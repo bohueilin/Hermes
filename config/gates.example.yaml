@@ -1,0 +1,54 @@
+version: 1
+label: illustrative_prototype_thresholds_not_for_real_vehicle_use
+
+hard_invariants:
+  collision_count:
+    operator: equals
+    value: 0
+  offroad_duration_s:
+    operator: less_than_or_equal
+    value: 0.25
+  wrong_way_duration_s:
+    operator: less_than_or_equal
+    value: 0.25
+  trace_integrity:
+    operator: equals
+    value: true
+  required_event_completeness_pct:
+    operator: greater_than_or_equal
+    value: 99.0
+
+soft_thresholds:
+  route_completion_pct:
+    target: 95.0
+    weight: 0.25
+  minimum_ttc_s:
+    target: 1.0
+    direction: higher_is_better
+    weight: 0.25
+  maximum_absolute_jerk_mps3:
+    target: 5.0
+    direction: lower_is_better
+    weight: 0.15
+  speed_violation_duration_s:
+    target: 0.0
+    direction: lower_is_better
+    weight: 0.10
+  stuck_duration_s:
+    target: 2.0
+    direction: lower_is_better
+    weight: 0.10
+  p95_policy_latency_ms:
+    target: 100.0
+    direction: lower_is_better
+    weight: 0.10
+  override_rate_pct:
+    target: 10.0
+    direction: lower_is_better
+    weight: 0.05
+
+verdicts:
+  pass_min_score: 85.0
+  conditional_min_score: 70.0
+  hard_invariant_failure: HOLD
+  invalid_or_tampered_evidence: INVALID_EVIDENCE

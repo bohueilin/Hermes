@@ -1,0 +1,32 @@
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Local secrets and operating-system files
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# External simulator checkout and generated evidence
+third_party/
+artifacts/*
+!artifacts/.gitkeep
+
+# Generated media and datasets
+*.gif
+*.mp4
+*.mov
+*.parquet
+
+# Extracted starter-pack duplicate
+Hermes_Starter_Pack/

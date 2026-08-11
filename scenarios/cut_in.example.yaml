@@ -1,0 +1,56 @@
+schema_version: 1
+id: cut_in_near_field_001
+title: Near-field cut-in under moderate traffic
+purpose: Test whether the ego policy maintains a safe envelope when an adjacent vehicle cuts into its lane.
+seed: 41021
+
+odd:
+  map_family: procedural
+  road_shape: straight_or_gentle_curve
+  lane_count: 3
+  weather: clear
+  lighting: daylight
+  speed_limit_mps: 15.0
+  traffic_density: 0.20
+
+initial_state:
+  ego:
+    lane_index: 1
+    speed_mps: 12.0
+  adversary:
+    lane_index: 2
+    longitudinal_offset_m: 8.0
+    speed_mps: 11.0
+
+maneuvers:
+  - actor: adversary
+    trigger:
+      type: simulation_time_s
+      value: 3.5
+    action:
+      type: lane_change
+      target_lane_index: 1
+      duration_s: 1.2
+
+faults: []
+
+run:
+  horizon_s: 20.0
+  control_hz: 20
+  headless: true
+
+expected_risks:
+  - low_time_to_collision
+  - emergency_braking
+  - lane_departure_during_avoidance
+  - excessive_jerk
+
+required_verifiers:
+  - collision
+  - lane_and_road_boundary
+  - time_to_collision
+  - speed_compliance
+  - route_progress
+  - comfort
+  - policy_latency
+  - trace_integrity
