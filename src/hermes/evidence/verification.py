@@ -1,0 +1,546 @@
+"""Independent stored-only verification; this module never imports runtime adapters."""
+
+from __future__ import annotations
+
+import json
+import math
+import os
+import re
+import stat
+from pathlib import Path
+from typing import Any, TypeVar
+
+from pydantic import BaseModel, ValidationError
+
+from hermes.domain.enums import AuthenticityStatus, IntegrityStatus, Verdict
+from hermes.domain.models import (
+    ArtifactManifest,
+    ArtifactVerification,
+    ExecutionContext,
+    FindingsDocument,
+    GateResult,
+    RunMetrics,
+    TraceEvent,
+)
+from hermes.evidence.artifacts import (
+    COMPANION_DIGEST_FILES,
+    INTEGRITY_LIMITATION,
+    REQUIRED_ARTIFACT_FILES,
+    bundle_digest,
+    config_digest,
+)
+from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
+from hermes.evidence.metrics import compute_metrics
+from hermes.evidence.trace import TraceIntegrityError, verify_complete_trace
+from hermes.gates.config import (
+    GateConfigError,
+    gate_config_digest,
+    parse_gate_config_yaml,
+    resolved_gate_config_yaml,
+)
+from hermes.gates.release import apply_release_gate
+from hermes.scenarios.loader import (
+    ScenarioLoadError,
+    parse_scenario_yaml,
+    resolved_scenario_yaml,
+    scenario_digest,
+)
+from hermes.verifiers import PHASE1_VERIFIER_IDENTITIES, run_phase1_verifiers
+
+MAX_ARTIFACT_FILE_BYTES = 16 * 1024 * 1024
+MAX_ARTIFACT_TOTAL_BYTES = 64 * 1024 * 1024
+MAX_EVENT_COUNT = 10_000
+MAX_EVENT_LINE_BYTES = 1 * 1024 * 1024
+_ModelT = TypeVar("_ModelT", bound=BaseModel)
+
+
+class _DuplicateJsonKey(ValueError):
+    pass
+
+
+def _reject_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant is unsupported: {value}")
+
+
+def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise _DuplicateJsonKey(f"duplicate JSON key: {key!r}")
+        result[key] = value
+    return result
+
+
+def _strict_json(data: bytes, filename: str) -> Any:
+    if data.startswith(b"\xef\xbb\xbf"):
+        raise ValueError(f"{filename} must not contain a UTF-8 BOM")
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(f"{filename} is not valid UTF-8: {exc}") from exc
+    try:
+        return json.loads(
+            text,
+            object_pairs_hook=_unique_object,
+            parse_constant=_reject_constant,
+        )
+    except (json.JSONDecodeError, _DuplicateJsonKey, RecursionError, ValueError) as exc:
+        raise ValueError(f"{filename} is malformed JSON: {exc}") from exc
+
+
+def _parse_canonical_model(
+    data: bytes,
+    filename: str,
+    model_type: type[_ModelT],
+) -> _ModelT:
+    payload = _strict_json(data, filename)
+    canonical = canonical_json_bytes(payload) + b"\n"
+    if data != canonical:
+        raise ValueError(f"{filename} is not canonical JSON")
+    try:
+        return model_type.model_validate_json(canonical_json_bytes(payload))
+    except ValidationError as exc:
+        raise ValueError(f"{filename} schema validation failed: {exc}") from exc
+
+
+def _invalid(
+    path: Path,
+    errors: list[str],
+    *,
+    first_mismatch_sequence: int | None = None,
+    trace_digest: str | None = None,
+) -> ArtifactVerification:
+    return ArtifactVerification(
+        artifact_path=str(path),
+        integrity=IntegrityStatus.INVALID,
+        authenticity=AuthenticityStatus.NOT_AUTHENTICATED,
+        verdict=Verdict.INVALID_EVIDENCE,
+        errors=tuple(errors or ["artifact verification failed"]),
+        first_mismatch_sequence=first_mismatch_sequence,
+        trace_digest=trace_digest,
+    )
+
+
+def _metadata_identity(metadata: os.stat_result) -> tuple[int, ...]:
+    return (
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_mode,
+        metadata.st_size,
+        metadata.st_mtime_ns,
+        metadata.st_ctime_ns,
+    )
+
+
+def _read_descriptor(file_descriptor: int) -> bytes:
+    os.lseek(file_descriptor, 0, os.SEEK_SET)
+    chunks: list[bytes] = []
+    while True:
+        chunk = os.read(file_descriptor, 1024 * 1024)
+        if not chunk:
+            return b"".join(chunks)
+        chunks.append(chunk)
+
+
+def _read_exact_files(path: Path) -> tuple[dict[str, bytes], list[str]]:
+    """Capture a stable no-follow snapshot through directory-relative descriptors."""
+    errors: list[str] = []
+    payloads: dict[str, bytes] = {}
+    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
+        return {}, ["descriptor-safe artifact verification is unavailable on this platform"]
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    directory_flags |= getattr(os, "O_CLOEXEC", 0)
+    try:
+        directory_fd = os.open(path, directory_flags)
+    except OSError as exc:
+        return {}, [f"cannot open real artifact directory without following links: {exc}"]
+
+    opened: dict[str, tuple[int, os.stat_result]] = {}
+    try:
+        try:
+            initial_names = set(os.listdir(directory_fd))
+        except OSError as exc:
+            return {}, [f"cannot enumerate artifact directory descriptor: {exc}"]
+        expected_names = set(REQUIRED_ARTIFACT_FILES)
+        missing = sorted(expected_names - initial_names)
+        unexpected = sorted(initial_names - expected_names)
+        if missing:
+            errors.append("missing required files: " + ", ".join(missing))
+        if unexpected:
+            errors.append("unexpected artifact entries: " + ", ".join(unexpected))
+
+        file_flags = (
+            os.O_RDONLY
+            | os.O_NOFOLLOW
+            | os.O_NONBLOCK
+            | getattr(os, "O_CLOEXEC", 0)
+        )
+        total_size = 0
+        for name in sorted(expected_names & initial_names):
+            try:
+                file_descriptor = os.open(
+                    name,
+                    file_flags,
+                    dir_fd=directory_fd,
+                )
+            except OSError as exc:
+                errors.append(f"cannot open {name} without following links: {exc}")
+                continue
+            try:
+                metadata = os.fstat(file_descriptor)
+            except OSError as exc:
+                os.close(file_descriptor)
+                errors.append(f"cannot stat opened {name}: {exc}")
+                continue
+            opened[name] = (file_descriptor, metadata)
+            if not stat.S_ISREG(metadata.st_mode):
+                errors.append(f"{name} must be a regular non-symlink file")
+                continue
+            if metadata.st_size > MAX_ARTIFACT_FILE_BYTES:
+                errors.append(
+                    f"{name} exceeds maximum size of {MAX_ARTIFACT_FILE_BYTES} bytes"
+                )
+                continue
+            total_size += metadata.st_size
+            if total_size > MAX_ARTIFACT_TOTAL_BYTES:
+                errors.append(
+                    f"artifact exceeds maximum total size of {MAX_ARTIFACT_TOTAL_BYTES} bytes"
+                )
+                continue
+            try:
+                first_read = _read_descriptor(file_descriptor)
+                second_read = _read_descriptor(file_descriptor)
+                final_metadata = os.fstat(file_descriptor)
+            except OSError as exc:
+                errors.append(f"cannot read stable snapshot of {name}: {exc}")
+                continue
+            if len(first_read) != metadata.st_size:
+                errors.append(f"{name} size changed while being read")
+                continue
+            if first_read != second_read or _metadata_identity(metadata) != _metadata_identity(
+                final_metadata
+            ):
+                errors.append(f"{name} changed while artifact snapshot was captured")
+                continue
+            payloads[name] = first_read
+
+        try:
+            final_names = set(os.listdir(directory_fd))
+        except OSError as exc:
+            errors.append(f"cannot re-enumerate artifact directory descriptor: {exc}")
+            final_names = set()
+        if final_names != initial_names:
+            errors.append("artifact directory entries changed during verification")
+        for name, (_, opened_metadata) in opened.items():
+            try:
+                current_metadata = os.stat(
+                    name,
+                    dir_fd=directory_fd,
+                    follow_symlinks=False,
+                )
+            except OSError as exc:
+                errors.append(f"artifact entry {name} changed during verification: {exc}")
+                continue
+            if _metadata_identity(opened_metadata) != _metadata_identity(current_metadata):
+                errors.append(f"artifact entry {name} was replaced during verification")
+    finally:
+        for file_descriptor, _ in opened.values():
+            os.close(file_descriptor)
+        os.close(directory_fd)
+    return payloads, errors
+
+
+def _parse_events(data: bytes) -> tuple[TraceEvent, ...]:
+    if not data.endswith(b"\n"):
+        raise ValueError("events.jsonl must end with exactly one complete event line")
+    raw_lines = data.splitlines()
+    if not raw_lines:
+        raise ValueError("events.jsonl contains no events")
+    if len(raw_lines) > MAX_EVENT_COUNT:
+        raise ValueError(f"events.jsonl exceeds maximum event count of {MAX_EVENT_COUNT}")
+    events: list[TraceEvent] = []
+    for line_number, line in enumerate(raw_lines, start=1):
+        if not line:
+            raise ValueError(f"events.jsonl contains a blank line at line {line_number}")
+        if len(line) > MAX_EVENT_LINE_BYTES:
+            raise ValueError(
+                f"events.jsonl line {line_number} exceeds {MAX_EVENT_LINE_BYTES} bytes"
+            )
+        payload = _strict_json(line, f"events.jsonl line {line_number}")
+        canonical = canonical_json_bytes(payload)
+        if line != canonical:
+            raise ValueError(f"events.jsonl line {line_number} is not canonical JSON")
+        try:
+            events.append(TraceEvent.model_validate_json(canonical))
+        except ValidationError as exc:
+            raise ValueError(
+                f"events.jsonl line {line_number} schema validation failed: {exc}"
+            ) from exc
+    return tuple(events)
+
+
+def _first_sequence(message: str) -> int | None:
+    match = re.search(r"sequence (\d+)", message)
+    return int(match.group(1)) if match else None
+
+
+def verify_artifact(artifact_path: Path) -> ArtifactVerification:
+    """Recompute a complete evidence decision from stored bytes without simulator execution."""
+    path = Path(os.path.abspath(os.fspath(artifact_path.expanduser())))
+
+    payloads, errors = _read_exact_files(path)
+    if set(REQUIRED_ARTIFACT_FILES) - payloads.keys():
+        return _invalid(path, errors)
+
+    observed_bundle = payloads["bundle.sha256"]
+    try:
+        bundle_text = observed_bundle.decode("ascii")
+    except UnicodeDecodeError as exc:
+        errors.append(f"bundle.sha256 is not ASCII: {exc}")
+        bundle_text = ""
+    if not re.fullmatch(r"[0-9a-f]{64}\n", bundle_text):
+        errors.append("bundle.sha256 must contain one lowercase SHA-256 digest")
+    else:
+        computed_bundle = bundle_digest(
+            {name: data for name, data in payloads.items() if name != "bundle.sha256"}
+        )
+        if bundle_text.strip() != computed_bundle:
+            errors.append("bundle.sha256 does not match manifest and companion bytes")
+
+    manifest: ArtifactManifest | None = None
+    context: ExecutionContext | None = None
+    metrics: RunMetrics | None = None
+    findings_document: FindingsDocument | None = None
+    stored_verdict: GateResult | None = None
+    for filename, model_type in (
+        ("manifest.json", ArtifactManifest),
+        ("execution-context.json", ExecutionContext),
+        ("metrics.json", RunMetrics),
+        ("findings.json", FindingsDocument),
+        ("verdict.json", GateResult),
+    ):
+        try:
+            parsed = _parse_canonical_model(payloads[filename], filename, model_type)
+        except ValueError as exc:
+            errors.append(str(exc))
+            continue
+        if filename == "manifest.json":
+            manifest = parsed  # type: ignore[assignment]
+        elif filename == "execution-context.json":
+            context = parsed  # type: ignore[assignment]
+        elif filename == "metrics.json":
+            metrics = parsed  # type: ignore[assignment]
+        elif filename == "findings.json":
+            findings_document = parsed  # type: ignore[assignment]
+        else:
+            stored_verdict = parsed  # type: ignore[assignment]
+
+    if manifest is not None:
+        if manifest.required_files != REQUIRED_ARTIFACT_FILES:
+            errors.append("manifest.json required_files does not match the exact bundle contract")
+        if set(manifest.file_digests) != set(COMPANION_DIGEST_FILES):
+            errors.append("manifest.json file_digests does not match companion inventory")
+        else:
+            for filename in COMPANION_DIGEST_FILES:
+                observed = sha256_hex(payloads[filename])
+                if manifest.file_digests[filename] != observed:
+                    errors.append(f"{filename} digest does not match manifest.json")
+        if manifest.integrity_limitation != INTEGRITY_LIMITATION:
+            errors.append("manifest.json integrity limitation is unsupported")
+
+    scenario = None
+    gate_config = None
+    try:
+        scenario_text = payloads["scenario.resolved.yaml"].decode("utf-8")
+        scenario = parse_scenario_yaml(scenario_text)
+        if payloads["scenario.resolved.yaml"] != resolved_scenario_yaml(scenario).encode("utf-8"):
+            errors.append("scenario.resolved.yaml is not canonical resolved YAML")
+    except UnicodeDecodeError as exc:
+        errors.append(f"scenario.resolved.yaml is not valid UTF-8: {exc}")
+    except ScenarioLoadError as exc:
+        errors.append(f"scenario.resolved.yaml is invalid: {exc}")
+    try:
+        gate_text = payloads["gate-config.resolved.yaml"].decode("utf-8")
+        gate_config = parse_gate_config_yaml(gate_text)
+        if payloads["gate-config.resolved.yaml"] != resolved_gate_config_yaml(gate_config).encode(
+            "utf-8"
+        ):
+            errors.append("gate-config.resolved.yaml is not canonical resolved YAML")
+    except UnicodeDecodeError as exc:
+        errors.append(f"gate-config.resolved.yaml is not valid UTF-8: {exc}")
+    except GateConfigError as exc:
+        errors.append(f"gate-config.resolved.yaml is invalid: {exc}")
+
+    events: tuple[TraceEvent, ...] | None = None
+    first_mismatch_sequence: int | None = None
+    trace_digest: str | None = None
+    try:
+        events = _parse_events(payloads["events.jsonl"])
+        trace_digest = verify_complete_trace(events, scenario)
+    except (ArithmeticError, RecursionError, ValueError, TraceIntegrityError) as exc:
+        message = str(exc)
+        errors.append(message)
+        first_mismatch_sequence = _first_sequence(message)
+
+    trace_text = ""
+    try:
+        trace_text = payloads["trace.sha256"].decode("ascii")
+    except UnicodeDecodeError as exc:
+        errors.append(f"trace.sha256 is not ASCII: {exc}")
+    if not re.fullmatch(r"[0-9a-f]{64}\n", trace_text):
+        errors.append("trace.sha256 must contain one lowercase SHA-256 digest")
+    elif trace_digest is not None and trace_text.strip() != trace_digest:
+        errors.append("trace.sha256 does not match the final event hash")
+
+    if context is not None:
+        for component_name, component in (
+            ("adapter", context.adapter),
+            ("policy", context.policy),
+            ("shield", context.shield),
+        ):
+            if component.config_digest != config_digest(component.config):
+                errors.append(f"execution-context.json {component_name} config digest mismatch")
+            run_context_identity = (
+                getattr(context.run_context, f"{component_name}_name"),
+                getattr(context.run_context, f"{component_name}_version"),
+                getattr(context.run_context, f"{component_name}_config_digest"),
+            )
+            component_identity = (
+                component.name,
+                component.version,
+                component.config_digest,
+            )
+            if component_identity != run_context_identity:
+                errors.append(
+                    f"execution-context.json {component_name} component does not match "
+                    "hashed run context"
+                )
+        suite_payload = [identity.model_dump(mode="json") for identity in context.verifier_suite]
+        if context.run_context.verifier_suite_digest != config_digest(suite_payload):
+            errors.append("execution-context.json verifier suite digest mismatch")
+        if context.verifier_suite != PHASE1_VERIFIER_IDENTITIES:
+            errors.append("execution-context.json contains an unsupported verifier suite")
+        if context.adapter.name != "fake" or context.adapter.version != "1.0":
+            errors.append("execution-context.json contains an unsupported Phase 1 adapter")
+        if context.policy.name != "baseline" or context.policy.version != "1.0":
+            errors.append("execution-context.json contains an unsupported Phase 1 policy")
+        if context.shield.name != "noop" or context.shield.version != "1.0":
+            errors.append("execution-context.json contains an unsupported Phase 1 shield")
+        if context.adapter.name == "fake" and context.policy.name == "baseline":
+            simulated_latency = context.policy.config.get("simulated_policy_latency_ms")
+            if (
+                isinstance(simulated_latency, bool)
+                or not isinstance(simulated_latency, (int, float))
+                or not math.isfinite(simulated_latency)
+                or simulated_latency < 0.0
+            ):
+                errors.append(
+                    "execution-context.json baseline simulated policy latency is invalid"
+                )
+            elif events is not None:
+                for event in events:
+                    if event.latency_source != "simulated":
+                        errors.append(
+                            "fake adapter latency_source must be simulated at sequence "
+                            f"{event.sequence}"
+                        )
+                        break
+                    if not math.isclose(
+                        event.policy_latency_ms,
+                        float(simulated_latency),
+                        rel_tol=0.0,
+                        abs_tol=1e-12,
+                    ):
+                        errors.append(
+                            "fake adapter policy latency does not match policy configuration "
+                            f"at sequence {event.sequence}"
+                        )
+                        break
+        if events is not None and events[0].run_context != context.run_context:
+            errors.append("execution-context.json does not match the trace run context")
+        if scenario is not None:
+            if context.run_context.scenario_digest != scenario_digest(scenario):
+                errors.append("scenario digest does not match the trace run context")
+            if context.run_context.control_frequency_hz != scenario.control.frequency_hz:
+                errors.append("scenario control frequency does not match trace context")
+            if context.run_context.horizon_steps != scenario.control.horizon_steps:
+                errors.append("scenario horizon does not match trace context")
+        if gate_config is not None and (
+            context.run_context.gate_config_digest != gate_config_digest(gate_config)
+        ):
+            errors.append("gate configuration digest does not match trace context")
+
+    if (
+        manifest is not None
+        and context is not None
+        and scenario is not None
+        and gate_config is not None
+    ):
+        expected_manifest_values = {
+            "adapter_name": context.adapter.name,
+            "adapter_version": context.adapter.version,
+            "adapter_config_digest": context.adapter.config_digest,
+            "scenario_name": scenario.name,
+            "scenario_version": scenario.version,
+            "scenario_schema_version": scenario.schema_version,
+            "scenario_digest": context.run_context.scenario_digest,
+            "policy_name": context.policy.name,
+            "policy_version": context.policy.version,
+            "policy_config_digest": context.policy.config_digest,
+            "shield_name": context.shield.name,
+            "shield_version": context.shield.version,
+            "shield_config_digest": context.shield.config_digest,
+            "gate_name": gate_config.name,
+            "gate_version": gate_config.version,
+            "gate_config_digest": context.run_context.gate_config_digest,
+            "verifier_suite_digest": context.run_context.verifier_suite_digest,
+            "seed": context.run_context.seed,
+            "control_frequency_hz": context.run_context.control_frequency_hz,
+            "horizon_steps": context.run_context.horizon_steps,
+        }
+        for field_name, expected in expected_manifest_values.items():
+            if getattr(manifest, field_name) != expected:
+                errors.append(f"manifest.json {field_name} does not match execution context")
+        if trace_digest is not None and manifest.trace_digest != trace_digest:
+            errors.append("manifest.json trace_digest does not match the event chain")
+        if any(
+            value is not None
+            for value in (
+                manifest.simulator_name,
+                manifest.simulator_version,
+                manifest.simulator_commit,
+            )
+        ):
+            errors.append("fake adapter manifest must not claim external simulator provenance")
+
+    recomputed_verdict: GateResult | None = None
+    if events is not None and scenario is not None and gate_config is not None:
+        recomputed_metrics = compute_metrics(events)
+        recomputed_findings = run_phase1_verifiers(events, scenario, gate_config)
+        recomputed_verdict = apply_release_gate(recomputed_findings, gate_config)
+        if metrics is not None and metrics != recomputed_metrics:
+            errors.append("metrics.json does not match metrics recomputed from stored events")
+        expected_findings = FindingsDocument(findings=recomputed_findings)
+        if findings_document is not None and findings_document != expected_findings:
+            errors.append("findings.json does not match verifiers rerun from stored events")
+        if stored_verdict is not None and stored_verdict != recomputed_verdict:
+            errors.append("verdict.json does not match the recomputed release gate")
+
+    if errors:
+        return _invalid(
+            path,
+            errors,
+            first_mismatch_sequence=first_mismatch_sequence,
+            trace_digest=trace_digest,
+        )
+    assert recomputed_verdict is not None
+    return ArtifactVerification(
+        artifact_path=str(path),
+        integrity=IntegrityStatus.INTERNALLY_CONSISTENT,
+        authenticity=AuthenticityStatus.NOT_AUTHENTICATED,
+        verdict=recomputed_verdict.verdict,
+        trace_digest=trace_digest,
+        rationale=recomputed_verdict.rationale,
+        supporting_finding_ids=recomputed_verdict.supporting_finding_ids,
+        residual_limitations=recomputed_verdict.residual_limitations,
+    )

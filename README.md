@@ -12,18 +12,13 @@ Hermes is for simulation and closed-lab learning only. It must not connect to a 
 
 ## Current status
 
-Phase 0 is complete:
+Phase 0 remains intact, and the Phase 1 deterministic evidence core is implemented on the
+feature branch. Phase 1 adds strict scenario and gate schemas, a deterministic fake adapter,
+baseline policy, no-op shield, canonical trace chaining, independent verifiers, non-compensatory
+gate precedence, atomic evidence publication, and stored-only artifact verification.
 
-- Python 3.11 `hermes-dev` environment;
-- installable `hermes-autonomy` package;
-- `hermes` CLI;
-- environment doctor;
-- Git and simulator provenance checks;
-- MetaDrive 0.4.3 installation and headless/offscreen prerequisite validation;
-- 26 passing tests and clean Ruff baseline;
-- baseline commit `c181509a691b132cb732a50c24612f6bd40bafca`.
-
-The next mandatory milestone is the deterministic simulator-neutral evidence core.
+The fake adapter is an architectural test double, not a vehicle-physics model. MetaDrive is not
+imported or launched by Phase 1 runs or artifact verification.
 
 ## Canonical identity
 
@@ -48,7 +43,7 @@ which python
 python -m pip install -e ".[dev]"
 ```
 
-## Current working command
+## Environment doctor
 
 ```bash
 hermes doctor
@@ -56,9 +51,7 @@ hermes doctor
 
 The optional display check may be `NOT_AVAILABLE` in a headless shell; the dedicated headless/offscreen prerequisite check is the relevant result.
 
-## Target Phase 1 commands
-
-After the evidence core is implemented:
+## Phase 1 commands
 
 ```bash
 hermes run \
@@ -71,6 +64,14 @@ hermes run \
 hermes verify-artifact artifacts/phase1-nominal
 ```
 
+The equivalent module entry paths remain available:
+
+```bash
+python -m hermes run --simulator fake --scenario scenarios/fake_nominal.yaml \
+  --policy baseline --seed 7 --run-id module-nominal
+python -m hermes.cli verify-artifact artifacts/module-nominal
+```
+
 Expected Phase 1 cases:
 
 | Case | Verdict | Exit code |
@@ -81,6 +82,14 @@ Expected Phase 1 cases:
 | Invalid/inconsistent evidence | `INVALID_EVIDENCE` | 30 |
 | Configuration/operational failure | error | 40 |
 
+Hermes remaps command-line usage and type-validation failures to configuration exit `40`; malformed
+commands never print `PASS`. The `doctor` command preserves its Phase 0 contract: `0` when no check
+is `FAIL`, otherwise `1`.
+
+A valid `HOLD` or `CONDITIONAL` bundle remains internally consistent and independently
+verifiable; its verification command returns the policy verdict exit code. Corruption instead
+returns `INVALID_EVIDENCE` / `30`.
+
 ## Evidence bundle
 
 Every completed run must preserve:
@@ -88,15 +97,25 @@ Every completed run must preserve:
 ```text
 artifacts/<run-id>/
   manifest.json
+  execution-context.json
   scenario.resolved.yaml
   gate-config.resolved.yaml
   events.jsonl
   metrics.json
+  findings.json
   verdict.json
   trace.sha256
+  bundle.sha256
 ```
 
-Stored artifact verification must not rerun a simulator.
+`trace.sha256` is the final event-chain root. `bundle.sha256` binds the canonical manifest and all
+companion bytes without a self-reference cycle. Stored artifact verification validates schemas,
+digests, event semantics, metrics, complete findings, and the recomputed gate result without
+rerunning a simulator. Completed-run publication uses a platform-native atomic no-replace rename;
+Hermes fails safely if that primitive is unavailable. Verification captures required files through
+no-follow directory-relative descriptors and rejects a bundle that changes during capture. It also
+checks episode-horizon completeness, observation-summary consistency, and the fake policy's
+explicitly simulated latency source.
 
 ## Development workflow
 
@@ -117,8 +136,8 @@ Read before editing:
 
 ## Roadmap
 
-1. Deterministic fake-simulator evidence core.
-2. Bounded MetaDrive headless adapter.
+1. Deterministic fake-simulator evidence core (implemented in Phase 1).
+2. Bounded MetaDrive headless adapter (strictly gated on Phase 1 acceptance).
 3. Deterministic runtime shield and challenge scenarios.
 4. Fault injection, comparison, CI, and demo hardening.
 5. Later: dashboard, CARLA, ROS 2/Autoware, RL experiments, and hardware-aware validation.

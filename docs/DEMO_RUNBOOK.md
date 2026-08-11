@@ -56,7 +56,7 @@ Executive point:
 
 Run the boundary scenario and make the same point for ODD/road constraints.
 
-## Demo 3 — Conditional advancement
+## Demo 3 — Conditional review
 
 Run the soft-degradation scenario.
 
@@ -70,7 +70,7 @@ Show:
 
 Executive point:
 
-> Hermes distinguishes a hard stop from a reviewable degradation rather than collapsing everything into pass/fail.
+> Hermes distinguishes a hard stop from a reviewable degradation rather than collapsing everything into pass/fail. CONDITIONAL requires human disposition and grants no deployment permission.
 
 ## Demo 4 — Tamper evidence
 
@@ -121,7 +121,7 @@ Show:
 
 Executive point:
 
-> The evidence and gate architecture survives a transition from a test double to a real closed-loop simulator.
+> The evidence and gate architecture survives a transition from a test double to a higher-fidelity closed-loop simulator.
 
 ## Demo 7 — Runtime shield
 
@@ -144,7 +144,7 @@ Executive point:
 
 ## Closing narrative
 
-> Hermes is the scenario-to-evidence control plane for autonomy development. The policy proposes behavior, the environment produces consequences, independent verifiers evaluate requirements, a gate decides advancement, and the trace supports review. The prototype is intentionally simulation-only, but the contracts establish a path toward higher-fidelity simulators, ROS-based stacks, and hardware-aware validation.
+> Hermes is the scenario-to-evidence control plane for autonomy development. The policy proposes behavior, the environment produces consequences, independent verifiers evaluate requirements, a gate decides advancement, and the trace supports review. The prototype is intentionally simulation-only. Any later ROS or closed-lab hardware work is deferred and requires a separate safety review.
 
 ## Demo safeguards
 

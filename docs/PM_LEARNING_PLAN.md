@@ -186,9 +186,9 @@ After each phase, answer:
 
 ## 9. Interview narrative
 
-A concise leadership narrative:
+A concise Phase 1 leadership narrative:
 
-> I built Hermes to understand the full autonomy development loop, not just a driving demo. I defined a constrained ODD, created simulator-neutral contracts, separated candidate from executed actions, built deterministic scenarios and independent verifiers, enforced hard release gates, and preserved replayable evidence. I then attached a real simulator through the same contract and evaluated runtime interventions without allowing aggregate metrics to hide safety failures. That exercise sharpened how I would lead autonomy software, simulation, safety, and hardware teams around measurable advancement criteria and residual-risk ownership.
+> I built Hermes to understand the autonomy evidence loop, not just produce a driving demo. In Phase 1, I defined a constrained ODD, created simulator-neutral contracts, separated candidate from executed actions, built deterministic scenarios and independent verifiers, enforced hard release gates, and preserved replayable evidence. The gated next steps are to attach the MetaDrive simulator through the same contract and then evaluate deterministic runtime interventions without allowing aggregate metrics to hide safety failures. The work sharpens how I would lead autonomy software, simulation, safety, and hardware teams around measurable advancement criteria and residual-risk ownership.
 
 ## 10. Residual learning roadmap
 

@@ -46,13 +46,16 @@ An autonomy product leader, safety reviewer, simulation engineer, autonomy devel
 
 ## Current validated status
 
-Phase 0 is complete:
+Phase 0 is preserved and the Phase 1 deterministic evidence core is implemented on the gated
+feature branch:
 
 - the `hermes` CLI is installed and recognized;
 - `hermes doctor` validates the Python, Git, MetaDrive, asset, and headless prerequisites;
-- the repository has a clean baseline commit;
-- 26 tests pass;
-- Ruff passes;
+- the Phase 0 repository has a clean baseline commit and its doctor behavior remains covered;
+- strict scenario, gate, trace, finding, verdict, and artifact schemas are implemented;
+- nominal, collision, boundary, soft-degradation, tamper, and repeated-input paths are automated;
+- stored verification recomputes the decision without importing or launching a simulator;
+- the full automated suite and Ruff pass at the Phase 1 checkpoint;
 - MetaDrive 0.4.3 is installed at the recorded source commit;
 - MetaDrive headless and offscreen launch have been verified on the development machine.
 
@@ -62,9 +65,10 @@ Current baseline commit:
 c181509a691b132cb732a50c24612f6bd40bafca
 ```
 
-## Next product milestone
+## Phase 1 acceptance outcomes
 
-Build the deterministic, simulator-neutral evidence vertical slice before integrating MetaDrive into Hermes runtime logic.
+The deterministic, simulator-neutral evidence vertical slice is the required gate before
+integrating MetaDrive into Hermes runtime logic and is implemented on this feature branch.
 
 Required Phase 1 outcomes:
 
@@ -76,7 +80,11 @@ Required Phase 1 outcomes:
 | Soft degradation | `CONDITIONAL` |
 | Modified or incomplete evidence | `INVALID_EVIDENCE` |
 
-After Phase 1 is fully green, add one bounded MetaDrive headless adapter run through the same contracts, verifiers, gate, and artifact format.
+## Next product milestone
+
+Add one bounded MetaDrive headless adapter run through the same contracts, verifiers, gate, and
+artifact format. Do not begin the runtime safety shield until that adapter path is independently
+verified and committed.
 
 ## Constrained prototype ODD
 
