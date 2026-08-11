@@ -127,16 +127,77 @@ Executive point:
 
 Only include after Phase 3 passes.
 
-Run baseline and shielded versions of a challenge scenario.
+Before presenting this demo, run and independently verify both the baseline and shielded bundles.
+Artifact publication never overwrites, so change the run IDs when repeating the demo.
+
+```bash
+hermes run \
+  --simulator metadrive \
+  --scenario scenarios/metadrive_lead_vehicle_hard_brake.yaml \
+  --policy metadrive-idm \
+  --seed 7 \
+  --run-id phase3-lead-baseline \
+  --headless
+
+hermes run \
+  --simulator metadrive \
+  --scenario scenarios/metadrive_lead_vehicle_hard_brake.yaml \
+  --policy metadrive-idm \
+  --seed 7 \
+  --run-id phase3-lead-shielded \
+  --headless \
+  --shield deterministic \
+  --shield-config config/shield.phase3.yaml
+
+hermes verify-artifact artifacts/phase3-lead-baseline
+hermes verify-artifact artifacts/phase3-lead-shielded
+hermes compare artifacts/phase3-lead-baseline artifacts/phase3-lead-shielded
+hermes compare artifacts/phase3-lead-baseline artifacts/phase3-lead-shielded \
+  --format json
+```
+
+Do not infer a result from the run ID. Capture the actual exit code, verdict, trace digest, metrics,
+and comparison statuses after each command. Exit `30` means at least one input artifact is invalid;
+exit `40` means the valid artifacts are incompatible or comparison encountered a
+configuration/operational error. Do not present either case as a policy comparison.
 
 Show:
 
-- candidate action;
-- executed action;
-- override reason;
-- safety evidence change;
-- comfort or progress regression, if any;
-- baseline/candidate comparison.
+- candidate and executed actions as separate fields, including unchanged events;
+- exact ordered override reasons when the shield changed the action;
+- collision and hard-failure results;
+- minimum TTC or its explicit `NOT_AVAILABLE` reason;
+- progress, acceleration, jerk, and policy-latency source;
+- intervention event count and reason histogram as descriptive evidence; and
+- every improved, regressed, unchanged, or non-comparable baseline/candidate dimension.
+
+The shield's supported reason codes are:
+
+```text
+TTC_BELOW_THRESHOLD
+SPEED_CAP
+STALE_OBSERVATION
+BOUNDARY_RISK
+EMERGENCY_STOP
+ACTUATION_DELAY_COMPENSATION
+```
+
+State that `config/shield.phase3.yaml` is versioned and illustrative. Stored artifact verification
+replays each deterministic shield decision from trace-bound inputs without importing or rerunning
+MetaDrive; it does not trust the recorded executed action or reason at face value.
+
+Repeat the bounded baseline/shielded/verify/compare sequence with
+`scenarios/metadrive_cut_in_near_field.yaml` and new `phase3-cutin-*` run IDs before declaring both
+required scenarios covered. Explain the scenario mechanisms accurately:
+
+- the lead actor receives a fixed schedule of native MetaDrive dynamic actions, including its
+  configured hard-brake interval; and
+- the cut-in is a `scripted_kinematic_replay` with `behavior_realism_claim: false`, not a native or
+  realistic traffic-agent maneuver.
+
+Front gap and relative speed come from the named actor's actual oriented geometry and velocity in
+the simulator. A TTC sample exists only when the actor is ahead, laterally overlapping, and closing.
+Simulator ground truth is not a claim about perception performance.
 
 Executive point:
 

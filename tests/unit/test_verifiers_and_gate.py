@@ -284,6 +284,56 @@ def test_metrics_never_turn_unavailable_progress_into_zero() -> None:
     assert metrics.route_completion_pct.reason == "route progress explicitly unavailable"
 
 
+def test_metrics_compute_minimum_ttc_only_from_paired_closing_front_evidence() -> None:
+    event = _events()[0]
+    closing = event.model_copy(
+        update={
+            "observation_summary": {
+                **event.observation_summary,
+                "front_distance_m": 6.0,
+                "front_relative_speed_mps": -3.0,
+            }
+        }
+    )
+    not_closing = event.model_copy(
+        update={
+            "observation_summary": {
+                **event.observation_summary,
+                "front_distance_m": 6.0,
+                "front_relative_speed_mps": 1.0,
+            }
+        }
+    )
+
+    available = compute_metrics((closing,))
+    unavailable = compute_metrics((not_closing,))
+
+    assert available.minimum_ttc_s.availability is EvidenceAvailability.AVAILABLE
+    assert available.minimum_ttc_s.value == 2.0
+    assert available.minimum_ttc_s.unit == "s"
+    assert unavailable.minimum_ttc_s.availability is EvidenceAvailability.NOT_AVAILABLE
+    assert unavailable.minimum_ttc_s.value is None
+
+
+def test_metrics_count_override_events_not_reason_occurrences() -> None:
+    event = _events()[0]
+    overridden = event.model_copy(
+        update={
+            "candidate_action": Action(steering=0.0, throttle=0.5, brake=0.0),
+            "executed_action": Action(steering=0.0, throttle=0.0, brake=1.0),
+            "override_reasons": ("TTC_BELOW_THRESHOLD", "SPEED_CAP"),
+        }
+    )
+
+    metrics = compute_metrics((overridden,))
+
+    assert metrics.shield_override_count == 1
+    assert metrics.shield_override_reasons == {
+        "SPEED_CAP": 1,
+        "TTC_BELOW_THRESHOLD": 1,
+    }
+
+
 def test_gate_rejects_missing_duplicate_or_unknown_required_findings(
     repository_root: Path,
 ) -> None:

@@ -133,3 +133,82 @@ The five-step real smoke passed. The bounded nominal run reached its destination
 returned `INTERNALLY_CONSISTENT` / `PASS` without importing MetaDrive. A repeated seed-7 run produced
 the same trace digest and byte-identical deterministic evidence files on this host. This does not
 establish cross-platform bitwise physics determinism or any real-world safety property.
+
+## 2026-08-11 — Phase 3 deterministic shield, challenges, and stored comparison
+
+### Scope
+
+Make candidate policy intent, shield-selected execution, and observed simulator consequences
+separately reviewable. Add only the two required bounded MetaDrive challenges and a simulator-free
+comparison of compatible stored artifacts. This phase does not authorize physical control or make a
+road-safety, behavior-realism, certification, compliance, or deployment-readiness claim.
+
+### Decisions
+
+- Use a strict deterministic shield version 1.0 whose complete threshold configuration is canonical,
+  digest-bound, and labeled `illustrative_simulation_only_not_real_vehicle_limits`. Support only the
+  six specified ordered reasons: `TTC_BELOW_THRESHOLD`, `SPEED_CAP`, `STALE_OBSERVATION`,
+  `BOUNDARY_RISK`, `EMERGENCY_STOP`, and `ACTUATION_DELAY_COMPENSATION`.
+- Treat a missing required observation as invalid input rather than a stale/safe default.
+  `STALE_OBSERVATION` applies to the age of an otherwise valid typed observation. Treat the configured
+  actuation-delay value as an additional TTC margin, not as evidence that a delay fault was modeled.
+- Select full braking for every supported trigger, with corrective steering toward lane center only
+  for boundary risk. Preserve the candidate exactly when no rule changes it, quantize changed action
+  components to MetaDrive's binary32 precision, and record reasons only when candidate and executed
+  actions differ.
+- Count shield interventions by changed-action events, not by number of reasons. Preserve a separate
+  ordered reason histogram because one event can have multiple applicable rules. Do not rank a higher
+  or lower intervention count as inherently safer.
+- Introduce strict scenario schema 2.0 for MetaDrive challenges while keeping Phase 1/2 scenario
+  serialization backward-compatible. Challenge scenarios cannot include fake hazards, and their
+  scheduled transition windows must fit within the bounded horizon. Use MetaDrive adapter version
+  1.1 for challenges while retaining version 1.0 for the Phase 2 nominal profile.
+- Implement `lead_vehicle_hard_brake` with a fixed-name, fixed-seed `TrafficDefaultVehicle` receiving
+  native MetaDrive dynamic actions on an exact neutral/brake/recovery schedule. Keep installed IDM
+  deceleration enabled; do not create an artificially faulted baseline. Record
+  `behavior_realism_claim: false` even though the actor uses simulator dynamics.
+- Implement `cut_in_near_field` as a smooth, fixed `scripted_kinematic_replay` because the pinned
+  stock traffic manager has no reliable scheduled near-field cut-in primitive. Set position,
+  velocity, and heading through MetaDrive replay-style surfaces and record
+  `behavior_realism_claim: false`; never relabel this as native traffic-agent behavior.
+- Derive front gap and relative speed from the named actor's actual oriented bounding boxes and
+  world-frame velocities projected into the ego frame. Require the actor to be ahead and laterally
+  overlapping for a paired front signal. A negative actor-minus-ego longitudinal speed means closing;
+  compute TTC only for finite paired closing evidence. Otherwise report `minimum_ttc_s` as
+  `NOT_AVAILABLE` with a reason.
+- Extend stored verification, not the online simulator, as the evidence authority. Reconstruct the
+  deterministic shield from its stored strict configuration, replay every decision from the stored
+  observation summary and candidate action, and require exact executed actions and ordered reasons.
+  Reconstruct the supported challenge adapter profile without importing MetaDrive.
+- Compare only independently verified descriptor-safe snapshots. Require equal evidence, scenario,
+  gate, adapter, policy, seed, cadence, simulator, platform, and available repository-commit
+  identities; intentionally allow shield identity/configuration to differ. Warn for dirty or unknown
+  worktree state, but refuse unavailable or different commits.
+- Report comparison dimensions as `IMPROVED`, `REGRESSED`, `UNCHANGED`, or `NOT_COMPARABLE` across
+  verdict, hard failures, collision, TTC, progress, acceleration, jerk, latency, intervention details,
+  and evidence availability. Missing evidence remains non-comparable, and intervention differences
+  remain descriptive. Exit 30 for invalid input evidence, 40 for incompatible valid evidence or
+  configuration/operational failure, and 0 only when valid compatible evidence is compared.
+
+### Observed acceptance and limitation boundary
+
+Completed 2026-08-11 commands produced four real, independently verified development bundles plus
+byte-identical same-host repeats of their eight deterministic evidence files:
+
+- lead baseline: `CONDITIONAL`, digest `504dfbcdd8f4239f1b9f2a5e94fa64f8a1a6ac108543e46ace12b251aa409bd1`;
+- lead shielded: `CONDITIONAL`, digest `7324adbd7fa824f5dd834be2b321e3a5e4da36fbdac6eca99b7ae0c92d49f380`;
+- cut-in baseline: `HOLD`, digest `00137f7fda53afa3531531bfeae6a8635b95b271707185c6922431633a8a5ef5`; and
+- cut-in shielded: `HOLD`, digest `7a0f0c7954a4257dca7fa2e4d2fbc0c53317b77f846174f7b033da029653e1ae`.
+
+Both comparisons reported improved minimum TTC alongside regressed route completion, acceleration,
+and jerk. Verdict, hard failures, and collision count did not improve. The observed overrides were
+36 and 3 `SPEED_CAP` events respectively; no real shielded artifact emitted
+`TTC_BELOW_THRESHOLD`. The cut-in runs retained a non-compensatory required-progress failure.
+
+All bundles record the pre-Phase-3 repository commit `638a951278d7b6ab5ffaad4bb514fc7447fa9b62`
+and `repository_dirty: true`; comparison therefore warns and these bundles are development evidence,
+not a clean-commit release candidate. MetaDrive ground truth is not a perception-system claim, the
+scripted cut-in is not a behavior model, same-host repeatability is not cross-platform bitwise
+determinism, stored verification does not replay simulator dynamics, and local SHA-256 remains
+tamper-evident rather than independently authenticated. Full metrics and reproducibility conditions
+are recorded in `docs/phase3-safety-shield.md`.

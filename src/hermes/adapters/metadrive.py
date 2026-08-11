@@ -12,6 +12,12 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any
 
+from hermes.adapters.metadrive_challenge import (
+    ACTOR_NAME,
+    MANAGER_VERSION,
+    ChallengeActorState,
+    create_challenge_environment,
+)
 from hermes.adapters.metadrive_support import (
     SUPPORTED_METADRIVE_COMMIT,
     SUPPORTED_METADRIVE_SOURCE,
@@ -49,6 +55,9 @@ class MetaDriveDependencies:
     simulator_version: str
     simulator_commit: str
     simulator_source: Path
+    challenge_environment_factory: Callable[
+        [dict[str, Any], dict[str, Any]], Any
+    ] | None = None
 
 
 def _git(repository: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
@@ -148,6 +157,7 @@ def _load_dependencies(repository_root: Path | None) -> MetaDriveDependencies:
         simulator_version=source_version,
         simulator_commit=simulator_commit,
         simulator_source=simulator_source,
+        challenge_environment_factory=create_challenge_environment,
     )
 
 
@@ -163,6 +173,7 @@ class MetaDriveAdapter:
         repository_root: Path | None = None,
         dependencies: MetaDriveDependencies | None = None,
     ) -> None:
+        self.version = "1.0"
         self._repository_root = repository_root
         self._dependencies = dependencies
         self._environment: Any | None = None
@@ -179,12 +190,13 @@ class MetaDriveAdapter:
         self._initial_route_raw = 0.0
         self._last_route_pct = 0.0
         self._collision_count = 0
+        self._challenge_payload: dict[str, Any] | None = None
 
     @property
     def evidence_config(self) -> dict[str, JsonValue]:
         if self._config is None or self._dependencies is None:
             raise RuntimeError("MetaDrive adapter must be reset before evidence config is read")
-        return {
+        evidence: dict[str, JsonValue] = {
             "headless": True,
             "agent_policy": "metadrive.policy.env_input_policy.EnvInputPolicy",
             "simulator_name": "metadrive",
@@ -215,6 +227,43 @@ class MetaDriveAdapter:
             },
             "metadrive_config": self._config,
         }
+        if self._challenge_payload is not None:
+            assert self._seed is not None
+            evidence["signal_availability"] = {
+                "front_distance_m": {
+                    "status": "AVAILABLE",
+                    "source": "hermes_challenge_manager.actual_oriented_bounding_boxes",
+                },
+                "front_relative_speed_mps": {
+                    "status": "AVAILABLE",
+                    "source": "hermes_challenge_manager.actual_velocity_projection",
+                },
+            }
+            evidence["challenge_manager"] = {
+                "environment_class": (
+                    "hermes.adapters.metadrive_challenge.HermesChallengeMetaDriveEnv"
+                ),
+                "manager_class": (
+                    "hermes.adapters.metadrive_challenge.HermesChallengeManager"
+                ),
+                "manager_version": MANAGER_VERSION,
+                "priority": 20,
+                "actor_name": ACTOR_NAME,
+                "actor_seed": self._seed,
+            }
+            evidence["challenge"] = self._challenge_payload
+            evidence["front_signal_mapping"] = {
+                "source": "HermesChallengeManager.actual_actor_ground_truth",
+                "distance": (
+                    "oriented_bounding_boxes_projected_into_ego_frame_"
+                    "bumper_gap_when_laterally_overlapping"
+                ),
+                "relative_speed": (
+                    "(actor_velocity-ego_velocity)_projected_onto_ego_heading"
+                ),
+                "no_lateral_overlap": None,
+            }
+        return evidence
 
     @property
     def simulator_name(self) -> str:
@@ -342,7 +391,20 @@ class MetaDriveAdapter:
         self._scenario = scenario
         self._seed = seed
         self._config = config
-        self._environment = dependencies.environment_factory(config)
+        if scenario.challenge is None:
+            self.version = "1.0"
+            self._challenge_payload = None
+            environment_factory = dependencies.environment_factory
+            self._environment = environment_factory(config)
+        else:
+            self.version = "1.1"
+            self._challenge_payload = scenario.challenge.model_dump(mode="json")
+            challenge_factory = dependencies.challenge_environment_factory
+            if challenge_factory is None:
+                raise RuntimeError(
+                    "MetaDrive challenge environment factory is unavailable in the selected runtime"
+                )
+            self._environment = challenge_factory(config, self._challenge_payload)
         reset_result = self._environment.reset(seed=seed)
         if not isinstance(reset_result, tuple) or len(reset_result) != 2:
             raise RuntimeError("MetaDrive reset did not return the expected (observation, info)")
@@ -394,7 +456,30 @@ class MetaDriveAdapter:
             offroad=False,
             destination_reached=False,
         )
-        return Observation(sequence=0, simulation_time_s=0.0, vehicle_state=state)
+        return Observation(
+            sequence=0,
+            simulation_time_s=0.0,
+            vehicle_state=state,
+            **self._challenge_observation_fields(),
+        )
+
+    def _challenge_observation_fields(self) -> dict[str, Any]:
+        if self._challenge_payload is None:
+            return {}
+        assert self._environment is not None
+        challenge_state = getattr(self._environment, "hermes_challenge_state", None)
+        if not isinstance(challenge_state, ChallengeActorState):
+            raise RuntimeError(
+                "MetaDrive challenge environment did not expose a typed actual-actor state"
+            )
+        return {
+            "front_distance_m": challenge_state.front_distance_m,
+            "front_relative_speed_mps": challenge_state.front_relative_speed_mps,
+            "challenge_actor_longitudinal_m": challenge_state.actor_longitudinal_m,
+            "challenge_actor_lateral_offset_m": challenge_state.actor_lateral_offset_m,
+            "challenge_actor_speed_mps": challenge_state.actor_speed_mps,
+            "challenge_phase": challenge_state.phase,
+        }
 
     def propose_idm_action(self) -> Action:
         if self._environment is None or self._dependencies is None or self._seed is None:
@@ -522,6 +607,7 @@ class MetaDriveAdapter:
             sequence=self._sequence,
             simulation_time_s=self._sequence * dt,
             vehicle_state=state,
+            **self._challenge_observation_fields(),
         )
         return StepResult(
             observation=observation,

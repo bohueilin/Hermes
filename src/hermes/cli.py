@@ -1,6 +1,7 @@
 """Command-line interface for Hermes."""
 
 from collections import Counter
+from functools import partial
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -10,6 +11,7 @@ from rich.table import Table
 from rich.text import Text
 from typer.core import TyperGroup
 
+from hermes.comparison.compare import compare_artifacts
 from hermes.doctor import (
     CheckResult,
     CheckStatus,
@@ -18,6 +20,8 @@ from hermes.doctor import (
 )
 from hermes.domain.enums import Verdict
 from hermes.domain.models import ArtifactVerification
+from hermes.evidence.canonical import canonical_json_bytes
+from hermes.evidence.verification import inspect_artifact
 from hermes.evidence.verification import verify_artifact as verify_stored_artifact
 from hermes.runtime.orchestrator import (
     RunConfigurationError,
@@ -26,6 +30,9 @@ from hermes.runtime.orchestrator import (
     execute_metadrive_run,
     run_metadrive_smoke,
 )
+from hermes.shields.config import ShieldConfigError, load_shield_config
+from hermes.shields.deterministic import DeterministicSafetyShield
+from hermes.shields.noop import NoOpShield
 
 EXIT_CODES = {
     Verdict.PASS: 0,
@@ -156,6 +163,14 @@ def run_command(
         bool,
         typer.Option("--headless", help="Require physics-only MetaDrive execution."),
     ] = False,
+    shield: Annotated[
+        str,
+        typer.Option("--shield", help="Runtime shield: noop or deterministic."),
+    ] = "noop",
+    shield_config: Annotated[
+        Path | None,
+        typer.Option("--shield-config", help="Versioned deterministic shield YAML."),
+    ] = None,
 ) -> None:
     """Run one bounded simulation-only scenario and publish verified evidence."""
     console = _phase_console()
@@ -172,6 +187,12 @@ def run_command(
     if simulator == "metadrive" and not headless:
         console.print("Configuration error: MetaDrive execution requires --headless")
         raise typer.Exit(code=40)
+    if shield not in {"noop", "deterministic"}:
+        console.print(f"Configuration error: unsupported shield {shield!r}")
+        raise typer.Exit(code=40)
+    if shield == "noop" and shield_config is not None:
+        console.print("Configuration error: --shield-config requires deterministic shield")
+        raise typer.Exit(code=40)
     repository_root = discover_hermes_repository_root()
     if repository_root is None:
         console.print("Configuration error: Hermes repository root is unavailable")
@@ -179,6 +200,15 @@ def run_command(
     default_gate = "gates.phase1.yaml" if simulator == "fake" else "gates.phase2.yaml"
     resolved_gate = gate_config or repository_root / "config" / default_gate
     resolved_artifacts = repository_root / "artifacts"
+    shield_factory = NoOpShield
+    if shield == "deterministic":
+        resolved_shield = shield_config or repository_root / "config" / "shield.phase3.yaml"
+        try:
+            deterministic_config = load_shield_config(resolved_shield)
+        except ShieldConfigError as exc:
+            console.print(f"Configuration error: {exc}", style="red")
+            raise typer.Exit(code=40) from exc
+        shield_factory = partial(DeterministicSafetyShield, deterministic_config)
     try:
         runner = execute_fake_run if simulator == "fake" else execute_metadrive_run
         outcome = runner(
@@ -188,6 +218,7 @@ def run_command(
             run_id=run_id,
             artifact_root=resolved_artifacts,
             repository_root=repository_root,
+            shield_factory=shield_factory,
         )
     except RunConfigurationError as exc:
         console.print(f"Configuration error: {exc}", style="red")
@@ -271,6 +302,90 @@ def verify_artifact_command(
     exit_code = EXIT_CODES[result.verdict]
     if exit_code:
         raise typer.Exit(code=exit_code)
+
+
+@app.command("compare")
+def compare_command(
+    baseline_dir: Annotated[Path, typer.Argument(help="Baseline evidence bundle.")],
+    candidate_dir: Annotated[Path, typer.Argument(help="Candidate evidence bundle.")],
+    output_format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: table or json."),
+    ] = "table",
+) -> None:
+    """Compare two independently verified, compatible stored evidence bundles."""
+    console = _phase_console()
+    if output_format not in {"table", "json"}:
+        console.print(f"Configuration error: unsupported format {output_format!r}")
+        raise typer.Exit(code=40)
+    try:
+        baseline = inspect_artifact(baseline_dir)
+        candidate = inspect_artifact(candidate_dir)
+    except Exception as exc:
+        console.print(
+            f"Operational error: artifact inspection crashed: {type(exc).__name__}: {exc}",
+            style="red",
+        )
+        raise typer.Exit(code=40) from exc
+
+    invalid = [
+        inspection
+        for inspection in (baseline, candidate)
+        if inspection.snapshot is None
+    ]
+    if invalid:
+        if output_format == "json":
+            typer.echo(
+                canonical_json_bytes(
+                    {
+                        "error": "INVALID_EVIDENCE",
+                        "artifacts": [
+                            inspection.verification.model_dump(mode="json")
+                            for inspection in invalid
+                        ],
+                    }
+                ).decode("utf-8")
+            )
+        else:
+            for inspection in invalid:
+                _render_artifact_verification(inspection.verification)
+        raise typer.Exit(code=30)
+
+    assert baseline.snapshot is not None
+    assert candidate.snapshot is not None
+    comparison = compare_artifacts(baseline.snapshot, candidate.snapshot)
+    if output_format == "json":
+        typer.echo(
+            canonical_json_bytes(comparison.model_dump(mode="json")).decode("utf-8")
+        )
+    else:
+        console.print(SCOPE_BANNER)
+        console.print(
+            "Comparable: "
+            + ("YES" if comparison.compatibility.comparable else "NO")
+        )
+        for reason in comparison.compatibility.reasons:
+            console.print(f"Incompatibility: {reason}", style="red")
+        for warning in comparison.compatibility.warnings:
+            console.print(f"Warning: {warning}", style="yellow")
+        if comparison.compatibility.comparable:
+            table = Table(title="Stored evidence comparison")
+            table.add_column("Dimension")
+            table.add_column("Status")
+            table.add_column("Baseline", overflow="fold")
+            table.add_column("Candidate", overflow="fold")
+            table.add_column("Explanation", overflow="fold")
+            for dimension in comparison.dimensions:
+                table.add_row(
+                    dimension.name,
+                    dimension.status.value,
+                    str(dimension.baseline_value),
+                    str(dimension.candidate_value),
+                    dimension.explanation,
+                )
+            console.print(table)
+    if not comparison.compatibility.comparable:
+        raise typer.Exit(code=40)
 
 
 if __name__ == "__main__":

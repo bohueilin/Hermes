@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import pytest
 
 from hermes.domain.enums import TerminationReason
-from hermes.domain.models import Action, RunContext, VehicleState
+from hermes.domain.models import Action, RunContext, ScenarioDefinition, VehicleState
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
 from hermes.evidence.trace import (
     GENESIS_HASH,
@@ -14,6 +15,7 @@ from hermes.evidence.trace import (
     verify_complete_trace,
     verify_event_chain,
 )
+from hermes.scenarios.loader import load_scenario
 
 
 def _context(*, horizon_steps: int = 20) -> RunContext:
@@ -82,6 +84,125 @@ def _event(
             "route_progress_pct": float((sequence + 1) * 10),
         },
         previous_hash=previous_hash,
+    )
+
+
+def _shield_event(
+    *,
+    candidate: Action,
+    executed: Action,
+    reasons: tuple[str, ...],
+):
+    context = _context(horizon_steps=1).model_copy(
+        update={"shield_name": "deterministic"}
+    )
+    return create_trace_event(
+        sequence=0,
+        simulation_time_s=0.1,
+        run_context=context,
+        observation_summary={
+            "input_sequence": 0,
+            "input_simulation_time_s": 0.0,
+            "speed_mps": 0.0,
+            "lateral_offset_m": 0.0,
+            "route_progress_pct": 0.0,
+            "observation_age_s": 0.0,
+        },
+        candidate_action=candidate,
+        executed_action=executed,
+        override_reasons=reasons,
+        vehicle_state=VehicleState(
+            position_m=0.0,
+            speed_mps=0.0,
+            acceleration_mps2=0.0,
+            lateral_offset_m=0.0,
+            route_progress_pct=0.0,
+            collision_count=0,
+            offroad=False,
+            destination_reached=False,
+        ),
+        policy_latency_ms=10.0,
+        latency_source="simulated",
+        terminated=False,
+        truncated=True,
+        termination_reason=TerminationReason.HORIZON,
+        raw_facts={
+            "collision": False,
+            "collision_count": 0,
+            "offroad": False,
+            "destination_reached": False,
+            "route_progress_available": True,
+            "route_progress_pct": 0.0,
+        },
+        previous_hash=GENESIS_HASH,
+    )
+
+
+def _challenge_event(
+    scenario: ScenarioDefinition,
+    *,
+    summary_updates: dict[str, object] | None = None,
+):
+    assert scenario.challenge is not None
+    initial_gap = scenario.challenge.initial_gap_m
+    actor_speed = scenario.challenge.actor_speed_mps
+    context = _context(horizon_steps=scenario.control.horizon_steps).model_copy(
+        update={"adapter_name": "metadrive", "policy_name": "metadrive-idm"}
+    )
+    summary = {
+        "input_sequence": 0,
+        "input_simulation_time_s": 0.0,
+        "speed_mps": 0.0,
+        "lateral_offset_m": 0.0,
+        "route_progress_pct": 0.0,
+        "observation_age_s": 0.0,
+        "front_distance_m": initial_gap,
+        "front_relative_speed_mps": actor_speed,
+        "challenge_actor_longitudinal_m": initial_gap + 4.515,
+        "challenge_actor_lateral_offset_m": 0.0,
+        "challenge_actor_speed_mps": actor_speed,
+        "challenge_phase": "PRE_TRIGGER",
+        "result_front_distance_m": initial_gap,
+        "result_front_relative_speed_mps": actor_speed,
+        "result_challenge_actor_longitudinal_m": initial_gap + 4.515,
+        "result_challenge_actor_lateral_offset_m": 0.0,
+        "result_challenge_actor_speed_mps": actor_speed,
+        "result_challenge_phase": "PRE_TRIGGER",
+    }
+    summary.update(summary_updates or {})
+    action = Action(steering=0.0, throttle=0.0, brake=0.0)
+    return create_trace_event(
+        sequence=0,
+        simulation_time_s=0.1,
+        run_context=context,
+        observation_summary=summary,
+        candidate_action=action,
+        executed_action=action,
+        override_reasons=(),
+        vehicle_state=VehicleState(
+            position_m=20.0,
+            speed_mps=0.0,
+            acceleration_mps2=0.0,
+            lateral_offset_m=0.0,
+            route_progress_pct=100.0,
+            collision_count=0,
+            offroad=False,
+            destination_reached=True,
+        ),
+        policy_latency_ms=10.0,
+        latency_source="simulated",
+        terminated=True,
+        truncated=False,
+        termination_reason=TerminationReason.DESTINATION_REACHED,
+        raw_facts={
+            "collision": False,
+            "collision_count": 0,
+            "offroad": False,
+            "destination_reached": True,
+            "route_progress_available": True,
+            "route_progress_pct": 100.0,
+        },
+        previous_hash=GENESIS_HASH,
     )
 
 
@@ -172,3 +293,66 @@ def test_complete_trace_rejects_more_events_than_configured_horizon() -> None:
 
     with pytest.raises(TraceIntegrityError, match="configured horizon"):
         verify_complete_trace((first, second))
+
+
+@pytest.mark.parametrize(
+    "reasons",
+    [
+        ("UNKNOWN_REASON",),
+        ("SPEED_CAP", "SPEED_CAP"),
+        ("SPEED_CAP", "TTC_BELOW_THRESHOLD"),
+    ],
+)
+def test_deterministic_shield_reasons_must_be_known_unique_and_stably_ordered(
+    reasons: tuple[str, ...],
+) -> None:
+    event = _shield_event(
+        candidate=Action(steering=0.0, throttle=0.5, brake=0.0),
+        executed=Action(steering=0.0, throttle=0.0, brake=1.0),
+        reasons=reasons,
+    )
+
+    with pytest.raises(TraceIntegrityError, match="override reasons"):
+        verify_complete_trace((event,))
+
+
+def test_deterministic_shield_reason_requires_an_actual_action_change() -> None:
+    action = Action(steering=0.0, throttle=0.0, brake=1.0)
+    event = _shield_event(
+        candidate=action,
+        executed=action,
+        reasons=("TTC_BELOW_THRESHOLD",),
+    )
+
+    with pytest.raises(TraceIntegrityError, match="override reasons"):
+        verify_complete_trace((event,))
+
+
+@pytest.mark.parametrize(
+    ("updates", "message"),
+    [
+        ({"front_relative_speed_mps": None}, "front-object evidence must be paired"),
+        ({"front_distance_m": -1.0}, "front_distance_m is negative"),
+        ({"challenge_actor_speed_mps": -1.0}, "actor_speed_mps is negative"),
+        ({"challenge_phase": "INVENTED"}, "challenge_phase is unsupported"),
+        ({"challenge_phase": "BRAKING"}, "contradicts the scenario schedule"),
+        ({"result_challenge_phase": "BRAKING"}, "contradicts the scenario schedule"),
+        (
+            {"challenge_actor_speed_mps": 5.0, "front_relative_speed_mps": 5.0},
+            "initial challenge actor speed",
+        ),
+        ({"front_distance_m": 14.0}, "initial front gap"),
+    ],
+)
+def test_challenge_observation_summary_rejects_false_or_incomplete_actor_evidence(
+    repository_root: Path,
+    updates: dict[str, object],
+    message: str,
+) -> None:
+    scenario = load_scenario(
+        repository_root / "scenarios" / "metadrive_lead_vehicle_hard_brake.yaml"
+    )
+    event = _challenge_event(scenario, summary_updates=updates)
+
+    with pytest.raises(TraceIntegrityError, match=message):
+        verify_complete_trace((event,), scenario)

@@ -12,12 +12,15 @@ Hermes is for simulation and closed-lab learning only. It must not connect to a 
 
 ## Current status
 
-Phase 0 remains intact, Phase 1 is committed, and the Phase 2 MetaDrive headless adapter is
-implemented on the feature branch. The same simulator-neutral evidence pipeline now supports a
-deterministic fake adapter and a pinned MetaDrive 0.4.3 physics run with an installed IDM policy.
+Phase 0 remains intact, and the committed Phase 1 and Phase 2 foundations support the Phase 3
+implementation on the feature branch. The same simulator-neutral evidence pipeline now supports a
+deterministic fake adapter, a pinned MetaDrive 0.4.3 physics run with an installed IDM policy, and
+trace-bound deterministic-shield decisions for two bounded MetaDrive challenge scenarios.
 
 The fake adapter is an architectural test double, not a vehicle-physics model. MetaDrive remains
-lazy and optional: fake runs and stored artifact verification do not import or launch it.
+lazy and optional: fake runs, stored artifact verification, and stored artifact comparison do not
+import or launch it. The cut-in challenge is explicitly a scripted kinematic replay with no behavior
+realism claim.
 
 ## Canonical identity
 
@@ -117,6 +120,56 @@ alone cannot pass. The installed IDM target (`8.0 m/s` in the nominal scenario),
 changes, enabled deceleration, float32 action conversion, and adapter signal mappings are bound into
 the execution context.
 
+## Phase 3 shield and challenge commands
+
+Run a challenge once with the no-op baseline and once with the deterministic shield, using unique
+run IDs because Hermes never overwrites an artifact directory:
+
+```bash
+hermes run \
+  --simulator metadrive \
+  --scenario scenarios/metadrive_lead_vehicle_hard_brake.yaml \
+  --policy metadrive-idm \
+  --seed 7 \
+  --run-id phase3-lead-baseline \
+  --headless
+
+hermes run \
+  --simulator metadrive \
+  --scenario scenarios/metadrive_lead_vehicle_hard_brake.yaml \
+  --policy metadrive-idm \
+  --seed 7 \
+  --run-id phase3-lead-shielded \
+  --headless \
+  --shield deterministic \
+  --shield-config config/shield.phase3.yaml
+
+hermes verify-artifact artifacts/phase3-lead-baseline
+hermes verify-artifact artifacts/phase3-lead-shielded
+hermes compare artifacts/phase3-lead-baseline artifacts/phase3-lead-shielded
+```
+
+The exact shield reasons are `TTC_BELOW_THRESHOLD`, `SPEED_CAP`, `STALE_OBSERVATION`,
+`BOUNDARY_RISK`, `EMERGENCY_STOP`, and `ACTUATION_DELAY_COMPENSATION`. All thresholds are strict,
+versioned, and labeled illustrative. Every event preserves both candidate and executed actions;
+reasons are present exactly when an override changes the action. Stored verification replays the
+shield decision from trace-bound inputs without rerunning MetaDrive.
+
+The second challenge is `scenarios/metadrive_cut_in_near_field.yaml`. Its actor movement is recorded
+as `scripted_kinematic_replay` with `behavior_realism_claim: false`; it must not be presented as
+native or realistic traffic behavior. Challenge front gap and relative speed come from the named
+actor's actual oriented geometry and velocity in the simulator. TTC exists only for a laterally
+overlapping front actor with a negative, closing relative speed; missing TTC remains
+`NOT_AVAILABLE`. Challenge events preserve both policy-input and post-step actor/front state, so
+minimum TTC includes the terminal observation while stored shield replay remains bound to the
+actual policy input.
+
+`hermes compare` first independently verifies both stored bundles. It returns `30` for invalid
+evidence and `40` for incompatible valid evidence or configuration/operational failure. Compatible
+comparisons report verdict, hard failures, collision, TTC, progress, comfort, latency, intervention,
+and evidence-availability trade-offs; intervention counts are descriptive rather than ordinal.
+See `docs/phase3-safety-shield.md` for exact rules, compatibility requirements, and limitations.
+
 ## Evidence bundle
 
 Every completed run must preserve:
@@ -141,8 +194,8 @@ digests, event semantics, metrics, complete findings, and the recomputed gate re
 rerunning a simulator. Completed-run publication uses a platform-native atomic no-replace rename;
 Hermes fails safely if that primitive is unavailable. Verification captures required files through
 no-follow directory-relative descriptors and rejects a bundle that changes during capture. It also
-checks episode-horizon completeness, observation-summary consistency, and the fake policy's
-explicitly simulated latency source.
+checks episode-horizon completeness, observation-summary consistency, the fake policy's explicitly
+simulated latency source, and exact deterministic-shield replay when applicable.
 
 ## Development workflow
 
@@ -165,9 +218,9 @@ Read before editing:
 
 1. Deterministic fake-simulator evidence core (implemented and committed in Phase 1).
 2. Bounded MetaDrive headless adapter (implemented in Phase 2).
-3. Deterministic runtime shield and challenge scenarios.
-4. Fault injection, comparison, CI, and demo hardening.
-5. Later: dashboard, CARLA, ROS 2/Autoware, RL experiments, and hardware-aware validation.
+3. Deterministic runtime shield, two bounded challenge scenarios, and stored evidence comparison
+   (implemented on the feature branch; acceptance depends on the documented gates and observed
+   artifacts).
 
 Later phases may begin only after their predecessor gates pass.
 

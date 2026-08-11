@@ -13,6 +13,7 @@ from hermes.domain.models import (
     VehicleState,
 )
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
+from hermes.shields.deterministic import SUPPORTED_OVERRIDE_REASONS
 
 GENESIS_HASH = "0" * 64
 
@@ -107,6 +108,27 @@ _OBSERVATION_SUMMARY_FIELDS = {
     "route_progress_pct",
     "observation_age_s",
 }
+_CHALLENGE_OBSERVATION_SUMMARY_FIELDS = _OBSERVATION_SUMMARY_FIELDS | {
+    "front_distance_m",
+    "front_relative_speed_mps",
+    "challenge_actor_longitudinal_m",
+    "challenge_actor_lateral_offset_m",
+    "challenge_actor_speed_mps",
+    "challenge_phase",
+    "result_front_distance_m",
+    "result_front_relative_speed_mps",
+    "result_challenge_actor_longitudinal_m",
+    "result_challenge_actor_lateral_offset_m",
+    "result_challenge_actor_speed_mps",
+    "result_challenge_phase",
+}
+_CHALLENGE_PHASES = {
+    "PRE_TRIGGER",
+    "BRAKING",
+    "RECOVERY",
+    "CUT_IN",
+    "POST_CUT_IN",
+}
 
 
 def _summary_number(event: TraceEvent, field_name: str) -> float:
@@ -122,17 +144,153 @@ def _summary_number(event: TraceEvent, field_name: str) -> float:
     return float(value)
 
 
+def _verify_front_actor_fields(event: TraceEvent, *, prefix: str) -> None:
+    distance_name = f"{prefix}front_distance_m"
+    relative_name = f"{prefix}front_relative_speed_mps"
+    distance = event.observation_summary[distance_name]
+    relative_speed = event.observation_summary[relative_name]
+    if (distance is None) != (relative_speed is None):
+        raise TraceIntegrityError(
+            f"observation summary {prefix}front-object evidence must be paired at sequence "
+            f"{event.sequence}"
+        )
+    if distance is not None:
+        if _summary_number(event, distance_name) < 0.0:
+            raise TraceIntegrityError(
+                f"observation summary {distance_name} is negative at sequence "
+                f"{event.sequence}"
+            )
+        _summary_number(event, relative_name)
+    _summary_number(event, f"{prefix}challenge_actor_longitudinal_m")
+    _summary_number(event, f"{prefix}challenge_actor_lateral_offset_m")
+    if _summary_number(event, f"{prefix}challenge_actor_speed_mps") < 0.0:
+        raise TraceIntegrityError(
+            f"observation summary {prefix}challenge_actor_speed_mps is negative at sequence "
+            f"{event.sequence}"
+        )
+    phase = event.observation_summary[f"{prefix}challenge_phase"]
+    if not isinstance(phase, str) or phase not in _CHALLENGE_PHASES:
+        raise TraceIntegrityError(
+            f"observation summary {prefix}challenge_phase is unsupported at sequence "
+            f"{event.sequence}"
+        )
+
+
+def _expected_challenge_phase(
+    scenario: ScenarioDefinition,
+    sequence: int,
+    *,
+    result: bool,
+) -> str:
+    challenge = scenario.challenge
+    if challenge is None:
+        raise TraceIntegrityError("schema 2.0 challenge configuration is unavailable")
+    if challenge.kind == "lead_vehicle_hard_brake":
+        trigger = challenge.trigger_step
+        end = trigger + challenge.brake_duration_steps
+        if sequence < trigger or (not result and sequence == trigger):
+            return "PRE_TRIGGER"
+        if sequence < end or (not result and sequence == end):
+            return "BRAKING"
+        return "RECOVERY"
+    trigger = challenge.trigger_step
+    end = trigger + challenge.transition_steps
+    if sequence < trigger or (not result and sequence == trigger):
+        return "PRE_TRIGGER"
+    if sequence < end or (not result and sequence == end):
+        return "CUT_IN"
+    return "POST_CUT_IN"
+
+
+def _challenge_values_match(left: object, right: object) -> bool:
+    if isinstance(left, bool) or isinstance(right, bool):
+        return left == right
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        return math.isclose(float(left), float(right), rel_tol=0.0, abs_tol=1e-12)
+    return left == right
+
+
 def _verify_observation_summary(
     events: tuple[TraceEvent, ...],
     index: int,
     scenario: ScenarioDefinition | None,
 ) -> None:
     event = events[index]
-    if set(event.observation_summary) != _OBSERVATION_SUMMARY_FIELDS:
+    expected_fields = (
+        _CHALLENGE_OBSERVATION_SUMMARY_FIELDS
+        if scenario is not None and scenario.schema_version == "2.0"
+        else _OBSERVATION_SUMMARY_FIELDS
+    )
+    if set(event.observation_summary) != expected_fields:
         raise TraceIntegrityError(
             f"observation summary fields are incomplete or unsupported at sequence "
             f"{event.sequence}"
         )
+    if expected_fields is _CHALLENGE_OBSERVATION_SUMMARY_FIELDS:
+        assert scenario is not None and scenario.challenge is not None
+        _verify_front_actor_fields(event, prefix="")
+        _verify_front_actor_fields(event, prefix="result_")
+        expected_input_phase = _expected_challenge_phase(
+            scenario, event.sequence, result=False
+        )
+        expected_result_phase = _expected_challenge_phase(
+            scenario, event.sequence, result=True
+        )
+        if event.observation_summary["challenge_phase"] != expected_input_phase:
+            raise TraceIntegrityError(
+                "observation summary challenge_phase contradicts the scenario schedule at "
+                f"sequence {event.sequence}"
+            )
+        if event.observation_summary["result_challenge_phase"] != expected_result_phase:
+            raise TraceIntegrityError(
+                "observation summary result_challenge_phase contradicts the scenario schedule "
+                f"at sequence {event.sequence}"
+            )
+        if event.sequence == 0:
+            actor_speed = _summary_number(event, "challenge_actor_speed_mps")
+            if not math.isclose(
+                actor_speed,
+                scenario.challenge.actor_speed_mps,
+                rel_tol=0.0,
+                abs_tol=1e-6,
+            ):
+                raise TraceIntegrityError(
+                    "observation summary initial challenge actor speed contradicts the "
+                    "scenario at sequence 0"
+                )
+            initial_distance = event.observation_summary["front_distance_m"]
+            if scenario.challenge.kind == "lead_vehicle_hard_brake":
+                if initial_distance is None or not math.isclose(
+                    float(initial_distance),
+                    scenario.challenge.initial_gap_m,
+                    rel_tol=0.0,
+                    abs_tol=1e-6,
+                ):
+                    raise TraceIntegrityError(
+                        "observation summary initial front gap contradicts the lead challenge"
+                    )
+            elif initial_distance is not None:
+                raise TraceIntegrityError(
+                    "observation summary cut-in actor must start outside front overlap"
+                )
+        if index > 0:
+            prior_summary = events[index - 1].observation_summary
+            for field_name in (
+                "front_distance_m",
+                "front_relative_speed_mps",
+                "challenge_actor_longitudinal_m",
+                "challenge_actor_lateral_offset_m",
+                "challenge_actor_speed_mps",
+                "challenge_phase",
+            ):
+                if not _challenge_values_match(
+                    event.observation_summary[field_name],
+                    prior_summary[f"result_{field_name}"],
+                ):
+                    raise TraceIntegrityError(
+                        f"observation summary {field_name} disagrees with the prior result "
+                        f"at sequence {event.sequence}"
+                    )
     input_sequence = event.observation_summary["input_sequence"]
     if isinstance(input_sequence, bool) or not isinstance(input_sequence, int):
         raise TraceIntegrityError(
@@ -254,7 +412,31 @@ def verify_complete_trace(
             raise TraceIntegrityError(
                 f"no-op shield evidence is contradictory at sequence {event.sequence}"
             )
-        if (
+        if event.run_context.shield_name == "deterministic":
+            reason_positions = []
+            for reason in event.override_reasons:
+                try:
+                    reason_positions.append(SUPPORTED_OVERRIDE_REASONS.index(reason))
+                except ValueError as exc:
+                    raise TraceIntegrityError(
+                        f"deterministic shield override reasons are unsupported at sequence "
+                        f"{event.sequence}"
+                    ) from exc
+            if (
+                len(set(event.override_reasons)) != len(event.override_reasons)
+                or reason_positions != sorted(reason_positions)
+            ):
+                raise TraceIntegrityError(
+                    "deterministic shield override reasons are duplicated or out of order "
+                    f"at sequence {event.sequence}"
+                )
+            action_changed = event.candidate_action != event.executed_action
+            if bool(event.override_reasons) != action_changed:
+                raise TraceIntegrityError(
+                    "deterministic shield override reasons must exactly match an action "
+                    f"change at sequence {event.sequence}"
+                )
+        elif (
             event.run_context.shield_name != "noop"
             and event.candidate_action != event.executed_action
             and not event.override_reasons

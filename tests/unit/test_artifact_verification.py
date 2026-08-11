@@ -14,6 +14,8 @@ from hermes.adapters.fake import FakeSimulatorAdapter
 from hermes.domain.enums import IntegrityStatus, Verdict
 from hermes.evidence.verification import verify_artifact
 from hermes.runtime.orchestrator import execute_fake_run
+from hermes.shields.config import load_shield_config
+from hermes.shields.deterministic import DeterministicSafetyShield
 
 
 def _nominal_bundle(repository_root: Path, tmp_path: Path) -> Path:
@@ -33,6 +35,21 @@ def _copy_bundle(source: Path, tmp_path: Path, name: str) -> Path:
     target = tmp_path / name
     shutil.copytree(source, target)
     return target
+
+
+def _shield_bundle(repository_root: Path, tmp_path: Path) -> Path:
+    artifacts = tmp_path / "shield-artifacts"
+    artifacts.mkdir()
+    config = load_shield_config(repository_root / "config" / "shield.phase3.yaml")
+    return execute_fake_run(
+        scenario_path=repository_root / "scenarios" / "fake_nominal.yaml",
+        gate_config_path=repository_root / "config" / "gates.phase1.yaml",
+        seed=7,
+        run_id="shield-source",
+        artifact_root=artifacts,
+        repository_root=repository_root,
+        shield_factory=lambda: DeterministicSafetyShield(config),
+    ).artifact_path
 
 
 def _canonical(value) -> bytes:
@@ -373,6 +390,32 @@ def test_observation_summary_must_match_prior_executed_state(
 
     assert result.verdict is Verdict.INVALID_EVIDENCE
     assert "observation summary speed_mps disagrees" in " ".join(result.errors)
+
+
+def test_stored_shield_replay_rejects_coherently_rehashed_forged_override(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    source = _shield_bundle(repository_root, tmp_path)
+    tampered = _copy_bundle(source, tmp_path, "forged-shield-decision")
+    events = [
+        json.loads(line)
+        for line in (tampered / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    events[0]["executed_action"] = {
+        "steering": events[0]["candidate_action"]["steering"],
+        "throttle": 0.0,
+        "brake": 1.0,
+    }
+    events[0]["override_reasons"] = ["SPEED_CAP"]
+    _rehash_events(tampered, events)
+
+    result = verify_artifact(tampered)
+
+    assert result.verdict is Verdict.INVALID_EVIDENCE
+    assert "stored deterministic shield decision mismatch at sequence 0" in " ".join(
+        result.errors
+    )
 
 
 def test_fake_latency_cannot_be_relabelled_as_measured_performance(

@@ -1,0 +1,26 @@
+schema_version: "2.0"
+name: lead_vehicle_hard_brake
+version: "1.0"
+description: Deterministic MetaDrive lead actor applying a scheduled full-brake command.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 300
+  target_speed_mps: 8.0
+initial_state:
+  speed_mps: 0.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 20.0
+  boundary_tolerance_m: 1.5
+hazards: {}
+challenge:
+  kind: lead_vehicle_hard_brake
+  actor_control_mode: metadrive_dynamic_action
+  behavior_realism_claim: false
+  initial_gap_m: 10.0
+  actor_speed_mps: 8.0
+  trigger_step: 30
+  brake_duration_steps: 15
+  brake_command: -1.0
+  resume_throttle_command: 1.0

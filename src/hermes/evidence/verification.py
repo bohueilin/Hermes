@@ -7,6 +7,7 @@ import math
 import os
 import re
 import stat
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -24,9 +25,11 @@ from hermes.domain.models import (
     ExecutionContext,
     FindingsDocument,
     GateResult,
+    Observation,
     RunMetrics,
     ScenarioDefinition,
     TraceEvent,
+    VehicleState,
 )
 from hermes.evidence.artifacts import (
     COMPANION_DIGEST_FILES,
@@ -39,6 +42,7 @@ from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
 from hermes.evidence.metrics import compute_metrics
 from hermes.evidence.trace import TraceIntegrityError, verify_complete_trace
 from hermes.gates.config import (
+    GateConfig,
     GateConfigError,
     gate_config_digest,
     parse_gate_config_yaml,
@@ -51,6 +55,8 @@ from hermes.scenarios.loader import (
     resolved_scenario_yaml,
     scenario_digest,
 )
+from hermes.shields.config import ShieldConfig
+from hermes.shields.deterministic import DeterministicSafetyShield
 from hermes.verifiers import PHASE1_VERIFIER_IDENTITIES, run_phase1_verifiers
 
 MAX_ARTIFACT_FILE_BYTES = 16 * 1024 * 1024
@@ -58,6 +64,29 @@ MAX_ARTIFACT_TOTAL_BYTES = 64 * 1024 * 1024
 MAX_EVENT_COUNT = 10_000
 MAX_EVENT_LINE_BYTES = 1 * 1024 * 1024
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
+
+
+@dataclass(frozen=True, slots=True)
+class VerifiedArtifactSnapshot:
+    """Parsed immutable evidence captured and verified from one descriptor snapshot."""
+
+    path: Path
+    manifest: ArtifactManifest
+    context: ExecutionContext
+    scenario: ScenarioDefinition
+    gate_config: GateConfig
+    events: tuple[TraceEvent, ...]
+    metrics: RunMetrics
+    findings: FindingsDocument
+    verdict: GateResult
+
+
+@dataclass(frozen=True, slots=True)
+class ArtifactInspection:
+    """Stored verification result and its snapshot when internally consistent."""
+
+    verification: ArtifactVerification
+    snapshot: VerifiedArtifactSnapshot | None
 
 
 class _DuplicateJsonKey(ValueError):
@@ -297,12 +326,64 @@ def _profile_errors(
 ) -> list[str]:
     """Validate supported runtime profiles without importing a simulator or policy."""
     errors: list[str] = []
-    if context.shield.name != "noop" or context.shield.version != "1.0":
+    shield: DeterministicSafetyShield | None = None
+    if context.shield.name == "noop" and context.shield.version == "1.0":
+        if canonical_json_bytes(context.shield.config) != canonical_json_bytes({}):
+            errors.append("execution-context.json no-op shield configuration is unsupported")
+    elif context.shield.name == "deterministic" and context.shield.version == "1.0":
+        try:
+            shield_config = ShieldConfig.model_validate(context.shield.config)
+            shield = DeterministicSafetyShield(shield_config)
+            shield.reset(scenario, context.run_context.seed)
+        except (ValidationError, ValueError) as exc:
+            errors.append(
+                "execution-context.json deterministic shield configuration is unsupported: "
+                f"{exc}"
+            )
+    else:
         errors.append("execution-context.json contains an unsupported shield")
-    if canonical_json_bytes(context.shield.config) != canonical_json_bytes({}):
-        errors.append("execution-context.json no-op shield configuration is unsupported")
     if context.adapter.name != scenario.adapter:
         errors.append("scenario adapter does not match execution-context.json adapter")
+
+    if shield is not None and events is not None:
+        for event in events:
+            summary = event.observation_summary
+            try:
+                observation = Observation(
+                    sequence=summary["input_sequence"],
+                    simulation_time_s=summary["input_simulation_time_s"],
+                    vehicle_state=VehicleState(
+                        position_m=0.0,
+                        speed_mps=summary["speed_mps"],
+                        acceleration_mps2=0.0,
+                        lateral_offset_m=summary["lateral_offset_m"],
+                        route_progress_pct=summary["route_progress_pct"],
+                        collision_count=0,
+                        offroad=False,
+                        destination_reached=False,
+                    ),
+                    front_distance_m=summary.get("front_distance_m"),
+                    front_relative_speed_mps=summary.get("front_relative_speed_mps"),
+                    observation_age_s=summary["observation_age_s"],
+                )
+                expected_action, expected_reasons = shield.apply(
+                    observation, event.candidate_action
+                )
+            except (KeyError, ValidationError, ValueError, RuntimeError) as exc:
+                errors.append(
+                    "stored deterministic shield replay failed at sequence "
+                    f"{event.sequence}: {exc}"
+                )
+                break
+            if (
+                event.executed_action != expected_action
+                or event.override_reasons != expected_reasons
+            ):
+                errors.append(
+                    "stored deterministic shield decision mismatch at sequence "
+                    f"{event.sequence}"
+                )
+                break
 
     expected_latency = scenario.control.simulated_policy_latency_ms
     if context.adapter.name == "fake":
@@ -399,6 +480,45 @@ def _profile_errors(
             },
             "metadrive_config": expected_metadrive_config,
         }
+        expected_adapter_version = "1.0"
+        if scenario.challenge is not None:
+            expected_adapter_version = "1.1"
+            expected_adapter_config["signal_availability"] = {
+                "front_distance_m": {
+                    "status": "AVAILABLE",
+                    "source": (
+                        "hermes_challenge_manager.actual_oriented_bounding_boxes"
+                    ),
+                },
+                "front_relative_speed_mps": {
+                    "status": "AVAILABLE",
+                    "source": "hermes_challenge_manager.actual_velocity_projection",
+                },
+            }
+            expected_adapter_config["challenge_manager"] = {
+                "environment_class": (
+                    "hermes.adapters.metadrive_challenge.HermesChallengeMetaDriveEnv"
+                ),
+                "manager_class": (
+                    "hermes.adapters.metadrive_challenge.HermesChallengeManager"
+                ),
+                "manager_version": "1.0",
+                "priority": 20,
+                "actor_name": "hermes_challenge_actor",
+                "actor_seed": context.run_context.seed,
+            }
+            expected_adapter_config["challenge"] = scenario.challenge.model_dump(mode="json")
+            expected_adapter_config["front_signal_mapping"] = {
+                "source": "HermesChallengeManager.actual_actor_ground_truth",
+                "distance": (
+                    "oriented_bounding_boxes_projected_into_ego_frame_"
+                    "bumper_gap_when_laterally_overlapping"
+                ),
+                "relative_speed": (
+                    "(actor_velocity-ego_velocity)_projected_onto_ego_heading"
+                ),
+                "no_lateral_overlap": None,
+            }
         expected_policy_config = {
             "backend": "metadrive.policy.idm_policy.IDMPolicy",
             "backend_version": SUPPORTED_METADRIVE_VERSION,
@@ -410,7 +530,7 @@ def _profile_errors(
             "target_speed_km_h": scenario.control.target_speed_mps * 3.6,
             "target_speed_mps": scenario.control.target_speed_mps,
         }
-        if context.adapter.version != "1.0":
+        if context.adapter.version != expected_adapter_version:
             errors.append(
                 "execution-context.json contains an unsupported MetaDrive adapter version"
             )
@@ -466,13 +586,14 @@ def _profile_errors(
     return errors
 
 
-def verify_artifact(artifact_path: Path) -> ArtifactVerification:
-    """Recompute a complete evidence decision from stored bytes without simulator execution."""
-    path = Path(os.path.abspath(os.fspath(artifact_path.expanduser())))
-
-    payloads, errors = _read_exact_files(path)
+def _inspect_captured_artifact(
+    path: Path,
+    payloads: dict[str, bytes],
+    errors: list[str],
+) -> ArtifactInspection:
+    """Verify and parse one already captured immutable artifact payload set."""
     if set(REQUIRED_ARTIFACT_FILES) - payloads.keys():
-        return _invalid(path, errors)
+        return ArtifactInspection(_invalid(path, errors), None)
 
     observed_bundle = payloads["bundle.sha256"]
     try:
@@ -695,14 +816,25 @@ def verify_artifact(artifact_path: Path) -> ArtifactVerification:
             errors.append("verdict.json does not match the recomputed release gate")
 
     if errors:
-        return _invalid(
-            path,
-            errors,
-            first_mismatch_sequence=first_mismatch_sequence,
-            trace_digest=trace_digest,
+        return ArtifactInspection(
+            _invalid(
+                path,
+                errors,
+                first_mismatch_sequence=first_mismatch_sequence,
+                trace_digest=trace_digest,
+            ),
+            None,
         )
     assert recomputed_verdict is not None
-    return ArtifactVerification(
+    assert manifest is not None
+    assert context is not None
+    assert scenario is not None
+    assert gate_config is not None
+    assert events is not None
+    assert metrics is not None
+    assert findings_document is not None
+    assert stored_verdict is not None
+    verification = ArtifactVerification(
         artifact_path=str(path),
         integrity=IntegrityStatus.INTERNALLY_CONSISTENT,
         authenticity=AuthenticityStatus.NOT_AUTHENTICATED,
@@ -712,3 +844,29 @@ def verify_artifact(artifact_path: Path) -> ArtifactVerification:
         supporting_finding_ids=recomputed_verdict.supporting_finding_ids,
         residual_limitations=recomputed_verdict.residual_limitations,
     )
+    return ArtifactInspection(
+        verification=verification,
+        snapshot=VerifiedArtifactSnapshot(
+            path=path,
+            manifest=manifest,
+            context=context,
+            scenario=scenario,
+            gate_config=gate_config,
+            events=events,
+            metrics=metrics,
+            findings=findings_document,
+            verdict=stored_verdict,
+        ),
+    )
+
+
+def inspect_artifact(artifact_path: Path) -> ArtifactInspection:
+    """Capture and verify an artifact once, returning a comparison-safe snapshot."""
+    path = Path(os.path.abspath(os.fspath(artifact_path.expanduser())))
+    payloads, errors = _read_exact_files(path)
+    return _inspect_captured_artifact(path, payloads, errors)
+
+
+def verify_artifact(artifact_path: Path) -> ArtifactVerification:
+    """Recompute a complete evidence decision from stored bytes without simulator execution."""
+    return inspect_artifact(artifact_path).verification

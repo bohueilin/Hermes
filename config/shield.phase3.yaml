@@ -1,0 +1,12 @@
+schema_version: "1.0"
+name: phase3_deterministic
+version: "1.0"
+label: illustrative_simulation_only_not_real_vehicle_limits
+ttc_threshold_s: 2.0
+speed_cap_mps: 5.5
+max_observation_age_s: 0.2
+boundary_margin_m: 0.3
+actuation_delay_compensation_s: 0.25
+emergency_stop_active: false
+full_brake_command: 1.0
+boundary_steering_command: 0.5

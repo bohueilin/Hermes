@@ -70,6 +70,68 @@ class SimulatorSmokeOutcome:
     steps_completed: int
 
 
+def _observation_summary(observation, result_observation, scenario) -> dict[str, object]:
+    summary: dict[str, object] = {
+        "input_sequence": observation.sequence,
+        "input_simulation_time_s": observation.simulation_time_s,
+        "speed_mps": observation.vehicle_state.speed_mps,
+        "lateral_offset_m": observation.vehicle_state.lateral_offset_m,
+        "route_progress_pct": observation.vehicle_state.route_progress_pct,
+        "observation_age_s": observation.observation_age_s,
+    }
+    if scenario.schema_version == "2.0":
+        for label, observed in (
+            ("input", observation),
+            ("result", result_observation),
+        ):
+            actor_values = (
+                observed.challenge_actor_longitudinal_m,
+                observed.challenge_actor_lateral_offset_m,
+                observed.challenge_actor_speed_mps,
+                observed.challenge_phase,
+            )
+            if any(value is None for value in actor_values):
+                raise RunOperationalError(
+                    f"challenge {label} observation omitted required actual actor evidence"
+                )
+            if (observed.front_distance_m is None) != (
+                observed.front_relative_speed_mps is None
+            ):
+                raise RunOperationalError(
+                    f"challenge {label} observation front distance and relative speed "
+                    "must be paired"
+                )
+        summary.update(
+            {
+                "front_distance_m": observation.front_distance_m,
+                "front_relative_speed_mps": observation.front_relative_speed_mps,
+                "challenge_actor_longitudinal_m": (
+                    observation.challenge_actor_longitudinal_m
+                ),
+                "challenge_actor_lateral_offset_m": (
+                    observation.challenge_actor_lateral_offset_m
+                ),
+                "challenge_actor_speed_mps": observation.challenge_actor_speed_mps,
+                "challenge_phase": observation.challenge_phase,
+                "result_front_distance_m": result_observation.front_distance_m,
+                "result_front_relative_speed_mps": (
+                    result_observation.front_relative_speed_mps
+                ),
+                "result_challenge_actor_longitudinal_m": (
+                    result_observation.challenge_actor_longitudinal_m
+                ),
+                "result_challenge_actor_lateral_offset_m": (
+                    result_observation.challenge_actor_lateral_offset_m
+                ),
+                "result_challenge_actor_speed_mps": (
+                    result_observation.challenge_actor_speed_mps
+                ),
+                "result_challenge_phase": result_observation.challenge_phase,
+            }
+        )
+    return summary
+
+
 def _git(repository_root: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(
@@ -198,14 +260,9 @@ def _execute_episode(
                 sequence=sequence,
                 simulation_time_s=result.observation.simulation_time_s,
                 run_context=execution_context.run_context,
-                observation_summary={
-                    "input_sequence": observation.sequence,
-                    "input_simulation_time_s": observation.simulation_time_s,
-                    "speed_mps": observation.vehicle_state.speed_mps,
-                    "lateral_offset_m": observation.vehicle_state.lateral_offset_m,
-                    "route_progress_pct": observation.vehicle_state.route_progress_pct,
-                    "observation_age_s": observation.observation_age_s,
-                },
+                observation_summary=_observation_summary(
+                    observation, result.observation, scenario
+                ),
                 candidate_action=candidate,
                 executed_action=executed,
                 override_reasons=override_reasons,

@@ -65,6 +65,48 @@ def compute_metrics(events: tuple[TraceEvent, ...]) -> RunMetrics:
 
     latencies = [event.policy_latency_ms for event in events]
     p95_latency = _available(_nearest_rank_percentile(latencies, 0.95), "ms")
+    ttc_samples: list[float] = []
+    has_front_evidence_fields = False
+    for event in events:
+        distance_field = (
+            "result_front_distance_m"
+            if "result_front_distance_m" in event.observation_summary
+            else "front_distance_m"
+        )
+        relative_speed_field = (
+            "result_front_relative_speed_mps"
+            if "result_front_relative_speed_mps" in event.observation_summary
+            else "front_relative_speed_mps"
+        )
+        has_front_evidence_fields = has_front_evidence_fields or (
+            distance_field in event.observation_summary
+            and relative_speed_field in event.observation_summary
+        )
+        distance = event.observation_summary.get(distance_field)
+        relative_speed = event.observation_summary.get(relative_speed_field)
+        if (
+            isinstance(distance, (int, float))
+            and not isinstance(distance, bool)
+            and isinstance(relative_speed, (int, float))
+            and not isinstance(relative_speed, bool)
+            and math.isfinite(distance)
+            and math.isfinite(relative_speed)
+            and distance >= 0.0
+            and relative_speed < 0.0
+        ):
+            ttc_samples.append(float(distance) / -float(relative_speed))
+    minimum_ttc = (
+        _available(min(ttc_samples), "s")
+        if ttc_samples
+        else _unavailable(
+            (
+                "no paired closing front-object evidence"
+                if has_front_evidence_fields
+                else "front-object TTC evidence is unavailable for this trace"
+            ),
+            "s",
+        )
+    )
     reason_counts = Counter(reason for event in events for reason in event.override_reasons)
     return RunMetrics(
         event_count=len(events),
@@ -73,10 +115,13 @@ def compute_metrics(events: tuple[TraceEvent, ...]) -> RunMetrics:
         max_abs_lateral_offset_m=max_lateral,
         offroad_duration_s=offroad_duration,
         route_completion_pct=route_completion,
+        minimum_ttc_s=minimum_ttc,
         max_abs_acceleration_mps2=max_acceleration,
         max_abs_jerk_mps3=max_jerk,
         p95_policy_latency_ms=p95_latency,
-        shield_override_count=sum(reason_counts.values()),
+        shield_override_count=sum(
+            event.candidate_action != event.executed_action for event in events
+        ),
         shield_override_reasons=dict(sorted(reason_counts.items())),
         termination_reason=events[-1].termination_reason,
     )

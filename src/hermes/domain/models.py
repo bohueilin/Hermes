@@ -64,6 +64,16 @@ class Observation(HermesModel):
     front_distance_m: NonNegativeFloat | None = None
     front_relative_speed_mps: FiniteFloat | None = None
     observation_age_s: NonNegativeFloat = 0.0
+    challenge_actor_longitudinal_m: FiniteFloat | None = None
+    challenge_actor_lateral_offset_m: FiniteFloat | None = None
+    challenge_actor_speed_mps: NonNegativeFloat | None = None
+    challenge_phase: Literal[
+        "PRE_TRIGGER",
+        "BRAKING",
+        "RECOVERY",
+        "CUT_IN",
+        "POST_CUT_IN",
+    ] | None = None
 
 
 class VerifierFacts(HermesModel):
@@ -139,10 +149,43 @@ class HazardConfig(HermesModel):
     unavailable_progress: bool = False
 
 
+class LeadVehicleHardBrakeChallenge(HermesModel):
+    """A simulator-dynamic lead actor with a scheduled full-brake interval."""
+
+    kind: Literal["lead_vehicle_hard_brake"]
+    actor_control_mode: Literal["metadrive_dynamic_action"]
+    behavior_realism_claim: Literal[False]
+    initial_gap_m: Annotated[FiniteFloat, Field(gt=0.0, le=200.0)]
+    actor_speed_mps: Annotated[FiniteFloat, Field(ge=0.0, le=50.0)]
+    trigger_step: Annotated[int, Field(ge=0)]
+    brake_duration_steps: Annotated[int, Field(ge=1, le=10_000)]
+    brake_command: Literal[-1.0]
+    resume_throttle_command: Annotated[FiniteFloat, Field(ge=0.0, le=1.0)]
+
+
+class CutInNearFieldChallenge(HermesModel):
+    """A deterministic kinematic replay from an adjacent lane into the ego lane."""
+
+    kind: Literal["cut_in_near_field"]
+    actor_control_mode: Literal["scripted_kinematic_replay"]
+    behavior_realism_claim: Literal[False]
+    initial_gap_m: Annotated[FiniteFloat, Field(gt=0.0, le=200.0)]
+    actor_speed_mps: Annotated[FiniteFloat, Field(ge=0.0, le=50.0)]
+    initial_lane_delta: Literal[-1, 1]
+    trigger_step: Annotated[int, Field(ge=0)]
+    transition_steps: Annotated[int, Field(ge=1, le=10_000)]
+
+
+ChallengeConfig = Annotated[
+    LeadVehicleHardBrakeChallenge | CutInNearFieldChallenge,
+    Field(discriminator="kind"),
+]
+
+
 class ScenarioDefinition(HermesModel):
     """Versioned, resolved, simulator-neutral scenario definition."""
 
-    schema_version: Literal["1.0"]
+    schema_version: Literal["1.0", "2.0"]
     name: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
     version: Annotated[str, Field(min_length=1, max_length=32)]
     description: Annotated[str, Field(min_length=1, max_length=500)]
@@ -151,9 +194,10 @@ class ScenarioDefinition(HermesModel):
     initial_state: InitialState
     road: RoadConfig
     hazards: HazardConfig = Field(default_factory=HazardConfig)
+    challenge: ChallengeConfig | None = None
 
     @model_validator(mode="after")
-    def reject_contradictory_steps(self) -> ScenarioDefinition:
+    def reject_contradictory_configuration(self) -> ScenarioDefinition:
         for field_name in (
             "collision_at_step",
             "boundary_at_step",
@@ -165,10 +209,40 @@ class ScenarioDefinition(HermesModel):
                     f"{field_name} must be less than horizon_steps "
                     f"({self.control.horizon_steps})"
                 )
+
+        if self.schema_version == "1.0":
+            if self.challenge is not None:
+                raise ValueError("schema_version 1.0 cannot define challenge")
+            return self
+
+        if self.adapter != "metadrive":
+            raise ValueError("schema_version 2.0 requires adapter metadrive")
+        if self.challenge is None:
+            raise ValueError("schema_version 2.0 requires challenge")
+        if self.hazards != HazardConfig():
+            raise ValueError(
+                "schema_version 2.0 challenge cannot coexist with fake hazards"
+            )
+
+        end_step: int
+        window_name: str
+        if isinstance(self.challenge, LeadVehicleHardBrakeChallenge):
+            end_step = self.challenge.trigger_step + self.challenge.brake_duration_steps
+            window_name = "lead-vehicle braking window"
+        else:
+            end_step = self.challenge.trigger_step + self.challenge.transition_steps
+            window_name = "cut-in transition window"
+        if end_step > self.control.horizon_steps:
+            raise ValueError(
+                f"{window_name} must fit within horizon_steps "
+                f"({self.control.horizon_steps})"
+            )
         return self
 
     @property
     def expected_hazard(self) -> str | None:
+        if self.challenge is not None:
+            return self.challenge.kind
         if self.hazards.collision_at_step is not None:
             return "collision"
         if self.hazards.boundary_at_step is not None:
@@ -261,6 +335,13 @@ class RunMetrics(HermesModel):
     max_abs_lateral_offset_m: NonNegativeFloat
     offroad_duration_s: NonNegativeFloat
     route_completion_pct: Measurement
+    minimum_ttc_s: Measurement = Field(
+        default_factory=lambda: Measurement(
+            availability=EvidenceAvailability.NOT_AVAILABLE,
+            reason="front-object TTC evidence is unavailable for this trace",
+            unit="s",
+        )
+    )
     max_abs_acceleration_mps2: Measurement
     max_abs_jerk_mps3: Measurement
     p95_policy_latency_ms: Measurement

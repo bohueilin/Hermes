@@ -272,6 +272,60 @@ def test_metadrive_run_requires_headless_and_routes_supported_profile(
     assert calls[0]["gate_config_path"].name == "gates.phase2.yaml"
 
 
+def test_run_routes_versioned_deterministic_shield_configuration(
+    repository_root: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifacts = _redirect_repository_artifacts(tmp_path, monkeypatch)
+    calls: list[dict[str, object]] = []
+
+    def execute(**kwargs):
+        calls.append(kwargs)
+        verification = ArtifactVerification(
+            artifact_path=str(artifacts / "shielded"),
+            integrity=IntegrityStatus.INTERNALLY_CONSISTENT,
+            verdict=Verdict.PASS,
+            trace_digest="a" * 64,
+        )
+        return RunOutcome(
+            verdict=Verdict.PASS,
+            artifact_path=artifacts / "shielded",
+            trace_digest="a" * 64,
+            verification=verification,
+        )
+
+    monkeypatch.setattr("hermes.cli.execute_metadrive_run", execute)
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--simulator",
+            "metadrive",
+            "--scenario",
+            str(repository_root / "scenarios" / "metadrive_lead_vehicle_hard_brake.yaml"),
+            "--policy",
+            "metadrive-idm",
+            "--shield",
+            "deterministic",
+            "--shield-config",
+            str(repository_root / "config" / "shield.phase3.yaml"),
+            "--seed",
+            "7",
+            "--run-id",
+            "shielded",
+            "--headless",
+        ],
+    )
+
+    assert result.exit_code == 0
+    shield = calls[0]["shield_factory"]()
+    assert shield.name == "deterministic"
+    assert shield.evidence_config["label"] == (
+        "illustrative_simulation_only_not_real_vehicle_limits"
+    )
+
+
 def test_sim_smoke_is_operational_only_and_requires_headless(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

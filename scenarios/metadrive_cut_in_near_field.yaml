@@ -1,0 +1,25 @@
+schema_version: "2.0"
+name: cut_in_near_field
+version: "1.0"
+description: Deterministic scripted kinematic replay from an adjacent lane into the ego lane.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 300
+  target_speed_mps: 8.0
+initial_state:
+  speed_mps: 0.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 20.0
+  boundary_tolerance_m: 1.5
+hazards: {}
+challenge:
+  kind: cut_in_near_field
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 10.0
+  actor_speed_mps: 4.0
+  initial_lane_delta: 1
+  trigger_step: 30
+  transition_steps: 10

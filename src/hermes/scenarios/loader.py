@@ -33,9 +33,17 @@ def _canonical_json_bytes(value: object) -> bytes:
     return text.encode("utf-8")
 
 
+def _resolved_scenario_payload(scenario: ScenarioDefinition) -> dict[str, object]:
+    """Return schema-aware content without changing established v1 identities."""
+    resolved = scenario.model_dump(mode="json")
+    if scenario.schema_version == "1.0":
+        resolved.pop("challenge")
+    return resolved
+
+
 def scenario_digest(scenario: ScenarioDefinition) -> str:
     """Return the SHA-256 identity of fully resolved scenario content."""
-    resolved = scenario.model_dump(mode="json")
+    resolved = _resolved_scenario_payload(scenario)
     return hashlib.sha256(_canonical_json_bytes(resolved)).hexdigest()
 
 
@@ -76,7 +84,7 @@ def load_scenario(path: Path) -> ScenarioDefinition:
 def resolved_scenario_yaml(scenario: ScenarioDefinition) -> str:
     """Serialize all explicit and defaulted scenario values deterministically."""
     return yaml.safe_dump(
-        scenario.model_dump(mode="json"),
+        _resolved_scenario_payload(scenario),
         allow_unicode=True,
         sort_keys=True,
     )
