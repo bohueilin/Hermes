@@ -72,7 +72,9 @@ def test_schema_v1_canonical_identity_is_backward_compatible(
 
     assert scenario.schema_version == "1.0"
     assert scenario.challenge is None
+    assert scenario.faults is None
     assert "challenge:" not in resolved_scenario_yaml(scenario)
+    assert "faults:" not in resolved_scenario_yaml(scenario)
     assert scenario_digest(scenario) == expected_digest
 
 
@@ -305,3 +307,40 @@ def test_phase3_challenge_scenarios_are_strictly_loadable(
     assert scenario.challenge.actor_control_mode == control_mode
     assert scenario.challenge.behavior_realism_claim is False
     assert "challenge:" in resolved_scenario_yaml(scenario)
+
+
+def test_phase4_fault_scenario_is_strict_bound_and_versioned(repository_root: Path) -> None:
+    scenario = load_scenario(repository_root / "scenarios/fake_fault_injection.yaml")
+
+    assert scenario.schema_version == "3.0"
+    assert scenario.adapter == "fake"
+    assert scenario.faults is not None
+    assert scenario.faults.enabled is True
+    assert scenario.faults.control_delay_steps == 1
+    assert "faults:" in resolved_scenario_yaml(scenario)
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "error"),
+    [
+        ('schema_version: "3.0"', 'schema_version: "2.0"', "cannot define faults"),
+        ("control_delay_steps: 1", "control_delay_steps: 20", "less than horizon"),
+        ("start_step: 2", "start_step: 19", "must fit within horizon"),
+        ("    - 4", "    - 20", "less than horizon"),
+    ],
+)
+def test_phase4_fault_schedule_rejects_ambiguous_or_out_of_horizon_values(
+    repository_root: Path,
+    tmp_path: Path,
+    old: str,
+    new: str,
+    error: str,
+) -> None:
+    source = (repository_root / "scenarios/fake_fault_injection.yaml").read_text(
+        encoding="utf-8"
+    )
+    path = tmp_path / "invalid-fault.yaml"
+    path.write_text(source.replace(old, new, 1), encoding="utf-8")
+
+    with pytest.raises(ScenarioLoadError, match=error):
+        load_scenario(path)

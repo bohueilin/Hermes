@@ -14,6 +14,9 @@ EXPECTED_FINDINGS = {
     "comfort.acceleration": ("ComfortVerifier", "1.0", False),
     "comfort.jerk": ("ComfortVerifier", "1.0", False),
 }
+FAULT_COVERAGE_FINDING = {
+    "fault.coverage.required": ("FaultCoverageVerifier", "1.0", True)
+}
 
 
 def apply_release_gate(
@@ -32,14 +35,19 @@ def apply_release_gate(
     for finding in findings:
         by_id.setdefault(finding.finding_id, []).append(finding)
 
-    malformed_finding_set = set(by_id) != set(EXPECTED_FINDINGS) or any(
+    expected_findings = (
+        {**EXPECTED_FINDINGS, **FAULT_COVERAGE_FINDING}
+        if "fault.coverage.required" in by_id
+        else EXPECTED_FINDINGS
+    )
+    malformed_finding_set = set(by_id) != set(expected_findings) or any(
         len(matches) != 1
         or (
             matches[0].verifier,
             matches[0].verifier_version,
             matches[0].hard_invariant,
         )
-        != EXPECTED_FINDINGS.get(finding_id)
+        != expected_findings.get(finding_id)
         for finding_id, matches in by_id.items()
     )
     if malformed_finding_set:
@@ -92,6 +100,11 @@ def apply_release_gate(
         for finding in progress_findings
         if finding.status is FindingStatus.NOT_AVAILABLE
     ]
+    fault_coverage_failures = [
+        finding
+        for finding in by_id.get("fault.coverage.required", [])
+        if finding.status is not FindingStatus.PASS
+    ]
     soft_nonpassing = [
         finding
         for finding in findings
@@ -119,6 +132,12 @@ def apply_release_gate(
             "Road-boundary hard invariant failed; positive soft results cannot compensate.",
         )
         hard = tuple(finding.finding_id for finding in boundary_failures)
+    elif fault_coverage_failures:
+        verdict = Verdict.HOLD
+        rationale = (
+            "Configured deterministic fault coverage is incomplete; advancement fails closed.",
+        )
+        hard = tuple(finding.finding_id for finding in fault_coverage_failures)
     elif progress_unavailable:
         verdict = Verdict(config.hard.missing_required_evidence)
         rationale = (

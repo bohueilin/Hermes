@@ -3,14 +3,15 @@
 from collections import Counter
 from functools import partial
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, NoReturn
 
 import typer
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
-from typer.core import TyperGroup
+from typer.core import TyperGroup, _click
 
+from hermes.cli_errors import CliErrorCode, render_cli_error
 from hermes.comparison.compare import compare_artifacts
 from hermes.doctor import (
     CheckResult,
@@ -50,12 +51,30 @@ class HermesTyperGroup(TyperGroup):
     """Map Click/Typer usage failures into the Hermes operational contract."""
 
     def main(self, *args: Any, **kwargs: Any) -> Any:
+        standalone_mode = kwargs.pop("standalone_mode", True)
         try:
-            return super().main(*args, **kwargs)
-        except SystemExit as exc:
-            if exc.code == 2:
+            result = super().main(*args, standalone_mode=False, **kwargs)
+        except _click.exceptions.UsageError as exc:
+            render_cli_error(
+                CliErrorCode.USAGE_ERROR,
+                exc.format_message(),
+                40,
+            )
+            if standalone_mode:
                 raise SystemExit(40) from exc
-            raise
+            return 40
+        except _click.exceptions.ClickException as exc:
+            render_cli_error(
+                CliErrorCode.USAGE_ERROR,
+                exc.format_message(),
+                40,
+            )
+            if standalone_mode:
+                raise SystemExit(40) from exc
+            return 40
+        if standalone_mode:
+            raise SystemExit(result if isinstance(result, int) else 0)
+        return result
 
 
 app = typer.Typer(
@@ -123,6 +142,25 @@ def _phase_console() -> Console:
     return Console(highlight=False, markup=False, soft_wrap=True)
 
 
+def _raise_cli_error(
+    code: CliErrorCode,
+    message: str,
+    *,
+    exit_code: int = 40,
+    details: dict[str, Any] | None = None,
+    json_output: bool = False,
+) -> NoReturn:
+    render_cli_error(
+        code,
+        message,
+        exit_code,
+        details=details,
+        json_output=json_output,
+        console=_phase_console(),
+    )
+    raise typer.Exit(code=exit_code)
+
+
 def _render_artifact_verification(result: ArtifactVerification) -> None:
     console = _phase_console()
     console.print(SCOPE_BANNER)
@@ -175,28 +213,37 @@ def run_command(
     """Run one bounded simulation-only scenario and publish verified evidence."""
     console = _phase_console()
     if simulator not in {"fake", "metadrive"}:
-        console.print(f"Configuration error: unsupported simulator {simulator!r}")
-        raise typer.Exit(code=40)
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported simulator {simulator!r}",
+        )
     expected_policy = "baseline" if simulator == "fake" else "metadrive-idm"
     if policy != expected_policy:
-        console.print(
-            f"Configuration error: simulator {simulator!r} requires policy "
-            f"{expected_policy!r}"
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"simulator {simulator!r} requires policy {expected_policy!r}",
         )
-        raise typer.Exit(code=40)
     if simulator == "metadrive" and not headless:
-        console.print("Configuration error: MetaDrive execution requires --headless")
-        raise typer.Exit(code=40)
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "MetaDrive execution requires --headless",
+        )
     if shield not in {"noop", "deterministic"}:
-        console.print(f"Configuration error: unsupported shield {shield!r}")
-        raise typer.Exit(code=40)
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported shield {shield!r}",
+        )
     if shield == "noop" and shield_config is not None:
-        console.print("Configuration error: --shield-config requires deterministic shield")
-        raise typer.Exit(code=40)
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "--shield-config requires deterministic shield",
+        )
     repository_root = discover_hermes_repository_root()
     if repository_root is None:
-        console.print("Configuration error: Hermes repository root is unavailable")
-        raise typer.Exit(code=40)
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "Hermes repository root is unavailable",
+        )
     default_gate = "gates.phase1.yaml" if simulator == "fake" else "gates.phase2.yaml"
     resolved_gate = gate_config or repository_root / "config" / default_gate
     resolved_artifacts = repository_root / "artifacts"
@@ -206,8 +253,7 @@ def run_command(
         try:
             deterministic_config = load_shield_config(resolved_shield)
         except ShieldConfigError as exc:
-            console.print(f"Configuration error: {exc}", style="red")
-            raise typer.Exit(code=40) from exc
+            _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
         shield_factory = partial(DeterministicSafetyShield, deterministic_config)
     try:
         runner = execute_fake_run if simulator == "fake" else execute_metadrive_run
@@ -221,14 +267,14 @@ def run_command(
             shield_factory=shield_factory,
         )
     except RunConfigurationError as exc:
-        console.print(f"Configuration error: {exc}", style="red")
-        raise typer.Exit(code=40) from exc
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
     except RunOperationalError as exc:
-        console.print(f"Operational error: {exc}", style="red")
-        raise typer.Exit(code=40) from exc
+        _raise_cli_error(CliErrorCode.OPERATIONAL_ERROR, str(exc))
     except Exception as exc:
-        console.print(f"Operational error: {type(exc).__name__}: {exc}", style="red")
-        raise typer.Exit(code=40) from exc
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            f"{type(exc).__name__}: {exc}",
+        )
 
     _render_artifact_verification(outcome.verification)
     if simulator == "fake":
@@ -252,12 +298,16 @@ def sim_smoke_command(
     """Probe MetaDrive reset/IDM/step/close without publishing release evidence."""
     console = _phase_console()
     if not headless:
-        console.print("Configuration error: MetaDrive smoke requires --headless")
-        raise typer.Exit(code=40)
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "MetaDrive smoke requires --headless",
+        )
     repository_root = discover_hermes_repository_root()
     if repository_root is None:
-        console.print("Configuration error: Hermes repository root is unavailable")
-        raise typer.Exit(code=40)
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "Hermes repository root is unavailable",
+        )
     try:
         outcome = run_metadrive_smoke(
             scenario_path=repository_root / "scenarios" / "metadrive_nominal.yaml",
@@ -265,14 +315,14 @@ def sim_smoke_command(
             repository_root=repository_root,
         )
     except RunConfigurationError as exc:
-        console.print(f"Configuration error: {exc}", style="red")
-        raise typer.Exit(code=40) from exc
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
     except RunOperationalError as exc:
-        console.print(f"Operational error: {exc}", style="red")
-        raise typer.Exit(code=40) from exc
+        _raise_cli_error(CliErrorCode.OPERATIONAL_ERROR, str(exc))
     except Exception as exc:
-        console.print(f"Operational error: {type(exc).__name__}: {exc}", style="red")
-        raise typer.Exit(code=40) from exc
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            f"{type(exc).__name__}: {exc}",
+        )
 
     console.print(SCOPE_BANNER)
     console.print("Smoke status: OK")
@@ -293,12 +343,17 @@ def verify_artifact_command(
     try:
         result = verify_stored_artifact(artifact_dir)
     except Exception as exc:
-        _phase_console().print(
-            f"Operational error: artifact verifier crashed: {type(exc).__name__}: {exc}",
-            style="red",
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            f"artifact verifier crashed: {type(exc).__name__}: {exc}",
         )
-        raise typer.Exit(code=40) from exc
     _render_artifact_verification(result)
+    if result.verdict is Verdict.INVALID_EVIDENCE:
+        _raise_cli_error(
+            CliErrorCode.INVALID_EVIDENCE,
+            "Stored artifact failed integrity verification.",
+            exit_code=30,
+        )
     exit_code = EXIT_CODES[result.verdict]
     if exit_code:
         raise typer.Exit(code=exit_code)
@@ -316,17 +371,18 @@ def compare_command(
     """Compare two independently verified, compatible stored evidence bundles."""
     console = _phase_console()
     if output_format not in {"table", "json"}:
-        console.print(f"Configuration error: unsupported format {output_format!r}")
-        raise typer.Exit(code=40)
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported format {output_format!r}",
+        )
     try:
         baseline = inspect_artifact(baseline_dir)
         candidate = inspect_artifact(candidate_dir)
     except Exception as exc:
-        console.print(
-            f"Operational error: artifact inspection crashed: {type(exc).__name__}: {exc}",
-            style="red",
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            f"artifact inspection crashed: {type(exc).__name__}: {exc}",
         )
-        raise typer.Exit(code=40) from exc
 
     invalid = [
         inspection
@@ -334,19 +390,28 @@ def compare_command(
         if inspection.snapshot is None
     ]
     if invalid:
+        details = {
+            "artifacts": [
+                inspection.verification.model_dump(mode="json")
+                for inspection in invalid
+            ]
+        }
         if output_format == "json":
-            typer.echo(
-                canonical_json_bytes(
-                    {
-                        "error": "INVALID_EVIDENCE",
-                        "artifacts": [
-                            inspection.verification.model_dump(mode="json")
-                            for inspection in invalid
-                        ],
-                    }
-                ).decode("utf-8")
+            _raise_cli_error(
+                CliErrorCode.INVALID_EVIDENCE,
+                "One or more stored artifacts failed verification.",
+                exit_code=30,
+                details=details,
+                json_output=True,
             )
         else:
+            render_cli_error(
+                CliErrorCode.INVALID_EVIDENCE,
+                "One or more stored artifacts failed verification.",
+                30,
+                details=details,
+                console=console,
+            )
             for inspection in invalid:
                 _render_artifact_verification(inspection.verification)
         raise typer.Exit(code=30)
@@ -385,7 +450,10 @@ def compare_command(
                 )
             console.print(table)
     if not comparison.compatibility.comparable:
-        raise typer.Exit(code=40)
+        _raise_cli_error(
+            CliErrorCode.INCOMPATIBLE_EVIDENCE,
+            "Stored artifacts are not comparable.",
+        )
 
 
 if __name__ == "__main__":

@@ -18,13 +18,18 @@ from typing import Any
 from hermes import __version__
 from hermes.domain.models import (
     ArtifactManifest,
+    ArtifactManifestV2,
     ExecutionContext,
+    ExecutionContextV2,
     Finding,
     FindingsDocument,
+    FindingsDocumentV2,
     GateResult,
     RunMetrics,
+    RunMetricsV2,
     ScenarioDefinition,
     TraceEvent,
+    TraceEventV2,
 )
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
 from hermes.evidence.trace import events_jsonl_bytes
@@ -174,9 +179,9 @@ def write_bundle(
     run_id: str,
     scenario: ScenarioDefinition,
     gate_config: GateConfig,
-    execution_context: ExecutionContext,
-    events: tuple[TraceEvent, ...],
-    metrics: RunMetrics,
+    execution_context: ExecutionContext | ExecutionContextV2,
+    events: tuple[TraceEvent | TraceEventV2, ...],
+    metrics: RunMetrics | RunMetricsV2,
     findings: tuple[Finding, ...],
     verdict: GateResult,
     repository_commit: str | None,
@@ -185,7 +190,7 @@ def write_bundle(
     simulator_name: str | None = None,
     simulator_version: str | None = None,
     simulator_commit: str | None = None,
-) -> ArtifactManifest:
+) -> ArtifactManifest | ArtifactManifestV2:
     """Write a complete deterministic payload, manifest inventory, and detached bundle root."""
     trace_digest = events[-1].current_hash
     payloads: dict[str, bytes] = {
@@ -195,7 +200,11 @@ def write_bundle(
         "events.jsonl": events_jsonl_bytes(events),
         "metrics.json": _json_file(metrics.model_dump(mode="json")),
         "findings.json": _json_file(
-            FindingsDocument(findings=findings).model_dump(mode="json")
+            (
+                FindingsDocumentV2(findings=findings)
+                if isinstance(execution_context, ExecutionContextV2)
+                else FindingsDocument(findings=findings)
+            ).model_dump(mode="json")
         ),
         "verdict.json": _json_file(verdict.model_dump(mode="json")),
         "trace.sha256": f"{trace_digest}\n".encode(),
@@ -204,7 +213,7 @@ def write_bundle(
         (directory / name).write_bytes(payload)
 
     context = execution_context.run_context
-    manifest = ArtifactManifest(
+    manifest_values = dict(
         hermes_version=__version__,
         run_id=run_id,
         created_at_utc=datetime.now(UTC),
@@ -241,6 +250,16 @@ def write_bundle(
         required_files=REQUIRED_ARTIFACT_FILES,
         file_digests={name: sha256_hex(payloads[name]) for name in COMPANION_DIGEST_FILES},
         integrity_limitation=INTEGRITY_LIMITATION,
+    )
+    manifest = (
+        ArtifactManifestV2(
+            **manifest_values,
+            fault_name=execution_context.faults.name,
+            fault_version=execution_context.faults.version,
+            fault_config_digest=execution_context.faults.config_digest,
+        )
+        if isinstance(execution_context, ExecutionContextV2)
+        else ArtifactManifest(**manifest_values)
     )
     manifest_bytes = _json_file(manifest.model_dump(mode="json"))
     (directory / "manifest.json").write_bytes(manifest_bytes)

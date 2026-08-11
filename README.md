@@ -12,10 +12,12 @@ Hermes is for simulation and closed-lab learning only. It must not connect to a 
 
 ## Current status
 
-Phase 0 remains intact, and the committed Phase 1 and Phase 2 foundations support the Phase 3
-implementation on the feature branch. The same simulator-neutral evidence pipeline now supports a
-deterministic fake adapter, a pinned MetaDrive 0.4.3 physics run with an installed IDM policy, and
-trace-bound deterministic-shield decisions for two bounded MetaDrive challenge scenarios.
+Phases 0–3 are committed on the feature branch. The simulator-neutral evidence pipeline supports a
+deterministic fake adapter, a pinned MetaDrive 0.4.3 physics run with an installed IDM policy,
+trace-bound deterministic-shield decisions for two bounded MetaDrive challenge scenarios, and
+schema-2 evidence for deterministic observation/control faults. Phase 5 hardening adds local Make
+targets, PR-safe CI, explicit schema-version checks, deterministic fixtures, and structured CLI
+errors. Dashboard and RL work remain deferred.
 
 The fake adapter is an architectural test double, not a vehicle-physics model. MetaDrive remains
 lazy and optional: fake runs, stored artifact verification, and stored artifact comparison do not
@@ -84,9 +86,11 @@ Expected Phase 1 cases:
 | Invalid/inconsistent evidence | `INVALID_EVIDENCE` | 30 |
 | Configuration/operational failure | error | 40 |
 
-Hermes remaps command-line usage and type-validation failures to configuration exit `40`; malformed
-commands never print `PASS`. The `doctor` command preserves its Phase 0 contract: `0` when no check
-is `FAIL`, otherwise `1`.
+Hermes reports stable `USAGE_ERROR`, `CONFIGURATION_ERROR`, `OPERATIONAL_ERROR`,
+`INVALID_EVIDENCE`, and `INCOMPATIBLE_EVIDENCE` categories. Usage/configuration/operational and
+incompatible-evidence failures exit `40`; invalid evidence exits `30`; malformed commands never
+print `PASS`. The `doctor` command preserves its Phase 0 contract: `0` when no check is `FAIL`,
+otherwise `1`.
 
 A valid `HOLD` or `CONDITIONAL` bundle remains internally consistent and independently
 verifiable; its verification command returns the policy verdict exit code. Corruption instead
@@ -170,6 +174,31 @@ comparisons report verdict, hard failures, collision, TTC, progress, comfort, la
 and evidence-availability trade-offs; intervention counts are descriptive rather than ordinal.
 See `docs/phase3-safety-shield.md` for exact rules, compatibility requirements, and limitations.
 
+## Phase 4 deterministic fault command
+
+```bash
+hermes run \
+  --simulator fake \
+  --scenario scenarios/fake_fault_injection.yaml \
+  --policy baseline \
+  --seed 7 \
+  --run-id phase4-fault-demo
+
+hermes verify-artifact artifacts/phase4-fault-demo
+```
+
+Scenario schema `3.0` and evidence schema `2.0` distinguish raw/delivered/result observations and
+candidate/shield-permitted/executed actions. Supported faults are observation delay, freeze,
+dropout/hold-last, bounded source-packet noise, control delay, steering saturation, and brake
+saturation. Every configured mechanism and scheduled freeze/dropout step must be exercised or the
+required fault-coverage finding forces `HOLD`.
+
+Stored verification exactly replays the shield and fault transformations without a simulator.
+Candidate policy proposals and simulator results remain trace inputs; the policy and simulator are
+not re-executed. MetaDrive IDM observation faults are rejected because that policy reads native
+simulator state; only action delay/saturation are truthful for that profile. See
+`docs/phase4-fault-and-ci-hardening.md` for the complete semantics and evidence boundary.
+
 ## Evidence bundle
 
 Every completed run must preserve:
@@ -200,11 +229,14 @@ simulated latency source, and exact deterministic-shield replay when applicable.
 ## Development workflow
 
 ```bash
-python -m pytest -q
-python -m ruff check .
-python -m hermes doctor
+make check
+make demo-phase1 DEMO_RUN_ID=<unique-lowercase-id>
+make sim-smoke
 git diff --check
 ```
+
+PR-safe CI runs Python 3.11, installs `.[dev]`, runs Ruff, and runs
+`pytest -m "not metadrive"`. Real MetaDrive validation remains an explicit local/manual gate.
 
 Read before editing:
 
@@ -216,13 +248,14 @@ Read before editing:
 
 ## Roadmap
 
-1. Deterministic fake-simulator evidence core (implemented and committed in Phase 1).
+1. Deterministic fake-simulator evidence core (implemented in Phase 1).
 2. Bounded MetaDrive headless adapter (implemented in Phase 2).
 3. Deterministic runtime shield, two bounded challenge scenarios, and stored evidence comparison
-   (implemented on the feature branch; acceptance depends on the documented gates and observed
-   artifacts).
+   (implemented in Phase 3).
+4. Deterministic fault injection and fail-closed fault coverage (implemented in Phase 4).
+5. PR-safe CI and developer-experience hardening (implemented in Phase 5).
 
-Later phases may begin only after their predecessor gates pass.
+Dashboard, RL, CARLA, ROS 2, Autoware, hardware integration, and real-log training remain deferred.
 
 ## Integrity limitation
 

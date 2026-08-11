@@ -9,6 +9,7 @@ from hermes.comparison.compare import ComparisonStatus, compare_artifacts
 from hermes.domain.enums import EvidenceAvailability, TerminationReason, Verdict
 from hermes.domain.models import (
     ArtifactManifest,
+    ArtifactManifestV2,
     ComponentContext,
     ExecutionContext,
     FindingsDocument,
@@ -350,6 +351,42 @@ def test_repository_provenance_must_be_available_and_dirty_state_warns() -> None
     assert any("unavailable" in reason for reason in missing_commit.compatibility.reasons)
     assert dirty.compatibility.comparable is True
     assert any("dirty" in warning for warning in dirty.compatibility.warnings)
+
+
+def _with_fault_manifest(
+    snapshot: VerifiedArtifactSnapshot,
+    *,
+    digest: str,
+) -> VerifiedArtifactSnapshot:
+    payload = snapshot.manifest.model_dump()
+    payload.update(
+        {
+            "evidence_schema_version": "2.0",
+            "fault_name": "deterministic-faults",
+            "fault_version": "1.0",
+            "fault_config_digest": digest,
+        }
+    )
+    return replace(
+        snapshot,
+        manifest=ArtifactManifestV2.model_construct(**payload),
+    )
+
+
+def test_fault_profile_identity_is_required_for_comparison() -> None:
+    baseline = _with_fault_manifest(_snapshot("/baseline"), digest="7" * 64)
+    same_profile = _with_fault_manifest(_snapshot("/same"), digest="7" * 64)
+    different_profile = _with_fault_manifest(_snapshot("/different"), digest="8" * 64)
+
+    comparable = compare_artifacts(baseline, same_profile)
+    incompatible = compare_artifacts(baseline, different_profile)
+
+    assert comparable.compatibility.comparable is True
+    assert incompatible.compatibility.comparable is False
+    assert any(
+        "fault configuration digest" in reason
+        for reason in incompatible.compatibility.reasons
+    )
 
 
 def test_shield_identity_may_differ_and_interventions_remain_descriptive() -> None:

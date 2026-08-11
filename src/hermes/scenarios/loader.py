@@ -38,6 +38,8 @@ def _resolved_scenario_payload(scenario: ScenarioDefinition) -> dict[str, object
     resolved = scenario.model_dump(mode="json")
     if scenario.schema_version == "1.0":
         resolved.pop("challenge")
+    if scenario.schema_version in {"1.0", "2.0"}:
+        resolved.pop("faults")
     return resolved
 
 

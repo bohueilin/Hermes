@@ -5,13 +5,25 @@ from pathlib import Path
 
 import pytest
 
-from hermes.domain.enums import TerminationReason
-from hermes.domain.models import Action, RunContext, ScenarioDefinition, VehicleState
+from hermes.domain.enums import EvidenceAvailability, TerminationReason
+from hermes.domain.models import (
+    Action,
+    ControlFaultEvidence,
+    FaultConfig,
+    Measurement,
+    Observation,
+    ObservationFaultEvidence,
+    RunContext,
+    RunContextV2,
+    ScenarioDefinition,
+    VehicleState,
+)
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
 from hermes.evidence.trace import (
     GENESIS_HASH,
     TraceIntegrityError,
     create_trace_event,
+    create_trace_event_v2,
     verify_complete_trace,
     verify_event_chain,
 )
@@ -206,6 +218,148 @@ def _challenge_event(
     )
 
 
+def _fault_challenge_event(
+    scenario: ScenarioDefinition,
+    *,
+    input_phase: str = "PRE_TRIGGER",
+    front_relative_speed_mps: float | None = 8.0,
+    result_actor_speed_mps: float | None = 8.0,
+):
+    assert scenario.challenge is not None
+    state = VehicleState(
+        position_m=0.0,
+        speed_mps=scenario.initial_state.speed_mps,
+        acceleration_mps2=0.0,
+        lateral_offset_m=scenario.initial_state.lateral_offset_m,
+        route_progress_pct=0.0,
+        collision_count=0,
+        offroad=False,
+        destination_reached=False,
+    )
+    result_state = state.model_copy(
+        update={
+            "position_m": scenario.road.destination_distance_m,
+            "route_progress_pct": 100.0,
+            "destination_reached": True,
+        }
+    )
+    raw = Observation(
+        sequence=0,
+        simulation_time_s=0.0,
+        vehicle_state=state,
+        front_distance_m=scenario.challenge.initial_gap_m,
+        front_relative_speed_mps=front_relative_speed_mps,
+        challenge_actor_longitudinal_m=scenario.challenge.initial_gap_m + 4.515,
+        challenge_actor_lateral_offset_m=0.0,
+        challenge_actor_speed_mps=scenario.challenge.actor_speed_mps,
+        challenge_phase=input_phase,
+    )
+    result = Observation(
+        sequence=1,
+        simulation_time_s=0.1,
+        vehicle_state=result_state,
+        front_distance_m=scenario.challenge.initial_gap_m,
+        front_relative_speed_mps=8.0,
+        challenge_actor_longitudinal_m=scenario.challenge.initial_gap_m + 4.515,
+        challenge_actor_lateral_offset_m=0.0,
+        challenge_actor_speed_mps=result_actor_speed_mps,
+        challenge_phase="PRE_TRIGGER",
+    )
+    context = RunContextV2(
+        scenario_digest="a" * 64,
+        gate_config_digest="b" * 64,
+        adapter_name="metadrive",
+        adapter_version="1.1",
+        adapter_config_digest="c" * 64,
+        policy_name="metadrive-idm",
+        policy_version="1.0",
+        policy_config_digest="d" * 64,
+        shield_name="noop",
+        shield_version="1.0",
+        shield_config_digest="e" * 64,
+        verifier_suite_digest="f" * 64,
+        fault_name="deterministic-faults",
+        fault_version="1.0",
+        fault_config_digest="1" * 64,
+        seed=7,
+        control_frequency_hz=10,
+        horizon_steps=scenario.control.horizon_steps,
+    )
+    action = Action(steering=0.0, throttle=0.0, brake=0.0)
+    summary = {
+        "input_sequence": 0,
+        "input_simulation_time_s": 0.0,
+        "speed_mps": state.speed_mps,
+        "lateral_offset_m": state.lateral_offset_m,
+        "route_progress_pct": state.route_progress_pct,
+        "observation_age_s": 0.0,
+        "front_distance_m": raw.front_distance_m,
+        "front_relative_speed_mps": raw.front_relative_speed_mps,
+        "challenge_actor_longitudinal_m": raw.challenge_actor_longitudinal_m,
+        "challenge_actor_lateral_offset_m": raw.challenge_actor_lateral_offset_m,
+        "challenge_actor_speed_mps": raw.challenge_actor_speed_mps,
+        "challenge_phase": raw.challenge_phase,
+        "result_front_distance_m": result.front_distance_m,
+        "result_front_relative_speed_mps": result.front_relative_speed_mps,
+        "result_challenge_actor_longitudinal_m": result.challenge_actor_longitudinal_m,
+        "result_challenge_actor_lateral_offset_m": (
+            result.challenge_actor_lateral_offset_m
+        ),
+        "result_challenge_actor_speed_mps": result.challenge_actor_speed_mps,
+        "result_challenge_phase": result.challenge_phase,
+    }
+    return create_trace_event_v2(
+        sequence=0,
+        simulation_time_s=0.1,
+        run_context=context,
+        observation_summary=summary,
+        candidate_action=action,
+        permitted_action=action,
+        executed_action=action,
+        override_reasons=(),
+        observation_fault_evidence=ObservationFaultEvidence(
+            raw_observation=raw,
+            delivered_observation=raw,
+            delivered_from_sequence=0,
+            delivered_from_time_s=0.0,
+            delivery_time_s=0.0,
+            applied_faults=(),
+            speed_noise_delta_mps=0.0,
+            lateral_noise_delta_m=0.0,
+        ),
+        control_fault_evidence=ControlFaultEvidence(
+            candidate_time_s=0.0,
+            executed_from_sequence=None,
+            executed_from_candidate_time_s=None,
+            execution_time_s=0.0,
+            pre_saturation_action=action,
+            applied_faults=("CONTROL_DELAY_FILL",),
+            control_latency_ms=Measurement(
+                availability=EvidenceAvailability.NOT_AVAILABLE,
+                reason="control-delay startup fill has no originating candidate",
+                unit="ms",
+            ),
+            latency_source="simulated",
+        ),
+        result_observation=result,
+        vehicle_state=result_state,
+        policy_latency_ms=10.0,
+        latency_source="simulated",
+        terminated=True,
+        truncated=False,
+        termination_reason=TerminationReason.DESTINATION_REACHED,
+        raw_facts={
+            "collision": False,
+            "collision_count": 0,
+            "offroad": False,
+            "destination_reached": True,
+            "route_progress_available": True,
+            "route_progress_pct": 100.0,
+        },
+        previous_hash=GENESIS_HASH,
+    )
+
+
 def test_canonical_json_has_literal_oracle_and_normalizes_negative_zero() -> None:
     payload = canonical_json_bytes({"b": 1, "a": -0.0})
 
@@ -353,6 +507,54 @@ def test_challenge_observation_summary_rejects_false_or_incomplete_actor_evidenc
         repository_root / "scenarios" / "metadrive_lead_vehicle_hard_brake.yaml"
     )
     event = _challenge_event(scenario, summary_updates=updates)
+
+    with pytest.raises(TraceIntegrityError, match=message):
+        verify_complete_trace((event,), scenario)
+
+
+def _schema3_action_fault_challenge(repository_root: Path) -> ScenarioDefinition:
+    legacy = load_scenario(
+        repository_root / "scenarios" / "metadrive_lead_vehicle_hard_brake.yaml"
+    )
+    faults = FaultConfig(
+        schema_version="1.0",
+        name="action_delay_only",
+        version="1.0",
+        label="illustrative_simulation_faults_not_real_vehicle_limits",
+        control_delay_steps=1,
+    )
+    return legacy.model_copy(
+        update={
+            "schema_version": "3.0",
+            "faults": faults,
+        }
+    )
+
+
+def test_schema3_fault_challenge_accepts_complete_scheduled_actor_evidence(
+    repository_root: Path,
+) -> None:
+    scenario = _schema3_action_fault_challenge(repository_root)
+    event = _fault_challenge_event(scenario)
+
+    assert verify_complete_trace((event,), scenario) == event.current_hash
+
+
+@pytest.mark.parametrize(
+    ("updates", "message"),
+    [
+        ({"input_phase": "BRAKING"}, "input phase contradicts"),
+        ({"front_relative_speed_mps": None}, "front-object evidence must be paired"),
+        ({"result_actor_speed_mps": None}, "actor_speed_mps is not numeric"),
+    ],
+)
+def test_schema3_fault_challenge_rejects_false_or_incomplete_actor_evidence(
+    repository_root: Path,
+    updates: dict[str, object],
+    message: str,
+) -> None:
+    scenario = _schema3_action_fault_challenge(repository_root)
+    event = _fault_challenge_event(scenario, **updates)
 
     with pytest.raises(TraceIntegrityError, match=message):
         verify_complete_trace((event,), scenario)

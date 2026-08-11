@@ -120,6 +120,21 @@ def _compatibility(
         ("Python version", baseline_manifest.python_version, candidate_manifest.python_version),
         ("platform", baseline_manifest.platform, candidate_manifest.platform),
         ("architecture", baseline_manifest.architecture, candidate_manifest.architecture),
+        (
+            "fault name",
+            getattr(baseline_manifest, "fault_name", None),
+            getattr(candidate_manifest, "fault_name", None),
+        ),
+        (
+            "fault version",
+            getattr(baseline_manifest, "fault_version", None),
+            getattr(candidate_manifest, "fault_version", None),
+        ),
+        (
+            "fault configuration digest",
+            getattr(baseline_manifest, "fault_config_digest", None),
+            getattr(candidate_manifest, "fault_config_digest", None),
+        ),
     )
     for label, baseline_value, candidate_value in checks:
         if baseline_value != candidate_value:

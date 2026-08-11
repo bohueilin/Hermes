@@ -11,13 +11,19 @@ from typing import cast
 from hermes.adapters.fake import FakeSimulatorAdapter
 from hermes.adapters.metadrive import MetaDriveAdapter
 from hermes.domain.contracts import DrivingPolicy, SafetyShield, SimulatorAdapter
-from hermes.domain.enums import IntegrityStatus, Verdict
+from hermes.domain.enums import EvidenceAvailability, IntegrityStatus, Verdict
 from hermes.domain.models import (
     ArtifactVerification,
     ComponentContext,
+    ControlFaultEvidence,
     ExecutionContext,
+    ExecutionContextV2,
+    Measurement,
+    ObservationFaultEvidence,
     RunContext,
+    RunContextV2,
     TraceEvent,
+    TraceEventV2,
 )
 from hermes.evidence.artifacts import (
     ArtifactError,
@@ -28,15 +34,27 @@ from hermes.evidence.artifacts import (
     write_bundle,
 )
 from hermes.evidence.metrics import compute_metrics
-from hermes.evidence.trace import GENESIS_HASH, create_trace_event, verify_complete_trace
+from hermes.evidence.trace import (
+    GENESIS_HASH,
+    TraceEventLike,
+    create_trace_event,
+    create_trace_event_v2,
+    verify_complete_trace,
+)
 from hermes.evidence.verification import verify_artifact
+from hermes.faults.deterministic import DeterministicFaultInjector
 from hermes.gates.config import GateConfigError, gate_config_digest, load_gate_config
 from hermes.gates.release import apply_release_gate
 from hermes.policies.baseline import BaselinePolicy
 from hermes.policies.metadrive_idm import MetaDriveIDMPolicy
 from hermes.scenarios.loader import ScenarioLoadError, load_scenario, scenario_digest
 from hermes.shields.noop import NoOpShield
-from hermes.verifiers import PHASE1_VERIFIER_IDENTITIES, run_phase1_verifiers
+from hermes.verifiers import (
+    PHASE1_VERIFIER_IDENTITIES,
+    PHASE4_VERIFIER_IDENTITIES,
+    run_phase1_verifiers,
+    run_phase4_verifiers,
+)
 
 
 class RunConfigurationError(ValueError):
@@ -79,7 +97,7 @@ def _observation_summary(observation, result_observation, scenario) -> dict[str,
         "route_progress_pct": observation.vehicle_state.route_progress_pct,
         "observation_age_s": observation.observation_age_s,
     }
-    if scenario.schema_version == "2.0":
+    if scenario.challenge is not None:
         for label, observed in (
             ("input", observation),
             ("result", result_observation),
@@ -166,11 +184,67 @@ def _build_execution_context(
     adapter: SimulatorAdapter,
     policy: DrivingPolicy,
     shield: SafetyShield,
-) -> ExecutionContext:
+    fault_injector: DeterministicFaultInjector | None,
+) -> ExecutionContext | ExecutionContextV2:
     adapter_config = adapter.evidence_config
     policy_config = policy.evidence_config
     shield_config = shield.evidence_config
-    suite_payload = [identity.model_dump(mode="json") for identity in PHASE1_VERIFIER_IDENTITIES]
+    verifier_suite = (
+        PHASE4_VERIFIER_IDENTITIES
+        if fault_injector is not None
+        else PHASE1_VERIFIER_IDENTITIES
+    )
+    suite_payload = [identity.model_dump(mode="json") for identity in verifier_suite]
+    if fault_injector is not None:
+        fault_config = fault_injector.evidence_config
+        run_context_v2 = RunContextV2(
+            scenario_digest=scenario_digest(scenario),
+            gate_config_digest=gate_config_digest(gate_config),
+            adapter_name=adapter.name,
+            adapter_version=adapter.version,
+            adapter_config_digest=config_digest(adapter_config),
+            policy_name=policy.name,
+            policy_version=policy.version,
+            policy_config_digest=config_digest(policy_config),
+            shield_name=shield.name,
+            shield_version=shield.version,
+            shield_config_digest=config_digest(shield_config),
+            verifier_suite_digest=config_digest(suite_payload),
+            fault_name=fault_injector.name,
+            fault_version=fault_injector.version,
+            fault_config_digest=config_digest(fault_config),
+            seed=seed,
+            control_frequency_hz=scenario.control.frequency_hz,
+            horizon_steps=scenario.control.horizon_steps,
+        )
+        return ExecutionContextV2(
+            run_context=run_context_v2,
+            adapter=ComponentContext(
+                name=adapter.name,
+                version=adapter.version,
+                config=adapter_config,
+                config_digest=run_context_v2.adapter_config_digest,
+            ),
+            policy=ComponentContext(
+                name=policy.name,
+                version=policy.version,
+                config=policy_config,
+                config_digest=run_context_v2.policy_config_digest,
+            ),
+            shield=ComponentContext(
+                name=shield.name,
+                version=shield.version,
+                config=shield_config,
+                config_digest=run_context_v2.shield_config_digest,
+            ),
+            faults=ComponentContext(
+                name=fault_injector.name,
+                version=fault_injector.version,
+                config=fault_config,
+                config_digest=run_context_v2.fault_config_digest,
+            ),
+            verifier_suite=verifier_suite,
+        )
     run_context = RunContext(
         scenario_digest=scenario_digest(scenario),
         gate_config_digest=gate_config_digest(gate_config),
@@ -208,7 +282,7 @@ def _build_execution_context(
             config=shield_config,
             config_digest=run_context.shield_config_digest,
         ),
-        verifier_suite=PHASE1_VERIFIER_IDENTITIES,
+        verifier_suite=verifier_suite,
     )
 
 
@@ -220,7 +294,11 @@ def _execute_episode(
     adapter_factory: Callable[[], SimulatorAdapter],
     policy_builder: Callable[[SimulatorAdapter], DrivingPolicy],
     shield_factory: Callable[[], SafetyShield],
-) -> tuple[tuple[TraceEvent, ...], ExecutionContext, SimulatorProvenance]:
+) -> tuple[
+    tuple[TraceEventLike, ...],
+    ExecutionContext | ExecutionContextV2,
+    SimulatorProvenance,
+]:
     try:
         adapter = adapter_factory()
     except Exception as exc:
@@ -229,15 +307,22 @@ def _execute_episode(
         ) from exc
 
     operation_error: Exception | None = None
-    events: list[TraceEvent] = []
-    execution_context: ExecutionContext | None = None
+    events: list[TraceEventLike] = []
+    execution_context: ExecutionContext | ExecutionContextV2 | None = None
     simulator_provenance: SimulatorProvenance | None = None
     try:
-        observation = adapter.reset(scenario, seed)
+        raw_observation = adapter.reset(scenario, seed)
         policy = policy_builder(adapter)
         shield = shield_factory()
+        fault_injector = (
+            DeterministicFaultInjector(scenario.faults)
+            if scenario.faults is not None
+            else None
+        )
         policy.reset(scenario, seed)
         shield.reset(scenario, seed)
+        if fault_injector is not None:
+            fault_injector.reset(scenario, seed)
         execution_context = _build_execution_context(
             scenario=scenario,
             gate_config=gate_config,
@@ -245,6 +330,7 @@ def _execute_episode(
             adapter=adapter,
             policy=policy,
             shield=shield,
+            fault_injector=fault_injector,
         )
         simulator_provenance = SimulatorProvenance(
             name=adapter.simulator_name,
@@ -253,31 +339,125 @@ def _execute_episode(
         )
         previous_hash = GENESIS_HASH
         for sequence in range(scenario.control.horizon_steps):
-            candidate = policy.act(observation)
-            executed, override_reasons = shield.apply(observation, candidate)
-            result = adapter.step(executed)
-            event = create_trace_event(
-                sequence=sequence,
-                simulation_time_s=result.observation.simulation_time_s,
-                run_context=execution_context.run_context,
-                observation_summary=_observation_summary(
-                    observation, result.observation, scenario
-                ),
-                candidate_action=candidate,
-                executed_action=executed,
-                override_reasons=override_reasons,
-                vehicle_state=result.observation.vehicle_state,
-                policy_latency_ms=policy.simulated_latency_ms,
-                latency_source="simulated",
-                terminated=result.terminated,
-                truncated=result.truncated,
-                termination_reason=result.termination_reason,
-                raw_facts=result.raw_facts,
-                previous_hash=previous_hash,
+            faulted_observation = (
+                fault_injector.process_observation(raw_observation)
+                if fault_injector is not None
+                else None
             )
+            policy_observation = (
+                faulted_observation.observation
+                if faulted_observation is not None
+                else raw_observation
+            )
+            candidate = policy.act(policy_observation)
+            permitted, override_reasons = shield.apply(policy_observation, candidate)
+            faulted_action = (
+                fault_injector.process_action(
+                    permitted,
+                    sequence=sequence,
+                    simulation_time_s=raw_observation.simulation_time_s,
+                )
+                if fault_injector is not None
+                else None
+            )
+            executed = faulted_action.action if faulted_action is not None else permitted
+            result = adapter.step(executed)
+            if fault_injector is None:
+                assert isinstance(execution_context, ExecutionContext)
+                event: TraceEventLike = create_trace_event(
+                    sequence=sequence,
+                    simulation_time_s=result.observation.simulation_time_s,
+                    run_context=execution_context.run_context,
+                    observation_summary=_observation_summary(
+                        policy_observation, result.observation, scenario
+                    ),
+                    candidate_action=candidate,
+                    executed_action=executed,
+                    override_reasons=override_reasons,
+                    vehicle_state=result.observation.vehicle_state,
+                    policy_latency_ms=policy.simulated_latency_ms,
+                    latency_source="simulated",
+                    terminated=result.terminated,
+                    truncated=result.truncated,
+                    termination_reason=result.termination_reason,
+                    raw_facts=result.raw_facts,
+                    previous_hash=previous_hash,
+                )
+            else:
+                assert isinstance(execution_context, ExecutionContextV2)
+                assert faulted_observation is not None
+                assert faulted_action is not None
+                control_latency = (
+                    Measurement(
+                        availability=EvidenceAvailability.NOT_AVAILABLE,
+                        unit="ms",
+                        reason=(
+                            "control-delay startup fill has no originating candidate"
+                        ),
+                    )
+                    if faulted_action.source_simulation_time_s is None
+                    else Measurement(
+                        availability=EvidenceAvailability.AVAILABLE,
+                        value=(
+                            raw_observation.simulation_time_s
+                            - faulted_action.source_simulation_time_s
+                        )
+                        * 1000.0,
+                        unit="ms",
+                    )
+                )
+                event = create_trace_event_v2(
+                    sequence=sequence,
+                    simulation_time_s=result.observation.simulation_time_s,
+                    run_context=execution_context.run_context,
+                    observation_summary=_observation_summary(
+                        policy_observation, result.observation, scenario
+                    ),
+                    candidate_action=candidate,
+                    permitted_action=permitted,
+                    executed_action=executed,
+                    override_reasons=override_reasons,
+                    observation_fault_evidence=ObservationFaultEvidence(
+                        raw_observation=raw_observation,
+                        delivered_observation=policy_observation,
+                        delivered_from_sequence=faulted_observation.source_sequence,
+                        delivered_from_time_s=(
+                            faulted_observation.source_simulation_time_s
+                        ),
+                        delivery_time_s=faulted_observation.delivery_time_s,
+                        applied_faults=faulted_observation.reason_codes,
+                        speed_noise_delta_mps=(
+                            faulted_observation.noise_deltas.speed_mps
+                        ),
+                        lateral_noise_delta_m=(
+                            faulted_observation.noise_deltas.lateral_offset_m
+                        ),
+                    ),
+                    control_fault_evidence=ControlFaultEvidence(
+                        candidate_time_s=raw_observation.simulation_time_s,
+                        executed_from_sequence=faulted_action.source_sequence,
+                        executed_from_candidate_time_s=(
+                            faulted_action.source_simulation_time_s
+                        ),
+                        execution_time_s=faulted_action.execution_time_s,
+                        pre_saturation_action=faulted_action.pre_saturation_action,
+                        applied_faults=faulted_action.reason_codes,
+                        control_latency_ms=control_latency,
+                        latency_source="simulated",
+                    ),
+                    result_observation=result.observation,
+                    vehicle_state=result.observation.vehicle_state,
+                    policy_latency_ms=policy.simulated_latency_ms,
+                    latency_source="simulated",
+                    terminated=result.terminated,
+                    truncated=result.truncated,
+                    termination_reason=result.termination_reason,
+                    raw_facts=result.raw_facts,
+                    previous_hash=previous_hash,
+                )
             events.append(event)
             previous_hash = event.current_hash
-            observation = result.observation
+            raw_observation = result.observation
             if result.terminated or result.truncated:
                 break
     except Exception as exc:
@@ -331,6 +511,21 @@ def _execute_run(
         raise RunConfigurationError(
             f"requested {expected_adapter} adapter requires scenario adapter: {expected_adapter}"
         )
+    if (
+        expected_adapter == "metadrive"
+        and scenario.faults is not None
+        and (
+            scenario.faults.observation_delay_steps > 0
+            or scenario.faults.frozen_observation_interval is not None
+            or bool(scenario.faults.dropped_observation_steps)
+            or scenario.faults.observation_noise is not None
+        )
+    ):
+        raise RunConfigurationError(
+            "MetaDrive IDM v1.0 reads native simulator state, so Hermes observation faults "
+            "would not truthfully affect that policy; use control delay/saturation only or "
+            "the fake baseline policy"
+        )
     if expected_adapter == "metadrive" and any(
         value is not None and value is not False
         for value in (
@@ -371,7 +566,18 @@ def _execute_run(
         raise RunOperationalError("MetaDrive simulator provenance is incomplete")
 
     metrics = compute_metrics(events)
-    findings = run_phase1_verifiers(events, scenario, gate_config)
+    if scenario.faults is not None:
+        fault_events = tuple(
+            event for event in events if isinstance(event, TraceEventV2)
+        )
+        if len(fault_events) != len(events):
+            raise RunOperationalError("fault run produced a mixed evidence schema")
+        findings = run_phase4_verifiers(fault_events, scenario, gate_config)
+    else:
+        legacy_events = tuple(event for event in events if isinstance(event, TraceEvent))
+        if len(legacy_events) != len(events):
+            raise RunOperationalError("legacy run produced a mixed evidence schema")
+        findings = run_phase1_verifiers(legacy_events, scenario, gate_config)
     verdict = apply_release_gate(findings, gate_config, adapter_name=expected_adapter)
     commit, dirty, provenance_reason = _repository_provenance(
         repository_root.expanduser().resolve()

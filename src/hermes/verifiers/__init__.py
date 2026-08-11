@@ -10,6 +10,7 @@ from hermes.domain.models import (
     Measurement,
     ScenarioDefinition,
     TraceEvent,
+    TraceEventV2,
     VerifierIdentity,
 )
 from hermes.evidence.metrics import compute_metrics
@@ -29,6 +30,13 @@ PHASE1_VERIFIER_IDENTITIES = (
         name="ComfortVerifier", version="1.0", finding_id="comfort.acceleration"
     ),
     VerifierIdentity(name="ComfortVerifier", version="1.0", finding_id="comfort.jerk"),
+)
+PHASE4_VERIFIER_IDENTITIES = PHASE1_VERIFIER_IDENTITIES + (
+    VerifierIdentity(
+        name="FaultCoverageVerifier",
+        version="1.0",
+        finding_id="fault.coverage.required",
+    ),
 )
 
 
@@ -299,3 +307,98 @@ def run_phase1_verifiers(
         _comfort_acceleration(events, gate),
         _comfort_jerk(events, gate),
     )
+
+
+def _fault_coverage(
+    events: tuple[TraceEventV2, ...],
+    scenario: ScenarioDefinition,
+) -> Finding:
+    config = scenario.faults
+    if config is None:
+        raise ValueError("fault coverage requires a scenario fault profile")
+    required: list[str] = []
+    if config.observation_delay_steps:
+        required.append("OBSERVATION_DELAY")
+    if config.frozen_observation_interval is not None:
+        required.append("OBSERVATION_FROZEN")
+    if config.dropped_observation_steps:
+        required.append("OBSERVATION_DROPOUT_HOLD_LAST")
+    if config.observation_noise is not None:
+        required.append("OBSERVATION_NOISE")
+    if config.control_delay_steps:
+        required.append("CONTROL_DELAY")
+    if config.max_abs_steering is not None:
+        required.append("STEERING_SATURATION")
+    if config.max_brake is not None:
+        required.append("BRAKE_SATURATION")
+    observed = {
+        reason
+        for event in events
+        for reason in (
+            *event.observation_fault_evidence.applied_faults,
+            *event.control_fault_evidence.applied_faults,
+        )
+    }
+    missing = [reason for reason in required if reason not in observed]
+    scheduled_missing: list[str] = []
+    interval = config.frozen_observation_interval
+    if interval is not None:
+        for sequence in range(
+            interval.start_step,
+            interval.start_step + interval.duration_steps,
+        ):
+            if sequence >= len(events) or "OBSERVATION_FROZEN" not in (
+                events[sequence].observation_fault_evidence.applied_faults
+            ):
+                scheduled_missing.append(f"OBSERVATION_FROZEN@{sequence}")
+    for sequence in config.dropped_observation_steps:
+        if sequence >= len(events) or "OBSERVATION_DROPOUT_HOLD_LAST" not in (
+            events[sequence].observation_fault_evidence.applied_faults
+        ):
+            scheduled_missing.append(f"OBSERVATION_DROPOUT_HOLD_LAST@{sequence}")
+    criterion = (
+        "every configured deterministic fault mechanism and scheduled fault step is observed"
+    )
+    if missing or scheduled_missing:
+        missing_items = [*missing, *scheduled_missing]
+        reason = "configured fault mechanisms or schedule were not exercised: " + ", ".join(
+            missing_items
+        )
+        return Finding(
+            finding_id="fault.coverage.required",
+            verifier="FaultCoverageVerifier",
+            verifier_version="1.0",
+            status=FindingStatus.NOT_AVAILABLE,
+            severity=Severity.ERROR,
+            hard_invariant=True,
+            threshold_or_invariant=criterion,
+            message=reason,
+            measurement=Measurement(
+                availability=EvidenceAvailability.NOT_AVAILABLE,
+                reason=reason,
+                unit="configured mechanisms",
+            ),
+        )
+    return Finding(
+        finding_id="fault.coverage.required",
+        verifier="FaultCoverageVerifier",
+        verifier_version="1.0",
+        status=FindingStatus.PASS,
+        severity=Severity.ERROR,
+        hard_invariant=True,
+        threshold_or_invariant=criterion,
+        message=(
+            f"all {len(required)} configured fault mechanisms and scheduled steps were "
+            "exercised"
+        ),
+        measurement=_available(float(len(required)), "configured mechanisms"),
+    )
+
+
+def run_phase4_verifiers(
+    events: tuple[TraceEventV2, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> tuple[Finding, ...]:
+    """Run legacy safety checks plus required deterministic fault coverage."""
+    return (*run_phase1_verifiers(events, scenario, gate), _fault_coverage(events, scenario))

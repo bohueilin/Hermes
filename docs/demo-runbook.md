@@ -203,6 +203,66 @@ Executive point:
 
 > Capability, permission, and verification are separate. An intervention can improve one dimension while creating another trade-off that remains visible.
 
+## Demo 8 — Deterministic fault pipeline
+
+Use a new run ID on every attempt; Hermes never overwrites evidence. The demonstration is expected
+to return the artifact's actual verdict exit code, which may be nonzero even when the bundle is
+internally consistent.
+
+```bash
+RUN_ID=phase4-fault-demo-$(date -u +%Y%m%dt%H%M%Sz)
+
+hermes run \
+  --simulator fake \
+  --scenario scenarios/fake_fault_injection.yaml \
+  --policy baseline \
+  --seed 7 \
+  --run-id "$RUN_ID"
+
+hermes verify-artifact "artifacts/$RUN_ID"
+```
+
+Show, from `events.jsonl` and `execution-context.json`:
+
+- raw, delivered, and result observations;
+- observation source sequence/time, age, bounded noise, freeze, and held-last reasons;
+- candidate, shield-permitted, pre-saturation, and executed actions;
+- candidate/execution time and simulated control latency;
+- the bound fault name/version/configuration digest; and
+- `fault.coverage.required`, including fail-closed behavior when a scheduled step was not reached.
+
+Do not call a changing delivery timestamp a changing sensor packet. Noise is source-packet-bound, so
+frozen and dropped packets retain their sensed values. Do not count control delay or saturation as a
+shield intervention.
+
+State the verification boundary precisely:
+
+> Stored verification exactly replays deterministic shield and fault transforms. The candidate
+> policy proposal and simulator result remain recorded inputs; the policy and simulator are not
+> re-executed. Local hashes are tamper-evident and `NOT_AUTHENTICATED`.
+
+MetaDrive IDM reads native simulator state, so Hermes rejects observation-fault profiles for that
+policy before constructing the adapter. Only action delay/saturation can truthfully wrap that
+profile.
+
+## Demo 9 — Developer gates and structured failures
+
+```bash
+make check
+make demo-phase1 DEMO_RUN_ID=demo-phase1-$(date -u +%Y%m%dt%H%M%Sz)
+make sim-smoke
+```
+
+`make check` runs Ruff, all tests, and doctor. `make demo-phase1` publishes and independently
+verifies a fake nominal artifact without overwriting an existing directory. `make sim-smoke` is a
+local/manual operational probe and requires the pinned MetaDrive environment; PR-safe CI excludes
+real MetaDrive and runs `pytest -m "not metadrive"`.
+
+Show one malformed command and one invalid artifact. The stable categories are `USAGE_ERROR`,
+`CONFIGURATION_ERROR`, `OPERATIONAL_ERROR`, `INVALID_EVIDENCE`, and
+`INCOMPATIBLE_EVIDENCE`. Configuration/operational/incompatible failures exit 40; invalid evidence
+exits 30. None may print a false `PASS`.
+
 ## Closing narrative
 
 > Hermes is the scenario-to-evidence control plane for autonomy development. The policy proposes behavior, the environment produces consequences, independent verifiers evaluate requirements, a gate decides advancement, and the trace supports review. The prototype is intentionally simulation-only. Any later ROS or closed-lab hardware work is deferred and requires a separate safety review.

@@ -28,7 +28,11 @@ hermes = "hermes.cli:app"
 where = ["src"]
 
 [tool.pytest.ini_options]
+addopts = "--strict-markers"
 testpaths = ["tests"]
+markers = [
+    "metadrive: requires a real local MetaDrive installation and simulator assets",
+]
 
 [tool.ruff]
 line-length = 100

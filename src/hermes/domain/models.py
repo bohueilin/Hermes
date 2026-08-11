@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from hermes.domain.enums import (
     AuthenticityStatus,
@@ -149,6 +149,80 @@ class HazardConfig(HermesModel):
     unavailable_progress: bool = False
 
 
+class FrozenObservationInterval(HermesModel):
+    """A bounded interval that reuses one previously selected observation."""
+
+    start_step: Annotated[int, Field(ge=1, le=9_999)]
+    duration_steps: Annotated[int, Field(ge=1, le=10_000)]
+
+
+class ObservationNoiseConfig(HermesModel):
+    """Counter-based bounded noise applied only to declared ego-state fields."""
+
+    speed_mps_bound: Annotated[FiniteFloat, Field(ge=0.0, le=10.0)] = 0.0
+    lateral_offset_m_bound: Annotated[FiniteFloat, Field(ge=0.0, le=5.0)] = 0.0
+
+    @model_validator(mode="after")
+    def require_a_positive_bound(self) -> ObservationNoiseConfig:
+        if self.speed_mps_bound == 0.0 and self.lateral_offset_m_bound == 0.0:
+            raise ValueError("observation noise requires at least one positive bound")
+        return self
+
+
+class FaultConfig(HermesModel):
+    """Strict deterministic fault profile bound into a schema-3 scenario."""
+
+    schema_version: Literal["1.0"]
+    name: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
+    version: Annotated[str, Field(min_length=1, max_length=32)]
+    label: Literal["illustrative_simulation_faults_not_real_vehicle_limits"]
+    observation_delay_steps: Annotated[int, Field(ge=0, le=9_999)] = 0
+    control_delay_steps: Annotated[int, Field(ge=0, le=9_999)] = 0
+    neutral_startup_action: Action = Field(
+        default_factory=lambda: Action(steering=0.0, throttle=0.0, brake=0.0)
+    )
+    frozen_observation_interval: FrozenObservationInterval | None = None
+    dropped_observation_steps: tuple[Annotated[int, Field(ge=1, le=9_999)], ...] = ()
+    observation_noise: ObservationNoiseConfig | None = None
+    max_abs_steering: Annotated[FiniteFloat, Field(gt=0.0, lt=1.0)] | None = None
+    max_brake: Annotated[FiniteFloat, Field(gt=0.0, lt=1.0)] | None = None
+
+    @field_validator("dropped_observation_steps", mode="before")
+    @classmethod
+    def normalize_yaml_step_list(cls, value: object) -> object:
+        return tuple(value) if isinstance(value, list) else value
+
+    @model_validator(mode="after")
+    def reject_ambiguous_profile(self) -> FaultConfig:
+        if self.neutral_startup_action != Action(
+            steering=0.0, throttle=0.0, brake=0.0
+        ):
+            raise ValueError("neutral_startup_action must be exactly neutral")
+        if tuple(sorted(set(self.dropped_observation_steps))) != self.dropped_observation_steps:
+            raise ValueError("dropped_observation_steps must be sorted and unique")
+        if self.frozen_observation_interval is not None:
+            start = self.frozen_observation_interval.start_step
+            end = start + self.frozen_observation_interval.duration_steps
+            overlap = [step for step in self.dropped_observation_steps if start <= step < end]
+            if overlap:
+                raise ValueError(
+                    "frozen observation interval cannot overlap dropped observation steps"
+                )
+        return self
+
+    @property
+    def enabled(self) -> bool:
+        return (
+            self.observation_delay_steps > 0
+            or self.control_delay_steps > 0
+            or self.frozen_observation_interval is not None
+            or bool(self.dropped_observation_steps)
+            or self.observation_noise is not None
+            or self.max_abs_steering is not None
+            or self.max_brake is not None
+        )
+
+
 class LeadVehicleHardBrakeChallenge(HermesModel):
     """A simulator-dynamic lead actor with a scheduled full-brake interval."""
 
@@ -185,7 +259,7 @@ ChallengeConfig = Annotated[
 class ScenarioDefinition(HermesModel):
     """Versioned, resolved, simulator-neutral scenario definition."""
 
-    schema_version: Literal["1.0", "2.0"]
+    schema_version: Literal["1.0", "2.0", "3.0"]
     name: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
     version: Annotated[str, Field(min_length=1, max_length=32)]
     description: Annotated[str, Field(min_length=1, max_length=500)]
@@ -195,6 +269,7 @@ class ScenarioDefinition(HermesModel):
     road: RoadConfig
     hazards: HazardConfig = Field(default_factory=HazardConfig)
     challenge: ChallengeConfig | None = None
+    faults: FaultConfig | None = None
 
     @model_validator(mode="after")
     def reject_contradictory_configuration(self) -> ScenarioDefinition:
@@ -213,16 +288,46 @@ class ScenarioDefinition(HermesModel):
         if self.schema_version == "1.0":
             if self.challenge is not None:
                 raise ValueError("schema_version 1.0 cannot define challenge")
+            if self.faults is not None:
+                raise ValueError("schema_version 1.0 cannot define faults")
             return self
 
-        if self.adapter != "metadrive":
-            raise ValueError("schema_version 2.0 requires adapter metadrive")
+        if self.schema_version == "2.0":
+            if self.faults is not None:
+                raise ValueError("schema_version 2.0 cannot define faults")
+            if self.adapter != "metadrive":
+                raise ValueError("schema_version 2.0 requires adapter metadrive")
+            if self.challenge is None:
+                raise ValueError("schema_version 2.0 requires challenge")
+        else:
+            if self.faults is None or not self.faults.enabled:
+                raise ValueError("schema_version 3.0 requires an enabled fault profile")
+            if self.adapter == "fake" and self.challenge is not None:
+                raise ValueError("fake adapter cannot define a MetaDrive challenge")
+            if (
+                self.faults.observation_delay_steps >= self.control.horizon_steps
+                or self.faults.control_delay_steps >= self.control.horizon_steps
+            ):
+                raise ValueError("fault delays must be less than horizon_steps")
+            interval = self.faults.frozen_observation_interval
+            if (
+                interval is not None
+                and interval.start_step + interval.duration_steps
+                > self.control.horizon_steps
+            ):
+                raise ValueError("frozen observation interval must fit within horizon_steps")
+            if any(
+                step >= self.control.horizon_steps
+                for step in self.faults.dropped_observation_steps
+            ):
+                raise ValueError("dropped observation steps must be less than horizon_steps")
+
         if self.challenge is None:
-            raise ValueError("schema_version 2.0 requires challenge")
+            return self
+        if self.adapter != "metadrive":
+            raise ValueError("challenge scenarios require adapter metadrive")
         if self.hazards != HazardConfig():
-            raise ValueError(
-                "schema_version 2.0 challenge cannot coexist with fake hazards"
-            )
+            raise ValueError("MetaDrive challenge cannot coexist with fake hazards")
 
         end_step: int
         window_name: str
@@ -272,6 +377,32 @@ class Measurement(HermesModel):
         elif self.value is not None:
             raise ValueError("NOT_AVAILABLE measurement cannot include a value")
         return self
+
+
+class ObservationFaultEvidence(HermesModel):
+    """Typed policy-input provenance for an evidence-schema-2 fault run."""
+
+    raw_observation: Observation
+    delivered_observation: Observation
+    delivered_from_sequence: Annotated[int, Field(ge=0)]
+    delivered_from_time_s: NonNegativeFloat
+    delivery_time_s: NonNegativeFloat
+    applied_faults: tuple[str, ...]
+    speed_noise_delta_mps: FiniteFloat
+    lateral_noise_delta_m: FiniteFloat
+
+
+class ControlFaultEvidence(HermesModel):
+    """Typed permitted-to-executed command provenance for a fault run."""
+
+    candidate_time_s: NonNegativeFloat
+    executed_from_sequence: Annotated[int, Field(ge=0)] | None
+    executed_from_candidate_time_s: NonNegativeFloat | None
+    execution_time_s: NonNegativeFloat
+    pre_saturation_action: Action
+    applied_faults: tuple[str, ...]
+    control_latency_ms: Measurement
+    latency_source: Literal["simulated"]
 
 
 class Finding(HermesModel):
@@ -350,6 +481,18 @@ class RunMetrics(HermesModel):
     termination_reason: TerminationReason
 
 
+class RunMetricsV2(RunMetrics):
+    """Schema-2 metrics with descriptive deterministic fault evidence."""
+
+    evidence_schema_version: Literal["2.0"] = "2.0"
+    fault_application_counts: dict[str, Annotated[int, Field(ge=0)]]
+    max_observation_age_s: Measurement
+    p95_control_latency_ms: Measurement
+    control_fill_count: Annotated[int, Field(ge=0)]
+    steering_saturation_count: Annotated[int, Field(ge=0)]
+    brake_saturation_count: Annotated[int, Field(ge=0)]
+
+
 class RunContext(HermesModel):
     """Deterministic inputs bound into every trace event."""
 
@@ -369,6 +512,15 @@ class RunContext(HermesModel):
     seed: Annotated[int, Field(ge=-(2**31), lt=2**31)]
     control_frequency_hz: Annotated[int, Field(ge=1, le=100)]
     horizon_steps: Annotated[int, Field(ge=1, le=10_000)]
+
+
+class RunContextV2(RunContext):
+    """Schema-2 run identity with an independently bound fault component."""
+
+    evidence_schema_version: Literal["2.0"] = "2.0"
+    fault_name: str
+    fault_version: str
+    fault_config_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 
 
 class ComponentContext(HermesModel):
@@ -399,6 +551,14 @@ class ExecutionContext(HermesModel):
     verifier_suite: tuple[VerifierIdentity, ...]
 
 
+class ExecutionContextV2(ExecutionContext):
+    """Schema-2 execution context for a deterministic fault run."""
+
+    evidence_schema_version: Literal["2.0"] = "2.0"
+    run_context: RunContextV2
+    faults: ComponentContext
+
+
 class TraceEvent(HermesModel):
     """One hash-chained deterministic evidence event."""
 
@@ -419,6 +579,17 @@ class TraceEvent(HermesModel):
     raw_facts: VerifierFacts
     previous_hash: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
     current_hash: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+
+
+class TraceEventV2(TraceEvent):
+    """Schema-2 event separating policy, shield, fault, and adapter actions."""
+
+    evidence_schema_version: Literal["2.0"] = "2.0"
+    run_context: RunContextV2
+    permitted_action: Action
+    observation_fault_evidence: ObservationFaultEvidence
+    control_fault_evidence: ControlFaultEvidence
+    result_observation: Observation
 
 
 class ArtifactManifest(HermesModel):
@@ -477,11 +648,26 @@ class ArtifactManifest(HermesModel):
         return self
 
 
+class ArtifactManifestV2(ArtifactManifest):
+    """Schema-2 manifest surfacing the bound deterministic fault profile."""
+
+    evidence_schema_version: Literal["2.0"] = "2.0"
+    fault_name: str
+    fault_version: str
+    fault_config_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+
+
 class FindingsDocument(HermesModel):
     """Complete deterministic structured verifier output."""
 
     evidence_schema_version: Literal["1.0"] = "1.0"
     findings: tuple[Finding, ...]
+
+
+class FindingsDocumentV2(FindingsDocument):
+    """Schema-2 finding collection for a fault run."""
+
+    evidence_schema_version: Literal["2.0"] = "2.0"
 
 
 class ArtifactVerification(HermesModel):

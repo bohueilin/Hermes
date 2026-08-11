@@ -6,7 +6,8 @@ import math
 from collections import Counter
 
 from hermes.domain.enums import EvidenceAvailability
-from hermes.domain.models import Measurement, RunMetrics, TraceEvent
+from hermes.domain.models import Measurement, RunMetrics, RunMetricsV2, TraceEvent, TraceEventV2
+from hermes.shields.deterministic import SUPPORTED_OVERRIDE_REASONS
 
 
 def _available(value: float, unit: str) -> Measurement:
@@ -31,7 +32,9 @@ def _nearest_rank_percentile(values: list[float], percentile: float) -> float:
     return ordered[rank - 1]
 
 
-def compute_metrics(events: tuple[TraceEvent, ...]) -> RunMetrics:
+def compute_metrics(
+    events: tuple[TraceEvent | TraceEventV2, ...],
+) -> RunMetrics | RunMetricsV2:
     """Recompute all Phase 1 metrics without adapter or policy access."""
     if not events:
         raise ValueError("cannot compute metrics from an empty trace")
@@ -107,8 +110,13 @@ def compute_metrics(events: tuple[TraceEvent, ...]) -> RunMetrics:
             "s",
         )
     )
-    reason_counts = Counter(reason for event in events for reason in event.override_reasons)
-    return RunMetrics(
+    reason_counts = Counter(
+        reason
+        for event in events
+        for reason in event.override_reasons
+        if reason in SUPPORTED_OVERRIDE_REASONS
+    )
+    common = dict(
         event_count=len(events),
         simulation_duration_s=events[-1].simulation_time_s,
         collision_count=collision_count,
@@ -120,8 +128,61 @@ def compute_metrics(events: tuple[TraceEvent, ...]) -> RunMetrics:
         max_abs_jerk_mps3=max_jerk,
         p95_policy_latency_ms=p95_latency,
         shield_override_count=sum(
-            event.candidate_action != event.executed_action for event in events
+            event.candidate_action
+            != (
+                event.permitted_action
+                if isinstance(event, TraceEventV2)
+                else event.executed_action
+            )
+            for event in events
         ),
         shield_override_reasons=dict(sorted(reason_counts.items())),
         termination_reason=events[-1].termination_reason,
+    )
+    if not isinstance(events[0], TraceEventV2):
+        return RunMetrics(**common)
+    if not all(isinstance(event, TraceEventV2) for event in events):
+        raise ValueError("trace cannot mix evidence schema versions")
+    fault_events = tuple(event for event in events if isinstance(event, TraceEventV2))
+    fault_counts = Counter(
+        reason
+        for event in fault_events
+        for reason in (
+            *event.observation_fault_evidence.applied_faults,
+            *event.control_fault_evidence.applied_faults,
+        )
+    )
+    control_latencies = [
+        event.control_fault_evidence.control_latency_ms.value
+        for event in fault_events
+        if event.control_fault_evidence.control_latency_ms.availability
+        is EvidenceAvailability.AVAILABLE
+    ]
+    return RunMetricsV2(
+        **common,
+        fault_application_counts=dict(sorted(fault_counts.items())),
+        max_observation_age_s=_available(
+            max(
+                event.observation_fault_evidence.delivered_observation.observation_age_s
+                for event in fault_events
+            ),
+            "s",
+        ),
+        p95_control_latency_ms=(
+            _available(
+                _nearest_rank_percentile(
+                    [float(value) for value in control_latencies if value is not None],
+                    0.95,
+                ),
+                "ms",
+            )
+            if control_latencies
+            else _unavailable(
+                "control-delay startup fill has no originating candidate",
+                "ms",
+            )
+        ),
+        control_fill_count=fault_counts["CONTROL_DELAY_FILL"],
+        steering_saturation_count=fault_counts["STEERING_SATURATION"],
+        brake_saturation_count=fault_counts["BRAKE_SATURATION"],
     )

@@ -212,3 +212,45 @@ scripted cut-in is not a behavior model, same-host repeatability is not cross-pl
 determinism, stored verification does not replay simulator dynamics, and local SHA-256 remains
 tamper-evident rather than independently authenticated. Full metrics and reproducibility conditions
 are recorded in `docs/phase3-safety-shield.md`.
+
+## 2026-08-11 — Phase 4 deterministic fault injection and Phase 5 hardening
+
+### Scope
+
+Add simulator-neutral observation/control faults only after the Phase 3 checkpoint was green, then
+complete the prescribed local targets, PR-safe CI, schema/version checks, structured CLI errors,
+and demo documentation. Dashboard, RL, CARLA, ROS 2, Autoware, cloud deployment, hardware, and real
+logs remain deferred.
+
+### Decisions
+
+- Introduce scenario schema 3.0 and sibling evidence schema 2.0 models rather than adding optional
+  fields to schema 1.0. This preserves legacy bytes/digests while requiring typed raw/delivered/result
+  observations and candidate/permitted/executed actions for fault runs.
+- Apply observation faults before policy/shield evaluation, then apply control delay and saturation
+  after the shield. Shield metrics compare candidate to permitted action so actuator faults cannot
+  masquerade as shield interventions.
+- Bind bounded counter noise to the source observation packet. Delay, freeze, and held-last delivery
+  therefore preserve sensor values even while delivery time and observation age advance.
+- Treat startup control fill as explicitly `NOT_AVAILABLE` latency because it has no originating
+  candidate. Subsequent control latency is derived from trace-bound simulated times.
+- Require every configured mechanism and every scheduled freeze/dropout step to occur. Early
+  termination or an untriggered configured saturation produces required fault coverage
+  `NOT_AVAILABLE` and a non-compensatory `HOLD`.
+- Reconstruct and replay the exact fault and shield transforms from stored evidence. Bind adapter
+  result sequence/time/freshness and preserve Phase 3 actor/phase checks for schema-3 MetaDrive
+  challenge evidence. Mixed or unsupported evidence schemas return `INVALID_EVIDENCE` rather than
+  raising out of verification.
+- Reject MetaDrive IDM observation faults before adapter construction because that policy reads
+  native simulator state, not the Hermes observation. Permit only action delay/saturation for that
+  installed-policy profile.
+- Keep candidate policy proposals and simulator consequences as trace inputs. Offline verification
+  does not rerun either component, and local hashes remain `NOT_AUTHENTICATED`; exact shield/fault
+  replay must not be described as full policy/dynamics replay.
+- Make fault identity/configuration part of comparison compatibility. Valid bundles with different
+  fault profiles are not ranked against each other.
+- Standardize CLI errors as `USAGE_ERROR`, `CONFIGURATION_ERROR`, `OPERATIONAL_ERROR`,
+  `INVALID_EVIDENCE`, or `INCOMPATIBLE_EVIDENCE`, preserving verdict exits 0/10/20/30,
+  operational/configuration exit 40, and doctor 0/1.
+- Keep `make check` as the full local gate; add artifact-safe `make demo-phase1` and local/manual
+  `make sim-smoke`. PR CI installs `.[dev]`, runs Ruff, and excludes tests marked `metadrive`.

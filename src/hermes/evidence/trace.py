@@ -7,15 +7,21 @@ from typing import Any
 
 from hermes.domain.models import (
     Action,
+    ControlFaultEvidence,
+    ObservationFaultEvidence,
     RunContext,
+    RunContextV2,
     ScenarioDefinition,
     TraceEvent,
+    TraceEventV2,
     VehicleState,
 )
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
+from hermes.faults.deterministic import ACTION_FAULT_REASONS, OBSERVATION_FAULT_REASONS
 from hermes.shields.deterministic import SUPPORTED_OVERRIDE_REASONS
 
 GENESIS_HASH = "0" * 64
+TraceEventLike = TraceEvent | TraceEventV2
 
 
 class TraceIntegrityError(ValueError):
@@ -66,19 +72,72 @@ def create_trace_event(
     return TraceEvent.model_validate({**payload, "current_hash": current_hash})
 
 
-def event_hash(event: TraceEvent) -> str:
+def create_trace_event_v2(
+    *,
+    sequence: int,
+    simulation_time_s: float,
+    run_context: RunContextV2,
+    observation_summary: dict[str, Any],
+    candidate_action: Action,
+    permitted_action: Action,
+    executed_action: Action,
+    override_reasons: tuple[str, ...],
+    observation_fault_evidence: ObservationFaultEvidence,
+    control_fault_evidence: ControlFaultEvidence,
+    result_observation,
+    vehicle_state: VehicleState,
+    policy_latency_ms: float,
+    latency_source: str,
+    terminated: bool,
+    truncated: bool,
+    termination_reason: object,
+    raw_facts: dict[str, Any],
+    previous_hash: str,
+) -> TraceEventV2:
+    """Build a schema-2 event without altering the legacy schema-1 hash path."""
+    payload: dict[str, Any] = {
+        "evidence_schema_version": "2.0",
+        "sequence": sequence,
+        "simulation_time_s": simulation_time_s,
+        "run_context": run_context,
+        "observation_summary": observation_summary,
+        "candidate_action": candidate_action,
+        "permitted_action": permitted_action,
+        "executed_action": executed_action,
+        "override_reasons": override_reasons,
+        "observation_fault_evidence": observation_fault_evidence,
+        "control_fault_evidence": control_fault_evidence,
+        "result_observation": result_observation,
+        "vehicle_state": vehicle_state,
+        "policy_latency_ms": policy_latency_ms,
+        "latency_source": latency_source,
+        "terminated": terminated,
+        "truncated": truncated,
+        "termination_reason": termination_reason,
+        "raw_facts": raw_facts,
+        "previous_hash": previous_hash,
+    }
+    json_payload = TraceEventV2.model_validate(
+        {**payload, "current_hash": "0" * 64}
+    ).model_dump(mode="json", exclude={"current_hash"})
+    current_hash = sha256_hex(canonical_json_bytes(json_payload))
+    return TraceEventV2.model_validate({**payload, "current_hash": current_hash})
+
+
+def event_hash(event: TraceEventLike) -> str:
     """Recompute one event hash from its canonical hash material."""
     payload = event.model_dump(mode="json", exclude={"current_hash"})
     return sha256_hex(canonical_json_bytes(payload))
 
 
-def verify_event_chain(events: tuple[TraceEvent, ...]) -> str:
+def verify_event_chain(events: tuple[TraceEventLike, ...]) -> str:
     """Verify sequence continuity, time ordering, links, and every event hash."""
     if not events:
         raise TraceIntegrityError("trace contains no events")
     expected_previous = GENESIS_HASH
     previous_time = -1.0
     context = events[0].run_context
+    schema_version = events[0].evidence_schema_version
     for expected_sequence, event in enumerate(events):
         if event.sequence != expected_sequence:
             raise TraceIntegrityError(
@@ -90,6 +149,8 @@ def verify_event_chain(events: tuple[TraceEvent, ...]) -> str:
             )
         if event.run_context != context:
             raise TraceIntegrityError(f"run context changed at sequence {event.sequence}")
+        if event.evidence_schema_version != schema_version:
+            raise TraceIntegrityError(f"evidence schema changed at sequence {event.sequence}")
         if event.previous_hash != expected_previous:
             raise TraceIntegrityError(f"previous hash mismatch at sequence {event.sequence}")
         recomputed = event_hash(event)
@@ -184,7 +245,7 @@ def _expected_challenge_phase(
 ) -> str:
     challenge = scenario.challenge
     if challenge is None:
-        raise TraceIntegrityError("schema 2.0 challenge configuration is unavailable")
+        raise TraceIntegrityError("challenge configuration is unavailable")
     if challenge.kind == "lead_vehicle_hard_brake":
         trigger = challenge.trigger_step
         end = trigger + challenge.brake_duration_steps
@@ -366,8 +427,275 @@ def _verify_observation_summary(
                 )
 
 
+def _known_ordered_reasons(
+    reasons: tuple[str, ...],
+    supported: tuple[str, ...],
+    *,
+    label: str,
+    sequence: int,
+) -> None:
+    positions: list[int] = []
+    for reason in reasons:
+        try:
+            positions.append(supported.index(reason))
+        except ValueError as exc:
+            raise TraceIntegrityError(
+                f"{label} reasons are unsupported at sequence {sequence}"
+            ) from exc
+    if len(set(reasons)) != len(reasons) or positions != sorted(positions):
+        raise TraceIntegrityError(
+            f"{label} reasons are duplicated or out of order at sequence {sequence}"
+        )
+
+
+def _verify_fault_challenge_evidence(
+    events: tuple[TraceEventLike, ...],
+    index: int,
+    scenario: ScenarioDefinition,
+) -> None:
+    event = events[index]
+    if not isinstance(event, TraceEventV2) or scenario.challenge is None:
+        raise TraceIntegrityError("fault challenge verification requires typed challenge evidence")
+    _verify_front_actor_fields(event, prefix="")
+    _verify_front_actor_fields(event, prefix="result_")
+    expected_input_phase = _expected_challenge_phase(
+        scenario,
+        event.sequence,
+        result=False,
+    )
+    expected_result_phase = _expected_challenge_phase(
+        scenario,
+        event.sequence,
+        result=True,
+    )
+    if event.observation_summary["challenge_phase"] != expected_input_phase:
+        raise TraceIntegrityError(
+            "fault challenge input phase contradicts the scenario schedule at sequence "
+            f"{event.sequence}"
+        )
+    if event.observation_summary["result_challenge_phase"] != expected_result_phase:
+        raise TraceIntegrityError(
+            "fault challenge result phase contradicts the scenario schedule at sequence "
+            f"{event.sequence}"
+        )
+    if event.sequence == 0:
+        actor_speed = _summary_number(event, "challenge_actor_speed_mps")
+        if not math.isclose(
+            actor_speed,
+            scenario.challenge.actor_speed_mps,
+            rel_tol=0.0,
+            abs_tol=1e-6,
+        ):
+            raise TraceIntegrityError(
+                "fault challenge initial actor speed contradicts the scenario at sequence 0"
+            )
+        initial_distance = event.observation_summary["front_distance_m"]
+        if scenario.challenge.kind == "lead_vehicle_hard_brake":
+            if initial_distance is None or not math.isclose(
+                float(initial_distance),
+                scenario.challenge.initial_gap_m,
+                rel_tol=0.0,
+                abs_tol=1e-6,
+            ):
+                raise TraceIntegrityError(
+                    "fault challenge initial front gap contradicts the lead challenge"
+                )
+        elif initial_distance is not None:
+            raise TraceIntegrityError(
+                "fault challenge cut-in actor must start outside front overlap"
+            )
+    if index > 0:
+        prior_summary = events[index - 1].observation_summary
+        for field_name in (
+            "front_distance_m",
+            "front_relative_speed_mps",
+            "challenge_actor_longitudinal_m",
+            "challenge_actor_lateral_offset_m",
+            "challenge_actor_speed_mps",
+            "challenge_phase",
+        ):
+            if not _challenge_values_match(
+                event.observation_summary[field_name],
+                prior_summary[f"result_{field_name}"],
+            ):
+                raise TraceIntegrityError(
+                    f"fault challenge {field_name} disagrees with the prior result at "
+                    f"sequence {event.sequence}"
+                )
+
+
+def _verify_fault_event(
+    events: tuple[TraceEventLike, ...],
+    index: int,
+    scenario: ScenarioDefinition | None,
+) -> None:
+    event = events[index]
+    if not isinstance(event, TraceEventV2):
+        raise TraceIntegrityError(
+            f"schema-2 fault trace requires schema-2 event at sequence {event.sequence}"
+        )
+    if scenario is None or scenario.schema_version != "3.0" or scenario.faults is None:
+        raise TraceIntegrityError("schema-2 fault trace requires a schema-3 fault scenario")
+    evidence = event.observation_fault_evidence
+    raw = evidence.raw_observation
+    delivered = evidence.delivered_observation
+    expected_input_time = event.sequence / event.run_context.control_frequency_hz
+    if raw.sequence != event.sequence or delivered.sequence != event.sequence:
+        raise TraceIntegrityError(
+            f"fault observation sequence disagrees at sequence {event.sequence}"
+        )
+    if not math.isclose(raw.observation_age_s, 0.0, rel_tol=0.0, abs_tol=1e-12):
+        raise TraceIntegrityError(
+            f"fault raw observation must be fresh at sequence {event.sequence}"
+        )
+    if not math.isclose(
+        raw.simulation_time_s, expected_input_time, rel_tol=0.0, abs_tol=1e-12
+    ) or not math.isclose(
+        delivered.simulation_time_s,
+        expected_input_time,
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        raise TraceIntegrityError(
+            f"fault observation time disagrees at sequence {event.sequence}"
+        )
+    if evidence.delivery_time_s != delivered.simulation_time_s:
+        raise TraceIntegrityError(
+            f"fault delivery time disagrees at sequence {event.sequence}"
+        )
+    if evidence.delivered_from_sequence > event.sequence:
+        raise TraceIntegrityError(
+            f"fault observation source is in the future at sequence {event.sequence}"
+        )
+    expected_age = evidence.delivery_time_s - evidence.delivered_from_time_s
+    if expected_age < -1e-12 or not math.isclose(
+        delivered.observation_age_s,
+        expected_age,
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        raise TraceIntegrityError(
+            f"fault observation age disagrees at sequence {event.sequence}"
+        )
+    if index == 0:
+        if raw.vehicle_state != VehicleState(
+            position_m=0.0,
+            speed_mps=scenario.initial_state.speed_mps,
+            acceleration_mps2=0.0,
+            lateral_offset_m=scenario.initial_state.lateral_offset_m,
+            route_progress_pct=0.0,
+            collision_count=0,
+            offroad=False,
+            destination_reached=False,
+        ):
+            raise TraceIntegrityError("fault raw initial observation contradicts the scenario")
+    else:
+        prior = events[index - 1]
+        if not isinstance(prior, TraceEventV2) or raw != prior.result_observation:
+            raise TraceIntegrityError(
+                f"fault raw observation disagrees with prior result at sequence "
+                f"{event.sequence}"
+            )
+    if event.result_observation.vehicle_state != event.vehicle_state:
+        raise TraceIntegrityError(
+            f"fault result observation disagrees with event state at sequence {event.sequence}"
+        )
+    if (
+        event.result_observation.sequence != event.sequence + 1
+        or not math.isclose(
+            event.result_observation.simulation_time_s,
+            event.simulation_time_s,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        )
+        or not math.isclose(
+            event.result_observation.observation_age_s,
+            0.0,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        )
+    ):
+        raise TraceIntegrityError(
+            f"fault result observation timing disagrees at sequence {event.sequence}"
+        )
+    expected_summary: dict[str, Any] = {
+        "input_sequence": delivered.sequence,
+        "input_simulation_time_s": delivered.simulation_time_s,
+        "speed_mps": delivered.vehicle_state.speed_mps,
+        "lateral_offset_m": delivered.vehicle_state.lateral_offset_m,
+        "route_progress_pct": delivered.vehicle_state.route_progress_pct,
+        "observation_age_s": delivered.observation_age_s,
+    }
+    if scenario.challenge is not None:
+        expected_summary.update(
+            {
+                "front_distance_m": delivered.front_distance_m,
+                "front_relative_speed_mps": delivered.front_relative_speed_mps,
+                "challenge_actor_longitudinal_m": (
+                    delivered.challenge_actor_longitudinal_m
+                ),
+                "challenge_actor_lateral_offset_m": (
+                    delivered.challenge_actor_lateral_offset_m
+                ),
+                "challenge_actor_speed_mps": delivered.challenge_actor_speed_mps,
+                "challenge_phase": delivered.challenge_phase,
+                "result_front_distance_m": event.result_observation.front_distance_m,
+                "result_front_relative_speed_mps": (
+                    event.result_observation.front_relative_speed_mps
+                ),
+                "result_challenge_actor_longitudinal_m": (
+                    event.result_observation.challenge_actor_longitudinal_m
+                ),
+                "result_challenge_actor_lateral_offset_m": (
+                    event.result_observation.challenge_actor_lateral_offset_m
+                ),
+                "result_challenge_actor_speed_mps": (
+                    event.result_observation.challenge_actor_speed_mps
+                ),
+                "result_challenge_phase": event.result_observation.challenge_phase,
+            }
+        )
+    if event.observation_summary != expected_summary:
+        raise TraceIntegrityError(
+            f"fault observation summary is not derived from typed evidence at sequence "
+            f"{event.sequence}"
+        )
+    if scenario.challenge is not None:
+        _verify_fault_challenge_evidence(events, index, scenario)
+    _known_ordered_reasons(
+        evidence.applied_faults,
+        OBSERVATION_FAULT_REASONS,
+        label="observation fault",
+        sequence=event.sequence,
+    )
+    control = event.control_fault_evidence
+    if (
+        not math.isclose(
+            control.candidate_time_s,
+            expected_input_time,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        )
+        or not math.isclose(
+            control.execution_time_s,
+            expected_input_time,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        )
+    ):
+        raise TraceIntegrityError(
+            f"fault command timing disagrees at sequence {event.sequence}"
+        )
+    _known_ordered_reasons(
+        control.applied_faults,
+        ACTION_FAULT_REASONS,
+        label="action fault",
+        sequence=event.sequence,
+    )
+
+
 def verify_complete_trace(
-    events: tuple[TraceEvent, ...],
+    events: tuple[TraceEventLike, ...],
     scenario: ScenarioDefinition | None = None,
 ) -> str:
     """Verify chain plus semantic completeness and redundant-fact consistency."""
@@ -376,9 +704,17 @@ def verify_complete_trace(
     if len(events) > configured_horizon:
         raise TraceIntegrityError(
             f"trace has {len(events)} events but configured horizon is {configured_horizon}"
-        )
+    )
     for index, event in enumerate(events):
-        _verify_observation_summary(events, index, scenario)
+        if event.evidence_schema_version == "2.0":
+            _verify_fault_event(events, index, scenario)
+        else:
+            legacy_events = tuple(
+                legacy for legacy in events if isinstance(legacy, TraceEvent)
+            )
+            if len(legacy_events) != len(events):
+                raise TraceIntegrityError("legacy trace contains a schema-2 event")
+            _verify_observation_summary(legacy_events, index, scenario)
         expected_time = (event.sequence + 1) / event.run_context.control_frequency_hz
         if not math.isclose(event.simulation_time_s, expected_time, rel_tol=0.0, abs_tol=1e-12):
             raise TraceIntegrityError(
@@ -406,8 +742,13 @@ def verify_complete_trace(
             raise TraceIntegrityError(
                 f"unavailable route progress has a value at sequence {event.sequence}"
             )
+        permitted_action = (
+            event.permitted_action
+            if isinstance(event, TraceEventV2)
+            else event.executed_action
+        )
         if event.run_context.shield_name == "noop" and (
-            event.candidate_action != event.executed_action or event.override_reasons
+            event.candidate_action != permitted_action or event.override_reasons
         ):
             raise TraceIntegrityError(
                 f"no-op shield evidence is contradictory at sequence {event.sequence}"
@@ -430,7 +771,7 @@ def verify_complete_trace(
                     "deterministic shield override reasons are duplicated or out of order "
                     f"at sequence {event.sequence}"
                 )
-            action_changed = event.candidate_action != event.executed_action
+            action_changed = event.candidate_action != permitted_action
             if bool(event.override_reasons) != action_changed:
                 raise TraceIntegrityError(
                     "deterministic shield override reasons must exactly match an action "
@@ -438,7 +779,7 @@ def verify_complete_trace(
                 )
         elif (
             event.run_context.shield_name != "noop"
-            and event.candidate_action != event.executed_action
+            and event.candidate_action != permitted_action
             and not event.override_reasons
         ):
             raise TraceIntegrityError(
@@ -489,7 +830,7 @@ def verify_complete_trace(
     return root
 
 
-def events_jsonl_bytes(events: tuple[TraceEvent, ...]) -> bytes:
+def events_jsonl_bytes(events: tuple[TraceEventLike, ...]) -> bytes:
     """Serialize events one canonical JSON object per UTF-8 line."""
     return b"".join(
         canonical_json_bytes(event.model_dump(mode="json")) + b"\n" for event in events

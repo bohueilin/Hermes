@@ -18,17 +18,31 @@ from hermes.adapters.metadrive_support import (
     SUPPORTED_METADRIVE_SOURCE,
     SUPPORTED_METADRIVE_VERSION,
 )
-from hermes.domain.enums import AuthenticityStatus, IntegrityStatus, Verdict
+from hermes.domain.enums import (
+    AuthenticityStatus,
+    EvidenceAvailability,
+    IntegrityStatus,
+    Verdict,
+)
 from hermes.domain.models import (
     ArtifactManifest,
+    ArtifactManifestV2,
     ArtifactVerification,
+    ControlFaultEvidence,
     ExecutionContext,
+    ExecutionContextV2,
+    FaultConfig,
     FindingsDocument,
+    FindingsDocumentV2,
     GateResult,
+    Measurement,
     Observation,
+    ObservationFaultEvidence,
     RunMetrics,
+    RunMetricsV2,
     ScenarioDefinition,
     TraceEvent,
+    TraceEventV2,
     VehicleState,
 )
 from hermes.evidence.artifacts import (
@@ -40,7 +54,8 @@ from hermes.evidence.artifacts import (
 )
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
 from hermes.evidence.metrics import compute_metrics
-from hermes.evidence.trace import TraceIntegrityError, verify_complete_trace
+from hermes.evidence.trace import TraceEventLike, TraceIntegrityError, verify_complete_trace
+from hermes.faults.deterministic import DeterministicFaultInjector
 from hermes.gates.config import (
     GateConfig,
     GateConfigError,
@@ -57,7 +72,12 @@ from hermes.scenarios.loader import (
 )
 from hermes.shields.config import ShieldConfig
 from hermes.shields.deterministic import DeterministicSafetyShield
-from hermes.verifiers import PHASE1_VERIFIER_IDENTITIES, run_phase1_verifiers
+from hermes.verifiers import (
+    PHASE1_VERIFIER_IDENTITIES,
+    PHASE4_VERIFIER_IDENTITIES,
+    run_phase1_verifiers,
+    run_phase4_verifiers,
+)
 
 MAX_ARTIFACT_FILE_BYTES = 16 * 1024 * 1024
 MAX_ARTIFACT_TOTAL_BYTES = 64 * 1024 * 1024
@@ -71,13 +91,13 @@ class VerifiedArtifactSnapshot:
     """Parsed immutable evidence captured and verified from one descriptor snapshot."""
 
     path: Path
-    manifest: ArtifactManifest
-    context: ExecutionContext
+    manifest: ArtifactManifest | ArtifactManifestV2
+    context: ExecutionContext | ExecutionContextV2
     scenario: ScenarioDefinition
     gate_config: GateConfig
-    events: tuple[TraceEvent, ...]
-    metrics: RunMetrics
-    findings: FindingsDocument
+    events: tuple[TraceEventLike, ...]
+    metrics: RunMetrics | RunMetricsV2
+    findings: FindingsDocument | FindingsDocumentV2
     verdict: GateResult
 
 
@@ -134,6 +154,43 @@ def _parse_canonical_model(
         raise ValueError(f"{filename} is not canonical JSON")
     try:
         return model_type.model_validate_json(canonical_json_bytes(payload))
+    except ValidationError as exc:
+        raise ValueError(f"{filename} schema validation failed: {exc}") from exc
+
+
+def _parse_versioned_model(
+    data: bytes,
+    filename: str,
+    model_types: dict[str, type[_ModelT]],
+) -> _ModelT:
+    payload = _strict_json(data, filename)
+    if not isinstance(payload, dict):
+        raise ValueError(f"{filename} must contain a JSON object")
+    if "evidence_schema_version" not in payload:
+        raise ValueError(f"{filename} is missing required evidence_schema_version")
+    version = payload["evidence_schema_version"]
+    if not isinstance(version, str) or version not in model_types:
+        supported = ", ".join(sorted(model_types))
+        raise ValueError(
+            f"{filename} evidence_schema_version {version!r} is unsupported; "
+            f"supported versions: {supported}"
+        )
+    if filename == "execution-context.json":
+        run_context = payload.get("run_context")
+        if not isinstance(run_context, dict) or "evidence_schema_version" not in run_context:
+            raise ValueError(
+                "execution-context.json run_context is missing required "
+                "evidence_schema_version"
+            )
+        if run_context["evidence_schema_version"] != version:
+            raise ValueError(
+                "execution-context.json run_context evidence schema differs from its parent"
+            )
+    canonical = canonical_json_bytes(payload) + b"\n"
+    if data != canonical:
+        raise ValueError(f"{filename} is not canonical JSON")
+    try:
+        return model_types[version].model_validate_json(canonical_json_bytes(payload))
     except ValidationError as exc:
         raise ValueError(f"{filename} schema validation failed: {exc}") from exc
 
@@ -285,7 +342,7 @@ def _read_exact_files(path: Path) -> tuple[dict[str, bytes], list[str]]:
     return payloads, errors
 
 
-def _parse_events(data: bytes) -> tuple[TraceEvent, ...]:
+def _parse_events(data: bytes) -> tuple[TraceEventLike, ...]:
     if not data.endswith(b"\n"):
         raise ValueError("events.jsonl must end with exactly one complete event line")
     raw_lines = data.splitlines()
@@ -293,7 +350,7 @@ def _parse_events(data: bytes) -> tuple[TraceEvent, ...]:
         raise ValueError("events.jsonl contains no events")
     if len(raw_lines) > MAX_EVENT_COUNT:
         raise ValueError(f"events.jsonl exceeds maximum event count of {MAX_EVENT_COUNT}")
-    events: list[TraceEvent] = []
+    events: list[TraceEventLike] = []
     for line_number, line in enumerate(raw_lines, start=1):
         if not line:
             raise ValueError(f"events.jsonl contains a blank line at line {line_number}")
@@ -302,11 +359,40 @@ def _parse_events(data: bytes) -> tuple[TraceEvent, ...]:
                 f"events.jsonl line {line_number} exceeds {MAX_EVENT_LINE_BYTES} bytes"
             )
         payload = _strict_json(line, f"events.jsonl line {line_number}")
+        if not isinstance(payload, dict):
+            raise ValueError(f"events.jsonl line {line_number} must be a JSON object")
+        if "evidence_schema_version" not in payload:
+            raise ValueError(
+                f"events.jsonl line {line_number} is missing required "
+                "evidence_schema_version"
+            )
+        version = payload["evidence_schema_version"]
+        model_type: type[TraceEvent] | type[TraceEventV2]
+        if version == "1.0":
+            model_type = TraceEvent
+        elif version == "2.0":
+            model_type = TraceEventV2
+        else:
+            raise ValueError(
+                f"events.jsonl line {line_number} evidence_schema_version "
+                f"{version!r} is unsupported; supported versions: 1.0, 2.0"
+            )
+        run_context = payload.get("run_context")
+        if not isinstance(run_context, dict) or "evidence_schema_version" not in run_context:
+            raise ValueError(
+                f"events.jsonl line {line_number} run_context is missing required "
+                "evidence_schema_version"
+            )
+        if run_context["evidence_schema_version"] != version:
+            raise ValueError(
+                f"events.jsonl line {line_number} run_context evidence schema differs "
+                "from the event"
+            )
         canonical = canonical_json_bytes(payload)
         if line != canonical:
             raise ValueError(f"events.jsonl line {line_number} is not canonical JSON")
         try:
-            events.append(TraceEvent.model_validate_json(canonical))
+            events.append(model_type.model_validate_json(canonical))
         except ValidationError as exc:
             raise ValueError(
                 f"events.jsonl line {line_number} schema validation failed: {exc}"
@@ -320,9 +406,9 @@ def _first_sequence(message: str) -> int | None:
 
 
 def _profile_errors(
-    context: ExecutionContext,
+    context: ExecutionContext | ExecutionContextV2,
     scenario: ScenarioDefinition,
-    events: tuple[TraceEvent, ...] | None,
+    events: tuple[TraceEventLike, ...] | None,
 ) -> list[str]:
     """Validate supported runtime profiles without importing a simulator or policy."""
     errors: list[str] = []
@@ -345,8 +431,122 @@ def _profile_errors(
     if context.adapter.name != scenario.adapter:
         errors.append("scenario adapter does not match execution-context.json adapter")
 
-    if shield is not None and events is not None:
+    fault_injector: DeterministicFaultInjector | None = None
+    if isinstance(context, ExecutionContextV2):
+        try:
+            fault_config = FaultConfig.model_validate(context.faults.config)
+            fault_injector = DeterministicFaultInjector(fault_config)
+            fault_injector.reset(scenario, context.run_context.seed)
+        except (ValidationError, ValueError) as exc:
+            errors.append(
+                "execution-context.json deterministic fault configuration is unsupported: "
+                f"{exc}"
+            )
+        if (
+            context.faults.name != "deterministic-faults"
+            or context.faults.version != "1.0"
+        ):
+            errors.append("execution-context.json contains an unsupported fault component")
+        if scenario.faults is None or canonical_json_bytes(
+            context.faults.config
+        ) != canonical_json_bytes(scenario.faults.model_dump(mode="json")):
+            errors.append(
+                "execution-context.json fault configuration does not match the scenario"
+            )
+    elif scenario.faults is not None:
+        errors.append("schema-3 fault scenario requires a schema-2 execution context")
+
+    if fault_injector is not None and events is not None:
         for event in events:
+            if not isinstance(event, TraceEventV2):
+                errors.append("stored fault replay encountered a legacy trace event")
+                break
+            try:
+                expected_observation = fault_injector.process_observation(
+                    event.observation_fault_evidence.raw_observation
+                )
+                expected_observation_evidence = ObservationFaultEvidence(
+                    raw_observation=event.observation_fault_evidence.raw_observation,
+                    delivered_observation=expected_observation.observation,
+                    delivered_from_sequence=expected_observation.source_sequence,
+                    delivered_from_time_s=(
+                        expected_observation.source_simulation_time_s
+                    ),
+                    delivery_time_s=expected_observation.delivery_time_s,
+                    applied_faults=expected_observation.reason_codes,
+                    speed_noise_delta_mps=expected_observation.noise_deltas.speed_mps,
+                    lateral_noise_delta_m=(
+                        expected_observation.noise_deltas.lateral_offset_m
+                    ),
+                )
+                expected_permitted, expected_override_reasons = (
+                    shield.apply(expected_observation.observation, event.candidate_action)
+                    if shield is not None
+                    else (event.candidate_action, ())
+                )
+                expected_action = fault_injector.process_action(
+                    expected_permitted,
+                    sequence=event.sequence,
+                    simulation_time_s=(
+                        event.observation_fault_evidence.raw_observation.simulation_time_s
+                    ),
+                )
+                expected_latency = (
+                    Measurement(
+                        availability=EvidenceAvailability.NOT_AVAILABLE,
+                        unit="ms",
+                        reason=(
+                            "control-delay startup fill has no originating candidate"
+                        ),
+                    )
+                    if expected_action.source_simulation_time_s is None
+                    else Measurement(
+                        availability=EvidenceAvailability.AVAILABLE,
+                        value=(
+                            event.observation_fault_evidence.raw_observation.simulation_time_s
+                            - expected_action.source_simulation_time_s
+                        )
+                        * 1000.0,
+                        unit="ms",
+                    )
+                )
+                expected_control_evidence = ControlFaultEvidence(
+                    candidate_time_s=(
+                        event.observation_fault_evidence.raw_observation.simulation_time_s
+                    ),
+                    executed_from_sequence=expected_action.source_sequence,
+                    executed_from_candidate_time_s=(
+                        expected_action.source_simulation_time_s
+                    ),
+                    execution_time_s=expected_action.execution_time_s,
+                    pre_saturation_action=expected_action.pre_saturation_action,
+                    applied_faults=expected_action.reason_codes,
+                    control_latency_ms=expected_latency,
+                    latency_source="simulated",
+                )
+            except (ValidationError, ValueError, RuntimeError) as exc:
+                errors.append(
+                    f"stored deterministic fault replay failed at sequence "
+                    f"{event.sequence}: {exc}"
+                )
+                break
+            if (
+                event.observation_fault_evidence != expected_observation_evidence
+                or event.permitted_action != expected_permitted
+                or event.override_reasons != expected_override_reasons
+                or event.executed_action != expected_action.action
+                or event.control_fault_evidence != expected_control_evidence
+            ):
+                errors.append(
+                    "stored deterministic fault decision mismatch at sequence "
+                    f"{event.sequence}"
+                )
+                break
+    elif shield is not None and events is not None:
+        for event in events:
+            if isinstance(event, TraceEventV2):
+                errors.append("stored shield replay encountered a schema-2 fault event")
+                break
             summary = event.observation_summary
             try:
                 observation = Observation(
@@ -407,6 +607,15 @@ def _profile_errors(
         ):
             errors.append("execution-context.json baseline policy configuration is unsupported")
     elif context.adapter.name == "metadrive":
+        if scenario.faults is not None and (
+            scenario.faults.observation_delay_steps > 0
+            or scenario.faults.frozen_observation_interval is not None
+            or bool(scenario.faults.dropped_observation_steps)
+            or scenario.faults.observation_noise is not None
+        ):
+            errors.append(
+                "MetaDrive IDM v1.0 does not support truthful Hermes observation faults"
+            )
         adapter_config = context.adapter.config
         simulator_commit = adapter_config.get("simulator_commit")
         simulator_version = adapter_config.get("simulator_version")
@@ -610,20 +819,26 @@ def _inspect_captured_artifact(
         if bundle_text.strip() != computed_bundle:
             errors.append("bundle.sha256 does not match manifest and companion bytes")
 
-    manifest: ArtifactManifest | None = None
-    context: ExecutionContext | None = None
-    metrics: RunMetrics | None = None
-    findings_document: FindingsDocument | None = None
+    manifest: ArtifactManifest | ArtifactManifestV2 | None = None
+    context: ExecutionContext | ExecutionContextV2 | None = None
+    metrics: RunMetrics | RunMetricsV2 | None = None
+    findings_document: FindingsDocument | FindingsDocumentV2 | None = None
     stored_verdict: GateResult | None = None
-    for filename, model_type in (
-        ("manifest.json", ArtifactManifest),
-        ("execution-context.json", ExecutionContext),
-        ("metrics.json", RunMetrics),
-        ("findings.json", FindingsDocument),
-        ("verdict.json", GateResult),
-    ):
+    versioned_documents = (
+        ("manifest.json", {"1.0": ArtifactManifest, "2.0": ArtifactManifestV2}),
+        (
+            "execution-context.json",
+            {"1.0": ExecutionContext, "2.0": ExecutionContextV2},
+        ),
+        ("metrics.json", {"1.0": RunMetrics, "2.0": RunMetricsV2}),
+        (
+            "findings.json",
+            {"1.0": FindingsDocument, "2.0": FindingsDocumentV2},
+        ),
+    )
+    for filename, model_types in versioned_documents:
         try:
-            parsed = _parse_canonical_model(payloads[filename], filename, model_type)
+            parsed = _parse_versioned_model(payloads[filename], filename, model_types)
         except ValueError as exc:
             errors.append(str(exc))
             continue
@@ -635,8 +850,12 @@ def _inspect_captured_artifact(
             metrics = parsed  # type: ignore[assignment]
         elif filename == "findings.json":
             findings_document = parsed  # type: ignore[assignment]
-        else:
-            stored_verdict = parsed  # type: ignore[assignment]
+    try:
+        stored_verdict = _parse_canonical_model(
+            payloads["verdict.json"], "verdict.json", GateResult
+        )
+    except ValueError as exc:
+        errors.append(str(exc))
 
     if manifest is not None:
         if manifest.required_files != REQUIRED_ARTIFACT_FILES:
@@ -674,7 +893,7 @@ def _inspect_captured_artifact(
     except GateConfigError as exc:
         errors.append(f"gate-config.resolved.yaml is invalid: {exc}")
 
-    events: tuple[TraceEvent, ...] | None = None
+    events: tuple[TraceEventLike, ...] | None = None
     first_mismatch_sequence: int | None = None
     trace_digest: str | None = None
     try:
@@ -696,11 +915,14 @@ def _inspect_captured_artifact(
         errors.append("trace.sha256 does not match the final event hash")
 
     if context is not None:
-        for component_name, component in (
+        components = [
             ("adapter", context.adapter),
             ("policy", context.policy),
             ("shield", context.shield),
-        ):
+        ]
+        if isinstance(context, ExecutionContextV2):
+            components.append(("fault", context.faults))
+        for component_name, component in components:
             if component.config_digest != config_digest(component.config):
                 errors.append(f"execution-context.json {component_name} config digest mismatch")
             run_context_identity = (
@@ -721,7 +943,12 @@ def _inspect_captured_artifact(
         suite_payload = [identity.model_dump(mode="json") for identity in context.verifier_suite]
         if context.run_context.verifier_suite_digest != config_digest(suite_payload):
             errors.append("execution-context.json verifier suite digest mismatch")
-        if context.verifier_suite != PHASE1_VERIFIER_IDENTITIES:
+        expected_suite = (
+            PHASE4_VERIFIER_IDENTITIES
+            if isinstance(context, ExecutionContextV2)
+            else PHASE1_VERIFIER_IDENTITIES
+        )
+        if context.verifier_suite != expected_suite:
             errors.append("execution-context.json contains an unsupported verifier suite")
         if events is not None and events[0].run_context != context.run_context:
             errors.append("execution-context.json does not match the trace run context")
@@ -737,6 +964,15 @@ def _inspect_captured_artifact(
             context.run_context.gate_config_digest != gate_config_digest(gate_config)
         ):
             errors.append("gate configuration digest does not match trace context")
+
+    versioned_objects = [manifest, context, metrics, findings_document]
+    observed_versions = {
+        item.evidence_schema_version for item in versioned_objects if item is not None
+    }
+    if events is not None:
+        observed_versions.update(event.evidence_schema_version for event in events)
+    if len(observed_versions) > 1:
+        errors.append("artifact files contain mixed evidence_schema_version values")
 
     if (
         manifest is not None
@@ -769,6 +1005,19 @@ def _inspect_captured_artifact(
         for field_name, expected in expected_manifest_values.items():
             if getattr(manifest, field_name) != expected:
                 errors.append(f"manifest.json {field_name} does not match execution context")
+        if isinstance(context, ExecutionContextV2):
+            if not isinstance(manifest, ArtifactManifestV2):
+                errors.append("schema-2 execution context requires a schema-2 manifest")
+            else:
+                for field_name, expected in (
+                    ("fault_name", context.faults.name),
+                    ("fault_version", context.faults.version),
+                    ("fault_config_digest", context.faults.config_digest),
+                ):
+                    if getattr(manifest, field_name) != expected:
+                        errors.append(
+                            f"manifest.json {field_name} does not match execution context"
+                        )
         if trace_digest is not None and manifest.trace_digest != trace_digest:
             errors.append("manifest.json trace_digest does not match the event chain")
         if context.adapter.name == "fake":
@@ -798,9 +1047,37 @@ def _inspect_captured_artifact(
                 )
 
     recomputed_verdict: GateResult | None = None
-    if events is not None and scenario is not None and gate_config is not None:
+    if (
+        events is not None
+        and trace_digest is not None
+        and scenario is not None
+        and gate_config is not None
+    ):
         recomputed_metrics = compute_metrics(events)
-        recomputed_findings = run_phase1_verifiers(events, scenario, gate_config)
+        if scenario.faults is not None:
+            fault_events = tuple(
+                event for event in events if isinstance(event, TraceEventV2)
+            )
+            if len(fault_events) != len(events):
+                errors.append("fault scenario contains a legacy trace event")
+                recomputed_findings = ()
+            else:
+                recomputed_findings = run_phase4_verifiers(
+                    fault_events, scenario, gate_config
+                )
+        else:
+            legacy_events = tuple(
+                event
+                for event in events
+                if isinstance(event, TraceEvent) and not isinstance(event, TraceEventV2)
+            )
+            if len(legacy_events) != len(events):
+                errors.append("legacy scenario contains a schema-2 trace event")
+                recomputed_findings = ()
+            else:
+                recomputed_findings = run_phase1_verifiers(
+                    legacy_events, scenario, gate_config
+                )
         adapter_name = context.adapter.name if context is not None else "fake"
         recomputed_verdict = apply_release_gate(
             recomputed_findings,
@@ -809,7 +1086,11 @@ def _inspect_captured_artifact(
         )
         if metrics is not None and metrics != recomputed_metrics:
             errors.append("metrics.json does not match metrics recomputed from stored events")
-        expected_findings = FindingsDocument(findings=recomputed_findings)
+        expected_findings = (
+            FindingsDocumentV2(findings=recomputed_findings)
+            if scenario.faults is not None
+            else FindingsDocument(findings=recomputed_findings)
+        )
         if findings_document is not None and findings_document != expected_findings:
             errors.append("findings.json does not match verifiers rerun from stored events")
         if stored_verdict is not None and stored_verdict != recomputed_verdict:
