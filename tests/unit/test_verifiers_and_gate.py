@@ -13,7 +13,7 @@ from hermes.domain.models import Action, Finding, Measurement, RunContext, Vehic
 from hermes.evidence.metrics import compute_metrics
 from hermes.evidence.trace import GENESIS_HASH, create_trace_event
 from hermes.gates.config import GateConfig, load_gate_config
-from hermes.gates.release import apply_release_gate
+from hermes.gates.release import VerifierProfile, apply_release_gate
 from hermes.scenarios.loader import load_scenario
 from hermes.verifiers import run_phase1_verifiers
 
@@ -141,6 +141,7 @@ def test_gate_precedence_cannot_average_away_hard_or_invalid_failures(
     collision_result = apply_release_gate(
         run_phase1_verifiers(_events(collision=True, acceleration=0.1), scenario, gate),
         gate,
+        expected_profile=VerifierProfile.LEGACY,
     )
     invalid_finding = Finding(
         finding_id="trace.integrity",
@@ -162,6 +163,7 @@ def test_gate_precedence_cannot_average_away_hard_or_invalid_failures(
     invalid_result = apply_release_gate(
         (invalid_finding,) + collision_result.findings,
         gate,
+        expected_profile=VerifierProfile.LEGACY,
     )
 
     assert collision_result.verdict is Verdict.HOLD
@@ -176,12 +178,20 @@ def test_gate_maps_soft_failure_to_conditional_and_required_unavailable_to_hold(
     gate = load_gate_config(repository_root / "config" / "gates.phase1.yaml")
 
     conditional = apply_release_gate(
-        run_phase1_verifiers(_events(acceleration=6.0), scenario, gate), gate
+        run_phase1_verifiers(_events(acceleration=6.0), scenario, gate),
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
     )
     unavailable = apply_release_gate(
-        run_phase1_verifiers(_events(progress_available=False), scenario, gate), gate
+        run_phase1_verifiers(_events(progress_available=False), scenario, gate),
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
     )
-    passing = apply_release_gate(run_phase1_verifiers(_events(), scenario, gate), gate)
+    passing = apply_release_gate(
+        run_phase1_verifiers(_events(), scenario, gate),
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
+    )
 
     assert conditional.verdict is Verdict.CONDITIONAL
     assert "comfort.acceleration" in conditional.soft_failures
@@ -202,7 +212,11 @@ def test_progress_requires_destination_even_when_numeric_threshold_is_met(
     progress = next(
         finding for finding in findings if finding.finding_id == "progress.required"
     )
-    result = apply_release_gate(findings, gate)
+    result = apply_release_gate(
+        findings,
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
+    )
 
     assert progress.status is FindingStatus.FAIL
     assert progress.verifier_version == "1.1"
@@ -216,7 +230,11 @@ def test_soft_measurement_unavailable_cannot_produce_pass(repository_root: Path)
 
     findings = run_phase1_verifiers(_events(), scenario, gate)
     by_id = {finding.finding_id: finding for finding in findings}
-    result = apply_release_gate(findings, gate)
+    result = apply_release_gate(
+        findings,
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
+    )
 
     assert by_id["comfort.jerk"].status is FindingStatus.NOT_AVAILABLE
     assert by_id["comfort.jerk"].measurement.reason
@@ -238,7 +256,11 @@ def test_offroad_state_fails_boundary_even_with_relaxed_lateral_threshold(
     boundary = next(
         finding for finding in findings if finding.finding_id == "boundary.within_tolerance"
     )
-    result = apply_release_gate(findings, relaxed_lateral_gate)
+    result = apply_release_gate(
+        findings,
+        relaxed_lateral_gate,
+        expected_profile=VerifierProfile.LEGACY,
+    )
 
     assert boundary.status is FindingStatus.FAIL
     assert boundary.first_failure_time_s == 0.1
@@ -271,7 +293,11 @@ def test_unavailable_collision_or_boundary_evidence_is_invalid(
     )
     findings[findings.index(collision)] = unavailable_collision
 
-    result = apply_release_gate(tuple(findings), gate)
+    result = apply_release_gate(
+        tuple(findings),
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
+    )
 
     assert result.verdict is Verdict.INVALID_EVIDENCE
     assert "collision.zero" in result.hard_failures
@@ -362,6 +388,44 @@ def test_gate_rejects_missing_duplicate_or_unknown_required_findings(
         ),
     )
 
-    assert apply_release_gate(without_trace, gate).verdict is Verdict.INVALID_EVIDENCE
-    assert apply_release_gate(duplicate, gate).verdict is Verdict.INVALID_EVIDENCE
-    assert apply_release_gate(unknown, gate).verdict is Verdict.INVALID_EVIDENCE
+    assert (
+        apply_release_gate(
+            without_trace,
+            gate,
+            expected_profile=VerifierProfile.LEGACY,
+        ).verdict
+        is Verdict.INVALID_EVIDENCE
+    )
+    assert (
+        apply_release_gate(
+            duplicate,
+            gate,
+            expected_profile=VerifierProfile.LEGACY,
+        ).verdict
+        is Verdict.INVALID_EVIDENCE
+    )
+    assert (
+        apply_release_gate(
+            unknown,
+            gate,
+            expected_profile=VerifierProfile.LEGACY,
+        ).verdict
+        is Verdict.INVALID_EVIDENCE
+    )
+
+
+def test_fault_coverage_profile_rejects_legacy_suite_without_coverage_finding(
+    repository_root: Path,
+) -> None:
+    scenario = load_scenario(repository_root / "scenarios" / "fake_nominal.yaml")
+    gate = load_gate_config(repository_root / "config" / "gates.phase2.yaml")
+    legacy_findings = run_phase1_verifiers(_events(), scenario, gate)
+
+    result = apply_release_gate(
+        legacy_findings,
+        gate,
+        expected_profile=VerifierProfile.FAULT_COVERAGE,
+    )
+
+    assert result.verdict is Verdict.INVALID_EVIDENCE
+    assert result.hard_failures == ("gate.finding-set",)

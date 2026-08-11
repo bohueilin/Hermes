@@ -1,1 +1,1 @@
-"""Simulator-specific adapter implementations and support profiles."""
+"""Simulator-specific adapter implementations."""

@@ -420,8 +420,16 @@ def compare_command(
     assert candidate.snapshot is not None
     comparison = compare_artifacts(baseline.snapshot, candidate.snapshot)
     if output_format == "json":
+        comparison_payload = comparison.model_dump(mode="json")
+        if not comparison.compatibility.comparable:
+            _raise_cli_error(
+                CliErrorCode.INCOMPATIBLE_EVIDENCE,
+                "Stored artifacts are not comparable.",
+                details={"comparison": comparison_payload},
+                json_output=True,
+            )
         typer.echo(
-            canonical_json_bytes(comparison.model_dump(mode="json")).decode("utf-8")
+            canonical_json_bytes(comparison_payload).decode("utf-8")
         )
     else:
         console.print(SCOPE_BANNER)

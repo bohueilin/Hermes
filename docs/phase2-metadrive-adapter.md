@@ -258,8 +258,9 @@ different mission semantics as the same verifier identity.
 - `close()` is idempotent at the Hermes boundary and invokes both owned cleanup paths.
 - A simulator exception is an operational failure, never a successful episode
   or fabricated terminal state.
-- Stored artifact verification imports no MetaDrive code and never reruns the
-  simulator.
+- Stored artifact verification imports no MetaDrive runtime package or adapter code and never
+  reruns the simulator. It reads only an import-safe, data-only declaration of the supported
+  recorded profile.
 
 ## Provenance
 

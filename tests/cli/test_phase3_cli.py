@@ -6,6 +6,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from hermes.cli import app
+from hermes.evidence.canonical import canonical_json_bytes
 from hermes.runtime.orchestrator import execute_fake_run
 from hermes.shields.config import load_shield_config
 from hermes.shields.deterministic import DeterministicSafetyShield
@@ -75,6 +76,10 @@ def test_compare_command_maps_invalid_and_incompatible_artifacts_to_stable_exits
         repository_root=repository_root,
     ).artifact_path
     incompatible = runner.invoke(app, ["compare", str(baseline), str(collision)])
+    incompatible_json = runner.invoke(
+        app,
+        ["compare", str(baseline), str(collision), "--format", "json"],
+    )
 
     assert invalid.exit_code == 30
     assert "INVALID_EVIDENCE" in invalid.output
@@ -82,3 +87,19 @@ def test_compare_command_maps_invalid_and_incompatible_artifacts_to_stable_exits
     assert json.loads(invalid_json.output)["error"] == "INVALID_EVIDENCE"
     assert incompatible.exit_code == 40
     assert "scenario digest differs" in incompatible.output
+    assert incompatible_json.exit_code == 40
+    incompatible_payload = json.loads(incompatible_json.output)
+    assert incompatible_json.output == (
+        canonical_json_bytes(incompatible_payload).decode("utf-8") + "\n"
+    )
+    assert incompatible_payload["error"] == "INCOMPATIBLE_EVIDENCE"
+    assert incompatible_payload["exit_code"] == 40
+    assert incompatible_payload["details"]["comparison"]["compatibility"][
+        "comparable"
+    ] is False
+    assert any(
+        "scenario digest differs" in reason
+        for reason in incompatible_payload["details"]["comparison"]["compatibility"][
+            "reasons"
+        ]
+    )

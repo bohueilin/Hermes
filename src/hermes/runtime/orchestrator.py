@@ -44,7 +44,7 @@ from hermes.evidence.trace import (
 from hermes.evidence.verification import verify_artifact
 from hermes.faults.deterministic import DeterministicFaultInjector
 from hermes.gates.config import GateConfigError, gate_config_digest, load_gate_config
-from hermes.gates.release import apply_release_gate
+from hermes.gates.release import VerifierProfile, apply_release_gate
 from hermes.policies.baseline import BaselinePolicy
 from hermes.policies.metadrive_idm import MetaDriveIDMPolicy
 from hermes.scenarios.loader import ScenarioLoadError, load_scenario, scenario_digest
@@ -578,7 +578,17 @@ def _execute_run(
         if len(legacy_events) != len(events):
             raise RunOperationalError("legacy run produced a mixed evidence schema")
         findings = run_phase1_verifiers(legacy_events, scenario, gate_config)
-    verdict = apply_release_gate(findings, gate_config, adapter_name=expected_adapter)
+    verifier_profile = (
+        VerifierProfile.FAULT_COVERAGE
+        if scenario.faults is not None
+        else VerifierProfile.LEGACY
+    )
+    verdict = apply_release_gate(
+        findings,
+        gate_config,
+        adapter_name=expected_adapter,
+        expected_profile=verifier_profile,
+    )
     commit, dirty, provenance_reason = _repository_provenance(
         repository_root.expanduser().resolve()
     )

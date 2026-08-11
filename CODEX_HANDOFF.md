@@ -1,514 +1,260 @@
-# Hermes Codex Handoff
+# Hermes unattended-build handoff
 
-## 1. Executive summary
+## Executive summary
 
-- **Highest completed phase:** Phase 3 — deterministic safety shield, two bounded MetaDrive
-  challenge scenarios, stored shield replay, and stored-artifact comparison.
-- **Overall status:** `GREEN` for implementation and local evidence validation; the Phase 3
-  checkpoint commit is intentionally still pending in this snapshot.
-- **Result:** Hermes now preserves policy proposal, shield-selected execution, simulator outcome,
-  verifier findings, gate decision, and replayable evidence as separate reviewable surfaces across
-  both the deterministic fake adapter and pinned MetaDrive 0.4.3.
-- **Most important limitation:** this is simulation-only prototype evidence. The retained Phase 3
-  runs were dominated by the illustrative `5.5 m/s` speed-cap rule; they do not establish a complete
-  shield, realistic traffic behavior, perception performance, road safety, certification,
-  compliance, or deployment permission.
-- **Remote actions:** none. No push, pull request, deployment, publication, purchase, remote
-  configuration change, or infrastructure mutation was performed.
+- **Highest completed phase:** Phase 5 — CI and developer experience, including the ordered
+  post-Phase-3 deterministic-fault hardening.
+- **Status:** implementation and local validation are green. No dashboard, RL, CARLA, ROS 2,
+  Autoware, real-log training, cloud deployment, hardware integration, or real-vehicle interface was
+  started.
+- **Branch:** `feat/unattended-evidence-core`.
+- **Implementation checkpoint:** `267a88e5193b226b60eeefd42e2a0e1ee5c6ae6c`.
+- **Environment:** Conda `hermes-dev`, Python 3.11.15, editable `hermes-autonomy` 0.1.0.
+- **Simulator:** MetaDrive 0.4.3 from clean `third_party/metadrive` commit
+  `85e5dadc6c7436d324348f6e3d8f8e680c06b4db`.
+- **Remote actions:** none. Nothing was pushed, published, deployed, purchased, or configured
+  remotely.
 
-## 2. Repository state
+Hermes remains a simulation-only prototype. Every retained final artifact reports
+`NOT_AUTHENTICATED`; none is road-safety, certification, compliance, or deployment evidence.
 
-| Field | Observed value |
-|---|---|
-| Repository root | `/Users/bohueilin/Documents/GitHub/Hermes` |
-| Starting branch | `main` |
-| Starting commit | `c181509a691b132cb732a50c24612f6bd40bafca` |
-| Ending branch | `feat/unattended-evidence-core` |
-| Current committed HEAD | `638a951278d7b6ab5ffaad4bb514fc7447fa9b62` |
-| Ending Phase 3 state | validated but uncommitted; checkpoint commit pending |
-| Working tree | dirty only with the intended Phase 3 source, tests, and documentation listed below |
-| Generated evidence | under ignored `artifacts/`; not staged |
-| External simulator | `third_party/metadrive` clean at its recorded commit |
+## Starting and ending snapshot
 
-The Phase 3 artifacts truthfully record repository commit `638a951278d7b6ab5ffaad4bb514fc7447fa9b62`
-and `repository_dirty: true` because they were generated before the Phase 3 checkpoint commit. Both
-stored comparisons therefore emit the expected dirty-worktree warning.
+| Item | Starting state | Ending state |
+|---|---|---|
+| Branch | `main` | `feat/unattended-evidence-core` |
+| Commit | `c181509a691b132cb732a50c24612f6bd40bafca` | implementation checkpoint `267a88e5193b226b60eeefd42e2a0e1ee5c6ae6c`; the final documentation-only handoff commit is `HEAD` at delivery |
+| Tests | 26 passing | 269 passing |
+| Ruff | passing | passing |
+| Doctor | working | no `FAIL`; 18 `PASS` and 1 optional `NOT_AVAILABLE` in the clean activated environment |
 
-## 3. Environment
+The repository was clean at the baseline. The final `git status --short`, after committing this
+handoff, is expected and subsequently verified to produce no output; the exact final `HEAD` is
+reported in the delivery response because a commit cannot embed its own content-derived SHA.
 
-| Field | Observed value |
-|---|---|
-| Python executable | `/Users/bohueilin/miniconda3/envs/hermes-dev/bin/python3.11` |
-| Python version | 3.11.15 |
-| Environment | Conda `hermes-dev` |
-| Hermes distribution | `hermes-autonomy` 0.1.0, editable |
-| MetaDrive | 0.4.3 from `third_party/metadrive` |
-| MetaDrive commit | `85e5dadc6c7436d324348f6e3d8f8e680c06b4db` |
-| OS / architecture | `macOS-26.5.2-arm64-arm-64bit` / `arm64` |
+## Phase and commit history
 
-## 4. Phase status
-
-| Phase | Status | Acceptance result | Local commit |
-|---|---|---|---|
-| Phase 0 — doctor/bootstrap | COMPLETE, pre-existing | package and doctor baseline preserved | `c181509` |
-| Build-plan checkpoint | COMPLETE | unattended plan and gates recorded | `430ef0c` |
-| Phase 1 — evidence core | COMPLETE | all four verdict paths, tamper rejection, deterministic repeat, stored replay green | `635c246` |
-| Phase 2 — MetaDrive adapter | COMPLETE | real headless smoke/run, pinned provenance, stored replay, deterministic repeat green | `638a951` |
-| Phase 3 — shield/challenges | COMPLETE, UNCOMMITTED | 221 tests, Ruff, doctor, two real challenge pairs, repeats, replay, and comparison green | pending |
-| Optional P3 hardening | DEFERRED | comparison was pulled forward because Phase 3 required it; CI and additional fault injection were not attempted | none |
-| Dashboard, RL, CARLA, ROS 2, Autoware, HIL, real logs | DEFERRED | explicitly out of current scope | none |
+| Phase/checkpoint | Result | Local commit |
+|---|---|---|
+| Phase 0 package and doctor | complete | `c181509` |
+| Unattended build plan | complete | `430ef0c` |
+| Phase 1 deterministic evidence core | complete | `635c246` |
+| Phase 2 pinned MetaDrive adapter | complete | `638a951` |
+| Phase 3 shield, challenges, comparison | complete | `862b98f` |
+| Phase 4 faults + Phase 5 CI/dev hardening | complete | `267a88e` |
 
 No predecessor gate was skipped.
 
-## 5. Architecture implemented
+## Attempted, completed, blocked, and deferred scope
 
-- **Simulator-neutral contracts:** strict Pydantic domain models preserve observations, vehicle
-  state, candidate and executed actions, termination, findings, measurements, manifests, and gate
-  results without importing MetaDrive.
-- **Strict scenario/config loading:** duplicate YAML keys, unknown fields, non-finite values, and
-  contradictions are rejected. Scenario schema 1.0 remains byte-compatible with Phase 1/2;
-  MetaDrive challenge schema 2.0 requires one typed challenge and forbids fake hazards.
-- **Adapter boundary:** the deterministic fake adapter is an architectural test double.
-  `MetaDriveAdapter` lazily validates the exact external version, source, commit, and cleanliness,
-  owns reset/step/close, and uses adapter version 1.1 only for challenge runs.
-- **Policy/permission boundary:** the installed MetaDrive IDM policy proposes a binary32-compatible
-  candidate. The no-op or deterministic shield returns the executed action and ordered reason codes;
-  MetaDrive receives exactly the trace-bound executed action.
-- **Challenge actor manager:** the lead actor receives fixed native dynamic actions on a scheduled
-  neutral/brake/recovery sequence. The cut-in uses a deterministic smoothstep
-  `scripted_kinematic_replay`. Both use a fixed actor name and seed and explicitly record
-  `behavior_realism_claim: false`.
-- **Ground-truth challenge signals:** front bumper gap and actor-relative longitudinal speed are
-  derived from the named actor's actual oriented geometry and velocity projected into the ego frame.
-  This is simulator ground truth, not a perception claim. TTC exists only for a laterally overlapping,
-  ahead, closing actor.
-- **Orchestration:** one simulator-neutral pipeline composes scenario, adapter, policy, shield,
-  trace, metrics, verifiers, gate, and atomic artifact publication. Operational failures do not
-  become policy verdicts or partial bundles.
-- **Evidence:** canonical JSON and SHA-256 bind every event to a constant run context and previous
-  event. A bundle digest binds manifest and companion bytes. Wall-clock publication metadata is kept
-  out of deterministic event content.
-- **Verifiers/gate:** trace, collision, boundary, destination-plus-progress, acceleration, and jerk
-  findings feed a non-compensatory gate. Collision and boundary hard failures force `HOLD`; missing
-  evidence is `NOT_AVAILABLE`, never zero or success.
-- **Independent stored replay:** artifact verification captures required files once through
-  descriptor-relative no-follow reads, rejects mutations during capture, reruns metrics/verifiers/
-  gate without a simulator, and replays every deterministic shield decision from stored policy-input
-  evidence.
-- **Comparison:** `hermes compare` first verifies both immutable snapshots, fails closed on invalid
-  or incompatible inputs, and reports verdict, hard failures, collision, TTC, progress, comfort,
-  latency, interventions, and evidence availability without rerunning MetaDrive.
-
-## 6. Major decisions and assumptions
-
-| Decision | Rationale and consequence | Decision log |
+| Scope | Status | Evidence |
 |---|---|---|
-| Local hashes are called tamper-evident, never tamper-proof | A party able to rewrite the whole bundle can recompute local hashes; authenticity remains `NOT_AUTHENTICATED` | `docs/decision-log.md` |
-| Destination fact and configured progress are both required | Prevents numeric route progress from fabricating mission completion; the MetaDrive gate uses illustrative 95% progress | `docs/decision-log.md` |
-| Challenge adapter is 1.1; nominal remains 1.0 | Binds the additional actor manager and signal mappings without silently changing old artifact meaning | `docs/decision-log.md` |
-| Shield reasons exist only when the action changes | Keeps `override_reasons` semantically exact even when a rule triggers against an already-identical full-brake candidate | `docs/decision-log.md` |
-| Override count counts changed-action events | A separate histogram counts reasons, because one event may have multiple reasons | `docs/decision-log.md` |
-| Cut-in is scripted kinematic replay | MetaDrive 0.4.3 has no reliable stock scheduled near-field cut-in primitive; the closest deterministic mechanism is used and labeled non-realistic | `docs/decision-log.md` |
-| Comparison compatibility is fail-closed | Scenario, gate, adapter, policy, simulator, seed, cadence, platform, evidence schema, and repository commit must match; shield identity may differ intentionally | `docs/decision-log.md` |
-| Intervention changes are descriptive | More interventions are not automatically safer; comparison reports them as `NOT_COMPARABLE` | `docs/decision-log.md` |
+| Phase 1 deterministic evidence core | completed | fake PASS/HOLD/CONDITIONAL cases, stored verification, tamper rejection, deterministic replay |
+| Phase 2 bounded MetaDrive adapter | completed | real 0.4.3 headless smoke, clean pinned source, stored artifact verification |
+| Phase 3 shield and challenges | completed | lead-vehicle and cut-in baseline/shielded artifacts and compatible comparisons |
+| P3 deterministic fault hardening | completed | all seven mechanisms covered, replay verified, deterministic companion files |
+| Phase 5 CI/developer experience | completed locally | exact CI command set, Make targets, strict markers, runbook; no remote workflow run |
+| Dashboard, RL, CARLA, ROS 2, Autoware, cloud, hardware, real vehicle | deferred by scope | no implementation started |
+| Blocked work | none | all prioritized predecessor gates passed |
 
-All shield and gate thresholds are versioned configuration labeled illustrative. No real-vehicle
-control surface, network call, telemetry, LLM control loop, or physical actuator integration was
-added.
+## Architecture and key decisions
 
-## 7. Files created or changed
+The simulator-neutral path is `strict scenario -> orchestrator -> policy candidate -> deterministic
+shield -> fault wrappers -> adapter -> canonical trace -> offline verifiers -> release gate -> atomic
+artifact bundle`. Domain models, evidence, verification, gate logic, comparison, shields, and faults
+do not import the external MetaDrive package or runtime adapters; simulator runtime coupling stays
+in `src/hermes/adapters/` and the MetaDrive policy wrapper. A data-only, import-safe compatibility
+declaration supplies recorded profile constants to both runtime and stored verification.
 
-### Phase 1 and Phase 2, committed
+Key decisions were to keep host wall-clock timing out of deterministic evidence, store simulated
+latency with an explicit source, preserve schema-1 bytes while adding schema 2/3 contracts, fail
+closed on unsupported/mixed schemas, bind observation noise to source packets so held observations
+stay held, and reject MetaDrive IDM observation faults rather than claim interception of native
+simulator state.
 
-- Evidence/domain/runtime packages under `src/hermes/{domain,evidence,gates,verifiers,runtime}/`.
-- Fake and MetaDrive adapters under `src/hermes/adapters/`; baseline and installed-IDM policy
-  wrappers under `src/hermes/policies/`; no-op shield under `src/hermes/shields/`.
-- Strict scenarios under `scenarios/fake_*.yaml` and `scenarios/metadrive_nominal.yaml`.
-- Versioned gate configuration under `config/gates.phase1.yaml` and `config/gates.phase2.yaml`.
-- CLI composition and tests under `src/hermes/cli.py` and `tests/{unit,integration,cli}/`.
-- Architecture, traceability, runbook, learning, validation, decision-log, and execution documents.
+## Files and dependencies
 
-### Phase 3, currently created
+The authoritative inventory is `git diff --name-status c181509..267a88e`. It includes:
 
-- `config/shield.phase3.yaml`
-- `docs/phase3-safety-shield.md`
-- `scenarios/metadrive_lead_vehicle_hard_brake.yaml`
-- `scenarios/metadrive_cut_in_near_field.yaml`
-- `src/hermes/adapters/metadrive_challenge.py`
-- `src/hermes/comparison/__init__.py`
-- `src/hermes/comparison/compare.py`
-- `src/hermes/shields/config.py`
-- `src/hermes/shields/deterministic.py`
-- `tests/cli/test_phase3_cli.py`
-- `tests/unit/test_comparison.py`
-- `tests/unit/test_deterministic_shield.py`
-- `tests/unit/test_metadrive_challenge.py`
-- `tests/unit/test_shield_config.py`
+- root/build: `.github/workflows/ci.yml`, `Makefile`, `pyproject.toml`, `README.md`,
+  `VALIDATION_MATRIX.md`, `CODEX_HANDOFF_TEMPLATE.md`, and the project policy/planning documents;
+- configuration/scenarios: three versioned gate/shield configs and eight fake/MetaDrive YAML
+  scenarios;
+- implementation: new simulator-neutral packages under `src/hermes/{domain,scenarios,runtime,
+  evidence,verifiers,gates,comparison,shields,faults,policies}`, MetaDrive/fake adapters, and the
+  extended CLI/error layer;
+- tests: CLI, unit, and integration coverage under `tests/`; real MetaDrive launch remains a
+  manual `make sim-smoke` gate rather than part of the default automated suite; and
+- documentation: Phase 1 architecture/traceability, Phase 2 adapter evidence, Phase 3 shield,
+  Phase 4/5 hardening, decision log, PM material, unattended execution, and demo runbook.
 
-### Phase 3, currently modified
+Runtime dependencies are `pydantic>=2.10,<3` for strict typed schemas, `PyYAML>=6.0,<7` for
+versioned configuration, and the existing Typer/Rich CLI stack. Development extras remain bounded
+to pytest 8 and Ruff. No database, web framework, dashboard, ML stack, or cloud SDK was added.
 
-- `CODEX_HANDOFF.md`
-- `README.md`
-- `docs/DEMO_RUNBOOK.md`
-- `docs/decision-log.md`
-- `docs/phase1-requirements-traceability.md`
-- `src/hermes/adapters/metadrive.py`
-- `src/hermes/cli.py`
-- `src/hermes/domain/models.py`
-- `src/hermes/evidence/metrics.py`
-- `src/hermes/evidence/trace.py`
-- `src/hermes/evidence/verification.py`
-- `src/hermes/runtime/orchestrator.py`
-- `src/hermes/scenarios/loader.py`
-- `tests/cli/test_phase1_cli.py`
-- `tests/integration/test_metadrive_run.py`
-- `tests/unit/test_artifact_verification.py`
-- `tests/unit/test_canonical_trace.py`
-- `tests/unit/test_scenarios.py`
-- `tests/unit/test_verifiers_and_gate.py`
+## What Phase 4 and Phase 5 added
 
-### Intentionally untouched/untracked from source control
+- Scenario schema 3.0 and sibling evidence schema 2.0, preserving legacy schema-1 bytes/digests.
+- Strict, simulator-neutral observation delay, frozen observation, dropped/held observation,
+  bounded source-packet noise, control delay, steering saturation, and brake saturation.
+- Typed raw/delivered/result observation evidence and distinct candidate/permitted/executed actions.
+- Exact stored-only replay of deterministic shield and fault transforms.
+- Required fault-coverage finding, including every scheduled freeze/dropout step.
+- MetaDrive IDM observation-fault rejection before adapter construction; action faults remain the
+  only truthful supported faults for that installed-policy profile.
+- Fault-profile comparison compatibility, explicit schema-version dispatch, deterministic artifact
+  fixtures, and coherent-rehash negative tests.
+- Stable CLI errors: `USAGE_ERROR`, `CONFIGURATION_ERROR`, `OPERATIONAL_ERROR`,
+  `INVALID_EVIDENCE`, and `INCOMPATIBLE_EVIDENCE`.
+- `make check`, no-overwrite `make demo-phase1`, local/manual `make sim-smoke`, strict pytest
+  markers, and PR-safe `.github/workflows/ci.yml` excluding real MetaDrive tests.
+- Lowercase `docs/demo-runbook.md`, the Phase 4/5 design record, decision log, and requirements
+  traceability.
 
-- `third_party/metadrive/` source and assets were not modified.
-- Generated `artifacts/<run-id>/`, caches, editable-install metadata, environments, and simulator
-  assets are ignored and were not staged.
-- Git remotes and external infrastructure were not changed.
+The exact runtime order is:
 
-## 8. Dependencies
+```text
+raw observation -> observation faults -> candidate -> shield-permitted action
+-> control delay -> saturation -> executed action -> simulator result
+```
 
-Only the following runtime dependencies were added during the unattended build; Phase 2 and Phase 3
-added no Python dependency:
+## Final validation results
 
-| Dependency | Version bound | Why |
-|---|---|---|
-| Pydantic | `>=2.10,<3` | strict simulator-neutral contracts and evidence/config validation |
-| PyYAML | `>=6.0,<7` | strict versioned scenario, gate, and shield YAML loading |
+All commands below were run from `/Users/bohueilin/Documents/GitHub/Hermes` on 2026-08-11.
 
-Typer, Rich, pytest, and Ruff were already part of the Phase 0 package. MetaDrive remains an external,
-pinned checkout/install rather than a new `pyproject.toml` dependency.
-
-## 9. Commands executed and current validation
-
-These final gate results were rerun in Conda `hermes-dev` after the last test-expectation correction:
-
-| Exact command | Exit | Actual observed result |
+| Command | Exit | Observed result |
 |---|---:|---|
-| `conda run --no-capture-output -n hermes-dev python -m pip install -e '.[dev]'` | 0 | editable `hermes-autonomy==0.1.0` built and installed; requirements already satisfied |
-| `conda run --no-capture-output -n hermes-dev python -m pytest -q` | 0 | **221 passed in 2.67 s** |
-| `conda run --no-capture-output -n hermes-dev python -m ruff check .` | 0 | **All checks passed** |
-| `conda run --no-capture-output -n hermes-dev python -m hermes doctor` | 0 | **17 PASS, 1 WARN, 1 NOT_AVAILABLE, 0 FAIL** |
+| `python -m pip install -e ".[dev]"` | 0 | editable `hermes-autonomy==0.1.0` installed |
+| `python -m pip show hermes-autonomy` | 0 | version 0.1.0; editable project location is this repository |
+| `python -m pytest -q` | 0 | **269 passed in 4.52 s** (final standalone run) |
+| `python -m pytest -q -m "not metadrive"` | 0 | **269 passed in 4.53 s** |
+| `python -m ruff check .` | 0 | **All checks passed** |
+| `make check` in activated `hermes-dev` | 0 | Ruff green; **269 passed in 4.34 s**; doctor green |
+| `make demo-phase1 DEMO_RUN_ID=phase5-demo-final` | 0 | run and stored verification both `PASS` |
+| `make sim-smoke` | 0 | MetaDrive 0.4.3, pinned commit, 5 headless steps |
+| three `doctor` entry paths | 0 each | all three executed successfully |
 | `git diff --check` | 0 | no whitespace errors |
-| `conda run --no-capture-output -n hermes-dev python -m hermes sim-smoke --headless` | 0 | MetaDrive 0.4.3 at pinned commit; five headless steps completed |
 
-Doctor's sole warning was the expected pending Phase 3 dirty worktree. Optional display availability
-was `NOT_AVAILABLE` because `DISPLAY`/`WAYLAND_DISPLAY` is unset; the headless/offscreen prerequisite
-check passed. Doctor does not launch the simulator.
+Activated-environment doctor output was **18 PASS, 1 NOT_AVAILABLE, 0 WARN, 0 FAIL**. The sole
+`NOT_AVAILABLE` is optional `DISPLAY`/`WAYLAND_DISPLAY`; the independent headless prerequisites
+check passed with `CocoaGraphicsPipe`. Direct commands launched from the parent base shell still
+truthfully warned that its environment variables identify Conda base, even though the explicit
+Python executable was `hermes-dev`; `conda run -n hermes-dev make check` removed that shell-context
+warning.
 
-One intermediate full test run after tuning the illustrative speed cap from 8.5 to 5.5 found two
-stale fixed-count expectations: `219 passed, 2 failed`. The tests were corrected to assert behavioral
-invariants (actual changed-action count and presence of speed-cap/TTC reasons) instead of the obsolete
-constant; the final 221-test gate above is the post-correction result.
-
-## 10. Phase 1 demonstrations and regressions
-
-The current verifier was rerun against every retained Phase 1 bundle without launching MetaDrive:
-
-| Run | Actual verdict | Verify exit | Artifact | Trace digest |
-|---|---|---:|---|---|
-| Nominal | `PASS` | 0 | `artifacts/phase1-nominal` | `f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e` |
-| Nominal repeat | `PASS` | 0 | `artifacts/phase1-nominal-repeat` | `f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e` |
-| Collision | `HOLD` | 20 | `artifacts/phase1-collision` | `ecaa3b9222612044349b643c44406c2088cfb335b07f7bf4da56ac587bb76a24` |
-| Boundary | `HOLD` | 20 | `artifacts/phase1-boundary` | `19cdf5e895c06d5bee9a250a9c236039543a1b17d503bd9a31547f9ec101e694` |
-| Soft degradation | `CONDITIONAL` | 10 | `artifacts/phase1-conditional` | `dfd8cc47423f8b93e70da1f5bcac00d21f363aec4a435da8ca9518b111704158` |
-| Modified artifact | `INVALID_EVIDENCE` | 30 | `artifacts/phase1-tampered` | rejected |
-
-- Collision recorded one collision and failed hard invariant `collision.zero`; progress could not
-  compensate.
-- Boundary recorded maximum lateral offset 1.75 m and 0.1 s off-road, failing hard invariant
-  `boundary.within_tolerance`; progress could not compensate.
-- Soft degradation kept hard criteria green but recorded 6.0 m/s² maximum acceleration, failing the
-  illustrative soft comfort requirement.
-- The tampered bundle modifies sequence-0 executed action evidence. Verification identified first
-  mismatched sequence 0, event/file/bundle digest mismatches, and recomputed metrics/findings/verdict
-  inconsistencies. It did not rerun an adapter.
-- Nominal and repeat have the same trace digest and all eight deterministic files
-  (`execution-context.json`, resolved scenario/gate, events, metrics, findings, verdict, trace root)
-  were byte-identical. Run ID and creation metadata remain permitted manifest/bundle differences.
-
-The regenerated Phase 1 regression bundles retained during Phase 2 also reverified under the final
-Phase 3 code as `PASS`, `HOLD`, `HOLD`, and `CONDITIONAL`, with the same corresponding trace digests.
-
-## 11. Phase 2 MetaDrive result
-
-| Item | Actual result |
-|---|---|
-| API/source reconnaissance | complete against installed MetaDrive 0.4.3 source/default configuration |
-| Real smoke | exit 0; reset, installed IDM proposal, five headless steps, close |
-| Nominal verdict | `PASS`, exit 0 |
-| Nominal artifact | `artifacts/phase2-metadrive-nominal` |
-| Nominal trace | `2b5009971c37c1eb65c9cc2830596689b5a25904a9b52b524d5bf77305848987` |
-| Nominal metrics | 165 events / 16.5 s; collision 0; off-road 0 s; route 96.05972167673185%; max acceleration 2.777194976808275 m/s²; max jerk 2.8324127194660598 m/s³ |
-| Independent replay | `INTERNALLY_CONSISTENT`, `PASS`, `NOT_AUTHENTICATED`; no MetaDrive import/rerun |
-| Repeat | `artifacts/phase2-metadrive-repeat`; same trace and 8/8 deterministic files byte-identical |
-| Unsupported evidence | front distance and relative speed explicitly `NOT_AVAILABLE` in nominal Phase 2 |
-| Simulator checkout | clean at `85e5dadc6c7436d324348f6e3d8f8e680c06b4db` |
-
-Same-host bitwise identity was observed. Cross-platform physics bitwise identity is not claimed;
-cross-platform acceptance is categorical equality plus documented numeric tolerance.
-
-## 12. Phase 3 shield and challenge evidence
-
-All eight retained challenge bundles independently verify as `INTERNALLY_CONSISTENT` and
-`NOT_AUTHENTICATED` without importing or rerunning MetaDrive. Verification returns the stored policy
-verdict exit (`10` for `CONDITIONAL`, `20` for `HOLD`), not a false exit-0 PASS.
-
-### Lead-vehicle hard-brake artifacts
-
-| Artifact | Verdict / exit | Events / duration | Collision | Minimum TTC | Route | Max accel | Max jerk | Overrides | Trace digest |
-|---|---|---|---:|---:|---:|---:|---:|---|---|
-| `artifacts/phase3-lead-baseline` | `CONDITIONAL` / 10 | 197 / 19.7 s | 0 | 11.585881563948043 s | 96.46240046030904% | 12.640056610081958 m/s² | 125.50792694062345 m/s³ | 0 / none | `504dfbcdd8f4239f1b9f2a5e94fa64f8a1a6ac108543e46ace12b251aa409bd1` |
-| `artifacts/phase3-lead-baseline-repeat` | `CONDITIONAL` / 10 | 197 / 19.7 s | 0 | 11.585881563948043 s | 96.46240046030904% | 12.640056610081958 m/s² | 125.50792694062345 m/s³ | 0 / none | `504dfbcdd8f4239f1b9f2a5e94fa64f8a1a6ac108543e46ace12b251aa409bd1` |
-| `artifacts/phase3-lead-shielded` | `CONDITIONAL` / 10 | 271 / 27.1 s | 0 | 13.338911253788899 s | 96.23402341003727% | 13.168830871576347 m/s² | 159.3982696536189 m/s³ | 36 / `SPEED_CAP: 36` | `7324adbd7fa824f5dd834be2b321e3a5e4da36fbdac6eca99b7ae0c92d49f380` |
-| `artifacts/phase3-lead-shielded-repeat` | `CONDITIONAL` / 10 | 271 / 27.1 s | 0 | 13.338911253788899 s | 96.23402341003727% | 13.168830871576347 m/s² | 159.3982696536189 m/s³ | 36 / `SPEED_CAP: 36` | `7324adbd7fa824f5dd834be2b321e3a5e4da36fbdac6eca99b7ae0c92d49f380` |
-
-Both lead runs satisfied hard criteria and failed the illustrative acceleration and jerk soft
-thresholds, hence `CONDITIONAL`. The lead actor used native MetaDrive dynamic actions on the fixed
-brake schedule, but the baseline IDM retained a large TTC; this evidence does not demonstrate a
-TTC-triggered shield intervention.
-
-### Near-field cut-in artifacts
-
-| Artifact | Verdict / exit | Events / duration | Collision | Minimum TTC | Route | Max accel | Max jerk | Overrides | Trace digest |
-|---|---|---|---:|---:|---:|---:|---:|---|---|
-| `artifacts/phase3-cutin-baseline` | `HOLD` / 20 | 300 / 30.0 s | 0 | 1.8155836417275437 s | 84.88178621406203% | 12.683377265917573 m/s² | 128.41591835005693 m/s³ | 0 / none | `00137f7fda53afa3531531bfeae6a8635b95b271707185c6922431633a8a5ef5` |
-| `artifacts/phase3-cutin-baseline-repeat` | `HOLD` / 20 | 300 / 30.0 s | 0 | 1.8155836417275437 s | 84.88178621406203% | 12.683377265917573 m/s² | 128.41591835005693 m/s³ | 0 / none | `00137f7fda53afa3531531bfeae6a8635b95b271707185c6922431633a8a5ef5` |
-| `artifacts/phase3-cutin-shielded` | `HOLD` / 20 | 300 / 30.0 s | 0 | 8.49579415469856 s | 84.39151677812995% | 13.003747463227677 m/s² | 157.565283775339 m/s³ | 3 / `SPEED_CAP: 3` | `7a0f0c7954a4257dca7fa2e4d2fbc0c53317b77f846174f7b033da029653e1ae` |
-| `artifacts/phase3-cutin-shielded-repeat` | `HOLD` / 20 | 300 / 30.0 s | 0 | 8.49579415469856 s | 84.39151677812995% | 13.003747463227677 m/s² | 157.565283775339 m/s³ | 3 / `SPEED_CAP: 3` | `7a0f0c7954a4257dca7fa2e4d2fbc0c53317b77f846174f7b033da029653e1ae` |
-
-Both cut-in runs exhausted the 300-step horizon without the required destination fact/95% progress,
-so hard finding `progress.required` forced `HOLD`. The shielded run improved stored minimum TTC but
-slightly reduced progress and worsened acceleration/jerk. The cut-in is scripted kinematic replay,
-not native traffic behavior.
-
-### Candidate/executed visibility and supported reasons
-
-Every event stores candidate and executed actions separately. The retained shielded evidence has
-36 changed-action events in the lead run and 3 in the cut-in run. Each actual retained override was
-caused by `SPEED_CAP`; no retained event fabricated an unused TTC/boundary/staleness/emergency/delay
-reason. The implementation and unit tests support the exact ordered reason vocabulary:
-
-```text
-TTC_BELOW_THRESHOLD
-SPEED_CAP
-STALE_OBSERVATION
-BOUNDARY_RISK
-EMERGENCY_STOP
-ACTUATION_DELAY_COMPENSATION
-```
-
-### Stored comparisons
-
-Both comparison commands exited 0, found the inputs compatible, and warned that both artifacts
-recorded a dirty worktree:
-
-| Dimension | Lead baseline → shield | Cut-in baseline → shield |
-|---|---|---|
-| Verdict | `UNCHANGED` (`CONDITIONAL`) | `UNCHANGED` (`HOLD`) |
-| Hard-failure set | `UNCHANGED` (empty) | `UNCHANGED` (`progress.required`) |
-| Collision | `UNCHANGED` (0 → 0) | `UNCHANGED` (0 → 0) |
-| Minimum TTC | `IMPROVED` (11.585881563948043 → 13.338911253788899 s) | `IMPROVED` (1.8155836417275437 → 8.49579415469856 s) |
-| Route completion | `REGRESSED` (96.46240046030904 → 96.23402341003727%) | `REGRESSED` (84.88178621406203 → 84.39151677812995%) |
-| Maximum acceleration | `REGRESSED` | `REGRESSED` |
-| Maximum jerk | `REGRESSED` | `REGRESSED` |
-| Policy latency/source | `UNCHANGED` at simulated 10 ms | `UNCHANGED` at simulated 10 ms |
-| Interventions | `NOT_COMPARABLE`, descriptive 0 → 36 | `NOT_COMPARABLE`, descriptive 0 → 3 |
-| Evidence availability | `UNCHANGED`, all compared measurements available | `UNCHANGED`, all compared measurements available |
-
-This is a trade-off result, not a blanket shield win: TTC improved, comfort and progress regressed,
-and the policy verdict did not improve.
-
-### Determinism
-
-For lead baseline, lead shielded, cut-in baseline, and cut-in shielded, the corresponding seed-7
-repeat produced the same trace digest and 8/8 byte-identical deterministic evidence files. Manifest
-timestamps/run IDs and the resulting bundle digest are intentionally different. Phase 1 nominal and
-Phase 2 nominal repeats passed the same check.
-
-## 13. Review-driven corrections
-
-The implementation incorporated independent review findings before the final 221-test gate:
-
-- count override events separately from the reason histogram;
-- suppress reasons when a triggered rule would not change an already-identical candidate action;
-- preserve Phase 1/2 schema-1 serialization and trace compatibility while adding schema-2 challenge
-  fields;
-- bind both policy-input and post-step challenge actor evidence, include terminal post-step TTC, and
-  enforce phase schedule/continuity during stored replay;
-- replay the deterministic shield offline and reject a coherently rehashed forged shield decision;
-- inspect each artifact through one stable descriptor-safe snapshot to remove verification/comparison
-  time-of-check/time-of-use gaps;
-- fail comparison closed on invalid/incompatible evidence and keep intervention deltas descriptive;
-- replace stale fixed intervention-count assertions after the configured speed-cap change with
-  behavioral assertions over actual override events and reason content; and
-- add the per-scenario baseline weakness, expected shield/verifier behavior, reproducibility
-  envelope, exact observed metrics/digests, mixed trade-offs, dirty provenance, and absence of a real
-  TTC override to `docs/phase3-safety-shield.md` and the decision record.
-
-The final evidence-integrity re-review and architecture/product-safety re-review both returned
-**GO with no release-blocking findings**. The evidence review independently ran a 92-test adversarial
-subset, the 221-test full suite, Ruff, doctor, diff checks, all eight stored verifications, and the
-four repeat comparisons. Review residuals are preserved below rather than converted into claims.
-
-## 14. Known limitations and residual risks
-
-| Limitation/risk | Observed impact | Mitigation or next step |
-|---|---|---|
-| Simulation is not real-world validation | All verdicts apply only to bounded configured simulation evidence | Keep simulation-only banner and require a separate safety case before any closed-lab hardware work |
-| Illustrative speed cap dominates Phase 3 interventions | Retained shield runs show only `SPEED_CAP`; no real run exercises each reason | Add targeted simulator scenarios/fault injection only in a later approved phase; do not generalize current benefit |
-| Cut-in is scripted replay | Reproducible geometry challenge is not realistic traffic-agent behavior | Preserve `scripted_kinematic_replay` and `behavior_realism_claim: false`; evaluate a supported behavioral model later |
-| Lead scenario remains easy for installed IDM | Baseline minimum TTC is 11.59 s and no TTC reason triggers | Tune a future bounded challenge without disabling IDM safeguards or fabricating behavior |
-| Ground-truth actor signal | TTC evidence does not measure perception accuracy, uncertainty, or occlusion | Keep signal source explicit; add a separate perception evidence contract if scoped later |
-| Comfort/progress regressions | Shielded evidence increases acceleration/jerk and slightly lowers route completion; cut-in remains `HOLD` | Treat comparison as a trade-off and keep non-compensatory gate precedence |
-| Local hash trust | Integrity is internally consistent but authenticity is `NOT_AUTHENTICATED` | External signing/separate trust anchor remains deferred |
-| MetaDrive IDM internal fallback | Upstream broad fallback is not structurally surfaced | Record limitation in policy context; do not claim complete candidate-policy introspection |
-| Cross-platform determinism | Same-host bytes match; Panda3D/physics may differ by platform | Require categorical equality plus documented `1e-5` numeric agreement; do not claim cross-platform bitwise identity |
-| Dirty provenance in retained artifacts | Comparison emits dirty-worktree warning and artifacts identify Phase 2 commit | After checkpoint, use new run IDs to create clean-commit evidence if desired; never rewrite current bundles |
-| No independent CI in this phase | Validation is local on one macOS arm64 host | Add CI only under later hardening scope, keeping simulator availability explicit |
-
-There are no blockers for the completed Phase 3 local implementation. Optional hardening remains
-deferred by scope, not represented as complete.
-
-## 15. Local commits
-
-```text
-638a951 (HEAD -> feat/unattended-evidence-core) feat: add MetaDrive headless adapter
-635c246 feat: add deterministic evidence core
-430ef0c docs: define unattended Hermes build plan
-c181509 (main) chore: establish Hermes Phase 0 foundation
-```
-
-The intended next checkpoint message is `feat: add safety shield and challenge scenarios`; it had
-not been created when this handoff snapshot was written. No commit was pushed.
-
-## 16. Final Git status
-
-At handoff drafting time, `git status --short` showed the following intended Phase 3 change set:
-
-```text
- M CODEX_HANDOFF.md
- M README.md
- M docs/DEMO_RUNBOOK.md
- M docs/decision-log.md
- M docs/phase1-requirements-traceability.md
- M src/hermes/adapters/metadrive.py
- M src/hermes/cli.py
- M src/hermes/domain/models.py
- M src/hermes/evidence/metrics.py
- M src/hermes/evidence/trace.py
- M src/hermes/evidence/verification.py
- M src/hermes/runtime/orchestrator.py
- M src/hermes/scenarios/loader.py
- M tests/cli/test_phase1_cli.py
- M tests/integration/test_metadrive_run.py
- M tests/unit/test_artifact_verification.py
- M tests/unit/test_canonical_trace.py
- M tests/unit/test_scenarios.py
- M tests/unit/test_verifiers_and_gate.py
-?? config/shield.phase3.yaml
-?? docs/phase3-safety-shield.md
-?? scenarios/metadrive_cut_in_near_field.yaml
-?? scenarios/metadrive_lead_vehicle_hard_brake.yaml
-?? src/hermes/adapters/metadrive_challenge.py
-?? src/hermes/comparison/
-?? src/hermes/shields/config.py
-?? src/hermes/shields/deterministic.py
-?? tests/cli/test_phase3_cli.py
-?? tests/unit/test_comparison.py
-?? tests/unit/test_deterministic_shield.py
-?? tests/unit/test_metadrive_challenge.py
-?? tests/unit/test_shield_config.py
-```
-
-Ignored generated artifacts and editable-install metadata do not appear in this status. The external
-MetaDrive checkout separately reports a clean `main` branch.
-
-## 17. Reproduction and verification commands
-
-Artifact publication never overwrites. The run IDs below are already occupied; use new IDs to rerun.
-
-### Full gates
+The three equivalent doctor paths were:
 
 ```bash
-conda run --no-capture-output -n hermes-dev python -m pip install -e '.[dev]'
-conda run --no-capture-output -n hermes-dev python -m pytest -q
-conda run --no-capture-output -n hermes-dev python -m ruff check .
-conda run --no-capture-output -n hermes-dev python -m hermes doctor
-git diff --check
-conda run --no-capture-output -n hermes-dev python -m hermes sim-smoke --headless
+hermes doctor
+python -m hermes doctor
+python -m hermes.cli doctor
 ```
 
-### Phase 1 demonstrations
+## Phase 1 gate demonstrations
+
+These exact commands were run in `hermes-dev`; every artifact was then independently checked from
+stored files only:
 
 ```bash
 hermes run --simulator fake --scenario scenarios/fake_nominal.yaml \
   --policy baseline --seed 7 --run-id phase1-nominal
+hermes verify-artifact artifacts/phase1-nominal
 hermes run --simulator fake --scenario scenarios/fake_collision.yaml \
   --policy baseline --seed 7 --run-id phase1-collision
 hermes run --simulator fake --scenario scenarios/fake_boundary.yaml \
   --policy baseline --seed 7 --run-id phase1-boundary
 hermes run --simulator fake --scenario scenarios/fake_soft_degradation.yaml \
   --policy baseline --seed 7 --run-id phase1-conditional
-hermes verify-artifact artifacts/phase1-nominal
-hermes verify-artifact artifacts/phase1-collision
-hermes verify-artifact artifacts/phase1-boundary
-hermes verify-artifact artifacts/phase1-conditional
 hermes verify-artifact artifacts/phase1-tampered
 ```
 
-### Phase 2 nominal
+| Case | Actual result | Exit | Artifact / digest |
+|---|---|---:|---|
+| nominal | `PASS` | 0 | `artifacts/phase1-nominal` / `f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e` |
+| collision | `HOLD` | 20 | `artifacts/phase1-collision` / `ecaa3b9222612044349b643c44406c2088cfb335b07f7bf4da56ac587bb76a24` |
+| boundary | `HOLD` | 20 | `artifacts/phase1-boundary` / `19cdf5e895c06d5bee9a250a9c236039543a1b17d503bd9a31547f9ec101e694` |
+| soft degradation | `CONDITIONAL` | 10 | `artifacts/phase1-conditional` / `dfd8cc47423f8b93e70da1f5bcac00d21f363aec4a435da8ca9518b111704158` |
+| modified executed action | `INVALID_EVIDENCE` | 30 | `artifacts/phase1-tampered`; first mismatched sequence reported |
 
-```bash
-hermes run --simulator metadrive --scenario scenarios/metadrive_nominal.yaml \
-  --policy metadrive-idm --seed 7 --run-id phase2-metadrive-nominal --headless
-hermes verify-artifact artifacts/phase2-metadrive-nominal
-```
+`artifacts/phase1-nominal-repeat` produced the same deterministic event bytes, trace digest,
+metrics, findings, and verdict as nominal. Run identity, creation time, and manifest bundle digest
+were correctly excluded from that identity claim.
 
-### Phase 3 lead challenge
+## Current-code demonstrations
 
-```bash
-hermes run --simulator metadrive \
-  --scenario scenarios/metadrive_lead_vehicle_hard_brake.yaml \
-  --policy metadrive-idm --seed 7 --run-id phase3-lead-baseline --headless
-hermes run --simulator metadrive \
-  --scenario scenarios/metadrive_lead_vehicle_hard_brake.yaml \
-  --policy metadrive-idm --seed 7 --run-id phase3-lead-shielded --headless \
-  --shield deterministic --shield-config config/shield.phase3.yaml
-hermes verify-artifact artifacts/phase3-lead-baseline
-hermes verify-artifact artifacts/phase3-lead-shielded
-hermes compare artifacts/phase3-lead-baseline artifacts/phase3-lead-shielded
-hermes compare artifacts/phase3-lead-baseline artifacts/phase3-lead-shielded --format json
-```
+All final artifacts below recorded clean repository commit `267a88e...` and independently verified
+as `INTERNALLY_CONSISTENT` without rerunning the simulator.
 
-### Phase 3 cut-in challenge
+| Artifact | Actual verdict | Trace digest |
+|---|---|---|
+| `artifacts/phase5-demo-final` | `PASS` | `f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e` |
+| `artifacts/phase2-metadrive-final` | `PASS` | `2b5009971c37c1eb65c9cc2830596689b5a25904a9b52b524d5bf77305848987` |
+| `artifacts/phase3-lead-baseline-final` | `CONDITIONAL` | `504dfbcdd8f4239f1b9f2a5e94fa64f8a1a6ac108543e46ace12b251aa409bd1` |
+| `artifacts/phase3-lead-shielded-final` | `CONDITIONAL` | `7324adbd7fa824f5dd834be2b321e3a5e4da36fbdac6eca99b7ae0c92d49f380` |
+| `artifacts/phase3-cutin-baseline-final` | `HOLD` | `00137f7fda53afa3531531bfeae6a8635b95b271707185c6922431633a8a5ef5` |
+| `artifacts/phase3-cutin-shielded-final` | `HOLD` | `7a0f0c7954a4257dca7fa2e4d2fbc0c53317b77f846174f7b033da029653e1ae` |
+| `artifacts/phase4-fault-final` | `HOLD` | `0943edb0e80c0fbd821b7d544c0da05d204fe86c8a48447bf53eb885d4d8c47d` |
+| `artifacts/phase4-fault-final-repeat` | `HOLD` | `0943edb0e80c0fbd821b7d544c0da05d204fe86c8a48447bf53eb885d4d8c47d` |
 
-```bash
-hermes run --simulator metadrive \
-  --scenario scenarios/metadrive_cut_in_near_field.yaml \
-  --policy metadrive-idm --seed 7 --run-id phase3-cutin-baseline --headless
-hermes run --simulator metadrive \
-  --scenario scenarios/metadrive_cut_in_near_field.yaml \
-  --policy metadrive-idm --seed 7 --run-id phase3-cutin-shielded --headless \
-  --shield deterministic --shield-config config/shield.phase3.yaml
-hermes verify-artifact artifacts/phase3-cutin-baseline
-hermes verify-artifact artifacts/phase3-cutin-shielded
-hermes compare artifacts/phase3-cutin-baseline artifacts/phase3-cutin-shielded
-hermes compare artifacts/phase3-cutin-baseline artifacts/phase3-cutin-shielded --format json
-```
+The Phase 3 lead and cut-in comparisons both remained compatible. In both cases the shielded trace
+had improved minimum TTC, regressed route completion/acceleration/jerk, and an unchanged policy
+verdict. This is a mixed trade-off, not a blanket shield win. The retained interventions were only
+`SPEED_CAP` (36 lead events and 3 cut-in events); no real run fabricated a TTC override.
 
-## 18. Single best next action
+The fresh fault demonstration produced 20 events / 2.0 simulated seconds and:
 
-Review the complete pending Phase 3 checkpoint scope before staging anything:
+- `fault.coverage.required = PASS` for all seven configured mechanisms and scheduled steps;
+- maximum observation age `0.30000000000000004 s`;
+- p95 simulated control latency `100.00000000000009 ms`;
+- one startup control fill;
+- 19 steering saturations and 19 brake saturations; and
+- `HOLD` because required mission progress failed, not because fault coverage failed.
 
-```bash
-git status --short
-```
+The two fault artifacts had **8/8 byte-identical deterministic companion files**. Manifest run ID,
+creation time, and bundle digest are intentionally nondeterministic metadata.
+
+## Tamper and false-pass results
+
+The final focused adversarial command passed **7 tests**. It covered:
+
+- coherent full-chain rewrites of executed action, command source/latency, fault reasons, and the
+  permitted-action delay chain;
+- mixed schema-2/schema-1 traces returning `INVALID_EVIDENCE` rather than raising;
+- changed result sequence/time/freshness; and
+- deterministic companion-file identity.
+
+The complete suite also covers missing/unsupported nested schema versions, missing files,
+malformed/duplicate/reordered events, forged metrics/findings/verdict, context substitutions,
+early terminal fault schedules, challenge actor/phase contradictions, and verifier filesystem race
+conditions.
+
+## Known limitations and non-blocking warnings
+
+- Local SHA-256 is tamper-evident, not authenticated. An author who rewrites a complete bundle can
+  recompute hashes.
+- Offline verification treats candidate policy proposals and simulator results as trace inputs. It
+  exactly replays shield/fault transforms, metrics, verifiers, and gate logic, but does not reexecute
+  the policy or simulator.
+- MetaDrive assets are present, but upstream provides no checksum manifest; asset integrity is not
+  independently verified.
+- MetaDrive IDM observation faults are unsupported and fail configuration validation because IDM
+  reads native simulator state. This is an explicit truthfulness boundary, not a missing silent path.
+- Phase 3 cut-in motion is scripted kinematic replay with `behavior_realism_claim: false`.
+- Same-host deterministic physics was observed; cross-platform bitwise MetaDrive determinism is not
+  claimed.
+- `artifacts/phase4-fault-demo-dev` is a stale development artifact created before source-packet
+  noise and full-schedule coverage corrections. It now correctly verifies invalid and is not an
+  acceptance artifact. `phase4-fault-final*` are authoritative.
+- The GitHub Actions file was validated locally through its exact commands; no remote workflow was
+  enabled or run because remote mutation was outside authorization.
+
+There is no blocker for the completed local scope.
+
+## Repository state and next action
+
+Generated artifacts remain ignored and unstaged. `third_party/metadrive` is clean. No remote action
+occurred. Final `git status --short` after the handoff commit: **no output (clean)**.
+
+**Recommended next action:** run `git diff main...HEAD` to review the complete local branch and its
+handoff, then decide whether to push/open a PR. Do not begin dashboard or RL work in the same
+review.

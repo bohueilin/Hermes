@@ -46,8 +46,8 @@ An autonomy product leader, safety reviewer, simulation engineer, autonomy devel
 
 ## Current validated status
 
-Phase 0 is preserved, Phase 1 is committed, and the Phase 2 MetaDrive adapter is implemented on
-the gated feature branch:
+Phases 0–3 and the ordered deterministic-fault/CI hardening are implemented and locally validated
+on the gated feature branch:
 
 - the `hermes` CLI is installed and recognized;
 - `hermes doctor` validates the Python, Git, MetaDrive, asset, and headless prerequisites;
@@ -64,6 +64,14 @@ the gated feature branch:
 - simulator version and exact source commit are trace-bound and manifest-cross-checked;
 - repeated seed-7 runs produced byte-identical deterministic evidence on the current machine;
 - unsupported front-distance and relative-speed signals are explicit `NOT_AVAILABLE` values.
+- deterministic shield interventions and candidate/permitted/executed actions are trace-bound for
+  the lead-vehicle and cut-in challenges;
+- schema-2 evidence covers observation/control delay, freeze, dropout, bounded source-packet
+  noise, and actuator saturation with required schedule coverage;
+- stored comparison exposes both improvements and regressions instead of collapsing them into a
+  success claim; and
+- local Make/CI command paths, strict schema dispatch, CLI error envelopes, and the demo runbook
+  complete Phase 5 developer hardening without claiming a remote CI run.
 
 Current baseline commit:
 
@@ -88,9 +96,9 @@ Required Phase 1 outcomes:
 
 ## Next product milestone
 
-After the green Phase 2 checkpoint commit, implement the deterministic runtime safety shield and
-only simulator-supported challenge scenarios. Do not treat nominal MetaDrive integration evidence
-as challenge, safety, certification, or deployment evidence.
+Review the completed local branch and retained evidence, then decide whether to publish it for code
+review. Dashboard, RL, additional simulators, cloud work, and hardware integration remain deferred;
+any next implementation phase should begin only after this evidence-core branch is reviewed.
 
 ## Constrained prototype ODD
 

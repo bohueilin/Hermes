@@ -13,11 +13,6 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from hermes.adapters.metadrive_support import (
-    SUPPORTED_METADRIVE_COMMIT,
-    SUPPORTED_METADRIVE_SOURCE,
-    SUPPORTED_METADRIVE_VERSION,
-)
 from hermes.domain.enums import (
     AuthenticityStatus,
     EvidenceAvailability,
@@ -63,7 +58,7 @@ from hermes.gates.config import (
     parse_gate_config_yaml,
     resolved_gate_config_yaml,
 )
-from hermes.gates.release import apply_release_gate
+from hermes.gates.release import VerifierProfile, apply_release_gate
 from hermes.scenarios.loader import (
     ScenarioLoadError,
     parse_scenario_yaml,
@@ -72,6 +67,11 @@ from hermes.scenarios.loader import (
 )
 from hermes.shields.config import ShieldConfig
 from hermes.shields.deterministic import DeterministicSafetyShield
+from hermes.simulator_support import (
+    SUPPORTED_METADRIVE_COMMIT,
+    SUPPORTED_METADRIVE_SOURCE,
+    SUPPORTED_METADRIVE_VERSION,
+)
 from hermes.verifiers import (
     PHASE1_VERIFIER_IDENTITIES,
     PHASE4_VERIFIER_IDENTITIES,
@@ -1083,6 +1083,12 @@ def _inspect_captured_artifact(
             recomputed_findings,
             gate_config,
             adapter_name=adapter_name,
+            expected_profile=(
+                VerifierProfile.FAULT_COVERAGE
+                if scenario.faults is not None
+                or isinstance(context, ExecutionContextV2)
+                else VerifierProfile.LEGACY
+            ),
         )
         if metrics is not None and metrics != recomputed_metrics:
             errors.append("metrics.json does not match metrics recomputed from stored events")

@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
+
 from hermes.domain.enums import FindingStatus, Verdict
 from hermes.domain.models import Finding, GateResult
 from hermes.gates.config import GateConfig
 
-EXPECTED_FINDINGS = {
+
+class VerifierProfile(StrEnum):
+    """Closed set of verifier suites the release gate can evaluate."""
+
+    LEGACY = "legacy"
+    FAULT_COVERAGE = "fault_coverage"
+
+
+LEGACY_EXPECTED_FINDINGS = {
     "trace.integrity": ("TraceIntegrityVerifier", "1.0", True),
     "collision.zero": ("CollisionVerifier", "1.0", True),
     "boundary.within_tolerance": ("BoundaryVerifier", "1.0", True),
@@ -14,8 +24,12 @@ EXPECTED_FINDINGS = {
     "comfort.acceleration": ("ComfortVerifier", "1.0", False),
     "comfort.jerk": ("ComfortVerifier", "1.0", False),
 }
-FAULT_COVERAGE_FINDING = {
-    "fault.coverage.required": ("FaultCoverageVerifier", "1.0", True)
+EXPECTED_FINDINGS_BY_PROFILE = {
+    VerifierProfile.LEGACY: LEGACY_EXPECTED_FINDINGS,
+    VerifierProfile.FAULT_COVERAGE: {
+        **LEGACY_EXPECTED_FINDINGS,
+        "fault.coverage.required": ("FaultCoverageVerifier", "1.0", True),
+    },
 }
 
 
@@ -23,9 +37,10 @@ def apply_release_gate(
     findings: tuple[Finding, ...],
     config: GateConfig,
     *,
+    expected_profile: VerifierProfile,
     adapter_name: str = "fake",
 ) -> GateResult:
-    """Apply explicit precedence; aggregate scores cannot mask a hard failure."""
+    """Apply precedence against an explicitly selected verifier contract."""
     dynamics_limitation = (
         "Simulation-only prototype; fake dynamics are an architectural test double."
         if adapter_name == "fake"
@@ -35,11 +50,7 @@ def apply_release_gate(
     for finding in findings:
         by_id.setdefault(finding.finding_id, []).append(finding)
 
-    expected_findings = (
-        {**EXPECTED_FINDINGS, **FAULT_COVERAGE_FINDING}
-        if "fault.coverage.required" in by_id
-        else EXPECTED_FINDINGS
-    )
+    expected_findings = EXPECTED_FINDINGS_BY_PROFILE[expected_profile]
     malformed_finding_set = set(by_id) != set(expected_findings) or any(
         len(matches) != 1
         or (

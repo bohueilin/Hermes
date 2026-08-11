@@ -18,11 +18,6 @@ from hermes.adapters.metadrive_challenge import (
     ChallengeActorState,
     create_challenge_environment,
 )
-from hermes.adapters.metadrive_support import (
-    SUPPORTED_METADRIVE_COMMIT,
-    SUPPORTED_METADRIVE_SOURCE,
-    SUPPORTED_METADRIVE_VERSION,
-)
 from hermes.domain.enums import TerminationReason
 from hermes.domain.models import (
     Action,
@@ -31,6 +26,11 @@ from hermes.domain.models import (
     ScenarioDefinition,
     StepResult,
     VehicleState,
+)
+from hermes.simulator_support import (
+    SUPPORTED_METADRIVE_COMMIT,
+    SUPPORTED_METADRIVE_SOURCE,
+    SUPPORTED_METADRIVE_VERSION,
 )
 
 _PHYSICS_STEP_S = 0.02

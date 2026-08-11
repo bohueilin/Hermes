@@ -26,8 +26,10 @@ staged evidence bundle → stored-only verifier → atomic publication
   networking, MetaDrive, or Panda3D.
 - `src/hermes/runtime/orchestrator.py` owns lifecycle and composition; every constructed adapter
   is closed exactly once on success and failure.
-- `src/hermes/evidence/verification.py` imports no runtime, adapter, policy, MetaDrive, or Panda3D
-  code. It derives its judgment only from stored bytes.
+- `src/hermes/evidence/verification.py` imports no runtime adapter, policy implementation, external
+  MetaDrive package, or Panda3D code. It derives its judgment only from stored bytes. A data-only,
+  import-safe compatibility declaration in `src/hermes/simulator_support.py` lets it validate the
+  recorded supported simulator profile without loading adapter or simulator runtime code.
 - `src/hermes/gates/release.py` consumes structured findings, never mutable simulator state.
 
 ## Run lifecycle

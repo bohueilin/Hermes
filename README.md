@@ -12,12 +12,13 @@ Hermes is for simulation and closed-lab learning only. It must not connect to a 
 
 ## Current status
 
-Phases 0–3 are committed on the feature branch. The simulator-neutral evidence pipeline supports a
-deterministic fake adapter, a pinned MetaDrive 0.4.3 physics run with an installed IDM policy,
-trace-bound deterministic-shield decisions for two bounded MetaDrive challenge scenarios, and
-schema-2 evidence for deterministic observation/control faults. Phase 5 hardening adds local Make
-targets, PR-safe CI, explicit schema-version checks, deterministic fixtures, and structured CLI
-errors. Dashboard and RL work remain deferred.
+Phases 0–3 plus the ordered deterministic-fault and Phase 5 developer hardening are committed on
+the feature branch. The simulator-neutral evidence pipeline supports a deterministic fake adapter,
+a pinned MetaDrive 0.4.3 physics run with an installed IDM policy, trace-bound
+deterministic-shield decisions for two bounded MetaDrive challenge scenarios, and schema-2
+evidence for deterministic observation/control faults. Phase 5 adds local Make targets, PR-safe CI
+commands, explicit schema-version checks, deterministic fixtures, and structured CLI errors. No
+remote CI run is claimed. Dashboard and RL work remain deferred.
 
 The fake adapter is an architectural test double, not a vehicle-physics model. MetaDrive remains
 lazy and optional: fake runs, stored artifact verification, and stored artifact comparison do not
