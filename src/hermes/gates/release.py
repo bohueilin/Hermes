@@ -10,7 +10,7 @@ EXPECTED_FINDINGS = {
     "trace.integrity": ("TraceIntegrityVerifier", "1.0", True),
     "collision.zero": ("CollisionVerifier", "1.0", True),
     "boundary.within_tolerance": ("BoundaryVerifier", "1.0", True),
-    "progress.required": ("ProgressVerifier", "1.0", True),
+    "progress.required": ("ProgressVerifier", "1.1", True),
     "comfort.acceleration": ("ComfortVerifier", "1.0", False),
     "comfort.jerk": ("ComfortVerifier", "1.0", False),
 }
@@ -19,8 +19,15 @@ EXPECTED_FINDINGS = {
 def apply_release_gate(
     findings: tuple[Finding, ...],
     config: GateConfig,
+    *,
+    adapter_name: str = "fake",
 ) -> GateResult:
     """Apply explicit precedence; aggregate scores cannot mask a hard failure."""
+    dynamics_limitation = (
+        "Simulation-only prototype; fake dynamics are an architectural test double."
+        if adapter_name == "fake"
+        else "Simulation-only prototype; MetaDrive dynamics do not establish real-world behavior."
+    )
     by_id: dict[str, list[Finding]] = {}
     for finding in findings:
         by_id.setdefault(finding.finding_id, []).append(finding)
@@ -48,7 +55,7 @@ def apply_release_gate(
             hard_failures=("gate.finding-set",),
             soft_failures=(),
             residual_limitations=(
-                "Simulation-only prototype; fake dynamics are an architectural test double.",
+                dynamics_limitation,
                 "Local SHA-256 evidence is tamper-evident, not independently authenticated.",
                 "All configured thresholds are illustrative, not real-world safety limits.",
             ),
@@ -155,7 +162,7 @@ def apply_release_gate(
         hard_failures=hard,
         soft_failures=tuple(finding.finding_id for finding in soft_nonpassing),
         residual_limitations=(
-            "Simulation-only prototype; fake dynamics are an architectural test double.",
+            dynamics_limitation,
             "Local SHA-256 evidence is tamper-evident, not independently authenticated.",
             "All configured thresholds are illustrative, not real-world safety limits.",
             *unavailable,

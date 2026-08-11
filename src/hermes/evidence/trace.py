@@ -262,9 +262,12 @@ def verify_complete_trace(
             raise TraceIntegrityError(
                 f"action override lacks a reason at sequence {event.sequence}"
             )
-        if event.run_context.policy_name == "baseline" and event.latency_source != "simulated":
+        if event.run_context.policy_name in {"baseline", "metadrive-idm"} and (
+            event.latency_source != "simulated"
+        ):
             raise TraceIntegrityError(
-                f"baseline policy latency_source must be simulated at sequence {event.sequence}"
+                f"{event.run_context.policy_name} policy latency_source must be simulated at "
+                f"sequence {event.sequence}"
             )
 
         is_last = index == len(events) - 1

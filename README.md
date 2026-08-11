@@ -12,13 +12,12 @@ Hermes is for simulation and closed-lab learning only. It must not connect to a 
 
 ## Current status
 
-Phase 0 remains intact, and the Phase 1 deterministic evidence core is implemented on the
-feature branch. Phase 1 adds strict scenario and gate schemas, a deterministic fake adapter,
-baseline policy, no-op shield, canonical trace chaining, independent verifiers, non-compensatory
-gate precedence, atomic evidence publication, and stored-only artifact verification.
+Phase 0 remains intact, Phase 1 is committed, and the Phase 2 MetaDrive headless adapter is
+implemented on the feature branch. The same simulator-neutral evidence pipeline now supports a
+deterministic fake adapter and a pinned MetaDrive 0.4.3 physics run with an installed IDM policy.
 
-The fake adapter is an architectural test double, not a vehicle-physics model. MetaDrive is not
-imported or launched by Phase 1 runs or artifact verification.
+The fake adapter is an architectural test double, not a vehicle-physics model. MetaDrive remains
+lazy and optional: fake runs and stored artifact verification do not import or launch it.
 
 ## Canonical identity
 
@@ -90,6 +89,34 @@ A valid `HOLD` or `CONDITIONAL` bundle remains internally consistent and indepen
 verifiable; its verification command returns the policy verdict exit code. Corruption instead
 returns `INVALID_EVIDENCE` / `30`.
 
+## Phase 2 MetaDrive commands
+
+```bash
+hermes sim-smoke --headless
+
+hermes run \
+  --simulator metadrive \
+  --scenario scenarios/metadrive_nominal.yaml \
+  --policy metadrive-idm \
+  --seed 7 \
+  --run-id phase2-metadrive-nominal \
+  --headless
+
+hermes verify-artifact artifacts/phase2-metadrive-nominal
+```
+
+`sim-smoke` is an operational reset/IDM/step/close probe, not a release verdict. The full run
+records MetaDrive version and exact source commit inside the trace-bound adapter configuration and
+cross-checks the manifest. Unsupported front-distance and relative-speed signals are recorded as
+`NOT_AVAILABLE`; they are not synthesized as zero. The observed nominal run is simulation-only and
+does not establish road safety, certification, compliance, or deployment readiness.
+
+MetaDrive runs default to the versioned `config/gates.phase2.yaml`. Its illustrative mission rule
+requires both the named destination fact and at least 95% normalized named route progress; progress
+alone cannot pass. The installed IDM target (`8.0 m/s` in the nominal scenario), disabled lane
+changes, enabled deceleration, float32 action conversion, and adapter signal mappings are bound into
+the execution context.
+
 ## Evidence bundle
 
 Every completed run must preserve:
@@ -136,8 +163,8 @@ Read before editing:
 
 ## Roadmap
 
-1. Deterministic fake-simulator evidence core (implemented in Phase 1).
-2. Bounded MetaDrive headless adapter (strictly gated on Phase 1 acceptance).
+1. Deterministic fake-simulator evidence core (implemented and committed in Phase 1).
+2. Bounded MetaDrive headless adapter (implemented in Phase 2).
 3. Deterministic runtime shield and challenge scenarios.
 4. Fault injection, comparison, CI, and demo hardening.
 5. Later: dashboard, CARLA, ROS 2/Autoware, RL experiments, and hardware-aware validation.

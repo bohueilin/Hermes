@@ -23,6 +23,8 @@ from hermes.runtime.orchestrator import (
     RunConfigurationError,
     RunOperationalError,
     execute_fake_run,
+    execute_metadrive_run,
+    run_metadrive_smoke,
 )
 
 EXIT_CODES = {
@@ -138,11 +140,11 @@ def _render_artifact_verification(result: ArtifactVerification) -> None:
 @app.command("run")
 def run_command(
     simulator: Annotated[
-        str, typer.Option("--simulator", help="Simulator adapter; Phase 1: fake.")
+        str, typer.Option("--simulator", help="Simulator adapter: fake or metadrive.")
     ],
     scenario: Annotated[Path, typer.Option("--scenario", help="Strict scenario YAML path.")],
     policy: Annotated[
-        str, typer.Option("--policy", help="Candidate policy; Phase 1: baseline.")
+        str, typer.Option("--policy", help="Candidate policy: baseline or metadrive-idm.")
     ],
     seed: Annotated[int, typer.Option("--seed", help="Signed 32-bit deterministic seed.")],
     run_id: Annotated[str, typer.Option("--run-id", help="Unique lowercase artifact slug.")],
@@ -150,27 +152,36 @@ def run_command(
         Path | None,
         typer.Option("--gate-config", help="Strict illustrative release-gate YAML."),
     ] = None,
+    headless: Annotated[
+        bool,
+        typer.Option("--headless", help="Require physics-only MetaDrive execution."),
+    ] = False,
 ) -> None:
     """Run one bounded simulation-only scenario and publish verified evidence."""
     console = _phase_console()
-    if simulator != "fake":
+    if simulator not in {"fake", "metadrive"}:
+        console.print(f"Configuration error: unsupported simulator {simulator!r}")
+        raise typer.Exit(code=40)
+    expected_policy = "baseline" if simulator == "fake" else "metadrive-idm"
+    if policy != expected_policy:
         console.print(
-            f"Configuration error: unsupported simulator {simulator!r}; Phase 1 supports fake"
+            f"Configuration error: simulator {simulator!r} requires policy "
+            f"{expected_policy!r}"
         )
         raise typer.Exit(code=40)
-    if policy != "baseline":
-        console.print(
-            f"Configuration error: unsupported policy {policy!r}; Phase 1 supports baseline"
-        )
+    if simulator == "metadrive" and not headless:
+        console.print("Configuration error: MetaDrive execution requires --headless")
         raise typer.Exit(code=40)
     repository_root = discover_hermes_repository_root()
     if repository_root is None:
         console.print("Configuration error: Hermes repository root is unavailable")
         raise typer.Exit(code=40)
-    resolved_gate = gate_config or repository_root / "config" / "gates.phase1.yaml"
+    default_gate = "gates.phase1.yaml" if simulator == "fake" else "gates.phase2.yaml"
+    resolved_gate = gate_config or repository_root / "config" / default_gate
     resolved_artifacts = repository_root / "artifacts"
     try:
-        outcome = execute_fake_run(
+        runner = execute_fake_run if simulator == "fake" else execute_metadrive_run
+        outcome = runner(
             scenario_path=scenario,
             gate_config_path=resolved_gate,
             seed=seed,
@@ -189,10 +200,56 @@ def run_command(
         raise typer.Exit(code=40) from exc
 
     _render_artifact_verification(outcome.verification)
-    console.print("Adapter: fake (deterministic architectural test double, not vehicle physics)")
+    if simulator == "fake":
+        console.print(
+            "Adapter: fake (deterministic architectural test double, not vehicle physics)"
+        )
+    else:
+        console.print("Adapter: metadrive (headless MetaDrive 0.4.3 vehicle physics)")
     exit_code = EXIT_CODES[outcome.verdict]
     if exit_code:
         raise typer.Exit(code=exit_code)
+
+
+@app.command("sim-smoke")
+def sim_smoke_command(
+    headless: Annotated[
+        bool,
+        typer.Option("--headless", help="Require physics-only MetaDrive execution."),
+    ] = False,
+) -> None:
+    """Probe MetaDrive reset/IDM/step/close without publishing release evidence."""
+    console = _phase_console()
+    if not headless:
+        console.print("Configuration error: MetaDrive smoke requires --headless")
+        raise typer.Exit(code=40)
+    repository_root = discover_hermes_repository_root()
+    if repository_root is None:
+        console.print("Configuration error: Hermes repository root is unavailable")
+        raise typer.Exit(code=40)
+    try:
+        outcome = run_metadrive_smoke(
+            scenario_path=repository_root / "scenarios" / "metadrive_nominal.yaml",
+            seed=7,
+            repository_root=repository_root,
+        )
+    except RunConfigurationError as exc:
+        console.print(f"Configuration error: {exc}", style="red")
+        raise typer.Exit(code=40) from exc
+    except RunOperationalError as exc:
+        console.print(f"Operational error: {exc}", style="red")
+        raise typer.Exit(code=40) from exc
+    except Exception as exc:
+        console.print(f"Operational error: {type(exc).__name__}: {exc}", style="red")
+        raise typer.Exit(code=40) from exc
+
+    console.print(SCOPE_BANNER)
+    console.print("Smoke status: OK")
+    console.print(
+        f"Simulator: {outcome.simulator_name} {outcome.simulator_version} "
+        f"({outcome.simulator_commit})"
+    )
+    console.print(f"Headless steps completed: {outcome.steps_completed}")
 
 
 @app.command("verify-artifact")

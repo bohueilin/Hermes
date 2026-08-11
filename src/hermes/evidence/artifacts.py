@@ -182,6 +182,9 @@ def write_bundle(
     repository_commit: str | None,
     repository_dirty: bool | None,
     repository_provenance_reason: str | None,
+    simulator_name: str | None = None,
+    simulator_version: str | None = None,
+    simulator_commit: str | None = None,
 ) -> ArtifactManifest:
     """Write a complete deterministic payload, manifest inventory, and detached bundle root."""
     trace_digest = events[-1].current_hash
@@ -211,9 +214,9 @@ def write_bundle(
         adapter_name=execution_context.adapter.name,
         adapter_version=execution_context.adapter.version,
         adapter_config_digest=execution_context.adapter.config_digest,
-        simulator_name=None,
-        simulator_version=None,
-        simulator_commit=None,
+        simulator_name=simulator_name,
+        simulator_version=simulator_version,
+        simulator_commit=simulator_commit,
         scenario_name=scenario.name,
         scenario_version=scenario.version,
         scenario_schema_version=scenario.schema_version,

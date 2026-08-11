@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from hermes.domain.models import Action, Observation, ScenarioDefinition
+from hermes.domain.models import Action, JsonValue, Observation, ScenarioDefinition
 
 
 class BaselinePolicy:
@@ -13,6 +13,17 @@ class BaselinePolicy:
 
     def __init__(self) -> None:
         self._scenario: ScenarioDefinition | None = None
+
+    @property
+    def evidence_config(self) -> dict[str, JsonValue]:
+        if self._scenario is None:
+            raise RuntimeError("baseline policy must be reset before evidence config is read")
+        return {
+            "target_speed_mps": self._scenario.control.target_speed_mps,
+            "simulated_policy_latency_ms": (
+                self._scenario.control.simulated_policy_latency_ms
+            ),
+        }
 
     @property
     def simulated_latency_ms(self) -> float:

@@ -1,107 +1,107 @@
 # Hermes Codex Handoff
 
-## 1. Executive summary
+## Executive summary
 
-- Highest phase completed: Phase 1 acceptance; final review and commit are in progress.
-- Overall status: `PARTIAL` until the Phase 1 review/commit checkpoint is complete.
-- Result: Hermes now executes deterministic fake scenarios into self-verified, atomic evidence
-  bundles and recomputes their verdicts without simulator execution.
-- Most important limitation: local hashes prove internal consistency, not independent authenticity;
-  the fake adapter is not a physics or real-world performance model.
+- Highest completed gate: Phase 2 MetaDrive headless adapter.
+- Status: Phase 0 preserved; Phase 1 committed at `635c246`; Phase 2 acceptance green.
+- Result: the same Hermes evidence pipeline now supports the deterministic fake test double and a
+  bounded, pinned MetaDrive 0.4.3 physics run with an installed IDM candidate policy.
+- Checkpoint: `feat: add MetaDrive headless adapter` (the commit containing this handoff).
+- Remote actions: none. No push, PR, deployment, purchase, or infrastructure mutation occurred.
 
-## 2. Repository state
-
-| Field | Value |
-|---|---|
-| Repository root | `/Users/bohueilin/Documents/GitHub/Hermes` |
-| Starting branch | `feat/unattended-evidence-core` |
-| Starting commit | `430ef0ca6492250977702a0b421515f93203d58d` |
-| Ending branch | in progress |
-| Ending commit | in progress |
-| Working tree | dirty with intentional Phase 1 work |
-| Remote actions | none |
-
-## 3. Environment
+## Repository and environment
 
 | Field | Observed value |
 |---|---|
-| Python executable | `/Users/bohueilin/miniconda3/envs/hermes-dev/bin/python` |
-| Python version | `3.11.15` |
-| Environment | Conda `hermes-dev` |
-| Hermes version | `0.1.0` editable |
-| MetaDrive | `0.4.3`; not used by Phase 1 runtime |
-| MetaDrive source commit | `85e5dadc6c7436d324348f6e3d8f8e680c06b4db` |
-| OS/architecture | macOS arm64 |
+| Repository | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Branch | `feat/unattended-evidence-core` |
+| Phase 0 commit | `c181509a691b132cb732a50c24612f6bd40bafca` |
+| Phase 1 commit | `635c246ef2f1eba84fde315d60c1b4f2bcba8634` |
+| Python | 3.11.15 in Conda `hermes-dev` |
+| Hermes | 0.1.0 editable |
+| MetaDrive | 0.4.3 from `third_party/metadrive` |
+| Simulator commit | `85e5dadc6c7436d324348f6e3d8f8e680c06b4db` |
+| Platform | macOS arm64 |
 
-## 4. Phase status
+## Phase status
 
-| Phase | Status | Acceptance result | Commit |
-|---|---|---|---|
-| Phase 0 | Pre-existing | 26-test baseline and doctor preserved | `c181509` |
-| Phase 1 | COMPLETE, UNCOMMITTED | 131 tests; Ruff; doctor; all demos green; three final re-reviews GO | pending |
-| Phase 2 | NOT_STARTED | gated on Phase 1 | — |
-| Phase 3 | NOT_STARTED | gated on Phase 2 | — |
-| P3 hardening | NOT_STARTED | gated | — |
+| Phase | Status | Acceptance result |
+|---|---|---|
+| Phase 0 | COMPLETE | Package/doctor baseline preserved |
+| Phase 1 | COMPLETE, COMMITTED | Fake evidence core and all four verdict paths green |
+| Phase 2 | COMPLETE, CHECKPOINT READY | Real smoke, nominal run, stored replay, provenance, repeat seed green |
+| Phase 3 | NOT STARTED | Gated on the Phase 2 checkpoint commit |
+| Optional hardening | NOT STARTED | Gated on earlier phases |
 
-## 5. Architecture implemented
+## Phase 2 architecture
 
-Strict simulator-neutral domain contracts, bounded YAML schemas, deterministic fake adapter,
-baseline policy/no-op shield, lifecycle-safe orchestrator, canonical event chain, pure metrics,
-six-finding verifier suite, non-compensatory release gate, native atomic no-replace artifact writer, detached bundle
-root, and stored-only independent verification. See `docs/phase1-architecture.md`.
+- `MetaDriveAdapter` imports MetaDrive only after selection, validates exact supported
+  version/source/commit/cleanliness, and owns one reset/step/close lifecycle.
+- MetaDrive keeps its external `EnvInputPolicy`. A separately owned installed
+  `IDMPolicy(env.agent, seed)` proposes the Hermes candidate; Hermes applies the shield boundary;
+  the adapter submits the selected action to `env.step()`.
+- The scenario target is applied as `8.0 m/s` / `28.8 km/h`; lane changes are disabled,
+  deceleration remains enabled, and candidate actions are clipped then represented at MetaDrive's
+  binary32 precision before tracing and execution.
+- The adapter maps named speed, position, lane, route, crash, off-road, destination, and horizon
+  signals. Reset lane state is validated before direct mapping; raw route progress is normalized
+  without a destination-to-100 rewrite. Physical acceleration is a deterministic speed finite difference.
+- Front distance and front relative speed are trace-bound as `NOT_AVAILABLE` with reasons.
+- MetaDrive name, version, exact commit, stable source identity, resolved headless config, IDM
+  backend/clipping/binary32 precision/limitation, seed, and component digests are bound into every
+  event context.
+- Stored verification has a strict MetaDrive support profile, cross-checks manifest provenance,
+  and imports/runs no simulator.
+- Existing six verifiers and non-compensatory release-gate precedence are reused; there is no
+  adapter-specific gate rule. `ProgressVerifier` 1.1 requires destination plus the configured
+  progress threshold; Phase 2 uses an illustrative 95% because the named destination fact occurs
+  at 96.06% normalized progress.
 
-## 6. Dependencies
+## Latest validation
 
-| Dependency | Version bound | Type | Reason |
-|---|---|---|---|
-| Pydantic | `>=2.10,<3` | runtime | strict typed contracts and persisted schemas |
-| PyYAML | `>=6.0,<7` | runtime | bounded versioned scenario/gate YAML |
-| Rich | `>=13.7,<15` | runtime | readable truthful terminal output |
-| Typer | `>=0.12,<1` | runtime | CLI and stable command surfaces |
+| Check | Actual result |
+|---|---|
+| Full automated suite | 146 passed in 2.39 s |
+| Ruff | all checks passed |
+| Doctor | 17 PASS, 1 dirty-tree WARN, 1 optional-display NOT_AVAILABLE, 0 FAIL |
+| Real smoke | exit 0; five headless steps; MetaDrive 0.4.3 at pinned commit |
+| Phase 1 nominal regression | PASS / 0; v1.1 trace digest `f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e` |
+| Phase 1 collision regression | HOLD / 20 |
+| Phase 1 boundary regression | HOLD / 20 |
+| Phase 1 soft regression | CONDITIONAL / 10 |
+| MetaDrive nominal | PASS / 0; 165 events; destination reached at 16.5 simulated seconds |
+| Stored MetaDrive replay | INTERNALLY_CONSISTENT, PASS / 0, NOT_AUTHENTICATED |
+| Repeat seed 7 | same trace digest and byte-identical deterministic evidence files |
+| Third-party status | clean; no files under `third_party/metadrive` changed |
 
-## 7. Validation results to date
+Final Phase 2 nominal trace digest:
 
-- Preflight: 26 tests passed; Ruff clean; doctor 18 PASS / 1 acceptable NOT_AVAILABLE.
-- Editable install succeeded with Pydantic 2.13.4 and PyYAML 6.0.3 already present.
-- Latest full suite: 131 passed in 2.08s.
-- Ruff: all checks passed.
-- Doctor: 17 PASS, one expected dirty-tree WARN, one optional-display NOT_AVAILABLE, no FAIL.
-- `git diff --check`: clean.
-- No MetaDrive runtime was launched.
-
-## 8. Demonstration results
-
-| Run | Actual verdict | Exit | Artifact | Trace digest |
-|---|---|---:|---|---|
-| Nominal | PASS | 0 | `artifacts/phase1-nominal` | `9be051b3d6e3f31c4a69f30d9766bc70a23608623ee4f09e70778740767a5958` |
-| Collision | HOLD | 20 | `artifacts/phase1-collision` | `41720038f8115c229c25a5fda78afc2fa3e090b3b25d3e27540e98ecd2392133` |
-| Boundary | HOLD | 20 | `artifacts/phase1-boundary` | `47c96008e5c7d0895b5ef71b3b32d6d5fe82017caab86f7a7ce9f37bcfc3b904` |
-| Soft degradation | CONDITIONAL | 10 | `artifacts/phase1-conditional` | `d85ec5d7cd439eff600627c69804c80fa19cf231bc89010a349cb3a54feeee5f` |
-| Tampered action | INVALID_EVIDENCE | 30 | `artifacts/phase1-tampered` | first mismatch sequence 0 |
-| Repeated nominal | PASS | 0 | `artifacts/phase1-nominal-repeat` | same `9be051b3...5958` |
-
-Independent stored verification reproduced PASS/0, both HOLD/20 verdicts, and CONDITIONAL/10
-without simulator execution. The tampered copy reported detached-bundle, file-digest, and event-hash
-failures. The two nominal runs had byte-identical execution context, events, metrics, findings,
-verdict, and trace root; `events.jsonl` SHA-256 was
-`233677706116f6b61b0f6b613410890e6238455b4816fe69130c5341d1b7283b`.
-
-## 9. Known limitations
-
-- Simulation only; no real-vehicle, road-safety, certification, or compliance claim.
-- Fake dynamics validate architecture, not physics.
-- Thresholds are illustrative.
-- Local SHA-256 evidence is not independently authenticated.
-- CLI usage/type errors are configuration exit 40; Phase 0 doctor remains 0/1.
-- Descriptor snapshot checks detect concurrent replacement during capture but do not provide an
-  external trust anchor or filesystem immutability after verification returns.
-
-## 10. Git and next action
-
-No push, PR, remote, third-party simulator, or external-infrastructure mutation occurred.
-
-Single best next command while this handoff is in progress:
-
-```bash
-conda run -n hermes-dev python -m pytest -q
+```text
+2b5009971c37c1eb65c9cc2830596689b5a25904a9b52b524d5bf77305848987
 ```
+
+Observed nominal metrics: 165 events, 16.5 simulated seconds, zero collision count, zero off-road
+duration, 96.05972167673185% normalized named route completion, approximately 2.7772 m/s² maximum absolute
+acceleration, approximately 2.8324 m/s³ maximum absolute jerk, and 10 ms explicitly simulated
+policy latency.
+
+## Evidence and determinism limits
+
+- This is simulation-only integration evidence, not real-road safety, certification, compliance,
+  SAE level, or deployment evidence.
+- The nominal zero-traffic route does not demonstrate obstacle response or shield benefit.
+- MetaDrive IDM has an upstream broad internal fallback that is not structurally surfaced.
+- The current stored verifier supports ProgressVerifier 1.1 mission semantics; older pre-1.1
+  prototype artifacts need regeneration and are not silently reinterpreted.
+- Same-host runs were byte-identical. Cross-platform acceptance remains exact categorical outcomes
+  plus numeric state agreement within `1e-5`; cross-platform bitwise identity is not claimed.
+- Local SHA-256 chaining is tamper-evident and internally verifiable, not independently
+  authenticated.
+- Generated artifacts are ignored and unstaged. The manifest truthfully records the Hermes working
+  tree as dirty because it was generated before the Phase 2 checkpoint commit.
+
+## Next action
+
+After confirming the Phase 2 commit exists and the worktree is clean, begin only Phase 3:
+deterministic shield reason codes and reliable simulator-supported challenge scenarios. Preserve
+the Phase 1/2 gates and do not invent unsupported MetaDrive mechanisms.

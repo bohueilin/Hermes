@@ -5,6 +5,7 @@ from __future__ import annotations
 from hermes.domain.enums import TerminationReason
 from hermes.domain.models import (
     Action,
+    JsonValue,
     Observation,
     ScenarioDefinition,
     StepResult,
@@ -24,6 +25,22 @@ class FakeSimulatorAdapter:
         self._step_index = 0
         self._closed = False
         self._finished = False
+
+    @property
+    def evidence_config(self) -> dict[str, JsonValue]:
+        return {"model": "deterministic_architectural_test_double_v1"}
+
+    @property
+    def simulator_name(self) -> None:
+        return None
+
+    @property
+    def simulator_version(self) -> None:
+        return None
+
+    @property
+    def simulator_commit(self) -> None:
+        return None
 
     def reset(self, scenario: ScenarioDefinition, seed: int) -> Observation:
         """Reset deterministic state; seed is recorded even though no randomness is used."""

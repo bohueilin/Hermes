@@ -6,8 +6,10 @@ import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from hermes.adapters.fake import FakeSimulatorAdapter
+from hermes.adapters.metadrive import MetaDriveAdapter
 from hermes.domain.contracts import DrivingPolicy, SafetyShield, SimulatorAdapter
 from hermes.domain.enums import IntegrityStatus, Verdict
 from hermes.domain.models import (
@@ -31,6 +33,7 @@ from hermes.evidence.verification import verify_artifact
 from hermes.gates.config import GateConfigError, gate_config_digest, load_gate_config
 from hermes.gates.release import apply_release_gate
 from hermes.policies.baseline import BaselinePolicy
+from hermes.policies.metadrive_idm import MetaDriveIDMPolicy
 from hermes.scenarios.loader import ScenarioLoadError, load_scenario, scenario_digest
 from hermes.shields.noop import NoOpShield
 from hermes.verifiers import PHASE1_VERIFIER_IDENTITIES, run_phase1_verifiers
@@ -50,6 +53,21 @@ class RunOutcome:
     artifact_path: Path
     trace_digest: str
     verification: ArtifactVerification
+
+
+@dataclass(frozen=True, slots=True)
+class SimulatorProvenance:
+    name: str | None
+    version: str | None
+    commit: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class SimulatorSmokeOutcome:
+    simulator_name: str
+    simulator_version: str
+    simulator_commit: str
+    steps_completed: int
 
 
 def _git(repository_root: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
@@ -87,12 +105,9 @@ def _build_execution_context(
     policy: DrivingPolicy,
     shield: SafetyShield,
 ) -> ExecutionContext:
-    adapter_config = {"model": "deterministic_architectural_test_double_v1"}
-    policy_config = {
-        "target_speed_mps": scenario.control.target_speed_mps,
-        "simulated_policy_latency_ms": scenario.control.simulated_policy_latency_ms,
-    }
-    shield_config: dict[str, object] = {}
+    adapter_config = adapter.evidence_config
+    policy_config = policy.evidence_config
+    shield_config = shield.evidence_config
     suite_payload = [identity.model_dump(mode="json") for identity in PHASE1_VERIFIER_IDENTITIES]
     run_context = RunContext(
         scenario_digest=scenario_digest(scenario),
@@ -141,9 +156,9 @@ def _execute_episode(
     gate_config,
     seed: int,
     adapter_factory: Callable[[], SimulatorAdapter],
-    policy_factory: Callable[[], DrivingPolicy],
+    policy_builder: Callable[[SimulatorAdapter], DrivingPolicy],
     shield_factory: Callable[[], SafetyShield],
-) -> tuple[tuple[TraceEvent, ...], ExecutionContext]:
+) -> tuple[tuple[TraceEvent, ...], ExecutionContext, SimulatorProvenance]:
     try:
         adapter = adapter_factory()
     except Exception as exc:
@@ -154,10 +169,11 @@ def _execute_episode(
     operation_error: Exception | None = None
     events: list[TraceEvent] = []
     execution_context: ExecutionContext | None = None
+    simulator_provenance: SimulatorProvenance | None = None
     try:
-        policy = policy_factory()
-        shield = shield_factory()
         observation = adapter.reset(scenario, seed)
+        policy = policy_builder(adapter)
+        shield = shield_factory()
         policy.reset(scenario, seed)
         shield.reset(scenario, seed)
         execution_context = _build_execution_context(
@@ -167,6 +183,11 @@ def _execute_episode(
             adapter=adapter,
             policy=policy,
             shield=shield,
+        )
+        simulator_provenance = SimulatorProvenance(
+            name=adapter.simulator_name,
+            version=adapter.simulator_version,
+            commit=adapter.simulator_commit,
         )
         previous_hash = GENESIS_HASH
         for sequence in range(scenario.control.horizon_steps):
@@ -220,26 +241,27 @@ def _execute_episode(
             f"run execution failed: {type(operation_error).__name__}: {operation_error}"
         ) from operation_error
     assert execution_context is not None
+    assert simulator_provenance is not None
     try:
         verify_complete_trace(tuple(events), scenario)
     except Exception as exc:
         raise RunOperationalError(f"runtime produced invalid trace: {exc}") from exc
-    return tuple(events), execution_context
+    return tuple(events), execution_context, simulator_provenance
 
 
-def execute_fake_run(
+def _execute_run(
     *,
+    expected_adapter: str,
     scenario_path: Path,
     gate_config_path: Path,
     seed: int,
     run_id: str,
     artifact_root: Path,
     repository_root: Path,
-    adapter_factory: Callable[[], SimulatorAdapter] = FakeSimulatorAdapter,
-    policy_factory: Callable[[], DrivingPolicy] = BaselinePolicy,
-    shield_factory: Callable[[], SafetyShield] = NoOpShield,
+    adapter_factory: Callable[[], SimulatorAdapter],
+    policy_builder: Callable[[SimulatorAdapter], DrivingPolicy],
+    shield_factory: Callable[[], SafetyShield],
 ) -> RunOutcome:
-    """Execute, self-verify, and atomically publish one Phase 1 fake run."""
     if isinstance(seed, bool) or not -(2**31) <= seed < 2**31:
         raise RunConfigurationError("seed must be a signed 32-bit integer")
     try:
@@ -248,20 +270,52 @@ def execute_fake_run(
         gate_config = load_gate_config(gate_config_path)
     except (ArtifactExistsError, ArtifactError, ScenarioLoadError, GateConfigError) as exc:
         raise RunConfigurationError(str(exc)) from exc
-    if scenario.adapter != "fake":
-        raise RunConfigurationError("Phase 1 execute_fake_run requires adapter: fake")
+    if scenario.adapter != expected_adapter:
+        raise RunConfigurationError(
+            f"requested {expected_adapter} adapter requires scenario adapter: {expected_adapter}"
+        )
+    if expected_adapter == "metadrive" and any(
+        value is not None and value is not False
+        for value in (
+            scenario.hazards.collision_at_step,
+            scenario.hazards.boundary_at_step,
+            scenario.hazards.comfort_spike_at_step,
+            scenario.hazards.unavailable_progress,
+        )
+    ):
+        raise RunConfigurationError(
+            "Phase 2 MetaDrive nominal runs do not support synthetic fake-adapter hazards"
+        )
 
-    events, execution_context = _execute_episode(
+    events, execution_context, simulator_provenance = _execute_episode(
         scenario=scenario,
         gate_config=gate_config,
         seed=seed,
         adapter_factory=adapter_factory,
-        policy_factory=policy_factory,
+        policy_builder=policy_builder,
         shield_factory=shield_factory,
     )
+    if expected_adapter == "fake" and any(
+        value is not None
+        for value in (
+            simulator_provenance.name,
+            simulator_provenance.version,
+            simulator_provenance.commit,
+        )
+    ):
+        raise RunOperationalError("fake adapter unexpectedly claimed simulator provenance")
+    if expected_adapter == "metadrive" and not all(
+        (
+            simulator_provenance.name,
+            simulator_provenance.version,
+            simulator_provenance.commit,
+        )
+    ):
+        raise RunOperationalError("MetaDrive simulator provenance is incomplete")
+
     metrics = compute_metrics(events)
     findings = run_phase1_verifiers(events, scenario, gate_config)
-    verdict = apply_release_gate(findings, gate_config)
+    verdict = apply_release_gate(findings, gate_config, adapter_name=expected_adapter)
     commit, dirty, provenance_reason = _repository_provenance(
         repository_root.expanduser().resolve()
     )
@@ -282,6 +336,9 @@ def execute_fake_run(
                 repository_commit=commit,
                 repository_dirty=dirty,
                 repository_provenance_reason=provenance_reason,
+                simulator_name=simulator_provenance.name,
+                simulator_version=simulator_provenance.version,
+                simulator_commit=simulator_provenance.commit,
             )
             staged_verification = verify_artifact(stager.staging_path)
             if staged_verification.integrity is not IntegrityStatus.INTERNALLY_CONSISTENT:
@@ -303,4 +360,137 @@ def execute_fake_run(
         artifact_path=published,
         trace_digest=events[-1].current_hash,
         verification=staged_verification.model_copy(update={"artifact_path": str(published)}),
+    )
+
+
+def execute_fake_run(
+    *,
+    scenario_path: Path,
+    gate_config_path: Path,
+    seed: int,
+    run_id: str,
+    artifact_root: Path,
+    repository_root: Path,
+    adapter_factory: Callable[[], SimulatorAdapter] = FakeSimulatorAdapter,
+    policy_factory: Callable[[], DrivingPolicy] = BaselinePolicy,
+    shield_factory: Callable[[], SafetyShield] = NoOpShield,
+) -> RunOutcome:
+    """Execute, self-verify, and atomically publish one Phase 1 fake run."""
+    return _execute_run(
+        expected_adapter="fake",
+        scenario_path=scenario_path,
+        gate_config_path=gate_config_path,
+        seed=seed,
+        run_id=run_id,
+        artifact_root=artifact_root,
+        repository_root=repository_root,
+        adapter_factory=adapter_factory,
+        policy_builder=lambda adapter: policy_factory(),
+        shield_factory=shield_factory,
+    )
+
+
+def execute_metadrive_run(
+    *,
+    scenario_path: Path,
+    gate_config_path: Path,
+    seed: int,
+    run_id: str,
+    artifact_root: Path,
+    repository_root: Path,
+    adapter_factory: Callable[[], SimulatorAdapter] | None = None,
+    policy_factory: Callable[[MetaDriveAdapter], DrivingPolicy] | None = None,
+    shield_factory: Callable[[], SafetyShield] = NoOpShield,
+) -> RunOutcome:
+    """Execute, self-verify, and atomically publish one Phase 2 MetaDrive run."""
+    resolved_adapter_factory = adapter_factory or (
+        lambda: MetaDriveAdapter(repository_root=repository_root)
+    )
+
+    def build_policy(adapter: SimulatorAdapter) -> DrivingPolicy:
+        metadrive_adapter = cast(MetaDriveAdapter, adapter)
+        return (
+            policy_factory(metadrive_adapter)
+            if policy_factory is not None
+            else MetaDriveIDMPolicy(metadrive_adapter)
+        )
+
+    return _execute_run(
+        expected_adapter="metadrive",
+        scenario_path=scenario_path,
+        gate_config_path=gate_config_path,
+        seed=seed,
+        run_id=run_id,
+        artifact_root=artifact_root,
+        repository_root=repository_root,
+        adapter_factory=resolved_adapter_factory,
+        policy_builder=build_policy,
+        shield_factory=shield_factory,
+    )
+
+
+def run_metadrive_smoke(
+    *,
+    scenario_path: Path,
+    seed: int,
+    repository_root: Path,
+    max_steps: int = 5,
+    adapter_factory: Callable[[], MetaDriveAdapter] | None = None,
+) -> SimulatorSmokeOutcome:
+    """Run a bounded reset/IDM/step/close probe without publishing evidence."""
+    try:
+        scenario = load_scenario(scenario_path)
+    except ScenarioLoadError as exc:
+        raise RunConfigurationError(str(exc)) from exc
+    if scenario.adapter != "metadrive":
+        raise RunConfigurationError("MetaDrive smoke requires scenario adapter: metadrive")
+    if max_steps < 1:
+        raise RunConfigurationError("MetaDrive smoke max_steps must be positive")
+
+    adapter = (
+        adapter_factory()
+        if adapter_factory is not None
+        else MetaDriveAdapter(repository_root=repository_root)
+    )
+    operation_error: Exception | None = None
+    completed = 0
+    provenance: SimulatorProvenance | None = None
+    try:
+        observation = adapter.reset(scenario, seed)
+        policy = MetaDriveIDMPolicy(adapter)
+        policy.reset(scenario, seed)
+        provenance = SimulatorProvenance(
+            adapter.simulator_name,
+            adapter.simulator_version,
+            adapter.simulator_commit,
+        )
+        for _ in range(min(max_steps, scenario.control.horizon_steps)):
+            result = adapter.step(policy.act(observation))
+            completed += 1
+            observation = result.observation
+            if result.terminated or result.truncated:
+                break
+    except Exception as exc:
+        operation_error = exc
+    finally:
+        try:
+            adapter.close()
+        except Exception as exc:
+            if operation_error is None:
+                operation_error = exc
+            else:
+                operation_error = RuntimeError(
+                    f"{operation_error}; adapter close also failed: {type(exc).__name__}: {exc}"
+                )
+    if operation_error is not None:
+        raise RunOperationalError(
+            f"MetaDrive smoke failed: {type(operation_error).__name__}: {operation_error}"
+        ) from operation_error
+    if provenance is None or not all((provenance.name, provenance.version, provenance.commit)):
+        raise RunOperationalError("MetaDrive smoke provenance is incomplete")
+    return SimulatorSmokeOutcome(
+        simulator_name=provenance.name,
+        simulator_version=provenance.version,
+        simulator_commit=provenance.commit,
+        steps_completed=completed,
     )

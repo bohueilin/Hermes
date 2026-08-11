@@ -7,6 +7,9 @@ import pytest
 from typer.testing import CliRunner
 
 from hermes.cli import app
+from hermes.domain.enums import IntegrityStatus, Verdict
+from hermes.domain.models import ArtifactVerification
+from hermes.runtime.orchestrator import RunOutcome, SimulatorSmokeOutcome
 
 runner = CliRunner()
 
@@ -216,3 +219,83 @@ def test_help_states_scope_commands_and_exit_contract() -> None:
     assert "run" in result.output
     assert "verify-artifact" in result.output
     assert "doctor" in result.output
+    assert "sim-smoke" in result.output
+
+
+def test_metadrive_run_requires_headless_and_routes_supported_profile(
+    repository_root: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifacts = _redirect_repository_artifacts(tmp_path, monkeypatch)
+    calls: list[dict[str, object]] = []
+
+    def execute(**kwargs):
+        calls.append(kwargs)
+        verification = ArtifactVerification(
+            artifact_path=str(artifacts / "cli-metadrive"),
+            integrity=IntegrityStatus.INTERNALLY_CONSISTENT,
+            verdict=Verdict.PASS,
+            trace_digest="a" * 64,
+        )
+        return RunOutcome(
+            verdict=Verdict.PASS,
+            artifact_path=artifacts / "cli-metadrive",
+            trace_digest="a" * 64,
+            verification=verification,
+        )
+
+    monkeypatch.setattr("hermes.cli.execute_metadrive_run", execute)
+    base = [
+        "run",
+        "--simulator",
+        "metadrive",
+        "--scenario",
+        str(repository_root / "scenarios" / "metadrive_nominal.yaml"),
+        "--policy",
+        "metadrive-idm",
+        "--seed",
+        "7",
+        "--run-id",
+        "cli-metadrive",
+    ]
+
+    missing_headless = runner.invoke(app, base)
+    result = runner.invoke(app, [*base, "--headless"])
+
+    assert missing_headless.exit_code == 40
+    assert "requires --headless" in missing_headless.output
+    assert result.exit_code == 0
+    assert "Adapter: metadrive" in result.output
+    assert calls and calls[0]["seed"] == 7
+    assert calls[0]["artifact_root"] == artifacts
+    assert calls[0]["gate_config_path"].name == "gates.phase2.yaml"
+
+
+def test_sim_smoke_is_operational_only_and_requires_headless(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _redirect_repository_artifacts(tmp_path, monkeypatch)
+    calls: list[dict[str, object]] = []
+
+    def smoke(**kwargs):
+        calls.append(kwargs)
+        return SimulatorSmokeOutcome(
+            simulator_name="metadrive",
+            simulator_version="0.4.3",
+            simulator_commit="85e5dadc6c7436d324348f6e3d8f8e680c06b4db",
+            steps_completed=5,
+        )
+
+    monkeypatch.setattr("hermes.cli.run_metadrive_smoke", smoke)
+
+    missing_headless = runner.invoke(app, ["sim-smoke"])
+    result = runner.invoke(app, ["sim-smoke", "--headless"])
+
+    assert missing_headless.exit_code == 40
+    assert result.exit_code == 0
+    assert "Smoke status: OK" in result.output
+    assert "Verdict:" not in result.output
+    assert "0.4.3" in result.output
+    assert calls

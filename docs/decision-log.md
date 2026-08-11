@@ -83,3 +83,53 @@ MetaDrive and Panda3D remain absent from Phase 1 runtime and stored verification
 Coherent whole-bundle rewriting remains possible for an actor who can recompute every local hash.
 Hermes therefore reports authenticity as `NOT_AUTHENTICATED` and describes local SHA-256 as
 tamper-evident, never tamper-proof.
+
+## 2026-08-11 — Phase 2 pinned MetaDrive headless adapter
+
+### Scope
+
+Run one bounded MetaDrive 0.4.3 nominal scenario through the existing candidate, trace, verifier,
+gate, artifact, and stored-verification contracts. Challenge scenarios and the runtime safety
+shield remain Phase 3.
+
+### Decisions
+
+- Keep MetaDrive lazy and external. Production selection validates distribution/source version,
+  imported source location, clean nested checkout, `SIMULATOR_COMMIT`, and the exact Hermes-supported
+  commit before environment construction.
+- Retain MetaDrive's `EnvInputPolicy` for execution. Instantiate the installed
+  `IDMPolicy(env.agent, seed)` separately so Hermes captures the candidate before shield evaluation
+  and sends the selected action back through `env.step()`.
+- Apply the scenario target (`8.0 m/s` / `28.8 km/h`) to both installed IDM speed fields, disable
+  lane changes for the bounded nominal route, and keep IDM deceleration enabled. Bind these settings
+  and the binary32 candidate-action conversion into policy evidence.
+- Use only source-verified 0.4.3 keys: physics-only rendering flags, fixed `"S"` map, one seed,
+  zero traffic/accidents, fixed spawn lane, bounded horizon, continuous checked actions, 0.02-second
+  physics step, and an exact integer decision repeat.
+- Support zero initial speed in Phase 2 rather than inventing a velocity-vector mapping. Reject
+  unsupported control frequencies and initial speeds before producing evidence.
+- Derive physical acceleration from speed deltas, cumulative position from planar displacement,
+  direct lane offset from named lane coordinates after reset-state validation, and route progress
+  from the reset-normalized named completion signal. Bind both mappings and never force progress to
+  100 on destination. Unexplained terminal states fail operationally.
+- Record front distance and relative speed as trace-bound `NOT_AVAILABLE` signals with reasons.
+  Do not reinterpret the installed IDM's internal sensing as Hermes evidence.
+- Bind MetaDrive name, version, exact source commit, stable source identity, resolved adapter
+  configuration, policy backend, clipping and binary32 action precision, and upstream IDM
+  limitation into component configuration digests. Cross-check the manifest during
+  simulator-free stored verification.
+- Reuse all six verifiers and the non-compensatory release gate. Change only the residual dynamics
+  limitation so MetaDrive evidence does not claim fake dynamics and fake evidence does not claim
+  MetaDrive physics.
+- Version `ProgressVerifier` as 1.1 and require destination reached plus configured progress. The
+  illustrative Phase 2 gate uses 95% because the named destination signal occurs at about 96.06%
+  normalized progress; a horizon truncation above 95% still receives `HOLD`. Older pre-1.1
+  prototype bundles must be regenerated rather than interpreted under changed semantics.
+
+### Observed acceptance
+
+The five-step real smoke passed. The bounded nominal run reached its destination in 165 events /
+16.5 simulated seconds and produced `PASS` with zero collision/off-road evidence. Stored replay
+returned `INTERNALLY_CONSISTENT` / `PASS` without importing MetaDrive. A repeated seed-7 run produced
+the same trace digest and byte-identical deterministic evidence files on this host. This does not
+establish cross-platform bitwise physics determinism or any real-world safety property.

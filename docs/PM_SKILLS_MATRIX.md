@@ -25,3 +25,17 @@ You do not need to personally implement every perception model or controller. Yo
   explicit `NOT_AVAILABLE` signals are visible in every decision.
 - **Reversible rollout discipline:** no-overwrite artifacts, atomic publication, stable exit codes,
   and operational-failure cleanup support safe iteration.
+
+## Phase 2 leadership evidence
+
+- **Interface ownership:** installed IDM proposes, Hermes preserves the candidate/shield boundary,
+  and MetaDrive's external-input policy executes the selected action.
+- **Evidence portability:** simulator version, exact commit, resolved config, seed, and unsupported
+  signals are trace-bound; stored review remains simulator-free.
+- **Verifier integrity:** the named 96.06% progress signal is preserved, destination is checked
+  independently, and a horizon-only run cannot exploit the 95% illustrative threshold.
+- **Claims discipline:** the nominal run proves integration and bounded physics execution only; it
+  does not prove obstacle response, road safety, certification, or deployment readiness.
+- **Reproducibility judgment:** same-host seed-7 evidence was byte-identical, while the declared
+  cross-platform criterion remains exact categorical outcomes plus numeric agreement within
+  `1e-5` rather than an unsupported bitwise guarantee.

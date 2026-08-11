@@ -24,7 +24,7 @@ PHASE1_VERIFIER_IDENTITIES = (
     VerifierIdentity(
         name="BoundaryVerifier", version="1.0", finding_id="boundary.within_tolerance"
     ),
-    VerifierIdentity(name="ProgressVerifier", version="1.0", finding_id="progress.required"),
+    VerifierIdentity(name="ProgressVerifier", version="1.1", finding_id="progress.required"),
     VerifierIdentity(
         name="ComfortVerifier", version="1.0", finding_id="comfort.acceleration"
     ),
@@ -114,12 +114,15 @@ def _boundary(
 
 def _progress(events: tuple[TraceEvent, ...], gate: GateConfig) -> Finding:
     measurement = compute_metrics(events).route_completion_pct
-    criterion = f"route_completion_pct >= {gate.hard.min_route_completion_pct}"
+    criterion = (
+        "destination_reached == true and "
+        f"route_completion_pct >= {gate.hard.min_route_completion_pct}"
+    )
     if measurement.availability is EvidenceAvailability.NOT_AVAILABLE:
         return Finding(
             finding_id="progress.required",
             verifier="ProgressVerifier",
-            verifier_version="1.0",
+            verifier_version="1.1",
             status=FindingStatus.NOT_AVAILABLE,
             severity=Severity.ERROR,
             hard_invariant=True,
@@ -128,20 +131,29 @@ def _progress(events: tuple[TraceEvent, ...], gate: GateConfig) -> Finding:
             measurement=measurement,
         )
     assert measurement.value is not None
-    failed = measurement.value < gate.hard.min_route_completion_pct
+    destination_reached = events[-1].vehicle_state.destination_reached
+    failed = (
+        measurement.value < gate.hard.min_route_completion_pct
+        or not destination_reached
+    )
     return Finding(
         finding_id="progress.required",
         verifier="ProgressVerifier",
-        verifier_version="1.0",
+        verifier_version="1.1",
         status=FindingStatus.FAIL if failed else FindingStatus.PASS,
         severity=Severity.ERROR,
         hard_invariant=True,
         threshold_or_invariant=criterion,
         message=(
-            f"route completion {measurement.value}% is below required "
+            "destination was not reached"
+            if not destination_reached
+            else f"route completion {measurement.value}% is below required "
             f"{gate.hard.min_route_completion_pct}%"
             if failed
-            else f"route completion {measurement.value}% meets requirement"
+            else (
+                f"destination reached and route completion {measurement.value}% "
+                "meets requirement"
+            )
         ),
         event_sequences=(events[-1].sequence,) if failed else (),
         first_failure_time_s=events[-1].simulation_time_s if failed else None,

@@ -12,6 +12,11 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
+from hermes.adapters.metadrive_support import (
+    SUPPORTED_METADRIVE_COMMIT,
+    SUPPORTED_METADRIVE_SOURCE,
+    SUPPORTED_METADRIVE_VERSION,
+)
 from hermes.domain.enums import AuthenticityStatus, IntegrityStatus, Verdict
 from hermes.domain.models import (
     ArtifactManifest,
@@ -20,6 +25,7 @@ from hermes.domain.models import (
     FindingsDocument,
     GateResult,
     RunMetrics,
+    ScenarioDefinition,
     TraceEvent,
 )
 from hermes.evidence.artifacts import (
@@ -284,6 +290,182 @@ def _first_sequence(message: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def _profile_errors(
+    context: ExecutionContext,
+    scenario: ScenarioDefinition,
+    events: tuple[TraceEvent, ...] | None,
+) -> list[str]:
+    """Validate supported runtime profiles without importing a simulator or policy."""
+    errors: list[str] = []
+    if context.shield.name != "noop" or context.shield.version != "1.0":
+        errors.append("execution-context.json contains an unsupported shield")
+    if canonical_json_bytes(context.shield.config) != canonical_json_bytes({}):
+        errors.append("execution-context.json no-op shield configuration is unsupported")
+    if context.adapter.name != scenario.adapter:
+        errors.append("scenario adapter does not match execution-context.json adapter")
+
+    expected_latency = scenario.control.simulated_policy_latency_ms
+    if context.adapter.name == "fake":
+        expected_adapter_config = {
+            "model": "deterministic_architectural_test_double_v1"
+        }
+        expected_policy_config = {
+            "target_speed_mps": scenario.control.target_speed_mps,
+            "simulated_policy_latency_ms": expected_latency,
+        }
+        if context.adapter.version != "1.0":
+            errors.append("execution-context.json contains an unsupported fake adapter version")
+        if context.policy.name != "baseline" or context.policy.version != "1.0":
+            errors.append("execution-context.json contains an unsupported fake policy")
+        if canonical_json_bytes(context.adapter.config) != canonical_json_bytes(
+            expected_adapter_config
+        ):
+            errors.append("execution-context.json fake adapter configuration is unsupported")
+        if canonical_json_bytes(context.policy.config) != canonical_json_bytes(
+            expected_policy_config
+        ):
+            errors.append("execution-context.json baseline policy configuration is unsupported")
+    elif context.adapter.name == "metadrive":
+        adapter_config = context.adapter.config
+        simulator_commit = adapter_config.get("simulator_commit")
+        simulator_version = adapter_config.get("simulator_version")
+        decision_repeat_raw = 1.0 / (scenario.control.frequency_hz * 0.02)
+        decision_repeat = round(decision_repeat_raw)
+        if not math.isclose(
+            decision_repeat_raw,
+            decision_repeat,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        ):
+            errors.append("scenario frequency has no supported MetaDrive decision interval")
+        expected_metadrive_config = {
+            "use_render": False,
+            "image_observation": False,
+            "manual_control": False,
+            "show_interface": False,
+            "show_policy_mark": False,
+            "map": "S",
+            "start_seed": context.run_context.seed,
+            "num_scenarios": 1,
+            "random_agent_model": False,
+            "random_spawn_lane_index": False,
+            "traffic_density": 0.0,
+            "random_traffic": False,
+            "accident_prob": 0.0,
+            "horizon": scenario.control.horizon_steps,
+            "truncate_as_terminate": False,
+            "physics_world_step_size": 0.02,
+            "decision_repeat": decision_repeat,
+            "action_check": True,
+            "log_level": 50,
+            "vehicle_config": {
+                "spawn_lateral": scenario.initial_state.lateral_offset_m,
+                "show_navi_mark": False,
+                "show_dest_mark": False,
+                "show_lidar": False,
+                "show_lane_line_detector": False,
+                "show_side_detector": False,
+                "lidar": {"num_lasers": 0, "distance": 0, "num_others": 0},
+            },
+        }
+        expected_adapter_config = {
+            "headless": True,
+            "agent_policy": "metadrive.policy.env_input_policy.EnvInputPolicy",
+            "simulator_name": "metadrive",
+            "simulator_version": SUPPORTED_METADRIVE_VERSION,
+            "simulator_commit": simulator_commit,
+            "simulator_source": SUPPORTED_METADRIVE_SOURCE,
+            "lateral_offset_mapping": {
+                "source": "agent.lane.local_coordinates(agent.position)[1]",
+                "mapping": "direct_meters",
+                "reset_validation_abs_tolerance_m": 1e-6,
+            },
+            "route_progress_mapping": {
+                "source": "info.route_completion_then_agent.navigation.route_completion",
+                "normalization": "100*(raw-reset_raw)/(1-reset_raw)",
+                "clamp_min_pct": 0.0,
+                "clamp_max_pct": 100.0,
+                "destination_override": False,
+            },
+            "signal_availability": {
+                "front_distance_m": {
+                    "status": "NOT_AVAILABLE",
+                    "reason": "no stable named MetaDrive 0.4.3 info signal selected",
+                },
+                "front_relative_speed_mps": {
+                    "status": "NOT_AVAILABLE",
+                    "reason": "no stable named MetaDrive 0.4.3 info signal selected",
+                },
+            },
+            "metadrive_config": expected_metadrive_config,
+        }
+        expected_policy_config = {
+            "backend": "metadrive.policy.idm_policy.IDMPolicy",
+            "backend_version": SUPPORTED_METADRIVE_VERSION,
+            "deceleration_enabled": True,
+            "known_limitation": "upstream IDM internal fallback is not structurally surfaced",
+            "lane_change_enabled": False,
+            "output_clipping": "componentwise_bounds_then_ieee754_binary32",
+            "simulated_policy_latency_ms": expected_latency,
+            "target_speed_km_h": scenario.control.target_speed_mps * 3.6,
+            "target_speed_mps": scenario.control.target_speed_mps,
+        }
+        if context.adapter.version != "1.0":
+            errors.append(
+                "execution-context.json contains an unsupported MetaDrive adapter version"
+            )
+        if context.policy.name != "metadrive-idm" or context.policy.version != "1.0":
+            errors.append("execution-context.json contains an unsupported MetaDrive policy")
+        if simulator_version != SUPPORTED_METADRIVE_VERSION:
+            errors.append("execution-context.json MetaDrive version is unsupported")
+        if simulator_commit != SUPPORTED_METADRIVE_COMMIT:
+            errors.append("execution-context.json MetaDrive commit is unsupported")
+        if canonical_json_bytes(adapter_config) != canonical_json_bytes(
+            expected_adapter_config
+        ):
+            errors.append("execution-context.json MetaDrive adapter configuration is unsupported")
+        if canonical_json_bytes(context.policy.config) != canonical_json_bytes(
+            expected_policy_config
+        ):
+            errors.append(
+                "execution-context.json MetaDrive IDM policy configuration is unsupported"
+            )
+    else:
+        errors.append("execution-context.json contains an unsupported adapter")
+
+    simulated_latency = context.policy.config.get("simulated_policy_latency_ms")
+    if (
+        isinstance(simulated_latency, bool)
+        or not isinstance(simulated_latency, (int, float))
+        or not math.isfinite(simulated_latency)
+        or simulated_latency < 0.0
+    ):
+        errors.append("execution-context.json simulated policy latency is invalid")
+    elif events is not None:
+        for event in events:
+            if event.latency_source != "simulated":
+                profile_label = (
+                    "fake adapter" if context.adapter.name == "fake" else "MetaDrive adapter"
+                )
+                errors.append(
+                    f"{profile_label} latency_source must be simulated at sequence "
+                    f"{event.sequence}"
+                )
+                break
+            if not math.isclose(
+                event.policy_latency_ms,
+                float(simulated_latency),
+                rel_tol=0.0,
+                abs_tol=1e-12,
+            ):
+                errors.append(
+                    "policy latency does not match policy configuration at sequence "
+                    f"{event.sequence}"
+                )
+                break
+    return errors
+
+
 def verify_artifact(artifact_path: Path) -> ArtifactVerification:
     """Recompute a complete evidence decision from stored bytes without simulator execution."""
     path = Path(os.path.abspath(os.fspath(artifact_path.expanduser())))
@@ -420,45 +602,10 @@ def verify_artifact(artifact_path: Path) -> ArtifactVerification:
             errors.append("execution-context.json verifier suite digest mismatch")
         if context.verifier_suite != PHASE1_VERIFIER_IDENTITIES:
             errors.append("execution-context.json contains an unsupported verifier suite")
-        if context.adapter.name != "fake" or context.adapter.version != "1.0":
-            errors.append("execution-context.json contains an unsupported Phase 1 adapter")
-        if context.policy.name != "baseline" or context.policy.version != "1.0":
-            errors.append("execution-context.json contains an unsupported Phase 1 policy")
-        if context.shield.name != "noop" or context.shield.version != "1.0":
-            errors.append("execution-context.json contains an unsupported Phase 1 shield")
-        if context.adapter.name == "fake" and context.policy.name == "baseline":
-            simulated_latency = context.policy.config.get("simulated_policy_latency_ms")
-            if (
-                isinstance(simulated_latency, bool)
-                or not isinstance(simulated_latency, (int, float))
-                or not math.isfinite(simulated_latency)
-                or simulated_latency < 0.0
-            ):
-                errors.append(
-                    "execution-context.json baseline simulated policy latency is invalid"
-                )
-            elif events is not None:
-                for event in events:
-                    if event.latency_source != "simulated":
-                        errors.append(
-                            "fake adapter latency_source must be simulated at sequence "
-                            f"{event.sequence}"
-                        )
-                        break
-                    if not math.isclose(
-                        event.policy_latency_ms,
-                        float(simulated_latency),
-                        rel_tol=0.0,
-                        abs_tol=1e-12,
-                    ):
-                        errors.append(
-                            "fake adapter policy latency does not match policy configuration "
-                            f"at sequence {event.sequence}"
-                        )
-                        break
         if events is not None and events[0].run_context != context.run_context:
             errors.append("execution-context.json does not match the trace run context")
         if scenario is not None:
+            errors.extend(_profile_errors(context, scenario, events))
             if context.run_context.scenario_digest != scenario_digest(scenario):
                 errors.append("scenario digest does not match the trace run context")
             if context.run_context.control_frequency_hz != scenario.control.frequency_hz:
@@ -503,21 +650,42 @@ def verify_artifact(artifact_path: Path) -> ArtifactVerification:
                 errors.append(f"manifest.json {field_name} does not match execution context")
         if trace_digest is not None and manifest.trace_digest != trace_digest:
             errors.append("manifest.json trace_digest does not match the event chain")
-        if any(
-            value is not None
-            for value in (
+        if context.adapter.name == "fake":
+            if any(
+                value is not None
+                for value in (
+                    manifest.simulator_name,
+                    manifest.simulator_version,
+                    manifest.simulator_commit,
+                )
+            ):
+                errors.append("fake adapter manifest must not claim external simulator provenance")
+        elif context.adapter.name == "metadrive":
+            expected_simulator_provenance = (
+                context.adapter.config.get("simulator_name"),
+                context.adapter.config.get("simulator_version"),
+                context.adapter.config.get("simulator_commit"),
+            )
+            observed_simulator_provenance = (
                 manifest.simulator_name,
                 manifest.simulator_version,
                 manifest.simulator_commit,
             )
-        ):
-            errors.append("fake adapter manifest must not claim external simulator provenance")
+            if observed_simulator_provenance != expected_simulator_provenance:
+                errors.append(
+                    "manifest.json simulator provenance does not match trace-bound adapter config"
+                )
 
     recomputed_verdict: GateResult | None = None
     if events is not None and scenario is not None and gate_config is not None:
         recomputed_metrics = compute_metrics(events)
         recomputed_findings = run_phase1_verifiers(events, scenario, gate_config)
-        recomputed_verdict = apply_release_gate(recomputed_findings, gate_config)
+        adapter_name = context.adapter.name if context is not None else "fake"
+        recomputed_verdict = apply_release_gate(
+            recomputed_findings,
+            gate_config,
+            adapter_name=adapter_name,
+        )
         if metrics is not None and metrics != recomputed_metrics:
             errors.append("metrics.json does not match metrics recomputed from stored events")
         expected_findings = FindingsDocument(findings=recomputed_findings)

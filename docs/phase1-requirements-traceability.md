@@ -32,3 +32,17 @@
 - `HOLD` is a policy judgment over internally consistent evidence.
 - `INVALID_EVIDENCE` means no policy judgment can be made.
 - `NOT_AVAILABLE` is a signal/finding availability state with a mandatory reason, never numeric zero.
+
+## Phase 2 extension
+
+| ID | Hazard or requirement | Scenario/input | Component and verifier | Automated/observed evidence | Gate consequence |
+|---|---|---|---|---|---|
+| P2-01 | Simulator integration must preserve candidate → shield → execution ordering | `metadrive_nominal.yaml`, seed 7 | Installed IDM wrapper, no-op shield, `MetaDriveAdapter` | Candidate/executed event fields; adapter/policy tests; real nominal trace | Existing six-finding gate only |
+| P2-02 | Headless configuration must use verified 0.4.3 APIs and remain bounded | Fixed `"S"` map, 10 Hz, horizon 300 | Lazy adapter configuration translator | Exact-config unit test; `hermes sim-smoke --headless` | Operational failure / 40 if unsupported |
+| P2-03 | Native simulator actions and facts cannot be silently reinterpreted | Throttle/brake, speed, lane, crash, off-road, route, destination | MetaDrive mapping layer | Action and collision/off-road/destination/horizon mapping tests | Invalid/operational on contradictory or missing required facts |
+| P2-04 | Simulator provenance must be exact and trace-bound | MetaDrive 0.4.3 at pinned 40-character commit | Runtime provenance validator and stored profile validator | Manifest/context assertions; real artifact; doctor | Operational error before publication or `INVALID_EVIDENCE` |
+| P2-05 | Unsupported surrounding-object signals must remain unavailable | No selected stable named front-distance/relative-speed API | Adapter component context | Unit assertion and stored config validation | No fabricated metric or pass |
+| P2-06 | Stored verification must remain simulator-free | Completed MetaDrive bundle | `evidence.verification` support profile | Test rejects any MetaDrive import; real `verify-artifact` | Preserves verdict only when internally consistent |
+| P2-07 | Simulator/policy failure must close owned native state | Injected step exception | Orchestrator + adapter cleanup | Environment close and IDM destroy regression test; no artifact | Operational error / 40 |
+| P2-08 | Same-seed behavior must be measured, not assumed | Two seed-7 run IDs | Canonical event pipeline | Same-host byte-identical context/events/metrics/findings/verdict/trace | Same bounded `PASS`; cross-platform tolerance `1e-5` |
+| P2-09 | Numeric progress cannot substitute for mission completion | Destination at 96.06%; synthetic 100% horizon truncation | `ProgressVerifier` 1.1 plus `gates.phase2.yaml` | Raw route mapping bound in context; destination-required unit test; real final fact | `PASS` only with destination and at least 95%; otherwise `HOLD` |

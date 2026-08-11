@@ -18,7 +18,7 @@ from hermes.scenarios.loader import load_scenario
 from hermes.verifiers import run_phase1_verifiers
 
 
-def _context() -> RunContext:
+def _context(*, horizon_steps: int = 20) -> RunContext:
     return RunContext(
         scenario_digest="a" * 64,
         gate_config_digest="b" * 64,
@@ -34,7 +34,7 @@ def _context() -> RunContext:
         verifier_suite_digest="f" * 64,
         seed=7,
         control_frequency_hz=10,
-        horizon_steps=20,
+        horizon_steps=horizon_steps,
     )
 
 
@@ -44,6 +44,7 @@ def _events(
     offroad: bool = False,
     acceleration: float = 1.0,
     progress_available: bool = True,
+    destination_reached: bool = True,
 ):
     state = VehicleState(
         position_m=20.0,
@@ -53,12 +54,12 @@ def _events(
         route_progress_pct=100.0,
         collision_count=1 if collision else 0,
         offroad=offroad,
-        destination_reached=True,
+        destination_reached=destination_reached,
     )
     event = create_trace_event(
         sequence=0,
         simulation_time_s=0.1,
-        run_context=_context(),
+        run_context=_context(horizon_steps=1 if not destination_reached else 20),
         observation_summary={
             "input_sequence": 0,
             "input_simulation_time_s": 0.0,
@@ -73,20 +74,22 @@ def _events(
         vehicle_state=state,
         policy_latency_ms=10.0,
         latency_source="simulated",
-        terminated=True,
-        truncated=False,
+        terminated=destination_reached or collision or offroad,
+        truncated=not (destination_reached or collision or offroad),
         termination_reason=(
             TerminationReason.COLLISION
             if collision
             else TerminationReason.OFF_ROAD
             if offroad
             else TerminationReason.DESTINATION_REACHED
+            if destination_reached
+            else TerminationReason.HORIZON
         ),
         raw_facts={
             "collision": collision,
             "collision_count": 1 if collision else 0,
             "offroad": offroad,
-            "destination_reached": True,
+            "destination_reached": destination_reached,
             "route_progress_available": progress_available,
             "route_progress_pct": 100.0 if progress_available else None,
         },
@@ -185,6 +188,26 @@ def test_gate_maps_soft_failure_to_conditional_and_required_unavailable_to_hold(
     assert unavailable.verdict is Verdict.HOLD
     assert "NOT_AVAILABLE" in " ".join(unavailable.rationale)
     assert passing.verdict is Verdict.CONDITIONAL
+
+
+def test_progress_requires_destination_even_when_numeric_threshold_is_met(
+    repository_root: Path,
+) -> None:
+    scenario = load_scenario(repository_root / "scenarios" / "fake_nominal.yaml")
+    gate = load_gate_config(repository_root / "config" / "gates.phase2.yaml")
+
+    findings = run_phase1_verifiers(
+        _events(destination_reached=False), scenario, gate
+    )
+    progress = next(
+        finding for finding in findings if finding.finding_id == "progress.required"
+    )
+    result = apply_release_gate(findings, gate)
+
+    assert progress.status is FindingStatus.FAIL
+    assert progress.verifier_version == "1.1"
+    assert progress.message == "destination was not reached"
+    assert result.verdict is Verdict.HOLD
 
 
 def test_soft_measurement_unavailable_cannot_produce_pass(repository_root: Path) -> None:

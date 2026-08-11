@@ -128,12 +128,15 @@ Required:
 
 ```text
 manifest.json
+execution-context.json
 scenario.resolved.yaml
 gate-config.resolved.yaml
 events.jsonl
 metrics.json
+findings.json
 verdict.json
 trace.sha256
+bundle.sha256
 ```
 
 Inspect:
@@ -216,6 +219,16 @@ Only run when Codex reports Phase 2 complete.
 ```bash
 hermes sim-smoke --headless
 echo "exit=$?"
+
+hermes run \
+  --simulator metadrive \
+  --scenario scenarios/metadrive_nominal.yaml \
+  --policy metadrive-idm \
+  --seed 7 \
+  --run-id review-phase2-metadrive-nominal \
+  --headless
+
+hermes verify-artifact artifacts/review-phase2-metadrive-nominal
 ```
 
 Then run the documented MetaDrive nominal command and verify its artifact.
@@ -224,6 +237,7 @@ Then run the documented MetaDrive nominal command and verify its artifact.
 |---|---|
 | Headless smoke | succeeds |
 | Bounded horizon | run terminates predictably |
+| Mission completion | destination is true and normalized named progress is at least the illustrative 95% threshold; horizon-only progress is HOLD |
 | Adapter provenance | MetaDrive 0.4.3 and source commit recorded |
 | Stored verification | succeeds without launching MetaDrive |
 | Unsupported signal | explicit NOT_AVAILABLE |

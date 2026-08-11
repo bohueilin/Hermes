@@ -98,7 +98,7 @@ reopens them by path. Non-regular entries such as FIFOs are rejected without wai
 ## Verifiers and gate precedence
 
 The fixed suite contains six findings from `TraceIntegrityVerifier`, `CollisionVerifier`,
-`BoundaryVerifier`, `ProgressVerifier`, and `ComfortVerifier`; comfort acceleration/deceleration
+`BoundaryVerifier`, `ProgressVerifier` 1.1, and `ComfortVerifier`; comfort acceleration/deceleration
 and jerk are separate structured findings. Each finding records its measurement availability,
 criterion/invariant, first failure time when event-backed, supporting sequences, and explanation.
 Missing, duplicated, identity-mismatched, or unknown findings invalidate the decision.
@@ -106,8 +106,8 @@ Missing, duplicated, identity-mismatched, or unknown findings invalidate the dec
 1. Invalid/inconsistent evidence → `INVALID_EVIDENCE`.
 2. Any collision → `HOLD`.
 3. Boundary/off-road failure → `HOLD`.
-4. Required mission failure or explicitly unavailable required progress → configured fail-closed
-   result (`HOLD` in Phase 1).
+4. Destination not reached, configured progress not reached, or explicitly unavailable required
+   progress → configured fail-closed result (`HOLD` in Phase 1).
 5. Hard criteria pass but illustrative comfort fails or is `NOT_AVAILABLE` → `CONDITIONAL`,
    requiring human review.
 6. All configured criteria pass → `PASS` for only this bounded simulation scenario and seed.

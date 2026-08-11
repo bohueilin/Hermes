@@ -46,8 +46,8 @@ An autonomy product leader, safety reviewer, simulation engineer, autonomy devel
 
 ## Current validated status
 
-Phase 0 is preserved and the Phase 1 deterministic evidence core is implemented on the gated
-feature branch:
+Phase 0 is preserved, Phase 1 is committed, and the Phase 2 MetaDrive adapter is implemented on
+the gated feature branch:
 
 - the `hermes` CLI is installed and recognized;
 - `hermes doctor` validates the Python, Git, MetaDrive, asset, and headless prerequisites;
@@ -58,6 +58,12 @@ feature branch:
 - the full automated suite and Ruff pass at the Phase 1 checkpoint;
 - MetaDrive 0.4.3 is installed at the recorded source commit;
 - MetaDrive headless and offscreen launch have been verified on the development machine.
+- the real `hermes sim-smoke --headless` probe succeeds against MetaDrive 0.4.3;
+- one bounded IDM-controlled nominal MetaDrive run reaches its destination and produces a complete
+  `PASS` artifact that verifies without simulator import or rerun;
+- simulator version and exact source commit are trace-bound and manifest-cross-checked;
+- repeated seed-7 runs produced byte-identical deterministic evidence on the current machine;
+- unsupported front-distance and relative-speed signals are explicit `NOT_AVAILABLE` values.
 
 Current baseline commit:
 
@@ -82,9 +88,9 @@ Required Phase 1 outcomes:
 
 ## Next product milestone
 
-Add one bounded MetaDrive headless adapter run through the same contracts, verifiers, gate, and
-artifact format. Do not begin the runtime safety shield until that adapter path is independently
-verified and committed.
+After the green Phase 2 checkpoint commit, implement the deterministic runtime safety shield and
+only simulator-supported challenge scenarios. Do not treat nominal MetaDrive integration evidence
+as challenge, safety, certification, or deployment evidence.
 
 ## Constrained prototype ODD
 
