@@ -1,88 +1,130 @@
 # Hermes
 
-**Hermes** is an autonomous-driving scenario and safety-evidence lab for a simulation-only hackathon prototype.
+Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
 
-Core thesis:
+> **Autonomy policy proposes → environment executes → verifiers evaluate → gate decides → trace proves.**
 
-> Autonomy policy proposes → simulator verifies → gate decides → trace proves.
-
-## Canonical naming
-
-Use these names consistently across GitHub, the local workspace, Python, documentation, and commands:
-
-| Surface | Canonical value |
-|---|---|
-| Product and repository display name | `Hermes` |
-| GitHub repository | `bohueilin/Hermes` |
-| Local project folder | `~/Projects/Hermes` |
-| Python distribution | `hermes-autonomy` |
-| Python import package | `hermes` |
-| Console command | `hermes ...` |
-| Module-form CLI | `python -m hermes.cli ...` |
-| Evidence output root | `artifacts/` |
-
-Do not create a parallel product name, repository name, or Python namespace unless a later migration is explicitly approved.
-
-## Contents
-
-- `MASTER_PROMPT.md` — paste into a Codex chat in the ChatGPT Desktop app.
-- `BUILD_PLAN.md` — complete implementation sequence, gates, demo, and learning roadmap.
-- `AGENTS.md` — copy to the root of the Hermes repository before starting.
-- `PROJECT_BRIEF.md` — product scope, ODD, success criteria, and non-goals.
-- `config/gates.example.yaml` — illustrative prototype gate thresholds.
-- `scenarios/cut_in.example.yaml` — simulator-neutral scenario-schema example.
-- `docs/PM_SKILLS_MATRIX.md` — capabilities and artifacts for an autonomy PM leader.
-
-## Recommended local layout
-
-```text
-~/Projects/Hermes/                 # Primary ChatGPT Desktop local-project folder
-~/Projects/Hermes/third_party/
-~/Projects/Hermes/third_party/metadrive/
-```
-
-## First commands
-
-```bash
-conda activate hermes-dev
-python -m pip install -e .
-python -m pip install -e ".[dev]"
-python -m hermes doctor
-```
-
-The equivalent Phase 0 doctor entry paths are:
-
-```bash
-hermes doctor
-python -m hermes doctor
-python -m hermes.cli doctor
-```
-
-The doctor reports `PASS`, `WARN`, `FAIL`, or `NOT_AVAILABLE` for each observed fact. It exits
-nonzero when a required check is `FAIL`; warnings and unavailable non-blocking observations remain
-visible without being fabricated as successful. It inspects only static/import prerequisites and
-does not launch MetaDrive.
-
-MetaDrive remains an external dependency installed from the verified local source at
-`third_party/metadrive`. Do not clone or reinstall it when the existing import, version, assets,
-and source revision checks pass. MetaDrive's upstream runtime diagnostic command is:
-
-```bash
-python -m metadrive.examples.verify_headless_installation
-```
-
-Record the exact simulator revision:
-
-```bash
-git -C third_party/metadrive rev-parse HEAD > SIMULATOR_COMMIT
-```
-
-When you intentionally create the GitHub remote, use the exact repository name `bohueilin/Hermes`. Do not let an agent create, publish, push, or change the remote without your explicit direction.
-
-The recommended root is `~/Projects/Hermes`, but the doctor reports the actual containing Git root
-so an explicitly selected desktop workspace remains valid. See `docs/decision-log.md` for Phase 0
-decisions and observed deviations.
+Hermes is designed to make an autonomy experiment reproducible and reviewable: it preserves the scenario, versions, candidate action, executed action, findings, metrics, release verdict, and evidence-integrity checks in one bundle.
 
 ## Safety boundary
 
-Hermes is for simulation and closed-lab learning only. Do not connect it to a road vehicle, public-road actuator, or safety-critical production system.
+Hermes is for simulation and closed-lab learning only. It must not connect to a physical road vehicle, public-road actuator, remote-control channel, CAN bus, or production safety-critical system. Prototype thresholds are illustrative and are not certification or real-world safety evidence.
+
+## Current status
+
+Phase 0 is complete:
+
+- Python 3.11 `hermes-dev` environment;
+- installable `hermes-autonomy` package;
+- `hermes` CLI;
+- environment doctor;
+- Git and simulator provenance checks;
+- MetaDrive 0.4.3 installation and headless/offscreen prerequisite validation;
+- 26 passing tests and clean Ruff baseline;
+- baseline commit `c181509a691b132cb732a50c24612f6bd40bafca`.
+
+The next mandatory milestone is the deterministic simulator-neutral evidence core.
+
+## Canonical identity
+
+| Surface | Value |
+|---|---|
+| Product/repository | `Hermes` |
+| Intended GitHub repository | `bohueilin/Hermes` |
+| Distribution | `hermes-autonomy` |
+| Package | `hermes` |
+| CLI | `hermes` |
+| Module entry points | `python -m hermes`, `python -m hermes.cli` |
+| Evidence root | `artifacts/` |
+| External simulator | `third_party/metadrive/` |
+
+## Environment
+
+```bash
+cd /Users/bohueilin/Documents/GitHub/Hermes
+conda activate hermes-dev
+python --version
+which python
+python -m pip install -e ".[dev]"
+```
+
+## Current working command
+
+```bash
+hermes doctor
+```
+
+The optional display check may be `NOT_AVAILABLE` in a headless shell; the dedicated headless/offscreen prerequisite check is the relevant result.
+
+## Target Phase 1 commands
+
+After the evidence core is implemented:
+
+```bash
+hermes run \
+  --simulator fake \
+  --scenario scenarios/fake_nominal.yaml \
+  --policy baseline \
+  --seed 7 \
+  --run-id phase1-nominal
+
+hermes verify-artifact artifacts/phase1-nominal
+```
+
+Expected Phase 1 cases:
+
+| Case | Verdict | Exit code |
+|---|---|---:|
+| Nominal | `PASS` | 0 |
+| Soft degradation | `CONDITIONAL` | 10 |
+| Collision or hard boundary violation | `HOLD` | 20 |
+| Invalid/inconsistent evidence | `INVALID_EVIDENCE` | 30 |
+| Configuration/operational failure | error | 40 |
+
+## Evidence bundle
+
+Every completed run must preserve:
+
+```text
+artifacts/<run-id>/
+  manifest.json
+  scenario.resolved.yaml
+  gate-config.resolved.yaml
+  events.jsonl
+  metrics.json
+  verdict.json
+  trace.sha256
+```
+
+Stored artifact verification must not rerun a simulator.
+
+## Development workflow
+
+```bash
+python -m pytest -q
+python -m ruff check .
+python -m hermes doctor
+git diff --check
+```
+
+Read before editing:
+
+- `AGENTS.md` — durable repository rules;
+- `PROJECT_BRIEF.md` — product scope and success criteria;
+- `BUILD_PLAN.md` — gated implementation roadmap;
+- `MASTER_PROMPT.md` — unattended Codex execution brief;
+- `VALIDATION_MATRIX.md` — human acceptance checklist.
+
+## Roadmap
+
+1. Deterministic fake-simulator evidence core.
+2. Bounded MetaDrive headless adapter.
+3. Deterministic runtime shield and challenge scenarios.
+4. Fault injection, comparison, CI, and demo hardening.
+5. Later: dashboard, CARLA, ROS 2/Autoware, RL experiments, and hardware-aware validation.
+
+Later phases may begin only after their predecessor gates pass.
+
+## Integrity limitation
+
+Hermes uses canonical serialization and local SHA-256 chaining to make modification detectable. This is tamper-evident, not independently authenticated; a party able to rewrite the entire bundle can recompute hashes. External signing or an independent trust anchor is deferred.

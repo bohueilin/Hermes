@@ -1,675 +1,1184 @@
-# Hermes — End-to-End Hackathon Build Plan
+# Hermes — Comprehensive Codex Build Plan
 
-## 1. Product definition
+## 1. Executive intent
 
-**Hermes** is a simulation-only autonomous-driving scenario and safety-evidence lab.
+Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
 
-**Product thesis:**
+> **Autonomy policy proposes → environment executes → verifiers evaluate → gate decides → trace proves.**
 
-> Autonomy policy proposes → simulator verifies → gate decides → trace proves.
+The build should teach and demonstrate the connective tissue of a world-class autonomy organization:
 
-Hermes helps an autonomy product leader, safety reviewer, simulation engineer, or developer answer a specific question:
+- explicit operational design domain boundaries;
+- simulator-neutral software contracts;
+- deterministic scenario execution;
+- candidate-versus-executed action accountability;
+- independent safety, mission, comfort, and system verifiers;
+- evidence provenance and integrity;
+- release-gate semantics;
+- reproducible developer workflows;
+- progression from software simulation toward hardware-aware validation.
 
-> Given a defined operational design domain, scenario, policy version, simulator version, and release-gate configuration, what happened, which requirements held or failed, and what evidence supports the advancement decision?
+The prototype must not optimize for visual spectacle before it establishes trustworthy evidence semantics.
 
-Hermes is intentionally not “a self-driving car in a weekend.” The prototype teaches the connective tissue required to build world-class autonomy software: architecture, scenarios, simulation, fault injection, verifiers, evidence provenance, release gates, hardware constraints, and cross-functional decision-making.
+## 2. Current validated baseline
 
-## 2. Canonical project naming
+The plan begins after Hermes Phase 0.
+
+| Item | Validated state |
+|---|---|
+| Repository root | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Baseline branch | `main` |
+| Baseline commit | `c181509a691b132cb732a50c24612f6bd40bafca` |
+| Distribution | `hermes-autonomy` |
+| Package | `hermes` |
+| CLI | `hermes` |
+| Conda environment | `hermes-dev` |
+| Python | 3.11.15 |
+| Existing tests | 26 passing |
+| Ruff | Passing |
+| Doctor | 18 PASS, 1 acceptable NOT_AVAILABLE |
+| MetaDrive | 0.4.3 |
+| MetaDrive commit | `85e5dadc6c7436d324348f6e3d8f8e680c06b4db` |
+| MetaDrive validation | Headless and offscreen launch passed |
+
+Before implementation, Codex must verify the actual current state and preserve any valid changes made after this baseline.
+
+## 3. Product definition
+
+### 3.1 Primary user
+
+An autonomy product leader, safety reviewer, simulation engineer, autonomy developer, or release owner evaluating whether a policy or software change is ready to advance within a constrained operational design domain.
+
+### 3.2 Core user question
+
+> Given a scenario, seed, policy version, environment implementation, and release-gate configuration, what happened, which requirements held or failed, and what evidence supports the advancement decision?
+
+### 3.3 Core user journey
+
+1. Select a scenario, simulator adapter, policy, shield, seed, fault profile, and gate configuration.
+2. Execute a bounded closed-loop run.
+3. Inspect the observation, candidate action, executed action, and override reason at each step.
+4. Review safety, mission, comfort, and system findings.
+5. Receive `PASS`, `CONDITIONAL`, `HOLD`, or `INVALID_EVIDENCE`.
+6. Independently verify the stored artifact without rerunning the simulator.
+7. Compare baseline and candidate runs.
+8. Export a self-contained evidence bundle for review.
+
+### 3.4 Non-goals
+
+- Public-road driving or physical vehicle control.
+- A full production perception, prediction, planning, and controls stack.
+- SAE automation-level claims.
+- Certification, regulatory approval, or formal safety-case completion.
+- Photorealistic rendering as the first milestone.
+- End-to-end neural driving.
+- RL before deterministic verifiers and gates are trustworthy.
+- Cloud deployment, fleet operations, or external telemetry.
+
+## 4. Canonical naming
 
 | Surface | Value |
 |---|---|
 | Product | `Hermes` |
-| GitHub repository | `bohueilin/Hermes` |
-| Local repository | `~/Projects/Hermes` |
-| Python distribution | `hermes-autonomy` |
-| Python package | `hermes` |
+| Repository | `bohueilin/Hermes` |
+| Distribution | `hermes-autonomy` |
+| Import package | `hermes` |
 | CLI | `hermes` |
-| Module CLI | `python -m hermes.cli` |
+| Module CLI | `python -m hermes` or `python -m hermes.cli` |
 | Source root | `src/hermes/` |
-| Evidence directory | `artifacts/` |
-| Run ID prefix | `hermes-` |
+| Evidence root | `artifacts/` |
+| External simulator | `third_party/metadrive/` |
 
-Use **Hermes** in prose and repository naming. Use lowercase `hermes` in Python code and commands.
+## 5. Product and engineering principles
 
-## 3. Repository strategy
+### 5.1 Evidence before aesthetics
 
-Create and own the application repository:
+A functioning CLI, verifiable artifact, and trustworthy negative path are more important than a dashboard or polished animation.
 
-```text
-bohueilin/Hermes
-```
+### 5.2 Hard invariants cannot be averaged away
 
-Treat driving simulators and full autonomy stacks as dependencies or reference architectures rather than copying them into the product code.
+A collision, hard boundary violation, or invalid evidence bundle cannot be compensated for by progress, comfort, or an aggregate score.
 
-| Repository | Role in the learning path | Timing |
-|---|---|---|
-| `metadriverse/metadrive` | Lightweight closed-loop simulator for the working MVP | Start here |
-| `metadriverse/metadrive-scenario` | Scenario/log extensions | After deterministic MVP |
-| `carla-simulator/carla` | Higher-fidelity sensors, actors, maps, and rendering | Phase 2 extension |
-| `carla-simulator/scenario_runner` | Repeatable scenario execution and standards-oriented testing | With CARLA |
-| `autowarefoundation/autoware` | Full ROS 2 autonomy-stack reference and later adapter target | Architecture study, then advanced integration |
-| `waymo-research/waymo-open-dataset` | Offline perception, motion, and data-lifecycle learning | Optional extension |
+### 5.3 Capability is not permission
 
-## 4. What the prototype must demonstrate
+A policy may be capable of proposing an action. A shield determines whether the proposed action may execute. Verifiers determine whether the resulting behavior met requirements. The gate determines whether the software version may advance.
 
-Hermes should expose three connected loops.
+### 5.4 Candidate action is not executed action
 
-### Runtime loop
+Hermes must preserve both, even when they are equal. This distinction is essential for runtime interventions, post-incident analysis, and verifier integrity.
 
-```text
-Observe → estimate world state → propose action → apply safety shield → execute → observe outcome
-```
+### 5.5 Determinism is a product feature
 
-### Development loop
+Identical scenario content, adapter version, policy version, shield version, gate configuration, and seed must produce identical deterministic trace content and verdict.
 
-```text
-Scenario or field signal → reproduce → diagnose → change policy/software → regress → compare → advance or hold
-```
+### 5.6 Missing evidence is explicit
 
-### Safety and evidence loop
+A metric that cannot be computed is `NOT_AVAILABLE` with a reason. It is never silently represented as zero, false, or pass.
 
-```text
-Hazard → requirement → scenario → verifier → evidence → gate → residual-risk owner
-```
+### 5.7 Local hashing has limits
 
-The user journey is:
+Hash chaining detects accidental or unsophisticated modification. It does not prove independent authenticity when an attacker can rewrite the bundle and recompute all hashes. Hermes must state that limitation.
 
-1. Select a scenario, policy, seed, fault profile, and gate configuration.
-2. Run a closed-loop simulation.
-3. Inspect the candidate action and the action actually executed.
-4. Inspect any runtime safety-shield intervention and reason code.
-5. Review safety, mission, comfort, and system metrics.
-6. Receive `PASS`, `CONDITIONAL`, `HOLD`, or `INVALID_EVIDENCE`.
-7. Compare baseline and candidate policy versions.
-8. Export and independently verify the evidence bundle.
+### 5.8 Simulation fidelity is scoped
 
-## 5. Reference architecture
-
-```text
-Scenario YAML + ODD + Seed
-          │
-          ▼
-  Run Orchestrator
-          │
-          ▼
- SimulatorAdapter ───────────────► MetaDrive
-          ▲                            │
-          │                            ▼
-  Executed Action              Observation / World State
-          ▲                            │
-          │                            ▼
-   Safety Shield ◄──────── Candidate Driving Policy
-          │                            │
-          └──────────────┬─────────────┘
-                         ▼
-                 Event / Trace Recorder
-                         │
-       ┌─────────────────┼─────────────────┐
-       ▼                 ▼                 ▼
- Safety Verifiers   Mission/Comfort   System Verifiers
-       └─────────────────┼─────────────────┘
-                         ▼
-                    Release Gate
-                         │
-                         ▼
-        PASS / CONDITIONAL / HOLD / INVALID
-                         │
-                         ▼
-          Hash-Chained Evidence Bundle
-                         │
-                         ▼
-                Streamlit Review UI
-```
-
-### Architectural separation
-
-- **Candidate policy:** proposes steering, throttle, and brake.
-- **Safety shield:** may override the proposal using explicit deterministic rules.
-- **Simulator adapter:** translates Hermes domain objects to a simulator API.
-- **Offline verifiers:** independently evaluate the actual run.
-- **Release gate:** issues a deterministic verdict from evidence and configuration.
-- **Trace layer:** proves the scenario, versions, events, metrics, and decision were not silently altered.
-
-An LLM may draft scenarios, explain evidence, generate tests, or summarize failures. It must not control the simulated vehicle in the real-time loop.
+The fake simulator validates software architecture, not physics. MetaDrive adds closed-loop dynamics and simulator integration, but it still does not prove real-world performance.
 
 ## 6. Constrained prototype ODD
 
-The initial operational design domain must be narrow and explicit.
-
-| Dimension | MVP boundary |
+| Dimension | Initial boundary |
 |---|---|
-| Roads | Procedural, lane-structured roads |
+| Road structure | Lane-structured procedural roads |
 | Lighting | Daylight |
 | Weather | Clear |
 | Dynamic actors | Vehicles only |
-| Speed | Scenario-defined bounded range |
-| Observation | State and LiDAR-like surrounding information |
+| Speed | Scenario-configured bounded range |
+| Observation | State and LiDAR-like context when supported |
 | Maps | Procedural MetaDrive maps |
-| Faults | Observation delay/dropout, control delay, actuator saturation |
-| Exclusions | Pedestrians, emergency vehicles, severe weather, unstructured roads, construction |
+| Faults | Delay, dropout, stale observations, bounded noise, actuator saturation |
+| Exclusions | Pedestrians, emergency vehicles, construction, severe weather, unstructured roads |
 | Deployment | Simulation only |
 
-Do not label Hermes as SAE Level 4 or claim production safety. The project verdicts describe prototype evidence status, not a real-world automation classification.
+The ODD must be present in scenario or project documentation and remain narrower than any claims made in the demo.
 
-## 7. MVP scenario catalog
+## 7. Target architecture
 
-| Scenario | Hazard under test | Primary evidence |
+```text
+Scenario YAML + ODD + Seed + Gate Config
+                    │
+                    ▼
+             Run Orchestrator
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+ Driving Policy          Runtime Safety Shield
+        │ candidate              │ executed + reason
+        └───────────┬───────────┘
+                    ▼
+             SimulatorAdapter
+                    │
+                    ▼
+ Observation / Vehicle State / Termination
+                    │
+                    ▼
+             Canonical Trace Writer
+                    │
+        ┌───────────┼─────────────┐
+        ▼           ▼             ▼
+ Safety Verifiers  Mission      Comfort/System
+        └───────────┼─────────────┘
+                    ▼
+                Release Gate
+                    │
+                    ▼
+ PASS / CONDITIONAL / HOLD / INVALID_EVIDENCE
+                    │
+                    ▼
+       Versioned, hash-chained evidence bundle
+                    │
+                    ▼
+     Independent artifact verification / comparison
+```
+
+### 7.1 Layer responsibilities
+
+| Layer | Responsibility | Forbidden coupling |
 |---|---|---|
-| Nominal lane following | Basic route or control failure | Progress, speed, boundary status |
-| Lead vehicle hard braking | Rear-end collision | Collision, minimum TTC, harsh braking |
-| Near-field cut-in | Inadequate gap handling | TTC, unsafe-gap duration, collision, override reason |
-| Blocked lane | Unsafe response or deadlock | Collision, progress, stuck duration |
-| Dense merge | Interaction and route-planning weakness | Collision, progress, unsafe-gap duration |
-| Actuation latency | Delayed control and overshoot | End-to-end latency, collision, boundary, missed deadline |
+| Domain | Stable types and contracts | No MetaDrive imports |
+| Scenario | Strict schema and resolved inputs | No silent unknown fields |
+| Policy | Candidate action proposal | No gate decisions |
+| Shield | Deterministic action permission/override | No post-hoc metric rewriting |
+| Adapter | Translate domain commands to environment | No release policy |
+| Trace | Canonical event serialization and chaining | No simulator rerun |
+| Verifier | Independent requirement evaluation | No access to mutable simulator internals |
+| Gate | Verdict precedence and rationale | No direct simulator dependencies |
+| CLI | Composition and human-readable output | No business logic concentration |
 
-Stretch scenarios:
-
-- Frozen or dropped observations
-- Low-friction surface
-- Real-log replay
-- Construction detour
-- Occluded pedestrian in CARLA
-- Map inconsistency
-- Compute-overload or thermal-throttling proxy
-
-## 8. Policies
-
-### Baseline
-
-Wrap MetaDrive’s supported deterministic IDM or closest stable equivalent. Do not build a perception-planning-control stack from scratch for the MVP.
-
-### Candidate
-
-Create a shielded baseline policy:
+## 8. Recommended repository structure
 
 ```text
-Baseline IDM proposal + deterministic Hermes safety shield
+Hermes/
+├── AGENTS.md
+├── BUILD_PLAN.md
+├── MASTER_PROMPT.md
+├── PROJECT_BRIEF.md
+├── README.md
+├── CODEX_HANDOFF.md                 # generated by Codex
+├── Makefile
+├── pyproject.toml
+├── SIMULATOR_COMMIT
+├── artifacts/
+│   └── .gitkeep
+├── config/
+│   ├── gates.example.yaml
+│   ├── gates.phase1.yaml
+│   └── gates.phase2.yaml
+├── docs/
+│   ├── decision-log.md
+│   ├── phase1-architecture.md
+│   ├── phase1-requirements-traceability.md
+│   ├── phase2-metadrive-adapter.md
+│   ├── demo-runbook.md
+│   └── PM_SKILLS_MATRIX.md
+├── scenarios/
+│   ├── fake_nominal.yaml
+│   ├── fake_collision.yaml
+│   ├── fake_boundary.yaml
+│   ├── fake_soft_degradation.yaml
+│   ├── metadrive_nominal.yaml
+│   ├── lead_vehicle_hard_brake.yaml
+│   └── cut_in_near_field.yaml
+├── src/hermes/
+│   ├── __init__.py
+│   ├── __main__.py
+│   ├── cli.py
+│   ├── doctor.py
+│   ├── domain/
+│   │   ├── contracts.py
+│   │   ├── enums.py
+│   │   └── models.py
+│   ├── scenarios/
+│   │   ├── loader.py
+│   │   └── schema.py
+│   ├── policies/
+│   │   ├── baseline.py
+│   │   └── metadrive_idm.py
+│   ├── shields/
+│   │   ├── noop.py
+│   │   └── deterministic.py
+│   ├── adapters/
+│   │   ├── fake.py
+│   │   └── metadrive.py
+│   ├── runtime/
+│   │   ├── orchestrator.py
+│   │   └── registry.py
+│   ├── evidence/
+│   │   ├── artifacts.py
+│   │   ├── canonical.py
+│   │   ├── trace.py
+│   │   └── verification.py
+│   ├── verifiers/
+│   │   ├── boundary.py
+│   │   ├── collision.py
+│   │   ├── comfort.py
+│   │   ├── integrity.py
+│   │   ├── latency.py
+│   │   └── progress.py
+│   ├── gates/
+│   │   └── release.py
+│   └── comparison/
+│       └── compare.py
+└── tests/
+    ├── unit/
+    ├── contract/
+    ├── integration/
+    └── cli/
 ```
 
-The shield may override the candidate action when:
+Exact filenames may change when justified, but boundaries must remain recognizable.
 
-- Estimated TTC is below the configured threshold.
-- Vehicle speed exceeds the scenario speed cap.
-- An observation is stale, missing, or frozen.
-- Road-boundary risk is detected.
-- An emergency-stop condition is active.
-- Actuation delay makes the pending command unsafe.
+## 9. Unattended execution strategy
 
-Every intervention emits a reason code:
+### 9.1 Branch strategy
+
+Use a dedicated feature branch:
+
+```bash
+git switch -c feat/unattended-evidence-core
+```
+
+If that branch already exists, switch to it and inspect current work. Do not discard valid changes.
+
+### 9.2 Priority queue
+
+| Priority | Work | Advancement rule |
+|---|---|---|
+| P0 | Phase 1 deterministic evidence core | Mandatory; all gates green |
+| P1 | Phase 2 MetaDrive bounded nominal adapter | Only after P0 |
+| P2 | Phase 3 safety shield + two challenge scenarios | Only after P1 |
+| P3 | Faults, compare command, CI, demo hardening | Only after P2 |
+| Deferred | Dashboard, RL, CARLA, ROS, hardware | Do not start |
+
+### 9.3 Checkpoints
+
+After each phase:
+
+1. Run focused tests.
+2. Run full tests and lint.
+3. Run real demo commands.
+4. Verify stored artifacts independently.
+5. Update requirements traceability.
+6. Update decision log and handoff.
+7. Inspect Git diff.
+8. Create a local commit only when green.
+
+### 9.4 Blocker handling
+
+- If one scenario is blocked, continue core infrastructure and other scenarios.
+- If network access is blocked, use existing dependencies or standard library; document any deferred dependency.
+- If MetaDrive behaves differently from documentation, inspect installed source and adapt to observed APIs.
+- If a phase gate cannot pass, do not proceed to dependent phases.
+- Preserve failing artifacts only when clearly labeled and useful for diagnosis.
+
+## 10. Phase 1 — Deterministic simulator-neutral evidence core
+
+### 10.1 Objective
+
+Prove the complete Hermes control and evidence loop without MetaDrive, graphics, or external services.
+
+Required outcomes:
+
+| Scenario/evidence condition | Verdict |
+|---|---|
+| Nominal fake run | `PASS` |
+| Deterministic collision | `HOLD` |
+| Deterministic boundary violation | `HOLD` |
+| Soft degradation with hard invariants satisfied | `CONDITIONAL` |
+| Modified/incomplete evidence | `INVALID_EVIDENCE` |
+
+### 10.2 Workstream A — Domain contracts
+
+Implement typed, simulator-neutral models and protocols for:
+
+- `Observation`
+- `VehicleState`
+- `Action`
+- `StepResult`
+- `EpisodeResult`
+- `ScenarioDefinition`
+- `SimulatorAdapter`
+- `DrivingPolicy`
+- `SafetyShield`
+- `Verifier`
+- `Finding`
+- `GateResult`
+- `TraceEvent`
+- `ArtifactManifest`
+
+Requirements:
+
+- bounded action validation;
+- explicit enum values for verdicts, status, severity, termination reason, and evidence availability;
+- serialization-safe values;
+- no simulator imports;
+- type hints on public interfaces;
+- unit tests for validation and edge cases.
+
+### 10.3 Workstream B — Strict scenario schema
+
+Use a versioned YAML schema, preferably Pydantic v2 and PyYAML.
+
+Required behavior:
+
+- reject unknown fields;
+- reject invalid types and ranges;
+- reject contradictory parameters;
+- resolve defaults explicitly;
+- preserve resolved scenario content;
+- include scenario and schema versions;
+- produce actionable validation errors;
+- compute a canonical scenario digest.
+
+Create:
 
 ```text
-TTC_BELOW_THRESHOLD
-STALE_OBSERVATION
-SPEED_CAP
-BOUNDARY_RISK
-EMERGENCY_STOP
-ACTUATION_DELAY_COMPENSATION
+scenarios/fake_nominal.yaml
+scenarios/fake_collision.yaml
+scenarios/fake_boundary.yaml
+scenarios/fake_soft_degradation.yaml
 ```
 
-Record both candidate and executed actions. Otherwise, the shield could hide policy weakness and make the policy appear safer than it is.
+### 10.4 Workstream C — Fake simulator
 
-### Optional learned-policy extension
+Implement deterministic bounded dynamics sufficient to expose:
 
-After the deterministic MVP is complete, add a small PPO policy. Evaluate it through the same hard invariants and gate. A valuable demonstration is that a policy can improve simulator reward yet receive `HOLD` because it violates a safety invariant.
+- longitudinal position;
+- speed;
+- acceleration/deceleration;
+- lateral offset;
+- route progress;
+- collision state;
+- off-road state;
+- destination reached;
+- termination and truncation reasons;
+- deterministic hazard injection.
 
-## 9. Metrics and gate design
+The fake simulator must be clearly documented as an architectural test double rather than a physics model.
 
-### Hard invariants
+### 10.5 Workstream D — Baseline policy and no-op shield
 
-Any hard-invariant failure results in `HOLD`; corrupt or incomplete evidence results in `INVALID_EVIDENCE`.
+Baseline policy:
 
-- Collision count equals zero.
-- Off-road duration stays within the configured prototype tolerance.
-- Wrong-way duration stays within tolerance when measurable.
-- Required event completeness is satisfied.
-- Trace hash chain verifies.
-- Simulator or policy failures are reported, not hidden.
-- Scenario, policy, gate, repository, and simulator versions are identifiable.
+- stable name and version;
+- deterministic target-speed control;
+- deterministic lateral correction;
+- bounded steering, throttle, and brake;
+- no unseeded randomness;
+- explicit simulated latency metadata.
 
-### Safety leading indicators
+No-op shield:
 
-- Minimum TTC
-- Unsafe-gap duration
-- Emergency-braking count
-- Safety-shield override count and reasons
-- Boundary-risk duration
+- returns candidate action unchanged;
+- returns an empty override-reason list;
+- stable name and version;
+- preserves candidate/executed action separation.
 
-### Mission metrics
+### 10.6 Workstream E — Run orchestrator
 
-- Route completion
-- Destination reached
-- Stuck duration
-- Episode termination reason
-- Progress per unit time
+The orchestrator must:
 
-### Comfort metrics
+1. validate inputs;
+2. resolve scenario, gate, policy, shield, and adapter versions;
+3. initialize the adapter and policy;
+4. gather repository provenance;
+5. request a candidate action;
+6. apply the shield;
+7. execute the action;
+8. record a canonical event;
+9. continue to bounded completion;
+10. close the adapter on every path;
+11. finalize the trace;
+12. run verifiers;
+13. compute metrics;
+14. apply the gate;
+15. write the bundle atomically;
+16. return verdict and artifact path.
 
-- Longitudinal acceleration
-- Lateral acceleration when available
-- Maximum jerk
-- Harsh-braking events
+Operational failures must never produce `PASS`.
 
-### System-quality metrics
+### 10.7 Workstream F — Canonical trace
 
-- Policy p50, p95, and p99 latency
-- Missed control deadlines
-- Dropped observations
-- Stale observations
-- Replay-determinism delta
-- Evidence completeness
+Each event must include:
 
-### Gate semantics
+- evidence schema version;
+- sequence number;
+- simulation time;
+- observation summary;
+- candidate action;
+- executed action;
+- override reasons;
+- vehicle state;
+- simulated policy latency and source;
+- termination state;
+- verifier-relevant raw facts;
+- previous hash;
+- current hash.
 
-```python
-if not trace_integrity or not required_evidence_complete:
-    verdict = "INVALID_EVIDENCE"
-elif any_hard_invariant_failed:
-    verdict = "HOLD"
-elif weighted_score >= pass_threshold:
-    verdict = "PASS"
-elif weighted_score >= conditional_threshold:
-    verdict = "CONDITIONAL"
-else:
-    verdict = "HOLD"
+Canonicalization rules:
+
+- UTF-8;
+- sorted keys;
+- deterministic separators;
+- no NaN or Infinity;
+- stable numeric representation;
+- explicit genesis value;
+- SHA-256;
+- no wall-clock time or run ID in deterministic event content.
+
+### 10.8 Workstream G — Evidence bundle
+
+Required files:
+
+```text
+manifest.json
+scenario.resolved.yaml
+gate-config.resolved.yaml
+events.jsonl
+metrics.json
+verdict.json
+trace.sha256
 ```
 
-All thresholds remain in versioned YAML and are labeled as illustrative prototype values.
+Manifest requirements:
 
-## 10. Exact local bootstrap
+- evidence schema version;
+- Hermes version;
+- Git commit and dirty state;
+- adapter name/version;
+- scenario name/version/schema and digest;
+- policy name/version/config digest;
+- shield name/version;
+- gate name/version/config digest;
+- seed;
+- control frequency;
+- horizon;
+- Python/platform/architecture;
+- UTC creation time;
+- trace digest;
+- required-file inventory and digests.
 
-```bash
-mkdir -p ~/Projects/Hermes/third_party
-cd ~/Projects/Hermes
+Write through a temporary directory and atomically rename. Reject unsafe run IDs and existing destinations.
 
-git init
-git branch -M main
-
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-
-git clone https://github.com/metadriverse/metadrive.git third_party/metadrive
-python -m pip install -e third_party/metadrive
-python -m metadrive.pull_asset
-python -m metadrive.examples.verify_headless_installation
-python -m metadrive.examples.profile_metadrive
-
-git -C third_party/metadrive rev-parse HEAD > SIMULATOR_COMMIT
-```
-
-Create the GitHub repository after confirming the local root is correct:
-
-```bash
-gh repo create bohueilin/Hermes \
-  --private \
-  --source=. \
-  --remote=origin \
-  --description "Simulation-only autonomous-driving scenario and safety-evidence lab"
-```
-
-Do not push generated simulator assets, virtual environments, datasets, videos, or run artifacts.
-
-## 11. ChatGPT Desktop setup
-
-1. Open the ChatGPT Desktop app.
-2. Create a local project using `~/Projects/Hermes` as the primary folder.
-3. Select Codex for implementation work.
-4. Keep approval-based execution enabled.
-5. Paste the full contents of `MASTER_PROMPT.md`.
-6. Require an environment assessment before code changes.
-7. Require Phase 0 and Phase 1 acceptance gates before MetaDrive-specific expansion.
-8. Use separate chats for architecture, simulator integration, verifiers, UI, tests, and executive demo after contracts stabilize.
-
-## 12. Implementation sequence
-
-### Phase 0 — Environment doctor and repository bootstrap
+### 10.9 Workstream H — Verifiers
 
 Implement:
+
+#### CollisionVerifier
+
+- hard invariant: collision count equals zero;
+- critical failure;
+- first failure time and event sequences.
+
+#### BoundaryVerifier
+
+- hard invariant: configured boundary tolerance not exceeded;
+- maximum lateral offset/off-road duration;
+- supporting event sequences.
+
+#### ProgressVerifier
+
+- destination or progress target;
+- distinguish failure from unavailable evidence.
+
+#### ComfortVerifier
+
+- acceleration, deceleration, or jerk when supported;
+- soft threshold may produce `CONDITIONAL`;
+- explicit `NOT_AVAILABLE` when signal is absent.
+
+#### TraceIntegrityVerifier
+
+- required files;
+- sequence continuity;
+- event-chain integrity;
+- digest consistency;
+- malformed/truncated evidence.
+
+### 10.10 Workstream I — Release gate
+
+Precedence:
+
+1. Invalid, missing, malformed, or inconsistent evidence → `INVALID_EVIDENCE`.
+2. Collision hard invariant failed → `HOLD`.
+3. Boundary hard invariant failed → `HOLD`.
+4. Required mission evidence unavailable → explicit configured `HOLD` or `INVALID_EVIDENCE` rule.
+5. Hard invariants pass, mission succeeds, soft threshold fails → `CONDITIONAL`.
+6. Hard invariants and required soft criteria pass → `PASS`.
+
+Every verdict must include rationale, supporting finding IDs, hard failures, soft failures, and residual limitations.
+
+### 10.11 Workstream J — Artifact verification
+
+`hermes verify-artifact <dir>` must not rerun any simulator.
+
+It must:
+
+- validate required files;
+- verify scenario and gate digests;
+- parse and validate events;
+- check sequence continuity;
+- recompute the hash chain;
+- identify the first mismatch;
+- recompute metrics;
+- rerun verifiers from stored events;
+- recompute the verdict;
+- compare stored metrics and verdict;
+- verify the trace root;
+- use exit code `30` for invalid evidence.
+
+### 10.12 Workstream K — CLI
+
+Required commands:
 
 ```bash
 hermes doctor
+hermes run --simulator fake --scenario <path> --policy baseline --seed <n> --run-id <id>
+hermes verify-artifact <artifact-dir>
 ```
 
-Report:
+Exit codes:
 
-- Python version and virtual environment
-- Operating system and CPU architecture
-- MetaDrive import and exact commit
-- Simulator assets
-- Headless-rendering status
-- Git commit and dirty state
-- Writable artifact directory
-- Optional display availability
+| Code | Meaning |
+|---:|---|
+| 0 | PASS |
+| 10 | CONDITIONAL |
+| 20 | HOLD |
+| 30 | INVALID_EVIDENCE |
+| 40 | Configuration or operational error |
 
-**Acceptance gate:** every failure is actionable; unavailable dependencies are never shown as green.
+CLI help must state simulation-only scope.
 
-### Phase 1 — Simulator-neutral vertical slice
+### 10.13 Phase 1 negative tests
 
-Create typed contracts:
+Automate:
 
-```python
-SimulatorAdapter.reset()
-SimulatorAdapter.step()
-SimulatorAdapter.snapshot()
-SimulatorAdapter.render()
-SimulatorAdapter.close()
-DrivingPolicy.reset()
-DrivingPolicy.act()
-SafetyShield.apply()
-Verifier.observe()
-Verifier.finalize()
-Gate.evaluate()
-TraceWriter.append()
+- one modified executed action;
+- truncated event file;
+- missing event file;
+- modified scenario;
+- modified gate configuration;
+- modified metrics;
+- modified verdict;
+- duplicate sequence;
+- path traversal run ID;
+- existing run ID;
+- adapter exception;
+- policy exception;
+- unavailable evidence.
+
+### 10.14 Phase 1 determinism test
+
+Same scenario content, adapter version, policy version, shield version, gate config, and seed under different run IDs must produce identical:
+
+- events;
+- final event hash;
+- trace digest;
+- metrics;
+- findings;
+- verdict.
+
+Creation timestamp, run ID, and host execution duration may differ.
+
+### 10.15 Phase 1 documentation
+
+Create/update:
+
+- `README.md`;
+- `docs/phase1-architecture.md`;
+- `docs/phase1-requirements-traceability.md`;
+- `docs/decision-log.md`;
+- `docs/PM_SKILLS_MATRIX.md`;
+- `CODEX_HANDOFF.md`.
+
+### 10.16 Phase 1 acceptance commands
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest -q
+python -m ruff check .
+python -m hermes doctor
+git diff --check
+
+hermes run \
+  --simulator fake \
+  --scenario scenarios/fake_nominal.yaml \
+  --policy baseline \
+  --seed 7 \
+  --run-id phase1-nominal
+
+hermes verify-artifact artifacts/phase1-nominal
+
+hermes run \
+  --simulator fake \
+  --scenario scenarios/fake_collision.yaml \
+  --policy baseline \
+  --seed 7 \
+  --run-id phase1-collision
+
+hermes verify-artifact artifacts/phase1-collision
+
+hermes run \
+  --simulator fake \
+  --scenario scenarios/fake_boundary.yaml \
+  --policy baseline \
+  --seed 7 \
+  --run-id phase1-boundary
+
+hermes run \
+  --simulator fake \
+  --scenario scenarios/fake_soft_degradation.yaml \
+  --policy baseline \
+  --seed 7 \
+  --run-id phase1-conditional
 ```
 
-Build `FakeSimulatorAdapter` before MetaDrive integration.
+Then create and verify a tampered copy and run a repeated nominal case.
 
-**Acceptance gate:** a deterministic fake ten-step run produces a valid evidence bundle and verdict.
+### 10.17 Phase 1 advancement gate
 
-### Phase 2 — Evidence integrity
+All must be true:
 
-Each run exports:
+- all tests pass;
+- Ruff passes;
+- doctor has no failure;
+- nominal `PASS` exit 0;
+- collision `HOLD` exit 20;
+- boundary `HOLD` exit 20;
+- soft degradation `CONDITIONAL` exit 10;
+- tampered bundle `INVALID_EVIDENCE` exit 30;
+- repeated inputs produce identical trace digest;
+- stored verification never reruns a simulator;
+- no MetaDrive runtime is used;
+- no generated artifacts are staged.
+
+Only then create the local commit:
 
 ```text
-artifacts/<hermes-run-id>/
-├── manifest.json
-├── scenario.resolved.yaml
-├── gate-config.resolved.yaml
-├── events.jsonl
-├── metrics.json
-├── verdict.json
-├── trace.sha256
-└── replay.gif or representative frames
+feat: add deterministic evidence core
 ```
 
-The manifest records:
+## 11. Phase 2 — MetaDrive headless adapter
 
-- Project name and `hermes-` run ID
-- Repository commit and dirty state
-- Simulator commit/version
-- Scenario ID, resolved hash, seed, and ODD
-- Policy name, version, and configuration hash
-- Gate configuration version and hash
-- Python and platform information
-- Control frequency and horizon
-- Evidence schema version
+### 11.1 Objective
 
-Add a tamper test by changing one event and requiring `INVALID_EVIDENCE`.
+Replace the fake environment with one bounded, deterministic MetaDrive run while preserving the same contracts, trace, verifiers, gate, artifact format, and CLI semantics.
 
-**Acceptance gate:** altered evidence can never receive `PASS` or `CONDITIONAL`.
+### 11.2 API reconnaissance
 
-### Phase 3 — MetaDrive nominal run
+Before implementation, inspect the installed MetaDrive 0.4.3 source and examples:
 
-Implement:
+- `MetaDriveEnv.default_config()`;
+- headless verification example;
+- policy examples;
+- environment reset/step signatures;
+- observation shape and `info` fields;
+- vehicle state accessors;
+- collision/off-road/destination flags;
+- deterministic seeding controls;
+- clean shutdown behavior.
+
+Write `docs/phase2-metadrive-adapter.md` with observed APIs. Do not use keys copied from another release without verification.
+
+### 11.3 Adapter contract
+
+Implement `MetaDriveAdapter` behind `SimulatorAdapter`.
+
+It must:
+
+- avoid MetaDrive imports at package import time when not selected;
+- validate simulator availability;
+- construct a bounded headless environment;
+- translate Hermes actions to MetaDrive action format;
+- translate observation and vehicle state into Hermes models;
+- expose collision, off-road, route progress, destination, termination, and truncation when supported;
+- label unsupported fields `NOT_AVAILABLE`;
+- close the environment on every path;
+- record MetaDrive version and source commit;
+- leave `third_party/metadrive` unchanged.
+
+### 11.4 Phase 2 CLI
+
+Add:
 
 ```bash
 hermes sim-smoke --headless
 ```
 
-The command must load a procedural environment, run a deterministic policy, collect state, export evidence, save a representative replay or frames, and close cleanly.
-
-Before integration, inspect the installed MetaDrive source, examples, and `MetaDriveEnv.default_config()`. Do not invent configuration keys.
-
-**Acceptance gate:** one real MetaDrive run completes from the documented CLI.
-
-### Phase 4 — Baseline and safety shield
-
-Implement:
-
-```text
-BaselineIDMPolicy
-ShieldedIDMPolicy
-```
-
-Test every override and no-override path independently.
-
-**Acceptance gate:** every override reason is visible in evidence and covered by unit tests.
-
-### Phase 5 — Scenario factory and fault injection
-
-Use simulator-neutral YAML schemas and adapter translation.
-
-Fault wrappers:
-
-```text
-ObservationDelay
-ObservationDropout
-FrozenObservation
-BoundedObservationNoise
-ControlDelay
-SteeringSaturation
-BrakeSaturation
-```
-
-For actuation delay, record both candidate time and execution time.
-
-**Acceptance gate:** the same scenario, seed, policy, and configuration reproduce the same verdict within declared tolerances.
-
-### Phase 6 — Verifier suite
-
-Each verifier result contains:
-
-```text
-name
-status
-measured_value
-threshold
-severity
-first_failure_time
-supporting_event_sequences
-explanation
-```
-
-Implement collision, boundary, TTC, speed, progress, comfort, latency, and trace-integrity verifiers. Unsupported metrics return `NOT_AVAILABLE` plus a reason, never zero.
-
-**Acceptance gate:** each verifier has edge-case tests and points to supporting events.
-
-### Phase 7 — Release gate and independent replay
-
-Implement:
-
-```bash
-hermes verify-artifact artifacts/<run-id>
-```
-
-This command recomputes the verdict without rerunning MetaDrive.
-
-**Acceptance gate:** the gate is deterministic from the evidence and gate configuration alone.
-
-### Phase 8 — Dashboard
-
-Build four Streamlit views:
-
-1. **Scenario Lab:** scenario, policy, seed, faults, and run controls.
-2. **Run Evidence:** verdict, invariants, metric timelines, override reasons, and replay.
-3. **Policy Comparison:** baseline versus candidate deltas and regression status.
-4. **Trace Integrity:** manifest, digests, event count, hash-chain status, and software versions.
-
-**Acceptance gate:** a reviewer can explain a verdict without reading source code.
-
-### Phase 9 — Tests and CI
-
-PR-level checks:
-
-```bash
-ruff check .
-pytest -q tests/unit tests/contract
-```
-
-Required coverage:
-
-- Schema rejection and unknown fields
-- Shield override and no-override paths
-- All four verdicts
-- Incomplete artifact
-- Tampered artifact
-- Policy exception
-- Simulator exception
-- Repeated-seed determinism
-- Unsupported metric behavior
-
-Keep heavyweight MetaDrive smoke tests explicit if CI lacks assets or rendering support.
-
-**Acceptance gate:** CI cannot pass fabricated, incomplete, or silently skipped evidence.
-
-### Phase 10 — Documentation and executive demo
-
-Create:
-
-- Architecture and interface document
-- ODD and requirements document
-- Scenario catalog and prioritization
-- Safety-case traceability table
-- Hardware-integration roadmap
-- Operations and incident playbook
-- Decision log
-- RACI and decision-rights table
-- Exact demo script
-
-**Acceptance gate:** the demo and documents connect user value, system behavior, safety evidence, and release governance.
-
-## 13. Demo sequence
-
-### Demo 1 — Nominal PASS
+and support:
 
 ```bash
 hermes run \
-  --scenario scenarios/nominal_lane_follow.yaml \
-  --policy baseline \
+  --simulator metadrive \
+  --scenario scenarios/metadrive_nominal.yaml \
+  --policy metadrive-idm \
+  --seed 7 \
+  --run-id phase2-metadrive-nominal \
   --headless
 ```
 
-### Demo 2 — Baseline cut-in HOLD
+The smoke command is a bounded integration check, not a substitute for the full evidence run.
 
-```bash
-hermes run \
-  --scenario scenarios/cut_in_near_field.yaml \
-  --policy baseline \
-  --headless
-```
+### 11.5 MetaDrive policy
 
-Show the failed invariant or leading indicator and supporting event sequence.
+Prefer an installed deterministic MetaDrive policy such as IDM when the observed API supports it. Wrap it rather than copying simulator internals.
 
-### Demo 3 — Shielded policy improvement
+Record:
 
-```bash
-hermes run \
-  --scenario scenarios/cut_in_near_field.yaml \
-  --policy shielded \
-  --headless
-```
+- policy name/version;
+- relevant configuration;
+- candidate action;
+- any policy limitation.
 
-Show the candidate action, override reason, executed action, TTC change, collision outcome, comfort tradeoff, and final verdict. A credible result may be `CONDITIONAL` rather than `PASS` if the intervention avoids collision but creates excessive jerk.
+If a built-in policy cannot be integrated cleanly through the desired interface, implement a small deterministic Hermes policy against supported state rather than modifying MetaDrive.
 
-### Demo 4 — Tamper detection
+### 11.6 Phase 2 verifiers
 
-```bash
-hermes verify-artifact artifacts/tampered-run
-```
+Reuse Phase 1 verifiers. Add adapter-specific evidence mapping tests, not adapter-specific gate rules.
 
-Expected result:
+For unsupported metrics:
+
+- use `NOT_AVAILABLE`;
+- explain why;
+- do not fail unless gate configuration explicitly requires the signal.
+
+### 11.7 Phase 2 tests
+
+Unit/contract tests should mock or fake MetaDrive surfaces so most CI remains headless and fast.
+
+Add one explicit local integration test or command for the real simulator.
+
+Test:
+
+- adapter import behavior;
+- config validation;
+- reset and step translation;
+- action bounds;
+- state mapping;
+- termination mapping;
+- close on normal and exceptional paths;
+- provenance capture;
+- artifact verification without MetaDrive rerun.
+
+### 11.8 Phase 2 acceptance gate
+
+All must be true:
+
+- Phase 1 remains green;
+- `hermes sim-smoke --headless` succeeds;
+- one MetaDrive nominal run completes;
+- evidence bundle is complete;
+- stored artifact verifies without simulator rerun;
+- MetaDrive version/commit are accurate;
+- unsupported evidence is explicit;
+- repeated seed behavior is documented with declared tolerance;
+- `third_party/metadrive` remains clean;
+- no generated artifact is staged.
+
+Then create:
 
 ```text
-INVALID_EVIDENCE
-Hash mismatch at event sequence <n>
+feat: add MetaDrive headless adapter
 ```
 
-### Executive narrative
+## 12. Phase 3 — Deterministic safety shield and challenge scenarios
 
-> Hermes is not valuable because a simulated vehicle completed a route. It demonstrates how an autonomy organization converts a proposed behavior into reproducible scenario evidence, applies independent safety and quality checks, makes an explicit advancement decision, and preserves the trace. The architecture can graduate from lightweight simulation to CARLA, ROS 2, Autoware, and hardware-in-the-loop without rewriting the product logic.
+### 12.1 Objective
 
-## 14. Skills an autonomy PM leader must build
+Demonstrate that Hermes can distinguish:
 
-| Capability | Leadership expectation |
+- what a baseline policy proposed;
+- what a deterministic runtime shield permitted;
+- what the simulator executed;
+- whether the intervention improved safety evidence;
+- what residual regressions remain.
+
+### 12.2 Safety shield
+
+Implement configurable rules for supported evidence:
+
+- TTC below threshold;
+- speed above configured cap;
+- stale or missing observation;
+- road-boundary risk;
+- emergency stop;
+- optional actuation-delay compensation.
+
+Each override must produce a stable reason code:
+
+```text
+TTC_BELOW_THRESHOLD
+SPEED_CAP
+STALE_OBSERVATION
+BOUNDARY_RISK
+EMERGENCY_STOP
+ACTUATION_DELAY_COMPENSATION
+```
+
+Requirements:
+
+- candidate and executed actions preserved;
+- every override and non-override path tested;
+- thresholds stored in versioned configuration;
+- shield intervention count and reason distribution included in metrics;
+- no claim that the shield is sufficient for real-world safety.
+
+### 12.3 Challenge scenarios
+
+Implement only simulator-supported deterministic scenarios:
+
+1. `lead_vehicle_hard_brake`
+2. `cut_in_near_field`
+
+Optional after those pass:
+
+3. `blocked_lane`
+4. `actuation_latency_fault`
+
+For each scenario, define:
+
+- hazard under test;
+- scenario parameters;
+- expected baseline weakness;
+- expected shield behavior;
+- hard and soft verifier expectations;
+- reproducibility envelope;
+- known simulator limitation.
+
+### 12.4 Comparison command
+
+Add a machine-readable comparison surface, for example:
+
+```bash
+hermes compare artifacts/<baseline> artifacts/<candidate>
+```
+
+Compare:
+
+- verdict;
+- collision;
+- minimum TTC when available;
+- progress;
+- comfort;
+- policy latency source;
+- shield overrides;
+- evidence availability;
+- adapter and scenario compatibility.
+
+Do not compare incompatible scenarios or gate configurations without a clear warning.
+
+### 12.5 Phase 3 acceptance gate
+
+- baseline and shielded runs both produce complete evidence;
+- challenge scenario is deterministic enough for the declared use;
+- candidate and executed action difference is visible;
+- override reason is preserved;
+- hard invariant precedence remains intact;
+- the shield cannot change stored verifier results after the run;
+- comparison reports improvements and regressions;
+- all tests and lint pass;
+- no unsupported safety claim is made.
+
+Then create:
+
+```text
+feat: add safety shield and challenge scenarios
+```
+
+## 13. Phase 4 — Fault injection and hardening
+
+Only begin after Phase 3 is green.
+
+Implement simulator-neutral wrappers for:
+
+- observation delay;
+- observation dropout;
+- frozen observation;
+- bounded observation noise;
+- control delay;
+- steering saturation;
+- brake saturation.
+
+Requirements:
+
+- fault configuration captured in resolved scenario and manifest;
+- candidate time and execution time distinguished;
+- latency source labeled simulated or measured;
+- deterministic tests;
+- fault findings and gate consequences documented.
+
+## 14. Phase 5 — CI and developer experience
+
+Add GitHub Actions only as repository files; do not push or enable external settings.
+
+PR-safe CI should run without MetaDrive assets:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m ruff check .
+python -m pytest -q -m "not metadrive"
+```
+
+Add:
+
+- test markers;
+- `make check`;
+- `make demo-phase1`;
+- `make sim-smoke`;
+- structured CLI error messages;
+- deterministic fixtures;
+- artifact schema version tests.
+
+Keep real MetaDrive integration explicit and local/manual unless a reliable runner is available.
+
+## 15. Deferred roadmap
+
+### Dashboard
+
+A Streamlit dashboard may later show scenario selection, verdicts, timelines, replay, trace integrity, and policy comparison. It must consume stored artifacts rather than become the source of truth.
+
+### Learned policy
+
+A small PPO extension may demonstrate reward versus invariant mismatch only after deterministic gates are trustworthy.
+
+### CARLA and ScenarioRunner
+
+Add a higher-fidelity adapter for cameras, LiDAR, weather, pedestrians, and standards-oriented scenarios.
+
+### ROS 2 and Autoware
+
+Map Hermes contracts to localization, perception, planning, control, and diagnostics messages.
+
+### Hardware-aware validation
+
+Progress to processor-in-the-loop and closed-lab hardware only with explicit sensor-to-action latency, clock synchronization, compute, memory, power, thermal, and actuator-response budgets.
+
+### External trust anchor
+
+Add signatures or an independent append-only store when evidence authenticity, not merely local tamper indication, is required.
+
+## 16. Test strategy
+
+### Test pyramid
+
+| Layer | Purpose | Simulator required? |
+|---|---|---:|
+| Unit | Models, schemas, hashing, gate, policy, shield | No |
+| Contract | Adapter and verifier interfaces | No |
+| Integration | Fake run and artifact verification | No |
+| Simulator integration | Bounded MetaDrive smoke and nominal run | Yes |
+| End-to-end demo | Scenario → evidence → independent verification | Depends |
+
+### Required categories
+
+- positive path;
+- negative path;
+- malformed input;
+- boundary values;
+- deterministic repeat;
+- exception cleanup;
+- evidence unavailability;
+- hard-invariant precedence;
+- tamper detection;
+- CLI exit codes;
+- provenance correctness;
+- backward-compatible evidence schema handling or explicit rejection.
+
+## 17. Artifact and schema versioning
+
+Use explicit versions for:
+
+- evidence schema;
+- scenario schema;
+- gate config;
+- adapter;
+- policy;
+- shield;
+- verifier;
+- Hermes package.
+
+Verification must reject unsupported schema versions with an actionable error. Never silently reinterpret a newer format.
+
+## 18. Security and abuse-resistance review
+
+Threats to consider:
+
+- artifact path traversal;
+- overwriting evidence;
+- malformed JSON/YAML resource exhaustion;
+- NaN/Infinity canonicalization ambiguity;
+- duplicate or reordered events;
+- recomputed hashes after tampering;
+- falsified provenance;
+- missing verifier evidence;
+- policy/shield version ambiguity;
+- aggregate score masking hard failure;
+- stale scenario/gate digest;
+- simulator crash presented as normal completion.
+
+Mitigations should be tested and documented. Do not overstate local hashing as protection against a malicious bundle author.
+
+## 19. PM learning agenda
+
+Hermes should leave explicit artifacts demonstrating product-leadership skills.
+
+| Capability | Evidence produced by project |
 |---|---|
-| Product and ODD | Define where the system operates, exclusions, user promise, fallback, and expansion gates |
-| Autonomy architecture | Explain and challenge localization, perception, prediction, planning, control, and vehicle interfaces |
-| Systems budgets | Own latency, jitter, compute, memory, bandwidth, power, thermal, and actuator-response budgets |
-| Simulation strategy | Distinguish open-loop replay from closed-loop simulation and define required fidelity |
-| Scenario engineering | Convert hazards, incidents, and uncertainty into reproducible parameterized tests |
-| Data and ML lifecycle | Lead logging, consent, labeling, provenance, training/eval separation, and model lineage |
-| Safety case | Connect hazards to requirements, scenarios, verifiers, evidence, gates, and residual-risk owners |
-| Verifier integrity | Determine whether the evaluator can be fooled, is incomplete, or rewards unsafe shortcuts |
-| Hardware integration | Understand sensors, calibration, synchronization, interference, compute, networks, and actuators |
-| Developer infrastructure | Drive reproducibility, CI, replay, observability, regression analysis, and artifact lineage |
-| Fleet operations | Define monitoring, fallback, remote-assistance boundaries, rollback, and incident response |
-| Cross-functional governance | Establish decision rights across autonomy, simulation, safety, hardware, operations, security, legal, and UX |
+| ODD definition | Scenario/ODD boundaries and exclusions |
+| Requirements | Traceability matrix from hazard to gate |
+| Architecture | Simulator-neutral contracts and adapter boundary |
+| Safety reasoning | Hard invariant precedence and residual limitations |
+| Verifier integrity | Tamper, unavailable-evidence, and false-pass tests |
+| Developer infrastructure | Reproducible CLI, tests, artifacts, provenance |
+| Hardware awareness | Roadmap for latency, compute, power, thermal, sensors |
+| XFN leadership | Decision log and release ownership model |
+| Launch discipline | PASS/CONDITIONAL/HOLD/INVALID semantics |
+| Incident readiness | Supporting event sequences and replayable evidence |
 
-Key questions to practice:
+## 20. Executive demo sequence
 
-- What exact ODD does this change support?
-- What new behavior can it produce?
-- Which hazard does it introduce or mitigate?
-- What independent oracle determines correctness?
-- What is the oracle’s false-pass risk?
-- Which scenarios prove the requirement?
-- What happens when data is late, stale, missing, or contradictory?
-- What are the p95 and p99 latency implications?
-- How does the change affect compute, bandwidth, power, and thermal?
-- Is the outcome reproducible?
-- Who owns the residual risk?
-- What signal triggers rollback?
+### Demo 1 — Evidence integrity
 
-## 15. Progression from simulation to hardware
+- run nominal fake scenario;
+- show `PASS`;
+- independently verify artifact;
+- show trace digest.
 
-### Stage 1 — Lightweight software-in-the-loop
+### Demo 2 — Hard invariant
 
-MetaDrive: closed-loop behavior, scenarios, faults, verifiers, evidence, and gates.
+- run collision scenario;
+- show `HOLD`;
+- identify first collision event;
+- explain why progress cannot compensate.
 
-### Stage 2 — Higher-fidelity software-in-the-loop
+### Demo 3 — Tamper detection
 
-CARLA plus ScenarioRunner: cameras, LiDAR, radar, weather, pedestrians, traffic lights, synchronization, and realistic maps.
+- modify one event in a copied artifact;
+- show `INVALID_EVIDENCE`;
+- identify first hash mismatch.
 
-### Stage 3 — Full autonomy-stack integration
+### Demo 4 — Real simulator integration
 
-ROS 2 plus Autoware: topics, messages, transforms, localization, perception objects, trajectories, control commands, and diagnostics.
+- run bounded MetaDrive nominal scenario;
+- show same evidence schema and verifiers;
+- verify artifact without simulator rerun.
 
-### Stage 4 — Standards mapping
+### Demo 5 — Runtime intervention
 
-Map Hermes schemas to ASAM OpenDRIVE and OpenSCENARIO concepts.
+- compare baseline and shielded challenge run;
+- show candidate action, executed action, reason code, improved safety evidence, and any comfort/mission regression.
 
-### Stage 5 — Processor- and hardware-in-the-loop
+### Executive close
 
-Run policy software on target compute while keeping sensors and vehicle dynamics simulated. Measure sensor-to-action latency, clock synchronization, utilization, memory, thermal throttling, frame loss, jitter, and missed deadlines.
+> Hermes does not declare a system safe because a simulated vehicle completed a route. It turns a policy change into a reproducible scenario, records what was proposed and executed, evaluates independent requirements, issues an explicit advancement decision, and preserves the trace for review.
 
-### Stage 6 — Closed-lab physical platform
-
-Use a scaled or controlled robotics platform to validate calibration, interference, actuation delay, network faults, power/thermal behavior, emergency stop, and sim-to-real gaps. Do not operate on public roads.
-
-## 16. Recommended ChatGPT Desktop chat structure
-
-1. Hermes bootstrap and environment doctor
-2. Domain contracts and fake simulator
-3. Evidence integrity and gate
-4. MetaDrive adapter and baseline policy
-5. Safety shield and verifiers
-6. Scenario factory and fault injection
-7. Dashboard and comparison
-8. Tests and CI
-9. ODD, hardware, safety case, and operating model
-10. Final demo and adversarial audit
-
-## Recommendation
-
-Build **Hermes on MetaDrive first** with six deterministic scenarios, a deterministic baseline, a safety shield, independent verifiers, a release gate, and hash-chained evidence. Do not start with end-to-end perception, RL, CARLA, ROS, Autoware, or real hardware. The differentiator is the scenario-to-evidence system and the PM leadership model surrounding it.
-
-## Top risks and mitigations
+## 21. Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
-| Simulator installation dominates the project | Start with the fake adapter and evidence vertical slice; keep the first MetaDrive run headless |
-| Simulator API drift | Inspect installed source, examples, and `default_config()`; add contract tests |
-| Prototype becomes only a visualization | Make CLI, artifact, verifiers, and gate the source of truth |
-| Thresholds appear like real safety claims | Store them in YAML and label them illustrative |
-| Safety shield hides weak policy behavior | Record both candidate and executed actions plus every override reason |
-| Aggregate score masks critical failure | Hard invariants always override the weighted score |
-| Evidence is fabricated or incomplete | Require manifest provenance, completeness checks, hash chain, and tamper tests |
-| RL distracts from systems learning | Add learned policy only after deterministic acceptance gates pass |
-| Architecture cannot graduate to another simulator | Keep policies, verifiers, gate, and evidence behind simulator-neutral contracts |
-| Project is misrepresented as production autonomy | Use only Hermes verdicts and state the simulation-only boundary in every demo |
+| Codex builds visuals before evidence | Phase gates prohibit dashboard before core |
+| MetaDrive API drift | Inspect installed 0.4.3 source before coding |
+| Fake simulator is mistaken for fidelity | Document it as an architectural test double |
+| Hash chain creates false assurance | State tamper-evident/authenticity limitation |
+| Nondeterministic timing breaks trace | Use simulated latency; separate host diagnostics |
+| Collision is averaged away | Hard-invariant precedence |
+| Missing signal becomes zero | Explicit `NOT_AVAILABLE` |
+| User-supplied path escapes artifacts | Strict slug and path containment validation |
+| Simulator crash looks like HOLD/PASS | Operational error, incomplete artifact invalid |
+| Codex stalls on optional blocker | Continue independent work, record blocker |
+| Third-party simulator is modified | Enforce clean external checkout |
+| Generated evidence enters Git | Ignore artifacts and review staged diff |
+| Scope expands to real hardware | Non-negotiable simulation-only boundary |
+
+## 22. Required unattended handoff
+
+At completion, `CODEX_HANDOFF.md` must contain:
+
+1. Executive summary.
+2. Starting and ending branch/commit.
+3. Phases attempted, completed, and deferred.
+4. Architecture and major decisions.
+5. Files changed.
+6. Dependencies added.
+7. Commands executed and actual outputs summarized.
+8. Test and Ruff results.
+9. Doctor result.
+10. Demo run IDs, artifact paths, verdicts, and trace digests.
+11. Tamper and determinism results.
+12. MetaDrive result when attempted.
+13. Known failures and limitations.
+14. Git status and local commits.
+15. The single best next command for the user.
+
+## 23. Definition of success for this unattended run
+
+The run is successful when Phase 1 is fully complete and reviewable. Phase 2 and Phase 3 are valuable only if their predecessor gates are green.
+
+A partial run is still useful when:
+
+- all completed work is tested;
+- incomplete work is isolated and clearly labeled;
+- no false pass is claimed;
+- the handoff makes the next step unambiguous.
+
+## Recommendation
+
+Build the deterministic evidence core first, then attach MetaDrive through the same adapter contract, then demonstrate a runtime shield on a reproducible challenge scenario. This sequence maximizes learning and credibility while keeping the project reversible and auditable.
+
+## Top risks and mitigations
+
+The highest risks are false confidence from simulation, weak verifier integrity, nondeterministic evidence, and premature scope expansion. Control them through narrow ODD boundaries, independent verification, hard-invariant precedence, explicit evidence availability, gated phases, and truthful limitations.
 
 ## Next three actions
 
-1. Copy this starter pack into `~/Projects/Hermes`, initialize Git, and create `bohueilin/Hermes` as a private GitHub repository.
-2. Install MetaDrive from source and run its headless verification while recording the exact simulator commit.
-3. Open `~/Projects/Hermes` in ChatGPT Desktop, paste `MASTER_PROMPT.md`, and require Phase 0–1 acceptance before simulator-specific expansion.
+1. Apply the updated instruction pack and create `feat/unattended-evidence-core`.
+2. Open a Codex Local chat in the Hermes repository with repository-scoped permissions and paste `MASTER_PROMPT.md`.
+3. On return, inspect `CODEX_HANDOFF.md`, run the validation matrix, and review local commits before any push.
