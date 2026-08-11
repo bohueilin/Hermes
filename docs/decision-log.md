@@ -254,3 +254,26 @@ logs remain deferred.
   operational/configuration exit 40, and doctor 0/1.
 - Keep `make check` as the full local gate; add artifact-safe `make demo-phase1` and local/manual
   `make sim-smoke`. PR CI installs `.[dev]`, runs Ruff, and excludes tests marked `metadrive`.
+
+## 2026-08-11 — Final adversarial contract corrections
+
+### Decisions
+
+- Require every release-gate caller to select a closed `VerifierProfile`; do not infer the Phase 4
+  contract from whichever findings happen to be present and do not provide a silent legacy
+  default. Runtime selects the fault-coverage profile from the resolved fault scenario, while
+  stored verification also treats schema-2 execution context as requiring that profile. Omitting
+  `fault.coverage.required` therefore yields `INVALID_EVIDENCE` instead of a possible legacy PASS.
+- Emit exactly one canonical error envelope for `hermes compare --format json` when two valid
+  artifacts are incompatible. Preserve the full comparison under error details and exit 40; never
+  append Rich human output that makes stdout invalid JSON.
+- Keep stored verification free of runtime-adapter and external-simulator imports. The recorded
+  MetaDrive support declaration is immutable data in `hermes.simulator_support`; an AST boundary
+  test prevents evidence, gate, or verifier modules from importing `hermes.adapters` or the
+  external `metadrive` package.
+
+### Observed result
+
+The two reviewer regressions and architecture boundary checks pass inside the 273-test suite.
+Clean-checkpoint fake, MetaDrive, challenge, fault, stored-verification, comparison, tamper, and
+determinism demonstrations were regenerated at `3c32c529e8be7127fbd71ecc467da007b2f72d5f`.

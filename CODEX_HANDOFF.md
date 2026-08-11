@@ -8,7 +8,7 @@
   Autoware, real-log training, cloud deployment, hardware integration, or real-vehicle interface was
   started.
 - **Branch:** `feat/unattended-evidence-core`.
-- **Implementation checkpoint:** `267a88e5193b226b60eeefd42e2a0e1ee5c6ae6c`.
+- **Implementation checkpoint:** `3c32c529e8be7127fbd71ecc467da007b2f72d5f`.
 - **Environment:** Conda `hermes-dev`, Python 3.11.15, editable `hermes-autonomy` 0.1.0.
 - **Simulator:** MetaDrive 0.4.3 from clean `third_party/metadrive` commit
   `85e5dadc6c7436d324348f6e3d8f8e680c06b4db`.
@@ -23,8 +23,8 @@ Hermes remains a simulation-only prototype. Every retained final artifact report
 | Item | Starting state | Ending state |
 |---|---|---|
 | Branch | `main` | `feat/unattended-evidence-core` |
-| Commit | `c181509a691b132cb732a50c24612f6bd40bafca` | implementation checkpoint `267a88e5193b226b60eeefd42e2a0e1ee5c6ae6c`; the final documentation-only handoff commit is `HEAD` at delivery |
-| Tests | 26 passing | 269 passing |
+| Commit | `c181509a691b132cb732a50c24612f6bd40bafca` | implementation checkpoint `3c32c529e8be7127fbd71ecc467da007b2f72d5f`; the final documentation-only handoff commit is `HEAD` at delivery |
+| Tests | 26 passing | 273 passing |
 | Ruff | passing | passing |
 | Doctor | working | no `FAIL`; 18 `PASS` and 1 optional `NOT_AVAILABLE` in the clean activated environment |
 
@@ -42,6 +42,7 @@ reported in the delivery response because a commit cannot embed its own content-
 | Phase 2 pinned MetaDrive adapter | complete | `638a951` |
 | Phase 3 shield, challenges, comparison | complete | `862b98f` |
 | Phase 4 faults + Phase 5 CI/dev hardening | complete | `267a88e` |
+| Final adversarial contract fixes | complete | `3c32c52` |
 
 No predecessor gate was skipped.
 
@@ -74,7 +75,7 @@ simulator state.
 
 ## Files and dependencies
 
-The authoritative inventory is `git diff --name-status c181509..267a88e`. It includes:
+The authoritative inventory is `git diff --name-status c181509..3c32c52`. It includes:
 
 - root/build: `.github/workflows/ci.yml`, `Makefile`, `pyproject.toml`, `README.md`,
   `VALIDATION_MATRIX.md`, `CODEX_HANDOFF_TEMPLATE.md`, and the project policy/planning documents;
@@ -100,12 +101,15 @@ to pytest 8 and Ruff. No database, web framework, dashboard, ML stack, or cloud 
 - Typed raw/delivered/result observation evidence and distinct candidate/permitted/executed actions.
 - Exact stored-only replay of deterministic shield and fault transforms.
 - Required fault-coverage finding, including every scheduled freeze/dropout step.
+- Required explicit gate verifier profile; a missing Phase 4 coverage finding can no longer fall
+  back to the legacy finding contract.
 - MetaDrive IDM observation-fault rejection before adapter construction; action faults remain the
   only truthful supported faults for that installed-policy profile.
 - Fault-profile comparison compatibility, explicit schema-version dispatch, deterministic artifact
   fixtures, and coherent-rehash negative tests.
 - Stable CLI errors: `USAGE_ERROR`, `CONFIGURATION_ERROR`, `OPERATIONAL_ERROR`,
-  `INVALID_EVIDENCE`, and `INCOMPATIBLE_EVIDENCE`.
+  `INVALID_EVIDENCE`, and `INCOMPATIBLE_EVIDENCE`; JSON mode emits one canonical envelope even for
+  valid-but-incompatible comparisons.
 - `make check`, no-overwrite `make demo-phase1`, local/manual `make sim-smoke`, strict pytest
   markers, and PR-safe `.github/workflows/ci.yml` excluding real MetaDrive tests.
 - Lowercase `docs/demo-runbook.md`, the Phase 4/5 design record, decision log, and requirements
@@ -126,11 +130,11 @@ All commands below were run from `/Users/bohueilin/Documents/GitHub/Hermes` on 2
 |---|---:|---|
 | `python -m pip install -e ".[dev]"` | 0 | editable `hermes-autonomy==0.1.0` installed |
 | `python -m pip show hermes-autonomy` | 0 | version 0.1.0; editable project location is this repository |
-| `python -m pytest -q` | 0 | **269 passed in 4.52 s** (final standalone run) |
-| `python -m pytest -q -m "not metadrive"` | 0 | **269 passed in 4.53 s** |
+| `python -m pytest -q` | 0 | **273 passed in 3.92 s** (clean implementation checkpoint) |
+| `python -m pytest -q -m "not metadrive"` | 0 | **273 passed in 4.46 s** |
 | `python -m ruff check .` | 0 | **All checks passed** |
-| `make check` in activated `hermes-dev` | 0 | Ruff green; **269 passed in 4.34 s**; doctor green |
-| `make demo-phase1 DEMO_RUN_ID=phase5-demo-final` | 0 | run and stored verification both `PASS` |
+| `make check` in activated `hermes-dev` | 0 | Ruff green; **273 passed in 3.92 s**; doctor 18 PASS / 1 optional NOT_AVAILABLE |
+| `make demo-phase1 DEMO_RUN_ID=handoff-phase5-demo` | 0 | run and stored verification both `PASS` |
 | `make sim-smoke` | 0 | MetaDrive 0.4.3, pinned commit, 5 headless steps |
 | three `doctor` entry paths | 0 each | all three executed successfully |
 | `git diff --check` | 0 | no whitespace errors |
@@ -157,44 +161,78 @@ stored files only:
 
 ```bash
 hermes run --simulator fake --scenario scenarios/fake_nominal.yaml \
-  --policy baseline --seed 7 --run-id phase1-nominal
-hermes verify-artifact artifacts/phase1-nominal
+  --policy baseline --seed 7 --run-id handoff-p1-nominal
+hermes verify-artifact artifacts/handoff-p1-nominal
 hermes run --simulator fake --scenario scenarios/fake_collision.yaml \
-  --policy baseline --seed 7 --run-id phase1-collision
+  --policy baseline --seed 7 --run-id handoff-p1-collision
 hermes run --simulator fake --scenario scenarios/fake_boundary.yaml \
-  --policy baseline --seed 7 --run-id phase1-boundary
+  --policy baseline --seed 7 --run-id handoff-p1-boundary
 hermes run --simulator fake --scenario scenarios/fake_soft_degradation.yaml \
-  --policy baseline --seed 7 --run-id phase1-conditional
+  --policy baseline --seed 7 --run-id handoff-p1-conditional
 hermes verify-artifact artifacts/phase1-tampered
 ```
 
 | Case | Actual result | Exit | Artifact / digest |
 |---|---|---:|---|
-| nominal | `PASS` | 0 | `artifacts/phase1-nominal` / `f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e` |
-| collision | `HOLD` | 20 | `artifacts/phase1-collision` / `ecaa3b9222612044349b643c44406c2088cfb335b07f7bf4da56ac587bb76a24` |
-| boundary | `HOLD` | 20 | `artifacts/phase1-boundary` / `19cdf5e895c06d5bee9a250a9c236039543a1b17d503bd9a31547f9ec101e694` |
-| soft degradation | `CONDITIONAL` | 10 | `artifacts/phase1-conditional` / `dfd8cc47423f8b93e70da1f5bcac00d21f363aec4a435da8ca9518b111704158` |
+| nominal | `PASS` | 0 | `artifacts/handoff-p1-nominal` / `f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e` |
+| collision | `HOLD` | 20 | `artifacts/handoff-p1-collision` / `ecaa3b9222612044349b643c44406c2088cfb335b07f7bf4da56ac587bb76a24` |
+| boundary | `HOLD` | 20 | `artifacts/handoff-p1-boundary` / `19cdf5e895c06d5bee9a250a9c236039543a1b17d503bd9a31547f9ec101e694` |
+| soft degradation | `CONDITIONAL` | 10 | `artifacts/handoff-p1-conditional` / `dfd8cc47423f8b93e70da1f5bcac00d21f363aec4a435da8ca9518b111704158` |
 | modified executed action | `INVALID_EVIDENCE` | 30 | `artifacts/phase1-tampered`; first mismatched sequence reported |
 
-`artifacts/phase1-nominal-repeat` produced the same deterministic event bytes, trace digest,
+`artifacts/handoff-p1-nominal-repeat` produced the same deterministic event bytes, trace digest,
 metrics, findings, and verdict as nominal. Run identity, creation time, and manifest bundle digest
 were correctly excluded from that identity claim.
 
+The clean-checkpoint simulator, challenge, and fault demonstrations used these exact command
+shapes (each generated artifact was also passed to `hermes verify-artifact`):
+
+```bash
+hermes sim-smoke --headless
+hermes run --simulator metadrive --scenario scenarios/metadrive_nominal.yaml \
+  --policy metadrive-idm --seed 7 --run-id handoff-p2-metadrive --headless
+
+hermes run --simulator metadrive \
+  --scenario scenarios/metadrive_lead_vehicle_hard_brake.yaml \
+  --policy metadrive-idm --seed 7 --run-id handoff-p3-lead-baseline --headless
+hermes run --simulator metadrive \
+  --scenario scenarios/metadrive_lead_vehicle_hard_brake.yaml \
+  --policy metadrive-idm --seed 7 --run-id handoff-p3-lead-shielded --headless \
+  --shield deterministic --shield-config config/shield.phase3.yaml
+hermes compare artifacts/handoff-p3-lead-baseline \
+  artifacts/handoff-p3-lead-shielded --format json
+
+hermes run --simulator metadrive \
+  --scenario scenarios/metadrive_cut_in_near_field.yaml \
+  --policy metadrive-idm --seed 7 --run-id handoff-p3-cutin-baseline --headless
+hermes run --simulator metadrive \
+  --scenario scenarios/metadrive_cut_in_near_field.yaml \
+  --policy metadrive-idm --seed 7 --run-id handoff-p3-cutin-shielded --headless \
+  --shield deterministic --shield-config config/shield.phase3.yaml
+hermes compare artifacts/handoff-p3-cutin-baseline \
+  artifacts/handoff-p3-cutin-shielded --format json
+
+hermes run --simulator fake --scenario scenarios/fake_fault_injection.yaml \
+  --policy baseline --seed 7 --run-id handoff-p4-fault \
+  --shield deterministic --shield-config config/shield.phase3.yaml
+hermes verify-artifact artifacts/handoff-p4-fault
+```
+
 ## Current-code demonstrations
 
-All final artifacts below recorded clean repository commit `267a88e...` and independently verified
+All final artifacts below recorded clean repository commit `3c32c52...` and independently verified
 as `INTERNALLY_CONSISTENT` without rerunning the simulator.
 
 | Artifact | Actual verdict | Trace digest |
 |---|---|---|
-| `artifacts/phase5-demo-final` | `PASS` | `f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e` |
-| `artifacts/phase2-metadrive-final` | `PASS` | `2b5009971c37c1eb65c9cc2830596689b5a25904a9b52b524d5bf77305848987` |
-| `artifacts/phase3-lead-baseline-final` | `CONDITIONAL` | `504dfbcdd8f4239f1b9f2a5e94fa64f8a1a6ac108543e46ace12b251aa409bd1` |
-| `artifacts/phase3-lead-shielded-final` | `CONDITIONAL` | `7324adbd7fa824f5dd834be2b321e3a5e4da36fbdac6eca99b7ae0c92d49f380` |
-| `artifacts/phase3-cutin-baseline-final` | `HOLD` | `00137f7fda53afa3531531bfeae6a8635b95b271707185c6922431633a8a5ef5` |
-| `artifacts/phase3-cutin-shielded-final` | `HOLD` | `7a0f0c7954a4257dca7fa2e4d2fbc0c53317b77f846174f7b033da029653e1ae` |
-| `artifacts/phase4-fault-final` | `HOLD` | `0943edb0e80c0fbd821b7d544c0da05d204fe86c8a48447bf53eb885d4d8c47d` |
-| `artifacts/phase4-fault-final-repeat` | `HOLD` | `0943edb0e80c0fbd821b7d544c0da05d204fe86c8a48447bf53eb885d4d8c47d` |
+| `artifacts/handoff-phase5-demo` | `PASS` | `f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e` |
+| `artifacts/handoff-p2-metadrive` | `PASS` | `2b5009971c37c1eb65c9cc2830596689b5a25904a9b52b524d5bf77305848987` |
+| `artifacts/handoff-p3-lead-baseline` | `CONDITIONAL` | `504dfbcdd8f4239f1b9f2a5e94fa64f8a1a6ac108543e46ace12b251aa409bd1` |
+| `artifacts/handoff-p3-lead-shielded` | `CONDITIONAL` | `7324adbd7fa824f5dd834be2b321e3a5e4da36fbdac6eca99b7ae0c92d49f380` |
+| `artifacts/handoff-p3-cutin-baseline` | `HOLD` | `00137f7fda53afa3531531bfeae6a8635b95b271707185c6922431633a8a5ef5` |
+| `artifacts/handoff-p3-cutin-shielded` | `HOLD` | `7a0f0c7954a4257dca7fa2e4d2fbc0c53317b77f846174f7b033da029653e1ae` |
+| `artifacts/handoff-p4-fault` | `HOLD` | `c365813d9ebda590299830a68d1683e3d8f413bc7b4b43da13ea77c5678552af` |
+| `artifacts/handoff-p4-fault-repeat` | `HOLD` | `c365813d9ebda590299830a68d1683e3d8f413bc7b4b43da13ea77c5678552af` |
 
 The Phase 3 lead and cut-in comparisons both remained compatible. In both cases the shielded trace
 had improved minimum TTC, regressed route completion/acceleration/jerk, and an unchanged policy
@@ -228,6 +266,11 @@ malformed/duplicate/reordered events, forged metrics/findings/verdict, context s
 early terminal fault schedules, challenge actor/phase contradictions, and verifier filesystem race
 conditions.
 
+The final independent review then found and drove two additional regression paths: omission of the
+Phase 4 coverage finding under the explicit fault verifier profile now yields `INVALID_EVIDENCE`,
+and incompatible comparison JSON is a single parseable `INCOMPATIBLE_EVIDENCE` envelope with exit
+40. Both are included in the 273-test suite.
+
 ## Known limitations and non-blocking warnings
 
 - Local SHA-256 is tamper-evident, not authenticated. An author who rewrites a complete bundle can
@@ -244,7 +287,8 @@ conditions.
   claimed.
 - `artifacts/phase4-fault-demo-dev` is a stale development artifact created before source-packet
   noise and full-schedule coverage corrections. It now correctly verifies invalid and is not an
-  acceptance artifact. `phase4-fault-final*` are authoritative.
+  acceptance artifact. `handoff-p4-fault*` are authoritative for the final implementation
+  checkpoint.
 - The GitHub Actions file was validated locally through its exact commands; no remote workflow was
   enabled or run because remote mutation was outside authorization.
 
