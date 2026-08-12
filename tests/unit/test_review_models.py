@@ -1177,6 +1177,7 @@ def _core_comparison_snapshot(path: str, *, latency_source: str = "simulated"):
         metrics=metrics,
         findings=FindingsDocument(findings=()),
         verdict=GateResult.model_construct(verdict=Verdict.PASS, hard_failures=()),
+        verifier_profile=VerifierProfile.LEGACY,
     )
 
 

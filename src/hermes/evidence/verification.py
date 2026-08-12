@@ -101,6 +101,7 @@ class VerifiedArtifactSnapshot:
     metrics: RunMetrics | RunMetricsV2
     findings: FindingsDocument | FindingsDocumentV2
     verdict: GateResult
+    verifier_profile: VerifierProfile
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,6 +112,16 @@ class _CapturedFileState:
     size_bytes: int
     observed_sha256: str
     metadata_identity: tuple[int, int, int, int, int, int]
+
+
+@dataclass(frozen=True, slots=True)
+class _SafeManifestIdentity:
+    """Narrow manifest identity retained after same-capture schema validation."""
+
+    run_id: str
+    created_at_utc: str
+    evidence_schema_version: str
+    scenario_schema_version: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,6 +165,7 @@ class _InspectionCapture:
 
     inspection: ArtifactInspection
     captured_files: tuple[_CapturedFileState, ...]
+    safe_manifest_identity: _SafeManifestIdentity | None
 
 
 class _DuplicateJsonKey(ValueError):
@@ -930,6 +942,7 @@ def _inspection_result(
     computed_bundle_digest: str | None,
     observed_trace_digest: str | None,
     computed_trace_digest: str | None,
+    safe_manifest_identity: _SafeManifestIdentity | None,
 ) -> _InspectionCapture:
     inspection = ArtifactInspection(
         verification=verification,
@@ -952,7 +965,7 @@ def _inspection_result(
             if name in dict(capture._payloads)
         ),
     )
-    return _InspectionCapture(inspection, capture.captured_files)
+    return _InspectionCapture(inspection, capture.captured_files, safe_manifest_identity)
 
 
 def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _InspectionCapture:
@@ -969,6 +982,26 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
         if required_bundle_inputs.issubset(payloads)
         else None
     )
+    manifest: ArtifactManifest | ArtifactManifestV2 | None = None
+    safe_manifest_identity: _SafeManifestIdentity | None = None
+    manifest_payload = payloads.get("manifest.json")
+    if manifest_payload is not None:
+        try:
+            manifest = _parse_versioned_model(
+                manifest_payload,
+                "manifest.json",
+                {"1.0": ArtifactManifest, "2.0": ArtifactManifestV2},
+            )
+        except ValueError as exc:
+            errors.append(str(exc))
+        else:
+            manifest_json = manifest.model_dump(mode="json")
+            safe_manifest_identity = _SafeManifestIdentity(
+                run_id=manifest.run_id,
+                created_at_utc=manifest_json["created_at_utc"],
+                evidence_schema_version=manifest.evidence_schema_version,
+                scenario_schema_version=manifest.scenario_schema_version,
+            )
     if set(REQUIRED_ARTIFACT_FILES) - payloads.keys():
         return _inspection_result(
             _invalid(path, errors),
@@ -978,6 +1011,7 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
             computed_bundle_digest=computed_bundle_digest,
             observed_trace_digest=observed_trace_digest,
             computed_trace_digest=None,
+            safe_manifest_identity=safe_manifest_identity,
         )
 
     observed_bundle = payloads["bundle.sha256"]
@@ -993,13 +1027,11 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
         if bundle_text.strip() != computed_bundle_digest:
             errors.append("bundle.sha256 does not match manifest and companion bytes")
 
-    manifest: ArtifactManifest | ArtifactManifestV2 | None = None
     context: ExecutionContext | ExecutionContextV2 | None = None
     metrics: RunMetrics | RunMetricsV2 | None = None
     findings_document: FindingsDocument | FindingsDocumentV2 | None = None
     stored_verdict: GateResult | None = None
     versioned_documents = (
-        ("manifest.json", {"1.0": ArtifactManifest, "2.0": ArtifactManifestV2}),
         (
             "execution-context.json",
             {"1.0": ExecutionContext, "2.0": ExecutionContextV2},
@@ -1016,9 +1048,7 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
         except ValueError as exc:
             errors.append(str(exc))
             continue
-        if filename == "manifest.json":
-            manifest = parsed  # type: ignore[assignment]
-        elif filename == "execution-context.json":
+        if filename == "execution-context.json":
             context = parsed  # type: ignore[assignment]
         elif filename == "metrics.json":
             metrics = parsed  # type: ignore[assignment]
@@ -1221,6 +1251,7 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
                 )
 
     recomputed_verdict: GateResult | None = None
+    verifier_profile: VerifierProfile | None = None
     if (
         events is not None
         and trace_digest is not None
@@ -1253,16 +1284,16 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
                     legacy_events, scenario, gate_config
                 )
         adapter_name = context.adapter.name if context is not None else "fake"
+        verifier_profile = (
+            VerifierProfile.FAULT_COVERAGE
+            if scenario.faults is not None or isinstance(context, ExecutionContextV2)
+            else VerifierProfile.LEGACY
+        )
         recomputed_verdict = apply_release_gate(
             recomputed_findings,
             gate_config,
             adapter_name=adapter_name,
-            expected_profile=(
-                VerifierProfile.FAULT_COVERAGE
-                if scenario.faults is not None
-                or isinstance(context, ExecutionContextV2)
-                else VerifierProfile.LEGACY
-            ),
+            expected_profile=verifier_profile,
         )
         if metrics is not None and metrics != recomputed_metrics:
             errors.append("metrics.json does not match metrics recomputed from stored events")
@@ -1290,6 +1321,7 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
             computed_bundle_digest=computed_bundle_digest,
             observed_trace_digest=observed_trace_digest,
             computed_trace_digest=trace_digest,
+            safe_manifest_identity=safe_manifest_identity,
         )
     assert recomputed_verdict is not None
     assert manifest is not None
@@ -1300,6 +1332,7 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
     assert metrics is not None
     assert findings_document is not None
     assert stored_verdict is not None
+    assert verifier_profile is not None
     verification = ArtifactVerification(
         artifact_path=str(path),
         integrity=IntegrityStatus.INTERNALLY_CONSISTENT,
@@ -1322,12 +1355,14 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
             metrics=metrics,
             findings=findings_document,
             verdict=stored_verdict,
+            verifier_profile=verifier_profile,
         ),
         capture=capture,
         observed_bundle_digest=observed_bundle_digest,
         computed_bundle_digest=computed_bundle_digest,
         observed_trace_digest=observed_trace_digest,
         computed_trace_digest=trace_digest,
+        safe_manifest_identity=safe_manifest_identity,
     )
 
 

@@ -22,6 +22,7 @@ from hermes.domain.models import (
 )
 from hermes.evidence.verification import VerifiedArtifactSnapshot
 from hermes.gates.config import GateConfig
+from hermes.gates.release import VerifierProfile
 
 
 def _available(value: float, unit: str) -> Measurement:
@@ -164,6 +165,7 @@ def _snapshot(
             residual_limitations=(),
             findings=(),
         ),
+        verifier_profile=VerifierProfile.LEGACY,
     )
 
 

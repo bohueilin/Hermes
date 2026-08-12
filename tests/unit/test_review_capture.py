@@ -20,6 +20,7 @@ from hermes.evidence.verification import (
     inspect_artifact_under_root,
     verify_artifact,
 )
+from hermes.gates.release import VerifierProfile
 
 
 def _capturable_bundle(repository_root: Path, tmp_path: Path) -> tuple[Path, Path]:
@@ -78,6 +79,61 @@ def test_root_contained_capture_returns_canonical_inventory_and_digest_roots(
         "findings.json",
         "verdict.json",
     )
+    assert inspection.snapshot.verifier_profile is VerifierProfile.LEGACY
+
+
+def test_private_capture_retains_safe_manifest_identity_all_four_or_none(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "allowed-artifacts"
+    root.mkdir()
+    tampered = root / "phase1-tampered"
+    shutil.copytree(repository_root / "artifacts" / "phase1-tampered", tampered)
+    missing_claim = root / "missing-claim"
+    shutil.copytree(repository_root / "artifacts" / "handoff-phase5-demo", missing_claim)
+    (missing_claim / "verdict.json").unlink()
+    malformed = root / "malformed-manifest"
+    shutil.copytree(repository_root / "artifacts" / "handoff-phase5-demo", malformed)
+    (malformed / "manifest.json").write_bytes(b"not-json\n")
+
+    tampered_capture = verification_module._inspect_artifact_under_root_capture(
+        root, "phase1-tampered"
+    )
+    missing_capture = verification_module._inspect_artifact_under_root_capture(
+        root, "missing-claim"
+    )
+    malformed_capture = verification_module._inspect_artifact_under_root_capture(
+        root, "malformed-manifest"
+    )
+
+    assert tampered_capture.inspection.verification.integrity is IntegrityStatus.INVALID
+    assert tampered_capture.safe_manifest_identity == verification_module._SafeManifestIdentity(
+        run_id="phase1-nominal",
+        created_at_utc="2026-08-11T21:29:33.392108Z",
+        evidence_schema_version="1.0",
+        scenario_schema_version="1.0",
+    )
+    assert missing_capture.inspection.verification.integrity is IntegrityStatus.INVALID
+    assert missing_capture.safe_manifest_identity is not None
+    assert missing_capture.safe_manifest_identity.run_id == "handoff-phase5-demo"
+    assert malformed_capture.safe_manifest_identity is None
+
+
+def test_verified_snapshot_retains_core_selected_fault_profile(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "allowed-artifacts"
+    root.mkdir()
+    bundle = root / "fault"
+    shutil.copytree(repository_root / "artifacts" / "handoff-p4-fault", bundle)
+
+    inspection = inspect_artifact_under_root(root, "fault")
+
+    assert inspection.verification.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
+    assert inspection.snapshot is not None
+    assert inspection.snapshot.verifier_profile is VerifierProfile.FAULT_COVERAGE
 
 
 @pytest.mark.parametrize(
@@ -200,6 +256,7 @@ def test_public_inspection_never_exposes_descriptor_identity(
             "metrics",
             "findings",
             "verdict",
+            "verifier_profile",
         },
     }
     forbidden = {
