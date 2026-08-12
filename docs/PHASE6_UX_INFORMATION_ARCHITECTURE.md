@@ -1,291 +1,180 @@
 # Hermes Phase 6 UX and Information Architecture
 
-## 1. UX objective
+## 1. Persistent frame
 
-Help a reviewer understand evidence without presenting a stronger claim than the verified core supports.
+Every artifact and comparison surface displays, as text:
 
-## 2. Persistent page frame
-
-Every artifact and comparison view includes:
-
-```text
+~~~
 Hermes — Simulation Evidence Review
-Scope: SIMULATION_ONLY
 Evidence authenticity: NOT_AUTHENTICATED
+Authorization status: NOT_EVALUATED
 Deployment permission: NONE
-```
+Scope: SIMULATION_ONLY
+~~~
 
-Do not hide these behind a tooltip.
+Artifact review also displays Gate verdict and Evidence integrity. Authoritative status is
+NOT_DEFINED on intake, summary, and provenance. Color is supplemental; status text, icon, and table
+values remain understandable without color.
 
-## 3. Navigation
+Navigation is Review artifact, Compare artifacts, and Evidence limitations. There is no run,
+upload, edit, repair, migrate, annotate, threshold, sign, approve, promote, release, or deploy
+control.
 
-```text
-Review artifact
-Compare artifacts
-About evidence and limitations
-```
+## 2. Artifact intake and verification
 
-No “run,” “create,” “approve,” “promote,” or “deploy” navigation.
+- Purpose: select one exact directory below the configured root and verify it before exposing an
+  accepted gate result.
+- Source fields: selected relative path/directory name are OBSERVED locator data; manifest run_id,
+  creation time, schemas, inventory, and observed digests are OBSERVED; computed digests and
+  integrity are COMPUTED; authenticity is AUTHENTICITY.
+- Initial state: UNVERIFIED with no gate badge and the sentence “Evidence has not yet been checked
+  by the installed Hermes verifier.”
+- Valid state: INTERNALLY_CONSISTENT with selected directory, manifest run_id, both bundle roots,
+  trace roots, and ten-file inventory.
+- Invalid state: INVALID_EVIDENCE, first diagnostics, mismatch identity, and “Stored verdict,
+  findings, and metrics are quarantined and not accepted.”
+- Error state: path/configuration error with no evidence verdict and actionable correction.
+- Prohibited: newest/official/latest/authoritative selection, accepted PASS before verification,
+  upload, drag-and-drop ingestion, raw path outside root.
+- Drill-down: portable inventory size/digests from the captured snapshot only. Filesystem device,
+  inode, mode, mtime, and ctime remain private facade state and are never rendered or serialized.
+- Accessibility: keyboard-selectable directory list, explicit verify action, announced errors,
+  table alternative to status graphics.
 
-## 4. Artifact intake
+## 3. Review summary
 
-### Purpose
+- Purpose: answer what was tested, what gate decided, why, and what the result does not establish.
+- Source fields: artifact/provenance OBSERVED; integrity/metrics COMPUTED; gate GATE_DECISION;
+  trust AUTHENTICITY or RESIDUAL_RISK; missing fields NOT_AVAILABLE.
+- Required content: exact identity/digests; six independent trust dimensions plus authoritative
+  status; gate profile/version/digest; recomputed rationale; hard and soft failure IDs; five-state
+  sufficiency counts; persistent limitations.
+- Empty state: no summary until verification finishes.
+- Invalid state: gate INVALID_EVIDENCE only; no stored PASS, findings, metric cards, or timeline.
+- Prohibited: safe, trusted, approved, certified, road-ready, deployable, Level 4, overall safety
+  score, green trust banner.
+- Drill-down: gate IDs link to finding rows and captured source references.
+- Accessibility: ordered heading structure, text rationale, full table for summary cards.
 
-Select one exact artifact under the configured root and verify it before showing an accepted gate result.
+Required wording:
 
-### Required fields
+~~~
+A Hermes PASS is only the installed prototype gate verdict for this bounded simulation.
+Internal consistency is not independent authenticity.
+Stored verification does not reexecute the policy or simulator.
+Simulation evidence grants no physical-system permission.
+~~~
 
-- relative artifact path;
-- run ID;
-- bundle digest after capture;
-- file inventory;
-- verification state;
-- schema versions.
+## 4. Findings and evidence sufficiency
 
-### States
+- Purpose: expose pass/fail/unavailable evidence, requiredness, threshold basis, source events, and
+  gate consequence.
+- Source fields: finding values and status COMPUTED; threshold projection COMPUTED from verified
+  GATE_CONFIG/SCENARIO; gate consequence GATE_DECISION; missing items NOT_AVAILABLE.
+- Columns: finding ID; verifier/version; evidence category; core status; severity; requiredness;
+  exact/display value and unit; structured operator/threshold; first failure time; supporting
+  sequence count; availability; gate consequence.
+- Empty state: “No accepted findings are available” with reason; never imply pass.
+- Invalid state: findings table absent and quarantine explanation visible.
+- Prohibited: parsing threshold_source_text, recomputing pass/fail, treating soft WARNING severity
+  as a fourth core finding status, substituting zero.
+- Drill-down: exact canonical value, compound threshold tree, original threshold text for audit
+  only, explanation, verified profile assignment, source references, event sequences.
+- Accessibility: text status/severity, sortable table with stable row IDs, keyboard expansion, no
+  color-only requiredness or availability.
 
-#### Unverified
+Sufficiency labels are exactly Required / available, Required / unavailable, Optional / available,
+Optional / unavailable, and Not applicable. UI never infers a bucket.
 
-```text
-Evidence has not yet been independently checked by the installed Hermes verifier.
-```
+## 5. Event and action timeline
 
-#### Internally consistent
+- Purpose: show what was observed, proposed, permitted, executed, and returned without inventing
+  distinctions absent from the source schema.
+- Source fields: track points are OBSERVED; derived TTC/metrics are COMPUTED; unavailable tracks
+  are NOT_AVAILABLE.
+- Schema 1.0 tracks: candidate action and executed action available; separate permitted action,
+  raw observation, delivered observation, and result observation NOT_AVAILABLE. Observation
+  summary and post-step vehicle state/raw facts remain available under their actual names.
+- Schema 2.0 tracks: candidate/permitted/executed actions and raw/delivered/result observations
+  available, plus shield/fault reasons and source/execution timing.
+- Common tracks: collision/off-road, speed, route progress, TTC availability/value, latency, and
+  verifier-trigger sequences when supported.
+- Empty state: explicit no-event or unsupported-track reason; never a flat zero line.
+- Invalid state: timeline absent; diagnostic sequence may be shown only as a captured invalidity
+  reference.
+- Prohibited: interpolation, semantic decimation, inferred permission for schema 1, inferred raw/
+  delivered/result observations, control actions, simulator playback.
+- Drill-down: exact sequence/time/value and SourceReference into the captured snapshot.
+- Accessibility: keyboard point navigation, synchronized data table, textual gaps, chart legend
+  text/icons, sufficient contrast.
 
-```text
-The bundle is internally consistent under the installed Hermes verifier.
-```
+Filtering changes only visible tracks. It cannot change envelope gate, findings, counts, or
+comparison partition.
 
-#### Invalid evidence
+## 6. Provenance, integrity, and limitations
 
-```text
-Evidence verification failed. Stored verdict and findings are quarantined.
-```
+- Purpose: distinguish recorded origin claims, internal consistency, authenticity, authority, and
+  residual risk.
+- Source fields: recorded manifest/context values OBSERVED; digest/verification results COMPUTED;
+  authenticated origin AUTHENTICITY; limitations RESIDUAL_RISK.
+- Required content: Hermes/repository state; adapter/simulator/source commit; policy/shield/fault/
+  gate/scenario profiles; schema versions; config, trace, and bundle roots; selected path versus
+  manifest run_id; source inventory.
+- Empty/unavailable: null plus explicit NOT_AVAILABLE reason, never blank.
+- Invalid: only safely captured identity/inventory and diagnostics; unverified provenance stays
+  quarantined.
+- Prohibited: verified producer, official artifact, authoritative/latest, signed, tamper-proof.
+- Drill-down: source inventory and references only; no source reopen.
+- Accessibility: definition list plus downloadable-equivalent text/JSON view.
 
-### Prohibitions
+Exact labels:
 
-- No automatic newest-artifact selection.
-- No accepted PASS badge before verification.
-- No upload control.
-- No edit or repair action.
-
-## 5. Review summary
-
-### Trust strip
-
-Display six independent fields:
-
-1. Gate verdict.
-2. Evidence integrity.
-3. Evidence authenticity.
-4. Authorization status.
-5. Deployment permission.
-6. Scope.
-
-### Gate section
-
-- recomputed verdict;
-- concise rationale;
-- hard failures;
-- soft failures;
-- supporting finding IDs;
-- gate profile, version, and digest.
-
-### Evidence-sufficiency section
-
-Show counts and drill-down for:
-
-- required and available;
-- required but unavailable;
-- optional and available;
-- optional and unavailable;
-- not applicable.
-
-### Residual-limitations section
-
-Always visible, including authenticity and no-reexecution limitations.
-
-## 6. Findings view
-
-### Table columns
-
-- finding ID;
-- verifier and version;
-- category;
-- status and severity;
-- value and unit;
-- threshold and operator;
-- first failure time;
-- supporting event count;
-- gate consequence;
-- availability.
-
-### Drill-down
-
-- full explanation;
-- exact canonical value;
-- source references;
-- event sequences;
-- related metric;
-- related gate rule.
-
-### Visual semantics
-
-Use text, icon, and color. Color alone is insufficient.
-
-`NOT_AVAILABLE` is a distinct state, not neutral gray zero.
-
-## 7. Timeline view
-
-### Tracks
-
-- raw observation;
-- delivered observation;
-- result observation;
-- candidate action;
-- permitted action;
-- executed action;
-- shield reasons;
-- fault reasons;
-- collision and off-road;
-- speed;
-- route progress;
-- TTC;
-- simulated latency;
-- verifier-triggering events.
-
-### Interaction
-
-- select event sequence;
-- show exact event facts from captured source reference;
-- link back to findings;
-- filter tracks without altering verdict or finding counts.
-
-### Unavailable data
-
-Use gaps and explicit labels. Never interpolate or substitute zero.
-
-## 8. Provenance and integrity view
-
-### Recorded provenance
-
-- Hermes version, commit, and dirty state;
-- adapter, simulator, version, and source commit;
-- scenario, policy, shield, fault, and gate versions;
-- schema versions;
-- configuration digests;
-- trace root;
-- bundle root.
-
-### Authenticated origin
-
-```text
-Status: NOT_AUTHENTICATED
-```
-
-Explain that recorded provenance is not a signed identity claim.
-
-### Authority
-
-```text
+~~~
+Evidence integrity: INTERNALLY_CONSISTENT | INVALID_EVIDENCE
+Evidence authenticity: NOT_AUTHENTICATED
 Authoritative status: NOT_DEFINED
-```
+~~~
 
-No “official” or “latest” designation.
+## 7. Compatible comparison
 
-## 9. Invalid-evidence page
+- Purpose: compare two exact independently verified artifacts without collapsing mixed effects.
+- Source fields: both artifact identities/integrities OBSERVED/COMPUTED; compatibility and deltas
+  COMPUTED by existing compare_artifacts; unchanged gate verdict GATE_DECISION; limitations
+  RESIDUAL_RISK.
+- Required content: identities/digests; both integrity states; compatibility reasons/warnings;
+  verdict and hard-failure delta; improvements; regressions; unchanged; NOT_COMPARABLE descriptive
+  dimensions; separate availability deltas; intervention detail.
+- Empty state: require explicit baseline and candidate; never auto-fill newest.
+- Invalid state: identify invalid side, exit 30, no comparison claim.
+- Incompatible state: reasons only, exit 40, and no deltas, winner, metric chart, or source-link
+  payload.
+- Prohibited: winner score, overall safety score, hidden regression, ranked intervention count,
+  “candidate is safer” without naming a supported dimension.
+- Drill-down: exact baseline/candidate values and references to each independently captured
+  snapshot.
+- Accessibility: improvements/regressions/unchanged have text and icons; every chart has a full
+  comparison table.
 
-Primary content:
+Representative truthful summary:
 
-- `INVALID_EVIDENCE`;
-- first failure or mismatch;
-- affected file or sequence;
-- artifact identity when safely known;
-- trust limitations;
-- source file inventory.
+~~~
+Minimum TTC improved. Route completion, acceleration, and jerk regressed. The gate verdict did
+not change. Intervention count is descriptive. This comparison does not demonstrate overall
+advancement.
+~~~
 
-Do not show a green stored PASS. If useful, show:
+## 8. Content and network security
 
-```text
-Stored verdict claim: quarantined and not accepted
-```
+Artifact text uses Streamlit text/table/chart APIs only. No unsafe_allow_html, raw HTML, executable
+Markdown links, external images/assets, telemetry, external API, upload, or database is allowed.
+Control characters render visibly and long strings obey the 1,024-character bound.
 
-## 10. Comparison view
+The launcher accepts only numeric loopback literals validated by ipaddress. It rejects hostnames,
+0.0.0.0, ::, LAN, link-local, and public addresses. Telemetry is disabled.
 
-### Header
+## 9. Human comprehension gate
 
-- baseline identity and digest;
-- candidate identity and digest;
-- compatibility status;
-- both verification states.
-
-### Sections
-
-- verdict delta;
-- hard-failure delta;
-- improvements;
-- regressions;
-- unchanged outcomes;
-- evidence-availability deltas;
-- intervention details;
-- residual limitations.
-
-### Prohibitions
-
-- no winner score;
-- no “candidate is safer” summary unless a specific supported dimension is named;
-- no chart after incompatibility;
-- no hidden regressions.
-
-### Example truthful summary
-
-```text
-Minimum TTC improved. Route completion, acceleration, and jerk regressed. The gate verdict did not improve. This run does not demonstrate overall advancement.
-```
-
-## 11. About and limitations
-
-Explain:
-
-- simulation scope;
-- gate semantics;
-- internal consistency;
-- authenticity limitation;
-- no policy or simulator re-execution;
-- no deployment permission;
-- ODD and simulator limitations;
-- local-only behavior.
-
-## 12. Accessibility
-
-- keyboard navigable controls;
-- text labels for statuses;
-- sufficient contrast;
-- tables readable without charts;
-- chart data available as a table;
-- no color-only meaning;
-- errors announced clearly;
-- long evidence text expandable.
-
-## 13. Content security
-
-- escape artifact-derived content;
-- no raw HTML rendering;
-- sanitize Markdown if supported;
-- bound long strings;
-- render control characters visibly and safely.
-
-## 14. Human-comprehension gate
-
-A reviewer should answer:
-
-- exact artifact identity;
-- reason for verdict;
-- hard failure;
-- unavailable evidence;
-- shield changes;
-- improvements and regressions;
-- authenticity;
-- deployment permission.
-
-Record real observations only.
+Record actual reviewer observations only. The reviewer must identify exact artifact/digest, gate
+rationale, hard failure, unavailable evidence, shield change, improvements and regressions,
+authenticity, and physical deployment permission. Any false answer that PASS means authenticated,
+safe, approved, or deployable is a comprehension defect to fix before completion.

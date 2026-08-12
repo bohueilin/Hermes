@@ -33,6 +33,10 @@ This matrix is the human acceptance gate for the Phase 6 design freeze and imple
 | UI information architecture | UX doc | Invalid, unavailable, comparison, and provenance states defined |
 | No implementation | Git diff | No workbench production module or UI dependency added |
 | Design handoff | `PHASE6_DESIGN_FREEZE_HANDOFF.md` | GO, CONDITIONAL GO, or HOLD and exact next prompt |
+| Portable determinism | Contract inspection | No generated timestamp, absolute path, or filesystem metadata; unchanged bytes/selected relative path/tool/schema produce byte-identical JSON |
+| Captured identity | Architecture/contract inspection | Source inventory and observed/computed roots use the same captured bytes; no reopen |
+| Resource authority | Threat/architecture docs | Existing verifier alone determines INVALID; review-shape failure is REVIEW_UNAVAILABLE / 40 |
+| Stage 6A scope | `git diff --name-only` and pyproject diff | Documentation only; no Python, tests, dependencies, artifacts, or third_party |
 
 ## 4. Review core acceptance
 
@@ -205,6 +209,13 @@ Test:
 
 Required result: bounded failure with no partial accepted review.
 
+Existing verifier limits remain 16 MiB/file, 64 MiB total, 10,000 events, and 1 MiB/event line;
+test each core boundary+1 as INVALID_EVIDENCE. Review passes no stricter limit. Test operational
+envelope boundaries 64 findings, 64 metrics, and depth 16 at boundary+1 as REVIEW_UNAVAILABLE /
+UNSUPPORTED_REVIEW_SHAPE / exit 40 with no portable envelope and unchanged integrity/gate. Test
+projection text at 1,024/1,025 scalars for explicit truncation while portable/source values remain
+complete. Test a 10,000-event portable timeline and deterministic pagination without decimation.
+
 ## 13. Architecture and dependency checks
 
 - [ ] Workbench imports only review-layer APIs plus framework.
@@ -231,10 +242,27 @@ Required:
 - [ ] Binds only to loopback.
 - [ ] `0.0.0.0` rejected.
 - [ ] `::` rejected.
+- [ ] Numeric 127/8 and `::1` accepted through ipaddress; hostnames rejected.
+- [ ] LAN, link-local, and public literals rejected.
 - [ ] No telemetry or external network call.
 - [ ] No upload, write, approve, run, sign, or deploy control.
 - [ ] Startup does not launch simulator.
 - [ ] Shutdown is clean.
+
+## 14A. Review CLI exit matrix
+
+| Command result | Required exit |
+|---|---:|
+| review-artifact valid PASS | 0 |
+| review-artifact valid CONDITIONAL | 0 |
+| review-artifact valid HOLD | 0 |
+| review-artifact invalid evidence | 30 |
+| review-compare compatible | 0 |
+| review-compare invalid side | 30 |
+| review path/configuration/operational failure | 40 |
+| review-compare incompatible valid artifacts | 40 |
+
+Legacy run, verify-artifact, and compare exits must remain unchanged.
 
 ## 15. Workbench functional cases
 

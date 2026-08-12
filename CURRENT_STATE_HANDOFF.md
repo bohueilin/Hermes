@@ -41,6 +41,16 @@ Codex must inspect the actual current branch, commit, and working tree before ed
 
 ## 4. Completed implementation
 
+### Phase 6 design-freeze starting snapshot — 2026-08-12
+
+The observed starting branch was feat/phase6-evidence-workbench at
+27cc5a08931cc1d659128bfebd0bd1ca7e9aefee with a clean tree. The package remained
+hermes-autonomy 0.1.0 with Python target 3.11. The supplied and observed regression baseline was
+273 passing tests, Ruff passing, and doctor 18 PASS / 1 optional NOT_AVAILABLE. Stage 6A remained
+documentation-only. Ending validation recorded 273 passed in 3.97 s, Ruff all checks passed,
+doctor 17 PASS / 1 intentional dirty-worktree WARN / 1 optional NOT_AVAILABLE / no FAIL, and
+git diff --check exit 0.
+
 ### Phase 0 — foundation
 
 - Python src-layout package.
@@ -139,7 +149,8 @@ artifacts/<run-id>/
   bundle.sha256
 ```
 
-Phase 6 must reconcile any older documentation that still lists only seven files. The ten-file inventory above is the working canonical contract unless repository inspection proves otherwise.
+Stage 6A confirmed this exact ten-file inventory against REQUIRED_ARTIFACT_FILES. No alternate
+seven-file or workbench-specific contract is permitted.
 
 ## 6. Demonstrated outcomes
 
@@ -226,4 +237,10 @@ A green gate verdict must never be presented as “safe,” “trusted,” “ap
 
 ## 11. Immediate Codex starting action
 
-Codex must first execute the **Phase 6 design-freeze prompt** and stop before implementation. The design freeze must reconcile bundle inventory, freeze `ReviewEnvelope v1`, define dependency rules, and update acceptance tests.
+Stage 6A is design-frozen as a CONDITIONAL GO with no unresolved P0. The controlling request says
+“Perform four internal stages in this one chat,” “Do not wait for human approval between stages
+unless a genuine unresolved P0 blocker...,” and after GO/CONDITIONAL GO, “continue automatically
+to Stage 6B.” That explicit instruction overrides the generic AGENTS separate-approval gate.
+
+The design freeze reconciled bundle inventory, froze ReviewEnvelope/ComparisonEnvelope 1.0,
+defined dependency rules, and specified acceptance tests. Do not repeat Stage 6A.

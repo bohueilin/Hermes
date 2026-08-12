@@ -1,5 +1,43 @@
 # Hermes Decision Log
 
+## 2026-08-12 — Phase 6 evidence-review design freeze
+
+### Scope
+
+Freeze an implementation-ready local, read-only Evidence Review Workbench design without adding
+production Python, tests, dependencies, signing, artifact migration, or simulator execution.
+
+### Decisions
+
+- Retain the exact ten-file REQUIRED_ARTIFACT_FILES contract.
+- Extend the existing descriptor-safe capture/facade narrowly so source inventory and observed/
+  computed roots come from the same captured bytes; never reopen artifacts for presentation.
+- Define strict immutable portable ReviewEnvelope and ComparisonEnvelope version 1.0. Exclude
+  generated time and absolute paths; quarantine gate/findings/metrics on invalid evidence.
+- Keep gate, integrity, authenticity, authorization, deployment permission, scope, and authority
+  independent. Map core INVALID to portable INVALID_EVIDENCE without renaming the core enum.
+- Expose requiredness from versioned verifier-profile metadata: hard findings required, comfort
+  findings optional, and legacy fault coverage not applicable. Do not change gate precedence.
+- Project structured simple/compound thresholds from verified configuration; UI never parses the
+  existing threshold string or decides pass/fail.
+- Select optional Streamlit >=1.37,<2 after evaluating a custom standard-library server and static
+  report alternative. Keep review core framework-independent.
+- Preserve the verifier as sole integrity authority at 16 MiB/file, 64 MiB total, 10,000 events,
+  and 1 MiB/line. Review passes no stricter capture limit. Operational envelope budgets are
+  64 findings, 64 metrics, depth 16, and 1,024 projection display scalars; unsupported core-valid
+  shape is REVIEW_UNAVAILABLE / 40 with no envelope and unchanged gate/integrity.
+- Accept only numeric loopback addresses via ipaddress; disable telemetry and remote dependencies.
+- Make review CLI exits operation-oriented: valid PASS/CONDITIONAL/HOLD exit 0, invalid 30, and
+  path/configuration/operational/incompatible 40. Preserve legacy command exits.
+- Use compare_artifacts as the only comparison core; provide no winner score and no delta/chart
+  payload after incompatibility.
+- Record CONDITIONAL GO with no unresolved P0. The controlling user request says “Perform four
+  internal stages in this one chat,” “Do not wait for human approval between stages unless a
+  genuine unresolved P0 blocker...,” and after GO/CONDITIONAL GO, “continue automatically to
+  Stage 6B.” This explicit instruction overrides the generic AGENTS separate-approval gate.
+
+The full frozen register is docs/PHASE6_DECISION_LOG_SEED.md.
+
 ## 2026-08-11 — Phase 0 environment doctor and package bootstrap
 
 ### Scope

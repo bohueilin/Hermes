@@ -34,6 +34,11 @@ Codex must verify actual state, but the design-review baseline is:
 
 **CONDITIONAL GO** for the read-only workbench.
 
+Stage 6A is design-frozen with no unresolved P0. The conditions below are Stage 6B implementation
+and regression gates. The controlling request says “Perform four internal stages in this one chat,”
+“Do not wait for human approval between stages unless a genuine unresolved P0 blocker...,” and
+after GO/CONDITIONAL GO, “continue automatically to Stage 6B.”
+
 ### Conditions
 
 - It is a one-way consumer of stored verification and comparison.
@@ -188,31 +193,19 @@ Artifact B → capture → verify ┘
 
 ## 9. Recommended package structure
 
-Exact names may change after repository inspection, but boundaries should resemble:
+Frozen Stage 2 package boundaries:
 
 ```text
 src/hermes/
   review/
     __init__.py
-    enums.py
     models.py
-    artifact_service.py
-    comparison_service.py
     projection.py
-    evidence_sufficiency.py
-    source_references.py
+    facade.py
   workbench/
     __init__.py
     app.py
     launcher.py
-    state.py
-    views/
-      intake.py
-      summary.py
-      findings.py
-      timeline.py
-      provenance.py
-      comparison.py
 ```
 
 Framework-specific modules may import `hermes.review`. `hermes.review` must not import the UI framework.
@@ -255,7 +248,8 @@ Freeze contracts and decisions before implementation.
 - Gate, integrity, authenticity, authorization, permission, and scope are independent fields.
 - Dependency direction is testable.
 - Every negative test has an expected result.
-- User approval is required before implementation.
+- Under instruction precedence, the quoted controlling request overrides the generic AGENTS
+  separate-approval gate and authorizes automatic Stage 6B when no genuine unresolved P0 remains.
 
 ## 11. Stage 2 — review core
 
@@ -441,11 +435,14 @@ Do not auto-select “latest.”
 ## 17. Caching and state
 
 - Cache only immutable review envelopes or presentation projections.
-- Key cache by bundle digest, review schema version, and Hermes tool version.
+- Key only INTERNALLY_CONSISTENT envelopes with a non-null computed bundle digest by that digest,
+  review schema 1.0, Hermes version, and selected relative path. Never cache any INVALID_EVIDENCE
+  envelope, including a complete invalid capture with a digest, or a partial/null-digest capture.
 - Prefer in-memory local cache.
-- Re-capture/re-verify when source metadata or digest changes.
-- A path is not an identity.
-- Stale verified state must never survive artifact replacement.
+- Before every cached render, repeat containment and full capture/stored verification.
+- Filesystem metadata remains private and nonserialized.
+- Digest change invalidates the active projection; identical bytes at the same path retain the
+  same envelope even if metadata changes.
 
 ## 18. Threat model
 

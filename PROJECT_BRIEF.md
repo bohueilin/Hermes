@@ -50,6 +50,11 @@ The workbench must answer:
 
 ## Core trust states
 
+Stage 6A is a CONDITIONAL GO with no unresolved P0 design decision. The frozen implementation uses
+strict immutable portable ReviewEnvelope/ComparisonEnvelope version 1.0, a framework-independent
+review core, and optional Streamlit >=1.37,<2. Conditions are Stage 6B implementation and
+regression gates, not unresolved architecture choices.
+
 The workbench must always expose these independently:
 
 | Dimension | Phase 6 value or domain |
@@ -63,6 +68,8 @@ The workbench must always expose these independently:
 
 ## Core jobs to be done
 
+Authoritative status is independently fixed at NOT_DEFINED for Phase 6.
+
 1. Select one exact artifact under an allowed local artifact root.
 2. Capture and verify it without mutation or simulator rerun.
 3. Review verdict, rationale, findings, evidence sufficiency, provenance, and limitations.
@@ -72,6 +79,10 @@ The workbench must always expose these independently:
 7. Export a machine-readable review envelope without modifying the source bundle.
 
 ## Existing product assets
+
+The canonical bundle is exactly the ten names in REQUIRED_ARTIFACT_FILES. The review facade retains
+source inventory and observed/computed bundle roots from the same descriptor-safe capture. It may
+not reopen files for presentation.
 
 Phases 0–5 already provide:
 
@@ -99,6 +110,7 @@ Phase 6 must reuse these capabilities rather than recreate them.
 - Artifact identity, integrity, trust, provenance, findings, evidence sufficiency, timeline, and comparison views.
 - Negative and human-factors tests.
 - Design-only future authenticity specification.
+- Core-owned evidence requiredness and structured simple/compound threshold projection.
 
 ### Out of scope
 
@@ -162,6 +174,8 @@ A new reviewer can answer:
 - UI dependencies remain optional.
 - Workbench binds to loopback only.
 - No simulator starts during review tests.
+- Review commands exit 0 for valid PASS, CONDITIONAL, and HOLD reviews; invalid evidence exits 30;
+  path/configuration/operational/incompatible cases exit 40. Legacy command exits do not change.
 
 ## Executive narrative
 

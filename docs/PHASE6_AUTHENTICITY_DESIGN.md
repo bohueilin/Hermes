@@ -4,6 +4,10 @@
 
 This document defines a minimal credible future trust anchor. It is not authorized for Phase 6 implementation.
 
+Phase 6 review schemas expose authenticity NOT_AUTHENTICATED, authorization NOT_EVALUATED,
+deployment permission NONE, and authoritative status NOT_DEFINED. This future mechanism must never
+overwrite gate verdict or integrity.
+
 ## 2. Why integrity is insufficient
 
 Current local hashes establish internal consistency under the installed verifier. A bundle author can rewrite the complete bundle and recompute all hashes. Authenticity requires an independently trusted key and verification policy.
@@ -77,6 +81,10 @@ Verification requires an independently configured policy:
 
 The artifact cannot declare its own key trusted.
 
+The policy owner must be independent of the artifact producer. Policy input includes accepted
+project identity, key ID, signer identity, signing scope, validity interval, revocation state, and
+allowed attestation schema. Unknown or ambiguous policy fails authentication closed.
+
 ## 7. Rotation and revocation
 
 - stable key ID;
@@ -85,6 +93,10 @@ The artifact cannot declare its own key trusted.
 - independent revocation list or policy;
 - signature retains original key ID;
 - UI clearly distinguishes expired, revoked, untrusted, and valid signatures.
+- Emergency revocation and routine rotation are independently distributed policy updates; an
+  artifact cannot remove or supersede them.
+- Historical verification records the policy version used and never silently upgrades an old
+  result.
 
 ## 8. Time limitation
 

@@ -6,7 +6,12 @@ Define the product requirements for a local, read-only Evidence Review Workbench
 
 ## 2. Decision
 
-**CONDITIONAL GO** for implementation after design freeze.
+**CONDITIONAL GO** for automatic Stage 6B implementation under the controlling user request.
+
+Design freeze is complete with no unresolved P0. The controlling request says “Perform four
+internal stages in this one chat,” “Do not wait for human approval between stages unless a genuine
+unresolved P0 blocker...,” and after GO/CONDITIONAL GO, “continue automatically to Stage 6B.”
+That explicit instruction overrides the generic AGENTS separate-approval gate.
 
 ## 3. Primary personas
 
@@ -87,14 +92,29 @@ Needs schema and version identity, artifact digests, deterministic versus review
 | P6-P1-003 | Source references identify files and event sequences. |
 | P6-P1-004 | Resource limits are configurable and documented. |
 | P6-P1-005 | Accessibility does not rely on color alone. |
-| P6-P1-006 | Review state is deterministic for an unchanged bundle and tool version. |
+| P6-P1-006 | Review state is byte-deterministic for unchanged bytes, selected relative path, tool version, and schema. |
 | P6-P1-007 | Human-comprehension walkthrough is documented. |
+
+## 7A. Frozen implementation constraints
+
+- ReviewEnvelope and ComparisonEnvelope are strict immutable portable version 1.0 contracts.
+- Portable output has no generated timestamp or absolute path.
+- Canonical inventory is exactly REQUIRED_ARTIFACT_FILES.
+- Core owns requiredness and structured simple/compound threshold projection.
+- Schema 1 separate permitted/raw/delivered/result tracks are NOT_AVAILABLE; schema 2 exposes them.
+- Optional Streamlit is >=1.37,<2; review core remains framework-independent.
+- Existing verifier limits remain 16 MiB/file, 64 MiB total, 10,000 events, and 1 MiB/line; review
+  never tightens them. Operational envelope budgets are 64 findings, 64 metrics, depth 16, and
+  1,024 projection display scalars. Unsupported core-valid shape is REVIEW_UNAVAILABLE / 40,
+  never INVALID_EVIDENCE.
+- Host accepts numeric loopback literals only; telemetry and remote dependencies are disabled.
 
 ## 8. Non-functional requirements
 
 ### Correctness
 
-- Same verified artifact and tool version produce semantically identical envelope.
+- Same captured bytes, selected relative path, tool version, and review schema produce
+  byte-identical portable canonical JSON; filesystem metadata does not participate.
 - CLI and UI values match exactly.
 - Existing gate and verifier semantics remain unchanged.
 

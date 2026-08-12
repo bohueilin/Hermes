@@ -1,12 +1,20 @@
 # Hermes — Phase 6 Draft README
 
-> This file is a draft target state. Codex must reconcile it with actual implementation before replacing the repository README.
+> Stage 6A design-frozen target. Commands below are not available until Stage 6B implements and
+> validates them; this draft must be reconciled with actual implementation before replacing README.
 
 Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
 
 > **Autonomy policy proposes → environment executes → verifiers evaluate → gate decides → trace proves.**
 
-Current Hermes preserves a reproducible scenario, candidate, permitted, and executed actions, findings, metrics, gate verdict, provenance, and integrity checks. Phase 6 adds a local, read-only Evidence Review Workbench that consumes the same stored-verification core.
+Current Hermes preserves a reproducible scenario, findings, metrics, gate verdict, provenance, and
+integrity checks. Evidence schema 1 preserves candidate and executed actions; it does not provide a
+separately identifiable permitted action. Evidence schema 2 preserves candidate, permitted, and
+executed actions. Phase 6 adds a local, read-only Evidence Review Workbench that consumes the same
+stored-verification core.
+
+The portable ReviewEnvelope/ComparisonEnvelope contract is version 1.0. It contains no generated
+timestamp or absolute path. All source references resolve only within one captured snapshot.
 
 ## Safety and trust boundary
 
@@ -81,13 +89,16 @@ hermes workbench \
 
 Phase 6 rejects public bind addresses. The workbench has no run, edit, repair, sign, approve, promote, release, or deploy action.
 
+Only numeric loopback literals are accepted. Telemetry, external assets/APIs, upload, and database
+persistence are disabled.
+
 ## Review views
 
 - artifact intake and verification;
 - trust-state summary;
 - gate rationale and findings;
 - evidence sufficiency;
-- candidate, permitted, and executed timeline;
+- schema-aware candidate/executed timeline, plus permitted actions only for schema 2;
 - provenance, integrity, and limitations;
 - compatible baseline-versus-candidate comparison.
 

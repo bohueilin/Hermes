@@ -1,129 +1,83 @@
 # Hermes Phase 6 Threat Model
 
-## 1. Scope
+## 1. Scope, assets, actors, and boundaries
 
-Local, read-only review of stored Hermes simulation artifacts. No remote service, account system, approval workflow, signing implementation, simulator execution, or physical vehicle interface.
+Scope is local, read-only review of stored Hermes simulation artifacts. Assets are source bytes,
+captured identity/digests, recomputed decisions, independent trust labels, envelopes, reviewer
+understanding, filesystem containment, and existing verifier/gate semantics. Actors include an
+honest reviewer, mistaken or malicious producer, stale-evidence selector, content attacker, and
+developer who duplicates semantics. A compromised host/verifier is outside assurance.
 
-## 2. Assets
+Boundaries are selection to allowed-root containment; entries to no-follow capture; captured bytes
+to existing verifier/compare core; core results to immutable envelope/projection; safe projection
+to local Streamlit; and rendered semantics to reviewer interpretation.
 
-- source artifact bytes;
-- artifact identity and digests;
-- recomputed verdict, findings, and metrics;
-- trust-state labels;
-- review and comparison envelopes;
-- reviewer understanding;
-- local filesystem boundaries;
-- existing verifier and gate semantics.
+Classification is exact: P0 can create a false accepted result, corrupt evidence, cross a security/
+network boundary, or violate a non-negotiable authority boundary; P1 can materially mislead or deny
+review without directly accepting false evidence; P2 is residual comprehension/assurance debt.
+Implementation HOLD applies when any P0 lacks prevention, fail-closed behavior, and an automated
+test.
 
-## 3. Actors
+## 2. Threat register
 
-- honest reviewer;
-- honest but mistaken artifact producer;
-- malicious artifact author;
-- local user selecting the wrong or stale artifact;
-- attacker controlling artifact strings or structure;
-- developer accidentally duplicating gate logic;
-- compromised local host or verifier, outside Phase 6 assurance.
+| ID | Class | Threat | Prevention | Detection | Fail behavior | Required test | Residual risk |
+|---|---|---|---|---|---|---|---|
+| T01 | P0 | Traversal/absolute path escape | Resolve non-symlink root; reject absolute/parent selections | Path unit tests | Exit 40; no capture | parent/sibling/absolute/encoded cases | Compromised process |
+| T02 | P0 | Symlink root/directory/file escape | O_NOFOLLOW directory-relative opens | Symlink fixtures | Exit 40 selection or core INVALID / 30 | root, directory, ten file cases | Platform primitive availability |
+| T03 | P0 | File mutates during capture | Descriptor double read + metadata identity | Injected race | Core INVALID / 30 | byte/size/mtime mutation | Privileged host |
+| T04 | P0 | Entry/directory replacement | Inventory and fstat/stat identity checks | Swap race | Core INVALID / 30 | inode and directory swap | Kernel/filesystem defect |
+| T05 | P0 | Stale cache at same path | Locator-bound digest key; full recapture/verify before every cached render | Replacement tests | Invalidate session/projection | same path different bytes | Cache defect |
+| T06 | P0 | Invalid stored PASS accepted | Verify before projection; quarantine | phase1-tampered | INVALID_EVIDENCE / 30 | corrupt stored PASS | Coherent rewrite |
+| T07 | P1 | Coherent full-bundle forgery | Mandatory NOT_AUTHENTICATED; no consequence control | Not locally detectable | Internally consistent only | coherent rehash retains trust labels | Future signature |
+| T08 | P1 | False policy/simulator facts treated as replayed | Persistent no-reexecution limitation | Content/comprehension tests | No origin/deployment claim | limitation every view | Attestation/reexecution deferred |
+| T09 | P0 | UI duplicates gate/verifier | Public review API only; AST boundary | Import/parity tests | CI fail/HOLD | AST and golden fixtures | Shared-core defect |
+| T10 | P0 | CLI/UI divergence | Same envelope/projection | Golden render tests | CI fail/HOLD | four verdict classes | Framework defect |
+| T11 | P0 | UI infers requiredness | Versioned core profile metadata | Profile tests | REVIEW_UNAVAILABLE / 40 | legacy/fault five-state cases | Profile policy defect |
+| T12 | P0 | Missing evidence shown as zero/success | Typed NOT_AVAILABLE | Projection tests | Explicit unavailable/gap | TTC/jerk/progress | Reviewer discounts gap |
+| T13 | P0 | Schema-1 fields inferred | Contracted unavailable tracks | v1/v2 golden tests | Explicit NOT_AVAILABLE | action/observation tracks | Legacy evidence coarse |
+| T14 | P0 | UI parses threshold/decides result | Exact core threshold registry | AST/parity tests | REVIEW_UNAVAILABLE / 40 | all seven findings | Registry defect |
+| T15 | P1 | Rounding reverses threshold relation | Full ExactValue; adaptive display precision | Edge fixtures | Show exact value/operator | below/equal/above/noise | Human misread |
+| T16 | P0 | XSS/Markdown/control injection | Safe text APIs; no raw HTML; projection truncation only | Payload render tests | Inert visible text | script/img/javascript/SVG/ANSI | Framework vulnerability |
+| T17 | P0 | Malformed/oversized artifact exhausts verifier | Existing 16 MiB/file, 64 MiB total, 10k event, 1 MiB/line core ceilings | Existing boundary tests | Core INVALID / 30 | each core limit +1 | DoS within limits |
+| T18 | P1 | Core-valid shape cannot be represented | 64 finding/metric and depth-16 envelope budgets | Shape boundary tests | REVIEW_UNAVAILABLE / UNSUPPORTED_REVIEW_SHAPE / 40; no envelope | each shape limit +1 | Review denial only |
+| T19 | P1 | Long text hides content | Full portable value; projection truncates after 1,024 with marker/length | Projection tests | Preserve source/full value | 1,024 and 1,025 scalars | Reviewer may not expand |
+| T20 | P0 | Timeline semantic decimation | Portable all <=10k events; deterministic pagination | Count parity | REVIEW_UNAVAILABLE if envelope construction fails | 10k events and pagination | Rendering cost |
+| T21 | P0 | Comparison skips independent verification | Verify both before compare_artifacts | Invalid+valid tests | Exit 30; no ComparisonEnvelope | both side permutations | Verification defect |
+| T22 | P0 | Incompatible comparison charts/ranks | Compatibility first | Mismatch fixtures | Exit 40; no deltas/arrays/charts | scenario/gate/fault/repo mismatch | Compatibility defect |
+| T23 | P1 | Comparison hides regression | One-to-one core mapping/partition | Lead/cut-in goldens | CI failure | TTC better + route/comfort worse | Reviewer cherry-picking |
+| T24 | P0 | Winner/score compensates hard failure | No score/winner fields | Recursive forbidden-key test | Contract rejection | schema/content scan | Reviewer forms own view |
+| T25 | P1 | Intervention count ranked | DESCRIPTIVE / NOT_COMPARABLE | Pair goldens | Descriptive only | 0→36 and 0→3 | Reviewer overinterprets |
+| T26 | P0 | Recorded provenance appears authenticated | Separate records/categories | Content tests | NOT_AUTHENTICATED | provenance golden | User ignores label |
+| T27 | P0 | PASS implies deployment authority | Mandatory trust records | Comprehension/content tests | PASS remains prototype; permission NONE | prohibited-language scan | User ignores warning |
+| T28 | P1 | Newest artifact appears authoritative | Exact selection; NOT_DEFINED | Selection tests | No auto-selection | multiple artifacts | User chooses stale |
+| T29 | P0 | Source drill-down reopens changed path | Captured snapshot references; full recapture before cached render | Mutation tests | Invalidate session | mutate then drill | In-memory corruption |
+| T30 | P0 | Workbench writes artifact | No write API/control; read-only capture | Before/after hashes | CI fail/HOLD | all views/cache | Temp files outside root |
+| T31 | P0 | Review imports/launches runtime | Lazy CLI imports + boundaries | Import bombs | CI fail/HOLD | adapters/policies/runtime/metadrive | Unrelated process |
+| T32 | P0 | Public/LAN bind | ipaddress numeric loopback only | Host/socket tests | Exit 40 | 127/8, ::1; wildcard/hostname/LAN/public | Other local process |
+| T33 | P1 | Telemetry/external asset leak | gatherUsageStats false; no remote dependencies | Config/network-deny tests | Startup/test failure | denied egress launch | Supply chain |
+| T34 | P1 | Directory/manifest run ID mismatch hidden | Show selected locator and manifest identity separately | phase1-tampered | Preserve mismatch | phase1-tampered vs phase1-nominal | User confusion |
 
-## 4. Security objectives
+## 3. Resource and availability boundary
 
-1. Source artifacts remain unchanged.
-2. Invalid evidence cannot masquerade as accepted PASS.
-3. UI cannot strengthen trust claims.
-4. UI cannot become a gate or verifier.
-5. Review state is bound to artifact digest.
-6. Paths remain inside the allowed root.
-7. Artifact content cannot execute code in UI.
-8. Public access is not enabled.
-9. Missing evidence remains explicit.
-10. Comparison remains compatible and bidirectional.
+Only existing stored verification decides integrity: 16 MiB per required file, 64 MiB total,
+10,000 events, and 1 MiB per event line. Review never passes stricter limits into capture/parser.
 
-## 5. Threat register
+Review structural budgets are operational: 64 findings, 64 metric items, generated model depth 16,
+and projection display truncation after 1,024 Unicode scalars. A core-valid unsupported shape is
+REVIEW_UNAVAILABLE / UNSUPPORTED_REVIEW_SHAPE / exit 40 with no portable envelope and no change to
+gate/integrity. The portable timeline retains all core-valid events; UI pagination cannot hide
+total counts.
 
-| ID | Threat | Prevention | Detection | Failure behavior | Residual risk |
-|---|---|---|---|---|---|
-| T1 | Path traversal | containment and canonical resolution | path tests | exit 40 | local filesystem compromise out of scope |
-| T2 | Symlink escape | no-follow capture | symlink fixtures | reject or invalid | platform primitive differences |
-| T3 | TOCTOU mutation | immutable snapshot and recheck | mutation tests | invalidate session | malicious privileged local actor |
-| T4 | Stale cache | digest, tool, and schema key | replacement tests | full reverify | cache library bugs |
-| T5 | Stored PASS on corrupt bundle | verify before presentation | tamper fixtures | INVALID and quarantine | coherent full rewrite |
-| T6 | Coherent full-bundle forgery | explicit unauthenticated state | not fully detectable | internally consistent but NOT_AUTHENTICATED | requires future signature or trust anchor |
-| T7 | False runtime facts | explicit no-reexecution limitation | provenance and review label | no authenticity claim | later attestation or reexecution needed |
-| T8 | UI gate drift | one facade and import test | parity and golden tests | fail CI | semantic bug in shared core |
-| T9 | Missing evidence shown as zero | typed availability | UI tests | explicit NOT_AVAILABLE | misleading optionality if profile is wrong |
-| T10 | Under-specified required evidence | core sufficiency model | profile tests | expose required or unavailable | gate profile design remains human responsibility |
-| T11 | Numeric rounding | exact plus display values | threshold-edge tests | show exact detail | human misread still possible |
-| T12 | XSS or content injection | escaping and no raw HTML | payload tests | render safe text | framework sanitizer defects |
-| T13 | Resource exhaustion | size, event, and depth bounds | large fixtures | bounded error, no partial review | local denial of service within limits |
-| T14 | Comparison cherry-picking | mandatory improvements and regressions | mixed-trade-off fixtures | no winner | reviewer bias |
-| T15 | Incompatible comparison chart | compatibility first | incompatible fixture | no delta or chart payload | incorrect compatibility core |
-| T16 | Stale artifact authority | no automatic latest | artifact identity UI | NOT_DEFINED authority | user can still choose wrong artifact |
-| T17 | Provenance and authenticity confusion | separate fields | content tests | NOT_AUTHENTICATED | user ignores label |
-| T18 | Public network exposure | loopback-only validation | bind tests | reject | local browser or process access remains |
-| T19 | Artifact writes | no write paths and before-after hashes | immutability tests | fail test or stop | framework temp files outside artifact root acceptable |
-| T20 | Simulator launch | import boundaries | import and patch tests | fail test or stop | manual external process unrelated to workbench |
+## 4. Required trust statements
 
-## 6. Most credible false-confidence paths
+Gate verdict, integrity, NOT_AUTHENTICATED, NOT_EVALUATED, deployment NONE, SIMULATION_ONLY, and
+authoritative NOT_DEFINED remain separate. A Hermes PASS is only a prototype gate verdict.
+Internal consistency is not authenticity. Stored verification does not reexecute policy/simulator.
+SHA-256 is tamper-evident, not authenticated. Simulation evidence grants no physical permission.
 
-### P0
+## 5. Unresolved-P0 audit
 
-- UI duplicates gate or verifier semantics.
-- Invalid stored PASS remains visually prominent.
-- Integrity is presented as authenticity.
-- `PASS` is presented as deployment permission.
-- Artifact changes after verification but UI uses stale result.
-
-### P1
-
-- Required evidence is inferred by UI.
-- Comparison hides mission or comfort regression.
-- Rounding hides threshold crossing.
-- Recorded provenance is labeled verified origin.
-- Stale development artifact is auto-selected.
-
-### P2
-
-- Reviewer overgeneralizes scripted or limited simulation.
-- Same-host determinism is generalized cross-platform.
-- Optional missing evidence is ignored despite business importance.
-
-## 7. Trust statements required in UI
-
-```text
-Internally consistent under installed Hermes verifier
-NOT_AUTHENTICATED
-Authorization NOT_EVALUATED
-Deployment permission NONE
-SIMULATION_ONLY
-```
-
-## 8. Resource-bound policy
-
-Design freeze must inspect current artifact sizes and select:
-
-- maximum companion file size;
-- maximum events;
-- maximum findings and metrics;
-- maximum nesting depth;
-- maximum display string length.
-
-Limits must be configurable, documented, and tested. Exceeding a limit produces no accepted partial review.
-
-## 9. Network policy
-
-Allowed:
-
-- local loopback server.
-
-Forbidden:
-
-- wildcard bind;
-- LAN bind;
-- cloud tunnel;
-- telemetry;
-- external assets or CDNs;
-- remote artifact fetch.
-
-## 10. Stop conditions
-
-HOLD implementation when any P0 threat lacks prevention, fail-closed behavior, and a regression test.
+Design-level unresolved P0: none after the corrected portable contract, resource-authority split,
+threshold/consequence registry, comparison mapping, and cache recapture rule. Stage 6B remains
+CONDITIONAL GO until every P0 row has its specified automated regression. Any missing or failing P0
+test returns implementation to HOLD.
