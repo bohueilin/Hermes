@@ -119,9 +119,10 @@ The facade accepts an existing allowed artifact root and one exact selected dire
 7. invokes stored verification on that same capture;
 8. builds all references against that capture.
 
-The current private capture/inspect boundary needs a narrow refactor so the public review facade
-receives portable inventory, private CaptureIdentity metadata, observed roots, computed roots, and
-the verified snapshot from one call. Existing verifier limits remain unchanged. Mutable byte
+The approved underscore-prefixed capture/inspect boundary returns portable inventory, private
+CaptureIdentity metadata, observed roots, computed roots, safe four-field manifest identity, and
+the verified snapshot from one call. The facade is its sole consumer; public ArtifactInspection
+remains free of filesystem identity. Existing verifier limits remain unchanged. Mutable byte
 dictionaries are never exposed to UI and no second parsing path is created.
 
 Path is a locator, not identity. Manifest run_id and selected directory name are shown separately.
@@ -186,7 +187,8 @@ from severity, hard_invariant, name, threshold text, or current availability.
 
 The minimal core change exposes immutable profile specifications adjacent to
 EXPECTED_FINDINGS_BY_PROFILE. It does not change existing findings, verdict precedence, or legacy
-artifact interpretation.
+artifact interpretation. Stored verification also retains its selected VerifierProfile on the
+valid VerifiedArtifactSnapshot so presentation cannot independently select a profile.
 
 ## 10. Threshold and numeric policy
 

@@ -272,6 +272,12 @@ non-null computed digest, and constructs the invalid envelope solely from safe c
 verifier diagnostics. It rejects aliases rather than normalizing them. Cache use always follows a
 fresh full capture/verification and private `CaptureIdentity` comparison.
 
+The approved evidence-to-facade seam is the underscore-prefixed root-contained capture result; it
+retains private descriptor identity without placing it on public `ArtifactInspection`. Extend that
+same capture result to retain the four safely parsed manifest-identity fields on invalid evidence,
+and retain the core-selected `VerifierProfile` on a valid `VerifiedArtifactSnapshot`. Do not parse a
+manifest or select a verifier profile again in the facade.
+
 **Step 4: Implement presentation-only helpers.**
 
 `projection.py` may group/sort/page already typed records and create explicit truncated-display records. It may not alter counts, verdicts, statuses, thresholds, exact values, or source references. Test 1,024/1,025 Unicode scalars and threshold-adjacent formatting.

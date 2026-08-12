@@ -35,6 +35,11 @@ CaptureFileIdentity records:
 | ctime_ns | integer | Non-negative |
 | observed_sha256 | Sha256 | From captured bytes |
 
+The evidence verifier exposes this state only through the approved underscore-prefixed internal
+handoff `_inspect_artifact_under_root_capture`. `review.facade` is its sole consumer and copies the
+records into its own private `CaptureIdentity`; neither private type is a package export or portable
+field. Public `ArtifactInspection` remains free of filesystem identity.
+
 The allowed absolute root remains non-exported runtime configuration. selected_relative_path and
 selected_directory_name are explicit OBSERVED locator fields in PortableArtifactIdentity and remain
 separate from manifest_run_id.
@@ -142,6 +147,12 @@ missing items.
 Manifest identity is derived from captured manifest/content. Locator fields never substitute for
 manifest identity.
 
+For invalid evidence, the capture seam may retain only these four observed manifest-identity fields
+when `manifest.json` itself passed canonical JSON and supported-schema validation from the same
+immutable capture. This permits a selected-directory/run-ID mismatch to remain visible without
+accepting any other invalid manifest provenance. If that narrow parse did not succeed, all four
+fields are null. No facade or UI parser may reopen or independently parse the manifest.
+
 | Field | Type | Rule |
 |---|---|---|
 | locator | LocatorInfo | selected_relative_path, selected_directory_name, category OBSERVED |
@@ -171,7 +182,10 @@ It resolves only inside the captured snapshot and never reopens a path.
 
 SideReference contains side: ComparisonSide and reference: SourceReference. Comparison references
 must always be side-qualified. Reference arrays sort by file inventory order, event_sequence
-(null first), then json_pointer and reject duplicates.
+(null first), then json_pointer and reject duplicates, except where a later collection-specific rule
+defines a narrower order. `MetricItem.source_references` is the sole version-1 exception: its exact
+METRIC pointer is first, followed by the remaining deterministic references. The narrower rule does
+not permit duplicates.
 
 ### 4.5 ExactValue and ActionValue
 
@@ -288,7 +302,7 @@ fact independently observed from arbitrary artifact bytes.
 | listed_in_hard_failures | boolean | Exact membership in GateResult.hard_failures |
 | listed_in_soft_failures | boolean | Exact membership in GateResult.soft_failures |
 | listed_in_supporting_findings | boolean | Exact membership in GateResult.supporting_finding_ids |
-| configuration_references | array[SourceReference] | Empty unless config/profile controls effect |
+| configuration_references | array[SourceReference] | Empty unless captured config controls effect; PROFILE_NOT_APPLICABLE has no fabricated source reference |
 
 The review core projects actual consequence; UI never simulates hypothetical precedence.
 
@@ -306,9 +320,11 @@ The review core projects actual consequence; UI never simulates hypothetical pre
 | hard_failure_ids | unique array[string] preserving GateResult order |
 | soft_failure_ids | unique array[string] preserving GateResult order |
 | supporting_finding_ids | unique array[string] preserving GateResult order |
-| residual_limitation_ids | unique array[string] matching envelope limitations |
+| residual_limitation_ids | unique array[string] matching envelope limitations for internally consistent evidence |
 
-On invalid quarantine, identity is populated only if safely verified; all ID arrays are empty.
+On invalid quarantine, identity is populated only if safely verified; all ID arrays, including
+residual_limitation_ids, are empty. Fixed top-level invalid-review limitations are not accepted gate
+limitations and therefore are not referenced from GateInfo.
 
 ### 5.5 SufficiencySummary and SufficiencyItem
 
@@ -409,8 +425,9 @@ unavailable_reason is the exact non-empty stored Measurement.reason, and value i
 ScalarMetricValue containing ExactValue(machine_value=null, canonical_text=null,
 display_text="NOT_AVAILABLE", unit=the stored Measurement.unit). Missing measurements are never
 zero. Each source_references array begins with the exact metrics.json pointer shown below and then
-contains the ordered EVENT references used by the stated transform; references are never inferred
-from an uncaptured source.
+contains the remaining ordered EVENT/configuration references used by the stated transform;
+references are never inferred from an uncaptured source. This METRIC-first order is the explicit
+collection-specific override to section 4.4.
 
 The supported metric registry is exact and ordered. Schema 1 emits rows 1-13; schema 2 emits rows
 1-19. This is below the immutable 64-item envelope budget. `evidence_schema_version` is
@@ -507,6 +524,12 @@ Exactly one value field is non-null and matches Track.value_kind. At an unavaila
 scalar_value is ExactValue with machine_value null and explicit unit; the point category is
 NOT_AVAILABLE. ACTION, OBSERVATION, and STRING_LIST points cannot be individually unavailable.
 
+When one point depends on multiple captured fields, `source_reference` points to their nearest
+captured common record: TTC points use the event observation-summary object and
+verifier-triggering-finding points use the findings document root. The Track-level
+source_references contain the exact contributing field/row references in deterministic order; the
+projector never chooses an arbitrary single contributor.
+
 Portable timeline retains every verified event and all contract-required semantic points through
 the core maximum 10,000; it is never semantically decimated. UI may page/filter deterministically
 while always showing total event/point counts.
@@ -554,6 +577,10 @@ For ACCEPTED, every field required by the verified source schema is non-null; on
 optional simulator/fault/repository fields may be null, and source_references are present. For
 QUARANTINED, every provenance field is null and source_references is empty. This prevents an invalid
 bundle from exposing unverified provenance as accepted fact.
+
+Valid provenance source references include the exact populated manifest pointers and, when present,
+the repository provenance reason pointer. Source-permitted nulls stay null; they are never rewritten
+as empty strings or invented evidence.
 
 AuthenticatedOrigin fields are status (NOT_AUTHENTICATED), signer_id null, signature_id null,
 category AUTHENTICITY.
@@ -627,6 +654,12 @@ VerificationInfo, mandatory
 TrustInfo, GateInfo verdict INVALID_EVIDENCE with accepted_recomputation false, zero/empty
 sufficiency, empty findings/metrics/timeline, QUARANTINED provenance, diagnostics, and limitations.
 Stored PASS/findings/metrics are not accepted.
+
+The review implementation owns immutable, golden-tested registries for every non-empty label,
+verified-by string, diagnostic ID/code/impact, fixed assumption, and fixed invalid-review
+limitation. These values are tool constants, never derived by parsing artifact text. The stored
+verifier profile is an explicit `VerifiedArtifactSnapshot.verifier_profile` core fact selected at
+the existing verification decision site; the projector must not reimplement profile selection.
 
 ## 9. Review-shape availability versus integrity
 

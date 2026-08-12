@@ -1,5 +1,21 @@
 # Hermes Decision Log
 
+## 2026-08-12 — Close review-facade source and session seams
+
+- **Decision:** Preserve a four-field safely parsed manifest identity on invalid inspection; approve
+  the existing underscore-prefixed single-capture result as the sole facade handoff for private
+  descriptor identity; retain the selected verifier profile on `VerifiedArtifactSnapshot`; and
+  treat METRIC-first references as the collection-specific ordering rule.
+- **Why:** A source-to-envelope implementation map proved that the public inspection intentionally
+  lacked the private cache identity, invalid inspections discarded the manifest run ID needed to
+  expose directory/run mismatch, and recomputing the verifier profile in presentation would create
+  a second selection authority. The generic file-order rule also contradicted the exact metric rule.
+- **Consequence:** No second parser, verifier, gate, or public filesystem-identity model is added.
+  Invalid evidence exposes only schema-valid manifest identity fields; all other claims remain
+  quarantined. Metric references remain deterministic and duplicate-free.
+- **Supersedes:** This narrows, without weakening, the design-freeze capture and source-reference
+  rules.
+
 ## 2026-08-12 — Freeze the minimal non-portable review runtime API
 
 - **Decision:** Expose the portable `LocatorInfo`, one frozen four-field `ReviewCacheKey`, and the
