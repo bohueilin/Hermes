@@ -1,8 +1,8 @@
-# Hermes repository instructions
+# Hermes repository instructions — Phase 6
 
 These instructions apply to every Codex task in this repository. Read them before planning or editing.
 
-## Canonical identity
+## 1. Canonical identity
 
 - Product and repository display name: `Hermes`.
 - Intended GitHub repository: `bohueilin/Hermes`.
@@ -13,162 +13,246 @@ These instructions apply to every Codex task in this repository. Read them befor
 - Module commands: `python -m hermes` and `python -m hermes.cli`.
 - Generated evidence root: `artifacts/`.
 - External simulator checkout: `third_party/metadrive/`.
-
-Do not rename these surfaces or reintroduce a former project name unless the user explicitly changes the product identity.
-
-## Validated baseline
-
-The unattended build plan assumes this starting point:
-
-- Baseline branch: `main`.
-- Baseline commit: `c181509a691b132cb732a50c24612f6bd40bafca`.
-- Phase 0 environment doctor is implemented.
-- Existing test baseline: 26 tests passing.
-- Existing Ruff baseline: clean.
 - Conda environment: `hermes-dev`.
-- Python: 3.11.15.
+- Python target: 3.11.
+
+Do not rename these surfaces unless the user explicitly changes the product identity.
+
+## 2. Current validated baseline
+
+The Phase 6 pack was prepared from this observed state:
+
+- Branch: `feat/unattended-evidence-core`.
+- Final local HEAD at design review: `9e257a0cf0ddbdbf601b8a01deebe4de52de9763`.
+- Working tree: clean.
+- Tests: 273 passing.
+- Ruff: passing.
+- Doctor: 18 PASS, 1 optional NOT_AVAILABLE, no WARN or FAIL.
 - MetaDrive: 0.4.3.
-- Recorded MetaDrive commit: `85e5dadc6c7436d324348f6e3d8f8e680c06b4db`.
-- MetaDrive headless and offscreen verification have passed on the development machine.
+- MetaDrive source commit: `85e5dadc6c7436d324348f6e3d8f8e680c06b4db`.
+- Phases 0–5: locally complete.
+- No remote action occurred.
 
-At task start, verify the current repository and environment rather than assuming the baseline still holds. If the repository has advanced, preserve valid newer work and reconcile this plan with the actual code.
+At task start, inspect actual branch, commit, working tree, tests, package version, artifacts, and documentation. Preserve valid newer work. Never reset the repository to the historical baseline merely because it is listed here.
 
-## Instruction precedence
+## 3. Instruction precedence
 
-Use this precedence order:
+Use this order:
 
-1. Explicit instructions in the current user prompt.
+1. Explicit current user instruction.
 2. This `AGENTS.md`.
-3. `MASTER_PROMPT.md` for the current unattended run.
-4. `BUILD_PLAN.md` and phase-specific design documents.
+3. The specific prompt being executed under `prompts/` or `MASTER_PROMPT.md`.
+4. `BUILD_PLAN.md`, `PROJECT_BRIEF.md`, `VALIDATION_MATRIX.md`, and Phase 6 design documents.
 5. Existing code, tests, and documented behavior.
 
-When two instructions conflict, follow the higher-precedence instruction, document the conflict in `docs/decision-log.md`, and continue all independent work.
+When instructions conflict, follow the higher-precedence instruction, record the conflict in the decision log, and continue all unaffected work.
 
-## Product thesis
+## 4. Product thesis and precise meaning
 
 > Autonomy policy proposes → environment executes → verifiers evaluate → gate decides → trace proves.
 
-Hermes is a simulation-only scenario-to-evidence control plane. Its value is not merely moving a simulated car; its value is producing reproducible, independently reviewable evidence about what was attempted, what actually executed, what happened, which requirements held or failed, and why a policy version should advance or be held.
+For current Hermes, “trace proves” has a narrow meaning:
 
-## Non-negotiable safety boundary
+> The stored trace supports a reproducible and internally consistent Hermes decision under the installed verifier and gate implementation.
+
+It does **not** prove:
+
+- independent authenticity;
+- that runtime facts were not fabricated by the producer;
+- real-world vehicle safety;
+- certification or compliance;
+- authorization to promote software;
+- permission to deploy to physical hardware.
+
+## 5. Non-negotiable safety and product boundary
 
 - Simulation and closed-lab learning only.
-- Never connect Hermes to a road vehicle, public-road actuator, remote-control channel, vehicle CAN bus, or safety-critical production system.
-- Never claim road readiness, production safety, SAE automation level, certification, regulatory approval, or compliance.
-- Prototype thresholds must be stored in versioned configuration and labeled illustrative.
-- An LLM may generate scenario drafts, tests, explanations, and documentation. It must never operate inside the real-time vehicle-control loop.
-- Do not add code that can send control commands to physical hardware.
+- Never connect Hermes to a road vehicle, CAN bus, automotive Ethernet, public-road actuator, remote-control channel, or production safety-critical system.
+- Never claim SAE automation level, road readiness, production safety, certification, compliance, regulatory approval, or deployment permission.
+- Prototype thresholds are illustrative and versioned.
+- An LLM may generate scenarios, tests, explanations, and documentation. It must never enter a real-time control loop.
+- Phase 6 is local-only and read-only.
 
-## Unattended execution protocol
+## 6. Canonical Phase 5 evidence contract
 
-The user may be unavailable for an extended period. Work autonomously within the repository and these constraints.
-
-### Do
-
-- Inspect before editing.
-- Make reasonable, conservative assumptions when ambiguity is non-material.
-- Record material assumptions and trade-offs in `docs/decision-log.md`.
-- Execute code, tests, and demonstrations; do not stop after writing a plan.
-- Work in priority order and enforce phase acceptance gates.
-- Continue independent work when one optional item is blocked.
-- Create `CODEX_HANDOFF.md` before finishing.
-- Leave the repository in a reviewable state with truthful test results.
-- Use subagents for independent review or test design when available; continue sequentially if delegation is unavailable.
-
-### Do not
-
-- Ask the user routine implementation questions.
-- Wait for clarification when a safe, reversible default exists.
-- Skip a failed gate to reach a later visual demo.
-- fabricate command output, metrics, artifacts, hashes, screenshots, or pass results.
-- overwrite an existing artifact directory.
-- use `git reset --hard`, `git clean -fd`, force push, history rewriting, or destructive filesystem commands.
-- push, publish, deploy, create a pull request, modify remotes, purchase services, or change external infrastructure.
-- inspect or transmit credentials, tokens, cookies, SSH keys, or unrelated personal files.
-
-### Hard-stop conditions
-
-Stop the affected operation and document the blocker when it would require:
-
-- destructive or irreversible action;
-- access outside the repository or declared simulator checkout;
-- credentials or secrets;
-- remote publication or deployment;
-- real-vehicle or public-road integration;
-- a safety claim not supported by the evidence;
-- bypassing a failed hard invariant or evidence-integrity check.
-
-Continue all other safe, independent work.
-
-## Priority order for the unattended build
-
-1. **P0 — Phase 1 evidence core:** deterministic fake simulator, contracts, trace, artifacts, verifiers, release gate, CLI, tamper tests, determinism tests, documentation.
-2. **P1 — Phase 2 MetaDrive adapter:** one bounded headless nominal run through the same contracts and evidence pipeline.
-3. **P2 — Phase 3 safety shield and challenge scenarios:** deterministic runtime shield, lead-vehicle braking and cut-in scenarios, candidate/executed action comparison.
-4. **P3 — Hardening:** fault injection, comparison tooling, CI, and additional documentation.
-5. **Deferred:** dashboard, RL, CARLA, ROS 2, Autoware, hardware-in-the-loop, and real-log pipelines.
-
-Never begin P1 until every P0 acceptance gate is green. Never begin P2 until every P1 acceptance gate is green.
-
-## Architecture rules
-
-- Keep domain contracts simulator-neutral.
-- Simulator-specific code belongs under `src/hermes/adapters/` or `src/hermes/simulators/`.
-- Domain models, evidence serialization, verifiers, gate logic, and artifact verification must not import MetaDrive.
-- The release gate consumes structured findings, not simulator objects.
-- Artifact verification must not rerun a simulator.
-- The CLI is a thin composition layer; business logic belongs in testable modules.
-- Candidate and executed actions are always distinct fields, even when identical.
-- A safety shield must return explicit reason codes for every override.
-- Missing evidence must be represented as `NOT_AVAILABLE` with a reason, never as zero or success.
-- Use strict schemas that reject unknown fields.
-- Use deterministic seeds and bounded episode horizons.
-
-## Evidence and integrity rules
-
-Each completed run must preserve, at minimum:
+Unless current code inspection proves otherwise, a completed bundle contains:
 
 ```text
-artifacts/<run-id>/
-  manifest.json
-  scenario.resolved.yaml
-  gate-config.resolved.yaml
-  events.jsonl
-  metrics.json
-  verdict.json
-  trace.sha256
+manifest.json
+execution-context.json
+scenario.resolved.yaml
+gate-config.resolved.yaml
+events.jsonl
+metrics.json
+findings.json
+verdict.json
+trace.sha256
+bundle.sha256
 ```
 
-- Use canonical JSON and SHA-256 for deterministic event chaining.
-- Do not use Python object hashes.
-- Separate deterministic trace content from wall-clock metadata.
-- Record repository commit, dirty state, adapter version, simulator revision when applicable, scenario digest, policy version, shield version, gate-config digest, Python version, platform, seed, and evidence schema version.
-- A missing, malformed, incomplete, or inconsistent bundle must produce `INVALID_EVIDENCE`.
-- Collision and hard boundary violations must force `HOLD`; aggregate scores may not compensate for them.
-- Local hashing is tamper-evident, not independently authenticated. State this limitation explicitly.
+Reconcile older documents that list only seven files. Do not create a second bundle contract for the workbench.
 
-## MetaDrive rules
+## 7. Phase 6 objective
 
-- Treat `third_party/metadrive` as an external dependency; do not modify it.
-- Before using any API or configuration key, inspect the installed MetaDrive 0.4.3 source, examples, and `MetaDriveEnv.default_config()`.
-- Do not invent configuration keys or assume examples from a different release are compatible.
-- Keep the imported source commit consistent with `SIMULATOR_COMMIT`.
-- Run MetaDrive headless for automated tests. Offscreen rendering is optional and must not become a gate for core evidence behavior.
-- If an intended maneuver cannot be reproduced reliably, implement the closest supported deterministic scenario and document the limitation rather than fabricating an event.
+Build a reviewer-oriented local Evidence Review Workbench that answers:
 
-## Python and dependency rules
+1. What was tested?
+2. What happened?
+3. What did the policy propose, the shield permit, and the simulator execute?
+4. Which findings passed, failed, warned, or lacked evidence?
+5. Why did the gate issue its verdict?
+6. Is the bundle internally consistent?
+7. Is the bundle authenticated?
+8. What does this result not establish?
+9. How does a compatible candidate differ from its baseline?
 
-- Target Python 3.11.
-- Prefer the active `hermes-dev` environment. If shell activation is unavailable, use `conda run -n hermes-dev`.
-- Add dependencies to `pyproject.toml` with bounded major versions and a clear justification.
-- Keep runtime dependencies minimal.
-- Do not install into Conda `base`.
-- No network calls or telemetry in Hermes runtime code.
+## 8. Phase 6 trust-state contract
 
-## Tests and validation
+Always separate:
 
-Run the narrowest relevant tests during implementation, then run the full gates before a phase is declared complete:
+- **Gate verdict:** `PASS`, `CONDITIONAL`, `HOLD`, or `INVALID_EVIDENCE`.
+- **Integrity:** `INTERNALLY_CONSISTENT`, `INVALID_EVIDENCE`, or transient `UNVERIFIED`.
+- **Authenticity:** `NOT_AUTHENTICATED` in Phase 6.
+- **Authorization:** `NOT_EVALUATED` in Phase 6.
+- **Deployment permission:** `NONE` in Phase 6.
+- **Scope:** `SIMULATION_ONLY`.
+
+Never compress these into a generic “trusted,” “approved,” or green state.
+
+## 9. Phase 6 evidence categories
+
+Every displayed item must be classified as one of:
+
+- `OBSERVED`
+- `COMPUTED`
+- `GATE_DECISION`
+- `ASSUMPTION`
+- `NOT_AVAILABLE`
+- `AUTHENTICITY`
+- `RESIDUAL_RISK`
+
+Do not rely on color alone. Do not represent missing evidence as zero, false, empty text, or success.
+
+## 10. One-way architecture rules
+
+The required dependency direction is:
+
+```text
+Untrusted artifact directory
+→ immutable no-follow snapshot
+→ existing stored verification/compare core
+→ immutable ReviewEnvelope/ComparisonEnvelope
+→ presentation projection
+→ local read-only UI
+```
+
+Hard rules:
+
+- UI code must not implement gate logic.
+- UI code must not implement verifier logic.
+- UI code must not directly parse artifact files after the verification facade has captured them.
+- UI code must not import simulator adapters, policies, shields, faults, gates, or verifier implementations.
+- Artifact verification must not rerun a simulator.
+- Comparison must use the existing comparison compatibility and delta logic.
+- The CLI and UI must consume the same review facade.
+- No artifact writes, edits, normalization, migration, or repair are permitted.
+- No scenario launch, policy execution, simulator launch, threshold editing, approval, promotion, or release action is permitted.
+- Cache keys must include bundle digest and Hermes review-schema/tool version.
+- Any artifact mutation invalidates the review session.
+
+## 11. Framework rule
+
+The review core must be framework-independent.
+
+The design freeze must select and record the UI framework. The default implementation choice is a local Streamlit workbench installed under an optional `workbench` dependency extra, but Codex may choose a server-rendered local alternative only when it documents a material testability or trust-boundary advantage.
+
+Regardless of framework:
+
+- bind to loopback only;
+- reject public bind addresses in Phase 6;
+- do not add telemetry;
+- do not add cloud services, authentication accounts, databases, uploads, or remote artifact ingestion;
+- escape all artifact-derived text;
+- no raw HTML from evidence content.
+
+## 12. Design-first gating
+
+### Stage 1 — design freeze
+
+When executing `MASTER_PROMPT.md` or `prompts/01_DESIGN_FREEZE.md`:
+
+- inspect code and tests;
+- reconcile canonical contracts;
+- update Phase 6 documents;
+- add no production implementation;
+- stop with `PHASE6_DESIGN_FREEZE_HANDOFF.md`.
+
+### Stage 2 — implementation
+
+Only execute `prompts/02_IMPLEMENT_PHASE6.md` after explicit user approval of the design freeze.
+
+### Stage 3 — adversarial review
+
+Use a separate chat and `prompts/03_ADVERSARIAL_REVIEW.md` after implementation.
+
+## 13. Security and artifact handling
+
+- Treat artifact content and paths as untrusted.
+- Use existing no-follow, directory-relative capture rather than reopening files ad hoc.
+- Enforce path containment under an explicitly selected artifact root.
+- Reject symlink escape, traversal, mutation during capture, mixed schema, malformed events, duplicate/reordered sequences, and unsupported versions.
+- Bound file size, event count, and parsing resources using documented defaults derived from current artifacts with safety margin.
+- Never auto-select an artifact merely because it is newest.
+- Show exact run ID, path relative to allowed root, bundle digest, trace digest, creation time, Git commit, and verification state.
+- If verification fails, quarantine the stored verdict and findings. Do not display a stored `PASS` as accepted evidence.
+
+## 14. Numeric and presentation integrity
+
+For each metric or finding, preserve:
+
+- exact stored or recomputed machine value;
+- display value;
+- unit;
+- threshold;
+- comparison operator;
+- verifier name and version;
+- supporting event sequences;
+- evidence availability;
+- gate consequence.
+
+Rounding must never change the apparent side of a threshold. The UI may format values, but it must provide exact details on inspection.
+
+## 15. Evidence sufficiency
+
+The review core, not the UI, must expose which evidence was:
+
+- required and available;
+- required but unavailable;
+- optional and available;
+- optional and unavailable;
+- not applicable.
+
+Do not change existing gate semantics implicitly. If current core APIs do not expose requiredness cleanly, design a versioned core-level representation and test it before the UI consumes it.
+
+## 16. Comparison integrity
+
+- Independently verify both artifacts before comparison.
+- Fail closed for incompatible evidence.
+- Never render comparison charts after incompatibility.
+- Show improvements, regressions, unchanged outcomes, and evidence-availability deltas separately.
+- Do not compute a UI-specific winner score.
+- Intervention count is descriptive, not ordinal.
+- A better TTC with worse mission/comfort and unchanged verdict must be shown as a mixed trade-off.
+
+## 17. Authenticity boundary
+
+All current Phase 6 evidence is `NOT_AUTHENTICATED`.
+
+Do not implement signing during the workbench wave unless the user explicitly authorizes a separate authenticity phase. A future design may use a detached Ed25519 signature over a canonical attestation, but signature validity must remain separate from integrity, authorization, policy advancement, and deployment permission.
+
+## 18. Testing and validation
+
+Run focused tests during work, then full gates:
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -178,48 +262,82 @@ python -m hermes doctor
 git diff --check
 ```
 
-For Phase 1, also run the nominal, collision, boundary, conditional, verification, tamper, and repeated-seed demonstrations defined in `MASTER_PROMPT.md`.
+When the workbench optional extra exists:
 
-For Phase 2 and later, run the documented bounded MetaDrive smoke command and independently verify its stored artifact.
+```bash
+python -m pip install -e ".[dev,workbench]"
+```
 
-A phase is not complete unless:
+Required Phase 6 categories include:
 
-- the requested behavior works from a documented command;
-- all existing and new tests pass;
-- a negative or failure path is tested;
-- generated evidence can be verified without simulator rerun;
-- documentation and requirements traceability are updated;
-- known limitations and residual risks are explicit.
+- review-envelope schema and determinism;
+- CLI/UI parity;
+- artifact immutability;
+- stale cache and TOCTOU;
+- XSS escaping;
+- path containment and symlink rejection;
+- invalid artifact quarantine;
+- unavailable evidence display;
+- exact threshold presentation;
+- comparison incompatibility;
+- dependency-boundary AST tests;
+- local-only bind behavior;
+- existing 273-test regression coverage or current equivalent.
 
-## Git discipline
+## 19. Git discipline
 
-- Work on a feature branch, not directly on `main`.
-- Local checkpoint commits are allowed only after the relevant phase gates pass.
-- Recommended commits:
-  - `docs: define unattended Hermes build plan`
-  - `feat: add deterministic evidence core`
-  - `feat: add MetaDrive headless adapter`
-  - `feat: add safety shield and challenge scenarios`
-  - `docs: add demo runbook and handoff`
-- Never push or create a pull request.
-- Do not stage generated artifacts, simulator assets, caches, virtual environments, or package metadata.
-- Before each commit, inspect `git status --short`, `git diff --cached --check`, and `git diff --cached --stat`.
+- Work on `feat/phase6-evidence-workbench` or another explicitly approved Phase 6 feature branch.
+- Never push, create a pull request, modify remotes, deploy, or publish.
+- Never use force, hard reset, destructive clean, or history rewriting.
+- Local commits are allowed only after documented gates pass.
+- Do not stage generated artifacts, caches, virtual environments, simulator assets, workbench cache, or package metadata.
+- Review `git status --short`, `git diff --cached --check`, and `git diff --cached --stat` before each commit.
 
-## Required handoff
+Suggested checkpoints:
 
-Before the final response, create or update `CODEX_HANDOFF.md` with:
+```text
+docs: freeze Phase 6 review contracts
+feat: add immutable evidence review facade
+feat: add local read-only evidence workbench
+test: harden workbench trust boundaries
+docs: finalize Phase 6 validation and handoff
+```
 
-- executive summary;
-- branch and HEAD commit;
-- phases attempted and completed;
-- architecture and key decisions;
-- files changed;
-- dependencies added;
-- exact commands run and actual results;
-- demonstration artifact paths and verdicts;
-- trace digests where applicable;
-- known failures, blockers, and limitations;
-- Git status;
-- the single best next command for the user.
+## 20. Hard stop conditions
 
-The final response must distinguish observed results from assumptions and planned follow-up.
+Stop the affected implementation and document the blocker if:
+
+- UI requires artifact mutation;
+- UI must implement a second gate or verifier;
+- CLI and UI verdicts diverge;
+- invalid evidence can display an accepted `PASS`;
+- authenticity is implied without a valid signature;
+- workbench requires simulator or policy execution;
+- immutable digest-bound capture cannot be maintained;
+- canonical bundle inventory cannot be reconciled;
+- a public/multi-user deployment is required;
+- scope expands to RL, CARLA, ROS, Autoware, cloud, or physical hardware;
+- gate verdict cannot be separated from deployment permission.
+
+Continue all other safe, independent work.
+
+## 21. Required handoffs
+
+### Design freeze
+
+Create `PHASE6_DESIGN_FREEZE_HANDOFF.md` containing:
+
+- repository snapshot;
+- inspected modules and contracts;
+- canonical bundle decision;
+- framework decision;
+- review schema decision;
+- trust-state decision;
+- dependency rules;
+- unresolved questions;
+- acceptance results;
+- exact recommendation to proceed or hold.
+
+### Implementation
+
+Create/update `CODEX_HANDOFF.md` using `CODEX_HANDOFF_TEMPLATE.md` and include actual commands, tests, review envelopes, artifact digests, negative results, Git state, and limitations.

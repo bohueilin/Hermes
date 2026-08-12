@@ -1,213 +1,228 @@
-# Hermes Codex Handoff
-
-> Codex must copy this template to `CODEX_HANDOFF.md` in the repository root and update it throughout the run.
+# Hermes Phase 6 Codex Handoff
 
 ## 1. Executive summary
 
-- Highest phase completed:
-- Overall status: `GREEN` / `PARTIAL` / `BLOCKED`
-- One-sentence result:
-- Single most important limitation:
+- **Phase attempted:**
+- **Highest completed milestone:**
+- **Verdict:** GO / CONDITIONAL GO / HOLD
+- **Branch:**
+- **Starting commit:**
+- **Ending commit:**
+- **Working tree:** clean / dirty with explanation
+- **Remote actions:** none / describe exactly
 
-## 2. Repository state
+## 2. Product boundary
 
-| Field | Value |
-|---|---|
-| Repository root | |
-| Starting branch | |
-| Starting commit | |
-| Ending branch | |
-| Ending commit | |
-| Working tree | clean / dirty |
-| Remote actions | none expected |
+Confirm:
 
-## 3. Environment
+- simulation-only;
+- local-only workbench;
+- read-only artifacts;
+- no simulator or policy launch from review;
+- no approval, promotion, or deployment control;
+- current authenticity `NOT_AUTHENTICATED`;
+- deployment permission `NONE`.
 
-| Field | Observed value |
-|---|---|
-| Python executable | |
-| Python version | |
-| Conda/virtual environment | |
-| Hermes version | |
-| MetaDrive version | |
-| MetaDrive source commit | |
-| OS/architecture | |
+## 3. Design-freeze decisions
 
-## 4. Phase status
-
-| Phase | Status | Acceptance result | Commit |
+| Decision | Final choice | Rationale | Document |
 |---|---|---|---|
-| Phase 0 — doctor/bootstrap | Pre-existing | | `c181509...` |
-| Phase 1 — evidence core | | | |
-| Phase 2 — MetaDrive adapter | | | |
-| Phase 3 — shield/challenges | | | |
-| P3 hardening | | | |
+| Canonical bundle inventory | | | |
+| ReviewEnvelope version | | | |
+| ComparisonEnvelope version | | | |
+| Evidence-sufficiency model | | | |
+| UI framework | | | |
+| Optional dependency model | | | |
+| Artifact-root policy | | | |
+| Cache policy | | | |
+| Resource bounds | | | |
+| Local bind policy | | | |
 
-Use `COMPLETE`, `PARTIAL`, `BLOCKED`, or `NOT_STARTED`.
-
-## 5. Architecture implemented
+## 4. Architecture implemented
 
 Describe:
 
-- domain contracts;
-- scenario model;
-- adapter boundary;
-- policy and shield boundary;
-- orchestrator;
-- trace and artifact system;
-- verifier system;
-- release gate;
-- independent verification;
-- comparison tooling when present.
+```text
+artifact selection
+→ immutable capture
+→ stored verification
+→ ReviewEnvelope
+→ presentation projection
+→ workbench
+```
 
-## 6. Major decisions and assumptions
+List component boundaries and prohibited imports.
 
-| Decision or assumption | Rationale | Consequence | Location in decision log |
+## 5. Files changed
+
+Provide `git diff --name-status <start>..<end>` summary grouped by:
+
+- root and config;
+- review core;
+- workbench;
+- CLI;
+- tests;
+- documentation.
+
+## 6. Dependencies
+
+| Dependency | Version bound | Extra/runtime | Why added |
 |---|---|---|---|
-| | | | |
 
-## 7. Files changed
+Confirm no cloud SDK, database, ML stack, or telemetry dependency was added.
 
-### Created
+## 7. Review and comparison contracts
 
--
+### ReviewEnvelope
 
-### Modified
+- Version:
+- Key fields:
+- Invalid-evidence behavior:
+- Deterministic fields:
+- Review-time fields:
 
--
+### ComparisonEnvelope
 
-### Intentionally untouched
+- Version:
+- Compatibility behavior:
+- Improvements and regressions behavior:
+- Winner score: absent or present with explanation
 
-- `third_party/metadrive/`
-- generated artifacts except ignored local evidence
-- Git remotes and external infrastructure
+## 8. Trust semantics
 
-## 8. Dependencies
+Report actual values and UI labels for:
 
-| Dependency | Version bound | Runtime/dev | Why required |
-|---|---|---|---|
-| | | | |
+- gate verdict;
+- evidence integrity;
+- authenticity;
+- authorization;
+- deployment permission;
+- scope;
+- authority or supersession.
 
-## 9. Validation results
+## 9. Commands executed and results
 
-### Full quality gates
-
-| Command | Exit code | Actual result |
+| Command | Exit | Actual result |
 |---|---:|---|
-| `python -m pip install -e ".[dev]"` | | |
+| `python -m pip install -e ".[dev,workbench]"` | | |
 | `python -m pytest -q` | | |
+| `python -m pytest -q -m "not metadrive"` | | |
 | `python -m ruff check .` | | |
 | `python -m hermes doctor` | | |
 | `git diff --check` | | |
 
-Include the exact test count.
+## 10. Review artifact demonstrations
 
-## 10. Phase 1 demonstrations
+| Artifact | Gate | Integrity | Authenticity | Exit | Bundle digest | Notes |
+|---|---|---|---|---:|---|---|
+| PASS | | | | | | |
+| CONDITIONAL | | | | | | |
+| HOLD | | | | | | |
+| INVALID | | | | | | |
+| MetaDrive | | | | | | |
+| Fault | | | | | | |
 
-| Run | Expected | Actual verdict | Exit | Artifact path | Trace digest |
-|---|---|---|---:|---|---|
-| Nominal | PASS | | | | |
-| Collision | HOLD | | | | |
-| Boundary | HOLD | | | | |
-| Soft degradation | CONDITIONAL | | | | |
-| Tampered artifact | INVALID_EVIDENCE | | | | |
-| Repeated nominal | same digest | | | | |
+## 11. Comparison demonstrations
 
-### Failed hard invariants
+| Pair | Compatible | Baseline verdict | Candidate verdict | Improvements | Regressions | Availability deltas |
+|---|---|---|---|---|---|---|
+| Lead | | | | | | |
+| Cut-in | | | | | | |
+| Incompatible fixture | | | | | | |
 
-- Collision run:
-- Boundary run:
+## 12. Artifact immutability
 
-### Tamper result
+- Before and after digest method:
+- Artifacts tested:
+- Result:
+- Mutation-during-review result:
+- Cache invalidation result:
 
-- Modified file/field:
-- First mismatch identified:
-- Verification behavior:
+## 13. Security and negative tests
 
-### Determinism result
-
-- Compared run IDs:
-- Event equality:
-- Trace-digest equality:
-- Metrics equality:
-- Findings equality:
-- Verdict equality:
-
-## 11. Phase 2 MetaDrive result
-
-| Item | Result |
-|---|---|
-| API reconnaissance complete | |
-| `hermes sim-smoke --headless` | |
-| Nominal run verdict | |
-| Artifact path | |
-| Trace digest | |
-| Independent verification | |
-| MetaDrive rerun during verification | must be no |
-| Unsupported evidence | |
-| Determinism/tolerance note | |
-| `third_party/metadrive` clean | |
-
-## 12. Phase 3 shield/challenge result
-
-| Item | Baseline | Shielded/candidate |
-|---|---|---|
-| Scenario | | |
-| Verdict | | |
-| Collision | | |
-| Minimum TTC | | |
-| Progress | | |
-| Comfort finding | | |
-| Override count | | |
-| Override reasons | | |
-| Artifact path | | |
-
-Explain visible candidate-versus-executed action differences and residual regressions.
-
-## 13. Known limitations and residual risks
-
-| Limitation or risk | Impact | Mitigation/current status | Owner/next step |
+| Category | Tests run | Result | Residual limitation |
 |---|---|---|---|
-| | | | |
+| Path and symlink | | | |
+| TOCTOU and cache | | | |
+| Invalid stored PASS | | | |
+| XSS and content | | | |
+| Resource bounds | | | |
+| Numeric precision | | | |
+| `NOT_AVAILABLE` | | | |
+| Dependency boundary | | | |
+| Local-only bind | | | |
+| Simulator isolation | | | |
 
-Required reminders:
+## 14. Workbench launch
 
-- simulation is not real-world validation;
-- fake dynamics are an architectural test double;
-- local hashes are not independent authenticity;
-- prototype thresholds are illustrative;
-- unsupported signals are explicit.
-
-## 14. Blockers and failed attempts
-
-For each blocker:
-
-- What failed:
-- Evidence/output:
-- Corrections attempted:
-- Why work stopped or was deferred:
-- Independent work completed despite blocker:
-
-## 15. Local commits
-
-```text
-<git log --oneline --decorate -8>
+```bash
+# exact command
 ```
 
-No push or PR should have occurred.
+- Bound address:
+- Port:
+- Browser behavior:
+- External network behavior:
+- Manual inspection performed: yes/no
+- If yes, what was actually observed:
 
-## 16. Final Git status
+## 15. Adversarial review
 
-```text
-<git status --short>
+- Review file:
+- Initial verdict:
+- P0 findings:
+- P1 findings:
+- Fixes applied:
+- Open accepted residual risks:
+- Final verdict:
+
+## 16. Known limitations
+
+Include at least:
+
+- tamper-evident, not authenticated;
+- no policy or simulator re-execution;
+- self-asserted provenance;
+- simulation-only;
+- no deployment permission;
+- same-host determinism limitation;
+- cut-in realism limitation;
+- no multi-user or approval workflow.
+
+## 17. Git state
+
+```bash
+git branch --show-current
+git log --oneline --decorate -10
+git status --short
 ```
 
-Explain every remaining modified or untracked file.
+Report actual output summary.
 
-## 17. Reproduction commands
+## 18. Local commits
 
-Provide the exact commands needed to reproduce every completed demonstration.
+| Commit | Message | Gate satisfied |
+|---|---|---|
 
-## 18. Recommended next action
+## 19. Deferred scope
 
-Provide exactly one highest-leverage next action and its exact command.
+Confirm not started:
+
+- signing or authenticity implementation;
+- approval or promotion workflow;
+- scenario expansion;
+- RL;
+- CARLA;
+- ROS or Autoware;
+- cloud;
+- hardware or vehicle.
+
+## 20. Recommendation
+
+State one next-phase recommendation and its predecessor gate.
+
+## 21. Single best next command for the user
+
+```bash
+# exact command
+```

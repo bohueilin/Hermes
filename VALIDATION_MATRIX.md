@@ -1,300 +1,293 @@
-# Hermes Validation Matrix
+# Hermes Phase 6 Validation Matrix
 
-Use this matrix after the unattended Codex run. Do not accept a phase based only on Codex's summary; rerun the relevant commands.
+## 1. Purpose
 
-## 1. Repository and environment
+This matrix is the human acceptance gate for the Phase 6 design freeze and implementation. Passing existing tests is necessary but not sufficient. Every claim must be backed by an actual command, test, fixture, or clearly labeled manual observation.
 
-| Check | Command | Pass condition |
+## 2. Baseline preflight
+
+| Check | Command | Required result |
 |---|---|---|
-| Correct repository | `pwd` | `/Users/bohueilin/Documents/GitHub/Hermes` |
-| Correct environment | `which python` | path contains `/envs/hermes-dev/` |
-| Correct Python | `python --version` | Python 3.11.x |
-| Feature branch | `git branch --show-current` | not `main` during development |
-| No accidental remote action | `git remote -v` and handoff | no unexpected remote changes/push |
-| Third-party clean | `git -C third_party/metadrive status --short` | no output |
-| Generated evidence ignored | `git status --short` | no `artifacts/<run-id>` staged/untracked |
+| Repository | `pwd` | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Environment | `python --version && which python` | Python 3.11 in `hermes-dev` |
+| Branch | `git branch --show-current` | `feat/phase6-evidence-workbench` |
+| Status | `git status --short` | Clean before each major stage |
+| Current history | `git log --oneline --decorate -8` | Phase 0–5 history preserved |
+| Install | `python -m pip install -e ".[dev]"` | Exit 0 |
+| Tests | `python -m pytest -q` | Current full suite passes |
+| Ruff | `python -m ruff check .` | All checks pass |
+| Doctor | `python -m hermes doctor` | No FAIL |
+| Whitespace | `git diff --check` | Exit 0 |
 
-## 2. Quality gates
+## 3. Design-freeze gate
 
-Run:
+| Requirement | Evidence | Pass condition |
+|---|---|---|
+| Canonical bundle | Code, schema, and document inspection | One ten-file inventory across Phase 6 docs |
+| Review schema | `PHASE6_REVIEW_ENVELOPE_CONTRACT.md` | Versioned, normative, no unresolved P0 field |
+| Trust states | Contract and UX docs | Verdict, integrity, authenticity, authorization, permission, and scope are separate |
+| Evidence sufficiency | Contract and traceability | Requiredness owned by core, not UI |
+| Framework choice | Decision log | One choice with rationale and test strategy |
+| Dependency rule | Architecture doc | Enforceable UI-to-review-only import boundary |
+| Threat model | Threat doc | Prevention, detection, failure, test, and residual risk mapped |
+| UI information architecture | UX doc | Invalid, unavailable, comparison, and provenance states defined |
+| No implementation | Git diff | No workbench production module or UI dependency added |
+| Design handoff | `PHASE6_DESIGN_FREEZE_HANDOFF.md` | GO, CONDITIONAL GO, or HOLD and exact next prompt |
+
+## 4. Review core acceptance
+
+### 4.1 Valid evidence classes
+
+Use actual artifact names when present. Substitute generated fixtures only when absent.
+
+| Case | Example artifact | Required review result |
+|---|---|---|
+| PASS | `artifacts/handoff-phase5-demo` | Integrity `INTERNALLY_CONSISTENT`; gate `PASS`; authenticity `NOT_AUTHENTICATED`; deployment `NONE` |
+| CONDITIONAL | `artifacts/handoff-p1-conditional` | Integrity valid; gate `CONDITIONAL`; soft failures visible |
+| HOLD | `artifacts/handoff-p1-collision` | Integrity valid; gate `HOLD`; collision hard failure and event references visible |
+| INVALID | `artifacts/phase1-tampered` | Integrity invalid; stored verdict quarantined; exit 30 |
+| MetaDrive | `artifacts/handoff-p2-metadrive` | Same review contract; no simulator import or rerun |
+| Fault | `artifacts/handoff-p4-fault` | Coverage result and mission HOLD both visible |
+
+Expected command shape:
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
-conda activate hermes-dev
-python -m pip install -e ".[dev]"
-python -m pytest -q
-python -m ruff check .
-python -m hermes doctor
-git diff --check
+hermes review-artifact artifacts/<run-id> \
+  --artifact-root artifacts \
+  --format json
 ```
 
-| Gate | Pass condition |
+### 4.2 Envelope checks
+
+- [ ] One parseable JSON document.
+- [ ] Review schema version present.
+- [ ] Artifact run ID and relative path present.
+- [ ] Bundle and trace digests present.
+- [ ] Recomputed gate result present.
+- [ ] Stored result not treated as accepted after verification failure.
+- [ ] Trust-state fields present.
+- [ ] Evidence sufficiency present.
+- [ ] Findings include source references.
+- [ ] Numeric values include unit, threshold, and operator when applicable.
+- [ ] Residual limitations present.
+- [ ] No absolute local path in shareable envelope unless explicitly classified as local diagnostic metadata.
+
+## 5. Comparison acceptance
+
+| Pair | Required result |
 |---|---|
-| Install | editable install succeeds |
-| Tests | all tests pass; count reported |
-| Ruff | no violations |
-| Doctor | no FAIL; optional display may be NOT_AVAILABLE |
-| Whitespace | `git diff --check` produces no error |
+| lead baseline vs shielded | Compatible; TTC improvement and mission or comfort regression both visible; unchanged verdict visible |
+| cut-in baseline vs shielded | Compatible; same bidirectional trade-off behavior |
+| incompatible scenarios, gates, or fault profiles | Exit 40; one incompatibility envelope; no chart payload |
+| invalid plus valid | Exit 30; invalid artifact identified; no comparison claim |
 
-## 3. Architecture review
-
-| Requirement | Evidence to inspect | Pass condition |
-|---|---|---|
-| Domain is simulator-neutral | imports under `src/hermes/domain` | no MetaDrive import |
-| Adapter boundary | `SimulatorAdapter` and implementations | fake and MetaDrive implement same contract |
-| Thin CLI | `src/hermes/cli.py` | orchestration delegated to modules |
-| Candidate vs executed action | models/events | both always present |
-| Explicit shield reason | events/findings | override reason codes preserved |
-| Independent gate | gate module | consumes findings, not simulator objects |
-| Stored verification | verification module | no simulator rerun |
-| Explicit unavailable evidence | enums/findings | `NOT_AVAILABLE` with reason |
-
-## 4. Phase 1 commands
-
-Delete or choose unique run IDs before rerunning; Hermes should refuse overwrite.
-
-### Nominal
+Expected shape:
 
 ```bash
-hermes run \
-  --simulator fake \
-  --scenario scenarios/fake_nominal.yaml \
-  --policy baseline \
-  --seed 7 \
-  --run-id review-phase1-nominal
-echo "exit=$?"
+hermes review-compare \
+  artifacts/handoff-p3-lead-baseline \
+  artifacts/handoff-p3-lead-shielded \
+  --artifact-root artifacts \
+  --format json
 ```
 
-Expected: `PASS`, exit `0`.
+- [ ] No winner score.
+- [ ] Improvements listed.
+- [ ] Regressions listed.
+- [ ] Unchanged outcomes listed.
+- [ ] Evidence availability deltas listed.
+- [ ] Both artifact identities and digests listed.
+- [ ] Compatibility basis listed.
 
-### Collision
+## 6. Artifact immutability
+
+For each representative artifact:
 
 ```bash
-hermes run \
-  --simulator fake \
-  --scenario scenarios/fake_collision.yaml \
-  --policy baseline \
-  --seed 7 \
-  --run-id review-phase1-collision
-echo "exit=$?"
+find artifacts/<run-id> -type f -maxdepth 1 -print0 | sort -z | \
+  xargs -0 shasum -a 256 > /tmp/hermes-before.sha256
+
+hermes review-artifact artifacts/<run-id> --artifact-root artifacts --format json \
+  > /tmp/hermes-review.json
+
+find artifacts/<run-id> -type f -maxdepth 1 -print0 | sort -z | \
+  xargs -0 shasum -a 256 > /tmp/hermes-after.sha256
+
+diff -u /tmp/hermes-before.sha256 /tmp/hermes-after.sha256
 ```
 
-Expected: `HOLD`, exit `20`, collision hard invariant.
+Required result: no diff.
 
-### Boundary
+Also automate this in tests for core and workbench harnesses.
 
-```bash
-hermes run \
-  --simulator fake \
-  --scenario scenarios/fake_boundary.yaml \
-  --policy baseline \
-  --seed 7 \
-  --run-id review-phase1-boundary
-echo "exit=$?"
-```
+## 7. Path, symlink, and TOCTOU negative tests
 
-Expected: `HOLD`, exit `20`, boundary hard invariant.
+| Test | Required result |
+|---|---|
+| `../` traversal | configuration or path error, exit 40 |
+| absolute path outside allowed root | reject |
+| symlink required file outside bundle | invalid or reject |
+| symlink artifact directory outside root | reject |
+| directory swapped after verification | session invalidated |
+| file changed during capture | invalid evidence |
+| same path, different bundle | new digest and full re-verification |
+| cached envelope after mutation | cache miss or invalidation |
 
-### Conditional
+## 8. Invalid-artifact quarantine
 
-```bash
-hermes run \
-  --simulator fake \
-  --scenario scenarios/fake_soft_degradation.yaml \
-  --policy baseline \
-  --seed 7 \
-  --run-id review-phase1-conditional
-echo "exit=$?"
-```
+For every invalid fixture:
 
-Expected: `CONDITIONAL`, exit `10`, no hard invariant failure.
+- [ ] Primary status is `INVALID_EVIDENCE`.
+- [ ] Stored `PASS` is not shown as accepted.
+- [ ] First mismatch or actionable failure is shown.
+- [ ] Findings or metrics from untrusted stored files are not presented as recomputed accepted results.
+- [ ] No green trust banner appears.
+- [ ] Authenticity is not promoted.
 
-### Independent verification
+## 9. Numeric integrity
 
-```bash
-hermes verify-artifact artifacts/review-phase1-nominal
-echo "exit=$?"
-```
+Create fixtures with measured values:
 
-Expected: `PASS`, exit `0`, no simulator invocation.
+- immediately below threshold;
+- equal to threshold;
+- immediately above threshold;
+- floating representation noise.
 
-## 5. Evidence-bundle review
+Required:
 
-```bash
-find artifacts/review-phase1-nominal -maxdepth 1 -type f -print | sort
+- [ ] Exact value inspectable.
+- [ ] Display value cannot change apparent comparison.
+- [ ] Operator visible.
+- [ ] Unit visible.
+- [ ] Verifier version visible.
+- [ ] Supporting events visible.
+
+## 10. `NOT_AVAILABLE` integrity
+
+- [ ] Missing TTC is displayed `NOT_AVAILABLE`, not `0`, infinity, blank, or pass.
+- [ ] Unavailable reason displayed.
+- [ ] Required or optional status displayed.
+- [ ] Gate consequence displayed.
+- [ ] Chart has a gap or annotation rather than a zero point.
+
+## 11. XSS and content-injection tests
+
+Inject into allowed artifact strings:
+
+```text
+<script>alert(1)</script>
+<img src=x onerror=alert(1)>
+[click](javascript:alert(1))
+<svg onload=alert(1)>
+ANSI escape sequences
+very long repeated text
 ```
 
 Required:
 
-```text
-manifest.json
-execution-context.json
-scenario.resolved.yaml
-gate-config.resolved.yaml
-events.jsonl
-metrics.json
-findings.json
-verdict.json
-trace.sha256
-bundle.sha256
-```
+- [ ] Rendered as text or safely sanitized.
+- [ ] No script execution.
+- [ ] No raw HTML use for evidence content.
+- [ ] Long content bounded or truncated with safe expansion.
+- [ ] Terminal output escapes control characters.
 
-Inspect:
+## 12. Resource-bound tests
 
-```bash
-python -m json.tool artifacts/review-phase1-nominal/manifest.json
-python -m json.tool artifacts/review-phase1-nominal/metrics.json
-python -m json.tool artifacts/review-phase1-nominal/verdict.json
-head -n 2 artifacts/review-phase1-nominal/events.jsonl
-```
+Design freeze must select documented limits after inspecting current artifacts.
 
-| Bundle property | Pass condition |
-|---|---|
-| Git provenance | real commit and dirty state recorded |
-| Adapter provenance | fake adapter named; no MetaDrive claim |
-| Scenario digest | present and verification succeeds |
-| Policy/shield/gate versions | explicit |
-| Seed and horizon | explicit |
-| Candidate/executed action | present in every event |
-| Hash chain | previous/current hash in every event |
-| Trace digest | matches `trace.sha256` |
-| Required files | manifest inventory agrees |
+Test:
 
-## 6. Tamper test
+- oversized companion file;
+- excessive event count;
+- deeply nested JSON or YAML;
+- oversized string;
+- many findings or metrics.
 
-Make a copy outside the original run, modify one action, and verify.
+Required result: bounded failure with no partial accepted review.
 
-Expected:
+## 13. Architecture and dependency checks
 
-- verdict `INVALID_EVIDENCE`;
-- exit `30`;
-- first mismatched event sequence identified;
-- no simulator rerun.
+- [ ] Workbench imports only review-layer APIs plus framework.
+- [ ] Review core does not import framework.
+- [ ] Review path does not import MetaDrive.
+- [ ] Review path does not instantiate adapters or policies.
+- [ ] No UI gate or verifier implementation exists.
+- [ ] AST or import-boundary test passes.
 
-Also review automated tests for:
+## 14. Local-only workbench launch
 
-- truncated file;
-- missing file;
-- modified scenario;
-- modified gate config;
-- modified metrics;
-- modified verdict;
-- duplicate sequence.
-
-## 7. Determinism test
-
-Run the same nominal scenario with a second run ID.
-
-Expected identical deterministic:
-
-- events excluding non-deterministic metadata;
-- final event hash;
-- `trace.sha256`;
-- metrics;
-- findings;
-- verdict.
-
-Allowed differences:
-
-- run ID;
-- UTC creation time;
-- host wall-clock duration.
-
-## 8. Gate-integrity review
-
-| Attempted false pass | Required behavior |
-|---|---|
-| Collision plus high progress | HOLD |
-| Boundary violation plus good comfort | HOLD |
-| Missing required evidence | HOLD or INVALID per explicit config; never PASS |
-| Modified stored verdict | INVALID_EVIDENCE |
-| Policy/adapter exception | operational error, never PASS |
-| Unsupported schema version | actionable rejection |
-| NaN/Infinity | rejection, not ambiguous serialization |
-
-## 9. Phase 2 MetaDrive validation
-
-Only run when Codex reports Phase 2 complete.
+Expected shape:
 
 ```bash
-hermes sim-smoke --headless
-echo "exit=$?"
-
-hermes run \
-  --simulator metadrive \
-  --scenario scenarios/metadrive_nominal.yaml \
-  --policy metadrive-idm \
-  --seed 7 \
-  --run-id review-phase2-metadrive-nominal \
-  --headless
-
-hermes verify-artifact artifacts/review-phase2-metadrive-nominal
+hermes workbench \
+  --artifact-root artifacts \
+  --host 127.0.0.1 \
+  --port 8501 \
+  --no-browser
 ```
 
-Then run the documented MetaDrive nominal command and verify its artifact.
+Required:
 
-| Check | Pass condition |
-|---|---|
-| Headless smoke | succeeds |
-| Bounded horizon | run terminates predictably |
-| Mission completion | destination is true and normalized named progress is at least the illustrative 95% threshold; horizon-only progress is HOLD |
-| Adapter provenance | MetaDrive 0.4.3 and source commit recorded |
-| Stored verification | succeeds without launching MetaDrive |
-| Unsupported signal | explicit NOT_AVAILABLE |
-| Third-party checkout | remains clean |
-| Phase 1 regression | all Phase 1 tests/demos remain green |
+- [ ] Binds only to loopback.
+- [ ] `0.0.0.0` rejected.
+- [ ] `::` rejected.
+- [ ] No telemetry or external network call.
+- [ ] No upload, write, approve, run, sign, or deploy control.
+- [ ] Startup does not launch simulator.
+- [ ] Shutdown is clean.
 
-## 10. Phase 3 shield/challenge validation
+## 15. Workbench functional cases
 
-Only run when Codex reports Phase 3 complete.
+- [ ] Intake waits for verification before accepting gate result.
+- [ ] Mandatory trust strip appears on every run view.
+- [ ] PASS, HOLD, CONDITIONAL, and INVALID render distinctly.
+- [ ] Findings table source-links to event sequences.
+- [ ] Timeline distinguishes raw, delivered, result, candidate, permitted, and executed values.
+- [ ] Provenance distinguishes recorded origin from authenticated origin.
+- [ ] Comparison shows both directions.
+- [ ] Incompatible comparison renders no misleading chart.
+- [ ] No automatic latest artifact is selected.
+- [ ] Filtering and sorting change presentation only.
 
-| Check | Pass condition |
-|---|---|
-| Baseline artifact | complete and verifiable |
-| Shielded artifact | complete and verifiable |
-| Candidate action | preserved |
-| Executed action | preserved |
-| Override reasons | explicit stable codes |
-| No-override tests | present |
-| Hard invariant precedence | unchanged |
-| Comparison | reports improvements and regressions |
-| Claims | simulation-only and illustrative |
+## 16. Human comprehension script
 
-## 11. Documentation review
+Ask a reviewer to answer from the workbench:
 
-Required when relevant:
+1. What exact artifact and digest are being reviewed?
+2. Why did the gate issue its verdict?
+3. Which hard requirement failed?
+4. Which evidence was unavailable?
+5. What did the shield change?
+6. What improved and regressed?
+7. Is the bundle authenticated?
+8. Does the verdict authorize real-world deployment?
 
-- `CODEX_HANDOFF.md`
-- `docs/decision-log.md`
-- `docs/phase1-architecture.md`
-- `docs/phase1-requirements-traceability.md`
-- `docs/phase2-metadrive-adapter.md` when Phase 2 is attempted
-- `docs/demo-runbook.md` when demo hardening is attempted
-- updated `README.md`
+Record only actual observations. Do not invent a usability-test participant or success rate.
 
-Requirements traceability must connect hazard/requirement to scenario, component, verifier, test, evidence, and gate consequence.
-
-## 12. Git review
+## 17. Full quality gate
 
 ```bash
+python -m pip install -e ".[dev,workbench]"
+python -m pytest -q
+python -m pytest -q -m "not metadrive"
+python -m ruff check .
+python -m hermes doctor
+git diff --check
 git status --short
-git log --oneline --decorate -8
-git diff main...HEAD --stat
-git diff main...HEAD --check
 ```
 
-Pass conditions:
+## 18. Stop conditions
 
-- no simulator assets, generated evidence, caches, or secrets in commits;
-- checkpoint commits correspond to green phases;
-- no push or PR unless the user later requests it;
-- remaining working-tree changes are explained in `CODEX_HANDOFF.md`.
+Phase 6 is HOLD when any is true:
 
-## Final acceptance decision
-
-| Decision | Criteria |
-|---|---|
-| Accept Phase 1 | all Phase 1 gates and evidence review pass |
-| Accept Phase 2 | Phase 1 remains green and real headless adapter artifact verifies |
-| Accept Phase 3 | Phase 2 remains green and shield/challenge evidence is credible |
-| Return for correction | any false pass, unverifiable artifact, hidden unavailable evidence, or unsupported safety claim |
+- UI has a separate gate or verifier.
+- Source bundle bytes change.
+- CLI and UI parity fails.
+- Invalid artifact displays accepted PASS.
+- Authenticity is implied.
+- Public bind is allowed.
+- Simulator or policy launches during review.
+- Canonical bundle remains inconsistent.
+- Requiredness is inferred by UI.
+- Existing evidence tests are weakened.
+- P0 adversarial finding remains open.
