@@ -206,6 +206,34 @@ def test_schema2_projection_preserves_fault_profile_metrics_tracks_and_ttc_absen
     assert all(point.availability == "NOT_AVAILABLE" for point in ttc.points)
 
 
+def test_triggering_finding_rows_keep_canonical_finding_order_when_failures_start_later(
+    repository_root: Path,
+) -> None:
+    capture = _capture(repository_root, "handoff-p3-cutin-baseline")
+
+    envelope = project_review_envelope(
+        capture,
+        selected_relative_path="handoff-p3-cutin-baseline",
+        hermes_version=__version__,
+    )
+
+    track = next(
+        item
+        for item in envelope.timeline.tracks
+        if item.track_id == "verifier_triggering_findings"
+    )
+    assert tuple(reference.json_pointer for reference in track.source_references) == (
+        "/findings/3",
+        "/findings/4",
+        "/findings/5",
+    )
+    assert track.points[36].string_list_value.values == (
+        "comfort.acceleration",
+        "comfort.jerk",
+    )
+    assert "progress.required" in track.points[299].string_list_value.values
+
+
 def test_presentation_helpers_do_not_round_or_mutate_authoritative_values() -> None:
     exact = "α" * 1_024
     over = exact + "β"

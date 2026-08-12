@@ -2509,10 +2509,6 @@ class ReviewEnvelope(ReviewModel):
             for track in self.timeline.tracks
             if track.track_id == "verifier_triggering_findings"
         )
-        row_by_id = {
-            finding.finding_id: index for index, finding in enumerate(self.findings)
-        }
-        expected_rows: list[str] = []
         for point in track.points:
             expected_ids = tuple(
                 finding.finding_id
@@ -2523,10 +2519,11 @@ class ReviewEnvelope(ReviewModel):
                 raise ValueError(
                     "triggering-finding point IDs must match exact finding contributors"
                 )
-            for finding_id in expected_ids:
-                pointer = f"/findings/{row_by_id[finding_id]}"
-                if pointer not in expected_rows:
-                    expected_rows.append(pointer)
+        expected_rows = tuple(
+            f"/findings/{index}"
+            for index, finding in enumerate(self.findings)
+            if finding.supporting_event_sequences
+        )
         if tuple(reference.json_pointer for reference in track.source_references) != tuple(
             expected_rows
         ):

@@ -2,33 +2,45 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from itertools import groupby
 from types import MappingProxyType
 from typing import TypeVar
 from unicodedata import category as unicode_category
 
+from hermes.comparison.compare import ArtifactComparison
 from hermes.gates.release import EVIDENCE_REQUIREMENTS_BY_PROFILE
 from hermes.review.models import (
     ActionValue,
     AssumptionItem,
     AuthenticatedOrigin,
+    AvailabilityDelta,
+    AvailabilityMapValue,
+    AvailabilityValues,
     CategorizedDigest,
+    ChartSeries,
     ClauseExpression,
+    ComparisonEnvelope,
+    ComparisonStringListValue,
+    CompatibilityInfo,
     DiagnosticItem,
     DigestInfo,
+    DimensionDelta,
     EvidenceSufficiency,
     ExactValue,
     FindingItem,
     GateConsequence,
     GateInfo,
     GroupExpression,
+    HardFailureDelta,
+    InterventionValue,
     InvariantExpression,
     InvariantRule,
     LimitationItem,
     LocatorInfo,
     ManifestIdentityInfo,
+    MeasurementDeltaValue,
     MetricItem,
     ObservationValue,
     Point,
@@ -38,7 +50,10 @@ from hermes.review.models import (
     ReviewEnvelope,
     ReviewUnavailableError,
     ReviewUnavailableReason,
+    ScalarDeltaValue,
     ScalarMetricValue,
+    SideReference,
+    SideSummary,
     SourceFileObservation,
     SourceInventoryItem,
     SourceReference,
@@ -74,39 +89,43 @@ _QUARANTINE_IMPACT = (
     "Artifact claims are quarantined; no stored verdict, findings, metrics, timeline, "
     "or recorded provenance are accepted."
 )
-_SOURCE_FILES = MappingProxyType({
-    "MANIFEST": "manifest.json",
-    "EXECUTION_CONTEXT": "execution-context.json",
-    "SCENARIO": "scenario.resolved.yaml",
-    "GATE_CONFIG": "gate-config.resolved.yaml",
-    "EVENT": "events.jsonl",
-    "METRIC": "metrics.json",
-    "FINDING": "findings.json",
-    "VERDICT": "verdict.json",
-    "TRACE_DIGEST": "trace.sha256",
-    "BUNDLE_DIGEST": "bundle.sha256",
-})
-_FILE_ORDER = MappingProxyType(
-    {name: index for index, name in enumerate(_SOURCE_FILES.values())}
+_SOURCE_FILES = MappingProxyType(
+    {
+        "MANIFEST": "manifest.json",
+        "EXECUTION_CONTEXT": "execution-context.json",
+        "SCENARIO": "scenario.resolved.yaml",
+        "GATE_CONFIG": "gate-config.resolved.yaml",
+        "EVENT": "events.jsonl",
+        "METRIC": "metrics.json",
+        "FINDING": "findings.json",
+        "VERDICT": "verdict.json",
+        "TRACE_DIGEST": "trace.sha256",
+        "BUNDLE_DIGEST": "bundle.sha256",
+    }
 )
-_FINDING_LABELS = MappingProxyType({
-    "trace.integrity": "Trace integrity",
-    "collision.zero": "Collision count is within limit",
-    "boundary.within_tolerance": "Road-boundary evidence is within tolerance",
-    "progress.required": "Required mission progress",
-    "comfort.acceleration": "Acceleration comfort threshold",
-    "comfort.jerk": "Jerk comfort threshold",
-    "fault.coverage.required": "Configured fault coverage",
-})
-_FINDING_METRICS = MappingProxyType({
-    "trace.integrity": "event_count",
-    "collision.zero": "collision_count",
-    "boundary.within_tolerance": "max_abs_lateral_offset_m",
-    "progress.required": "route_completion_pct",
-    "comfort.acceleration": "max_abs_acceleration_mps2",
-    "comfort.jerk": "max_abs_jerk_mps3",
-    "fault.coverage.required": "fault_application_counts",
-})
+_FILE_ORDER = MappingProxyType({name: index for index, name in enumerate(_SOURCE_FILES.values())})
+_FINDING_LABELS = MappingProxyType(
+    {
+        "trace.integrity": "Trace integrity",
+        "collision.zero": "Collision count is within limit",
+        "boundary.within_tolerance": "Road-boundary evidence is within tolerance",
+        "progress.required": "Required mission progress",
+        "comfort.acceleration": "Acceleration comfort threshold",
+        "comfort.jerk": "Jerk comfort threshold",
+        "fault.coverage.required": "Configured fault coverage",
+    }
+)
+_FINDING_METRICS = MappingProxyType(
+    {
+        "trace.integrity": "event_count",
+        "collision.zero": "collision_count",
+        "boundary.within_tolerance": "max_abs_lateral_offset_m",
+        "progress.required": "route_completion_pct",
+        "comfort.acceleration": "max_abs_acceleration_mps2",
+        "comfort.jerk": "max_abs_jerk_mps3",
+        "fault.coverage.required": "fault_application_counts",
+    }
+)
 _METRIC_ORDER = (
     "event_count",
     "simulation_duration_s",
@@ -128,48 +147,52 @@ _METRIC_ORDER = (
     "steering_saturation_count",
     "brake_saturation_count",
 )
-_METRIC_METADATA = MappingProxyType({
-    "event_count": ("Event count", "events", "DESCRIPTIVE"),
-    "simulation_duration_s": ("Simulation duration", "s", "DESCRIPTIVE"),
-    "collision_count": ("Collision count", "collisions", "LOWER"),
-    "max_abs_lateral_offset_m": ("Maximum absolute lateral offset", "m", "LOWER"),
-    "offroad_duration_s": ("Off-road duration", "s", "LOWER"),
-    "route_completion_pct": ("Route completion", "%", "HIGHER"),
-    "minimum_ttc_s": ("Minimum time to collision", "s", "HIGHER"),
-    "max_abs_acceleration_mps2": (
-        "Maximum absolute acceleration",
-        "m/s^2",
-        "LOWER",
-    ),
-    "max_abs_jerk_mps3": ("Maximum absolute jerk", "m/s^3", "LOWER"),
-    "p95_policy_latency_ms": ("P95 policy latency", "ms", "LOWER"),
-    "shield_override_count": ("Shield override count", "overrides", "DESCRIPTIVE"),
-    "shield_override_reasons": (
-        "Shield override reasons",
-        "occurrences",
-        "DESCRIPTIVE",
-    ),
-    "termination_reason": ("Termination reason", None, "DESCRIPTIVE"),
-    "fault_application_counts": (
-        "Fault application counts",
-        "occurrences",
-        "DESCRIPTIVE",
-    ),
-    "max_observation_age_s": ("Maximum observation age", "s", "LOWER"),
-    "p95_control_latency_ms": ("P95 control latency", "ms", "LOWER"),
-    "control_fill_count": ("Control fill count", "events", "DESCRIPTIVE"),
-    "steering_saturation_count": ("Steering saturation count", "events", "LOWER"),
-    "brake_saturation_count": ("Brake saturation count", "events", "LOWER"),
-})
-_MEASUREMENT_METRICS = frozenset({
-    "route_completion_pct",
-    "minimum_ttc_s",
-    "max_abs_acceleration_mps2",
-    "max_abs_jerk_mps3",
-    "p95_policy_latency_ms",
-    "max_observation_age_s",
-    "p95_control_latency_ms",
-})
+_METRIC_METADATA = MappingProxyType(
+    {
+        "event_count": ("Event count", "events", "DESCRIPTIVE"),
+        "simulation_duration_s": ("Simulation duration", "s", "DESCRIPTIVE"),
+        "collision_count": ("Collision count", "collisions", "LOWER"),
+        "max_abs_lateral_offset_m": ("Maximum absolute lateral offset", "m", "LOWER"),
+        "offroad_duration_s": ("Off-road duration", "s", "LOWER"),
+        "route_completion_pct": ("Route completion", "%", "HIGHER"),
+        "minimum_ttc_s": ("Minimum time to collision", "s", "HIGHER"),
+        "max_abs_acceleration_mps2": (
+            "Maximum absolute acceleration",
+            "m/s^2",
+            "LOWER",
+        ),
+        "max_abs_jerk_mps3": ("Maximum absolute jerk", "m/s^3", "LOWER"),
+        "p95_policy_latency_ms": ("P95 policy latency", "ms", "LOWER"),
+        "shield_override_count": ("Shield override count", "overrides", "DESCRIPTIVE"),
+        "shield_override_reasons": (
+            "Shield override reasons",
+            "occurrences",
+            "DESCRIPTIVE",
+        ),
+        "termination_reason": ("Termination reason", None, "DESCRIPTIVE"),
+        "fault_application_counts": (
+            "Fault application counts",
+            "occurrences",
+            "DESCRIPTIVE",
+        ),
+        "max_observation_age_s": ("Maximum observation age", "s", "LOWER"),
+        "p95_control_latency_ms": ("P95 control latency", "ms", "LOWER"),
+        "control_fill_count": ("Control fill count", "events", "DESCRIPTIVE"),
+        "steering_saturation_count": ("Steering saturation count", "events", "LOWER"),
+        "brake_saturation_count": ("Brake saturation count", "events", "LOWER"),
+    }
+)
+_MEASUREMENT_METRICS = frozenset(
+    {
+        "route_completion_pct",
+        "minimum_ttc_s",
+        "max_abs_acceleration_mps2",
+        "max_abs_jerk_mps3",
+        "p95_policy_latency_ms",
+        "max_observation_age_s",
+        "p95_control_latency_ms",
+    }
+)
 _TRACK_ORDER = (
     "raw_observation",
     "delivered_observation",
@@ -188,35 +211,37 @@ _TRACK_ORDER = (
     "policy_latency_ms",
     "verifier_triggering_findings",
 )
-_TRACK_LABELS = MappingProxyType({
-    "raw_observation": "Raw observation",
-    "delivered_observation": "Delivered observation",
-    "result_observation": "Result observation",
-    "candidate_action": "Candidate action",
-    "permitted_action": "Permitted action",
-    "executed_action": "Executed action",
-    "override_reasons": "Override reasons",
-    "observation_fault_reasons": "Observation fault reasons",
-    "control_fault_reasons": "Control fault reasons",
-    "collision_count": "Collision count",
-    "offroad": "Off-road state",
-    "speed_mps": "Speed",
-    "route_progress_pct": "Route progress",
-    "ttc_s": "Time to collision",
-    "policy_latency_ms": "Policy latency",
-    "verifier_triggering_findings": "Verifier-triggering findings",
-})
-_LEGACY_UNAVAILABLE_TRACKS = frozenset({
-    "raw_observation",
-    "delivered_observation",
-    "result_observation",
-    "permitted_action",
-    "observation_fault_reasons",
-    "control_fault_reasons",
-})
-_LEGACY_TRACK_REASON = (
-    "Not represented separately by evidence schema 1.0; no value is inferred."
+_TRACK_LABELS = MappingProxyType(
+    {
+        "raw_observation": "Raw observation",
+        "delivered_observation": "Delivered observation",
+        "result_observation": "Result observation",
+        "candidate_action": "Candidate action",
+        "permitted_action": "Permitted action",
+        "executed_action": "Executed action",
+        "override_reasons": "Override reasons",
+        "observation_fault_reasons": "Observation fault reasons",
+        "control_fault_reasons": "Control fault reasons",
+        "collision_count": "Collision count",
+        "offroad": "Off-road state",
+        "speed_mps": "Speed",
+        "route_progress_pct": "Route progress",
+        "ttc_s": "Time to collision",
+        "policy_latency_ms": "Policy latency",
+        "verifier_triggering_findings": "Verifier-triggering findings",
+    }
 )
+_LEGACY_UNAVAILABLE_TRACKS = frozenset(
+    {
+        "raw_observation",
+        "delivered_observation",
+        "result_observation",
+        "permitted_action",
+        "observation_fault_reasons",
+        "control_fault_reasons",
+    }
+)
+_LEGACY_TRACK_REASON = "Not represented separately by evidence schema 1.0; no value is inferred."
 
 
 def _enum_value(value: object) -> object:
@@ -308,9 +333,7 @@ def _threshold(snapshot: object, finding_id: str):
             children=(),
             invariant=InvariantRule(
                 operator="COMPLETE",
-                configuration_sources=(
-                    _reference("SCENARIO", "/control/horizon_steps"),
-                ),
+                configuration_sources=(_reference("SCENARIO", "/control/horizon_steps"),),
                 evidence_sources=_ordered_references(
                     *_event_references(events, ""),
                     _reference("TRACE_DIGEST", ""),
@@ -347,9 +370,7 @@ def _threshold(snapshot: object, finding_id: str):
                         _reference("SCENARIO", "/road/boundary_tolerance_m"),
                         _reference("GATE_CONFIG", "/hard/max_abs_lateral_offset_m"),
                     ),
-                    evidence=_event_references(
-                        events, "/vehicle_state/lateral_offset_m"
-                    ),
+                    evidence=_event_references(events, "/vehicle_state/lateral_offset_m"),
                 ),
                 _clause(
                     label="No event is off-road",
@@ -365,9 +386,7 @@ def _threshold(snapshot: object, finding_id: str):
                     transforms=("DURATION_TRUE",),
                     operator="LTE",
                     right=_exact(gate.hard.max_offroad_duration_s, "s"),
-                    configuration=(
-                        _reference("GATE_CONFIG", "/hard/max_offroad_duration_s"),
-                    ),
+                    configuration=(_reference("GATE_CONFIG", "/hard/max_offroad_duration_s"),),
                     evidence=(
                         _reference(
                             "EXECUTION_CONTEXT",
@@ -381,16 +400,10 @@ def _threshold(snapshot: object, finding_id: str):
         )
     if finding_id == "progress.required":
         final = events[-1]
-        finding = next(
-            item for item in snapshot.findings.findings if item.finding_id == finding_id
-        )
-        progress_evidence = list(
-            _event_references(events, "/raw_facts/route_progress_available")
-        )
+        finding = next(item for item in snapshot.findings.findings if item.finding_id == finding_id)
+        progress_evidence = list(_event_references(events, "/raw_facts/route_progress_available"))
         if _enum_value(finding.measurement.availability) == "AVAILABLE":
-            progress_evidence.extend(
-                _event_references(events, "/vehicle_state/route_progress_pct")
-            )
+            progress_evidence.extend(_event_references(events, "/vehicle_state/route_progress_pct"))
         progress_evidence.append(_reference("METRIC", "/route_completion_pct"))
         return GroupExpression(
             kind="ALL_OF",
@@ -417,9 +430,7 @@ def _threshold(snapshot: object, finding_id: str):
                     transforms=("MAX_OVER_EVENTS",),
                     operator="GTE",
                     right=_exact(gate.hard.min_route_completion_pct, "%"),
-                    configuration=(
-                        _reference("GATE_CONFIG", "/hard/min_route_completion_pct"),
-                    ),
+                    configuration=(_reference("GATE_CONFIG", "/hard/min_route_completion_pct"),),
                     evidence=tuple(progress_evidence),
                 ),
             ),
@@ -432,9 +443,7 @@ def _threshold(snapshot: object, finding_id: str):
             transforms=("ABSOLUTE_VALUE", "MAX_OVER_EVENTS"),
             operator="LTE",
             right=_exact(gate.soft.max_abs_acceleration_mps2, "m/s^2"),
-            configuration=(
-                _reference("GATE_CONFIG", "/soft/max_abs_acceleration_mps2"),
-            ),
+            configuration=(_reference("GATE_CONFIG", "/soft/max_abs_acceleration_mps2"),),
             evidence=_event_references(events, "/vehicle_state/acceleration_mps2"),
         )
     if finding_id == "comfort.jerk":
@@ -460,12 +469,8 @@ def _threshold(snapshot: object, finding_id: str):
                 operator="ALL_OBSERVED",
                 configuration_sources=(_reference("SCENARIO", "/faults"),),
                 evidence_sources=_ordered_references(
-                    *_event_references(
-                        events, "/observation_fault_evidence/applied_faults"
-                    ),
-                    *_event_references(
-                        events, "/control_fault_evidence/applied_faults"
-                    ),
+                    *_event_references(events, "/observation_fault_evidence/applied_faults"),
+                    *_event_references(events, "/control_fault_evidence/applied_faults"),
                 ),
             ),
         )
@@ -508,9 +513,7 @@ def _consequence(
         effect = "CONFIGURED_MISSING_REQUIRED_EVIDENCE"
         result = _enum_value(snapshot.gate_config.hard.missing_required_evidence)
         source = "GATE_CONFIG_MISSING_REQUIRED_EVIDENCE"
-        configuration = (
-            _reference("GATE_CONFIG", "/hard/missing_required_evidence"),
-        )
+        configuration = (_reference("GATE_CONFIG", "/hard/missing_required_evidence"),)
     elif finding_id in {"progress.required", "fault.coverage.required"}:
         effect = result = "HOLD"
         source = "FIXED_GATE_PRECEDENCE"
@@ -545,9 +548,7 @@ def _finding_references(
         _reference("METRIC", f"/{_FINDING_METRICS[finding.finding_id]}"),
         _reference("FINDING", f"/findings/{finding_index}"),
     ]
-    references.extend(
-        _reference("EVENT", "", sequence) for sequence in finding.event_sequences
-    )
+    references.extend(_reference("EVENT", "", sequence) for sequence in finding.event_sequences)
     return _ordered_references(*references)
 
 
@@ -568,9 +569,7 @@ def _findings(snapshot: object) -> tuple[FindingItem, ...]:
                 verifier_version=finding.verifier_version,
                 label=_FINDING_LABELS[finding.finding_id],
                 explanation=finding.message,
-                category=(
-                    "NOT_AVAILABLE" if availability == "NOT_AVAILABLE" else "COMPUTED"
-                ),
+                category=("NOT_AVAILABLE" if availability == "NOT_AVAILABLE" else "COMPUTED"),
                 status=status,
                 severity=_enum_value(finding.severity),
                 hard_invariant=finding.hard_invariant,
@@ -625,9 +624,7 @@ def _sufficiency(
             )
         available = finding.evidence_availability == "AVAILABLE"
         source_finding = next(
-            item
-            for item in snapshot.findings.findings
-            if item.finding_id == finding_id
+            item for item in snapshot.findings.findings if item.finding_id == finding_id
         )
         items.append(
             SufficiencyItem(
@@ -693,10 +690,7 @@ def _accepted_limitations(snapshot: object) -> tuple[LimitationItem, ...]:
     for index, text in enumerate(snapshot.verdict.residual_limitations):
         if "SHA-256" in text or "authenticated" in text:
             category = "AUTHENTICITY"
-        elif any(
-            text.startswith(f"{finding_id}:")
-            for finding_id in _FINDING_LABELS
-        ):
+        elif any(text.startswith(f"{finding_id}:") for finding_id in _FINDING_LABELS):
             category = "NOT_AVAILABLE"
         else:
             category = "RESIDUAL_RISK"
@@ -706,9 +700,7 @@ def _accepted_limitations(snapshot: object) -> tuple[LimitationItem, ...]:
                 text=text,
                 impact="This limitation remains after the stored gate decision.",
                 category=category,
-                source_references=(
-                    _reference("VERDICT", f"/residual_limitations/{index}"),
-                ),
+                source_references=(_reference("VERDICT", f"/residual_limitations/{index}"),),
             )
         )
     return tuple(limitations)
@@ -741,10 +733,7 @@ def _ttc_references(event: object) -> tuple[SourceReference, ...]:
     keys = result_keys if all(key in summary for key in result_keys) else fallback_keys
     if not all(key in summary for key in keys):
         return (_reference("EVENT", "/observation_summary", event.sequence),)
-    return tuple(
-        _reference("EVENT", f"/observation_summary/{key}", event.sequence)
-        for key in keys
-    )
+    return tuple(_reference("EVENT", f"/observation_summary/{key}", event.sequence) for key in keys)
 
 
 def _metric_tail_references(snapshot: object, metric_id: str) -> tuple[SourceReference, ...]:
@@ -752,9 +741,7 @@ def _metric_tail_references(snapshot: object, metric_id: str) -> tuple[SourceRef
     if metric_id == "event_count":
         references = _event_references(events, "")
     elif metric_id == "simulation_duration_s":
-        references = (
-            _reference("EVENT", "/simulation_time_s", events[-1].sequence),
-        )
+        references = (_reference("EVENT", "/simulation_time_s", events[-1].sequence),)
     elif metric_id == "collision_count":
         references = _event_references(events, "/vehicle_state/collision_count")
     elif metric_id == "max_abs_lateral_offset_m":
@@ -770,9 +757,7 @@ def _metric_tail_references(snapshot: object, metric_id: str) -> tuple[SourceRef
         if _enum_value(measurement.availability) == "AVAILABLE":
             references += _event_references(events, "/vehicle_state/route_progress_pct")
     elif metric_id == "minimum_ttc_s":
-        references = tuple(
-            reference for event in events for reference in _ttc_references(event)
-        )
+        references = tuple(reference for event in events for reference in _ttc_references(event))
     elif metric_id in {"max_abs_acceleration_mps2", "max_abs_jerk_mps3"}:
         references = _event_references(events, "/vehicle_state/acceleration_mps2")
         if metric_id == "max_abs_jerk_mps3":
@@ -799,9 +784,7 @@ def _metric_tail_references(snapshot: object, metric_id: str) -> tuple[SourceRef
     elif metric_id == "shield_override_reasons":
         references = _event_references(events, "/override_reasons")
     elif metric_id == "termination_reason":
-        references = (
-            _reference("EVENT", "/termination_reason", events[-1].sequence),
-        )
+        references = (_reference("EVENT", "/termination_reason", events[-1].sequence),)
     elif metric_id == "fault_application_counts":
         references = tuple(
             reference
@@ -845,18 +828,14 @@ def _metric_tail_references(snapshot: object, metric_id: str) -> tuple[SourceRef
             if fault_name in reasons
         )
         if fault_name in snapshot.metrics.fault_application_counts:
-            references += (
-                _reference("METRIC", f"/fault_application_counts/{fault_name}"),
-            )
+            references += (_reference("METRIC", f"/fault_application_counts/{fault_name}"),)
     elif metric_id == "max_observation_age_s":
         references = _event_references(
             events,
             "/observation_fault_evidence/delivered_observation/observation_age_s",
         )
     elif metric_id == "p95_control_latency_ms":
-        references = _event_references(
-            events, "/control_fault_evidence/control_latency_ms/value"
-        )
+        references = _event_references(events, "/control_fault_evidence/control_latency_ms/value")
     else:
         raise ReviewUnavailableError(
             ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
@@ -897,9 +876,7 @@ def _metrics(snapshot: object) -> tuple[MetricItem, ...]:
             MetricItem(
                 metric_id=metric_id,
                 label=label,
-                category=(
-                    "COMPUTED" if availability == "AVAILABLE" else "NOT_AVAILABLE"
-                ),
+                category=("COMPUTED" if availability == "AVAILABLE" else "NOT_AVAILABLE"),
                 value=value,
                 availability=availability,
                 unavailable_reason=reason,
@@ -983,9 +960,7 @@ def _point_for_track(
     }
     pointer: str
     if track_id == "raw_observation":
-        base["observation_value"] = _observation(
-            event.observation_fault_evidence.raw_observation
-        )
+        base["observation_value"] = _observation(event.observation_fault_evidence.raw_observation)
         pointer = "/observation_fault_evidence/raw_observation"
     elif track_id == "delivered_observation":
         base["observation_value"] = _observation(
@@ -1090,16 +1065,11 @@ def _timeline(snapshot: object, findings: tuple[FindingItem, ...]) -> Timeline:
             )
             continue
         points = tuple(
-            _point_for_track(snapshot, findings, track_id, event)
-            for event in snapshot.events
+            _point_for_track(snapshot, findings, track_id, event) for event in snapshot.events
         )
         if track_id == "ttc_s":
             sources = _ordered_references(
-                *(
-                    reference
-                    for event in snapshot.events
-                    for reference in _ttc_references(event)
-                )
+                *(reference for event in snapshot.events for reference in _ttc_references(event))
             )
         elif track_id == "verifier_triggering_findings":
             sources = tuple(
@@ -1127,10 +1097,15 @@ def _timeline(snapshot: object, findings: tuple[FindingItem, ...]) -> Timeline:
             "policy_latency_ms": "SCALAR",
             "verifier_triggering_findings": "STRING_LIST",
         }[track_id]
-        category = "COMPUTED" if track_id in {
-            "ttc_s",
-            "verifier_triggering_findings",
-        } else "OBSERVED"
+        category = (
+            "COMPUTED"
+            if track_id
+            in {
+                "ttc_s",
+                "verifier_triggering_findings",
+            }
+            else "OBSERVED"
+        )
         tracks.append(
             Track(
                 track_id=track_id,
@@ -1199,18 +1174,10 @@ def _artifact(capture: object, selected_relative_path: str) -> PortableArtifactI
             ),
             category="OBSERVED",
         ),
-        observed_bundle_digest=_digest(
-            inspection.observed_bundle_digest, "OBSERVED_CLAIM"
-        ),
-        computed_bundle_digest=_digest(
-            inspection.computed_bundle_digest, "COMPUTED_FROM_CAPTURE"
-        ),
-        observed_trace_digest=_digest(
-            inspection.observed_trace_digest, "OBSERVED_CLAIM"
-        ),
-        computed_trace_digest=_digest(
-            inspection.computed_trace_digest, "COMPUTED_FROM_EVENTS"
-        ),
+        observed_bundle_digest=_digest(inspection.observed_bundle_digest, "OBSERVED_CLAIM"),
+        computed_bundle_digest=_digest(inspection.computed_bundle_digest, "COMPUTED_FROM_CAPTURE"),
+        observed_trace_digest=_digest(inspection.observed_trace_digest, "OBSERVED_CLAIM"),
+        computed_trace_digest=_digest(inspection.computed_trace_digest, "COMPUTED_FROM_EVENTS"),
         source_inventory=tuple(
             SourceInventoryItem(
                 file=SourceFileObservation(
@@ -1342,11 +1309,16 @@ def _fixed_limitations() -> tuple[LimitationItem, ...]:
 
 
 def _quarantined_provenance() -> Provenance:
-    empty = {name: None for name in RecordedProvenance.model_fields if name not in {
-        "status",
-        "category",
-        "source_references",
-    }}
+    empty = {
+        name: None
+        for name in RecordedProvenance.model_fields
+        if name
+        not in {
+            "status",
+            "category",
+            "source_references",
+        }
+    }
     return Provenance(
         recorded=RecordedProvenance(
             status="QUARANTINED",
@@ -1588,6 +1560,480 @@ def project_review_envelope(
         unavailable_evidence=unavailable,
         residual_limitations=limitations,
     )
+
+
+_COMPARISON_DIMENSION_ORDER = (
+    "verdict",
+    "hard_failures",
+    "collision_count",
+    "minimum_ttc_s",
+    "route_completion_pct",
+    "max_abs_acceleration_mps2",
+    "max_abs_jerk_mps3",
+    "p95_policy_latency_ms",
+    "policy_latency_source",
+    "shield_interventions",
+    "evidence_availability",
+)
+_COMPARISON_PARTITION_ORDER = _COMPARISON_DIMENSION_ORDER[2:-1]
+_COMPARISON_AVAILABILITY_ORDER = (
+    "minimum_ttc_s",
+    "route_completion_pct",
+    "max_abs_acceleration_mps2",
+    "max_abs_jerk_mps3",
+    "p95_policy_latency_ms",
+)
+_COMPARISON_UNIT_DIRECTION = MappingProxyType(
+    {
+        "verdict": (None, "NONE"),
+        "collision_count": ("collisions", "LOWER"),
+        "minimum_ttc_s": ("s", "HIGHER"),
+        "route_completion_pct": ("%", "HIGHER"),
+        "max_abs_acceleration_mps2": ("m/s^2", "LOWER"),
+        "max_abs_jerk_mps3": ("m/s^3", "LOWER"),
+        "p95_policy_latency_ms": ("ms", "LOWER"),
+        "policy_latency_source": (None, "DESCRIPTIVE"),
+        "shield_interventions": ("interventions", "DESCRIPTIVE"),
+        "evidence_availability": (None, "NONE"),
+    }
+)
+_COMPARISON_CORE_UNITS = MappingProxyType(
+    {
+        **{
+            dimension_id: unit_direction[0]
+            for dimension_id, unit_direction in _COMPARISON_UNIT_DIRECTION.items()
+        },
+        "shield_interventions": None,
+    }
+)
+
+
+def _side_reference(
+    side: str,
+    source_type: str,
+    pointer: str,
+    sequence: int | None = None,
+) -> SideReference:
+    return SideReference(
+        side=side,
+        reference=_reference(source_type, pointer, sequence),
+    )
+
+
+def _side_reference_key(reference: SideReference) -> tuple[int, int, str, int]:
+    source = reference.reference
+    return (
+        _FILE_ORDER[source.file_name],
+        -1 if source.event_sequence is None else source.event_sequence,
+        source.json_pointer or "",
+        0 if reference.side == "BASELINE" else 1,
+    )
+
+
+def _ordered_side_references(
+    *references: SideReference,
+) -> tuple[SideReference, ...]:
+    by_key = {_side_reference_key(reference): reference for reference in references}
+    return tuple(by_key[key] for key in sorted(by_key))
+
+
+def _summary_references(side: str) -> tuple[SideReference, ...]:
+    return _ordered_side_references(
+        *(
+            _side_reference(side, "MANIFEST", pointer)
+            for pointer in (
+                "/run_id",
+                "/created_at_utc",
+                "/evidence_schema_version",
+                "/scenario_schema_version",
+            )
+        ),
+        _side_reference(side, "VERDICT", "/verdict"),
+        _side_reference(side, "TRACE_DIGEST", ""),
+        _side_reference(side, "BUNDLE_DIGEST", ""),
+    )
+
+
+def _comparison_references(
+    dimension_id: str,
+    baseline_snapshot: object,
+    candidate_snapshot: object,
+) -> tuple[SideReference, ...]:
+    if dimension_id == "verdict":
+        return _ordered_side_references(
+            _side_reference("BASELINE", "VERDICT", "/verdict"),
+            _side_reference("CANDIDATE", "VERDICT", "/verdict"),
+        )
+    if dimension_id == "hard_failures":
+        return _ordered_side_references(
+            _side_reference("BASELINE", "VERDICT", "/hard_failures"),
+            _side_reference("CANDIDATE", "VERDICT", "/hard_failures"),
+        )
+    if dimension_id in {
+        "collision_count",
+        "minimum_ttc_s",
+        "route_completion_pct",
+        "max_abs_acceleration_mps2",
+        "max_abs_jerk_mps3",
+        "p95_policy_latency_ms",
+    }:
+        return _ordered_side_references(
+            _side_reference("BASELINE", "METRIC", f"/{dimension_id}"),
+            _side_reference("CANDIDATE", "METRIC", f"/{dimension_id}"),
+        )
+    if dimension_id == "policy_latency_source":
+        return _ordered_side_references(
+            *(
+                _side_reference("BASELINE", "EVENT", "/latency_source", event.sequence)
+                for event in baseline_snapshot.events
+            ),
+            *(
+                _side_reference("CANDIDATE", "EVENT", "/latency_source", event.sequence)
+                for event in candidate_snapshot.events
+            ),
+        )
+    if dimension_id == "shield_interventions":
+        return _ordered_side_references(
+            *(
+                _side_reference(side, "METRIC", pointer)
+                for pointer in ("/shield_override_count", "/shield_override_reasons")
+                for side in ("BASELINE", "CANDIDATE")
+            )
+        )
+    if dimension_id == "evidence_availability":
+        return _ordered_side_references(
+            *(
+                _side_reference(side, "METRIC", f"/{metric_id}")
+                for metric_id in _COMPARISON_AVAILABILITY_ORDER
+                for side in ("BASELINE", "CANDIDATE")
+            )
+        )
+    raise ReviewUnavailableError(
+        ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+        f"unsupported comparison dimension {dimension_id!r}",
+    )
+
+
+def _comparison_scalar(value: object, unit: str | None) -> ScalarDeltaValue:
+    if value is not None and not isinstance(value, (str, bool, int, float)):
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "comparison scalar has an unsupported shape",
+        )
+    return ScalarDeltaValue(kind="SCALAR", value=_exact(value, unit))
+
+
+def _comparison_measurement(value: object) -> MeasurementDeltaValue:
+    if not isinstance(value, Mapping) or set(value) != {"availability", "value", "reason"}:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "comparison measurement has an unsupported shape",
+        )
+    availability = value["availability"]
+    measured = value["value"]
+    reason = value["reason"]
+    if availability not in {"AVAILABLE", "NOT_AVAILABLE"}:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "comparison measurement has an unsupported availability",
+        )
+    return MeasurementDeltaValue(
+        kind="MEASUREMENT",
+        availability=availability,
+        value=measured,
+        reason=reason,
+    )
+
+
+def _comparison_string_list(value: object) -> ComparisonStringListValue:
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "comparison string list has an unsupported shape",
+        )
+    return ComparisonStringListValue(kind="STRING_LIST", values=tuple(value))
+
+
+def _comparison_intervention(value: object) -> InterventionValue:
+    if not isinstance(value, Mapping) or set(value) != {"count", "reasons"}:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "comparison intervention has an unsupported shape",
+        )
+    reasons = value["reasons"]
+    if not isinstance(reasons, Mapping):
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "comparison intervention reasons have an unsupported shape",
+        )
+    return InterventionValue(
+        kind="INTERVENTION",
+        count=value["count"],
+        reasons=dict(sorted(reasons.items())),
+    )
+
+
+def _comparison_availability(value: object) -> AvailabilityMapValue:
+    if not isinstance(value, Mapping) or set(value) != set(_COMPARISON_AVAILABILITY_ORDER):
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "comparison availability map has an unsupported shape",
+        )
+    return AvailabilityMapValue(
+        kind="AVAILABILITY_MAP",
+        values=AvailabilityValues(**value),
+    )
+
+
+def _comparison_dimension_value(dimension_id: str, value: object):
+    unit = _COMPARISON_UNIT_DIRECTION[dimension_id][0]
+    if dimension_id in {"verdict", "collision_count"}:
+        return _comparison_scalar(value, unit)
+    if dimension_id in _COMPARISON_AVAILABILITY_ORDER:
+        return _comparison_measurement(value)
+    if dimension_id == "policy_latency_source":
+        return _comparison_string_list(value)
+    if dimension_id == "shield_interventions":
+        return _comparison_intervention(value)
+    if dimension_id == "evidence_availability":
+        return _comparison_availability(value)
+    raise ReviewUnavailableError(
+        ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+        f"unsupported comparison dimension {dimension_id!r}",
+    )
+
+
+def _project_dimension(
+    dimension: object,
+    baseline_snapshot: object,
+    candidate_snapshot: object,
+) -> DimensionDelta:
+    dimension_id = dimension.name
+    if dimension_id not in _COMPARISON_UNIT_DIRECTION:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            f"unsupported comparison dimension {dimension_id!r}",
+        )
+    if dimension.unit != _COMPARISON_CORE_UNITS[dimension_id]:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            f"comparison dimension {dimension_id!r} has an unsupported unit",
+        )
+    unit, direction = _COMPARISON_UNIT_DIRECTION[dimension_id]
+    return DimensionDelta(
+        dimension_id=dimension_id,
+        status=dimension.status.value,
+        baseline_value=_comparison_dimension_value(dimension_id, dimension.baseline_value),
+        candidate_value=_comparison_dimension_value(dimension_id, dimension.candidate_value),
+        unit=unit,
+        explanation=dimension.explanation,
+        desired_direction=direction,
+        category="COMPUTED",
+        source_references=_comparison_references(
+            dimension_id, baseline_snapshot, candidate_snapshot
+        ),
+    )
+
+
+def _project_hard_failure(
+    dimension: object,
+    baseline_snapshot: object,
+    candidate_snapshot: object,
+) -> HardFailureDelta:
+    if dimension.name != "hard_failures" or dimension.unit is not None:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "hard-failure comparison has an unsupported identity or unit",
+        )
+    baseline = _comparison_string_list(dimension.baseline_value).values
+    candidate = _comparison_string_list(dimension.candidate_value).values
+    return HardFailureDelta(
+        status=dimension.status.value,
+        baseline_ids=baseline,
+        candidate_ids=candidate,
+        removed_ids=tuple(sorted(set(baseline) - set(candidate))),
+        added_ids=tuple(sorted(set(candidate) - set(baseline))),
+        explanation=dimension.explanation,
+        category="COMPUTED",
+        source_references=_comparison_references(
+            "hard_failures", baseline_snapshot, candidate_snapshot
+        ),
+    )
+
+
+def project_comparison_envelope(
+    comparison: ArtifactComparison,
+    *,
+    baseline: ReviewEnvelope,
+    candidate: ReviewEnvelope,
+    baseline_snapshot: object,
+    candidate_snapshot: object,
+) -> ComparisonEnvelope:
+    """Map one authoritative core comparison into the portable review contract."""
+
+    try:
+        baseline_summary = SideSummary(
+            side="BASELINE",
+            artifact=baseline.artifact,
+            integrity=baseline.verification.integrity,
+            gate_verdict=baseline.gate.verdict,
+            category="COMPUTED",
+            source_references=_summary_references("BASELINE"),
+        )
+        candidate_summary = SideSummary(
+            side="CANDIDATE",
+            artifact=candidate.artifact,
+            integrity=candidate.verification.integrity,
+            gate_verdict=candidate.gate.verdict,
+            category="COMPUTED",
+            source_references=_summary_references("CANDIDATE"),
+        )
+        compatibility = CompatibilityInfo(
+            status=("COMPATIBLE" if comparison.compatibility.comparable else "INCOMPATIBLE"),
+            reasons=comparison.compatibility.reasons,
+            warnings=comparison.compatibility.warnings,
+            category="COMPUTED",
+        )
+        if not comparison.compatibility.comparable:
+            if comparison.dimensions:
+                raise ReviewUnavailableError(
+                    ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+                    "incompatible core comparison unexpectedly contains dimensions",
+                )
+            return ComparisonEnvelope(
+                comparison_schema_version="1.0",
+                tool=baseline.tool,
+                baseline=baseline_summary,
+                candidate=candidate_summary,
+                compatibility=compatibility,
+                verdict_delta=None,
+                hard_failure_delta=None,
+                availability_summary_delta=None,
+                improvements=(),
+                regressions=(),
+                unchanged_outcomes=(),
+                not_comparable=(),
+                availability_deltas=(),
+                chart_series=(),
+                residual_limitations=(),
+            )
+        dimension_ids = tuple(dimension.name for dimension in comparison.dimensions)
+        if dimension_ids != _COMPARISON_DIMENSION_ORDER:
+            raise ReviewUnavailableError(
+                ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+                "comparison core dimensions do not match review schema 1.0",
+            )
+        by_id = {dimension.name: dimension for dimension in comparison.dimensions}
+        verdict_delta = _project_dimension(by_id["verdict"], baseline_snapshot, candidate_snapshot)
+        hard_failure_delta = _project_hard_failure(
+            by_id["hard_failures"], baseline_snapshot, candidate_snapshot
+        )
+        availability_summary_delta = _project_dimension(
+            by_id["evidence_availability"], baseline_snapshot, candidate_snapshot
+        )
+        projected = {
+            dimension_id: _project_dimension(
+                by_id[dimension_id], baseline_snapshot, candidate_snapshot
+            )
+            for dimension_id in _COMPARISON_PARTITION_ORDER
+        }
+        partitions = {
+            "IMPROVED": tuple(
+                projected[dimension_id]
+                for dimension_id in _COMPARISON_PARTITION_ORDER
+                if projected[dimension_id].status == "IMPROVED"
+            ),
+            "REGRESSED": tuple(
+                projected[dimension_id]
+                for dimension_id in _COMPARISON_PARTITION_ORDER
+                if projected[dimension_id].status == "REGRESSED"
+            ),
+            "UNCHANGED": tuple(
+                projected[dimension_id]
+                for dimension_id in _COMPARISON_PARTITION_ORDER
+                if projected[dimension_id].status == "UNCHANGED"
+            ),
+            "NOT_COMPARABLE": tuple(
+                projected[dimension_id]
+                for dimension_id in _COMPARISON_PARTITION_ORDER
+                if projected[dimension_id].status == "NOT_COMPARABLE"
+            ),
+        }
+        availability_deltas = tuple(
+            AvailabilityDelta(
+                metric_id=metric_id,
+                baseline_availability=projected[metric_id].baseline_value.availability,
+                candidate_availability=projected[metric_id].candidate_value.availability,
+                baseline_reason=projected[metric_id].baseline_value.reason,
+                candidate_reason=projected[metric_id].candidate_value.reason,
+                category="COMPUTED",
+                source_references=projected[metric_id].source_references,
+            )
+            for metric_id in _COMPARISON_AVAILABILITY_ORDER
+            if (
+                projected[metric_id].baseline_value.availability
+                != projected[metric_id].candidate_value.availability
+                or projected[metric_id].baseline_value.reason
+                != projected[metric_id].candidate_value.reason
+            )
+        )
+        chart_series: list[ChartSeries] = []
+        for dimension_id in _COMPARISON_PARTITION_ORDER[:6]:
+            delta = projected[dimension_id]
+            if isinstance(delta.baseline_value, ScalarDeltaValue):
+                baseline_numeric = delta.baseline_value.value.machine_value
+                candidate_numeric = delta.candidate_value.value.machine_value
+                eligible = (
+                    isinstance(baseline_numeric, (int, float))
+                    and not isinstance(baseline_numeric, bool)
+                    and isinstance(candidate_numeric, (int, float))
+                    and not isinstance(candidate_numeric, bool)
+                )
+            else:
+                baseline_numeric = delta.baseline_value.value
+                candidate_numeric = delta.candidate_value.value
+                eligible = (
+                    delta.baseline_value.availability == "AVAILABLE"
+                    and delta.candidate_value.availability == "AVAILABLE"
+                    and (
+                        dimension_id != "p95_policy_latency_ms" or delta.status != "NOT_COMPARABLE"
+                    )
+                )
+            if eligible:
+                chart_series.append(
+                    ChartSeries(
+                        dimension_id=dimension_id,
+                        baseline_numeric_value=baseline_numeric,
+                        candidate_numeric_value=candidate_numeric,
+                        unit=delta.unit,
+                        category="COMPUTED",
+                        source_references=delta.source_references,
+                    )
+                )
+        return ComparisonEnvelope(
+            comparison_schema_version="1.0",
+            tool=baseline.tool,
+            baseline=baseline_summary,
+            candidate=candidate_summary,
+            compatibility=compatibility,
+            verdict_delta=verdict_delta,
+            hard_failure_delta=hard_failure_delta,
+            availability_summary_delta=availability_summary_delta,
+            improvements=partitions["IMPROVED"],
+            regressions=partitions["REGRESSED"],
+            unchanged_outcomes=partitions["UNCHANGED"],
+            not_comparable=partitions["NOT_COMPARABLE"],
+            availability_deltas=availability_deltas,
+            chart_series=tuple(chart_series),
+            residual_limitations=(),
+        )
+    except ReviewUnavailableError:
+        raise
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "comparison core result cannot be projected by review schema 1.0",
+        ) from exc
 
 
 def _visible_character(character: str) -> str:

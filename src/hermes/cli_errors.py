@@ -19,6 +19,7 @@ class CliErrorCode(StrEnum):
     OPERATIONAL_ERROR = "OPERATIONAL_ERROR"
     INVALID_EVIDENCE = "INVALID_EVIDENCE"
     INCOMPATIBLE_EVIDENCE = "INCOMPATIBLE_EVIDENCE"
+    REVIEW_UNAVAILABLE = "REVIEW_UNAVAILABLE"
 
 
 _HUMAN_LABELS = {
@@ -27,6 +28,7 @@ _HUMAN_LABELS = {
     CliErrorCode.OPERATIONAL_ERROR: "Operational error",
     CliErrorCode.INVALID_EVIDENCE: "Invalid evidence",
     CliErrorCode.INCOMPATIBLE_EVIDENCE: "Incompatible evidence",
+    CliErrorCode.REVIEW_UNAVAILABLE: "Review unavailable",
 }
 
 

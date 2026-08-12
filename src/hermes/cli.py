@@ -12,7 +12,6 @@ from rich.text import Text
 from typer.core import TyperGroup, _click
 
 from hermes.cli_errors import CliErrorCode, render_cli_error
-from hermes.comparison.compare import compare_artifacts
 from hermes.doctor import (
     CheckResult,
     CheckStatus,
@@ -22,18 +21,6 @@ from hermes.doctor import (
 from hermes.domain.enums import Verdict
 from hermes.domain.models import ArtifactVerification
 from hermes.evidence.canonical import canonical_json_bytes
-from hermes.evidence.verification import inspect_artifact
-from hermes.evidence.verification import verify_artifact as verify_stored_artifact
-from hermes.runtime.orchestrator import (
-    RunConfigurationError,
-    RunOperationalError,
-    execute_fake_run,
-    execute_metadrive_run,
-    run_metadrive_smoke,
-)
-from hermes.shields.config import ShieldConfigError, load_shield_config
-from hermes.shields.deterministic import DeterministicSafetyShield
-from hermes.shields.noop import NoOpShield
 
 EXIT_CODES = {
     Verdict.PASS: 0,
@@ -142,6 +129,52 @@ def _phase_console() -> Console:
     return Console(highlight=False, markup=False, soft_wrap=True)
 
 
+def _review_console() -> Console:
+    return Console(
+        highlight=False,
+        markup=False,
+        soft_wrap=True,
+        color_system=None,
+        force_terminal=False,
+    )
+
+
+def _neutralize_artifact_text(value: object) -> str:
+    """Render every C0/C1 control as visible uppercase ASCII text."""
+
+    text = str(value)
+    return "".join(
+        f"\\u{ord(character):04X}"
+        if "\u0000" <= character <= "\u001F" or "\u007F" <= character <= "\u009F"
+        else character
+        for character in text
+    )
+
+
+def execute_fake_run(**kwargs: Any) -> Any:
+    """Lazy legacy monkeypatch seam for fake execution."""
+
+    from hermes.runtime.orchestrator import execute_fake_run as implementation
+
+    return implementation(**kwargs)
+
+
+def execute_metadrive_run(**kwargs: Any) -> Any:
+    """Lazy legacy monkeypatch seam for MetaDrive execution."""
+
+    from hermes.runtime.orchestrator import execute_metadrive_run as implementation
+
+    return implementation(**kwargs)
+
+
+def run_metadrive_smoke(**kwargs: Any) -> Any:
+    """Lazy legacy monkeypatch seam for the MetaDrive smoke probe."""
+
+    from hermes.runtime.orchestrator import run_metadrive_smoke as implementation
+
+    return implementation(**kwargs)
+
+
 def _raise_cli_error(
     code: CliErrorCode,
     message: str,
@@ -211,6 +244,11 @@ def run_command(
     ] = None,
 ) -> None:
     """Run one bounded simulation-only scenario and publish verified evidence."""
+    from hermes.runtime.orchestrator import RunConfigurationError, RunOperationalError
+    from hermes.shields.config import ShieldConfigError, load_shield_config
+    from hermes.shields.deterministic import DeterministicSafetyShield
+    from hermes.shields.noop import NoOpShield
+
     console = _phase_console()
     if simulator not in {"fake", "metadrive"}:
         _raise_cli_error(
@@ -296,6 +334,8 @@ def sim_smoke_command(
     ] = False,
 ) -> None:
     """Probe MetaDrive reset/IDM/step/close without publishing release evidence."""
+    from hermes.runtime.orchestrator import RunConfigurationError, RunOperationalError
+
     console = _phase_console()
     if not headless:
         _raise_cli_error(
@@ -340,6 +380,8 @@ def verify_artifact_command(
     ],
 ) -> None:
     """Verify stored evidence and recompute its verdict without rerunning a simulator."""
+    from hermes.evidence.verification import verify_artifact as verify_stored_artifact
+
     try:
         result = verify_stored_artifact(artifact_dir)
     except Exception as exc:
@@ -359,6 +401,402 @@ def verify_artifact_command(
         raise typer.Exit(code=exit_code)
 
 
+def _review_record_json(value: object) -> str:
+    payload = value.model_dump(mode="json") if hasattr(value, "model_dump") else value
+    text = canonical_json_bytes(payload).decode("utf-8")
+    replacements = {
+        "\\b": "\\u0008",
+        "\\t": "\\u0009",
+        "\\n": "\\u000A",
+        "\\f": "\\u000C",
+        "\\r": "\\u000D",
+    }
+    normalized: list[str] = []
+    index = 0
+    while index < len(text):
+        character = text[index]
+        if character == "\\" and index + 1 < len(text):
+            short = text[index : index + 2]
+            if short in {"\\\\", '\\"', "\\/"}:
+                normalized.append(short)
+                index += 2
+                continue
+            if short in replacements:
+                normalized.append(replacements[short])
+                index += 2
+                continue
+            if index + 5 < len(text) and text[index + 1] == "u":
+                hexadecimal = text[index + 2 : index + 6]
+                if all(value in "0123456789abcdefABCDEF" for value in hexadecimal):
+                    codepoint = int(hexadecimal, 16)
+                    if codepoint <= 0x1F or 0x7F <= codepoint <= 0x9F:
+                        normalized.append(f"\\u{codepoint:04X}")
+                        index += 6
+                        continue
+        normalized.append(_neutralize_artifact_text(character))
+        index += 1
+    return "".join(normalized)
+
+
+def _digest_text(digest: object | None) -> str:
+    return "NOT_AVAILABLE" if digest is None else _neutralize_artifact_text(digest.value)
+
+
+def _optional_artifact_text(value: object | None) -> str:
+    return "NOT_AVAILABLE" if value is None else _neutralize_artifact_text(value)
+
+
+def _render_review_envelope_text(envelope: object) -> None:
+    console = _review_console()
+    artifact = envelope.artifact
+    identity = artifact.manifest_identity
+    console.print(SCOPE_BANNER)
+    console.print(
+        "Review authority: stored simulation evidence only; not an approval, "
+        "certification, or deployment grant."
+    )
+    console.print(
+        "Selected artifact: "
+        + _neutralize_artifact_text(artifact.locator.selected_relative_path)
+    )
+    console.print(
+        "Selected directory: "
+        + _neutralize_artifact_text(artifact.locator.selected_directory_name)
+    )
+    console.print("Manifest run ID: " + _optional_artifact_text(identity.run_id))
+    console.print("Created at: " + _optional_artifact_text(identity.created_at_utc))
+    console.print(
+        "Evidence schema: "
+        + _optional_artifact_text(identity.evidence_schema_version)
+    )
+    console.print(
+        "Scenario schema: "
+        + _optional_artifact_text(identity.scenario_schema_version)
+    )
+    console.print("Observed bundle digest: " + _digest_text(artifact.observed_bundle_digest))
+    console.print("Computed bundle digest: " + _digest_text(artifact.computed_bundle_digest))
+    console.print("Observed trace digest: " + _digest_text(artifact.observed_trace_digest))
+    console.print("Computed trace digest: " + _digest_text(artifact.computed_trace_digest))
+    console.print("Source inventory:")
+    for item in artifact.source_inventory:
+        console.print("  " + _review_record_json(item))
+
+    console.print(
+        "Evidence integrity: "
+        + _neutralize_artifact_text(envelope.verification.integrity)
+    )
+    console.print("Gate verdict: " + _neutralize_artifact_text(envelope.gate.verdict))
+    console.print(
+        "Stored claims quarantined: "
+        + _neutralize_artifact_text(
+            envelope.verification.stored_claims_quarantined
+        )
+    )
+    trust_labels = {
+        "authenticity": "Authenticity",
+        "authorization": "Authorization",
+        "deployment_permission": "Deployment permission",
+        "scope": "Scope",
+        "authoritative_status": "Authoritative status",
+    }
+    for record in envelope.trust.records:
+        label = trust_labels[record.dimension]
+        console.print(f"{label}: " + _neutralize_artifact_text(record.value))
+        console.print(
+            f"  {label} explanation: "
+            + _neutralize_artifact_text(record.explanation)
+        )
+
+    console.print("Gate decision:")
+    console.print("  " + _review_record_json(envelope.gate))
+    console.print("Verification diagnostics:")
+    for diagnostic in envelope.verification.errors:
+        console.print("  " + _review_record_json(diagnostic))
+    for diagnostic in envelope.diagnostics:
+        console.print("  " + _review_record_json(diagnostic))
+
+    console.print("Evidence sufficiency:")
+    console.print("  Summary: " + _review_record_json(envelope.evidence_sufficiency.summary))
+    for item in envelope.evidence_sufficiency.items:
+        console.print("  " + _review_record_json(item))
+    console.print("Findings:")
+    for item in envelope.findings:
+        console.print("  " + _review_record_json(item))
+    console.print("Metrics:")
+    for item in envelope.metrics:
+        console.print("  " + _review_record_json(item))
+    console.print("Timeline:")
+    console.print(
+        "  Event count: " + _neutralize_artifact_text(envelope.timeline.event_count)
+    )
+    console.print(
+        "  Simulation range: "
+        + _optional_artifact_text(envelope.timeline.simulation_start_s)
+        + " -> "
+        + _optional_artifact_text(envelope.timeline.simulation_end_s)
+    )
+    for track in envelope.timeline.tracks:
+        console.print(
+            "  Track: "
+            + _neutralize_artifact_text(track.track_id)
+            + " | availability="
+            + _neutralize_artifact_text(track.availability)
+            + " | reason="
+            + _neutralize_artifact_text(track.unavailable_reason)
+            + " | value_kind="
+            + _neutralize_artifact_text(track.value_kind)
+            + " | points="
+            + _neutralize_artifact_text(len(track.points))
+        )
+
+    console.print(
+        "Recorded provenance: "
+        + _neutralize_artifact_text(envelope.provenance.recorded.status)
+    )
+    console.print("  " + _review_record_json(envelope.provenance))
+    console.print("Assumptions:")
+    for item in envelope.assumptions:
+        console.print("  " + _review_record_json(item))
+    console.print("Unavailable evidence:")
+    for item in envelope.unavailable_evidence:
+        console.print("  " + _review_record_json(item))
+    console.print("Residual limitations:")
+    for item in envelope.residual_limitations:
+        console.print("  " + _review_record_json(item))
+
+
+def _render_comparison_side(console: Console, label: str, side: object) -> None:
+    console.print(
+        f"{label} artifact: "
+        + _neutralize_artifact_text(side.artifact.locator.selected_relative_path)
+    )
+    console.print(
+        f"{label} manifest run ID: "
+        + _neutralize_artifact_text(side.artifact.manifest_identity.run_id)
+    )
+    console.print(
+        f"{label} bundle digest: "
+        + _digest_text(side.artifact.computed_bundle_digest)
+    )
+    console.print(
+        f"{label} trace digest: "
+        + _digest_text(side.artifact.computed_trace_digest)
+    )
+    console.print(f"{label} integrity: " + _neutralize_artifact_text(side.integrity))
+    console.print(f"{label} gate: " + _neutralize_artifact_text(side.gate_verdict))
+
+
+def _render_comparison_partition(
+    console: Console,
+    label: str,
+    values: tuple[object, ...],
+) -> None:
+    console.print(label + ":")
+    for value in values:
+        console.print("  " + _review_record_json(value))
+
+
+def _render_comparison_envelope_text(envelope: object) -> None:
+    console = _review_console()
+    console.print(SCOPE_BANNER)
+    console.print("Authenticity: NOT_AUTHENTICATED")
+    console.print("Authorization: NOT_EVALUATED")
+    console.print("Deployment permission: NONE")
+    console.print("Scope: SIMULATION_ONLY")
+    console.print("Authoritative status: NOT_DEFINED")
+    _render_comparison_side(console, "Baseline", envelope.baseline)
+    _render_comparison_side(console, "Candidate", envelope.candidate)
+    console.print(
+        "Compatibility: " + _neutralize_artifact_text(envelope.compatibility.status)
+    )
+    for reason in envelope.compatibility.reasons:
+        console.print("Incompatibility: " + _neutralize_artifact_text(reason))
+    for warning in envelope.compatibility.warnings:
+        console.print("Compatibility warning: " + _neutralize_artifact_text(warning))
+    console.print("Verdict delta: " + _review_record_json(envelope.verdict_delta))
+    console.print(
+        "Hard-failure delta: " + _review_record_json(envelope.hard_failure_delta)
+    )
+    console.print(
+        "Evidence-availability summary delta: "
+        + _review_record_json(envelope.availability_summary_delta)
+    )
+    _render_comparison_partition(console, "Improvements", envelope.improvements)
+    _render_comparison_partition(console, "Regressions", envelope.regressions)
+    _render_comparison_partition(
+        console, "Unchanged outcomes", envelope.unchanged_outcomes
+    )
+    _render_comparison_partition(console, "Not comparable", envelope.not_comparable)
+    _render_comparison_partition(
+        console, "Availability details", envelope.availability_deltas
+    )
+    _render_comparison_partition(console, "Chart series", envelope.chart_series)
+    _render_comparison_partition(
+        console, "Residual limitations", envelope.residual_limitations
+    )
+
+
+def _review_format_or_error(output_format: str) -> None:
+    if output_format not in {"text", "json"}:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported format {output_format!r}",
+        )
+
+
+@app.command("review-artifact")
+def review_artifact_command(
+    selection: Annotated[
+        str,
+        typer.Argument(help="Exact relative evidence-bundle selection below the root."),
+    ],
+    artifact_root: Annotated[
+        Path,
+        typer.Option("--artifact-root", help="Allowed local artifact root."),
+    ],
+    output_format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: text or json."),
+    ] = "text",
+) -> None:
+    """Review one stored bundle without executing a simulator or policy."""
+    from hermes.review import (
+        ReviewEnvelope,
+        ReviewUnavailableError,
+        canonical_envelope_bytes,
+        review_artifact,
+    )
+
+    _review_format_or_error(output_format)
+    try:
+        result = review_artifact(artifact_root, selection)
+        if not isinstance(result, ReviewEnvelope):
+            raise TypeError("review facade returned an unsupported result")
+    except ReviewUnavailableError as exc:
+        _raise_cli_error(
+            CliErrorCode.REVIEW_UNAVAILABLE,
+            _neutralize_artifact_text(exc.message),
+            details={"reason": exc.reason.value},
+            json_output=output_format == "json",
+        )
+    except ValueError as exc:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            _neutralize_artifact_text(exc),
+            json_output=output_format == "json",
+        )
+    except Exception as exc:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            _neutralize_artifact_text(f"{type(exc).__name__}: {exc}"),
+            json_output=output_format == "json",
+        )
+
+    if output_format == "json":
+        typer.echo(canonical_envelope_bytes(result).decode("utf-8"))
+    else:
+        _render_review_envelope_text(result)
+    if result.verification.integrity == "INVALID_EVIDENCE":
+        raise typer.Exit(code=30)
+
+
+@app.command("review-compare")
+def review_compare_command(
+    baseline_selection: Annotated[
+        str,
+        typer.Argument(help="Exact relative baseline selection below the root."),
+    ],
+    candidate_selection: Annotated[
+        str,
+        typer.Argument(help="Exact relative candidate selection below the root."),
+    ],
+    artifact_root: Annotated[
+        Path,
+        typer.Option("--artifact-root", help="Allowed local artifact root."),
+    ],
+    output_format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: text or json."),
+    ] = "text",
+) -> None:
+    """Compare two independently reviewed stored bundles without execution."""
+    from hermes.review import (
+        ComparisonEnvelope,
+        ReviewEnvelope,
+        ReviewUnavailableError,
+        canonical_envelope_bytes,
+        compare_review_artifacts,
+    )
+
+    _review_format_or_error(output_format)
+    try:
+        result = compare_review_artifacts(
+            artifact_root,
+            baseline_selection,
+            candidate_selection,
+        )
+        if not isinstance(result, (ComparisonEnvelope, ReviewEnvelope)):
+            raise TypeError("comparison review facade returned an unsupported result")
+    except ReviewUnavailableError as exc:
+        _raise_cli_error(
+            CliErrorCode.REVIEW_UNAVAILABLE,
+            _neutralize_artifact_text(exc.message),
+            details={"reason": exc.reason.value},
+            json_output=output_format == "json",
+        )
+    except ValueError as exc:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            _neutralize_artifact_text(exc),
+            json_output=output_format == "json",
+        )
+    except Exception as exc:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            _neutralize_artifact_text(f"{type(exc).__name__}: {exc}"),
+            json_output=output_format == "json",
+        )
+
+    if isinstance(result, ReviewEnvelope):
+        invalid_selection = result.artifact.locator.selected_relative_path
+        if invalid_selection == baseline_selection:
+            side = "BASELINE"
+        elif invalid_selection == candidate_selection:
+            side = "CANDIDATE"
+        else:
+            _raise_cli_error(
+                CliErrorCode.OPERATIONAL_ERROR,
+                "comparison facade returned an unknown artifact locator",
+                json_output=output_format == "json",
+            )
+        details = {"side": side, "review": result.model_dump(mode="json")}
+        if output_format == "text":
+            _review_console().print("Invalid comparison side: " + side)
+            _render_review_envelope_text(result)
+        _raise_cli_error(
+            CliErrorCode.INVALID_EVIDENCE,
+            "One stored artifact failed integrity verification.",
+            exit_code=30,
+            details=details,
+            json_output=output_format == "json",
+        )
+
+    if result.compatibility.status == "INCOMPATIBLE":
+        details = {"comparison": result.model_dump(mode="json")}
+        if output_format == "text":
+            _render_comparison_envelope_text(result)
+        _raise_cli_error(
+            CliErrorCode.INCOMPATIBLE_EVIDENCE,
+            "Stored artifacts are not comparable.",
+            details=details,
+            json_output=output_format == "json",
+        )
+    if output_format == "json":
+        typer.echo(canonical_envelope_bytes(result).decode("utf-8"))
+    else:
+        _render_comparison_envelope_text(result)
+
+
 @app.command("compare")
 def compare_command(
     baseline_dir: Annotated[Path, typer.Argument(help="Baseline evidence bundle.")],
@@ -369,6 +807,9 @@ def compare_command(
     ] = "table",
 ) -> None:
     """Compare two independently verified, compatible stored evidence bundles."""
+    from hermes.comparison.compare import compare_artifacts
+    from hermes.evidence.verification import inspect_artifact
+
     console = _phase_console()
     if output_format not in {"table", "json"}:
         _raise_cli_error(

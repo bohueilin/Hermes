@@ -8,9 +8,13 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from hermes import __version__
+from hermes.comparison.compare import compare_artifacts
 from hermes.evidence.verification import _inspect_artifact_under_root_capture
-from hermes.review.models import ReviewCacheKey, ReviewEnvelope
-from hermes.review.projection import project_review_envelope
+from hermes.review.models import ComparisonEnvelope, ReviewCacheKey, ReviewEnvelope
+from hermes.review.projection import (
+    project_comparison_envelope,
+    project_review_envelope,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -188,6 +192,33 @@ class _ReviewFacade:
             cache_key=cache_key,
         )
 
+    def compare_review_artifacts(
+        self,
+        artifact_root: Path,
+        baseline_relative_path: str,
+        candidate_relative_path: str,
+    ) -> ComparisonEnvelope | ReviewEnvelope:
+        """Independently review two sides before invoking the comparison authority."""
+
+        baseline = self._review_result(artifact_root, baseline_relative_path)
+        candidate = self._review_result(artifact_root, candidate_relative_path)
+        if baseline.envelope.verification.integrity == "INVALID_EVIDENCE":
+            return baseline.envelope
+        if candidate.envelope.verification.integrity == "INVALID_EVIDENCE":
+            return candidate.envelope
+        baseline_snapshot = baseline.capture.inspection.snapshot
+        candidate_snapshot = candidate.capture.inspection.snapshot
+        if baseline_snapshot is None or candidate_snapshot is None:
+            raise RuntimeError("consistent review is missing its verified snapshot")
+        comparison = compare_artifacts(baseline_snapshot, candidate_snapshot)
+        return project_comparison_envelope(
+            comparison,
+            baseline=baseline.envelope,
+            candidate=candidate.envelope,
+            baseline_snapshot=baseline_snapshot,
+            candidate_snapshot=candidate_snapshot,
+        )
+
 
 _DEFAULT_FACADE = _ReviewFacade()
 
@@ -199,3 +230,17 @@ def review_artifact(
     """Fresh-capture one exact lexical selection below an allowed root."""
 
     return _DEFAULT_FACADE.review_artifact(artifact_root, selected_relative_path)
+
+
+def compare_review_artifacts(
+    artifact_root: Path,
+    baseline_relative_path: str,
+    candidate_relative_path: str,
+) -> ComparisonEnvelope | ReviewEnvelope:
+    """Review two exact selections and map the authoritative core comparison."""
+
+    return _DEFAULT_FACADE.compare_review_artifacts(
+        artifact_root,
+        baseline_relative_path,
+        candidate_relative_path,
+    )

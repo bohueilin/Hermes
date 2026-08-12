@@ -1,6 +1,10 @@
 """Framework-independent Phase 6 evidence review contracts."""
 
-from hermes.review.facade import review_artifact, validate_artifact_root
+from hermes.review.facade import (
+    compare_review_artifacts,
+    review_artifact,
+    validate_artifact_root,
+)
 from hermes.review.models import (
     ComparisonEnvelope,
     LocatorInfo,
@@ -27,6 +31,7 @@ __all__ = [
     "ReviewUnavailableError",
     "ReviewUnavailableReason",
     "canonical_envelope_bytes",
+    "compare_review_artifacts",
     "format_threshold_value",
     "group_records",
     "page_records",
