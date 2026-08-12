@@ -4,10 +4,13 @@ import hashlib
 import json
 import os
 import shutil
-from dataclasses import asdict, fields
+from collections.abc import Mapping, Sequence
+from dataclasses import asdict, fields, is_dataclass
 from pathlib import Path
+from typing import get_type_hints
 
 import pytest
+from pydantic import BaseModel
 
 import hermes.evidence.verification as verification_module
 from hermes.domain.enums import IntegrityStatus
@@ -171,11 +174,34 @@ def test_public_inspection_never_exposes_descriptor_identity(
 ) -> None:
     root, _ = _capturable_bundle(repository_root, tmp_path)
     inspection = inspect_artifact_under_root(root, "nominal")
-    public_models = (
-        verification_module.ArtifactInspection,
-        verification_module.ArtifactFileInventory,
-        verification_module.VerifiedArtifactSnapshot,
-    )
+    public_fields = {
+        verification_module.ArtifactInspection: {
+            "verification",
+            "snapshot",
+            "source_inventory",
+            "observed_bundle_digest",
+            "computed_bundle_digest",
+            "observed_trace_digest",
+            "computed_trace_digest",
+            "stored_claim_files",
+        },
+        verification_module.ArtifactFileInventory: {
+            "file_name",
+            "size_bytes",
+            "observed_sha256",
+        },
+        verification_module.VerifiedArtifactSnapshot: {
+            "path",
+            "manifest",
+            "context",
+            "scenario",
+            "gate_config",
+            "events",
+            "metrics",
+            "findings",
+            "verdict",
+        },
+    }
     forbidden = {
         "device",
         "inode",
@@ -187,23 +213,112 @@ def test_public_inspection_never_exposes_descriptor_identity(
         "_captured_files",
         "_CapturedFileState",
     }
-    serialized = asdict(inspection)
-
-    def keys(value) -> set[str]:
-        if isinstance(value, dict):
-            return set(value) | set().union(*(keys(item) for item in value.values()))
-        if isinstance(value, (list, tuple)):
-            return set().union(*(keys(item) for item in value)) if value else set()
+    def walk(value) -> set[str]:
+        assert not type(value).__name__.startswith("_")
+        if isinstance(value, BaseModel):
+            return walk(value.model_dump(mode="python"))
+        if is_dataclass(value) and not isinstance(value, type):
+            return set().union(*(walk(getattr(value, item.name)) for item in fields(value)))
+        if isinstance(value, Mapping):
+            return set(value) | set().union(*(walk(item) for item in value.values()))
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            return set().union(*(walk(item) for item in value)) if value else set()
         return set()
 
     assert all(
-        {item.name for item in fields(model)}.isdisjoint(forbidden)
-        for model in public_models
+        {item.name for item in fields(model)} == allowed
+        for model, allowed in public_fields.items()
     )
-    assert keys(serialized).isdisjoint(forbidden)
-    assert not any("_CapturedFileState" in repr(value) for value in (inspection, serialized))
-    assert keys(json.loads(json.dumps(serialized, default=str))).isdisjoint(forbidden)
+    assert all(
+        all("_CapturedFileState" not in str(hint) for hint in get_type_hints(model).values())
+        for model in public_fields
+    )
+    assert walk(inspection).isdisjoint(forbidden)
+    assert walk(asdict(inspection)).isdisjoint(forbidden)
+    assert walk(json.loads(json.dumps(asdict(inspection), default=str))).isdisjoint(forbidden)
     assert "_CapturedFileState" not in verification_module.__dict__.get("__all__", ())
+
+
+@pytest.mark.parametrize(
+    "failure", ("component_open", "component_fstat", "fd_listdir", "root_reopen")
+)
+def test_root_capture_fails_closed_and_closes_fds_for_unsupported_descriptor_primitives(
+    repository_root: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str,
+) -> None:
+    root, _ = _capturable_bundle(repository_root, tmp_path)
+    original_open = verification_module.os.open
+    original_close = verification_module.os.close
+    original_listdir = verification_module.os.listdir
+    original_fstat = verification_module.os.fstat
+    opened: set[int] = set()
+    opened_count = 0
+    closed_count = 0
+
+    def tracked_open(*args, **kwargs):
+        nonlocal opened_count
+        if failure == "component_open" and kwargs.get("dir_fd") is not None:
+            raise NotImplementedError("component-relative open unavailable")
+        if failure == "root_reopen" and kwargs.get("dir_fd") is None and opened_count >= 2:
+            raise NotImplementedError("root reopen unavailable")
+        descriptor = original_open(*args, **kwargs)
+        opened.add(descriptor)
+        opened_count += 1
+        return descriptor
+
+    def tracked_close(descriptor: int) -> None:
+        nonlocal closed_count
+        if descriptor in opened:
+            opened.remove(descriptor)
+            closed_count += 1
+        original_close(descriptor)
+
+    def unsupported_fd_listdir(path):
+        if failure == "fd_listdir" and isinstance(path, int):
+            raise NotImplementedError("fd listdir unavailable")
+        return original_listdir(path)
+
+    def unsupported_component_fstat(descriptor: int):
+        if failure == "component_fstat" and descriptor in opened and opened_count >= 2:
+            raise NotImplementedError("component fstat unavailable")
+        return original_fstat(descriptor)
+
+    monkeypatch.setattr(verification_module.os, "open", tracked_open)
+    monkeypatch.setattr(verification_module.os, "close", tracked_close)
+    monkeypatch.setattr(verification_module.os, "listdir", unsupported_fd_listdir)
+    monkeypatch.setattr(verification_module.os, "fstat", unsupported_component_fstat)
+    monkeypatch.setattr(verification_module, "_descriptor_capture_is_supported", lambda: True)
+
+    inspection = inspect_artifact_under_root(root, "nominal")
+
+    assert inspection.verification.integrity is IntegrityStatus.INVALID
+    assert inspection.snapshot is None
+    assert opened == set()
+    assert opened_count >= 1
+    assert closed_count == opened_count
+
+
+def test_root_capture_rejects_missing_descriptor_capabilities_without_path_fallback(
+    repository_root: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root, _ = _capturable_bundle(repository_root, tmp_path)
+    monkeypatch.setattr(
+        verification_module, "_descriptor_capture_is_supported", lambda: False
+    )
+
+    inspection = inspect_artifact_under_root(root, "nominal")
+
+    assert inspection.verification.integrity is IntegrityStatus.INVALID
+    assert inspection.snapshot is None
+    assert inspection.source_inventory == ()
+    assert inspection.verification.errors == (
+        "artifact root and selected path must be existing real directories "
+        "without symlink traversal",
+    )
 
 
 def test_root_contained_capture_detects_mutation_without_reopening_artifact_paths(
@@ -439,6 +554,37 @@ def test_capture_resource_limits_keep_exact_and_plus_one_semantics(
         "manifest.json exceeds maximum size of 10 bytes"
         in error
         for error in file_plus_one_capture.errors
+    )
+
+
+def test_partial_first_read_errors_reserve_the_total_capture_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = tmp_path / "partial-read-errors"
+    bundle.mkdir()
+    for name in REQUIRED_ARTIFACT_FILES:
+        (bundle / name).write_bytes(b"abc")
+    monkeypatch.setattr(verification_module, "MAX_ARTIFACT_FILE_BYTES", 3)
+    monkeypatch.setattr(verification_module, "MAX_ARTIFACT_TOTAL_BYTES", 5)
+    returned_first_pass_bytes = 0
+
+    def partial_then_error(file_descriptor: int, byte_limit: int) -> bytes:
+        nonlocal returned_first_pass_bytes
+        del file_descriptor, byte_limit
+        returned_first_pass_bytes += 2
+        raise OSError("injected partial read failure")
+
+    monkeypatch.setattr(verification_module, "_read_descriptor", partial_then_error)
+
+    capture = verification_module._read_exact_files(bundle)
+
+    assert returned_first_pass_bytes <= 5
+    assert capture._payloads == ()
+    assert any("cannot read stable snapshot" in error for error in capture.errors)
+    assert any(
+        "artifact exceeds maximum total size of 5 bytes" in error
+        for error in capture.errors
     )
 
 

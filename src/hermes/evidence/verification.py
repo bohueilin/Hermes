@@ -7,6 +7,7 @@ import math
 import os
 import re
 import stat
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
@@ -84,6 +85,7 @@ MAX_ARTIFACT_TOTAL_BYTES = 64 * 1024 * 1024
 MAX_EVENT_COUNT = 10_000
 MAX_EVENT_LINE_BYTES = 1 * 1024 * 1024
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
+_DESCRIPTOR_ERRORS = (OSError, NotImplementedError, TypeError)
 
 
 @dataclass(frozen=True, slots=True)
@@ -293,6 +295,26 @@ def _read_descriptor(file_descriptor: int, byte_limit: int) -> bytes:
         remaining -= len(chunk)
 
 
+def _descriptor_capture_is_supported() -> bool:
+    """Require every descriptor-relative primitive; no pathname fallback exists."""
+    try:
+        return (
+            hasattr(os, "O_NOFOLLOW")
+            and hasattr(os, "O_DIRECTORY")
+            and os.open in os.supports_dir_fd
+            and os.stat in os.supports_dir_fd
+            and os.stat in os.supports_follow_symlinks
+            and os.listdir in os.supports_fd
+        )
+    except (AttributeError, TypeError):
+        return False
+
+
+def _close_descriptor(file_descriptor: int) -> None:
+    with suppress(*_DESCRIPTOR_ERRORS):
+        os.close(file_descriptor)
+
+
 def _empty_capture(errors: list[str]) -> _ArtifactCapture:
     return _ArtifactCapture((), (), tuple(errors))
 
@@ -306,7 +328,7 @@ def _capture_exact_files(directory_fd: int) -> _ArtifactCapture:
     try:
         try:
             initial_names = set(os.listdir(directory_fd))
-        except OSError as exc:
+        except _DESCRIPTOR_ERRORS as exc:
             return _empty_capture([f"cannot enumerate artifact directory descriptor: {exc}"])
         expected_names = set(REQUIRED_ARTIFACT_FILES)
         missing = sorted(expected_names - initial_names)
@@ -330,13 +352,13 @@ def _capture_exact_files(directory_fd: int) -> _ArtifactCapture:
                     file_flags,
                     dir_fd=directory_fd,
                 )
-            except OSError as exc:
+            except _DESCRIPTOR_ERRORS as exc:
                 errors.append(f"cannot open {name} without following links: {exc}")
                 continue
             try:
                 metadata = os.fstat(file_descriptor)
-            except OSError as exc:
-                os.close(file_descriptor)
+            except _DESCRIPTOR_ERRORS as exc:
+                _close_descriptor(file_descriptor)
                 errors.append(f"cannot stat opened {name}: {exc}")
                 continue
             opened[name] = (file_descriptor, metadata)
@@ -354,19 +376,15 @@ def _capture_exact_files(directory_fd: int) -> _ArtifactCapture:
                     f"artifact exceeds maximum total size of {MAX_ARTIFACT_TOTAL_BYTES} bytes"
                 )
                 continue
+            captured_total_bytes += metadata.st_size
             try:
-                first_read_complete = False
                 first_read = _read_descriptor(file_descriptor, metadata.st_size)
-                captured_total_bytes += len(first_read)
-                first_read_complete = True
                 second_read = _read_descriptor(file_descriptor, len(first_read))
                 final_metadata = os.fstat(file_descriptor)
             except _ArtifactReadLimitExceeded as exc:
-                if not first_read_complete:
-                    captured_total_bytes += metadata.st_size
                 errors.append(f"{name} changed while artifact snapshot was captured: {exc}")
                 break
-            except OSError as exc:
+            except _DESCRIPTOR_ERRORS as exc:
                 errors.append(f"cannot read stable snapshot of {name}: {exc}")
                 continue
             if len(first_read) != metadata.st_size:
@@ -387,7 +405,7 @@ def _capture_exact_files(directory_fd: int) -> _ArtifactCapture:
 
         try:
             final_names = set(os.listdir(directory_fd))
-        except OSError as exc:
+        except _DESCRIPTOR_ERRORS as exc:
             errors.append(f"cannot re-enumerate artifact directory descriptor: {exc}")
             final_names = set()
         if final_names != initial_names:
@@ -399,14 +417,14 @@ def _capture_exact_files(directory_fd: int) -> _ArtifactCapture:
                     dir_fd=directory_fd,
                     follow_symlinks=False,
                 )
-            except OSError as exc:
+            except _DESCRIPTOR_ERRORS as exc:
                 errors.append(f"artifact entry {name} changed during verification: {exc}")
                 continue
             if _metadata_identity(opened_metadata) != _metadata_identity(current_metadata):
                 errors.append(f"artifact entry {name} was replaced during verification")
     finally:
         for file_descriptor, _ in opened.values():
-            os.close(file_descriptor)
+            _close_descriptor(file_descriptor)
     return _ArtifactCapture(
         _payloads=tuple(
             (name, payloads[name]) for name in REQUIRED_ARTIFACT_FILES if name in payloads
@@ -422,7 +440,7 @@ def _capture_exact_files(directory_fd: int) -> _ArtifactCapture:
 
 def _read_exact_files(path: Path) -> _ArtifactCapture:
     """Capture a stable no-follow snapshot through directory-relative descriptors."""
-    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
+    if not _descriptor_capture_is_supported():
         return _empty_capture(
             ["descriptor-safe artifact verification is unavailable on this platform"]
         )
@@ -430,14 +448,14 @@ def _read_exact_files(path: Path) -> _ArtifactCapture:
     directory_flags |= getattr(os, "O_CLOEXEC", 0)
     try:
         directory_fd = os.open(path, directory_flags)
-    except OSError as exc:
+    except _DESCRIPTOR_ERRORS as exc:
         return _empty_capture(
             [f"cannot open real artifact directory without following links: {exc}"]
         )
     try:
         return _capture_exact_files(directory_fd)
     finally:
-        os.close(directory_fd)
+        _close_descriptor(directory_fd)
 
 
 def _parse_events(data: bytes) -> tuple[TraceEventLike, ...]:
@@ -1351,19 +1369,19 @@ def _open_artifact_under_root(
     components = _validated_relative_selection(selected_relative_path)
     if components is None:
         return root, None, None, None, ()
-    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
+    if not _descriptor_capture_is_supported():
         return root.joinpath(*components), None, None, None, ()
     directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     directory_flags |= getattr(os, "O_CLOEXEC", 0)
     try:
         directory_fd = os.open(root, directory_flags)
-    except OSError:
+    except _DESCRIPTOR_ERRORS:
         return root.joinpath(*components), None, None, None, ()
     root_fd = directory_fd
     try:
         root_identity = _directory_identity(os.fstat(root_fd))
-    except OSError:
-        os.close(root_fd)
+    except _DESCRIPTOR_ERRORS:
+        _close_descriptor(root_fd)
         return root.joinpath(*components), None, None, None, ()
     identities: list[tuple[str, tuple[int, int, int, int, int, int]]] = []
     try:
@@ -1371,17 +1389,17 @@ def _open_artifact_under_root(
             next_fd = os.open(component, directory_flags, dir_fd=directory_fd)
             try:
                 metadata = os.fstat(next_fd)
-            except OSError:
-                os.close(next_fd)
+            except _DESCRIPTOR_ERRORS:
+                _close_descriptor(next_fd)
                 raise
             identities.append((component, _directory_identity(metadata)))
             if directory_fd != root_fd:
-                os.close(directory_fd)
+                _close_descriptor(directory_fd)
             directory_fd = next_fd
-    except OSError:
+    except _DESCRIPTOR_ERRORS:
         if directory_fd != root_fd:
-            os.close(directory_fd)
-        os.close(root_fd)
+            _close_descriptor(directory_fd)
+        _close_descriptor(root_fd)
         return root.joinpath(*components), None, None, None, ()
     return root.joinpath(*components), root_fd, directory_fd, root_identity, tuple(identities)
 
@@ -1405,11 +1423,11 @@ def _directory_chain_is_current(
                 return False
             current_fd = next_fd
         return True
-    except OSError:
+    except _DESCRIPTOR_ERRORS:
         return False
     finally:
         for directory_fd in reversed(opened_fds):
-            os.close(directory_fd)
+            _close_descriptor(directory_fd)
 
 
 def _root_directory_is_current(
@@ -1423,15 +1441,15 @@ def _root_directory_is_current(
     directory_flags |= getattr(os, "O_CLOEXEC", 0)
     try:
         current_fd = os.open(root, directory_flags)
-    except OSError:
+    except _DESCRIPTOR_ERRORS:
         return False
     try:
         try:
             return _directory_identity(os.fstat(current_fd)) == expected_identity
-        except OSError:
+        except _DESCRIPTOR_ERRORS:
             return False
     finally:
-        os.close(current_fd)
+        _close_descriptor(current_fd)
 
 
 def _retained_directory_identity_is_current(
@@ -1440,7 +1458,7 @@ def _retained_directory_identity_is_current(
 ) -> bool:
     try:
         return _directory_identity(os.fstat(directory_fd)) == expected_identity
-    except OSError:
+    except _DESCRIPTOR_ERRORS:
         return False
 
 
@@ -1468,7 +1486,7 @@ def _inspect_artifact_under_root_capture(
         try:
             capture = _capture_exact_files(selected_fd)
         finally:
-            os.close(selected_fd)
+            _close_descriptor(selected_fd)
         root_path = path.parents[len(components) - 1]
         binding_is_current = _root_directory_is_current(
             root_fd, root_path, root_identity
@@ -1485,7 +1503,7 @@ def _inspect_artifact_under_root_capture(
             )
         return _inspect_captured_artifact(path, capture)
     finally:
-        os.close(root_fd)
+        _close_descriptor(root_fd)
 
 
 def inspect_artifact_under_root(
