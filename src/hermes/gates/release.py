@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import dataclass
 from enum import StrEnum
+from types import MappingProxyType
 
 from hermes.domain.enums import FindingStatus, Verdict
 from hermes.domain.models import Finding, GateResult
@@ -14,6 +17,30 @@ class VerifierProfile(StrEnum):
 
     LEGACY = "legacy"
     FAULT_COVERAGE = "fault_coverage"
+
+
+class EvidenceRequiredness(StrEnum):
+    """Core-owned applicability for evidence projected by the review facade."""
+
+    REQUIRED = "REQUIRED"
+    OPTIONAL = "OPTIONAL"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceRequirement:
+    """One ordered finding requirement for a versioned verifier profile."""
+
+    finding_id: str
+    requiredness: EvidenceRequiredness
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceRequirementProfile:
+    """Immutable requiredness metadata without any release-gate behavior."""
+
+    version: str
+    requirements: tuple[EvidenceRequirement, ...]
 
 
 LEGACY_EXPECTED_FINDINGS = {
@@ -31,6 +58,41 @@ EXPECTED_FINDINGS_BY_PROFILE = {
         "fault.coverage.required": ("FaultCoverageVerifier", "1.0", True),
     },
 }
+
+_COMMON_EVIDENCE_REQUIREMENTS = (
+    EvidenceRequirement("trace.integrity", EvidenceRequiredness.REQUIRED),
+    EvidenceRequirement("collision.zero", EvidenceRequiredness.REQUIRED),
+    EvidenceRequirement("boundary.within_tolerance", EvidenceRequiredness.REQUIRED),
+    EvidenceRequirement("progress.required", EvidenceRequiredness.REQUIRED),
+    EvidenceRequirement("comfort.acceleration", EvidenceRequiredness.OPTIONAL),
+    EvidenceRequirement("comfort.jerk", EvidenceRequiredness.OPTIONAL),
+)
+EVIDENCE_REQUIREMENTS_BY_PROFILE: Mapping[VerifierProfile, EvidenceRequirementProfile] = (
+    MappingProxyType(
+        {
+            VerifierProfile.LEGACY: EvidenceRequirementProfile(
+                version="1.0",
+                requirements=(
+                    *_COMMON_EVIDENCE_REQUIREMENTS,
+                    EvidenceRequirement(
+                        "fault.coverage.required",
+                        EvidenceRequiredness.NOT_APPLICABLE,
+                    ),
+                ),
+            ),
+            VerifierProfile.FAULT_COVERAGE: EvidenceRequirementProfile(
+                version="1.0",
+                requirements=(
+                    *_COMMON_EVIDENCE_REQUIREMENTS,
+                    EvidenceRequirement(
+                        "fault.coverage.required",
+                        EvidenceRequiredness.REQUIRED,
+                    ),
+                ),
+            ),
+        }
+    )
+)
 
 
 def apply_release_gate(

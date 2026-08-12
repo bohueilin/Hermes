@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from hermes.domain.enums import (
     EvidenceAvailability,
     FindingStatus,
@@ -13,7 +15,12 @@ from hermes.domain.models import Action, Finding, Measurement, RunContext, Vehic
 from hermes.evidence.metrics import compute_metrics
 from hermes.evidence.trace import GENESIS_HASH, create_trace_event
 from hermes.gates.config import GateConfig, load_gate_config
-from hermes.gates.release import VerifierProfile, apply_release_gate
+from hermes.gates.release import (
+    EVIDENCE_REQUIREMENTS_BY_PROFILE,
+    EvidenceRequiredness,
+    VerifierProfile,
+    apply_release_gate,
+)
 from hermes.scenarios.loader import load_scenario
 from hermes.verifiers import run_phase1_verifiers
 
@@ -96,6 +103,35 @@ def _events(
         previous_hash=GENESIS_HASH,
     )
     return (event,)
+
+
+def test_evidence_requirement_profiles_are_versioned_ordered_and_immutable() -> None:
+    legacy = EVIDENCE_REQUIREMENTS_BY_PROFILE[VerifierProfile.LEGACY]
+    fault_coverage = EVIDENCE_REQUIREMENTS_BY_PROFILE[VerifierProfile.FAULT_COVERAGE]
+
+    assert legacy.version == "1.0"
+    assert fault_coverage.version == "1.0"
+    assert tuple(item.finding_id for item in legacy.requirements) == (
+        "trace.integrity",
+        "collision.zero",
+        "boundary.within_tolerance",
+        "progress.required",
+        "comfort.acceleration",
+        "comfort.jerk",
+        "fault.coverage.required",
+    )
+    assert tuple(item.requiredness for item in legacy.requirements) == (
+        EvidenceRequiredness.REQUIRED,
+        EvidenceRequiredness.REQUIRED,
+        EvidenceRequiredness.REQUIRED,
+        EvidenceRequiredness.REQUIRED,
+        EvidenceRequiredness.OPTIONAL,
+        EvidenceRequiredness.OPTIONAL,
+        EvidenceRequiredness.NOT_APPLICABLE,
+    )
+    assert fault_coverage.requirements[-1].requiredness is EvidenceRequiredness.REQUIRED
+    with pytest.raises(TypeError):
+        EVIDENCE_REQUIREMENTS_BY_PROFILE[VerifierProfile.LEGACY] = fault_coverage
 
 
 def test_verifiers_emit_structured_hard_soft_and_unavailable_findings(

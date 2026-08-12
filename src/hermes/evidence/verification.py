@@ -102,11 +102,56 @@ class VerifiedArtifactSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class _CapturedFileState:
+    """Private descriptor identity retained only for a review-session handoff."""
+
+    file_name: str
+    size_bytes: int
+    observed_sha256: str
+    metadata_identity: tuple[int, int, int, int, int, int]
+
+
+@dataclass(frozen=True, slots=True)
+class ArtifactFileInventory:
+    """Portable capture observation that deliberately excludes filesystem identity."""
+
+    file_name: str
+    size_bytes: int
+    observed_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class _ArtifactCapture:
+    """One immutable descriptor-relative capture; payload bytes never leave verification."""
+
+    _payloads: tuple[tuple[str, bytes], ...]
+    captured_files: tuple[_CapturedFileState, ...]
+    errors: tuple[str, ...]
+
+    def payload_map(self) -> dict[str, bytes]:
+        return dict(self._payloads)
+
+
+@dataclass(frozen=True, slots=True)
 class ArtifactInspection:
     """Stored verification result and its snapshot when internally consistent."""
 
     verification: ArtifactVerification
     snapshot: VerifiedArtifactSnapshot | None
+    source_inventory: tuple[ArtifactFileInventory, ...]
+    observed_bundle_digest: str | None
+    computed_bundle_digest: str | None
+    observed_trace_digest: str | None
+    computed_trace_digest: str | None
+    stored_claim_files: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _InspectionCapture:
+    """Private verification-to-review handoff retaining descriptor identity in memory only."""
+
+    inspection: ArtifactInspection
+    captured_files: tuple[_CapturedFileState, ...]
 
 
 class _DuplicateJsonKey(ValueError):
@@ -234,25 +279,21 @@ def _read_descriptor(file_descriptor: int) -> bytes:
         chunks.append(chunk)
 
 
-def _read_exact_files(path: Path) -> tuple[dict[str, bytes], list[str]]:
-    """Capture a stable no-follow snapshot through directory-relative descriptors."""
+def _empty_capture(errors: list[str]) -> _ArtifactCapture:
+    return _ArtifactCapture((), (), tuple(errors))
+
+
+def _capture_exact_files(directory_fd: int) -> _ArtifactCapture:
+    """Capture a stable no-follow snapshot through one already-open directory."""
     errors: list[str] = []
     payloads: dict[str, bytes] = {}
-    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
-        return {}, ["descriptor-safe artifact verification is unavailable on this platform"]
-    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    directory_flags |= getattr(os, "O_CLOEXEC", 0)
-    try:
-        directory_fd = os.open(path, directory_flags)
-    except OSError as exc:
-        return {}, [f"cannot open real artifact directory without following links: {exc}"]
-
     opened: dict[str, tuple[int, os.stat_result]] = {}
+    captured_files: dict[str, _CapturedFileState] = {}
     try:
         try:
             initial_names = set(os.listdir(directory_fd))
         except OSError as exc:
-            return {}, [f"cannot enumerate artifact directory descriptor: {exc}"]
+            return _empty_capture([f"cannot enumerate artifact directory descriptor: {exc}"])
         expected_names = set(REQUIRED_ARTIFACT_FILES)
         missing = sorted(expected_names - initial_names)
         unexpected = sorted(initial_names - expected_names)
@@ -268,7 +309,7 @@ def _read_exact_files(path: Path) -> tuple[dict[str, bytes], list[str]]:
             | getattr(os, "O_CLOEXEC", 0)
         )
         total_size = 0
-        for name in sorted(expected_names & initial_names):
+        for name in (name for name in REQUIRED_ARTIFACT_FILES if name in initial_names):
             try:
                 file_descriptor = os.open(
                     name,
@@ -315,6 +356,12 @@ def _read_exact_files(path: Path) -> tuple[dict[str, bytes], list[str]]:
                 errors.append(f"{name} changed while artifact snapshot was captured")
                 continue
             payloads[name] = first_read
+            captured_files[name] = _CapturedFileState(
+                file_name=name,
+                size_bytes=metadata.st_size,
+                observed_sha256=sha256_hex(first_read),
+                metadata_identity=_metadata_identity(metadata),
+            )
 
         try:
             final_names = set(os.listdir(directory_fd))
@@ -338,8 +385,37 @@ def _read_exact_files(path: Path) -> tuple[dict[str, bytes], list[str]]:
     finally:
         for file_descriptor, _ in opened.values():
             os.close(file_descriptor)
+    return _ArtifactCapture(
+        _payloads=tuple(
+            (name, payloads[name]) for name in REQUIRED_ARTIFACT_FILES if name in payloads
+        ),
+        captured_files=tuple(
+            captured_files[name]
+            for name in REQUIRED_ARTIFACT_FILES
+            if name in captured_files
+        ),
+        errors=tuple(errors),
+    )
+
+
+def _read_exact_files(path: Path) -> _ArtifactCapture:
+    """Capture a stable no-follow snapshot through directory-relative descriptors."""
+    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
+        return _empty_capture(
+            ["descriptor-safe artifact verification is unavailable on this platform"]
+        )
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    directory_flags |= getattr(os, "O_CLOEXEC", 0)
+    try:
+        directory_fd = os.open(path, directory_flags)
+    except OSError as exc:
+        return _empty_capture(
+            [f"cannot open real artifact directory without following links: {exc}"]
+        )
+    try:
+        return _capture_exact_files(directory_fd)
+    finally:
         os.close(directory_fd)
-    return payloads, errors
 
 
 def _parse_events(data: bytes) -> tuple[TraceEventLike, ...]:
@@ -795,14 +871,74 @@ def _profile_errors(
     return errors
 
 
-def _inspect_captured_artifact(
-    path: Path,
-    payloads: dict[str, bytes],
-    errors: list[str],
-) -> ArtifactInspection:
+def _digest_claim(payload: bytes | None) -> str | None:
+    if payload is None:
+        return None
+    try:
+        text = payload.decode("ascii")
+    except UnicodeDecodeError:
+        return None
+    return text.strip() if re.fullmatch(r"[0-9a-f]{64}\n", text) else None
+
+
+def _inspection_result(
+    verification: ArtifactVerification,
+    snapshot: VerifiedArtifactSnapshot | None,
+    capture: _ArtifactCapture,
+    *,
+    observed_bundle_digest: str | None,
+    computed_bundle_digest: str | None,
+    observed_trace_digest: str | None,
+    computed_trace_digest: str | None,
+) -> _InspectionCapture:
+    inspection = ArtifactInspection(
+        verification=verification,
+        snapshot=snapshot,
+        source_inventory=tuple(
+            ArtifactFileInventory(
+                file_name=item.file_name,
+                size_bytes=item.size_bytes,
+                observed_sha256=item.observed_sha256,
+            )
+            for item in capture.captured_files
+        ),
+        observed_bundle_digest=observed_bundle_digest,
+        computed_bundle_digest=computed_bundle_digest,
+        observed_trace_digest=observed_trace_digest,
+        computed_trace_digest=computed_trace_digest,
+        stored_claim_files=tuple(
+            name
+            for name in ("metrics.json", "findings.json", "verdict.json")
+            if name in dict(capture._payloads)
+        ),
+    )
+    return _InspectionCapture(inspection, capture.captured_files)
+
+
+def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _InspectionCapture:
     """Verify and parse one already captured immutable artifact payload set."""
+    payloads = capture.payload_map()
+    errors = list(capture.errors)
+    observed_bundle_digest = _digest_claim(payloads.get("bundle.sha256"))
+    observed_trace_digest = _digest_claim(payloads.get("trace.sha256"))
+    required_bundle_inputs = set(REQUIRED_ARTIFACT_FILES) - {"bundle.sha256"}
+    computed_bundle_digest = (
+        bundle_digest(
+            {name: payloads[name] for name in required_bundle_inputs}
+        )
+        if required_bundle_inputs.issubset(payloads)
+        else None
+    )
     if set(REQUIRED_ARTIFACT_FILES) - payloads.keys():
-        return ArtifactInspection(_invalid(path, errors), None)
+        return _inspection_result(
+            _invalid(path, errors),
+            None,
+            capture,
+            observed_bundle_digest=observed_bundle_digest,
+            computed_bundle_digest=computed_bundle_digest,
+            observed_trace_digest=observed_trace_digest,
+            computed_trace_digest=None,
+        )
 
     observed_bundle = payloads["bundle.sha256"]
     try:
@@ -813,10 +949,8 @@ def _inspect_captured_artifact(
     if not re.fullmatch(r"[0-9a-f]{64}\n", bundle_text):
         errors.append("bundle.sha256 must contain one lowercase SHA-256 digest")
     else:
-        computed_bundle = bundle_digest(
-            {name: data for name, data in payloads.items() if name != "bundle.sha256"}
-        )
-        if bundle_text.strip() != computed_bundle:
+        assert computed_bundle_digest is not None
+        if bundle_text.strip() != computed_bundle_digest:
             errors.append("bundle.sha256 does not match manifest and companion bytes")
 
     manifest: ArtifactManifest | ArtifactManifestV2 | None = None
@@ -1103,7 +1237,7 @@ def _inspect_captured_artifact(
             errors.append("verdict.json does not match the recomputed release gate")
 
     if errors:
-        return ArtifactInspection(
+        return _inspection_result(
             _invalid(
                 path,
                 errors,
@@ -1111,6 +1245,11 @@ def _inspect_captured_artifact(
                 trace_digest=trace_digest,
             ),
             None,
+            capture,
+            observed_bundle_digest=observed_bundle_digest,
+            computed_bundle_digest=computed_bundle_digest,
+            observed_trace_digest=observed_trace_digest,
+            computed_trace_digest=trace_digest,
         )
     assert recomputed_verdict is not None
     assert manifest is not None
@@ -1131,7 +1270,7 @@ def _inspect_captured_artifact(
         supporting_finding_ids=recomputed_verdict.supporting_finding_ids,
         residual_limitations=recomputed_verdict.residual_limitations,
     )
-    return ArtifactInspection(
+    return _inspection_result(
         verification=verification,
         snapshot=VerifiedArtifactSnapshot(
             path=path,
@@ -1144,14 +1283,92 @@ def _inspect_captured_artifact(
             findings=findings_document,
             verdict=stored_verdict,
         ),
+        capture=capture,
+        observed_bundle_digest=observed_bundle_digest,
+        computed_bundle_digest=computed_bundle_digest,
+        observed_trace_digest=observed_trace_digest,
+        computed_trace_digest=trace_digest,
     )
 
 
 def inspect_artifact(artifact_path: Path) -> ArtifactInspection:
     """Capture and verify an artifact once, returning a comparison-safe snapshot."""
     path = Path(os.path.abspath(os.fspath(artifact_path.expanduser())))
-    payloads, errors = _read_exact_files(path)
-    return _inspect_captured_artifact(path, payloads, errors)
+    return _inspect_captured_artifact(path, _read_exact_files(path)).inspection
+
+
+def _validated_relative_selection(selected_relative_path: str) -> tuple[str, ...] | None:
+    if (
+        not isinstance(selected_relative_path, str)
+        or not selected_relative_path
+        or selected_relative_path.startswith("/")
+        or "\x00" in selected_relative_path
+        or "\\" in selected_relative_path
+    ):
+        return None
+    components = tuple(selected_relative_path.split("/"))
+    if any(component in {"", ".", ".."} for component in components):
+        return None
+    return components
+
+
+def _open_artifact_under_root(
+    artifact_root: Path,
+    selected_relative_path: str,
+) -> tuple[Path, int] | tuple[Path, None]:
+    root = Path(os.path.abspath(os.fspath(artifact_root.expanduser())))
+    components = _validated_relative_selection(selected_relative_path)
+    if components is None:
+        return root, None
+    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
+        return root.joinpath(*components), None
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    directory_flags |= getattr(os, "O_CLOEXEC", 0)
+    try:
+        directory_fd = os.open(root, directory_flags)
+    except OSError:
+        return root.joinpath(*components), None
+    try:
+        for component in components:
+            next_fd = os.open(component, directory_flags, dir_fd=directory_fd)
+            os.close(directory_fd)
+            directory_fd = next_fd
+    except OSError:
+        os.close(directory_fd)
+        return root.joinpath(*components), None
+    return root.joinpath(*components), directory_fd
+
+
+def _inspect_artifact_under_root_capture(
+    artifact_root: Path,
+    selected_relative_path: str,
+) -> _InspectionCapture:
+    """Capture one lexical selection below an already configured real artifact root."""
+    path, directory_fd = _open_artifact_under_root(artifact_root, selected_relative_path)
+    if directory_fd is None:
+        return _inspect_captured_artifact(
+            path,
+            _empty_capture(
+                [
+                    "artifact root and selected path must be existing real directories "
+                    "without symlink traversal"
+                ]
+            ),
+        )
+    try:
+        return _inspect_captured_artifact(path, _capture_exact_files(directory_fd))
+    finally:
+        os.close(directory_fd)
+
+
+def inspect_artifact_under_root(
+    artifact_root: Path,
+    selected_relative_path: str,
+) -> ArtifactInspection:
+    """Capture a lexical artifact selection below an existing non-symlink root."""
+    return _inspect_artifact_under_root_capture(
+        artifact_root, selected_relative_path
+    ).inspection
 
 
 def verify_artifact(artifact_path: Path) -> ArtifactVerification:
