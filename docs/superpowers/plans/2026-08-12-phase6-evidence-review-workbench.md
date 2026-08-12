@@ -172,7 +172,12 @@ class ReviewModel(BaseModel):
     )
 ```
 
-Implement the exact types and validation rules from `docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md`; do not simplify structured values into `dict[str, Any]`. Export portable `ReviewEnvelope`, `ComparisonEnvelope`, canonical serializer, session locator/cache-key types, and typed operational review errors from `hermes.review.__init__`. Keep Streamlit and workbench imports entirely absent.
+Implement the exact types and validation rules from
+`docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md`; do not simplify structured values into
+`dict[str, Any]`. Export portable `ReviewEnvelope`, `ComparisonEnvelope`, `LocatorInfo`, the exact
+runtime `ReviewCacheKey`, canonical serializer, `ReviewUnavailableReason`, and
+`ReviewUnavailableError` from `hermes.review.__init__`. Do not invent another public locator or
+parallel path/configuration error taxonomy. Keep Streamlit and workbench imports entirely absent.
 
 **Step 3: Add deterministic serialization.**
 

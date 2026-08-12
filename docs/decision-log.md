@@ -1,5 +1,19 @@
 # Hermes Decision Log
 
+## 2026-08-12 — Freeze the minimal non-portable review runtime API
+
+- **Decision:** Expose the portable `LocatorInfo`, one frozen four-field `ReviewCacheKey`, and the
+  narrowly typed `ReviewUnavailableError` / `UNSUPPORTED_REVIEW_SHAPE` pair. Keep the allowed root
+  as a facade argument/private runtime value and reuse the existing CLI taxonomy for all other
+  failures.
+- **Why:** Implementation-plan preflight found that the portable envelopes and cache tuple were
+  exact, but the phrase “session locator/cache-key types and typed operational review errors” left
+  room for competing public APIs. The minimal surface preserves the frozen tuple and exit contract
+  without serializing an absolute root or creating a second error system.
+- **Consequence:** Task 2 has an exact model/test target; Task 3 still owns root/selection validation,
+  capture identity, caching, and error-to-CLI mapping.
+- **Supersedes:** No prior decision; this clarifies the Phase 6 design freeze.
+
 ## 2026-08-12 — Phase 6 evidence-review design freeze
 
 ### Scope

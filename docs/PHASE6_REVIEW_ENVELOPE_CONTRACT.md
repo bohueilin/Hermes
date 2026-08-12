@@ -57,6 +57,26 @@ containment and performs a full capture and stored verification. A metadata or d
 invalidates the active session and its presentation projection. A different computed bundle digest
 selects a different cache entry.
 
+### 2.3 Exact runtime API types
+
+`ReviewCacheKey` is a frozen, slots-only, non-Pydantic runtime value with exactly four fields in
+this order: `computed_bundle_digest_sha256: Sha256`, `review_schema_version: Literal["1.0"]`,
+`hermes_version: non-empty string`, and `selected_relative_path: validated non-empty lexical
+relative string`. Its tuple representation is exactly the four-value cache tuple above. It is not
+part of either portable envelope and never contains the allowed root or filesystem metadata.
+
+The portable session locator is `LocatorInfo`; there is no additional public locator model. The
+allowed root remains an explicit `Path` argument to the facade and the artifact selection remains
+an explicit relative-string argument. The facade validates both and retains any absolute root only
+as private runtime state.
+
+`ReviewUnavailableReason` has exactly one Phase 6 value, `UNSUPPORTED_REVIEW_SHAPE`.
+`ReviewUnavailableError` is a typed runtime exception with `reason: ReviewUnavailableReason` and a
+non-empty `message`. It is not portable evidence. CLI code maps it to error code
+`REVIEW_UNAVAILABLE`, reason `UNSUPPORTED_REVIEW_SHAPE`, and exit 40. Path, configuration,
+operational, invalid-evidence, and incompatibility failures continue to use the existing CLI error
+taxonomy; this contract does not create parallel runtime error types for them.
+
 ## 3. Common enums and scalar types
 
 | Type | Exact values/rule |
