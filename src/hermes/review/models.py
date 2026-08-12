@@ -152,6 +152,79 @@ METRIC_REGISTRY: dict[str, tuple[str | None, str, str]] = {
     "steering_saturation_count": ("events", "LOWER", "SCALAR"),
     "brake_saturation_count": ("events", "LOWER", "SCALAR"),
 }
+METRIC_EVENT_POINTERS: dict[str, frozenset[str]] = {
+    "event_count": frozenset({""}),
+    "simulation_duration_s": frozenset({"/simulation_time_s"}),
+    "collision_count": frozenset({"/vehicle_state/collision_count"}),
+    "max_abs_lateral_offset_m": frozenset({"/vehicle_state/lateral_offset_m"}),
+    "offroad_duration_s": frozenset({"/vehicle_state/offroad"}),
+    "route_completion_pct": frozenset(
+        {"/raw_facts/route_progress_available", "/vehicle_state/route_progress_pct"}
+    ),
+    "minimum_ttc_s": frozenset(
+        {
+            "/observation_summary/result_front_distance_m",
+            "/observation_summary/result_front_relative_speed_mps",
+            "/observation_summary/front_distance_m",
+            "/observation_summary/front_relative_speed_mps",
+        }
+    ),
+    "max_abs_acceleration_mps2": frozenset({"/vehicle_state/acceleration_mps2"}),
+    "max_abs_jerk_mps3": frozenset({"/vehicle_state/acceleration_mps2"}),
+    "p95_policy_latency_ms": frozenset({"/policy_latency_ms"}),
+    "shield_override_count": frozenset(
+        {"/candidate_action", "/permitted_action", "/executed_action"}
+    ),
+    "shield_override_reasons": frozenset({"/override_reasons"}),
+    "termination_reason": frozenset({"/termination_reason"}),
+    "fault_application_counts": frozenset(
+        {
+            "/observation_fault_evidence/applied_faults",
+            "/control_fault_evidence/applied_faults",
+        }
+    ),
+    "max_observation_age_s": frozenset(
+        {"/observation_fault_evidence/delivered_observation/observation_age_s"}
+    ),
+    "p95_control_latency_ms": frozenset(
+        {"/control_fault_evidence/control_latency_ms/value"}
+    ),
+    "control_fill_count": frozenset(
+        {
+            "/observation_fault_evidence/applied_faults",
+            "/control_fault_evidence/applied_faults",
+        }
+    ),
+    "steering_saturation_count": frozenset(
+        {
+            "/observation_fault_evidence/applied_faults",
+            "/control_fault_evidence/applied_faults",
+        }
+    ),
+    "brake_saturation_count": frozenset(
+        {
+            "/observation_fault_evidence/applied_faults",
+            "/control_fault_evidence/applied_faults",
+        }
+    ),
+}
+METRIC_AUX_POINTERS: dict[str, frozenset[tuple[str, str]]] = {
+    "offroad_duration_s": frozenset(
+        {("EXECUTION_CONTEXT", "/run_context/control_frequency_hz")}
+    ),
+    "max_abs_jerk_mps3": frozenset(
+        {("EXECUTION_CONTEXT", "/run_context/control_frequency_hz")}
+    ),
+    "control_fill_count": frozenset(
+        {("METRIC", "/fault_application_counts/CONTROL_DELAY_FILL")}
+    ),
+    "steering_saturation_count": frozenset(
+        {("METRIC", "/fault_application_counts/STEERING_SATURATION")}
+    ),
+    "brake_saturation_count": frozenset(
+        {("METRIC", "/fault_application_counts/BRAKE_SATURATION")}
+    ),
+}
 MEASUREMENT_METRICS = {
     "route_completion_pct",
     "minimum_ttc_s",
@@ -213,10 +286,30 @@ TRACK_POINT_POINTERS: dict[str, frozenset[str]] = {
     "route_progress_pct": frozenset(
         {"/vehicle_state/route_progress_pct", "/raw_facts/route_progress_available"}
     ),
-    "ttc_s": frozenset({"", "/observation_summary"}),
+    "ttc_s": frozenset({"/observation_summary"}),
     "policy_latency_ms": frozenset({"/policy_latency_ms"}),
     "verifier_triggering_findings": frozenset({""}),
 }
+SCALAR_TRACK_UNITS: dict[str, str | None] = {
+    "collision_count": "collisions",
+    "offroad": None,
+    "speed_mps": "m/s",
+    "route_progress_pct": "%",
+    "ttc_s": "s",
+    "policy_latency_ms": "ms",
+}
+TTC_CONTRIBUTOR_POINTER_PAIRS = frozenset(
+    {
+        (
+            "/observation_summary/result_front_distance_m",
+            "/observation_summary/result_front_relative_speed_mps",
+        ),
+        (
+            "/observation_summary/front_distance_m",
+            "/observation_summary/front_relative_speed_mps",
+        ),
+    }
+)
 LEGACY_UNAVAILABLE_TRACKS = {
     "raw_observation",
     "delivered_observation",
@@ -264,7 +357,7 @@ class ReviewUnavailableError(Exception):
 
 
 def _validate_relative_path(value: str) -> str:
-    if not value or "\\" in value or "\x00" in value:
+    if not value or value == "." or "\\" in value or "\x00" in value:
         raise ValueError("selected_relative_path must be a non-empty POSIX relative path")
     path = PurePosixPath(value)
     if path.is_absolute() or value.endswith("/") or "//" in value:
@@ -317,7 +410,8 @@ def _reference_key(reference: SourceReference) -> tuple[int, int, str]:
 
 
 def _validate_references(references: tuple[SourceReference, ...]) -> None:
-    if len(set(references)) != len(references):
+    semantic_keys = tuple(_reference_key(reference) for reference in references)
+    if len(set(semantic_keys)) != len(semantic_keys):
         raise ValueError("source references must be unique")
     if tuple(sorted(references, key=_reference_key)) != references:
         raise ValueError("source references must use canonical order")
@@ -331,7 +425,10 @@ def _side_reference_key(reference: SideReference) -> tuple[int, int, str, int]:
 
 
 def _validate_side_references(references: tuple[SideReference, ...]) -> None:
-    if len(set(references)) != len(references):
+    semantic_keys = tuple(
+        (*_reference_key(reference.reference), reference.side) for reference in references
+    )
+    if len(set(semantic_keys)) != len(semantic_keys):
         raise ValueError("side references must be unique")
     if tuple(sorted(references, key=_side_reference_key)) != references:
         raise ValueError("side references must use canonical order")
@@ -459,7 +556,47 @@ class PortableArtifactIdentity(ReviewModel):
             value is not None for value in identity_values
         ):
             raise ValueError("manifest identity is retained all-four-or-none")
+        if all(value is not None for value in identity_values):
+            if "manifest.json" not in names:
+                raise ValueError("retained manifest identity requires captured manifest.json")
+            if self.manifest_identity.evidence_schema_version not in {"1.0", "2.0"}:
+                raise ValueError("retained manifest identity requires a supported evidence schema")
+        required_sources = (
+            (self.observed_bundle_digest, "bundle.sha256"),
+            (self.observed_trace_digest, "trace.sha256"),
+            (self.computed_trace_digest, "events.jsonl"),
+        )
+        if any(digest is not None and source not in names for digest, source in required_sources):
+            raise ValueError("retained digest requires its captured source file")
         return self
+
+    def require_consistent_complete(self) -> None:
+        if len(self.source_inventory) != len(ARTIFACT_FILES):
+            raise ValueError("consistent evidence requires the complete inventory")
+        identity = self.manifest_identity
+        if any(
+            getattr(identity, name) is None
+            for name in (
+                "run_id",
+                "created_at_utc",
+                "evidence_schema_version",
+                "scenario_schema_version",
+            )
+        ):
+            raise ValueError("consistent evidence requires complete manifest identity")
+        roots = (
+            self.observed_bundle_digest,
+            self.computed_bundle_digest,
+            self.observed_trace_digest,
+            self.computed_trace_digest,
+        )
+        if any(digest is None for digest in roots):
+            raise ValueError("consistent evidence requires all observed and computed digest roots")
+        if (
+            self.observed_bundle_digest.value != self.computed_bundle_digest.value
+            or self.observed_trace_digest.value != self.computed_trace_digest.value
+        ):
+            raise ValueError("consistent evidence requires matching observed and computed roots")
 
 
 class SourceReference(ReviewModel):
@@ -499,6 +636,18 @@ class ExactValue(ReviewModel):
     canonical_text: str | None
     display_text: str
     unit: str | None
+
+    @model_validator(mode="after")
+    def exact_lexical_representation(self) -> ExactValue:
+        if self.machine_value is None:
+            if self.canonical_text is not None or self.display_text != "NOT_AVAILABLE":
+                raise ValueError("null exact values use the NOT_AVAILABLE representation")
+            return self
+        canonical = canonical_json_bytes(self.machine_value).decode("utf-8")
+        display = self.machine_value if isinstance(self.machine_value, str) else canonical
+        if self.canonical_text != canonical or self.display_text != display:
+            raise ValueError("exact value text must deterministically represent its machine value")
+        return self
 
 
 class ActionValue(ReviewModel):
@@ -1253,22 +1402,38 @@ class MetricItem(ReviewModel):
         if first.source_type != "METRIC" or first.json_pointer != f"/{self.metric_id}":
             raise ValueError("metric references must begin with its metrics pointer")
         _validate_references(tuple(tail))
-        if len(set(self.source_references)) != len(self.source_references):
+        if len({_reference_key(reference) for reference in self.source_references}) != len(
+            self.source_references
+        ):
             raise ValueError("metric source references must be unique")
         allowed_types = {"EVENT", "EXECUTION_CONTEXT", "METRIC"}
         if any(reference.source_type not in allowed_types for reference in tail):
             raise ValueError("metric tail reference has no frozen transform role")
-        context_required = self.metric_id in {"offroad_duration_s", "max_abs_jerk_mps3"}
-        context_reference = (
-            "EXECUTION_CONTEXT",
-            "/run_context/control_frequency_hz",
-        )
-        has_context = any(
-            (reference.source_type, reference.json_pointer) == context_reference
+        allowed_events = METRIC_EVENT_POINTERS[self.metric_id]
+        allowed_aux = METRIC_AUX_POINTERS.get(self.metric_id, frozenset())
+        if any(
+            (
+                reference.json_pointer not in allowed_events
+                if reference.source_type == "EVENT"
+                else (reference.source_type, reference.json_pointer) not in allowed_aux
+            )
             for reference in tail
-        )
-        if context_required != has_context:
-            raise ValueError("metric control-frequency reference does not match its transform")
+        ):
+            raise ValueError("metric tail reference does not match its frozen transform")
+        required_aux = {
+            "offroad_duration_s": (
+                "EXECUTION_CONTEXT",
+                "/run_context/control_frequency_hz",
+            ),
+            "max_abs_jerk_mps3": (
+                "EXECUTION_CONTEXT",
+                "/run_context/control_frequency_hz",
+            ),
+        }
+        if self.metric_id in required_aux and required_aux[self.metric_id] not in {
+            (reference.source_type, reference.json_pointer) for reference in tail
+        }:
+            raise ValueError("metric is missing its required transform context")
         unavailable = self.availability == "NOT_AVAILABLE"
         if unavailable:
             if self.metric_id not in MEASUREMENT_METRICS:
@@ -1297,7 +1462,14 @@ class MetricItem(ReviewModel):
                 "brake_saturation_count",
             }
             if self.metric_id == "termination_reason":
-                valid_value = isinstance(machine_value, str) and bool(machine_value)
+                valid_value = machine_value in {
+                    "NONE",
+                    "DESTINATION_REACHED",
+                    "COLLISION",
+                    "OFF_ROAD",
+                    "HORIZON",
+                    "OPERATIONAL_ERROR",
+                }
             elif self.metric_id in integer_metrics:
                 valid_value = isinstance(machine_value, int) and not isinstance(machine_value, bool)
                 valid_value = valid_value and machine_value >= 0
@@ -1305,6 +1477,9 @@ class MetricItem(ReviewModel):
                 valid_value = isinstance(machine_value, (int, float)) and not isinstance(
                     machine_value, bool
                 )
+                valid_value = valid_value and machine_value >= 0
+                if self.metric_id == "route_completion_pct":
+                    valid_value = valid_value and machine_value <= 100
             if not valid_value:
                 raise ValueError("available scalar metric requires its registry machine-value type")
         return self
@@ -1413,7 +1588,12 @@ class Track(ReviewModel):
         if sequences != tuple(sorted(set(sequences))):
             raise ValueError("track points must be ordered by sequence")
         if self.availability == "NOT_AVAILABLE":
-            if self.category != "NOT_AVAILABLE" or not self.unavailable_reason or self.points:
+            if (
+                self.category != "NOT_AVAILABLE"
+                or not self.unavailable_reason
+                or self.points
+                or self.source_references
+            ):
                 raise ValueError("unavailable track requires reason and no points")
         else:
             if self.category != category or self.unavailable_reason is not None:
@@ -1439,13 +1619,86 @@ class Track(ReviewModel):
                     raise ValueError("non-finding timeline points use event sources")
                 elif point.source_reference.json_pointer not in TRACK_POINT_POINTERS[self.track_id]:
                     raise ValueError("timeline point source pointer must match its track registry")
-            point_references = tuple(point.source_reference for point in self.points)
-            if (
-                self.track_id != "verifier_triggering_findings"
-                and self.source_references != point_references
-            ):
+                if self.track_id == "route_progress_pct":
+                    expected_pointer = (
+                        "/vehicle_state/route_progress_pct"
+                        if point.availability == "AVAILABLE"
+                        else "/raw_facts/route_progress_available"
+                    )
+                    if point.source_reference.json_pointer != expected_pointer:
+                        raise ValueError("route-progress source must match point availability")
+                if self.track_id in SCALAR_TRACK_UNITS:
+                    self._validate_scalar_point(point)
+            if self.track_id == "ttc_s":
+                self._validate_ttc_sources()
+            elif self.track_id == "verifier_triggering_findings":
+                self._validate_triggering_finding_sources()
+            elif self.source_references != tuple(point.source_reference for point in self.points):
                 raise ValueError("track source references must exactly cover its points")
         return self
+
+    def _validate_scalar_point(self, point: Point) -> None:
+        value = point.scalar_value
+        if value is None or value.unit != SCALAR_TRACK_UNITS[self.track_id]:
+            raise ValueError("scalar point unit must match its track registry")
+        if point.availability == "NOT_AVAILABLE":
+            if self.track_id == "ttc_s" and point.unavailable_reason != (
+                "no paired closing front-object evidence"
+            ):
+                raise ValueError("unavailable TTC point requires its exact reason")
+            return
+        machine = value.machine_value
+        if self.track_id == "collision_count":
+            valid = isinstance(machine, int) and not isinstance(machine, bool) and machine >= 0
+        elif self.track_id == "offroad":
+            valid = isinstance(machine, bool)
+        else:
+            valid = (
+                isinstance(machine, (int, float))
+                and not isinstance(machine, bool)
+                and machine >= 0
+            )
+            if self.track_id == "route_progress_pct":
+                valid = valid and machine <= 100
+        if not valid:
+            raise ValueError("scalar point machine value must match its track registry")
+
+    def _validate_ttc_sources(self) -> None:
+        references_by_sequence: dict[int, list[str]] = {}
+        for reference in self.source_references:
+            if reference.source_type != "EVENT" or reference.event_sequence is None:
+                raise ValueError("TTC contributors must be exact event-field references")
+            references_by_sequence.setdefault(reference.event_sequence, []).append(
+                reference.json_pointer
+            )
+        point_sequences = {point.sequence for point in self.points}
+        if set(references_by_sequence) != point_sequences:
+            raise ValueError("TTC contributors must exactly cover every timeline point")
+        if any(
+            tuple(references_by_sequence[sequence]) not in TTC_CONTRIBUTOR_POINTER_PAIRS
+            for sequence in point_sequences
+        ):
+            raise ValueError("TTC contributors must use an exact result or fallback field pair")
+
+    def _validate_triggering_finding_sources(self) -> None:
+        finding_ids = {
+            finding_id
+            for point in self.points
+            for finding_id in point.string_list_value.values
+            if point.string_list_value is not None
+        }
+        if len(self.source_references) != len(finding_ids):
+            raise ValueError("triggering-finding references must exactly cover contributing rows")
+        for reference in self.source_references:
+            prefix = "/findings/"
+            row = reference.json_pointer.removeprefix(prefix)
+            if (
+                reference.source_type != "FINDING"
+                or not reference.json_pointer.startswith(prefix)
+                or not row.isdecimal()
+                or str(int(row)) != row
+            ):
+                raise ValueError("triggering-finding references must use exact finding rows")
 
 
 class Timeline(ReviewModel):
@@ -1945,6 +2198,7 @@ class SideSummary(ReviewModel):
     def references_match_side(self) -> SideSummary:
         if any(reference.side != self.side for reference in self.source_references):
             raise ValueError("side summary references must match the summary side")
+        self.artifact.require_consistent_complete()
         return self
 
 
@@ -2046,29 +2300,7 @@ class ReviewEnvelope(ReviewModel):
             raise ValueError("gate limitation IDs must match envelope limitations")
         if self.gate.verdict == "INVALID_EVIDENCE" or not self.gate.accepted_recomputation:
             raise ValueError("consistent evidence requires an accepted recomputation")
-        if len(self.artifact.source_inventory) != 10:
-            raise ValueError("consistent evidence requires the complete inventory")
-        identity = self.artifact.manifest_identity
-        if any(
-            getattr(identity, name) is None
-            for name in (
-                "run_id",
-                "created_at_utc",
-                "evidence_schema_version",
-                "scenario_schema_version",
-            )
-        ):
-            raise ValueError("consistent evidence requires complete manifest identity")
-        if any(
-            digest is None
-            for digest in (
-                self.artifact.observed_bundle_digest,
-                self.artifact.computed_bundle_digest,
-                self.artifact.observed_trace_digest,
-                self.artifact.computed_trace_digest,
-            )
-        ):
-            raise ValueError("consistent evidence requires all observed and computed digest roots")
+        self.artifact.require_consistent_complete()
         if self.provenance.recorded.status != "ACCEPTED":
             raise ValueError("consistent evidence requires accepted recorded provenance")
         finding_ids = tuple(item.finding_id for item in self.findings)
@@ -2078,6 +2310,22 @@ class ReviewEnvelope(ReviewModel):
         schema = self.artifact.manifest_identity.evidence_schema_version
         if (schema, profile) not in {("1.0", "legacy"), ("2.0", "fault_coverage")}:
             raise ValueError("evidence schema and sufficiency profile must use the frozen pairing")
+        gate_identity = (
+            self.gate.gate_name,
+            self.gate.gate_version,
+            self.gate.gate_config_digest_sha256,
+        )
+        if any(value is None for value in gate_identity):
+            raise ValueError("consistent evidence requires complete gate identity")
+        provenance_fault = (
+            self.provenance.recorded.fault_name,
+            self.provenance.recorded.fault_version,
+            self.provenance.recorded.fault_config_digest,
+        )
+        if schema == "1.0" and any(value is not None for value in provenance_fault):
+            raise ValueError("schema 1 accepted provenance has no fault component identity")
+        if schema == "2.0" and any(value is None for value in provenance_fault):
+            raise ValueError("schema 2 accepted provenance requires complete fault identity")
         expected_findings = FINDING_ORDER[:6] if profile == "legacy" else FINDING_ORDER
         if finding_ids != expected_findings:
             raise ValueError("findings must match the frozen profile order")
@@ -2122,13 +2370,118 @@ class ReviewEnvelope(ReviewModel):
         )
         if tuple(item.metric_id for item in self.metrics) != expected_metrics:
             raise ValueError("metrics must match the evidence-schema registry")
+        if self.timeline.event_count < 1:
+            raise ValueError("consistent evidence requires at least one retained event")
+        event_count_metric = self.metrics[0].value
+        if (
+            not isinstance(event_count_metric, ScalarMetricValue)
+            or event_count_metric.value.machine_value != self.timeline.event_count
+        ):
+            raise ValueError("event-count metric must equal the retained timeline event count")
+        for metric in self.metrics:
+            self._validate_metric_event_coverage(metric, schema)
         if tuple(track.track_id for track in self.timeline.tracks) != TRACK_ORDER:
             raise ValueError("timeline tracks must match the frozen registry")
         for track in self.timeline.tracks:
             should_be_unavailable = schema == "1.0" and track.track_id in LEGACY_UNAVAILABLE_TRACKS
             if should_be_unavailable != (track.availability == "NOT_AVAILABLE"):
                 raise ValueError("track availability must match the evidence schema")
+        self._validate_triggering_finding_track()
         return self
+
+    def _validate_metric_event_coverage(self, metric: MetricItem, schema: str) -> None:
+        event_references = tuple(
+            reference for reference in metric.source_references if reference.source_type == "EVENT"
+        )
+        actual = tuple(
+            (reference.event_sequence, reference.json_pointer) for reference in event_references
+        )
+        every = tuple(range(self.timeline.event_count))
+
+        def pairs(pointer: str, sequences: tuple[int, ...] = every) -> tuple[tuple[int, str], ...]:
+            return tuple((sequence, pointer) for sequence in sequences)
+
+        final = (self.timeline.event_count - 1,)
+        universal_pointer = {
+            "event_count": "",
+            "collision_count": "/vehicle_state/collision_count",
+            "max_abs_lateral_offset_m": "/vehicle_state/lateral_offset_m",
+            "offroad_duration_s": "/vehicle_state/offroad",
+            "max_abs_acceleration_mps2": "/vehicle_state/acceleration_mps2",
+            "max_abs_jerk_mps3": "/vehicle_state/acceleration_mps2",
+            "p95_policy_latency_ms": "/policy_latency_ms",
+            "shield_override_reasons": "/override_reasons",
+            "max_observation_age_s": (
+                "/observation_fault_evidence/delivered_observation/observation_age_s"
+            ),
+            "p95_control_latency_ms": "/control_fault_evidence/control_latency_ms/value",
+        }.get(metric.metric_id)
+        if universal_pointer is not None:
+            expected = pairs(universal_pointer)
+        elif metric.metric_id == "simulation_duration_s":
+            expected = pairs("/simulation_time_s", final)
+        elif metric.metric_id == "termination_reason":
+            expected = pairs("/termination_reason", final)
+        elif metric.metric_id == "route_completion_pct":
+            expected = pairs("/raw_facts/route_progress_available")
+            if metric.availability == "AVAILABLE":
+                expected += pairs("/vehicle_state/route_progress_pct")
+                expected = tuple(sorted(expected))
+        elif metric.metric_id == "minimum_ttc_s":
+            by_sequence: dict[int, list[str]] = {}
+            for sequence, pointer in actual:
+                by_sequence.setdefault(sequence, []).append(pointer)
+            if set(by_sequence) != set(every) or any(
+                tuple(by_sequence[sequence]) not in TTC_CONTRIBUTOR_POINTER_PAIRS
+                for sequence in every
+            ):
+                raise ValueError("TTC metric must retain one exact contributor pair per event")
+            return
+        elif metric.metric_id == "shield_override_count":
+            second = "/executed_action" if schema == "1.0" else "/permitted_action"
+            expected = tuple(sorted(pairs("/candidate_action") + pairs(second)))
+        elif metric.metric_id == "fault_application_counts":
+            expected = tuple(
+                sorted(
+                    pairs("/observation_fault_evidence/applied_faults")
+                    + pairs("/control_fault_evidence/applied_faults")
+                )
+            )
+        else:
+            if any(sequence not in every for sequence, _ in actual):
+                raise ValueError("metric event references must lie on the retained event grid")
+            return
+        if actual != expected:
+            raise ValueError("metric event references must completely match its transform")
+
+    def _validate_triggering_finding_track(self) -> None:
+        track = next(
+            track
+            for track in self.timeline.tracks
+            if track.track_id == "verifier_triggering_findings"
+        )
+        row_by_id = {
+            finding.finding_id: index for index, finding in enumerate(self.findings)
+        }
+        expected_rows: list[str] = []
+        for point in track.points:
+            expected_ids = tuple(
+                finding.finding_id
+                for finding in self.findings
+                if point.sequence in finding.supporting_event_sequences
+            )
+            if point.string_list_value is None or point.string_list_value.values != expected_ids:
+                raise ValueError(
+                    "triggering-finding point IDs must match exact finding contributors"
+                )
+            for finding_id in expected_ids:
+                pointer = f"/findings/{row_by_id[finding_id]}"
+                if pointer not in expected_rows:
+                    expected_rows.append(pointer)
+        if tuple(reference.json_pointer for reference in track.source_references) != tuple(
+            expected_rows
+        ):
+            raise ValueError("triggering-finding track rows must match exact finding contributors")
 
     def _validate_threshold_event_coverage(self, finding: FindingItem) -> None:
         event_count = self.timeline.event_count
@@ -2234,6 +2587,15 @@ class ComparisonEnvelope(ReviewModel):
             return self
         if self.verdict_delta is None or self.verdict_delta.dimension_id != "verdict":
             raise ValueError("compatible comparison requires dedicated verdict delta")
+        verdict_baseline = self.verdict_delta.baseline_value
+        verdict_candidate = self.verdict_delta.candidate_value
+        if (
+            not isinstance(verdict_baseline, ScalarDeltaValue)
+            or not isinstance(verdict_candidate, ScalarDeltaValue)
+            or verdict_baseline.value.machine_value != self.baseline.gate_verdict
+            or verdict_candidate.value.machine_value != self.candidate.gate_verdict
+        ):
+            raise ValueError("verdict delta must exactly copy the comparison side verdicts")
         if self.hard_failure_delta is None:
             raise ValueError("compatible comparison requires dedicated hard-failure delta")
         if (
@@ -2328,6 +2690,13 @@ class ComparisonEnvelope(ReviewModel):
         partition_by_id = {
             item.dimension_id: item for partition in partitions for item in partition[1]
         }
+        latency_source = partition_by_id["policy_latency_source"]
+        latency = partition_by_id["p95_policy_latency_ms"]
+        if (
+            latency_source.status == "NOT_COMPARABLE"
+            and latency.status != "NOT_COMPARABLE"
+        ):
+            raise ValueError("latency-source differences make the latency metric non-comparable")
         eligible_chart_ids = []
         for dimension_id in chart_order:
             delta = partition_by_id[dimension_id]

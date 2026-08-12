@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import math
 from copy import deepcopy
 
@@ -199,10 +200,16 @@ def _ref(source_type: str, pointer: str, *, sequence: int | None = None) -> dict
 
 
 def _exact(value: object = 0, unit: str | None = None) -> dict[str, object]:
+    if value is None:
+        canonical_text = None
+        display_text = "NOT_AVAILABLE"
+    else:
+        canonical_text = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        display_text = value if isinstance(value, str) else canonical_text
     return {
         "machine_value": value,
-        "canonical_text": None if value is None else str(value),
-        "display_text": "NOT_AVAILABLE" if value is None else str(value),
+        "canonical_text": canonical_text,
+        "display_text": display_text,
         "unit": unit,
     }
 
@@ -266,7 +273,14 @@ def _invariant(operator: str = "COMPLETE") -> dict[str, object]:
                 if trace
                 else (_ref("SCENARIO", "/faults"),)
             ),
-            "evidence_sources": (_ref("TRACE_DIGEST", ""),) if trace else (),
+            "evidence_sources": (
+                (_ref("EVENT", "", sequence=0), _ref("TRACE_DIGEST", ""))
+                if trace
+                else (
+                    _ref("EVENT", "/control_fault_evidence/applied_faults", sequence=0),
+                    _ref("EVENT", "/observation_fault_evidence/applied_faults", sequence=0),
+                )
+            ),
         },
     }
 
@@ -286,12 +300,14 @@ def _threshold(finding_id: str) -> dict[str, object]:
                     _ref("SCENARIO", "/road/boundary_tolerance_m"),
                     _ref("GATE_CONFIG", "/hard/max_abs_lateral_offset_m"),
                 ),
+                evidence=(_ref("EVENT", "/vehicle_state/lateral_offset_m", sequence=0),),
                 label="Maximum absolute lateral offset",
             ),
             _clause(
                 "offroad",
                 ("ALL_EVENTS",),
                 "IS_FALSE",
+                evidence=(_ref("EVENT", "/vehicle_state/offroad", sequence=0),),
                 label="No event is off-road",
             ),
             _clause(
@@ -299,7 +315,10 @@ def _threshold(finding_id: str) -> dict[str, object]:
                 ("DURATION_TRUE",),
                 right=_exact(0.0, "s"),
                 configuration=(_ref("GATE_CONFIG", "/hard/max_offroad_duration_s"),),
-                evidence=(_ref("EXECUTION_CONTEXT", "/run_context/control_frequency_hz"),),
+                evidence=(
+                    _ref("EXECUTION_CONTEXT", "/run_context/control_frequency_hz"),
+                    _ref("EVENT", "/vehicle_state/offroad", sequence=0),
+                ),
                 label="Maximum off-road duration",
             ),
         )
@@ -320,6 +339,9 @@ def _threshold(finding_id: str) -> dict[str, object]:
                     "destination_reached",
                     ("FINAL_EVENT",),
                     "IS_TRUE",
+                    evidence=(
+                        _ref("EVENT", "/vehicle_state/destination_reached", sequence=0),
+                    ),
                     label="Destination reached at final event",
                 ),
                 _clause(
@@ -328,7 +350,11 @@ def _threshold(finding_id: str) -> dict[str, object]:
                     "GTE",
                     right=_exact(95.0, "%"),
                     configuration=(_ref("GATE_CONFIG", "/hard/min_route_completion_pct"),),
-                    evidence=(_ref("METRIC", "/route_completion_pct"),),
+                    evidence=(
+                        _ref("EVENT", "/raw_facts/route_progress_available", sequence=0),
+                        _ref("EVENT", "/vehicle_state/route_progress_pct", sequence=0),
+                        _ref("METRIC", "/route_completion_pct"),
+                    ),
                     label="Minimum route completion",
                 ),
             ),
@@ -340,6 +366,7 @@ def _threshold(finding_id: str) -> dict[str, object]:
             ("ABSOLUTE_VALUE", "MAX_OVER_EVENTS"),
             right=_exact(4.0, "m/s^2"),
             configuration=(_ref("GATE_CONFIG", "/soft/max_abs_acceleration_mps2"),),
+            evidence=(_ref("EVENT", "/vehicle_state/acceleration_mps2", sequence=0),),
             label="Maximum absolute acceleration",
         )
     if finding_id == "comfort.jerk":
@@ -348,12 +375,16 @@ def _threshold(finding_id: str) -> dict[str, object]:
             ("FINITE_DIFFERENCE", "ABSOLUTE_VALUE", "MAX_OVER_EVENTS"),
             right=_exact(10.0, "m/s^3"),
             configuration=(_ref("GATE_CONFIG", "/soft/max_abs_jerk_mps3"),),
-            evidence=(_ref("EXECUTION_CONTEXT", "/run_context/control_frequency_hz"),),
+            evidence=(
+                _ref("EXECUTION_CONTEXT", "/run_context/control_frequency_hz"),
+                _ref("EVENT", "/vehicle_state/acceleration_mps2", sequence=0),
+            ),
             label="Maximum absolute jerk",
         )
     return _clause(
         right=_exact(0, "count"),
         configuration=(_ref("GATE_CONFIG", "/hard/max_collision_count"),),
+        evidence=(_ref("EVENT", "/vehicle_state/collision_count", sequence=0),),
         label="Maximum collision count",
     )
 
@@ -385,7 +416,7 @@ def _artifact(schema: str = "2.0", *, path: str = "candidate") -> dict[str, obje
         },
         "observed_bundle_digest": {
             "algorithm": "SHA-256",
-            "value": "b" * 64,
+            "value": "c" * 64,
             "semantic": "OBSERVED_CLAIM",
             "category": "OBSERVED",
         },
@@ -397,7 +428,7 @@ def _artifact(schema: str = "2.0", *, path: str = "candidate") -> dict[str, obje
         },
         "observed_trace_digest": {
             "algorithm": "SHA-256",
-            "value": "d" * 64,
+            "value": "e" * 64,
             "semantic": "OBSERVED_CLAIM",
             "category": "OBSERVED",
         },
@@ -421,7 +452,49 @@ def _metrics(schema: str = "2.0") -> tuple[dict[str, object], ...]:
             value = {"kind": kind, "values": {}}
         else:
             scalar: object = "HORIZON" if metric_id == "termination_reason" else 0
+            if metric_id == "event_count":
+                scalar = 1
             value = {"kind": kind, "value": _exact(scalar, unit)}
+        event_pointers: dict[str, tuple[str, ...]] = {
+            "event_count": ("",),
+            "simulation_duration_s": ("/simulation_time_s",),
+            "collision_count": ("/vehicle_state/collision_count",),
+            "max_abs_lateral_offset_m": ("/vehicle_state/lateral_offset_m",),
+            "offroad_duration_s": ("/vehicle_state/offroad",),
+            "route_completion_pct": (
+                "/raw_facts/route_progress_available",
+                "/vehicle_state/route_progress_pct",
+            ),
+            "minimum_ttc_s": (
+                "/observation_summary/result_front_distance_m",
+                "/observation_summary/result_front_relative_speed_mps",
+            ),
+            "max_abs_acceleration_mps2": ("/vehicle_state/acceleration_mps2",),
+            "max_abs_jerk_mps3": ("/vehicle_state/acceleration_mps2",),
+            "p95_policy_latency_ms": ("/policy_latency_ms",),
+            "shield_override_count": (
+                "/candidate_action",
+                "/executed_action" if schema == "1.0" else "/permitted_action",
+            ),
+            "shield_override_reasons": ("/override_reasons",),
+            "termination_reason": ("/termination_reason",),
+            "fault_application_counts": (
+                "/control_fault_evidence/applied_faults",
+                "/observation_fault_evidence/applied_faults",
+            ),
+            "max_observation_age_s": (
+                "/observation_fault_evidence/delivered_observation/observation_age_s",
+            ),
+            "p95_control_latency_ms": ("/control_fault_evidence/control_latency_ms/value",),
+            "control_fill_count": (),
+            "steering_saturation_count": (),
+            "brake_saturation_count": (),
+        }
+        tail = tuple(
+            _ref("EVENT", pointer, sequence=0) for pointer in event_pointers[metric_id]
+        )
+        if metric_id in {"offroad_duration_s", "max_abs_jerk_mps3"}:
+            tail = (_ref("EXECUTION_CONTEXT", "/run_context/control_frequency_hz"), *tail)
         result.append(
             {
                 "metric_id": metric_id,
@@ -436,11 +509,7 @@ def _metrics(schema: str = "2.0") -> tuple[dict[str, object], ...]:
                         **_source("METRIC", sequence=None),
                         "json_pointer": f"/{metric_id}",
                     },
-                    *(
-                        (_ref("EXECUTION_CONTEXT", "/run_context/control_frequency_hz"),)
-                        if metric_id in {"offroad_duration_s", "max_abs_jerk_mps3"}
-                        else ()
-                    ),
+                    *tail,
                 ),
             }
         )
@@ -456,10 +525,89 @@ def _tracks(schema: str = "2.0") -> tuple[dict[str, object], ...]:
         "observation_fault_reasons",
         "control_fault_reasons",
     }
+    point_pointers = {
+        "raw_observation": "/observation_fault_evidence/raw_observation",
+        "delivered_observation": "/observation_fault_evidence/delivered_observation",
+        "result_observation": "/result_observation",
+        "candidate_action": "/candidate_action",
+        "permitted_action": "/permitted_action",
+        "executed_action": "/executed_action",
+        "override_reasons": "/override_reasons",
+        "observation_fault_reasons": "/observation_fault_evidence/applied_faults",
+        "control_fault_reasons": "/control_fault_evidence/applied_faults",
+        "collision_count": "/vehicle_state/collision_count",
+        "offroad": "/vehicle_state/offroad",
+        "speed_mps": "/vehicle_state/speed_mps",
+        "route_progress_pct": "/vehicle_state/route_progress_pct",
+        "ttc_s": "/observation_summary",
+        "policy_latency_ms": "/policy_latency_ms",
+        "verifier_triggering_findings": "",
+    }
+    observation = {
+        "sequence": 0,
+        "simulation_time_s": 0.0,
+        "position_m": 0.0,
+        "speed_mps": 0.0,
+        "acceleration_mps2": 0.0,
+        "lateral_offset_m": 0.0,
+        "route_progress_pct": 0.0,
+        "collision_count": 0,
+        "offroad": False,
+        "destination_reached": False,
+        "front_distance_m": 2.0,
+        "front_relative_speed_mps": -1.0,
+        "observation_age_s": 0.0,
+        "challenge_actor_longitudinal_m": None,
+        "challenge_actor_lateral_offset_m": None,
+        "challenge_actor_speed_mps": None,
+        "challenge_phase": None,
+    }
+    scalar_values = {
+        "collision_count": _exact(0, "collisions"),
+        "offroad": _exact(False, None),
+        "speed_mps": _exact(0.0, "m/s"),
+        "route_progress_pct": _exact(0.0, "%"),
+        "ttc_s": _exact(2.0, "s"),
+        "policy_latency_ms": _exact(0.0, "ms"),
+    }
     result = []
     for track_id in TRACKS:
         kind, category = TRACK_META[track_id]
         unavailable = schema == "1.0" and track_id in legacy_unavailable
+        pointer = point_pointers[track_id]
+        source = _ref(
+            "FINDING" if track_id == "verifier_triggering_findings" else "EVENT",
+            pointer,
+            sequence=None if track_id == "verifier_triggering_findings" else 0,
+        )
+        point = {
+            "sequence": 0,
+            "simulation_time_s": 0.0,
+            "category": category,
+            "availability": "AVAILABLE",
+            "unavailable_reason": None,
+            "scalar_value": scalar_values.get(track_id),
+            "action_value": (
+                {"steering": 0.0, "throttle": 0.0, "brake": 0.0}
+                if kind == "ACTION"
+                else None
+            ),
+            "observation_value": observation if kind == "OBSERVATION" else None,
+            "string_list_value": {"values": ()} if kind == "STRING_LIST" else None,
+            "source_reference": source,
+        }
+        track_sources = (source,)
+        if track_id == "ttc_s":
+            track_sources = (
+                _ref("EVENT", "/observation_summary/result_front_distance_m", sequence=0),
+                _ref(
+                    "EVENT",
+                    "/observation_summary/result_front_relative_speed_mps",
+                    sequence=0,
+                ),
+            )
+        elif track_id == "verifier_triggering_findings":
+            track_sources = ()
         result.append(
             {
                 "track_id": track_id,
@@ -468,8 +616,8 @@ def _tracks(schema: str = "2.0") -> tuple[dict[str, object], ...]:
                 "availability": "NOT_AVAILABLE" if unavailable else "AVAILABLE",
                 "unavailable_reason": "not present in schema 1" if unavailable else None,
                 "value_kind": kind,
-                "points": (),
-                "source_references": (),
+                "points": () if unavailable else (point,),
+                "source_references": () if unavailable else track_sources,
             }
         )
     return tuple(result)
@@ -630,14 +778,21 @@ def _review_payload(schema: str = "2.0") -> dict[str, object]:
         "findings": findings,
         "metrics": _metrics(schema),
         "timeline": {
-            "event_count": 0,
-            "simulation_start_s": None,
-            "simulation_end_s": None,
+            "event_count": 1,
+            "simulation_start_s": 0.0,
+            "simulation_end_s": 0.0,
             "tracks": _tracks(schema),
             "category": "OBSERVED",
         },
         "provenance": {
-            "recorded": _accepted_provenance(),
+            "recorded": {
+                **_accepted_provenance(),
+                **(
+                    {"fault_name": None, "fault_version": None, "fault_config_digest": None}
+                    if schema == "1.0"
+                    else {}
+                ),
+            },
             "authenticated_origin": {
                 "status": "NOT_AUTHENTICATED",
                 "signer_id": None,
@@ -1087,6 +1242,7 @@ def test_inventory_locator_and_digests_preserve_observed_computed_separation() -
 def test_computed_bundle_digest_requires_nine_inputs_not_stored_bundle_claim() -> None:
     payload = _artifact()
     payload["source_inventory"] = payload["source_inventory"][:-1]
+    payload["observed_bundle_digest"] = None
     artifact = PortableArtifactIdentity.model_validate(payload)
     assert artifact.computed_bundle_digest is not None
     payload = deepcopy(payload)
@@ -1317,11 +1473,11 @@ def test_metric_value_variants_enforce_sorted_maps_units_registry_and_unavailabi
 
 
 def test_metric_references_allow_ordered_config_and_context_after_metrics_pointer() -> None:
-    payload = deepcopy(_review_payload()["metrics"][0])
+    payload = deepcopy(_review_payload()["metrics"][4])
     payload["source_references"] = (
-        {**_source("METRIC", sequence=None), "json_pointer": "/event_count"},
-        _source("EXECUTION_CONTEXT", sequence=None),
-        _source("EVENT", sequence=0),
+        {**_source("METRIC", sequence=None), "json_pointer": "/offroad_duration_s"},
+        _ref("EXECUTION_CONTEXT", "/run_context/control_frequency_hz"),
+        _ref("EVENT", "/vehicle_state/offroad", sequence=0),
     )
     assert len(MetricItem.model_validate(payload).source_references) == 3
 
@@ -1879,6 +2035,597 @@ def test_round1_timeline_grid_categories_and_scalar_availability_are_exact() -> 
         )
 
 
+@pytest.mark.parametrize(
+    ("distance_pointer", "speed_pointer", "availability"),
+    (
+        (
+            "/observation_summary/result_front_distance_m",
+            "/observation_summary/result_front_relative_speed_mps",
+            "AVAILABLE",
+        ),
+        (
+            "/observation_summary/front_distance_m",
+            "/observation_summary/front_relative_speed_mps",
+            "AVAILABLE",
+        ),
+        (
+            "/observation_summary/result_front_distance_m",
+            "/observation_summary/result_front_relative_speed_mps",
+            "NOT_AVAILABLE",
+        ),
+    ),
+)
+def test_round2_ttc_track_retains_exact_contributing_pair_for_common_record_point(
+    distance_pointer: str,
+    speed_pointer: str,
+    availability: str,
+) -> None:
+    unavailable = availability == "NOT_AVAILABLE"
+    point = Point(
+        sequence=0,
+        simulation_time_s=0.0,
+        category="NOT_AVAILABLE" if unavailable else "COMPUTED",
+        availability=availability,
+        unavailable_reason="no paired closing front-object evidence" if unavailable else None,
+        scalar_value=ExactValue(
+            machine_value=None if unavailable else 2.0,
+            canonical_text=None if unavailable else "2.0",
+            display_text="NOT_AVAILABLE" if unavailable else "2.0",
+            unit="s",
+        ),
+        action_value=None,
+        observation_value=None,
+        string_list_value=None,
+        source_reference=SourceReference(
+            source_type="EVENT",
+            file_name="events.jsonl",
+            json_pointer="/observation_summary",
+            event_sequence=0,
+        ),
+    )
+    track = Track(
+        track_id="ttc_s",
+        label="TTC",
+        category="COMPUTED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        value_kind="SCALAR",
+        points=(point,),
+        source_references=(
+            SourceReference(
+                source_type="EVENT",
+                file_name="events.jsonl",
+                json_pointer=distance_pointer,
+                event_sequence=0,
+            ),
+            SourceReference(
+                source_type="EVENT",
+                file_name="events.jsonl",
+                json_pointer=speed_pointer,
+                event_sequence=0,
+            ),
+        ),
+    )
+    assert track.points[0].source_reference.json_pointer == "/observation_summary"
+    assert tuple(reference.json_pointer for reference in track.source_references) == (
+        distance_pointer,
+        speed_pointer,
+    )
+
+
+@pytest.mark.parametrize(
+    "contributor_pointers",
+    (
+        ("/observation_summary/front_distance_m",),
+        (
+            "/observation_summary/result_front_distance_m",
+            "/observation_summary/front_relative_speed_mps",
+        ),
+    ),
+)
+def test_round2_ttc_track_rejects_incomplete_or_mixed_contributing_pairs(
+    contributor_pointers: tuple[str, ...],
+) -> None:
+    point = Point(
+        sequence=0,
+        simulation_time_s=0.0,
+        category="COMPUTED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        scalar_value=ExactValue(
+            machine_value=2.0,
+            canonical_text="2.0",
+            display_text="2.0",
+            unit="s",
+        ),
+        action_value=None,
+        observation_value=None,
+        string_list_value=None,
+        source_reference=SourceReference(
+            source_type="EVENT",
+            file_name="events.jsonl",
+            json_pointer="/observation_summary",
+            event_sequence=0,
+        ),
+    )
+    with pytest.raises(ValidationError):
+        Track(
+            track_id="ttc_s",
+            label="TTC",
+            category="COMPUTED",
+            availability="AVAILABLE",
+            unavailable_reason=None,
+            value_kind="SCALAR",
+            points=(point,),
+            source_references=tuple(
+                SourceReference(
+                    source_type="EVENT",
+                    file_name="events.jsonl",
+                    json_pointer=pointer,
+                    event_sequence=0,
+                )
+                for pointer in contributor_pointers
+            ),
+        )
+
+
+def test_round2_ordinary_track_still_requires_its_single_exact_point_source() -> None:
+    point = Point(
+        sequence=0,
+        simulation_time_s=0.0,
+        category="OBSERVED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        scalar_value=ExactValue(
+            machine_value=1.0,
+            canonical_text="1.0",
+            display_text="1.0",
+            unit="m/s",
+        ),
+        action_value=None,
+        observation_value=None,
+        string_list_value=None,
+        source_reference=SourceReference(
+            source_type="EVENT",
+            file_name="events.jsonl",
+            json_pointer="/vehicle_state/speed_mps",
+            event_sequence=0,
+        ),
+    )
+    with pytest.raises(ValidationError, match="exactly cover"):
+        Track(
+            track_id="speed_mps",
+            label="speed",
+            category="OBSERVED",
+            availability="AVAILABLE",
+            unavailable_reason=None,
+            value_kind="SCALAR",
+            points=(point,),
+            source_references=(
+                SourceReference(
+                    source_type="EVENT",
+                    file_name="events.jsonl",
+                    json_pointer="/observation_summary/front_distance_m",
+                    event_sequence=0,
+                ),
+                SourceReference(
+                    source_type="EVENT",
+                    file_name="events.jsonl",
+                    json_pointer="/observation_summary/front_relative_speed_mps",
+                    event_sequence=0,
+                ),
+            ),
+        )
+
+
+def test_round2_verifier_track_uses_finding_root_points_and_exact_row_references() -> None:
+    point = Point(
+        sequence=0,
+        simulation_time_s=0.0,
+        category="COMPUTED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        scalar_value=None,
+        action_value=None,
+        observation_value=None,
+        string_list_value=StringListValue(values=("collision.zero", "progress.required")),
+        source_reference=SourceReference(
+            source_type="FINDING",
+            file_name="findings.json",
+            json_pointer="",
+            event_sequence=None,
+        ),
+    )
+    track = Track(
+        track_id="verifier_triggering_findings",
+        label="triggering findings",
+        category="COMPUTED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        value_kind="STRING_LIST",
+        points=(point,),
+        source_references=(
+            SourceReference(
+                source_type="FINDING",
+                file_name="findings.json",
+                json_pointer="/findings/1",
+                event_sequence=None,
+            ),
+            SourceReference(
+                source_type="FINDING",
+                file_name="findings.json",
+                json_pointer="/findings/3",
+                event_sequence=None,
+            ),
+        ),
+    )
+    assert tuple(reference.json_pointer for reference in track.source_references) == (
+        "/findings/1",
+        "/findings/3",
+    )
+
+
+def test_round2_probe_latency_source_change_forces_measurement_not_comparable() -> None:
+    payload = _comparison_payload()
+    unchanged = list(payload["unchanged_outcomes"])
+    source_delta = unchanged.pop(6)
+    source_delta["status"] = "NOT_COMPARABLE"
+    source_delta["candidate_value"] = {"kind": "STRING_LIST", "values": ("measured",)}
+    payload["unchanged_outcomes"] = tuple(unchanged)
+    payload["not_comparable"] = (source_delta,)
+    with pytest.raises(ValidationError):
+        ComparisonEnvelope.model_validate(payload)
+
+
+def test_round2_probe_verdict_delta_must_copy_side_summary_verdicts() -> None:
+    payload = _comparison_payload()
+    payload["candidate"]["gate_verdict"] = "HOLD"
+    with pytest.raises(ValidationError):
+        ComparisonEnvelope.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    "retained_field",
+    (
+        "manifest_identity",
+        "observed_bundle_digest",
+        "observed_trace_digest",
+        "computed_trace_digest",
+    ),
+)
+def test_round2_probe_identity_and_digest_facts_require_their_captured_source(
+    retained_field: str,
+) -> None:
+    original = _artifact()
+    payload = deepcopy(original)
+    payload["source_inventory"] = ()
+    payload["manifest_identity"] = {
+        "run_id": None,
+        "created_at_utc": None,
+        "evidence_schema_version": None,
+        "scenario_schema_version": None,
+        "category": "OBSERVED",
+    }
+    payload["observed_bundle_digest"] = None
+    payload["computed_bundle_digest"] = None
+    payload["observed_trace_digest"] = None
+    payload["computed_trace_digest"] = None
+    payload[retained_field] = original[retained_field]
+    with pytest.raises(ValidationError):
+        PortableArtifactIdentity.model_validate(payload)
+
+
+def test_round2_json_round_trip_copy_preserves_transitive_immutability() -> None:
+    review = ReviewEnvelope.model_validate(_review_payload())
+    copied = ReviewEnvelope.model_validate_json(review.model_dump_json())
+    assert canonical_envelope_bytes(copied) == canonical_envelope_bytes(review)
+    with pytest.raises(TypeError):
+        copied.metrics[11].value.values["injected"] = 7
+
+
+def test_round2_metric_rejects_event_pointer_outside_its_transform_registry() -> None:
+    metric = deepcopy(_metrics()[2])
+    metric["source_references"] = (
+        metric["source_references"][0],
+        _ref("EVENT", "/vehicle_state/offroad", sequence=0),
+    )
+    with pytest.raises(ValidationError):
+        MetricItem.model_validate(metric)
+
+
+@pytest.mark.parametrize("metric_index", range(19))
+def test_round2_every_metric_rejects_event_pointer_outside_its_transform_registry(
+    metric_index: int,
+) -> None:
+    metric = deepcopy(_metrics()[metric_index])
+    references = list(metric["source_references"])
+    event_index = next(
+        (
+            index
+            for index, reference in enumerate(references)
+            if reference["source_type"] == "EVENT"
+        ),
+        None,
+    )
+    bad_reference = _ref("EVENT", "/not-a-contract-transform", sequence=0)
+    if event_index is None:
+        references.append(bad_reference)
+    else:
+        references[event_index] = bad_reference
+    metric["source_references"] = tuple(references)
+    with pytest.raises(ValidationError):
+        MetricItem.model_validate(metric)
+
+
+def test_round2_consistent_review_requires_nonempty_event_timeline() -> None:
+    payload = _review_payload()
+    payload["timeline"] = {
+        "event_count": 0,
+        "simulation_start_s": None,
+        "simulation_end_s": None,
+        "tracks": tuple(
+            {
+                **track,
+                "points": (),
+                "source_references": (),
+            }
+            for track in payload["timeline"]["tracks"]
+        ),
+        "category": "OBSERVED",
+    }
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+def test_round2_timeline_event_count_must_equal_event_count_metric() -> None:
+    payload = _review_payload()
+    payload["metrics"][0]["value"] = {"kind": "SCALAR", "value": _exact(2, "events")}
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+def test_round2_scalar_track_machine_type_and_unit_follow_registry() -> None:
+    source = SourceReference.model_validate(
+        _ref("EVENT", "/vehicle_state/speed_mps", sequence=0)
+    )
+    point = Point(
+        sequence=0,
+        simulation_time_s=0.0,
+        category="OBSERVED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        scalar_value=ExactValue(
+            machine_value="fast",
+            canonical_text='"fast"',
+            display_text="fast",
+            unit="bananas",
+        ),
+        action_value=None,
+        observation_value=None,
+        string_list_value=None,
+        source_reference=source,
+    )
+    with pytest.raises(ValidationError):
+        Track(
+            track_id="speed_mps",
+            label="speed",
+            category="OBSERVED",
+            availability="AVAILABLE",
+            unavailable_reason=None,
+            value_kind="SCALAR",
+            points=(point,),
+            source_references=(source,),
+        )
+
+
+@pytest.mark.parametrize(
+    ("metric_index", "bad_value"),
+    ((1, -1.0), (3, -1.0), (5, 101.0), (12, "not-a-termination-reason")),
+)
+def test_round2_metric_scalar_range_and_enum_follow_registry(
+    metric_index: int,
+    bad_value: object,
+) -> None:
+    metric = deepcopy(_metrics()[metric_index])
+    metric["value"] = {
+        "kind": "SCALAR",
+        "value": _exact(bad_value, metric["value"]["value"]["unit"]),
+    }
+    with pytest.raises(ValidationError):
+        MetricItem.model_validate(metric)
+
+
+@pytest.mark.parametrize(
+    ("availability", "pointer"),
+    (
+        ("AVAILABLE", "/raw_facts/route_progress_available"),
+        ("NOT_AVAILABLE", "/vehicle_state/route_progress_pct"),
+    ),
+)
+def test_round2_route_progress_point_source_matches_availability(
+    availability: str,
+    pointer: str,
+) -> None:
+    unavailable = availability == "NOT_AVAILABLE"
+    source = SourceReference.model_validate(_ref("EVENT", pointer, sequence=0))
+    point = Point(
+        sequence=0,
+        simulation_time_s=0.0,
+        category="NOT_AVAILABLE" if unavailable else "OBSERVED",
+        availability=availability,
+        unavailable_reason="route progress explicitly unavailable" if unavailable else None,
+        scalar_value=ExactValue(**_exact(None if unavailable else 5.0, "%")),
+        action_value=None,
+        observation_value=None,
+        string_list_value=None,
+        source_reference=source,
+    )
+    with pytest.raises(ValidationError):
+        Track(
+            track_id="route_progress_pct",
+            label="route progress",
+            category="OBSERVED",
+            availability="AVAILABLE",
+            unavailable_reason=None,
+            value_kind="SCALAR",
+            points=(point,),
+            source_references=(source,),
+        )
+
+
+def test_round2_verifier_points_exactly_match_finding_sequence_membership() -> None:
+    payload = _review_payload()
+    verifier_track = payload["timeline"]["tracks"][-1]
+    verifier_track["points"][0]["string_list_value"] = {"values": ("collision.zero",)}
+    verifier_track["source_references"] = (_ref("FINDING", "/findings/1", sequence=None),)
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+def test_round2_unavailable_track_has_no_source_references() -> None:
+    with pytest.raises(ValidationError):
+        Track(
+            track_id="raw_observation",
+            label="raw observation",
+            category="NOT_AVAILABLE",
+            availability="NOT_AVAILABLE",
+            unavailable_reason="not represented in this schema",
+            value_kind="OBSERVATION",
+            points=(),
+            source_references=(
+                SourceReference.model_validate(
+                    _ref("EVENT", "/observation_fault_evidence/raw_observation", sequence=0)
+                ),
+            ),
+        )
+
+
+@pytest.mark.parametrize("schema", ("1.0", "2.0"))
+def test_round2_accepted_fault_provenance_matches_evidence_schema(schema: str) -> None:
+    payload = _review_payload(schema)
+    if schema == "2.0":
+        payload["provenance"]["recorded"]["fault_name"] = None
+        payload["provenance"]["recorded"]["fault_version"] = None
+        payload["provenance"]["recorded"]["fault_config_digest"] = None
+    else:
+        payload["provenance"]["recorded"]["fault_name"] = "faults"
+        payload["provenance"]["recorded"]["fault_version"] = "1.0"
+        payload["provenance"]["recorded"]["fault_config_digest"] = SHA
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+def test_round2_consistent_gate_requires_complete_identity() -> None:
+    payload = _review_payload()
+    payload["gate"]["gate_name"] = None
+    payload["gate"]["gate_version"] = None
+    payload["gate"]["gate_config_digest_sha256"] = None
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("machine_value", "canonical_text", "display_text"),
+    (
+        ("PASS", "PASS", "PASS"),
+        (True, "True", "True"),
+        (2.0, "2", "2"),
+    ),
+)
+def test_round2_exact_value_requires_canonical_json_lexical_and_full_display(
+    machine_value: object,
+    canonical_text: str,
+    display_text: str,
+) -> None:
+    with pytest.raises(ValidationError):
+        ExactValue(
+            machine_value=machine_value,
+            canonical_text=canonical_text,
+            display_text=display_text,
+            unit=None,
+        )
+
+
+@pytest.mark.parametrize(
+    ("machine_value", "canonical_text", "display_text"),
+    (("PASS", '"PASS"', "PASS"), (True, "true", "true"), (2.0, "2.0", "2.0")),
+)
+def test_round2_exact_value_accepts_canonical_json_lexical_and_full_display(
+    machine_value: object,
+    canonical_text: str,
+    display_text: str,
+) -> None:
+    value = ExactValue(
+        machine_value=machine_value,
+        canonical_text=canonical_text,
+        display_text=display_text,
+        unit=None,
+    )
+    assert value.machine_value == machine_value
+
+
+def test_round2_consistent_review_requires_matching_observed_and_computed_roots() -> None:
+    payload = _review_payload()
+    payload["artifact"]["observed_bundle_digest"]["value"] = "f" * 64
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+    payload = _review_payload()
+    payload["artifact"]["observed_trace_digest"]["value"] = "f" * 64
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+@pytest.mark.parametrize("relative_path", (".", "bad\x00path"))
+def test_round2_public_relative_paths_reject_non_locator_forms(relative_path: str) -> None:
+    with pytest.raises((TypeError, ValueError)):
+        ReviewCacheKey(SHA, "1.0", "0.1.0", relative_path)
+    with pytest.raises(ValidationError):
+        LocatorInfo(
+            selected_relative_path=relative_path,
+            selected_directory_name=relative_path,
+            category="OBSERVED",
+        )
+
+
+def test_round2_reference_arrays_reject_semantically_duplicate_root_pointers() -> None:
+    with pytest.raises(ValidationError):
+        DiagnosticItem(
+            id="duplicate-root",
+            code="DUPLICATE_ROOT",
+            text="duplicate root",
+            impact="ambiguous canonical bytes",
+            category="COMPUTED",
+            source_references=(
+                SourceReference(
+                    source_type="MANIFEST",
+                    file_name="manifest.json",
+                    json_pointer=None,
+                    event_sequence=None,
+                ),
+                SourceReference(
+                    source_type="MANIFEST",
+                    file_name="manifest.json",
+                    json_pointer="",
+                    event_sequence=None,
+                ),
+            ),
+        )
+
+
+@pytest.mark.parametrize("side_name", ("baseline", "candidate"))
+def test_round2_consistent_comparison_side_requires_complete_matching_artifact_roots(
+    side_name: str,
+) -> None:
+    payload = _comparison_payload()
+    payload[side_name]["artifact"]["source_inventory"] = ()
+    payload[side_name]["artifact"]["observed_bundle_digest"] = None
+    payload[side_name]["artifact"]["computed_bundle_digest"] = None
+    payload[side_name]["artifact"]["observed_trace_digest"] = None
+    payload[side_name]["artifact"]["computed_trace_digest"] = None
+    with pytest.raises(ValidationError):
+        ComparisonEnvelope.model_validate(payload)
+
+
 def test_round1_schema_profile_pair_and_gate_memberships_are_exact() -> None:
     payload = _review_payload("2.0")
     payload["evidence_sufficiency"] = _review_payload("1.0")["evidence_sufficiency"]
@@ -1940,3 +2687,40 @@ def test_round1_dimension_variants_match_real_compare_artifacts_shapes() -> None
     payload["gate"]["hard_failure_ids"] = ("ghost.finding",)
     with pytest.raises(ValidationError):
         ReviewEnvelope.model_validate(payload)
+
+
+def test_round2_complete_envelope_matches_real_latency_source_incompatibility() -> None:
+    core = compare_artifacts(
+        _core_comparison_snapshot("baseline", latency_source="simulated"),
+        _core_comparison_snapshot("candidate", latency_source="measured"),
+    )
+    dimensions = {item.name: item.model_dump(mode="json") for item in core.dimensions}
+    assert dimensions["policy_latency_source"]["status"] == "NOT_COMPARABLE"
+    assert dimensions["p95_policy_latency_ms"]["status"] == "NOT_COMPARABLE"
+
+    payload = _comparison_payload()
+    unchanged = list(payload["unchanged_outcomes"])
+    latency = unchanged.pop(5)
+    source = unchanged.pop(5)
+    latency["status"] = dimensions["p95_policy_latency_ms"]["status"]
+    source["status"] = dimensions["policy_latency_source"]["status"]
+    source["baseline_value"] = {
+        "kind": "STRING_LIST",
+        "values": tuple(dimensions["policy_latency_source"]["baseline_value"]),
+    }
+    source["candidate_value"] = {
+        "kind": "STRING_LIST",
+        "values": tuple(dimensions["policy_latency_source"]["candidate_value"]),
+    }
+    payload["unchanged_outcomes"] = tuple(unchanged)
+    payload["not_comparable"] = (latency, source)
+    payload["chart_series"] = payload["chart_series"][:-1]
+
+    envelope = ComparisonEnvelope.model_validate(payload)
+    assert tuple(item.dimension_id for item in envelope.not_comparable) == (
+        "p95_policy_latency_ms",
+        "policy_latency_source",
+    )
+    assert "p95_policy_latency_ms" not in {
+        item.dimension_id for item in envelope.chart_series
+    }
