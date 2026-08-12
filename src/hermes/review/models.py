@@ -163,6 +163,7 @@ METRIC_EVENT_POINTERS: dict[str, frozenset[str]] = {
     ),
     "minimum_ttc_s": frozenset(
         {
+            "/observation_summary",
             "/observation_summary/result_front_distance_m",
             "/observation_summary/result_front_relative_speed_mps",
             "/observation_summary/front_distance_m",
@@ -1675,10 +1676,19 @@ class Track(ReviewModel):
         if set(references_by_sequence) != point_sequences:
             raise ValueError("TTC contributors must exactly cover every timeline point")
         if any(
-            tuple(references_by_sequence[sequence]) not in TTC_CONTRIBUTOR_POINTER_PAIRS
+            tuple(references_by_sequence[sequence])
+            not in TTC_CONTRIBUTOR_POINTER_PAIRS | {("/observation_summary",)}
             for sequence in point_sequences
         ):
-            raise ValueError("TTC contributors must use an exact result or fallback field pair")
+            raise ValueError(
+                "TTC contributors must use an exact field pair or common-record absence evidence"
+            )
+        if any(
+            references_by_sequence[point.sequence] == ["/observation_summary"]
+            and point.availability != "NOT_AVAILABLE"
+            for point in self.points
+        ):
+            raise ValueError("TTC common-record absence evidence requires an unavailable point")
 
     def _validate_triggering_finding_sources(self) -> None:
         finding_ids = {
@@ -1734,6 +1744,13 @@ class Timeline(ReviewModel):
             raise ValueError("available timeline tracks require the complete event sequence grid")
         if grids and any(grid != grids[0] for grid in grids[1:]):
             raise ValueError("available timeline tracks must share one exact event time grid")
+        if grids and any(
+            current_time <= previous_time
+            for (_, previous_time), (_, current_time) in zip(
+                grids[0], grids[0][1:], strict=False
+            )
+        ):
+            raise ValueError("timeline simulation times must be strictly increasing")
         if (
             self.event_count
             and grids
@@ -2190,7 +2207,7 @@ class SideSummary(ReviewModel):
     side: ComparisonSide
     artifact: PortableArtifactIdentity
     integrity: Literal["INTERNALLY_CONSISTENT"]
-    gate_verdict: Literal["PASS", "CONDITIONAL", "HOLD"]
+    gate_verdict: Verdict
     category: Literal["COMPUTED"]
     source_references: tuple[SideReference, ...]
 
@@ -2298,7 +2315,7 @@ class ReviewEnvelope(ReviewModel):
             return self
         if self.gate.residual_limitation_ids != limitation_ids:
             raise ValueError("gate limitation IDs must match envelope limitations")
-        if self.gate.verdict == "INVALID_EVIDENCE" or not self.gate.accepted_recomputation:
+        if not self.gate.accepted_recomputation:
             raise ValueError("consistent evidence requires an accepted recomputation")
         self.artifact.require_consistent_complete()
         if self.provenance.recorded.status != "ACCEPTED":
@@ -2308,6 +2325,7 @@ class ReviewEnvelope(ReviewModel):
         if profile is None:
             raise ValueError("consistent evidence requires a selected sufficiency profile")
         schema = self.artifact.manifest_identity.evidence_schema_version
+        identity = self.artifact.manifest_identity
         if (schema, profile) not in {("1.0", "legacy"), ("2.0", "fault_coverage")}:
             raise ValueError("evidence schema and sufficiency profile must use the frozen pairing")
         gate_identity = (
@@ -2317,6 +2335,15 @@ class ReviewEnvelope(ReviewModel):
         )
         if any(value is None for value in gate_identity):
             raise ValueError("consistent evidence requires complete gate identity")
+        recorded = self.provenance.recorded
+        if gate_identity != (
+            recorded.gate_name,
+            recorded.gate_version,
+            recorded.gate_config_digest,
+        ):
+            raise ValueError("gate identity must exactly match accepted recorded provenance")
+        if identity.scenario_schema_version != recorded.scenario_schema_version:
+            raise ValueError("scenario schema identity must match accepted recorded provenance")
         provenance_fault = (
             self.provenance.recorded.fault_name,
             self.provenance.recorded.fault_version,
@@ -2359,6 +2386,25 @@ class ReviewEnvelope(ReviewModel):
             )
             if recorded != actual:
                 raise ValueError("finding consequence membership must exactly copy GateInfo arrays")
+            if any(
+                sequence >= self.timeline.event_count
+                for sequence in finding.supporting_event_sequences
+            ):
+                raise ValueError("finding supporting sequences must lie on the retained timeline")
+            if finding.status == "FAIL" and finding.supporting_event_sequences:
+                first_sequence = finding.supporting_event_sequences[0]
+                grid_track = next(
+                    track for track in self.timeline.tracks if track.availability == "AVAILABLE"
+                )
+                grid_time = next(
+                    point.simulation_time_s
+                    for point in grid_track.points
+                    if point.sequence == first_sequence
+                )
+                if finding.first_failure_simulation_time_s != grid_time:
+                    raise ValueError(
+                        "finding failure time must equal its first supporting event time"
+                    )
             self._validate_threshold_event_coverage(finding)
         if any(_threshold_depth(item.threshold) > 16 for item in self.findings):
             raise ReviewUnavailableError(
@@ -2432,10 +2478,13 @@ class ReviewEnvelope(ReviewModel):
             for sequence, pointer in actual:
                 by_sequence.setdefault(sequence, []).append(pointer)
             if set(by_sequence) != set(every) or any(
-                tuple(by_sequence[sequence]) not in TTC_CONTRIBUTOR_POINTER_PAIRS
+                tuple(by_sequence[sequence])
+                not in TTC_CONTRIBUTOR_POINTER_PAIRS | {("/observation_summary",)}
                 for sequence in every
             ):
-                raise ValueError("TTC metric must retain one exact contributor pair per event")
+                raise ValueError(
+                    "TTC metric must retain an exact pair or common-record absence per event"
+                )
             return
         elif metric.metric_id == "shield_override_count":
             second = "/executed_action" if schema == "1.0" else "/permitted_action"
@@ -2585,6 +2634,15 @@ class ComparisonEnvelope(ReviewModel):
             ) or any(detail_arrays):
                 raise ValueError("incompatible comparison cannot expose deltas or charts")
             return self
+        baseline_identity = self.baseline.artifact.manifest_identity
+        candidate_identity = self.candidate.artifact.manifest_identity
+        if (
+            baseline_identity.evidence_schema_version
+            != candidate_identity.evidence_schema_version
+            or baseline_identity.scenario_schema_version
+            != candidate_identity.scenario_schema_version
+        ):
+            raise ValueError("compatible comparison sides require matching schema identities")
         if self.verdict_delta is None or self.verdict_delta.dimension_id != "verdict":
             raise ValueError("compatible comparison requires dedicated verdict delta")
         verdict_baseline = self.verdict_delta.baseline_value

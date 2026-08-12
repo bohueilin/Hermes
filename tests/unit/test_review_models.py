@@ -4,16 +4,18 @@ import dataclasses
 import json
 import math
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from hermes.comparison.compare import compare_artifacts
-from hermes.domain.enums import EvidenceAvailability, TerminationReason, Verdict
+from hermes.domain.enums import EvidenceAvailability, FindingStatus, TerminationReason, Verdict
 from hermes.domain.models import (
     ArtifactManifest,
     ComponentContext,
     ExecutionContext,
+    Finding,
     FindingsDocument,
     GateResult,
     Measurement,
@@ -22,8 +24,9 @@ from hermes.domain.models import (
     ScenarioDefinition,
     TraceEvent,
 )
-from hermes.evidence.verification import VerifiedArtifactSnapshot
+from hermes.evidence.verification import VerifiedArtifactSnapshot, inspect_artifact
 from hermes.gates.config import GateConfig
+from hermes.gates.release import VerifierProfile, apply_release_gate
 from hermes.review import (
     ComparisonEnvelope,
     LocatorInfo,
@@ -2724,3 +2727,405 @@ def test_round2_complete_envelope_matches_real_latency_source_incompatibility() 
     assert "p95_policy_latency_ms" not in {
         item.dimension_id for item in envelope.chart_series
     }
+
+
+@pytest.mark.parametrize("retained_artifact", ("handoff-p1-nominal", "handoff-p4-fault"))
+def test_round3_ttc_absence_uses_common_summary_evidence_for_unavailable_metric_and_point(
+    retained_artifact: str,
+) -> None:
+    metric_payload = deepcopy(_metrics()[6])
+    metric_payload["category"] = "NOT_AVAILABLE"
+    metric_payload["availability"] = "NOT_AVAILABLE"
+    metric_payload["unavailable_reason"] = "no paired closing front-object evidence"
+    metric_payload["value"] = {"kind": "SCALAR", "value": _exact(None, "s")}
+    metric_payload["source_references"] = (
+        _ref("METRIC", "/minimum_ttc_s", sequence=None),
+        _ref("EVENT", "/observation_summary", sequence=0),
+    )
+    metric = MetricItem.model_validate(metric_payload)
+
+    point = Point(
+        sequence=0,
+        simulation_time_s=0.1,
+        category="NOT_AVAILABLE",
+        availability="NOT_AVAILABLE",
+        unavailable_reason="no paired closing front-object evidence",
+        scalar_value=ExactValue(**_exact(None, "s")),
+        action_value=None,
+        observation_value=None,
+        string_list_value=None,
+        source_reference=SourceReference.model_validate(
+            _ref("EVENT", "/observation_summary", sequence=0)
+        ),
+    )
+    track = Track(
+        track_id="ttc_s",
+        label=f"TTC from {retained_artifact}",
+        category="COMPUTED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        value_kind="SCALAR",
+        points=(point,),
+        source_references=(
+            SourceReference.model_validate(
+                _ref("EVENT", "/observation_summary", sequence=0)
+            ),
+        ),
+    )
+
+    assert metric.source_references[1].json_pointer == "/observation_summary"
+    assert track.points[0].availability == "NOT_AVAILABLE"
+
+
+def test_round3_ttc_common_summary_absence_requires_an_unavailable_point() -> None:
+    point = Point(
+        sequence=0,
+        simulation_time_s=0.1,
+        category="COMPUTED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        scalar_value=ExactValue(**_exact(2.0, "s")),
+        action_value=None,
+        observation_value=None,
+        string_list_value=None,
+        source_reference=SourceReference.model_validate(
+            _ref("EVENT", "/observation_summary", sequence=0)
+        ),
+    )
+    with pytest.raises(ValidationError):
+        Track(
+            track_id="ttc_s",
+            label="TTC",
+            category="COMPUTED",
+            availability="AVAILABLE",
+            unavailable_reason=None,
+            value_kind="SCALAR",
+            points=(point,),
+            source_references=(
+                SourceReference.model_validate(
+                    _ref("EVENT", "/observation_summary", sequence=0)
+                ),
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    ("distance_pointer", "speed_pointer"),
+    (
+        (
+            "/observation_summary/result_front_distance_m",
+            "/observation_summary/result_front_relative_speed_mps",
+        ),
+        (
+            "/observation_summary/front_distance_m",
+            "/observation_summary/front_relative_speed_mps",
+        ),
+    ),
+)
+def test_round3_available_ttc_metric_allows_mixed_absence_and_eligible_event_sources(
+    distance_pointer: str,
+    speed_pointer: str,
+) -> None:
+    payload = deepcopy(_metrics()[6])
+    payload["value"] = {"kind": "SCALAR", "value": _exact(2.0, "s")}
+    payload["source_references"] = (
+        _ref("METRIC", "/minimum_ttc_s", sequence=None),
+        _ref("EVENT", "/observation_summary", sequence=0),
+        _ref("EVENT", distance_pointer, sequence=1),
+        _ref("EVENT", speed_pointer, sequence=1),
+    )
+    metric = MetricItem.model_validate(payload)
+    assert metric.availability == "AVAILABLE"
+    assert tuple(reference.event_sequence for reference in metric.source_references[1:]) == (
+        0,
+        1,
+        1,
+    )
+
+
+@pytest.mark.parametrize("schema", ("1.0", "2.0"))
+def test_round3_valid_schema_envelope_retains_ttc_common_record_absence(schema: str) -> None:
+    payload = _review_payload(schema)
+    metric = payload["metrics"][6]
+    metric.update(
+        {
+            "category": "NOT_AVAILABLE",
+            "availability": "NOT_AVAILABLE",
+            "unavailable_reason": "front-object TTC evidence is unavailable for this trace",
+            "value": {"kind": "SCALAR", "value": _exact(None, "s")},
+            "source_references": (
+                _ref("METRIC", "/minimum_ttc_s", sequence=None),
+                _ref("EVENT", "/observation_summary", sequence=0),
+            ),
+        }
+    )
+    track = payload["timeline"]["tracks"][13]
+    track["points"][0].update(
+        {
+            "category": "NOT_AVAILABLE",
+            "availability": "NOT_AVAILABLE",
+            "unavailable_reason": "no paired closing front-object evidence",
+            "scalar_value": _exact(None, "s"),
+        }
+    )
+    track["source_references"] = (
+        _ref("EVENT", "/observation_summary", sequence=0),
+    )
+    envelope = ReviewEnvelope.model_validate(payload)
+    assert envelope.metrics[6].availability == "NOT_AVAILABLE"
+    assert envelope.timeline.tracks[13].points[0].availability == "NOT_AVAILABLE"
+
+
+def test_round3_probe_finding_supporting_sequences_stay_within_timeline() -> None:
+    payload = _review_payload()
+    payload["findings"][1]["supporting_event_sequences"] = (1,)
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+def test_round3_probe_failed_finding_time_matches_first_supporting_event() -> None:
+    payload = _review_payload()
+    finding = payload["findings"][1]
+    finding["status"] = "FAIL"
+    finding["severity"] = "ERROR"
+    finding["measured"] = _exact(1, "count")
+    finding["first_failure_simulation_time_s"] = 999.0
+    finding["supporting_event_sequences"] = (0,)
+    finding["consequence"] = {
+        **finding["consequence"],
+        "triggered": True,
+        "effect": "HOLD",
+        "result_if_controlling": "HOLD",
+        "listed_in_hard_failures": True,
+    }
+    payload["gate"]["verdict"] = "HOLD"
+    payload["gate"]["hard_failure_ids"] = ("collision.zero",)
+    verifier_track = payload["timeline"]["tracks"][-1]
+    verifier_track["points"][0]["string_list_value"] = {"values": ("collision.zero",)}
+    verifier_track["source_references"] = (_ref("FINDING", "/findings/1", sequence=None),)
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+def test_round3_probe_timeline_times_are_strictly_increasing() -> None:
+    def point(sequence: int) -> Point:
+        source = SourceReference.model_validate(
+            _ref("EVENT", "/vehicle_state/speed_mps", sequence=sequence)
+        )
+        return Point(
+            sequence=sequence,
+            simulation_time_s=0.5,
+            category="OBSERVED",
+            availability="AVAILABLE",
+            unavailable_reason=None,
+            scalar_value=ExactValue(**_exact(1.0, "m/s")),
+            action_value=None,
+            observation_value=None,
+            string_list_value=None,
+            source_reference=source,
+        )
+
+    points = (point(0), point(1))
+    track = Track(
+        track_id="speed_mps",
+        label="speed",
+        category="OBSERVED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        value_kind="SCALAR",
+        points=points,
+        source_references=tuple(item.source_reference for item in points),
+    )
+    with pytest.raises(ValidationError):
+        Timeline(
+            event_count=2,
+            simulation_start_s=0.5,
+            simulation_end_s=0.5,
+            tracks=(track,),
+            category="OBSERVED",
+        )
+
+
+@pytest.mark.parametrize("schema_field", ("evidence_schema_version", "scenario_schema_version"))
+def test_round3_probe_compatible_comparison_sides_require_matching_schema_keys(
+    schema_field: str,
+) -> None:
+    payload = _comparison_payload()
+    payload["candidate"]["artifact"]["manifest_identity"][schema_field] = (
+        "1.0" if schema_field == "evidence_schema_version" else "4.0"
+    )
+    with pytest.raises(ValidationError):
+        ComparisonEnvelope.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("artifact_or_gate_field", "provenance_field"),
+    (
+        ("gate_name", "gate_name"),
+        ("gate_version", "gate_version"),
+        ("gate_config_digest_sha256", "gate_config_digest"),
+        ("scenario_schema_version", "scenario_schema_version"),
+    ),
+)
+def test_round3_probe_valid_gate_and_scenario_identity_match_recorded_provenance(
+    artifact_or_gate_field: str,
+    provenance_field: str,
+) -> None:
+    payload = _review_payload()
+    if artifact_or_gate_field == "scenario_schema_version":
+        payload["artifact"]["manifest_identity"][artifact_or_gate_field] = "4.0"
+    else:
+        payload["gate"][artifact_or_gate_field] = (
+            "different" if artifact_or_gate_field != "gate_config_digest_sha256" else "f" * 64
+        )
+    assert payload["provenance"]["recorded"][provenance_field] != (
+        payload["artifact"]["manifest_identity"].get(artifact_or_gate_field)
+        if artifact_or_gate_field == "scenario_schema_version"
+        else payload["gate"][artifact_or_gate_field]
+    )
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+def test_round3_comparison_accepts_internally_consistent_invalid_gate_side() -> None:
+    payload = _comparison_payload()
+    payload["baseline"]["gate_verdict"] = "INVALID_EVIDENCE"
+    payload["verdict_delta"]["baseline_value"] = {
+        "kind": "SCALAR",
+        "value": _exact("INVALID_EVIDENCE"),
+    }
+    payload["verdict_delta"]["status"] = "NOT_COMPARABLE"
+    envelope = ComparisonEnvelope.model_validate(payload)
+    assert envelope.baseline.integrity == "INTERNALLY_CONSISTENT"
+    assert envelope.baseline.gate_verdict == "INVALID_EVIDENCE"
+    assert envelope.verdict_delta.status == "NOT_COMPARABLE"
+
+
+def test_round3_core_invalid_gate_remains_accepted_under_consistent_integrity() -> None:
+    inspection = inspect_artifact(Path("artifacts/handoff-p1-nominal"))
+    assert inspection.snapshot is not None
+    snapshot = inspection.snapshot
+    gate_payload = snapshot.gate_config.model_dump(mode="json")
+    gate_payload["hard"]["missing_required_evidence"] = "INVALID_EVIDENCE"
+    invalid_on_missing = GateConfig.model_validate(gate_payload)
+    findings = list(snapshot.findings.findings)
+    progress_index = next(
+        index for index, finding in enumerate(findings) if finding.finding_id == "progress.required"
+    )
+    original_progress = findings[progress_index]
+    findings[progress_index] = Finding(
+        finding_id=original_progress.finding_id,
+        verifier=original_progress.verifier,
+        verifier_version=original_progress.verifier_version,
+        status=FindingStatus.NOT_AVAILABLE,
+        severity=original_progress.severity,
+        hard_invariant=original_progress.hard_invariant,
+        threshold_or_invariant=original_progress.threshold_or_invariant,
+        measurement=Measurement(
+            availability=EvidenceAvailability.NOT_AVAILABLE,
+            value=None,
+            unit="%",
+            reason="route progress explicitly unavailable",
+        ),
+        message="route progress explicitly unavailable",
+        event_sequences=(),
+        first_failure_time_s=None,
+    )
+    core = apply_release_gate(
+        tuple(findings),
+        invalid_on_missing,
+        expected_profile=VerifierProfile.LEGACY,
+    )
+    assert core.verdict is Verdict.INVALID_EVIDENCE
+
+    payload = _review_payload("1.0")
+    progress = payload["findings"][3]
+    consequence = {
+        **progress["consequence"],
+        "triggered": True,
+        "effect": "CONFIGURED_MISSING_REQUIRED_EVIDENCE",
+        "result_if_controlling": "INVALID_EVIDENCE",
+        "source": "GATE_CONFIG_MISSING_REQUIRED_EVIDENCE",
+        "listed_in_hard_failures": True,
+        "configuration_references": (
+            _ref("GATE_CONFIG", "/hard/missing_required_evidence"),
+        ),
+    }
+    progress.update(
+        {
+            "status": "NOT_AVAILABLE",
+            "category": "NOT_AVAILABLE",
+            "measured": _exact(None, "%"),
+            "evidence_availability": "NOT_AVAILABLE",
+            "consequence": consequence,
+        }
+    )
+    progress["threshold"]["children"][1]["clause"]["evidence_sources"] = (
+        _ref("EVENT", "/raw_facts/route_progress_available", sequence=0),
+        _ref("METRIC", "/route_completion_pct", sequence=None),
+    )
+    for index, finding in enumerate(payload["findings"]):
+        if index != 3:
+            finding["consequence"]["listed_in_supporting_findings"] = False
+    payload["gate"].update(
+        {
+            "verdict": core.verdict.value,
+            "hard_failure_ids": ("progress.required",),
+            "supporting_finding_ids": ("progress.required",),
+        }
+    )
+    sufficiency = payload["evidence_sufficiency"]
+    sufficiency["summary"]["required_and_available"] -= 1
+    sufficiency["summary"]["required_but_unavailable"] = 1
+    sufficiency_item = sufficiency["items"][3]
+    sufficiency_item.update(
+        {
+            "availability": "NOT_AVAILABLE",
+            "reason": "route progress explicitly unavailable",
+            "category": "NOT_AVAILABLE",
+            "consequence": consequence,
+        }
+    )
+    route_metric = payload["metrics"][5]
+    route_metric.update(
+        {
+            "category": "NOT_AVAILABLE",
+            "availability": "NOT_AVAILABLE",
+            "unavailable_reason": "route progress explicitly unavailable",
+            "value": {"kind": "SCALAR", "value": _exact(None, "%")},
+            "source_references": (
+                _ref("METRIC", "/route_completion_pct", sequence=None),
+                _ref("EVENT", "/raw_facts/route_progress_available", sequence=0),
+            ),
+        }
+    )
+    route_track = payload["timeline"]["tracks"][12]
+    route_track["points"][0].update(
+        {
+            "category": "NOT_AVAILABLE",
+            "availability": "NOT_AVAILABLE",
+            "unavailable_reason": "route progress explicitly unavailable",
+            "scalar_value": _exact(None, "%"),
+            "source_reference": _ref(
+                "EVENT", "/raw_facts/route_progress_available", sequence=0
+            ),
+        }
+    )
+    route_track["source_references"] = (
+        _ref("EVENT", "/raw_facts/route_progress_available", sequence=0),
+    )
+    payload["unavailable_evidence"] = (
+        {
+            "evidence_id": "progress.required",
+            "label": "progress.required",
+            "reason": "route progress explicitly unavailable",
+            "requiredness": "REQUIRED",
+            "consequence": consequence,
+            "category": "NOT_AVAILABLE",
+            "source_references": (),
+        },
+    )
+    envelope = ReviewEnvelope.model_validate(payload)
+    assert envelope.verification.integrity == "INTERNALLY_CONSISTENT"
+    assert envelope.gate.verdict == "INVALID_EVIDENCE"
+    assert envelope.gate.accepted_recomputation is True
