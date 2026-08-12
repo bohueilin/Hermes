@@ -7,6 +7,22 @@ from copy import deepcopy
 import pytest
 from pydantic import ValidationError
 
+from hermes.comparison.compare import compare_artifacts
+from hermes.domain.enums import EvidenceAvailability, TerminationReason, Verdict
+from hermes.domain.models import (
+    ArtifactManifest,
+    ComponentContext,
+    ExecutionContext,
+    FindingsDocument,
+    GateResult,
+    Measurement,
+    RunContext,
+    RunMetrics,
+    ScenarioDefinition,
+    TraceEvent,
+)
+from hermes.evidence.verification import VerifiedArtifactSnapshot
+from hermes.gates.config import GateConfig
 from hermes.review import (
     ComparisonEnvelope,
     LocatorInfo,
@@ -25,6 +41,7 @@ from hermes.review.models import (
     ClauseExpression,
     ComparisonStringListValue,
     DiagnosticItem,
+    DimensionDelta,
     ExactValue,
     GateConsequence,
     GroupExpression,
@@ -45,6 +62,7 @@ from hermes.review.models import (
     StringListValue,
     SufficiencyItem,
     ThresholdClause,
+    Timeline,
     ToolInfo,
     Track,
     TrustInfo,
@@ -176,6 +194,10 @@ def _source(source_type: str = "EVENT", *, sequence: int | None = 0) -> dict[str
     }
 
 
+def _ref(source_type: str, pointer: str, *, sequence: int | None = None) -> dict[str, object]:
+    return {**_source(source_type, sequence=sequence), "json_pointer": pointer}
+
+
 def _exact(value: object = 0, unit: str | None = None) -> dict[str, object]:
     return {
         "machine_value": value,
@@ -202,17 +224,24 @@ def _clause(
     left: str = "collision_count",
     transforms: tuple[str, ...] = ("MAX_OVER_EVENTS",),
     operator: str = "LTE",
+    *,
+    right: dict[str, object] | None = None,
+    configuration: tuple[dict[str, object], ...] = (),
+    evidence: tuple[dict[str, object], ...] = (),
+    label: str | None = None,
 ) -> dict[str, object]:
     return {
         "kind": "CLAUSE",
-        "label": left,
+        "label": label or left,
         "clause": {
             "left_operand": left,
             "transforms": transforms,
             "operator": operator,
-            "right_operand": None if operator in {"IS_TRUE", "IS_FALSE"} else _exact(0, None),
-            "configuration_sources": (),
-            "evidence_sources": (_source(),),
+            "right_operand": (
+                None if operator in {"IS_TRUE", "IS_FALSE"} else right or _exact(0, None)
+            ),
+            "configuration_sources": configuration,
+            "evidence_sources": evidence,
         },
         "children": (),
         "invariant": None,
@@ -220,15 +249,24 @@ def _clause(
 
 
 def _invariant(operator: str = "COMPLETE") -> dict[str, object]:
+    trace = operator == "COMPLETE"
     return {
         "kind": "INVARIANT",
-        "label": operator,
+        "label": (
+            "Complete trace sequence and digest chain"
+            if trace
+            else "All configured faults are observed"
+        ),
         "clause": None,
         "children": (),
         "invariant": {
             "operator": operator,
-            "configuration_sources": (),
-            "evidence_sources": (_source(),),
+            "configuration_sources": (
+                (_ref("SCENARIO", "/control/horizon_steps"),)
+                if trace
+                else (_ref("SCENARIO", "/faults"),)
+            ),
+            "evidence_sources": (_ref("TRACE_DIGEST", ""),) if trace else (),
         },
     }
 
@@ -240,13 +278,34 @@ def _threshold(finding_id: str) -> dict[str, object]:
         return _invariant("ALL_OBSERVED")
     if finding_id == "boundary.within_tolerance":
         children = (
-            _clause("lateral_offset_m", ("ABSOLUTE_VALUE", "MAX_OVER_EVENTS")),
-            _clause("offroad", ("ALL_EVENTS",), "IS_FALSE"),
-            _clause("offroad", ("DURATION_TRUE",)),
+            _clause(
+                "lateral_offset_m",
+                ("ABSOLUTE_VALUE", "MAX_OVER_EVENTS"),
+                right=_exact(1.0, "m"),
+                configuration=(
+                    _ref("SCENARIO", "/road/boundary_tolerance_m"),
+                    _ref("GATE_CONFIG", "/hard/max_abs_lateral_offset_m"),
+                ),
+                label="Maximum absolute lateral offset",
+            ),
+            _clause(
+                "offroad",
+                ("ALL_EVENTS",),
+                "IS_FALSE",
+                label="No event is off-road",
+            ),
+            _clause(
+                "offroad",
+                ("DURATION_TRUE",),
+                right=_exact(0.0, "s"),
+                configuration=(_ref("GATE_CONFIG", "/hard/max_offroad_duration_s"),),
+                evidence=(_ref("EXECUTION_CONTEXT", "/run_context/control_frequency_hz"),),
+                label="Maximum off-road duration",
+            ),
         )
         return {
             "kind": "ALL_OF",
-            "label": "boundary",
+            "label": "Boundary and off-road limits",
             "clause": None,
             "children": children,
             "invariant": None,
@@ -254,22 +313,49 @@ def _threshold(finding_id: str) -> dict[str, object]:
     if finding_id == "progress.required":
         return {
             "kind": "ALL_OF",
-            "label": "progress",
+            "label": "Destination and route progress requirements",
             "clause": None,
             "children": (
-                _clause("destination_reached", ("FINAL_EVENT",), "IS_TRUE"),
-                _clause("route_completion_pct", ("MAX_OVER_EVENTS",), "GTE"),
+                _clause(
+                    "destination_reached",
+                    ("FINAL_EVENT",),
+                    "IS_TRUE",
+                    label="Destination reached at final event",
+                ),
+                _clause(
+                    "route_completion_pct",
+                    ("MAX_OVER_EVENTS",),
+                    "GTE",
+                    right=_exact(95.0, "%"),
+                    configuration=(_ref("GATE_CONFIG", "/hard/min_route_completion_pct"),),
+                    evidence=(_ref("METRIC", "/route_completion_pct"),),
+                    label="Minimum route completion",
+                ),
             ),
             "invariant": None,
         }
     if finding_id == "comfort.acceleration":
-        return _clause("acceleration_mps2", ("ABSOLUTE_VALUE", "MAX_OVER_EVENTS"))
+        return _clause(
+            "acceleration_mps2",
+            ("ABSOLUTE_VALUE", "MAX_OVER_EVENTS"),
+            right=_exact(4.0, "m/s^2"),
+            configuration=(_ref("GATE_CONFIG", "/soft/max_abs_acceleration_mps2"),),
+            label="Maximum absolute acceleration",
+        )
     if finding_id == "comfort.jerk":
         return _clause(
             "acceleration_mps2",
             ("FINITE_DIFFERENCE", "ABSOLUTE_VALUE", "MAX_OVER_EVENTS"),
+            right=_exact(10.0, "m/s^3"),
+            configuration=(_ref("GATE_CONFIG", "/soft/max_abs_jerk_mps3"),),
+            evidence=(_ref("EXECUTION_CONTEXT", "/run_context/control_frequency_hz"),),
+            label="Maximum absolute jerk",
         )
-    return _clause()
+    return _clause(
+        right=_exact(0, "count"),
+        configuration=(_ref("GATE_CONFIG", "/hard/max_collision_count"),),
+        label="Maximum collision count",
+    )
 
 
 def _artifact(schema: str = "2.0", *, path: str = "candidate") -> dict[str, object]:
@@ -350,6 +436,11 @@ def _metrics(schema: str = "2.0") -> tuple[dict[str, object], ...]:
                         **_source("METRIC", sequence=None),
                         "json_pointer": f"/{metric_id}",
                     },
+                    *(
+                        (_ref("EXECUTION_CONTEXT", "/run_context/control_frequency_hz"),)
+                        if metric_id in {"offroad_duration_s", "max_abs_jerk_mps3"}
+                        else ()
+                    ),
                 ),
             }
         )
@@ -600,7 +691,7 @@ def _invalid_review_payload() -> dict[str, object]:
         "gate_name": None,
         "gate_version": None,
         "gate_config_digest_sha256": None,
-        "rationale": ("evidence invalid",),
+        "rationale": (),
         "hard_failure_ids": (),
         "soft_failure_ids": (),
         "supporting_finding_ids": (),
@@ -738,7 +829,28 @@ def _comparison_payload(*, compatible: bool = True) -> dict[str, object]:
         },
         {**_measurement_delta("max_abs_jerk_mps3"), "unit": "m/s^3", "desired_direction": "LOWER"},
         {**_measurement_delta("p95_policy_latency_ms"), "unit": "ms", "desired_direction": "LOWER"},
-        _scalar_delta("policy_latency_source"),
+        {
+            "dimension_id": "policy_latency_source",
+            "status": "UNCHANGED",
+            "baseline_value": {"kind": "STRING_LIST", "values": ("simulated",)},
+            "candidate_value": {"kind": "STRING_LIST", "values": ("simulated",)},
+            "unit": None,
+            "explanation": "hard-failure set is unchanged",
+            "desired_direction": "DESCRIPTIVE",
+            "category": "COMPUTED",
+            "source_references": (),
+        },
+        {
+            "dimension_id": "shield_interventions",
+            "status": "UNCHANGED",
+            "baseline_value": {"kind": "INTERVENTION", "count": 0, "reasons": {}},
+            "candidate_value": {"kind": "INTERVENTION", "count": 0, "reasons": {}},
+            "unit": "interventions",
+            "explanation": "descriptive",
+            "desired_direction": "DESCRIPTIVE",
+            "category": "COMPUTED",
+            "source_references": (),
+        },
     )
     return {
         "comparison_schema_version": "1.0",
@@ -758,7 +870,7 @@ def _comparison_payload(*, compatible: bool = True) -> dict[str, object]:
             "candidate_ids": (),
             "removed_ids": (),
             "added_ids": (),
-            "explanation": "unchanged",
+            "explanation": "hard-failure set is unchanged",
             "category": "COMPUTED",
             "source_references": (),
         },
@@ -794,23 +906,120 @@ def _comparison_payload(*, compatible: bool = True) -> dict[str, object]:
         "improvements": (),
         "regressions": (),
         "unchanged_outcomes": unchanged,
-        "not_comparable": (
-            {
-                "dimension_id": "shield_interventions",
-                "status": "NOT_COMPARABLE",
-                "baseline_value": {"kind": "INTERVENTION", "count": 0, "reasons": {}},
-                "candidate_value": {"kind": "INTERVENTION", "count": 0, "reasons": {}},
-                "unit": "interventions",
-                "explanation": "descriptive",
-                "desired_direction": "DESCRIPTIVE",
-                "category": "COMPUTED",
-                "source_references": (),
-            },
-        ),
+        "not_comparable": (),
         "availability_deltas": (),
-        "chart_series": (),
+        "chart_series": tuple(
+            {
+                "dimension_id": item["dimension_id"],
+                "baseline_numeric_value": (
+                    item["baseline_value"]["value"]["machine_value"]
+                    if item["baseline_value"]["kind"] == "SCALAR"
+                    else item["baseline_value"]["value"]
+                ),
+                "candidate_numeric_value": (
+                    item["candidate_value"]["value"]["machine_value"]
+                    if item["candidate_value"]["kind"] == "SCALAR"
+                    else item["candidate_value"]["value"]
+                ),
+                "unit": item["unit"],
+                "category": "COMPUTED",
+                "source_references": item["source_references"],
+            }
+            for item in unchanged[:6]
+        ),
         "residual_limitations": (),
     }
+
+
+def _core_comparison_snapshot(path: str, *, latency_source: str = "simulated"):
+    def available(value: float, unit: str) -> Measurement:
+        return Measurement(
+            availability=EvidenceAvailability.AVAILABLE,
+            value=value,
+            unit=unit,
+        )
+
+    metrics = RunMetrics(
+        event_count=1,
+        simulation_duration_s=0.0,
+        collision_count=0,
+        max_abs_lateral_offset_m=0.0,
+        offroad_duration_s=0.0,
+        route_completion_pct=available(100.0, "%"),
+        minimum_ttc_s=available(1.0, "s"),
+        max_abs_acceleration_mps2=available(0.0, "m/s^2"),
+        max_abs_jerk_mps3=available(0.0, "m/s^3"),
+        p95_policy_latency_ms=available(10.0, "ms"),
+        shield_override_count=0,
+        shield_override_reasons={},
+        termination_reason=TerminationReason.DESTINATION_REACHED,
+    )
+    context = RunContext.model_construct(
+        scenario_digest="1" * 64,
+        gate_config_digest="2" * 64,
+        adapter_name="fake",
+        adapter_version="1.0",
+        adapter_config_digest="3" * 64,
+        policy_name="baseline",
+        policy_version="1.0",
+        policy_config_digest="4" * 64,
+        shield_name="noop",
+        shield_version="1.0",
+        shield_config_digest="5" * 64,
+        verifier_suite_digest="6" * 64,
+        seed=7,
+        control_frequency_hz=10,
+        horizon_steps=1,
+    )
+    return VerifiedArtifactSnapshot(
+        path=path,
+        manifest=ArtifactManifest.model_construct(
+            evidence_schema_version="1.0",
+            repository_commit="7" * 40,
+            repository_dirty=False,
+            adapter_name="fake",
+            adapter_version="1.0",
+            adapter_config_digest="3" * 64,
+            simulator_name=None,
+            simulator_version=None,
+            simulator_commit=None,
+            scenario_digest="1" * 64,
+            policy_name="baseline",
+            policy_version="1.0",
+            policy_config_digest="4" * 64,
+            shield_name="noop",
+            shield_version="1.0",
+            shield_config_digest="5" * 64,
+            gate_config_digest="2" * 64,
+            seed=7,
+            control_frequency_hz=10,
+            horizon_steps=1,
+            python_version="3.11",
+            platform="darwin",
+            architecture="arm64",
+        ),
+        context=ExecutionContext.model_construct(
+            run_context=context,
+            adapter=ComponentContext.model_construct(
+                name="fake", version="1.0", config={}, config_digest="3" * 64
+            ),
+            policy=ComponentContext.model_construct(
+                name="baseline", version="1.0", config={}, config_digest="4" * 64
+            ),
+            shield=ComponentContext.model_construct(
+                name="noop", version="1.0", config={}, config_digest="5" * 64
+            ),
+            verifier_suite=(),
+        ),
+        scenario=ScenarioDefinition.model_construct(
+            schema_version="1.0", name="nominal", version="1.0"
+        ),
+        gate_config=GateConfig.model_construct(schema_version="1.0", name="phase1", version="1.0"),
+        events=(TraceEvent.model_construct(latency_source=latency_source),),
+        metrics=metrics,
+        findings=FindingsDocument(findings=()),
+        verdict=GateResult.model_construct(verdict=Verdict.PASS, hard_failures=()),
+    )
 
 
 def test_models_are_strict_frozen_finite_and_forbid_unknown_fields() -> None:
@@ -838,6 +1047,14 @@ def test_runtime_cache_key_and_unavailable_error_have_exact_stable_api() -> None
         ReviewCacheKey(SHA, "2.0", "0.1.0", "runs/candidate")  # type: ignore[arg-type]
     with pytest.raises((TypeError, ValueError)):
         ReviewCacheKey(SHA, "1.0", "", "/absolute")
+    with pytest.raises((TypeError, ValueError)):
+        ReviewCacheKey(SHA, "1.0", "0.1.0", "bad\x00path")
+    with pytest.raises(ValidationError):
+        LocatorInfo(
+            selected_relative_path="bad\x00path",
+            selected_directory_name="bad\x00path",
+            category="OBSERVED",
+        )
     error = ReviewUnavailableError(
         ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
         "finding budget exceeded",
@@ -1110,6 +1327,9 @@ def test_metric_references_allow_ordered_config_and_context_after_metrics_pointe
 
 
 def test_point_and_track_union_rules_preserve_unavailable_scalar_without_inference() -> None:
+    route_source = SourceReference.model_validate(
+        {**_source(), "json_pointer": "/raw_facts/route_progress_available"}
+    )
     point = Point(
         sequence=0,
         simulation_time_s=0.0,
@@ -1120,7 +1340,7 @@ def test_point_and_track_union_rules_preserve_unavailable_scalar_without_inferen
         action_value=None,
         observation_value=None,
         string_list_value=None,
-        source_reference=SourceReference.model_validate(_source()),
+        source_reference=route_source,
     )
     Track(
         track_id="route_progress_pct",
@@ -1130,7 +1350,7 @@ def test_point_and_track_union_rules_preserve_unavailable_scalar_without_inferen
         unavailable_reason=None,
         value_kind="SCALAR",
         points=(point,),
-        source_references=(),
+        source_references=(route_source,),
     )
     with pytest.raises(ValidationError):
         Point.model_validate(
@@ -1301,7 +1521,7 @@ def test_side_references_hard_failure_availability_and_chart_models_are_strict()
         candidate_ids=(),
         removed_ids=("collision.zero",),
         added_ids=(),
-        explanation="removed",
+        explanation="removed hard failures: collision.zero",
         category="COMPUTED",
         source_references=(baseline_ref,),
     )
@@ -1434,3 +1654,289 @@ def test_threshold_nesting_over_16_fails_with_typed_review_unavailable_error() -
     with pytest.raises(ReviewUnavailableError) as exc_info:
         ReviewEnvelope.model_validate(payload)
     assert exc_info.value.reason is ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE
+
+
+def test_round1_threshold_and_gate_registry_rejects_fabricated_portable_basis() -> None:
+    payload = _review_payload()
+    collision = payload["findings"][1]
+    collision["threshold"]["label"] = "fabricated label"
+    collision["threshold"]["clause"]["right_operand"] = _exact(999, "bananas")
+    collision["threshold"]["clause"]["configuration_sources"] = (
+        _source("MANIFEST", sequence=None),
+    )
+    collision["threshold"]["clause"]["evidence_sources"] = (_source("METRIC", sequence=None),)
+    payload["gate"]["hard_failure_ids"] = ("collision.zero",)
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+@pytest.mark.parametrize("finding_index", range(7))
+def test_round1_each_finding_uses_its_frozen_threshold_label(finding_index: int) -> None:
+    payload = _review_payload()
+    payload["findings"][finding_index]["threshold"]["label"] = "arbitrary caller label"
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    "membership_field",
+    (
+        "listed_in_hard_failures",
+        "listed_in_soft_failures",
+        "listed_in_supporting_findings",
+    ),
+)
+def test_round1_finding_membership_flags_exactly_copy_gate_arrays(
+    membership_field: str,
+) -> None:
+    payload = _review_payload()
+    consequence = payload["findings"][0]["consequence"]
+    consequence[membership_field] = not consequence[membership_field]
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+def test_round1_comparison_registry_rejects_invented_set_chart_and_availability_deltas() -> None:
+    payload = _comparison_payload()
+    latency = next(
+        item
+        for item in payload["unchanged_outcomes"]
+        if item["dimension_id"] == "policy_latency_source"
+    )
+    latency["baseline_value"] = {"kind": "STRING_LIST", "values": ("simulated",)}
+    latency["candidate_value"] = {"kind": "STRING_LIST", "values": ("simulated",)}
+    payload["hard_failure_delta"]["removed_ids"] = ("ghost",)
+    payload["hard_failure_delta"]["status"] = "IMPROVED"
+    payload["chart_series"] = (
+        {
+            "dimension_id": "minimum_ttc_s",
+            "baseline_numeric_value": 999.0,
+            "candidate_numeric_value": -3.0,
+            "unit": "bananas",
+            "category": "COMPUTED",
+            "source_references": (),
+        },
+    )
+    with pytest.raises(ValidationError):
+        ComparisonEnvelope.model_validate(payload)
+
+
+def test_round1_chart_must_exactly_copy_eligible_partition_delta() -> None:
+    payload = _comparison_payload()
+    payload["chart_series"][1]["baseline_numeric_value"] = 999.0
+    payload["chart_series"][1]["unit"] = "bananas"
+    with pytest.raises(ValidationError):
+        ComparisonEnvelope.model_validate(payload)
+
+
+def test_round1_availability_details_exactly_match_summary_and_measurement_delta() -> None:
+    payload = _comparison_payload()
+    minimum_ttc = payload["unchanged_outcomes"][1]
+    minimum_ttc["status"] = "NOT_COMPARABLE"
+    minimum_ttc["baseline_value"] = {
+        "kind": "MEASUREMENT",
+        "availability": "NOT_AVAILABLE",
+        "value": None,
+        "reason": "missing baseline TTC",
+    }
+    payload["availability_summary_delta"]["status"] = "NOT_COMPARABLE"
+    payload["availability_summary_delta"]["baseline_value"]["values"]["minimum_ttc_s"] = (
+        "NOT_AVAILABLE"
+    )
+    with pytest.raises(ValidationError):
+        ComparisonEnvelope.model_validate(payload)
+
+
+def test_round1_portable_maps_are_transitively_immutable_and_canonical_bytes_stable() -> None:
+    review = ReviewEnvelope.model_validate(_review_payload())
+    before = canonical_envelope_bytes(review)
+    with pytest.raises(TypeError):
+        review.metrics[11].value.values["injected"] = 7
+    assert canonical_envelope_bytes(review) == before
+    comparison = ComparisonEnvelope.model_validate(_comparison_payload())
+    intervention = comparison.unchanged_outcomes[-1].baseline_value
+    with pytest.raises(TypeError):
+        intervention.reasons["injected"] = 7
+
+
+def test_round1_integrity_requires_complete_identity_roots_provenance_and_quarantine_flag() -> None:
+    payload = _review_payload()
+    payload["artifact"]["manifest_identity"]["run_id"] = None
+    payload["artifact"]["computed_bundle_digest"] = None
+    payload["provenance"]["recorded"] = _invalid_review_payload()["provenance"]["recorded"]
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+    invalid = _invalid_review_payload()
+    invalid["verification"]["stored_claims_quarantined"] = False
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(invalid)
+
+
+def test_round1_available_metric_requires_typed_value_and_exact_source() -> None:
+    payload = _review_payload()
+    payload["metrics"][0]["value"] = {"kind": "SCALAR", "value": _exact(None, "events")}
+    payload["metrics"][0]["value"]["value"]["display_text"] = "PASS"
+    payload["metrics"][0]["source_references"] = ()
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+def test_round1_side_reference_order_is_source_first_then_side_tiebreaker() -> None:
+    candidate_manifest = SideReference(
+        side="CANDIDATE",
+        reference=SourceReference.model_validate(_source("MANIFEST", sequence=None)),
+    )
+    baseline_verdict = SideReference(
+        side="BASELINE",
+        reference=SourceReference.model_validate(_source("VERDICT", sequence=None)),
+    )
+    HardFailureDelta(
+        status="UNCHANGED",
+        baseline_ids=(),
+        candidate_ids=(),
+        removed_ids=(),
+        added_ids=(),
+        explanation="hard-failure set is unchanged",
+        category="COMPUTED",
+        source_references=(candidate_manifest, baseline_verdict),
+    )
+
+
+def test_round1_timeline_grid_categories_and_scalar_availability_are_exact() -> None:
+    source = SourceReference.model_validate(_source(sequence=0))
+    with pytest.raises(ValidationError):
+        Point(
+            sequence=0,
+            simulation_time_s=0.0,
+            category="OBSERVED",
+            availability="AVAILABLE",
+            unavailable_reason=None,
+            scalar_value=ExactValue(**_exact(None, "m/s")),
+            action_value=None,
+            observation_value=None,
+            string_list_value=None,
+            source_reference=source,
+        )
+    collision_source = SourceReference.model_validate(
+        {**_source(sequence=0), "json_pointer": "/vehicle_state/collision_count"}
+    )
+    speed_source = SourceReference.model_validate(
+        {**_source(sequence=0), "json_pointer": "/vehicle_state/speed_mps"}
+    )
+    collision = Point(
+        sequence=0,
+        simulation_time_s=0.0,
+        category="OBSERVED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        scalar_value=ExactValue(**_exact(0, "collisions")),
+        action_value=None,
+        observation_value=None,
+        string_list_value=None,
+        source_reference=collision_source,
+    )
+    speed = Point(
+        sequence=0,
+        simulation_time_s=1.0,
+        category="OBSERVED",
+        availability="AVAILABLE",
+        unavailable_reason=None,
+        scalar_value=ExactValue(**_exact(1.0, "m/s")),
+        action_value=None,
+        observation_value=None,
+        string_list_value=None,
+        source_reference=speed_source,
+    )
+    tracks = (
+        Track(
+            track_id="collision_count",
+            label="collision",
+            category="OBSERVED",
+            availability="AVAILABLE",
+            unavailable_reason=None,
+            value_kind="SCALAR",
+            points=(collision,),
+            source_references=(collision_source,),
+        ),
+        Track(
+            track_id="speed_mps",
+            label="speed",
+            category="OBSERVED",
+            availability="AVAILABLE",
+            unavailable_reason=None,
+            value_kind="SCALAR",
+            points=(speed,),
+            source_references=(speed_source,),
+        ),
+    )
+    with pytest.raises(ValidationError, match="time grid"):
+        Timeline(
+            event_count=1,
+            simulation_start_s=0.0,
+            simulation_end_s=0.0,
+            tracks=tracks,
+            category="OBSERVED",
+        )
+
+
+def test_round1_schema_profile_pair_and_gate_memberships_are_exact() -> None:
+    payload = _review_payload("2.0")
+    payload["evidence_sufficiency"] = _review_payload("1.0")["evidence_sufficiency"]
+    payload["findings"] = _review_payload("1.0")["findings"]
+    payload["gate"]["supporting_finding_ids"] = tuple(
+        item["finding_id"] for item in payload["findings"]
+    )
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
+
+
+def test_round1_dimension_variants_match_real_compare_artifacts_shapes() -> None:
+    core = compare_artifacts(
+        _core_comparison_snapshot("baseline"),
+        _core_comparison_snapshot("candidate"),
+    )
+    dimensions = {item.name: item.model_dump(mode="json") for item in core.dimensions}
+    latency = dimensions["policy_latency_source"]
+    intervention = dimensions["shield_interventions"]
+    projected_latency = DimensionDelta(
+        dimension_id="policy_latency_source",
+        status=latency["status"],
+        baseline_value=ComparisonStringListValue(
+            kind="STRING_LIST", values=tuple(latency["baseline_value"])
+        ),
+        candidate_value=ComparisonStringListValue(
+            kind="STRING_LIST", values=tuple(latency["candidate_value"])
+        ),
+        unit=None,
+        explanation=latency["explanation"],
+        desired_direction="DESCRIPTIVE",
+        category="COMPUTED",
+        source_references=(),
+    )
+    projected_intervention = DimensionDelta(
+        dimension_id="shield_interventions",
+        status=intervention["status"],
+        baseline_value=InterventionValue(
+            kind="INTERVENTION",
+            count=intervention["baseline_value"]["count"],
+            reasons=intervention["baseline_value"]["reasons"],
+        ),
+        candidate_value=InterventionValue(
+            kind="INTERVENTION",
+            count=intervention["candidate_value"]["count"],
+            reasons=intervention["candidate_value"]["reasons"],
+        ),
+        unit="interventions",
+        explanation=intervention["explanation"],
+        desired_direction="DESCRIPTIVE",
+        category="COMPUTED",
+        source_references=(),
+    )
+    assert projected_latency.baseline_value.values == ("simulated",)
+    assert projected_latency.status == "UNCHANGED"
+    assert projected_intervention.baseline_value.count == 0
+    assert projected_intervention.status == "UNCHANGED"
+    payload = _review_payload()
+    payload["gate"]["hard_failure_ids"] = ("ghost.finding",)
+    with pytest.raises(ValidationError):
+        ReviewEnvelope.model_validate(payload)
