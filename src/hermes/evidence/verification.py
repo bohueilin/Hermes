@@ -269,14 +269,28 @@ def _metadata_identity(metadata: os.stat_result) -> tuple[int, ...]:
     )
 
 
-def _read_descriptor(file_descriptor: int) -> bytes:
+def _directory_identity(metadata: os.stat_result) -> tuple[int, int, int, int, int, int]:
+    return _metadata_identity(metadata)
+
+
+class _ArtifactReadLimitExceeded(ValueError):
+    pass
+
+
+def _read_descriptor(file_descriptor: int, byte_limit: int) -> bytes:
     os.lseek(file_descriptor, 0, os.SEEK_SET)
     chunks: list[bytes] = []
+    remaining = byte_limit
     while True:
-        chunk = os.read(file_descriptor, 1024 * 1024)
+        chunk = os.read(file_descriptor, min(1024 * 1024, remaining + 1))
         if not chunk:
             return b"".join(chunks)
+        if len(chunk) > remaining:
+            raise _ArtifactReadLimitExceeded(
+                f"artifact read exceeds maximum size of {byte_limit} bytes"
+            )
         chunks.append(chunk)
+        remaining -= len(chunk)
 
 
 def _empty_capture(errors: list[str]) -> _ArtifactCapture:
@@ -308,7 +322,7 @@ def _capture_exact_files(directory_fd: int) -> _ArtifactCapture:
             | os.O_NONBLOCK
             | getattr(os, "O_CLOEXEC", 0)
         )
-        total_size = 0
+        captured_total_bytes = 0
         for name in (name for name in REQUIRED_ARTIFACT_FILES if name in initial_names):
             try:
                 file_descriptor = os.open(
@@ -334,16 +348,24 @@ def _capture_exact_files(directory_fd: int) -> _ArtifactCapture:
                     f"{name} exceeds maximum size of {MAX_ARTIFACT_FILE_BYTES} bytes"
                 )
                 continue
-            total_size += metadata.st_size
-            if total_size > MAX_ARTIFACT_TOTAL_BYTES:
+            remaining_total_bytes = MAX_ARTIFACT_TOTAL_BYTES - captured_total_bytes
+            if metadata.st_size > remaining_total_bytes:
                 errors.append(
                     f"artifact exceeds maximum total size of {MAX_ARTIFACT_TOTAL_BYTES} bytes"
                 )
                 continue
             try:
-                first_read = _read_descriptor(file_descriptor)
-                second_read = _read_descriptor(file_descriptor)
+                first_read_complete = False
+                first_read = _read_descriptor(file_descriptor, metadata.st_size)
+                captured_total_bytes += len(first_read)
+                first_read_complete = True
+                second_read = _read_descriptor(file_descriptor, len(first_read))
                 final_metadata = os.fstat(file_descriptor)
+            except _ArtifactReadLimitExceeded as exc:
+                if not first_read_complete:
+                    captured_total_bytes += metadata.st_size
+                errors.append(f"{name} changed while artifact snapshot was captured: {exc}")
+                break
             except OSError as exc:
                 errors.append(f"cannot read stable snapshot of {name}: {exc}")
                 continue
@@ -1315,28 +1337,111 @@ def _validated_relative_selection(selected_relative_path: str) -> tuple[str, ...
 def _open_artifact_under_root(
     artifact_root: Path,
     selected_relative_path: str,
-) -> tuple[Path, int] | tuple[Path, None]:
+) -> (
+    tuple[
+        Path,
+        int,
+        int,
+        tuple[int, int, int, int, int, int],
+        tuple[tuple[str, tuple[int, int, int, int, int, int]], ...],
+    ]
+    | tuple[Path, None, None, None, ()]
+):
     root = Path(os.path.abspath(os.fspath(artifact_root.expanduser())))
     components = _validated_relative_selection(selected_relative_path)
     if components is None:
-        return root, None
+        return root, None, None, None, ()
     if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
-        return root.joinpath(*components), None
+        return root.joinpath(*components), None, None, None, ()
     directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     directory_flags |= getattr(os, "O_CLOEXEC", 0)
     try:
         directory_fd = os.open(root, directory_flags)
     except OSError:
-        return root.joinpath(*components), None
+        return root.joinpath(*components), None, None, None, ()
+    root_fd = directory_fd
+    try:
+        root_identity = _directory_identity(os.fstat(root_fd))
+    except OSError:
+        os.close(root_fd)
+        return root.joinpath(*components), None, None, None, ()
+    identities: list[tuple[str, tuple[int, int, int, int, int, int]]] = []
     try:
         for component in components:
             next_fd = os.open(component, directory_flags, dir_fd=directory_fd)
-            os.close(directory_fd)
+            try:
+                metadata = os.fstat(next_fd)
+            except OSError:
+                os.close(next_fd)
+                raise
+            identities.append((component, _directory_identity(metadata)))
+            if directory_fd != root_fd:
+                os.close(directory_fd)
             directory_fd = next_fd
     except OSError:
-        os.close(directory_fd)
-        return root.joinpath(*components), None
-    return root.joinpath(*components), directory_fd
+        if directory_fd != root_fd:
+            os.close(directory_fd)
+        os.close(root_fd)
+        return root.joinpath(*components), None, None, None, ()
+    return root.joinpath(*components), root_fd, directory_fd, root_identity, tuple(identities)
+
+
+def _directory_chain_is_current(
+    root_fd: int,
+    components: tuple[str, ...],
+    identities: tuple[tuple[str, tuple[int, int, int, int, int, int]], ...],
+) -> bool:
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    directory_flags |= getattr(os, "O_CLOEXEC", 0)
+    current_fd = root_fd
+    opened_fds: list[int] = []
+    try:
+        for component, (name, expected) in zip(components, identities, strict=True):
+            if name != component:
+                return False
+            next_fd = os.open(component, directory_flags, dir_fd=current_fd)
+            opened_fds.append(next_fd)
+            if _directory_identity(os.fstat(next_fd)) != expected:
+                return False
+            current_fd = next_fd
+        return True
+    except OSError:
+        return False
+    finally:
+        for directory_fd in reversed(opened_fds):
+            os.close(directory_fd)
+
+
+def _root_directory_is_current(
+    root_fd: int,
+    root: Path,
+    expected_identity: tuple[int, int, int, int, int, int],
+) -> bool:
+    if not _retained_directory_identity_is_current(root_fd, expected_identity):
+        return False
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    directory_flags |= getattr(os, "O_CLOEXEC", 0)
+    try:
+        current_fd = os.open(root, directory_flags)
+    except OSError:
+        return False
+    try:
+        try:
+            return _directory_identity(os.fstat(current_fd)) == expected_identity
+        except OSError:
+            return False
+    finally:
+        os.close(current_fd)
+
+
+def _retained_directory_identity_is_current(
+    directory_fd: int,
+    expected_identity: tuple[int, int, int, int, int, int],
+) -> bool:
+    try:
+        return _directory_identity(os.fstat(directory_fd)) == expected_identity
+    except OSError:
+        return False
 
 
 def _inspect_artifact_under_root_capture(
@@ -1344,8 +1449,10 @@ def _inspect_artifact_under_root_capture(
     selected_relative_path: str,
 ) -> _InspectionCapture:
     """Capture one lexical selection below an already configured real artifact root."""
-    path, directory_fd = _open_artifact_under_root(artifact_root, selected_relative_path)
-    if directory_fd is None:
+    path, root_fd, selected_fd, root_identity, identities = _open_artifact_under_root(
+        artifact_root, selected_relative_path
+    )
+    if root_fd is None or selected_fd is None or root_identity is None:
         return _inspect_captured_artifact(
             path,
             _empty_capture(
@@ -1356,9 +1463,29 @@ def _inspect_artifact_under_root_capture(
             ),
         )
     try:
-        return _inspect_captured_artifact(path, _capture_exact_files(directory_fd))
+        components = _validated_relative_selection(selected_relative_path)
+        assert components is not None
+        try:
+            capture = _capture_exact_files(selected_fd)
+        finally:
+            os.close(selected_fd)
+        root_path = path.parents[len(components) - 1]
+        binding_is_current = _root_directory_is_current(
+            root_fd, root_path, root_identity
+        ) and _directory_chain_is_current(root_fd, components, identities)
+        if binding_is_current:
+            binding_is_current = _retained_directory_identity_is_current(
+                root_fd, root_identity
+            )
+        if not binding_is_current:
+            capture = _ArtifactCapture(
+                capture._payloads,
+                capture.captured_files,
+                (*capture.errors, "artifact directory component changed during verification"),
+            )
+        return _inspect_captured_artifact(path, capture)
     finally:
-        os.close(directory_fd)
+        os.close(root_fd)
 
 
 def inspect_artifact_under_root(
