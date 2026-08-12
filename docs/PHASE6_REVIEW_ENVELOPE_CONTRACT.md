@@ -350,8 +350,10 @@ SufficiencyItem fields:
 | category | OBSERVED, COMPUTED, or NOT_AVAILABLE |
 | source_references | array[SourceReference] |
 
-NOT_APPLICABLE requires requirement and availability both NOT_APPLICABLE. Other valid combinations
-map one-to-one to the four named summary counts. Items preserve verifier-profile order.
+NOT_APPLICABLE requires requirement and availability both NOT_APPLICABLE, a non-empty fixed reason,
+and category NOT_AVAILABLE. NOT_AVAILABLE likewise requires a non-empty reason and category
+NOT_AVAILABLE. AVAILABLE requires a null reason and category OBSERVED or COMPUTED. Other valid
+combinations map one-to-one to the four named summary counts. Items preserve verifier-profile order.
 
 EvidenceSufficiency:
 
