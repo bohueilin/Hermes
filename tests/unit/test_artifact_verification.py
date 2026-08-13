@@ -528,3 +528,70 @@ def test_early_horizon_claim_is_invalid_after_coherent_event_rehash(
     assert "horizon termination occurred before configured horizon" in " ".join(
         result.errors
     )
+
+
+@pytest.mark.parametrize(
+    ("filename", "original", "malformed"),
+    (
+        (
+            "scenario.resolved.yaml",
+            "name: fake_nominal",
+            "name: 2026-99-99",
+        ),
+        (
+            "gate-config.resolved.yaml",
+            "name: phase1",
+            "name: " + "9" * 5_000,
+        ),
+    ),
+    ids=("scenario-date-constructor", "gate-integer-constructor"),
+)
+def test_yaml_constructor_value_error_returns_bounded_invalid_evidence(
+    repository_root: Path,
+    tmp_path: Path,
+    filename: str,
+    original: str,
+    malformed: str,
+) -> None:
+    source = _nominal_bundle(repository_root, tmp_path)
+    tampered = _copy_bundle(source, tmp_path, f"constructor-error-{filename}")
+    resolved_path = tampered / filename
+    resolved_text = resolved_path.read_text(encoding="utf-8")
+    assert original in resolved_text
+    resolved_path.write_text(
+        resolved_text.replace(original, malformed, 1),
+        encoding="utf-8",
+    )
+    _refresh_envelope(tampered)
+
+    result = verify_artifact(tampered)
+
+    assert result.integrity is IntegrityStatus.INVALID
+    assert result.verdict is Verdict.INVALID_EVIDENCE
+    assert any(error.startswith(f"{filename} is invalid:") for error in result.errors)
+    assert all(len(error) <= 512 for error in result.errors)
+
+
+def test_extreme_finite_acceleration_overflow_returns_bounded_invalid_evidence(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    source = _nominal_bundle(repository_root, tmp_path)
+    tampered = _copy_bundle(source, tmp_path, "extreme-finite-acceleration")
+    events = [
+        json.loads(line)
+        for line in (tampered / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    events[0]["vehicle_state"]["acceleration_mps2"] = 1e308
+    events[1]["vehicle_state"]["acceleration_mps2"] = -1e308
+    _rehash_events(tampered, events)
+
+    result = verify_artifact(tampered)
+
+    assert result.integrity is IntegrityStatus.INVALID
+    assert result.verdict is Verdict.INVALID_EVIDENCE
+    assert any(
+        error.startswith("stored evidence recomputation failed:")
+        for error in result.errors
+    )
+    assert all(len(error) <= 512 for error in result.errors)

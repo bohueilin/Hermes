@@ -1078,24 +1078,42 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
     gate_config = None
     try:
         scenario_text = payloads["scenario.resolved.yaml"].decode("utf-8")
-        scenario = parse_scenario_yaml(scenario_text)
-        if payloads["scenario.resolved.yaml"] != resolved_scenario_yaml(scenario).encode("utf-8"):
-            errors.append("scenario.resolved.yaml is not canonical resolved YAML")
     except UnicodeDecodeError as exc:
         errors.append(f"scenario.resolved.yaml is not valid UTF-8: {exc}")
-    except ScenarioLoadError as exc:
-        errors.append(f"scenario.resolved.yaml is invalid: {exc}")
+    else:
+        try:
+            scenario = parse_scenario_yaml(scenario_text)
+        except ScenarioLoadError as exc:
+            errors.append(f"scenario.resolved.yaml is invalid: {exc}")
+        except ValueError as exc:
+            errors.append(
+                "scenario.resolved.yaml is invalid: "
+                f"YAML scalar construction failed ({type(exc).__name__})"
+            )
+        else:
+            if payloads["scenario.resolved.yaml"] != resolved_scenario_yaml(
+                scenario
+            ).encode("utf-8"):
+                errors.append("scenario.resolved.yaml is not canonical resolved YAML")
     try:
         gate_text = payloads["gate-config.resolved.yaml"].decode("utf-8")
-        gate_config = parse_gate_config_yaml(gate_text)
-        if payloads["gate-config.resolved.yaml"] != resolved_gate_config_yaml(gate_config).encode(
-            "utf-8"
-        ):
-            errors.append("gate-config.resolved.yaml is not canonical resolved YAML")
     except UnicodeDecodeError as exc:
         errors.append(f"gate-config.resolved.yaml is not valid UTF-8: {exc}")
-    except GateConfigError as exc:
-        errors.append(f"gate-config.resolved.yaml is invalid: {exc}")
+    else:
+        try:
+            gate_config = parse_gate_config_yaml(gate_text)
+        except GateConfigError as exc:
+            errors.append(f"gate-config.resolved.yaml is invalid: {exc}")
+        except ValueError as exc:
+            errors.append(
+                "gate-config.resolved.yaml is invalid: "
+                f"YAML scalar construction failed ({type(exc).__name__})"
+            )
+        else:
+            if payloads[
+                "gate-config.resolved.yaml"
+            ] != resolved_gate_config_yaml(gate_config).encode("utf-8"):
+                errors.append("gate-config.resolved.yaml is not canonical resolved YAML")
 
     events: tuple[TraceEventLike, ...] | None = None
     first_mismatch_sequence: int | None = None
@@ -1258,54 +1276,60 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
         and scenario is not None
         and gate_config is not None
     ):
-        recomputed_metrics = compute_metrics(events)
-        if scenario.faults is not None:
-            fault_events = tuple(
-                event for event in events if isinstance(event, TraceEventV2)
-            )
-            if len(fault_events) != len(events):
-                errors.append("fault scenario contains a legacy trace event")
-                recomputed_findings = ()
-            else:
-                recomputed_findings = run_phase4_verifiers(
-                    fault_events, scenario, gate_config
+        try:
+            recomputed_metrics = compute_metrics(events)
+            if scenario.faults is not None:
+                fault_events = tuple(
+                    event for event in events if isinstance(event, TraceEventV2)
                 )
-        else:
-            legacy_events = tuple(
-                event
-                for event in events
-                if isinstance(event, TraceEvent) and not isinstance(event, TraceEventV2)
-            )
-            if len(legacy_events) != len(events):
-                errors.append("legacy scenario contains a schema-2 trace event")
-                recomputed_findings = ()
+                if len(fault_events) != len(events):
+                    errors.append("fault scenario contains a legacy trace event")
+                    recomputed_findings = ()
+                else:
+                    recomputed_findings = run_phase4_verifiers(
+                        fault_events, scenario, gate_config
+                    )
             else:
-                recomputed_findings = run_phase1_verifiers(
-                    legacy_events, scenario, gate_config
+                legacy_events = tuple(
+                    event
+                    for event in events
+                    if isinstance(event, TraceEvent) and not isinstance(event, TraceEventV2)
                 )
-        adapter_name = context.adapter.name if context is not None else "fake"
-        verifier_profile = (
-            VerifierProfile.FAULT_COVERAGE
-            if scenario.faults is not None or isinstance(context, ExecutionContextV2)
-            else VerifierProfile.LEGACY
-        )
-        recomputed_verdict = apply_release_gate(
-            recomputed_findings,
-            gate_config,
-            adapter_name=adapter_name,
-            expected_profile=verifier_profile,
-        )
-        if metrics is not None and metrics != recomputed_metrics:
-            errors.append("metrics.json does not match metrics recomputed from stored events")
-        expected_findings = (
-            FindingsDocumentV2(findings=recomputed_findings)
-            if scenario.faults is not None
-            else FindingsDocument(findings=recomputed_findings)
-        )
-        if findings_document is not None and findings_document != expected_findings:
-            errors.append("findings.json does not match verifiers rerun from stored events")
-        if stored_verdict is not None and stored_verdict != recomputed_verdict:
-            errors.append("verdict.json does not match the recomputed release gate")
+                if len(legacy_events) != len(events):
+                    errors.append("legacy scenario contains a schema-2 trace event")
+                    recomputed_findings = ()
+                else:
+                    recomputed_findings = run_phase1_verifiers(
+                        legacy_events, scenario, gate_config
+                    )
+            adapter_name = context.adapter.name if context is not None else "fake"
+            verifier_profile = (
+                VerifierProfile.FAULT_COVERAGE
+                if scenario.faults is not None or isinstance(context, ExecutionContextV2)
+                else VerifierProfile.LEGACY
+            )
+            recomputed_verdict = apply_release_gate(
+                recomputed_findings,
+                gate_config,
+                adapter_name=adapter_name,
+                expected_profile=verifier_profile,
+            )
+            if metrics is not None and metrics != recomputed_metrics:
+                errors.append("metrics.json does not match metrics recomputed from stored events")
+            expected_findings = (
+                FindingsDocumentV2(findings=recomputed_findings)
+                if scenario.faults is not None
+                else FindingsDocument(findings=recomputed_findings)
+            )
+            if findings_document is not None and findings_document != expected_findings:
+                errors.append("findings.json does not match verifiers rerun from stored events")
+            if stored_verdict is not None and stored_verdict != recomputed_verdict:
+                errors.append("verdict.json does not match the recomputed release gate")
+        except (ArithmeticError, ValidationError) as exc:
+            errors.append(
+                "stored evidence recomputation failed: "
+                f"unsupported derived value ({type(exc).__name__})"
+            )
 
     if errors:
         return _inspection_result(

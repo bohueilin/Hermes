@@ -4,6 +4,7 @@ from collections import Counter
 from functools import partial
 from pathlib import Path
 from typing import Annotated, Any, NoReturn
+from unicodedata import category as unicode_category
 
 import typer
 from rich.console import Console
@@ -32,6 +33,7 @@ SCOPE_BANNER = (
     "SIMULATION-ONLY PROTOTYPE — illustrative thresholds; not road-safety, certification, "
     "compliance, or deployment evidence."
 )
+_REVIEW_TEXT_SCALAR_LIMIT = 1_024
 
 
 class HermesTyperGroup(TyperGroup):
@@ -140,14 +142,36 @@ def _review_console() -> Console:
 
 
 def _neutralize_artifact_text(value: object) -> str:
-    """Render every C0/C1 control as visible uppercase ASCII text."""
+    """Render every Cc/Cf control as visible uppercase ASCII text."""
 
     text = str(value)
-    return "".join(
-        f"\\u{ord(character):04X}"
-        if "\u0000" <= character <= "\u001F" or "\u007F" <= character <= "\u009F"
-        else character
-        for character in text
+    rendered: list[str] = []
+    for character in text:
+        if unicode_category(character) not in {"Cc", "Cf"}:
+            rendered.append(character)
+            continue
+        codepoint = ord(character)
+        rendered.append(
+            f"\\u{codepoint:04X}"
+            if codepoint <= 0xFFFF
+            else f"\\U{codepoint:08X}"
+        )
+    return "".join(rendered)
+
+
+def _bounded_artifact_text(value: object) -> str:
+    """Return one bounded, visibly inert human-display scalar."""
+
+    from hermes.review import truncate_display_text
+
+    text = str(value)
+    projection = truncate_display_text(text, limit=_REVIEW_TEXT_SCALAR_LIMIT)
+    displayed = _neutralize_artifact_text(text[:_REVIEW_TEXT_SCALAR_LIMIT])
+    if not projection.truncated:
+        return displayed
+    return (
+        f"{displayed} [truncated=true; "
+        f"original_length={projection.original_length}]"
     )
 
 
@@ -403,7 +427,48 @@ def verify_artifact_command(
 
 def _review_record_json(value: object) -> str:
     payload = value.model_dump(mode="json") if hasattr(value, "model_dump") else value
-    text = canonical_json_bytes(payload).decode("utf-8")
+
+    def project_scalars(record: object) -> object:
+        if isinstance(record, str):
+            from hermes.review import truncate_display_text
+
+            projection = truncate_display_text(
+                record,
+                limit=_REVIEW_TEXT_SCALAR_LIMIT,
+            )
+            if not projection.truncated:
+                return record
+            return {
+                "displayed_text": record[:_REVIEW_TEXT_SCALAR_LIMIT],
+                "original_length": projection.original_length,
+                "truncated": True,
+            }
+        if isinstance(record, dict):
+            from hermes.review import truncate_display_text
+
+            projected: dict[object, object] = {}
+            for key_index, key in enumerate(sorted(record)):
+                item = record[key]
+                displayed_key = key
+                if isinstance(key, str):
+                    key_projection = truncate_display_text(
+                        key,
+                        limit=_REVIEW_TEXT_SCALAR_LIMIT,
+                    )
+                    if key_projection.truncated:
+                        displayed_key = (
+                            key[:_REVIEW_TEXT_SCALAR_LIMIT]
+                            + " [truncated=true; "
+                            + f"original_length={key_projection.original_length}; "
+                            + f"key_index={key_index}]"
+                        )
+                projected[displayed_key] = project_scalars(item)
+            return projected
+        if isinstance(record, (list, tuple)):
+            return [project_scalars(item) for item in record]
+        return record
+
+    text = canonical_json_bytes(project_scalars(payload)).decode("utf-8")
     replacements = {
         "\\b": "\\u0008",
         "\\t": "\\u0009",
@@ -439,11 +504,11 @@ def _review_record_json(value: object) -> str:
 
 
 def _digest_text(digest: object | None) -> str:
-    return "NOT_AVAILABLE" if digest is None else _neutralize_artifact_text(digest.value)
+    return "NOT_AVAILABLE" if digest is None else _bounded_artifact_text(digest.value)
 
 
 def _optional_artifact_text(value: object | None) -> str:
-    return "NOT_AVAILABLE" if value is None else _neutralize_artifact_text(value)
+    return "NOT_AVAILABLE" if value is None else _bounded_artifact_text(value)
 
 
 def _render_review_envelope_text(envelope: object) -> None:
@@ -457,11 +522,11 @@ def _render_review_envelope_text(envelope: object) -> None:
     )
     console.print(
         "Selected artifact: "
-        + _neutralize_artifact_text(artifact.locator.selected_relative_path)
+        + _bounded_artifact_text(artifact.locator.selected_relative_path)
     )
     console.print(
         "Selected directory: "
-        + _neutralize_artifact_text(artifact.locator.selected_directory_name)
+        + _bounded_artifact_text(artifact.locator.selected_directory_name)
     )
     console.print("Manifest run ID: " + _optional_artifact_text(identity.run_id))
     console.print("Created at: " + _optional_artifact_text(identity.created_at_utc))
@@ -483,12 +548,12 @@ def _render_review_envelope_text(envelope: object) -> None:
 
     console.print(
         "Evidence integrity: "
-        + _neutralize_artifact_text(envelope.verification.integrity)
+        + _bounded_artifact_text(envelope.verification.integrity)
     )
-    console.print("Gate verdict: " + _neutralize_artifact_text(envelope.gate.verdict))
+    console.print("Gate verdict: " + _bounded_artifact_text(envelope.gate.verdict))
     console.print(
         "Stored claims quarantined: "
-        + _neutralize_artifact_text(
+        + _bounded_artifact_text(
             envelope.verification.stored_claims_quarantined
         )
     )
@@ -501,10 +566,10 @@ def _render_review_envelope_text(envelope: object) -> None:
     }
     for record in envelope.trust.records:
         label = trust_labels[record.dimension]
-        console.print(f"{label}: " + _neutralize_artifact_text(record.value))
+        console.print(f"{label}: " + _bounded_artifact_text(record.value))
         console.print(
             f"  {label} explanation: "
-            + _neutralize_artifact_text(record.explanation)
+            + _bounded_artifact_text(record.explanation)
         )
 
     console.print("Gate decision:")
@@ -527,7 +592,7 @@ def _render_review_envelope_text(envelope: object) -> None:
         console.print("  " + _review_record_json(item))
     console.print("Timeline:")
     console.print(
-        "  Event count: " + _neutralize_artifact_text(envelope.timeline.event_count)
+        "  Event count: " + _bounded_artifact_text(envelope.timeline.event_count)
     )
     console.print(
         "  Simulation range: "
@@ -538,20 +603,20 @@ def _render_review_envelope_text(envelope: object) -> None:
     for track in envelope.timeline.tracks:
         console.print(
             "  Track: "
-            + _neutralize_artifact_text(track.track_id)
+            + _bounded_artifact_text(track.track_id)
             + " | availability="
-            + _neutralize_artifact_text(track.availability)
+            + _bounded_artifact_text(track.availability)
             + " | reason="
-            + _neutralize_artifact_text(track.unavailable_reason)
+            + _bounded_artifact_text(track.unavailable_reason)
             + " | value_kind="
-            + _neutralize_artifact_text(track.value_kind)
+            + _bounded_artifact_text(track.value_kind)
             + " | points="
-            + _neutralize_artifact_text(len(track.points))
+            + _bounded_artifact_text(len(track.points))
         )
 
     console.print(
         "Recorded provenance: "
-        + _neutralize_artifact_text(envelope.provenance.recorded.status)
+        + _bounded_artifact_text(envelope.provenance.recorded.status)
     )
     console.print("  " + _review_record_json(envelope.provenance))
     console.print("Assumptions:")
@@ -568,11 +633,11 @@ def _render_review_envelope_text(envelope: object) -> None:
 def _render_comparison_side(console: Console, label: str, side: object) -> None:
     console.print(
         f"{label} artifact: "
-        + _neutralize_artifact_text(side.artifact.locator.selected_relative_path)
+        + _bounded_artifact_text(side.artifact.locator.selected_relative_path)
     )
     console.print(
         f"{label} manifest run ID: "
-        + _neutralize_artifact_text(side.artifact.manifest_identity.run_id)
+        + _bounded_artifact_text(side.artifact.manifest_identity.run_id)
     )
     console.print(
         f"{label} bundle digest: "
@@ -582,8 +647,8 @@ def _render_comparison_side(console: Console, label: str, side: object) -> None:
         f"{label} trace digest: "
         + _digest_text(side.artifact.computed_trace_digest)
     )
-    console.print(f"{label} integrity: " + _neutralize_artifact_text(side.integrity))
-    console.print(f"{label} gate: " + _neutralize_artifact_text(side.gate_verdict))
+    console.print(f"{label} integrity: " + _bounded_artifact_text(side.integrity))
+    console.print(f"{label} gate: " + _bounded_artifact_text(side.gate_verdict))
 
 
 def _render_comparison_partition(
@@ -607,12 +672,12 @@ def _render_comparison_envelope_text(envelope: object) -> None:
     _render_comparison_side(console, "Baseline", envelope.baseline)
     _render_comparison_side(console, "Candidate", envelope.candidate)
     console.print(
-        "Compatibility: " + _neutralize_artifact_text(envelope.compatibility.status)
+        "Compatibility: " + _bounded_artifact_text(envelope.compatibility.status)
     )
     for reason in envelope.compatibility.reasons:
-        console.print("Incompatibility: " + _neutralize_artifact_text(reason))
+        console.print("Incompatibility: " + _bounded_artifact_text(reason))
     for warning in envelope.compatibility.warnings:
-        console.print("Compatibility warning: " + _neutralize_artifact_text(warning))
+        console.print("Compatibility warning: " + _bounded_artifact_text(warning))
     console.print("Verdict delta: " + _review_record_json(envelope.verdict_delta))
     console.print(
         "Hard-failure delta: " + _review_record_json(envelope.hard_failure_delta)
@@ -675,20 +740,20 @@ def review_artifact_command(
     except ReviewUnavailableError as exc:
         _raise_cli_error(
             CliErrorCode.REVIEW_UNAVAILABLE,
-            _neutralize_artifact_text(exc.message),
+            _bounded_artifact_text(exc.message),
             details={"reason": exc.reason.value},
             json_output=output_format == "json",
         )
     except ValueError as exc:
         _raise_cli_error(
             CliErrorCode.CONFIGURATION_ERROR,
-            _neutralize_artifact_text(exc),
+            _bounded_artifact_text(exc),
             json_output=output_format == "json",
         )
     except Exception as exc:
         _raise_cli_error(
             CliErrorCode.OPERATIONAL_ERROR,
-            _neutralize_artifact_text(f"{type(exc).__name__}: {exc}"),
+            _bounded_artifact_text(f"{type(exc).__name__}: {exc}"),
             json_output=output_format == "json",
         )
 
@@ -740,20 +805,20 @@ def review_compare_command(
     except ReviewUnavailableError as exc:
         _raise_cli_error(
             CliErrorCode.REVIEW_UNAVAILABLE,
-            _neutralize_artifact_text(exc.message),
+            _bounded_artifact_text(exc.message),
             details={"reason": exc.reason.value},
             json_output=output_format == "json",
         )
     except ValueError as exc:
         _raise_cli_error(
             CliErrorCode.CONFIGURATION_ERROR,
-            _neutralize_artifact_text(exc),
+            _bounded_artifact_text(exc),
             json_output=output_format == "json",
         )
     except Exception as exc:
         _raise_cli_error(
             CliErrorCode.OPERATIONAL_ERROR,
-            _neutralize_artifact_text(f"{type(exc).__name__}: {exc}"),
+            _bounded_artifact_text(f"{type(exc).__name__}: {exc}"),
             json_output=output_format == "json",
         )
 

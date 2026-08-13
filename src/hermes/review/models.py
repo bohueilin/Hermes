@@ -82,23 +82,27 @@ ARTIFACT_FILES: tuple[str, ...] = (
     "trace.sha256",
     "bundle.sha256",
 )
-FILE_ORDER = {name: index for index, name in enumerate(ARTIFACT_FILES)}
-SOURCE_FILES = dict(
-    zip(
-        (
-            "MANIFEST",
-            "EXECUTION_CONTEXT",
-            "SCENARIO",
-            "GATE_CONFIG",
-            "EVENT",
-            "METRIC",
-            "FINDING",
-            "VERDICT",
-            "TRACE_DIGEST",
-            "BUNDLE_DIGEST",
-        ),
-        ARTIFACT_FILES,
-        strict=True,
+FILE_ORDER: Mapping[str, int] = MappingProxyType(
+    {name: index for index, name in enumerate(ARTIFACT_FILES)}
+)
+SOURCE_FILES: Mapping[str, str] = MappingProxyType(
+    dict(
+        zip(
+            (
+                "MANIFEST",
+                "EXECUTION_CONTEXT",
+                "SCENARIO",
+                "GATE_CONFIG",
+                "EVENT",
+                "METRIC",
+                "FINDING",
+                "VERDICT",
+                "TRACE_DIGEST",
+                "BUNDLE_DIGEST",
+            ),
+            ARTIFACT_FILES,
+            strict=True,
+        )
     )
 )
 FINDING_ORDER = (
@@ -131,7 +135,7 @@ METRIC_ORDER = (
     "steering_saturation_count",
     "brake_saturation_count",
 )
-METRIC_REGISTRY: dict[str, tuple[str | None, str, str]] = {
+METRIC_REGISTRY: Mapping[str, tuple[str | None, str, str]] = MappingProxyType({
     "event_count": ("events", "DESCRIPTIVE", "SCALAR"),
     "simulation_duration_s": ("s", "DESCRIPTIVE", "SCALAR"),
     "collision_count": ("collisions", "LOWER", "SCALAR"),
@@ -151,8 +155,8 @@ METRIC_REGISTRY: dict[str, tuple[str | None, str, str]] = {
     "control_fill_count": ("events", "DESCRIPTIVE", "SCALAR"),
     "steering_saturation_count": ("events", "LOWER", "SCALAR"),
     "brake_saturation_count": ("events", "LOWER", "SCALAR"),
-}
-METRIC_EVENT_POINTERS: dict[str, frozenset[str]] = {
+})
+METRIC_EVENT_POINTERS: Mapping[str, frozenset[str]] = MappingProxyType({
     "event_count": frozenset({""}),
     "simulation_duration_s": frozenset({"/simulation_time_s"}),
     "collision_count": frozenset({"/vehicle_state/collision_count"}),
@@ -208,8 +212,8 @@ METRIC_EVENT_POINTERS: dict[str, frozenset[str]] = {
             "/control_fault_evidence/applied_faults",
         }
     ),
-}
-METRIC_AUX_POINTERS: dict[str, frozenset[tuple[str, str]]] = {
+})
+METRIC_AUX_POINTERS: Mapping[str, frozenset[tuple[str, str]]] = MappingProxyType({
     "offroad_duration_s": frozenset(
         {("EXECUTION_CONTEXT", "/run_context/control_frequency_hz")}
     ),
@@ -225,8 +229,8 @@ METRIC_AUX_POINTERS: dict[str, frozenset[tuple[str, str]]] = {
     "brake_saturation_count": frozenset(
         {("METRIC", "/fault_application_counts/BRAKE_SATURATION")}
     ),
-}
-MEASUREMENT_METRICS = {
+})
+MEASUREMENT_METRICS = frozenset({
     "route_completion_pct",
     "minimum_ttc_s",
     "max_abs_acceleration_mps2",
@@ -234,7 +238,7 @@ MEASUREMENT_METRICS = {
     "p95_policy_latency_ms",
     "max_observation_age_s",
     "p95_control_latency_ms",
-}
+})
 TRACK_ORDER = (
     "raw_observation",
     "delivered_observation",
@@ -253,7 +257,7 @@ TRACK_ORDER = (
     "policy_latency_ms",
     "verifier_triggering_findings",
 )
-TRACK_REGISTRY: dict[str, tuple[str, str]] = {
+TRACK_REGISTRY: Mapping[str, tuple[str, str]] = MappingProxyType({
     "raw_observation": ("OBSERVATION", "OBSERVED"),
     "delivered_observation": ("OBSERVATION", "OBSERVED"),
     "result_observation": ("OBSERVATION", "OBSERVED"),
@@ -270,8 +274,8 @@ TRACK_REGISTRY: dict[str, tuple[str, str]] = {
     "ttc_s": ("SCALAR", "COMPUTED"),
     "policy_latency_ms": ("SCALAR", "OBSERVED"),
     "verifier_triggering_findings": ("STRING_LIST", "COMPUTED"),
-}
-TRACK_POINT_POINTERS: dict[str, frozenset[str]] = {
+})
+TRACK_POINT_POINTERS: Mapping[str, frozenset[str]] = MappingProxyType({
     "raw_observation": frozenset({"/observation_fault_evidence/raw_observation"}),
     "delivered_observation": frozenset({"/observation_fault_evidence/delivered_observation"}),
     "result_observation": frozenset({"/result_observation"}),
@@ -290,15 +294,15 @@ TRACK_POINT_POINTERS: dict[str, frozenset[str]] = {
     "ttc_s": frozenset({"/observation_summary"}),
     "policy_latency_ms": frozenset({"/policy_latency_ms"}),
     "verifier_triggering_findings": frozenset({""}),
-}
-SCALAR_TRACK_UNITS: dict[str, str | None] = {
+})
+SCALAR_TRACK_UNITS: Mapping[str, str | None] = MappingProxyType({
     "collision_count": "collisions",
     "offroad": None,
     "speed_mps": "m/s",
     "route_progress_pct": "%",
     "ttc_s": "s",
     "policy_latency_ms": "ms",
-}
+})
 TTC_CONTRIBUTOR_POINTER_PAIRS = frozenset(
     {
         (
@@ -311,14 +315,14 @@ TTC_CONTRIBUTOR_POINTER_PAIRS = frozenset(
         ),
     }
 )
-LEGACY_UNAVAILABLE_TRACKS = {
+LEGACY_UNAVAILABLE_TRACKS = frozenset({
     "raw_observation",
     "delivered_observation",
     "result_observation",
     "permitted_action",
     "observation_fault_reasons",
     "control_fault_reasons",
-}
+})
 PARTITION_DIMENSION_ORDER = (
     "collision_count",
     "minimum_ttc_s",

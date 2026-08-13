@@ -3,12 +3,14 @@ from __future__ import annotations
 import dataclasses
 import json
 import math
+from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
+import hermes.review.models as review_models
 from hermes.comparison.compare import compare_artifacts
 from hermes.domain.enums import EvidenceAvailability, FindingStatus, TerminationReason, Verdict
 from hermes.domain.models import (
@@ -3130,3 +3132,314 @@ def test_round3_core_invalid_gate_remains_accepted_under_consistent_integrity() 
     assert envelope.verification.integrity == "INTERNALLY_CONSISTENT"
     assert envelope.gate.verdict == "INVALID_EVIDENCE"
     assert envelope.gate.accepted_recomputation is True
+
+
+def _assert_exact_ordered_mapping(
+    actual: Mapping[object, object],
+    expected: Mapping[object, object],
+) -> None:
+    assert tuple(actual.items()) == tuple(expected.items())
+
+
+def test_normative_review_registries_preserve_exact_values_and_order() -> None:
+    expected_file_order = {
+        "manifest.json": 0,
+        "execution-context.json": 1,
+        "scenario.resolved.yaml": 2,
+        "gate-config.resolved.yaml": 3,
+        "events.jsonl": 4,
+        "metrics.json": 5,
+        "findings.json": 6,
+        "verdict.json": 7,
+        "trace.sha256": 8,
+        "bundle.sha256": 9,
+    }
+    expected_source_files = {
+        "MANIFEST": "manifest.json",
+        "EXECUTION_CONTEXT": "execution-context.json",
+        "SCENARIO": "scenario.resolved.yaml",
+        "GATE_CONFIG": "gate-config.resolved.yaml",
+        "EVENT": "events.jsonl",
+        "METRIC": "metrics.json",
+        "FINDING": "findings.json",
+        "VERDICT": "verdict.json",
+        "TRACE_DIGEST": "trace.sha256",
+        "BUNDLE_DIGEST": "bundle.sha256",
+    }
+    expected_metric_registry = {
+        "event_count": ("events", "DESCRIPTIVE", "SCALAR"),
+        "simulation_duration_s": ("s", "DESCRIPTIVE", "SCALAR"),
+        "collision_count": ("collisions", "LOWER", "SCALAR"),
+        "max_abs_lateral_offset_m": ("m", "LOWER", "SCALAR"),
+        "offroad_duration_s": ("s", "LOWER", "SCALAR"),
+        "route_completion_pct": ("%", "HIGHER", "SCALAR"),
+        "minimum_ttc_s": ("s", "HIGHER", "SCALAR"),
+        "max_abs_acceleration_mps2": ("m/s^2", "LOWER", "SCALAR"),
+        "max_abs_jerk_mps3": ("m/s^3", "LOWER", "SCALAR"),
+        "p95_policy_latency_ms": ("ms", "LOWER", "SCALAR"),
+        "shield_override_count": ("overrides", "DESCRIPTIVE", "SCALAR"),
+        "shield_override_reasons": (
+            "occurrences",
+            "DESCRIPTIVE",
+            "STRING_COUNT_MAP",
+        ),
+        "termination_reason": (None, "DESCRIPTIVE", "SCALAR"),
+        "fault_application_counts": (
+            "occurrences",
+            "DESCRIPTIVE",
+            "STRING_COUNT_MAP",
+        ),
+        "max_observation_age_s": ("s", "LOWER", "SCALAR"),
+        "p95_control_latency_ms": ("ms", "LOWER", "SCALAR"),
+        "control_fill_count": ("events", "DESCRIPTIVE", "SCALAR"),
+        "steering_saturation_count": ("events", "LOWER", "SCALAR"),
+        "brake_saturation_count": ("events", "LOWER", "SCALAR"),
+    }
+    expected_metric_event_pointers = {
+        "event_count": frozenset({""}),
+        "simulation_duration_s": frozenset({"/simulation_time_s"}),
+        "collision_count": frozenset({"/vehicle_state/collision_count"}),
+        "max_abs_lateral_offset_m": frozenset(
+            {"/vehicle_state/lateral_offset_m"}
+        ),
+        "offroad_duration_s": frozenset({"/vehicle_state/offroad"}),
+        "route_completion_pct": frozenset(
+            {
+                "/raw_facts/route_progress_available",
+                "/vehicle_state/route_progress_pct",
+            }
+        ),
+        "minimum_ttc_s": frozenset(
+            {
+                "/observation_summary",
+                "/observation_summary/result_front_distance_m",
+                "/observation_summary/result_front_relative_speed_mps",
+                "/observation_summary/front_distance_m",
+                "/observation_summary/front_relative_speed_mps",
+            }
+        ),
+        "max_abs_acceleration_mps2": frozenset(
+            {"/vehicle_state/acceleration_mps2"}
+        ),
+        "max_abs_jerk_mps3": frozenset({"/vehicle_state/acceleration_mps2"}),
+        "p95_policy_latency_ms": frozenset({"/policy_latency_ms"}),
+        "shield_override_count": frozenset(
+            {"/candidate_action", "/permitted_action", "/executed_action"}
+        ),
+        "shield_override_reasons": frozenset({"/override_reasons"}),
+        "termination_reason": frozenset({"/termination_reason"}),
+        "fault_application_counts": frozenset(
+            {
+                "/observation_fault_evidence/applied_faults",
+                "/control_fault_evidence/applied_faults",
+            }
+        ),
+        "max_observation_age_s": frozenset(
+            {
+                "/observation_fault_evidence/delivered_observation/observation_age_s"
+            }
+        ),
+        "p95_control_latency_ms": frozenset(
+            {"/control_fault_evidence/control_latency_ms/value"}
+        ),
+        "control_fill_count": frozenset(
+            {
+                "/observation_fault_evidence/applied_faults",
+                "/control_fault_evidence/applied_faults",
+            }
+        ),
+        "steering_saturation_count": frozenset(
+            {
+                "/observation_fault_evidence/applied_faults",
+                "/control_fault_evidence/applied_faults",
+            }
+        ),
+        "brake_saturation_count": frozenset(
+            {
+                "/observation_fault_evidence/applied_faults",
+                "/control_fault_evidence/applied_faults",
+            }
+        ),
+    }
+    expected_metric_aux_pointers = {
+        "offroad_duration_s": frozenset(
+            {("EXECUTION_CONTEXT", "/run_context/control_frequency_hz")}
+        ),
+        "max_abs_jerk_mps3": frozenset(
+            {("EXECUTION_CONTEXT", "/run_context/control_frequency_hz")}
+        ),
+        "control_fill_count": frozenset(
+            {("METRIC", "/fault_application_counts/CONTROL_DELAY_FILL")}
+        ),
+        "steering_saturation_count": frozenset(
+            {("METRIC", "/fault_application_counts/STEERING_SATURATION")}
+        ),
+        "brake_saturation_count": frozenset(
+            {("METRIC", "/fault_application_counts/BRAKE_SATURATION")}
+        ),
+    }
+    expected_track_registry = {
+        "raw_observation": ("OBSERVATION", "OBSERVED"),
+        "delivered_observation": ("OBSERVATION", "OBSERVED"),
+        "result_observation": ("OBSERVATION", "OBSERVED"),
+        "candidate_action": ("ACTION", "OBSERVED"),
+        "permitted_action": ("ACTION", "OBSERVED"),
+        "executed_action": ("ACTION", "OBSERVED"),
+        "override_reasons": ("STRING_LIST", "OBSERVED"),
+        "observation_fault_reasons": ("STRING_LIST", "OBSERVED"),
+        "control_fault_reasons": ("STRING_LIST", "OBSERVED"),
+        "collision_count": ("SCALAR", "OBSERVED"),
+        "offroad": ("SCALAR", "OBSERVED"),
+        "speed_mps": ("SCALAR", "OBSERVED"),
+        "route_progress_pct": ("SCALAR", "OBSERVED"),
+        "ttc_s": ("SCALAR", "COMPUTED"),
+        "policy_latency_ms": ("SCALAR", "OBSERVED"),
+        "verifier_triggering_findings": ("STRING_LIST", "COMPUTED"),
+    }
+    expected_track_point_pointers = {
+        "raw_observation": frozenset(
+            {"/observation_fault_evidence/raw_observation"}
+        ),
+        "delivered_observation": frozenset(
+            {"/observation_fault_evidence/delivered_observation"}
+        ),
+        "result_observation": frozenset({"/result_observation"}),
+        "candidate_action": frozenset({"/candidate_action"}),
+        "permitted_action": frozenset({"/permitted_action"}),
+        "executed_action": frozenset({"/executed_action"}),
+        "override_reasons": frozenset({"/override_reasons"}),
+        "observation_fault_reasons": frozenset(
+            {"/observation_fault_evidence/applied_faults"}
+        ),
+        "control_fault_reasons": frozenset(
+            {"/control_fault_evidence/applied_faults"}
+        ),
+        "collision_count": frozenset({"/vehicle_state/collision_count"}),
+        "offroad": frozenset({"/vehicle_state/offroad"}),
+        "speed_mps": frozenset({"/vehicle_state/speed_mps"}),
+        "route_progress_pct": frozenset(
+            {
+                "/vehicle_state/route_progress_pct",
+                "/raw_facts/route_progress_available",
+            }
+        ),
+        "ttc_s": frozenset({"/observation_summary"}),
+        "policy_latency_ms": frozenset({"/policy_latency_ms"}),
+        "verifier_triggering_findings": frozenset({""}),
+    }
+    expected_scalar_track_units = {
+        "collision_count": "collisions",
+        "offroad": None,
+        "speed_mps": "m/s",
+        "route_progress_pct": "%",
+        "ttc_s": "s",
+        "policy_latency_ms": "ms",
+    }
+
+    _assert_exact_ordered_mapping(review_models.FILE_ORDER, expected_file_order)
+    _assert_exact_ordered_mapping(review_models.SOURCE_FILES, expected_source_files)
+    _assert_exact_ordered_mapping(
+        review_models.METRIC_REGISTRY,
+        expected_metric_registry,
+    )
+    _assert_exact_ordered_mapping(
+        review_models.METRIC_EVENT_POINTERS,
+        expected_metric_event_pointers,
+    )
+    _assert_exact_ordered_mapping(
+        review_models.METRIC_AUX_POINTERS,
+        expected_metric_aux_pointers,
+    )
+    assert frozenset(
+        {
+            "route_completion_pct",
+            "minimum_ttc_s",
+            "max_abs_acceleration_mps2",
+            "max_abs_jerk_mps3",
+            "p95_policy_latency_ms",
+            "max_observation_age_s",
+            "p95_control_latency_ms",
+        }
+    ) == review_models.MEASUREMENT_METRICS
+    _assert_exact_ordered_mapping(
+        review_models.TRACK_REGISTRY,
+        expected_track_registry,
+    )
+    _assert_exact_ordered_mapping(
+        review_models.TRACK_POINT_POINTERS,
+        expected_track_point_pointers,
+    )
+    _assert_exact_ordered_mapping(
+        review_models.SCALAR_TRACK_UNITS,
+        expected_scalar_track_units,
+    )
+    assert frozenset(
+        {
+            "raw_observation",
+            "delivered_observation",
+            "result_observation",
+            "permitted_action",
+            "observation_fault_reasons",
+            "control_fault_reasons",
+        }
+    ) == review_models.LEGACY_UNAVAILABLE_TRACKS
+
+
+@pytest.mark.parametrize(
+    ("registry_name", "key", "replacement"),
+    [
+        ("FILE_ORDER", "manifest.json", 99),
+        ("SOURCE_FILES", "MANIFEST", "verdict.json"),
+        ("METRIC_REGISTRY", "event_count", (None, "NONE", "SCALAR")),
+        ("METRIC_EVENT_POINTERS", "event_count", frozenset({"/injected"})),
+        (
+            "METRIC_AUX_POINTERS",
+            "offroad_duration_s",
+            frozenset({("MANIFEST", "/injected")}),
+        ),
+        ("TRACK_REGISTRY", "candidate_action", ("SCALAR", "NOT_AVAILABLE")),
+        (
+            "TRACK_POINT_POINTERS",
+            "candidate_action",
+            frozenset({"/injected"}),
+        ),
+        ("SCALAR_TRACK_UNITS", "speed_mps", "bananas"),
+    ],
+)
+def test_normative_review_mapping_registries_reject_mutation(
+    registry_name: str,
+    key: str,
+    replacement: object,
+) -> None:
+    registry = getattr(review_models, registry_name)
+    before = tuple(registry.items())
+    try:
+        with pytest.raises(TypeError):
+            registry[key] = replacement
+    finally:
+        if tuple(registry.items()) != before:
+            registry.clear()
+            registry.update(before)
+    assert tuple(registry.items()) == before
+
+
+@pytest.mark.parametrize(
+    ("registry_name", "injected_value"),
+    [
+        ("MEASUREMENT_METRICS", "event_count"),
+        ("LEGACY_UNAVAILABLE_TRACKS", "speed_mps"),
+    ],
+)
+def test_normative_review_set_registries_reject_mutation(
+    registry_name: str,
+    injected_value: str,
+) -> None:
+    registry = getattr(review_models, registry_name)
+    before = frozenset(registry)
+    try:
+        with pytest.raises(AttributeError):
+            registry.add(injected_value)
+    finally:
+        if injected_value not in before and hasattr(registry, "discard"):
+            registry.discard(injected_value)
+    assert frozenset(registry) == before

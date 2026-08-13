@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import hermes.gates.release as release_gate
 from hermes.domain.enums import (
     EvidenceAvailability,
     FindingStatus,
@@ -132,6 +133,85 @@ def test_evidence_requirement_profiles_are_versioned_ordered_and_immutable() -> 
     assert fault_coverage.requirements[-1].requiredness is EvidenceRequiredness.REQUIRED
     with pytest.raises(TypeError):
         EVIDENCE_REQUIREMENTS_BY_PROFILE[VerifierProfile.LEGACY] = fault_coverage
+
+
+def test_expected_finding_registries_preserve_exact_values_order_and_alias() -> None:
+    expected_legacy = {
+        "trace.integrity": ("TraceIntegrityVerifier", "1.0", True),
+        "collision.zero": ("CollisionVerifier", "1.0", True),
+        "boundary.within_tolerance": ("BoundaryVerifier", "1.0", True),
+        "progress.required": ("ProgressVerifier", "1.1", True),
+        "comfort.acceleration": ("ComfortVerifier", "1.0", False),
+        "comfort.jerk": ("ComfortVerifier", "1.0", False),
+    }
+    expected_fault_coverage = {
+        "trace.integrity": ("TraceIntegrityVerifier", "1.0", True),
+        "collision.zero": ("CollisionVerifier", "1.0", True),
+        "boundary.within_tolerance": ("BoundaryVerifier", "1.0", True),
+        "progress.required": ("ProgressVerifier", "1.1", True),
+        "comfort.acceleration": ("ComfortVerifier", "1.0", False),
+        "comfort.jerk": ("ComfortVerifier", "1.0", False),
+        "fault.coverage.required": ("FaultCoverageVerifier", "1.0", True),
+    }
+
+    assert tuple(release_gate.LEGACY_EXPECTED_FINDINGS.items()) == tuple(
+        expected_legacy.items()
+    )
+    assert tuple(release_gate.EXPECTED_FINDINGS_BY_PROFILE) == (
+        VerifierProfile.LEGACY,
+        VerifierProfile.FAULT_COVERAGE,
+    )
+    assert (
+        release_gate.EXPECTED_FINDINGS_BY_PROFILE[VerifierProfile.LEGACY]
+        is release_gate.LEGACY_EXPECTED_FINDINGS
+    )
+    assert tuple(
+        release_gate.EXPECTED_FINDINGS_BY_PROFILE[VerifierProfile.LEGACY].items()
+    ) == tuple(expected_legacy.items())
+    assert tuple(
+        release_gate.EXPECTED_FINDINGS_BY_PROFILE[
+            VerifierProfile.FAULT_COVERAGE
+        ].items()
+    ) == tuple(expected_fault_coverage.items())
+
+
+@pytest.mark.parametrize(
+    "registry_case",
+    ["legacy_public", "profile_outer", "legacy_nested", "fault_nested"],
+)
+def test_expected_finding_registries_reject_outer_and_nested_mutation(
+    registry_case: str,
+) -> None:
+    if registry_case == "legacy_public":
+        registry = release_gate.LEGACY_EXPECTED_FINDINGS
+        key = "collision.zero"
+        replacement = ("InjectedVerifier", "9.9", False)
+    elif registry_case == "profile_outer":
+        registry = release_gate.EXPECTED_FINDINGS_BY_PROFILE
+        key = VerifierProfile.LEGACY
+        replacement = {}
+    elif registry_case == "legacy_nested":
+        registry = release_gate.EXPECTED_FINDINGS_BY_PROFILE[
+            VerifierProfile.LEGACY
+        ]
+        key = "collision.zero"
+        replacement = ("InjectedVerifier", "9.9", False)
+    else:
+        registry = release_gate.EXPECTED_FINDINGS_BY_PROFILE[
+            VerifierProfile.FAULT_COVERAGE
+        ]
+        key = "fault.coverage.required"
+        replacement = ("InjectedVerifier", "9.9", False)
+
+    before = tuple(registry.items())
+    try:
+        with pytest.raises(TypeError):
+            registry[key] = replacement
+    finally:
+        if tuple(registry.items()) != before:
+            registry.clear()
+            registry.update(before)
+    assert tuple(registry.items()) == before
 
 
 def test_verifiers_emit_structured_hard_soft_and_unavailable_findings(

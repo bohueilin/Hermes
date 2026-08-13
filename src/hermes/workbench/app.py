@@ -1197,6 +1197,8 @@ def _render_intake(root: Path) -> None:
         st.session_state["submitted_artifact_selection"] = draft
         st.session_state["review_requested"] = True
         st.session_state["timeline_page"] = 0
+        st.session_state["inspect_event_requested"] = False
+        st.session_state["finding_event_sequence"] = 0
     envelope = _active_review(root)
     if envelope is None:
         st.text("Evidence integrity: UNVERIFIED [COMPUTED]")

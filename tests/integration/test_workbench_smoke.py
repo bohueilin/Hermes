@@ -209,6 +209,60 @@ def test_workbench_findings_renders_recursive_threshold_and_exact_event_drilldow
     assert set(drilldown_frame["sequence"]) == {"0"}
 
 
+def test_workbench_new_review_resets_prior_event_drilldown_until_explicit_inspect(
+    workbench_root: Path,
+) -> None:
+    app = _submit_review(_app(workbench_root), "handoff-phase5-demo")
+    app = _select_screen(app, "Findings / evidence coverage")
+    app.number_input[0].set_value(1).run(timeout=30)
+    app.button[0].click().run(timeout=30)
+
+    assert app.session_state.filtered_state["inspect_event_requested"] is True
+    assert app.session_state.filtered_state["finding_event_sequence"] == 1
+    prior_drilldown = next(
+        frame.value
+        for frame in app.dataframe
+        if "point availability" in frame.value.columns
+    )
+    assert set(prior_drilldown["sequence"]) == {"1"}
+
+    app = _select_screen(app, "Intake / verification")
+    app = _submit_review(app, "handoff-p1-collision")
+
+    assert list(app.exception) == []
+    assert app.session_state.filtered_state["submitted_artifact_selection"] == (
+        "handoff-p1-collision"
+    )
+    assert app.session_state.filtered_state["inspect_event_requested"] is False
+    assert app.session_state.filtered_state["finding_event_sequence"] == 0
+    identity_frame = next(
+        frame.value
+        for frame in app.dataframe
+        if "label" in frame.value.columns
+        and "Selected relative path" in set(frame.value["label"])
+    )
+    assert identity_frame.loc[
+        identity_frame["label"] == "Selected relative path", "value"
+    ].item() == "handoff-p1-collision"
+
+    app = _select_screen(app, "Findings / evidence coverage")
+
+    assert app.session_state.filtered_state["submitted_artifact_selection"] == (
+        "handoff-p1-collision"
+    )
+    assert not any(
+        "point availability" in frame.value.columns for frame in app.dataframe
+    )
+
+    app.button[0].click().run(timeout=30)
+    fresh_drilldown = next(
+        frame.value
+        for frame in app.dataframe
+        if "point availability" in frame.value.columns
+    )
+    assert set(fresh_drilldown["sequence"]) == {"0"}
+
+
 @pytest.mark.parametrize("selection", ["handoff-phase5-demo", "phase1-tampered"])
 def test_workbench_provenance_renders_inventory_and_safe_diagnostics(
     workbench_root: Path,

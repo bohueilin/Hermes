@@ -585,6 +585,303 @@ def test_review_text_preserves_literal_backslash_escape_sequences(
     assert r"literal\\u0008" not in result.output
 
 
+def test_review_text_neutralizes_unicode_format_controls_in_direct_scalars(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = repository_root / "artifacts"
+    envelope = review_api.review_artifact(root, "handoff-phase5-demo")
+    manifest_identity = envelope.artifact.manifest_identity.model_copy(
+        update={"run_id": "honest-\u202eSSAP-\u2066isolated\u2069"}
+    )
+    artifact = envelope.artifact.model_copy(update={"manifest_identity": manifest_identity})
+    injected = envelope.model_copy(update={"artifact": artifact})
+    monkeypatch.setattr(review_api, "review_artifact", lambda root, selection: injected)
+
+    result = runner.invoke(app, _review_args(root, "handoff-phase5-demo", "text"))
+
+    assert result.exit_code == 0
+    assert "Manifest run ID: honest-\\u202ESSAP-\\u2066isolated\\u2069" in result.output
+    assert "\u202e" not in result.output
+    assert "\u2066" not in result.output
+    assert "\u2069" not in result.output
+
+
+def test_review_text_bounds_each_direct_scalar_at_input_scalar_boundary(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = repository_root / "artifacts"
+    envelope = review_api.review_artifact(root, "handoff-phase5-demo")
+    exact = "x" * 1_024
+    over = "y" * 1_025
+    manifest_identity = envelope.artifact.manifest_identity.model_copy(
+        update={"run_id": exact, "created_at_utc": over}
+    )
+    artifact = envelope.artifact.model_copy(update={"manifest_identity": manifest_identity})
+    injected = envelope.model_copy(update={"artifact": artifact})
+    monkeypatch.setattr(review_api, "review_artifact", lambda root, selection: injected)
+
+    result = runner.invoke(app, _review_args(root, "handoff-phase5-demo", "text"))
+
+    assert result.exit_code == 0
+    assert f"Manifest run ID: {exact}\n" in result.output
+    assert "Manifest run ID: " + exact + " [truncated=" not in result.output
+    assert (
+        f"Created at: {'y' * 1_024} [truncated=true; original_length=1025]\n"
+        in result.output
+    )
+    assert over not in result.output
+
+
+def test_review_text_neutralizes_and_bounds_each_nested_record_scalar(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = repository_root / "artifacts"
+    envelope = review_api.review_artifact(root, "handoff-phase5-demo")
+    over = "z" * 1_000 + "\u202e" + "q" * 24
+    finding = envelope.findings[0].model_copy(
+        update={
+            "verifier_name": "nested-\u202e-\u2066-\u2069",
+            "explanation": over,
+        }
+    )
+    injected = envelope.model_copy(
+        update={"findings": (finding, *envelope.findings[1:])}
+    )
+    monkeypatch.setattr(review_api, "review_artifact", lambda root, selection: injected)
+
+    result = runner.invoke(app, _review_args(root, "handoff-phase5-demo", "text"))
+
+    assert result.exit_code == 0
+    assert '"verifier_name":"nested-\\u202E-\\u2066-\\u2069"' in result.output
+    assert (
+        '"explanation":{"displayed_text":"'
+        + "z" * 1_000
+        + "\\u202E"
+        + "q" * 23
+        + '","original_length":1025,"truncated":true}'
+        in result.output
+    )
+    assert over not in result.output
+    assert "\u202e" not in result.output
+    assert "\u2066" not in result.output
+    assert "\u2069" not in result.output
+
+
+def test_review_text_bounds_artifact_derived_nested_mapping_keys(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = repository_root / "artifacts"
+    envelope = review_api.review_artifact(root, "handoff-phase5-demo")
+    metric_index = next(
+        index
+        for index, metric in enumerate(envelope.metrics)
+        if metric.metric_id == "shield_override_reasons"
+    )
+    metric = envelope.metrics[metric_index]
+    long_key = "k" * 1_000 + "\u2066" + "v" * 24
+    value = metric.value.model_copy(update={"values": {long_key: 1}})
+    injected_metric = metric.model_copy(update={"value": value})
+    metrics = list(envelope.metrics)
+    metrics[metric_index] = injected_metric
+    injected = envelope.model_copy(update={"metrics": tuple(metrics)})
+    monkeypatch.setattr(review_api, "review_artifact", lambda root, selection: injected)
+
+    result = runner.invoke(app, _review_args(root, "handoff-phase5-demo", "text"))
+
+    assert result.exit_code == 0
+    expected_key = (
+        "k" * 1_000
+        + "\\u2066"
+        + "v" * 23
+        + " [truncated=true; original_length=1025; key_index=0]"
+    )
+    assert f'"{expected_key}":1' in result.output
+    assert long_key not in result.output
+    assert "\u2066" not in result.output
+
+
+def test_review_text_preserves_colliding_truncated_mapping_keys_in_canonical_order(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = repository_root / "artifacts"
+    envelope = review_api.review_artifact(root, "handoff-phase5-demo")
+    metric_index = next(
+        index
+        for index, metric in enumerate(envelope.metrics)
+        if metric.metric_id == "shield_override_reasons"
+    )
+    metric = envelope.metrics[metric_index]
+    shared_prefix = "c" * 1_024
+    first_key = shared_prefix + "a"
+    second_key = shared_prefix + "b"
+    value = metric.value.model_copy(
+        update={"values": {second_key: 2, first_key: 1}}
+    )
+    injected_metric = metric.model_copy(update={"value": value})
+    metrics = list(envelope.metrics)
+    metrics[metric_index] = injected_metric
+    injected = envelope.model_copy(update={"metrics": tuple(metrics)})
+    monkeypatch.setattr(review_api, "review_artifact", lambda root, selection: injected)
+
+    result = runner.invoke(app, _review_args(root, "handoff-phase5-demo", "text"))
+
+    assert result.exit_code == 0
+    first_display = (
+        shared_prefix
+        + " [truncated=true; original_length=1025; key_index=0]"
+    )
+    second_display = (
+        shared_prefix
+        + " [truncated=true; original_length=1025; key_index=1]"
+    )
+    first_record = f'"{first_display}":1'
+    second_record = f'"{second_display}":2'
+    assert result.output.count(shared_prefix) == 2
+    assert first_record in result.output
+    assert second_record in result.output
+    assert result.output.index(first_record) < result.output.index(second_record)
+    assert first_key not in result.output
+    assert second_key not in result.output
+
+
+def test_review_compare_text_safely_projects_direct_and_nested_artifact_scalars(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = repository_root / "artifacts"
+    envelope = review_api.compare_review_artifacts(
+        root,
+        "handoff-p3-lead-baseline",
+        "handoff-p3-lead-shielded",
+    )
+    assert isinstance(envelope, ComparisonEnvelope)
+    candidate_identity = envelope.candidate.artifact.manifest_identity.model_copy(
+        update={"run_id": "candidate-\u202e-\u2066-\u2069"}
+    )
+    candidate_artifact = envelope.candidate.artifact.model_copy(
+        update={"manifest_identity": candidate_identity}
+    )
+    candidate = envelope.candidate.model_copy(update={"artifact": candidate_artifact})
+    compatibility = envelope.compatibility.model_copy(
+        update={"warnings": ("warning-\u202e-\u2066-\u2069",)}
+    )
+    improvement = envelope.improvements[0].model_copy(
+        update={"explanation": "q" * 1_025}
+    )
+    injected = envelope.model_copy(
+        update={
+            "candidate": candidate,
+            "compatibility": compatibility,
+            "improvements": (improvement, *envelope.improvements[1:]),
+        }
+    )
+    monkeypatch.setattr(
+        review_api,
+        "compare_review_artifacts",
+        lambda root, baseline, candidate: injected,
+    )
+
+    result = runner.invoke(
+        app,
+        _compare_args(
+            root,
+            "handoff-p3-lead-baseline",
+            "handoff-p3-lead-shielded",
+            "text",
+        ),
+    )
+
+    assert result.exit_code == 0
+    assert "Candidate manifest run ID: candidate-\\u202E-\\u2066-\\u2069" in result.output
+    assert "Compatibility warning: warning-\\u202E-\\u2066-\\u2069" in result.output
+    assert (
+        '"explanation":{"displayed_text":"'
+        + "q" * 1_024
+        + '","original_length":1025,"truncated":true}'
+        in result.output
+    )
+    assert "q" * 1_025 not in result.output
+    assert "\u202e" not in result.output
+    assert "\u2066" not in result.output
+    assert "\u2069" not in result.output
+
+
+def test_review_json_preserves_full_exact_controls_and_long_scalars(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = repository_root / "artifacts"
+    envelope = review_api.review_artifact(root, "handoff-phase5-demo")
+    run_id = "json-\u202e-" + "j" * 1_025
+    explanation = "nested-\u2066value\u2069-" + "n" * 1_025
+    manifest_identity = envelope.artifact.manifest_identity.model_copy(
+        update={"run_id": run_id}
+    )
+    artifact = envelope.artifact.model_copy(update={"manifest_identity": manifest_identity})
+    finding = envelope.findings[0].model_copy(update={"explanation": explanation})
+    injected = envelope.model_copy(
+        update={
+            "artifact": artifact,
+            "findings": (finding, *envelope.findings[1:]),
+        }
+    )
+    monkeypatch.setattr(review_api, "review_artifact", lambda root, selection: injected)
+
+    result = runner.invoke(app, _review_args(root, "handoff-phase5-demo", "json"))
+
+    assert result.exit_code == 0
+    assert result.output.encode("utf-8") == canonical_envelope_bytes(injected) + b"\n"
+    payload = json.loads(result.output)
+    assert payload["artifact"]["manifest_identity"]["run_id"] == run_id
+    assert payload["findings"][0]["explanation"] == explanation
+
+
+@pytest.mark.parametrize("command", ["review-artifact", "review-compare"])
+def test_review_text_bounds_and_neutralizes_artifact_derived_exception_messages(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    command: str,
+) -> None:
+    root = repository_root / "artifacts"
+    message = "e" * 1_000 + "\u202e" + "m" * 24
+
+    def unavailable(*args: object) -> ReviewEnvelope:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            message,
+        )
+
+    if command == "review-artifact":
+        monkeypatch.setattr(review_api, "review_artifact", unavailable)
+        arguments = _review_args(root, "handoff-phase5-demo", "text")
+    else:
+        monkeypatch.setattr(review_api, "compare_review_artifacts", unavailable)
+        arguments = _compare_args(
+            root,
+            "handoff-p3-lead-baseline",
+            "handoff-p3-lead-shielded",
+            "text",
+        )
+
+    result = runner.invoke(app, arguments)
+
+    assert result.exit_code == 40
+    assert (
+        "e" * 1_000
+        + "\\u202E"
+        + "m" * 23
+        + " [truncated=true; original_length=1025]"
+        in result.output
+    )
+    assert message not in result.output
+    assert "\u202e" not in result.output
+
+
 def test_review_cli_rejects_unsupported_format_before_review(
     repository_root: Path,
 ) -> None:

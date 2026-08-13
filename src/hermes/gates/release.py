@@ -43,21 +43,33 @@ class EvidenceRequirementProfile:
     requirements: tuple[EvidenceRequirement, ...]
 
 
-LEGACY_EXPECTED_FINDINGS = {
-    "trace.integrity": ("TraceIntegrityVerifier", "1.0", True),
-    "collision.zero": ("CollisionVerifier", "1.0", True),
-    "boundary.within_tolerance": ("BoundaryVerifier", "1.0", True),
-    "progress.required": ("ProgressVerifier", "1.1", True),
-    "comfort.acceleration": ("ComfortVerifier", "1.0", False),
-    "comfort.jerk": ("ComfortVerifier", "1.0", False),
-}
-EXPECTED_FINDINGS_BY_PROFILE = {
-    VerifierProfile.LEGACY: LEGACY_EXPECTED_FINDINGS,
-    VerifierProfile.FAULT_COVERAGE: {
-        **LEGACY_EXPECTED_FINDINGS,
-        "fault.coverage.required": ("FaultCoverageVerifier", "1.0", True),
-    },
-}
+LEGACY_EXPECTED_FINDINGS: Mapping[str, tuple[str, str, bool]] = MappingProxyType(
+    {
+        "trace.integrity": ("TraceIntegrityVerifier", "1.0", True),
+        "collision.zero": ("CollisionVerifier", "1.0", True),
+        "boundary.within_tolerance": ("BoundaryVerifier", "1.0", True),
+        "progress.required": ("ProgressVerifier", "1.1", True),
+        "comfort.acceleration": ("ComfortVerifier", "1.0", False),
+        "comfort.jerk": ("ComfortVerifier", "1.0", False),
+    }
+)
+EXPECTED_FINDINGS_BY_PROFILE: Mapping[
+    VerifierProfile, Mapping[str, tuple[str, str, bool]]
+] = MappingProxyType(
+    {
+        VerifierProfile.LEGACY: LEGACY_EXPECTED_FINDINGS,
+        VerifierProfile.FAULT_COVERAGE: MappingProxyType(
+            {
+                **LEGACY_EXPECTED_FINDINGS,
+                "fault.coverage.required": (
+                    "FaultCoverageVerifier",
+                    "1.0",
+                    True,
+                ),
+            }
+        ),
+    }
+)
 
 _COMMON_EVIDENCE_REQUIREMENTS = (
     EvidenceRequirement("trace.integrity", EvidenceRequiredness.REQUIRED),
