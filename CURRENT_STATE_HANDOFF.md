@@ -1,4 +1,4 @@
-# Hermes Current-State Handoff for Phase 6
+# Hermes Current-State Handoff after Phase 6
 
 ## 1. Executive summary
 
@@ -6,7 +6,10 @@ Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
 
 > **Autonomy policy proposes → environment executes → verifiers evaluate → gate decides → trace proves.**
 
-Phases 0–5 are implemented and locally validated. The next recommended implementation wave is a **local, read-only Evidence Review Workbench** that consumes existing stored verification and comparison results without creating a parallel evidence authority.
+Phases 0–6 are implemented and locally validated. Hermes now includes a **local, read-only Evidence
+Review Workbench** that consumes existing stored verification and comparison results without
+creating a parallel evidence authority. The implementation/adversarial checkpoint is `90fb7d8`;
+independent reviewers returned GO with no open P0/P1.
 
 ## 2. Canonical identity and environment
 
@@ -23,31 +26,33 @@ Phases 0–5 are implemented and locally validated. The next recommended impleme
 | MetaDrive source commit | `85e5dadc6c7436d324348f6e3d8f8e680c06b4db` |
 | Evidence root | `artifacts/` |
 
-## 3. Validated repository state at design review
+## 3. Validated Phase 6 implementation/adversarial checkpoint
 
 | Item | Observed state |
 |---|---|
-| Branch | `feat/unattended-evidence-core` |
-| Final local HEAD | `9e257a0cf0ddbdbf601b8a01deebe4de52de9763` |
+| Branch | `feat/phase6-evidence-workbench` |
+| Checkpoint HEAD | `90fb7d891a233fea9fe5de915060873851da1d70` |
 | Working tree | Clean |
 | Remote action | None; nothing pushed, published, deployed, or enabled remotely |
-| Full tests | 273 passed |
-| PR-safe tests | 273 passed |
+| Full tests | 720 passed |
+| Non-MetaDrive tests | 720 passed |
+| Focused Phase 6 adversarial matrix | 488 passed |
 | Ruff | All checks passed |
-| Doctor | 18 PASS, 1 optional NOT_AVAILABLE, 0 WARN, 0 FAIL |
-| MetaDrive smoke | Five headless steps completed |
+| Doctor | 17 PASS, 1 expected dirty-tree WARN, 1 optional display NOT_AVAILABLE, 0 FAIL |
+| Adversarial decision | GO; no open P0/P1 |
 
-Codex must inspect the actual current branch, commit, and working tree before editing. This handoff is a starting claim, not a substitute for repository inspection.
+This is the committed implementation/adversarial checkpoint before the final documentation commit,
+not a substitute for inspecting the actual branch, commit, and working tree.
 
 ## 4. Completed implementation
 
-### Phase 6 design-freeze starting snapshot — 2026-08-12
+### Historical Phase 6 design-freeze snapshot — 2026-08-12
 
 The observed starting branch was feat/phase6-evidence-workbench at
 27cc5a08931cc1d659128bfebd0bd1ca7e9aefee with a clean tree. The package remained
 hermes-autonomy 0.1.0 with Python target 3.11. The supplied and observed regression baseline was
-273 passing tests, Ruff passing, and doctor 18 PASS / 1 optional NOT_AVAILABLE. Stage 6A remained
-documentation-only. Ending validation recorded 273 passed in 3.97 s, Ruff all checks passed,
+273 passing tests, Ruff passing, and doctor 18 PASS / 1 optional NOT_AVAILABLE. Stage 6A was
+documentation-only by design. Its ending validation recorded 273 passed in 3.97 s, Ruff all checks passed,
 doctor 17 PASS / 1 intentional dirty-worktree WARN / 1 optional NOT_AVAILABLE / no FAIL, and
 git diff --check exit 0.
 
@@ -131,9 +136,24 @@ Stored verification replays deterministic shield and fault transforms from store
 - structured CLI errors.
 - demo runbook and architecture/traceability documentation.
 
+### Phase 6 — local evidence review workbench
+
+- Strict frozen portable `ReviewEnvelope` and `ComparisonEnvelope` version 1.0.
+- One framework-independent review facade shared by CLI and UI.
+- Exact root-contained artifact selection with descriptor-relative, no-follow capture.
+- Invalid-evidence quarantine: stored verdict/findings/metrics/timeline are not accepted after
+  verification failure.
+- Core-owned evidence requiredness, exact thresholds, source references, and deterministic timeline
+  projection.
+- Compatible comparison through the existing compatibility/delta core; no UI winner score.
+- Optional Streamlit `>=1.37,<2` workbench with six reviewer screens.
+- Numeric loopback-only launcher, disabled usage telemetry, and no remote ingestion.
+- No artifact write, repair, migration, signing, approval, promotion, simulator, or policy action.
+- Independent adversarial review closed all reproduced P1 findings and one presentation-state P2.
+
 ## 5. Canonical evidence bundle
 
-The current Phase 5 implementation uses the following ten-file completed-run contract:
+The current Phase 6 implementation consumes the existing ten-file completed-run contract:
 
 ```text
 artifacts/<run-id>/
@@ -149,8 +169,8 @@ artifacts/<run-id>/
   bundle.sha256
 ```
 
-Stage 6A confirmed this exact ten-file inventory against REQUIRED_ARTIFACT_FILES. No alternate
-seven-file or workbench-specific contract is permitted.
+The design freeze and implementation confirmed this exact inventory against
+`REQUIRED_ARTIFACT_FILES`. No alternate seven-file or workbench-specific contract is permitted.
 
 ## 6. Demonstrated outcomes
 
@@ -165,6 +185,29 @@ seven-file or workbench-specific contract is permitted.
 | Lead baseline and shielded | both `CONDITIONAL` |
 | Cut-in baseline and shielded | both `HOLD` |
 | Deterministic fault run | `HOLD`; fault coverage passed but mission progress failed |
+| Phase 6 review of valid PASS/CONDITIONAL/HOLD | integrity accepted; command exit 0 |
+| Phase 6 review of tampered bundle | `INVALID_EVIDENCE`; stored claims quarantined; exit 30 |
+| Phase 6 incompatible comparison | no deltas/charts; exit 40 |
+
+Exact root-relative review commands:
+
+```bash
+hermes review-artifact handoff-phase5-demo \
+  --artifact-root artifacts \
+  --format json
+
+hermes review-compare \
+  handoff-p3-lead-baseline \
+  handoff-p3-lead-shielded \
+  --artifact-root artifacts \
+  --format text
+
+hermes workbench \
+  --artifact-root artifacts \
+  --host 127.0.0.1 \
+  --port 8501 \
+  --no-browser
+```
 
 Observed final artifact names include:
 
@@ -179,7 +222,8 @@ artifacts/handoff-p4-fault
 artifacts/handoff-p4-fault-repeat
 ```
 
-Do not assume every artifact still exists. Codex must discover available artifacts and fail clearly when a named acceptance artifact is absent.
+Do not assume every artifact still exists and never auto-select a newest run. A reviewer must submit
+an exact selection relative to the configured root; a missing selection fails clearly.
 
 ## 7. Strong current boundaries
 
@@ -203,22 +247,26 @@ Do not assume every artifact still exists. Codex must discover available artifac
 7. Same-host determinism was observed; cross-platform bitwise determinism is not claimed.
 8. No remote CI execution is claimed.
 9. Simulation evidence grants no real-world deployment permission.
-10. No reviewer-oriented product surface currently exists.
+10. The process-local review cache and active-session maps have no entry cap. Growth requires
+    repeated explicit local selections and is recoverable by restarting the process; add a
+    deterministic synchronized LRU before materially increasing artifact scale.
 
-## 9. Phase 6 recommendation
+## 9. Phase 6 decision
 
-Proceed with a **CONDITIONAL GO** for a local, read-only Evidence Review Workbench.
+**GO** for the implemented local, read-only Evidence Review Workbench within the frozen Phase 6
+boundary.
 
-The condition is that the workbench must:
+The workbench:
 
-- consume the existing verification and comparison core;
-- never implement a second gate or verifier;
-- never mutate artifacts;
-- never launch a simulator or policy;
-- never edit thresholds;
-- never approve promotion or deployment;
-- label every current bundle `NOT_AUTHENTICATED`;
-- distinguish gate verdict, internal consistency, authenticity, authorization, and deployment permission.
+- consumes the existing verification and comparison core;
+- does not implement a second gate or verifier;
+- does not mutate artifacts;
+- does not launch a simulator or policy;
+- does not edit thresholds;
+- cannot approve promotion or deployment;
+- labels every current bundle `NOT_AUTHENTICATED`;
+- distinguishes gate verdict, internal consistency, authenticity, authorization, and deployment
+  permission.
 
 ## 10. Required trust vocabulary
 
@@ -235,12 +283,10 @@ Scope: SIMULATION_ONLY
 
 A green gate verdict must never be presented as “safe,” “trusted,” “approved,” “deployable,” or “road-ready.”
 
-## 11. Immediate Codex starting action
+## 11. Next implementation boundary
 
-Stage 6A is design-frozen as a CONDITIONAL GO with no unresolved P0. The controlling request says
-“Perform four internal stages in this one chat,” “Do not wait for human approval between stages
-unless a genuine unresolved P0 blocker...,” and after GO/CONDITIONAL GO, “continue automatically
-to Stage 6B.” That explicit instruction overrides the generic AGENTS separate-approval gate.
-
-The design freeze reconciled bundle inventory, froze ReviewEnvelope/ComparisonEnvelope 1.0,
-defined dependency rules, and specified acceptance tests. Do not repeat Stage 6A.
+Do not repeat Phase 6 design or implementation. Preserve the local-only/read-only boundary and run
+the documented quality gates before future changes. The smallest optional hardening is a
+deterministic synchronized LRU for the accepted P2 cache/session residual. Signing, authorization,
+promotion, remote review, scenario expansion, or RL each require a separately authorized phase and
+must not be inferred from the Phase 6 GO.

@@ -141,3 +141,22 @@ Even authenticated evidence does not prove:
 - real-world safety;
 - certification;
 - deployment permission.
+
+## 13. Phase 6 implementation status
+
+Checkpoint `90fb7d8` intentionally implements none of the future signing design in sections 4-10.
+The canonical ten-file evidence bundle is unchanged: it has no `attestation.json`,
+`attestation.sig`, signature, signer, trust-policy, approval, promotion, or deployment-authority
+field. The workbench has no sign, authenticate, approve, promote, release, or deploy action.
+
+Both `ReviewEnvelope` and `ComparisonEnvelope` keep integrity separate from origin and authority.
+Every current review exposes `NOT_AUTHENTICATED`; authorization remains `NOT_EVALUATED`;
+deployment permission remains `NONE`; scope remains `SIMULATION_ONLY`; authoritative status
+remains `NOT_DEFINED`. Adversarial tests also confirm that a coherent full-bundle rewrite can remain
+internally consistent while these trust states remain unchanged.
+
+The Phase 6 implementation therefore satisfies the predecessor requirement that trust dimensions
+be stable, but it does not select a signer persona, custody mechanism, trust-policy owner,
+rotation/revocation process, trusted time source, or multi-user approval use case. Those decisions
+still require an explicitly authorized authenticity phase. The accepted process-cache P2 is an
+availability concern and does not justify or imply signing, authorization, or deployment.

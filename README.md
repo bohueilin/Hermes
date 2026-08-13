@@ -12,13 +12,15 @@ Hermes is for simulation and closed-lab learning only. It must not connect to a 
 
 ## Current status
 
-Phases 0–3 plus the ordered deterministic-fault and Phase 5 developer hardening are committed on
-the feature branch. The simulator-neutral evidence pipeline supports a deterministic fake adapter,
-a pinned MetaDrive 0.4.3 physics run with an installed IDM policy, trace-bound
-deterministic-shield decisions for two bounded MetaDrive challenge scenarios, and schema-2
-evidence for deterministic observation/control faults. Phase 5 adds local Make targets, PR-safe CI
-commands, explicit schema-version checks, deterministic fixtures, and structured CLI errors. No
-remote CI run is claimed. Dashboard and RL work remain deferred.
+Phases 0–6 are implemented on `feat/phase6-evidence-workbench`. The simulator-neutral evidence
+pipeline supports a deterministic fake adapter, a pinned MetaDrive 0.4.3 physics run with an
+installed IDM policy, trace-bound deterministic-shield decisions for two bounded MetaDrive
+challenge scenarios, schema-2 evidence for deterministic observation/control faults, and a local
+read-only Evidence Review Workbench. Phase 6 adds immutable portable review/comparison envelopes,
+root-contained review CLI commands, and an optional Streamlit UI that consumes the same verified
+facade. The implementation and adversarial-hardening checkpoint is `90fb7d8`; both the complete and
+non-MetaDrive selections passed 720 tests, with independent review GO and no open P0/P1. No remote
+CI run is claimed. Cloud/multi-user review, authenticity, and RL work remain deferred.
 
 The fake adapter is an architectural test double, not a vehicle-physics model. MetaDrive remains
 lazy and optional: fake runs, stored artifact verification, and stored artifact comparison do not
@@ -46,6 +48,12 @@ conda activate hermes-dev
 python --version
 which python
 python -m pip install -e ".[dev]"
+```
+
+Install the optional local workbench only when needed:
+
+```bash
+python -m pip install -e ".[dev,workbench]"
 ```
 
 ## Environment doctor
@@ -200,6 +208,52 @@ not re-executed. MetaDrive IDM observation faults are rejected because that poli
 simulator state; only action delay/saturation are truthful for that profile. See
 `docs/phase4-fault-and-ci-hardening.md` for the complete semantics and evidence boundary.
 
+## Phase 6 evidence review
+
+Review selections are exact POSIX-relative paths beneath the configured artifact root. Do not
+prefix them with `artifacts/`, and Hermes never auto-selects a newest run.
+
+```bash
+hermes review-artifact handoff-phase5-demo \
+  --artifact-root artifacts \
+  --format text
+
+hermes review-compare \
+  handoff-p3-lead-baseline \
+  handoff-p3-lead-shielded \
+  --artifact-root artifacts \
+  --format json
+
+hermes workbench \
+  --artifact-root artifacts \
+  --host 127.0.0.1 \
+  --port 8501 \
+  --no-browser
+```
+
+The review CLI and workbench perform a fresh descriptor-relative, no-follow capture and invoke the
+same stored verification facade. They never rerun a simulator or policy and never write, repair,
+normalize, sign, approve, promote, or deploy an artifact. The workbench accepts numeric loopback
+addresses only and disables Streamlit usage telemetry.
+
+Every review keeps these states separate:
+
+| Dimension | Phase 6 result |
+|---|---|
+| Gate verdict | `PASS`, `CONDITIONAL`, `HOLD`, or `INVALID_EVIDENCE` |
+| Integrity | `INTERNALLY_CONSISTENT`, `INVALID_EVIDENCE`, or transient `UNVERIFIED` |
+| Authenticity | `NOT_AUTHENTICATED` |
+| Authorization | `NOT_EVALUATED` |
+| Deployment permission | `NONE` |
+| Scope | `SIMULATION_ONLY` |
+
+Invalid evidence quarantines stored verdicts, findings, metrics, and timeline claims. Compatible
+comparison shows improvements, regressions, unchanged outcomes, and evidence-availability deltas
+without a winner score. The independent adversarial review closed all reproduced P1 findings; its
+remaining accepted P2 is linear process-lifetime growth of explicitly selected review cache/session
+entries. Restarting the single-user local process recovers that memory; a bounded synchronized LRU
+is recommended before substantially increasing artifact scale.
+
 ## Evidence bundle
 
 Every completed run must preserve:
@@ -243,7 +297,7 @@ Read before editing:
 
 - `AGENTS.md` — durable repository rules;
 - `PROJECT_BRIEF.md` — product scope and success criteria;
-- `BUILD_PLAN.md` — gated implementation roadmap;
+- `BUILD_PLAN.md` — executed gated plan and durable Phase 6 boundaries;
 - `MASTER_PROMPT.md` — unattended Codex execution brief;
 - `VALIDATION_MATRIX.md` — human acceptance checklist.
 
@@ -255,8 +309,11 @@ Read before editing:
    (implemented in Phase 3).
 4. Deterministic fault injection and fail-closed fault coverage (implemented in Phase 4).
 5. PR-safe CI and developer-experience hardening (implemented in Phase 5).
+6. Immutable review envelopes, root-contained review CLI, and local read-only workbench
+   (implemented and adversarially hardened in Phase 6).
 
-Dashboard, RL, CARLA, ROS 2, Autoware, hardware integration, and real-log training remain deferred.
+Cloud/multi-user review, RL, CARLA, ROS 2, Autoware, hardware integration, and real-log training
+remain deferred.
 
 ## Integrity limitation
 

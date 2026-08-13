@@ -32,12 +32,36 @@ Confirm:
 - no external network;
 - no upload or write action.
 
+Workbench and review-command selections are always relative to the configured root. With
+`--artifact-root artifacts`, enter `handoff-phase5-demo`, not
+`artifacts/handoff-phase5-demo`.
+
+## 3A. CLI parity checks
+
+These commands exercise the same public facade used by the workbench:
+
+```bash
+hermes review-artifact handoff-phase5-demo --artifact-root artifacts --format text
+hermes review-artifact handoff-p1-conditional --artifact-root artifacts --format text
+hermes review-artifact handoff-p1-collision --artifact-root artifacts --format text
+hermes review-artifact phase1-tampered --artifact-root artifacts --format json
+hermes review-compare handoff-p3-lead-baseline handoff-p3-lead-shielded \
+  --artifact-root artifacts --format text
+hermes review-compare handoff-phase5-demo handoff-p2-metadrive \
+  --artifact-root artifacts --format json
+```
+
+Expected exits are 0 for the first three valid review operations and the compatible lead
+comparison, 30 for `phase1-tampered`, and 40 for the incompatible Phase 5/MetaDrive comparison.
+`CONDITIONAL` and `HOLD` are accepted gate outcomes for an internally consistent review, so the new
+review command intentionally exits 0 for them.
+
 ## 4. Demo 1 — valid nominal evidence
 
-Artifact:
+Workbench selection relative to `artifacts`:
 
 ```text
-artifacts/handoff-phase5-demo
+handoff-phase5-demo
 ```
 
 Show:
@@ -57,10 +81,10 @@ Executive point:
 
 ## 5. Demo 2 — hard invariant HOLD
 
-Artifact:
+Workbench selection relative to `artifacts`:
 
 ```text
-artifacts/handoff-p1-collision
+handoff-p1-collision
 ```
 
 Show:
@@ -73,10 +97,10 @@ Show:
 
 ## 6. Demo 3 — tampered evidence
 
-Artifact:
+Workbench selection relative to `artifacts`:
 
 ```text
-artifacts/phase1-tampered
+phase1-tampered
 ```
 
 Show:
@@ -93,10 +117,10 @@ Executive point:
 
 ## 7. Demo 4 — MetaDrive portability
 
-Artifact:
+Workbench selection relative to `artifacts`:
 
 ```text
-artifacts/handoff-p2-metadrive
+handoff-p2-metadrive
 ```
 
 Show the same review contract and provenance without simulator rerun.
@@ -107,14 +131,14 @@ Executive point:
 
 ## 8. Demo 5 — mixed shield trade-off
 
-Compare:
+Compare these two root-relative selections:
 
 ```text
-artifacts/handoff-p3-lead-baseline
-artifacts/handoff-p3-lead-shielded
+handoff-p3-lead-baseline
+handoff-p3-lead-shielded
 ```
 
-Then cut-in pair.
+Then compare `handoff-p3-cutin-baseline` with `handoff-p3-cutin-shielded`.
 
 Show:
 
@@ -131,10 +155,10 @@ Executive point:
 
 ## 9. Demo 6 — fault coverage versus mission outcome
 
-Artifact:
+Workbench selection relative to `artifacts`:
 
 ```text
-artifacts/handoff-p4-fault
+handoff-p4-fault
 ```
 
 Show:
@@ -173,3 +197,37 @@ Show:
 - realistic cut-in behavior;
 - cross-platform bitwise determinism;
 - remote CI execution unless actually observed.
+
+## 13. Automated implementation checkpoint
+
+At checkpoint `90fb7d8`, the implementation/adversarial suite recorded:
+
+- 720 complete tests passed;
+- 720 tests passed under the non-MetaDrive selection;
+- 488 focused Phase 6 adversarial tests passed;
+- Ruff and `git diff --check` passed;
+- retained PASS, CONDITIONAL, HOLD, INVALID_EVIDENCE, MetaDrive, fault, compatible mixed-tradeoff,
+  and incompatible artifacts produced the expected facade results; and
+- automated AppTests launched no simulator, policy, Streamlit server, browser, child process, or
+  network connection and preserved every source-bundle byte.
+
+The accepted Phase 6 P2 is process-lifetime cache/session growth after repeated explicit local
+selections. Restart recovers memory; add a deterministic synchronized LRU before materially
+increasing single-user artifact scale.
+
+## 14. Human observation record
+
+Automated validation is not a manual visual or comprehension result. When an actual reviewer runs
+this demo, record the date, reviewer, exact selected paths and digests, whether they correctly
+identified gate rationale/hard failures/unavailable evidence/mixed comparison effects, and whether
+they correctly answered:
+
+```text
+Evidence authenticity: NOT_AUTHENTICATED
+Authorization status: NOT_EVALUATED
+Deployment permission: NONE
+Scope: SIMULATION_ONLY
+```
+
+Until that observation exists, report the human-comprehension gate as `NOT YET OBSERVED`; do not
+infer it from AppTest output or fabricate a participant result.

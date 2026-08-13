@@ -2,7 +2,23 @@
 
 ## 1. Purpose
 
-This matrix is the human acceptance gate for the Phase 6 design freeze and implementation. Passing existing tests is necessary but not sufficient. Every claim must be backed by an actual command, test, fixture, or clearly labeled manual observation.
+This matrix is both the recorded acceptance gate for Phase 6 and a rerunnable regression checklist.
+Every claim is backed by an actual command, test, fixture, or clearly labeled manual observation;
+no human-participant result is inferred from automated coverage.
+
+### Completed implementation/adversarial checkpoint
+
+| Item | Recorded result |
+|---|---|
+| Branch | `feat/phase6-evidence-workbench` |
+| Checkpoint HEAD | `90fb7d891a233fea9fe5de915060873851da1d70` |
+| Complete tests | 720 passed |
+| Non-MetaDrive selection | 720 passed |
+| Focused Phase 6 adversarial matrix | 488 passed |
+| Ruff / diff check | passed |
+| Doctor | 17 PASS, one expected dirty-tree WARN, one optional display NOT_AVAILABLE, no FAIL |
+| Adversarial decision | GO; no open P0/P1 |
+| Accepted residual | P2 process-lifetime cache/session growth after explicit selections |
 
 ## 2. Baseline preflight
 
@@ -12,14 +28,14 @@ This matrix is the human acceptance gate for the Phase 6 design freeze and imple
 | Environment | `python --version && which python` | Python 3.11 in `hermes-dev` |
 | Branch | `git branch --show-current` | `feat/phase6-evidence-workbench` |
 | Status | `git status --short` | Clean before each major stage |
-| Current history | `git log --oneline --decorate -8` | Phase 0–5 history preserved |
+| Current history | `git log --oneline --decorate -8` | Phase 0–6 history preserved |
 | Install | `python -m pip install -e ".[dev]"` | Exit 0 |
 | Tests | `python -m pytest -q` | Current full suite passes |
 | Ruff | `python -m ruff check .` | All checks pass |
 | Doctor | `python -m hermes doctor` | No FAIL |
 | Whitespace | `git diff --check` | Exit 0 |
 
-## 3. Design-freeze gate
+## 3. Historical design-freeze gate (completed before implementation)
 
 | Requirement | Evidence | Pass condition |
 |---|---|---|
@@ -31,12 +47,12 @@ This matrix is the human acceptance gate for the Phase 6 design freeze and imple
 | Dependency rule | Architecture doc | Enforceable UI-to-review-only import boundary |
 | Threat model | Threat doc | Prevention, detection, failure, test, and residual risk mapped |
 | UI information architecture | UX doc | Invalid, unavailable, comparison, and provenance states defined |
-| No implementation | Git diff | No workbench production module or UI dependency added |
-| Design handoff | `PHASE6_DESIGN_FREEZE_HANDOFF.md` | GO, CONDITIONAL GO, or HOLD and exact next prompt |
+| Stage isolation | Design-freeze commit diff | Only contract/design documents changed at that historical checkpoint; implementation followed later |
+| Design handoff | `PHASE6_DESIGN_FREEZE_HANDOFF.md` | Recorded decision, no unresolved P0, and exact next prompt |
 | Portable determinism | Contract inspection | No generated timestamp, absolute path, or filesystem metadata; unchanged bytes/selected relative path/tool/schema produce byte-identical JSON |
 | Captured identity | Architecture/contract inspection | Source inventory and observed/computed roots use the same captured bytes; no reopen |
 | Resource authority | Threat/architecture docs | Existing verifier alone determines INVALID; review-shape failure is REVIEW_UNAVAILABLE / 40 |
-| Stage 6A scope | `git diff --name-only` and pyproject diff | Documentation only; no Python, tests, dependencies, artifacts, or third_party |
+| Stage 6A scope | Design-freeze commit diff | Documentation only at that historical checkpoint; implementation followed in later commits |
 
 ## 4. Review core acceptance
 
@@ -46,35 +62,38 @@ Use actual artifact names when present. Substitute generated fixtures only when 
 
 | Case | Example artifact | Required review result |
 |---|---|---|
-| PASS | `artifacts/handoff-phase5-demo` | Integrity `INTERNALLY_CONSISTENT`; gate `PASS`; authenticity `NOT_AUTHENTICATED`; deployment `NONE` |
-| CONDITIONAL | `artifacts/handoff-p1-conditional` | Integrity valid; gate `CONDITIONAL`; soft failures visible |
-| HOLD | `artifacts/handoff-p1-collision` | Integrity valid; gate `HOLD`; collision hard failure and event references visible |
-| INVALID | `artifacts/phase1-tampered` | Integrity invalid; stored verdict quarantined; exit 30 |
-| MetaDrive | `artifacts/handoff-p2-metadrive` | Same review contract; no simulator import or rerun |
-| Fault | `artifacts/handoff-p4-fault` | Coverage result and mission HOLD both visible |
+| PASS | `handoff-phase5-demo` | Integrity `INTERNALLY_CONSISTENT`; gate `PASS`; authenticity `NOT_AUTHENTICATED`; deployment `NONE` |
+| CONDITIONAL | `handoff-p1-conditional` | Integrity valid; gate `CONDITIONAL`; soft failures visible |
+| HOLD | `handoff-p1-collision` | Integrity valid; gate `HOLD`; collision hard failure and event references visible |
+| INVALID | `phase1-tampered` | Integrity invalid; stored verdict quarantined; exit 30 |
+| MetaDrive | `handoff-p2-metadrive` | Same review contract; no simulator import or rerun |
+| Fault | `handoff-p4-fault` | Coverage result and mission HOLD both visible |
+
+Every case separately exposes gate verdict, integrity, authenticity `NOT_AUTHENTICATED`,
+authorization `NOT_EVALUATED`, deployment permission `NONE`, and scope `SIMULATION_ONLY`.
 
 Expected command shape:
 
 ```bash
-hermes review-artifact artifacts/<run-id> \
+hermes review-artifact handoff-phase5-demo \
   --artifact-root artifacts \
   --format json
 ```
 
 ### 4.2 Envelope checks
 
-- [ ] One parseable JSON document.
-- [ ] Review schema version present.
-- [ ] Artifact run ID and relative path present.
-- [ ] Bundle and trace digests present.
-- [ ] Recomputed gate result present.
-- [ ] Stored result not treated as accepted after verification failure.
-- [ ] Trust-state fields present.
-- [ ] Evidence sufficiency present.
-- [ ] Findings include source references.
-- [ ] Numeric values include unit, threshold, and operator when applicable.
-- [ ] Residual limitations present.
-- [ ] No absolute local path in shareable envelope unless explicitly classified as local diagnostic metadata.
+- [x] One parseable JSON document.
+- [x] Review schema version present.
+- [x] Artifact run ID and relative path present.
+- [x] Bundle and trace digests present.
+- [x] Recomputed gate result present.
+- [x] Stored result not treated as accepted after verification failure.
+- [x] Trust-state fields present.
+- [x] Evidence sufficiency present.
+- [x] Findings include source references.
+- [x] Numeric values include unit, threshold, and operator when applicable.
+- [x] Residual limitations present.
+- [x] No absolute local path in the portable envelope.
 
 ## 5. Comparison acceptance
 
@@ -89,32 +108,32 @@ Expected shape:
 
 ```bash
 hermes review-compare \
-  artifacts/handoff-p3-lead-baseline \
-  artifacts/handoff-p3-lead-shielded \
+  handoff-p3-lead-baseline \
+  handoff-p3-lead-shielded \
   --artifact-root artifacts \
   --format json
 ```
 
-- [ ] No winner score.
-- [ ] Improvements listed.
-- [ ] Regressions listed.
-- [ ] Unchanged outcomes listed.
-- [ ] Evidence availability deltas listed.
-- [ ] Both artifact identities and digests listed.
-- [ ] Compatibility basis listed.
+- [x] No winner score.
+- [x] Improvements listed.
+- [x] Regressions listed.
+- [x] Unchanged outcomes listed.
+- [x] Evidence availability deltas listed.
+- [x] Both artifact identities and digests listed.
+- [x] Compatibility basis listed.
 
 ## 6. Artifact immutability
 
 For each representative artifact:
 
 ```bash
-find artifacts/<run-id> -type f -maxdepth 1 -print0 | sort -z | \
+find artifacts/handoff-phase5-demo -type f -maxdepth 1 -print0 | sort -z | \
   xargs -0 shasum -a 256 > /tmp/hermes-before.sha256
 
-hermes review-artifact artifacts/<run-id> --artifact-root artifacts --format json \
+hermes review-artifact handoff-phase5-demo --artifact-root artifacts --format json \
   > /tmp/hermes-review.json
 
-find artifacts/<run-id> -type f -maxdepth 1 -print0 | sort -z | \
+find artifacts/handoff-phase5-demo -type f -maxdepth 1 -print0 | sort -z | \
   xargs -0 shasum -a 256 > /tmp/hermes-after.sha256
 
 diff -u /tmp/hermes-before.sha256 /tmp/hermes-after.sha256
@@ -141,12 +160,12 @@ Also automate this in tests for core and workbench harnesses.
 
 For every invalid fixture:
 
-- [ ] Primary status is `INVALID_EVIDENCE`.
-- [ ] Stored `PASS` is not shown as accepted.
-- [ ] First mismatch or actionable failure is shown.
-- [ ] Findings or metrics from untrusted stored files are not presented as recomputed accepted results.
-- [ ] No green trust banner appears.
-- [ ] Authenticity is not promoted.
+- [x] Primary status is `INVALID_EVIDENCE`.
+- [x] Stored `PASS` is not shown as accepted.
+- [x] First mismatch or actionable failure is shown.
+- [x] Findings or metrics from untrusted stored files are not presented as recomputed accepted results.
+- [x] No green trust banner appears.
+- [x] Authenticity is not promoted.
 
 ## 9. Numeric integrity
 
@@ -159,20 +178,20 @@ Create fixtures with measured values:
 
 Required:
 
-- [ ] Exact value inspectable.
-- [ ] Display value cannot change apparent comparison.
-- [ ] Operator visible.
-- [ ] Unit visible.
-- [ ] Verifier version visible.
-- [ ] Supporting events visible.
+- [x] Exact value inspectable.
+- [x] Display value cannot change apparent comparison.
+- [x] Operator visible.
+- [x] Unit visible.
+- [x] Verifier version visible.
+- [x] Supporting events visible.
 
 ## 10. `NOT_AVAILABLE` integrity
 
-- [ ] Missing TTC is displayed `NOT_AVAILABLE`, not `0`, infinity, blank, or pass.
-- [ ] Unavailable reason displayed.
-- [ ] Required or optional status displayed.
-- [ ] Gate consequence displayed.
-- [ ] Chart has a gap or annotation rather than a zero point.
+- [x] Missing TTC is displayed `NOT_AVAILABLE`, not `0`, infinity, blank, or pass.
+- [x] Unavailable reason displayed.
+- [x] Required or optional status displayed.
+- [x] Gate consequence displayed.
+- [x] Chart has a gap or annotation rather than a zero point.
 
 ## 11. XSS and content-injection tests
 
@@ -189,15 +208,16 @@ very long repeated text
 
 Required:
 
-- [ ] Rendered as text or safely sanitized.
-- [ ] No script execution.
-- [ ] No raw HTML use for evidence content.
-- [ ] Long content bounded or truncated with safe expansion.
-- [ ] Terminal output escapes control characters.
+- [x] Rendered as text or safely sanitized.
+- [x] No script execution.
+- [x] No raw HTML use for evidence content.
+- [x] Long presentation text is bounded with explicit truncation/original-length metadata while
+  canonical JSON remains exact.
+- [x] Terminal output visibly escapes Unicode Cc/Cf control characters.
 
 ## 12. Resource-bound tests
 
-Design freeze must select documented limits after inspecting current artifacts.
+The design freeze selected documented limits after inspecting retained artifacts.
 
 Test:
 
@@ -218,12 +238,12 @@ complete. Test a 10,000-event portable timeline and deterministic pagination wit
 
 ## 13. Architecture and dependency checks
 
-- [ ] Workbench imports only review-layer APIs plus framework.
-- [ ] Review core does not import framework.
-- [ ] Review path does not import MetaDrive.
-- [ ] Review path does not instantiate adapters or policies.
-- [ ] No UI gate or verifier implementation exists.
-- [ ] AST or import-boundary test passes.
+- [x] Workbench imports only review-layer APIs plus framework.
+- [x] Review core does not import framework.
+- [x] Review path does not import MetaDrive.
+- [x] Review path does not instantiate adapters or policies.
+- [x] No UI gate or verifier implementation exists.
+- [x] AST or import-boundary test passes.
 
 ## 14. Local-only workbench launch
 
@@ -239,15 +259,18 @@ hermes workbench \
 
 Required:
 
-- [ ] Binds only to loopback.
-- [ ] `0.0.0.0` rejected.
-- [ ] `::` rejected.
-- [ ] Numeric 127/8 and `::1` accepted through ipaddress; hostnames rejected.
-- [ ] LAN, link-local, and public literals rejected.
-- [ ] No telemetry or external network call.
-- [ ] No upload, write, approve, run, sign, or deploy control.
-- [ ] Startup does not launch simulator.
+- [x] Binds only to loopback.
+- [x] `0.0.0.0` rejected.
+- [x] `::` rejected.
+- [x] Numeric 127/8 and `::1` accepted through ipaddress; hostnames rejected.
+- [x] LAN, link-local, and public literals rejected.
+- [x] No telemetry or external network call.
+- [x] No upload, write, approve, run, sign, or deploy control.
+- [x] Startup does not launch simulator.
 - [ ] Shutdown is clean.
+
+The shutdown item remains an explicit manual launcher check; automated finalization did not start a
+real server or browser. Launcher argument and subprocess behavior are covered without network use.
 
 ## 14A. Review CLI exit matrix
 
@@ -266,16 +289,16 @@ Legacy run, verify-artifact, and compare exits must remain unchanged.
 
 ## 15. Workbench functional cases
 
-- [ ] Intake waits for verification before accepting gate result.
-- [ ] Mandatory trust strip appears on every run view.
-- [ ] PASS, HOLD, CONDITIONAL, and INVALID render distinctly.
-- [ ] Findings table source-links to event sequences.
-- [ ] Timeline distinguishes raw, delivered, result, candidate, permitted, and executed values.
-- [ ] Provenance distinguishes recorded origin from authenticated origin.
-- [ ] Comparison shows both directions.
-- [ ] Incompatible comparison renders no misleading chart.
-- [ ] No automatic latest artifact is selected.
-- [ ] Filtering and sorting change presentation only.
+- [x] Intake waits for verification before accepting gate result.
+- [x] Mandatory trust strip appears on every run view.
+- [x] PASS, HOLD, CONDITIONAL, and INVALID render distinctly.
+- [x] Findings table source-links to event sequences.
+- [x] Timeline distinguishes raw, delivered, result, candidate, permitted, and executed values.
+- [x] Provenance distinguishes recorded origin from authenticated origin.
+- [x] Comparison shows both directions.
+- [x] Incompatible comparison renders no misleading chart.
+- [x] No automatic latest artifact is selected.
+- [x] Filtering and pagination change presentation only.
 
 ## 16. Human comprehension script
 
@@ -291,6 +314,10 @@ Ask a reviewer to answer from the workbench:
 8. Does the verdict authorize real-world deployment?
 
 Record only actual observations. Do not invent a usability-test participant or success rate.
+
+No separate human-participant session is claimed at the `90fb7d8` checkpoint. Deterministic
+Streamlit AppTest coverage verifies the six screens and required trust content; a future usability
+study remains distinct from implementation acceptance.
 
 ## 17. Full quality gate
 
@@ -319,3 +346,7 @@ Phase 6 is HOLD when any is true:
 - Requiredness is inferred by UI.
 - Existing evidence tests are weakened.
 - P0 adversarial finding remains open.
+
+None of these stop conditions was present at the implementation/adversarial checkpoint. The open P2
+cache/session growth residual is availability debt, requires repeated explicit local selections,
+and does not change the GO decision for the single-user local scope.

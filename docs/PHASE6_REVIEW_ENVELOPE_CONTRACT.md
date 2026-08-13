@@ -787,3 +787,38 @@ normalization, or best-effort interpretation is permitted.
 - every comparison core dimension mapped exactly once and side-qualified references;
 - incompatible comparison has no deltas/arrays/charts;
 - invalid stored PASS quarantine; no winner/score fields.
+
+## 13. Implementation conformance at checkpoint 90fb7d8
+
+The version 1.0 contracts above are implemented without a second portable or UI-specific schema.
+`src/hermes/review/models.py` owns the strict frozen Pydantic models and immutable normative
+registries; `projection.py` maps verified snapshots and the existing comparison result;
+`facade.py` performs root validation, fresh descriptor capture, quarantine, cache/session identity,
+and independent two-sided review; and `hermes.review.__init__` is the public import surface used by
+both CLI and workbench.
+
+Observed implementation behavior:
+
+- canonical JSON from `review-artifact --format json` is the exact portable
+  `ReviewEnvelope` bytes plus one transport newline;
+- canonical JSON from a compatible `review-compare --format json` is the exact portable
+  `ComparisonEnvelope` bytes plus one transport newline;
+- invalid evidence exits 30 with an invalid/quarantined review; incompatible valid evidence exits
+  40 with reasons and no deltas, partitions, availability details, or chart series;
+- text output projects direct, nested, and mapping-key strings safely, neutralizes all Unicode
+  `Cc`/`Cf` controls, and marks 1,025-plus input-scalar values after retaining the first 1,024;
+- valid machine JSON remains full and byte-exact rather than inheriting human-text truncation; and
+- CLI and workbench both call the same public facade and never reconstruct a gate, verifier,
+  threshold result, or comparison ranking.
+
+Adversarial review found that initially mutable module-level registries could drift after an
+in-process importer modified them. Outer and nested gate mappings now use immutable mapping views,
+review mappings use immutable mapping views, and review set registries are `frozenset`; exact values
+and ordering did not change. It also verified that malformed implicit YAML scalars and finite trace
+values whose derived arithmetic is not representable now produce bounded verification diagnostics
+and a quarantined `INVALID_EVIDENCE` envelope rather than escaping the facade.
+
+The implementation/adversarial checkpoint passed 720 complete tests, 720 non-MetaDrive-selected
+tests, and 488 focused Phase 6 tests. The remaining accepted P2 is operational, not portable: the
+process-lifetime facade cache/session maps have no LRU bound. No cache/session state is serialized,
+and every active render still starts with fresh capture and stored verification.

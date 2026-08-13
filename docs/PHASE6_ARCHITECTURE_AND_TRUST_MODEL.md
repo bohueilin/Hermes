@@ -250,3 +250,43 @@ Legacy verify-artifact and compare exits do not change.
 - Simulation fidelity and scenario distributions remain limited.
 - Same-host deterministic evidence does not establish cross-platform bitwise physics identity.
 - No review result grants physical deployment permission.
+
+## 15. Implemented checkpoint and adversarial closure
+
+The frozen design above is implemented at checkpoint `90fb7d891a233fea9fe5de915060873851da1d70`.
+The implementation keeps the one-way dependency direction and exposes only these public review
+entry points from `hermes.review`: `review_artifact`, `compare_review_artifacts`,
+`validate_artifact_root`, the two portable envelopes, the typed review-unavailable surface, and
+presentation-only helpers. The CLI imports review and workbench code only inside their handlers.
+
+Implemented reviewer surfaces are:
+
+- `hermes review-artifact SELECTION --artifact-root ROOT --format text|json`;
+- `hermes review-compare BASELINE CANDIDATE --artifact-root ROOT --format text|json`; and
+- `hermes workbench --artifact-root ROOT --host 127.0.0.1 --port 8501 --no-browser`.
+
+`SELECTION`, `BASELINE`, and `CANDIDATE` are exact lexical paths relative to `ROOT`. For example,
+with `--artifact-root artifacts`, the valid selection is `handoff-phase5-demo`, not
+`artifacts/handoff-phase5-demo`. The workbench presents six explicit screens: intake/verification,
+summary/trust, findings/evidence coverage, timeline, provenance/integrity/limitations, and
+compatible comparison. It never discovers or selects an artifact automatically.
+
+Streamlit is installed only through the optional `workbench` extra (`streamlit>=1.37,<2`). The
+launcher constructs one argument-vector subprocess invocation, accepts numeric loopback addresses
+only, validates ports 1 through 65535, and disables Streamlit usage telemetry. Automated workbench
+validation used Streamlit's application test harness; it did not start a server or browser.
+
+The Phase 6 adversarial pass closed four P1 findings without changing authority or product scope:
+normative gate/review registries are now transitively immutable; bounded YAML-constructor failures
+and finite derived-metric overflow are quarantined as `INVALID_EVIDENCE`; and CLI human text
+neutralizes every Unicode `Cc`/`Cf` control while bounding each input scalar at 1,024 with explicit
+loss metadata. A P2 event-drill-down state leak across explicit artifact changes was also closed.
+The checkpoint passed 720 complete tests, 720 tests under the non-MetaDrive selection, and 488
+focused Phase 6 adversarial tests, with Ruff and diff checks clean.
+
+One accepted P2 remains: the process-local `_cache` and `_active` maps are not size-bounded. An
+adversarial 43-selection probe observed about 251 MB peak resident memory. Every entry still
+requires an explicit local selection and a full recapture/verification before reuse; restart is
+recoverable. Add a deterministic synchronized LRU before increasing single-user artifact scale.
+This availability residual does not authenticate evidence, alter gate semantics, write artifacts,
+or grant authorization or deployment permission.

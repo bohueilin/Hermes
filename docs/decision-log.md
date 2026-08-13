@@ -1,5 +1,49 @@
 # Hermes Decision Log
 
+## 2026-08-12 — Implement and adversarially close Phase 6 evidence review
+
+### Scope
+
+Implement the frozen local, read-only Evidence Review Workbench through the public review facade,
+review/compare CLI commands, optional Streamlit UI, adversarial remediation, and pre-final
+validation. Do not add signing, approval, promotion, deployment, remote ingestion, a database, or
+simulator/policy execution to review.
+
+### Decisions
+
+- Keep `ReviewEnvelope` and `ComparisonEnvelope` 1.0 as the only portable review contracts. Both
+  CLI and UI consume `hermes.review`; neither reconstructs gate, verifier, threshold, requiredness,
+  or comparison semantics.
+- Add `review-artifact` and `review-compare` with exact root-relative selections, canonical JSON,
+  readable bounded text, and operation-oriented exits 0/30/40. Preserve all legacy command exits.
+- Add Streamlit only under `.[workbench]` at `>=1.37,<2`. Launch it through a validated argument
+  vector on numeric loopback only, with usage telemetry disabled and no upload/write/remote action.
+- Implement six explicit workbench screens and require a deliberate Verify or Compare action. Keep
+  every active render behind fresh capture/stored verification and reset event-drill-down state on
+  artifact change.
+- Freeze every normative review/gate registry transitively. Normalize bounded artifact-derived
+  YAML constructor and derived-metric representation failures into fixed diagnostics plus
+  quarantined `INVALID_EVIDENCE`; do not mask programmer-control exceptions.
+- Neutralize every Unicode `Cc`/`Cf` control in human CLI output and bound each artifact-derived
+  input scalar at 1,024 with explicit original-length metadata. Preserve full byte-exact canonical
+  JSON.
+- Accept C6-04 as P2 for Phase 6: process-local facade cache/session maps remain unbounded. Require
+  a deterministic synchronized LRU before materially increasing single-user artifact scale.
+- Continue to expose authenticity `NOT_AUTHENTICATED`, authorization `NOT_EVALUATED`, deployment
+  permission `NONE`, scope `SIMULATION_ONLY`, and authoritative status `NOT_DEFINED`. Do not add
+  attestation or consequence controls.
+
+### Observed implementation checkpoint
+
+Checkpoint `90fb7d891a233fea9fe5de915060873851da1d70` passed 720 complete tests, 720 tests under the
+non-MetaDrive selection, and 488 focused Phase 6 adversarial tests. Ruff and diff checks passed.
+Independent core/facade/workbench and CLI reviewers returned GO with no P0-P3 in their remediated
+scopes. The final adversarial verdict is GO with no open P0 or P1.
+
+Automated review did not launch a simulator, policy, Streamlit server, or browser and did not use a
+remote service. No human-comprehension result is claimed; the demo runbook remains the manual
+observation protocol.
+
 ## 2026-08-12 — Close review-facade source and session seams
 
 - **Decision:** Preserve a four-field safely parsed manifest identity on invalid inspection; approve

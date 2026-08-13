@@ -2,17 +2,20 @@
 
 ## 1. Executive intent
 
-Hermes has completed the deterministic evidence, MetaDrive, shield, fault, comparison, and developer-hardening foundations. Phase 6 should create product value by making those artifacts reviewable without weakening evidence integrity.
+Hermes has completed the deterministic evidence, MetaDrive, shield, fault, comparison,
+developer-hardening, and Phase 6 evidence-review foundations. Phase 6 makes those artifacts
+reviewable without weakening evidence integrity.
 
-Recommended next wave:
+Delivered Phase 6 wave:
 
 > **A local, read-only Evidence Review Workbench built on one immutable review contract and the existing stored-verification core.**
 
-This plan is gated. Codex must complete a design freeze before implementation.
+This plan was executed in gated order: design freeze, review core/CLI, local workbench,
+adversarial hardening, and final documentation/handoff.
 
-## 2. Current baseline
+## 2. Historical baseline and implementation checkpoint
 
-Codex must verify actual state, but the design-review baseline is:
+The historical design-review baseline was:
 
 | Item | Observed value |
 |---|---|
@@ -28,18 +31,31 @@ Codex must verify actual state, but the design-review baseline is:
 | MetaDrive | 0.4.3 at pinned clean source commit |
 | Remote activity | none |
 
+The completed implementation/adversarial checkpoint is:
+
+| Item | Observed value |
+|---|---|
+| Branch | `feat/phase6-evidence-workbench` |
+| Checkpoint HEAD | `90fb7d891a233fea9fe5de915060873851da1d70` |
+| Python | 3.11.15 in `hermes-dev` |
+| Complete tests | 720 passing |
+| Non-MetaDrive tests | 720 passing |
+| Focused Phase 6 adversarial matrix | 488 passing |
+| Ruff / diff check | passing |
+| Adversarial decision | GO; no open P0/P1 |
+| Remote activity | none |
+
 ## 3. Phase 6 decision
 
 ### Decision
 
-**CONDITIONAL GO** for the read-only workbench.
+**GO** for the local, read-only workbench within the frozen Phase 6 boundary.
 
-Stage 6A is design-frozen with no unresolved P0. The conditions below are Stage 6B implementation
-and regression gates. The controlling request says “Perform four internal stages in this one chat,”
-“Do not wait for human approval between stages unless a genuine unresolved P0 blocker...,” and
-after GO/CONDITIONAL GO, “continue automatically to Stage 6B.”
+Design freeze, implementation, adversarial review, and regression gates completed. Independent
+reviewers returned GO after reproduced P1 defects were closed. One accepted P2 remains: unbounded
+process-lifetime cache/session growth after repeated explicit local selections.
 
-### Conditions
+### Conditions met
 
 - It is a one-way consumer of stored verification and comparison.
 - It is local-only.
@@ -69,7 +85,7 @@ A learned policy adds training nondeterminism, model provenance, reward hacking,
 
 ### 5.1 Completed-run bundle
 
-Phase 6 must freeze one canonical ten-file inventory:
+Phase 6 uses one canonical ten-file inventory:
 
 ```text
 manifest.json
@@ -84,9 +100,9 @@ trace.sha256
 bundle.sha256
 ```
 
-### 5.2 Required documentation updates
+### 5.2 Documentation reconciliation
 
-Reconcile:
+The Phase 6 finalization reconciles:
 
 - `AGENTS.md`;
 - `PROJECT_BRIEF.md`;
@@ -96,7 +112,8 @@ Reconcile:
 - schema docs;
 - review-envelope docs.
 
-No document may continue to imply that the older seven-file inventory is the completed Phase 5 contract.
+The older seven-file inventory is not a completed-run contract and no workbench-specific contract
+exists.
 
 ## 6. Trust vocabulary
 
@@ -135,7 +152,7 @@ Do not present current artifacts as:
 - Level 4;
 - authenticated.
 
-## 7. Target architecture
+## 7. Implemented architecture
 
 ```text
 Allowed local artifact root
@@ -191,9 +208,9 @@ Artifact B → capture → verify ┘
 | Workbench UI | Render immutable projection | Parse source files directly |
 | Authenticity provider | Return `NOT_AUTHENTICATED` in Phase 6 | Pretend local hashes authenticate origin |
 
-## 9. Recommended package structure
+## 9. Implemented package structure
 
-Frozen Stage 2 package boundaries:
+Implemented package boundaries:
 
 ```text
 src/hermes/
@@ -210,7 +227,7 @@ src/hermes/
 
 Framework-specific modules may import `hermes.review`. `hermes.review` must not import the UI framework.
 
-## 10. Stage 1 — design freeze
+## 10. Stage 1 — design freeze (completed)
 
 ### Objective
 
@@ -231,10 +248,10 @@ Freeze contracts and decisions before implementation.
 11. Update requirement traceability.
 12. Produce `PHASE6_DESIGN_FREEZE_HANDOFF.md`.
 
-### Design-freeze prohibitions
+### Historical design-freeze isolation
 
-- No workbench code.
-- No new UI dependency.
+- At that checkpoint only, changes were limited to the contract and design documents; production
+  code and the optional UI dependency followed in later commits.
 - No gate/verifier semantic changes unless required only to expose existing requiredness and explicitly documented.
 - No signing.
 - No artifact format migration.
@@ -248,14 +265,12 @@ Freeze contracts and decisions before implementation.
 - Gate, integrity, authenticity, authorization, permission, and scope are independent fields.
 - Dependency direction is testable.
 - Every negative test has an expected result.
-- Under instruction precedence, the quoted controlling request overrides the generic AGENTS
-  separate-approval gate and authorizes automatic Stage 6B when no genuine unresolved P0 remains.
 
-## 11. Stage 2 — review core
+## 11. Stage 2 — review core (completed)
 
 ### 11.1 Review facade
 
-Implement a framework-independent service that:
+The framework-independent service:
 
 - accepts an exact artifact directory and allowed artifact root;
 - enforces containment;
@@ -268,12 +283,12 @@ Implement a framework-independent service that:
 
 ### 11.2 Review CLI
 
-Recommended command:
+Implemented command using a root-relative selection:
 
 ```bash
-hermes review-artifact <artifact-dir> \
+hermes review-artifact handoff-phase5-demo \
   --artifact-root artifacts \
-  --format text|json
+  --format json
 ```
 
 Required behavior:
@@ -287,12 +302,12 @@ Required behavior:
 
 ### 11.3 Comparison facade and CLI
 
-Recommended command:
+Implemented command using two root-relative selections:
 
 ```bash
-hermes review-compare <baseline-dir> <candidate-dir> \
+hermes review-compare handoff-p3-lead-baseline handoff-p3-lead-shielded \
   --artifact-root artifacts \
-  --format text|json
+  --format text
 ```
 
 Required behavior:
@@ -305,22 +320,22 @@ Required behavior:
 - includes improvements, regressions, unchanged results, and availability deltas;
 - contains no winner score.
 
-## 12. Stage 3 — local workbench
+## 12. Stage 3 — local workbench (completed)
 
 ### 12.1 Framework
 
-Preferred default: Streamlit as an optional extra:
+Selected framework: Streamlit as an optional extra:
 
 ```toml
 [project.optional-dependencies]
 workbench = ["streamlit>=1.37,<2"]
 ```
 
-The design freeze may select another local server-rendered framework only with a documented advantage. The review core must remain independent.
+The review core remains framework-independent and does not import Streamlit.
 
 ### 12.2 Launcher
 
-Recommended command:
+Implemented command:
 
 ```bash
 hermes workbench \
@@ -330,7 +345,7 @@ hermes workbench \
   --no-browser
 ```
 
-Phase 6 must reject non-loopback host binding.
+Phase 6 rejects non-loopback host binding before process startup.
 
 ### 12.3 Workbench screens
 
@@ -443,6 +458,10 @@ Do not auto-select “latest.”
 - Filesystem metadata remains private and nonserialized.
 - Digest change invalidates the active projection; identical bytes at the same path retain the
   same envelope even if metadata changes.
+- Accepted P2: the process-local cache and active-session maps do not yet have an entry cap. Every
+  entry requires an explicit local selection, Hermes performs no root discovery/automatic loading,
+  and process restart recovers memory. Add a deterministic synchronized LRU before materially
+  increasing artifact scale.
 
 ## 18. Threat model
 
@@ -461,9 +480,9 @@ Priority threats:
 9. numeric rounding;
 10. stale artifact authority.
 
-## 19. Required negative tests
+## 19. Implemented negative-test matrix
 
-At minimum:
+Coverage includes:
 
 - artifact changes after verification;
 - directory swapped under same path;
@@ -558,9 +577,9 @@ handoff-p4-fault
 
 If absent, generate only the minimum required documented artifacts through existing commands. The workbench itself must not generate them.
 
-## 23. Stage 4 — adversarial review and hardening
+## 23. Stage 4 — adversarial review and hardening (completed)
 
-Run an independent review focused on:
+The independent review covered:
 
 - false-pass and false-trust presentation;
 - artifact mutation;
@@ -572,11 +591,14 @@ Run an independent review focused on:
 - prohibited safety language;
 - local-only behavior.
 
-Fix only validated issues. Do not expand scope.
+It closed four reproduced P1 findings covering mutable semantic registries, malformed-YAML and
+derived-value exception escape, and unsafe/unbounded terminal text projection. It also closed a P2
+artifact-switch drill-down state issue. Independent reviewers returned GO; the cache/session growth
+P2 in section 17 remains accepted.
 
-## 24. Stage 5 — documentation and handoff
+## 24. Stage 5 — documentation and handoff (completed by finalization)
 
-Update:
+Finalization updates:
 
 - root README;
 - project brief;
@@ -589,7 +611,8 @@ Update:
 - demo runbook;
 - `CODEX_HANDOFF.md`.
 
-The handoff must include actual review commands, envelope samples, tests, negative results, local URL/launch command, Git status, and limitations.
+The final handoff records actual review commands, envelope samples, tests, negative results, local
+URL/launch command, Git status, and limitations.
 
 ## 25. Explicit non-goals
 
@@ -634,8 +657,12 @@ No push or PR.
 
 ## 28. Definition of success
 
-Phase 6 succeeds when a reviewer can inspect valid, invalid, and compared artifacts through a local read-only surface, while every displayed verdict remains traceable to the existing verified core and every trust limitation remains explicit.
+Phase 6 met its definition of success: a reviewer can inspect valid, invalid, and compared artifacts
+through a local read-only surface, every displayed verdict remains traceable to the existing
+verified core, and every trust limitation remains explicit.
 
 ## Recommendation
 
-Freeze the contracts first. Then build the review facade. Add the local workbench only after CLI/core parity is established. Run an adversarial presentation-integrity review before declaring Phase 6 complete.
+Maintain Phase 6 as a local-only, read-only reviewer. Before materially increasing artifact scale,
+bound the process-local cache/session maps with a deterministic synchronized LRU. Treat signing,
+authorization, promotion, or remote review as separate future phases with their own trust gates.

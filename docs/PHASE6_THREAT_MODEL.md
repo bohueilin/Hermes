@@ -81,3 +81,41 @@ Design-level unresolved P0: none after the corrected portable contract, resource
 threshold/consequence registry, comparison mapping, and cache recapture rule. Stage 6B remains
 CONDITIONAL GO until every P0 row has its specified automated regression. Any missing or failing P0
 test returns implementation to HOLD.
+
+## 6. Implementation and adversarial disposition
+
+At implementation checkpoint `90fb7d8`, the full adversarial review returned `GO`: no P0 was
+reproduced and no P0 or P1 remains open. The complete suite and the non-MetaDrive-selected suite
+each passed 720 tests; the focused Phase 6 adversarial matrix passed 488 tests. Ruff and diff checks
+were clean. Automated remediation did not launch a simulator, policy, server, or browser and did
+not change artifact bytes.
+
+| Finding | Threat rows | Initial severity | Final disposition |
+|---|---|---:|---|
+| C6-01 mutable normative gate/review registries | T09, T14 | P1 | Closed: outer/nested mappings and sets reject mutation without changing values or order. Deliberate module rebinding by compromised in-process code remains outside assurance. |
+| C6-02 malformed implicit YAML scalar escapes verification | T17 | P1 | Closed: bounded scenario/gate parse `ValueError` becomes a fixed diagnostic and quarantined `INVALID_EVIDENCE`. |
+| C6-03 finite extreme trace overflows derived metric | T15, T17 | P1 | Closed: artifact-derived arithmetic/Pydantic validation failure becomes a fixed diagnostic and quarantined `INVALID_EVIDENCE`; programmer-control exceptions remain visible. |
+| C6-05 invisible/bounded terminal-text gap | T16, T19 | P1 | Closed: every Unicode `Cc`/`Cf` control is visible, text scalars stop at 1,024 input scalars with loss metadata, mapping-key collisions preserve count/order, and canonical JSON stays exact. |
+| C6-06 drill-down state survives artifact switch | T28 | P2 | Closed: explicit Verify resets the event-inspection flag and sequence before rendering the new fresh review. |
+
+T16 remains P0 for executable HTML/script or a crossed renderer boundary. C6-05 was calibrated P1
+because it could materially deceive a terminal reviewer but did not execute content, alter the
+immutable envelope, or create a false accepted core result.
+
+Likewise, T09/T14/T17 retain their P0 classification for a false accepted result or a broader
+authority/resource failure. The reproduced C6-01/02/03 subcases were P1 because they required
+already executing in-process code outside artifact assurance or denied one explicit local review
+without accepting false evidence.
+
+## 7. Accepted Phase 6 residual
+
+C6-04 remains accepted P2 availability debt: the process-lifetime facade `_cache` and `_active`
+maps are unbounded. A 43-explicit-selection probe produced 41 cached envelopes, 43 active sessions,
+and about 251 MB peak resident memory. There is no discovery or automatic loading; each selection
+requires local reviewer action, every render still recaptures/verifies, and process restart fully
+recovers memory. A deterministic synchronized LRU is required before materially increasing the
+single-user artifact scale.
+
+This residual does not weaken T01-T06 containment/integrity controls, does not change a verdict,
+does not expose an accepted stored PASS after invalidity, and does not alter the Phase 6
+`NOT_AUTHENTICATED` / `NOT_EVALUATED` / `NONE` / `SIMULATION_ONLY` boundary.

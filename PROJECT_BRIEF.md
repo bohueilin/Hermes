@@ -15,7 +15,9 @@ For current Hermes, the trace supports an internally consistent advancement deci
 
 ## Problem
 
-Hermes now produces structured, independently re-verifiable simulation evidence, but reviewers consume it through CLI output and raw files. That makes it difficult to answer quickly and accurately:
+Before Phase 6, Hermes produced structured, independently re-verifiable simulation evidence, but
+reviewers had to consume legacy CLI output and raw files. That made it difficult to answer quickly
+and accurately:
 
 - what was tested;
 - what the policy proposed, the shield permitted, and the environment executed;
@@ -33,9 +35,10 @@ An autonomy product leader, safety reviewer, simulation engineer, autonomy devel
 
 ## Phase 6 product objective
 
-Create a **local, read-only Evidence Review Workbench** that makes existing Hermes evidence understandable without weakening its integrity model.
+Hermes now provides a **local, read-only Evidence Review Workbench** that makes existing evidence
+understandable without weakening its integrity model.
 
-The workbench must answer:
+The workbench answers:
 
 1. What exact artifact was reviewed?
 2. Did stored verification accept it as internally consistent?
@@ -50,10 +53,11 @@ The workbench must answer:
 
 ## Core trust states
 
-Stage 6A is a CONDITIONAL GO with no unresolved P0 design decision. The frozen implementation uses
-strict immutable portable ReviewEnvelope/ComparisonEnvelope version 1.0, a framework-independent
-review core, and optional Streamlit >=1.37,<2. Conditions are Stage 6B implementation and
-regression gates, not unresolved architecture choices.
+Phase 6 completed implementation and adversarial hardening at checkpoint `90fb7d8`. The complete
+and non-MetaDrive selections each passed 720 tests, and independent reviewers returned GO with no
+open P0/P1. The delivered implementation uses strict immutable portable
+`ReviewEnvelope`/`ComparisonEnvelope` version 1.0, a framework-independent review core, and
+optional Streamlit `>=1.37,<2`.
 
 The workbench must always expose these independently:
 
@@ -68,7 +72,8 @@ The workbench must always expose these independently:
 
 ## Core jobs to be done
 
-Authoritative status is independently fixed at NOT_DEFINED for Phase 6.
+Authoritative/supersession status is independently fixed at `NOT_DEFINED` for Phase 6; this is
+separate from authorization `NOT_EVALUATED`.
 
 1. Select one exact artifact under an allowed local artifact root.
 2. Capture and verify it without mutation or simulator rerun.
@@ -84,7 +89,7 @@ The canonical bundle is exactly the ten names in REQUIRED_ARTIFACT_FILES. The re
 source inventory and observed/computed bundle roots from the same descriptor-safe capture. It may
 not reopen files for presentation.
 
-Phases 0–5 already provide:
+The pre-Phase 6 foundation provides:
 
 - strict versioned scenarios and evidence;
 - deterministic fake and MetaDrive adapters;
@@ -96,11 +101,11 @@ Phases 0–5 already provide:
 - tamper and false-pass tests;
 - local CI/developer workflows.
 
-Phase 6 must reuse these capabilities rather than recreate them.
+Phase 6 reuses these capabilities rather than recreating them.
 
 ## Phase 6 scope
 
-### In scope
+### Delivered scope
 
 - Canonical bundle contract reconciliation.
 - `ReviewEnvelope v1` and `ComparisonEnvelope v1`.
@@ -147,6 +152,32 @@ A reviewer can:
 
 No approval or write action exists.
 
+## Delivered local interfaces
+
+Selections are exact relative paths under the configured artifact root; they are not prefixed with
+`artifacts/` and are never chosen automatically.
+
+```bash
+hermes review-artifact handoff-phase5-demo \
+  --artifact-root artifacts \
+  --format json
+
+hermes review-compare \
+  handoff-p3-lead-baseline \
+  handoff-p3-lead-shielded \
+  --artifact-root artifacts \
+  --format text
+
+hermes workbench \
+  --artifact-root artifacts \
+  --host 127.0.0.1 \
+  --port 8501 \
+  --no-browser
+```
+
+The CLI and workbench consume the same immutable facade. A review performs a fresh root-contained
+capture and stored verification, never a simulator/policy run or artifact write.
+
 ## Success metrics for Phase 6
 
 ### Correctness
@@ -170,12 +201,22 @@ A new reviewer can answer:
 
 ### Developer quality
 
-- Existing test and Ruff baseline remains green.
+- Complete and non-MetaDrive test selections passed 720 tests at the adversarial-hardening
+  checkpoint; Ruff and the focused Phase 6 matrix passed.
 - UI dependencies remain optional.
 - Workbench binds to loopback only.
 - No simulator starts during review tests.
 - Review commands exit 0 for valid PASS, CONDITIONAL, and HOLD reviews; invalid evidence exits 30;
   path/configuration/operational/incompatible cases exit 40. Legacy command exits do not change.
+
+## Accepted residual risk
+
+The process-local facade cache and active-session maps currently grow with each explicit selection.
+The adversarial review classified this as P2 availability debt because Hermes performs no artifact
+discovery or automatic loading, requires a local reviewer to submit each selection, and recovers on
+process restart. Add a deterministic synchronized LRU before materially increasing single-user
+artifact scale. This residual does not change evidence, bypass verification, or expand the
+local-only scope.
 
 ## Executive narrative
 

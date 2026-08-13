@@ -178,3 +178,48 @@ Record actual reviewer observations only. The reviewer must identify exact artif
 rationale, hard failure, unavailable evidence, shield change, improvements and regressions,
 authenticity, and physical deployment permission. Any false answer that PASS means authenticated,
 safe, approved, or deployable is a comprehension defect to fix before completion.
+
+## 10. Implemented local workbench
+
+Checkpoint `90fb7d8` implements this information architecture as six Streamlit screens selected by
+an explicit text radio control:
+
+1. Intake / verification
+2. Review summary / trust
+3. Findings / evidence coverage
+4. Timeline
+5. Provenance / integrity / limitations
+6. Compatible comparison
+
+These six screens realize the three design-time conceptual areas (artifact review, comparison, and
+limitations) without adding authority. The design-time directory-list accessibility note was
+resolved to a keyboard-accessible exact text input so the UI never discovers or suggests an
+artifact.
+
+The configured artifact root is fixed at launch. Intake accepts one exact root-relative string and
+does nothing until **Verify stored evidence** is selected. Comparison likewise accepts two exact
+root-relative strings and does nothing until **Compare stored evidence** is selected. With root
+`artifacts`, enter `handoff-phase5-demo`; do not enter `artifacts/handoff-phase5-demo`. There is no
+directory listing, newest-run choice, upload, edit, approval, promotion, release, or deployment
+control.
+
+The implemented timeline uses deterministic 50-event pages, explicit track filtering, total event
+and track counts, typed unavailable rows, and exact-sequence drill-down. Each explicit Verify
+submission resets both timeline paging and prior event-inspection state. The comparison screen
+renders typed tables for both sides, compatibility, dedicated deltas, all four outcome partitions,
+availability changes, and limitations. Incompatibility returns after reasons/limitations and never
+renders delta or chart claims; the UI adds no winner or composite score.
+
+The version 1 workbench does not draw a comparison chart; the typed `chart_series` remains available
+in the portable comparison/CLI JSON for a future safe renderer.
+
+All artifact-derived table cells use the shared safe text projection with explicit truncation and
+original-scalar-count columns. CLI human text applies the same 1,024-input-scalar boundary and
+renders every Unicode `Cc`/`Cf` control visibly. Valid JSON stays full and canonical. Automated
+AppTests covered all six screens, PASS/CONDITIONAL/HOLD/INVALID evidence, compatible/incompatible/
+invalid comparison, stale mutation recapture, source-byte identity, and runtime/network/process
+import bombs without launching a real server or browser.
+
+No manual visual inspection or human-comprehension participant result is recorded by the automated
+checkpoint. Section 9 remains the manual acceptance script; observations must be recorded when an
+actual reviewer performs it and must never be fabricated.
