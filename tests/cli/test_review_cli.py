@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -594,3 +596,142 @@ def test_review_cli_rejects_unsupported_format_before_review(
     assert result.exit_code == 40
     assert "[CONFIGURATION_ERROR]" in result.output
     assert "unsupported format 'yaml'" in result.output
+
+
+def test_workbench_cli_lazily_calls_public_launcher_with_exact_options(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import hermes.workbench as workbench_api
+
+    root = tmp_path / "artifacts"
+    root.mkdir()
+    calls: list[tuple[Path, str, int, bool]] = []
+
+    def fake_launch(
+        artifact_root: Path,
+        *,
+        host: str,
+        port: int,
+        no_browser: bool,
+    ) -> int:
+        calls.append((artifact_root, host, port, no_browser))
+        return 0
+
+    monkeypatch.setattr(workbench_api, "launch_workbench", fake_launch)
+
+    result = runner.invoke(
+        app,
+        [
+            "workbench",
+            "--artifact-root",
+            str(root),
+            "--host",
+            "::1",
+            "--port",
+            "43210",
+            "--no-browser",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert calls == [(root, "::1", 43210, True)]
+
+
+def test_workbench_cli_rejects_public_bind_as_configuration_error_without_streamlit(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "artifacts"
+    root.mkdir()
+
+    result = runner.invoke(
+        app,
+        [
+            "workbench",
+            "--artifact-root",
+            str(root),
+            "--host",
+            "0.0.0.0",
+        ],
+    )
+
+    assert result.exit_code == 40
+    assert "[CONFIGURATION_ERROR]" in result.output
+    assert "numeric loopback" in result.output
+
+
+def test_workbench_cli_maps_nonzero_child_status_to_operational_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import hermes.workbench as workbench_api
+
+    root = tmp_path / "artifacts"
+    root.mkdir()
+    monkeypatch.setattr(workbench_api, "launch_workbench", lambda *args, **kwargs: 9)
+
+    result = runner.invoke(app, ["workbench", "--artifact-root", str(root)])
+
+    assert result.exit_code == 40
+    assert "[OPERATIONAL_ERROR]" in result.output
+    assert "status 9" in result.output
+
+
+def test_workbench_cli_maps_missing_optional_extra_to_configuration_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import hermes.workbench as workbench_api
+
+    root = tmp_path / "artifacts"
+    root.mkdir()
+
+    def unavailable(*args: object, **kwargs: object) -> int:
+        raise ValueError("Streamlit is unavailable; install Hermes with the .[workbench] extra")
+
+    monkeypatch.setattr(workbench_api, "launch_workbench", unavailable)
+
+    result = runner.invoke(app, ["workbench", "--artifact-root", str(root)])
+
+    assert result.exit_code == 40
+    assert "[CONFIGURATION_ERROR]" in result.output
+    assert ".[workbench]" in result.output
+
+
+def test_workbench_cli_requires_explicit_artifact_root() -> None:
+    result = runner.invoke(app, ["workbench"])
+
+    assert result.exit_code == 40
+    assert "[USAGE_ERROR]" in result.output
+    assert "artifact-root" in result.output
+
+
+def test_workbench_help_states_local_read_only_simulation_boundary_and_extra() -> None:
+    result = runner.invoke(app, ["workbench", "--help"])
+
+    assert result.exit_code == 0
+    lowered = result.output.lower()
+    assert "local-only" in lowered
+    assert "read-only" in lowered
+    assert "simulation-only" in lowered
+    assert ".[workbench]" in result.output
+
+
+def test_cli_import_has_no_invalid_escape_deprecation_warning(
+    repository_root: Path,
+) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-W",
+            "error::DeprecationWarning",
+            "-c",
+            "import hermes.cli",
+        ],
+        cwd=repository_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr

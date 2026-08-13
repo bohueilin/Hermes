@@ -797,6 +797,55 @@ def review_compare_command(
         _render_comparison_envelope_text(result)
 
 
+@app.command("workbench")
+def workbench_command(
+    artifact_root: Annotated[
+        Path,
+        typer.Option(
+            "--artifact-root",
+            help="Required allowed root containing stored simulation evidence.",
+        ),
+    ],
+    host: Annotated[
+        str,
+        typer.Option("--host", help="Numeric loopback bind address only."),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option("--port", help="Explicit local TCP port from 1 through 65535."),
+    ] = 8501,
+    no_browser: Annotated[
+        bool,
+        typer.Option("--no-browser", help="Do not ask Streamlit to open a browser."),
+    ] = False,
+) -> None:
+    r"""Launch the local-only, read-only, simulation-only UI; install .\[workbench]."""
+    from hermes.workbench import launch_workbench
+
+    try:
+        status = launch_workbench(
+            artifact_root,
+            host=host,
+            port=port,
+            no_browser=no_browser,
+        )
+    except ValueError as exc:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            _neutralize_artifact_text(exc),
+        )
+    except Exception as exc:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            _neutralize_artifact_text(f"{type(exc).__name__}: {exc}"),
+        )
+    if status != 0:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            f"workbench process exited with status {status}",
+        )
+
+
 @app.command("compare")
 def compare_command(
     baseline_dir: Annotated[Path, typer.Argument(help="Baseline evidence bundle.")],
