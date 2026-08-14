@@ -1856,9 +1856,11 @@ def _render_timeline(envelope: ReviewEnvelope | None) -> None:
         _render_quarantine(envelope)
         return
     _render_decision_trust(envelope)
+    # Explicit Verify resets to All tracks; a finding jump intentionally names its preset.
     preset = st.radio(
         "Timeline preset",
         _TIMELINE_PRESET_NAMES,
+        index=_TIMELINE_PRESET_NAMES.index("All tracks"),
         key="timeline_preset",
     )
     if st.session_state.get("timeline_preset_applied") != preset:

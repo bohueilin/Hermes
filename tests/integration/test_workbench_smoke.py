@@ -240,6 +240,39 @@ def test_workbench_timeline_filter_changes_only_visible_tracks(
     )
 
 
+def test_workbench_first_timeline_mount_uses_all_tracks_control_and_projection(
+    workbench_root: Path,
+) -> None:
+    app = _verify(_app(workbench_root), "handoff-phase5-demo")
+    # Model the preset widget's first mount after Verify reset state on another page.
+    del app.session_state["timeline_preset"]
+
+    app = _review_section(app, "Timeline")
+
+    expected_tracks = [
+        "raw_observation",
+        "delivered_observation",
+        "result_observation",
+        "candidate_action",
+        "permitted_action",
+        "executed_action",
+        "override_reasons",
+        "observation_fault_reasons",
+        "control_fault_reasons",
+        "collision_count",
+        "offroad",
+        "speed_mps",
+        "route_progress_pct",
+        "ttc_s",
+        "policy_latency_ms",
+        "verifier_triggering_findings",
+    ]
+    assert list(app.exception) == []
+    assert app.radio(key="timeline_preset").value == "All tracks"
+    assert app.multiselect(key="visible_timeline_tracks").options == expected_tracks
+    assert app.multiselect(key="visible_timeline_tracks").value == expected_tracks
+
+
 def test_workbench_findings_renders_recursive_threshold_and_exact_event_drilldown(
     workbench_root: Path,
 ) -> None:
