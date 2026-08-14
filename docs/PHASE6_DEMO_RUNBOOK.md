@@ -56,6 +56,32 @@ comparison, 30 for `phase1-tampered`, and 40 for the incompatible Phase 5/MetaDr
 `CONDITIONAL` and `HOLD` are accepted gate outcomes for an internally consistent review, so the new
 review command intentionally exits 0 for them.
 
+## 3B. Reviewer-comprehension navigation
+
+The current workbench has three primary destinations:
+
+```text
+Review
+  Select & Verify
+  Overview
+  Evidence
+  Timeline
+  Provenance
+Compare
+Evidence limitations
+```
+
+For every Review demo, enter the exact root-relative locator on `Select & Verify`, activate
+`Verify selected artifact`, then keep the submitted locator visible while moving through Review.
+On Overview, present artifact → gate → rationale → integrity/authority → required unavailable
+evidence → limitations before technical hashes. Use Evidence's six ordered groups and Timeline's
+`Decision evidence`, `Action accountability`, `Fault behavior`, and `All tracks` presets. A preset
+or finding jump changes presentation only.
+
+For comparison, submit blank-by-default baseline and candidate explicitly. Present compatibility
+before deltas, then gate/hard failures/improvements/regressions/unchanged/not comparable/
+availability/advancement interpretation. Never summarize the pair as a winner or safer candidate.
+
 ## 4. Demo 1 — valid nominal evidence
 
 Workbench selection relative to `artifacts`:
@@ -215,6 +241,40 @@ The accepted Phase 6 P2 is process-lifetime cache/session growth after repeated 
 selections. Restart recovers memory; add a deterministic synchronized LRU before materially
 increasing single-user artifact scale.
 
+The later reviewer-comprehension implementation at `80439c5` recorded 746 full tests passing and a
+15-attack automated Task 3 GO with no P0/P1 reproduced. That audit verified strict quarantine,
+submitted-side identity, hard-failure visibility, presentation-only presets/jumps, no missing-as-
+zero, no incompatible deltas, no winner language, stable references, and reachable keyed controls.
+It did not establish rendered visual hierarchy, CSS focus, screen-reader behavior, contrast, 200%
+reflow, or participant comprehension.
+
+A subsequent in-app browser DOM walkthrough found that first Timeline mount showed the All-tracks
+projection while its radio indicated Decision evidence. Commit `cbced6e` fixed the presentation
+truth mismatch RED-first. The targeted test passed after failing first, 88 scoped and two independent
+targeted tests passed, and fresh DOM inspection confirmed `All tracks` plus the exact 16-track
+multiselect. The screenshot backend produced blank/non-visible images; do not use them as visual
+evidence.
+
+The walkthrough also found stale dynamic H2 permalinks after radio reruns. Commit `0fe3459` gives
+all seven primary H2s explicit anchors. Its targeted regression failed then passed; 83 focused and
+two independent targeted tests passed, with Ruff/diff clean. Fresh cross-section browser DOM
+observed Overview `#overview`, Timeline `#timeline`, Compare `#compare`, and exception-text count 0.
+The P2 is closed; no manual visual or accessibility status changes.
+
+Final Task 4 validation at `0fe3459` with the documentation working tree recorded 756 full tests,
+756 non-MetaDrive tests, and 506 focused Phase 6 tests. Both editable installs succeeded;
+repository Ruff and diff/cached checks passed; doctor reported 17 PASS, one intended 15-entry
+dirty-tree WARN, one optional DISPLAY `NOT_AVAILABLE`, and no FAIL. Six review and three comparison
+CLI cases matched expected contracts, and all 100 canonical files across ten retained artifact
+directories were byte-identical before and after. No simulator or policy was launched.
+
+The browser document object model (DOM) retained-state walkthrough covered initial UNVERIFIED,
+nominal PASS, collision HOLD, INVALID quarantine/no stored-PASS leak, Timeline/action
+accountability, Provenance/limitations, compatible mixed comparison, incompatible fail-closed
+comparison, and stable anchor hrefs without exception/leak. Pixel/manual visual quality, 200%
+reflow, visible CSS focus, screen-reader behavior, contrast, accessibility audit, and human
+comprehension remain `NOT YET OBSERVED`.
+
 ## 14. Human observation record
 
 Automated validation is not a manual visual or comprehension result. When an actual reviewer runs
@@ -231,3 +291,21 @@ Scope: SIMULATION_ONLY
 
 Until that observation exists, report the human-comprehension gate as `NOT YET OBSERVED`; do not
 infer it from AppTest output or fabricate a participant result.
+
+Use these separate records:
+
+- `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md` for rendered screenshots, keyboard, screen reader,
+  focus/announcement, non-color/contrast, tables, and 200% zoom/reflow;
+- `docs/PHASE6_USABILITY_TEST_PLAN.md` for Tasks 1–10 with 6–10 future participants; and
+- `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` for one actual participant session.
+
+Keep the closing statuses independent:
+
+```text
+Automated correctness: OBSERVED
+Browser DOM structural walkthrough: OBSERVED for initial/PASS/HOLD/INVALID/Timeline/Provenance/
+limitations/compatible/incompatible retained states, anchor hrefs, and no exception/leak
+Manual visual review: NOT YET OBSERVED
+Accessibility audit: NOT YET OBSERVED
+Human comprehension: NOT YET OBSERVED
+```

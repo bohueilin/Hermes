@@ -12,7 +12,9 @@ Hermes is for simulation and closed-lab learning only. It must not connect to a 
 
 ## Current status
 
-Phases 0–6 are implemented on `feat/phase6-evidence-workbench`. The simulator-neutral evidence
+Phases 0–6 are implemented. The Phase 6 evidence authority was delivered on
+`feat/phase6-evidence-workbench`; the presentation-only reviewer-comprehension iteration is on
+`feat/phase6-reviewer-comprehension`. The simulator-neutral evidence
 pipeline supports a deterministic fake adapter, a pinned MetaDrive 0.4.3 physics run with an
 installed IDM policy, trace-bound deterministic-shield decisions for two bounded MetaDrive
 challenge scenarios, schema-2 evidence for deterministic observation/control faults, and a local
@@ -20,7 +22,30 @@ read-only Evidence Review Workbench. Phase 6 adds immutable portable review/comp
 root-contained review CLI commands, and an optional Streamlit UI that consumes the same verified
 facade. The implementation and adversarial-hardening checkpoint is `90fb7d8`; both the complete and
 non-MetaDrive selections passed 720 tests, with independent review GO and no open P0/P1. No remote
-CI run is claimed. Cloud/multi-user review, authenticity, and RL work remain deferred.
+CI run is claimed. On the later reviewer-comprehension branch, commits `685b92d`, `e2eab34`, and
+`80439c5` reorganize the workbench into Review/Compare/Evidence limitations, add task-oriented
+evidence and Timeline presentation, and harden submitted-state handling. An independent automated
+audit recorded 746 passing tests and no reproduced P0/P1. Manual visual review, accessibility audit,
+and human comprehension remain `NOT YET OBSERVED`. A subsequent browser DOM walkthrough found a
+first-Timeline-mount radio/projection mismatch; `cbced6e` fixed it RED-first, with 88 scoped and two
+independent targeted tests passing and fresh DOM parity. Pixel screenshots were unsupported/blank,
+so no manual visual or accessibility result is inferred. A second browser P2—stale dynamic H2
+permalinks after radio reruns—was fixed in `0fe3459` with explicit anchors for all seven H2s, one
+RED/one GREEN, 83 focused, and two independent targeted passes. Fresh DOM observed Overview
+`#overview`, Timeline `#timeline`, Compare `#compare`, and zero exception text. Cloud/multi-user
+review, authenticity, and RL work remain deferred.
+
+The final pre-documentation-commit checkpoint installed both `.[dev,workbench]` and `.[dev]`, then
+recorded 756 full tests, 756 non-MetaDrive tests, and 506 tests in the focused 13-file Phase 6
+matrix. Repository Ruff and diff/cached checks passed; doctor reported 17 PASS, one intended
+15-entry dirty-tree WARN, one optional DISPLAY `NOT_AVAILABLE`, and no FAIL. Six review and three
+comparison CLI cases matched their expected contracts, and all 100 canonical files across ten
+retained artifact directories were byte-identical before and after. The browser document object
+model (DOM) retained-state walkthrough covered initial UNVERIFIED, PASS, HOLD, INVALID quarantine,
+Timeline/action accountability, Provenance/limitations, compatible mixed comparison, incompatible
+fail-closed comparison, and stable anchor hrefs without exception or stored-PASS leakage.
+Pixel/manual visual quality, 200% reflow, visible CSS focus, screen-reader behavior, contrast,
+accessibility audit, and human comprehension remain `NOT YET OBSERVED`.
 
 The fake adapter is an architectural test double, not a vehicle-physics model. MetaDrive remains
 lazy and optional: fake runs, stored artifact verification, and stored artifact comparison do not
@@ -254,6 +279,36 @@ remaining accepted P2 is linear process-lifetime growth of explicitly selected r
 entries. Restarting the single-user local process recovers that memory; a bounded synchronized LRU
 is recommended before substantially increasing artifact scale.
 
+The workbench information architecture is now:
+
+```text
+Review
+  Select & Verify
+  Overview
+  Evidence
+  Timeline
+  Provenance
+Compare
+Evidence limitations
+```
+
+Selection is still a blank-by-default exact root-relative text entry followed by explicit Verify.
+There is no picker or autocomplete because the public facade has no descriptor-safe discovery API;
+adding discovery also requires the bounded-LRU predecessor. The selected locator stays visible,
+findings use requiredness-first groups, Timeline has Decision evidence / Action accountability /
+Fault behavior / All tracks presets, and compatible comparisons always show improvements and
+regressions together with a no-overall-advancement interpretation.
+
+Human review artifacts are:
+
+- `docs/PHASE6_USABILITY_TEST_PLAN.md` — prospective Tasks 1–10 for 6–10 participants;
+- `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` — blank evidence record; and
+- `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md` — executable visual, keyboard, screen-reader, contrast,
+  table, focus, and 200% zoom/reflow checks.
+
+Automated correctness does not promote those manual gates. No WCAG or reviewer-readiness claim is
+made without actual observation.
+
 ## Evidence bundle
 
 Every completed run must preserve:
@@ -311,6 +366,8 @@ Read before editing:
 5. PR-safe CI and developer-experience hardening (implemented in Phase 5).
 6. Immutable review envelopes, root-contained review CLI, and local read-only workbench
    (implemented and adversarially hardened in Phase 6).
+7. Reviewer-comprehension presentation and human-review package (implementation automated-audit
+   green; manual visual, accessibility, and participant evidence still open).
 
 Cloud/multi-user review, RL, CARLA, ROS 2, Autoware, hardware integration, and real-log training
 remain deferred.

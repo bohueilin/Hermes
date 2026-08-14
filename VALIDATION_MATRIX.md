@@ -20,14 +20,49 @@ no human-participant result is inferred from automated coverage.
 | Adversarial decision | GO; no open P0/P1 |
 | Accepted residual | P2 process-lifetime cache/session growth after explicit selections |
 
+### Reviewer-comprehension implementation checkpoint
+
+| Item | Recorded result |
+|---|---|
+| Branch | `feat/phase6-reviewer-comprehension` |
+| Task 3 production/audit HEAD | `80439c5382cf5e0744cdcec7402633e4bcc81e1e` |
+| Current pre-documentation HEAD | `0fe3459ac87b78a023bb477ebf1210b2a9d31792` |
+| Design / implementation / fix commits | `685b92d` / `e2eab34` / `80439c5` / `cbced6e` / `0fe3459` |
+| Complete tests at Task 3 | 746 passed |
+| Final full / non-MetaDrive | 756 passed / 756 passed |
+| Final focused 13-file matrix | 506 passed |
+| Focused workbench/projection/architecture | 136 passed |
+| Focused review/capture/comparison/CLI/artifact/launcher | 223 passed |
+| Adversarial attacks | A01–A15 passed; GO; no P0/P1 reproduced |
+| Browser-DOM follow-up | First-mount mismatch fixed RED-first; 88 scoped + 2 targeted passed; All tracks/16-track parity observed |
+| Stable H2 anchors | P2 fixed RED-first; 83 focused + 2 targeted passed; exact DOM hrefs observed; zero exceptions |
+| Installs | `.[dev,workbench]` and `.[dev]` succeeded |
+| Ruff / diff / cached checks | passed; staged index empty |
+| Doctor | 17 PASS, one intended 15-entry dirty-tree WARN, one optional DISPLAY NOT_AVAILABLE, 0 FAIL |
+| Review/compare CLI | six review and three comparison cases matched expected exits/contracts |
+| Artifact immutability | 100 canonical files across ten retained directories exactly unchanged |
+| Browser DOM retained states | initial/PASS/HOLD/INVALID/Timeline/Provenance/limitations/compatible/incompatible; no exception/leak |
+| Manual visual review | `NOT YET OBSERVED` |
+| Accessibility audit | `NOT YET OBSERVED` |
+| Human comprehension | `NOT YET OBSERVED` |
+
+The in-app screenshot backend returned visibility false and uniformly blank images. Browser
+document object model (DOM) structure is observed for the retained-state workflow above, but this
+is structural rather than pixel/manual evidence. CSS focus, 200% visual reflow, screen reader,
+contrast, accessibility audit, and human comprehension remain unobserved.
+
+All seven primary second-level headings (H2s) now have explicit anchors at `0fe3459`. Code/test
+closure and narrow browser DOM closure are observed: Overview `#overview`, Timeline `#timeline`,
+Compare `#compare`, and exception-text count 0.
+
 ## 2. Baseline preflight
 
 | Check | Command | Required result |
 |---|---|---|
 | Repository | `pwd` | `/Users/bohueilin/Documents/GitHub/Hermes` |
 | Environment | `python --version && which python` | Python 3.11 in `hermes-dev` |
-| Branch | `git branch --show-current` | `feat/phase6-evidence-workbench` |
-| Status | `git status --short` | Clean before each major stage |
+| Branch | `git branch --show-current` | `feat/phase6-reviewer-comprehension` for this iteration |
+| Status | `git status --short` | Only explicitly reviewed iteration changes and preserved user-owned prompt; clean before each commit |
 | Current history | `git log --oneline --decorate -8` | Phase 0–6 history preserved |
 | Install | `python -m pip install -e ".[dev]"` | Exit 0 |
 | Tests | `python -m pytest -q` | Current full suite passes |
@@ -267,10 +302,11 @@ Required:
 - [x] No telemetry or external network call.
 - [x] No upload, write, approve, run, sign, or deploy control.
 - [x] Startup does not launch simulator.
-- [ ] Shutdown is clean.
+- [x] Shutdown is clean.
 
-The shutdown item remains an explicit manual launcher check; automated finalization did not start a
-real server or browser. Launcher argument and subprocess behavior are covered without network use.
+The observed walkthrough used the real loopback server and browser DOM. Ctrl-C stopped the server
+cleanly, the port 8501 listener was gone, and browser tabs were finalized. Pixel screenshots,
+manual visual quality, and accessibility were not established.
 
 ## 14A. Review CLI exit matrix
 
@@ -291,14 +327,27 @@ Legacy run, verify-artifact, and compare exits must remain unchanged.
 
 - [x] Intake waits for verification before accepting gate result.
 - [x] Mandatory trust strip appears on every run view.
+- [x] Primary order is Review / Compare / Evidence limitations.
+- [x] Review secondary order is Select & Verify / Overview / Evidence / Timeline / Provenance.
+- [x] Submitted locator persists across Review and stays separate from manifest run ID.
+- [x] Gate/integrity are Tier 1 and the five authority boundaries remain independent Tier 2 fields.
 - [x] PASS, HOLD, CONDITIONAL, and INVALID render distinctly.
-- [x] Findings table source-links to event sequences.
+- [x] Findings use the six frozen groups and a detail focus cannot hide failed required evidence.
+- [x] Findings table source-links to first supporting event without inventing a sequence.
 - [x] Timeline distinguishes raw, delivered, result, candidate, permitted, and executed values.
+- [x] Four Timeline presets and finding jump alter presentation only.
 - [x] Provenance distinguishes recorded origin from authenticated origin.
-- [x] Comparison shows both directions.
+- [x] Comparison requires explicit blank-by-default baseline/candidate and shows all mandatory
+  bidirectional synthesis sections.
 - [x] Incompatible comparison renders no misleading chart.
 - [x] No automatic latest artifact is selected.
 - [x] Filtering and pagination change presentation only.
+- [x] Invalid selection cannot replace the last accepted review or comparison pair.
+- [x] New Verify clears stale finding, Timeline, page, filter, and jump state.
+
+Task 3 automated these structural/semantic cases. The checkmarks do not establish CSS focus,
+screen-reader output, contrast, visual hierarchy, zoom/reflow, WCAG conformance, or human
+comprehension.
 
 ## 16. Human comprehension script
 
@@ -319,6 +368,43 @@ No separate human-participant session is claimed at the `90fb7d8` checkpoint. De
 Streamlit AppTest coverage verifies the six screens and required trust content; a future usability
 study remains distinct from implementation acceptance.
 
+The current prospective protocol is `docs/PHASE6_USABILITY_TEST_PLAN.md`. It defines Tasks 1–10 for
+6–10 future participants across product, safety, simulation, and engineering:
+
+1. nominal PASS;
+2. collision HOLD;
+3. tampered evidence;
+4. required/optional/not-applicable missing evidence;
+5. action accountability;
+6. mixed lead comparison;
+7. mixed cut-in comparison;
+8. recorded provenance versus authenticated origin;
+9. incompatible comparison; and
+10. keyboard/screen-reader workflow.
+
+Use `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` for each actual participant. There is currently no
+retained valid fixture known to expose all Task 4 unavailable states; leave that task `NOT RUN`
+rather than mutating or fabricating evidence. Human comprehension remains `NOT YET OBSERVED`.
+
+## 16A. Manual visual and accessibility evidence
+
+Use `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md`. Required rendered states include initial UNVERIFIED,
+PASS, HOLD, INVALID_EVIDENCE, typed required-unavailable evidence when a valid fixture exists,
+Timeline accountability, Provenance/limitations, compatible mixed comparisons, incompatible
+comparison, visible focus, and 200% Overview/Evidence/Timeline/Compare reflow.
+
+Required manual checks include keyboard, screen reader, focus/announcement, non-color/contrast,
+table alternatives, stable rows, essential-content horizontal-scroll dependence, and bounded inert
+artifact text. Status at this checkpoint:
+
+```text
+Manual visual review: NOT YET OBSERVED
+Accessibility audit: NOT YET OBSERVED
+Human comprehension: NOT YET OBSERVED
+```
+
+No WCAG conformance claim is permitted without an actual audit.
+
 ## 17. Full quality gate
 
 ```bash
@@ -330,6 +416,22 @@ python -m hermes doctor
 git diff --check
 git status --short
 ```
+
+Observed at `0fe3459` with the intended Task 4 documentation/input tree:
+
+| Gate | Result |
+|---|---|
+| `.[dev,workbench]` / `.[dev]` installs | both succeeded |
+| Full tests | 756 passed |
+| Non-MetaDrive | 756 passed |
+| Focused 13-file matrix | 506 passed |
+| Ruff | all checks passed |
+| Doctor | 17 PASS / 1 WARN / 1 NOT_AVAILABLE / 0 FAIL |
+| Diff/cached | clean; staged index empty |
+| Six review / three comparison commands | expected gate/integrity/compatibility/exits |
+| Ten-directory artifact map | all 100 canonical files byte-identical before/after |
+| Server lifecycle | stopped cleanly; port 8501 listener gone |
+| `third_party/metadrive` / remote | clean / no remote action |
 
 ## 18. Stop conditions
 
@@ -347,6 +449,6 @@ Phase 6 is HOLD when any is true:
 - Existing evidence tests are weakened.
 - P0 adversarial finding remains open.
 
-None of these stop conditions was present at the implementation/adversarial checkpoint. The open P2
+None of these stop conditions was present at the final Task 4 validation checkpoint. The open P2
 cache/session growth residual is availability debt, requires repeated explicit local selections,
 and does not change the GO decision for the single-user local scope.

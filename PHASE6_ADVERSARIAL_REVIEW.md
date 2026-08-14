@@ -1,5 +1,112 @@
 # Hermes Phase 6 adversarial review
 
+## Reviewer-comprehension re-audit addendum — 2026-08-13
+
+The original Phase 6 audit below remains the evidence-authority/security record at `90fb7d8`. A
+fresh presentation-focused Task 3 audit reviewed the later implementation at
+`80439c5382cf5e0744cdcec7402633e4bcc81e1e` on
+`feat/phase6-reviewer-comprehension`.
+
+**Automated verdict: GO.** The auditor executed a predeclared 15-attack matrix against PASS trust
+dominance structure, invalid Review/Compare quarantine, side pinning, incompatible-delta leakage,
+missing-as-zero, hard-failure visibility, preset/filter/jump immutability, stale state, inert/bounded
+artifact text, authority-implying selection copy, persistent simulation scope, winner language,
+source references, and reachable keyed controls. A01–A15 passed; no P0 or P1 was reproduced and no
+tracked fix/commit was required.
+
+Fresh Task 3 gates at that production HEAD recorded:
+
+- focused workbench/projection/architecture: 136 passed;
+- focused review/capture/comparison/CLI/artifact/launcher: 223 passed;
+- full suite: 746 passed;
+- Ruff: all checks passed;
+- doctor: 17 PASS, one expected dirty-tree WARN for the user-owned untracked prompt, one optional
+  display `NOT_AVAILABLE`, no FAIL;
+- `git diff --check`: clean;
+- `third_party/metadrive`: clean; and
+- no tracked diff, source-artifact mutation, simulator/policy/server/browser/remote action.
+
+One source-reference probe observed broader presentation-only Timeline references after navigation,
+but no previous reference disappeared and the exact selected-event/comparison references, facade
+JSON, gate/findings/counts, all ten source hashes, and full source-reference record set remained
+byte-identical. It did not meet the P0/P1 fix threshold and remains, at most, a P2 presentation-state
+rehydration observation.
+
+### Browser-DOM follow-up
+
+A later real in-app browser DOM walkthrough reproduced a separate bounded presentation defect on
+the first Timeline mount: the preset radio indicated `Decision evidence`, while the track
+multiselect/projection showed `All tracks`. This was a control/projection truth mismatch, not a core
+envelope, count, gate, or authority change.
+
+The fix followed RED/GREEN TDD and was committed as
+`cbced6e57670ae7aaf63f9ce875122ac7471e348` (`fix: align timeline preset and projection`):
+
+- RED: one targeted test failed on Decision evidence radio versus All tracks projection;
+- GREEN: the targeted test passed;
+- focused regression: 88 passed;
+- independent root confirmation: two targeted tests passed;
+- Ruff and diff checks: clean; and
+- fresh browser DOM: `All tracks` radio plus exact 16-track multiselect parity.
+
+The in-app screenshot backend reported element visibility false and yielded uniformly blank images.
+Those images are not visual evidence. Browser DOM structural parity is `OBSERVED`; pixel/manual
+visual quality, 200% visual reflow, CSS focus, screen-reader behavior, contrast, accessibility audit,
+and human comprehension remain `NOT YET OBSERVED`.
+
+The browser walkthrough subsequently reproduced a second presentation P2: Streamlit-generated H2
+permalinks could retain stale dynamic hrefs after radio reruns. Commit
+`0fe3459ac87b78a023bb477ebf1210b2a9d31792` (`fix: stabilize workbench heading anchors`) adds
+explicit stable anchors for all seven primary H2s: Select & Verify, Overview, Evidence, Timeline,
+Provenance, Compare, and Evidence limitations.
+
+Closure evidence:
+
+- RED: one targeted stale-permalink test failed;
+- GREEN: the same targeted test passed;
+- focused regression: 83 passed;
+- independent root confirmation: two targeted tests passed;
+- Ruff and diff checks: clean; and
+- fresh cross-section browser DOM: Overview `#overview`, Timeline `#timeline`, Compare `#compare`,
+  and exception-text count 0.
+
+The finding is closed at the code/test and narrow DOM-structure boundaries and is not an accepted
+residual. Stable anchors do not establish pixel/manual visual quality, focus behavior, screen-reader
+output, contrast, accessibility conformance, or comprehension.
+
+These manual-only gates remain open:
+
+```text
+Manual visual review: NOT YET OBSERVED
+Accessibility audit (including screen reader, contrast, 200% reflow, visible focus): NOT YET OBSERVED
+Human comprehension: NOT YET OBSERVED
+```
+
+### Final Task 4 verification checkpoint
+
+At `0fe3459` with the Task 4 documentation working tree, both editable installs succeeded; the full
+and non-MetaDrive suites each recorded 756 passed, and the focused 13-file Phase 6 matrix recorded
+506 passed. Repository Ruff and diff/cached checks passed; doctor reported 17 PASS, one intended
+15-entry dirty-tree WARN, one optional DISPLAY `NOT_AVAILABLE`, and 0 FAIL. Six review and three
+comparison CLI cases matched their expected trust, quarantine, compatibility, and exit contracts.
+All 100 canonical files across ten retained artifact directories were byte-identical before and
+after those nine commands. No simulator or policy was launched, `third_party/metadrive` remained
+clean, and no remote action occurred.
+
+The browser document object model (DOM) retained-state walkthrough observed initial UNVERIFIED,
+nominal PASS, collision HOLD, INVALID quarantine without stored-PASS leakage, Timeline/action
+accountability, Provenance/limitations, compatible mixed comparison, incompatible fail-closed
+comparison, and the exact Overview/Timeline/Compare anchor hrefs without exception/leak. It did not
+produce pixel/manual visual, 200% reflow, visible CSS focus, screen-reader, contrast, accessibility,
+or human-comprehension evidence; those statuses remain `NOT YET OBSERVED`.
+
+Automated AppTest structure does not establish those outcomes or WCAG conformance. The prospective
+protocols are `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md`,
+`docs/PHASE6_USABILITY_TEST_PLAN.md`, and
+`docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`. The accepted process-lifetime cache/session-growth P2
+below remains unchanged; discovery/autocomplete still requires a deterministic synchronized bounded
+LRU predecessor.
+
 ## 1. Executive verdict
 
 **Final verdict: GO.**

@@ -1,5 +1,78 @@
 # Hermes Phase 6 Codex handoff
 
+## Current reviewer-comprehension addendum — 2026-08-13
+
+The sections below preserve the original Phase 6 evidence-workbench handoff at `be57bb1`. The
+current presentation-only iteration is on `feat/phase6-reviewer-comprehension`:
+
+| Item | Current recorded result |
+|---|---|
+| Iteration start | `be57bb126d6339efe0d8184304620aab64a680a6` |
+| Design freeze | `685b92df37e88a3232384fec4d57f5e9d8e5e089` |
+| UX implementation | `e2eab3421973fb3d9ca554bc6da3f8953e3442de` |
+| Submission-state hardening | `80439c5382cf5e0744cdcec7402633e4bcc81e1e` |
+| Intermediate Browser-DOM Timeline parity fix | `cbced6e57670ae7aaf63f9ce875122ac7471e348` |
+| Stable explicit H2-anchor fix / current pre-doc HEAD | `0fe3459ac87b78a023bb477ebf1210b2a9d31792` |
+| Task 3 full suite | 746 passed |
+| Final full / non-MetaDrive suites | 756 passed / 756 passed |
+| Final focused 13-file matrix | 506 passed |
+| Final installs / Ruff / doctor | both editable installs succeeded; Ruff passed; 17 PASS / 1 intended WARN / 1 DISPLAY NOT_AVAILABLE / 0 FAIL |
+| Final CLI / artifact immutability | six reviews + three comparisons matched contracts; 100 canonical files unchanged |
+| Task 3 adversarial result | GO; A01–A15 passed; no P0/P1 reproduced |
+| Automated correctness | `OBSERVED` |
+| Browser DOM structural walkthrough | `OBSERVED` for initial/PASS/HOLD/INVALID/Timeline/Provenance/limitations/compatible/incompatible states; no exception/leak |
+| Manual visual review | `NOT YET OBSERVED` |
+| Accessibility audit | `NOT YET OBSERVED` |
+| Human comprehension | `NOT YET OBSERVED` |
+| Remote actions | none |
+
+The workbench now uses `Review` / `Compare` / `Evidence limitations`; Review contains
+`Select & Verify`, `Overview`, `Evidence`, `Timeline`, and `Provenance`. Findings use six
+requiredness-first groups, Timeline adds four presentation-only presets and supporting-event jump,
+and compatible comparisons require mixed-outcome/no-advancement synthesis. Invalid quarantine and
+the public ReviewEnvelope/ComparisonEnvelope 1.0 authority are unchanged.
+
+Selection remains exact root-relative manual input. No picker/autocomplete was added because the
+facade has no descriptor-safe discovery API; discovery first requires its own reviewed contract and
+the deterministic synchronized bounded-LRU predecessor. The existing cache/session growth remains
+accepted P2: 43 explicit selections previously reached 41 cache entries, 43 active sessions, and
+about 251 MB peak RSS; restart recovers memory.
+
+The current human-review package and final-iteration ledger are in:
+
+- `PHASE6_DESIGN_ITERATION_HANDOFF.md`;
+- `docs/PHASE6_USABILITY_TEST_PLAN.md`;
+- `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`; and
+- `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md`.
+
+The documentation-wave results are recorded in `PHASE6_DESIGN_ITERATION_HANDOFF.md`: 756 full, 756
+non-MetaDrive, and 506 focused tests passed; both editable installs, repository Ruff, and
+diff/cached checks passed; doctor reported 17 PASS, one intended 15-entry dirty-tree WARN, one
+optional DISPLAY `NOT_AVAILABLE`, and no FAIL. Six review and three comparison CLI cases matched
+their expected contracts, and 100 canonical files across ten retained artifact directories were
+unchanged before/after. Do not treat those automated results, the historical 720-test results
+below, or Task 3's 746-test result above as participant, screen-reader, contrast, or visual evidence.
+
+The browser DOM walkthrough reproduced a first-Timeline-mount mismatch (radio indicated Decision
+evidence while projection showed All tracks). Commit `cbced6e` fixed it RED-first; 88 scoped tests
+and two independent targeted tests passed, and fresh DOM inspection confirmed All tracks plus the
+exact 16-track multiselect. The in-app screenshot backend reported visibility false and returned
+uniformly blank images, so no pixel/manual visual, 200% visual reflow, CSS focus, screen-reader,
+contrast, accessibility-audit, or human-comprehension result is claimed.
+
+The retained-state browser document object model (DOM) walkthrough additionally covered initial
+UNVERIFIED, nominal PASS, collision HOLD, INVALID quarantine with no stored-PASS leak,
+Timeline/action accountability, Provenance/limitations, compatible mixed comparison, and
+incompatible fail-closed comparison without exception/leak. This remains structural DOM evidence,
+not pixel/manual visual or accessibility evidence.
+
+A second browser P2 showed stale Streamlit-generated H2 permalinks after radio reruns. Commit
+`0fe3459` gives all seven primary H2s explicit stable anchors. Its targeted test failed then passed;
+83 focused tests and two independent targeted tests passed, with Ruff/diff clean. Code/test closure
+and narrow DOM closure are complete: fresh cross-section DOM observed Overview `#overview`, Timeline
+`#timeline`, Compare `#compare`, and exception-text count 0. This does not promote manual visual,
+accessibility, or human-comprehension status.
+
 ## 1. Executive summary
 
 - **Phase attempted:** Phase 6 — local Evidence Review Workbench.
@@ -304,8 +377,11 @@ hermes workbench --artifact-root artifacts --host 127.0.0.1 --port 8501 --no-bro
 - **Port:** 8501 by default; validated integer 1–65535.
 - **Browser behavior:** disabled by the exact command above.
 - **External network behavior:** none required; telemetry disabled; public binds reject.
-- **Manual inspection performed:** **no**. Validation used pure row projections, launcher/process
-  injection, and Streamlit AppTest. No server, browser, simulator, or policy was launched.
+- **Manual inspection at the original `90fb7d8` checkpoint:** **no**. That validation used pure row
+  projections, launcher/process injection, and Streamlit AppTest; it launched no server, browser,
+  simulator, or policy. The later reviewer-comprehension checkpoint did use a real loopback server
+  and browser DOM walkthrough, then stopped the server cleanly and confirmed port 8501 closed. It
+  still launched no simulator or policy and produced no pixel/manual visual evidence.
 
 ## 15. Adversarial review
 

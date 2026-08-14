@@ -1,4 +1,4 @@
-# Hermes — Phase 6 Product Brief
+# Hermes — Phase 6 Product Brief and Reviewer-Comprehension Iteration
 
 ## Product identity
 
@@ -53,9 +53,17 @@ The workbench answers:
 
 ## Core trust states
 
-Phase 6 completed implementation and adversarial hardening at checkpoint `90fb7d8`. The complete
-and non-MetaDrive selections each passed 720 tests, and independent reviewers returned GO with no
-open P0/P1. The delivered implementation uses strict immutable portable
+Phase 6 completed implementation and adversarial hardening at checkpoint `90fb7d8`. The later
+reviewer-comprehension branch `feat/phase6-reviewer-comprehension` reorganized the presentation at
+commits `685b92d`, `e2eab34`, and `80439c5`. Its independent Task 3 audit recorded 746 passing tests
+and GO for automated acceptance with no reproduced P0/P1. A later browser document object model
+(DOM) walkthrough found and
+closed a first-Timeline-mount preset/projection mismatch in `cbced6e`; 88 scoped and two independent
+targeted tests passed. A second browser P2 involving stale second-level heading (H2) permalinks after
+radio reruns is closed in code/tests by explicit anchors for all seven primary H2s at `0fe3459`; 83 focused and two
+independent targeted tests passed. Fresh DOM observed Overview `#overview`, Timeline `#timeline`,
+Compare `#compare`, and zero exception text. The delivered implementation uses strict
+immutable portable
 `ReviewEnvelope`/`ComparisonEnvelope` version 1.0, a framework-independent review core, and
 optional Streamlit `>=1.37,<2`.
 
@@ -199,10 +207,25 @@ A new reviewer can answer:
 - whether the artifact is authenticated;
 - whether the verdict grants deployment permission.
 
+These are prospective comprehension outcomes, not observed participant results. The repository now
+contains a 6–10 participant moderated plan, blank observation template, and executable visual/
+accessibility checklist. Manual visual review, accessibility audit, and human comprehension remain
+`NOT YET OBSERVED` until real evidence is recorded.
+
+Browser DOM retained-state structure is `OBSERVED` for initial UNVERIFIED, PASS, HOLD, INVALID
+quarantine/no stored-PASS leak, Timeline/action accountability, Provenance/limitations, compatible
+mixed comparison, incompatible fail-closed comparison, and zero exception/leak text. The available
+screenshot backend returned uniformly blank images, so it did not establish pixel/manual visual
+quality, 200% visual reflow, CSS focus, screen-reader behavior, contrast, accessibility conformance,
+or human comprehension.
+
 ### Developer quality
 
-- Complete and non-MetaDrive test selections passed 720 tests at the adversarial-hardening
-  checkpoint; Ruff and the focused Phase 6 matrix passed.
+- Final Task 4 validation recorded 756 full tests, 756 non-MetaDrive tests, and 506 focused Phase 6/
+  workbench/review/CLI/artifact/documentation tests passing. Both installs, repository Ruff, doctor
+  (17 PASS / 1 intended dirty-tree WARN / 1 optional DISPLAY NOT_AVAILABLE / 0 FAIL), six review
+  cases, three comparison cases, and diff/cached checks passed. All 100 canonical files across ten
+  retained directories were byte-identical before and after the nine CLI commands.
 - UI dependencies remain optional.
 - Workbench binds to loopback only.
 - No simulator starts during review tests.
@@ -217,6 +240,19 @@ discovery or automatic loading, requires a local reviewer to submit each selecti
 process restart. Add a deterministic synchronized LRU before materially increasing single-user
 artifact scale. This residual does not change evidence, bypass verification, or expand the
 local-only scope.
+
+## Reviewer-comprehension presentation
+
+The workbench now uses top-level `Review`, `Compare`, and `Evidence limitations`. Review contains
+`Select & Verify`, `Overview`, `Evidence`, `Timeline`, and `Provenance`. The decision state (gate and
+integrity) is structurally separated from origin `NOT_AUTHENTICATED`, authorization `NOT_EVALUATED`,
+deployment permission `NONE`, scope `SIMULATION_ONLY`, and authoritative status `NOT_DEFINED`.
+
+Exact root-relative selection remains blank and manual by design. A picker/autocomplete would need
+a separately reviewed descriptor-safe discovery contract and the deterministic synchronized
+bounded-LRU predecessor; UI-side directory enumeration is not permitted. Findings use six ordered
+groups, Timeline adds four presentation-only presets plus first-supporting-event navigation, and
+compatible comparisons require mixed-outcome synthesis with no winner or advancement claim.
 
 ## Executive narrative
 

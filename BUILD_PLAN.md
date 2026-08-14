@@ -1,4 +1,4 @@
-# Hermes — Phase 6 Comprehensive Build Plan
+# Hermes — Phase 6 Comprehensive Build Plan and Reviewer-Comprehension Iteration
 
 ## 1. Executive intent
 
@@ -11,7 +11,9 @@ Delivered Phase 6 wave:
 > **A local, read-only Evidence Review Workbench built on one immutable review contract and the existing stored-verification core.**
 
 This plan was executed in gated order: design freeze, review core/CLI, local workbench,
-adversarial hardening, and final documentation/handoff.
+adversarial hardening, and final documentation/handoff. A later presentation-only
+reviewer-comprehension iteration preserves the same facade/envelopes while improving reviewer
+reasoning, navigation, evidence grouping, Timeline defaults, and comparison synthesis.
 
 ## 2. Historical baseline and implementation checkpoint
 
@@ -43,6 +45,29 @@ The completed implementation/adversarial checkpoint is:
 | Focused Phase 6 adversarial matrix | 488 passing |
 | Ruff / diff check | passing |
 | Adversarial decision | GO; no open P0/P1 |
+| Remote activity | none |
+
+The later reviewer-comprehension implementation checkpoint is:
+
+| Item | Observed value |
+|---|---|
+| Branch | `feat/phase6-reviewer-comprehension` |
+| Starting HEAD | `be57bb126d6339efe0d8184304620aab64a680a6` |
+| Design commit | `685b92df37e88a3232384fec4d57f5e9d8e5e089` |
+| Implementation commit | `e2eab3421973fb3d9ca554bc6da3f8953e3442de` |
+| Submission-state hardening | `80439c5382cf5e0744cdcec7402633e4bcc81e1e` |
+| Browser-DOM Timeline parity fix | `cbced6e57670ae7aaf63f9ce875122ac7471e348` |
+| Stable explicit H2-anchor fix / current pre-doc HEAD | `0fe3459ac87b78a023bb477ebf1210b2a9d31792` |
+| Complete tests at Task 3 audit | 746 passing |
+| Final full / non-MetaDrive tests | 756 / 756 passing |
+| Final focused 13-file Phase 6 matrix | 506 passing |
+| Final installs / Ruff / diff and cached checks | both extras installed; passing; staged index empty |
+| Final doctor | 17 PASS, one intended 15-entry dirty-tree WARN, one optional DISPLAY NOT_AVAILABLE, 0 FAIL |
+| Final review/compare CLI and artifact immutability | six reviews + three comparisons matched contracts; 100 canonical files unchanged |
+| Automated adversarial audit | GO; A01–A15 passed; no P0/P1 reproduced |
+| Browser-DOM fix verification | RED/GREEN; 88 scoped + 2 independent targeted passed; DOM parity observed |
+| Stable-anchor verification | RED/GREEN; 83 focused + 2 targeted passed; exact DOM hrefs and zero exceptions observed |
+| Manual visual / accessibility / human comprehension | `NOT YET OBSERVED` |
 | Remote activity | none |
 
 ## 3. Phase 6 decision
@@ -347,14 +372,17 @@ hermes workbench \
 
 Phase 6 rejects non-loopback host binding before process startup.
 
-### 12.3 Workbench screens
+### 12.3 Workbench information architecture
 
-1. **Artifact intake and verification**
-2. **Review summary**
-3. **Findings and evidence coverage**
-4. **Event/action timeline**
-5. **Provenance, integrity, and limitations**
-6. **Compatible comparison**
+The six-screen predecessor was replaced by three primary destinations:
+
+1. **Review**, with `Select & Verify`, `Overview`, `Evidence`, `Timeline`, and `Provenance`.
+2. **Compare**.
+3. **Evidence limitations**.
+
+The submitted artifact locator persists throughout Review. Gate/integrity form Tier 1 decision
+state; origin, authorization, deployment permission, simulation scope, and authoritative status
+remain independent Tier 2 authority boundaries. This hierarchy is presentation-only.
 
 ### 12.4 Read-only behavior
 
@@ -613,6 +641,74 @@ Finalization updates:
 
 The final handoff records actual review commands, envelope samples, tests, negative results, local
 URL/launch command, Git status, and limitations.
+
+## 24A. Reviewer-comprehension iteration
+
+### Design and implementation
+
+The repository-aware design freeze rejected UI-side artifact discovery because the public facade
+has no descriptor-safe discovery contract. Selection remains blank-by-default exact text with an
+inert example, explicit Verify, submitted-identity confirmation, and recovery copy. A future picker
+requires both a reviewed discovery API and a deterministic synchronized bounded LRU.
+
+The implementation adds, without changing evidence semantics:
+
+- the ordered Review/Compare/Evidence limitations hierarchy;
+- Overview ordered around identity, gate, rationale, integrity/authority, unavailable required
+  evidence, limitations, and Provenance cue;
+- `Failed required evidence`, `Required but unavailable`, `Soft failures and warnings`, `Passing
+  required evidence`, `Optional evidence`, and `Not applicable` groups;
+- distinct required/optional/not-applicable unavailable copy;
+- `Decision evidence`, `Action accountability`, `Fault behavior`, and `All tracks` Timeline presets;
+- finding-to-first-supporting-event navigation; and
+- mandatory compatible-comparison synthesis for gate, hard failures, improvements, regressions,
+  unchanged, not comparable, availability, and no-overall-advancement interpretation.
+
+Strict invalid quarantine, exact values/units/thresholds/references, side qualification, 16-track
+data, and facade ownership remain unchanged. Task 3 attacked 15 authority/workflow seams and
+reported GO with no P0/P1. One P2 presentation-state rehydration observation and the pre-existing
+cache/session P2 remain accepted.
+
+A later in-app browser DOM walkthrough found that first Timeline mount displayed an All-tracks
+projection while the radio indicated Decision evidence. Commit `cbced6e` aligns both to
+`All tracks`; its targeted RED/GREEN cycle, 88 scoped tests, two independent targeted tests, and
+fresh DOM confirmation passed. The screenshot backend returned blank/non-visible images, so only
+that particular DOM structural parity result is observed. The complete retained-state browser DOM
+walkthrough also observed initial UNVERIFIED, PASS, HOLD, invalid quarantine without stored-PASS
+leakage, Timeline/action accountability, Provenance/limitations, compatible mixed comparison,
+incompatible fail-closed comparison, and no exception/leak. Pixel/manual visual and accessibility
+gates remain open.
+
+The same walkthrough found stale dynamic H2 permalinks after radio reruns. Commit `0fe3459` assigns
+explicit anchors to all seven primary H2s. One targeted test failed then passed; 83 focused tests
+and two independent targeted tests passed, with Ruff/diff clean. The code/test P2 is closed; browser
+DOM also observed Overview `#overview`, Timeline `#timeline`, Compare `#compare`, and exception-text
+count 0. Manual visual/accessibility/human gates remain unchanged.
+
+Final Task 4 gates at `0fe3459` plus the documentation working tree recorded 756 full tests, 756
+non-MetaDrive tests, and 506 focused tests. Both editable installs succeeded; repository Ruff and
+diff/cached checks passed; doctor reported 17 PASS, one intended 15-entry dirty-tree WARN, one
+optional DISPLAY `NOT_AVAILABLE`, and no FAIL. Six review and three comparison CLI cases matched
+their expected contracts, and the exact before/after map for 100 canonical files across ten
+retained artifact directories was unchanged. No simulator or policy was launched; doctor performed
+only an environment-level MetaDrive import.
+
+### Human-review package and status
+
+The package comprises:
+
+```text
+PHASE6_DESIGN_ITERATION_HANDOFF.md
+docs/PHASE6_USABILITY_TEST_PLAN.md
+docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md
+docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md
+```
+
+The usability plan defines Tasks 1–10 for 6–10 future product, safety, simulation, and engineering
+participants. The visual checklist covers screenshots, keyboard, screen reader, focus/announcement,
+non-color/contrast, table alternatives, 200% zoom/reflow, and bounded inert content. It makes no
+WCAG claim. Manual visual review, accessibility audit, and human comprehension remain
+`NOT YET OBSERVED` until actual evidence is recorded.
 
 ## 25. Explicit non-goals
 

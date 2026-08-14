@@ -1,5 +1,93 @@
 # Hermes Decision Log
 
+## 2026-08-13 — Implement reviewer comprehension and keep human gates open
+
+### Scope
+
+Implement the frozen presentation hierarchy and adversarially test it without changing the public
+review facade, ReviewEnvelope/ComparisonEnvelope 1.0, gate, verifier, threshold, compatibility,
+artifact capture, or local/read-only/simulation-only authority boundary. Add an executable future
+human-review package, but do not infer visual, accessibility, or comprehension outcomes.
+
+### Decisions
+
+- Implement top-level `Review`, `Compare`, and `Evidence limitations`, with `Select & Verify`,
+  `Overview`, `Evidence`, `Timeline`, and `Provenance` as ordered Review destinations. Keep stable
+  keyed navigation and the submitted locator visible.
+- Keep Tier 1 gate/integrity separate from Tier 2 origin `NOT_AUTHENTICATED`, authorization
+  `NOT_EVALUATED`, deployment permission `NONE`, scope `SIMULATION_ONLY`, and authoritative status
+  `NOT_DEFINED`. Persist the no-approval/deployment sentence throughout the workbench.
+- Retain blank exact root-relative manual selection. No picker/autocomplete is implemented because
+  there is no descriptor-safe discovery facade. Require a separately reviewed discovery contract
+  and deterministic synchronized bounded LRU before any listing/autocomplete scale increase.
+- Render Overview in decision-narrative order, findings in the frozen six-group order, and typed
+  required/optional/not-applicable unavailable explanations. Keep every failed required finding
+  visible even when another detail group is selected.
+- Add Timeline presets `Decision evidence`, `Action accountability`, `Fault behavior`, and
+  `All tracks`, plus an explicit first-supporting-event jump. They change only presentation state.
+- Require compatible comparison sections for gate, hard failures, improvements, regressions,
+  unchanged, not comparable, availability changes, and advancement interpretation. Use specific
+  TTC/route/acceleration/jerk synthesis only when those exact typed partitions support it; otherwise
+  use generic non-fabricating mixed-trade-off copy.
+- Preserve strict invalid quarantine on every Review and Compare route. Bound and categorize
+  persistent artifact-derived identity/rationale text; label missing manifest identity
+  `NOT_AVAILABLE` rather than OBSERVED.
+- On invalid Verify, reset all presentation drill-down/filter/jump state while preserving the last
+  accepted submitted review. On invalid Compare, preserve the last accepted baseline/candidate pair
+  and freshly recapture it for display.
+- Create the future 6–10 participant Tasks 1–10 plan, blank observation template, and executable
+  visual/accessibility checklist. A required-unavailable visual/human fixture must be separately
+  approved; no retained bundle may be mutated or fabricated to fill that gap.
+
+### Observed evidence and residuals
+
+- Local commits: `685b92d` (design freeze), `e2eab34` (implementation), and `80439c5`
+  (submission-state hardening).
+- Task 3 ran A01–A15 and reported GO with no P0/P1 reproduced. It recorded 136 focused workbench/
+  projection/architecture tests, 223 review/capture/comparison/CLI/artifact/launcher tests, and 746
+  full tests passing; Ruff and diff checks passed.
+- One broader presentation-only Timeline reference set after navigation retained all prior exact
+  references and byte-identical facade/core/hash state; it remains at most P2.
+- The existing P2 cache/session-growth decision is unchanged. The 43-selection observation (41
+  cache, 43 active, about 251 MB peak RSS) remains restart-recoverable; the LRU is a predecessor for
+  discovery or material scale increase.
+- Automated correctness is `OBSERVED`. Manual visual review, accessibility audit, and human
+  comprehension remain `NOT YET OBSERVED`; no WCAG claim is made.
+- A later in-app browser DOM walkthrough found a first-Timeline-mount mismatch: the preset radio
+  indicated `Decision evidence` while projection contained `All tracks`. Commit `cbced6e`
+  (`fix: align timeline preset and projection`) aligned the default to `All tracks` through a
+  failing targeted test, then 88 scoped and two independent targeted passing tests. Fresh browser
+  DOM confirmed the All tracks radio and exact 16-track multiselect agree.
+- Browser DOM structural parity is `OBSERVED` for that control/projection seam only. The screenshot
+  backend reported visibility false and uniformly blank images, so pixel/manual visual review, 200%
+  visual reflow, CSS focus, screen reader, contrast, accessibility audit, and human comprehension
+  remain `NOT YET OBSERVED`.
+- A second browser P2 exposed stale dynamic H2 permalinks after radio reruns. Commit `0fe3459`
+  closes the implementation seam by assigning explicit stable anchors to all seven primary H2s.
+  One targeted test failed then passed; 83 focused and two independent targeted tests passed, with
+  Ruff/diff clean. Fresh cross-section browser DOM observed Overview `#overview`, Timeline
+  `#timeline`, Compare `#compare`, and exception-text count 0. The finding is closed rather than
+  accepted.
+- Final Task 4 validation installed both editable extras and recorded 756 full tests, 756
+  non-MetaDrive tests, and 506 focused Phase 6 tests. Repository Ruff and diff/cached checks passed;
+  doctor reported 17 PASS, one intended 15-entry dirty-tree WARN, one optional DISPLAY
+  `NOT_AVAILABLE`, and 0 FAIL. Six review and three comparison CLI cases matched their expected
+  contracts; 100 canonical files across ten retained artifact directories were byte-identical
+  before/after; no simulator/policy or remote action occurred.
+- The complete browser document object model (DOM) retained-state walkthrough observed initial
+  UNVERIFIED, PASS, HOLD, INVALID quarantine without stored-PASS leakage, Timeline/action
+  accountability, Provenance/limitations, compatible mixed comparison, incompatible fail-closed
+  comparison, and exact anchor hrefs without exception/leak. Pixel/manual visual, 200% reflow,
+  visible CSS focus, screen-reader, contrast, accessibility-audit, and human-comprehension statuses
+  remain `NOT YET OBSERVED`.
+
+### Consequence
+
+The completed presentation iteration may proceed only to an independently verified missing-evidence
+fixture and the recorded manual visual, accessibility, and human-comprehension protocols. It may
+not be represented as adding evidence authority, accessibility conformance, human validation,
+approval, or deployment permission. No remote action is authorized.
+
 ## 2026-08-13 — Freeze the Phase 6 reviewer-comprehension design iteration
 
 ### Scope

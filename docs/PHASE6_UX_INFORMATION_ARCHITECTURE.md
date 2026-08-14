@@ -282,15 +282,17 @@ expansion, visible focus, announced validation/invalid-evidence errors, screen r
 the synchronized timeline table, and inert bounded artifact strings. Essential trust and decision
 content must not depend on horizontal scrolling. No ambiguous abbreviation or raw HTML is allowed.
 
-Future tracked documents are `docs/PHASE6_USABILITY_TEST_PLAN.md`,
+The tracked protocols are `docs/PHASE6_USABILITY_TEST_PLAN.md`,
 `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`, and `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md`. Their
-status remains `NOT YET OBSERVED` until a real reviewer or auditor records evidence.
+creation does not constitute an observation. Human comprehension, manual visual review, and the
+accessibility audit remain `NOT YET OBSERVED` until a real reviewer or auditor records evidence.
 
-## 10. Frozen reviewer-comprehension implementation delta
+## 10. Implemented reviewer-comprehension delta
 
-Checkpoint `90fb7d8` remains the validated six-screen predecessor. The next production iteration
-must map its existing renderers into the primary/secondary hierarchy in section 1 without changing
-the public review facade or portable envelopes:
+Checkpoint `90fb7d8` remains the validated six-screen predecessor. The presentation delta was frozen
+at `685b92d`, implemented at `e2eab34`, and submission-state-hardened at `80439c5`. It maps the
+existing renderers into the primary/secondary hierarchy in section 1 without changing the public
+review facade or portable envelopes:
 
 | Predecessor screen | Frozen destination |
 | --- | --- |
@@ -303,10 +305,37 @@ the public review facade or portable envelopes:
 
 The existing exact-selection facade, fresh capture on explicit submission, independent comparison
 verification, 50-event deterministic paging, full timeline contract, comparison partitions, safe
-text projection, and invalid-envelope quarantine remain authoritative. This design iteration adds
-presentation hierarchy, progressive disclosure, task-oriented presets/jumps, and mandatory
-comparison synthesis; it does not add review, gate, verifier, threshold, comparison, or filesystem
-discovery semantics.
+text projection, and invalid-envelope quarantine remain authoritative. The implementation adds
+presentation hierarchy, progressive disclosure, task-oriented presets/jumps, mandatory comparison
+synthesis, and stable submitted-state controls; it does not add review, gate, verifier, threshold,
+comparison, or filesystem-discovery semantics.
 
-No production implementation or tests are part of this design-freeze change. Human comprehension,
-manual visual review, and accessibility audit remain `NOT YET OBSERVED`.
+The independent Task 3 automated audit attacked 15 presentation/authority seams, recorded 746 full
+tests passing, and returned GO with no reproduced P0/P1. Automated correctness is `OBSERVED` at that
+checkpoint. Visual hierarchy, visible focus, screen-reader behavior, contrast, 200% zoom/reflow,
+accessibility conformance, and human comprehension remain `NOT YET OBSERVED`.
+
+A later in-app browser DOM walkthrough reproduced a first-Timeline-mount mismatch: the radio showed
+`Decision evidence`, while the projection showed `All tracks`. Commit `cbced6e` aligns first mount
+to `All tracks`; one targeted RED/GREEN test, 88 scoped tests, two independent targeted tests, and
+fresh browser DOM parity passed. This changes only initial presentation state. The screenshot
+backend returned non-visible uniformly blank images, so pixel/manual visual review and every manual
+accessibility/human gate remain `NOT YET OBSERVED`.
+
+A second browser P2 showed stale dynamic H2 permalink hrefs after radio reruns. Commit `0fe3459`
+adds explicit stable anchors for Select & Verify, Overview, Evidence, Timeline, Provenance, Compare,
+and Evidence limitations. The targeted test failed before the fix and passed after it; 83 focused
+tests and two independent targeted tests passed, with Ruff/diff clean. Code/test closure is complete;
+fresh cross-section browser DOM observed Overview `#overview`, Timeline `#timeline`, Compare
+`#compare`, and exception-text count 0. This changes no manual gate.
+
+The final Task 4 checkpoint installed both editable extras and recorded 756 full tests, 756
+non-MetaDrive tests, and 506 focused Phase 6 tests. Repository Ruff and diff/cached checks passed;
+doctor reported 17 PASS, one intended 15-entry dirty-tree WARN, one optional DISPLAY
+`NOT_AVAILABLE`, and no FAIL. Six review and three comparison CLI cases matched their contracts,
+and all 100 canonical files across ten retained artifact directories remained byte-identical. The
+browser document object model (DOM) retained-state walkthrough covered initial UNVERIFIED, PASS,
+HOLD, INVALID quarantine, Timeline/action accountability, Provenance/limitations, compatible mixed
+comparison, incompatible fail-closed comparison, and exact anchor hrefs without exception/leak.
+Pixel/manual visual quality, 200% reflow, visible CSS focus, screen-reader behavior, contrast,
+accessibility audit, and human comprehension remain `NOT YET OBSERVED`.
