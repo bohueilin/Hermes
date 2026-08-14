@@ -6,8 +6,87 @@ import pytest
 
 pytest.importorskip("streamlit")
 from hermes.review import compare_review_artifacts, review_artifact  # noqa: E402
-from hermes.review.models import ExactValue, Point, SourceReference, Timeline, Track  # noqa: E402
+from hermes.review.models import (  # noqa: E402
+    ExactValue,
+    GateConsequence,
+    Point,
+    SourceReference,
+    SufficiencySummary,
+    Timeline,
+    Track,
+    UnavailableEvidenceItem,
+)
 from hermes.workbench import app as workbench_app  # noqa: E402
+
+
+@pytest.fixture
+def presentation_only_unavailable_envelope(repository_root: Path):
+    """Typed presentation fixture only; it is not verified artifact evidence."""
+
+    envelope = review_artifact(repository_root / "artifacts", "handoff-phase5-demo")
+    required = envelope.evidence_sufficiency.items[0]
+    optional = envelope.evidence_sufficiency.items[4]
+    required_consequence = GateConsequence(
+        triggered=True,
+        effect="CONFIGURED_MISSING_REQUIRED_EVIDENCE",
+        result_if_controlling="HOLD",
+        source="GATE_CONFIG_MISSING_REQUIRED_EVIDENCE",
+        listed_in_hard_failures=False,
+        listed_in_soft_failures=False,
+        listed_in_supporting_findings=False,
+        configuration_references=required.consequence.configuration_references,
+    )
+    items = list(envelope.evidence_sufficiency.items)
+    items[0] = required.model_copy(
+        update={
+            "availability": "NOT_AVAILABLE",
+            "reason": "required source record is absent",
+            "category": "NOT_AVAILABLE",
+            "consequence": required_consequence,
+        }
+    )
+    items[4] = optional.model_copy(
+        update={
+            "availability": "NOT_AVAILABLE",
+            "reason": "optional comfort source record is absent",
+            "category": "NOT_AVAILABLE",
+        }
+    )
+    sufficiency = envelope.evidence_sufficiency.model_copy(
+        update={
+            "items": tuple(items),
+            "summary": SufficiencySummary(
+                required_and_available=3,
+                required_but_unavailable=1,
+                optional_and_available=1,
+                optional_and_unavailable=1,
+                not_applicable=1,
+            ),
+        }
+    )
+    unavailable = (
+        UnavailableEvidenceItem(
+            evidence_id=items[0].evidence_id,
+            label=items[0].label,
+            reason=items[0].reason,
+            requiredness=items[0].requirement,
+            consequence=items[0].consequence,
+            category="NOT_AVAILABLE",
+            source_references=items[0].source_references,
+        ),
+        UnavailableEvidenceItem(
+            evidence_id=items[4].evidence_id,
+            label=items[4].label,
+            reason=items[4].reason,
+            requiredness=items[4].requirement,
+            consequence=items[4].consequence,
+            category="NOT_AVAILABLE",
+            source_references=items[4].source_references,
+        ),
+    )
+    return envelope.model_copy(
+        update={"evidence_sufficiency": sufficiency, "unavailable_evidence": unavailable}
+    )
 
 
 def test_app_argument_parser_accepts_one_canonical_absolute_root(tmp_path: Path) -> None:
@@ -889,3 +968,250 @@ def test_incompatible_comparison_has_reason_rows_and_no_delta_or_chart_rows(
     assert workbench_app._comparison_rows(result) == ()
     assert workbench_app._compatibility_reason_rows(result)
     assert result.chart_series == ()
+
+
+def test_evidence_groups_are_deterministic_non_overlapping_and_prioritize_hard_failure(
+    repository_root: Path,
+) -> None:
+    envelope = review_artifact(repository_root / "artifacts", "handoff-p1-collision")
+
+    grouped = workbench_app._grouped_finding_rows(envelope)
+
+    assert tuple(grouped) == (
+        "Failed required evidence",
+        "Required but unavailable",
+        "Soft failures and warnings",
+        "Passing required evidence",
+        "Optional evidence",
+        "Not applicable",
+    )
+    finding_ids = [row["finding ID"] for rows in grouped.values() for row in rows]
+    assert finding_ids == [
+        "collision.zero",
+        "progress.required",
+        "trace.integrity",
+        "boundary.within_tolerance",
+        "comfort.acceleration",
+        "comfort.jerk",
+    ]
+    assert len(finding_ids) == len(set(finding_ids)) == len(envelope.findings)
+    collision = grouped["Failed required evidence"][0]
+    assert collision["label"] == "Collision count is within limit"
+    assert collision["status"] == "FAIL"
+    assert collision["requiredness"] == "REQUIRED"
+    assert collision["display value"] == "1.0"
+    assert collision["unit"] == "count"
+    assert collision["short rule"]
+    assert collision["gate consequence"] == "HOLD"
+    assert collision["first supporting event"] == "12"
+
+
+def test_grouped_finding_rows_keep_exact_threshold_and_source_detail(
+    repository_root: Path,
+) -> None:
+    envelope = review_artifact(repository_root / "artifacts", "handoff-p1-collision")
+
+    grouped = workbench_app._grouped_finding_rows(envelope)
+    collision = grouped["Failed required evidence"][0]
+    exact = workbench_app._finding_detail_rows(envelope, collision["finding ID"])
+
+    assert len(exact) == 1
+    row = exact[0]
+    finding = next(item for item in envelope.findings if item.finding_id == "collision.zero")
+    assert row["machine value"] == str(finding.measured.machine_value)
+    assert row["exact value"] == finding.measured.canonical_text
+    assert row["display value"] == finding.measured.display_text
+    assert row["unit"] == finding.measured.unit
+    assert row["verifier"] == finding.verifier_name
+    assert row["verifier version"] == finding.verifier_version
+    assert row["threshold"]
+    assert row["source references"]
+    assert row["supporting sequences"] == "12"
+    threshold_nodes = workbench_app._finding_threshold_rows(
+        envelope, collision["finding ID"]
+    )
+    assert threshold_nodes
+    assert threshold_nodes[0]["node path"] == "root"
+
+
+def test_evidence_availability_copy_distinguishes_required_optional_and_not_applicable_without_zero(
+    presentation_only_unavailable_envelope,
+) -> None:
+    rows = workbench_app._sufficiency_rows(presentation_only_unavailable_envelope)
+    by_id = {row["evidence ID"]: row for row in rows}
+
+    required = by_id["trace.integrity"]
+    assert required["availability explanation"] == (
+        "This signal was required by the selected verifier profile but could not be "
+        "computed from the stored evidence."
+    )
+    assert required["reason"] == "required source record is absent"
+    assert required["gate consequence"] == "CONFIGURED_MISSING_REQUIRED_EVIDENCE"
+    assert required["source references"] != "NOT_AVAILABLE"
+
+    optional = by_id["comfort.acceleration"]
+    assert optional["availability explanation"] == (
+        "This signal could not be computed from the stored evidence. It does not "
+        "control the current gate verdict, but it remains a review limitation."
+    )
+    assert optional["reason"] == "optional comfort source record is absent"
+
+    not_applicable = by_id["fault.coverage.required"]
+    assert not_applicable["availability explanation"] == (
+        "This verifier is not required or evaluated under the selected profile."
+    )
+    for row in (required, optional, not_applicable):
+        assert row["availability"] in {"NOT_AVAILABLE", "NOT_APPLICABLE"}
+        assert row["availability"] not in {"0", "False", "PASS", "", "infinity"}
+
+
+def test_availability_projection_does_not_mutate_envelope_or_gate(
+    presentation_only_unavailable_envelope,
+) -> None:
+    before = presentation_only_unavailable_envelope.model_dump_json()
+    gate_before = presentation_only_unavailable_envelope.gate.model_dump_json()
+
+    workbench_app._sufficiency_rows(presentation_only_unavailable_envelope)
+
+    assert presentation_only_unavailable_envelope.model_dump_json() == before
+    assert presentation_only_unavailable_envelope.gate.model_dump_json() == gate_before
+
+
+def test_timeline_preset_track_ids_are_unique_known_and_deterministic(
+    repository_root: Path,
+) -> None:
+    envelope = review_artifact(repository_root / "artifacts", "handoff-p4-fault")
+    all_ids = tuple(track.track_id for track in envelope.timeline.tracks)
+
+    assert workbench_app._TIMELINE_PRESET_NAMES == (
+        "Decision evidence",
+        "Action accountability",
+        "Fault behavior",
+        "All tracks",
+    )
+    assert workbench_app._timeline_preset_track_ids(envelope, "Decision evidence") == (
+        "collision_count",
+        "offroad",
+        "route_progress_pct",
+        "ttc_s",
+        "verifier_triggering_findings",
+    )
+    assert workbench_app._timeline_preset_track_ids(envelope, "Action accountability") == (
+        "candidate_action",
+        "permitted_action",
+        "executed_action",
+        "override_reasons",
+        "policy_latency_ms",
+    )
+    assert workbench_app._timeline_preset_track_ids(envelope, "Fault behavior") == (
+        "raw_observation",
+        "delivered_observation",
+        "result_observation",
+        "observation_fault_reasons",
+        "control_fault_reasons",
+        "policy_latency_ms",
+    )
+    assert workbench_app._timeline_preset_track_ids(envelope, "All tracks") == all_ids
+    for preset in workbench_app._TIMELINE_PRESET_NAMES:
+        values = workbench_app._timeline_preset_track_ids(envelope, preset)
+        assert len(values) == len(set(values))
+        assert set(values).issubset(all_ids)
+
+
+def test_timeline_presets_only_change_visible_track_projection_and_event_jump(
+    repository_root: Path,
+) -> None:
+    envelope = review_artifact(repository_root / "artifacts", "handoff-p1-collision")
+    before = envelope.model_dump_json()
+
+    selected = workbench_app._timeline_preset_track_ids(envelope, "Decision evidence")
+    rows = workbench_app._timeline_rows(
+        envelope,
+        offset=0,
+        limit=50,
+        selected_track_ids=selected,
+    )
+    jump = workbench_app._finding_timeline_jump(envelope, "collision.zero")
+
+    assert {row["track ID"] for row in rows} == set(selected)
+    assert jump == {
+        "sequence": 12,
+        "page": 1,
+        "preset": "Decision evidence",
+        "track_ids": ("collision_count", "verifier_triggering_findings"),
+    }
+    assert envelope.model_dump_json() == before
+
+
+def test_finding_event_jump_uses_first_supporting_sequence_and_never_recomputes_gate(
+    repository_root: Path,
+) -> None:
+    envelope = review_artifact(repository_root / "artifacts", "handoff-p1-collision")
+    gate_before = envelope.gate.model_dump_json()
+
+    jump = workbench_app._finding_timeline_jump(envelope, "progress.required")
+    event_rows = workbench_app._sequence_rows(envelope, jump["sequence"])
+
+    assert jump["sequence"] == 12
+    assert jump["page"] == 1
+    assert jump["track_ids"] == (
+        "route_progress_pct",
+        "verifier_triggering_findings",
+    )
+    assert {row["sequence"] for row in event_rows} == {"12"}
+    event_source_rows = [
+        row for row in event_rows if row["track ID"] != "verifier_triggering_findings"
+    ]
+    assert all("source_type=EVENT" in row["point source reference"] for row in event_source_rows)
+    assert all("event_sequence=12" in row["point source reference"] for row in event_source_rows)
+    finding_source = next(
+        row for row in event_rows if row["track ID"] == "verifier_triggering_findings"
+    )
+    assert finding_source["point source reference"].startswith("source_type=FINDING")
+    assert envelope.gate.model_dump_json() == gate_before
+
+
+def test_advancement_interpretation_uses_existing_partitions_without_forcing_mixed_copy(
+    repository_root: Path,
+) -> None:
+    unchanged = compare_review_artifacts(
+        repository_root / "artifacts",
+        "handoff-p3-lead-baseline",
+        "handoff-p3-lead-baseline",
+    )
+    mixed = compare_review_artifacts(
+        repository_root / "artifacts",
+        "handoff-p3-lead-baseline",
+        "handoff-p3-lead-shielded",
+    )
+    different_mixed = mixed.model_copy(
+        update={
+            "improvements": (
+                mixed.improvements[0].model_copy(
+                    update={"dimension_id": "collision_count"}
+                ),
+            ),
+            "regressions": (
+                mixed.regressions[0].model_copy(
+                    update={"dimension_id": "p95_policy_latency_ms"}
+                ),
+            ),
+            "verdict_delta": mixed.verdict_delta.model_copy(update={"status": "IMPROVED"}),
+        }
+    )
+
+    assert unchanged.improvements == ()
+    assert unchanged.regressions == ()
+    unchanged_copy = workbench_app._comparison_interpretation(unchanged)
+    assert "mixed trade-off" not in unchanged_copy.lower()
+    assert "no overall advancement" in unchanged_copy.lower()
+    assert workbench_app._comparison_interpretation(mixed) == (
+        "Minimum TTC improved. Route completion, acceleration, and jerk regressed. "
+        "The gate verdict did not improve. This is a mixed trade-off and does not "
+        "establish overall advancement."
+    )
+    different_copy = workbench_app._comparison_interpretation(different_mixed)
+    assert "Minimum TTC improved" not in different_copy
+    assert "gate verdict did not improve" not in different_copy
+    assert "mixed trade-off" in different_copy
+    assert "no overall advancement" in different_copy

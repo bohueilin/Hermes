@@ -22,13 +22,86 @@ from hermes.review import (
     validate_artifact_root,
 )
 
-_SCREENS = (
-    "Intake / verification",
-    "Review summary / trust",
-    "Findings / evidence coverage",
+_PRIMARY_WORKFLOWS = ("Review", "Compare", "Evidence limitations")
+_REVIEW_SECTIONS = (
+    "Select & Verify",
+    "Overview",
+    "Evidence",
     "Timeline",
-    "Provenance / integrity / limitations",
-    "Compatible comparison",
+    "Provenance",
+)
+_FINDING_GROUP_LABELS = (
+    "Failed required evidence",
+    "Required but unavailable",
+    "Soft failures and warnings",
+    "Passing required evidence",
+    "Optional evidence",
+    "Not applicable",
+)
+_TIMELINE_TRACK_REGISTRY = (
+    "raw_observation",
+    "delivered_observation",
+    "result_observation",
+    "candidate_action",
+    "permitted_action",
+    "executed_action",
+    "override_reasons",
+    "observation_fault_reasons",
+    "control_fault_reasons",
+    "collision_count",
+    "offroad",
+    "speed_mps",
+    "route_progress_pct",
+    "ttc_s",
+    "policy_latency_ms",
+    "verifier_triggering_findings",
+)
+_TIMELINE_PRESETS = (
+    (
+        "Decision evidence",
+        (
+            "collision_count",
+            "offroad",
+            "route_progress_pct",
+            "ttc_s",
+            "verifier_triggering_findings",
+        ),
+    ),
+    (
+        "Action accountability",
+        (
+            "candidate_action",
+            "permitted_action",
+            "executed_action",
+            "override_reasons",
+            "policy_latency_ms",
+        ),
+    ),
+    (
+        "Fault behavior",
+        (
+            "raw_observation",
+            "delivered_observation",
+            "result_observation",
+            "observation_fault_reasons",
+            "control_fault_reasons",
+            "policy_latency_ms",
+        ),
+    ),
+    ("All tracks", _TIMELINE_TRACK_REGISTRY),
+)
+_TIMELINE_PRESET_NAMES = tuple(name for name, _track_ids in _TIMELINE_PRESETS)
+_FINDING_TIMELINE_TRACKS = (
+    ("trace.integrity", ("verifier_triggering_findings",)),
+    ("collision.zero", ("collision_count", "verifier_triggering_findings")),
+    ("boundary.within_tolerance", ("offroad", "verifier_triggering_findings")),
+    ("progress.required", ("route_progress_pct", "verifier_triggering_findings")),
+    (
+        "comfort.acceleration",
+        ("executed_action", "verifier_triggering_findings"),
+    ),
+    ("comfort.jerk", ("executed_action", "verifier_triggering_findings")),
+    ("fault.coverage.required", ("verifier_triggering_findings",)),
 )
 _PAGE_SIZE = 50
 _REFERENCE_PREVIEW_SIZE = 8
@@ -45,11 +118,30 @@ _FIXED_LIMITATION_RECORDS = (
     ("Simulation evidence grants no physical-system permission.", "RESIDUAL_RISK"),
 )
 _PERSISTENT_TRUST_FRAME = (
-    ("Evidence authenticity", "NOT_AUTHENTICATED", "AUTHENTICITY"),
-    ("Authorization status", "NOT_EVALUATED", "ASSUMPTION"),
+    ("Origin", "NOT_AUTHENTICATED", "AUTHENTICITY"),
+    ("Authorization", "NOT_EVALUATED", "ASSUMPTION"),
     ("Deployment permission", "NONE", "RESIDUAL_RISK"),
     ("Scope", "SIMULATION_ONLY", "ASSUMPTION"),
     ("Authoritative status", "NOT_DEFINED", "ASSUMPTION"),
+)
+_NON_AUTHORITY_SENTENCE = (
+    "This is a simulation evidence decision, not an approval or deployment authorization."
+)
+_REQUIRED_UNAVAILABLE_COPY = (
+    "This signal was required by the selected verifier profile but could not be computed "
+    "from the stored evidence."
+)
+_OPTIONAL_UNAVAILABLE_COPY = (
+    "This signal could not be computed from the stored evidence. It does not control the "
+    "current gate verdict, but it remains a review limitation."
+)
+_NOT_APPLICABLE_COPY = (
+    "This verifier is not required or evaluated under the selected profile."
+)
+_MIXED_COMPARISON_COPY = (
+    "Minimum TTC improved. Route completion, acceleration, and jerk regressed. The gate "
+    "verdict did not improve. This is a mixed trade-off and does not establish overall "
+    "advancement."
 )
 
 
@@ -464,6 +556,84 @@ def _finding_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
     return tuple(rows)
 
 
+def _finding_group_id(finding: object) -> str:
+    if finding.requiredness == "REQUIRED" and finding.status == "FAIL":
+        return "Failed required evidence"
+    if (
+        finding.requiredness == "REQUIRED"
+        and finding.evidence_availability == "NOT_AVAILABLE"
+    ):
+        return "Required but unavailable"
+    if finding.status == "FAIL":
+        return "Soft failures and warnings"
+    if finding.requiredness == "REQUIRED":
+        return "Passing required evidence"
+    if finding.requiredness == "OPTIONAL":
+        return "Optional evidence"
+    return "Not applicable"
+
+
+def _compact_finding_row(finding: object) -> dict[str, str]:
+    return _safe_row(
+        ("finding ID", finding.finding_id),
+        ("label", finding.label),
+        ("status", finding.status),
+        ("requiredness", finding.requiredness),
+        ("display value", finding.measured.display_text),
+        ("unit", finding.measured.unit or "NOT_AVAILABLE"),
+        ("short rule", _threshold_text(finding.threshold)),
+        ("gate consequence", finding.consequence.effect),
+        (
+            "first supporting event",
+            finding.supporting_event_sequences[0]
+            if finding.supporting_event_sequences
+            else "NOT_AVAILABLE",
+        ),
+    )
+
+
+def _grouped_finding_rows(
+    envelope: ReviewEnvelope,
+) -> dict[str, tuple[dict[str, str], ...]]:
+    grouped: dict[str, list[dict[str, str]]] = {
+        label: [] for label in _FINDING_GROUP_LABELS
+    }
+    for finding in envelope.findings:
+        grouped[_finding_group_id(finding)].append(_compact_finding_row(finding))
+    return {label: tuple(grouped[label]) for label in _FINDING_GROUP_LABELS}
+
+
+def _finding_detail_rows(
+    envelope: ReviewEnvelope,
+    finding_id: str,
+) -> tuple[dict[str, str], ...]:
+    return tuple(
+        row for row in _finding_rows(envelope) if row["finding ID"] == finding_id
+    )
+
+
+def _finding_threshold_rows(
+    envelope: ReviewEnvelope,
+    finding_id: str,
+) -> tuple[dict[str, str], ...]:
+    return tuple(
+        row
+        for finding in envelope.findings
+        if finding.finding_id == finding_id
+        for row in _threshold_rows(finding)
+    )
+
+
+def _availability_explanation(item: object) -> str:
+    if item.requirement == "NOT_APPLICABLE":
+        return _NOT_APPLICABLE_COPY
+    if item.availability != "NOT_AVAILABLE":
+        return "Evidence is available for evaluation under the selected profile."
+    if item.requirement == "REQUIRED":
+        return _REQUIRED_UNAVAILABLE_COPY
+    return _OPTIONAL_UNAVAILABLE_COPY
+
+
 def _sufficiency_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
     return tuple(
         _safe_row(
@@ -471,6 +641,7 @@ def _sufficiency_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
             ("label", item.label),
             ("requiredness", item.requirement),
             ("availability", item.availability),
+            ("availability explanation", _availability_explanation(item)),
             ("reason", item.reason or "NOT_APPLICABLE"),
             ("category", item.category),
             ("gate consequence", item.consequence.effect),
@@ -502,6 +673,43 @@ def _point_exact_fields(point: object) -> tuple[object, str, str, str]:
         exact.display_text,
         exact.unit or "NOT_AVAILABLE",
     )
+
+
+def _timeline_preset_track_ids(
+    envelope: ReviewEnvelope,
+    preset_name: str,
+) -> tuple[str, ...]:
+    preset_tracks = dict(_TIMELINE_PRESETS).get(preset_name)
+    if preset_tracks is None:
+        raise ValueError("invalid timeline preset")
+    available_ids = {track.track_id for track in envelope.timeline.tracks}
+    return tuple(track_id for track_id in preset_tracks if track_id in available_ids)
+
+
+def _finding_timeline_jump(
+    envelope: ReviewEnvelope,
+    finding_id: str,
+) -> dict[str, object] | None:
+    finding = next(
+        (item for item in envelope.findings if item.finding_id == finding_id),
+        None,
+    )
+    if finding is None:
+        raise ValueError("invalid finding selection")
+    if not finding.supporting_event_sequences:
+        return None
+    track_ids = dict(_FINDING_TIMELINE_TRACKS).get(
+        finding_id,
+        ("verifier_triggering_findings",),
+    )
+    known_ids = {track.track_id for track in envelope.timeline.tracks}
+    sequence = finding.supporting_event_sequences[0]
+    return {
+        "sequence": sequence,
+        "page": (sequence // _PAGE_SIZE) + 1,
+        "preset": "Decision evidence",
+        "track_ids": tuple(track_id for track_id in track_ids if track_id in known_ids),
+    }
 
 
 def _timeline_rows(
@@ -798,6 +1006,59 @@ def _comparison_rows(envelope: ComparisonEnvelope) -> tuple[dict[str, str], ...]
             ("source references", _reference_text(item.source_references)),
         )
         for item in deltas
+    )
+
+
+def _comparison_partition_rows(items: Sequence[object]) -> tuple[dict[str, str], ...]:
+    return tuple(
+        _safe_row(
+            ("dimension ID", item.dimension_id),
+            ("status", item.status),
+            *_delta_row_fields("baseline", item.baseline_value, item.unit),
+            *_delta_row_fields("candidate", item.candidate_value, item.unit),
+            ("unit", item.unit or "NOT_AVAILABLE"),
+            ("desired direction", item.desired_direction),
+            ("category", item.category),
+            ("explanation", item.explanation),
+            ("source references", _reference_text(item.source_references)),
+        )
+        for item in items
+    )
+
+
+def _comparison_interpretation(envelope: ComparisonEnvelope) -> str:
+    if envelope.improvements and envelope.regressions:
+        improvement_ids = {item.dimension_id for item in envelope.improvements}
+        regression_ids = {item.dimension_id for item in envelope.regressions}
+        if (
+            "minimum_ttc_s" in improvement_ids
+            and {
+                "route_completion_pct",
+                "max_abs_acceleration_mps2",
+                "max_abs_jerk_mps3",
+            }.issubset(regression_ids)
+            and envelope.verdict_delta is not None
+            and envelope.verdict_delta.status == "UNCHANGED"
+        ):
+            return _MIXED_COMPARISON_COPY
+        return (
+            "Improvements and regressions coexist. This is a mixed trade-off; Hermes "
+            "makes no overall advancement claim."
+        )
+    if envelope.improvements:
+        return (
+            "Comparable improvements are present without a comparable regression. The gate "
+            "outcome and authority boundaries remain independent; Hermes makes no overall "
+            "advancement claim."
+        )
+    if envelope.regressions:
+        return (
+            "Comparable regressions are present without a comparable improvement. Hermes "
+            "makes no overall advancement claim."
+        )
+    return (
+        "No comparable dimension improved or regressed. Hermes makes no overall "
+        "advancement claim."
     )
 
 
@@ -1189,62 +1450,302 @@ def _active_review(root: Path) -> ReviewEnvelope | None:
         return None
 
 
-def _render_intake(root: Path) -> None:
-    st.header("Intake / verification")
-    st.caption("Enter one exact relative selection. Hermes does not discover or auto-select runs.")
+def _render_persistent_review_identity(envelope: ReviewEnvelope | None) -> None:
+    if envelope is None:
+        return
+    locator = envelope.artifact.locator
+    manifest = envelope.artifact.manifest_identity
+    st.text(f"Selected directory: {locator.selected_relative_path} [OBSERVED]")
+    st.text(f"Manifest run ID: {manifest.run_id or 'NOT_AVAILABLE'} [OBSERVED]")
+
+
+def _render_decision_trust(envelope: ReviewEnvelope) -> None:
+    st.text("Decision state")
+    st.text(f"Gate verdict: {envelope.gate.verdict} [{envelope.gate.category}]")
+    st.text(
+        "Evidence integrity: "
+        f"{envelope.verification.integrity} [{envelope.verification.category}]"
+    )
+    st.text("Authority boundaries")
+    for row in _trust_rows(envelope)[2:]:
+        label = {
+            "Evidence authenticity": "Origin",
+            "Authorization status": "Authorization",
+        }.get(row["dimension"], row["dimension"])
+        st.text(f"{label}: {row['value']} [{row['category']}]")
+    st.text(_NON_AUTHORITY_SENTENCE)
+
+
+def _quarantine_identity_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+    artifact = envelope.artifact
+    manifest = artifact.manifest_identity
+    values = (
+        (
+            "Selected relative path",
+            artifact.locator.selected_relative_path,
+            artifact.locator.category,
+        ),
+        (
+            "Selected directory name",
+            artifact.locator.selected_directory_name,
+            artifact.locator.category,
+        ),
+        (
+            "Manifest run ID",
+            manifest.run_id or "NOT_AVAILABLE",
+            manifest.category if manifest.run_id is not None else "NOT_AVAILABLE",
+        ),
+        (
+            "Created at",
+            manifest.created_at_utc or "NOT_AVAILABLE",
+            manifest.category if manifest.created_at_utc is not None else "NOT_AVAILABLE",
+        ),
+        (
+            "Evidence schema",
+            manifest.evidence_schema_version or "NOT_AVAILABLE",
+            (
+                manifest.category
+                if manifest.evidence_schema_version is not None
+                else "NOT_AVAILABLE"
+            ),
+        ),
+        (
+            "Scenario schema",
+            manifest.scenario_schema_version or "NOT_AVAILABLE",
+            (
+                manifest.category
+                if manifest.scenario_schema_version is not None
+                else "NOT_AVAILABLE"
+            ),
+        ),
+    )
+    return tuple(
+        _safe_row(
+            ("label", label),
+            ("value", value),
+            ("category", category),
+        )
+        for label, value, category in values
+    )
+
+
+def _render_quarantine(envelope: ReviewEnvelope) -> None:
+    st.error("INVALID_EVIDENCE — Invalid evidence quarantine")
+    st.text(
+        "Stored gate rationale, findings, metrics, timeline, provenance, and comparison "
+        "deltas are quarantined and are not accepted."
+    )
+    _render_decision_trust(envelope)
+    st.text("Safely captured partial identity")
+    _show_rows(_quarantine_identity_rows(envelope))
+    st.text("Integrity diagnostics")
+    _show_rows(_diagnostic_rows(envelope))
+    mismatch = envelope.verification.first_mismatch_sequence
+    st.text(
+        "First mismatch: "
+        + (str(mismatch) if mismatch is not None else "NOT_AVAILABLE")
+        + " [COMPUTED]"
+    )
+    st.text("Safe next steps")
+    st.text(
+        "Confirm the intended directory, select another artifact, or contact the artifact "
+        "producer."
+    )
+
+
+def _reset_review_presentation_state() -> None:
+    st.session_state["timeline_page"] = 1
+    st.session_state["inspect_event_requested"] = False
+    st.session_state["finding_event_sequence"] = 0
+    st.session_state["finding_group"] = _FINDING_GROUP_LABELS[0]
+    st.session_state["selected_finding_id"] = ""
+    st.session_state["timeline_preset"] = "All tracks"
+    st.session_state["timeline_preset_applied"] = ""
+    st.session_state["visible_timeline_tracks"] = list(_TIMELINE_TRACK_REGISTRY)
+    st.session_state["selected_timeline_sequence"] = -1
+
+
+def _render_intake(root: Path, envelope: ReviewEnvelope | None) -> None:
+    st.header("Select & Verify")
+    st.caption(
+        "Enter one exact root-relative directory. Omit the configured root name. "
+        "Example: handoff-phase5-demo. Hermes does not discover or auto-select artifacts."
+    )
     draft = st.text_input("Exact relative artifact selection", key="artifact_selection_draft")
-    if st.button("Verify stored evidence"):
+    if st.button(
+        "Verify selected artifact",
+        key="verify_selected_artifact",
+    ):
+        previous_selection = st.session_state.get("submitted_artifact_selection", "")
+        previous_requested = st.session_state.get("review_requested", False)
         st.session_state["submitted_artifact_selection"] = draft
         st.session_state["review_requested"] = True
-        st.session_state["timeline_page"] = 0
-        st.session_state["inspect_event_requested"] = False
-        st.session_state["finding_event_sequence"] = 0
-    envelope = _active_review(root)
+        candidate = _active_review(root)
+        if candidate is None:
+            st.session_state["submitted_artifact_selection"] = previous_selection
+            st.session_state["review_requested"] = previous_requested
+        else:
+            _reset_review_presentation_state()
+            envelope = candidate
     if envelope is None:
         st.text("Evidence integrity: UNVERIFIED [COMPUTED]")
         st.text("Evidence has not yet been checked by the installed Hermes verifier.")
+        st.info(
+            "Enter one exact root-relative directory, omit the configured root name, "
+            "confirm the intended directory, and submit Verify again."
+        )
         return
-    _show_rows(_trust_rows(envelope))
+    _render_persistent_review_identity(envelope)
     if envelope.verification.integrity == "INVALID_EVIDENCE":
-        st.error("INVALID_EVIDENCE")
-        st.warning("Stored verdict, findings, and metrics are quarantined and not accepted.")
-    _show_rows(_identity_rows(envelope))
-    st.subheader("Captured source inventory")
-    _show_rows(_inventory_rows(envelope))
-    st.subheader("Verification diagnostics")
-    _show_rows(_diagnostic_rows(envelope))
+        _render_quarantine(envelope)
+        return
+    _render_decision_trust(envelope)
+    st.text("Submitted directory and manifest identity are shown separately above.")
 
 
 def _render_summary(envelope: ReviewEnvelope | None) -> None:
-    st.header("Review summary / trust")
+    st.header("Overview")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing it.")
         return
-    _show_rows(_trust_rows(envelope))
-    _show_rows(_identity_rows(envelope))
+    _render_persistent_review_identity(envelope)
     if envelope.verification.integrity == "INVALID_EVIDENCE":
-        st.error("INVALID_EVIDENCE — stored claims remain quarantined.")
+        _render_quarantine(envelope)
         return
-    _show_rows(_accepted_review_rows(envelope))
+    artifact = envelope.artifact
+    manifest = artifact.manifest_identity
+    st.subheader("Artifact reviewed")
+    st.text(f"Selected relative path: {artifact.locator.selected_relative_path} [OBSERVED]")
+    st.text(f"Selected directory name: {artifact.locator.selected_directory_name} [OBSERVED]")
+    st.text(f"Manifest run ID: {manifest.run_id} [OBSERVED]")
+    st.text(f"Created at: {manifest.created_at_utc} [OBSERVED]")
+    st.text(f"Evidence schema: {manifest.evidence_schema_version} [OBSERVED]")
+    st.subheader("Gate decision")
+    st.text(f"Gate verdict: {envelope.gate.verdict} [GATE_DECISION]")
+    if envelope.gate.verdict == "PASS":
+        st.text(
+            "The installed prototype gate recomputation returned PASS for this bounded "
+            "simulation evidence."
+        )
+    elif envelope.gate.verdict == "HOLD":
+        st.text(
+            "The installed prototype gate recomputation returned HOLD because controlling "
+            "findings did not pass."
+        )
+    else:
+        st.text(
+            "The installed prototype gate recomputation returned CONDITIONAL for this "
+            "bounded simulation evidence."
+        )
+    st.subheader("Why")
+    st.text("Rationale: " + ("; ".join(envelope.gate.rationale) or "NONE"))
+    st.text(
+        "Controlling hard findings: "
+        + (", ".join(envelope.gate.hard_failure_ids) or "NONE")
+    )
+    st.text(
+        "Controlling soft findings: "
+        + (", ".join(envelope.gate.soft_failure_ids) or "NONE")
+    )
+    st.subheader("Integrity")
+    _render_decision_trust(envelope)
+    st.subheader("Required unavailable evidence")
+    required_unavailable = tuple(
+        item
+        for item in envelope.evidence_sufficiency.items
+        if item.requirement == "REQUIRED" and item.availability == "NOT_AVAILABLE"
+    )
+    st.text(f"Count: {len(required_unavailable)} [COMPUTED]")
+    if required_unavailable:
+        _show_rows(
+            tuple(
+                row
+                for row in _sufficiency_rows(envelope)
+                if row["requiredness"] == "REQUIRED"
+                and row["availability"] == "NOT_AVAILABLE"
+            )
+        )
+    else:
+        st.info("No required unavailable evidence is reported by this envelope.")
+    st.subheader("What this does not establish")
+    for statement, category in _FIXED_LIMITATION_RECORDS:
+        st.text(f"{statement} [{category}]")
+    st.text(
+        "Simulation evidence does not establish real-world safety, certification, "
+        "authorization, or permission to control physical hardware. [RESIDUAL_RISK]"
+    )
+    st.subheader("Technical identity")
+    st.text(
+        "Open Provenance for hashes, Hermes and gate versions, schema details, and the "
+        "captured source inventory."
+    )
 
 
 def _render_findings(envelope: ReviewEnvelope | None) -> None:
-    st.header("Findings / evidence coverage")
+    st.header("Evidence")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing findings.")
         return
-    _show_rows(_trust_rows(envelope))
+    _render_persistent_review_identity(envelope)
     if envelope.verification.integrity == "INVALID_EVIDENCE":
-        st.error("No accepted findings are available because evidence is invalid.")
+        _render_quarantine(envelope)
         return
+    _render_decision_trust(envelope)
     st.subheader("Evidence sufficiency")
     _show_rows(_sufficiency_rows(envelope))
-    st.subheader("Findings")
-    _show_rows(_finding_rows(envelope))
-    st.subheader("Threshold expression nodes")
-    _show_rows(
-        tuple(row for finding in envelope.findings for row in _threshold_rows(finding))
-    )
+    grouped = _grouped_finding_rows(envelope)
+    st.text(f"Canonical accepted finding total: {len(envelope.findings)} [COMPUTED]")
+    group = st.radio("Finding group", _FINDING_GROUP_LABELS, key="finding_group")
+    compact_rows = grouped[group]
+    if group != "Failed required evidence":
+        st.subheader("Failed required evidence — always visible")
+        _show_rows(grouped["Failed required evidence"])
+    st.subheader(group)
+    if compact_rows:
+        _show_rows(compact_rows)
+        finding_ids = [row["finding ID"] for row in compact_rows]
+        current = st.session_state.get("selected_finding_id", "")
+        if current not in finding_ids:
+            st.session_state["selected_finding_id"] = finding_ids[0]
+        selected_finding_id = st.radio(
+            "Finding detail",
+            finding_ids,
+            key="selected_finding_id",
+        )
+        st.subheader("Exact finding detail")
+        _show_rows(_finding_detail_rows(envelope, selected_finding_id))
+        st.subheader("Threshold expression nodes")
+        _show_rows(_finding_threshold_rows(envelope, selected_finding_id))
+        jump = _finding_timeline_jump(envelope, selected_finding_id)
+        if jump is None:
+            st.info("No supporting event is stored for this finding.")
+        else:
+            st.button(
+                "Open first supporting event in Timeline",
+                key="jump_to_timeline",
+                on_click=_apply_timeline_jump_state,
+                args=(
+                    jump["sequence"],
+                    jump["page"],
+                    jump["preset"],
+                    jump["track_ids"],
+                ),
+            )
+    else:
+        matching_sufficiency = tuple(
+            row
+            for row in _sufficiency_rows(envelope)
+            if (
+                group == "Required but unavailable"
+                and row["requiredness"] == "REQUIRED"
+                and row["availability"] == "NOT_AVAILABLE"
+            )
+            or (
+                group == "Not applicable"
+                and row["requiredness"] == "NOT_APPLICABLE"
+            )
+        )
+        _show_rows(matching_sufficiency)
     st.subheader("Metrics")
     _show_rows(_metric_rows(envelope))
     st.subheader("Exact supporting-event drill-down")
@@ -1256,7 +1757,7 @@ def _render_findings(envelope: ReviewEnvelope | None) -> None:
         step=1,
         key="finding_event_sequence",
     )
-    if st.button("Inspect exact event evidence"):
+    if st.button("Inspect exact event evidence", key="inspect_exact_event"):
         st.session_state["inspect_event_requested"] = True
     if st.session_state.get("inspect_event_requested", False):
         rows = _sequence_rows(envelope, int(sequence))
@@ -1266,24 +1767,48 @@ def _render_findings(envelope: ReviewEnvelope | None) -> None:
             st.info("No retained point exists for that exact event sequence.")
 
 
+def _apply_timeline_jump_state(
+    sequence: int,
+    page: int,
+    preset: str,
+    track_ids: tuple[str, ...],
+) -> None:
+    st.session_state["review_section"] = "Timeline"
+    st.session_state["timeline_page"] = page
+    st.session_state["timeline_preset"] = preset
+    st.session_state["timeline_preset_applied"] = preset
+    st.session_state["visible_timeline_tracks"] = list(track_ids)
+    st.session_state["selected_timeline_sequence"] = sequence
+
+
 def _render_timeline(envelope: ReviewEnvelope | None) -> None:
     st.header("Timeline")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing the timeline.")
         return
-    _show_rows(_trust_rows(envelope))
+    _render_persistent_review_identity(envelope)
     if envelope.verification.integrity == "INVALID_EVIDENCE":
-        st.error("No accepted timeline is available because evidence is invalid.")
+        _render_quarantine(envelope)
         return
+    _render_decision_trust(envelope)
+    preset = st.radio(
+        "Timeline preset",
+        _TIMELINE_PRESET_NAMES,
+        key="timeline_preset",
+    )
+    if st.session_state.get("timeline_preset_applied") != preset:
+        st.session_state["visible_timeline_tracks"] = list(
+            _timeline_preset_track_ids(envelope, preset)
+        )
+        st.session_state["timeline_preset_applied"] = preset
     page_count = max(1, (envelope.timeline.event_count + _PAGE_SIZE - 1) // _PAGE_SIZE)
     page = st.number_input(
         "Timeline page",
         min_value=1,
         max_value=page_count,
-        value=min(st.session_state.get("timeline_page", 0) + 1, page_count),
         step=1,
+        key="timeline_page",
     )
-    st.session_state["timeline_page"] = int(page) - 1
     available_tracks = tuple(
         track for track in envelope.timeline.tracks if track.availability == "AVAILABLE"
     )
@@ -1291,7 +1816,7 @@ def _render_timeline(envelope: ReviewEnvelope | None) -> None:
     selected_track_ids = st.multiselect(
         "Visible timeline tracks",
         options=[track.track_id for track in envelope.timeline.tracks],
-        default=[track.track_id for track in envelope.timeline.tracks],
+        default=list(_timeline_preset_track_ids(envelope, preset)),
         key="visible_timeline_tracks",
     )
     st.text(
@@ -1320,14 +1845,22 @@ def _render_timeline(envelope: ReviewEnvelope | None) -> None:
             selected_track_ids=selected_track_ids,
         )
     )
+    selected_sequence = st.session_state.get("selected_timeline_sequence", -1)
+    if isinstance(selected_sequence, int) and selected_sequence >= 0:
+        st.subheader("Selected supporting event")
+        _show_rows(_sequence_rows(envelope, selected_sequence))
 
 
 def _render_provenance(envelope: ReviewEnvelope | None) -> None:
-    st.header("Provenance / integrity / limitations")
+    st.header("Provenance")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing provenance.")
         return
-    _show_rows(_trust_rows(envelope))
+    _render_persistent_review_identity(envelope)
+    if envelope.verification.integrity == "INVALID_EVIDENCE":
+        _render_quarantine(envelope)
+        return
+    _render_decision_trust(envelope)
     _show_rows(_identity_rows(envelope))
     st.subheader("Captured source inventory")
     _show_rows(_inventory_rows(envelope))
@@ -1369,10 +1902,20 @@ def _active_comparison(root: Path) -> ComparisonEnvelope | ReviewEnvelope | None
 
 
 def _render_comparison(root: Path) -> None:
-    st.header("Compatible comparison")
-    baseline = st.text_input("Exact baseline selection", key="baseline_selection_draft")
-    candidate = st.text_input("Exact candidate selection", key="candidate_selection_draft")
-    if st.button("Compare stored evidence"):
+    st.header("Compare")
+    st.caption(
+        "Enter two exact root-relative directories. Hermes does not discover, rank, or "
+        "auto-select comparison artifacts."
+    )
+    baseline = st.text_input(
+        "Exact baseline selection",
+        key="comparison_baseline_draft",
+    )
+    candidate = st.text_input(
+        "Exact candidate selection",
+        key="comparison_candidate_draft",
+    )
+    if st.button("Compare stored evidence", key="compare_stored_evidence"):
         st.session_state["submitted_baseline_selection"] = baseline
         st.session_state["submitted_candidate_selection"] = candidate
         st.session_state["comparison_requested"] = True
@@ -1385,11 +1928,19 @@ def _render_comparison(root: Path) -> None:
         candidate = st.session_state.get("submitted_candidate_selection", "")
         side = _invalid_comparison_side(result, baseline, candidate)
         st.error(f"{side} is INVALID_EVIDENCE; no comparison claim is available.")
-        _show_rows(_trust_rows(result))
-        _show_rows(_identity_rows(result))
-        _show_rows(_diagnostic_rows(result))
+        _render_persistent_review_identity(result)
+        _render_quarantine(result)
         return
+    st.text(
+        "Submitted baseline: "
+        f"{result.baseline.artifact.locator.selected_relative_path} [OBSERVED]"
+    )
+    st.text(
+        "Submitted candidate: "
+        f"{result.candidate.artifact.locator.selected_relative_path} [OBSERVED]"
+    )
     compatible = result.compatibility.status == "COMPATIBLE"
+    st.text("Decision state")
     _show_rows(
         _comparison_side_rows(
             result,
@@ -1399,20 +1950,57 @@ def _render_comparison(root: Path) -> None:
     _show_rows(_compatibility_rows(result))
     _show_rows(_compatibility_reason_rows(result))
     if result.compatibility.status == "INCOMPATIBLE":
-        st.error("These artifacts are incompatible; no deltas or charts are available.")
+        st.error("Comparison unavailable")
+        st.text(
+            "The artifacts may be reviewed independently, but no winner, metric change, "
+            "or advancement claim is shown."
+        )
         _show_rows(_comparison_limitation_rows(result))
         return
-    st.subheader("Verdict, hard-failure, and availability summary deltas")
-    _show_rows(_dedicated_comparison_rows(result))
-    st.subheader("Improvements, regressions, unchanged, and descriptive outcomes")
-    _show_rows(_comparison_rows(result))
-    st.subheader("Evidence availability details")
-    _show_rows(_availability_delta_rows(result))
+    dedicated = _dedicated_comparison_rows(result)
+    st.subheader("Gate outcome")
+    _show_rows(tuple(row for row in dedicated if row["record"] == "verdict delta"))
+    st.subheader("Hard-failure change")
+    _show_rows(tuple(row for row in dedicated if row["record"] == "hard-failure delta"))
+    st.subheader("What improved")
+    _show_rows(_comparison_partition_rows(result.improvements))
+    st.subheader("What regressed")
+    _show_rows(_comparison_partition_rows(result.regressions))
+    st.subheader("What was unchanged")
+    _show_rows(_comparison_partition_rows(result.unchanged_outcomes))
+    st.subheader("What was not comparable")
+    _show_rows(_comparison_partition_rows(result.not_comparable))
+    st.subheader("Evidence availability changes")
+    _show_rows(
+        tuple(row for row in dedicated if row["record"] == "availability summary delta")
+        + _availability_delta_rows(result)
+    )
+    st.subheader("Advancement interpretation")
+    st.text(_comparison_interpretation(result))
     st.subheader("Comparison limitations")
     _show_rows(_comparison_limitation_rows(result))
-    st.caption(
-        "Intervention count is descriptive. No winner or overall advancement is inferred. "
-        "[RESIDUAL_RISK]"
+    st.text(
+        "Intervention count is descriptive and is not an ordinal measure. [RESIDUAL_RISK]"
+    )
+
+
+def _render_evidence_limitations() -> None:
+    st.header("Evidence limitations")
+    st.text("Internal consistency is not independent authenticity. [AUTHENTICITY]")
+    st.text(
+        "Stored verification does not reexecute the policy or simulator. [RESIDUAL_RISK]"
+    )
+    st.text(
+        "Hermes reviews simulation evidence only; authorization is NOT_EVALUATED and "
+        "deployment permission is NONE. [RESIDUAL_RISK]"
+    )
+    st.text(
+        "This result does not establish real-world safety, certification, compliance, or "
+        "permission to control physical hardware. [RESIDUAL_RISK]"
+    )
+    st.text(
+        "Human comprehension, manual visual review, and accessibility audit are NOT YET "
+        "OBSERVED. [NOT_AVAILABLE]"
     )
 
 
@@ -1425,23 +2013,36 @@ def main(argv: Sequence[str] | None = None) -> None:
         st.stop()
         return
     st.title("Hermes — Simulation Evidence Review")
+    st.text("Authority boundaries")
     for label, value, category in _PERSISTENT_TRUST_FRAME:
         st.text(f"{label}: {value} [{category}]")
-    for statement, category in _FIXED_LIMITATION_RECORDS:
-        st.text(f"{statement} [{category}]")
-    screen = st.radio("Review screen", _SCREENS, key="selected_screen")
-    if screen == _SCREENS[0]:
-        _render_intake(arguments.artifact_root)
-    elif screen == _SCREENS[1]:
-        _render_summary(_active_review(arguments.artifact_root))
-    elif screen == _SCREENS[2]:
-        _render_findings(_active_review(arguments.artifact_root))
-    elif screen == _SCREENS[3]:
-        _render_timeline(_active_review(arguments.artifact_root))
-    elif screen == _SCREENS[4]:
-        _render_provenance(_active_review(arguments.artifact_root))
-    else:
+    st.text(_NON_AUTHORITY_SENTENCE)
+    workflow = st.radio(
+        "Primary workflow",
+        _PRIMARY_WORKFLOWS,
+        key="primary_workflow",
+    )
+    if workflow == "Review":
+        section = st.radio(
+            "Review section",
+            _REVIEW_SECTIONS,
+            key="review_section",
+        )
+        envelope = _active_review(arguments.artifact_root)
+        if section == "Select & Verify":
+            _render_intake(arguments.artifact_root, envelope)
+        elif section == "Overview":
+            _render_summary(envelope)
+        elif section == "Evidence":
+            _render_findings(envelope)
+        elif section == "Timeline":
+            _render_timeline(envelope)
+        else:
+            _render_provenance(envelope)
+    elif workflow == "Compare":
         _render_comparison(arguments.artifact_root)
+    else:
+        _render_evidence_limitations()
 
 
 if __name__ == "__main__":

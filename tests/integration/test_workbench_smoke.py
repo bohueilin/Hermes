@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
 from pathlib import Path
 
@@ -10,6 +11,7 @@ pytest.importorskip("streamlit")
 from streamlit.testing.v1 import AppTest  # noqa: E402
 
 from hermes.evidence.artifacts import REQUIRED_ARTIFACT_FILES
+from hermes.review import review_artifact
 
 _RETAINED_SELECTIONS = (
     "handoff-phase5-demo",
@@ -17,27 +19,22 @@ _RETAINED_SELECTIONS = (
     "handoff-p1-conditional",
     "handoff-p2-metadrive",
     "handoff-p3-cutin-baseline",
+    "handoff-p3-cutin-shielded",
     "handoff-p3-lead-baseline",
     "handoff-p3-lead-shielded",
     "handoff-p4-fault",
     "phase1-tampered",
 )
 _PERSISTENT_TEXT = (
-    "Evidence authenticity: NOT_AUTHENTICATED [AUTHENTICITY]",
-    "Authorization status: NOT_EVALUATED [ASSUMPTION]",
+    "Origin: NOT_AUTHENTICATED [AUTHENTICITY]",
+    "Authorization: NOT_EVALUATED [ASSUMPTION]",
     "Deployment permission: NONE [RESIDUAL_RISK]",
     "Scope: SIMULATION_ONLY [ASSUMPTION]",
     "Authoritative status: NOT_DEFINED [ASSUMPTION]",
     (
-        "A Hermes PASS is only the installed prototype gate verdict for this bounded "
-        "simulation. [RESIDUAL_RISK]"
+        "This is a simulation evidence decision, not an approval or deployment "
+        "authorization."
     ),
-    "Internal consistency is not independent authenticity. [AUTHENTICITY]",
-    (
-        "Stored verification does not reexecute the policy or simulator. "
-        "[RESIDUAL_RISK]"
-    ),
-    "Simulation evidence grants no physical-system permission. [RESIDUAL_RISK]",
 )
 
 
@@ -77,56 +74,109 @@ def workbench_root(repository_root: Path, tmp_path: Path) -> Path:
     return _copy_artifacts(repository_root, tmp_path, _RETAINED_SELECTIONS)
 
 
-def _select_screen(app: AppTest, screen: str) -> AppTest:
-    return app.radio[0].set_value(screen).run(timeout=30)
+def _workflow(app: AppTest, value: str) -> AppTest:
+    return app.radio(key="primary_workflow").set_value(value).run(timeout=30)
 
 
-def _submit_review(app: AppTest, selection: str) -> AppTest:
-    app.text_input[0].input(selection).run(timeout=30)
-    return app.button[0].click().run(timeout=30)
+def _review_section(app: AppTest, value: str) -> AppTest:
+    return app.radio(key="review_section").set_value(value).run(timeout=30)
 
 
-def _assert_persistent_frame(app: AppTest) -> None:
-    assert tuple(item.value for item in app.text[: len(_PERSISTENT_TEXT)]) == (
-        _PERSISTENT_TEXT
+def _verify(app: AppTest, selection: str) -> AppTest:
+    app.text_input(key="artifact_selection_draft").input(selection).run(timeout=30)
+    return app.button(key="verify_selected_artifact").click().run(timeout=30)
+
+
+def _compare(app: AppTest, baseline: str, candidate: str) -> AppTest:
+    app.text_input(key="comparison_baseline_draft").input(baseline).run(timeout=30)
+    app.text_input(key="comparison_candidate_draft").input(candidate).run(timeout=30)
+    return app.button(key="compare_stored_evidence").click().run(timeout=30)
+
+
+def _visible_text(app: AppTest) -> str:
+    return "\n".join(
+        str(item.value)
+        for collection in (
+            app.title,
+            app.header,
+            app.subheader,
+            app.text,
+            app.caption,
+            app.info,
+            app.warning,
+            app.error,
+        )
+        for item in collection
     )
 
 
-def test_workbench_initial_state_requires_explicit_verify_and_has_six_screens(
+def _review_snapshot(root: Path, selection: str) -> dict[str, str]:
+    envelope = review_artifact(root, selection)
+    return {
+        "envelope": envelope.model_dump_json(),
+        "gate": envelope.gate.model_dump_json(),
+        "findings": json.dumps(
+            [item.model_dump(mode="json") for item in envelope.findings],
+            sort_keys=True,
+        ),
+        "event_count": str(envelope.timeline.event_count),
+        "track_count": str(len(envelope.timeline.tracks)),
+    }
+
+
+def _assert_persistent_frame(app: AppTest) -> None:
+    visible = _visible_text(app)
+    for expected in _PERSISTENT_TEXT:
+        assert expected in visible
+
+
+def _assert_no_envelope(app: AppTest) -> None:
+    assert all(
+        "Envelope" not in type(value).__name__
+        for value in app.session_state.filtered_state.values()
+    )
+
+
+def test_workbench_initial_review_flow_requires_explicit_verify_and_has_no_selection(
     workbench_root: Path,
 ) -> None:
     app = _app(workbench_root)
 
     assert list(app.exception) == []
     assert app.title[0].value == "Hermes — Simulation Evidence Review"
-    assert app.radio[0].options == [
-        "Intake / verification",
-        "Review summary / trust",
-        "Findings / evidence coverage",
-        "Timeline",
-        "Provenance / integrity / limitations",
-        "Compatible comparison",
+    assert app.radio(key="primary_workflow").options == [
+        "Review",
+        "Compare",
+        "Evidence limitations",
     ]
-    assert app.text_input[0].value == ""
+    assert app.radio(key="review_section").options == [
+        "Select & Verify",
+        "Overview",
+        "Evidence",
+        "Timeline",
+        "Provenance",
+    ]
+    assert app.text_input(key="artifact_selection_draft").value == ""
     assert any("UNVERIFIED" in item.value for item in app.text)
     assert "review_requested" not in app.session_state.filtered_state
     _assert_persistent_frame(app)
+    _assert_no_envelope(app)
 
 
 def test_workbench_review_action_pins_last_submitted_selection_and_recaptures(
     workbench_root: Path,
 ) -> None:
-    app = _submit_review(_app(workbench_root), "handoff-phase5-demo")
+    app = _verify(_app(workbench_root), "handoff-phase5-demo")
 
     assert list(app.exception) == []
     assert app.session_state.filtered_state["submitted_artifact_selection"] == (
         "handoff-phase5-demo"
     )
-    app.text_input[0].input("phase1-tampered").run(timeout=30)
+    app.text_input(key="artifact_selection_draft").input("phase1-tampered").run(timeout=30)
     assert app.session_state.filtered_state["submitted_artifact_selection"] == (
         "handoff-phase5-demo"
     )
-    app.button[0].click().run(timeout=30)
+    app.button(key="verify_selected_artifact").click().run(timeout=30)
     assert app.session_state.filtered_state["submitted_artifact_selection"] == (
         "phase1-tampered"
     )
@@ -136,13 +186,15 @@ def test_workbench_review_action_pins_last_submitted_selection_and_recaptures(
 def test_workbench_timeline_filter_changes_only_visible_tracks(
     workbench_root: Path,
 ) -> None:
-    app = _submit_review(_app(workbench_root), "handoff-phase5-demo")
-    app = _select_screen(app, "Timeline")
+    app = _verify(_app(workbench_root), "handoff-phase5-demo")
+    app = _review_section(app, "Timeline")
 
     assert list(app.exception) == []
     assert app.multiselect[0].value == app.multiselect[0].options
     assert "Event total: 40 [OBSERVED]" in [item.value for item in app.text]
-    app.multiselect[0].set_value(["candidate_action", "ttc_s"]).run(timeout=30)
+    app.multiselect(key="visible_timeline_tracks").set_value(
+        ["candidate_action", "ttc_s"]
+    ).run(timeout=30)
 
     assert list(app.exception) == []
     point_frame = app.dataframe[-1].value
@@ -163,7 +215,9 @@ def test_workbench_timeline_filter_changes_only_visible_tracks(
         for value in app.session_state.filtered_state.values()
     )
 
-    app.multiselect[0].set_value(["raw_observation"]).run(timeout=30)
+    app.multiselect(key="visible_timeline_tracks").set_value(["raw_observation"]).run(
+        timeout=30
+    )
     track_frames = [
         frame.value for frame in app.dataframe if "track ID" in frame.value.columns
     ]
@@ -172,12 +226,13 @@ def test_workbench_timeline_filter_changes_only_visible_tracks(
     assert "machine value" not in track_frames[-1].columns
     assert track_frames[-1].iloc[0]["availability"] == "NOT_AVAILABLE"
 
-    app.multiselect[0].set_value([]).run(timeout=30)
+    app.multiselect(key="visible_timeline_tracks").set_value([]).run(timeout=30)
     assert all("track ID" not in frame.value.columns for frame in app.dataframe)
     assert "Event total: 40 [OBSERVED]" in [item.value for item in app.text]
 
-    app.multiselect[0].set_value(app.multiselect[0].options).run(timeout=30)
-    assert app.multiselect[0].value == app.multiselect[0].options
+    tracks = app.multiselect(key="visible_timeline_tracks").options
+    app.multiselect(key="visible_timeline_tracks").set_value(tracks).run(timeout=30)
+    assert app.multiselect(key="visible_timeline_tracks").value == tracks
     point_frame = app.dataframe[-1].value
     assert len(point_frame) == 40 * 10
     assert app.session_state.filtered_state["submitted_artifact_selection"] == (
@@ -188,10 +243,14 @@ def test_workbench_timeline_filter_changes_only_visible_tracks(
 def test_workbench_findings_renders_recursive_threshold_and_exact_event_drilldown(
     workbench_root: Path,
 ) -> None:
-    app = _submit_review(_app(workbench_root), "handoff-phase5-demo")
-    app = _select_screen(app, "Findings / evidence coverage")
+    app = _verify(_app(workbench_root), "handoff-phase5-demo")
+    app = _review_section(app, "Evidence")
 
     assert list(app.exception) == []
+    app.radio(key="finding_group").set_value("Passing required evidence").run(timeout=30)
+    app.radio(key="selected_finding_id").set_value("boundary.within_tolerance").run(
+        timeout=30
+    )
     threshold_frame = next(
         frame.value for frame in app.dataframe if "node path" in frame.value.columns
     )
@@ -201,7 +260,7 @@ def test_workbench_findings_renders_recursive_threshold_and_exact_event_drilldow
             "node path",
         ]
     ) == ["root", "root.0", "root.1", "root.2"]
-    app.button[0].click().run(timeout=30)
+    app.button(key="inspect_exact_event").click().run(timeout=30)
     drilldown_frame = app.dataframe[-1].value
     assert {"machine value", "exact value", "display value", "unit"}.issubset(
         drilldown_frame.columns
@@ -212,10 +271,10 @@ def test_workbench_findings_renders_recursive_threshold_and_exact_event_drilldow
 def test_workbench_new_review_resets_prior_event_drilldown_until_explicit_inspect(
     workbench_root: Path,
 ) -> None:
-    app = _submit_review(_app(workbench_root), "handoff-phase5-demo")
-    app = _select_screen(app, "Findings / evidence coverage")
-    app.number_input[0].set_value(1).run(timeout=30)
-    app.button[0].click().run(timeout=30)
+    app = _verify(_app(workbench_root), "handoff-phase5-demo")
+    app = _review_section(app, "Evidence")
+    app.number_input(key="finding_event_sequence").set_value(1).run(timeout=30)
+    app.button(key="inspect_exact_event").click().run(timeout=30)
 
     assert app.session_state.filtered_state["inspect_event_requested"] is True
     assert app.session_state.filtered_state["finding_event_sequence"] == 1
@@ -226,8 +285,8 @@ def test_workbench_new_review_resets_prior_event_drilldown_until_explicit_inspec
     )
     assert set(prior_drilldown["sequence"]) == {"1"}
 
-    app = _select_screen(app, "Intake / verification")
-    app = _submit_review(app, "handoff-p1-collision")
+    app = _review_section(app, "Select & Verify")
+    app = _verify(app, "handoff-p1-collision")
 
     assert list(app.exception) == []
     assert app.session_state.filtered_state["submitted_artifact_selection"] == (
@@ -235,17 +294,14 @@ def test_workbench_new_review_resets_prior_event_drilldown_until_explicit_inspec
     )
     assert app.session_state.filtered_state["inspect_event_requested"] is False
     assert app.session_state.filtered_state["finding_event_sequence"] == 0
-    identity_frame = next(
-        frame.value
-        for frame in app.dataframe
-        if "label" in frame.value.columns
-        and "Selected relative path" in set(frame.value["label"])
-    )
-    assert identity_frame.loc[
-        identity_frame["label"] == "Selected relative path", "value"
-    ].item() == "handoff-p1-collision"
+    assert app.session_state.filtered_state["finding_group"] == "Failed required evidence"
+    assert app.session_state.filtered_state["selected_finding_id"] == ""
+    assert app.session_state.filtered_state["timeline_preset"] == "All tracks"
+    assert app.session_state.filtered_state["timeline_preset_applied"] == ""
+    assert app.session_state.filtered_state["selected_timeline_sequence"] == -1
+    assert "Selected directory: handoff-p1-collision [OBSERVED]" in _visible_text(app)
 
-    app = _select_screen(app, "Findings / evidence coverage")
+    app = _review_section(app, "Evidence")
 
     assert app.session_state.filtered_state["submitted_artifact_selection"] == (
         "handoff-p1-collision"
@@ -254,7 +310,7 @@ def test_workbench_new_review_resets_prior_event_drilldown_until_explicit_inspec
         "point availability" in frame.value.columns for frame in app.dataframe
     )
 
-    app.button[0].click().run(timeout=30)
+    app.button(key="inspect_exact_event").click().run(timeout=30)
     fresh_drilldown = next(
         frame.value
         for frame in app.dataframe
@@ -263,13 +319,11 @@ def test_workbench_new_review_resets_prior_event_drilldown_until_explicit_inspec
     assert set(fresh_drilldown["sequence"]) == {"0"}
 
 
-@pytest.mark.parametrize("selection", ["handoff-phase5-demo", "phase1-tampered"])
 def test_workbench_provenance_renders_inventory_and_safe_diagnostics(
     workbench_root: Path,
-    selection: str,
 ) -> None:
-    app = _submit_review(_app(workbench_root), selection)
-    app = _select_screen(app, "Provenance / integrity / limitations")
+    app = _verify(_app(workbench_root), "handoff-phase5-demo")
+    app = _review_section(app, "Provenance")
 
     assert list(app.exception) == []
     inventory_frame = next(
@@ -286,27 +340,6 @@ def test_workbench_provenance_renders_inventory_and_safe_diagnostics(
     assert set(inventory_frame["file category"]) == {"OBSERVED"}
     assert set(inventory_frame["digest category"]) == {"COMPUTED"}
     assert all(len(value) == 64 for value in inventory_frame["SHA-256"])
-    if selection == "phase1-tampered":
-        assert any("quarantined" in item.value.lower() for item in app.warning)
-        provenance_status = next(
-            frame.value
-            for frame in app.dataframe
-            if "label" in frame.value.columns
-            and list(frame.value["label"]) == ["status"]
-        )
-        assert provenance_status.iloc[0]["value"] == "QUARANTINED"
-        assert provenance_status.iloc[0]["availability"] == "NOT_AVAILABLE"
-        assert provenance_status.iloc[0]["category"] == "NOT_AVAILABLE"
-        diagnostic_frame = next(
-            frame.value for frame in app.dataframe if "code" in frame.value.columns
-        )
-        assert len(diagnostic_frame) > 0
-        all_cells = " ".join(
-            str(value)
-            for frame in app.dataframe
-            for value in frame.value.to_numpy().ravel()
-        )
-        assert "None" not in all_cells
 
 
 @pytest.mark.parametrize(
@@ -324,47 +357,53 @@ def test_workbench_all_review_screens_render_without_exception_and_never_store_e
     workbench_root: Path,
     selection: str,
 ) -> None:
-    app = _submit_review(_app(workbench_root), selection)
+    app = _verify(_app(workbench_root), selection)
 
-    for screen in app.radio[0].options[:-1]:
-        app = _select_screen(app, screen)
+    for screen in app.radio(key="review_section").options:
+        app = _review_section(app, screen)
         assert list(app.exception) == []
         _assert_persistent_frame(app)
-        assert all(
-            "Envelope" not in type(value).__name__
-            for value in app.session_state.filtered_state.values()
-        )
-        if screen != "Intake / verification":
-            assert len(app.dataframe) >= 1
+        _assert_no_envelope(app)
+        if screen != "Select & Verify":
+            assert f"Selected directory: {selection} [OBSERVED]" in _visible_text(app)
 
 
 def test_workbench_compatible_and_incompatible_comparison_render_without_chart_claims(
     workbench_root: Path,
 ) -> None:
-    app = _select_screen(_app(workbench_root), "Compatible comparison")
-    app.text_input[0].input("handoff-p3-lead-baseline").run(timeout=30)
-    app.text_input[1].input("handoff-p3-lead-shielded").run(timeout=30)
-    app.button[0].click().run(timeout=30)
+    app = _workflow(_app(workbench_root), "Compare")
+    app = _compare(app, "handoff-p3-lead-baseline", "handoff-p3-lead-shielded")
 
     assert list(app.exception) == []
     assert len(app.dataframe) >= 4
-    app.text_input[1].input("handoff-p3-cutin-baseline").run(timeout=30)
+    app.text_input(key="comparison_candidate_draft").input(
+        "handoff-p3-cutin-baseline"
+    ).run(timeout=30)
     assert app.session_state.filtered_state["submitted_candidate_selection"] == (
         "handoff-p3-lead-shielded"
     )
-    app.button[0].click().run(timeout=30)
-    assert any("incompatible" in item.value.lower() for item in app.error)
+    app.button(key="compare_stored_evidence").click().run(timeout=30)
+    assert any("comparison unavailable" in item.value.lower() for item in app.error)
     all_cells = " ".join(
         str(value)
         for frame in app.dataframe
         for value in frame.value.to_numpy().ravel()
     )
     assert "source_type=" not in all_cells
+    assert "dimension ID" not in {
+        column for frame in app.dataframe for column in frame.value.columns
+    }
     assert all(
         item.value
         not in {
-            "Verdict, hard-failure, and availability summary deltas",
-            "Improvements, regressions, unchanged, and descriptive outcomes",
+            "Gate outcome",
+            "Hard-failure change",
+            "What improved",
+            "What regressed",
+            "What was unchanged",
+            "What was not comparable",
+            "Evidence availability changes",
+            "Advancement interpretation",
         }
         for item in app.subheader
     )
@@ -384,22 +423,14 @@ def test_workbench_invalid_comparison_identifies_side_and_quarantines_claims(
     candidate: str,
     side: str,
 ) -> None:
-    app = _select_screen(_app(workbench_root), "Compatible comparison")
-    app.text_input[0].input(baseline).run(timeout=30)
-    app.text_input[1].input(candidate).run(timeout=30)
-    app.button[0].click().run(timeout=30)
+    app = _workflow(_app(workbench_root), "Compare")
+    app = _compare(app, baseline, candidate)
 
     assert list(app.exception) == []
     assert any(side in item.value and "INVALID_EVIDENCE" in item.value for item in app.error)
-    trust_frame = app.dataframe[0].value
-    assert "Gate verdict" in set(trust_frame["dimension"])
-    assert "Evidence integrity" in set(trust_frame["dimension"])
-    assert set(
-        trust_frame.loc[
-            trust_frame["dimension"].isin(["Gate verdict", "Evidence integrity"]),
-            "value",
-        ]
-    ) == {"INVALID_EVIDENCE"}
+    visible = _visible_text(app)
+    assert "Gate verdict: INVALID_EVIDENCE [GATE_DECISION]" in visible
+    assert "Evidence integrity: INVALID_EVIDENCE [COMPUTED]" in visible
 
 
 def test_workbench_review_and_comparison_preserve_every_source_bundle_byte(
@@ -412,13 +443,11 @@ def test_workbench_review_and_comparison_preserve_every_source_bundle_byte(
         "handoff-p3-lead-shielded",
     )
     before = _hashes(workbench_root, selections)
-    app = _submit_review(_app(workbench_root), selections[0])
-    app = _select_screen(app, "Timeline")
-    app.number_input[0].increment().run(timeout=30)
-    app = _select_screen(app, "Compatible comparison")
-    app.text_input[0].input(selections[2]).run(timeout=30)
-    app.text_input[1].input(selections[3]).run(timeout=30)
-    app.button[0].click().run(timeout=30)
+    app = _verify(_app(workbench_root), selections[0])
+    app = _review_section(app, "Timeline")
+    app.number_input(key="timeline_page").increment().run(timeout=30)
+    app = _workflow(app, "Compare")
+    app = _compare(app, selections[2], selections[3])
 
     assert list(app.exception) == []
     assert _hashes(workbench_root, selections) == before
@@ -428,13 +457,13 @@ def test_workbench_active_rerun_recaptures_mutated_bundle_and_invalidates_review
     workbench_root: Path,
 ) -> None:
     selection = "handoff-phase5-demo"
-    app = _submit_review(_app(workbench_root), selection)
+    app = _verify(_app(workbench_root), selection)
     assert list(app.exception) == []
     assert not any("INVALID_EVIDENCE" in item.value for item in app.error)
 
     metrics_path = workbench_root / selection / "metrics.json"
     metrics_path.write_bytes(metrics_path.read_bytes() + b"\n")
-    app = _select_screen(app, "Review summary / trust")
+    app = _review_section(app, "Overview")
 
     assert list(app.exception) == []
     assert any("INVALID_EVIDENCE" in item.value for item in app.error)
@@ -462,11 +491,9 @@ def test_workbench_apptest_performs_no_network_browser_or_child_process(
     monkeypatch.setattr(subprocess, "Popen", bomb)
     monkeypatch.setattr(webbrowser, "open", bomb)
 
-    app = _submit_review(_app(workbench_root), "handoff-phase5-demo")
-    app = _select_screen(app, "Compatible comparison")
-    app.text_input[0].input("handoff-p3-lead-baseline").run(timeout=30)
-    app.text_input[1].input("handoff-p3-lead-shielded").run(timeout=30)
-    app.button[0].click().run(timeout=30)
+    app = _verify(_app(workbench_root), "handoff-phase5-demo")
+    app = _workflow(app, "Compare")
+    app = _compare(app, "handoff-p3-lead-baseline", "handoff-p3-lead-shielded")
 
     assert list(app.exception) == []
 
@@ -493,7 +520,296 @@ from hermes.workbench.app import main
 main(('--artifact-root', {str(workbench_root)!r}))
 """
     app = AppTest.from_string(script, default_timeout=30).run()
-    app = _submit_review(app, "handoff-phase5-demo")
-    app = _select_screen(app, "Timeline")
+    app = _verify(app, "handoff-phase5-demo")
+    app = _review_section(app, "Timeline")
 
     assert list(app.exception) == []
+
+
+def test_workbench_information_architecture_uses_workflow_then_review_section(
+    workbench_root: Path,
+) -> None:
+    app = _app(workbench_root)
+
+    assert app.radio(key="primary_workflow").options == [
+        "Review",
+        "Compare",
+        "Evidence limitations",
+    ]
+    assert app.radio(key="review_section").options == [
+        "Select & Verify",
+        "Overview",
+        "Evidence",
+        "Timeline",
+        "Provenance",
+    ]
+    assert app.button(key="verify_selected_artifact").label == "Verify selected artifact"
+
+
+def test_selected_artifact_identity_persists_across_all_review_sections(
+    workbench_root: Path,
+) -> None:
+    app = _verify(_app(workbench_root), "handoff-phase5-demo")
+    manifest_run_id = review_artifact(
+        workbench_root, "handoff-phase5-demo"
+    ).artifact.manifest_identity.run_id
+
+    for section in app.radio(key="review_section").options:
+        app = _review_section(app, section)
+        visible = _visible_text(app)
+        assert "Selected directory: handoff-phase5-demo [OBSERVED]" in visible
+        assert f"Manifest run ID: {manifest_run_id} [OBSERVED]" in visible
+        _assert_no_envelope(app)
+
+
+@pytest.mark.parametrize(
+    ("selection", "verdict", "integrity"),
+    [
+        ("handoff-phase5-demo", "PASS", "INTERNALLY_CONSISTENT"),
+        ("handoff-p1-collision", "HOLD", "INTERNALLY_CONSISTENT"),
+        ("phase1-tampered", "INVALID_EVIDENCE", "INVALID_EVIDENCE"),
+    ],
+)
+def test_persistent_trust_strip_separates_decision_state_from_authority_boundaries(
+    workbench_root: Path,
+    selection: str,
+    verdict: str,
+    integrity: str,
+) -> None:
+    app = _review_section(_verify(_app(workbench_root), selection), "Overview")
+    visible = _visible_text(app)
+
+    assert "Decision state" in visible
+    assert f"Gate verdict: {verdict} [GATE_DECISION]" in visible
+    assert f"Evidence integrity: {integrity} [COMPUTED]" in visible
+    assert "Authority boundaries" in visible
+    _assert_persistent_frame(app)
+
+
+def test_selection_workflow_is_empty_lexical_and_requires_explicit_verification(
+    workbench_root: Path,
+) -> None:
+    app = _app(workbench_root)
+    assert app.text_input(key="artifact_selection_draft").value == ""
+    assert "handoff-phase5-demo" in _visible_text(app)
+    assert "review_requested" not in app.session_state.filtered_state
+
+    app.text_input(key="artifact_selection_draft").input("handoff-phase5-demo").run(
+        timeout=30
+    )
+    assert "review_requested" not in app.session_state.filtered_state
+    app = app.button(key="verify_selected_artifact").click().run(timeout=30)
+    assert app.session_state.filtered_state["submitted_artifact_selection"] == (
+        "handoff-phase5-demo"
+    )
+    app.text_input(key="artifact_selection_draft").input("../outside").run(timeout=30)
+    app = app.button(key="verify_selected_artifact").click().run(timeout=30)
+    assert app.session_state.filtered_state["submitted_artifact_selection"] == (
+        "handoff-phase5-demo"
+    )
+    assert "Selected directory: handoff-phase5-demo [OBSERVED]" in _visible_text(app)
+    assert list(app.error)
+    app.text_input(key="artifact_selection_draft").input("handoff-p1-collision").run(
+        timeout=30
+    )
+    assert app.session_state.filtered_state["submitted_artifact_selection"] == (
+        "handoff-phase5-demo"
+    )
+
+
+@pytest.mark.parametrize(
+    ("selection", "verdict"),
+    [("handoff-phase5-demo", "PASS"), ("handoff-p1-collision", "HOLD")],
+)
+def test_overview_orders_identity_gate_rationale_integrity_sufficiency_limitations_then_technical_identity(  # noqa: E501
+    workbench_root: Path,
+    selection: str,
+    verdict: str,
+) -> None:
+    app = _review_section(_verify(_app(workbench_root), selection), "Overview")
+    headings = [item.value for item in app.subheader]
+
+    assert headings == [
+        "Artifact reviewed",
+        "Gate decision",
+        "Why",
+        "Integrity",
+        "Required unavailable evidence",
+        "What this does not establish",
+        "Technical identity",
+    ]
+    assert f"Gate verdict: {verdict} [GATE_DECISION]" in _visible_text(app)
+    all_cells = " ".join(
+        str(value)
+        for frame in app.dataframe
+        for value in frame.value.to_numpy().ravel()
+    )
+    assert "Observed bundle digest" not in all_cells
+
+
+def test_evidence_screen_renders_grouped_first_pass_rows_and_exact_details_on_inspection(
+    workbench_root: Path,
+) -> None:
+    app = _review_section(_verify(_app(workbench_root), "handoff-p1-collision"), "Evidence")
+
+    assert app.radio(key="finding_group").options == [
+        "Failed required evidence",
+        "Required but unavailable",
+        "Soft failures and warnings",
+        "Passing required evidence",
+        "Optional evidence",
+        "Not applicable",
+    ]
+    assert app.radio(key="finding_group").value == "Failed required evidence"
+    compact = next(
+        frame.value
+        for frame in app.dataframe
+        if "first supporting event" in frame.value.columns
+    )
+    assert list(compact["finding ID"]) == ["collision.zero", "progress.required"]
+    detail = next(
+        frame.value
+        for frame in app.dataframe
+        if "verifier version" in frame.value.columns
+        and "supporting sequences" in frame.value.columns
+    )
+    assert detail.iloc[0]["finding ID"] == "collision.zero"
+    assert detail.iloc[0]["supporting sequences"] == "12"
+    assert app.button(key="jump_to_timeline").label == (
+        "Open first supporting event in Timeline"
+    )
+
+
+def test_failed_required_group_remains_visible_after_evidence_filter_changes(
+    workbench_root: Path,
+) -> None:
+    app = _review_section(_verify(_app(workbench_root), "handoff-p1-collision"), "Evidence")
+    app = app.radio(key="finding_group").set_value("Optional evidence").run(timeout=30)
+
+    finding_frames = [
+        frame.value for frame in app.dataframe if "finding ID" in frame.value.columns
+    ]
+    visible_ids = [
+        value
+        for frame in finding_frames
+        for value in frame["finding ID"]
+    ]
+    assert "collision.zero" in visible_ids
+    assert visible_ids.count("collision.zero") == 1
+    assert "Canonical accepted finding total: 6 [COMPUTED]" in _visible_text(app)
+
+
+def test_workbench_timeline_preset_and_finding_jump_preserve_review_snapshot(
+    workbench_root: Path,
+) -> None:
+    selection = "handoff-p1-collision"
+    before = _review_snapshot(workbench_root, selection)
+    app = _review_section(_verify(_app(workbench_root), selection), "Evidence")
+    app = app.button(key="jump_to_timeline").click().run(timeout=30)
+
+    assert app.radio(key="review_section").value == "Timeline"
+    assert app.radio(key="timeline_preset").value == "Decision evidence"
+    assert app.number_input(key="timeline_page").value == 1
+    assert app.session_state.filtered_state["selected_timeline_sequence"] == 12
+    assert app.multiselect(key="visible_timeline_tracks").value == [
+        "collision_count",
+        "verifier_triggering_findings",
+    ]
+    selected = next(
+        frame.value
+        for frame in app.dataframe
+        if "point source reference" in frame.value.columns
+    )
+    assert set(selected["sequence"]) == {"12"}
+    event_sources = selected.loc[
+        selected["track ID"] != "verifier_triggering_findings",
+        "point source reference",
+    ]
+    assert all("source_type=EVENT" in value for value in event_sources)
+    assert all("event_sequence=12" in value for value in event_sources)
+    assert _review_snapshot(workbench_root, selection) == before
+    _assert_no_envelope(app)
+
+
+@pytest.mark.parametrize(
+    ("baseline", "candidate"),
+    [
+        ("handoff-p3-lead-baseline", "handoff-p3-lead-shielded"),
+        ("handoff-p3-cutin-baseline", "handoff-p3-cutin-shielded"),
+    ],
+)
+def test_compatible_comparison_requires_explicit_mixed_outcome_synthesis_without_winner(
+    workbench_root: Path,
+    baseline: str,
+    candidate: str,
+) -> None:
+    app = _compare(_workflow(_app(workbench_root), "Compare"), baseline, candidate)
+    headings = [item.value for item in app.subheader]
+
+    assert headings[:8] == [
+        "Gate outcome",
+        "Hard-failure change",
+        "What improved",
+        "What regressed",
+        "What was unchanged",
+        "What was not comparable",
+        "Evidence availability changes",
+        "Advancement interpretation",
+    ]
+    visible = _visible_text(app)
+    assert (
+        "Minimum TTC improved. Route completion, acceleration, and jerk regressed. "
+        "The gate verdict did not improve. This is a mixed trade-off and does not "
+        "establish overall advancement."
+    ) in visible
+    assert "winner" not in visible.lower()
+    assert "overall safety score" not in visible.lower()
+    for forbidden in ("ranked candidate", "candidate is safer", "recommended policy"):
+        assert forbidden not in visible.lower()
+
+
+def test_invalid_evidence_quarantine_hides_accepted_gate_findings_metrics_timeline_and_provenance(
+    workbench_root: Path,
+) -> None:
+    app = _review_section(_verify(_app(workbench_root), "phase1-tampered"), "Provenance")
+    visible = _visible_text(app)
+    all_columns = {
+        column for frame in app.dataframe for column in frame.value.columns
+    }
+
+    assert "Invalid evidence quarantine" in visible
+    assert "Confirm the intended directory" in visible
+    assert "first mismatch" in visible.lower()
+    assert "finding ID" not in all_columns
+    assert "metric ID" not in all_columns
+    assert "track ID" not in all_columns
+    assert "file name" not in all_columns
+    assert "Recorded provenance" not in visible
+    assert "Accepted gate rationale" not in visible
+    assert "Configured illustrative prototype criteria passed" not in visible
+    assert "TraceIntegrityVerifier" not in visible
+    assert "collision count 0 meets required maximum" not in visible
+    partial_identity = next(
+        frame.value
+        for frame in app.dataframe
+        if "Selected relative path" in set(frame.value["label"])
+    )
+    assert "category" in partial_identity.columns
+    assert set(partial_identity["category"]).issubset({"OBSERVED", "NOT_AVAILABLE"})
+
+
+def test_invalid_evidence_quarantine_is_consistent_across_every_review_section(
+    workbench_root: Path,
+) -> None:
+    app = _verify(_app(workbench_root), "phase1-tampered")
+
+    for section in app.radio(key="review_section").options:
+        app = _review_section(app, section)
+        visible = _visible_text(app)
+        columns = {column for frame in app.dataframe for column in frame.value.columns}
+        assert "INVALID_EVIDENCE — Invalid evidence quarantine" in visible
+        assert "Gate verdict: INVALID_EVIDENCE [GATE_DECISION]" in visible
+        assert "Confirm the intended directory" in visible
+        assert {"finding ID", "metric ID", "track ID", "file name"}.isdisjoint(columns)
+        assert "Recorded provenance" not in visible
+        _assert_no_envelope(app)
