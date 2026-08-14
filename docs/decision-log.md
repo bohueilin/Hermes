@@ -1,5 +1,75 @@
 # Hermes Decision Log
 
+## 2026-08-13 — Freeze the Phase 6 reviewer-comprehension design iteration
+
+### Scope
+
+Freeze the repository-aware presentation delta before production implementation. This decision
+changes information architecture and reviewer copy only; it does not change the public review
+facade, portable envelopes, verifier, gate, comparison authority, artifact contract, dependencies,
+or read-only/local-only boundary.
+
+### Decisions
+
+- Replace six peer-level screens with top-level `Review`, `Compare`, and `Evidence limitations`.
+  Within Review, use `Select & Verify`, `Overview`, `Evidence`, `Timeline`, and `Provenance`, in that
+  order. Keep the submitted root-relative locator visible across the Review workflow.
+- Present Tier 1 **Decision state** as gate verdict and evidence integrity. Present Tier 2
+  **Authority boundaries** as origin `NOT_AUTHENTICATED`, authorization `NOT_EVALUATED`, deployment
+  permission `NONE`, scope `SIMULATION_ONLY`, and authoritative status `NOT_DEFINED`. Do not combine
+  the statuses. Persist this exact sentence: `This is a simulation evidence decision, not an
+  approval or deployment authorization.`
+- Reject a picker, directory list, and autocomplete for this iteration. The public facade has no
+  descriptor-safe root discovery API, so UI-side directory enumeration would bypass the no-follow
+  capture boundary and introduce new filesystem-discovery authority. A future safe discovery API
+  would require explicit design and containment, symlink, replacement-race, lexical-order,
+  no-default, and non-authority-language tests.
+- Listing or autocomplete would materially increase single-user selection volume and therefore
+  triggers the accepted bounded-cache predecessor: implement a deterministic synchronized bounded
+  LRU before adding that discovery surface. Until both prerequisites are approved, retain blank
+  root-relative manual entry, the inert example `handoff-phase5-demo`, separate draft/submitted
+  values, submitted-selection confirmation, explicit Verify, and exact recovery copy.
+- Order Overview as artifact, gate, rationale, integrity and independent authority boundaries,
+  required unavailable evidence, limitations, then a technical-identity cue. Put hashes, versions,
+  and detailed inventory in Provenance.
+- Group Evidence in this exact order: `Failed required evidence`; `Required but unavailable`;
+  `Soft failures and warnings`; `Passing required evidence`; `Optional evidence`; `Not applicable`.
+  Use envelope-provided status, requiredness, severity/hard-invariant, and sufficiency only; the UI
+  must not evaluate thresholds or infer gate/profile semantics.
+- Freeze the availability copy: required unavailable means the selected verifier profile required
+  a signal that could not be computed; optional unavailable does not control the current gate but
+  remains a limitation; not applicable means the verifier is not required or evaluated under the
+  selected profile. Missing evidence is never zero, false, blank, infinity, a flat line, or pass.
+- Add Timeline presets `Decision evidence`, `Action accountability`, `Fault behavior`, and
+  `All tracks`. Provide an explicit finding-to-first-supporting-event action that opens Timeline,
+  moves to the containing page, and activates relevant tracks. If no supporting event exists,
+  report it as unavailable. Filtering remains presentation-only.
+- Require every compatible comparison to render, in order, `Gate outcome`, `Hard-failure change`,
+  `What improved`, `What regressed`, `What was unchanged`, `What was not comparable`,
+  `Evidence availability changes`, and `Advancement interpretation`. Mixed outcomes must be called
+  a mixed trade-off with no overall advancement claim. Intervention count remains descriptive;
+  never produce a winner, aggregate score, recommendation, promotion, or deployment conclusion.
+- Preserve strict invalid-evidence quarantine across all Review surfaces. Safely captured inventory
+  is a capture diagnostic, not accepted provenance: suppress it from Overview and normal invalid
+  content. If retained in a technical Provenance diagnostic, isolate it and label every value
+  `CAPTURED_DIAGNOSTIC`; never use it to imply an accepted result.
+- Keep the current public facade and version 1.0 ReviewEnvelope/ComparisonEnvelope authoritative.
+  This is a presentation-only design iteration; CLI and UI must continue consuming the same facade,
+  and no UI gate, verifier, comparison, threshold, artifact parser, or discovery path is allowed.
+
+### Human-validation status
+
+Human comprehension, manual visual review, and accessibility audit remain `NOT YET OBSERVED`.
+Automated coverage must not be represented as human evidence or WCAG conformance. The future
+usability plan, observation template, and visual-review checklist must retain this status until
+actual observations are recorded.
+
+### Consequence and implementation gate
+
+The two documentation files freeze the implementation target. Production and test changes may
+proceed only in the later implementation task and must preserve the established one-way review
+architecture, strict quarantine, read-only/local-only scope, and authority boundaries.
+
 ## 2026-08-12 — Implement and adversarially close Phase 6 evidence review
 
 ### Scope

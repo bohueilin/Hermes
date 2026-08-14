@@ -1,225 +1,312 @@
 # Hermes Phase 6 UX and Information Architecture
 
-## 1. Persistent frame
+## 1. Persistent frame and navigation
 
-Every artifact and comparison surface displays, as text:
+The reviewer-comprehension iteration freezes this top-level navigation:
 
-~~~
-Hermes — Simulation Evidence Review
-Evidence authenticity: NOT_AUTHENTICATED
-Authorization status: NOT_EVALUATED
+1. `Review`
+2. `Compare`
+3. `Evidence limitations`
+
+Within `Review`, secondary navigation is, in order:
+
+1. `Select & Verify`
+2. `Overview`
+3. `Evidence`
+4. `Timeline`
+5. `Provenance`
+
+After an explicit verification submission, the selected root-relative locator remains visible on
+every Review subpage. The workbench does not infer, recommend, rank, or automatically select an
+artifact.
+
+Every artifact and comparison surface presents the trust state as independent text values in two
+tiers. Color and icons are supplemental only.
+
+~~~text
+Tier 1 — Decision state
+Gate verdict: PASS | CONDITIONAL | HOLD | INVALID_EVIDENCE
+Evidence integrity: UNVERIFIED | INTERNALLY_CONSISTENT | INVALID_EVIDENCE
+
+Tier 2 — Authority boundaries
+Origin: NOT_AUTHENTICATED
+Authorization: NOT_EVALUATED
 Deployment permission: NONE
 Scope: SIMULATION_ONLY
-~~~
-
-Artifact review also displays Gate verdict and Evidence integrity. Authoritative status is
-NOT_DEFINED on intake, summary, and provenance. Color is supplemental; status text, icon, and table
-values remain understandable without color.
-
-Navigation is Review artifact, Compare artifacts, and Evidence limitations. There is no run,
-upload, edit, repair, migrate, annotate, threshold, sign, approve, promote, release, or deploy
-control.
-
-## 2. Artifact intake and verification
-
-- Purpose: select one exact directory below the configured root and verify it before exposing an
-  accepted gate result.
-- Source fields: selected relative path/directory name are OBSERVED locator data; manifest run_id,
-  creation time, schemas, inventory, and observed digests are OBSERVED; computed digests and
-  integrity are COMPUTED; authenticity is AUTHENTICITY.
-- Initial state: UNVERIFIED with no gate badge and the sentence “Evidence has not yet been checked
-  by the installed Hermes verifier.”
-- Valid state: INTERNALLY_CONSISTENT with selected directory, manifest run_id, both bundle roots,
-  trace roots, and ten-file inventory.
-- Invalid state: INVALID_EVIDENCE, first diagnostics, mismatch identity, and “Stored verdict,
-  findings, and metrics are quarantined and not accepted.”
-- Error state: path/configuration error with no evidence verdict and actionable correction.
-- Prohibited: newest/official/latest/authoritative selection, accepted PASS before verification,
-  upload, drag-and-drop ingestion, raw path outside root.
-- Drill-down: portable inventory size/digests from the captured snapshot only. Filesystem device,
-  inode, mode, mtime, and ctime remain private facade state and are never rendered or serialized.
-- Accessibility: keyboard-selectable directory list, explicit verify action, announced errors,
-  table alternative to status graphics.
-
-## 3. Review summary
-
-- Purpose: answer what was tested, what gate decided, why, and what the result does not establish.
-- Source fields: artifact/provenance OBSERVED; integrity/metrics COMPUTED; gate GATE_DECISION;
-  trust AUTHENTICITY or RESIDUAL_RISK; missing fields NOT_AVAILABLE.
-- Required content: exact identity/digests; six independent trust dimensions plus authoritative
-  status; gate profile/version/digest; recomputed rationale; hard and soft failure IDs; five-state
-  sufficiency counts; persistent limitations.
-- Empty state: no summary until verification finishes.
-- Invalid state: gate INVALID_EVIDENCE only; no stored PASS, findings, metric cards, or timeline.
-- Prohibited: safe, trusted, approved, certified, road-ready, deployable, Level 4, overall safety
-  score, green trust banner.
-- Drill-down: gate IDs link to finding rows and captured source references.
-- Accessibility: ordered heading structure, text rationale, full table for summary cards.
-
-Required wording:
-
-~~~
-A Hermes PASS is only the installed prototype gate verdict for this bounded simulation.
-Internal consistency is not independent authenticity.
-Stored verification does not reexecute the policy or simulator.
-Simulation evidence grants no physical-system permission.
-~~~
-
-## 4. Findings and evidence sufficiency
-
-- Purpose: expose pass/fail/unavailable evidence, requiredness, threshold basis, source events, and
-  gate consequence.
-- Source fields: finding values and status COMPUTED; threshold projection COMPUTED from verified
-  GATE_CONFIG/SCENARIO; gate consequence GATE_DECISION; missing items NOT_AVAILABLE.
-- Columns: finding ID; verifier/version; evidence category; core status; severity; requiredness;
-  exact/display value and unit; structured operator/threshold; first failure time; supporting
-  sequence count; availability; gate consequence.
-- Empty state: “No accepted findings are available” with reason; never imply pass.
-- Invalid state: findings table absent and quarantine explanation visible.
-- Prohibited: parsing threshold_source_text, recomputing pass/fail, treating soft WARNING severity
-  as a fourth core finding status, substituting zero.
-- Drill-down: exact canonical value, compound threshold tree, original threshold text for audit
-  only, explanation, verified profile assignment, source references, event sequences.
-- Accessibility: text status/severity, sortable table with stable row IDs, keyboard expansion, no
-  color-only requiredness or availability.
-
-Sufficiency labels are exactly Required / available, Required / unavailable, Optional / available,
-Optional / unavailable, and Not applicable. UI never infers a bucket.
-
-## 5. Event and action timeline
-
-- Purpose: show what was observed, proposed, permitted, executed, and returned without inventing
-  distinctions absent from the source schema.
-- Source fields: track points are OBSERVED; derived TTC/metrics are COMPUTED; unavailable tracks
-  are NOT_AVAILABLE.
-- Schema 1.0 tracks: candidate action and executed action available; separate permitted action,
-  raw observation, delivered observation, and result observation NOT_AVAILABLE. Observation
-  summary and post-step vehicle state/raw facts remain available under their actual names.
-- Schema 2.0 tracks: candidate/permitted/executed actions and raw/delivered/result observations
-  available, plus shield/fault reasons and source/execution timing.
-- Common tracks: collision/off-road, speed, route progress, TTC availability/value, latency, and
-  verifier-trigger sequences when supported.
-- Empty state: explicit no-event or unsupported-track reason; never a flat zero line.
-- Invalid state: timeline absent; diagnostic sequence may be shown only as a captured invalidity
-  reference.
-- Prohibited: interpolation, semantic decimation, inferred permission for schema 1, inferred raw/
-  delivered/result observations, control actions, simulator playback.
-- Drill-down: exact sequence/time/value and SourceReference into the captured snapshot.
-- Accessibility: keyboard point navigation, synchronized data table, textual gaps, chart legend
-  text/icons, sufficient contrast.
-
-Filtering changes only visible tracks. It cannot change envelope gate, findings, counts, or
-comparison partition.
-
-## 6. Provenance, integrity, and limitations
-
-- Purpose: distinguish recorded origin claims, internal consistency, authenticity, authority, and
-  residual risk.
-- Source fields: recorded manifest/context values OBSERVED; digest/verification results COMPUTED;
-  authenticated origin AUTHENTICITY; limitations RESIDUAL_RISK.
-- Required content: Hermes/repository state; adapter/simulator/source commit; policy/shield/fault/
-  gate/scenario profiles; schema versions; config, trace, and bundle roots; selected path versus
-  manifest run_id; source inventory.
-- Empty/unavailable: null plus explicit NOT_AVAILABLE reason, never blank.
-- Invalid: only safely captured identity/inventory and diagnostics; unverified provenance stays
-  quarantined.
-- Prohibited: verified producer, official artifact, authoritative/latest, signed, tamper-proof.
-- Drill-down: source inventory and references only; no source reopen.
-- Accessibility: definition list plus downloadable-equivalent text/JSON view.
-
-Exact labels:
-
-~~~
-Evidence integrity: INTERNALLY_CONSISTENT | INVALID_EVIDENCE
-Evidence authenticity: NOT_AUTHENTICATED
 Authoritative status: NOT_DEFINED
 ~~~
 
-## 7. Compatible comparison
+The fields must not be merged into a single trust badge. The following sentence persists across
+the workbench exactly as written:
 
-- Purpose: compare two exact independently verified artifacts without collapsing mixed effects.
-- Source fields: both artifact identities/integrities OBSERVED/COMPUTED; compatibility and deltas
-  COMPUTED by existing compare_artifacts; unchanged gate verdict GATE_DECISION; limitations
-  RESIDUAL_RISK.
-- Required content: identities/digests; both integrity states; compatibility reasons/warnings;
-  verdict and hard-failure delta; improvements; regressions; unchanged; NOT_COMPARABLE descriptive
-  dimensions; separate availability deltas; intervention detail.
-- Empty state: require explicit baseline and candidate; never auto-fill newest.
-- Invalid state: identify invalid side, exit 30, no comparison claim.
-- Incompatible state: reasons only, exit 40, and no deltas, winner, metric chart, or source-link
-  payload.
-- Prohibited: winner score, overall safety score, hidden regression, ranked intervention count,
-  “candidate is safer” without naming a supported dimension.
-- Drill-down: exact baseline/candidate values and references to each independently captured
-  snapshot.
-- Accessibility: improvements/regressions/unchanged have text and icons; every chart has a full
-  comparison table.
+> This is a simulation evidence decision, not an approval or deployment authorization.
 
-Representative truthful summary:
+There is no run, upload, edit, repair, migrate, annotate, threshold, sign, approve, promote,
+release, or deploy control.
 
-~~~
-Minimum TTC improved. Route completion, acceleration, and jerk regressed. The gate verdict did
-not change. Intervention count is descriptive. This comparison does not demonstrate overall
-advancement.
-~~~
+## 2. Select & Verify
+
+- Purpose: submit one exact directory below the configured root and verify it before exposing an
+  accepted gate result.
+- Selection control: a blank-by-default root-relative manual text entry followed by the explicit
+  `Verify selected artifact` action. With configured root `artifacts`, show the inert example
+  `handoff-phase5-demo`; the configured root name is excluded from the submitted value.
+- Confirmation: distinguish the draft entry from the last submitted selection. After verification,
+  display the submitted directory separately from the manifest `run_id`, and keep that selected
+  locator visible throughout Review.
+- Recovery copy: on a path or configuration error, explain that the reviewer should enter one exact
+  root-relative directory, omit the configured root name, confirm the intended directory, and
+  submit Verify again. Do not imply that Hermes can discover or repair the intended artifact.
+- Source fields: selected relative path and directory name are OBSERVED locator data; accepted
+  manifest identity and inventory are OBSERVED; computed digests and integrity are COMPUTED;
+  authenticity is AUTHENTICITY.
+- Initial state: UNVERIFIED with no gate badge and the sentence “Evidence has not yet been checked
+  by the installed Hermes verifier.”
+- Valid state: INTERNALLY_CONSISTENT with the selected directory and manifest `run_id` clearly
+  separated. Detailed digests and ten-file inventory belong in Provenance.
+- Invalid state: use the strict quarantine described in section 6.
+- Prohibited: newest/official/latest/recommended/authoritative selection, accepted PASS before
+  verification, upload, drag-and-drop ingestion, or a raw path outside the configured root.
+- Accessibility: keyboard-accessible exact text input, explicit Verify action, announced errors,
+  visible focus, and a text/table alternative to any status visual.
+
+### Picker and autocomplete decision
+
+A picker, directory list, and validated autocomplete are rejected for this iteration. The public
+review facade verifies one already-known lexical selection; it has no descriptor-safe root
+discovery API. UI-side `Path.iterdir`, `os.listdir`, globbing, or cached directory discovery would
+create a second filesystem path outside the no-follow capture boundary. A safe review-layer
+discovery API would be new authority and would require containment, symlink, replacement-race,
+lexical-order, no-default, and non-authority-language tests.
+
+Listing or autocomplete could materially increase selection volume and therefore triggers the
+previously accepted P2 predecessor: a deterministic synchronized bounded LRU must be implemented
+before that scale increase. Until both prerequisites are explicitly designed and approved, the
+safe route remains blank root-relative manual entry, an inert example, submitted-selection
+confirmation, explicit Verify, and recovery copy.
+
+## 3. Overview
+
+Overview answers the review questions in this exact order:
+
+1. **Artifact reviewed:** selected root-relative path, selected directory name, manifest `run_id`,
+   and creation time/schema when available.
+2. **Gate decision:** the Tier 1 gate verdict.
+3. **Why:** recomputed gate rationale and controlling hard/soft finding identifiers from the
+   envelope, without new UI gate logic.
+4. **Integrity:** the Tier 1 evidence-integrity state, followed by the five independent Tier 2
+   authority boundaries.
+5. **Required unavailable evidence:** count and named items, including consequence; never substitute
+   zero, false, blank, infinity, or success.
+6. **What this does not establish:** internal consistency is not independent authenticity; stored
+   verification does not reexecute the policy or simulator; simulation evidence does not establish
+   real-world safety, authorization, certification, or permission to control physical hardware.
+7. **Technical identity cue:** direct the reviewer to Provenance for hashes, tool/gate versions,
+   schema details, and captured source inventory.
+
+Detailed hashes, versions, and inventory must not compete with the decision narrative in Overview.
+The gate, integrity, authenticity, authorization, deployment permission, scope, and authoritative
+status remain independent. Accepted content retains its evidence category: OBSERVED, COMPUTED,
+GATE_DECISION, ASSUMPTION, NOT_AVAILABLE, AUTHENTICITY, or RESIDUAL_RISK.
+
+Empty state: no Overview result until explicit verification finishes. Invalid state: render only
+the section 6 quarantine content. Prohibited language includes safe, trusted, approved, certified,
+road-ready, deployable, Level 4, overall safety score, or green trust banner.
+
+## 4. Evidence findings and sufficiency
+
+The Evidence page groups existing typed findings and sufficiency items in this exact order:
+
+1. `Failed required evidence`
+2. `Required but unavailable`
+3. `Soft failures and warnings`
+4. `Passing required evidence`
+5. `Optional evidence`
+6. `Not applicable`
+
+Grouping is presentation-only and uses the envelope’s status, requiredness, hard-invariant/severity,
+and sufficiency items. It does not evaluate a threshold, infer profile membership, change gate
+semantics, or mutate the envelope. Required failures and required-unavailable items take precedence
+over later groups.
+
+A collapsed finding row initially shows human-readable label, status, requiredness, display value
+and unit, short structured threshold/rule, gate consequence, and first supporting event when one is
+available. Progressive disclosure may show finding ID, verifier/version, exact canonical value,
+the full structured threshold expression, source references, every supporting sequence, and audit
+text. The UI renders the structured threshold supplied by the core; it never parses audit text or
+recomputes pass/fail. Metrics remain separate technical evidence and do not precede findings.
+
+Availability explanations are frozen as follows:
+
+### Required evidence unavailable
+
+> This signal was required by the selected verifier profile but could not be computed from the stored evidence.
+
+Show the typed reason, gate consequence, and source references.
+
+### Optional evidence unavailable
+
+> This signal could not be computed from the stored evidence. It does not control the current gate verdict, but it remains a review limitation.
+
+### Not applicable to this evidence profile
+
+> This verifier is not required or evaluated under the selected profile.
+
+The sufficiency labels remain exactly Required / available, Required / unavailable, Optional /
+available, Optional / unavailable, and Not applicable. Missing evidence is never rendered as zero,
+blank, false, infinity, a flat line, or pass. Invalid evidence exposes no accepted finding,
+sufficiency, metric, or threshold content.
+
+## 5. Timeline
+
+The timeline preserves the full 16-track contract and all source data. A preset control precedes
+manual track filtering and offers these presentation-only presets in order:
+
+1. `Decision evidence` — collision count, off-road, route progress, TTC, and
+   verifier-triggering findings.
+2. `Action accountability` — candidate action, permitted action, executed action, override reasons,
+   and policy latency.
+3. `Fault behavior` — raw observation, delivered observation, result observation, observation-fault
+   reasons, control-fault reasons, and latency.
+4. `All tracks` — all tracks in registry order.
+
+Unavailable schema-specific tracks stay explicitly NOT_AVAILABLE; they are not inferred. Filtering
+changes only visible presentation tracks and cannot change the envelope, findings, counts, or gate.
+
+Each finding with supporting events has an explicit `Open first supporting event in Timeline`
+action. It selects the first stored supporting-event sequence, opens Timeline, moves to the page
+containing that exact sequence, and activates relevant tracks, including
+`verifier_triggering_findings` where needed. If no supporting event is stored, show a truthful
+unavailable notice and do not invent a sequence. A new Verify submission resets all stale
+preset/filter/jump state.
+
+The synchronized data table is a first-class accessibility surface. Preserve exact sequence,
+time/value, typed gaps, stable row identifiers, keyboard navigation, visible focus, non-color track
+labels, and SourceReference drill-down. Do not interpolate, semantically decimate, infer schema-1
+permission/observation distinctions, or provide simulator playback.
+
+## 6. Provenance, limitations, and invalid-evidence quarantine
+
+Provenance contains the technical detail moved out of Overview: selected path versus manifest
+`run_id`; recorded Hermes/repository, adapter/simulator/source, policy/shield/fault/gate/scenario
+identity; schema and tool versions; observed and computed config/trace/bundle digests; source
+inventory; integrity checks; and source references. Null remains explicit NOT_AVAILABLE with its
+reason, never blank. Presentation consumes the immutable captured envelope and never reopens a
+source file.
+
+Evidence limitations explains, in full, internal consistency versus authenticity, no policy or
+simulator reexecution, simulation-only scope, no authorization or deployment permission, and known
+operational limitations. Detailed limitation copy also appears in Overview for the selected review.
+
+### Strict invalid quarantine
+
+When verification returns INVALID_EVIDENCE, every Review subpage uses one quarantine presentation.
+It may show only:
+
+- the selected locator;
+- safely captured partial manifest identity;
+- Tier 1 gate/integrity state and the five Tier 2 authority-boundary values;
+- integrity diagnostics and the first mismatch when available; and
+- safe next steps: confirm the intended directory, select another artifact, or contact the artifact
+  producer.
+
+It must not show an accepted stored PASS, CONDITIONAL, or HOLD; accepted rationale, findings,
+metrics, normal timeline, accepted provenance, comparison deltas, repair, migration, editing, or
+override controls.
+
+Safely captured inventory is a capture diagnostic, not accepted provenance. It is excluded from
+Overview and every normal invalid-result view. If a technical Provenance diagnostic displays it,
+the inventory must remain isolated in diagnostic context and every value must be labeled
+`CAPTURED_DIAGNOSTIC`, never OBSERVED/accepted provenance. It cannot be used to restore or imply an
+accepted result.
+
+## 7. Compare
+
+Compare requires blank-by-default, explicit root-relative baseline and candidate selections plus an
+explicit Compare action. Baseline and candidate labels remain visible. The facade independently
+verifies both sides, and compatibility is shown before any delta.
+
+Every compatible comparison renders these sections in order:
+
+1. `Gate outcome`
+2. `Hard-failure change`
+3. `What improved`
+4. `What regressed`
+5. `What was unchanged`
+6. `What was not comparable`
+7. `Evidence availability changes`
+8. `Advancement interpretation`
+
+The sections partition existing typed comparison-envelope lists directly and preserve exact side
+values, units, desired direction, and side-qualified source references. The UI does not reclassify
+a dimension or create a score. Intervention count is always described as descriptive, never
+ordinal.
+
+When improvements and regressions coexist, Advancement interpretation must state that the result is
+a mixed trade-off and Hermes makes no overall advancement claim. For the retained lead and cut-in
+cases, the truthful synthesis is:
+
+> Minimum TTC improved. Route completion, acceleration, and jerk regressed. The gate verdict did not improve. This is a mixed trade-off and does not establish overall advancement.
+
+The comparison must never generate a winner, overall safety/composite score, “candidate is safer,”
+“recommended policy,” promotion conclusion, or authority claim.
+
+On incompatibility, show `Comparison unavailable`, reasons, warnings, and limitations. State that
+both artifacts may be reviewed independently but no winner, metric change, or advancement claim is
+shown. Do not render deltas, charts, or source-link delta payload. An invalid side remains
+quarantined and cannot produce comparison deltas.
 
 ## 8. Content and network security
 
-Artifact text uses Streamlit text/table/chart APIs only. No unsafe_allow_html, raw HTML, executable
-Markdown links, external images/assets, telemetry, external API, upload, or database is allowed.
-Control characters render visibly and long strings obey the 1,024-character bound.
+Artifact text uses Streamlit text/table/chart APIs only. No `unsafe_allow_html`, raw HTML,
+executable Markdown links, external images/assets, telemetry, external API, upload, or database is
+allowed. Control characters render visibly and long strings obey the 1,024-character bound.
 
-The launcher accepts only numeric loopback literals validated by ipaddress. It rejects hostnames,
-0.0.0.0, ::, LAN, link-local, and public addresses. Telemetry is disabled.
+The launcher accepts only numeric loopback literals validated by `ipaddress`. It rejects hostnames,
+`0.0.0.0`, `::`, LAN, link-local, and public addresses. Telemetry is disabled.
 
-## 9. Human comprehension gate
+## 9. Human comprehension and accessibility gates
 
-Record actual reviewer observations only. The reviewer must identify exact artifact/digest, gate
-rationale, hard failure, unavailable evidence, shield change, improvements and regressions,
-authenticity, and physical deployment permission. Any false answer that PASS means authenticated,
-safe, approved, or deployable is a comprehension defect to fix before completion.
+Human comprehension, manual visual review, and accessibility audit are all `NOT YET OBSERVED`.
+Automated tests cannot change those statuses. Do not claim reviewer comprehension, visual quality,
+WCAG conformance, or gate completion without actual recorded observation.
 
-## 10. Implemented local workbench
+The eventual human package must include an observation template and task protocol covering exact
+artifact identity/digest, gate rationale, hard failure, unavailable evidence, shield change,
+improvements and regressions, authenticity, and physical deployment permission. Any false answer
+that PASS means authenticated, safe, approved, or deployable is a comprehension defect.
 
-Checkpoint `90fb7d8` implements this information architecture as six Streamlit screens selected by
-an explicit text radio control:
+Manual accessibility review must cover ordered headings, keyboard-only navigation and finding
+expansion, visible focus, announced validation/invalid-evidence errors, screen reader behavior,
+200% zoom/reflow, contrast, non-color status, stable row IDs, full table alternatives for charts,
+the synchronized timeline table, and inert bounded artifact strings. Essential trust and decision
+content must not depend on horizontal scrolling. No ambiguous abbreviation or raw HTML is allowed.
 
-1. Intake / verification
-2. Review summary / trust
-3. Findings / evidence coverage
-4. Timeline
-5. Provenance / integrity / limitations
-6. Compatible comparison
+Future tracked documents are `docs/PHASE6_USABILITY_TEST_PLAN.md`,
+`docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`, and `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md`. Their
+status remains `NOT YET OBSERVED` until a real reviewer or auditor records evidence.
 
-These six screens realize the three design-time conceptual areas (artifact review, comparison, and
-limitations) without adding authority. The design-time directory-list accessibility note was
-resolved to a keyboard-accessible exact text input so the UI never discovers or suggests an
-artifact.
+## 10. Frozen reviewer-comprehension implementation delta
 
-The configured artifact root is fixed at launch. Intake accepts one exact root-relative string and
-does nothing until **Verify stored evidence** is selected. Comparison likewise accepts two exact
-root-relative strings and does nothing until **Compare stored evidence** is selected. With root
-`artifacts`, enter `handoff-phase5-demo`; do not enter `artifacts/handoff-phase5-demo`. There is no
-directory listing, newest-run choice, upload, edit, approval, promotion, release, or deployment
-control.
+Checkpoint `90fb7d8` remains the validated six-screen predecessor. The next production iteration
+must map its existing renderers into the primary/secondary hierarchy in section 1 without changing
+the public review facade or portable envelopes:
 
-The implemented timeline uses deterministic 50-event pages, explicit track filtering, total event
-and track counts, typed unavailable rows, and exact-sequence drill-down. Each explicit Verify
-submission resets both timeline paging and prior event-inspection state. The comparison screen
-renders typed tables for both sides, compatibility, dedicated deltas, all four outcome partitions,
-availability changes, and limitations. Incompatibility returns after reasons/limitations and never
-renders delta or chart claims; the UI adds no winner or composite score.
+| Predecessor screen | Frozen destination |
+| --- | --- |
+| Intake / verification | Review → Select & Verify |
+| Review summary / trust | Review → Overview |
+| Findings / evidence coverage | Review → Evidence |
+| Timeline | Review → Timeline |
+| Provenance / integrity / limitations | Review → Provenance and Evidence limitations |
+| Compatible comparison | Compare |
 
-The version 1 workbench does not draw a comparison chart; the typed `chart_series` remains available
-in the portable comparison/CLI JSON for a future safe renderer.
+The existing exact-selection facade, fresh capture on explicit submission, independent comparison
+verification, 50-event deterministic paging, full timeline contract, comparison partitions, safe
+text projection, and invalid-envelope quarantine remain authoritative. This design iteration adds
+presentation hierarchy, progressive disclosure, task-oriented presets/jumps, and mandatory
+comparison synthesis; it does not add review, gate, verifier, threshold, comparison, or filesystem
+discovery semantics.
 
-All artifact-derived table cells use the shared safe text projection with explicit truncation and
-original-scalar-count columns. CLI human text applies the same 1,024-input-scalar boundary and
-renders every Unicode `Cc`/`Cf` control visibly. Valid JSON stays full and canonical. Automated
-AppTests covered all six screens, PASS/CONDITIONAL/HOLD/INVALID evidence, compatible/incompatible/
-invalid comparison, stale mutation recapture, source-byte identity, and runtime/network/process
-import bombs without launching a real server or browser.
-
-No manual visual inspection or human-comprehension participant result is recorded by the automated
-checkpoint. Section 9 remains the manual acceptance script; observations must be recorded when an
-actual reviewer performs it and must never be fabricated.
+No production implementation or tests are part of this design-freeze change. Human comprehension,
+manual visual review, and accessibility audit remain `NOT YET OBSERVED`.
