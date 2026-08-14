@@ -1215,3 +1215,42 @@ def test_advancement_interpretation_uses_existing_partitions_without_forcing_mix
     assert "gate verdict did not improve" not in different_copy
     assert "mixed trade-off" in different_copy
     assert "no overall advancement" in different_copy
+
+
+def test_categorized_text_row_bounds_controls_and_marks_missing_values_unavailable() -> None:
+    long_value = "prefix\x00" + "x" * 1_025
+
+    bounded = workbench_app._categorized_text_row(
+        "Manifest run ID",
+        long_value,
+        "OBSERVED",
+    )
+    absent = workbench_app._categorized_text_row(
+        "Manifest run ID",
+        None,
+        "OBSERVED",
+    )
+
+    assert bounded["value"].startswith("prefix\\u0000")
+    assert "\x00" not in bounded["value"]
+    assert bounded["value"].endswith("x" * 1_017)
+    assert bounded["value truncated"] == "true"
+    assert bounded["value original scalar count"] == str(len(long_value))
+    assert bounded["category"] == "OBSERVED"
+    assert absent["value"] == "NOT_AVAILABLE"
+    assert absent["category"] == "NOT_AVAILABLE"
+
+
+def test_persistent_identity_rows_use_not_available_category_for_absent_manifest_run_id(
+    repository_root: Path,
+) -> None:
+    envelope = review_artifact(repository_root / "artifacts", "phase1-tampered")
+    manifest = envelope.artifact.manifest_identity.model_copy(update={"run_id": None})
+    artifact = envelope.artifact.model_copy(update={"manifest_identity": manifest})
+    absent_run_id = envelope.model_copy(update={"artifact": artifact})
+
+    rows = workbench_app._persistent_identity_rows(absent_run_id)
+    run_id = next(row for row in rows if row["label"] == "Manifest run ID")
+
+    assert run_id["value"] == "NOT_AVAILABLE"
+    assert run_id["category"] == "NOT_AVAILABLE"

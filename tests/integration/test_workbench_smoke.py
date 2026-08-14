@@ -409,6 +409,26 @@ def test_workbench_compatible_and_incompatible_comparison_render_without_chart_c
     )
 
 
+def test_comparison_invalid_selection_preserves_last_accepted_submitted_sides(
+    workbench_root: Path,
+) -> None:
+    baseline = "handoff-p3-lead-baseline"
+    candidate = "handoff-p3-lead-shielded"
+    app = _compare(_workflow(_app(workbench_root), "Compare"), baseline, candidate)
+    assert "Minimum TTC improved" in _visible_text(app)
+
+    app.text_input(key="comparison_baseline_draft").input("../outside").run(timeout=30)
+    app = app.button(key="compare_stored_evidence").click().run(timeout=30)
+
+    assert list(app.error)
+    assert app.session_state.filtered_state["submitted_baseline_selection"] == baseline
+    assert app.session_state.filtered_state["submitted_candidate_selection"] == candidate
+    assert app.session_state.filtered_state["comparison_requested"] is True
+    assert f"Submitted baseline: {baseline} [OBSERVED]" in _visible_text(app)
+    assert f"Submitted candidate: {candidate} [OBSERVED]" in _visible_text(app)
+    assert "Minimum TTC improved" in _visible_text(app)
+
+
 @pytest.mark.parametrize(
     ("baseline", "candidate", "side"),
     [
@@ -729,6 +749,59 @@ def test_workbench_timeline_preset_and_finding_jump_preserve_review_snapshot(
     assert all("event_sequence=12" in value for value in event_sources)
     assert _review_snapshot(workbench_root, selection) == before
     _assert_no_envelope(app)
+
+
+def test_invalid_verify_resets_all_presentation_state_and_retains_last_accepted_review(
+    workbench_root: Path,
+) -> None:
+    selection = "handoff-p1-collision"
+    app = _review_section(_verify(_app(workbench_root), selection), "Evidence")
+    app.radio(key="finding_group").set_value("Optional evidence").run(timeout=30)
+    app.radio(key="selected_finding_id").set_value("comfort.jerk").run(timeout=30)
+    app.number_input(key="finding_event_sequence").set_value(3).run(timeout=30)
+    app.button(key="inspect_exact_event").click().run(timeout=30)
+    app = _review_section(app, "Timeline")
+    app.radio(key="timeline_preset").set_value("Action accountability").run(timeout=30)
+    app.multiselect(key="visible_timeline_tracks").set_value(["executed_action"]).run(
+        timeout=30
+    )
+    app.session_state["selected_timeline_sequence"] = 12
+
+    app = _review_section(app, "Select & Verify")
+    app.text_input(key="artifact_selection_draft").input("../outside").run(timeout=30)
+    app = app.button(key="verify_selected_artifact").click().run(timeout=30)
+
+    state = app.session_state.filtered_state
+    assert list(app.error)
+    assert state["submitted_artifact_selection"] == selection
+    assert state["review_requested"] is True
+    assert state["finding_group"] == "Failed required evidence"
+    assert state["selected_finding_id"] == ""
+    assert state["finding_event_sequence"] == 0
+    assert state["inspect_event_requested"] is False
+    assert state["timeline_preset"] == "All tracks"
+    assert state["timeline_preset_applied"] == ""
+    assert state["visible_timeline_tracks"] == [
+        "raw_observation",
+        "delivered_observation",
+        "result_observation",
+        "candidate_action",
+        "permitted_action",
+        "executed_action",
+        "override_reasons",
+        "observation_fault_reasons",
+        "control_fault_reasons",
+        "collision_count",
+        "offroad",
+        "speed_mps",
+        "route_progress_pct",
+        "ttc_s",
+        "policy_latency_ms",
+        "verifier_triggering_findings",
+    ]
+    assert state["timeline_page"] == 1
+    assert state["selected_timeline_sequence"] == -1
+    assert f"Selected directory: {selection} [OBSERVED]" in _visible_text(app)
 
 
 @pytest.mark.parametrize(

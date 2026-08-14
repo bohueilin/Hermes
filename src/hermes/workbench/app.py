@@ -192,6 +192,36 @@ def _safe_row(*values: tuple[str, object]) -> dict[str, str]:
     return row
 
 
+def _categorized_text_row(
+    label: str,
+    value: object | None,
+    category: str,
+) -> dict[str, str]:
+    effective_category = "NOT_AVAILABLE" if value is None else category
+    return _safe_row(
+        ("label", label),
+        ("value", value),
+        ("category", effective_category),
+    )
+
+
+def _render_categorized_row(row: dict[str, str]) -> None:
+    st.text(f"{row['label']}: {row['value']} [{row['category']}]")
+    if row["value truncated"] == "true":
+        st.caption(
+            f"{row['label']} display truncated; original scalar count: "
+            f"{row['value original scalar count']}."
+        )
+
+
+def _render_categorized_text(
+    label: str,
+    value: object | None,
+    category: str,
+) -> None:
+    _render_categorized_row(_categorized_text_row(label, value, category))
+
+
 def _text_rows(values: Sequence[tuple[str, object]]) -> tuple[dict[str, str], ...]:
     rows: list[dict[str, str]] = []
     for label, value in values:
@@ -1450,13 +1480,30 @@ def _active_review(root: Path) -> ReviewEnvelope | None:
         return None
 
 
+def _persistent_identity_rows(
+    envelope: ReviewEnvelope,
+) -> tuple[dict[str, str], ...]:
+    locator = envelope.artifact.locator
+    manifest = envelope.artifact.manifest_identity
+    return (
+        _categorized_text_row(
+            "Selected directory",
+            locator.selected_relative_path,
+            locator.category,
+        ),
+        _categorized_text_row(
+            "Manifest run ID",
+            manifest.run_id,
+            manifest.category,
+        ),
+    )
+
+
 def _render_persistent_review_identity(envelope: ReviewEnvelope | None) -> None:
     if envelope is None:
         return
-    locator = envelope.artifact.locator
-    manifest = envelope.artifact.manifest_identity
-    st.text(f"Selected directory: {locator.selected_relative_path} [OBSERVED]")
-    st.text(f"Manifest run ID: {manifest.run_id or 'NOT_AVAILABLE'} [OBSERVED]")
+    for row in _persistent_identity_rows(envelope):
+        _render_categorized_row(row)
 
 
 def _render_decision_trust(envelope: ReviewEnvelope) -> None:
@@ -1576,6 +1623,7 @@ def _render_intake(root: Path, envelope: ReviewEnvelope | None) -> None:
         "Verify selected artifact",
         key="verify_selected_artifact",
     ):
+        _reset_review_presentation_state()
         previous_selection = st.session_state.get("submitted_artifact_selection", "")
         previous_requested = st.session_state.get("review_requested", False)
         st.session_state["submitted_artifact_selection"] = draft
@@ -1585,7 +1633,6 @@ def _render_intake(root: Path, envelope: ReviewEnvelope | None) -> None:
             st.session_state["submitted_artifact_selection"] = previous_selection
             st.session_state["review_requested"] = previous_requested
         else:
-            _reset_review_presentation_state()
             envelope = candidate
     if envelope is None:
         st.text("Evidence integrity: UNVERIFIED [COMPUTED]")
@@ -1615,11 +1662,23 @@ def _render_summary(envelope: ReviewEnvelope | None) -> None:
     artifact = envelope.artifact
     manifest = artifact.manifest_identity
     st.subheader("Artifact reviewed")
-    st.text(f"Selected relative path: {artifact.locator.selected_relative_path} [OBSERVED]")
-    st.text(f"Selected directory name: {artifact.locator.selected_directory_name} [OBSERVED]")
-    st.text(f"Manifest run ID: {manifest.run_id} [OBSERVED]")
-    st.text(f"Created at: {manifest.created_at_utc} [OBSERVED]")
-    st.text(f"Evidence schema: {manifest.evidence_schema_version} [OBSERVED]")
+    _render_categorized_text(
+        "Selected relative path",
+        artifact.locator.selected_relative_path,
+        artifact.locator.category,
+    )
+    _render_categorized_text(
+        "Selected directory name",
+        artifact.locator.selected_directory_name,
+        artifact.locator.category,
+    )
+    _render_categorized_text("Manifest run ID", manifest.run_id, manifest.category)
+    _render_categorized_text("Created at", manifest.created_at_utc, manifest.category)
+    _render_categorized_text(
+        "Evidence schema",
+        manifest.evidence_schema_version,
+        manifest.category,
+    )
     st.subheader("Gate decision")
     st.text(f"Gate verdict: {envelope.gate.verdict} [GATE_DECISION]")
     if envelope.gate.verdict == "PASS":
@@ -1638,14 +1697,20 @@ def _render_summary(envelope: ReviewEnvelope | None) -> None:
             "bounded simulation evidence."
         )
     st.subheader("Why")
-    st.text("Rationale: " + ("; ".join(envelope.gate.rationale) or "NONE"))
-    st.text(
-        "Controlling hard findings: "
-        + (", ".join(envelope.gate.hard_failure_ids) or "NONE")
+    _render_categorized_text(
+        "Rationale",
+        "; ".join(envelope.gate.rationale) or "NONE",
+        envelope.gate.category,
     )
-    st.text(
-        "Controlling soft findings: "
-        + (", ".join(envelope.gate.soft_failure_ids) or "NONE")
+    _render_categorized_text(
+        "Controlling hard findings",
+        ", ".join(envelope.gate.hard_failure_ids) or "NONE",
+        envelope.gate.category,
+    )
+    _render_categorized_text(
+        "Controlling soft findings",
+        ", ".join(envelope.gate.soft_failure_ids) or "NONE",
+        envelope.gate.category,
     )
     st.subheader("Integrity")
     _render_decision_trust(envelope)
@@ -1915,11 +1980,23 @@ def _render_comparison(root: Path) -> None:
         "Exact candidate selection",
         key="comparison_candidate_draft",
     )
+    result: ComparisonEnvelope | ReviewEnvelope | None = None
     if st.button("Compare stored evidence", key="compare_stored_evidence"):
+        previous_baseline = st.session_state.get("submitted_baseline_selection", "")
+        previous_candidate = st.session_state.get("submitted_candidate_selection", "")
+        previous_requested = st.session_state.get("comparison_requested", False)
         st.session_state["submitted_baseline_selection"] = baseline
         st.session_state["submitted_candidate_selection"] = candidate
         st.session_state["comparison_requested"] = True
-    result = _active_comparison(root)
+        submitted_result = _active_comparison(root)
+        if submitted_result is None:
+            st.session_state["submitted_baseline_selection"] = previous_baseline
+            st.session_state["submitted_candidate_selection"] = previous_candidate
+            st.session_state["comparison_requested"] = previous_requested
+        else:
+            result = submitted_result
+    if result is None:
+        result = _active_comparison(root)
     if result is None:
         st.info("Enter two exact independently verified selections.")
         return
@@ -1931,13 +2008,15 @@ def _render_comparison(root: Path) -> None:
         _render_persistent_review_identity(result)
         _render_quarantine(result)
         return
-    st.text(
-        "Submitted baseline: "
-        f"{result.baseline.artifact.locator.selected_relative_path} [OBSERVED]"
+    _render_categorized_text(
+        "Submitted baseline",
+        result.baseline.artifact.locator.selected_relative_path,
+        result.baseline.artifact.locator.category,
     )
-    st.text(
-        "Submitted candidate: "
-        f"{result.candidate.artifact.locator.selected_relative_path} [OBSERVED]"
+    _render_categorized_text(
+        "Submitted candidate",
+        result.candidate.artifact.locator.selected_relative_path,
+        result.candidate.artifact.locator.category,
     )
     compatible = result.compatibility.status == "COMPATIBLE"
     st.text("Decision state")
