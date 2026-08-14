@@ -402,6 +402,50 @@ def test_workbench_app_avoids_unsafe_streamlit_filesystem_network_and_process_ap
     assert _unsafe_workbench_calls(source_path) == []
 
 
+def test_workbench_primary_headers_have_unique_stable_explicit_anchors(
+    repository_root: Path,
+) -> None:
+    source_path = repository_root / "src" / "hermes" / "workbench" / "app.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    observed: list[tuple[int, str, str | None]] = []
+
+    for node in ast.walk(tree):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "st"
+            and node.func.attr == "header"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+        ):
+            continue
+        anchor_keyword = next(
+            (keyword.value for keyword in node.keywords if keyword.arg == "anchor"),
+            None,
+        )
+        anchor = (
+            anchor_keyword.value
+            if isinstance(anchor_keyword, ast.Constant)
+            and isinstance(anchor_keyword.value, str)
+            else None
+        )
+        observed.append((node.lineno, node.args[0].value, anchor))
+
+    mappings = [(label, anchor) for _line, label, anchor in sorted(observed)]
+    assert mappings == [
+        ("Select & Verify", "select-and-verify"),
+        ("Overview", "overview"),
+        ("Evidence", "evidence"),
+        ("Timeline", "timeline"),
+        ("Provenance", "provenance"),
+        ("Compare", "compare"),
+        ("Evidence limitations", "evidence-limitations"),
+    ]
+    assert len({anchor for _label, anchor in mappings}) == len(mappings)
+
+
 def test_workbench_widget_vocabulary_has_no_execution_mutation_or_approval_actions(
     repository_root: Path,
 ) -> None:

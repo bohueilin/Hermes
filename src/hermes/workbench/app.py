@@ -1613,7 +1613,7 @@ def _reset_review_presentation_state() -> None:
 
 
 def _render_intake(root: Path, envelope: ReviewEnvelope | None) -> None:
-    st.header("Select & Verify")
+    st.header("Select & Verify", anchor="select-and-verify")
     st.caption(
         "Enter one exact root-relative directory. Omit the configured root name. "
         "Example: handoff-phase5-demo. Hermes does not discover or auto-select artifacts."
@@ -1651,7 +1651,7 @@ def _render_intake(root: Path, envelope: ReviewEnvelope | None) -> None:
 
 
 def _render_summary(envelope: ReviewEnvelope | None) -> None:
-    st.header("Overview")
+    st.header("Overview", anchor="overview")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing it.")
         return
@@ -1747,7 +1747,7 @@ def _render_summary(envelope: ReviewEnvelope | None) -> None:
 
 
 def _render_findings(envelope: ReviewEnvelope | None) -> None:
-    st.header("Evidence")
+    st.header("Evidence", anchor="evidence")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing findings.")
         return
@@ -1847,7 +1847,7 @@ def _apply_timeline_jump_state(
 
 
 def _render_timeline(envelope: ReviewEnvelope | None) -> None:
-    st.header("Timeline")
+    st.header("Timeline", anchor="timeline")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing the timeline.")
         return
@@ -1919,7 +1919,7 @@ def _render_timeline(envelope: ReviewEnvelope | None) -> None:
 
 
 def _render_provenance(envelope: ReviewEnvelope | None) -> None:
-    st.header("Provenance")
+    st.header("Provenance", anchor="provenance")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing provenance.")
         return
@@ -1969,7 +1969,7 @@ def _active_comparison(root: Path) -> ComparisonEnvelope | ReviewEnvelope | None
 
 
 def _render_comparison(root: Path) -> None:
-    st.header("Compare")
+    st.header("Compare", anchor="compare")
     st.caption(
         "Enter two exact root-relative directories. Hermes does not discover, rank, or "
         "auto-select comparison artifacts."
@@ -2066,7 +2066,7 @@ def _render_comparison(root: Path) -> None:
 
 
 def _render_evidence_limitations() -> None:
-    st.header("Evidence limitations")
+    st.header("Evidence limitations", anchor="evidence-limitations")
     st.text("Internal consistency is not independent authenticity. [AUTHENTICITY]")
     st.text(
         "Stored verification does not reexecute the policy or simulator. [RESIDUAL_RISK]"
