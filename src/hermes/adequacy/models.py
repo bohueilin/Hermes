@@ -92,7 +92,7 @@ class ObservationDisposition(StrEnum):
 
 
 PlanEvaluation = Literal["EVALUATED", "PLAN_NOT_EVALUATED"]
-Integrity = Literal["INTERNALLY_CONSISTENT", "INVALID_EVIDENCE"]
+Integrity = Literal["UNVERIFIED", "INTERNALLY_CONSISTENT", "INVALID_EVIDENCE"]
 Compatibility = Literal["COMPATIBLE", "INCOMPATIBLE", "NOT_EVALUATED"]
 Role = Literal["BASELINE", "CANDIDATE"]
 ChallengePhase = Literal["PRE_TRIGGER", "BRAKING", "RECOVERY", "CUT_IN", "POST_CUT_IN"]
@@ -289,10 +289,23 @@ class StudyProtocol(_AdequacyModel):
     @model_validator(mode="after")
     def require_complete_unique_grid_and_rules(self) -> StudyProtocol:
         grid_parameters = tuple(dimension.parameter for dimension in self.baseline_grid)
+        grid_fields = tuple(dimension.scenario_field for dimension in self.baseline_grid)
+        grid_pairs = tuple(
+            (dimension.parameter, dimension.scenario_field)
+            for dimension in self.baseline_grid
+        )
         _require_unique(grid_parameters, "baseline grid parameters")
-        mapping_parameters = tuple(mapping.parameter for mapping in self.materializer.mappings)
-        if grid_parameters != mapping_parameters:
-            raise ValueError("materializer mappings must exactly follow baseline grid parameters")
+        _require_unique(grid_fields, "baseline grid scenario fields")
+        _require_unique(grid_pairs, "baseline grid parameter/scenario field pairs")
+        mapping_pairs = tuple(
+            (mapping.parameter, mapping.scenario_field)
+            for mapping in self.materializer.mappings
+        )
+        if grid_pairs != mapping_pairs:
+            raise ValueError(
+                "materializer mappings must exactly follow baseline grid "
+                "parameter/scenario field pairs"
+            )
         validity_ids = tuple(rule.rule_id for rule in self.valid_run_rules)
         exclusion_ids = tuple(rule.rule_id for rule in self.exclusion_rules)
         _require_unique(validity_ids, "valid-run rule IDs")
@@ -329,6 +342,16 @@ class SelectionObservation(_AdequacyModel):
     operator: Literal["EQ", "NE", "LT", "LTE", "GT", "GTE"]
     threshold_machine_value: JsonScalar
     sequence: NonNegativeInt | None
+
+    @model_validator(mode="after")
+    def require_exact_lexical_representation(self) -> SelectionObservation:
+        canonical = _canonical_json_data(self.machine_value).decode("utf-8")
+        display = self.machine_value if isinstance(self.machine_value, str) else canonical
+        if self.canonical_value != canonical or self.display_value != display:
+            raise ValueError(
+                "selection observation text must deterministically represent machine value"
+            )
+        return self
 
 
 class ExclusionResult(_AdequacyModel):
@@ -386,6 +409,8 @@ class DiscoveryLedgerEntry(_AdequacyModel):
         _require_unique(parameters, "discovery parameters")
         observations = tuple(item.observation_id for item in self.selection_observations)
         _require_unique(observations, "selection observations")
+        if self.exclusion.valid_run and not self.selection_observations:
+            raise ValueError("included valid attempt requires selection observations")
         if self.environment.repository_commit != self.registration_commit:
             raise ValueError("discovery environment must use registration commit")
         if self.verification_status == "INVALID_EVIDENCE" and self.exclusion.valid_run:
@@ -597,7 +622,7 @@ class SideReviewState(_AdequacyModel):
     """Per-side trust state, separated from optional verified assessment facts."""
 
     identity: SideIdentity
-    gate_verdict: Literal["PASS", "CONDITIONAL", "HOLD", "INVALID_EVIDENCE"]
+    gate_verdict: Literal["PASS", "CONDITIONAL", "HOLD", "INVALID_EVIDENCE"] | None
     integrity: Integrity
     authenticity: Literal["NOT_AUTHENTICATED"]
     authorization: Literal["NOT_EVALUATED"]
@@ -611,6 +636,15 @@ class SideReviewState(_AdequacyModel):
     def require_integrity_specific_payload(self) -> SideReviewState:
         if any(item.side != self.identity.role for item in self.diagnostics):
             raise ValueError("side diagnostics must match side identity")
+        if self.integrity == "UNVERIFIED":
+            if (
+                self.identity.observed_run_id is not None
+                or self.gate_verdict is not None
+                or self.assessment_facts is not None
+                or self.diagnostics
+            ):
+                raise ValueError("unverified side cannot carry parsed or verified claims")
+            return self
         if self.integrity == "INVALID_EVIDENCE":
             if (
                 self.gate_verdict != "INVALID_EVIDENCE"
@@ -619,7 +653,10 @@ class SideReviewState(_AdequacyModel):
             ):
                 raise ValueError("invalid evidence must be quarantined with diagnostics")
             return self
-        if self.gate_verdict == "INVALID_EVIDENCE" or self.assessment_facts is None:
+        if (
+            self.gate_verdict not in {"PASS", "CONDITIONAL", "HOLD"}
+            or self.assessment_facts is None
+        ):
             raise ValueError("consistent evidence requires accepted gate and assessment facts")
         if self.assessment_facts.role != self.identity.role:
             raise ValueError("assessment facts role must match requested side")
@@ -762,6 +799,16 @@ class EvaluationAdequacyEnvelope(_AdequacyModel):
     def require_exhaustive_decision_planes(self) -> EvaluationAdequacyEnvelope:
         if self.baseline.identity.role != "BASELINE" or self.candidate.identity.role != "CANDIDATE":
             raise ValueError("envelope sides must be ordered baseline then candidate")
+        baseline_unverified = self.baseline.integrity == "UNVERIFIED"
+        candidate_unverified = self.candidate.integrity == "UNVERIFIED"
+        baseline_invalid = self.baseline.integrity == "INVALID_EVIDENCE"
+        candidate_invalid = self.candidate.integrity == "INVALID_EVIDENCE"
+        if baseline_unverified:
+            raise ValueError("UNVERIFIED is allowed only for an unvisited candidate")
+        if candidate_unverified and not baseline_invalid:
+            raise ValueError("UNVERIFIED candidate requires baseline-first invalid evidence")
+        if baseline_invalid and not candidate_unverified:
+            raise ValueError("baseline-first invalid evidence requires an UNVERIFIED candidate")
         ordered_side_diagnostics = self.baseline.diagnostics + self.candidate.diagnostics
         if self.diagnostics != ordered_side_diagnostics:
             raise ValueError("envelope diagnostics must equal ordered per-side diagnostics")
@@ -785,8 +832,6 @@ class EvaluationAdequacyEnvelope(_AdequacyModel):
             if self.interpretation is not expected:
                 raise ValueError("interpretation must match assessment and registration")
 
-        baseline_invalid = self.baseline.integrity == "INVALID_EVIDENCE"
-        candidate_invalid = self.candidate.integrity == "INVALID_EVIDENCE"
         if baseline_invalid or candidate_invalid:
             if (
                 self.compatibility != "NOT_EVALUATED"

@@ -403,6 +403,21 @@ def _side_state(
     )
 
 
+def _unverified_side_state(role: str = "CANDIDATE") -> SideReviewState:
+    return SideReviewState(
+        identity=_identity(role, parsed=False),
+        gate_verdict=None,
+        integrity="UNVERIFIED",
+        authenticity="NOT_AUTHENTICATED",
+        authorization="NOT_EVALUATED",
+        deployment_permission="NONE",
+        scope="SIMULATION_ONLY",
+        authoritative_status="NOT_DEFINED",
+        assessment_facts=None,
+        diagnostics=(),
+    )
+
+
 def _exact(value: float = 2.0) -> CriterionExactValue:
     return CriterionExactValue(
         machine_value=value,
@@ -507,6 +522,113 @@ def test_complete_protocol_ledger_and_pair_contracts_preserve_decision_fields() 
     assert pair.expected_pair.candidate_shield_name == "deterministic"
     assert pair.expected_pair.require_repository_dirty is False
     assert pair.selected_scenario_relative_path.startswith("scenarios/")
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    (
+        (
+            "materializer",
+            MaterializerSpecification(
+                version="1.0",
+                mappings=(
+                    MaterializerFieldMapping(
+                        parameter="initial_gap_m",
+                        scenario_field="challenge.initial_gap_m",
+                    ),
+                    MaterializerFieldMapping(
+                        parameter="trigger_step",
+                        scenario_field="challenge.brake_duration_steps",
+                    ),
+                ),
+            ),
+        ),
+        (
+            "baseline_grid",
+            (
+                GridDimension(
+                    parameter="initial_gap_m",
+                    scenario_field="challenge.initial_gap_m",
+                    values=(8.0, 10.0),
+                ),
+                GridDimension(
+                    parameter="trigger_step",
+                    scenario_field="challenge.initial_gap_m",
+                    values=(25, 30),
+                ),
+            ),
+        ),
+    ),
+)
+def test_protocol_requires_exact_unique_parameter_scenario_field_pairs(
+    field: str,
+    replacement: object,
+) -> None:
+    protocol = _protocol()
+    with pytest.raises(ValidationError, match="scenario field"):
+        StudyProtocol.model_validate(
+            {**protocol.model_dump(), field: replacement}
+        )
+
+
+def test_materializer_rejects_duplicate_scenario_field_mappings() -> None:
+    with pytest.raises(ValidationError, match="scenario fields"):
+        MaterializerSpecification(
+            version="1.0",
+            mappings=(
+                MaterializerFieldMapping(
+                    parameter="initial_gap_m",
+                    scenario_field="challenge.initial_gap_m",
+                ),
+                MaterializerFieldMapping(
+                    parameter="trigger_step",
+                    scenario_field="challenge.initial_gap_m",
+                ),
+            ),
+        )
+
+
+@pytest.mark.parametrize("selection_status", ("SELECTED", "NOT_SELECTED"))
+def test_included_discovery_attempt_requires_selection_observations(
+    selection_status: str,
+) -> None:
+    ledger = _ledger()
+    with pytest.raises(ValidationError, match="selection observations"):
+        DiscoveryLedgerEntry.model_validate(
+            {
+                **ledger.model_dump(),
+                "selection_observations": (),
+                "selection": {
+                    **ledger.selection.model_dump(),
+                    "status": selection_status,
+                },
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("machine_value", "canonical_value", "display_value"),
+    (
+        (1.5, "1.50", "1.5"),
+        (1.5, "1.5", "1.50"),
+        ("observed", '"observed"', '"observed"'),
+    ),
+)
+def test_selection_observation_requires_exact_machine_canonical_display_consistency(
+    machine_value: object,
+    canonical_value: str,
+    display_value: str,
+) -> None:
+    observation = _selection_observation()
+    with pytest.raises(ValidationError, match="deterministically represent"):
+        SelectionObservation.model_validate(
+            {
+                **observation.model_dump(),
+                "machine_value": machine_value,
+                "canonical_value": canonical_value,
+                "display_value": display_value,
+            }
+        )
 
 
 def test_contracts_are_strict_frozen_finite_and_reject_unknown_fields() -> None:
@@ -695,7 +817,7 @@ def test_invalid_baseline_is_safe_sparse_and_baseline_first() -> None:
         baseline=_side_state(
             "BASELINE", valid=False, diagnostics=(baseline_diagnostic,)
         ),
-        candidate=_side_state("CANDIDATE"),
+        candidate=_unverified_side_state(),
         compatibility="NOT_EVALUATED",
         compatibility_reasons=(),
         plan_evaluation="PLAN_NOT_EVALUATED",
@@ -712,8 +834,90 @@ def test_invalid_baseline_is_safe_sparse_and_baseline_first() -> None:
     assert invalid.baseline.identity.observed_run_id is None
     assert invalid.baseline.assessment_facts is None
     assert invalid.baseline.gate_verdict == "INVALID_EVIDENCE"
+    assert invalid.candidate.integrity == "UNVERIFIED"
+    assert invalid.candidate.identity.observed_run_id is None
+    assert invalid.candidate.gate_verdict is None
+    assert invalid.candidate.assessment_facts is None
+    assert invalid.candidate.diagnostics == ()
     assert invalid.diagnostics[0].side == "BASELINE"
     assert invalid.assessment is None
+
+    with pytest.raises(ValidationError, match="requires an UNVERIFIED candidate"):
+        EvaluationAdequacyEnvelope.model_validate(
+            {**invalid.model_dump(), "candidate": _side_state("CANDIDATE")}
+        )
+
+
+@pytest.mark.parametrize(
+    "updates",
+    (
+        {"identity": _identity("CANDIDATE")},
+        {"gate_verdict": "HOLD"},
+        {"assessment_facts": _facts("CANDIDATE")},
+        {
+            "diagnostics": (
+                ArtifactDiagnostic(
+                    side="CANDIDATE",
+                    code="NOT_VISITED",
+                    message="candidate was not visited",
+                ),
+            )
+        },
+    ),
+)
+def test_unverified_candidate_carries_no_parsed_or_verified_claims(
+    updates: dict[str, object],
+) -> None:
+    candidate = _unverified_side_state()
+    with pytest.raises(ValidationError, match="unverified"):
+        SideReviewState.model_validate({**candidate.model_dump(), **updates})
+
+
+def test_internally_consistent_side_requires_an_accepted_gate() -> None:
+    candidate = _side_state("CANDIDATE")
+    with pytest.raises(ValidationError, match="consistent evidence requires accepted gate"):
+        SideReviewState.model_validate(
+            {**candidate.model_dump(), "gate_verdict": None}
+        )
+
+
+def test_unverified_side_is_only_allowed_after_baseline_invalid_evidence() -> None:
+    unverified = _unverified_side_state()
+    completed = _completed_envelope()
+    with pytest.raises(ValidationError, match="UNVERIFIED"):
+        EvaluationAdequacyEnvelope.model_validate(
+            {**completed.model_dump(), "candidate": unverified}
+        )
+
+    incompatible = EvaluationAdequacyEnvelope(
+        schema_version="1.0",
+        hermes_version="0.1.0",
+        baseline=_side_state("BASELINE"),
+        candidate=_side_state("CANDIDATE"),
+        compatibility="INCOMPATIBLE",
+        compatibility_reasons=("scenario digest differs",),
+        plan_evaluation="PLAN_NOT_EVALUATED",
+        protocol_source=None,
+        discovery_ledger_source=None,
+        pair_plan_source=None,
+        assessment=None,
+        registration=None,
+        interpretation=Interpretation.NO_INTERPRETATION,
+        diagnostics=(),
+        limitations=("No comparison claims accepted.",),
+    )
+    with pytest.raises(ValidationError, match="UNVERIFIED"):
+        EvaluationAdequacyEnvelope.model_validate(
+            {**incompatible.model_dump(), "candidate": unverified}
+        )
+
+    with pytest.raises(ValidationError, match="UNVERIFIED"):
+        EvaluationAdequacyEnvelope.model_validate(
+            {
+                **incompatible.model_dump(),
+                "baseline": _unverified_side_state("BASELINE"),
+            }
+        )
 
 
 def test_invalid_diagnostics_equal_ordered_per_side_diagnostics() -> None:
@@ -734,7 +938,7 @@ def test_invalid_diagnostics_equal_ordered_per_side_diagnostics() -> None:
             baseline=_side_state(
                 "BASELINE", valid=False, diagnostics=(side_diagnostic,)
             ),
-            candidate=_side_state("CANDIDATE"),
+            candidate=_unverified_side_state(),
             compatibility="NOT_EVALUATED",
             compatibility_reasons=(),
             plan_evaluation="PLAN_NOT_EVALUATED",
