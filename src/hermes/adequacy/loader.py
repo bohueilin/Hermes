@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import stat
 from contextlib import suppress
 from dataclasses import dataclass
+from itertools import product
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -19,6 +21,7 @@ from hermes.adequacy.models import (
     DiscoveryLedgerEntry,
     PairPlan,
     StudyProtocol,
+    _canonical_json_data,
     canonical_adequacy_json_bytes,
 )
 from hermes.scenarios.yaml_loader import StrictYamlError, load_strict_yaml
@@ -28,6 +31,13 @@ MAX_PLAN_TOTAL_BYTES = 3 * 1024 * 1024
 MAX_PLAN_LINE_BYTES = 64 * 1024
 MAX_DISCOVERY_ATTEMPTS = 1024
 MAX_PLAN_STRING_SCALARS = 4096
+
+_MAX_PLAN_DEPTH = 32
+_MAX_PLAN_NODES = 100_000
+_MAX_PLAN_INTEGER_ABS = 2**63 - 1
+_MAX_PLAN_FLOAT_ABS = 1e12
+
+_FileIdentity = tuple[int, int, int, int, int, int]
 
 
 class InvalidPlanError(ValueError):
@@ -44,16 +54,32 @@ class CapturedEvaluationPlans:
     sources: tuple[CapturedSourceIdentity, CapturedSourceIdentity, CapturedSourceIdentity]
 
 
+@dataclass(frozen=True, slots=True)
+class _EntryIdentity:
+    parent_fd: int
+    name: str
+    opened_fd: int
+    identity: _FileIdentity
+
+
+@dataclass(frozen=True, slots=True)
+class _CapturedPlanFile:
+    payload: bytes
+    size: int
+    entries: tuple[_EntryIdentity, ...]
+
+
 def validate_plan_root(plan_root: Path) -> Path:
     """Validate one existing non-symlink plan root without resolving symlinks."""
 
     try:
-        root_fd = _open_plan_root(plan_root)
-    except (OSError, ValueError) as exc:
+        root = Path(os.path.abspath(os.fspath(plan_root)))
+        root_fd = _open_plan_root(root)
+    except (OSError, TypeError, ValueError) as exc:
         raise InvalidPlanError("plan root is not a safe existing directory") from exc
     else:
         os.close(root_fd)
-    return Path(os.path.abspath(os.fspath(plan_root)))
+    return root
 
 
 def _validate_selection(root: Path, selection: str) -> str:
@@ -96,7 +122,7 @@ def _open_plan_root(plan_root: Path) -> int:
         raise
 
 
-def _identity(metadata: os.stat_result) -> tuple[int, int, int, int, int, int]:
+def _identity(metadata: os.stat_result) -> _FileIdentity:
     return (
         metadata.st_dev,
         metadata.st_ino,
@@ -120,10 +146,14 @@ def _read_exact(file_descriptor: int, expected_size: int) -> bytes:
     return b"".join(chunks)
 
 
-def _capture_one(root_fd: int, selection: str, remaining_total: int) -> tuple[bytes, int]:
+def _capture_one(
+    root_fd: int,
+    selection: str,
+    remaining_total: int,
+    owned_fds: list[int],
+) -> _CapturedPlanFile:
     descriptor = root_fd
-    opened: list[int] = []
-    entry_checks: list[tuple[int, str, tuple[int, int, int, int, int, int]]] = []
+    entry_checks: list[_EntryIdentity] = []
     try:
         parts = selection.split("/")
         for component in parts[:-1]:
@@ -133,20 +163,23 @@ def _capture_one(root_fd: int, selection: str, remaining_total: int) -> tuple[by
                 os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0),
                 dir_fd=descriptor,
             )
-            opened.append(descriptor)
+            owned_fds.append(descriptor)
             metadata = os.fstat(descriptor)
             if not stat.S_ISDIR(metadata.st_mode):
                 raise InvalidPlanError("plan selection intermediate is not a directory")
-            entry_checks.append((parent, component, _identity(metadata)))
+            entry_checks.append(_EntryIdentity(parent, component, descriptor, _identity(metadata)))
         parent = descriptor
         descriptor = os.open(
             parts[-1],
-            os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0),
+            os.O_RDONLY
+            | os.O_NONBLOCK
+            | os.O_NOFOLLOW
+            | getattr(os, "O_CLOEXEC", 0),
             dir_fd=descriptor,
         )
-        opened.append(descriptor)
+        owned_fds.append(descriptor)
         before = os.fstat(descriptor)
-        entry_checks.append((parent, parts[-1], _identity(before)))
+        entry_checks.append(_EntryIdentity(parent, parts[-1], descriptor, _identity(before)))
         if not stat.S_ISREG(before.st_mode):
             raise InvalidPlanError("plan selection must be a regular file")
         if before.st_size > MAX_PLAN_FILE_BYTES:
@@ -158,18 +191,22 @@ def _capture_one(root_fd: int, selection: str, remaining_total: int) -> tuple[by
         after = os.fstat(descriptor)
         if len(first) != before.st_size or first != second or _identity(before) != _identity(after):
             raise InvalidPlanError("plan file changed during capture")
-        for parent_fd, name, expected in entry_checks:
-            if _identity(os.stat(name, dir_fd=parent_fd, follow_symlinks=False)) != expected:
-                raise InvalidPlanError("plan entry was replaced during capture")
-        return first, before.st_size
+        _revalidate_entries(entry_checks)
+        return _CapturedPlanFile(first, before.st_size, tuple(entry_checks))
     except InvalidPlanError:
         raise
     except OSError as exc:
         raise InvalidPlanError("cannot capture selected plan without following links") from exc
-    finally:
-        for item in reversed(opened):
-            with suppress(OSError):
-                os.close(item)
+
+
+def _revalidate_entries(entries: list[_EntryIdentity] | tuple[_EntryIdentity, ...]) -> None:
+    for entry in entries:
+        descriptor_identity = _identity(os.fstat(entry.opened_fd))
+        path_identity = _identity(
+            os.stat(entry.name, dir_fd=entry.parent_fd, follow_symlinks=False)
+        )
+        if descriptor_identity != entry.identity or path_identity != entry.identity:
+            raise InvalidPlanError("plan entry was replaced or changed during capture")
 
 
 def _reject_constant(value: str) -> None:
@@ -185,23 +222,43 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def _validate_string_bounds(value: object) -> None:
+def _validate_plan_value(
+    value: object,
+    *,
+    depth: int = 0,
+    node_count: list[int] | None = None,
+) -> None:
+    if node_count is None:
+        node_count = [0]
+    node_count[0] += 1
+    if node_count[0] > _MAX_PLAN_NODES or depth > _MAX_PLAN_DEPTH:
+        raise InvalidPlanError("plan structure exceeds bounded depth or node count")
     if isinstance(value, str):
         if len(value) > MAX_PLAN_STRING_SCALARS:
             raise InvalidPlanError("plan string scalar exceeds maximum length")
+    elif value is None or isinstance(value, bool):
+        return
+    elif isinstance(value, int):
+        if abs(value) > _MAX_PLAN_INTEGER_ABS:
+            raise InvalidPlanError("plan integer scalar exceeds maximum magnitude")
+    elif isinstance(value, float):
+        if not math.isfinite(value) or abs(value) > _MAX_PLAN_FLOAT_ABS:
+            raise InvalidPlanError("plan float scalar is nonfinite or exceeds maximum magnitude")
     elif isinstance(value, dict):
         for key, item in value.items():
-            _validate_string_bounds(key)
-            _validate_string_bounds(item)
-    elif isinstance(value, (list, tuple)):
+            if not isinstance(key, str):
+                raise InvalidPlanError("plan object keys must be strings")
+            _validate_plan_value(key, depth=depth + 1, node_count=node_count)
+            _validate_plan_value(item, depth=depth + 1, node_count=node_count)
+    elif isinstance(value, list):
         for item in value:
-            _validate_string_bounds(item)
+            _validate_plan_value(item, depth=depth + 1, node_count=node_count)
+    else:
+        raise InvalidPlanError("plan contains a non-JSON YAML value")
 
 
 def _canonical_payload(value: object) -> bytes:
-    return json.dumps(
-        value, allow_nan=False, ensure_ascii=False, separators=(",", ":"), sort_keys=True
-    ).encode("utf-8")
+    return _canonical_json_data(value)
 
 
 def _parse_yaml(data: bytes, name: str, model_type: type[StudyProtocol] | type[PairPlan]) -> Any:
@@ -210,27 +267,36 @@ def _parse_yaml(data: bytes, name: str, model_type: type[StudyProtocol] | type[P
     try:
         text = data.decode("utf-8")
         for token in yaml.scan(text):
-            if isinstance(token, yaml.tokens.TagToken):
-                raise InvalidPlanError(f"{name} must not contain YAML tags")
+            if isinstance(
+                token,
+                (yaml.tokens.AliasToken, yaml.tokens.AnchorToken, yaml.tokens.TagToken),
+            ):
+                raise InvalidPlanError(f"{name} must not contain YAML aliases or tags")
         payload = load_strict_yaml(text)
-        _validate_string_bounds(payload)
+        _validate_plan_value(payload)
         return model_type.model_validate_json(_canonical_payload(payload))
+    except InvalidPlanError:
+        raise
     except (
         UnicodeDecodeError,
+        UnicodeEncodeError,
         StrictYamlError,
         ValidationError,
+        TypeError,
         ValueError,
+        OverflowError,
+        RecursionError,
         yaml.YAMLError,
     ) as exc:
         raise InvalidPlanError(f"{name} is invalid") from exc
 
 
 def _parse_ledger(data: bytes, name: str) -> tuple[DiscoveryLedgerEntry, ...]:
-    if data.startswith(b"\xef\xbb\xbf") or not data.endswith(b"\n"):
+    if data.startswith(b"\xef\xbb\xbf") or not data.endswith(b"\n") or b"\r" in data:
         raise InvalidPlanError(f"{name} is not canonical JSONL")
     records: list[DiscoveryLedgerEntry] = []
     try:
-        for line in data.splitlines():
+        for line in data[:-1].split(b"\n"):
             if not line or len(line) > MAX_PLAN_LINE_BYTES:
                 raise InvalidPlanError(f"{name} has an invalid line")
             payload = json.loads(
@@ -240,11 +306,20 @@ def _parse_ledger(data: bytes, name: str) -> tuple[DiscoveryLedgerEntry, ...]:
             )
             if not isinstance(payload, dict):
                 raise InvalidPlanError(f"{name} lines must be JSON objects")
-            _validate_string_bounds(payload)
+            _validate_plan_value(payload)
             if _canonical_payload(payload) != line:
                 raise InvalidPlanError(f"{name} is not canonical JSONL")
             records.append(DiscoveryLedgerEntry.model_validate_json(_canonical_payload(payload)))
-    except (UnicodeDecodeError, ValidationError, ValueError, json.JSONDecodeError) as exc:
+    except (
+        UnicodeDecodeError,
+        UnicodeEncodeError,
+        ValidationError,
+        TypeError,
+        ValueError,
+        OverflowError,
+        RecursionError,
+        json.JSONDecodeError,
+    ) as exc:
         if isinstance(exc, InvalidPlanError):
             raise
         raise InvalidPlanError(f"{name} is invalid") from exc
@@ -271,6 +346,90 @@ def _selection_digest(entry: DiscoveryLedgerEntry) -> str:
     return hashlib.sha256(_canonical_payload(payload)).hexdigest()
 
 
+def _validate_discovery_grid(
+    protocol: StudyProtocol, ledger: tuple[DiscoveryLedgerEntry, ...]
+) -> None:
+    dimensions = protocol.baseline_grid
+    expected_attempts = math.prod(len(dimension.values) for dimension in dimensions)
+    if expected_attempts != len(ledger) or expected_attempts > MAX_DISCOVERY_ATTEMPTS:
+        raise InvalidPlanError("discovery ledger does not exhaust the declared Cartesian grid")
+    if not protocol.selection_rule.tie_breakers or protocol.selection_rule.tie_breakers[0] != (
+        "GRID_ORDER"
+    ):
+        raise InvalidPlanError("discovery selection does not declare grid order first")
+    selected_indices: list[int] = []
+    first_valid_index: int | None = None
+    grid_values = (dimension.values for dimension in dimensions)
+    for index, (entry, values) in enumerate(zip(ledger, product(*grid_values), strict=True)):
+        expected_parameters = [
+            {"parameter": dimension.parameter, "value": value}
+            for dimension, value in zip(dimensions, values, strict=True)
+        ]
+        observed_parameters = [item.model_dump(mode="json") for item in entry.parameters]
+        if _canonical_payload(observed_parameters) != _canonical_payload(expected_parameters):
+            raise InvalidPlanError("discovery parameters do not follow the declared grid order")
+        if entry.selection.rank != index + 1 or entry.selection.tie_breaker != "GRID_ORDER":
+            raise InvalidPlanError("discovery selection rank or tie breaker is inconsistent")
+        if entry.selection.status == "SELECTED":
+            selected_indices.append(index)
+        if (
+            first_valid_index is None
+            and entry.exclusion.valid_run
+            and entry.verification_status == "INTERNALLY_CONSISTENT"
+        ):
+            first_valid_index = index
+    if len(selected_indices) != 1 or selected_indices[0] != first_valid_index:
+        raise InvalidPlanError("discovery selection is not the first valid grid attempt")
+
+
+def _validate_component_identities(protocol: StudyProtocol, pair_plan: PairPlan) -> None:
+    pair = pair_plan.expected_pair
+    components = protocol.expected_components
+    if (
+        pair.hermes_version != components.hermes_version
+        or pair.policy_name != components.policy.name
+        or pair.policy_version != components.policy.version
+        or pair.policy_config_digest_sha256 != components.policy.config_digest_sha256
+        or pair.adapter_name != components.adapter.name
+        or pair.adapter_version != components.adapter.version
+        or pair.adapter_config_digest_sha256 != components.adapter.config_digest_sha256
+        or pair.simulator_name != components.simulator.name
+        or pair.simulator_version != components.simulator.version
+        or pair.simulator_commit != components.simulator.source_commit
+        or pair.gate_name != components.gate.name
+        or pair.gate_version != components.gate.version
+        or pair.gate_config_digest_sha256 != components.gate.config_digest_sha256
+        or pair.candidate_shield_name != protocol.candidate_shield.name
+        or pair.candidate_shield_version != protocol.candidate_shield.version
+        or pair.candidate_shield_config_digest_sha256
+        != protocol.candidate_shield.config_digest_sha256
+    ):
+        raise InvalidPlanError("pair plan component identities contradict the protocol")
+
+
+def _validate_ttc_selection_observation(
+    protocol: StudyProtocol, entry: DiscoveryLedgerEntry
+) -> None:
+    observations = tuple(
+        observation
+        for observation in entry.selection_observations
+        if observation.observation_id == "minimum_policy_input_ttc_s"
+    )
+    if entry.exclusion.valid_run and len(observations) != 1:
+        raise InvalidPlanError("valid discovery attempt lacks its unique TTC observation")
+    for observation in observations:
+        machine_value = observation.machine_value
+        if (
+            isinstance(machine_value, bool)
+            or not isinstance(machine_value, (int, float))
+            or observation.unit != "s"
+            or observation.operator != "LTE"
+            or _canonical_payload(observation.threshold_machine_value)
+            != _canonical_payload(protocol.criteria.policy_input_ttc_lte_s)
+        ):
+            raise InvalidPlanError("discovery TTC observation contradicts protocol criteria")
+
+
 def _validate_cross_record(
     protocol: StudyProtocol,
     ledger: tuple[DiscoveryLedgerEntry, ...],
@@ -278,20 +437,37 @@ def _validate_cross_record(
     sources: tuple[CapturedSourceIdentity, CapturedSourceIdentity, CapturedSourceIdentity],
 ) -> None:
     protocol_source, ledger_source, _ = sources
+    candidate_configuration_digest = hashlib.sha256(
+        canonical_adequacy_json_bytes(protocol.candidate_shield.configuration)
+    ).hexdigest()
+    if (
+        candidate_configuration_digest != protocol.candidate_shield.config_digest_sha256
+        or protocol.criteria.policy_input_ttc_lte_s
+        != protocol.candidate_shield.configuration.ttc_threshold_s
+        or protocol.criteria.actuation_delay_compensation_s
+        != protocol.candidate_shield.configuration.actuation_delay_compensation_s
+    ):
+        raise InvalidPlanError("candidate shield configuration contradicts protocol criteria")
+    _validate_discovery_grid(protocol, ledger)
+    _validate_component_identities(protocol, pair_plan)
     for entry in ledger:
+        _validate_ttc_selection_observation(protocol, entry)
         if (
             entry.protocol_byte_digest_sha256 != protocol_source.byte_digest_sha256
             or entry.protocol_semantic_digest_sha256 != protocol_source.semantic_digest_sha256
             or entry.selection_evidence_sha256 != _selection_digest(entry)
+            or entry.registration_commit
+            != pair_plan.expected_pair.implementation_base_commit
+            or entry.environment.hermes_version != protocol.expected_components.hermes_version
         ):
-            raise InvalidPlanError("discovery ledger contradicts captured protocol or observations")
+            raise InvalidPlanError(
+                "discovery ledger contradicts protocol, registration, or observations"
+            )
     if (
         pair_plan.protocol_byte_digest_sha256 != protocol_source.byte_digest_sha256
         or pair_plan.protocol_semantic_digest_sha256 != protocol_source.semantic_digest_sha256
         or pair_plan.discovery_ledger_byte_digest_sha256 != ledger_source.byte_digest_sha256
         or pair_plan.discovery_ledger_semantic_digest_sha256 != ledger_source.semantic_digest_sha256
-        or pair_plan.expected_pair.candidate_shield_config_digest_sha256
-        != protocol.candidate_shield.config_digest_sha256
         or pair_plan.expected_pair.challenge_kind != protocol.planned_execution.challenge_kind
         or pair_plan.expected_pair.seed != protocol.planned_execution.seed
         or pair_plan.expected_pair.control_frequency_hz
@@ -324,43 +500,42 @@ def capture_evaluation_plans(
 ) -> CapturedEvaluationPlans:
     """Capture and validate exact protocol, ledger, and pair-plan files in that order."""
 
-    root = validate_plan_root(plan_root)
-    selections = tuple(
-        _validate_selection(root, item)
-        for item in (
-            protocol_relative_path,
-            discovery_ledger_relative_path,
-            pair_plan_relative_path,
+    try:
+        root = Path(os.path.abspath(os.fspath(plan_root)))
+        selections = tuple(
+            _validate_selection(root, item)
+            for item in (
+                protocol_relative_path,
+                discovery_ledger_relative_path,
+                pair_plan_relative_path,
+            )
         )
-    )
+    except InvalidPlanError:
+        raise
+    except (OSError, TypeError, ValueError) as exc:
+        raise InvalidPlanError("plan root or selection is invalid") from exc
     if len(set(selections)) != len(selections):
         raise InvalidPlanError("protocol, ledger, and pair plan selections must differ")
+    root_fd: int | None = None
+    owned_fds: list[int] = []
     try:
         root_fd = _open_plan_root(root)
         root_before = _identity(os.fstat(root_fd))
         root_path_before = _identity(os.stat(root, follow_symlinks=False))
         if root_path_before != root_before:
             raise InvalidPlanError("plan root changed during capture")
-        payloads: list[bytes] = []
+        captures: list[_CapturedPlanFile] = []
         total = 0
         for selection in selections:
-            payload, size = _capture_one(root_fd, selection, MAX_PLAN_TOTAL_BYTES - total)
-            payloads.append(payload)
-            total += size
-        if (
-            _identity(os.fstat(root_fd)) != root_before
-            or _identity(os.stat(root, follow_symlinks=False)) != root_path_before
-        ):
-            raise InvalidPlanError("plan root changed during capture")
-    except InvalidPlanError:
-        raise
-    except (OSError, ValueError) as exc:
-        raise InvalidPlanError("plan root changed during capture") from exc
-    finally:
-        if "root_fd" in locals():
-            with suppress(OSError):
-                os.close(root_fd)
-    try:
+            capture = _capture_one(
+                root_fd,
+                selection,
+                MAX_PLAN_TOTAL_BYTES - total,
+                owned_fds,
+            )
+            captures.append(capture)
+            total += capture.size
+        payloads = tuple(capture.payload for capture in captures)
         protocol = _parse_yaml(payloads[0], selections[0], StudyProtocol)
         ledger = _parse_ledger(payloads[1], selections[1])
         pair_plan = _parse_yaml(payloads[2], selections[2], PairPlan)
@@ -382,8 +557,30 @@ def capture_evaluation_plans(
             ),
         )
         _validate_cross_record(protocol, ledger, pair_plan, sources)
+        for capture in captures:
+            _revalidate_entries(capture.entries)
+        if (
+            _identity(os.fstat(root_fd)) != root_before
+            or _identity(os.stat(root, follow_symlinks=False)) != root_path_before
+        ):
+            raise InvalidPlanError("plan root changed during capture")
         return CapturedEvaluationPlans(protocol, ledger, pair_plan, sources)
     except InvalidPlanError:
         raise
-    except (ValidationError, ValueError) as exc:
+    except (
+        OSError,
+        ValidationError,
+        TypeError,
+        UnicodeError,
+        ValueError,
+        OverflowError,
+        RecursionError,
+    ) as exc:
         raise InvalidPlanError("captured evaluation plan set is invalid") from exc
+    finally:
+        for descriptor in reversed(owned_fds):
+            with suppress(OSError):
+                os.close(descriptor)
+        if root_fd is not None:
+            with suppress(OSError):
+                os.close(root_fd)
