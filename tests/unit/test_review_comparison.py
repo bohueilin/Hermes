@@ -110,11 +110,26 @@ def test_compare_facade_independently_reviews_both_sides_and_calls_core_once(
 
 
 @pytest.mark.parametrize(
-    ("baseline", "candidate", "invalid_locator"),
+    ("baseline", "candidate", "invalid_locator", "reviewed_paths"),
     [
-        ("phase1-tampered", "handoff-phase5-demo", "phase1-tampered"),
-        ("handoff-phase5-demo", "phase1-tampered", "phase1-tampered"),
-        ("phase1-tampered", "phase1-tampered", "phase1-tampered"),
+        (
+            "phase1-tampered",
+            "handoff-phase5-demo",
+            "phase1-tampered",
+            ["phase1-tampered"],
+        ),
+        (
+            "handoff-phase5-demo",
+            "phase1-tampered",
+            "phase1-tampered",
+            ["handoff-phase5-demo", "phase1-tampered"],
+        ),
+        (
+            "phase1-tampered",
+            "phase1-tampered",
+            "phase1-tampered",
+            ["phase1-tampered"],
+        ),
     ],
 )
 def test_invalid_comparison_returns_baseline_first_quarantined_review_without_core_claims(
@@ -123,6 +138,7 @@ def test_invalid_comparison_returns_baseline_first_quarantined_review_without_co
     baseline: str,
     candidate: str,
     invalid_locator: str,
+    reviewed_paths: list[str],
 ) -> None:
     core_calls = 0
     reviewed: list[str] = []
@@ -142,7 +158,7 @@ def test_invalid_comparison_returns_baseline_first_quarantined_review_without_co
 
     result = _comparison_api()(repository_root / "artifacts", baseline, candidate)
 
-    assert reviewed == [baseline, candidate]
+    assert reviewed == reviewed_paths
     assert core_calls == 0
     assert isinstance(result, ReviewEnvelope)
     assert result.artifact.locator.selected_relative_path == invalid_locator

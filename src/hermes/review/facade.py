@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from hermes import __version__
-from hermes.comparison.compare import compare_artifacts
+from hermes.comparison.compare import ArtifactComparison, compare_artifacts
 from hermes.evidence.verification import _inspect_artifact_under_root_capture
 from hermes.review.models import ComparisonEnvelope, ReviewCacheKey, ReviewEnvelope
 from hermes.review.projection import (
@@ -49,6 +49,15 @@ class _ReviewedArtifact:
     capture: object
     envelope: ReviewEnvelope
     cache_key: ReviewCacheKey | None
+
+
+@dataclass(frozen=True, slots=True)
+class _ReviewedArtifactPair:
+    """Private exact-capture pair and its existing core comparison."""
+
+    baseline: _ReviewedArtifact
+    candidate: _ReviewedArtifact | None
+    comparison: ArtifactComparison | None
 
 
 def validate_artifact_root(artifact_root: Path) -> Path:
@@ -200,23 +209,62 @@ class _ReviewFacade:
     ) -> ComparisonEnvelope | ReviewEnvelope:
         """Independently review two sides before invoking the comparison authority."""
 
-        baseline = self._review_result(artifact_root, baseline_relative_path)
-        candidate = self._review_result(artifact_root, candidate_relative_path)
-        if baseline.envelope.verification.integrity == "INVALID_EVIDENCE":
-            return baseline.envelope
+        pair = self._review_pair(
+            artifact_root,
+            baseline_relative_path,
+            candidate_relative_path,
+        )
+        if pair.baseline.envelope.verification.integrity == "INVALID_EVIDENCE":
+            return pair.baseline.envelope
+        candidate = pair.candidate
+        if candidate is None:
+            raise RuntimeError("valid baseline review is missing its candidate review")
         if candidate.envelope.verification.integrity == "INVALID_EVIDENCE":
             return candidate.envelope
+        baseline_snapshot = pair.baseline.capture.inspection.snapshot
+        candidate_snapshot = candidate.capture.inspection.snapshot
+        if baseline_snapshot is None or candidate_snapshot is None:
+            raise RuntimeError("consistent review is missing its verified snapshot")
+        if pair.comparison is None:
+            raise RuntimeError("consistent review pair is missing its comparison")
+        return project_comparison_envelope(
+            pair.comparison,
+            baseline=pair.baseline.envelope,
+            candidate=candidate.envelope,
+            baseline_snapshot=baseline_snapshot,
+            candidate_snapshot=candidate_snapshot,
+        )
+
+    def _review_pair(
+        self,
+        artifact_root: Path,
+        baseline_relative_path: str,
+        candidate_relative_path: str,
+    ) -> _ReviewedArtifactPair:
+        """Retain each current capture and compare only two valid sides."""
+
+        baseline = self._review_result(artifact_root, baseline_relative_path)
+        if baseline.envelope.verification.integrity == "INVALID_EVIDENCE":
+            return _ReviewedArtifactPair(
+                baseline=baseline,
+                candidate=None,
+                comparison=None,
+            )
+        candidate = self._review_result(artifact_root, candidate_relative_path)
+        if candidate.envelope.verification.integrity == "INVALID_EVIDENCE":
+            return _ReviewedArtifactPair(
+                baseline=baseline,
+                candidate=candidate,
+                comparison=None,
+            )
         baseline_snapshot = baseline.capture.inspection.snapshot
         candidate_snapshot = candidate.capture.inspection.snapshot
         if baseline_snapshot is None or candidate_snapshot is None:
             raise RuntimeError("consistent review is missing its verified snapshot")
-        comparison = compare_artifacts(baseline_snapshot, candidate_snapshot)
-        return project_comparison_envelope(
-            comparison,
-            baseline=baseline.envelope,
-            candidate=candidate.envelope,
-            baseline_snapshot=baseline_snapshot,
-            candidate_snapshot=candidate_snapshot,
+        return _ReviewedArtifactPair(
+            baseline=baseline,
+            candidate=candidate,
+            comparison=compare_artifacts(baseline_snapshot, candidate_snapshot),
         )
 
 
