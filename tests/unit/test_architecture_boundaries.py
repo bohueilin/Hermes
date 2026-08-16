@@ -89,6 +89,57 @@ def test_cli_has_no_top_level_runtime_simulator_or_review_imports(
     assert violations == []
 
 
+def test_adequacy_contract_modules_have_no_authority_or_process_imports(
+    repository_root: Path,
+) -> None:
+    forbidden = (
+        "subprocess",
+        "hermes.provenance",
+        "hermes.review",
+        "hermes.evidence",
+        "hermes.gates",
+        "hermes.runtime",
+        "hermes.adapters",
+        "hermes.policies",
+        "hermes.shields",
+        "hermes.faults",
+        "metadrive",
+    )
+    adequacy_root = repository_root / "src" / "hermes" / "adequacy"
+    violations: list[str] = []
+    for source_path in sorted(adequacy_root.rglob("*.py")):
+        for module in _imported_modules(source_path):
+            if any(module == prefix or module.startswith(prefix + ".") for prefix in forbidden):
+                violations.append(f"{source_path.relative_to(repository_root)} -> {module}")
+    assert violations == []
+
+
+def test_adequacy_models_import_without_process_or_provenance_boundary(
+    repository_root: Path,
+) -> None:
+    script = """
+import importlib.abc
+
+class Blocked(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == 'subprocess' or fullname.startswith('hermes.provenance'):
+            raise RuntimeError('forbidden import: ' + fullname)
+        return None
+
+import sys
+sys.meta_path.insert(0, Blocked())
+import hermes.adequacy.models
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=repository_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+
+
 _IMPORT_BOMB_PREFIXES = (
     "hermes.adapters",
     "hermes.policies",
