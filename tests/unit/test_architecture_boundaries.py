@@ -140,6 +140,18 @@ import hermes.adequacy.models
     assert result.returncode == 0, result.stderr or result.stdout
 
 
+def test_adequacy_initializer_has_no_import_or_executable_statement(
+    repository_root: Path,
+) -> None:
+    source_path = repository_root / "src/hermes/adequacy/__init__.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    assert len(tree.body) == 1
+    node = tree.body[0]
+    assert isinstance(node, ast.Expr)
+    assert isinstance(node.value, ast.Constant)
+    assert isinstance(node.value.value, str)
+
+
 _IMPORT_BOMB_PREFIXES = (
     "hermes.adapters",
     "hermes.policies",
