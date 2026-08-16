@@ -163,6 +163,46 @@ import hermes.adequacy.models
     assert result.returncode == 0, result.stderr or result.stdout
 
 
+def test_adequacy_assessment_imports_without_io_authority_or_runtime_boundaries(
+    repository_root: Path,
+) -> None:
+    script = """
+import importlib.abc
+
+PREFIXES = (
+    'subprocess',
+    'hermes.provenance',
+    'hermes.review',
+    'hermes.evidence',
+    'hermes.gates',
+    'hermes.runtime',
+    'hermes.adapters',
+    'hermes.policies',
+    'hermes.shields',
+    'hermes.faults',
+    'metadrive',
+)
+
+class Blocked(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if any(fullname == prefix or fullname.startswith(prefix + '.') for prefix in PREFIXES):
+            raise RuntimeError('forbidden import: ' + fullname)
+        return None
+
+import sys
+sys.meta_path.insert(0, Blocked())
+import hermes.adequacy.assessment
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=repository_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+
+
 def test_adequacy_initializer_has_no_import_or_executable_statement(
     repository_root: Path,
 ) -> None:
