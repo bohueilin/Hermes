@@ -20,6 +20,8 @@ from hermes.adequacy.loader import (
     validate_plan_root,
 )
 
+_EMPTY_CONFIG_SHA256 = "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+
 
 def _sha(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
@@ -247,7 +249,7 @@ def _write_valid_plans(root: Path) -> tuple[str, str, str]:
             "gate_config_digest_sha256": digest,
             "baseline_shield_name": "noop",
             "baseline_shield_version": "1.0",
-            "baseline_shield_config_digest_sha256": digest,
+            "baseline_shield_config_digest_sha256": _EMPTY_CONFIG_SHA256,
             "candidate_shield_name": "deterministic",
             "candidate_shield_version": "1.0",
             "candidate_shield_config_digest_sha256": candidate_digest,
@@ -403,6 +405,9 @@ def test_capture_plans_is_ordered_no_scan_and_returns_deterministic_identities(
     assert first.protocol.protocol_id == "lead_ttc_engagement"
     assert first.ledger[0].attempt_id == "attempt-0001"
     assert first.pair_plan.expected_pair.selected_discovery_attempt_id == "attempt-0001"
+    assert first.pair_plan.expected_pair.baseline_shield_config_digest_sha256 == (
+        _EMPTY_CONFIG_SHA256
+    )
 
 
 @pytest.mark.parametrize(
@@ -530,6 +535,32 @@ def test_capture_rejects_root_replaced_after_its_descriptor_is_opened(
         capture_evaluation_plans(root, *selections)
 
 
+def test_capture_rejects_root_ancestor_renamed_then_symlinked_back_during_parse(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ancestor = tmp_path / "ancestor"
+    root = ancestor / "plans"
+    root.mkdir(parents=True)
+    selections = _write_valid_plans(root)
+    import hermes.adequacy.loader as loader
+
+    original = loader._parse_yaml
+    replaced = False
+
+    def replace_ancestor_then_parse(data: bytes, name: str, model_type: object) -> object:
+        nonlocal replaced
+        if not replaced:
+            replaced = True
+            renamed = tmp_path / "renamed-ancestor"
+            ancestor.rename(renamed)
+            ancestor.symlink_to(renamed, target_is_directory=True)
+        return original(data, name, model_type)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(loader, "_parse_yaml", replace_ancestor_then_parse)
+    with pytest.raises(InvalidPlanError):
+        capture_evaluation_plans(root, *selections)
+
+
 def test_capture_rejects_intermediate_directory_swapped_during_parse(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -615,6 +646,42 @@ def test_capture_closes_every_opened_descriptor_on_success_and_failure(
     assert sorted(opened) == sorted(closed)
 
 
+def test_open_plan_root_closes_child_when_closing_parent_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import hermes.adequacy.loader as loader
+
+    original_open = loader.os.open
+    original_close = loader.os.close
+    opened: list[int] = []
+    closed: list[int] = []
+    injected = False
+
+    def tracked_open(*args: object, **kwargs: object) -> int:
+        descriptor = original_open(*args, **kwargs)  # type: ignore[arg-type]
+        opened.append(descriptor)
+        return descriptor
+
+    def fail_first_parent_close(descriptor: int) -> None:
+        nonlocal injected
+        if not injected and descriptor == opened[0] and len(opened) >= 2:
+            injected = True
+            raise OSError("injected parent close failure")
+        original_close(descriptor)
+        closed.append(descriptor)
+
+    monkeypatch.setattr(loader.os, "open", tracked_open)
+    monkeypatch.setattr(loader.os, "close", fail_first_parent_close)
+    try:
+        with pytest.raises(OSError, match="injected parent close failure"):
+            loader._open_plan_root(tmp_path)
+        assert sorted(opened) == sorted(closed)
+    finally:
+        for descriptor in opened:
+            if descriptor not in closed:
+                original_close(descriptor)
+
+
 def test_public_capture_api_refuses_parsed_plan_or_source_byte_arguments(tmp_path: Path) -> None:
     selections = _write_valid_plans(tmp_path)
     with pytest.raises(TypeError):
@@ -651,6 +718,92 @@ def test_discovery_ledger_must_be_the_exact_ordered_grid_and_first_valid_selecti
 
 
 @pytest.mark.parametrize(
+    "invalid_case",
+    [
+        "false_exclusion_selection_shift",
+        "unknown_rule",
+        "validity_contradiction",
+        "exclusion_contradiction",
+        "later_matching_exclusion_rule",
+    ],
+)
+def test_discovery_validity_is_derived_from_protocol_rules_and_recorded_observations(
+    tmp_path: Path, invalid_case: str
+) -> None:
+    selections = _write_valid_plans(tmp_path)
+    protocol, ledger, pair = _two_attempt_grid(tmp_path, selections)
+    if invalid_case in {"false_exclusion_selection_shift", "unknown_rule"}:
+        ledger[0]["selection"]["status"] = "NOT_SELECTED"
+        ledger[1]["selection"]["status"] = "SELECTED"
+        ledger[0]["exclusion"] = {
+            "valid_run": False,
+            "disposition": "EXCLUDED",
+            "rule_id": "INVALID_EVIDENCE" if invalid_case.startswith("false") else "UNKNOWN_RULE",
+            "rationale": "mutated exclusion",
+        }
+        if invalid_case == "unknown_rule":
+            ledger[0]["verification_status"] = "INVALID_EVIDENCE"
+    elif invalid_case == "validity_contradiction":
+        valid_rules = protocol["valid_run_rules"]
+        assert isinstance(valid_rules, list)
+        valid_rules[0]["expected_value"] = "INVALID_EVIDENCE"
+    elif invalid_case == "exclusion_contradiction":
+        exclusion_rules = protocol["exclusion_rules"]
+        assert isinstance(exclusion_rules, list)
+        exclusion_rules[0] = {
+            "rule_id": "TTC_IN_BAND",
+            "observation": "minimum_policy_input_ttc_s",
+            "operator": "LTE",
+            "excluded_value": 2.0,
+        }
+    else:
+        protocol["exclusion_rules"] = [
+            {
+                "rule_id": "TTC_FIRST",
+                "observation": "minimum_policy_input_ttc_s",
+                "operator": "LTE",
+                "excluded_value": 2.0,
+            },
+            {
+                "rule_id": "TTC_SECOND",
+                "observation": "minimum_policy_input_ttc_s",
+                "operator": "LTE",
+                "excluded_value": 3.0,
+            },
+        ]
+        ledger[0]["exclusion"] = {
+            "valid_run": False,
+            "disposition": "EXCLUDED",
+            "rule_id": "TTC_SECOND",
+            "rationale": "skipped first matching rule",
+        }
+        ledger[0]["selection"]["status"] = "NOT_SELECTED"
+        ledger[1]["selection"]["status"] = "SELECTED"
+    _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
+    with pytest.raises(InvalidPlanError):
+        capture_evaluation_plans(tmp_path, *selections)
+
+
+def test_declared_invalid_evidence_exclusion_selects_next_valid_grid_attempt(
+    tmp_path: Path,
+) -> None:
+    selections = _write_valid_plans(tmp_path)
+    protocol, ledger, pair = _two_attempt_grid(tmp_path, selections)
+    ledger[0]["verification_status"] = "INVALID_EVIDENCE"
+    ledger[0]["exclusion"] = {
+        "valid_run": False,
+        "disposition": "EXCLUDED",
+        "rule_id": "INVALID_EVIDENCE",
+        "rationale": "declared integrity exclusion",
+    }
+    ledger[0]["selection"]["status"] = "NOT_SELECTED"
+    ledger[1]["selection"]["status"] = "SELECTED"
+    _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
+    result = capture_evaluation_plans(tmp_path, *selections)
+    assert result.pair_plan.expected_pair.selected_discovery_attempt_id == "attempt-0002"
+
+
+@pytest.mark.parametrize(
     "contradiction",
     [
         "candidate_config_digest",
@@ -663,6 +816,7 @@ def test_discovery_ledger_must_be_the_exact_ordered_grid_and_first_valid_selecti
         "registration_commit",
         "ledger_hermes_identity",
         "ledger_ttc_threshold",
+        "baseline_noop_digest",
     ],
 )
 def test_cross_record_rejects_rebound_but_semantically_contradictory_plans(
@@ -698,8 +852,10 @@ def test_cross_record_rejects_rebound_but_semantically_contradictory_plans(
         environment = ledger[0]["environment"]
         assert isinstance(environment, dict)
         environment["hermes_version"] = "0.2.0"
-    else:
+    elif contradiction == "ledger_ttc_threshold":
         ledger[0]["selection_observations"][0]["threshold_machine_value"] = 1.9
+    else:
+        expected_pair["baseline_shield_config_digest_sha256"] = "b" * 64
     _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
     with pytest.raises(InvalidPlanError):
         capture_evaluation_plans(tmp_path, *selections)

@@ -114,11 +114,17 @@ def _open_plan_root(plan_root: Path) -> int:
     try:
         for component in Path(raw_path).parts[1:]:
             child = os.open(component, flags, dir_fd=descriptor)
-            os.close(descriptor)
+            try:
+                os.close(descriptor)
+            except BaseException:
+                with suppress(OSError):
+                    os.close(child)
+                raise
             descriptor = child
         return descriptor
     except BaseException:
-        os.close(descriptor)
+        with suppress(OSError):
+            os.close(descriptor)
         raise
 
 
@@ -372,11 +378,9 @@ def _validate_discovery_grid(
             raise InvalidPlanError("discovery selection rank or tie breaker is inconsistent")
         if entry.selection.status == "SELECTED":
             selected_indices.append(index)
-        if (
-            first_valid_index is None
-            and entry.exclusion.valid_run
-            and entry.verification_status == "INTERNALLY_CONSISTENT"
-        ):
+        derived_validity = _derive_and_validate_discovery_validity(protocol, entry)
+        _validate_ttc_selection_observation(protocol, entry, derived_validity)
+        if first_valid_index is None and derived_validity:
             first_valid_index = index
     if len(selected_indices) != 1 or selected_indices[0] != first_valid_index:
         raise InvalidPlanError("discovery selection is not the first valid grid attempt")
@@ -385,6 +389,7 @@ def _validate_discovery_grid(
 def _validate_component_identities(protocol: StudyProtocol, pair_plan: PairPlan) -> None:
     pair = pair_plan.expected_pair
     components = protocol.expected_components
+    empty_config_digest = hashlib.sha256(_canonical_payload({})).hexdigest()
     if (
         pair.hermes_version != components.hermes_version
         or pair.policy_name != components.policy.name
@@ -403,19 +408,97 @@ def _validate_component_identities(protocol: StudyProtocol, pair_plan: PairPlan)
         or pair.candidate_shield_version != protocol.candidate_shield.version
         or pair.candidate_shield_config_digest_sha256
         != protocol.candidate_shield.config_digest_sha256
+        or pair.baseline_shield_config_digest_sha256 != empty_config_digest
     ):
         raise InvalidPlanError("pair plan component identities contradict the protocol")
 
 
-def _validate_ttc_selection_observation(
+def _rule_matches(observed: object, operator: str, expected: object) -> bool:
+    if operator == "EQ":
+        return _canonical_payload(observed) == _canonical_payload(expected)
+    if operator == "NE":
+        return _canonical_payload(observed) != _canonical_payload(expected)
+    if (
+        isinstance(observed, bool)
+        or isinstance(expected, bool)
+        or not isinstance(observed, (int, float))
+        or not isinstance(expected, (int, float))
+    ):
+        raise InvalidPlanError("ordered plan rule requires comparable numeric observations")
+    if operator == "LTE":
+        return observed <= expected
+    if operator == "GTE":
+        return observed >= expected
+    raise InvalidPlanError("ordered plan rule has an unsupported operator")
+
+
+def _derive_and_validate_discovery_validity(
     protocol: StudyProtocol, entry: DiscoveryLedgerEntry
+) -> bool:
+    observations: dict[str, object] = {"INTEGRITY": entry.verification_status}
+    observations.update(
+        (observation.observation_id, observation.machine_value)
+        for observation in entry.selection_observations
+    )
+
+    validity_matches: list[bool] = []
+    for rule in protocol.valid_run_rules:
+        if rule.observation not in observations:
+            raise InvalidPlanError("valid-run rule observation is unavailable")
+        validity_matches.append(
+            _rule_matches(
+                observations[rule.observation],
+                rule.operator,
+                rule.expected_value,
+            )
+        )
+
+    matching_exclusions = []
+    for rule in protocol.exclusion_rules:
+        if rule.observation not in observations:
+            raise InvalidPlanError("exclusion-rule observation is unavailable")
+        if _rule_matches(
+            observations[rule.observation],
+            rule.operator,
+            rule.excluded_value,
+        ):
+            matching_exclusions.append(rule)
+
+    declared_exclusion_ids = {rule.rule_id for rule in protocol.exclusion_rules}
+    if (
+        entry.exclusion.disposition == "EXCLUDED"
+        and entry.exclusion.rule_id not in declared_exclusion_ids
+    ):
+        raise InvalidPlanError("discovery exclusion rule is not declared by the protocol")
+
+    first_exclusion = matching_exclusions[0] if matching_exclusions else None
+    derived_validity = all(validity_matches) and first_exclusion is None
+    if derived_validity:
+        if (
+            not entry.exclusion.valid_run
+            or entry.exclusion.disposition != "INCLUDED"
+            or entry.exclusion.rule_id != "NONE"
+        ):
+            raise InvalidPlanError("discovery validity contradicts ordered protocol rules")
+    elif (
+        first_exclusion is None
+        or entry.exclusion.valid_run
+        or entry.exclusion.disposition != "EXCLUDED"
+        or entry.exclusion.rule_id != first_exclusion.rule_id
+    ):
+        raise InvalidPlanError("discovery exclusion contradicts ordered protocol rules")
+    return derived_validity
+
+
+def _validate_ttc_selection_observation(
+    protocol: StudyProtocol, entry: DiscoveryLedgerEntry, valid_run: bool
 ) -> None:
     observations = tuple(
         observation
         for observation in entry.selection_observations
         if observation.observation_id == "minimum_policy_input_ttc_s"
     )
-    if entry.exclusion.valid_run and len(observations) != 1:
+    if valid_run and len(observations) != 1:
         raise InvalidPlanError("valid discovery attempt lacks its unique TTC observation")
     for observation in observations:
         machine_value = observation.machine_value
@@ -451,7 +534,6 @@ def _validate_cross_record(
     _validate_discovery_grid(protocol, ledger)
     _validate_component_identities(protocol, pair_plan)
     for entry in ledger:
-        _validate_ttc_selection_observation(protocol, entry)
         if (
             entry.protocol_byte_digest_sha256 != protocol_source.byte_digest_sha256
             or entry.protocol_semantic_digest_sha256 != protocol_source.semantic_digest_sha256
@@ -559,11 +641,21 @@ def capture_evaluation_plans(
         _validate_cross_record(protocol, ledger, pair_plan, sources)
         for capture in captures:
             _revalidate_entries(capture.entries)
-        if (
-            _identity(os.fstat(root_fd)) != root_before
-            or _identity(os.stat(root, follow_symlinks=False)) != root_path_before
-        ):
+        if _identity(os.fstat(root_fd)) != root_before:
             raise InvalidPlanError("plan root changed during capture")
+        reopened_root_fd: int | None = None
+        try:
+            reopened_root_fd = _open_plan_root(root)
+            if _identity(os.fstat(reopened_root_fd)) != root_before:
+                raise InvalidPlanError("plan root changed during capture")
+        except InvalidPlanError:
+            raise
+        except OSError as exc:
+            raise InvalidPlanError("plan root changed during capture") from exc
+        finally:
+            if reopened_root_fd is not None:
+                with suppress(OSError):
+                    os.close(reopened_root_fd)
         return CapturedEvaluationPlans(protocol, ledger, pair_plan, sources)
     except InvalidPlanError:
         raise
