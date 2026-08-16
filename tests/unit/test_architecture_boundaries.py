@@ -114,6 +114,29 @@ def test_adequacy_contract_modules_have_no_authority_or_process_imports(
     assert violations == []
 
 
+def test_adequacy_loader_has_no_review_process_or_simulator_imports(
+    repository_root: Path,
+) -> None:
+    modules = _imported_modules(repository_root / "src/hermes/adequacy/loader.py")
+    forbidden = (
+        "subprocess",
+        "hermes.provenance",
+        "hermes.review",
+        "hermes.gates",
+        "hermes.runtime",
+        "hermes.adapters",
+        "hermes.policies",
+        "hermes.shields",
+        "hermes.faults",
+        "metadrive",
+    )
+    assert not any(
+        module == prefix or module.startswith(prefix + ".")
+        for module in modules
+        for prefix in forbidden
+    )
+
+
 def test_adequacy_models_import_without_process_or_provenance_boundary(
     repository_root: Path,
 ) -> None:
