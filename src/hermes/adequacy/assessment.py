@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import struct
 from dataclasses import dataclass, field
 
@@ -168,7 +169,8 @@ def _input_ttc(event: AssessmentEvent) -> float | None:
     relative_speed = event.front_relative_speed_mps
     if distance is None or relative_speed is None or relative_speed >= 0.0:
         return None
-    return distance / -relative_speed
+    ttc_s = distance / -relative_speed
+    return ttc_s if math.isfinite(ttc_s) else None
 
 
 def _same_prefix_event(
@@ -373,6 +375,7 @@ def _scan_lead_ttc_adequacy(
     condition_match_count = 0
     condition_entry_ttc: float | None = None
     minimum_closing_braking_ttc: float | None = None
+    condition_nonfinite_derived_ttc = False
     condition_signal_missing = False
     condition_alignment: bool | None = None
     divergence_alignment: bool | None = None
@@ -466,6 +469,8 @@ def _scan_lead_ttc_adequacy(
                                     candidate_event,
                                     "/observation_summary/front_distance_m",
                                 )
+                    elif candidate_event.front_relative_speed_mps < 0.0:
+                        condition_nonfinite_derived_ttc = True
 
             if condition_sequence is None:
                 if _TARGET_REASON in candidate_event.override_reasons:
@@ -486,9 +491,6 @@ def _scan_lead_ttc_adequacy(
             ):
                 target_reason_after_condition = True
                 intervention_references.add(
-                    _reference("CANDIDATE", index, "/override_reasons")
-                )
-                target_count_references.add(
                     _reference("CANDIDATE", index, "/override_reasons")
                 )
 
@@ -623,9 +625,13 @@ def _scan_lead_ttc_adequacy(
         condition_unavailable_reason = None
         if minimum_closing_braking_ttc is None:
             condition_observation = (
-                "NO_CLOSING_FRONT_INPUT"
-                if candidate_phase_count
-                else "NO_BRAKING_POLICY_INPUT"
+                "NO_FINITE_CLOSING_TTC"
+                if condition_nonfinite_derived_ttc
+                else (
+                    "NO_CLOSING_FRONT_INPUT"
+                    if candidate_phase_count
+                    else "NO_BRAKING_POLICY_INPUT"
+                )
             )
             condition_observation_unit = "state"
         else:

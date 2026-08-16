@@ -915,6 +915,80 @@ def test_independent_criterion_precedence_is_fail_then_not_available_then_pass()
     assert assessment.status is AdequacyStatus.INADEQUATE
 
 
+def test_target_count_references_only_events_that_satisfy_the_counted_predicate() -> None:
+    baseline = tuple(
+        _event(
+            sequence,
+            phase="PRE_TRIGGER" if sequence <= 30 else "BRAKING",
+            distance=10.0 if sequence <= 30 else 2.0,
+        )
+        for sequence in range(43)
+    )
+    candidate = list(baseline)
+    for sequence in range(31, 41):
+        candidate[sequence] = _event(
+            sequence,
+            phase="BRAKING",
+            distance=2.0,
+            reasons=("TTC_BELOW_THRESHOLD",),
+        )
+    candidate[41] = _event(
+        41,
+        phase="BRAKING",
+        distance=2.0,
+        executed_action=_action(brake=1.0),
+        reasons=("TTC_BELOW_THRESHOLD",),
+    )
+
+    assessment = assess_lead_ttc_adequacy(
+        _protocol(),
+        _side("BASELINE", baseline),
+        _side("CANDIDATE", tuple(candidate)),
+    )
+
+    counted = _criterion(assessment, "minimum_target_event_count")
+    assert counted.status is CriterionStatus.PASS
+    assert counted.observation is not None
+    assert counted.observation.machine_value == 1
+    assert counted.references
+    assert {(reference.side, reference.sequence) for reference in counted.references} == {
+        ("CANDIDATE", 41)
+    }
+
+
+@pytest.mark.parametrize("distance", [1.0, 1e308])
+def test_finite_extreme_closing_input_with_infinite_derived_ttc_is_available_fail(
+    distance: float,
+) -> None:
+    events = tuple(
+        _event(
+            sequence,
+            phase="BRAKING",
+            distance=distance,
+            relative_speed=-5e-324,
+        )
+        for sequence in range(3)
+    )
+    relative_speed = events[0].front_relative_speed_mps
+    assert relative_speed is not None
+    assert math.isfinite(distance)
+    assert math.isfinite(relative_speed)
+    assert math.isinf(distance / -relative_speed)
+
+    assessment = assess_lead_ttc_adequacy(
+        _protocol(),
+        _side("BASELINE", events),
+        _side("CANDIDATE", events),
+    )
+
+    exposure = _criterion(assessment, "target_condition_exposure")
+    assert exposure.status is CriterionStatus.FAIL
+    assert exposure.observation is not None
+    assert exposure.observation.machine_value == "NO_FINITE_CLOSING_TTC"
+    assert exposure.observation.unit == "state"
+    assert assessment.observation_disposition is ObservationDisposition.CONDITION_NOT_OBSERVED
+
+
 def test_gate_verdict_and_outcome_metrics_are_not_assessor_inputs() -> None:
     signature = inspect.signature(assess_lead_ttc_adequacy)
     assert tuple(signature.parameters) == ("protocol", "baseline", "candidate")
