@@ -44,7 +44,10 @@ def test_review_layer_never_imports_runtime_simulator_or_workbench(
 ) -> None:
     review_root = repository_root / "src" / "hermes" / "review"
     forbidden = (
+        "subprocess",
+        "hermes.adequacy",
         "hermes.adapters",
+        "hermes.provenance",
         "hermes.policies",
         "hermes.runtime",
         "hermes.workbench",
@@ -213,6 +216,53 @@ def test_adequacy_initializer_has_no_import_or_executable_statement(
     assert isinstance(node, ast.Expr)
     assert isinstance(node.value, ast.Constant)
     assert isinstance(node.value.value, str)
+
+
+def test_provenance_initializer_is_documentation_only(repository_root: Path) -> None:
+    source_path = repository_root / "src/hermes/provenance/__init__.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    assert len(tree.body) == 1
+    node = tree.body[0]
+    assert isinstance(node, ast.Expr)
+    assert isinstance(node.value, ast.Constant)
+    assert isinstance(node.value.value, str)
+
+
+def test_provenance_git_is_the_only_new_process_boundary(
+    repository_root: Path,
+) -> None:
+    source_path = repository_root / "src/hermes/provenance/git.py"
+    modules = _imported_modules(source_path)
+    assert "subprocess" in modules
+    forbidden = (
+        "hermes.review",
+        "hermes.evidence",
+        "hermes.gates",
+        "hermes.runtime",
+        "hermes.adapters",
+        "hermes.policies",
+        "hermes.shields",
+        "hermes.faults",
+        "hermes.workbench",
+        "metadrive",
+    )
+    assert not any(
+        module == prefix or module.startswith(prefix + ".")
+        for module in modules
+        for prefix in forbidden
+    )
+
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    subprocess_calls = {
+        node.func.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "subprocess"
+    }
+    assert "Popen" in subprocess_calls
+    assert "run" not in subprocess_calls
 
 
 _IMPORT_BOMB_PREFIXES = (
