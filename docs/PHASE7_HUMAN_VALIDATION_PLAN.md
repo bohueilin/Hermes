@@ -15,21 +15,24 @@ reviewers, within a per-attempt bound frozen before the main cohort, with zero c
 misconceptions. Tasks 1–9 only form the North Star denominator. Task 10 is excluded from the North
 Star and is reported as a separate scoped accessibility observation.
 
-## Fixed authority answer for every relevant task
+## Fixed authority contract for every relevant task
 
 Every relevant answer records all seven dimensions separately:
 
 | Dimension | Current valid-evidence value |
 |---|---|
-| Gate verdict | Artifact-specific: PASS, CONDITIONAL, HOLD, or INVALID_EVIDENCE |
-| Evidence integrity | Artifact-specific: INTERNALLY_CONSISTENT or INVALID_EVIDENCE |
+| Gate verdict | Frozen exactly in each task scoring checklist |
+| Evidence integrity | Frozen exactly in each task scoring checklist |
 | Origin | NOT_AUTHENTICATED |
 | Authorization | NOT_EVALUATED |
 | Deployment permission | NONE |
 | Scope | SIMULATION_ONLY |
 | Authoritative status | NOT_DEFINED |
 
-These fields never collapse into “trusted,” “approved,” “safe,” or “deployable.”
+Each task checklist freezes its exact Gate verdict and Evidence integrity value (or both exact side
+values for a pair). The other five values are fixed above. These fields never collapse into
+“trusted,” “approved,” “safe,” or “deployable.” A response is correct only when it satisfies every
+item in that task's checklist; partial credit does not enter the North Star numerator.
 
 The six independent study status fields are maintained exactly as `Automated correctness`,
 `Manual visual quality`, `Accessibility`, `Expert critique`, `Pilot human comprehension`, and
@@ -49,6 +52,14 @@ prose. The latter five remain `NOT YET OBSERVED` unless their named protocols ac
   preserves its assigned order. Record fatigue and carryover observations.
 - Main-cohort eligibility: 6–10 declared non-author participants spanning the frozen role coverage.
 - Pilot cohort: 2–3 declared non-author participants.
+
+Frozen eligible roles: PRODUCT, SAFETY, SIMULATION, ENGINEERING. The main cohort must include at
+least one eligible participant from each frozen role. A participant declares exactly one primary
+frozen role for slicing. Eligible means age 18 or older, explicit consent, declared non-author of
+the Hermes Phase 7 instrument, answer keys, fixtures, and implementation, no access to the frozen
+answer keys before scoring, and no role as moderator for that scored session. Anyone who authored
+or materially reviewed any of those surfaces is ineligible for the participant numerator and
+denominator. Eligibility is recorded before task exposure and is not changed based on performance.
 
 Neutral introduction:
 
@@ -121,10 +132,20 @@ Fixture: `handoff-phase5-demo`.
 
 Prompt: Verify the exact artifact, explain the stored decision, and state what it authorizes.
 
-Expected answer: gate `PASS`, integrity `INTERNALLY_CONSISTENT`, and the seven authority dimensions
-above. PASS is not a safety, authentication, approval, certification, or deployment claim.
+Scoring checklist — correct only if every item is satisfied:
 
-Authority response: use the fixed seven-field answer above.
+- select fixture and manifest run ID `handoff-phase5-demo`;
+- report gate PASS and integrity INTERNALLY_CONSISTENT;
+- state that PASS is not a safety, authentication, approval, certification, authorization, or
+  deployment claim; and
+- report the exact seven-field authority state below.
+
+Required authority state: Gate verdict PASS; Evidence integrity INTERNALLY_CONSISTENT; Origin
+NOT_AUTHENTICATED; Authorization NOT_EVALUATED; Deployment permission NONE; Scope SIMULATION_ONLY;
+Authoritative status NOT_DEFINED.
+
+Required source references: `manifest.json /run_id`, `verdict.json /verdict`, `bundle.sha256`
+whole-file pointer `""`, and `trace.sha256` whole-file pointer `""`.
 
 ## Task 2 — Non-compensatory collision HOLD
 
@@ -136,10 +157,23 @@ Fixture: `handoff-p1-collision`.
 
 Prompt: Explain why the decision is HOLD and identify its first supporting event.
 
-Expected answer: the collision hard invariant controls; positive findings cannot compensate. The
-participant states the seven authority dimensions.
+Scoring checklist — correct only if every item is satisfied:
 
-Authority response: use the fixed seven-field answer above.
+- report gate HOLD and integrity INTERNALLY_CONSISTENT;
+- identify that `collision.zero` is REQUIRED / FAIL / AVAILABLE, measured 1.0 count against
+  LTE 0.0 count, with a hard-invariant HOLD consequence;
+- identify that sequence 11 remains 0 collisions and the first supporting collision is sequence
+  12 at 1.3 s; and
+- state the exact rationale: `Collision hard invariant failed; positive soft results cannot
+  compensate.` Positive results do not compensate for the hard failure.
+
+Required authority state: Gate verdict HOLD; Evidence integrity INTERNALLY_CONSISTENT; Origin
+NOT_AUTHENTICATED; Authorization NOT_EVALUATED; Deployment permission NONE; Scope SIMULATION_ONLY;
+Authoritative status NOT_DEFINED.
+
+Required source references: `events.jsonl /vehicle_state/collision_count @ sequence 12`,
+`gate-config.resolved.yaml /hard/max_collision_count`, `metrics.json /collision_count`,
+`findings.json /findings/1`, and `verdict.json /verdict`.
 
 ## Task 3 — Invalid-evidence quarantine
 
@@ -151,11 +185,28 @@ Fixture: `phase1-tampered`.
 
 Prompt: Explain which claims can be accepted after verification.
 
-Expected answer: integrity and gate are `INVALID_EVIDENCE`; stored verdict/findings/metrics/timeline
-and provenance claims are quarantined. No stored PASS is accepted. The seven authority dimensions
-remain separate.
+Scoring checklist — correct only if every item is satisfied:
 
-Authority response: use the fixed seven-field answer above.
+- select locator `phase1-tampered` and distinguish it from manifest run ID `phase1-nominal`;
+- report gate INVALID_EVIDENCE and integrity INVALID_EVIDENCE;
+- identify observed bundle root
+  `6eac41695c890dd08758bc6da95e8ae0092d9120057af4693fc64847017d97de` versus computed bundle
+  root `831f22ed419e4b13ce5d0a1aa3bc1444b2ca523d60edb8d4c75eaa7491e1d61e`, and observed trace
+  root `f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e` with no accepted
+  computed trace root;
+- state that the bundle mismatch, events digest mismatch, and sequence-0 hash mismatch quarantine
+  stored verdict, findings, metrics, timeline, and recorded provenance; no stored PASS is accepted;
+  and
+- report the exact seven-field authority state below.
+
+Required authority state: Gate verdict INVALID_EVIDENCE; Evidence integrity INVALID_EVIDENCE;
+Origin NOT_AUTHENTICATED; Authorization NOT_EVALUATED; Deployment permission NONE; Scope
+SIMULATION_ONLY; Authoritative status NOT_DEFINED.
+
+Required source references: `bundle.sha256` whole-file pointer `""`, `manifest.json /run_id`,
+`events.jsonl` whole-event pointer `""` at sequence 0, and the three
+`ARTIFACT_VERIFICATION_ERROR` diagnostics. Quarantined stored fields are not cited as accepted
+facts.
 
 ## Task 4 — Evidence availability and consequence
 
@@ -183,9 +234,22 @@ Expected answer:
   `NO_EFFECT`; and
 - the overall verdict remains HOLD because required progress unavailability has higher precedence.
 
-The participant also reports all seven authority dimensions.
+Scoring checklist — correct only if every item is satisfied:
 
-Authority response: use the fixed seven-field answer above.
+- classify and explain all three rows exactly as listed above;
+- distinguish REQUIRED / NOT_AVAILABLE, OPTIONAL / NOT_AVAILABLE, and NOT_APPLICABLE without
+  replacing any with zero, false, blank, or pass;
+- report gate HOLD and integrity INTERNALLY_CONSISTENT, with required progress unavailability
+  controlling over the subordinate comfort consequence; and
+- report the exact seven-field authority state below.
+
+Required authority state: Gate verdict HOLD; Evidence integrity INTERNALLY_CONSISTENT; Origin
+NOT_AUTHENTICATED; Authorization NOT_EVALUATED; Deployment permission NONE; Scope SIMULATION_ONLY;
+Authoritative status NOT_DEFINED.
+
+Required source references: `findings.json /findings/3`, `metrics.json /route_completion_pct`,
+`findings.json /findings/5`, `metrics.json /max_abs_jerk_mps3`, and the
+`fault.coverage.required` sufficiency row shown by the review envelope.
 
 ## Task 5 — Action accountability
 
@@ -198,11 +262,41 @@ Fixture: `handoff-p4-fault`. Evidence schema: 2.0. Scenario schema: 3.0.
 Prompt: Distinguish candidate, permitted, and executed actions and attribute shield and control-fault
 effects to their correct boundaries.
 
-Expected answer: candidate is policy intent; permitted is shield output; executed is post-fault
-simulator input. A control fault is not attributed to the shield. The seven authority dimensions
-are explicit.
+Scoring checklist — correct only if every item is satisfied:
 
-Authority response: use the fixed seven-field answer above.
+- report gate HOLD and integrity INTERNALLY_CONSISTENT;
+- at event 9 at 1.0 s, report candidate brake 0.9897080762989154, steering
+  -0.5511323602891678, throttle 0.0 and permitted brake 1.0, steering -0.5511323809623718,
+  throttle 0.0; attribute the `SPEED_CAP` override only to the candidate-to-permitted shield
+  boundary;
+- at event 9, report observation delivery from sequence 8, delivered-from time 0.8 s, age
+  0.09999999999999998 s, with `OBSERVATION_DELAY` and `OBSERVATION_NOISE`;
+- do not claim a same-row causal chain: `CONTROL_DELAY` carries the event-9 permitted action into
+  event 10 at 1.1 s, where `executed_from_sequence 9`, `executed_from_candidate_time_s 0.9`,
+  `execution_time_s 1.0`, pre-saturation brake 1.0, steering -0.5511323809623718, throttle 0.0,
+  and control latency 99.99999999999997 ms are recorded;
+- at event 10, report executed brake 0.5, steering -0.25, throttle 0.0 and attribute
+  `CONTROL_DELAY`, `STEERING_SATURATION`, and `BRAKE_SATURATION` to the permitted-to-executed
+  control-fault boundary, never to the shield; and
+- report the exact seven-field authority state below.
+
+Required authority state: Gate verdict HOLD; Evidence integrity INTERNALLY_CONSISTENT; Origin
+NOT_AUTHENTICATED; Authorization NOT_EVALUATED; Deployment permission NONE; Scope SIMULATION_ONLY;
+Authoritative status NOT_DEFINED.
+
+Required source references: `events.jsonl /candidate_action @ sequence 9`,
+`events.jsonl /permitted_action @ sequence 9`, `events.jsonl /override_reasons @ sequence 9`,
+`events.jsonl /observation_fault_evidence/applied_faults @ sequence 9`,
+`events.jsonl /observation_fault_evidence/delivered_from_sequence @ sequence 9`,
+`events.jsonl /observation_fault_evidence/delivered_from_time_s @ sequence 9`,
+`events.jsonl /observation_fault_evidence/delivered_observation/observation_age_s @ sequence 9`,
+`events.jsonl /executed_action @ sequence 10`,
+`events.jsonl /control_fault_evidence/applied_faults @ sequence 10`,
+`events.jsonl /executed_from_sequence @ sequence 10`,
+`events.jsonl /executed_from_candidate_time_s @ sequence 10`,
+`events.jsonl /execution_time_s @ sequence 10`,
+`events.jsonl /control_latency_ms/value @ sequence 10`, and
+`events.jsonl /pre_saturation_action @ sequence 10`.
 
 ## Task 6 — CONDITIONAL without permission
 
@@ -214,10 +308,27 @@ Fixture: `handoff-p1-conditional`.
 
 Prompt: Explain the outcome, required follow-up, and authority.
 
-Expected answer: hard criteria pass, a soft criterion needs review, and CONDITIONAL does not grant
-permission. Authorization remains NOT_EVALUATED and deployment permission NONE.
+Scoring checklist — correct only if every item is satisfied:
 
-Authority response: use the fixed seven-field answer above.
+- report gate CONDITIONAL and integrity INTERNALLY_CONSISTENT;
+- identify that `comfort.acceleration` is OPTIONAL / FAIL / AVAILABLE and the sole controlling soft
+  finding, measured 6.0 m/s^2 against `max_abs_acceleration_mps2 <= 4.0` after
+  `ABSOLUTE_VALUE + MAX_OVER_EVENTS`;
+- report that first support is sequence 12 at 1.3 s, with effect CONDITIONAL and
+  result_if_controlling CONDITIONAL;
+- state the exact rationale: `Hard criteria passed, but illustrative soft criteria failed or are
+  NOT_AVAILABLE and require human review; Hermes grants no deployment permission.`; and
+- state that CONDITIONAL requires review. CONDITIONAL does not grant permission, authorization, or
+  deployment permission.
+
+Required authority state: Gate verdict CONDITIONAL; Evidence integrity INTERNALLY_CONSISTENT;
+Origin NOT_AUTHENTICATED; Authorization NOT_EVALUATED; Deployment permission NONE; Scope
+SIMULATION_ONLY; Authoritative status NOT_DEFINED.
+
+Required source references: `events.jsonl /vehicle_state/acceleration_mps2 @ sequence 12`,
+`gate-config.resolved.yaml /soft/max_abs_acceleration_mps2`,
+`metrics.json /max_abs_acceleration_mps2`, `findings.json /findings/4`, and
+`verdict.json /verdict`.
 
 ## Task 7 — Non-causal mixed comparison
 
@@ -230,10 +341,22 @@ Fixtures: `handoff-p3-cutin-baseline` → `handoff-p3-cutin-shielded`.
 Prompt: Report the exact factual changes, then identify every interpretation the comparison does
 not support.
 
-Expected answer: minimum TTC is `1.8155836417275437 → 8.49579415469856 s`; verdict is unchanged
-`HOLD`; the candidate records `SPEED_CAP at sequences 20, 26, and 32`; the candidate never entered
-the TTC target band; it records zero TTC_BELOW_THRESHOLD target reasons; and it includes
-pre-trigger SPEED_CAP confounding. The result is descriptive and non-causal.
+Scoring checklist — correct only if every item is satisfied:
+
+- report comparison COMPATIBLE, baseline Gate verdict HOLD / Evidence integrity
+  INTERNALLY_CONSISTENT, candidate Gate verdict HOLD / Evidence integrity
+  INTERNALLY_CONSISTENT, and unchanged verdict `HOLD → HOLD`;
+- report minimum TTC: 1.8155836417275437 → 8.49579415469856 s (IMPROVED);
+- report route completion: 84.88178621406203 → 84.39151677812995 % (REGRESSED);
+- report maximum absolute acceleration: 12.683377265917573 → 13.003747463227677 m/s^2
+  (REGRESSED);
+- report maximum absolute jerk: 128.41591835005693 → 157.565283775339 m/s^3 (REGRESSED);
+- report `SPEED_CAP at sequences 20, 26, and 32`; sequences 20 and 26 are PRE_TRIGGER and sequence
+  32 is CUT_IN, so pre-trigger SPEED_CAP confounding is explicit;
+- state that the candidate never entered the TTC target band and records zero
+  `TTC_BELOW_THRESHOLD` target reasons; and
+- characterize the mixed result as descriptive and non-causal, with no aggregate winner or
+  advancement inference.
 
 Reject: engagement.
 
@@ -247,10 +370,18 @@ Reject: safer.
 
 Reject: advancement.
 
-The participant must also reject any safety or mechanism-effect claim and state all seven authority
-dimensions.
+The participant must also reject any safety or mechanism-effect claim.
 
-Authority response: use the fixed seven-field answer above.
+Required authority state: baseline Gate verdict HOLD / Evidence integrity INTERNALLY_CONSISTENT;
+candidate Gate verdict HOLD / Evidence integrity INTERNALLY_CONSISTENT; Origin NOT_AUTHENTICATED;
+Authorization NOT_EVALUATED; Deployment permission NONE; Scope SIMULATION_ONLY; Authoritative
+status NOT_DEFINED.
+
+Required source references: `BASELINE metrics.json /minimum_ttc_s`,
+`CANDIDATE metrics.json /minimum_ttc_s`, both sides' `metrics.json /route_completion_pct`,
+`metrics.json /max_abs_acceleration_mps2`, and `metrics.json /max_abs_jerk_mps3`; both sides'
+`verdict.json /verdict`; `CANDIDATE events.jsonl /override_reasons @ sequences 20, 26, and 32`;
+and `CANDIDATE metrics.json /shield_override_reasons`.
 
 ## Task 8 — Provenance is not authenticated origin
 
@@ -263,10 +394,27 @@ Fixture: `handoff-p2-metadrive`.
 Prompt: Explain what recorded Git/simulator identity and local hashes establish and what they do
 not establish.
 
-Expected answer: they support internally consistent recorded identity and tamper evidence; they do
-not authenticate origin, authorize promotion, or grant deployment permission.
+Scoring checklist — correct only if every item is satisfied:
 
-Authority response: use the fixed seven-field answer above.
+- select fixture and manifest run ID `handoff-p2-metadrive` and report gate PASS / integrity
+  INTERNALLY_CONSISTENT;
+- report recorded Hermes 0.1.0 commit
+  `3c32c529e8be7127fbd71ecc467da007b2f72d5f`, dirty false; recorded MetaDrive adapter 1.0;
+  and recorded simulator `metadrive` 0.4.3 commit
+  `85e5dadc6c7436d324348f6e3d8f8e680c06b4db`;
+- state that the recorded identities and local hashes support internal consistency and tamper
+  evidence only; they do not authenticate origin, authorize promotion, or grant deployment
+  permission; and
+- report the exact seven-field authority state below.
+
+Required authority state: Gate verdict PASS; Evidence integrity INTERNALLY_CONSISTENT; Origin
+NOT_AUTHENTICATED; Authorization NOT_EVALUATED; Deployment permission NONE; Scope SIMULATION_ONLY;
+Authoritative status NOT_DEFINED.
+
+Required source references: `manifest.json /repository_commit`, `manifest.json /repository_dirty`,
+`manifest.json /adapter_name`, `manifest.json /adapter_version`, `manifest.json /simulator_name`,
+`manifest.json /simulator_version`, `manifest.json /simulator_commit`, `bundle.sha256` whole-file
+pointer `""`, and `trace.sha256` whole-file pointer `""`.
 
 ## Task 9 — Incompatible evidence
 
@@ -278,11 +426,31 @@ Fixtures: `handoff-p3-lead-baseline` → `handoff-p3-cutin-shielded`.
 
 Prompt: Decide whether deltas, ranking, or advancement may be inferred.
 
-Expected answer: evidence is `INCOMPATIBLE`; no deltas, rank, winner, mechanism claim, or advancement
-is available. Each side is independently reviewed before comparison. The seven authority fields
-remain explicit.
+Scoring checklist — correct only if every item is satisfied:
 
-Authority response: use the fixed seven-field answer above.
+- independently report baseline Gate verdict CONDITIONAL / Evidence integrity
+  INTERNALLY_CONSISTENT and candidate Gate verdict HOLD / Evidence integrity
+  INTERNALLY_CONSISTENT;
+- report comparison INCOMPATIBLE and state that INCOMPATIBLE does not mean either side is
+  INVALID_EVIDENCE;
+- identify all three exact mismatches: scenario digest baseline
+  `a3b738431af234f4d2751667e8fee869307bc7c6d32b69fa71b602d340b48aaf` versus candidate
+  `5d96994b9a1efd7626f162d852501a7c51c358e865be24a5c7929c2de5129e32`; scenario name
+  `lead_vehicle_hard_brake` versus `cut_in_near_field`; and adapter-config digest baseline
+  `4bf4f0051f46a079abf3d208773ea9ed668e0888f81c1b70f24752adcd9bc4a3` versus candidate
+  `d8e9e31b3f069fb9cbd26d5331747255315a112109af29345ccd6e1fddf0b999`;
+- state that no deltas, verdict delta, charts, rank, winner, mechanism claim, or advancement may be
+  inferred; and
+- report the exact seven-field authority state below.
+
+Required authority state: baseline Gate verdict CONDITIONAL / Evidence integrity
+INTERNALLY_CONSISTENT; candidate Gate verdict HOLD / Evidence integrity INTERNALLY_CONSISTENT;
+Origin NOT_AUTHENTICATED; Authorization NOT_EVALUATED; Deployment permission NONE; Scope
+SIMULATION_ONLY; Authoritative status NOT_DEFINED.
+
+Required source references: both sides' `manifest.json /scenario_digest`,
+`manifest.json /scenario_name`, and `manifest.json /adapter_config_digest`; BASELINE and CANDIDATE
+`verdict.json /verdict`; and each side's independently verified bundle and trace roots.
 
 ## Task 10 — Scoped keyboard and screen-reader observation
 
@@ -296,10 +464,23 @@ Prompt: Complete the named keyboard-only nominal review flow and the named scree
 review flow; record browser and assistive-technology versions, focus/order/name/state, blockers,
 and assistance.
 
-Expected result format: a scoped observation, not a general accessibility or WCAG claim. Task 10 is
-excluded from the North Star denominator.
+Scoring checklist — correct only if every item is satisfied:
 
-Authority response: use the fixed seven-field answer above.
+- bind the observation to protocol/task version, implementation commit, registry digest, fresh
+  verification, exact fixture/run/digests, and operation command;
+- complete both named nominal-review flows and record exact browser/assistive-technology versions,
+  focus/order/name/state, blockers, and assistance without generalizing beyond the observed setup;
+- report fixture Gate verdict PASS and Evidence integrity INTERNALLY_CONSISTENT while preserving
+  all five fixed non-gate authority states; and
+- state that the record is not a WCAG claim and Task 10 is excluded from the North Star denominator.
+
+Required authority state: Gate verdict PASS; Evidence integrity INTERNALLY_CONSISTENT; Origin
+NOT_AUTHENTICATED; Authorization NOT_EVALUATED; Deployment permission NONE; Scope SIMULATION_ONLY;
+Authoritative status NOT_DEFINED.
+
+Required source references: `manifest.json /run_id`, `verdict.json /verdict`, `bundle.sha256`
+whole-file pointer `""`, `trace.sha256` whole-file pointer `""`, plus the bound observation record
+for the exact Task 10 operation.
 
 ## Immediate-stop conditions
 
@@ -327,9 +508,13 @@ Participant IDs only. No names, emails, employers, or employer-confidential info
 Warn participants: do not share employer-confidential information. Obtain explicit recording
 consent. Store encrypted raw data outside Git and artifacts/.
 
-Evidence custodian: Bo-Huei Lin.
+Evidence custodian: UNASSIGNED — proposed owner requires explicit written acceptance.
 
-Deletion owner: Bo-Huei Lin.
+Deletion owner: UNASSIGNED — proposed owner requires explicit written acceptance.
+
+Recruitment is blocked until both owners explicitly accept their responsibilities and the accepted
+names are recorded in a new reviewed protocol version. This document does not assign either role
+by inference.
 
 Recommended deletion: 30 days after accepted synthesis. Only blank templates and de-identified
 accepted synthesis may be committed. Separate participant quote verbatim from observer inference.

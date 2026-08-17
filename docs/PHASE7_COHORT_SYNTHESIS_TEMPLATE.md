@@ -1,11 +1,15 @@
 # Hermes Phase 7 Cohort Synthesis Template
 
-Status: `NOT YET OBSERVED`. Scope: `SIMULATION_ONLY`. Deployment permission: `NONE`. This blank
-template does not report a pilot or cohort and cannot promote a human gate by its presence.
+Status: `NOT YET OBSERVED`. Moderator-only, non-scored, immutable safety boundary: Scope
+SIMULATION_ONLY; Deployment permission NONE. These prefilled values are reporting constraints,
+not scored participant or cohort responses. This blank template does not report a pilot or cohort
+and cannot promote a human gate by its presence.
 
 ## Frozen protocol and cohort
 
 Protocol version: ____
+
+Frozen eligibility rule/version: ____
 
 Fixture-registry digest: ____
 
@@ -16,6 +20,16 @@ Pilot median hypotheses and freeze decision: ____
 Raw eligible participant count: ____
 
 Eligibility requires 6–10 declared non-author participants spanning the frozen role coverage.
+At least one eligible participant in each frozen role is required. Performance cannot change
+eligibility.
+
+PRODUCT eligible count: ____
+
+SAFETY eligible count: ____
+
+SIMULATION eligible count: ____
+
+ENGINEERING eligible count: ____
 
 Raw assigned task-opportunity count: ____
 
@@ -59,7 +73,7 @@ Authorization: ____
 
 Deployment permission: ____
 
-Scope: SIMULATION_ONLY
+Scope: ____
 
 Authoritative status: ____
 

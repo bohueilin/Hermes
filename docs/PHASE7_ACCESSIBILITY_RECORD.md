@@ -8,6 +8,41 @@ not a WCAG conformance statement.
 Task 10 uses `handoff-phase5-demo`, representative nominal review only. No comparison is included.
 It is excluded from the North Star denominator.
 
+## Frozen observation identity — complete before either flow
+
+Protocol version: ____
+
+Task version: ____
+
+Session ID: ____
+
+Date: ____
+
+Implementation commit: ____
+
+Fixture-registry SHA-256: ____
+
+Fresh verification result: ____
+
+Fixture key: ____
+
+Locator: ____
+
+Manifest run ID: ____
+
+Observed bundle digest SHA-256: ____
+
+Computed bundle digest SHA-256: ____
+
+Observed trace digest SHA-256: ____
+
+Computed trace digest SHA-256: ____
+
+Exact operation command: ____
+
+Stop and leave the observation `NOT YET OBSERVED` if any identity differs from the frozen registry
+or fresh verification does not return the expected valid result.
+
 ## Named flow A — Keyboard-only nominal review flow
 
 Observer ID: ____
@@ -45,9 +80,9 @@ Blocker or assistance: ____
 
 ## Authority and reporting boundary
 
-Gate verdict: artifact-specific only. Evidence integrity: independently displayed. Origin:
-`NOT_AUTHENTICATED`. Authorization: `NOT_EVALUATED`. Deployment permission: `NONE`. Scope:
-`SIMULATION_ONLY`. Authoritative status: `NOT_DEFINED`.
+For this exact Task 10 fixture, Gate verdict: PASS. Evidence integrity: INTERNALLY_CONSISTENT.
+Origin: `NOT_AUTHENTICATED`. Authorization: `NOT_EVALUATED`. Deployment permission: `NONE`.
+Scope: `SIMULATION_ONLY`. Authoritative status: `NOT_DEFINED`.
 
 No WCAG claim follows. Mouse success cannot promote keyboard or screen-reader status. Manual
 visual, accessibility, expert, pilot human comprehension, and main-cohort human comprehension

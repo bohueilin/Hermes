@@ -38,12 +38,21 @@ Technical implementation does not constitute human, manual, accessibility, or ex
 
 ## Owner-operated next gates
 
-1. Freshly verify all registry fixtures and perform an implementer executability dry run.
-2. Name and execute expert, manual visual, and scoped accessibility prerequisites; preserve any
-   blocker and owner.
-3. Run a 2–3-person non-author pilot; version material changes, exclude changed pilot results, and
-   freeze the per-attempt bound, task order/counterbalancing, maximum duration, breaks, corrections,
-   analysis, exclusions, and stop rules before recruiting the 6–10-person main cohort.
+1. **Pre-pilot freeze gate:** obtain explicit acceptance from the evidence custodian and deletion
+   owner; freeze eligibility, role coverage, prompts, exact keys/source references, fixtures,
+   registry digest, pilot order, maximum duration, break rule, corrections, exclusions, and stop
+   rules; freshly verify every fixture; complete the implementer executability dry run and the
+   required owner-operated expert, manual visual, and scoped accessibility prerequisites; close
+   every P0/P1 and every zero-tolerance authority, hidden-failure, access, or digest defect.
+2. **Run the 2–3-person non-author pilot** under that frozen pre-pilot version. Preserve raw counts,
+   assistance, deviations, technical invalidations, fatigue/carryover, and unfavorable outcomes.
+3. **Post-pilot main-cohort freeze gate:** review pilot evidence, resolve material defects, and
+   freeze the per-attempt numerator bound, median thresholds, main-cohort counterbalancing,
+   analysis, exclusions, and stop rules. Any material prompt, key, fixture, UI, or threshold change
+   creates a new protocol version, excludes the prior pilot, and requires a new pilot before this
+   gate can close.
+4. **Recruit the 6–10-person main cohort** only after the post-pilot gate, accepted custody, exact
+   fixture digests, and all readiness conditions remain satisfied.
 
 ## Authority boundary
 
@@ -56,6 +65,12 @@ vehicle control.
 ## Privacy boundary
 
 Use participant IDs only. Raw notes and recordings stay encrypted outside Git and `artifacts/`.
-Commit only blank templates and de-identified accepted synthesis. Bo-Huei Lin is the named evidence
-custodian and deletion owner for this protocol; recommended deletion is 30 days after accepted
+Commit only blank templates and de-identified accepted synthesis.
+
+Evidence custodian: UNASSIGNED — proposed owner requires explicit written acceptance.
+
+Deletion owner: UNASSIGNED — proposed owner requires explicit written acceptance.
+
+Recruitment is blocked until both owners explicitly accept their responsibilities and a reviewed
+protocol version records the accepted names. Recommended deletion is 30 days after accepted
 synthesis.

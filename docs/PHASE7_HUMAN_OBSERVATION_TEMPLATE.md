@@ -1,11 +1,23 @@
 # Hermes Phase 7 Human Observation Template
 
-Status: `NOT YET OBSERVED`. Blank template only. Scope: `SIMULATION_ONLY`. Deployment permission:
-`NONE`. This file contains no participant result, expected value, or scoring hint.
+Status: `NOT YET OBSERVED`. Blank template only. Moderator-only, non-scored, immutable safety
+boundary: Scope SIMULATION_ONLY; Deployment permission NONE. These two prefilled boundary values
+are instructions to the moderator, not participant responses or scored fields. This file contains
+no participant result, expected value, or scoring hint.
 
 ## Session identity
 
 Protocol version: ____
+
+Session ID: ____
+
+Session date: ____
+
+Implementation commit: ____
+
+Fixture-registry SHA-256: ____
+
+Fresh verification result: ____
 
 Participant ID: ____
 
@@ -19,7 +31,7 @@ Employer-confidentiality warning acknowledged: ____
 
 Moderator ID: ____
 
-Session date/time: ____
+Session start time: ____
 
 Assigned task order: ____
 
@@ -39,7 +51,53 @@ Assistive technology/version: ____
 
 ## Per-task blank record — copy once per assigned task
 
-Task ID/version: ____
+Task ID: ____
+
+Task version: ____
+
+Fixture key: ____
+
+Locator: ____
+
+Manifest run ID: ____
+
+Observed bundle digest SHA-256: ____
+
+Computed bundle digest SHA-256: ____
+
+Observed trace digest SHA-256: ____
+
+Computed trace digest SHA-256: ____
+
+For a pair task, bind both sides; otherwise mark every pair field `NOT_APPLICABLE`:
+
+Baseline fixture key: ____
+
+Baseline locator: ____
+
+Baseline manifest run ID: ____
+
+Baseline observed bundle digest SHA-256: ____
+
+Baseline computed bundle digest SHA-256: ____
+
+Baseline observed trace digest SHA-256: ____
+
+Baseline computed trace digest SHA-256: ____
+
+Candidate fixture key: ____
+
+Candidate locator: ____
+
+Candidate manifest run ID: ____
+
+Candidate observed bundle digest SHA-256: ____
+
+Candidate computed bundle digest SHA-256: ____
+
+Candidate observed trace digest SHA-256: ____
+
+Candidate computed trace digest SHA-256: ____
 
 Start time: ____
 
