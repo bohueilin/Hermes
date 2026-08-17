@@ -36,6 +36,10 @@ _PERSISTENT_TEXT = (
         "authorization."
     ),
 )
+_NON_CAUSAL_COMPARISON_LIMITATION = (
+    "Stored deltas are descriptive; comparison alone does not establish challenge "
+    "engagement or causal treatment effect"
+)
 
 
 def _app(root: Path) -> AppTest:
@@ -409,6 +413,27 @@ def test_workbench_compatible_and_incompatible_comparison_render_without_chart_c
 
     assert list(app.exception) == []
     assert len(app.dataframe) >= 4
+    ordered = list(app)
+    limitation_index = next(
+        index
+        for index, item in enumerate(ordered)
+        if isinstance(getattr(item, "value", None), str)
+        and item.value == _NON_CAUSAL_COMPARISON_LIMITATION
+    )
+    compatibility_index = next(
+        index
+        for index, item in enumerate(ordered)
+        if hasattr(getattr(item, "value", None), "columns")
+        and "label" in item.value.columns
+        and "Compatibility" in set(item.value["label"])
+    )
+    gate_index = next(
+        index
+        for index, item in enumerate(ordered)
+        if isinstance(getattr(item, "value", None), str)
+        and item.value == "Gate outcome"
+    )
+    assert compatibility_index < limitation_index < gate_index
     app.text_input(key="comparison_candidate_draft").input(
         "handoff-p3-cutin-baseline"
     ).run(timeout=30)
@@ -417,6 +442,25 @@ def test_workbench_compatible_and_incompatible_comparison_render_without_chart_c
     )
     app.button(key="compare_stored_evidence").click().run(timeout=30)
     assert any("comparison unavailable" in item.value.lower() for item in app.error)
+    ordered = list(app)
+    limitation_index = next(
+        index
+        for index, item in enumerate(ordered)
+        if isinstance(getattr(item, "value", None), str)
+        and item.value == _NON_CAUSAL_COMPARISON_LIMITATION
+    )
+    error_index = next(
+        index
+        for index, item in enumerate(ordered)
+        if isinstance(getattr(item, "value", None), str)
+        and item.value == "Comparison unavailable"
+    )
+    dataframe_indices = [
+        index
+        for index, item in enumerate(ordered)
+        if hasattr(getattr(item, "value", None), "columns")
+    ]
+    assert max(dataframe_indices) < limitation_index < error_index
     all_cells = " ".join(
         str(value)
         for frame in app.dataframe
@@ -437,9 +481,11 @@ def test_workbench_compatible_and_incompatible_comparison_render_without_chart_c
             "What was not comparable",
             "Evidence availability changes",
             "Advancement interpretation",
+            "Descriptive comparison interpretation",
         }
         for item in app.subheader
     )
+    assert _NON_CAUSAL_COMPARISON_LIMITATION in _visible_text(app)
 
 
 def test_comparison_invalid_selection_preserves_last_accepted_submitted_sides(
@@ -860,9 +906,11 @@ def test_compatible_comparison_requires_explicit_mixed_outcome_synthesis_without
         "What was unchanged",
         "What was not comparable",
         "Evidence availability changes",
-        "Advancement interpretation",
+        "Descriptive comparison interpretation",
     ]
     visible = _visible_text(app)
+    assert _NON_CAUSAL_COMPARISON_LIMITATION in visible
+    assert "Advancement interpretation" not in headings
     assert (
         "Minimum TTC improved. Route completion, acceleration, and jerk regressed. "
         "The gate verdict did not improve. This is a mixed trade-off and does not "
@@ -872,6 +920,17 @@ def test_compatible_comparison_requires_explicit_mixed_outcome_synthesis_without
     assert "overall safety score" not in visible.lower()
     for forbidden in ("ranked candidate", "candidate is safer", "recommended policy"):
         assert forbidden not in visible.lower()
+    for forbidden in (
+        "the challenge engaged",
+        "the shield caused",
+        "caused the higher",
+        "causal effect was established",
+    ):
+        assert forbidden not in visible.lower()
+    assert not any(
+        "adequacy" in key.lower()
+        for key in app.session_state.filtered_state
+    )
 
 
 def test_invalid_evidence_quarantine_hides_accepted_gate_findings_metrics_timeline_and_provenance(

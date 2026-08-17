@@ -22,6 +22,11 @@ from hermes.review import (
     validate_artifact_root,
 )
 
+_NON_CAUSAL_COMPARISON_LIMITATION = (
+    "Stored deltas are descriptive; comparison alone does not establish challenge "
+    "engagement or causal treatment effect"
+)
+
 _PRIMARY_WORKFLOWS = ("Review", "Compare", "Evidence limitations")
 _REVIEW_SECTIONS = (
     "Select & Verify",
@@ -2030,6 +2035,7 @@ def _render_comparison(root: Path) -> None:
     )
     _show_rows(_compatibility_rows(result))
     _show_rows(_compatibility_reason_rows(result))
+    st.text(_NON_CAUSAL_COMPARISON_LIMITATION)
     if result.compatibility.status == "INCOMPATIBLE":
         st.error("Comparison unavailable")
         st.text(
@@ -2056,7 +2062,7 @@ def _render_comparison(root: Path) -> None:
         tuple(row for row in dedicated if row["record"] == "availability summary delta")
         + _availability_delta_rows(result)
     )
-    st.subheader("Advancement interpretation")
+    st.subheader("Descriptive comparison interpretation")
     st.text(_comparison_interpretation(result))
     st.subheader("Comparison limitations")
     _show_rows(_comparison_limitation_rows(result))

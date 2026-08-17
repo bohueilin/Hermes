@@ -1,5 +1,6 @@
 """Command-line interface for Hermes."""
 
+import os
 from collections import Counter
 from functools import partial
 from pathlib import Path
@@ -34,6 +35,16 @@ SCOPE_BANNER = (
     "compliance, or deployment evidence."
 )
 _REVIEW_TEXT_SCALAR_LIMIT = 1_024
+_NON_CAUSAL_COMPARISON_LIMITATION = (
+    "Stored deltas are descriptive; comparison alone does not establish challenge "
+    "engagement or causal treatment effect"
+)
+_ADEQUACY_AUTHORITY_STATEMENT = (
+    "Assessment authority: stored simulation evidence and declared criteria only. "
+    "Exit 0 means completed assessment, not passed gate or deployment permission. "
+    "It does not establish real-world safety, authenticated registration, approval, "
+    "authorization, or release."
+)
 
 
 class HermesTyperGroup(TyperGroup):
@@ -678,6 +689,7 @@ def _render_comparison_envelope_text(envelope: object) -> None:
         console.print("Incompatibility: " + _bounded_artifact_text(reason))
     for warning in envelope.compatibility.warnings:
         console.print("Compatibility warning: " + _bounded_artifact_text(warning))
+    console.print(_NON_CAUSAL_COMPARISON_LIMITATION)
     console.print("Verdict delta: " + _review_record_json(envelope.verdict_delta))
     console.print(
         "Hard-failure delta: " + _review_record_json(envelope.hard_failure_delta)
@@ -707,6 +719,111 @@ def _review_format_or_error(output_format: str) -> None:
             CliErrorCode.CONFIGURATION_ERROR,
             f"unsupported format {output_format!r}",
         )
+
+
+def _render_adequacy_side(console: Console, label: str, side: object) -> None:
+    console.print(f"{label} identity: " + _review_record_json(side.identity))
+    console.print(f"{label} integrity: " + _bounded_artifact_text(side.integrity))
+    console.print(
+        f"{label} gate verdict: " + _optional_artifact_text(side.gate_verdict)
+    )
+    console.print(
+        f"{label} authenticity: " + _bounded_artifact_text(side.authenticity)
+    )
+    console.print(
+        f"{label} authorization: " + _bounded_artifact_text(side.authorization)
+    )
+    console.print(
+        f"{label} deployment permission: "
+        + _bounded_artifact_text(side.deployment_permission)
+    )
+    console.print(f"{label} scope: " + _bounded_artifact_text(side.scope))
+    console.print(
+        f"{label} authoritative status: "
+        + _bounded_artifact_text(side.authoritative_status)
+    )
+
+
+def _render_adequacy_source(console: Console, label: str, source: object | None) -> None:
+    console.print(
+        f"{label}: "
+        + ("NOT_AVAILABLE" if source is None else _review_record_json(source))
+    )
+
+
+def _render_adequacy_envelope_text(envelope: object) -> None:
+    console = _review_console()
+    console.print(SCOPE_BANNER)
+    console.print(_ADEQUACY_AUTHORITY_STATEMENT)
+    console.print(
+        "Requested plan selections: "
+        + _review_record_json(envelope.requested_plan_selections)
+    )
+    _render_adequacy_side(console, "Baseline", envelope.baseline)
+    _render_adequacy_side(console, "Candidate", envelope.candidate)
+    console.print("Compatibility: " + _bounded_artifact_text(envelope.compatibility))
+    for reason in envelope.compatibility_reasons:
+        console.print("Compatibility reason: " + _bounded_artifact_text(reason))
+    console.print(
+        "Plan evaluation: " + _bounded_artifact_text(envelope.plan_evaluation)
+    )
+    console.print(
+        "Plan evaluation reason: "
+        + _optional_artifact_text(envelope.plan_evaluation_reason)
+    )
+    _render_adequacy_source(console, "Protocol source", envelope.protocol_source)
+    _render_adequacy_source(
+        console,
+        "Discovery ledger source",
+        envelope.discovery_ledger_source,
+    )
+    _render_adequacy_source(console, "Pair plan source", envelope.pair_plan_source)
+
+    if envelope.assessment is None:
+        console.print("Adequacy assessment: NOT_EVALUATED")
+    else:
+        console.print(
+            "Adequacy status: " + _bounded_artifact_text(envelope.assessment.status)
+        )
+        console.print(
+            "Observation disposition: "
+            + _bounded_artifact_text(envelope.assessment.observation_disposition)
+        )
+        console.print("Criteria:")
+        for criterion in envelope.assessment.criteria:
+            console.print("  " + _review_record_json(criterion))
+
+    if envelope.registration is None:
+        console.print("Registration: NOT_EVALUATED")
+    else:
+        console.print(
+            "Registration status: "
+            + _bounded_artifact_text(envelope.registration.status)
+        )
+        console.print(
+            "Registration authenticity: "
+            + _bounded_artifact_text(envelope.registration.authenticity)
+        )
+        console.print(
+            "Registration limitation: "
+            + _bounded_artifact_text(envelope.registration.limitation)
+        )
+        console.print(
+            "Protocol registration commit: "
+            + _optional_artifact_text(envelope.registration.protocol_commit)
+        )
+        console.print(
+            "Pair-plan registration commit: "
+            + _optional_artifact_text(envelope.registration.pair_plan_commit)
+        )
+
+    console.print("Interpretation: " + _bounded_artifact_text(envelope.interpretation))
+    console.print("Diagnostics:")
+    for diagnostic in envelope.diagnostics:
+        console.print("  " + _review_record_json(diagnostic))
+    console.print("Limitations:")
+    for limitation in envelope.limitations:
+        console.print("  " + _review_record_json(limitation))
 
 
 @app.command("review-artifact")
@@ -862,6 +979,109 @@ def review_compare_command(
         _render_comparison_envelope_text(result)
 
 
+@app.command("assess-adequacy")
+def assess_adequacy_command(
+    baseline_selection: Annotated[
+        str,
+        typer.Argument(help="Exact relative baseline selection below the artifact root."),
+    ],
+    candidate_selection: Annotated[
+        str,
+        typer.Argument(help="Exact relative candidate selection below the artifact root."),
+    ],
+    repository_root: Annotated[
+        Path,
+        typer.Option("--repository-root", help="Local Hermes repository root."),
+    ],
+    artifact_root: Annotated[
+        Path,
+        typer.Option("--artifact-root", help="Allowed local artifact root."),
+    ],
+    plan_root: Annotated[
+        Path,
+        typer.Option("--plan-root", help="Allowed local evaluation-plan root."),
+    ],
+    protocol_relative_path: Annotated[
+        str,
+        typer.Option("--protocol", help="Exact relative study-protocol selection."),
+    ],
+    discovery_ledger_relative_path: Annotated[
+        str,
+        typer.Option(
+            "--discovery-ledger",
+            help="Exact relative discovery-ledger selection.",
+        ),
+    ],
+    pair_plan_relative_path: Annotated[
+        str,
+        typer.Option("--pair-plan", help="Exact relative pair-plan selection."),
+    ],
+    output_format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: text or json."),
+    ] = "text",
+) -> None:
+    """Assess one stored pair against one exact captured evaluation plan."""
+    _review_format_or_error(output_format)
+
+    from hermes.adequacy.api import (
+        AdequacyServiceError,
+        AdequacyServiceErrorKind,
+        assess_review_pair_adequacy,
+    )
+    from hermes.adequacy.models import (
+        EvaluationAdequacyEnvelope,
+        canonical_adequacy_json_bytes,
+    )
+
+    try:
+        result = assess_review_pair_adequacy(
+            Path(os.path.abspath(os.fspath(repository_root))),
+            Path(os.path.abspath(os.fspath(artifact_root))),
+            baseline_selection,
+            candidate_selection,
+            Path(os.path.abspath(os.fspath(plan_root))),
+            protocol_relative_path,
+            discovery_ledger_relative_path,
+            pair_plan_relative_path,
+        )
+        if not isinstance(result, EvaluationAdequacyEnvelope):
+            raise TypeError("adequacy service returned an unsupported result")
+    except AdequacyServiceError as exc:
+        configuration_kinds = {
+            AdequacyServiceErrorKind.INVALID_REQUEST,
+            AdequacyServiceErrorKind.INVALID_PLAN,
+        }
+        _raise_cli_error(
+            (
+                CliErrorCode.CONFIGURATION_ERROR
+                if exc.kind in configuration_kinds
+                else CliErrorCode.OPERATIONAL_ERROR
+            ),
+            _bounded_artifact_text(exc.safe_message),
+            json_output=output_format == "json",
+        )
+    except Exception:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            "Adequacy service could not be completed safely.",
+            json_output=output_format == "json",
+        )
+
+    if output_format == "json":
+        typer.echo(canonical_adequacy_json_bytes(result).decode("utf-8"))
+    else:
+        _render_adequacy_envelope_text(result)
+
+    if (
+        result.baseline.integrity == "INVALID_EVIDENCE"
+        or result.candidate.integrity == "INVALID_EVIDENCE"
+    ):
+        raise typer.Exit(code=30)
+    if result.compatibility == "INCOMPATIBLE":
+        raise typer.Exit(code=40)
+
+
 @app.command("workbench")
 def workbench_command(
     artifact_root: Annotated[
@@ -996,6 +1216,7 @@ def compare_command(
             console.print(f"Incompatibility: {reason}", style="red")
         for warning in comparison.compatibility.warnings:
             console.print(f"Warning: {warning}", style="yellow")
+        console.print(_NON_CAUSAL_COMPARISON_LIMITATION)
         if comparison.compatibility.comparable:
             table = Table(title="Stored evidence comparison")
             table.add_column("Dimension")

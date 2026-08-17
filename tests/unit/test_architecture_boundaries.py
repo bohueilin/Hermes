@@ -70,11 +70,13 @@ def test_cli_has_no_top_level_runtime_simulator_or_review_imports(
     source_path = repository_root / "src" / "hermes" / "cli.py"
     tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
     forbidden = (
+        "hermes.adequacy",
         "hermes.adapters",
         "hermes.policies",
         "hermes.runtime",
         "hermes.review",
         "hermes.shields",
+        "hermes.workbench",
         "metadrive",
     )
     violations: list[str] = []
@@ -383,6 +385,7 @@ _IMPORT_BOMB_PREFIXES = (
     "hermes.adapters",
     "hermes.policies",
     "hermes.runtime",
+    "hermes.workbench",
     "metadrive",
 )
 
@@ -409,20 +412,30 @@ elif {action!r} == 'cli-import':
 else:
     from typer.testing import CliRunner
     from hermes.cli import app
-    arguments = (
-        [
+    if {action!r} == 'review-artifact':
+        arguments = [
             'review-artifact', 'handoff-phase5-demo',
             '--artifact-root', 'artifacts', '--format', 'json',
         ]
-        if {action!r} == 'review-artifact'
-        else [
+        expected_exit = 0
+    elif {action!r} == 'review-compare':
+        arguments = [
             'review-compare',
             'handoff-p3-lead-baseline', 'handoff-p3-lead-shielded',
             '--artifact-root', 'artifacts', '--format', 'json',
         ]
-    )
+        expected_exit = 0
+    else:
+        arguments = [
+            'assess-adequacy', 'phase1-tampered', 'handoff-phase5-demo',
+            '--repository-root', '.', '--artifact-root', 'artifacts',
+            '--plan-root', 'missing-plans', '--protocol', 'protocol.yaml',
+            '--discovery-ledger', 'ledger.jsonl', '--pair-plan', 'pair.yaml',
+            '--format', 'json',
+        ]
+        expected_exit = 30
     result = CliRunner().invoke(app, arguments)
-    if result.exit_code != 0:
+    if result.exit_code != expected_exit:
         message = f'command failed {{result.exit_code}}: {{result.output}}'
         raise RuntimeError(message) from result.exception
 """
@@ -437,9 +450,15 @@ else:
 
 @pytest.mark.parametrize(
     "action",
-    ["review-import", "cli-import", "review-artifact", "review-compare"],
+    [
+        "review-import",
+        "cli-import",
+        "review-artifact",
+        "review-compare",
+        "assess-adequacy",
+    ],
 )
-def test_review_surfaces_bomb_runtime_and_simulator_imports(
+def test_review_and_adequacy_surfaces_bomb_runtime_and_simulator_imports(
     repository_root: Path,
     action: str,
 ) -> None:
@@ -494,7 +513,14 @@ def _workbench_import_violations(source_path: Path) -> list[str]:
 
 @pytest.mark.parametrize(
     "module",
-    ["requests", "boto3", "hermes.review.models", "urllib.request", "http.client"],
+    [
+        "requests",
+        "boto3",
+        "hermes.adequacy",
+        "hermes.review.models",
+        "urllib.request",
+        "http.client",
+    ],
 )
 def test_workbench_import_allowlist_rejects_arbitrary_third_party_and_private_review(
     tmp_path: Path,
@@ -847,6 +873,53 @@ def test_cli_imports_workbench_only_inside_workbench_handler(
     assert importing_functions == ["workbench_command"]
 
 
+def test_cli_imports_adequacy_only_inside_assess_adequacy_handler(
+    repository_root: Path,
+) -> None:
+    source_path = repository_root / "src" / "hermes" / "cli.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    importing_functions: list[str] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        imports = set()
+        for child in ast.walk(node):
+            if isinstance(child, ast.Import):
+                imports.update(alias.name for alias in child.names)
+            elif isinstance(child, ast.ImportFrom) and child.module is not None:
+                imports.add(child.module)
+        if any(
+            module == "hermes.adequacy" or module.startswith("hermes.adequacy.")
+            for module in imports
+        ):
+            importing_functions.append(node.name)
+
+    assert importing_functions == ["assess_adequacy_command"]
+
+
+def test_workbench_has_no_adequacy_import_state_or_computation(
+    repository_root: Path,
+) -> None:
+    source_path = repository_root / "src" / "hermes" / "workbench" / "app.py"
+    source = source_path.read_text(encoding="utf-8")
+    modules = _imported_modules(source_path)
+
+    assert not any(
+        module == "hermes.adequacy" or module.startswith("hermes.adequacy.")
+        for module in modules
+    )
+    for forbidden in (
+        "AdequacyAssessment",
+        "AdequacyStatus",
+        "assessment.status",
+        "observation_disposition",
+        "plan_evaluation",
+        "registration.status",
+    ):
+        assert forbidden not in source
+
+
 def test_workbench_optional_dependency_is_isolated_and_exact() -> None:
     metadata = importlib.metadata.metadata("hermes-autonomy")
     requirements = metadata.get_all("Requires-Dist") or []
@@ -885,6 +958,39 @@ import hermes.workbench
 from typer.testing import CliRunner
 from hermes.cli import app
 result = CliRunner().invoke(app, ['workbench', '--help'])
+if result.exit_code != 0:
+    raise RuntimeError(result.output) from result.exception
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=repository_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr or result.stdout
+
+
+def test_cli_module_and_assess_help_import_when_adequacy_workbench_and_streamlit_are_bombed(
+    repository_root: Path,
+) -> None:
+    script = """
+import importlib.abc
+import sys
+
+PREFIXES = ('hermes.adequacy', 'hermes.workbench', 'streamlit')
+
+class Blocked(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if any(fullname == prefix or fullname.startswith(prefix + '.') for prefix in PREFIXES):
+            raise RuntimeError('forbidden eager import: ' + fullname)
+        return None
+
+sys.meta_path.insert(0, Blocked())
+from typer.testing import CliRunner
+from hermes.cli import app
+result = CliRunner().invoke(app, ['assess-adequacy', '--help'])
 if result.exit_code != 0:
     raise RuntimeError(result.output) from result.exception
 """

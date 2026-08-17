@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -20,6 +21,11 @@ from hermes.review import (
 )
 
 runner = CliRunner()
+
+_NON_CAUSAL_COMPARISON_LIMITATION = (
+    "Stored deltas are descriptive; comparison alone does not establish challenge "
+    "engagement or causal treatment effect"
+)
 
 _INVALID_SELECTIONS = (
     "",
@@ -374,6 +380,10 @@ def test_review_compare_json_is_exact_public_facade_bytes(
 
     assert result.exit_code == 0
     assert result.output.encode("utf-8") == canonical_envelope_bytes(envelope) + b"\n"
+    assert envelope.comparison_schema_version == "1.0"
+    assert hashlib.sha256(canonical_envelope_bytes(envelope)).hexdigest() == (
+        "391d2a9021e1bd72f36ba3f10db8fba39fe8e4221ac917f8a99217c05c9f83b1"
+    )
 
 
 def test_review_compare_text_exposes_both_sides_partitions_and_chart_values(
@@ -414,8 +424,34 @@ def test_review_compare_text_exposes_both_sides_partitions_and_chart_values(
         "Deployment permission: NONE",
     )
     assert all(text in result.output for text in required_text)
+    assert result.output.index(_NON_CAUSAL_COMPARISON_LIMITATION) < result.output.index(
+        "Verdict delta"
+    )
+    assert result.output.count(_NON_CAUSAL_COMPARISON_LIMITATION) == 1
     assert "winner" not in result.output.lower()
     assert "safety score" not in result.output.lower()
+
+
+def test_legacy_compare_table_places_fixed_noncausal_limit_before_dimensions(
+    repository_root: Path,
+) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            str(repository_root / "artifacts" / "handoff-p3-lead-baseline"),
+            str(repository_root / "artifacts" / "handoff-p3-lead-shielded"),
+            "--format",
+            "table",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert _NON_CAUSAL_COMPARISON_LIMITATION in result.output
+    assert result.output.index(_NON_CAUSAL_COMPARISON_LIMITATION) < result.output.index(
+        "minimum_ttc_s"
+    )
+    assert result.output.count(_NON_CAUSAL_COMPARISON_LIMITATION) == 1
 
 
 def test_review_compare_invalid_side_is_baseline_first_one_error_document(

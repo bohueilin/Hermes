@@ -1171,7 +1171,7 @@ def test_finding_event_jump_uses_first_supporting_sequence_and_never_recomputes_
     assert envelope.gate.model_dump_json() == gate_before
 
 
-def test_advancement_interpretation_uses_existing_partitions_without_forcing_mixed_copy(
+def test_descriptive_interpretation_retains_factual_partitions_without_causal_inference(
     repository_root: Path,
 ) -> None:
     unchanged = compare_review_artifacts(
@@ -1210,6 +1210,16 @@ def test_advancement_interpretation_uses_existing_partitions_without_forcing_mix
         "The gate verdict did not improve. This is a mixed trade-off and does not "
         "establish overall advancement."
     )
+    mixed_copy = workbench_app._comparison_interpretation(mixed).lower()
+    for forbidden in (
+        "challenge engaged",
+        "treatment caused",
+        "shield caused",
+        "candidate is safer",
+        "recommended policy",
+        "winner",
+    ):
+        assert forbidden not in mixed_copy
     different_copy = workbench_app._comparison_interpretation(different_mixed)
     assert "Minimum TTC improved" not in different_copy
     assert "gate verdict did not improve" not in different_copy
