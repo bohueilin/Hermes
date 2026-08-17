@@ -355,13 +355,45 @@ Commit: `fix: derive fresh selection evidence from stored events`
 
 ---
 
+## Task 5B: Correct the captured-versus-declared adequacy boundary
+
+**Files:**
+
+- Modify: `PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md`
+- Modify: `docs/superpowers/plans/2026-08-16-phase7-evaluation-adequacy-human-validation.md`
+
+### Step 1: Freeze the pre-API correction
+
+- [ ] Keep strict protocol/pair-plan expectations separate from permissive immutable captured
+  facts; a valid observed mismatch must reach a criterion rather than fail plan-shaped validation.
+- [ ] Make public side state safe and event-free, with requested locator, run/schema identity,
+  observed/computed bundle and trace roots, trust planes, and diagnostics.
+- [ ] Freeze adequacy-owned captured repository, component, simulator, scenario, shield/config,
+  execution, and scanner-side records; do not substitute declared configuration for absent captured
+  configuration.
+- [ ] Preserve valid schema-1 fake/cut-in/role/config mismatches as completed `FAIL` or
+  `NOT_AVAILABLE`; reserve unsupported-shape exit 40 for schema/event structures V1 cannot map.
+- [ ] Separate pure non-I/O syntax screening from the existing authoritative artifact, plan, and
+  repository boundary checks and freeze combined-failure precedence.
+
+### Step 2: Review and commit
+
+- [ ] Obtain independent semantic review before Task 6 code begins.
+- [ ] Commit only the two design/plan files.
+
+Commit: `docs: separate observed adequacy facts from plan expectations`
+
+---
+
 ## Task 6: Compose the public adequacy API with frozen failure precedence
 
 **Files:**
 
 - Create: `src/hermes/adequacy/api.py`
 - Create: `tests/unit/test_adequacy_api.py`
+- Modify: `src/hermes/adequacy/models.py`
 - Modify: `src/hermes/adequacy/assessment.py`
+- Modify: `tests/unit/test_adequacy_models.py`
 - Modify: `tests/unit/test_adequacy_assessment.py`
 - Modify: `tests/unit/test_review_adequacy.py`
 - Modify: `tests/unit/test_architecture_boundaries.py`
@@ -369,10 +401,14 @@ Commit: `fix: derive fresh selection evidence from stored events`
 ### Step 1: Write application-service REDs
 
 - [ ] Assert the exact eight-argument public API and no inspector/result/parsed-plan/capture/snapshot injection seam.
-- [ ] Assert lexical roots/selections → baseline capture → candidate capture → incompatibility → protocol/ledger/pair capture → Git once → pure assessment.
+- [ ] Assert pure non-I/O lexical screening of all eight arguments → baseline capture → candidate
+  capture → incompatibility → protocol/ledger/pair capture → captured-fact mapping → Git once →
+  pure assessment.
 - [ ] Assert invalid baseline/candidate/both produce safe identity, null plan fields with `PLAN_NOT_EVALUATED`, no criteria, no plan read, no Git, and exit-30 semantics.
 - [ ] Assert incompatibility produces reasons, null plan fields, no criteria, no plan read/Git, and exit-40 semantics.
-- [ ] Assert invalid plan and unsupported lead/schema shape perform no Git and normalize to typed exit-40 outcomes.
+- [ ] Assert invalid plan and unsupported evidence schema/event structure perform no Git and
+  normalize to typed exit-40 outcomes; valid schema-1 fake/cut-in/role/config mismatches remain
+  completed criterion results.
 - [ ] Assert Git operational errors occur only after valid/compatible sides and valid plans.
 - [ ] Assert artifact-vs-plan identity mismatch becomes completed available criterion `FAIL`/exit 0; registration non-establishment does not alter criteria.
 - [ ] Assert the pure pair helper emits deterministic run-ID, shared primary repository-commit,
@@ -380,6 +416,17 @@ Commit: `fix: derive fresh selection evidence from stored events`
   existing eleven scanner criteria. It must not compare the primary pair-plan commit to the earlier
   `implementation_base_commit`.
 - [ ] Assert snapshot-to-adequacy mapping copies only typed stored facts and does not mutate source models.
+- [ ] Assert public `SideReviewState` is event-free and retains exact safe run/schema/digest/trust
+  state for invalid and incompatible output; requested plan selections are always present and the
+  plan-not-evaluated reason is typed.
+- [ ] Assert missing/nonhex repository provenance, dirty `None`/`True`, fake simulator absence,
+  cut-in/no challenge, swapped shield roles, and runtime-valid nonzero delay become the frozen
+  compatibility or criterion outcomes—never plan-model construction errors.
+- [ ] Assert absent captured candidate configuration is never replaced by the declared config;
+  dependent scanner rows become `NOT_AVAILABLE` while identity/configuration fails.
+- [ ] Assert malformed syntax wins before capture; invalid baseline wins over defective plan/repo
+  roots; incompatibility wins over plan/repo filesystem defects; invalid plan wins over unavailable
+  Git; and valid flow resolves Git once immediately before use.
 
 Run:
 
@@ -395,6 +442,8 @@ Expected RED: public application service is missing.
 
 - [ ] Public import remains `from hermes.adequacy.api import assess_review_pair_adequacy`.
 - [ ] Construct the existing private review facade and concrete Git inspector internally; pass only immutable reduced facts to pure assessment.
+- [ ] Keep strict declared expectation types unchanged; add separate adequacy-owned captured types
+  and a scanner-only reduction rather than reusing plan validators on stored observations.
 - [ ] Keep every identity/reproduction comparison in a pure assessment helper accepting only
   adequacy-owned protocol/ledger/pair/side models; `api.py` only maps and orders operations.
 - [ ] Keep fake registration injection only in a non-public pure helper for tests.
@@ -406,6 +455,7 @@ Expected RED: public application service is missing.
 ```bash
 conda run -n hermes-dev python -m pytest -q \
   tests/unit/test_adequacy_api.py \
+  tests/unit/test_adequacy_models.py \
   tests/unit/test_review_adequacy.py \
   tests/unit/test_adequacy_assessment.py \
   tests/unit/test_adequacy_loader.py \

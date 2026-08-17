@@ -713,6 +713,46 @@ Categorize each field at its actual authority:
 - normative question, criteria, thresholds, grid, and selection rule: `ASSUMPTION`;
 - origin of every local plan/record: `NOT_AUTHENTICATED`.
 
+#### Observed facts are not declared expectations
+
+Phase 7 keeps two immutable type tiers. Strict protocol and pair-plan types describe what was
+declared and remain narrow. Separately, adequacy-owned captured types preserve every already-valid
+stored observation without forcing it through a plan validator. A captured mismatch is therefore
+available evidence for a criterion, not a parse error.
+
+The portable `SideReviewState` contains only safe review state: role, requested locator, observed
+run ID, evidence and scenario schema versions, optional observed/computed bundle and trace roots,
+gate/integrity/trust planes, and diagnostics. It never embeds events or plan-shaped assessment
+facts. `UNVERIFIED` retains only the requested role/locator. Internally consistent visited sides
+require all four digest roots and observed/computed equality. Invalid evidence may retain only the
+same safely projected partial identity and digest roots that the existing review envelope permits.
+
+Private pure assessment inputs use separate captured records for:
+
+- repository provenance, preserving `commit: str | null`, `dirty: bool | null`, and its source
+  reason cross-product;
+- policy, adapter, gate, and nullable external-simulator identities exactly as stored;
+- scenario digest, schema, boundary tolerance, and challenge kind—including lead, cut-in, or no
+  challenge;
+- shield identity plus a captured runtime-valid configuration, including an actuation delay from
+  `0.0` through `5.0`, without positional baseline/candidate validation;
+- seed, cadence, horizon, bundle/trace roots, and ordered stored event facts; and
+- a scanner-only reduction containing only role, boundary tolerance, captured shield/config, and
+  events.
+
+Expected `Identifier`, `GitCommit`, component, pair, and zero-delay shield-plan types remain strict.
+No captured record may reuse those validators merely because the plan expects the same field.
+The scanner never substitutes the protocol's candidate configuration when a captured configuration
+is absent. Criteria whose required captured configuration is absent become `NOT_AVAILABLE`; a
+present but different captured configuration is evaluated exactly and the identity/configuration
+criterion fails.
+
+Valid schema-1 fake or cut-in evidence is not an unsupported shape merely because it differs from
+the lead/MetaDrive plan: those differences complete as `FAIL` and, where a required supported input
+is absent, `NOT_AVAILABLE`. A schema version or event structure the V1 mapper does not support is a
+typed unsupported-shape service error after plan validation and before Git. This boundary may not
+be used to convert an ordinary observed-versus-declared mismatch into exit 40.
+
 ## 11. Adequacy semantics
 
 ### 11.1 Status
@@ -876,16 +916,24 @@ Boundary-dependent criterion status is frozen as follows:
 | Post-response horizon | Bound met after `d` | Defined `d` but too few opportunities | `d` absent |
 | Fresh baseline selection reproduction | Exact typed result and digest equal the selected discovery entry | Available no-match or any available result/value/sequence/digest mismatch | Required BRAKING-domain front signal missing |
 
-Identity/role/phase criteria are always available after valid compatible capture and therefore
-return only `PASS` or `FAIL`. Fresh selection reproduction follows the explicit availability row
-above. Integrity, compatibility, intrinsic plan validity, and Git operational success are prereq
-planes under §10.6, not criterion rows.
+Identity/role/phase criteria return `PASS` or `FAIL` when every required captured field is
+available. The clean-execution observation is the explicit exception: `repository_dirty=false`
+may pass, `true` fails, and a source-permitted `null` is `NOT_AVAILABLE`; any independent mismatch
+in the same criterion still has `FAIL` precedence. Fresh selection reproduction follows the
+explicit availability row above. Integrity, compatibility, intrinsic plan validity, and Git
+operational success are prerequisite planes under §10.6, not criterion rows.
 
 Existing structural compatibility does not require equal event counts. If the candidate defines
 `c` or `d` after the baseline has terminated, the corresponding arm-alignment criterion is an
 available `FAIL`, producing completed `INADEQUATE` assessment semantics and exit 0—not
 `NOT_AVAILABLE`, unsupported shape, or operational exit 40. Early candidate/baseline termination is
 also evaluated normally by phase, condition, count, alignment, and response-horizon criteria.
+
+The scanner consumes captured configuration only. If the candidate's captured shield
+configuration is absent, it must not fall back to the declared configuration; condition/config-
+dependent rows are `NOT_AVAILABLE` as applicable, while role/config identity remains an available
+`FAIL`. If a runtime-valid captured configuration differs from the declaration, the scanner uses
+the captured values and the identity/configuration criterion fails.
 
 The **new adequacy-core** event algorithm is one monotonically increasing indexed pass over the two
 ordered timelines. It visits each baseline event at most once and each candidate event at most
@@ -984,7 +1032,8 @@ No weighted score or partial-credit total exists.
 The envelope contains:
 
 - Hermes/review schema;
-- observed protocol/pair-plan selections and captured source-byte identities;
+- always-present requested protocol, discovery-ledger, and pair-plan selections plus captured
+  source-byte identities only after plan evaluation;
 - computed source-byte, semantic, discovery-ledger, configuration, and registration digests;
 - assumption-classified claim, criteria, thresholds, grid, and selection rule;
 - registration status, local-history commit references, and the fixed rewritable-history/no-external-
@@ -1003,7 +1052,9 @@ The envelope contains:
 Invalid/incompatible output contains safe identity/diagnostics,
 `adequacy_assessment: null`, and no accepted criteria. Because these states return before plan-file
 capture, they contain only the safely projected requested plan selections; captured plan identities,
-digests, and registration fields are `null` with an explicit `PLAN_NOT_EVALUATED` reason.
+digests, and registration fields are `null` with an explicit typed `PLAN_NOT_EVALUATED` reason of
+`INVALID_EVIDENCE` or `INCOMPATIBLE_EVIDENCE`. The public side records contain no event-bearing or
+plan-shaped assessment facts in any state.
 
 ### 12.3 Public API
 
@@ -1027,7 +1078,10 @@ The public application service owns bounded plan capture and coordinates the exi
 so each artifact side is captured once and the current snapshots are reused, in the frozen order
 below. Once plan capture occurs, it passes a private immutable captured-plan identity to the pure
 assessor. Public callers cannot supply parsed plans, captures, snapshots, registration results, or
-inspector implementations. Do not publicly expose those internals or duplicate path validation.
+inspector implementations. Do not publicly expose those internals. The application service performs
+one non-authoritative, pure lexical screen of all eight arguments before capture; boundary owners
+still perform their existing authoritative no-follow, containment, existence, and mutation checks.
+This syntax screen is not a duplicate authority decision.
 
 `hermes.adequacy.api` constructs the concrete command-specific inspector from
 `hermes.provenance.git` and passes only its immutable result to the non-public assessment helper.
@@ -1039,18 +1093,29 @@ inspection can establish local-history ordering, not origin authenticity.
 
 The application service freezes failure precedence and work order:
 
-1. lexically validate all explicit roots and exact relative selections without discovering files;
-2. capture/verify baseline once, then candidate once; return baseline-first invalid evidence
+1. screen every root and selection for type, nonempty/control/NUL content, canonical lexical root
+   spelling, exact relative selection spelling, traversal, and root-prefix syntax, with no `stat`,
+   `lstat`, `open`, `resolve`, `realpath`, Git import, executable lookup, or directory discovery;
+2. authoritatively validate the artifact root and capture/verify baseline once, then candidate once;
+   return baseline-first invalid evidence
    immediately with exit 30 semantics and no plan/Git operation;
 3. run existing structural compatibility; return incompatible immediately with no plan/Git
    operation;
-4. capture and strictly validate protocol, discovery ledger, and pair plan in that declared order;
-5. resolve the trusted Git executable exactly once immediately before the first Git operation, then
-   run the bounded registration inspection once; and
-6. assess criteria from the already captured snapshots/plans and immutable registration result.
+4. authoritatively capture and strictly validate protocol, discovery ledger, and pair plan in that
+   declared order;
+5. map the already captured snapshots into adequacy-owned observed types; return a typed
+   unsupported-shape service error only for a schema/event structure the V1 mapper cannot consume,
+   never for a representable identity mismatch;
+6. authoritatively validate the repository, resolve the trusted Git executable exactly once
+   immediately before the first Git operation, and run the bounded registration inspection once;
+   and
+7. assess criteria from the already captured snapshots/plans and immutable registration result.
 
 Combined-failure tests prove Git absence/timeout cannot mask invalid-evidence quarantine or
 incompatibility, plan failure cannot trigger Git, and no branch rereads an artifact or plan.
+Malformed lexical syntax wins before capture; invalid baseline wins over missing/symlink plan or
+repository roots; incompatibility wins over plan/repository filesystem defects; invalid plan wins
+over unavailable Git; and the valid path resolves Git exactly once immediately before use.
 
 Registration ordering may be established only by read-only fixed-argument local Git history readback
 under the explicitly supplied canonical `repository_root`. It must prove each captured file matches
@@ -1105,7 +1170,7 @@ uses existing Unicode Cc/Cf neutralization and the 1,024-input-scalar bound with
 |---|---:|
 | Valid `ADEQUATE`, `INADEQUATE`, or `NOT_AVAILABLE` assessment | 0 |
 | Invalid stored artifact | 30 |
-| Incompatible evidence, invalid plan, unsupported shape, operational error | 40 |
+| Incompatible evidence, invalid plan, unsupported evidence schema/event structure, operational error | 40 |
 
 Exit 0 means completed assessment, not passed gate or deployment permission.
 
