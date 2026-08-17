@@ -540,6 +540,51 @@ def test_review_compare_incompatible_is_reason_only_error_exit_40(
     assert result.output.count("\n") == 1
 
 
+def test_review_compare_incompatible_text_stops_after_fixed_limitation_before_error(
+    repository_root: Path,
+) -> None:
+    root = repository_root / "artifacts"
+
+    result = runner.invoke(
+        app,
+        _compare_args(
+            root,
+            "handoff-p3-lead-baseline",
+            "handoff-p3-cutin-baseline",
+            "text",
+        ),
+    )
+
+    assert result.exit_code == 40
+    assert "Compatibility: INCOMPATIBLE" in result.output
+    assert "Incompatibility: scenario digest differs" in result.output
+    assert _NON_CAUSAL_COMPARISON_LIMITATION in result.output
+    assert "[INCOMPATIBLE_EVIDENCE]" in result.output
+    assert result.output.index("Compatibility: INCOMPATIBLE") < result.output.index(
+        "Incompatibility: scenario digest differs"
+    )
+    assert result.output.index("Incompatibility: scenario digest differs") < (
+        result.output.index(_NON_CAUSAL_COMPARISON_LIMITATION)
+    )
+    assert result.output.index(_NON_CAUSAL_COMPARISON_LIMITATION) < result.output.index(
+        "[INCOMPATIBLE_EVIDENCE]"
+    )
+    assert result.output.count(_NON_CAUSAL_COMPARISON_LIMITATION) == 1
+    for forbidden in (
+        "Verdict delta:",
+        "Hard-failure delta:",
+        "Evidence-availability summary delta:",
+        "Improvements:",
+        "Regressions:",
+        "Unchanged outcomes:",
+        "Not comparable:",
+        "Availability details:",
+        "Chart series:",
+        "Residual limitations:",
+    ):
+        assert forbidden not in result.output
+
+
 def test_review_text_neutralizes_all_c0_c1_controls_and_ansi_from_artifact_text(
     repository_root: Path,
     monkeypatch: pytest.MonkeyPatch,

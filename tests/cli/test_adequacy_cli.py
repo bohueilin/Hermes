@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from unicodedata import category as unicode_category
 
 import pytest
 from typer.main import get_command
@@ -504,6 +505,73 @@ def test_assess_adequacy_invalid_format_stops_before_service_call(
     assert "CONFIGURATION_ERROR" in result.output
     assert "unsupported format 'yaml'" in result.output
     assert "service must not run" not in result.output
+
+
+@pytest.mark.parametrize(
+    ("value", "expected", "expects_truncation"),
+    [
+        (
+            "x" * 1_024,
+            "unsupported format '" + "x" * 1_024 + "'",
+            False,
+        ),
+        (
+            "y" * 1_025,
+            (
+                "unsupported format '"
+                + "y" * 1_024
+                + " [truncated=true; original_length=1025]'"
+            ),
+            True,
+        ),
+    ],
+)
+def test_assess_adequacy_invalid_format_uses_exact_input_scalar_bound_before_service(
+    value: str,
+    expected: str,
+    expects_truncation: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def bomb(*_args: object) -> EvaluationAdequacyEnvelope:
+        raise AssertionError("service must not run for an invalid format")
+
+    monkeypatch.setattr(adequacy_api, "assess_review_pair_adequacy", bomb)
+
+    result = runner.invoke(app, _args(output_format=value))
+
+    assert result.exit_code == 40
+    assert "CONFIGURATION_ERROR" in result.output
+    assert expected in result.output
+    assert ("truncated=true" in result.output) is expects_truncation
+    assert "service must not run" not in result.output
+    if expects_truncation:
+        assert value not in result.output
+
+
+def test_assess_adequacy_invalid_format_neutralizes_controls_before_repr_and_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def bomb(*_args: object) -> EvaluationAdequacyEnvelope:
+        raise AssertionError("service must not run for an invalid format")
+
+    monkeypatch.setattr(adequacy_api, "assess_review_pair_adequacy", bomb)
+    value = "bad\x00\t\n\r\x1b\u202e\u2066"
+
+    result = runner.invoke(app, _args(output_format=value))
+
+    assert result.exit_code == 40
+    assert (
+        r"unsupported format 'bad\\u0000\\u0009\\u000A\\u000D"
+        r"\\u001B\\u202E\\u2066'"
+    ) in result.output
+    assert "service must not run" not in result.output
+    assert "\u202e" not in result.output
+    assert "\u2066" not in result.output
+    for character in result.output:
+        codepoint = ord(character)
+        assert character == "\n" or unicode_category(character) not in {"Cc", "Cf"}, (
+            codepoint
+        )
 
 
 def test_assess_adequacy_text_renders_all_planes_ordered_criteria_and_inert_bounds(

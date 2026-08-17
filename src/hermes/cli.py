@@ -690,6 +690,8 @@ def _render_comparison_envelope_text(envelope: object) -> None:
     for warning in envelope.compatibility.warnings:
         console.print("Compatibility warning: " + _bounded_artifact_text(warning))
     console.print(_NON_CAUSAL_COMPARISON_LIMITATION)
+    if envelope.compatibility.status == "INCOMPATIBLE":
+        return
     console.print("Verdict delta: " + _review_record_json(envelope.verdict_delta))
     console.print(
         "Hard-failure delta: " + _review_record_json(envelope.hard_failure_delta)
@@ -717,7 +719,7 @@ def _review_format_or_error(output_format: str) -> None:
     if output_format not in {"text", "json"}:
         _raise_cli_error(
             CliErrorCode.CONFIGURATION_ERROR,
-            f"unsupported format {output_format!r}",
+            f"unsupported format {_bounded_artifact_text(output_format)!r}",
         )
 
 
