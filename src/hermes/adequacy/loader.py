@@ -348,8 +348,7 @@ def _semantic_digest_ledger(records: tuple[DiscoveryLedgerEntry, ...]) -> str:
 
 
 def _selection_digest(entry: DiscoveryLedgerEntry) -> str:
-    payload = [item.model_dump(mode="json") for item in entry.selection_observations]
-    return hashlib.sha256(_canonical_payload(payload)).hexdigest()
+    return hashlib.sha256(canonical_adequacy_json_bytes(entry.selection_evidence)).hexdigest()
 
 
 def _validate_discovery_grid(
@@ -378,8 +377,20 @@ def _validate_discovery_grid(
             raise InvalidPlanError("discovery selection rank or tie breaker is inconsistent")
         if entry.selection.status == "SELECTED":
             selected_indices.append(index)
-        derived_validity = _derive_and_validate_discovery_validity(protocol, entry)
-        _validate_ttc_selection_observation(protocol, entry, derived_validity)
+        selection_inputs = _selection_rule_inputs(protocol, entry)
+        derived_validity = _derive_and_validate_discovery_validity(
+            protocol,
+            entry,
+            selection_inputs,
+        )
+        eligible = (
+            selection_inputs["SELECTION_EVIDENCE_OBSERVED"]
+            and selection_inputs["SELECTION_EVIDENCE_THRESHOLD_MATCHED"]
+        )
+        if (derived_validity or entry.selection.status == "SELECTED") and not eligible:
+            raise InvalidPlanError(
+                "valid or selected discovery attempt requires observed threshold-matched evidence"
+            )
         if first_valid_index is None and derived_validity:
             first_valid_index = index
     if len(selected_indices) != 1 or selected_indices[0] != first_valid_index:
@@ -432,14 +443,45 @@ def _rule_matches(observed: object, operator: str, expected: object) -> bool:
     raise InvalidPlanError("ordered plan rule has an unsupported operator")
 
 
+def _selection_rule_inputs(
+    protocol: StudyProtocol,
+    entry: DiscoveryLedgerEntry,
+) -> dict[str, bool]:
+    definition = protocol.selection_evidence
+    evidence = entry.selection_evidence
+    available = evidence.status == "AVAILABLE"
+    observed = evidence.outcome == "OBSERVED"
+    threshold_matched = False
+    if observed:
+        observation = evidence.observations[0]
+        if (
+            observation.observation_id != definition.observation_id
+            or observation.unit != definition.unit
+            or observation.operator != definition.operator
+            or observation.sequence is None
+            or type(observation.machine_value) is not float
+            or type(observation.threshold_machine_value) is not float
+            or _canonical_payload(observation.threshold_machine_value)
+            != _canonical_payload(protocol.criteria.policy_input_ttc_lte_s)
+        ):
+            raise InvalidPlanError("discovery selection evidence contradicts its definition")
+        threshold_matched = (
+            observation.machine_value <= protocol.criteria.policy_input_ttc_lte_s
+        )
+    return {
+        "SELECTION_EVIDENCE_AVAILABLE": available,
+        "SELECTION_EVIDENCE_OBSERVED": observed,
+        "SELECTION_EVIDENCE_THRESHOLD_MATCHED": threshold_matched,
+    }
+
+
 def _derive_and_validate_discovery_validity(
-    protocol: StudyProtocol, entry: DiscoveryLedgerEntry
+    protocol: StudyProtocol,
+    entry: DiscoveryLedgerEntry,
+    selection_inputs: dict[str, bool],
 ) -> bool:
     observations: dict[str, object] = {"INTEGRITY": entry.verification_status}
-    observations.update(
-        (observation.observation_id, observation.machine_value)
-        for observation in entry.selection_observations
-    )
+    observations.update(selection_inputs)
 
     validity_matches: list[bool] = []
     for rule in protocol.valid_run_rules:
@@ -488,29 +530,6 @@ def _derive_and_validate_discovery_validity(
     ):
         raise InvalidPlanError("discovery exclusion contradicts ordered protocol rules")
     return derived_validity
-
-
-def _validate_ttc_selection_observation(
-    protocol: StudyProtocol, entry: DiscoveryLedgerEntry, valid_run: bool
-) -> None:
-    observations = tuple(
-        observation
-        for observation in entry.selection_observations
-        if observation.observation_id == "minimum_policy_input_ttc_s"
-    )
-    if valid_run and len(observations) != 1:
-        raise InvalidPlanError("valid discovery attempt lacks its unique TTC observation")
-    for observation in observations:
-        machine_value = observation.machine_value
-        if (
-            isinstance(machine_value, bool)
-            or not isinstance(machine_value, (int, float))
-            or observation.unit != "s"
-            or observation.operator != "LTE"
-            or _canonical_payload(observation.threshold_machine_value)
-            != _canonical_payload(protocol.criteria.policy_input_ttc_lte_s)
-        ):
-            raise InvalidPlanError("discovery TTC observation contradicts protocol criteria")
 
 
 def _validate_cross_record(

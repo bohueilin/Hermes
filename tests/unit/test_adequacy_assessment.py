@@ -13,6 +13,7 @@ from hermes.adequacy.assessment import (
 )
 from hermes.adequacy.models import (
     MAX_CRITERION_REFERENCES,
+    SELECTION_EVIDENCE_MISSING_REASON,
     ActionCommand,
     AdequacyAssessment,
     AdequacyCriterion,
@@ -34,7 +35,7 @@ from hermes.adequacy.models import (
     PlannedExecution,
     RegistrationLocation,
     RunValidityRule,
-    SelectionObservation,
+    SelectionEvidenceDefinition,
     SelectionRule,
     ShieldConfiguration,
     StudyProtocol,
@@ -90,6 +91,29 @@ def _configuration_digest(configuration: ShieldConfiguration) -> str:
     return hashlib.sha256(canonical_adequacy_json_bytes(configuration)).hexdigest()
 
 
+def _selection_evidence_definition() -> SelectionEvidenceDefinition:
+    return SelectionEvidenceDefinition(
+        schema_version="1.0",
+        observation_id="minimum_policy_input_ttc_s",
+        event_domain="BRAKING_POLICY_INPUT_EVENTS",
+        required_signals="FRONT_DISTANCE_AND_RELATIVE_SPEED",
+        closing_condition="FRONT_RELATIVE_SPEED_LT_ZERO",
+        value_expression="FRONT_DISTANCE_DIVIDED_BY_NEGATED_RELATIVE_SPEED",
+        aggregation="MINIMUM",
+        sequence_tie_breaker="EARLIEST_SEQUENCE",
+        unit="s",
+        operator="LTE",
+        threshold_source="criteria.policy_input_ttc_lte_s",
+        source_file="events.jsonl",
+        source_json_pointers=(
+            "/sequence",
+            "/observation_summary/challenge_phase",
+            "/observation_summary/front_distance_m",
+            "/observation_summary/front_relative_speed_mps",
+        ),
+    )
+
+
 def _protocol(
     *,
     minimum_phase_samples_per_arm: int = 2,
@@ -115,6 +139,7 @@ def _protocol(
             minimum_post_response_decision_steps=minimum_post_response_decision_steps,
             actuation_delay_compensation_s=0.0,
         ),
+        selection_evidence=_selection_evidence_definition(),
         baseline_grid=(
             GridDimension(
                 parameter="initial_gap_m",
@@ -250,19 +275,6 @@ def _engagement_events(
     return tuple(events)
 
 
-def _selection_observation() -> SelectionObservation:
-    return SelectionObservation(
-        observation_id="minimum_policy_input_ttc_s",
-        machine_value=2.0,
-        canonical_value="2.0",
-        display_value="2.0",
-        unit="s",
-        operator="LTE",
-        threshold_machine_value=2.0,
-        sequence=31,
-    )
-
-
 def _side(
     role: str,
     events: tuple[AssessmentEvent, ...],
@@ -315,8 +327,6 @@ def _side(
         seed=7,
         control_frequency_hz=10,
         horizon_steps=horizon_steps or max(len(events), 1),
-        fresh_selection_observations=(_selection_observation(),),
-        fresh_selection_evidence_sha256=_DIGEST_A,
         events=events,
     )
 
@@ -385,6 +395,26 @@ def test_exact_phase_entry_divergence_and_scan_endpoints() -> None:
     assert exposure.observation is not None
     assert exposure.observation.machine_value == 2.0
     assert exposure.observation.unit == "s"
+    assert scan.baseline_selection_evidence.model_dump(mode="json") == {
+        "status": "AVAILABLE",
+        "outcome": "OBSERVED",
+        "observations": [
+            {
+                "observation_id": "minimum_policy_input_ttc_s",
+                "machine_value": 2.0,
+                "canonical_value": "2.0",
+                "display_value": "2.0",
+                "unit": "s",
+                "operator": "LTE",
+                "threshold_machine_value": 2.0,
+                "sequence": 31,
+            }
+        ],
+        "unavailable_reason": None,
+    }
+    assert scan.baseline_selection_evidence_sha256 == hashlib.sha256(
+        canonical_adequacy_json_bytes(scan.baseline_selection_evidence)
+    ).hexdigest()
 
 
 def test_zero_sequence_condition_and_divergence_have_explicit_empty_ranges() -> None:
@@ -520,6 +550,111 @@ def test_missing_front_signals_are_distinct_from_available_nonclosing_evidence(
     )
     assert scan.assessment.status is AdequacyStatus.INADEQUATE
     assert scan.assessment.observation_disposition is expected_disposition
+
+
+def test_baseline_selection_derivation_uses_finite_minimum_and_earliest_tie() -> None:
+    events = (
+        _event(0, phase="BRAKING", distance=3.0),
+        _event(1, phase="BRAKING", distance=1.5),
+        _event(2, phase="BRAKING", distance=1.5),
+        _event(3, phase="BRAKING", distance=2.0, relative_speed=0.0),
+    )
+
+    scan = _scan_lead_ttc_adequacy(
+        _protocol(),
+        _side("BASELINE", events),
+        _side("CANDIDATE", events),
+    )
+
+    evidence = scan.baseline_selection_evidence
+    assert (evidence.status, evidence.outcome, evidence.unavailable_reason) == (
+        "AVAILABLE",
+        "OBSERVED",
+        None,
+    )
+    assert len(evidence.observations) == 1
+    observation = evidence.observations[0]
+    assert (observation.machine_value, observation.sequence) == (1.5, 1)
+    assert observation.canonical_value == observation.display_value == "1.5"
+    assert scan.baseline_selection_evidence_sha256 == hashlib.sha256(
+        canonical_adequacy_json_bytes(evidence)
+    ).hexdigest()
+
+
+def test_baseline_selection_missing_signal_is_sticky_over_finite_observations() -> None:
+    baseline = (
+        _event(0, phase="BRAKING", distance=1.5),
+        _event(1, phase="BRAKING", distance=None, relative_speed=None),
+        _event(2, phase="BRAKING", distance=1.0),
+    )
+
+    scan = _scan_lead_ttc_adequacy(
+        _protocol(),
+        _side("BASELINE", baseline),
+        _side("CANDIDATE", baseline),
+    )
+
+    evidence = scan.baseline_selection_evidence
+    assert evidence.status == "NOT_AVAILABLE"
+    assert evidence.outcome == "REQUIRED_SIGNAL_MISSING"
+    assert evidence.observations == ()
+    assert evidence.unavailable_reason == SELECTION_EVIDENCE_MISSING_REASON
+
+
+@pytest.mark.parametrize(
+    ("distance", "relative_speed"),
+    ((10.0, 0.0), (1e308, -5e-324)),
+)
+def test_baseline_selection_available_no_finite_closing_ttc_never_serializes_infinity(
+    distance: float,
+    relative_speed: float,
+) -> None:
+    events = tuple(
+        _event(
+            sequence,
+            phase="BRAKING",
+            distance=distance,
+            relative_speed=relative_speed,
+        )
+        for sequence in range(3)
+    )
+    scan = _scan_lead_ttc_adequacy(
+        _protocol(),
+        _side("BASELINE", events),
+        _side("CANDIDATE", events),
+    )
+
+    evidence = scan.baseline_selection_evidence
+    assert evidence.status == "AVAILABLE"
+    assert evidence.outcome == "NO_FINITE_CLOSING_TTC"
+    assert evidence.observations == ()
+    assert evidence.unavailable_reason is None
+    assert b"Infinity" not in canonical_adequacy_json_bytes(evidence)
+
+
+def test_baseline_selection_empty_state_digests_are_distinct() -> None:
+    missing_events = tuple(
+        _event(sequence, phase="BRAKING", distance=None, relative_speed=None)
+        for sequence in range(2)
+    )
+    nonclosing_events = tuple(
+        _event(sequence, phase="BRAKING", distance=10.0, relative_speed=0.0)
+        for sequence in range(2)
+    )
+    missing = _scan_lead_ttc_adequacy(
+        _protocol(),
+        _side("BASELINE", missing_events),
+        _side("CANDIDATE", missing_events),
+    )
+    nonclosing = _scan_lead_ttc_adequacy(
+        _protocol(),
+        _side("BASELINE", nonclosing_events),
+        _side("CANDIDATE", nonclosing_events),
+    )
+
+    assert missing.baseline_selection_evidence_sha256 != (
+        nonclosing.baseline_selection_evidence_sha256
+    )
 
 
 @pytest.mark.parametrize(
@@ -1042,6 +1177,7 @@ def test_ten_thousand_event_boundary_is_one_pass_and_references_are_bounded() ->
     assert scan.baseline_event_visits == 10_000
     assert scan.candidate_event_visits == 10_000
     assert scan.baseline_event_visits + scan.candidate_event_visits <= 20_000
+    assert scan.baseline_selection_evidence.observations[0].sequence == 9_998
     prefix = _criterion(scan.assessment, "common_prefix_equality")
     assert prefix.status is CriterionStatus.FAIL
     assert prefix.observation is not None

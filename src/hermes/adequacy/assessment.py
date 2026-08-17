@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import math
 import struct
 from dataclasses import dataclass, field
 
 from hermes.adequacy.models import (
     MAX_CRITERION_REFERENCES,
+    SELECTION_EVIDENCE_MISSING_REASON,
     ActionCommand,
     AdequacyAssessment,
     AdequacyCriterion,
@@ -19,10 +21,13 @@ from hermes.adequacy.models import (
     JsonScalar,
     ObservationDisposition,
     Role,
+    SelectionEvidence,
+    SelectionObservation,
     ShieldConfiguration,
     StudyProtocol,
     _canonical_json_data,
     aggregate_adequacy_status,
+    canonical_adequacy_json_bytes,
 )
 
 _TARGET_REASON = "TTC_BELOW_THRESHOLD"
@@ -50,6 +55,8 @@ class _ScanResult:
     precondition_events_examined: int
     baseline_event_visits: int
     candidate_event_visits: int
+    baseline_selection_evidence: SelectionEvidence
+    baseline_selection_evidence_sha256: str
 
 
 @dataclass(slots=True)
@@ -171,6 +178,32 @@ def _input_ttc(event: AssessmentEvent) -> float | None:
         return None
     ttc_s = distance / -relative_speed
     return ttc_s if math.isfinite(ttc_s) else None
+
+
+def _observed_selection_evidence(
+    protocol: StudyProtocol,
+    machine_value: float,
+    sequence: int,
+) -> SelectionEvidence:
+    definition = protocol.selection_evidence
+    canonical_value = _canonical_json_data(machine_value).decode("utf-8")
+    return SelectionEvidence(
+        status="AVAILABLE",
+        outcome="OBSERVED",
+        observations=(
+            SelectionObservation(
+                observation_id=definition.observation_id,
+                machine_value=machine_value,
+                canonical_value=canonical_value,
+                display_value=canonical_value,
+                unit=definition.unit,
+                operator=definition.operator,
+                threshold_machine_value=protocol.criteria.policy_input_ttc_lte_s,
+                sequence=sequence,
+            ),
+        ),
+        unavailable_reason=None,
+    )
 
 
 def _same_prefix_event(
@@ -370,6 +403,9 @@ def _scan_lead_ttc_adequacy(
     candidate_phase_count = 0
     baseline_event_visits = 0
     candidate_event_visits = 0
+    baseline_selection_signal_missing = False
+    baseline_selection_minimum_ttc: float | None = None
+    baseline_selection_sequence: int | None = None
     condition_sequence: int | None = None
     divergence_sequence: int | None = None
     condition_match_count = 0
@@ -407,6 +443,17 @@ def _scan_lead_ttc_adequacy(
                         "/observation_summary/challenge_phase",
                     )
                 )
+                if (
+                    baseline_event.front_distance_m is None
+                    or baseline_event.front_relative_speed_mps is None
+                ):
+                    baseline_selection_signal_missing = True
+                elif baseline_ttc is not None and (
+                    baseline_selection_minimum_ttc is None
+                    or baseline_ttc < baseline_selection_minimum_ttc
+                ):
+                    baseline_selection_minimum_ttc = baseline_ttc
+                    baseline_selection_sequence = baseline_event.sequence
 
         divergence_before_event = divergence_sequence
         if candidate_event is not None:
@@ -574,6 +621,32 @@ def _scan_lead_ttc_adequacy(
         elif divergence_before_event is None:
             prefix_mismatch_count += pending_tail_mismatch_count
             prefix_references.extend(pending_tail_references)
+
+    if baseline_selection_signal_missing:
+        baseline_selection_evidence = SelectionEvidence(
+            status="NOT_AVAILABLE",
+            outcome="REQUIRED_SIGNAL_MISSING",
+            observations=(),
+            unavailable_reason=SELECTION_EVIDENCE_MISSING_REASON,
+        )
+    elif baseline_selection_minimum_ttc is None:
+        baseline_selection_evidence = SelectionEvidence(
+            status="AVAILABLE",
+            outcome="NO_FINITE_CLOSING_TTC",
+            observations=(),
+            unavailable_reason=None,
+        )
+    else:
+        if baseline_selection_sequence is None:  # pragma: no cover - invariant guard
+            raise ValueError("finite baseline selection TTC requires its event sequence")
+        baseline_selection_evidence = _observed_selection_evidence(
+            protocol,
+            baseline_selection_minimum_ttc,
+            baseline_selection_sequence,
+        )
+    baseline_selection_evidence_sha256 = hashlib.sha256(
+        canonical_adequacy_json_bytes(baseline_selection_evidence)
+    ).hexdigest()
 
     prefix_endpoint = (
         divergence_sequence - 1
@@ -945,4 +1018,6 @@ def _scan_lead_ttc_adequacy(
         precondition_events_examined=precondition_events_examined,
         baseline_event_visits=baseline_event_visits,
         candidate_event_visits=candidate_event_visits,
+        baseline_selection_evidence=baseline_selection_evidence,
+        baseline_selection_evidence_sha256=baseline_selection_evidence_sha256,
     )

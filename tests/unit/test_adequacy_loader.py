@@ -21,6 +21,9 @@ from hermes.adequacy.loader import (
 )
 
 _EMPTY_CONFIG_SHA256 = "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+_MISSING_SELECTION_REASON = (
+    "A BRAKING policy-input event lacks paired front distance and relative speed."
+)
 
 
 def _sha(payload: bytes) -> str:
@@ -29,6 +32,29 @@ def _sha(payload: bytes) -> str:
 
 def _canonical(value: object) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+
+
+def _observed_selection_evidence(
+    *, value: float = 1.5, sequence: int = 35, threshold: float = 2.0
+) -> dict[str, object]:
+    canonical_value = json.dumps(value, allow_nan=False, separators=(",", ":"))
+    return {
+        "status": "AVAILABLE",
+        "outcome": "OBSERVED",
+        "observations": [
+            {
+                "observation_id": "minimum_policy_input_ttc_s",
+                "machine_value": value,
+                "canonical_value": canonical_value,
+                "display_value": canonical_value,
+                "unit": "s",
+                "operator": "LTE",
+                "threshold_machine_value": threshold,
+                "sequence": sequence,
+            }
+        ],
+        "unavailable_reason": None,
+    }
 
 
 def _protocol_payload() -> dict[str, object]:
@@ -50,6 +76,26 @@ def _protocol_payload() -> dict[str, object]:
             "minimum_post_response_decision_steps": 1,
             "actuation_delay_compensation_s": 0.0,
         },
+        "selection_evidence": {
+            "schema_version": "1.0",
+            "observation_id": "minimum_policy_input_ttc_s",
+            "event_domain": "BRAKING_POLICY_INPUT_EVENTS",
+            "required_signals": "FRONT_DISTANCE_AND_RELATIVE_SPEED",
+            "closing_condition": "FRONT_RELATIVE_SPEED_LT_ZERO",
+            "value_expression": "FRONT_DISTANCE_DIVIDED_BY_NEGATED_RELATIVE_SPEED",
+            "aggregation": "MINIMUM",
+            "sequence_tie_breaker": "EARLIEST_SEQUENCE",
+            "unit": "s",
+            "operator": "LTE",
+            "threshold_source": "criteria.policy_input_ttc_lte_s",
+            "source_file": "events.jsonl",
+            "source_json_pointers": [
+                "/sequence",
+                "/observation_summary/challenge_phase",
+                "/observation_summary/front_distance_m",
+                "/observation_summary/front_relative_speed_mps",
+            ],
+        },
         "baseline_grid": [
             {
                 "parameter": "initial_gap_m",
@@ -69,7 +115,25 @@ def _protocol_payload() -> dict[str, object]:
                 "observation": "INTEGRITY",
                 "operator": "EQ",
                 "expected_value": "INTERNALLY_CONSISTENT",
-            }
+            },
+            {
+                "rule_id": "SELECTION_EVIDENCE_AVAILABLE",
+                "observation": "SELECTION_EVIDENCE_AVAILABLE",
+                "operator": "EQ",
+                "expected_value": True,
+            },
+            {
+                "rule_id": "SELECTION_EVIDENCE_OBSERVED",
+                "observation": "SELECTION_EVIDENCE_OBSERVED",
+                "operator": "EQ",
+                "expected_value": True,
+            },
+            {
+                "rule_id": "SELECTION_EVIDENCE_THRESHOLD_MATCHED",
+                "observation": "SELECTION_EVIDENCE_THRESHOLD_MATCHED",
+                "operator": "EQ",
+                "expected_value": True,
+            },
         ],
         "exclusion_rules": [
             {
@@ -77,7 +141,25 @@ def _protocol_payload() -> dict[str, object]:
                 "observation": "INTEGRITY",
                 "operator": "EQ",
                 "excluded_value": "INVALID_EVIDENCE",
-            }
+            },
+            {
+                "rule_id": "SELECTION_EVIDENCE_NOT_AVAILABLE",
+                "observation": "SELECTION_EVIDENCE_AVAILABLE",
+                "operator": "EQ",
+                "excluded_value": False,
+            },
+            {
+                "rule_id": "SELECTION_EVIDENCE_NOT_OBSERVED",
+                "observation": "SELECTION_EVIDENCE_OBSERVED",
+                "operator": "EQ",
+                "excluded_value": False,
+            },
+            {
+                "rule_id": "SELECTION_EVIDENCE_THRESHOLD_NOT_MATCHED",
+                "observation": "SELECTION_EVIDENCE_THRESHOLD_MATCHED",
+                "operator": "EQ",
+                "excluded_value": False,
+            },
         ],
         "materializer": {
             "version": "1.0",
@@ -157,17 +239,8 @@ def _write_valid_plans(root: Path) -> tuple[str, str, str]:
     protocol_bytes = yaml.safe_dump(protocol_payload, allow_unicode=True, sort_keys=False).encode()
     (root / protocol_selection).write_bytes(protocol_bytes)
     protocol_semantic = _sha(_canonical(protocol_payload))
-    observation = {
-        "observation_id": "minimum_policy_input_ttc_s",
-        "machine_value": 1.5,
-        "canonical_value": "1.5",
-        "display_value": "1.5",
-        "unit": "s",
-        "operator": "LTE",
-        "threshold_machine_value": 2.0,
-        "sequence": 35,
-    }
-    selection_digest = _sha(_canonical([observation]))
+    selection_evidence = _observed_selection_evidence()
+    selection_digest = _sha(_canonical(selection_evidence))
     digest = "a" * 64
     candidate = protocol_payload["candidate_shield"]
     assert isinstance(candidate, dict)
@@ -198,7 +271,7 @@ def _write_valid_plans(root: Path) -> tuple[str, str, str]:
         "bundle_digest_sha256": digest,
         "trace_digest_sha256": digest,
         "verification_status": "INTERNALLY_CONSISTENT",
-        "selection_observations": [observation],
+        "selection_evidence": selection_evidence,
         "selection_evidence_sha256": selection_digest,
         "exclusion": {
             "valid_run": True,
@@ -296,9 +369,7 @@ def _write_plan_payloads(
     for entry in ledger:
         entry["protocol_byte_digest_sha256"] = protocol_byte_digest
         entry["protocol_semantic_digest_sha256"] = protocol_semantic_digest
-        entry["selection_evidence_sha256"] = _sha(
-            _canonical(entry["selection_observations"])
-        )
+        entry["selection_evidence_sha256"] = _sha(_canonical(entry["selection_evidence"]))
     ledger_bytes = b"".join(_canonical(entry) + b"\n" for entry in ledger)
     pair["protocol_byte_digest_sha256"] = protocol_byte_digest
     pair["protocol_semantic_digest_sha256"] = protocol_semantic_digest
@@ -751,30 +822,30 @@ def test_discovery_validity_is_derived_from_protocol_rules_and_recorded_observat
         exclusion_rules = protocol["exclusion_rules"]
         assert isinstance(exclusion_rules, list)
         exclusion_rules[0] = {
-            "rule_id": "TTC_IN_BAND",
-            "observation": "minimum_policy_input_ttc_s",
-            "operator": "LTE",
-            "excluded_value": 2.0,
+            "rule_id": "OBSERVED_EVIDENCE",
+            "observation": "SELECTION_EVIDENCE_OBSERVED",
+            "operator": "EQ",
+            "excluded_value": True,
         }
     else:
         protocol["exclusion_rules"] = [
             {
-                "rule_id": "TTC_FIRST",
-                "observation": "minimum_policy_input_ttc_s",
-                "operator": "LTE",
-                "excluded_value": 2.0,
+                "rule_id": "OBSERVED_FIRST",
+                "observation": "SELECTION_EVIDENCE_OBSERVED",
+                "operator": "EQ",
+                "excluded_value": True,
             },
             {
-                "rule_id": "TTC_SECOND",
-                "observation": "minimum_policy_input_ttc_s",
-                "operator": "LTE",
-                "excluded_value": 3.0,
+                "rule_id": "THRESHOLD_SECOND",
+                "observation": "SELECTION_EVIDENCE_THRESHOLD_MATCHED",
+                "operator": "EQ",
+                "excluded_value": True,
             },
         ]
         ledger[0]["exclusion"] = {
             "valid_run": False,
             "disposition": "EXCLUDED",
-            "rule_id": "TTC_SECOND",
+            "rule_id": "THRESHOLD_SECOND",
             "rationale": "skipped first matching rule",
         }
         ledger[0]["selection"]["status"] = "NOT_SELECTED"
@@ -801,6 +872,156 @@ def test_declared_invalid_evidence_exclusion_selects_next_valid_grid_attempt(
     _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
     result = capture_evaluation_plans(tmp_path, *selections)
     assert result.pair_plan.expected_pair.selected_discovery_attempt_id == "attempt-0002"
+
+
+@pytest.mark.parametrize(
+    ("selection_evidence", "rule_id"),
+    (
+        (
+            {
+                "status": "AVAILABLE",
+                "outcome": "NO_FINITE_CLOSING_TTC",
+                "observations": [],
+                "unavailable_reason": None,
+            },
+            "SELECTION_EVIDENCE_NOT_OBSERVED",
+        ),
+        (
+            {
+                "status": "NOT_AVAILABLE",
+                "outcome": "REQUIRED_SIGNAL_MISSING",
+                "observations": [],
+                "unavailable_reason": _MISSING_SELECTION_REASON,
+            },
+            "SELECTION_EVIDENCE_NOT_AVAILABLE",
+        ),
+        (
+            _observed_selection_evidence(value=2.5),
+            "SELECTION_EVIDENCE_THRESHOLD_NOT_MATCHED",
+        ),
+    ),
+)
+def test_typed_empty_selection_states_are_excluded_and_next_grid_attempt_is_selected(
+    tmp_path: Path,
+    selection_evidence: dict[str, object],
+    rule_id: str,
+) -> None:
+    selections = _write_valid_plans(tmp_path)
+    protocol, ledger, pair = _two_attempt_grid(tmp_path, selections)
+    ledger[0]["selection_evidence"] = selection_evidence
+    ledger[0]["exclusion"] = {
+        "valid_run": False,
+        "disposition": "EXCLUDED",
+        "rule_id": rule_id,
+        "rationale": "derived typed selection evidence is excluded",
+    }
+    ledger[0]["selection"]["status"] = "NOT_SELECTED"
+    ledger[1]["selection"]["status"] = "SELECTED"
+    _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
+
+    result = capture_evaluation_plans(tmp_path, *selections)
+
+    assert result.ledger[0].selection_evidence.outcome == selection_evidence["outcome"]
+    assert result.pair_plan.expected_pair.selected_discovery_attempt_id == "attempt-0002"
+
+
+def test_selected_discovery_attempt_requires_observed_threshold_match_even_if_rules_omit_it(
+    tmp_path: Path,
+) -> None:
+    selections = _write_valid_plans(tmp_path)
+    protocol, ledger, pair = _load_plan_payloads(tmp_path, selections)
+    valid_rules = protocol["valid_run_rules"]
+    exclusion_rules = protocol["exclusion_rules"]
+    assert isinstance(valid_rules, list)
+    assert isinstance(exclusion_rules, list)
+    protocol["valid_run_rules"] = [
+        rule
+        for rule in valid_rules
+        if rule["observation"] != "SELECTION_EVIDENCE_THRESHOLD_MATCHED"
+    ]
+    protocol["exclusion_rules"] = [
+        rule
+        for rule in exclusion_rules
+        if rule["observation"] != "SELECTION_EVIDENCE_THRESHOLD_MATCHED"
+    ]
+    ledger[0]["selection_evidence"] = _observed_selection_evidence(value=2.5)
+    _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
+
+    with pytest.raises(InvalidPlanError, match="threshold-matched"):
+        capture_evaluation_plans(tmp_path, *selections)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("observation_id", "different_observation"),
+        ("unit", "ms"),
+        ("operator", "GTE"),
+        ("threshold_machine_value", 1.9),
+        ("sequence", None),
+    ),
+)
+def test_selection_observation_must_match_the_protocol_definition(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    selections = _write_valid_plans(tmp_path)
+    protocol, ledger, pair = _load_plan_payloads(tmp_path, selections)
+    evidence = ledger[0]["selection_evidence"]
+    assert isinstance(evidence, dict)
+    observations = evidence["observations"]
+    assert isinstance(observations, list)
+    observation = observations[0]
+    assert isinstance(observation, dict)
+    observation[field] = value
+    _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
+
+    with pytest.raises(InvalidPlanError):
+        capture_evaluation_plans(tmp_path, *selections)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ("value", "sequence", "status", "outcome", "digest"),
+)
+def test_selection_evidence_result_and_complete_digest_are_cross_record_validated(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    selections = _write_valid_plans(tmp_path)
+    protocol, ledger, pair = _load_plan_payloads(tmp_path, selections)
+    _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
+    protocol, ledger, pair = _load_plan_payloads(tmp_path, selections)
+    evidence = ledger[0]["selection_evidence"]
+    assert isinstance(evidence, dict)
+    observations = evidence["observations"]
+    assert isinstance(observations, list)
+    observation = observations[0]
+    assert isinstance(observation, dict)
+    if mutation == "value":
+        observation.update(machine_value=1.25, canonical_value="1.25", display_value="1.25")
+    elif mutation == "sequence":
+        observation["sequence"] = 36
+    elif mutation == "status":
+        evidence["status"] = "NOT_AVAILABLE"
+    elif mutation == "outcome":
+        evidence["outcome"] = "NO_FINITE_CLOSING_TTC"
+    if mutation == "digest":
+        ledger[0]["selection_evidence_sha256"] = "b" * 64
+        expected_pair = pair["expected_pair"]
+        assert isinstance(expected_pair, dict)
+        expected_pair["selected_discovery_selection_evidence_sha256"] = "b" * 64
+    tampered_bytes = b"".join(_canonical(entry) + b"\n" for entry in ledger)
+    (tmp_path / selections[1]).write_bytes(tampered_bytes)
+    pair["discovery_ledger_byte_digest_sha256"] = _sha(tampered_bytes)
+    pair["discovery_ledger_semantic_digest_sha256"] = _sha(_canonical(ledger))
+    (tmp_path / selections[2]).write_text(
+        yaml.safe_dump(pair, allow_unicode=True, sort_keys=False), encoding="utf-8"
+    )
+
+    with pytest.raises(InvalidPlanError):
+        capture_evaluation_plans(tmp_path, *selections)
 
 
 @pytest.mark.parametrize(
@@ -853,7 +1074,7 @@ def test_cross_record_rejects_rebound_but_semantically_contradictory_plans(
         assert isinstance(environment, dict)
         environment["hermes_version"] = "0.2.0"
     elif contradiction == "ledger_ttc_threshold":
-        ledger[0]["selection_observations"][0]["threshold_machine_value"] = 1.9
+        ledger[0]["selection_evidence"]["observations"][0]["threshold_machine_value"] = 1.9
     else:
         expected_pair["baseline_shield_config_digest_sha256"] = "b" * 64
     _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
@@ -990,7 +1211,7 @@ def test_huge_json_integer_scalar_is_rejected(tmp_path: Path) -> None:
 def test_jsonl_rejects_negative_zero_even_when_pair_digests_are_rebound(tmp_path: Path) -> None:
     selections = _write_valid_plans(tmp_path)
     protocol, ledger, pair = _load_plan_payloads(tmp_path, selections)
-    ledger[0]["selection_observations"][0]["threshold_machine_value"] = -0.0
+    ledger[0]["selection_evidence"]["observations"][0]["threshold_machine_value"] = -0.0
     _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
     with pytest.raises(InvalidPlanError):
         capture_evaluation_plans(tmp_path, *selections)

@@ -30,6 +30,16 @@ GridValue: TypeAlias = int | float
 
 LOCAL_HISTORY_LIMITATION = "Rewritable local history; no external timestamp."
 MAX_CRITERION_REFERENCES = 8
+SELECTION_EVIDENCE_MISSING_REASON = (
+    "A BRAKING policy-input event lacks paired front distance and relative speed."
+)
+
+_SELECTION_EVIDENCE_SOURCE_POINTERS = (
+    "/sequence",
+    "/observation_summary/challenge_phase",
+    "/observation_summary/front_distance_m",
+    "/observation_summary/front_relative_speed_mps",
+)
 
 _OVERRIDE_REASON_ORDER = {
     "TTC_BELOW_THRESHOLD": 0,
@@ -116,6 +126,32 @@ class CriterionDefinition(_AdequacyModel):
     prohibit_non_target_reasons_through_first_target_response: Literal[True]
     minimum_post_response_decision_steps: NonNegativeInt
     actuation_delay_compensation_s: Literal[0.0]
+
+
+class SelectionEvidenceDefinition(_AdequacyModel):
+    """Protocol-owned v1 derivation for baseline discovery evidence."""
+
+    schema_version: Literal["1.0"]
+    observation_id: Literal["minimum_policy_input_ttc_s"]
+    event_domain: Literal["BRAKING_POLICY_INPUT_EVENTS"]
+    required_signals: Literal["FRONT_DISTANCE_AND_RELATIVE_SPEED"]
+    closing_condition: Literal["FRONT_RELATIVE_SPEED_LT_ZERO"]
+    value_expression: Literal["FRONT_DISTANCE_DIVIDED_BY_NEGATED_RELATIVE_SPEED"]
+    aggregation: Literal["MINIMUM"]
+    sequence_tie_breaker: Literal["EARLIEST_SEQUENCE"]
+    unit: Literal["s"]
+    operator: Literal["LTE"]
+    threshold_source: Literal["criteria.policy_input_ttc_lte_s"]
+    source_file: Literal["events.jsonl"]
+    source_json_pointers: Annotated[
+        tuple[NonEmptyString, ...], Field(min_length=4, max_length=4)
+    ]
+
+    @model_validator(mode="after")
+    def require_exact_source_pointers(self) -> SelectionEvidenceDefinition:
+        if self.source_json_pointers != _SELECTION_EVIDENCE_SOURCE_POINTERS:
+            raise ValueError("selection evidence source pointers must match the v1 definition")
+        return self
 
 
 class GridDimension(_AdequacyModel):
@@ -276,6 +312,7 @@ class StudyProtocol(_AdequacyModel):
     scope: Literal["SIMULATION_ONLY"]
     claim_type: Literal["LEAD_TTC_INTERVENTION_ENGAGEMENT"]
     criteria: CriterionDefinition
+    selection_evidence: SelectionEvidenceDefinition
     baseline_grid: Annotated[tuple[GridDimension, ...], Field(min_length=1)]
     selection_rule: SelectionRule
     valid_run_rules: Annotated[tuple[RunValidityRule, ...], Field(min_length=1)]
@@ -354,6 +391,61 @@ class SelectionObservation(_AdequacyModel):
         return self
 
 
+class SelectionEvidence(_AdequacyModel):
+    """Strict three-state result for the frozen selection-evidence derivation."""
+
+    status: Literal["AVAILABLE", "NOT_AVAILABLE"]
+    outcome: Literal[
+        "OBSERVED", "NO_FINITE_CLOSING_TTC", "REQUIRED_SIGNAL_MISSING"
+    ]
+    observations: Annotated[tuple[SelectionObservation, ...], Field(max_length=1)]
+    unavailable_reason: (
+        Literal[
+            "A BRAKING policy-input event lacks paired front distance and relative speed."
+        ]
+        | None
+    )
+
+    @model_validator(mode="after")
+    def require_exact_state_cross_product(self) -> SelectionEvidence:
+        if self.outcome == "OBSERVED":
+            if (
+                self.status != "AVAILABLE"
+                or len(self.observations) != 1
+                or self.unavailable_reason is not None
+            ):
+                raise ValueError("OBSERVED selection evidence requires one available observation")
+            observation = self.observations[0]
+            if (
+                type(observation.machine_value) is not float
+                or not math.isfinite(observation.machine_value)
+                or observation.sequence is None
+            ):
+                raise ValueError(
+                    "OBSERVED selection evidence requires a finite float and sequence"
+                )
+            return self
+        if self.outcome == "NO_FINITE_CLOSING_TTC":
+            if (
+                self.status != "AVAILABLE"
+                or self.observations
+                or self.unavailable_reason is not None
+            ):
+                raise ValueError(
+                    "NO_FINITE_CLOSING_TTC selection evidence must be available and empty"
+                )
+            return self
+        if (
+            self.status != "NOT_AVAILABLE"
+            or self.observations
+            or self.unavailable_reason != SELECTION_EVIDENCE_MISSING_REASON
+        ):
+            raise ValueError(
+                "REQUIRED_SIGNAL_MISSING selection evidence requires the fixed reason"
+            )
+        return self
+
+
 class ExclusionResult(_AdequacyModel):
     valid_run: bool
     disposition: Literal["INCLUDED", "EXCLUDED"]
@@ -397,7 +489,7 @@ class DiscoveryLedgerEntry(_AdequacyModel):
     bundle_digest_sha256: Sha256
     trace_digest_sha256: Sha256
     verification_status: Literal["INTERNALLY_CONSISTENT", "INVALID_EVIDENCE"]
-    selection_observations: tuple[SelectionObservation, ...]
+    selection_evidence: SelectionEvidence
     selection_evidence_sha256: Sha256
     exclusion: ExclusionResult
     selection: SelectionResult
@@ -407,16 +499,17 @@ class DiscoveryLedgerEntry(_AdequacyModel):
         _require_lexical_relative_locator(self.artifact_locator, "artifact_locator")
         parameters = tuple(assignment.parameter for assignment in self.parameters)
         _require_unique(parameters, "discovery parameters")
-        observations = tuple(item.observation_id for item in self.selection_observations)
-        _require_unique(observations, "selection observations")
-        if self.exclusion.valid_run and not self.selection_observations:
-            raise ValueError("included valid attempt requires selection observations")
+        if self.exclusion.valid_run and self.selection_evidence.outcome != "OBSERVED":
+            raise ValueError("included valid attempt requires observed selection evidence")
         if self.environment.repository_commit != self.registration_commit:
             raise ValueError("discovery environment must use registration commit")
         if self.verification_status == "INVALID_EVIDENCE" and self.exclusion.valid_run:
             raise ValueError("invalid evidence cannot be a valid discovery run")
-        if self.selection.status == "SELECTED" and not self.exclusion.valid_run:
-            raise ValueError("an excluded discovery attempt cannot be selected")
+        if self.selection.status == "SELECTED":
+            if not self.exclusion.valid_run:
+                raise ValueError("an excluded discovery attempt cannot be selected")
+            if self.selection_evidence.outcome != "OBSERVED":
+                raise ValueError("selected attempt requires observed selection evidence")
         return self
 
 
@@ -568,8 +661,6 @@ class AssessmentSide(_AdequacyModel):
     seed: Annotated[int, Field(ge=-(2**31), lt=2**31)]
     control_frequency_hz: Annotated[int, Field(ge=1, le=100)]
     horizon_steps: Annotated[int, Field(ge=1, le=10_000)]
-    fresh_selection_observations: tuple[SelectionObservation, ...]
-    fresh_selection_evidence_sha256: Sha256
     events: Annotated[tuple[AssessmentEvent, ...], Field(min_length=1)]
 
     @model_validator(mode="after")
@@ -589,8 +680,6 @@ class AssessmentSide(_AdequacyModel):
         sequences = tuple(event.sequence for event in self.events)
         if sequences != tuple(range(len(sequences))):
             raise ValueError("events must be nonempty and contiguous from sequence zero")
-        observations = tuple(item.observation_id for item in self.fresh_selection_observations)
-        _require_unique(observations, "fresh selection observations")
         return self
 
 

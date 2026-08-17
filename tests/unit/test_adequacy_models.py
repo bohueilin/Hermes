@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -11,6 +12,7 @@ from pydantic import ValidationError
 from hermes.adequacy.models import (
     LOCAL_HISTORY_LIMITATION,
     MAX_CRITERION_REFERENCES,
+    SELECTION_EVIDENCE_MISSING_REASON,
     ActionCommand,
     AdequacyAssessment,
     AdequacyCriterion,
@@ -46,6 +48,8 @@ from hermes.adequacy.models import (
     RegistrationLocation,
     RegistrationStatus,
     RunValidityRule,
+    SelectionEvidence,
+    SelectionEvidenceDefinition,
     SelectionObservation,
     SelectionResult,
     SelectionRule,
@@ -116,6 +120,7 @@ def _protocol() -> StudyProtocol:
             minimum_post_response_decision_steps=1,
             actuation_delay_compensation_s=0.0,
         ),
+        selection_evidence=_selection_evidence_definition(),
         baseline_grid=(
             GridDimension(
                 parameter="initial_gap_m",
@@ -207,6 +212,42 @@ def _selection_observation() -> SelectionObservation:
     )
 
 
+def _selection_evidence_definition() -> SelectionEvidenceDefinition:
+    return SelectionEvidenceDefinition(
+        schema_version="1.0",
+        observation_id="minimum_policy_input_ttc_s",
+        event_domain="BRAKING_POLICY_INPUT_EVENTS",
+        required_signals="FRONT_DISTANCE_AND_RELATIVE_SPEED",
+        closing_condition="FRONT_RELATIVE_SPEED_LT_ZERO",
+        value_expression="FRONT_DISTANCE_DIVIDED_BY_NEGATED_RELATIVE_SPEED",
+        aggregation="MINIMUM",
+        sequence_tie_breaker="EARLIEST_SEQUENCE",
+        unit="s",
+        operator="LTE",
+        threshold_source="criteria.policy_input_ttc_lte_s",
+        source_file="events.jsonl",
+        source_json_pointers=(
+            "/sequence",
+            "/observation_summary/challenge_phase",
+            "/observation_summary/front_distance_m",
+            "/observation_summary/front_relative_speed_mps",
+        ),
+    )
+
+
+def _selection_evidence() -> SelectionEvidence:
+    return SelectionEvidence(
+        status="AVAILABLE",
+        outcome="OBSERVED",
+        observations=(_selection_observation(),),
+        unavailable_reason=None,
+    )
+
+
+def _selection_evidence_digest() -> str:
+    return hashlib.sha256(canonical_adequacy_json_bytes(_selection_evidence())).hexdigest()
+
+
 def _ledger() -> DiscoveryLedgerEntry:
     return DiscoveryLedgerEntry(
         schema_version="1.0",
@@ -232,8 +273,8 @@ def _ledger() -> DiscoveryLedgerEntry:
         bundle_digest_sha256=_DIGEST_A,
         trace_digest_sha256=_DIGEST_B,
         verification_status="INTERNALLY_CONSISTENT",
-        selection_observations=(_selection_observation(),),
-        selection_evidence_sha256=_DIGEST_A,
+        selection_evidence=_selection_evidence(),
+        selection_evidence_sha256=_selection_evidence_digest(),
         exclusion=ExclusionResult(
             valid_run=True,
             disposition="INCLUDED",
@@ -254,7 +295,7 @@ def _expected_pair() -> ExpectedPair:
         baseline_run_id="handoff-p7-lead-baseline",
         candidate_run_id="handoff-p7-lead-candidate",
         selected_discovery_attempt_id="attempt-0001",
-        selected_discovery_selection_evidence_sha256=_DIGEST_A,
+        selected_discovery_selection_evidence_sha256=_selection_evidence_digest(),
         scenario_digest_sha256=_DIGEST_B,
         challenge_kind="lead_vehicle_hard_brake",
         seed=7,
@@ -368,8 +409,6 @@ def _facts(role: str = "CANDIDATE") -> AssessmentSide:
         seed=7,
         control_frequency_hz=10,
         horizon_steps=300,
-        fresh_selection_observations=(_selection_observation(),),
-        fresh_selection_evidence_sha256=_DIGEST_A,
         events=(_event(), _event(1)),
     )
 
@@ -516,12 +555,155 @@ def test_complete_protocol_ledger_and_pair_contracts_preserve_decision_fields() 
     assert protocol.planned_execution.challenge_kind == "lead_vehicle_hard_brake"
     assert protocol.registration.repository_relative_path.startswith("evaluation-plans/")
     assert ledger.command_argv[0:3] == ("python", "-m", "hermes")
-    assert ledger.selection_observations == (_selection_observation(),)
+    assert protocol.selection_evidence == _selection_evidence_definition()
+    assert ledger.selection_evidence == _selection_evidence()
+    assert ledger.selection_evidence_sha256 == _selection_evidence_digest()
     assert ledger.exclusion.valid_run is True
     assert ledger.selection.status == "SELECTED"
     assert pair.expected_pair.candidate_shield_name == "deterministic"
     assert pair.expected_pair.require_repository_dirty is False
     assert pair.selected_scenario_relative_path.startswith("scenarios/")
+
+
+def test_selection_evidence_is_protocol_owned_and_not_injected_into_assessment_side() -> None:
+    assert "selection_evidence" in StudyProtocol.model_fields
+    assert "selection_evidence" in DiscoveryLedgerEntry.model_fields
+    assert "selection_observations" not in DiscoveryLedgerEntry.model_fields
+    assert "fresh_selection_observations" not in AssessmentSide.model_fields
+    assert "fresh_selection_evidence_sha256" not in AssessmentSide.model_fields
+
+    side_payload = _facts().model_dump(mode="python")
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        AssessmentSide.model_validate(
+            {**side_payload, "fresh_selection_evidence_sha256": _DIGEST_A}
+        )
+
+
+def test_selection_evidence_definition_freezes_exact_source_pointers_and_literals() -> None:
+    definition = _selection_evidence_definition()
+    assert definition.source_json_pointers == (
+        "/sequence",
+        "/observation_summary/challenge_phase",
+        "/observation_summary/front_distance_m",
+        "/observation_summary/front_relative_speed_mps",
+    )
+
+    payload = definition.model_dump(mode="python")
+    with pytest.raises(ValidationError):
+        SelectionEvidenceDefinition.model_validate(
+            {
+                **payload,
+                "source_json_pointers": payload["source_json_pointers"][1:],
+            }
+        )
+    with pytest.raises(ValidationError):
+        SelectionEvidenceDefinition.model_validate({**payload, "aggregation": "MAXIMUM"})
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    (
+        SelectionEvidence(
+            status="AVAILABLE",
+            outcome="OBSERVED",
+            observations=(_selection_observation(),),
+            unavailable_reason=None,
+        ),
+        SelectionEvidence(
+            status="AVAILABLE",
+            outcome="NO_FINITE_CLOSING_TTC",
+            observations=(),
+            unavailable_reason=None,
+        ),
+        SelectionEvidence(
+            status="NOT_AVAILABLE",
+            outcome="REQUIRED_SIGNAL_MISSING",
+            observations=(),
+            unavailable_reason=SELECTION_EVIDENCE_MISSING_REASON,
+        ),
+    ),
+)
+def test_selection_evidence_accepts_only_the_three_frozen_states(
+    evidence: SelectionEvidence,
+) -> None:
+    assert SelectionEvidence.model_validate(evidence.model_dump()) == evidence
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        {
+            "status": "AVAILABLE",
+            "outcome": "OBSERVED",
+            "observations": (),
+            "unavailable_reason": None,
+        },
+        {
+            "status": "AVAILABLE",
+            "outcome": "NO_FINITE_CLOSING_TTC",
+            "observations": (_selection_observation(),),
+            "unavailable_reason": None,
+        },
+        {
+            "status": "NOT_AVAILABLE",
+            "outcome": "REQUIRED_SIGNAL_MISSING",
+            "observations": (),
+            "unavailable_reason": "different reason",
+        },
+        {
+            "status": "AVAILABLE",
+            "outcome": "OBSERVED",
+            "observations": (
+                SelectionObservation(
+                    **{
+                        **_selection_observation().model_dump(),
+                        "sequence": None,
+                    }
+                ),
+            ),
+            "unavailable_reason": None,
+        },
+        {
+            "status": "AVAILABLE",
+            "outcome": "OBSERVED",
+            "observations": (
+                SelectionObservation(
+                    **{
+                        **_selection_observation().model_dump(),
+                        "machine_value": 1,
+                        "canonical_value": "1",
+                        "display_value": "1",
+                    }
+                ),
+            ),
+            "unavailable_reason": None,
+        },
+    ),
+)
+def test_selection_evidence_rejects_every_invalid_state_cross_product(
+    mutation: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        SelectionEvidence.model_validate(mutation)
+
+
+def test_complete_selection_evidence_digest_distinguishes_typed_empty_states() -> None:
+    no_finite = SelectionEvidence(
+        status="AVAILABLE",
+        outcome="NO_FINITE_CLOSING_TTC",
+        observations=(),
+        unavailable_reason=None,
+    )
+    missing = SelectionEvidence(
+        status="NOT_AVAILABLE",
+        outcome="REQUIRED_SIGNAL_MISSING",
+        observations=(),
+        unavailable_reason=SELECTION_EVIDENCE_MISSING_REASON,
+    )
+    assert canonical_adequacy_json_bytes(no_finite) != canonical_adequacy_json_bytes(missing)
+    assert hashlib.sha256(canonical_adequacy_json_bytes(no_finite)).digest() != hashlib.sha256(
+        canonical_adequacy_json_bytes(missing)
+    ).digest()
 
 
 @pytest.mark.parametrize(
@@ -589,15 +771,20 @@ def test_materializer_rejects_duplicate_scenario_field_mappings() -> None:
 
 
 @pytest.mark.parametrize("selection_status", ("SELECTED", "NOT_SELECTED"))
-def test_included_discovery_attempt_requires_selection_observations(
+def test_included_discovery_attempt_requires_observed_selection_evidence(
     selection_status: str,
 ) -> None:
     ledger = _ledger()
-    with pytest.raises(ValidationError, match="selection observations"):
+    with pytest.raises(ValidationError, match="observed selection evidence"):
         DiscoveryLedgerEntry.model_validate(
             {
                 **ledger.model_dump(),
-                "selection_observations": (),
+                "selection_evidence": {
+                    "status": "AVAILABLE",
+                    "outcome": "NO_FINITE_CLOSING_TTC",
+                    "observations": (),
+                    "unavailable_reason": None,
+                },
                 "selection": {
                     **ledger.selection.model_dump(),
                     "status": selection_status,
