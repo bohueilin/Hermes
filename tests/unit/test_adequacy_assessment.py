@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 import hermes.adequacy.assessment as assessment_module
+import hermes.adequacy.models as adequacy_models
 from hermes.adequacy.assessment import (
     _scan_lead_ttc_adequacy,
     assess_lead_ttc_adequacy,
@@ -21,10 +22,8 @@ from hermes.adequacy.models import (
     AdequacyCriterion,
     AdequacyStatus,
     AssessmentEvent,
-    AssessmentScenario,
     AssessmentSide,
     CandidateShieldPlan,
-    CapturedShield,
     ComponentExpectation,
     CriterionDefinition,
     CriterionStatus,
@@ -286,49 +285,30 @@ def _side(
     shield_config_digest: str | None = None,
 ) -> AssessmentSide:
     candidate_configuration = configuration or _configuration()
+    captured_configuration = adequacy_models.CapturedShieldConfiguration(
+        **candidate_configuration.model_dump()
+    )
     shield = (
-        CapturedShield(
+        adequacy_models.CapturedShield(
             name="noop",
             version="1.0",
-            config_digest_sha256=_DIGEST_A,
+            config_digest=_DIGEST_A,
             configuration=None,
         )
         if role == "BASELINE"
-        else CapturedShield(
+        else adequacy_models.CapturedShield(
             name="deterministic",
             version="1.0",
-            config_digest_sha256=(
+            config_digest=(
                 shield_config_digest or _configuration_digest(candidate_configuration)
             ),
-            configuration=candidate_configuration,
+            configuration=captured_configuration,
         )
     )
     return AssessmentSide(
         role=role,
-        hermes_version="0.1.0",
-        bundle_digest_sha256=_DIGEST_A,
-        trace_digest_sha256=_DIGEST_B,
-        repository_commit=_COMMIT,
-        repository_dirty=False,
-        scenario_digest_sha256=_DIGEST_A,
-        scenario=AssessmentScenario(
-            challenge_kind="lead_vehicle_hard_brake",
-            boundary_tolerance_m=1.0,
-        ),
-        policy=_component("POLICY", "metadrive-idm", "1.0"),
-        adapter=_component("ADAPTER", "metadrive", "1.1"),
-        simulator=_component(
-            "SIMULATOR",
-            "metadrive",
-            "0.4.3",
-            config_digest=None,
-            source_commit=_SIMULATOR_COMMIT,
-        ),
-        gate=_component("GATE", "phase2", "1.0"),
+        boundary_tolerance_m=1.0,
         shield=shield,
-        seed=7,
-        control_frequency_hz=10,
-        horizon_steps=horizon_steps or max(len(events), 1),
         events=events,
     )
 
@@ -1208,3 +1188,457 @@ def test_ten_thousand_event_boundary_is_one_pass_and_references_are_bounded(
         len(criterion.references) <= MAX_CRITERION_REFERENCES
         for criterion in scan.assessment.criteria
     )
+
+
+def _task6_runtime_configuration(*, delay: float = 0.0) -> object:
+    return adequacy_models.CapturedShieldConfiguration(
+        **{
+            **_configuration().model_dump(),
+            "actuation_delay_compensation_s": delay,
+        }
+    )
+
+
+_TASK6_DEFAULT_CONFIG = object()
+
+
+def _task6_scanner_side(
+    role: str,
+    events: tuple[AssessmentEvent, ...],
+    *,
+    shield_name: str | None = None,
+    shield_digest: str | None = None,
+    configuration: object | None = _TASK6_DEFAULT_CONFIG,
+) -> object:
+    if shield_name is None:
+        shield_name = "noop" if role == "BASELINE" else "deterministic"
+    if shield_digest is None:
+        shield_digest = _DIGEST_A if role == "BASELINE" else _configuration_digest(_configuration())
+    if (
+        configuration is _TASK6_DEFAULT_CONFIG
+        and role == "CANDIDATE"
+        and shield_name == "deterministic"
+    ):
+        configuration = _task6_runtime_configuration()
+    elif configuration is _TASK6_DEFAULT_CONFIG:
+        configuration = None
+    return adequacy_models.AssessmentSide(
+        role=role,
+        boundary_tolerance_m=1.0,
+        shield=adequacy_models.CapturedShield(
+            name=shield_name,
+            version="1.0",
+            config_digest=shield_digest,
+            configuration=configuration,
+        ),
+        events=events,
+    )
+
+
+def _task6_captured_side(
+    role: str,
+    events: tuple[AssessmentEvent, ...],
+    *,
+    run_id: str | None = None,
+    commit: str | None = _COMMIT,
+    dirty: bool | None = False,
+    reason: str | None = None,
+    challenge_kind: str | None = "lead_vehicle_hard_brake",
+    simulator: object | None = None,
+    shield_name: str | None = None,
+    shield_digest: str | None = None,
+    configuration: object | None = _TASK6_DEFAULT_CONFIG,
+) -> object:
+    scanner = _task6_scanner_side(
+        role,
+        events,
+        shield_name=shield_name,
+        shield_digest=shield_digest,
+        configuration=configuration,
+    )
+    if simulator is None:
+        simulator = adequacy_models.CapturedSimulatorIdentity(
+            name="metadrive",
+            version="0.4.3",
+            source_commit=_SIMULATOR_COMMIT,
+        )
+    if commit is None or dirty is None:
+        reason = reason or "repository provenance unavailable"
+    component = adequacy_models.CapturedComponentIdentity
+    return adequacy_models.CapturedArtifactSide(
+        role=role,
+        run_id=run_id or f"handoff-p7-lead-{role.lower()}",
+        evidence_schema_version="1.0",
+        bundle_digest_sha256=_DIGEST_A,
+        trace_digest_sha256=_DIGEST_B,
+        repository=adequacy_models.CapturedRepositoryProvenance(
+            commit=commit,
+            dirty=dirty,
+            reason=reason,
+        ),
+        hermes_version="0.1.0",
+        scenario=adequacy_models.CapturedScenario(
+            schema_version="2.0",
+            digest=_DIGEST_A,
+            challenge_kind=challenge_kind,
+            boundary_tolerance_m=1.0,
+        ),
+        policy=component(name="metadrive-idm", version="1.0", config_digest=_DIGEST_A),
+        adapter=component(name="metadrive", version="1.1", config_digest=_DIGEST_A),
+        simulator=simulator,
+        gate=component(name="phase2", version="1.0", config_digest=_DIGEST_A),
+        execution=adequacy_models.CapturedExecutionIdentity(
+            seed=7,
+            control_frequency_hz=10,
+            horizon_steps=300,
+        ),
+        scanner=scanner,
+    )
+
+
+def _task6_expected_pair(selection_digest: str) -> object:
+    return adequacy_models.ExpectedPair(
+        baseline_run_id="handoff-p7-lead-baseline",
+        candidate_run_id="handoff-p7-lead-candidate",
+        selected_discovery_attempt_id="attempt-0001",
+        selected_discovery_selection_evidence_sha256=selection_digest,
+        scenario_digest_sha256=_DIGEST_A,
+        challenge_kind="lead_vehicle_hard_brake",
+        seed=7,
+        control_frequency_hz=10,
+        horizon_steps=300,
+        hermes_version="0.1.0",
+        implementation_base_commit="a" * 40,
+        require_repository_dirty=False,
+        policy_name="metadrive-idm",
+        policy_version="1.0",
+        policy_config_digest_sha256=_DIGEST_A,
+        adapter_name="metadrive",
+        adapter_version="1.1",
+        adapter_config_digest_sha256=_DIGEST_A,
+        simulator_name="metadrive",
+        simulator_version="0.4.3",
+        simulator_commit=_SIMULATOR_COMMIT,
+        gate_name="phase2",
+        gate_version="1.0",
+        gate_config_digest_sha256=_DIGEST_A,
+        baseline_shield_name="noop",
+        baseline_shield_version="1.0",
+        baseline_shield_config_digest_sha256=_DIGEST_A,
+        candidate_shield_name="deterministic",
+        candidate_shield_version="1.0",
+        candidate_shield_config_digest_sha256=_configuration_digest(_configuration()),
+    )
+
+
+def _task6_plan_inputs(
+    protocol: StudyProtocol,
+    baseline: object,
+    candidate: object,
+) -> tuple[tuple[object, ...], object]:
+    scan = assessment_module._scan_lead_ttc_adequacy(
+        protocol,
+        baseline.scanner,
+        candidate.scanner,
+    )
+    evidence = scan.baseline_selection_evidence
+    digest = scan.baseline_selection_evidence_sha256
+    selected = adequacy_models.DiscoveryLedgerEntry.model_construct(
+        attempt_id="attempt-0001",
+        selection=adequacy_models.SelectionResult(
+            status="SELECTED",
+            rank=1,
+            tie_breaker="GRID_ORDER",
+            rationale="fixture",
+        ),
+        selection_evidence=evidence,
+        selection_evidence_sha256=digest,
+    )
+    pair = adequacy_models.PairPlan.model_construct(
+        expected_pair=_task6_expected_pair(digest),
+    )
+    return (selected,), pair
+
+
+def _task6_pair_assessment(
+    *,
+    baseline: object | None = None,
+    candidate: object | None = None,
+    ledger: tuple[object, ...] | None = None,
+    pair_plan: object | None = None,
+) -> AdequacyAssessment:
+    protocol = _protocol()
+    baseline = baseline or _task6_captured_side(
+        "BASELINE", _engagement_events(divergence=False)
+    )
+    candidate = candidate or _task6_captured_side("CANDIDATE", _engagement_events())
+    default_ledger, default_pair = _task6_plan_inputs(protocol, baseline, candidate)
+    return assessment_module._assess_captured_pair(
+        protocol,
+        ledger or default_ledger,
+        pair_plan or default_pair,
+        baseline,
+        candidate,
+    )
+
+
+def test_task6_pure_pair_assessor_prepends_exact_six_identity_criteria() -> None:
+    assessment = _task6_pair_assessment()
+    assert tuple(item.criterion_id for item in assessment.criteria) == (
+        "primary_run_ids_match_pair_plan",
+        "primary_repository_commits_match",
+        "artifact_execution_identity_matches_pair_plan",
+        "artifact_component_identities_match_pair_plan",
+        "baseline_shield_identity_matches_pair_plan",
+        "fresh_baseline_selection_reproduces_selected_discovery",
+        "arm_roles_and_candidate_configuration",
+        "minimum_braking_samples_per_arm",
+        "common_prefix_equality",
+        "target_condition_exposure",
+        "at_condition_arm_alignment",
+        "pre_condition_cleanliness",
+        "material_target_intervention",
+        "at_divergence_arm_alignment",
+        "minimum_target_event_count",
+        "non_target_predicates_and_reasons_clear",
+        "post_response_horizon",
+    )
+    assert all(item.status is CriterionStatus.PASS for item in assessment.criteria)
+
+
+def test_task6_first_six_available_mismatches_fail_independently() -> None:
+    baseline = _task6_captured_side("BASELINE", _engagement_events(divergence=False))
+    candidate = _task6_captured_side("CANDIDATE", _engagement_events())
+    protocol = _protocol()
+    ledger, pair = _task6_plan_inputs(protocol, baseline, candidate)
+    mutations = (
+        (
+            "primary_run_ids_match_pair_plan",
+            baseline,
+            candidate.model_copy(update={"run_id": "different-run"}),
+        ),
+        (
+            "primary_repository_commits_match",
+            baseline.model_copy(
+                update={
+                    "repository": adequacy_models.CapturedRepositoryProvenance(
+                        commit="shared-nonhex", dirty=False, reason=None
+                    )
+                }
+            ),
+            candidate.model_copy(
+                update={
+                    "repository": adequacy_models.CapturedRepositoryProvenance(
+                        commit="shared-nonhex", dirty=False, reason=None
+                    )
+                }
+            ),
+        ),
+        (
+            "artifact_execution_identity_matches_pair_plan",
+            baseline,
+            candidate.model_copy(
+                update={
+                    "scenario": candidate.scenario.model_copy(
+                        update={"challenge_kind": "cut_in_near_field"}
+                    )
+                }
+            ),
+        ),
+        (
+            "artifact_component_identities_match_pair_plan",
+            baseline,
+            candidate.model_copy(
+                update={
+                    "simulator": adequacy_models.CapturedSimulatorIdentity(
+                        name=None, version=None, source_commit=None
+                    )
+                }
+            ),
+        ),
+        (
+            "baseline_shield_identity_matches_pair_plan",
+            baseline.model_copy(
+                update={
+                    "scanner": baseline.scanner.model_copy(
+                        update={
+                            "shield": baseline.scanner.shield.model_copy(
+                                update={"config_digest": _DIGEST_B}
+                            )
+                        }
+                    )
+                }
+            ),
+            candidate,
+        ),
+    )
+    for criterion_id, changed_baseline, changed_candidate in mutations:
+        assessment = assessment_module._assess_captured_pair(
+            protocol, ledger, pair, changed_baseline, changed_candidate
+        )
+        assert _criterion(assessment, criterion_id).status is CriterionStatus.FAIL
+
+
+def test_task6_execution_dirty_precedence_is_fail_then_missing_then_pass() -> None:
+    baseline = _task6_captured_side("BASELINE", _engagement_events(divergence=False))
+    candidate = _task6_captured_side("CANDIDATE", _engagement_events())
+    protocol = _protocol()
+    ledger, pair = _task6_plan_inputs(protocol, baseline, candidate)
+    missing = baseline.model_copy(
+        update={
+            "repository": adequacy_models.CapturedRepositoryProvenance(
+                commit=_COMMIT, dirty=None, reason="dirty state unavailable"
+            )
+        }
+    )
+    assessment = assessment_module._assess_captured_pair(
+        protocol, ledger, pair, missing, candidate
+    )
+    assert _criterion(
+        assessment, "artifact_execution_identity_matches_pair_plan"
+    ).status is CriterionStatus.NOT_AVAILABLE
+
+    mismatch_and_missing = missing.model_copy(
+        update={"hermes_version": "different-observed-version"}
+    )
+    assessment = assessment_module._assess_captured_pair(
+        protocol, ledger, pair, mismatch_and_missing, candidate
+    )
+    assert _criterion(
+        assessment, "artifact_execution_identity_matches_pair_plan"
+    ).status is CriterionStatus.FAIL
+
+    dirty = candidate.model_copy(
+        update={
+            "repository": adequacy_models.CapturedRepositoryProvenance(
+                commit=_COMMIT, dirty=True, reason=None
+            )
+        }
+    )
+    assessment = assessment_module._assess_captured_pair(
+        protocol, ledger, pair, baseline, dirty
+    )
+    assert _criterion(
+        assessment, "artifact_execution_identity_matches_pair_plan"
+    ).status is CriterionStatus.FAIL
+
+
+def test_task6_fresh_selection_reproduction_has_exact_three_state_semantics() -> None:
+    protocol = _protocol()
+    candidate = _task6_captured_side("CANDIDATE", _engagement_events())
+    reference_baseline = _task6_captured_side(
+        "BASELINE", _engagement_events(divergence=False)
+    )
+    ledger, pair = _task6_plan_inputs(protocol, reference_baseline, candidate)
+    cases = (
+        (
+            tuple(
+                _event(sequence, phase="BRAKING", distance=None, relative_speed=None)
+                for sequence in range(3)
+            ),
+            CriterionStatus.NOT_AVAILABLE,
+        ),
+        (
+            tuple(
+                _event(sequence, phase="BRAKING", distance=10.0, relative_speed=0.0)
+                for sequence in range(3)
+            ),
+            CriterionStatus.FAIL,
+        ),
+    )
+    for events, expected in cases:
+        baseline = _task6_captured_side("BASELINE", events)
+        assessment = assessment_module._assess_captured_pair(
+            protocol, ledger, pair, baseline, candidate
+        )
+        assert _criterion(
+            assessment,
+            "fresh_baseline_selection_reproduces_selected_discovery",
+        ).status is expected
+
+
+def test_task6_fresh_selection_digest_binding_mutation_is_available_fail() -> None:
+    baseline = _task6_captured_side("BASELINE", _engagement_events(divergence=False))
+    candidate = _task6_captured_side("CANDIDATE", _engagement_events())
+    protocol = _protocol()
+    ledger, pair = _task6_plan_inputs(protocol, baseline, candidate)
+    pair = pair.model_copy(
+        update={
+            "expected_pair": pair.expected_pair.model_copy(
+                update={"selected_discovery_selection_evidence_sha256": _DIGEST_A}
+            )
+        }
+    )
+    assessment = assessment_module._assess_captured_pair(
+        protocol, ledger, pair, baseline, candidate
+    )
+    assert _criterion(
+        assessment,
+        "fresh_baseline_selection_reproduces_selected_discovery",
+    ).status is CriterionStatus.FAIL
+
+
+def test_task6_absent_candidate_configuration_has_exact_scanner_override_matrix() -> None:
+    events = tuple(_event(sequence, phase="PRE_TRIGGER") for sequence in range(3))
+    baseline = _task6_scanner_side("BASELINE", events)
+    candidate = _task6_scanner_side(
+        "CANDIDATE",
+        events,
+        shield_name="deterministic",
+        configuration=None,
+    )
+    scan = assessment_module._scan_lead_ttc_adequacy(_protocol(), baseline, candidate)
+    assert (
+        scan.condition_sequence,
+        scan.divergence_sequence,
+        scan.prefix_endpoint,
+        scan.precondition_endpoint,
+        scan.confound_endpoint,
+    ) == (None, None, 2, 2, 2)
+    assert scan.assessment.observation_disposition is ObservationDisposition.EVIDENCE_NOT_AVAILABLE
+    statuses = {item.criterion_id: item.status for item in scan.assessment.criteria}
+    assert statuses["arm_roles_and_candidate_configuration"] is CriterionStatus.FAIL
+    assert statuses["minimum_braking_samples_per_arm"] is CriterionStatus.FAIL
+    assert statuses["common_prefix_equality"] is CriterionStatus.PASS
+    assert statuses["pre_condition_cleanliness"] is CriterionStatus.PASS
+    for criterion_id in (
+        "target_condition_exposure",
+        "at_condition_arm_alignment",
+        "material_target_intervention",
+        "at_divergence_arm_alignment",
+        "minimum_target_event_count",
+        "non_target_predicates_and_reasons_clear",
+        "post_response_horizon",
+    ):
+        assert statuses[criterion_id] is CriterionStatus.NOT_AVAILABLE
+
+
+@pytest.mark.parametrize(
+    "phases",
+    (
+        (None, None, None),
+        ("PRE_TRIGGER", "CUT_IN", "POST_CUT_IN"),
+    ),
+)
+def test_task6_fake_and_cutin_phase_mismatches_complete_as_available_failures(
+    phases: tuple[str | None, ...],
+) -> None:
+    events = tuple(
+        _event(sequence, phase=phase)
+        if phase is not None
+        else AssessmentEvent(
+            **{**_event(sequence).model_dump(), "challenge_phase": None}
+        )
+        for sequence, phase in enumerate(phases)
+    )
+    assessment = assess_lead_ttc_adequacy(
+        _protocol(),
+        _task6_scanner_side("BASELINE", events),
+        _task6_scanner_side("CANDIDATE", events),
+    )
+    assert _criterion(
+        assessment, "minimum_braking_samples_per_arm"
+    ).status is CriterionStatus.FAIL
+    assert _criterion(
+        assessment, "target_condition_exposure"
+    ).status is CriterionStatus.FAIL

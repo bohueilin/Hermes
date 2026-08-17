@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
 import struct
 from dataclasses import dataclass, field
 
@@ -15,15 +16,18 @@ from hermes.adequacy.models import (
     AdequacyCriterion,
     AssessmentEvent,
     AssessmentSide,
+    CapturedArtifactSide,
+    CapturedShieldConfiguration,
     CriterionExactValue,
     CriterionStatus,
+    DiscoveryLedgerEntry,
     EvidenceReference,
     JsonScalar,
     ObservationDisposition,
+    PairPlan,
     Role,
     SelectionEvidence,
     SelectionObservation,
-    ShieldConfiguration,
     StudyProtocol,
     _canonical_json_data,
     aggregate_adequacy_status,
@@ -266,7 +270,7 @@ def _same_at_divergence(
 def _non_target_violations(
     event: AssessmentEvent,
     ttc_s: float | None,
-    configuration: ShieldConfiguration,
+    configuration: CapturedShieldConfiguration,
     boundary_tolerance_m: float,
 ) -> tuple[tuple[str, str], ...]:
     references: list[tuple[str, str]] = []
@@ -332,8 +336,9 @@ def _scan_lead_ttc_adequacy(
 
     definition = protocol.criteria
     candidate_configuration = candidate.shield.configuration
-    scan_configuration = candidate_configuration or protocol.candidate_shield.configuration
-    threshold_s = scan_configuration.ttc_threshold_s
+    threshold_s = (
+        None if candidate_configuration is None else candidate_configuration.ttc_threshold_s
+    )
 
     role_references = _ReferenceBuffer()
     role_references.add(
@@ -360,10 +365,11 @@ def _scan_lead_ttc_adequacy(
         and candidate.role == "CANDIDATE"
         and candidate.shield.name == protocol.candidate_shield.name
         and candidate.shield.version == protocol.candidate_shield.version
-        and candidate.shield.config_digest_sha256
+        and candidate.shield.config_digest
         == protocol.candidate_shield.config_digest_sha256
-        and candidate_configuration == protocol.candidate_shield.configuration
         and candidate_configuration is not None
+        and candidate_configuration.model_dump(mode="python")
+        == protocol.candidate_shield.configuration.model_dump(mode="python")
         and candidate_configuration.ttc_threshold_s
         == definition.policy_input_ttc_lte_s
         and candidate_configuration.actuation_delay_compensation_s
@@ -498,7 +504,7 @@ def _scan_lead_ttc_adequacy(
                             if minimum_closing_braking_ttc is None
                             else min(minimum_closing_braking_ttc, candidate_ttc)
                         )
-                        if candidate_ttc <= threshold_s:
+                        if threshold_s is not None and candidate_ttc <= threshold_s:
                             condition_match_count += 1
                             if condition_sequence is None:
                                 condition_sequence = index
@@ -573,6 +579,7 @@ def _scan_lead_ttc_adequacy(
                 _TARGET_REASON in candidate_event.override_reasons
                 and candidate_event_material
                 and candidate_ttc is not None
+                and threshold_s is not None
                 and candidate_ttc <= threshold_s
             ):
                 target_event_count += 1
@@ -580,12 +587,12 @@ def _scan_lead_ttc_adequacy(
                     _reference("CANDIDATE", index, "/override_reasons")
                 )
 
-            if divergence_before_event is None:
+            if divergence_before_event is None and candidate_configuration is not None:
                 violations = _non_target_violations(
                     candidate_event,
                     candidate_ttc,
-                    scan_configuration,
-                    candidate.scenario.boundary_tolerance_m,
+                    candidate_configuration,
+                    candidate.boundary_tolerance_m,
                 )
                 non_target_violation_count += len(violations)
                 for source_file, pointer in violations:
@@ -648,6 +655,13 @@ def _scan_lead_ttc_adequacy(
         canonical_adequacy_json_bytes(baseline_selection_evidence)
     ).hexdigest()
 
+    configuration_missing = candidate_configuration is None
+    criterion_threshold_s = (
+        definition.policy_input_ttc_lte_s
+        if configuration_missing
+        else candidate_configuration.ttc_threshold_s
+    )
+
     prefix_endpoint = (
         divergence_sequence - 1
         if divergence_sequence is not None
@@ -681,7 +695,12 @@ def _scan_lead_ttc_adequacy(
             _reference("CANDIDATE", confound_endpoint, "/observation_summary")
         )
 
-    if condition_sequence is not None:
+    if configuration_missing:
+        condition_status = CriterionStatus.NOT_AVAILABLE
+        condition_unavailable_reason = "captured candidate shield configuration is absent"
+        condition_observation = None
+        condition_observation_unit = "s"
+    elif condition_sequence is not None:
         condition_status = CriterionStatus.PASS
         condition_unavailable_reason = None
         condition_observation: JsonScalar | None = condition_entry_ttc
@@ -711,7 +730,11 @@ def _scan_lead_ttc_adequacy(
             condition_observation = minimum_closing_braking_ttc
             condition_observation_unit = "s"
 
-    if condition_sequence is None:
+    if configuration_missing:
+        condition_alignment_status = CriterionStatus.NOT_AVAILABLE
+        condition_alignment_observation = None
+        condition_alignment_unavailable = "captured candidate shield configuration is absent"
+    elif condition_sequence is None:
         condition_alignment_status = CriterionStatus.NOT_AVAILABLE
         condition_alignment_observation: JsonScalar | None = None
         condition_alignment_unavailable = "condition-entry sequence c is not defined"
@@ -722,7 +745,11 @@ def _scan_lead_ttc_adequacy(
         condition_alignment_observation = bool(condition_alignment)
         condition_alignment_unavailable = None
 
-    if divergence_sequence is None:
+    if configuration_missing:
+        divergence_alignment_status = CriterionStatus.NOT_AVAILABLE
+        divergence_alignment_observation = None
+        divergence_alignment_unavailable = "captured candidate shield configuration is absent"
+    elif divergence_sequence is None:
         divergence_alignment_status = CriterionStatus.NOT_AVAILABLE
         divergence_alignment_observation: JsonScalar | None = None
         divergence_alignment_unavailable = "treatment-divergence sequence d is not defined"
@@ -738,7 +765,10 @@ def _scan_lead_ttc_adequacy(
         if divergence_sequence is not None
         else None
     )
-    if post_response_steps is None:
+    if configuration_missing:
+        post_status = CriterionStatus.NOT_AVAILABLE
+        post_unavailable_reason = "captured candidate shield configuration is absent"
+    elif post_response_steps is None:
         post_status = CriterionStatus.NOT_AVAILABLE
         post_unavailable_reason = "treatment-divergence sequence d is not defined"
     else:
@@ -751,6 +781,39 @@ def _scan_lead_ttc_adequacy(
         post_references.add(
             _reference("CANDIDATE", divergence_sequence, "/sequence")
         )
+
+    if configuration_missing:
+        intervention_status = CriterionStatus.NOT_AVAILABLE
+        intervention_observation: JsonScalar | None = None
+        intervention_unavailable = "captured candidate shield configuration is absent"
+        target_count_status = CriterionStatus.NOT_AVAILABLE
+        target_count_observation: JsonScalar | None = None
+        target_count_unavailable = "captured candidate shield configuration is absent"
+        non_target_status = CriterionStatus.NOT_AVAILABLE
+        non_target_observation: JsonScalar | None = None
+        non_target_unavailable = "captured candidate shield configuration is absent"
+    else:
+        intervention_status = (
+            CriterionStatus.PASS
+            if divergence_sequence is not None
+            else CriterionStatus.FAIL
+        )
+        intervention_observation = divergence_sequence is not None
+        intervention_unavailable = None
+        target_count_status = (
+            CriterionStatus.PASS
+            if target_event_count >= definition.minimum_target_override_events
+            else CriterionStatus.FAIL
+        )
+        target_count_observation = target_event_count
+        target_count_unavailable = None
+        non_target_status = (
+            CriterionStatus.PASS
+            if non_target_violation_count == 0
+            else CriterionStatus.FAIL
+        )
+        non_target_observation = non_target_violation_count
+        non_target_unavailable = None
 
     criteria = (
         _criterion(
@@ -816,9 +879,9 @@ def _scan_lead_ttc_adequacy(
             status=condition_status,
             definition=(
                 "at least one BRAKING policy input has paired closing front signals and input "
-                f"TTC <= {threshold_s} s"
+                f"TTC <= {criterion_threshold_s} s"
             ),
-            threshold=threshold_s,
+            threshold=criterion_threshold_s,
             threshold_unit="s",
             observation=condition_observation,
             observation_unit=condition_observation_unit,
@@ -882,18 +945,14 @@ def _scan_lead_ttc_adequacy(
         ),
         _criterion(
             criterion_id="material_target_intervention",
-            status=(
-                CriterionStatus.PASS
-                if divergence_sequence is not None
-                else CriterionStatus.FAIL
-            ),
+            status=intervention_status,
             definition=(
                 "at or after c, target reason and binary32-material proposed/executed action "
                 "difference define d"
             ),
             threshold=True,
             threshold_unit="boolean",
-            observation=divergence_sequence is not None,
+            observation=intervention_observation,
             observation_unit="boolean",
             rationale=(
                 f"first treatment-divergence sequence d={divergence_sequence}"
@@ -901,6 +960,7 @@ def _scan_lead_ttc_adequacy(
                 else "no qualifying material target intervention exists at or after c"
             ),
             references=intervention_references,
+            unavailable_reason=intervention_unavailable,
         ),
         _criterion(
             criterion_id="at_divergence_arm_alignment",
@@ -927,42 +987,36 @@ def _scan_lead_ttc_adequacy(
         ),
         _criterion(
             criterion_id="minimum_target_event_count",
-            status=(
-                CriterionStatus.PASS
-                if target_event_count >= definition.minimum_target_override_events
-                else CriterionStatus.FAIL
-            ),
+            status=target_count_status,
             definition=(
                 "candidate target events record the target reason, in-band input TTC, and a "
                 "binary32-material action difference"
             ),
             threshold=definition.minimum_target_override_events,
             threshold_unit="events",
-            observation=target_event_count,
+            observation=target_count_observation,
             observation_unit="events",
             rationale=f"found {target_event_count} qualifying target events",
             references=target_count_references,
+            unavailable_reason=target_count_unavailable,
         ),
         _criterion(
             criterion_id="non_target_predicates_and_reasons_clear",
-            status=(
-                CriterionStatus.PASS
-                if non_target_violation_count == 0
-                else CriterionStatus.FAIL
-            ),
+            status=non_target_status,
             definition=(
                 "all speed, staleness, boundary, emergency-stop, and zero-delay predicates "
                 "are false and non-target reasons absent through e"
             ),
             threshold=0,
             threshold_unit="violations",
-            observation=non_target_violation_count,
+            observation=non_target_observation,
             observation_unit="violations",
             rationale=(
                 f"examined {confound_events_examined} events through e={confound_endpoint}; "
                 f"found {non_target_violation_count} non-target predicate/reason violations"
             ),
             references=non_target_references,
+            unavailable_reason=non_target_unavailable,
         ),
         _criterion(
             criterion_id="post_response_horizon",
@@ -982,7 +1036,9 @@ def _scan_lead_ttc_adequacy(
         ),
     )
 
-    if condition_sequence is None:
+    if configuration_missing:
+        disposition = ObservationDisposition.EVIDENCE_NOT_AVAILABLE
+    elif condition_sequence is None:
         if precondition_violation_count:
             disposition = ObservationDisposition.TARGET_INTERVENTION_CONFOUNDED
         elif condition_signal_missing:
@@ -1020,4 +1076,315 @@ def _scan_lead_ttc_adequacy(
         candidate_event_visits=candidate_event_visits,
         baseline_selection_evidence=baseline_selection_evidence,
         baseline_selection_evidence_sha256=baseline_selection_evidence_sha256,
+    )
+
+
+_LOWERCASE_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+
+
+def _status_for_match(*, mismatch: bool, missing: bool = False) -> CriterionStatus:
+    if mismatch:
+        return CriterionStatus.FAIL
+    if missing:
+        return CriterionStatus.NOT_AVAILABLE
+    return CriterionStatus.PASS
+
+
+def _identity_references(
+    pointer: str,
+    *,
+    source_file: str = "manifest.json",
+) -> _ReferenceBuffer:
+    references = _ReferenceBuffer()
+    references.add(_reference("BASELINE", None, pointer, source_file=source_file))
+    references.add(_reference("CANDIDATE", None, pointer, source_file=source_file))
+    return references
+
+
+def _component_tuple(component: object) -> tuple[object, ...]:
+    return (component.name, component.version, component.config_digest)
+
+
+def _simulator_tuple(side: CapturedArtifactSide) -> tuple[object, ...]:
+    simulator = side.simulator
+    return simulator.name, simulator.version, simulator.source_commit
+
+
+def _first_six_criteria(
+    protocol: StudyProtocol,
+    ledger: tuple[DiscoveryLedgerEntry, ...],
+    pair_plan: PairPlan,
+    baseline: CapturedArtifactSide,
+    candidate: CapturedArtifactSide,
+    scan: _ScanResult,
+) -> tuple[AdequacyCriterion, ...]:
+    expected = pair_plan.expected_pair
+
+    run_match = (
+        baseline.run_id == expected.baseline_run_id
+        and candidate.run_id == expected.candidate_run_id
+    )
+    run_criterion = _criterion(
+        criterion_id="primary_run_ids_match_pair_plan",
+        status=_status_for_match(mismatch=not run_match),
+        definition="primary run IDs match the pair plan by positional role",
+        threshold=True,
+        threshold_unit="boolean",
+        observation=run_match,
+        observation_unit="boolean",
+        rationale=(
+            "both primary run IDs match the declared positional roles"
+            if run_match
+            else "one or both primary run IDs differ from the pair plan"
+        ),
+        references=_identity_references("/run_id"),
+    )
+
+    baseline_commit = baseline.repository.commit
+    candidate_commit = candidate.repository.commit
+    if (
+        baseline_commit is None
+        or candidate_commit is None
+        or baseline_commit != candidate_commit
+    ):
+        raise ValueError("repository compatibility must precede the pair assessor")
+    commit_valid = _LOWERCASE_COMMIT.fullmatch(baseline_commit) is not None
+    repository_criterion = _criterion(
+        criterion_id="primary_repository_commits_match",
+        status=_status_for_match(mismatch=not commit_valid),
+        definition="the shared primary repository commit is lowercase 40-hex",
+        threshold="LOWERCASE_40_HEX",
+        threshold_unit="format",
+        observation=baseline_commit,
+        observation_unit="commit",
+        rationale=(
+            "both primary artifacts record the same lowercase 40-hex commit"
+            if commit_valid
+            else "the shared recorded primary commit is not lowercase 40-hex"
+        ),
+        references=_identity_references("/repository_commit"),
+    )
+
+    def execution_mismatch(side: CapturedArtifactSide) -> bool:
+        return (
+            side.hermes_version != expected.hermes_version
+            or side.scenario.digest != expected.scenario_digest_sha256
+            or side.scenario.challenge_kind != expected.challenge_kind
+            or side.execution.seed != expected.seed
+            or side.execution.control_frequency_hz != expected.control_frequency_hz
+            or side.execution.horizon_steps != expected.horizon_steps
+            or side.repository.dirty is True
+        )
+
+    execution_has_mismatch = execution_mismatch(baseline) or execution_mismatch(candidate)
+    execution_missing = (
+        baseline.repository.dirty is None or candidate.repository.dirty is None
+    )
+    execution_status = _status_for_match(
+        mismatch=execution_has_mismatch,
+        missing=execution_missing,
+    )
+    execution_criterion = _criterion(
+        criterion_id="artifact_execution_identity_matches_pair_plan",
+        status=execution_status,
+        definition=(
+            "Hermes, scenario, challenge, seed, cadence, horizon, and clean-execution "
+            "identities match the pair plan"
+        ),
+        threshold=True,
+        threshold_unit="boolean",
+        observation=(
+            None
+            if execution_status is CriterionStatus.NOT_AVAILABLE
+            else not execution_has_mismatch
+        ),
+        observation_unit="boolean",
+        rationale=(
+            "repository dirty state is unavailable on an otherwise matching pair"
+            if execution_status is CriterionStatus.NOT_AVAILABLE
+            else (
+                "all captured execution identities match the pair plan"
+                if not execution_has_mismatch
+                else "one or more available execution identities differ from the pair plan"
+            )
+        ),
+        references=_identity_references("/seed"),
+        unavailable_reason=(
+            "repository dirty state is unavailable"
+            if execution_status is CriterionStatus.NOT_AVAILABLE
+            else None
+        ),
+    )
+
+    expected_policy = (
+        expected.policy_name,
+        expected.policy_version,
+        expected.policy_config_digest_sha256,
+    )
+    expected_adapter = (
+        expected.adapter_name,
+        expected.adapter_version,
+        expected.adapter_config_digest_sha256,
+    )
+    expected_simulator = (
+        expected.simulator_name,
+        expected.simulator_version,
+        expected.simulator_commit,
+    )
+    expected_gate = (
+        expected.gate_name,
+        expected.gate_version,
+        expected.gate_config_digest_sha256,
+    )
+    component_match = all(
+        (
+            _component_tuple(side.policy) == expected_policy
+            and _component_tuple(side.adapter) == expected_adapter
+            and _simulator_tuple(side) == expected_simulator
+            and _component_tuple(side.gate) == expected_gate
+        )
+        for side in (baseline, candidate)
+    )
+    component_criterion = _criterion(
+        criterion_id="artifact_component_identities_match_pair_plan",
+        status=_status_for_match(mismatch=not component_match),
+        definition="both artifacts record the declared policy, adapter, simulator, and gate",
+        threshold=True,
+        threshold_unit="boolean",
+        observation=component_match,
+        observation_unit="boolean",
+        rationale=(
+            "all captured component identities match the pair plan"
+            if component_match
+            else "one or more captured component identities differ from the pair plan"
+        ),
+        references=_identity_references("/policy_name"),
+    )
+
+    baseline_shield = baseline.scanner.shield
+    baseline_shield_match = (
+        baseline_shield.name == expected.baseline_shield_name
+        and baseline_shield.version == expected.baseline_shield_version
+        and baseline_shield.config_digest
+        == expected.baseline_shield_config_digest_sha256
+    )
+    shield_references = _ReferenceBuffer()
+    shield_references.add(
+        _reference(
+            "BASELINE",
+            None,
+            "/shield",
+            source_file="execution-context.json",
+        )
+    )
+    baseline_shield_criterion = _criterion(
+        criterion_id="baseline_shield_identity_matches_pair_plan",
+        status=_status_for_match(mismatch=not baseline_shield_match),
+        definition="baseline shield identity and no-op configuration digest match the pair plan",
+        threshold=True,
+        threshold_unit="boolean",
+        observation=baseline_shield_match,
+        observation_unit="boolean",
+        rationale=(
+            "captured baseline shield identity matches the pair plan"
+            if baseline_shield_match
+            else "captured baseline shield identity differs from the pair plan"
+        ),
+        references=shield_references,
+    )
+
+    selected = tuple(
+        entry
+        for entry in ledger
+        if entry.attempt_id == expected.selected_discovery_attempt_id
+        and entry.selection.status == "SELECTED"
+    )
+    if len(selected) != 1:
+        raise ValueError("validated plans must identify exactly one selected discovery entry")
+    selected_entry = selected[0]
+    fresh = scan.baseline_selection_evidence
+    if fresh.outcome == "REQUIRED_SIGNAL_MISSING":
+        selection_status = CriterionStatus.NOT_AVAILABLE
+        selection_observation: JsonScalar | None = None
+        selection_unavailable = SELECTION_EVIDENCE_MISSING_REASON
+        selection_match = False
+    else:
+        selection_match = (
+            fresh.outcome == "OBSERVED"
+            and fresh == selected_entry.selection_evidence
+            and scan.baseline_selection_evidence_sha256
+            == selected_entry.selection_evidence_sha256
+            == expected.selected_discovery_selection_evidence_sha256
+        )
+        selection_status = _status_for_match(mismatch=not selection_match)
+        selection_observation = selection_match
+        selection_unavailable = None
+    selection_references = _ReferenceBuffer()
+    if fresh.observations:
+        sequence = fresh.observations[0].sequence
+        selection_references.add(
+            _reference(
+                "BASELINE",
+                sequence,
+                "/observation_summary/front_distance_m",
+            )
+        )
+    fresh_selection_criterion = _criterion(
+        criterion_id="fresh_baseline_selection_reproduces_selected_discovery",
+        status=selection_status,
+        definition=(
+            "fresh baseline selection evidence and digest reproduce the selected "
+            "ledger entry"
+        ),
+        threshold=True,
+        threshold_unit="boolean",
+        observation=selection_observation,
+        observation_unit="boolean",
+        rationale=(
+            selection_unavailable
+            if selection_unavailable is not None
+            else (
+                "fresh baseline selection evidence exactly reproduces the selected discovery"
+                if selection_match
+                else "fresh baseline selection evidence does not reproduce the selected discovery"
+            )
+        ),
+        references=selection_references,
+        unavailable_reason=selection_unavailable,
+    )
+
+    return (
+        run_criterion,
+        repository_criterion,
+        execution_criterion,
+        component_criterion,
+        baseline_shield_criterion,
+        fresh_selection_criterion,
+    )
+
+
+def _assess_captured_pair(
+    protocol: StudyProtocol,
+    ledger: tuple[DiscoveryLedgerEntry, ...],
+    pair_plan: PairPlan,
+    baseline: CapturedArtifactSide,
+    candidate: CapturedArtifactSide,
+) -> AdequacyAssessment:
+    """Purely compare captured observations to declarations, then scan stored events once."""
+
+    if baseline.role != "BASELINE" or candidate.role != "CANDIDATE":
+        raise ValueError("captured pair must be ordered baseline then candidate")
+    scan = _scan_lead_ttc_adequacy(protocol, baseline.scanner, candidate.scanner)
+    criteria = _first_six_criteria(
+        protocol,
+        ledger,
+        pair_plan,
+        baseline,
+        candidate,
+        scan,
+    ) + scan.assessment.criteria
+    return AdequacyAssessment(
+        status=aggregate_adequacy_status(tuple(item.status for item in criteria)),
+        observation_disposition=scan.assessment.observation_disposition,
+        criteria=criteria,
     )

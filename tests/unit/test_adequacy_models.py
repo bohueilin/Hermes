@@ -5,10 +5,12 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from typing import Literal
 
 import pytest
 from pydantic import ValidationError
 
+import hermes.adequacy.models as adequacy_models
 from hermes.adequacy.models import (
     LOCAL_HISTORY_LIMITATION,
     MAX_CRITERION_REFERENCES,
@@ -19,10 +21,8 @@ from hermes.adequacy.models import (
     AdequacyStatus,
     ArtifactDiagnostic,
     AssessmentEvent,
-    AssessmentScenario,
     AssessmentSide,
     CandidateShieldPlan,
-    CapturedShield,
     CapturedSourceIdentity,
     ComponentExpectation,
     CriterionDefinition,
@@ -348,6 +348,14 @@ def _source(relative_path: str = "lead.protocol.v1.yaml") -> CapturedSourceIdent
     )
 
 
+def _requested() -> object:
+    return adequacy_models.RequestedPlanSelections(
+        protocol_relative_path="lead.protocol.v1.yaml",
+        discovery_ledger_relative_path="lead.discovery.v1.jsonl",
+        pair_plan_relative_path="lead.pair.v1.yaml",
+    )
+
+
 def _action(*, throttle: float = 0.0, brake: float = 0.0) -> ActionCommand:
     return ActionCommand(steering=0.0, throttle=throttle, brake=brake)
 
@@ -369,46 +377,26 @@ def _event(sequence: int = 0) -> AssessmentEvent:
 
 def _facts(role: str = "CANDIDATE") -> AssessmentSide:
     shield = (
-        CapturedShield(
+        adequacy_models.CapturedShield(
             name="noop",
             version="1.0",
-            config_digest_sha256=_DIGEST_A,
+            config_digest=_DIGEST_A,
             configuration=None,
         )
         if role == "BASELINE"
-        else CapturedShield(
+        else adequacy_models.CapturedShield(
             name="deterministic",
             version="1.0",
-            config_digest_sha256=_DIGEST_B,
-            configuration=_shield_config(),
+            config_digest=_DIGEST_B,
+            configuration=adequacy_models.CapturedShieldConfiguration(
+                **_shield_config().model_dump()
+            ),
         )
     )
     return AssessmentSide(
         role=role,
-        hermes_version="0.1.0",
-        bundle_digest_sha256=_DIGEST_A,
-        trace_digest_sha256=_DIGEST_B,
-        repository_commit=_COMMIT_B,
-        repository_dirty=False,
-        scenario_digest_sha256=_DIGEST_A,
-        scenario=AssessmentScenario(
-            challenge_kind="lead_vehicle_hard_brake",
-            boundary_tolerance_m=1.0,
-        ),
-        policy=_component("POLICY", "metadrive-idm", "1.0"),
-        adapter=_component("ADAPTER", "metadrive", "1.1"),
-        simulator=_component(
-            "SIMULATOR",
-            "metadrive",
-            "0.4.3",
-            config_digest=None,
-            source_commit="85e5dadc6c7436d324348f6e3d8f8e680c06b4db",
-        ),
-        gate=_component("GATE", "phase2", "1.0"),
+        boundary_tolerance_m=1.0,
         shield=shield,
-        seed=7,
-        control_frequency_hz=10,
-        horizon_steps=300,
         events=(_event(), _event(1)),
     )
 
@@ -419,6 +407,11 @@ def _identity(role: str = "CANDIDATE", *, parsed: bool = True) -> SideIdentity:
         requested_relative_locator=role.lower(),
         observed_run_id=(f"handoff-p7-lead-{role.lower()}" if parsed else None),
         observed_evidence_schema_version=("1.0" if parsed else None),
+        observed_scenario_schema_version=("2.0" if parsed else None),
+        observed_bundle_digest_sha256=(_DIGEST_A if parsed else None),
+        computed_bundle_digest_sha256=(_DIGEST_A if parsed else None),
+        observed_trace_digest_sha256=(_DIGEST_B if parsed else None),
+        computed_trace_digest_sha256=(_DIGEST_B if parsed else None),
     )
 
 
@@ -437,7 +430,6 @@ def _side_state(
         deployment_permission="NONE",
         scope="SIMULATION_ONLY",
         authoritative_status="NOT_DEFINED",
-        assessment_facts=(_facts(role) if valid else None),
         diagnostics=diagnostics,
     )
 
@@ -452,7 +444,6 @@ def _unverified_side_state(role: str = "CANDIDATE") -> SideReviewState:
         deployment_permission="NONE",
         scope="SIMULATION_ONLY",
         authoritative_status="NOT_DEFINED",
-        assessment_facts=None,
         diagnostics=(),
     )
 
@@ -527,11 +518,13 @@ def _completed_envelope(
     return EvaluationAdequacyEnvelope(
         schema_version="1.0",
         hermes_version="0.1.0",
+        requested_plan_selections=_requested(),
         baseline=_side_state("BASELINE"),
         candidate=_side_state("CANDIDATE"),
         compatibility="COMPATIBLE",
         compatibility_reasons=(),
         plan_evaluation="EVALUATED",
+        plan_evaluation_reason=None,
         protocol_source=_source(),
         discovery_ledger_source=_source("lead.discovery.v1.jsonl"),
         pair_plan_source=_source("lead.pair.v1.yaml"),
@@ -861,8 +854,9 @@ def test_public_captured_source_identity_excludes_filesystem_metadata() -> None:
 
 def test_reduced_side_has_complete_predicate_inputs_and_nonempty_contiguous_events() -> None:
     candidate = _facts()
-    assert candidate.scenario.boundary_tolerance_m == 1.0
-    assert candidate.shield.configuration == _shield_config()
+    assert candidate.boundary_tolerance_m == 1.0
+    assert candidate.shield.configuration is not None
+    assert candidate.shield.configuration.model_dump() == _shield_config().model_dump()
     assert tuple(event.sequence for event in candidate.events) == (0, 1)
     with pytest.raises(ValidationError, match="contiguous"):
         AssessmentSide.model_validate(
@@ -1016,6 +1010,7 @@ def test_invalid_baseline_is_safe_sparse_and_baseline_first() -> None:
     invalid = EvaluationAdequacyEnvelope(
         schema_version="1.0",
         hermes_version="0.1.0",
+        requested_plan_selections=_requested(),
         baseline=_side_state(
             "BASELINE", valid=False, diagnostics=(baseline_diagnostic,)
         ),
@@ -1023,6 +1018,7 @@ def test_invalid_baseline_is_safe_sparse_and_baseline_first() -> None:
         compatibility="NOT_EVALUATED",
         compatibility_reasons=(),
         plan_evaluation="PLAN_NOT_EVALUATED",
+        plan_evaluation_reason="INVALID_EVIDENCE",
         protocol_source=None,
         discovery_ledger_source=None,
         pair_plan_source=None,
@@ -1034,12 +1030,10 @@ def test_invalid_baseline_is_safe_sparse_and_baseline_first() -> None:
     )
 
     assert invalid.baseline.identity.observed_run_id is None
-    assert invalid.baseline.assessment_facts is None
     assert invalid.baseline.gate_verdict == "INVALID_EVIDENCE"
     assert invalid.candidate.integrity == "UNVERIFIED"
     assert invalid.candidate.identity.observed_run_id is None
     assert invalid.candidate.gate_verdict is None
-    assert invalid.candidate.assessment_facts is None
     assert invalid.candidate.diagnostics == ()
     assert invalid.diagnostics[0].side == "BASELINE"
     assert invalid.assessment is None
@@ -1053,9 +1047,8 @@ def test_invalid_baseline_is_safe_sparse_and_baseline_first() -> None:
 @pytest.mark.parametrize(
     "updates",
     (
-        {"identity": _identity("CANDIDATE")},
+        {"identity": "PARSED_IDENTITY"},
         {"gate_verdict": "HOLD"},
-        {"assessment_facts": _facts("CANDIDATE")},
         {
             "diagnostics": (
                 ArtifactDiagnostic(
@@ -1071,6 +1064,8 @@ def test_unverified_candidate_carries_no_parsed_or_verified_claims(
     updates: dict[str, object],
 ) -> None:
     candidate = _unverified_side_state()
+    if updates.get("identity") == "PARSED_IDENTITY":
+        updates = {"identity": _identity("CANDIDATE")}
     with pytest.raises(ValidationError, match="unverified"):
         SideReviewState.model_validate({**candidate.model_dump(), **updates})
 
@@ -1094,11 +1089,13 @@ def test_unverified_side_is_only_allowed_after_baseline_invalid_evidence() -> No
     incompatible = EvaluationAdequacyEnvelope(
         schema_version="1.0",
         hermes_version="0.1.0",
+        requested_plan_selections=_requested(),
         baseline=_side_state("BASELINE"),
         candidate=_side_state("CANDIDATE"),
         compatibility="INCOMPATIBLE",
         compatibility_reasons=("scenario digest differs",),
         plan_evaluation="PLAN_NOT_EVALUATED",
+        plan_evaluation_reason="INCOMPATIBLE_EVIDENCE",
         protocol_source=None,
         discovery_ledger_source=None,
         pair_plan_source=None,
@@ -1137,6 +1134,7 @@ def test_invalid_diagnostics_equal_ordered_per_side_diagnostics() -> None:
         EvaluationAdequacyEnvelope(
             schema_version="1.0",
             hermes_version="0.1.0",
+            requested_plan_selections=_requested(),
             baseline=_side_state(
                 "BASELINE", valid=False, diagnostics=(side_diagnostic,)
             ),
@@ -1144,6 +1142,7 @@ def test_invalid_diagnostics_equal_ordered_per_side_diagnostics() -> None:
             compatibility="NOT_EVALUATED",
             compatibility_reasons=(),
             plan_evaluation="PLAN_NOT_EVALUATED",
+            plan_evaluation_reason="INVALID_EVIDENCE",
             protocol_source=None,
             discovery_ledger_source=None,
             pair_plan_source=None,
@@ -1159,11 +1158,13 @@ def test_incompatible_valid_pair_has_no_plan_or_criteria() -> None:
     incompatible = EvaluationAdequacyEnvelope(
         schema_version="1.0",
         hermes_version="0.1.0",
+        requested_plan_selections=_requested(),
         baseline=_side_state("BASELINE"),
         candidate=_side_state("CANDIDATE"),
         compatibility="INCOMPATIBLE",
         compatibility_reasons=("scenario digest differs",),
         plan_evaluation="PLAN_NOT_EVALUATED",
+        plan_evaluation_reason="INCOMPATIBLE_EVIDENCE",
         protocol_source=None,
         discovery_ledger_source=None,
         pair_plan_source=None,
@@ -1174,7 +1175,7 @@ def test_incompatible_valid_pair_has_no_plan_or_criteria() -> None:
         limitations=("No comparison claims accepted.",),
     )
 
-    assert incompatible.baseline.assessment_facts is not None
+    assert "assessment_facts" not in type(incompatible.baseline).model_fields
     assert incompatible.assessment is None
     assert incompatible.protocol_source is None
 
@@ -1200,17 +1201,30 @@ def test_canonical_bytes_have_a_literal_oracle_and_ignore_constructor_keyword_or
         requested_relative_locator="baseline",
         observed_run_id=None,
         observed_evidence_schema_version=None,
+        observed_scenario_schema_version=None,
+        observed_bundle_digest_sha256=None,
+        computed_bundle_digest_sha256=None,
+        observed_trace_digest_sha256=None,
+        computed_trace_digest_sha256=None,
     )
     second = SideIdentity(
         observed_evidence_schema_version=None,
+        observed_scenario_schema_version=None,
+        observed_bundle_digest_sha256=None,
+        computed_bundle_digest_sha256=None,
+        observed_trace_digest_sha256=None,
+        computed_trace_digest_sha256=None,
         requested_relative_locator="baseline",
         observed_run_id=None,
         role="BASELINE",
     )
 
     expected = (
-        b'{"observed_evidence_schema_version":null,"observed_run_id":null,'
-        b'"requested_relative_locator":"baseline","role":"BASELINE"}'
+        b'{"computed_bundle_digest_sha256":null,"computed_trace_digest_sha256":null,'
+        b'"observed_bundle_digest_sha256":null,"observed_evidence_schema_version":null,'
+        b'"observed_run_id":null,"observed_scenario_schema_version":null,'
+        b'"observed_trace_digest_sha256":null,"requested_relative_locator":"baseline",'
+        b'"role":"BASELINE"}'
     )
     assert canonical_adequacy_json_bytes(first) == expected
     assert canonical_adequacy_json_bytes(second) == expected
@@ -1226,3 +1240,281 @@ def test_adequacy_initializer_is_documentation_only(repository_root: Path) -> No
     assert isinstance(tree.body[0], ast.Expr)
     assert isinstance(tree.body[0].value, ast.Constant)
     assert isinstance(tree.body[0].value.value, str)
+
+
+def _task6_identity_payload(
+    role: str = "BASELINE",
+    *,
+    state: str = "CONSISTENT",
+) -> dict[str, object]:
+    observed = state != "UNVERIFIED"
+    return {
+        "role": role,
+        "requested_relative_locator": role.lower(),
+        "observed_run_id": "run.with-observed-format" if observed else None,
+        "observed_evidence_schema_version": "1.0" if observed else None,
+        "observed_scenario_schema_version": "future-observed-schema" if observed else None,
+        "observed_bundle_digest_sha256": _DIGEST_A if observed else None,
+        "computed_bundle_digest_sha256": _DIGEST_A if observed else None,
+        "observed_trace_digest_sha256": _DIGEST_B if observed else None,
+        "computed_trace_digest_sha256": _DIGEST_B if observed else None,
+    }
+
+
+def test_task6_requested_selections_and_event_free_public_side_schema_are_exact() -> None:
+    requested_type = adequacy_models.RequestedPlanSelections
+    assert tuple(requested_type.model_fields) == (
+        "protocol_relative_path",
+        "discovery_ledger_relative_path",
+        "pair_plan_relative_path",
+    )
+    assert tuple(adequacy_models.SideIdentity.model_fields) == (
+        "role",
+        "requested_relative_locator",
+        "observed_run_id",
+        "observed_evidence_schema_version",
+        "observed_scenario_schema_version",
+        "observed_bundle_digest_sha256",
+        "computed_bundle_digest_sha256",
+        "observed_trace_digest_sha256",
+        "computed_trace_digest_sha256",
+    )
+    assert tuple(adequacy_models.SideReviewState.model_fields) == (
+        "identity",
+        "gate_verdict",
+        "integrity",
+        "authenticity",
+        "authorization",
+        "deployment_permission",
+        "scope",
+        "authoritative_status",
+        "diagnostics",
+    )
+    assert "assessment_facts" not in adequacy_models.SideReviewState.model_fields
+
+    selections = requested_type(
+        protocol_relative_path="plans/protocol.yaml",
+        discovery_ledger_relative_path="plans/discovery.jsonl",
+        pair_plan_relative_path="plans/pair.yaml",
+    )
+    for mutation in (
+        {"pair_plan_relative_path": "plans/protocol.yaml"},
+        {"pair_plan_relative_path": "../pair.yaml"},
+        {"pair_plan_relative_path": "plans//pair.yaml"},
+        {"pair_plan_relative_path": "plans\\pair.yaml"},
+    ):
+        with pytest.raises(ValidationError):
+            requested_type.model_validate({**selections.model_dump(), **mutation})
+
+
+def test_task6_side_identity_preserves_observed_strings_and_integrity_cross_products() -> None:
+    identity = adequacy_models.SideIdentity.model_validate(_task6_identity_payload())
+    assert identity.observed_run_id == "run.with-observed-format"
+    assert identity.observed_scenario_schema_version == "future-observed-schema"
+
+    consistent = adequacy_models.SideReviewState(
+        identity=identity,
+        gate_verdict="PASS",
+        integrity="INTERNALLY_CONSISTENT",
+        authenticity="NOT_AUTHENTICATED",
+        authorization="NOT_EVALUATED",
+        deployment_permission="NONE",
+        scope="SIMULATION_ONLY",
+        authoritative_status="NOT_DEFINED",
+        diagnostics=(),
+    )
+    assert consistent.integrity == "INTERNALLY_CONSISTENT"
+
+    unverified = adequacy_models.SideReviewState(
+        identity=adequacy_models.SideIdentity.model_validate(
+            _task6_identity_payload("CANDIDATE", state="UNVERIFIED")
+        ),
+        gate_verdict=None,
+        integrity="UNVERIFIED",
+        authenticity="NOT_AUTHENTICATED",
+        authorization="NOT_EVALUATED",
+        deployment_permission="NONE",
+        scope="SIMULATION_ONLY",
+        authoritative_status="NOT_DEFINED",
+        diagnostics=(),
+    )
+    assert unverified.identity.observed_run_id is None
+
+    diagnostic = adequacy_models.ArtifactDiagnostic(
+        side="BASELINE",
+        code="stored.review.code.with-punctuation",
+        message="safe stored review diagnostic",
+    )
+    invalid_payload = _task6_identity_payload()
+    invalid_payload["computed_bundle_digest_sha256"] = _DIGEST_B
+    invalid_payload["computed_trace_digest_sha256"] = None
+    invalid = adequacy_models.SideReviewState(
+        identity=adequacy_models.SideIdentity.model_validate(invalid_payload),
+        gate_verdict="INVALID_EVIDENCE",
+        integrity="INVALID_EVIDENCE",
+        authenticity="NOT_AUTHENTICATED",
+        authorization="NOT_EVALUATED",
+        deployment_permission="NONE",
+        scope="SIMULATION_ONLY",
+        authoritative_status="NOT_DEFINED",
+        diagnostics=(diagnostic,),
+    )
+    assert invalid.identity.observed_bundle_digest_sha256 != (
+        invalid.identity.computed_bundle_digest_sha256
+    )
+
+    malformed = _task6_identity_payload()
+    malformed["observed_scenario_schema_version"] = None
+    with pytest.raises(ValidationError):
+        adequacy_models.SideIdentity.model_validate(malformed)
+    mismatched = _task6_identity_payload()
+    mismatched["computed_trace_digest_sha256"] = _DIGEST_A
+    with pytest.raises(ValidationError):
+        adequacy_models.SideReviewState.model_validate(
+            {**consistent.model_dump(), "identity": mismatched}
+        )
+
+
+def test_task6_captured_types_preserve_observations_without_plan_coercion() -> None:
+    repository_type = adequacy_models.CapturedRepositoryProvenance
+    assert repository_type(commit=None, dirty=None, reason="not recorded").commit is None
+    assert repository_type(commit="not-a-git-object", dirty=True, reason=None).dirty is True
+    with pytest.raises(ValidationError):
+        repository_type(commit=None, dirty=False, reason=None)
+    with pytest.raises(ValidationError):
+        repository_type(commit="recorded", dirty=False, reason="contradictory")
+
+    component = adequacy_models.CapturedComponentIdentity(
+        name="observed.policy/name",
+        version="observed version",
+        config_digest="not-plan-sha",
+    )
+    assert component.config_digest == "not-plan-sha"
+    empty_component = adequacy_models.CapturedComponentIdentity(
+        name="",
+        version="",
+        config_digest="",
+    )
+    assert empty_component.model_dump() == {
+        "name": "",
+        "version": "",
+        "config_digest": "",
+    }
+
+    no_simulator = adequacy_models.CapturedSimulatorIdentity(
+        name=None,
+        version=None,
+        source_commit=None,
+    )
+    assert no_simulator.name is None
+    empty_simulator = adequacy_models.CapturedSimulatorIdentity(
+        name="",
+        version="",
+        source_commit="",
+    )
+    assert empty_simulator.source_commit == ""
+    with pytest.raises(ValidationError):
+        adequacy_models.CapturedSimulatorIdentity(
+            name="metadrive",
+            version=None,
+            source_commit=None,
+        )
+
+    runtime_config = adequacy_models.CapturedShieldConfiguration(
+        **{
+            **_shield_config().model_dump(),
+            "actuation_delay_compensation_s": 5.0,
+        }
+    )
+    assert runtime_config.actuation_delay_compensation_s == 5.0
+    with pytest.raises(ValidationError):
+        ShieldConfiguration.model_validate(runtime_config.model_dump())
+
+    swapped = adequacy_models.CapturedShield(
+        name="deterministic",
+        version="1.0",
+        config_digest="observed-digest",
+        configuration=runtime_config,
+    )
+    assert swapped.configuration is runtime_config
+    absent = adequacy_models.CapturedShield(
+        name="deterministic",
+        version="1.0",
+        config_digest="observed-digest",
+        configuration=None,
+    )
+    assert absent.configuration is None
+    empty_shield = adequacy_models.CapturedShield(
+        name="",
+        version="",
+        config_digest="",
+        configuration=None,
+    )
+    assert empty_shield.config_digest == ""
+
+    empty_scenario = adequacy_models.CapturedScenario(
+        schema_version="",
+        digest="",
+        challenge_kind=None,
+        boundary_tolerance_m=1.0,
+    )
+    assert empty_scenario.digest == ""
+    assert adequacy_models.CapturedArtifactSide.model_fields["hermes_version"].annotation is str
+
+
+@pytest.mark.parametrize(
+    ("challenge_kind", "phase"),
+    (
+        (None, None),
+        ("lead_vehicle_hard_brake", "PRE_TRIGGER"),
+        ("lead_vehicle_hard_brake", "BRAKING"),
+        ("lead_vehicle_hard_brake", "RECOVERY"),
+        ("cut_in_near_field", "PRE_TRIGGER"),
+        ("cut_in_near_field", "CUT_IN"),
+        ("cut_in_near_field", "POST_CUT_IN"),
+    ),
+)
+def test_task6_captured_scenario_and_event_phase_domain_is_representable(
+    challenge_kind: str | None,
+    phase: str | None,
+) -> None:
+    scenario = adequacy_models.CapturedScenario(
+        schema_version="observed-scenario-version",
+        digest="observed-scenario-digest",
+        challenge_kind=challenge_kind,
+        boundary_tolerance_m=1.0,
+    )
+    event = adequacy_models.AssessmentEvent(
+        sequence=0,
+        challenge_phase=phase,
+        front_distance_m=None,
+        front_relative_speed_mps=None,
+        speed_mps=0.0,
+        lateral_offset_m=0.0,
+        observation_age_s=0.0,
+        candidate_action=_action(),
+        executed_action=_action(),
+        override_reasons=(),
+    )
+    assert (scenario.challenge_kind, event.challenge_phase) == (challenge_kind, phase)
+
+
+def test_task6_scanner_side_contains_only_stored_scanner_inputs() -> None:
+    assert tuple(adequacy_models.AssessmentSide.model_fields) == (
+        "role",
+        "boundary_tolerance_m",
+        "shield",
+        "events",
+    )
+    assert "repository_commit" not in adequacy_models.AssessmentSide.model_fields
+    assert "scenario_digest_sha256" not in adequacy_models.AssessmentSide.model_fields
+    assert "fresh_selection_evidence_sha256" not in adequacy_models.AssessmentSide.model_fields
+
+
+def test_task6_envelope_plan_reason_type_is_exact() -> None:
+    fields = adequacy_models.EvaluationAdequacyEnvelope.model_fields
+    assert "requested_plan_selections" in fields
+    assert "plan_evaluation_reason" in fields
+    assert fields["plan_evaluation_reason"].annotation == (
+        Literal["INVALID_EVIDENCE", "INCOMPATIBLE_EVIDENCE"] | None
+    )

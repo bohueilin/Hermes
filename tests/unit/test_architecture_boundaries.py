@@ -111,10 +111,124 @@ def test_adequacy_contract_modules_have_no_authority_or_process_imports(
     adequacy_root = repository_root / "src" / "hermes" / "adequacy"
     violations: list[str] = []
     for source_path in sorted(adequacy_root.rglob("*.py")):
+        if source_path.name == "api.py":
+            continue
         for module in _imported_modules(source_path):
             if any(module == prefix or module.startswith(prefix + ".") for prefix in forbidden):
                 violations.append(f"{source_path.relative_to(repository_root)} -> {module}")
     assert violations == []
+
+
+def test_adequacy_api_is_the_only_composition_root_and_has_no_runtime_dependencies(
+    repository_root: Path,
+) -> None:
+    source_path = repository_root / "src/hermes/adequacy/api.py"
+    modules = _imported_modules(source_path)
+    forbidden = (
+        "subprocess",
+        "hermes.adapters",
+        "hermes.policies",
+        "hermes.runtime",
+        "hermes.shields",
+        "hermes.faults",
+        "hermes.gates",
+        "hermes.workbench",
+        "metadrive",
+        "streamlit",
+    )
+    assert not any(
+        module == prefix or module.startswith(prefix + ".")
+        for module in modules
+        for prefix in forbidden
+    )
+
+    pure_paths = (
+        repository_root / "src/hermes/adequacy/models.py",
+        repository_root / "src/hermes/adequacy/assessment.py",
+        repository_root / "src/hermes/adequacy/loader.py",
+    )
+    for pure_path in pure_paths:
+        pure_modules = _imported_modules(pure_path)
+        assert not any(
+            module == prefix or module.startswith(prefix + ".")
+            for module in pure_modules
+            for prefix in ("hermes.review", "hermes.provenance", "subprocess")
+        )
+
+
+@pytest.mark.parametrize(
+    ("baseline", "candidate"),
+    (
+        ("phase1-tampered", "handoff-phase5-demo"),
+        ("handoff-p3-lead-baseline", "handoff-p3-cutin-baseline"),
+    ),
+)
+def test_adequacy_invalid_and_incompatible_branches_do_not_import_git_boundary(
+    repository_root: Path,
+    baseline: str,
+    candidate: str,
+) -> None:
+    script = f"""
+import importlib.abc
+from pathlib import Path
+
+class Blocked(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.startswith('hermes.provenance'):
+            raise RuntimeError('forbidden early Git boundary import: ' + fullname)
+        return None
+
+import sys
+sys.meta_path.insert(0, Blocked())
+from hermes.adequacy.api import assess_review_pair_adequacy
+root = Path({str(repository_root)!r})
+result = assess_review_pair_adequacy(
+    root,
+    root / 'artifacts',
+    {baseline!r},
+    {candidate!r},
+    root / 'missing-plans',
+    'protocol.yaml',
+    'ledger.jsonl',
+    'pair.yaml',
+)
+assert result.plan_evaluation == 'PLAN_NOT_EVALUATED'
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=repository_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+
+
+def test_adequacy_api_exports_no_capture_snapshot_or_registration_injection_surface(
+    repository_root: Path,
+) -> None:
+    script = """
+import inspect
+import hermes.adequacy.api as api
+
+signature = inspect.signature(api.assess_review_pair_adequacy)
+assert tuple(signature.parameters) == (
+    'repository_root', 'artifact_root', 'baseline_relative_path',
+    'candidate_relative_path', 'plan_root', 'protocol_relative_path',
+    'discovery_ledger_relative_path', 'pair_plan_relative_path',
+)
+for name in ('_ReviewedArtifactPair', 'VerifiedArtifactSnapshot',
+             'RegistrationGitInspector', 'CapturedEvaluationPlans'):
+    assert not hasattr(api, name)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=repository_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
 
 
 def test_adequacy_loader_has_no_review_process_or_simulator_imports(

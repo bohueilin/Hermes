@@ -221,3 +221,50 @@ def test_public_review_and_compare_models_and_canonical_bytes_remain_frozen(
         assert hashlib.sha256(canonical_envelope_bytes(result)).hexdigest() == (
             expected_sha256
         )
+
+
+def test_adequacy_api_reuses_private_pair_without_reopening_either_side(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import importlib
+
+    api = importlib.import_module("hermes.adequacy.api")
+    reviewed: list[str] = []
+    captured: list[str] = []
+    real_review = facade_module._ReviewFacade._review_result
+    real_capture = facade_module._inspect_artifact_under_root_capture
+
+    def record_review(self, artifact_root: Path, selection: str):
+        reviewed.append(selection)
+        return real_review(self, artifact_root, selection)
+
+    def record_capture(root: Path, selection: str):
+        captured.append(selection)
+        return real_capture(root, selection)
+
+    def forbidden_plans(*_args: object) -> object:
+        raise AssertionError("invalid candidate reached plan capture")
+
+    monkeypatch.setattr(facade_module._ReviewFacade, "_review_result", record_review)
+    monkeypatch.setattr(
+        facade_module,
+        "_inspect_artifact_under_root_capture",
+        record_capture,
+    )
+    monkeypatch.setattr(api, "_capture_plans", forbidden_plans)
+
+    result = api.assess_review_pair_adequacy(
+        repository_root,
+        repository_root / "artifacts",
+        "handoff-phase5-demo",
+        "phase1-tampered",
+        repository_root / "missing-plans",
+        "protocol.yaml",
+        "ledger.jsonl",
+        "pair.yaml",
+    )
+
+    assert result.candidate.integrity == "INVALID_EVIDENCE"
+    assert reviewed == ["handoff-phase5-demo", "phase1-tampered"]
+    assert captured == ["handoff-phase5-demo", "phase1-tampered"]

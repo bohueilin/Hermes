@@ -105,7 +105,9 @@ PlanEvaluation = Literal["EVALUATED", "PLAN_NOT_EVALUATED"]
 Integrity = Literal["UNVERIFIED", "INTERNALLY_CONSISTENT", "INVALID_EVIDENCE"]
 Compatibility = Literal["COMPATIBLE", "INCOMPATIBLE", "NOT_EVALUATED"]
 Role = Literal["BASELINE", "CANDIDATE"]
-ChallengePhase = Literal["PRE_TRIGGER", "BRAKING", "RECOVERY", "CUT_IN", "POST_CUT_IN"]
+ChallengePhase = Literal[
+    "PRE_TRIGGER", "BRAKING", "RECOVERY", "CUT_IN", "POST_CUT_IN"
+] | None
 OverrideReason = Literal[
     "TTC_BELOW_THRESHOLD",
     "SPEED_CAP",
@@ -623,64 +625,141 @@ class AssessmentEvent(_AdequacyModel):
         return self
 
 
-class AssessmentScenario(_AdequacyModel):
-    challenge_kind: Literal["lead_vehicle_hard_brake"]
-    boundary_tolerance_m: Annotated[FiniteFloat, Field(gt=0.0, le=10.0)]
+class CapturedRepositoryProvenance(_AdequacyModel):
+    """Repository facts exactly as accepted by stored verification."""
 
-
-class CapturedShield(_AdequacyModel):
-    name: Literal["noop", "deterministic"]
-    version: Literal["1.0"]
-    config_digest_sha256: Sha256
-    configuration: ShieldConfiguration | None
+    commit: str | None
+    dirty: bool | None
+    reason: str | None
 
     @model_validator(mode="after")
-    def require_role_specific_configuration(self) -> CapturedShield:
-        if self.name == "noop" and self.configuration is not None:
-            raise ValueError("noop shield cannot carry deterministic configuration")
-        if self.name == "deterministic" and self.configuration is None:
-            raise ValueError("deterministic shield requires captured configuration")
+    def require_truthful_availability(self) -> CapturedRepositoryProvenance:
+        unavailable = self.commit is None or self.dirty is None
+        if unavailable and not self.reason:
+            raise ValueError("unavailable repository provenance requires a reason")
+        if not unavailable and self.reason is not None:
+            raise ValueError("available repository provenance cannot carry a reason")
         return self
 
 
-class AssessmentSide(_AdequacyModel):
-    """Verified side facts reduced before entering the adequacy core."""
+class CapturedComponentIdentity(_AdequacyModel):
+    """Observed non-simulator component identity without plan-shaped validators."""
 
-    role: Role
-    hermes_version: NonEmptyString
-    bundle_digest_sha256: Sha256
-    trace_digest_sha256: Sha256
-    repository_commit: GitCommit
-    repository_dirty: bool
-    scenario_digest_sha256: Sha256
-    scenario: AssessmentScenario
-    policy: ComponentExpectation
-    adapter: ComponentExpectation
-    simulator: ComponentExpectation
-    gate: ComponentExpectation
-    shield: CapturedShield
+    name: str
+    version: str
+    config_digest: str
+
+
+class CapturedSimulatorIdentity(_AdequacyModel):
+    """Observed external simulator tuple; all-null means no external simulator."""
+
+    name: str | None
+    version: str | None
+    source_commit: str | None
+
+    @model_validator(mode="after")
+    def require_complete_or_absent_tuple(self) -> CapturedSimulatorIdentity:
+        present = (self.name is not None, self.version is not None, self.source_commit is not None)
+        if any(present) and not all(present):
+            raise ValueError("captured simulator identity must be complete or all-null")
+        return self
+
+
+class CapturedScenario(_AdequacyModel):
+    schema_version: str
+    digest: str
+    challenge_kind: Literal["lead_vehicle_hard_brake", "cut_in_near_field"] | None
+    boundary_tolerance_m: Annotated[FiniteFloat, Field(gt=0.0, le=10.0)]
+
+
+class CapturedShieldConfiguration(_AdequacyModel):
+    """Runtime-valid stored shield configuration, distinct from the zero-delay plan."""
+
+    schema_version: Literal["1.0"]
+    name: Literal["phase3_deterministic"]
+    version: Literal["1.0"]
+    label: Literal["illustrative_simulation_only_not_real_vehicle_limits"]
+    ttc_threshold_s: Annotated[FiniteFloat, Field(gt=0.0, le=30.0)]
+    speed_cap_mps: Annotated[FiniteFloat, Field(gt=0.0, le=50.0)]
+    max_observation_age_s: Annotated[FiniteFloat, Field(ge=0.0, le=10.0)]
+    boundary_margin_m: Annotated[FiniteFloat, Field(gt=0.0, le=5.0)]
+    actuation_delay_compensation_s: Annotated[FiniteFloat, Field(ge=0.0, le=5.0)]
+    emergency_stop_active: bool
+    full_brake_command: Literal[1.0]
+    boundary_steering_command: Annotated[FiniteFloat, Field(gt=0.0, le=1.0)]
+
+
+class CapturedShield(_AdequacyModel):
+    """Observed shield identity without positional role or presence inference."""
+
+    name: str
+    version: str
+    config_digest: str
+    configuration: CapturedShieldConfiguration | None
+
+
+class CapturedExecutionIdentity(_AdequacyModel):
     seed: Annotated[int, Field(ge=-(2**31), lt=2**31)]
     control_frequency_hz: Annotated[int, Field(ge=1, le=100)]
     horizon_steps: Annotated[int, Field(ge=1, le=10_000)]
+
+
+class AssessmentSide(_AdequacyModel):
+    """Scanner-only stored inputs; no plan or repository identity is inferred here."""
+
+    role: Role
+    boundary_tolerance_m: Annotated[FiniteFloat, Field(gt=0.0, le=10.0)]
+    shield: CapturedShield
     events: Annotated[tuple[AssessmentEvent, ...], Field(min_length=1)]
 
     @model_validator(mode="after")
-    def require_roles_and_contiguous_events(self) -> AssessmentSide:
-        expected_components = (
-            (self.policy.component, "POLICY"),
-            (self.adapter.component, "ADAPTER"),
-            (self.simulator.component, "SIMULATOR"),
-            (self.gate.component, "GATE"),
-        )
-        if any(observed != expected for observed, expected in expected_components):
-            raise ValueError("captured component roles are inconsistent")
-        if self.role == "BASELINE" and self.shield.name != "noop":
-            raise ValueError("baseline assessment side requires noop shield")
-        if self.role == "CANDIDATE" and self.shield.name != "deterministic":
-            raise ValueError("candidate assessment side requires deterministic shield")
+    def require_contiguous_events(self) -> AssessmentSide:
         sequences = tuple(event.sequence for event in self.events)
         if sequences != tuple(range(len(sequences))):
             raise ValueError("events must be nonempty and contiguous from sequence zero")
+        return self
+
+
+class CapturedArtifactSide(_AdequacyModel):
+    """Complete supported stored observations used by the pure pair assessor."""
+
+    role: Role
+    run_id: NonEmptyString
+    evidence_schema_version: Literal["1.0"]
+    bundle_digest_sha256: Sha256
+    trace_digest_sha256: Sha256
+    repository: CapturedRepositoryProvenance
+    hermes_version: str
+    scenario: CapturedScenario
+    policy: CapturedComponentIdentity
+    adapter: CapturedComponentIdentity
+    simulator: CapturedSimulatorIdentity
+    gate: CapturedComponentIdentity
+    execution: CapturedExecutionIdentity
+    scanner: AssessmentSide
+
+    @model_validator(mode="after")
+    def require_scanner_role(self) -> CapturedArtifactSide:
+        if self.scanner.role != self.role:
+            raise ValueError("captured artifact and scanner roles must match")
+        return self
+
+
+class RequestedPlanSelections(_AdequacyModel):
+    protocol_relative_path: RelativeLocator
+    discovery_ledger_relative_path: RelativeLocator
+    pair_plan_relative_path: RelativeLocator
+
+    @model_validator(mode="after")
+    def require_distinct_lexical_paths(self) -> RequestedPlanSelections:
+        values = (
+            self.protocol_relative_path,
+            self.discovery_ledger_relative_path,
+            self.pair_plan_relative_path,
+        )
+        for field_name, value in zip(type(self).model_fields, values, strict=True):
+            _require_lexical_relative_locator(value, field_name)
+        _require_unique(values, "requested plan selections")
         return self
 
 
@@ -689,27 +768,39 @@ class SideIdentity(_AdequacyModel):
 
     role: Role
     requested_relative_locator: RelativeLocator
-    observed_run_id: Identifier | None
-    observed_evidence_schema_version: Literal["1.0"] | None
+    observed_run_id: NonEmptyString | None
+    observed_evidence_schema_version: Literal["1.0", "2.0"] | None
+    observed_scenario_schema_version: NonEmptyString | None
+    observed_bundle_digest_sha256: Sha256 | None
+    computed_bundle_digest_sha256: Sha256 | None
+    observed_trace_digest_sha256: Sha256 | None
+    computed_trace_digest_sha256: Sha256 | None
 
     @model_validator(mode="after")
     def require_safe_consistent_identity(self) -> SideIdentity:
         _require_lexical_relative_locator(
             self.requested_relative_locator, "requested_relative_locator"
         )
-        if (self.observed_run_id is None) != (self.observed_evidence_schema_version is None):
-            raise ValueError("observed run ID and schema version must be available together")
+        parsed = (
+            self.observed_run_id,
+            self.observed_evidence_schema_version,
+            self.observed_scenario_schema_version,
+        )
+        if any(value is not None for value in parsed) and not all(
+            value is not None for value in parsed
+        ):
+            raise ValueError("observed run and schema identity must be all-present or all-absent")
         return self
 
 
 class ArtifactDiagnostic(_AdequacyModel):
     side: Role
-    code: RuleIdentifier
+    code: NonEmptyString
     message: NonEmptyString
 
 
 class SideReviewState(_AdequacyModel):
-    """Per-side trust state, separated from optional verified assessment facts."""
+    """Portable event-free per-side trust state."""
 
     identity: SideIdentity
     gate_verdict: Literal["PASS", "CONDITIONAL", "HOLD", "INVALID_EVIDENCE"] | None
@@ -719,7 +810,6 @@ class SideReviewState(_AdequacyModel):
     deployment_permission: Literal["NONE"]
     scope: Literal["SIMULATION_ONLY"]
     authoritative_status: Literal["NOT_DEFINED"]
-    assessment_facts: AssessmentSide | None
     diagnostics: tuple[ArtifactDiagnostic, ...]
 
     @model_validator(mode="after")
@@ -728,9 +818,19 @@ class SideReviewState(_AdequacyModel):
             raise ValueError("side diagnostics must match side identity")
         if self.integrity == "UNVERIFIED":
             if (
-                self.identity.observed_run_id is not None
+                any(
+                    value is not None
+                    for value in (
+                        self.identity.observed_run_id,
+                        self.identity.observed_evidence_schema_version,
+                        self.identity.observed_scenario_schema_version,
+                        self.identity.observed_bundle_digest_sha256,
+                        self.identity.computed_bundle_digest_sha256,
+                        self.identity.observed_trace_digest_sha256,
+                        self.identity.computed_trace_digest_sha256,
+                    )
+                )
                 or self.gate_verdict is not None
-                or self.assessment_facts is not None
                 or self.diagnostics
             ):
                 raise ValueError("unverified side cannot carry parsed or verified claims")
@@ -738,20 +838,31 @@ class SideReviewState(_AdequacyModel):
         if self.integrity == "INVALID_EVIDENCE":
             if (
                 self.gate_verdict != "INVALID_EVIDENCE"
-                or self.assessment_facts is not None
                 or not self.diagnostics
             ):
                 raise ValueError("invalid evidence must be quarantined with diagnostics")
             return self
+        if self.gate_verdict not in {"PASS", "CONDITIONAL", "HOLD"}:
+            raise ValueError("consistent evidence requires accepted gate")
+        identity = self.identity
+        required = (
+            identity.observed_run_id,
+            identity.observed_evidence_schema_version,
+            identity.observed_scenario_schema_version,
+            identity.observed_bundle_digest_sha256,
+            identity.computed_bundle_digest_sha256,
+            identity.observed_trace_digest_sha256,
+            identity.computed_trace_digest_sha256,
+        )
+        if any(value is None for value in required):
+            raise ValueError("consistent evidence requires complete observed identity")
         if (
-            self.gate_verdict not in {"PASS", "CONDITIONAL", "HOLD"}
-            or self.assessment_facts is None
+            identity.observed_bundle_digest_sha256
+            != identity.computed_bundle_digest_sha256
+            or identity.observed_trace_digest_sha256
+            != identity.computed_trace_digest_sha256
         ):
-            raise ValueError("consistent evidence requires accepted gate and assessment facts")
-        if self.assessment_facts.role != self.identity.role:
-            raise ValueError("assessment facts role must match requested side")
-        if self.identity.observed_run_id is None:
-            raise ValueError("consistent evidence requires observed manifest identity")
+            raise ValueError("consistent evidence requires matching digest roots")
         return self
 
 
@@ -871,11 +982,13 @@ class EvaluationAdequacyEnvelope(_AdequacyModel):
 
     schema_version: Literal["1.0"]
     hermes_version: NonEmptyString
+    requested_plan_selections: RequestedPlanSelections
     baseline: SideReviewState
     candidate: SideReviewState
     compatibility: Compatibility
     compatibility_reasons: tuple[NonEmptyString, ...]
     plan_evaluation: PlanEvaluation
+    plan_evaluation_reason: Literal["INVALID_EVIDENCE", "INCOMPATIBLE_EVIDENCE"] | None
     protocol_source: CapturedSourceIdentity | None
     discovery_ledger_source: CapturedSourceIdentity | None
     pair_plan_source: CapturedSourceIdentity | None
@@ -909,6 +1022,7 @@ class EvaluationAdequacyEnvelope(_AdequacyModel):
                 or self.assessment is not None
                 or self.registration is not None
                 or self.interpretation is not Interpretation.NO_INTERPRETATION
+                or self.plan_evaluation_reason is None
             ):
                 raise ValueError("PLAN_NOT_EVALUATED cannot expose accepted plan or assessment")
         else:
@@ -916,6 +1030,7 @@ class EvaluationAdequacyEnvelope(_AdequacyModel):
                 any(source is None for source in sources)
                 or self.assessment is None
                 or self.registration is None
+                or self.plan_evaluation_reason is not None
             ):
                 raise ValueError("EVALUATED output requires sources, assessment, and registration")
             expected = interpretation_for(self.assessment.status, self.registration.status)
@@ -926,6 +1041,7 @@ class EvaluationAdequacyEnvelope(_AdequacyModel):
             if (
                 self.compatibility != "NOT_EVALUATED"
                 or self.plan_evaluation != "PLAN_NOT_EVALUATED"
+                or self.plan_evaluation_reason != "INVALID_EVIDENCE"
             ):
                 raise ValueError("invalid evidence must precede compatibility and plan evaluation")
             expected_first_side = "BASELINE" if baseline_invalid else "CANDIDATE"
@@ -936,7 +1052,11 @@ class EvaluationAdequacyEnvelope(_AdequacyModel):
             return self
 
         if self.compatibility == "INCOMPATIBLE":
-            if not self.compatibility_reasons or self.plan_evaluation != "PLAN_NOT_EVALUATED":
+            if (
+                not self.compatibility_reasons
+                or self.plan_evaluation != "PLAN_NOT_EVALUATED"
+                or self.plan_evaluation_reason != "INCOMPATIBLE_EVIDENCE"
+            ):
                 raise ValueError("incompatible evidence requires reasons and no plan evaluation")
             return self
         if self.compatibility != "COMPATIBLE" or self.compatibility_reasons:
