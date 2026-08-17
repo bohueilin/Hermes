@@ -151,12 +151,29 @@ def _resolve_git_executable() -> Path:
 def _stop_process(process: subprocess.Popen[bytes]) -> None:
     with suppress(OSError, ProcessLookupError):
         process.terminate()
-    with suppress(OSError, subprocess.TimeoutExpired):
+    try:
         process.wait(timeout=GIT_TERMINATE_GRACE_S)
-    with suppress(OSError, ProcessLookupError):
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    else:
+        return
+    try:
         process.kill()
-    with suppress(OSError, subprocess.TimeoutExpired):
+    except ProcessLookupError:
+        with suppress(OSError):
+            process.wait()
+        return
+    except OSError:
+        with suppress(OSError, subprocess.TimeoutExpired):
+            process.wait(timeout=GIT_TERMINATE_GRACE_S)
+        return
+    try:
         process.wait(timeout=GIT_TERMINATE_GRACE_S)
+    except subprocess.TimeoutExpired:
+        with suppress(OSError):
+            process.wait()
+    except OSError:
+        pass
 
 
 def _register_pipe(
@@ -398,11 +415,22 @@ def _parse_status_output(payload: bytes) -> tuple[tuple[str, str], ...]:
     return tuple(records)
 
 
-def _successful(result: _GitCommandResult) -> bool:
-    if result.returncode != 0:
+def _command_succeeded(
+    result: _GitCommandResult,
+    operation: str,
+    *,
+    historical_returncodes: frozenset[int] = frozenset(),
+) -> bool:
+    if result.returncode in historical_returncodes:
         return False
+    if result.returncode != 0:
+        raise RegistrationGitOperationalError(
+            f"Git {operation} failed with unexpected exit status {result.returncode}"
+        )
     if result.stderr:
-        raise RegistrationGitOperationalError("Git emitted unexpected diagnostic output")
+        raise RegistrationGitOperationalError(
+            f"Git {operation} emitted unexpected diagnostic output"
+        )
     return True
 
 
@@ -448,7 +476,11 @@ def _blob_digest_matches(
     expected_digest: str,
 ) -> bool:
     result = runner.run("show", f"{commit}:{path}")
-    if not _successful(result):
+    if not _command_succeeded(
+        result,
+        "show",
+        historical_returncodes=frozenset({128}),
+    ):
         return False
     return hashlib.sha256(result.stdout).hexdigest() == expected_digest
 
@@ -503,7 +535,11 @@ class RegistrationGitInspector:
 
         runner = _GitRunner(_resolve_git_executable(), root)
         top_level = runner.run("rev-parse", "--show-toplevel")
-        if not _successful(top_level):
+        if not _command_succeeded(
+            top_level,
+            "rev-parse",
+            historical_returncodes=frozenset({128}),
+        ):
             return _not_established()
         if _parse_repository_top_level(top_level.stdout) != root:
             return _not_established()
@@ -517,8 +553,7 @@ class RegistrationGitInspector:
                 return _not_established()
 
         parent_result = runner.run("rev-list", "--parents", "-n", "1", pair_commit)
-        if not _successful(parent_result):
-            return _not_established()
+        _command_succeeded(parent_result, "rev-list")
         observed_commit, parents = _parse_parent_line(parent_result.stdout)
         if observed_commit != pair_commit or parents != (protocol_commit,):
             return _not_established()
@@ -532,8 +567,7 @@ class RegistrationGitInspector:
             protocol_commit,
             pair_commit,
         )
-        if not _successful(diff_result):
-            return _not_established()
+        _command_succeeded(diff_result, "diff-tree")
         diff_records = _parse_diff_tree_output(diff_result.stdout)
         expected_additions = {paths.ledger, paths.pair_plan, paths.selected_scenario}
         if (
@@ -544,7 +578,11 @@ class RegistrationGitInspector:
             return _not_established()
 
         ancestry = runner.run("merge-base", "--is-ancestor", protocol_commit, pair_commit)
-        if not _successful(ancestry):
+        if not _command_succeeded(
+            ancestry,
+            "merge-base",
+            historical_returncodes=frozenset({1}),
+        ):
             return _not_established()
         if ancestry.stdout:
             raise RegistrationGitOperationalError("merge-base emitted unexpected output")
@@ -557,8 +595,7 @@ class RegistrationGitInspector:
             "--",
             *paths.status_pathspec(),
         )
-        if not _successful(status):
-            return _not_established()
+        _command_succeeded(status, "status")
         status_records = _parse_status_output(status.stdout)
         if status_records:
             return _not_established()

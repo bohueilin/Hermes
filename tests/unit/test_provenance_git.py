@@ -667,6 +667,95 @@ def _write_fake_git(path: Path, body: str) -> Path:
     return path
 
 
+def _git_with_operation_exit(
+    path: Path,
+    *,
+    real_git: Path,
+    operation: str,
+    returncode: int,
+) -> Path:
+    return _write_fake_git(
+        path,
+        (
+            "import os, sys\n"
+            f"real_git = {str(real_git)!r}\n"
+            f"if {operation!r} in sys.argv[1:]:\n"
+            f"    os.write(2, b'synthetic {operation} failure\\n')\n"
+            f"    raise SystemExit({returncode})\n"
+            "os.execve(real_git, [real_git, *sys.argv[1:]], dict(os.environ))\n"
+        ),
+    )
+
+
+def test_status_nonzero_exit_is_an_operational_error_with_diagnostic(
+    registered_repository: _RegisteredRepository,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_git = Path(shutil.which("git") or "").resolve()
+    executable = _git_with_operation_exit(
+        tmp_path / "status-failure-git",
+        real_git=real_git,
+        operation="status",
+        returncode=1,
+    )
+    monkeypatch.setattr(
+        git_module.shutil,
+        "which",
+        lambda *_args, **_kwargs: str(executable),
+    )
+
+    with pytest.raises(RegistrationGitOperationalError) as captured:
+        _inspect(registered_repository)
+
+    assert str(captured.value) == "Git status failed with unexpected exit status 1"
+
+
+def test_merge_base_unexpected_exit_is_an_operational_error_with_diagnostic(
+    registered_repository: _RegisteredRepository,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_git = Path(shutil.which("git") or "").resolve()
+    executable = _git_with_operation_exit(
+        tmp_path / "merge-base-failure-git",
+        real_git=real_git,
+        operation="merge-base",
+        returncode=2,
+    )
+    monkeypatch.setattr(
+        git_module.shutil,
+        "which",
+        lambda *_args, **_kwargs: str(executable),
+    )
+
+    with pytest.raises(RegistrationGitOperationalError) as captured:
+        _inspect(registered_repository)
+
+    assert str(captured.value) == "Git merge-base failed with unexpected exit status 2"
+
+
+def test_merge_base_nonancestor_exit_remains_historical_non_establishment(
+    registered_repository: _RegisteredRepository,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_git = Path(shutil.which("git") or "").resolve()
+    executable = _git_with_operation_exit(
+        tmp_path / "merge-base-nonancestor-git",
+        real_git=real_git,
+        operation="merge-base",
+        returncode=1,
+    )
+    monkeypatch.setattr(
+        git_module.shutil,
+        "which",
+        lambda *_args, **_kwargs: str(executable),
+    )
+
+    _assert_not_established(_inspect(registered_repository))
+
+
 def test_repository_root_requires_exact_absolute_canonical_spelling(
     registered_repository: _RegisteredRepository,
     monkeypatch: pytest.MonkeyPatch,
@@ -825,6 +914,46 @@ class _StuckProcess:
         self.returncode = -9
         os.close(self._stdout_write)
         os.close(self._stderr_write)
+
+
+class _DelayedReapProcess(_StuckProcess):
+    def __init__(self) -> None:
+        super().__init__()
+        self.killed = False
+        self.reaped = False
+
+    def wait(self, timeout: float | None = None) -> int:
+        if not self.killed:
+            raise subprocess.TimeoutExpired("git", timeout)
+        if timeout is not None:
+            self.events.append("post-kill-timeout")
+            raise subprocess.TimeoutExpired("git", timeout)
+        self.events.append("reap")
+        self.reaped = True
+        self.returncode = -9
+        return self.returncode
+
+    def kill(self) -> None:
+        self.events.append("kill")
+        self.killed = True
+        os.close(self._stdout_write)
+        os.close(self._stderr_write)
+
+
+def test_post_kill_timeout_is_followed_by_eventual_reap_and_pipe_cleanup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = _DelayedReapProcess()
+    monkeypatch.setattr(git_module, "GIT_OPERATION_TIMEOUT_S", 0.01)
+    monkeypatch.setattr(git_module, "GIT_TERMINATE_GRACE_S", 0.01)
+
+    with pytest.raises(RegistrationGitOperationalError):
+        _read_bounded_process(process)
+
+    assert process.events == ["terminate", "kill", "post-kill-timeout", "reap"]
+    assert process.reaped
+    assert process.stdout.closed
+    assert process.stderr.closed
 
 
 def test_selector_initialization_failure_stops_process_and_closes_pipes(
