@@ -12,6 +12,7 @@ from streamlit.testing.v1 import AppTest  # noqa: E402
 
 from hermes.evidence.artifacts import REQUIRED_ARTIFACT_FILES
 from hermes.review import review_artifact
+from hermes.runtime.orchestrator import execute_fake_run
 
 _RETAINED_SELECTIONS = (
     "handoff-phase5-demo",
@@ -978,3 +979,95 @@ def test_invalid_evidence_quarantine_is_consistent_across_every_review_section(
         assert {"finding ID", "metric ID", "track ID", "file name"}.isdisjoint(columns)
         assert "Recorded provenance" not in visible
         _assert_no_envelope(app)
+
+
+def test_phase7_availability_fixture_workbench_matches_review_envelope(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "artifacts"
+    root.mkdir()
+    run_id = "handoff-p7-evidence-availability"
+    execute_fake_run(
+        scenario_path=repository_root / "scenarios" / "fake_evidence_availability.yaml",
+        gate_config_path=repository_root / "config" / "gates.phase1.yaml",
+        seed=7,
+        run_id=run_id,
+        artifact_root=root,
+        repository_root=repository_root,
+    )
+    envelope = review_artifact(root, run_id)
+    before = _hashes(root, (run_id,))
+
+    app = _review_section(_verify(_app(root.resolve()), run_id), "Evidence")
+    assert list(app.exception) == []
+    visible = _visible_text(app)
+    assert "Gate verdict: HOLD [GATE_DECISION]" in visible
+    assert "Canonical accepted finding total: 6 [COMPUTED]" in visible
+    frames = [frame.value for frame in app.dataframe]
+    sufficiency = next(frame for frame in frames if "evidence ID" in frame.columns)
+    progress = sufficiency.loc[sufficiency["evidence ID"] == "progress.required"].iloc[0]
+    jerk = sufficiency.loc[sufficiency["evidence ID"] == "comfort.jerk"].iloc[0]
+    not_applicable = sufficiency.loc[
+        sufficiency["evidence ID"] == "fault.coverage.required"
+    ].iloc[0]
+    assert progress["availability"] == "NOT_AVAILABLE"
+    assert progress["reason"] == "route progress explicitly unavailable"
+    assert progress["gate consequence"] == "CONFIGURED_MISSING_REQUIRED_EVIDENCE"
+    assert jerk["availability"] == "NOT_AVAILABLE"
+    assert jerk["reason"] == "at least two events are required to compute jerk"
+    assert jerk["gate consequence"] == "CONDITIONAL"
+    assert not_applicable["availability"] == "NOT_APPLICABLE"
+    assert not_applicable["reason"] == "Not applicable to the legacy verifier profile"
+
+    metrics = next(frame for frame in frames if "metric ID" in frame.columns)
+    for metric_id, reason in (
+        ("route_completion_pct", "route progress explicitly unavailable"),
+        (
+            "minimum_ttc_s",
+            "front-object TTC evidence is unavailable for this trace",
+        ),
+        (
+            "max_abs_jerk_mps3",
+            "at least two events are required to compute jerk",
+        ),
+    ):
+        row = metrics.loc[metrics["metric ID"] == metric_id].iloc[0]
+        assert row["availability"] == "NOT_AVAILABLE"
+        assert row["unavailable reason"] == reason
+
+    app = _review_section(app, "Timeline")
+    assert list(app.exception) == []
+    assert "Event total: 1 [OBSERVED]" in _visible_text(app)
+    assert "Track total: 16; available tracks: 10 [OBSERVED]" in _visible_text(app)
+    frames = [frame.value for frame in app.dataframe]
+    metadata = next(
+        frame
+        for frame in frames
+        if {"track ID", "source reference count", "availability"}.issubset(frame.columns)
+    )
+    unavailable = metadata.loc[metadata["availability"] == "NOT_AVAILABLE"]
+    assert set(unavailable["track ID"]) == {
+        "raw_observation",
+        "delivered_observation",
+        "result_observation",
+        "permitted_action",
+        "observation_fault_reasons",
+        "control_fault_reasons",
+    }
+    points = next(
+        frame
+        for frame in frames
+        if {"track ID", "sequence", "display value", "unavailable reason"}.issubset(
+            frame.columns
+        )
+    )
+    route = points.loc[points["track ID"] == "route_progress_pct"].iloc[0]
+    assert route["availability"] == "NOT_AVAILABLE"
+    assert route["display value"] == "NOT_AVAILABLE"
+    assert route["unavailable reason"] == "route progress explicitly unavailable"
+    ttc = points.loc[points["track ID"] == "ttc_s"].iloc[0]
+    assert ttc["availability"] == "NOT_AVAILABLE"
+    assert ttc["unavailable reason"] == "no paired closing front-object evidence"
+    assert _hashes(root, (run_id,)) == before
+    assert envelope.model_dump_json() == review_artifact(root, run_id).model_dump_json()

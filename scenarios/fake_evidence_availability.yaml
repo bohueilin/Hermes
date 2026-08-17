@@ -1,0 +1,17 @@
+schema_version: "1.0"
+name: fake_evidence_availability
+version: "1.0"
+description: Forced one-event presentation fixture for typed evidence availability review.
+adapter: fake
+control:
+  frequency_hz: 10
+  horizon_steps: 1
+  target_speed_mps: 8.0
+initial_state:
+  speed_mps: 0.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 20.0
+  boundary_tolerance_m: 1.5
+hazards:
+  unavailable_progress: true

@@ -1,5 +1,9 @@
 # Hermes Phase 6 Reviewer-Comprehension Usability Test Plan
 
+> **Supersession note:** Superseded for future execution by PHASE7_HUMAN_VALIDATION_PLAN.md.
+> Historical Phase 6 evidence is preserved and not reinterpreted. This file remains the record of
+> the Phase 6 prospective instrument.
+
 ## Status and purpose
 
 **Human-comprehension status: `NOT YET OBSERVED`.**

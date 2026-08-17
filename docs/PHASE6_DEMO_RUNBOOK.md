@@ -1,5 +1,9 @@
 # Hermes Phase 6 Demo Runbook
 
+> **Phase 7 non-causality correction:** Stored deltas are descriptive; comparison alone does not establish challenge engagement or causal treatment effect. The retained lead and cut-in pairs must not be presented as proof that a TTC mechanism engaged or caused a metric delta.
+> This note
+> corrects interpretation only; it does not rewrite the historical Phase 6 evidence.
+
 ## 1. Objective
 
 Demonstrate that Hermes makes simulation evidence understandable without strengthening the claim beyond the verified core.

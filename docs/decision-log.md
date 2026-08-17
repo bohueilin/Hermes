@@ -1,5 +1,41 @@
 # Hermes Decision Log
 
+## 2026-08-16 — Phase 7 human-validation instrument repair
+
+### Scope
+
+Add one forced one-event fake presentation fixture through the normal public evidence pipeline and
+replace the prospective Phase 6 study instrument for future execution. Preserve gate, verifier,
+review, comparison, artifact, and authority semantics. No simulator-backed human conclusion,
+manual/accessibility result, participant recruitment, remote action, or physical-control claim is
+authorized.
+
+### Decisions
+
+- Treat the schema-1 fixture as exactly six findings plus seven sufficiency rows. The seventh row,
+  `fault.coverage.required`, is sufficiency-only `NOT_APPLICABLE`; never synthesize it as a finding.
+- Generate the retained fixture once from a clean semantic/docs checkpoint, accept public command
+  exit 20 as successful HOLD publication, and bind only actually observed digests/commit/clean state
+  in the later fixture registry. Never stage or hand-edit generated artifact bytes.
+- Freeze ten tasks, with Tasks 1–9 in the North Star and Task 10 as a separate named keyboard and
+  screen-reader observation of the nominal review flow. Task 4 is classification/reason/consequence
+  only. Task 7 is an explicit non-causal cut-in interpretation test. Task 5 uses schema-2 evidence.
+- Keep cohort-median timing hypotheses separate from the per-attempt numerator bound, which remains
+  `TBD_BEFORE_MAIN_COHORT` until pilot review. Technical invalidations stay denominator-visible and
+  must be rerun under the unchanged frozen protocol.
+- Preserve raw task/participant-role/accessibility slices, withdrawals, assistance, unfavorable
+  outcomes, and all seven authority fields. Do not create a composite score or unqualified
+  population percentage from a 6–10-person cohort.
+- Keep the six independent study status fields separate. Automated correctness is test-derived;
+  human, manual, accessibility, expert, pilot, and cohort status remain NOT YET OBSERVED.
+
+### Consequence
+
+Checkpoint A may establish only a test-backed executable instrument. Checkpoint B may bind the one
+retained local fixture after its actual digests exist. Human evidence remains absent. Promotion to
+pilot or main-cohort readiness remains conditional on the separately named prerequisites in the
+Phase 7 plan. Deployment permission remains `NONE`; scope remains `SIMULATION_ONLY`.
+
 ## 2026-08-13 — Implement reviewer comprehension and keep human gates open
 
 ### Scope

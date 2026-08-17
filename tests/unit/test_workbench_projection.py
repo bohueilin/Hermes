@@ -16,6 +16,7 @@ from hermes.review.models import (  # noqa: E402
     Track,
     UnavailableEvidenceItem,
 )
+from hermes.runtime.orchestrator import execute_fake_run  # noqa: E402
 from hermes.workbench import app as workbench_app  # noqa: E402
 
 
@@ -1264,3 +1265,97 @@ def test_persistent_identity_rows_use_not_available_category_for_absent_manifest
 
     assert run_id["value"] == "NOT_AVAILABLE"
     assert run_id["category"] == "NOT_AVAILABLE"
+
+
+def test_phase7_pipeline_fixture_projects_exact_availability_rows_without_mutation(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    run_id = "handoff-p7-evidence-availability"
+    outcome = execute_fake_run(
+        scenario_path=repository_root / "scenarios" / "fake_evidence_availability.yaml",
+        gate_config_path=repository_root / "config" / "gates.phase1.yaml",
+        seed=7,
+        run_id=run_id,
+        artifact_root=artifact_root,
+        repository_root=repository_root,
+    )
+    envelope = review_artifact(artifact_root, run_id)
+    before = envelope.model_dump_json()
+
+    sufficiency_rows = workbench_app._sufficiency_rows(envelope)
+    findings = workbench_app._grouped_finding_rows(envelope)
+    metric_rows = workbench_app._metric_rows(envelope)
+    metadata_rows = workbench_app._track_metadata_rows(envelope)
+    point_rows = workbench_app._timeline_rows(envelope, offset=0, limit=50)
+
+    assert outcome.artifact_path == artifact_root / run_id
+    assert len(envelope.findings) == 6
+    assert len(sufficiency_rows) == 7
+    by_evidence_id = {row["evidence ID"]: row for row in sufficiency_rows}
+    assert by_evidence_id["progress.required"]["reason"] == (
+        "route progress explicitly unavailable"
+    )
+    assert by_evidence_id["progress.required"]["gate consequence"] == (
+        "CONFIGURED_MISSING_REQUIRED_EVIDENCE"
+    )
+    assert by_evidence_id["comfort.jerk"]["reason"] == (
+        "at least two events are required to compute jerk"
+    )
+    assert by_evidence_id["comfort.jerk"]["gate consequence"] == "CONDITIONAL"
+    assert by_evidence_id["fault.coverage.required"] == {
+        **by_evidence_id["fault.coverage.required"],
+        "requiredness": "NOT_APPLICABLE",
+        "availability": "NOT_APPLICABLE",
+        "reason": "Not applicable to the legacy verifier profile",
+        "gate consequence": "NO_EFFECT",
+    }
+    assert [row["finding ID"] for row in findings["Required but unavailable"]] == [
+        "progress.required"
+    ]
+    assert [row["finding ID"] for row in findings["Optional evidence"]] == [
+        "comfort.acceleration",
+        "comfort.jerk",
+    ]
+
+    by_metric_id = {row["metric ID"]: row for row in metric_rows}
+    assert by_metric_id["route_completion_pct"]["availability"] == "NOT_AVAILABLE"
+    assert by_metric_id["route_completion_pct"]["unavailable reason"] == (
+        "route progress explicitly unavailable"
+    )
+    assert by_metric_id["minimum_ttc_s"]["unavailable reason"] == (
+        "front-object TTC evidence is unavailable for this trace"
+    )
+    assert by_metric_id["max_abs_jerk_mps3"]["unavailable reason"] == (
+        "at least two events are required to compute jerk"
+    )
+
+    unavailable_track_ids = {
+        "raw_observation",
+        "delivered_observation",
+        "result_observation",
+        "permitted_action",
+        "observation_fault_reasons",
+        "control_fault_reasons",
+    }
+    assert {
+        row["track ID"]
+        for row in metadata_rows
+        if row["availability"] == "NOT_AVAILABLE"
+    } == unavailable_track_ids
+    route = next(row for row in point_rows if row["track ID"] == "route_progress_pct")
+    assert route == {
+        **route,
+        "availability": "NOT_AVAILABLE",
+        "machine value": "NOT_AVAILABLE",
+        "exact value": "NOT_AVAILABLE",
+        "display value": "NOT_AVAILABLE",
+        "unit": "%",
+        "unavailable reason": "route progress explicitly unavailable",
+    }
+    ttc = next(row for row in point_rows if row["track ID"] == "ttc_s")
+    assert ttc["availability"] == "NOT_AVAILABLE"
+    assert ttc["unavailable reason"] == "no paired closing front-object evidence"
+    assert envelope.model_dump_json() == before
