@@ -161,7 +161,7 @@ Scoring checklist — correct only if every item is satisfied:
 
 - report gate HOLD and integrity INTERNALLY_CONSISTENT;
 - identify that `collision.zero` is REQUIRED / FAIL / AVAILABLE, measured 1.0 count against
-  LTE 0.0 count, with a hard-invariant HOLD consequence;
+  LTE 0 count, with a hard-invariant HOLD consequence;
 - identify that sequence 11 remains 0 collisions and the first supporting collision is sequence
   12 at 1.3 s; and
 - state the exact rationale: `Collision hard invariant failed; positive soft results cannot
@@ -292,11 +292,11 @@ Required source references: `events.jsonl /candidate_action @ sequence 9`,
 `events.jsonl /observation_fault_evidence/delivered_observation/observation_age_s @ sequence 9`,
 `events.jsonl /executed_action @ sequence 10`,
 `events.jsonl /control_fault_evidence/applied_faults @ sequence 10`,
-`events.jsonl /executed_from_sequence @ sequence 10`,
-`events.jsonl /executed_from_candidate_time_s @ sequence 10`,
-`events.jsonl /execution_time_s @ sequence 10`,
-`events.jsonl /control_latency_ms/value @ sequence 10`, and
-`events.jsonl /pre_saturation_action @ sequence 10`.
+`events.jsonl /control_fault_evidence/executed_from_sequence @ sequence 10`,
+`events.jsonl /control_fault_evidence/executed_from_candidate_time_s @ sequence 10`,
+`events.jsonl /control_fault_evidence/execution_time_s @ sequence 10`,
+`events.jsonl /control_fault_evidence/control_latency_ms/value @ sequence 10`, and
+`events.jsonl /control_fault_evidence/pre_saturation_action @ sequence 10`.
 
 ## Task 6 — CONDITIONAL without permission
 
@@ -351,10 +351,11 @@ Scoring checklist — correct only if every item is satisfied:
 - report maximum absolute acceleration: 12.683377265917573 → 13.003747463227677 m/s^2
   (REGRESSED);
 - report maximum absolute jerk: 128.41591835005693 → 157.565283775339 m/s^3 (REGRESSED);
-- report `SPEED_CAP at sequences 20, 26, and 32`; sequences 20 and 26 are PRE_TRIGGER and sequence
-  32 is CUT_IN, so pre-trigger SPEED_CAP confounding is explicit;
-- state that the candidate never entered the TTC target band and records zero
-  `TTC_BELOW_THRESHOLD` target reasons; and
+- report `SPEED_CAP at sequences 20, 26, and 32`, the exact candidate override histogram
+  `{SPEED_CAP: 3}`, and zero recorded `TTC_BELOW_THRESHOLD` reasons;
+- state that the stored review evidence does not demonstrate TTC-target intervention or mechanism
+  engagement; phase labels, the shield's configured TTC threshold, and target-band recomputation
+  are not exposed by the approved participant interface and therefore are not scored; and
 - characterize the mixed result as descriptive and non-causal, with no aggregate winner or
   advancement inference.
 
@@ -411,10 +412,11 @@ Required authority state: Gate verdict PASS; Evidence integrity INTERNALLY_CONSI
 NOT_AUTHENTICATED; Authorization NOT_EVALUATED; Deployment permission NONE; Scope SIMULATION_ONLY;
 Authoritative status NOT_DEFINED.
 
-Required source references: `manifest.json /repository_commit`, `manifest.json /repository_dirty`,
-`manifest.json /adapter_name`, `manifest.json /adapter_version`, `manifest.json /simulator_name`,
-`manifest.json /simulator_version`, `manifest.json /simulator_commit`, `bundle.sha256` whole-file
-pointer `""`, and `trace.sha256` whole-file pointer `""`.
+Required source references: `manifest.json /hermes_version`, `manifest.json /repository_commit`,
+`manifest.json /repository_dirty`, `manifest.json /adapter_name`, `manifest.json /adapter_version`,
+`manifest.json /simulator_name`, `manifest.json /simulator_version`,
+`manifest.json /simulator_commit`, `bundle.sha256` whole-file pointer `""`, and `trace.sha256`
+whole-file pointer `""`.
 
 ## Task 9 — Incompatible evidence
 

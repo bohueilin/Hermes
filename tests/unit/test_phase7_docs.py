@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import json
 import re
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
+import yaml
+
+from hermes.review import canonical_envelope_bytes, review_artifact
 
 _PHASE7_DOCS = (
     "PHASE7_HUMAN_VALIDATION_PLAN.md",
@@ -39,6 +44,112 @@ def _read(repository_root: Path, name: str) -> str:
 
 def _read_raw(repository_root: Path, name: str) -> str:
     return (repository_root / "docs" / name).read_text(encoding="utf-8")
+
+
+def _resolve_json_pointer(document: object, pointer: str) -> object:
+    assert pointer == "" or pointer.startswith("/")
+    current = document
+    for raw_token in pointer.split("/")[1:]:
+        token = raw_token.replace("~1", "/").replace("~0", "~")
+        if isinstance(current, Mapping):
+            current = current[token]
+        else:
+            assert isinstance(current, list)
+            current = current[int(token)]
+    return current
+
+
+def _artifact_pointer_value(
+    repository_root: Path,
+    locator: str,
+    file_name: str,
+    pointer: str,
+    *,
+    event_sequence: int | None = None,
+) -> object:
+    path = repository_root / "artifacts" / locator / file_name
+    if file_name == "events.jsonl":
+        assert event_sequence is not None
+        events = tuple(
+            json.loads(line)
+            for line in path.read_text(encoding="utf-8").splitlines()
+        )
+        matches = tuple(event for event in events if event["sequence"] == event_sequence)
+        assert len(matches) == 1
+        document: object = matches[0]
+    elif file_name.endswith(".yaml"):
+        document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    else:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    return _resolve_json_pointer(document, pointer)
+
+
+def _assert_literal_subset(actual: object, expected: object) -> None:
+    if isinstance(expected, Mapping):
+        assert isinstance(actual, Mapping)
+        for key, value in expected.items():
+            _assert_literal_subset(actual[key], value)
+        return
+    assert actual == expected
+
+
+def _assert_phase7_packet_status_coherence(documents: Mapping[str, str]) -> None:
+    normalized = {
+        name: " ".join(raw.replace("`", "").split())
+        for name, raw in documents.items()
+    }
+    exact_status_contracts = {
+        "PHASE7_HUMAN_VALIDATION_PLAN.md": (
+            "Human comprehension, manual visual quality, accessibility, expert critique, "
+            "pilot, and main-cohort outcomes are NOT YET OBSERVED."
+        ),
+        "PHASE7_HUMAN_OBSERVATION_TEMPLATE.md": "Status: NOT YET OBSERVED.",
+        "PHASE7_COHORT_SYNTHESIS_TEMPLATE.md": "Status: NOT YET OBSERVED.",
+        "PHASE7_MANUAL_VISUAL_RECORD.md": "Status: NOT YET OBSERVED",
+        "PHASE7_ACCESSIBILITY_RECORD.md": "Status: NOT YET OBSERVED",
+        "PHASE7_REQUIREMENTS_TRACEABILITY.md": (
+            "human/manual/accessibility/expert/pilot/cohort evidence is NOT YET OBSERVED."
+        ),
+    }
+    for name, exact in exact_status_contracts.items():
+        assert exact in normalized[name]
+
+    handoff = normalized["PHASE7_HUMAN_VALIDATION_HANDOFF.md"]
+    for exact in (
+        "Automated correctness: TEST-DERIVED",
+        "Manual visual quality: NOT YET OBSERVED",
+        "Accessibility: NOT YET OBSERVED",
+        "Expert critique: NOT YET OBSERVED",
+        "Pilot human comprehension: NOT YET OBSERVED",
+        "Main-cohort human comprehension: NOT YET OBSERVED",
+        "HUMAN_EVIDENCE_OBSERVED: NOT PROMOTED",
+        "COMPREHENSION_GATE_MET: NOT PROMOTED",
+    ):
+        assert exact in handoff
+
+    for name in (
+        "PHASE7_HUMAN_VALIDATION_PLAN.md",
+        "PHASE7_HUMAN_VALIDATION_HANDOFF.md",
+    ):
+        text = normalized[name]
+        assert "Evidence custodian: UNASSIGNED" in text
+        assert "Deletion owner: UNASSIGNED" in text
+        assert "Recruitment is blocked until both owners explicitly accept" in text
+
+    assert (
+        "| P7-HV-09 | Privacy, encrypted external custody, explicitly accepted owners, "
+        "and deletion | plan/templates/handoff | UNASSIGNED; recruitment BLOCKED pending "
+        "explicit written acceptance |"
+    ) in normalized["PHASE7_REQUIREMENTS_TRACEABILITY.md"]
+
+    forbidden_promotion = re.compile(
+        r"(?im)^\s*(?:status|manual visual quality|accessibility|expert critique|"
+        r"pilot human comprehension|main-cohort human comprehension|"
+        r"human_evidence_observed|comprehension_gate_met)\s*:\s*"
+        r"(?:observed|ready(?:_for_(?:pilot|main_cohort))?|promoted|true)\b"
+    )
+    for raw in documents.values():
+        assert forbidden_promotion.search(raw.replace("`", "")) is None
 
 
 def test_phase7_human_packet_has_exact_file_set_and_honest_statuses(
@@ -86,9 +197,14 @@ def test_phase7_plan_freezes_ten_versioned_tasks_and_exact_answer_contract(
     assert "CONDITIONAL does not grant permission" in text
     assert "1.8155836417275437 → 8.49579415469856 s" in text
     assert "SPEED_CAP at sequences 20, 26, and 32" in text
-    assert "candidate never entered the TTC target band" in text
-    assert "zero TTC_BELOW_THRESHOLD target reasons" in text
-    assert "pre-trigger SPEED_CAP confounding" in text
+    assert "zero recorded TTC_BELOW_THRESHOLD reasons" in text
+    assert (
+        "stored review evidence does not demonstrate TTC-target intervention or "
+        "mechanism engagement"
+    ) in text
+    assert "candidate never entered the TTC target band" not in text
+    assert "PRE_TRIGGER" not in _task_section(text, 7)
+    assert "CUT_IN" not in _task_section(text, 7)
     for prohibited in (
         "engagement",
         "mechanism exercised",
@@ -155,7 +271,7 @@ def test_phase7_scoring_keys_bind_exact_artifact_facts_sources_and_authority(
     task2 = _task_section(plan, 2)
     for exact in (
         "collision.zero is REQUIRED / FAIL / AVAILABLE",
-        "measured 1.0 count against LTE 0.0 count",
+        "measured 1.0 count against LTE 0 count",
         "first supporting collision is sequence 12 at 1.3 s",
         "sequence 11 remains 0 collisions",
         "Collision hard invariant failed; positive soft results cannot compensate.",
@@ -188,7 +304,14 @@ def test_phase7_scoring_keys_bind_exact_artifact_facts_sources_and_authority(
             "observation_age_s @ sequence 9"
         ),
         "events.jsonl /executed_action @ sequence 10",
-        "events.jsonl /executed_from_sequence @ sequence 10",
+        "events.jsonl /control_fault_evidence/executed_from_sequence @ sequence 10",
+        (
+            "events.jsonl /control_fault_evidence/executed_from_candidate_time_s "
+            "@ sequence 10"
+        ),
+        "events.jsonl /control_fault_evidence/execution_time_s @ sequence 10",
+        "events.jsonl /control_fault_evidence/control_latency_ms/value @ sequence 10",
+        "events.jsonl /control_fault_evidence/pre_saturation_action @ sequence 10",
     ):
         assert exact in task5
     assert "do not claim a same-row causal chain" in task5
@@ -259,6 +382,270 @@ def test_phase7_scoring_keys_bind_exact_artifact_facts_sources_and_authority(
     for task_id, source_reference in required_source_by_task.items():
         assert source_reference in _task_section(plan, task_id)
 
+    assert "manifest.json /hermes_version" in _task_section(plan, 8)
+    for nonexistent in (
+        "events.jsonl /executed_from_sequence @ sequence 10",
+        "events.jsonl /executed_from_candidate_time_s @ sequence 10",
+        "events.jsonl /execution_time_s @ sequence 10",
+        "events.jsonl /control_latency_ms/value @ sequence 10",
+        "events.jsonl /pre_saturation_action @ sequence 10",
+    ):
+        assert nonexistent not in task5
+
+
+def test_phase7_frozen_artifact_json_pointers_resolve_to_exact_values(
+    repository_root: Path,
+) -> None:
+    cases: tuple[
+        tuple[int, str, str, str, int | None, object, str], ...
+    ] = (
+        (1, "handoff-phase5-demo", "manifest.json", "/run_id", None,
+         "handoff-phase5-demo", "manifest.json /run_id"),
+        (1, "handoff-phase5-demo", "verdict.json", "/verdict", None,
+         "PASS", "verdict.json /verdict"),
+        (2, "handoff-p1-collision", "events.jsonl",
+         "/vehicle_state/collision_count", 12, 1,
+         "events.jsonl /vehicle_state/collision_count @ sequence 12"),
+        (2, "handoff-p1-collision", "gate-config.resolved.yaml",
+         "/hard/max_collision_count", None, 0,
+         "gate-config.resolved.yaml /hard/max_collision_count"),
+        (2, "handoff-p1-collision", "metrics.json", "/collision_count", None,
+         1, "metrics.json /collision_count"),
+        (2, "handoff-p1-collision", "findings.json", "/findings/1", None,
+         {"finding_id": "collision.zero", "status": "FAIL",
+          "event_sequences": [12]}, "findings.json /findings/1"),
+        (2, "handoff-p1-collision", "verdict.json", "/verdict", None,
+         "HOLD", "verdict.json /verdict"),
+        (3, "phase1-tampered", "manifest.json", "/run_id", None,
+         "phase1-nominal", "manifest.json /run_id"),
+        (3, "phase1-tampered", "events.jsonl", "", 0,
+         {"sequence": 0}, 'events.jsonl whole-event pointer "" at sequence 0'),
+        (4, "handoff-p7-evidence-availability", "findings.json", "/findings/3",
+         None, {"finding_id": "progress.required", "status": "NOT_AVAILABLE",
+                "measurement": {"reason": "route progress explicitly unavailable"}},
+         "findings.json /findings/3"),
+        (4, "handoff-p7-evidence-availability", "metrics.json",
+         "/route_completion_pct", None,
+         {"availability": "NOT_AVAILABLE", "value": None,
+          "reason": "route progress explicitly unavailable"},
+         "metrics.json /route_completion_pct"),
+        (4, "handoff-p7-evidence-availability", "findings.json", "/findings/5",
+         None, {"finding_id": "comfort.jerk", "status": "NOT_AVAILABLE",
+                "measurement": {
+                    "reason": "at least two events are required to compute jerk"
+                }}, "findings.json /findings/5"),
+        (4, "handoff-p7-evidence-availability", "metrics.json",
+         "/max_abs_jerk_mps3", None,
+         {"availability": "NOT_AVAILABLE", "value": None,
+          "reason": "at least two events are required to compute jerk"},
+         "metrics.json /max_abs_jerk_mps3"),
+        (5, "handoff-p4-fault", "events.jsonl", "/candidate_action", 9,
+         {"brake": 0.9897080762989154, "steering": -0.5511323602891678,
+          "throttle": 0.0}, "events.jsonl /candidate_action @ sequence 9"),
+        (5, "handoff-p4-fault", "events.jsonl", "/permitted_action", 9,
+         {"brake": 1.0, "steering": -0.5511323809623718, "throttle": 0.0},
+         "events.jsonl /permitted_action @ sequence 9"),
+        (5, "handoff-p4-fault", "events.jsonl", "/override_reasons", 9,
+         ["SPEED_CAP"], "events.jsonl /override_reasons @ sequence 9"),
+        (5, "handoff-p4-fault", "events.jsonl",
+         "/observation_fault_evidence/applied_faults", 9,
+         ["OBSERVATION_DELAY", "OBSERVATION_NOISE"],
+         "events.jsonl /observation_fault_evidence/applied_faults @ sequence 9"),
+        (5, "handoff-p4-fault", "events.jsonl",
+         "/observation_fault_evidence/delivered_from_sequence", 9, 8,
+         "events.jsonl /observation_fault_evidence/delivered_from_sequence @ sequence 9"),
+        (5, "handoff-p4-fault", "events.jsonl",
+         "/observation_fault_evidence/delivered_from_time_s", 9, 0.8,
+         "events.jsonl /observation_fault_evidence/delivered_from_time_s @ sequence 9"),
+        (5, "handoff-p4-fault", "events.jsonl",
+         "/observation_fault_evidence/delivered_observation/observation_age_s", 9,
+         0.09999999999999998,
+         "events.jsonl /observation_fault_evidence/delivered_observation/"
+         "observation_age_s @ sequence 9"),
+        (5, "handoff-p4-fault", "events.jsonl", "/executed_action", 10,
+         {"brake": 0.5, "steering": -0.25, "throttle": 0.0},
+         "events.jsonl /executed_action @ sequence 10"),
+        (5, "handoff-p4-fault", "events.jsonl",
+         "/control_fault_evidence/applied_faults", 10,
+         ["CONTROL_DELAY", "STEERING_SATURATION", "BRAKE_SATURATION"],
+         "events.jsonl /control_fault_evidence/applied_faults @ sequence 10"),
+        (5, "handoff-p4-fault", "events.jsonl",
+         "/control_fault_evidence/executed_from_sequence", 10, 9,
+         "events.jsonl /control_fault_evidence/executed_from_sequence @ sequence 10"),
+        (5, "handoff-p4-fault", "events.jsonl",
+         "/control_fault_evidence/executed_from_candidate_time_s", 10, 0.9,
+         "events.jsonl /control_fault_evidence/executed_from_candidate_time_s @ sequence 10"),
+        (5, "handoff-p4-fault", "events.jsonl",
+         "/control_fault_evidence/execution_time_s", 10, 1.0,
+         "events.jsonl /control_fault_evidence/execution_time_s @ sequence 10"),
+        (5, "handoff-p4-fault", "events.jsonl",
+         "/control_fault_evidence/control_latency_ms/value", 10,
+         99.99999999999997,
+         "events.jsonl /control_fault_evidence/control_latency_ms/value @ sequence 10"),
+        (5, "handoff-p4-fault", "events.jsonl",
+         "/control_fault_evidence/pre_saturation_action", 10,
+         {"brake": 1.0, "steering": -0.5511323809623718, "throttle": 0.0},
+         "events.jsonl /control_fault_evidence/pre_saturation_action @ sequence 10"),
+        (6, "handoff-p1-conditional", "events.jsonl",
+         "/vehicle_state/acceleration_mps2", 12, 6.0,
+         "events.jsonl /vehicle_state/acceleration_mps2 @ sequence 12"),
+        (6, "handoff-p1-conditional", "gate-config.resolved.yaml",
+         "/soft/max_abs_acceleration_mps2", None, 4.0,
+         "gate-config.resolved.yaml /soft/max_abs_acceleration_mps2"),
+        (6, "handoff-p1-conditional", "metrics.json",
+         "/max_abs_acceleration_mps2", None, {"value": 6.0},
+         "metrics.json /max_abs_acceleration_mps2"),
+        (6, "handoff-p1-conditional", "findings.json", "/findings/4", None,
+         {"finding_id": "comfort.acceleration", "status": "FAIL",
+          "event_sequences": [12]}, "findings.json /findings/4"),
+        (6, "handoff-p1-conditional", "verdict.json", "/verdict", None,
+         "CONDITIONAL", "verdict.json /verdict"),
+        (7, "handoff-p3-cutin-baseline", "metrics.json", "/minimum_ttc_s", None,
+         {"value": 1.8155836417275437}, "BASELINE metrics.json /minimum_ttc_s"),
+        (7, "handoff-p3-cutin-shielded", "metrics.json", "/minimum_ttc_s", None,
+         {"value": 8.49579415469856}, "CANDIDATE metrics.json /minimum_ttc_s"),
+        (7, "handoff-p3-cutin-baseline", "metrics.json", "/route_completion_pct", None,
+         {"value": 84.88178621406203}, "metrics.json /route_completion_pct"),
+        (7, "handoff-p3-cutin-shielded", "metrics.json", "/route_completion_pct", None,
+         {"value": 84.39151677812995}, "metrics.json /route_completion_pct"),
+        (7, "handoff-p3-cutin-baseline", "metrics.json",
+         "/max_abs_acceleration_mps2", None, {"value": 12.683377265917573},
+         "metrics.json /max_abs_acceleration_mps2"),
+        (7, "handoff-p3-cutin-shielded", "metrics.json",
+         "/max_abs_acceleration_mps2", None, {"value": 13.003747463227677},
+         "metrics.json /max_abs_acceleration_mps2"),
+        (7, "handoff-p3-cutin-baseline", "metrics.json", "/max_abs_jerk_mps3", None,
+         {"value": 128.41591835005693}, "metrics.json /max_abs_jerk_mps3"),
+        (7, "handoff-p3-cutin-shielded", "metrics.json", "/max_abs_jerk_mps3", None,
+         {"value": 157.565283775339}, "metrics.json /max_abs_jerk_mps3"),
+        (7, "handoff-p3-cutin-baseline", "verdict.json", "/verdict", None,
+         "HOLD", "verdict.json /verdict"),
+        (7, "handoff-p3-cutin-shielded", "verdict.json", "/verdict", None,
+         "HOLD", "verdict.json /verdict"),
+        (7, "handoff-p3-cutin-shielded", "events.jsonl", "/override_reasons", 20,
+         ["SPEED_CAP"], "events.jsonl /override_reasons @ sequences 20, 26, and 32"),
+        (7, "handoff-p3-cutin-shielded", "events.jsonl", "/override_reasons", 26,
+         ["SPEED_CAP"], "events.jsonl /override_reasons @ sequences 20, 26, and 32"),
+        (7, "handoff-p3-cutin-shielded", "events.jsonl", "/override_reasons", 32,
+         ["SPEED_CAP"], "events.jsonl /override_reasons @ sequences 20, 26, and 32"),
+        (7, "handoff-p3-cutin-shielded", "metrics.json",
+         "/shield_override_reasons", None, {"SPEED_CAP": 3},
+         "metrics.json /shield_override_reasons"),
+        (8, "handoff-p2-metadrive", "manifest.json", "/hermes_version", None,
+         "0.1.0", "manifest.json /hermes_version"),
+        (8, "handoff-p2-metadrive", "manifest.json", "/repository_commit", None,
+         "3c32c529e8be7127fbd71ecc467da007b2f72d5f",
+         "manifest.json /repository_commit"),
+        (8, "handoff-p2-metadrive", "manifest.json", "/repository_dirty", None,
+         False, "manifest.json /repository_dirty"),
+        (8, "handoff-p2-metadrive", "manifest.json", "/adapter_name", None,
+         "metadrive", "manifest.json /adapter_name"),
+        (8, "handoff-p2-metadrive", "manifest.json", "/adapter_version", None,
+         "1.0", "manifest.json /adapter_version"),
+        (8, "handoff-p2-metadrive", "manifest.json", "/simulator_name", None,
+         "metadrive", "manifest.json /simulator_name"),
+        (8, "handoff-p2-metadrive", "manifest.json", "/simulator_version", None,
+         "0.4.3", "manifest.json /simulator_version"),
+        (8, "handoff-p2-metadrive", "manifest.json", "/simulator_commit", None,
+         "85e5dadc6c7436d324348f6e3d8f8e680c06b4db",
+         "manifest.json /simulator_commit"),
+        (9, "handoff-p3-lead-baseline", "manifest.json", "/scenario_digest", None,
+         "a3b738431af234f4d2751667e8fee869307bc7c6d32b69fa71b602d340b48aaf",
+         "manifest.json /scenario_digest"),
+        (9, "handoff-p3-cutin-shielded", "manifest.json", "/scenario_digest", None,
+         "5d96994b9a1efd7626f162d852501a7c51c358e865be24a5c7929c2de5129e32",
+         "manifest.json /scenario_digest"),
+        (9, "handoff-p3-lead-baseline", "manifest.json", "/scenario_name", None,
+         "lead_vehicle_hard_brake", "manifest.json /scenario_name"),
+        (9, "handoff-p3-cutin-shielded", "manifest.json", "/scenario_name", None,
+         "cut_in_near_field", "manifest.json /scenario_name"),
+        (9, "handoff-p3-lead-baseline", "manifest.json", "/adapter_config_digest", None,
+         "4bf4f0051f46a079abf3d208773ea9ed668e0888f81c1b70f24752adcd9bc4a3",
+         "manifest.json /adapter_config_digest"),
+        (9, "handoff-p3-cutin-shielded", "manifest.json", "/adapter_config_digest", None,
+         "d8e9e31b3f069fb9cbd26d5331747255315a112109af29345ccd6e1fddf0b999",
+         "manifest.json /adapter_config_digest"),
+        (9, "handoff-p3-lead-baseline", "verdict.json", "/verdict", None,
+         "CONDITIONAL", "verdict.json /verdict"),
+        (9, "handoff-p3-cutin-shielded", "verdict.json", "/verdict", None,
+         "HOLD", "verdict.json /verdict"),
+        (10, "handoff-phase5-demo", "manifest.json", "/run_id", None,
+         "handoff-phase5-demo", "manifest.json /run_id"),
+        (10, "handoff-phase5-demo", "verdict.json", "/verdict", None,
+         "PASS", "verdict.json /verdict"),
+    )
+
+    plan = _read(repository_root, "PHASE7_HUMAN_VALIDATION_PLAN.md")
+    for task_id, locator, file_name, pointer, sequence, expected, reference in cases:
+        assert reference in _task_section(plan, task_id)
+        actual = _artifact_pointer_value(
+            repository_root,
+            locator,
+            file_name,
+            pointer,
+            event_sequence=sequence,
+        )
+        _assert_literal_subset(actual, expected)
+
+
+def test_phase7_task2_and_task7_keys_match_public_facade_numeric_fidelity(
+    repository_root: Path,
+) -> None:
+    collision = review_artifact(repository_root / "artifacts", "handoff-p1-collision")
+    collision_finding = next(
+        finding for finding in collision.findings if finding.finding_id == "collision.zero"
+    )
+    operand = collision_finding.threshold.clause.right_operand
+    assert operand is not None
+    assert operand.machine_value == 0
+    assert operand.canonical_text == "0"
+    assert operand.display_text == "0"
+
+    candidate = review_artifact(
+        repository_root / "artifacts", "handoff-p3-cutin-shielded"
+    )
+    minimum_ttc = next(
+        metric for metric in candidate.metrics if metric.metric_id == "minimum_ttc_s"
+    )
+    assert minimum_ttc.value.kind == "SCALAR"
+    assert minimum_ttc.value.value.machine_value == 8.49579415469856
+    override_histogram = next(
+        metric
+        for metric in candidate.metrics
+        if metric.metric_id == "shield_override_reasons"
+    )
+    assert override_histogram.value.kind == "STRING_COUNT_MAP"
+    assert dict(override_histogram.value.values) == {"SPEED_CAP": 3}
+    override_track = next(
+        track for track in candidate.timeline.tracks if track.track_id == "override_reasons"
+    )
+    nonempty_override_points = tuple(
+        point
+        for point in override_track.points
+        if point.string_list_value is not None and point.string_list_value.values
+    )
+    assert tuple(point.sequence for point in nonempty_override_points) == (20, 26, 32)
+    assert all(
+        point.string_list_value is not None
+        and point.string_list_value.values == ("SPEED_CAP",)
+        for point in nonempty_override_points
+    )
+    observation_tracks = tuple(
+        track
+        for track in candidate.timeline.tracks
+        if track.track_id
+        in {"raw_observation", "delivered_observation", "result_observation"}
+    )
+    assert len(observation_tracks) == 3
+    assert all(
+        track.availability == "NOT_AVAILABLE" and track.points == ()
+        for track in observation_tracks
+    )
+    public_bytes = canonical_envelope_bytes(candidate)
+    assert b"ttc_threshold_s" not in public_bytes
+    assert b"PRE_TRIGGER" not in public_bytes
+    assert b"CUT_IN" not in public_bytes
+
 
 def test_phase7_observation_records_bind_sessions_to_frozen_fixture_state(
     repository_root: Path,
@@ -295,8 +682,34 @@ def test_phase7_observation_records_bind_sessions_to_frozen_fixture_state(
         "Candidate computed bundle digest SHA-256: ____",
         "Candidate observed trace digest SHA-256: ____",
         "Candidate computed trace digest SHA-256: ____",
+        "Eligibility checklist version: ____",
+        "Eligibility decision timestamp (before task exposure): ____",
+        "First task exposure timestamp: ____",
+        "Participant age 18 or older (YES/NO): ____",
+        "Explicit participation consent (YES/NO): ____",
+        "No prior access to frozen answer keys (YES/NO): ____",
+        "No authorship or material review of the instrument (YES/NO): ____",
+        "No authorship or material review of the answer keys (YES/NO): ____",
+        "No authorship or material review of the fixtures (YES/NO): ____",
+        "No authorship or material review of the implementation (YES/NO): ____",
+        "Participant ID differs from Moderator ID (YES/NO): ____",
+        (
+            "Primary frozen role (exactly one of PRODUCT, SAFETY, SIMULATION, "
+            "ENGINEERING): ____"
+        ),
+        "Exactly one frozen primary role selected (YES/NO): ____",
+        "Eligibility completed before task exposure (YES/NO): ____",
+        "Eligibility decision (ELIGIBLE/INELIGIBLE): ____",
+        "Eligibility reason: ____",
     ):
         assert field in observation
+    assert (
+        "Complete this versioned checklist once per participant before any task prompt, "
+        "answer key, fixture, or evidence view is exposed."
+    ) in observation
+    assert observation.index("Eligibility decision timestamp (before task exposure): ____") < (
+        observation.index("First task exposure timestamp: ____")
+    )
 
     for field in (
         "Protocol version: ____",
@@ -382,6 +795,65 @@ def test_phase7_eligibility_handoff_ownership_and_statuses_fail_closed(
     assert_exact_statuses(raw_handoff)
     with pytest.raises(AssertionError):
         assert_exact_statuses(raw_handoff + "\nAccessibility: OBSERVED\n")
+
+
+def test_phase7_packet_statuses_and_open_prerequisites_are_globally_coherent(
+    repository_root: Path,
+) -> None:
+    documents = {name: _read_raw(repository_root, name) for name in _PHASE7_DOCS}
+    _assert_phase7_packet_status_coherence(documents)
+
+
+@pytest.mark.parametrize("name", _PHASE7_DOCS)
+def test_phase7_packet_rejects_any_local_observed_promotion_while_prerequisites_open(
+    repository_root: Path,
+    name: str,
+) -> None:
+    documents = {doc_name: _read_raw(repository_root, doc_name) for doc_name in _PHASE7_DOCS}
+    assert "NOT YET OBSERVED" in documents[name]
+    documents[name] = documents[name].replace("NOT YET OBSERVED", "OBSERVED", 1)
+
+    with pytest.raises(AssertionError):
+        _assert_phase7_packet_status_coherence(documents)
+
+
+@pytest.mark.parametrize(
+    "promotion",
+    (
+        "Status: READY_FOR_PILOT",
+        "Status: READY_FOR_MAIN_COHORT",
+        "HUMAN_EVIDENCE_OBSERVED: PROMOTED",
+        "COMPREHENSION_GATE_MET: TRUE",
+    ),
+)
+@pytest.mark.parametrize("name", _PHASE7_DOCS)
+def test_phase7_packet_rejects_ready_or_promoted_state_with_unassigned_owners(
+    repository_root: Path,
+    promotion: str,
+    name: str,
+) -> None:
+    documents = {doc_name: _read_raw(repository_root, doc_name) for doc_name in _PHASE7_DOCS}
+    documents[name] += f"\n{promotion}\n"
+
+    with pytest.raises(AssertionError):
+        _assert_phase7_packet_status_coherence(documents)
+
+
+def test_phase7_traceability_rejects_implemented_owner_claim_until_acceptance(
+    repository_root: Path,
+) -> None:
+    documents = {name: _read_raw(repository_root, name) for name in _PHASE7_DOCS}
+    traceability = documents["PHASE7_REQUIREMENTS_TRACEABILITY.md"]
+    blocked = (
+        "UNASSIGNED; recruitment BLOCKED pending explicit written acceptance"
+    )
+    documents["PHASE7_REQUIREMENTS_TRACEABILITY.md"] = traceability.replace(
+        blocked,
+        "IMPLEMENTED",
+    )
+
+    with pytest.raises(AssertionError):
+        _assert_phase7_packet_status_coherence(documents)
 
 
 def test_phase7_moderation_protocol_bounds_help_correction_order_and_denominator(
@@ -498,7 +970,8 @@ def test_observation_template_is_blank_and_records_all_authority_and_protocol_fi
     text = _read(repository_root, "PHASE7_HUMAN_OBSERVATION_TEMPLATE.md")
     for field in (
         "Participant ID: ____",
-        "Consent recorded: ____",
+        "Explicit participation consent (YES/NO): ____",
+        "Recording consent (YES/NO/NOT_APPLICABLE): ____",
         "Assigned task order: ____",
         "Actual task order: ____",
         "Assistance state: ____",

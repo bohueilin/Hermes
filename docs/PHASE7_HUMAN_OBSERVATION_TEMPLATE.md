@@ -21,15 +21,56 @@ Fresh verification result: ____
 
 Participant ID: ____
 
-Declared non-author status: ____
+Moderator ID: ____
 
-Participant role: ____
+## Frozen per-participant eligibility — complete before task exposure
 
-Consent recorded: ____
+Complete this versioned checklist once per participant before any task prompt, answer key, fixture,
+or evidence view is exposed. Every item is decided from pre-exposure facts; performance cannot
+change eligibility.
+
+Eligibility checklist version: ____
+
+Eligibility decision timestamp (before task exposure): ____
+
+First task exposure timestamp: ____
+
+Participant age 18 or older (YES/NO): ____
+
+Explicit participation consent (YES/NO): ____
+
+No prior access to frozen answer keys (YES/NO): ____
+
+No authorship or material review of the instrument (YES/NO): ____
+
+No authorship or material review of the answer keys (YES/NO): ____
+
+No authorship or material review of the fixtures (YES/NO): ____
+
+No authorship or material review of the implementation (YES/NO): ____
+
+Participant ID differs from Moderator ID (YES/NO): ____
+
+Primary frozen role (exactly one of PRODUCT, SAFETY, SIMULATION, ENGINEERING): ____
+
+Exactly one frozen primary role selected (YES/NO): ____
+
+Eligibility completed before task exposure (YES/NO): ____
+
+Eligibility decision (ELIGIBLE/INELIGIBLE): ____
+
+Eligibility reason: ____
+
+Recording consent (YES/NO/NOT_APPLICABLE): ____
 
 Employer-confidentiality warning acknowledged: ____
 
-Moderator ID: ____
+An `ELIGIBLE` decision requires every applicable checklist item to be `YES`, exactly one frozen
+primary role, a participant ID distinct from the moderator ID, and a decision timestamp earlier
+than first task exposure. Preserve every `INELIGIBLE` decision and reason; do not expose tasks or
+score the person as a participant.
+
+## Session conditions
 
 Session start time: ____
 

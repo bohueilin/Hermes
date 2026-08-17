@@ -13,7 +13,7 @@ is `NOT YET OBSERVED`. Scope: `SIMULATION_ONLY`. Deployment permission: `NONE`.
 | P7-HV-06 | Median hypotheses separate from TBD frozen per-attempt bound; raw denominator/slices | plan/synthesis and docs tests | IMPLEMENTED |
 | P7-HV-07 | Exact non-causal cut-in answer and retained lead exclusion | plan/registry and fresh comparison checks | IMPLEMENTED |
 | P7-HV-08 | Seven authority fields and all immediate stops | plan/templates and docs tests | IMPLEMENTED |
-| P7-HV-09 | Privacy, encrypted external custody, named owners, and deletion | plan/templates/handoff | IMPLEMENTED |
+| P7-HV-09 | Privacy, encrypted external custody, explicitly accepted owners, and deletion | plan/templates/handoff | UNASSIGNED; recruitment BLOCKED pending explicit written acceptance |
 | P7-HV-10 | Human/manual/accessibility/expert/pilot/cohort cannot be promoted by automation | status records and negative docs tests | NOT YET OBSERVED |
 
 ## Decision planes
