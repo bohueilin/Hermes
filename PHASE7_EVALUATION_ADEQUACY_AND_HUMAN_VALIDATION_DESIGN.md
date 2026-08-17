@@ -931,8 +931,8 @@ mismatch yields `FAIL`; otherwise any required source-permitted missing value yi
 | Criterion ID | Required captured fields | `PASS` | `FAIL` | `NOT_AVAILABLE` |
 |---|---|---|---|---|
 | `primary_run_ids_match_pair_plan` | Both observed run IDs; pair-plan baseline/candidate run IDs | Both exact by positional role | Either available run ID differs | Never after consistent review |
-| `primary_repository_commits_match` | Both recorded commit strings | Both equal each other and are the same lowercase 40-hex string | Any available string is unequal or not lowercase 40-hex | Never; a missing commit is existing comparison incompatibility before plan evaluation |
-| `artifact_execution_identity_matches_pair_plan` | Per side: Hermes version, scenario digest, challenge kind, seed, cadence, horizon, repository dirty state; pair-plan declarations | Every value exact and both dirty states are `false` | Any available identity differs, challenge is lead/cut-in/none rather than declared lead, or either dirty state is `true` | Only when all available identity fields match and either dirty state is source-permitted `null` |
+| `primary_repository_commits_match` | Both recorded commit strings after existing compatibility | The shared string is lowercase 40-hex | The shared available string is not lowercase 40-hex | Never; a missing or unequal commit is existing comparison incompatibility before plan evaluation |
+| `artifact_execution_identity_matches_pair_plan` | Per side: Hermes version, scenario digest, challenge kind, seed, cadence, horizon, repository dirty state; pair-plan declarations | Every value exact and both dirty states are `false` | Any available identity differs, captured challenge kind is cut-in or none rather than the declared lead kind, or either dirty state is `true` | Only when all available identity fields match and either dirty state is source-permitted `null` |
 | `artifact_component_identities_match_pair_plan` | Per side: policy, adapter, simulator, and gate name/version/config/source identity; pair-plan declarations | Every stored identity is exact | Any identity differs, including an observed nullable “no external simulator” tuple versus the declared simulator | Never after valid stored verification; nullable simulator tuple is an available observed state |
 | `baseline_shield_identity_matches_pair_plan` | Captured baseline shield name/version/config digest and pair-plan baseline declarations | Exact no-op identity and digest | Any available baseline shield identity differs | Never after valid stored verification |
 | `fresh_baseline_selection_reproduces_selected_discovery` | Fresh baseline typed result/digest; selected ledger typed result/digest; pair-plan selected-result digest binding | Complete result and both digest bindings are exact | Fresh evidence is available-no-finite or any available result/value/sequence/digest differs | Fresh result is `REQUIRED_SIGNAL_MISSING` |
@@ -999,12 +999,17 @@ the ordinary `d`-absent rows above:
 | `non_target_predicates_and_reasons_clear` | `NOT_AVAILABLE` |
 | `post_response_horizon` | `NOT_AVAILABLE` |
 
-A valid schema-1 fake/no-challenge or cut-in event maps its captured phase as `null`, `CUT_IN`, or
-`POST_CUT_IN` and preserves paired front inputs exactly as stored. No `BRAKING` event means zero
-braking samples and no target-condition entry: phase-sample and target-exposure rows are available
-`FAIL`, not unsupported shape. Missing front fields on events outside the `BRAKING` derivation
-domain do not create required-signal missingness. Required paired front fields missing on any
-`BRAKING` event remain the already frozen `NOT_AVAILABLE` case.
+A valid schema-1 event preserves this exact captured phase domain:
+
+- fake/no challenge: `null`;
+- lead: `PRE_TRIGGER | BRAKING | RECOVERY`; and
+- cut-in: `PRE_TRIGGER | CUT_IN | POST_CUT_IN`.
+
+Paired front inputs are preserved exactly as stored. When captured candidate configuration is
+present, no `BRAKING` event means zero braking samples and no target-condition entry: phase-sample
+and target-exposure rows are available `FAIL`, not unsupported shape. Missing front fields on events
+outside the `BRAKING` derivation domain do not create required-signal missingness. Required paired
+front fields missing on any `BRAKING` event remain the already frozen `NOT_AVAILABLE` case.
 
 The **new adequacy-core** event algorithm is one monotonically increasing indexed pass over the two
 ordered timelines. It visits each baseline event at most once and each candidate event at most

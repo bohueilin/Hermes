@@ -416,9 +416,11 @@ Commit: `docs: separate observed adequacy facts from plan expectations`
   existing eleven scanner criteria. It must not compare the primary pair-plan commit to the earlier
   `implementation_base_commit`.
 - [ ] Assert the exact 17 IDs/order frozen in the design. For the first six rows, test every named
-  input group and `FAIL > NOT_AVAILABLE > PASS` precedence: nonhex/unequal primary commit, dirty
+  input group and `FAIL > NOT_AVAILABLE > PASS` precedence: shared nonhex primary commit, dirty
   `None`/`True`, nullable fake simulator tuple, challenge mismatch, baseline shield digest, and all
   three fresh-selection outcomes/digest bindings.
+- [ ] Assert missing or unequal primary repository commits remain existing incompatibility with no
+  plan/criteria/Git; only a shared available nonhex string reaches repository-identity `FAIL`.
 - [ ] Assert snapshot-to-adequacy mapping copies only typed stored facts and does not mutate source models.
 - [ ] Assert public `SideReviewState` is event-free and retains exact safe run/schema/digest/trust
   state for invalid and incompatible output; requested plan selections are always present and the
@@ -434,9 +436,13 @@ Commit: `docs: separate observed adequacy facts from plan expectations`
   assert exact `c/d/p/q/e`, `EVIDENCE_NOT_AVAILABLE`, and every row in the frozen override matrix,
   including the ordinary never-unavailable intervention/count rows becoming `NOT_AVAILABLE` under
   this explicit override.
-- [ ] Assert fake/no-challenge and cut-in phases are representable: zero BRAKING samples and absent
-  target condition are available `FAIL`; only missing paired inputs on a BRAKING event create
-  required-signal `NOT_AVAILABLE`.
+- [ ] Assert fake/no-challenge and cut-in phases are representable: with captured candidate config
+  present, zero BRAKING samples and absent target condition are available `FAIL`; only missing
+  paired inputs on a BRAKING event create required-signal `NOT_AVAILABLE`; absent candidate config
+  follows the explicit override matrix.
+- [ ] Assert exact captured phase mapping: fake `None`; lead PRE_TRIGGER/BRAKING/RECOVERY; cut-in
+  PRE_TRIGGER/CUT_IN/POST_CUT_IN. A cut-in PRE_TRIGGER prefix must complete criteria, never produce
+  unsupported-shape exit 40.
 - [ ] Assert malformed syntax wins before capture; invalid baseline wins over defective plan/repo
   roots; incompatibility wins over plan/repo filesystem defects; invalid plan wins over unavailable
   Git; and valid flow resolves Git once immediately before use.
