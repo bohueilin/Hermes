@@ -288,12 +288,81 @@ Commit: `feat: verify bounded local registration ordering`
 
 ---
 
+## Task 5A: Freeze fresh-selection derivation before public composition
+
+This checkpoint closes an implementation-discovered design gap: no canonical bundle stores fresh
+selection observations, so they must never be copied or invented by the API. The protocol owns the
+derivation and the pure scanner computes it in its existing baseline pass.
+
+**Files:**
+
+- Modify: `PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md`
+- Modify: `src/hermes/adequacy/models.py`
+- Modify: `src/hermes/adequacy/loader.py`
+- Modify: `src/hermes/adequacy/assessment.py`
+- Modify: `tests/unit/test_adequacy_models.py`
+- Modify: `tests/unit/test_adequacy_loader.py`
+- Modify: `tests/unit/test_adequacy_assessment.py`
+- Modify: `tests/unit/test_architecture_boundaries.py`
+
+### Step 1: Write contract and derivation REDs
+
+- [ ] Add one strict protocol-owned v1 `selection_evidence` definition covering event domain,
+  required signals, closing/value expressions, aggregation, tie-break, unit/operator/threshold
+  source, source file, and exact pointers.
+- [ ] Remove synthetic `fresh_selection_observations` and `fresh_selection_evidence_sha256` from
+  `AssessmentSide`; prove extra fields are rejected.
+- [ ] Add a strict typed selection-evidence result that distinguishes numeric observed,
+  available-no-finite-closing, and required-signal-missing states. Require valid/selected discovery
+  attempts to carry the numeric state and expose `SELECTION_EVIDENCE_AVAILABLE` plus
+  `SELECTION_EVIDENCE_OBSERVED` and `SELECTION_EVIDENCE_THRESHOLD_MATCHED` to ordered
+  validity/exclusion rules; observed values above the declared LTE threshold cannot be selected.
+- [ ] Derive minimum finite closing TTC over all BRAKING baseline inputs with earliest-sequence tie
+  break; missing paired signals are `NOT_AVAILABLE`, while available nonclosing/no-finite-TTC is an
+  available reproduction `FAIL`.
+- [ ] Freeze the exact missing-signal reason and source pointers including `/sequence`; RED mixed
+  missing-plus-finite inputs (missing remains sticky), non-null earliest-sequence ties, and finite
+  input division overflow (available no-finite result, never nonfinite JSON).
+- [ ] Prove typed selection-result/digest exact match, value/sequence/status/outcome/digest mismatch,
+  empty selected-observed evidence rejection, and no second baseline scan at the 10,000-event
+  boundary.
+
+### Step 2: Implement the narrow correction
+
+- [ ] Keep derivation in pure `assessment.py`; API/review/loader cannot derive artifact facts.
+- [ ] Compute SHA-256 over canonical JSON for the complete typed selection-evidence result using
+  the frozen adequacy canonical primitive; typed empty states must have distinct digests.
+- [ ] Extend the existing scan result with private derived evidence; do not add plan/Git authority or
+  change the public Phase 6 review/comparison schemas.
+- [ ] Preserve the existing scanner-only `assess_lead_ttc_adequacy`; add the pair-aware pure helper
+  in Task 6 after plan/run identities are available.
+
+### Step 3: Verify and commit
+
+```bash
+conda run -n hermes-dev python -m pytest -q \
+  tests/unit/test_adequacy_models.py \
+  tests/unit/test_adequacy_loader.py \
+  tests/unit/test_adequacy_assessment.py \
+  tests/unit/test_architecture_boundaries.py -k 'adequacy or provenance'
+conda run -n hermes-dev python -m ruff check \
+  src/hermes/adequacy tests/unit/test_adequacy_models.py \
+  tests/unit/test_adequacy_loader.py tests/unit/test_adequacy_assessment.py
+git diff --check
+```
+
+Commit: `fix: derive fresh selection evidence from stored events`
+
+---
+
 ## Task 6: Compose the public adequacy API with frozen failure precedence
 
 **Files:**
 
 - Create: `src/hermes/adequacy/api.py`
 - Create: `tests/unit/test_adequacy_api.py`
+- Modify: `src/hermes/adequacy/assessment.py`
+- Modify: `tests/unit/test_adequacy_assessment.py`
 - Modify: `tests/unit/test_review_adequacy.py`
 - Modify: `tests/unit/test_architecture_boundaries.py`
 
@@ -306,6 +375,10 @@ Commit: `feat: verify bounded local registration ordering`
 - [ ] Assert invalid plan and unsupported lead/schema shape perform no Git and normalize to typed exit-40 outcomes.
 - [ ] Assert Git operational errors occur only after valid/compatible sides and valid plans.
 - [ ] Assert artifact-vs-plan identity mismatch becomes completed available criterion `FAIL`/exit 0; registration non-establishment does not alter criteria.
+- [ ] Assert the pure pair helper emits deterministic run-ID, shared primary repository-commit,
+  execution, component, baseline-shield, and fresh-selection-reproduction criteria before the
+  existing eleven scanner criteria. It must not compare the primary pair-plan commit to the earlier
+  `implementation_base_commit`.
 - [ ] Assert snapshot-to-adequacy mapping copies only typed stored facts and does not mutate source models.
 
 Run:
@@ -322,6 +395,8 @@ Expected RED: public application service is missing.
 
 - [ ] Public import remains `from hermes.adequacy.api import assess_review_pair_adequacy`.
 - [ ] Construct the existing private review facade and concrete Git inspector internally; pass only immutable reduced facts to pure assessment.
+- [ ] Keep every identity/reproduction comparison in a pure assessment helper accepting only
+  adequacy-owned protocol/ledger/pair/side models; `api.py` only maps and orders operations.
 - [ ] Keep fake registration injection only in a non-public pure helper for tests.
 - [ ] Return one `EvaluationAdequacyEnvelope` for invalid, incompatible, or completed outcomes; normalize invalid-plan, unsupported-shape, and operational exceptions into typed service errors.
 - [ ] Preserve gate/integrity/authenticity/authorization/deployment/scope/authoritative-status fields exactly.
@@ -471,7 +546,7 @@ Commit: `test: register Phase 7 lead adequacy pair`
 ### Step 5: Run both fresh primary arms once at the pair-plan commit
 
 - [ ] Assert both ignored target directories absent and worktree clean at pair-plan HEAD.
-- [ ] Run fresh baseline, then prove its canonical selection observations/digest equal the selected discovery entry before candidate interpretation.
+- [ ] Run fresh baseline, then prove its canonical typed selection-evidence result/digest equal the selected discovery entry before candidate interpretation.
 - [ ] Run candidate once with the frozen config; retain/report any failure without retuning.
 - [ ] Fresh-verify both bundles, assert identical repository commit, structural compatibility, unique canonical ten-file inventories, and unchanged retained-control hashes.
 - [ ] Run public API/CLI and record criteria, registration, interpretation, run IDs, bundle/trace digests, command, wall time, RSS, and source hashes.
@@ -614,7 +689,7 @@ Commit: `docs: finalize Phase 7 implementation handoff`
 
 ## Final execution rule
 
-Execute Tasks 1–7, then execute Task 9 in full **before** any discovery run. This deliberate
+Execute Tasks 1–5, Task 5A, Tasks 6–7, then execute Task 9 in full **before** any discovery run. This deliberate
 dependency order freezes every reviewed Phase 7 code, config, test, scenario, registry, and protocol
 input before Task 8 records `implementation_base_commit`. After that freeze, perform baseline-only
 discovery, make the exact three-file pair-plan commit, and generate both primary arms. Task 10 is

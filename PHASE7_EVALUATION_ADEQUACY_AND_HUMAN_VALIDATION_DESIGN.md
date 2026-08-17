@@ -539,6 +539,72 @@ criteria:
 The complete grid and tie-break rule must be machine-readable, not prose such as “choose a good
 baseline.” The protocol is committed before any discovery run.
 
+### 10.3.1 Fresh-selection evidence derivation contract
+
+The protocol also contains one strict `selection_evidence` record. V1 permits exactly this typed
+derivation:
+
+```yaml
+selection_evidence:
+  schema_version: "1.0"
+  observation_id: minimum_policy_input_ttc_s
+  event_domain: BRAKING_POLICY_INPUT_EVENTS
+  required_signals: FRONT_DISTANCE_AND_RELATIVE_SPEED
+  closing_condition: FRONT_RELATIVE_SPEED_LT_ZERO
+  value_expression: FRONT_DISTANCE_DIVIDED_BY_NEGATED_RELATIVE_SPEED
+  aggregation: MINIMUM
+  sequence_tie_breaker: EARLIEST_SEQUENCE
+  unit: s
+  operator: LTE
+  threshold_source: criteria.policy_input_ttc_lte_s
+  source_file: events.jsonl
+  source_json_pointers:
+    - /sequence
+    - /observation_summary/challenge_phase
+    - /observation_summary/front_distance_m
+    - /observation_summary/front_relative_speed_mps
+```
+
+The derivation considers every `BRAKING` policy-input event. Missing evidence is sticky: if any
+event in that domain lacks the paired front signals, fresh selection evidence is `NOT_AVAILABLE`
+with exactly `A BRAKING policy-input event lacks paired front distance and relative speed.` as its
+reason, even when another event has a finite TTC. Otherwise it computes TTC only for finite closing
+inputs and retains only finite division results; quotient overflow is treated as no finite closing
+TTC. It selects the minimum and breaks equal minima by earliest sequence. A trace with available
+signals but no finite closing TTC is an available no-match and therefore a fresh-reproduction
+`FAIL`, not missing evidence. The observation threshold is copied from the declared criterion; no
+threshold or aggregation is inferred by the API.
+
+Discovery attempts store one strict `SelectionEvidence` result:
+
+```text
+status: AVAILABLE | NOT_AVAILABLE
+outcome: OBSERVED | NO_FINITE_CLOSING_TTC | REQUIRED_SIGNAL_MISSING
+observations: zero or one typed SelectionObservation
+unavailable_reason: fixed text or null
+```
+
+`OBSERVED` is `AVAILABLE` with exactly one finite-float observation and a non-null sequence.
+`NO_FINITE_CLOSING_TTC` is `AVAILABLE` with no observation and no unavailable reason.
+`REQUIRED_SIGNAL_MISSING` is `NOT_AVAILABLE` with no observation and the fixed missing-signal
+reason literal above. No other cross-product is valid. The loader exposes the derived booleans
+`SELECTION_EVIDENCE_AVAILABLE`, `SELECTION_EVIDENCE_OBSERVED`, and
+`SELECTION_EVIDENCE_THRESHOLD_MATCHED` plus `INTEGRITY` to ordered valid-run/exclusion rules; it
+never reconstructs artifact events. `SELECTION_EVIDENCE_THRESHOLD_MATCHED` is true only for an
+`OBSERVED` numeric value that satisfies the declared `LTE` threshold. Every valid/selected
+discovery attempt must use `OBSERVED` and have this boolean true; the loader also validates the
+observation's fixed ID/unit/operator/threshold and sequence.
+
+The selection-evidence digest is SHA-256 over canonical JSON for the complete typed result—not just
+its observation tuple—so missing and available-no-match states cannot collide. The pair plan binds
+the selected result digest, and the fresh primary must reproduce both the typed result and digest.
+
+The fresh primary baseline does not copy discovery-ledger observations into artifact facts. The
+pure adequacy scanner derives fresh selection evidence from the already reduced baseline events in
+the same monotonic pass used for criteria, then compares its exact typed result and digest to
+the selected ledger entry. The API only maps immutable stored facts and cannot inject or infer this
+evidence. `AssessmentSide` therefore contains no synthetic `fresh_selection_*` fields.
+
 ### 10.4 Discovery ledger — frozen before primary-pair execution
 
 The append-created JSONL ledger records every allowed baseline attempt in execution order:
@@ -629,8 +695,8 @@ Every mismatch has exactly one primary plane and exit path:
 | Baseline or candidate byte/schema/hash/recomputation invalid | Existing integrity quarantine, baseline first | None | 30 |
 | Both sides valid but existing comparison incompatible | Existing compatibility result | None | 40 |
 | Protocol/ledger/pair file has unknown schema/field, duplicate key, implicit date, wrong/non-finite/out-of-range scalar, oversized input, unsupported role, phase/challenge contradiction, or internal cross-record digest/threshold/config contradiction | Invalid plan | Not run | 40 |
-| Valid compatible artifact field differs from a valid plan declaration—run ID, scenario/config/threshold, role, component identity, seed/cadence/horizon, declared repository-commit string, clean-execution flag, or fresh-baseline selection observations/digest | Available adequacy criterion `FAIL` | Evaluated | 0 |
-| A required supported observation is genuinely absent | Adequacy criterion `NOT_AVAILABLE` | Evaluated; `FAIL` still wins | 0 |
+| Valid compatible artifact field differs from a valid plan declaration—run ID, scenario/config/threshold, role, component identity, seed/cadence/horizon, declared repository-commit string, clean-execution flag, or an available fresh-baseline selection result/digest | Available adequacy criterion `FAIL` | Evaluated | 0 |
+| A required supported observation is genuinely absent, including a required BRAKING-domain front signal for fresh-selection reproduction | Adequacy criterion `NOT_AVAILABLE` | Evaluated; `FAIL` still wins | 0 |
 | Git inspection succeeds but cannot establish captured file-at-commit bytes, ancestry/order, sole parent, exact three-path diff, or clean current registration paths | `REGISTRATION_NOT_ESTABLISHED` | Unchanged | 0 |
 | Git cannot be safely executed or parsed—unsafe root, missing executable, timeout, streaming cap, malformed output | Typed operational error | Not run | 40 |
 
@@ -768,7 +834,8 @@ The lead-TTC plan is adequate only if:
 
 1. both sides independently verify;
 2. existing comparison says structurally compatible;
-3. captured protocol, discovery ledger, pair plan, declared repository-commit strings, policy,
+3. captured protocol, discovery ledger, pair plan, declared repository-commit strings, fresh
+   baseline selection result/digest, policy,
    adapter, simulator, scenario, challenge, seed, cadence, horizon, gate, and shield identities
    match; local-history existence/ordering is never an adequacy criterion;
 4. baseline is the exact no-op shield role;
@@ -807,10 +874,12 @@ Boundary-dependent criterion status is frozen as follows:
 | Minimum target-event count | Material target count meets bound | Count below bound, including zero | Never |
 | Non-target predicates/reasons clear | All false/absent through `e` | Any predicate true or reason recorded | Only if a required predicate input is absent; current v1 supported inputs are otherwise required by valid event schema |
 | Post-response horizon | Bound met after `d` | Defined `d` but too few opportunities | `d` absent |
+| Fresh baseline selection reproduction | Exact typed result and digest equal the selected discovery entry | Available no-match or any available result/value/sequence/digest mismatch | Required BRAKING-domain front signal missing |
 
-Identity/role/phase/reproduction criteria are always available after valid compatible capture and
-therefore return only `PASS` or `FAIL`. Integrity, compatibility, intrinsic plan validity, and Git
-operational success are prereq planes under §10.6, not criterion rows.
+Identity/role/phase criteria are always available after valid compatible capture and therefore
+return only `PASS` or `FAIL`. Fresh selection reproduction follows the explicit availability row
+above. Integrity, compatibility, intrinsic plan validity, and Git operational success are prereq
+planes under §10.6, not criterion rows.
 
 Existing structural compatibility does not require equal event counts. If the candidate defines
 `c` or `d` after the baseline has terminated, the corresponding arm-alignment criterion is an
@@ -820,8 +889,9 @@ also evaluated normally by phase, condition, count, alignment, and response-hori
 
 The **new adequacy-core** event algorithm is one monotonically increasing indexed pass over the two
 ordered timelines. It visits each baseline event at most once and each candidate event at most
-once, counts phase/target observations as it advances, performs exact lockstep comparisons over the
-required prefix, and never restarts or sorts. The adequacy-core visit counter is at most `B + C`.
+once, derives the fresh baseline selection evidence, counts phase/target observations as it
+advances, performs exact lockstep comparisons over the required prefix, and never restarts or
+sorts. The adequacy-core visit counter is at most `B + C`.
 Each criterion retains only a frozen maximum number of representative source references plus exact
 total counts, never an aggregate reference per event.
 
@@ -1065,8 +1135,8 @@ the current pair unchanged as the negative control.
 5. Prefer governed recovery (for example zero resume throttle) over current full-throttle recovery,
    without making a realism claim.
 6. Select baseline using only registered engagement and valid-run rules; record every grid attempt in
-   the discovery ledger. For each attempt, persist the exact canonical selection observations and a
-   deterministic selection-evidence digest over their ordered typed fields.
+   the discovery ledger. For each attempt, persist the exact canonical typed selection-evidence
+   result and a deterministic digest over that complete record.
 7. Freeze and commit the completed discovery ledger and pair plan, including both unique primary run
    IDs, plus the selected scenario before either primary execution. This commit has the protocol
    registration commit as its direct sole parent and changes only those three allowed paths.
@@ -1581,7 +1651,7 @@ Preserve:
    registration commit before running either arm.
 6. Run only approved command; generate the fresh primary baseline and candidate at that same HEAD.
 7. Before candidate interpretation, prove the fresh primary baseline reproduces the selected
-   discovery entry's canonical selection observations and selection-evidence digest.
+   discovery entry's canonical typed selection-evidence result and digest.
 8. Freshly verify new bundle and assert both manifests record that identical HEAD.
 9. Re-hash controls.
 10. Never repair/annotate/regenerate in place.
