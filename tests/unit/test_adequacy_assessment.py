@@ -1523,6 +1523,75 @@ def test_task6_execution_dirty_precedence_is_fail_then_missing_then_pass() -> No
     ).status is CriterionStatus.FAIL
 
 
+def test_task6_execution_challenge_mismatch_references_the_scenario_field() -> None:
+    baseline = _task6_captured_side("BASELINE", _engagement_events(divergence=False))
+    candidate = _task6_captured_side("CANDIDATE", _engagement_events())
+    protocol = _protocol()
+    ledger, pair = _task6_plan_inputs(protocol, baseline, candidate)
+    candidate = candidate.model_copy(
+        update={
+            "scenario": candidate.scenario.model_copy(
+                update={"challenge_kind": "cut_in_near_field"}
+            )
+        }
+    )
+
+    assessment = assessment_module._assess_captured_pair(
+        protocol,
+        ledger,
+        pair,
+        baseline,
+        candidate,
+    )
+    criterion = _criterion(
+        assessment,
+        "artifact_execution_identity_matches_pair_plan",
+    )
+
+    assert criterion.status is CriterionStatus.FAIL
+    assert tuple(
+        (reference.side, reference.source_file, reference.json_pointer)
+        for reference in criterion.references
+    ) == (("CANDIDATE", "scenario.resolved.yaml", "/challenge/kind"),)
+
+
+def test_task6_component_simulator_mismatch_references_the_simulator_fields() -> None:
+    baseline = _task6_captured_side("BASELINE", _engagement_events(divergence=False))
+    candidate = _task6_captured_side("CANDIDATE", _engagement_events())
+    protocol = _protocol()
+    ledger, pair = _task6_plan_inputs(protocol, baseline, candidate)
+    candidate = candidate.model_copy(
+        update={
+            "simulator": adequacy_models.CapturedSimulatorIdentity(
+                name=None,
+                version=None,
+                source_commit=None,
+            )
+        }
+    )
+
+    assessment = assessment_module._assess_captured_pair(
+        protocol,
+        ledger,
+        pair,
+        baseline,
+        candidate,
+    )
+    criterion = _criterion(
+        assessment,
+        "artifact_component_identities_match_pair_plan",
+    )
+
+    assert criterion.status is CriterionStatus.FAIL
+    assert tuple(
+        (reference.side, reference.source_file, reference.json_pointer)
+        for reference in criterion.references
+    ) == (
+        ("CANDIDATE", "manifest.json", "/simulator_commit"),
+        ("CANDIDATE", "manifest.json", "/simulator_name"),
+        ("CANDIDATE", "manifest.json", "/simulator_version"),
+    )
+
 def test_task6_fresh_selection_reproduction_has_exact_three_state_semantics() -> None:
     protocol = _protocol()
     candidate = _task6_captured_side("CANDIDATE", _engagement_events())
@@ -1596,7 +1665,8 @@ def test_task6_absent_candidate_configuration_has_exact_scanner_override_matrix(
         scan.confound_endpoint,
     ) == (None, None, 2, 2, 2)
     assert scan.assessment.observation_disposition is ObservationDisposition.EVIDENCE_NOT_AVAILABLE
-    statuses = {item.criterion_id: item.status for item in scan.assessment.criteria}
+    criteria = {item.criterion_id: item for item in scan.assessment.criteria}
+    statuses = {criterion_id: item.status for criterion_id, item in criteria.items()}
     assert statuses["arm_roles_and_candidate_configuration"] is CriterionStatus.FAIL
     assert statuses["minimum_braking_samples_per_arm"] is CriterionStatus.FAIL
     assert statuses["common_prefix_equality"] is CriterionStatus.PASS
@@ -1611,6 +1681,14 @@ def test_task6_absent_candidate_configuration_has_exact_scanner_override_matrix(
         "post_response_horizon",
     ):
         assert statuses[criterion_id] is CriterionStatus.NOT_AVAILABLE
+        assert (
+            criteria[criterion_id].unavailable_reason
+            == "captured candidate shield configuration is absent"
+        )
+        assert (
+            criteria[criterion_id].rationale
+            == "captured candidate shield configuration is absent"
+        )
 
 
 @pytest.mark.parametrize(

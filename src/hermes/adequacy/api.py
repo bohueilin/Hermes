@@ -65,6 +65,7 @@ def _screen_root(value: object) -> Path:
     if (
         not isinstance(raw, str)
         or not raw
+        or raw.startswith("//")
         or _has_control(raw)
         or not value.is_absolute()
         or os.path.normpath(raw) != raw
@@ -147,8 +148,8 @@ def _capture_plans(
             discovery_ledger_relative_path,
             pair_plan_relative_path,
         )
-    except loader.InvalidPlanError as exc:
-        raise _InvalidPlanBoundary from exc
+    except loader.InvalidPlanError:
+        raise _InvalidPlanBoundary from None
 
 
 def _inspect_registration(
@@ -165,8 +166,8 @@ def _inspect_registration(
             baseline_repository_commit=baseline_repository_commit,
             candidate_repository_commit=candidate_repository_commit,
         )
-    except provenance.RegistrationGitOperationalError as exc:
-        raise _RegistrationBoundaryFailure from exc
+    except provenance.RegistrationGitOperationalError:
+        raise _RegistrationBoundaryFailure from None
 
 
 def _digest_value(value: object) -> str | None:
@@ -284,8 +285,8 @@ def _mapped_phase(snapshot: object, summary: dict[str, object]) -> object:
         return None
     try:
         phase = summary["challenge_phase"]
-    except KeyError as exc:
-        raise _UnsupportedEvidenceShape from exc
+    except KeyError:
+        raise _UnsupportedEvidenceShape from None
     if challenge.kind == "lead_vehicle_hard_brake":
         allowed = {"PRE_TRIGGER", "BRAKING", "RECOVERY"}
     elif challenge.kind == "cut_in_near_field":
@@ -400,8 +401,8 @@ def _map_verified_snapshot(
         )
     except _UnsupportedEvidenceShape:
         raise
-    except (AttributeError, KeyError, TypeError, ValueError, ArithmeticError) as exc:
-        raise _UnsupportedEvidenceShape from exc
+    except (AttributeError, KeyError, TypeError, ValueError, ArithmeticError):
+        raise _UnsupportedEvidenceShape from None
 
 
 def _evaluated_envelope(
@@ -460,11 +461,11 @@ def assess_review_pair_adequacy(
                 pair_plan_relative_path,
             )
         )
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError):
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.INVALID_REQUEST,
             "Adequacy request syntax is invalid.",
-        ) from exc
+        ) from None
 
     try:
         pair = _capture_review_pair(artifacts, baseline_selection, candidate_selection)
@@ -512,11 +513,11 @@ def assess_review_pair_adequacy(
             )
     except AdequacyServiceError:
         raise
-    except Exception as exc:
+    except Exception:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
             "Stored evidence review could not be completed safely.",
-        ) from exc
+        ) from None
 
     try:
         plans = _capture_plans(
@@ -525,16 +526,16 @@ def assess_review_pair_adequacy(
             requested.discovery_ledger_relative_path,
             requested.pair_plan_relative_path,
         )
-    except _InvalidPlanBoundary as exc:
+    except _InvalidPlanBoundary:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.INVALID_PLAN,
             "Evaluation plans are invalid or could not be captured safely.",
-        ) from exc
-    except Exception as exc:
+        ) from None
+    except Exception:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
             "Evaluation plan capture could not be completed safely.",
-        ) from exc
+        ) from None
 
     try:
         baseline_snapshot = pair.baseline.capture.inspection.snapshot
@@ -561,16 +562,16 @@ def assess_review_pair_adequacy(
                 candidate_state.identity.computed_trace_digest_sha256 or ""
             ),
         )
-    except _UnsupportedEvidenceShape as exc:
+    except _UnsupportedEvidenceShape:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.UNSUPPORTED_EVIDENCE_SHAPE,
             "Stored evidence uses a shape unsupported by adequacy schema 1.0.",
-        ) from exc
-    except Exception as exc:
+        ) from None
+    except Exception:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
             "Stored evidence could not be reduced safely.",
-        ) from exc
+        ) from None
 
     try:
         registration = _inspect_registration(
@@ -579,16 +580,16 @@ def assess_review_pair_adequacy(
             baseline_facts.repository.commit,
             candidate_facts.repository.commit,
         )
-    except _RegistrationBoundaryFailure as exc:
+    except _RegistrationBoundaryFailure:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
             "Local registration inspection could not be completed safely.",
-        ) from exc
-    except Exception as exc:
+        ) from None
+    except Exception:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
             "Local registration inspection could not be completed safely.",
-        ) from exc
+        ) from None
 
     try:
         assessment = _assess_captured_pair(
@@ -606,11 +607,11 @@ def assess_review_pair_adequacy(
             assessment=assessment,
             registration=registration,
         )
-    except Exception as exc:
+    except Exception:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
             "Adequacy assessment could not be completed safely.",
-        ) from exc
+        ) from None
 
 
 __all__ = (

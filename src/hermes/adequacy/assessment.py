@@ -42,6 +42,9 @@ _NON_TARGET_REASONS = (
     "EMERGENCY_STOP",
     "ACTUATION_DELAY_COMPENSATION",
 )
+_MISSING_CANDIDATE_CONFIGURATION = (
+    "captured candidate shield configuration is absent"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -697,7 +700,7 @@ def _scan_lead_ttc_adequacy(
 
     if configuration_missing:
         condition_status = CriterionStatus.NOT_AVAILABLE
-        condition_unavailable_reason = "captured candidate shield configuration is absent"
+        condition_unavailable_reason = _MISSING_CANDIDATE_CONFIGURATION
         condition_observation = None
         condition_observation_unit = "s"
     elif condition_sequence is not None:
@@ -733,7 +736,7 @@ def _scan_lead_ttc_adequacy(
     if configuration_missing:
         condition_alignment_status = CriterionStatus.NOT_AVAILABLE
         condition_alignment_observation = None
-        condition_alignment_unavailable = "captured candidate shield configuration is absent"
+        condition_alignment_unavailable = _MISSING_CANDIDATE_CONFIGURATION
     elif condition_sequence is None:
         condition_alignment_status = CriterionStatus.NOT_AVAILABLE
         condition_alignment_observation: JsonScalar | None = None
@@ -748,7 +751,7 @@ def _scan_lead_ttc_adequacy(
     if configuration_missing:
         divergence_alignment_status = CriterionStatus.NOT_AVAILABLE
         divergence_alignment_observation = None
-        divergence_alignment_unavailable = "captured candidate shield configuration is absent"
+        divergence_alignment_unavailable = _MISSING_CANDIDATE_CONFIGURATION
     elif divergence_sequence is None:
         divergence_alignment_status = CriterionStatus.NOT_AVAILABLE
         divergence_alignment_observation: JsonScalar | None = None
@@ -767,7 +770,7 @@ def _scan_lead_ttc_adequacy(
     )
     if configuration_missing:
         post_status = CriterionStatus.NOT_AVAILABLE
-        post_unavailable_reason = "captured candidate shield configuration is absent"
+        post_unavailable_reason = _MISSING_CANDIDATE_CONFIGURATION
     elif post_response_steps is None:
         post_status = CriterionStatus.NOT_AVAILABLE
         post_unavailable_reason = "treatment-divergence sequence d is not defined"
@@ -785,13 +788,13 @@ def _scan_lead_ttc_adequacy(
     if configuration_missing:
         intervention_status = CriterionStatus.NOT_AVAILABLE
         intervention_observation: JsonScalar | None = None
-        intervention_unavailable = "captured candidate shield configuration is absent"
+        intervention_unavailable = _MISSING_CANDIDATE_CONFIGURATION
         target_count_status = CriterionStatus.NOT_AVAILABLE
         target_count_observation: JsonScalar | None = None
-        target_count_unavailable = "captured candidate shield configuration is absent"
+        target_count_unavailable = _MISSING_CANDIDATE_CONFIGURATION
         non_target_status = CriterionStatus.NOT_AVAILABLE
         non_target_observation: JsonScalar | None = None
-        non_target_unavailable = "captured candidate shield configuration is absent"
+        non_target_unavailable = _MISSING_CANDIDATE_CONFIGURATION
     else:
         intervention_status = (
             CriterionStatus.PASS
@@ -955,9 +958,13 @@ def _scan_lead_ttc_adequacy(
             observation=intervention_observation,
             observation_unit="boolean",
             rationale=(
-                f"first treatment-divergence sequence d={divergence_sequence}"
-                if divergence_sequence is not None
-                else "no qualifying material target intervention exists at or after c"
+                intervention_unavailable
+                if intervention_unavailable is not None
+                else (
+                    f"first treatment-divergence sequence d={divergence_sequence}"
+                    if divergence_sequence is not None
+                    else "no qualifying material target intervention exists at or after c"
+                )
             ),
             references=intervention_references,
             unavailable_reason=intervention_unavailable,
@@ -996,7 +1003,11 @@ def _scan_lead_ttc_adequacy(
             threshold_unit="events",
             observation=target_count_observation,
             observation_unit="events",
-            rationale=f"found {target_event_count} qualifying target events",
+            rationale=(
+                target_count_unavailable
+                if target_count_unavailable is not None
+                else f"found {target_event_count} qualifying target events"
+            ),
             references=target_count_references,
             unavailable_reason=target_count_unavailable,
         ),
@@ -1012,8 +1023,13 @@ def _scan_lead_ttc_adequacy(
             observation=non_target_observation,
             observation_unit="violations",
             rationale=(
-                f"examined {confound_events_examined} events through e={confound_endpoint}; "
-                f"found {non_target_violation_count} non-target predicate/reason violations"
+                non_target_unavailable
+                if non_target_unavailable is not None
+                else (
+                    f"examined {confound_events_examined} events through "
+                    f"e={confound_endpoint}; found {non_target_violation_count} "
+                    "non-target predicate/reason violations"
+                )
             ),
             references=non_target_references,
             unavailable_reason=non_target_unavailable,
@@ -1101,13 +1117,18 @@ def _identity_references(
     return references
 
 
-def _component_tuple(component: object) -> tuple[object, ...]:
-    return (component.name, component.version, component.config_digest)
-
-
-def _simulator_tuple(side: CapturedArtifactSide) -> tuple[object, ...]:
-    simulator = side.simulator
-    return simulator.name, simulator.version, simulator.source_commit
+def _difference_references(
+    fields: tuple[tuple[Role, bool, str, str], ...],
+    *,
+    fallback_pointer: str,
+) -> _ReferenceBuffer:
+    references = _ReferenceBuffer()
+    for side, differs, source_file, pointer in fields:
+        if differs:
+            references.add(_reference(side, None, pointer, source_file=source_file))
+    if not references.baseline and not references.candidate:
+        return _identity_references(fallback_pointer)
+    return references
 
 
 def _first_six_criteria(
@@ -1165,21 +1186,72 @@ def _first_six_criteria(
         references=_identity_references("/repository_commit"),
     )
 
-    def execution_mismatch(side: CapturedArtifactSide) -> bool:
+    def execution_fields(
+        side: CapturedArtifactSide,
+    ) -> tuple[tuple[Role, bool, str, str], ...]:
         return (
-            side.hermes_version != expected.hermes_version
-            or side.scenario.digest != expected.scenario_digest_sha256
-            or side.scenario.challenge_kind != expected.challenge_kind
-            or side.execution.seed != expected.seed
-            or side.execution.control_frequency_hz != expected.control_frequency_hz
-            or side.execution.horizon_steps != expected.horizon_steps
-            or side.repository.dirty is True
+            (
+                side.role,
+                side.hermes_version != expected.hermes_version,
+                "manifest.json",
+                "/hermes_version",
+            ),
+            (
+                side.role,
+                side.scenario.digest != expected.scenario_digest_sha256,
+                "manifest.json",
+                "/scenario_digest",
+            ),
+            (
+                side.role,
+                side.scenario.challenge_kind != expected.challenge_kind,
+                "scenario.resolved.yaml",
+                "/challenge/kind",
+            ),
+            (
+                side.role,
+                side.execution.seed != expected.seed,
+                "manifest.json",
+                "/seed",
+            ),
+            (
+                side.role,
+                side.execution.control_frequency_hz
+                != expected.control_frequency_hz,
+                "manifest.json",
+                "/control_frequency_hz",
+            ),
+            (
+                side.role,
+                side.execution.horizon_steps != expected.horizon_steps,
+                "manifest.json",
+                "/horizon_steps",
+            ),
+            (
+                side.role,
+                side.repository.dirty is True,
+                "manifest.json",
+                "/repository_dirty",
+            ),
         )
 
-    execution_has_mismatch = execution_mismatch(baseline) or execution_mismatch(candidate)
-    execution_missing = (
-        baseline.repository.dirty is None or candidate.repository.dirty is None
+    execution_mismatch_fields = execution_fields(baseline) + execution_fields(candidate)
+    execution_missing_fields = tuple(
+        (
+            side.role,
+            side.repository.dirty is None,
+            "manifest.json",
+            "/repository_dirty",
+        )
+        for side in (baseline, candidate)
     )
+    execution_has_mismatch = any(
+        differs for _, differs, _, _ in execution_mismatch_fields
+    )
+    execution_missing = any(
+        missing for _, missing, _, _ in execution_missing_fields
+    )
+    execution_reference_fields = execution_mismatch_fields + execution_missing_fields
     execution_status = _status_for_match(
         mismatch=execution_has_mismatch,
         missing=execution_missing,
@@ -1208,7 +1280,10 @@ def _first_six_criteria(
                 else "one or more available execution identities differ from the pair plan"
             )
         ),
-        references=_identity_references("/seed"),
+        references=_difference_references(
+            execution_reference_fields,
+            fallback_pointer="/seed",
+        ),
         unavailable_reason=(
             "repository dirty state is unavailable"
             if execution_status is CriterionStatus.NOT_AVAILABLE
@@ -1216,34 +1291,87 @@ def _first_six_criteria(
         ),
     )
 
-    expected_policy = (
-        expected.policy_name,
-        expected.policy_version,
-        expected.policy_config_digest_sha256,
-    )
-    expected_adapter = (
-        expected.adapter_name,
-        expected.adapter_version,
-        expected.adapter_config_digest_sha256,
-    )
-    expected_simulator = (
-        expected.simulator_name,
-        expected.simulator_version,
-        expected.simulator_commit,
-    )
-    expected_gate = (
-        expected.gate_name,
-        expected.gate_version,
-        expected.gate_config_digest_sha256,
-    )
-    component_match = all(
-        (
-            _component_tuple(side.policy) == expected_policy
-            and _component_tuple(side.adapter) == expected_adapter
-            and _simulator_tuple(side) == expected_simulator
-            and _component_tuple(side.gate) == expected_gate
+    def component_fields(
+        side: CapturedArtifactSide,
+    ) -> tuple[tuple[Role, bool, str, str], ...]:
+        return (
+            (
+                side.role,
+                side.policy.name != expected.policy_name,
+                "manifest.json",
+                "/policy_name",
+            ),
+            (
+                side.role,
+                side.policy.version != expected.policy_version,
+                "manifest.json",
+                "/policy_version",
+            ),
+            (
+                side.role,
+                side.policy.config_digest != expected.policy_config_digest_sha256,
+                "manifest.json",
+                "/policy_config_digest",
+            ),
+            (
+                side.role,
+                side.adapter.name != expected.adapter_name,
+                "manifest.json",
+                "/adapter_name",
+            ),
+            (
+                side.role,
+                side.adapter.version != expected.adapter_version,
+                "manifest.json",
+                "/adapter_version",
+            ),
+            (
+                side.role,
+                side.adapter.config_digest != expected.adapter_config_digest_sha256,
+                "manifest.json",
+                "/adapter_config_digest",
+            ),
+            (
+                side.role,
+                side.simulator.name != expected.simulator_name,
+                "manifest.json",
+                "/simulator_name",
+            ),
+            (
+                side.role,
+                side.simulator.version != expected.simulator_version,
+                "manifest.json",
+                "/simulator_version",
+            ),
+            (
+                side.role,
+                side.simulator.source_commit != expected.simulator_commit,
+                "manifest.json",
+                "/simulator_commit",
+            ),
+            (
+                side.role,
+                side.gate.name != expected.gate_name,
+                "manifest.json",
+                "/gate_name",
+            ),
+            (
+                side.role,
+                side.gate.version != expected.gate_version,
+                "manifest.json",
+                "/gate_version",
+            ),
+            (
+                side.role,
+                side.gate.config_digest != expected.gate_config_digest_sha256,
+                "manifest.json",
+                "/gate_config_digest",
+            ),
         )
-        for side in (baseline, candidate)
+
+    component_reference_fields = component_fields(baseline) + component_fields(candidate)
+    component_match = not any(
+        differs for _, differs, _, _ in component_reference_fields
     )
     component_criterion = _criterion(
         criterion_id="artifact_component_identities_match_pair_plan",
@@ -1258,7 +1386,10 @@ def _first_six_criteria(
             if component_match
             else "one or more captured component identities differ from the pair plan"
         ),
-        references=_identity_references("/policy_name"),
+        references=_difference_references(
+            component_reference_fields,
+            fallback_pointer="/policy_name",
+        ),
     )
 
     baseline_shield = baseline.scanner.shield

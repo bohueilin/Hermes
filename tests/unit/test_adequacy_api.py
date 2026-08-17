@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import traceback
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -23,6 +25,18 @@ def _arguments(repository_root: Path) -> dict[str, object]:
         "discovery_ledger_relative_path": "lead.discovery.v1.jsonl",
         "pair_plan_relative_path": "lead.pair.v1.yaml",
     }
+
+
+def _assert_opaque_service_error(
+    error: Exception,
+    *raw_fragments: str,
+) -> None:
+    rendered = "".join(traceback.format_exception(error, chain=True))
+    assert error.__cause__ is None
+    assert 0 < len(str(error)) <= 1024
+    for fragment in raw_fragments:
+        assert fragment not in str(error)
+        assert fragment not in rendered
 
 
 def test_public_api_has_exact_signature_and_closed_error_taxonomy() -> None:
@@ -70,6 +84,9 @@ def test_public_api_has_exact_signature_and_closed_error_taxonomy() -> None:
         ("artifact_root", Path("artifacts")),
         ("plan_root", Path("plans")),
         ("repository_root", Path("/tmp/noncanonical/../root")),
+        ("repository_root", Path("//noncanonical-repository-root")),
+        ("artifact_root", Path("//noncanonical-artifact-root")),
+        ("plan_root", Path("//noncanonical-plan-root")),
         ("artifact_root", Path("/tmp/control\u200broot")),
         ("baseline_relative_path", ""),
         ("baseline_relative_path", "/absolute"),
@@ -117,6 +134,26 @@ def test_request_error_message_is_fixed_bounded_and_never_echoes_input(
     assert 0 < len(captured.value.safe_message) <= 1024
     assert "SECRET" not in captured.value.safe_message
     assert str(repository_root) not in captured.value.safe_message
+    _assert_opaque_service_error(captured.value, "SECRET")
+
+
+def test_raw_review_exception_is_opaque_in_the_public_error_chain(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _api()
+    sentinel = "RAW-REVIEW-SENTINEL"
+    raw_path = "/private/adequacy-raw-review-path"
+
+    def explode(*_args: object) -> object:
+        raise OSError(f"{sentinel}: {raw_path}")
+
+    monkeypatch.setattr(module, "_capture_review_pair", explode)
+    with pytest.raises(module.AdequacyServiceError) as captured:
+        module.assess_review_pair_adequacy(**_arguments(repository_root))
+
+    assert captured.value.kind is module.AdequacyServiceErrorKind.OPERATIONAL_FAILURE
+    _assert_opaque_service_error(captured.value, sentinel, raw_path)
 
 
 def test_invalid_baseline_returns_unvisited_candidate_and_never_reads_plans_or_git(
@@ -211,15 +248,92 @@ def test_existing_incompatibility_wins_before_missing_plan_and_repository_roots(
     assert result.registration is None
 
 
+def _reviewed_with_repository_commit(reviewed: object, commit: str | None) -> object:
+    snapshot = reviewed.capture.inspection.snapshot
+    assert snapshot is not None
+    manifest_updates: dict[str, object] = {"repository_commit": commit}
+    if commit is None:
+        manifest_updates.update(
+            repository_dirty=None,
+            repository_provenance_reason="repository provenance unavailable",
+        )
+    modified_snapshot = replace(
+        snapshot,
+        manifest=snapshot.manifest.model_copy(update=manifest_updates),
+    )
+    modified_inspection = replace(
+        reviewed.capture.inspection,
+        snapshot=modified_snapshot,
+    )
+    return replace(
+        reviewed,
+        capture=replace(reviewed.capture, inspection=modified_inspection),
+    )
+
+
+@pytest.mark.parametrize(
+    ("baseline_commit", "candidate_commit", "reason"),
+    (
+        (None, None, "repository commit is unavailable"),
+        ("1" * 40, "2" * 40, "repository commit differs"),
+    ),
+)
+def test_public_api_keeps_missing_or_unequal_commits_in_existing_incompatibility(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    baseline_commit: str | None,
+    candidate_commit: str | None,
+    reason: str,
+) -> None:
+    module = _api()
+    facade = importlib.import_module("hermes.review.facade")
+    service = facade._ReviewFacade()
+    baseline = _reviewed_with_repository_commit(
+        service._review_result(
+            repository_root / "artifacts",
+            "handoff-p3-lead-baseline",
+        ),
+        baseline_commit,
+    )
+    candidate = _reviewed_with_repository_commit(
+        service._review_result(
+            repository_root / "artifacts",
+            "handoff-p3-lead-shielded",
+        ),
+        candidate_commit,
+    )
+    reviewed = iter((baseline, candidate))
+
+    def selected_review(*_args: object) -> object:
+        return next(reviewed)
+
+    def forbidden(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("repository incompatibility reached plans or Git")
+
+    monkeypatch.setattr(facade._ReviewFacade, "_review_result", selected_review)
+    monkeypatch.setattr(module, "_capture_plans", forbidden)
+    monkeypatch.setattr(module, "_inspect_registration", forbidden)
+
+    result = module.assess_review_pair_adequacy(**_arguments(repository_root))
+
+    assert result.compatibility == "INCOMPATIBLE"
+    assert result.plan_evaluation == "PLAN_NOT_EVALUATED"
+    assert result.plan_evaluation_reason == "INCOMPATIBLE_EVIDENCE"
+    assert any(reason in item for item in result.compatibility_reasons)
+    assert result.assessment is None
+    assert result.registration is None
+
+
 def test_invalid_plan_is_normalized_before_git(
     repository_root: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     module = _api()
     loader = importlib.import_module("hermes.adequacy.loader")
+    raw_path = "/private/adequacy-plan-secret"
 
     def invalid_plan(*_args: object) -> object:
-        raise loader.InvalidPlanError("raw path and parser detail must not escape")
+        raise loader.InvalidPlanError(f"raw path {raw_path} and parser detail must not escape")
 
     def forbidden_git(*_args: object, **_kwargs: object) -> object:
         raise AssertionError("invalid plan reached Git")
@@ -231,6 +345,7 @@ def test_invalid_plan_is_normalized_before_git(
     assert captured.value.kind is module.AdequacyServiceErrorKind.INVALID_PLAN
     assert "raw path" not in captured.value.safe_message
     assert str(repository_root) not in captured.value.safe_message
+    _assert_opaque_service_error(captured.value, "raw path", raw_path)
 
 
 def test_schema2_mapping_is_unsupported_after_plan_and_before_git(
@@ -310,6 +425,47 @@ def test_schema1_mapper_preserves_fake_cutin_and_lead_phase_domains(
     assert set(event.challenge_phase for event in side.scanner.events) <= expected_phases
     assert side.run_id == snapshot.manifest.run_id
     assert side.repository.commit == snapshot.manifest.repository_commit
+
+
+def test_side_review_state_maps_every_safe_identity_root_and_trust_plane_exactly(
+    repository_root: Path,
+) -> None:
+    module = _api()
+    facade = importlib.import_module("hermes.review.facade")
+    reviewed = facade._ReviewFacade()._review_result(
+        repository_root / "artifacts",
+        "phase1-tampered",
+    )
+
+    state = module._side_review_state(
+        reviewed,
+        "BASELINE",
+        "phase1-tampered",
+    )
+
+    assert state.identity.observed_run_id == "phase1-nominal"
+    assert state.identity.observed_evidence_schema_version == "1.0"
+    assert state.identity.observed_scenario_schema_version == "1.0"
+    assert (
+        state.identity.observed_bundle_digest_sha256
+        == "6eac41695c890dd08758bc6da95e8ae0092d9120057af4693fc64847017d97de"
+    )
+    assert (
+        state.identity.computed_bundle_digest_sha256
+        == "831f22ed419e4b13ce5d0a1aa3bc1444b2ca523d60edb8d4c75eaa7491e1d61e"
+    )
+    assert (
+        state.identity.observed_trace_digest_sha256
+        == "f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e"
+    )
+    assert state.identity.computed_trace_digest_sha256 is None
+    assert state.gate_verdict == "INVALID_EVIDENCE"
+    assert state.integrity == "INVALID_EVIDENCE"
+    assert state.authenticity == "NOT_AUTHENTICATED"
+    assert state.authorization == "NOT_EVALUATED"
+    assert state.deployment_permission == "NONE"
+    assert state.scope == "SIMULATION_ONLY"
+    assert state.authoritative_status == "NOT_DEFINED"
 
 
 def test_valid_operation_order_is_pair_plans_map_git_assessment_once(
@@ -420,10 +576,11 @@ def test_raw_git_operational_error_is_normalized_without_output_leak(
 ) -> None:
     module = _api()
     provenance = importlib.import_module("hermes.provenance.git")
+    raw_path = "/private/adequacy-git-secret"
 
     def operational(*_args: object) -> object:
         raise provenance.RegistrationGitOperationalError(
-            "SECRET GIT STDERR and absolute path"
+            f"SECRET GIT STDERR and absolute path {raw_path}"
         )
 
     monkeypatch.setattr(module, "_capture_plans", lambda *_args: SimpleNamespace())
@@ -433,3 +590,4 @@ def test_raw_git_operational_error_is_normalized_without_output_leak(
     assert captured.value.kind is module.AdequacyServiceErrorKind.OPERATIONAL_FAILURE
     assert "SECRET" not in captured.value.safe_message
     assert str(repository_root) not in captured.value.safe_message
+    _assert_opaque_service_error(captured.value, "SECRET", raw_path)
