@@ -31,12 +31,74 @@ def _assert_opaque_service_error(
     error: Exception,
     *raw_fragments: str,
 ) -> None:
+    _assert_detached_exception(error, *raw_fragments)
+    assert 0 < len(str(error)) <= 1024
+
+
+def _assert_detached_exception(
+    error: Exception,
+    *raw_fragments: str,
+) -> None:
     rendered = "".join(traceback.format_exception(error, chain=True))
     assert error.__cause__ is None
-    assert 0 < len(str(error)) <= 1024
+    assert error.__context__ is None
+    pending: list[BaseException] = [error]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        for link in (current.__cause__, current.__context__):
+            if link is not None:
+                pending.append(link)
+        for fragment in raw_fragments:
+            assert fragment not in str(current)
     for fragment in raw_fragments:
-        assert fragment not in str(error)
         assert fragment not in rendered
+
+
+def _install_synthetic_valid_flow(
+    module: object,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    consistent = SimpleNamespace(
+        verification=SimpleNamespace(integrity="INTERNALLY_CONSISTENT")
+    )
+    reviewed_baseline = SimpleNamespace(
+        envelope=consistent,
+        capture=SimpleNamespace(inspection=SimpleNamespace(snapshot="baseline-snapshot")),
+    )
+    reviewed_candidate = SimpleNamespace(
+        envelope=consistent,
+        capture=SimpleNamespace(inspection=SimpleNamespace(snapshot="candidate-snapshot")),
+    )
+    pair = SimpleNamespace(
+        baseline=reviewed_baseline,
+        candidate=reviewed_candidate,
+        comparison=SimpleNamespace(
+            compatibility=SimpleNamespace(comparable=True, reasons=())
+        ),
+    )
+    plans = SimpleNamespace(
+        protocol="protocol",
+        ledger="ledger",
+        pair_plan="pair-plan",
+        sources="sources",
+    )
+    captured = SimpleNamespace(repository=SimpleNamespace(commit="a" * 40))
+
+    monkeypatch.setattr(module, "_capture_review_pair", lambda *_args: pair)
+    monkeypatch.setattr(
+        module,
+        "_side_review_state",
+        lambda _reviewed, role, requested: module._unverified_side(role, requested),
+    )
+    monkeypatch.setattr(module, "_capture_plans", lambda *_args: plans)
+    monkeypatch.setattr(module, "_map_verified_snapshot", lambda *_args, **_kwargs: captured)
+    monkeypatch.setattr(module, "_inspect_registration", lambda *_args: object())
+    monkeypatch.setattr(module, "_assess_captured_pair", lambda *_args: object())
+    monkeypatch.setattr(module, "_evaluated_envelope", lambda **_kwargs: object())
 
 
 def test_public_api_has_exact_signature_and_closed_error_taxonomy() -> None:
@@ -154,6 +216,139 @@ def test_raw_review_exception_is_opaque_in_the_public_error_chain(
 
     assert captured.value.kind is module.AdequacyServiceErrorKind.OPERATIONAL_FAILURE
     _assert_opaque_service_error(captured.value, sentinel, raw_path)
+
+
+@pytest.mark.parametrize(
+    ("stage", "target", "exception_name", "expected_kind"),
+    (
+        ("request", "_screen_request", "VALUE", "INVALID_REQUEST"),
+        ("review", "_capture_review_pair", "OS", "OPERATIONAL_FAILURE"),
+        ("invalid-plan", "_capture_plans", "INVALID_PLAN", "INVALID_PLAN"),
+        ("plan", "_capture_plans", "OS", "OPERATIONAL_FAILURE"),
+        (
+            "unsupported-shape",
+            "_map_verified_snapshot",
+            "UNSUPPORTED_SHAPE",
+            "UNSUPPORTED_EVIDENCE_SHAPE",
+        ),
+        ("mapping", "_map_verified_snapshot", "OS", "OPERATIONAL_FAILURE"),
+        (
+            "registration-boundary",
+            "_inspect_registration",
+            "REGISTRATION_BOUNDARY",
+            "OPERATIONAL_FAILURE",
+        ),
+        ("registration", "_inspect_registration", "OS", "OPERATIONAL_FAILURE"),
+        ("assessment", "_assess_captured_pair", "OS", "OPERATIONAL_FAILURE"),
+    ),
+)
+def test_every_public_normalization_branch_detaches_the_raw_exception_graph(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    stage: str,
+    target: str,
+    exception_name: str,
+    expected_kind: str,
+) -> None:
+    module = _api()
+    _install_synthetic_valid_flow(module, monkeypatch)
+    sentinel = f"RAW-{stage.upper()}-SENTINEL"
+    raw_path = f"/private/adequacy-{stage}-secret"
+    exception_types = {
+        "VALUE": ValueError,
+        "OS": OSError,
+        "INVALID_PLAN": module._InvalidPlanBoundary,
+        "UNSUPPORTED_SHAPE": module._UnsupportedEvidenceShape,
+        "REGISTRATION_BOUNDARY": module._RegistrationBoundaryFailure,
+    }
+
+    def explode(*_args: object, **_kwargs: object) -> object:
+        raise exception_types[exception_name](f"{sentinel}: {raw_path}")
+
+    monkeypatch.setattr(module, target, explode)
+    with pytest.raises(module.AdequacyServiceError) as captured:
+        module.assess_review_pair_adequacy(**_arguments(repository_root))
+
+    assert captured.value.kind.value == expected_kind
+    _assert_opaque_service_error(captured.value, sentinel, raw_path)
+
+
+def test_private_loader_wrapper_detaches_raw_parser_exception(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _api()
+    loader = importlib.import_module("hermes.adequacy.loader")
+    sentinel = "RAW-PRIVATE-LOADER-SENTINEL"
+
+    def explode(*_args: object) -> object:
+        raise loader.InvalidPlanError(sentinel)
+
+    monkeypatch.setattr(loader, "capture_evaluation_plans", explode)
+    with pytest.raises(module._InvalidPlanBoundary) as captured:
+        module._capture_plans(
+            repository_root,
+            "protocol.yaml",
+            "ledger.jsonl",
+            "pair.yaml",
+        )
+
+    _assert_detached_exception(captured.value, sentinel)
+
+
+def test_private_registration_wrapper_detaches_raw_git_exception(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _api()
+    provenance = importlib.import_module("hermes.provenance.git")
+    sentinel = "RAW-PRIVATE-GIT-SENTINEL"
+
+    def explode(*_args: object, **_kwargs: object) -> object:
+        raise provenance.RegistrationGitOperationalError(sentinel)
+
+    monkeypatch.setattr(provenance.RegistrationGitInspector, "inspect", explode)
+    with pytest.raises(module._RegistrationBoundaryFailure) as captured:
+        module._inspect_registration(repository_root, object(), "a" * 40, "a" * 40)
+
+    _assert_detached_exception(captured.value, sentinel)
+
+
+def test_private_phase_wrapper_detaches_raw_mapping_exception() -> None:
+    module = _api()
+    phase_sentinel = "RAW-PRIVATE-PHASE-SENTINEL"
+
+    class ExplodingSummary(dict[str, object]):
+        def __getitem__(self, key: str) -> object:
+            raise KeyError(f"{phase_sentinel}: {key}")
+
+    snapshot = SimpleNamespace(
+        scenario=SimpleNamespace(
+            challenge=SimpleNamespace(kind="lead_vehicle_hard_brake")
+        )
+    )
+    with pytest.raises(module._UnsupportedEvidenceShape) as phase_error:
+        module._mapped_phase(snapshot, ExplodingSummary())
+    _assert_detached_exception(phase_error.value, phase_sentinel)
+
+
+def test_private_snapshot_wrapper_detaches_raw_mapping_exception() -> None:
+    module = _api()
+    map_sentinel = "RAW-PRIVATE-MAP-SENTINEL"
+
+    class ExplodingSnapshot:
+        @property
+        def manifest(self) -> object:
+            raise ValueError(map_sentinel)
+
+    with pytest.raises(module._UnsupportedEvidenceShape) as map_error:
+        module._map_verified_snapshot(
+            ExplodingSnapshot(),
+            "BASELINE",
+            bundle_digest_sha256="a" * 64,
+            trace_digest_sha256="b" * 64,
+        )
+    _assert_detached_exception(map_error.value, map_sentinel)
 
 
 def test_invalid_baseline_returns_unvisited_candidate_and_never_reads_plans_or_git(
@@ -584,7 +779,7 @@ def test_raw_git_operational_error_is_normalized_without_output_leak(
         )
 
     monkeypatch.setattr(module, "_capture_plans", lambda *_args: SimpleNamespace())
-    monkeypatch.setattr(module, "_inspect_registration", operational)
+    monkeypatch.setattr(provenance.RegistrationGitInspector, "inspect", operational)
     with pytest.raises(module.AdequacyServiceError) as captured:
         module.assess_review_pair_adequacy(**_arguments(repository_root))
     assert captured.value.kind is module.AdequacyServiceErrorKind.OPERATIONAL_FAILURE

@@ -18,6 +18,7 @@ _LIMITATIONS = (
     "deployment permission.",
     "Local artifact and Git history observations are not authenticated.",
 )
+_BOUNDARY_FAILURE = object()
 
 
 class AdequacyServiceErrorKind(StrEnum):
@@ -141,15 +142,19 @@ def _capture_plans(
     pair_plan_relative_path: str,
 ) -> object:
     loader = importlib.import_module("hermes.adequacy.loader")
+    result: object = _BOUNDARY_FAILURE
     try:
-        return loader.capture_evaluation_plans(
+        result = loader.capture_evaluation_plans(
             plan_root,
             protocol_relative_path,
             discovery_ledger_relative_path,
             pair_plan_relative_path,
         )
     except loader.InvalidPlanError:
-        raise _InvalidPlanBoundary from None
+        result = _BOUNDARY_FAILURE
+    if result is _BOUNDARY_FAILURE:
+        raise _InvalidPlanBoundary
+    return result
 
 
 def _inspect_registration(
@@ -159,15 +164,19 @@ def _inspect_registration(
     candidate_repository_commit: str | None,
 ) -> _models.RegistrationEvidence:
     provenance = importlib.import_module("hermes.provenance.git")
+    result: _models.RegistrationEvidence | object = _BOUNDARY_FAILURE
     try:
-        return provenance.RegistrationGitInspector().inspect(
+        result = provenance.RegistrationGitInspector().inspect(
             repository_root,
             plans,
             baseline_repository_commit=baseline_repository_commit,
             candidate_repository_commit=candidate_repository_commit,
         )
     except provenance.RegistrationGitOperationalError:
-        raise _RegistrationBoundaryFailure from None
+        result = _BOUNDARY_FAILURE
+    if result is _BOUNDARY_FAILURE:
+        raise _RegistrationBoundaryFailure
+    return result
 
 
 def _digest_value(value: object) -> str | None:
@@ -283,10 +292,13 @@ def _mapped_phase(snapshot: object, summary: dict[str, object]) -> object:
     challenge = snapshot.scenario.challenge
     if challenge is None:
         return None
+    phase: object = _BOUNDARY_FAILURE
     try:
         phase = summary["challenge_phase"]
     except KeyError:
-        raise _UnsupportedEvidenceShape from None
+        phase = _BOUNDARY_FAILURE
+    if phase is _BOUNDARY_FAILURE:
+        raise _UnsupportedEvidenceShape
     if challenge.kind == "lead_vehicle_hard_brake":
         allowed = {"PRE_TRIGGER", "BRAKING", "RECOVERY"}
     elif challenge.kind == "cut_in_near_field":
@@ -307,6 +319,7 @@ def _map_verified_snapshot(
 ) -> _models.CapturedArtifactSide:
     """Reduce one already verified snapshot without rereading or plan coercion."""
 
+    mapping_failed = False
     try:
         manifest = snapshot.manifest
         context = snapshot.context
@@ -400,9 +413,12 @@ def _map_verified_snapshot(
             scanner=scanner,
         )
     except _UnsupportedEvidenceShape:
-        raise
+        mapping_failed = True
     except (AttributeError, KeyError, TypeError, ValueError, ArithmeticError):
-        raise _UnsupportedEvidenceShape from None
+        mapping_failed = True
+    if mapping_failed:
+        raise _UnsupportedEvidenceShape
+    raise RuntimeError("snapshot mapping completed without a result")  # pragma: no cover
 
 
 def _evaluated_envelope(
@@ -448,25 +464,28 @@ def assess_review_pair_adequacy(
 ) -> _models.EvaluationAdequacyEnvelope:
     """Assess one exact current stored pair under one captured declared plan."""
 
+    screened: object = _BOUNDARY_FAILURE
     try:
-        repository, artifacts, baseline_selection, candidate_selection, plans_root, requested = (
-            _screen_request(
-                repository_root,
-                artifact_root,
-                baseline_relative_path,
-                candidate_relative_path,
-                plan_root,
-                protocol_relative_path,
-                discovery_ledger_relative_path,
-                pair_plan_relative_path,
-            )
+        screened = _screen_request(
+            repository_root,
+            artifact_root,
+            baseline_relative_path,
+            candidate_relative_path,
+            plan_root,
+            protocol_relative_path,
+            discovery_ledger_relative_path,
+            pair_plan_relative_path,
         )
     except (TypeError, ValueError):
+        screened = _BOUNDARY_FAILURE
+    if screened is _BOUNDARY_FAILURE:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.INVALID_REQUEST,
             "Adequacy request syntax is invalid.",
-        ) from None
+        )
+    repository, artifacts, baseline_selection, candidate_selection, plans_root, requested = screened
 
+    review_failed = False
     try:
         pair = _capture_review_pair(artifacts, baseline_selection, candidate_selection)
         baseline_state = _side_review_state(
@@ -511,14 +530,15 @@ def assess_review_pair_adequacy(
                 compatibility_reasons=tuple(compatibility.reasons),
                 reason="INCOMPATIBLE_EVIDENCE",
             )
-    except AdequacyServiceError:
-        raise
     except Exception:
+        review_failed = True
+    if review_failed:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
             "Stored evidence review could not be completed safely.",
-        ) from None
+        )
 
+    plan_failure: AdequacyServiceErrorKind | None = None
     try:
         plans = _capture_plans(
             plans_root,
@@ -527,16 +547,21 @@ def assess_review_pair_adequacy(
             requested.pair_plan_relative_path,
         )
     except _InvalidPlanBoundary:
-        raise AdequacyServiceError(
-            AdequacyServiceErrorKind.INVALID_PLAN,
-            "Evaluation plans are invalid or could not be captured safely.",
-        ) from None
+        plan_failure = AdequacyServiceErrorKind.INVALID_PLAN
     except Exception:
+        plan_failure = AdequacyServiceErrorKind.OPERATIONAL_FAILURE
+    if plan_failure is AdequacyServiceErrorKind.INVALID_PLAN:
         raise AdequacyServiceError(
-            AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
+            plan_failure,
+            "Evaluation plans are invalid or could not be captured safely.",
+        )
+    if plan_failure is AdequacyServiceErrorKind.OPERATIONAL_FAILURE:
+        raise AdequacyServiceError(
+            plan_failure,
             "Evaluation plan capture could not be completed safely.",
-        ) from None
+        )
 
+    mapping_failure: AdequacyServiceErrorKind | None = None
     try:
         baseline_snapshot = pair.baseline.capture.inspection.snapshot
         candidate_snapshot = pair.candidate.capture.inspection.snapshot
@@ -563,16 +588,21 @@ def assess_review_pair_adequacy(
             ),
         )
     except _UnsupportedEvidenceShape:
-        raise AdequacyServiceError(
-            AdequacyServiceErrorKind.UNSUPPORTED_EVIDENCE_SHAPE,
-            "Stored evidence uses a shape unsupported by adequacy schema 1.0.",
-        ) from None
+        mapping_failure = AdequacyServiceErrorKind.UNSUPPORTED_EVIDENCE_SHAPE
     except Exception:
+        mapping_failure = AdequacyServiceErrorKind.OPERATIONAL_FAILURE
+    if mapping_failure is AdequacyServiceErrorKind.UNSUPPORTED_EVIDENCE_SHAPE:
         raise AdequacyServiceError(
-            AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
+            mapping_failure,
+            "Stored evidence uses a shape unsupported by adequacy schema 1.0.",
+        )
+    if mapping_failure is AdequacyServiceErrorKind.OPERATIONAL_FAILURE:
+        raise AdequacyServiceError(
+            mapping_failure,
             "Stored evidence could not be reduced safely.",
-        ) from None
+        )
 
+    registration_failed = False
     try:
         registration = _inspect_registration(
             repository,
@@ -581,16 +611,16 @@ def assess_review_pair_adequacy(
             candidate_facts.repository.commit,
         )
     except _RegistrationBoundaryFailure:
-        raise AdequacyServiceError(
-            AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
-            "Local registration inspection could not be completed safely.",
-        ) from None
+        registration_failed = True
     except Exception:
+        registration_failed = True
+    if registration_failed:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
             "Local registration inspection could not be completed safely.",
-        ) from None
+        )
 
+    assessment_failed = False
     try:
         assessment = _assess_captured_pair(
             plans.protocol,
@@ -608,10 +638,13 @@ def assess_review_pair_adequacy(
             registration=registration,
         )
     except Exception:
+        assessment_failed = True
+    if assessment_failed:
         raise AdequacyServiceError(
             AdequacyServiceErrorKind.OPERATIONAL_FAILURE,
             "Adequacy assessment could not be completed safely.",
-        ) from None
+        )
+    raise RuntimeError("adequacy assessment completed without a result")  # pragma: no cover
 
 
 __all__ = (
