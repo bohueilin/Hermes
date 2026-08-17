@@ -415,18 +415,34 @@ Commit: `docs: separate observed adequacy facts from plan expectations`
   execution, component, baseline-shield, and fresh-selection-reproduction criteria before the
   existing eleven scanner criteria. It must not compare the primary pair-plan commit to the earlier
   `implementation_base_commit`.
+- [ ] Assert the exact 17 IDs/order frozen in the design. For the first six rows, test every named
+  input group and `FAIL > NOT_AVAILABLE > PASS` precedence: nonhex/unequal primary commit, dirty
+  `None`/`True`, nullable fake simulator tuple, challenge mismatch, baseline shield digest, and all
+  three fresh-selection outcomes/digest bindings.
 - [ ] Assert snapshot-to-adequacy mapping copies only typed stored facts and does not mutate source models.
 - [ ] Assert public `SideReviewState` is event-free and retains exact safe run/schema/digest/trust
   state for invalid and incompatible output; requested plan selections are always present and the
   plan-not-evaluated reason is typed.
+- [ ] Assert exact `RequestedPlanSelections`, `SideIdentity`, and envelope
+  `plan_evaluation_reason` field types/cross-products, including UNVERIFIED all-null, consistent
+  four-root equality, invalid partial-root retention, evaluated-null-reason, and exact invalid vs
+  incompatible reasons.
 - [ ] Assert missing/nonhex repository provenance, dirty `None`/`True`, fake simulator absence,
   cut-in/no challenge, swapped shield roles, and runtime-valid nonzero delay become the frozen
   compatibility or criterion outcomes—never plan-model construction errors.
 - [ ] Assert absent captured candidate configuration is never replaced by the declared config;
-  dependent scanner rows become `NOT_AVAILABLE` while identity/configuration fails.
+  assert exact `c/d/p/q/e`, `EVIDENCE_NOT_AVAILABLE`, and every row in the frozen override matrix,
+  including the ordinary never-unavailable intervention/count rows becoming `NOT_AVAILABLE` under
+  this explicit override.
+- [ ] Assert fake/no-challenge and cut-in phases are representable: zero BRAKING samples and absent
+  target condition are available `FAIL`; only missing paired inputs on a BRAKING event create
+  required-signal `NOT_AVAILABLE`.
 - [ ] Assert malformed syntax wins before capture; invalid baseline wins over defective plan/repo
   roots; incompatibility wins over plan/repo filesystem defects; invalid plan wins over unavailable
   Git; and valid flow resolves Git once immediately before use.
+- [ ] Assert API roots accept only absolute normalized `Path` spellings, CLI-relative normalization
+  remains deferred to Task 7, Cc/Cf/NUL and noncanonical roots fail `INVALID_REQUEST`, and the pure
+  lexical screen performs no filesystem/Git/executable operation.
 
 Run:
 
@@ -447,6 +463,9 @@ Expected RED: public application service is missing.
 - [ ] Keep every identity/reproduction comparison in a pure assessment helper accepting only
   adequacy-owned protocol/ledger/pair/side models; `api.py` only maps and orders operations.
 - [ ] Keep fake registration injection only in a non-public pure helper for tests.
+- [ ] Define only `AdequacyServiceError` plus the exhaustive `INVALID_REQUEST`, `INVALID_PLAN`,
+  `UNSUPPORTED_EVIDENCE_SHAPE`, and `OPERATIONAL_FAILURE` kinds; raw dependency exceptions never
+  escape and every kind carries exit code 40.
 - [ ] Return one `EvaluationAdequacyEnvelope` for invalid, incompatible, or completed outcomes; normalize invalid-plan, unsupported-shape, and operational exceptions into typed service errors.
 - [ ] Preserve gate/integrity/authenticity/authorization/deployment/scope/authoritative-status fields exactly.
 
@@ -459,10 +478,13 @@ conda run -n hermes-dev python -m pytest -q \
   tests/unit/test_review_adequacy.py \
   tests/unit/test_adequacy_assessment.py \
   tests/unit/test_adequacy_loader.py \
-  tests/unit/test_provenance_git.py
+  tests/unit/test_provenance_git.py \
+  tests/unit/test_architecture_boundaries.py
 conda run -n hermes-dev python -m ruff check \
   src/hermes/adequacy src/hermes/provenance \
-  tests/unit/test_adequacy_api.py tests/unit/test_review_adequacy.py
+  tests/unit/test_adequacy_api.py tests/unit/test_adequacy_models.py \
+  tests/unit/test_adequacy_assessment.py tests/unit/test_review_adequacy.py \
+  tests/unit/test_architecture_boundaries.py
 git diff --check
 ```
 

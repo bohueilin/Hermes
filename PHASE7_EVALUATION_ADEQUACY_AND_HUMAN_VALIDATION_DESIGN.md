@@ -901,6 +901,49 @@ The lead-TTC plan is adequate only if:
     is never evidence that the other predicates were nonbinding; and
 12. enough decision opportunities remain after first target response.
 
+The complete criterion tuple is exactly these 17 IDs in this order; no implementation may split,
+merge, rename, or reorder them:
+
+```text
+primary_run_ids_match_pair_plan
+primary_repository_commits_match
+artifact_execution_identity_matches_pair_plan
+artifact_component_identities_match_pair_plan
+baseline_shield_identity_matches_pair_plan
+fresh_baseline_selection_reproduces_selected_discovery
+arm_roles_and_candidate_configuration
+minimum_braking_samples_per_arm
+common_prefix_equality
+target_condition_exposure
+at_condition_arm_alignment
+pre_condition_cleanliness
+material_target_intervention
+at_divergence_arm_alignment
+minimum_target_event_count
+non_target_predicates_and_reasons_clear
+post_response_horizon
+```
+
+The first six criteria have these exact input and status rules. Within one criterion, any available
+mismatch yields `FAIL`; otherwise any required source-permitted missing value yields
+`NOT_AVAILABLE`; otherwise every exact match yields `PASS`.
+
+| Criterion ID | Required captured fields | `PASS` | `FAIL` | `NOT_AVAILABLE` |
+|---|---|---|---|---|
+| `primary_run_ids_match_pair_plan` | Both observed run IDs; pair-plan baseline/candidate run IDs | Both exact by positional role | Either available run ID differs | Never after consistent review |
+| `primary_repository_commits_match` | Both recorded commit strings | Both equal each other and are the same lowercase 40-hex string | Any available string is unequal or not lowercase 40-hex | Never; a missing commit is existing comparison incompatibility before plan evaluation |
+| `artifact_execution_identity_matches_pair_plan` | Per side: Hermes version, scenario digest, challenge kind, seed, cadence, horizon, repository dirty state; pair-plan declarations | Every value exact and both dirty states are `false` | Any available identity differs, challenge is lead/cut-in/none rather than declared lead, or either dirty state is `true` | Only when all available identity fields match and either dirty state is source-permitted `null` |
+| `artifact_component_identities_match_pair_plan` | Per side: policy, adapter, simulator, and gate name/version/config/source identity; pair-plan declarations | Every stored identity is exact | Any identity differs, including an observed nullable “no external simulator” tuple versus the declared simulator | Never after valid stored verification; nullable simulator tuple is an available observed state |
+| `baseline_shield_identity_matches_pair_plan` | Captured baseline shield name/version/config digest and pair-plan baseline declarations | Exact no-op identity and digest | Any available baseline shield identity differs | Never after valid stored verification |
+| `fresh_baseline_selection_reproduces_selected_discovery` | Fresh baseline typed result/digest; selected ledger typed result/digest; pair-plan selected-result digest binding | Complete result and both digest bindings are exact | Fresh evidence is available-no-finite or any available result/value/sequence/digest differs | Fresh result is `REQUIRED_SIGNAL_MISSING` |
+
+`artifact_execution_identity_matches_pair_plan` owns the clean-execution observation. It does not
+compare either primary commit with `implementation_base_commit`; the repository criterion checks
+only the two primary recorded strings, while the registration inspector owns history relations.
+Candidate shield role/configuration remains in
+`arm_roles_and_candidate_configuration`; the separate baseline criterion exists to cover the
+baseline no-op config digest that the scanner row does not otherwise establish.
+
 Boundary-dependent criterion status is frozen as follows:
 
 | Criterion | `PASS` | `FAIL` | `NOT_AVAILABLE` |
@@ -934,6 +977,34 @@ configuration is absent, it must not fall back to the declared configuration; co
 dependent rows are `NOT_AVAILABLE` as applicable, while role/config identity remains an available
 `FAIL`. If a runtime-valid captured configuration differs from the declaration, the scanner uses
 the captured values and the identity/configuration criterion fails.
+
+When the captured candidate configuration is absent, this override matrix is exact and supersedes
+the ordinary `d`-absent rows above:
+
+| Scanner output | Required result |
+|---|---|
+| `c`, `d` | Both `null` because the captured threshold/config predicates are unavailable |
+| `p` | `min(B, C) - 1` |
+| `q`, `e` | Both `C - 1` |
+| Observation disposition | `EVIDENCE_NOT_AVAILABLE` |
+| `arm_roles_and_candidate_configuration` | `FAIL` |
+| `minimum_braking_samples_per_arm` | Evaluate normally from stored phases |
+| `common_prefix_equality` | Evaluate normally over `p` without a declared-config fallback |
+| `target_condition_exposure` | `NOT_AVAILABLE` |
+| `at_condition_arm_alignment` | `NOT_AVAILABLE` |
+| `pre_condition_cleanliness` | Evaluate normally over `q` from stored reasons/actions |
+| `material_target_intervention` | `NOT_AVAILABLE` |
+| `at_divergence_arm_alignment` | `NOT_AVAILABLE` |
+| `minimum_target_event_count` | `NOT_AVAILABLE` |
+| `non_target_predicates_and_reasons_clear` | `NOT_AVAILABLE` |
+| `post_response_horizon` | `NOT_AVAILABLE` |
+
+A valid schema-1 fake/no-challenge or cut-in event maps its captured phase as `null`, `CUT_IN`, or
+`POST_CUT_IN` and preserves paired front inputs exactly as stored. No `BRAKING` event means zero
+braking samples and no target-condition entry: phase-sample and target-exposure rows are available
+`FAIL`, not unsupported shape. Missing front fields on events outside the `BRAKING` derivation
+domain do not create required-signal missingness. Required paired front fields missing on any
+`BRAKING` event remain the already frozen `NOT_AVAILABLE` case.
 
 The **new adequacy-core** event algorithm is one monotonically increasing indexed pass over the two
 ordered timelines. It visits each baseline event at most once and each candidate event at most
@@ -1056,6 +1127,46 @@ digests, and registration fields are `null` with an explicit typed `PLAN_NOT_EVA
 `INVALID_EVIDENCE` or `INCOMPATIBLE_EVIDENCE`. The public side records contain no event-bearing or
 plan-shaped assessment facts in any state.
 
+The V1 portable schema freezes these additional types and fields:
+
+```text
+RequestedPlanSelections
+  protocol_relative_path: exact lexical relative string
+  discovery_ledger_relative_path: exact lexical relative string
+  pair_plan_relative_path: exact lexical relative string
+
+SideIdentity
+  role: BASELINE | CANDIDATE
+  requested_relative_locator: exact lexical relative string
+  observed_run_id: nonempty string | null
+  observed_evidence_schema_version: 1.0 | 2.0 | null
+  observed_scenario_schema_version: nonempty string | null
+  observed_bundle_digest_sha256: lowercase SHA-256 | null
+  computed_bundle_digest_sha256: lowercase SHA-256 | null
+  observed_trace_digest_sha256: lowercase SHA-256 | null
+  computed_trace_digest_sha256: lowercase SHA-256 | null
+
+EvaluationAdequacyEnvelope
+  requested_plan_selections: RequestedPlanSelections  # always present
+  plan_evaluation: EVALUATED | PLAN_NOT_EVALUATED
+  plan_evaluation_reason: INVALID_EVIDENCE | INCOMPATIBLE_EVIDENCE | null
+```
+
+The three requested plan selections are distinct exact lexical relative paths. `UNVERIFIED`
+identity has every observed field and digest root `null`. An internally consistent identity has
+all run/schema fields and all four roots present, with observed bundle equal to computed bundle and
+observed trace equal to computed trace. Invalid identity requires the three run/schema fields to be
+all present or all absent and may retain any independently safe digest roots; it never requires
+matching roots. Run IDs and scenario schema versions are observations and therefore never use plan
+`Identifier` or version literals.
+
+For `PLAN_NOT_EVALUATED`, all captured plan-source identities, assessment, and registration are
+`null`, interpretation is `NO_INTERPRETATION`, and the reason is required. Any invalid side requires
+`INVALID_EVIDENCE`; otherwise an incompatible pair requires `INCOMPATIBLE_EVIDENCE`. For
+`EVALUATED`, all three captured plan-source identities, assessment, and registration are present,
+the reason is `null`, compatibility is `COMPATIBLE`, and interpretation is derived from assessment
+plus registration. No other cross-product validates.
+
 ### 12.3 Public API
 
 The explicit import path is `from hermes.adequacy.api import assess_review_pair_adequacy`;
@@ -1073,6 +1184,27 @@ assess_review_pair_adequacy(
     pair_plan_relative_path: str,
 ) -> EvaluationAdequacyEnvelope
 ```
+
+All non-envelope failures use exactly one public typed exception:
+
+```text
+AdequacyServiceErrorKind
+  INVALID_REQUEST
+  INVALID_PLAN
+  UNSUPPORTED_EVIDENCE_SHAPE
+  OPERATIONAL_FAILURE
+
+AdequacyServiceError(RuntimeError)
+  kind: AdequacyServiceErrorKind
+  safe_message: nonempty implementation-owned text, at most 1,024 input scalars
+  exit_code: 40
+```
+
+Invalid and incompatible stored evidence return envelopes rather than this exception. Raw
+filesystem, YAML/JSON, Pydantic, review, Git, and process exceptions never escape the public API.
+The safe message never embeds selected artifact/plan text, absolute paths, Git stdout/stderr, or a
+raw exception string.
+Task 7 maps every `AdequacyServiceErrorKind` to exit 40 without inventing a second error taxonomy.
 
 The public application service owns bounded plan capture and coordinates the existing review facade
 so each artifact side is captured once and the current snapshots are reused, in the frozen order
@@ -1116,6 +1248,15 @@ incompatibility, plan failure cannot trigger Git, and no branch rereads an artif
 Malformed lexical syntax wins before capture; invalid baseline wins over missing/symlink plan or
 repository roots; incompatibility wins over plan/repository filesystem defects; invalid plan wins
 over unavailable Git; and the valid path resolves Git exactly once immediately before use.
+
+The public API accepts root arguments only as absolute `pathlib.Path` values whose `os.fspath`
+string is nonempty, contains no Unicode `Cc`/`Cf` control-format character or NUL, and already equals
+its `os.path.normpath` spelling. This is a lexical check only. Relative CLI roots remain supported:
+the CLI converts each user-supplied root to an absolute normalized `Path` with `abspath`—never
+`resolve`/`realpath`—before calling the API. Selection arguments remain strings and must be exact
+nonempty POSIX-relative paths with no control-format character, leading/trailing slash, repeated
+slash, `.`/`..` component, backslash, or root-name prefix. Authoritative boundary checks later
+decide existence, symlinks, containment, replacement, and mutation.
 
 Registration ordering may be established only by read-only fixed-argument local Git history readback
 under the explicitly supplied canonical `repository_root`. It must prove each captured file matches
