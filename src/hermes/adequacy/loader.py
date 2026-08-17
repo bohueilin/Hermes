@@ -454,11 +454,16 @@ def _selection_rule_inputs(
     threshold_matched = False
     if observed:
         observation = evidence.observations[0]
+        if observation.sequence is None or (
+            observation.sequence >= protocol.planned_execution.horizon_steps
+        ):
+            raise InvalidPlanError(
+                "discovery selection evidence sequence is outside the planned horizon"
+            )
         if (
             observation.observation_id != definition.observation_id
             or observation.unit != definition.unit
             or observation.operator != definition.operator
-            or observation.sequence is None
             or type(observation.machine_value) is not float
             or type(observation.threshold_machine_value) is not float
             or _canonical_payload(observation.threshold_machine_value)

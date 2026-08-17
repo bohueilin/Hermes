@@ -678,6 +678,21 @@ def test_selection_evidence_accepts_only_the_three_frozen_states(
             ),
             "unavailable_reason": None,
         },
+        {
+            "status": "AVAILABLE",
+            "outcome": "OBSERVED",
+            "observations": (
+                SelectionObservation(
+                    **{
+                        **_selection_observation().model_dump(),
+                        "machine_value": -1.0,
+                        "canonical_value": "-1.0",
+                        "display_value": "-1.0",
+                    }
+                ),
+            ),
+            "unavailable_reason": None,
+        },
     ),
 )
 def test_selection_evidence_rejects_every_invalid_state_cross_product(

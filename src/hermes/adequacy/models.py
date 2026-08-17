@@ -419,10 +419,11 @@ class SelectionEvidence(_AdequacyModel):
             if (
                 type(observation.machine_value) is not float
                 or not math.isfinite(observation.machine_value)
+                or observation.machine_value < 0.0
                 or observation.sequence is None
             ):
                 raise ValueError(
-                    "OBSERVED selection evidence requires a finite float and sequence"
+                    "OBSERVED selection evidence requires a nonnegative finite float and sequence"
                 )
             return self
         if self.outcome == "NO_FINITE_CLOSING_TTC":

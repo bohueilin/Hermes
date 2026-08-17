@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import inspect
 import math
+from collections import Counter
 
 import pytest
 from pydantic import ValidationError
 
+import hermes.adequacy.assessment as assessment_module
 from hermes.adequacy.assessment import (
     _scan_lead_ttc_adequacy,
     assess_lead_ttc_adequacy,
@@ -1136,7 +1138,9 @@ def test_gate_verdict_and_outcome_metrics_are_not_assessor_inputs() -> None:
     assert assessment.status is AdequacyStatus.ADEQUATE
 
 
-def test_ten_thousand_event_boundary_is_one_pass_and_references_are_bounded() -> None:
+def test_ten_thousand_event_boundary_is_one_pass_and_references_are_bounded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     baseline_events: list[AssessmentEvent] = []
     candidate_events: list[AssessmentEvent] = []
     for sequence in range(10_000):
@@ -1161,10 +1165,24 @@ def test_ten_thousand_event_boundary_is_one_pass_and_references_are_bounded() ->
         reasons=("TTC_BELOW_THRESHOLD",),
     )
 
+    baseline_side = _side("BASELINE", tuple(baseline_events), horizon_steps=10_000)
+    candidate_side = _side("CANDIDATE", tuple(candidate_events), horizon_steps=10_000)
+    expected_event_ids = {
+        id(event) for event in baseline_side.events + candidate_side.events
+    }
+    assert len(expected_event_ids) == 20_000
+    ttc_calls: Counter[int] = Counter()
+    original_input_ttc = assessment_module._input_ttc
+
+    def count_input_ttc(event: AssessmentEvent) -> float | None:
+        ttc_calls[id(event)] += 1
+        return original_input_ttc(event)
+
+    monkeypatch.setattr(assessment_module, "_input_ttc", count_input_ttc)
     scan = _scan_lead_ttc_adequacy(
         _protocol(),
-        _side("BASELINE", tuple(baseline_events), horizon_steps=10_000),
-        _side("CANDIDATE", tuple(candidate_events), horizon_steps=10_000),
+        baseline_side,
+        candidate_side,
     )
 
     assert (
@@ -1177,6 +1195,9 @@ def test_ten_thousand_event_boundary_is_one_pass_and_references_are_bounded() ->
     assert scan.baseline_event_visits == 10_000
     assert scan.candidate_event_visits == 10_000
     assert scan.baseline_event_visits + scan.candidate_event_visits <= 20_000
+    assert set(ttc_calls) == expected_event_ids
+    assert sum(ttc_calls.values()) == 20_000
+    assert set(ttc_calls.values()) == {1}
     assert scan.baseline_selection_evidence.observations[0].sequence == 9_998
     prefix = _criterion(scan.assessment, "common_prefix_equality")
     assert prefix.status is CriterionStatus.FAIL

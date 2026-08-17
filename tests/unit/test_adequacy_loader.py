@@ -981,6 +981,60 @@ def test_selection_observation_must_match_the_protocol_definition(
         capture_evaluation_plans(tmp_path, *selections)
 
 
+def test_fully_rebound_negative_selection_ttc_is_rejected_by_capture(tmp_path: Path) -> None:
+    selections = _write_valid_plans(tmp_path)
+    protocol, ledger, pair = _load_plan_payloads(tmp_path, selections)
+    ledger[0]["selection_evidence"] = _observed_selection_evidence(value=-1.0)
+    _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
+    rebound_protocol, rebound_ledger, rebound_pair = _load_plan_payloads(tmp_path, selections)
+    evidence = rebound_ledger[0]["selection_evidence"]
+    expected_pair = rebound_pair["expected_pair"]
+    assert isinstance(expected_pair, dict)
+    assert rebound_ledger[0]["selection_evidence_sha256"] == _sha(_canonical(evidence))
+    assert expected_pair["selected_discovery_selection_evidence_sha256"] == (
+        rebound_ledger[0]["selection_evidence_sha256"]
+    )
+    assert {
+        rule["observation"] for rule in rebound_protocol["valid_run_rules"]
+    } == {
+        "INTEGRITY",
+        "SELECTION_EVIDENCE_AVAILABLE",
+        "SELECTION_EVIDENCE_OBSERVED",
+        "SELECTION_EVIDENCE_THRESHOLD_MATCHED",
+    }
+
+    with pytest.raises(InvalidPlanError):
+        capture_evaluation_plans(tmp_path, *selections)
+
+
+@pytest.mark.parametrize(("sequence", "accepted"), ((299, True), (300, False)))
+def test_fully_rebound_selection_sequence_must_be_inside_planned_horizon(
+    tmp_path: Path,
+    sequence: int,
+    accepted: bool,
+) -> None:
+    selections = _write_valid_plans(tmp_path)
+    protocol, ledger, pair = _load_plan_payloads(tmp_path, selections)
+    ledger[0]["selection_evidence"] = _observed_selection_evidence(sequence=sequence)
+    _write_plan_payloads(tmp_path, selections, protocol, ledger, pair)
+    rebound_protocol, rebound_ledger, rebound_pair = _load_plan_payloads(tmp_path, selections)
+    evidence = rebound_ledger[0]["selection_evidence"]
+    expected_pair = rebound_pair["expected_pair"]
+    assert isinstance(expected_pair, dict)
+    assert rebound_protocol["planned_execution"]["horizon_steps"] == 300
+    assert rebound_ledger[0]["selection_evidence_sha256"] == _sha(_canonical(evidence))
+    assert expected_pair["selected_discovery_selection_evidence_sha256"] == (
+        rebound_ledger[0]["selection_evidence_sha256"]
+    )
+
+    if accepted:
+        captured = capture_evaluation_plans(tmp_path, *selections)
+        assert captured.ledger[0].selection_evidence.observations[0].sequence == 299
+    else:
+        with pytest.raises(InvalidPlanError, match="planned horizon"):
+            capture_evaluation_plans(tmp_path, *selections)
+
+
 @pytest.mark.parametrize(
     "mutation",
     ("value", "sequence", "status", "outcome", "digest"),
