@@ -134,3 +134,44 @@ The declared question at a 2.0 s threshold is closed as unreachable and is not
 retried. Version 4 asks a different, explicitly stated question at a threshold
 above the measured floor, so the positive path of the adequacy assessor can also
 be exercised. The 2.0 s result stands unchanged in this record.
+
+## Protocol version 4 — `lead_ttc_engagement.protocol.v4.yaml`
+
+- Protocol byte digest: `3021c4a59b52fde36bea6d921b88170dffb8aa481efc193528b0080ea854fbd0`
+- Registration commit: `ef1169e2b819dca219dd4dd06e37ffb237ea9808`
+- Pair-plan commit: `389a3cceb8ecec28e816b46f304c6501adc81d6e`
+- Ledger: `lead_ttc_engagement.discovery.v4.jsonl` (9 attempts, byte digest
+  `969779633829f4f543ecc528f38c190405a85d37ec60f94189c105057a8db765`)
+- Declared threshold: 4.0 s
+- Primary pair: `handoff-p7-lead-baseline` / `handoff-p7-lead-candidate`
+
+**Discovery outcome: SELECTED `attempt-0000` / `grid-0000`** (30 m gap, 8.0 m/s
+actor, trigger 60, 30 braking steps, zero resume throttle) with an observed
+minimum policy-input TTC of 3.1221979708407908 s.
+
+**Assessment outcome: INADEQUATE — mis-declared policy component identity.**
+
+The primary pair engaged the mechanism cleanly. The candidate recorded three
+`TTC_BELOW_THRESHOLD` overrides at sequences 66, 70, and 74, with no
+`SPEED_CAP` or any other non-target reason anywhere in the run, and the fresh
+primary baseline reproduced the selected discovery observation exactly
+(3.1221979708407908 s at sequence 74). Sixteen of seventeen criteria passed,
+including target-condition exposure, material target intervention, arm alignment
+at the divergence, non-target predicate clearance, and common-prefix equality.
+
+One criterion failed: `artifact_component_identities_match_pair_plan`. The v4
+protocol declared the `metadrive-idm` policy configuration digest as the
+empty-object digest `44136fa3...`, but the policy has a real configuration whose
+digest is `22b5e129ed53fad94e0bf70e38bdf341316d8ff1d8a75652abd08c964f230fa4`.
+
+This is an authoring error in the frozen protocol, and the assessor caught it
+rather than accepting the pair. It is preserved here rather than corrected in
+place. The v4 artifacts are retained unchanged.
+
+### Consequence
+
+A mis-declared component identity is a material defect, so version 5 re-declares
+the protocol with the correct policy digest and uses new discovery and primary
+run IDs. The correct digest is taken from retained pre-existing artifacts
+(`handoff-p2-metadrive`, `handoff-p3-lead-baseline`), where it has been stable
+since Phase 2; it is not read from any v4 result.
