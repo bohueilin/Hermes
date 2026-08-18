@@ -43,3 +43,47 @@ A material retry requires a new protocol version and new run IDs. Version 2 is
 registered separately. Its grid is informed only by this disclosed v1 evidence
 and by retained pre-existing artifacts; no unregistered exploratory run informed
 it, and no candidate outcome informed it.
+
+## Protocol version 2 — `lead_ttc_engagement.protocol.v2.yaml`
+
+- Protocol byte digest: `e878b936936cb97431f0499f77121bfcb2669704c81b1819148d75a3b6a2555f`
+- Protocol semantic digest: `aa7d6b54abec9e1405f776c1f6b849f565345787c231f55228d93ce2d80fe49f`
+- Registration commit: `bc66fa0c4782a6f9b554bc2d7f26a047c24e3b77`
+- Ledger: `lead_ttc_engagement.discovery.v2.jsonl` (32 attempts, byte digest
+  `147c321e54e2974d5adaf95477e3e40f027656ade3f633c54105df17a972dea9`)
+- Grid: `initial_gap_m` {12.0, 16.0, 20.0, 30.0} x `actor_speed_mps` {6.0, 8.0} x
+  `trigger_step` {80, 140} x `brake_duration_steps` {30, 60} x
+  `recovery_throttle` {0.0}
+
+**Outcome: NO VALID ATTEMPT.** No baseline entered the 2.0 s band. Observed
+minimum policy-input TTC ranged from 3.113655645906048 s to 12.49756404415772 s.
+
+### What the v2 evidence shows
+
+Two effects are now visible and both are monotonic within the searched range.
+
+At `actor_speed_mps` 8.0 with `trigger_step` 80, opening the initial gap lowers
+the observed minimum policy-input TTC:
+
+| `initial_gap_m` | minimum policy-input TTC (s) |
+|---:|---:|
+| 12.0 | 6.9420108834983845 |
+| 16.0 | 7.261493612440824 |
+| 20.0 | 6.059562678424191 |
+| 30.0 | 3.113655645906048 |
+
+A larger gap lets the ego reach and hold its 8.0 m/s target, so the closing speed
+after the lead stops is larger. `trigger_step` 140 is uniformly worse than 80
+(about 12.4-12.5 s at every gap): by step 140 the car-following policy has
+settled into a wide steady-state headway.
+
+`brake_duration_steps` had no effect at all. Every 30-step and 60-step pair
+produced an identical minimum, so the minimum always falls inside the first 30
+steps of braking.
+
+### Consequence
+
+Version 3 fixes `brake_duration_steps` at 30 and `actor_speed_mps` at 8.0 on this
+disclosed evidence, and extends the gap and trigger ranges in the direction the
+v2 ledger already shows. As with v2, the grid is informed only by committed
+discovery ledgers and retained pre-existing artifacts.
