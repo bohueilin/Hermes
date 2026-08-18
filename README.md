@@ -4,6 +4,11 @@
 
 Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
 
+> **New here — human or model? Start with [`PROJECT_HANDOFF.md`](PROJECT_HANDOFF.md).**
+> It is the canonical entry point: what Hermes is, its principles and boundaries, every
+> phase, current state, and what to do next. This repository has many documents; that one
+> orders them.
+
 > **Autonomy policy proposes → environment executes → verifiers evaluate → gate decides → trace proves.**
 
 Hermes is designed to make an autonomy experiment reproducible and reviewable: it preserves the scenario, versions, candidate action, executed action, findings, metrics, release verdict, and evidence-integrity checks in one bundle.

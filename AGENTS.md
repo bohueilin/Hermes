@@ -1,6 +1,16 @@
-# Hermes repository instructions — Phase 6
+# Hermes repository instructions
 
-These instructions apply to every Codex task in this repository. Read them before planning or editing.
+These instructions apply to every task in this repository, whatever model or tool is
+executing it. Read them before planning or editing.
+
+**Read `PROJECT_HANDOFF.md` first.** It is the canonical entry point and carries current
+state, principles, phase history, and open decisions. This file carries the rules; that one
+carries the context. **Every substantive session must update `PROJECT_HANDOFF.md` before it
+ends** — see its section 0 for what to update and the append-don't-overwrite rule.
+
+Role separation is deliberate: design and consulting authority (Fable 5 / Codex Sol 5.6) is
+separate from implementation authority (Opus 5), and neither approves its own work. See
+`PROJECT_HANDOFF.md` section 1.
 
 ## 1. Canonical identity
 
