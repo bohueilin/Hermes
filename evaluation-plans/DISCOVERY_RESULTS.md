@@ -175,3 +175,59 @@ the protocol with the correct policy digest and uses new discovery and primary
 run IDs. The correct digest is taken from retained pre-existing artifacts
 (`handoff-p2-metadrive`, `handoff-p3-lead-baseline`), where it has been stable
 since Phase 2; it is not read from any v4 result.
+
+## Protocol version 5 — `lead_ttc_engagement.protocol.v5.yaml`
+
+- Protocol byte digest: `977a93f90b635fb5bd054dfcc896de758efb5ea35142567eea69a88bc7ba2cc5`
+- Protocol semantic digest: `e83fac88293ec9eed7d68fcc5ee2f09f32a78f43bc30f43a5b45cb4e6141151d`
+- Registration commit: `fc63bd3bbd2dad6d8d5b2641e39fde102a3f2c28`
+- Pair-plan commit: `cb6d66954a277eb21d3100eb555222f9acc0c16a`
+- Ledger: `lead_ttc_engagement.discovery.v5.jsonl` (9 attempts, byte digest
+  `2c8deaf5e48d8378b1169c7c1a50d54987982fdb5dc5817857f6b00b678eb10d`)
+- Selected: `attempt-0000` / `grid-0000` — 30 m gap, 8.0 m/s actor, trigger 60,
+  30 braking steps, zero resume throttle; observed minimum policy-input TTC
+  3.1221979708407908 s at sequence 74
+- Primary pair: `handoff-p7b-lead-baseline` / `handoff-p7b-lead-candidate`
+  (trace digests `26489bf0f904f0e4a2d05fef371e6992dd2a9d383a341e6345396b275548c661`
+  and `b2e651fab965fe532450df18b1885090d4e098f63c1fe8febb1ff48a558e0d02`)
+
+**Discovery outcome: SELECTED `attempt-0000`. Assessment outcome: `ADEQUATE`.**
+
+All seventeen criteria passed. Registration is `LOCAL_HISTORY_ORDERING_VERIFIED`
+and interpretation is `DECLARED_QUESTION_ONLY`.
+
+The candidate recorded three `TTC_BELOW_THRESHOLD` overrides at sequences 66, 70,
+and 74. No `SPEED_CAP`, `STALE_OBSERVATION`, `BOUNDARY_RISK`, `EMERGENCY_STOP`,
+or `ACTUATION_DELAY_COMPENSATION` reason appears anywhere in the run, and every
+non-target predicate recomputed from stored observations is false through the
+treatment divergence. The two arms match exactly on all 66 events through
+sequence 65, diverge first at sequence 66, and the fresh primary baseline
+reproduced the selected discovery observation exactly.
+
+This is the first `TTC_BELOW_THRESHOLD` override recorded anywhere in this
+repository's evidence.
+
+### Negative control
+
+The retained `handoff-p3-lead-baseline` → `handoff-p3-lead-shielded` pair,
+assessed against the same plan, returns `INADEQUATE` with disposition
+`TARGET_INTERVENTION_CONFOUNDED`, interpretation `DESCRIPTIVE_ONLY`, and
+registration `REGISTRATION_NOT_ESTABLISHED`. Its diagnostics state exactly why:
+available BRAKING inputs never entered the declared band, 36 target-evidence
+violations precede any divergence, 73 non-target predicate or reason violations
+were found, and zero qualifying target events exist.
+
+Invalid stored evidence (`phase1-tampered`) fails closed at exit 30 with
+`assessment: null` and no criteria.
+
+### What this does and does not establish
+
+The pair exercised the locally registered lead-TTC engagement question at a 4.0 s
+threshold in this bounded simulation. The registration ordering is evidenced by
+local Git history, which is rewritable and carries no external timestamp, and the
+evidence remains `NOT_AUTHENTICATED`.
+
+It does not establish that the shield is safer, that the challenge is realistic,
+that the candidate is ready to advance, that the comparison proves a causal
+treatment effect, or anything about real-world vehicle safety. Both arms hold at
+gate verdict `HOLD`.
