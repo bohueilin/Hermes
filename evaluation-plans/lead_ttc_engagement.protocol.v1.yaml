@@ -1,0 +1,464 @@
+baseline_grid:
+- parameter: initial_gap_m
+  scenario_field: challenge.initial_gap_m
+  values:
+  - 6.0
+  - 8.0
+  - 10.0
+- parameter: actor_speed_mps
+  scenario_field: challenge.actor_speed_mps
+  values:
+  - 4.0
+  - 6.0
+  - 8.0
+- parameter: trigger_step
+  scenario_field: challenge.trigger_step
+  values:
+  - 30
+- parameter: brake_duration_steps
+  scenario_field: challenge.brake_duration_steps
+  values:
+  - 15
+  - 30
+- parameter: recovery_throttle
+  scenario_field: challenge.resume_throttle_command
+  values:
+  - 0.0
+candidate_shield:
+  config_digest_sha256: 038fe5504c7c7eefbf5ef91d9273db7860bc92fafa400456935e60f4c1bde057
+  configuration:
+    actuation_delay_compensation_s: 0.0
+    boundary_margin_m: 0.25
+    boundary_steering_command: 0.5
+    emergency_stop_active: false
+    full_brake_command: 1.0
+    label: illustrative_simulation_only_not_real_vehicle_limits
+    max_observation_age_s: 1.0
+    name: phase3_deterministic
+    schema_version: '1.0'
+    speed_cap_mps: 50.0
+    ttc_threshold_s: 2.0
+    version: '1.0'
+  name: deterministic
+  version: '1.0'
+claim_type: LEAD_TTC_INTERVENTION_ENGAGEMENT
+criteria:
+  actuation_delay_compensation_s: 0.0
+  candidate_required_override_reason: TTC_BELOW_THRESHOLD
+  minimum_phase_samples_per_arm: 10
+  minimum_post_response_decision_steps: 1
+  minimum_target_override_events: 1
+  policy_input_ttc_lte_s: 2.0
+  prohibit_non_target_reasons_through_first_target_response: true
+  required_phase: BRAKING
+exclusion_rules:
+- excluded_value: INVALID_EVIDENCE
+  observation: INTEGRITY
+  operator: EQ
+  rule_id: INVALID_EVIDENCE
+- excluded_value: false
+  observation: SELECTION_EVIDENCE_AVAILABLE
+  operator: EQ
+  rule_id: SELECTION_EVIDENCE_NOT_AVAILABLE
+- excluded_value: false
+  observation: SELECTION_EVIDENCE_OBSERVED
+  operator: EQ
+  rule_id: SELECTION_EVIDENCE_NOT_OBSERVED
+- excluded_value: false
+  observation: SELECTION_EVIDENCE_THRESHOLD_MATCHED
+  operator: EQ
+  rule_id: SELECTION_EVIDENCE_THRESHOLD_NOT_MATCHED
+expected_components:
+  adapter:
+    component: ADAPTER
+    config_digest_scope: MATERIALIZED_VARIANT
+    config_digest_sha256: null
+    name: metadrive
+    source_commit: null
+    version: '1.1'
+  gate:
+    component: GATE
+    config_digest_scope: FIXED
+    config_digest_sha256: 1216216c081cba74dc58d7f8c517a2380e93dde458a81a02b3901c212582fe84
+    name: phase2
+    source_commit: null
+    version: '1.0'
+  hermes_version: 0.1.0
+  policy:
+    component: POLICY
+    config_digest_scope: FIXED
+    config_digest_sha256: 44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
+    name: metadrive-idm
+    source_commit: null
+    version: '1.0'
+  simulator:
+    component: SIMULATOR
+    config_digest_scope: NOT_APPLICABLE
+    config_digest_sha256: null
+    name: metadrive
+    source_commit: 85e5dadc6c7436d324348f6e3d8f8e680c06b4db
+    version: 0.4.3
+label: illustrative_simulation_only_declared_question
+materializer:
+  adapter_config_projection: METADRIVE_ADAPTER_EVIDENCE_CONFIG_V1_1
+  algorithm: STRICT_EXISTING_SCALAR_REPLACEMENT_V1
+  mappings:
+  - parameter: initial_gap_m
+    scenario_field: challenge.initial_gap_m
+  - parameter: actor_speed_mps
+    scenario_field: challenge.actor_speed_mps
+  - parameter: trigger_step
+    scenario_field: challenge.trigger_step
+  - parameter: brake_duration_steps
+    scenario_field: challenge.brake_duration_steps
+  - parameter: recovery_throttle
+    scenario_field: challenge.resume_throttle_command
+  output_serialization: HERMES_RESOLVED_SCENARIO_YAML_UTF8_LF_V1
+  protocol_serialization: HERMES_EVALUATION_PROTOCOL_YAML_UTF8_LF_V1
+  template:
+    byte_digest_sha256: 1ad3ae72d28df881cf4b8708e7ced1455551d863ac21f13b86cdcbab59cd24fe
+    repository_relative_path: evaluation-plans/templates/lead_ttc_engagement.template.yaml
+    scenario_digest_sha256: a08a1623fa321d1e01684450ffadd118ffc4e0df1657de0738c609f85299075f
+  variants:
+  - adapter_config_digest_sha256: a928f219e74618371db1e45f0187572e5c368d4dc9e60c7590089aaf9ae8dd82
+    grid_index: 0
+    parameters:
+    - parameter: initial_gap_m
+      value: 6.0
+    - parameter: actor_speed_mps
+      value: 4.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 15
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: 3adc364a67a452985e463472f2c210ee7bc3f6e22d8c7e6d22699ebb07c146a3
+    scenario_digest_sha256: 04b074b4ca141bce04268520674d03fcb9fb250bd85b724a4f92be5d82691e10
+    variant_id: grid-0000
+  - adapter_config_digest_sha256: b7646ca8b3c1dac032e0458eba65c1032a17dc0f14225dfb0fde299e8c60af7f
+    grid_index: 1
+    parameters:
+    - parameter: initial_gap_m
+      value: 6.0
+    - parameter: actor_speed_mps
+      value: 4.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 30
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: 55627c3f71f734d91de260550e413342486c290a173cff71a36d3b7d13a67da1
+    scenario_digest_sha256: e411a37eb6edfaef6a856efe3ec6f6b76a3098b9568ee6f8504204ca6d7d3811
+    variant_id: grid-0001
+  - adapter_config_digest_sha256: 787480a8fc5f72678ab1b0a390563cece4185717280e9c88ce8428c77eff8143
+    grid_index: 2
+    parameters:
+    - parameter: initial_gap_m
+      value: 6.0
+    - parameter: actor_speed_mps
+      value: 6.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 15
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: c05e5c8444146ff7ff511edd051d53c46c1fab1055ac44b72fcf3ed64b3f4861
+    scenario_digest_sha256: 68e3116e566cd3f982be6dd65831304654030f400f3e055ec280f16096f74718
+    variant_id: grid-0002
+  - adapter_config_digest_sha256: 37dc2244c5f63c00723d91b8a25eb07e355642c7966c09f0ef375d8afb54823c
+    grid_index: 3
+    parameters:
+    - parameter: initial_gap_m
+      value: 6.0
+    - parameter: actor_speed_mps
+      value: 6.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 30
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: f9d7ea8fedf76fcb7591176697d08503e791f1d4216d4a6de8d998fc550cd3a3
+    scenario_digest_sha256: 713d3679c83119f22fdaaae1608ec06affb8ff0d45c8c0d3039f7a5fd883f3af
+    variant_id: grid-0003
+  - adapter_config_digest_sha256: 66aad54b006fcac8ca37ab83839ac4d491ebbf7f14cba06d86f43d8f6c1cf389
+    grid_index: 4
+    parameters:
+    - parameter: initial_gap_m
+      value: 6.0
+    - parameter: actor_speed_mps
+      value: 8.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 15
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: e8a159d6472d567ffa691535f26ce6024be6aed15386d8e617f79ceeb653b6d9
+    scenario_digest_sha256: 920ca60e9b662b7c1dd35e243d0e6541d352988aa3e13dcfec3e26111f431345
+    variant_id: grid-0004
+  - adapter_config_digest_sha256: 2fe2376ee9b9cff8c92dc7435a1f186889c8a01ae7f49d0821f901aea38995f6
+    grid_index: 5
+    parameters:
+    - parameter: initial_gap_m
+      value: 6.0
+    - parameter: actor_speed_mps
+      value: 8.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 30
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: 397a4bc92d6ccb895b66120c25a67609e610709ce2e009656670645173a4c8f7
+    scenario_digest_sha256: 14757ddb7ca621620fa63e38c363de5350ae679abcd2ef96a20d350c011751fa
+    variant_id: grid-0005
+  - adapter_config_digest_sha256: ff8f3fa8137ecd301fae25c1ba4001005a7042c05605ff8ce22282da9007ba76
+    grid_index: 6
+    parameters:
+    - parameter: initial_gap_m
+      value: 8.0
+    - parameter: actor_speed_mps
+      value: 4.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 15
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: df0271f650977cd871a226ddac1ffe62aa28947d0bb545899a9e71e3dcf800dd
+    scenario_digest_sha256: 3bfc3735f749164620cd993a931249f275688f796166ff3e75feb92addf50ddc
+    variant_id: grid-0006
+  - adapter_config_digest_sha256: 5b4e78c49182282d9fc4c5cde1706aa7f5267b78f04fdac4006039e3a0c3e4b6
+    grid_index: 7
+    parameters:
+    - parameter: initial_gap_m
+      value: 8.0
+    - parameter: actor_speed_mps
+      value: 4.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 30
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: 60e23e75294e7b5a7b01d7974fdc43e4649cc17efdc12039bdb5914e1d727f13
+    scenario_digest_sha256: a6f5758a111da9cccd1cf3c1f1df440f6cec5c2a57b3f37b957cae4a3cabd5ed
+    variant_id: grid-0007
+  - adapter_config_digest_sha256: 39bd861ac33459c58c4064e2a7288963da265a47e49047f8e6a92450212f6f3e
+    grid_index: 8
+    parameters:
+    - parameter: initial_gap_m
+      value: 8.0
+    - parameter: actor_speed_mps
+      value: 6.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 15
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: dbb9feedae252a0db87e64dd6c9d9165712a217cfc81b84f3b16b2b4ef5b9169
+    scenario_digest_sha256: edee770c9c9426d2d1164dddefa6261f9b53594b7360863cd93e3562300b7e75
+    variant_id: grid-0008
+  - adapter_config_digest_sha256: ecb5d81c63ad99b7c848c31c2c7761482e6392e6768f4a2ad1ed3e73cafe8041
+    grid_index: 9
+    parameters:
+    - parameter: initial_gap_m
+      value: 8.0
+    - parameter: actor_speed_mps
+      value: 6.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 30
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: 7c98f604cd1591d5ba12540625bab2c3e7d66cddb0a337fd69f67d13fccb96c7
+    scenario_digest_sha256: 62adfa64e72d1f05b30f570a186b8145f019c3678ccaa36cb4215fd51e0a1e6e
+    variant_id: grid-0009
+  - adapter_config_digest_sha256: 1fabbe0b857e6b84b2e45028029f60a5ca45ea384d9bfde9a3e943a9baa47178
+    grid_index: 10
+    parameters:
+    - parameter: initial_gap_m
+      value: 8.0
+    - parameter: actor_speed_mps
+      value: 8.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 15
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: c6522b665a92210db80fa451918645ba87178e065770a7b750915d06f37c0559
+    scenario_digest_sha256: 1cced16c12edf68e69b5389ab2a224cd63520441570bc11e2f53c07584cfd444
+    variant_id: grid-0010
+  - adapter_config_digest_sha256: 2ae659d1a9b8d4dafe5e65027bd6c72ac3eb7c0c158597f4ad32d5cc609ce088
+    grid_index: 11
+    parameters:
+    - parameter: initial_gap_m
+      value: 8.0
+    - parameter: actor_speed_mps
+      value: 8.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 30
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: fae9a98d6792eda798fea0113b83b0342f0613f3c058158d3e488060cef7fa25
+    scenario_digest_sha256: 6c3ff15e74f794450255dd0c0508e1b858925423359c3d0b572d8d2be6c150b4
+    variant_id: grid-0011
+  - adapter_config_digest_sha256: 5a4018b85430abbf9e8d2918d86bb2d6e75016bc00d5607bc0284bf16656830d
+    grid_index: 12
+    parameters:
+    - parameter: initial_gap_m
+      value: 10.0
+    - parameter: actor_speed_mps
+      value: 4.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 15
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: f72b59cf2032df0a1b648f5ce2c0ec067ecbd6fdc94c0df1f32956b1b669e46c
+    scenario_digest_sha256: b208d84abac4a71d0924b3ac4ae033ab37728db4249facde4c1bb1a738369bf4
+    variant_id: grid-0012
+  - adapter_config_digest_sha256: 06b2fc01c13aa5541f083bfccbd7f5530773faba209c09063677f94e48b72480
+    grid_index: 13
+    parameters:
+    - parameter: initial_gap_m
+      value: 10.0
+    - parameter: actor_speed_mps
+      value: 4.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 30
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: d6a31c8145a010745c88b02082ae762a60edad410bc1bc4b2786260207518033
+    scenario_digest_sha256: 6b22abd95a5180dc1a35bd630cced687af87b95f0b2a79f636b5f9c11ddc5006
+    variant_id: grid-0013
+  - adapter_config_digest_sha256: 57da15873f93019cdde599bec0658442d4e51eaba4fee1f303e4927a96665bb9
+    grid_index: 14
+    parameters:
+    - parameter: initial_gap_m
+      value: 10.0
+    - parameter: actor_speed_mps
+      value: 6.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 15
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: 128e7580c1a59607093b0fdfc5708720b01a080ec85d949e1605688df2d2f21d
+    scenario_digest_sha256: 1e799a42b06759aebdb9a141ee638871ba13544d0d28e8b3208ca943df054976
+    variant_id: grid-0014
+  - adapter_config_digest_sha256: 8c182c77f5faceac0061dada41bf8d1a7be9ef14a6a203ed17aa5f510de78774
+    grid_index: 15
+    parameters:
+    - parameter: initial_gap_m
+      value: 10.0
+    - parameter: actor_speed_mps
+      value: 6.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 30
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: 88502364e678fb8dc63c762f437ad2825fd6652c588baf3208d9aab8d6ece36c
+    scenario_digest_sha256: 30fd169b5fd7d0dba9e1b2ed6572ee7bf32f0517d83e310ba64e0bbd1db2e855
+    variant_id: grid-0015
+  - adapter_config_digest_sha256: a60bc5445fd9d8e4280d258d7839a0b240134ec7369d88e54149c5df19bc602c
+    grid_index: 16
+    parameters:
+    - parameter: initial_gap_m
+      value: 10.0
+    - parameter: actor_speed_mps
+      value: 8.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 15
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: 1ad3ae72d28df881cf4b8708e7ced1455551d863ac21f13b86cdcbab59cd24fe
+    scenario_digest_sha256: a08a1623fa321d1e01684450ffadd118ffc4e0df1657de0738c609f85299075f
+    variant_id: grid-0016
+  - adapter_config_digest_sha256: d1003ff1458fb45645cf089c90b5a0166c0203dd7d37ddc2c3c5471b116f7fc7
+    grid_index: 17
+    parameters:
+    - parameter: initial_gap_m
+      value: 10.0
+    - parameter: actor_speed_mps
+      value: 8.0
+    - parameter: trigger_step
+      value: 30
+    - parameter: brake_duration_steps
+      value: 30
+    - parameter: recovery_throttle
+      value: 0.0
+    scenario_byte_digest_sha256: dae2eb1496970deb192380058e34905c0e5fb38e49744894b24f2e3158a14bfe
+    scenario_digest_sha256: e5dd8da939198773834b9dfa0bd625dc30588edc7a639e153ffe1821225106f9
+    variant_id: grid-0017
+  version: '2.0'
+planned_execution:
+  challenge_kind: lead_vehicle_hard_brake
+  control_frequency_hz: 10
+  horizon_steps: 300
+  seed: 7
+protocol_id: lead_ttc_engagement
+protocol_version: '1.0'
+registration:
+  repository_relative_path: evaluation-plans/lead_ttc_engagement.protocol.v1.yaml
+schema_version: '2.0'
+scope: SIMULATION_ONLY
+selection_evidence:
+  aggregation: MINIMUM
+  closing_condition: FRONT_RELATIVE_SPEED_LT_ZERO
+  event_domain: BRAKING_POLICY_INPUT_EVENTS
+  observation_id: minimum_policy_input_ttc_s
+  operator: LTE
+  required_signals: FRONT_DISTANCE_AND_RELATIVE_SPEED
+  schema_version: '1.0'
+  sequence_tie_breaker: EARLIEST_SEQUENCE
+  source_file: events.jsonl
+  source_json_pointers:
+  - /sequence
+  - /observation_summary/challenge_phase
+  - /observation_summary/front_distance_m
+  - /observation_summary/front_relative_speed_mps
+  threshold_source: criteria.policy_input_ttc_lte_s
+  unit: s
+  value_expression: FRONT_DISTANCE_DIVIDED_BY_NEGATED_RELATIVE_SPEED
+selection_rule:
+  direction: FIRST_MATCH
+  metric: POLICY_INPUT_TTC_BAND_ENTRY
+  rule_id: FIRST_VALID_BY_GRID_ORDER
+  tie_breakers:
+  - GRID_ORDER
+  - ATTEMPT_ID
+valid_run_rules:
+- expected_value: INTERNALLY_CONSISTENT
+  observation: INTEGRITY
+  operator: EQ
+  rule_id: INTERNALLY_CONSISTENT
+- expected_value: true
+  observation: SELECTION_EVIDENCE_AVAILABLE
+  operator: EQ
+  rule_id: SELECTION_EVIDENCE_AVAILABLE
+- expected_value: true
+  observation: SELECTION_EVIDENCE_OBSERVED
+  operator: EQ
+  rule_id: SELECTION_EVIDENCE_OBSERVED
+- expected_value: true
+  observation: SELECTION_EVIDENCE_THRESHOLD_MATCHED
+  operator: EQ
+  rule_id: SELECTION_EVIDENCE_THRESHOLD_MATCHED

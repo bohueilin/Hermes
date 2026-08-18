@@ -1,0 +1,27 @@
+# Phase 7 candidate shield for the declared lead-TTC engagement question.
+#
+# Illustrative simulation-only thresholds. These are not real-vehicle limits.
+#
+# Every non-target trigger is deliberately configured to be non-binding so the
+# recorded evidence can attribute an intervention to the TTC mechanism rather than
+# to a confound:
+#   speed_cap_mps                  above the 8.0 m/s policy target
+#   actuation_delay_compensation_s zero, so no pre-emptive band brakes before the
+#                                  TTC threshold is crossed and prevents entry
+#   max_observation_age_s          above any age these runs produce
+#   boundary_margin_m              leaves a 1.25 m risk threshold on a 1.5 m road
+#   emergency_stop_active          disabled
+# Configuration alone does not prove non-binding; the assessor also requires event
+# evidence that no non-target reason fired through the treatment divergence.
+schema_version: "1.0"
+name: phase3_deterministic
+version: "1.0"
+label: illustrative_simulation_only_not_real_vehicle_limits
+ttc_threshold_s: 2.0
+speed_cap_mps: 50.0
+max_observation_age_s: 1.0
+boundary_margin_m: 0.25
+actuation_delay_compensation_s: 0.0
+emergency_stop_active: false
+full_brake_command: 1.0
+boundary_steering_command: 0.5

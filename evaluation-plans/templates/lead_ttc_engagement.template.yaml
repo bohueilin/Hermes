@@ -1,0 +1,36 @@
+adapter: metadrive
+challenge:
+  actor_control_mode: metadrive_dynamic_action
+  actor_speed_mps: 8.0
+  behavior_realism_claim: false
+  brake_command: -1.0
+  brake_duration_steps: 15
+  initial_gap_m: 10.0
+  kind: lead_vehicle_hard_brake
+  resume_throttle_command: 0.0
+  trigger_step: 30
+control:
+  frequency_hz: 10
+  horizon_steps: 300
+  lateral_response_mps: 1.0
+  max_acceleration_mps2: 3.0
+  max_braking_mps2: 6.0
+  simulated_policy_latency_ms: 10.0
+  target_speed_mps: 8.0
+description: Illustrative simulation-only lead-vehicle hard-brake template for the
+  declared TTC engagement question. Not a realism claim.
+hazards:
+  boundary_at_step: null
+  collision_at_step: null
+  comfort_acceleration_mps2: 6.0
+  comfort_spike_at_step: null
+  unavailable_progress: false
+initial_state:
+  lateral_offset_m: 0.0
+  speed_mps: 0.0
+name: lead_ttc_engagement_template
+road:
+  boundary_tolerance_m: 1.5
+  destination_distance_m: 20.0
+schema_version: '2.0'
+version: '1.0'
