@@ -87,3 +87,50 @@ Version 3 fixes `brake_duration_steps` at 30 and `actor_speed_mps` at 8.0 on thi
 disclosed evidence, and extends the gap and trigger ranges in the direction the
 v2 ledger already shows. As with v2, the grid is informed only by committed
 discovery ledgers and retained pre-existing artifacts.
+
+## Protocol version 3 — `lead_ttc_engagement.protocol.v3.yaml`
+
+- Protocol byte digest: `0b2aa172d2227d09fb24a4deed3c15ace61ae932e7a2890cd5c96a10cdccf17c`
+- Protocol semantic digest: `68a0a1f696814386b7e2737c6456f8ec6e5379b33c7161e1b69cd886a5bd69d3`
+- Registration commit: `34b6c43b81ad276d33af423895f70329992d6594`
+- Ledger: `lead_ttc_engagement.discovery.v3.jsonl` (15 attempts, byte digest
+  `9fd6f73c5d14ebfb9b4c70a035de9aa8b03caa57a0172b85efbe2cdc14f38d2f`)
+- Grid: `initial_gap_m` {40.0, 50.0, 60.0, 80.0, 100.0} x `actor_speed_mps` {8.0} x
+  `trigger_step` {60, 80, 100} x `brake_duration_steps` {30} x
+  `recovery_throttle` {0.0}
+
+**Outcome: NO VALID ATTEMPT.** Observed minimum policy-input TTC ranged from
+3.108394946413832 s to 10.313028788093142 s.
+
+### What the v3 evidence shows — the search is now bracketed
+
+v3 extended the gap in the direction v2 favoured and the trend reversed:
+
+| `initial_gap_m` | trigger 60 | trigger 80 | trigger 100 |
+|---:|---:|---:|---:|
+| 40.0 | 3.11849651401919 | 3.1548306140668023 | 3.108394946413832 |
+| 50.0 | 4.0653360306295445 | 3.4050433173209447 | 3.158785598958083 |
+| 60.0 | 5.314561906794161 | 4.655639527283892 | 3.808240334472508 |
+| 80.0 | 7.813863553047341 | 7.156405483717201 | 6.306950606898969 |
+| 100.0 | 10.313028788093142 | 9.65739937864893 | 8.805536544980038 |
+
+Together with the v2 row at 30 m (3.113655645906048 s), the observed minimum is
+now bracketed on both sides with a flat floor near 3.11 s at 30-40 m.
+
+**This is the substantive Phase 7A finding.** Across 65 registered baseline
+attempts spanning three protocol versions, the `metadrive-idm` policy never let
+the policy-input TTC fall below about 3.11 s in a lead-vehicle hard-brake
+encounter. The floor is a property of the baseline car-following policy, which
+brakes early enough to preserve its own headway.
+
+A deterministic shield whose `ttc_threshold_s` is 2.0 s therefore **cannot**
+engage in this scenario family at all. The retained `handoff-p3-lead-*` pair does
+not merely happen to lack a TTC intervention; the intervention is structurally
+unreachable for this challenge and policy at that threshold.
+
+### Consequence
+
+The declared question at a 2.0 s threshold is closed as unreachable and is not
+retried. Version 4 asks a different, explicitly stated question at a threshold
+above the measured floor, so the positive path of the adequacy assessor can also
+be exercised. The 2.0 s result stands unchanged in this record.
