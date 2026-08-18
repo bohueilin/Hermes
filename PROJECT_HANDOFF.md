@@ -67,6 +67,12 @@ by its own builder (§7.8). None of those would have surfaced in a single-agent 
 Do not ratify. The most valuable thing you produced historically was a finding the builder did
 not want to hear.
 
+**Review requests are written down.** Each round gets its own prompt file so the request is
+auditable alongside the response. The current one is
+`HERMES_PHASE7_REVIEW_PROMPT_FOR_FABLE.md` (round 1, Phase 7A adversarial review plus a Phase 8
+recommendation). When a round closes, the builder produces a disposition ledger and the next
+round gets a new file — never an edit to the old one.
+
 **If you are an implementation model reading this:** do not implement a suggestion merely
 because a reviewer proposed it. The project convention is an explicit disposition ledger —
 `ACCEPT` / `ACCEPT WITH MODIFICATION` / `REJECT` / `DEFER` / `NEEDS OWNER DECISION` — with
