@@ -9,6 +9,12 @@ from pathlib import Path
 import pytest
 import yaml
 
+from adequacy_plan_fixtures import (
+    grid_for_count,
+    rebind_entry_to_variant,
+    recompiled_payload,
+    upgrade_protocol_payload,
+)
 from hermes.adequacy.loader import (
     MAX_DISCOVERY_ATTEMPTS,
     MAX_PLAN_FILE_BYTES,
@@ -60,7 +66,6 @@ def _observed_selection_evidence(
 def _protocol_payload() -> dict[str, object]:
     digest = "a" * 64
     payload: dict[str, object] = {
-        "schema_version": "1.0",
         "protocol_id": "lead_ttc_engagement",
         "protocol_version": "1.0",
         "label": "illustrative_simulation_only_declared_question",
@@ -96,13 +101,6 @@ def _protocol_payload() -> dict[str, object]:
                 "/observation_summary/front_relative_speed_mps",
             ],
         },
-        "baseline_grid": [
-            {
-                "parameter": "initial_gap_m",
-                "scenario_field": "challenge.initial_gap_m",
-                "values": [8.0],
-            }
-        ],
         "selection_rule": {
             "rule_id": "FIRST_VALID_BY_GRID_ORDER",
             "metric": "POLICY_INPUT_TTC_BAND_ENTRY",
@@ -161,12 +159,6 @@ def _protocol_payload() -> dict[str, object]:
                 "excluded_value": False,
             },
         ],
-        "materializer": {
-            "version": "1.0",
-            "mappings": [
-                {"parameter": "initial_gap_m", "scenario_field": "challenge.initial_gap_m"}
-            ],
-        },
         "candidate_shield": {
             "name": "deterministic",
             "version": "1.0",
@@ -192,6 +184,7 @@ def _protocol_payload() -> dict[str, object]:
                 "component": "POLICY",
                 "name": "metadrive-idm",
                 "version": "1.0",
+                "config_digest_scope": "FIXED",
                 "config_digest_sha256": digest,
                 "source_commit": None,
             },
@@ -199,13 +192,15 @@ def _protocol_payload() -> dict[str, object]:
                 "component": "ADAPTER",
                 "name": "metadrive",
                 "version": "1.1",
-                "config_digest_sha256": digest,
+                "config_digest_scope": "MATERIALIZED_VARIANT",
+                "config_digest_sha256": None,
                 "source_commit": None,
             },
             "simulator": {
                 "component": "SIMULATOR",
                 "name": "metadrive",
                 "version": "0.4.3",
+                "config_digest_scope": "NOT_APPLICABLE",
                 "config_digest_sha256": None,
                 "source_commit": "85e5dadc6c7436d324348f6e3d8f8e680c06b4db",
             },
@@ -213,6 +208,7 @@ def _protocol_payload() -> dict[str, object]:
                 "component": "GATE",
                 "name": "phase2",
                 "version": "1.0",
+                "config_digest_scope": "FIXED",
                 "config_digest_sha256": digest,
                 "source_commit": None,
             },
@@ -228,7 +224,7 @@ def _protocol_payload() -> dict[str, object]:
     candidate = payload["candidate_shield"]
     assert isinstance(candidate, dict)
     candidate["config_digest_sha256"] = _sha(_canonical(candidate["configuration"]))
-    return payload
+    return upgrade_protocol_payload(payload)
 
 
 def _write_valid_plans(root: Path) -> tuple[str, str, str]:
@@ -247,14 +243,19 @@ def _write_valid_plans(root: Path) -> tuple[str, str, str]:
     candidate_digest = candidate["config_digest_sha256"]
     assert isinstance(candidate_digest, str)
     commit = "a" * 40
+    materializer = protocol_payload["materializer"]
+    assert isinstance(materializer, dict)
+    variant = materializer["variants"][0]
     ledger = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "attempt_index": 0,
         "attempt_id": "attempt-0001",
         "protocol_byte_digest_sha256": _sha(protocol_bytes),
         "protocol_semantic_digest_sha256": protocol_semantic,
         "registration_commit": commit,
-        "parameters": [{"parameter": "initial_gap_m", "value": 8.0}],
+        "materialized_variant_id": variant["variant_id"],
+        "adapter_config_digest_sha256": variant["adapter_config_digest_sha256"],
+        "parameters": deepcopy(variant["parameters"]),
         "command_argv": ["python", "-m", "hermes", "run"],
         "environment": {
             "hermes_version": "0.1.0",
@@ -266,8 +267,8 @@ def _write_valid_plans(root: Path) -> tuple[str, str, str]:
         },
         "run_id": "discovery-0001",
         "artifact_locator": "artifacts/discovery-0001",
-        "scenario_byte_digest_sha256": digest,
-        "scenario_digest_sha256": digest,
+        "scenario_byte_digest_sha256": variant["scenario_byte_digest_sha256"],
+        "scenario_digest_sha256": variant["scenario_digest_sha256"],
         "bundle_digest_sha256": digest,
         "trace_digest_sha256": digest,
         "verification_status": "INTERNALLY_CONSISTENT",
@@ -289,7 +290,7 @@ def _write_valid_plans(root: Path) -> tuple[str, str, str]:
     ledger_bytes = _canonical(ledger) + b"\n"
     (root / ledger_selection).write_bytes(ledger_bytes)
     pair = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "pair_plan_id": "lead_pair",
         "protocol_byte_digest_sha256": _sha(protocol_bytes),
         "protocol_semantic_digest_sha256": protocol_semantic,
@@ -300,7 +301,9 @@ def _write_valid_plans(root: Path) -> tuple[str, str, str]:
             "candidate_run_id": "handoff-p7-lead-candidate",
             "selected_discovery_attempt_id": "attempt-0001",
             "selected_discovery_selection_evidence_sha256": selection_digest,
-            "scenario_digest_sha256": digest,
+            "selected_materialized_variant_id": variant["variant_id"],
+            "scenario_byte_digest_sha256": variant["scenario_byte_digest_sha256"],
+            "scenario_digest_sha256": variant["scenario_digest_sha256"],
             "challenge_kind": "lead_vehicle_hard_brake",
             "seed": 7,
             "control_frequency_hz": 10,
@@ -313,7 +316,7 @@ def _write_valid_plans(root: Path) -> tuple[str, str, str]:
             "policy_config_digest_sha256": digest,
             "adapter_name": "metadrive",
             "adapter_version": "1.1",
-            "adapter_config_digest_sha256": digest,
+            "adapter_config_digest_sha256": variant["adapter_config_digest_sha256"],
             "simulator_name": "metadrive",
             "simulator_version": "0.4.3",
             "simulator_commit": "85e5dadc6c7436d324348f6e3d8f8e680c06b4db",
@@ -385,6 +388,15 @@ def _write_plan_payloads(
             "selection_evidence_sha256"
         ]
         expected_pair["scenario_digest_sha256"] = selected_entry["scenario_digest_sha256"]
+        expected_pair["selected_materialized_variant_id"] = selected_entry[
+            "materialized_variant_id"
+        ]
+        expected_pair["scenario_byte_digest_sha256"] = selected_entry[
+            "scenario_byte_digest_sha256"
+        ]
+        expected_pair["adapter_config_digest_sha256"] = selected_entry[
+            "adapter_config_digest_sha256"
+        ]
     pair_bytes = yaml.safe_dump(pair, allow_unicode=True, sort_keys=False).encode()
     if pair_padding:
         pair_bytes += b"#" + b"x" * (pair_padding - 2) + b"\n"
@@ -397,13 +409,13 @@ def _two_attempt_grid(
     root: Path, selections: tuple[str, str, str]
 ) -> tuple[dict[str, object], list[dict[str, object]], dict[str, object]]:
     protocol, ledger, pair = _load_plan_payloads(root, selections)
-    baseline_grid = protocol["baseline_grid"]
-    assert isinstance(baseline_grid, list)
-    baseline_grid[0]["values"] = [8.0, 9.0]
+    protocol = recompiled_payload(protocol, grid_for_count(2))
+    variants = protocol["materializer"]["variants"]
+    rebind_entry_to_variant(ledger[0], variants[0])
     second = deepcopy(ledger[0])
     second["attempt_index"] = 1
     second["attempt_id"] = "attempt-0002"
-    second["parameters"] = [{"parameter": "initial_gap_m", "value": 9.0}]
+    rebind_entry_to_variant(second, variants[1])
     second["run_id"] = "discovery-0002"
     second["artifact_locator"] = "artifacts/discovery-0002"
     second["selection"] = {
@@ -420,15 +432,14 @@ def _many_attempt_grid(
     root: Path, selections: tuple[str, str, str], count: int
 ) -> tuple[dict[str, object], list[dict[str, object]], dict[str, object]]:
     protocol, original_ledger, pair = _load_plan_payloads(root, selections)
-    baseline_grid = protocol["baseline_grid"]
-    assert isinstance(baseline_grid, list)
-    baseline_grid[0]["values"] = list(range(count))
+    protocol = recompiled_payload(protocol, grid_for_count(count))
+    variants = protocol["materializer"]["variants"]
     ledger: list[dict[str, object]] = []
     for index in range(count):
         entry = deepcopy(original_ledger[0])
         entry["attempt_index"] = index
         entry["attempt_id"] = f"attempt-{index:04d}"
-        entry["parameters"] = [{"parameter": "initial_gap_m", "value": index}]
+        rebind_entry_to_variant(entry, variants[index])
         entry["run_id"] = f"discovery-{index:04d}"
         entry["artifact_locator"] = f"artifacts/discovery-{index:04d}"
         entry["selection"] = {
@@ -1224,7 +1235,9 @@ def test_unknown_and_unsupported_typed_plan_values_are_rejected(
     if invalid_case == "unknown":
         protocol["unknown_field"] = True
     elif invalid_case == "schema":
-        protocol["schema_version"] = "2.0"
+        # Superseded plan-record schema 1.0 is a rejection input only. It is never
+        # silently upgraded and never kept as a second active model path.
+        protocol["schema_version"] = "1.0"
     elif invalid_case == "claim":
         protocol["claim_type"] = "SAFETY_CLAIM"
     elif invalid_case == "challenge":

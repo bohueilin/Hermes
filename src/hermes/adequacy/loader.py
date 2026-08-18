@@ -377,6 +377,16 @@ def _validate_discovery_grid(
             raise InvalidPlanError("discovery selection rank or tie breaker is inconsistent")
         if entry.selection.status == "SELECTED":
             selected_indices.append(index)
+        variant = protocol.materializer.variants[index]
+        if (
+            entry.materialized_variant_id != variant.variant_id
+            or entry.scenario_byte_digest_sha256 != variant.scenario_byte_digest_sha256
+            or entry.scenario_digest_sha256 != variant.scenario_digest_sha256
+            or entry.adapter_config_digest_sha256 != variant.adapter_config_digest_sha256
+        ):
+            raise InvalidPlanError(
+                "discovery attempt does not bind its predeclared materialized variant"
+            )
         selection_inputs = _selection_rule_inputs(protocol, entry)
         derived_validity = _derive_and_validate_discovery_validity(
             protocol,
@@ -408,7 +418,6 @@ def _validate_component_identities(protocol: StudyProtocol, pair_plan: PairPlan)
         or pair.policy_config_digest_sha256 != components.policy.config_digest_sha256
         or pair.adapter_name != components.adapter.name
         or pair.adapter_version != components.adapter.version
-        or pair.adapter_config_digest_sha256 != components.adapter.config_digest_sha256
         or pair.simulator_name != components.simulator.name
         or pair.simulator_version != components.simulator.version
         or pair.simulator_commit != components.simulator.source_commit
@@ -596,6 +605,25 @@ def _validate_cross_record(
         or entry.scenario_digest_sha256 != pair_plan.expected_pair.scenario_digest_sha256
     ):
         raise InvalidPlanError("pair plan selected discovery evidence contradicts ledger")
+    selected_variant = protocol.materializer.variant_by_id(
+        pair_plan.expected_pair.selected_materialized_variant_id
+    )
+    if selected_variant is None:
+        raise InvalidPlanError("pair plan selects an undeclared materialized variant")
+    if (
+        entry.materialized_variant_id != selected_variant.variant_id
+        or entry.scenario_byte_digest_sha256 != selected_variant.scenario_byte_digest_sha256
+        or entry.adapter_config_digest_sha256 != selected_variant.adapter_config_digest_sha256
+        or pair_plan.expected_pair.scenario_byte_digest_sha256
+        != selected_variant.scenario_byte_digest_sha256
+        or pair_plan.expected_pair.scenario_digest_sha256
+        != selected_variant.scenario_digest_sha256
+        or pair_plan.expected_pair.adapter_config_digest_sha256
+        != selected_variant.adapter_config_digest_sha256
+    ):
+        raise InvalidPlanError(
+            "pair plan selected variant identity contradicts the protocol or ledger"
+        )
 
 
 def capture_evaluation_plans(

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 from enum import StrEnum
+from itertools import product
 from typing import Annotated, Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -27,6 +28,57 @@ PositiveInt = Annotated[int, Field(gt=0)]
 RelativeLocator = Annotated[str, Field(min_length=1)]
 JsonScalar: TypeAlias = str | bool | int | float | None
 GridValue: TypeAlias = int | float
+GridParameter = Literal[
+    "initial_gap_m",
+    "actor_speed_mps",
+    "trigger_step",
+    "brake_duration_steps",
+    "recovery_throttle",
+]
+GRID_PARAMETER_ORDER: tuple[str, ...] = (
+    "initial_gap_m",
+    "actor_speed_mps",
+    "trigger_step",
+    "brake_duration_steps",
+    "recovery_throttle",
+)
+GRID_PARAMETER_SCENARIO_FIELDS: dict[str, str] = {
+    "initial_gap_m": "challenge.initial_gap_m",
+    "actor_speed_mps": "challenge.actor_speed_mps",
+    "trigger_step": "challenge.trigger_step",
+    "brake_duration_steps": "challenge.brake_duration_steps",
+    "recovery_throttle": "challenge.resume_throttle_command",
+}
+# Exact closed domains frozen by the Task 8 contract amendment. `kind` is enforced
+# strictly: a bool is never a number, and an int is never accepted where the scenario
+# field is a float (and vice versa).
+_GRID_PARAMETER_DOMAIN: dict[str, tuple[str, float, bool, float, bool]] = {
+    "initial_gap_m": ("float", 0.0, False, 200.0, True),
+    "actor_speed_mps": ("float", 0.0, True, 50.0, True),
+    "trigger_step": ("int", 0.0, True, 9_999.0, True),
+    "brake_duration_steps": ("int", 1.0, True, 10_000.0, True),
+    "recovery_throttle": ("float", 0.0, True, 1.0, True),
+}
+
+
+def validate_grid_value(parameter: str, value: object) -> None:
+    """Reject any grid value outside its exact declared type and closed domain."""
+    kind, low, low_inclusive, high, high_inclusive = _GRID_PARAMETER_DOMAIN[parameter]
+    if isinstance(value, bool):
+        raise ValueError(f"grid parameter {parameter} rejects boolean values")
+    if kind == "int":
+        if not isinstance(value, int):
+            raise ValueError(f"grid parameter {parameter} requires a strict integer")
+    else:
+        if not isinstance(value, float):
+            raise ValueError(f"grid parameter {parameter} requires a strict float")
+        if not math.isfinite(value):
+            raise ValueError(f"grid parameter {parameter} requires a finite value")
+    numeric = float(value)
+    if (numeric < low) or (numeric == low and not low_inclusive):
+        raise ValueError(f"grid parameter {parameter} is below its allowed domain")
+    if (numeric > high) or (numeric == high and not high_inclusive):
+        raise ValueError(f"grid parameter {parameter} is above its allowed domain")
 
 LOCAL_HISTORY_LIMITATION = "Rewritable local history; no external timestamp."
 MAX_CRITERION_REFERENCES = 8
@@ -157,19 +209,20 @@ class SelectionEvidenceDefinition(_AdequacyModel):
 
 
 class GridDimension(_AdequacyModel):
-    parameter: Literal[
-        "initial_gap_m",
-        "actor_speed_mps",
-        "trigger_step",
-        "brake_duration_steps",
-        "recovery_throttle",
-    ]
+    parameter: GridParameter
     scenario_field: NonEmptyString
     values: Annotated[tuple[GridValue, ...], Field(min_length=1)]
 
     @model_validator(mode="after")
     def require_unique_values(self) -> GridDimension:
         _require_unique(self.values, "grid values")
+        if self.scenario_field != GRID_PARAMETER_SCENARIO_FIELDS[self.parameter]:
+            raise ValueError(
+                f"grid parameter {self.parameter} must map to "
+                f"{GRID_PARAMETER_SCENARIO_FIELDS[self.parameter]}"
+            )
+        for value in self.values:
+            validate_grid_value(self.parameter, value)
         return self
 
 
@@ -202,19 +255,62 @@ class ExclusionRule(_AdequacyModel):
 
 
 class MaterializerFieldMapping(_AdequacyModel):
-    parameter: Literal[
-        "initial_gap_m",
-        "actor_speed_mps",
-        "trigger_step",
-        "brake_duration_steps",
-        "recovery_throttle",
-    ]
+    parameter: GridParameter
     scenario_field: NonEmptyString
+
+    @model_validator(mode="after")
+    def require_frozen_scenario_field(self) -> MaterializerFieldMapping:
+        if self.scenario_field != GRID_PARAMETER_SCENARIO_FIELDS[self.parameter]:
+            raise ValueError(
+                f"materializer parameter {self.parameter} must map to "
+                f"{GRID_PARAMETER_SCENARIO_FIELDS[self.parameter]}"
+            )
+        return self
+
+
+class MaterializerTemplate(_AdequacyModel):
+    """Exact identity of the reviewed scenario template every variant derives from."""
+
+    repository_relative_path: RelativeLocator
+    byte_digest_sha256: Sha256
+    scenario_digest_sha256: Sha256
+
+    @model_validator(mode="after")
+    def require_relative_template_path(self) -> MaterializerTemplate:
+        _require_lexical_relative_locator(
+            self.repository_relative_path, "repository_relative_path"
+        )
+        return self
+
+
+class MaterializedVariantBinding(_AdequacyModel):
+    """One predeclared Cartesian-grid output with its exact rendered identity."""
+
+    grid_index: NonNegativeInt
+    variant_id: Identifier
+    parameters: Annotated[tuple[GridAssignment, ...], Field(min_length=1)]
+    scenario_byte_digest_sha256: Sha256
+    scenario_digest_sha256: Sha256
+    adapter_config_digest_sha256: Sha256
+
+    @model_validator(mode="after")
+    def require_ordered_unique_parameters(self) -> MaterializedVariantBinding:
+        parameters = tuple(assignment.parameter for assignment in self.parameters)
+        _require_unique(parameters, "variant parameters")
+        if parameters != GRID_PARAMETER_ORDER:
+            raise ValueError("variant parameters must use the frozen grid parameter order")
+        return self
 
 
 class MaterializerSpecification(_AdequacyModel):
-    version: Literal["1.0"]
+    version: Literal["2.0"]
+    algorithm: Literal["STRICT_EXISTING_SCALAR_REPLACEMENT_V1"]
+    output_serialization: Literal["HERMES_RESOLVED_SCENARIO_YAML_UTF8_LF_V1"]
+    protocol_serialization: Literal["HERMES_EVALUATION_PROTOCOL_YAML_UTF8_LF_V1"]
+    adapter_config_projection: Literal["METADRIVE_ADAPTER_EVIDENCE_CONFIG_V1_1"]
+    template: MaterializerTemplate
     mappings: Annotated[tuple[MaterializerFieldMapping, ...], Field(min_length=1)]
+    variants: Annotated[tuple[MaterializedVariantBinding, ...], Field(min_length=1)]
 
     @model_validator(mode="after")
     def require_unique_mappings(self) -> MaterializerSpecification:
@@ -222,7 +318,31 @@ class MaterializerSpecification(_AdequacyModel):
         fields = tuple(mapping.scenario_field for mapping in self.mappings)
         _require_unique(parameters, "materializer parameters")
         _require_unique(fields, "materializer scenario fields")
+        if parameters != GRID_PARAMETER_ORDER:
+            raise ValueError("materializer mappings must use the frozen grid parameter order")
+        indices = tuple(variant.grid_index for variant in self.variants)
+        if indices != tuple(range(len(self.variants))):
+            raise ValueError("variant grid indices must be dense and ascending from zero")
+        _require_unique(tuple(variant.variant_id for variant in self.variants), "variant IDs")
+        _require_unique(
+            tuple(variant.scenario_byte_digest_sha256 for variant in self.variants),
+            "variant scenario byte digests",
+        )
+        _require_unique(
+            tuple(variant.scenario_digest_sha256 for variant in self.variants),
+            "variant scenario digests",
+        )
+        _require_unique(
+            tuple(variant.adapter_config_digest_sha256 for variant in self.variants),
+            "variant adapter config digests",
+        )
         return self
+
+    def variant_by_id(self, variant_id: str) -> MaterializedVariantBinding | None:
+        for variant in self.variants:
+            if variant.variant_id == variant_id:
+                return variant
+        return None
 
 
 class ShieldConfiguration(_AdequacyModel):
@@ -251,18 +371,43 @@ class ComponentExpectation(_AdequacyModel):
     component: Literal["POLICY", "ADAPTER", "SIMULATOR", "GATE"]
     name: NonEmptyString
     version: NonEmptyString
+    config_digest_scope: Literal["FIXED", "MATERIALIZED_VARIANT", "NOT_APPLICABLE"]
     config_digest_sha256: Sha256 | None
     source_commit: GitCommit | None
 
     @model_validator(mode="after")
     def require_component_specific_identity(self) -> ComponentExpectation:
-        if self.component == "SIMULATOR":
+        # A multi-variant MetaDrive grid cannot have one global adapter-config digest:
+        # the adapter's trace-bound evidence config embeds the scenario challenge
+        # payload, so every grid point has a different digest. Digest ownership is
+        # therefore explicit per component rather than implied.
+        expected_scope = {
+            "POLICY": "FIXED",
+            "GATE": "FIXED",
+            "ADAPTER": "MATERIALIZED_VARIANT",
+            "SIMULATOR": "NOT_APPLICABLE",
+        }[self.component]
+        if self.config_digest_scope != expected_scope:
+            raise ValueError(
+                f"{self.component} expectation requires config_digest_scope {expected_scope}"
+            )
+        if self.config_digest_scope == "FIXED":
+            if self.config_digest_sha256 is None:
+                raise ValueError("FIXED digest scope requires config_digest_sha256")
+            if self.source_commit is not None:
+                raise ValueError("FIXED digest scope rejects source_commit")
+        elif self.config_digest_scope == "MATERIALIZED_VARIANT":
+            if self.config_digest_sha256 is not None:
+                raise ValueError(
+                    "MATERIALIZED_VARIANT digest scope rejects a global config digest"
+                )
+            if self.source_commit is not None:
+                raise ValueError("MATERIALIZED_VARIANT digest scope rejects source_commit")
+        else:
+            if self.config_digest_sha256 is not None:
+                raise ValueError("NOT_APPLICABLE digest scope rejects a global config digest")
             if self.source_commit is None:
-                raise ValueError("simulator expectation requires source_commit")
-        elif self.source_commit is not None:
-            raise ValueError("only simulator expectation accepts source_commit")
-        if self.component != "SIMULATOR" and self.config_digest_sha256 is None:
-            raise ValueError("non-simulator expectation requires config digest")
+                raise ValueError("NOT_APPLICABLE digest scope requires source_commit")
         return self
 
 
@@ -307,7 +452,7 @@ class RegistrationLocation(_AdequacyModel):
 class StudyProtocol(_AdequacyModel):
     """Complete frozen-before-discovery declared-question protocol."""
 
-    schema_version: Literal["1.0"]
+    schema_version: Literal["2.0"]
     protocol_id: Identifier
     protocol_version: Literal["1.0"]
     label: Literal["illustrative_simulation_only_declared_question"]
@@ -333,6 +478,10 @@ class StudyProtocol(_AdequacyModel):
             (dimension.parameter, dimension.scenario_field)
             for dimension in self.baseline_grid
         )
+        if grid_parameters != GRID_PARAMETER_ORDER:
+            raise ValueError(
+                "baseline grid must declare every frozen grid parameter exactly once in order"
+            )
         _require_unique(grid_parameters, "baseline grid parameters")
         _require_unique(grid_fields, "baseline grid scenario fields")
         _require_unique(grid_pairs, "baseline grid parameter/scenario field pairs")
@@ -349,18 +498,44 @@ class StudyProtocol(_AdequacyModel):
         exclusion_ids = tuple(rule.rule_id for rule in self.exclusion_rules)
         _require_unique(validity_ids, "valid-run rule IDs")
         _require_unique(exclusion_ids, "exclusion rule IDs")
+        self._require_exhaustive_variant_table()
         return self
+
+    def _require_exhaustive_variant_table(self) -> None:
+        """The frozen variant table must be the complete declared Cartesian product."""
+        expected = tuple(
+            tuple(
+                {"parameter": dimension.parameter, "value": value}
+                for dimension, value in zip(self.baseline_grid, combination, strict=True)
+            )
+            for combination in product(*(dimension.values for dimension in self.baseline_grid))
+        )
+        variants = self.materializer.variants
+        if len(variants) != len(expected):
+            raise ValueError("materializer variants must exhaust the declared Cartesian grid")
+        for variant, expected_parameters in zip(variants, expected, strict=True):
+            observed = tuple(item.model_dump(mode="json") for item in variant.parameters)
+            if observed != expected_parameters:
+                raise ValueError(
+                    "materializer variants must follow the declared grid order exactly"
+                )
+        horizon = self.planned_execution.horizon_steps
+        for variant in variants:
+            values = {item.parameter: item.value for item in variant.parameters}
+            if values["trigger_step"] + values["brake_duration_steps"] > horizon:
+                raise ValueError(
+                    "every variant braking window must fit within planned horizon_steps"
+                )
 
 
 class GridAssignment(_AdequacyModel):
-    parameter: Literal[
-        "initial_gap_m",
-        "actor_speed_mps",
-        "trigger_step",
-        "brake_duration_steps",
-        "recovery_throttle",
-    ]
+    parameter: GridParameter
     value: GridValue
+
+    @model_validator(mode="after")
+    def require_declared_domain(self) -> GridAssignment:
+        validate_grid_value(self.parameter, self.value)
+        return self
 
 
 class DiscoveryEnvironment(_AdequacyModel):
@@ -476,12 +651,14 @@ class SelectionResult(_AdequacyModel):
 class DiscoveryLedgerEntry(_AdequacyModel):
     """One complete append-created baseline discovery attempt."""
 
-    schema_version: Literal["1.0"]
+    schema_version: Literal["2.0"]
     attempt_index: NonNegativeInt
     attempt_id: Identifier
     protocol_byte_digest_sha256: Sha256
     protocol_semantic_digest_sha256: Sha256
     registration_commit: GitCommit
+    materialized_variant_id: Identifier
+    adapter_config_digest_sha256: Sha256
     parameters: Annotated[tuple[GridAssignment, ...], Field(min_length=1)]
     command_argv: Annotated[tuple[NonEmptyString, ...], Field(min_length=1)]
     environment: DiscoveryEnvironment
@@ -521,6 +698,8 @@ class ExpectedPair(_AdequacyModel):
     candidate_run_id: Identifier
     selected_discovery_attempt_id: Identifier
     selected_discovery_selection_evidence_sha256: Sha256
+    selected_materialized_variant_id: Identifier
+    scenario_byte_digest_sha256: Sha256
     scenario_digest_sha256: Sha256
     challenge_kind: Literal["lead_vehicle_hard_brake"]
     seed: Annotated[int, Field(ge=-(2**31), lt=2**31)]
@@ -558,7 +737,7 @@ class ExpectedPair(_AdequacyModel):
 class PairPlan(_AdequacyModel):
     """Complete frozen-before-primary-run pair declaration."""
 
-    schema_version: Literal["1.0"]
+    schema_version: Literal["2.0"]
     pair_plan_id: Identifier
     protocol_byte_digest_sha256: Sha256
     protocol_semantic_digest_sha256: Sha256

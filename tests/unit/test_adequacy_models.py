@@ -11,6 +11,8 @@ import pytest
 from pydantic import ValidationError
 
 import hermes.adequacy.models as adequacy_models
+from adequacy_plan_fixtures import DEFAULT_GRID as _GRID
+from adequacy_plan_fixtures import upgrade_protocol_payload
 from hermes.adequacy.models import (
     LOCAL_HISTORY_LIMITATION,
     MAX_CRITERION_REFERENCES,
@@ -76,11 +78,18 @@ def _component(
     config_digest: str | None = _DIGEST_A,
     source_commit: str | None = None,
 ) -> ComponentExpectation:
+    scope = {
+        "POLICY": "FIXED",
+        "GATE": "FIXED",
+        "ADAPTER": "MATERIALIZED_VARIANT",
+        "SIMULATOR": "NOT_APPLICABLE",
+    }[component]
     return ComponentExpectation(
         component=component,
         name=name,
         version=version,
-        config_digest_sha256=config_digest,
+        config_digest_scope=scope,
+        config_digest_sha256=None if scope != "FIXED" else config_digest,
         source_commit=source_commit,
     )
 
@@ -103,8 +112,12 @@ def _shield_config() -> ShieldConfiguration:
 
 
 def _protocol() -> StudyProtocol:
-    return StudyProtocol(
-        schema_version="1.0",
+    return _compile_protocol(_protocol_seed())
+
+
+def _protocol_seed() -> StudyProtocol:
+    return StudyProtocol.model_construct(
+        schema_version="2.0",
         protocol_id="lead_ttc_engagement",
         protocol_version="1.0",
         label="illustrative_simulation_only_declared_question",
@@ -121,18 +134,7 @@ def _protocol() -> StudyProtocol:
             actuation_delay_compensation_s=0.0,
         ),
         selection_evidence=_selection_evidence_definition(),
-        baseline_grid=(
-            GridDimension(
-                parameter="initial_gap_m",
-                scenario_field="challenge.initial_gap_m",
-                values=(8.0, 10.0),
-            ),
-            GridDimension(
-                parameter="trigger_step",
-                scenario_field="challenge.trigger_step",
-                values=(25, 30),
-            ),
-        ),
+        baseline_grid=(),
         selection_rule=SelectionRule(
             rule_id="FIRST_VALID_BY_GRID_ORDER",
             metric="POLICY_INPUT_TTC_BAND_ENTRY",
@@ -155,19 +157,7 @@ def _protocol() -> StudyProtocol:
                 excluded_value="INVALID_EVIDENCE",
             ),
         ),
-        materializer=MaterializerSpecification(
-            version="1.0",
-            mappings=(
-                MaterializerFieldMapping(
-                    parameter="initial_gap_m",
-                    scenario_field="challenge.initial_gap_m",
-                ),
-                MaterializerFieldMapping(
-                    parameter="trigger_step",
-                    scenario_field="challenge.trigger_step",
-                ),
-            ),
-        ),
+        materializer=None,
         candidate_shield=CandidateShieldPlan(
             name="deterministic",
             version="1.0",
@@ -248,15 +238,37 @@ def _selection_evidence_digest() -> str:
     return hashlib.sha256(canonical_adequacy_json_bytes(_selection_evidence())).hexdigest()
 
 
+def _compile_protocol(seed_protocol: StudyProtocol) -> StudyProtocol:
+    """Compile the seeded body into a real schema-2.0 protocol with a variant table."""
+    body = {
+        key: value
+        for key, value in seed_protocol.model_dump(mode="json").items()
+        if key not in {"schema_version", "baseline_grid", "materializer"}
+    }
+    return StudyProtocol.model_validate_json(
+        json.dumps(upgrade_protocol_payload(body, _GRID), separators=(",", ":"), sort_keys=True)
+    )
+
+
+def _variant() -> dict[str, object]:
+    materializer = _protocol().materializer
+    return materializer.variants[0].model_dump(mode="json")
+
+
 def _ledger() -> DiscoveryLedgerEntry:
+    variant = _variant()
     return DiscoveryLedgerEntry(
-        schema_version="1.0",
+        schema_version="2.0",
         attempt_index=0,
         attempt_id="attempt-0001",
         protocol_byte_digest_sha256=_DIGEST_A,
         protocol_semantic_digest_sha256=_DIGEST_B,
         registration_commit=_COMMIT_A,
-        parameters=(GridAssignment(parameter="initial_gap_m", value=8.0),),
+        materialized_variant_id=variant["variant_id"],
+        adapter_config_digest_sha256=variant["adapter_config_digest_sha256"],
+        parameters=tuple(
+            GridAssignment(**assignment) for assignment in variant["parameters"]
+        ),
         command_argv=("python", "-m", "hermes", "run", "--run-id", "discovery-0001"),
         environment=DiscoveryEnvironment(
             hermes_version="0.1.0",
@@ -296,6 +308,8 @@ def _expected_pair() -> ExpectedPair:
         candidate_run_id="handoff-p7-lead-candidate",
         selected_discovery_attempt_id="attempt-0001",
         selected_discovery_selection_evidence_sha256=_selection_evidence_digest(),
+        selected_materialized_variant_id=_variant()["variant_id"],
+        scenario_byte_digest_sha256=_variant()["scenario_byte_digest_sha256"],
         scenario_digest_sha256=_DIGEST_B,
         challenge_kind="lead_vehicle_hard_brake",
         seed=7,
@@ -327,7 +341,7 @@ def _expected_pair() -> ExpectedPair:
 
 def _pair_plan() -> PairPlan:
     return PairPlan(
-        schema_version="1.0",
+        schema_version="2.0",
         pair_plan_id="lead_ttc_engagement_pair",
         protocol_byte_digest_sha256=_DIGEST_A,
         protocol_semantic_digest_sha256=_DIGEST_B,
@@ -714,68 +728,63 @@ def test_complete_selection_evidence_digest_distinguishes_typed_empty_states() -
     ).digest()
 
 
+# Schema 2.0 freezes each grid parameter to exactly one scenario field, so a wrong
+# pair is rejected where it is written rather than only when the whole protocol is
+# assembled. These cases assert the earlier, stricter boundary.
 @pytest.mark.parametrize(
-    ("field", "replacement"),
+    ("parameter", "scenario_field"),
     (
-        (
-            "materializer",
-            MaterializerSpecification(
-                version="1.0",
-                mappings=(
-                    MaterializerFieldMapping(
-                        parameter="initial_gap_m",
-                        scenario_field="challenge.initial_gap_m",
-                    ),
-                    MaterializerFieldMapping(
-                        parameter="trigger_step",
-                        scenario_field="challenge.brake_duration_steps",
-                    ),
-                ),
-            ),
-        ),
-        (
-            "baseline_grid",
-            (
-                GridDimension(
-                    parameter="initial_gap_m",
-                    scenario_field="challenge.initial_gap_m",
-                    values=(8.0, 10.0),
-                ),
-                GridDimension(
-                    parameter="trigger_step",
-                    scenario_field="challenge.initial_gap_m",
-                    values=(25, 30),
-                ),
-            ),
-        ),
+        ("trigger_step", "challenge.brake_duration_steps"),
+        ("initial_gap_m", "challenge.actor_speed_mps"),
+        ("recovery_throttle", "challenge.initial_gap_m"),
     ),
 )
-def test_protocol_requires_exact_unique_parameter_scenario_field_pairs(
-    field: str,
-    replacement: object,
+def test_materializer_mapping_requires_its_frozen_scenario_field(
+    parameter: str, scenario_field: str
 ) -> None:
+    with pytest.raises(ValidationError, match="must map to"):
+        MaterializerFieldMapping(parameter=parameter, scenario_field=scenario_field)
+
+
+@pytest.mark.parametrize(
+    ("parameter", "scenario_field"),
+    (
+        ("trigger_step", "challenge.initial_gap_m"),
+        ("actor_speed_mps", "challenge.trigger_step"),
+    ),
+)
+def test_grid_dimension_requires_its_frozen_scenario_field(
+    parameter: str, scenario_field: str
+) -> None:
+    values = (30,) if parameter == "trigger_step" else (8.0,)
+    with pytest.raises(ValidationError, match="must map to"):
+        GridDimension(parameter=parameter, scenario_field=scenario_field, values=values)
+
+
+def test_protocol_requires_every_grid_parameter_exactly_once_in_frozen_order() -> None:
     protocol = _protocol()
-    with pytest.raises(ValidationError, match="scenario field"):
-        StudyProtocol.model_validate(
-            {**protocol.model_dump(), field: replacement}
-        )
+    payload = protocol.model_dump(mode="json")
+    payload["baseline_grid"] = list(reversed(payload["baseline_grid"]))
+    with pytest.raises(ValidationError, match="frozen grid parameter"):
+        StudyProtocol.model_validate_json(json.dumps(payload))
+
+    partial = protocol.model_dump(mode="json")
+    partial["baseline_grid"] = partial["baseline_grid"][:2]
+    with pytest.raises(ValidationError):
+        StudyProtocol.model_validate_json(json.dumps(partial))
 
 
-def test_materializer_rejects_duplicate_scenario_field_mappings() -> None:
-    with pytest.raises(ValidationError, match="scenario fields"):
-        MaterializerSpecification(
-            version="1.0",
-            mappings=(
-                MaterializerFieldMapping(
-                    parameter="initial_gap_m",
-                    scenario_field="challenge.initial_gap_m",
-                ),
-                MaterializerFieldMapping(
-                    parameter="trigger_step",
-                    scenario_field="challenge.initial_gap_m",
-                ),
-            ),
-        )
+def test_materializer_requires_the_complete_frozen_mapping_tuple() -> None:
+    specification = _protocol().materializer
+    payload = specification.model_dump(mode="json")
+    payload["mappings"] = list(reversed(payload["mappings"]))
+    with pytest.raises(ValidationError, match="frozen grid parameter order"):
+        MaterializerSpecification.model_validate_json(json.dumps(payload))
+
+    subset = specification.model_dump(mode="json")
+    subset["mappings"] = subset["mappings"][:3]
+    with pytest.raises(ValidationError, match="frozen grid parameter order"):
+        MaterializerSpecification.model_validate_json(json.dumps(subset))
 
 
 @pytest.mark.parametrize("selection_status", ("SELECTED", "NOT_SELECTED"))

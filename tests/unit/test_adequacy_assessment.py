@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import inspect
+import json
 import math
 from collections import Counter
 
@@ -10,6 +11,8 @@ from pydantic import ValidationError
 
 import hermes.adequacy.assessment as assessment_module
 import hermes.adequacy.models as adequacy_models
+from adequacy_plan_fixtures import DEFAULT_GRID as _GRID
+from adequacy_plan_fixtures import upgrade_protocol_payload
 from hermes.adequacy.assessment import (
     _scan_lead_ttc_adequacy,
     assess_lead_ttc_adequacy,
@@ -29,9 +32,6 @@ from hermes.adequacy.models import (
     CriterionStatus,
     ExclusionRule,
     ExpectedComponents,
-    GridDimension,
-    MaterializerFieldMapping,
-    MaterializerSpecification,
     ObservationDisposition,
     PlannedExecution,
     RegistrationLocation,
@@ -57,11 +57,18 @@ def _component(
     config_digest: str | None = _DIGEST_A,
     source_commit: str | None = None,
 ) -> ComponentExpectation:
+    scope = {
+        "POLICY": "FIXED",
+        "GATE": "FIXED",
+        "ADAPTER": "MATERIALIZED_VARIANT",
+        "SIMULATOR": "NOT_APPLICABLE",
+    }[component]
     return ComponentExpectation(
         component=component,
         name=name,
         version=version,
-        config_digest_sha256=config_digest,
+        config_digest_scope=scope,
+        config_digest_sha256=None if scope != "FIXED" else config_digest,
         source_commit=source_commit,
     )
 
@@ -123,8 +130,8 @@ def _protocol(
     configuration: ShieldConfiguration | None = None,
 ) -> StudyProtocol:
     config = configuration or _configuration()
-    return StudyProtocol(
-        schema_version="1.0",
+    seed_protocol = StudyProtocol.model_construct(
+        schema_version="2.0",
         protocol_id="lead_ttc_engagement",
         protocol_version="1.0",
         label="illustrative_simulation_only_declared_question",
@@ -141,13 +148,7 @@ def _protocol(
             actuation_delay_compensation_s=0.0,
         ),
         selection_evidence=_selection_evidence_definition(),
-        baseline_grid=(
-            GridDimension(
-                parameter="initial_gap_m",
-                scenario_field="challenge.initial_gap_m",
-                values=(8.0,),
-            ),
-        ),
+        baseline_grid=(),
         selection_rule=SelectionRule(
             rule_id="FIRST_VALID_BY_GRID_ORDER",
             metric="POLICY_INPUT_TTC_BAND_ENTRY",
@@ -170,15 +171,7 @@ def _protocol(
                 excluded_value="INVALID_EVIDENCE",
             ),
         ),
-        materializer=MaterializerSpecification(
-            version="1.0",
-            mappings=(
-                MaterializerFieldMapping(
-                    parameter="initial_gap_m",
-                    scenario_field="challenge.initial_gap_m",
-                ),
-            ),
-        ),
+        materializer=None,
         candidate_shield=CandidateShieldPlan(
             name="deterministic",
             version="1.0",
@@ -208,6 +201,26 @@ def _protocol(
             repository_relative_path="evaluation-plans/lead.protocol.v1.yaml"
         ),
     )
+    body = {
+        key: value
+        for key, value in seed_protocol.model_dump(mode="json").items()
+        if key not in {"schema_version", "baseline_grid", "materializer"}
+    }
+    return StudyProtocol.model_validate_json(
+        json.dumps(upgrade_protocol_payload(body, _GRID), separators=(",", ":"), sort_keys=True)
+    )
+
+
+def _variant() -> dict[str, object]:
+    return _protocol().materializer.variants[0].model_dump(mode="json")
+
+
+def _variant_id() -> str:
+    return str(_variant()["variant_id"])
+
+
+def _variant_byte_digest() -> str:
+    return str(_variant()["scenario_byte_digest_sha256"])
 
 
 def _action(
@@ -1302,6 +1315,8 @@ def _task6_expected_pair(selection_digest: str) -> object:
         candidate_run_id="handoff-p7-lead-candidate",
         selected_discovery_attempt_id="attempt-0001",
         selected_discovery_selection_evidence_sha256=selection_digest,
+        selected_materialized_variant_id=_variant_id(),
+        scenario_byte_digest_sha256=_variant_byte_digest(),
         scenario_digest_sha256=_DIGEST_A,
         challenge_kind="lead_vehicle_hard_brake",
         seed=7,
