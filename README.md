@@ -1,3 +1,5 @@
+![Hermes — a simulation-only autonomous-driving scenario and safety-evidence lab](Hermes_Github.png)
+
 # Hermes
 
 Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
