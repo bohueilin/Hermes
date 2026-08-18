@@ -13,10 +13,15 @@ from pathlib import Path
 from typing import Any
 
 from hermes.adapters.metadrive_challenge import (
-    ACTOR_NAME,
-    MANAGER_VERSION,
     ChallengeActorState,
     create_challenge_environment,
+)
+from hermes.adapters.metadrive_config import (
+    ImmutableAdapterEvidenceConfig,
+    decision_repeat,
+    metadrive_adapter_version,
+    preview_metadrive_adapter_evidence_config,
+    resolved_metadrive_environment_config,
 )
 from hermes.domain.enums import TerminationReason
 from hermes.domain.models import (
@@ -29,11 +34,8 @@ from hermes.domain.models import (
 )
 from hermes.simulator_support import (
     SUPPORTED_METADRIVE_COMMIT,
-    SUPPORTED_METADRIVE_SOURCE,
     SUPPORTED_METADRIVE_VERSION,
 )
-
-_PHYSICS_STEP_S = 0.02
 
 
 def _binary32(value: float) -> float:
@@ -180,6 +182,7 @@ class MetaDriveAdapter:
         self._idm_policy: Any | None = None
         self._scenario: ScenarioDefinition | None = None
         self._config: dict[str, Any] | None = None
+        self._evidence_snapshot: ImmutableAdapterEvidenceConfig | None = None
         self._seed: int | None = None
         self._sequence = 0
         self._finished = False
@@ -194,76 +197,10 @@ class MetaDriveAdapter:
 
     @property
     def evidence_config(self) -> dict[str, JsonValue]:
-        if self._config is None or self._dependencies is None:
+        """Return an independent copy of the immutable configuration bound at reset."""
+        if self._evidence_snapshot is None:
             raise RuntimeError("MetaDrive adapter must be reset before evidence config is read")
-        evidence: dict[str, JsonValue] = {
-            "headless": True,
-            "agent_policy": "metadrive.policy.env_input_policy.EnvInputPolicy",
-            "simulator_name": "metadrive",
-            "simulator_version": self._dependencies.simulator_version,
-            "simulator_commit": self._dependencies.simulator_commit,
-            "simulator_source": SUPPORTED_METADRIVE_SOURCE,
-            "lateral_offset_mapping": {
-                "source": "agent.lane.local_coordinates(agent.position)[1]",
-                "mapping": "direct_meters",
-                "reset_validation_abs_tolerance_m": 1e-6,
-            },
-            "route_progress_mapping": {
-                "source": "info.route_completion_then_agent.navigation.route_completion",
-                "normalization": "100*(raw-reset_raw)/(1-reset_raw)",
-                "clamp_min_pct": 0.0,
-                "clamp_max_pct": 100.0,
-                "destination_override": False,
-            },
-            "signal_availability": {
-                "front_distance_m": {
-                    "status": "NOT_AVAILABLE",
-                    "reason": "no stable named MetaDrive 0.4.3 info signal selected",
-                },
-                "front_relative_speed_mps": {
-                    "status": "NOT_AVAILABLE",
-                    "reason": "no stable named MetaDrive 0.4.3 info signal selected",
-                },
-            },
-            "metadrive_config": self._config,
-        }
-        if self._challenge_payload is not None:
-            assert self._seed is not None
-            evidence["signal_availability"] = {
-                "front_distance_m": {
-                    "status": "AVAILABLE",
-                    "source": "hermes_challenge_manager.actual_oriented_bounding_boxes",
-                },
-                "front_relative_speed_mps": {
-                    "status": "AVAILABLE",
-                    "source": "hermes_challenge_manager.actual_velocity_projection",
-                },
-            }
-            evidence["challenge_manager"] = {
-                "environment_class": (
-                    "hermes.adapters.metadrive_challenge.HermesChallengeMetaDriveEnv"
-                ),
-                "manager_class": (
-                    "hermes.adapters.metadrive_challenge.HermesChallengeManager"
-                ),
-                "manager_version": MANAGER_VERSION,
-                "priority": 20,
-                "actor_name": ACTOR_NAME,
-                "actor_seed": self._seed,
-            }
-            evidence["challenge"] = self._challenge_payload
-            evidence["front_signal_mapping"] = {
-                "source": "HermesChallengeManager.actual_actor_ground_truth",
-                "distance": (
-                    "oriented_bounding_boxes_projected_into_ego_frame_"
-                    "bumper_gap_when_laterally_overlapping"
-                ),
-                "relative_speed": (
-                    "(actor_velocity-ego_velocity)_projected_onto_ego_heading"
-                ),
-                "no_lateral_overlap": None,
-            }
-        return evidence
+        return self._evidence_snapshot.as_dict()
 
     @property
     def simulator_name(self) -> str:
@@ -283,51 +220,10 @@ class MetaDriveAdapter:
         return self._idm_policy
 
     def _decision_repeat(self, frequency_hz: int) -> int:
-        desired = 1.0 / (frequency_hz * _PHYSICS_STEP_S)
-        repeat = round(desired)
-        if repeat < 1 or not math.isclose(desired, repeat, rel_tol=0.0, abs_tol=1e-12):
-            raise ValueError(
-                f"control frequency {frequency_hz} Hz has no exact MetaDrive decision interval "
-                f"with physics_world_step_size={_PHYSICS_STEP_S}"
-            )
-        return repeat
+        return decision_repeat(frequency_hz)
 
     def _resolved_config(self, scenario: ScenarioDefinition, seed: int) -> dict[str, Any]:
-        if not math.isclose(
-            scenario.initial_state.speed_mps, 0.0, rel_tol=0.0, abs_tol=1e-12
-        ):
-            raise ValueError("Phase 2 MetaDrive scenarios require initial speed_mps: 0.0")
-        decision_repeat = self._decision_repeat(scenario.control.frequency_hz)
-        return {
-            "use_render": False,
-            "image_observation": False,
-            "manual_control": False,
-            "show_interface": False,
-            "show_policy_mark": False,
-            "map": "S",
-            "start_seed": seed,
-            "num_scenarios": 1,
-            "random_agent_model": False,
-            "random_spawn_lane_index": False,
-            "traffic_density": 0.0,
-            "random_traffic": False,
-            "accident_prob": 0.0,
-            "horizon": scenario.control.horizon_steps,
-            "truncate_as_terminate": False,
-            "physics_world_step_size": _PHYSICS_STEP_S,
-            "decision_repeat": decision_repeat,
-            "action_check": True,
-            "log_level": 50,
-            "vehicle_config": {
-                "spawn_lateral": scenario.initial_state.lateral_offset_m,
-                "show_navi_mark": False,
-                "show_dest_mark": False,
-                "show_lidar": False,
-                "show_lane_line_detector": False,
-                "show_side_detector": False,
-                "lidar": {"num_lasers": 0, "distance": 0, "num_others": 0},
-            },
-        }
+        return resolved_metadrive_environment_config(scenario, seed)
 
     def _agent_position(self) -> tuple[float, float]:
         assert self._environment is not None
@@ -385,26 +281,34 @@ class MetaDriveAdapter:
         if scenario.adapter != self.name:
             raise ValueError("MetaDrive adapter requires a scenario with adapter: metadrive")
 
-        config = self._resolved_config(scenario, seed)
+        self._resolved_config(scenario, seed)
         dependencies = self._dependencies or _load_dependencies(self._repository_root)
         self._dependencies = dependencies
         self._scenario = scenario
         self._seed = seed
-        self._config = config
+        self.version = metadrive_adapter_version(scenario)
+        snapshot = ImmutableAdapterEvidenceConfig(
+            preview_metadrive_adapter_evidence_config(
+                scenario,
+                seed,
+                dependencies.simulator_version,
+                dependencies.simulator_commit,
+            )
+        )
+        self._evidence_snapshot = snapshot
+        self._config = snapshot.member_clone("metadrive_config")
         if scenario.challenge is None:
-            self.version = "1.0"
             self._challenge_payload = None
             environment_factory = dependencies.environment_factory
-            self._environment = environment_factory(config)
+            self._environment = environment_factory(self._config)
         else:
-            self.version = "1.1"
-            self._challenge_payload = scenario.challenge.model_dump(mode="json")
+            self._challenge_payload = snapshot.member_clone("challenge")
             challenge_factory = dependencies.challenge_environment_factory
             if challenge_factory is None:
                 raise RuntimeError(
                     "MetaDrive challenge environment factory is unavailable in the selected runtime"
                 )
-            self._environment = challenge_factory(config, self._challenge_payload)
+            self._environment = challenge_factory(self._config, self._challenge_payload)
         reset_result = self._environment.reset(seed=seed)
         if not isinstance(reset_result, tuple) or len(reset_result) != 2:
             raise RuntimeError("MetaDrive reset did not return the expected (observation, info)")
