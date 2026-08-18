@@ -2,7 +2,7 @@
 
 ## Status, purpose, and authority
 
-Protocol version: `P7-HV-1.0`.
+Protocol version: `P7-HV-1.1`.
 
 Human comprehension, manual visual quality, accessibility, expert critique, pilot, and main-cohort
 outcomes are `NOT YET OBSERVED`. This is a prospective moderator instrument, not a study result.
@@ -89,6 +89,39 @@ protocol deviation. Record withdrawal and completion state.
 Technical invalidation is `NOT_RUN_TECHNICAL`: it remains denominator-visible, blocks 100%
 executable-instrument coverage, and must be corrected and rerun under the unchanged frozen protocol
 before cohort closure.
+
+## Scoring match rule
+
+This rule binds every scored checklist item in Tasks 1–9 by its item type. Tasks do not annotate
+items individually; the moderator classifies each checklist item using the table below and marks
+it with that row's rule only. Without this rule two moderators can score the same spoken answer
+differently, and the protocol cannot claim deterministic scoring.
+
+CRITICAL items decide the attempt. A missed CRITICAL item makes the whole task incorrect.
+
+SUPPORTING items are recorded for analysis and never decide the attempt on their own. An item
+whose type is not listed below is CRITICAL.
+
+| Item type | What the participant must produce | How the moderator marks it |
+|---|---|---|
+| Authority value — CRITICAL | The exact enum token, for example `HOLD`, `INTERNALLY_CONSISTENT`, `NOT_AUTHENTICATED` | Exact string match against the frozen token. Case-insensitive. No paraphrase accepted. |
+| Direction — CRITICAL | `IMPROVED`, `REGRESSED`, or `UNCHANGED` for the named dimension, or an unambiguous plain-language equivalent such as "went up" / "got worse" | Mark correct when the stated direction matches the frozen direction. A hedge with no direction is incorrect. |
+| Named reason or count — CRITICAL | The reason token, for example `SPEED_CAP`, and the fact that no `TTC_BELOW_THRESHOLD` reason is recorded | Exact token match; the count must match the frozen integer. |
+| Non-causal conclusion — CRITICAL | A statement that the evidence does not demonstrate the mechanism, and rejection of every listed inference | Mark correct when the participant states the limitation in their own words and rejects each listed inference. |
+| Exact numeric value — SUPPORTING | The value as the interface displays it | Correct when the participant reads aloud, points to, or transcribes the interface's displayed value for that dimension. A rounded or approximate spoken value is `APPROXIMATE`, not incorrect. Record the participant's literal words. |
+| Exact event sequence — SUPPORTING | The sequence indices where the reason appears | Correct when every listed index is named. Partial recall is `PARTIAL`. Record what was named. |
+
+Rules that bind every item type:
+
+- The moderator records the participant's literal words before marking anything.
+- Reading a value off the interface is not assistance. Being told where to look is
+  `NEUTRAL_PROMPT`; being told what the value means is `INSTRUCTIONAL_ASSISTANCE`.
+- Time spent transcribing an exact value for the record is excluded from task timing.
+- A SUPPORTING item marked APPROXIMATE or PARTIAL never converts a correct attempt into an
+  incorrect one, and never converts an incorrect attempt into a correct one.
+- No moderator may reference a fact the approved participant interface does not expose. Naming a
+  challenge phase, the shield's configured threshold, or a recomputed target band is
+  `INSTRUCTIONAL_ASSISTANCE` and removes the attempt from the unassisted numerator.
 
 ## Timing and scoring
 
@@ -332,9 +365,9 @@ Required source references: `events.jsonl /vehicle_state/acceleration_mps2 @ seq
 
 ## Task 7 — Non-causal mixed comparison
 
-Prompt version: P7-T07-v1
+Prompt version: P7-T07-v2
 
-Answer-key version: P7-T07-A1
+Answer-key version: P7-T07-A2
 
 Fixtures: `handoff-p3-cutin-baseline` → `handoff-p3-cutin-shielded`.
 
@@ -348,16 +381,13 @@ Scoring checklist — correct only if every item is satisfied:
   INTERNALLY_CONSISTENT, and unchanged verdict `HOLD → HOLD`;
 - report minimum TTC: 1.8155836417275437 → 8.49579415469856 s (IMPROVED);
 - report route completion: 84.88178621406203 → 84.39151677812995 % (REGRESSED);
-- report maximum absolute acceleration: 12.683377265917573 → 13.003747463227677 m/s^2
-  (REGRESSED);
+- report maximum absolute acceleration: 12.683377265917573 → 13.003747463227677 m/s^2 (REGRESSED);
 - report maximum absolute jerk: 128.41591835005693 → 157.565283775339 m/s^3 (REGRESSED);
-- report `SPEED_CAP at sequences 20, 26, and 32`, the exact candidate override histogram
-  `{SPEED_CAP: 3}`, and zero recorded `TTC_BELOW_THRESHOLD` reasons;
-- state that the stored review evidence does not demonstrate TTC-target intervention or mechanism
-  engagement; phase labels, the shield's configured TTC threshold, and target-band recomputation
+- report SPEED_CAP at sequences 20, 26, and 32, the exact candidate override histogram
+  {SPEED_CAP: 3}, and zero recorded TTC_BELOW_THRESHOLD reasons;
+- state that the stored review evidence does not demonstrate TTC-target intervention or mechanism engagement; phase labels, the shield's configured TTC threshold, and target-band recomputation
   are not exposed by the approved participant interface and therefore are not scored; and
-- characterize the mixed result as descriptive and non-causal, with no aggregate winner or
-  advancement inference.
+- characterize the mixed result as descriptive and non-causal, with no aggregate winner or advancement inference.
 
 Reject: engagement.
 

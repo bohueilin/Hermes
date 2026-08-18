@@ -177,15 +177,48 @@ def test_phase7_human_packet_has_exact_file_set_and_honest_statuses(
     assert "COMPREHENSION_GATE_MET: NOT PROMOTED" in handoff
 
 
+def test_phase7_observation_template_records_every_scoring_match_rule_field(
+    repository_root: Path,
+) -> None:
+    """The blank record must be able to hold what the scoring match rule requires."""
+    text = _read(repository_root, "PHASE7_HUMAN_OBSERVATION_TEMPLATE.md")
+    for field in (
+        "Every CRITICAL item satisfied:",
+        "CRITICAL items missed, by name:",
+        "SUPPORTING item marks:",
+        "Participant literal words for each exact value or sequence item:",
+        "Transcription time excluded from task timing (seconds):",
+        "Moderator referenced a fact the participant interface does not expose:",
+    ):
+        assert field in text
+    assert "Allowed SUPPORTING marks: EXACT, APPROXIMATE, PARTIAL, NOT_STATED." in text
+    assert "is decided by the CRITICAL items alone" in text
+    # the template stays blank: no expected answers may leak into the record
+    assert "1.8155836417275437" not in text
+    assert "SPEED_CAP" not in text
+
+
 def test_phase7_plan_freezes_ten_versioned_tasks_and_exact_answer_contract(
     repository_root: Path,
 ) -> None:
     text = _read(repository_root, "PHASE7_HUMAN_VALIDATION_PLAN.md")
 
-    for task_id in range(1, 11):
+    # Task 7's scored semantics changed when the key was bound to interface-visible
+    # evidence and the scoring match rule, so its prompt and key are versioned forward.
+    # Every other task stays at v1/A1; the map catches unintended drift in either
+    # direction rather than merely asserting that some version string is present.
+    expected_versions = {task_id: ("v1", "A1") for task_id in range(1, 11)}
+    expected_versions[7] = ("v2", "A2")
+    assert "Protocol version: P7-HV-1.1." in text
+    for task_id, (prompt_version, key_version) in expected_versions.items():
         assert f"## Task {task_id} —" in text
-        assert f"Prompt version: P7-T{task_id:02d}-v1" in text
-        assert f"Answer-key version: P7-T{task_id:02d}-A1" in text
+        assert f"Prompt version: P7-T{task_id:02d}-{prompt_version}" in text
+        assert f"Answer-key version: P7-T{task_id:02d}-{key_version}" in text
+        for other in ("v1", "v2", "A1", "A2"):
+            if other in {prompt_version, key_version}:
+                continue
+            marker = "Prompt version" if other.startswith("v") else "Answer-key version"
+            assert f"{marker}: P7-T{task_id:02d}-{other}" not in text
     assert "Tasks 1–9 only" in text
     assert "Task 10 is excluded from the North Star" in text
     assert "Task 4: classification, reason, and consequence only" in text
@@ -198,6 +231,20 @@ def test_phase7_plan_freezes_ten_versioned_tasks_and_exact_answer_contract(
     assert "1.8155836417275437 → 8.49579415469856 s" in text
     assert "SPEED_CAP at sequences 20, 26, and 32" in text
     assert "zero recorded TTC_BELOW_THRESHOLD reasons" in text
+
+    # A scored checklist that names exact values is not scorable until the protocol
+    # says how a moderator marks a spoken answer against them.
+    assert "## Scoring match rule" in text
+    for marker in (
+        "CRITICAL items decide the attempt",
+        "SUPPORTING items are recorded for analysis",
+        "Exact string match against the frozen token",
+        "reads aloud, points to, or transcribes",
+        "records the participant's literal words before marking",
+        "excluded from task timing",
+        "INSTRUCTIONAL_ASSISTANCE and removes the attempt from the unassisted numerator",
+    ):
+        assert marker in text
     assert (
         "stored review evidence does not demonstrate TTC-target intervention or "
         "mechanism engagement"

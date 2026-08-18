@@ -150,6 +150,29 @@ Participant response: ____
 
 Correct under frozen key: ____
 
+Scoring is applied with the protocol's scoring match rule. Record the participant's literal
+words first, then mark each item by its type. `Correct under frozen key` is decided by the
+CRITICAL items alone.
+
+Every CRITICAL item satisfied: ____
+
+Allowed values: `YES`, `NO`.
+
+CRITICAL items missed, by name: ____
+
+SUPPORTING item marks: ____
+
+Allowed SUPPORTING marks: `EXACT`, `APPROXIMATE`, `PARTIAL`, `NOT_STATED`.
+
+Participant literal words for each exact value or sequence item: ____
+
+Transcription time excluded from task timing (seconds): ____
+
+Moderator referenced a fact the participant interface does not expose: ____
+
+Allowed values: `NO`, `YES`. `YES` sets the assistance state to `INSTRUCTIONAL_ASSISTANCE`
+and removes the attempt from the unassisted numerator.
+
 Evidence location used: ____
 
 Assistance state: ____

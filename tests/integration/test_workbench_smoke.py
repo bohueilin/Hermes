@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -619,11 +620,18 @@ sys.meta_path.insert(0, Blocked())
 from hermes.workbench.app import main
 main(('--artifact-root', {str(workbench_root)!r}))
 """
-    app = AppTest.from_string(script, default_timeout=30).run()
-    app = _verify(app, "handoff-phase5-demo")
-    app = _review_section(app, "Timeline")
+    # AppTest.from_string executes the script in this process, so the script's
+    # meta-path blocker would otherwise leak into every later test in the session
+    # and fail any legitimate adapter, policy, runtime, or MetaDrive import.
+    original_meta_path = list(sys.meta_path)
+    try:
+        app = AppTest.from_string(script, default_timeout=30).run()
+        app = _verify(app, "handoff-phase5-demo")
+        app = _review_section(app, "Timeline")
 
-    assert list(app.exception) == []
+        assert list(app.exception) == []
+    finally:
+        sys.meta_path[:] = original_meta_path
 
 
 def test_workbench_information_architecture_uses_workflow_then_review_section(
