@@ -1,0 +1,40 @@
+discovery_ledger_byte_digest_sha256: 969779633829f4f543ecc528f38c190405a85d37ec60f94189c105057a8db765
+discovery_ledger_semantic_digest_sha256: e8a446095846fa8446e83f703d769a83cdfa4793c8b3c5cda4dc2ff30861f0c1
+expected_pair:
+  adapter_config_digest_sha256: ca50f0c1fa949166e3cad93f729a0999c071b83d8584e1f09264f3869eaade00
+  adapter_name: metadrive
+  adapter_version: '1.1'
+  baseline_run_id: handoff-p7-lead-baseline
+  baseline_shield_config_digest_sha256: 44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
+  baseline_shield_name: noop
+  baseline_shield_version: '1.0'
+  candidate_run_id: handoff-p7-lead-candidate
+  candidate_shield_config_digest_sha256: 26ca205b6eca686876bab9dd41ba247dece9e12f1afe0b5f60c79222eef70245
+  candidate_shield_name: deterministic
+  candidate_shield_version: '1.0'
+  challenge_kind: lead_vehicle_hard_brake
+  control_frequency_hz: 10
+  gate_config_digest_sha256: 1216216c081cba74dc58d7f8c517a2380e93dde458a81a02b3901c212582fe84
+  gate_name: phase2
+  gate_version: '1.0'
+  hermes_version: 0.1.0
+  horizon_steps: 300
+  implementation_base_commit: ef1169e2b819dca219dd4dd06e37ffb237ea9808
+  policy_config_digest_sha256: 44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
+  policy_name: metadrive-idm
+  policy_version: '1.0'
+  require_repository_dirty: false
+  scenario_byte_digest_sha256: 92f26f3853fdb7bef82198bc497083cf9e45d13287bd1ccfab7d92c06ae79c6c
+  scenario_digest_sha256: d3792c3181fc8d18cca50f7de513630bea73aa3eab3e13047077e580736897fe
+  seed: 7
+  selected_discovery_attempt_id: attempt-0000
+  selected_discovery_selection_evidence_sha256: 019ee4f6fc8a0c9bced11842389daa61d497ab61a81e7f34a4a5a3c13d0ceb59
+  selected_materialized_variant_id: grid-0000
+  simulator_commit: 85e5dadc6c7436d324348f6e3d8f8e680c06b4db
+  simulator_name: metadrive
+  simulator_version: 0.4.3
+pair_plan_id: lead_ttc_engagement_pair_v4
+protocol_byte_digest_sha256: 3021c4a59b52fde36bea6d921b88170dffb8aa481efc193528b0080ea854fbd0
+protocol_semantic_digest_sha256: dac44c72ee861bd9d2900223e483c91c64a02486cf04611e2f4859431aea6cad
+schema_version: '2.0'
+selected_scenario_relative_path: scenarios/metadrive_lead_vehicle_hard_brake_adequacy_v1.yaml
