@@ -4,8 +4,8 @@
 > new collaborator, read this file completely before reading anything else or touching any
 > code. Everything else in this repository is downstream of it.
 >
-> **Last updated:** 2026-08-17 · **By:** Opus 5 (builder) · **At commit:** `a0c0e64`
-> · **Covers through:** Phase 7A complete
+> **Last updated:** 2026-08-19 · **By:** Opus 5 (builder) · **At commit:** `99a5195`
+> · **Covers through:** Phase 7A built, Fable round-1 review dispositioned
 
 ---
 
@@ -151,16 +151,16 @@ opinion may promote them.
 |---|---|
 | Public repository | `github.com/bohueilin/Hermes` |
 | Working branch | `codex/phase7-evaluation-adequacy-human-validation` |
-| HEAD | `a0c0e64` |
+| HEAD | `99a5195` |
 | Default branch | **not yet set** — see §9 |
-| Tests | **1245 passing** (6 are `-m metadrive`, real-simulator only) |
+| Tests | **1243 passing** (6 are `-m metadrive`, real-simulator only) |
 | Ruff | clean |
 | `hermes doctor` | 17 PASS · 1 WARN (conda env) · 1 NOT_AVAILABLE (display) |
 | Python / env | 3.11, conda env `hermes-dev` |
 | Simulator | MetaDrive 0.4.3 pinned at `85e5dadc6c7436d324348f6e3d8f8e680c06b4db`, clean |
 | Artifact directories | 131, all gitignored local outputs; none ever committed |
 | Phases 0–6 | complete |
-| Phase 7A (adequacy) | **complete** |
+| Phase 7A (adequacy) | built; **not accepted** — Fable round-1 found 7 P1, all now closed; awaiting owner sign-off |
 | Phase 7B (human study) | instrument built, **blocked pending owner approval**; `P7-HV-07` is `BLOCKED` |
 
 ---
@@ -408,6 +408,43 @@ blocker into the whole pytest session.
 *References:* `PHASE7_IMPLEMENTATION_HANDOFF.md`, `evaluation-plans/DISCOVERY_RESULTS.md`,
 `PHASE7_TASK7_AND_TASK8_CONTRACT_AMENDMENT.md`, `PHASE7_CLAUDE_FEEDBACK_DISPOSITION.md`.
 
+### 7.8b Phase 7A — Fable round-1 adversarial review (2026-08-18/19)
+
+The required independent review ran and returned **7 P1, 18 P2, 8 P3, no P0**, with the verdict
+"accept the machinery, hold the record". Every P1 reproduced. Full ledger:
+`PHASE7_FABLE_ROUND1_DISPOSITION.md`. Two findings were serious:
+
+**F-01 was a real vulnerability.** `git status` executes `filter.<driver>.clean` — arbitrary
+commands from the reviewed repository's own `.git/config` — and no git switch disables it, because
+the filter is repository-local. The registration inspector ran it and still returned
+`LOCAL_HISTORY_ORDERING_VERIFIED`, putting arbitrary execution on the one layer whose whole
+discipline is that it does not execute. Reproduced with a scratch-repo PoC. The operation was
+deleted; it was redundant anyway, since file-at-commit byte comparison already catches a dirty
+path.
+
+**F-05 meant the Phase 7A headline was causally wrong.** The record said the ~3.11 s floor came
+from a policy "braking early enough to preserve its own headway". The artifacts show the ego
+holding 8.000 m/s at zero brake until the lead reaches 30 m, then braking fully: the floor is
+MetaDrive `IDMPolicy`'s detection horizon (`MAX_LONG_DIST = 30`), `(30 − 5.1275)/8.0 = 3.109062 s`
+against an observed `3.108394946413832 s`. Ego target speed was fixed at 8.0 m/s in all 83
+attempts and is not a mappable grid parameter, so "structurally unreachable" over-generalised a
+search that could never vary the term the floor scales with.
+
+**The phase built to catch a right number with a wrong causal story shipped exactly that, in its
+own headline.** That is the most important thing in this record.
+
+Also closed: the process that produced the evidence was not in the repository (F-02, now committed
+verbatim under `tools/phase7-authoring/` with its gaps disclosed); non-selected discovery
+observations were never checked against artifacts (F-03); the governance deviation was
+unrecorded (F-04, now in `docs/decision-log.md`); the traceability matrix promoted a `BLOCKED`
+requirement (F-06); scoring was not deterministic for spoken answers (F-07); and six P2s
+including a real serialization bug (F-21) and the adequacy/verdict coupling (F-12).
+
+Two scope calls differ from the review and are argued in the ledger: F-02 was disclosed and
+committed rather than rebuilt now, and F-04 kept LLM authorship while strengthening the record.
+One severity correction went the other way: F-03's end-to-end exploit could not be written as a
+test, because the pair-plan binding and Git blob check already block it.
+
 ### 7.9 Phase 7B — Human instrument (built, **not run**)
 Ten-task moderated protocol at version `P7-HV-1.1`; blank observation, synthesis, manual-visual,
 and accessibility templates; a digest-bound fixture registry; a pipeline-generated three-state
@@ -474,8 +511,8 @@ None of these are approved. They are the live options, with the case for and aga
   one. Decide between promoting it to `main` or renaming to a non-Codex-owned name.
 - **Optimize the README banner.** `Hermes_Github.png` is 2.5 MB at 2172×724 for a ~1000 px
   render column.
-- **Independent adversarial review of Phase 7A.** The amendment's own gate requires this before
-  any recruitment, and the builder is the wrong reviewer. *This is the highest-value next action.*
+- ~~Independent adversarial review of Phase 7A.~~ **Done** — Fable round 1, 2026-08-18. All 7 P1
+  closed. *Next: owner sign-off on the disposition, then a round-2 review of the fixes.*
 
 ### 9.2 Phase 7B — run the human study
 Everything is built and blocked on owner approval. Needs: named moderator, evidence custodian,
@@ -484,7 +521,7 @@ cohort. **Nothing may promote comprehension short of that.**
 
 ### 9.3 Phase 8 candidates, roughly in order of value
 
-**A. Adequacy in the reviewer surface.** Phase 7A deliberately shipped adequacy as an expert CLI
+**A. Adequacy in the reviewer surface — Fable's round-1 recommendation, and mine.** Phase 7A deliberately shipped adequacy as an expert CLI
 vertical slice; the workbench does not ingest it. Until it does, adequacy does not protect the
 primary reviewer journey — which is where the original over-credit happened. *Strongest
 candidate.*
@@ -528,6 +565,11 @@ Honest inventory. Add to it; don't quietly clear it.
 | **Task 4's availability fixture is a one-event trace.** Forced by metric semantics — jerk is unavailable only below two events — not chosen. Cannot exercise timeline or comparison surfaces. | Medium | Documented, scoped |
 | **Facade `_cache` / `_active` are unbounded.** Fresh-process-per-participant bounds exposure; LRU deferred to post-pilot pending RSS measurement. | Medium | Deferred with rationale |
 | **Four separate Git subprocess helpers** (`doctor`, `orchestrator`, `metadrive` adapter, `provenance`). Only the last is hardened. | Medium | Open |
+| **The tracked tree cannot regenerate the Phase 7A ledgers.** The authoring drivers are committed as a historical record but are unreviewed, untested, and path-bound; the amendment's `materialize-evaluation-plan` CLI was never built. | High | Disclosed (F-02); Phase 8 |
+| **The non-causal limitation is renderer-owned, not in `ComparisonEnvelope`.** Moving it changes v1 canonical bytes, which §23.5 makes a rollback trigger without an approved schema version. | Medium | Deferred to the Phase 8 envelope bump (F-26) |
+| **A Git operational failure vetoes the whole adequacy plane** rather than degrading to a third registration status. | Medium | **Needs owner decision** (F-09) |
+| **Protocol versions carry no machine-checked lineage** to their predecessors. | Medium | Disclosed (F-04); machinery deferred (F-11) |
+| **Tasks 1–6 and 8–10 checklists are not yet type-tagged**, so their scoring still needs moderator classification. | Medium | Prerequisite for administering each task (F-07) |
 | **Directional comparison copy for inadequate pairs.** See §9.3E. | Medium | **Needs owner decision** |
 | **Absolute local paths in ~10 tracked docs.** Deliberate per `AGENTS.md` §1, but now public. | Low | Accepted |
 | **20+ root Markdown files.** This file is the mitigation. | Low | Mitigated |
