@@ -19,6 +19,8 @@ from hermes.adequacy.models import (
     DiscoveryEnvironment,
     DiscoveryLedgerEntry,
     ExpectedPair,
+    MaterializerSpecification,
+    MaterializerTemplate,
     PairPlan,
     RegistrationEvidence,
     RegistrationLocation,
@@ -34,7 +36,6 @@ from hermes.provenance.git import (
     _parse_diff_tree_output,
     _parse_parent_line,
     _parse_repository_top_level,
-    _parse_status_output,
     _read_bounded_process,
 )
 
@@ -42,6 +43,7 @@ _PROTOCOL_PATH = "evaluation-plans/lead.protocol.v1.yaml"
 _LEDGER_PATH = "evaluation-plans/lead.discovery.v1.jsonl"
 _PAIR_PATH = "evaluation-plans/lead.pair.v1.yaml"
 _SCENARIO_PATH = "scenarios/lead.yaml"
+_TEMPLATE_PATH = "evaluation-plans/templates/lead.template.yaml"
 
 
 def _sha(payload: bytes) -> str:
@@ -80,6 +82,7 @@ class _RegisteredRepository:
     ledger_bytes: bytes
     pair_bytes: bytes
     scenario_bytes: bytes
+    template_bytes: bytes
 
 
 def _captured_plans(
@@ -89,10 +92,17 @@ def _captured_plans(
     ledger_bytes: bytes,
     pair_bytes: bytes,
     scenario_bytes: bytes,
+    template_bytes: bytes,
     discovery_commit: str | None = None,
 ) -> CapturedEvaluationPlans:
     protocol = StudyProtocol.model_construct(
-        registration=RegistrationLocation(repository_relative_path=_PROTOCOL_PATH)
+        registration=RegistrationLocation(repository_relative_path=_PROTOCOL_PATH),
+        materializer=MaterializerSpecification.model_construct(
+            template=MaterializerTemplate.model_construct(
+                repository_relative_path=_TEMPLATE_PATH,
+                byte_digest_sha256=_sha(template_bytes),
+            )
+        ),
     )
     ledger_entry = DiscoveryLedgerEntry.model_construct(
         attempt_id="attempt-0001",
@@ -158,8 +168,10 @@ def _build_registered_repository(
     ledger_bytes = b'{"attempt_id":"attempt-0001","selection":"SELECTED"}\n'
     pair_bytes = b"schema_version: '1.0'\npair_plan_id: lead_pair\n"
     scenario_bytes = b"schema_version: '1.0'\nname: selected_lead\n"
+    template_bytes = b"schema_version: '2.0'\nname: lead_template\n"
 
     _write(root, _PROTOCOL_PATH, protocol_bytes)
+    _write(root, _TEMPLATE_PATH, template_bytes)
     for relative_path, payload in (protocol_tree_extras or {}).items():
         _write(root, relative_path, payload)
     _git(root, "add", "--", ".")
@@ -181,6 +193,7 @@ def _build_registered_repository(
         ledger_bytes=ledger_bytes,
         pair_bytes=pair_bytes,
         scenario_bytes=scenario_bytes,
+        template_bytes=template_bytes,
     )
     return _RegisteredRepository(
         root=root,
@@ -192,6 +205,7 @@ def _build_registered_repository(
         ledger_bytes=ledger_bytes,
         pair_bytes=pair_bytes,
         scenario_bytes=scenario_bytes,
+        template_bytes=template_bytes,
     )
 
 
@@ -337,10 +351,6 @@ def test_inspector_uses_one_resolved_executable_and_exact_read_only_process_cont
         "-c",
         f"core.hooksPath={os.devnull}",
         "-c",
-        "core.fsmonitor=false",
-        "-c",
-        "core.untrackedCache=false",
-        "-c",
         "protocol.allow=never",
         "-c",
         "protocol.file.allow=never",
@@ -351,6 +361,7 @@ def test_inspector_uses_one_resolved_executable_and_exact_read_only_process_cont
         ("show", f"{registered_repository.pair_commit}:{_LEDGER_PATH}"),
         ("show", f"{registered_repository.pair_commit}:{_PAIR_PATH}"),
         ("show", f"{registered_repository.pair_commit}:{_SCENARIO_PATH}"),
+        ("show", f"{registered_repository.protocol_commit}:{_TEMPLATE_PATH}"),
         (
             "rev-list",
             "--parents",
@@ -370,19 +381,8 @@ def test_inspector_uses_one_resolved_executable_and_exact_read_only_process_cont
         (
             "merge-base",
             "--is-ancestor",
-            registered_repository.protocol_commit,
             registered_repository.pair_commit,
-        ),
-        (
-            "status",
-            "--porcelain=v1",
-            "-z",
-            "--untracked-files=all",
-            "--",
-            _PROTOCOL_PATH,
-            _LEDGER_PATH,
-            _PAIR_PATH,
-            _SCENARIO_PATH,
+            "HEAD",
         ),
     )
     assert tuple(argv[len(common) :] for argv, _kwargs in process_calls) == (
@@ -465,6 +465,7 @@ def test_discovery_commit_string_and_file_content_mismatches_do_not_establish(
         ledger_bytes=registered_repository.ledger_bytes,
         pair_bytes=registered_repository.pair_bytes,
         scenario_bytes=registered_repository.scenario_bytes,
+        template_bytes=registered_repository.template_bytes,
         discovery_commit=registered_repository.pair_commit,
     )
     _assert_not_established(_inspect(registered_repository, plans=mismatched_discovery))
@@ -523,6 +524,7 @@ def test_protocol_commit_after_discovery_pair_does_not_establish(
         ledger_bytes=registered_repository.ledger_bytes,
         pair_bytes=registered_repository.pair_bytes,
         scenario_bytes=registered_repository.scenario_bytes,
+        template_bytes=registered_repository.template_bytes,
     )
 
     _assert_not_established(_inspect(registered_repository, plans=plans))
@@ -573,8 +575,21 @@ def test_dirty_registration_path_and_unexpected_fourth_pair_path_do_not_establis
     registered_repository: _RegisteredRepository,
     tmp_path: Path,
 ) -> None:
-    _write(registered_repository.root, _PAIR_PATH, b"dirty pair plan\n")
-    _assert_not_established(_inspect(registered_repository))
+    # The inspector is object-graph-only: it never runs `git status`, because status executes
+    # repository-configured clean filters. A dirty registration file is caught one step
+    # earlier instead — the loader captures the dirty bytes, so the captured digest stops
+    # matching the blob at the registration commit.
+    dirty = _build_registered_repository(tmp_path / "dirty-capture-repository")
+    _write(dirty.root, _PAIR_PATH, b"dirty pair plan\n")
+    recaptured = _captured_plans(
+        protocol_commit=dirty.protocol_commit,
+        protocol_bytes=dirty.protocol_bytes,
+        ledger_bytes=dirty.ledger_bytes,
+        pair_bytes=b"dirty pair plan\n",
+        scenario_bytes=dirty.scenario_bytes,
+        template_bytes=dirty.template_bytes,
+    )
+    _assert_not_established(_inspect(dirty, plans=recaptured))
 
     extra = _build_registered_repository(
         tmp_path / "extra-path-repository",
@@ -609,25 +624,6 @@ def test_modified_instead_of_added_pair_path_does_not_establish(tmp_path: Path) 
 def test_diff_tree_nul_parser_rejects_unsafe_or_malformed_records(payload: bytes) -> None:
     with pytest.raises(RegistrationGitOperationalError):
         _parse_diff_tree_output(payload)
-
-
-@pytest.mark.parametrize(
-    "payload",
-    (
-        b"R  renamed\0old\0",
-        b"C  copied\0old\0",
-        b"ZZ unknown\0",
-        b"M short\0",
-        b" M missing-terminator",
-        b" M bad\npath\0",
-        b" M bad\tpath\0",
-        b"?? -leading-dash\0",
-        b"?? \xff\0",
-    ),
-)
-def test_status_nul_parser_rejects_unsafe_or_malformed_records(payload: bytes) -> None:
-    with pytest.raises(RegistrationGitOperationalError):
-        _parse_status_output(payload)
 
 
 @pytest.mark.parametrize(
@@ -685,32 +681,6 @@ def _git_with_operation_exit(
             "os.execve(real_git, [real_git, *sys.argv[1:]], dict(os.environ))\n"
         ),
     )
-
-
-def test_status_nonzero_exit_is_an_operational_error_with_diagnostic(
-    registered_repository: _RegisteredRepository,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    real_git = Path(shutil.which("git") or "").resolve()
-    executable = _git_with_operation_exit(
-        tmp_path / "status-failure-git",
-        real_git=real_git,
-        operation="status",
-        returncode=1,
-    )
-    monkeypatch.setattr(
-        git_module.shutil,
-        "which",
-        lambda *_args, **_kwargs: str(executable),
-    )
-
-    with pytest.raises(RegistrationGitOperationalError) as captured:
-        _inspect(registered_repository)
-
-    assert str(captured.value) == "Git status failed with unexpected exit status 1"
-
-
 def test_merge_base_unexpected_exit_is_an_operational_error_with_diagnostic(
     registered_repository: _RegisteredRepository,
     tmp_path: Path,
@@ -995,3 +965,45 @@ def test_deadline_terminates_then_kills_a_stuck_process(
     assert process.events == ["terminate", "kill"]
     assert process.stdout.closed
     assert process.stderr.closed
+
+
+def test_repository_configured_clean_filter_is_never_executed(
+    registered_repository: _RegisteredRepository,
+    tmp_path: Path,
+) -> None:
+    """A reviewed repository must not be able to run commands via the inspector.
+
+    `git status` executes `filter.<driver>.clean` for matching paths. That is arbitrary
+    command execution taken from the reviewed repository's own config, and no git switch
+    disables it — not `GIT_CONFIG_NOSYSTEM`, not `GIT_CONFIG_GLOBAL`, because the filter
+    lives in the repository-local config. The inspector therefore never runs `status`.
+    """
+    marker = tmp_path / "clean-filter-marker"
+    root = registered_repository.root
+    _git(
+        root,
+        "config",
+        "filter.trap.clean",
+        f"sh -c 'echo RAN >> {marker}; cat'",
+    )
+    attributes = root / ".git" / "info" / "attributes"
+    attributes.parent.mkdir(parents=True, exist_ok=True)
+    attributes.write_text("evaluation-plans/* filter=trap\n", encoding="utf-8")
+    # make a registration path stat-dirty without changing its bytes
+    (root / _PAIR_PATH).touch()
+
+    process_calls: list[tuple[str, ...]] = []
+    real_popen = subprocess.Popen
+
+    def record_popen(argv, **kwargs):
+        process_calls.append(tuple(argv))
+        return real_popen(argv, **kwargs)
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(git_module.subprocess, "Popen", record_popen)
+        evidence = _inspect(registered_repository)
+
+    assert not marker.exists(), "a repository-configured clean filter executed"
+    assert evidence.status is RegistrationStatus.LOCAL_HISTORY_ORDERING_VERIFIED
+    assert all("status" not in argv for argv in process_calls)
+    assert "status" not in git_module._ALLOWED_OPERATIONS

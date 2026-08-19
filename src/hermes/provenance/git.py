@@ -30,8 +30,12 @@ GIT_TERMINATE_GRACE_S = 0.25
 
 _READ_CHUNK_BYTES = 64 * 1024
 _COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+# `status` is deliberately absent: it executes repository-configured clean filters
+# (filter.<driver>.clean), which is arbitrary command execution from the reviewed
+# repository's own config and cannot be disabled by any git switch. File-at-commit byte
+# comparison already establishes what the status check was reaching for.
 _ALLOWED_OPERATIONS = frozenset(
-    {"rev-parse", "show", "rev-list", "diff-tree", "merge-base", "status"}
+    {"rev-parse", "show", "rev-list", "diff-tree", "merge-base"}
 )
 _COMMON_ARGUMENTS = (
     "--no-pager",
@@ -39,10 +43,6 @@ _COMMON_ARGUMENTS = (
     "--literal-pathspecs",
     "-c",
     f"core.hooksPath={os.devnull}",
-    "-c",
-    "core.fsmonitor=false",
-    "-c",
-    "core.untrackedCache=false",
     "-c",
     "protocol.allow=never",
     "-c",
@@ -79,9 +79,16 @@ class _RegistrationPaths:
     ledger: str
     pair_plan: str
     selected_scenario: str
+    template: str
 
-    def status_pathspec(self) -> tuple[str, str, str, str]:
-        return self.protocol, self.ledger, self.pair_plan, self.selected_scenario
+    def registration_paths(self) -> tuple[str, str, str, str, str]:
+        return (
+            self.protocol,
+            self.ledger,
+            self.pair_plan,
+            self.selected_scenario,
+            self.template,
+        )
 
 
 def _not_established() -> RegistrationEvidence:
@@ -323,6 +330,9 @@ def _derive_registration_paths(
         selected_scenario = _safe_repository_path(
             plans.pair_plan.selected_scenario_relative_path
         )
+        template_path = _safe_repository_path(
+            plans.protocol.materializer.template.repository_relative_path
+        )
     except (AttributeError, TypeError) as exc:
         raise RegistrationGitOperationalError(
             "captured plans lack registration path identity"
@@ -348,10 +358,11 @@ def _derive_registration_paths(
         ledger=str(derived_ledger),
         pair_plan=str(derived_pair),
         selected_scenario=str(selected_scenario),
+        template=str(template_path),
     )
-    if len(set(paths.status_pathspec())) != 4:
+    if len(set(paths.registration_paths())) != 5:
         return None
-    for value in paths.status_pathspec():
+    for value in paths.registration_paths():
         _safe_repository_path(value)
     return paths
 
@@ -391,27 +402,6 @@ def _parse_diff_tree_output(payload: bytes) -> tuple[tuple[str, str], ...]:
         if status not in {"A", "M", "D", "T", "U"}:
             raise RegistrationGitOperationalError("unknown diff-tree status")
         records.append((status, _decode_git_path(fields[index + 1])))
-    return tuple(records)
-
-
-def _parse_status_output(payload: bytes) -> tuple[tuple[str, str], ...]:
-    fields = _nul_fields(payload, "status output")
-    records: list[tuple[str, str]] = []
-    normal_status = frozenset({" ", "M", "A", "D", "T", "U"})
-    for field in fields:
-        if len(field) < 4 or field[2:3] != b" ":
-            raise RegistrationGitOperationalError("malformed status record arity")
-        try:
-            status = field[:2].decode("ascii", errors="strict")
-        except UnicodeError as exc:
-            raise RegistrationGitOperationalError("non-ASCII status code") from exc
-        if "R" in status or "C" in status:
-            raise RegistrationGitOperationalError("rename/copy status is unsupported")
-        if status not in {"??", "!!"} and (
-            status == "  " or any(character not in normal_status for character in status)
-        ):
-            raise RegistrationGitOperationalError("unknown status code")
-        records.append((status, _decode_git_path(field[3:])))
     return tuple(records)
 
 
@@ -548,6 +538,11 @@ class RegistrationGitInspector:
             (pair_commit, paths.ledger, ledger_source.byte_digest_sha256),
             (pair_commit, paths.pair_plan, pair_source.byte_digest_sha256),
             (pair_commit, paths.selected_scenario, scenario_byte_digest),
+            (
+                protocol_commit,
+                paths.template,
+                plans.protocol.materializer.template.byte_digest_sha256,
+            ),
         ):
             if not _blob_digest_matches(runner, commit, path, digest):
                 return _not_established()
@@ -577,26 +572,16 @@ class RegistrationGitInspector:
         ):
             return _not_established()
 
-        ancestry = runner.run("merge-base", "--is-ancestor", protocol_commit, pair_commit)
+        # F-10: the registration must belong to the checkout the caller supplied, not merely
+        # exist somewhere in its object database.
+        reachable = runner.run("merge-base", "--is-ancestor", pair_commit, "HEAD")
         if not _command_succeeded(
-            ancestry,
+            reachable,
             "merge-base",
             historical_returncodes=frozenset({1}),
         ):
             return _not_established()
-        if ancestry.stdout:
+        if reachable.stdout:
             raise RegistrationGitOperationalError("merge-base emitted unexpected output")
 
-        status = runner.run(
-            "status",
-            "--porcelain=v1",
-            "-z",
-            "--untracked-files=all",
-            "--",
-            *paths.status_pathspec(),
-        )
-        _command_succeeded(status, "status")
-        status_records = _parse_status_output(status.stdout)
-        if status_records:
-            return _not_established()
         return _verified(protocol_commit, pair_commit)
