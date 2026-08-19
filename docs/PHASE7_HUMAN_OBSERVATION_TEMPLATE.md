@@ -162,7 +162,12 @@ CRITICAL items missed, by name: ____
 
 SUPPORTING item marks: ____
 
-Allowed SUPPORTING marks: `EXACT`, `APPROXIMATE`, `PARTIAL`, `NOT_STATED`.
+Allowed SUPPORTING marks: `EXACT`, `APPROXIMATE`, `PARTIAL`, `WRONG`, `NOT_STATED`.
+
+A `WRONG` mark does not fail the task. It is reported separately in the synthesis: a
+participant misreading the interface is a finding about the interface.
+
+Authority items marked `PARAPHRASE` (meaning stated without the frozen token): ____
 
 Participant literal words for each exact value or sequence item: ____
 

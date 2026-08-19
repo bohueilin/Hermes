@@ -62,7 +62,7 @@ identity = require_frozen_simulator_identity(protocol, ROOT)
 print(f"simulator preflight OK : {identity.version} @ {identity.commit[:12]}")
 print(f"HEAD                   : {head}")
 print(f"pair-plan base commit  : {pair.implementation_base_commit}")
-print(f"both targets absent    : yes\n")
+print("both targets absent    : yes\n")
 
 
 def run(run_id: str, shield: str, shield_config: str | None) -> dict:

@@ -13,7 +13,6 @@ import hashlib
 import json
 from pathlib import Path
 
-from hermes.adequacy.models import canonical_adequacy_json_bytes
 from hermes.evaluation_plans.materializer import (
     StudyProtocolAuthoringDraft,
     materialize,

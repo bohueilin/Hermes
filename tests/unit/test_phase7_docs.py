@@ -191,7 +191,8 @@ def test_phase7_observation_template_records_every_scoring_match_rule_field(
         "Moderator referenced a fact the participant interface does not expose:",
     ):
         assert field in text
-    assert "Allowed SUPPORTING marks: EXACT, APPROXIMATE, PARTIAL, NOT_STATED." in text
+    assert "Allowed SUPPORTING marks: EXACT, APPROXIMATE, PARTIAL, WRONG, NOT_STATED." in text
+    assert "PARAPHRASE" in text
     assert "is decided by the CRITICAL items alone" in text
     # the template stays blank: no expected answers may leak into the record
     assert "1.8155836417275437" not in text
@@ -284,7 +285,9 @@ def test_phase7_plan_freezes_ten_versioned_tasks_and_exact_answer_contract(
         "CRITICAL items decide the attempt",
         "SUPPORTING items are recorded for analysis",
         "Exact string match against the frozen token",
-        "reads aloud, points to, or transcribes",
+        "reads, points to, or transcribes the displayed value",
+        "PARAPHRASE",
+        "Spoken forms of authority tokens",
         "records the participant's literal words before marking",
         "excluded from task timing",
         "INSTRUCTIONAL_ASSISTANCE and removes the attempt from the unassisted numerator",

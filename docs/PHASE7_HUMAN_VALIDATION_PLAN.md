@@ -92,9 +92,10 @@ before cohort closure.
 
 ## Scoring match rule
 
-This rule binds every scored checklist item in Tasks 1–9 by its item type. Tasks do not annotate
-items individually; the moderator classifies each checklist item using the table below and marks
-it with that row's rule only. Without this rule two moderators can score the same spoken answer
+This rule binds every scored checklist item in Tasks 1–9 by its item type. **Each checklist
+bullet carries its own type tag**, so the moderator never has to classify anything: a bullet
+tagged `[AUTHORITY]` is marked with the authority row, `[DIRECTION]` with the direction row, and
+so on. A bullet that would need two types is split into two bullets. Without this rule two moderators can score the same spoken answer
 differently, and the protocol cannot claim deterministic scoring.
 
 CRITICAL items decide the attempt. A missed CRITICAL item makes the whole task incorrect.
@@ -108,8 +109,32 @@ whose type is not listed below is CRITICAL.
 | Direction — CRITICAL | `IMPROVED`, `REGRESSED`, or `UNCHANGED` for the named dimension, or an unambiguous plain-language equivalent such as "went up" / "got worse" | Mark correct when the stated direction matches the frozen direction. A hedge with no direction is incorrect. |
 | Named reason or count — CRITICAL | The reason token, for example `SPEED_CAP`, and the fact that no `TTC_BELOW_THRESHOLD` reason is recorded | Exact token match; the count must match the frozen integer. |
 | Non-causal conclusion — CRITICAL | A statement that the evidence does not demonstrate the mechanism, and rejection of every listed inference | Mark correct when the participant states the limitation in their own words and rejects each listed inference. |
-| Exact numeric value — SUPPORTING | The value as the interface displays it | Correct when the participant reads aloud, points to, or transcribes the interface's displayed value for that dimension. A rounded or approximate spoken value is `APPROXIMATE`, not incorrect. Record the participant's literal words. |
-| Exact event sequence — SUPPORTING | The sequence indices where the reason appears | Correct when every listed index is named. Partial recall is `PARTIAL`. Record what was named. |
+| Exact numeric value — SUPPORTING | The value as the interface displays it | `EXACT` when the participant reads, points to, or transcribes the displayed value. `APPROXIMATE` when rounded but consistent with it. **`WRONG`** when the stated value is inconsistent with the display — a different dimension's value, or a different order of magnitude. `NOT_STATED` otherwise. |
+| Exact event sequence — SUPPORTING | The sequence indices where the reason appears | `EXACT` when every index is named. `PARTIAL` when some are. **`WRONG`** when an index is named that does not appear. `NOT_STATED` otherwise. |
+
+Spoken forms of authority tokens. Participants speak English, not enum values. These forms are
+accepted as exact for the authority row; anything else is not:
+
+| Frozen token | Also accepted, spoken |
+|---|---|
+| `HOLD` | "hold" |
+| `CONDITIONAL` | "conditional" |
+| `PASS` | "pass", "passed" |
+| `INVALID_EVIDENCE` | "invalid evidence", "invalid" |
+| `INTERNALLY_CONSISTENT` | "internally consistent", "consistent" |
+| `NOT_AUTHENTICATED` | "not authenticated", "unauthenticated" |
+| `NOT_EVALUATED` | "not evaluated" |
+| `NONE` | "none", "no deployment permission" |
+| `SIMULATION_ONLY` | "simulation only" |
+| `NOT_DEFINED` | "not defined", "undefined" |
+
+A participant who says the *meaning* without the token — "it hasn't been checked by anyone
+outside" for `NOT_AUTHENTICATED` — is marked `PARAPHRASE`, which is **not** correct for an
+authority item. Record the words; do not argue the participant into the token.
+
+Digests and other 64-hex values are never required to be spoken. They are `SUPPORTING` and are
+marked `EXACT` when the participant points to or reads any leading portion that uniquely
+identifies the value on screen.
 
 Rules that bind every item type:
 
@@ -117,8 +142,12 @@ Rules that bind every item type:
 - Reading a value off the interface is not assistance. Being told where to look is
   `NEUTRAL_PROMPT`; being told what the value means is `INSTRUCTIONAL_ASSISTANCE`.
 - Time spent transcribing an exact value for the record is excluded from task timing.
-- A SUPPORTING item marked APPROXIMATE or PARTIAL never converts a correct attempt into an
+- A SUPPORTING item marked `APPROXIMATE` or `PARTIAL` never converts a correct attempt into an
   incorrect one, and never converts an incorrect attempt into a correct one.
+- A SUPPORTING item marked **`WRONG`** does not fail the task either, but it is reported
+  separately in the synthesis. A participant who reads the interface incorrectly is a finding
+  about the interface, and burying it inside a passed task would hide exactly what the study is
+  for.
 - No moderator may reference a fact the approved participant interface does not expose. Naming a
   challenge phase, the shield's configured threshold, or a recomputed target band is
   `INSTRUCTIONAL_ASSISTANCE` and removes the attempt from the unassisted numerator.
@@ -376,18 +405,19 @@ not support.
 
 Scoring checklist — correct only if every item is satisfied:
 
-- report comparison COMPATIBLE, baseline Gate verdict HOLD / Evidence integrity
+- `[AUTHORITY]` report comparison COMPATIBLE, baseline Gate verdict HOLD / Evidence integrity
   INTERNALLY_CONSISTENT, candidate Gate verdict HOLD / Evidence integrity
   INTERNALLY_CONSISTENT, and unchanged verdict `HOLD → HOLD`;
-- report minimum TTC: 1.8155836417275437 → 8.49579415469856 s (IMPROVED);
-- report route completion: 84.88178621406203 → 84.39151677812995 % (REGRESSED);
-- report maximum absolute acceleration: 12.683377265917573 → 13.003747463227677 m/s^2 (REGRESSED);
-- report maximum absolute jerk: 128.41591835005693 → 157.565283775339 m/s^3 (REGRESSED);
-- report SPEED_CAP at sequences 20, 26, and 32, the exact candidate override histogram
+- `[DIRECTION]` `[VALUE]` report minimum TTC: 1.8155836417275437 → 8.49579415469856 s (IMPROVED);
+- `[DIRECTION]` `[VALUE]` report route completion: 84.88178621406203 → 84.39151677812995 % (REGRESSED);
+- `[DIRECTION]` `[VALUE]` report maximum absolute acceleration: 12.683377265917573 → 13.003747463227677 m/s^2 (REGRESSED);
+- `[DIRECTION]` `[VALUE]` report maximum absolute jerk: 128.41591835005693 → 157.565283775339 m/s^3 (REGRESSED);
+- `[SEQUENCE]` report SPEED_CAP at sequences 20, 26, and 32
+- `[REASON]` report the exact candidate override histogram
   {SPEED_CAP: 3}, and zero recorded TTC_BELOW_THRESHOLD reasons;
-- state that the stored review evidence does not demonstrate TTC-target intervention or mechanism engagement; phase labels, the shield's configured TTC threshold, and target-band recomputation
+- `[CONCLUSION]` state that the stored review evidence does not demonstrate TTC-target intervention or mechanism engagement; phase labels, the shield's configured TTC threshold, and target-band recomputation
   are not exposed by the approved participant interface and therefore are not scored; and
-- characterize the mixed result as descriptive and non-causal, with no aggregate winner or advancement inference.
+- `[CONCLUSION]` characterize the mixed result as descriptive and non-causal, with no aggregate winner or advancement inference.
 
 Reject: engagement.
 
