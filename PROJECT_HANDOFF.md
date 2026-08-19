@@ -373,13 +373,28 @@ that never launches the simulator and is shared with runtime.
 | v4 | 4.0 s | 9 | selected | `INADEQUATE` — builder's own mis-declared policy digest |
 | v5 | 4.0 s | 9 | selected | **`ADEQUATE`**, all 17 criteria |
 
-**The headline is the negative result.** Across 65 registered baseline attempts the
-`metadrive-idm` policy never let policy-input TTC fall below **~3.11 s**, bracketed on both
-sides. A 2.0 s TTC shield is therefore **structurally unreachable** in this scenario family — the
-retained pair does not merely happen to lack an intervention. A competent car-following
-controller brakes early enough to preserve its own headway.
+**The headline is the negative result — as corrected on 2026-08-19.** Across 65 registered
+baseline attempts the `metadrive-idm` policy never let policy-input TTC fall below **~3.11 s**
+within the registered family.
 
-v5 then asked the same question at 4.0 s, above the measured floor, frozen in advance: exactly
+The original write-up attributed that floor to a controller "braking early enough to preserve its
+own headway". **That was wrong**, and Fable's round-1 review (F-05) caught it. The artifacts show
+the ego holding 8.000 m/s at zero brake until the lead reaches 30 m centre-to-centre, then
+braking fully. The floor is MetaDrive `IDMPolicy`'s **detection horizon**
+(`MAX_LONG_DIST = 30`): `(30 − 5.1275)/8.0 = 3.109062 s` against an observed
+`3.108394946413832 s`. A perception cutoff, not foresight.
+
+Ego target speed was fixed at 8.0 m/s in all 83 attempts and is not a mappable grid parameter,
+so the search could never vary the term the floor scales with. The claim is therefore bounded to
+the registered family and **not** a general statement that a 2.0 s threshold is unreachable —
+the retained cut-in baseline already reaches 1.8155836417275437 s.
+
+This correction matters more than the result: the phase built to catch a right number with a
+wrong causal story shipped exactly that, in its own headline.
+
+v5 then re-declared the question at 4.0 s, above the measured floor, frozen before any run
+under that protocol version existed — though seven of its nine grid points were re-runs of
+committed v2/v3 points, so a valid selection was already certain (see `DISCOVERY_RESULTS.md`): exactly
 three `TTC_BELOW_THRESHOLD` overrides at sequences 66/70/74, no confounding reason anywhere, arms
 bit-identical through sequence 65, and a fresh baseline reproducing the selected discovery
 observation exactly. **The first `TTC_BELOW_THRESHOLD` override recorded anywhere in the

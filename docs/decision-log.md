@@ -583,3 +583,72 @@ logs remain deferred.
 The two reviewer regressions and architecture boundary checks pass inside the 273-test suite.
 Clean-checkpoint fake, MetaDrive, challenge, fault, stored-verification, comparison, tamper, and
 determinism demonstrations were regenerated at `3c32c529e8be7127fbd71ecc467da007b2f72d5f`.
+
+## 2026-08-17 — Phase 7A evaluation adequacy: five protocol versions and the 4.0 s re-declaration
+
+Recorded 2026-08-19, after Fable round-1 review finding F-04. This entry is written
+after the fact and is labelled as such; it is not a contemporaneous approval record.
+
+### What happened
+
+Five protocol versions were registered and executed in a single 13-minute session
+(`69fe004` 18:35:25 → `cb6d669` 18:47:13), all authored by the implementation model:
+
+- v1–v3 searched at a 2.0 s declared threshold over 65 baseline attempts and selected
+  nothing.
+- v4 re-declared the threshold at 4.0 s and selected `grid-0000`; its assessment
+  returned `INADEQUATE` because the protocol mis-declared the policy config digest.
+- v5 corrected that digest and returned `ADEQUATE`.
+
+### Deviations from the approved design, stated plainly
+
+**Rule 11 of design §13.2** says "No automatic optimizer, reward search, or LLM
+parameter tuning", and `PROJECT_HANDOFF.md` §3 forbids an LLM entering "a
+parameter-selection loop that could shop for a favourable result". The executed
+process had the implementation model re-select the grid (v2, v3) and the criterion
+threshold (v4) from prior results. **That is contrary to the rule as written.**
+
+**No inter-version approval was recorded.** There was no owner sign-off between
+versions and no decision-log entry until this one.
+
+**The authorising amendment was still `PROPOSED`** and was first committed at
+`b029ca9`, after all runs completed.
+
+**The v5 outcome was not open at registration.** Seven of the nine v4/v5 grid points
+are re-runs of points already committed in the v2/v3 ledgers, six of them already
+known to be below 4.0 s, so a valid selection was certain before v4 was registered.
+The v5 primary traces are byte-identical to v4's (`26489bf0…`, `b2e651fa…`).
+Describing v5 as "frozen in advance" overstated what its registration established:
+it was frozen before any run *under that protocol version*, which is a weaker claim.
+
+### Why 4.0 s
+
+No document previously stated a rule. Recording it now: **4.0 s is the smallest round
+value above the observed ~3.11 s floor that leaves in-band baseline events at every
+gap the v2/v3 ledgers recorded below it.** It is illustrative and is not a safety
+criterion. The 2.0 s result stands unchanged in `DISCOVERY_RESULTS.md`.
+
+### Decisions
+
+1. **The rule is amended rather than declared violated in spirit.** An LLM may author
+   a successor protocol version only when: the grid or threshold change follows from
+   *disclosed evidence already committed* in a prior version's ledger; the successor is
+   baseline-informed only; it is frozen before any run under that version; and its
+   registration is recorded here with the value rule stated. Candidate outcomes may
+   never inform a successor. The alternative — requiring a human to author successor
+   versions — was rejected because the enforceable control is the record, not the
+   author, and an unenforceable rule is worse than an honest one.
+
+2. **The disclosure obligation is strengthened.** Any version whose grid overlaps a
+   prior version must state the overlap and whether a valid selection was already
+   certain. Applied to v4/v5 in `DISCOVERY_RESULTS.md`.
+
+3. **What v5 establishes is narrowed.** Because engagement is mechanical once a
+   baseline dips below a threshold the shield tests with the same predicate, the v5
+   `ADEQUATE` demonstrates the assessor's positive path and its bookkeeping — as v4's
+   `INADEQUATE` demonstrates its refusal path — and establishes nothing about the
+   shield beyond its unit-tested predicate.
+
+4. **Owner acceptance is required and is not recorded here.** This entry records what
+   the builder did. `PHASE7_TASK7_AND_TASK8_CONTRACT_AMENDMENT.md` remains `PROPOSED`
+   and `P7-HV-07` remains `BLOCKED` until Bo-Huei approves.

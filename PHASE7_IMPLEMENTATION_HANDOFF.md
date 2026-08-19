@@ -89,19 +89,26 @@ three that found nothing and the one whose assessment failed. See
 
 Across 65 registered baseline attempts in versions 1-3, the `metadrive-idm`
 policy never let the policy-input TTC fall below about **3.11 s** in a
-lead-vehicle hard-brake encounter. The search is bracketed on both sides: the
-minimum is flat near 3.11 s at 30-40 m initial gap and rises to 10.3 s at 100 m.
+lead-vehicle hard-brake encounter within the registered family.
 
-A deterministic shield with a 2.0 s TTC threshold therefore **cannot** engage in
-this scenario family at all. The retained `handoff-p3-lead-*` pair does not
-merely happen to lack a TTC intervention — the intervention is structurally
-unreachable at that threshold. This is the finding that justified the Phase 7
-showcase moratorium, now established by measurement rather than inference.
+**Corrected 2026-08-19 (Fable round-1 F-05).** The original text attributed this
+to a controller braking early to preserve headway. That was wrong. The ego holds
+8.000 m/s at zero brake until the lead reaches 30 m centre-to-centre, then brakes
+fully: the floor is MetaDrive `IDMPolicy`'s detection horizon `MAX_LONG_DIST = 30`,
+giving `(30 − 5.1275)/8.0 = 3.109062 s` against an observed `3.108394946413832 s`.
+
+Ego target speed was fixed at 8.0 m/s in all 83 attempts and is not a mappable
+grid parameter, so the claim is bounded to the registered family and is not a
+general unreachability result. `minimum_policy_input_ttc_s` is also a
+BRAKING-window figure: 19 of 65 attempts have a lower whole-run minimum and 5 runs
+truncated at `DESTINATION_REACHED`.
 
 ### 3.2 The positive result
 
-v5 asks the same question at a 4.0 s threshold, above the measured floor, frozen
-before any v5 run existed. All seventeen criteria pass.
+v5 re-declares the question at a 4.0 s threshold, above the measured floor, frozen
+before any run under that protocol version existed. Seven of its nine grid points
+are re-runs of committed v2/v3 points, so a valid selection was already certain;
+the pair demonstrates the assessor, not the shield. All seventeen criteria pass.
 
 - Pair: `handoff-p7b-lead-baseline` → `handoff-p7b-lead-candidate`
 - Adequacy `ADEQUATE`, disposition `TARGET_INTERVENTION_RECORDED`

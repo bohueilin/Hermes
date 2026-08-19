@@ -4,12 +4,16 @@
 # Illustrative simulation-only thresholds. These are not real-vehicle limits.
 #
 # Why 4.0 s and not 2.0 s: 65 registered baseline discovery attempts across
-# protocol versions 1-3 (see evaluation-plans/DISCOVERY_RESULTS.md) established
-# that the metadrive-idm policy never lets the policy-input TTC fall below about
-# 3.11 s in a lead-vehicle hard-brake encounter. A 2.0 s threshold is therefore
-# structurally unreachable for this challenge and policy, and that negative
-# result stands unchanged in the record. This configuration asks a different,
-# explicitly stated question at a threshold above the measured floor.
+# protocol versions 1-3 (see evaluation-plans/DISCOVERY_RESULTS.md) observed a
+# floor of about 3.11 s in a lead-vehicle hard-brake encounter with this policy at
+# an 8.0 m/s ego target speed. That floor is MetaDrive IDMPolicy's 30 m detection
+# horizon, not a headway-preserving controller, and it scales with target speed,
+# which no registered attempt varied. The 2.0 s question is therefore unreachable
+# within the registered family rather than unreachable in general.
+#
+# 4.0 s is the smallest round value above the observed floor that leaves in-band
+# baseline events at every gap the v2/v3 ledgers recorded below it. It is
+# illustrative, not a safety criterion.
 #
 # Every non-target trigger remains non-binding, and configuration alone does not
 # prove that: the assessor also requires event evidence that no non-target reason

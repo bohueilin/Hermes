@@ -115,18 +115,58 @@ v3 extended the gap in the direction v2 favoured and the trend reversed:
 | 100.0 | 10.313028788093142 | 9.65739937864893 | 8.805536544980038 |
 
 Together with the v2 row at 30 m (3.113655645906048 s), the observed minimum is
-now bracketed on both sides with a flat floor near 3.11 s at 30-40 m.
+flat near 3.11 s for every gap at or above 30 m and rises above it. The low side
+is limited by how far the ego can run up before the encounter; the high side by
+the measurement window and the road length. This is **not** a two-sided bracket
+of a physical optimum, and the earlier text saying so was wrong.
 
-**This is the substantive Phase 7A finding.** Across 65 registered baseline
-attempts spanning three protocol versions, the `metadrive-idm` policy never let
-the policy-input TTC fall below about 3.11 s in a lead-vehicle hard-brake
-encounter. The floor is a property of the baseline car-following policy, which
-brakes early enough to preserve its own headway.
+**Correction, 2026-08-19 (Fable round-1 finding F-05).** The original text
+attributed this floor to "a car-following policy that brakes early enough to
+preserve its own headway". **That attribution was wrong**, and it was wrong in
+the same way the Phase 7A showcase was wrong: a real number with an invented
+mechanism.
 
-A deterministic shield whose `ttc_threshold_s` is 2.0 s therefore **cannot**
-engage in this scenario family at all. The retained `handoff-p3-lead-*` pair does
-not merely happen to lack a TTC intervention; the intervention is structurally
-unreachable for this challenge and policy at that threshold.
+The artifacts show the opposite of early braking. In
+`artifacts/p7-v5-discovery-0000`, the ego holds **8.000 m/s with `brake` 0.00 and
+`throttle` 0.000** from sequence 64 through 73 — it does not respond to the
+decelerating lead at all — and then applies **`brake` 1.00** at sequence 74, the
+step at which the minimum is recorded.
+
+The mechanism is MetaDrive `IDMPolicy`'s detection horizon.
+`third_party/metadrive/metadrive/policy/idm_policy.py:212` sets
+`MAX_LONG_DIST = 30`: the policy does not perceive the lead beyond 30 m
+centre-to-centre, then brakes hard. With the two vehicle lengths giving a
+5.1275 m bumper offset and the ego at its 8.0 m/s target:
+
+```text
+(30 − 5.1275) / 8.0 = 3.109062 s
+```
+
+The observed minimum across all 65 attempts is **3.108394946413832 s** — a match
+to four significant figures. The floor is a perception cutoff, not conservative
+foresight.
+
+**What this does and does not license.** `control.target_speed_mps` was fixed at
+**8.0** in every one of the 83 registered attempts, is not a mappable grid
+parameter, and is the term the floor scales with. The search could never have
+varied it. So the correct statement is:
+
+> Within the registered family — lead-vehicle hard brake, `metadrive-idm`, ego
+> target speed 8.0 m/s, actor speed ≤ 8.0 m/s — no baseline entered the 2.0 s
+> band, and the floor is set by the policy's 30 m detection horizon.
+
+It is **not** established that a 2.0 s threshold is unreachable for this policy in
+general. The floor scales as roughly `(30 − 5.13)/v`, so a legal template edit to
+a higher ego target speed would be expected to reach the band. The retained cut-in
+baseline already reaches 1.8155836417275437 s, so 2.0 s is reachable elsewhere in
+Hermes today.
+
+**Measurement caveat.** `minimum_policy_input_ttc_s` is derived over the
+**BRAKING window only**. Of the 65 v1–v3 attempts, **19** have a whole-run minimum
+*below* their recorded braking-window minimum, and **5** ended
+`DESTINATION_REACHED` before the encounter concluded. The whole-run global minimum
+across v1–v3 is **3.1020836761465693 s**. The recorded figures are correct for the
+declared window and should not be read as whole-run minima.
 
 ### Consequence
 
@@ -148,6 +188,18 @@ be exercised. The 2.0 s result stands unchanged in this record.
 **Discovery outcome: SELECTED `attempt-0000` / `grid-0000`** (30 m gap, 8.0 m/s
 actor, trigger 60, 30 braking steps, zero resume throttle) with an observed
 minimum policy-input TTC of 3.1221979708407908 s.
+
+**Overlap disclosure (added 2026-08-19, Fable round-1 F-04).** Seven of the nine
+v4 grid points are re-runs of points already committed in the v2 and v3 ledgers,
+and six of those were already recorded below 4.0 s. A valid selection was
+therefore **certain before v4 was registered**. Because the shield tests the same
+predicate on the same observation the ledger formula uses, candidate engagement
+follows mechanically once a baseline dips below the declared threshold.
+
+What the v4/v5 pair establishes is the behaviour of the **assessor**: v4's
+`INADEQUATE` demonstrates its refusal path and v5's `ADEQUATE` its positive path
+and bookkeeping. Neither establishes anything about the shield beyond its
+unit-tested predicate.
 
 **Assessment outcome: INADEQUATE — mis-declared policy component identity.**
 

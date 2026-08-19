@@ -198,6 +198,51 @@ def test_phase7_observation_template_records_every_scoring_match_rule_field(
     assert "SPEED_CAP" not in text
 
 
+def test_phase7_record_does_not_reassert_the_corrected_floor_mechanism(
+    repository_root: Path,
+) -> None:
+    """The 3.11 s floor is a detection horizon, not a headway-preserving controller.
+
+    Fable round-1 F-05: the original attribution was a real number with an invented
+    mechanism - the exact failure Phase 7A exists to catch - so it is pinned here.
+    """
+    for name in (
+        "PROJECT_HANDOFF.md",
+        "PHASE7_IMPLEMENTATION_HANDOFF.md",
+    ):
+        text = (repository_root / name).read_text(encoding="utf-8")
+        assert "brakes early enough to preserve its own headway" not in text, name
+        assert "MAX_LONG_DIST" in text or "detection horizon" in text, name
+
+    record = (repository_root / "evaluation-plans" / "DISCOVERY_RESULTS.md").read_text(
+        encoding="utf-8"
+    )
+    assert "detection horizon" in record
+    assert "3.109062" in record
+    # the bounded claim must name the fixed term the floor scales with
+    assert "target speed" in record.lower()
+    # and must not reassert unqualified unreachability
+    assert "structurally\nunreachable" not in record
+    for line in record.splitlines():
+        if "unreachable" in line:
+            assert "within the registered family" in line or "not" in line, line
+
+
+def test_phase7_blocked_requirement_is_not_promoted_in_traceability(
+    repository_root: Path,
+) -> None:
+    """P7-HV-07 is BLOCKED in the governing documents; no other file may promote it."""
+    matrix = (repository_root / "docs" / "PHASE7_REQUIREMENTS_TRACEABILITY.md").read_text(
+        encoding="utf-8"
+    )
+    rows = [line for line in matrix.splitlines() if line.startswith("| P7-HV-07 |")]
+    assert len(rows) == 1, rows
+    status = rows[0].rstrip("|").rsplit("|", 1)[-1].strip()
+    assert status.startswith("BLOCKED"), status
+    for name in ("PROJECT_HANDOFF.md", "PHASE7_IMPLEMENTATION_HANDOFF.md"):
+        assert "BLOCKED" in (repository_root / name).read_text(encoding="utf-8"), name
+
+
 def test_phase7_plan_freezes_ten_versioned_tasks_and_exact_answer_contract(
     repository_root: Path,
 ) -> None:
