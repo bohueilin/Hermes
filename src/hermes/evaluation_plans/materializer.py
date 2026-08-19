@@ -18,6 +18,7 @@ a fully validated template and revalidates the result.
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal
 
@@ -129,7 +130,11 @@ def serialize_scenario(scenario: ScenarioDefinition) -> bytes:
 
 def serialize_protocol(protocol: StudyProtocol) -> bytes:
     """Serialize the final protocol with the frozen plan-YAML contract."""
-    payload = yaml.safe_load(canonical_adequacy_json_bytes(protocol).decode("utf-8"))
+    # Decode with json, not yaml: canonical JSON prints small floats as `1e-05`, and
+    # YAML 1.1 requires a dot in exponential floats, so yaml.safe_load would silently
+    # turn them into strings - producing an unloadable protocol and a semantic digest
+    # that cannot be reproduced.
+    payload = json.loads(canonical_adequacy_json_bytes(protocol).decode("utf-8"))
     text = yaml.safe_dump(
         payload,
         allow_unicode=True,

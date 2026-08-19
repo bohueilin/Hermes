@@ -496,7 +496,7 @@ def test_comparison_invalid_selection_preserves_last_accepted_submitted_sides(
     baseline = "handoff-p3-lead-baseline"
     candidate = "handoff-p3-lead-shielded"
     app = _compare(_workflow(_app(workbench_root), "Compare"), baseline, candidate)
-    assert "Minimum TTC improved" in _visible_text(app)
+    assert "no overall advancement claim" in _visible_text(app)
 
     app.text_input(key="comparison_baseline_draft").input("../outside").run(timeout=30)
     app = app.button(key="compare_stored_evidence").click().run(timeout=30)
@@ -507,7 +507,7 @@ def test_comparison_invalid_selection_preserves_last_accepted_submitted_sides(
     assert app.session_state.filtered_state["comparison_requested"] is True
     assert f"Submitted baseline: {baseline} [OBSERVED]" in _visible_text(app)
     assert f"Submitted candidate: {candidate} [OBSERVED]" in _visible_text(app)
-    assert "Minimum TTC improved" in _visible_text(app)
+    assert "no overall advancement claim" in _visible_text(app)
 
 
 @pytest.mark.parametrize(
@@ -921,10 +921,11 @@ def test_compatible_comparison_requires_explicit_mixed_outcome_synthesis_without
     assert _NON_CAUSAL_COMPARISON_LIMITATION in visible
     assert "Advancement interpretation" not in headings
     assert (
-        "Minimum TTC improved. Route completion, acceleration, and jerk regressed. "
-        "The gate verdict did not improve. This is a mixed trade-off and does not "
-        "establish overall advancement."
+        "Hermes makes no overall advancement claim. Per-dimension changes are shown "
+        "below as descriptive outcomes and are not evidence of a causal effect."
     ) in visible
+    # the composed sentence must not name a direction anywhere in the synthesis
+    assert "Minimum TTC improved" not in visible
     assert "winner" not in visible.lower()
     assert "overall safety score" not in visible.lower()
     for forbidden in ("ranked candidate", "candidate is safer", "recommended policy"):

@@ -1021,8 +1021,13 @@ class SideReviewState(_AdequacyModel):
             ):
                 raise ValueError("invalid evidence must be quarantined with diagnostics")
             return self
-        if self.gate_verdict not in {"PASS", "CONDITIONAL", "HOLD"}:
-            raise ValueError("consistent evidence requires accepted gate")
+        # Integrity and gate verdict are independent planes. A bundle can verify
+        # byte-for-byte while its recomputed gate returns INVALID_EVIDENCE - for
+        # example a finding set that does not match the declared profile. Rejecting
+        # that here would couple adequacy to a verdict value, which is precisely the
+        # coupling this phase exists to forbid.
+        if self.gate_verdict not in {"PASS", "CONDITIONAL", "HOLD", "INVALID_EVIDENCE"}:
+            raise ValueError("consistent evidence requires a recomputed gate verdict")
         identity = self.identity
         required = (
             identity.observed_run_id,

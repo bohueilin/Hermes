@@ -55,7 +55,7 @@ Fable's verdict — accept the machinery, hold the record and Phase 7B — is co
 | **F-13** | `ACCEPT` | Add the in-band non-gate statement to envelope limitations. The JSON is the machine-consumable surface and carried no such statement. |
 | **F-20** | `ACCEPT` | Typed closed `reason` on `REGISTRATION_NOT_ESTABLISHED`. Twelve causes collapsing into one silent status is the same compression error the project forbids elsewhere. |
 | **F-21** | `ACCEPT` | Real bug: `serialize_protocol` round-trips through YAML and emits exponential floats that reload as strings. Fixed by canonical-JSON round-trip, with a regression test at `1e-05`. |
-| **F-26** | `ACCEPT` | Move the non-causal limitation into `ComparisonEnvelope.residual_limitations` and delete the UI-composed directional sentence. This is also Fable's decision on **E**, which I accept: suppress the synthesis, keep the typed partition polarity. |
+| **F-26** | `ACCEPT` (part 2 of 2) · **part 1 `DEFER`** | Deleted the UI-composed directional sentence — this is Fable's decision on **E**, which I accept: suppress the synthesis, keep the typed partition polarity. **Moving the limitation into `ComparisonEnvelope.residual_limitations` was attempted and reverted**: it changes `ComparisonEnvelope 1.0` canonical bytes, and design §23.5 makes that a *rollback trigger* without an approved schema version. It belongs with Fable's own Phase 8A proposal of `ComparisonEnvelope 1.1`. The fixed copy stays renderer-owned for now, and the machine surface still lacks the statement — recorded in `PROJECT_HANDOFF.md` §10. |
 | **F-33** | `ACCEPT` | Folded into F-01 (delete `merge-base`); grafts/shallow caveat added to the boundary text. |
 
 ### P2/P3 — deferred, with reasons

@@ -1079,12 +1079,30 @@ def test_unverified_candidate_carries_no_parsed_or_verified_claims(
         SideReviewState.model_validate({**candidate.model_dump(), **updates})
 
 
-def test_internally_consistent_side_requires_an_accepted_gate() -> None:
+def test_internally_consistent_side_requires_a_recomputed_gate_verdict() -> None:
     candidate = _side_state("CANDIDATE")
-    with pytest.raises(ValidationError, match="consistent evidence requires accepted gate"):
+    with pytest.raises(
+        ValidationError, match="consistent evidence requires a recomputed gate verdict"
+    ):
         SideReviewState.model_validate(
             {**candidate.model_dump(), "gate_verdict": None}
         )
+
+
+def test_internally_consistent_side_accepts_any_recomputed_verdict_value() -> None:
+    """Integrity and gate verdict are independent planes.
+
+    Fable round-1 F-12: a bundle can verify byte-for-byte while its recomputed gate
+    returns INVALID_EVIDENCE - a finding set that does not match the declared profile,
+    for instance. Rejecting that coupled the adequacy plane to a verdict value.
+    """
+    candidate = _side_state("CANDIDATE")
+    for verdict in ("PASS", "CONDITIONAL", "HOLD", "INVALID_EVIDENCE"):
+        state = SideReviewState.model_validate(
+            {**candidate.model_dump(), "gate_verdict": verdict}
+        )
+        assert state.gate_verdict == verdict
+        assert state.integrity == "INTERNALLY_CONSISTENT"
 
 
 def test_unverified_side_is_only_allowed_after_baseline_invalid_evidence() -> None:

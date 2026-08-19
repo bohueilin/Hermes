@@ -20,6 +20,9 @@ _LIMITATIONS = (
     "Simulation-only stored evidence does not establish real-world safety or "
     "deployment permission.",
     "Local artifact and Git history observations are not authenticated.",
+    "Adequacy is a claim precondition for the declared engagement question only. It "
+    "does not change or rank gate verdicts and establishes no safety, approval, "
+    "authorization, or deployment conclusion.",
 )
 _BOUNDARY_FAILURE = object()
 

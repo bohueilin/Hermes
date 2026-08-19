@@ -143,11 +143,6 @@ _OPTIONAL_UNAVAILABLE_COPY = (
 _NOT_APPLICABLE_COPY = (
     "This verifier is not required or evaluated under the selected profile."
 )
-_MIXED_COMPARISON_COPY = (
-    "Minimum TTC improved. Route completion, acceleration, and jerk regressed. The gate "
-    "verdict did not improve. This is a mixed trade-off and does not establish overall "
-    "advancement."
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1062,40 +1057,19 @@ def _comparison_partition_rows(items: Sequence[object]) -> tuple[dict[str, str],
 
 
 def _comparison_interpretation(envelope: ComparisonEnvelope) -> str:
-    if envelope.improvements and envelope.regressions:
-        improvement_ids = {item.dimension_id for item in envelope.improvements}
-        regression_ids = {item.dimension_id for item in envelope.regressions}
-        if (
-            "minimum_ttc_s" in improvement_ids
-            and {
-                "route_completion_pct",
-                "max_abs_acceleration_mps2",
-                "max_abs_jerk_mps3",
-            }.issubset(regression_ids)
-            and envelope.verdict_delta is not None
-            and envelope.verdict_delta.status == "UNCHANGED"
-        ):
-            return _MIXED_COMPARISON_COPY
-        return (
-            "Improvements and regressions coexist. This is a mixed trade-off; Hermes "
-            "makes no overall advancement claim."
-        )
-    if envelope.improvements:
-        return (
-            "Comparable improvements are present without a comparable regression. The gate "
-            "outcome and authority boundaries remain independent; Hermes makes no overall "
-            "advancement claim."
-        )
-    if envelope.regressions:
-        return (
-            "Comparable regressions are present without a comparable improvement. Hermes "
-            "makes no overall advancement claim."
-        )
-    return (
-        "No comparable dimension improved or regressed. Hermes makes no overall "
-        "advancement claim."
-    )
+    """Return a fixed, non-directional statement.
 
+    The workbench used to compose a sentence naming which dimension improved. That
+    sentence sat above the limitations and invited exactly the mechanism inference
+    Phase 7A exists to prevent, on a pair that may never have exercised its declared
+    question. Typed per-dimension polarity stays in the partition tables, where it is
+    descriptive and labelled; the synthesis does not.
+    """
+    del envelope
+    return (
+        "Hermes makes no overall advancement claim. Per-dimension changes are shown "
+        "below as descriptive outcomes and are not evidence of a causal effect."
+    )
 
 def _compatibility_reason_rows(envelope: ComparisonEnvelope) -> tuple[dict[str, str], ...]:
     return tuple(

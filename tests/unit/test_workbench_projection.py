@@ -1206,11 +1206,18 @@ def test_descriptive_interpretation_retains_factual_partitions_without_causal_in
     unchanged_copy = workbench_app._comparison_interpretation(unchanged)
     assert "mixed trade-off" not in unchanged_copy.lower()
     assert "no overall advancement" in unchanged_copy.lower()
-    assert workbench_app._comparison_interpretation(mixed) == (
-        "Minimum TTC improved. Route completion, acceleration, and jerk regressed. "
-        "The gate verdict did not improve. This is a mixed trade-off and does not "
-        "establish overall advancement."
+    # Fable round-1 F-26 / open question E: the synthesis no longer names a direction.
+    # Per-dimension polarity stays in the partition tables, where it is typed and
+    # labelled; a composed sentence above them invited causal inference on a pair that
+    # may never have exercised its declared question.
+    fixed = (
+        "Hermes makes no overall advancement claim. Per-dimension changes are shown "
+        "below as descriptive outcomes and are not evidence of a causal effect."
     )
+    assert workbench_app._comparison_interpretation(mixed) == fixed
+    assert workbench_app._comparison_interpretation(unchanged) == fixed
+    assert "improved" not in fixed.lower()
+    assert "regressed" not in fixed.lower()
     mixed_copy = workbench_app._comparison_interpretation(mixed).lower()
     for forbidden in (
         "challenge engaged",
@@ -1221,11 +1228,12 @@ def test_descriptive_interpretation_retains_factual_partitions_without_causal_in
         "winner",
     ):
         assert forbidden not in mixed_copy
+    # every shape now yields the same non-directional statement
     different_copy = workbench_app._comparison_interpretation(different_mixed)
+    assert different_copy == fixed
     assert "Minimum TTC improved" not in different_copy
     assert "gate verdict did not improve" not in different_copy
-    assert "mixed trade-off" in different_copy
-    assert "no overall advancement" in different_copy
+    assert "no overall advancement" in different_copy.lower()
 
 
 def test_categorized_text_row_bounds_controls_and_marks_missing_values_unavailable() -> None:

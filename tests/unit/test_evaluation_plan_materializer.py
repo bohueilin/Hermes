@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from adequacy_plan_fixtures import (
@@ -326,3 +328,32 @@ def test_materializer_never_imports_metadrive_or_launches_a_process() -> None:
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == ""
+
+
+def test_protocol_serialization_survives_exponential_float_scalars() -> None:
+    """Small floats must not become strings on the way out.
+
+    Fable round-1 F-21: canonical JSON prints 1e-05 without a dot, and YAML 1.1 only
+    recognises exponential floats that have one. Round-tripping the protocol through
+    yaml.safe_load therefore turned such scalars into strings, producing a protocol
+    that would not reload and a semantic digest that could not be reproduced.
+    """
+    result = _materialize(
+        (
+            ("initial_gap_m", (30.0,)),
+            ("actor_speed_mps", (8.0,)),
+            ("trigger_step", (60,)),
+            ("brake_duration_steps", (30,)),
+            ("recovery_throttle", (1e-05,)),
+        )
+    )
+    text = result.protocol_yaml_bytes.decode("utf-8")
+    assert "'1e-05'" not in text and '"1e-05"' not in text
+
+    reloaded = yaml.safe_load(text)
+    value = reloaded["materializer"]["variants"][0]["parameters"][4]["value"]
+    assert isinstance(value, float) and value == 1e-05
+
+    # the reloaded protocol must still validate and reproduce its own digests
+    restored = StudyProtocol.model_validate_json(json.dumps(reloaded))
+    assert serialize_protocol(restored) == result.protocol_yaml_bytes
