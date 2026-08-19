@@ -41,6 +41,10 @@ markers = [
 line-length = 100
 src = ["src", "tests"]
 target-version = "py311"
+# tools/phase7-authoring is a committed historical record of the scripts that produced
+# the Phase 7A evidence, preserved verbatim for inspection. Linting it would mean
+# editing it, which would destroy the thing it exists to be.
+extend-exclude = ["tools/phase7-authoring"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
