@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib
+import json
+import math
 import os
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
@@ -13,6 +15,7 @@ from hermes import __version__
 from hermes.adequacy import models as _models
 from hermes.adequacy.assessment import _assess_captured_pair
 
+_MAX_LEDGER_EVENTS_BYTES = 16 * 1024 * 1024
 _LIMITATIONS = (
     "Simulation-only stored evidence does not establish real-world safety or "
     "deployment permission.",
@@ -452,6 +455,114 @@ def _evaluated_envelope(
     )
 
 
+
+_DISCOVERY_UNVERIFIED_LIMITATION = (
+    "Discovery observations for non-selected attempts are self-reported: their "
+    "artifacts were not present under the supplied artifact root and were not "
+    "recomputed."
+)
+
+
+def _verify_discovery_ledger(
+    plans: object,
+    artifacts: Path,
+) -> tuple[bool, int, int]:
+    """Recompute every discovery observation whose artifacts are present.
+
+    The selection rule is only machinery if the numbers it selects on are checked.
+    Without this, an author who ran every variant privately can report earlier grid
+    points as not threshold-matched and select any point they like, because nothing
+    ever resolves a non-selected entry's artifacts. Returns
+    (all_present, verified_count, total_count); a mismatch raises.
+    """
+    entries = tuple(getattr(plans, "ledger", ()) or ())
+    verified = 0
+    for entry in entries:
+        locator = getattr(entry, "artifact_locator", None)
+        if not isinstance(locator, str) or not locator:
+            continue
+        try:
+            directory = _resolve_under_root(artifacts, locator)
+        except (OSError, ValueError):
+            continue
+        if directory is None or not directory.is_dir():
+            continue
+        bundle = directory / "bundle.sha256"
+        trace = directory / "trace.sha256"
+        if not bundle.is_file() or not trace.is_file():
+            continue
+        if (
+            bundle.read_text(encoding="utf-8").strip()
+            != entry.bundle_digest_sha256
+            or trace.read_text(encoding="utf-8").strip() != entry.trace_digest_sha256
+        ):
+            raise _InvalidPlanBoundary
+        observed = _recompute_selection_observation(directory / "events.jsonl")
+        declared = tuple(entry.selection_evidence.observations)
+        if declared:
+            if observed is None or observed != declared[0].machine_value:
+                raise _InvalidPlanBoundary
+        elif observed is not None:
+            raise _InvalidPlanBoundary
+        verified += 1
+    return verified == len(entries), verified, len(entries)
+
+
+def _resolve_under_root(root: Path, locator: str) -> Path | None:
+    """Resolve a repository-relative artifact locator strictly under one root."""
+    if locator.startswith("/") or "\\" in locator or "\x00" in locator:
+        return None
+    parts = PurePosixPath(locator).parts
+    if any(part in {"", ".", ".."} for part in parts):
+        return None
+    # ledgers record `artifacts/<run-id>`; the caller supplies the artifact root
+    if parts and parts[0] == root.name:
+        parts = parts[1:]
+    if not parts:
+        return None
+    candidate = root.joinpath(*parts)
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    return candidate
+
+
+def _recompute_selection_observation(events_path: Path) -> float | None:
+    """Recompute the minimum BRAKING policy-input TTC with the assessor's own rule."""
+    if not events_path.is_file():
+        return None
+    if events_path.stat().st_size > _MAX_LEDGER_EVENTS_BYTES:
+        raise _InvalidPlanBoundary
+    best: float | None = None
+    with events_path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+                summary = event["observation_summary"]
+            except (ValueError, KeyError, TypeError):
+                raise _InvalidPlanBoundary from None
+            if summary.get("challenge_phase") != "BRAKING":
+                continue
+            distance = summary.get("front_distance_m")
+            speed = summary.get("front_relative_speed_mps")
+            if not isinstance(distance, (int, float)) or isinstance(distance, bool):
+                continue
+            if not isinstance(speed, (int, float)) or isinstance(speed, bool):
+                continue
+            if speed >= 0.0:
+                continue
+            value = distance / -speed
+            if not math.isfinite(value):
+                continue
+            if best is None or value < best:
+                best = value
+    return best
+
+
 def assess_review_pair_adequacy(
     repository_root: Path,
     artifact_root: Path,
@@ -559,6 +670,22 @@ def assess_review_pair_adequacy(
         raise AdequacyServiceError(
             plan_failure,
             "Evaluation plan capture could not be completed safely.",
+        )
+
+    discovery_verification_failed = False
+    discovery_fully_verified = True
+    try:
+        discovery_fully_verified, _verified, _total = _verify_discovery_ledger(
+            plans, artifacts
+        )
+    except _InvalidPlanBoundary:
+        discovery_verification_failed = True
+    except Exception:
+        discovery_verification_failed = True
+    if discovery_verification_failed:
+        raise AdequacyServiceError(
+            AdequacyServiceErrorKind.INVALID_PLAN,
+            "A discovery-ledger observation contradicts its stored artifacts.",
         )
 
     mapping_failure: AdequacyServiceErrorKind | None = None

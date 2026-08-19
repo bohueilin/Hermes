@@ -76,4 +76,18 @@ Fable's verdict — accept the machinery, hold the record and Phase 7B — is co
 
 **Nothing material.** Two scope choices differ from Fable's first suggestion — F-02 (commit and disclose now, build the CLI in Phase 8) and F-04 (keep LLM authorship, strengthen the record) — and both are argued above rather than silently taken.
 
+**One severity correction, found while building the fix.** F-03 states an author can
+"select any grid point by reporting earlier points as not threshold-matched" and still
+receive `ADEQUATE`. I tried to write that end-to-end exploit as a test and could not: a
+post-hoc ledger edit is rejected by the pair plan's `selected_discovery_attempt_id` and
+selection-evidence digest, and a coherently authored shopped plan set still has to defeat
+the pair-plan variant binding and the Git blob check on the tracked selected scenario. My
+first two attempts at the test passed *without* the fix, for those reasons.
+
+So F-03's practical exploitability is lower than the finding claims. The hole it names is
+nonetheless real and is now closed: before this change **no code path resolved a
+non-selected entry's artifacts at all**, so those observations were accepted on the
+author's word. The fix is defence in depth, and the test says so rather than claiming to
+block an attack it does not block.
+
 One correction to the review itself: F-27 asserts the "first `TTC_BELOW_THRESHOLD` anywhere" claim is misattributed to the v5 primary. It is accurate as written for the *primary pair*, but Fable is right that the v4 primary recorded it first and the v4/v5 traces are byte-identical. The sentence is corrected to say so.
