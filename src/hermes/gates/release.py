@@ -71,6 +71,21 @@ EXPECTED_FINDINGS_BY_PROFILE: Mapping[
     }
 )
 
+EXPLICITLY_ORDERED_HARD_FINDING_IDS: frozenset[str] = frozenset(
+    {
+        "trace.integrity",
+        "collision.zero",
+        "boundary.within_tolerance",
+        "progress.required",
+        "fault.coverage.required",
+    }
+)
+"""Hard findings that have their own branch in the precedence chain below.
+
+Every other hard finding is caught by the non-compensatory catch-all, so registering a new
+hard finding in a verifier profile can never silently produce PASS while that finding fails.
+"""
+
 _COMMON_EVIDENCE_REQUIREMENTS = (
     EvidenceRequirement("trace.integrity", EvidenceRequiredness.REQUIRED),
     EvidenceRequirement("collision.zero", EvidenceRequiredness.REQUIRED),
@@ -190,6 +205,19 @@ def apply_release_gate(
         for finding in by_id.get("fault.coverage.required", [])
         if finding.status is not FindingStatus.PASS
     ]
+    unhandled_hard = [
+        finding
+        for finding in findings
+        if finding.hard_invariant
+        and finding.finding_id not in EXPLICITLY_ORDERED_HARD_FINDING_IDS
+        and finding.status is not FindingStatus.PASS
+    ]
+    unhandled_hard_unavailable = [
+        finding for finding in unhandled_hard if finding.status is FindingStatus.NOT_AVAILABLE
+    ]
+    unhandled_hard_failures = [
+        finding for finding in unhandled_hard if finding.status is FindingStatus.FAIL
+    ]
     soft_nonpassing = [
         finding
         for finding in findings
@@ -233,6 +261,18 @@ def apply_release_gate(
         verdict = Verdict.HOLD
         rationale = ("Required mission progress criterion failed.",)
         hard = tuple(finding.finding_id for finding in progress_failures)
+    elif unhandled_hard_unavailable:
+        verdict = Verdict(config.hard.missing_required_evidence)
+        rationale = (
+            "Required hard-invariant evidence is NOT_AVAILABLE; advancement fails closed.",
+        )
+        hard = tuple(finding.finding_id for finding in unhandled_hard_unavailable)
+    elif unhandled_hard_failures:
+        verdict = Verdict.HOLD
+        rationale = (
+            "A hard invariant failed; positive soft results cannot compensate.",
+        )
+        hard = tuple(finding.finding_id for finding in unhandled_hard_failures)
     elif soft_nonpassing:
         verdict = Verdict.CONDITIONAL
         rationale = (

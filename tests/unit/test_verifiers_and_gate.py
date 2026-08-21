@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import MappingProxyType
 
 import pytest
 
@@ -545,3 +546,128 @@ def test_fault_coverage_profile_rejects_legacy_suite_without_coverage_finding(
 
     assert result.verdict is Verdict.INVALID_EVIDENCE
     assert result.hard_failures == ("gate.finding-set",)
+
+
+def _extended_legacy_profile(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    finding_id: str,
+    identity: tuple[str, str, bool],
+) -> None:
+    """Register one extra expected finding on the legacy profile for this test only."""
+    monkeypatch.setattr(
+        release_gate,
+        "EXPECTED_FINDINGS_BY_PROFILE",
+        MappingProxyType(
+            {
+                **release_gate.EXPECTED_FINDINGS_BY_PROFILE,
+                VerifierProfile.LEGACY: MappingProxyType(
+                    {**release_gate.LEGACY_EXPECTED_FINDINGS, finding_id: identity}
+                ),
+            }
+        ),
+    )
+
+
+def _unhandled_hard_finding(status: FindingStatus) -> Finding:
+    measurement = (
+        Measurement(availability=EvidenceAvailability.AVAILABLE, value=1.0, unit="count")
+        if status is not FindingStatus.NOT_AVAILABLE
+        else Measurement(
+            availability=EvidenceAvailability.NOT_AVAILABLE,
+            reason="illustrative unhandled hard evidence is unavailable",
+            unit="count",
+        )
+    )
+    return Finding(
+        finding_id="gate.unhandled_hard_invariant",
+        verifier="UnhandledHardInvariantVerifier",
+        verifier_version="1.0",
+        status=status,
+        severity=Severity.CRITICAL,
+        hard_invariant=True,
+        threshold_or_invariant="illustrative unhandled hard invariant",
+        message="illustrative unhandled hard invariant outcome",
+        measurement=measurement,
+    )
+
+
+def test_failing_hard_finding_without_precedence_branch_cannot_pass(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A registered hard finding with no explicit branch must never yield PASS."""
+    scenario = load_scenario(repository_root / "scenarios" / "fake_nominal.yaml")
+    gate = load_gate_config(repository_root / "config" / "gates.phase1.yaml")
+    passing_suite = run_phase1_verifiers(_events(), scenario, gate)
+    unhandled = _unhandled_hard_finding(FindingStatus.FAIL)
+    _extended_legacy_profile(
+        monkeypatch,
+        finding_id=unhandled.finding_id,
+        identity=("UnhandledHardInvariantVerifier", "1.0", True),
+    )
+
+    result = apply_release_gate(
+        (*passing_suite, unhandled),
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
+    )
+
+    assert result.verdict is Verdict.HOLD
+    assert result.hard_failures == ("gate.unhandled_hard_invariant",)
+    assert "gate.unhandled_hard_invariant" not in result.soft_failures
+
+
+def test_unavailable_hard_finding_without_precedence_branch_fails_closed(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unavailable hard evidence with no explicit branch follows the configured policy."""
+    scenario = load_scenario(repository_root / "scenarios" / "fake_nominal.yaml")
+    gate = load_gate_config(repository_root / "config" / "gates.phase1.yaml")
+    passing_suite = run_phase1_verifiers(_events(), scenario, gate)
+    unhandled = _unhandled_hard_finding(FindingStatus.NOT_AVAILABLE)
+    _extended_legacy_profile(
+        monkeypatch,
+        finding_id=unhandled.finding_id,
+        identity=("UnhandledHardInvariantVerifier", "1.0", True),
+    )
+
+    result = apply_release_gate(
+        (*passing_suite, unhandled),
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
+    )
+
+    assert result.verdict is Verdict(gate.hard.missing_required_evidence)
+    assert result.hard_failures == ("gate.unhandled_hard_invariant",)
+
+
+def test_passing_hard_finding_without_precedence_branch_changes_nothing(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The catch-all must not disturb a suite in which every hard finding passes."""
+    scenario = load_scenario(repository_root / "scenarios" / "fake_nominal.yaml")
+    gate = load_gate_config(repository_root / "config" / "gates.phase1.yaml")
+    passing_suite = run_phase1_verifiers(_events(), scenario, gate)
+    baseline = apply_release_gate(
+        passing_suite,
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
+    )
+    unhandled = _unhandled_hard_finding(FindingStatus.PASS)
+    _extended_legacy_profile(
+        monkeypatch,
+        finding_id=unhandled.finding_id,
+        identity=("UnhandledHardInvariantVerifier", "1.0", True),
+    )
+
+    result = apply_release_gate(
+        (*passing_suite, unhandled),
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
+    )
+
+    assert result.verdict is baseline.verdict
+    assert result.hard_failures == baseline.hard_failures == ()
