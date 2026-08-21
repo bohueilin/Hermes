@@ -980,8 +980,15 @@ Phase 8 runs with `PYTHONPATH="$PWD/src"` against the `hermes-dev` interpreter. 
 
 ## 10. What Sprint 0 deliberately did not do
 
-- No feature code, no schema change, no test change. The only repository change so far is this
-  document and the new branch.
+- **No ADAS feature code and no schema change.** Sprint 0 itself changed nothing but this document.
+  The Sprint 0.5 commits that follow it are contract *hardening* only, permitted under §39 because
+  each closes a hole rather than loosening a guarantee, and each is proven behaviour-preserving:
+  - `fix: close release-gate fail-open for unhandled hard findings` (§6.5) — 756 pre-existing tests
+    unchanged; `handoff-phase5-demo`, `handoff-p1-collision`, `handoff-p4-fault` and
+    `phase2-metadrive-final` re-verify with identical integrity and verdicts.
+  - `test: guard that the suite imports this checkout's hermes` (§2) — a new test only.
+
+  No existing test assertion was edited or deleted.
 - The Phase 7 worktree at `~/.codex/worktrees/Hermes/phase7-evaluation-adequacy-human-validation` was
   **not** read, checked out, merged or modified. Its adequacy machinery is not consumed. The only
   Phase 7 material read is the root-level `PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md`,
