@@ -106,3 +106,84 @@ def test_schema_4_run_is_bitwise_repeatable(
         tmp_path / "events-1.jsonl"
     ).read_bytes()
     shutil.rmtree(tmp_path / "repeat-0")
+
+
+def test_schema_4_scenario_can_spawn_the_ego_already_moving(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    """ADAS threat scenarios need a moving start.
+
+    Below schema 4.0 the adapter refuses any nonzero ``initial_state.speed_mps``, so an AEB
+    case at 20 m/s would spend most of its horizon accelerating from rest. Schema 4.0 sets
+    MetaDrive's car-frame spawn velocity instead; the adapter's own reset validation - which
+    compares the observed speed to the scenario at 1e-9 - is what proves it took effect.
+    """
+    _requires_metadrive(repository_root)
+    from hermes.evidence.verification import verify_artifact
+    from hermes.runtime.orchestrator import execute_metadrive_run
+
+    scenario_path = _schema_4_lead_brake(repository_root, tmp_path)
+    text = scenario_path.read_text(encoding="utf-8").replace(
+        "  speed_mps: 0.0", "  speed_mps: 20.0"
+    )
+    scenario_path.write_text(text, encoding="utf-8")
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+
+    execute_metadrive_run(
+        scenario_path=scenario_path,
+        gate_config_path=repository_root / "config" / "gates.phase2.yaml",
+        seed=7,
+        run_id="adas-v4-moving-start",
+        artifact_root=artifact_root,
+        repository_root=repository_root,
+    )
+    bundle = artifact_root / "adas-v4-moving-start"
+    result = verify_artifact(bundle)
+    import json
+
+    context = json.loads((bundle / "execution-context.json").read_text(encoding="utf-8"))
+    vehicle_config = context["adapter"]["config"]["metadrive_config"]["vehicle_config"]
+
+    assert result.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
+    assert vehicle_config["spawn_velocity"] == [20.0, 0.0]
+    assert vehicle_config["spawn_velocity_car_frame"] is True
+
+
+def test_stationary_schema_4_scenario_keeps_the_pre_v4_adapter_configuration(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    """A stationary 4.0 scenario must not acquire spawn-velocity keys.
+
+    Keeping the configuration identical to its schema-2.0 equivalent keeps
+    ``adapter_config_digest`` stable across a schema migration, which the fail-closed
+    comparison compatibility check depends on.
+    """
+    _requires_metadrive(repository_root)
+    from hermes.runtime.orchestrator import execute_metadrive_run
+
+    scenario_path = _schema_4_lead_brake(repository_root, tmp_path)
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+
+    execute_metadrive_run(
+        scenario_path=scenario_path,
+        gate_config_path=repository_root / "config" / "gates.phase2.yaml",
+        seed=7,
+        run_id="adas-v4-stationary",
+        artifact_root=artifact_root,
+        repository_root=repository_root,
+    )
+    import json
+
+    context = json.loads(
+        (artifact_root / "adas-v4-stationary" / "execution-context.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    vehicle_config = context["adapter"]["config"]["metadrive_config"]["vehicle_config"]
+
+    assert "spawn_velocity" not in vehicle_config
+    assert "spawn_velocity_car_frame" not in vehicle_config

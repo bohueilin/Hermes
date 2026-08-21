@@ -293,11 +293,31 @@ class MetaDriveAdapter:
         return repeat
 
     def _resolved_config(self, scenario: ScenarioDefinition, seed: int) -> dict[str, Any]:
-        if not math.isclose(
-            scenario.initial_state.speed_mps, 0.0, rel_tol=0.0, abs_tol=1e-12
-        ):
-            raise ValueError("Phase 2 MetaDrive scenarios require initial speed_mps: 0.0")
+        spawn_speed_mps = scenario.initial_state.speed_mps
+        stationary = math.isclose(spawn_speed_mps, 0.0, rel_tol=0.0, abs_tol=1e-12)
+        if not stationary and scenario.schema_version != "4.0":
+            raise ValueError(
+                "MetaDrive scenarios below schema_version 4.0 require initial speed_mps: 0.0"
+            )
         decision_repeat = self._decision_repeat(scenario.control.frequency_hz)
+        vehicle_config: dict[str, Any] = {
+            "spawn_lateral": scenario.initial_state.lateral_offset_m,
+            "show_navi_mark": False,
+            "show_dest_mark": False,
+            "show_lidar": False,
+            "show_lane_line_detector": False,
+            "show_side_detector": False,
+            "lidar": {"num_lasers": 0, "distance": 0, "num_others": 0},
+        }
+        if not stationary:
+            # Car-frame spawn velocity, so a scenario can start the ego already travelling.
+            # ADAS threat scenarios need this: an AEB case at 20 m/s cannot spend most of
+            # its horizon accelerating from rest. The keys are added only for a nonzero
+            # spawn so that a stationary schema-4.0 scenario keeps the same adapter
+            # configuration - and therefore the same adapter_config_digest - as its
+            # schema-2.0 equivalent.
+            vehicle_config["spawn_velocity"] = [spawn_speed_mps, 0.0]
+            vehicle_config["spawn_velocity_car_frame"] = True
         return {
             "use_render": False,
             "image_observation": False,
@@ -318,15 +338,7 @@ class MetaDriveAdapter:
             "decision_repeat": decision_repeat,
             "action_check": True,
             "log_level": 50,
-            "vehicle_config": {
-                "spawn_lateral": scenario.initial_state.lateral_offset_m,
-                "show_navi_mark": False,
-                "show_dest_mark": False,
-                "show_lidar": False,
-                "show_lane_line_detector": False,
-                "show_side_detector": False,
-                "lidar": {"num_lasers": 0, "distance": 0, "num_others": 0},
-            },
+            "vehicle_config": vehicle_config,
         }
 
     def _agent_position(self) -> tuple[float, float]:

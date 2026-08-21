@@ -756,6 +756,30 @@ def _profile_errors(
             abs_tol=1e-12,
         ):
             errors.append("scenario frequency has no supported MetaDrive decision interval")
+        expected_vehicle_config: dict[str, Any] = {
+            "spawn_lateral": scenario.initial_state.lateral_offset_m,
+            "show_navi_mark": False,
+            "show_dest_mark": False,
+            "show_lidar": False,
+            "show_lane_line_detector": False,
+            "show_side_detector": False,
+            "lidar": {"num_lasers": 0, "distance": 0, "num_others": 0},
+        }
+        if not math.isclose(
+            scenario.initial_state.speed_mps, 0.0, rel_tol=0.0, abs_tol=1e-12
+        ):
+            # Mirrors MetaDriveAdapter._resolved_config: a nonzero spawn speed is a
+            # schema-4.0 capability and adds exactly these two keys.
+            if scenario.schema_version != "4.0":
+                errors.append(
+                    "scenario.resolved.yaml declares a nonzero MetaDrive spawn speed below "
+                    "schema_version 4.0"
+                )
+            expected_vehicle_config["spawn_velocity"] = [
+                scenario.initial_state.speed_mps,
+                0.0,
+            ]
+            expected_vehicle_config["spawn_velocity_car_frame"] = True
         expected_metadrive_config = {
             "use_render": False,
             "image_observation": False,
@@ -776,15 +800,7 @@ def _profile_errors(
             "decision_repeat": decision_repeat,
             "action_check": True,
             "log_level": 50,
-            "vehicle_config": {
-                "spawn_lateral": scenario.initial_state.lateral_offset_m,
-                "show_navi_mark": False,
-                "show_dest_mark": False,
-                "show_lidar": False,
-                "show_lane_line_detector": False,
-                "show_side_detector": False,
-                "lidar": {"num_lasers": 0, "distance": 0, "num_others": 0},
-            },
+            "vehicle_config": expected_vehicle_config,
         }
         expected_adapter_config = {
             "headless": True,
