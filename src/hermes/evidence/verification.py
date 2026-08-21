@@ -59,7 +59,11 @@ from hermes.gates.config import (
     parse_gate_config_yaml,
     resolved_gate_config_yaml,
 )
-from hermes.gates.release import VerifierProfile, apply_release_gate
+from hermes.gates.release import (
+    VerifierProfile,
+    apply_release_gate,
+    select_verifier_profile,
+)
 from hermes.scenarios.loader import (
     ScenarioLoadError,
     parse_scenario_yaml,
@@ -76,8 +80,7 @@ from hermes.simulator_support import (
 from hermes.verifiers import (
     PHASE1_VERIFIER_IDENTITIES,
     PHASE4_VERIFIER_IDENTITIES,
-    run_phase1_verifiers,
-    run_phase4_verifiers,
+    run_verifiers_for_profile,
 )
 
 MAX_ARTIFACT_FILE_BYTES = 16 * 1024 * 1024
@@ -1322,6 +1325,14 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
     ):
         try:
             recomputed_metrics = compute_metrics(events)
+            verifier_profile = select_verifier_profile(scenario)
+            if (
+                verifier_profile is VerifierProfile.LEGACY
+                and isinstance(context, ExecutionContextV2)
+            ):
+                # Preserved from before the shared selector existed: a schema-2 execution
+                # context implies fault coverage even when the scenario no longer says so.
+                verifier_profile = VerifierProfile.FAULT_COVERAGE
             if scenario.faults is not None:
                 fault_events = tuple(
                     event for event in events if isinstance(event, TraceEventV2)
@@ -1330,8 +1341,8 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
                     errors.append("fault scenario contains a legacy trace event")
                     recomputed_findings = ()
                 else:
-                    recomputed_findings = run_phase4_verifiers(
-                        fault_events, scenario, gate_config
+                    recomputed_findings = run_verifiers_for_profile(
+                        verifier_profile, fault_events, scenario, gate_config
                     )
             else:
                 legacy_events = tuple(
@@ -1343,15 +1354,10 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
                     errors.append("legacy scenario contains a schema-2 trace event")
                     recomputed_findings = ()
                 else:
-                    recomputed_findings = run_phase1_verifiers(
-                        legacy_events, scenario, gate_config
+                    recomputed_findings = run_verifiers_for_profile(
+                        verifier_profile, legacy_events, scenario, gate_config
                     )
             adapter_name = context.adapter.name if context is not None else "fake"
-            verifier_profile = (
-                VerifierProfile.FAULT_COVERAGE
-                if scenario.faults is not None or isinstance(context, ExecutionContextV2)
-                else VerifierProfile.LEGACY
-            )
             recomputed_verdict = apply_release_gate(
                 recomputed_findings,
                 gate_config,

@@ -16,6 +16,7 @@ from hermes.domain.models import (
 from hermes.evidence.metrics import compute_metrics
 from hermes.evidence.trace import TraceIntegrityError, verify_complete_trace
 from hermes.gates.config import GateConfig
+from hermes.gates.release import VerifierProfile
 
 PHASE1_VERIFIER_IDENTITIES = (
     VerifierIdentity(
@@ -402,3 +403,33 @@ def run_phase4_verifiers(
 ) -> tuple[Finding, ...]:
     """Run legacy safety checks plus required deterministic fault coverage."""
     return (*run_phase1_verifiers(events, scenario, gate), _fault_coverage(events, scenario))
+
+
+def run_verifiers_for_profile(
+    profile: VerifierProfile,
+    events: tuple[TraceEvent, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> tuple[Finding, ...]:
+    """Run exactly the suite a verifier profile enumerates.
+
+    Single dispatch point shared by the run orchestrator and stored-evidence verification.
+    The gate matches a profile's expected finding set for exact equality, so a suite and its
+    profile that disagree produce INVALID_EVIDENCE rather than a wrong verdict - which makes
+    keeping the two in one place a correctness requirement, not tidiness.
+    """
+    from hermes.verifiers.adas import run_adas_p0_longitudinal_verifiers
+
+    if profile is VerifierProfile.ADAS_P0_LONGITUDINAL:
+        return (
+            *run_phase1_verifiers(events, scenario, gate),
+            *run_adas_p0_longitudinal_verifiers(events, scenario, gate),
+        )
+    if profile is VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT:
+        return (
+            *run_phase4_verifiers(events, scenario, gate),  # type: ignore[arg-type]
+            *run_adas_p0_longitudinal_verifiers(events, scenario, gate),
+        )
+    if profile is VerifierProfile.FAULT_COVERAGE:
+        return run_phase4_verifiers(events, scenario, gate)  # type: ignore[arg-type]
+    return run_phase1_verifiers(events, scenario, gate)

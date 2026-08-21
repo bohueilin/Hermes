@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from hermes.evidence.canonical import canonical_json_bytes
 from hermes.scenarios.yaml_loader import StrictYamlError, load_strict_yaml
@@ -32,13 +32,46 @@ class SoftCriteria(_StrictModel):
     max_abs_jerk_mps3: Annotated[float, Field(gt=0.0, le=500.0)]
 
 
+class AdasCriteria(_StrictModel):
+    """Oracle thresholds for the ADAS dimensions, introduced by gate-config schema 2.0.
+
+    These are deliberately the *gate's* thresholds, not the controller's. If the evaluator
+    reused the controller's configured trigger points it would only ever confirm that the
+    controller did what it was configured to do. Judging a run means asking an independent
+    question: given the closing geometry the trace records, should something have happened,
+    and did it happen soon enough?
+    """
+
+    #: A threat is oracle-labelled once required deceleration reaches this fraction of the
+    #: scenario's braking authority. Set below the controller's own partial-brake fraction
+    #: so a controller that intervenes exactly at its threshold is still judged in time.
+    threat_authority_fraction: Annotated[float, Field(gt=0.0, le=1.0)] = 0.3
+    #: Latest acceptable time-to-collision at the first AEB brake command.
+    minimum_ttc_at_brake_onset_s: Annotated[float, Field(gt=0.0, le=10.0)] = 0.5
+    #: Residual impact speed permitted where avoidance is kinematically infeasible.
+    max_residual_impact_speed_mps: Annotated[float, Field(ge=0.0, le=30.0)] = 0.0
+    #: Braking commands allowed in an oracle-labelled threat-free scenario.
+    max_false_intervention_steps: Annotated[int, Field(ge=0, le=1_000)] = 0
+    #: Standoff used when the oracle recomputes required deceleration from the trace.
+    oracle_standoff_m: Annotated[float, Field(ge=0.0, le=20.0)] = 2.0
+
+
 class GateConfig(_StrictModel):
-    schema_version: Literal["1.0"]
+    schema_version: Literal["1.0", "2.0"]
     name: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
     version: Annotated[str, Field(min_length=1, max_length=32)]
     label: Literal["illustrative_prototype_thresholds_not_for_real_vehicle_use"]
     hard: HardCriteria
     soft: SoftCriteria
+    adas: AdasCriteria | None = None
+
+    @model_validator(mode="after")
+    def require_adas_criteria_only_at_schema_2(self) -> GateConfig:
+        if self.schema_version == "1.0" and self.adas is not None:
+            raise ValueError("gate-config schema_version 1.0 cannot define adas criteria")
+        if self.schema_version == "2.0" and self.adas is None:
+            raise ValueError("gate-config schema_version 2.0 requires adas criteria")
+        return self
 
 
 class GateConfigError(ValueError):
@@ -78,9 +111,32 @@ def load_gate_config(path: Path) -> GateConfig:
     return parse_gate_config_yaml(text)
 
 
+#: Fields introduced by gate-config schema 2.0.
+#:
+#: gate_config_digest hashes model_dump(), and that digest is bound into every trace event's
+#: run context and re-derived during verification. A schema-2.0 field reaching the payload of
+#: a schema-1.0 configuration therefore changes its digest and invalidates every bundle ever
+#: produced with it - observed as "gate configuration digest does not match trace context".
+#: This mirrors the same rule for scenarios in hermes.scenarios.loader.
+_SCHEMA_2_ONLY_FIELDS = ("adas",)
+
+
+def _resolved_gate_config_payload(config: GateConfig) -> dict[str, object]:
+    """Return schema-aware content without changing established schema-1.0 identities."""
+    resolved = config.model_dump(mode="json")
+    if config.schema_version != "2.0":
+        for field_name in _SCHEMA_2_ONLY_FIELDS:
+            resolved.pop(field_name)
+    return resolved
+
+
 def gate_config_digest(config: GateConfig) -> str:
-    return hashlib.sha256(canonical_json_bytes(config.model_dump(mode="json"))).hexdigest()
+    return hashlib.sha256(
+        canonical_json_bytes(_resolved_gate_config_payload(config))
+    ).hexdigest()
 
 
 def resolved_gate_config_yaml(config: GateConfig) -> str:
-    return yaml.safe_dump(config.model_dump(mode="json"), allow_unicode=True, sort_keys=True)
+    return yaml.safe_dump(
+        _resolved_gate_config_payload(config), allow_unicode=True, sort_keys=True
+    )

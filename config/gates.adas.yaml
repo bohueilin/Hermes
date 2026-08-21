@@ -1,0 +1,25 @@
+# Illustrative ADAS release-gate thresholds for the simulation lab.
+#
+# The `adas` block holds ORACLE thresholds, used by the evaluators to judge a run. They are
+# deliberately distinct from the controller's own configured trigger points: an evaluator
+# that reused the controller's thresholds would only confirm the controller did what it was
+# configured to do. None of these values carry standards or regulatory meaning.
+schema_version: "2.0"
+name: adas_p0
+version: "1.0"
+label: illustrative_prototype_thresholds_not_for_real_vehicle_use
+hard:
+  max_collision_count: 0
+  max_abs_lateral_offset_m: 1.5
+  max_offroad_duration_s: 0.0
+  min_route_completion_pct: 0.0
+  missing_required_evidence: HOLD
+soft:
+  max_abs_acceleration_mps2: 4.0
+  max_abs_jerk_mps3: 100.0
+adas:
+  threat_authority_fraction: 0.3
+  minimum_ttc_at_brake_onset_s: 0.5
+  max_residual_impact_speed_mps: 0.0
+  max_false_intervention_steps: 0
+  oracle_standoff_m: 2.0

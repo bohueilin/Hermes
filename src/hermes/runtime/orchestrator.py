@@ -44,7 +44,10 @@ from hermes.evidence.trace import (
 from hermes.evidence.verification import verify_artifact
 from hermes.faults.deterministic import DeterministicFaultInjector
 from hermes.gates.config import GateConfigError, gate_config_digest, load_gate_config
-from hermes.gates.release import VerifierProfile, apply_release_gate
+from hermes.gates.release import (
+    apply_release_gate,
+    select_verifier_profile,
+)
 from hermes.policies.baseline import BaselinePolicy
 from hermes.policies.metadrive_idm import MetaDriveIDMPolicy
 from hermes.scenarios.loader import ScenarioLoadError, load_scenario, scenario_digest
@@ -52,8 +55,7 @@ from hermes.shields.noop import NoOpShield
 from hermes.verifiers import (
     PHASE1_VERIFIER_IDENTITIES,
     PHASE4_VERIFIER_IDENTITIES,
-    run_phase1_verifiers,
-    run_phase4_verifiers,
+    run_verifiers_for_profile,
 )
 
 
@@ -566,23 +568,23 @@ def _execute_run(
         raise RunOperationalError("MetaDrive simulator provenance is incomplete")
 
     metrics = compute_metrics(events)
+    verifier_profile = select_verifier_profile(scenario)
     if scenario.faults is not None:
         fault_events = tuple(
             event for event in events if isinstance(event, TraceEventV2)
         )
         if len(fault_events) != len(events):
             raise RunOperationalError("fault run produced a mixed evidence schema")
-        findings = run_phase4_verifiers(fault_events, scenario, gate_config)
+        findings = run_verifiers_for_profile(
+            verifier_profile, fault_events, scenario, gate_config
+        )
     else:
         legacy_events = tuple(event for event in events if isinstance(event, TraceEvent))
         if len(legacy_events) != len(events):
             raise RunOperationalError("legacy run produced a mixed evidence schema")
-        findings = run_phase1_verifiers(legacy_events, scenario, gate_config)
-    verifier_profile = (
-        VerifierProfile.FAULT_COVERAGE
-        if scenario.faults is not None
-        else VerifierProfile.LEGACY
-    )
+        findings = run_verifiers_for_profile(
+            verifier_profile, legacy_events, scenario, gate_config
+        )
     verdict = apply_release_gate(
         findings,
         gate_config,

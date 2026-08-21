@@ -17,6 +17,8 @@ class VerifierProfile(StrEnum):
 
     LEGACY = "legacy"
     FAULT_COVERAGE = "fault_coverage"
+    ADAS_P0_LONGITUDINAL = "adas_p0_longitudinal"
+    ADAS_P0_LONGITUDINAL_FAULT = "adas_p0_longitudinal_fault"
 
 
 class EvidenceRequiredness(StrEnum):
@@ -53,6 +55,15 @@ LEGACY_EXPECTED_FINDINGS: Mapping[str, tuple[str, str, bool]] = MappingProxyType
         "comfort.jerk": ("ComfortVerifier", "1.0", False),
     }
 )
+ADAS_P0_LONGITUDINAL_EXPECTED_FINDINGS: Mapping[str, tuple[str, str, bool]] = MappingProxyType(
+    {
+        **LEGACY_EXPECTED_FINDINGS,
+        "adas.aeb.threat_response": ("AdasThreatResponseVerifier", "1.0", True),
+        "adas.aeb.brake_onset_ttc": ("AdasBrakeOnsetVerifier", "1.0", False),
+        "adas.aeb.no_false_intervention": ("AdasFalseInterventionVerifier", "1.0", True),
+        "adas.fcw.warning_timing": ("AdasWarningTimingVerifier", "1.0", False),
+    }
+)
 EXPECTED_FINDINGS_BY_PROFILE: Mapping[
     VerifierProfile, Mapping[str, tuple[str, str, bool]]
 ] = MappingProxyType(
@@ -66,6 +77,13 @@ EXPECTED_FINDINGS_BY_PROFILE: Mapping[
                     "1.0",
                     True,
                 ),
+            }
+        ),
+        VerifierProfile.ADAS_P0_LONGITUDINAL: ADAS_P0_LONGITUDINAL_EXPECTED_FINDINGS,
+        VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT: MappingProxyType(
+            {
+                **ADAS_P0_LONGITUDINAL_EXPECTED_FINDINGS,
+                "fault.coverage.required": ("FaultCoverageVerifier", "1.0", True),
             }
         ),
     }
@@ -117,9 +135,83 @@ EVIDENCE_REQUIREMENTS_BY_PROFILE: Mapping[VerifierProfile, EvidenceRequirementPr
                     ),
                 ),
             ),
+            VerifierProfile.ADAS_P0_LONGITUDINAL: EvidenceRequirementProfile(
+                version="1.0",
+                requirements=(
+                    *_COMMON_EVIDENCE_REQUIREMENTS,
+                    EvidenceRequirement(
+                        "fault.coverage.required",
+                        EvidenceRequiredness.NOT_APPLICABLE,
+                    ),
+                    EvidenceRequirement(
+                        "adas.aeb.threat_response",
+                        EvidenceRequiredness.REQUIRED,
+                    ),
+                    EvidenceRequirement(
+                        "adas.aeb.brake_onset_ttc",
+                        EvidenceRequiredness.OPTIONAL,
+                    ),
+                    EvidenceRequirement(
+                        "adas.aeb.no_false_intervention",
+                        EvidenceRequiredness.REQUIRED,
+                    ),
+                    EvidenceRequirement(
+                        "adas.fcw.warning_timing",
+                        EvidenceRequiredness.OPTIONAL,
+                    ),
+                ),
+            ),
+            VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT: EvidenceRequirementProfile(
+                version="1.0",
+                requirements=(
+                    *_COMMON_EVIDENCE_REQUIREMENTS,
+                    EvidenceRequirement(
+                        "fault.coverage.required",
+                        EvidenceRequiredness.REQUIRED,
+                    ),
+                    EvidenceRequirement(
+                        "adas.aeb.threat_response",
+                        EvidenceRequiredness.REQUIRED,
+                    ),
+                    EvidenceRequirement(
+                        "adas.aeb.brake_onset_ttc",
+                        EvidenceRequiredness.OPTIONAL,
+                    ),
+                    EvidenceRequirement(
+                        "adas.aeb.no_false_intervention",
+                        EvidenceRequiredness.REQUIRED,
+                    ),
+                    EvidenceRequirement(
+                        "adas.fcw.warning_timing",
+                        EvidenceRequiredness.OPTIONAL,
+                    ),
+                ),
+            ),
         }
     )
 )
+
+
+def select_verifier_profile(scenario: object) -> VerifierProfile:
+    """Choose the verifier profile a scenario's evidence must satisfy.
+
+    Single source of truth. Profile selection previously existed as two independent copies -
+    one in the run orchestrator and one in stored-evidence verification - so extending one
+    without the other would make a run's verdict and its re-verification silently disagree.
+    """
+    has_faults = getattr(scenario, "faults", None) is not None
+    if getattr(scenario, "adas", None) is not None:
+        # An ADAS scenario that also injects faults keeps fault-coverage checking. Folding
+        # both into one profile would have silently dropped it, because a profile's expected
+        # finding set is matched for exact equality.
+        return (
+            VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT
+            if has_faults
+            else VerifierProfile.ADAS_P0_LONGITUDINAL
+        )
+    if has_faults:
+        return VerifierProfile.FAULT_COVERAGE
+    return VerifierProfile.LEGACY
 
 
 def apply_release_gate(

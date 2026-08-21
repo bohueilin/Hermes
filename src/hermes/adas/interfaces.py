@@ -187,7 +187,13 @@ class DriverConfig(HermesModel):
 
     speed_gain_per_mps: Annotated[FiniteFloat, Field(gt=0.0, le=5.0)] = 0.5
     max_throttle: Annotated[FiniteFloat, Field(gt=0.0, le=1.0)] = 1.0
-    max_brake: Annotated[FiniteFloat, Field(ge=0.0, le=1.0)] = 0.3
+    #: Defaults to zero so the scripted driver never brakes.
+    #:
+    #: In an FCW/AEB run that makes every braking command in the trace AEB-attributable by
+    #: construction, which is what lets an offline verifier - which sees only the stored
+    #: trace, not the controller's internal decision - count AEB interventions without
+    #: guessing. A configuration that raises it is opting into ambiguous attribution.
+    max_brake: Annotated[FiniteFloat, Field(ge=0.0, le=1.0)] = 0.0
     speed_deadband_mps: Annotated[FiniteFloat, Field(ge=0.0, le=5.0)] = 0.2
 
 

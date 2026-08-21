@@ -161,7 +161,18 @@ def test_expected_finding_registries_preserve_exact_values_order_and_alias() -> 
     assert tuple(release_gate.EXPECTED_FINDINGS_BY_PROFILE) == (
         VerifierProfile.LEGACY,
         VerifierProfile.FAULT_COVERAGE,
+        VerifierProfile.ADAS_P0_LONGITUDINAL,
+        VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT,
     )
+    # The ADAS profiles are supersets of the legacy set: the pre-Phase-8 findings keep their
+    # identity, requiredness and hard/soft classification unchanged inside them.
+    for profile in (
+        VerifierProfile.ADAS_P0_LONGITUDINAL,
+        VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT,
+    ):
+        adas_findings = release_gate.EXPECTED_FINDINGS_BY_PROFILE[profile]
+        for finding_id, identity in expected_legacy.items():
+            assert adas_findings[finding_id] == identity
     assert (
         release_gate.EXPECTED_FINDINGS_BY_PROFILE[VerifierProfile.LEGACY]
         is release_gate.LEGACY_EXPECTED_FINDINGS

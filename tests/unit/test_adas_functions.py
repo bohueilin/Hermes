@@ -298,9 +298,19 @@ def test_driver_accelerates_towards_the_target_and_holds_in_the_deadband() -> No
     assert held == (0.0, 0.0, BrakeSource.NONE)
 
 
+def test_driver_does_not_brake_by_default() -> None:
+    """Every brake in a default FCW/AEB run is therefore AEB-attributable by construction."""
+    driver = ScriptedLongitudinalDriver(DriverConfig())
+    driver.reset(5.0)
+
+    throttle, brake, source = driver.step(_observation(speed=20.0))
+
+    assert (throttle, brake, source) == (0.0, 0.0, BrakeSource.NONE)
+
+
 def test_driver_braking_is_attributed_to_the_driver_not_to_aeb() -> None:
     """AEB metrics count only aeb-attributed braking; misattribution would inflate them."""
-    driver = ScriptedLongitudinalDriver(DriverConfig())
+    driver = ScriptedLongitudinalDriver(DriverConfig(max_brake=0.3))
     driver.reset(5.0)
 
     _, brake, source = driver.step(_observation(speed=20.0))
