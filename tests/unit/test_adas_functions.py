@@ -326,5 +326,17 @@ def test_projection_always_satisfies_the_action_invariant(throttle: float, brake
 def test_projection_lets_brake_win_over_throttle() -> None:
     action = project_to_action(throttle=1.0, brake=0.4)
 
-    assert action.brake == 0.4
+    # Commands are quantised to binary32 so MetaDrive reads back exactly what was
+    # requested, so 0.4 is not representable exactly here.
+    assert action.brake == pytest.approx(0.4)
     assert action.throttle == 0.0
+
+
+def test_projection_is_exactly_representable_as_binary32() -> None:
+    """The adapter aborts the run when the accepted action differs from the requested one."""
+    import struct
+
+    action = project_to_action(throttle=0.0, brake=0.9158437251382487)
+
+    for value in (action.steering, action.throttle, action.brake):
+        assert struct.unpack("!f", struct.pack("!f", value))[0] == value
