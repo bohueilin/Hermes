@@ -38,7 +38,7 @@ Pre-existing untracked files at branch creation (not created by Phase 8, not sta
 
 | Gate | Command | Result |
 |---|---|---|
-| Tests | `python -m pytest -q` | **756 passed** in 23.67 s, exit 0 |
+| Tests | `python -m pytest -q` | **756 passed** in 23.67 s, exit 0 — *on this host only; see §1.3* |
 | Tests (no-simulator selection) | `python -m pytest -q -m "not metadrive"` | **756 passed** — identical set |
 | Lint (tracked tree) | `python -m ruff check src tests` | **All checks passed!** |
 | Lint (whole repo) | `python -m ruff check .` | 2 errors, both inside untracked `sandbox/mujoco/` — pre-existing, outside Phase 8 scope |
@@ -64,6 +64,49 @@ adapter work and the Risk 8 brake-dynamics calibration are therefore the first r
 the project's history, and they cannot lean on existing coverage. Any calibration constant derived
 from real MetaDrive must be recorded as evidence and pinned by a test that runs against the *double*,
 with the real-simulator measurement kept as a separately-marked, host-dependent check.
+
+### 1.3 CRITICAL — the Phase 0–6 suite is green only on a host carrying the local `artifacts/` tree
+
+`.gitignore` excludes `artifacts/*` (all but `.gitkeep`), yet **eight test modules read fixture bundles
+by name out of `repository_root / "artifacts"`** — `handoff-phase5-demo`, `handoff-p1-collision`,
+`handoff-p1-nominal`, `handoff-p3-lead-baseline`, `handoff-p3-cutin-shielded`, `phase1-tampered`,
+`handoff-p2-metadrive`, and others:
+
+`tests/unit/test_review_capture.py`, `test_review_facade.py`, `test_review_comparison.py`,
+`test_review_projection.py`, `test_workbench_projection.py`, `tests/cli/test_review_cli.py`,
+`tests/integration/test_review_artifacts.py`, `tests/integration/test_workbench_smoke.py`.
+
+Measured directly, by cloning this branch into a scratch directory and running the CI selection
+against it:
+
+```
+127 failed, 593 passed, 40 errors      # fresh clone of feat/phase8-adas-lab
+756 passed                             # same commit, this working tree
+```
+
+Every one of those 167 outcomes resolves to the same cause — the fixture bundle is absent, so
+verification returns `ARTIFACT_VERIFICATION_ERROR` ("artifact root and selected path must be existing
+real directories"). Even `tests/unit/test_architecture_boundaries.py` fails twice, because it asserts
+the boundary by invoking `review-artifact` / `review-compare` on a fixture bundle.
+
+**There is no committed way to regenerate the fixtures.** `docs/PHASE6_DEMO_RUNBOOK.md` *consumes*
+`handoff-phase5-demo` but never says how it was produced; no Makefile target, script, or registry
+creates the `handoff-*` set. They exist only as 43 locally-generated directories on this machine.
+
+Three consequences for Phase 8:
+
+1. The master prompt's ground rule "the full Phase 0–6 test suite must stay green at every sprint
+   boundary" is only checkable on this host. Every green result reported by this effort carries that
+   qualification, and this document states it rather than implying portability.
+2. The GitHub workflow (`.github/workflows/ci.yml`) runs on `push` to `main` and on pull requests.
+   `main` holds only Phase 0, so these Phase 6 tests have never executed in CI — merging Phase 1–6 to
+   `main` would turn CI red on arrival, independently of Phase 8.
+3. It sharpens §6.0 considerably. If a scenario-digest change invalidates the stored bundles, the local
+   suite goes red **and cannot be repaired from source**. A deterministic, committed
+   fixture-regeneration path is therefore a prerequisite for the Sprint 1a schema work, not a nicety.
+
+This is a pre-existing repository condition, not something Phase 8 introduced. It is recorded here
+because Sprint 0's job is to state the real baseline.
 
 ---
 
@@ -450,7 +493,7 @@ a schema-4.0 scenario is the only thing that will *produce* a 3.0 bundle to test
 
 | # | Severity | Risk | Lands in |
 |---|---|---|---|
-| 6.0 | CRITICAL | Any new optional scenario field changes every existing scenario digest → all 43 bundles invalid | Sprint 1a |
+| 6.0 | CRITICAL | Any new optional scenario field changes every existing scenario digest → all 43 bundles invalid, and with them the Phase 6 suite (§1.3), with no committed way to regenerate them | Sprint 1a |
 | 6.1 | CRITICAL | No schema version allows `challenge` + `faults`; `"4.0"` falls into the schema-3 `else:` branch; two trace gates keyed to `"2.0"`/`"3.0"` | Sprint 1a |
 | 6.2 | CRITICAL | Verifier profile set is closed, doubly registered, and selected in two independent places | Sprint 1 |
 | 6.3 | CRITICAL | Review layer rejects `evidence_schema_version "3.0"` | Sprint 1 |
@@ -823,8 +866,10 @@ profiles, which enumerate only findings that already have precedence branches.
 Optionally also the `tests/conftest.py` import-provenance guard (§2).
 
 **Sprint 1a — schema + adapter foundations (§0-A.9.1).** Highest risk, no controller code.
-Order: (a) failing tests pinning 1.0/2.0/3.0 validation and digests byte-for-byte, including an
-end-to-end re-verification of an existing `artifacts/` bundle; (b) extend
+Order: (a0) a deterministic, committed fixture-regeneration path for the `handoff-*` bundles the Phase 6
+suite depends on (§1.3) — without it the schema work cannot be validated and a mistake cannot be
+recovered from source; (a) failing tests pinning 1.0/2.0/3.0 validation and digests byte-for-byte,
+including an end-to-end re-verification of an existing `artifacts/` bundle; (b) extend
 `_resolved_scenario_payload`'s pop-list for every 4.0-only field (§6.0) **in the same commit that adds
 the fields**; (c) restructure the scenario validator and add `"4.0"` permitting challenge+faults
 (§6.1); (d) 4.0 branches in `trace.py:282` and `:537` plus a 4.0 observation-summary field set and new
