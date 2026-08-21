@@ -108,12 +108,19 @@ def test_private_capture_retains_safe_manifest_identity_all_four_or_none(
     )
 
     assert tampered_capture.inspection.verification.integrity is IntegrityStatus.INVALID
+    # The expected creation time is read from the fixture's own manifest rather than
+    # pinned to one generation instant: the property under test is that the safe identity
+    # mirrors the manifest even for quarantined evidence, not that the fixture was built
+    # on a particular date. Pinning the literal made the test unusable with a regenerated
+    # fixture (see config/phase8-fixture-registry.yaml).
+    tampered_manifest = json.loads((tampered / "manifest.json").read_text(encoding="utf-8"))
     assert tampered_capture.safe_manifest_identity == verification_module._SafeManifestIdentity(
         run_id="phase1-nominal",
-        created_at_utc="2026-08-11T21:29:33.392108Z",
+        created_at_utc=tampered_manifest["created_at_utc"],
         evidence_schema_version="1.0",
         scenario_schema_version="1.0",
     )
+    assert tampered_manifest["run_id"] == "phase1-nominal"
     assert missing_capture.inspection.verification.integrity is IntegrityStatus.INVALID
     assert missing_capture.safe_manifest_identity is not None
     assert missing_capture.safe_manifest_identity.run_id == "handoff-phase5-demo"

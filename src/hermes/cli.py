@@ -1019,5 +1019,182 @@ def compare_command(
         )
 
 
+fixtures_app = typer.Typer(
+    name="fixtures",
+    help="Regenerate the SIMULATION-ONLY evidence fixtures the test suite depends on.",
+    no_args_is_help=True,
+    cls=HermesTyperGroup,
+)
+app.add_typer(fixtures_app, name="fixtures")
+
+
+def _fixture_registry_path(repository_root: Path, registry: Path | None) -> Path:
+    return registry or repository_root / "config" / "phase8-fixture-registry.yaml"
+
+
+def _resolved_repository_root() -> Path:
+    repository_root = discover_hermes_repository_root()
+    if repository_root is None:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "Hermes repository root is unavailable",
+        )
+    return repository_root
+
+
+@fixtures_app.command("list")
+def fixtures_list_command(
+    registry: Annotated[
+        Path | None,
+        typer.Option("--registry", help="Strict fixture-registry YAML path."),
+    ] = None,
+) -> None:
+    """List every registered fixture and whether it is present locally."""
+    from hermes.fixtures import FixtureRegistryError, load_fixture_registry
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    artifact_root = repository_root / "artifacts"
+    try:
+        loaded = load_fixture_registry(_fixture_registry_path(repository_root, registry))
+    except FixtureRegistryError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+
+    table = Table(title="SIMULATION-ONLY evidence fixtures")
+    table.add_column("Run ID")
+    table.add_column("Present")
+    table.add_column("Needs simulator")
+    table.add_column("Description", overflow="fold")
+    for recipe in loaded.fixtures:
+        table.add_row(
+            recipe.run_id,
+            "yes" if (artifact_root / recipe.run_id).is_dir() else "NO",
+            "yes" if recipe.requires_simulator else "no",
+            recipe.description,
+        )
+    console.print(table)
+
+
+@fixtures_app.command("regenerate")
+def fixtures_regenerate_command(
+    registry: Annotated[
+        Path | None,
+        typer.Option("--registry", help="Strict fixture-registry YAML path."),
+    ] = None,
+    only: Annotated[
+        list[str] | None,
+        typer.Option("--only", help="Regenerate just this fixture; repeatable."),
+    ] = None,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Replace fixtures that already exist."),
+    ] = False,
+    simulator: Annotated[
+        bool,
+        typer.Option(
+            "--simulator/--no-simulator",
+            help="Include fixtures that require a real local MetaDrive installation.",
+        ),
+    ] = True,
+    allow_dirty: Annotated[
+        bool,
+        typer.Option(
+            "--allow-dirty",
+            help="Regenerate even though the worktree is dirty (records dirty provenance).",
+        ),
+    ] = False,
+) -> None:
+    """Rebuild evidence fixtures deterministically from committed inputs."""
+    from hermes.fixtures import (
+        FixtureRegistryError,
+        load_fixture_registry,
+        regenerate_fixture,
+        select_recipes,
+    )
+    from hermes.fixtures.registry import repository_worktree_is_dirty
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    artifact_root = repository_root / "artifacts"
+    artifact_root.mkdir(parents=True, exist_ok=True)
+    try:
+        loaded = load_fixture_registry(_fixture_registry_path(repository_root, registry))
+        selected = select_recipes(loaded, only=only or None, include_simulator=simulator)
+    except FixtureRegistryError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+
+    if not allow_dirty and repository_worktree_is_dirty(repository_root):
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "the worktree is dirty, so regenerated fixtures would record dirty provenance and "
+            "diverge from the stored ones; commit or stash first, or pass --allow-dirty",
+        )
+    console.print(
+        "SIMULATION-ONLY PROTOTYPE — regenerated fixtures are test inputs, not release evidence."
+    )
+    rebuilt = 0
+    failures: list[str] = []
+    for recipe in selected:
+        destination = artifact_root / recipe.run_id
+        if destination.exists() and not force:
+            console.print(f"Skipped (already present): {recipe.run_id}")
+            continue
+        if recipe.derived_from is not None and recipe.derived_from in failures:
+            failures.append(recipe.run_id)
+            console.print(
+                f"Skipped: {recipe.run_id} (its source {recipe.derived_from} failed)",
+                style="red",
+            )
+            continue
+        try:
+            regenerate_fixture(
+                recipe,
+                registry=loaded,
+                artifact_root=artifact_root,
+                repository_root=repository_root,
+                force=force,
+            )
+        except FixtureRegistryError as exc:
+            # One unavailable simulator must not deny the caller every other fixture.
+            failures.append(recipe.run_id)
+            console.print(f"Failed: {recipe.run_id}: {exc}", style="red")
+            continue
+        rebuilt += 1
+        console.print(f"Regenerated: {recipe.run_id}")
+    console.print(f"Fixtures regenerated: {rebuilt} of {len(selected)} selected")
+    if failures:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            "these fixtures could not be regenerated: " + ", ".join(failures),
+        )
+
+
+@fixtures_app.command("verify")
+def fixtures_verify_command(
+    registry: Annotated[
+        Path | None,
+        typer.Option("--registry", help="Strict fixture-registry YAML path."),
+    ] = None,
+) -> None:
+    """Report registered fixtures that are absent from the local artifact root."""
+    from hermes.fixtures import FixtureRegistryError, load_fixture_registry, missing_fixtures
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    try:
+        loaded = load_fixture_registry(_fixture_registry_path(repository_root, registry))
+    except FixtureRegistryError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+
+    absent = missing_fixtures(loaded, repository_root / "artifacts")
+    if absent:
+        console.print(f"Missing fixtures: {', '.join(absent)}")
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "run `hermes fixtures regenerate` to restore the evidence fixtures",
+        )
+    console.print(f"All {len(loaded.fixtures)} registered fixtures are present.")
+
+
 if __name__ == "__main__":
     app()

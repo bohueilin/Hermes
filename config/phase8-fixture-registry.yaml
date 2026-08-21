@@ -1,0 +1,129 @@
+# Reproducible evidence fixtures for the Hermes test suite.
+#
+# artifacts/* is gitignored, but eight Phase 6 test modules read bundles by name out of it.
+# This registry binds every such bundle to the committed inputs that regenerate it, so the
+# suite can be restored on a fresh clone:
+#
+#   python -m hermes fixtures regenerate --force
+#   python -m hermes fixtures regenerate --force --no-simulator   # skip MetaDrive fixtures
+#
+# Fixtures whose simulator is "metadrive" need a real local MetaDrive installation
+# (third_party/metadrive, also gitignored). Everything else runs on the fake adapter.
+schema_version: "1.0"
+label: illustrative_simulation_fixtures_not_real_vehicle_evidence
+fixtures:
+  - run_id: phase1-nominal
+    description: Phase 1 nominal fake run used as the untampered comparison baseline.
+    scenario: scenarios/fake_nominal.yaml
+    gate_config: config/gates.phase1.yaml
+    simulator: fake
+    policy: baseline
+    shield: noop
+    seed: 7
+
+  - run_id: handoff-p1-nominal
+    description: Phase 1 nominal fake run published under the handoff run ID.
+    scenario: scenarios/fake_nominal.yaml
+    gate_config: config/gates.phase1.yaml
+    simulator: fake
+    policy: baseline
+    shield: noop
+    seed: 7
+
+  - run_id: handoff-p1-collision
+    description: Phase 1 collision scenario demonstrating a non-compensatory HOLD.
+    scenario: scenarios/fake_collision.yaml
+    gate_config: config/gates.phase1.yaml
+    simulator: fake
+    policy: baseline
+    shield: noop
+    seed: 7
+
+  - run_id: handoff-p1-boundary
+    description: Phase 1 road-boundary violation scenario.
+    scenario: scenarios/fake_boundary.yaml
+    gate_config: config/gates.phase1.yaml
+    simulator: fake
+    policy: baseline
+    shield: noop
+    seed: 7
+
+  - run_id: handoff-p1-conditional
+    description: Phase 1 soft-criterion degradation producing a CONDITIONAL verdict.
+    scenario: scenarios/fake_soft_degradation.yaml
+    gate_config: config/gates.phase1.yaml
+    simulator: fake
+    policy: baseline
+    shield: noop
+    seed: 7
+
+  - run_id: handoff-phase5-demo
+    description: Phase 5 demonstration bundle used as the canonical review fixture.
+    scenario: scenarios/fake_nominal.yaml
+    gate_config: config/gates.phase1.yaml
+    simulator: fake
+    policy: baseline
+    shield: noop
+    seed: 7
+
+  - run_id: handoff-p4-fault
+    description: Phase 4 schema-2 deterministic fault run under the deterministic shield.
+    scenario: scenarios/fake_fault_injection.yaml
+    gate_config: config/gates.phase1.yaml
+    simulator: fake
+    policy: baseline
+    shield: deterministic
+    shield_config: config/shield.phase3.yaml
+    seed: 7
+
+  - run_id: handoff-p2-metadrive
+    description: Phase 2 nominal MetaDrive run establishing simulator provenance.
+    scenario: scenarios/metadrive_nominal.yaml
+    gate_config: config/gates.phase2.yaml
+    simulator: metadrive
+    policy: metadrive-idm
+    shield: noop
+    seed: 7
+
+  - run_id: handoff-p3-lead-baseline
+    description: Phase 3 lead-vehicle hard brake without a shield.
+    scenario: scenarios/metadrive_lead_vehicle_hard_brake.yaml
+    gate_config: config/gates.phase2.yaml
+    simulator: metadrive
+    policy: metadrive-idm
+    shield: noop
+    seed: 7
+
+  - run_id: handoff-p3-lead-shielded
+    description: Phase 3 lead-vehicle hard brake under the deterministic shield.
+    scenario: scenarios/metadrive_lead_vehicle_hard_brake.yaml
+    gate_config: config/gates.phase2.yaml
+    simulator: metadrive
+    policy: metadrive-idm
+    shield: deterministic
+    shield_config: config/shield.phase3.yaml
+    seed: 7
+
+  - run_id: handoff-p3-cutin-baseline
+    description: Phase 3 near-field cut-in without a shield.
+    scenario: scenarios/metadrive_cut_in_near_field.yaml
+    gate_config: config/gates.phase2.yaml
+    simulator: metadrive
+    policy: metadrive-idm
+    shield: noop
+    seed: 7
+
+  - run_id: handoff-p3-cutin-shielded
+    description: Phase 3 near-field cut-in under the deterministic shield.
+    scenario: scenarios/metadrive_cut_in_near_field.yaml
+    gate_config: config/gates.phase2.yaml
+    simulator: metadrive
+    policy: metadrive-idm
+    shield: deterministic
+    shield_config: config/shield.phase3.yaml
+    seed: 7
+
+  - run_id: phase1-tampered
+    description: phase1-nominal with an unrehashed trace edit, used as the invalid-evidence fixture.
+    derived_from: phase1-nominal
+    tamper: executed_throttle_downshift
