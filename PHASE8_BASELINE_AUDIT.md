@@ -113,6 +113,21 @@ Three consequences for Phase 8:
 This is a pre-existing repository condition, not something Phase 8 introduced. It is recorded here
 because Sprint 0's job is to state the real baseline.
 
+> **RESOLVED in Sprint 1a** (`10343bf`). `config/phase8-fixture-registry.yaml` binds all 13 fixtures to
+> the committed inputs that generate them, and `hermes fixtures list|regenerate|verify` rebuilds them.
+> Measured on a fresh clone of this branch with `third_party/metadrive` vendored:
+>
+> ```
+> hermes fixtures regenerate     ->  Fixtures regenerated: 13 of 13 selected
+> pytest -q                      ->  777 passed
+> ```
+>
+> Two constraints the tool enforces rather than documents: regeneration refuses a dirty worktree
+> (`repository_dirty` would diverge from the stored fixtures), and the five MetaDrive fixtures need
+> `third_party/metadrive` vendored — the adapter correctly refuses MetaDrive imported from anywhere
+> else. `tests/unit/test_fixture_registry.py` scans the test tree for fixture references and fails if
+> any lacks a recipe, so the dependency cannot silently reappear.
+
 ---
 
 ## 2. CRITICAL operational hazard: the `hermes-dev` environment resolves to the Phase 7 worktree
