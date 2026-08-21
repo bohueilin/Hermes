@@ -714,6 +714,30 @@ def _profile_errors(
                 break
 
     expected_latency = scenario.control.simulated_policy_latency_ms
+    adas_policy = context.policy.name == "adas-longitudinal"
+    if adas_policy:
+        # Schema 4.0 introduces controllers whose configuration is a tuning surface rather
+        # than a fixed literal, so it cannot be mirrored here the way the two pre-4.0
+        # policies are. Verification instead pins identity, the simulation-only label, and
+        # the fields a run is entitled to vary - the configuration itself stays bound by
+        # policy_config_digest, which the comparison compatibility check still compares.
+        if scenario.schema_version != "4.0":
+            errors.append(
+                "execution-context.json uses an ADAS policy below scenario schema_version 4.0"
+            )
+        if context.policy.version != "1.0":
+            errors.append("execution-context.json contains an unsupported ADAS policy version")
+        policy_config = context.policy.config
+        if not isinstance(policy_config, dict):
+            errors.append("execution-context.json ADAS policy configuration is malformed")
+        elif (
+            policy_config.get("label")
+            != "illustrative_simulation_adas_not_real_vehicle_limits"
+        ):
+            errors.append("execution-context.json ADAS policy configuration is unlabelled")
+        elif not policy_config.get("functions"):
+            errors.append("execution-context.json ADAS policy enables no function")
+
     if context.adapter.name == "fake":
         expected_adapter_config = {
             "model": "deterministic_architectural_test_double_v1"
@@ -724,15 +748,17 @@ def _profile_errors(
         }
         if context.adapter.version != "1.0":
             errors.append("execution-context.json contains an unsupported fake adapter version")
-        if context.policy.name != "baseline" or context.policy.version != "1.0":
+        if not adas_policy and (
+            context.policy.name != "baseline" or context.policy.version != "1.0"
+        ):
             errors.append("execution-context.json contains an unsupported fake policy")
         if canonical_json_bytes(context.adapter.config) != canonical_json_bytes(
             expected_adapter_config
         ):
             errors.append("execution-context.json fake adapter configuration is unsupported")
-        if canonical_json_bytes(context.policy.config) != canonical_json_bytes(
-            expected_policy_config
-        ):
+        if not adas_policy and canonical_json_bytes(
+            context.policy.config
+        ) != canonical_json_bytes(expected_policy_config):
             errors.append("execution-context.json baseline policy configuration is unsupported")
     elif context.adapter.name == "metadrive":
         if scenario.faults is not None and (
@@ -887,7 +913,9 @@ def _profile_errors(
             errors.append(
                 "execution-context.json contains an unsupported MetaDrive adapter version"
             )
-        if context.policy.name != "metadrive-idm" or context.policy.version != "1.0":
+        if not adas_policy and (
+            context.policy.name != "metadrive-idm" or context.policy.version != "1.0"
+        ):
             errors.append("execution-context.json contains an unsupported MetaDrive policy")
         if simulator_version != SUPPORTED_METADRIVE_VERSION:
             errors.append("execution-context.json MetaDrive version is unsupported")
@@ -897,9 +925,9 @@ def _profile_errors(
             expected_adapter_config
         ):
             errors.append("execution-context.json MetaDrive adapter configuration is unsupported")
-        if canonical_json_bytes(context.policy.config) != canonical_json_bytes(
-            expected_policy_config
-        ):
+        if not adas_policy and canonical_json_bytes(
+            context.policy.config
+        ) != canonical_json_bytes(expected_policy_config):
             errors.append(
                 "execution-context.json MetaDrive IDM policy configuration is unsupported"
             )

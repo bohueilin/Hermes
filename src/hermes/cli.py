@@ -1,8 +1,10 @@
 """Command-line interface for Hermes."""
 
 from collections import Counter
+from collections.abc import Callable, Mapping
 from functools import partial
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, Any, NoReturn
 from unicodedata import category as unicode_category
 
@@ -239,6 +241,38 @@ def _render_artifact_verification(result: ArtifactVerification) -> None:
         console.print(f"Verification error: {error}", style="red")
 
 
+#: Which simulators each registered policy supports.
+#:
+#: Before Phase 8 the CLI derived one policy from the simulator and discarded --policy
+#: entirely; the orchestrator already accepted a policy_factory but nothing ever passed one.
+#: The ADAS controller is simulator-neutral because it consumes only the stored-domain
+#: Observation, so it runs on either adapter.
+POLICY_SIMULATORS: Mapping[str, frozenset[str]] = MappingProxyType(
+    {
+        "baseline": frozenset({"fake"}),
+        "metadrive-idm": frozenset({"metadrive"}),
+        "adas-longitudinal": frozenset({"fake", "metadrive"}),
+    }
+)
+
+
+def _policy_factory(policy: str, simulator: str) -> Callable[..., Any] | None:
+    """Resolve --policy to a factory, or None to keep the orchestrator's default.
+
+    Returning None for the two pre-Phase-8 policies keeps their construction byte-identical
+    to how the orchestrator has always built them, including MetaDriveIDMPolicy's adapter
+    argument.
+    """
+    if policy != "adas-longitudinal":
+        return None
+    from hermes.adas.policy import AdasLongitudinalPolicy
+
+    if simulator == "metadrive":
+        # execute_metadrive_run passes the adapter; the ADAS controller does not need it.
+        return lambda _adapter: AdasLongitudinalPolicy()
+    return AdasLongitudinalPolicy
+
+
 @app.command("run")
 def run_command(
     simulator: Annotated[
@@ -246,7 +280,11 @@ def run_command(
     ],
     scenario: Annotated[Path, typer.Option("--scenario", help="Strict scenario YAML path.")],
     policy: Annotated[
-        str, typer.Option("--policy", help="Candidate policy: baseline or metadrive-idm.")
+        str,
+        typer.Option(
+            "--policy",
+            help="Candidate policy: baseline, metadrive-idm, or adas-longitudinal.",
+        ),
     ],
     seed: Annotated[int, typer.Option("--seed", help="Signed 32-bit deterministic seed.")],
     run_id: Annotated[str, typer.Option("--run-id", help="Unique lowercase artifact slug.")],
@@ -279,11 +317,16 @@ def run_command(
             CliErrorCode.CONFIGURATION_ERROR,
             f"unsupported simulator {simulator!r}",
         )
-    expected_policy = "baseline" if simulator == "fake" else "metadrive-idm"
-    if policy != expected_policy:
+    if policy not in POLICY_SIMULATORS:
         _raise_cli_error(
             CliErrorCode.CONFIGURATION_ERROR,
-            f"simulator {simulator!r} requires policy {expected_policy!r}",
+            f"unsupported policy {policy!r}; available: {', '.join(sorted(POLICY_SIMULATORS))}",
+        )
+    if simulator not in POLICY_SIMULATORS[policy]:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"policy {policy!r} does not support simulator {simulator!r}; "
+            f"it supports: {', '.join(sorted(POLICY_SIMULATORS[policy]))}",
         )
     if simulator == "metadrive" and not headless:
         _raise_cli_error(
@@ -317,6 +360,7 @@ def run_command(
         except ShieldConfigError as exc:
             _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
         shield_factory = partial(DeterministicSafetyShield, deterministic_config)
+    policy_factory = _policy_factory(policy, simulator)
     try:
         runner = execute_fake_run if simulator == "fake" else execute_metadrive_run
         outcome = runner(
@@ -327,6 +371,7 @@ def run_command(
             artifact_root=resolved_artifacts,
             repository_root=repository_root,
             shield_factory=shield_factory,
+            **({} if policy_factory is None else {"policy_factory": policy_factory}),
         )
     except RunConfigurationError as exc:
         _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
