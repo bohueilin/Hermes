@@ -10,6 +10,11 @@
 > amendments assert a repository fact, that assertion is verified here against source and marked
 > CONFIRMED, PARTIAL, or CORRECTED. §0-A *decisions* are not re-litigated; only its *repo
 > references* are checked, as §0-A itself requires.
+>
+> **Citation baseline.** Every `file:line` in this document is against the base commit
+> `4eb8765`. The Sprint 0.5 fix to `src/hermes/gates/release.py` (§6.5) shifts that file's line
+> numbers by +28 at branch HEAD; read its citations with `git show 4eb8765:src/hermes/gates/release.py`.
+> No other file has been modified.
 
 ---
 
@@ -27,7 +32,7 @@
 | Key deps | pydantic 2.13.4, PyYAML 6.0.3, rich 14.3.4, typer 0.27.1, pytest 8.4.2, ruff 0.16.2, streamlit 1.61.1 |
 | Source size | 19,190 lines across `src/hermes` (excluding `__pycache__`) |
 | Tests | 35 test files, ~465 test functions, **756 collected test cases** |
-| Local evidence bundles | 43 directories under `artifacts/` (gitignored; usable as Phase 0–6 fixtures) |
+| Local evidence bundles | 43 untracked, unreproducible directories under `artifacts/` — **a hard prerequisite for 167 of 756 tests**, not a convenience. See §1.3 |
 
 Pre-existing untracked files at branch creation (not created by Phase 8, not staged):
 `HERMES_PHASE7_ADAS_AGENTIC_WORKFLOW_PRD.md`, `Hermes_Phase8_ADAS_Opus5_Implementation_Master_Prompt.md`,
@@ -374,7 +379,7 @@ stand as written.
 | 0-A.2.1 | ACC target speed readable from the scenario `control` block | CONFIRMED | `ControlConfig.target_speed_mps`, `models.py:121` |
 | 0-A.2.2 | Evaluators are `Verifier` implementations under `src/hermes/verifiers/` | **PARTIAL / CORRECTED** | The `Verifier` Protocol (`contracts.py:85`) is **defined but never implemented or referenced anywhere**. The real pattern is module-level functions returning `Finding`, registered via `VerifierIdentity` tuples and `run_phase1_verifiers` / `run_phase4_verifiers`. See §9.2 |
 | 0-A.2.3 | Run context requires shield identity, so "disabled" must be a null shield | CONFIRMED | `RunContext.shield_name/shield_version/shield_config_digest` are **non-optional**, `models.py:508-510` |
-| 0-A.2.3 | ADAS runs use a passthrough/noop shield | CONFIRMED — **already the default** | `NoOpShield` exists (`shields/noop.py`) and is the default in the CLI (`cli.py:263`) *and* both run entry points (`orchestrator.py:649,676`). Zero new work |
+| 0-A.2.3 | ADAS runs use a passthrough/noop shield | CONFIRMED — **already the default** | `NoOpShield` exists (`shields/noop.py`) and is the default in the CLI (`cli.py:263`) *and* both run entry points (`orchestrator.py:649,676`). Zero new work. Note its `evidence_config` returns `{}`, so `shield_config_digest` is a constant across every ADAS run and carries no discriminating information — ADAS supervision variants must be distinguished by `policy_config_digest`, never by the shield |
 | 0-A.2.4 | `Action` invariant: throttle/brake mutually exclusive, steering ∈ [-1,1] | CONFIRMED | `models.py` `Action`; adapter projects via `throttle=max(0,l)`, `brake=max(0,-l)` (`metadrive.py:510-511`) |
 | 0-A.3.1 | TTC undefined when `closing_speed <= 0`, matching `observation_ttc_s` | CONFIRMED | `shields/deterministic.py`; `minimum_ttc_s` defaults to a `NOT_AVAILABLE` `Measurement` (`models.py:469-475`) |
 | 0-A.3.6 | Existing `ControlConfig` limits `max_acceleration_mps2` 3.0, `max_braking_mps2` 6.0 | CONFIRMED | `models.py:122-123` |
@@ -382,7 +387,7 @@ stand as written.
 | 0-A.4.1 | Existing `challenge_actor_*` observation convention | CONFIRMED | `_CHALLENGE_OBSERVATION_SUMMARY_FIELDS`, `trace.py:172-185` |
 | 0-A.4.2 | `observation_age_s` in seconds | CONFIRMED | `Observation.observation_age_s`; `RunMetricsV2.max_observation_age_s` |
 | 0-A.5 | Strict versioned `ScenarioDefinition`, `Literal["1.0","2.0","3.0"]` strings, discriminated `ChallengeConfig`, single `FaultConfig`, seed as run parameter | CONFIRMED | `models.py:253-272` |
-| 0-A.5.4 | Fault families 1–7 already exist as `FaultConfig` fields in `src/hermes/faults/deterministic.py` | CONFIRMED in substance, **file reference corrected** | The seven fields are real, but `FaultConfig` is defined in `domain/models.py:172-188`; `faults/deterministic.py` only imports it and implements the transforms. Coverage verifier: `verifiers/__init__.py:309-330` |
+| 0-A.5.4 | Fault families 1–7 already exist as `FaultConfig` fields in `src/hermes/faults/deterministic.py` | CONFIRMED in substance, **file reference corrected** | The seven fields are real, but `FaultConfig` is defined in `domain/models.py:170-188` (class statement at :170, first field at :175); `faults/deterministic.py` only imports it and implements the transforms. Coverage verifier: `verifiers/__init__.py:309-330` |
 | 0-A.5.5 | Scenario YAML lives under repo-root `scenarios/`, never in the code package | CONFIRMED | 9 YAML files in `scenarios/`; `src/hermes/scenarios/` contains only `loader.py`, `yaml_loader.py` |
 | 0-A.6.2 | `events.jsonl` is the hash-chained per-step TraceEvent stream | CONFIRMED | `trace.py:40-73` (schema 1.0) and `:75-110` (schema 2.0); hash = SHA-256 of canonical JSON excluding `current_hash`, chained by `previous_hash` |
 | 0-A.6.3 | Drop `faults.resolved.yaml`; fault config already digest-bound as `fault_config_digest` | CONFIRMED (vacuously) | It was never in `REQUIRED_ARTIFACT_FILES` (`artifacts.py:39-50`); `fault_config_digest` is real (`models.py:523`) |
@@ -393,6 +398,7 @@ stand as written.
 | 0-A.7.7 | "regressed" diverges from the existing strict-inequality comparator | CONFIRMED | `compare.py:186-195`, no tolerance |
 | 0-A.7.10 | `_compatibility` requires identical policy identity/config/seed/commit and forbids comparing controllers | CONFIRMED | `compare.py:57-180`, 26 equality checks + repository-commit check |
 | 0-A.8.2 | Reuse the digest-bound registry pattern from the approved Phase 7 design | CONFIRMED as a **design only** | Described at `PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md:1132-1136`. There is **no implementation and no registry file** in this checkout — `config/` holds only the four gate/shield YAMLs. Phase 8 reuses the documented pattern, not code |
+| 0-A.8 (all) | Agent runtime, `ScriptedAgent`, approval subsystem, budgets, tool envelopes, citation checker | **GREENFIELD** — audited and confirmed absent | Nothing in `src/hermes` implements any of it; there is no `agents/` package. The single existing foothold is the citation model (`SourceReference`/`LocatorInfo`, §3 Q9). §0-A.8.2's "reuse the digest-bound registry pattern from the approved Phase 7 design" can only be satisfied from the *document* at repo root — that pattern has no implementation in this checkout, and its implementation lives in the off-limits worktree |
 | 0-A.9.1 | Adapter hardcodes a straight map, forces `speed_mps: 0.0`, spawns one actor, supports two kinds | CONFIRMED, all four | `"map": "S"` (`metadrive.py:307`); `raise ValueError("Phase 2 MetaDrive scenarios require initial speed_mps: 0.0")` (`:295-299`); one `challenge_payload`; two `ChallengeConfig` members |
 | 0-A.9.5 | The existing workbench is ~2,100 lines | CONFIRMED | `workbench/app.py` = 2,130 lines |
 | 0-A.9.7 | Extend the real typer surface: `doctor, run, sim-smoke, verify-artifact, review-artifact, review-compare, workbench, compare`; `compare` keeps positional dirs | CONFIRMED | `cli.py` command registrations |
@@ -508,10 +514,13 @@ a schema-4.0 scenario is the only thing that will *produce* a 3.0 bundle to test
 | 6.12 | MAJOR | `telemetry.parquet` needs an undeclared dependency | Sprint 4 |
 | 6.13 | MINOR | No ego driver model exists | Sprint 1 |
 | 6.14 | MAJOR | Brake actuator lag under the noop shield forces ADAS onto schema-2+ trace events, which are currently bound to fault scenarios | Sprint 1a/1 |
+| 6.15 | MAJOR | `scenarios/cut_in.example.yaml` and `config/gates.example.yaml` are stale prototypes that fail validation — a live trap for a Phase 8 implementer reaching for a template | Sprint 1a |
+| 6.16 | MINOR | The MetaDrive adapter raises when the accepted action differs from the requested one, constraining where actuator lag may be applied | Sprint 1 |
+| 6.17 | CRITICAL | Scenario identity used a forked canonical serializer, so `-0.0` split one scenario into two digests — **fixed on this branch** (`e78d42f`) | Sprint 0.5 ✔ |
 
 **The single highest risk**, and the one least visible from the PRD: *the repository is a tightly
-digest-bound, exact-equality machine in far more places than the amendments assume.* Five of the nine
-criticals (6.0, 6.3, 6.6, 6.8, 6.9) are cases where a natural, idiomatic extension compiles, passes its
+digest-bound, exact-equality machine in far more places than the amendments assume.* Six of the ten
+criticals (6.0, 6.3, 6.6, 6.8, 6.9, 6.17) are cases where a natural, idiomatic extension compiles, passes its
 own new tests, and then either silently produces wrong evidence or invalidates existing evidence. The
 mitigation discipline for all of them is identical: **write the test that pins the old behaviour first,
 then version-gate the new behaviour, and never widen a check that pre-4.0 evidence depends on.**
@@ -537,8 +546,11 @@ too**, changing their digests. The blast radius:
 
 - `verification.py:1179` — `if context.run_context.scenario_digest != scenario_digest(scenario):` —
   re-verification recomputes the digest from the stored `scenario.resolved.yaml` and compares it to the
-  stored run context. **All 43 existing `artifacts/` bundles would become invalid evidence**, including
-  the `handoff-*` fixtures the Phase 6 review tests and the Phase 7 human-validation plan depend on.
+  stored run context. Every stored bundle produced from a pre-4.0 scenario would become invalid
+  evidence. To be precise about blast radius: **no bundle is committed**, so this is not repository
+  state — it is the 43 local `artifacts/` fixtures plus any copies published elsewhere. That is not a
+  reprieve: §1.3 shows eight test modules *require* those fixtures and nothing regenerates them, so
+  invalidating them takes the suite red with no path back.
 - `compare.py:73` — scenario digest is a fail-closed compatibility check.
 - `tests/unit/test_scenarios.py:56-77` — a golden test pinning
   `fake_nominal.yaml` → `c8d4e793…` and `metadrive_nominal.yaml` → `675413578f…`, which also asserts
@@ -606,6 +618,13 @@ Every ADAS bundle at evidence schema 3.0 would fail to build a review envelope, 
 `review-artifact`, `review-compare` and the workbench. Additionally `verification.py:1197` forbids
 mixed versions inside one bundle, so metrics/trace/run-context/execution-context must move to 3.0
 together — a single coordinated change set, exactly as §0-A.6.1 requires.
+
+**Size this larger than "bump a literal."** `domain/models.py` carries **six** V1/V2 model pairs, each
+declaring its own `evidence_schema_version` literal — `RunMetrics`/`V2`, `RunContext`/`V2`,
+`ExecutionContext`/`V2`, `TraceEvent`/`V2`, `ArtifactManifest`/`V2`, `FindingsDocument`/`V2` — and
+`verification.py` carries **four** literal `{"1.0": …, "2.0": …}` version→class dispatch maps
+(`:993`, `:1037`, `:1039`, `:1042`). Evidence schema 3.0 means six new subclasses and four dispatch
+entries before a single ADAS field is added. See §7.
 
 ### 6.4 CRITICAL — comparison compatibility is a deliberate, tested fail-closed contract
 
@@ -835,15 +854,87 @@ scenario is stuck on schema-1 events and cannot carry actuator lag, `permitted_a
 
 ---
 
+### 6.15 MAJOR — the two `*.example.*` files are stale prototypes that no longer load
+
+Both example files predate the implemented schemas and **fail validation outright**:
+
+```
+scenarios/cut_in.example.yaml  -> scenario validation failed: 21 validation errors
+                                  schema_version: Input should be '1.0', '2.0' or '3.0'
+config/gates.example.yaml      -> gate configuration validation failed: 8 validation errors
+                                  schema_version: Field required
+```
+
+`cut_in.example.yaml` is an active trap for this effort specifically: it is named for the cut-in
+scenario Phase 8 extends, it sits beside the nine real scenarios, and an implementer reaching for "the
+example" as a template would start from a document that no loader accepts. Either refresh both to the
+current schemas or delete them; do not leave them as apparent templates while writing schema 4.0.
+
+### 6.16 MINOR — the MetaDrive adapter forbids silent action clipping
+
+`metadrive.py:546-550` re-reads the action MetaDrive actually accepted and raises when it differs from
+the requested one:
+
+```python
+accepted = self._accepted_action(info)
+if accepted != requested:
+    raise RuntimeError(f"MetaDrive accepted action {accepted!r} differs from requested {requested!r}")
+```
+
+This is a useful guarantee — the executed action in the trace is exactly the action commanded — and it
+constrains Sprint 1's actuator-lag work: the lag must be applied *before* the adapter call and recorded
+as executed-action evidence (§6.14), never left to the simulator to absorb. Any ADAS command the
+arbitration layer produces must also be exactly representable, or the run dies with a RuntimeError
+rather than a typed configuration failure.
+
+### 6.17 CRITICAL (FIXED on this branch) — scenario identity used a forked canonical serializer
+
+`scenarios/loader.py` carried a private `_canonical_json_bytes`: the same separators and `sort_keys`
+as `evidence/canonical.py`, but **without its `_normalize` step**, which collapses `-0.0` to `0.0`.
+Scenario identity therefore obeyed different float rules from every other digest in the repository:
+
+```
+canonical_json_bytes({'lateral_offset_m': -0.0})  ->  b'{"lateral_offset_m":0.0}'
+loader._canonical_json_bytes(same)                ->  b'{"lateral_offset_m":-0.0}'
+```
+
+Reachable today: `InitialState.lateral_offset_m` accepts `-0.0`, and `-0.0 == 0.0` in Python, so two
+YAML files describing the *same* scenario produce two different digests. Demonstrated end to end from
+`scenarios/fake_nominal.yaml`:
+
+```
+lateral_offset_m:  0.0  ->  c8d4e79352e5b556...
+lateral_offset_m: -0.0  ->  6abf74206dc1cdfc...
+```
+
+`scenario_digest` feeds `RunContext` and the fail-closed comparison compatibility check, so this splits
+one scenario into two identities and makes two runs of it **incomparable**. It also makes §0-A.7.8's
+"floats use the existing canonical JSON serialization" ambiguous, because there were two.
+
+Phase 8 raises the exposure sharply: ADAS scenarios are float-dense (speeds, gaps, headways, curvature)
+and §10's parameter grid computes values where `-0.0` arises naturally.
+
+**Fixed** in `e78d42f`: the loader delegates to `hermes.evidence.canonical.canonical_json_bytes`,
+keeping the `ScenarioLoadError` wrapping. The import direction was already established by
+`gates/config.py:12`. Behaviour-preserving — no existing scenario contains `-0.0`, the golden
+schema-1.0 digests are unchanged, and five historical bundles re-verify identically.
+
+---
+
 ## 7. Cross-cutting duplication map
 
-A per-subsystem reading cannot see these. Each row is a literal that exists in more than one place and
-must be changed in lockstep.
+A per-subsystem reading cannot see these. Each row is a literal or rule that exists in more than one
+place and must be changed in lockstep. This map is the main reason §6's criticals are criticals.
 
 | Concept | Sites |
 |---|---|
 | Bundle file inventory (10 files) | `evidence/artifacts.py:39` `REQUIRED_ARTIFACT_FILES`; `review/models.py:41` `ArtifactFileName` (closed `Literal`); `review/models.py:73` `ARTIFACT_FILES`; `review/projection.py:94` source-type→filename map; `verification.py:1065` `manifest.required_files != REQUIRED_ARTIFACT_FILES` |
-| Metric direction / unit | `review/models.py:138` `METRIC_REGISTRY`; `comparison/compare.py:493` `_MEASUREMENT_DIMENSIONS` |
+| **Evidence-schema V1/V2 model pairs** | Six pairs in `domain/models.py`, each declaring its own `evidence_schema_version` `Literal`: `RunMetrics` :459 / `RunMetricsV2` :484; `RunContext` :496 / `V2` :517; `ExecutionContext` :543 / `V2` :554; `TraceEvent` :562 / `V2` :584; `ArtifactManifest` :595 / `V2` :651; `FindingsDocument` :660 / `V2` :667. **A `"3.0"` bump is six new subclasses, not a widened allowlist** |
+| **Version→class dispatch dicts** | `verification.py:993` (manifest), `:1037` (execution context), `:1039` (metrics), `:1042` (findings) — each a literal `{"1.0": …, "2.0": …}` map |
+| Metric order / metadata / direction | **Triplicated**: `review/models.py:117` `METRIC_ORDER` and `:138` `METRIC_REGISTRY`; `review/projection.py:129` `_METRIC_ORDER` (byte-identical re-declaration despite projection already importing from models) and `:150` `_METRIC_METADATA`; `comparison/compare.py:493` `_MEASUREMENT_DIMENSIONS`. Plus the magic slice `[:13]` at `review/models.py:2419` **and** `review/projection.py:849` — inserting an ADAS metric before index 13 silently moves the schema-1.0 boundary in both. One new metric ≈ six coordinated edits |
+| Legacy unavailable tracks | `review/models.py:318` `LEGACY_UNAVAILABLE_TRACKS`; `review/projection.py:234` `_LEGACY_UNAVAILABLE_TRACKS` (identical frozensets) |
+| MetaDrive support triple | `simulator_support.py:8-10` (`SUPPORTED_METADRIVE_VERSION/_COMMIT/_SOURCE`); `doctor.py:20` re-declares `SUPPORTED_METADRIVE_VERSION` independently rather than importing it; root file `SIMULATOR_COMMIT` is a third copy |
+| **Canonical JSON serializer** | `evidence/canonical.py:30` `canonical_json_bytes` (normalizes `-0.0`→`0.0`, rejects non-finite) vs the former private copy in `scenarios/loader.py` (raw `json.dumps`, no normalization). **Fixed on this branch** — see §6.17 |
 | Verifier-profile selection | `orchestrator.py:582-584`; `verification.py:1307-1309` |
 | `evidence_schema_version` allowlist | `verification.py:228-244` and `:492-514`; `review/models.py:567` `{"1.0","2.0"}`; `trace.py:709` |
 | Scenario `schema_version` gates | `models.py:288-345` validator; `trace.py:282` (`== "2.0"`); `trace.py:537` (`!= "3.0"`); `scenarios/loader.py:39-42` (digest pop-list, §6.0) |
@@ -987,8 +1078,11 @@ Phase 8 runs with `PYTHONPATH="$PWD/src"` against the `hermes-dev` interpreter. 
     unchanged; `handoff-phase5-demo`, `handoff-p1-collision`, `handoff-p4-fault` and
     `phase2-metadrive-final` re-verify with identical integrity and verdicts.
   - `test: guard that the suite imports this checkout's hermes` (§2) — a new test only.
+  - `fix: give scenario identity the repository's canonical serializer` (§6.17) — golden schema-1.0
+    digests unchanged; five historical bundles re-verify with identical integrity and verdicts.
 
-  No existing test assertion was edited or deleted.
+  No existing test assertion was edited or deleted. Final gates: **762 passed**, ruff clean on
+  `src`/`tests`, doctor 16 PASS / 2 WARN.
 - The Phase 7 worktree at `~/.codex/worktrees/Hermes/phase7-evaluation-adequacy-human-validation` was
   **not** read, checked out, merged or modified. Its adequacy machinery is not consumed. The only
   Phase 7 material read is the root-level `PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md`,
