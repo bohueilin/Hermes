@@ -33,6 +33,16 @@ def _canonical_json_bytes(value: object) -> bytes:
         raise ScenarioLoadError(f"scenario cannot be canonicalized: {exc}") from exc
 
 
+#: Fields introduced by scenario schema 4.0.
+#:
+#: ``scenario_digest`` hashes ``model_dump()``, and the digest is recomputed during
+#: re-verification and compared against the value stored in every bundle's run context.
+#: A field that reaches the payload of an older scenario would therefore change that
+#: scenario's identity and invalidate previously published evidence. Every schema-4.0
+#: addition must be listed here.
+_SCHEMA_4_ONLY_FIELDS = ("tags", "odd", "adas", "requirements")
+
+
 def _resolved_scenario_payload(scenario: ScenarioDefinition) -> dict[str, object]:
     """Return schema-aware content without changing established v1 identities."""
     resolved = scenario.model_dump(mode="json")
@@ -40,6 +50,9 @@ def _resolved_scenario_payload(scenario: ScenarioDefinition) -> dict[str, object
         resolved.pop("challenge")
     if scenario.schema_version in {"1.0", "2.0"}:
         resolved.pop("faults")
+    if scenario.schema_version != "4.0":
+        for field_name in _SCHEMA_4_ONLY_FIELDS:
+            resolved.pop(field_name)
     return resolved
 
 

@@ -256,10 +256,99 @@ ChallengeConfig = Annotated[
 ]
 
 
+#: MetaDrive advances physics in fixed 0.02 s steps, so a control frequency is only exactly
+#: representable when 1 / (frequency_hz * 0.02) is a whole number of physics steps. That is
+#: true precisely for the divisors of 50: 1, 2, 5, 10, 25 and 50 Hz. 20, 30 and 60 Hz are not.
+METADRIVE_PHYSICS_STEP_S = 0.02
+METADRIVE_STEPS_PER_SECOND = 50
+
+
+class OddDeclaration(HermesModel):
+    """Resolved operational design domain for one simulated scenario.
+
+    This records the conditions a scenario is *declared* to exercise. It is a scoping
+    statement about the simulation, not a claim about real-world operating limits.
+    """
+
+    road_type: tuple[Literal["highway", "arterial_simple"], ...]
+    weather: tuple[Literal["clear"], ...] = ("clear",)
+    lighting: tuple[Literal["daylight"], ...] = ("daylight",)
+    lane_markings_required: bool = True
+    min_speed_mps: Annotated[FiniteFloat, Field(ge=0.0, le=50.0)] = 0.0
+    max_speed_mps: Annotated[FiniteFloat, Field(ge=0.0, le=50.0)] = 30.0
+    vulnerable_road_users: Literal["excluded", "explicit_scenarios"] = "excluded"
+    intersections: Literal["excluded"] = "excluded"
+
+    @field_validator("road_type", "weather", "lighting", mode="before")
+    @classmethod
+    def normalize_yaml_sequence(cls, value: object) -> object:
+        return tuple(value) if isinstance(value, list) else value
+
+    @model_validator(mode="after")
+    def require_ordered_non_empty_declaration(self) -> OddDeclaration:
+        if not self.road_type:
+            raise ValueError("ODD must declare at least one road type")
+        if self.min_speed_mps > self.max_speed_mps:
+            raise ValueError("ODD speed range must be ordered: min_speed_mps <= max_speed_mps")
+        return self
+
+
+class FcwExpectation(HermesModel):
+    """Scenario-authored, oracle-verified expectation for forward collision warning."""
+
+    kind: Literal["none", "required"]
+    before_ttc_s: Annotated[FiniteFloat, Field(gt=0.0, le=10.0)] | None = None
+
+    @model_validator(mode="after")
+    def require_threshold_only_when_required(self) -> FcwExpectation:
+        if self.kind == "none" and self.before_ttc_s is not None:
+            raise ValueError("expected_fcw none cannot declare before_ttc_s")
+        return self
+
+
+class AebExpectation(HermesModel):
+    """Scenario-authored, oracle-verified expectation for automatic emergency braking."""
+
+    kind: Literal["forbidden", "required"]
+
+
+class AdasConfig(HermesModel):
+    """Which ADAS functions a scenario exercises, and what is expected of them."""
+
+    enabled: tuple[Literal["fcw", "aeb", "acc", "lka", "assist"], ...]
+    expected_fcw: FcwExpectation | None = None
+    expected_aeb: AebExpectation | None = None
+
+    @field_validator("enabled", mode="before")
+    @classmethod
+    def normalize_yaml_sequence(cls, value: object) -> object:
+        return tuple(value) if isinstance(value, list) else value
+
+    @model_validator(mode="after")
+    def require_unique_non_empty_functions(self) -> AdasConfig:
+        if not self.enabled:
+            raise ValueError("an ADAS block must enable at least one function")
+        if len(set(self.enabled)) != len(self.enabled):
+            raise ValueError("enabled ADAS functions must be unique")
+        return self
+
+
+class ScenarioRequirement(HermesModel):
+    """One structured expected property, compiling to exactly one verifier finding."""
+
+    property_id: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
+    verifier: Annotated[str, Field(min_length=1, max_length=64)]
+    metric: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_.]{0,63}$")]
+    operator: Literal["<", "<=", "==", "!=", ">=", ">"]
+    threshold: FiniteFloat | None = None
+    unit: Annotated[str, Field(min_length=1, max_length=32)] | None = None
+    hard: bool
+
+
 class ScenarioDefinition(HermesModel):
     """Versioned, resolved, simulator-neutral scenario definition."""
 
-    schema_version: Literal["1.0", "2.0", "3.0"]
+    schema_version: Literal["1.0", "2.0", "3.0", "4.0"]
     name: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
     version: Annotated[str, Field(min_length=1, max_length=32)]
     description: Annotated[str, Field(min_length=1, max_length=500)]
@@ -270,6 +359,19 @@ class ScenarioDefinition(HermesModel):
     hazards: HazardConfig = Field(default_factory=HazardConfig)
     challenge: ChallengeConfig | None = None
     faults: FaultConfig | None = None
+    # Schema-4.0-only blocks. They must never reach the resolved payload of an older
+    # scenario: scenario_digest is recomputed during re-verification and compared to the
+    # value stored in every bundle, so a shifted digest would invalidate stored evidence.
+    # hermes.scenarios.loader strips them for schema versions below 4.0.
+    tags: tuple[Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,31}$")], ...] = ()
+    odd: OddDeclaration | None = None
+    adas: AdasConfig | None = None
+    requirements: tuple[ScenarioRequirement, ...] = ()
+
+    @field_validator("tags", "requirements", mode="before")
+    @classmethod
+    def normalize_yaml_sequence(cls, value: object) -> object:
+        return tuple(value) if isinstance(value, list) else value
 
     @model_validator(mode="after")
     def reject_contradictory_configuration(self) -> ScenarioDefinition:
@@ -285,6 +387,13 @@ class ScenarioDefinition(HermesModel):
                     f"({self.control.horizon_steps})"
                 )
 
+        if self.schema_version != "4.0" and (
+            self.tags or self.odd is not None or self.adas is not None or self.requirements
+        ):
+            raise ValueError(
+                "schema_version below 4.0 cannot define tags, odd, adas, or requirements"
+            )
+
         if self.schema_version == "1.0":
             if self.challenge is not None:
                 raise ValueError("schema_version 1.0 cannot define challenge")
@@ -299,28 +408,14 @@ class ScenarioDefinition(HermesModel):
                 raise ValueError("schema_version 2.0 requires adapter metadrive")
             if self.challenge is None:
                 raise ValueError("schema_version 2.0 requires challenge")
-        else:
+        elif self.schema_version == "3.0":
             if self.faults is None or not self.faults.enabled:
                 raise ValueError("schema_version 3.0 requires an enabled fault profile")
             if self.adapter == "fake" and self.challenge is not None:
                 raise ValueError("fake adapter cannot define a MetaDrive challenge")
-            if (
-                self.faults.observation_delay_steps >= self.control.horizon_steps
-                or self.faults.control_delay_steps >= self.control.horizon_steps
-            ):
-                raise ValueError("fault delays must be less than horizon_steps")
-            interval = self.faults.frozen_observation_interval
-            if (
-                interval is not None
-                and interval.start_step + interval.duration_steps
-                > self.control.horizon_steps
-            ):
-                raise ValueError("frozen observation interval must fit within horizon_steps")
-            if any(
-                step >= self.control.horizon_steps
-                for step in self.faults.dropped_observation_steps
-            ):
-                raise ValueError("dropped observation steps must be less than horizon_steps")
+            self._reject_faults_beyond_horizon()
+        else:
+            self._validate_schema_4()
 
         if self.challenge is None:
             return self
@@ -343,6 +438,56 @@ class ScenarioDefinition(HermesModel):
                 f"({self.control.horizon_steps})"
             )
         return self
+
+    def _reject_faults_beyond_horizon(self) -> None:
+        """Fault schedules must fit inside the run. Shared by schema 3.0 and 4.0."""
+        assert self.faults is not None
+        if (
+            self.faults.observation_delay_steps >= self.control.horizon_steps
+            or self.faults.control_delay_steps >= self.control.horizon_steps
+        ):
+            raise ValueError("fault delays must be less than horizon_steps")
+        interval = self.faults.frozen_observation_interval
+        if (
+            interval is not None
+            and interval.start_step + interval.duration_steps > self.control.horizon_steps
+        ):
+            raise ValueError("frozen observation interval must fit within horizon_steps")
+        if any(
+            step >= self.control.horizon_steps
+            for step in self.faults.dropped_observation_steps
+        ):
+            raise ValueError("dropped observation steps must be less than horizon_steps")
+
+    def _validate_schema_4(self) -> None:
+        """Validate an ADAS scenario.
+
+        Schema 4.0 is deliberately permissive where 2.0 and 3.0 are strict: a challenge and
+        a fault profile may coexist, and both are optional, because ADAS coverage needs
+        threat scenarios, degraded threat scenarios, and threat-free nominal exposure.
+        """
+        if self.faults is not None:
+            if not self.faults.enabled:
+                raise ValueError("a declared schema_version 4.0 fault profile must be enabled")
+            self._reject_faults_beyond_horizon()
+        if self.adapter == "metadrive" and METADRIVE_STEPS_PER_SECOND % self.control.frequency_hz:
+            raise ValueError(
+                f"control frequency {self.control.frequency_hz} Hz has no exact MetaDrive "
+                f"decision interval at the {METADRIVE_PHYSICS_STEP_S} s physics step; use a "
+                f"divisor of {METADRIVE_STEPS_PER_SECOND} Hz"
+            )
+        if len(set(self.tags)) != len(self.tags):
+            raise ValueError("scenario tags must be unique")
+        if self.odd is not None and not (
+            self.odd.min_speed_mps <= self.control.target_speed_mps <= self.odd.max_speed_mps
+        ):
+            raise ValueError(
+                f"target_speed_mps {self.control.target_speed_mps} lies outside the declared "
+                f"ODD speed range [{self.odd.min_speed_mps}, {self.odd.max_speed_mps}]"
+            )
+        property_ids = [requirement.property_id for requirement in self.requirements]
+        if len(set(property_ids)) != len(property_ids):
+            raise ValueError("requirement property_id values must be unique")
 
     @property
     def expected_hazard(self) -> str | None:
