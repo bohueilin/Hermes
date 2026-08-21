@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 
 import yaml
 from pydantic import ValidationError
 
 from hermes.domain.models import ScenarioDefinition
+from hermes.evidence.canonical import canonical_json_bytes
 from hermes.scenarios.yaml_loader import StrictYamlError, load_strict_yaml
 
 MAX_SCENARIO_BYTES = 1_048_576
@@ -20,17 +20,17 @@ class ScenarioLoadError(ValueError):
 
 
 def _canonical_json_bytes(value: object) -> bytes:
+    """Canonicalize scenario content with the repository's single serializer.
+
+    This delegates to ``hermes.evidence.canonical`` rather than calling ``json.dumps``
+    directly so that scenario identity obeys the same float rules as every other digest.
+    A local copy without that normalization made ``scenario_digest`` sensitive to the sign
+    of zero, splitting one scenario into two identities.
+    """
     try:
-        text = json.dumps(
-            value,
-            allow_nan=False,
-            ensure_ascii=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        )
+        return canonical_json_bytes(value)
     except (TypeError, ValueError) as exc:
         raise ScenarioLoadError(f"scenario cannot be canonicalized: {exc}") from exc
-    return text.encode("utf-8")
 
 
 def _resolved_scenario_payload(scenario: ScenarioDefinition) -> dict[str, object]:

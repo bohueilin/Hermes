@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -344,3 +345,45 @@ def test_phase4_fault_schedule_rejects_ambiguous_or_out_of_horizon_values(
 
     with pytest.raises(ScenarioLoadError, match=error):
         load_scenario(path)
+
+
+def test_scenario_digest_is_invariant_to_negative_zero(tmp_path: Path) -> None:
+    """Numerically identical scenarios must share one canonical identity.
+
+    ``-0.0 == 0.0`` in Python, so two scenarios written this way are the same scenario.
+    ``scenario_digest`` feeds the run context and the fail-closed comparison compatibility
+    check, so a digest that depends on the sign of zero would split one scenario into two
+    identities and make two runs of it incomparable.
+    """
+    positive = tmp_path / "positive.yaml"
+    negative = tmp_path / "negative.yaml"
+    positive.write_text(VALID_SCENARIO, encoding="utf-8")
+    negative.write_text(
+        VALID_SCENARIO.replace("lateral_offset_m: 0.0", "lateral_offset_m: -0.0"),
+        encoding="utf-8",
+    )
+
+    positive_scenario = load_scenario(positive)
+    negative_scenario = load_scenario(negative)
+
+    assert (
+        positive_scenario.initial_state.lateral_offset_m
+        == negative_scenario.initial_state.lateral_offset_m
+    )
+    assert scenario_digest(positive_scenario) == scenario_digest(negative_scenario)
+
+
+def test_scenario_digest_uses_the_shared_canonical_serializer(tmp_path: Path) -> None:
+    """Scenario identity must not fork the repository's canonical JSON rules."""
+    from hermes.evidence.canonical import canonical_json_bytes
+    from hermes.scenarios.loader import _resolved_scenario_payload
+
+    scenario_file = tmp_path / "scenario.yaml"
+    scenario_file.write_text(VALID_SCENARIO, encoding="utf-8")
+    scenario = load_scenario(scenario_file)
+
+    expected = hashlib.sha256(
+        canonical_json_bytes(_resolved_scenario_payload(scenario))
+    ).hexdigest()
+
+    assert scenario_digest(scenario) == expected
