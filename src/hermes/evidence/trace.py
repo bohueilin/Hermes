@@ -237,6 +237,25 @@ def _verify_front_actor_fields(event: TraceEvent, *, prefix: str) -> None:
         )
 
 
+def _expected_observation_summary_fields(
+    scenario: ScenarioDefinition | None,
+) -> frozenset[str] | set[str]:
+    """Select the exact observation-summary field set a scenario's trace must carry.
+
+    The set is checked for exact equality, so this is version-gated rather than inferred:
+    schema 2.0 always carries challenge fields (a challenge is mandatory there), schema 4.0
+    carries them only when it declares a challenge, and every other version keeps the base
+    set byte-identically.
+    """
+    if scenario is None:
+        return _OBSERVATION_SUMMARY_FIELDS
+    if scenario.schema_version == "2.0":
+        return _CHALLENGE_OBSERVATION_SUMMARY_FIELDS
+    if scenario.schema_version == "4.0" and scenario.challenge is not None:
+        return _CHALLENGE_OBSERVATION_SUMMARY_FIELDS
+    return _OBSERVATION_SUMMARY_FIELDS
+
+
 def _expected_challenge_phase(
     scenario: ScenarioDefinition,
     sequence: int,
@@ -277,11 +296,7 @@ def _verify_observation_summary(
     scenario: ScenarioDefinition | None,
 ) -> None:
     event = events[index]
-    expected_fields = (
-        _CHALLENGE_OBSERVATION_SUMMARY_FIELDS
-        if scenario is not None and scenario.schema_version == "2.0"
-        else _OBSERVATION_SUMMARY_FIELDS
-    )
+    expected_fields = _expected_observation_summary_fields(scenario)
     if set(event.observation_summary) != expected_fields:
         raise TraceIntegrityError(
             f"observation summary fields are incomplete or unsupported at sequence "
@@ -534,8 +549,14 @@ def _verify_fault_event(
         raise TraceIntegrityError(
             f"schema-2 fault trace requires schema-2 event at sequence {event.sequence}"
         )
-    if scenario is None or scenario.schema_version != "3.0" or scenario.faults is None:
-        raise TraceIntegrityError("schema-2 fault trace requires a schema-3 fault scenario")
+    if (
+        scenario is None
+        or scenario.schema_version not in {"3.0", "4.0"}
+        or scenario.faults is None
+    ):
+        raise TraceIntegrityError(
+            "schema-2 fault trace requires a schema-3 or schema-4 fault scenario"
+        )
     evidence = event.observation_fault_evidence
     raw = evidence.raw_observation
     delivered = evidence.delivered_observation
