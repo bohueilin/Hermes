@@ -457,7 +457,7 @@ a schema-4.0 scenario is the only thing that will *produce* a 3.0 bundle to test
 | 6.4 | CRITICAL | Comparison compatibility is a tested fail-closed contract (26 checks) that §0-A.7.10 deliberately relaxes | Sprint 2 |
 | 6.5 | CRITICAL | Release gate **fails open** for a registered hard finding with no precedence branch | Sprint 0.5 |
 | 6.6 | CRITICAL | Verification hardcodes policy/adapter identity + config byte-for-byte; ADAS runs self-verify as INVALID_EVIDENCE | Sprint 1a/1 |
-| 6.7 | CRITICAL | `latency_source` integrity check is a policy-name allowlist a new policy silently bypasses | Sprint 0.5 |
+| 6.7 | MINOR | Trace-level `latency_source` policy-name allowlist stops firing for new policies (the guarantee is still enforced policy-agnostically in `verification.py`) | Sprint 1 |
 | 6.8 | CRITICAL | `compute_metrics` `isinstance` dispatch would silently return `RunMetricsV2` for a V3 trace | Sprint 1 |
 | 6.9 | CRITICAL | Review layer encodes per-schema metric sets as prefix slices, freezes `(schema, profile)` pairs, exact-matches the comparison dimension tuple, and couples comparison to review schema version | Sprints 1–2 |
 | 6.10 | MAJOR | Gate-config / shield-config schemas pinned at `"1.0"` | Sprint 2 |
@@ -467,7 +467,7 @@ a schema-4.0 scenario is the only thing that will *produce* a 3.0 bundle to test
 | 6.14 | MAJOR | Brake actuator lag under the noop shield forces ADAS onto schema-2+ trace events, which are currently bound to fault scenarios | Sprint 1a/1 |
 
 **The single highest risk**, and the one least visible from the PRD: *the repository is a tightly
-digest-bound, exact-equality machine in far more places than the amendments assume.* Five of the ten
+digest-bound, exact-equality machine in far more places than the amendments assume.* Five of the nine
 criticals (6.0, 6.3, 6.6, 6.8, 6.9) are cases where a natural, idiomatic extension compiles, passes its
 own new tests, and then either silently produces wrong evidence or invalidates existing evidence. The
 mitigation discipline for all of them is identical: **write the test that pins the old behaviour first,
@@ -636,7 +636,7 @@ scenarios at 1.0/2.0/3.0, and for 4.0 verify the *shape and digest binding* of t
 config rather than a hardcoded literal. This is unavoidable work in Sprint 1a and Sprint 1, and it must
 not be done by loosening the pre-4.0 path.
 
-### 6.7 CRITICAL — the trace's `latency_source` guarantee is a policy-name allowlist
+### 6.7 MINOR — the trace's policy-name `latency_source` allowlist stops firing (guarantee is preserved elsewhere)
 
 `evidence/trace.py:788-794`:
 
@@ -647,10 +647,22 @@ if event.run_context.policy_name in {"baseline", "metadrive-idm"} and (
     raise TraceIntegrityError(...)
 ```
 
-A new ADAS policy name **silently bypasses** this integrity check. Leaving it as-is would weaken an
-existing evidence guarantee — explicitly forbidden by §39. Phase 8 must extend the allowlist to every
-registered policy (better: invert it so that *all* policies must report `simulated`, with an explicit
-exception list), and pin it with a test.
+A new ADAS policy name does not match the allowlist, so this particular check stops firing.
+
+**But the guarantee is not lost.** `verification.py:901-910` enforces
+`event.latency_source == "simulated"` for **every event of every run**, gated only on the policy config
+carrying a valid `simulated_policy_latency_ms` (required for all runs); the policy name is used solely
+to pick the error wording. Every published run is self-verified through that path
+(`execute_*_run` → verify → publish), and `tests/unit/test_artifact_verification.py:421-438` pins it
+("fake adapter latency_source must be simulated").
+
+So this is redundancy loss, not a weakened contract, and it is **not** a §39 violation. Phase 8 should
+still extend the trace-level allowlist to registered ADAS policies so the two layers stay in agreement,
+but it is a tidy-up, not a blocker.
+
+> **Correction record.** This item was initially graded CRITICAL on the strength of the trace-level
+> allowlist alone. Re-checking found the second, policy-agnostic enforcement site in `verification.py`.
+> Graded down to MINOR and removed from the Sprint 0.5 gating work.
 
 ### 6.8 CRITICAL — `compute_metrics` would silently drop every ADAS metric
 
@@ -802,14 +814,11 @@ must be changed in lockstep.
 Every sprint's exit criterion includes **the full Phase 0–6 suite green** (§0-A.9.10) and ruff clean on
 `src`/`tests`.
 
-**Sprint 0.5 — strengthen two existing contracts before extending anything.** Both are pure
-hardening, permitted under §39 because they close holes rather than loosen guarantees, and both must
-land before the first ADAS finding or policy exists:
-
-1. the release-gate catch-all for unhandled hard findings (§6.5) — otherwise the first failing ADAS
-   hard invariant is reported as PASS;
-2. the `latency_source` policy allowlist (§6.7) — otherwise a new policy name silently bypasses an
-   existing trace-integrity check.
+**Sprint 0.5 — close the gate fail-open before extending anything.** Pure hardening, permitted
+under §39 because it closes a hole rather than loosening a guarantee, and it must land before the
+first ADAS finding exists: the release-gate catch-all for unhandled hard findings (§6.5) — otherwise
+the first failing ADAS hard invariant is reported as PASS. Behaviour is unchanged for both existing
+profiles, which enumerate only findings that already have precedence branches.
 
 Optionally also the `tests/conftest.py` import-provenance guard (§2).
 
