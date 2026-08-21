@@ -5,7 +5,7 @@ DEMO_RUN_ID := phase1-demo-$(shell date -u +%Y%m%dt%H%M%Sz)
 endif
 DEMO_ARTIFACT := artifacts/$(DEMO_RUN_ID)
 
-.PHONY: install install-dev doctor test lint check demo-phase1 sim-smoke
+.PHONY: install install-dev doctor test lint check demo-phase1 sim-smoke fixtures demo-adas
 
 install:
 	$(PYTHON) -m pip install -e .
@@ -33,3 +33,24 @@ demo-phase1:
 
 sim-smoke:
 	$(PYTHON) -m hermes sim-smoke --headless
+
+fixtures:
+	$(PYTHON) -m hermes fixtures regenerate
+
+# SIMULATION-ONLY ADAS demonstration: one threat scenario the controller must brake for,
+# and one threat-free scenario it must stay quiet in. Requires a vendored MetaDrive.
+ifndef ADAS_RUN_SUFFIX
+ADAS_RUN_SUFFIX := $(shell date -u +%Y%m%dt%H%M%Sz)
+endif
+
+demo-adas:
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/aeb_lead_hard_brake.yaml \
+		--policy adas-longitudinal --gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "adas-threat-$(ADAS_RUN_SUFFIX)"
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/adas_nominal_no_lead.yaml \
+		--policy adas-longitudinal --gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "adas-nominal-$(ADAS_RUN_SUFFIX)"
+	$(PYTHON) -m hermes review-artifact "adas-threat-$(ADAS_RUN_SUFFIX)" \
+		--artifact-root artifacts --format text

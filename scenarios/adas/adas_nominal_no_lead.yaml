@@ -1,0 +1,42 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# Threat-free nominal exposure. Nothing is ahead of the ego, so the oracle labels no threat
+# and any braking command is a false intervention. Without scenarios like this a suite only
+# ever rewards a controller for braking, and an over-braking candidate looks perfect.
+schema_version: "4.0"
+name: adas_nominal_no_lead
+version: "1.0"
+description: Ego cruises a clear lane with no in-path object; no warning or braking is due.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 200
+  target_speed_mps: 20.0
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - nominal
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: none
+  expected_aeb:
+    kind: forbidden

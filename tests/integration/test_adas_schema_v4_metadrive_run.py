@@ -187,3 +187,62 @@ def test_stationary_schema_4_scenario_keeps_the_pre_v4_adapter_configuration(
 
     assert "spawn_velocity" not in vehicle_config
     assert "spawn_velocity_car_frame" not in vehicle_config
+
+
+@pytest.mark.parametrize(
+    ("scenario_name", "expect_braking"),
+    [("aeb_lead_hard_brake", True), ("adas_nominal_no_lead", False)],
+)
+def test_committed_adas_scenarios_pass_every_hard_adas_finding(
+    repository_root: Path,
+    tmp_path: Path,
+    scenario_name: str,
+    expect_braking: bool,
+) -> None:
+    """The P0 pair: a threat that must be braked, and nominal exposure that must not be.
+
+    A suite made only of threat scenarios rewards a controller for braking and nothing else,
+    so an over-braking candidate looks perfect. The nominal case is what makes the
+    false-intervention invariant able to fail.
+    """
+    _requires_metadrive(repository_root)
+    import json
+
+    from hermes.domain.enums import FindingStatus
+    from hermes.runtime.orchestrator import execute_metadrive_run
+
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    run_id = f"adas-{scenario_name.replace('_', '-')}"
+
+    execute_metadrive_run(
+        scenario_path=repository_root / "scenarios" / "adas" / f"{scenario_name}.yaml",
+        gate_config_path=repository_root / "config" / "gates.adas.yaml",
+        seed=7,
+        run_id=run_id,
+        artifact_root=artifact_root,
+        repository_root=repository_root,
+        policy_factory=lambda _adapter: _adas_policy(),
+    )
+    bundle = artifact_root / run_id
+    findings = json.loads((bundle / "findings.json").read_text(encoding="utf-8"))
+    items = findings["findings"] if isinstance(findings, dict) else findings
+    adas = {item["finding_id"]: item for item in items if item["finding_id"].startswith("adas")}
+    events = [
+        json.loads(line)
+        for line in (bundle / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    braking_steps = [event for event in events if event["executed_action"]["brake"] > 0.0]
+
+    assert len(adas) == 4
+    for finding_id, item in adas.items():
+        if item["hard_invariant"]:
+            assert item["status"] == FindingStatus.PASS.value, finding_id
+    assert bool(braking_steps) is expect_braking
+    assert max(event["vehicle_state"]["collision_count"] for event in events) == 0
+
+
+def _adas_policy():
+    from hermes.adas.policy import AdasLongitudinalPolicy
+
+    return AdasLongitudinalPolicy()
