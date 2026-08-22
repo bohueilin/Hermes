@@ -27,9 +27,9 @@ deterministic check it does not control.
 
 | | |
 |---|---|
-| Commits on branch | 31 |
+| Commits on branch | 33 |
 | Files changed | 68 (+11,347 / −154) |
-| Tests | **961 passing** (14 drive real MetaDrive) |
+| Tests | **965 passing** (18 drive real MetaDrive) |
 | Lint | ruff clean repo-wide |
 | Doctor | 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | New source packages | `adas/`, `agents/`, `regression/`, `fixtures/`, `verifiers/adas.py` |
@@ -48,6 +48,7 @@ Each row is backed by a re-runnable command. Nothing is listed that I have not r
 | Evaluation catches controllers broken on purpose | `make demo-seeded-defects` → 5 passed |
 | A safety metric cannot be bought with a false intervention | `make demo-adas-tradeoff` |
 | A failure becomes a committed regression case | `make demo-flywheel` |
+| The oracle generalises to geometry it was not written for | `make demo-cut-in` |
 | An agent proposes; the classifier decides | `hermes agent triage <run>` |
 | Every agent claim carries a re-resolvable citation | `hermes agent check-citations <run>` |
 | The mutation boundary refuses without an approval | `PHASE8_GETTING_STARTED.md` §3 |
@@ -73,6 +74,23 @@ nothing is there. This is the clearest statement of what a non-compensatory gate
 **Demo 4 — `make demo-flywheel`.** Failed run → triage → draft → validate → approve → promote
 → rerun. The derived case must *discriminate*, and it does: `HOLD` for the defect that
 provoked it (a_req 6.83 m/s², 114% of authority), `CONDITIONAL` for the baseline (2.71, 45%).
+
+**Demo 5 — `make demo-cut-in`.** The evaluators in `verifiers/adas.py` never inspect
+`challenge.kind`; they compute required deceleration from observed gap and closing speed. That
+is a *claim* about generalisation, so it is now tested: two scenarios using the same cut-in
+manoeuvre, differing only in geometry, classified oppositely with **no change to any ADAS or
+verifier code**. The near case measures a peak required deceleration of 2.77 m/s² (46% of
+authority) and the far case 0.03 m/s² (under 1%), against a 30% threat threshold.
+
+The pair is complementary rather than redundant, which is what earns it its simulation time:
+
+| | baseline | late_braking | no_aeb | over_braking |
+|---|---|---|---|---|
+| **cut_in_near** (threat) | pass | `brake_onset_margin` | **`threat_response` → HOLD** | pass |
+| **cut_in_far** (nominal) | pass | pass | pass | **`no_false_intervention` → HOLD** |
+
+Each scenario *passes* the defect the other one catches. A scenario that failed every
+defective controller would add cost without adding information.
 
 ---
 
@@ -152,9 +170,15 @@ with permission tiers and approvals, deterministic triage, checkable citations,
 baseline-vs-candidate comparison on a declared variation axis, and the regression flywheel end
 to end.
 
-**Not started:** ACC, LKA, combined assist; `RunMetricsV3` / evidence schema 3.0; 9 of the 12
-P0 scenarios and the new `ChallengeConfig` kinds they need; ADAS fault wiring; the
-release-brief agent; workbench panels; interesting-event detection and parameter sweeps.
+**Not started:** ACC, LKA, combined assist; `RunMetricsV3` / evidence schema 3.0; the
+remaining P0 scenarios and the new `ChallengeConfig` kinds several of them need; ADAS fault
+wiring; the release-brief agent; workbench panels; interesting-event detection and parameter
+sweeps.
+
+On scenario counts: the PRD's P0 catalog is **22 named entries plus four nominal entries**
+added by §0-A amendment 6 — not the 12 an earlier revision of the handoff claimed. Five
+scenarios are committed, of which three match named entries (`lead_hard_brake`, `cut_in_near`,
+`cut_in_far`).
 
 **Not claimed, ever:** this is simulation only. No physical vehicle, no CAN, no public-road
 control, no real-time LLM in a control loop, no standards or certification claim. Every
@@ -165,6 +189,10 @@ warning signal, so it confirms only that the run presented the declared closing 
 ---
 
 ## 8. Two-day plan
+
+**Day 2 — in progress.** Two more P0 scenarios delivered (`cut_in_near`, `cut_in_far`),
+extending the seeded-defect suite to five cases and adding the generalisation test. Remaining:
+the one-page narrative and the architecture diagram.
 
 **Day 1 — complete.**
 - Trade-off demo (`make demo-adas-tradeoff`) — the false-intervention story ✓

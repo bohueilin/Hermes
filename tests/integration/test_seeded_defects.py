@@ -27,6 +27,13 @@ pytestmark = pytest.mark.metadrive
 SUITE = Path("config") / "phase8-seeded-defects.yaml"
 GATE = Path("config") / "gates.adas.yaml"
 
+#: Read at collection time so the parametrisation cannot drift from the suite file. A
+#: hardcoded list here would silently stop covering any defect added to the YAML.
+_DEFECT_IDS = [
+    item.defect_id
+    for item in load_seeded_defects(Path(__file__).resolve().parents[2] / SUITE).defects
+]
+
 
 def _requires_metadrive(repository_root: Path) -> None:
     if not (repository_root / "third_party" / "metadrive" / "metadrive").is_dir():
@@ -71,7 +78,12 @@ def test_the_baseline_controller_passes_every_hard_adas_finding(
     artifact_root = tmp_path / "artifacts"
     artifact_root.mkdir()
     for index, scenario in enumerate(
-        ("scenarios/adas/aeb_lead_hard_brake.yaml", "scenarios/adas/adas_nominal_slow_closing.yaml")
+        (
+            "scenarios/adas/aeb_lead_hard_brake.yaml",
+            "scenarios/adas/adas_nominal_slow_closing.yaml",
+            "scenarios/adas/adas_cut_in_near.yaml",
+            "scenarios/adas/adas_cut_in_far.yaml",
+        )
     ):
         baseline = SeededDefect(
             defect_id="baseline",
@@ -92,9 +104,7 @@ def test_the_baseline_controller_passes_every_hard_adas_finding(
         assert failing_adas == [], f"{scenario}: {failing_adas}"
 
 
-@pytest.mark.parametrize(
-    "defect_id", ["late_braking", "no_aeb", "over_braking"]
-)
+@pytest.mark.parametrize("defect_id", _DEFECT_IDS)
 def test_each_seeded_defect_is_caught_by_its_own_criterion(
     repository_root: Path,
     tmp_path: Path,

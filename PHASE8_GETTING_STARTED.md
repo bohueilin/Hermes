@@ -40,7 +40,7 @@ Everything below assumes you have done that. Without it, `python -m hermes` runs
 ## 1. Does the whole thing still work?
 
 ```bash
-make test        # expect: 947 passed
+make test        # expect: 965 passed
 make lint        # expect: All checks passed!
 make doctor      # expect: 17 PASS, 1 WARN, 1 NOT_AVAILABLE
 ```
@@ -54,7 +54,7 @@ python -m pytest -q -m "not metadrive"
 
 ---
 
-## 2. The four demos, in order of what they prove
+## 2. The five demos, in order of what they prove
 
 ### Demo 1 — an ADAS controller runs and is evaluated
 
@@ -135,6 +135,21 @@ python -m hermes regression promote "$DRAFT" --execute
 
 The last one writes into `scenarios/adas/`. Undo with
 `rm scenarios/adas/*_regression_*.yaml && rm -rf drafts config/phase8-approvals.yaml`.
+
+### Demo 5 — the evaluation generalises to a manoeuvre it was not written for
+
+```bash
+make demo-cut-in
+```
+
+The oracle in `verifiers/adas.py` never looks at `challenge.kind` — it works from observed gap
+and closing speed alone. These two scenarios use the **same** cut-in manoeuvre and differ only
+in geometry. **What to look for:** the near case brakes and passes every hard ADAS finding; the
+far case never brakes at all (`brake_onset_margin` reports NOT_AVAILABLE, which is the honest
+answer rather than a pass). No ADAS or verifier code changed to support either.
+
+The two tests it then runs are the point: the pair must separate by geometry, and each
+scenario must *pass* the defect the other one catches.
 
 ---
 

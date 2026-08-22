@@ -1,0 +1,65 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# The nominal twin of adas_cut_in_near: the same challenge kind and the same manoeuvre, at a
+# range and closing speed that never constitute a threat. A controller that intervenes here
+# is reacting to the *manoeuvre* rather than to the geometry.
+#
+# The pair matters more than either scenario alone. Same challenge kind, opposite expectation
+# - so a controller cannot pass both by pattern-matching on "a cut-in is happening", and the
+# oracle cannot pass both by keying on challenge.kind. Only geometry separates them.
+schema_version: "4.0"
+name: adas_cut_in_far
+version: "1.0"
+description: An adjacent-lane vehicle merges ahead at long range and low closing speed.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 300
+  target_speed_mps: 20.0
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+challenge:
+  # 80 m of separation closing at 2 m/s. Measured on the baseline controller: peak required
+  # deceleration is 0.03 m/s^2, under 1% of braking authority and roughly sixty times under
+  # the oracle's threat threshold, with a minimum gap of 67.8 m. No step is labelled a
+  # threat, so any braking at all is a false intervention.
+  #
+  # Note the run ends at DESTINATION_REACHED after ~6 s rather than exhausting the 300-step
+  # horizon, which leaves about 4 s of post-cut-in nominal exposure. That is enough for an
+  # over-braking controller to reveal itself - it does - but it is thinner than the step
+  # count suggests, and is worth revisiting if the destination distance changes.
+  kind: cut_in_near_field
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 80.0
+  actor_speed_mps: 18.0
+  initial_lane_delta: 1
+  trigger_step: 10
+  transition_steps: 10
+tags:
+  - aeb
+  - cut_in
+  - fcw
+  - longitudinal
+  - nominal
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: none
+  expected_aeb:
+    kind: forbidden

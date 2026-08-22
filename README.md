@@ -71,10 +71,17 @@ and the approval binds to the draft's exact bytes. The derived case then fails f
 controller that provoked it and passes for one without the defect — a regression case that
 cannot discriminate grows the suite and detects nothing.
 
+**5. The evaluation generalises.** `make demo-cut-in` runs two cut-in scenarios that differ
+only in geometry — one a threat, one not — and are classified oppositely with no change to any
+ADAS or verifier code. The oracle never inspects the challenge kind, so the split can only come
+from the geometry. Each scenario also passes the defect the other one catches, which is what
+makes the pair worth its simulation time rather than redundant.
+
 ### Phase 8 commands
 
 ```bash
 make demo-adas                             # threat and nominal scenarios, gate-evaluated
+make demo-cut-in                           # the same oracle on a manoeuvre it never saw
 hermes agent tools                         # discoverable tool catalogue with permissions
 hermes agent triage <run-id>               # proposal vs deterministic classification
 hermes agent check-citations <run-id>      # re-resolve every citation against the evidence

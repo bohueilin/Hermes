@@ -30,3 +30,21 @@ defects:
     scenario: scenarios/adas/adas_nominal_slow_closing.yaml
     expected_failing_finding: adas.aeb.no_false_intervention
     expected_triage_category: OVER_INTERVENTION
+
+  # The same two defects again, on a cut-in rather than a lead brake. The controllers are
+  # unchanged and so is the oracle; only the geometry differs. These entries exist to show
+  # the evaluation is not tuned to one manoeuvre - a defect that is caught only in the
+  # scenario it was discovered in has not really been characterised.
+  - defect_id: no_aeb_cut_in
+    description: Warns but never intervenes, when the threat arrives as a near-field cut-in.
+    policy_config: config/adas/defect_no_aeb.yaml
+    scenario: scenarios/adas/adas_cut_in_near.yaml
+    expected_failing_finding: adas.aeb.threat_response
+    expected_triage_category: MISSED_INTERVENTION
+
+  - defect_id: over_braking_cut_in
+    description: Treats a distant, slow merge ahead as an emergency.
+    policy_config: config/adas/defect_over_braking.yaml
+    scenario: scenarios/adas/adas_cut_in_far.yaml
+    expected_failing_finding: adas.aeb.no_false_intervention
+    expected_triage_category: OVER_INTERVENTION

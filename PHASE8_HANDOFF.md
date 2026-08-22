@@ -110,7 +110,7 @@ install points at the read-only Phase 7 worktree — see §4.1).
 
 ## 2. Required final evidence (PRD §39)
 
-**1. Commit / checkpoint.** Branch `feat/phase8-adas-lab`, 31 commits from
+**1. Commit / checkpoint.** Branch `feat/phase8-adas-lab`, 33 commits from
 `4eb87654f79654843169d00a656dd2c6f8092de4`. Head at time of writing: `65363ae`.
 
 **2. Changed-file summary.** 68 files changed, 11,347 insertions(+), 154 deletions(-). New packages: `src/hermes/adas/` (6 files),
@@ -123,7 +123,7 @@ assets: `config/adas/` (4 controller configs), `config/gates.adas.yaml`,
 `adapters/metadrive.py`, `runtime/orchestrator.py`, `cli.py`, `verifiers/__init__.py`, and two
 existing test files (both extended, no assertion deleted).
 
-**3. Tests.** `961 passed` (`pytest -q`), of which 14 carry the `metadrive` marker and run
+**3. Tests.** `965 passed` (`pytest -q`), of which 18 carry the `metadrive` marker and run
 against the real simulator. `pytest -q -m "not metadrive"` is the selection CI runs. Ruff
 clean repo-wide. Doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE.
 
@@ -151,10 +151,12 @@ earlier revision of this file:** the PRD's P0 catalog (§9) is **22 named entrie
 | `adas_aeb_lead_hard_brake` | covers catalog #3 `lead_hard_brake` |
 | `adas_nominal_no_lead` | serves amendment 6's ≥ 30% threat-free exposure requirement; **not** one of the four named nominal entries |
 | `adas_nominal_slow_closing` | as above, with a lead present so an over-braking controller has something to react to |
+| `adas_cut_in_near` | covers catalog #5 `cut_in_near` |
+| `adas_cut_in_far` | covers catalog #6 `cut_in_far`, authored as the nominal twin of the above |
 
-So: **1 of 22 named P0 scenarios**, plus two nominal scenarios that satisfy the exposure
-*requirement* without matching the named entries. The FCW/AEB slice alone needs six more named
-entries (#1, #2, #4, #5, #6, #7); ACC adds five, LKA six, combined assist four.
+So: **3 of 22 named P0 scenarios**, plus two nominal scenarios that satisfy the exposure
+*requirement* without matching the named entries. The FCW/AEB slice needs four more named
+entries (#1, #2, #4, #7); ACC adds five, LKA six, combined assist four.
 
 **6. Fault coverage.** **None wired to ADAS yet.** The seven existing fault transforms are
 intact and schema 4.0 permits `adas` + `faults` together, with `ADAS_P0_LONGITUDINAL_FAULT`
@@ -341,16 +343,31 @@ them, and the schema-drift guard tests added in Phase 8 still pass.
 
 ---
 
-### 3. The six remaining FCW/AEB P0 scenarios (§0-A.9.2, §0-A.7.6)
+### 3. The remaining FCW/AEB P0 scenarios (§0-A.9.2, §0-A.7.6)
 
-`fcw_stationary_lead`, `aeb_stationary_lead`, `slow_lead_closing`, `cut_in_near`, `cut_in_far`,
-`cut_out_reveal_stopped` — plus the four named nominal entries (`fcw_aeb_nominal_following`,
+**Done:** `cut_in_near` and `cut_in_far`. Both used the **existing** `cut_in_near_field`
+challenge kind, which was already fully implemented from an earlier phase — schema, adapter,
+trace rules and all. Authoring them needed no new code of any kind, only YAML. Check what the
+adapter already supports before assuming a scenario is blocked.
+
+**Remaining:** `fcw_stationary_lead`, `aeb_stationary_lead`, `slow_lead_closing`,
+`cut_out_reveal_stopped`, plus the four named nominal entries (`fcw_aeb_nominal_following`,
 `adjacent_lane_pass`, `non_in_path_stationary_object`, `decelerating_but_safe_lead`).
 
-**Blocked on new challenge kinds.** `ChallengeConfig`'s union still has exactly **two** members.
-`stationary_lead`, `cut_out_reveal`, `lead_accelerate` and `steady_lead` do not exist. Adding a
-kind touches the scenario schema, the adapter's challenge scheduler, the trace-layer
-observation-summary rules, and the offline oracle — budget accordingly.
+**These are blocked on new challenge kinds**, unlike the cut-in pair. `ChallengeConfig`'s union
+has exactly two members (`lead_vehicle_hard_brake`, `cut_in_near_field`); `stationary_lead`,
+`cut_out_reveal`, `lead_accelerate` and `steady_lead` do not exist. Adding a kind touches the
+scenario schema, the adapter's challenge scheduler, the trace-layer observation-summary rules
+and the offline oracle — budget accordingly.
+
+**Author them in threat/nominal pairs.** The cut-in pair is worth more than two independent
+scenarios because each one passes the defect the other catches, which is what proves neither is
+redundant. `tests/integration/test_cut_in_generalisation.py` is the template.
+
+**Watch the horizon.** Both cut-in scenarios end at `DESTINATION_REACHED` after 6–8 s rather
+than exhausting their 300-step horizon, so declared `horizon_steps` overstates the real
+exposure. Check `termination_reason` in `metrics.json` and measure the post-trigger window
+rather than trusting the step count.
 
 **Keep nominal exposure ≥ 30% of suite sim-time** (§0-A amendment 6). This is the constraint
 that makes the false-intervention criterion meaningful; a suite of only threat scenarios cannot
@@ -467,7 +484,7 @@ what gets built next.
 
 | Gate | Status |
 |---|---|
-| **8A — ADAS core** | **Partial.** FCW ✓, AEB ✓, ACC ✗, LKA ✗ (P1), combined assist ✗ (P1). 3 scenarios committed, of which 1 matches a named P0 catalog entry out of 22 + 4 nominal (see §2.5). Canonical metrics ✗ (`RunMetricsV3` not implemented). Deterministic repeats ✓ (N = 3 bitwise, re-verified at `65363ae`). Evidence bundles ✓. Baseline/candidate comparison ✓ (`make demo-adas-tradeoff`, declared variation axis; review-envelope path still strict). |
+| **8A — ADAS core** | **Partial.** FCW ✓, AEB ✓, ACC ✗, LKA ✗ (P1), combined assist ✗ (P1). 5 scenarios committed, of which 3 match named P0 catalog entries out of 22 + 4 nominal (see §2.5). Canonical metrics ✗ (`RunMetricsV3` not implemented). Deterministic repeats ✓ (N = 3 bitwise, re-verified at `65363ae`). Evidence bundles ✓. Baseline/candidate comparison ✓ (`make demo-adas-tradeoff`, declared variation axis; review-envelope path still strict). |
 | **8B — Failure / regression platform** | **Partial.** Failure taxonomy ✓ with a deterministic classifier. Seeded-defect acceptance suite ✓. Regression promotion ✓ end to end — draft authoring, coverage-gap assessment, requirement floor, approval boundary, promotion. Interesting-event detection ✗, scenario parameterisation and sweeps ✗, ADAS release scorecard ✗. |
 | **8C — Agentic workflow** | **Mostly delivered.** Failure-triage agent ✓, deterministic tool contracts ✓, mutation approval boundary ✓, agent cannot set gate verdict ✓ (pinned by test), scenario-curator workflow ✓ (coverage-gap assessment), regression builder ✓. Release-brief generation ✗, complete evidence provenance ✗ (`agent-trace.jsonl` blocked on the bundle's exact-inventory rule). |
 | **8D — Portfolio quality** | **Partial.** Demo runbook ✓ (§3), explicit limitations ✓ (§4), no unsupported production claims ✓, reproducible setup ✓, automated tests green ✓. README walkthrough, architecture diagram and screenshots ✗. |

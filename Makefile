@@ -19,7 +19,7 @@ endif
 DEMO_ARTIFACT := artifacts/$(DEMO_RUN_ID)
 
 .PHONY: install install-dev doctor test lint check demo-phase1 sim-smoke fixtures \
-	demo-adas demo-adas-tradeoff demo-seeded-defects demo-flywheel preflight
+	demo-adas demo-adas-tradeoff demo-seeded-defects demo-flywheel demo-cut-in preflight
 
 # Fail early and actionably rather than deep inside a demo.
 preflight:
@@ -119,6 +119,25 @@ demo-adas-tradeoff: preflight
 		"artifacts/tradeoff-base-$(ADAS_RUN_SUFFIX)" \
 		"artifacts/tradeoff-cand-$(ADAS_RUN_SUFFIX)" \
 		--variation-axis policy $(ALLOW_VERDICT)
+
+# Does the evaluation generalise? The oracle was written against a lead-brake scenario and
+# never inspects challenge.kind. These two scenarios use the same cut-in manoeuvre and differ
+# only in geometry - one is a threat, one is not - so the classification cannot be coming from
+# the manoeuvre. Nothing in src/hermes/adas/ or src/hermes/verifiers/ changed to support them.
+demo-cut-in: preflight
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/adas_cut_in_near.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "cutin-near-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/adas_cut_in_far.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "cutin-far-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	@echo ""
+	@echo "--- the pair must separate by geometry, and be complementary ---"
+	$(PYTHON) -m pytest -q tests/integration/test_cut_in_generalisation.py
 
 # The evaluation's own acceptance criterion: controllers broken on purpose must be caught.
 demo-seeded-defects: preflight
