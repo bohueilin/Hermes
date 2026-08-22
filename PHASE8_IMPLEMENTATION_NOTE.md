@@ -3,7 +3,7 @@
 **Companion to:** [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) (design) and
 [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md) (pre-work survey).
 **Branch:** `feat/phase8-adas-lab` from `feat/phase6-reviewer-comprehension` @ `4eb8765`.
-**Gates at time of writing:** 909 tests pass (11 of them `metadrive`-marked, running real
+**Gates at time of writing:** 947 tests pass (14 of them `metadrive`-marked, running real
 physics), ruff clean repo-wide, doctor 16 PASS.
 
 This note records what was built, what was measured, what deviates from the PRD and why, and
@@ -129,6 +129,30 @@ nominal scenario   verdict         CONDITIONAL -> HOLD     REGRESSED
                    hard_failures   [] -> [adas.aeb.no_false_intervention]
 ```
 
+### 2.8 The flywheel derives from the trace, not from a template
+
+A regression case is only worth adding if it discriminates. The derivation therefore reads the
+geometry the trace records at the failing event and proposes a scenario that *starts* there,
+rather than re-emitting the source scenario under a new name.
+
+Verified end to end: the derived case fails for the controller that provoked it (required
+deceleration at onset 6.83 m/s², 114% of authority) and passes for the baseline (2.71, 45%).
+A case that cannot separate those two grows the suite and detects nothing.
+
+Two latent defects surfaced by running it, both the same shape — a float32 storage boundary
+meeting a float64 tolerance:
+
+* A derived spawn speed of 18.515 is not float32-exact, so MetaDrive spawned at 18.514999…
+  and failed the reset check. The adapter now projects the spawn velocity to binary32 and
+  compares against the same projection, which keeps the check exact rather than loosening it.
+* The observed initial gap is a *difference of two float32 positions*, so its error is an ulp
+  of the position (tens of metres), not of the gap. An absolute 1e-6 m tolerance held only by
+  luck — a 40 m gap landed exactly, a 28.816 m gap missed by 1.4e-6. **This one is a
+  deliberate loosening of a trace-integrity tolerance**, now expressed relatively at roughly
+  eight times float32 epsilon with an absolute floor. Still four orders of magnitude tighter
+  than the smallest physically meaningful contradiction, which is millimetres — but it is a
+  loosening and should be reviewed as one.
+
 ## 3. Defects found in the existing codebase
 
 Four, all pre-existing, all fixed test-first and proven behaviour-preserving. These are worth
@@ -189,6 +213,7 @@ self-maintaining test scans the test tree for fixture references and fails if an
 | §0-A.6.4 `agent-trace.jsonl` | Not built | Bundle capture rejects *any* file outside `REQUIRED_ARTIFACT_FILES`, so §24's "Optional:" list is not implementable. Needs a schema-gated optional-artifact mechanism first. |
 | §12 `RunMetricsV3` | ADAS values live as finding measurements | Evidence schema 3.0 is six model subclasses plus four dispatch maps; deferred rather than half-done. |
 | §0-A.7.1 oracle from omniscient simulator state | Oracle computed from the stored trace | Keeps evaluation offline and re-judgeable without the simulator, at the cost described in §2.6. |
+| §0-A.9.7 `hermes regression promote <draft> --approve` | Approval is a separate verb | A single command lets the promoter self-approve, which defeats the boundary the approval record exists to draw. |
 
 ## 5. What I would push on if reviewing this
 
@@ -216,7 +241,7 @@ Honest list of where the work is thinnest:
 cd <repo> && export PYTHONPATH="$PWD/src"
 
 # gates
-python -m pytest -q                 # 909 passed
+python -m pytest -q                 # 947 passed
 python -m pytest -q -m metadrive    # 11 passed, real physics
 python -m ruff check . && python -m hermes doctor
 
@@ -231,8 +256,9 @@ python -m hermes run --simulator metadrive --headless \
 python -m hermes agent triage demo-late-braking
 python -m hermes agent check-citations demo-late-braking
 
-# the trade-off demonstration
+# the trade-off demonstration, and the flywheel
 make demo-adas-tradeoff
+make demo-flywheel
 ```
 
 **Environment note:** the `hermes-dev` conda environment's editable install resolves `hermes`
@@ -244,6 +270,7 @@ to a different checkout. Always run with `PYTHONPATH="$PWD/src"`;
 ```
 src/hermes/adas/        interfaces, functions, policy, config, seeded_defects
 src/hermes/agents/      contracts, tools, approval, triage, citations
+src/hermes/regression/  builder, floor, models - the failure-to-regression flywheel
 src/hermes/verifiers/   adas.py — four offline evaluators
 src/hermes/fixtures/    registry.py — reproducible test fixtures
 config/adas/            baseline + three seeded-defect controller configs

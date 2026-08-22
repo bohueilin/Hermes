@@ -1,8 +1,8 @@
 # Hermes Phase 8 — Design Spec: Agentic Workflows for ADAS Development
 
 **Status:** For design review. Implemented through the FCW/AEB slice, the seeded-defect
-acceptance suite, the agentic tool layer, and baseline-versus-candidate comparison; §10 lists
-what is specified but not yet built.
+acceptance suite, the agentic tool layer, baseline-versus-candidate comparison, and the
+failure-to-regression flywheel; §10 lists what is specified but not yet built.
 **Audience:** Design reviewers, AV simulation/validation engineers, platform PMs.
 **Scope boundary:** Simulation only. No physical vehicle, no CAN, no standards or
 certification claim. Every threshold in this document is illustrative.
@@ -136,7 +136,22 @@ EXECUTE and MUTATE tool returns a resolved plan — instance count, simulated se
 remaining, destination path — without side effects. This is what makes an agent's proposal
 reviewable *before* it is expensive or irreversible.
 
-### 6.6 Why budgets live with the tools
+### 6.6 Why a draft may add coverage but never subtract it
+
+The requirement floor closes an authority-laundering channel. An agent that cannot change a
+verdict directly could otherwise change what *counts* as passing: propose a "regression"
+scenario that quietly drops the AEB expectation, have it approved because it reads as added
+coverage, and thereafter every controller passes it.
+
+So the floor is enforced by the deterministic validator, before anyone is asked to approve —
+not at the approval step. Asking a human to notice a *missing* requirement in a YAML diff is
+a weak check, and the weakness is asymmetric: added text is conspicuous, removed text is not.
+
+The flywheel also refuses to draft when the suite already covers the conditions. Growing a
+regression suite has an ongoing cost in simulation time, and a duplicate tells a reviewer
+nothing.
+
+### 6.7 Why budgets live with the tools
 
 The PRD's example parameter grid alone resolves to 2,304 scenario instances. An agent that
 can trigger sweeps without a ceiling is a cost and denial-of-service channel. The ledger
@@ -235,8 +250,6 @@ Listed so a reviewer knows what is design and what is code.
 - **ACC, LKA, combined L2 assist.** Designated drop-to-P1 under the PRD's staging rule.
 - **`RunMetricsV3` / evidence schema 3.0.** ADAS metrics currently live as finding
   measurements rather than in `metrics.json`.
-- **Failure mining and the regression flywheel.** Tool contracts exist; window extraction and
-  draft authoring do not.
 - **Scenario curator, evaluation analyst, release brief agents.** Only triage is built.
 - **Agent provenance artifact** (`agent-trace.jsonl`) — blocked on the bundle's exact-inventory
   rule; needs a schema-gated optional-artifact mechanism.

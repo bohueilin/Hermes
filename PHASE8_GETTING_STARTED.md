@@ -40,12 +40,12 @@ Everything below assumes you have done that. Without it, `python -m hermes` runs
 ## 1. Does the whole thing still work?
 
 ```bash
-make test        # expect: 909 passed
+make test        # expect: 947 passed
 make lint        # expect: All checks passed!
 make doctor      # expect: 17 PASS, 1 WARN, 1 NOT_AVAILABLE
 ```
 
-`make test` runs everything including 11 tests that drive **real MetaDrive physics**. To run
+`make test` runs everything including 14 tests that drive **real MetaDrive physics**. To run
 only the simulator-free selection — what CI runs:
 
 ```bash
@@ -54,7 +54,7 @@ python -m pytest -q -m "not metadrive"
 
 ---
 
-## 2. The three demos, in order of what they prove
+## 2. The four demos, in order of what they prove
 
 ### Demo 1 — an ADAS controller runs and is evaluated
 
@@ -107,6 +107,34 @@ hard_failures  REGRESSED   [] -> ['adas.aeb.no_false_intervention']
 The candidate brakes far earlier. On the threat scenario that *improves* minimum time-to-collision
 from 1.17 s to 4.67 s — on a collision-and-TTC scorecard it ships. The gate holds it anyway,
 because of what it does when nothing is there.
+
+### Demo 4 — a failure becomes a regression case
+
+```bash
+make demo-flywheel
+```
+
+The canonical workflow end to end. **What to look for:**
+
+- `Coverage: GAP` — the proposal is not a duplicate of existing coverage.
+- The draft's `[VALIDATED]` state — it passed the requirement floor, so it does not weaken
+  the coverage it derives from.
+- `Approval: none` in the listing — nothing has been promoted, and nothing can be until a
+  human records a decision.
+
+To carry it through to promotion:
+
+```bash
+DRAFT=$(ls drafts | head -1)
+python -m hermes regression promote "$DRAFT"          # refused: APPROVAL_REQUIRED
+python -m hermes regression approve "$DRAFT" --approver "$(whoami)" \
+  --rationale "Reproduces the late-braking failure at the observed geometry."
+python -m hermes regression promote "$DRAFT"          # dry run: shows the plan
+python -m hermes regression promote "$DRAFT" --execute
+```
+
+The last one writes into `scenarios/adas/`. Undo with
+`rm scenarios/adas/*_regression_*.yaml && rm -rf drafts config/phase8-approvals.yaml`.
 
 ---
 

@@ -57,6 +57,19 @@ digest**, and refuses identically whether it is called by a scripted agent, a li
 desktop coding agent, or a person at the CLI. An agent's triage proposal is recorded *beside*
 the deterministic classification, never in place of it.
 
+**4. A failure becomes a regression case, and a human decides.** `make demo-flywheel` runs the
+canonical workflow end to end:
+
+```
+failed run -> triage -> draft -> validate -> approve -> promote -> rerun
+```
+
+The draft is derived from the geometry the trace records at the failing event, so it *starts*
+at the failure rather than driving up to it. It is refused promotion until an approval exists,
+and the approval binds to the draft's exact bytes. The derived case then fails for the
+controller that provoked it and passes for one without the defect — a regression case that
+cannot discriminate grows the suite and detects nothing.
+
 ### Phase 8 commands
 
 ```bash
@@ -65,11 +78,15 @@ hermes agent tools                         # discoverable tool catalogue with pe
 hermes agent triage <run-id>               # proposal vs deterministic classification
 hermes agent check-citations <run-id>      # re-resolve every citation against the evidence
 hermes compare <base> <cand> --variation-axis policy
+hermes regression draft <run-id>           # derive a regression case from a failure
+hermes regression approve <draft> --approver <you> --rationale <why>
+hermes regression promote <draft> --execute
 hermes fixtures regenerate                 # restore the test fixtures on a fresh clone
 ```
 
-Phase 8 is **partial**: FCW and AEB are implemented and evaluated; ACC, LKA, combined assist,
-`RunMetricsV3`, failure mining and the workbench panels are not. See the handoff for the gate
+Phase 8 is **partial**: FCW and AEB are implemented and evaluated, with the agentic layer and
+the regression flywheel closed; ACC, LKA, combined assist, `RunMetricsV3` and the workbench
+panels are not. See the handoff for the gate
 table. Two scenarios and one seed are a reference implementation, not a safety case.
 
 ## Safety boundary

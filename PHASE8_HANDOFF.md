@@ -109,8 +109,8 @@ install points at the read-only Phase 7 worktree — see §4.1).
 
 ## 2. Required final evidence (PRD §39)
 
-**1. Commit / checkpoint.** Branch `feat/phase8-adas-lab`, 25 commits from
-`4eb87654f79654843169d00a656dd2c6f8092de4`. Head at time of writing: `2e5db88`.
+**1. Commit / checkpoint.** Branch `feat/phase8-adas-lab`, 29 commits from
+`4eb87654f79654843169d00a656dd2c6f8092de4`. Head at time of writing: `cdb4637`.
 
 **2. Changed-file summary.** 57 files changed, 9115 insertions(+), 105 deletions(-). New packages: `src/hermes/adas/` (6 files),
 `src/hermes/agents/` (6), `src/hermes/fixtures/` (2), `src/hermes/verifiers/adas.py`. New
@@ -121,7 +121,7 @@ assets: `config/adas/` (4 controller configs), `config/gates.adas.yaml`,
 `adapters/metadrive.py`, `runtime/orchestrator.py`, `cli.py`, `verifiers/__init__.py`, and two
 existing test files (both extended, no assertion deleted).
 
-**3. Tests.** `909 passed` (`pytest -q`), of which 11 carry the `metadrive` marker and run
+**3. Tests.** `947 passed` (`pytest -q`), of which 14 carry the `metadrive` marker and run
 against the real simulator. `pytest -q -m "not metadrive"` is the selection CI runs. Ruff
 clean repo-wide. Doctor 16 PASS / 2 WARN.
 
@@ -331,8 +331,8 @@ fields and name it for what it approves (a repository change), per audit §9.3.
 | Gate | Status |
 |---|---|
 | **8A — ADAS core** | **Partial.** FCW ✓, AEB ✓, ACC ✗, LKA ✗ (P1), combined assist ✗ (P1). 2 of 12+ scenarios. Canonical metrics ✗ (`RunMetricsV3` not implemented). Deterministic repeats ✓ (N = 3 bitwise). Evidence bundles ✓. Baseline/candidate comparison ✗. |
-| **8B — Failure / regression platform** | **Partial.** Failure taxonomy ✓ with a deterministic classifier. Seeded-defect acceptance suite ✓. Interesting-event detection ✗, scenario parameterisation ✗, regression promotion — the approval boundary and `promote_regression` exist ✓, draft authoring ✗. |
-| **8C — Agentic workflow** | **Partial.** Failure-triage agent ✓, deterministic tool contracts ✓, mutation approval boundary ✓, agent cannot set gate verdict ✓ (pinned by test). Scenario-curator workflow ✗, release-brief generation ✗, complete evidence provenance ✗ (`agent-trace.jsonl` blocked on the bundle's exact-inventory rule). |
+| **8B — Failure / regression platform** | **Partial.** Failure taxonomy ✓ with a deterministic classifier. Seeded-defect acceptance suite ✓. Regression promotion ✓ end to end — draft authoring, coverage-gap assessment, requirement floor, approval boundary, promotion. Interesting-event detection ✗, scenario parameterisation and sweeps ✗, ADAS release scorecard ✗. |
+| **8C — Agentic workflow** | **Mostly delivered.** Failure-triage agent ✓, deterministic tool contracts ✓, mutation approval boundary ✓, agent cannot set gate verdict ✓ (pinned by test), scenario-curator workflow ✓ (coverage-gap assessment), regression builder ✓. Release-brief generation ✗, complete evidence provenance ✗ (`agent-trace.jsonl` blocked on the bundle's exact-inventory rule). |
 | **8D — Portfolio quality** | **Partial.** Demo runbook ✓ (§3), explicit limitations ✓ (§4), no unsupported production claims ✓, reproducible setup ✓, automated tests green ✓. README walkthrough, architecture diagram and screenshots ✗. |
 
 Under §0-A.9.2's staging condition, LKA, combined assist, curved geometry, lane-estimate
