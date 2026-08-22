@@ -12,10 +12,14 @@ Phase 8 extends Hermes into a simulation-based **ADAS development and agentic wo
 forward collision warning and automatic emergency braking, evaluated by an independent offline
 oracle, with an agentic layer whose authority boundary is enforced in code rather than in a prompt.
 
+**Start here:** [PHASE8_GETTING_STARTED.md](PHASE8_GETTING_STARTED.md) — ten minutes, every
+command copy-pasteable, with what each one should print.
+
 Design documents, in reading order:
 
 | Document | What it is |
 |---|---|
+| [PHASE8_GETTING_STARTED.md](PHASE8_GETTING_STARTED.md) | How to run and test it |
 | [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) | The design, the agent authority model, acceptance criteria, and open questions for review |
 | [PHASE8_IMPLEMENTATION_NOTE.md](PHASE8_IMPLEMENTATION_NOTE.md) | What was built and measured, decisions forced by the code, deviations, and where the work is thinnest |
 | [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md) | The Sprint 0 survey of the existing codebase and its compatibility risks |
