@@ -34,7 +34,7 @@ deterministic check it does not control.
 | Doctor | 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | New source packages | `adas/`, `agents/`, `regression/`, `fixtures/`, `verifiers/adas.py` |
 | New test files | 14 |
-| Working tree | clean; fresh clone reproduces every demo |
+| Working tree | clean. **A clean clone does not reproduce the suite** — see §4 |
 
 ---
 
@@ -53,7 +53,7 @@ Each row is backed by a re-runnable command. Nothing is listed that I have not r
 | Every agent claim carries a re-resolvable citation | `hermes agent check-citations <run>` |
 | The mutation boundary refuses without an approval | `PHASE8_GETTING_STARTED.md` §3 |
 | Bitwise determinism at fixed seed and host | `PHASE8_GETTING_STARTED.md` §5 |
-| Fresh clone reproducibility | `hermes fixtures regenerate` → 961 pass |
+| Fixture regeneration (on a host that already has the vendored simulator) | `hermes fixtures regenerate` → 965 pass |
 
 ### 3.1 The four demos, and what each is actually evidence of
 
@@ -112,6 +112,26 @@ statement. Whether late braking that still avoids contact should be a hard failu
 [design-spec open question 2](PHASE8_DESIGN_SPEC.md) and is genuinely open: making it hard
 requires the scenario to declare whether a severity-reducing late intervention is acceptable,
 and nothing declares that today.
+
+**It does not run on anyone else's machine.** This is the sharpest thing to know about the
+project and it should not be discovered by cloning. Measured, not estimated:
+
+| From | Result |
+|---|---|
+| A clean clone, as committed | **144 failed / 761 passed / 42 errors** |
+| After `hermes fixtures regenerate` | **24 failed / 883 passed / 40 errors** |
+| On this development host | 965 passed |
+
+Two causes. `artifacts/` is gitignored, so eight test modules load evidence fixtures by name that
+nothing in the repository can produce — `fixtures regenerate` closes most of that gap. The
+remainder is that MetaDrive is **not a declared dependency**: it is a vendored checkout under
+`third_party/`, also gitignored, so 5 of 13 fixtures cannot be regenerated anywhere the simulator
+has not been placed by hand. CI has never run against this branch — `.github/workflows/ci.yml`
+triggers on `main`, and `main` is still the Phase 0 commit.
+
+A repository about evidence integrity that cannot reproduce its own evidence elsewhere is a real
+contradiction, not a packaging detail. Fixing it means declaring the simulator dependency and
+running CI on the branch; neither is done.
 
 **Comfort is not under control.** Every demo lands CONDITIONAL on `comfort.acceleration` and
 `comfort.jerk`, with measured peak |a| around 13 m/s² against a configured 6 m/s² authority.

@@ -247,6 +247,7 @@ Clean up: `rm -rf artifacts/det-* artifacts/demo-late`
 | `No module named hermes` | `conda activate hermes-dev` |
 | `make` refuses with a preflight message | Follow the message; it names the exact command |
 | A test wants a fixture that is absent | `make fixtures` |
+| A clean clone reports ~144 failures | Expected. Run `make fixtures`; the residual ~24 need the vendored simulator, which is gitignored and not a declared dependency |
 | `run ID must be 1-64 lowercase ASCII...` | Run IDs allow letters, digits and hyphens — no underscores |
 | MetaDrive fails to import | `third_party/metadrive` must be vendored; run `make doctor` |
 | A demo exits non-zero | `hermes run` encodes the verdict in its exit status: 0 PASS, 10 CONDITIONAL, 20 HOLD, 30 invalid evidence. Only 30 is a real failure. |

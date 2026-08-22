@@ -280,7 +280,7 @@ got wrong.
 conda activate hermes-dev && cd ~/Documents/GitHub/Hermes
 export PYTHONPATH="$PWD/src"          # mandatory: see §4.1, the editable install lies
 make preflight                        # silent + exit 0 means you are on the right checkout
-make test                             # expect 961 passed
+make test                             # expect 965 passed (on a host with the vendored simulator)
 python -m hermes fixtures regenerate  # only if tests fail on missing artifacts/ fixtures
 ```
 

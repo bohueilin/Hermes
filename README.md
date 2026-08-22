@@ -19,6 +19,7 @@ Design documents, in reading order:
 
 | Document | What it is |
 |---|---|
+| [HERMES_OVERVIEW.md](HERMES_OVERVIEW.md) | **Start here if you are new** — what Hermes is, what it is not, and how it was built |
 | [PHASE8_STATUS.md](PHASE8_STATUS.md) | Where the work stands: what exists, what is not claimed, and the numbers |
 | [PHASE8_GETTING_STARTED.md](PHASE8_GETTING_STARTED.md) | How to run and test it |
 | [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) | The design, the agent authority model, acceptance criteria, and open questions for review |
@@ -33,12 +34,18 @@ that has never failed is indistinguishable from one that cannot fail, so three c
 each broken in exactly one way, expressed purely as configuration - must each be caught by
 their own named criterion:
 
-| Controller | Scenario | Verdict | Caught by |
+| Controller | Scenario | Detected by its named criterion | Verdict, and what drove it |
 |---|---|---|---|
-| `baseline` | threat | CONDITIONAL | — (braking began at 50% of authority) |
-| `defect_late_braking` | threat | HOLD | `adas.aeb.brake_onset_margin` (108%) |
-| `defect_no_aeb` | threat | HOLD | `adas.aeb.threat_response` |
-| `defect_over_braking` | nominal | HOLD | `adas.aeb.no_false_intervention` |
+| `baseline` | threat | — (braking began at 50% of authority) | CONDITIONAL (comfort) |
+| `defect_late_braking` | threat | `adas.aeb.brake_onset_margin` (108%) — **soft** | HOLD, driven by `progress.required` |
+| `defect_no_aeb` | threat | `adas.aeb.threat_response` — **hard** | HOLD, driven by that finding |
+| `defect_over_braking` | nominal | `adas.aeb.no_false_intervention` — **hard** | HOLD, driven by that finding |
+
+The second row is worth reading carefully rather than skimming. `brake_onset_margin` correctly
+detects the late-braking defect, but it is a *soft* criterion, so on its own it would produce
+CONDITIONAL. The HOLD comes from the vehicle failing to complete its mission — a plausible
+consequence of braking late, but not the same statement. Whether late braking that still avoids
+contact should be a hard failure is an open design question, not a settled one.
 
 **2. A candidate cannot buy a safety metric with a false intervention.** Same scenario, same
 seed, declared variation axis `policy`:
