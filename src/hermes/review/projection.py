@@ -113,6 +113,10 @@ _FINDING_LABELS = MappingProxyType(
         "comfort.acceleration": "Acceleration comfort threshold",
         "comfort.jerk": "Jerk comfort threshold",
         "fault.coverage.required": "Configured fault coverage",
+        "adas.aeb.threat_response": "AEB responded to an oracle-labelled threat",
+        "adas.aeb.brake_onset_margin": "AEB braking began within braking authority",
+        "adas.aeb.no_false_intervention": "No braking in a threat-free scenario",
+        "adas.fcw.warning_timing": "Declared forward-collision warning exposure occurred",
     }
 )
 _FINDING_METRICS = MappingProxyType(
@@ -296,6 +300,15 @@ def _exact(value: object, unit: str | None) -> ExactValue:
     )
 
 
+def _finding_label(finding_id: str) -> str:
+    """Human label for a finding, falling back to the identifier itself.
+
+    A missing label must not take down the whole review. Rendering the raw finding id is
+    ugly; refusing to render the bundle is worse.
+    """
+    return _FINDING_LABELS.get(finding_id, finding_id)
+
+
 def _clause(
     *,
     label: str,
@@ -474,10 +487,73 @@ def _threshold(snapshot: object, finding_id: str):
                 ),
             ),
         )
+    if finding_id.startswith("adas."):
+        return _adas_threshold(snapshot, finding_id)
     raise ReviewUnavailableError(
         ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
         f"unsupported accepted finding shape: {finding_id}",
     )
+
+
+def _adas_threshold(snapshot: object, finding_id: str):
+    """Project an ADAS finding's criterion for review.
+
+    The criterion each ADAS verifier applied is already recorded on the finding as
+    ``threshold_or_invariant``, and its measured value on the finding's measurement. This
+    projects those into the review vocabulary rather than re-deriving the rule, so the
+    review surface cannot drift from what the verifier actually evaluated.
+    """
+    finding = next(
+        item for item in snapshot.findings.findings if item.finding_id == finding_id
+    )
+    gate_reference = (_reference("GATE_CONFIG", "/adas"),)
+    if finding_id == "adas.aeb.threat_response":
+        return InvariantExpression(
+            kind="INVARIANT",
+            label="Threat response and collision avoidance",
+            clause=None,
+            children=(),
+            invariant=InvariantRule(
+                operator="ALL_OBSERVED",
+                configuration_sources=gate_reference,
+                evidence_sources=_ordered_references(
+                    *_event_references(snapshot.events, "/executed_action/brake"),
+                ),
+            ),
+        )
+    left, evidence_pointer, operator = _ADAS_CLAUSES[finding_id]
+    return _clause(
+        label=_finding_label(finding_id),
+        left=left,
+        transforms=("IDENTITY",),
+        operator=operator,
+        right=_exact(finding.measurement.value, finding.measurement.unit),
+        configuration=gate_reference,
+        evidence=_event_references(snapshot.events, evidence_pointer),
+    )
+
+
+#: Left operand, supporting evidence pointer, and operator for each clause-shaped ADAS
+#: finding. ``adas.aeb.threat_response`` is compound and is projected as an invariant.
+_ADAS_CLAUSES: Mapping[str, tuple[str, str, str]] = MappingProxyType(
+    {
+        "adas.aeb.brake_onset_margin": (
+            "required_deceleration_at_brake_onset_mps2",
+            "/executed_action/brake",
+            "LTE",
+        ),
+        "adas.aeb.no_false_intervention": (
+            "braking_steps_in_threat_free_scenario",
+            "/executed_action/brake",
+            "LTE",
+        ),
+        "adas.fcw.warning_timing": (
+            "minimum_ttc_s",
+            "/observation_summary/front_distance_m",
+            "LTE",
+        ),
+    }
+)
 
 
 def _consequence(
@@ -522,6 +598,26 @@ def _consequence(
         effect = result = "CONDITIONAL"
         source = "FIXED_GATE_PRECEDENCE"
         configuration = ()
+    elif finding_id.startswith("adas."):
+        # Mirrors the gate's non-compensatory catch-all for hard findings that have no
+        # branch of their own: FAIL holds, unavailable required evidence follows the
+        # configured policy, and a soft finding is held for human review.
+        finding = next(
+            item for item in snapshot.findings.findings if item.finding_id == finding_id
+        )
+        if not finding.hard_invariant:
+            effect = result = "CONDITIONAL"
+            source = "FIXED_GATE_PRECEDENCE"
+            configuration = ()
+        elif status == "NOT_AVAILABLE":
+            effect = "CONFIGURED_MISSING_REQUIRED_EVIDENCE"
+            result = _enum_value(snapshot.gate_config.hard.missing_required_evidence)
+            source = "GATE_CONFIG_MISSING_REQUIRED_EVIDENCE"
+            configuration = (_reference("GATE_CONFIG", "/hard/missing_required_evidence"),)
+        else:
+            effect = result = "HOLD"
+            source = "FIXED_GATE_PRECEDENCE"
+            configuration = ()
     else:
         raise ReviewUnavailableError(
             ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
@@ -544,10 +640,13 @@ def _finding_references(
     finding: object,
     finding_index: int,
 ) -> tuple[SourceReference, ...]:
-    references = [
-        _reference("METRIC", f"/{_FINDING_METRICS[finding.finding_id]}"),
-        _reference("FINDING", f"/findings/{finding_index}"),
-    ]
+    references = [_reference("FINDING", f"/findings/{finding_index}")]
+    # ADAS findings carry their measurement on the finding itself; there is no
+    # metrics.json counterpart until RunMetricsV3 exists, so no METRIC reference is
+    # fabricated for them. A dangling source reference would be worse than none.
+    metric = _FINDING_METRICS.get(finding.finding_id)
+    if metric is not None:
+        references.insert(0, _reference("METRIC", f"/{metric}"))
     references.extend(_reference("EVENT", "", sequence) for sequence in finding.event_sequences)
     return _ordered_references(*references)
 
@@ -567,7 +666,7 @@ def _findings(snapshot: object) -> tuple[FindingItem, ...]:
                 finding_id=finding.finding_id,
                 verifier_name=finding.verifier,
                 verifier_version=finding.verifier_version,
-                label=_FINDING_LABELS[finding.finding_id],
+                label=_finding_label(finding.finding_id),
                 explanation=finding.message,
                 category=("NOT_AVAILABLE" if availability == "NOT_AVAILABLE" else "COMPUTED"),
                 status=status,
@@ -602,7 +701,7 @@ def _sufficiency(
             items.append(
                 SufficiencyItem(
                     evidence_id=finding_id,
-                    label=_FINDING_LABELS[finding_id],
+                    label=_finding_label(finding_id),
                     requirement="NOT_APPLICABLE",
                     availability="NOT_APPLICABLE",
                     reason="Not applicable to the legacy verifier profile",

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import PurePosixPath
 from types import MappingProxyType
-from typing import Annotated, Literal, TypeAlias
+from typing import Annotated, ClassVar, Literal, TypeAlias
 
 from pydantic import (
     BaseModel,
@@ -113,6 +113,86 @@ FINDING_ORDER = (
     "comfort.acceleration",
     "comfort.jerk",
     "fault.coverage.required",
+)
+ADAS_FINDING_ORDER = (
+    "adas.aeb.threat_response",
+    "adas.aeb.brake_onset_margin",
+    "adas.aeb.no_false_intervention",
+    "adas.fcw.warning_timing",
+)
+#: The single trace pointer each ADAS criterion reads, used to check that its evidence
+#: references cover the whole timeline. Mirrors hermes.review.projection.
+_ADAS_EVIDENCE_POINTERS: Mapping[str, str] = MappingProxyType(
+    {
+        "adas.aeb.threat_response": "/executed_action/brake",
+        "adas.aeb.brake_onset_margin": "/executed_action/brake",
+        "adas.aeb.no_false_intervention": "/executed_action/brake",
+        "adas.fcw.warning_timing": "/observation_summary/front_distance_m",
+    }
+)
+#: Findings a profile actually emits, in order.
+#:
+#: Distinct from FINDING_ORDER_BY_PROFILE, which lists *sufficiency* items and therefore
+#: includes entries a profile marks NOT_APPLICABLE. Only the legacy profile emits no
+#: fault-coverage finding.
+EMITTED_FINDING_ORDER_BY_PROFILE: Mapping[str, tuple[str, ...]] = MappingProxyType(
+    {
+        "legacy": FINDING_ORDER[:6],
+        "fault_coverage": FINDING_ORDER,
+        "adas_p0_longitudinal": FINDING_ORDER[:6] + ADAS_FINDING_ORDER,
+        "adas_p0_longitudinal_fault": FINDING_ORDER + ADAS_FINDING_ORDER,
+    }
+)
+#: Which evidence schema each verifier profile may appear with.
+#:
+#: An ADAS run without faults emits schema-1 trace events, and one with faults emits schema-2,
+#: so each ADAS profile pairs with the schema its evidence actually carries. Keeping this a
+#: closed set means a bundle claiming a profile its evidence cannot support is rejected rather
+#: than rendered.
+_FROZEN_SCHEMA_PROFILE_PAIRINGS: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("1.0", "legacy"),
+        ("2.0", "fault_coverage"),
+        ("1.0", "adas_p0_longitudinal"),
+        ("2.0", "adas_p0_longitudinal_fault"),
+    }
+)
+#: Expected requiredness per verifier profile, positionally aligned with the order below.
+_COMMON_REQUIREDNESS = (
+    "REQUIRED",
+    "REQUIRED",
+    "REQUIRED",
+    "REQUIRED",
+    "OPTIONAL",
+    "OPTIONAL",
+)
+#: The four ADAS findings: threat response and false intervention are hard, the onset margin
+#: and warning exposure are held for human review.
+_ADAS_REQUIREDNESS = ("REQUIRED", "OPTIONAL", "REQUIRED", "OPTIONAL")
+REQUIREDNESS_BY_PROFILE: Mapping[str, tuple[str, ...]] = MappingProxyType(
+    {
+        "legacy": _COMMON_REQUIREDNESS + ("NOT_APPLICABLE",),
+        "fault_coverage": _COMMON_REQUIREDNESS + ("REQUIRED",),
+        "adas_p0_longitudinal": (
+            _COMMON_REQUIREDNESS + ("NOT_APPLICABLE",) + _ADAS_REQUIREDNESS
+        ),
+        "adas_p0_longitudinal_fault": (
+            _COMMON_REQUIREDNESS + ("REQUIRED",) + _ADAS_REQUIREDNESS
+        ),
+    }
+)
+#: Expected sufficiency-item order per verifier profile.
+#:
+#: Restated here rather than imported so the review core keeps its own frozen contract, and
+#: pinned against hermes.gates.release by test_review_finding_order_matches_gate_profiles so
+#: the two cannot drift apart silently.
+FINDING_ORDER_BY_PROFILE: Mapping[str, tuple[str, ...]] = MappingProxyType(
+    {
+        "legacy": FINDING_ORDER,
+        "fault_coverage": FINDING_ORDER,
+        "adas_p0_longitudinal": FINDING_ORDER + ADAS_FINDING_ORDER,
+        "adas_p0_longitudinal_fault": FINDING_ORDER + ADAS_FINDING_ORDER,
+    }
 )
 METRIC_ORDER = (
     "event_count",
@@ -969,22 +1049,17 @@ class EvidenceSufficiency(ReviewModel):
                 raise ValueError("unselected profile cannot carry sufficiency items")
         else:
             if (
-                self.profile_name not in {"legacy", "fault_coverage"}
+                self.profile_name not in FINDING_ORDER_BY_PROFILE
                 or self.profile_version != "1.0"
             ):
                 raise ValueError("unsupported evidence requirement profile")
-            if tuple(item.evidence_id for item in self.items) != FINDING_ORDER:
+            expected_order = FINDING_ORDER_BY_PROFILE[self.profile_name]
+            if tuple(item.evidence_id for item in self.items) != expected_order:
                 raise ValueError("sufficiency items must match frozen profile order")
-            expected_requiredness = (
-                "REQUIRED",
-                "REQUIRED",
-                "REQUIRED",
-                "REQUIRED",
-                "OPTIONAL",
-                "OPTIONAL",
-                "NOT_APPLICABLE" if self.profile_name == "legacy" else "REQUIRED",
-            )
-            if tuple(item.requirement for item in self.items) != expected_requiredness:
+            if (
+                tuple(item.requirement for item in self.items)
+                != REQUIREDNESS_BY_PROFILE[self.profile_name]
+            ):
                 raise ValueError("sufficiency requiredness must match the selected profile")
         counts = {
             "required_and_available": 0,
@@ -1239,10 +1314,60 @@ class FindingItem(ReviewModel):
                     )
                 )
             )
+        elif self.finding_id.startswith("adas."):
+            valid = self._validate_adas_threshold(expression)
         else:
             valid = False
         if not valid:
             raise ValueError("finding threshold does not match the frozen registry")
+
+    #: Left operand and operator for each clause-shaped ADAS finding, mirroring the
+    #: projection. ``adas.aeb.threat_response`` is compound and validated as an invariant.
+    _ADAS_CLAUSE_REGISTRY: ClassVar[Mapping[str, tuple[str, str]]] = MappingProxyType(
+        {
+            "adas.aeb.brake_onset_margin": (
+                "required_deceleration_at_brake_onset_mps2",
+                "LTE",
+            ),
+            "adas.aeb.no_false_intervention": (
+                "braking_steps_in_threat_free_scenario",
+                "LTE",
+            ),
+            "adas.fcw.warning_timing": ("minimum_ttc_s", "LTE"),
+        }
+    )
+
+    def _validate_adas_threshold(self, expression: object) -> bool:
+        """Validate an ADAS finding's projected criterion.
+
+        ADAS criteria are configured in the gate's ``adas`` block rather than derived from a
+        fixed per-finding rule, so the registry pins the *shape* - operand, operator, and
+        that the configuration is sourced from gate config - rather than a literal threshold.
+        """
+        if self.finding_id == "adas.aeb.threat_response":
+            return (
+                isinstance(expression, InvariantExpression)
+                and expression.label == "Threat response and collision avoidance"
+                and expression.invariant.operator == "ALL_OBSERVED"
+                and self._references_match(
+                    expression.invariant.configuration_sources,
+                    (("GATE_CONFIG", "/adas"),),
+                )
+            )
+        registered = self._ADAS_CLAUSE_REGISTRY.get(self.finding_id)
+        if registered is None:
+            return False
+        left_operand, operator = registered
+        return (
+            isinstance(expression, ClauseExpression)
+            and expression.clause.left_operand == left_operand
+            and expression.clause.operator == operator
+            and expression.clause.transforms == ("IDENTITY",)
+            and self._references_match(
+                expression.clause.configuration_sources,
+                (("GATE_CONFIG", "/adas"),),
+            )
+        )
 
     @staticmethod
     def _references_match(
@@ -1352,6 +1477,36 @@ class FindingItem(ReviewModel):
                 and consequence.source == "FIXED_GATE_PRECEDENCE"
                 and not consequence.configuration_references
             )
+        elif self.finding_id.startswith("adas."):
+            # Mirrors the gate's non-compensatory catch-all: a hard ADAS finding holds, its
+            # unavailable required evidence follows the configured policy, and a soft one is
+            # held for human review. Keyed on hard_invariant rather than on a list of
+            # finding ids so a newly registered ADAS finding is covered without editing here.
+            if not self.hard_invariant:
+                valid = (
+                    consequence.effect == "CONDITIONAL"
+                    and consequence.result_if_controlling == "CONDITIONAL"
+                    and consequence.source == "FIXED_GATE_PRECEDENCE"
+                    and not consequence.configuration_references
+                )
+            elif self.status == "NOT_AVAILABLE":
+                valid = (
+                    consequence.effect == "CONFIGURED_MISSING_REQUIRED_EVIDENCE"
+                    and consequence.result_if_controlling
+                    in {"HOLD", "INVALID_EVIDENCE"}
+                    and consequence.source == "GATE_CONFIG_MISSING_REQUIRED_EVIDENCE"
+                    and self._references_match(
+                        consequence.configuration_references,
+                        (("GATE_CONFIG", "/hard/missing_required_evidence"),),
+                    )
+                )
+            else:
+                valid = (
+                    consequence.effect == "HOLD"
+                    and consequence.result_if_controlling == "HOLD"
+                    and consequence.source == "FIXED_GATE_PRECEDENCE"
+                    and not consequence.configuration_references
+                )
         else:
             valid = False
         if not valid:
@@ -2330,7 +2485,7 @@ class ReviewEnvelope(ReviewModel):
             raise ValueError("consistent evidence requires a selected sufficiency profile")
         schema = self.artifact.manifest_identity.evidence_schema_version
         identity = self.artifact.manifest_identity
-        if (schema, profile) not in {("1.0", "legacy"), ("2.0", "fault_coverage")}:
+        if (schema, profile) not in _FROZEN_SCHEMA_PROFILE_PAIRINGS:
             raise ValueError("evidence schema and sufficiency profile must use the frozen pairing")
         gate_identity = (
             self.gate.gate_name,
@@ -2357,8 +2512,7 @@ class ReviewEnvelope(ReviewModel):
             raise ValueError("schema 1 accepted provenance has no fault component identity")
         if schema == "2.0" and any(value is None for value in provenance_fault):
             raise ValueError("schema 2 accepted provenance requires complete fault identity")
-        expected_findings = FINDING_ORDER[:6] if profile == "legacy" else FINDING_ORDER
-        if finding_ids != expected_findings:
+        if finding_ids != EMITTED_FINDING_ORDER_BY_PROFILE[profile]:
             raise ValueError("findings must match the frozen profile order")
         requirements = {
             item.evidence_id: item.requirement for item in self.evidence_sufficiency.items
@@ -2579,6 +2733,16 @@ class ReviewEnvelope(ReviewModel):
         elif finding.finding_id in {"comfort.acceleration", "comfort.jerk"}:
             groups = (expression.clause.evidence_sources,)
             expected_groups = (expected("/vehicle_state/acceleration_mps2"),)
+        elif finding.finding_id.startswith("adas."):
+            # Every ADAS criterion is evaluated over the whole episode, so its evidence must
+            # cover the complete timeline grid on the single pointer it reads.
+            pointer = _ADAS_EVIDENCE_POINTERS[finding.finding_id]
+            groups = (
+                (expression.invariant.evidence_sources,)
+                if finding.finding_id == "adas.aeb.threat_response"
+                else (expression.clause.evidence_sources,)
+            )
+            expected_groups = (expected(pointer),)
         else:
             groups = (expression.invariant.evidence_sources,)
             expected_groups = (
