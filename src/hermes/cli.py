@@ -1430,5 +1430,220 @@ def agent_check_citations_command(
     console.print(f"All {len(checks)} citations resolved and matched.")
 
 
+regression_app = typer.Typer(
+    name="regression",
+    help="Turn a failed run into a reviewable regression scenario.",
+    no_args_is_help=True,
+    cls=HermesTyperGroup,
+)
+app.add_typer(regression_app, name="regression")
+
+
+def _draft_root(repository_root: Path, override: Path | None) -> Path:
+    return override or repository_root / "drafts"
+
+
+@regression_app.command("draft")
+def regression_draft_command(
+    run_id: Annotated[str, typer.Argument(help="Run ID of a failed artifact bundle.")],
+    artifact_root: Annotated[
+        Path | None, typer.Option("--artifact-root", help="Artifact root containing the run.")
+    ] = None,
+    draft_root: Annotated[
+        Path | None, typer.Option("--draft-root", help="Where drafts are written.")
+    ] = None,
+) -> None:
+    """Draft a regression scenario reproducing a failed run's conditions."""
+    from hermes.regression import (
+        RegressionDraftError,
+        build_regression_draft,
+        committed_suite,
+    )
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    artifacts = artifact_root or repository_root / "artifacts"
+    try:
+        draft, path, coverage, violations = build_regression_draft(
+            repository_root=repository_root,
+            artifact_root=artifacts,
+            run_id=run_id,
+            draft_root=_draft_root(repository_root, draft_root),
+            suite=committed_suite(repository_root),
+        )
+    except RegressionDraftError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+
+    console.print(
+        "SIMULATION-ONLY PROTOTYPE — a draft is a proposal, not an addition to the suite."
+    )
+    console.print(f"Draft: {draft.draft_id}  [{draft.state.value}]")
+    console.print(f"Proposed scenario: {draft.scenario_name}")
+    console.print(f"Written to: {path}")
+    console.print(f"DETERMINISTIC FACT: triggered by {draft.provenance.trigger_finding_id}")
+    console.print(f"Rationale: {draft.rationale}")
+    if coverage.covered:
+        console.print(
+            f"Coverage: ALREADY COVERED by {coverage.matching_scenario} — {coverage.reason}",
+            style="yellow",
+        )
+    else:
+        console.print(f"Coverage: GAP — {coverage.reason}")
+    for violation in violations:
+        console.print(f"Requirement floor: {violation.rule}: {violation.detail}", style="red")
+    if violations:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "draft weakens the coverage it derives from and cannot be promoted",
+        )
+    console.print(
+        "HUMAN DECISION: not recorded. Approve with "
+        f"`hermes regression approve {draft.draft_id} --approver <you> --rationale <why>`."
+    )
+
+
+@regression_app.command("list")
+def regression_list_command(
+    draft_root: Annotated[
+        Path | None, typer.Option("--draft-root", help="Where drafts are written.")
+    ] = None,
+) -> None:
+    """List drafted regression scenarios and their state."""
+    from hermes.agents.approval import load_approval_registry
+    from hermes.regression import RegressionDraftError, load_draft
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    root = _draft_root(repository_root, draft_root)
+    registry = load_approval_registry(repository_root / "config" / "phase8-approvals.yaml")
+    table = Table(title="Regression drafts")
+    table.add_column("Draft")
+    table.add_column("State")
+    table.add_column("Approval")
+    table.add_column("Proposed scenario", overflow="fold")
+    table.add_column("From run", overflow="fold")
+    if root.is_dir():
+        for directory in sorted(root.iterdir()):
+            if not (directory / "draft.json").is_file():
+                continue
+            try:
+                draft = load_draft(directory)
+            except RegressionDraftError as exc:
+                table.add_row(directory.name, "EDITED", "-", str(exc)[:60], "-")
+                continue
+            decision = registry.decision_for(draft.draft_id, draft.scenario_content_digest)
+            table.add_row(
+                draft.draft_id,
+                draft.state.value,
+                decision.decision.value if decision else "none",
+                draft.scenario_name,
+                draft.provenance.source_run_id,
+            )
+    console.print(table)
+
+
+@regression_app.command("approve")
+def regression_approve_command(
+    draft_id: Annotated[str, typer.Argument(help="Draft to record a decision for.")],
+    approver: Annotated[str, typer.Option("--approver", help="Who is deciding.")],
+    rationale: Annotated[str, typer.Option("--rationale", help="Why.")],
+    reject: Annotated[
+        bool, typer.Option("--reject", help="Record a rejection instead of an approval.")
+    ] = False,
+    draft_root: Annotated[
+        Path | None, typer.Option("--draft-root", help="Where drafts are written.")
+    ] = None,
+) -> None:
+    """Record a human decision about one draft, bound to its exact content digest."""
+    from datetime import UTC, datetime
+
+    from hermes.agents.approval import (
+        ApprovalDecision,
+        ApprovalError,
+        ApprovalRecord,
+        append_approval,
+    )
+    from hermes.regression import RegressionDraftError, load_draft
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    directory = _draft_root(repository_root, draft_root) / draft_id
+    if not (directory / "draft.json").is_file():
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, f"unknown draft: {draft_id}")
+    try:
+        draft = load_draft(directory)
+    except RegressionDraftError as exc:
+        _raise_cli_error(CliErrorCode.INVALID_EVIDENCE, str(exc))
+    if not draft.is_promotable and not reject:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"draft {draft_id} is {draft.state.value} and cannot be approved",
+        )
+    try:
+        append_approval(
+            repository_root / "config" / "phase8-approvals.yaml",
+            ApprovalRecord(
+                draft_id=draft.draft_id,
+                draft_content_digest=draft.scenario_content_digest,
+                approver=approver,
+                timestamp_utc=datetime.now(UTC).isoformat(),
+                decision=(
+                    ApprovalDecision.REJECTED if reject else ApprovalDecision.APPROVED
+                ),
+                rationale=rationale,
+            ),
+        )
+    except ApprovalError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+    console.print(
+        f"Recorded {'REJECTED' if reject else 'APPROVED'} for {draft.draft_id} "
+        f"bound to content digest {draft.scenario_content_digest[:12]}."
+    )
+    console.print(
+        "This approves a repository change only. It is not a gate verdict, not evidence "
+        "approval, and not deployment permission."
+    )
+
+
+@regression_app.command("promote")
+def regression_promote_command(
+    draft_id: Annotated[str, typer.Argument(help="Draft to promote into the suite.")],
+    execute: Annotated[
+        bool, typer.Option("--execute", help="Actually write the scenario; default is a plan.")
+    ] = False,
+    draft_root: Annotated[
+        Path | None, typer.Option("--draft-root", help="Where drafts are written.")
+    ] = None,
+) -> None:
+    """Promote an approved draft into the canonical regression suite."""
+    from hermes.agents.tools import ToolContext, promote_regression
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    directory = _draft_root(repository_root, draft_root) / draft_id
+    scenario = directory / "scenario.yaml"
+    if not scenario.is_file():
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, f"unknown draft: {draft_id}")
+
+    context = ToolContext(
+        repository_root=repository_root, artifact_root=repository_root / "artifacts"
+    )
+    result = promote_regression(
+        context, draft_id=draft_id, draft_path=scenario, dry_run=not execute
+    )
+    if not result.ok:
+        assert result.error is not None
+        console.print(f"Refused: {result.error.code.value}: {result.error.detail}", style="red")
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, result.error.detail)
+    plan = result.data["plan"]
+    console.print(f"Scenario: {plan['scenario_name']}")
+    console.print(f"Destination: {plan['destination']}")
+    console.print(f"Approved by: {result.data['approved_by']}")
+    if result.data["dry_run"]:
+        console.print("Dry run: nothing written. Re-run with --execute to promote.")
+    else:
+        console.print(f"Promoted to {result.data['promoted_to']}")
+
+
 if __name__ == "__main__":
     app()

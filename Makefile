@@ -19,7 +19,7 @@ endif
 DEMO_ARTIFACT := artifacts/$(DEMO_RUN_ID)
 
 .PHONY: install install-dev doctor test lint check demo-phase1 sim-smoke fixtures \
-	demo-adas demo-adas-tradeoff demo-seeded-defects preflight
+	demo-adas demo-adas-tradeoff demo-seeded-defects demo-flywheel preflight
 
 # Fail early and actionably rather than deep inside a demo.
 preflight:
@@ -123,3 +123,26 @@ demo-adas-tradeoff: preflight
 # The evaluation's own acceptance criterion: controllers broken on purpose must be caught.
 demo-seeded-defects: preflight
 	$(PYTHON) -m pytest -q tests/integration/test_seeded_defects.py
+
+# The failure-to-regression flywheel, end to end. Runs a deliberately defective controller,
+# triages the failure, drafts a regression case from the observed geometry, shows promotion
+# refused without approval, records a decision, then stops at a dry-run promotion so the demo
+# is repeatable and never writes into the committed suite.
+FLYWHEEL_RUN := flywheel-$(ADAS_RUN_SUFFIX)
+FLYWHEEL_DRAFTS := $(CURDIR)/drafts
+
+demo-flywheel: preflight
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/aeb_lead_hard_brake.yaml \
+		--policy adas-longitudinal --policy-config config/adas/defect_late_braking.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "$(FLYWHEEL_RUN)" $(ALLOW_VERDICT)
+	@echo ""
+	@echo "--- triage: agent proposes, the classifier decides ---"
+	$(PYTHON) -m hermes agent triage "$(FLYWHEEL_RUN)"
+	@echo ""
+	@echo "--- draft a regression case from the observed failure geometry ---"
+	$(PYTHON) -m hermes regression draft "$(FLYWHEEL_RUN)" --draft-root "$(FLYWHEEL_DRAFTS)"
+	@echo ""
+	@echo "--- promotion is refused while no human decision exists ---"
+	@$(PYTHON) -m hermes regression list --draft-root "$(FLYWHEEL_DRAFTS)"

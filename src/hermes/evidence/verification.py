@@ -7,6 +7,7 @@ import math
 import os
 import re
 import stat
+import struct
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -169,6 +170,11 @@ class _InspectionCapture:
     inspection: ArtifactInspection
     captured_files: tuple[_CapturedFileState, ...]
     safe_manifest_identity: _SafeManifestIdentity | None
+
+
+def _binary32(value: float) -> float:
+    """Mirror the adapter's float32 projection of the spawn velocity."""
+    return struct.unpack("!f", struct.pack("!f", value))[0]
 
 
 class _DuplicateJsonKey(ValueError):
@@ -805,7 +811,7 @@ def _profile_errors(
                     "schema_version 4.0"
                 )
             expected_vehicle_config["spawn_velocity"] = [
-                scenario.initial_state.speed_mps,
+                _binary32(scenario.initial_state.speed_mps),
                 0.0,
             ]
             expected_vehicle_config["spawn_velocity_car_frame"] = True

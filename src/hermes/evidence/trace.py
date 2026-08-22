@@ -183,6 +183,17 @@ _CHALLENGE_OBSERVATION_SUMMARY_FIELDS = _OBSERVATION_SUMMARY_FIELDS | {
     "result_challenge_actor_speed_mps",
     "result_challenge_phase",
 }
+#: Tolerance for comparing a declared challenge quantity against its observed value.
+#:
+#: The observed front gap is a difference of two float32 bumper positions, so its error is
+#: an ulp of the *position* (tens of metres), not of the gap. An absolute 1e-6 m tolerance
+#: therefore held only by luck: a 40 m gap landed exactly, and a 28.816 m gap missed by
+#: 1.4e-6. Expressed relatively this is roughly eight times float32 epsilon, with an
+#: absolute floor for near-zero gaps - still four orders of magnitude tighter than the
+#: smallest physically meaningful contradiction, which is millimetres.
+_CHALLENGE_GEOMETRY_REL_TOL = 1e-6
+_CHALLENGE_GEOMETRY_ABS_TOL = 1e-5
+
 _CHALLENGE_PHASES = {
     "PRE_TRIGGER",
     "BRAKING",
@@ -327,8 +338,8 @@ def _verify_observation_summary(
             if not math.isclose(
                 actor_speed,
                 scenario.challenge.actor_speed_mps,
-                rel_tol=0.0,
-                abs_tol=1e-6,
+                rel_tol=_CHALLENGE_GEOMETRY_REL_TOL,
+                abs_tol=_CHALLENGE_GEOMETRY_ABS_TOL,
             ):
                 raise TraceIntegrityError(
                     "observation summary initial challenge actor speed contradicts the "
@@ -339,8 +350,8 @@ def _verify_observation_summary(
                 if initial_distance is None or not math.isclose(
                     float(initial_distance),
                     scenario.challenge.initial_gap_m,
-                    rel_tol=0.0,
-                    abs_tol=1e-6,
+                    rel_tol=_CHALLENGE_GEOMETRY_REL_TOL,
+                    abs_tol=_CHALLENGE_GEOMETRY_ABS_TOL,
                 ):
                     raise TraceIntegrityError(
                         "observation summary initial front gap contradicts the lead challenge"
@@ -498,8 +509,8 @@ def _verify_fault_challenge_evidence(
         if not math.isclose(
             actor_speed,
             scenario.challenge.actor_speed_mps,
-            rel_tol=0.0,
-            abs_tol=1e-6,
+            rel_tol=_CHALLENGE_GEOMETRY_REL_TOL,
+            abs_tol=_CHALLENGE_GEOMETRY_ABS_TOL,
         ):
             raise TraceIntegrityError(
                 "fault challenge initial actor speed contradicts the scenario at sequence 0"
@@ -509,8 +520,8 @@ def _verify_fault_challenge_evidence(
             if initial_distance is None or not math.isclose(
                 float(initial_distance),
                 scenario.challenge.initial_gap_m,
-                rel_tol=0.0,
-                abs_tol=1e-6,
+                rel_tol=_CHALLENGE_GEOMETRY_REL_TOL,
+                abs_tol=_CHALLENGE_GEOMETRY_ABS_TOL,
             ):
                 raise TraceIntegrityError(
                     "fault challenge initial front gap contradicts the lead challenge"

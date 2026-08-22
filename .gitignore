@@ -22,6 +22,11 @@ third_party/
 artifacts/*
 !artifacts/.gitkeep
 
+# Proposed regression scenarios awaiting review; promoted ones land in scenarios/.
+/drafts/
+# Recorded approvals are local until deliberately committed.
+/config/phase8-approvals.yaml
+
 # Generated media and datasets
 *.gif
 *.mp4

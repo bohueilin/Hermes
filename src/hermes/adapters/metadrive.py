@@ -316,7 +316,11 @@ class MetaDriveAdapter:
             # spawn so that a stationary schema-4.0 scenario keeps the same adapter
             # configuration - and therefore the same adapter_config_digest - as its
             # schema-2.0 equivalent.
-            vehicle_config["spawn_velocity"] = [spawn_speed_mps, 0.0]
+            # MetaDrive stores the spawn velocity as float32, so a declared speed that is
+            # not exactly representable comes back slightly different and fails the reset
+            # validation below. Projecting to binary32 here - and comparing against the same
+            # projection - keeps that check exact rather than loosening its tolerance.
+            vehicle_config["spawn_velocity"] = [_binary32(spawn_speed_mps), 0.0]
             vehicle_config["spawn_velocity_car_frame"] = True
         return {
             "use_render": False,
@@ -447,15 +451,16 @@ class MetaDriveAdapter:
         self._initial_route_raw = initial_route
         self._last_route_pct = 0.0
         observed_speed = self._speed()
+        expected_speed = _binary32(scenario.initial_state.speed_mps)
         if not math.isclose(
             observed_speed,
-            scenario.initial_state.speed_mps,
+            expected_speed,
             rel_tol=0.0,
             abs_tol=1e-9,
         ):
             raise RuntimeError(
                 "MetaDrive reset speed does not match scenario initial state: "
-                f"observed={observed_speed}, expected={scenario.initial_state.speed_mps}"
+                f"observed={observed_speed}, expected={expected_speed}"
             )
         self._previous_speed_mps = observed_speed
         state = VehicleState(
