@@ -1,7 +1,8 @@
 # Hermes Phase 8 — Design Spec: Agentic Workflows for ADAS Development
 
-**Status:** For design review. Implemented through the FCW/AEB slice; §10 lists what is
-specified but not yet built.
+**Status:** For design review. Implemented through the FCW/AEB slice, the seeded-defect
+acceptance suite, the agentic tool layer, and baseline-versus-candidate comparison; §10 lists
+what is specified but not yet built.
 **Audience:** Design reviewers, AV simulation/validation engineers, platform PMs.
 **Scope boundary:** Simulation only. No physical vehicle, no CAN, no standards or
 certification claim. Every threshold in this document is illustrative.
@@ -234,8 +235,6 @@ Listed so a reviewer knows what is design and what is code.
 - **ACC, LKA, combined L2 assist.** Designated drop-to-P1 under the PRD's staging rule.
 - **`RunMetricsV3` / evidence schema 3.0.** ADAS metrics currently live as finding
   measurements rather than in `metrics.json`.
-- **Baseline-versus-candidate comparison.** The declared variation axis is specified but the
-  fail-closed compatibility check still forbids comparing two controllers.
 - **Failure mining and the regression flywheel.** Tool contracts exist; window extraction and
   draft authoring do not.
 - **Scenario curator, evaluation analyst, release brief agents.** Only triage is built.
@@ -265,6 +264,18 @@ These are the places I am least confident, and where review would be most useful
    agent applies the same precedence rule as the classifier, so 3/3 is unsurprising. It
    becomes meaningful with a live model — but then it is no longer deterministic. What is the
    right way to report agent quality that is both meaningful and reproducible?
+
+7. **Should the threat oracle read omniscient simulator state rather than the trace?** Found
+   while building the comparison demo: a controller that intervenes early prevents the threat
+   from ever appearing in the trace it is judged on, so labelling threats purely from the
+   realised trace converts a correct early intervention into a false one. The current
+   mitigation is that the scenario's *declared* expectation decides whether false-intervention
+   exposure applies. That works, but it moves authority to the scenario author. The PRD's own
+   answer — label from omniscient state — is stronger and is not implemented.
+
+8. **Is one declared variation axis enough?** Comparing controller *and* seed, or controller
+   *and* scenario parameter, is a legitimate sweep. Permitting two axes weakens attribution;
+   forbidding it forces a sweep to be expressed as many pairwise comparisons. Which is right?
 
 5. **Does the nominal-exposure requirement scale?** One threat-free scenario is enough to
    catch a crude over-braking defect. The PRD calls for ≥ 30% of suite simulated time to be

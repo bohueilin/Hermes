@@ -3,7 +3,7 @@
 **Companion to:** [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) (design) and
 [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md) (pre-work survey).
 **Branch:** `feat/phase8-adas-lab` from `feat/phase6-reviewer-comprehension` @ `4eb8765`.
-**Gates at time of writing:** 903 tests pass (11 of them `metadrive`-marked, running real
+**Gates at time of writing:** 909 tests pass (11 of them `metadrive`-marked, running real
 physics), ruff clean repo-wide, doctor 16 PASS.
 
 This note records what was built, what was measured, what deviates from the PRD and why, and
@@ -98,6 +98,37 @@ Not planned, but three things needed it at once: seeded defects expressible as d
 declared variation axis for candidate comparison, and a developer-facing configuration
 surface. `--policy-config` binds the file's content into `policy_config_digest`.
 
+### 2.6 The threat oracle labels from the realised trace — and the controller affects it
+
+Found by running the comparison demo, not by reading the code. A candidate that brakes far
+earlier prevented the threat from ever developing, so the oracle saw a threat-free run and
+judged the candidate for *false* intervention — converting a correct early intervention into a
+failure.
+
+This is a second kind of circularity, distinct from threshold circularity: not "the evaluator
+shares the controller's thresholds" but "the evidence the evaluator reads was shaped by the
+controller's actions."
+
+Mitigated by making the scenario's **declared** expectation decide whether false-intervention
+exposure applies, while the realised trace still decides whether a threat response was due.
+That is sound, but it moves authority to the scenario author. The PRD's stronger answer —
+label threats from omniscient simulator state — is recorded as open question 7 in the spec.
+
+### 2.7 Comparison gained a declared variation axis
+
+`_compatibility` refuses any pair whose identity digests differ, which is correct and also made
+comparing two controllers impossible. The caller now names the independent variable in advance;
+every other digest must still match. Default is unchanged and fully fail-closed, the vocabulary
+is closed, and a declared axis that did not actually vary is surfaced as a warning.
+
+Produces the demonstration the evaluation design exists for:
+
+```
+threat scenario    minimum_ttc_s   1.17 s -> 4.67 s        IMPROVED
+nominal scenario   verdict         CONDITIONAL -> HOLD     REGRESSED
+                   hard_failures   [] -> [adas.aeb.no_false_intervention]
+```
+
 ## 3. Defects found in the existing codebase
 
 Four, all pre-existing, all fixed test-first and proven behaviour-preserving. These are worth
@@ -157,6 +188,7 @@ self-maintaining test scans the test tree for fixture references and fails if an
 | §0-A.2.4 brake source in the trace | Structural attribution (§2.3) | Requires evidence schema 3.0; the guarantee is achieved without it for the P0 slice. |
 | §0-A.6.4 `agent-trace.jsonl` | Not built | Bundle capture rejects *any* file outside `REQUIRED_ARTIFACT_FILES`, so §24's "Optional:" list is not implementable. Needs a schema-gated optional-artifact mechanism first. |
 | §12 `RunMetricsV3` | ADAS values live as finding measurements | Evidence schema 3.0 is six model subclasses plus four dispatch maps; deferred rather than half-done. |
+| §0-A.7.1 oracle from omniscient simulator state | Oracle computed from the stored trace | Keeps evaluation offline and re-judgeable without the simulator, at the cost described in §2.6. |
 
 ## 5. What I would push on if reviewing this
 
@@ -174,9 +206,9 @@ Honest list of where the work is thinnest:
 4. **`adas.fcw.warning_timing` verifies less than its name suggests.** The trace has no field
    for the warning signal, so it confirms only that the run presented the declared closing
    geometry. The finding message says this; the name still oversells it and should change.
-5. **No comparison.** Without the variation axis, the "candidate improves collisions but
-   regresses false braking" story — the most valuable demonstration in the whole design —
-   cannot actually be run.
+5. **Threat labels come from the realised trace, not omniscient state.** See §2.6 — the
+   current mitigation is sound but places authority with the scenario author, and the PRD's
+   own stronger answer is not implemented.
 
 ## 6. Reproduction
 
@@ -184,7 +216,7 @@ Honest list of where the work is thinnest:
 cd <repo> && export PYTHONPATH="$PWD/src"
 
 # gates
-python -m pytest -q                 # 903 passed
+python -m pytest -q                 # 909 passed
 python -m pytest -q -m metadrive    # 11 passed, real physics
 python -m ruff check . && python -m hermes doctor
 
@@ -198,6 +230,9 @@ python -m hermes run --simulator metadrive --headless \
   --gate-config config/gates.adas.yaml --seed 7 --run-id demo-late-braking
 python -m hermes agent triage demo-late-braking
 python -m hermes agent check-citations demo-late-braking
+
+# the trade-off demonstration
+make demo-adas-tradeoff
 ```
 
 **Environment note:** the `hermes-dev` conda environment's editable install resolves `hermes`

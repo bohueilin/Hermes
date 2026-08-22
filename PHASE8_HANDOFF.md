@@ -6,10 +6,16 @@
 **Sprint 0 audit:** [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md)
 **Date:** 2026-08-21
 
-> **Status: partial.** Sprint 0, Sprint 0.5 and Sprint 1a are complete, and the FCW + AEB
-> slice of Sprint 1 runs end to end and is gate-evaluated. Sprints 2–6 are **not** started.
-> §5 states exactly what remains and in what order. Nothing below is claimed as done that is
-> not backed by a command in §3 you can re-run.
+> **Status: partial, and larger than when this note was first written.** Complete: Sprint 0,
+> Sprint 0.5, Sprint 1a, the FCW + AEB slice of Sprint 1, the seeded-defect acceptance suite,
+> the agentic tool layer with triage and approvals, and baseline-versus-candidate comparison.
+> Not started: ACC, LKA, combined assist, `RunMetricsV3`, failure mining, the remaining agents,
+> the workbench panels. Nothing below is claimed as done that is not backed by a re-runnable
+> command.
+>
+> **Read [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) and
+> [PHASE8_IMPLEMENTATION_NOTE.md](PHASE8_IMPLEMENTATION_NOTE.md) first** — they supersede this
+> file's §1 and §2 for anything built after the FCW/AEB slice.
 
 ---
 
@@ -133,10 +139,16 @@ Cross-platform bitwise identity remains an explicit non-goal (§0-A.7.8).
 intact and schema 4.0 permits `adas` + `faults` together, with `ADAS_P0_LONGITUDINAL_FAULT`
 registered to keep coverage checking — but no ADAS fault scenario has been authored or run.
 
-**7. Baseline/candidate demonstrations.** **Not delivered.** The comparison variation axis
-(§0-A.7.10) is not implemented, so two ADAS controllers still cannot be compared.
+**7. Baseline/candidate demonstrations.** **Delivered.** `make demo-adas-tradeoff`: a candidate
+that brakes far earlier improves minimum TTC from 1.17 s to 4.67 s on the threat scenario and
+is still HELD on the nominal scenario for `adas.aeb.no_false_intervention`. The declared
+variation axis (§0-A.7.10) is implemented for the core comparator; the review-envelope path
+still uses the strict rule.
 
-**8. Agentic workflow demonstration.** **Not delivered.** §0-A.8 is entirely greenfield.
+**8. Agentic workflow demonstration.** **Partially delivered.** Tool layer, permission tiers,
+budgets, approvals, deterministic triage and the citation checker are built and tested
+(`hermes agent tools|triage|check-citations`). The scenario-curator, regression-builder,
+analyst and release-brief agents are not.
 
 **9–10. Limitations and residual risks.** §4.
 
@@ -314,8 +326,8 @@ fields and name it for what it approves (a repository change), per audit §9.3.
 | Gate | Status |
 |---|---|
 | **8A — ADAS core** | **Partial.** FCW ✓, AEB ✓, ACC ✗, LKA ✗ (P1), combined assist ✗ (P1). 2 of 12+ scenarios. Canonical metrics ✗ (`RunMetricsV3` not implemented). Deterministic repeats ✓ (N = 3 bitwise). Evidence bundles ✓. Baseline/candidate comparison ✗. |
-| **8B — Failure / regression platform** | **Not started.** |
-| **8C — Agentic workflow** | **Not started.** |
+| **8B — Failure / regression platform** | **Partial.** Failure taxonomy ✓ with a deterministic classifier. Seeded-defect acceptance suite ✓. Interesting-event detection ✗, scenario parameterisation ✗, regression promotion — the approval boundary and `promote_regression` exist ✓, draft authoring ✗. |
+| **8C — Agentic workflow** | **Partial.** Failure-triage agent ✓, deterministic tool contracts ✓, mutation approval boundary ✓, agent cannot set gate verdict ✓ (pinned by test). Scenario-curator workflow ✗, release-brief generation ✗, complete evidence provenance ✗ (`agent-trace.jsonl` blocked on the bundle's exact-inventory rule). |
 | **8D — Portfolio quality** | **Partial.** Demo runbook ✓ (§3), explicit limitations ✓ (§4), no unsupported production claims ✓, reproducible setup ✓, automated tests green ✓. README walkthrough, architecture diagram and screenshots ✗. |
 
 Under §0-A.9.2's staging condition, LKA, combined assist, curved geometry, lane-estimate

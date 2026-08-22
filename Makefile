@@ -5,7 +5,8 @@ DEMO_RUN_ID := phase1-demo-$(shell date -u +%Y%m%dt%H%M%Sz)
 endif
 DEMO_ARTIFACT := artifacts/$(DEMO_RUN_ID)
 
-.PHONY: install install-dev doctor test lint check demo-phase1 sim-smoke fixtures demo-adas
+.PHONY: install install-dev doctor test lint check demo-phase1 sim-smoke fixtures \
+	demo-adas demo-adas-tradeoff demo-seeded-defects
 
 install:
 	$(PYTHON) -m pip install -e .
@@ -39,6 +40,11 @@ fixtures:
 
 # SIMULATION-ONLY ADAS demonstration: one threat scenario the controller must brake for,
 # and one threat-free scenario it must stay quiet in. Requires a vendored MetaDrive.
+# `hermes run` encodes the verdict in its exit status: 0 PASS, 10 CONDITIONAL, 20 HOLD.
+# A demo that shows non-PASS verdicts must tolerate those three and still fail on 30
+# (invalid evidence) or on any operational error, so it cannot simply ignore errors.
+ALLOW_VERDICT := || { status=$$?; [ $$status -eq 10 ] || [ $$status -eq 20 ]; }
+
 ifndef ADAS_RUN_SUFFIX
 ADAS_RUN_SUFFIX := $(shell date -u +%Y%m%dt%H%M%Sz)
 endif
@@ -46,11 +52,34 @@ endif
 demo-adas:
 	$(PYTHON) -m hermes run --simulator metadrive --headless \
 		--scenario scenarios/adas/aeb_lead_hard_brake.yaml \
-		--policy adas-longitudinal --gate-config config/gates.adas.yaml \
-		--seed 7 --run-id "adas-threat-$(ADAS_RUN_SUFFIX)"
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "adas-threat-base-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
 	$(PYTHON) -m hermes run --simulator metadrive --headless \
-		--scenario scenarios/adas/adas_nominal_no_lead.yaml \
-		--policy adas-longitudinal --gate-config config/gates.adas.yaml \
-		--seed 7 --run-id "adas-nominal-$(ADAS_RUN_SUFFIX)"
-	$(PYTHON) -m hermes review-artifact "adas-threat-$(ADAS_RUN_SUFFIX)" \
-		--artifact-root artifacts --format text
+		--scenario scenarios/adas/adas_nominal_slow_closing.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "adas-nominal-base-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	$(PYTHON) -m hermes agent triage "adas-threat-base-$(ADAS_RUN_SUFFIX)"
+
+# The trade-off demonstration: a candidate that brakes far earlier improves the safety metric
+# on the threat scenario and is held anyway for what it does when nothing is there.
+demo-adas-tradeoff:
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/adas_nominal_slow_closing.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "tradeoff-base-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/adas_nominal_slow_closing.yaml \
+		--policy adas-longitudinal --policy-config config/adas/defect_over_braking.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "tradeoff-cand-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	$(PYTHON) -m hermes compare \
+		"artifacts/tradeoff-base-$(ADAS_RUN_SUFFIX)" \
+		"artifacts/tradeoff-cand-$(ADAS_RUN_SUFFIX)" \
+		--variation-axis policy $(ALLOW_VERDICT)
+
+# The evaluation's own acceptance criterion: controllers broken on purpose must be caught.
+demo-seeded-defects:
+	$(PYTHON) -m pytest -q tests/integration/test_seeded_defects.py

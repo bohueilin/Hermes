@@ -6,6 +6,68 @@ Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
 
 Hermes is designed to make an autonomy experiment reproducible and reviewable: it preserves the scenario, versions, candidate action, executed action, findings, metrics, release verdict, and evidence-integrity checks in one bundle.
 
+## Phase 8 — ADAS development and agentic workflow lab
+
+Phase 8 extends Hermes into a simulation-based **ADAS development and agentic workflow lab**:
+forward collision warning and automatic emergency braking, evaluated by an independent offline
+oracle, with an agentic layer whose authority boundary is enforced in code rather than in a prompt.
+
+Design documents, in reading order:
+
+| Document | What it is |
+|---|---|
+| [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) | The design, the agent authority model, acceptance criteria, and open questions for review |
+| [PHASE8_IMPLEMENTATION_NOTE.md](PHASE8_IMPLEMENTATION_NOTE.md) | What was built and measured, decisions forced by the code, deviations, and where the work is thinnest |
+| [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md) | The Sprint 0 survey of the existing codebase and its compatibility risks |
+| [PHASE8_HANDOFF.md](PHASE8_HANDOFF.md) | Status against the acceptance gates and what remains |
+
+### The three things worth looking at
+
+**1. The evaluation is shown to catch controllers that are broken on purpose.** A release gate
+that has never failed is indistinguishable from one that cannot fail, so three controllers -
+each broken in exactly one way, expressed purely as configuration - must each be caught by
+their own named criterion:
+
+| Controller | Scenario | Verdict | Caught by |
+|---|---|---|---|
+| `baseline` | threat | CONDITIONAL | — (braking began at 50% of authority) |
+| `defect_late_braking` | threat | HOLD | `adas.aeb.brake_onset_margin` (108%) |
+| `defect_no_aeb` | threat | HOLD | `adas.aeb.threat_response` |
+| `defect_over_braking` | nominal | HOLD | `adas.aeb.no_false_intervention` |
+
+**2. A candidate cannot buy a safety metric with a false intervention.** Same scenario, same
+seed, declared variation axis `policy`:
+
+```
+threat scenario    minimum_ttc_s   1.17 s -> 4.67 s          IMPROVED
+nominal scenario   verdict         CONDITIONAL -> HOLD       REGRESSED
+                   hard_failures   [] -> [adas.aeb.no_false_intervention]
+```
+
+The candidate improves the safety metric you were looking at, and the gate holds it anyway
+because of what it does when nothing is there.
+
+**3. The agent's authority boundary is enforced in the tool layer.** `promote_regression`
+refuses to change canonical state without an approval record bound to the draft's **content
+digest**, and refuses identically whether it is called by a scripted agent, a live model, a
+desktop coding agent, or a person at the CLI. An agent's triage proposal is recorded *beside*
+the deterministic classification, never in place of it.
+
+### Phase 8 commands
+
+```bash
+make demo-adas                             # threat and nominal scenarios, gate-evaluated
+hermes agent tools                         # discoverable tool catalogue with permissions
+hermes agent triage <run-id>               # proposal vs deterministic classification
+hermes agent check-citations <run-id>      # re-resolve every citation against the evidence
+hermes compare <base> <cand> --variation-axis policy
+hermes fixtures regenerate                 # restore the test fixtures on a fresh clone
+```
+
+Phase 8 is **partial**: FCW and AEB are implemented and evaluated; ACC, LKA, combined assist,
+`RunMetricsV3`, failure mining and the workbench panels are not. See the handoff for the gate
+table. Two scenarios and one seed are a reference implementation, not a safety case.
+
 ## Safety boundary
 
 Hermes is for simulation and closed-lab learning only. It must not connect to a physical road vehicle, public-road actuator, remote-control channel, CAN bus, or production safety-critical system. Prototype thresholds are illustrative and are not certification or real-world safety evidence.
