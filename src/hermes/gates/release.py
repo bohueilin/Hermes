@@ -59,7 +59,7 @@ ADAS_P0_LONGITUDINAL_EXPECTED_FINDINGS: Mapping[str, tuple[str, str, bool]] = Ma
     {
         **LEGACY_EXPECTED_FINDINGS,
         "adas.aeb.threat_response": ("AdasThreatResponseVerifier", "1.0", True),
-        "adas.aeb.brake_onset_ttc": ("AdasBrakeOnsetVerifier", "1.0", False),
+        "adas.aeb.brake_onset_margin": ("AdasBrakeOnsetVerifier", "1.0", False),
         "adas.aeb.no_false_intervention": ("AdasFalseInterventionVerifier", "1.0", True),
         "adas.fcw.warning_timing": ("AdasWarningTimingVerifier", "1.0", False),
     }
@@ -148,7 +148,7 @@ EVIDENCE_REQUIREMENTS_BY_PROFILE: Mapping[VerifierProfile, EvidenceRequirementPr
                         EvidenceRequiredness.REQUIRED,
                     ),
                     EvidenceRequirement(
-                        "adas.aeb.brake_onset_ttc",
+                        "adas.aeb.brake_onset_margin",
                         EvidenceRequiredness.OPTIONAL,
                     ),
                     EvidenceRequirement(
@@ -174,7 +174,7 @@ EVIDENCE_REQUIREMENTS_BY_PROFILE: Mapping[VerifierProfile, EvidenceRequirementPr
                         EvidenceRequiredness.REQUIRED,
                     ),
                     EvidenceRequirement(
-                        "adas.aeb.brake_onset_ttc",
+                        "adas.aeb.brake_onset_margin",
                         EvidenceRequiredness.OPTIONAL,
                     ),
                     EvidenceRequirement(

@@ -45,7 +45,7 @@ _PRECEDENCE: tuple[FailureCategory, ...] = (
 
 _FINDING_TO_CATEGORY: dict[str, FailureCategory] = {
     "adas.aeb.threat_response": FailureCategory.MISSED_INTERVENTION,
-    "adas.aeb.brake_onset_ttc": FailureCategory.INTERVENTION_TOO_LATE,
+    "adas.aeb.brake_onset_margin": FailureCategory.INTERVENTION_TOO_LATE,
     "adas.aeb.no_false_intervention": FailureCategory.OVER_INTERVENTION,
     "comfort.acceleration": FailureCategory.COMFORT_VIOLATION,
     "comfort.jerk": FailureCategory.COMFORT_VIOLATION,

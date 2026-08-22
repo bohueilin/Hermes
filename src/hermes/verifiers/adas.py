@@ -42,7 +42,7 @@ ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES = (
     VerifierIdentity(
         name="AdasBrakeOnsetVerifier",
         version="1.0",
-        finding_id="adas.aeb.brake_onset_ttc",
+        finding_id="adas.aeb.brake_onset_margin",
     ),
     VerifierIdentity(
         name="AdasFalseInterventionVerifier",
@@ -235,22 +235,41 @@ def adas_threat_response(
     )
 
 
-def adas_brake_onset_ttc(
+def adas_brake_onset_margin(
     events: tuple[TraceEvent, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
 ) -> Finding:
-    """Braking must begin while there is still time to collision left to spend."""
+    """Braking must begin while stopping is still achievable with the brakes available.
+
+    The criterion is the required deceleration at the first brake command, expressed against
+    the scenario's braking authority - not a fixed time-to-collision threshold. Two reasons:
+
+    * It is speed-independent. A TTC that leaves ample margin at 10 m/s leaves none at 30,
+      so one fixed TTC threshold is either too lax at the top of the ODD or too strict at
+      the bottom.
+    * It is physically meaningful rather than tuned. At a fraction of 1.0 the question is
+      "had the controller already waited past the point where its own brakes could stop it",
+      which is answerable from the trace without reference to what the controller intended.
+
+    Measured on the committed lead-brake scenario: a timely controller begins at roughly 50%
+    of authority, and one seeded to brake late begins at 108% - past the point of avoidance,
+    whether or not it happens to get away with it.
+    """
     criteria = _criteria(gate)
     samples = _samples(events)
     braked = _first_brake(samples)
-    criterion = f"ttc_at_brake_onset_s >= {criteria.minimum_ttc_at_brake_onset_s}"
-    del scenario
+    authority = scenario.control.max_braking_mps2
+    limit = criteria.onset_authority_fraction * authority
+    criterion = (
+        f"required_deceleration_at_brake_onset_mps2 <= {limit} "
+        f"({criteria.onset_authority_fraction} of {authority} m/s^2 authority)"
+    )
 
     if braked is None:
-        reason = "no braking command was issued, so brake-onset TTC is undefined"
+        reason = "no braking command was issued, so brake-onset margin is undefined"
         return Finding(
-            finding_id="adas.aeb.brake_onset_ttc",
+            finding_id="adas.aeb.brake_onset_margin",
             verifier="AdasBrakeOnsetVerifier",
             verifier_version="1.0",
             status=FindingStatus.NOT_AVAILABLE,
@@ -258,15 +277,16 @@ def adas_brake_onset_ttc(
             hard_invariant=False,
             threshold_or_invariant=criterion,
             message=reason,
-            measurement=_unavailable(reason, "s"),
+            measurement=_unavailable(reason, "m/s^2"),
         )
-    ttc = braked.ttc_s()
-    if ttc is None:
+    required = braked.required_deceleration_mps2(criteria.oracle_standoff_m)
+    if required is None:
         reason = (
-            "the ego was not closing on an in-path lead at brake onset, so TTC is undefined"
+            "the ego was not closing on an in-path lead at brake onset, so the required "
+            "deceleration is undefined"
         )
         return Finding(
-            finding_id="adas.aeb.brake_onset_ttc",
+            finding_id="adas.aeb.brake_onset_margin",
             verifier="AdasBrakeOnsetVerifier",
             verifier_version="1.0",
             status=FindingStatus.NOT_AVAILABLE,
@@ -275,11 +295,27 @@ def adas_brake_onset_ttc(
             threshold_or_invariant=criterion,
             message=reason,
             event_sequences=(braked.sequence,),
-            measurement=_unavailable(reason, "s"),
+            measurement=_unavailable(reason, "m/s^2"),
         )
-    late = ttc < criteria.minimum_ttc_at_brake_onset_s
+    if required == float("inf"):
+        reason = "the usable gap was already consumed at brake onset"
+        return Finding(
+            finding_id="adas.aeb.brake_onset_margin",
+            verifier="AdasBrakeOnsetVerifier",
+            verifier_version="1.0",
+            status=FindingStatus.FAIL,
+            severity=Severity.WARNING,
+            hard_invariant=False,
+            threshold_or_invariant=criterion,
+            message=reason,
+            event_sequences=(braked.sequence,),
+            first_failure_time_s=braked.time_s,
+            measurement=_unavailable(reason, "m/s^2"),
+        )
+    late = required > limit
+    ttc = braked.ttc_s()
     return Finding(
-        finding_id="adas.aeb.brake_onset_ttc",
+        finding_id="adas.aeb.brake_onset_margin",
         verifier="AdasBrakeOnsetVerifier",
         verifier_version="1.0",
         status=FindingStatus.FAIL if late else FindingStatus.PASS,
@@ -287,12 +323,14 @@ def adas_brake_onset_ttc(
         hard_invariant=False,
         threshold_or_invariant=criterion,
         message=(
-            f"braking began at TTC {ttc:.3f} s (sequence {braked.sequence}), "
-            f"{'below' if late else 'at or above'} the configured minimum"
+            f"braking began at sequence {braked.sequence} requiring "
+            f"{required:.2f} m/s^2 ({100 * required / authority:.0f}% of authority"
+            + (f", TTC {ttc:.3f} s" if ttc is not None else "")
+            + f"), {'past' if late else 'within'} the configured onset margin"
         ),
         event_sequences=(braked.sequence,),
         first_failure_time_s=braked.time_s if late else None,
-        measurement=_available(ttc, "s"),
+        measurement=_available(required, "m/s^2"),
     )
 
 
@@ -428,7 +466,7 @@ def run_adas_p0_longitudinal_verifiers(
     """Run the ADAS longitudinal suite in deterministic finding order."""
     return (
         adas_threat_response(events, scenario, gate),
-        adas_brake_onset_ttc(events, scenario, gate),
+        adas_brake_onset_margin(events, scenario, gate),
         adas_no_false_intervention(events, scenario, gate),
         adas_warning_timing(events, scenario, gate),
     )

@@ -256,7 +256,11 @@ POLICY_SIMULATORS: Mapping[str, frozenset[str]] = MappingProxyType(
 )
 
 
-def _policy_factory(policy: str, simulator: str) -> Callable[..., Any] | None:
+def _policy_factory(
+    policy: str,
+    simulator: str,
+    policy_config: Path | None = None,
+) -> Callable[..., Any] | None:
     """Resolve --policy to a factory, or None to keep the orchestrator's default.
 
     Returning None for the two pre-Phase-8 policies keeps their construction byte-identical
@@ -265,12 +269,20 @@ def _policy_factory(policy: str, simulator: str) -> Callable[..., Any] | None:
     """
     if policy != "adas-longitudinal":
         return None
+    from hermes.adas.config import AdasConfigError, load_adas_config
     from hermes.adas.policy import AdasLongitudinalPolicy
+
+    config = None
+    if policy_config is not None:
+        try:
+            config = load_adas_config(policy_config)
+        except AdasConfigError as exc:
+            raise ValueError(str(exc)) from exc
 
     if simulator == "metadrive":
         # execute_metadrive_run passes the adapter; the ADAS controller does not need it.
-        return lambda _adapter: AdasLongitudinalPolicy()
-    return AdasLongitudinalPolicy
+        return lambda _adapter: AdasLongitudinalPolicy(config)
+    return lambda: AdasLongitudinalPolicy(config)
 
 
 @app.command("run")
@@ -303,6 +315,13 @@ def run_command(
     shield_config: Annotated[
         Path | None,
         typer.Option("--shield-config", help="Versioned deterministic shield YAML."),
+    ] = None,
+    policy_config: Annotated[
+        Path | None,
+        typer.Option(
+            "--policy-config",
+            help="ADAS controller configuration YAML; binds policy_config_digest.",
+        ),
     ] = None,
 ) -> None:
     """Run one bounded simulation-only scenario and publish verified evidence."""
@@ -360,7 +379,15 @@ def run_command(
         except ShieldConfigError as exc:
             _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
         shield_factory = partial(DeterministicSafetyShield, deterministic_config)
-    policy_factory = _policy_factory(policy, simulator)
+    if policy_config is not None and policy != "adas-longitudinal":
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "--policy-config applies to the adas-longitudinal policy",
+        )
+    try:
+        policy_factory = _policy_factory(policy, simulator, policy_config)
+    except ValueError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
     try:
         runner = execute_fake_run if simulator == "fake" else execute_metadrive_run
         outcome = runner(

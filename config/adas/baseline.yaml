@@ -1,0 +1,8 @@
+# SIMULATION-ONLY. Illustrative thresholds; no standards or regulatory meaning.
+#
+# The reference longitudinal controller: FCW + AEB over a non-braking scripted driver.
+# Every seeded-defect configuration in this directory is this file with one property
+# deliberately broken, so a difference in outcome is attributable to that property alone.
+functions:
+  - fcw
+  - aeb

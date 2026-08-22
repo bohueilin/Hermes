@@ -281,16 +281,55 @@ def test_no_braking_in_a_threat_free_scenario_passes(adas_gate: GateConfig) -> N
 # --- brake onset -----------------------------------------------------------------------
 
 
-def test_late_braking_fails_the_onset_criterion(adas_gate: GateConfig) -> None:
-    # Braking first appears at a 2 m gap closing at 20 m/s: TTC 0.1 s, below the 0.5 s floor.
-    events = _events([(60.0, -20.0, 0.0, 20.0), (2.0, -20.0, 1.0, 20.0)])
+def test_braking_within_authority_passes_the_onset_criterion(adas_gate: GateConfig) -> None:
+    """Onset at 40 m closing 20 m/s needs 5.26 m/s^2, inside the 6.0 m/s^2 authority."""
+    events = _events([(40.0, -20.0, 1.0, 20.0), (30.0, -20.0, 1.0, 20.0)])
 
     finding = _by_id(run_adas_p0_longitudinal_verifiers(events, _scenario(), adas_gate))[
-        "adas.aeb.brake_onset_ttc"
+        "adas.aeb.brake_onset_margin"
+    ]
+
+    assert finding.status is FindingStatus.PASS
+    assert finding.measurement.value == pytest.approx(5.263157894736842)
+
+
+def test_braking_past_the_point_of_avoidance_fails_the_onset_criterion(
+    adas_gate: GateConfig,
+) -> None:
+    """Onset at 20 m closing 20 m/s needs 11.1 m/s^2 - nearly twice the authority.
+
+    The controller waited until stopping was no longer achievable with the brakes it has.
+    Whether it then avoided contact is luck, not design, so the criterion fails regardless.
+    """
+    events = _events([(60.0, -20.0, 0.0, 20.0), (20.0, -20.0, 1.0, 20.0)])
+
+    finding = _by_id(run_adas_p0_longitudinal_verifiers(events, _scenario(), adas_gate))[
+        "adas.aeb.brake_onset_margin"
     ]
 
     assert finding.status is FindingStatus.FAIL
-    assert finding.measurement.value == pytest.approx(0.1)
+    assert finding.measurement.value == pytest.approx(11.11111111111111)
+
+
+def test_the_onset_criterion_is_speed_independent(adas_gate: GateConfig) -> None:
+    """The reason it is not a fixed TTC: the same TTC means different things by speed.
+
+    Both onsets below sit at TTC 2.0 s. At 10 m/s that leaves the required deceleration
+    inside authority; at 30 m/s it does not. A single TTC threshold cannot separate them.
+    """
+    slow = _events([(20.0, -10.0, 1.0, 10.0)])
+    fast = _events([(60.0, -30.0, 1.0, 30.0)])
+
+    slow_finding = _by_id(run_adas_p0_longitudinal_verifiers(slow, _scenario(), adas_gate))[
+        "adas.aeb.brake_onset_margin"
+    ]
+    fast_finding = _by_id(run_adas_p0_longitudinal_verifiers(fast, _scenario(), adas_gate))[
+        "adas.aeb.brake_onset_margin"
+    ]
+
+    assert slow.__len__() == fast.__len__() == 1
+    assert slow_finding.status is FindingStatus.PASS
+    assert fast_finding.status is FindingStatus.FAIL
 
 
 def test_brake_onset_is_unavailable_when_nothing_braked(adas_gate: GateConfig) -> None:
@@ -298,7 +337,7 @@ def test_brake_onset_is_unavailable_when_nothing_braked(adas_gate: GateConfig) -
     events = _events([(300.0, -1.0, 0.0, 20.0)])
 
     finding = _by_id(run_adas_p0_longitudinal_verifiers(events, _scenario("forbidden"), adas_gate))[
-        "adas.aeb.brake_onset_ttc"
+        "adas.aeb.brake_onset_margin"
     ]
 
     assert finding.status is FindingStatus.NOT_AVAILABLE

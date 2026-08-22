@@ -19,7 +19,7 @@ soft:
   max_abs_jerk_mps3: 100.0
 adas:
   threat_authority_fraction: 0.3
-  minimum_ttc_at_brake_onset_s: 0.5
+  onset_authority_fraction: 1.0
   max_residual_impact_speed_mps: 0.0
   max_false_intervention_steps: 0
   oracle_standoff_m: 2.0

@@ -17,7 +17,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from hermes.domain.models import FiniteFloat, HermesModel, NonNegativeFloat, Observation
 
@@ -212,6 +212,11 @@ class AdasControllerConfig(HermesModel):
     fcw: FcwConfig = Field(default_factory=FcwConfig)
     aeb: AebConfig = Field(default_factory=AebConfig)
     driver: DriverConfig = Field(default_factory=DriverConfig)
+
+    @field_validator("functions", mode="before")
+    @classmethod
+    def normalize_yaml_sequence(cls, value: object) -> object:
+        return tuple(value) if isinstance(value, list) else value
 
     def model_post_init(self, _context: object) -> None:
         if not self.functions:

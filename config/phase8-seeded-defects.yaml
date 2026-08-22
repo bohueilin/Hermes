@@ -1,0 +1,32 @@
+# Seeded-defect suite: deliberately broken controllers the evaluation MUST catch.
+#
+# This is the acceptance criterion for the evaluation itself. A gate that never fails is
+# indistinguishable from a gate that cannot fail, so each entry names a controller broken in
+# exactly one way, the scenario that exposes it, the finding that must catch it, and the
+# failure category the triage agent must propose.
+#
+# Each defect config is config/adas/baseline.yaml with one property changed, so a difference
+# in outcome is attributable to that property alone.
+schema_version: "1.0"
+label: deliberately_defective_controllers_for_evaluation_acceptance
+defects:
+  - defect_id: late_braking
+    description: Brakes only once required deceleration approaches full authority.
+    policy_config: config/adas/defect_late_braking.yaml
+    scenario: scenarios/adas/aeb_lead_hard_brake.yaml
+    expected_failing_finding: adas.aeb.brake_onset_margin
+    expected_triage_category: INTERVENTION_TOO_LATE
+
+  - defect_id: no_aeb
+    description: Warns but never intervenes.
+    policy_config: config/adas/defect_no_aeb.yaml
+    scenario: scenarios/adas/aeb_lead_hard_brake.yaml
+    expected_failing_finding: adas.aeb.threat_response
+    expected_triage_category: MISSED_INTERVENTION
+
+  - defect_id: over_braking
+    description: Treats almost any closing geometry as an emergency.
+    policy_config: config/adas/defect_over_braking.yaml
+    scenario: scenarios/adas/adas_nominal_slow_closing.yaml
+    expected_failing_finding: adas.aeb.no_false_intervention
+    expected_triage_category: OVER_INTERVENTION

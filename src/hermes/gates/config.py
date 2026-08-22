@@ -46,8 +46,15 @@ class AdasCriteria(_StrictModel):
     #: scenario's braking authority. Set below the controller's own partial-brake fraction
     #: so a controller that intervenes exactly at its threshold is still judged in time.
     threat_authority_fraction: Annotated[float, Field(gt=0.0, le=1.0)] = 0.3
-    #: Latest acceptable time-to-collision at the first AEB brake command.
-    minimum_ttc_at_brake_onset_s: Annotated[float, Field(gt=0.0, le=10.0)] = 0.5
+    #: Fraction of braking authority the required deceleration may already consume at the
+    #: first brake command.
+    #:
+    #: Physically grounded rather than tuned: at 1.0 the criterion is "braking began while
+    #: stopping was still achievable with the brakes this vehicle has". A controller that
+    #: first brakes when a_req already exceeds its authority waited past the point of
+    #: avoidance, whether or not it happened to get away with it. Expressing it this way
+    #: also makes it speed-independent, which a fixed TTC threshold is not.
+    onset_authority_fraction: Annotated[float, Field(gt=0.0, le=2.0)] = 1.0
     #: Residual impact speed permitted where avoidance is kinematically infeasible.
     max_residual_impact_speed_mps: Annotated[float, Field(ge=0.0, le=30.0)] = 0.0
     #: Braking commands allowed in an oracle-labelled threat-free scenario.

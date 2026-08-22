@@ -1,0 +1,12 @@
+# SEEDED DEFECT - a controller that is meant to fail.
+#
+# Defect: treats almost any closing geometry as an emergency, so it brakes when nothing
+# warrants it. Expected detection: adas.aeb.no_false_intervention, i.e. OVER_INTERVENTION.
+# This is the defect a collision-only metric would reward.
+functions:
+  - fcw
+  - aeb
+aeb:
+  partial_authority_fraction: 0.002
+  emergency_authority_fraction: 0.004
+  minimum_ego_speed_mps: 0.0

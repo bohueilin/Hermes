@@ -1,0 +1,10 @@
+# SEEDED DEFECT - a controller that is meant to fail.
+#
+# Defect: brakes only once required deceleration approaches full authority, leaving no
+# margin. Expected detection: adas.aeb.brake_onset_ttc, i.e. INTERVENTION_TOO_LATE.
+functions:
+  - fcw
+  - aeb
+aeb:
+  partial_authority_fraction: 0.95
+  emergency_authority_fraction: 0.99

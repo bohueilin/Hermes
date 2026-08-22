@@ -1,0 +1,6 @@
+# SEEDED DEFECT - a controller that is meant to fail.
+#
+# Defect: warns but never intervenes. Expected detection: adas.aeb.threat_response, i.e.
+# MISSED_INTERVENTION - a hard invariant, so the release gate must HOLD.
+functions:
+  - fcw
