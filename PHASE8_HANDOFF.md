@@ -31,13 +31,15 @@ Concretely, this now works:
 make demo-adas
 ```
 
-- **`scenarios/adas/aeb_lead_hard_brake.yaml`** — ego at 20 m/s, slower lead 10 m ahead brakes
-  hard. Measured: 19 oracle-labelled threat steps, emergency braking from sequence 0,
-  brake-onset TTC 0.833 s, **zero collisions**, all four ADAS findings PASS, verdict
-  CONDITIONAL on comfort.
-- **`scenarios/adas/adas_nominal_no_lead.yaml`** — nothing ahead. Measured: **zero braking
-  steps**, no false intervention, and the two inapplicable metrics reported `NOT_AVAILABLE`
-  rather than as passing numbers.
+- **`scenarios/adas/aeb_lead_hard_brake.yaml`** — ego follows a lead at matched speed from
+  40 m until the lead brakes hard. Measured: braking begins at 50% of braking authority,
+  **zero collisions**, all four ADAS findings PASS, verdict CONDITIONAL on comfort.
+  *(This scenario was rewritten after it was found to be measuring nothing — see the
+  implementation note §2.1.)*
+- **`scenarios/adas/adas_nominal_no_lead.yaml`** and **`adas_nominal_slow_closing.yaml`** —
+  threat-free exposure with and without a lead present. Measured: **zero braking steps**, no
+  false intervention, and inapplicable metrics reported `NOT_AVAILABLE` rather than as
+  passing numbers.
 
 ### 1.1 Three defects found in the existing codebase, and fixed
 
@@ -107,20 +109,21 @@ install points at the read-only Phase 7 worktree — see §4.1).
 
 ## 2. Required final evidence (PRD §39)
 
-**1. Commit / checkpoint.** Branch `feat/phase8-adas-lab`, 17 commits from
-`4eb87654f79654843169d00a656dd2c6f8092de4`. Head at time of writing: `ed92f5b`.
+**1. Commit / checkpoint.** Branch `feat/phase8-adas-lab`, 25 commits from
+`4eb87654f79654843169d00a656dd2c6f8092de4`. Head at time of writing: `2e5db88`.
 
-**2. Changed-file summary.** 34 files, +5,462 / −98. New packages: `src/hermes/adas/` (4
-files), `src/hermes/fixtures/` (2), `src/hermes/verifiers/adas.py`. New assets:
-`config/gates.adas.yaml`, `config/phase8-fixture-registry.yaml`, `scenarios/adas/` (2). New
-tests: 6 files. Modified: `domain/models.py`, `evidence/{trace,verification}.py`,
-`gates/{config,release}.py`, `scenarios/loader.py`, `adapters/metadrive.py`,
-`runtime/orchestrator.py`, `cli.py`, `verifiers/__init__.py`, and two existing test files
-(both extended, no assertion deleted).
+**2. Changed-file summary.** 57 files changed, 9115 insertions(+), 105 deletions(-). New packages: `src/hermes/adas/` (6 files),
+`src/hermes/agents/` (6), `src/hermes/fixtures/` (2), `src/hermes/verifiers/adas.py`. New
+assets: `config/adas/` (4 controller configs), `config/gates.adas.yaml`,
+`config/phase8-fixture-registry.yaml`, `config/phase8-seeded-defects.yaml`, `scenarios/adas/`
+(3). New tests: 10 files. Modified: `domain/models.py`, `evidence/{trace,verification}.py`,
+`gates/{config,release}.py`, `comparison/compare.py`, `scenarios/loader.py`,
+`adapters/metadrive.py`, `runtime/orchestrator.py`, `cli.py`, `verifiers/__init__.py`, and two
+existing test files (both extended, no assertion deleted).
 
-**3. Tests.** `870 passed` (`pytest -q`), of which 6 carry the `metadrive` marker and run
-against the real simulator. `pytest -q -m "not metadrive"` → `864 passed, 6 deselected` —
-the selection CI runs. Ruff clean repo-wide. Doctor 16 PASS / 2 WARN.
+**3. Tests.** `909 passed` (`pytest -q`), of which 11 carry the `metadrive` marker and run
+against the real simulator. `pytest -q -m "not metadrive"` is the selection CI runs. Ruff
+clean repo-wide. Doctor 16 PASS / 2 WARN.
 
 **4. Deterministic-repeat evidence.** N = 3 identical repeats of
 `scenarios/adas/aeb_lead_hard_brake.yaml`, seed 7, same host, pinned `SIMULATOR_COMMIT`:
@@ -132,8 +135,10 @@ identical across N=3: events.jsonl, metrics.json, findings.json, verdict.json, t
 
 Cross-platform bitwise identity remains an explicit non-goal (§0-A.7.8).
 
-**5. Scenario list.** 2 of the 12 P0 scenarios: `adas_aeb_lead_hard_brake` (threat),
-`adas_nominal_no_lead` (threat-free nominal exposure). The remaining 10 are listed in §5.
+**5. Scenario list.** 3 of the 12 P0 scenarios: `adas_aeb_lead_hard_brake` (threat),
+`adas_nominal_no_lead` and `adas_nominal_slow_closing` (threat-free nominal exposure, the
+latter with a lead present so an over-braking controller has something to react to). The
+remaining 9 are listed in §5.
 
 **6. Fault coverage.** **None wired to ADAS yet.** The seven existing fault transforms are
 intact and schema 4.0 permits `adas` + `faults` together, with `ADAS_P0_LONGITUDINAL_FAULT`
