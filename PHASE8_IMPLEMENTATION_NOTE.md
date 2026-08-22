@@ -147,11 +147,29 @@ meeting a float64 tolerance:
   compares against the same projection, which keeps the check exact rather than loosening it.
 * The observed initial gap is a *difference of two float32 positions*, so its error is an ulp
   of the position (tens of metres), not of the gap. An absolute 1e-6 m tolerance held only by
-  luck — a 40 m gap landed exactly, a 28.816 m gap missed by 1.4e-6. **This one is a
-  deliberate loosening of a trace-integrity tolerance**, now expressed relatively at roughly
-  eight times float32 epsilon with an absolute floor. Still four orders of magnitude tighter
-  than the smallest physically meaningful contradiction, which is millimetres — but it is a
-  loosening and should be reviewed as one.
+  luck — a 40 m gap landed exactly, a 28.816 m gap missed by 1.4e-6.
+
+  **This entry previously described my fix as a deliberate loosening of a trace-integrity
+  tolerance, and asked that it be reviewed as one. That framing was half right and the fix was
+  worse than it needed to be.** It was a relative tolerance of 1e-6 — a number that worked but
+  that I had chosen rather than derived. It has been replaced (`65363ae`) with a tolerance
+  computed from the float32 grid spacing at the compared magnitude, via `_geometry_agrees` in
+  `evidence/trace.py`. That is *tighter* than the relative tolerance at every magnitude
+  (1.5e-5 m rather than 2.9e-5 m at a 28.8 m gap, and 20× tighter near zero), so relative to
+  the fix it replaces it is a tightening, not a loosening.
+
+  Relative to the **original** 1e-6 m it is still wider at large magnitudes, and that is
+  correct: the original was tighter than the representation permits, which does not make a
+  check stronger, it makes it fire on correct behaviour. Two tests pin the properties that
+  matter — it absorbs float32 representation error, and it still rejects a one-millimetre
+  disagreement at every magnitude in the schema's range. A third records where the headroom is
+  thinnest, because it is not uniform: at the 200 m schema maximum the tolerance is 0.12 mm,
+  roughly 8× under a millimetre rather than the three orders available at the low end. A
+  sub-millimetre contradiction in a very long-range gap is beyond what this check can resolve,
+  and that limit is inherent to float32 storage rather than to the choice of tolerance.
+
+  The generalisable lesson, now recorded as handoff landmine 7: **when a tolerance has to be
+  chosen rather than derived, the error model is usually wrong.**
 
 ## 3. Defects found in the existing codebase
 

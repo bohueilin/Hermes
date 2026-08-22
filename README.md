@@ -19,6 +19,7 @@ Design documents, in reading order:
 
 | Document | What it is |
 |---|---|
+| [PHASE8_STATUS.md](PHASE8_STATUS.md) | Where the work stands: what exists, what is not claimed, and the numbers |
 | [PHASE8_GETTING_STARTED.md](PHASE8_GETTING_STARTED.md) | How to run and test it |
 | [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) | The design, the agent authority model, acceptance criteria, and open questions for review |
 | [PHASE8_IMPLEMENTATION_NOTE.md](PHASE8_IMPLEMENTATION_NOTE.md) | What was built and measured, decisions forced by the code, deviations, and where the work is thinnest |

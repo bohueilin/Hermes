@@ -242,6 +242,7 @@ Clean up: `rm -rf artifacts/det-* artifacts/demo-late`
 
 | Document | For |
 |---|---|
+| [PHASE8_STATUS.md](PHASE8_STATUS.md) | Where the work stands, and what is deliberately not claimed |
 | [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) | Why the design is shaped this way, and open questions |
 | [PHASE8_IMPLEMENTATION_NOTE.md](PHASE8_IMPLEMENTATION_NOTE.md) | What was built, measured, and where it is thin |
 | [PHASE8_HANDOFF.md](PHASE8_HANDOFF.md) | Status against the acceptance gates |

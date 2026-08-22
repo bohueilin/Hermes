@@ -4,14 +4,15 @@
 **Base:** `feat/phase6-reviewer-comprehension` @ `4eb87654f79654843169d00a656dd2c6f8092de4`
 **Governing document:** `HERMES_PHASE7_ADAS_AGENTIC_WORKFLOW_PRD.md` (local-only, untracked) — §0-A normative
 **Sprint 0 audit:** [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md)
-**Date:** 2026-08-21
+**Overall status:** [PHASE8_STATUS.md](PHASE8_STATUS.md) — start there for "where are we"
+**Date:** 2026-08-22
 
 > **Status: partial, and larger than when this note was first written.** Complete: Sprint 0,
 > Sprint 0.5, Sprint 1a, the FCW + AEB slice of Sprint 1, the seeded-defect acceptance suite,
-> the agentic tool layer with triage and approvals, and baseline-versus-candidate comparison.
-> Not started: ACC, LKA, combined assist, `RunMetricsV3`, failure mining, the remaining agents,
-> the workbench panels. Nothing below is claimed as done that is not backed by a re-runnable
-> command.
+> the agentic tool layer with triage and approvals, baseline-versus-candidate comparison, and
+> the failure-to-regression flywheel end to end. Not started: ACC, LKA, combined assist,
+> `RunMetricsV3`, interesting-event detection, the remaining agents, the workbench panels.
+> Nothing below is claimed as done that is not backed by a re-runnable command.
 >
 > **Read [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) and
 > [PHASE8_IMPLEMENTATION_NOTE.md](PHASE8_IMPLEMENTATION_NOTE.md) first** — they supersede this
@@ -109,11 +110,12 @@ install points at the read-only Phase 7 worktree — see §4.1).
 
 ## 2. Required final evidence (PRD §39)
 
-**1. Commit / checkpoint.** Branch `feat/phase8-adas-lab`, 29 commits from
-`4eb87654f79654843169d00a656dd2c6f8092de4`. Head at time of writing: `cdb4637`.
+**1. Commit / checkpoint.** Branch `feat/phase8-adas-lab`, 31 commits from
+`4eb87654f79654843169d00a656dd2c6f8092de4`. Head at time of writing: `65363ae`.
 
-**2. Changed-file summary.** 57 files changed, 9115 insertions(+), 105 deletions(-). New packages: `src/hermes/adas/` (6 files),
-`src/hermes/agents/` (6), `src/hermes/fixtures/` (2), `src/hermes/verifiers/adas.py`. New
+**2. Changed-file summary.** 68 files changed, 11,347 insertions(+), 154 deletions(-). New packages: `src/hermes/adas/` (6 files),
+`src/hermes/agents/` (6), `src/hermes/regression/` (4), `src/hermes/fixtures/` (2),
+`src/hermes/verifiers/adas.py`. New
 assets: `config/adas/` (4 controller configs), `config/gates.adas.yaml`,
 `config/phase8-fixture-registry.yaml`, `config/phase8-seeded-defects.yaml`, `scenarios/adas/`
 (3). New tests: 10 files. Modified: `domain/models.py`, `evidence/{trace,verification}.py`,
@@ -121,24 +123,38 @@ assets: `config/adas/` (4 controller configs), `config/gates.adas.yaml`,
 `adapters/metadrive.py`, `runtime/orchestrator.py`, `cli.py`, `verifiers/__init__.py`, and two
 existing test files (both extended, no assertion deleted).
 
-**3. Tests.** `947 passed` (`pytest -q`), of which 14 carry the `metadrive` marker and run
+**3. Tests.** `961 passed` (`pytest -q`), of which 14 carry the `metadrive` marker and run
 against the real simulator. `pytest -q -m "not metadrive"` is the selection CI runs. Ruff
-clean repo-wide. Doctor 16 PASS / 2 WARN.
+clean repo-wide. Doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE.
 
 **4. Deterministic-repeat evidence.** N = 3 identical repeats of
 `scenarios/adas/aeb_lead_hard_brake.yaml`, seed 7, same host, pinned `SIMULATOR_COMMIT`:
 
 ```
-Trace digest: 1603319fbd213b018576a672d34097935c9758dcb42db8ab6edd26ab9de99861   (×3)
+Trace digest: 8bb1c69b5a20204488e9b5056839a6ce001ceeb9480d5e0105bce3a576b458a3   (×3)
 identical across N=3: events.jsonl, metrics.json, findings.json, verdict.json, trace.sha256
 ```
 
+Re-verified at `65363ae`. This digest changed when the flagship scenario was rewritten
+(implementation note §2.1) and again with the binary32 spawn projection; a digest quoted in an
+older revision of this file will not match, which is the intended behaviour of a
+content-addressed trace, not a regression.
+
 Cross-platform bitwise identity remains an explicit non-goal (§0-A.7.8).
 
-**5. Scenario list.** 3 of the 12 P0 scenarios: `adas_aeb_lead_hard_brake` (threat),
-`adas_nominal_no_lead` and `adas_nominal_slow_closing` (threat-free nominal exposure, the
-latter with a lead present so an over-braking controller has something to react to). The
-remaining 9 are listed in §5.
+**5. Scenario list.** Three scenarios are committed. **Correcting an understatement in an
+earlier revision of this file:** the PRD's P0 catalog (§9) is **22 named entries**, plus the
+**four nominal entries** added by §0-A amendment 6 — 26, not 12.
+
+| Committed | Catalog status |
+|---|---|
+| `adas_aeb_lead_hard_brake` | covers catalog #3 `lead_hard_brake` |
+| `adas_nominal_no_lead` | serves amendment 6's ≥ 30% threat-free exposure requirement; **not** one of the four named nominal entries |
+| `adas_nominal_slow_closing` | as above, with a lead present so an over-braking controller has something to react to |
+
+So: **1 of 22 named P0 scenarios**, plus two nominal scenarios that satisfy the exposure
+*requirement* without matching the named entries. The FCW/AEB slice alone needs six more named
+entries (#1, #2, #4, #5, #6, #7); ACC adds five, LKA six, combined assist four.
 
 **6. Fault coverage.** **None wired to ADAS yet.** The seven existing fault transforms are
 intact and schema 4.0 permits `adas` + `faults` together, with `ADAS_P0_LONGITUDINAL_FAULT`
@@ -150,10 +166,11 @@ is still HELD on the nominal scenario for `adas.aeb.no_false_intervention`. The 
 variation axis (§0-A.7.10) is implemented for the core comparator; the review-envelope path
 still uses the strict rule.
 
-**8. Agentic workflow demonstration.** **Partially delivered.** Tool layer, permission tiers,
+**8. Agentic workflow demonstration.** **Mostly delivered.** Tool layer, permission tiers,
 budgets, approvals, deterministic triage and the citation checker are built and tested
-(`hermes agent tools|triage|check-citations`). The scenario-curator, regression-builder,
-analyst and release-brief agents are not.
+(`hermes agent tools|triage|check-citations`). The scenario-curator and regression-builder
+paths are delivered as the flywheel (`hermes regression draft|list|approve|promote`,
+`make demo-flywheel`). The analyst and release-brief agents are not.
 
 **9–10. Limitations and residual risks.** §4.
 
@@ -255,51 +272,139 @@ got wrong.
 
 ## 5. What remains, in the order I would do it
 
-The [audit's risk register](PHASE8_BASELINE_AUDIT.md) is the working map; each item below
-names the finding that governs it. Items 1–4 are the P0 cut line (§0-A.9.2); 5–7 are beyond it.
+**If you are picking this up cold — including as a fresh agent session — read this first.**
 
-**1. MetaDrive brake-dynamics calibration (Risk 8).** Measure decel-vs-speed under full brake
-across the 0–30 m/s ODD, record it as evidence, and re-derive scenario speeds/gaps and the
-AEB authority fractions from the measured curves. Until this is done every threshold in
-`config/gates.adas.yaml` and `AebConfig` is an analytical guess, and the comfort story in
-§4.2 cannot be fixed. **Do this before authoring more scenarios**, or they will be re-tuned.
+```bash
+conda activate hermes-dev && cd ~/Documents/GitHub/Hermes
+export PYTHONPATH="$PWD/src"          # mandatory: see §4.1, the editable install lies
+make preflight                        # silent + exit 0 means you are on the right checkout
+make test                             # expect 961 passed
+python -m hermes fixtures regenerate  # only if tests fail on missing artifacts/ fixtures
+```
 
-**2. `RunMetricsV3` and evidence schema 3.0** (audit §6.3, §6.8, §7). Six V1/V2 model pairs in
-`domain/models.py` each declare their own `evidence_schema_version` literal, and
-`verification.py` holds four literal `{"1.0": …, "2.0": …}` dispatch maps. Also:
-`compute_metrics` dispatches on `isinstance(events[0], TraceEventV2)`, so a `TraceEventV3`
-subclassing V2 would silently return `RunMetricsV2` and drop every ADAS metric with no error —
-dispatch most-derived-first. And `review/models.py:567` allowlists `{"1.0","2.0"}`, `:2333`
-freezes `(schema, profile)` pairs, and `:2418` encodes per-schema metric sets as prefix slices
-with `else ()`.
+Orientation, in reading order: [PHASE8_STATUS.md](PHASE8_STATUS.md) for where things stand,
+[PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) for why the design is shaped this way,
+[PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md) §6 as the risk register each item below
+cites, then §5.1 here — **the landmines are not optional reading**, every one of them cost
+real time to discover.
 
-**3. The remaining 10 P0 scenarios** (§0-A.9.2, §0-A.7.6): `fcw_stationary_lead`,
-`aeb_stationary_lead`, `slow_lead_closing`, `cut_in_near`, `cut_in_far`,
-`cut_out_reveal_stopped`, plus the nominal set `fcw_aeb_nominal_following`,
-`adjacent_lane_pass`, `non_in_path_stationary_object`, `decelerating_but_safe_lead`. Several
-need the new `ChallengeConfig` kinds (`stationary_lead`, `cut_out_reveal`, `lead_accelerate`,
-`steady_lead`) — **not yet implemented**; the union still has exactly two members. Keep the
-nominal share at ≥ 30% of suite sim-time.
+**Ground rules that are not negotiable** (PRD §39, restated because they are easy to erode
+one small step at a time): simulation only; no CAN or physical-vehicle claim; no
+standards-compliance claim; no weakening of evidence integrity; **no deleting a prior test to
+make new work pass**; no agent verdict replacing the deterministic gate; no LLM in a real-time
+control loop. The Phase 7 worktree at `~/.codex/worktrees/Hermes/phase7-…` is **read-only** —
+do not check out, merge, rebase, or consume its adequacy machinery.
 
-**4. Wire the seven existing faults to ADAS scenarios.** Schema 4.0 already permits it and
-`ADAS_P0_LONGITUDINAL_FAULT` is registered. Note `orchestrator.py:514-528` bars observation
-faults on the MetaDrive adapter — that restriction was written for the IDM policy, which
-ignores the observation entirely; the ADAS controller does not, so the restriction should be
-revisited rather than worked around.
+Items 1–4 are the P0 cut line; 5–6 are beyond it. Each names the audit finding that governs it
+and states how you will know it is done.
 
-**5. ACC, the two-stage gate, and the comparison variation axis** (§0-A.7.10). Budget the
-comparison work larger than the amendment implies: `review/models.py:2615` forces
-`comparison_schema_version == review_schema_version`, so it cannot be bumped in isolation;
-`:2105-2114` re-derives comparison status with a private copy of the strict comparator that a
-tolerance-aware core would disagree with; and `projection.py:1565-1578` compares the
-dimension tuple for exact equality and slices it positionally.
+---
 
-**6. Failure mining, regression promotion, the approval registry** (§0-A.8.2). Note the
-repository has **no** approval concept today — the only three matches for "approval" are
-disclaimers denying that review is approval. Keep the new record outside the five trust-state
-fields and name it for what it approves (a repository change), per audit §9.3.
+### 1. MetaDrive brake-dynamics calibration (Risk 8) — highest engineering value
 
-**7. The agentic layer** (§0-A.8) — entirely greenfield, and the workbench P0 panels.
+**Why first.** Every threshold in `config/gates.adas.yaml` and `AebConfig` is an *analytical
+guess*. Peak |a| measures ~13 m/s² against a configured 6 m/s² authority, so the comfort
+findings are CONDITIONAL in every demo and cannot be fixed by tuning. Author more scenarios
+before this and they will all need re-tuning afterwards.
+
+**Do.** Measure decel-vs-speed under full brake across the 0–30 m/s ODD; record the curves as
+evidence, not as a constant in a file; re-derive scenario speeds/gaps and the AEB authority
+fractions from the measurement. Note `ControlConfig` limits are *declared but not enforced on
+the simulator* — decide deliberately whether to enforce them, and if so, where.
+
+**Done when.** A committed measurement artefact exists, every threshold in
+`config/gates.adas.yaml` cites it, and `make demo-adas` no longer lands CONDITIONAL on comfort
+for reasons that are actually an uncalibrated simulator.
+
+**Expect to break:** every trace digest, hence every stored fixture. Budget for
+`hermes fixtures regenerate` and a suite-wide re-baseline.
+
+---
+
+### 2. `RunMetricsV3` and evidence schema 3.0 (audit §6.3, §6.8, §7)
+
+**Why.** ADAS metrics live only as finding measurements today; they are not in `metrics.json`.
+Until they are, there is no ADAS release scorecard and no parameter sweep worth running.
+
+**Do not treat this as a literal version bump.** Six V1/V2 model pairs in `domain/models.py`
+each declare their own `evidence_schema_version` literal, and `verification.py` holds four
+literal `{"1.0": …, "2.0": …}` dispatch maps. Also:
+
+- `compute_metrics` dispatches on `isinstance(events[0], TraceEventV2)`, so a `TraceEventV3`
+  subclassing V2 would silently return `RunMetricsV2` and **drop every ADAS metric with no
+  error**. Dispatch most-derived-first.
+- `review/models.py:567` allowlists `{"1.0","2.0"}`; `:2333` freezes `(schema, profile)` pairs;
+  `:2418` encodes per-schema metric sets as prefix slices with `else ()`.
+
+**Done when.** An ADAS run's `metrics.json` carries the ADAS metrics, `review-artifact` renders
+them, and the schema-drift guard tests added in Phase 8 still pass.
+
+---
+
+### 3. The six remaining FCW/AEB P0 scenarios (§0-A.9.2, §0-A.7.6)
+
+`fcw_stationary_lead`, `aeb_stationary_lead`, `slow_lead_closing`, `cut_in_near`, `cut_in_far`,
+`cut_out_reveal_stopped` — plus the four named nominal entries (`fcw_aeb_nominal_following`,
+`adjacent_lane_pass`, `non_in_path_stationary_object`, `decelerating_but_safe_lead`).
+
+**Blocked on new challenge kinds.** `ChallengeConfig`'s union still has exactly **two** members.
+`stationary_lead`, `cut_out_reveal`, `lead_accelerate` and `steady_lead` do not exist. Adding a
+kind touches the scenario schema, the adapter's challenge scheduler, the trace-layer
+observation-summary rules, and the offline oracle — budget accordingly.
+
+**Keep nominal exposure ≥ 30% of suite sim-time** (§0-A amendment 6). This is the constraint
+that makes the false-intervention criterion meaningful; a suite of only threat scenarios cannot
+detect an over-braking controller at all. **Do item 1 before this one.**
+
+---
+
+### 4. Wire the seven existing faults to ADAS scenarios
+
+Schema 4.0 already permits `adas` + `faults` together and `ADAS_P0_LONGITUDINAL_FAULT` is
+registered, so the plumbing is there and unused.
+
+**One trap.** `orchestrator.py:514-528` bars observation faults on the MetaDrive adapter. That
+restriction was written for the IDM policy, which ignores the observation entirely. The ADAS
+controller does **not** ignore it — a stale or dropped observation is one of the most
+interesting things you can do to an AEB. Revisit the restriction; do not work around it.
+
+---
+
+### 5. ACC, the two-stage gate, and the comparison variation axis (§0-A.7.10)
+
+The variation axis is implemented for the **core comparator**; the review-envelope path still
+uses the strict rule. Budget the remaining comparison work larger than the amendment implies:
+`review/models.py:2615` forces `comparison_schema_version == review_schema_version` so it cannot
+be bumped in isolation; `:2105-2114` re-derives comparison status with a *private copy* of the
+strict comparator that a tolerance-aware core would disagree with; `projection.py:1565-1578`
+compares the dimension tuple for exact equality and slices it positionally.
+
+---
+
+### 6. What is left of the agentic layer, and the workbench
+
+**Delivered:** tool catalogue with permission tiers, budgets, content-digest-bound approvals,
+deterministic triage, checkable citations, the scenario-curator path (coverage-gap assessment)
+and the regression builder — the whole flywheel.
+
+**Remaining:** the release-brief agent; interesting-event detection and parameter sweeps; the
+workbench P0 panels (audit §6.9 is the map, and it is the most under-budgeted area in the PRD);
+and `agent-trace.jsonl` provenance, which is **blocked** — see landmine 2 below.
+
+---
+
+### 7. Smaller things worth clearing
+
+- `scenarios/cut_in.example.yaml` and `config/gates.example.yaml` **fail validation outright**
+  (21 and 8 errors) — a live trap for anyone reaching for "the example" as a template. Refresh
+  or delete (audit §6.15).
+- `*.parquet` is gitignored and pyarrow/pandas are **undeclared dependencies**, present only
+  transitively via streamlit. Blocks §0-A.6.5 (audit §6.12).
+- `config/phase8-approvals.yaml` is currently gitignored, so approvals are local-only. If the
+  approval registry is meant to be an auditable record, it has to be committed — **this is a
+  design decision, not a cleanup**, and it is open. See §5.2.
+
+---
 
 ### 5.1 Landmines the next implementer should not rediscover
 
@@ -323,6 +428,38 @@ fields and name it for what it approves (a repository change), per audit §9.3.
    output. The tool refuses by default.
 6. **Profile selection lives in one place now** (`select_verifier_profile`). It used to exist
    as two copies that could drift into disagreeing about a run's own verdict. Keep it single.
+7. **Any value *derived* from a trace crosses a float32 boundary.** The simulator stores
+   positions and velocities as float32; you read them back as float64. This bit twice in one
+   afternoon. A derived spawn speed of 18.515 is not float32-exact, so the adapter's reset
+   check failed — fixed by projecting to binary32 and comparing against *the same projection*,
+   which keeps the check exact. And the observed front gap is a **difference of two float32
+   positions**, so its error is an ulp of the *position* (tens of metres), not of the gap; a
+   fixed absolute tolerance is simply the wrong shape and will fail at some magnitudes and not
+   others. `_geometry_agrees` in `evidence/trace.py` derives the tolerance from float32
+   spacing — reuse it rather than picking a new constant. **If you find yourself choosing a
+   tolerance, the error model is probably wrong.**
+8. **Do not let the promoter self-approve.** §0-A.9.7 specifies
+   `regression promote <draft> --approve`; this branch deliberately deviates and makes
+   `approve` a separate verb. A single command collapses the boundary the approval record
+   exists to draw. If you re-unify them, you have removed the control, not simplified the CLI.
+9. **A regression case that merely runs is worthless.** It must *discriminate* — fail for the
+   controller that provoked it and pass for one without the defect. `tests/integration/
+   test_flywheel_end_to_end.py` asserts exactly that. A case that fails for everything grows
+   the suite and detects nothing.
+
+---
+
+### 5.2 Open decisions that need a human, not an implementer
+
+These are not tasks. They are choices I did not think were mine to make, and each one changes
+what gets built next.
+
+| Decision | Why it is open |
+|---|---|
+| **Should `adas.aeb.brake_onset_margin` be a hard invariant?** | Today it is soft, so a late-braking controller that still avoids contact yields CONDITIONAL. Making it hard requires the scenario to declare whether a severity-reducing late intervention is acceptable — and nothing declares that today. See [PHASE8_STATUS.md §4](PHASE8_STATUS.md). |
+| **Should `config/phase8-approvals.yaml` be committed?** | It is gitignored, so approvals are local-only and unauditable. Committing it makes the record real but puts approver names in git history. |
+| **Should promoted regression scenarios be committed automatically?** | Promotion writes into `scenarios/adas/`. Committing that is a repository mutation an agent-driven path now reaches. Currently a human commits by hand — deliberately. |
+| **Is the declared-variation-axis rule right for the review envelope?** | The core comparator honours it; the review path still uses the strict rule. They can disagree about the same pair of runs. |
 
 ---
 
@@ -330,7 +467,7 @@ fields and name it for what it approves (a repository change), per audit §9.3.
 
 | Gate | Status |
 |---|---|
-| **8A — ADAS core** | **Partial.** FCW ✓, AEB ✓, ACC ✗, LKA ✗ (P1), combined assist ✗ (P1). 2 of 12+ scenarios. Canonical metrics ✗ (`RunMetricsV3` not implemented). Deterministic repeats ✓ (N = 3 bitwise). Evidence bundles ✓. Baseline/candidate comparison ✗. |
+| **8A — ADAS core** | **Partial.** FCW ✓, AEB ✓, ACC ✗, LKA ✗ (P1), combined assist ✗ (P1). 3 scenarios committed, of which 1 matches a named P0 catalog entry out of 22 + 4 nominal (see §2.5). Canonical metrics ✗ (`RunMetricsV3` not implemented). Deterministic repeats ✓ (N = 3 bitwise, re-verified at `65363ae`). Evidence bundles ✓. Baseline/candidate comparison ✓ (`make demo-adas-tradeoff`, declared variation axis; review-envelope path still strict). |
 | **8B — Failure / regression platform** | **Partial.** Failure taxonomy ✓ with a deterministic classifier. Seeded-defect acceptance suite ✓. Regression promotion ✓ end to end — draft authoring, coverage-gap assessment, requirement floor, approval boundary, promotion. Interesting-event detection ✗, scenario parameterisation and sweeps ✗, ADAS release scorecard ✗. |
 | **8C — Agentic workflow** | **Mostly delivered.** Failure-triage agent ✓, deterministic tool contracts ✓, mutation approval boundary ✓, agent cannot set gate verdict ✓ (pinned by test), scenario-curator workflow ✓ (coverage-gap assessment), regression builder ✓. Release-brief generation ✗, complete evidence provenance ✗ (`agent-trace.jsonl` blocked on the bundle's exact-inventory rule). |
 | **8D — Portfolio quality** | **Partial.** Demo runbook ✓ (§3), explicit limitations ✓ (§4), no unsupported production claims ✓, reproducible setup ✓, automated tests green ✓. README walkthrough, architecture diagram and screenshots ✗. |
