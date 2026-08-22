@@ -183,16 +183,43 @@ _CHALLENGE_OBSERVATION_SUMMARY_FIELDS = _OBSERVATION_SUMMARY_FIELDS | {
     "result_challenge_actor_speed_mps",
     "result_challenge_phase",
 }
-#: Tolerance for comparing a declared challenge quantity against its observed value.
+#: How many float32 steps of slack a declared-vs-observed geometry comparison allows.
 #:
-#: The observed front gap is a difference of two float32 bumper positions, so its error is
-#: an ulp of the *position* (tens of metres), not of the gap. An absolute 1e-6 m tolerance
-#: therefore held only by luck: a 40 m gap landed exactly, and a 28.816 m gap missed by
-#: 1.4e-6. Expressed relatively this is roughly eight times float32 epsilon, with an
-#: absolute floor for near-zero gaps - still four orders of magnitude tighter than the
-#: smallest physically meaningful contradiction, which is millimetres.
-_CHALLENGE_GEOMETRY_REL_TOL = 1e-6
-_CHALLENGE_GEOMETRY_ABS_TOL = 1e-5
+#: The simulator stores positions and velocities as float32 and we read them back as
+#: float64, so an observed quantity cannot be expected to equal a declared one exactly -
+#: only to within the spacing of the float32 grid at that magnitude. Eight steps covers the
+#: handful of float32 operations between spawn and observation (bumper projection, frame
+#: transform, subtraction) with room to spare.
+_FLOAT32_ULP_ALLOWANCE = 8
+
+
+def _float32_ulp(magnitude: float) -> float:
+    """Spacing between adjacent float32 values at ``magnitude``.
+
+    float32 carries 23 fraction bits, so within the binade [2**(e-1), 2**e) the spacing is
+    2**(e-24), where ``frexp`` supplies ``e``.
+    """
+    _, exponent = math.frexp(abs(magnitude))
+    return math.ldexp(1.0, exponent - 24)
+
+
+def _geometry_agrees(observed: float, declared: float) -> bool:
+    """Whether an observed geometry quantity matches its declared value.
+
+    The tolerance is derived, not chosen. The observed front gap in particular is a
+    *difference of two float32 bumper positions*, so its representation error is an ulp of
+    the position - tens of metres - and not of the gap. Comparing it with a fixed absolute
+    tolerance was the original defect: 1e-6 m held for a 40 m gap by luck and failed for a
+    28.816 m one by 1.4e-6, a contradiction that existed only in the check.
+
+    Scaling by ulp is both correct and tighter than the relative tolerance it replaces. At a
+    28.8 m gap it admits 1.5e-5 m; the smallest physically meaningful contradiction is a
+    millimetre, so this still refuses anything that means something. The magnitude floors at
+    1.0 so that a declared zero is compared against a fixed 4.8e-7 rather than a vanishing
+    tolerance.
+    """
+    scale = max(abs(observed), abs(declared), 1.0)
+    return abs(observed - declared) <= _FLOAT32_ULP_ALLOWANCE * _float32_ulp(scale)
 
 _CHALLENGE_PHASES = {
     "PRE_TRIGGER",
@@ -335,23 +362,15 @@ def _verify_observation_summary(
             )
         if event.sequence == 0:
             actor_speed = _summary_number(event, "challenge_actor_speed_mps")
-            if not math.isclose(
-                actor_speed,
-                scenario.challenge.actor_speed_mps,
-                rel_tol=_CHALLENGE_GEOMETRY_REL_TOL,
-                abs_tol=_CHALLENGE_GEOMETRY_ABS_TOL,
-            ):
+            if not _geometry_agrees(actor_speed, scenario.challenge.actor_speed_mps):
                 raise TraceIntegrityError(
                     "observation summary initial challenge actor speed contradicts the "
                     "scenario at sequence 0"
                 )
             initial_distance = event.observation_summary["front_distance_m"]
             if scenario.challenge.kind == "lead_vehicle_hard_brake":
-                if initial_distance is None or not math.isclose(
-                    float(initial_distance),
-                    scenario.challenge.initial_gap_m,
-                    rel_tol=_CHALLENGE_GEOMETRY_REL_TOL,
-                    abs_tol=_CHALLENGE_GEOMETRY_ABS_TOL,
+                if initial_distance is None or not _geometry_agrees(
+                    float(initial_distance), scenario.challenge.initial_gap_m
                 ):
                     raise TraceIntegrityError(
                         "observation summary initial front gap contradicts the lead challenge"
@@ -506,22 +525,14 @@ def _verify_fault_challenge_evidence(
         )
     if event.sequence == 0:
         actor_speed = _summary_number(event, "challenge_actor_speed_mps")
-        if not math.isclose(
-            actor_speed,
-            scenario.challenge.actor_speed_mps,
-            rel_tol=_CHALLENGE_GEOMETRY_REL_TOL,
-            abs_tol=_CHALLENGE_GEOMETRY_ABS_TOL,
-        ):
+        if not _geometry_agrees(actor_speed, scenario.challenge.actor_speed_mps):
             raise TraceIntegrityError(
                 "fault challenge initial actor speed contradicts the scenario at sequence 0"
             )
         initial_distance = event.observation_summary["front_distance_m"]
         if scenario.challenge.kind == "lead_vehicle_hard_brake":
-            if initial_distance is None or not math.isclose(
-                float(initial_distance),
-                scenario.challenge.initial_gap_m,
-                rel_tol=_CHALLENGE_GEOMETRY_REL_TOL,
-                abs_tol=_CHALLENGE_GEOMETRY_ABS_TOL,
+            if initial_distance is None or not _geometry_agrees(
+                float(initial_distance), scenario.challenge.initial_gap_m
             ):
                 raise TraceIntegrityError(
                     "fault challenge initial front gap contradicts the lead challenge"

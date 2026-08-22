@@ -558,3 +558,79 @@ def test_schema3_fault_challenge_rejects_false_or_incomplete_actor_evidence(
 
     with pytest.raises(TraceIntegrityError, match=message):
         verify_complete_trace((event,), scenario)
+
+
+# --- declared-vs-observed geometry tolerance --------------------------------------------
+
+
+def test_geometry_tolerance_accepts_float32_representation_error() -> None:
+    """The case that exposed the defect: a gap that is a difference of float32 positions.
+
+    28.816 m arrived 1.415e-6 short of its declared value, because the observed gap is
+    ``float32(lead_x) - float32(ego_x)`` and so carries an ulp of the *position*. A fixed
+    1e-6 m tolerance called that a trace contradiction. It was not one.
+    """
+    from hermes.evidence.trace import _geometry_agrees
+
+    assert _geometry_agrees(28.816 - 1.415e-6, 28.816)
+
+
+@pytest.mark.parametrize("declared", [1.0, 10.0, 28.816, 40.0, 200.0])
+def test_geometry_tolerance_rejects_a_physically_meaningful_contradiction(
+    declared: float,
+) -> None:
+    """A millimetre is the smallest disagreement that means anything. It must still fail.
+
+    This is the property that keeps the derived tolerance honest: it must absorb the
+    representation error and nothing larger, at every magnitude in the schema's range.
+    """
+    from hermes.evidence.trace import _geometry_agrees
+
+    assert not _geometry_agrees(declared + 1e-3, declared)
+
+
+@pytest.mark.parametrize("declared", [1.0, 10.0, 28.816, 40.0, 200.0])
+def test_geometry_tolerance_stays_below_a_millimetre_across_the_schema_range(
+    declared: float,
+) -> None:
+    """Pins the headroom, so a future widening has to be deliberate rather than incidental.
+
+    The margin is not uniform, and it is worth knowing where it is thinnest: at a 1 m gap
+    the tolerance is 5e-7 m, and at the schema maximum of 200 m it is 1.2e-4 m - about
+    eight times under a millimetre rather than the three orders of magnitude available at
+    the low end. That is still a correct tolerance, because float32 spacing genuinely is
+    that coarse at 200 m, but it means a sub-millimetre contradiction in a very long-range
+    gap is beyond what this check can resolve.
+    """
+    from hermes.evidence.trace import _FLOAT32_ULP_ALLOWANCE, _float32_ulp
+
+    assert _FLOAT32_ULP_ALLOWANCE * _float32_ulp(declared) < 1e-3
+
+
+def test_geometry_tolerance_scales_with_magnitude() -> None:
+    """A fixed tolerance is the wrong shape: float32 spacing grows with the value."""
+    from hermes.evidence.trace import _float32_ulp
+
+    assert _float32_ulp(200.0) > _float32_ulp(28.816) > _float32_ulp(1.0)
+
+
+def test_geometry_tolerance_does_not_vanish_at_zero() -> None:
+    """A declared zero must not be compared against a zero-width tolerance."""
+    from hermes.evidence.trace import _geometry_agrees
+
+    assert _geometry_agrees(1e-8, 0.0)
+    assert not _geometry_agrees(1e-3, 0.0)
+
+
+def test_a_gap_within_float32_spacing_is_accepted_end_to_end(repository_root: Path) -> None:
+    """The tolerance reaches the verifier, not just the helper."""
+    scenario = load_scenario(
+        repository_root / "scenarios" / "metadrive_lead_vehicle_hard_brake.yaml"
+    )
+    declared = scenario.challenge.initial_gap_m
+    event = _challenge_event(
+        scenario,
+        summary_updates={"front_distance_m": declared - 1e-6},
+    )
+
+    verify_complete_trace((event,), scenario)
