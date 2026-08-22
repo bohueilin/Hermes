@@ -1369,5 +1369,48 @@ def agent_triage_command(
     )
 
 
+@agent_app.command("check-citations")
+def agent_check_citations_command(
+    run_id: Annotated[str, typer.Argument(help="Run ID whose triage citations to verify.")],
+    artifact_root: Annotated[
+        Path | None,
+        typer.Option("--artifact-root", help="Artifact root containing the run."),
+    ] = None,
+) -> None:
+    """Re-resolve every citation a triage proposal emits against the stored evidence."""
+    from hermes.agents import ToolContext, triage_run
+    from hermes.agents.citations import all_valid, check_citations
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    root = artifact_root or repository_root / "artifacts"
+    if not (root / run_id).is_dir():
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, f"unknown run: {run_id}")
+
+    context = ToolContext(repository_root=repository_root, artifact_root=root)
+    proposal = triage_run(context, run_id)
+    checks = check_citations(proposal.citations, root)
+
+    table = Table(title=f"Citation check for {run_id}")
+    table.add_column("Artifact")
+    table.add_column("Locator", overflow="fold")
+    table.add_column("Status")
+    table.add_column("Detail", overflow="fold")
+    for check in checks:
+        table.add_row(
+            check.citation.artifact_file,
+            check.citation.locator,
+            check.status.value,
+            check.detail,
+        )
+    console.print(table)
+    if not all_valid(checks):
+        _raise_cli_error(
+            CliErrorCode.INVALID_EVIDENCE,
+            "one or more citations did not resolve against the stored evidence",
+        )
+    console.print(f"All {len(checks)} citations resolved and matched.")
+
+
 if __name__ == "__main__":
     app()
