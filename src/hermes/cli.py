@@ -1241,5 +1241,106 @@ def fixtures_verify_command(
     console.print(f"All {len(loaded.fixtures)} registered fixtures are present.")
 
 
+agent_app = typer.Typer(
+    name="agent",
+    help="Bounded agentic workflows over the deterministic Hermes tool layer.",
+    no_args_is_help=True,
+    cls=HermesTyperGroup,
+)
+app.add_typer(agent_app, name="agent")
+
+
+@agent_app.command("tools")
+def agent_tools_command() -> None:
+    """List the deterministic tools an agent may call, and what each is permitted to do."""
+    from hermes.agents import TOOL_CATALOG
+
+    console = _phase_console()
+    console.print(
+        "SIMULATION-ONLY PROTOTYPE — agents propose; deterministic tools execute and the "
+        "gate decides. Capability is not permission."
+    )
+    table = Table(title="Agent tool catalog")
+    table.add_column("Tool")
+    table.add_column("Permission")
+    table.add_column("Dry run")
+    table.add_column("Arguments", overflow="fold")
+    table.add_column("Summary", overflow="fold")
+    for spec in TOOL_CATALOG:
+        table.add_row(
+            spec.name,
+            spec.permission.value,
+            "yes" if spec.supports_dry_run else "-",
+            ", ".join(spec.arguments) or "-",
+            spec.summary,
+        )
+    console.print(table)
+    console.print(
+        "READ may be called freely; EXECUTE is bounded by the workflow budget; "
+        "MUTATE refuses without an approval record bound to the draft content digest."
+    )
+
+
+@agent_app.command("triage")
+def agent_triage_command(
+    run_id: Annotated[str, typer.Argument(help="Run ID of a published artifact bundle.")],
+    artifact_root: Annotated[
+        Path | None,
+        typer.Option("--artifact-root", help="Artifact root containing the run."),
+    ] = None,
+    output_format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: text or json."),
+    ] = "text",
+) -> None:
+    """Triage one run: propose a failure category beside the deterministic classification."""
+    from hermes.agents import ToolContext, triage_run
+
+    console = _phase_console()
+    if output_format not in {"text", "json"}:
+        _raise_cli_error(
+            CliErrorCode.USAGE_ERROR,
+            f"unsupported format {output_format!r}; use text or json",
+        )
+    repository_root = _resolved_repository_root()
+    root = artifact_root or repository_root / "artifacts"
+    if not (root / run_id).is_dir():
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, f"unknown run: {run_id}")
+
+    context = ToolContext(repository_root=repository_root, artifact_root=root)
+    proposal = triage_run(context, run_id)
+
+    if output_format == "json":
+        console.print(canonical_json_bytes(proposal.model_dump(mode="json")).decode("utf-8"))
+        return
+
+    console.print(
+        "SIMULATION-ONLY PROTOTYPE — an agent proposal is an interpretation, never a verdict."
+    )
+    console.print(f"Run: {proposal.run_id}")
+    console.print(f"Agent runtime: {proposal.runtime}")
+    console.print(f"AGENT INTERPRETATION: {proposal.category.value}")
+    console.print(f"DETERMINISTIC FACT: {proposal.deterministic_category.value}")
+    console.print(
+        "Agreement: "
+        + ("agent agrees with the deterministic classifier" if
+           proposal.agrees_with_deterministic_classifier
+           else "AGENT DISAGREES WITH THE DETERMINISTIC CLASSIFIER")
+    )
+    console.print(f"Rationale (agent): {proposal.rationale}")
+    for citation in proposal.citations:
+        console.print(
+            f"Evidence: {citation.artifact_file}{citation.locator} = "
+            f"{citation.quoted_value!r} [bundle {citation.bundle_digest[:12]}]"
+        )
+    console.print(
+        "HUMAN DECISION: not recorded; promotion of any canonical change requires an "
+        "approval record bound to the draft content digest."
+    )
+    console.print(
+        f"Budget: {context.ledger.tool_calls} tool calls, {context.ledger.runs} runs"
+    )
+
+
 if __name__ == "__main__":
     app()
