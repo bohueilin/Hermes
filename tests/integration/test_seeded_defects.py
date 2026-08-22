@@ -61,7 +61,10 @@ def test_the_baseline_controller_passes_every_hard_adas_finding(
     repository_root: Path,
     tmp_path: Path,
 ) -> None:
-    """The control case. Without it, "the gate caught it" could just mean "the gate always fails"."""
+    """The control case.
+
+    Without it, "the gate caught the defect" could just mean "the gate always fails".
+    """
     _requires_metadrive(repository_root)
     from hermes.adas.seeded_defects import SeededDefect
 
