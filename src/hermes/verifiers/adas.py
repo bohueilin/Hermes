@@ -347,20 +347,14 @@ def adas_no_false_intervention(
     criteria = _criteria(gate)
     samples = _samples(events)
     threats = _threat_samples(samples, criteria, scenario.control.max_braking_mps2)
-    forbidden = (
-        scenario.adas is not None
-        and scenario.adas.expected_aeb is not None
-        and scenario.adas.expected_aeb.kind == "forbidden"
-    )
+    expectation = scenario.adas.expected_aeb if scenario.adas is not None else None
+    forbidden = expectation is not None and expectation.kind == "forbidden"
+    declared_required = expectation is not None and expectation.kind == "required"
     criterion = (
         f"braking steps in a threat-free scenario <= {criteria.max_false_intervention_steps}"
     )
 
-    if threats and not forbidden:
-        message = (
-            f"scenario contains {len(threats)} oracle-labelled threat steps; "
-            "false-intervention exposure does not apply"
-        )
+    def _not_applicable(message: str) -> Finding:
         return Finding(
             finding_id="adas.aeb.no_false_intervention",
             verifier="AdasFalseInterventionVerifier",
@@ -371,6 +365,22 @@ def adas_no_false_intervention(
             threshold_or_invariant=criterion,
             message=message,
             measurement=_available(0.0, "steps"),
+        )
+
+    if declared_required:
+        # The scenario's *declared* label decides whether false-intervention exposure
+        # applies, not the realised trace. A controller that intervenes early can prevent
+        # the threat from ever appearing in the trace it is judged on - so labelling from
+        # the trace alone would convert a correct early intervention into a false one.
+        # Whether that early intervention was warranted is the threat-response criterion's
+        # question, not this one's.
+        return _not_applicable(
+            "scenario declares AEB is required, so false-intervention exposure does not apply"
+        )
+    if threats and not forbidden:
+        return _not_applicable(
+            f"scenario contains {len(threats)} oracle-labelled threat steps; "
+            "false-intervention exposure does not apply"
         )
 
     braking = tuple(sample for sample in samples if sample.brake > 0.0)

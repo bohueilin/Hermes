@@ -991,10 +991,28 @@ def compare_command(
         str,
         typer.Option("--format", help="Output format: table or json."),
     ] = "table",
+    variation_axis: Annotated[
+        str,
+        typer.Option(
+            "--variation-axis",
+            help=(
+                "Component permitted to differ: none (default, fully fail-closed) "
+                "or policy."
+            ),
+        ),
+    ] = "none",
 ) -> None:
     """Compare two independently verified, compatible stored evidence bundles."""
-    from hermes.comparison.compare import compare_artifacts
+    from hermes.comparison.compare import VariationAxis, compare_artifacts
     from hermes.evidence.verification import inspect_artifact
+
+    try:
+        axis = VariationAxis(variation_axis)
+    except ValueError:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported variation axis {variation_axis!r}; use none or policy",
+        )
 
     console = _phase_console()
     if output_format not in {"table", "json"}:
@@ -1045,7 +1063,7 @@ def compare_command(
 
     assert baseline.snapshot is not None
     assert candidate.snapshot is not None
-    comparison = compare_artifacts(baseline.snapshot, candidate.snapshot)
+    comparison = compare_artifacts(baseline.snapshot, candidate.snapshot, axis)
     if output_format == "json":
         comparison_payload = comparison.model_dump(mode="json")
         if not comparison.compatibility.comparable:

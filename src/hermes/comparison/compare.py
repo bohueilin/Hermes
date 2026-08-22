@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import StrEnum
+from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
@@ -27,12 +29,42 @@ class _ComparisonModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True, allow_inf_nan=False)
 
 
+class VariationAxis(StrEnum):
+    """The one component a comparison is permitted to vary.
+
+    Comparison is fail-closed by design: two runs that differ in any identity or
+    configuration digest are not comparable, because a metric delta between them cannot be
+    attributed to anything. That is correct, and it also makes the single most useful
+    comparison - this controller against that controller - structurally impossible.
+
+    A declared variation axis resolves it without weakening the principle. The caller states
+    in advance which component is the independent variable; every other digest must still
+    match exactly. A delta is then attributable to the declared axis or to nothing.
+    """
+
+    NONE = "none"
+    POLICY = "policy"
+
+
+#: Checks a declared axis is permitted to relax. Everything not listed stays fail-closed.
+_AXIS_EXEMPT_CHECKS: Mapping[VariationAxis, frozenset[str]] = MappingProxyType(
+    {
+        VariationAxis.NONE: frozenset(),
+        VariationAxis.POLICY: frozenset(
+            {"policy name", "policy version", "policy configuration digest"}
+        ),
+    }
+)
+
+
 class ComparisonCompatibility(_ComparisonModel):
     """Fail-closed compatibility decision made before metric comparison."""
 
     comparable: bool
     reasons: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
+    declared_variation_axis: VariationAxis = VariationAxis.NONE
+    varied: tuple[str, ...] = ()
 
 
 class ComparisonDimension(_ComparisonModel):
@@ -58,6 +90,7 @@ class ArtifactComparison(_ComparisonModel):
 def _compatibility(
     baseline: VerifiedArtifactSnapshot,
     candidate: VerifiedArtifactSnapshot,
+    variation_axis: VariationAxis = VariationAxis.NONE,
 ) -> ComparisonCompatibility:
     baseline_manifest = baseline.manifest
     candidate_manifest = candidate.manifest
@@ -136,11 +169,27 @@ def _compatibility(
             getattr(candidate_manifest, "fault_config_digest", None),
         ),
     )
+    exempt = _AXIS_EXEMPT_CHECKS[variation_axis]
+    varied: list[str] = []
     for label, baseline_value, candidate_value in checks:
-        if baseline_value != candidate_value:
-            reasons.append(
-                f"{label} differs: baseline={baseline_value!r}, candidate={candidate_value!r}"
+        if baseline_value == candidate_value:
+            continue
+        if label in exempt:
+            # Declared in advance as the independent variable, so it is recorded as a
+            # variation rather than as a reason the pair cannot be compared.
+            varied.append(
+                f"{label}: baseline={baseline_value!r}, candidate={candidate_value!r}"
             )
+            continue
+        reasons.append(
+            f"{label} differs: baseline={baseline_value!r}, candidate={candidate_value!r}"
+        )
+    if variation_axis is not VariationAxis.NONE and not varied:
+        # A declared axis that did not actually vary is a mistake worth surfacing: the
+        # caller believes they are comparing two controllers and they are not.
+        warnings.append(
+            f"declared variation axis {variation_axis.value!r} did not vary between the runs"
+        )
 
     if baseline_manifest.repository_commit is None or candidate_manifest.repository_commit is None:
         reasons.append("repository commit is unavailable for one or both artifacts")
@@ -180,6 +229,8 @@ def _compatibility(
         comparable=not reasons,
         reasons=tuple(reasons),
         warnings=tuple(warnings),
+        declared_variation_axis=variation_axis,
+        varied=tuple(varied),
     )
 
 
@@ -454,9 +505,15 @@ def _intervention_dimension(
 def compare_artifacts(
     baseline: VerifiedArtifactSnapshot,
     candidate: VerifiedArtifactSnapshot,
+    variation_axis: VariationAxis = VariationAxis.NONE,
 ) -> ArtifactComparison:
-    """Compare two stable verified snapshots, refusing incompatible evidence."""
-    compatibility = _compatibility(baseline, candidate)
+    """Compare two stable verified snapshots, refusing incompatible evidence.
+
+    ``variation_axis`` defaults to NONE, which preserves the original fail-closed behaviour
+    exactly: any difference in any identity or configuration digest makes the pair
+    incomparable. A caller that wants to compare two controllers must say so.
+    """
+    compatibility = _compatibility(baseline, candidate, variation_axis)
     if not compatibility.comparable:
         return ArtifactComparison(
             baseline_path=str(baseline.path),
