@@ -143,10 +143,11 @@ demo-cut-in: preflight
 demo-seeded-defects: preflight
 	$(PYTHON) -m pytest -q tests/integration/test_seeded_defects.py
 
-# The failure-to-regression flywheel, end to end. Runs a deliberately defective controller,
-# triages the failure, drafts a regression case from the observed geometry, shows promotion
-# refused without approval, records a decision, then stops at a dry-run promotion so the demo
-# is repeatable and never writes into the committed suite.
+# The failure-to-regression flywheel up to the human decision. Runs a deliberately defective
+# controller, triages the failure, drafts a regression case from the observed geometry, and
+# stops at the draft listing with no approval recorded - so the demo is repeatable and never
+# writes into the committed suite. Approval and promotion are the manual steps in
+# HERMES_SOURCE_OF_TRUTH.md section 3.2.
 FLYWHEEL_RUN := flywheel-$(ADAS_RUN_SUFFIX)
 FLYWHEEL_DRAFTS := $(CURDIR)/drafts
 
@@ -163,5 +164,5 @@ demo-flywheel: preflight
 	@echo "--- draft a regression case from the observed failure geometry ---"
 	$(PYTHON) -m hermes regression draft "$(FLYWHEEL_RUN)" --draft-root "$(FLYWHEEL_DRAFTS)"
 	@echo ""
-	@echo "--- promotion is refused while no human decision exists ---"
+	@echo "--- no human decision is recorded, so nothing here is promotable ---"
 	@$(PYTHON) -m hermes regression list --draft-root "$(FLYWHEEL_DRAFTS)"

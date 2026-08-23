@@ -12,21 +12,17 @@ Phase 8 extends Hermes into a simulation-based **ADAS development and agentic wo
 forward collision warning and automatic emergency braking, evaluated by an independent offline
 oracle, with an agentic layer whose authority boundary is enforced in code rather than in a prompt.
 
-**Start here:** [PHASE8_GETTING_STARTED.md](PHASE8_GETTING_STARTED.md) — ten minutes, every
-command copy-pasteable, with what each one should print.
+**Start here:** [HERMES_SOURCE_OF_TRUTH.md](HERMES_SOURCE_OF_TRUTH.md) — the single status,
+runbook, coordination and next-steps document for all Hermes work. Every conversation reads it
+first and updates it last; there is deliberately no other status document.
 
-Design documents, in reading order:
+Reference documents (deep material, not status):
 
 | Document | What it is |
 |---|---|
-| [PHASE_ALIGNMENT.md](PHASE_ALIGNMENT.md) | **Read before touching shared code** — state, ownership, and the coordination rules between parallel efforts |
-| [HERMES_OVERVIEW.md](HERMES_OVERVIEW.md) | **Start here if you are new** — what Hermes is, what it is not, and how it was built |
-| [PHASE8_STATUS.md](PHASE8_STATUS.md) | Where the work stands: what exists, what is not claimed, and the numbers |
-| [PHASE8_GETTING_STARTED.md](PHASE8_GETTING_STARTED.md) | How to run and test it |
 | [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) | The design, the agent authority model, acceptance criteria, and open questions for review |
 | [PHASE8_IMPLEMENTATION_NOTE.md](PHASE8_IMPLEMENTATION_NOTE.md) | What was built and measured, decisions forced by the code, deviations, and where the work is thinnest |
 | [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md) | The Sprint 0 survey of the existing codebase and its compatibility risks |
-| [PHASE8_HANDOFF.md](PHASE8_HANDOFF.md) | Status against the acceptance gates and what remains |
 
 ### The three things worth looking at
 
@@ -102,8 +98,8 @@ hermes fixtures regenerate                 # restore the test fixtures on a fres
 
 Phase 8 is **partial**: FCW and AEB are implemented and evaluated, with the agentic layer and
 the regression flywheel closed; ACC, LKA, combined assist, `RunMetricsV3` and the workbench
-panels are not. See the handoff for the gate
-table. Two scenarios and one seed are a reference implementation, not a safety case.
+panels are not. See [HERMES_SOURCE_OF_TRUTH.md](HERMES_SOURCE_OF_TRUTH.md) §11 for what
+remains. Two scenarios and one seed are a reference implementation, not a safety case.
 
 ## Safety boundary
 
