@@ -14,6 +14,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Phase 9** | specification only (`HERMES_PHASE9_FLEET_SIMULATION_PRD.md`, local, gitignored); no code, no branch |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | 965 tests pass (18 drive real MetaDrive) · ruff clean · `hermes doctor` 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
+| **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
 | **Last updated** | 2026-08-22 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
@@ -53,7 +54,8 @@ doing it.
 3. Record what you did **and what you deliberately did not do**. The "not claimed" and
    "open decisions" sections are load-bearing; the repository has been audited by an outside
    reader and the overclaims that survived were the expensive ones.
-4. Commit this file in the same commit as the work it describes, with the `Last updated` date.
+4. Commit this file in the same commit as the work it describes, with the `Last updated` date,
+   and republish the artifact (URL in the header) so the readable copy matches the repo.
 5. Parallel sessions: read §10 first. Most ways to break Phase 8 are *silent* — a wrong number
    that verifies cleanly, not a red test.
 
@@ -876,7 +878,8 @@ Each item states how you know it is done and what it will break.
 
 ## 15. Document map
 
-**Status and plan — this file only.**
+**Status and plan — this file only.** Readable copy: the artifact URL in the header. The
+separate "Hermes Evidence Lab" artifact is the portfolio page, not a status document.
 
 **Reference (deep material, linked from here, not status):**
 
