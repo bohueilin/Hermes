@@ -23,6 +23,7 @@ dev = [
 workbench = [
     "streamlit>=1.37,<2",
 ]
+fleet = []
 
 [project.scripts]
 hermes = "hermes.cli:app"
