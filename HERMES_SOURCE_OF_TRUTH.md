@@ -7,15 +7,15 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkout** | `/Users/bohueilin/Documents/GitHub/Hermes` on `feat/phase8-adas-lab` |
+| **Checkouts** | main checkout `…/Hermes` (on `main` since 2026-08-22, another session's move; Phase 8 intact on its branch) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · Phase 7 codex worktree (read-only) |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | complete for the FCW/AEB slice; 36 commits, 74 files, +12,581 / −154 |
-| **Phase 9** | specification only (`HERMES_PHASE9_FLEET_SIMULATION_PRD.md`, local, gitignored); no code, no branch |
+| **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 30 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | 965 tests pass (18 drive real MetaDrive) · ruff clean · `hermes doctor` 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-08-22 |
+| **Last updated** | 2026-08-23 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -406,7 +406,7 @@ renders envelopes; its read-only property is enforced by AST tests.
 | 6 | Review envelopes 1.0, `review-artifact`, `review-compare`, Streamlit workbench; reviewer-comprehension iteration; 756 tests | `feat/phase6-evidence-workbench` → `feat/phase6-reviewer-comprehension` @ `4eb8765` |
 | 7 | Evaluation-adequacy assessor, evaluation plans, provenance; 1,245 tests claimed | **codex worktree only** — `codex/phase7-…` @ `9d5c0ba`, 56 commits, **not merged** |
 | 8 | ADAS (FCW/AEB) + oracle + seeded defects + agent layer + regression flywheel; 965 tests | `feat/phase8-adas-lab` @ `e6e2c8c`, 36 commits from `4eb8765` |
-| 9 | Fleet simulation — **specification only** | local PRD, gitignored; no code |
+| 9 | Fleet simulation — **FLEET-005 spike built**: contracts, world tape, minimal DES, paired loop, decision record; 30 tests, clean-clone green | `feat/phase9-fleetlab` @ `00b2a48`; PRD stays local |
 
 Design decisions from early phases that still constrain everything: MetaDrive stays external and
 unmodified; every event hashes scenario/gate/component digests; hard invariants cannot be
@@ -597,8 +597,21 @@ fields, zero new `adapter` Literal values, and no `evidence_schema_version` chan
 MetaDrive-derived parameters, not Phase 8 ADAS evidence. Principle 18 (L228), "physical authority
 is measured, not assumed", is one line; §6.8 here is its only operationalisation. There is no risk
 register. Six P0 fleet scenarios (FLEET-001…006), 20 P0 / 10 P1 / 8 P2 acceptance criteria,
-48-hour MVP (§45), one-week build (§46). **Nothing is implemented: no module, command, test,
-extra, branch or sandbox content.**
+48-hour MVP (§45), one-week build (§46). **Built 2026-08-23 (the narrowed spike from the external design review):** `src/hermes/fleet/`
+on `feat/phase9-fleetlab` — preregistered `ExperimentSpec` (single variation axis, primary
+metric with an equivalence margin, guardrails, frozen seed set) and a `DecisionRecord` bound to
+spec/world-tape/seed-set digests; a materialized, hashed world tape (demand fixed across
+replications; per-request travel disturbances vary by seed, keyed to the request, never the
+chosen vehicle); the thinnest DES expressing FLEET-005 (nearest dispatch, depot bays); twelve
+invariants where a violation yields `INVALID_EXPERIMENT` with no partial outcome; a seeded
+double-assign dispatcher caught by the invariant that names it; bootstrap CI over paired
+replications; a non-compensatory recommendation (guardrail regression HOLDs an IMPROVED
+primary); `hermes fleet demo` (~0.5 s). Measured demo result: baseline healthy, +25% turnaround
+→ REGRESSED, CI [+736, +919] s on wait p90, guardrail hit → HOLD. 30 tests, all simulator- and
+fixture-free; suite 761→791 in the worktree with zero new failures; **30/30 from a clean clone
+on core deps only, decision-record digest bit-identical across checkouts.** Everything else in
+the PRD (charging, FLEET-001..004/006, policy SDK, forecast seam, Studio, registry) remains
+unbuilt.
 
 ### 7.2 MuJoCo sandbox — what exists
 
@@ -671,8 +684,8 @@ must not: the number as a default edit (§10 rule 3).
 - **Not reproducible off this host yet** (§2).
 - **Not measured on its own success metrics.** The Phase 8 PRD defines 22; roughly one is
   measured, and that one is near-tautological.
-- **Not Phase 9.** No FleetLab code exists. The PRD's own §52 says not to use its resume claim
-  before P0 is built.
+- **Not Phase 9 P0.** One vertical slice (FLEET-005) exists; the other 19 P0 criteria do not.
+  The PRD's own §52 says not to use its resume claim before P0 is built — a spike is not P0.
 - **Not MuJoCo-integrated.** `adapter` is still `Literal["fake","metadrive"]`.
 
 ---
@@ -777,15 +790,22 @@ Each item states how you know it is done and what it will break.
 6. **Small:** `scenarios/cut_in.example.yaml` and `config/gates.example.yaml` fail validation
    (21 and 8 errors) — refresh or delete; `*.parquet` gitignored with pyarrow/pandas undeclared.
 
-### 11.2 Phase 9 — before any code
+### 11.2 Phase 9 — after the FLEET-005 spike (2026-08-23)
 
-1. Decide whether to track the PRD (currently gitignored defensively).
-2. Create a branch and a **separate worktree** (rule 6).
-3. Follow the PRD's own §47 order: Phase 8 landed (it is) → FleetLab as an additive domain under
-   `src/hermes/fleet/` with its own `FleetSimulationBackend` — **not** through `SimulatorAdapter`.
-4. Build the analytical fixtures (Lane 0, §22.2) before the DES engine; they are the only
-   correctness oracle the DES will have.
-5. The MetaDrive→FleetLab parameter bridge is P1 and needs the calibrated curve from §11.1 item 1.
+Done: worktree + branch (rule 6) ✓; additive domain, no `SimulatorAdapter` involvement ✓; the
+spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
+
+1. **FLEET-006 with a minimal policy seam** — nearest vs an OR candidate behind a
+   `DispatchPolicy` contract with decision-time-only views, latency counted, `[fleet-or]` extra.
+2. **FLEET-003 (charger outage) needs the charging model**; author regime pairs and keep
+   outcomes separate per regime (no post-hoc MIXED).
+3. **Spec-file authoring + `hermes fleet run <spec.yaml>`** so the demo stops being the only
+   entry point; then the decision-record Comparison page on the workbench.
+4. Analytical fixtures beyond the conservation backbone (M/M/c depot check against closed form).
+5. Development-vs-evaluation seed separation and the leakage defects (ORACLE_LEAKAGE provider)
+   when the forecast seam lands.
+6. The MetaDrive→FleetLab parameter bridge stays P1 and still needs §11.1 item 1's curve.
+7. Decide whether to track the PRD (still gitignored defensively).
 
 ### 11.3 MuJoCo — before graduation
 
@@ -859,6 +879,11 @@ Each item states how you know it is done and what it will break.
 ---
 
 ## 14. Housekeeping and known inconsistencies
+
+- The main checkout `…/Hermes` was switched to `main` (Phase 0) by a parallel session on
+  2026-08-22 ~22:09 (`git reflog`). Phase 8 is intact on its branch and on GitHub; nothing was
+  lost. Run nothing from that checkout while it sits on `main` — FleetLab work happens only in
+  the `…/Hermes-fleetlab` worktree.
 
 - `Hermes_Fable5_Full_Project_Fresh_Eye_Design_Review_Master_Prompt.md` is in `.gitignore` (line
   47) **but tracked** (committed in `9efb811`). Public today.
