@@ -137,7 +137,11 @@ running CI on the branch; neither is done.
 `comfort.jerk`, with measured peak |a| around 13 m/s² against a configured 6 m/s² authority.
 `ControlConfig` limits are declared but not enforced on the simulator, and MetaDrive's brake
 dynamics are uncalibrated. This is PRD Risk 8, it is open, and it means **every threshold in
-`config/gates.adas.yaml` is an analytical guess rather than a measured one.**
+`config/gates.adas.yaml` is an analytical guess rather than a measured one.** An independent
+read-only probe (raw MetaDrive, outside `hermes`) has since measured a true peak of ~12.6–12.7 m/s²
+from two entry speeds, corroborating the in-pipeline figure — but with no point at the 20 m/s
+operating speed yet. Details in [PHASE_ALIGNMENT.md §4](PHASE_ALIGNMENT.md). The calibration item
+remains open; the measurement is an input to it, not a substitute for it.
 
 ---
 

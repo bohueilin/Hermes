@@ -251,6 +251,7 @@ Clean up: `rm -rf artifacts/det-* artifacts/demo-late`
 | `run ID must be 1-64 lowercase ASCII...` | Run IDs allow letters, digits and hyphens — no underscores |
 | MetaDrive fails to import | `third_party/metadrive` must be vendored; run `make doctor` |
 | A demo exits non-zero | `hermes run` encodes the verdict in its exit status: 0 PASS, 10 CONDITIONAL, 20 HOLD, 30 invalid evidence. Only 30 is a real failure. |
+| `IndexError: Replacement index 0 out of range` from `engine_core.py` | MetaDrive 0.4.3's headless graphics-pipe detection is intermittently empty. Re-run; it is not your scenario. Seen on display-less hosts. |
 
 ---
 

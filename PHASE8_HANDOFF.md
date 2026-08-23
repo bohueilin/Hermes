@@ -1,6 +1,6 @@
 # Hermes Phase 8 — Implementation Handoff
 
-**Branch:** `feat/phase8-adas-lab`
+**Branch:** `feat/phase8-adas-lab` — on the `github` remote since 2026-08-22
 **Base:** `feat/phase6-reviewer-comprehension` @ `4eb87654f79654843169d00a656dd2c6f8092de4`
 **Governing document:** `HERMES_PHASE7_ADAS_AGENTIC_WORKFLOW_PRD.md` (local-only, untracked) — §0-A normative
 **Sprint 0 audit:** [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md)
@@ -309,6 +309,22 @@ guess*. Peak |a| measures ~13 m/s² against a configured 6 m/s² authority, so t
 findings are CONDITIONAL in every demo and cannot be fixed by tuning. Author more scenarios
 before this and they will all need re-tuning afterwards.
 
+**Starting data, measured 2026-08-22.** A read-only probe in the (gitignored) MuJoCo sandbox —
+`sandbox/mujoco/metadrive_brake_probe.py`, raw MetaDrive 0.4.3, not through `hermes` — measured
+full-brake deceleration from two entry speeds. Corrected for the probe's own arithmetic (its peak
+excludes the first brake step, which is the largest; its mean has an off-by-one in intervals):
+
+| entry | true peak | steady-state | mean |
+|---|---|---|---|
+| 8.29 m/s | 12.70 m/s² | ~11.3 m/s² | 9.76 m/s² |
+| 13.81 m/s | 12.60 m/s² | ~11.3 m/s² | 11.07 m/s² |
+
+That corroborates the ~13 m/s² observed in-pipeline. **There is no point at 20 m/s** — the
+operating speed of every committed ADAS scenario — because the probe uses the default map and runs
+out of road; re-run it on `map='S'` with a 240 m destination first. Details and the derivation are
+in [PHASE_ALIGNMENT.md §4](PHASE_ALIGNMENT.md). **Do not paste the measured value into
+`ControlConfig.max_braking_mps2`** — see alignment rule 3 for why that weakens the oracle.
+
 **Do.** Measure decel-vs-speed under full brake across the 0–30 m/s ODD; record the curves as
 evidence, not as a constant in a file; re-derive scenario speeds/gaps and the AEB authority
 fractions from the measurement. Note `ControlConfig` limits are *declared but not enforced on
@@ -463,6 +479,14 @@ and `agent-trace.jsonl` provenance, which is **blocked** — see landmine 2 belo
    controller that provoked it and pass for one without the defect. `tests/integration/
    test_flywheel_end_to_end.py` asserts exactly that. A case that fails for everything grows
    the suite and detects nothing.
+10. **MetaDrive 0.4.3 can crash on init when fully headless.**
+    `third_party/metadrive/metadrive/engine/core/engine_core.py:213` does
+    `"Known Pipes: {}".format(*getPipeTypes())`, which raises `IndexError: Replacement index 0 out
+    of range` when pipe detection returns empty. Intermittent — pipe detection is flaky in headless
+    subprocesses, and setting `PANDA_PRC_DIR` to a directory without a display config makes it
+    worse. None of the 18 simulator-backed tests has hit it on this host, but a CI runner with no
+    display may. A retry loop on `IndexError` around environment construction works around it.
+    Found by the sandbox session; verified at source.
 
 ---
 

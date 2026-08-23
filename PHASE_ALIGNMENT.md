@@ -6,7 +6,7 @@ Read this before touching shared code. Updated 2026-08-22.
 | | Phase 8 — ADAS & agentic workflow lab | Phase 9 — Fleet simulation |
 |---|---|---|
 | Status | **Complete and committed** | Specification + sandbox exploration |
-| Branch | `feat/phase8-adas-lab` @ `0c16c8f` | not yet branched |
+| Branch | `feat/phase8-adas-lab`, pushed to `github` | not yet branched |
 | Spec | `HERMES_PHASE7_ADAS_AGENTIC_WORKFLOW_PRD.md` (local-only) | `HERMES_PHASE9_FLEET_SIMULATION_PRD.md` (local-only) |
 | Code | `src/hermes/{adas,agents,regression}/`, `verifiers/adas.py` | none — `sandbox/mujoco/` only, gitignored, imports nothing from `src/` |
 | Tests | 965 passing, 18 simulator-backed | n/a |
@@ -121,8 +121,9 @@ list in the same commit.
 
 ### Protecting Phase 9
 
-**6. Work in a separate git worktree, and push `feat/phase8-adas-lab` first.** All 34 commits
-exist on one local disk with no upstream. `orchestrator.py:170` stamps `repository_dirty` from
+**6. Work in a separate git worktree.** `feat/phase8-adas-lab` is on the `github` remote as of
+2026-08-22 (pushed by the sandbox session; fast-forward pushes only). `orchestrator.py:170` stamps
+`repository_dirty` from
 `git status --porcelain`, so an uncommitted file in this checkout taints every bundle anyone
 generates, and a differing `repository_commit` makes any baseline/candidate pair `NOT_COMPARABLE`.
 
@@ -147,17 +148,37 @@ for d in artifacts/*/; do printf '%s ' "$d"; hermes verify-artifact "$d" | grep 
 change.**
 
 `sandbox/mujoco/metadrive_brake_probe.py` is the only instrument either effort has that *measures*
-physical braking authority instead of assuming it. Its reference run records entry 5.52 m/s, peak
-11.06 m/s², mean 8.37 m/s² — corroborating Phase 8's independently observed peak |a| ≈ 13 m/s².
+physical braking authority instead of assuming it. Its headline — "~11 m/s² peak" — **understates
+its own data.** The probe's `max()` runs over consecutive samples *within* the post-brake trace, so it
+excludes the first brake step, which is the largest drop in both curves:
+
+| entry speed | reported peak | first-step drop (excluded) | true peak | reported mean | mean, correct intervals |
+|---|---|---|---|---|---|
+| 8.29 m/s | 11.24 | 8.29 → 7.02 = **12.70** | 12.70 m/s² | 8.54 | 9.76 m/s² |
+| 13.81 m/s | 11.24 | 13.81 → 12.55 = **12.60** | 12.60 m/s² | 9.61 | 11.07 m/s² |
+| 17.12 m/s | — | episode ended after one brake step | — | — | — |
+
+(The mean divides a `len(vs)−1`-interval drop by `len(vs)` intervals.) So the steady-state
+deceleration is ~11 m/s² and the true peak is ~12.6–12.7 m/s² — which agrees with Phase 8's
+in-pipeline ~13 m/s² far more closely than the handoff states. Derived here from the probe's own
+`speed_trace`; the probe script belongs to the sandbox session and has not been edited.
+
+The 17.12 m/s run has no curve because the probe uses MetaDrive's *default* map and runs out of road
+at speed. Every committed ADAS scenario runs at 20 m/s on `map='S'` with a 240 m destination.
 
 Phase 8's single largest known weakness is that `max_braking_mps2 = 6.0` is an unmeasured guess
 that the oracle treats as physical ground truth, while the code prose calls the onset criterion
 "physically grounded". Phase 9 needs a real decel-vs-speed curve anyway for its MetaDrive→FleetLab
 calibration bridge. Same measurement, both needs.
 
-What should transfer: a probe producing usable points **at 20 m/s**, the operating speed of all
-five committed ADAS scenarios — the current probe has two points below 14 m/s and a null at
-17.12 m/s. That unblocks Phase 9's bridge and gives Phase 8 what it needs to either re-derive the
+What should transfer: a probe producing usable points **at 20 m/s** on the **scenario-faithful
+config** (`map='S'`, `traffic_density=0`, a destination long enough to brake from 20 m/s) — the
+current probe has two points below 14 m/s and a null at 17.12 m/s.
+
+Also informational: the sandbox's `pilot_adapter.py` implements the `SimulatorAdapter` shape
+against a MuJoCo AEB scene and conforms — all 9 protocol members, exact field parity on all 5 data
+models, AST-checked against the real `contracts.py`/`models.py`. Its one surfaced integration gap is
+the `adapter` Literal (§5), which is digest-neutral to widen. That unblocks Phase 9's bridge and gives Phase 8 what it needs to either re-derive the
 authority *fractions* alongside the authority (so the oracle keeps discriminating) or honestly
 relabel the criterion as simulator-relative.
 
@@ -192,6 +213,8 @@ and `:1308`), so a third adapter's simulator provenance would never be validated
 - `Hermes_Fable5_Full_Project_Fresh_Eye_Design_Review_Master_Prompt.md` is listed in `.gitignore`
   **but is already tracked** (committed in `9efb811`) — gitignore does not untrack. It is public
   today. `git rm --cached` if that was not intended.
+- `PHASE8_SANDBOX_HANDOFF.md` (the sandbox session's note to Phase 8) states it is not tracked but
+  was not gitignored; now protected, same as the PRDs.
 - `main` is still the Phase 0 commit; CI triggers on `main` only and has never run against this
   work. There is no LICENSE file.
 - The Phase 7 worktree at `~/.codex/worktrees/Hermes/phase7-…` is **read-only** to both efforts.
