@@ -41,6 +41,7 @@ Hermes_Starter_Pack/
 # repository_dirty from `git status --porcelain --untracked-files=normal`, and a dirty
 # worktree makes every generated bundle carry dirty provenance.
 /HERMES_PHASE7_ADAS_AGENTIC_WORKFLOW_PRD.md
+/HERMES_PHASE9_FLEET_SIMULATION_PRD.md
 /Hermes_Phase8_ADAS_Opus5_Implementation_Master_Prompt.md
 /Hermes_Phase6_Reviewer_Comprehension_Iteration_Master_Prompt.md
 /Hermes_Fable5_Full_Project_Fresh_Eye_Design_Review_Master_Prompt.md

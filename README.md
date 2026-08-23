@@ -19,6 +19,7 @@ Design documents, in reading order:
 
 | Document | What it is |
 |---|---|
+| [PHASE_ALIGNMENT.md](PHASE_ALIGNMENT.md) | **Read before touching shared code** — state, ownership, and the coordination rules between parallel efforts |
 | [HERMES_OVERVIEW.md](HERMES_OVERVIEW.md) | **Start here if you are new** — what Hermes is, what it is not, and how it was built |
 | [PHASE8_STATUS.md](PHASE8_STATUS.md) | Where the work stands: what exists, what is not claimed, and the numbers |
 | [PHASE8_GETTING_STARTED.md](PHASE8_GETTING_STARTED.md) | How to run and test it |
