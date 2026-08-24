@@ -58,9 +58,9 @@ Observed inputs and model choices, not a post-hoc fit, explain the direction of 
   a 1,400 kg ego body, 0.1 kg nonzero joint armature, 2 N·s/m slide damping, and a fixed 8,000 N
   full-brake motor command at a 0.01 s step. It does not model tires, wheels, ABS, aerodynamic
   drag, suspension, road grade, or a measured real brake plant.
-- The MuJoCo lead is held 100 m ahead by a velocity servo at the entry speed. It is explicitly
-  **scripted-kinematic**, carries `behavior_realism_claim=false`, and does not interact with the
-  ego during this sweep.
+- The MuJoCo lead starts 100 m ahead, and its velocity servo holds the entry speed, so separation
+  grows as the ego brakes. It is explicitly **scripted-kinematic**, carries
+  `behavior_realism_claim=false`, and does not interact with the ego during this sweep.
 - This sweep therefore exercises the MuJoCo actuator-level reference, not contact physics. It
   establishes the optional instrument and its evidence discipline; it does not claim that the
   chosen 8,000 N is calibrated to MetaDrive or to a real vehicle.

@@ -1,7 +1,8 @@
 # SEEDED DEFECT - a controller that is meant to fail.
 #
-# Defect: brakes only once required deceleration approaches full authority, leaving no
-# margin. Expected detection: adas.aeb.brake_onset_ttc, i.e. INTERVENTION_TOO_LATE.
+# Defect: preserves the deliberately late 5.7/5.94 m/s^2 staging, so braking starts only
+# after crossing the calibrated onset margin. Expected detection:
+# adas.aeb.brake_onset_margin, i.e. INTERVENTION_TOO_LATE.
 functions:
   - fcw
   - aeb

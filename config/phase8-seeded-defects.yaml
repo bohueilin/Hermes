@@ -11,7 +11,7 @@ schema_version: "1.0"
 label: deliberately_defective_controllers_for_evaluation_acceptance
 defects:
   - defect_id: late_braking
-    description: Brakes only once required deceleration approaches full authority.
+    description: Brakes only once required deceleration crosses the calibrated onset margin.
     policy_config: config/adas/defect_late_braking.yaml
     scenario: scenarios/adas/aeb_lead_hard_brake.yaml
     expected_failing_finding: adas.aeb.brake_onset_margin

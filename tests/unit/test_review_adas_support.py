@@ -85,6 +85,9 @@ def test_every_adas_finding_has_a_review_label() -> None:
     for finding_id in adas_findings:
         assert finding_id in _FINDING_LABELS, finding_id
         assert _finding_label(finding_id) != finding_id
+    assert _finding_label("adas.aeb.brake_onset_margin") == (
+        "AEB braking began within the calibrated onset margin"
+    )
 
 
 def test_an_unknown_finding_label_degrades_instead_of_crashing() -> None:

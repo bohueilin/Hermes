@@ -114,7 +114,9 @@ _FINDING_LABELS = MappingProxyType(
         "comfort.jerk": "Jerk comfort threshold",
         "fault.coverage.required": "Configured fault coverage",
         "adas.aeb.threat_response": "AEB responded to an oracle-labelled threat",
-        "adas.aeb.brake_onset_margin": "AEB braking began within braking authority",
+        "adas.aeb.brake_onset_margin": (
+            "AEB braking began within the calibrated onset margin"
+        ),
         "adas.aeb.no_false_intervention": "No braking in a threat-free scenario",
         "adas.fcw.warning_timing": "Declared forward-collision warning exposure occurred",
     }
