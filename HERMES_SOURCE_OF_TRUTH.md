@@ -7,7 +7,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkouts** | main checkout `…/Hermes` (on `main` since 2026-08-22, another session's move; Phase 8 intact on its branch) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · Phase 7 codex worktree (read-only) |
+| **Checkouts** | main checkout `…/Hermes` (on `main` since 2026-08-22, another session's move; Phase 8 intact on its branch) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · ADAS worktree `…/Hermes-adas` on `feat/phase8-adas-calibration` (env verified: 965 green; execution plan local there) · Phase 7 codex worktree (read-only) |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | complete for the FCW/AEB slice; 36 commits, 74 files, +12,581 / −154 |
@@ -764,6 +764,14 @@ Each item states how you know it is done and what it will break.
 
 ### 11.1 Phase 8 — remaining, in order
 
+> **Execution plan exists (2026-08-23):** `…/Hermes-adas/Hermes_Phase8_ADAS_Execution_Plan.md`
+> (local, untracked). Centerpiece: item 1 below (WP-A), with MuJoCo graduated as a *calibration
+> instrument* (`[mujoco-cal]`, `fwdinv` + graduation defaults — the sandbox's Q1 niche answered),
+> a Warp CPU kernel, an esmini/OpenSCENARIO audition, and a web-verified tool decision table
+> (ADOPT/DEMO/LITERATE/AVOID; 45 claims checked, incl. Isaac/Newton/MJWarp/cuOpt/Waymax reality
+> on this host). The plan's environment is pre-verified in that worktree.
+
+
 1. **Brake-dynamics calibration (PRD Risk 8) — highest engineering value.** Re-run the probe on
    `map='S'`, `traffic_density=0`, 240 m destination, across 0–30 m/s; fix its arithmetic (§6.8);
    commit the curve as an evidence artefact, not a constant; re-derive the AEB authority
@@ -884,6 +892,12 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
 ---
 
 ## 14. Housekeeping and known inconsistencies
+
+- The ADAS worktree's copy of this file is **stale by design** (branched at `7a6cfe6`, before
+  the FleetLab updates). The ADAS executor must not edit it; results are folded in here. Two
+  entries live in the shared `…/Hermes/.git/info/exclude` (affects all worktrees, no tracked
+  file): `third_party` (the ADAS worktree's symlink to the vendored simulator) and
+  `/Hermes_Phase8_ADAS_Execution_Plan.md`.
 
 - The main checkout `…/Hermes` was switched to `main` (Phase 0) by a parallel session on
   2026-08-22 ~22:09 (`git reflog`). Phase 8 is intact on its branch and on GitHub; nothing was
