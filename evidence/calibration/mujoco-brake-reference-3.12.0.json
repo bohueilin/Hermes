@@ -2,7 +2,7 @@
   "api_contract": {
     "advance": "mujoco.mj_step",
     "fresh_state": "mujoco.MjData",
-    "fwdinv_output": "mujoco.MjData.solver_fwdinv[2]",
+    "fwdinv_output": "mujoco.MjData.solver_fwdinv two-element array at indices 0 and 1",
     "model_load": "mujoco.MjModel.from_xml_path",
     "state_capture": "mujoco.mj_getState(..., mjSTATE_INTEGRATION)",
     "state_size": "mujoco.mj_stateSize"
@@ -14,15 +14,36 @@
     {
       "braking_interval_count": 65,
       "entry_speed_mps": 4.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 66
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -35,9 +56,9 @@
         "ce9a42b6bf27f512752293ba9d640fbeff43f19d4a33d8e50fbddc373f6f267a"
       ],
       "repeat_observation_trace_sha256": [
-        "bf1c05654d2d9e1581c8f5b01e4abe2f6c704fa1e44a3ed456a7b80fda343ec4",
-        "bf1c05654d2d9e1581c8f5b01e4abe2f6c704fa1e44a3ed456a7b80fda343ec4",
-        "bf1c05654d2d9e1581c8f5b01e4abe2f6c704fa1e44a3ed456a7b80fda343ec4"
+        "5d76b933dfa7ac398e18a7b35c5c2db6fb691217e1b0a876a07e466911997e24",
+        "5d76b933dfa7ac398e18a7b35c5c2db6fb691217e1b0a876a07e466911997e24",
+        "5d76b933dfa7ac398e18a7b35c5c2db6fb691217e1b0a876a07e466911997e24"
       ],
       "steady_deceleration_mps2": 5.716896119006204,
       "steady_interval_indices": [
@@ -112,15 +133,36 @@
     {
       "braking_interval_count": 100,
       "entry_speed_mps": 6.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 101
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -133,9 +175,9 @@
         "a2a1ca112f7642830037b031d175eb87b2824cb4b4049040b40b4ec4da58679a"
       ],
       "repeat_observation_trace_sha256": [
-        "d41cf52efa8f9fc70486233ddedf68c552724365f39bab402de90f6f15840648",
-        "d41cf52efa8f9fc70486233ddedf68c552724365f39bab402de90f6f15840648",
-        "d41cf52efa8f9fc70486233ddedf68c552724365f39bab402de90f6f15840648"
+        "0cc79249016506ec8e5529c836d57ebe4ffe97d846ca505180a14cbb74b994b8",
+        "0cc79249016506ec8e5529c836d57ebe4ffe97d846ca505180a14cbb74b994b8",
+        "0cc79249016506ec8e5529c836d57ebe4ffe97d846ca505180a14cbb74b994b8"
       ],
       "steady_deceleration_mps2": 5.718322338547935,
       "steady_interval_indices": [
@@ -245,15 +287,36 @@
     {
       "braking_interval_count": 135,
       "entry_speed_mps": 8.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 136
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -266,9 +329,9 @@
         "ee025ac012ef30b4b241035086a78f38f2a16e4dce18edc0d341760c953b7cbf"
       ],
       "repeat_observation_trace_sha256": [
-        "7f4e5722e1aef745318b3052c4d509ebd9719b3aefb564538442d91d409bcb59",
-        "7f4e5722e1aef745318b3052c4d509ebd9719b3aefb564538442d91d409bcb59",
-        "7f4e5722e1aef745318b3052c4d509ebd9719b3aefb564538442d91d409bcb59"
+        "409493b4cbb1c845e0583377d59520713983852aa2c5bb2b8dbdfb3a7ccda9d2",
+        "409493b4cbb1c845e0583377d59520713983852aa2c5bb2b8dbdfb3a7ccda9d2",
+        "409493b4cbb1c845e0583377d59520713983852aa2c5bb2b8dbdfb3a7ccda9d2"
       ],
       "steady_deceleration_mps2": 5.719747607380622,
       "steady_interval_indices": [
@@ -413,15 +476,36 @@
     {
       "braking_interval_count": 170,
       "entry_speed_mps": 10.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 171
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -434,9 +518,9 @@
         "f526580960514d4265b2617903eb1eb700110e21da40d0ce52ac8407d4698fd7"
       ],
       "repeat_observation_trace_sha256": [
-        "acbb0c957415bee7a35cf4ba9a5b61e240b16e580ffd3c191b162401dd956f44",
-        "acbb0c957415bee7a35cf4ba9a5b61e240b16e580ffd3c191b162401dd956f44",
-        "acbb0c957415bee7a35cf4ba9a5b61e240b16e580ffd3c191b162401dd956f44"
+        "7baac6e3e2b6e10efaaae693ef691a9295dcb76c54396f46305ba75234fd0130",
+        "7baac6e3e2b6e10efaaae693ef691a9295dcb76c54396f46305ba75234fd0130",
+        "7baac6e3e2b6e10efaaae693ef691a9295dcb76c54396f46305ba75234fd0130"
       ],
       "steady_deceleration_mps2": 5.721171926038915,
       "steady_interval_indices": [
@@ -616,15 +700,36 @@
     {
       "braking_interval_count": 205,
       "entry_speed_mps": 12.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 206
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -637,9 +742,9 @@
         "89c9bde8a27509a025fce03af7bbc9a1a0d0cdd0f7e49d6daa1a3e73797efcd6"
       ],
       "repeat_observation_trace_sha256": [
-        "f81be05b2062eee5e1280a4ba7f01d24113257650d69b9fc387f799d5dd720c6",
-        "f81be05b2062eee5e1280a4ba7f01d24113257650d69b9fc387f799d5dd720c6",
-        "f81be05b2062eee5e1280a4ba7f01d24113257650d69b9fc387f799d5dd720c6"
+        "81311abd3d61b2c282f7cbf591a52426afe17c68f71a814683cea70e32454850",
+        "81311abd3d61b2c282f7cbf591a52426afe17c68f71a814683cea70e32454850",
+        "81311abd3d61b2c282f7cbf591a52426afe17c68f71a814683cea70e32454850"
       ],
       "steady_deceleration_mps2": 5.7225952950571575,
       "steady_interval_indices": [
@@ -854,15 +959,36 @@
     {
       "braking_interval_count": 240,
       "entry_speed_mps": 14.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 241
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -875,9 +1001,9 @@
         "545b13750098b636bb83dba0f3c34cfd0a6550974a8ab7b88f7e23ea56e6ed65"
       ],
       "repeat_observation_trace_sha256": [
-        "f5c2a5240946a2bdc2cca9a06ff81490cfdebdd9a6ecbb49826178643ceaea05",
-        "f5c2a5240946a2bdc2cca9a06ff81490cfdebdd9a6ecbb49826178643ceaea05",
-        "f5c2a5240946a2bdc2cca9a06ff81490cfdebdd9a6ecbb49826178643ceaea05"
+        "3ae9187ea7d6dc2dbdaea3b9a0198ecacc8f102493674c482e2d0e55a3b08456",
+        "3ae9187ea7d6dc2dbdaea3b9a0198ecacc8f102493674c482e2d0e55a3b08456",
+        "3ae9187ea7d6dc2dbdaea3b9a0198ecacc8f102493674c482e2d0e55a3b08456"
       ],
       "steady_deceleration_mps2": 5.724017714969411,
       "steady_interval_indices": [
@@ -1127,15 +1253,36 @@
     {
       "braking_interval_count": 275,
       "entry_speed_mps": 16.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 276
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -1148,9 +1295,9 @@
         "77ece621a7ee44ce42da86a5fee0747a53e0429939338c9bfa911bd4588555a5"
       ],
       "repeat_observation_trace_sha256": [
-        "e8c0552a4ff80bf2faefc58872342ef5726c9499934bf6d539a47646e2926e33",
-        "e8c0552a4ff80bf2faefc58872342ef5726c9499934bf6d539a47646e2926e33",
-        "e8c0552a4ff80bf2faefc58872342ef5726c9499934bf6d539a47646e2926e33"
+        "3605d10ef54a80a8e26184dcf95a4cf893d81fdd7ba14357cd1cfbabd0928a36",
+        "3605d10ef54a80a8e26184dcf95a4cf893d81fdd7ba14357cd1cfbabd0928a36",
+        "3605d10ef54a80a8e26184dcf95a4cf893d81fdd7ba14357cd1cfbabd0928a36"
       ],
       "steady_deceleration_mps2": 5.725439186309459,
       "steady_interval_indices": [
@@ -1435,15 +1582,36 @@
     {
       "braking_interval_count": 310,
       "entry_speed_mps": 18.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 311
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -1456,9 +1624,9 @@
         "9250d6dcedf458418afb0567240e2b6a0b138eb3c2fa8065c3ca21db1e5b2b74"
       ],
       "repeat_observation_trace_sha256": [
-        "0fd92feec2f82012a1bc106b09161e6ef81c091f2762554868c37bd8ef08589f",
-        "0fd92feec2f82012a1bc106b09161e6ef81c091f2762554868c37bd8ef08589f",
-        "0fd92feec2f82012a1bc106b09161e6ef81c091f2762554868c37bd8ef08589f"
+        "e3fe7624b1104f8f331bafff6cd65162207f604f113d241187fda8397618a11a",
+        "e3fe7624b1104f8f331bafff6cd65162207f604f113d241187fda8397618a11a",
+        "e3fe7624b1104f8f331bafff6cd65162207f604f113d241187fda8397618a11a"
       ],
       "steady_deceleration_mps2": 5.726859709610812,
       "steady_interval_indices": [
@@ -1778,15 +1946,36 @@
     {
       "braking_interval_count": 344,
       "entry_speed_mps": 20.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 345
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -1799,9 +1988,9 @@
         "ef837a4027b91b649d4df7f28803bfe227bdd8e3b2790c7dfc0e27d42cdbebb2"
       ],
       "repeat_observation_trace_sha256": [
-        "c0769f514f9060fac01700b518d75835ba4bb518edf187a33cfb4308d95d3357",
-        "c0769f514f9060fac01700b518d75835ba4bb518edf187a33cfb4308d95d3357",
-        "c0769f514f9060fac01700b518d75835ba4bb518edf187a33cfb4308d95d3357"
+        "889b888f102637cabf09c58ab1ea9b6d085eba0f95c5c42312663f364ef3d5c5",
+        "889b888f102637cabf09c58ab1ea9b6d085eba0f95c5c42312663f364ef3d5c5",
+        "889b888f102637cabf09c58ab1ea9b6d085eba0f95c5c42312663f364ef3d5c5"
       ],
       "steady_deceleration_mps2": 5.728320165257537,
       "steady_interval_indices": [
@@ -2155,15 +2344,36 @@
     {
       "braking_interval_count": 379,
       "entry_speed_mps": 22.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 380
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -2176,9 +2386,9 @@
         "2a2c8abcc64607504ffe056ce6d720c0efdff08500b99d7d4716d37bb2cd3f62"
       ],
       "repeat_observation_trace_sha256": [
-        "62b63695a09ef433cfa6d47b49c69577aef47d8cb62092d02962fb60932253d3",
-        "62b63695a09ef433cfa6d47b49c69577aef47d8cb62092d02962fb60932253d3",
-        "62b63695a09ef433cfa6d47b49c69577aef47d8cb62092d02962fb60932253d3"
+        "bc5ca4f3f201d18b919a5bc699146ccfb063eb745c05bb59032f506633392cf3",
+        "bc5ca4f3f201d18b919a5bc699146ccfb063eb745c05bb59032f506633392cf3",
+        "bc5ca4f3f201d18b919a5bc699146ccfb063eb745c05bb59032f506633392cf3"
       ],
       "steady_deceleration_mps2": 5.729738800794837,
       "steady_interval_indices": [
@@ -2567,15 +2777,36 @@
     {
       "braking_interval_count": 414,
       "entry_speed_mps": 24.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 415
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -2588,9 +2819,9 @@
         "9b302379fc0e7fef80f513ca6eac4c86d97e37098afea04cb94877e396f64532"
       ],
       "repeat_observation_trace_sha256": [
-        "008f7aa3c7f6b24115882ed6da9c777bebb4d418b95f2001bb2c242beb4d3a56",
-        "008f7aa3c7f6b24115882ed6da9c777bebb4d418b95f2001bb2c242beb4d3a56",
-        "008f7aa3c7f6b24115882ed6da9c777bebb4d418b95f2001bb2c242beb4d3a56"
+        "20c2898eb8d76f52e71c5570a2444246e48e023779a520623d6762f0d22691be",
+        "20c2898eb8d76f52e71c5570a2444246e48e023779a520623d6762f0d22691be",
+        "20c2898eb8d76f52e71c5570a2444246e48e023779a520623d6762f0d22691be"
       ],
       "steady_deceleration_mps2": 5.731156489883752,
       "steady_interval_indices": [
@@ -3014,15 +3245,36 @@
     {
       "braking_interval_count": 449,
       "entry_speed_mps": 26.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 450
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -3035,9 +3287,9 @@
         "47d647315169887dada82e2d32bf2fa54db850b51349ec44c60a7537a6802ff5"
       ],
       "repeat_observation_trace_sha256": [
-        "191d36b0b486468acd1ff266181cc7858a1d52d302da8908ac1dec09566149a7",
-        "191d36b0b486468acd1ff266181cc7858a1d52d302da8908ac1dec09566149a7",
-        "191d36b0b486468acd1ff266181cc7858a1d52d302da8908ac1dec09566149a7"
+        "3154ae5e97b481fb3624c88781eb24656270b7763b7e90b32c3ad9dcf41e1ff8",
+        "3154ae5e97b481fb3624c88781eb24656270b7763b7e90b32c3ad9dcf41e1ff8",
+        "3154ae5e97b481fb3624c88781eb24656270b7763b7e90b32c3ad9dcf41e1ff8"
       ],
       "steady_deceleration_mps2": 5.7325732330566535,
       "steady_interval_indices": [
@@ -3496,15 +3748,36 @@
     {
       "braking_interval_count": 484,
       "entry_speed_mps": 28.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 485
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -3517,9 +3790,9 @@
         "0d578d6d23d10517c929621fe49d7ec9d8d138aff54bca87d87756f6e2219a60"
       ],
       "repeat_observation_trace_sha256": [
-        "250d2c3c88a83ea445c9886222266cdab8fbb0afe3b1f5abee6b997de056edcf",
-        "250d2c3c88a83ea445c9886222266cdab8fbb0afe3b1f5abee6b997de056edcf",
-        "250d2c3c88a83ea445c9886222266cdab8fbb0afe3b1f5abee6b997de056edcf"
+        "50a4be54548400d98ee7de0cdc6d7ce74ddb8d6bc5bee0b8f5c1404e8241b256",
+        "50a4be54548400d98ee7de0cdc6d7ce74ddb8d6bc5bee0b8f5c1404e8241b256",
+        "50a4be54548400d98ee7de0cdc6d7ce74ddb8d6bc5bee0b8f5c1404e8241b256"
       ],
       "steady_deceleration_mps2": 5.733989030845657,
       "steady_interval_indices": [
@@ -4013,15 +4286,36 @@
     {
       "braking_interval_count": 518,
       "entry_speed_mps": 30.0,
-      "fwdinv_residual": {
-        "maximum_constraint_space_relative": 0.0,
-        "maximum_joint_space_relative": 0.0,
-        "median_constraint_space_relative": 0.0,
-        "median_joint_space_relative": 0.0,
-        "semantics": [
-          "joint-space relative norm of forward/inverse applied-force discrepancy",
-          "constraint-space relative norm of forward/inverse applied-force discrepancy"
-        ]
+      "fwdinv_diagnostic": {
+        "active_constraint_count": {
+          "maximum": 0,
+          "minimum": 0
+        },
+        "array_api": "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm and index 1 is constraint-space L2 norm",
+        "comparison_exercised": false,
+        "interpretation": "MuJoCo clears both raw slots and returns without comparing when the active constraint count is zero; raw zeros in that state are not L2-norm results",
+        "l2_norms_when_exercised": {
+          "constraint_space": {
+            "maximum": null,
+            "median": null
+          },
+          "joint_space": {
+            "maximum": null,
+            "median": null
+          }
+        },
+        "sample_counts": {
+          "exercised": 0,
+          "not_exercised": 519
+        },
+        "unexercised_raw_array_values": {
+          "constraint_space_l2_norm": [
+            0.0
+          ],
+          "joint_space_l2_norm": [
+            0.0
+          ]
+        }
       },
       "integration_state_name": "mjSTATE_INTEGRATION",
       "integration_state_size": 29,
@@ -4034,9 +4328,9 @@
         "57b4ba01d2f62d502bc8ca5f12b31a730bd701ca7d739a93e300cda1ee8201ca"
       ],
       "repeat_observation_trace_sha256": [
-        "6389e4aad95b508fdfb6cb50074d4dfa48f8ff345d18e081bae80092e9367709",
-        "6389e4aad95b508fdfb6cb50074d4dfa48f8ff345d18e081bae80092e9367709",
-        "6389e4aad95b508fdfb6cb50074d4dfa48f8ff345d18e081bae80092e9367709"
+        "1752ed8176649b7e7bffa4dce05e566d50e32facf9e8e5301a5c0aac2082a3f5",
+        "1752ed8176649b7e7bffa4dce05e566d50e32facf9e8e5301a5c0aac2082a3f5",
+        "1752ed8176649b7e7bffa4dce05e566d50e32facf9e8e5301a5c0aac2082a3f5"
       ],
       "steady_deceleration_mps2": 5.735444797508547,
       "steady_interval_indices": [
@@ -4563,133 +4857,91 @@
     }
   ],
   "distribution_summary": {
-    "fwdinv_maximum_constraint_space_relative": {
-      "maximum": 0.0,
-      "median": 0.0,
-      "minimum": 0.0,
-      "sample_count": 14,
-      "samples_by_entry_speed_mps": [
-        {
-          "entry_speed_mps": 4.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 6.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 8.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 10.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 12.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 14.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 16.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 18.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 20.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 22.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 24.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 26.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 28.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 30.0,
-          "value": 0.0
-        }
-      ]
-    },
-    "fwdinv_maximum_joint_space_relative": {
-      "maximum": 0.0,
-      "median": 0.0,
-      "minimum": 0.0,
-      "sample_count": 14,
-      "samples_by_entry_speed_mps": [
-        {
-          "entry_speed_mps": 4.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 6.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 8.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 10.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 12.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 14.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 16.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 18.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 20.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 22.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 24.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 26.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 28.0,
-          "value": 0.0
-        },
-        {
-          "entry_speed_mps": 30.0,
-          "value": 0.0
-        }
-      ]
+    "fwdinv_diagnostic": {
+      "maximum_active_constraint_count": {
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0,
+        "sample_count": 14,
+        "samples_by_entry_speed_mps": [
+          {
+            "entry_speed_mps": 4.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 6.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 8.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 10.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 12.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 14.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 16.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 18.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 20.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 22.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 24.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 26.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 28.0,
+            "value": 0.0
+          },
+          {
+            "entry_speed_mps": 30.0,
+            "value": 0.0
+          }
+        ]
+      },
+      "maximum_constraint_space_l2_norm_when_exercised": {
+        "availability": "NOT_EXERCISED",
+        "maximum": null,
+        "median": null,
+        "minimum": null,
+        "reason": "No speed exercised mj_compareFwdInv because every recorded active-constraint count was zero; MuJoCo cleared both raw array slots without computing L2 norms.",
+        "sample_count": 0,
+        "samples_by_entry_speed_mps": []
+      },
+      "maximum_joint_space_l2_norm_when_exercised": {
+        "availability": "NOT_EXERCISED",
+        "maximum": null,
+        "median": null,
+        "minimum": null,
+        "reason": "No speed exercised mj_compareFwdInv because every recorded active-constraint count was zero; MuJoCo cleared both raw array slots without computing L2 norms.",
+        "sample_count": 0,
+        "samples_by_entry_speed_mps": []
+      },
+      "speeds_with_comparison_exercised": 0,
+      "speeds_without_comparison_exercised": 14
     },
     "interpretation": "empirical cross-speed distributions; the N=3 repeats are deterministic replication checks, not independent stochastic samples",
     "mean_deceleration_mps2": {
@@ -5002,12 +5254,47 @@
     "model_scope": "one-dimensional actuator-level simulation reference",
     "parameter_status": "illustrative pilot assumptions adapted from the prior 1-D AEB sandbox; not identified from a real vehicle"
   },
+  "producer": {
+    "command": [
+      "python3.11",
+      "tools/calibration/mujoco_brake_reference.py"
+    ],
+    "working_directory": "repository root"
+  },
   "release_evidence_lane": false,
   "repository": {
-    "commit": "eeac0b5042002914b46aa80b6eecb84e8ce546bc",
+    "commit": "23e44b6b5830040afb19f3def320e4ff3114591b",
     "dirty_before_output_write": false
   },
-  "schema_version": "1.0",
+  "runtime": {
+    "mujoco_distribution": {
+      "name": "mujoco",
+      "package_metadata_sha256": "5e43553c4fc3471a3b48709a0c75c703c2687f4a655597b1d1a351158511c3cf",
+      "version": "3.12.0",
+      "wheel_metadata_sha256": "b337e93e5d67a3bd3deddb8cd623f1d6e7bb96eef9d07ef29a1e94a3046c2d05",
+      "wheel_tags": [
+        "cp311-cp311-macosx_11_0_arm64"
+      ]
+    },
+    "mujoco_native_library": {
+      "filename": "libmujoco.3.12.0.dylib",
+      "sha256": "9e7724614fb0b3f346758ff4158ef65e7c398f2caa3e9daab41ed210b4ab689c",
+      "size_bytes": 9615768
+    },
+    "platform": {
+      "descriptor": "macOS-26.5.2-arm64-arm-64bit",
+      "machine": "arm64",
+      "release": "25.5.0",
+      "system": "Darwin"
+    },
+    "python": {
+      "abi": "cpython-311-darwin",
+      "byteorder": "little",
+      "implementation": "CPython",
+      "version": "3.11.15"
+    }
+  },
+  "schema_version": "1.1",
   "simulation_only": true,
   "simulator": {
     "commit": null,

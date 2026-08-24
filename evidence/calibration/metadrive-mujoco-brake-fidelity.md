@@ -21,7 +21,7 @@ or represented as validation of either model.
   `a9f4c6360b384b0fe8e641632d9f6db174a927da342654d07595e479e658c19e`. This is the sole
   committed WP-A curve/bridge source.
 - MuJoCo source: `evidence/calibration/mujoco-brake-reference-3.12.0.json`, SHA-256
-  `5da0d72a4b8d00933cfd165326545d5e149c4106827e23a64f504d37b6591f00`.
+  `9f66b114e46282b63cdd7f4270fe63162072cb5ccdda77f2013a0d07a875a136`.
 - Common support: exactly 4, 6, ..., 30 m/s, inclusive; 14 entry-speed samples.
 - Comparison unit: empirical outcome distributions across the matched entry-speed support.
   The N=3 repeats in each backend establish deterministic replication on this host; they are not
@@ -69,20 +69,30 @@ The appropriate use is question-to-fidelity routing: MetaDrive remains the scena
 lane; MuJoCo is an optional reference instrument when actuator or contact-level assumptions are
 the question. This record does not authorize substituting MuJoCo values into Hermes thresholds.
 
-## Determinism and fwd/inv residual interpretation
+## Determinism and fwd/inv diagnostic availability
 
 The MuJoCo record uses `mujoco==3.12.0`, `implicitfast`, nonzero armature, `fwdinv` enabled,
 and autoreset disabled. Each speed ran three fresh `MjData` states. Both the observation-stream
 SHA-256 and the full `mjSTATE_INTEGRATION` stream SHA-256 are bitwise identical within every
 N=3 set; the integration state has 29 binary64 values. All runs emitted zero numerical warnings.
-These are same-host, same-wheel, same-model guarantees only.
+These are same-runtime, same-platform, same-wheel/native-library, same-model guarantees only.
 
-`MjData.solver_fwdinv[0]` is the joint-space relative norm and `[1]` is the constraint-space
-relative norm of the forward/inverse applied-force discrepancy. Both maxima are 0.0 at all 14
-speeds and are retained as first-class per-speed and distribution outputs. That result is expected
-for this simple, non-contacting rail model. It shows no observed forward/inverse discrepancy in
-this run; it does **not** validate the 8,000 N parameter, contact fidelity, vehicle realism, or
-real-world braking.
+`MjData.solver_fwdinv` is a two-element array: index 0 is the joint-space L2 norm and index 1 is
+the constraint-space L2 norm. MuJoCo 3.12.0's `mj_compareFwdInv` clears both array slots and
+returns without computing either norm when `nefc == 0`. Every sample in this sweep had zero
+active constraints, so `comparison_exercised=false` at all 14 speeds and both L2-norm results are
+recorded as unavailable. The raw zero values are retained only as the cleared, unexercised array
+state; they are **not** observations of zero forward/inverse discrepancy or evidence of
+consistency. This diagnostic therefore cannot validate the 8,000 N parameter, contact fidelity,
+vehicle realism, or real-world braking.
+
+The exact runtime identity recorded in the artifact is CPython 3.11.15 with ABI
+`cpython-311-darwin`; Darwin 25.5.0 on arm64 (`macOS-26.5.2-arm64-arm-64bit`); MuJoCo wheel tag
+`cp311-cp311-macosx_11_0_arm64`; wheel metadata SHA-256
+`b337e93e5d67a3bd3deddb8cd623f1d6e7bb96eef9d07ef29a1e94a3046c2d05`; package metadata
+SHA-256 `5e43553c4fc3471a3b48709a0c75c703c2687f4a655597b1d1a351158511c3cf`; and native library
+`libmujoco.3.12.0.dylib` (9,615,768 bytes), SHA-256
+`9e7724614fb0b3f346758ff4158ef65e7c398f2caa3e9daab41ed210b4ab689c`.
 
 ## Graduation Q3 — what a full MuJoCo lane would require
 
@@ -109,14 +119,13 @@ evidence lane, and no agent execution surface for MuJoCo.
 
 ```bash
 export PYTHONPATH="$PWD/src"
-/Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m pip install -e '.[mujoco-cal]'
-/Users/bohueilin/miniconda3/envs/hermes-dev/bin/python \
-  tools/calibration/mujoco_brake_reference.py
+python3.11 -m pip install -e '.[mujoco-cal]'
+python3.11 tools/calibration/mujoco_brake_reference.py
 ```
 
 The command loudly refuses to run when the exact optional dependency is unavailable. Exact JSON
 reproduction additionally requires checking out the artifact's recorded producer commit
-`eeac0b5042002914b46aa80b6eecb84e8ce546bc`; a later commit intentionally changes the JSON's
+`23e44b6b5830040afb19f3def320e4ff3114591b`; a later commit intentionally changes the JSON's
 `repository.commit` even when every measured outcome and trace digest is unchanged. On that
-producer commit, the same host and MuJoCo wheel reproduced the JSON byte-for-byte. Cross-platform
-bitwise identity is unresolved and is not claimed.
+producer commit, the same recorded runtime, platform, wheel, and native library reproduced the
+JSON byte-for-byte. Cross-platform bitwise identity is unresolved and is not claimed.
