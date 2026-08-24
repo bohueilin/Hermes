@@ -685,7 +685,8 @@ def load_esmini_csv(
 
     csv_path = csv_path.resolve()
     try:
-        lines = csv_path.read_text(encoding="utf-8").splitlines()
+        csv_bytes = csv_path.read_bytes()
+        lines = csv_bytes.decode("utf-8").splitlines()
     except (OSError, UnicodeError) as exc:
         raise AuditionError(f"cannot read esmini CSV {csv_path}: {exc}") from exc
     if len(lines) < 8:
@@ -869,9 +870,30 @@ def load_esmini_csv(
         "scenario_file_metadata_sha256": hashlib.sha256(
             scenario_path.encode("utf-8")
         ).hexdigest(),
-        "csv_sha256": _sha256(csv_path),
+        "csv_sha256": hashlib.sha256(csv_bytes).hexdigest(),
     }
     return BackendTrace(backend="esmini", identity=identity, samples=tuple(samples))
+
+
+def bind_execution_csv_hash(
+    execution: Mapping[str, object],
+    parsed_trace: BackendTrace,
+) -> str:
+    """Bind later parsing to the exact CSV bytes observed when esmini returned."""
+
+    _expect_equal("parsed CSV backend", parsed_trace.backend, "esmini")
+    execution_hash = _validated_sha256(
+        execution.get("raw_csv_sha256"), "esmini execution raw_csv_sha256"
+    )
+    parsed_hash = _validated_sha256(
+        parsed_trace.identity.get("csv_sha256"), "parsed esmini CSV SHA-256"
+    )
+    _expect_equal(
+        "esmini CSV execution-to-parse SHA-256",
+        parsed_hash,
+        execution_hash,
+    )
+    return parsed_hash
 
 
 def _clock_matches(observed: float, expected: float) -> bool:
@@ -1432,6 +1454,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         metadrive = load_metadrive_trace(args.hermes_artifact)
         esmini = load_esmini_csv(args.raw_csv)
+        bound_esmini_csv_sha256 = bind_execution_csv_hash(execution, esmini)
         provenance = {
             **provenance,
             "runtime_execution": {
@@ -1460,7 +1483,7 @@ def main(argv: list[str] | None = None) -> int:
         source_hashes = {
             "openscenario_sha256": _sha256(committed_scenario),
             "opendrive_sha256": _sha256(road_path),
-            "esmini_raw_csv_sha256": _sha256(args.raw_csv.resolve()),
+            "esmini_raw_csv_sha256": bound_esmini_csv_sha256,
             "esmini_normalized_trace_sha256": hashlib.sha256(
                 normalized_trace_jsonl_bytes(esmini)
             ).hexdigest(),

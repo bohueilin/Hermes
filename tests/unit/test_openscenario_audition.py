@@ -645,6 +645,22 @@ def test_esmini_parser_rejects_canonical_timestamp_off_exact_grid(tmp_path: Path
         tool.load_esmini_csv(csv_path)
 
 
+def test_esmini_execution_hash_rejects_csv_mutated_before_parse(tmp_path: Path) -> None:
+    """A valid CSV substituted after execution must not enter the comparison."""
+    tool = _load_tool()
+    csv_path = _write_esmini_fixture(tmp_path / "mutated-after-execution.csv")
+    execution = {"raw_csv_sha256": hashlib.sha256(csv_path.read_bytes()).hexdigest()}
+    csv_path.write_text(
+        csv_path.read_text().replace("105.18", "105.19", 1),
+        encoding="utf-8",
+    )
+
+    parsed = tool.load_esmini_csv(csv_path)
+
+    with pytest.raises(tool.AuditionError, match="execution-to-parse SHA-256"):
+        tool.bind_execution_csv_hash(execution, parsed)
+
+
 def test_esmini_parser_uses_entity_names_not_numbered_block_order(tmp_path: Path) -> None:
     """Reordering valid producer blocks must not silently swap ego and actor geometry."""
     tool = _load_tool()
