@@ -268,6 +268,16 @@ def _expect_equal(label: str, observed: object, expected: object) -> None:
         raise AuditionError(f"{label} mismatch: observed={observed!r}, expected={expected!r}")
 
 
+def _validated_sha256(value: object, label: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        raise AuditionError(f"{label} must be a 64-character lowercase hexadecimal digest")
+    return value
+
+
 def _mapping(value: object, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise AuditionError(f"{label} must be an object")
@@ -332,6 +342,7 @@ def _validate_metadrive_identity(
     repository_commit = manifest.get("repository_commit")
     if not isinstance(repository_commit, str) or len(repository_commit) != 40:
         raise AuditionError("manifest repository_commit must be a 40-character string")
+    trace_digest = _validated_sha256(manifest.get("trace_digest"), "manifest trace_digest")
 
     run_context = _mapping(context.get("run_context"), "execution context run_context")
     _expect_equal("context adapter_name", run_context.get("adapter_name"), "metadrive")
@@ -381,7 +392,7 @@ def _validate_metadrive_identity(
         "simulator_commit": EXPECTED_METADRIVE_COMMIT,
         "repository_commit": repository_commit,
         "repository_dirty": False,
-        "trace_digest": manifest.get("trace_digest"),
+        "trace_digest": trace_digest,
     }
 
 
@@ -515,8 +526,10 @@ def load_metadrive_trace(artifact_root: Path) -> BackendTrace:
                 brake_command=_finite(executed.get("brake"), "executed brake"),
             )
         )
-        final_hash = event.get("current_hash")
-    _expect_equal("final event hash", final_hash, manifest.get("trace_digest"))
+        final_hash = _validated_sha256(
+            event.get("current_hash"), f"event {expected_sequence} current_hash"
+        )
+    _expect_equal("final event hash", final_hash, identity["trace_digest"])
     return BackendTrace(backend="metadrive", identity=identity, samples=tuple(samples))
 
 

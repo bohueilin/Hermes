@@ -383,6 +383,25 @@ def test_metadrive_parser_refuses_to_invent_missing_actor_speed(tmp_path: Path) 
         tool.load_metadrive_trace(artifact)
 
 
+def test_metadrive_parser_rejects_missing_trace_digests(tmp_path: Path) -> None:
+    """Missing digest fields must not authorize each other through ``None == None``."""
+    tool = _load_tool()
+    artifact = _write_metadrive_fixture(tmp_path / "missing-digests")
+    events_path = artifact / "events.jsonl"
+    events = [json.loads(line) for line in events_path.read_text().splitlines()]
+    del events[-1]["current_hash"]
+    event_bytes = b"".join(_canonical(event) for event in events)
+    events_path.write_bytes(event_bytes)
+    manifest_path = artifact / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    del manifest["trace_digest"]
+    manifest["file_digests"]["events.jsonl"] = hashlib.sha256(event_bytes).hexdigest()
+    manifest_path.write_bytes(_canonical(manifest))
+
+    with pytest.raises(tool.AuditionError, match="trace_digest"):
+        tool.load_metadrive_trace(artifact)
+
+
 def test_metadrive_parser_rejects_misaligned_result_clock(tmp_path: Path) -> None:
     """Mixing controller-input and result clocks would shift every event marker by one step."""
     tool = _load_tool()
