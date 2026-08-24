@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="1" date="2026-08-24T00:00:00Z"
+              description="Hermes FCW cut-in audition — SIMULATION-ONLY / NOT HERMES EVIDENCE"
+              author="Hermes WP-D"/>
+  <ParameterDeclarations/>
+  <CatalogLocations/>
+  <RoadNetwork>
+    <LogicFile filepath="adas_cut_in_near.xodr"/>
+  </RoadNetwork>
+  <Entities>
+    <ScenarioObject name="Ego">
+      <Vehicle name="HermesEgo" vehicleCategory="car">
+        <ParameterDeclarations/>
+        <BoundingBox>
+          <Center x="0" y="0" z="0.595"/>
+          <Dimensions width="1.852" length="4.515" height="1.19"/>
+        </BoundingBox>
+        <Performance maxSpeed="40" maxAcceleration="3" maxDeceleration="13"/>
+        <Axles>
+          <FrontAxle maxSteering="0.6" wheelDiameter="0.626" trackWidth="1.63"
+                     positionX="2.46894" positionZ="0.313"/>
+          <RearAxle maxSteering="0" wheelDiameter="0.626" trackWidth="1.63"
+                    positionX="0" positionZ="0.313"/>
+        </Axles>
+        <Properties>
+          <Property name="scope" value="SIMULATION-ONLY / NOT HERMES EVIDENCE"/>
+        </Properties>
+      </Vehicle>
+    </ScenarioObject>
+    <ScenarioObject name="CutInActor">
+      <Vehicle name="HermesCutInActor" vehicleCategory="car">
+        <ParameterDeclarations/>
+        <BoundingBox>
+          <Center x="0" y="0" z="0.595"/>
+          <Dimensions width="1.852" length="4.515" height="1.19"/>
+        </BoundingBox>
+        <Performance maxSpeed="40" maxAcceleration="3" maxDeceleration="13"/>
+        <Axles>
+          <FrontAxle maxSteering="0.6" wheelDiameter="0.626" trackWidth="1.63"
+                     positionX="2.46894" positionZ="0.313"/>
+          <RearAxle maxSteering="0" wheelDiameter="0.626" trackWidth="1.63"
+                    positionX="0" positionZ="0.313"/>
+        </Axles>
+        <Properties>
+          <Property name="scope" value="SIMULATION-ONLY / NOT HERMES EVIDENCE"/>
+        </Properties>
+      </Vehicle>
+    </ScenarioObject>
+  </Entities>
+  <Storyboard>
+    <Init>
+      <Actions>
+        <Private entityRef="Ego">
+          <PrivateAction>
+            <TeleportAction>
+              <Position><LanePosition roadId="1" laneId="-1" s="50" offset="0"/></Position>
+            </TeleportAction>
+          </PrivateAction>
+          <PrivateAction>
+            <LongitudinalAction>
+              <SpeedAction>
+                <SpeedActionDynamics dynamicsShape="step" dynamicsDimension="time" value="0"/>
+                <SpeedActionTarget><AbsoluteTargetSpeed value="20"/></SpeedActionTarget>
+              </SpeedAction>
+            </LongitudinalAction>
+          </PrivateAction>
+        </Private>
+        <Private entityRef="CutInActor">
+          <PrivateAction>
+            <TeleportAction>
+              <Position><LanePosition roadId="1" laneId="-2" s="86.515" offset="0"/></Position>
+            </TeleportAction>
+          </PrivateAction>
+          <PrivateAction>
+            <LongitudinalAction>
+              <SpeedAction>
+                <SpeedActionDynamics dynamicsShape="step" dynamicsDimension="time" value="0"/>
+                <SpeedActionTarget><AbsoluteTargetSpeed value="12"/></SpeedActionTarget>
+              </SpeedAction>
+            </LongitudinalAction>
+          </PrivateAction>
+        </Private>
+      </Actions>
+    </Init>
+    <Story name="CutInStory">
+      <ParameterDeclarations/>
+      <Act name="CutInAct">
+        <ManeuverGroup name="CutInActorManeuverGroup" maximumExecutionCount="1">
+          <Actors selectTriggeringEntities="false">
+            <EntityRef entityRef="CutInActor"/>
+          </Actors>
+          <Maneuver name="CutInActorManeuver">
+            <Event name="CutInEvent" priority="overwrite" maximumExecutionCount="1">
+              <Action name="CubicLaneChange">
+                <PrivateAction>
+                  <LateralAction>
+                    <LaneChangeAction>
+                      <LaneChangeActionDynamics dynamicsShape="cubic" dynamicsDimension="time"
+                                                value="1.0"/>
+                      <LaneChangeTarget><AbsoluteTargetLane value="-1"/></LaneChangeTarget>
+                    </LaneChangeAction>
+                  </LateralAction>
+                </PrivateAction>
+              </Action>
+              <StartTrigger>
+                <ConditionGroup>
+                  <Condition name="CutInAtOneSecond" delay="0" conditionEdge="rising">
+                    <ByValueCondition>
+                      <SimulationTimeCondition value="1.0" rule="greaterOrEqual"/>
+                    </ByValueCondition>
+                  </Condition>
+                </ConditionGroup>
+              </StartTrigger>
+            </Event>
+          </Maneuver>
+        </ManeuverGroup>
+        <StartTrigger>
+          <ConditionGroup>
+            <Condition name="ActStarts" delay="0" conditionEdge="rising">
+              <ByValueCondition>
+                <SimulationTimeCondition value="0" rule="greaterThan"/>
+              </ByValueCondition>
+            </Condition>
+          </ConditionGroup>
+        </StartTrigger>
+        <StopTrigger/>
+      </Act>
+    </Story>
+    <StopTrigger>
+      <ConditionGroup>
+        <Condition name="StopAfterComparatorHorizon" delay="0" conditionEdge="rising">
+          <ByValueCondition>
+            <SimulationTimeCondition value="7.8" rule="greaterOrEqual"/>
+          </ByValueCondition>
+        </Condition>
+      </ConditionGroup>
+    </StopTrigger>
+  </Storyboard>
+</OpenSCENARIO>
