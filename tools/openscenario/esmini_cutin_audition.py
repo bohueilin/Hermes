@@ -14,6 +14,7 @@ import json
 import math
 import os
 import platform
+import struct
 import subprocess
 import sys
 from collections.abc import Mapping
@@ -297,6 +298,12 @@ def _optional_finite(value: object, label: str) -> float | None:
     return None if value is None else _finite(value, label)
 
 
+def _binary32(value: float) -> float:
+    """Project a declared value through the simulator's recorded float32 boundary."""
+
+    return struct.unpack("!f", struct.pack("!f", value))[0]
+
+
 def _ttc(
     gap_m: float | None,
     relative_speed_mps: float | None,
@@ -500,10 +507,11 @@ def load_metadrive_trace(artifact_root: Path) -> BackendTrace:
             }
             for label, (value, expected) in reset_contract.items():
                 observed = _finite(value, f"recorded reset {label}")
-                if not math.isclose(observed, expected, rel_tol=0.0, abs_tol=1e-5):
+                expected_binary32 = _binary32(expected)
+                if observed != expected_binary32:
                     raise AuditionError(
                         f"recorded reset {label} mismatch: "
-                        f"observed={observed}, expected={expected}"
+                        f"observed={observed}, expected_binary32={expected_binary32}"
                     )
         samples.append(
             TrajectorySample(

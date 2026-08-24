@@ -98,7 +98,7 @@ def _write_metadrive_fixture(root: Path, *, simulator_version: str = "0.4.3") ->
                 "input_simulation_time_s": 0.0,
                 "speed_mps": 20.0,
                 "lateral_offset_m": 0.0,
-                "challenge_actor_longitudinal_m": 36.515,
+                "challenge_actor_longitudinal_m": 36.51499938964844,
                 "challenge_actor_lateral_offset_m": -3.5,
                 "challenge_actor_speed_mps": 12.0,
                 "front_distance_m": None,
@@ -426,7 +426,8 @@ def test_metadrive_parser_rejects_wrong_recorded_reset_geometry(tmp_path: Path) 
     artifact = _write_metadrive_fixture(tmp_path / "bad-reset")
     events_path = artifact / "events.jsonl"
     events = [json.loads(line) for line in events_path.read_text().splitlines()]
-    events[0]["observation_summary"]["challenge_actor_longitudinal_m"] = 35.515
+    # Adjacent binary32 value above binary32(36.515); a chosen 1e-5 tolerance accepts it.
+    events[0]["observation_summary"]["challenge_actor_longitudinal_m"] = 36.5150032043457
     event_bytes = b"".join(_canonical(event) for event in events)
     events_path.write_bytes(event_bytes)
     manifest_path = artifact / "manifest.json"
