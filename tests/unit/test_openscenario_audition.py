@@ -6,12 +6,17 @@ import hashlib
 import importlib.util
 import json
 import math
+import shutil
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from types import ModuleType
 
 import pytest
+
+from hermes.domain.enums import IntegrityStatus, Verdict
+from hermes.domain.models import ArtifactVerification
+from hermes.evidence.artifacts import bundle_digest
 
 TOOL_PATH = (
     Path(__file__).parents[2] / "tools" / "openscenario" / "esmini_cutin_audition.py"
@@ -37,6 +42,22 @@ def _load_tool() -> ModuleType:
 
 def _canonical(payload: object) -> bytes:
     return (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode()
+
+
+def _authorize_synthetic_metadrive_fixture(
+    monkeypatch: pytest.MonkeyPatch,
+    tool: ModuleType,
+) -> None:
+    """Keep parser-unit fixtures narrow; a separate test uses the real verifier."""
+
+    def internally_consistent(path: Path) -> ArtifactVerification:
+        return ArtifactVerification(
+            artifact_path=str(path),
+            integrity=IntegrityStatus.INTERNALLY_CONSISTENT,
+            verdict=Verdict.CONDITIONAL,
+        )
+
+    monkeypatch.setattr(tool, "verify_artifact", internally_consistent)
 
 
 def _write_metadrive_fixture(root: Path, *, simulator_version: str = "0.4.3") -> Path:
@@ -348,9 +369,13 @@ def _write_esmini_fixture(
     return path
 
 
-def test_metadrive_parser_binds_identity_and_uses_recorded_geometry(tmp_path: Path) -> None:
+def test_metadrive_parser_binds_identity_and_uses_recorded_geometry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Wrong bundles or recomputed stand-in geometry must not enter the comparison."""
     tool = _load_tool()
+    _authorize_synthetic_metadrive_fixture(monkeypatch, tool)
     artifact = _write_metadrive_fixture(tmp_path / "artifact")
 
     trace = tool.load_metadrive_trace(artifact)
@@ -371,9 +396,13 @@ def test_metadrive_parser_binds_identity_and_uses_recorded_geometry(tmp_path: Pa
     assert trace.samples[1].brake_command == pytest.approx(0.25)
 
 
-def test_metadrive_parser_rejects_wrong_simulator_version(tmp_path: Path) -> None:
+def test_metadrive_parser_rejects_wrong_simulator_version(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Accepting a similarly shaped non-0.4.3 run would invalidate the audition."""
     tool = _load_tool()
+    _authorize_synthetic_metadrive_fixture(monkeypatch, tool)
     artifact = _write_metadrive_fixture(
         tmp_path / "wrong-producer", simulator_version="0.4.2"
     )
@@ -382,9 +411,13 @@ def test_metadrive_parser_rejects_wrong_simulator_version(tmp_path: Path) -> Non
         tool.load_metadrive_trace(artifact)
 
 
-def test_metadrive_parser_refuses_to_invent_missing_actor_speed(tmp_path: Path) -> None:
+def test_metadrive_parser_refuses_to_invent_missing_actor_speed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A missing recorded physical metric must fail, never inherit the scenario declaration."""
     tool = _load_tool()
+    _authorize_synthetic_metadrive_fixture(monkeypatch, tool)
     artifact = _write_metadrive_fixture(tmp_path / "missing-speed")
     events_path = artifact / "events.jsonl"
     events = [json.loads(line) for line in events_path.read_text().splitlines()]
@@ -400,9 +433,13 @@ def test_metadrive_parser_refuses_to_invent_missing_actor_speed(tmp_path: Path) 
         tool.load_metadrive_trace(artifact)
 
 
-def test_metadrive_parser_rejects_missing_trace_digests(tmp_path: Path) -> None:
+def test_metadrive_parser_rejects_missing_trace_digests(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Missing digest fields must not authorize each other through ``None == None``."""
     tool = _load_tool()
+    _authorize_synthetic_metadrive_fixture(monkeypatch, tool)
     artifact = _write_metadrive_fixture(tmp_path / "missing-digests")
     events_path = artifact / "events.jsonl"
     events = [json.loads(line) for line in events_path.read_text().splitlines()]
@@ -419,9 +456,54 @@ def test_metadrive_parser_rejects_missing_trace_digests(tmp_path: Path) -> None:
         tool.load_metadrive_trace(artifact)
 
 
-def test_metadrive_parser_rejects_misaligned_result_clock(tmp_path: Path) -> None:
+def test_metadrive_parser_rejects_stale_event_hash_after_outer_digest_refresh(
+    tmp_path: Path,
+    fake_artifact_factory,
+) -> None:
+    """A refreshed file inventory must not hide stale event-chain geometry."""
+    tool = _load_tool()
+    source = fake_artifact_factory().artifact_path
+    artifact = tmp_path / "stale-event-chain"
+    shutil.copytree(source, artifact)
+
+    events_path = artifact / "events.jsonl"
+    events = [json.loads(line) for line in events_path.read_text().splitlines()]
+    events[0]["vehicle_state"]["position_m"] += 1.0
+    event_bytes = b"".join(_canonical(event) for event in events)
+    events_path.write_bytes(event_bytes)
+
+    manifest_path = artifact / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["file_digests"]["events.jsonl"] = hashlib.sha256(event_bytes).hexdigest()
+    manifest_path.write_bytes(_canonical(manifest))
+    bundle_payloads = {
+        path.name: path.read_bytes()
+        for path in artifact.iterdir()
+        if path.name != "bundle.sha256"
+    }
+    (artifact / "bundle.sha256").write_text(
+        bundle_digest(bundle_payloads) + "\n",
+        encoding="ascii",
+    )
+    bytes_before_verification = {
+        path.name: path.read_bytes() for path in artifact.iterdir()
+    }
+
+    with pytest.raises(tool.AuditionError, match="current hash mismatch at sequence 0"):
+        tool.load_metadrive_trace(artifact)
+
+    assert {
+        path.name: path.read_bytes() for path in artifact.iterdir()
+    } == bytes_before_verification
+
+
+def test_metadrive_parser_rejects_misaligned_result_clock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Mixing controller-input and result clocks would shift every event marker by one step."""
     tool = _load_tool()
+    _authorize_synthetic_metadrive_fixture(monkeypatch, tool)
     artifact = _write_metadrive_fixture(tmp_path / "bad-clock")
     events_path = artifact / "events.jsonl"
     events = [json.loads(line) for line in events_path.read_text().splitlines()]
@@ -437,9 +519,13 @@ def test_metadrive_parser_rejects_misaligned_result_clock(tmp_path: Path) -> Non
         tool.load_metadrive_trace(artifact)
 
 
-def test_metadrive_parser_rejects_wrong_final_termination_reason(tmp_path: Path) -> None:
+def test_metadrive_parser_rejects_wrong_final_termination_reason(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A same-clock collision must not masquerade as the expected destination completion."""
     tool = _load_tool()
+    _authorize_synthetic_metadrive_fixture(monkeypatch, tool)
     artifact = _write_metadrive_fixture(tmp_path / "wrong-terminal-reason")
     events = [json.loads(line) for line in (artifact / "events.jsonl").read_text().splitlines()]
     events[-1]["termination_reason"] = "COLLISION"
@@ -449,9 +535,13 @@ def test_metadrive_parser_rejects_wrong_final_termination_reason(tmp_path: Path)
         tool.load_metadrive_trace(artifact)
 
 
-def test_metadrive_parser_rejects_early_terminal_event(tmp_path: Path) -> None:
+def test_metadrive_parser_rejects_early_terminal_event(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Only the final event may carry the expected terminal tuple."""
     tool = _load_tool()
+    _authorize_synthetic_metadrive_fixture(monkeypatch, tool)
     artifact = _write_metadrive_fixture(tmp_path / "early-terminal")
     events = [json.loads(line) for line in (artifact / "events.jsonl").read_text().splitlines()]
     events[0].update(
@@ -465,9 +555,13 @@ def test_metadrive_parser_rejects_early_terminal_event(tmp_path: Path) -> None:
         tool.load_metadrive_trace(artifact)
 
 
-def test_metadrive_parser_rejects_missing_terminal_field(tmp_path: Path) -> None:
+def test_metadrive_parser_rejects_missing_terminal_field(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Missing terminal fields must fail closed instead of inheriting falsey defaults."""
     tool = _load_tool()
+    _authorize_synthetic_metadrive_fixture(monkeypatch, tool)
     artifact = _write_metadrive_fixture(tmp_path / "missing-terminal")
     events = [json.loads(line) for line in (artifact / "events.jsonl").read_text().splitlines()]
     del events[-1]["truncated"]
@@ -477,9 +571,13 @@ def test_metadrive_parser_rejects_missing_terminal_field(tmp_path: Path) -> None
         tool.load_metadrive_trace(artifact)
 
 
-def test_metadrive_parser_rejects_wrong_recorded_reset_geometry(tmp_path: Path) -> None:
+def test_metadrive_parser_rejects_wrong_recorded_reset_geometry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Pinned config identity is insufficient if the recorded reset state is inconsistent."""
     tool = _load_tool()
+    _authorize_synthetic_metadrive_fixture(monkeypatch, tool)
     artifact = _write_metadrive_fixture(tmp_path / "bad-reset")
     events_path = artifact / "events.jsonl"
     events = [json.loads(line) for line in events_path.read_text().splitlines()]
@@ -668,9 +766,11 @@ def test_native_invocation_is_fixed_step_seeded_and_sanitizes_config(tmp_path: P
 
 def test_summary_and_svg_are_deterministic_and_bound_response_attribution(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Controller-confounded post-brake deltas must not be labelled scenario semantics."""
     tool = _load_tool()
+    _authorize_synthetic_metadrive_fixture(monkeypatch, tool)
     metadrive = tool.load_metadrive_trace(_write_metadrive_fixture(tmp_path / "metadrive"))
     esmini = tool.load_esmini_csv(_write_esmini_fixture(tmp_path / "esmini.csv"))
     provenance = tool.validate_esmini_producer(

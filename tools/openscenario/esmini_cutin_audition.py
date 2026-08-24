@@ -24,6 +24,9 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from hermes.domain.enums import IntegrityStatus
+from hermes.evidence.verification import verify_artifact
+
 EXPECTED_METADRIVE_COMMIT = "85e5dadc6c7436d324348f6e3d8f8e680c06b4db"
 EXPECTED_SCENARIO_DIGEST = (
     "989e948e5e49805125c895d21e889d33bc6c45b33c58cf151377888683b56904"
@@ -436,6 +439,14 @@ def load_metadrive_trace(artifact_root: Path) -> BackendTrace:
     """Load and authorize the exact current Hermes cut-in comparator bundle."""
 
     artifact_root = artifact_root.resolve()
+    verification = verify_artifact(artifact_root)
+    if verification.integrity is not IntegrityStatus.INTERNALLY_CONSISTENT:
+        details = "; ".join(verification.errors) or "no verifier detail"
+        raise AuditionError(
+            "MetaDrive comparator artifact integrity mismatch: "
+            f"observed={verification.integrity.value!r}, "
+            f"expected={IntegrityStatus.INTERNALLY_CONSISTENT.value!r}; {details}"
+        )
     manifest_path = artifact_root / "manifest.json"
     context_path = artifact_root / "execution-context.json"
     events_path = artifact_root / "events.jsonl"
