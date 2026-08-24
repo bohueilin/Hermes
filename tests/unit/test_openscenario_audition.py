@@ -116,6 +116,9 @@ def _write_metadrive_fixture(root: Path, *, simulator_version: str = "0.4.3") ->
                 "lateral_offset_m": 0.0,
                 "speed_mps": 20.0,
             },
+            "terminated": False,
+            "truncated": False,
+            "termination_reason": "NONE",
             "current_hash": "a" * 64,
         },
         {
@@ -139,6 +142,9 @@ def _write_metadrive_fixture(root: Path, *, simulator_version: str = "0.4.3") ->
                 "lateral_offset_m": 0.00001621246337890625,
                 "speed_mps": 19.819297790541636,
             },
+            "terminated": True,
+            "truncated": False,
+            "termination_reason": "DESTINATION_REACHED",
             "current_hash": "b" * 64,
         },
     ]
@@ -176,6 +182,15 @@ def _write_metadrive_fixture(root: Path, *, simulator_version: str = "0.4.3") ->
     }
     (root / "manifest.json").write_bytes(_canonical(manifest))
     return root
+
+
+def _replace_metadrive_events(artifact: Path, events: list[dict[str, object]]) -> None:
+    event_bytes = b"".join(_canonical(event) for event in events)
+    (artifact / "events.jsonl").write_bytes(event_bytes)
+    manifest_path = artifact / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["file_digests"]["events.jsonl"] = hashlib.sha256(event_bytes).hexdigest()
+    manifest_path.write_bytes(_canonical(manifest))
 
 
 def _write_esmini_fixture(
@@ -420,6 +435,46 @@ def test_metadrive_parser_rejects_misaligned_result_clock(tmp_path: Path) -> Non
         tool.load_metadrive_trace(artifact)
 
 
+def test_metadrive_parser_rejects_wrong_final_termination_reason(tmp_path: Path) -> None:
+    """A same-clock collision must not masquerade as the expected destination completion."""
+    tool = _load_tool()
+    artifact = _write_metadrive_fixture(tmp_path / "wrong-terminal-reason")
+    events = [json.loads(line) for line in (artifact / "events.jsonl").read_text().splitlines()]
+    events[-1]["termination_reason"] = "COLLISION"
+    _replace_metadrive_events(artifact, events)
+
+    with pytest.raises(tool.AuditionError, match="final terminal tuple"):
+        tool.load_metadrive_trace(artifact)
+
+
+def test_metadrive_parser_rejects_early_terminal_event(tmp_path: Path) -> None:
+    """Only the final event may carry the expected terminal tuple."""
+    tool = _load_tool()
+    artifact = _write_metadrive_fixture(tmp_path / "early-terminal")
+    events = [json.loads(line) for line in (artifact / "events.jsonl").read_text().splitlines()]
+    events[0].update(
+        terminated=True,
+        truncated=False,
+        termination_reason="DESTINATION_REACHED",
+    )
+    _replace_metadrive_events(artifact, events)
+
+    with pytest.raises(tool.AuditionError, match="pre-final terminal tuple"):
+        tool.load_metadrive_trace(artifact)
+
+
+def test_metadrive_parser_rejects_missing_terminal_field(tmp_path: Path) -> None:
+    """Missing terminal fields must fail closed instead of inheriting falsey defaults."""
+    tool = _load_tool()
+    artifact = _write_metadrive_fixture(tmp_path / "missing-terminal")
+    events = [json.loads(line) for line in (artifact / "events.jsonl").read_text().splitlines()]
+    del events[-1]["truncated"]
+    _replace_metadrive_events(artifact, events)
+
+    with pytest.raises(tool.AuditionError, match="truncated must be boolean"):
+        tool.load_metadrive_trace(artifact)
+
+
 def test_metadrive_parser_rejects_wrong_recorded_reset_geometry(tmp_path: Path) -> None:
     """Pinned config identity is insufficient if the recorded reset state is inconsistent."""
     tool = _load_tool()
@@ -634,6 +689,12 @@ def test_summary_and_svg_are_deterministic_and_bound_response_attribution(
     assert response["first_executed_brake_result_time_s"] == pytest.approx(0.2)
     assert first["comparison"]["pre_response_comparison_cutoff_s"] == pytest.approx(0.1)
     assert "scenario_semantics_attribution_through_s" not in first["comparison"]
+    assert first["backends"]["metadrive"]["terminal_event"] == {
+        "terminated": True,
+        "truncated": False,
+        "termination_reason": "DESTINATION_REACHED",
+    }
+    assert "terminal_event" not in first["backends"]["esmini"]
     assert first["comparison"]["post_cutoff_label"] == "CONTROLLER_RESPONSE_CONFOUNDED"
     assert first["comparison"]["pre_cutoff_label"] == (
         "SCENARIO_BACKEND_AND_NON_BRAKING_CONTROLLER_DYNAMICS"

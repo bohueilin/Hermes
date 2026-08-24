@@ -86,6 +86,16 @@ class BackendTrace:
     backend: str
     identity: dict[str, object]
     samples: tuple[TrajectorySample, ...]
+    terminal_event: TerminalEvent | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class TerminalEvent:
+    """Observed Hermes terminal tuple required for comparator authorization."""
+
+    terminated: bool
+    truncated: bool
+    termination_reason: str
 
 
 def validate_esmini_producer(
@@ -285,6 +295,23 @@ def _mapping(value: object, label: str) -> dict[str, Any]:
     return value
 
 
+def _terminal_event(event: dict[str, Any], label: str) -> TerminalEvent:
+    terminated = event.get("terminated")
+    truncated = event.get("truncated")
+    termination_reason = event.get("termination_reason")
+    if type(terminated) is not bool:
+        raise AuditionError(f"{label} terminated must be boolean")
+    if type(truncated) is not bool:
+        raise AuditionError(f"{label} truncated must be boolean")
+    if not isinstance(termination_reason, str):
+        raise AuditionError(f"{label} termination_reason must be a string")
+    return TerminalEvent(
+        terminated=terminated,
+        truncated=truncated,
+        termination_reason=termination_reason,
+    )
+
+
 def _finite(value: object, label: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise AuditionError(f"{label} must be numeric")
@@ -430,6 +457,7 @@ def load_metadrive_trace(artifact_root: Path) -> BackendTrace:
         raise AuditionError("events.jsonl contains no events")
     previous_time = -math.inf
     final_hash: object = None
+    observed_final_terminal: TerminalEvent | None = None
     expected_context = _mapping(context.get("run_context"), "execution context run_context")
     for expected_sequence, line in enumerate(lines):
         try:
@@ -439,6 +467,21 @@ def load_metadrive_trace(artifact_root: Path) -> BackendTrace:
         event = _mapping(event, f"events.jsonl line {expected_sequence + 1}")
         _expect_equal("event sequence", event.get("sequence"), expected_sequence)
         _expect_equal("event run_context", event.get("run_context"), expected_context)
+        terminal = _terminal_event(event, f"event {expected_sequence}")
+        is_final = expected_sequence == len(lines) - 1
+        expected_terminal = TerminalEvent(
+            terminated=is_final,
+            truncated=False,
+            termination_reason="DESTINATION_REACHED" if is_final else "NONE",
+        )
+        if terminal != expected_terminal:
+            position = "final" if is_final else "pre-final"
+            raise AuditionError(
+                f"{position} terminal tuple mismatch: "
+                f"observed={terminal}, expected={expected_terminal}"
+            )
+        if is_final:
+            observed_final_terminal = terminal
         time_s = _finite(event.get("simulation_time_s"), "event simulation_time_s")
         expected_result_time = (expected_sequence + 1) / 10.0
         result_clock_budget = 2.0 * max(math.ulp(time_s), math.ulp(expected_result_time))
@@ -538,7 +581,13 @@ def load_metadrive_trace(artifact_root: Path) -> BackendTrace:
             event.get("current_hash"), f"event {expected_sequence} current_hash"
         )
     _expect_equal("final event hash", final_hash, identity["trace_digest"])
-    return BackendTrace(backend="metadrive", identity=identity, samples=tuple(samples))
+    assert observed_final_terminal is not None
+    return BackendTrace(
+        backend="metadrive",
+        identity=identity,
+        samples=tuple(samples),
+        terminal_event=observed_final_terminal,
+    )
 
 
 def _csv_value(row: dict[str, str], key: str, label: str) -> str:
@@ -847,7 +896,7 @@ def _backend_summary(
         trace.samples,
         lambda sample: sample.ttc_s is not None and sample.ttc_s <= 2.6,
     )
-    return {
+    summary: dict[str, object] = {
         "identity": trace.identity,
         "sample_count": len(trace.samples),
         "first_time_s": trace.samples[0].time_s,
@@ -859,6 +908,9 @@ def _backend_summary(
             trace.samples, through_s=pre_response_cutoff_s
         ),
     }
+    if trace.terminal_event is not None:
+        summary["terminal_event"] = asdict(trace.terminal_event)
+    return summary
 
 
 def _maximum_delta(
