@@ -746,6 +746,37 @@ def test_output_paths_cannot_alias_each_other_or_raw_csv(tmp_path: Path) -> None
         )
 
 
+@pytest.mark.parametrize("protected_option", ["--raw-csv", "--summary-out", "--svg-out"])
+def test_cli_rejects_any_output_under_comparator_artifact_root(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    protected_option: str,
+) -> None:
+    """No output may add or overwrite any file inside the comparator bundle."""
+    tool = _load_tool()
+    artifact = tmp_path / "artifact"
+    artifact.mkdir()
+    outputs = {
+        "--raw-csv": tmp_path / "raw.csv",
+        "--summary-out": tmp_path / "summary.json",
+        "--svg-out": tmp_path / "plot.svg",
+    }
+    outputs[protected_option] = artifact / "findings.json"
+    argv = [
+        "--esmini-bin",
+        str(tmp_path / "missing-esmini"),
+        "--esmini-archive",
+        str(tmp_path / "missing-archive.zip"),
+        "--hermes-artifact",
+        str(artifact),
+    ]
+    for option, path in outputs.items():
+        argv.extend((option, str(path)))
+
+    assert tool.main(argv) == 2
+    assert "comparator artifact root" in capsys.readouterr().err
+
+
 def test_normalized_esmini_trace_bytes_are_canonical_and_path_free(tmp_path: Path) -> None:
     """A stable summary hash alone does not prove the normalized trajectory bytes stable."""
     tool = _load_tool()

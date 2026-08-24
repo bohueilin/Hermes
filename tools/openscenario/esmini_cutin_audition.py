@@ -1282,6 +1282,7 @@ def validate_output_paths(
     summary_path: Path,
     svg_path: Path,
     protected_paths: tuple[Path, ...] = (),
+    protected_roots: tuple[Path, ...] = (),
 ) -> None:
     """Require three distinct outputs that cannot overwrite producer inputs."""
 
@@ -1297,6 +1298,17 @@ def validate_output_paths(
     if collisions:
         raise AuditionError(
             f"output paths must not overwrite audition inputs: {', '.join(collisions)}"
+        )
+    roots = tuple(path.resolve() for path in protected_roots)
+    contained = sorted(
+        label
+        for label, path in outputs.items()
+        if any(path == root or path.is_relative_to(root) for root in roots)
+    )
+    if contained:
+        raise AuditionError(
+            "output paths must not be inside the comparator artifact root: "
+            f"{', '.join(contained)}"
         )
 
 
@@ -1366,10 +1378,8 @@ def main(argv: list[str] | None = None) -> int:
                 road_path,
                 args.esmini_bin,
                 args.esmini_archive,
-                artifact / "manifest.json",
-                artifact / "execution-context.json",
-                artifact / "events.jsonl",
             ),
+            protected_roots=(artifact,),
         )
         provenance = probe_esmini_producer(args.esmini_bin, args.esmini_archive)
         execution = run_esmini(
