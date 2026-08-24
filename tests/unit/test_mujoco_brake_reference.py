@@ -29,6 +29,11 @@ def _load_tool() -> ModuleType:
     return module
 
 
+def _require_mujoco(tool: ModuleType) -> object:
+    pytest.importorskip("mujoco", reason="install the optional [mujoco-cal] extra")
+    return tool.require_mujoco()
+
+
 def test_mujoco_dependency_is_exactly_pinned_behind_optional_extra() -> None:
     """Moving MuJoCo into core or loosening its version must break this dependency boundary."""
     project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
@@ -66,7 +71,7 @@ def test_speed_contract_is_consumed_from_the_committed_wp_a_curve() -> None:
 def test_compiled_model_freezes_required_physics_defaults() -> None:
     """Regression to Euler, autoreset, zero armature, or disabled fwdinv must fail."""
     tool = _load_tool()
-    mujoco = tool.require_mujoco()
+    mujoco = _require_mujoco(tool)
     model = tool.load_model(MODEL_PATH, mujoco=mujoco)
 
     assert mujoco.mjtIntegrator(model.opt.integrator) == mujoco.mjtIntegrator.mjINT_IMPLICITFAST
@@ -84,7 +89,7 @@ def test_compiled_model_freezes_required_physics_defaults() -> None:
 def test_real_measurement_hashes_full_integration_state_and_logs_fwdinv() -> None:
     """Dropping warmstart state, repeat checks, or either fwdinv residual must fail."""
     tool = _load_tool()
-    mujoco = tool.require_mujoco()
+    mujoco = _require_mujoco(tool)
     model = tool.load_model(MODEL_PATH, mujoco=mujoco)
 
     measurement = tool.measure_entry_speed(
@@ -112,7 +117,7 @@ def test_real_measurement_hashes_full_integration_state_and_logs_fwdinv() -> Non
 def test_evidence_is_deterministic_and_emits_distribution_not_trajectory_claims() -> None:
     """The calibration output must expose distributions and its non-release scope."""
     tool = _load_tool()
-    mujoco = tool.require_mujoco()
+    mujoco = _require_mujoco(tool)
     model = tool.load_model(MODEL_PATH, mujoco=mujoco)
     measurement = tool.measure_entry_speed(
         model,
@@ -157,7 +162,7 @@ def test_evidence_is_deterministic_and_emits_distribution_not_trajectory_claims(
 def test_measurement_rejects_any_repeat_count_other_than_three() -> None:
     """Weakening N=3 to a single deterministic run must fail before simulation."""
     tool = _load_tool()
-    mujoco = tool.require_mujoco()
+    mujoco = _require_mujoco(tool)
     model = tool.load_model(MODEL_PATH, mujoco=mujoco)
 
     with pytest.raises(ValueError, match="exactly N=3"):
