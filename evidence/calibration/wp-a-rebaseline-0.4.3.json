@@ -1,0 +1,113 @@
+{
+  "schema_version": "1.0",
+  "work_package": "WP-A MetaDrive brake-dynamics calibration",
+  "simulation_only": true,
+  "repository_commit_under_test": "77930d0872ea25da83a5d1465db393dff6c0978f",
+  "simulator": {
+    "name": "MetaDrive",
+    "version": "0.4.3",
+    "commit": "85e5dadc6c7436d324348f6e3d8f8e680c06b4db"
+  },
+  "fixture_regeneration": {
+    "command": "PYTHONPATH=$PWD/src /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m hermes fixtures regenerate",
+    "clean_worktree": true,
+    "force_used": false,
+    "exit_code": 0,
+    "output": [
+      "SIMULATION-ONLY PROTOTYPE — regenerated fixtures are test inputs, not release evidence.",
+      "Skipped (already present): phase1-nominal",
+      "Skipped (already present): handoff-p1-nominal",
+      "Skipped (already present): handoff-p1-collision",
+      "Skipped (already present): handoff-p1-boundary",
+      "Skipped (already present): handoff-p1-conditional",
+      "Skipped (already present): handoff-phase5-demo",
+      "Skipped (already present): handoff-p4-fault",
+      "Skipped (already present): handoff-p2-metadrive",
+      "Skipped (already present): handoff-p3-lead-baseline",
+      "Skipped (already present): handoff-p3-lead-shielded",
+      "Skipped (already present): handoff-p3-cutin-baseline",
+      "Skipped (already present): handoff-p3-cutin-shielded",
+      "Skipped (already present): phase1-tampered",
+      "Fixtures regenerated: 0 of 13 selected"
+    ],
+    "result": "NO_REGISTERED_FIXTURE_CHANGED",
+    "limitation": "The fixture registry contains no ADAS recipe and every registered destination already existed. Non-force regeneration therefore had no replacement path. No fixture was moved, deleted, overwritten, or force-regenerated to manufacture a rebaseline.",
+    "future_cost": "If an ADAS fixture is later registered, add an explicit non-destructive versioning or archival workflow before replacing an existing content-addressed bundle."
+  },
+  "registered_bundle_verification": {
+    "command": "for each of the 13 run IDs in config/phase8-fixture-registry.yaml: PYTHONPATH=$PWD/src /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m hermes verify-artifact artifacts/<run-id>",
+    "summary": {
+      "registered_bundles": 13,
+      "internally_consistent": 12,
+      "expected_invalid_evidence": 1,
+      "unexpected_results": 0
+    },
+    "bundles": [
+      {"run_id": "phase1-nominal", "integrity": "INTERNALLY_CONSISTENT", "verdict": "PASS"},
+      {"run_id": "handoff-p1-nominal", "integrity": "INTERNALLY_CONSISTENT", "verdict": "PASS"},
+      {"run_id": "handoff-p1-collision", "integrity": "INTERNALLY_CONSISTENT", "verdict": "HOLD"},
+      {"run_id": "handoff-p1-boundary", "integrity": "INTERNALLY_CONSISTENT", "verdict": "HOLD"},
+      {"run_id": "handoff-p1-conditional", "integrity": "INTERNALLY_CONSISTENT", "verdict": "CONDITIONAL"},
+      {"run_id": "handoff-phase5-demo", "integrity": "INTERNALLY_CONSISTENT", "verdict": "PASS"},
+      {"run_id": "handoff-p4-fault", "integrity": "INTERNALLY_CONSISTENT", "verdict": "HOLD"},
+      {"run_id": "handoff-p2-metadrive", "integrity": "INTERNALLY_CONSISTENT", "verdict": "PASS"},
+      {"run_id": "handoff-p3-lead-baseline", "integrity": "INTERNALLY_CONSISTENT", "verdict": "CONDITIONAL"},
+      {"run_id": "handoff-p3-lead-shielded", "integrity": "INTERNALLY_CONSISTENT", "verdict": "CONDITIONAL"},
+      {"run_id": "handoff-p3-cutin-baseline", "integrity": "INTERNALLY_CONSISTENT", "verdict": "HOLD"},
+      {"run_id": "handoff-p3-cutin-shielded", "integrity": "INTERNALLY_CONSISTENT", "verdict": "HOLD"},
+      {"run_id": "phase1-tampered", "integrity": "INVALID", "verdict": "INVALID_EVIDENCE", "expected": true}
+    ]
+  },
+  "adas_digest_determinism": {
+    "command": "for i in 1 2 3; do PYTHONPATH=$PWD/src /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m hermes run --simulator metadrive --headless --scenario scenarios/adas/aeb_lead_hard_brake.yaml --policy adas-longitudinal --policy-config config/adas/baseline.yaml --gate-config config/gates.adas.yaml --seed 7 --run-id cal-$i | grep 'Trace digest'; done",
+    "seed": 7,
+    "run_ids": ["cal-1", "cal-2", "cal-3"],
+    "trace_digests": [
+      "7700044e01543bc38cef06b79f81a91ccd3ccc06996432995e3d70e80ce59c79",
+      "7700044e01543bc38cef06b79f81a91ccd3ccc06996432995e3d70e80ce59c79",
+      "7700044e01543bc38cef06b79f81a91ccd3ccc06996432995e3d70e80ce59c79"
+    ],
+    "identical": true,
+    "artifact_verification": [
+      {"run_id": "cal-1", "integrity": "INTERNALLY_CONSISTENT", "verdict": "CONDITIONAL"},
+      {"run_id": "cal-2", "integrity": "INTERNALLY_CONSISTENT", "verdict": "CONDITIONAL"},
+      {"run_id": "cal-3", "integrity": "INTERNALLY_CONSISTENT", "verdict": "CONDITIONAL"}
+    ],
+    "git_policy": "cal-* bundles remain gitignored and are not committed"
+  },
+  "verification_gates": {
+    "full_suite": {
+      "command": "PYTHONPATH=$PWD/src /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m pytest -q",
+      "result": "974 passed in 34.51s",
+      "exit_code": 0
+    },
+    "seeded_defects": {
+      "command": "PYTHONPATH=$PWD/src /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m pytest -q tests/integration/test_seeded_defects.py",
+      "result": "7 passed in 3.42s",
+      "named_finding_contract": true,
+      "exit_code": 0
+    },
+    "ruff": {
+      "command": "PYTHONPATH=$PWD/src /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m ruff check .",
+      "result": "All checks passed!",
+      "exit_code": 0
+    },
+    "doctor": {
+      "command": "PYTHONPATH=$PWD/src /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m hermes doctor",
+      "result": "17 PASS, 1 WARN, 1 NOT_AVAILABLE",
+      "warning": "The shell reported Conda base as active although the command explicitly used hermes-dev/bin/python.",
+      "not_available": "DISPLAY/WAYLAND_DISPLAY unset; acceptable for the headless checks.",
+      "exit_code": 0
+    },
+    "sim_smoke": {
+      "command": "PYTHONPATH=$PWD/src /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m hermes sim-smoke --headless",
+      "result": "Smoke status: OK; MetaDrive 0.4.3; 5 headless steps",
+      "exit_code": 0
+    },
+    "verify_artifact_latest": {
+      "applicable": false,
+      "reason": "artifacts/latest does not exist in this worktree.",
+      "substitute": "All 13 registered bundles and all three cal-* digest runs were verified explicitly."
+    }
+  }
+}
