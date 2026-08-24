@@ -23,6 +23,9 @@ dev = [
 workbench = [
     "streamlit>=1.37,<2",
 ]
+mujoco-cal = [
+    "mujoco==3.12.0",
+]
 
 [project.scripts]
 hermes = "hermes.cli:app"
