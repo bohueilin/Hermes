@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tomllib
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -104,14 +104,72 @@ def test_real_measurement_hashes_full_integration_state_and_logs_fwdinv() -> Non
     assert measurement.summary.stopping_distance_m > 0.0
     assert measurement.summary.peak_deceleration_mps2 > 0.0
     assert measurement.integration_state_name == "mjSTATE_INTEGRATION"
-    assert measurement.integration_state_size > model.nq + model.nv
+    integration_signature = int(mujoco.mjtState.mjSTATE_INTEGRATION)
+    assert measurement.integration_state_size == mujoco.mj_stateSize(
+        model, integration_signature
+    )
     assert len(set(measurement.repeat_integration_state_trace_sha256)) == 1
     assert len(set(measurement.repeat_observation_trace_sha256)) == 1
     assert measurement.warning_count == 0
-    assert measurement.fwdinv_residual.maximum_joint_space_relative >= 0.0
-    assert measurement.fwdinv_residual.maximum_constraint_space_relative >= 0.0
+    assert measurement.fwdinv_diagnostic.comparison_exercised is False
+    assert measurement.fwdinv_diagnostic.maximum_active_constraint_count == 0
+    assert measurement.fwdinv_diagnostic.maximum_joint_space_l2_norm is None
+    assert measurement.fwdinv_diagnostic.maximum_constraint_space_l2_norm is None
+    assert measurement.fwdinv_diagnostic.unexercised_joint_space_raw_values == (0.0,)
+    assert measurement.fwdinv_diagnostic.unexercised_constraint_space_raw_values == (0.0,)
     assert measurement.trace[-1].speed_mps <= tool.STOP_SPEED_THRESHOLD_MPS
     assert all(point.integration_state_sha256 for point in measurement.trace)
+    assert all(point.active_constraint_count == 0 for point in measurement.trace)
+
+
+def test_state_capture_passes_integration_signature_to_both_mujoco_apis() -> None:
+    """Replacing either state call with FULLPHYSICS must break this API-boundary spy."""
+    tool = _load_tool()
+    mujoco = _require_mujoco(tool)
+    model = tool.load_model(MODEL_PATH, mujoco=mujoco)
+    data = mujoco.MjData(model)
+    expected_signature = int(mujoco.mjtState.mjSTATE_INTEGRATION)
+    size_signatures: list[int] = []
+    get_signatures: list[int] = []
+
+    class StateApiSpy:
+        mjtState = mujoco.mjtState
+
+        @staticmethod
+        def mj_stateSize(spy_model: object, signature: int) -> int:
+            size_signatures.append(signature)
+            return mujoco.mj_stateSize(spy_model, signature)
+
+        @staticmethod
+        def mj_getState(
+            spy_model: object,
+            spy_data: object,
+            state: object,
+            signature: int,
+        ) -> None:
+            get_signatures.append(signature)
+            mujoco.mj_getState(spy_model, spy_data, state, signature)
+
+    capture = tool._capture_state(model, data, mujoco=StateApiSpy())
+
+    assert size_signatures == [expected_signature]
+    assert get_signatures == [expected_signature]
+    assert capture.signature_name == "mjSTATE_INTEGRATION"
+    assert capture.size == mujoco.mj_stateSize(model, expected_signature)
+
+
+def test_fwdinv_sentinel_reads_two_array_slots_without_swapping_or_fabrication() -> None:
+    """Slot 0 is joint-space L2 and slot 1 constraint-space L2 when constraints exist."""
+    tool = _load_tool()
+    data = SimpleNamespace(nefc=3, solver_fwdinv=(1.25, 9.5))
+
+    sample = tool._capture_fwdinv_sample(data)
+
+    assert sample.active_constraint_count == 3
+    assert sample.comparison_exercised is True
+    assert sample.joint_space_l2_norm == 1.25
+    assert sample.constraint_space_l2_norm == 9.5
+    assert "relative" not in " ".join(sample._fields)
 
 
 def test_evidence_is_deterministic_and_emits_distribution_not_trajectory_claims() -> None:
@@ -150,13 +208,44 @@ def test_evidence_is_deterministic_and_emits_distribution_not_trajectory_claims(
     assert decoded["curves"][0]["trace_retention"] == (
         "replay inputs plus observation and mjSTATE_INTEGRATION trace SHA-256 digests"
     )
-    assert decoded["curves"][0]["fwdinv_residual"]["semantics"][0].startswith(
-        "joint-space relative norm"
+    fwdinv = decoded["curves"][0]["fwdinv_diagnostic"]
+    assert fwdinv["array_api"] == (
+        "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm "
+        "and index 1 is constraint-space L2 norm"
     )
+    assert fwdinv["comparison_exercised"] is False
+    assert fwdinv["active_constraint_count"] == {"minimum": 0, "maximum": 0}
+    assert fwdinv["l2_norms_when_exercised"]["joint_space"]["maximum"] is None
+    assert fwdinv["unexercised_raw_array_values"] == {
+        "joint_space_l2_norm": [0.0],
+        "constraint_space_l2_norm": [0.0],
+    }
+    assert "relative" not in json.dumps(fwdinv).lower()
+    assert decoded["distribution_summary"]["fwdinv_diagnostic"][
+        "speeds_with_comparison_exercised"
+    ] == 0
     assert decoded["distribution_summary"]["sample_axis"] == "entry_speed_mps"
     assert decoded["distribution_summary"]["stopping_distance_m"]["sample_count"] == 1
     assert "trajectory" not in decoded["cross_backend_claim_contract"].lower()
     assert decoded["simulator"]["version"] == "3.12.0"
+    assert decoded["api_contract"]["fwdinv_output"] == (
+        "mujoco.MjData.solver_fwdinv two-element array at indices 0 and 1"
+    )
+    assert decoded["producer"]["command"] == [
+        "python3.11",
+        "tools/calibration/mujoco_brake_reference.py",
+    ]
+    assert not any("/Users/" in part for part in decoded["producer"]["command"])
+    runtime = decoded["runtime"]
+    assert runtime["python"]["version"]
+    assert runtime["platform"]["system"]
+    assert runtime["platform"]["machine"]
+    assert runtime["mujoco_distribution"]["wheel_tags"]
+    assert len(runtime["mujoco_distribution"]["wheel_metadata_sha256"]) == 64
+    assert len(runtime["mujoco_distribution"]["package_metadata_sha256"]) == 64
+    assert runtime["mujoco_native_library"]["filename"]
+    assert runtime["mujoco_native_library"]["size_bytes"] > 0
+    assert len(runtime["mujoco_native_library"]["sha256"]) == 64
 
 
 def test_measurement_rejects_any_repeat_count_other_than_three() -> None:

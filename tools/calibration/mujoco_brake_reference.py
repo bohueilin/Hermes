@@ -10,11 +10,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib
+import importlib.metadata
 import json
+import platform
 import statistics
 import struct
 import subprocess
 import sys
+import sysconfig
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -45,8 +48,10 @@ class TracePoint(NamedTuple):
     time_s: float
     position_m: float
     speed_mps: float
-    fwdinv_joint_space_relative: float
-    fwdinv_constraint_space_relative: float
+    fwdinv_joint_space_l2_norm: float
+    fwdinv_constraint_space_l2_norm: float
+    active_constraint_count: int
+    fwdinv_comparison_exercised: bool
     integration_state_sha256: str
 
 
@@ -61,13 +66,38 @@ class TraceSummary(NamedTuple):
     steady_interval_indices: tuple[int, ...]
 
 
-class FwdInvResidualSummary(NamedTuple):
-    """Relative forward/inverse dynamics discrepancies reported by MuJoCo."""
+class FwdInvSample(NamedTuple):
+    """One read of MuJoCo's two-element forward/inverse diagnostic array."""
 
-    maximum_joint_space_relative: float
-    median_joint_space_relative: float
-    maximum_constraint_space_relative: float
-    median_constraint_space_relative: float
+    active_constraint_count: int
+    comparison_exercised: bool
+    joint_space_l2_norm: float
+    constraint_space_l2_norm: float
+
+
+class FwdInvDiagnosticSummary(NamedTuple):
+    """Availability and L2 norms for MuJoCo's constraint-gated diagnostic."""
+
+    comparison_exercised: bool
+    minimum_active_constraint_count: int
+    maximum_active_constraint_count: int
+    exercised_sample_count: int
+    unexercised_sample_count: int
+    maximum_joint_space_l2_norm: float | None
+    median_joint_space_l2_norm: float | None
+    maximum_constraint_space_l2_norm: float | None
+    median_constraint_space_l2_norm: float | None
+    unexercised_joint_space_raw_values: tuple[float, ...]
+    unexercised_constraint_space_raw_values: tuple[float, ...]
+
+
+class StateCapture(NamedTuple):
+    """One exact MuJoCo state capture and the API signature that produced it."""
+
+    state_bytes: bytes
+    sha256: str
+    signature_name: str
+    size: int
 
 
 class CurveMeasurement(NamedTuple):
@@ -75,7 +105,7 @@ class CurveMeasurement(NamedTuple):
 
     entry_speed_mps: float
     summary: TraceSummary
-    fwdinv_residual: FwdInvResidualSummary
+    fwdinv_diagnostic: FwdInvDiagnosticSummary
     trace: tuple[TracePoint, ...]
     integration_state_name: str
     integration_state_size: int
@@ -209,14 +239,31 @@ def _joint_addresses(model: Any, *, mujoco: Any) -> tuple[int, int, int, int, in
     )
 
 
-def _capture_state(model: Any, data: Any, *, mujoco: Any) -> tuple[bytes, str]:
+def _capture_state(model: Any, data: Any, *, mujoco: Any) -> StateCapture:
     import numpy
 
-    signature = int(mujoco.mjtState.mjSTATE_INTEGRATION)
+    state_signature = mujoco.mjtState.mjSTATE_INTEGRATION
+    signature = int(state_signature)
     state = numpy.empty(mujoco.mj_stateSize(model, signature), dtype=numpy.float64)
     mujoco.mj_getState(model, data, state, signature)
     state_bytes = state.tobytes(order="C")
-    return state_bytes, hashlib.sha256(state_bytes).hexdigest()
+    return StateCapture(
+        state_bytes=state_bytes,
+        sha256=hashlib.sha256(state_bytes).hexdigest(),
+        signature_name=state_signature.name,
+        size=state.size,
+    )
+
+
+def _capture_fwdinv_sample(data: Any) -> FwdInvSample:
+    """Read both slots and state whether MuJoCo exercised the comparison."""
+    active_constraint_count = int(data.nefc)
+    return FwdInvSample(
+        active_constraint_count=active_constraint_count,
+        comparison_exercised=active_constraint_count > 0,
+        joint_space_l2_norm=float(data.solver_fwdinv[0]),
+        constraint_space_l2_norm=float(data.solver_fwdinv[1]),
+    )
 
 
 def _observation_trace_sha256(trace: Sequence[TracePoint]) -> str:
@@ -228,8 +275,15 @@ def _observation_trace_sha256(trace: Sequence[TracePoint]) -> str:
                 point.time_s,
                 point.position_m,
                 point.speed_mps,
-                point.fwdinv_joint_space_relative,
-                point.fwdinv_constraint_space_relative,
+                point.fwdinv_joint_space_l2_norm,
+                point.fwdinv_constraint_space_l2_norm,
+            )
+        )
+        digest.update(
+            struct.pack(
+                "!q?",
+                point.active_constraint_count,
+                point.fwdinv_comparison_exercised,
             )
         )
         digest.update(bytes.fromhex(point.integration_state_sha256))
@@ -255,16 +309,19 @@ def _measure_repeat(
     mujoco.mj_forward(model, data)
 
     state_trace_digest = hashlib.sha256()
-    initial_state, initial_state_sha256 = _capture_state(model, data, mujoco=mujoco)
-    state_trace_digest.update(initial_state)
+    initial_state = _capture_state(model, data, mujoco=mujoco)
+    initial_fwdinv = _capture_fwdinv_sample(data)
+    state_trace_digest.update(initial_state.state_bytes)
     trace = [
         TracePoint(
             time_s=float(data.time),
             position_m=float(data.qpos[ego_qpos]),
             speed_mps=float(data.qvel[ego_dof]),
-            fwdinv_joint_space_relative=float(data.solver_fwdinv[0]),
-            fwdinv_constraint_space_relative=float(data.solver_fwdinv[1]),
-            integration_state_sha256=initial_state_sha256,
+            fwdinv_joint_space_l2_norm=initial_fwdinv.joint_space_l2_norm,
+            fwdinv_constraint_space_l2_norm=initial_fwdinv.constraint_space_l2_norm,
+            active_constraint_count=initial_fwdinv.active_constraint_count,
+            fwdinv_comparison_exercised=initial_fwdinv.comparison_exercised,
+            integration_state_sha256=initial_state.sha256,
         )
     ]
 
@@ -273,15 +330,18 @@ def _measure_repeat(
         data.ctrl[ego_motor] = full_brake_command
         data.ctrl[lead_servo] = entry_speed_mps
         mujoco.mj_step(model, data)
-        state, state_sha256 = _capture_state(model, data, mujoco=mujoco)
-        state_trace_digest.update(state)
+        state = _capture_state(model, data, mujoco=mujoco)
+        fwdinv = _capture_fwdinv_sample(data)
+        state_trace_digest.update(state.state_bytes)
         point = TracePoint(
             time_s=float(data.time),
             position_m=float(data.qpos[ego_qpos]),
             speed_mps=float(data.qvel[ego_dof]),
-            fwdinv_joint_space_relative=float(data.solver_fwdinv[0]),
-            fwdinv_constraint_space_relative=float(data.solver_fwdinv[1]),
-            integration_state_sha256=state_sha256,
+            fwdinv_joint_space_l2_norm=fwdinv.joint_space_l2_norm,
+            fwdinv_constraint_space_l2_norm=fwdinv.constraint_space_l2_norm,
+            active_constraint_count=fwdinv.active_constraint_count,
+            fwdinv_comparison_exercised=fwdinv.comparison_exercised,
+            integration_state_sha256=state.sha256,
         )
         trace.append(point)
         if point.speed_mps <= STOP_SPEED_THRESHOLD_MPS:
@@ -295,7 +355,7 @@ def _measure_repeat(
     resolved_trace = tuple(trace)
     return _RepeatResult(
         trace=resolved_trace,
-        integration_state_size=len(initial_state) // 8,
+        integration_state_size=initial_state.size,
         integration_state_trace_sha256=state_trace_digest.hexdigest(),
         observation_trace_sha256=_observation_trace_sha256(resolved_trace),
         warning_count=warning_count,
@@ -323,14 +383,29 @@ def _summarize_trace(trace: Sequence[TracePoint], *, timestep_s: float) -> Trace
     )
 
 
-def _summarize_fwdinv(trace: Sequence[TracePoint]) -> FwdInvResidualSummary:
-    joint_values = [point.fwdinv_joint_space_relative for point in trace]
-    constraint_values = [point.fwdinv_constraint_space_relative for point in trace]
-    return FwdInvResidualSummary(
-        maximum_joint_space_relative=max(joint_values),
-        median_joint_space_relative=statistics.median(joint_values),
-        maximum_constraint_space_relative=max(constraint_values),
-        median_constraint_space_relative=statistics.median(constraint_values),
+def _summarize_fwdinv(trace: Sequence[TracePoint]) -> FwdInvDiagnosticSummary:
+    exercised = [point for point in trace if point.fwdinv_comparison_exercised]
+    unexercised = [point for point in trace if not point.fwdinv_comparison_exercised]
+    joint_values = [point.fwdinv_joint_space_l2_norm for point in exercised]
+    constraint_values = [point.fwdinv_constraint_space_l2_norm for point in exercised]
+    return FwdInvDiagnosticSummary(
+        comparison_exercised=bool(exercised),
+        minimum_active_constraint_count=min(point.active_constraint_count for point in trace),
+        maximum_active_constraint_count=max(point.active_constraint_count for point in trace),
+        exercised_sample_count=len(exercised),
+        unexercised_sample_count=len(unexercised),
+        maximum_joint_space_l2_norm=max(joint_values) if joint_values else None,
+        median_joint_space_l2_norm=statistics.median(joint_values) if joint_values else None,
+        maximum_constraint_space_l2_norm=max(constraint_values) if constraint_values else None,
+        median_constraint_space_l2_norm=(
+            statistics.median(constraint_values) if constraint_values else None
+        ),
+        unexercised_joint_space_raw_values=tuple(
+            sorted({point.fwdinv_joint_space_l2_norm for point in unexercised})
+        ),
+        unexercised_constraint_space_raw_values=tuple(
+            sorted({point.fwdinv_constraint_space_l2_norm for point in unexercised})
+        ),
     )
 
 
@@ -366,9 +441,9 @@ def measure_entry_speed(
             representative.trace,
             timestep_s=float(model.opt.timestep),
         ),
-        fwdinv_residual=_summarize_fwdinv(representative.trace),
+        fwdinv_diagnostic=_summarize_fwdinv(representative.trace),
         trace=representative.trace,
-        integration_state_name="mjSTATE_INTEGRATION",
+        integration_state_name=mujoco.mjtState.mjSTATE_INTEGRATION.name,
         integration_state_size=representative.integration_state_size,
         repeat_integration_state_trace_sha256=integration_hashes,
         repeat_observation_trace_sha256=observation_hashes,
@@ -403,9 +478,81 @@ def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _distribution_metadata_file(distribution: Any, filename: str) -> Path:
+    candidates = [
+        item
+        for item in distribution.files or ()
+        if item.name == filename and ".dist-info" in str(item)
+    ]
+    if len(candidates) != 1:
+        raise RuntimeError(f"MuJoCo distribution has {len(candidates)} {filename} files")
+    return Path(distribution.locate_file(candidates[0])).resolve()
+
+
+def runtime_identity(*, mujoco: Any) -> dict[str, Any]:
+    """Fingerprint the interpreter, host, wheel metadata, and native MuJoCo library."""
+    distribution = importlib.metadata.distribution("mujoco")
+    wheel_path = _distribution_metadata_file(distribution, "WHEEL")
+    metadata_path = _distribution_metadata_file(distribution, "METADATA")
+    wheel_lines = wheel_path.read_text().splitlines()
+    wheel_tags = sorted(
+        line.partition(":")[2].strip() for line in wheel_lines if line.startswith("Tag:")
+    )
+    package_dir = Path(mujoco.__file__).resolve().parent
+    native_candidates = sorted(
+        path
+        for pattern in ("libmujoco*", "mujoco.dll")
+        for path in package_dir.glob(pattern)
+        if path.is_file()
+    )
+    if len(native_candidates) != 1:
+        raise RuntimeError(
+            f"MuJoCo package has {len(native_candidates)} candidate native core libraries"
+        )
+    native_library = native_candidates[0]
+    return {
+        "python": {
+            "version": platform.python_version(),
+            "implementation": platform.python_implementation(),
+            "abi": sysconfig.get_config_var("SOABI"),
+            "byteorder": sys.byteorder,
+        },
+        "platform": {
+            "system": platform.system(),
+            "release": platform.release(),
+            "machine": platform.machine(),
+            "descriptor": platform.platform(aliased=False, terse=False),
+        },
+        "mujoco_distribution": {
+            "name": distribution.metadata["Name"],
+            "version": distribution.version,
+            "wheel_tags": wheel_tags,
+            "wheel_metadata_sha256": _file_sha256(wheel_path),
+            "package_metadata_sha256": _file_sha256(metadata_path),
+        },
+        "mujoco_native_library": {
+            "filename": native_library.name,
+            "size_bytes": native_library.stat().st_size,
+            "sha256": _file_sha256(native_library),
+        },
+    }
+
+
+def _unavailable_l2_distribution(*, reason: str) -> dict[str, Any]:
+    return {
+        "sample_count": 0,
+        "minimum": None,
+        "median": None,
+        "maximum": None,
+        "samples_by_entry_speed_mps": [],
+        "availability": "NOT_EXERCISED",
+        "reason": reason,
+    }
+
+
 def _curve_payload(item: CurveMeasurement) -> dict[str, Any]:
     summary = item.summary
-    residual = item.fwdinv_residual
+    diagnostic = item.fwdinv_diagnostic
     return {
         "entry_speed_mps": item.entry_speed_mps,
         "peak_deceleration_mps2": summary.peak_deceleration_mps2,
@@ -425,15 +572,42 @@ def _curve_payload(item: CurveMeasurement) -> dict[str, Any]:
             "replay inputs plus observation and mjSTATE_INTEGRATION trace SHA-256 digests"
         ),
         "warning_count": item.warning_count,
-        "fwdinv_residual": {
-            "semantics": [
-                "joint-space relative norm of forward/inverse applied-force discrepancy",
-                "constraint-space relative norm of forward/inverse applied-force discrepancy",
-            ],
-            "maximum_joint_space_relative": residual.maximum_joint_space_relative,
-            "median_joint_space_relative": residual.median_joint_space_relative,
-            "maximum_constraint_space_relative": residual.maximum_constraint_space_relative,
-            "median_constraint_space_relative": residual.median_constraint_space_relative,
+        "fwdinv_diagnostic": {
+            "array_api": (
+                "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm "
+                "and index 1 is constraint-space L2 norm"
+            ),
+            "comparison_exercised": diagnostic.comparison_exercised,
+            "active_constraint_count": {
+                "minimum": diagnostic.minimum_active_constraint_count,
+                "maximum": diagnostic.maximum_active_constraint_count,
+            },
+            "sample_counts": {
+                "exercised": diagnostic.exercised_sample_count,
+                "not_exercised": diagnostic.unexercised_sample_count,
+            },
+            "l2_norms_when_exercised": {
+                "joint_space": {
+                    "maximum": diagnostic.maximum_joint_space_l2_norm,
+                    "median": diagnostic.median_joint_space_l2_norm,
+                },
+                "constraint_space": {
+                    "maximum": diagnostic.maximum_constraint_space_l2_norm,
+                    "median": diagnostic.median_constraint_space_l2_norm,
+                },
+            },
+            "unexercised_raw_array_values": {
+                "joint_space_l2_norm": list(
+                    diagnostic.unexercised_joint_space_raw_values
+                ),
+                "constraint_space_l2_norm": list(
+                    diagnostic.unexercised_constraint_space_raw_values
+                ),
+            },
+            "interpretation": (
+                "MuJoCo clears both raw slots and returns without comparing when the active "
+                "constraint count is zero; raw zeros in that state are not L2-norm results"
+            ),
         },
     }
 
@@ -455,14 +629,19 @@ def build_evidence(
     steady = [item.summary.steady_deceleration_mps2 for item in measurements]
     means = [item.summary.mean_deceleration_mps2 for item in measurements]
     distances = [item.summary.stopping_distance_m for item in measurements]
-    fwdinv_joint = [
-        item.fwdinv_residual.maximum_joint_space_relative for item in measurements
+    compared_measurements = [
+        item for item in measurements if item.fwdinv_diagnostic.comparison_exercised
     ]
-    fwdinv_constraint = [
-        item.fwdinv_residual.maximum_constraint_space_relative for item in measurements
+    maximum_active_constraints = [
+        float(item.fwdinv_diagnostic.maximum_active_constraint_count)
+        for item in measurements
     ]
+    no_comparison_reason = (
+        "No speed exercised mj_compareFwdInv because every recorded active-constraint count "
+        "was zero; MuJoCo cleared both raw array slots without computing L2 norms."
+    )
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "artifact_type": "mujoco_full_brake_reference",
         "simulation_only": True,
         "claim_scope": (
@@ -486,6 +665,11 @@ def build_evidence(
             "commit": repository_commit,
             "dirty_before_output_write": repository_dirty,
         },
+        "producer": {
+            "command": ["python3.11", "tools/calibration/mujoco_brake_reference.py"],
+            "working_directory": "repository root",
+        },
+        "runtime": runtime_identity(mujoco=mujoco),
         "model": {
             "path": _relative_path(model_path),
             "sha256": _file_sha256(model_path),
@@ -515,7 +699,9 @@ def build_evidence(
             "advance": "mujoco.mj_step",
             "state_size": "mujoco.mj_stateSize",
             "state_capture": "mujoco.mj_getState(..., mjSTATE_INTEGRATION)",
-            "fwdinv_output": "mujoco.MjData.solver_fwdinv[2]",
+            "fwdinv_output": (
+                "mujoco.MjData.solver_fwdinv two-element array at indices 0 and 1"
+            ),
         },
         "curves": [_curve_payload(item) for item in measurements],
         "distribution_summary": {
@@ -528,12 +714,37 @@ def build_evidence(
             "steady_deceleration_mps2": _distribution(measurements, steady),
             "mean_deceleration_mps2": _distribution(measurements, means),
             "stopping_distance_m": _distribution(measurements, distances),
-            "fwdinv_maximum_joint_space_relative": _distribution(
-                measurements, fwdinv_joint
-            ),
-            "fwdinv_maximum_constraint_space_relative": _distribution(
-                measurements, fwdinv_constraint
-            ),
+            "fwdinv_diagnostic": {
+                "speeds_with_comparison_exercised": len(compared_measurements),
+                "speeds_without_comparison_exercised": (
+                    len(measurements) - len(compared_measurements)
+                ),
+                "maximum_active_constraint_count": _distribution(
+                    measurements, maximum_active_constraints
+                ),
+                "maximum_joint_space_l2_norm_when_exercised": (
+                    _distribution(
+                        compared_measurements,
+                        [
+                            item.fwdinv_diagnostic.maximum_joint_space_l2_norm
+                            for item in compared_measurements
+                        ],
+                    )
+                    if compared_measurements
+                    else _unavailable_l2_distribution(reason=no_comparison_reason)
+                ),
+                "maximum_constraint_space_l2_norm_when_exercised": (
+                    _distribution(
+                        compared_measurements,
+                        [
+                            item.fwdinv_diagnostic.maximum_constraint_space_l2_norm
+                            for item in compared_measurements
+                        ],
+                    )
+                    if compared_measurements
+                    else _unavailable_l2_distribution(reason=no_comparison_reason)
+                ),
+            },
         },
     }
 
