@@ -85,16 +85,28 @@ WP-D files were committed:
 - Scenario digest `989e948e5e49805125c895d21e889d33bc6c45b33c58cf151377888683b56904`;
   trace digest `e895022b0977ee6c8701a937e7995e7042b1720c2557aa47cbdabb019c256f14`;
   78 result events through 7.8 s.
+- Final event tuple: `terminated=true`, `truncated=false`,
+  `termination_reason=DESTINATION_REACHED`. Every earlier event is exactly
+  `terminated=false`, `truncated=false`, `termination_reason=NONE`.
 
 The parser verifies these identities, file hashes, trace continuity, result/input clocks,
-recorded reset speeds/geometry, and the final trace digest before comparing anything.
+recorded reset speeds/geometry, every terminal tuple, and the final trace digest before
+comparing anything.
 
 ## Observed comparison
 
 Geometry is computed from recorded oriented boxes. World velocities are projected into the
 ego heading frame; bumper overlap is inclusive; TTC exists only for an actor ahead, in path,
 with positive closing speed. esmini CSV has six decimal places (absolute quantization floor
-0.5e-6); timing is the recorded 0.1 s grid with no interpolation.
+0.5e-6); each timestamp must use the producer's canonical six-decimal spelling and equal its
+`index / 10` value exactly in decimal arithmetic. Timing is the recorded 0.1 s grid with no
+interpolation.
+
+The matched longitudinal-like values are explicitly **route-axis proxies**, not exact
+cross-backend world positions. MetaDrive's ego source is `VehicleState.position_m`, the
+cumulative traveled path distance; its actor proxy adds the recorded actor-center longitudinal
+offset relative to ego. esmini uses each recorded box center's world X relative to the initial
+ego on this committed straight road.
 
 | Observed event / metric | MetaDrive result geometry | esmini | esmini - MetaDrive |
 |---|---:|---:|---:|
@@ -108,8 +120,8 @@ with positive closing speed. esmini CSV has six decimal places (absolute quantiz
 Through the first executed-brake input at 2.2 s, the maximum matched-grid differences were:
 
 - actor lateral center: 0.000117 m (the cubic center interpolation is effectively aligned);
-- actor longitudinal center: 1.200002 m, first maximized at 0.5 s;
-- ego longitudinal position: 0.788105 m at 2.2 s;
+- actor route-axis proxy: 1.200002 m, first maximized at 0.5 s;
+- ego route-axis proxy: 0.788105 m at 2.2 s;
 - in-path bumper gap: 0.315335 m at 1.9 s;
 - TTC: 0.362633 s at 1.6 s.
 
@@ -127,10 +139,11 @@ qualitatively different controller confound. All post-cutoff trajectory/TTC delt
    esmini's first oriented-box in-path sample from 1.5 s to 1.4 s.
 2. **The 12 m/s constraint means different things.** esmini spends the scalar speed along the
    yawed path, reducing world-X progress during the lane change. At 2.0 s, its actor center is
-   0.636778 m behind the independent `x0 + 12t` progression. Hermes advances longitudinal
-   position independently while replaying lateral position.
+   0.636778 m behind the independent `x0 + 12t` road-longitudinal command. Hermes commands that
+   coordinate independently while replaying lateral position. This within-scenario observation
+   does not turn the cross-backend route-axis proxy into an exact common world coordinate.
 3. **Hermes has a first-interval alignment difference.** Result event 0 occurs at 0.1 s but
-   retains actor replay step index 0, so actor longitudinal progress is one 1.2 m interval
+   retains actor replay step index 0, so the actor route-axis proxy is one 1.2 m interval
    behind the esmini time grid before the lateral maneuver.
 4. **Ego/controller semantics differ.** esmini keeps the ego scripted at 20 m/s and has no
    Hermes FCW/AEB controller. MetaDrive runs the baseline policy and vehicle physics; the first
@@ -149,8 +162,8 @@ Three clean native-arm64 executions produced identical bytes:
 | Output | SHA-256 (same ×3) | Committed? |
 |---|---|---:|
 | Raw esmini CSV | `01b082d13364a1144bfcf9bf57c9f27b36c2ddd3d03543d082634f7e0d093972` | No |
-| Path-free normalized trajectory JSONL | `dd4d3d4bdd071ed51058aab7f09a7377f9fd5ca497afad43f283f410bb2ef834` | Hash only |
-| Comparison JSON | `561b3b46d453118bf804888889a1ac76f06d960756624a56bfd8d3fbdd66bc51` | Yes |
+| Path-free normalized trajectory JSONL | `ec251e5116733ae616c63405a6662987e0ee19e17a40e27092f8aceb7e9d3b20` | Hash only |
+| Comparison JSON | `efc3c64432e05dc6ced3f9e1c41292c5e841f65551ccff2971fb697ebe3cd0d5` | Yes |
 | SVG plot | `e5a9e2263bcf9cfb437a44f5c5abde0b26091f648247d16b04db93d792222e61` | Yes |
 
 The committed whole-summary hash binds the exact pre-WP-D MetaDrive manifest and repository
@@ -162,9 +175,10 @@ trajectory/timing findings, but its provenance-bound summary hash will intention
 **Observed:** actual official producer bits, native arm64 execution, exact XOSC/XODR inputs,
 raw CSV, actual Hermes events, oriented-box geometry, N=3 hashes, and the numbers above.
 
-**Modeling choices / assumptions:** the straight road is the common longitudinal frame; inline
-vehicle dimensions deliberately match MetaDrive's default/traffic vehicle dimensions; the
-OpenSCENARIO lane-change primitive is the closest explicit representation of Hermes's replay.
+**Modeling choices / assumptions:** the straight road supplies a route-axis comparison proxy,
+not an exact shared world-position frame; inline vehicle dimensions deliberately match
+MetaDrive's default/traffic vehicle dimensions; the OpenSCENARIO lane-change primitive is the
+closest explicit representation of Hermes's replay.
 
 **Not observed or claimed:** physical-vehicle behavior, public-road safety, sensor behavior,
 FCW warning issuance, certification, backend parity, cross-platform determinism, or production

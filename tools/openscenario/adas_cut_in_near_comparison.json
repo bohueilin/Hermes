@@ -77,7 +77,12 @@
         "time_s": 2.2,
         "ttc_s": 1.7926365909024342
       },
-      "sample_count": 78
+      "sample_count": 78,
+      "terminal_event": {
+        "terminated": true,
+        "termination_reason": "DESTINATION_REACHED",
+        "truncated": false
+      }
     }
   },
   "claim_boundary": "Deterministic trajectory/timing audition only; not backend parity, real-world safety evidence, certification, or production validation.",
@@ -91,7 +96,7 @@
         "max_abs_delta": 0.00011722549962458773,
         "time_s": 2.2
       },
-      "actor_longitudinal_m": {
+      "actor_route_axis_proxy_m": {
         "esmini_minus_metadrive": 1.2000018393444876,
         "max_abs_delta": 1.2000018393444876,
         "time_s": 0.5
@@ -106,7 +111,7 @@
         "max_abs_delta": 3.7670135498046875e-05,
         "time_s": 2.2
       },
-      "ego_longitudinal_m": {
+      "ego_route_axis_proxy_m": {
         "esmini_minus_metadrive": 0.788105010955249,
         "max_abs_delta": 0.788105010955249,
         "time_s": 2.2
@@ -119,7 +124,13 @@
     },
     "post_cutoff_label": "CONTROLLER_RESPONSE_CONFOUNDED",
     "pre_cutoff_label": "SCENARIO_BACKEND_AND_NON_BRAKING_CONTROLLER_DYNAMICS",
-    "pre_response_comparison_cutoff_s": 2.2
+    "pre_response_comparison_cutoff_s": 2.2,
+    "route_axis_proxy": {
+      "claim_boundary": "straight-road comparison proxy; not exact cross-backend world position",
+      "esmini_source": "recorded bounding-box center world X relative to initial ego on the straight road",
+      "metadrive_actor_source": "ego path-distance proxy plus recorded actor center longitudinal relative to ego",
+      "metadrive_ego_source": "VehicleState.position_m cumulative traveled path distance"
+    }
   },
   "controller_response": {
     "first_controller_observed_ttc_le_2_6_input_time_s": 1.5,
@@ -174,13 +185,13 @@
   "semantic_findings": {
     "controller_mismatch": "esmini has no Hermes ADAS controller in this audition; post-cutoff deltas combine backend semantics with MetaDrive controller response",
     "lateral_interpolation": "esmini 3.7.1 cubic and Hermes replay both use u^2*(3-2u)",
-    "longitudinal_mismatch": "esmini advances 12 m/s along the yawed lane-change path; Hermes independently advances longitudinal position at 12 m/s while replaying lateral position",
-    "metadrive_actor_first_interval": "Hermes result event 0 at 0.1 s retains actor step index 0, placing actor longitudinal progress one 1.2 m interval behind the esmini time grid",
+    "longitudinal_mismatch": "esmini advances 12 m/s along the yawed lane-change path; Hermes independently commands its road-longitudinal coordinate at 12 m/s while replaying lateral position",
+    "metadrive_actor_first_interval": "Hermes result event 0 at 0.1 s retains actor step index 0, placing actor route-axis proxy one 1.2 m interval behind the esmini time grid",
     "oriented_pose_mismatch": "esmini yaws the actor along the lane-change path, expanding its projected lateral box extent; Hermes replays lateral position at road heading",
     "pre_brake_ego_mismatch": "esmini scripts ego at 20 m/s while MetaDrive runs the baseline speed policy and vehicle dynamics; pre-brake ego/gap/TTC deltas are not pure actor semantics"
   },
   "sources": {
-    "esmini_normalized_trace_sha256": "dd4d3d4bdd071ed51058aab7f09a7377f9fd5ca497afad43f283f410bb2ef834",
+    "esmini_normalized_trace_sha256": "ec251e5116733ae616c63405a6662987e0ee19e17a40e27092f8aceb7e9d3b20",
     "esmini_raw_csv_sha256": "01b082d13364a1144bfcf9bf57c9f27b36c2ddd3d03543d082634f7e0d093972",
     "metadrive_events_sha256": "edbbae64096ec5894eaf747e9a97fab374fa0088ccc690adaa582c7db8eb9f8f",
     "metadrive_execution_context_sha256": "adaf02629247771e3eb9a30469fbba9fbba94ae3195b963b0c3a29da91af8a59",

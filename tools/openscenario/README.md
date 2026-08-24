@@ -52,6 +52,7 @@ $HERMES_PY tools/openscenario/esmini_cutin_audition.py \
 The runner removes any ambient `ESMINI_CONFIG_FILE` before launch. It refuses an existing raw
 CSV, wrong producer bits/version/architecture, malformed CSV, wrong Hermes
 scenario/policy/gate/shield identity, dirty comparator provenance, or a truncated/non-0.1-second
-trace. A fresh post-commit Hermes run has different repository/manifest provenance, so numerical
-results should reproduce while the whole summary hash is expected to change. The committed byte
-hashes bind the exact producer inputs recorded in `COMPARISON.md`.
+trace or terminal sequence. Raw, summary, and SVG paths must remain distinct and outside the
+comparator artifact root. A fresh post-commit Hermes run has different repository/manifest
+provenance, so numerical results should reproduce while the whole summary hash is expected to
+change. The committed byte hashes bind the exact producer inputs recorded in `COMPARISON.md`.
