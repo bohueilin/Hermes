@@ -1224,6 +1224,30 @@ def comparison_svg_bytes(
     return ("\n".join(svg) + "\n").encode("utf-8")
 
 
+def validate_output_paths(
+    *,
+    raw_csv: Path,
+    summary_path: Path,
+    svg_path: Path,
+    protected_paths: tuple[Path, ...] = (),
+) -> None:
+    """Require three distinct outputs that cannot overwrite producer inputs."""
+
+    outputs = {
+        "raw CSV": raw_csv.resolve(),
+        "summary": summary_path.resolve(),
+        "SVG": svg_path.resolve(),
+    }
+    if len(set(outputs.values())) != len(outputs):
+        raise AuditionError(f"raw CSV, summary, and SVG paths must be distinct: {outputs}")
+    protected = {path.resolve() for path in protected_paths}
+    collisions = sorted(label for label, path in outputs.items() if path in protected)
+    if collisions:
+        raise AuditionError(
+            f"output paths must not overwrite audition inputs: {', '.join(collisions)}"
+        )
+
+
 def write_outputs(
     summary_path: Path,
     svg_path: Path,
@@ -1234,6 +1258,8 @@ def write_outputs(
 
     summary_path = summary_path.resolve()
     svg_path = svg_path.resolve()
+    if summary_path == svg_path:
+        raise AuditionError("summary and SVG paths must be distinct")
     if not summary_path.parent.is_dir() or not svg_path.parent.is_dir():
         raise AuditionError("summary and SVG parent directories must already exist")
     summary_path.write_bytes(summary_bytes)
@@ -1278,6 +1304,21 @@ def main(argv: list[str] | None = None) -> int:
         road_path = committed_scenario.with_suffix(".xodr")
         if not road_path.is_file():
             raise AuditionError(f"required OpenDRIVE input is missing: {road_path}")
+        artifact = args.hermes_artifact.resolve()
+        validate_output_paths(
+            raw_csv=args.raw_csv,
+            summary_path=args.summary_out,
+            svg_path=args.svg_out,
+            protected_paths=(
+                committed_scenario,
+                road_path,
+                args.esmini_bin,
+                args.esmini_archive,
+                artifact / "manifest.json",
+                artifact / "execution-context.json",
+                artifact / "events.jsonl",
+            ),
+        )
         provenance = probe_esmini_producer(args.esmini_bin, args.esmini_archive)
         execution = run_esmini(
             binary=args.esmini_bin,
@@ -1312,7 +1353,6 @@ def main(argv: list[str] | None = None) -> int:
                 "ambient_esmini_config_removed": True,
             },
         }
-        artifact = args.hermes_artifact.resolve()
         source_hashes = {
             "openscenario_sha256": _sha256(committed_scenario),
             "opendrive_sha256": _sha256(road_path),

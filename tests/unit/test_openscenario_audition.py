@@ -670,6 +670,21 @@ def test_output_writer_reports_hashes_of_exact_written_bytes(tmp_path: Path) -> 
     }
 
 
+def test_output_paths_cannot_alias_each_other_or_raw_csv(tmp_path: Path) -> None:
+    """An output-path typo must not erase the raw producer trace or the other review output."""
+    tool = _load_tool()
+    same_path = tmp_path / "same-output"
+
+    with pytest.raises(tool.AuditionError, match="distinct"):
+        tool.write_outputs(same_path, same_path, b"summary", b"svg")
+    with pytest.raises(tool.AuditionError, match="distinct"):
+        tool.validate_output_paths(
+            raw_csv=same_path,
+            summary_path=same_path,
+            svg_path=tmp_path / "plot.svg",
+        )
+
+
 def test_normalized_esmini_trace_bytes_are_canonical_and_path_free(tmp_path: Path) -> None:
     """A stable summary hash alone does not prove the normalized trajectory bytes stable."""
     tool = _load_tool()
