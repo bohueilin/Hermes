@@ -114,6 +114,9 @@ export PYTHONPATH="$PWD/src"
   tools/calibration/mujoco_brake_reference.py
 ```
 
-The command loudly refuses to run when the exact optional dependency is unavailable. Re-running
-from the committed instrument/model inputs should reproduce the JSON byte-for-byte on the same
-host and MuJoCo wheel; cross-platform bitwise identity is unresolved and is not claimed.
+The command loudly refuses to run when the exact optional dependency is unavailable. Exact JSON
+reproduction additionally requires checking out the artifact's recorded producer commit
+`eeac0b5042002914b46aa80b6eecb84e8ce546bc`; a later commit intentionally changes the JSON's
+`repository.commit` even when every measured outcome and trace digest is unchanged. On that
+producer commit, the same host and MuJoCo wheel reproduced the JSON byte-for-byte. Cross-platform
+bitwise identity is unresolved and is not claimed.
