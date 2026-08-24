@@ -14,11 +14,13 @@ import json
 import math
 import os
 import platform
+import re
 import struct
 import subprocess
 import sys
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -750,12 +752,19 @@ def load_esmini_csv(
         except ValueError as exc:
             raise AuditionError("esmini CSV index is not an integer") from exc
         _expect_equal("esmini CSV index", index, expected_index)
-        time_s = _csv_float(row, "TimeStamp [s]", "timestamp")
-        expected_time = expected_index / 10.0
-        if not math.isclose(time_s, expected_time, rel_tol=0.0, abs_tol=1e-12):
+        timestamp_text = _csv_value(row, "TimeStamp [s]", "timestamp")
+        if re.fullmatch(r"(?:0|[1-9][0-9]*)\.[0-9]{6}", timestamp_text) is None:
             raise AuditionError(
-                f"esmini CSV timestamp mismatch: observed={time_s}, expected={expected_time}"
+                "esmini CSV timestamp must use canonical six-decimal nonnegative spelling"
             )
+        timestamp_decimal = Decimal(timestamp_text)
+        expected_timestamp = Decimal(expected_index) / Decimal(10)
+        if timestamp_decimal != expected_timestamp:
+            raise AuditionError(
+                "esmini CSV timestamp is off the exact 0.1-second grid: "
+                f"observed={timestamp_decimal}, expected={expected_timestamp}"
+            )
+        time_s = float(timestamp_decimal)
         entities = [_entity_geometry(row, prefix) for prefix in entity_prefixes]
         by_name = {str(entity["name"]): entity for entity in entities}
         if len(by_name) != 2:

@@ -519,6 +519,32 @@ def test_esmini_parser_rejects_wrong_embedded_version(tmp_path: Path) -> None:
         tool.load_esmini_csv(csv_path)
 
 
+def test_esmini_parser_rejects_noncanonical_timestamp_precision(tmp_path: Path) -> None:
+    """The v3.7.1 logger contract is exactly six decimals, not any float-equivalent spelling."""
+    tool = _load_tool()
+    csv_path = _write_esmini_fixture(tmp_path / "high-precision.csv")
+    csv_path.write_text(
+        csv_path.read_text().replace("1, 0.100000,", "1, 0.1000000,"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(tool.AuditionError, match="canonical six-decimal"):
+        tool.load_esmini_csv(csv_path)
+
+
+def test_esmini_parser_rejects_canonical_timestamp_off_exact_grid(tmp_path: Path) -> None:
+    """Six-decimal spelling alone must not authorize a value off the exact 0.1-second grid."""
+    tool = _load_tool()
+    csv_path = _write_esmini_fixture(tmp_path / "off-grid.csv")
+    csv_path.write_text(
+        csv_path.read_text().replace("1, 0.100000,", "1, 0.100001,"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(tool.AuditionError):
+        tool.load_esmini_csv(csv_path)
+
+
 def test_esmini_parser_uses_entity_names_not_numbered_block_order(tmp_path: Path) -> None:
     """Reordering valid producer blocks must not silently swap ego and actor geometry."""
     tool = _load_tool()
