@@ -1016,7 +1016,7 @@ def build_comparison_summary(
             "first_executed_brake_command": first_brake.brake_command,
         },
         "comparison": {
-            "scenario_semantics_attribution_through_s": attribution_cutoff,
+            "pre_response_comparison_cutoff_s": attribution_cutoff,
             "pre_cutoff_label": "SCENARIO_BACKEND_AND_NON_BRAKING_CONTROLLER_DYNAMICS",
             "post_cutoff_label": "CONTROLLER_RESPONSE_CONFOUNDED",
             "matched_grid_sample_count_through_cutoff": sum(

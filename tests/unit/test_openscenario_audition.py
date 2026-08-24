@@ -632,7 +632,8 @@ def test_summary_and_svg_are_deterministic_and_bound_response_attribution(
     response = first["controller_response"]
     assert response["first_executed_brake_input_time_s"] == pytest.approx(0.1)
     assert response["first_executed_brake_result_time_s"] == pytest.approx(0.2)
-    assert first["comparison"]["scenario_semantics_attribution_through_s"] == pytest.approx(0.1)
+    assert first["comparison"]["pre_response_comparison_cutoff_s"] == pytest.approx(0.1)
+    assert "scenario_semantics_attribution_through_s" not in first["comparison"]
     assert first["comparison"]["post_cutoff_label"] == "CONTROLLER_RESPONSE_CONFOUNDED"
     assert first["comparison"]["pre_cutoff_label"] == (
         "SCENARIO_BACKEND_AND_NON_BRAKING_CONTROLLER_DYNAMICS"
