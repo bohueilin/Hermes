@@ -1,0 +1,196 @@
+{
+  "backends": {
+    "esmini": {
+      "first_in_path": {
+        "bumper_gap_m": 20.470717916160257,
+        "closing_speed_mps": 8.839718,
+        "time_s": 1.4,
+        "ttc_s": 2.3157659459453637
+      },
+      "first_time_s": 0.0,
+      "first_ttc_le_2_6_exposure": {
+        "bumper_gap_m": 20.470717916160257,
+        "closing_speed_mps": 8.839718,
+        "time_s": 1.4,
+        "ttc_s": 2.3157659459453637
+      },
+      "identity": {
+        "build_version": "6348",
+        "csv_sha256": "01b082d13364a1144bfcf9bf57c9f27b36c2ddd3d03543d082634f7e0d093972",
+        "git_branch": "tags/v3.7.1^0",
+        "git_revision": "v3.7.1-0-b848e291",
+        "git_tag": "v3.7.1",
+        "scenario_file": "adas_cut_in_near.xosc",
+        "scenario_file_metadata_sha256": "1a63e4f540e0b81ef14b3c7d7d01725f205ce7c8adcec49a7aeed47e9ed8a04c"
+      },
+      "last_time_s": 7.8,
+      "minimum_ttc_overall": {
+        "bumper_gap_m": 0.0,
+        "closing_speed_mps": 8.0,
+        "time_s": 4.0,
+        "ttc_s": 0.0
+      },
+      "minimum_ttc_through_pre_response_cutoff": {
+        "bumper_gap_m": 13.763221999999999,
+        "closing_speed_mps": 8.0,
+        "time_s": 2.2,
+        "ttc_s": 1.7204027499999999
+      },
+      "sample_count": 79
+    },
+    "metadrive": {
+      "first_in_path": {
+        "bumper_gap_m": 19.444827508048217,
+        "closing_speed_mps": 7.790153503440953,
+        "time_s": 1.5,
+        "ttc_s": 2.496077580430133
+      },
+      "first_time_s": 0.1,
+      "first_ttc_le_2_6_exposure": {
+        "bumper_gap_m": 19.444827508048217,
+        "closing_speed_mps": 7.790153503440953,
+        "time_s": 1.5,
+        "ttc_s": 2.496077580430133
+      },
+      "identity": {
+        "repository_commit": "846e27fefd3ce5fd6ff7fe0442383c124f9b444e",
+        "repository_dirty": false,
+        "scenario_digest": "989e948e5e49805125c895d21e889d33bc6c45b33c58cf151377888683b56904",
+        "scenario_name": "adas_cut_in_near",
+        "scenario_schema_version": "4.0",
+        "seed": 7,
+        "simulator_commit": "85e5dadc6c7436d324348f6e3d8f8e680c06b4db",
+        "simulator_name": "metadrive",
+        "simulator_version": "0.4.3",
+        "trace_digest": "e895022b0977ee6c8701a937e7995e7042b1720c2557aa47cbdabb019c256f14"
+      },
+      "last_time_s": 7.800000000000001,
+      "minimum_ttc_overall": {
+        "bumper_gap_m": 4.299081316087385,
+        "closing_speed_mps": 3.411123276589759,
+        "time_s": 7.0,
+        "ttc_s": 1.2603125033890168
+      },
+      "minimum_ttc_through_pre_response_cutoff": {
+        "bumper_gap_m": 13.988164663181697,
+        "closing_speed_mps": 7.803123474200586,
+        "time_s": 2.2,
+        "ttc_s": 1.7926365909024342
+      },
+      "sample_count": 78
+    }
+  },
+  "claim_boundary": "Deterministic trajectory/timing audition only; not backend parity, real-world safety evidence, certification, or production validation.",
+  "comparison": {
+    "esmini_minus_metadrive_first_in_path_time_s": -0.10000000000000009,
+    "esmini_minus_metadrive_first_ttc_le_2_6_time_s": -0.10000000000000009,
+    "matched_grid_sample_count_through_cutoff": 22,
+    "maximum_deltas_through_cutoff": {
+      "actor_lateral_m": {
+        "esmini_minus_metadrive": -0.00011722549962458773,
+        "max_abs_delta": 0.00011722549962458773,
+        "time_s": 2.2
+      },
+      "actor_longitudinal_m": {
+        "esmini_minus_metadrive": 1.2000018393444876,
+        "max_abs_delta": 1.2000018393444876,
+        "time_s": 0.5
+      },
+      "bumper_gap_m": {
+        "esmini_minus_metadrive": -0.31533465728794496,
+        "max_abs_delta": 0.31533465728794496,
+        "time_s": 1.9
+      },
+      "ego_lateral_m": {
+        "esmini_minus_metadrive": -3.7670135498046875e-05,
+        "max_abs_delta": 3.7670135498046875e-05,
+        "time_s": 2.2
+      },
+      "ego_longitudinal_m": {
+        "esmini_minus_metadrive": 0.788105010955249,
+        "max_abs_delta": 0.788105010955249,
+        "time_s": 2.2
+      },
+      "ttc_s": {
+        "esmini_minus_metadrive": -0.3626327109401899,
+        "max_abs_delta": 0.3626327109401899,
+        "time_s": 1.6
+      }
+    },
+    "post_cutoff_label": "CONTROLLER_RESPONSE_CONFOUNDED",
+    "pre_cutoff_label": "SCENARIO_BACKEND_AND_NON_BRAKING_CONTROLLER_DYNAMICS",
+    "pre_response_comparison_cutoff_s": 2.2
+  },
+  "controller_response": {
+    "first_controller_observed_ttc_le_2_6_input_time_s": 1.5,
+    "first_controller_observed_ttc_s": 2.496077580430133,
+    "first_executed_brake_command": 0.5,
+    "first_executed_brake_input_time_s": 2.2,
+    "first_executed_brake_result_time_s": 2.3000000000000003
+  },
+  "producer": {
+    "archive_sha256": "b69e08691319fe8041027687a5b678a5e18e4c5775cb5708362707940c534079",
+    "asset_url": "https://github.com/esmini/esmini/releases/download/v3.7.1/esmini-bin_macOS.zip",
+    "executable_sha256": "20d53493cee342cd4dd1b5139d1bafc0ebb5e7793ac8991457d13aa53115e999",
+    "file_output": "Mach-O universal binary with 2 architectures: [x86_64:Mach-O 64-bit executable x86_64] [arm64]\n<ESMINI_BIN> (for architecture x86_64):\tMach-O 64-bit executable x86_64\n<ESMINI_BIN> (for architecture arm64):\tMach-O 64-bit executable arm64",
+    "file_output_sha256": "67a125d5eab049c61dfa06b0601f6a5730e64d705b33e5b60b6ecd1dc2afe03e",
+    "host_machine": "arm64",
+    "host_system": "Darwin",
+    "lipo_architectures": "x86_64 arm64",
+    "native_architecture": "arm64",
+    "runtime_execution": {
+      "ambient_esmini_config_removed": true,
+      "command_contract": [
+        "/usr/bin/arch",
+        "-arm64",
+        "<authorized-esmini-binary>",
+        "--headless",
+        "--fixed_timestep",
+        "0.1",
+        "--seed",
+        "7",
+        "--csv_logger",
+        "<clean-raw-csv>",
+        "--disable_log",
+        "--disable_stdout",
+        "--osc",
+        "tools/openscenario/adas_cut_in_near.xosc"
+      ],
+      "raw_csv_sha256": "01b082d13364a1144bfcf9bf57c9f27b36c2ddd3d03543d082634f7e0d093972",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "d9c9212c588541bef254e07ab40c348f610608d441f67901ce116f3980ba6d0b"
+    },
+    "version_output": "esmini GIT REV: v3.7.1-0-b848e291\nesmini GIT TAG: v3.7.1\nesmini GIT BRANCH: tags/v3.7.1^0\nesmini BUILD VERSION: 6348\n",
+    "version_probe_returncode": 255
+  },
+  "sampling": {
+    "esmini_csv_decimal_places": 6,
+    "esmini_numeric_quantization_floor_abs": 5e-07,
+    "event_times_are_grid_samples_without_interpolation": true,
+    "fixed_step_s": 0.1
+  },
+  "schema_version": "1.0",
+  "scope": "SIMULATION-ONLY / NOT HERMES EVIDENCE",
+  "semantic_findings": {
+    "controller_mismatch": "esmini has no Hermes ADAS controller in this audition; post-cutoff deltas combine backend semantics with MetaDrive controller response",
+    "lateral_interpolation": "esmini 3.7.1 cubic and Hermes replay both use u^2*(3-2u)",
+    "longitudinal_mismatch": "esmini advances 12 m/s along the yawed lane-change path; Hermes independently advances longitudinal position at 12 m/s while replaying lateral position",
+    "metadrive_actor_first_interval": "Hermes result event 0 at 0.1 s retains actor step index 0, placing actor longitudinal progress one 1.2 m interval behind the esmini time grid",
+    "oriented_pose_mismatch": "esmini yaws the actor along the lane-change path, expanding its projected lateral box extent; Hermes replays lateral position at road heading",
+    "pre_brake_ego_mismatch": "esmini scripts ego at 20 m/s while MetaDrive runs the baseline speed policy and vehicle dynamics; pre-brake ego/gap/TTC deltas are not pure actor semantics"
+  },
+  "sources": {
+    "esmini_normalized_trace_sha256": "dd4d3d4bdd071ed51058aab7f09a7377f9fd5ca497afad43f283f410bb2ef834",
+    "esmini_raw_csv_sha256": "01b082d13364a1144bfcf9bf57c9f27b36c2ddd3d03543d082634f7e0d093972",
+    "metadrive_events_sha256": "edbbae64096ec5894eaf747e9a97fab374fa0088ccc690adaa582c7db8eb9f8f",
+    "metadrive_execution_context_sha256": "adaf02629247771e3eb9a30469fbba9fbba94ae3195b963b0c3a29da91af8a59",
+    "metadrive_manifest_sha256": "500f35a0c9254e033abb1e54c4091df26e96e7f1794fa776cba4758a9c789934",
+    "opendrive_sha256": "6d9c4aab6aba72523a53cf604c0dcaf0b00748ec73f3e229731e6dbe4974cf97",
+    "openscenario_sha256": "6f1b008e418514bcb882305cfa60b6333569bae92c6e3607b2d6cb0a91236d87"
+  },
+  "threshold": {
+    "fcw_signal_recorded": false,
+    "meaning": "illustrative scenario exposure only",
+    "ttc_s": 2.6
+  }
+}
