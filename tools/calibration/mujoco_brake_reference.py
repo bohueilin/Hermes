@@ -421,6 +421,9 @@ def _curve_payload(item: CurveMeasurement) -> dict[str, Any]:
         ),
         "repeat_observation_trace_sha256": list(item.repeat_observation_trace_sha256),
         "repeat_bitwise_identical": True,
+        "trace_retention": (
+            "replay inputs plus observation and mjSTATE_INTEGRATION trace SHA-256 digests"
+        ),
         "warning_count": item.warning_count,
         "fwdinv_residual": {
             "semantics": [
@@ -432,7 +435,6 @@ def _curve_payload(item: CurveMeasurement) -> dict[str, Any]:
             "maximum_constraint_space_relative": residual.maximum_constraint_space_relative,
             "median_constraint_space_relative": residual.median_constraint_space_relative,
         },
-        "representative_trace": [point._asdict() for point in item.trace],
     }
 
 

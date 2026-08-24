@@ -141,6 +141,10 @@ def test_evidence_is_deterministic_and_emits_distribution_not_trajectory_claims(
     assert decoded["simulator_adapter"] is False
     assert decoded["measurement_protocol"]["state_signature"] == "mjSTATE_INTEGRATION"
     assert decoded["model_assumptions"]["lead_actor_role"] == "scripted-kinematic"
+    assert "representative_trace" not in decoded["curves"][0]
+    assert decoded["curves"][0]["trace_retention"] == (
+        "replay inputs plus observation and mjSTATE_INTEGRATION trace SHA-256 digests"
+    )
     assert decoded["curves"][0]["fwdinv_residual"]["semantics"][0].startswith(
         "joint-space relative norm"
     )
