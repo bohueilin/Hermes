@@ -63,13 +63,13 @@ class AuditionError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class TrajectorySample:
-    """One backend sample normalized to the straight-road comparison frame."""
+    """One sample in a straight-road frame whose route-axis values are comparison proxies."""
 
     time_s: float
-    ego_longitudinal_m: float
+    ego_route_axis_proxy_m: float
     ego_lateral_m: float
     ego_speed_mps: float
-    actor_longitudinal_m: float
+    actor_route_axis_proxy_m: float
     actor_lateral_m: float
     actor_speed_mps: float
     in_path: bool
@@ -499,7 +499,9 @@ def load_metadrive_trace(artifact_root: Path) -> BackendTrace:
         observation = _mapping(event.get("observation_summary"), "event observation_summary")
         vehicle = _mapping(event.get("vehicle_state"), "event vehicle_state")
         executed = _mapping(event.get("executed_action"), "event executed_action")
-        ego_longitudinal = _finite(vehicle.get("position_m"), "vehicle position_m")
+        ego_route_axis_proxy = _finite(
+            vehicle.get("position_m"), "vehicle cumulative path-distance position_m"
+        )
         ego_lateral = _finite(vehicle.get("lateral_offset_m"), "vehicle lateral_offset_m")
         actor_relative_longitudinal = _finite(
             observation.get("result_challenge_actor_longitudinal_m"),
@@ -561,10 +563,12 @@ def load_metadrive_trace(artifact_root: Path) -> BackendTrace:
         samples.append(
             TrajectorySample(
                 time_s=time_s,
-                ego_longitudinal_m=ego_longitudinal,
+                ego_route_axis_proxy_m=ego_route_axis_proxy,
                 ego_lateral_m=ego_lateral,
                 ego_speed_mps=_finite(vehicle.get("speed_mps"), "vehicle speed_mps"),
-                actor_longitudinal_m=ego_longitudinal + actor_relative_longitudinal,
+                actor_route_axis_proxy_m=(
+                    ego_route_axis_proxy + actor_relative_longitudinal
+                ),
                 actor_lateral_m=ego_lateral + actor_relative_lateral,
                 actor_speed_mps=_finite(
                     observation.get("result_challenge_actor_speed_mps"),
@@ -829,12 +833,12 @@ def load_esmini_csv(
         samples.append(
             TrajectorySample(
                 time_s=time_s,
-                ego_longitudinal_m=ego_x - initial_ego_x,
+                ego_route_axis_proxy_m=ego_x - initial_ego_x,
                 ego_lateral_m=ego_y - initial_ego_y,
                 ego_speed_mps=math.hypot(
                     float(ego["velocity_x"]), float(ego["velocity_y"])
                 ),
-                actor_longitudinal_m=actor_x - initial_ego_x,
+                actor_route_axis_proxy_m=actor_x - initial_ego_x,
                 actor_lateral_m=actor_y - initial_ego_y,
                 actor_speed_mps=math.hypot(
                     float(actor["velocity_x"]), float(actor["velocity_y"])
@@ -972,7 +976,8 @@ def build_comparison_summary(
         "ego_speed_mps": (initial_esmini.ego_speed_mps, 20.0),
         "actor_speed_mps": (initial_esmini.actor_speed_mps, 12.0),
         "center_separation_m": (
-            initial_esmini.actor_longitudinal_m - initial_esmini.ego_longitudinal_m,
+            initial_esmini.actor_route_axis_proxy_m
+            - initial_esmini.ego_route_axis_proxy_m,
             36.515,
         ),
         "lateral_delta_m": (
@@ -1007,8 +1012,8 @@ def build_comparison_summary(
     esmini_by_tick = {round(sample.time_s * 10): sample for sample in esmini.samples}
     cutoff_tick = round(attribution_cutoff * 10)
     fields = (
-        "ego_longitudinal_m",
-        "actor_longitudinal_m",
+        "ego_route_axis_proxy_m",
+        "actor_route_axis_proxy_m",
         "ego_lateral_m",
         "actor_lateral_m",
         "bumper_gap_m",
@@ -1080,6 +1085,22 @@ def build_comparison_summary(
             "pre_response_comparison_cutoff_s": attribution_cutoff,
             "pre_cutoff_label": "SCENARIO_BACKEND_AND_NON_BRAKING_CONTROLLER_DYNAMICS",
             "post_cutoff_label": "CONTROLLER_RESPONSE_CONFOUNDED",
+            "route_axis_proxy": {
+                "claim_boundary": (
+                    "straight-road comparison proxy; not exact cross-backend world position"
+                ),
+                "metadrive_ego_source": (
+                    "VehicleState.position_m cumulative traveled path distance"
+                ),
+                "metadrive_actor_source": (
+                    "ego path-distance proxy plus recorded actor center longitudinal "
+                    "relative to ego"
+                ),
+                "esmini_source": (
+                    "recorded bounding-box center world X relative to initial ego on the "
+                    "straight road"
+                ),
+            },
             "matched_grid_sample_count_through_cutoff": sum(
                 1
                 for tick in set(metadrive_by_tick) & set(esmini_by_tick)
@@ -1099,7 +1120,8 @@ def build_comparison_summary(
             ),
             "longitudinal_mismatch": (
                 "esmini advances 12 m/s along the yawed lane-change path; Hermes independently "
-                "advances longitudinal position at 12 m/s while replaying lateral position"
+                "commands its road-longitudinal coordinate at 12 m/s while replaying lateral "
+                "position"
             ),
             "oriented_pose_mismatch": (
                 "esmini yaws the actor along the lane-change path, expanding its projected "
@@ -1107,7 +1129,7 @@ def build_comparison_summary(
             ),
             "metadrive_actor_first_interval": (
                 "Hermes result event 0 at 0.1 s retains actor step index 0, placing actor "
-                "longitudinal progress one 1.2 m interval behind the esmini time grid"
+                "route-axis proxy one 1.2 m interval behind the esmini time grid"
             ),
             "pre_brake_ego_mismatch": (
                 "esmini scripts ego at 20 m/s while MetaDrive runs the baseline speed policy "

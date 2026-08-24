@@ -358,8 +358,10 @@ def test_metadrive_parser_binds_identity_and_uses_recorded_geometry(tmp_path: Pa
     assert trace.backend == "metadrive"
     assert trace.identity["scenario_name"] == "adas_cut_in_near"
     assert trace.identity["seed"] == 7
-    assert trace.samples[1].ego_longitudinal_m == pytest.approx(31.335090637216567)
-    assert trace.samples[1].actor_longitudinal_m == pytest.approx(54.51500086607826)
+    assert trace.samples[1].ego_route_axis_proxy_m == pytest.approx(31.335090637216567)
+    assert trace.samples[1].actor_route_axis_proxy_m == pytest.approx(54.51500086607826)
+    assert not hasattr(trace.samples[1], "ego_longitudinal_m")
+    assert not hasattr(trace.samples[1], "actor_longitudinal_m")
     assert trace.samples[1].actor_lateral_m == pytest.approx(-1.2319396698633796)
     assert trace.samples[1].bumper_gap_m == pytest.approx(18.664974496973613)
     assert trace.samples[1].closing_speed_mps == pytest.approx(7.819297790550253)
@@ -573,7 +575,7 @@ def test_esmini_parser_projects_rotated_box_and_nonzero_local_center(tmp_path: P
     sample = tool.load_esmini_csv(csv_path).samples[1]
 
     # esmini CSV emits six decimal places, so the producer's quantization floor is 0.5e-6.
-    assert sample.actor_longitudinal_m == pytest.approx(55.18, abs=5e-7)
+    assert sample.actor_route_axis_proxy_m == pytest.approx(55.18, abs=5e-7)
     assert sample.actor_lateral_m == pytest.approx(-2.0, abs=5e-7)
     assert abs(sample.actor_lateral_m) > 1.852
     assert sample.in_path is True
@@ -725,6 +727,21 @@ def test_summary_and_svg_are_deterministic_and_bound_response_attribution(
     assert first["comparison"]["pre_cutoff_label"] == (
         "SCENARIO_BACKEND_AND_NON_BRAKING_CONTROLLER_DYNAMICS"
     )
+    assert first["comparison"]["route_axis_proxy"] == {
+        "claim_boundary": "straight-road comparison proxy; not exact cross-backend world position",
+        "metadrive_ego_source": "VehicleState.position_m cumulative traveled path distance",
+        "metadrive_actor_source": (
+            "ego path-distance proxy plus recorded actor center longitudinal relative to ego"
+        ),
+        "esmini_source": (
+            "recorded bounding-box center world X relative to initial ego on the straight road"
+        ),
+    }
+    delta_fields = first["comparison"]["maximum_deltas_through_cutoff"]
+    assert "ego_route_axis_proxy_m" in delta_fields
+    assert "actor_route_axis_proxy_m" in delta_fields
+    assert "ego_longitudinal_m" not in delta_fields
+    assert "actor_longitudinal_m" not in delta_fields
     assert set(first["semantic_findings"]) >= {
         "lateral_interpolation",
         "oriented_pose_mismatch",
@@ -817,6 +834,8 @@ def test_normalized_esmini_trace_bytes_are_canonical_and_path_free(tmp_path: Pat
     payload = json.loads(first.splitlines()[1])
     assert payload["time_s"] == pytest.approx(0.1)
     assert payload["actor_lateral_m"] == pytest.approx(-1.23194)
+    assert payload["actor_route_axis_proxy_m"] == pytest.approx(55.18)
+    assert "actor_longitudinal_m" not in payload
 
 
 def test_openscenario_translation_preserves_cut_in_contract() -> None:
