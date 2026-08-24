@@ -11,7 +11,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | complete for the FCW/AEB slice; 36 commits, 74 files, +12,581 / −154 |
-| **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 30 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
+| **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 33 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | 965 tests pass (18 drive real MetaDrive) · ruff clean · `hermes doctor` 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
@@ -406,7 +406,7 @@ renders envelopes; its read-only property is enforced by AST tests.
 | 6 | Review envelopes 1.0, `review-artifact`, `review-compare`, Streamlit workbench; reviewer-comprehension iteration; 756 tests | `feat/phase6-evidence-workbench` → `feat/phase6-reviewer-comprehension` @ `4eb8765` |
 | 7 | Evaluation-adequacy assessor, evaluation plans, provenance; 1,245 tests claimed | **codex worktree only** — `codex/phase7-…` @ `9d5c0ba`, 56 commits, **not merged** |
 | 8 | ADAS (FCW/AEB) + oracle + seeded defects + agent layer + regression flywheel; 965 tests | `feat/phase8-adas-lab` @ `e6e2c8c`, 36 commits from `4eb8765` |
-| 9 | Fleet simulation — **FLEET-005 spike built**: contracts, world tape, minimal DES, paired loop, decision record; 30 tests, clean-clone green | `feat/phase9-fleetlab` @ `00b2a48`; PRD stays local |
+| 9 | Fleet simulation — **FLEET-005 spike built**: contracts, world tape, minimal DES, paired loop, decision record; 33 tests incl. a hand-computed analytical fixture, clean-clone green | `feat/phase9-fleetlab` @ `00b2a48`; PRD stays local |
 
 Design decisions from early phases that still constrain everything: MetaDrive stays external and
 unmodified; every event hashes scenario/gate/component digests; hard invariants cannot be
@@ -602,13 +602,17 @@ on `feat/phase9-fleetlab` — preregistered `ExperimentSpec` (single variation a
 metric with an equivalence margin, guardrails, frozen seed set) and a `DecisionRecord` bound to
 spec/world-tape/seed-set digests; a materialized, hashed world tape (demand fixed across
 replications; per-request travel disturbances vary by seed, keyed to the request, never the
-chosen vehicle); the thinnest DES expressing FLEET-005 (nearest dispatch, depot bays); twelve
-invariants where a violation yields `INVALID_EXPERIMENT` with no partial outcome; a seeded
+chosen vehicle); the thinnest DES expressing FLEET-005 (nearest dispatch, depot bays); the PRD §17
+invariants that have referents in this model (8 of 12 — the three charging-related ones await
+the charging model; replay determinism is the `run_experiment` precheck), where any violation
+yields `INVALID_EXPERIMENT` with no partial outcome; a seeded
 double-assign dispatcher caught by the invariant that names it; bootstrap CI over paired
 replications; a non-compensatory recommendation (guardrail regression HOLDs an IMPROVED
-primary); `hermes fleet demo` (~0.5 s). Measured demo result: baseline healthy, +25% turnaround
+primary); an analytical fixture whose three-request world is computed entirely by hand and
+asserted exactly, plus a metamorphic service-delay case; `hermes fleet demo` (~0.5 s).
+Measured demo result: baseline healthy, +25% turnaround
 → REGRESSED, CI [+736, +919] s on wait p90, guardrail hit → HOLD. 30 tests, all simulator- and
-fixture-free; suite 761→791 in the worktree with zero new failures; **30/30 from a clean clone
+fixture-free; suite 761→794 in the worktree with zero new failures; **33/33 from a clean clone
 on core deps only, decision-record digest bit-identical across checkouts.** Everything else in
 the PRD (charging, FLEET-001..004/006, policy SDK, forecast seam, Studio, registry) remains
 unbuilt.
@@ -801,7 +805,8 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
    outcomes separate per regime (no post-hoc MIXED).
 3. **Spec-file authoring + `hermes fleet run <spec.yaml>`** so the demo stops being the only
    entry point; then the decision-record Comparison page on the workbench.
-4. Analytical fixtures beyond the conservation backbone (M/M/c depot check against closed form).
+4. More analytical fixtures: the hand-computed three-request world exists
+   (`test_fleet_analytical_fixture.py`); add an M/M/c depot check against closed form.
 5. Development-vs-evaluation seed separation and the leakage defects (ORACLE_LEAKAGE provider)
    when the forecast seam lands.
 6. The MetaDrive→FleetLab parameter bridge stays P1 and still needs §11.1 item 1's curve.
