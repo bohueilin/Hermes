@@ -240,7 +240,7 @@ def adas_brake_onset_margin(
     scenario: ScenarioDefinition,
     gate: GateConfig,
 ) -> Finding:
-    """Braking must begin while stopping is still achievable with the brakes available.
+    """Braking must begin within the calibrated required-deceleration margin.
 
     The criterion is the required deceleration at the first brake command, expressed against
     the scenario's braking authority - not a fixed time-to-collision threshold. Two reasons:
@@ -248,13 +248,13 @@ def adas_brake_onset_margin(
     * It is speed-independent. A TTC that leaves ample margin at 10 m/s leaves none at 30,
       so one fixed TTC threshold is either too lax at the top of the ODD or too strict at
       the bottom.
-    * It is physically meaningful rather than tuned. At a fraction of 1.0 the question is
-      "had the controller already waited past the point where its own brakes could stop it",
-      which is answerable from the trace without reference to what the controller intended.
+    * It preserves the pre-calibration 6.0 m/s^2 evaluation boundary as a fraction of the
+      measured 20 m/s MetaDrive peak. That is an explicit simulator-relative margin, not a
+      claim that the old unenforced value was the physical stopping limit.
 
-    Measured on the committed lead-brake scenario: a timely controller begins at roughly 50%
-    of authority, and one seeded to brake late begins at 108% - past the point of avoidance,
-    whether or not it happens to get away with it.
+    Measured on the committed lead-brake scenario: a timely controller begins around 23% of
+    the measured envelope, while the late-braking seed begins around 50%, beyond the calibrated
+    46% onset margin whether or not it happens to get away with it.
     """
     criteria = _criteria(gate)
     samples = _samples(events)

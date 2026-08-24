@@ -31,7 +31,7 @@ control:
   frequency_hz: 10
   horizon_steps: 60
   target_speed_mps: 20.0
-  max_braking_mps2: 6.0
+  max_braking_mps2: 12.982444763183452
 initial_state:
   speed_mps: 20.0
   lateral_offset_m: 0.0
@@ -282,7 +282,7 @@ def test_no_braking_in_a_threat_free_scenario_passes(adas_gate: GateConfig) -> N
 
 
 def test_braking_within_authority_passes_the_onset_criterion(adas_gate: GateConfig) -> None:
-    """Onset at 40 m closing 20 m/s needs 5.26 m/s^2, inside the 6.0 m/s^2 authority."""
+    """Onset needing 5.26 m/s^2 remains inside the calibrated 6.0 m/s^2 margin."""
     events = _events([(40.0, -20.0, 1.0, 20.0), (30.0, -20.0, 1.0, 20.0)])
 
     finding = _by_id(run_adas_p0_longitudinal_verifiers(events, _scenario(), adas_gate))[
@@ -293,13 +293,13 @@ def test_braking_within_authority_passes_the_onset_criterion(adas_gate: GateConf
     assert finding.measurement.value == pytest.approx(5.263157894736842)
 
 
-def test_braking_past_the_point_of_avoidance_fails_the_onset_criterion(
+def test_braking_past_the_calibrated_margin_fails_the_onset_criterion(
     adas_gate: GateConfig,
 ) -> None:
-    """Onset at 20 m closing 20 m/s needs 11.1 m/s^2 - nearly twice the authority.
+    """Onset at 20 m closing 20 m/s needs 11.1 m/s^2, beyond the 6.0 margin.
 
-    The controller waited until stopping was no longer achievable with the brakes it has.
-    Whether it then avoided contact is luck, not design, so the criterion fails regardless.
+    The measured peak is higher, but the calibrated evaluation deliberately preserves the
+    previous absolute discriminator instead of silently making a late-braking seed pass.
     """
     events = _events([(60.0, -20.0, 0.0, 20.0), (20.0, -20.0, 1.0, 20.0)])
 

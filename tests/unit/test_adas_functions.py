@@ -154,7 +154,10 @@ def test_fcw_counts_each_warning_episode_once() -> None:
 # --- automatic emergency braking -------------------------------------------------------
 
 
-def _aeb(config: AebConfig | None = None, authority: float = 6.0) -> AutomaticEmergencyBraking:
+def _aeb(
+    config: AebConfig | None = None,
+    authority: float = 12.982444763183452,
+) -> AutomaticEmergencyBraking:
     return AutomaticEmergencyBraking(config or AebConfig(), max_braking_mps2=authority)
 
 
@@ -167,8 +170,8 @@ def test_aeb_does_not_intervene_on_a_distant_lead() -> None:
 
 def test_aeb_stages_partial_before_emergency_as_required_deceleration_rises() -> None:
     """The staging property: authority fractions, not TTC thresholds."""
-    # Closing at 20 m/s with a 2 m standoff against 6 m/s^2 authority: staging boundaries
-    # sit at a_req = 2.4 (partial) and 4.2 (emergency), i.e. gaps of roughly 85 m and 50 m.
+    # Against the measured 20 m/s simulator envelope, calibrated fractions preserve the
+    # 2.4 (partial) and 4.2 (emergency) m/s^2 boundaries.
     none = _aeb().step(_observation(gap=200.0), control_period_s=CONTROL_PERIOD_S)[0]
     partial = _aeb().step(_observation(gap=60.0), control_period_s=CONTROL_PERIOD_S)[0]
     emergency = _aeb().step(_observation(gap=26.0), control_period_s=CONTROL_PERIOD_S)[0]
@@ -278,7 +281,7 @@ def test_aeb_counts_each_intervention_episode_once() -> None:
 def test_aeb_staging_scales_with_the_scenario_braking_authority() -> None:
     """A threshold expressed as a fraction of authority means the same at any limit."""
     weak = _aeb(authority=3.0).step(_observation(gap=60.0), control_period_s=CONTROL_PERIOD_S)
-    strong = _aeb(authority=12.0).step(_observation(gap=60.0), control_period_s=CONTROL_PERIOD_S)
+    strong = _aeb(authority=20.0).step(_observation(gap=60.0), control_period_s=CONTROL_PERIOD_S)
 
     assert weak[0] is not InterventionLevel.NO_INTERVENTION
     assert strong[0] is InterventionLevel.NO_INTERVENTION

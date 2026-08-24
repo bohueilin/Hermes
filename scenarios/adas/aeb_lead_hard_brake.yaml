@@ -12,6 +12,9 @@ control:
   frequency_hz: 10
   horizon_steps: 300
   target_speed_mps: 20.0
+  # Simulator-measured envelope: 20 m/s full-brake peak in
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
 initial_state:
   speed_mps: 20.0
   lateral_offset_m: 0.0

@@ -17,6 +17,9 @@ control:
   frequency_hz: 10
   horizon_steps: 300
   target_speed_mps: 20.0
+  # Simulator-measured envelope: 20 m/s full-brake peak in
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
 initial_state:
   speed_mps: 20.0
   lateral_offset_m: 0.0
@@ -26,10 +29,10 @@ road:
 challenge:
   # Geometry is set so the threat is real but avoidable. Measured on the baseline
   # controller: the actor first registers in-path at sequence 15, peak required deceleration
-  # is 2.77 m/s^2 at sequence 40 - 46% of the 6 m/s^2 braking authority - against the
-  # oracle's 30% threat threshold, and the run closes to a minimum gap of 3.5 m without
-  # contact. Comfortably above the threshold, and well below the 100% point past which
-  # avoidance is no longer possible.
+  # is 2.77 m/s^2 at sequence 40 - 21% of the measured simulator envelope - against the
+  # calibrated 13.9% threat fraction, and the run closes to a minimum gap of 3.5 m without
+  # contact. It remains comfortably above the preserved 1.8 m/s^2 absolute threshold and
+  # below the preserved 6.0 m/s^2 onset margin.
   kind: cut_in_near_field
   actor_control_mode: scripted_kinematic_replay
   behavior_realism_claim: false

@@ -152,12 +152,18 @@ class FcwConfig(HermesModel):
 class AebConfig(HermesModel):
     """Automatic-emergency-braking tunables.
 
-    Staging is expressed as fractions of the scenario's available braking authority so a
-    threshold means the same thing at any configured deceleration limit.
+    Staging is expressed as fractions of the scenario's measured simulator envelope so a
+    threshold means the same thing at any explicitly calibrated deceleration limit. The
+    defaults preserve the prior 2.4 and 4.2 m/s^2 absolute staging boundaries against the
+    measured 20 m/s peak in ``evidence/calibration/metadrive-brake-curve-0.4.3.json``.
     """
 
-    partial_authority_fraction: Annotated[FiniteFloat, Field(gt=0.0, le=1.0)] = 0.4
-    emergency_authority_fraction: Annotated[FiniteFloat, Field(gt=0.0, le=1.0)] = 0.7
+    partial_authority_fraction: Annotated[FiniteFloat, Field(gt=0.0, le=1.0)] = (
+        0.1848650268712171
+    )
+    emergency_authority_fraction: Annotated[FiniteFloat, Field(gt=0.0, le=1.0)] = (
+        0.3235137970246298
+    )
     partial_brake_command: Annotated[FiniteFloat, Field(gt=0.0, le=1.0)] = 0.5
     emergency_brake_command: Annotated[FiniteFloat, Field(gt=0.0, le=1.0)] = 1.0
     standoff_m: Annotated[FiniteFloat, Field(ge=0.0, le=20.0)] = 2.0

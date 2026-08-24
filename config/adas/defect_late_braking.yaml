@@ -6,5 +6,7 @@ functions:
   - fcw
   - aeb
 aeb:
-  partial_authority_fraction: 0.95
-  emergency_authority_fraction: 0.99
+  # Preserve the deliberately late 5.7/5.94 m/s^2 staging boundaries against the measured
+  # 20 m/s peak in evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  partial_authority_fraction: 0.43905443881914047
+  emergency_authority_fraction: 0.4575409415062622
