@@ -232,6 +232,11 @@ def _fault_challenge_event(
     input_phase: str | None = None,
     front_relative_speed_mps: float | None | object = _UNSET,
     result_actor_speed_mps: float | None | object = _UNSET,
+    raw_updates: dict[str, object] | None = None,
+    delivered_updates: dict[str, object] | None = None,
+    result_updates: dict[str, object] | None = None,
+    evidence_updates: dict[str, object] | None = None,
+    summary_updates: dict[str, object] | None = None,
 ):
     assert scenario.challenge is not None
     actor_speed = getattr(scenario.challenge, "actor_speed_mps", 0.0)
@@ -262,7 +267,7 @@ def _fault_challenge_event(
             "destination_reached": True,
         }
     )
-    raw = Observation(
+    base_raw = Observation(
         sequence=0,
         simulation_time_s=0.0,
         vehicle_state=state,
@@ -273,6 +278,8 @@ def _fault_challenge_event(
         challenge_actor_speed_mps=actor_speed,
         challenge_phase=phase,
     )
+    raw = base_raw.model_copy(update=raw_updates or {})
+    delivered = base_raw.model_copy(update=delivered_updates or {})
     result = Observation(
         sequence=1,
         simulation_time_s=0.1,
@@ -283,7 +290,7 @@ def _fault_challenge_event(
         challenge_actor_lateral_offset_m=0.0,
         challenge_actor_speed_mps=result_actor_speed_mps,
         challenge_phase=phase,
-    )
+    ).model_copy(update=result_updates or {})
     context = RunContextV2(
         scenario_digest="a" * 64,
         gate_config_digest="b" * 64,
@@ -312,12 +319,12 @@ def _fault_challenge_event(
         "lateral_offset_m": state.lateral_offset_m,
         "route_progress_pct": state.route_progress_pct,
         "observation_age_s": 0.0,
-        "front_distance_m": raw.front_distance_m,
-        "front_relative_speed_mps": raw.front_relative_speed_mps,
-        "challenge_actor_longitudinal_m": raw.challenge_actor_longitudinal_m,
-        "challenge_actor_lateral_offset_m": raw.challenge_actor_lateral_offset_m,
-        "challenge_actor_speed_mps": raw.challenge_actor_speed_mps,
-        "challenge_phase": raw.challenge_phase,
+        "front_distance_m": delivered.front_distance_m,
+        "front_relative_speed_mps": delivered.front_relative_speed_mps,
+        "challenge_actor_longitudinal_m": delivered.challenge_actor_longitudinal_m,
+        "challenge_actor_lateral_offset_m": delivered.challenge_actor_lateral_offset_m,
+        "challenge_actor_speed_mps": delivered.challenge_actor_speed_mps,
+        "challenge_phase": delivered.challenge_phase,
         "result_front_distance_m": result.front_distance_m,
         "result_front_relative_speed_mps": result.front_relative_speed_mps,
         "result_challenge_actor_longitudinal_m": result.challenge_actor_longitudinal_m,
@@ -327,6 +334,18 @@ def _fault_challenge_event(
         "result_challenge_actor_speed_mps": result.challenge_actor_speed_mps,
         "result_challenge_phase": result.challenge_phase,
     }
+    summary.update(summary_updates or {})
+    observation_evidence = {
+        "raw_observation": raw,
+        "delivered_observation": delivered,
+        "delivered_from_sequence": 0,
+        "delivered_from_time_s": 0.0,
+        "delivery_time_s": 0.0,
+        "applied_faults": (),
+        "speed_noise_delta_mps": 0.0,
+        "lateral_noise_delta_m": 0.0,
+    }
+    observation_evidence.update(evidence_updates or {})
     return create_trace_event_v2(
         sequence=0,
         simulation_time_s=0.1,
@@ -336,15 +355,8 @@ def _fault_challenge_event(
         permitted_action=action,
         executed_action=action,
         override_reasons=(),
-        observation_fault_evidence=ObservationFaultEvidence(
-            raw_observation=raw,
-            delivered_observation=raw,
-            delivered_from_sequence=0,
-            delivered_from_time_s=0.0,
-            delivery_time_s=0.0,
-            applied_faults=(),
-            speed_noise_delta_mps=0.0,
-            lateral_noise_delta_m=0.0,
+        observation_fault_evidence=ObservationFaultEvidence.model_validate(
+            observation_evidence
         ),
         control_fault_evidence=ControlFaultEvidence(
             candidate_time_s=0.0,
@@ -613,6 +625,20 @@ def test_stationary_challenge_trace_rejects_false_sequence_zero_evidence(
         verify_complete_trace((event,), scenario)
 
 
+@pytest.mark.parametrize(
+    "field_name",
+    ["challenge_actor_speed_mps", "result_challenge_actor_speed_mps"],
+)
+def test_stationary_challenge_trace_requires_exact_zero_actor_speed(
+    field_name: str,
+) -> None:
+    scenario = _stationary_scenario()
+    event = _challenge_event(scenario, summary_updates={field_name: 1e-7})
+
+    with pytest.raises(TraceIntegrityError, match="stationary actor speed"):
+        verify_complete_trace((event,), scenario)
+
+
 def test_adjacent_stationary_trace_rejects_false_front_overlap() -> None:
     scenario = _stationary_scenario(initial_lane_delta=1)
     event = _challenge_event(
@@ -639,6 +665,86 @@ def test_fault_stationary_trace_rejects_nonzero_initial_actor_speed() -> None:
     event = _fault_challenge_event(scenario, result_actor_speed_mps=0.01)
 
     with pytest.raises(TraceIntegrityError, match="fault challenge initial actor speed"):
+        verify_complete_trace((event,), scenario)
+
+
+@pytest.mark.parametrize("packet", ["raw", "delivered", "result"])
+def test_fault_stationary_trace_requires_exact_zero_actor_speed(packet: str) -> None:
+    scenario = _stationary_scenario(with_fault=True)
+    kwargs: dict[str, object] = {}
+    if packet == "raw":
+        kwargs["raw_updates"] = {"challenge_actor_speed_mps": 1e-7}
+    elif packet == "delivered":
+        kwargs["delivered_updates"] = {"challenge_actor_speed_mps": 1e-7}
+    else:
+        kwargs["result_updates"] = {"challenge_actor_speed_mps": 1e-7}
+    event = _fault_challenge_event(scenario, **kwargs)
+
+    with pytest.raises(TraceIntegrityError, match="stationary actor speed"):
+        verify_complete_trace((event,), scenario)
+
+
+@pytest.mark.parametrize(
+    ("raw_updates", "message"),
+    [
+        ({"challenge_actor_speed_mps": 1.0}, "raw stationary actor speed"),
+        ({"challenge_phase": "PRE_TRIGGER"}, "raw stationary actor phase"),
+        ({"front_distance_m": 11.0}, "raw initial front gap"),
+    ],
+)
+def test_fault_stationary_trace_binds_initial_raw_actor_to_scenario(
+    raw_updates: dict[str, object],
+    message: str,
+) -> None:
+    scenario = _stationary_scenario(with_fault=True)
+    event = _fault_challenge_event(scenario, raw_updates=raw_updates)
+
+    with pytest.raises(TraceIntegrityError, match=message):
+        verify_complete_trace((event,), scenario)
+
+
+def test_fault_adjacent_stationary_raw_actor_requires_paired_null_front_fields() -> None:
+    scenario = _stationary_scenario(initial_lane_delta=1, with_fault=True)
+    event = _fault_challenge_event(
+        scenario,
+        raw_updates={
+            "front_distance_m": scenario.challenge.initial_gap_m,
+            "front_relative_speed_mps": 0.0,
+        },
+    )
+
+    with pytest.raises(TraceIntegrityError, match="paired-null front fields"):
+        verify_complete_trace((event,), scenario)
+
+
+@pytest.mark.parametrize("field_name", ["challenge_actor", "unsummarized_position"])
+def test_fault_trace_binds_delivered_packet_to_declared_raw_source(
+    field_name: str,
+) -> None:
+    scenario = _stationary_scenario(with_fault=True)
+    if field_name == "challenge_actor":
+        delivered_updates: dict[str, object] = {
+            "challenge_actor_longitudinal_m": 99.0
+        }
+    else:
+        delivered_updates = {
+            "vehicle_state": VehicleState(
+                position_m=99.0,
+                speed_mps=0.0,
+                acceleration_mps2=0.0,
+                lateral_offset_m=0.0,
+                route_progress_pct=0.0,
+                collision_count=0,
+                offroad=False,
+                destination_reached=False,
+            )
+        }
+    event = _fault_challenge_event(
+        scenario,
+        delivered_updates=delivered_updates,
+    )
+
+    with pytest.raises(TraceIntegrityError, match="declared raw source"):
         verify_complete_trace((event,), scenario)
 
 

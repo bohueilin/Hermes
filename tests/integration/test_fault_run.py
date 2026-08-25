@@ -409,3 +409,60 @@ def test_initial_raw_observation_freshness_is_bound_by_trace_verification(
 
     assert result.verdict is Verdict.INVALID_EVIDENCE
     assert "fault raw observation must be fresh" in " ".join(result.errors)
+
+
+def test_rehashed_delivered_observation_must_match_its_declared_raw_source(
+    fake_artifact_factory: Callable[..., RunOutcome],
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    source = _fault_run(
+        fake_artifact_factory,
+        repository_root,
+        run_id="fault-delivered-source-binding",
+    )
+    tampered = tmp_path / "fault-delivered-source-tamper"
+    shutil.copytree(source.artifact_path, tampered)
+    events = [
+        json.loads(line)
+        for line in (tampered / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    events[1]["observation_fault_evidence"]["delivered_observation"][
+        "vehicle_state"
+    ]["position_m"] = 999.0
+    _rehash_events(tampered, events)
+
+    result = verify_artifact(tampered)
+
+    assert result.verdict is Verdict.INVALID_EVIDENCE
+    assert "fault delivered observation is not derived from declared raw source" in " ".join(
+        result.errors
+    )
+
+
+def test_rehashed_delivery_source_time_must_match_the_declared_raw_packet(
+    fake_artifact_factory: Callable[..., RunOutcome],
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    source = _fault_run(
+        fake_artifact_factory,
+        repository_root,
+        run_id="fault-delivered-source-time",
+    )
+    tampered = tmp_path / "fault-delivered-source-time-tamper"
+    shutil.copytree(source.artifact_path, tampered)
+    events = [
+        json.loads(line)
+        for line in (tampered / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    evidence = events[1]["observation_fault_evidence"]
+    evidence["delivered_from_time_s"] = 0.05
+    evidence["delivered_observation"]["observation_age_s"] = 0.05
+    events[1]["observation_summary"]["observation_age_s"] = 0.05
+    _rehash_events(tampered, events)
+
+    result = verify_artifact(tampered)
+
+    assert result.verdict is Verdict.INVALID_EVIDENCE
+    assert "fault observation source time disagrees" in " ".join(result.errors)

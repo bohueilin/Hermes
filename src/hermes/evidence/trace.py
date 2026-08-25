@@ -368,11 +368,11 @@ def _verify_observation_summary(
                 "challenge_actor_speed_mps",
                 "result_challenge_actor_speed_mps",
             ):
-                if not _geometry_agrees(_summary_number(event, field_name), 0.0):
+                if _summary_number(event, field_name) != 0.0:
                     if event.sequence == 0:
                         raise TraceIntegrityError(
                             "observation summary initial challenge actor speed contradicts "
-                            "the scenario at sequence 0"
+                            "stationary actor speed at sequence 0"
                         )
                     raise TraceIntegrityError(
                         f"observation summary {field_name} contradicts stationary actor "
@@ -559,11 +559,11 @@ def _verify_fault_challenge_evidence(
             "challenge_actor_speed_mps",
             "result_challenge_actor_speed_mps",
         ):
-            if not _geometry_agrees(_summary_number(event, field_name), 0.0):
+            if _summary_number(event, field_name) != 0.0:
                 if event.sequence == 0:
                     raise TraceIntegrityError(
-                        "fault challenge initial actor speed contradicts the scenario at "
-                        "sequence 0"
+                        "fault challenge initial actor speed contradicts stationary actor "
+                        "speed at sequence 0"
                     )
                 raise TraceIntegrityError(
                     f"fault challenge {field_name} contradicts stationary actor speed at "
@@ -618,6 +618,55 @@ def _verify_fault_challenge_evidence(
                     f"fault challenge {field_name} disagrees with the prior result at "
                     f"sequence {event.sequence}"
                 )
+
+
+def _verify_delivered_observation_source(
+    events: tuple[TraceEventLike, ...],
+    event: TraceEventV2,
+) -> None:
+    """Bind a delivered policy packet to its declared raw source and noise deltas."""
+    evidence = event.observation_fault_evidence
+    source_event = events[evidence.delivered_from_sequence]
+    if not isinstance(source_event, TraceEventV2):
+        raise TraceIntegrityError(
+            f"fault observation source has the wrong schema at sequence {event.sequence}"
+        )
+    source = source_event.observation_fault_evidence.raw_observation
+    if not math.isclose(
+        evidence.delivered_from_time_s,
+        source.simulation_time_s,
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        raise TraceIntegrityError(
+            f"fault observation source time disagrees at sequence {event.sequence}"
+        )
+    age = evidence.delivery_time_s - source.simulation_time_s
+    expected = source.model_copy(
+        update={
+            "sequence": event.sequence,
+            "simulation_time_s": evidence.delivery_time_s,
+            "observation_age_s": max(0.0, age),
+            "vehicle_state": source.vehicle_state.model_copy(
+                update={
+                    "speed_mps": max(
+                        0.0,
+                        source.vehicle_state.speed_mps
+                        + evidence.speed_noise_delta_mps,
+                    ),
+                    "lateral_offset_m": (
+                        source.vehicle_state.lateral_offset_m
+                        + evidence.lateral_noise_delta_m
+                    ),
+                }
+            ),
+        }
+    )
+    if evidence.delivered_observation != expected:
+        raise TraceIntegrityError(
+            "fault delivered observation is not derived from declared raw source at "
+            f"sequence {event.sequence}"
+        )
 
 
 def _verify_fault_event(
@@ -691,6 +740,34 @@ def _verify_fault_event(
             destination_reached=False,
         ):
             raise TraceIntegrityError("fault raw initial observation contradicts the scenario")
+        if scenario.challenge is not None and scenario.challenge.kind == "stationary_lead":
+            if raw.challenge_actor_speed_mps != 0.0:
+                raise TraceIntegrityError(
+                    "fault raw stationary actor speed contradicts the scenario at sequence 0"
+                )
+            if raw.challenge_phase != "PRESENT":
+                raise TraceIntegrityError(
+                    "fault raw stationary actor phase contradicts the scenario at sequence 0"
+                )
+            if scenario.challenge.initial_lane_delta == 0:
+                if (
+                    raw.front_distance_m is None
+                    or raw.front_relative_speed_mps is None
+                    or not _geometry_agrees(
+                        raw.front_distance_m,
+                        scenario.challenge.initial_gap_m,
+                    )
+                ):
+                    raise TraceIntegrityError(
+                        "fault raw initial front gap contradicts the stationary challenge"
+                    )
+            elif (
+                raw.front_distance_m is not None
+                or raw.front_relative_speed_mps is not None
+            ):
+                raise TraceIntegrityError(
+                    "fault raw adjacent stationary actor must have paired-null front fields"
+                )
     else:
         prior = events[index - 1]
         if not isinstance(prior, TraceEventV2) or raw != prior.result_observation:
@@ -764,6 +841,7 @@ def _verify_fault_event(
         )
     if scenario.challenge is not None:
         _verify_fault_challenge_evidence(events, index, scenario)
+    _verify_delivered_observation_source(events, event)
     _known_ordered_reasons(
         evidence.applied_faults,
         OBSERVATION_FAULT_REASONS,
