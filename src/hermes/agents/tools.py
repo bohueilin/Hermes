@@ -179,27 +179,67 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
     if error is not None:
         return error
     assert bundle is not None
+    from pydantic import ValidationError
+
+    from hermes.adas.interfaces import AdasControllerConfig
+    from hermes.domain.enums import IntegrityStatus
+    from hermes.domain.models import ExecutionContextV2
     from hermes.evidence.verification import verify_artifact
 
     verification = verify_artifact(bundle)
     manifest = _read_json(bundle, "manifest.json")
+    data: dict[str, Any] = {
+        "run_id": run_id,
+        "verdict": verification.verdict.value,
+        "integrity": verification.integrity.value,
+        "scenario_name": manifest.get("scenario_name"),
+        "policy_name": manifest.get("policy_name"),
+        "policy_config_digest": manifest.get("policy_config_digest"),
+        "seed": manifest.get("seed"),
+        "errors": list(verification.errors),
+    }
+    citations = [
+        _citation(run_id, bundle, "verdict.json", "/verdict", verification.verdict.value)
+    ]
+    if verification.integrity is IntegrityStatus.INTERNALLY_CONSISTENT:
+        execution_document = _read_json(bundle, "execution-context.json")
+        if execution_document.get("evidence_schema_version") == "2.0":
+            execution = ExecutionContextV2.model_validate_json(
+                (bundle / "execution-context.json").read_bytes()
+            )
+            if execution.policy.name == "adas-longitudinal" and execution.policy.version == "1.0":
+                aeb_config = execution.policy.config.get("aeb")
+                if isinstance(aeb_config, dict) and "stale_observation_s" in aeb_config:
+                    controller_config = {
+                        key: value
+                        for key, value in execution.policy.config.items()
+                        if key in AdasControllerConfig.model_fields
+                    }
+                    try:
+                        policy_config = AdasControllerConfig.model_validate_json(
+                            json.dumps(controller_config)
+                        )
+                    except ValidationError:
+                        # Integrity verification binds this config but intentionally does
+                        # not interpret controller tunables. An invalid bounded value is
+                        # therefore unavailable to the agent, never exposed as evidence.
+                        policy_config = None
+                    if policy_config is not None:
+                        threshold = policy_config.aeb.stale_observation_s
+                        data["aeb_stale_observation_s"] = threshold
+                        citations.append(
+                            _citation(
+                                run_id,
+                                bundle,
+                                "execution-context.json",
+                                "/policy/config/aeb/stale_observation_s",
+                                threshold,
+                            )
+                        )
     return ok(
         tool,
-        {
-            "run_id": run_id,
-            "verdict": verification.verdict.value,
-            "integrity": verification.integrity.value,
-            "scenario_name": manifest.get("scenario_name"),
-            "policy_name": manifest.get("policy_name"),
-            "policy_config_digest": manifest.get("policy_config_digest"),
-            "seed": manifest.get("seed"),
-            "errors": list(verification.errors),
-        },
-        (
-            _citation(
-                run_id, bundle, "verdict.json", "/verdict", verification.verdict.value
-            ),
-        ),
+        data,
+        tuple(citations),
     )
 
 
@@ -239,12 +279,38 @@ def get_metrics(context: ToolContext, *, run_id: str) -> ToolResult:
         return error
     assert bundle is not None
     metrics = _read_json(bundle, "metrics.json")
-    citations = tuple(
+    citations = [
         _citation(run_id, bundle, "metrics.json", f"/{key}", value)
         for key, value in sorted(metrics.items())
         if isinstance(value, (int, float, str)) and not isinstance(value, bool)
-    )
-    return ok(tool, {"metrics": metrics}, citations)
+    ]
+    maximum_age = metrics.get("max_observation_age_s")
+    if isinstance(maximum_age, dict):
+        value = maximum_age.get("value")
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            citations.append(
+                _citation(
+                    run_id,
+                    bundle,
+                    "metrics.json",
+                    "/max_observation_age_s/value",
+                    value,
+                )
+            )
+    fault_counts = metrics.get("fault_application_counts")
+    if isinstance(fault_counts, dict):
+        for reason, value in sorted(fault_counts.items()):
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                citations.append(
+                    _citation(
+                        run_id,
+                        bundle,
+                        "metrics.json",
+                        f"/fault_application_counts/{reason}",
+                        value,
+                    )
+                )
+    return ok(tool, {"metrics": metrics}, tuple(citations))
 
 
 def get_events(

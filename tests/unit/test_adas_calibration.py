@@ -162,7 +162,7 @@ def test_seeded_matrix_includes_the_observation_delay_environment_failure(
         "scenarios/adas/aeb_stationary_lead_observation_delay.yaml"
     )
     assert delayed.expected_failing_finding == "adas.aeb.threat_response"
-    assert delayed.expected_triage_category == "MISSED_INTERVENTION"
+    assert delayed.expected_triage_category == "STALE_OBSERVATION"
 
 
 def test_wp1_preserves_existing_scenario_controller_and_gate_digests(

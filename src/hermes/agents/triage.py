@@ -51,6 +51,121 @@ _FINDING_TO_CATEGORY: dict[str, FailureCategory] = {
     "comfort.jerk": FailureCategory.COMFORT_VIOLATION,
 }
 
+_STALE_OBSERVATION_FAULT_REASONS = frozenset(
+    {
+        "OBSERVATION_DELAY",
+        "OBSERVATION_FROZEN",
+        "OBSERVATION_DROPOUT_HOLD_LAST",
+    }
+)
+
+
+def _is_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _has_causal_stale_observation(evidence: dict[str, object]) -> bool:
+    """Return whether verified evidence proves a stale-observation failure chain."""
+    failed = evidence.get("failed_findings")
+    if not isinstance(failed, (list, tuple)) or not any(
+        str(finding_id).startswith("adas.") for finding_id in failed
+    ):
+        return False
+    if evidence.get("integrity") != "INTERNALLY_CONSISTENT":
+        return False
+    maximum_age = evidence.get("max_observation_age_s")
+    threshold = evidence.get("aeb_stale_observation_s")
+    if not _is_number(maximum_age) or not _is_number(threshold):
+        return False
+    if float(maximum_age) <= float(threshold):
+        return False
+    counts = evidence.get("fault_application_counts")
+    if not isinstance(counts, dict):
+        return False
+    return any(
+        _is_number(counts.get(reason)) and float(counts[reason]) > 0.0
+        for reason in _STALE_OBSERVATION_FAULT_REASONS
+    )
+
+
+def _read_triage_evidence(
+    context: ToolContext,
+    run_id: str,
+) -> tuple[dict[str, object], tuple[Citation, ...], bool]:
+    findings = get_findings(context, run_id=run_id)
+    metrics = get_metrics(context, run_id=run_id)
+    identity = query_run(context, run_id=run_id)
+
+    items = findings.data.get("findings", []) if findings.ok else []
+    assert isinstance(items, list)
+    failed = [item["finding_id"] for item in items if item["status"] == "FAIL"]
+    failed_adas_locators = tuple(
+        f"/findings/{index}/status"
+        for index, item in enumerate(items)
+        if item["status"] == "FAIL" and str(item["finding_id"]).startswith("adas.")
+    )
+
+    metrics_document = metrics.data.get("metrics", {}) if metrics.ok else {}
+    assert isinstance(metrics_document, dict)
+    maximum_age_metric = metrics_document.get("max_observation_age_s")
+    maximum_age: object = None
+    if (
+        isinstance(maximum_age_metric, dict)
+        and maximum_age_metric.get("availability") == "AVAILABLE"
+    ):
+        maximum_age = maximum_age_metric.get("value")
+    fault_counts = metrics_document.get("fault_application_counts", {})
+    if not isinstance(fault_counts, dict):
+        fault_counts = {}
+
+    evidence: dict[str, object] = {
+        "failed_findings": failed,
+        "failed_adas_finding_locators": failed_adas_locators,
+        "verdict": identity.data.get("verdict") if identity.ok else None,
+        "integrity": identity.data.get("integrity") if identity.ok else None,
+        "max_observation_age_s": maximum_age,
+        "fault_application_counts": fault_counts,
+        "aeb_stale_observation_s": (
+            identity.data.get("aeb_stale_observation_s") if identity.ok else None
+        ),
+    }
+    citations = (*findings.citations, *metrics.citations, *identity.citations)
+    return evidence, citations, findings.ok
+
+
+def _classify_evidence(
+    evidence: dict[str, object],
+    *,
+    findings_ok: bool,
+) -> tuple[FailureCategory, tuple[str, ...]]:
+    if not findings_ok:
+        return FailureCategory.UNKNOWN, ()
+    failed = evidence.get("failed_findings", ())
+    assert isinstance(failed, (list, tuple))
+    if _has_causal_stale_observation(evidence):
+        supporting = tuple(
+            sorted(
+                str(finding_id)
+                for finding_id in failed
+                if str(finding_id).startswith("adas.")
+            )
+        )
+        return FailureCategory.STALE_OBSERVATION, supporting
+
+    failed_by_category: dict[FailureCategory, list[str]] = {}
+    for raw_finding_id in failed:
+        finding_id = str(raw_finding_id)
+        category = _FINDING_TO_CATEGORY.get(finding_id)
+        if category is not None:
+            failed_by_category.setdefault(category, []).append(finding_id)
+
+    for category in _PRECEDENCE:
+        if category in failed_by_category:
+            return category, tuple(sorted(failed_by_category[category]))
+    if not failed:
+        return FailureCategory.NO_FAILURE, ()
+    return FailureCategory.UNKNOWN, ()
+
 
 def classify_failure(context: ToolContext, run_id: str) -> tuple[FailureCategory, tuple[str, ...]]:
     """Assign the authoritative failure category for a run.
@@ -59,29 +174,8 @@ def classify_failure(context: ToolContext, run_id: str) -> tuple[FailureCategory
     run that failed in a way no predicate matches - it is a signal that the taxonomy needs
     extending, so it must never be used as a catch-all for "probably fine".
     """
-    findings = get_findings(context, run_id=run_id)
-    if not findings.ok:
-        return FailureCategory.UNKNOWN, ()
-    items = findings.data.get("findings", [])
-    assert isinstance(items, list)
-
-    failed_by_category: dict[FailureCategory, list[str]] = {}
-    any_failure = False
-    for item in items:
-        if item["status"] != "FAIL":
-            continue
-        any_failure = True
-        category = _FINDING_TO_CATEGORY.get(item["finding_id"])
-        if category is None:
-            continue
-        failed_by_category.setdefault(category, []).append(item["finding_id"])
-
-    for category in _PRECEDENCE:
-        if category in failed_by_category:
-            return category, tuple(sorted(failed_by_category[category]))
-    if not any_failure:
-        return FailureCategory.NO_FAILURE, ()
-    return FailureCategory.UNKNOWN, ()
+    evidence, _citations, findings_ok = _read_triage_evidence(context, run_id)
+    return _classify_evidence(evidence, findings_ok=findings_ok)
 
 
 @runtime_checkable
@@ -131,6 +225,18 @@ class ScriptedAgent:
                 FailureCategory.NO_FAILURE,
                 "No verifier finding is failing, so no failure is proposed.",
             )
+        if _has_causal_stale_observation(evidence):
+            supporting = sorted(
+                str(finding_id)
+                for finding_id in failed
+                if str(finding_id).startswith("adas.")
+            )
+            return (
+                FailureCategory.STALE_OBSERVATION,
+                f"{', '.join(supporting)} is failing and verified observation-fault "
+                "evidence exceeds the stored AEB staleness threshold, which under the "
+                "upstream-wins precedence rule indicates STALE_OBSERVATION.",
+            )
         for category in _PRECEDENCE:
             supporting = [
                 finding_id
@@ -162,30 +268,49 @@ def triage_run(
     than substituted for it.
     """
     runtime = runtime or ScriptedAgent()
-    deterministic, supporting = classify_failure(context, run_id)
-
-    findings = get_findings(context, run_id=run_id)
-    metrics = get_metrics(context, run_id=run_id)
-    identity = query_run(context, run_id=run_id)
-    items = findings.data.get("findings", []) if findings.ok else []
-    assert isinstance(items, list)
-    failed = [item["finding_id"] for item in items if item["status"] == "FAIL"]
-
-    citations = (*identity.citations, *findings.citations, *metrics.citations)
-    evidence: dict[str, object] = {
-        "failed_findings": failed,
-        "verdict": identity.data.get("verdict") if identity.ok else None,
-        "integrity": identity.data.get("integrity") if identity.ok else None,
-    }
+    evidence, citations, findings_ok = _read_triage_evidence(context, run_id)
+    deterministic, supporting = _classify_evidence(
+        evidence, findings_ok=findings_ok
+    )
     proposed, rationale = runtime.propose_triage(
         run_id=run_id, evidence=evidence, citations=citations
     )
 
-    supporting_citations = tuple(
-        citation
-        for citation in citations
-        if citation.artifact_file in {"findings.json", "verdict.json"}
-    )
+    if proposed is FailureCategory.STALE_OBSERVATION:
+        adas_finding_locators = evidence.get("failed_adas_finding_locators", ())
+        assert isinstance(adas_finding_locators, (list, tuple))
+        fault_counts = evidence.get("fault_application_counts", {})
+        assert isinstance(fault_counts, dict)
+        positive_fault_locators = {
+            f"/fault_application_counts/{reason}"
+            for reason in _STALE_OBSERVATION_FAULT_REASONS
+            if _is_number(fault_counts.get(reason)) and float(fault_counts[reason]) > 0.0
+        }
+        supporting_citations = tuple(
+            citation
+            for citation in citations
+            if (
+                citation.artifact_file == "findings.json"
+                and citation.locator in adas_finding_locators
+            )
+            or (
+                citation.artifact_file == "metrics.json"
+                and (
+                    citation.locator == "/max_observation_age_s/value"
+                    or citation.locator in positive_fault_locators
+                )
+            )
+            or (
+                citation.artifact_file == "execution-context.json"
+                and citation.locator == "/policy/config/aeb/stale_observation_s"
+            )
+        )
+    else:
+        supporting_citations = tuple(
+            citation
+            for citation in citations
+            if citation.artifact_file in {"findings.json", "verdict.json"}
+        )
     return TriageProposal(
         run_id=run_id,
         category=proposed,
@@ -195,6 +320,10 @@ def triage_run(
             if supporting
             else ""
         ),
-        citations=supporting_citations[:12],
+        citations=(
+            supporting_citations
+            if proposed is FailureCategory.STALE_OBSERVATION
+            else supporting_citations[:12]
+        ),
         runtime=runtime.name,
     )

@@ -67,12 +67,11 @@ defects:
     expected_failing_finding: adas.aeb.no_false_intervention
     expected_triage_category: OVER_INTERVENTION
 
-  # Environment-path seed: the policy is the unchanged baseline. The current deterministic
-  # triage category is intentionally MISSED_INTERVENTION; stored policy configuration does
-  # not yet let triage prove the controller's stale-observation threshold.
+  # Environment-path seed: the policy is the unchanged baseline. Verified metrics, fault
+  # coverage, and the stored policy threshold prove the upstream stale-observation cause.
   - defect_id: stationary_observation_delay
     description: Delays a stopped in-lane actor observation until the baseline misses AEB.
     policy_config: config/adas/baseline.yaml
     scenario: scenarios/adas/aeb_stationary_lead_observation_delay.yaml
     expected_failing_finding: adas.aeb.threat_response
-    expected_triage_category: MISSED_INTERVENTION
+    expected_triage_category: STALE_OBSERVATION

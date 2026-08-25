@@ -26,6 +26,7 @@ from hermes.agents.approval import (
 from hermes.agents.contracts import (
     TOOL_CATALOG,
     BudgetLedger,
+    Citation,
     FailureCategory,
     ToolErrorCode,
     ToolPermission,
@@ -349,6 +350,238 @@ def test_triage_ignores_not_available_findings_when_a_real_failure_is_present(
 
     assert proposal.deterministic_category is FailureCategory.OVER_INTERVENTION
     assert proposal.category is FailureCategory.OVER_INTERVENTION
+
+
+def _stored_citation(
+    artifact_file: str,
+    locator: str,
+    quoted_value: object,
+) -> Citation:
+    return Citation(
+        run_id="stale-probe",
+        artifact_file=artifact_file,
+        locator=locator,
+        quoted_value=quoted_value,
+        bundle_digest="a" * 64,
+    )
+
+
+def _stub_stale_triage_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    failed_findings: tuple[str, ...],
+    max_observation_age_s: float,
+    fault_application_counts: dict[str, int],
+    stale_observation_s: float | None,
+    integrity: str = "INTERNALLY_CONSISTENT",
+) -> None:
+    finding_items = [
+        {"finding_id": finding_id, "status": "FAIL"}
+        for finding_id in failed_findings
+    ]
+    finding_citations = tuple(
+        _stored_citation("findings.json", f"/findings/{index}/status", "FAIL")
+        for index in range(len(finding_items))
+    )
+    metric_citations = (
+        _stored_citation(
+            "metrics.json",
+            "/max_observation_age_s/value",
+            max_observation_age_s,
+        ),
+        *(
+            _stored_citation(
+                "metrics.json",
+                f"/fault_application_counts/{reason}",
+                count,
+            )
+            for reason, count in sorted(fault_application_counts.items())
+        ),
+    )
+    identity_data: dict[str, object] = {
+        "verdict": "HOLD",
+        "integrity": integrity,
+    }
+    identity_citations: tuple[Citation, ...] = ()
+    if stale_observation_s is not None:
+        identity_data["aeb_stale_observation_s"] = stale_observation_s
+        identity_citations = (
+            _stored_citation(
+                "execution-context.json",
+                "/policy/config/aeb/stale_observation_s",
+                stale_observation_s,
+            ),
+        )
+    monkeypatch.setattr(
+        triage_module,
+        "get_findings",
+        lambda *_args, **_kwargs: ok(
+            "get_findings",
+            {"findings": finding_items},
+            finding_citations,
+        ),
+    )
+    monkeypatch.setattr(
+        triage_module,
+        "get_metrics",
+        lambda *_args, **_kwargs: ok(
+            "get_metrics",
+            {
+                "metrics": {
+                    "max_observation_age_s": {
+                        "availability": "AVAILABLE",
+                        "value": max_observation_age_s,
+                        "unit": "s",
+                        "reason": None,
+                    },
+                    "fault_application_counts": fault_application_counts,
+                }
+            },
+            metric_citations,
+        ),
+    )
+    monkeypatch.setattr(
+        triage_module,
+        "query_run",
+        lambda *_args, **_kwargs: ok(
+            "query_run",
+            identity_data,
+            identity_citations,
+        ),
+    )
+
+
+def test_stale_observation_precedes_the_downstream_adas_failure_with_citations(
+    context: ToolContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Removing the stale predicate must relabel this as MISSED_INTERVENTION."""
+    _stub_stale_triage_evidence(
+        monkeypatch,
+        failed_findings=("adas.aeb.threat_response", "comfort.jerk"),
+        max_observation_age_s=0.6,
+        fault_application_counts={
+            "OBSERVATION_DELAY": 4,
+            "OBSERVATION_DROPOUT_HOLD_LAST": 2,
+            "OBSERVATION_FROZEN": 0,
+            "OBSERVATION_NOISE": 9,
+        },
+        stale_observation_s=0.5,
+    )
+
+    proposal = triage_run(context, "stale-probe")
+
+    assert proposal.deterministic_category is FailureCategory.STALE_OBSERVATION
+    assert proposal.category is FailureCategory.STALE_OBSERVATION
+    assert proposal.agrees_with_deterministic_classifier is True
+    cited = {(citation.artifact_file, citation.locator) for citation in proposal.citations}
+    assert ("findings.json", "/findings/0/status") in cited
+    assert ("findings.json", "/findings/1/status") not in cited
+    assert ("metrics.json", "/max_observation_age_s/value") in cited
+    assert ("metrics.json", "/fault_application_counts/OBSERVATION_DELAY") in cited
+    assert (
+        "metrics.json",
+        "/fault_application_counts/OBSERVATION_DROPOUT_HOLD_LAST",
+    ) in cited
+    assert ("metrics.json", "/fault_application_counts/OBSERVATION_FROZEN") not in cited
+    assert ("metrics.json", "/fault_application_counts/OBSERVATION_NOISE") not in cited
+    assert (
+        "execution-context.json",
+        "/policy/config/aeb/stale_observation_s",
+    ) in cited
+
+
+@pytest.mark.parametrize(
+    (
+        "failed_findings",
+        "max_age_s",
+        "fault_counts",
+        "threshold_s",
+        "integrity",
+        "expected",
+    ),
+    [
+        (
+            (),
+            0.6,
+            {"OBSERVATION_DELAY": 4},
+            0.5,
+            "INTERNALLY_CONSISTENT",
+            FailureCategory.NO_FAILURE,
+        ),
+        (
+            ("adas.aeb.threat_response",),
+            0.5,
+            {"OBSERVATION_DELAY": 4},
+            0.5,
+            "INTERNALLY_CONSISTENT",
+            FailureCategory.MISSED_INTERVENTION,
+        ),
+        (
+            ("adas.aeb.threat_response",),
+            0.6,
+            {"OBSERVATION_NOISE": 4},
+            0.5,
+            "INTERNALLY_CONSISTENT",
+            FailureCategory.MISSED_INTERVENTION,
+        ),
+        (
+            ("comfort.acceleration",),
+            0.6,
+            {"OBSERVATION_DELAY": 4},
+            0.5,
+            "INTERNALLY_CONSISTENT",
+            FailureCategory.COMFORT_VIOLATION,
+        ),
+        (
+            ("adas.aeb.threat_response",),
+            0.6,
+            {"OBSERVATION_DELAY": 4},
+            None,
+            "INTERNALLY_CONSISTENT",
+            FailureCategory.MISSED_INTERVENTION,
+        ),
+        (
+            ("adas.aeb.threat_response",),
+            0.6,
+            {"OBSERVATION_DELAY": 4},
+            0.5,
+            "INVALID",
+            FailureCategory.MISSED_INTERVENTION,
+        ),
+    ],
+    ids=(
+        "no-failing-adas",
+        "not-stale",
+        "noise-only",
+        "non-adas-failure",
+        "non-adas-policy",
+        "unverified-evidence",
+    ),
+)
+def test_stale_observation_classification_requires_every_causal_edge(
+    context: ToolContext,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_findings: tuple[str, ...],
+    max_age_s: float,
+    fault_counts: dict[str, int],
+    threshold_s: float | None,
+    integrity: str,
+    expected: FailureCategory,
+) -> None:
+    _stub_stale_triage_evidence(
+        monkeypatch,
+        failed_findings=failed_findings,
+        max_observation_age_s=max_age_s,
+        fault_application_counts=fault_counts,
+        stale_observation_s=threshold_s,
+        integrity=integrity,
+    )
+
+    proposal = triage_run(context, "stale-probe")
+
+    assert proposal.deterministic_category is expected
+    assert proposal.category is expected
 
 
 def test_an_agent_proposal_never_replaces_the_deterministic_label(

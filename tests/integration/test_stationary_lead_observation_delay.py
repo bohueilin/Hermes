@@ -9,6 +9,8 @@ import pytest
 
 from hermes.domain.enums import FindingStatus, IntegrityStatus
 from hermes.domain.models import HazardConfig
+from hermes.evidence.artifacts import bundle_digest, config_digest
+from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
 from hermes.gates.release import VerifierProfile, select_verifier_profile
 from hermes.scenarios.loader import load_scenario, resolved_scenario_yaml
 
@@ -60,6 +62,57 @@ def _events(bundle: Path) -> list[dict]:
     ]
 
 
+def _write_canonical(path: Path, payload: object) -> None:
+    path.write_bytes(canonical_json_bytes(payload) + b"\n")
+
+
+def _refresh_envelope(bundle: Path) -> None:
+    manifest_path = bundle / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for filename in manifest["file_digests"]:
+        manifest["file_digests"][filename] = sha256_hex((bundle / filename).read_bytes())
+    _write_canonical(manifest_path, manifest)
+    payloads = {
+        path.name: path.read_bytes()
+        for path in bundle.iterdir()
+        if path.name != "bundle.sha256"
+    }
+    (bundle / "bundle.sha256").write_text(
+        bundle_digest(payloads) + "\n", encoding="ascii"
+    )
+
+
+def _rewrite_policy_stale_threshold(bundle: Path, threshold_s: float) -> None:
+    context_path = bundle / "execution-context.json"
+    context = json.loads(context_path.read_text(encoding="utf-8"))
+    context["policy"]["config"]["aeb"]["stale_observation_s"] = threshold_s
+    policy_digest = config_digest(context["policy"]["config"])
+    context["policy"]["config_digest"] = policy_digest
+    context["run_context"]["policy_config_digest"] = policy_digest
+    _write_canonical(context_path, context)
+
+    events = _events(bundle)
+    previous = "0" * 64
+    for event in events:
+        event["run_context"]["policy_config_digest"] = policy_digest
+        event["previous_hash"] = previous
+        material = dict(event)
+        material.pop("current_hash", None)
+        event["current_hash"] = sha256_hex(canonical_json_bytes(material))
+        previous = event["current_hash"]
+    (bundle / "events.jsonl").write_bytes(
+        b"".join(canonical_json_bytes(event) + b"\n" for event in events)
+    )
+    (bundle / "trace.sha256").write_text(previous + "\n", encoding="ascii")
+
+    manifest_path = bundle / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["policy_config_digest"] = policy_digest
+    manifest["trace_digest"] = previous
+    _write_canonical(manifest_path, manifest)
+    _refresh_envelope(bundle)
+
+
 def _run_real_adas(
     repository_root: Path,
     artifact_root: Path,
@@ -88,6 +141,30 @@ def _timely_control_path(repository_root: Path, tmp_path: Path) -> Path:
     path = tmp_path / "stationary-lead-timely-control.yaml"
     path.write_text(resolved_scenario_yaml(control), encoding="utf-8")
     return path
+
+
+def test_non_adas_schema_two_run_does_not_expose_an_adas_threshold(
+    repository_root: Path,
+) -> None:
+    from hermes.agents import ToolContext
+    from hermes.agents.tools import query_run
+
+    result = query_run(
+        ToolContext(
+            repository_root=repository_root,
+            artifact_root=repository_root / "artifacts",
+        ),
+        run_id="handoff-p4-fault",
+    )
+
+    assert result.ok
+    assert result.data["integrity"] == "INTERNALLY_CONSISTENT"
+    assert result.data["policy_name"] == "baseline"
+    assert "aeb_stale_observation_s" not in result.data
+    assert all(
+        citation.artifact_file != "execution-context.json"
+        for citation in result.citations
+    )
 
 
 @pytest.mark.metadrive
@@ -183,6 +260,8 @@ def test_delayed_source_provenance_offline_replay_and_review_tracks(
 
     from hermes.adapters.metadrive import MetaDriveAdapter
     from hermes.adas.policy import AdasLongitudinalPolicy
+    from hermes.agents import ToolContext
+    from hermes.agents.tools import query_run
     from hermes.evidence.verification import verify_artifact
     from hermes.review.facade import review_artifact
 
@@ -193,12 +272,24 @@ def test_delayed_source_provenance_offline_replay_and_review_tracks(
 
     replay = verify_artifact(bundle)
     envelope = review_artifact(artifact_root, "stationary-delay-provenance")
+    identity = query_run(
+        ToolContext(repository_root=repository_root, artifact_root=artifact_root),
+        run_id="stationary-delay-provenance",
+    )
     stored_verdict = json.loads((bundle / "verdict.json").read_text(encoding="utf-8"))
     assert replay.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
     assert replay.errors == ()
     assert replay.verdict.value == stored_verdict["verdict"]
     assert replay.supporting_finding_ids == tuple(
         stored_verdict["supporting_finding_ids"]
+    )
+    assert identity.data["aeb_stale_observation_s"] == 0.5
+    assert "policy_config" not in identity.data
+    assert any(
+        citation.artifact_file == "execution-context.json"
+        and citation.locator == "/policy/config/aeb/stale_observation_s"
+        and citation.quoted_value == 0.5
+        for citation in identity.citations
     )
     assert envelope.evidence_sufficiency.profile_name == "adas_p0_longitudinal_fault"
     tracks = {track.track_id: track for track in envelope.timeline.tracks}
@@ -216,6 +307,42 @@ def test_delayed_source_provenance_offline_replay_and_review_tracks(
     assert (
         tracks["observation_fault_reasons"].points[6].string_list_value.values
         == ("OBSERVATION_DELAY",)
+    )
+
+
+@pytest.mark.metadrive
+def test_query_run_omits_a_schema_two_adas_threshold_that_is_out_of_bounds(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    _requires_metadrive(repository_root)
+    artifact_root = tmp_path / "invalid-threshold-artifacts"
+    artifact_root.mkdir()
+    bundle = _run_real_adas(
+        repository_root,
+        artifact_root,
+        "invalid-stored-threshold",
+        repository_root / SCENARIO,
+    )
+    _rewrite_policy_stale_threshold(bundle, 6.0)
+
+    from hermes.agents import ToolContext
+    from hermes.agents.tools import query_run
+    from hermes.evidence.verification import verify_artifact
+
+    verification = verify_artifact(bundle)
+    assert verification.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
+
+    result = query_run(
+        ToolContext(repository_root=repository_root, artifact_root=artifact_root),
+        run_id="invalid-stored-threshold",
+    )
+
+    assert result.ok
+    assert "aeb_stale_observation_s" not in result.data
+    assert all(
+        citation.artifact_file != "execution-context.json"
+        for citation in result.citations
     )
 
 

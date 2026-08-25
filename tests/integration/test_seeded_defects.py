@@ -20,6 +20,7 @@ import pytest
 
 from hermes.adas.seeded_defects import load_seeded_defects
 from hermes.agents import ToolContext, triage_run
+from hermes.agents.citations import all_valid, check_citations
 from hermes.domain.enums import FindingStatus, Verdict
 
 pytestmark = pytest.mark.metadrive
@@ -161,6 +162,25 @@ def test_triage_proposes_the_correct_category_for_every_seeded_defect(
             f"{proposal.deterministic_category.value}"
         )
         assert proposal.citations, f"{defect.defect_id}: proposal carries no citations"
+        if defect.defect_id == "stationary_observation_delay":
+            cited = {
+                (citation.artifact_file, citation.locator)
+                for citation in proposal.citations
+            }
+            assert any(
+                artifact_file == "findings.json"
+                for artifact_file, _locator in cited
+            )
+            assert ("metrics.json", "/max_observation_age_s/value") in cited
+            assert (
+                "metrics.json",
+                "/fault_application_counts/OBSERVATION_DELAY",
+            ) in cited
+            assert (
+                "execution-context.json",
+                "/policy/config/aeb/stale_observation_s",
+            ) in cited
+            assert all_valid(check_citations(proposal.citations, artifact_root))
         if proposal.category.value == defect.expected_triage_category:
             correct += 1
 
