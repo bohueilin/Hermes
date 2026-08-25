@@ -895,7 +895,6 @@ separate "Hermes Evidence Lab" artifact is the portfolio page, not a status docu
 | `HERMES_PHASE7_ADAS_AGENTIC_WORKFLOW_PRD.md` | Phase 8 PRD — local, gitignored; §0-A normative |
 | `HERMES_PHASE9_FLEET_SIMULATION_PRD.md` | Phase 9 PRD — local, gitignored |
 | `sandbox/mujoco/{NOTES,SIMULATION_DESIGN_PACKAGE}.md` | MuJoCo sandbox — local, gitignored, NOT EVIDENCE |
-| `NVIDIA_CONVERSATION_BRIEF.md` | Personal, gitignored |
 
 **Historical (Phase 5–6 era; superseded as entry points, kept for the record):**
 `CURRENT_STATE_HANDOFF.md`, `CODEX_HANDOFF.md`, `PROJECT_BRIEF.md`, `PHASE6_*.md`, `AGENTS.md`,
