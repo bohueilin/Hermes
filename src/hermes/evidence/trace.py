@@ -16,6 +16,7 @@ from hermes.domain.models import (
     Action,
     AdasDecisionEvidence,
     ControlFaultEvidence,
+    Observation,
     ObservationFaultEvidence,
     RunContext,
     RunContextV2,
@@ -27,11 +28,20 @@ from hermes.domain.models import (
     VehicleState,
 )
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
-from hermes.faults.deterministic import ACTION_FAULT_REASONS, OBSERVATION_FAULT_REASONS
-from hermes.shields.deterministic import SUPPORTED_OVERRIDE_REASONS
+from hermes.faults.deterministic import (
+    ACTION_FAULT_REASONS,
+    OBSERVATION_FAULT_REASONS,
+    replay_control_fault_action,
+)
+from hermes.shields.config import ShieldConfig, shield_config_digest
+from hermes.shields.deterministic import (
+    SUPPORTED_OVERRIDE_REASONS,
+    DeterministicSafetyShield,
+)
 
 GENESIS_HASH = "0" * 64
 TraceEventLike = TraceEvent | TraceEventV2 | TraceEventV3
+_NOOP_SHIELD_CONFIG_DIGEST = sha256_hex(canonical_json_bytes({}))
 
 
 class TraceIntegrityError(ValueError):
@@ -165,6 +175,64 @@ def _v3_source_attribution(
     return source_action, source_attribution
 
 
+def _validate_v3_shield_transition(
+    *,
+    run_context: RunContextV3,
+    observation: Observation,
+    candidate_action: Action,
+    permitted_action: Action,
+    override_reasons: tuple[str, ...],
+    scenario: ScenarioDefinition | None,
+    shield_config: ShieldConfig | None,
+) -> None:
+    identity = (run_context.shield_name, run_context.shield_version)
+    if identity == ("noop", "1.0"):
+        if shield_config is not None:
+            raise ValueError("no-op shield cannot use a deterministic shield config")
+        if run_context.shield_config_digest != _NOOP_SHIELD_CONFIG_DIGEST:
+            raise ValueError("no-op shield config digest is contradictory")
+        expected_action, expected_reasons = candidate_action, ()
+    elif identity == ("deterministic", "1.0"):
+        if scenario is None or shield_config is None:
+            raise ValueError(
+                "deterministic shield transition requires its bound scenario and config"
+            )
+        if run_context.shield_config_digest != shield_config_digest(shield_config):
+            raise ValueError("deterministic shield config digest is contradictory")
+        shield = DeterministicSafetyShield(shield_config)
+        shield.reset(scenario, run_context.seed)
+        expected_action, expected_reasons = shield.apply(observation, candidate_action)
+    else:
+        raise ValueError(
+            "unsupported shield identity for V3 evidence: "
+            f"{run_context.shield_name}/{run_context.shield_version}"
+        )
+    if permitted_action != expected_action or override_reasons != expected_reasons:
+        raise ValueError("shield transition does not match deterministic replay")
+
+
+def _validate_v3_control_fault_replay(
+    *,
+    scenario: ScenarioDefinition | None,
+    control_fault_evidence: ControlFaultEvidence,
+    executed_action: Action,
+    sequence: int,
+) -> None:
+    if scenario is None or scenario.faults is None:
+        return
+    expected_action, expected_reasons = replay_control_fault_action(
+        config=scenario.faults,
+        pre_saturation_action=control_fault_evidence.pre_saturation_action,
+        execution_sequence=sequence,
+        source_sequence=control_fault_evidence.executed_from_sequence,
+    )
+    if (
+        executed_action != expected_action
+        or control_fault_evidence.applied_faults != expected_reasons
+    ):
+        raise ValueError("control fault replay does not match executed action and reasons")
+
+
 def create_trace_event_v3(
     *,
     sequence: int,
@@ -187,6 +255,8 @@ def create_trace_event_v3(
     termination_reason: object,
     raw_facts: dict[str, Any],
     previous_hash: str,
+    scenario: ScenarioDefinition | None = None,
+    shield_config: ShieldConfig | None = None,
     prior_events: tuple[TraceEventV3, ...] = (),
 ) -> TraceEventV3:
     """Build one inactive schema-3 event with deterministic action attribution."""
@@ -196,6 +266,15 @@ def create_trace_event_v3(
         adas_decision_evidence,
         observation_fault_evidence.delivered_observation,
         candidate_action,
+    )
+    _validate_v3_shield_transition(
+        run_context=run_context,
+        observation=observation_fault_evidence.delivered_observation,
+        candidate_action=candidate_action,
+        permitted_action=permitted_action,
+        override_reasons=override_reasons,
+        scenario=scenario,
+        shield_config=shield_config,
     )
     candidate_source = candidate_brake_source(
         adas_decision_evidence.decision,
@@ -219,6 +298,12 @@ def create_trace_event_v3(
         executed_action=executed_action,
         source_permitted_action=source_action,
         source_permitted_brake_source=source_attribution,
+    )
+    _validate_v3_control_fault_replay(
+        scenario=scenario,
+        control_fault_evidence=control_fault_evidence,
+        executed_action=executed_action,
+        sequence=sequence,
     )
     payload: dict[str, Any] = {
         "evidence_schema_version": "3.0",
@@ -997,6 +1082,7 @@ def _verify_v3_decision_and_attribution(
     events: tuple[TraceEventLike, ...],
     index: int,
     scenario: ScenarioDefinition | None,
+    shield_config: ShieldConfig | None,
 ) -> None:
     event = events[index]
     if not isinstance(event, TraceEventV3):
@@ -1013,6 +1099,15 @@ def _verify_v3_decision_and_attribution(
             evidence,
             event.observation_fault_evidence.delivered_observation,
             event.candidate_action,
+        )
+        _validate_v3_shield_transition(
+            run_context=event.run_context,
+            observation=event.observation_fault_evidence.delivered_observation,
+            candidate_action=event.candidate_action,
+            permitted_action=event.permitted_action,
+            override_reasons=event.override_reasons,
+            scenario=scenario,
+            shield_config=shield_config,
         )
         expected_candidate_source = candidate_brake_source(
             event.adas_decision,
@@ -1041,6 +1136,12 @@ def _verify_v3_decision_and_attribution(
             executed_action=event.executed_action,
             source_permitted_action=source_action,
             source_permitted_brake_source=source_attribution,
+        )
+        _validate_v3_control_fault_replay(
+            scenario=scenario,
+            control_fault_evidence=event.control_fault_evidence,
+            executed_action=event.executed_action,
+            sequence=event.sequence,
         )
     except ValueError as exc:
         raise TraceIntegrityError(
@@ -1082,6 +1183,8 @@ def _verify_v3_decision_and_attribution(
 def verify_complete_trace(
     events: tuple[TraceEventLike, ...],
     scenario: ScenarioDefinition | None = None,
+    *,
+    shield_config: ShieldConfig | None = None,
 ) -> str:
     """Verify chain plus semantic completeness and redundant-fact consistency."""
     root = verify_event_chain(events)
@@ -1099,8 +1202,20 @@ def verify_complete_trace(
             if event.run_context.fault_name is not None:
                 _verify_fault_event(events, index, scenario)
             else:
+                try:
+                    event.require_truthful_no_fault_pass_through()
+                except ValueError as exc:
+                    raise TraceIntegrityError(
+                        f"no-fault V3 pass-through is contradictory at sequence "
+                        f"{event.sequence}: {exc}"
+                    ) from exc
                 _verify_observation_summary(events, index, scenario)
-            _verify_v3_decision_and_attribution(events, index, scenario)
+            _verify_v3_decision_and_attribution(
+                events,
+                index,
+                scenario,
+                shield_config,
+            )
         else:
             legacy_events = tuple(
                 legacy for legacy in events if isinstance(legacy, TraceEvent)

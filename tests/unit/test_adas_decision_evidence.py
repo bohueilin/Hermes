@@ -35,6 +35,8 @@ from hermes.domain.models import (
     TraceEventV3,
     VehicleState,
 )
+from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
+from hermes.shields.config import ShieldConfig, shield_config_digest
 
 
 def _scenario(*, control_delay_steps: int = 0, horizon_steps: int = 4) -> ScenarioDefinition:
@@ -64,6 +66,23 @@ def _scenario(*, control_delay_steps: int = 0, horizon_steps: int = 4) -> Scenar
             "max_brake": 0.4,
         }
     return ScenarioDefinition.model_validate(payload)
+
+
+def _shield_config() -> ShieldConfig:
+    return ShieldConfig(
+        schema_version="1.0",
+        name="phase3_deterministic",
+        version="1.0",
+        label="illustrative_simulation_only_not_real_vehicle_limits",
+        ttc_threshold_s=2.0,
+        speed_cap_mps=30.0,
+        max_observation_age_s=0.5,
+        boundary_margin_m=0.5,
+        actuation_delay_compensation_s=0.0,
+        emergency_stop_active=False,
+        full_brake_command=1.0,
+        boundary_steering_command=0.2,
+    )
 
 
 def _state(sequence: int, *, route_progress_pct: float | None = None) -> VehicleState:
@@ -137,8 +156,14 @@ def _run_context(
     scenario: ScenarioDefinition,
     *,
     shield_name: str = "noop",
+    shield_config: ShieldConfig | None = None,
 ) -> RunContextV3:
     fault = scenario.faults
+    shield_digest = (
+        shield_config_digest(shield_config)
+        if shield_config is not None
+        else sha256_hex(canonical_json_bytes({}))
+    )
     return RunContextV3(
         scenario_digest="a" * 64,
         gate_config_digest="b" * 64,
@@ -150,7 +175,7 @@ def _run_context(
         policy_config_digest="d" * 64,
         shield_name=shield_name,
         shield_version="1.0",
-        shield_config_digest="e" * 64,
+        shield_config_digest=shield_digest,
         verifier_suite_digest="f" * 64,
         fault_name="deterministic-faults" if fault is not None else None,
         fault_version="1.0" if fault is not None else None,
@@ -236,9 +261,12 @@ def _create_event(
     control_faults: tuple[str, ...] = (),
     prior_events: tuple[TraceEventV3, ...] = (),
     shield_name: str = "noop",
+    shield_config: ShieldConfig | None = None,
     is_last: bool = True,
     evidence: AdasDecisionEvidence | None = None,
 ) -> TraceEventV3:
+    if shield_name == "deterministic" and shield_config is None:
+        shield_config = _shield_config()
     if source_sequence is None and scenario.faults is None:
         source_sequence = sequence
         source_time_s = sequence / 10
@@ -252,7 +280,11 @@ def _create_event(
     return trace_module.create_trace_event_v3(
         sequence=sequence,
         simulation_time_s=result.simulation_time_s,
-        run_context=_run_context(scenario, shield_name=shield_name),
+        run_context=_run_context(
+            scenario,
+            shield_name=shield_name,
+            shield_config=shield_config,
+        ),
         observation_summary=_summary(observation, result),
         candidate_action=candidate,
         permitted_action=permitted,
@@ -281,6 +313,8 @@ def _create_event(
         previous_hash=(
             prior_events[-1].current_hash if prior_events else trace_module.GENESIS_HASH
         ),
+        scenario=scenario,
+        shield_config=shield_config,
         prior_events=prior_events,
     )
 
@@ -511,8 +545,13 @@ def test_v3_construction_derives_candidate_permitted_and_executed_sources(
     expected_sources: tuple[BrakeSource, BrakeSource, BrakeSource],
 ) -> None:
     scenario = _scenario(horizon_steps=1)
-    observation = _observation(0)
+    observation = (
+        _observation(0, gap_m=1.0, relative_speed_mps=-1.0)
+        if shield_name == "deterministic"
+        else _observation(0)
+    )
     result = _observation(1)
+    shield_config = _shield_config() if shield_name == "deterministic" else None
     candidate = project_to_action(throttle=decision.throttle, brake=decision.brake)
     permitted = candidate if permitted is None else permitted
 
@@ -527,6 +566,7 @@ def test_v3_construction_derives_candidate_permitted_and_executed_sources(
         executed=permitted,
         override_reasons=override_reasons,
         shield_name=shield_name,
+        shield_config=shield_config,
     )
 
     assert (
@@ -537,7 +577,14 @@ def test_v3_construction_derives_candidate_permitted_and_executed_sources(
     assert event.adas_decision_input_sequence == observation.sequence
     assert event.adas_decision_input_time_s == observation.simulation_time_s
     assert event.simulation_time_s == result.simulation_time_s
-    assert trace_module.verify_complete_trace((event,), scenario) == event.current_hash
+    assert (
+        trace_module.verify_complete_trace(
+            (event,),
+            scenario,
+            shield_config=shield_config,
+        )
+        == event.current_hash
+    )
 
 
 @pytest.mark.parametrize(
@@ -589,7 +636,7 @@ def test_v3_construction_rejects_unexplained_shield_brake_removal() -> None:
     candidate = project_to_action(throttle=0.0, brake=1.0)
     permitted = project_to_action(throttle=0.0, brake=0.0)
 
-    with pytest.raises(ValueError, match="shield override"):
+    with pytest.raises(ValueError, match="shield transition"):
         _create_event(
             scenario=scenario,
             sequence=0,
@@ -788,3 +835,276 @@ def test_fault_config_used_by_delay_contract_is_existing_schema_one() -> None:
     assert isinstance(scenario.faults, FaultConfig)
     assert scenario.faults.schema_version == "1.0"
     assert scenario.faults.control_delay_steps == 1
+
+
+@pytest.mark.parametrize(
+    ("decision_update", "message"),
+    [
+        ({"throttle": 0.25}, "throttle and brake"),
+        ({"intervention": InterventionLevel.NO_INTERVENTION}, "intervention"),
+        ({"brake_source": BrakeSource.DRIVER}, "intervention"),
+    ],
+    ids=(
+        "simultaneous-throttle-brake",
+        "aeb-source-without-intervention",
+        "intervention-with-non-aeb-source",
+    ),
+)
+def test_v3_construction_rejects_semantically_contradictory_adas_decision(
+    decision_update: dict[str, object],
+    message: str,
+) -> None:
+    scenario = _scenario(horizon_steps=1)
+    observation = _observation(0)
+    result = _observation(1)
+    decision = _decision(
+        brake_source=BrakeSource.AEB,
+        brake=1.0,
+        intervention=InterventionLevel.EMERGENCY_BRAKE,
+    ).model_copy(update=decision_update)
+    candidate = project_to_action(throttle=decision.throttle, brake=decision.brake)
+
+    with pytest.raises(ValueError, match=message):
+        _create_event(
+            scenario=scenario,
+            sequence=0,
+            observation=observation,
+            result=result,
+            decision=decision,
+            candidate=candidate,
+            permitted=candidate,
+            executed=candidate,
+        )
+
+
+@pytest.mark.parametrize(
+    ("decision_update", "message"),
+    [
+        ({"throttle": 0.25}, "throttle and brake"),
+        ({"intervention": InterventionLevel.NO_INTERVENTION}, "intervention"),
+        ({"brake_source": BrakeSource.DRIVER}, "intervention"),
+    ],
+    ids=(
+        "simultaneous-throttle-brake",
+        "aeb-source-without-intervention",
+        "intervention-with-non-aeb-source",
+    ),
+)
+def test_v3_trace_rejects_coherently_rehashed_semantic_decision_tampering(
+    decision_update: dict[str, object],
+    message: str,
+) -> None:
+    scenario = _scenario(horizon_steps=1)
+    observation = _observation(0)
+    result = _observation(1)
+    decision = _decision(
+        brake_source=BrakeSource.AEB,
+        brake=1.0,
+        intervention=InterventionLevel.EMERGENCY_BRAKE,
+    )
+    candidate = project_to_action(throttle=decision.throttle, brake=decision.brake)
+    event = _create_event(
+        scenario=scenario,
+        sequence=0,
+        observation=observation,
+        result=result,
+        decision=decision,
+        candidate=candidate,
+        permitted=candidate,
+        executed=candidate,
+    )
+    tampered = event.model_copy(
+        update={"adas_decision": event.adas_decision.model_copy(update=decision_update)}
+    )
+    tampered = tampered.model_copy(
+        update={"current_hash": trace_module.event_hash(tampered)}
+    )
+
+    with pytest.raises(trace_module.TraceIntegrityError, match=message):
+        trace_module.verify_complete_trace((tampered,), scenario)
+
+
+def test_v3_construction_rejects_unsupported_shield_contract() -> None:
+    scenario = _scenario(horizon_steps=1)
+    observation = _observation(0)
+    result = _observation(1)
+    decision = _decision()
+    neutral = project_to_action(throttle=0.0, brake=0.0)
+
+    with pytest.raises(ValueError, match="unsupported shield"):
+        _create_event(
+            scenario=scenario,
+            sequence=0,
+            observation=observation,
+            result=result,
+            decision=decision,
+            candidate=neutral,
+            permitted=neutral,
+            executed=neutral,
+            shield_name="opaque-shield",
+        )
+
+
+def test_v3_trace_rejects_coherent_deterministic_ttc_override_not_replayed() -> None:
+    scenario = _scenario(horizon_steps=1)
+    observation = _observation(0)
+    result = _observation(1)
+    decision = _decision()
+    neutral = project_to_action(throttle=0.0, brake=0.0)
+    event = _create_event(
+        scenario=scenario,
+        sequence=0,
+        observation=observation,
+        result=result,
+        decision=decision,
+        candidate=neutral,
+        permitted=neutral,
+        executed=neutral,
+        shield_name="deterministic",
+    )
+    fabricated_brake = project_to_action(throttle=0.0, brake=1.0)
+    control = event.control_fault_evidence.model_copy(
+        update={"pre_saturation_action": fabricated_brake}
+    )
+    tampered = event.model_copy(
+        update={
+            "permitted_action": fabricated_brake,
+            "executed_action": fabricated_brake,
+            "override_reasons": ("TTC_BELOW_THRESHOLD",),
+            "control_fault_evidence": control,
+            "permitted_brake_source": BrakeSource.SHIELD,
+            "executed_brake_source": BrakeSource.SHIELD,
+        }
+    )
+    tampered = tampered.model_copy(
+        update={"current_hash": trace_module.event_hash(tampered)}
+    )
+
+    with pytest.raises(trace_module.TraceIntegrityError, match="shield transition"):
+        trace_module.verify_complete_trace(
+            (tampered,),
+            scenario,
+            shield_config=_shield_config(),
+        )
+
+
+def test_v3_trace_rejects_coherently_rehashed_unsupported_shield_identity() -> None:
+    scenario = _scenario(horizon_steps=1)
+    observation = _observation(0)
+    result = _observation(1)
+    decision = _decision()
+    neutral = project_to_action(throttle=0.0, brake=0.0)
+    event = _create_event(
+        scenario=scenario,
+        sequence=0,
+        observation=observation,
+        result=result,
+        decision=decision,
+        candidate=neutral,
+        permitted=neutral,
+        executed=neutral,
+    )
+    context = event.run_context.model_copy(update={"shield_name": "future-shield"})
+    tampered = event.model_copy(update={"run_context": context})
+    tampered = tampered.model_copy(
+        update={"current_hash": trace_module.event_hash(tampered)}
+    )
+
+    with pytest.raises(trace_module.TraceIntegrityError, match="unsupported shield"):
+        trace_module.verify_complete_trace((tampered,), scenario)
+
+
+@pytest.mark.parametrize(
+    "supplied_config",
+    (None, _shield_config().model_copy(update={"ttc_threshold_s": 0.5})),
+    ids=("missing-config", "digest-mismatched-config"),
+)
+def test_v3_trace_requires_exact_bound_deterministic_shield_config(
+    supplied_config: ShieldConfig | None,
+) -> None:
+    scenario = _scenario(horizon_steps=1)
+    observation = _observation(0, gap_m=1.0, relative_speed_mps=-1.0)
+    result = _observation(1)
+    decision = _decision()
+    neutral = project_to_action(throttle=0.0, brake=0.0)
+    shield_brake = project_to_action(throttle=0.0, brake=1.0)
+    event = _create_event(
+        scenario=scenario,
+        sequence=0,
+        observation=observation,
+        result=result,
+        decision=decision,
+        candidate=neutral,
+        permitted=shield_brake,
+        executed=shield_brake,
+        override_reasons=("TTC_BELOW_THRESHOLD",),
+        shield_name="deterministic",
+        shield_config=_shield_config(),
+    )
+
+    with pytest.raises(trace_module.TraceIntegrityError, match="shield.*config"):
+        trace_module.verify_complete_trace(
+            (event,),
+            scenario,
+            shield_config=supplied_config,
+        )
+
+
+def test_v3_trace_rejects_coherent_no_fault_saturation_claim() -> None:
+    scenario = _scenario(horizon_steps=1)
+    observation = _observation(0)
+    result = _observation(1)
+    decision = _decision()
+    neutral = project_to_action(throttle=0.0, brake=0.0)
+    event = _create_event(
+        scenario=scenario,
+        sequence=0,
+        observation=observation,
+        result=result,
+        decision=decision,
+        candidate=neutral,
+        permitted=neutral,
+        executed=neutral,
+    )
+    control = event.control_fault_evidence.model_copy(
+        update={"applied_faults": ("BRAKE_SATURATION",)}
+    )
+    tampered = event.model_copy(update={"control_fault_evidence": control})
+    tampered = tampered.model_copy(
+        update={"current_hash": trace_module.event_hash(tampered)}
+    )
+
+    with pytest.raises(trace_module.TraceIntegrityError, match="no-fault V3"):
+        trace_module.verify_complete_trace((tampered,), scenario)
+
+
+@pytest.mark.parametrize(
+    ("executed_brake", "control_faults"),
+    [
+        (0.2, ("CONTROL_DELAY", "BRAKE_SATURATION")),
+        (0.4, ("CONTROL_DELAY",)),
+    ],
+    ids=("wrong-saturation-magnitude", "missing-saturation-reason"),
+)
+def test_v3_trace_rejects_coherent_control_fault_replay_tampering(
+    executed_brake: float,
+    control_faults: tuple[str, ...],
+) -> None:
+    scenario, events = _delay_trace()
+    control = events[1].control_fault_evidence.model_copy(
+        update={"applied_faults": control_faults}
+    )
+    tampered = events[1].model_copy(
+        update={
+            "control_fault_evidence": control,
+            "executed_action": events[1].executed_action.model_copy(
+                update={"brake": executed_brake}
+            ),
+        }
+    )
+    tampered = tampered.model_copy(
+        update={"current_hash": trace_module.event_hash(tampered)}
+    )
+
+    with pytest.raises(trace_module.TraceIntegrityError, match="control fault replay"):
+        trace_module.verify_complete_trace((events[0], tampered), scenario)

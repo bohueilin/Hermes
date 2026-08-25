@@ -49,12 +49,23 @@ def action_from_decision(decision: AdasDecision) -> Action:
     return project_to_action(throttle=decision.throttle, brake=decision.brake)
 
 
+def validate_adas_decision(decision: AdasDecision) -> None:
+    """Reject internally contradictory typed ADAS semantics."""
+    if decision.throttle > 0.0 and decision.brake > 0.0:
+        raise ValueError("ADAS decision cannot command throttle and brake together")
+    has_intervention = decision.intervention is not InterventionLevel.NO_INTERVENTION
+    has_aeb_source = decision.brake_source is BrakeSource.AEB
+    if has_intervention != has_aeb_source:
+        raise ValueError("ADAS intervention and brake source are contradictory")
+
+
 def validate_decision_evidence(
     evidence: AdasDecisionEvidence,
     observation: Observation,
     candidate_action: Action,
 ) -> None:
     """Reject stale or action-inconsistent policy evidence without fallback."""
+    validate_adas_decision(evidence.decision)
     if evidence.input_sequence != observation.sequence:
         raise ValueError("ADAS decision input sequence does not match delivered observation")
     if evidence.input_time_s != observation.simulation_time_s:
