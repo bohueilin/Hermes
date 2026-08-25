@@ -2,8 +2,8 @@
 
 **Companion to:** [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) (design) and
 [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md) (pre-work survey).
-**Branch:** `feat/phase8-adas-lab` from `feat/phase6-reviewer-comprehension` @ `4eb8765`.
-**Gates at time of writing:** 947 tests pass (14 of them `metadrive`-marked, running real
+**Branch:** `feat/phase8-adas-scenarios`; WP-3 started from checkpoint `75d1679`.
+**Gates at time of writing:** 1,108 tests pass (29 are `metadrive`-selected, including real
 physics), ruff clean repo-wide, doctor 16 PASS.
 
 This note records what was built, what was measured, what deviates from the PRD and why, and
@@ -41,8 +41,9 @@ Determinism: N = 3 repeats of the threat scenario produce trace digest
 `1603319fbd213b01…` with byte-identical `events.jsonl`, `metrics.json`, `findings.json` and
 `verdict.json`.
 
-Triage: agent proposal and deterministic classifier agreed on 3 of 3 seeded defects; 11 of 11
-citations re-resolved and matched.
+Triage: agent proposal and deterministic classifier agreed on all 8 seeded defects. The
+environment-path seed resolves its finding, nested age and fault-count metrics, and stored
+policy-threshold citations against the verified bundle.
 
 ## 2. Decisions taken during implementation
 
@@ -259,8 +260,8 @@ Honest list of where the work is thinnest:
 cd <repo> && export PYTHONPATH="$PWD/src"
 
 # gates
-python -m pytest -q                 # 947 passed
-python -m pytest -q -m metadrive    # 11 passed, real physics
+python -m pytest -q                 # 1,108 passed
+python -m pytest -q -m metadrive    # 29 passed, including real physics
 python -m ruff check . && python -m hermes doctor
 
 # seeded-defect suite (needs vendored third_party/metadrive)
@@ -288,6 +289,45 @@ make demo-adas-tradeoff
 make demo-flywheel
 ```
 
+### 6.1 WP-3 delay reproducibility and historical evidence disposition
+
+The committed delay scenario has a durable same-host real-MetaDrive N = 3 test at
+`tests/integration/test_stationary_lead_observation_delay.py`. Each repeat uses run ID
+`stationary-delay-n3`, seed 7, and a distinct artifact root. The trace digest is
+`f87e9e8b739dcef62d99ab3328450e1e43d8417736a14a738b005796c5735bcb`; all three repeats
+also produced these byte-identical companion hashes:
+
+| File | SHA-256 |
+|---|---|
+| `events.jsonl` | `c248d1625230e42f863d1ff12fd06a61d8f135290615374326ff0006e42b51eb` |
+| `trace.sha256` | `5af413888e7750bfdb6f4f140ebb00a9f64e3e1ea87c813320f56caf5f6536df` |
+| `execution-context.json` | `819db7a8f8e6190dd5229721571ab9c6c01022d5c84f5ef2e6349956bacd682d` |
+| `metrics.json` | `46b20932b15ea1c6258012f648118d2ce7ef3c22e7339d0bab1554c8214d0816` |
+| `findings.json` | `733547085261c7fabfa6634950034a55cdb8f9780e6956777846c9a4c6166610` |
+| `verdict.json` | `53e0517d5f8f48c4555107ba1cac36f944b7e538e9dfbacaee276d12ea01bc71` |
+| `scenario.resolved.yaml` | `e32c06557811cd455424f3aa85d97a522e10ea1b3f35922f4868b47a44553eca` |
+| `gate-config.resolved.yaml` | `db9e70ec89e3eaf32dcf988702a2866e73138dbb6efd3b9c0746bcc38540e05f` |
+
+Every manifest field except `created_at_utc` is equal. Manifest bytes and bundle-root digests
+are intentionally not asserted: the truthful creation timestamp makes both vary.
+
+Verifier-suite binding changed the historical disposition of six preserved, local,
+pre-binding ADAS bundles from internally consistent to `INVALID`:
+
+- `stationary-nominal-wp1-final-demo`
+- `stationary-threat-wp1-final-demo`
+- `wp1-stationary-no-aeb-measure`
+- `wp1-stationary-nominal-measure`
+- `wp1-stationary-over-measure`
+- `wp1-stationary-threat-measure`
+
+That fail-closed result is intentional. Compatibility that accepts an ADAS bundle with its
+ADAS verifier identities omitted is explicitly rejected; the coherent-omission regression
+in `test_stored_adas_bundle_rejects_coherently_wrong_verifier_suite` must remain `INVALID`.
+The six bundles remain unmodified local historical evidence. Choosing whether to migrate or
+rebaseline them, and recording any resulting disposition in `HERMES_SOURCE_OF_TRUTH.md`,
+belongs to the repository/evidence owner—not to the compatibility layer or this work package.
+
 **Environment note:** the `hermes-dev` conda environment's editable install resolves `hermes`
 to a different checkout. Always run with `PYTHONPATH="$PWD/src"`;
 `tests/unit/test_import_provenance.py` fails loudly if this is got wrong.
@@ -300,7 +340,7 @@ src/hermes/agents/      contracts, tools, approval, triage, citations
 src/hermes/regression/  builder, floor, models - the failure-to-regression flywheel
 src/hermes/verifiers/   adas.py — four offline evaluators
 src/hermes/fixtures/    registry.py — reproducible test fixtures
-config/adas/            baseline + three seeded-defect controller configs
+config/adas/            baseline + four seeded-defect controller configs
 config/gates.adas.yaml  gate-config schema 2.0, oracle thresholds
-scenarios/adas/         three schema-4.0 scenarios (one threat, two nominal)
+scenarios/adas/         eight schema-4.0 ADAS scenarios, including the delay environment seed
 ```

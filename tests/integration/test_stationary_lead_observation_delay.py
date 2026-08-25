@@ -346,6 +346,56 @@ def test_query_run_omits_a_schema_two_adas_threshold_that_is_out_of_bounds(
     )
 
 
+@pytest.mark.metadrive
+def test_committed_observation_delay_is_reproducible_across_three_real_runs(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    """Same-host N=3 excludes only manifest time and bundle-root identity."""
+    _requires_metadrive(repository_root)
+    bundles: list[Path] = []
+    for index in range(3):
+        artifact_root = tmp_path / f"n3-root-{index}"
+        artifact_root.mkdir()
+        bundles.append(
+            _run_real_adas(
+                repository_root,
+                artifact_root,
+                "stationary-delay-n3",
+                repository_root / SCENARIO,
+            )
+        )
+
+    manifests = [
+        json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+        for bundle in bundles
+    ]
+    assert {manifest["run_id"] for manifest in manifests} == {"stationary-delay-n3"}
+    assert {manifest["seed"] for manifest in manifests} == {7}
+    assert manifests[0]["trace_digest"] == manifests[1]["trace_digest"] == manifests[2][
+        "trace_digest"
+    ]
+    manifest_projections = []
+    for manifest in manifests:
+        projection = dict(manifest)
+        del projection["created_at_utc"]
+        manifest_projections.append(projection)
+    assert manifest_projections[0] == manifest_projections[1] == manifest_projections[2]
+
+    for filename in (
+        "events.jsonl",
+        "trace.sha256",
+        "execution-context.json",
+        "metrics.json",
+        "findings.json",
+        "verdict.json",
+        "scenario.resolved.yaml",
+        "gate-config.resolved.yaml",
+    ):
+        payloads = [(bundle / filename).read_bytes() for bundle in bundles]
+        assert payloads[0] == payloads[1] == payloads[2], filename
+
+
 def test_coverage_is_not_pass_before_any_real_delay_event(
     repository_root: Path,
     tmp_path: Path,
