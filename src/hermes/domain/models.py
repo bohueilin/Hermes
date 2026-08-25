@@ -120,6 +120,8 @@ class ControlConfig(HermesModel):
     horizon_steps: Annotated[int, Field(ge=1, le=10_000)]
     target_speed_mps: Annotated[FiniteFloat, Field(ge=0.0, le=50.0)]
     max_acceleration_mps2: Annotated[FiniteFloat, Field(gt=0.0, le=20.0)] = 3.0
+    #: The 6.0 m/s² default is a declared, unenforced, unmeasured value; committed ADAS
+    #: scenarios override it with the measured simulator envelope.
     max_braking_mps2: Annotated[FiniteFloat, Field(gt=0.0, le=20.0)] = 6.0
     lateral_response_mps: Annotated[FiniteFloat, Field(gt=0.0, le=5.0)] = 1.0
     simulated_policy_latency_ms: Annotated[FiniteFloat, Field(ge=0.0, le=10_000.0)] = 10.0
