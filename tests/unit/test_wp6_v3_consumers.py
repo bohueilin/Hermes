@@ -47,6 +47,118 @@ def _synthetic_v3(
     return directory
 
 
+def _project_real_shaped_v3_clock_failure(
+    repository_root: Path,
+    parent: Path,
+    *,
+    failure_kind: str,
+    first_failure_time_s: float | None = None,
+):
+    """Project verified-shaped V3 facts whose input and result clocks differ."""
+    from test_run_metrics_v3 import _typed_fact_events
+
+    from hermes.domain.models import FindingsDocumentV3
+    from hermes.evidence.metrics import compute_metrics
+    from hermes.gates.release import apply_release_gate, select_verifier_profile
+    from hermes.review.projection import project_review_envelope
+    from hermes.verifiers import run_verifiers_for_profile
+
+    bundle = _synthetic_v3(repository_root, parent, faulted=True)
+    capture = verification_module._inspect_artifact_under_root_capture(parent, bundle.name)
+    stored_snapshot = capture.inspection.snapshot
+    assert stored_snapshot is not None
+
+    if failure_kind == "NO_BRAKE":
+        scenario = stored_snapshot.scenario
+        gate = stored_snapshot.gate_config
+        events = list(stored_snapshot.events)
+        source = events[0]
+        delivered = source.observation_fault_evidence.delivered_observation.model_copy(
+            update={
+                "front_distance_m": 1.0,
+                "front_relative_speed_mps": -20.0,
+            }
+        )
+        events[0] = source.model_copy(
+            update={
+                "observation_fault_evidence": (
+                    source.observation_fault_evidence.model_copy(
+                        update={"delivered_observation": delivered}
+                    )
+                )
+            }
+        )
+        events = tuple(events)
+        target_id = "adas.aeb.threat_response"
+    else:
+        events, scenario, gate = _typed_fact_events(repository_root)
+        target_id = "adas.aeb.threat_response"
+        if failure_kind == "BRAKE_ONSET":
+            source = events[0]
+            delivered = source.observation_fault_evidence.delivered_observation.model_copy(
+                update={"front_relative_speed_mps": -12.0}
+            )
+            events = (
+                source.model_copy(
+                    update={
+                        "observation_fault_evidence": (
+                            source.observation_fault_evidence.model_copy(
+                                update={"delivered_observation": delivered}
+                            )
+                        )
+                    }
+                ),
+                *events[1:],
+            )
+            target_id = "adas.aeb.brake_onset_margin"
+        elif failure_kind != "RESIDUAL_IMPACT":
+            raise AssertionError(f"unsupported clock failure kind: {failure_kind}")
+
+    profile = select_verifier_profile(scenario)
+    findings = list(run_verifiers_for_profile(profile, events, scenario, gate))
+    # These model-copied facts deliberately separate the frozen clocks without rebuilding
+    # their hash chain. Keep the independently verified synthetic trace-integrity finding so
+    # this consumer test reaches the finding-clock projection boundary and no other one.
+    findings[0] = stored_snapshot.findings.findings[0]
+    target_index = next(
+        index for index, finding in enumerate(findings) if finding.finding_id == target_id
+    )
+    target = findings[target_index]
+    assert target.status.value == "FAIL"
+    if first_failure_time_s is not None:
+        findings[target_index] = target.model_copy(
+            update={"first_failure_time_s": first_failure_time_s}
+        )
+    findings_tuple = tuple(findings)
+    metrics = compute_metrics(events, scenario=scenario, gate_config=gate)
+    verdict = apply_release_gate(
+        findings_tuple,
+        gate,
+        expected_profile=profile,
+        adapter_name=stored_snapshot.context.adapter.name,
+        evidence_schema_version="3.0",
+    )
+    snapshot = replace(
+        stored_snapshot,
+        scenario=scenario,
+        gate_config=gate,
+        events=events,
+        metrics=metrics,
+        findings=FindingsDocumentV3(findings=findings_tuple),
+        verdict=verdict,
+        verifier_profile=profile,
+    )
+    capture = replace(
+        capture,
+        inspection=replace(capture.inspection, snapshot=snapshot),
+    )
+    return project_review_envelope(
+        capture,
+        selected_relative_path=bundle.name,
+        hermes_version="0.1.0",
+    )
+
+
 @pytest.fixture
 def v3_pair(repository_root: Path, tmp_path: Path) -> tuple[Path, Path, Path]:
     root = tmp_path / "artifacts"
@@ -141,6 +253,130 @@ def test_v3_review_cache_is_schema2_and_cold_warm_bytes_are_identical(
     assert canonical_envelope_bytes(first) == canonical_envelope_bytes(second)
     assert first.tool.review_schema_version == "2.0"
     assert ReviewEnvelopeV2.model_validate_json(first.model_dump_json()) == first
+
+
+def test_schema2_review_projects_delayed_no_brake_failure_at_delivered_input_clock(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    envelope = _project_real_shaped_v3_clock_failure(
+        repository_root,
+        tmp_path / "source",
+        failure_kind="NO_BRAKE",
+    )
+
+    finding = next(
+        item for item in envelope.findings if item.finding_id == "adas.aeb.threat_response"
+    )
+    delivered_track = next(
+        item for item in envelope.timeline.tracks if item.track_id == "delivered_observation"
+    )
+    support = delivered_track.points[finding.supporting_event_sequences[0]]
+    assert finding.measured.unit == "threat steps"
+    assert finding.first_failure_simulation_time_s == 0.0
+    assert support.observation_value is not None
+    assert support.observation_value.simulation_time_s == 0.0
+    assert support.simulation_time_s == 0.1
+
+
+@pytest.mark.parametrize("wrong_time_s", (0.05, 0.1), ids=("between-clocks", "result-clock"))
+def test_schema2_review_rejects_wrong_delayed_no_brake_failure_clocks(
+    repository_root: Path,
+    tmp_path: Path,
+    wrong_time_s: float,
+) -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(
+        ValidationError,
+        match="finding failure time",
+    ):
+        _project_real_shaped_v3_clock_failure(
+            repository_root,
+            tmp_path / "source",
+            failure_kind="NO_BRAKE",
+            first_failure_time_s=wrong_time_s,
+        )
+
+
+def test_schema2_review_projects_brake_onset_failure_at_execution_clock(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    envelope = _project_real_shaped_v3_clock_failure(
+        repository_root,
+        tmp_path / "source",
+        failure_kind="BRAKE_ONSET",
+    )
+
+    finding = next(
+        item
+        for item in envelope.findings
+        if item.finding_id == "adas.aeb.brake_onset_margin"
+    )
+    raw_track = next(
+        item for item in envelope.timeline.tracks if item.track_id == "raw_observation"
+    )
+    support = raw_track.points[finding.supporting_event_sequences[0]]
+    assert finding.measured.unit == "m/s^2"
+    assert finding.first_failure_simulation_time_s == 0.1
+    assert support.observation_value is not None
+    assert support.observation_value.simulation_time_s == 0.1
+    assert support.simulation_time_s == 0.2
+
+
+@pytest.mark.parametrize("wrong_time_s", (0.15, 0.2), ids=("between-clocks", "result-clock"))
+def test_schema2_review_rejects_wrong_brake_onset_failure_clocks(
+    repository_root: Path,
+    tmp_path: Path,
+    wrong_time_s: float,
+) -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(
+        ValidationError,
+        match="finding failure time",
+    ):
+        _project_real_shaped_v3_clock_failure(
+            repository_root,
+            tmp_path / "source",
+            failure_kind="BRAKE_ONSET",
+            first_failure_time_s=wrong_time_s,
+        )
+
+
+def test_schema2_review_residual_impact_failure_stays_on_result_clock(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    from pydantic import ValidationError
+
+    envelope = _project_real_shaped_v3_clock_failure(
+        repository_root,
+        tmp_path / "accepted",
+        failure_kind="RESIDUAL_IMPACT",
+    )
+    finding = next(
+        item for item in envelope.findings if item.finding_id == "adas.aeb.threat_response"
+    )
+    result_track = next(
+        item for item in envelope.timeline.tracks if item.track_id == "result_observation"
+    )
+    support = result_track.points[finding.supporting_event_sequences[0]]
+    assert finding.measured.unit == "m/s"
+    assert finding.first_failure_simulation_time_s == 0.2
+    assert support.simulation_time_s == 0.2
+
+    with pytest.raises(
+        ValidationError,
+        match="finding failure time",
+    ):
+        _project_real_shaped_v3_clock_failure(
+            repository_root,
+            tmp_path / "rejected",
+            failure_kind="RESIDUAL_IMPACT",
+            first_failure_time_s=0.1,
+        )
 
 
 def test_schema2_review_rejects_extra_metric_and_consumed_gap_source_pointers(

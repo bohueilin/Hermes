@@ -2619,6 +2619,36 @@ def _threshold_depth(expression: ThresholdExpression) -> int:
     return 1
 
 
+def _schema2_finding_failure_time_s(
+    timeline: Timeline,
+    finding: FindingItem,
+    sequence: int,
+) -> float:
+    if (
+        finding.finding_id == "adas.aeb.threat_response"
+        and finding.measured.unit == "threat steps"
+    ):
+        track_id = "delivered_observation"
+        observation_clock = True
+    elif finding.finding_id == "adas.aeb.brake_onset_margin":
+        track_id = "raw_observation"
+        observation_clock = True
+    else:
+        track_id = "result_observation"
+        observation_clock = False
+    track = next((item for item in timeline.tracks if item.track_id == track_id), None)
+    if track is None:
+        raise ValueError(f"schema-2 finding clock requires the {track_id} track")
+    point = next((item for item in track.points if item.sequence == sequence), None)
+    if point is None:
+        raise ValueError("schema-2 finding clock requires its first supporting event")
+    if not observation_clock:
+        return point.simulation_time_s
+    if point.observation_value is None:
+        raise ValueError(f"schema-2 finding clock requires {track_id} evidence")
+    return point.observation_value.simulation_time_s
+
+
 class ReviewEnvelope(ReviewModel):
     review_schema_version: Literal["1.0"]
     tool: ToolInfo
@@ -2918,17 +2948,14 @@ class ReviewEnvelope(ReviewModel):
                 raise ValueError("finding supporting sequences must lie on the retained timeline")
             if finding.status == "FAIL" and finding.supporting_event_sequences:
                 first_sequence = finding.supporting_event_sequences[0]
-                grid_track = next(
-                    track for track in self.timeline.tracks if track.availability == "AVAILABLE"
+                authoritative_time = _schema2_finding_failure_time_s(
+                    self.timeline,
+                    finding,
+                    first_sequence,
                 )
-                grid_time = next(
-                    point.simulation_time_s
-                    for point in grid_track.points
-                    if point.sequence == first_sequence
-                )
-                if finding.first_failure_simulation_time_s != grid_time:
+                if finding.first_failure_simulation_time_s != authoritative_time:
                     raise ValueError(
-                        "finding failure time must equal its first supporting event time"
+                        "finding failure time must equal its authoritative clock"
                     )
             ReviewEnvelope._validate_threshold_event_coverage(self, finding)
         if any(_threshold_depth(item.threshold) > 16 for item in self.findings):
