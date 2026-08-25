@@ -419,6 +419,14 @@ _CHALLENGE_OBSERVATION_SUMMARY_FIELDS = _OBSERVATION_SUMMARY_FIELDS | {
     "result_challenge_actor_speed_mps",
     "result_challenge_phase",
 }
+_TYPED_CHALLENGE_OBSERVATION_FIELDS = (
+    "front_distance_m",
+    "front_relative_speed_mps",
+    "challenge_actor_longitudinal_m",
+    "challenge_actor_lateral_offset_m",
+    "challenge_actor_speed_mps",
+    "challenge_phase",
+)
 #: How many float32 steps of slack a declared-vs-observed geometry comparison allows.
 #:
 #: The simulator stores positions and velocities as float32 and we read them back as
@@ -565,6 +573,167 @@ def _challenge_values_match(left: object, right: object) -> bool:
     if isinstance(left, (int, float)) and isinstance(right, (int, float)):
         return math.isclose(float(left), float(right), rel_tol=0.0, abs_tol=1e-12)
     return left == right
+
+
+def _initial_vehicle_state(scenario: ScenarioDefinition) -> VehicleState:
+    """Return the exact simulator-neutral reset facts declared by a scenario."""
+    return VehicleState(
+        position_m=0.0,
+        speed_mps=scenario.initial_state.speed_mps,
+        acceleration_mps2=0.0,
+        lateral_offset_m=scenario.initial_state.lateral_offset_m,
+        route_progress_pct=0.0,
+        collision_count=0,
+        offroad=False,
+        destination_reached=False,
+    )
+
+
+def _typed_observation_summary(
+    event: TraceEventV2 | TraceEventV3,
+    scenario: ScenarioDefinition,
+) -> dict[str, Any]:
+    """Project the exact typed policy input and adapter result carried by one event."""
+    delivered = event.observation_fault_evidence.delivered_observation
+    result = event.result_observation
+    expected: dict[str, Any] = {
+        "input_sequence": delivered.sequence,
+        "input_simulation_time_s": delivered.simulation_time_s,
+        "speed_mps": delivered.vehicle_state.speed_mps,
+        "lateral_offset_m": delivered.vehicle_state.lateral_offset_m,
+        "route_progress_pct": delivered.vehicle_state.route_progress_pct,
+        "observation_age_s": delivered.observation_age_s,
+    }
+    if scenario.challenge is not None:
+        expected.update(
+            {
+                "front_distance_m": delivered.front_distance_m,
+                "front_relative_speed_mps": delivered.front_relative_speed_mps,
+                "challenge_actor_longitudinal_m": (
+                    delivered.challenge_actor_longitudinal_m
+                ),
+                "challenge_actor_lateral_offset_m": (
+                    delivered.challenge_actor_lateral_offset_m
+                ),
+                "challenge_actor_speed_mps": delivered.challenge_actor_speed_mps,
+                "challenge_phase": delivered.challenge_phase,
+                "result_front_distance_m": result.front_distance_m,
+                "result_front_relative_speed_mps": result.front_relative_speed_mps,
+                "result_challenge_actor_longitudinal_m": (
+                    result.challenge_actor_longitudinal_m
+                ),
+                "result_challenge_actor_lateral_offset_m": (
+                    result.challenge_actor_lateral_offset_m
+                ),
+                "result_challenge_actor_speed_mps": result.challenge_actor_speed_mps,
+                "result_challenge_phase": result.challenge_phase,
+            }
+        )
+    return expected
+
+
+def _has_typed_challenge_facts(observation: Observation) -> bool:
+    return any(
+        getattr(observation, field_name) is not None
+        for field_name in _TYPED_CHALLENGE_OBSERVATION_FIELDS
+    )
+
+
+def _verify_no_fault_v3_typed_observations(
+    events: tuple[TraceEventLike, ...],
+    index: int,
+    scenario: ScenarioDefinition | None,
+) -> None:
+    """Bind every no-fault V3 typed policy input and adapter result into one state chain."""
+    event = events[index]
+    if not isinstance(event, TraceEventV3):
+        raise TraceIntegrityError(
+            f"no-fault V3 trace requires a schema-3 event at sequence {event.sequence}"
+        )
+    if scenario is None or scenario.schema_version != "4.0" or scenario.faults is not None:
+        raise TraceIntegrityError(
+            "no-fault V3 typed observation verification requires a schema-4 no-fault scenario"
+        )
+
+    raw = event.observation_fault_evidence.raw_observation
+    delivered = event.observation_fault_evidence.delivered_observation
+    expected_input_time = event.sequence / event.run_context.control_frequency_hz
+    if raw.sequence != event.sequence or delivered.sequence != event.sequence:
+        raise TraceIntegrityError(
+            f"no-fault V3 observation sequence disagrees at sequence {event.sequence}"
+        )
+    if not math.isclose(raw.observation_age_s, 0.0, rel_tol=0.0, abs_tol=1e-12):
+        raise TraceIntegrityError(
+            f"no-fault V3 raw observation must be fresh at sequence {event.sequence}"
+        )
+    if not math.isclose(
+        raw.simulation_time_s,
+        expected_input_time,
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ) or not math.isclose(
+        delivered.simulation_time_s,
+        expected_input_time,
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        raise TraceIntegrityError(
+            f"no-fault V3 observation time disagrees at sequence {event.sequence}"
+        )
+    if index == 0:
+        if raw.vehicle_state != _initial_vehicle_state(scenario):
+            raise TraceIntegrityError(
+                "no-fault V3 raw initial observation contradicts the scenario"
+            )
+    else:
+        prior = events[index - 1]
+        if not isinstance(prior, TraceEventV3) or raw != prior.result_observation:
+            raise TraceIntegrityError(
+                "no-fault V3 raw observation disagrees with prior result at sequence "
+                f"{event.sequence}"
+            )
+
+    result = event.result_observation
+    if result.vehicle_state != event.vehicle_state:
+        raise TraceIntegrityError(
+            "no-fault V3 result observation disagrees with event state at sequence "
+            f"{event.sequence}"
+        )
+    if (
+        result.sequence != event.sequence + 1
+        or not math.isclose(
+            result.simulation_time_s,
+            event.simulation_time_s,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        )
+        or not math.isclose(
+            result.observation_age_s,
+            0.0,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        )
+    ):
+        raise TraceIntegrityError(
+            f"no-fault V3 result observation timing disagrees at sequence {event.sequence}"
+        )
+
+    if scenario.challenge is None:
+        if _has_typed_challenge_facts(raw):
+            raise TraceIntegrityError(
+                "no-fault V3 raw observation contradicts the scenario challenge at sequence "
+                f"{event.sequence}"
+            )
+        if _has_typed_challenge_facts(result):
+            raise TraceIntegrityError(
+                "no-fault V3 result observation contradicts the scenario challenge at "
+                f"sequence {event.sequence}"
+            )
+    if event.observation_summary != _typed_observation_summary(event, scenario):
+        raise TraceIntegrityError(
+            "no-fault V3 observation summary is not derived from typed evidence at sequence "
+            f"{event.sequence}"
+        )
 
 
 def _verify_observation_summary(
@@ -953,16 +1122,7 @@ def _verify_fault_event(
             f"fault observation age disagrees at sequence {event.sequence}"
         )
     if index == 0:
-        if raw.vehicle_state != VehicleState(
-            position_m=0.0,
-            speed_mps=scenario.initial_state.speed_mps,
-            acceleration_mps2=0.0,
-            lateral_offset_m=scenario.initial_state.lateral_offset_m,
-            route_progress_pct=0.0,
-            collision_count=0,
-            offroad=False,
-            destination_reached=False,
-        ):
+        if raw.vehicle_state != _initial_vehicle_state(scenario):
             raise TraceIntegrityError("fault raw initial observation contradicts the scenario")
         if scenario.challenge is not None and scenario.challenge.kind == "stationary_lead":
             if raw.challenge_actor_speed_mps != 0.0:
@@ -1021,43 +1181,7 @@ def _verify_fault_event(
         raise TraceIntegrityError(
             f"fault result observation timing disagrees at sequence {event.sequence}"
         )
-    expected_summary: dict[str, Any] = {
-        "input_sequence": delivered.sequence,
-        "input_simulation_time_s": delivered.simulation_time_s,
-        "speed_mps": delivered.vehicle_state.speed_mps,
-        "lateral_offset_m": delivered.vehicle_state.lateral_offset_m,
-        "route_progress_pct": delivered.vehicle_state.route_progress_pct,
-        "observation_age_s": delivered.observation_age_s,
-    }
-    if scenario.challenge is not None:
-        expected_summary.update(
-            {
-                "front_distance_m": delivered.front_distance_m,
-                "front_relative_speed_mps": delivered.front_relative_speed_mps,
-                "challenge_actor_longitudinal_m": (
-                    delivered.challenge_actor_longitudinal_m
-                ),
-                "challenge_actor_lateral_offset_m": (
-                    delivered.challenge_actor_lateral_offset_m
-                ),
-                "challenge_actor_speed_mps": delivered.challenge_actor_speed_mps,
-                "challenge_phase": delivered.challenge_phase,
-                "result_front_distance_m": event.result_observation.front_distance_m,
-                "result_front_relative_speed_mps": (
-                    event.result_observation.front_relative_speed_mps
-                ),
-                "result_challenge_actor_longitudinal_m": (
-                    event.result_observation.challenge_actor_longitudinal_m
-                ),
-                "result_challenge_actor_lateral_offset_m": (
-                    event.result_observation.challenge_actor_lateral_offset_m
-                ),
-                "result_challenge_actor_speed_mps": (
-                    event.result_observation.challenge_actor_speed_mps
-                ),
-                "result_challenge_phase": event.result_observation.challenge_phase,
-            }
-        )
+    expected_summary = _typed_observation_summary(event, scenario)
     if event.observation_summary != expected_summary:
         raise TraceIntegrityError(
             f"fault observation summary is not derived from typed evidence at sequence "
@@ -1230,6 +1354,7 @@ def verify_complete_trace(
                         f"no-fault V3 pass-through is contradictory at sequence "
                         f"{event.sequence}: {exc}"
                     ) from exc
+                _verify_no_fault_v3_typed_observations(events, index, scenario)
                 _verify_observation_summary(events, index, scenario)
             _verify_v3_decision_and_attribution(
                 events,

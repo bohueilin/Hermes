@@ -187,6 +187,63 @@ def test_expected_finding_registries_preserve_exact_values_order_and_alias() -> 
     ) == tuple(expected_fault_coverage.items())
 
 
+def test_schema_v3_gate_selects_trace_integrity_v1_1_without_moving_legacy() -> None:
+    legacy = release_gate.expected_findings_for_profile(
+        VerifierProfile.LEGACY,
+        evidence_schema_version="1.0",
+    )
+    fault_v2 = release_gate.expected_findings_for_profile(
+        VerifierProfile.FAULT_COVERAGE,
+        evidence_schema_version="2.0",
+    )
+    v3 = release_gate.expected_findings_for_profile(
+        VerifierProfile.LEGACY,
+        evidence_schema_version="3.0",
+    )
+
+    assert legacy is release_gate.LEGACY_EXPECTED_FINDINGS
+    assert legacy["trace.integrity"] == ("TraceIntegrityVerifier", "1.0", True)
+    assert fault_v2["trace.integrity"] == ("TraceIntegrityVerifier", "1.0", True)
+    assert v3["trace.integrity"] == ("TraceIntegrityVerifier", "1.1", True)
+    assert tuple(v3) == tuple(legacy)
+    assert tuple(
+        (finding_id, identity)
+        for finding_id, identity in v3.items()
+        if finding_id != "trace.integrity"
+    ) == tuple(
+        (finding_id, identity)
+        for finding_id, identity in legacy.items()
+        if finding_id != "trace.integrity"
+    )
+
+
+def test_schema_v3_gate_accepts_only_the_schema_selected_trace_identity(
+    repository_root: Path,
+) -> None:
+    scenario = load_scenario(repository_root / "scenarios" / "fake_nominal.yaml")
+    gate = load_gate_config(repository_root / "config" / "gates.phase1.yaml")
+    legacy_findings = run_phase1_verifiers(_events(), scenario, gate)
+    v3_findings = (
+        legacy_findings[0].model_copy(update={"verifier_version": "1.1"}),
+        *legacy_findings[1:],
+    )
+
+    accepted = apply_release_gate(
+        v3_findings,
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
+        evidence_schema_version="3.0",
+    )
+    legacy_rejects_v3 = apply_release_gate(
+        v3_findings,
+        gate,
+        expected_profile=VerifierProfile.LEGACY,
+    )
+
+    assert accepted.verdict is not Verdict.INVALID_EVIDENCE
+    assert legacy_rejects_v3.verdict is Verdict.INVALID_EVIDENCE
+
+
 @pytest.mark.parametrize(
     "registry_case",
     ["legacy_public", "profile_outer", "legacy_nested", "fault_nested"],

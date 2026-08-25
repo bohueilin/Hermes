@@ -134,8 +134,6 @@ def _observation(sequence: int) -> Observation:
             offroad=False,
             destination_reached=False,
         ),
-        front_distance_m=40.0 - sequence,
-        front_relative_speed_mps=-10.0,
         observation_age_s=0.0,
     )
 
@@ -186,7 +184,10 @@ def _context(
         if selected_shield_config is not None
         else {}
     )
-    verifier_suite = verifier_identities_for_profile(select_verifier_profile(scenario))
+    verifier_suite = verifier_identities_for_profile(
+        select_verifier_profile(scenario),
+        evidence_schema_version="3.0",
+    )
     suite_payload = [item.model_dump(mode="json") for item in verifier_suite]
     fault_config = (
         scenario.faults.model_dump(mode="json") if scenario.faults is not None else None
@@ -558,6 +559,126 @@ def test_v3_event_parser_rejects_unknown_and_cross_version_nested_schemas(
         verification_module._parse_events(canonical_json_bytes(nested) + b"\n")
 
 
+@pytest.mark.parametrize(
+    "version",
+    (["3.0"], {"declared": "3.0"}),
+    ids=("list", "object"),
+)
+def test_v3_event_parser_rejects_non_string_declared_versions(
+    repository_root: Path,
+    tmp_path: Path,
+    version: object,
+) -> None:
+    bundle, _, _, _, _ = _bundle(repository_root, tmp_path, faulted=False)
+    event = _event_payloads(bundle)[0]
+    event["evidence_schema_version"] = version
+    run_context = dict(event["run_context"])
+    run_context["evidence_schema_version"] = version
+    event["run_context"] = run_context
+
+    with pytest.raises(ValueError, match="evidence_schema_version.*unsupported"):
+        verification_module._parse_events(canonical_json_bytes(event) + b"\n")
+
+
+@pytest.mark.parametrize(
+    "version",
+    (["3.0"], {"declared": "3.0"}),
+    ids=("list", "object"),
+)
+def test_v3_inspection_quarantines_coherently_rebound_non_string_event_versions(
+    repository_root: Path,
+    tmp_path: Path,
+    version: object,
+) -> None:
+    bundle, _, _, _, _ = _bundle(repository_root, tmp_path, faulted=False)
+    events = _event_payloads(bundle)
+    events[0]["evidence_schema_version"] = version
+    run_context = dict(events[0]["run_context"])
+    run_context["evidence_schema_version"] = version
+    events[0]["run_context"] = run_context
+    _rehash_events(bundle, events)
+
+    _assert_seam_and_boundary(
+        bundle,
+        "events.jsonl line 1 evidence_schema_version",
+    )
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected_seam"),
+    (
+        (
+            "initial-position",
+            "no-fault V3 raw initial observation contradicts the scenario",
+        ),
+        (
+            "initial-front-geometry",
+            "no-fault V3 raw observation contradicts the scenario challenge at sequence 0",
+        ),
+        (
+            "prior-result-chain",
+            "no-fault V3 raw observation disagrees with prior result at sequence 1",
+        ),
+        (
+            "result-state",
+            "no-fault V3 result observation disagrees with event state at sequence 0",
+        ),
+        (
+            "result-timing",
+            "no-fault V3 result observation timing disagrees at sequence 0",
+        ),
+        (
+            "result-front-geometry",
+            "no-fault V3 result observation contradicts the scenario challenge at sequence 0",
+        ),
+    ),
+)
+def test_stored_no_fault_v3_binds_complete_typed_observation_continuity(
+    repository_root: Path,
+    tmp_path: Path,
+    mutation: str,
+    expected_seam: str,
+) -> None:
+    bundle, _, _, _, _ = _bundle(repository_root, tmp_path, faulted=False)
+    events = _event_payloads(bundle)
+
+    if mutation in {"initial-position", "initial-front-geometry"}:
+        evidence = dict(events[0]["observation_fault_evidence"])
+        for field_name in ("raw_observation", "delivered_observation"):
+            observation = dict(evidence[field_name])
+            if mutation == "initial-position":
+                vehicle_state = dict(observation["vehicle_state"])
+                vehicle_state["position_m"] = 99.0
+                observation["vehicle_state"] = vehicle_state
+            else:
+                observation["front_distance_m"] = 1000.0
+            evidence[field_name] = observation
+        events[0]["observation_fault_evidence"] = evidence
+    elif mutation == "prior-result-chain":
+        evidence = dict(events[1]["observation_fault_evidence"])
+        for field_name in ("raw_observation", "delivered_observation"):
+            observation = dict(evidence[field_name])
+            vehicle_state = dict(observation["vehicle_state"])
+            vehicle_state["position_m"] = 99.0
+            observation["vehicle_state"] = vehicle_state
+            evidence[field_name] = observation
+        events[1]["observation_fault_evidence"] = evidence
+    else:
+        result = dict(events[0]["result_observation"])
+        if mutation == "result-state":
+            vehicle_state = dict(result["vehicle_state"])
+            vehicle_state["position_m"] = 99.0
+            result["vehicle_state"] = vehicle_state
+        elif mutation == "result-timing":
+            result["sequence"] = 99
+        else:
+            result["front_distance_m"] = 1000.0
+        events[0]["result_observation"] = result
+    _rehash_events(bundle, events)
+
+    _assert_seam_and_boundary(bundle, expected_seam)
+
+
 def test_v3_writer_rejects_a_mixed_exact_document_family(
     repository_root: Path,
     tmp_path: Path,
@@ -715,7 +836,44 @@ def test_stored_v3_threads_exact_shield_config_through_outer_trace_and_verifier(
         shield_config=shield_config,
     )
     assert finding.finding_id == "trace.integrity"
+    assert finding.verifier_version == "1.1"
     assert finding.status is FindingStatus.PASS
+
+    broken = parsed_events[0].model_copy(update={"current_hash": "0" * 64})
+    failed = _trace_integrity(
+        (broken, *parsed_events[1:]),
+        scenario,
+        shield_config=shield_config,
+    )
+    assert failed.finding_id == "trace.integrity"
+    assert failed.verifier_version == "1.1"
+    assert failed.status is FindingStatus.FAIL
+
+
+def test_v3_suite_selects_exact_trace_integrity_v1_1_and_binds_its_digest(
+    repository_root: Path,
+) -> None:
+    scenario = _scenario(faulted=False)
+    gate_config = load_gate_config(repository_root / "config" / "gates.adas.yaml")
+    context, _ = _context(
+        scenario,
+        gate_config,
+        deterministic_shield=False,
+    )
+    expected_suite = verifier_identities_for_profile(
+        select_verifier_profile(scenario),
+        evidence_schema_version="3.0",
+    )
+
+    assert context.verifier_suite == expected_suite
+    assert context.verifier_suite[0].model_dump(mode="json") == {
+        "name": "TraceIntegrityVerifier",
+        "version": "1.1",
+        "finding_id": "trace.integrity",
+    }
+    assert context.run_context.verifier_suite_digest == config_digest(
+        [identity.model_dump(mode="json") for identity in expected_suite]
+    )
 
 
 def test_stored_v3_rejects_a_coherently_rebound_shield_config(

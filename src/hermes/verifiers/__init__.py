@@ -17,12 +17,14 @@ from hermes.domain.models import (
 from hermes.evidence.metrics import compute_metrics
 from hermes.evidence.trace import TraceIntegrityError, verify_complete_trace
 from hermes.gates.config import GateConfig
-from hermes.gates.release import VerifierProfile
+from hermes.gates.release import VerifierProfile, trace_integrity_verifier_version
 from hermes.shields.config import ShieldConfig
 
 PHASE1_VERIFIER_IDENTITIES = (
     VerifierIdentity(
-        name="TraceIntegrityVerifier", version="1.0", finding_id="trace.integrity"
+        name="TraceIntegrityVerifier",
+        version=trace_integrity_verifier_version("1.0"),
+        finding_id="trace.integrity",
     ),
     VerifierIdentity(name="CollisionVerifier", version="1.0", finding_id="collision.zero"),
     VerifierIdentity(
@@ -45,20 +47,37 @@ PHASE4_VERIFIER_IDENTITIES = PHASE1_VERIFIER_IDENTITIES + (
 
 def verifier_identities_for_profile(
     profile: VerifierProfile,
+    *,
+    evidence_schema_version: str = "1.0",
 ) -> tuple[VerifierIdentity, ...]:
     """Return the exact ordered identities executed by one verifier profile."""
     if profile is VerifierProfile.LEGACY:
-        return PHASE1_VERIFIER_IDENTITIES
-    if profile is VerifierProfile.FAULT_COVERAGE:
-        return PHASE4_VERIFIER_IDENTITIES
+        identities = PHASE1_VERIFIER_IDENTITIES
+    elif profile is VerifierProfile.FAULT_COVERAGE:
+        identities = PHASE4_VERIFIER_IDENTITIES
+    else:
+        from hermes.verifiers.adas import ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
 
-    from hermes.verifiers.adas import ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
+        if profile is VerifierProfile.ADAS_P0_LONGITUDINAL:
+            identities = (
+                PHASE1_VERIFIER_IDENTITIES
+                + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
+            )
+        elif profile is VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT:
+            identities = (
+                PHASE4_VERIFIER_IDENTITIES
+                + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
+            )
+        else:
+            raise ValueError(f"unsupported verifier profile: {profile}")
 
-    if profile is VerifierProfile.ADAS_P0_LONGITUDINAL:
-        return PHASE1_VERIFIER_IDENTITIES + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
-    if profile is VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT:
-        return PHASE4_VERIFIER_IDENTITIES + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
-    raise ValueError(f"unsupported verifier profile: {profile}")
+    trace_version = trace_integrity_verifier_version(evidence_schema_version)
+    if trace_version == identities[0].version:
+        return identities
+    return (
+        identities[0].model_copy(update={"version": trace_version}),
+        *identities[1:],
+    )
 
 
 def _available(value: float, unit: str) -> Measurement:
@@ -278,6 +297,9 @@ def _trace_integrity(
 ) -> Finding:
     measurement = _available(float(len(events)), "events")
     criterion = "complete trace sequence and SHA-256 chain are internally consistent"
+    verifier_version = trace_integrity_verifier_version(
+        events[0].evidence_schema_version if events else "1.0"
+    )
     try:
         verify_complete_trace(events, scenario, shield_config=shield_config)
     except TraceIntegrityError as exc:
@@ -291,7 +313,7 @@ def _trace_integrity(
         return Finding(
             finding_id="trace.integrity",
             verifier="TraceIntegrityVerifier",
-            verifier_version="1.0",
+            verifier_version=verifier_version,
             status=FindingStatus.FAIL,
             severity=Severity.CRITICAL,
             hard_invariant=True,
@@ -306,7 +328,7 @@ def _trace_integrity(
     return Finding(
         finding_id="trace.integrity",
         verifier="TraceIntegrityVerifier",
-        verifier_version="1.0",
+        verifier_version=verifier_version,
         status=FindingStatus.PASS,
         severity=Severity.CRITICAL,
         hard_invariant=True,

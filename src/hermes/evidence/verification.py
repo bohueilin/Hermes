@@ -529,7 +529,11 @@ def _parse_events(data: bytes) -> tuple[TraceEventLike, ...]:
                 "evidence_schema_version"
             )
         version = payload["evidence_schema_version"]
-        model_type = TRACE_EVENT_BY_EVIDENCE_SCHEMA.get(version)
+        model_type = (
+            TRACE_EVENT_BY_EVIDENCE_SCHEMA.get(version)
+            if isinstance(version, str)
+            else None
+        )
         if model_type is None:
             supported = ", ".join(TRACE_EVENT_BY_EVIDENCE_SCHEMA)
             raise ValueError(
@@ -1475,7 +1479,10 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
         if context.run_context.verifier_suite_digest != config_digest(suite_payload):
             errors.append("execution-context.json verifier suite digest mismatch")
         expected_suite = (
-            verifier_identities_for_profile(select_verifier_profile(scenario))
+            verifier_identities_for_profile(
+                select_verifier_profile(scenario),
+                evidence_schema_version=context.evidence_schema_version,
+            )
             if scenario is not None
             else ()
         )

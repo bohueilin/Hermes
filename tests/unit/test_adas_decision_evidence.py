@@ -552,7 +552,7 @@ def test_v3_runtime_rejects_stale_or_action_inconsistent_decision_evidence(
         (
             _decision(),
             Action(steering=0.0, throttle=0.0, brake=1.0),
-            ("TTC_BELOW_THRESHOLD",),
+            ("EMERGENCY_STOP",),
             "deterministic",
             (BrakeSource.NONE, BrakeSource.SHIELD, BrakeSource.SHIELD),
         ),
@@ -567,13 +567,13 @@ def test_v3_construction_derives_candidate_permitted_and_executed_sources(
     expected_sources: tuple[BrakeSource, BrakeSource, BrakeSource],
 ) -> None:
     scenario = _scenario(horizon_steps=1)
-    observation = (
-        _observation(0, gap_m=1.0, relative_speed_mps=-1.0)
-        if shield_name == "deterministic"
-        else _observation(0)
-    )
+    observation = _observation(0)
     result = _observation(1)
-    shield_config = _shield_config() if shield_name == "deterministic" else None
+    shield_config = (
+        _shield_config().model_copy(update={"emergency_stop_active": True})
+        if shield_name == "deterministic"
+        else None
+    )
     candidate = project_to_action(throttle=decision.throttle, brake=decision.brake)
     permitted = candidate if permitted is None else permitted
 
@@ -1045,11 +1045,14 @@ def test_v3_trace_requires_exact_bound_deterministic_shield_config(
     supplied_config: ShieldConfig | None,
 ) -> None:
     scenario = _scenario(horizon_steps=1)
-    observation = _observation(0, gap_m=1.0, relative_speed_mps=-1.0)
+    observation = _observation(0)
     result = _observation(1)
     decision = _decision()
     neutral = project_to_action(throttle=0.0, brake=0.0)
     shield_brake = project_to_action(throttle=0.0, brake=1.0)
+    bound_shield_config = _shield_config().model_copy(
+        update={"emergency_stop_active": True}
+    )
     event = _create_event(
         scenario=scenario,
         sequence=0,
@@ -1059,9 +1062,9 @@ def test_v3_trace_requires_exact_bound_deterministic_shield_config(
         candidate=neutral,
         permitted=shield_brake,
         executed=shield_brake,
-        override_reasons=("TTC_BELOW_THRESHOLD",),
+        override_reasons=("EMERGENCY_STOP",),
         shield_name="deterministic",
-        shield_config=_shield_config(),
+        shield_config=bound_shield_config,
     )
 
     with pytest.raises(trace_module.TraceIntegrityError, match="shield.*config"):

@@ -10,11 +10,16 @@ from hermes.adas.policy import AdasLongitudinalPolicy
 from hermes.evidence.artifacts import config_digest
 from hermes.faults.deterministic import DeterministicFaultInjector
 from hermes.gates.config import load_gate_config
+from hermes.gates.release import VerifierProfile
 from hermes.policies.baseline import BaselinePolicy
 from hermes.runtime.orchestrator import _build_execution_context
 from hermes.scenarios.loader import load_scenario
 from hermes.shields.noop import NoOpShield
-from hermes.verifiers import PHASE1_VERIFIER_IDENTITIES, PHASE4_VERIFIER_IDENTITIES
+from hermes.verifiers import (
+    PHASE1_VERIFIER_IDENTITIES,
+    PHASE4_VERIFIER_IDENTITIES,
+    verifier_identities_for_profile,
+)
 from hermes.verifiers.adas import ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
 
 
@@ -22,6 +27,22 @@ def _identity_triplets(identities) -> tuple[tuple[str, str, str], ...]:
     return tuple(
         (identity.name, identity.version, identity.finding_id) for identity in identities
     )
+
+
+@pytest.mark.parametrize("evidence_schema_version", ["1.0", "2.0"])
+def test_legacy_schema_suite_selectors_keep_trace_integrity_v1_0(
+    evidence_schema_version: str,
+) -> None:
+    identities = verifier_identities_for_profile(
+        VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT,
+        evidence_schema_version=evidence_schema_version,
+    )
+
+    assert identities[0].model_dump(mode="json") == {
+        "name": "TraceIntegrityVerifier",
+        "version": "1.0",
+        "finding_id": "trace.integrity",
+    }
 
 
 @pytest.mark.parametrize(
