@@ -1,0 +1,33 @@
+<mujoco model="hermes_mujoco_brake_reference">
+  <compiler angle="radian" inertiafromgeom="true"/>
+  <option timestep="0.01" integrator="implicitfast" solver="Newton" iterations="100">
+    <flag fwdinv="enable" autoreset="disable"/>
+  </option>
+
+  <custom>
+    <text name="lead_actor_role" data="scripted-kinematic; behavior_realism_claim=false"/>
+  </custom>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="120 5 0.1" rgba="0.25 0.30 0.35 1"/>
+    <body name="ego" pos="0 0 0.4">
+      <joint name="ego_drive" type="slide" axis="1 0 0" damping="2" armature="0.1"/>
+      <geom name="ego_geom" type="box" size="0.4 0.3 0.3" mass="1400"
+            rgba="0.85 0.30 0.20 1"/>
+    </body>
+    <!-- The lead servo is a scripted-kinematic reference, not a behaving agent. -->
+    <body name="lead" pos="100 0 0.4">
+      <joint name="lead_drive" type="slide" axis="1 0 0" damping="0" armature="0.1"/>
+      <geom name="lead_geom" type="box" size="0.4 0.3 0.3" mass="1400"
+            rgba="0.30 0.60 0.90 1"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="ego_motor" joint="ego_drive" gear="1" ctrllimited="true"
+           ctrlrange="-8000 6000"/>
+    <velocity name="lead_velocity_servo" joint="lead_drive" kv="30000"
+              ctrllimited="true" ctrlrange="0 40"
+              forcelimited="true" forcerange="-100000 100000"/>
+  </actuator>
+</mujoco>

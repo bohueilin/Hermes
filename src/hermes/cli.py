@@ -1,18 +1,78 @@
 """Command-line interface for Hermes."""
 
 from collections import Counter
+from collections.abc import Callable, Mapping
+from functools import partial
+from pathlib import Path
+from types import MappingProxyType
+from typing import Annotated, Any, NoReturn
+from unicodedata import category as unicode_category
 
 import typer
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
+from typer.core import TyperGroup, _click
 
-from hermes.doctor import CheckResult, CheckStatus, collect_doctor_checks
+from hermes.cli_errors import CliErrorCode, render_cli_error
+from hermes.doctor import (
+    CheckResult,
+    CheckStatus,
+    collect_doctor_checks,
+    discover_hermes_repository_root,
+)
+from hermes.domain.enums import Verdict
+from hermes.domain.models import ArtifactVerification
+from hermes.evidence.canonical import canonical_json_bytes
+
+EXIT_CODES = {
+    Verdict.PASS: 0,
+    Verdict.CONDITIONAL: 10,
+    Verdict.HOLD: 20,
+    Verdict.INVALID_EVIDENCE: 30,
+}
+SCOPE_BANNER = (
+    "SIMULATION-ONLY PROTOTYPE — illustrative thresholds; not road-safety, certification, "
+    "compliance, or deployment evidence."
+)
+_REVIEW_TEXT_SCALAR_LIMIT = 1_024
+
+
+class HermesTyperGroup(TyperGroup):
+    """Map Click/Typer usage failures into the Hermes operational contract."""
+
+    def main(self, *args: Any, **kwargs: Any) -> Any:
+        standalone_mode = kwargs.pop("standalone_mode", True)
+        try:
+            result = super().main(*args, standalone_mode=False, **kwargs)
+        except _click.exceptions.UsageError as exc:
+            render_cli_error(
+                CliErrorCode.USAGE_ERROR,
+                exc.format_message(),
+                40,
+            )
+            if standalone_mode:
+                raise SystemExit(40) from exc
+            return 40
+        except _click.exceptions.ClickException as exc:
+            render_cli_error(
+                CliErrorCode.USAGE_ERROR,
+                exc.format_message(),
+                40,
+            )
+            if standalone_mode:
+                raise SystemExit(40) from exc
+            return 40
+        if standalone_mode:
+            raise SystemExit(result if isinstance(result, int) else 0)
+        return result
+
 
 app = typer.Typer(
     name="hermes",
-    help="Hermes simulation-only autonomy evidence tooling.",
+    help="Hermes SIMULATION-ONLY autonomy evidence tooling.",
     no_args_is_help=True,
+    cls=HermesTyperGroup,
 )
 
 
@@ -67,6 +127,1522 @@ def doctor() -> None:
     render_doctor_checks(checks)
     if any(check.status is CheckStatus.FAIL for check in checks):
         raise typer.Exit(code=1)
+
+
+def _phase_console() -> Console:
+    return Console(highlight=False, markup=False, soft_wrap=True)
+
+
+def _review_console() -> Console:
+    return Console(
+        highlight=False,
+        markup=False,
+        soft_wrap=True,
+        color_system=None,
+        force_terminal=False,
+    )
+
+
+def _neutralize_artifact_text(value: object) -> str:
+    """Render every Cc/Cf control as visible uppercase ASCII text."""
+
+    text = str(value)
+    rendered: list[str] = []
+    for character in text:
+        if unicode_category(character) not in {"Cc", "Cf"}:
+            rendered.append(character)
+            continue
+        codepoint = ord(character)
+        rendered.append(
+            f"\\u{codepoint:04X}"
+            if codepoint <= 0xFFFF
+            else f"\\U{codepoint:08X}"
+        )
+    return "".join(rendered)
+
+
+def _bounded_artifact_text(value: object) -> str:
+    """Return one bounded, visibly inert human-display scalar."""
+
+    from hermes.review import truncate_display_text
+
+    text = str(value)
+    projection = truncate_display_text(text, limit=_REVIEW_TEXT_SCALAR_LIMIT)
+    displayed = _neutralize_artifact_text(text[:_REVIEW_TEXT_SCALAR_LIMIT])
+    if not projection.truncated:
+        return displayed
+    return (
+        f"{displayed} [truncated=true; "
+        f"original_length={projection.original_length}]"
+    )
+
+
+def execute_fake_run(**kwargs: Any) -> Any:
+    """Lazy legacy monkeypatch seam for fake execution."""
+
+    from hermes.runtime.orchestrator import execute_fake_run as implementation
+
+    return implementation(**kwargs)
+
+
+def execute_metadrive_run(**kwargs: Any) -> Any:
+    """Lazy legacy monkeypatch seam for MetaDrive execution."""
+
+    from hermes.runtime.orchestrator import execute_metadrive_run as implementation
+
+    return implementation(**kwargs)
+
+
+def run_metadrive_smoke(**kwargs: Any) -> Any:
+    """Lazy legacy monkeypatch seam for the MetaDrive smoke probe."""
+
+    from hermes.runtime.orchestrator import run_metadrive_smoke as implementation
+
+    return implementation(**kwargs)
+
+
+def _raise_cli_error(
+    code: CliErrorCode,
+    message: str,
+    *,
+    exit_code: int = 40,
+    details: dict[str, Any] | None = None,
+    json_output: bool = False,
+) -> NoReturn:
+    render_cli_error(
+        code,
+        message,
+        exit_code,
+        details=details,
+        json_output=json_output,
+        console=_phase_console(),
+    )
+    raise typer.Exit(code=exit_code)
+
+
+def _render_artifact_verification(result: ArtifactVerification) -> None:
+    console = _phase_console()
+    console.print(SCOPE_BANNER)
+    console.print(f"Artifact integrity: {result.integrity.value}")
+    console.print(f"Authenticity: {result.authenticity.value}")
+    console.print(f"Verdict: {result.verdict.value}")
+    console.print(f"Artifact: {result.artifact_path}")
+    if result.trace_digest:
+        console.print(f"Trace digest: {result.trace_digest}")
+    if result.first_mismatch_sequence is not None:
+        console.print(f"First mismatched event sequence: {result.first_mismatch_sequence}")
+    for rationale in result.rationale:
+        console.print(f"Rationale: {rationale}")
+    if result.supporting_finding_ids:
+        console.print("Supporting findings: " + ", ".join(result.supporting_finding_ids))
+    for limitation in result.residual_limitations:
+        console.print(f"Limitation: {limitation}")
+    for error in result.errors:
+        console.print(f"Verification error: {error}", style="red")
+
+
+#: Which simulators each registered policy supports.
+#:
+#: Before Phase 8 the CLI derived one policy from the simulator and discarded --policy
+#: entirely; the orchestrator already accepted a policy_factory but nothing ever passed one.
+#: The ADAS controller is simulator-neutral because it consumes only the stored-domain
+#: Observation, so it runs on either adapter.
+POLICY_SIMULATORS: Mapping[str, frozenset[str]] = MappingProxyType(
+    {
+        "baseline": frozenset({"fake"}),
+        "metadrive-idm": frozenset({"metadrive"}),
+        "adas-longitudinal": frozenset({"fake", "metadrive"}),
+    }
+)
+
+
+def _policy_factory(
+    policy: str,
+    simulator: str,
+    policy_config: Path | None = None,
+) -> Callable[..., Any] | None:
+    """Resolve --policy to a factory, or None to keep the orchestrator's default.
+
+    Returning None for the two pre-Phase-8 policies keeps their construction byte-identical
+    to how the orchestrator has always built them, including MetaDriveIDMPolicy's adapter
+    argument.
+    """
+    if policy != "adas-longitudinal":
+        return None
+    from hermes.adas.config import AdasConfigError, load_adas_config
+    from hermes.adas.policy import AdasLongitudinalPolicy
+
+    config = None
+    if policy_config is not None:
+        try:
+            config = load_adas_config(policy_config)
+        except AdasConfigError as exc:
+            raise ValueError(str(exc)) from exc
+
+    if simulator == "metadrive":
+        # execute_metadrive_run passes the adapter; the ADAS controller does not need it.
+        return lambda _adapter: AdasLongitudinalPolicy(config)
+    return lambda: AdasLongitudinalPolicy(config)
+
+
+@app.command("run")
+def run_command(
+    simulator: Annotated[
+        str, typer.Option("--simulator", help="Simulator adapter: fake or metadrive.")
+    ],
+    scenario: Annotated[Path, typer.Option("--scenario", help="Strict scenario YAML path.")],
+    policy: Annotated[
+        str,
+        typer.Option(
+            "--policy",
+            help="Candidate policy: baseline, metadrive-idm, or adas-longitudinal.",
+        ),
+    ],
+    seed: Annotated[int, typer.Option("--seed", help="Signed 32-bit deterministic seed.")],
+    run_id: Annotated[str, typer.Option("--run-id", help="Unique lowercase artifact slug.")],
+    gate_config: Annotated[
+        Path | None,
+        typer.Option("--gate-config", help="Strict illustrative release-gate YAML."),
+    ] = None,
+    headless: Annotated[
+        bool,
+        typer.Option("--headless", help="Require physics-only MetaDrive execution."),
+    ] = False,
+    shield: Annotated[
+        str,
+        typer.Option("--shield", help="Runtime shield: noop or deterministic."),
+    ] = "noop",
+    shield_config: Annotated[
+        Path | None,
+        typer.Option("--shield-config", help="Versioned deterministic shield YAML."),
+    ] = None,
+    policy_config: Annotated[
+        Path | None,
+        typer.Option(
+            "--policy-config",
+            help="ADAS controller configuration YAML; binds policy_config_digest.",
+        ),
+    ] = None,
+) -> None:
+    """Run one bounded simulation-only scenario and publish verified evidence."""
+    from hermes.runtime.orchestrator import RunConfigurationError, RunOperationalError
+    from hermes.shields.config import ShieldConfigError, load_shield_config
+    from hermes.shields.deterministic import DeterministicSafetyShield
+    from hermes.shields.noop import NoOpShield
+
+    console = _phase_console()
+    if simulator not in {"fake", "metadrive"}:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported simulator {simulator!r}",
+        )
+    if policy not in POLICY_SIMULATORS:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported policy {policy!r}; available: {', '.join(sorted(POLICY_SIMULATORS))}",
+        )
+    if simulator not in POLICY_SIMULATORS[policy]:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"policy {policy!r} does not support simulator {simulator!r}; "
+            f"it supports: {', '.join(sorted(POLICY_SIMULATORS[policy]))}",
+        )
+    if simulator == "metadrive" and not headless:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "MetaDrive execution requires --headless",
+        )
+    if shield not in {"noop", "deterministic"}:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported shield {shield!r}",
+        )
+    if shield == "noop" and shield_config is not None:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "--shield-config requires deterministic shield",
+        )
+    repository_root = discover_hermes_repository_root()
+    if repository_root is None:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "Hermes repository root is unavailable",
+        )
+    default_gate = "gates.phase1.yaml" if simulator == "fake" else "gates.phase2.yaml"
+    resolved_gate = gate_config or repository_root / "config" / default_gate
+    resolved_artifacts = repository_root / "artifacts"
+    shield_factory = NoOpShield
+    if shield == "deterministic":
+        resolved_shield = shield_config or repository_root / "config" / "shield.phase3.yaml"
+        try:
+            deterministic_config = load_shield_config(resolved_shield)
+        except ShieldConfigError as exc:
+            _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+        shield_factory = partial(DeterministicSafetyShield, deterministic_config)
+    if policy_config is not None and policy != "adas-longitudinal":
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "--policy-config applies to the adas-longitudinal policy",
+        )
+    try:
+        policy_factory = _policy_factory(policy, simulator, policy_config)
+    except ValueError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+    try:
+        runner = execute_fake_run if simulator == "fake" else execute_metadrive_run
+        outcome = runner(
+            scenario_path=scenario,
+            gate_config_path=resolved_gate,
+            seed=seed,
+            run_id=run_id,
+            artifact_root=resolved_artifacts,
+            repository_root=repository_root,
+            shield_factory=shield_factory,
+            **({} if policy_factory is None else {"policy_factory": policy_factory}),
+        )
+    except RunConfigurationError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+    except RunOperationalError as exc:
+        _raise_cli_error(CliErrorCode.OPERATIONAL_ERROR, str(exc))
+    except Exception as exc:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            f"{type(exc).__name__}: {exc}",
+        )
+
+    _render_artifact_verification(outcome.verification)
+    if simulator == "fake":
+        console.print(
+            "Adapter: fake (deterministic architectural test double, not vehicle physics)"
+        )
+    else:
+        console.print("Adapter: metadrive (headless MetaDrive 0.4.3 vehicle physics)")
+    exit_code = EXIT_CODES[outcome.verdict]
+    if exit_code:
+        raise typer.Exit(code=exit_code)
+
+
+@app.command("sim-smoke")
+def sim_smoke_command(
+    headless: Annotated[
+        bool,
+        typer.Option("--headless", help="Require physics-only MetaDrive execution."),
+    ] = False,
+) -> None:
+    """Probe MetaDrive reset/IDM/step/close without publishing release evidence."""
+    from hermes.runtime.orchestrator import RunConfigurationError, RunOperationalError
+
+    console = _phase_console()
+    if not headless:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "MetaDrive smoke requires --headless",
+        )
+    repository_root = discover_hermes_repository_root()
+    if repository_root is None:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "Hermes repository root is unavailable",
+        )
+    try:
+        outcome = run_metadrive_smoke(
+            scenario_path=repository_root / "scenarios" / "metadrive_nominal.yaml",
+            seed=7,
+            repository_root=repository_root,
+        )
+    except RunConfigurationError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+    except RunOperationalError as exc:
+        _raise_cli_error(CliErrorCode.OPERATIONAL_ERROR, str(exc))
+    except Exception as exc:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            f"{type(exc).__name__}: {exc}",
+        )
+
+    console.print(SCOPE_BANNER)
+    console.print("Smoke status: OK")
+    console.print(
+        f"Simulator: {outcome.simulator_name} {outcome.simulator_version} "
+        f"({outcome.simulator_commit})"
+    )
+    console.print(f"Headless steps completed: {outcome.steps_completed}")
+
+
+@app.command("verify-artifact")
+def verify_artifact_command(
+    artifact_dir: Annotated[
+        Path, typer.Argument(help="Stored evidence-bundle directory.")
+    ],
+) -> None:
+    """Verify stored evidence and recompute its verdict without rerunning a simulator."""
+    from hermes.evidence.verification import verify_artifact as verify_stored_artifact
+
+    try:
+        result = verify_stored_artifact(artifact_dir)
+    except Exception as exc:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            f"artifact verifier crashed: {type(exc).__name__}: {exc}",
+        )
+    _render_artifact_verification(result)
+    if result.verdict is Verdict.INVALID_EVIDENCE:
+        _raise_cli_error(
+            CliErrorCode.INVALID_EVIDENCE,
+            "Stored artifact failed integrity verification.",
+            exit_code=30,
+        )
+    exit_code = EXIT_CODES[result.verdict]
+    if exit_code:
+        raise typer.Exit(code=exit_code)
+
+
+def _review_record_json(value: object) -> str:
+    payload = value.model_dump(mode="json") if hasattr(value, "model_dump") else value
+
+    def project_scalars(record: object) -> object:
+        if isinstance(record, str):
+            from hermes.review import truncate_display_text
+
+            projection = truncate_display_text(
+                record,
+                limit=_REVIEW_TEXT_SCALAR_LIMIT,
+            )
+            if not projection.truncated:
+                return record
+            return {
+                "displayed_text": record[:_REVIEW_TEXT_SCALAR_LIMIT],
+                "original_length": projection.original_length,
+                "truncated": True,
+            }
+        if isinstance(record, dict):
+            from hermes.review import truncate_display_text
+
+            projected: dict[object, object] = {}
+            for key_index, key in enumerate(sorted(record)):
+                item = record[key]
+                displayed_key = key
+                if isinstance(key, str):
+                    key_projection = truncate_display_text(
+                        key,
+                        limit=_REVIEW_TEXT_SCALAR_LIMIT,
+                    )
+                    if key_projection.truncated:
+                        displayed_key = (
+                            key[:_REVIEW_TEXT_SCALAR_LIMIT]
+                            + " [truncated=true; "
+                            + f"original_length={key_projection.original_length}; "
+                            + f"key_index={key_index}]"
+                        )
+                projected[displayed_key] = project_scalars(item)
+            return projected
+        if isinstance(record, (list, tuple)):
+            return [project_scalars(item) for item in record]
+        return record
+
+    text = canonical_json_bytes(project_scalars(payload)).decode("utf-8")
+    replacements = {
+        "\\b": "\\u0008",
+        "\\t": "\\u0009",
+        "\\n": "\\u000A",
+        "\\f": "\\u000C",
+        "\\r": "\\u000D",
+    }
+    normalized: list[str] = []
+    index = 0
+    while index < len(text):
+        character = text[index]
+        if character == "\\" and index + 1 < len(text):
+            short = text[index : index + 2]
+            if short in {"\\\\", '\\"', "\\/"}:
+                normalized.append(short)
+                index += 2
+                continue
+            if short in replacements:
+                normalized.append(replacements[short])
+                index += 2
+                continue
+            if index + 5 < len(text) and text[index + 1] == "u":
+                hexadecimal = text[index + 2 : index + 6]
+                if all(value in "0123456789abcdefABCDEF" for value in hexadecimal):
+                    codepoint = int(hexadecimal, 16)
+                    if codepoint <= 0x1F or 0x7F <= codepoint <= 0x9F:
+                        normalized.append(f"\\u{codepoint:04X}")
+                        index += 6
+                        continue
+        normalized.append(_neutralize_artifact_text(character))
+        index += 1
+    return "".join(normalized)
+
+
+def _digest_text(digest: object | None) -> str:
+    return "NOT_AVAILABLE" if digest is None else _bounded_artifact_text(digest.value)
+
+
+def _optional_artifact_text(value: object | None) -> str:
+    return "NOT_AVAILABLE" if value is None else _bounded_artifact_text(value)
+
+
+def _render_review_envelope_text(envelope: object) -> None:
+    console = _review_console()
+    artifact = envelope.artifact
+    identity = artifact.manifest_identity
+    console.print(SCOPE_BANNER)
+    console.print(
+        "Review authority: stored simulation evidence only; not an approval, "
+        "certification, or deployment grant."
+    )
+    console.print(
+        "Selected artifact: "
+        + _bounded_artifact_text(artifact.locator.selected_relative_path)
+    )
+    console.print(
+        "Selected directory: "
+        + _bounded_artifact_text(artifact.locator.selected_directory_name)
+    )
+    console.print("Manifest run ID: " + _optional_artifact_text(identity.run_id))
+    console.print("Created at: " + _optional_artifact_text(identity.created_at_utc))
+    console.print(
+        "Evidence schema: "
+        + _optional_artifact_text(identity.evidence_schema_version)
+    )
+    console.print(
+        "Scenario schema: "
+        + _optional_artifact_text(identity.scenario_schema_version)
+    )
+    console.print("Observed bundle digest: " + _digest_text(artifact.observed_bundle_digest))
+    console.print("Computed bundle digest: " + _digest_text(artifact.computed_bundle_digest))
+    console.print("Observed trace digest: " + _digest_text(artifact.observed_trace_digest))
+    console.print("Computed trace digest: " + _digest_text(artifact.computed_trace_digest))
+    console.print("Source inventory:")
+    for item in artifact.source_inventory:
+        console.print("  " + _review_record_json(item))
+
+    console.print(
+        "Evidence integrity: "
+        + _bounded_artifact_text(envelope.verification.integrity)
+    )
+    console.print("Gate verdict: " + _bounded_artifact_text(envelope.gate.verdict))
+    console.print(
+        "Stored claims quarantined: "
+        + _bounded_artifact_text(
+            envelope.verification.stored_claims_quarantined
+        )
+    )
+    trust_labels = {
+        "authenticity": "Authenticity",
+        "authorization": "Authorization",
+        "deployment_permission": "Deployment permission",
+        "scope": "Scope",
+        "authoritative_status": "Authoritative status",
+    }
+    for record in envelope.trust.records:
+        label = trust_labels[record.dimension]
+        console.print(f"{label}: " + _bounded_artifact_text(record.value))
+        console.print(
+            f"  {label} explanation: "
+            + _bounded_artifact_text(record.explanation)
+        )
+
+    console.print("Gate decision:")
+    console.print("  " + _review_record_json(envelope.gate))
+    console.print("Verification diagnostics:")
+    for diagnostic in envelope.verification.errors:
+        console.print("  " + _review_record_json(diagnostic))
+    for diagnostic in envelope.diagnostics:
+        console.print("  " + _review_record_json(diagnostic))
+
+    console.print("Evidence sufficiency:")
+    console.print("  Summary: " + _review_record_json(envelope.evidence_sufficiency.summary))
+    for item in envelope.evidence_sufficiency.items:
+        console.print("  " + _review_record_json(item))
+    console.print("Findings:")
+    for item in envelope.findings:
+        console.print("  " + _review_record_json(item))
+    console.print("Metrics:")
+    for item in envelope.metrics:
+        console.print("  " + _review_record_json(item))
+    console.print("Timeline:")
+    console.print(
+        "  Event count: " + _bounded_artifact_text(envelope.timeline.event_count)
+    )
+    console.print(
+        "  Simulation range: "
+        + _optional_artifact_text(envelope.timeline.simulation_start_s)
+        + " -> "
+        + _optional_artifact_text(envelope.timeline.simulation_end_s)
+    )
+    for track in envelope.timeline.tracks:
+        console.print(
+            "  Track: "
+            + _bounded_artifact_text(track.track_id)
+            + " | availability="
+            + _bounded_artifact_text(track.availability)
+            + " | reason="
+            + _bounded_artifact_text(track.unavailable_reason)
+            + " | value_kind="
+            + _bounded_artifact_text(track.value_kind)
+            + " | points="
+            + _bounded_artifact_text(len(track.points))
+        )
+
+    console.print(
+        "Recorded provenance: "
+        + _bounded_artifact_text(envelope.provenance.recorded.status)
+    )
+    console.print("  " + _review_record_json(envelope.provenance))
+    console.print("Assumptions:")
+    for item in envelope.assumptions:
+        console.print("  " + _review_record_json(item))
+    console.print("Unavailable evidence:")
+    for item in envelope.unavailable_evidence:
+        console.print("  " + _review_record_json(item))
+    console.print("Residual limitations:")
+    for item in envelope.residual_limitations:
+        console.print("  " + _review_record_json(item))
+
+
+def _render_comparison_side(console: Console, label: str, side: object) -> None:
+    console.print(
+        f"{label} artifact: "
+        + _bounded_artifact_text(side.artifact.locator.selected_relative_path)
+    )
+    console.print(
+        f"{label} manifest run ID: "
+        + _bounded_artifact_text(side.artifact.manifest_identity.run_id)
+    )
+    console.print(
+        f"{label} bundle digest: "
+        + _digest_text(side.artifact.computed_bundle_digest)
+    )
+    console.print(
+        f"{label} trace digest: "
+        + _digest_text(side.artifact.computed_trace_digest)
+    )
+    console.print(f"{label} integrity: " + _bounded_artifact_text(side.integrity))
+    console.print(f"{label} gate: " + _bounded_artifact_text(side.gate_verdict))
+
+
+def _render_comparison_partition(
+    console: Console,
+    label: str,
+    values: tuple[object, ...],
+) -> None:
+    console.print(label + ":")
+    for value in values:
+        console.print("  " + _review_record_json(value))
+
+
+def _render_comparison_envelope_text(envelope: object) -> None:
+    console = _review_console()
+    console.print(SCOPE_BANNER)
+    console.print("Authenticity: NOT_AUTHENTICATED")
+    console.print("Authorization: NOT_EVALUATED")
+    console.print("Deployment permission: NONE")
+    console.print("Scope: SIMULATION_ONLY")
+    console.print("Authoritative status: NOT_DEFINED")
+    _render_comparison_side(console, "Baseline", envelope.baseline)
+    _render_comparison_side(console, "Candidate", envelope.candidate)
+    console.print(
+        "Compatibility: " + _bounded_artifact_text(envelope.compatibility.status)
+    )
+    for reason in envelope.compatibility.reasons:
+        console.print("Incompatibility: " + _bounded_artifact_text(reason))
+    for warning in envelope.compatibility.warnings:
+        console.print("Compatibility warning: " + _bounded_artifact_text(warning))
+    console.print("Verdict delta: " + _review_record_json(envelope.verdict_delta))
+    console.print(
+        "Hard-failure delta: " + _review_record_json(envelope.hard_failure_delta)
+    )
+    console.print(
+        "Evidence-availability summary delta: "
+        + _review_record_json(envelope.availability_summary_delta)
+    )
+    _render_comparison_partition(console, "Improvements", envelope.improvements)
+    _render_comparison_partition(console, "Regressions", envelope.regressions)
+    _render_comparison_partition(
+        console, "Unchanged outcomes", envelope.unchanged_outcomes
+    )
+    _render_comparison_partition(console, "Not comparable", envelope.not_comparable)
+    _render_comparison_partition(
+        console, "Availability details", envelope.availability_deltas
+    )
+    _render_comparison_partition(console, "Chart series", envelope.chart_series)
+    _render_comparison_partition(
+        console, "Residual limitations", envelope.residual_limitations
+    )
+
+
+def _review_format_or_error(output_format: str) -> None:
+    if output_format not in {"text", "json"}:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported format {output_format!r}",
+        )
+
+
+@app.command("review-artifact")
+def review_artifact_command(
+    selection: Annotated[
+        str,
+        typer.Argument(help="Exact relative evidence-bundle selection below the root."),
+    ],
+    artifact_root: Annotated[
+        Path,
+        typer.Option("--artifact-root", help="Allowed local artifact root."),
+    ],
+    output_format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: text or json."),
+    ] = "text",
+) -> None:
+    """Review one stored bundle without executing a simulator or policy."""
+    from hermes.review import (
+        ReviewEnvelope,
+        ReviewUnavailableError,
+        canonical_envelope_bytes,
+        review_artifact,
+    )
+
+    _review_format_or_error(output_format)
+    try:
+        result = review_artifact(artifact_root, selection)
+        if not isinstance(result, ReviewEnvelope):
+            raise TypeError("review facade returned an unsupported result")
+    except ReviewUnavailableError as exc:
+        _raise_cli_error(
+            CliErrorCode.REVIEW_UNAVAILABLE,
+            _bounded_artifact_text(exc.message),
+            details={"reason": exc.reason.value},
+            json_output=output_format == "json",
+        )
+    except ValueError as exc:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            _bounded_artifact_text(exc),
+            json_output=output_format == "json",
+        )
+    except Exception as exc:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            _bounded_artifact_text(f"{type(exc).__name__}: {exc}"),
+            json_output=output_format == "json",
+        )
+
+    if output_format == "json":
+        typer.echo(canonical_envelope_bytes(result).decode("utf-8"))
+    else:
+        _render_review_envelope_text(result)
+    if result.verification.integrity == "INVALID_EVIDENCE":
+        raise typer.Exit(code=30)
+
+
+@app.command("review-compare")
+def review_compare_command(
+    baseline_selection: Annotated[
+        str,
+        typer.Argument(help="Exact relative baseline selection below the root."),
+    ],
+    candidate_selection: Annotated[
+        str,
+        typer.Argument(help="Exact relative candidate selection below the root."),
+    ],
+    artifact_root: Annotated[
+        Path,
+        typer.Option("--artifact-root", help="Allowed local artifact root."),
+    ],
+    output_format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: text or json."),
+    ] = "text",
+) -> None:
+    """Compare two independently reviewed stored bundles without execution."""
+    from hermes.review import (
+        ComparisonEnvelope,
+        ReviewEnvelope,
+        ReviewUnavailableError,
+        canonical_envelope_bytes,
+        compare_review_artifacts,
+    )
+
+    _review_format_or_error(output_format)
+    try:
+        result = compare_review_artifacts(
+            artifact_root,
+            baseline_selection,
+            candidate_selection,
+        )
+        if not isinstance(result, (ComparisonEnvelope, ReviewEnvelope)):
+            raise TypeError("comparison review facade returned an unsupported result")
+    except ReviewUnavailableError as exc:
+        _raise_cli_error(
+            CliErrorCode.REVIEW_UNAVAILABLE,
+            _bounded_artifact_text(exc.message),
+            details={"reason": exc.reason.value},
+            json_output=output_format == "json",
+        )
+    except ValueError as exc:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            _bounded_artifact_text(exc),
+            json_output=output_format == "json",
+        )
+    except Exception as exc:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            _bounded_artifact_text(f"{type(exc).__name__}: {exc}"),
+            json_output=output_format == "json",
+        )
+
+    if isinstance(result, ReviewEnvelope):
+        invalid_selection = result.artifact.locator.selected_relative_path
+        if invalid_selection == baseline_selection:
+            side = "BASELINE"
+        elif invalid_selection == candidate_selection:
+            side = "CANDIDATE"
+        else:
+            _raise_cli_error(
+                CliErrorCode.OPERATIONAL_ERROR,
+                "comparison facade returned an unknown artifact locator",
+                json_output=output_format == "json",
+            )
+        details = {"side": side, "review": result.model_dump(mode="json")}
+        if output_format == "text":
+            _review_console().print("Invalid comparison side: " + side)
+            _render_review_envelope_text(result)
+        _raise_cli_error(
+            CliErrorCode.INVALID_EVIDENCE,
+            "One stored artifact failed integrity verification.",
+            exit_code=30,
+            details=details,
+            json_output=output_format == "json",
+        )
+
+    if result.compatibility.status == "INCOMPATIBLE":
+        details = {"comparison": result.model_dump(mode="json")}
+        if output_format == "text":
+            _render_comparison_envelope_text(result)
+        _raise_cli_error(
+            CliErrorCode.INCOMPATIBLE_EVIDENCE,
+            "Stored artifacts are not comparable.",
+            details=details,
+            json_output=output_format == "json",
+        )
+    if output_format == "json":
+        typer.echo(canonical_envelope_bytes(result).decode("utf-8"))
+    else:
+        _render_comparison_envelope_text(result)
+
+
+@app.command("workbench")
+def workbench_command(
+    artifact_root: Annotated[
+        Path,
+        typer.Option(
+            "--artifact-root",
+            help="Required allowed root containing stored simulation evidence.",
+        ),
+    ],
+    host: Annotated[
+        str,
+        typer.Option("--host", help="Numeric loopback bind address only."),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option("--port", help="Explicit local TCP port from 1 through 65535."),
+    ] = 8501,
+    no_browser: Annotated[
+        bool,
+        typer.Option("--no-browser", help="Do not ask Streamlit to open a browser."),
+    ] = False,
+) -> None:
+    r"""Launch the local-only, read-only, simulation-only UI; install .\[workbench]."""
+    from hermes.workbench import launch_workbench
+
+    try:
+        status = launch_workbench(
+            artifact_root,
+            host=host,
+            port=port,
+            no_browser=no_browser,
+        )
+    except ValueError as exc:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            _neutralize_artifact_text(exc),
+        )
+    except Exception as exc:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            _neutralize_artifact_text(f"{type(exc).__name__}: {exc}"),
+        )
+    if status != 0:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            f"workbench process exited with status {status}",
+        )
+
+
+@app.command("compare")
+def compare_command(
+    baseline_dir: Annotated[Path, typer.Argument(help="Baseline evidence bundle.")],
+    candidate_dir: Annotated[Path, typer.Argument(help="Candidate evidence bundle.")],
+    output_format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: table or json."),
+    ] = "table",
+    variation_axis: Annotated[
+        str,
+        typer.Option(
+            "--variation-axis",
+            help=(
+                "Component permitted to differ: none (default, fully fail-closed) "
+                "or policy."
+            ),
+        ),
+    ] = "none",
+) -> None:
+    """Compare two independently verified, compatible stored evidence bundles."""
+    from hermes.comparison.compare import VariationAxis, compare_artifacts
+    from hermes.evidence.verification import inspect_artifact
+
+    try:
+        axis = VariationAxis(variation_axis)
+    except ValueError:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported variation axis {variation_axis!r}; use none or policy",
+        )
+
+    console = _phase_console()
+    if output_format not in {"table", "json"}:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"unsupported format {output_format!r}",
+        )
+    try:
+        baseline = inspect_artifact(baseline_dir)
+        candidate = inspect_artifact(candidate_dir)
+    except Exception as exc:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            f"artifact inspection crashed: {type(exc).__name__}: {exc}",
+        )
+
+    invalid = [
+        inspection
+        for inspection in (baseline, candidate)
+        if inspection.snapshot is None
+    ]
+    if invalid:
+        details = {
+            "artifacts": [
+                inspection.verification.model_dump(mode="json")
+                for inspection in invalid
+            ]
+        }
+        if output_format == "json":
+            _raise_cli_error(
+                CliErrorCode.INVALID_EVIDENCE,
+                "One or more stored artifacts failed verification.",
+                exit_code=30,
+                details=details,
+                json_output=True,
+            )
+        else:
+            render_cli_error(
+                CliErrorCode.INVALID_EVIDENCE,
+                "One or more stored artifacts failed verification.",
+                30,
+                details=details,
+                console=console,
+            )
+            for inspection in invalid:
+                _render_artifact_verification(inspection.verification)
+        raise typer.Exit(code=30)
+
+    assert baseline.snapshot is not None
+    assert candidate.snapshot is not None
+    comparison = compare_artifacts(baseline.snapshot, candidate.snapshot, axis)
+    if output_format == "json":
+        comparison_payload = comparison.model_dump(mode="json")
+        if not comparison.compatibility.comparable:
+            _raise_cli_error(
+                CliErrorCode.INCOMPATIBLE_EVIDENCE,
+                "Stored artifacts are not comparable.",
+                details={"comparison": comparison_payload},
+                json_output=True,
+            )
+        typer.echo(
+            canonical_json_bytes(comparison_payload).decode("utf-8")
+        )
+    else:
+        console.print(SCOPE_BANNER)
+        console.print(
+            "Comparable: "
+            + ("YES" if comparison.compatibility.comparable else "NO")
+        )
+        for reason in comparison.compatibility.reasons:
+            console.print(f"Incompatibility: {reason}", style="red")
+        for warning in comparison.compatibility.warnings:
+            console.print(f"Warning: {warning}", style="yellow")
+        if comparison.compatibility.comparable:
+            table = Table(title="Stored evidence comparison")
+            table.add_column("Dimension")
+            table.add_column("Status")
+            table.add_column("Baseline", overflow="fold")
+            table.add_column("Candidate", overflow="fold")
+            table.add_column("Explanation", overflow="fold")
+            for dimension in comparison.dimensions:
+                table.add_row(
+                    dimension.name,
+                    dimension.status.value,
+                    str(dimension.baseline_value),
+                    str(dimension.candidate_value),
+                    dimension.explanation,
+                )
+            console.print(table)
+    if not comparison.compatibility.comparable:
+        _raise_cli_error(
+            CliErrorCode.INCOMPATIBLE_EVIDENCE,
+            "Stored artifacts are not comparable.",
+        )
+
+
+fixtures_app = typer.Typer(
+    name="fixtures",
+    help="Regenerate the SIMULATION-ONLY evidence fixtures the test suite depends on.",
+    no_args_is_help=True,
+    cls=HermesTyperGroup,
+)
+app.add_typer(fixtures_app, name="fixtures")
+
+
+def _fixture_registry_path(repository_root: Path, registry: Path | None) -> Path:
+    return registry or repository_root / "config" / "phase8-fixture-registry.yaml"
+
+
+def _resolved_repository_root() -> Path:
+    repository_root = discover_hermes_repository_root()
+    if repository_root is None:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "Hermes repository root is unavailable",
+        )
+    return repository_root
+
+
+@fixtures_app.command("list")
+def fixtures_list_command(
+    registry: Annotated[
+        Path | None,
+        typer.Option("--registry", help="Strict fixture-registry YAML path."),
+    ] = None,
+) -> None:
+    """List every registered fixture and whether it is present locally."""
+    from hermes.fixtures import FixtureRegistryError, load_fixture_registry
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    artifact_root = repository_root / "artifacts"
+    try:
+        loaded = load_fixture_registry(_fixture_registry_path(repository_root, registry))
+    except FixtureRegistryError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+
+    table = Table(title="SIMULATION-ONLY evidence fixtures")
+    table.add_column("Run ID")
+    table.add_column("Present")
+    table.add_column("Needs simulator")
+    table.add_column("Description", overflow="fold")
+    for recipe in loaded.fixtures:
+        table.add_row(
+            recipe.run_id,
+            "yes" if (artifact_root / recipe.run_id).is_dir() else "NO",
+            "yes" if recipe.requires_simulator else "no",
+            recipe.description,
+        )
+    console.print(table)
+
+
+@fixtures_app.command("regenerate")
+def fixtures_regenerate_command(
+    registry: Annotated[
+        Path | None,
+        typer.Option("--registry", help="Strict fixture-registry YAML path."),
+    ] = None,
+    only: Annotated[
+        list[str] | None,
+        typer.Option("--only", help="Regenerate just this fixture; repeatable."),
+    ] = None,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Replace fixtures that already exist."),
+    ] = False,
+    simulator: Annotated[
+        bool,
+        typer.Option(
+            "--simulator/--no-simulator",
+            help="Include fixtures that require a real local MetaDrive installation.",
+        ),
+    ] = True,
+    allow_dirty: Annotated[
+        bool,
+        typer.Option(
+            "--allow-dirty",
+            help="Regenerate even though the worktree is dirty (records dirty provenance).",
+        ),
+    ] = False,
+) -> None:
+    """Rebuild evidence fixtures deterministically from committed inputs."""
+    from hermes.fixtures import (
+        FixtureRegistryError,
+        load_fixture_registry,
+        regenerate_fixture,
+        select_recipes,
+    )
+    from hermes.fixtures.registry import repository_worktree_is_dirty
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    artifact_root = repository_root / "artifacts"
+    artifact_root.mkdir(parents=True, exist_ok=True)
+    try:
+        loaded = load_fixture_registry(_fixture_registry_path(repository_root, registry))
+        selected = select_recipes(loaded, only=only or None, include_simulator=simulator)
+    except FixtureRegistryError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+
+    if not allow_dirty and repository_worktree_is_dirty(repository_root):
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "the worktree is dirty, so regenerated fixtures would record dirty provenance and "
+            "diverge from the stored ones; commit or stash first, or pass --allow-dirty",
+        )
+    console.print(
+        "SIMULATION-ONLY PROTOTYPE — regenerated fixtures are test inputs, not release evidence."
+    )
+    rebuilt = 0
+    failures: list[str] = []
+    for recipe in selected:
+        destination = artifact_root / recipe.run_id
+        if destination.exists() and not force:
+            console.print(f"Skipped (already present): {recipe.run_id}")
+            continue
+        if recipe.derived_from is not None and recipe.derived_from in failures:
+            failures.append(recipe.run_id)
+            console.print(
+                f"Skipped: {recipe.run_id} (its source {recipe.derived_from} failed)",
+                style="red",
+            )
+            continue
+        try:
+            regenerate_fixture(
+                recipe,
+                registry=loaded,
+                artifact_root=artifact_root,
+                repository_root=repository_root,
+                force=force,
+            )
+        except FixtureRegistryError as exc:
+            # One unavailable simulator must not deny the caller every other fixture.
+            failures.append(recipe.run_id)
+            console.print(f"Failed: {recipe.run_id}: {exc}", style="red")
+            continue
+        rebuilt += 1
+        console.print(f"Regenerated: {recipe.run_id}")
+    console.print(f"Fixtures regenerated: {rebuilt} of {len(selected)} selected")
+    if failures:
+        _raise_cli_error(
+            CliErrorCode.OPERATIONAL_ERROR,
+            "these fixtures could not be regenerated: " + ", ".join(failures),
+        )
+
+
+@fixtures_app.command("verify")
+def fixtures_verify_command(
+    registry: Annotated[
+        Path | None,
+        typer.Option("--registry", help="Strict fixture-registry YAML path."),
+    ] = None,
+) -> None:
+    """Report registered fixtures that are absent from the local artifact root."""
+    from hermes.fixtures import FixtureRegistryError, load_fixture_registry, missing_fixtures
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    try:
+        loaded = load_fixture_registry(_fixture_registry_path(repository_root, registry))
+    except FixtureRegistryError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+
+    absent = missing_fixtures(loaded, repository_root / "artifacts")
+    if absent:
+        console.print(f"Missing fixtures: {', '.join(absent)}")
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "run `hermes fixtures regenerate` to restore the evidence fixtures",
+        )
+    console.print(f"All {len(loaded.fixtures)} registered fixtures are present.")
+
+
+agent_app = typer.Typer(
+    name="agent",
+    help="Bounded agentic workflows over the deterministic Hermes tool layer.",
+    no_args_is_help=True,
+    cls=HermesTyperGroup,
+)
+app.add_typer(agent_app, name="agent")
+
+
+@agent_app.command("tools")
+def agent_tools_command() -> None:
+    """List the deterministic tools an agent may call, and what each is permitted to do."""
+    from hermes.agents import TOOL_CATALOG
+
+    console = _phase_console()
+    console.print(
+        "SIMULATION-ONLY PROTOTYPE — agents propose; deterministic tools execute and the "
+        "gate decides. Capability is not permission."
+    )
+    table = Table(title="Agent tool catalog")
+    table.add_column("Tool")
+    table.add_column("Permission")
+    table.add_column("Dry run")
+    table.add_column("Arguments", overflow="fold")
+    table.add_column("Summary", overflow="fold")
+    for spec in TOOL_CATALOG:
+        table.add_row(
+            spec.name,
+            spec.permission.value,
+            "yes" if spec.supports_dry_run else "-",
+            ", ".join(spec.arguments) or "-",
+            spec.summary,
+        )
+    console.print(table)
+    console.print(
+        "READ may be called freely; EXECUTE is bounded by the workflow budget; "
+        "MUTATE refuses without an approval record bound to the draft content digest."
+    )
+
+
+@agent_app.command("triage")
+def agent_triage_command(
+    run_id: Annotated[str, typer.Argument(help="Run ID of a published artifact bundle.")],
+    artifact_root: Annotated[
+        Path | None,
+        typer.Option("--artifact-root", help="Artifact root containing the run."),
+    ] = None,
+    output_format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: text or json."),
+    ] = "text",
+) -> None:
+    """Triage one run: propose a failure category beside the deterministic classification."""
+    from hermes.agents import ToolContext, triage_run
+
+    console = _phase_console()
+    if output_format not in {"text", "json"}:
+        _raise_cli_error(
+            CliErrorCode.USAGE_ERROR,
+            f"unsupported format {output_format!r}; use text or json",
+        )
+    repository_root = _resolved_repository_root()
+    root = artifact_root or repository_root / "artifacts"
+    if not (root / run_id).is_dir():
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, f"unknown run: {run_id}")
+
+    context = ToolContext(repository_root=repository_root, artifact_root=root)
+    proposal = triage_run(context, run_id)
+
+    if output_format == "json":
+        console.print(canonical_json_bytes(proposal.model_dump(mode="json")).decode("utf-8"))
+        return
+
+    console.print(
+        "SIMULATION-ONLY PROTOTYPE — an agent proposal is an interpretation, never a verdict."
+    )
+    console.print(f"Run: {proposal.run_id}")
+    console.print(f"Agent runtime: {proposal.runtime}")
+    console.print(f"AGENT INTERPRETATION: {proposal.category.value}")
+    console.print(f"DETERMINISTIC FACT: {proposal.deterministic_category.value}")
+    console.print(
+        "Agreement: "
+        + ("agent agrees with the deterministic classifier" if
+           proposal.agrees_with_deterministic_classifier
+           else "AGENT DISAGREES WITH THE DETERMINISTIC CLASSIFIER")
+    )
+    console.print(f"Rationale (agent): {proposal.rationale}")
+    for citation in proposal.citations:
+        console.print(
+            f"Evidence: {citation.artifact_file}{citation.locator} = "
+            f"{citation.quoted_value!r} [bundle {citation.bundle_digest[:12]}]"
+        )
+    console.print(
+        "HUMAN DECISION: not recorded; promotion of any canonical change requires an "
+        "approval record bound to the draft content digest."
+    )
+    console.print(
+        f"Budget: {context.ledger.tool_calls} tool calls, {context.ledger.runs} runs"
+    )
+
+
+@agent_app.command("check-citations")
+def agent_check_citations_command(
+    run_id: Annotated[str, typer.Argument(help="Run ID whose triage citations to verify.")],
+    artifact_root: Annotated[
+        Path | None,
+        typer.Option("--artifact-root", help="Artifact root containing the run."),
+    ] = None,
+) -> None:
+    """Re-resolve every citation a triage proposal emits against the stored evidence."""
+    from hermes.agents import ToolContext, triage_run
+    from hermes.agents.citations import all_valid, check_citations
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    root = artifact_root or repository_root / "artifacts"
+    if not (root / run_id).is_dir():
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, f"unknown run: {run_id}")
+
+    context = ToolContext(repository_root=repository_root, artifact_root=root)
+    proposal = triage_run(context, run_id)
+    checks = check_citations(proposal.citations, root)
+
+    table = Table(title=f"Citation check for {run_id}")
+    table.add_column("Artifact")
+    table.add_column("Locator", overflow="fold")
+    table.add_column("Status")
+    table.add_column("Detail", overflow="fold")
+    for check in checks:
+        table.add_row(
+            check.citation.artifact_file,
+            check.citation.locator,
+            check.status.value,
+            check.detail,
+        )
+    console.print(table)
+    if not all_valid(checks):
+        _raise_cli_error(
+            CliErrorCode.INVALID_EVIDENCE,
+            "one or more citations did not resolve against the stored evidence",
+        )
+    console.print(f"All {len(checks)} citations resolved and matched.")
+
+
+regression_app = typer.Typer(
+    name="regression",
+    help="Turn a failed run into a reviewable regression scenario.",
+    no_args_is_help=True,
+    cls=HermesTyperGroup,
+)
+app.add_typer(regression_app, name="regression")
+
+
+def _draft_root(repository_root: Path, override: Path | None) -> Path:
+    return override or repository_root / "drafts"
+
+
+@regression_app.command("draft")
+def regression_draft_command(
+    run_id: Annotated[str, typer.Argument(help="Run ID of a failed artifact bundle.")],
+    artifact_root: Annotated[
+        Path | None, typer.Option("--artifact-root", help="Artifact root containing the run.")
+    ] = None,
+    draft_root: Annotated[
+        Path | None, typer.Option("--draft-root", help="Where drafts are written.")
+    ] = None,
+) -> None:
+    """Draft a regression scenario reproducing a failed run's conditions."""
+    from hermes.regression import (
+        RegressionDraftError,
+        build_regression_draft,
+        committed_suite,
+    )
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    artifacts = artifact_root or repository_root / "artifacts"
+    try:
+        draft, path, coverage, violations = build_regression_draft(
+            repository_root=repository_root,
+            artifact_root=artifacts,
+            run_id=run_id,
+            draft_root=_draft_root(repository_root, draft_root),
+            suite=committed_suite(repository_root),
+        )
+    except RegressionDraftError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+
+    console.print(
+        "SIMULATION-ONLY PROTOTYPE — a draft is a proposal, not an addition to the suite."
+    )
+    console.print(f"Draft: {draft.draft_id}  [{draft.state.value}]")
+    console.print(f"Proposed scenario: {draft.scenario_name}")
+    console.print(f"Written to: {path}")
+    console.print(f"DETERMINISTIC FACT: triggered by {draft.provenance.trigger_finding_id}")
+    console.print(f"Rationale: {draft.rationale}")
+    if coverage.covered:
+        console.print(
+            f"Coverage: ALREADY COVERED by {coverage.matching_scenario} — {coverage.reason}",
+            style="yellow",
+        )
+    else:
+        console.print(f"Coverage: GAP — {coverage.reason}")
+    for violation in violations:
+        console.print(f"Requirement floor: {violation.rule}: {violation.detail}", style="red")
+    if violations:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            "draft weakens the coverage it derives from and cannot be promoted",
+        )
+    console.print(
+        "HUMAN DECISION: not recorded. Approve with "
+        f"`hermes regression approve {draft.draft_id} --approver <you> --rationale <why>`."
+    )
+
+
+@regression_app.command("list")
+def regression_list_command(
+    draft_root: Annotated[
+        Path | None, typer.Option("--draft-root", help="Where drafts are written.")
+    ] = None,
+) -> None:
+    """List drafted regression scenarios and their state."""
+    from hermes.agents.approval import load_approval_registry
+    from hermes.regression import RegressionDraftError, load_draft
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    root = _draft_root(repository_root, draft_root)
+    registry = load_approval_registry(repository_root / "config" / "phase8-approvals.yaml")
+    table = Table(title="Regression drafts")
+    table.add_column("Draft")
+    table.add_column("State")
+    table.add_column("Approval")
+    table.add_column("Proposed scenario", overflow="fold")
+    table.add_column("From run", overflow="fold")
+    if root.is_dir():
+        for directory in sorted(root.iterdir()):
+            if not (directory / "draft.json").is_file():
+                continue
+            try:
+                draft = load_draft(directory)
+            except RegressionDraftError as exc:
+                table.add_row(directory.name, "EDITED", "-", str(exc)[:60], "-")
+                continue
+            decision = registry.decision_for(draft.draft_id, draft.scenario_content_digest)
+            table.add_row(
+                draft.draft_id,
+                draft.state.value,
+                decision.decision.value if decision else "none",
+                draft.scenario_name,
+                draft.provenance.source_run_id,
+            )
+    console.print(table)
+
+
+@regression_app.command("approve")
+def regression_approve_command(
+    draft_id: Annotated[str, typer.Argument(help="Draft to record a decision for.")],
+    approver: Annotated[str, typer.Option("--approver", help="Who is deciding.")],
+    rationale: Annotated[str, typer.Option("--rationale", help="Why.")],
+    reject: Annotated[
+        bool, typer.Option("--reject", help="Record a rejection instead of an approval.")
+    ] = False,
+    draft_root: Annotated[
+        Path | None, typer.Option("--draft-root", help="Where drafts are written.")
+    ] = None,
+) -> None:
+    """Record a human decision about one draft, bound to its exact content digest."""
+    from datetime import UTC, datetime
+
+    from hermes.agents.approval import (
+        ApprovalDecision,
+        ApprovalError,
+        ApprovalRecord,
+        append_approval,
+    )
+    from hermes.regression import RegressionDraftError, load_draft
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    directory = _draft_root(repository_root, draft_root) / draft_id
+    if not (directory / "draft.json").is_file():
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, f"unknown draft: {draft_id}")
+    try:
+        draft = load_draft(directory)
+    except RegressionDraftError as exc:
+        _raise_cli_error(CliErrorCode.INVALID_EVIDENCE, str(exc))
+    if not draft.is_promotable and not reject:
+        _raise_cli_error(
+            CliErrorCode.CONFIGURATION_ERROR,
+            f"draft {draft_id} is {draft.state.value} and cannot be approved",
+        )
+    try:
+        append_approval(
+            repository_root / "config" / "phase8-approvals.yaml",
+            ApprovalRecord(
+                draft_id=draft.draft_id,
+                draft_content_digest=draft.scenario_content_digest,
+                approver=approver,
+                timestamp_utc=datetime.now(UTC).isoformat(),
+                decision=(
+                    ApprovalDecision.REJECTED if reject else ApprovalDecision.APPROVED
+                ),
+                rationale=rationale,
+            ),
+        )
+    except ApprovalError as exc:
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc))
+    console.print(
+        f"Recorded {'REJECTED' if reject else 'APPROVED'} for {draft.draft_id} "
+        f"bound to content digest {draft.scenario_content_digest[:12]}."
+    )
+    console.print(
+        "This approves a repository change only. It is not a gate verdict, not evidence "
+        "approval, and not deployment permission."
+    )
+
+
+@regression_app.command("promote")
+def regression_promote_command(
+    draft_id: Annotated[str, typer.Argument(help="Draft to promote into the suite.")],
+    execute: Annotated[
+        bool, typer.Option("--execute", help="Actually write the scenario; default is a plan.")
+    ] = False,
+    draft_root: Annotated[
+        Path | None, typer.Option("--draft-root", help="Where drafts are written.")
+    ] = None,
+) -> None:
+    """Promote an approved draft into the canonical regression suite."""
+    from hermes.agents.tools import ToolContext, promote_regression
+
+    console = _phase_console()
+    repository_root = _resolved_repository_root()
+    directory = _draft_root(repository_root, draft_root) / draft_id
+    scenario = directory / "scenario.yaml"
+    if not scenario.is_file():
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, f"unknown draft: {draft_id}")
+
+    context = ToolContext(
+        repository_root=repository_root, artifact_root=repository_root / "artifacts"
+    )
+    result = promote_regression(
+        context, draft_id=draft_id, draft_path=scenario, dry_run=not execute
+    )
+    if not result.ok:
+        assert result.error is not None
+        console.print(f"Refused: {result.error.code.value}: {result.error.detail}", style="red")
+        _raise_cli_error(CliErrorCode.CONFIGURATION_ERROR, result.error.detail)
+    plan = result.data["plan"]
+    console.print(f"Scenario: {plan['scenario_name']}")
+    console.print(f"Destination: {plan['destination']}")
+    console.print(f"Approved by: {result.data['approved_by']}")
+    if result.data["dry_run"]:
+        console.print("Dry run: nothing written. Re-run with --execute to promote.")
+    else:
+        console.print(f"Promoted to {result.data['promoted_to']}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,77 @@
+# Seeded-evaluation suite: deliberately seeded policy or environment failures the
+# evaluation MUST catch.
+#
+# This is the acceptance criterion for the evaluation itself. A gate that never fails is
+# indistinguishable from a gate that cannot fail, so each entry names a seeded failure, the
+# scenario that exposes it, the finding that must catch it, and the failure category the
+# triage agent must propose.
+#
+# The seven policy defects use config/adas/baseline.yaml with one property changed. The
+# observation-delay row instead keeps the baseline policy and seeds the environment path.
+schema_version: "1.0"
+label: deliberately_seeded_policy_or_environment_failures_for_evaluation_acceptance
+defects:
+  - defect_id: late_braking
+    description: Brakes only once required deceleration crosses the calibrated onset margin.
+    policy_config: config/adas/defect_late_braking.yaml
+    scenario: scenarios/adas/aeb_lead_hard_brake.yaml
+    expected_failing_finding: adas.aeb.brake_onset_margin
+    expected_triage_category: INTERVENTION_TOO_LATE
+
+  - defect_id: no_aeb
+    description: Warns but never intervenes.
+    policy_config: config/adas/defect_no_aeb.yaml
+    scenario: scenarios/adas/aeb_lead_hard_brake.yaml
+    expected_failing_finding: adas.aeb.threat_response
+    expected_triage_category: MISSED_INTERVENTION
+
+  - defect_id: over_braking
+    description: Treats almost any closing geometry as an emergency.
+    policy_config: config/adas/defect_over_braking.yaml
+    scenario: scenarios/adas/adas_nominal_slow_closing.yaml
+    expected_failing_finding: adas.aeb.no_false_intervention
+    expected_triage_category: OVER_INTERVENTION
+
+  # The same two defects again, on a cut-in rather than a lead brake. The controllers are
+  # unchanged and so is the oracle; only the geometry differs. These entries exist to show
+  # the evaluation is not tuned to one manoeuvre - a defect that is caught only in the
+  # scenario it was discovered in has not really been characterised.
+  - defect_id: no_aeb_cut_in
+    description: Warns but never intervenes, when the threat arrives as a near-field cut-in.
+    policy_config: config/adas/defect_no_aeb.yaml
+    scenario: scenarios/adas/adas_cut_in_near.yaml
+    expected_failing_finding: adas.aeb.threat_response
+    expected_triage_category: MISSED_INTERVENTION
+
+  - defect_id: over_braking_cut_in
+    description: Treats a distant, slow merge ahead as an emergency.
+    policy_config: config/adas/defect_over_braking.yaml
+    scenario: scenarios/adas/adas_cut_in_far.yaml
+    expected_failing_finding: adas.aeb.no_false_intervention
+    expected_triage_category: OVER_INTERVENTION
+
+  # The classic stationary-object pair adds the same evaluation diagonal with no manoeuvre.
+  # The nominal defect is deliberately different from the threshold-only over-braking
+  # config: it pattern-matches on any scripted actor instead of respecting in-path geometry.
+  - defect_id: no_aeb_stationary
+    description: Warns but never intervenes for an avoidable stopped in-lane actor.
+    policy_config: config/adas/defect_no_aeb.yaml
+    scenario: scenarios/adas/aeb_stationary_lead.yaml
+    expected_failing_finding: adas.aeb.threat_response
+    expected_triage_category: MISSED_INTERVENTION
+
+  - defect_id: over_braking_stationary
+    description: Brakes for a stopped adjacent-lane actor with no in-path front geometry.
+    policy_config: config/adas/defect_actor_presence_braking.yaml
+    scenario: scenarios/adas/non_in_path_stationary_object.yaml
+    expected_failing_finding: adas.aeb.no_false_intervention
+    expected_triage_category: OVER_INTERVENTION
+
+  # Environment-path seed: the policy is the unchanged baseline. Verified metrics, fault
+  # coverage, and the stored policy threshold prove the upstream stale-observation cause.
+  - defect_id: stationary_observation_delay
+    description: Delays a stopped in-lane actor observation until the baseline misses AEB.
+    policy_config: config/adas/baseline.yaml
+    scenario: scenarios/adas/aeb_stationary_lead_observation_delay.yaml
+    expected_failing_finding: adas.aeb.threat_response
+    expected_triage_category: STALE_OBSERVATION

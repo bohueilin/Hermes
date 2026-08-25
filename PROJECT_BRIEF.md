@@ -1,100 +1,259 @@
-# Hermes — Autonomous Driving Scenario & Safety Evidence Lab
-
-**Repository:** `bohueilin/Hermes`  
-**Implementation package:** `hermes`  
-**Positioning:** Scenario-to-evidence control plane for simulation-based autonomy development.
+# Hermes — Phase 6 Product Brief and Reviewer-Comprehension Iteration
 
 ## Product identity
 
-**Hermes** is the trusted evidence courier for autonomy development. It does not claim that a policy is safe merely because the vehicle completed a route; it carries the exact scenario, software versions, candidate and executed actions, verifier findings, metrics, verdict, and integrity proof from experiment to review.
-
-Canonical repository and software naming:
-
-- GitHub: `bohueilin/Hermes`
-- Local root: `~/Projects/Hermes`
-- Distribution: `hermes-autonomy`
-- Python package: `hermes`
-- CLI: `hermes`
+**Repository:** `bohueilin/Hermes`
+**Distribution:** `hermes-autonomy`
+**Python package:** `hermes`
+**Positioning:** Scenario-to-evidence control plane for simulation-based autonomy development.
 
 ## Product thesis
 
-Autonomy teams need more than an aggregate driving score. They need reproducible evidence showing what the system encountered, what it decided, whether safety invariants held, and why a change should pass or be held.
+> **Autonomy policy proposes → environment executes → verifiers evaluate → gate decides → trace proves.**
 
-**Autonomy policy proposes → simulator verifies → gate decides → trace proves.**
+For current Hermes, the trace supports an internally consistent advancement decision. It does not independently authenticate the producer, re-execute the policy or simulator, establish real-world safety, or grant deployment permission.
+
+## Problem
+
+Before Phase 6, Hermes produced structured, independently re-verifiable simulation evidence, but
+reviewers had to consume legacy CLI output and raw files. That made it difficult to answer quickly
+and accurately:
+
+- what was tested;
+- what the policy proposed, the shield permitted, and the environment executed;
+- which evidence was observed versus computed;
+- which requirements failed or lacked evidence;
+- why the release gate issued its verdict;
+- whether a candidate improved one dimension while regressing another;
+- whether the artifact is internally consistent, authenticated, authorized, or deployable.
+
+A conventional dashboard can worsen this problem by turning a recomputed gate verdict into a generic green status, hiding missing evidence, or reimplementing evidence logic in the presentation layer.
 
 ## Primary user
 
-An autonomy product leader, safety reviewer, simulation engineer, or autonomy developer assessing whether a policy change is ready to advance within a constrained operational design domain.
+An autonomy product leader, safety reviewer, simulation engineer, autonomy developer, or release owner reviewing a completed Hermes artifact or compatible baseline/candidate pair within a constrained simulation ODD.
 
-## MVP user journey
+## Phase 6 product objective
 
-1. Select a scenario, seed, policy, and gate configuration.
-2. Run a closed-loop simulation.
-3. Inspect candidate actions, safety overrides, vehicle state, and findings.
-4. Review safety, mission, comfort, and system metrics.
-5. Receive PASS, CONDITIONAL, HOLD, or INVALID_EVIDENCE.
-6. Compare baseline and candidate policies.
-7. Export a replayable, tamper-evident evidence bundle.
+Hermes now provides a **local, read-only Evidence Review Workbench** that makes existing evidence
+understandable without weakening its integrity model.
 
-## Constrained prototype ODD
+The workbench answers:
 
-- Procedurally generated, lane-structured roads.
-- Daylight and clear weather.
-- Bounded speed range configured per scenario.
-- Vehicle traffic only in MVP.
-- State/LiDAR-like observation with configurable noise, delay, and dropout.
-- No public-road deployment and no claim of production representativeness.
+1. What exact artifact was reviewed?
+2. Did stored verification accept it as internally consistent?
+3. What gate verdict was recomputed, and why?
+4. Which findings were hard failures, soft failures, warnings, or unavailable?
+5. What evidence was required versus available?
+6. Which event sequences support each finding?
+7. What did candidate, permitted, and executed actions show?
+8. What improved and regressed in a compatible comparison?
+9. Is the artifact authenticated?
+10. What does the result not establish?
 
-## MVP scenarios
+## Core trust states
 
-1. Nominal lane following.
-2. Lead vehicle hard braking.
-3. Near-field vehicle cut-in.
-4. Static obstacle blocking the lane.
-5. Dense merge or bottleneck.
-6. Actuation-latency fault.
+Phase 6 completed implementation and adversarial hardening at checkpoint `90fb7d8`. The later
+reviewer-comprehension branch `feat/phase6-reviewer-comprehension` reorganized the presentation at
+commits `685b92d`, `e2eab34`, and `80439c5`. Its independent Task 3 audit recorded 746 passing tests
+and GO for automated acceptance with no reproduced P0/P1. A later browser document object model
+(DOM) walkthrough found and
+closed a first-Timeline-mount preset/projection mismatch in `cbced6e`; 88 scoped and two independent
+targeted tests passed. A second browser P2 involving stale second-level heading (H2) permalinks after
+radio reruns is closed in code/tests by explicit anchors for all seven primary H2s at `0fe3459`; 83 focused and two
+independent targeted tests passed. Fresh DOM observed Overview `#overview`, Timeline `#timeline`,
+Compare `#compare`, and zero exception text. The delivered implementation uses strict
+immutable portable
+`ReviewEnvelope`/`ComparisonEnvelope` version 1.0, a framework-independent review core, and
+optional Streamlit `>=1.37,<2`.
 
-Stretch scenarios: sensor dropout, low friction, real-log replay, construction detour, and an occluded pedestrian in a higher-fidelity simulator.
+The workbench must always expose these independently:
 
-## Policies
+| Dimension | Phase 6 value or domain |
+|---|---|
+| Gate verdict | `PASS`, `CONDITIONAL`, `HOLD`, `INVALID_EVIDENCE` |
+| Evidence integrity | `INTERNALLY_CONSISTENT`, `INVALID_EVIDENCE`, transient `UNVERIFIED` |
+| Evidence authenticity | `NOT_AUTHENTICATED` |
+| Authorization | `NOT_EVALUATED` |
+| Deployment permission | `NONE` |
+| Scope | `SIMULATION_ONLY` |
 
-- **Baseline:** simulator-supported IDM or equivalent deterministic policy.
-- **Candidate:** baseline plus a deterministic safety shield for minimum time-to-collision, speed cap, stale-observation handling, and emergency braking.
-- **Optional research extension:** PPO or another learned policy, evaluated against the same hard invariants and evidence gate.
+## Core jobs to be done
 
-## Evidence model
+Authoritative/supersession status is independently fixed at `NOT_DEFINED` for Phase 6; this is
+separate from authorization `NOT_EVALUATED`.
 
-Each run exports:
+1. Select one exact artifact under an allowed local artifact root.
+2. Capture and verify it without mutation or simulator rerun.
+3. Review verdict, rationale, findings, evidence sufficiency, provenance, and limitations.
+4. Drill from a finding or metric to supporting event sequences.
+5. Inspect candidate, permitted, and executed actions over time.
+6. Compare two independently verified and compatible artifacts.
+7. Export a machine-readable review envelope without modifying the source bundle.
 
-```text
-manifest.json
-scenario.resolved.yaml
-gate-config.resolved.yaml
-events.jsonl
-metrics.json
-verdict.json
-trace.sha256
-replay.gif or representative frames
+## Existing product assets
+
+The canonical bundle is exactly the ten names in REQUIRED_ARTIFACT_FILES. The review facade retains
+source inventory and observed/computed bundle roots from the same descriptor-safe capture. It may
+not reopen files for presentation.
+
+The pre-Phase 6 foundation provides:
+
+- strict versioned scenarios and evidence;
+- deterministic fake and MetaDrive adapters;
+- candidate/permitted/executed actions;
+- deterministic shield and fault replay;
+- independent stored verification;
+- hard-invariant release semantics;
+- compatible stored comparison;
+- tamper and false-pass tests;
+- local CI/developer workflows.
+
+Phase 6 reuses these capabilities rather than recreating them.
+
+## Phase 6 scope
+
+### Delivered scope
+
+- Canonical bundle contract reconciliation.
+- `ReviewEnvelope v1` and `ComparisonEnvelope v1`.
+- Framework-independent review facade.
+- Read-only review and comparison CLI JSON surfaces.
+- Local-only reviewer workbench.
+- Artifact identity, integrity, trust, provenance, findings, evidence sufficiency, timeline, and comparison views.
+- Negative and human-factors tests.
+- Design-only future authenticity specification.
+- Core-owned evidence requiredness and structured simple/compound threshold projection.
+
+### Out of scope
+
+- Artifact mutation, repair, migration, or annotation.
+- Scenario execution or simulator launch from the UI.
+- Policy execution or training.
+- Threshold or gate editing.
+- Approve, promote, release, or deploy controls.
+- Multi-user accounts, cloud hosting, remote ingestion, or database persistence.
+- Evidence signing in the same implementation wave.
+- New scenario families except tests needed to validate the reviewer surface.
+- RL, CARLA, ROS 2, Autoware, real-log training, hardware-in-the-loop, or physical vehicle integration.
+
+## Product principles
+
+1. **Verification before visualization.** Stored verdicts are not shown as accepted until independent verification completes.
+2. **No parallel authority.** The UI consumes one canonical review facade.
+3. **Trust dimensions stay separate.** Integrity, authenticity, authorization, and deployment permission are not interchangeable.
+4. **Missing evidence is visible.** `NOT_AVAILABLE` is not zero.
+5. **Hard failures remain non-compensatory.** No chart or score can average away a collision.
+6. **Comparison is multidirectional.** Improvements and regressions appear together.
+7. **Exact identity matters.** No automatic “latest artifact” authority.
+8. **Simulation-only is persistent.** Scope and limitations appear on every review.
+
+## Smallest useful release
+
+A reviewer can:
+
+- review one verified artifact;
+- review an invalid/tampered artifact without seeing a trusted stored `PASS`;
+- compare two compatible artifacts;
+- drill into supporting events;
+- see `NOT_AUTHENTICATED`, `NOT_EVALUATED`, deployment permission `NONE`, and `SIMULATION_ONLY` on every view.
+
+No approval or write action exists.
+
+## Delivered local interfaces
+
+Selections are exact relative paths under the configured artifact root; they are not prefixed with
+`artifacts/` and are never chosen automatically.
+
+```bash
+hermes review-artifact handoff-phase5-demo \
+  --artifact-root artifacts \
+  --format json
+
+hermes review-compare \
+  handoff-p3-lead-baseline \
+  handoff-p3-lead-shielded \
+  --artifact-root artifacts \
+  --format text
+
+hermes workbench \
+  --artifact-root artifacts \
+  --host 127.0.0.1 \
+  --port 8501 \
+  --no-browser
 ```
 
-Each event contains a sequence number, simulation timestamp, summarized observation, candidate action, executed action, override reason, vehicle state, verifier findings, previous hash, and current hash.
+The CLI and workbench consume the same immutable facade. A review performs a fresh root-contained
+capture and stored verification, never a simulator/policy run or artifact write.
 
-## Success criteria
+## Success metrics for Phase 6
 
-- Six deterministic scenario definitions execute from the CLI.
-- The baseline fails at least two challenge scenarios for a clear demonstration.
-- The candidate policy improves the pass rate without bypassing hard invariants.
-- Re-running a scenario with the same seed produces the same verdict and equivalent metrics within declared tolerances.
-- A tampered event causes evidence verification to fail.
-- The dashboard compares baseline and candidate runs.
-- Unit tests cover domain logic without requiring the simulator.
-- A documented headless simulator smoke test passes on the development machine.
+### Correctness
 
-## Non-goals
+- 100% parity between CLI review envelope and UI-displayed verdict/findings for test fixtures.
+- Zero artifact bytes changed after review.
+- All invalid-evidence fixtures remain quarantined.
+- All incompatible comparisons render no misleading charts.
 
-- A full perception, prediction, planning, and controls production stack.
-- Photorealistic simulation as the first milestone.
-- Public-road operation, real-vehicle control, or remote vehicle operation.
-- SAE automation-level claims.
-- ISO, UL, NHTSA, or other certification claims.
-- Replacing professional functional-safety, SOTIF, cybersecurity, or regulatory processes.
+### Reviewer comprehension
+
+A new reviewer can answer:
+
+- why the gate issued the verdict;
+- which hard requirement failed;
+- which evidence was unavailable;
+- what the shield changed;
+- what improved and regressed;
+- whether the artifact is authenticated;
+- whether the verdict grants deployment permission.
+
+These are prospective comprehension outcomes, not observed participant results. The repository now
+contains a 6–10 participant moderated plan, blank observation template, and executable visual/
+accessibility checklist. Manual visual review, accessibility audit, and human comprehension remain
+`NOT YET OBSERVED` until real evidence is recorded.
+
+Browser DOM retained-state structure is `OBSERVED` for initial UNVERIFIED, PASS, HOLD, INVALID
+quarantine/no stored-PASS leak, Timeline/action accountability, Provenance/limitations, compatible
+mixed comparison, incompatible fail-closed comparison, and zero exception/leak text. The available
+screenshot backend returned uniformly blank images, so it did not establish pixel/manual visual
+quality, 200% visual reflow, CSS focus, screen-reader behavior, contrast, accessibility conformance,
+or human comprehension.
+
+### Developer quality
+
+- Final Task 4 validation recorded 756 full tests, 756 non-MetaDrive tests, and 506 focused Phase 6/
+  workbench/review/CLI/artifact/documentation tests passing. Both installs, repository Ruff, doctor
+  (17 PASS / 1 intended dirty-tree WARN / 1 optional DISPLAY NOT_AVAILABLE / 0 FAIL), six review
+  cases, three comparison cases, and diff/cached checks passed. All 100 canonical files across ten
+  retained directories were byte-identical before and after the nine CLI commands.
+- UI dependencies remain optional.
+- Workbench binds to loopback only.
+- No simulator starts during review tests.
+- Review commands exit 0 for valid PASS, CONDITIONAL, and HOLD reviews; invalid evidence exits 30;
+  path/configuration/operational/incompatible cases exit 40. Legacy command exits do not change.
+
+## Accepted residual risk
+
+The process-local facade cache and active-session maps currently grow with each explicit selection.
+The adversarial review classified this as P2 availability debt because Hermes performs no artifact
+discovery or automatic loading, requires a local reviewer to submit each selection, and recovers on
+process restart. Add a deterministic synchronized LRU before materially increasing single-user
+artifact scale. This residual does not change evidence, bypass verification, or expand the
+local-only scope.
+
+## Reviewer-comprehension presentation
+
+The workbench now uses top-level `Review`, `Compare`, and `Evidence limitations`. Review contains
+`Select & Verify`, `Overview`, `Evidence`, `Timeline`, and `Provenance`. The decision state (gate and
+integrity) is structurally separated from origin `NOT_AUTHENTICATED`, authorization `NOT_EVALUATED`,
+deployment permission `NONE`, scope `SIMULATION_ONLY`, and authoritative status `NOT_DEFINED`.
+
+Exact root-relative selection remains blank and manual by design. A picker/autocomplete would need
+a separately reviewed descriptor-safe discovery contract and the deterministic synchronized
+bounded-LRU predecessor; UI-side directory enumeration is not permitted. Findings use six ordered
+groups, Timeline adds four presentation-only presets plus first-supporting-event navigation, and
+compatible comparisons require mixed-outcome synthesis with no winner or advancement claim.
+
+## Executive narrative
+
+Hermes does not become more credible merely by drawing prettier charts. Phase 6 makes the existing evidence legible while preserving the distinction among capability, permission, verification, evidence, authenticity, and residual risk.

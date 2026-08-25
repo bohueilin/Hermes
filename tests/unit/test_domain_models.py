@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+import math
+
+import pytest
+from pydantic import ValidationError
+
+from hermes.domain.enums import EvidenceAvailability, FindingStatus, Severity, Verdict
+from hermes.domain.models import Action, Finding, Measurement, RunContext, VehicleState
+
+
+def test_action_rejects_out_of_range_and_conflicting_longitudinal_commands() -> None:
+    with pytest.raises(ValidationError):
+        Action(steering=1.01, throttle=0.0, brake=0.0)
+    with pytest.raises(ValidationError):
+        Action(steering=0.0, throttle=0.2, brake=0.1)
+
+
+@pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
+def test_vehicle_state_rejects_non_finite_evidence(value: float) -> None:
+    with pytest.raises(ValidationError):
+        VehicleState(
+            position_m=value,
+            speed_mps=0.0,
+            acceleration_mps2=0.0,
+            lateral_offset_m=0.0,
+            route_progress_pct=0.0,
+            collision_count=0,
+            offroad=False,
+            destination_reached=False,
+        )
+
+
+def test_persisted_vehicle_state_rejects_coercion_and_missing_safety_facts() -> None:
+    with pytest.raises(ValidationError):
+        VehicleState.model_validate(
+            {
+                "position_m": "1.0",
+                "speed_mps": "2.0",
+                "acceleration_mps2": "0.0",
+                "lateral_offset_m": "0.0",
+                "route_progress_pct": "5.0",
+            }
+        )
+
+    with pytest.raises(ValidationError):
+        VehicleState(
+            position_m=1.0,
+            speed_mps=2.0,
+            acceleration_mps2=0.0,
+            lateral_offset_m=0.0,
+            route_progress_pct=5.0,
+        )
+
+
+def test_measurement_requires_value_or_unavailable_reason_consistently() -> None:
+    available = Measurement(availability=EvidenceAvailability.AVAILABLE, value=3.5)
+    unavailable = Measurement(
+        availability=EvidenceAvailability.NOT_AVAILABLE,
+        reason="signal not emitted by adapter",
+    )
+
+    assert available.value == 3.5
+    assert unavailable.reason == "signal not emitted by adapter"
+    with pytest.raises(ValidationError):
+        Measurement(availability=EvidenceAvailability.AVAILABLE, reason="missing")
+    with pytest.raises(ValidationError):
+        Measurement(availability=EvidenceAvailability.NOT_AVAILABLE)
+
+
+def test_finding_requires_structured_measurement_and_criterion() -> None:
+    required = {
+        "finding_id": "collision.zero",
+        "verifier": "CollisionVerifier",
+        "verifier_version": "1.0",
+        "status": FindingStatus.PASS,
+        "severity": Severity.CRITICAL,
+        "hard_invariant": True,
+        "message": "collision invariant passed",
+    }
+
+    with pytest.raises(ValidationError, match="measurement"):
+        Finding.model_validate(
+            {
+                **required,
+                "threshold_or_invariant": "collision_count == 0",
+            }
+        )
+    with pytest.raises(ValidationError, match="threshold_or_invariant"):
+        Finding.model_validate(
+            {
+                **required,
+                "measurement": {
+                    "availability": "AVAILABLE",
+                    "value": 0.0,
+                    "unit": "count",
+                },
+            }
+        )
+
+
+def test_public_enum_values_are_stable_and_explicit() -> None:
+    assert Verdict.PASS.value == "PASS"
+    assert Verdict.CONDITIONAL.value == "CONDITIONAL"
+    assert Verdict.HOLD.value == "HOLD"
+    assert Verdict.INVALID_EVIDENCE.value == "INVALID_EVIDENCE"
+    assert FindingStatus.NOT_AVAILABLE.value == "NOT_AVAILABLE"
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    [("control_frequency_hz", 0), ("control_frequency_hz", 101), ("horizon_steps", 0)],
+)
+def test_run_context_rejects_unsafe_control_bounds(field_name: str, value: int) -> None:
+    payload = {
+        "scenario_digest": "a" * 64,
+        "gate_config_digest": "b" * 64,
+        "adapter_name": "fake",
+        "adapter_version": "1.0",
+        "adapter_config_digest": "c" * 64,
+        "policy_name": "baseline",
+        "policy_version": "1.0",
+        "policy_config_digest": "d" * 64,
+        "shield_name": "noop",
+        "shield_version": "1.0",
+        "shield_config_digest": "e" * 64,
+        "verifier_suite_digest": "f" * 64,
+        "seed": 7,
+        "control_frequency_hz": 10,
+        "horizon_steps": 20,
+    }
+    payload[field_name] = value
+
+    with pytest.raises(ValidationError, match=field_name):
+        RunContext.model_validate(payload)

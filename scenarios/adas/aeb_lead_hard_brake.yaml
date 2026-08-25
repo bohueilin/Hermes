@@ -1,0 +1,60 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# The flagship AEB threat: the ego is already travelling when a slower lead vehicle brakes
+# hard ahead of it. The oracle labels the closing geometry as a threat, so the run must
+# produce braking and avoid contact.
+schema_version: "4.0"
+name: adas_aeb_lead_hard_brake
+version: "1.0"
+description: Ego follows a lead at matched speed until the lead applies a full-brake command.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 300
+  target_speed_mps: 20.0
+  # Simulator-measured envelope: 20 m/s full-brake peak in
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+challenge:
+  # The ego follows a lead travelling at its own speed from a comfortable gap, so nothing
+  # is due until the lead brakes. Starting the ego already closing would put the run in
+  # emergency at step 0, where a timely controller and a deliberately late one behave
+  # identically - the scenario would look like a threat while testing nothing.
+  kind: lead_vehicle_hard_brake
+  actor_control_mode: metadrive_dynamic_action
+  behavior_realism_claim: false
+  initial_gap_m: 40.0
+  actor_speed_mps: 20.0
+  trigger_step: 30
+  brake_duration_steps: 30
+  brake_command: -1.0
+  resume_throttle_command: 0.4
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - threat
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: required
+    before_ttc_s: 2.6
+  expected_aeb:
+    kind: required

@@ -1,0 +1,67 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# A near-field cut-in: a slower vehicle in the adjacent lane moves into the ego's lane at
+# close range. Unlike the lead-brake case the threat does not develop gradually - it appears
+# the moment the actor enters the path, with the gap already closed.
+#
+# This scenario exists to test the oracle on geometry it was not written against. The
+# evaluators in verifiers/adas.py never inspect challenge.kind; they compute required
+# deceleration from the observed gap and closing speed. If that is genuinely
+# geometry-driven, a cut-in must be classified correctly with no ADAS code change at all.
+schema_version: "4.0"
+name: adas_cut_in_near
+version: "1.0"
+description: A slower adjacent-lane vehicle cuts into the ego lane at close range.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 300
+  target_speed_mps: 20.0
+  # Simulator-measured envelope: 20 m/s full-brake peak in
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+challenge:
+  # Geometry is set so the threat is real but avoidable. Measured on the baseline
+  # controller: the actor first registers in-path at sequence 15, peak required deceleration
+  # is 2.77 m/s^2 at sequence 40 - 21% of the measured simulator envelope - against the
+  # calibrated 13.9% threat fraction, and the run closes to a minimum gap of 3.5 m without
+  # contact. It remains comfortably above the preserved 1.8 m/s^2 absolute threshold and
+  # below the preserved 6.0 m/s^2 onset margin.
+  kind: cut_in_near_field
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 32.0
+  actor_speed_mps: 12.0
+  initial_lane_delta: 1
+  trigger_step: 10
+  transition_steps: 10
+tags:
+  - aeb
+  - cut_in
+  - fcw
+  - longitudinal
+  - threat
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: required
+    before_ttc_s: 2.6
+  expected_aeb:
+    kind: required

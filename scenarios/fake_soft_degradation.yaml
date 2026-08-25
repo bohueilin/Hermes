@@ -1,0 +1,18 @@
+schema_version: "1.0"
+name: fake_soft_degradation
+version: "1.0"
+description: Deterministic comfort degradation with safety and mission invariants intact.
+adapter: fake
+control:
+  frequency_hz: 10
+  horizon_steps: 100
+  target_speed_mps: 8.0
+initial_state:
+  speed_mps: 0.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 20.0
+  boundary_tolerance_m: 1.5
+hazards:
+  comfort_spike_at_step: 12
+  comfort_acceleration_mps2: 6.0

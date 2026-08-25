@@ -1,0 +1,13 @@
+schema_version: "1.0"
+name: phase1
+version: "1.0"
+label: illustrative_prototype_thresholds_not_for_real_vehicle_use
+hard:
+  max_collision_count: 0
+  max_abs_lateral_offset_m: 1.5
+  max_offroad_duration_s: 0.0
+  min_route_completion_pct: 100.0
+  missing_required_evidence: HOLD
+soft:
+  max_abs_acceleration_mps2: 4.0
+  max_abs_jerk_mps3: 100.0

@@ -1,0 +1,49 @@
+# Illustrative ADAS release-gate thresholds for the simulation lab.
+#
+# The `adas` block holds ORACLE thresholds, used by the evaluators to judge a run. They are
+# deliberately distinct from the controller's own configured trigger points: an evaluator
+# that reused the controller's thresholds would only confirm the controller did what it was
+# configured to do. None of these values carry standards or regulatory meaning.
+schema_version: "2.0"
+name: adas_p0
+version: "1.0"
+label: illustrative_prototype_thresholds_not_for_real_vehicle_use
+hard:
+  # Calibration scope only; this invariant is not brake-derived. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  max_collision_count: 0
+  # Calibration scope only; this lateral threshold is not brake-derived. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  max_abs_lateral_offset_m: 1.5
+  # Calibration scope only; this invariant is not brake-derived. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  max_offroad_duration_s: 0.0
+  # Calibration scope only; this progress threshold is not brake-derived. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  min_route_completion_pct: 0.0
+  # Calibration scope only; this evidence rule is not brake-derived. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  missing_required_evidence: HOLD
+soft:
+  # Still illustrative comfort, not the measured full-brake envelope. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  max_abs_acceleration_mps2: 4.0
+  # Still illustrative comfort; the curve contains no jerk calibration. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  max_abs_jerk_mps3: 100.0
+adas:
+  # 1.8 / 12.982444763183452; preserves the prior absolute threat boundary. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  threat_authority_fraction: 0.1386487701534128
+  # 6.0 / 12.982444763183452; preserves the prior absolute onset margin. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  onset_authority_fraction: 0.46216256717804266
+  # Exact-zero impact invariant; the curve supplies no impact calibration. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  max_residual_impact_speed_mps: 0.0
+  # Exact-zero false-intervention invariant; not brake-dynamics-derived. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  max_false_intervention_steps: 0
+  # Existing geometry convention; the curve supplies no standoff calibration. Curve citation:
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json
+  oracle_standoff_m: 2.0

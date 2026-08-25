@@ -1,0 +1,58 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# Nominal twin of aeb_stationary_lead: the same stopped actor and longitudinal gap are
+# placed one lane away. The adapter must report no in-path front pair, so the unchanged
+# geometry oracle expects no warning requirement and zero braking.
+schema_version: "4.0"
+name: non_in_path_stationary_object
+version: "1.0"
+description: Ego passes a stopped adjacent-lane actor without unnecessary braking.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 300
+  target_speed_mps: 20.0
+  # Simulator-measured 20 m/s full-brake peak from
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+challenge:
+  # Contract prediction: initial_lane_delta 1 places the static actor outside the ego path.
+  # Measured on the baseline controller at seed 7: the front distance/relative-speed pair
+  # remains absent for all 61 events, actor speed remains exactly 0.0 m/s, oracle-labelled
+  # threat steps and braking steps are both zero, and the run reaches its destination with
+  # zero collisions. Its CONDITIONAL disposition records two expected NOT_AVAILABLE soft
+  # findings (brake-onset margin and warning timing), not an ADAS failure.
+  kind: stationary_lead
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 40.0
+  initial_lane_delta: 1
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - nominal
+  - stationary_object
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: none
+  expected_aeb:
+    kind: forbidden

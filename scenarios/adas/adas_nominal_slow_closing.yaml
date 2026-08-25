@@ -1,0 +1,59 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# Threat-free nominal exposure with a lead present. The ego closes on a slightly slower lead
+# from a large gap, so required deceleration stays far below the oracle's threat threshold
+# throughout. Nothing is due: no warning, no braking.
+#
+# This is the case that catches an over-braking controller. The no-lead nominal scenario
+# cannot: with no in-path object there is no closing geometry at all, so a controller that
+# brakes at the slightest provocation still has nothing to react to.
+schema_version: "4.0"
+name: adas_nominal_slow_closing
+version: "1.0"
+description: Ego closes slowly on a slightly slower lead from a large gap; no response is due.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 200
+  target_speed_mps: 20.0
+  # Simulator-measured envelope: 20 m/s full-brake peak in
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 600.0
+  boundary_tolerance_m: 1.5
+challenge:
+  kind: lead_vehicle_hard_brake
+  actor_control_mode: metadrive_dynamic_action
+  behavior_realism_claim: false
+  initial_gap_m: 90.0
+  actor_speed_mps: 18.0
+  trigger_step: 199
+  brake_duration_steps: 1
+  brake_command: -1.0
+  resume_throttle_command: 0.2
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - nominal
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: none
+  expected_aeb:
+    kind: forbidden

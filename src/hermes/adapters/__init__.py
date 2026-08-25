@@ -1,0 +1,1 @@
+"""Simulator-specific adapter implementations."""

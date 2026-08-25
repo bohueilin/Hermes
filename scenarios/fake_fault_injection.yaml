@@ -1,0 +1,37 @@
+schema_version: "3.0"
+name: fake_fault_injection
+version: "1.0"
+description: Deterministic simulator-neutral fault-pipeline demonstration.
+adapter: fake
+control:
+  frequency_hz: 10
+  horizon_steps: 20
+  target_speed_mps: 0.0
+initial_state:
+  speed_mps: 8.0
+  lateral_offset_m: 1.0
+road:
+  destination_distance_m: 20.0
+  boundary_tolerance_m: 1.5
+hazards: {}
+faults:
+  schema_version: "1.0"
+  name: phase4_demo_faults
+  version: "1.0"
+  label: illustrative_simulation_faults_not_real_vehicle_limits
+  observation_delay_steps: 1
+  control_delay_steps: 1
+  neutral_startup_action:
+    steering: 0.0
+    throttle: 0.0
+    brake: 0.0
+  frozen_observation_interval:
+    start_step: 2
+    duration_steps: 2
+  dropped_observation_steps:
+    - 4
+  observation_noise:
+    speed_mps_bound: 0.05
+    lateral_offset_m_bound: 0.01
+  max_abs_steering: 0.25
+  max_brake: 0.5

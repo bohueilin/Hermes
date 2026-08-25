@@ -1,0 +1,293 @@
+"""Behavior contract for the optional MuJoCo brake-reference instrument."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+from types import ModuleType, SimpleNamespace
+
+import pytest
+
+REPO_ROOT = Path(__file__).parents[2]
+TOOL_PATH = REPO_ROOT / "tools" / "calibration" / "mujoco_brake_reference.py"
+MODEL_PATH = REPO_ROOT / "tools" / "calibration" / "mujoco_brake_reference.xml"
+METADRIVE_CURVE_PATH = (
+    REPO_ROOT / "evidence" / "calibration" / "metadrive-brake-curve-0.4.3.json"
+)
+
+
+def _load_tool() -> ModuleType:
+    assert TOOL_PATH.is_file(), "the committed MuJoCo brake-reference tool is missing"
+    spec = importlib.util.spec_from_file_location("mujoco_brake_reference", TOOL_PATH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _require_mujoco(tool: ModuleType) -> object:
+    pytest.importorskip("mujoco", reason="install the optional [mujoco-cal] extra")
+    return tool.require_mujoco()
+
+
+def test_mujoco_dependency_is_exactly_pinned_behind_optional_extra() -> None:
+    """Moving MuJoCo into core or loosening its version must break this dependency boundary."""
+    project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+
+    assert "mujoco" not in " ".join(project["project"]["dependencies"]).lower()
+    assert project["project"]["optional-dependencies"]["mujoco-cal"] == ["mujoco==3.12.0"]
+
+
+def test_missing_optional_dependency_refuses_loudly_with_install_guidance() -> None:
+    """Running without site packages must fail before producing fabricated measurements."""
+    result = subprocess.run(
+        [sys.executable, "-S", str(TOOL_PATH)],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "mujoco==3.12.0" in result.stderr
+    assert "pip install -e '.[mujoco-cal]'" in result.stderr
+
+
+def test_speed_contract_is_consumed_from_the_committed_wp_a_curve() -> None:
+    """A missing, reordered, or substituted WP-A speed sweep must fail closed."""
+    tool = _load_tool()
+
+    speeds = tool.load_entry_speeds(METADRIVE_CURVE_PATH)
+
+    assert speeds == tuple(float(value) for value in range(4, 31, 2))
+    assert len(speeds) == 14
+    assert speeds[8] == 20.0
+
+
+def test_compiled_model_freezes_required_physics_defaults() -> None:
+    """Regression to Euler, autoreset, zero armature, or disabled fwdinv must fail."""
+    tool = _load_tool()
+    mujoco = _require_mujoco(tool)
+    model = tool.load_model(MODEL_PATH, mujoco=mujoco)
+
+    assert mujoco.mjtIntegrator(model.opt.integrator) == mujoco.mjtIntegrator.mjINT_IMPLICITFAST
+    assert model.opt.enableflags & int(mujoco.mjtEnableBit.mjENBL_FWDINV)
+    assert model.opt.disableflags & int(mujoco.mjtDisableBit.mjDSBL_AUTORESET)
+    assert model.nu == 2
+    assert all(float(value) > 0.0 for value in model.dof_armature)
+
+    assumptions = tool.model_assumptions(model, mujoco=mujoco)
+    assert assumptions["lead_actor_role"] == "scripted-kinematic"
+    assert assumptions["lead_behavior_realism_claim"] is False
+    assert assumptions["ego_full_brake_force_n"] == 8000.0
+
+
+def test_real_measurement_hashes_full_integration_state_and_logs_fwdinv() -> None:
+    """Dropping warmstart state, repeat checks, or either fwdinv residual must fail."""
+    tool = _load_tool()
+    mujoco = _require_mujoco(tool)
+    model = tool.load_model(MODEL_PATH, mujoco=mujoco)
+
+    measurement = tool.measure_entry_speed(
+        model,
+        entry_speed_mps=4.0,
+        seed=7,
+        repeats=3,
+        mujoco=mujoco,
+    )
+
+    assert measurement.entry_speed_mps == 4.0
+    assert measurement.summary.stopping_distance_m > 0.0
+    assert measurement.summary.peak_deceleration_mps2 > 0.0
+    assert measurement.integration_state_name == "mjSTATE_INTEGRATION"
+    integration_signature = int(mujoco.mjtState.mjSTATE_INTEGRATION)
+    assert measurement.integration_state_size == mujoco.mj_stateSize(
+        model, integration_signature
+    )
+    assert len(set(measurement.repeat_integration_state_trace_sha256)) == 1
+    assert len(set(measurement.repeat_observation_trace_sha256)) == 1
+    assert measurement.warning_count == 0
+    assert measurement.fwdinv_diagnostic.comparison_exercised is False
+    assert measurement.fwdinv_diagnostic.maximum_active_constraint_count == 0
+    assert measurement.fwdinv_diagnostic.maximum_joint_space_l2_norm is None
+    assert measurement.fwdinv_diagnostic.maximum_constraint_space_l2_norm is None
+    assert measurement.fwdinv_diagnostic.unexercised_joint_space_raw_values == (0.0,)
+    assert measurement.fwdinv_diagnostic.unexercised_constraint_space_raw_values == (0.0,)
+    assert measurement.trace[-1].speed_mps <= tool.STOP_SPEED_THRESHOLD_MPS
+    assert all(point.integration_state_sha256 for point in measurement.trace)
+    assert all(point.active_constraint_count == 0 for point in measurement.trace)
+
+
+def test_state_capture_passes_integration_signature_to_both_mujoco_apis() -> None:
+    """Replacing either state call with FULLPHYSICS must break this API-boundary spy."""
+    tool = _load_tool()
+    mujoco = _require_mujoco(tool)
+    model = tool.load_model(MODEL_PATH, mujoco=mujoco)
+    data = mujoco.MjData(model)
+    expected_signature = int(mujoco.mjtState.mjSTATE_INTEGRATION)
+    size_signatures: list[int] = []
+    get_signatures: list[int] = []
+
+    class StateApiSpy:
+        mjtState = mujoco.mjtState
+
+        @staticmethod
+        def mj_stateSize(spy_model: object, signature: int) -> int:
+            size_signatures.append(signature)
+            return mujoco.mj_stateSize(spy_model, signature)
+
+        @staticmethod
+        def mj_getState(
+            spy_model: object,
+            spy_data: object,
+            state: object,
+            signature: int,
+        ) -> None:
+            get_signatures.append(signature)
+            mujoco.mj_getState(spy_model, spy_data, state, signature)
+
+    capture = tool._capture_state(model, data, mujoco=StateApiSpy())
+
+    assert size_signatures == [expected_signature]
+    assert get_signatures == [expected_signature]
+    assert capture.signature_name == "mjSTATE_INTEGRATION"
+    assert capture.size == mujoco.mj_stateSize(model, expected_signature)
+
+
+def test_fwdinv_sentinel_reads_two_array_slots_without_swapping_or_fabrication() -> None:
+    """Slot 0 is joint-space L2 and slot 1 constraint-space L2 when constraints exist."""
+    tool = _load_tool()
+    data = SimpleNamespace(nefc=3, solver_fwdinv=(1.25, 9.5))
+
+    sample = tool._capture_fwdinv_sample(data)
+
+    assert sample.active_constraint_count == 3
+    assert sample.comparison_exercised is True
+    assert sample.joint_space_l2_norm == 1.25
+    assert sample.constraint_space_l2_norm == 9.5
+    assert "relative" not in " ".join(sample._fields)
+
+
+def test_evidence_is_deterministic_and_emits_distribution_not_trajectory_claims(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The calibration output must expose distributions and its non-release scope."""
+    tool = _load_tool()
+    observed_argv = ["tools/calibration/mujoco_brake_reference.py", "--seed", "7"]
+    monkeypatch.setattr(sys, "argv", observed_argv)
+    mujoco = _require_mujoco(tool)
+    model = tool.load_model(MODEL_PATH, mujoco=mujoco)
+    measurement = tool.measure_entry_speed(
+        model,
+        entry_speed_mps=4.0,
+        seed=7,
+        repeats=3,
+        mujoco=mujoco,
+    )
+
+    evidence = tool.build_evidence(
+        (measurement,),
+        model_path=MODEL_PATH,
+        metadrive_curve_path=METADRIVE_CURVE_PATH,
+        repository_commit="a" * 40,
+        repository_dirty=False,
+        mujoco=mujoco,
+        model=model,
+    )
+    encoded_a = tool.encode_evidence(evidence)
+    encoded_b = tool.encode_evidence(evidence)
+    decoded = json.loads(encoded_a)
+
+    assert encoded_a == encoded_b
+    assert decoded["instrument_role"] == "optional_calibration_instrument"
+    assert decoded["release_evidence_lane"] is False
+    assert decoded["simulator_adapter"] is False
+    assert decoded["measurement_protocol"]["state_signature"] == "mjSTATE_INTEGRATION"
+    assert decoded["model_assumptions"]["lead_actor_role"] == "scripted-kinematic"
+    assert "representative_trace" not in decoded["curves"][0]
+    assert decoded["curves"][0]["trace_retention"] == (
+        "replay inputs plus observation and mjSTATE_INTEGRATION trace SHA-256 digests"
+    )
+    fwdinv = decoded["curves"][0]["fwdinv_diagnostic"]
+    assert fwdinv["array_api"] == (
+        "MjData.solver_fwdinv is a two-element array; index 0 is joint-space L2 norm "
+        "and index 1 is constraint-space L2 norm"
+    )
+    assert fwdinv["comparison_exercised"] is False
+    assert fwdinv["active_constraint_count"] == {"minimum": 0, "maximum": 0}
+    assert fwdinv["l2_norms_when_exercised"]["joint_space"]["maximum"] is None
+    assert fwdinv["unexercised_raw_array_values"] == {
+        "joint_space_l2_norm": [0.0],
+        "constraint_space_l2_norm": [0.0],
+    }
+    assert "relative" not in json.dumps(fwdinv).lower()
+    assert decoded["distribution_summary"]["fwdinv_diagnostic"][
+        "speeds_with_comparison_exercised"
+    ] == 0
+    assert decoded["distribution_summary"]["sample_axis"] == "entry_speed_mps"
+    assert decoded["distribution_summary"]["stopping_distance_m"]["sample_count"] == 1
+    assert "trajectory" not in decoded["cross_backend_claim_contract"].lower()
+    assert decoded["simulator"]["version"] == "3.12.0"
+    assert decoded["api_contract"]["fwdinv_output"] == (
+        "mujoco.MjData.solver_fwdinv two-element array at indices 0 and 1"
+    )
+    assert decoded["producer"]["command"] == observed_argv
+    assert not any("/Users/" in part for part in decoded["producer"]["command"])
+    runtime = decoded["runtime"]
+    assert runtime["python"]["version"]
+    assert runtime["platform"]["system"]
+    assert runtime["platform"]["machine"]
+    assert runtime["mujoco_distribution"]["wheel_tags"]
+    assert len(runtime["mujoco_distribution"]["wheel_metadata_sha256"]) == 64
+    assert len(runtime["mujoco_distribution"]["package_metadata_sha256"]) == 64
+    assert runtime["mujoco_native_library"]["filename"]
+    assert runtime["mujoco_native_library"]["size_bytes"] > 0
+    assert len(runtime["mujoco_native_library"]["sha256"]) == 64
+
+
+def test_evidence_marks_nonidentical_repeat_digests_as_not_bitwise_identical() -> None:
+    """An inconsistent measurement handed to serialization must not claim determinism."""
+    tool = _load_tool()
+    mujoco = _require_mujoco(tool)
+    model = tool.load_model(MODEL_PATH, mujoco=mujoco)
+    measurement = tool.measure_entry_speed(
+        model,
+        entry_speed_mps=4.0,
+        seed=7,
+        repeats=3,
+        mujoco=mujoco,
+    )._replace(
+        repeat_observation_trace_sha256=("a" * 64, "b" * 64, "a" * 64)
+    )
+
+    evidence = tool.build_evidence(
+        (measurement,),
+        model_path=MODEL_PATH,
+        metadrive_curve_path=METADRIVE_CURVE_PATH,
+        repository_commit="a" * 40,
+        repository_dirty=False,
+        mujoco=mujoco,
+        model=model,
+    )
+
+    assert evidence["curves"][0]["repeat_bitwise_identical"] is False
+
+
+def test_measurement_rejects_any_repeat_count_other_than_three() -> None:
+    """Weakening N=3 to a single deterministic run must fail before simulation."""
+    tool = _load_tool()
+    mujoco = _require_mujoco(tool)
+    model = tool.load_model(MODEL_PATH, mujoco=mujoco)
+
+    with pytest.raises(ValueError, match="exactly N=3"):
+        tool.measure_entry_speed(
+            model,
+            entry_speed_mps=4.0,
+            seed=7,
+            repeats=1,
+            mujoco=mujoco,
+        )

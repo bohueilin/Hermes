@@ -1,0 +1,67 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# A stopped actor begins 100 m ahead of an ego commanded to 20 m/s. The analytical
+# prediction was that initial required deceleration would be about 2.041 m/s^2:
+# below the baseline controller's 2.4 m/s^2 partial-brake stage, above the independent
+# oracle's 1.8 m/s^2 threat boundary. Real seed-7 MetaDrive screening measured delay 5 as
+# braking/PASS and delays 6, 7, and 8 as no-braking/FAIL. Six steps is therefore the
+# smallest measured delay that crosses the controller's strict >0.5 s stale threshold.
+# The timely control and every screened delay had zero collisions; the delayed failures do
+# not depend on contact.
+schema_version: "4.0"
+name: aeb_stationary_lead_observation_delay
+version: "1.0"
+description: Stationary in-lane lead with delayed observations for a causal AEB degradation test.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 40
+  target_speed_mps: 20.0
+  # Simulator-measured 20 m/s full-brake peak from
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  # Calibration record: entry_speed_command_mps=20.0,
+  # peak_deceleration_mps2=12.982444763183452, stopping_distance_m=17.70855712890625.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 300.0
+  boundary_tolerance_m: 1.5
+challenge:
+  kind: stationary_lead
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 100.0
+  initial_lane_delta: 0
+faults:
+  schema_version: "1.0"
+  name: aeb_stationary_lead_observation_delay
+  version: "1.0"
+  label: illustrative_simulation_faults_not_real_vehicle_limits
+  observation_delay_steps: 6
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - observation_delay
+  - stationary_object
+  - threat
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: required
+    before_ttc_s: 2.6
+  expected_aeb:
+    kind: required
