@@ -1,13 +1,13 @@
-"""The seeded-defect suite: controllers broken on purpose, that the gate must catch.
+"""Seeded policy or environment failures that the evaluation must catch.
 
 A release gate that has never failed is indistinguishable from one that cannot fail. This
-suite is the acceptance criterion for the evaluation itself: each entry is the baseline
-controller with exactly one property broken, paired with the scenario that exposes it, the
-finding that must catch it, and the failure category triage must propose.
+suite is the acceptance criterion for the evaluation itself: each entry pairs a deliberately
+seeded policy or environment failure with the scenario that exposes it, the finding that
+must catch it, and the failure category triage must propose.
 
 It also turns agent quality into a number. "The triage agent is helpful" is an opinion;
-"the triage agent proposed the correct category for 3 of 3 seeded defects" is a metric, and
-it is computed deterministically from stored evidence rather than from a human's impression.
+"the triage agent proposed the correct category for every seeded failure" is a metric, and it
+is computed deterministically from stored evidence rather than from a human's impression.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ class SeededDefectError(ValueError):
 
 
 class SeededDefect(HermesModel):
-    """One deliberately broken controller and the detection it must provoke."""
+    """One deliberately seeded policy or environment failure and its expected detection."""
 
     defect_id: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
     description: Annotated[str, Field(min_length=1, max_length=200)]
@@ -38,7 +38,9 @@ class SeededDefect(HermesModel):
 
 class SeededDefectSuite(HermesModel):
     schema_version: Literal["1.0"]
-    label: Literal["deliberately_defective_controllers_for_evaluation_acceptance"]
+    label: Literal[
+        "deliberately_seeded_policy_or_environment_failures_for_evaluation_acceptance"
+    ]
     defects: tuple[SeededDefect, ...]
 
     @field_validator("defects", mode="before")

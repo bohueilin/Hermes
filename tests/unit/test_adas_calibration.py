@@ -146,6 +146,25 @@ def test_seeded_matrix_binds_each_stationary_twin_to_its_named_finding(
     assert over_braking.expected_failing_finding == "adas.aeb.no_false_intervention"
 
 
+def test_seeded_matrix_includes_the_observation_delay_environment_failure(
+    repository_root: Path,
+) -> None:
+    suite = load_seeded_defects(repository_root / "config" / "phase8-seeded-defects.yaml")
+    defects = {item.defect_id: item for item in suite.defects}
+
+    assert suite.label == (
+        "deliberately_seeded_policy_or_environment_failures_for_evaluation_acceptance"
+    )
+    assert len(defects) == 8
+    delayed = defects["stationary_observation_delay"]
+    assert delayed.policy_config == "config/adas/baseline.yaml"
+    assert delayed.scenario == (
+        "scenarios/adas/aeb_stationary_lead_observation_delay.yaml"
+    )
+    assert delayed.expected_failing_finding == "adas.aeb.threat_response"
+    assert delayed.expected_triage_category == "MISSED_INTERVENTION"
+
+
 def test_wp1_preserves_existing_scenario_controller_and_gate_digests(
     repository_root: Path,
 ) -> None:

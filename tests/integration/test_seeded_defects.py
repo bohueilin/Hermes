@@ -1,4 +1,4 @@
-"""The evaluation must catch controllers that are broken on purpose.
+"""The evaluation must catch deliberately seeded policy or environment failures.
 
 This is the acceptance test for the gate and the triage agent together, and it is the one
 test in the repository designed to fail if the *evaluation* regresses rather than if the
@@ -112,7 +112,7 @@ def test_each_seeded_defect_is_caught_by_its_own_criterion(
     tmp_path: Path,
     defect_id: str,
 ) -> None:
-    """Not merely "the run failed" - the *named* finding for that defect must fail.
+    """Not merely "the run failed" - each seed's *named* finding must fail.
 
     A defect that trips some unrelated invariant is caught by luck. Requiring the specific
     criterion is what shows the evaluation discriminates between failure modes rather than
@@ -138,10 +138,10 @@ def test_triage_proposes_the_correct_category_for_every_seeded_defect(
     repository_root: Path,
     tmp_path: Path,
 ) -> None:
-    """The agent-quality metric: proposals scored against a deterministic ground truth.
+    """The agent-quality metric: proposals scored against deterministic ground truth.
 
     "The triage agent is helpful" is an opinion. "The triage agent proposed the correct
-    category for 3 of 3 seeded defects, and the deterministic classifier agreed in every
+    category for every seeded failure, and the deterministic classifier agreed in every
     case" is a number, recomputable from stored evidence by anyone.
     """
     _requires_metadrive(repository_root)

@@ -1,14 +1,15 @@
-# Seeded-defect suite: deliberately broken controllers the evaluation MUST catch.
+# Seeded-evaluation suite: deliberately seeded policy or environment failures the
+# evaluation MUST catch.
 #
 # This is the acceptance criterion for the evaluation itself. A gate that never fails is
-# indistinguishable from a gate that cannot fail, so each entry names a controller broken in
-# exactly one way, the scenario that exposes it, the finding that must catch it, and the
-# failure category the triage agent must propose.
+# indistinguishable from a gate that cannot fail, so each entry names a seeded failure, the
+# scenario that exposes it, the finding that must catch it, and the failure category the
+# triage agent must propose.
 #
-# Each defect config is config/adas/baseline.yaml with one property changed, so a difference
-# in outcome is attributable to that property alone.
+# The seven policy defects use config/adas/baseline.yaml with one property changed. The
+# observation-delay row instead keeps the baseline policy and seeds the environment path.
 schema_version: "1.0"
-label: deliberately_defective_controllers_for_evaluation_acceptance
+label: deliberately_seeded_policy_or_environment_failures_for_evaluation_acceptance
 defects:
   - defect_id: late_braking
     description: Brakes only once required deceleration crosses the calibrated onset margin.
@@ -65,3 +66,13 @@ defects:
     scenario: scenarios/adas/non_in_path_stationary_object.yaml
     expected_failing_finding: adas.aeb.no_false_intervention
     expected_triage_category: OVER_INTERVENTION
+
+  # Environment-path seed: the policy is the unchanged baseline. The current deterministic
+  # triage category is intentionally MISSED_INTERVENTION; stored policy configuration does
+  # not yet let triage prove the controller's stale-observation threshold.
+  - defect_id: stationary_observation_delay
+    description: Delays a stopped in-lane actor observation until the baseline misses AEB.
+    policy_config: config/adas/baseline.yaml
+    scenario: scenarios/adas/aeb_stationary_lead_observation_delay.yaml
+    expected_failing_finding: adas.aeb.threat_response
+    expected_triage_category: MISSED_INTERVENTION
