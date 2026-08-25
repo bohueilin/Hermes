@@ -49,8 +49,10 @@ Hermes_Starter_Pack/
 /Hermes_Github.png
 /sandbox/
 
-# Personal career material, not part of the project.
-NVIDIA_CONVERSATION_BRIEF.md
 
 # Handoff note from the sandbox session; it states it is not tracked.
 PHASE8_SANDBOX_HANDOFF.md
+
+# Additional local-only paths are listed in .git/info/exclude, which is never
+# committed. Personal material is excluded there rather than here on purpose:
+# this file is public, so naming such a file would itself disclose it.
