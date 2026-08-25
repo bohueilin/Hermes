@@ -191,6 +191,12 @@ class _InspectionCapture:
     inspection: ArtifactInspection
     captured_files: tuple[_CapturedFileState, ...]
     safe_manifest_identity: _SafeManifestIdentity | None
+    _payloads: tuple[tuple[str, bytes], ...]
+
+    def payload_map(self) -> dict[str, bytes]:
+        """Return bytes from this exact immutable capture, never a reopened artifact."""
+
+        return dict(self._payloads)
 
 
 def _binary32(value: float) -> float:
@@ -1263,7 +1269,12 @@ def _inspection_result(
             if name in dict(capture._payloads)
         ),
     )
-    return _InspectionCapture(inspection, capture.captured_files, safe_manifest_identity)
+    return _InspectionCapture(
+        inspection,
+        capture.captured_files,
+        safe_manifest_identity,
+        capture._payloads,
+    )
 
 
 def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _InspectionCapture:

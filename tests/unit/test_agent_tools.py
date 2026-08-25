@@ -637,8 +637,7 @@ def test_stale_counterfactual_rejects_a_later_hold_after_an_earlier_raw_aeb(
     from hermes.adas import policy as policy_module
     from hermes.adas.interfaces import BrakeSource, InterventionLevel
     from hermes.agents.tools import _aeb_stale_observation_counterfactual
-    from hermes.domain.models import Action, TraceEventV2
-    from hermes.scenarios import loader as scenario_loader
+    from hermes.domain.models import Action
 
     zero = Action(steering=0.0, throttle=0.0, brake=0.0)
     raw_observation = SimpleNamespace(
@@ -664,8 +663,7 @@ def test_stale_counterfactual_rejects_a_later_hold_after_an_earlier_raw_aeb(
             ),
         )
 
-    stored_events = iter(
-        (
+    stored_events = (
             event(0, age_s=0.0, source_sequence=0, applied_faults=()),
             event(
                 1,
@@ -673,7 +671,6 @@ def test_stale_counterfactual_rejects_a_later_hold_after_an_earlier_raw_aeb(
                 source_sequence=0,
                 applied_faults=("OBSERVATION_DELAY",),
             ),
-        )
     )
 
     class DeterministicReplayPolicy:
@@ -704,17 +701,19 @@ def test_stale_counterfactual_rejects_a_later_hold_after_an_earlier_raw_aeb(
             )
             return Action(steering=0.0, throttle=0.0, brake=0.5)
 
-    bundle = tmp_path / "stateful-counterfactual"
-    bundle.mkdir()
-    (bundle / "scenario.resolved.yaml").write_text("ignored\n", encoding="utf-8")
-    (bundle / "events.jsonl").write_text("{}\n{}\n", encoding="utf-8")
-    (bundle / "bundle.sha256").write_text("a" * 64 + "\n", encoding="ascii")
-    monkeypatch.setattr(
-        TraceEventV2,
-        "model_validate_json",
-        staticmethod(lambda _line: next(stored_events)),
+    snapshot = SimpleNamespace(
+        manifest=SimpleNamespace(evidence_schema_version="2.0"),
+        scenario=object(),
+        events=stored_events,
     )
-    monkeypatch.setattr(scenario_loader, "parse_scenario_yaml", lambda _text: object())
+    bundle = SimpleNamespace(
+        capture=SimpleNamespace(
+            inspection=SimpleNamespace(
+                snapshot=snapshot,
+                observed_bundle_digest="a" * 64,
+            )
+        )
+    )
     monkeypatch.setattr(
         policy_module,
         "AdasLongitudinalPolicy",

@@ -12,7 +12,9 @@ import streamlit as st
 
 from hermes.review import (
     ComparisonEnvelope,
+    ComparisonEnvelopeV2,
     ReviewEnvelope,
+    ReviewEnvelopeV2,
     ReviewUnavailableError,
     compare_review_artifacts,
     format_threshold_value,
@@ -21,6 +23,8 @@ from hermes.review import (
     truncate_display_text,
     validate_artifact_root,
 )
+
+ReviewEnvelopeLike = ReviewEnvelope | ReviewEnvelopeV2
 
 _PRIMARY_WORKFLOWS = ("Review", "Compare", "Evidence limitations")
 _REVIEW_SECTIONS = (
@@ -396,7 +400,7 @@ def _threshold_rows(finding: object) -> tuple[dict[str, str], ...]:
     return tuple(rows)
 
 
-def _trust_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _trust_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     records = {record.dimension: record for record in envelope.trust.records}
     rows = (
         ("Gate verdict", envelope.gate.verdict, envelope.gate.category),
@@ -433,7 +437,7 @@ def _trust_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
     )
 
 
-def _accepted_review_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _accepted_review_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     if envelope.verification.integrity != "INTERNALLY_CONSISTENT":
         return ()
     gate_category = envelope.gate.category
@@ -507,7 +511,7 @@ def _accepted_review_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...
     )
 
 
-def _finding_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _finding_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     rows = []
     for finding in envelope.findings:
         labels, transforms, configuration, evidence = _threshold_details(finding.threshold)
@@ -623,7 +627,7 @@ def _compact_finding_row(finding: object) -> dict[str, str]:
 
 
 def _grouped_finding_rows(
-    envelope: ReviewEnvelope,
+    envelope: ReviewEnvelopeLike,
 ) -> dict[str, tuple[dict[str, str], ...]]:
     grouped: dict[str, list[dict[str, str]]] = {
         label: [] for label in _FINDING_GROUP_LABELS
@@ -634,7 +638,7 @@ def _grouped_finding_rows(
 
 
 def _finding_detail_rows(
-    envelope: ReviewEnvelope,
+    envelope: ReviewEnvelopeLike,
     finding_id: str,
 ) -> tuple[dict[str, str], ...]:
     return tuple(
@@ -643,7 +647,7 @@ def _finding_detail_rows(
 
 
 def _finding_threshold_rows(
-    envelope: ReviewEnvelope,
+    envelope: ReviewEnvelopeLike,
     finding_id: str,
 ) -> tuple[dict[str, str], ...]:
     return tuple(
@@ -664,7 +668,7 @@ def _availability_explanation(item: object) -> str:
     return _OPTIONAL_UNAVAILABLE_COPY
 
 
-def _sufficiency_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _sufficiency_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     return tuple(
         _safe_row(
             ("evidence ID", item.evidence_id),
@@ -706,7 +710,7 @@ def _point_exact_fields(point: object) -> tuple[object, str, str, str]:
 
 
 def _timeline_preset_track_ids(
-    envelope: ReviewEnvelope,
+    envelope: ReviewEnvelopeLike,
     preset_name: str,
 ) -> tuple[str, ...]:
     preset_tracks = dict(_TIMELINE_PRESETS).get(preset_name)
@@ -717,7 +721,7 @@ def _timeline_preset_track_ids(
 
 
 def _finding_timeline_jump(
-    envelope: ReviewEnvelope,
+    envelope: ReviewEnvelopeLike,
     finding_id: str,
 ) -> dict[str, object] | None:
     finding = next(
@@ -743,7 +747,7 @@ def _finding_timeline_jump(
 
 
 def _timeline_rows(
-    envelope: ReviewEnvelope,
+    envelope: ReviewEnvelopeLike,
     *,
     offset: int,
     limit: int,
@@ -801,7 +805,7 @@ def _timeline_rows(
 
 
 def _track_metadata_rows(
-    envelope: ReviewEnvelope,
+    envelope: ReviewEnvelopeLike,
     *,
     selected_track_ids: Sequence[str] | None = None,
 ) -> tuple[dict[str, str], ...]:
@@ -846,7 +850,7 @@ def _track_metadata_rows(
 
 
 def _unavailable_track_rows(
-    envelope: ReviewEnvelope,
+    envelope: ReviewEnvelopeLike,
     *,
     selected_track_ids: Sequence[str] | None = None,
 ) -> tuple[dict[str, str], ...]:
@@ -881,15 +885,20 @@ def _metric_value(value: object) -> tuple[object, str, str, str]:
             exact.display_text,
             exact.unit or "NOT_AVAILABLE",
         )
-    return (
-        dict(value.values),
-        str(dict(value.values)),
-        str(dict(value.values)),
-        "occurrences",
-    )
+    if value.kind == "STRING_COUNT_MAP":
+        mapping = dict(value.values)
+        return (mapping, str(mapping), str(mapping), "occurrences")
+    if value.kind in {"MEASUREMENT", "COUNT", "BOOLEAN"}:
+        if value.value is None:
+            unavailable = "NOT_AVAILABLE: " + value.reason
+            return (None, unavailable, unavailable, value.unit)
+        return (value.value, str(value.value), str(value.value), value.unit)
+    if value.kind == "ENUM":
+        return (value.value, value.value, value.value, value.unit)
+    raise TypeError("unsupported review metric value kind")
 
 
-def _metric_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _metric_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     rows = []
     for item in envelope.metrics:
         machine, exact, displayed, unit = _metric_value(item.value)
@@ -914,7 +923,7 @@ def _metric_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
     return tuple(rows)
 
 
-def _sequence_rows(envelope: ReviewEnvelope, sequence: int) -> tuple[dict[str, str], ...]:
+def _sequence_rows(envelope: ReviewEnvelopeLike, sequence: int) -> tuple[dict[str, str], ...]:
     if isinstance(sequence, bool) or not isinstance(sequence, int):
         return ()
     if sequence < 0 or sequence >= envelope.timeline.event_count:
@@ -1014,9 +1023,26 @@ def _delta_row_fields(
     )
 
 
-def _comparison_rows(envelope: ComparisonEnvelope) -> tuple[dict[str, str], ...]:
+def _comparison_rows(
+    envelope: ComparisonEnvelope | ComparisonEnvelopeV2,
+) -> tuple[dict[str, str], ...]:
     if envelope.compatibility.status != "COMPATIBLE":
         return ()
+    if type(envelope) is ComparisonEnvelopeV2:
+        return tuple(
+            _safe_row(
+                ("dimension ID", item.dimension_id),
+                ("status", item.status),
+                ("baseline", item.baseline_value),
+                ("candidate", item.candidate_value),
+                ("value kind", item.value_kind),
+                ("unit", item.unit or "NOT_AVAILABLE"),
+                ("desired direction", item.desired_direction),
+                ("explanation", item.explanation),
+                ("source references", _reference_text(item.source_references)),
+            )
+            for item in envelope.dimensions
+        )
     deltas = (
         *envelope.improvements,
         *envelope.regressions,
@@ -1092,7 +1118,9 @@ def _comparison_interpretation(envelope: ComparisonEnvelope) -> str:
     )
 
 
-def _compatibility_reason_rows(envelope: ComparisonEnvelope) -> tuple[dict[str, str], ...]:
+def _compatibility_reason_rows(
+    envelope: ComparisonEnvelope | ComparisonEnvelopeV2,
+) -> tuple[dict[str, str], ...]:
     return tuple(
         _safe_row(
             ("kind", "reason"),
@@ -1110,7 +1138,9 @@ def _compatibility_reason_rows(envelope: ComparisonEnvelope) -> tuple[dict[str, 
     )
 
 
-def _compatibility_rows(envelope: ComparisonEnvelope) -> tuple[dict[str, str], ...]:
+def _compatibility_rows(
+    envelope: ComparisonEnvelope | ComparisonEnvelopeV2,
+) -> tuple[dict[str, str], ...]:
     return (
         _safe_row(
             ("label", "Compatibility"),
@@ -1173,7 +1203,9 @@ def _availability_delta_rows(envelope: ComparisonEnvelope) -> tuple[dict[str, st
     )
 
 
-def _comparison_limitation_rows(envelope: ComparisonEnvelope) -> tuple[dict[str, str], ...]:
+def _comparison_limitation_rows(
+    envelope: ComparisonEnvelope | ComparisonEnvelopeV2,
+) -> tuple[dict[str, str], ...]:
     return tuple(
         _safe_row(
             ("ID", item.id),
@@ -1187,7 +1219,7 @@ def _comparison_limitation_rows(envelope: ComparisonEnvelope) -> tuple[dict[str,
 
 
 def _comparison_side_rows(
-    envelope: ComparisonEnvelope,
+    envelope: ComparisonEnvelope | ComparisonEnvelopeV2,
     *,
     include_source_references: bool = True,
 ) -> tuple[dict[str, str], ...]:
@@ -1255,7 +1287,7 @@ def _comparison_side_rows(
 
 
 def _invalid_comparison_side(
-    envelope: ReviewEnvelope,
+    envelope: ReviewEnvelopeLike,
     baseline_selection: str,
     candidate_selection: str,
 ) -> str:
@@ -1282,7 +1314,7 @@ def _show_rows(rows: Sequence[dict[str, str]]) -> None:
     )
 
 
-def _identity_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _identity_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     artifact = envelope.artifact
     manifest = artifact.manifest_identity
     values = (
@@ -1355,7 +1387,7 @@ def _identity_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
     )
 
 
-def _inventory_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _inventory_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     return tuple(
         _safe_row(
             ("file name", item.file.file_name),
@@ -1368,7 +1400,7 @@ def _inventory_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
     )
 
 
-def _recorded_provenance_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _recorded_provenance_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     recorded = envelope.provenance.recorded
     if recorded.status == "QUARANTINED":
         return (
@@ -1408,7 +1440,7 @@ def _recorded_provenance_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str],
     return tuple(rows)
 
 
-def _diagnostic_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _diagnostic_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     return tuple(
         _safe_row(
             ("ID", item.id),
@@ -1422,7 +1454,7 @@ def _diagnostic_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
     )
 
 
-def _assumption_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _assumption_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     return tuple(
         _safe_row(
             ("ID", item.id),
@@ -1435,7 +1467,7 @@ def _assumption_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
     )
 
 
-def _limitation_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _limitation_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     return tuple(
         _safe_row(
             ("ID", item.id),
@@ -1448,7 +1480,7 @@ def _limitation_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
     )
 
 
-def _unavailable_evidence_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _unavailable_evidence_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     return tuple(
         _safe_row(
             ("evidence ID", item.evidence_id),
@@ -1464,7 +1496,7 @@ def _unavailable_evidence_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str]
     )
 
 
-def _active_review(root: Path) -> ReviewEnvelope | None:
+def _active_review(root: Path) -> ReviewEnvelopeLike | None:
     if not st.session_state.get("review_requested", False):
         return None
     selection = st.session_state.get("submitted_artifact_selection", "")
@@ -1481,7 +1513,7 @@ def _active_review(root: Path) -> ReviewEnvelope | None:
 
 
 def _persistent_identity_rows(
-    envelope: ReviewEnvelope,
+    envelope: ReviewEnvelopeLike,
 ) -> tuple[dict[str, str], ...]:
     locator = envelope.artifact.locator
     manifest = envelope.artifact.manifest_identity
@@ -1499,14 +1531,14 @@ def _persistent_identity_rows(
     )
 
 
-def _render_persistent_review_identity(envelope: ReviewEnvelope | None) -> None:
+def _render_persistent_review_identity(envelope: ReviewEnvelopeLike | None) -> None:
     if envelope is None:
         return
     for row in _persistent_identity_rows(envelope):
         _render_categorized_row(row)
 
 
-def _render_decision_trust(envelope: ReviewEnvelope) -> None:
+def _render_decision_trust(envelope: ReviewEnvelopeLike) -> None:
     st.text("Decision state")
     st.text(f"Gate verdict: {envelope.gate.verdict} [{envelope.gate.category}]")
     st.text(
@@ -1523,7 +1555,7 @@ def _render_decision_trust(envelope: ReviewEnvelope) -> None:
     st.text(_NON_AUTHORITY_SENTENCE)
 
 
-def _quarantine_identity_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str], ...]:
+def _quarantine_identity_rows(envelope: ReviewEnvelopeLike) -> tuple[dict[str, str], ...]:
     artifact = envelope.artifact
     manifest = artifact.manifest_identity
     values = (
@@ -1576,7 +1608,7 @@ def _quarantine_identity_rows(envelope: ReviewEnvelope) -> tuple[dict[str, str],
     )
 
 
-def _render_quarantine(envelope: ReviewEnvelope) -> None:
+def _render_quarantine(envelope: ReviewEnvelopeLike) -> None:
     st.error("INVALID_EVIDENCE — Invalid evidence quarantine")
     st.text(
         "Stored gate rationale, findings, metrics, timeline, provenance, and comparison "
@@ -1612,7 +1644,7 @@ def _reset_review_presentation_state() -> None:
     st.session_state["selected_timeline_sequence"] = -1
 
 
-def _render_intake(root: Path, envelope: ReviewEnvelope | None) -> None:
+def _render_intake(root: Path, envelope: ReviewEnvelopeLike | None) -> None:
     st.header("Select & Verify", anchor="select-and-verify")
     st.caption(
         "Enter one exact root-relative directory. Omit the configured root name. "
@@ -1650,7 +1682,7 @@ def _render_intake(root: Path, envelope: ReviewEnvelope | None) -> None:
     st.text("Submitted directory and manifest identity are shown separately above.")
 
 
-def _render_summary(envelope: ReviewEnvelope | None) -> None:
+def _render_summary(envelope: ReviewEnvelopeLike | None) -> None:
     st.header("Overview", anchor="overview")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing it.")
@@ -1746,7 +1778,7 @@ def _render_summary(envelope: ReviewEnvelope | None) -> None:
     )
 
 
-def _render_findings(envelope: ReviewEnvelope | None) -> None:
+def _render_findings(envelope: ReviewEnvelopeLike | None) -> None:
     st.header("Evidence", anchor="evidence")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing findings.")
@@ -1846,7 +1878,7 @@ def _apply_timeline_jump_state(
     st.session_state["selected_timeline_sequence"] = sequence
 
 
-def _render_timeline(envelope: ReviewEnvelope | None) -> None:
+def _render_timeline(envelope: ReviewEnvelopeLike | None) -> None:
     st.header("Timeline", anchor="timeline")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing the timeline.")
@@ -1918,7 +1950,7 @@ def _render_timeline(envelope: ReviewEnvelope | None) -> None:
         _show_rows(_sequence_rows(envelope, selected_sequence))
 
 
-def _render_provenance(envelope: ReviewEnvelope | None) -> None:
+def _render_provenance(envelope: ReviewEnvelopeLike | None) -> None:
     st.header("Provenance", anchor="provenance")
     if envelope is None:
         st.info("Verify an exact stored artifact before reviewing provenance.")
@@ -1946,7 +1978,9 @@ def _render_provenance(envelope: ReviewEnvelope | None) -> None:
     _show_rows(_limitation_rows(envelope))
 
 
-def _active_comparison(root: Path) -> ComparisonEnvelope | ReviewEnvelope | None:
+def _active_comparison(
+    root: Path,
+) -> ComparisonEnvelope | ComparisonEnvelopeV2 | ReviewEnvelope | ReviewEnvelopeV2 | None:
     if not st.session_state.get("comparison_requested", False):
         return None
     baseline = st.session_state.get("submitted_baseline_selection", "")
@@ -1982,7 +2016,9 @@ def _render_comparison(root: Path) -> None:
         "Exact candidate selection",
         key="comparison_candidate_draft",
     )
-    result: ComparisonEnvelope | ReviewEnvelope | None = None
+    result: (
+        ComparisonEnvelope | ComparisonEnvelopeV2 | ReviewEnvelope | ReviewEnvelopeV2 | None
+    ) = None
     if st.button("Compare stored evidence", key="compare_stored_evidence"):
         previous_baseline = st.session_state.get("submitted_baseline_selection", "")
         previous_candidate = st.session_state.get("submitted_candidate_selection", "")
@@ -2002,7 +2038,7 @@ def _render_comparison(root: Path) -> None:
     if result is None:
         st.info("Enter two exact independently verified selections.")
         return
-    if isinstance(result, ReviewEnvelope):
+    if type(result) in {ReviewEnvelope, ReviewEnvelopeV2}:
         baseline = st.session_state.get("submitted_baseline_selection", "")
         candidate = st.session_state.get("submitted_candidate_selection", "")
         side = _invalid_comparison_side(result, baseline, candidate)
@@ -2037,6 +2073,14 @@ def _render_comparison(root: Path) -> None:
             "or advancement claim is shown."
         )
         _show_rows(_comparison_limitation_rows(result))
+        return
+    if type(result) is ComparisonEnvelopeV2:
+        st.subheader("Schema-2 comparison dimensions")
+        _show_rows(_comparison_rows(result))
+        st.subheader("Advancement interpretation")
+        st.text(
+            "No winner score or advancement decision is derived from these dimensions."
+        )
         return
     dedicated = _dedicated_comparison_rows(result)
     st.subheader("Gate outcome")

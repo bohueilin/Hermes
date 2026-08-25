@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from math import isfinite
 from pathlib import PurePosixPath
 from types import MappingProxyType
 from typing import Annotated, ClassVar, Literal, TypeAlias
@@ -19,8 +20,15 @@ from pydantic import (
 )
 
 from hermes.evidence.canonical import canonical_json_bytes
+from hermes.evidence.metric_registry import (
+    SCHEMA2_METRIC_BY_ID,
+    SCHEMA2_METRIC_REGISTRY,
+    SCHEMA2_TOLERANCE_LABEL,
+    metric_leaf_uses_wrapper,
+)
 
 REVIEW_SCHEMA_VERSION = "1.0"
+REVIEW_SCHEMA_V2_VERSION = "2.0"
 
 NonEmptyString = Annotated[str, Field(min_length=1)]
 Sha256 = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
@@ -155,6 +163,8 @@ _FROZEN_SCHEMA_PROFILE_PAIRINGS: frozenset[tuple[str, str]] = frozenset(
         ("2.0", "fault_coverage"),
         ("1.0", "adas_p0_longitudinal"),
         ("2.0", "adas_p0_longitudinal_fault"),
+        ("3.0", "adas_p0_longitudinal"),
+        ("3.0", "adas_p0_longitudinal_fault"),
     }
 )
 #: Expected requiredness per verifier profile, positionally aligned with the order below.
@@ -457,7 +467,7 @@ class ReviewCacheKey:
     """Exact locator-bound portable cache tuple."""
 
     computed_bundle_digest_sha256: Sha256
-    review_schema_version: Literal["1.0"]
+    review_schema_version: Literal["1.0", "2.0"]
     hermes_version: NonEmptyString
     selected_relative_path: NonEmptyString
 
@@ -471,7 +481,7 @@ class ReviewCacheKey:
             )
         ):
             raise ValueError("computed_bundle_digest_sha256 must be lowercase SHA-256")
-        if self.review_schema_version != REVIEW_SCHEMA_VERSION:
+        if self.review_schema_version not in {REVIEW_SCHEMA_VERSION, REVIEW_SCHEMA_V2_VERSION}:
             raise ValueError("unsupported review schema version")
         if not isinstance(self.hermes_version, str) or not self.hermes_version:
             raise ValueError("hermes_version must be a non-empty string")
@@ -544,6 +554,13 @@ class ToolInfo(ReviewModel):
     hermes_distribution: Literal["hermes-autonomy"]
     hermes_version: NonEmptyString
     review_schema_version: Literal["1.0"]
+    category: Literal["COMPUTED"]
+
+
+class ToolInfoV2(ReviewModel):
+    hermes_distribution: Literal["hermes-autonomy"]
+    hermes_version: NonEmptyString
+    review_schema_version: Literal["2.0"]
     category: Literal["COMPUTED"]
 
 
@@ -644,7 +661,7 @@ class PortableArtifactIdentity(ReviewModel):
         if all(value is not None for value in identity_values):
             if "manifest.json" not in names:
                 raise ValueError("retained manifest identity requires captured manifest.json")
-            if self.manifest_identity.evidence_schema_version not in {"1.0", "2.0"}:
+            if self.manifest_identity.evidence_schema_version not in {"1.0", "2.0", "3.0"}:
                 raise ValueError("retained manifest identity requires a supported evidence schema")
         required_sources = (
             (self.observed_bundle_digest, "bundle.sha256"),
@@ -1353,6 +1370,28 @@ class FindingItem(ReviewModel):
                     expression.invariant.configuration_sources,
                     (("GATE_CONFIG", "/adas"),),
                 )
+                and self._references_match(
+                    expression.invariant.evidence_sources,
+                    (("EVENT", "/executed_action/brake"),),
+                )
+            )
+        if (
+            self.finding_id == "adas.aeb.brake_onset_margin"
+            and self.verifier_version == "1.1"
+            and self.measured.unit == "m usable gap"
+        ):
+            return (
+                isinstance(expression, InvariantExpression)
+                and expression.label == "Usable gap at AEB brake onset (m usable gap)"
+                and expression.invariant.operator == "COMPLETE"
+                and self._references_match(
+                    expression.invariant.configuration_sources,
+                    (("GATE_CONFIG", "/adas"),),
+                )
+                and self._references_match(
+                    expression.invariant.evidence_sources,
+                    (("EVENT", "/executed_action/brake"),),
+                )
             )
         registered = self._ADAS_CLAUSE_REGISTRY.get(self.finding_id)
         if registered is None:
@@ -1366,6 +1405,10 @@ class FindingItem(ReviewModel):
             and self._references_match(
                 expression.clause.configuration_sources,
                 (("GATE_CONFIG", "/adas"),),
+            )
+            and self._references_match(
+                expression.clause.evidence_sources,
+                (("EVENT", _ADAS_EVIDENCE_POINTERS[self.finding_id]),),
             )
         )
 
@@ -1642,6 +1685,157 @@ class MetricItem(ReviewModel):
                     valid_value = valid_value and machine_value <= 100
             if not valid_value:
                 raise ValueError("available scalar metric requires its registry machine-value type")
+        return self
+
+
+class MeasurementMetricValue(ReviewModel):
+    kind: Literal["MEASUREMENT"]
+    availability: Literal["AVAILABLE", "NOT_AVAILABLE"]
+    value: FiniteFloat | None
+    unit: str | None
+    reason: str | None
+
+    @model_validator(mode="after")
+    def validate_availability(self) -> MeasurementMetricValue:
+        if self.availability == "AVAILABLE":
+            if self.value is None or self.reason is not None:
+                raise ValueError("available measurement requires a value and no reason")
+        elif self.value is not None or not self.reason:
+            raise ValueError("unavailable measurement requires a reason and null value")
+        return self
+
+
+class CountMetricValue(ReviewModel):
+    kind: Literal["COUNT"]
+    value: NonNegativeInt | None
+    unit: str | None
+    availability: Literal["AVAILABLE", "NOT_AVAILABLE"] = "AVAILABLE"
+    reason: str | None = None
+
+    @model_validator(mode="after")
+    def validate_availability(self) -> CountMetricValue:
+        if self.availability == "AVAILABLE":
+            if self.value is None or self.reason is not None:
+                raise ValueError("available count requires an integer value and no reason")
+        elif self.value is not None or not self.reason:
+            raise ValueError("unavailable count requires a reason and null value")
+        return self
+
+
+class BooleanMetricValue(ReviewModel):
+    kind: Literal["BOOLEAN"]
+    value: bool | None
+    unit: None = None
+    availability: Literal["AVAILABLE", "NOT_AVAILABLE"] = "AVAILABLE"
+    reason: str | None = None
+
+    @model_validator(mode="after")
+    def validate_availability(self) -> BooleanMetricValue:
+        if self.availability == "AVAILABLE":
+            if self.value is None or self.reason is not None:
+                raise ValueError("available boolean requires a value and no reason")
+        elif self.value is not None or not self.reason:
+            raise ValueError("unavailable boolean requires a reason and null value")
+        return self
+
+
+class EnumMetricValue(ReviewModel):
+    kind: Literal["ENUM"]
+    value: NonEmptyString
+    unit: None = None
+
+
+MetricValueV2 = Annotated[
+    MeasurementMetricValue
+    | CountMetricValue
+    | BooleanMetricValue
+    | EnumMetricValue
+    | ScalarMetricValue
+    | StringCountMapMetricValue,
+    Field(discriminator="kind"),
+]
+
+
+class MetricItemV2(ReviewModel):
+    metric_id: NonEmptyString
+    display_id: NonEmptyString
+    label: NonEmptyString
+    category: Literal["COMPUTED", "NOT_AVAILABLE"]
+    value: MetricValueV2
+    availability: Literal["AVAILABLE", "NOT_AVAILABLE"]
+    unavailable_reason: str | None
+    desired_direction: Literal["HIGHER", "LOWER", "FALSE_PREFERRED", "DESCRIPTIVE"]
+    authoritative_view: NonEmptyString
+    abs_tol: FiniteFloat
+    rel_tol: FiniteFloat
+    tolerance_label: NonEmptyString
+    criticality: Literal["UNASSIGNED"]
+    gating: Literal[False]
+    source_references: tuple[SourceReference, ...]
+
+    @model_validator(mode="after")
+    def validate_schema2_metric(self) -> MetricItemV2:
+        spec = SCHEMA2_METRIC_BY_ID.get(self.metric_id)
+        if spec is None:
+            raise ValueError("unsupported schema-2 metric ID")
+        if (
+            self.display_id != spec.display_id
+            or self.label != spec.display_id
+            or self.desired_direction != spec.direction
+            or self.authoritative_view != spec.authoritative_view
+            or self.abs_tol != spec.abs_tol
+            or self.rel_tol != spec.rel_tol
+            or self.tolerance_label != spec.tolerance_label
+            or self.criticality != spec.criticality
+            or self.gating is not spec.gating
+            or self.value.kind != spec.value_kind
+        ):
+            raise ValueError("schema-2 metric metadata must exactly match the shared registry")
+        value_unit = (
+            self.value.value.unit
+            if isinstance(self.value, ScalarMetricValue)
+            else getattr(self.value, "unit", None)
+        )
+        if not isinstance(self.value, StringCountMapMetricValue) and value_unit != spec.unit:
+            raise ValueError("schema-2 metric unit must exactly match the shared registry")
+        if (
+            self.availability != getattr(self.value, "availability", "AVAILABLE")
+            or self.unavailable_reason != getattr(self.value, "reason", None)
+        ):
+            raise ValueError("schema-2 metric availability must match its typed value")
+        if not self.source_references:
+            raise ValueError("schema-2 metric requires an exact metrics source")
+        expected_base = spec.json_pointer
+        wrapped = metric_leaf_uses_wrapper(spec)
+        expected_first = (
+            f"{expected_base}/availability"
+            if self.availability == "NOT_AVAILABLE"
+            and wrapped
+            else f"{expected_base}/value"
+            if wrapped
+            else expected_base
+        )
+        first = self.source_references[0]
+        if first.source_type != "METRIC" or first.json_pointer != expected_first:
+            raise ValueError("schema-2 metric must begin with its exact storage leaf")
+        expected_pointers = (
+            (f"{expected_base}/availability", f"{expected_base}/reason")
+            if self.availability == "NOT_AVAILABLE" and wrapped
+            else (f"{expected_base}/value",)
+            if wrapped
+            else (expected_base,)
+        )
+        if tuple(reference.json_pointer for reference in self.source_references) != (
+            expected_pointers
+        ) or any(reference.source_type != "METRIC" for reference in self.source_references):
+            raise ValueError("schema-2 metric sources must exactly match its storage leaves")
+        if self.availability == "NOT_AVAILABLE":
+            if self.category != "NOT_AVAILABLE" or not self.unavailable_reason:
+                raise ValueError("unavailable schema-2 metric requires its exact reason")
+            if getattr(self.value, "value", None) is not None:
+                raise ValueError("unavailable schema-2 metric cannot carry a value")
+        elif self.category != "COMPUTED" or self.unavailable_reason is not None:
+            raise ValueError("available schema-2 metric must be computed without a reason")
         return self
 
 
@@ -2479,6 +2673,8 @@ class ReviewEnvelope(ReviewModel):
             ):
                 raise ValueError("invalid evidence must use the quarantined envelope shape")
             return self
+        if self.review_schema_version == "2.0":
+            return self._validate_schema2_envelope()
         if self.gate.residual_limitation_ids != limitation_ids:
             raise ValueError("gate limitation IDs must match envelope limitations")
         if not self.gate.accepted_recomputation:
@@ -2492,6 +2688,8 @@ class ReviewEnvelope(ReviewModel):
             raise ValueError("consistent evidence requires a selected sufficiency profile")
         schema = self.artifact.manifest_identity.evidence_schema_version
         identity = self.artifact.manifest_identity
+        if schema == "3.0":
+            raise ValueError("evidence V3 requires review schema 2")
         if (schema, profile) not in _FROZEN_SCHEMA_PROFILE_PAIRINGS:
             raise ValueError("evidence schema and sufficiency profile must use the frozen pairing")
         gate_identity = (
@@ -2598,6 +2796,123 @@ class ReviewEnvelope(ReviewModel):
             if should_be_unavailable != (track.availability == "NOT_AVAILABLE"):
                 raise ValueError("track availability must match the evidence schema")
         self._validate_triggering_finding_track()
+        return self
+
+    def _validate_schema2_envelope(self) -> ReviewEnvelope:
+        if self.gate.residual_limitation_ids != tuple(
+            item.id for item in self.residual_limitations
+        ):
+            raise ValueError("gate limitation IDs must match envelope limitations")
+        if not self.gate.accepted_recomputation:
+            raise ValueError("consistent evidence requires an accepted recomputation")
+        self.artifact.require_consistent_complete()
+        if self.provenance.recorded.status != "ACCEPTED":
+            raise ValueError("consistent evidence requires accepted recorded provenance")
+        schema = self.artifact.manifest_identity.evidence_schema_version
+        profile = self.evidence_sufficiency.profile_name
+        if schema != "3.0" or (schema, profile) not in _FROZEN_SCHEMA_PROFILE_PAIRINGS:
+            raise ValueError("review schema 2 accepts only a frozen evidence-V3 ADAS pairing")
+        fault = (
+            self.provenance.recorded.fault_name,
+            self.provenance.recorded.fault_version,
+            self.provenance.recorded.fault_config_digest,
+        )
+        expected_profile = (
+            "adas_p0_longitudinal" if not any(value is not None for value in fault)
+            else "adas_p0_longitudinal_fault"
+        )
+        if profile != expected_profile:
+            raise ValueError("evidence-V3 profile must exactly match fault identity presence")
+        if any(value is not None for value in fault) and any(value is None for value in fault):
+            raise ValueError("evidence-V3 fault identity must be complete or absent")
+        gate_identity = (
+            self.gate.gate_name,
+            self.gate.gate_version,
+            self.gate.gate_config_digest_sha256,
+        )
+        if any(value is None for value in gate_identity):
+            raise ValueError("consistent evidence requires complete gate identity")
+        recorded = self.provenance.recorded
+        if gate_identity != (
+            recorded.gate_name,
+            recorded.gate_version,
+            recorded.gate_config_digest,
+        ):
+            raise ValueError("gate identity must exactly match accepted recorded provenance")
+        if (
+            self.artifact.manifest_identity.scenario_schema_version
+            != recorded.scenario_schema_version
+        ):
+            raise ValueError("scenario schema identity must match accepted recorded provenance")
+        finding_ids = tuple(item.finding_id for item in self.findings)
+        if finding_ids != EMITTED_FINDING_ORDER_BY_PROFILE[profile]:
+            raise ValueError("findings must match the frozen V3 profile order")
+        requirements = {
+            item.evidence_id: item.requirement for item in self.evidence_sufficiency.items
+        }
+        if any(item.requiredness != requirements[item.finding_id] for item in self.findings):
+            raise ValueError("finding requiredness must match the selected profile")
+        emitted_ids = set(finding_ids)
+        gate_arrays = (
+            self.gate.hard_failure_ids,
+            self.gate.soft_failure_ids,
+            self.gate.supporting_finding_ids,
+        )
+        if any(not set(values).issubset(emitted_ids) for values in gate_arrays):
+            raise ValueError("gate arrays may contain only emitted finding IDs")
+        for values in gate_arrays:
+            if values != tuple(item for item in finding_ids if item in values):
+                raise ValueError("gate arrays must preserve emitted finding order")
+        for finding in self.findings:
+            consequence = finding.consequence
+            actual = (
+                finding.finding_id in self.gate.hard_failure_ids,
+                finding.finding_id in self.gate.soft_failure_ids,
+                finding.finding_id in self.gate.supporting_finding_ids,
+            )
+            recorded_membership = (
+                consequence.listed_in_hard_failures,
+                consequence.listed_in_soft_failures,
+                consequence.listed_in_supporting_findings,
+            )
+            if recorded_membership != actual:
+                raise ValueError("finding consequence membership must exactly copy GateInfo arrays")
+            if any(
+                sequence >= self.timeline.event_count
+                for sequence in finding.supporting_event_sequences
+            ):
+                raise ValueError("finding supporting sequences must lie on the retained timeline")
+            if finding.status == "FAIL" and finding.supporting_event_sequences:
+                first_sequence = finding.supporting_event_sequences[0]
+                grid_track = next(
+                    track for track in self.timeline.tracks if track.availability == "AVAILABLE"
+                )
+                grid_time = next(
+                    point.simulation_time_s
+                    for point in grid_track.points
+                    if point.sequence == first_sequence
+                )
+                if finding.first_failure_simulation_time_s != grid_time:
+                    raise ValueError(
+                        "finding failure time must equal its first supporting event time"
+                    )
+            ReviewEnvelope._validate_threshold_event_coverage(self, finding)
+        if any(_threshold_depth(item.threshold) > 16 for item in self.findings):
+            raise ReviewUnavailableError(
+                ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+                "review threshold nesting depth exceeded",
+            )
+        expected_metrics = tuple(item.leaf_id for item in SCHEMA2_METRIC_REGISTRY)
+        if tuple(item.metric_id for item in self.metrics) != expected_metrics:
+            raise ValueError("metrics must match the exact schema-2 registry")
+        if self.timeline.event_count < 1:
+            raise ValueError("consistent evidence requires at least one retained event")
+        first = self.metrics[0].value
+        if not isinstance(first, CountMetricValue) or first.value != self.timeline.event_count:
+            raise ValueError("event-count metric must equal the retained timeline event count")
+        if tuple(track.track_id for track in self.timeline.tracks) != TRACK_ORDER:
+            raise ValueError("timeline tracks must match the frozen registry")
+        ReviewEnvelope._validate_triggering_finding_track(self)
         return self
 
     def _validate_metric_event_coverage(self, metric: MetricItem, schema: str) -> None:
@@ -2747,6 +3062,11 @@ class ReviewEnvelope(ReviewModel):
             groups = (
                 (expression.invariant.evidence_sources,)
                 if finding.finding_id == "adas.aeb.threat_response"
+                or (
+                    finding.finding_id == "adas.aeb.brake_onset_margin"
+                    and finding.verifier_version == "1.1"
+                    and finding.measured.unit == "m usable gap"
+                )
                 else (expression.clause.evidence_sources,)
             )
             expected_groups = (expected(pointer),)
@@ -2762,6 +3082,334 @@ class ReviewEnvelope(ReviewModel):
             )
         if tuple(event_pairs(group) for group in groups) != expected_groups:
             raise ValueError("threshold event references must completely cover the timeline grid")
+
+
+class ReviewEnvelopeV2(ReviewModel):
+    """Standalone review schema for exact evidence-V3 snapshots."""
+
+    review_schema_version: Literal["2.0"]
+    tool: ToolInfoV2
+    artifact: PortableArtifactIdentity
+    verification: VerificationInfo
+    trust: TrustInfo
+    gate: GateInfo
+    evidence_sufficiency: EvidenceSufficiency
+    findings: tuple[FindingItem, ...]
+    metrics: tuple[MetricItemV2, ...]
+    timeline: Timeline
+    provenance: Provenance
+    diagnostics: tuple[DiagnosticItem, ...]
+    assumptions: tuple[AssumptionItem, ...]
+    unavailable_evidence: tuple[UnavailableEvidenceItem, ...]
+    residual_limitations: tuple[LimitationItem, ...]
+
+    @model_validator(mode="after")
+    def validate_review_envelope_v2(self) -> ReviewEnvelopeV2:
+        if len(self.findings) > 64 or len(self.metrics) > 64:
+            raise ReviewUnavailableError(
+                ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+                "schema-2 review finding or metric budget exceeded",
+            )
+        if self.tool.review_schema_version != self.review_schema_version:
+            raise ValueError("tool and envelope review schema versions must match")
+        limitation_ids = tuple(item.id for item in self.residual_limitations)
+        if tuple(sorted(set(limitation_ids))) != limitation_ids:
+            raise ValueError("residual limitations must be unique and sorted by ID")
+        assumption_ids = tuple(item.id for item in self.assumptions)
+        if tuple(sorted(set(assumption_ids))) != assumption_ids:
+            raise ValueError("assumptions must be unique and sorted by ID")
+        expected_unavailable = tuple(
+            (
+                item.evidence_id,
+                item.label,
+                item.reason,
+                item.requirement,
+                item.consequence,
+                item.source_references,
+            )
+            for item in self.evidence_sufficiency.items
+            if item.availability == "NOT_AVAILABLE"
+        )
+        actual_unavailable = tuple(
+            (
+                item.evidence_id,
+                item.label,
+                item.reason,
+                item.requiredness,
+                item.consequence,
+                item.source_references,
+            )
+            for item in self.unavailable_evidence
+        )
+        if expected_unavailable != actual_unavailable:
+            raise ValueError("unavailable evidence must exactly project sufficiency items")
+        if self.verification.integrity == "INVALID_EVIDENCE":
+            summary = self.evidence_sufficiency.summary
+            inventory_names = {item.file.file_name for item in self.artifact.source_inventory}
+            captured_claims = bool(
+                inventory_names.intersection({"metrics.json", "findings.json", "verdict.json"})
+            )
+            if (
+                self.gate.verdict != "INVALID_EVIDENCE"
+                or self.gate.accepted_recomputation
+                or self.gate.rationale
+                or any(
+                    (
+                        self.gate.hard_failure_ids,
+                        self.gate.soft_failure_ids,
+                        self.gate.supporting_finding_ids,
+                        self.gate.residual_limitation_ids,
+                    )
+                )
+                or self.findings
+                or self.metrics
+                or self.timeline.event_count != 0
+                or self.timeline.tracks
+                or self.provenance.recorded.status != "QUARANTINED"
+                or self.evidence_sufficiency.profile_name is not None
+                or self.evidence_sufficiency.profile_version is not None
+                or self.evidence_sufficiency.items
+                or any(summary.model_dump().values())
+                or self.verification.stored_claims_quarantined != captured_claims
+            ):
+                raise ValueError("invalid evidence must use the quarantined envelope shape")
+            return self
+        ReviewEnvelope._validate_schema2_envelope(self)
+        return self
+
+
+class ComparisonDimensionV2Item(ReviewModel):
+    dimension_id: NonEmptyString
+    status: ComparisonStatus
+    baseline_value: object
+    candidate_value: object
+    value_kind: NonEmptyString
+    unit: str | None
+    explanation: NonEmptyString
+    desired_direction: NonEmptyString
+    abs_tol: FiniteFloat
+    rel_tol: FiniteFloat
+    tolerance_label: NonEmptyString
+    criticality: Literal["UNASSIGNED"]
+    gating: Literal[False]
+    source_references: tuple[SideReference, ...]
+
+    @model_validator(mode="after")
+    def validate_schema2_dimension(self) -> ComparisonDimensionV2Item:
+        if self.dimension_id == "verdict":
+            expected_metadata = ("ENUM", None, "HIGHER")
+            expected_sources = {
+                ("BASELINE", "VERDICT", "/verdict"),
+                ("CANDIDATE", "VERDICT", "/verdict"),
+            }
+            rank = {"HOLD": 0, "CONDITIONAL": 1, "PASS": 2}
+            if self.baseline_value not in rank or self.candidate_value not in rank:
+                expected_status = "NOT_COMPARABLE"
+            elif rank[self.candidate_value] == rank[self.baseline_value]:
+                expected_status = "UNCHANGED"
+            elif rank[self.candidate_value] > rank[self.baseline_value]:
+                expected_status = "IMPROVED"
+            else:
+                expected_status = "REGRESSED"
+        elif self.dimension_id == "hard_failures":
+            expected_metadata = ("STRING_LIST", None, "DESCRIPTIVE")
+            expected_sources = {
+                ("BASELINE", "VERDICT", "/hard_failures"),
+                ("CANDIDATE", "VERDICT", "/hard_failures"),
+            }
+            if (
+                not isinstance(self.baseline_value, list)
+                or not isinstance(self.candidate_value, list)
+                or any(
+                    not isinstance(item, str)
+                    for item in (*self.baseline_value, *self.candidate_value)
+                )
+                or self.baseline_value != sorted(set(self.baseline_value))
+                or self.candidate_value != sorted(set(self.candidate_value))
+            ):
+                raise ValueError("hard-failure dimension requires two JSON arrays")
+            removed = set(self.baseline_value) - set(self.candidate_value)
+            added = set(self.candidate_value) - set(self.baseline_value)
+            expected_status = (
+                "UNCHANGED"
+                if not removed and not added
+                else "IMPROVED"
+                if removed and not added
+                else "REGRESSED"
+                if added and not removed
+                else "NOT_COMPARABLE"
+            )
+        else:
+            spec = SCHEMA2_METRIC_BY_ID.get(self.dimension_id)
+            if spec is None:
+                raise ValueError("unsupported schema-2 comparison dimension")
+            expected_metadata = (spec.value_kind, spec.unit, spec.direction)
+            expected_sources: set[tuple[str, str, str]] = set()
+            for side, value in (
+                ("BASELINE", self.baseline_value),
+                ("CANDIDATE", self.candidate_value),
+            ):
+                self._validate_registry_value(spec, value)
+                if metric_leaf_uses_wrapper(spec):
+                    if not isinstance(value, dict) or set(value) != {
+                        "availability",
+                        "value",
+                        "unit",
+                        "reason",
+                    }:
+                        raise ValueError("schema-2 wrapped comparison value has the wrong shape")
+                    if value["unit"] != spec.unit:
+                        raise ValueError("schema-2 wrapped comparison value has the wrong unit")
+                    if value["availability"] == "AVAILABLE":
+                        pointers = (f"{spec.json_pointer}/value",)
+                    elif value["availability"] == "NOT_AVAILABLE" and value["reason"]:
+                        pointers = (
+                            f"{spec.json_pointer}/availability",
+                            f"{spec.json_pointer}/reason",
+                        )
+                    else:
+                        raise ValueError(
+                            "schema-2 wrapped comparison value has invalid availability"
+                        )
+                else:
+                    pointers = (spec.json_pointer,)
+                expected_sources.update((side, "METRIC", pointer) for pointer in pointers)
+            expected_status = self._registry_status(spec)
+        if (
+            (self.value_kind, self.unit, self.desired_direction) != expected_metadata
+            or self.abs_tol != 0.0
+            or self.rel_tol != 0.0
+            or self.tolerance_label != SCHEMA2_TOLERANCE_LABEL
+            or self.criticality != "UNASSIGNED"
+            or self.gating is not False
+        ):
+            raise ValueError("schema-2 comparison metadata must match the shared registry")
+        actual_sources = {
+            (
+                reference.side,
+                reference.reference.source_type,
+                reference.reference.json_pointer,
+            )
+            for reference in self.source_references
+        }
+        if actual_sources != expected_sources or any(
+            reference.reference.event_sequence is not None
+            for reference in self.source_references
+        ):
+            raise ValueError("schema-2 comparison sources must match its exact side leaves")
+        if self.status != expected_status:
+            raise ValueError("schema-2 comparison status must match its exact side values")
+        return self
+
+    @staticmethod
+    def _validate_registry_value(spec: object, value: object) -> None:
+        if metric_leaf_uses_wrapper(spec):
+            if not isinstance(value, dict) or set(value) != {
+                "availability",
+                "value",
+                "unit",
+                "reason",
+            }:
+                raise ValueError("schema-2 wrapped comparison value has the wrong shape")
+            available = value["availability"] == "AVAILABLE"
+            if available != (value["value"] is not None) or available == bool(value["reason"]):
+                raise ValueError("schema-2 wrapped comparison availability is inconsistent")
+            value = value["value"]
+            if not available:
+                return
+        if spec.value_kind == "COUNT":
+            valid = type(value) is int and value >= 0
+        elif spec.value_kind == "BOOLEAN":
+            valid = type(value) is bool
+        elif spec.value_kind in {"MEASUREMENT", "SCALAR"}:
+            valid = (
+                not isinstance(value, bool)
+                and isinstance(value, (int, float))
+                and isfinite(value)
+            )
+        elif spec.value_kind == "ENUM":
+            valid = isinstance(value, str) and bool(value)
+        else:
+            valid = (
+                isinstance(value, dict)
+                and tuple(value) == tuple(sorted(value))
+                and all(
+                    isinstance(key, str)
+                    and bool(key)
+                    and type(count) is int
+                    and count >= 0
+                    for key, count in value.items()
+                )
+            )
+        if not valid:
+            raise ValueError("schema-2 comparison value does not match its registry kind")
+
+    def _registry_status(self, spec: object) -> str:
+        baseline = self.baseline_value
+        candidate = self.candidate_value
+        if metric_leaf_uses_wrapper(spec):
+            if (
+                baseline["availability"] != "AVAILABLE"
+                or candidate["availability"] != "AVAILABLE"
+            ):
+                return "NOT_COMPARABLE"
+            baseline = baseline["value"]
+            candidate = candidate["value"]
+        if spec.value_kind == "BOOLEAN":
+            if type(baseline) is not bool or type(candidate) is not bool:
+                raise ValueError("boolean comparison requires exact boolean values")
+            return (
+                "UNCHANGED"
+                if baseline == candidate
+                else "IMPROVED"
+                if baseline and not candidate
+                else "REGRESSED"
+            )
+        if spec.direction == "DESCRIPTIVE":
+            return "UNCHANGED" if baseline == candidate else "NOT_COMPARABLE"
+        if (
+            isinstance(baseline, bool)
+            or isinstance(candidate, bool)
+            or not isinstance(baseline, (int, float))
+            or not isinstance(candidate, (int, float))
+        ):
+            raise ValueError("ordinal comparison requires exact numeric values")
+        tolerance = max(self.abs_tol, self.rel_tol * abs(float(baseline)))
+        delta = float(candidate) - float(baseline)
+        if abs(delta) <= tolerance:
+            return "UNCHANGED"
+        improved = delta > 0.0 if spec.direction == "HIGHER" else delta < 0.0
+        return "IMPROVED" if improved else "REGRESSED"
+
+
+class ComparisonEnvelopeV2(ReviewModel):
+    """Review mirror of comparison schema 2; no legacy partition reinterpretation."""
+
+    comparison_schema_version: Literal["2.0"]
+    tool: ToolInfoV2
+    baseline: SideSummary
+    candidate: SideSummary
+    compatibility: CompatibilityInfo
+    dimensions: tuple[ComparisonDimensionV2Item, ...]
+    chart_series: tuple[ChartSeries, ...] = ()
+    residual_limitations: tuple[LimitationItem, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_schema2_comparison(self) -> ComparisonEnvelopeV2:
+        if self.baseline.side != "BASELINE" or self.candidate.side != "CANDIDATE":
+            raise ValueError("comparison side summaries have fixed roles")
+        if self.compatibility.status == "INCOMPATIBLE":
+            if self.dimensions or self.chart_series:
+                raise ValueError("incompatible comparison cannot expose dimensions or charts")
+            return self
+        expected = ("verdict", "hard_failures") + tuple(
+            item.leaf_id for item in SCHEMA2_METRIC_REGISTRY
+        )
+        if tuple(item.dimension_id for item in self.dimensions) != expected:
+            raise ValueError("schema-2 comparison must mirror all 63 core dimensions")
+        if self.chart_series:
+            raise ValueError("schema-2 review does not synthesize presentation-only charts")
+        return self
 
 
 class ComparisonEnvelope(ReviewModel):
@@ -2984,9 +3632,14 @@ class ComparisonEnvelope(ReviewModel):
         return self
 
 
-def canonical_envelope_bytes(envelope: ReviewEnvelope | ComparisonEnvelope) -> bytes:
+def canonical_envelope_bytes(
+    envelope: ReviewEnvelope | ReviewEnvelopeV2 | ComparisonEnvelope | ComparisonEnvelopeV2,
+) -> bytes:
     """Return canonical portable JSON bytes without transport newline decoration."""
-    if not isinstance(envelope, (ReviewEnvelope, ComparisonEnvelope)):
+    if not isinstance(
+        envelope,
+        (ReviewEnvelope, ReviewEnvelopeV2, ComparisonEnvelope, ComparisonEnvelopeV2),
+    ):
         raise TypeError("envelope must be ReviewEnvelope or ComparisonEnvelope")
     return canonical_json_bytes(envelope.model_dump(mode="json"))
 

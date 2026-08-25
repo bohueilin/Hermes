@@ -1224,8 +1224,10 @@ def test_runtime_cache_key_and_unavailable_error_have_exact_stable_api() -> None
     key = ReviewCacheKey(SHA, "1.0", "0.1.0", "runs/candidate")
     assert dataclasses.fields(key)[0].name == "computed_bundle_digest_sha256"
     assert key.as_tuple() == (SHA, "1.0", "0.1.0", "runs/candidate")
+    schema2 = ReviewCacheKey(SHA, "2.0", "0.1.0", "runs/candidate")
+    assert schema2.as_tuple() == (SHA, "2.0", "0.1.0", "runs/candidate")
     with pytest.raises((TypeError, ValueError)):
-        ReviewCacheKey(SHA, "2.0", "0.1.0", "runs/candidate")  # type: ignore[arg-type]
+        ReviewCacheKey(SHA, "3.0", "0.1.0", "runs/candidate")  # type: ignore[arg-type]
     with pytest.raises((TypeError, ValueError)):
         ReviewCacheKey(SHA, "1.0", "", "/absolute")
     with pytest.raises((TypeError, ValueError)):

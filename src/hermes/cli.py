@@ -593,6 +593,9 @@ def _render_review_envelope_text(envelope: object) -> None:
         "certification, or deployment grant."
     )
     console.print(
+        "Review schema: " + _bounded_artifact_text(envelope.review_schema_version)
+    )
+    console.print(
         "Selected artifact: "
         + _bounded_artifact_text(artifact.locator.selected_relative_path)
     )
@@ -750,6 +753,13 @@ def _render_comparison_envelope_text(envelope: object) -> None:
         console.print("Incompatibility: " + _bounded_artifact_text(reason))
     for warning in envelope.compatibility.warnings:
         console.print("Compatibility warning: " + _bounded_artifact_text(warning))
+    if getattr(envelope, "comparison_schema_version", None) == "2.0":
+        _render_comparison_partition(console, "Schema-2 dimensions", envelope.dimensions)
+        _render_comparison_partition(console, "Chart series", envelope.chart_series)
+        _render_comparison_partition(
+            console, "Residual limitations", envelope.residual_limitations
+        )
+        return
     console.print("Verdict delta: " + _review_record_json(envelope.verdict_delta))
     console.print(
         "Hard-failure delta: " + _review_record_json(envelope.hard_failure_delta)
@@ -799,6 +809,7 @@ def review_artifact_command(
     """Review one stored bundle without executing a simulator or policy."""
     from hermes.review import (
         ReviewEnvelope,
+        ReviewEnvelopeV2,
         ReviewUnavailableError,
         canonical_envelope_bytes,
         review_artifact,
@@ -807,7 +818,7 @@ def review_artifact_command(
     _review_format_or_error(output_format)
     try:
         result = review_artifact(artifact_root, selection)
-        if not isinstance(result, ReviewEnvelope):
+        if type(result) not in {ReviewEnvelope, ReviewEnvelopeV2}:
             raise TypeError("review facade returned an unsupported result")
     except ReviewUnavailableError as exc:
         _raise_cli_error(
@@ -859,7 +870,9 @@ def review_compare_command(
     """Compare two independently reviewed stored bundles without execution."""
     from hermes.review import (
         ComparisonEnvelope,
+        ComparisonEnvelopeV2,
         ReviewEnvelope,
+        ReviewEnvelopeV2,
         ReviewUnavailableError,
         canonical_envelope_bytes,
         compare_review_artifacts,
@@ -872,7 +885,12 @@ def review_compare_command(
             baseline_selection,
             candidate_selection,
         )
-        if not isinstance(result, (ComparisonEnvelope, ReviewEnvelope)):
+        if type(result) not in {
+            ComparisonEnvelope,
+            ComparisonEnvelopeV2,
+            ReviewEnvelope,
+            ReviewEnvelopeV2,
+        }:
             raise TypeError("comparison review facade returned an unsupported result")
     except ReviewUnavailableError as exc:
         _raise_cli_error(
@@ -894,7 +912,7 @@ def review_compare_command(
             json_output=output_format == "json",
         )
 
-    if isinstance(result, ReviewEnvelope):
+    if type(result) in {ReviewEnvelope, ReviewEnvelopeV2}:
         invalid_selection = result.artifact.locator.selected_relative_path
         if invalid_selection == baseline_selection:
             side = "BASELINE"

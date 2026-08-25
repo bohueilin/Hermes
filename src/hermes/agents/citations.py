@@ -18,13 +18,15 @@ from __future__ import annotations
 
 import json
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Annotated, Any
 
 from pydantic import Field
 
 from hermes.agents.contracts import Citation
 from hermes.domain.models import HermesModel, JsonValue
+from hermes.evidence.artifacts import REQUIRED_ARTIFACT_FILES
+from hermes.evidence.verification import _inspect_artifact_under_root_capture
 
 
 class CitationStatus(StrEnum):
@@ -33,6 +35,8 @@ class CitationStatus(StrEnum):
     BUNDLE_DIGEST_MISMATCH = "BUNDLE_DIGEST_MISMATCH"
     LOCATOR_DANGLING = "LOCATOR_DANGLING"
     VALUE_DRIFTED = "VALUE_DRIFTED"
+    UNSAFE_PATH = "UNSAFE_PATH"
+    INVALID_EVIDENCE = "INVALID_EVIDENCE"
 
 
 class CitationCheck(HermesModel):
@@ -49,15 +53,45 @@ class CitationCheck(HermesModel):
 
 
 def _walk(payload: Any, pointer: str) -> tuple[bool, Any]:
-    """Resolve a slash-delimited pointer, returning (found, value)."""
+    """Strictly resolve one RFC 6901 JSON pointer, returning ``(found, value)``."""
+
+    if not isinstance(pointer, str):
+        return False, None
+    if pointer == "":
+        return True, payload
+    if not pointer.startswith("/"):
+        return False, None
+
+    def decode(token: str) -> str | None:
+        result: list[str] = []
+        index = 0
+        while index < len(token):
+            character = token[index]
+            if character != "~":
+                result.append(character)
+                index += 1
+                continue
+            if index + 1 >= len(token) or token[index + 1] not in "01":
+                return None
+            result.append("~" if token[index + 1] == "0" else "/")
+            index += 2
+        return "".join(result)
+
     current = payload
-    for token in [part for part in pointer.split("/") if part]:
+    for encoded in pointer[1:].split("/"):
+        token = decode(encoded)
+        if token is None:
+            return False, None
         if isinstance(current, dict):
             if token not in current:
                 return False, None
             current = current[token]
         elif isinstance(current, list):
-            if not token.isdigit() or int(token) >= len(current):
+            if (
+                not token.isdigit()
+                or (len(token) > 1 and token.startswith("0"))
+                or int(token) >= len(current)
+            ):
                 return False, None
             current = current[int(token)]
         else:
@@ -66,22 +100,48 @@ def _walk(payload: Any, pointer: str) -> tuple[bool, Any]:
 
 
 def check_citation(citation: Citation, artifact_root: Path) -> CitationCheck:
-    """Re-resolve one citation against stored evidence."""
-    bundle = artifact_root / citation.run_id
-    if not bundle.is_dir():
+    """Re-resolve one citation from one root-contained immutable capture."""
+
+    selection = citation.run_id
+    path = PurePosixPath(selection)
+    if (
+        not selection
+        or path.is_absolute()
+        or "\\" in selection
+        or "\x00" in selection
+        or selection.endswith("/")
+        or "//" in selection
+        or any(part in {"", ".", ".."} for part in path.parts)
+        or str(path) != selection
+    ):
+        return CitationCheck(
+            citation=citation,
+            status=CitationStatus.UNSAFE_PATH,
+            detail="citation run selection is not a lexical root-contained path",
+        )
+    if citation.artifact_file not in REQUIRED_ARTIFACT_FILES:
+        return CitationCheck(
+            citation=citation,
+            status=CitationStatus.UNSAFE_PATH,
+            detail="citation artifact file is outside the exact bundle allowlist",
+        )
+
+    capture = _inspect_artifact_under_root_capture(artifact_root, selection)
+    inspection = capture.inspection
+    payloads = capture.payload_map()
+    if not capture.captured_files:
         return CitationCheck(
             citation=citation,
             status=CitationStatus.RUN_NOT_FOUND,
-            detail=f"no bundle for run {citation.run_id}",
+            detail=f"no safely captured bundle for run {citation.run_id}",
         )
-    digest_file = bundle / "bundle.sha256"
-    if not digest_file.is_file():
+    observed_digest = inspection.observed_bundle_digest
+    if observed_digest is None:
         return CitationCheck(
             citation=citation,
-            status=CitationStatus.RUN_NOT_FOUND,
-            detail="bundle.sha256 is absent",
+            status=CitationStatus.INVALID_EVIDENCE,
+            detail="bundle digest is absent or malformed in the immutable capture",
         )
-    observed_digest = digest_file.read_text(encoding="utf-8").strip().split()[0]
     if observed_digest != citation.bundle_digest:
         return CitationCheck(
             citation=citation,
@@ -92,15 +152,27 @@ def check_citation(citation: Citation, artifact_root: Path) -> CitationCheck:
             ),
         )
 
-    target = bundle / citation.artifact_file
-    if not target.is_file():
+    if inspection.snapshot is None:
+        return CitationCheck(
+            citation=citation,
+            status=CitationStatus.INVALID_EVIDENCE,
+            detail="citation bundle did not pass independent stored verification",
+        )
+    target = payloads.get(citation.artifact_file)
+    if target is None:
         return CitationCheck(
             citation=citation,
             status=CitationStatus.LOCATOR_DANGLING,
-            detail=f"{citation.artifact_file} is absent from the bundle",
+            detail=f"{citation.artifact_file} is absent from the immutable capture",
         )
 
     if citation.locator.startswith("sequence:"):
+        if citation.artifact_file != "events.jsonl":
+            return CitationCheck(
+                citation=citation,
+                status=CitationStatus.LOCATOR_DANGLING,
+                detail="sequence locators are allowed only for events.jsonl",
+            )
         event_locator = citation.locator.split(":", 1)[1]
         wanted, separator, field_pointer = event_locator.partition("/")
         if not wanted.isdigit():
@@ -109,8 +181,15 @@ def check_citation(citation: Citation, artifact_root: Path) -> CitationCheck:
                 status=CitationStatus.LOCATOR_DANGLING,
                 detail=f"malformed sequence locator: {citation.locator}",
             )
-        for line in target.read_text(encoding="utf-8").splitlines():
-            event = json.loads(line)
+        try:
+            events = tuple(json.loads(line) for line in target.splitlines())
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError):
+            return CitationCheck(
+                citation=citation,
+                status=CitationStatus.INVALID_EVIDENCE,
+                detail="captured events are malformed",
+            )
+        for event in events:
             if event.get("sequence") == int(wanted):
                 if not separator:
                     value = event["executed_action"]["brake"]
@@ -132,7 +211,14 @@ def check_citation(citation: Citation, artifact_root: Path) -> CitationCheck:
             detail=f"no event at {citation.locator}",
         )
 
-    payload = json.loads(target.read_text(encoding="utf-8"))
+    try:
+        payload = json.loads(target)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError):
+        return CitationCheck(
+            citation=citation,
+            status=CitationStatus.LOCATOR_DANGLING,
+            detail=f"{citation.artifact_file} does not support this JSON locator",
+        )
     found, value = _walk(payload, citation.locator)
     if not found:
         return CitationCheck(

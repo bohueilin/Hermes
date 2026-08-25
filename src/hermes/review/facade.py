@@ -10,7 +10,13 @@ from pathlib import Path, PurePosixPath
 from hermes import __version__
 from hermes.comparison.compare import compare_artifacts
 from hermes.evidence.verification import _inspect_artifact_under_root_capture
-from hermes.review.models import ComparisonEnvelope, ReviewCacheKey, ReviewEnvelope
+from hermes.review.models import (
+    ComparisonEnvelope,
+    ComparisonEnvelopeV2,
+    ReviewCacheKey,
+    ReviewEnvelope,
+    ReviewEnvelopeV2,
+)
 from hermes.review.projection import (
     project_comparison_envelope,
     project_review_envelope,
@@ -47,7 +53,7 @@ class _ReviewedArtifact:
     """Private current-capture handoff for comparison orchestration."""
 
     capture: object
-    envelope: ReviewEnvelope
+    envelope: ReviewEnvelope | ReviewEnvelopeV2
     cache_key: ReviewCacheKey | None
 
 
@@ -124,14 +130,14 @@ class _ReviewFacade:
     """Process-local cache that never substitutes for a fresh stored verification."""
 
     def __init__(self) -> None:
-        self._cache: dict[ReviewCacheKey, ReviewEnvelope] = {}
+        self._cache: dict[ReviewCacheKey, ReviewEnvelope | ReviewEnvelopeV2] = {}
         self._active: dict[tuple[Path, str], _ActiveSession] = {}
 
     def review_artifact(
         self,
         artifact_root: Path,
         selected_relative_path: str,
-    ) -> ReviewEnvelope:
+    ) -> ReviewEnvelope | ReviewEnvelopeV2:
         return self._review_result(artifact_root, selected_relative_path).envelope
 
     def _review_result(
@@ -151,9 +157,14 @@ class _ReviewFacade:
             inspection.snapshot is not None
             and inspection.computed_bundle_digest is not None
         ):
+            review_schema = (
+                "2.0"
+                if inspection.snapshot.manifest.evidence_schema_version == "3.0"
+                else "1.0"
+            )
             cache_key = ReviewCacheKey(
                 computed_bundle_digest_sha256=inspection.computed_bundle_digest,
-                review_schema_version="1.0",
+                review_schema_version=review_schema,
                 hermes_version=__version__,
                 selected_relative_path=selection,
             )
@@ -197,7 +208,7 @@ class _ReviewFacade:
         artifact_root: Path,
         baseline_relative_path: str,
         candidate_relative_path: str,
-    ) -> ComparisonEnvelope | ReviewEnvelope:
+    ) -> ComparisonEnvelope | ComparisonEnvelopeV2 | ReviewEnvelope | ReviewEnvelopeV2:
         """Independently review two sides before invoking the comparison authority."""
 
         baseline = self._review_result(artifact_root, baseline_relative_path)
@@ -226,7 +237,7 @@ _DEFAULT_FACADE = _ReviewFacade()
 def review_artifact(
     artifact_root: Path,
     selected_relative_path: str,
-) -> ReviewEnvelope:
+) -> ReviewEnvelope | ReviewEnvelopeV2:
     """Fresh-capture one exact lexical selection below an allowed root."""
 
     return _DEFAULT_FACADE.review_artifact(artifact_root, selected_relative_path)
@@ -236,7 +247,7 @@ def compare_review_artifacts(
     artifact_root: Path,
     baseline_relative_path: str,
     candidate_relative_path: str,
-) -> ComparisonEnvelope | ReviewEnvelope:
+) -> ComparisonEnvelope | ComparisonEnvelopeV2 | ReviewEnvelope | ReviewEnvelopeV2:
     """Review two exact selections and map the authoritative core comparison."""
 
     return _DEFAULT_FACADE.compare_review_artifacts(
