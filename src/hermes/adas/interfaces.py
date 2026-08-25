@@ -23,6 +23,7 @@ from hermes.domain.enums import BrakeSource as _BrakeSource
 from hermes.domain.enums import InterventionLevel as _InterventionLevel
 from hermes.domain.enums import WarningLevel as _WarningLevel
 from hermes.domain.models import AdasDecision as _AdasDecision
+from hermes.domain.models import AdasDecisionEvidence as _AdasDecisionEvidence
 from hermes.domain.models import FiniteFloat, HermesModel, NonNegativeFloat, Observation
 
 AdasMode = _AdasMode
@@ -30,6 +31,7 @@ BrakeSource = _BrakeSource
 InterventionLevel = _InterventionLevel
 WarningLevel = _WarningLevel
 AdasDecision = _AdasDecision
+AdasDecisionEvidence = _AdasDecisionEvidence
 
 
 class AdasObservation(HermesModel):

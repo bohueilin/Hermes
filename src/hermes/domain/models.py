@@ -95,6 +95,14 @@ class AdasDecision(HermesModel):
     reasons: tuple[str, ...] = ()
 
 
+class AdasDecisionEvidence(HermesModel):
+    """One policy decision bound to the exact delivered input that produced it."""
+
+    input_sequence: Annotated[int, Field(ge=0)]
+    input_time_s: NonNegativeFloat
+    decision: AdasDecision
+
+
 class VerifierFacts(HermesModel):
     """Authoritative typed facts consumed by offline verifiers."""
 

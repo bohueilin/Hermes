@@ -10,15 +10,24 @@ from typing import cast
 
 from hermes.adapters.fake import FakeSimulatorAdapter
 from hermes.adapters.metadrive import MetaDriveAdapter
-from hermes.domain.contracts import DrivingPolicy, SafetyShield, SimulatorAdapter
+from hermes.adas.decision import validate_decision_evidence
+from hermes.domain.contracts import (
+    AdasDecisionEvidenceProvider,
+    DrivingPolicy,
+    SafetyShield,
+    SimulatorAdapter,
+)
 from hermes.domain.enums import EvidenceAvailability, IntegrityStatus, Verdict
 from hermes.domain.models import (
+    Action,
+    AdasDecisionEvidence,
     ArtifactVerification,
     ComponentContext,
     ControlFaultEvidence,
     ExecutionContext,
     ExecutionContextV2,
     Measurement,
+    Observation,
     ObservationFaultEvidence,
     RunContext,
     RunContextV2,
@@ -69,6 +78,26 @@ class RunConfigurationError(ValueError):
 
 class RunOperationalError(RuntimeError):
     """Execution, cleanup, serialization, self-verification, or publication failed."""
+
+
+def _require_v3_adas_decision_evidence(
+    policy: object,
+    observation: Observation,
+    candidate_action: Action,
+) -> AdasDecisionEvidence:
+    """Fail closed unless a protocol provider exposes fresh, matching V3 evidence."""
+    if not isinstance(policy, AdasDecisionEvidenceProvider):
+        raise RunOperationalError(
+            "V3 policy does not implement AdasDecisionEvidenceProvider"
+        )
+    evidence = policy.last_decision_evidence
+    if evidence is None:
+        raise RunOperationalError("V3 policy returned no ADAS decision evidence")
+    try:
+        validate_decision_evidence(evidence, observation, candidate_action)
+    except ValueError as exc:
+        raise RunOperationalError(f"invalid V3 ADAS decision evidence: {exc}") from exc
+    return evidence
 
 
 @dataclass(frozen=True, slots=True)

@@ -376,6 +376,7 @@ def test_adas_public_types_are_compatibility_reexports_from_the_domain_seam() ->
     assert interfaces.BrakeSource is _enum("BrakeSource")
     assert interfaces.AdasMode is _enum("AdasMode")
     assert interfaces.AdasDecision is _model("AdasDecision")
+    assert interfaces.AdasDecisionEvidence is _model("AdasDecisionEvidence")
 
 
 def test_run_metrics_v3_has_exactly_46_display_rows_and_61_review_leaves() -> None:

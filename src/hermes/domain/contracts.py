@@ -6,6 +6,7 @@ from typing import Protocol, runtime_checkable
 
 from hermes.domain.models import (
     Action,
+    AdasDecisionEvidence,
     Finding,
     JsonValue,
     Observation,
@@ -63,6 +64,15 @@ class DrivingPolicy(Protocol):
 
     def act(self, observation: Observation) -> Action:
         """Propose, but do not execute, an action."""
+
+
+@runtime_checkable
+class AdasDecisionEvidenceProvider(Protocol):
+    """Policy capability required before constructing typed ADAS V3 evidence."""
+
+    @property
+    def last_decision_evidence(self) -> AdasDecisionEvidence | None:
+        """Return the decision for the most recent delivered policy input, if any."""
 
 
 @runtime_checkable

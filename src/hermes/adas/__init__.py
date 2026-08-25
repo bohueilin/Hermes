@@ -3,6 +3,7 @@
 from hermes.adas.interfaces import (
     AdasControllerConfig,
     AdasDecision,
+    AdasDecisionEvidence,
     AdasMode,
     AdasObservation,
     AebConfig,
@@ -17,6 +18,7 @@ from hermes.adas.policy import AdasLongitudinalPolicy, project_to_action
 __all__ = [
     "AdasControllerConfig",
     "AdasDecision",
+    "AdasDecisionEvidence",
     "AdasLongitudinalPolicy",
     "AdasMode",
     "AdasObservation",
