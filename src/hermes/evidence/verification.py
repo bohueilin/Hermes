@@ -53,6 +53,11 @@ from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
 from hermes.evidence.metrics import compute_metrics
 from hermes.evidence.trace import TraceEventLike, TraceIntegrityError, verify_complete_trace
 from hermes.faults.deterministic import DeterministicFaultInjector
+from hermes.faults.eligibility import (
+    has_observation_faults,
+    metadrive_observation_fault_policy_error,
+    supports_metadrive_observation_faults,
+)
 from hermes.gates.config import (
     GateConfig,
     GateConfigError,
@@ -769,14 +774,15 @@ def _profile_errors(
         ) != canonical_json_bytes(expected_policy_config):
             errors.append("execution-context.json baseline policy configuration is unsupported")
     elif context.adapter.name == "metadrive":
-        if scenario.faults is not None and (
-            scenario.faults.observation_delay_steps > 0
-            or scenario.faults.frozen_observation_interval is not None
-            or bool(scenario.faults.dropped_observation_steps)
-            or scenario.faults.observation_noise is not None
+        if has_observation_faults(scenario.faults) and not (
+            supports_metadrive_observation_faults(
+                context.policy.name, context.policy.version
+            )
         ):
             errors.append(
-                "MetaDrive IDM v1.0 does not support truthful Hermes observation faults"
+                metadrive_observation_fault_policy_error(
+                    context.policy.name, context.policy.version
+                )
             )
         adapter_config = context.adapter.config
         simulator_commit = adapter_config.get("simulator_commit")

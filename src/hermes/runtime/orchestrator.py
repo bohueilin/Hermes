@@ -43,6 +43,11 @@ from hermes.evidence.trace import (
 )
 from hermes.evidence.verification import verify_artifact
 from hermes.faults.deterministic import DeterministicFaultInjector
+from hermes.faults.eligibility import (
+    has_observation_faults,
+    metadrive_observation_fault_policy_error,
+    supports_metadrive_observation_faults,
+)
 from hermes.gates.config import GateConfigError, gate_config_digest, load_gate_config
 from hermes.gates.release import (
     apply_release_gate,
@@ -291,6 +296,7 @@ def _execute_episode(
     adapter_factory: Callable[[], SimulatorAdapter],
     policy_builder: Callable[[SimulatorAdapter], DrivingPolicy],
     shield_factory: Callable[[], SafetyShield],
+    enforce_metadrive_observation_fault_policy: bool,
 ) -> tuple[
     tuple[TraceEventLike, ...],
     ExecutionContext | ExecutionContextV2,
@@ -308,8 +314,24 @@ def _execute_episode(
     execution_context: ExecutionContext | ExecutionContextV2 | None = None
     simulator_provenance: SimulatorProvenance | None = None
     try:
-        raw_observation = adapter.reset(scenario, seed)
-        policy = policy_builder(adapter)
+        observation_fault_policy_check = (
+            enforce_metadrive_observation_fault_policy
+            and has_observation_faults(scenario.faults)
+        )
+        if observation_fault_policy_check:
+            policy = policy_builder(adapter)
+            if not supports_metadrive_observation_faults(policy.name, policy.version):
+                raise RunConfigurationError(
+                    metadrive_observation_fault_policy_error(
+                        policy.name, policy.version
+                    )
+                )
+            raw_observation = adapter.reset(scenario, seed)
+        else:
+            # Preserve the established reset-before-policy-construction order for every
+            # path that does not need policy identity before observation-fault delivery.
+            raw_observation = adapter.reset(scenario, seed)
+            policy = policy_builder(adapter)
         shield = shield_factory()
         fault_injector = (
             DeterministicFaultInjector(scenario.faults)
@@ -465,11 +487,17 @@ def _execute_episode(
         except Exception as exc:
             if operation_error is None:
                 operation_error = exc
+            elif isinstance(operation_error, RunConfigurationError):
+                operation_error.add_note(
+                    "adapter close also failed: " f"{type(exc).__name__}: {exc}"
+                )
             else:
                 operation_error = RuntimeError(
                     f"{operation_error}; adapter close also failed: {type(exc).__name__}: {exc}"
                 )
 
+    if isinstance(operation_error, RunConfigurationError):
+        raise operation_error
     if operation_error is not None:
         raise RunOperationalError(
             f"run execution failed: {type(operation_error).__name__}: {operation_error}"
@@ -495,6 +523,7 @@ def _execute_run(
     adapter_factory: Callable[[], SimulatorAdapter],
     policy_builder: Callable[[SimulatorAdapter], DrivingPolicy],
     shield_factory: Callable[[], SafetyShield],
+    known_preconstruction_policy_identity: tuple[str, str] | None = None,
 ) -> RunOutcome:
     if isinstance(seed, bool) or not -(2**31) <= seed < 2**31:
         raise RunConfigurationError("seed must be a signed 32-bit integer")
@@ -510,18 +539,16 @@ def _execute_run(
         )
     if (
         expected_adapter == "metadrive"
-        and scenario.faults is not None
-        and (
-            scenario.faults.observation_delay_steps > 0
-            or scenario.faults.frozen_observation_interval is not None
-            or bool(scenario.faults.dropped_observation_steps)
-            or scenario.faults.observation_noise is not None
+        and has_observation_faults(scenario.faults)
+        and known_preconstruction_policy_identity is not None
+        and not supports_metadrive_observation_faults(
+            *known_preconstruction_policy_identity
         )
     ):
         raise RunConfigurationError(
-            "MetaDrive IDM v1.0 reads native simulator state, so Hermes observation faults "
-            "would not truthfully affect that policy; use control delay/saturation only or "
-            "the fake baseline policy"
+            metadrive_observation_fault_policy_error(
+                *known_preconstruction_policy_identity
+            )
         )
     if expected_adapter == "metadrive" and any(
         value is not None and value is not False
@@ -543,6 +570,7 @@ def _execute_run(
         adapter_factory=adapter_factory,
         policy_builder=policy_builder,
         shield_factory=shield_factory,
+        enforce_metadrive_observation_fault_policy=expected_adapter == "metadrive",
     )
     if expected_adapter == "fake" and any(
         value is not None
@@ -696,6 +724,11 @@ def execute_metadrive_run(
         adapter_factory=resolved_adapter_factory,
         policy_builder=build_policy,
         shield_factory=shield_factory,
+        known_preconstruction_policy_identity=(
+            (MetaDriveIDMPolicy.name, MetaDriveIDMPolicy.version)
+            if policy_factory is None
+            else None
+        ),
     )
 
 
