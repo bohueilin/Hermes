@@ -3,8 +3,8 @@
 **Companion to:** [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) (design) and
 [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md) (pre-work survey).
 **Branch:** `feat/phase8-adas-scenarios`; WP-3 started from checkpoint `75d1679`.
-**Gates at time of writing:** 1,108 tests pass (29 are `metadrive`-selected, including real
-physics), ruff clean repo-wide, doctor 16 PASS.
+**Gates at time of writing:** 1,117 tests pass (33 are `metadrive`-selected, including real
+physics), ruff clean repo-wide, doctor 17 PASS on the clean committed tree.
 
 This note records what was built, what was measured, what deviates from the PRD and why, and
 what a reviewer should push on. It is deliberately organised around *decisions and evidence*

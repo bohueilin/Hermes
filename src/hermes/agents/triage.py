@@ -27,7 +27,13 @@ from hermes.agents.contracts import (
     FailureCategory,
     TriageProposal,
 )
-from hermes.agents.tools import ToolContext, get_findings, get_metrics, query_run
+from hermes.agents.tools import (
+    STALE_OBSERVATION_FAULT_REASONS,
+    ToolContext,
+    get_findings,
+    get_metrics,
+    query_run,
+)
 
 #: Deterministic precedence: upstream causes win over downstream symptoms.
 #:
@@ -50,15 +56,7 @@ _FINDING_TO_CATEGORY: dict[str, FailureCategory] = {
     "comfort.acceleration": FailureCategory.COMFORT_VIOLATION,
     "comfort.jerk": FailureCategory.COMFORT_VIOLATION,
 }
-
-_STALE_OBSERVATION_FAULT_REASONS = frozenset(
-    {
-        "OBSERVATION_DELAY",
-        "OBSERVATION_FROZEN",
-        "OBSERVATION_DROPOUT_HOLD_LAST",
-    }
-)
-
+_STALE_OBSERVATION_FINDING_IDS = frozenset({"adas.aeb.threat_response"})
 
 def _is_number(value: object) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
@@ -68,10 +66,34 @@ def _has_causal_stale_observation(evidence: dict[str, object]) -> bool:
     """Return whether verified evidence proves a stale-observation failure chain."""
     failed = evidence.get("failed_findings")
     if not isinstance(failed, (list, tuple)) or not any(
-        str(finding_id).startswith("adas.") for finding_id in failed
+        str(finding_id) in _STALE_OBSERVATION_FINDING_IDS for finding_id in failed
     ):
         return False
     if evidence.get("integrity") != "INTERNALLY_CONSISTENT":
+        return False
+    counterfactual = evidence.get("aeb_stale_observation_counterfactual")
+    if not isinstance(counterfactual, dict):
+        return False
+    if set(counterfactual) != {
+        "sequence",
+        "delivered_from_sequence",
+        "raw_replay_brake",
+        "stored_candidate_brake",
+    }:
+        return False
+    if (
+        not isinstance(counterfactual["sequence"], int)
+        or isinstance(counterfactual["sequence"], bool)
+        or counterfactual["sequence"] < 0
+        or not isinstance(counterfactual["delivered_from_sequence"], int)
+        or isinstance(counterfactual["delivered_from_sequence"], bool)
+        or counterfactual["delivered_from_sequence"] < 0
+        or counterfactual["delivered_from_sequence"] >= counterfactual["sequence"]
+        or not _is_number(counterfactual["raw_replay_brake"])
+        or float(counterfactual["raw_replay_brake"]) <= 0.0
+        or not _is_number(counterfactual["stored_candidate_brake"])
+        or float(counterfactual["stored_candidate_brake"]) != 0.0
+    ):
         return False
     maximum_age = evidence.get("max_observation_age_s")
     threshold = evidence.get("aeb_stale_observation_s")
@@ -84,7 +106,7 @@ def _has_causal_stale_observation(evidence: dict[str, object]) -> bool:
         return False
     return any(
         _is_number(counts.get(reason)) and float(counts[reason]) > 0.0
-        for reason in _STALE_OBSERVATION_FAULT_REASONS
+        for reason in STALE_OBSERVATION_FAULT_REASONS
     )
 
 
@@ -99,10 +121,11 @@ def _read_triage_evidence(
     items = findings.data.get("findings", []) if findings.ok else []
     assert isinstance(items, list)
     failed = [item["finding_id"] for item in items if item["status"] == "FAIL"]
-    failed_adas_locators = tuple(
+    failed_stale_locators = tuple(
         f"/findings/{index}/status"
         for index, item in enumerate(items)
-        if item["status"] == "FAIL" and str(item["finding_id"]).startswith("adas.")
+        if item["status"] == "FAIL"
+        and str(item["finding_id"]) in _STALE_OBSERVATION_FINDING_IDS
     )
 
     metrics_document = metrics.data.get("metrics", {}) if metrics.ok else {}
@@ -120,13 +143,18 @@ def _read_triage_evidence(
 
     evidence: dict[str, object] = {
         "failed_findings": failed,
-        "failed_adas_finding_locators": failed_adas_locators,
+        "failed_stale_finding_locators": failed_stale_locators,
         "verdict": identity.data.get("verdict") if identity.ok else None,
         "integrity": identity.data.get("integrity") if identity.ok else None,
         "max_observation_age_s": maximum_age,
         "fault_application_counts": fault_counts,
         "aeb_stale_observation_s": (
             identity.data.get("aeb_stale_observation_s") if identity.ok else None
+        ),
+        "aeb_stale_observation_counterfactual": (
+            identity.data.get("aeb_stale_observation_counterfactual")
+            if identity.ok
+            else None
         ),
     }
     citations = (*findings.citations, *metrics.citations, *identity.citations)
@@ -147,7 +175,7 @@ def _classify_evidence(
             sorted(
                 str(finding_id)
                 for finding_id in failed
-                if str(finding_id).startswith("adas.")
+                if str(finding_id) in _STALE_OBSERVATION_FINDING_IDS
             )
         )
         return FailureCategory.STALE_OBSERVATION, supporting
@@ -229,7 +257,7 @@ class ScriptedAgent:
             supporting = sorted(
                 str(finding_id)
                 for finding_id in failed
-                if str(finding_id).startswith("adas.")
+                if str(finding_id) in _STALE_OBSERVATION_FINDING_IDS
             )
             return (
                 FailureCategory.STALE_OBSERVATION,
@@ -277,13 +305,13 @@ def triage_run(
     )
 
     if proposed is FailureCategory.STALE_OBSERVATION:
-        adas_finding_locators = evidence.get("failed_adas_finding_locators", ())
-        assert isinstance(adas_finding_locators, (list, tuple))
+        stale_finding_locators = evidence.get("failed_stale_finding_locators", ())
+        assert isinstance(stale_finding_locators, (list, tuple))
         fault_counts = evidence.get("fault_application_counts", {})
         assert isinstance(fault_counts, dict)
         positive_fault_locators = {
             f"/fault_application_counts/{reason}"
-            for reason in _STALE_OBSERVATION_FAULT_REASONS
+            for reason in STALE_OBSERVATION_FAULT_REASONS
             if _is_number(fault_counts.get(reason)) and float(fault_counts[reason]) > 0.0
         }
         supporting_citations = tuple(
@@ -291,7 +319,7 @@ def triage_run(
             for citation in citations
             if (
                 citation.artifact_file == "findings.json"
-                and citation.locator in adas_finding_locators
+                and citation.locator in stale_finding_locators
             )
             or (
                 citation.artifact_file == "metrics.json"
@@ -304,6 +332,7 @@ def triage_run(
                 citation.artifact_file == "execution-context.json"
                 and citation.locator == "/policy/config/aeb/stale_observation_s"
             )
+            or citation.artifact_file == "events.jsonl"
         )
     else:
         supporting_citations = tuple(

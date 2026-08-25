@@ -82,10 +82,20 @@ def _refresh_envelope(bundle: Path) -> None:
     )
 
 
-def _rewrite_policy_stale_threshold(bundle: Path, threshold_s: float) -> None:
+def _rewrite_policy_config(bundle: Path, mutation: str) -> None:
     context_path = bundle / "execution-context.json"
     context = json.loads(context_path.read_text(encoding="utf-8"))
-    context["policy"]["config"]["aeb"]["stale_observation_s"] = threshold_s
+    policy_config = context["policy"]["config"]
+    if mutation == "out-of-bounds-threshold":
+        policy_config["aeb"]["stale_observation_s"] = 6.0
+    elif mutation == "unknown-extra-key":
+        policy_config["unrecognized_controller_surface"] = "must-not-be-projected-away"
+    elif mutation == "omitted-driver":
+        del policy_config["driver"]
+    elif mutation == "omitted-driver-tunable":
+        del policy_config["driver"]["speed_deadband_mps"]
+    else:
+        raise AssertionError(f"unsupported test mutation: {mutation}")
     policy_digest = config_digest(context["policy"]["config"])
     context["policy"]["config_digest"] = policy_digest
     context["run_context"]["policy_config_digest"] = policy_digest
@@ -118,12 +128,16 @@ def _run_real_adas(
     artifact_root: Path,
     run_id: str,
     scenario_path: Path,
+    policy_config_path: Path | None = None,
 ) -> Path:
     from hermes.adas.config import load_adas_config
     from hermes.adas.policy import AdasLongitudinalPolicy
     from hermes.runtime.orchestrator import execute_metadrive_run
 
-    config = load_adas_config(repository_root / "config" / "adas" / "baseline.yaml")
+    config = load_adas_config(
+        policy_config_path
+        or repository_root / "config" / "adas" / "baseline.yaml"
+    )
     return execute_metadrive_run(
         scenario_path=scenario_path,
         gate_config_path=repository_root / "config" / "gates.adas.yaml",
@@ -219,6 +233,115 @@ def test_timely_to_delayed_pair_has_the_named_causal_degradation(
 
 
 @pytest.mark.metadrive
+def test_stale_triage_requires_a_policy_bound_raw_stream_counterfactual(
+    repository_root: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Delay is causal only when raw replay restores an AEB action the run missed."""
+    _requires_metadrive(repository_root)
+    artifact_root = tmp_path / "counterfactual-artifacts"
+    artifact_root.mkdir()
+    baseline = _run_real_adas(
+        repository_root,
+        artifact_root,
+        "stationary-delay-baseline",
+        repository_root / SCENARIO,
+    )
+    no_aeb = _run_real_adas(
+        repository_root,
+        artifact_root,
+        "stationary-delay-no-aeb",
+        repository_root / SCENARIO,
+        repository_root / "config" / "adas" / "defect_no_aeb.yaml",
+    )
+
+    from hermes.agents import ToolContext, triage_run
+    from hermes.agents.citations import all_valid, check_citations
+    from hermes.agents.contracts import FailureCategory
+    from hermes.agents.tools import query_run
+
+    context = ToolContext(repository_root=repository_root, artifact_root=artifact_root)
+    baseline_identity = query_run(context, run_id=baseline.name)
+    baseline_proposal = triage_run(context, baseline.name)
+    proof = baseline_identity.data["aeb_stale_observation_counterfactual"]
+    assert set(proof) == {
+        "sequence",
+        "delivered_from_sequence",
+        "raw_replay_brake",
+        "stored_candidate_brake",
+    }
+    assert proof["delivered_from_sequence"] < proof["sequence"]
+    assert proof["raw_replay_brake"] > 0.0
+    assert proof["stored_candidate_brake"] == 0.0
+    proof_event = _events(baseline)[proof["sequence"]]
+    assert proof_event["candidate_action"]["brake"] == 0.0
+    assert (
+        proof_event["observation_fault_evidence"]["delivered_from_sequence"]
+        == proof["delivered_from_sequence"]
+    )
+    assert baseline_proposal.deterministic_category is FailureCategory.STALE_OBSERVATION
+    assert baseline_proposal.category is FailureCategory.STALE_OBSERVATION
+    assert baseline_proposal.agrees_with_deterministic_classifier is True
+    baseline_citations = {
+        (citation.artifact_file, citation.locator)
+        for citation in baseline_proposal.citations
+    }
+    event_prefix = f"sequence:{proof['sequence']}"
+    for locator in (
+        f"{event_prefix}/candidate_action/brake",
+        (
+            f"{event_prefix}/observation_fault_evidence/"
+            "delivered_observation/observation_age_s"
+        ),
+        f"{event_prefix}/observation_fault_evidence/applied_faults",
+        f"{event_prefix}/observation_fault_evidence/delivered_from_sequence",
+        f"{event_prefix}/observation_fault_evidence/raw_observation/front_distance_m",
+        (
+            f"{event_prefix}/observation_fault_evidence/"
+            "raw_observation/front_relative_speed_mps"
+        ),
+    ):
+        assert ("events.jsonl", locator) in baseline_citations
+    assert all_valid(check_citations(baseline_proposal.citations, artifact_root))
+
+    no_aeb_identity = query_run(context, run_id=no_aeb.name)
+    no_aeb_proposal = triage_run(context, no_aeb.name)
+    no_aeb_metrics = json.loads((no_aeb / "metrics.json").read_text(encoding="utf-8"))
+    no_aeb_findings = _findings(no_aeb)
+    assert no_aeb_identity.data["aeb_stale_observation_s"] == 0.5
+    assert "aeb_stale_observation_counterfactual" not in no_aeb_identity.data
+    assert no_aeb_metrics["max_observation_age_s"]["value"] > 0.5
+    assert no_aeb_metrics["fault_application_counts"]["OBSERVATION_DELAY"] > 0
+    assert no_aeb_findings["adas.aeb.threat_response"]["status"] == "FAIL"
+    assert no_aeb_proposal.deterministic_category is FailureCategory.MISSED_INTERVENTION
+    assert no_aeb_proposal.category is FailureCategory.MISSED_INTERVENTION
+    assert no_aeb_proposal.agrees_with_deterministic_classifier is True
+
+    from hermes.adas.policy import AdasLongitudinalPolicy
+    from hermes.domain.models import Action
+
+    monkeypatch.setattr(
+        AdasLongitudinalPolicy,
+        "act",
+        lambda _policy, _observation: Action(
+            steering=0.0,
+            throttle=0.0,
+            brake=0.0,
+        ),
+    )
+    mismatched_identity = query_run(context, run_id=baseline.name)
+    mismatched_proposal = triage_run(context, baseline.name)
+    assert mismatched_identity.data["aeb_stale_observation_s"] == 0.5
+    assert "aeb_stale_observation_counterfactual" not in mismatched_identity.data
+    assert (
+        mismatched_proposal.deterministic_category
+        is FailureCategory.MISSED_INTERVENTION
+    )
+    assert mismatched_proposal.category is FailureCategory.MISSED_INTERVENTION
+
+
+@pytest.mark.metadrive
 def test_delayed_source_provenance_offline_replay_and_review_tracks(
     repository_root: Path,
     tmp_path: Path,
@@ -265,6 +388,10 @@ def test_delayed_source_provenance_offline_replay_and_review_tracks(
     from hermes.evidence.verification import verify_artifact
     from hermes.review.facade import review_artifact
 
+    identity = query_run(
+        ToolContext(repository_root=repository_root, artifact_root=artifact_root),
+        run_id="stationary-delay-provenance",
+    )
     monkeypatch.setattr(MetaDriveAdapter, "reset", forbid_execution)
     monkeypatch.setattr(MetaDriveAdapter, "step", forbid_execution)
     monkeypatch.setattr(AdasLongitudinalPolicy, "reset", forbid_execution)
@@ -272,10 +399,6 @@ def test_delayed_source_provenance_offline_replay_and_review_tracks(
 
     replay = verify_artifact(bundle)
     envelope = review_artifact(artifact_root, "stationary-delay-provenance")
-    identity = query_run(
-        ToolContext(repository_root=repository_root, artifact_root=artifact_root),
-        run_id="stationary-delay-provenance",
-    )
     stored_verdict = json.loads((bundle / "verdict.json").read_text(encoding="utf-8"))
     assert replay.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
     assert replay.errors == ()
@@ -324,7 +447,7 @@ def test_query_run_omits_a_schema_two_adas_threshold_that_is_out_of_bounds(
         "invalid-stored-threshold",
         repository_root / SCENARIO,
     )
-    _rewrite_policy_stale_threshold(bundle, 6.0)
+    _rewrite_policy_config(bundle, "out-of-bounds-threshold")
 
     from hermes.agents import ToolContext
     from hermes.agents.tools import query_run
@@ -343,6 +466,51 @@ def test_query_run_omits_a_schema_two_adas_threshold_that_is_out_of_bounds(
     assert all(
         citation.artifact_file != "execution-context.json"
         for citation in result.citations
+    )
+
+
+@pytest.mark.metadrive
+@pytest.mark.parametrize(
+    "mutation",
+    ("unknown-extra-key", "omitted-driver", "omitted-driver-tunable"),
+)
+def test_query_and_triage_reject_incomplete_or_extended_stored_adas_config(
+    repository_root: Path,
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    """Projection or Pydantic defaults must not legitimize undeclared stored identity."""
+    _requires_metadrive(repository_root)
+    artifact_root = tmp_path / f"invalid-{mutation}-artifacts"
+    artifact_root.mkdir()
+    run_id = f"invalid-{mutation}"
+    bundle = _run_real_adas(
+        repository_root,
+        artifact_root,
+        run_id,
+        repository_root / SCENARIO,
+    )
+    _rewrite_policy_config(bundle, mutation)
+
+    from hermes.agents import ToolContext, triage_run
+    from hermes.agents.contracts import FailureCategory
+    from hermes.agents.tools import query_run
+    from hermes.evidence.verification import verify_artifact
+
+    verification = verify_artifact(bundle)
+    assert verification.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
+    context = ToolContext(repository_root=repository_root, artifact_root=artifact_root)
+
+    result = query_run(context, run_id=run_id)
+    proposal = triage_run(context, run_id)
+
+    assert result.ok
+    assert "aeb_stale_observation_s" not in result.data
+    assert proposal.deterministic_category is FailureCategory.MISSED_INTERVENTION
+    assert proposal.category is FailureCategory.MISSED_INTERVENTION
+    assert all(
+        citation.artifact_file != "execution-context.json"
+        for citation in proposal.citations
     )
 
 

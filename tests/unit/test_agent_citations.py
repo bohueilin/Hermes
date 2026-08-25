@@ -49,6 +49,26 @@ def test_a_faithful_citation_resolves(repository_root: Path) -> None:
     assert check.valid
 
 
+def test_an_event_field_citation_resolves(repository_root: Path) -> None:
+    artifacts = repository_root / "artifacts"
+    bundle = artifacts / "handoff-p4-fault"
+    first_event = json.loads(
+        (bundle / "events.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    )
+    citation = _citation(
+        bundle,
+        "handoff-p4-fault",
+        artifact_file="events.jsonl",
+        locator="sequence:0/candidate_action/brake",
+        quoted_value=first_event["candidate_action"]["brake"],
+    )
+
+    check = check_citation(citation, artifacts)
+
+    assert check.status is CitationStatus.RESOLVED
+    assert check.valid
+
+
 def test_a_citation_to_a_missing_run_fails(repository_root: Path) -> None:
     artifacts = repository_root / "artifacts"
     bundle = artifacts / "handoff-phase5-demo"

@@ -30,6 +30,13 @@ from hermes.agents.contracts import (
 )
 
 _MAX_EVENT_WINDOW = 40
+STALE_OBSERVATION_FAULT_REASONS = frozenset(
+    {
+        "OBSERVATION_DELAY",
+        "OBSERVATION_FROZEN",
+        "OBSERVATION_DROPOUT_HOLD_LAST",
+    }
+)
 
 
 @dataclass(slots=True)
@@ -100,6 +107,128 @@ def _require_bundle(
             tool, ToolErrorCode.NOT_FOUND, ToolPermission.READ, f"unknown run: {run_id}"
         )
     return bundle, None
+
+
+def _aeb_stale_observation_counterfactual(
+    *,
+    run_id: str,
+    bundle: Path,
+    controller_config: Any,
+    stale_threshold_s: float,
+    seed: int,
+) -> tuple[dict[str, Any] | None, tuple[Citation, ...]]:
+    """Find the earliest policy-bound raw-vs-delivered AEB counterfactual.
+
+    The delivered replay is the binding edge: unless the exact stored controller
+    reproduces every stored candidate through the proof event, the trace cannot support a
+    causal claim about that controller. The raw replay then changes only the observation
+    stream, keeping the stored scenario, seed, and controller fixed.
+    """
+    from hermes.adas.interfaces import BrakeSource, InterventionLevel
+    from hermes.adas.policy import AdasLongitudinalPolicy
+    from hermes.domain.models import TraceEventV2
+    from hermes.scenarios.loader import parse_scenario_yaml
+
+    try:
+        scenario = parse_scenario_yaml(
+            (bundle / "scenario.resolved.yaml").read_text(encoding="utf-8")
+        )
+        events = tuple(
+            TraceEventV2.model_validate_json(line)
+            for line in (bundle / "events.jsonl").read_bytes().splitlines()
+        )
+        raw_policy = AdasLongitudinalPolicy(controller_config)
+        delivered_policy = AdasLongitudinalPolicy(controller_config)
+        raw_policy.reset(scenario, seed)
+        delivered_policy.reset(scenario, seed)
+        for event in events:
+            fault_evidence = event.observation_fault_evidence
+            raw_candidate = raw_policy.act(fault_evidence.raw_observation)
+            delivered_candidate = delivered_policy.act(
+                fault_evidence.delivered_observation
+            )
+            if delivered_candidate != event.candidate_action:
+                return None, ()
+            raw_decision = raw_policy.last_decision
+            if (
+                fault_evidence.delivered_observation.observation_age_s
+                <= stale_threshold_s
+                or not STALE_OBSERVATION_FAULT_REASONS.intersection(
+                    fault_evidence.applied_faults
+                )
+                or raw_decision is None
+                or raw_decision.brake_source is not BrakeSource.AEB
+                or raw_decision.intervention is InterventionLevel.NO_INTERVENTION
+                or raw_candidate.brake <= 0.0
+                or event.candidate_action.brake != 0.0
+            ):
+                continue
+            prefix = f"sequence:{event.sequence}"
+            proof = {
+                "sequence": event.sequence,
+                "delivered_from_sequence": fault_evidence.delivered_from_sequence,
+                "raw_replay_brake": raw_candidate.brake,
+                "stored_candidate_brake": event.candidate_action.brake,
+            }
+            citations = (
+                _citation(
+                    run_id,
+                    bundle,
+                    "events.jsonl",
+                    f"{prefix}/candidate_action/brake",
+                    event.candidate_action.brake,
+                ),
+                _citation(
+                    run_id,
+                    bundle,
+                    "events.jsonl",
+                    (
+                        f"{prefix}/observation_fault_evidence/"
+                        "delivered_observation/observation_age_s"
+                    ),
+                    fault_evidence.delivered_observation.observation_age_s,
+                ),
+                _citation(
+                    run_id,
+                    bundle,
+                    "events.jsonl",
+                    f"{prefix}/observation_fault_evidence/applied_faults",
+                    list(fault_evidence.applied_faults),
+                ),
+                _citation(
+                    run_id,
+                    bundle,
+                    "events.jsonl",
+                    f"{prefix}/observation_fault_evidence/delivered_from_sequence",
+                    fault_evidence.delivered_from_sequence,
+                ),
+                _citation(
+                    run_id,
+                    bundle,
+                    "events.jsonl",
+                    (
+                        f"{prefix}/observation_fault_evidence/"
+                        "raw_observation/front_distance_m"
+                    ),
+                    fault_evidence.raw_observation.front_distance_m,
+                ),
+                _citation(
+                    run_id,
+                    bundle,
+                    "events.jsonl",
+                    (
+                        f"{prefix}/observation_fault_evidence/"
+                        "raw_observation/front_relative_speed_mps"
+                    ),
+                    fault_evidence.raw_observation.front_relative_speed_mps,
+                ),
+            )
+            return proof, citations
+    except (OSError, UnicodeError, RecursionError, RuntimeError, ValueError):
+        # This is derived read-only evidence, not a new integrity claim. Any unsupported
+        # stored input or replay mismatch withholds the proof and fails triage closed.
+        return None, ()
+    return None, ()
 
 
 # --- read tools -----------------------------------------------------------------------
@@ -179,11 +308,10 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
     if error is not None:
         return error
     assert bundle is not None
-    from pydantic import ValidationError
-
     from hermes.adas.interfaces import AdasControllerConfig
     from hermes.domain.enums import IntegrityStatus
     from hermes.domain.models import ExecutionContextV2
+    from hermes.evidence.canonical import canonical_json_bytes
     from hermes.evidence.verification import verify_artifact
 
     verification = verify_artifact(bundle)
@@ -208,23 +336,29 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
                 (bundle / "execution-context.json").read_bytes()
             )
             if execution.policy.name == "adas-longitudinal" and execution.policy.version == "1.0":
-                aeb_config = execution.policy.config.get("aeb")
-                if isinstance(aeb_config, dict) and "stale_observation_s" in aeb_config:
+                controller_keys = set(AdasControllerConfig.model_fields)
+                expected_keys = controller_keys | {
+                    "target_speed_mps",
+                    "simulated_policy_latency_ms",
+                }
+                if set(execution.policy.config) == expected_keys:
                     controller_config = {
-                        key: value
-                        for key, value in execution.policy.config.items()
-                        if key in AdasControllerConfig.model_fields
+                        key: execution.policy.config[key] for key in controller_keys
                     }
                     try:
                         policy_config = AdasControllerConfig.model_validate_json(
-                            json.dumps(controller_config)
+                            canonical_json_bytes(controller_config), strict=True
                         )
-                    except ValidationError:
+                        complete_controller_config = canonical_json_bytes(
+                            policy_config.model_dump(mode="json")
+                        ) == canonical_json_bytes(controller_config)
+                    except (RecursionError, ValueError):
                         # Integrity verification binds this config but intentionally does
                         # not interpret controller tunables. An invalid bounded value is
                         # therefore unavailable to the agent, never exposed as evidence.
                         policy_config = None
-                    if policy_config is not None:
+                        complete_controller_config = False
+                    if policy_config is not None and complete_controller_config:
                         threshold = policy_config.aeb.stale_observation_s
                         data["aeb_stale_observation_s"] = threshold
                         citations.append(
@@ -236,6 +370,16 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
                                 threshold,
                             )
                         )
+                        proof, proof_citations = _aeb_stale_observation_counterfactual(
+                            run_id=run_id,
+                            bundle=bundle,
+                            controller_config=policy_config,
+                            stale_threshold_s=threshold,
+                            seed=execution.run_context.seed,
+                        )
+                        if proof is not None:
+                            data["aeb_stale_observation_counterfactual"] = proof
+                            citations.extend(proof_citations)
     return ok(
         tool,
         data,

@@ -374,6 +374,8 @@ def _stub_stale_triage_evidence(
     fault_application_counts: dict[str, int],
     stale_observation_s: float | None,
     integrity: str = "INTERNALLY_CONSISTENT",
+    counterfactual_sequence: int | None = 6,
+    delivered_from_sequence: int = 0,
 ) -> None:
     finding_items = [
         {"finding_id": finding_id, "status": "FAIL"}
@@ -410,6 +412,56 @@ def _stub_stale_triage_evidence(
                 "execution-context.json",
                 "/policy/config/aeb/stale_observation_s",
                 stale_observation_s,
+            ),
+        )
+    if counterfactual_sequence is not None:
+        identity_data["aeb_stale_observation_counterfactual"] = {
+            "sequence": counterfactual_sequence,
+            "delivered_from_sequence": delivered_from_sequence,
+            "raw_replay_brake": 0.5,
+            "stored_candidate_brake": 0.0,
+        }
+        event_prefix = f"sequence:{counterfactual_sequence}"
+        identity_citations = (
+            *identity_citations,
+            _stored_citation(
+                "events.jsonl",
+                f"{event_prefix}/candidate_action/brake",
+                0.0,
+            ),
+            _stored_citation(
+                "events.jsonl",
+                (
+                    f"{event_prefix}/observation_fault_evidence/"
+                    "delivered_observation/observation_age_s"
+                ),
+                max_observation_age_s,
+            ),
+            _stored_citation(
+                "events.jsonl",
+                f"{event_prefix}/observation_fault_evidence/applied_faults",
+                ["OBSERVATION_DELAY"],
+            ),
+            _stored_citation(
+                "events.jsonl",
+                f"{event_prefix}/observation_fault_evidence/delivered_from_sequence",
+                delivered_from_sequence,
+            ),
+            _stored_citation(
+                "events.jsonl",
+                (
+                    f"{event_prefix}/observation_fault_evidence/"
+                    "raw_observation/front_distance_m"
+                ),
+                30.0,
+            ),
+            _stored_citation(
+                "events.jsonl",
+                (
+                    f"{event_prefix}/observation_fault_evidence/"
+                    "raw_observation/front_relative_speed_mps"
+                ),
+                -10.0,
             ),
         )
     monkeypatch.setattr(
@@ -489,6 +541,91 @@ def test_stale_observation_precedes_the_downstream_adas_failure_with_citations(
         "execution-context.json",
         "/policy/config/aeb/stale_observation_s",
     ) in cited
+    assert ("events.jsonl", "sequence:6/candidate_action/brake") in cited
+    assert (
+        "events.jsonl",
+        (
+            "sequence:6/observation_fault_evidence/"
+            "delivered_observation/observation_age_s"
+        ),
+    ) in cited
+    assert (
+        "events.jsonl",
+        "sequence:6/observation_fault_evidence/applied_faults",
+    ) in cited
+    assert (
+        "events.jsonl",
+        "sequence:6/observation_fault_evidence/delivered_from_sequence",
+    ) in cited
+    assert (
+        "events.jsonl",
+        "sequence:6/observation_fault_evidence/raw_observation/front_distance_m",
+    ) in cited
+    assert (
+        "events.jsonl",
+        (
+            "sequence:6/observation_fault_evidence/"
+            "raw_observation/front_relative_speed_mps"
+        ),
+    ) in cited
+
+
+def test_stale_observation_requires_event_local_counterfactual_proof(
+    context: ToolContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Aggregate staleness cannot relabel a pre-existing ADAS miss as causal."""
+    _stub_stale_triage_evidence(
+        monkeypatch,
+        failed_findings=("adas.aeb.threat_response",),
+        max_observation_age_s=0.6,
+        fault_application_counts={"OBSERVATION_DELAY": 34},
+        stale_observation_s=0.5,
+        counterfactual_sequence=None,
+    )
+
+    proposal = triage_run(context, "stale-probe")
+
+    assert proposal.deterministic_category is FailureCategory.MISSED_INTERVENTION
+    assert proposal.category is FailureCategory.MISSED_INTERVENTION
+
+
+def test_stale_counterfactual_does_not_explain_an_over_intervention(
+    context: ToolContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_stale_triage_evidence(
+        monkeypatch,
+        failed_findings=("adas.aeb.no_false_intervention",),
+        max_observation_age_s=0.6,
+        fault_application_counts={"OBSERVATION_DELAY": 34},
+        stale_observation_s=0.5,
+    )
+
+    proposal = triage_run(context, "stale-probe")
+
+    assert proposal.deterministic_category is FailureCategory.OVER_INTERVENTION
+    assert proposal.category is FailureCategory.OVER_INTERVENTION
+
+
+def test_stale_counterfactual_requires_an_older_delivered_source(
+    context: ToolContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_stale_triage_evidence(
+        monkeypatch,
+        failed_findings=("adas.aeb.threat_response",),
+        max_observation_age_s=0.6,
+        fault_application_counts={"OBSERVATION_DELAY": 34},
+        stale_observation_s=0.5,
+        counterfactual_sequence=6,
+        delivered_from_sequence=6,
+    )
+
+    proposal = triage_run(context, "stale-probe")
+
+    assert proposal.deterministic_category is FailureCategory.MISSED_INTERVENTION
+    assert proposal.category is FailureCategory.MISSED_INTERVENTION
 
 
 @pytest.mark.parametrize(

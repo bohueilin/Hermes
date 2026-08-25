@@ -101,7 +101,8 @@ def check_citation(citation: Citation, artifact_root: Path) -> CitationCheck:
         )
 
     if citation.locator.startswith("sequence:"):
-        wanted = citation.locator.split(":", 1)[1]
+        event_locator = citation.locator.split(":", 1)[1]
+        wanted, separator, field_pointer = event_locator.partition("/")
         if not wanted.isdigit():
             return CitationCheck(
                 citation=citation,
@@ -111,7 +112,19 @@ def check_citation(citation: Citation, artifact_root: Path) -> CitationCheck:
         for line in target.read_text(encoding="utf-8").splitlines():
             event = json.loads(line)
             if event.get("sequence") == int(wanted):
-                value = event["executed_action"]["brake"]
+                if not separator:
+                    value = event["executed_action"]["brake"]
+                else:
+                    found, value = _walk(event, f"/{field_pointer}")
+                    if not found:
+                        return CitationCheck(
+                            citation=citation,
+                            status=CitationStatus.LOCATOR_DANGLING,
+                            detail=(
+                                f"{citation.locator} does not resolve in "
+                                f"{citation.artifact_file}"
+                            ),
+                        )
                 return _compare(citation, value)
         return CitationCheck(
             citation=citation,
