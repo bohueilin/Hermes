@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 from typing import cast
 
 from hermes.adapters.fake import FakeSimulatorAdapter
@@ -26,13 +27,16 @@ from hermes.domain.models import (
     ControlFaultEvidence,
     ExecutionContext,
     ExecutionContextV2,
+    ExecutionContextV3,
     Measurement,
     Observation,
     ObservationFaultEvidence,
     RunContext,
     RunContextV2,
+    RunContextV3,
     TraceEvent,
     TraceEventV2,
+    TraceEventV3,
 )
 from hermes.evidence.artifacts import (
     ArtifactError,
@@ -48,6 +52,7 @@ from hermes.evidence.trace import (
     TraceEventLike,
     create_trace_event,
     create_trace_event_v2,
+    create_trace_event_v3,
     verify_complete_trace,
 )
 from hermes.evidence.verification import verify_artifact
@@ -59,12 +64,14 @@ from hermes.faults.eligibility import (
 )
 from hermes.gates.config import GateConfigError, gate_config_digest, load_gate_config
 from hermes.gates.release import (
+    VerifierProfile,
     apply_release_gate,
     select_verifier_profile,
 )
 from hermes.policies.baseline import BaselinePolicy
 from hermes.policies.metadrive_idm import MetaDriveIDMPolicy
 from hermes.scenarios.loader import ScenarioLoadError, load_scenario, scenario_digest
+from hermes.shields.config import ShieldConfig
 from hermes.shields.noop import NoOpShield
 from hermes.verifiers import (
     run_verifiers_for_profile,
@@ -78,6 +85,23 @@ class RunConfigurationError(ValueError):
 
 class RunOperationalError(RuntimeError):
     """Execution, cleanup, serialization, self-verification, or publication failed."""
+
+
+_EVIDENCE_SCHEMA_BY_VERIFIER_PROFILE: Mapping[VerifierProfile, str] = MappingProxyType(
+    {
+        VerifierProfile.LEGACY: "1.0",
+        VerifierProfile.FAULT_COVERAGE: "2.0",
+        VerifierProfile.ADAS_P0_LONGITUDINAL: "3.0",
+        VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT: "3.0",
+    }
+)
+
+
+def _evidence_schema_for_verifier_profile(profile: object) -> str:
+    """Select the producer schema from one exact verifier-profile identity."""
+    if type(profile) is not VerifierProfile:
+        raise TypeError("producer schema selection requires an exact VerifierProfile")
+    return _EVIDENCE_SCHEMA_BY_VERIFIER_PROFILE[profile]
 
 
 def _require_v3_adas_decision_evidence(
@@ -220,12 +244,76 @@ def _build_execution_context(
     policy: DrivingPolicy,
     shield: SafetyShield,
     fault_injector: DeterministicFaultInjector | None,
-) -> ExecutionContext | ExecutionContextV2:
+    verifier_profile: VerifierProfile | None = None,
+) -> ExecutionContext | ExecutionContextV2 | ExecutionContextV3:
     adapter_config = adapter.evidence_config
     policy_config = policy.evidence_config
     shield_config = shield.evidence_config
-    verifier_suite = verifier_identities_for_profile(select_verifier_profile(scenario))
+    selected_profile = verifier_profile or select_verifier_profile(scenario)
+    evidence_schema_version = _evidence_schema_for_verifier_profile(selected_profile)
+    verifier_suite = verifier_identities_for_profile(
+        selected_profile,
+        evidence_schema_version=evidence_schema_version,
+    )
     suite_payload = [identity.model_dump(mode="json") for identity in verifier_suite]
+    if evidence_schema_version == "3.0":
+        fault_config = (
+            fault_injector.evidence_config if fault_injector is not None else None
+        )
+        run_context_v3 = RunContextV3(
+            scenario_digest=scenario_digest(scenario),
+            gate_config_digest=gate_config_digest(gate_config),
+            adapter_name=adapter.name,
+            adapter_version=adapter.version,
+            adapter_config_digest=config_digest(adapter_config),
+            policy_name=policy.name,
+            policy_version=policy.version,
+            policy_config_digest=config_digest(policy_config),
+            shield_name=shield.name,
+            shield_version=shield.version,
+            shield_config_digest=config_digest(shield_config),
+            verifier_suite_digest=config_digest(suite_payload),
+            fault_name=(fault_injector.name if fault_injector is not None else None),
+            fault_version=(fault_injector.version if fault_injector is not None else None),
+            fault_config_digest=(
+                config_digest(fault_config) if fault_config is not None else None
+            ),
+            seed=seed,
+            control_frequency_hz=scenario.control.frequency_hz,
+            horizon_steps=scenario.control.horizon_steps,
+        )
+        return ExecutionContextV3(
+            run_context=run_context_v3,
+            adapter=ComponentContext(
+                name=adapter.name,
+                version=adapter.version,
+                config=adapter_config,
+                config_digest=run_context_v3.adapter_config_digest,
+            ),
+            policy=ComponentContext(
+                name=policy.name,
+                version=policy.version,
+                config=policy_config,
+                config_digest=run_context_v3.policy_config_digest,
+            ),
+            shield=ComponentContext(
+                name=shield.name,
+                version=shield.version,
+                config=shield_config,
+                config_digest=run_context_v3.shield_config_digest,
+            ),
+            verifier_suite=verifier_suite,
+            faults=(
+                ComponentContext(
+                    name=fault_injector.name,
+                    version=fault_injector.version,
+                    config=fault_config,
+                    config_digest=run_context_v3.fault_config_digest,
+                )
+                if fault_injector is not None and fault_config is not None
+                else None
+            ),
+        )
     if fault_injector is not None:
         fault_config = fault_injector.evidence_config
         run_context_v2 = RunContextV2(
@@ -317,6 +405,13 @@ def _build_execution_context(
     )
 
 
+def _v3_shield_config(shield: SafetyShield) -> ShieldConfig | None:
+    """Return the exact typed config required by V3 shield replay."""
+    if (shield.name, shield.version) != ("deterministic", "1.0"):
+        return None
+    return ShieldConfig.model_validate(shield.evidence_config)
+
+
 def _execute_episode(
     *,
     scenario,
@@ -328,8 +423,9 @@ def _execute_episode(
     enforce_metadrive_observation_fault_policy: bool,
 ) -> tuple[
     tuple[TraceEventLike, ...],
-    ExecutionContext | ExecutionContextV2,
+    ExecutionContext | ExecutionContextV2 | ExecutionContextV3,
     SimulatorProvenance,
+    ShieldConfig | None,
 ]:
     try:
         adapter = adapter_factory()
@@ -340,9 +436,12 @@ def _execute_episode(
 
     operation_error: Exception | None = None
     events: list[TraceEventLike] = []
-    execution_context: ExecutionContext | ExecutionContextV2 | None = None
+    execution_context: ExecutionContext | ExecutionContextV2 | ExecutionContextV3 | None = None
     simulator_provenance: SimulatorProvenance | None = None
+    resolved_shield_config: ShieldConfig | None = None
     try:
+        verifier_profile = select_verifier_profile(scenario)
+        evidence_schema_version = _evidence_schema_for_verifier_profile(verifier_profile)
         observation_fault_policy_check = (
             enforce_metadrive_observation_fault_policy
             and has_observation_faults(scenario.faults)
@@ -371,6 +470,8 @@ def _execute_episode(
         shield.reset(scenario, seed)
         if fault_injector is not None:
             fault_injector.reset(scenario, seed)
+        if evidence_schema_version == "3.0":
+            resolved_shield_config = _v3_shield_config(shield)
         execution_context = _build_execution_context(
             scenario=scenario,
             gate_config=gate_config,
@@ -379,6 +480,7 @@ def _execute_episode(
             policy=policy,
             shield=shield,
             fault_injector=fault_injector,
+            verifier_profile=verifier_profile,
         )
         simulator_provenance = SimulatorProvenance(
             name=adapter.simulator_name,
@@ -398,6 +500,15 @@ def _execute_episode(
                 else raw_observation
             )
             candidate = policy.act(policy_observation)
+            adas_decision_evidence = (
+                _require_v3_adas_decision_evidence(
+                    policy,
+                    policy_observation,
+                    candidate,
+                )
+                if evidence_schema_version == "3.0"
+                else None
+            )
             permitted, override_reasons = shield.apply(policy_observation, candidate)
             faulted_action = (
                 fault_injector.process_action(
@@ -410,7 +521,118 @@ def _execute_episode(
             )
             executed = faulted_action.action if faulted_action is not None else permitted
             result = adapter.step(executed)
-            if fault_injector is None:
+            if evidence_schema_version == "3.0":
+                assert isinstance(execution_context, ExecutionContextV3)
+                if fault_injector is None:
+                    observation_fault_evidence = ObservationFaultEvidence(
+                        raw_observation=raw_observation,
+                        delivered_observation=policy_observation,
+                        delivered_from_sequence=raw_observation.sequence,
+                        delivered_from_time_s=raw_observation.simulation_time_s,
+                        delivery_time_s=raw_observation.simulation_time_s,
+                        applied_faults=(),
+                        speed_noise_delta_mps=0.0,
+                        lateral_noise_delta_m=0.0,
+                    )
+                    control_fault_evidence = ControlFaultEvidence(
+                        candidate_time_s=raw_observation.simulation_time_s,
+                        executed_from_sequence=sequence,
+                        executed_from_candidate_time_s=(
+                            raw_observation.simulation_time_s
+                        ),
+                        execution_time_s=raw_observation.simulation_time_s,
+                        pre_saturation_action=permitted,
+                        applied_faults=(),
+                        control_latency_ms=Measurement(
+                            availability=EvidenceAvailability.AVAILABLE,
+                            value=0.0,
+                            unit="ms",
+                        ),
+                        latency_source="simulated",
+                    )
+                else:
+                    assert faulted_observation is not None
+                    assert faulted_action is not None
+                    observation_fault_evidence = ObservationFaultEvidence(
+                        raw_observation=raw_observation,
+                        delivered_observation=policy_observation,
+                        delivered_from_sequence=faulted_observation.source_sequence,
+                        delivered_from_time_s=(
+                            faulted_observation.source_simulation_time_s
+                        ),
+                        delivery_time_s=faulted_observation.delivery_time_s,
+                        applied_faults=faulted_observation.reason_codes,
+                        speed_noise_delta_mps=(
+                            faulted_observation.noise_deltas.speed_mps
+                        ),
+                        lateral_noise_delta_m=(
+                            faulted_observation.noise_deltas.lateral_offset_m
+                        ),
+                    )
+                    control_fault_evidence = ControlFaultEvidence(
+                        candidate_time_s=raw_observation.simulation_time_s,
+                        executed_from_sequence=faulted_action.source_sequence,
+                        executed_from_candidate_time_s=(
+                            faulted_action.source_simulation_time_s
+                        ),
+                        execution_time_s=faulted_action.execution_time_s,
+                        pre_saturation_action=faulted_action.pre_saturation_action,
+                        applied_faults=faulted_action.reason_codes,
+                        control_latency_ms=(
+                            Measurement(
+                                availability=EvidenceAvailability.NOT_AVAILABLE,
+                                unit="ms",
+                                reason=(
+                                    "control-delay startup fill has no originating "
+                                    "candidate"
+                                ),
+                            )
+                            if faulted_action.source_simulation_time_s is None
+                            else Measurement(
+                                availability=EvidenceAvailability.AVAILABLE,
+                                value=(
+                                    raw_observation.simulation_time_s
+                                    - faulted_action.source_simulation_time_s
+                                )
+                                * 1000.0,
+                                unit="ms",
+                            )
+                        ),
+                        latency_source="simulated",
+                    )
+                prior_v3_events = tuple(
+                    event for event in events if type(event) is TraceEventV3
+                )
+                if len(prior_v3_events) != len(events):
+                    raise RunOperationalError("V3 run produced a mixed evidence schema")
+                event = create_trace_event_v3(
+                    sequence=sequence,
+                    simulation_time_s=result.observation.simulation_time_s,
+                    run_context=execution_context.run_context,
+                    observation_summary=_observation_summary(
+                        policy_observation, result.observation, scenario
+                    ),
+                    candidate_action=candidate,
+                    permitted_action=permitted,
+                    executed_action=executed,
+                    override_reasons=override_reasons,
+                    observation_fault_evidence=observation_fault_evidence,
+                    control_fault_evidence=control_fault_evidence,
+                    result_observation=result.observation,
+                    adas_decision_evidence=adas_decision_evidence,
+                    vehicle_state=result.observation.vehicle_state,
+                    policy_latency_ms=policy.simulated_latency_ms,
+                    latency_source="simulated",
+                    terminated=result.terminated,
+                    truncated=result.truncated,
+                    termination_reason=result.termination_reason,
+                    raw_facts=result.raw_facts,
+                    previous_hash=previous_hash,
+                    scenario=scenario,
+                    shield_config=resolved_shield_config,
+                    prior_events=prior_v3_events,
+                )
+            elif fault_injector is None:
                 assert isinstance(execution_context, ExecutionContext)
                 event: TraceEventLike = create_trace_event(
                     sequence=sequence,
@@ -535,10 +757,14 @@ def _execute_episode(
     assert execution_context is not None
     assert simulator_provenance is not None
     try:
-        verify_complete_trace(tuple(events), scenario)
+        verify_complete_trace(
+            tuple(events),
+            scenario,
+            shield_config=resolved_shield_config,
+        )
     except Exception as exc:
         raise RunOperationalError(f"runtime produced invalid trace: {exc}") from exc
-    return tuple(events), execution_context, simulator_provenance
+    return tuple(events), execution_context, simulator_provenance, resolved_shield_config
 
 
 def _execute_run(
@@ -593,7 +819,7 @@ def _execute_run(
             "Phase 2 MetaDrive nominal runs do not support synthetic fake-adapter hazards"
         )
 
-    events, execution_context, simulator_provenance = _execute_episode(
+    events, execution_context, simulator_provenance, resolved_shield_config = _execute_episode(
         scenario=scenario,
         gate_config=gate_config,
         seed=seed,
@@ -620,11 +846,27 @@ def _execute_run(
     ):
         raise RunOperationalError("MetaDrive simulator provenance is incomplete")
 
-    metrics = compute_metrics(events)
+    metrics = compute_metrics(
+        events,
+        scenario=scenario,
+        gate_config=gate_config,
+    )
     verifier_profile = select_verifier_profile(scenario)
-    if scenario.faults is not None:
+    evidence_schema_version = _evidence_schema_for_verifier_profile(verifier_profile)
+    if evidence_schema_version == "3.0":
+        typed_events = tuple(event for event in events if type(event) is TraceEventV3)
+        if len(typed_events) != len(events):
+            raise RunOperationalError("V3 run produced a mixed evidence schema")
+        findings = run_verifiers_for_profile(
+            verifier_profile,
+            typed_events,
+            scenario,
+            gate_config,
+            shield_config=resolved_shield_config,
+        )
+    elif evidence_schema_version == "2.0":
         fault_events = tuple(
-            event for event in events if isinstance(event, TraceEventV2)
+            event for event in events if type(event) is TraceEventV2
         )
         if len(fault_events) != len(events):
             raise RunOperationalError("fault run produced a mixed evidence schema")
@@ -632,7 +874,7 @@ def _execute_run(
             verifier_profile, fault_events, scenario, gate_config
         )
     else:
-        legacy_events = tuple(event for event in events if isinstance(event, TraceEvent))
+        legacy_events = tuple(event for event in events if type(event) is TraceEvent)
         if len(legacy_events) != len(events):
             raise RunOperationalError("legacy run produced a mixed evidence schema")
         findings = run_verifiers_for_profile(
@@ -643,6 +885,7 @@ def _execute_run(
         gate_config,
         adapter_name=expected_adapter,
         expected_profile=verifier_profile,
+        evidence_schema_version=evidence_schema_version,
     )
     commit, dirty, provenance_reason = _repository_provenance(
         repository_root.expanduser().resolve()

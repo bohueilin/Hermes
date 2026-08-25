@@ -20,7 +20,6 @@ from hermes.verifiers import (
     PHASE4_VERIFIER_IDENTITIES,
     verifier_identities_for_profile,
 )
-from hermes.verifiers.adas import ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
 
 
 def _identity_triplets(identities) -> tuple[tuple[str, str, str], ...]:
@@ -95,12 +94,18 @@ def test_schema_v3_adas_suites_select_only_brake_onset_v1_1(profile: VerifierPro
         (
             "adas/aeb_stationary_lead.yaml",
             "adas",
-            PHASE1_VERIFIER_IDENTITIES + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES,
+            verifier_identities_for_profile(
+                VerifierProfile.ADAS_P0_LONGITUDINAL,
+                evidence_schema_version="3.0",
+            ),
         ),
         (
             "adas/aeb_stationary_lead.yaml",
             "adas_fault",
-            PHASE4_VERIFIER_IDENTITIES + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES,
+            verifier_identities_for_profile(
+                VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT,
+                evidence_schema_version="3.0",
+            ),
         ),
     ],
 )

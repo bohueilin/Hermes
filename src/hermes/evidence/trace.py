@@ -278,7 +278,7 @@ def create_trace_event_v3(
     shield_config: ShieldConfig | None = None,
     prior_events: tuple[TraceEventV3, ...] = (),
 ) -> TraceEventV3:
-    """Build one inactive schema-3 event with deterministic action attribution."""
+    """Build one schema-3 event with deterministic action attribution."""
     if adas_decision_evidence is None:
         raise ValueError("V3 event construction requires ADAS decision evidence")
     validate_decision_evidence(

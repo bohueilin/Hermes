@@ -26,8 +26,6 @@ from hermes.domain.models import (
     ArtifactManifestV3,
     ComponentContext,
     ControlFaultEvidence,
-    ExecutionContext,
-    ExecutionContextV2,
     ExecutionContextV3,
     FindingsDocumentV3,
     GateResult,
@@ -999,8 +997,8 @@ def test_stored_v3_binds_exact_schema_aware_verifier_suite(
     )
 
 
-@pytest.mark.parametrize("faulted", [False, True], ids=("legacy-v1", "fault-v2"))
-def test_wp4_does_not_activate_v3_runtime_production(
+@pytest.mark.parametrize("faulted", [False, True], ids=("adas-v3", "adas-fault-v3"))
+def test_wp7_activates_exact_v3_runtime_context_for_both_adas_profiles(
     repository_root: Path,
     faulted: bool,
 ) -> None:
@@ -1029,7 +1027,9 @@ def test_wp4_does_not_activate_v3_runtime_production(
         fault_injector=fault_injector,
     )
 
-    assert type(context) is (ExecutionContextV2 if faulted else ExecutionContext)
+    assert type(context) is ExecutionContextV3
+    assert type(context.run_context) is RunContextV3
+    assert (context.faults is not None) is faulted
 
 
 def test_wp5_closes_the_same_synthetic_bundle_with_exact_v3_snapshot_classes(
