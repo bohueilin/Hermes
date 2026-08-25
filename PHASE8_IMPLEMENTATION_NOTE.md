@@ -274,6 +274,15 @@ python -m hermes run --simulator metadrive --headless \
 python -m hermes agent triage demo-late-braking
 python -m hermes agent check-citations demo-late-braking
 
+# baseline-policy environment-path seed: real observation delay, not a broken controller
+python -m hermes run --simulator metadrive --headless \
+  --scenario scenarios/adas/aeb_stationary_lead_observation_delay.yaml \
+  --policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+  --gate-config config/gates.adas.yaml --seed 7 --run-id demo-stationary-delay
+# Expected: internally consistent evidence with a HOLD verdict. verify-artifact exits 20
+# for a valid held artifact; that disposition is not an execution or integrity failure.
+python -m hermes verify-artifact artifacts/demo-stationary-delay
+
 # the trade-off demonstration, and the flywheel
 make demo-adas-tradeoff
 make demo-flywheel
