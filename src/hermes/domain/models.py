@@ -1104,6 +1104,37 @@ class TraceEventV3(HermesModel):
     previous_hash: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
     current_hash: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 
+    @model_validator(mode="after")
+    def require_truthful_no_fault_pass_through(self) -> TraceEventV3:
+        if self.run_context.fault_name is not None:
+            return self
+
+        observation = self.observation_fault_evidence
+        raw = observation.raw_observation
+        control = self.control_fault_evidence
+        latency = control.control_latency_ms
+        if (
+            observation.delivered_observation != raw
+            or observation.delivered_from_sequence != raw.sequence
+            or observation.delivered_from_time_s != raw.simulation_time_s
+            or observation.delivery_time_s != raw.simulation_time_s
+            or observation.applied_faults
+            or observation.speed_noise_delta_mps != 0.0
+            or observation.lateral_noise_delta_m != 0.0
+            or control.candidate_time_s != raw.simulation_time_s
+            or control.executed_from_sequence != self.sequence
+            or control.executed_from_candidate_time_s != raw.simulation_time_s
+            or control.execution_time_s != raw.simulation_time_s
+            or control.pre_saturation_action != self.permitted_action
+            or control.applied_faults
+            or self.executed_action != self.permitted_action
+            or latency.availability is not EvidenceAvailability.AVAILABLE
+            or latency.value != 0.0
+            or latency.unit != "ms"
+        ):
+            raise ValueError("no-fault V3 event must contain truthful pass-through evidence")
+        return self
+
 
 class ArtifactManifest(HermesModel):
     """Execution provenance plus a digest inventory for one evidence bundle."""

@@ -304,13 +304,13 @@ def _trace_event_payload(*, fault: bool = False) -> dict[str, object]:
             "route_progress_pct": 0.0,
             "observation_age_s": 0.0,
         },
-        "candidate_action": action,
-        "permitted_action": action,
-        "executed_action": action,
+        "candidate_action": deepcopy(action),
+        "permitted_action": deepcopy(action),
+        "executed_action": deepcopy(action),
         "override_reasons": (),
         "observation_fault_evidence": {
-            "raw_observation": observation,
-            "delivered_observation": observation,
+            "raw_observation": deepcopy(observation),
+            "delivered_observation": deepcopy(observation),
             "delivered_from_sequence": 0,
             "delivered_from_time_s": 0.0,
             "delivery_time_s": 0.0,
@@ -323,7 +323,7 @@ def _trace_event_payload(*, fault: bool = False) -> dict[str, object]:
             "executed_from_sequence": 0,
             "executed_from_candidate_time_s": 0.0,
             "execution_time_s": 0.0,
-            "pre_saturation_action": action,
+            "pre_saturation_action": deepcopy(action),
             "applied_faults": (),
             "control_latency_ms": _available(0.0, "ms"),
             "latency_source": "simulated",
@@ -464,7 +464,116 @@ def test_run_metrics_v3_has_exactly_46_display_rows_and_61_review_leaves() -> No
     assert len(top_level - {"evidence_schema_version", "adas"}) + sum(
         len(fields) for fields in nested_fields.values()
     ) == 61
-    assert 7 + 5 + 7 + 8 + 8 + 6 + 5 == 46
+    display_rows = (
+        ("collision.count", ("collision_count",)),
+        ("collision.occurred", ("collision_occurred",)),
+        ("ttc.minimum_s", ("minimum_ttc_s",)),
+        ("ttc.at_warning_s", ("ttc_at_warning_s",)),
+        ("ttc.at_brake_onset_s", ("ttc_at_brake_onset_s",)),
+        ("impact.residual_speed_mps", ("impact_residual_speed_mps",)),
+        ("distance.minimum_lead_m", ("minimum_lead_distance_m",)),
+        ("fcw.warning_count", ("adas.fcw.warning_count",)),
+        ("fcw.first_warning_time_s", ("adas.fcw.first_warning_time_s",)),
+        ("fcw.false_warning_count", ("adas.fcw.false_warning_count",)),
+        ("fcw.missed_warning", ("adas.fcw.missed_warning",)),
+        ("fcw.warning_chatter_count", ("adas.fcw.warning_chatter_count",)),
+        ("aeb.intervention_count", ("adas.aeb.intervention_count",)),
+        ("aeb.first_intervention_time_s", ("adas.aeb.first_intervention_time_s",)),
+        ("aeb.max_deceleration_mps2", ("adas.aeb.max_deceleration_mps2",)),
+        ("aeb.max_jerk_mps3", ("adas.aeb.max_jerk_mps3",)),
+        ("aeb.false_intervention_count", ("adas.aeb.false_intervention_count",)),
+        ("aeb.missed_intervention", ("adas.aeb.missed_intervention",)),
+        (
+            "aeb.required_decel_at_onset_mps2",
+            ("adas.aeb.required_decel_at_onset_mps2",),
+        ),
+        ("acc.headway_target_s", ("adas.acc.headway_target_s",)),
+        ("acc.headway_minimum_s", ("adas.acc.headway_minimum_s",)),
+        ("acc.headway_mae_s", ("adas.acc.headway_mae_s",)),
+        ("acc.speed_error_mae_mps", ("adas.acc.speed_error_mae_mps",)),
+        ("acc.cut_in_recovery_s", ("adas.acc.cut_in_recovery_s",)),
+        ("acc.max_acceleration_mps2", ("adas.acc.max_acceleration_mps2",)),
+        ("acc.max_deceleration_mps2", ("adas.acc.max_deceleration_mps2",)),
+        ("acc.max_jerk_mps3", ("adas.acc.max_jerk_mps3",)),
+        ("lka.lateral_error_mae_m", ("adas.lka.lateral_error_mae_m",)),
+        ("lka.lateral_error_max_m", ("adas.lka.lateral_error_max_m",)),
+        ("lka.lane_crossing_count", ("adas.lka.lane_crossing_count",)),
+        (
+            "lka.steering_oscillation_count",
+            ("adas.lka.steering_oscillation_count",),
+        ),
+        ("lka.max_lateral_accel_mps2", ("adas.lka.max_lateral_accel_mps2",)),
+        ("lka.max_lateral_jerk_mps3", ("adas.lka.max_lateral_jerk_mps3",)),
+        ("lka.degraded_count", ("adas.lka.degraded_count",)),
+        (
+            "lka.curve_steady_state_error_m",
+            ("adas.lka.curve_steady_state_error_m",),
+        ),
+        ("assist.mode_transition_count", ("adas.assist.mode_transition_count",)),
+        ("assist.degraded_count", ("adas.assist.degraded_count",)),
+        ("assist.takeover_request_count", ("adas.assist.takeover_request_count",)),
+        ("assist.disengagement_count", ("adas.assist.disengagement_count",)),
+        ("assist.route_completion", ("adas.assist.route_completion_pct",)),
+        (
+            "assist.constraint_violation_count",
+            ("adas.assist.constraint_violation_count",),
+        ),
+        ("system.observation_age_p95_s", ("p95_observation_age_s",)),
+        ("system.control_latency_p95_ms", ("p95_control_latency_ms",)),
+        ("system.sensor_invalid_count", ("sensor_invalid_count",)),
+        (
+            "system.control_saturation_count",
+            ("steering_saturation_count", "brake_saturation_count"),
+        ),
+        ("system.runtime_error_count", ("runtime_error_count",)),
+    )
+    display_ids = tuple(display_id for display_id, _ in display_rows)
+    display_paths = tuple(path for _, paths in display_rows for path in paths)
+    canonical_leaves = {
+        *(top_level - {"evidence_schema_version", "adas"}),
+        *(
+            f"adas.{group}.{name}"
+            for group, model_name in (
+                ("fcw", "FcwMetricsV3"),
+                ("aeb", "AebMetricsV3"),
+                ("acc", "AccMetricsV3"),
+                ("lka", "LkaMetricsV3"),
+                ("assist", "AssistMetricsV3"),
+            )
+            for name in nested_fields[model_name]
+        ),
+    }
+
+    assert len(display_rows) == 46
+    assert len(display_ids) == len(set(display_ids))
+    assert len(display_paths) == len(set(display_paths))
+    assert set(display_paths) == {
+        "collision_count",
+        "collision_occurred",
+        "minimum_ttc_s",
+        "ttc_at_warning_s",
+        "ttc_at_brake_onset_s",
+        "impact_residual_speed_mps",
+        "minimum_lead_distance_m",
+        "p95_observation_age_s",
+        "p95_control_latency_ms",
+        "sensor_invalid_count",
+        "steering_saturation_count",
+        "brake_saturation_count",
+        "runtime_error_count",
+        *(
+            f"adas.{group}.{name}"
+            for group, model_name in (
+                ("fcw", "FcwMetricsV3"),
+                ("aeb", "AebMetricsV3"),
+                ("acc", "AccMetricsV3"),
+                ("lka", "LkaMetricsV3"),
+                ("assist", "AssistMetricsV3"),
+            )
+            for name in nested_fields[model_name]
+        ),
+    }
+    assert set(display_paths) <= canonical_leaves
     assert not any(
         "approach" in name
         for name in top_level | set().union(*nested_fields.values())
@@ -611,6 +720,74 @@ def test_trace_event_v3_has_unified_typed_no_fault_pass_through_evidence() -> No
     assert event.adas_decision.intervention is _enum("InterventionLevel").NO_INTERVENTION
     assert event.adas_decision.mode is _enum("AdasMode").ACTIVE
     assert event.executed_brake_source is _enum("BrakeSource").NONE
+
+
+@pytest.mark.parametrize(
+    ("path", "fabricated_value"),
+    (
+        (("observation_fault_evidence", "applied_faults"), ("OBSERVATION_DELAY",)),
+        (("control_fault_evidence", "applied_faults"), ("CONTROL_DELAY",)),
+        (("observation_fault_evidence", "delivered_observation", "observation_age_s"), 0.1),
+        (("observation_fault_evidence", "speed_noise_delta_mps"), 0.1),
+        (("observation_fault_evidence", "lateral_noise_delta_m"), -0.1),
+        (("observation_fault_evidence", "delivered_from_sequence"), 1),
+        (("observation_fault_evidence", "delivered_from_time_s"), 0.1),
+        (("observation_fault_evidence", "delivery_time_s"), 0.1),
+        (("control_fault_evidence", "candidate_time_s"), 0.1),
+        (("control_fault_evidence", "executed_from_sequence"), None),
+        (("control_fault_evidence", "executed_from_candidate_time_s"), 0.1),
+        (("control_fault_evidence", "execution_time_s"), 0.1),
+        (("control_fault_evidence", "pre_saturation_action", "steering"), 0.1),
+        (("executed_action", "steering"), 0.1),
+        (("control_fault_evidence", "control_latency_ms"), _available(0.1, "ms")),
+        (("control_fault_evidence", "control_latency_ms", "unit"), "s"),
+    ),
+)
+def test_trace_event_v3_rejects_fabricated_no_fault_pass_through(
+    path: tuple[str, ...], fabricated_value: object
+) -> None:
+    payload = _trace_event_payload(fault=False)
+    target: dict[str, object] = payload
+    for segment in path[:-1]:
+        nested = target[segment]
+        assert isinstance(nested, dict)
+        target = nested
+    target[path[-1]] = fabricated_value
+
+    with pytest.raises(ValidationError, match="no-fault V3 event"):
+        _model("TraceEventV3").model_validate(payload)
+
+
+def test_trace_event_v3_allows_shield_change_in_no_fault_pass_through() -> None:
+    payload = _trace_event_payload(fault=False)
+    payload["candidate_action"] = {"steering": 0.2, "throttle": 0.0, "brake": 0.0}
+    payload["override_reasons"] = ("STEERING_LIMIT",)
+
+    event = _model("TraceEventV3").model_validate(payload)
+
+    assert event.candidate_action != event.permitted_action
+
+
+def test_trace_event_v3_preserves_faulted_non_pass_through_acceptance() -> None:
+    payload = _trace_event_payload(fault=True)
+    observation_evidence = payload["observation_fault_evidence"]
+    control_evidence = payload["control_fault_evidence"]
+    assert isinstance(observation_evidence, dict)
+    assert isinstance(control_evidence, dict)
+    delivered = observation_evidence["delivered_observation"]
+    assert isinstance(delivered, dict)
+    delivered["observation_age_s"] = 0.1
+    observation_evidence["speed_noise_delta_mps"] = 0.1
+    control_evidence["applied_faults"] = ("CONTROL_DELAY",)
+    control_evidence["executed_from_sequence"] = None
+    control_evidence["executed_from_candidate_time_s"] = None
+    control_evidence["control_latency_ms"] = _unavailable(
+        "control-delay startup fill has no originating candidate", "ms"
+    )
+
+    event = _model("TraceEventV3").model_validate(payload)
+
+    assert event.run_context.fault_name == "deterministic-faults"
 
 
 def test_trace_event_v3_supports_the_same_typed_shape_with_fault_identity() -> None:
