@@ -14,51 +14,22 @@ Conventions, fixed here once so no function re-derives them:
 
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
 
+from hermes.domain.enums import AdasMode as _AdasMode
+from hermes.domain.enums import BrakeSource as _BrakeSource
+from hermes.domain.enums import InterventionLevel as _InterventionLevel
+from hermes.domain.enums import WarningLevel as _WarningLevel
+from hermes.domain.models import AdasDecision as _AdasDecision
 from hermes.domain.models import FiniteFloat, HermesModel, NonNegativeFloat, Observation
 
-
-class WarningLevel(StrEnum):
-    """Forward-collision warning output (PRD §7.1)."""
-
-    NO_WARNING = "NO_WARNING"
-    ADVISORY = "ADVISORY"
-    URGENT_WARNING = "URGENT_WARNING"
-
-
-class InterventionLevel(StrEnum):
-    """Automatic emergency braking output (PRD §7.2)."""
-
-    NO_INTERVENTION = "NO_INTERVENTION"
-    PARTIAL_BRAKE = "PARTIAL_BRAKE"
-    EMERGENCY_BRAKE = "EMERGENCY_BRAKE"
-
-
-class BrakeSource(StrEnum):
-    """Which component a braking command is attributable to.
-
-    Required by PRD §0-A.2.4: AEB metrics count only ``aeb``-attributed braking, so a
-    brake applied by the scripted driver or a shield can never inflate an AEB result.
-    """
-
-    NONE = "none"
-    DRIVER = "driver"
-    AEB = "aeb"
-    ACC = "acc"
-    SHIELD = "shield"
-
-
-class AdasMode(StrEnum):
-    """Supervisory mode of the longitudinal stack."""
-
-    OFF = "OFF"
-    AVAILABLE = "AVAILABLE"
-    ACTIVE = "ACTIVE"
-    DEGRADED = "DEGRADED"
+AdasMode = _AdasMode
+BrakeSource = _BrakeSource
+InterventionLevel = _InterventionLevel
+WarningLevel = _WarningLevel
+AdasDecision = _AdasDecision
 
 
 class AdasObservation(HermesModel):
@@ -117,20 +88,6 @@ class AdasObservation(HermesModel):
         if usable_gap <= 0.0:
             return float("inf")
         return (closing * closing) / (2.0 * usable_gap)
-
-
-class AdasDecision(HermesModel):
-    """One step's ADAS output, before projection onto the executed vehicle command."""
-
-    warning: WarningLevel
-    intervention: InterventionLevel
-    mode: AdasMode
-    brake_source: BrakeSource
-    throttle: Annotated[FiniteFloat, Field(ge=0.0, le=1.0)]
-    brake: Annotated[FiniteFloat, Field(ge=0.0, le=1.0)]
-    time_to_collision_s: FiniteFloat | None
-    required_deceleration_mps2: FiniteFloat | None
-    reasons: tuple[str, ...] = ()
 
 
 class FcwConfig(HermesModel):

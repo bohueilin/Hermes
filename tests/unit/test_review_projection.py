@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+import hashlib
 import os
 from pathlib import Path
 
@@ -37,6 +38,39 @@ def _capture(repository_root: Path, selection: str):
     return verification_module._inspect_artifact_under_root_capture(
         repository_root / "artifacts", selection
     )
+
+
+@pytest.mark.parametrize(
+    ("run_id", "expected_size", "expected_sha256"),
+    (
+        (
+            "phase1-nominal",
+            338_868,
+            "825080a33f28d56527e9d0dac0c4efa6f75f5beaf4870c4d78fa23be76fc2f13",
+        ),
+        (
+            "handoff-p4-fault",
+            302_128,
+            "46adc17345cb75792b57b97246a1185858c228ac3e6f729bbea535fb4f2d9e72",
+        ),
+    ),
+)
+def test_legacy_review_envelopes_are_canonical_byte_pinned(
+    repository_root: Path,
+    run_id: str,
+    expected_size: int,
+    expected_sha256: str,
+) -> None:
+    envelope = project_review_envelope(
+        _capture(repository_root, run_id),
+        selected_relative_path=run_id,
+        hermes_version=__version__,
+    )
+    payload = canonical_envelope_bytes(envelope)
+
+    assert type(envelope).__name__ == "ReviewEnvelope"
+    assert len(payload) == expected_size
+    assert hashlib.sha256(payload).hexdigest() == expected_sha256
 
 
 def test_valid_projection_uses_only_captured_typed_facts_and_frozen_registries(
