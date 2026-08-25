@@ -8,6 +8,7 @@ import os
 import re
 import stat
 import struct
+from collections.abc import Mapping
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,8 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
+from hermes.adas.decision import AdasLongitudinalDecisionKernel
+from hermes.adas.interfaces import AdasControllerConfig
 from hermes.domain.enums import (
     AuthenticityStatus,
     EvidenceAvailability,
@@ -22,24 +25,31 @@ from hermes.domain.enums import (
     Verdict,
 )
 from hermes.domain.models import (
+    Action,
+    AdasDecisionEvidence,
     ArtifactManifest,
     ArtifactManifestV2,
+    ArtifactManifestV3,
     ArtifactVerification,
     ControlFaultEvidence,
     ExecutionContext,
     ExecutionContextV2,
+    ExecutionContextV3,
     FaultConfig,
     FindingsDocument,
     FindingsDocumentV2,
+    FindingsDocumentV3,
     GateResult,
     Measurement,
     Observation,
     ObservationFaultEvidence,
     RunMetrics,
     RunMetricsV2,
+    RunMetricsV3,
     ScenarioDefinition,
     TraceEvent,
     TraceEventV2,
+    TraceEventV3,
     VehicleState,
 )
 from hermes.evidence.artifacts import (
@@ -51,6 +61,13 @@ from hermes.evidence.artifacts import (
 )
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
 from hermes.evidence.metrics import compute_metrics
+from hermes.evidence.schema_registry import (
+    ARTIFACT_MANIFEST_BY_EVIDENCE_SCHEMA,
+    EXECUTION_CONTEXT_BY_EVIDENCE_SCHEMA,
+    FINDINGS_DOCUMENT_BY_EVIDENCE_SCHEMA,
+    RUN_METRICS_BY_EVIDENCE_SCHEMA,
+    TRACE_EVENT_BY_EVIDENCE_SCHEMA,
+)
 from hermes.evidence.trace import TraceEventLike, TraceIntegrityError, verify_complete_trace
 from hermes.faults.deterministic import DeterministicFaultInjector
 from hermes.faults.eligibility import (
@@ -101,13 +118,13 @@ class VerifiedArtifactSnapshot:
     """Parsed immutable evidence captured and verified from one descriptor snapshot."""
 
     path: Path
-    manifest: ArtifactManifest | ArtifactManifestV2
-    context: ExecutionContext | ExecutionContextV2
+    manifest: ArtifactManifest | ArtifactManifestV2 | ArtifactManifestV3
+    context: ExecutionContext | ExecutionContextV2 | ExecutionContextV3
     scenario: ScenarioDefinition
     gate_config: GateConfig
     events: tuple[TraceEventLike, ...]
-    metrics: RunMetrics | RunMetricsV2
-    findings: FindingsDocument | FindingsDocumentV2
+    metrics: RunMetrics | RunMetricsV2 | RunMetricsV3
+    findings: FindingsDocument | FindingsDocumentV2 | FindingsDocumentV3
     verdict: GateResult
     verifier_profile: VerifierProfile
 
@@ -233,7 +250,7 @@ def _parse_canonical_model(
 def _parse_versioned_model(
     data: bytes,
     filename: str,
-    model_types: dict[str, type[_ModelT]],
+    model_types: Mapping[str, type[_ModelT]],
 ) -> _ModelT:
     payload = _strict_json(data, filename)
     if not isinstance(payload, dict):
@@ -261,10 +278,14 @@ def _parse_versioned_model(
     canonical = canonical_json_bytes(payload) + b"\n"
     if data != canonical:
         raise ValueError(f"{filename} is not canonical JSON")
+    model_type = model_types[version]
     try:
-        return model_types[version].model_validate_json(canonical_json_bytes(payload))
+        parsed = model_type.model_validate_json(canonical_json_bytes(payload))
     except ValidationError as exc:
         raise ValueError(f"{filename} schema validation failed: {exc}") from exc
+    if type(parsed) is not model_type:
+        raise ValueError(f"{filename} did not return the exact declared-version model")
+    return parsed
 
 
 def _invalid(
@@ -508,15 +529,12 @@ def _parse_events(data: bytes) -> tuple[TraceEventLike, ...]:
                 "evidence_schema_version"
             )
         version = payload["evidence_schema_version"]
-        model_type: type[TraceEvent] | type[TraceEventV2]
-        if version == "1.0":
-            model_type = TraceEvent
-        elif version == "2.0":
-            model_type = TraceEventV2
-        else:
+        model_type = TRACE_EVENT_BY_EVIDENCE_SCHEMA.get(version)
+        if model_type is None:
+            supported = ", ".join(TRACE_EVENT_BY_EVIDENCE_SCHEMA)
             raise ValueError(
                 f"events.jsonl line {line_number} evidence_schema_version "
-                f"{version!r} is unsupported; supported versions: 1.0, 2.0"
+                f"{version!r} is unsupported; supported versions: {supported}"
             )
         run_context = payload.get("run_context")
         if not isinstance(run_context, dict) or "evidence_schema_version" not in run_context:
@@ -533,11 +551,17 @@ def _parse_events(data: bytes) -> tuple[TraceEventLike, ...]:
         if line != canonical:
             raise ValueError(f"events.jsonl line {line_number} is not canonical JSON")
         try:
-            events.append(model_type.model_validate_json(canonical))
+            parsed = model_type.model_validate_json(canonical)
         except ValidationError as exc:
             raise ValueError(
                 f"events.jsonl line {line_number} schema validation failed: {exc}"
             ) from exc
+        if type(parsed) is not model_type:
+            raise ValueError(
+                f"events.jsonl line {line_number} did not return the exact "
+                "declared-version model"
+            )
+        events.append(parsed)
     return tuple(events)
 
 
@@ -546,8 +570,186 @@ def _first_sequence(message: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def _strict_adas_controller_config(
+    context: ExecutionContextV3,
+    scenario: ScenarioDefinition,
+) -> AdasControllerConfig:
+    policy_config = dict(context.policy.config)
+    target_speed_mps = policy_config.pop("target_speed_mps", None)
+    simulated_latency_ms = policy_config.pop("simulated_policy_latency_ms", None)
+    if target_speed_mps != scenario.control.target_speed_mps:
+        raise ValueError("stored target speed does not match the scenario")
+    if simulated_latency_ms != scenario.control.simulated_policy_latency_ms:
+        raise ValueError("stored simulated latency does not match the scenario")
+    return AdasControllerConfig.model_validate(policy_config)
+
+
+def _expected_control_evidence(
+    *,
+    candidate_time_s: float,
+    source_sequence: int | None,
+    source_time_s: float | None,
+    execution_time_s: float,
+    pre_saturation_action: Action,
+    reason_codes: tuple[str, ...],
+) -> ControlFaultEvidence:
+    latency = (
+        Measurement(
+            availability=EvidenceAvailability.NOT_AVAILABLE,
+            unit="ms",
+            reason="control-delay startup fill has no originating candidate",
+        )
+        if source_time_s is None
+        else Measurement(
+            availability=EvidenceAvailability.AVAILABLE,
+            value=(execution_time_s - source_time_s) * 1000.0,
+            unit="ms",
+        )
+    )
+    return ControlFaultEvidence(
+        candidate_time_s=candidate_time_s,
+        executed_from_sequence=source_sequence,
+        executed_from_candidate_time_s=source_time_s,
+        execution_time_s=execution_time_s,
+        pre_saturation_action=pre_saturation_action,
+        applied_faults=reason_codes,
+        control_latency_ms=latency,
+        latency_source="simulated",
+    )
+
+
+def _replay_v3_profile(
+    context: ExecutionContextV3,
+    scenario: ScenarioDefinition,
+    events: tuple[TraceEventLike, ...],
+    *,
+    shield: DeterministicSafetyShield | None,
+    fault_injector: DeterministicFaultInjector | None,
+    controller_config: AdasControllerConfig,
+) -> list[str]:
+    """Independently replay the complete stored ADAS input-to-execution kernel."""
+    errors: list[str] = []
+    kernel = AdasLongitudinalDecisionKernel(controller_config)
+    kernel.reset(scenario)
+    for event in events:
+        if type(event) is not TraceEventV3:
+            errors.append("stored V3 replay encountered a non-schema-3 trace event")
+            break
+        raw = event.observation_fault_evidence.raw_observation
+        try:
+            if fault_injector is None:
+                delivered = raw
+                expected_observation_evidence = ObservationFaultEvidence(
+                    raw_observation=raw,
+                    delivered_observation=raw,
+                    delivered_from_sequence=raw.sequence,
+                    delivered_from_time_s=raw.simulation_time_s,
+                    delivery_time_s=raw.simulation_time_s,
+                    applied_faults=(),
+                    speed_noise_delta_mps=0.0,
+                    lateral_noise_delta_m=0.0,
+                )
+            else:
+                faulted_observation = fault_injector.process_observation(raw)
+                delivered = faulted_observation.observation
+                expected_observation_evidence = ObservationFaultEvidence(
+                    raw_observation=raw,
+                    delivered_observation=delivered,
+                    delivered_from_sequence=faulted_observation.source_sequence,
+                    delivered_from_time_s=faulted_observation.source_simulation_time_s,
+                    delivery_time_s=faulted_observation.delivery_time_s,
+                    applied_faults=faulted_observation.reason_codes,
+                    speed_noise_delta_mps=faulted_observation.noise_deltas.speed_mps,
+                    lateral_noise_delta_m=faulted_observation.noise_deltas.lateral_offset_m,
+                )
+        except (ValidationError, ValueError, RuntimeError) as exc:
+            errors.append(
+                f"stored deterministic fault observation replay failed at sequence "
+                f"{event.sequence}: {exc}"
+            )
+            break
+        if event.observation_fault_evidence != expected_observation_evidence:
+            errors.append(
+                f"stored deterministic fault observation mismatch at sequence {event.sequence}"
+            )
+            break
+
+        try:
+            expected_candidate, expected_decision = kernel.step(delivered)
+        except (ValidationError, ValueError, RuntimeError) as exc:
+            errors.append(
+                f"stored ADAS policy replay failed at sequence {event.sequence}: {exc}"
+            )
+            break
+        stored_decision = AdasDecisionEvidence(
+            input_sequence=event.adas_decision_input_sequence,
+            input_time_s=event.adas_decision_input_time_s,
+            decision=event.adas_decision,
+        )
+        if (
+            event.candidate_action != expected_candidate
+            or stored_decision != expected_decision
+        ):
+            errors.append(f"stored ADAS policy replay mismatch at sequence {event.sequence}")
+            break
+
+        try:
+            expected_permitted, expected_override_reasons = (
+                shield.apply(delivered, expected_candidate)
+                if shield is not None
+                else (expected_candidate, ())
+            )
+            if fault_injector is None:
+                expected_executed = expected_permitted
+                expected_control_evidence = _expected_control_evidence(
+                    candidate_time_s=raw.simulation_time_s,
+                    source_sequence=event.sequence,
+                    source_time_s=raw.simulation_time_s,
+                    execution_time_s=raw.simulation_time_s,
+                    pre_saturation_action=expected_permitted,
+                    reason_codes=(),
+                )
+            else:
+                faulted_action = fault_injector.process_action(
+                    expected_permitted,
+                    sequence=event.sequence,
+                    simulation_time_s=raw.simulation_time_s,
+                )
+                expected_executed = faulted_action.action
+                expected_control_evidence = _expected_control_evidence(
+                    candidate_time_s=raw.simulation_time_s,
+                    source_sequence=faulted_action.source_sequence,
+                    source_time_s=faulted_action.source_simulation_time_s,
+                    execution_time_s=faulted_action.execution_time_s,
+                    pre_saturation_action=faulted_action.pre_saturation_action,
+                    reason_codes=faulted_action.reason_codes,
+                )
+        except (ValidationError, ValueError, RuntimeError) as exc:
+            errors.append(
+                f"stored V3 shield/control replay failed at sequence {event.sequence}: {exc}"
+            )
+            break
+        if (
+            event.permitted_action != expected_permitted
+            or event.override_reasons != expected_override_reasons
+        ):
+            errors.append(
+                f"stored deterministic shield decision mismatch at sequence {event.sequence}"
+            )
+            break
+        if (
+            event.executed_action != expected_executed
+            or event.control_fault_evidence != expected_control_evidence
+        ):
+            errors.append(
+                f"stored deterministic fault control mismatch at sequence {event.sequence}"
+            )
+            break
+    return errors
+
+
 def _profile_errors(
-    context: ExecutionContext | ExecutionContextV2,
+    context: ExecutionContext | ExecutionContextV2 | ExecutionContextV3,
     scenario: ScenarioDefinition,
     events: tuple[TraceEventLike, ...] | None,
 ) -> list[str]:
@@ -573,7 +775,12 @@ def _profile_errors(
         errors.append("scenario adapter does not match execution-context.json adapter")
 
     fault_injector: DeterministicFaultInjector | None = None
-    if isinstance(context, ExecutionContextV2):
+    has_fault_component = (
+        type(context) is ExecutionContextV2
+        or (type(context) is ExecutionContextV3 and context.faults is not None)
+    )
+    if has_fault_component:
+        assert context.faults is not None
         try:
             fault_config = FaultConfig.model_validate(context.faults.config)
             fault_injector = DeterministicFaultInjector(fault_config)
@@ -595,9 +802,38 @@ def _profile_errors(
                 "execution-context.json fault configuration does not match the scenario"
             )
     elif scenario.faults is not None:
-        errors.append("schema-3 fault scenario requires a schema-2 execution context")
+        errors.append("fault scenario requires a declared fault execution component")
 
-    if fault_injector is not None and events is not None:
+    if type(context) is ExecutionContextV3:
+        if (context.faults is not None) != (scenario.faults is not None):
+            errors.append(
+                "execution-context.json V3 fault identity presence does not match the scenario"
+            )
+        try:
+            controller_config = _strict_adas_controller_config(context, scenario)
+        except (ValidationError, ValueError) as exc:
+            errors.append(
+                "execution-context.json ADAS policy configuration is unsupported: "
+                f"{exc}"
+            )
+        else:
+            if events is not None and not errors:
+                errors.extend(
+                    _replay_v3_profile(
+                        context,
+                        scenario,
+                        events,
+                        shield=shield,
+                        fault_injector=fault_injector,
+                        controller_config=controller_config,
+                    )
+                )
+
+    if (
+        type(context) is not ExecutionContextV3
+        and fault_injector is not None
+        and events is not None
+    ):
         for event in events:
             if not isinstance(event, TraceEventV2):
                 errors.append("stored fault replay encountered a legacy trace event")
@@ -683,7 +919,7 @@ def _profile_errors(
                     f"{event.sequence}"
                 )
                 break
-    elif shield is not None and events is not None:
+    elif type(context) is not ExecutionContextV3 and shield is not None and events is not None:
         for event in events:
             if isinstance(event, TraceEventV2):
                 errors.append("stored shield replay encountered a schema-2 fault event")
@@ -1040,7 +1276,7 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
         if required_bundle_inputs.issubset(payloads)
         else None
     )
-    manifest: ArtifactManifest | ArtifactManifestV2 | None = None
+    manifest: ArtifactManifest | ArtifactManifestV2 | ArtifactManifestV3 | None = None
     safe_manifest_identity: _SafeManifestIdentity | None = None
     manifest_payload = payloads.get("manifest.json")
     if manifest_payload is not None:
@@ -1048,7 +1284,7 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
             manifest = _parse_versioned_model(
                 manifest_payload,
                 "manifest.json",
-                {"1.0": ArtifactManifest, "2.0": ArtifactManifestV2},
+                ARTIFACT_MANIFEST_BY_EVIDENCE_SCHEMA,
             )
         except ValueError as exc:
             errors.append(str(exc))
@@ -1085,19 +1321,19 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
         if bundle_text.strip() != computed_bundle_digest:
             errors.append("bundle.sha256 does not match manifest and companion bytes")
 
-    context: ExecutionContext | ExecutionContextV2 | None = None
-    metrics: RunMetrics | RunMetricsV2 | None = None
-    findings_document: FindingsDocument | FindingsDocumentV2 | None = None
+    context: ExecutionContext | ExecutionContextV2 | ExecutionContextV3 | None = None
+    metrics: RunMetrics | RunMetricsV2 | RunMetricsV3 | None = None
+    findings_document: FindingsDocument | FindingsDocumentV2 | FindingsDocumentV3 | None = None
     stored_verdict: GateResult | None = None
     versioned_documents = (
         (
             "execution-context.json",
-            {"1.0": ExecutionContext, "2.0": ExecutionContextV2},
+            EXECUTION_CONTEXT_BY_EVIDENCE_SCHEMA,
         ),
-        ("metrics.json", {"1.0": RunMetrics, "2.0": RunMetricsV2}),
+        ("metrics.json", RUN_METRICS_BY_EVIDENCE_SCHEMA),
         (
             "findings.json",
-            {"1.0": FindingsDocument, "2.0": FindingsDocumentV2},
+            FINDINGS_DOCUMENT_BY_EVIDENCE_SCHEMA,
         ),
     )
     for filename, model_types in versioned_documents:
@@ -1176,9 +1412,21 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
     events: tuple[TraceEventLike, ...] | None = None
     first_mismatch_sequence: int | None = None
     trace_digest: str | None = None
+    trace_shield_config: ShieldConfig | None = None
+    if (
+        context is not None
+        and context.shield.name == "deterministic"
+        and context.shield.version == "1.0"
+    ):
+        with suppress(ValidationError):
+            trace_shield_config = ShieldConfig.model_validate(context.shield.config)
     try:
         events = _parse_events(payloads["events.jsonl"])
-        trace_digest = verify_complete_trace(events, scenario)
+        trace_digest = verify_complete_trace(
+            events,
+            scenario,
+            shield_config=trace_shield_config,
+        )
     except (ArithmeticError, RecursionError, ValueError, TraceIntegrityError) as exc:
         message = str(exc)
         errors.append(message)
@@ -1200,7 +1448,10 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
             ("policy", context.policy),
             ("shield", context.shield),
         ]
-        if isinstance(context, ExecutionContextV2):
+        if type(context) is ExecutionContextV2 or (
+            type(context) is ExecutionContextV3 and context.faults is not None
+        ):
+            assert context.faults is not None
             components.append(("fault", context.faults))
         for component_name, component in components:
             if component.config_digest != config_digest(component.config):
@@ -1253,6 +1504,9 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
         observed_versions.update(event.evidence_schema_version for event in events)
     if len(observed_versions) > 1:
         errors.append("artifact files contain mixed evidence_schema_version values")
+    is_v3_bundle = "3.0" in observed_versions
+    if is_v3_bundle:
+        errors.append("V3 metrics/findings derivation unsupported until WP-5")
 
     if (
         manifest is not None
@@ -1285,14 +1539,36 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
         for field_name, expected in expected_manifest_values.items():
             if getattr(manifest, field_name) != expected:
                 errors.append(f"manifest.json {field_name} does not match execution context")
-        if isinstance(context, ExecutionContextV2):
-            if not isinstance(manifest, ArtifactManifestV2):
+        if type(context) is ExecutionContextV2:
+            if type(manifest) is not ArtifactManifestV2:
                 errors.append("schema-2 execution context requires a schema-2 manifest")
             else:
                 for field_name, expected in (
                     ("fault_name", context.faults.name),
                     ("fault_version", context.faults.version),
                     ("fault_config_digest", context.faults.config_digest),
+                ):
+                    if getattr(manifest, field_name) != expected:
+                        errors.append(
+                            f"manifest.json {field_name} does not match execution context"
+                        )
+        elif type(context) is ExecutionContextV3:
+            if type(manifest) is not ArtifactManifestV3:
+                errors.append("schema-3 execution context requires a schema-3 manifest")
+            else:
+                expected_fault_values = (
+                    (None, None, None)
+                    if context.faults is None
+                    else (
+                        context.faults.name,
+                        context.faults.version,
+                        context.faults.config_digest,
+                    )
+                )
+                for field_name, expected in zip(
+                    ("fault_name", "fault_version", "fault_config_digest"),
+                    expected_fault_values,
+                    strict=True,
                 ):
                     if getattr(manifest, field_name) != expected:
                         errors.append(
@@ -1329,7 +1605,8 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
     recomputed_verdict: GateResult | None = None
     verifier_profile: VerifierProfile | None = None
     if (
-        events is not None
+        not is_v3_bundle
+        and events is not None
         and trace_digest is not None
         and scenario is not None
         and gate_config is not None
@@ -1353,7 +1630,11 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
                     recomputed_findings = ()
                 else:
                     recomputed_findings = run_verifiers_for_profile(
-                        verifier_profile, fault_events, scenario, gate_config
+                        verifier_profile,
+                        fault_events,
+                        scenario,
+                        gate_config,
+                        shield_config=trace_shield_config,
                     )
             else:
                 legacy_events = tuple(
@@ -1366,7 +1647,11 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
                     recomputed_findings = ()
                 else:
                     recomputed_findings = run_verifiers_for_profile(
-                        verifier_profile, legacy_events, scenario, gate_config
+                        verifier_profile,
+                        legacy_events,
+                        scenario,
+                        gate_config,
+                        shield_config=trace_shield_config,
                     )
             adapter_name = context.adapter.name if context is not None else "fake"
             recomputed_verdict = apply_release_gate(

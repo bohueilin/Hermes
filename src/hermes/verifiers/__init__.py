@@ -11,12 +11,14 @@ from hermes.domain.models import (
     ScenarioDefinition,
     TraceEvent,
     TraceEventV2,
+    TraceEventV3,
     VerifierIdentity,
 )
 from hermes.evidence.metrics import compute_metrics
 from hermes.evidence.trace import TraceIntegrityError, verify_complete_trace
 from hermes.gates.config import GateConfig
 from hermes.gates.release import VerifierProfile
+from hermes.shields.config import ShieldConfig
 
 PHASE1_VERIFIER_IDENTITIES = (
     VerifierIdentity(
@@ -269,13 +271,15 @@ def _comfort_jerk(events: tuple[TraceEvent, ...], gate: GateConfig) -> Finding:
 
 
 def _trace_integrity(
-    events: tuple[TraceEvent, ...],
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
+    *,
+    shield_config: ShieldConfig | None = None,
 ) -> Finding:
     measurement = _available(float(len(events)), "events")
     criterion = "complete trace sequence and SHA-256 chain are internally consistent"
     try:
-        verify_complete_trace(events, scenario)
+        verify_complete_trace(events, scenario, shield_config=shield_config)
     except TraceIntegrityError as exc:
         match = re.search(r"sequence (\d+)", str(exc))
         sequence = int(match.group(1)) if match else None
@@ -316,10 +320,12 @@ def run_phase1_verifiers(
     events: tuple[TraceEvent, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
+    *,
+    shield_config: ShieldConfig | None = None,
 ) -> tuple[Finding, ...]:
     """Run the stable Phase 1 suite in deterministic finding order."""
     return (
-        _trace_integrity(events, scenario),
+        _trace_integrity(events, scenario, shield_config=shield_config),
         _collision(events, gate),
         _boundary(events, scenario, gate),
         _progress(events, gate),
@@ -418,9 +424,19 @@ def run_phase4_verifiers(
     events: tuple[TraceEventV2, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
+    *,
+    shield_config: ShieldConfig | None = None,
 ) -> tuple[Finding, ...]:
     """Run legacy safety checks plus required deterministic fault coverage."""
-    return (*run_phase1_verifiers(events, scenario, gate), _fault_coverage(events, scenario))
+    return (
+        *run_phase1_verifiers(
+            events,
+            scenario,
+            gate,
+            shield_config=shield_config,
+        ),
+        _fault_coverage(events, scenario),
+    )
 
 
 def run_verifiers_for_profile(
@@ -428,6 +444,8 @@ def run_verifiers_for_profile(
     events: tuple[TraceEvent, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
+    *,
+    shield_config: ShieldConfig | None = None,
 ) -> tuple[Finding, ...]:
     """Run exactly the suite a verifier profile enumerates.
 
@@ -440,14 +458,34 @@ def run_verifiers_for_profile(
 
     if profile is VerifierProfile.ADAS_P0_LONGITUDINAL:
         return (
-            *run_phase1_verifiers(events, scenario, gate),
+            *run_phase1_verifiers(
+                events,
+                scenario,
+                gate,
+                shield_config=shield_config,
+            ),
             *run_adas_p0_longitudinal_verifiers(events, scenario, gate),
         )
     if profile is VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT:
         return (
-            *run_phase4_verifiers(events, scenario, gate),  # type: ignore[arg-type]
+            *run_phase4_verifiers(  # type: ignore[arg-type]
+                events,
+                scenario,
+                gate,
+                shield_config=shield_config,
+            ),
             *run_adas_p0_longitudinal_verifiers(events, scenario, gate),
         )
     if profile is VerifierProfile.FAULT_COVERAGE:
-        return run_phase4_verifiers(events, scenario, gate)  # type: ignore[arg-type]
-    return run_phase1_verifiers(events, scenario, gate)
+        return run_phase4_verifiers(  # type: ignore[arg-type]
+            events,
+            scenario,
+            gate,
+            shield_config=shield_config,
+        )
+    return run_phase1_verifiers(
+        events,
+        scenario,
+        gate,
+        shield_config=shield_config,
+    )
