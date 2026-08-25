@@ -221,7 +221,8 @@ The following inventory prices the change; it does not authorize work.
 | Orchestrator | `_observation_summary`, `_build_execution_context`, `_execute_episode`, schema-specific event creation, metric/finding dispatch, and bundle staging in `src/hermes/runtime/orchestrator.py`. Candidate, permitted, executed, raw, delivered, result, and reviewable selection evidence must remain distinct. |
 | Trace construction and semantics | `create_trace_event`, `create_trace_event_v2`, `_OBSERVATION_SUMMARY_FIELDS`, `_CHALLENGE_OBSERVATION_SUMMARY_FIELDS`, `_expected_observation_summary_fields`, `_expected_challenge_phase`, `_verify_observation_summary`, `_verify_fault_event`, `_verify_fault_challenge_evidence`, `verify_event_chain`, `verify_complete_trace`, and `events_jsonl_bytes` in `src/hermes/evidence/trace.py`. Add a separate v3 path; preserve v1/v2 byte semantics. |
 | Artifact write/read/version dispatch | `write_bundle` in `src/hermes/evidence/artifacts.py`; `_parse_versioned_model`, `_parse_events`, profile checks, version-consistency checks, recomputed metrics/findings/verdict, and model maps in `src/hermes/evidence/verification.py`. Every stored file carrying `evidence_schema_version` needs explicit v3 dispatch and mixed-version rejection. |
-| Metrics and findings | `compute_metrics` and minimum-TTC front-pair selection in `src/hermes/evidence/metrics.py`; ADAS finding construction and verifier profile registration in `src/hermes/verifiers/__init__.py` and `src/hermes/verifiers/adas.py`. Metrics must cite the selected actor and reject a selector/roster contradiction. |
+| Metrics and findings | `compute_metrics` and minimum-TTC front-pair selection in `src/hermes/evidence/metrics.py`; ADAS finding construction in `src/hermes/verifiers/adas.py`; suite dispatch in `src/hermes/verifiers/__init__.py::run_verifiers_for_profile`. Metrics must cite the selected actor and reject a selector/roster contradiction. |
+| Verifier profile and release registry | `VerifierProfile`, `EXPECTED_FINDINGS_BY_PROFILE`, `EVIDENCE_REQUIREMENTS_BY_PROFILE`, and `select_verifier_profile` in `src/hermes/gates/release.py` define the profile enum, expected-finding/evidence registry, and profile selection. Preserve exact suite/registry agreement when adding v3; `src/hermes/verifiers/__init__.py` remains the suite dispatcher. |
 | ADAS projection and controller | `AdasObservation` and `project_observation` in `src/hermes/adas/interfaces.py`, the FCW/AEB state machines in `src/hermes/adas/functions.py`, and `AdasLongitudinalPolicy` in `src/hermes/adas/policy.py`. The policy may consume the selected front pair, but selection must be an evidence-bound environment/verifier contract rather than private policy state. |
 | Offline ADAS oracle | `_Sample`, `_samples`, `_threat_samples`, `adas_threat_response`, `adas_brake_onset_margin`, `adas_no_false_intervention`, and `adas_warning_timing` in `src/hermes/verifiers/adas.py`. Recompute selected-front consistency from stored roster before using gap/relative speed. Do not make kind-specific threat exceptions. |
 | Shield | `observation_ttc_s` and `DeterministicSafetyShield.apply` in `src/hermes/shields/deterministic.py`. The shield must consume the same delivered selected actor as the policy and leave evidence of any override; it must not run an independent unrecorded selector. |
@@ -258,11 +259,19 @@ neutral action. It is not a contract that actively preserves constant world spee
 `PRE_TRIGGER` phase does not state steady motion.
 
 Therefore `scenarios/adas/adas_nominal_slow_closing.yaml` overstates its evidence when its
-comments say required deceleration stays below threshold “throughout” and “nothing is due: no
-warning, no braking.” It also cannot prove the proposed true `slow_lead_closing` semantics.
-This note does not edit or rebaseline that existing scenario; the overstatement should be
-corrected only under an owner-approved migration decision because scenario bytes and digest are
-already identity-sensitive and the scenario remains part of seeded-defect coverage.
+comments describe a steady/threat-free-throughout exposure. The scheduled final-step brake is
+the **lead actor's** real brake and proves that actor is not steady through the horizon. It does
+not by itself prove that ego/AEB braking was due or occurred: candidate/executed ego action and
+the offline findings answer those separate questions. In the scenario comments, “nothing is
+due: no warning, no braking” contextually describes the expected ego FCW/AEB response, not the
+lead actor's command, so the actor brake alone does not contradict that response claim.
+
+The existing case still cannot prove the proposed true `slow_lead_closing` semantics. This note
+does not edit it. A comment-only correction would change the source YAML bytes but not the
+value-based `scenario_digest`, because comments are absent from the parsed
+`ScenarioDefinition`; changing bound values such as `description`, `trigger_step`, or another
+schedule field would change that digest. Any bound-field correction or rebaseline remains an
+owner-approved migration decision because the scenario is part of seeded-defect coverage.
 
 Its `adas.expected_fcw.kind: none` is also not evidence that no warning was emitted.
 `AdasLongitudinalPolicy` computes an `AdasDecision.warning` internally, but `TraceEvent` and
