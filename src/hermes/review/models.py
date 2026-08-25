@@ -1798,6 +1798,40 @@ class MetricItemV2(ReviewModel):
         )
         if not isinstance(self.value, StringCountMapMetricValue) and value_unit != spec.unit:
             raise ValueError("schema-2 metric unit must exactly match the shared registry")
+        if isinstance(self.value, ScalarMetricValue):
+            machine_value = self.value.value.machine_value
+            valid_machine_value = (
+                isinstance(machine_value, (int, float))
+                and not isinstance(machine_value, bool)
+                and isfinite(float(machine_value))
+            )
+        elif isinstance(self.value, CountMetricValue):
+            valid_machine_value = self.value.value is None or (
+                isinstance(self.value.value, int) and not isinstance(self.value.value, bool)
+            )
+        elif isinstance(self.value, BooleanMetricValue):
+            valid_machine_value = self.value.value is None or isinstance(self.value.value, bool)
+        elif isinstance(self.value, StringCountMapMetricValue):
+            valid_machine_value = all(
+                isinstance(key, str)
+                and bool(key)
+                and isinstance(value, int)
+                and not isinstance(value, bool)
+                and value >= 0
+                for key, value in self.value.values.items()
+            )
+        elif isinstance(self.value, EnumMetricValue):
+            valid_machine_value = isinstance(self.value.value, str) and bool(self.value.value)
+        else:
+            valid_machine_value = self.value.value is None or (
+                isinstance(self.value.value, (int, float))
+                and not isinstance(self.value.value, bool)
+                and isfinite(float(self.value.value))
+            )
+        if not valid_machine_value:
+            raise ValueError(
+                "schema-2 metric machine value must exactly match its registry value kind"
+            )
         if (
             self.availability != getattr(self.value, "availability", "AVAILABLE")
             or self.unavailable_reason != getattr(self.value, "reason", None)

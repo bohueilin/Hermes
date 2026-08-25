@@ -28,6 +28,7 @@ from hermes.agents.contracts import (
     fail,
     ok,
 )
+from hermes.evidence.artifacts import REQUIRED_ARTIFACT_FILES
 
 _MAX_EVENT_WINDOW = 40
 STALE_OBSERVATION_FAULT_REASONS = frozenset(
@@ -108,7 +109,10 @@ def _guard(context: ToolContext, tool: str, permission: ToolPermission) -> ToolR
 
 
 def _require_bundle(
-    context: ToolContext, tool: str, run_id: str
+    context: ToolContext,
+    tool: str,
+    run_id: str,
+    captured_bundle: _AgentBundle | None = None,
 ) -> tuple[_AgentBundle, None] | tuple[None, ToolResult]:
     path = PurePosixPath(run_id)
     if (
@@ -127,6 +131,15 @@ def _require_bundle(
             ToolPermission.READ,
             "run selection must be a lexical root-contained path",
         )
+    if captured_bundle is not None:
+        if captured_bundle.path != _bundle(context, run_id):
+            return None, fail(
+                tool,
+                ToolErrorCode.INVALID_EVIDENCE,
+                ToolPermission.READ,
+                "workflow capture does not match the requested artifact selection",
+            )
+        return captured_bundle, None
     from hermes.evidence.verification import _inspect_artifact_under_root_capture
 
     capture = _inspect_artifact_under_root_capture(context.artifact_root, run_id)
@@ -134,7 +147,16 @@ def _require_bundle(
         return None, fail(
             tool, ToolErrorCode.NOT_FOUND, ToolPermission.READ, f"unknown run: {run_id}"
         )
-    if capture.inspection.snapshot is None:
+    payloads = capture.payload_map()
+    safe_identity = capture.safe_manifest_identity
+    legacy_invalid_read = (
+        capture.inspection.snapshot is None
+        and safe_identity is not None
+        and safe_identity.evidence_schema_version in {"1.0", "2.0"}
+        and set(REQUIRED_ARTIFACT_FILES) <= payloads.keys()
+        and capture.inspection.observed_bundle_digest is not None
+    )
+    if capture.inspection.snapshot is None and not legacy_invalid_read:
         detail = "; ".join(capture.inspection.verification.errors[:2])
         return None, fail(
             tool,
@@ -146,7 +168,7 @@ def _require_bundle(
         _AgentBundle(
             path=_bundle(context, run_id),
             capture=capture,
-            payloads=capture.payload_map(),
+            payloads=payloads,
         ),
         None,
     )
@@ -332,7 +354,12 @@ def get_scenario(context: ToolContext, *, name: str) -> ToolResult:
     return fail(tool, ToolErrorCode.NOT_FOUND, ToolPermission.READ, f"unknown scenario: {name}")
 
 
-def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
+def query_run(
+    context: ToolContext,
+    *,
+    run_id: str,
+    _captured_bundle: _AgentBundle | None = None,
+) -> ToolResult:
     """Return a run's verdict, integrity state, and identity.
 
     Integrity is re-derived here rather than read from the bundle's stored claim: a bundle
@@ -342,7 +369,7 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
     guard = _guard(context, tool, ToolPermission.READ)
     if guard is not None:
         return guard
-    bundle, error = _require_bundle(context, tool, run_id)
+    bundle, error = _require_bundle(context, tool, run_id, _captured_bundle)
     if error is not None:
         return error
     assert bundle is not None
@@ -353,7 +380,6 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
     inspection = bundle.capture.inspection
     verification = inspection.verification
     snapshot = inspection.snapshot
-    assert snapshot is not None
     manifest = _read_json(bundle, "manifest.json")
     data: dict[str, Any] = {
         "run_id": run_id,
@@ -366,9 +392,10 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
         "errors": list(verification.errors),
     }
     citations = [_citation(run_id, bundle, "verdict.json", "/verdict", verification.verdict.value)]
-    execution_document = _read_json(bundle, "execution-context.json")
-    execution = snapshot.context
-    if (
+    if snapshot is not None:
+        execution_document = _read_json(bundle, "execution-context.json")
+        execution = snapshot.context
+    if snapshot is not None and (
         execution_document.get("evidence_schema_version") in {"2.0", "3.0"}
         and type(execution) in {ExecutionContextV2, ExecutionContextV3}
         and execution.policy.name == "adas-longitudinal"
@@ -423,18 +450,41 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
     )
 
 
-def get_findings(context: ToolContext, *, run_id: str) -> ToolResult:
+def get_findings(
+    context: ToolContext,
+    *,
+    run_id: str,
+    _captured_bundle: _AgentBundle | None = None,
+) -> ToolResult:
     """Return a run's verifier findings, each bound to a citation."""
     tool = "get_findings"
     guard = _guard(context, tool, ToolPermission.READ)
     if guard is not None:
         return guard
-    bundle, error = _require_bundle(context, tool, run_id)
+    bundle, error = _require_bundle(context, tool, run_id, _captured_bundle)
     if error is not None:
         return error
     assert bundle is not None
-    document = _read_json(bundle, "findings.json")
+    try:
+        document = _read_json(bundle, "findings.json")
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError) as exc:
+        return fail(
+            tool,
+            ToolErrorCode.INVALID_EVIDENCE,
+            ToolPermission.READ,
+            f"captured findings.json is malformed: {exc}",
+        )
     items = document["findings"] if isinstance(document, dict) else document
+    if not isinstance(items, list) or any(
+        not isinstance(item, dict) or not isinstance(item.get("status"), str)
+        for item in items
+    ):
+        return fail(
+            tool,
+            ToolErrorCode.INVALID_EVIDENCE,
+            ToolPermission.READ,
+            "captured findings.json does not contain the legacy findings list",
+        )
     citations = tuple(
         _citation(
             run_id,
@@ -448,20 +498,44 @@ def get_findings(context: ToolContext, *, run_id: str) -> ToolResult:
     return ok(tool, {"findings": items, "count": len(items)}, citations)
 
 
-def get_metrics(context: ToolContext, *, run_id: str) -> ToolResult:
+def get_metrics(
+    context: ToolContext,
+    *,
+    run_id: str,
+    _captured_bundle: _AgentBundle | None = None,
+) -> ToolResult:
     """Return a run's stored metrics, each scalar bound to a citation."""
     tool = "get_metrics"
     guard = _guard(context, tool, ToolPermission.READ)
     if guard is not None:
         return guard
-    bundle, error = _require_bundle(context, tool, run_id)
+    bundle, error = _require_bundle(context, tool, run_id, _captured_bundle)
     if error is not None:
         return error
     assert bundle is not None
-    metrics = _read_json(bundle, "metrics.json")
+    try:
+        metrics = _read_json(bundle, "metrics.json")
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError) as exc:
+        return fail(
+            tool,
+            ToolErrorCode.INVALID_EVIDENCE,
+            ToolPermission.READ,
+            f"captured metrics.json is malformed: {exc}",
+        )
+    if not isinstance(metrics, dict):
+        return fail(
+            tool,
+            ToolErrorCode.INVALID_EVIDENCE,
+            ToolPermission.READ,
+            "captured metrics.json is not an object",
+        )
     snapshot = bundle.capture.inspection.snapshot
-    assert snapshot is not None
-    if snapshot.manifest.evidence_schema_version == "3.0":
+    evidence_schema_version = (
+        snapshot.manifest.evidence_schema_version
+        if snapshot is not None
+        else bundle.capture.safe_manifest_identity.evidence_schema_version
+    )
+    if evidence_schema_version == "3.0":
         from hermes.domain.models import RunMetricsV3
         from hermes.evidence.metric_registry import SCHEMA2_METRIC_REGISTRY
 
@@ -516,7 +590,7 @@ def get_metrics(context: ToolContext, *, run_id: str) -> ToolResult:
             if isinstance(value, (int, float, str)) and not isinstance(value, bool)
         ]
     maximum_age = metrics.get("max_observation_age_s")
-    if snapshot.manifest.evidence_schema_version != "3.0" and isinstance(maximum_age, dict):
+    if evidence_schema_version != "3.0" and isinstance(maximum_age, dict):
         value = maximum_age.get("value")
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             citations.append(

@@ -99,12 +99,9 @@ def _walk(payload: Any, pointer: str) -> tuple[bool, Any]:
     return True, current
 
 
-def check_citation(citation: Citation, artifact_root: Path) -> CitationCheck:
-    """Re-resolve one citation from one root-contained immutable capture."""
-
-    selection = citation.run_id
+def _safe_run_selection(selection: str) -> bool:
     path = PurePosixPath(selection)
-    if (
+    return not (
         not selection
         or path.is_absolute()
         or "\\" in selection
@@ -113,7 +110,19 @@ def check_citation(citation: Citation, artifact_root: Path) -> CitationCheck:
         or "//" in selection
         or any(part in {"", ".", ".."} for part in path.parts)
         or str(path) != selection
-    ):
+    )
+
+
+def check_citation(
+    citation: Citation,
+    artifact_root: Path,
+    *,
+    _capture: Any | None = None,
+) -> CitationCheck:
+    """Re-resolve one citation from one root-contained immutable capture."""
+
+    selection = citation.run_id
+    if not _safe_run_selection(selection):
         return CitationCheck(
             citation=citation,
             status=CitationStatus.UNSAFE_PATH,
@@ -126,7 +135,11 @@ def check_citation(citation: Citation, artifact_root: Path) -> CitationCheck:
             detail="citation artifact file is outside the exact bundle allowlist",
         )
 
-    capture = _inspect_artifact_under_root_capture(artifact_root, selection)
+    capture = (
+        _inspect_artifact_under_root_capture(artifact_root, selection)
+        if _capture is None
+        else _capture
+    )
     inspection = capture.inspection
     payloads = capture.payload_map()
     if not capture.captured_files:
@@ -253,7 +266,38 @@ def _compare(citation: Citation, value: Any) -> CitationCheck:
 def check_citations(
     citations: tuple[Citation, ...], artifact_root: Path
 ) -> tuple[CitationCheck, ...]:
-    return tuple(check_citation(citation, artifact_root) for citation in citations)
+    anchor = next(
+        (
+            citation
+            for citation in citations
+            if _safe_run_selection(citation.run_id)
+            and citation.artifact_file in REQUIRED_ARTIFACT_FILES
+        ),
+        None,
+    )
+    if anchor is None:
+        return tuple(check_citation(citation, artifact_root) for citation in citations)
+    capture = _inspect_artifact_under_root_capture(artifact_root, anchor.run_id)
+    checks: list[CitationCheck] = []
+    for citation in citations:
+        if (
+            _safe_run_selection(citation.run_id)
+            and citation.artifact_file in REQUIRED_ARTIFACT_FILES
+            and citation.run_id != anchor.run_id
+        ):
+            checks.append(
+                CitationCheck(
+                    citation=citation,
+                    status=CitationStatus.BUNDLE_DIGEST_MISMATCH,
+                    detail=(
+                        "citation batch spans multiple run selections and cannot be bound "
+                        "to one immutable capture"
+                    ),
+                )
+            )
+        else:
+            checks.append(check_citation(citation, artifact_root, _capture=capture))
+    return tuple(checks)
 
 
 def all_valid(checks: tuple[CitationCheck, ...]) -> bool:

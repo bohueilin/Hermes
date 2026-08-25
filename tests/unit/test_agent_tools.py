@@ -336,6 +336,11 @@ def test_triage_ignores_not_available_findings_when_a_real_failure_is_present(
     monkeypatch.setattr(triage_module, "get_findings", lambda *_args, **_kwargs: findings)
     monkeypatch.setattr(
         triage_module,
+        "_require_bundle",
+        lambda *_args, **_kwargs: (SimpleNamespace(), None),
+    )
+    monkeypatch.setattr(
+        triage_module,
         "get_metrics",
         lambda *_args, **_kwargs: ok("get_metrics", {"metrics": {}}),
     )
@@ -378,6 +383,11 @@ def _stub_stale_triage_evidence(
     counterfactual_sequence: int | None = 6,
     delivered_from_sequence: int = 0,
 ) -> None:
+    monkeypatch.setattr(
+        triage_module,
+        "_require_bundle",
+        lambda *_args, **_kwargs: (SimpleNamespace(), None),
+    )
     finding_items = [
         {"finding_id": finding_id, "status": "FAIL"}
         for finding_id in failed_findings

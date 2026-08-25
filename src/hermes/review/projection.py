@@ -12,6 +12,7 @@ from unicodedata import category as unicode_category
 from hermes.comparison.compare import ArtifactComparison, ArtifactComparisonV2
 from hermes.domain.models import BooleanMeasurement, CountMeasurement, Measurement
 from hermes.evidence.metric_registry import (
+    SCHEMA2_METRIC_BY_ID,
     SCHEMA2_METRIC_REGISTRY,
     metric_leaf_uses_wrapper,
     metric_leaf_value,
@@ -687,7 +688,7 @@ def _finding_references(
             and metrics.adas.aeb.required_decel_at_onset_mps2.availability.value == "AVAILABLE"
             and measured.value == metrics.adas.aeb.required_decel_at_onset_mps2.value
         ):
-            metric = "adas/aeb/required_decel_at_onset_mps2"
+            metric = "adas.aeb.required_decel_at_onset_mps2"
         elif (
             finding.finding_id == "adas.fcw.warning_timing"
             and measured.unit == "s"
@@ -696,9 +697,18 @@ def _finding_references(
         ):
             metric = "minimum_ttc_s"
     if metric is not None:
-        pointer = f"/{metric}"
         if snapshot.manifest.evidence_schema_version == "3.0":
-            pointer += "/value"
+            spec = SCHEMA2_METRIC_BY_ID.get(metric)
+            if spec is None:
+                raise ReviewUnavailableError(
+                    ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+                    f"finding {finding.finding_id!r} links an unregistered metric {metric!r}",
+                )
+            pointer = spec.json_pointer
+            if metric_leaf_uses_wrapper(spec):
+                pointer += "/value"
+        else:
+            pointer = f"/{metric}"
         references.insert(0, _reference("METRIC", pointer))
     references.extend(_reference("EVENT", "", sequence) for sequence in finding.event_sequences)
     return _ordered_references(*references)
@@ -2021,9 +2031,33 @@ def _comparison_v2_references(dimension: object) -> tuple[SideReference, ...]:
 def _project_comparison_envelope_v2(
     comparison: ArtifactComparisonV2,
     *,
-    baseline: ReviewEnvelopeV2,
-    candidate: ReviewEnvelopeV2,
+    baseline: ReviewEnvelope | ReviewEnvelopeV2,
+    candidate: ReviewEnvelope | ReviewEnvelopeV2,
 ) -> ComparisonEnvelopeV2:
+    schema2_sibling = (
+        baseline
+        if type(baseline) is ReviewEnvelopeV2
+        else candidate
+        if type(candidate) is ReviewEnvelopeV2
+        else None
+    )
+    if schema2_sibling is None:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "schema-2 comparison requires at least one exact schema-2 review sibling",
+        )
+    if comparison.compatibility.comparable and (
+        type(baseline) is not ReviewEnvelopeV2 or type(candidate) is not ReviewEnvelopeV2
+    ):
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "compatible schema-2 comparison requires exact schema-2 review siblings",
+        )
+    if not comparison.compatibility.comparable and comparison.dimensions:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "incompatible schema-2 comparison cannot expose dimensions",
+        )
     baseline_summary = SideSummary(
         side="BASELINE",
         artifact=baseline.artifact,
@@ -2067,7 +2101,7 @@ def _project_comparison_envelope_v2(
     )
     return ComparisonEnvelopeV2(
         comparison_schema_version="2.0",
-        tool=baseline.tool,
+        tool=schema2_sibling.tool,
         baseline=baseline_summary,
         candidate=candidate_summary,
         compatibility=compatibility,
@@ -2235,11 +2269,6 @@ def project_comparison_envelope(
     """Map one authoritative core comparison into the portable review contract."""
 
     if type(comparison) is ArtifactComparisonV2:
-        if type(baseline) is not ReviewEnvelopeV2 or type(candidate) is not ReviewEnvelopeV2:
-            raise ReviewUnavailableError(
-                ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
-                "schema-2 comparison requires exact schema-2 review siblings",
-            )
         return _project_comparison_envelope_v2(
             comparison,
             baseline=baseline,

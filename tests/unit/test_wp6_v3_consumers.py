@@ -15,9 +15,11 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from hermes.agents.citations import CitationStatus, _walk, check_citations
+import hermes.agents.citations as citations_module
+import hermes.evidence.verification as verification_module
+from hermes.agents.citations import CitationStatus, _walk, all_valid, check_citations
 from hermes.agents.contracts import Citation, ToolErrorCode
-from hermes.agents.tools import ToolContext, get_metrics, query_run
+from hermes.agents.tools import ToolContext, get_findings, get_metrics, query_run
 from hermes.agents.triage import ScriptedAgent, triage_run
 from hermes.comparison.compare import compare_artifacts
 from hermes.evidence.verification import inspect_artifact
@@ -203,6 +205,53 @@ def test_schema2_review_rejects_extra_metric_and_consumed_gap_source_pointers(
         ReviewEnvelopeV2.model_validate_json(json.dumps(finding_payload))
 
 
+@pytest.mark.parametrize(
+    ("value_kind", "metric_id", "forged_value"),
+    (
+        ("SCALAR", "simulation_duration_s", "forged-duration"),
+        ("COUNT", "event_count", 1.5),
+        ("BOOLEAN", "collision_occurred", 1),
+        ("STRING_COUNT_MAP", "fault_application_counts", {"forged": 1.5}),
+        ("ENUM", "termination_reason", 3),
+        ("MEASUREMENT", "route_completion_pct", "forged-completion"),
+        ("NOT_AVAILABLE", None, 0.0),
+    ),
+)
+def test_schema2_review_rejects_forged_machine_values_for_every_registry_kind(
+    repository_root: Path,
+    tmp_path: Path,
+    value_kind: str,
+    metric_id: str | None,
+    forged_value: object,
+) -> None:
+    from pydantic import ValidationError
+
+    from hermes.review.models import ReviewEnvelopeV2
+
+    bundle = _synthetic_v3(repository_root, tmp_path / "source")
+    envelope = review_artifact(tmp_path / "source", bundle.name)
+    payload = envelope.model_dump(mode="json")
+    if value_kind == "NOT_AVAILABLE":
+        metric = next(item for item in payload["metrics"] if item["availability"] == value_kind)
+    else:
+        metric = next(item for item in payload["metrics"] if item["metric_id"] == metric_id)
+        assert metric["value"]["kind"] == value_kind
+    if value_kind == "SCALAR":
+        metric["value"]["value"] = {
+            "machine_value": forged_value,
+            "canonical_text": json.dumps(forged_value, separators=(",", ":")),
+            "display_text": forged_value,
+            "unit": metric["value"]["value"]["unit"],
+        }
+    elif value_kind == "STRING_COUNT_MAP":
+        metric["value"]["values"] = forged_value
+    else:
+        metric["value"]["value"] = forged_value
+
+    with pytest.raises(ValidationError):
+        ReviewEnvelopeV2.model_validate_json(json.dumps(payload))
+
+
 def test_recognized_tampered_v3_uses_schema2_quarantine(
     repository_root: Path,
     tmp_path: Path,
@@ -292,6 +341,67 @@ def test_any_mixed_v3_core_pair_is_schema2_incompatible_with_no_dimensions(
         assert result.comparison_schema_version == "2.0"
         assert result.compatibility.comparable is False
         assert result.dimensions == ()
+
+
+@pytest.mark.parametrize("legacy_first", (True, False))
+def test_mixed_legacy_v3_review_comparison_is_schema2_incompatible_in_both_orientations(
+    repository_root: Path,
+    tmp_path: Path,
+    legacy_first: bool,
+) -> None:
+    from hermes.review.models import ComparisonEnvelopeV2
+    from hermes.workbench.app import _comparison_rows
+
+    root = tmp_path / "artifacts"
+    root.mkdir()
+    legacy = root / "legacy"
+    shutil.copytree(repository_root / "artifacts" / "handoff-p1-nominal", legacy)
+    modern = _synthetic_v3(repository_root, root / "modern")
+    baseline, candidate = (legacy, modern) if legacy_first else (modern, legacy)
+
+    result = compare_review_artifacts(
+        root,
+        baseline.relative_to(root).as_posix(),
+        candidate.relative_to(root).as_posix(),
+    )
+
+    assert type(result) is ComparisonEnvelopeV2
+    assert result.comparison_schema_version == "2.0"
+    assert result.compatibility.status == "INCOMPATIBLE"
+    assert result.dimensions == ()
+    assert result.chart_series == ()
+    assert _comparison_rows(result) == ()
+
+
+def test_every_v3_finding_metric_link_resolves_to_the_exact_registered_leaf(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    bundle = _synthetic_v3(repository_root, tmp_path / "source", faulted=True)
+    envelope = review_artifact(tmp_path / "source", bundle.name)
+    stored_metrics = json.loads((bundle / "metrics.json").read_text(encoding="utf-8"))
+
+    metric_pointers = {
+        reference.json_pointer
+        for finding in envelope.findings
+        for reference in finding.source_references
+        if reference.source_type == "METRIC"
+    }
+    assert {
+        "/event_count",
+        "/collision_count",
+        "/max_abs_lateral_offset_m",
+        "/fault_application_counts",
+    } <= metric_pointers
+    assert not {
+        "/event_count/value",
+        "/collision_count/value",
+        "/max_abs_lateral_offset_m/value",
+        "/fault_application_counts/value",
+    } & metric_pointers
+    for pointer in metric_pointers:
+        found, _ = _walk(stored_metrics, pointer)
+        assert found, pointer
 
 
 def test_review_comparison_mirrors_schema2_core_with_exact_sibling(
@@ -478,6 +588,138 @@ def test_scripted_triage_consumes_v3_and_returns_resolvable_exact_citations(
 
     assert proposal.category == proposal.deterministic_category
     assert checks and all(check.status is CitationStatus.RESOLVED for check in checks)
+
+
+def test_triage_binds_all_read_tools_to_one_immutable_capture(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifacts = repository_root / "artifacts"
+    original_capture = verification_module._inspect_artifact_under_root_capture
+    alternating = (
+        original_capture(artifacts, "handoff-phase5-demo"),
+        original_capture(artifacts, "handoff-p1-collision"),
+    )
+    calls = 0
+
+    def alternating_capture(_root: Path, _selection: str):
+        nonlocal calls
+        capture = alternating[calls % len(alternating)]
+        calls += 1
+        return capture
+
+    monkeypatch.setattr(
+        verification_module,
+        "_inspect_artifact_under_root_capture",
+        alternating_capture,
+    )
+    proposal = triage_run(
+        ToolContext(repository_root=repository_root, artifact_root=artifacts),
+        "one-logical-run",
+        runtime=ScriptedAgent(),
+    )
+
+    assert calls == 1
+    assert len({citation.bundle_digest for citation in proposal.citations}) == 1
+
+
+def test_citation_batch_rejects_alternating_pass_hold_capture_laundering(
+    repository_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifacts = repository_root / "artifacts"
+    original_capture = verification_module._inspect_artifact_under_root_capture
+    pass_capture = original_capture(artifacts, "handoff-phase5-demo")
+    hold_capture = original_capture(artifacts, "handoff-p1-collision")
+    calls = 0
+
+    def alternating_capture(_root: Path, _selection: str):
+        nonlocal calls
+        capture = (pass_capture, hold_capture)[calls % 2]
+        calls += 1
+        return capture
+
+    monkeypatch.setattr(
+        citations_module,
+        "_inspect_artifact_under_root_capture",
+        alternating_capture,
+    )
+    citations = (
+        Citation(
+            run_id="one-logical-run",
+            artifact_file="verdict.json",
+            locator="/verdict",
+            quoted_value="PASS",
+            bundle_digest=pass_capture.inspection.observed_bundle_digest,
+        ),
+        Citation(
+            run_id="one-logical-run",
+            artifact_file="verdict.json",
+            locator="/verdict",
+            quoted_value="HOLD",
+            bundle_digest=hold_capture.inspection.observed_bundle_digest,
+        ),
+    )
+
+    checks = check_citations(citations, artifacts)
+
+    assert calls == 1
+    assert all_valid(checks) is False
+    assert any(check.status is CitationStatus.BUNDLE_DIGEST_MISMATCH for check in checks)
+
+
+@pytest.mark.parametrize("tool_name", ("query_run", "get_findings", "get_metrics"))
+def test_legacy_invalid_artifact_read_behavior_remains_exact(
+    repository_root: Path,
+    tool_name: str,
+) -> None:
+    artifacts = repository_root / "artifacts"
+    context = ToolContext(repository_root=repository_root, artifact_root=artifacts)
+    tools = {
+        "query_run": query_run,
+        "get_findings": get_findings,
+        "get_metrics": get_metrics,
+    }
+
+    result = tools[tool_name](context, run_id="phase1-tampered")
+
+    assert result.ok is True
+    if tool_name == "query_run":
+        assert result.data["integrity"] == "INVALID"
+        assert result.data["verdict"] == "INVALID_EVIDENCE"
+        assert result.data["errors"]
+    elif tool_name == "get_findings":
+        stored = json.loads((artifacts / "phase1-tampered" / "findings.json").read_text())
+        assert result.data == {
+            "findings": stored["findings"],
+            "count": len(stored["findings"]),
+        }
+    else:
+        stored = json.loads((artifacts / "phase1-tampered" / "metrics.json").read_text())
+        assert result.data == {"metrics": stored}
+
+
+def test_invalid_unknown_evidence_identity_still_fails_closed(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "artifacts"
+    root.mkdir()
+    unknown = root / "unknown"
+    shutil.copytree(repository_root / "artifacts" / "handoff-phase5-demo", unknown)
+    manifest_path = unknown / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["evidence_schema_version"] = "9.0"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = query_run(
+        ToolContext(repository_root=repository_root, artifact_root=root),
+        run_id=unknown.name,
+    )
+
+    assert result.ok is False
+    assert result.error is not None
+    assert result.error.code is ToolErrorCode.INVALID_EVIDENCE
 
 
 @pytest.mark.parametrize("output_format", ("json", "text"))
