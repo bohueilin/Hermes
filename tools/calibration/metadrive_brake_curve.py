@@ -15,6 +15,7 @@ import os
 import statistics
 import struct
 import subprocess
+import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -332,7 +333,7 @@ def build_evidence(
                 "braking_interval_count": summary.braking_interval_count,
                 "steady_interval_indices": list(summary.steady_interval_indices),
                 "repeat_trace_sha256": list(measurement.repeat_trace_sha256),
-                "repeat_bitwise_identical": True,
+                "repeat_bitwise_identical": len(set(measurement.repeat_trace_sha256)) == 1,
                 "trace": [point._asdict() for point in measurement.trace],
                 "metadrive_config": measurement.metadrive_config,
             }
@@ -347,6 +348,7 @@ def build_evidence(
             "claim, certification, or regulatory threshold."
         ),
         "consumers": ["fleetlab-travel-bridge"],
+        "producer": {"command": list(sys.argv)},
         "simulator": {
             "name": "MetaDrive",
             "version": simulator_version,

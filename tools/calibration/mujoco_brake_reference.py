@@ -567,7 +567,10 @@ def _curve_payload(item: CurveMeasurement) -> dict[str, Any]:
             item.repeat_integration_state_trace_sha256
         ),
         "repeat_observation_trace_sha256": list(item.repeat_observation_trace_sha256),
-        "repeat_bitwise_identical": True,
+        "repeat_bitwise_identical": (
+            len(set(item.repeat_integration_state_trace_sha256)) == 1
+            and len(set(item.repeat_observation_trace_sha256)) == 1
+        ),
         "trace_retention": (
             "replay inputs plus observation and mjSTATE_INTEGRATION trace SHA-256 digests"
         ),
@@ -666,7 +669,7 @@ def build_evidence(
             "dirty_before_output_write": repository_dirty,
         },
         "producer": {
-            "command": ["python3.11", "tools/calibration/mujoco_brake_reference.py"],
+            "command": list(sys.argv),
             "working_directory": "repository root",
         },
         "runtime": runtime_identity(mujoco=mujoco),

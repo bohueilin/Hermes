@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import struct
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -113,9 +114,12 @@ def test_environment_construction_retries_only_index_error() -> None:
 
 def test_measurement_runs_three_fresh_episodes_and_emits_bridge_distributions(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Removing repeat validation or the bridge payload must break the committed contract."""
     tool = _load_tool()
+    observed_argv = ["tools/calibration/metadrive_brake_curve.py", "--seed", "7"]
+    monkeypatch.setattr(sys, "argv", observed_argv)
     created: list[object] = []
 
     class Agent:
@@ -183,6 +187,7 @@ def test_measurement_runs_three_fresh_episodes_and_emits_bridge_distributions(
     assert evidence["curves"][0]["braking_interval_count"] == 3
     assert evidence["curves"][0]["steady_interval_indices"] == [1]
     assert evidence["curves"][0]["metadrive_config"]["map"] == "S"
+    assert evidence["producer"]["command"] == observed_argv
     assert evidence["bridge_summary"]["deceleration_distributions_mps2"]["peak"][
         "samples_by_entry_speed_mps"
     ] == [{"entry_speed_mps": 3.0, "value": 13.0}]
@@ -194,3 +199,32 @@ def test_measurement_runs_three_fresh_episodes_and_emits_bridge_distributions(
     tool.write_evidence(output, evidence)
     assert json.loads(output.read_text(encoding="utf-8")) == evidence
     assert output.read_bytes().endswith(b"\n")
+
+
+def test_evidence_marks_nonidentical_repeat_digests_as_not_bitwise_identical() -> None:
+    """An inconsistent measurement handed to serialization must not claim determinism."""
+    tool = _load_tool()
+    measurement = tool.CurveMeasurement(
+        entry_speed_command_mps=3.0,
+        entry_speed_observed_mps=3.0,
+        summary=tool.TraceSummary(13.0, 11.2, 28.0 / 3.0, 0.45, 3, (1,)),
+        trace=(
+            tool.TracePoint(0.0, 3.0, 0.0),
+            tool.TracePoint(0.1, 1.7, 0.25),
+            tool.TracePoint(0.2, 0.58, 0.4),
+            tool.TracePoint(0.3, 0.2, 0.45),
+        ),
+        repeat_trace_sha256=("a" * 64, "b" * 64, "a" * 64),
+        metadrive_config=tool.metadrive_config(entry_speed_mps=3.0, seed=7),
+    )
+
+    evidence = tool.build_evidence(
+        (measurement,),
+        simulator_version="0.4.3",
+        simulator_commit="a" * 40,
+        simulator_source="third_party/metadrive",
+        seed=7,
+        repeats=3,
+    )
+
+    assert evidence["curves"][0]["repeat_bitwise_identical"] is False

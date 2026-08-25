@@ -172,9 +172,13 @@ def test_fwdinv_sentinel_reads_two_array_slots_without_swapping_or_fabrication()
     assert "relative" not in " ".join(sample._fields)
 
 
-def test_evidence_is_deterministic_and_emits_distribution_not_trajectory_claims() -> None:
+def test_evidence_is_deterministic_and_emits_distribution_not_trajectory_claims(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The calibration output must expose distributions and its non-release scope."""
     tool = _load_tool()
+    observed_argv = ["tools/calibration/mujoco_brake_reference.py", "--seed", "7"]
+    monkeypatch.setattr(sys, "argv", observed_argv)
     mujoco = _require_mujoco(tool)
     model = tool.load_model(MODEL_PATH, mujoco=mujoco)
     measurement = tool.measure_entry_speed(
@@ -231,10 +235,7 @@ def test_evidence_is_deterministic_and_emits_distribution_not_trajectory_claims(
     assert decoded["api_contract"]["fwdinv_output"] == (
         "mujoco.MjData.solver_fwdinv two-element array at indices 0 and 1"
     )
-    assert decoded["producer"]["command"] == [
-        "python3.11",
-        "tools/calibration/mujoco_brake_reference.py",
-    ]
+    assert decoded["producer"]["command"] == observed_argv
     assert not any("/Users/" in part for part in decoded["producer"]["command"])
     runtime = decoded["runtime"]
     assert runtime["python"]["version"]
@@ -246,6 +247,34 @@ def test_evidence_is_deterministic_and_emits_distribution_not_trajectory_claims(
     assert runtime["mujoco_native_library"]["filename"]
     assert runtime["mujoco_native_library"]["size_bytes"] > 0
     assert len(runtime["mujoco_native_library"]["sha256"]) == 64
+
+
+def test_evidence_marks_nonidentical_repeat_digests_as_not_bitwise_identical() -> None:
+    """An inconsistent measurement handed to serialization must not claim determinism."""
+    tool = _load_tool()
+    mujoco = _require_mujoco(tool)
+    model = tool.load_model(MODEL_PATH, mujoco=mujoco)
+    measurement = tool.measure_entry_speed(
+        model,
+        entry_speed_mps=4.0,
+        seed=7,
+        repeats=3,
+        mujoco=mujoco,
+    )._replace(
+        repeat_observation_trace_sha256=("a" * 64, "b" * 64, "a" * 64)
+    )
+
+    evidence = tool.build_evidence(
+        (measurement,),
+        model_path=MODEL_PATH,
+        metadrive_curve_path=METADRIVE_CURVE_PATH,
+        repository_commit="a" * 40,
+        repository_dirty=False,
+        mujoco=mujoco,
+        model=model,
+    )
+
+    assert evidence["curves"][0]["repeat_bitwise_identical"] is False
 
 
 def test_measurement_rejects_any_repeat_count_other_than_three() -> None:
