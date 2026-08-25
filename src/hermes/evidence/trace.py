@@ -213,13 +213,32 @@ def _validate_v3_shield_transition(
 
 def _validate_v3_control_fault_replay(
     *,
+    run_context: RunContextV3,
     scenario: ScenarioDefinition | None,
     control_fault_evidence: ControlFaultEvidence,
     executed_action: Action,
     sequence: int,
 ) -> None:
-    if scenario is None or scenario.faults is None:
+    fault_identity = (
+        run_context.fault_name,
+        run_context.fault_version,
+        run_context.fault_config_digest,
+    )
+    if all(value is None for value in fault_identity):
+        if scenario is not None and scenario.faults is not None:
+            raise ValueError("fault scenario requires declared fault identity")
         return
+    if any(value is None for value in fault_identity):
+        raise ValueError("declared fault identity is incomplete")
+    if scenario is None or scenario.faults is None:
+        raise ValueError("declared fault identity requires a fault scenario")
+    if fault_identity[:2] != ("deterministic-faults", "1.0"):
+        raise ValueError("declared fault identity is unsupported")
+    expected_digest = sha256_hex(
+        canonical_json_bytes(scenario.faults.model_dump(mode="json"))
+    )
+    if run_context.fault_config_digest != expected_digest:
+        raise ValueError("declared fault config digest contradicts the scenario")
     expected_action, expected_reasons = replay_control_fault_action(
         config=scenario.faults,
         pre_saturation_action=control_fault_evidence.pre_saturation_action,
@@ -300,6 +319,7 @@ def create_trace_event_v3(
         source_permitted_brake_source=source_attribution,
     )
     _validate_v3_control_fault_replay(
+        run_context=run_context,
         scenario=scenario,
         control_fault_evidence=control_fault_evidence,
         executed_action=executed_action,
@@ -1138,6 +1158,7 @@ def _verify_v3_decision_and_attribution(
             source_permitted_brake_source=source_attribution,
         )
         _validate_v3_control_fault_replay(
+            run_context=event.run_context,
             scenario=scenario,
             control_fault_evidence=event.control_fault_evidence,
             executed_action=event.executed_action,

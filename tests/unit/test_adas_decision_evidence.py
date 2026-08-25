@@ -38,6 +38,8 @@ from hermes.domain.models import (
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
 from hermes.shields.config import ShieldConfig, shield_config_digest
 
+_DEFAULT_CONSTRUCTION_SCENARIO = object()
+
 
 def _scenario(*, control_delay_steps: int = 0, horizon_steps: int = 4) -> ScenarioDefinition:
     payload: dict[str, object] = {
@@ -164,6 +166,11 @@ def _run_context(
         if shield_config is not None
         else sha256_hex(canonical_json_bytes({}))
     )
+    fault_digest = (
+        sha256_hex(canonical_json_bytes(fault.model_dump(mode="json")))
+        if fault is not None
+        else None
+    )
     return RunContextV3(
         scenario_digest="a" * 64,
         gate_config_digest="b" * 64,
@@ -179,7 +186,7 @@ def _run_context(
         verifier_suite_digest="f" * 64,
         fault_name="deterministic-faults" if fault is not None else None,
         fault_version="1.0" if fault is not None else None,
-        fault_config_digest="1" * 64 if fault is not None else None,
+        fault_config_digest=fault_digest,
         seed=7,
         control_frequency_hz=10,
         horizon_steps=scenario.control.horizon_steps,
@@ -262,6 +269,10 @@ def _create_event(
     prior_events: tuple[TraceEventV3, ...] = (),
     shield_name: str = "noop",
     shield_config: ShieldConfig | None = None,
+    run_context: RunContextV3 | None = None,
+    construction_scenario: ScenarioDefinition | None | object = (
+        _DEFAULT_CONSTRUCTION_SCENARIO
+    ),
     is_last: bool = True,
     evidence: AdasDecisionEvidence | None = None,
 ) -> TraceEventV3:
@@ -277,13 +288,24 @@ def _create_event(
         pre_saturation_action=pre_saturation_action or permitted,
         applied_faults=control_faults,
     )
+    if construction_scenario is _DEFAULT_CONSTRUCTION_SCENARIO:
+        replay_scenario: ScenarioDefinition | None = scenario
+    else:
+        assert construction_scenario is None or isinstance(
+            construction_scenario, ScenarioDefinition
+        )
+        replay_scenario = construction_scenario
     return trace_module.create_trace_event_v3(
         sequence=sequence,
         simulation_time_s=result.simulation_time_s,
-        run_context=_run_context(
-            scenario,
-            shield_name=shield_name,
-            shield_config=shield_config,
+        run_context=(
+            run_context
+            if run_context is not None
+            else _run_context(
+                scenario,
+                shield_name=shield_name,
+                shield_config=shield_config,
+            )
         ),
         observation_summary=_summary(observation, result),
         candidate_action=candidate,
@@ -313,7 +335,7 @@ def _create_event(
         previous_hash=(
             prior_events[-1].current_hash if prior_events else trace_module.GENESIS_HASH
         ),
-        scenario=scenario,
+        scenario=replay_scenario,
         shield_config=shield_config,
         prior_events=prior_events,
     )
@@ -1108,3 +1130,145 @@ def test_v3_trace_rejects_coherent_control_fault_replay_tampering(
 
     with pytest.raises(trace_module.TraceIntegrityError, match="control fault replay"):
         trace_module.verify_complete_trace((events[0], tampered), scenario)
+
+
+def _mismatched_fault_scenario() -> ScenarioDefinition:
+    scenario = _scenario(control_delay_steps=1, horizon_steps=2)
+    assert scenario.faults is not None
+    payload = scenario.model_dump(mode="json")
+    fault_payload = scenario.faults.model_dump(mode="json")
+    fault_payload["max_brake"] = 0.3
+    payload["faults"] = fault_payload
+    return ScenarioDefinition.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("construction_scenario", "message"),
+    [
+        (None, "fault scenario"),
+        (_scenario(horizon_steps=2), "fault scenario"),
+        (_mismatched_fault_scenario(), "fault config digest"),
+    ],
+    ids=("missing-scenario", "scenario-without-faults", "mismatched-fault-config"),
+)
+def test_v3_fault_construction_requires_exact_declared_scenario_binding(
+    construction_scenario: ScenarioDefinition | None,
+    message: str,
+) -> None:
+    declared_scenario = _scenario(control_delay_steps=1, horizon_steps=2)
+    observation = _observation(0)
+    result = _observation(1)
+    decision = _decision()
+    neutral = project_to_action(throttle=0.0, brake=0.0)
+
+    with pytest.raises(ValueError, match=message):
+        _create_event(
+            scenario=declared_scenario,
+            construction_scenario=construction_scenario,
+            sequence=0,
+            observation=observation,
+            result=result,
+            decision=decision,
+            candidate=neutral,
+            permitted=neutral,
+            executed=neutral,
+            source_sequence=None,
+            source_time_s=None,
+            pre_saturation_action=neutral,
+            control_faults=("CONTROL_DELAY_FILL",),
+        )
+
+
+@pytest.mark.parametrize(
+    ("context_update", "message"),
+    [
+        ({"fault_name": "other-fault-injector"}, "fault identity"),
+        ({"fault_version": "2.0"}, "fault identity"),
+        ({"fault_config_digest": "2" * 64}, "fault config digest"),
+    ],
+    ids=("fault-name", "fault-version", "fault-config-digest"),
+)
+def test_v3_fault_construction_rejects_mismatched_declared_fault_identity(
+    context_update: dict[str, object],
+    message: str,
+) -> None:
+    scenario = _scenario(control_delay_steps=1, horizon_steps=2)
+    context_payload = _run_context(scenario).model_dump(mode="json")
+    context_payload.update(context_update)
+    context = RunContextV3.model_validate(context_payload)
+    observation = _observation(0)
+    result = _observation(1)
+    decision = _decision()
+    neutral = project_to_action(throttle=0.0, brake=0.0)
+
+    with pytest.raises(ValueError, match=message):
+        _create_event(
+            scenario=scenario,
+            run_context=context,
+            sequence=0,
+            observation=observation,
+            result=result,
+            decision=decision,
+            candidate=neutral,
+            permitted=neutral,
+            executed=neutral,
+            source_sequence=None,
+            source_time_s=None,
+            pre_saturation_action=neutral,
+            control_faults=("CONTROL_DELAY_FILL",),
+        )
+
+
+def test_v3_fault_construction_accepts_exact_declared_fault_binding() -> None:
+    scenario = _scenario(control_delay_steps=1, horizon_steps=2)
+    observation = _observation(0)
+    result = _observation(1)
+    decision = _decision()
+    neutral = project_to_action(throttle=0.0, brake=0.0)
+
+    event = _create_event(
+        scenario=scenario,
+        sequence=0,
+        observation=observation,
+        result=result,
+        decision=decision,
+        candidate=neutral,
+        permitted=neutral,
+        executed=neutral,
+        source_sequence=None,
+        source_time_s=None,
+        pre_saturation_action=neutral,
+        control_faults=("CONTROL_DELAY_FILL",),
+        is_last=False,
+    )
+
+    assert event.run_context.fault_name == "deterministic-faults"
+    assert event.run_context.fault_version == "1.0"
+    assert (
+        event.run_context.fault_config_digest
+        == "36acbc01c124ba77b000aa83630bcb988ba1cbc5dbd68792978f68efc4f72586"
+    )
+    assert event.control_fault_evidence.applied_faults == ("CONTROL_DELAY_FILL",)
+
+
+def test_v3_no_fault_construction_accepts_truthful_pass_through_without_scenario() -> None:
+    scenario = _scenario(horizon_steps=1)
+    observation = _observation(0)
+    result = _observation(1)
+    decision = _decision()
+    neutral = project_to_action(throttle=0.0, brake=0.0)
+
+    event = _create_event(
+        scenario=scenario,
+        construction_scenario=None,
+        sequence=0,
+        observation=observation,
+        result=result,
+        decision=decision,
+        candidate=neutral,
+        permitted=neutral,
+        executed=neutral,
+    )
+
+    assert event.run_context.fault_name is None
+    assert event.candidate_action == event.permitted_action == event.executed_action
