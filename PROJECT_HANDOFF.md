@@ -497,7 +497,7 @@ Hermes is *supporting evidence of autonomy fluency*, never the centrepiece. Lead
 evidence machinery there mis-types the work.
 
 **Career-positioning material is intentionally not in this repository.** It lives in a private
-local folder (`~/Documents/Hermes-Interview-Prep/`) and must not be committed here.
+location outside this checkout and must not be committed here.
 
 ---
 
