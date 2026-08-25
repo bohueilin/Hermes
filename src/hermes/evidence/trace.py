@@ -536,7 +536,7 @@ def _verify_fault_challenge_evidence(
     _verify_front_actor_fields(event, prefix="result_")
     expected_input_phase = _expected_challenge_phase(
         scenario,
-        event.sequence,
+        event.observation_fault_evidence.delivered_from_sequence,
         result=False,
     )
     expected_result_phase = _expected_challenge_phase(
@@ -600,24 +600,11 @@ def _verify_fault_challenge_evidence(
             raise TraceIntegrityError(
                 f"fault challenge {label} must start outside front overlap"
             )
-    if index > 0:
-        prior_summary = events[index - 1].observation_summary
-        for field_name in (
-            "front_distance_m",
-            "front_relative_speed_mps",
-            "challenge_actor_longitudinal_m",
-            "challenge_actor_lateral_offset_m",
-            "challenge_actor_speed_mps",
-            "challenge_phase",
-        ):
-            if not _challenge_values_match(
-                event.observation_summary[field_name],
-                prior_summary[f"result_{field_name}"],
-            ):
-                raise TraceIntegrityError(
-                    f"fault challenge {field_name} disagrees with the prior result at "
-                    f"sequence {event.sequence}"
-                )
+    # Raw challenge observations are already required to equal the immediately prior
+    # result, and the delivered packet is required to equal its declared raw source. A
+    # delayed/frozen/dropped delivery must therefore not be compared to the prior result at
+    # its *delivery* sequence; that would reject the truthful source chain it is meant to
+    # verify.
 
 
 def _verify_delivered_observation_source(
