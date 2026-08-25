@@ -180,7 +180,14 @@ def _metrics_v3_from_summary(summary: AdasRunSummary) -> RunMetricsV3:
         ttc_at_warning = (
             _available(summary.first_warning_ttc_s, "s")
             if summary.first_warning_ttc_s is not None
-            else _unavailable("no FCW warning was emitted", "s")
+            else _unavailable(
+                (
+                    "no FCW warning was emitted"
+                    if summary.warning_onset_count == 0
+                    else "TTC is undefined at first FCW warning"
+                ),
+                "s",
+            )
         )
     else:
         warning_count = _unavailable_count(_FCW_DISABLED, "warnings")
@@ -205,7 +212,14 @@ def _metrics_v3_from_summary(summary: AdasRunSummary) -> RunMetricsV3:
         max_aeb_jerk = (
             _available(max(summary.aeb_jerks_mps3), "m/s^3")
             if summary.aeb_jerks_mps3
-            else _unavailable("no AEB execution interval", "m/s^3")
+            else _unavailable(
+                (
+                    "no adjacent AEB-attributed result pair"
+                    if summary.aeb_decelerations_mps2
+                    else "no AEB execution interval"
+                ),
+                "m/s^3",
+            )
         )
         false_intervention_count = (
             _available_count(summary.aeb_onset_count, "interventions")
@@ -218,12 +232,29 @@ def _metrics_v3_from_summary(summary: AdasRunSummary) -> RunMetricsV3:
         ttc_at_brake_onset = (
             _available(summary.first_aeb_onset_ttc_s, "s")
             if summary.first_aeb_onset_ttc_s is not None
-            else _unavailable("no AEB-attributed brake onset", "s")
+            else _unavailable(
+                (
+                    "no AEB-attributed brake onset"
+                    if summary.aeb_onset_count == 0
+                    else "TTC is undefined at first AEB-attributed brake onset"
+                ),
+                "s",
+            )
         )
         required_decel_at_onset = (
             _available(summary.first_aeb_onset_required_decel_mps2, "m/s^2")
             if summary.first_aeb_onset_required_decel_mps2 is not None
-            else _unavailable("no AEB-attributed brake onset", "m/s^2")
+            else _unavailable(
+                (
+                    "no AEB-attributed brake onset"
+                    if summary.aeb_onset_count == 0
+                    else (
+                        "required deceleration is undefined at first "
+                        "AEB-attributed brake onset"
+                    )
+                ),
+                "m/s^2",
+            )
         )
     else:
         intervention_count = _unavailable_count(_AEB_DISABLED, "interventions")

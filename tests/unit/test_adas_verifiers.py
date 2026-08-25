@@ -9,6 +9,7 @@ than as a passing number.
 
 from __future__ import annotations
 
+from inspect import signature
 from pathlib import Path
 
 import pytest
@@ -16,12 +17,16 @@ from tests.unit.test_run_metrics_v3 import _typed_fact_events
 
 from hermes.domain.enums import EvidenceAvailability, FindingStatus, TerminationReason
 from hermes.domain.models import Action, RunContext, VehicleState
+from hermes.evidence.adas_summary import summarize_adas_run
 from hermes.evidence.trace import GENESIS_HASH, create_trace_event
 from hermes.gates.config import GateConfig, gate_config_digest, load_gate_config
 from hermes.gates.release import VerifierProfile, select_verifier_profile
 from hermes.scenarios.loader import parse_scenario_yaml
 from hermes.verifiers.adas import (
     adas_brake_onset_margin,
+    adas_no_false_intervention,
+    adas_threat_response,
+    adas_warning_timing,
     run_adas_p0_longitudinal_verifiers,
 )
 
@@ -159,6 +164,75 @@ def _with_residual_impact_speed_limit(
             )
         }
     )
+
+
+_PUBLIC_ADAS_VERIFIERS = (
+    adas_threat_response,
+    adas_brake_onset_margin,
+    adas_no_false_intervention,
+    adas_warning_timing,
+)
+
+
+@pytest.mark.parametrize("verifier", _PUBLIC_ADAS_VERIFIERS)
+def test_public_adas_verifier_signatures_do_not_accept_precomputed_summaries(
+    verifier,
+) -> None:
+    assert "summary" not in signature(verifier).parameters
+
+
+@pytest.mark.parametrize("verifier", _PUBLIC_ADAS_VERIFIERS)
+@pytest.mark.parametrize("probe", ("cross-run", "empty-events", "changed-gate"))
+def test_public_adas_verifiers_reject_caller_supplied_summary_laundering(
+    repository_root: Path,
+    verifier,
+    probe: str,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    summary = summarize_adas_run(events, scenario, gate)
+    supplied_events = tuple(reversed(events)) if probe == "cross-run" else events
+    supplied_gate = gate
+    if probe == "empty-events":
+        supplied_events = ()
+    elif probe == "changed-gate":
+        assert gate.adas is not None
+        supplied_gate = gate.model_copy(
+            update={
+                "adas": gate.adas.model_copy(
+                    update={"threat_authority_fraction": 1.0}
+                )
+            }
+        )
+
+    with pytest.raises(TypeError, match="unexpected keyword argument 'summary'"):
+        verifier(  # type: ignore[call-arg]
+            supplied_events,
+            scenario,
+            supplied_gate,
+            summary=summary,
+        )
+
+
+def test_public_direct_v3_and_legacy_verifiers_match_the_exact_suite_outputs(
+    repository_root: Path,
+    adas_gate: GateConfig,
+) -> None:
+    v3_events, v3_scenario, v3_gate = _typed_fact_events(repository_root)
+    legacy_events = _events([(20.0, -20.0, 1.0, 20.0), (8.0, 0.0, 0.0, 0.0)])
+    legacy_scenario = _scenario()
+
+    for events, scenario, gate in (
+        (v3_events, v3_scenario, v3_gate),
+        (legacy_events, legacy_scenario, adas_gate),
+    ):
+        direct = tuple(verifier(events, scenario, gate) for verifier in _PUBLIC_ADAS_VERIFIERS)
+        suite = run_adas_p0_longitudinal_verifiers(events, scenario, gate)
+        assert direct == suite
+
+    mixed = (v3_events[0], legacy_events[0])
+    for verifier in _PUBLIC_ADAS_VERIFIERS:
+        with pytest.raises(ValueError, match="cannot mix evidence schema versions"):
+            verifier(mixed, v3_scenario, v3_gate)
 
 
 # --- gate-config identity --------------------------------------------------------------

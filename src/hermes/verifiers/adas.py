@@ -9,14 +9,14 @@ Two properties keep the evaluation honest:
 * **No circularity.** The oracle recomputes the closing geometry from the trace and judges
   it against thresholds in *gate config*, never against the controller's configured trigger
   points. A controller cannot pass by being configured to agree with itself.
-* **No simulator access.** Everything here is derived from ``observation_summary`` and
-  ``vehicle_state`` in the stored events, so a bundle can be re-judged offline, long after
-  the run, without the simulator present.
+* **No simulator access.** Legacy schema-1/2 findings retain their historical derivation
+  from ``observation_summary`` and ``vehicle_state``. Schema-3 findings derive from the
+  typed delivered observation, result geometry/state, and execution source/attribution in
+  the stored events. A bundle can therefore be re-judged offline without the simulator.
 
-Attribution note: in the default ADAS configuration the scripted driver never brakes, so
-every braking command in the trace is AEB-attributable by construction. A configuration
-that raises ``DriverConfig.max_brake`` opts into ambiguous attribution, and these evaluators
-would over-count interventions for it.
+Attribution note: schema-3 evidence explicitly distinguishes candidate, permitted, and
+executed actions and records the executed source; its AEB findings use that typed
+attribution. Schema-1/2 findings retain the historical default-driver braking assumption.
 """
 
 from __future__ import annotations
@@ -146,15 +146,12 @@ def _criteria(gate: GateConfig) -> AdasCriteria:
     return gate.adas
 
 
-def _v3_summary(
+def _derive_v3_summary(
     events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
-    summary: AdasRunSummary | None,
 ) -> AdasRunSummary | None:
-    """Ensure every public schema-3 verifier path consumes the typed shared summary."""
-    if summary is not None:
-        return summary
+    """Derive typed schema-3 facts from the exact public verifier inputs."""
     if events and type(events[0]) is TraceEventV3:
         if any(type(event) is not TraceEventV3 for event in events):
             raise ValueError("ADAS verifier trace cannot mix evidence schema versions")
@@ -189,12 +186,11 @@ def _first_brake(
     return next((sample for sample in samples if sample.brake > 0.0), None)
 
 
-def adas_threat_response(
+def _adas_threat_response_from_summary(
     events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
-    *,
-    summary: AdasRunSummary | None = None,
+    summary: AdasRunSummary | None,
 ) -> Finding:
     """A threat must produce braking; any contact must stay within its residual-speed limit.
 
@@ -205,7 +201,6 @@ def adas_threat_response(
     The bump was free at the time it was made - every ADAS bundle in the local fleet was
     already invalid under the suite-identity correction in the same range.
     """
-    summary = _v3_summary(events, scenario, gate, summary)
     criteria = _criteria(gate)
     samples = summary.policy_samples if summary is not None else _samples(events)  # type: ignore[arg-type]
     threats = (
@@ -317,12 +312,11 @@ def adas_threat_response(
     )
 
 
-def adas_brake_onset_margin(
+def _adas_brake_onset_margin_from_summary(
     events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
-    *,
-    summary: AdasRunSummary | None = None,
+    summary: AdasRunSummary | None,
 ) -> Finding:
     """Braking must begin within the calibrated required-deceleration margin.
 
@@ -340,7 +334,6 @@ def adas_brake_onset_margin(
     the measured envelope, while the late-braking seed begins around 50%, beyond the calibrated
     46% onset margin whether or not it happens to get away with it.
     """
-    summary = _v3_summary(events, scenario, gate, summary)
     criteria = _criteria(gate)
     samples = summary.policy_samples if summary is not None else _samples(events)  # type: ignore[arg-type]
     braked = _first_brake(
@@ -440,19 +433,17 @@ def adas_brake_onset_margin(
     )
 
 
-def adas_no_false_intervention(
+def _adas_no_false_intervention_from_summary(
     events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
-    *,
-    summary: AdasRunSummary | None = None,
+    summary: AdasRunSummary | None,
 ) -> Finding:
     """Braking during an oracle-labelled threat-free scenario is a hard failure.
 
     Over-intervention is not a cosmetic complaint. An ADAS that brakes when nothing is
     there is unusable, and a candidate can always buy a better collision number with one.
     """
-    summary = _v3_summary(events, scenario, gate, summary)
     criteria = _criteria(gate)
     samples = summary.policy_samples if summary is not None else _samples(events)  # type: ignore[arg-type]
     threats = (
@@ -521,12 +512,11 @@ def adas_no_false_intervention(
     )
 
 
-def adas_warning_timing(
+def _adas_warning_timing_from_summary(
     events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
-    *,
-    summary: AdasRunSummary | None = None,
+    summary: AdasRunSummary | None,
 ) -> Finding:
     """A scenario declaring a required warning must reach the declared TTC in evidence.
 
@@ -535,7 +525,6 @@ def adas_warning_timing(
     closing geometry. It is a coverage check on the scenario, not a check of the warning
     output, and it says so rather than implying more than it establishes.
     """
-    summary = _v3_summary(events, scenario, gate, summary)
     del gate
     samples = summary.policy_samples if summary is not None else _samples(events)  # type: ignore[arg-type]
     expectation = scenario.adas.expected_fcw if scenario.adas is not None else None
@@ -588,16 +577,60 @@ def adas_warning_timing(
     )
 
 
+def adas_threat_response(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    """Evaluate threat response from the supplied trace and resolved inputs."""
+    return _adas_threat_response_from_summary(
+        events, scenario, gate, _derive_v3_summary(events, scenario, gate)
+    )
+
+
+def adas_brake_onset_margin(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    """Evaluate brake-onset margin from the supplied trace and resolved inputs."""
+    return _adas_brake_onset_margin_from_summary(
+        events, scenario, gate, _derive_v3_summary(events, scenario, gate)
+    )
+
+
+def adas_no_false_intervention(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    """Evaluate false intervention from the supplied trace and resolved inputs."""
+    return _adas_no_false_intervention_from_summary(
+        events, scenario, gate, _derive_v3_summary(events, scenario, gate)
+    )
+
+
+def adas_warning_timing(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    """Evaluate warning timing from the supplied trace and resolved inputs."""
+    return _adas_warning_timing_from_summary(
+        events, scenario, gate, _derive_v3_summary(events, scenario, gate)
+    )
+
+
 def run_adas_p0_longitudinal_verifiers(
     events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
 ) -> tuple[Finding, ...]:
     """Run the ADAS longitudinal suite in deterministic finding order."""
-    summary = _v3_summary(events, scenario, gate, None)
+    summary = _derive_v3_summary(events, scenario, gate)
     return (
-        adas_threat_response(events, scenario, gate, summary=summary),
-        adas_brake_onset_margin(events, scenario, gate, summary=summary),
-        adas_no_false_intervention(events, scenario, gate, summary=summary),
-        adas_warning_timing(events, scenario, gate, summary=summary),
+        _adas_threat_response_from_summary(events, scenario, gate, summary),
+        _adas_brake_onset_margin_from_summary(events, scenario, gate, summary),
+        _adas_no_false_intervention_from_summary(events, scenario, gate, summary),
+        _adas_warning_timing_from_summary(events, scenario, gate, summary),
     )

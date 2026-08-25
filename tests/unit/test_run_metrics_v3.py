@@ -391,3 +391,156 @@ def test_scenario_owned_applicability_does_not_infer_enabled_functions_from_even
     ):
         assert value.availability is EvidenceAvailability.NOT_AVAILABLE
         assert value.reason == _FCW_DISABLED
+
+
+def test_dynamic_na_reasons_distinguish_no_warning_and_no_aeb_execution(
+    repository_root: Path,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    without_outputs = tuple(
+        event.model_copy(
+            update={
+                "adas_decision": event.adas_decision.model_copy(
+                    update={"warning": WarningLevel.NO_WARNING}
+                ),
+                "executed_action": Action(
+                    steering=event.executed_action.steering,
+                    throttle=event.executed_action.throttle,
+                    brake=0.0,
+                ),
+                "executed_brake_source": BrakeSource.NONE,
+            }
+        )
+        for event in events
+    )
+
+    metrics = compute_metrics(
+        without_outputs,
+        scenario=scenario,
+        gate_config=gate,
+    )
+    assert type(metrics) is RunMetricsV3
+
+    assert metrics.ttc_at_warning_s.reason == "no FCW warning was emitted"
+    assert metrics.ttc_at_brake_onset_s.reason == "no AEB-attributed brake onset"
+    assert metrics.adas.aeb.required_decel_at_onset_mps2.reason == (
+        "no AEB-attributed brake onset"
+    )
+    assert metrics.adas.aeb.max_deceleration_mps2.reason == "no AEB execution interval"
+    assert metrics.adas.aeb.max_jerk_mps3.reason == "no AEB execution interval"
+
+
+def test_dynamic_na_reasons_distinguish_warning_and_aeb_onset_with_missing_geometry(
+    repository_root: Path,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    source = events[0]
+    delivered = source.observation_fault_evidence.delivered_observation.model_copy(
+        update={"front_distance_m": None, "front_relative_speed_mps": None}
+    )
+    source = source.model_copy(
+        update={
+            "observation_fault_evidence": source.observation_fault_evidence.model_copy(
+                update={"delivered_observation": delivered}
+            ),
+            "adas_decision": source.adas_decision.model_copy(
+                update={
+                    "time_to_collision_s": None,
+                    "required_deceleration_mps2": None,
+                }
+            ),
+        }
+    )
+
+    metrics = compute_metrics(
+        (source, *events[1:]),
+        scenario=scenario,
+        gate_config=gate,
+    )
+    assert type(metrics) is RunMetricsV3
+
+    assert metrics.adas.fcw.warning_count.value == 1
+    assert metrics.ttc_at_warning_s.reason == "TTC is undefined at first FCW warning"
+    assert metrics.adas.aeb.intervention_count.value == 1
+    assert metrics.ttc_at_brake_onset_s.reason == (
+        "TTC is undefined at first AEB-attributed brake onset"
+    )
+    assert metrics.adas.aeb.required_decel_at_onset_mps2.reason == (
+        "required deceleration is undefined at first AEB-attributed brake onset"
+    )
+
+
+def test_consumed_usable_gap_keeps_onset_present_when_required_deceleration_is_undefined(
+    repository_root: Path,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    source = events[0]
+    delivered = source.observation_fault_evidence.delivered_observation.model_copy(
+        update={"front_distance_m": 1.0, "front_relative_speed_mps": -3.0}
+    )
+    source = source.model_copy(
+        update={
+            "observation_fault_evidence": source.observation_fault_evidence.model_copy(
+                update={"delivered_observation": delivered}
+            ),
+            "adas_decision": source.adas_decision.model_copy(
+                update={
+                    "time_to_collision_s": 1.0 / 3.0,
+                    "required_deceleration_mps2": None,
+                }
+            ),
+        }
+    )
+
+    metrics = compute_metrics(
+        (source, *events[1:]),
+        scenario=scenario,
+        gate_config=gate,
+    )
+    assert type(metrics) is RunMetricsV3
+
+    assert metrics.adas.aeb.intervention_count.value == 1
+    assert metrics.ttc_at_brake_onset_s.value == pytest.approx(1.0 / 3.0)
+    assert metrics.adas.aeb.required_decel_at_onset_mps2.reason == (
+        "required deceleration is undefined at first AEB-attributed brake onset"
+    )
+
+
+def test_first_event_only_aeb_execution_reports_no_adjacent_aeb_result_pair(
+    repository_root: Path,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    event = events[0]
+    executed = Action(steering=0.0, throttle=0.0, brake=0.4)
+    state = event.vehicle_state.model_copy(update={"acceleration_mps2": -2.0})
+    event = event.model_copy(
+        update={
+            "executed_action": executed,
+            "executed_brake_source": BrakeSource.AEB,
+            "control_fault_evidence": event.control_fault_evidence.model_copy(
+                update={
+                    "executed_from_sequence": 0,
+                    "executed_from_candidate_time_s": 0.0,
+                    "execution_time_s": 0.0,
+                    "pre_saturation_action": executed,
+                }
+            ),
+            "vehicle_state": state,
+            "result_observation": event.result_observation.model_copy(
+                update={"vehicle_state": state}
+            ),
+        }
+    )
+
+    metrics = compute_metrics(
+        (event,),
+        scenario=scenario,
+        gate_config=gate,
+    )
+    assert type(metrics) is RunMetricsV3
+
+    assert metrics.adas.aeb.intervention_count.value == 1
+    assert metrics.adas.aeb.max_deceleration_mps2.value == pytest.approx(2.0)
+    assert metrics.adas.aeb.max_jerk_mps3.reason == (
+        "no adjacent AEB-attributed result pair"
+    )
