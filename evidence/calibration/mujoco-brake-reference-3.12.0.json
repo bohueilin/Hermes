@@ -5205,7 +5205,7 @@
   "instrument_role": "optional_calibration_instrument",
   "measurement_protocol": {
     "entry_speed_source": "evidence/calibration/metadrive-brake-curve-0.4.3.json",
-    "entry_speed_source_sha256": "a9f4c6360b384b0fe8e641632d9f6db174a927da342654d07595e479e658c19e",
+    "entry_speed_source_sha256": "2ee087a42a704ce581d5e532451418d8026e2a62d6bad993d5925ab04d3de825",
     "entry_speeds_mps": [
       4.0,
       6.0,
@@ -5256,15 +5256,22 @@
   },
   "producer": {
     "command": [
-      "python3.11",
-      "tools/calibration/mujoco_brake_reference.py"
+      "tools/calibration/mujoco_brake_reference.py",
+      "--metadrive-curve",
+      "evidence/calibration/metadrive-brake-curve-0.4.3.json",
+      "--output",
+      "evidence/calibration/mujoco-brake-reference-3.12.0.json",
+      "--seed",
+      "7",
+      "--repeats",
+      "3"
     ],
     "working_directory": "repository root"
   },
   "release_evidence_lane": false,
   "repository": {
-    "commit": "23e44b6b5830040afb19f3def320e4ff3114591b",
-    "dirty_before_output_write": false
+    "commit": "9afe9919aaf3cd43094da866899c67f4c95b3234",
+    "dirty_before_output_write": true
   },
   "runtime": {
     "mujoco_distribution": {

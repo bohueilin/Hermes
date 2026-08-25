@@ -18,10 +18,10 @@ or represented as validation of either model.
 ## Compared records and claim contract
 
 - MetaDrive source: `evidence/calibration/metadrive-brake-curve-0.4.3.json`, SHA-256
-  `a9f4c6360b384b0fe8e641632d9f6db174a927da342654d07595e479e658c19e`. This is the sole
+  `2ee087a42a704ce581d5e532451418d8026e2a62d6bad993d5925ab04d3de825`. This is the sole
   committed WP-A curve/bridge source.
 - MuJoCo source: `evidence/calibration/mujoco-brake-reference-3.12.0.json`, SHA-256
-  `9f66b114e46282b63cdd7f4270fe63162072cb5ccdda77f2013a0d07a875a136`.
+  `d479ee9b8d2b5e9f83aed0599b21452df19193ad0f24a1ec21619262e6a9f885`.
 - Common support: exactly 4, 6, ..., 30 m/s, inclusive; 14 entry-speed samples.
 - Comparison unit: empirical outcome distributions across the matched entry-speed support.
   The N=3 repeats in each backend establish deterministic replication on this host; they are not

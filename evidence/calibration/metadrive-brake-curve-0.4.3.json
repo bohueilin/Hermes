@@ -2439,7 +2439,18 @@
     "seed": 7,
     "stop_speed_threshold_mps": 0.3
   },
-  "repository_commit": "e0f534c6dcc5afcd3b1c91e0ffadef69f83e8cec",
+  "producer": {
+    "command": [
+      "tools/calibration/metadrive_brake_curve.py",
+      "--repository-root",
+      ".",
+      "--output",
+      "evidence/calibration/metadrive-brake-curve-0.4.3.json",
+      "--seed",
+      "7"
+    ]
+  },
+  "repository_commit": "9afe9919aaf3cd43094da866899c67f4c95b3234",
   "schema_version": "1.0",
   "simulation_only": true,
   "simulator": {
