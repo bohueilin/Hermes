@@ -41,6 +41,24 @@ PHASE4_VERIFIER_IDENTITIES = PHASE1_VERIFIER_IDENTITIES + (
 )
 
 
+def verifier_identities_for_profile(
+    profile: VerifierProfile,
+) -> tuple[VerifierIdentity, ...]:
+    """Return the exact ordered identities executed by one verifier profile."""
+    if profile is VerifierProfile.LEGACY:
+        return PHASE1_VERIFIER_IDENTITIES
+    if profile is VerifierProfile.FAULT_COVERAGE:
+        return PHASE4_VERIFIER_IDENTITIES
+
+    from hermes.verifiers.adas import ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
+
+    if profile is VerifierProfile.ADAS_P0_LONGITUDINAL:
+        return PHASE1_VERIFIER_IDENTITIES + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
+    if profile is VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT:
+        return PHASE4_VERIFIER_IDENTITIES + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
+    raise ValueError(f"unsupported verifier profile: {profile}")
+
+
 def _available(value: float, unit: str) -> Measurement:
     return Measurement(
         availability=EvidenceAvailability.AVAILABLE,

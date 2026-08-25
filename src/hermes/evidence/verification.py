@@ -79,9 +79,8 @@ from hermes.simulator_support import (
     SUPPORTED_METADRIVE_VERSION,
 )
 from hermes.verifiers import (
-    PHASE1_VERIFIER_IDENTITIES,
-    PHASE4_VERIFIER_IDENTITIES,
     run_verifiers_for_profile,
+    verifier_identities_for_profile,
 )
 
 MAX_ARTIFACT_FILE_BYTES = 16 * 1024 * 1024
@@ -1219,9 +1218,9 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
         if context.run_context.verifier_suite_digest != config_digest(suite_payload):
             errors.append("execution-context.json verifier suite digest mismatch")
         expected_suite = (
-            PHASE4_VERIFIER_IDENTITIES
-            if isinstance(context, ExecutionContextV2)
-            else PHASE1_VERIFIER_IDENTITIES
+            verifier_identities_for_profile(select_verifier_profile(scenario))
+            if scenario is not None
+            else ()
         )
         if context.verifier_suite != expected_suite:
             errors.append("execution-context.json contains an unsupported verifier suite")

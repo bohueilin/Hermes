@@ -52,6 +52,55 @@ def _shield_bundle(repository_root: Path, tmp_path: Path) -> Path:
     ).artifact_path
 
 
+def _fake_adas_bundle(repository_root: Path, tmp_path: Path) -> Path:
+    from hermes.adas.config import load_adas_config
+    from hermes.adas.policy import AdasLongitudinalPolicy
+
+    scenario_path = tmp_path / "fake-adas.yaml"
+    scenario_path.write_text(
+        """\
+schema_version: "4.0"
+name: fake_adas_suite_probe
+version: "1.0"
+description: Simulator-neutral probe for stored ADAS verifier-suite binding.
+adapter: fake
+control:
+  frequency_hz: 10
+  horizon_steps: 40
+  target_speed_mps: 8.0
+  max_braking_mps2: 6.0
+initial_state:
+  speed_mps: 8.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 20.0
+  boundary_tolerance_m: 1.5
+hazards: {}
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: none
+  expected_aeb:
+    kind: forbidden
+""",
+        encoding="utf-8",
+    )
+    artifacts = tmp_path / "fake-adas-artifacts"
+    artifacts.mkdir()
+    config = load_adas_config(repository_root / "config" / "adas" / "baseline.yaml")
+    return execute_fake_run(
+        scenario_path=scenario_path,
+        gate_config_path=repository_root / "config" / "gates.adas.yaml",
+        seed=7,
+        run_id="fake-adas-source",
+        artifact_root=artifacts,
+        repository_root=repository_root,
+        policy_factory=lambda: AdasLongitudinalPolicy(config),
+    ).artifact_path
+
+
 def _canonical(value) -> bytes:
     return json.dumps(
         value,
@@ -102,6 +151,28 @@ def _rehash_events(bundle: Path, events: list[dict]) -> None:
     manifest["trace_digest"] = previous
     manifest_path.write_bytes(_canonical(manifest) + b"\n")
     _refresh_envelope(bundle)
+
+
+def _rewrite_verifier_suite(bundle: Path, mutate) -> None:
+    context_path = bundle / "execution-context.json"
+    context = json.loads(context_path.read_text(encoding="utf-8"))
+    mutate(context["verifier_suite"])
+    suite_digest = _sha(_canonical(context["verifier_suite"]))
+    context["run_context"]["verifier_suite_digest"] = suite_digest
+    context_path.write_bytes(_canonical(context) + b"\n")
+
+    manifest_path = bundle / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["verifier_suite_digest"] = suite_digest
+    manifest_path.write_bytes(_canonical(manifest) + b"\n")
+
+    events = [
+        json.loads(line)
+        for line in (bundle / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    for event in events:
+        event["run_context"]["verifier_suite_digest"] = suite_digest
+    _rehash_events(bundle, events)
 
 
 def test_modified_action_reports_first_hash_mismatch_sequence(
@@ -371,6 +442,32 @@ def test_component_context_cannot_diverge_from_hashed_run_context(
     assert "policy component does not match hashed run context" in " ".join(
         result.errors
     )
+
+
+@pytest.mark.parametrize("mutation", ["omitted", "incorrect"])
+def test_stored_adas_bundle_rejects_coherently_wrong_verifier_suite(
+    repository_root: Path,
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    source = _fake_adas_bundle(repository_root, tmp_path)
+    tampered = _copy_bundle(source, tmp_path, f"adas-suite-{mutation}")
+
+    if mutation == "omitted":
+        _rewrite_verifier_suite(tampered, lambda suite: suite.__delitem__(slice(-4, None)))
+    else:
+        _rewrite_verifier_suite(
+            tampered,
+            lambda suite: suite[-1].__setitem__(
+                "finding_id", "adas.fcw.substituted_identity"
+            ),
+        )
+
+    result = verify_artifact(tampered)
+
+    assert result.integrity is IntegrityStatus.INVALID
+    assert result.verdict is Verdict.INVALID_EVIDENCE
+    assert "execution-context.json contains an unsupported verifier suite" in result.errors
 
 
 def test_observation_summary_must_match_prior_executed_state(

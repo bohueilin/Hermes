@@ -53,9 +53,8 @@ from hermes.policies.metadrive_idm import MetaDriveIDMPolicy
 from hermes.scenarios.loader import ScenarioLoadError, load_scenario, scenario_digest
 from hermes.shields.noop import NoOpShield
 from hermes.verifiers import (
-    PHASE1_VERIFIER_IDENTITIES,
-    PHASE4_VERIFIER_IDENTITIES,
     run_verifiers_for_profile,
+    verifier_identities_for_profile,
 )
 
 
@@ -191,11 +190,7 @@ def _build_execution_context(
     adapter_config = adapter.evidence_config
     policy_config = policy.evidence_config
     shield_config = shield.evidence_config
-    verifier_suite = (
-        PHASE4_VERIFIER_IDENTITIES
-        if fault_injector is not None
-        else PHASE1_VERIFIER_IDENTITIES
-    )
+    verifier_suite = verifier_identities_for_profile(select_verifier_profile(scenario))
     suite_payload = [identity.model_dump(mode="json") for identity in verifier_suite]
     if fault_injector is not None:
         fault_config = fault_injector.evidence_config
