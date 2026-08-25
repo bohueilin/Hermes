@@ -294,6 +294,45 @@ def test_custom_wrong_policy_identity_rejects_before_any_reset_and_closes_adapte
     assert list(artifacts.iterdir()) == []
 
 
+def test_wrong_policy_identity_and_close_failure_remain_cli_visible_configuration_error(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    _TrackingEnv.instances.clear()
+
+    class CloseFailingAdapter(_TrackingAdapter):
+        def close(self) -> None:
+            super().close()
+            raise RuntimeError("synthetic adapter cleanup failure")
+
+    policy = _IdentityPolicy("arbitrary-custom-policy", "1.0")
+    adapter = CloseFailingAdapter(dependencies=_dependencies(repository_root))
+    artifacts = tmp_path / "wrong-policy-close-failure"
+    artifacts.mkdir()
+
+    with pytest.raises(RunConfigurationError) as raised:
+        execute_metadrive_run(
+            scenario_path=_observation_fault_scenario(tmp_path),
+            gate_config_path=repository_root / "config" / "gates.adas.yaml",
+            seed=7,
+            run_id="wrong-policy-close-failure",
+            artifact_root=artifacts,
+            repository_root=repository_root,
+            adapter_factory=lambda: adapter,
+            policy_factory=lambda _adapter: policy,
+        )
+
+    rendered = str(raised.value)
+    assert "observation faults require policy" in rendered
+    assert "adapter close also failed" in rendered
+    assert "RuntimeError: synthetic adapter cleanup failure" in rendered
+    assert policy.reset_called is False
+    assert adapter.reset_called is False
+    assert adapter.close_count == 1
+    assert _TrackingEnv.instances == []
+    assert list(artifacts.iterdir()) == []
+
+
 def test_idm_control_only_faults_remain_legal(
     repository_root: Path,
     tmp_path: Path,

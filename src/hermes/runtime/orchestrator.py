@@ -488,8 +488,9 @@ def _execute_episode(
             if operation_error is None:
                 operation_error = exc
             elif isinstance(operation_error, RunConfigurationError):
-                operation_error.add_note(
-                    "adapter close also failed: " f"{type(exc).__name__}: {exc}"
+                operation_error = RunConfigurationError(
+                    f"{operation_error}; adapter close also failed: "
+                    f"{type(exc).__name__}: {exc}"
                 )
             else:
                 operation_error = RuntimeError(
