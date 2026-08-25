@@ -29,6 +29,10 @@ from hermes.agents.contracts import (
     ok,
 )
 from hermes.evidence.artifacts import REQUIRED_ARTIFACT_FILES
+from hermes.evidence.schema_registry import (
+    FINDINGS_DOCUMENT_BY_EVIDENCE_SCHEMA,
+    RUN_METRICS_BY_EVIDENCE_SCHEMA,
+)
 
 _MAX_EVENT_WINDOW = 40
 STALE_OBSERVATION_FAULT_REASONS = frozenset(
@@ -83,6 +87,21 @@ def _bundle_digest(bundle: _AgentBundle) -> str:
     if digest is None:
         raise ValueError("captured bundle has no valid recorded digest")
     return digest
+
+
+def _evidence_schema_version(bundle: _AgentBundle) -> str:
+    snapshot = bundle.capture.inspection.snapshot
+    if snapshot is not None:
+        return snapshot.manifest.evidence_schema_version
+    identity = bundle.capture.safe_manifest_identity
+    if identity is None:
+        raise ValueError("captured bundle has no safe evidence-schema identity")
+    return identity.evidence_schema_version
+
+
+def _malformed_capture_detail(artifact_file: str, exc: Exception) -> str:
+    detail = f"captured {artifact_file} is malformed: {exc}"
+    return detail if len(detail) <= 500 else f"{detail[:497]}..."
 
 
 def _citation(
@@ -467,24 +486,25 @@ def get_findings(
     assert bundle is not None
     try:
         document = _read_json(bundle, "findings.json")
+        findings_type = FINDINGS_DOCUMENT_BY_EVIDENCE_SCHEMA[
+            _evidence_schema_version(bundle)
+        ]
+        findings_type.model_validate_json(bundle.payloads["findings.json"])
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError) as exc:
         return fail(
             tool,
             ToolErrorCode.INVALID_EVIDENCE,
             ToolPermission.READ,
-            f"captured findings.json is malformed: {exc}",
+            _malformed_capture_detail("findings.json", exc),
         )
-    items = document["findings"] if isinstance(document, dict) else document
-    if not isinstance(items, list) or any(
-        not isinstance(item, dict) or not isinstance(item.get("status"), str)
-        for item in items
-    ):
+    if not isinstance(document, dict):
         return fail(
             tool,
             ToolErrorCode.INVALID_EVIDENCE,
             ToolPermission.READ,
             "captured findings.json does not contain the legacy findings list",
         )
+    items = document["findings"]
     citations = tuple(
         _citation(
             run_id,
@@ -515,12 +535,14 @@ def get_metrics(
     assert bundle is not None
     try:
         metrics = _read_json(bundle, "metrics.json")
+        metrics_type = RUN_METRICS_BY_EVIDENCE_SCHEMA[_evidence_schema_version(bundle)]
+        metrics_type.model_validate_json(bundle.payloads["metrics.json"])
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError) as exc:
         return fail(
             tool,
             ToolErrorCode.INVALID_EVIDENCE,
             ToolPermission.READ,
-            f"captured metrics.json is malformed: {exc}",
+            _malformed_capture_detail("metrics.json", exc),
         )
     if not isinstance(metrics, dict):
         return fail(
@@ -530,11 +552,7 @@ def get_metrics(
             "captured metrics.json is not an object",
         )
     snapshot = bundle.capture.inspection.snapshot
-    evidence_schema_version = (
-        snapshot.manifest.evidence_schema_version
-        if snapshot is not None
-        else bundle.capture.safe_manifest_identity.evidence_schema_version
-    )
+    evidence_schema_version = _evidence_schema_version(bundle)
     if evidence_schema_version == "3.0":
         from hermes.domain.models import RunMetricsV3
         from hermes.evidence.metric_registry import SCHEMA2_METRIC_REGISTRY

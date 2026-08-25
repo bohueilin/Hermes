@@ -119,6 +119,7 @@ def _read_triage_evidence(
     if captured_bundle is None:
         return (
             {
+                "evidence_reads_ok": False,
                 "failed_findings": [],
                 "failed_stale_finding_locators": (),
                 "verdict": None,
@@ -159,6 +160,7 @@ def _read_triage_evidence(
         fault_counts = {}
 
     evidence: dict[str, object] = {
+        "evidence_reads_ok": findings.ok and metrics.ok and identity.ok,
         "failed_findings": failed,
         "failed_stale_finding_locators": failed_stale_locators,
         "verdict": identity.data.get("verdict") if identity.ok else None,
@@ -175,15 +177,15 @@ def _read_triage_evidence(
         ),
     }
     citations = (*findings.citations, *metrics.citations, *identity.citations)
-    return evidence, citations, findings.ok
+    return evidence, citations, findings.ok and metrics.ok and identity.ok
 
 
 def _classify_evidence(
     evidence: dict[str, object],
     *,
-    findings_ok: bool,
+    evidence_reads_ok: bool,
 ) -> tuple[FailureCategory, tuple[str, ...]]:
-    if not findings_ok:
+    if not evidence_reads_ok:
         return FailureCategory.UNKNOWN, ()
     failed = evidence.get("failed_findings", ())
     assert isinstance(failed, (list, tuple))
@@ -219,8 +221,8 @@ def classify_failure(context: ToolContext, run_id: str) -> tuple[FailureCategory
     run that failed in a way no predicate matches - it is a signal that the taxonomy needs
     extending, so it must never be used as a catch-all for "probably fine".
     """
-    evidence, _citations, findings_ok = _read_triage_evidence(context, run_id)
-    return _classify_evidence(evidence, findings_ok=findings_ok)
+    evidence, _citations, evidence_reads_ok = _read_triage_evidence(context, run_id)
+    return _classify_evidence(evidence, evidence_reads_ok=evidence_reads_ok)
 
 
 @runtime_checkable
@@ -263,6 +265,11 @@ class ScriptedAgent:
         citations: tuple[Citation, ...],
     ) -> tuple[FailureCategory, str]:
         del run_id, citations
+        if evidence.get("evidence_reads_ok") is not True:
+            return (
+                FailureCategory.UNKNOWN,
+                "Required stored evidence could not be read, so no failure category is proposed.",
+            )
         failed = evidence.get("failed_findings", ())
         assert isinstance(failed, (list, tuple))
         if not failed:
@@ -313,9 +320,9 @@ def triage_run(
     than substituted for it.
     """
     runtime = runtime or ScriptedAgent()
-    evidence, citations, findings_ok = _read_triage_evidence(context, run_id)
+    evidence, citations, evidence_reads_ok = _read_triage_evidence(context, run_id)
     deterministic, supporting = _classify_evidence(
-        evidence, findings_ok=findings_ok
+        evidence, evidence_reads_ok=evidence_reads_ok
     )
     proposed, rationale = runtime.propose_triage(
         run_id=run_id, evidence=evidence, citations=citations

@@ -699,6 +699,207 @@ def test_legacy_invalid_artifact_read_behavior_remains_exact(
         assert result.data == {"metrics": stored}
 
 
+def _malformed_legacy_bundle(
+    repository_root: Path,
+    tmp_path: Path,
+    *,
+    artifact_file: str,
+    case: str,
+) -> tuple[Path, Path]:
+    root = tmp_path / "artifacts"
+    root.mkdir()
+    bundle = root / "malformed-legacy"
+    shutil.copytree(repository_root / "artifacts" / "handoff-phase5-demo", bundle)
+    target = bundle / artifact_file
+    document = json.loads(target.read_text(encoding="utf-8"))
+    if artifact_file == "findings.json":
+        if case == "missing_findings_field":
+            document = {"evidence_schema_version": "1.0"}
+        elif case == "non_list_findings":
+            document["findings"] = {}
+        else:
+            item = document["findings"][0]
+            if case == "missing_finding_id":
+                item.pop("finding_id")
+            elif case == "missing_status":
+                item.pop("status")
+            elif case == "wrong_finding_id_type":
+                item["finding_id"] = 7
+            elif case == "wrong_status_type":
+                item["status"] = 7
+            elif case == "wrong_required_field_type":
+                item["event_sequences"] = "not-a-sequence-list"
+            else:
+                raise AssertionError(case)
+    elif case == "empty_object":
+        document = {}
+    elif case == "non_object":
+        document = []
+    elif case == "version_only":
+        document = {"evidence_schema_version": "1.0"}
+    elif case == "missing_required_field":
+        document.pop("event_count")
+    elif case == "wrong_required_field_type":
+        document["event_count"] = "40"
+    elif case == "wrong_nested_measurement_shape":
+        document["route_completion_pct"] = {}
+    else:
+        raise AssertionError(case)
+    target.write_text(json.dumps(document), encoding="utf-8")
+    return root, bundle
+
+
+@pytest.mark.parametrize(
+    "case",
+    (
+        "missing_findings_field",
+        "non_list_findings",
+        "missing_finding_id",
+        "missing_status",
+        "wrong_finding_id_type",
+        "wrong_status_type",
+        "wrong_required_field_type",
+    ),
+)
+def test_malformed_legacy_findings_fail_closed_across_agent_workflows(
+    repository_root: Path,
+    tmp_path: Path,
+    case: str,
+) -> None:
+    root, bundle = _malformed_legacy_bundle(
+        repository_root,
+        tmp_path,
+        artifact_file="findings.json",
+        case=case,
+    )
+    context = ToolContext(repository_root=repository_root, artifact_root=root)
+
+    findings = get_findings(context, run_id=bundle.name)
+    identity = query_run(context, run_id=bundle.name)
+    proposal = triage_run(context, bundle.name, runtime=ScriptedAgent())
+    checks = check_citations((*identity.citations, *proposal.citations), root)
+
+    assert findings.ok is False
+    assert findings.error is not None
+    assert findings.error.code is ToolErrorCode.INVALID_EVIDENCE
+    assert findings.data == {}
+    assert findings.citations == ()
+    assert identity.ok is True
+    assert identity.data["integrity"] == "INVALID"
+    assert identity.data["verdict"] == "INVALID_EVIDENCE"
+    assert identity.data["errors"]
+    assert proposal.deterministic_category.value == "UNKNOWN"
+    assert proposal.category.value == "UNKNOWN"
+    assert checks
+    assert all_valid(checks) is False
+    assert all(check.status is CitationStatus.INVALID_EVIDENCE for check in checks)
+
+
+@pytest.mark.parametrize(
+    "case",
+    (
+        "empty_object",
+        "non_object",
+        "version_only",
+        "missing_required_field",
+        "wrong_required_field_type",
+        "wrong_nested_measurement_shape",
+    ),
+)
+def test_malformed_legacy_metrics_fail_closed_without_empty_success(
+    repository_root: Path,
+    tmp_path: Path,
+    case: str,
+) -> None:
+    root, bundle = _malformed_legacy_bundle(
+        repository_root,
+        tmp_path,
+        artifact_file="metrics.json",
+        case=case,
+    )
+    context = ToolContext(repository_root=repository_root, artifact_root=root)
+
+    metrics = get_metrics(context, run_id=bundle.name)
+    identity = query_run(context, run_id=bundle.name)
+    proposal = triage_run(context, bundle.name, runtime=ScriptedAgent())
+    checks = check_citations((*identity.citations, *proposal.citations), root)
+
+    assert metrics.ok is False
+    assert metrics.error is not None
+    assert metrics.error.code is ToolErrorCode.INVALID_EVIDENCE
+    assert metrics.data == {}
+    assert metrics.citations == ()
+    assert identity.ok is True
+    assert identity.data["integrity"] == "INVALID"
+    assert identity.data["verdict"] == "INVALID_EVIDENCE"
+    assert identity.data["errors"]
+    assert proposal.deterministic_category.value == "UNKNOWN"
+    assert proposal.category.value == "UNKNOWN"
+    assert checks
+    assert all_valid(checks) is False
+    assert all(check.status is CitationStatus.INVALID_EVIDENCE for check in checks)
+
+
+def test_well_formed_invalid_v2_legacy_reads_remain_available(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "artifacts"
+    root.mkdir()
+    bundle = root / "invalid-v2"
+    shutil.copytree(repository_root / "artifacts" / "handoff-p4-fault", bundle)
+    events_path = bundle / "events.jsonl"
+    events_path.write_bytes(events_path.read_bytes() + b"\n")
+    context = ToolContext(repository_root=repository_root, artifact_root=root)
+
+    findings = get_findings(context, run_id=bundle.name)
+    metrics = get_metrics(context, run_id=bundle.name)
+    identity = query_run(context, run_id=bundle.name)
+
+    assert findings.ok is True
+    assert findings.data["findings"]
+    assert metrics.ok is True
+    assert metrics.data["metrics"]["evidence_schema_version"] == "2.0"
+    assert identity.ok is True
+    assert identity.data["integrity"] == "INVALID"
+    assert identity.data["verdict"] == "INVALID_EVIDENCE"
+
+
+def test_malformed_v3_agent_and_citation_workflows_remain_fail_closed(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    bundle = _synthetic_v3(repository_root, tmp_path / "source")
+    metrics_path = bundle / "metrics.json"
+    metrics_path.write_text("{}", encoding="utf-8")
+    context = ToolContext(repository_root=repository_root, artifact_root=tmp_path / "source")
+
+    results = (
+        get_findings(context, run_id=bundle.name),
+        get_metrics(context, run_id=bundle.name),
+        query_run(context, run_id=bundle.name),
+    )
+    proposal = triage_run(context, bundle.name, runtime=ScriptedAgent())
+    citation = Citation(
+        run_id=bundle.name,
+        artifact_file="verdict.json",
+        locator="/verdict",
+        quoted_value="PASS",
+        bundle_digest=(bundle / "bundle.sha256").read_text(encoding="utf-8").strip(),
+    )
+    check = check_citations((citation,), tmp_path / "source")[0]
+
+    assert all(result.ok is False for result in results)
+    assert all(
+        result.error is not None and result.error.code is ToolErrorCode.INVALID_EVIDENCE
+        for result in results
+    )
+    assert proposal.deterministic_category.value == "UNKNOWN"
+    assert proposal.category.value == "UNKNOWN"
+    assert proposal.citations == ()
+    assert check.status is CitationStatus.INVALID_EVIDENCE
+
+
 def test_invalid_unknown_evidence_identity_still_fails_closed(
     repository_root: Path,
     tmp_path: Path,
