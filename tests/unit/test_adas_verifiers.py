@@ -143,6 +143,20 @@ def _by_id(findings):
     return {finding.finding_id: finding for finding in findings}
 
 
+def _with_residual_impact_speed_limit(
+    gate: GateConfig,
+    limit_mps: float,
+) -> GateConfig:
+    assert gate.adas is not None
+    return gate.model_copy(
+        update={
+            "adas": gate.adas.model_copy(
+                update={"max_residual_impact_speed_mps": limit_mps}
+            )
+        }
+    )
+
+
 # --- gate-config identity --------------------------------------------------------------
 
 
@@ -250,6 +264,47 @@ def test_the_threat_label_comes_from_the_trace_not_the_controller(
     ]
 
     assert finding.status is FindingStatus.PASS
+
+
+def test_contact_above_the_residual_limit_fails_even_without_an_oracle_threat(
+    adas_gate: GateConfig,
+) -> None:
+    """The early no-threat return must not bypass a contact's residual-speed limit."""
+    events = _events(
+        [(300.0, -1.0, 0.0, 20.0), (299.0, -1.0, 0.0, 1.0)],
+        collision_at=1,
+    )
+
+    finding = _by_id(
+        run_adas_p0_longitudinal_verifiers(events, _scenario("forbidden"), adas_gate)
+    )["adas.aeb.threat_response"]
+
+    assert finding.status is FindingStatus.FAIL
+    assert finding.event_sequences == (1,)
+
+
+def test_residual_impact_limit_preserves_equal_contacts_and_orders_violations(
+    adas_gate: GateConfig,
+) -> None:
+    """Only contacts above the threshold fail, in trace order with the earliest timestamp."""
+    gate = _with_residual_impact_speed_limit(adas_gate, 1.0)
+    events = _events(
+        [
+            (300.0, -1.0, 0.0, 20.0),
+            (299.0, -1.0, 0.0, 1.0),
+            (298.0, -1.0, 0.0, 1.1),
+            (297.0, -1.0, 0.0, 0.5),
+        ],
+        collision_at=1,
+    )
+
+    finding = _by_id(
+        run_adas_p0_longitudinal_verifiers(events, _scenario("forbidden"), gate)
+    )["adas.aeb.threat_response"]
+
+    assert finding.status is FindingStatus.FAIL
+    assert finding.event_sequences == (2,)
+    assert finding.first_failure_time_s == pytest.approx(0.2)
 
 
 # --- false intervention ----------------------------------------------------------------

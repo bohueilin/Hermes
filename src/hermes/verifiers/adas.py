@@ -157,7 +157,7 @@ def adas_threat_response(
     scenario: ScenarioDefinition,
     gate: GateConfig,
 ) -> Finding:
-    """A scenario the oracle labels as a threat must produce braking, and no collision."""
+    """A threat must produce braking; any contact must stay within its residual-speed limit."""
     criteria = _criteria(gate)
     samples = _samples(events)
     threats = _threat_samples(samples, criteria, scenario.control.max_braking_mps2)
@@ -166,8 +166,37 @@ def adas_threat_response(
         if scenario.adas is not None and scenario.adas.expected_aeb is not None
         else False
     )
-    collisions = max(event.vehicle_state.collision_count for event in events)
-    criterion = "an oracle-labelled threat produces AEB braking and no collision"
+    residual_speed_limit_mps = criteria.max_residual_impact_speed_mps
+    violating_contacts = tuple(
+        event
+        for event in events
+        if event.vehicle_state.collision_count > 0
+        and event.vehicle_state.speed_mps > residual_speed_limit_mps
+    )
+    criterion = (
+        "an oracle-labelled threat produces AEB braking and every contact residual ego speed "
+        "is within the configured limit"
+    )
+
+    if violating_contacts:
+        return Finding(
+            finding_id="adas.aeb.threat_response",
+            verifier="AdasThreatResponseVerifier",
+            verifier_version="1.0",
+            status=FindingStatus.FAIL,
+            severity=Severity.CRITICAL,
+            hard_invariant=True,
+            threshold_or_invariant=criterion,
+            message=(
+                f"residual ego speed exceeded {residual_speed_limit_mps} m/s at "
+                f"{len(violating_contacts)} contact event(s)"
+            ),
+            event_sequences=tuple(event.sequence for event in violating_contacts),
+            first_failure_time_s=violating_contacts[0].simulation_time_s,
+            measurement=_available(
+                max(event.vehicle_state.speed_mps for event in violating_contacts), "m/s"
+            ),
+        )
 
     if not threats and not expected_required:
         return Finding(
@@ -183,25 +212,6 @@ def adas_threat_response(
         )
 
     braked = _first_brake(samples)
-    if collisions > 0:
-        failing = tuple(
-            event.sequence
-            for event in events
-            if event.vehicle_state.collision_count > 0
-        )
-        return Finding(
-            finding_id="adas.aeb.threat_response",
-            verifier="AdasThreatResponseVerifier",
-            verifier_version="1.0",
-            status=FindingStatus.FAIL,
-            severity=Severity.CRITICAL,
-            hard_invariant=True,
-            threshold_or_invariant=criterion,
-            message=f"collision occurred during an oracle-labelled threat ({collisions})",
-            event_sequences=failing,
-            first_failure_time_s=events[failing[0]].simulation_time_s if failing else None,
-            measurement=_available(float(collisions), "collisions"),
-        )
     if braked is None:
         return Finding(
             finding_id="adas.aeb.threat_response",
@@ -228,7 +238,7 @@ def adas_threat_response(
         threshold_or_invariant=criterion,
         message=(
             f"{len(threats)} oracle-labelled threat steps produced braking from sequence "
-            f"{braked.sequence} with no collision"
+            f"{braked.sequence} with all contact residual speeds within the configured limit"
         ),
         event_sequences=(braked.sequence,),
         measurement=_available(float(len(threats)), "threat steps"),
