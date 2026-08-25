@@ -10,12 +10,12 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Checkouts** | main checkout `…/Hermes` (on `main` since 2026-08-22, another session's move; Phase 8 intact on its branch) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · ADAS worktree `…/Hermes-adas` on `feat/phase8-adas-calibration` (env verified: 965 green; execution plan local there) · Phase 7 codex worktree (read-only) |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
-| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; ADAS-branch suite **1012 passed** |
+| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; ADAS-branch suite **1118 passed**; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes) |
 | **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 33 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | 965 tests pass (18 drive real MetaDrive) · ruff clean · `hermes doctor` 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-08-24 |
+| **Last updated** | 2026-08-25 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -761,6 +761,28 @@ Each item states how you know it is done and what it will break.
 
 ### 11.1 Phase 8 — remaining, in order
 
+> **Phase 3 merged 2026-08-25** (`a78287e`): the `stationary_lead` kind with a measured
+> threat/nominal pair, ADAS observation-fault wiring (a delayed observation now degrades the
+> baseline into a *named* failure — fault injection proving the evaluation notices), residual-impact
+> enforcement, and two owner-facing design notes (WP-2 composite scenarios, WP-4 `RunMetricsV3`).
+> Suite 1118; seeded suite 8 named defects / 10 tests.
+>
+> **Three corrections were made in review, before merge**, each recorded in
+> `PHASE8_IMPLEMENTATION_NOTE.md`:
+> 1. **`AdasThreatResponseVerifier` 1.0 → 1.1.** Its observable behaviour changed (residual-impact
+>    enforcement plus rewritten criterion text) while the version stayed frozen, so one
+>    `(name, version)` pair denoted two behaviours. Bumped at all six pins. It was free at that
+>    moment because every ADAS bundle was already invalid.
+> 2. **A superseded determinism digest** in the implementation note, re-measured to
+>    `54b439ca60e67794…` and annotated with *why* it moves, so the next reader re-measures.
+> 3. **Fleet disposition recorded: 14 of 14 ADAS bundles are `INVALID`** under two fail-closed
+>    corrections (residual-impact enforcement, then verifier-suite identity binding). A fresh run
+>    verifies clean, so the pipeline is healthy; what is invalid is historical evidence produced
+>    under superseded verifier identities. **Coordination rule 8's "60 of 63" baseline is stale —
+>    re-measure before using it.** Regenerating or retiring the 14 is an owner decision.
+
+
+
 > **Phase 2 (calibration) executed and merged 2026-08-24** — reviewed with zero critical/important
 > findings. The plan file now carries **Phase 3** (review follow-ups, `stationary_lead` and
 > `cut_out_reveal` challenge kinds as threat/nominal pairs, ADAS fault wiring):
@@ -799,7 +821,8 @@ Each item states how you know it is done and what it will break.
    on new challenge kinds** (`ChallengeConfig` has exactly two); each touches schema, adapter
    scheduler, trace rules and oracle. Author in threat/nominal pairs using
    `tests/integration/test_cut_in_generalisation.py` as the template. Keep nominal exposure ≥30%.
-4. **Wire the seven faults to ADAS scenarios.** Plumbing exists and is unused.
+4. ~~Wire the faults to ADAS~~ **DONE** (Phase 3) — observation faults enabled for the exact ADAS
+   policy identity, with a measured delay scenario whose baseline degrades into a named finding. Plumbing exists and is unused.
    `orchestrator.py:514-528` bars observation faults on MetaDrive — written for IDM, which ignores
    observations; the ADAS controller does not. Revisit, do not work around.
 5. **ACC, two-stage gate, review-envelope variation axis** (`review/models.py:2615`, `:2105-2114`,
@@ -886,8 +909,19 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
     policy's decel-to-pedal divisor (`policies/baseline.py:52`). Committed ADAS runs are
     unaffected (fixed brake constants), but a generic-policy run on an ADAS scenario now
     commands ~46% of the former pedal fraction.
-15. **`max_residual_impact_speed_mps` is declared but consumed by no verifier** — a dead
-    criterion carrying a fresh citation comment. Wire it or remove it deliberately.
+15. ~~`max_residual_impact_speed_mps` is dead~~ **WIRED** (Phase 3) into
+    `adas.aeb.threat_response`; still vacuous at verdict level because contact already HOLDs via
+    `collision.zero`, which is stated honestly rather than sold as new coverage.
+16. **A verifier whose behaviour changes must move its version.** Phase 3 shipped a semantics
+    change under a frozen `1.0`, caught in review. Six pins must move together: the identity
+    tuple, the four emission sites, and the profile registry. Changing any verifier identity
+    re-digests the suite and invalidates every stored ADAS bundle — which is correct, and is why
+    the cheapest moment to bump is when the fleet is already invalid.
+17. **A single-actor evidence contract cannot express a composite scenario.** The observation
+    summary is an exact 18-field set with one unlabelled challenge actor; switching its subject
+    mid-run would be an unprovable identity change. See the WP-2 design note before attempting
+    `cut_out_reveal`, and note that `adas_nominal_slow_closing` overstates "steady throughout" —
+    its lead brakes on the final step.
 
 ---
 
