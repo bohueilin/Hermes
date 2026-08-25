@@ -30,3 +30,29 @@ artifacts/*
 
 # Extracted starter-pack duplicate
 Hermes_Starter_Pack/
+
+# Proposed regression scenarios awaiting review; promoted ones land in scenarios/.
+/drafts/
+# Recorded approvals are local until deliberately committed.
+/config/phase8-approvals.yaml
+# FleetLab experiment artifacts are runtime output.
+/experiments/
+
+# Local-only design and reference material (kept out of version control on request).
+# These also keep `git status` clean, which matters: the runtime records
+# repository_dirty from `git status --porcelain --untracked-files=normal`, and a dirty
+# worktree makes every generated bundle carry dirty provenance.
+/HERMES_PHASE7_ADAS_AGENTIC_WORKFLOW_PRD.md
+/HERMES_PHASE9_FLEET_SIMULATION_PRD.md
+/Hermes_Phase8_ADAS_Opus5_Implementation_Master_Prompt.md
+/Hermes_Phase6_Reviewer_Comprehension_Iteration_Master_Prompt.md
+/Hermes_Fable5_Full_Project_Fresh_Eye_Design_Review_Master_Prompt.md
+/Hermes_Phase9_FleetLab_Codex_Handoff.md
+/Hermes_PRD_Phase6_Product_Requirements.pdf
+/Hermes_Github.png
+/sandbox/
+/PHASE8_SANDBOX_HANDOFF.md
+
+# Additional local-only paths are listed in .git/info/exclude, which is never
+# committed. Personal material is excluded there rather than here on purpose:
+# this file is public, so naming such a file would itself disclose it.
