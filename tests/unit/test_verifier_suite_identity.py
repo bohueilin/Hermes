@@ -43,6 +43,48 @@ def test_legacy_schema_suite_selectors_keep_trace_integrity_v1_0(
         "version": "1.0",
         "finding_id": "trace.integrity",
     }
+    assert identities[-3].model_dump(mode="json") == {
+        "name": "AdasBrakeOnsetVerifier",
+        "version": "1.0",
+        "finding_id": "adas.aeb.brake_onset_margin",
+    }
+
+
+@pytest.mark.parametrize(
+    "profile",
+    [
+        VerifierProfile.ADAS_P0_LONGITUDINAL,
+        VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT,
+    ],
+)
+def test_schema_v3_adas_suites_select_only_brake_onset_v1_1(profile: VerifierProfile) -> None:
+    identities = verifier_identities_for_profile(
+        profile,
+        evidence_schema_version="3.0",
+    )
+    triplets = _identity_triplets(identities)
+
+    assert ("TraceIntegrityVerifier", "1.1", "trace.integrity") in triplets
+    assert (
+        "AdasThreatResponseVerifier",
+        "1.1",
+        "adas.aeb.threat_response",
+    ) in triplets
+    assert (
+        "AdasBrakeOnsetVerifier",
+        "1.1",
+        "adas.aeb.brake_onset_margin",
+    ) in triplets
+    assert (
+        "AdasFalseInterventionVerifier",
+        "1.0",
+        "adas.aeb.no_false_intervention",
+    ) in triplets
+    assert (
+        "AdasWarningTimingVerifier",
+        "1.0",
+        "adas.fcw.warning_timing",
+    ) in triplets
 
 
 @pytest.mark.parametrize(

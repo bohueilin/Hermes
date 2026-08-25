@@ -217,6 +217,63 @@ def test_schema_v3_gate_selects_trace_integrity_v1_1_without_moving_legacy() -> 
     )
 
 
+def test_v3_adas_gate_selects_brake_onset_v1_1_without_moving_other_versions() -> None:
+    legacy = release_gate.expected_findings_for_profile(
+        VerifierProfile.ADAS_P0_LONGITUDINAL,
+        evidence_schema_version="1.0",
+    )
+    fault_v2 = release_gate.expected_findings_for_profile(
+        VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT,
+        evidence_schema_version="2.0",
+    )
+    v3 = release_gate.expected_findings_for_profile(
+        VerifierProfile.ADAS_P0_LONGITUDINAL,
+        evidence_schema_version="3.0",
+    )
+
+    assert legacy["adas.aeb.brake_onset_margin"] == (
+        "AdasBrakeOnsetVerifier",
+        "1.0",
+        False,
+    )
+    assert fault_v2["adas.aeb.brake_onset_margin"] == (
+        "AdasBrakeOnsetVerifier",
+        "1.0",
+        False,
+    )
+    assert v3["adas.aeb.brake_onset_margin"] == (
+        "AdasBrakeOnsetVerifier",
+        "1.1",
+        False,
+    )
+    assert v3["adas.aeb.threat_response"] == (
+        "AdasThreatResponseVerifier",
+        "1.1",
+        True,
+    )
+    assert v3["adas.aeb.no_false_intervention"] == (
+        "AdasFalseInterventionVerifier",
+        "1.0",
+        True,
+    )
+    assert v3["adas.fcw.warning_timing"] == (
+        "AdasWarningTimingVerifier",
+        "1.0",
+        False,
+    )
+
+
+def test_expected_finding_selector_rejects_unhashable_schema_canonically() -> None:
+    with pytest.raises(
+        ValueError,
+        match=r"unsupported evidence schema for trace verifier: \['3\.0'\]",
+    ):
+        release_gate.expected_findings_for_profile(
+            VerifierProfile.ADAS_P0_LONGITUDINAL,
+            evidence_schema_version=["3.0"],  # type: ignore[arg-type]
+        )
+
+
 def test_schema_v3_gate_accepts_only_the_schema_selected_trace_identity(
     repository_root: Path,
 ) -> None:

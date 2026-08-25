@@ -1,4 +1,4 @@
-"""Inactive schema-3 bundle serialization and stored-replay contracts for WP-4."""
+"""Schema-3 bundle serialization, independent derivation, and stored-replay contracts."""
 
 from __future__ import annotations
 
@@ -49,6 +49,7 @@ from hermes.evidence.artifacts import (
     write_bundle,
 )
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
+from hermes.evidence.metrics import compute_metrics
 from hermes.evidence.schema_registry import (
     ARTIFACT_MANIFEST_BY_EVIDENCE_SCHEMA,
     EXECUTION_CONTEXT_BY_EVIDENCE_SCHEMA,
@@ -59,14 +60,16 @@ from hermes.evidence.trace import GENESIS_HASH, create_trace_event_v3
 from hermes.evidence.verification import inspect_artifact
 from hermes.faults.deterministic import DeterministicFaultInjector
 from hermes.gates.config import GateConfig, gate_config_digest, load_gate_config
-from hermes.gates.release import select_verifier_profile
+from hermes.gates.release import apply_release_gate, select_verifier_profile
 from hermes.scenarios.loader import scenario_digest
 from hermes.shields.config import ShieldConfig
 from hermes.shields.deterministic import DeterministicSafetyShield
 from hermes.shields.noop import NoOpShield
-from hermes.verifiers import _trace_integrity, verifier_identities_for_profile
-
-_WP5_BOUNDARY = "V3 metrics/findings derivation unsupported until WP-5"
+from hermes.verifiers import (
+    _trace_integrity,
+    run_verifiers_for_profile,
+    verifier_identities_for_profile,
+)
 
 
 def _scenario(*, faulted: bool) -> ScenarioDefinition:
@@ -407,6 +410,22 @@ def _bundle(
         deterministic_shield=deterministic_shield,
     )
     events = _events(scenario, context, shield_config)
+    metrics = compute_metrics(events, scenario=scenario, gate_config=gate_config)
+    profile = select_verifier_profile(scenario)
+    findings = run_verifiers_for_profile(
+        profile,
+        events,
+        scenario,
+        gate_config,
+        shield_config=shield_config,
+    )
+    verdict = apply_release_gate(
+        findings,
+        gate_config,
+        expected_profile=profile,
+        adapter_name=context.adapter.name,
+        evidence_schema_version=context.evidence_schema_version,
+    )
     directory = tmp_path / (
         "v3-fault" if faulted else "v3-shield" if deterministic_shield else "v3-no-fault"
     )
@@ -418,14 +437,26 @@ def _bundle(
         gate_config=gate_config,
         execution_context=context,
         events=events,
-        metrics=RunMetricsV3.model_validate(_metrics_v3_payload()),
-        findings=(),
-        verdict=_verdict(),
+        metrics=metrics,
+        findings=findings,
+        verdict=verdict,
         repository_commit="9e8787ad3ece61f4df4d55b9f91874b88133985e",
         repository_dirty=False,
         repository_provenance_reason=None,
     )
     return directory, scenario, gate_config, context, events
+
+
+def _wp5_closed_bundle(
+    repository_root: Path,
+    tmp_path: Path,
+) -> Path:
+    directory, _, _, _, _ = _bundle(
+        repository_root,
+        tmp_path,
+        faulted=False,
+    )
+    return directory
 
 
 def _decoded(path: Path) -> dict[str, object]:
@@ -482,13 +513,12 @@ def _event_payloads(bundle: Path) -> list[dict[str, object]]:
     ]
 
 
-def _assert_seam_and_boundary(bundle: Path, seam: str) -> None:
+def _assert_seam_rejected(bundle: Path, seam: str) -> None:
     inspection = inspect_artifact(bundle)
     assert inspection.verification.integrity is IntegrityStatus.INVALID
     assert inspection.snapshot is None
     errors = " | ".join(inspection.verification.errors)
     assert seam in errors
-    assert _WP5_BOUNDARY in errors
 
 
 @pytest.mark.parametrize("faulted", [False, True], ids=("no-fault", "faulted"))
@@ -537,8 +567,11 @@ def test_v3_writer_round_trips_exact_six_families_and_ten_file_inventory(
     assert parsed_manifest.required_files == REQUIRED_ARTIFACT_FILES
     assert (parsed_manifest.fault_name is not None) is faulted
     inspection = inspect_artifact(bundle)
-    assert inspection.snapshot is None
-    assert inspection.verification.errors == (_WP5_BOUNDARY,)
+    assert inspection.verification.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
+    assert inspection.verification.errors == ()
+    assert inspection.snapshot is not None
+    assert type(inspection.snapshot.metrics) is RunMetricsV3
+    assert type(inspection.snapshot.findings) is FindingsDocumentV3
 
 
 def test_v3_event_parser_rejects_unknown_and_cross_version_nested_schemas(
@@ -598,7 +631,7 @@ def test_v3_inspection_quarantines_coherently_rebound_non_string_event_versions(
     events[0]["run_context"] = run_context
     _rehash_events(bundle, events)
 
-    _assert_seam_and_boundary(
+    _assert_seam_rejected(
         bundle,
         "events.jsonl line 1 evidence_schema_version",
     )
@@ -676,7 +709,7 @@ def test_stored_no_fault_v3_binds_complete_typed_observation_continuity(
         events[0]["result_observation"] = result
     _rehash_events(bundle, events)
 
-    _assert_seam_and_boundary(bundle, expected_seam)
+    _assert_seam_rejected(bundle, expected_seam)
 
 
 def test_v3_writer_rejects_a_mixed_exact_document_family(
@@ -748,7 +781,7 @@ def test_stored_v3_replays_full_stateful_policy_from_strict_bound_config(
     event["control_fault_evidence"] = control
     _rehash_events(bundle, events)
 
-    _assert_seam_and_boundary(bundle, "stored ADAS policy replay mismatch at sequence 1")
+    _assert_seam_rejected(bundle, "stored ADAS policy replay mismatch at sequence 1")
 
 
 def test_stored_v3_rejects_unknown_controller_config_even_when_digest_bound(
@@ -778,7 +811,7 @@ def test_stored_v3_rejects_unknown_controller_config_even_when_digest_bound(
         event["run_context"] = event_context
     _rehash_events(bundle, events)
 
-    _assert_seam_and_boundary(
+    _assert_seam_rejected(
         bundle,
         "execution-context.json ADAS policy configuration is unsupported",
     )
@@ -795,7 +828,7 @@ def test_stored_v3_independently_replays_complete_observation_fault_evidence(
     events[1]["observation_fault_evidence"] = observation_evidence
     _rehash_events(bundle, events)
 
-    _assert_seam_and_boundary(
+    _assert_seam_rejected(
         bundle,
         "stored deterministic fault observation mismatch at sequence 1",
     )
@@ -812,7 +845,7 @@ def test_stored_v3_rejects_coherently_rehashed_control_fault_tampering(
     events[1]["control_fault_evidence"] = control_evidence
     _rehash_events(bundle, events)
 
-    _assert_seam_and_boundary(bundle, "control fault replay does not match")
+    _assert_seam_rejected(bundle, "control fault replay does not match")
 
 
 def test_stored_v3_threads_exact_shield_config_through_outer_trace_and_verifier(
@@ -826,7 +859,9 @@ def test_stored_v3_threads_exact_shield_config_through_outer_trace_and_verifier(
         deterministic_shield=True,
     )
     inspection = inspect_artifact(bundle)
-    assert inspection.verification.errors == (_WP5_BOUNDARY,)
+    assert inspection.verification.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
+    assert inspection.verification.errors == ()
+    assert inspection.snapshot is not None
     parsed_events = verification_module._parse_events((bundle / "events.jsonl").read_bytes())
     shield_config = ShieldConfig.model_validate(context.shield.config)
 
@@ -871,6 +906,11 @@ def test_v3_suite_selects_exact_trace_integrity_v1_1_and_binds_its_digest(
         "version": "1.1",
         "finding_id": "trace.integrity",
     }
+    assert context.verifier_suite[-3].model_dump(mode="json") == {
+        "name": "AdasBrakeOnsetVerifier",
+        "version": "1.1",
+        "finding_id": "adas.aeb.brake_onset_margin",
+    }
     assert context.run_context.verifier_suite_digest == config_digest(
         [identity.model_dump(mode="json") for identity in expected_suite]
     )
@@ -908,7 +948,7 @@ def test_stored_v3_rejects_a_coherently_rebound_shield_config(
         event["run_context"] = event_context
     _rehash_events(bundle, events)
 
-    _assert_seam_and_boundary(bundle, "shield transition does not match deterministic replay")
+    _assert_seam_rejected(bundle, "shield transition does not match deterministic replay")
 
 
 def test_stored_v3_binds_optional_fault_identity_into_manifest(
@@ -921,7 +961,7 @@ def test_stored_v3_binds_optional_fault_identity_into_manifest(
     _write_json(bundle / "manifest.json", manifest)
     _refresh_bundle(bundle)
 
-    _assert_seam_and_boundary(
+    _assert_seam_rejected(
         bundle,
         "manifest.json fault_config_digest does not match execution context",
     )
@@ -953,7 +993,7 @@ def test_stored_v3_binds_exact_schema_aware_verifier_suite(
         event["run_context"] = event_context
     _rehash_events(bundle, events)
 
-    _assert_seam_and_boundary(
+    _assert_seam_rejected(
         bundle,
         "execution-context.json contains an unsupported verifier suite",
     )
@@ -990,3 +1030,96 @@ def test_wp4_does_not_activate_v3_runtime_production(
     )
 
     assert type(context) is (ExecutionContextV2 if faulted else ExecutionContext)
+
+
+def test_wp5_closes_the_same_synthetic_bundle_with_exact_v3_snapshot_classes(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    bundle = _wp5_closed_bundle(repository_root, tmp_path)
+
+    inspection = inspect_artifact(bundle)
+
+    assert inspection.verification.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
+    assert inspection.snapshot is not None
+    assert type(inspection.snapshot.context) is ExecutionContextV3
+    assert type(inspection.snapshot.events[0]) is TraceEventV3
+    assert type(inspection.snapshot.metrics) is RunMetricsV3
+    assert type(inspection.snapshot.findings) is FindingsDocumentV3
+
+    snapshot = inspection.snapshot
+    recomputed_metrics = compute_metrics(
+        snapshot.events,
+        scenario=snapshot.scenario,
+        gate_config=snapshot.gate_config,
+    )
+    recomputed_findings = run_verifiers_for_profile(
+        snapshot.verifier_profile,
+        snapshot.events,
+        snapshot.scenario,
+        snapshot.gate_config,
+        shield_config=(
+            ShieldConfig.model_validate(snapshot.context.shield.config)
+            if snapshot.context.shield.name == "deterministic"
+            else None
+        ),
+    )
+    recomputed_verdict = apply_release_gate(
+        recomputed_findings,
+        snapshot.gate_config,
+        adapter_name=snapshot.context.adapter.name,
+        expected_profile=snapshot.verifier_profile,
+        evidence_schema_version=snapshot.context.evidence_schema_version,
+    )
+
+    assert (bundle / "metrics.json").read_bytes() == (
+        canonical_json_bytes(recomputed_metrics.model_dump(mode="json")) + b"\n"
+    )
+    assert (bundle / "findings.json").read_bytes() == (
+        canonical_json_bytes(
+            FindingsDocumentV3(findings=recomputed_findings).model_dump(mode="json")
+        )
+        + b"\n"
+    )
+    assert (bundle / "verdict.json").read_bytes() == (
+        canonical_json_bytes(recomputed_verdict.model_dump(mode="json")) + b"\n"
+    )
+
+
+def test_wp5_rejects_coherently_rehashed_metrics_findings_and_verdict(
+    repository_root: Path,
+    tmp_path: Path,
+) -> None:
+    bundle = _wp5_closed_bundle(repository_root, tmp_path)
+    metrics = _decoded(bundle / "metrics.json")
+    metrics["collision_count"] = 1
+    collision_occurred = dict(metrics["collision_occurred"])
+    collision_occurred["value"] = True
+    metrics["collision_occurred"] = collision_occurred
+    _write_json(bundle / "metrics.json", metrics)
+
+    findings = _decoded(bundle / "findings.json")
+    finding_items = list(findings["findings"])
+    progress = dict(finding_items[3])
+    progress["message"] = "coherently rewritten stored finding"
+    finding_items[3] = progress
+    findings["findings"] = finding_items
+    _write_json(bundle / "findings.json", findings)
+    verdict = _decoded(bundle / "verdict.json")
+    verdict["findings"] = finding_items
+    _write_json(bundle / "verdict.json", verdict)
+    _refresh_bundle(bundle)
+
+    inspection = inspect_artifact(bundle)
+
+    assert inspection.verification.integrity is IntegrityStatus.INVALID
+    assert inspection.snapshot is None
+    assert "metrics.json does not match metrics recomputed from stored events" in (
+        inspection.verification.errors
+    )
+    assert "findings.json does not match verifiers rerun from stored events" in (
+        inspection.verification.errors
+    )
+    assert "verdict.json does not match the recomputed release gate" in (
+        inspection.verification.errors
+    )

@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from tests.unit.test_run_metrics_v3 import _typed_fact_events
 
 from hermes.domain.enums import EvidenceAvailability, FindingStatus, TerminationReason
 from hermes.domain.models import Action, RunContext, VehicleState
@@ -19,7 +20,10 @@ from hermes.evidence.trace import GENESIS_HASH, create_trace_event
 from hermes.gates.config import GateConfig, gate_config_digest, load_gate_config
 from hermes.gates.release import VerifierProfile, select_verifier_profile
 from hermes.scenarios.loader import parse_scenario_yaml
-from hermes.verifiers.adas import run_adas_p0_longitudinal_verifiers
+from hermes.verifiers.adas import (
+    adas_brake_onset_margin,
+    run_adas_p0_longitudinal_verifiers,
+)
 
 SCENARIO = """\
 schema_version: "4.0"
@@ -399,6 +403,113 @@ def test_brake_onset_is_unavailable_when_nothing_braked(adas_gate: GateConfig) -
     assert finding.measurement.availability is EvidenceAvailability.NOT_AVAILABLE
     assert finding.measurement.value is None
     assert finding.measurement.reason
+
+
+def test_schema_v3_consumed_gap_is_a_finite_available_v1_1_failure(
+    repository_root: Path,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    source = events[0]
+    delivered = source.observation_fault_evidence.delivered_observation.model_copy(
+        update={"front_distance_m": 1.0, "front_relative_speed_mps": -3.0}
+    )
+    source = source.model_copy(
+        update={
+            "observation_fault_evidence": source.observation_fault_evidence.model_copy(
+                update={"delivered_observation": delivered}
+            )
+        }
+    )
+    events = (source, *events[1:])
+
+    finding = _by_id(run_adas_p0_longitudinal_verifiers(events, scenario, gate))[
+        "adas.aeb.brake_onset_margin"
+    ]
+
+    assert finding.verifier == "AdasBrakeOnsetVerifier"
+    assert finding.verifier_version == "1.1"
+    assert finding.status is FindingStatus.FAIL
+    assert finding.measurement.availability is EvidenceAvailability.AVAILABLE
+    assert finding.measurement.value == 0.0
+    assert finding.measurement.unit == "m usable gap"
+
+
+def test_schema_v3_brake_onset_uses_origin_geometry_and_execution_clock(
+    repository_root: Path,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    source = events[0]
+    delivered = source.observation_fault_evidence.delivered_observation.model_copy(
+        update={"front_relative_speed_mps": -12.0}
+    )
+    events = (
+        source.model_copy(
+            update={
+                "observation_fault_evidence": source.observation_fault_evidence.model_copy(
+                    update={"delivered_observation": delivered}
+                )
+            }
+        ),
+        *events[1:],
+    )
+
+    finding = _by_id(run_adas_p0_longitudinal_verifiers(events, scenario, gate))[
+        "adas.aeb.brake_onset_margin"
+    ]
+
+    assert finding.verifier_version == "1.1"
+    assert finding.event_sequences == (1,)
+    assert finding.first_failure_time_s == pytest.approx(0.1)
+    assert finding.measurement.value == pytest.approx(7.2)
+
+    false_intervention = _by_id(
+        run_adas_p0_longitudinal_verifiers(events, scenario, gate)
+    )["adas.aeb.no_false_intervention"]
+    assert false_intervention.event_sequences == (1,)
+    assert false_intervention.first_failure_time_s == pytest.approx(0.2)
+
+
+def test_schema_v3_direct_brake_onset_api_pins_v1_1_for_no_onset_and_undefined_geometry(
+    repository_root: Path,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    onset = events[1]
+    no_onset_events = (
+        events[0],
+        onset.model_copy(
+            update={
+                "executed_action": Action(
+                    steering=onset.executed_action.steering,
+                    throttle=onset.executed_action.throttle,
+                    brake=0.0,
+                ),
+                "executed_brake_source": "none",
+            }
+        ),
+        *events[2:],
+    )
+    no_onset = adas_brake_onset_margin(no_onset_events, scenario, gate)
+
+    source = events[0]
+    delivered = source.observation_fault_evidence.delivered_observation.model_copy(
+        update={"front_relative_speed_mps": 0.0}
+    )
+    undefined_events = (
+        source.model_copy(
+            update={
+                "observation_fault_evidence": source.observation_fault_evidence.model_copy(
+                    update={"delivered_observation": delivered}
+                )
+            }
+        ),
+        *events[1:],
+    )
+    undefined = adas_brake_onset_margin(undefined_events, scenario, gate)
+
+    assert no_onset.verifier_version == "1.1"
+    assert no_onset.status is FindingStatus.NOT_AVAILABLE
+    assert undefined.verifier_version == "1.1"
+    assert undefined.status is FindingStatus.NOT_AVAILABLE
 
 
 # --- warning exposure ------------------------------------------------------------------

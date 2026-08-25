@@ -121,6 +121,12 @@ V3_EXPECTED_FINDINGS_BY_PROFILE: Mapping[
                     identity[2],
                 )
                 if finding_id == "trace.integrity"
+                else (
+                    identity[0],
+                    "1.1",
+                    identity[2],
+                )
+                if finding_id == "adas.aeb.brake_onset_margin"
                 else identity
                 for finding_id, identity in expected.items()
             }
@@ -136,6 +142,8 @@ def expected_findings_for_profile(
     evidence_schema_version: str = "1.0",
 ) -> Mapping[str, tuple[str, str, bool]]:
     """Return the exact finding identities accepted for one profile and schema."""
+    if not isinstance(evidence_schema_version, str):
+        trace_integrity_verifier_version(evidence_schema_version)
     if evidence_schema_version in {"1.0", "2.0"}:
         return EXPECTED_FINDINGS_BY_PROFILE[profile]
     if evidence_schema_version == "3.0":

@@ -1512,8 +1512,6 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
     if len(observed_versions) > 1:
         errors.append("artifact files contain mixed evidence_schema_version values")
     is_v3_bundle = "3.0" in observed_versions
-    if is_v3_bundle:
-        errors.append("V3 metrics/findings derivation unsupported until WP-5")
 
     if (
         manifest is not None
@@ -1612,23 +1610,40 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
     recomputed_verdict: GateResult | None = None
     verifier_profile: VerifierProfile | None = None
     if (
-        not is_v3_bundle
-        and events is not None
+        events is not None
         and trace_digest is not None
         and scenario is not None
         and gate_config is not None
+        and context is not None
     ):
         try:
-            recomputed_metrics = compute_metrics(events)
+            recomputed_metrics = compute_metrics(
+                events,
+                scenario=scenario,
+                gate_config=gate_config,
+            )
             verifier_profile = select_verifier_profile(scenario)
             if (
                 verifier_profile is VerifierProfile.LEGACY
-                and isinstance(context, ExecutionContextV2)
+                and type(context) is ExecutionContextV2
             ):
                 # Preserved from before the shared selector existed: a schema-2 execution
                 # context implies fault coverage even when the scenario no longer says so.
                 verifier_profile = VerifierProfile.FAULT_COVERAGE
-            if scenario.faults is not None:
+            if is_v3_bundle:
+                v3_events = tuple(event for event in events if type(event) is TraceEventV3)
+                if len(v3_events) != len(events):
+                    errors.append("schema-3 scenario contains a non-schema-3 trace event")
+                    recomputed_findings = ()
+                else:
+                    recomputed_findings = run_verifiers_for_profile(
+                        verifier_profile,
+                        v3_events,
+                        scenario,
+                        gate_config,
+                        shield_config=trace_shield_config,
+                    )
+            elif scenario.faults is not None:
                 fault_events = tuple(
                     event for event in events if isinstance(event, TraceEventV2)
                 )
@@ -1660,25 +1675,26 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
                         gate_config,
                         shield_config=trace_shield_config,
                     )
-            adapter_name = context.adapter.name if context is not None else "fake"
             recomputed_verdict = apply_release_gate(
                 recomputed_findings,
                 gate_config,
-                adapter_name=adapter_name,
+                adapter_name=context.adapter.name,
                 expected_profile=verifier_profile,
+                evidence_schema_version=context.evidence_schema_version,
             )
             if metrics is not None and metrics != recomputed_metrics:
                 errors.append("metrics.json does not match metrics recomputed from stored events")
-            expected_findings = (
-                FindingsDocumentV2(findings=recomputed_findings)
-                if scenario.faults is not None
-                else FindingsDocument(findings=recomputed_findings)
-            )
+            if is_v3_bundle:
+                expected_findings = FindingsDocumentV3(findings=recomputed_findings)
+            elif scenario.faults is not None:
+                expected_findings = FindingsDocumentV2(findings=recomputed_findings)
+            else:
+                expected_findings = FindingsDocument(findings=recomputed_findings)
             if findings_document is not None and findings_document != expected_findings:
                 errors.append("findings.json does not match verifiers rerun from stored events")
             if stored_verdict is not None and stored_verdict != recomputed_verdict:
                 errors.append("verdict.json does not match the recomputed release gate")
-        except (ArithmeticError, ValidationError) as exc:
+        except (ArithmeticError, ValidationError, ValueError) as exc:
             errors.append(
                 "stored evidence recomputation failed: "
                 f"unsupported derived value ({type(exc).__name__})"
