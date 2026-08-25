@@ -10,6 +10,7 @@ classification an agent cannot move.
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -626,6 +627,110 @@ def test_stale_counterfactual_requires_an_older_delivered_source(
 
     assert proposal.deterministic_category is FailureCategory.MISSED_INTERVENTION
     assert proposal.category is FailureCategory.MISSED_INTERVENTION
+
+
+def test_stale_counterfactual_rejects_a_later_hold_after_an_earlier_raw_aeb(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The first raw AEB action is causal onset; a later held brake cannot replace it."""
+    from hermes.adas import policy as policy_module
+    from hermes.adas.interfaces import BrakeSource, InterventionLevel
+    from hermes.agents.tools import _aeb_stale_observation_counterfactual
+    from hermes.domain.models import Action, TraceEventV2
+    from hermes.scenarios import loader as scenario_loader
+
+    zero = Action(steering=0.0, throttle=0.0, brake=0.0)
+    raw_observation = SimpleNamespace(
+        front_distance_m=30.0,
+        front_relative_speed_mps=-10.0,
+    )
+
+    def event(
+        sequence: int,
+        *,
+        age_s: float,
+        source_sequence: int,
+        applied_faults: tuple[str, ...],
+    ) -> SimpleNamespace:
+        return SimpleNamespace(
+            sequence=sequence,
+            candidate_action=zero,
+            observation_fault_evidence=SimpleNamespace(
+                raw_observation=raw_observation,
+                delivered_observation=SimpleNamespace(observation_age_s=age_s),
+                delivered_from_sequence=source_sequence,
+                applied_faults=applied_faults,
+            ),
+        )
+
+    stored_events = iter(
+        (
+            event(0, age_s=0.0, source_sequence=0, applied_faults=()),
+            event(
+                1,
+                age_s=0.6,
+                source_sequence=0,
+                applied_faults=("OBSERVATION_DELAY",),
+            ),
+        )
+    )
+
+    class DeterministicReplayPolicy:
+        instance_count = 0
+
+        def __init__(self, _config: object) -> None:
+            self.is_raw_replay = self.instance_count == 0
+            type(self).instance_count += 1
+            self.raw_action_count = 0
+            self.last_decision: SimpleNamespace | None = None
+
+        def reset(self, _scenario: object, _seed: int) -> None:
+            return None
+
+        def act(self, _observation: object) -> Action:
+            if not self.is_raw_replay:
+                return zero
+            reasons = (
+                ("AEB_PARTIAL_BRAKE",)
+                if self.raw_action_count == 0
+                else ("AEB_MINIMUM_HOLD",)
+            )
+            self.raw_action_count += 1
+            self.last_decision = SimpleNamespace(
+                brake_source=BrakeSource.AEB,
+                intervention=InterventionLevel.PARTIAL_BRAKE,
+                reasons=reasons,
+            )
+            return Action(steering=0.0, throttle=0.0, brake=0.5)
+
+    bundle = tmp_path / "stateful-counterfactual"
+    bundle.mkdir()
+    (bundle / "scenario.resolved.yaml").write_text("ignored\n", encoding="utf-8")
+    (bundle / "events.jsonl").write_text("{}\n{}\n", encoding="utf-8")
+    (bundle / "bundle.sha256").write_text("a" * 64 + "\n", encoding="ascii")
+    monkeypatch.setattr(
+        TraceEventV2,
+        "model_validate_json",
+        staticmethod(lambda _line: next(stored_events)),
+    )
+    monkeypatch.setattr(scenario_loader, "parse_scenario_yaml", lambda _text: object())
+    monkeypatch.setattr(
+        policy_module,
+        "AdasLongitudinalPolicy",
+        DeterministicReplayPolicy,
+    )
+
+    proof, citations = _aeb_stale_observation_counterfactual(
+        run_id="stateful-counterfactual",
+        bundle=bundle,
+        controller_config=object(),
+        stale_threshold_s=0.5,
+        seed=7,
+    )
+
+    assert proof is None
+    assert citations == ()
 
 
 @pytest.mark.parametrize(

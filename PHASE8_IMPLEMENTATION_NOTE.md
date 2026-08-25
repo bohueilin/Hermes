@@ -3,7 +3,7 @@
 **Companion to:** [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) (design) and
 [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md) (pre-work survey).
 **Branch:** `feat/phase8-adas-scenarios`; WP-3 started from checkpoint `75d1679`.
-**Gates at time of writing:** 1,117 tests pass (33 are `metadrive`-selected, including real
+**Gates at time of writing:** 1,118 tests pass (33 are `metadrive`-selected, including real
 physics), ruff clean repo-wide, doctor 17 PASS on the clean committed tree.
 
 This note records what was built, what was measured, what deviates from the PRD and why, and
@@ -43,7 +43,9 @@ Determinism: N = 3 repeats of the threat scenario produce trace digest
 
 Triage: agent proposal and deterministic classifier agreed on all 8 seeded defects. The
 environment-path seed resolves its finding, nested age and fault-count metrics, and stored
-policy-threshold citations against the verified bundle.
+policy-threshold citations against the verified bundle. Its bounded causal proof binds the
+delivered-policy replay to stored candidates and uses the first positive raw AEB intervention
+as the decisive onset, so a later stateful hold cannot replace a nonqualifying onset.
 
 ## 2. Decisions taken during implementation
 
@@ -260,8 +262,8 @@ Honest list of where the work is thinnest:
 cd <repo> && export PYTHONPATH="$PWD/src"
 
 # gates
-python -m pytest -q                 # 1,108 passed
-python -m pytest -q -m metadrive    # 29 passed, including real physics
+python -m pytest -q                 # 1,118 passed
+python -m pytest -q -m metadrive    # 33 passed, including real physics
 python -m ruff check . && python -m hermes doctor
 
 # seeded-defect suite (needs vendored third_party/metadrive)

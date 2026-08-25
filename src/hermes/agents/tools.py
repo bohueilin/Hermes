@@ -122,7 +122,9 @@ def _aeb_stale_observation_counterfactual(
     The delivered replay is the binding edge: unless the exact stored controller
     reproduces every stored candidate through the proof event, the trace cannot support a
     causal claim about that controller. The raw replay then changes only the observation
-    stream, keeping the stored scenario, seed, and controller fixed.
+    stream, keeping the stored scenario, seed, and controller fixed. Its first positive
+    AEB-attributed intervention is decisive: a later stateful hold cannot replace an onset
+    that did not itself satisfy the counterfactual conditions.
     """
     from hermes.adas.interfaces import BrakeSource, InterventionLevel
     from hermes.adas.policy import AdasLongitudinalPolicy
@@ -150,19 +152,24 @@ def _aeb_stale_observation_counterfactual(
             if delivered_candidate != event.candidate_action:
                 return None, ()
             raw_decision = raw_policy.last_decision
+            raw_aeb_intervention = (
+                raw_decision is not None
+                and raw_decision.brake_source is BrakeSource.AEB
+                and raw_decision.intervention is not InterventionLevel.NO_INTERVENTION
+                and raw_candidate.brake > 0.0
+            )
+            if not raw_aeb_intervention:
+                continue
             if (
                 fault_evidence.delivered_observation.observation_age_s
                 <= stale_threshold_s
                 or not STALE_OBSERVATION_FAULT_REASONS.intersection(
                     fault_evidence.applied_faults
                 )
-                or raw_decision is None
-                or raw_decision.brake_source is not BrakeSource.AEB
-                or raw_decision.intervention is InterventionLevel.NO_INTERVENTION
-                or raw_candidate.brake <= 0.0
+                or fault_evidence.delivered_from_sequence >= event.sequence
                 or event.candidate_action.brake != 0.0
             ):
-                continue
+                return None, ()
             prefix = f"sequence:{event.sequence}"
             proof = {
                 "sequence": event.sequence,
