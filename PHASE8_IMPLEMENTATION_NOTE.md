@@ -38,8 +38,14 @@ Measured end to end on real MetaDrive physics, seed 7:
 | `defect_over_braking` | nominal | HOLD | `adas.aeb.no_false_intervention` | 0.02 m/s² |
 
 Determinism: N = 3 repeats of the threat scenario produce trace digest
-`1603319fbd213b01…` with byte-identical `events.jsonl`, `metrics.json`, `findings.json` and
+`54b439ca60e67794…` with byte-identical `events.jsonl`, `metrics.json`, `findings.json` and
 `verdict.json`.
+
+That digest has moved three times and each move was a contract change working as designed, not
+a regression: the flagship scenario rewrite, then the binary32 spawn projection, then this
+range's verifier-suite binding plus the `AdasThreatResponseVerifier` 1.0 -> 1.1 bump (the suite
+digest is chained into every event's run context). A digest quoted in any older revision of this
+file will not match. **Re-measure it here whenever the suite identity changes.**
 
 Triage: agent proposal and deterministic classifier agreed on all 8 seeded defects. The
 environment-path seed resolves its finding, nested age and fault-count metrics, and stored
@@ -312,6 +318,27 @@ also produced these byte-identical companion hashes:
 
 Every manifest field except `created_at_utc` is equal. Manifest bytes and bundle-root digests
 are intentionally not asserted: the truthful creation timestamp makes both vary.
+
+### Fleet disposition after the Phase-3 contract corrections
+
+**Every ADAS bundle in the local fleet is now `INVALID` (14 of 14, measured 2026-08-25).** Two
+in-range corrections did this, both fail-closed-correct and neither reversible in place:
+
+1. `b22c4e1` (residual-impact enforcement) rewrote `adas.aeb.threat_response`'s criterion and
+   message text. Verification re-runs verifiers from stored events and requires full findings
+   equality, so the eight then-valid ADAS bundles flipped. The commit message said stored
+   bundles were "neither deleted nor re-baselined" - true as written, but it did not say that
+   they had been *invalidated*, and the hand-back's "six bundles" undercounts the range's total.
+2. `5f2c06b` (verifier-suite identity binding) flipped the six listed below.
+
+**Superseded record:** `evidence/calibration/wp-a-rebaseline-0.4.3.json` records `cal-1/2/3` as
+`INTERNALLY_CONSISTENT`. That was true at its stamped `repository_commit_under_test` and the file
+is **not** rewritten - evidence is annotated, never edited. It no longer describes the current
+tree, and this paragraph is the pointer that says so.
+
+A fresh run verifies `INTERNALLY_CONSISTENT` (measured above), so the pipeline is healthy; what
+is invalid is historical evidence produced under superseded verifier identities. Regenerating or
+retiring the 14 remains an owner decision.
 
 Verifier-suite binding changed the historical disposition of six preserved, local,
 pre-binding ADAS bundles from internally consistent to `INVALID`:

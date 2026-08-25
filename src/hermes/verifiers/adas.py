@@ -36,7 +36,7 @@ from hermes.gates.config import AdasCriteria, GateConfig
 ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES = (
     VerifierIdentity(
         name="AdasThreatResponseVerifier",
-        version="1.0",
+        version="1.1",
         finding_id="adas.aeb.threat_response",
     ),
     VerifierIdentity(
@@ -157,7 +157,15 @@ def adas_threat_response(
     scenario: ScenarioDefinition,
     gate: GateConfig,
 ) -> Finding:
-    """A threat must produce braking; any contact must stay within its residual-speed limit."""
+    """A threat must produce braking; any contact must stay within its residual-speed limit.
+
+    Version 1.1 (2026-08-25). 1.0 failed on *any* collision; 1.1 additionally enforces
+    ``max_residual_impact_speed_mps`` at contact and rewrote its criterion and message text.
+    That is an observable behaviour change, so the version had to move: a stored bundle
+    naming ``("AdasThreatResponseVerifier", "1.0")`` must keep meaning the 1.0 behaviour.
+    The bump was free at the time it was made - every ADAS bundle in the local fleet was
+    already invalid under the suite-identity correction in the same range.
+    """
     criteria = _criteria(gate)
     samples = _samples(events)
     threats = _threat_samples(samples, criteria, scenario.control.max_braking_mps2)
@@ -182,7 +190,7 @@ def adas_threat_response(
         return Finding(
             finding_id="adas.aeb.threat_response",
             verifier="AdasThreatResponseVerifier",
-            verifier_version="1.0",
+            verifier_version="1.1",
             status=FindingStatus.FAIL,
             severity=Severity.CRITICAL,
             hard_invariant=True,
@@ -202,7 +210,7 @@ def adas_threat_response(
         return Finding(
             finding_id="adas.aeb.threat_response",
             verifier="AdasThreatResponseVerifier",
-            verifier_version="1.0",
+            verifier_version="1.1",
             status=FindingStatus.PASS,
             severity=Severity.CRITICAL,
             hard_invariant=True,
@@ -216,7 +224,7 @@ def adas_threat_response(
         return Finding(
             finding_id="adas.aeb.threat_response",
             verifier="AdasThreatResponseVerifier",
-            verifier_version="1.0",
+            verifier_version="1.1",
             status=FindingStatus.FAIL,
             severity=Severity.CRITICAL,
             hard_invariant=True,
@@ -231,7 +239,7 @@ def adas_threat_response(
     return Finding(
         finding_id="adas.aeb.threat_response",
         verifier="AdasThreatResponseVerifier",
-        verifier_version="1.0",
+        verifier_version="1.1",
         status=FindingStatus.PASS,
         severity=Severity.CRITICAL,
         hard_invariant=True,

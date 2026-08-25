@@ -58,7 +58,7 @@ LEGACY_EXPECTED_FINDINGS: Mapping[str, tuple[str, str, bool]] = MappingProxyType
 ADAS_P0_LONGITUDINAL_EXPECTED_FINDINGS: Mapping[str, tuple[str, str, bool]] = MappingProxyType(
     {
         **LEGACY_EXPECTED_FINDINGS,
-        "adas.aeb.threat_response": ("AdasThreatResponseVerifier", "1.0", True),
+        "adas.aeb.threat_response": ("AdasThreatResponseVerifier", "1.1", True),
         "adas.aeb.brake_onset_margin": ("AdasBrakeOnsetVerifier", "1.0", False),
         "adas.aeb.no_false_intervention": ("AdasFalseInterventionVerifier", "1.0", True),
         "adas.fcw.warning_timing": ("AdasWarningTimingVerifier", "1.0", False),
