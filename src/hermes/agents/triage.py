@@ -68,7 +68,7 @@ def classify_failure(context: ToolContext, run_id: str) -> tuple[FailureCategory
     failed_by_category: dict[FailureCategory, list[str]] = {}
     any_failure = False
     for item in items:
-        if item["status"] == "PASS":
+        if item["status"] != "FAIL":
             continue
         any_failure = True
         category = _FINDING_TO_CATEGORY.get(item["finding_id"])
@@ -169,7 +169,7 @@ def triage_run(
     identity = query_run(context, run_id=run_id)
     items = findings.data.get("findings", []) if findings.ok else []
     assert isinstance(items, list)
-    failed = [item["finding_id"] for item in items if item["status"] != "PASS"]
+    failed = [item["finding_id"] for item in items if item["status"] == "FAIL"]
 
     citations = (*identity.citations, *findings.citations, *metrics.citations)
     evidence: dict[str, object] = {

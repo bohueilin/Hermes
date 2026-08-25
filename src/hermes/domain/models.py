@@ -73,6 +73,7 @@ class Observation(HermesModel):
         "RECOVERY",
         "CUT_IN",
         "POST_CUT_IN",
+        "PRESENT",
     ] | None = None
 
 
@@ -252,8 +253,18 @@ class CutInNearFieldChallenge(HermesModel):
     transition_steps: Annotated[int, Field(ge=1, le=10_000)]
 
 
+class StationaryLeadChallenge(HermesModel):
+    """A stationary actor replayed at a fixed pose in or beside the ego lane."""
+
+    kind: Literal["stationary_lead"]
+    actor_control_mode: Literal["scripted_kinematic_replay"]
+    behavior_realism_claim: Literal[False]
+    initial_gap_m: Annotated[FiniteFloat, Field(gt=0.0, le=200.0)]
+    initial_lane_delta: Literal[-1, 0, 1] = 0
+
+
 ChallengeConfig = Annotated[
-    LeadVehicleHardBrakeChallenge | CutInNearFieldChallenge,
+    LeadVehicleHardBrakeChallenge | CutInNearFieldChallenge | StationaryLeadChallenge,
     Field(discriminator="kind"),
 ]
 
@@ -431,9 +442,11 @@ class ScenarioDefinition(HermesModel):
         if isinstance(self.challenge, LeadVehicleHardBrakeChallenge):
             end_step = self.challenge.trigger_step + self.challenge.brake_duration_steps
             window_name = "lead-vehicle braking window"
-        else:
+        elif isinstance(self.challenge, CutInNearFieldChallenge):
             end_step = self.challenge.trigger_step + self.challenge.transition_steps
             window_name = "cut-in transition window"
+        else:
+            return self
         if end_step > self.control.horizon_steps:
             raise ValueError(
                 f"{window_name} must fit within horizon_steps "

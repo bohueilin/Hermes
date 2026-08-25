@@ -19,7 +19,8 @@ endif
 DEMO_ARTIFACT := artifacts/$(DEMO_RUN_ID)
 
 .PHONY: install install-dev doctor test lint check demo-phase1 sim-smoke fixtures \
-	demo-adas demo-adas-tradeoff demo-seeded-defects demo-flywheel demo-cut-in preflight
+	demo-adas demo-adas-tradeoff demo-seeded-defects demo-flywheel demo-cut-in \
+	demo-stationary preflight
 
 # Fail early and actionably rather than deep inside a demo.
 preflight:
@@ -138,6 +139,24 @@ demo-cut-in: preflight
 	@echo ""
 	@echo "--- the pair must separate by geometry, and be complementary ---"
 	$(PYTHON) -m pytest -q tests/integration/test_cut_in_generalisation.py
+
+# The classic AEB complement: the same stopped actor and longitudinal gap are in-path for
+# the threat twin and one lane away for the nominal twin. The unchanged oracle must separate
+# them from stored geometry alone; no challenge-kind dispatch exists in verifiers/adas.py.
+demo-stationary: preflight
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/aeb_stationary_lead.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "stationary-threat-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/non_in_path_stationary_object.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "stationary-nominal-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	@echo ""
+	@echo "--- the stationary pair must separate by geometry and be complementary ---"
+	$(PYTHON) -m pytest -q tests/integration/test_stationary_lead_generalisation.py
 
 # The evaluation's own acceptance criterion: controllers broken on purpose must be caught.
 demo-seeded-defects: preflight

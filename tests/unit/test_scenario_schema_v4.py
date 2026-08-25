@@ -87,6 +87,29 @@ requirements:
     hard: true
 """
 
+STATIONARY_LEAD_SCENARIO = """\
+schema_version: "4.0"
+name: stationary_lead_unit
+version: "1.0"
+description: Static actor used to exercise stationary-lead schema validation.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 60
+  target_speed_mps: 20.0
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 300.0
+  boundary_tolerance_m: 1.5
+challenge:
+  kind: stationary_lead
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 40.0
+"""
+
 
 def _strip_block(text: str, block: str) -> str:
     """Drop one top-level YAML block, keeping everything else byte-identical."""
@@ -173,6 +196,38 @@ def test_schema_4_accepts_a_challenge_and_a_fault_profile_together() -> None:
     assert scenario.adas.enabled == ("fcw", "aeb")
     assert scenario.odd is not None
     assert scenario.requirements[0].property_id == "no_runtime_error"
+
+
+def test_schema_4_accepts_stationary_lead_without_an_actor_speed_or_schedule() -> None:
+    """A static actor has no configurable speed or phase window by definition."""
+    scenario = parse_scenario_yaml(STATIONARY_LEAD_SCENARIO)
+
+    assert scenario.challenge is not None
+    assert scenario.challenge.kind == "stationary_lead"
+    assert scenario.challenge.initial_lane_delta == 0
+    assert "actor_speed_mps" not in scenario.challenge.model_fields_set
+
+
+def test_schema_4_stationary_lead_accepts_an_explicit_adjacent_lane() -> None:
+    text = STATIONARY_LEAD_SCENARIO.replace(
+        "  initial_gap_m: 40.0\n",
+        "  initial_gap_m: 40.0\n  initial_lane_delta: 1\n",
+    )
+
+    scenario = parse_scenario_yaml(text)
+
+    assert scenario.challenge is not None
+    assert scenario.challenge.initial_lane_delta == 1
+
+
+def test_schema_4_stationary_lead_rejects_a_configurable_actor_speed() -> None:
+    text = STATIONARY_LEAD_SCENARIO.replace(
+        "  initial_gap_m: 40.0\n",
+        "  initial_gap_m: 40.0\n  actor_speed_mps: 0.0\n",
+    )
+
+    with pytest.raises(ScenarioLoadError, match="actor_speed_mps"):
+        parse_scenario_yaml(text)
 
 
 def test_schema_4_permits_a_faultless_scenario() -> None:

@@ -346,6 +346,59 @@ def test_cut_in_actor_follows_labeled_smooth_kinematic_replay() -> None:
     assert manager.snapshot.phase == "POST_CUT_IN"
 
 
+def test_stationary_lead_actor_stays_static_in_one_present_phase() -> None:
+    """Dispatching the stationary kind to cut-in replay would move it or require a speed."""
+    _reset_runtime()
+    environment = create_challenge_environment(
+        _config(),
+        {
+            "kind": "stationary_lead",
+            "actor_control_mode": "scripted_kinematic_replay",
+            "behavior_realism_claim": False,
+            "initial_gap_m": 8.0,
+            "initial_lane_delta": 0,
+        },
+        runtime_types=_runtime_types(),
+    )
+    manager = environment.engine.hermes_challenge_manager
+
+    manager.reset()
+    manager.after_reset()
+    actor = manager.actor
+    initial_position = tuple(actor.position)
+
+    assert actor.static is True
+    assert actor.velocity == [0.0, 0.0]
+    assert manager.snapshot.front_distance_m == pytest.approx(8.0)
+    assert manager.snapshot.actor_speed_mps == 0.0
+    assert manager.snapshot.phase == "PRESENT"
+
+    for episode_step in (1, 10):
+        _ENGINE.episode_step = episode_step
+        manager.before_step()
+        # MetaDrive's static body can retain a tiny post-physics velocity readback even
+        # while its pose stays fixed. The scheduler must clear it before evidence capture.
+        actor.velocity = [0.0056, 0.0]
+        manager.after_step()
+        assert tuple(actor.position) == initial_position
+        assert actor.velocity == [0.0, 0.0]
+        assert manager.snapshot.phase == "PRESENT"
+
+
+def test_stationary_lead_runtime_rejects_a_dynamic_control_mode() -> None:
+    with pytest.raises(ValueError, match="stationary challenge requires"):
+        create_challenge_environment(
+            _config(),
+            {
+                "kind": "stationary_lead",
+                "actor_control_mode": "metadrive_dynamic_action",
+                "behavior_realism_claim": False,
+                "initial_gap_m": 8.0,
+            },
+            runtime_types=_runtime_types(),
+        )
+
+
 def test_manager_fails_if_named_challenge_actor_disappears() -> None:
     _reset_runtime()
     environment = create_challenge_environment(

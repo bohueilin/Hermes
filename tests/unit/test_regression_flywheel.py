@@ -101,6 +101,33 @@ def test_a_derived_gap_is_clamped_into_the_schema_bounds(source) -> None:
     assert derived.challenge.initial_gap_m >= 1.0
 
 
+def test_stationary_lead_derivation_preserves_its_schedule_free_contract(source) -> None:
+    """A generic challenge draft must not invent a trigger unsupported by its kind."""
+    payload = source.model_dump(mode="json")
+    payload["name"] = "stationary_regression_source"
+    payload["challenge"] = {
+        "kind": "stationary_lead",
+        "actor_control_mode": "scripted_kinematic_replay",
+        "behavior_realism_claim": False,
+        "initial_gap_m": 40.0,
+        "initial_lane_delta": 0,
+    }
+    stationary = parse_scenario_yaml(scenario_yaml_bytes(payload).decode("utf-8"))
+
+    derived_payload = derive_scenario_payload(
+        stationary,
+        observed_gap_m=28.8,
+        observed_ego_speed_mps=18.5,
+        scenario_name="stationary_regression_derived",
+        trigger_finding_id="adas.aeb.threat_response",
+    )
+
+    derived = parse_scenario_yaml(scenario_yaml_bytes(derived_payload).decode("utf-8"))
+    assert derived.challenge is not None
+    assert derived.challenge.kind == "stationary_lead"
+    assert derived.challenge.initial_gap_m == 28.8
+
+
 # --- coverage gap ----------------------------------------------------------------------
 
 

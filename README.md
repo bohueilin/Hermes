@@ -81,11 +81,18 @@ ADAS or verifier code. The oracle never inspects the challenge kind, so the spli
 from the geometry. Each scenario also passes the defect the other one catches, which is what
 makes the pair worth its simulation time rather than redundant.
 
+`make demo-stationary` applies the same test to the classic stopped-object complement: the
+same static actor and longitudinal gap are in the ego lane for the AEB threat and one lane
+away for the nominal twin. The baseline avoids contact in the threat case and never brakes
+for the adjacent object; deliberately broken controllers fail only the named criterion their
+opposite twin is designed to expose.
+
 ### Phase 8 commands
 
 ```bash
 make demo-adas                             # threat and nominal scenarios, gate-evaluated
 make demo-cut-in                           # the same oracle on a manoeuvre it never saw
+make demo-stationary                       # classic stopped in-path / adjacent-object pair
 hermes agent tools                         # discoverable tool catalogue with permissions
 hermes agent triage <run-id>               # proposal vs deterministic classification
 hermes agent check-citations <run-id>      # re-resolve every citation against the evidence

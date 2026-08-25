@@ -16,6 +16,7 @@ from hermes.adas.functions import (
     ScriptedLongitudinalDriver,
 )
 from hermes.adas.interfaces import (
+    AdasControllerConfig,
     AdasObservation,
     AebConfig,
     BrakeSource,
@@ -23,8 +24,10 @@ from hermes.adas.interfaces import (
     FcwConfig,
     InterventionLevel,
     WarningLevel,
+    project_observation,
 )
-from hermes.adas.policy import project_to_action
+from hermes.adas.policy import AdasLongitudinalPolicy, project_to_action
+from hermes.domain.models import Observation, VehicleState
 
 CONTROL_PERIOD_S = 0.1
 
@@ -91,6 +94,87 @@ def test_lead_in_path_follows_the_adapter_signal_availability_convention() -> No
     """The adapter reports a front distance only while the actor overlaps the ego lane."""
     assert _observation(gap=30.0, relative_speed=-5.0).lead_in_path
     assert not _observation(gap=None, relative_speed=None).lead_in_path
+
+
+def test_projection_derives_challenge_actor_presence_without_in_path_geometry() -> None:
+    observation = Observation(
+        sequence=0,
+        simulation_time_s=0.0,
+        vehicle_state=VehicleState(
+            position_m=0.0,
+            speed_mps=20.0,
+            acceleration_mps2=0.0,
+            lateral_offset_m=0.0,
+            route_progress_pct=0.0,
+            collision_count=0,
+            offroad=False,
+            destination_reached=False,
+        ),
+        front_distance_m=None,
+        front_relative_speed_mps=None,
+        challenge_actor_longitudinal_m=40.0,
+        challenge_actor_lateral_offset_m=4.0,
+        challenge_actor_speed_mps=0.0,
+        challenge_phase="PRESENT",
+    )
+
+    projected = project_observation(
+        observation,
+        previous_relative_speed_mps=None,
+        control_period_s=CONTROL_PERIOD_S,
+    )
+
+    assert projected.challenge_actor_present is True
+    assert projected.lead_in_path is False
+
+
+@pytest.mark.parametrize(
+    ("actor_present", "expected_intervention"),
+    [
+        (False, InterventionLevel.NO_INTERVENTION),
+        (True, InterventionLevel.EMERGENCY_BRAKE),
+    ],
+)
+def test_seeded_actor_presence_defect_brakes_only_when_an_actor_is_present(
+    actor_present: bool,
+    expected_intervention: InterventionLevel,
+) -> None:
+    """This evaluation-only defect models braking on actor presence instead of path geometry."""
+    config = AdasControllerConfig(
+        functions=("fcw", "aeb", "seeded_actor_presence_brake")
+    )
+    policy = AdasLongitudinalPolicy(config)
+    observation = _observation(gap=None, relative_speed=None).model_copy(
+        update={"challenge_actor_present": actor_present}
+    )
+
+    decision = policy.decide(observation)
+
+    assert decision.intervention is expected_intervention
+    if actor_present:
+        assert decision.brake_source is BrakeSource.AEB
+        assert decision.brake == 1.0
+        assert "SEEDED_DEFECT_ACTOR_PRESENCE_BRAKE" in decision.reasons
+    else:
+        assert decision.brake == 0.0
+
+
+def test_unselected_actor_presence_defect_never_changes_baseline_behavior() -> None:
+    policy = AdasLongitudinalPolicy(AdasControllerConfig())
+    observation = _observation(gap=None, relative_speed=None).model_copy(
+        update={"challenge_actor_present": True}
+    )
+
+    decision = policy.decide(observation)
+
+    assert decision.intervention is InterventionLevel.NO_INTERVENTION
+    assert decision.brake == 0.0
+    assert "SEEDED_DEFECT_ACTOR_PRESENCE_BRAKE" not in decision.reasons
+
+
+def test_actor_presence_defect_requires_aeb_to_be_enabled() -> None:
+    with pytest.raises(ValueError, match="requires aeb"):
+        AdasControllerConfig(functions=("fcw", "seeded_actor_presence_brake"))
 
 
 # --- forward collision warning ---------------------------------------------------------

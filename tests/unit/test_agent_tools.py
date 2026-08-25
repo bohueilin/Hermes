@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+import hermes.agents.triage as triage_module
 from hermes.agents.approval import (
     ApprovalDecision,
     ApprovalError,
@@ -29,6 +30,7 @@ from hermes.agents.contracts import (
     ToolErrorCode,
     ToolPermission,
     WorkflowBudget,
+    ok,
 )
 from hermes.agents.tools import (
     ToolContext,
@@ -307,6 +309,46 @@ def test_a_passing_run_is_classified_as_no_failure(context: ToolContext) -> None
 
     assert category is FailureCategory.NO_FAILURE
     assert supporting == ()
+
+
+def test_triage_ignores_not_available_findings_when_a_real_failure_is_present(
+    context: ToolContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Missing evidence is a limitation, not a failed upstream predicate."""
+    findings = ok(
+        "get_findings",
+        {
+            "findings": [
+                {
+                    "finding_id": "adas.aeb.brake_onset_margin",
+                    "status": "NOT_AVAILABLE",
+                },
+                {
+                    "finding_id": "adas.aeb.no_false_intervention",
+                    "status": "FAIL",
+                },
+            ]
+        },
+    )
+    monkeypatch.setattr(triage_module, "get_findings", lambda *_args, **_kwargs: findings)
+    monkeypatch.setattr(
+        triage_module,
+        "get_metrics",
+        lambda *_args, **_kwargs: ok("get_metrics", {"metrics": {}}),
+    )
+    monkeypatch.setattr(
+        triage_module,
+        "query_run",
+        lambda *_args, **_kwargs: ok(
+            "query_run", {"verdict": "HOLD", "integrity": "INTERNALLY_CONSISTENT"}
+        ),
+    )
+
+    proposal = triage_run(context, "stationary-over-braking")
+
+    assert proposal.deterministic_category is FailureCategory.OVER_INTERVENTION
+    assert proposal.category is FailureCategory.OVER_INTERVENTION
 
 
 def test_an_agent_proposal_never_replaces_the_deterministic_label(

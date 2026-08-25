@@ -143,8 +143,10 @@ def derive_scenario_payload(
         payload["challenge"]["initial_gap_m"] = round(
             min(200.0, max(1.0, observed_gap_m)), 3
         )
-        # The threat is present from the start now, so the scripted trigger fires promptly.
-        payload["challenge"]["trigger_step"] = 1
+        # Scheduled challenges should reach their interesting phase promptly. A stationary
+        # actor has no trigger by contract, so drafting must not invent one.
+        if "trigger_step" in payload["challenge"]:
+            payload["challenge"]["trigger_step"] = 1
     return payload
 
 

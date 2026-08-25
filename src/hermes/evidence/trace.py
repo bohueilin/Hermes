@@ -227,6 +227,7 @@ _CHALLENGE_PHASES = {
     "RECOVERY",
     "CUT_IN",
     "POST_CUT_IN",
+    "PRESENT",
 }
 
 
@@ -303,6 +304,8 @@ def _expected_challenge_phase(
     challenge = scenario.challenge
     if challenge is None:
         raise TraceIntegrityError("challenge configuration is unavailable")
+    if challenge.kind == "stationary_lead":
+        return "PRESENT"
     if challenge.kind == "lead_vehicle_hard_brake":
         trigger = challenge.trigger_step
         end = trigger + challenge.brake_duration_steps
@@ -360,24 +363,52 @@ def _verify_observation_summary(
                 "observation summary result_challenge_phase contradicts the scenario schedule "
                 f"at sequence {event.sequence}"
             )
+        if scenario.challenge.kind == "stationary_lead":
+            for field_name in (
+                "challenge_actor_speed_mps",
+                "result_challenge_actor_speed_mps",
+            ):
+                if not _geometry_agrees(_summary_number(event, field_name), 0.0):
+                    if event.sequence == 0:
+                        raise TraceIntegrityError(
+                            "observation summary initial challenge actor speed contradicts "
+                            "the scenario at sequence 0"
+                        )
+                    raise TraceIntegrityError(
+                        f"observation summary {field_name} contradicts stationary actor "
+                        f"speed at sequence {event.sequence}"
+                    )
         if event.sequence == 0:
             actor_speed = _summary_number(event, "challenge_actor_speed_mps")
-            if not _geometry_agrees(actor_speed, scenario.challenge.actor_speed_mps):
+            declared_actor_speed = (
+                0.0
+                if scenario.challenge.kind == "stationary_lead"
+                else scenario.challenge.actor_speed_mps
+            )
+            if not _geometry_agrees(actor_speed, declared_actor_speed):
                 raise TraceIntegrityError(
                     "observation summary initial challenge actor speed contradicts the "
                     "scenario at sequence 0"
                 )
             initial_distance = event.observation_summary["front_distance_m"]
-            if scenario.challenge.kind == "lead_vehicle_hard_brake":
+            if scenario.challenge.kind == "lead_vehicle_hard_brake" or (
+                scenario.challenge.kind == "stationary_lead"
+                and scenario.challenge.initial_lane_delta == 0
+            ):
                 if initial_distance is None or not _geometry_agrees(
                     float(initial_distance), scenario.challenge.initial_gap_m
                 ):
                     raise TraceIntegrityError(
-                        "observation summary initial front gap contradicts the lead challenge"
+                        "observation summary initial front gap contradicts the challenge"
                     )
             elif initial_distance is not None:
+                label = (
+                    "adjacent stationary actor"
+                    if scenario.challenge.kind == "stationary_lead"
+                    else "cut-in actor"
+                )
                 raise TraceIntegrityError(
-                    "observation summary cut-in actor must start outside front overlap"
+                    f"observation summary {label} must start outside front overlap"
                 )
         if index > 0:
             prior_summary = events[index - 1].observation_summary
@@ -523,23 +554,51 @@ def _verify_fault_challenge_evidence(
             "fault challenge result phase contradicts the scenario schedule at sequence "
             f"{event.sequence}"
         )
+    if scenario.challenge.kind == "stationary_lead":
+        for field_name in (
+            "challenge_actor_speed_mps",
+            "result_challenge_actor_speed_mps",
+        ):
+            if not _geometry_agrees(_summary_number(event, field_name), 0.0):
+                if event.sequence == 0:
+                    raise TraceIntegrityError(
+                        "fault challenge initial actor speed contradicts the scenario at "
+                        "sequence 0"
+                    )
+                raise TraceIntegrityError(
+                    f"fault challenge {field_name} contradicts stationary actor speed at "
+                    f"sequence {event.sequence}"
+                )
     if event.sequence == 0:
         actor_speed = _summary_number(event, "challenge_actor_speed_mps")
-        if not _geometry_agrees(actor_speed, scenario.challenge.actor_speed_mps):
+        declared_actor_speed = (
+            0.0
+            if scenario.challenge.kind == "stationary_lead"
+            else scenario.challenge.actor_speed_mps
+        )
+        if not _geometry_agrees(actor_speed, declared_actor_speed):
             raise TraceIntegrityError(
                 "fault challenge initial actor speed contradicts the scenario at sequence 0"
             )
         initial_distance = event.observation_summary["front_distance_m"]
-        if scenario.challenge.kind == "lead_vehicle_hard_brake":
+        if scenario.challenge.kind == "lead_vehicle_hard_brake" or (
+            scenario.challenge.kind == "stationary_lead"
+            and scenario.challenge.initial_lane_delta == 0
+        ):
             if initial_distance is None or not _geometry_agrees(
                 float(initial_distance), scenario.challenge.initial_gap_m
             ):
                 raise TraceIntegrityError(
-                    "fault challenge initial front gap contradicts the lead challenge"
+                    "fault challenge initial front gap contradicts the challenge"
                 )
         elif initial_distance is not None:
+            label = (
+                "adjacent stationary actor"
+                if scenario.challenge.kind == "stationary_lead"
+                else "cut-in actor"
+            )
             raise TraceIntegrityError(
-                "fault challenge cut-in actor must start outside front overlap"
+                f"fault challenge {label} must start outside front overlap"
             )
     if index > 0:
         prior_summary = events[index - 1].observation_summary

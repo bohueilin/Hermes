@@ -48,3 +48,20 @@ defects:
     scenario: scenarios/adas/adas_cut_in_far.yaml
     expected_failing_finding: adas.aeb.no_false_intervention
     expected_triage_category: OVER_INTERVENTION
+
+  # The classic stationary-object pair adds the same evaluation diagonal with no manoeuvre.
+  # The nominal defect is deliberately different from the threshold-only over-braking
+  # config: it pattern-matches on any scripted actor instead of respecting in-path geometry.
+  - defect_id: no_aeb_stationary
+    description: Warns but never intervenes for an avoidable stopped in-lane actor.
+    policy_config: config/adas/defect_no_aeb.yaml
+    scenario: scenarios/adas/aeb_stationary_lead.yaml
+    expected_failing_finding: adas.aeb.threat_response
+    expected_triage_category: MISSED_INTERVENTION
+
+  - defect_id: over_braking_stationary
+    description: Brakes for a stopped adjacent-lane actor with no in-path front geometry.
+    policy_config: config/adas/defect_actor_presence_braking.yaml
+    scenario: scenarios/adas/non_in_path_stationary_object.yaml
+    expected_failing_finding: adas.aeb.no_false_intervention
+    expected_triage_category: OVER_INTERVENTION

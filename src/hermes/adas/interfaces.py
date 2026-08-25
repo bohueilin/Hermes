@@ -72,6 +72,7 @@ class AdasObservation(HermesModel):
     lead_distance_m: NonNegativeFloat | None = None
     lead_relative_speed_mps: FiniteFloat | None = None
     lead_relative_acceleration_mps2: FiniteFloat | None = None
+    challenge_actor_present: bool = False
 
     @property
     def lead_in_path(self) -> bool:
@@ -214,7 +215,9 @@ class AdasControllerConfig(HermesModel):
     label: Literal["illustrative_simulation_adas_not_real_vehicle_limits"] = (
         "illustrative_simulation_adas_not_real_vehicle_limits"
     )
-    functions: tuple[Literal["fcw", "aeb"], ...] = ("fcw", "aeb")
+    functions: tuple[
+        Literal["fcw", "aeb", "seeded_actor_presence_brake"], ...
+    ] = ("fcw", "aeb")
     fcw: FcwConfig = Field(default_factory=FcwConfig)
     aeb: AebConfig = Field(default_factory=AebConfig)
     driver: DriverConfig = Field(default_factory=DriverConfig)
@@ -229,6 +232,8 @@ class AdasControllerConfig(HermesModel):
             raise ValueError("an ADAS controller must enable at least one function")
         if len(set(self.functions)) != len(self.functions):
             raise ValueError("enabled ADAS functions must be unique")
+        if "seeded_actor_presence_brake" in self.functions and "aeb" not in self.functions:
+            raise ValueError("seeded_actor_presence_brake requires aeb to be enabled")
 
 
 def project_observation(
@@ -262,4 +267,5 @@ def project_observation(
         lead_distance_m=observation.front_distance_m,
         lead_relative_speed_mps=relative_speed,
         lead_relative_acceleration_mps2=relative_acceleration,
+        challenge_actor_present=observation.challenge_actor_longitudinal_m is not None,
     )

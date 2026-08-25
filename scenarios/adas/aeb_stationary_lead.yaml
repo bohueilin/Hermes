@@ -1,0 +1,59 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# Classic stationary-lead AEB threat: a stopped actor is placed directly in the ego lane.
+# The generic ADAS oracle is expected to classify only the observed gap and closing speed;
+# it does not inspect challenge.kind.
+schema_version: "4.0"
+name: aeb_stationary_lead
+version: "1.0"
+description: Ego approaches a stopped in-lane actor with an avoidable braking envelope.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 300
+  target_speed_mps: 20.0
+  # Simulator-measured 20 m/s full-brake peak from
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+challenge:
+  # Calibration prediction: the committed 20 m/s curve stops in 17.71 m, while this
+  # declared bumper gap is 40 m. Measured on the baseline controller at seed 7: initial
+  # gap 39.999999523 m; braking begins at sequence 0 at 5.263157961 m/s^2 required
+  # deceleration; 20 oracle-labelled threat steps; minimum gap 4.606621949 m; zero
+  # collisions. The run stops the ego and ends at the 300-step horizon, so its HOLD is the
+  # documented mission-progress disposition, not an ADAS finding failure.
+  kind: stationary_lead
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 40.0
+  initial_lane_delta: 0
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - stationary_object
+  - threat
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: required
+    before_ttc_s: 2.6
+  expected_aeb:
+    kind: required

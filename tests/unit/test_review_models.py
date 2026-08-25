@@ -1315,6 +1315,10 @@ def test_exact_action_observation_and_timeline_string_values_are_typed() -> None
         challenge_phase=None,
     )
     assert observation.sequence == 0
+    stationary_payload = observation.model_dump()
+    stationary_payload["challenge_phase"] = "PRESENT"
+    stationary = ObservationValue.model_validate(stationary_payload)
+    assert stationary.challenge_phase == "PRESENT"
     with pytest.raises(ValidationError):
         StringListValue(values=("DUP", "DUP"))
 

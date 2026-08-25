@@ -1662,7 +1662,14 @@ class ObservationValue(ReviewModel):
     challenge_actor_longitudinal_m: FiniteFloat | None
     challenge_actor_lateral_offset_m: FiniteFloat | None
     challenge_actor_speed_mps: NonNegativeFloat | None
-    challenge_phase: Literal["PRE_TRIGGER", "BRAKING", "RECOVERY", "CUT_IN", "POST_CUT_IN"] | None
+    challenge_phase: Literal[
+        "PRE_TRIGGER",
+        "BRAKING",
+        "RECOVERY",
+        "CUT_IN",
+        "POST_CUT_IN",
+        "PRESENT",
+    ] | None
 
 
 class StringListValue(ReviewModel):

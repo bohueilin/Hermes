@@ -1,0 +1,10 @@
+# SEEDED DEFECT - evaluation-only controller behavior that is meant to fail.
+#
+# Defect: applies emergency braking whenever any scripted challenge actor is present,
+# including a stationary object in an adjacent lane with no in-path front geometry. This
+# deliberately models actor-presence pattern matching instead of a geometry-driven AEB.
+# Expected detection: adas.aeb.no_false_intervention, i.e. OVER_INTERVENTION.
+functions:
+  - fcw
+  - aeb
+  - seeded_actor_presence_brake

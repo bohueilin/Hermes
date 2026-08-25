@@ -153,6 +153,14 @@ class AdasLongitudinalPolicy:
             )
             reasons.extend(aeb_reasons)
 
+        if (
+            "seeded_actor_presence_brake" in self._config.functions
+            and observation.challenge_actor_present
+        ):
+            intervention = InterventionLevel.EMERGENCY_BRAKE
+            aeb_brake = self._config.aeb.emergency_brake_command
+            reasons.append("SEEDED_DEFECT_ACTOR_PRESENCE_BRAKE")
+
         driver_throttle, driver_brake, driver_source = self._driver.step(observation)
 
         if intervention is not InterventionLevel.NO_INTERVENTION:

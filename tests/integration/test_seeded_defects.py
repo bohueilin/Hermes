@@ -83,6 +83,8 @@ def test_the_baseline_controller_passes_every_hard_adas_finding(
             "scenarios/adas/adas_nominal_slow_closing.yaml",
             "scenarios/adas/adas_cut_in_near.yaml",
             "scenarios/adas/adas_cut_in_far.yaml",
+            "scenarios/adas/aeb_stationary_lead.yaml",
+            "scenarios/adas/non_in_path_stationary_object.yaml",
         )
     ):
         baseline = SeededDefect(

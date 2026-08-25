@@ -166,6 +166,11 @@ def _validated_challenge(challenge: Mapping[str, Any]) -> dict[str, Any]:
             raise ValueError(
                 "cut-in challenge requires actor_control_mode scripted_kinematic_replay"
             )
+    elif kind == "stationary_lead":
+        if payload.get("actor_control_mode") != "scripted_kinematic_replay":
+            raise ValueError(
+                "stationary challenge requires actor_control_mode scripted_kinematic_replay"
+            )
     else:
         raise ValueError(f"unsupported MetaDrive challenge kind: {kind!r}")
     if payload.get("behavior_realism_claim") is not False:
@@ -268,7 +273,11 @@ def create_challenge_environment(
             initial_lane_delta = int(self._challenge.get("initial_lane_delta", 0))
             spawn_lateral = initial_lane_delta * self._lane_width
             heading = float(self._reference_lane.heading_theta_at(actor_center))
-            actor_speed = float(self._challenge["actor_speed_mps"])
+            actor_speed = (
+                0.0
+                if self._challenge["kind"] == "stationary_lead"
+                else float(self._challenge["actor_speed_mps"])
+            )
             velocity = [math.cos(heading) * actor_speed, math.sin(heading) * actor_speed]
             self._actor = self.spawn_object(
                 actor_type,
@@ -288,9 +297,11 @@ def create_challenge_environment(
                     "lidar": {"num_lasers": 0, "distance": 0, "num_others": 0},
                 },
             )
-            if self._challenge["kind"] == "cut_in_near_field":
+            if self._challenge["kind"] in {"cut_in_near_field", "stationary_lead"}:
                 self._actor.set_static(True)
-            self._phase = "PRE_TRIGGER"
+            self._phase = (
+                "PRESENT" if self._challenge["kind"] == "stationary_lead" else "PRE_TRIGGER"
+            )
             self._measure()
 
         def _before_lead_step(self, step: int) -> None:
@@ -333,6 +344,12 @@ def create_challenge_environment(
             self.actor.set_heading_theta(heading)
             self.actor.set_static(True)
 
+        def _before_stationary_step(self) -> None:
+            self.actor.before_step(None)
+            self.actor.set_velocity([0.0, 0.0], in_local_frame=False)
+            self.actor.set_static(True)
+            self._phase = "PRESENT"
+
         def before_step(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
             del args, kwargs
             step = int(self.engine.episode_step) - 1
@@ -340,8 +357,10 @@ def create_challenge_environment(
                 raise RuntimeError("MetaDrive challenge manager observed a negative trace sequence")
             if self._challenge["kind"] == "lead_vehicle_hard_brake":
                 self._before_lead_step(step)
-            else:
+            elif self._challenge["kind"] == "cut_in_near_field":
                 self._before_cut_in_step(step)
+            else:
+                self._before_stationary_step()
             self._commanded_this_step = True
             self._measure()
             return {}
@@ -352,6 +371,9 @@ def create_challenge_environment(
                 self.actor.after_step()
                 self._commanded_this_step = False
             if self._actor is not None:
+                if self._challenge["kind"] == "stationary_lead":
+                    self.actor.set_velocity([0.0, 0.0], in_local_frame=False)
+                    self.actor.set_static(True)
                 self._measure()
             return {}
 
