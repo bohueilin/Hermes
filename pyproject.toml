@@ -26,6 +26,7 @@ workbench = [
 mujoco-cal = [
     "mujoco==3.12.0",
 ]
+fleet = []
 
 [project.scripts]
 hermes = "hermes.cli:app"

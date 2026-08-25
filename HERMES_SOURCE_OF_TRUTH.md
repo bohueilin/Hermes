@@ -7,15 +7,15 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkout** | `/Users/bohueilin/Documents/GitHub/Hermes` on `feat/phase8-adas-lab` |
+| **Checkouts** | main checkout `…/Hermes` (on `main` since 2026-08-22, another session's move; Phase 8 intact on its branch) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · ADAS worktree `…/Hermes-adas` on `feat/phase8-adas-calibration` (env verified: 965 green; execution plan local there) · Phase 7 codex worktree (read-only) |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
-| **Phase 8** | complete for the FCW/AEB slice; 36 commits, 74 files, +12,581 / −154 |
-| **Phase 9** | specification only (`HERMES_PHASE9_FLEET_SIMULATION_PRD.md`, local, gitignored); no code, no branch |
+| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; ADAS-branch suite **1118 passed**; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes) |
+| **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 33 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | 965 tests pass (18 drive real MetaDrive) · ruff clean · `hermes doctor` 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-08-22 |
+| **Last updated** | 2026-08-25 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -406,7 +406,7 @@ renders envelopes; its read-only property is enforced by AST tests.
 | 6 | Review envelopes 1.0, `review-artifact`, `review-compare`, Streamlit workbench; reviewer-comprehension iteration; 756 tests | `feat/phase6-evidence-workbench` → `feat/phase6-reviewer-comprehension` @ `4eb8765` |
 | 7 | Evaluation-adequacy assessor, evaluation plans, provenance; 1,245 tests claimed | **codex worktree only** — `codex/phase7-…` @ `9d5c0ba`, 56 commits, **not merged** |
 | 8 | ADAS (FCW/AEB) + oracle + seeded defects + agent layer + regression flywheel; 965 tests | `feat/phase8-adas-lab` @ `e6e2c8c`, 36 commits from `4eb8765` |
-| 9 | Fleet simulation — **specification only** | local PRD, gitignored; no code |
+| 9 | Fleet simulation — **FLEET-005 spike built**: contracts, world tape, minimal DES, paired loop, decision record; 33 tests incl. a hand-computed analytical fixture, clean-clone green | `feat/phase9-fleetlab` @ `00b2a48`; PRD stays local |
 
 Design decisions from early phases that still constrain everything: MetaDrive stays external and
 unmodified; every event hashes scenario/gate/component digests; hard invariants cannot be
@@ -545,30 +545,27 @@ and avoid contact. Whether late-but-successful braking should be hard is open (�
 **`adas.fcw.warning_timing` does not verify a warning.** The trace has no field for the warning
 signal; it confirms only that the run presented the declared closing geometry.
 
-### 6.8 Calibration debt — the single largest engineering weakness
+### 6.8 Calibration — measured (2026-08-24), with one honest nuance
 
-Every threshold in `config/gates.adas.yaml` and `AebConfig` is an analytical guess.
-`ControlConfig.max_braking_mps2 = 6.0` is declared, **not enforced on the simulator**, and the
-oracle treats it as ground truth. Measured in-pipeline peak |a| ≈ 13 m/s² (comfort fails in every
-demo). An independent read-only probe in the MuJoCo sandbox (`metadrive_brake_probe.py`, raw
-MetaDrive, outside `hermes`) measured full-brake deceleration — and its own headline ("~11 m/s²")
-understates its traces, because its `max()` excludes the first brake step:
+The debt in the old version of this section is paid. `evidence/calibration/
+metadrive-brake-curve-0.4.3.json` (on `feat/phase8-adas-lab`) measures full-brake deceleration
+at 14 entry speeds, 4–30 m/s, N=3 bitwise-identical per speed with the three trace SHAs
+recorded per entry. At 20 m/s: peak **12.9824 m/s²**, steady **11.5319**, stopping **17.709 m**.
+Construction: each committed ADAS scenario now *declares* the measured authority
+(`max_braking_mps2: 12.982444763183452`, digest-bound, curve-cited); every oracle/controller/
+defect fraction was re-derived in lockstep so all absolute boundaries are bit-identical to
+before; the Python default stays 6.0 and a test fails if it moves. Cross-backend: a MuJoCo
+3.12 reference instrument disagrees materially (MetaDrive peak 2.26× MuJoCo) — kept as
+falsification evidence, not parity. A Warp CPU kernel cross-checks sensitivity
+(∂d/∂a = −d/a reproduces the measured steady authority exactly).
 
-| entry | probe's reported peak | first-step drop (excluded) | true peak | probe's mean | mean, correct intervals |
-|---|---|---|---|---|---|
-| 8.29 m/s | 11.24 | 8.29→7.02 = **12.70** | 12.70 m/s² | 8.54 | 9.76 |
-| 13.81 m/s | 11.24 | 13.81→12.55 = **12.60** | 12.60 m/s² | 9.61 | 11.07 |
-| 17.12 m/s | — | episode ended after one step (default map runs out of road) | — | — | — |
+**The nuance an adversarial review pinned (keep saying it):** the *authority* is measured; the
+*margins* (1.8, 6.0, 2.4/4.2 m/s²) are inherited pre-calibration choices, now explicitly
+relabelled as a simulator-relative evaluation boundary rather than a physical stopping limit —
+the verifier docstring no longer claims "physically meaningful rather than tuned". Comfort
+enforcement was deliberately not added (a full-brake curve is not a command-to-deceleration
+map); the decision is recorded in the artifact (`control_config_decision`).
 
-So steady-state ≈ 11 m/s², true peak ≈ 12.6–12.7, agreeing with the in-pipeline ~13. **There is
-no point at 20 m/s**, the operating speed of every ADAS scenario; the probe must run on the
-scenario-faithful config (`map='S'`, `traffic_density=0`, 240 m destination) first. The probe
-script is the sandbox session's and is unedited; its NOTES still quote 11.24.
-
-**Do not paste the measured value into `max_braking_mps2`.** Both oracle thresholds are fractions
-of it (`verifiers/adas.py:142`, `:263`); raising it raises them, so fewer steps are threats and
-later braking passes. It weakens the oracle, not the controller, with the suite still green
-(§10 rule 3).
 
 ---
 
@@ -597,8 +594,25 @@ fields, zero new `adapter` Literal values, and no `evidence_schema_version` chan
 MetaDrive-derived parameters, not Phase 8 ADAS evidence. Principle 18 (L228), "physical authority
 is measured, not assumed", is one line; §6.8 here is its only operationalisation. There is no risk
 register. Six P0 fleet scenarios (FLEET-001…006), 20 P0 / 10 P1 / 8 P2 acceptance criteria,
-48-hour MVP (§45), one-week build (§46). **Nothing is implemented: no module, command, test,
-extra, branch or sandbox content.**
+48-hour MVP (§45), one-week build (§46). **Built 2026-08-23 (the narrowed spike from the external design review):** `src/hermes/fleet/`
+on `feat/phase9-fleetlab` — preregistered `ExperimentSpec` (single variation axis, primary
+metric with an equivalence margin, guardrails, frozen seed set) and a `DecisionRecord` bound to
+spec/world-tape/seed-set digests; a materialized, hashed world tape (demand fixed across
+replications; per-request travel disturbances vary by seed, keyed to the request, never the
+chosen vehicle); the thinnest DES expressing FLEET-005 (nearest dispatch, depot bays); the PRD §17
+invariants that have referents in this model (8 of 12 — the three charging-related ones await
+the charging model; replay determinism is the `run_experiment` precheck), where any violation
+yields `INVALID_EXPERIMENT` with no partial outcome; a seeded
+double-assign dispatcher caught by the invariant that names it; bootstrap CI over paired
+replications; a non-compensatory recommendation (guardrail regression HOLDs an IMPROVED
+primary); an analytical fixture whose three-request world is computed entirely by hand and
+asserted exactly, plus a metamorphic service-delay case; `hermes fleet demo` (~0.5 s).
+Measured demo result: baseline healthy, +25% turnaround
+→ REGRESSED, CI [+736, +919] s on wait p90, guardrail hit → HOLD. 30 tests, all simulator- and
+fixture-free; suite 761→794 in the worktree with zero new failures; **33/33 from a clean clone
+on core deps only, decision-record digest bit-identical across checkouts.** Everything else in
+the PRD (charging, FLEET-001..004/006, policy SDK, forecast seam, Studio, registry) remains
+unbuilt.
 
 ### 7.2 MuJoCo sandbox — what exists
 
@@ -671,8 +685,8 @@ must not: the number as a default edit (§10 rule 3).
 - **Not reproducible off this host yet** (§2).
 - **Not measured on its own success metrics.** The Phase 8 PRD defines 22; roughly one is
   measured, and that one is near-tautological.
-- **Not Phase 9.** No FleetLab code exists. The PRD's own §52 says not to use its resume claim
-  before P0 is built.
+- **Not Phase 9 P0.** One vertical slice (FLEET-005) exists; the other 19 P0 criteria do not.
+  The PRD's own §52 says not to use its resume claim before P0 is built — a spike is not P0.
 - **Not MuJoCo-integrated.** `adapter` is still `Literal["fake","metadrive"]`.
 
 ---
@@ -747,7 +761,46 @@ Each item states how you know it is done and what it will break.
 
 ### 11.1 Phase 8 — remaining, in order
 
-1. **Brake-dynamics calibration (PRD Risk 8) — highest engineering value.** Re-run the probe on
+> **Phase 3 merged 2026-08-25** (`a78287e`): the `stationary_lead` kind with a measured
+> threat/nominal pair, ADAS observation-fault wiring (a delayed observation now degrades the
+> baseline into a *named* failure — fault injection proving the evaluation notices), residual-impact
+> enforcement, and two owner-facing design notes (WP-2 composite scenarios, WP-4 `RunMetricsV3`).
+> Suite 1118; seeded suite 8 named defects / 10 tests.
+>
+> **Three corrections were made in review, before merge**, each recorded in
+> `PHASE8_IMPLEMENTATION_NOTE.md`:
+> 1. **`AdasThreatResponseVerifier` 1.0 → 1.1.** Its observable behaviour changed (residual-impact
+>    enforcement plus rewritten criterion text) while the version stayed frozen, so one
+>    `(name, version)` pair denoted two behaviours. Bumped at all six pins. It was free at that
+>    moment because every ADAS bundle was already invalid.
+> 2. **A superseded determinism digest** in the implementation note, re-measured to
+>    `54b439ca60e67794…` and annotated with *why* it moves, so the next reader re-measures.
+> 3. **Fleet disposition recorded: 14 of 14 ADAS bundles are `INVALID`** under two fail-closed
+>    corrections (residual-impact enforcement, then verifier-suite identity binding). A fresh run
+>    verifies clean, so the pipeline is healthy; what is invalid is historical evidence produced
+>    under superseded verifier identities. **Coordination rule 8's "60 of 63" baseline is stale —
+>    re-measure before using it.** Regenerating or retiring the 14 is an owner decision.
+
+
+
+> **Phase 2 (calibration) executed and merged 2026-08-24** — reviewed with zero critical/important
+> findings. The plan file now carries **Phase 3** (review follow-ups, `stationary_lead` and
+> `cut_out_reveal` challenge kinds as threat/nominal pairs, ADAS fault wiring):
+> `…/Hermes-adas/Hermes_Phase8_ADAS_Execution_Plan.md`
+> (local, untracked). Centerpiece: item 1 below (WP-A), with MuJoCo graduated as a *calibration
+> instrument* (`[mujoco-cal]`, `fwdinv` + graduation defaults — the sandbox's Q1 niche answered),
+> a Warp CPU kernel, an esmini/OpenSCENARIO audition, and a web-verified tool decision table
+> (ADOPT/DEMO/LITERATE/AVOID; 45 claims checked, incl. Isaac/Newton/MJWarp/cuOpt/Waymax reality
+> on this host). The plan's environment is pre-verified in that worktree.
+
+
+1. ~~Brake-dynamics calibration~~ **DONE, merged @ `6b2f375`** — see §6.8. Review follow-ups
+   (all MINOR) moved into the Phase-3 plan: derive `repeat_bitwise_identical` from data instead
+   of hardcoding; record producer argv in evidence; an evidence self-consistency test over the
+   curve JSON; docstring on `ControlConfig.max_braking_mps2` noting the default is unenforced;
+   decide wire-vs-document for the dead `max_residual_impact_speed_mps` criterion (a gate-config
+   field change re-baselines ADAS digests — plan accordingly).
+   *(original item, for context)* **Brake-dynamics calibration (PRD Risk 8) — highest engineering value.** Re-run the probe on
    `map='S'`, `traffic_density=0`, 240 m destination, across 0–30 m/s; fix its arithmetic (§6.8);
    commit the curve as an evidence artefact, not a constant; re-derive the AEB authority
    *fractions* alongside the authority so the oracle keeps discriminating — or honestly relabel
@@ -768,7 +821,8 @@ Each item states how you know it is done and what it will break.
    on new challenge kinds** (`ChallengeConfig` has exactly two); each touches schema, adapter
    scheduler, trace rules and oracle. Author in threat/nominal pairs using
    `tests/integration/test_cut_in_generalisation.py` as the template. Keep nominal exposure ≥30%.
-4. **Wire the seven faults to ADAS scenarios.** Plumbing exists and is unused.
+4. ~~Wire the faults to ADAS~~ **DONE** (Phase 3) — observation faults enabled for the exact ADAS
+   policy identity, with a measured delay scenario whose baseline degrades into a named finding. Plumbing exists and is unused.
    `orchestrator.py:514-528` bars observation faults on MetaDrive — written for IDM, which ignores
    observations; the ADAS controller does not. Revisit, do not work around.
 5. **ACC, two-stage gate, review-envelope variation axis** (`review/models.py:2615`, `:2105-2114`,
@@ -777,15 +831,23 @@ Each item states how you know it is done and what it will break.
 6. **Small:** `scenarios/cut_in.example.yaml` and `config/gates.example.yaml` fail validation
    (21 and 8 errors) — refresh or delete; `*.parquet` gitignored with pyarrow/pandas undeclared.
 
-### 11.2 Phase 9 — before any code
+### 11.2 Phase 9 — after the FLEET-005 spike (2026-08-23)
 
-1. Decide whether to track the PRD (currently gitignored defensively).
-2. Create a branch and a **separate worktree** (rule 6).
-3. Follow the PRD's own §47 order: Phase 8 landed (it is) → FleetLab as an additive domain under
-   `src/hermes/fleet/` with its own `FleetSimulationBackend` — **not** through `SimulatorAdapter`.
-4. Build the analytical fixtures (Lane 0, §22.2) before the DES engine; they are the only
-   correctness oracle the DES will have.
-5. The MetaDrive→FleetLab parameter bridge is P1 and needs the calibrated curve from §11.1 item 1.
+Done: worktree + branch (rule 6) ✓; additive domain, no `SimulatorAdapter` involvement ✓; the
+spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
+
+1. **FLEET-006 with a minimal policy seam** — nearest vs an OR candidate behind a
+   `DispatchPolicy` contract with decision-time-only views, latency counted, `[fleet-or]` extra.
+2. **FLEET-003 (charger outage) needs the charging model**; author regime pairs and keep
+   outcomes separate per regime (no post-hoc MIXED).
+3. **Spec-file authoring + `hermes fleet run <spec.yaml>`** so the demo stops being the only
+   entry point; then the decision-record Comparison page on the workbench.
+4. More analytical fixtures: the hand-computed three-request world exists
+   (`test_fleet_analytical_fixture.py`); add an M/M/c depot check against closed form.
+5. Development-vs-evaluation seed separation and the leakage defects (ORACLE_LEAKAGE provider)
+   when the forecast seam lands.
+6. The MetaDrive→FleetLab parameter bridge stays P1 and still needs §11.1 item 1's curve.
+7. Decide whether to track the PRD (still gitignored defensively).
 
 ### 11.3 MuJoCo — before graduation
 
@@ -839,6 +901,27 @@ Each item states how you know it is done and what it will break.
 11. **MuJoCo determinism needs `mjSTATE_INTEGRATION`**, not qpos/qvel; and `refsafe` silently
     clamps contact stiffness to the timestep.
 12. **Hermes declared `horizon_steps` can overstate exposure** — check `termination_reason`.
+13. **`AebConfig` default fractions encode the 20 m/s measured peak specifically.** A scenario
+    declaring a different measured authority gets different absolute staging than the documented
+    2.4/4.2 m/s²; one silently falling back to the 6.0 Python default stages at 1.11/1.94 m/s².
+    Declare authority explicitly in every new ADAS scenario.
+14. **`max_braking_mps2` does dual duty**: oracle denominator *and* the generic baseline
+    policy's decel-to-pedal divisor (`policies/baseline.py:52`). Committed ADAS runs are
+    unaffected (fixed brake constants), but a generic-policy run on an ADAS scenario now
+    commands ~46% of the former pedal fraction.
+15. ~~`max_residual_impact_speed_mps` is dead~~ **WIRED** (Phase 3) into
+    `adas.aeb.threat_response`; still vacuous at verdict level because contact already HOLDs via
+    `collision.zero`, which is stated honestly rather than sold as new coverage.
+16. **A verifier whose behaviour changes must move its version.** Phase 3 shipped a semantics
+    change under a frozen `1.0`, caught in review. Six pins must move together: the identity
+    tuple, the four emission sites, and the profile registry. Changing any verifier identity
+    re-digests the suite and invalidates every stored ADAS bundle — which is correct, and is why
+    the cheapest moment to bump is when the fleet is already invalid.
+17. **A single-actor evidence contract cannot express a composite scenario.** The observation
+    summary is an exact 18-field set with one unlabelled challenge actor; switching its subject
+    mid-run would be an unprovable identity change. See the WP-2 design note before attempting
+    `cut_out_reveal`, and note that `adas_nominal_slow_closing` overstates "steady throughout" —
+    its lead brakes on the final step.
 
 ---
 
@@ -859,6 +942,17 @@ Each item states how you know it is done and what it will break.
 ---
 
 ## 14. Housekeeping and known inconsistencies
+
+- The ADAS worktree's copy of this file is **stale by design** (branched at `7a6cfe6`, before
+  the FleetLab updates). The ADAS executor must not edit it; results are folded in here. Two
+  entries live in the shared `…/Hermes/.git/info/exclude` (affects all worktrees, no tracked
+  file): `third_party` (the ADAS worktree's symlink to the vendored simulator) and
+  `/Hermes_Phase8_ADAS_Execution_Plan.md`.
+
+- The main checkout `…/Hermes` was switched to `main` (Phase 0) by a parallel session on
+  2026-08-22 ~22:09 (`git reflog`). Phase 8 is intact on its branch and on GitHub; nothing was
+  lost. Run nothing from that checkout while it sits on `main` — FleetLab work happens only in
+  the `…/Hermes-fleetlab` worktree.
 
 - `Hermes_Fable5_Full_Project_Fresh_Eye_Design_Review_Master_Prompt.md` is in `.gitignore` (line
   47) **but tracked** (committed in `9efb811`). Public today.

@@ -1438,6 +1438,10 @@ regression_app = typer.Typer(
 )
 app.add_typer(regression_app, name="regression")
 
+from hermes.fleet.cli import fleet_app  # noqa: E402  (registered like the other sub-apps)
+
+app.add_typer(fleet_app, name="fleet")
+
 
 def _draft_root(repository_root: Path, override: Path | None) -> Path:
     return override or repository_root / "drafts"
