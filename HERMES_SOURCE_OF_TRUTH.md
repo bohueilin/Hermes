@@ -10,7 +10,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Checkouts** | main checkout `…/Hermes` (on `main` since 2026-08-22, another session's move; Phase 8 intact on its branch) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (execution plan local there) · Phase 7 codex worktree (read-only) |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
-| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25** on `feat/phase8-metrics-v3` @ `ab17958` — unmerged, local-only, suite **1410 passed** (§11.1 item 2) |
+| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25** on `feat/phase8-metrics-v3` @ `ab17958` — **pushed to GitHub 2026-08-25**, unmerged pending review, suite **1410 passed** (§11.1 item 2) |
 | **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 33 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | 965 tests pass (18 drive real MetaDrive) · ruff clean · `hermes doctor` 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
@@ -405,7 +405,7 @@ renders envelopes; its read-only property is enforced by AST tests.
 | 5 | Contract closure: closed `VerifierProfile`, `simulator_support.py`; 273 tests | ″ @ `9e257a0` |
 | 6 | Review envelopes 1.0, `review-artifact`, `review-compare`, Streamlit workbench; reviewer-comprehension iteration; 756 tests | `feat/phase6-evidence-workbench` → `feat/phase6-reviewer-comprehension` @ `4eb8765` |
 | 7 | Evaluation-adequacy assessor, evaluation plans, provenance; 1,245 tests claimed | **codex worktree only** — `codex/phase7-…` @ `9d5c0ba`, 56 commits, **not merged** |
-| 8 | ADAS (FCW/AEB) + oracle + seeded defects + agent layer + regression flywheel; 965 tests; then calibration (merged `6b2f375`), Phase 3 (merged `a78287e`), and **evidence schema 3.0 / `RunMetricsV3`** (complete, unmerged) | trunk `feat/phase8-adas-lab` @ `e6e2c8c`; metrics V3 on `feat/phase8-metrics-v3` @ `ab17958` (14 commits from `a78287e`, local-only) |
+| 8 | ADAS (FCW/AEB) + oracle + seeded defects + agent layer + regression flywheel; 965 tests; then calibration (merged `6b2f375`), Phase 3 (merged `a78287e`), and **evidence schema 3.0 / `RunMetricsV3`** (complete, unmerged) | trunk `feat/phase8-adas-lab` @ `e6e2c8c`; metrics V3 on `feat/phase8-metrics-v3` @ `ab17958` (14 commits from `a78287e`, pushed, unmerged) |
 | 9 | Fleet simulation — **FLEET-005 spike built**: contracts, world tape, minimal DES, paired loop, decision record; 33 tests incl. a hand-computed analytical fixture, clean-clone green | `feat/phase9-fleetlab` @ `00b2a48`; PRD stays local |
 
 Design decisions from early phases that still constrain everything: MetaDrive stays external and
@@ -810,7 +810,8 @@ Each item states how you know it is done and what it will break.
    every trace digest and every fixture — budget a full re-baseline. **Do before authoring more
    scenarios.**
 2. ~~`RunMetricsV3` / evidence schema 3.0~~ **DONE 2026-08-25, accepted, unmerged** —
-   `feat/phase8-metrics-v3` @ `ab17958` (14 commits from `a78287e`, local-only, never pushed).
+   `feat/phase8-metrics-v3` @ `ab17958` (14 commits from `a78287e`, **pushed to GitHub 2026-08-25**;
+   unmerged and not yet through the adversarial branch review every prior phase received).
    Evidence schema 3.0 produced for exactly the two ADAS profiles (legacy → V1, non-ADAS fault
    → V2 — routing is exact, not inherited); typed decision plus candidate → permitted → executed
    attribution; independent policy/shield/fault/trace/metrics/findings/gate replay;
