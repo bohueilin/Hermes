@@ -1656,7 +1656,7 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
                     )
             elif scenario.faults is not None:
                 fault_events = tuple(
-                    event for event in events if isinstance(event, TraceEventV2)
+                    event for event in events if type(event) is TraceEventV2
                 )
                 if len(fault_events) != len(events):
                     errors.append("fault scenario contains a legacy trace event")
@@ -1673,7 +1673,7 @@ def _inspect_captured_artifact(path: Path, capture: _ArtifactCapture) -> _Inspec
                 legacy_events = tuple(
                     event
                     for event in events
-                    if isinstance(event, TraceEvent) and not isinstance(event, TraceEventV2)
+                    if type(event) is TraceEvent
                 )
                 if len(legacy_events) != len(events):
                     errors.append("legacy scenario contains a schema-2 trace event")

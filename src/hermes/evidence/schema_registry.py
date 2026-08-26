@@ -1,7 +1,8 @@
-"""Inactive exact evidence-schema model registries.
+"""Exact evidence-schema model families.
 
-These registries define the model runway only. Artifact parsing, writing, verification,
-metrics, consumers, and runtime production remain unchanged until their later work packages.
+Schema 3.0 is produced for the ``adas_p0_longitudinal`` and
+``adas_p0_longitudinal_fault`` ADAS profiles. Artifact parsing, verification, metrics,
+consumers, and runtime production are schema-aware.
 """
 
 from __future__ import annotations

@@ -203,6 +203,14 @@ def test_legacy_six_family_models_event_jsonl_and_trace_digest_are_pinned(
     ]
 
 
+def test_stored_v2_profile_dispatch_remains_accepted(repository_root: Path) -> None:
+    inspection = inspect_artifact(repository_root / "artifacts" / "handoff-p4-fault")
+
+    assert inspection.verification.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
+    assert inspection.snapshot is not None
+    assert type(inspection.snapshot.events[0]) is TraceEventV2
+
+
 def _refresh_envelope(bundle: Path) -> None:
     manifest_path = bundle / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))

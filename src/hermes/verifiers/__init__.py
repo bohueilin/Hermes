@@ -482,7 +482,7 @@ def _fault_coverage(
 
 
 def run_phase4_verifiers(
-    events: tuple[TraceEventV2 | TraceEventV3, ...],
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
     *,
@@ -529,7 +529,7 @@ def run_verifiers_for_profile(
         )
     if profile is VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT:
         return (
-            *run_phase4_verifiers(  # type: ignore[arg-type]
+            *run_phase4_verifiers(
                 events,
                 scenario,
                 gate,
@@ -538,15 +538,17 @@ def run_verifiers_for_profile(
             *run_adas_p0_longitudinal_verifiers(events, scenario, gate),
         )
     if profile is VerifierProfile.FAULT_COVERAGE:
-        return run_phase4_verifiers(  # type: ignore[arg-type]
+        return run_phase4_verifiers(
             events,
             scenario,
             gate,
             shield_config=shield_config,
         )
-    return run_phase1_verifiers(
-        events,
-        scenario,
-        gate,
-        shield_config=shield_config,
-    )
+    if profile is VerifierProfile.LEGACY:
+        return run_phase1_verifiers(
+            events,
+            scenario,
+            gate,
+            shield_config=shield_config,
+        )
+    raise ValueError(f"unsupported verifier profile: {profile}")

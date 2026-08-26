@@ -153,10 +153,9 @@ EMITTED_FINDING_ORDER_BY_PROFILE: Mapping[str, tuple[str, ...]] = MappingProxyTy
 )
 #: Which evidence schema each verifier profile may appear with.
 #:
-#: An ADAS run without faults emits schema-1 trace events, and one with faults emits schema-2,
-#: so each ADAS profile pairs with the schema its evidence actually carries. Keeping this a
-#: closed set means a bundle claiming a profile its evidence cannot support is rejected rather
-#: than rendered.
+#: Both ADAS profiles now produce schema 3.0. Schema-1.0 and schema-2.0 pairings are retained
+#: for pre-V3 stored bundles. Keeping this a closed set means a bundle claiming a profile its
+#: evidence cannot support is rejected rather than rendered.
 _FROZEN_SCHEMA_PROFILE_PAIRINGS: frozenset[tuple[str, str]] = frozenset(
     {
         ("1.0", "legacy"),

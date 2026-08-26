@@ -36,6 +36,8 @@ from hermes.domain.models import (
     RunMetrics,
     RunMetricsV3,
     ScenarioDefinition,
+    TraceEvent,
+    TraceEventV2,
     TraceEventV3,
     VehicleState,
 )
@@ -58,7 +60,11 @@ from hermes.evidence.trace import GENESIS_HASH, create_trace_event_v3
 from hermes.evidence.verification import inspect_artifact
 from hermes.faults.deterministic import DeterministicFaultInjector
 from hermes.gates.config import GateConfig, gate_config_digest, load_gate_config
-from hermes.gates.release import apply_release_gate, select_verifier_profile
+from hermes.gates.release import (
+    VerifierProfile,
+    apply_release_gate,
+    select_verifier_profile,
+)
 from hermes.scenarios.loader import scenario_digest
 from hermes.shields.config import ShieldConfig
 from hermes.shields.deterministic import DeterministicSafetyShield
@@ -443,6 +449,72 @@ def _bundle(
         repository_provenance_reason=None,
     )
     return directory, scenario, gate_config, context, events
+
+
+@pytest.mark.parametrize(
+    ("profile", "faulted"),
+    (
+        (VerifierProfile.LEGACY, False),
+        (VerifierProfile.FAULT_COVERAGE, True),
+        (VerifierProfile.ADAS_P0_LONGITUDINAL, False),
+        (VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT, True),
+    ),
+)
+def test_verifier_profile_dispatch_retains_each_typed_suite(
+    repository_root: Path,
+    tmp_path: Path,
+    profile: VerifierProfile,
+    faulted: bool,
+) -> None:
+    _, scenario, gate_config, context, events = _bundle(
+        repository_root,
+        tmp_path,
+        faulted=faulted,
+    )
+
+    findings = run_verifiers_for_profile(
+        profile,
+        events,
+        scenario,
+        gate_config,
+        shield_config=(
+            ShieldConfig.model_validate(context.shield.config)
+            if context.shield.name == "deterministic"
+            else None
+        ),
+    )
+
+    assert tuple(finding.finding_id for finding in findings) == tuple(
+        identity.finding_id
+        for identity in verifier_identities_for_profile(
+            profile,
+            evidence_schema_version="3.0",
+        )
+    )
+
+
+@pytest.mark.parametrize("profile", ("adas_p0_longitudinal", object()))
+def test_verifier_profile_dispatch_rejects_untyped_values(
+    repository_root: Path,
+    tmp_path: Path,
+    profile: object,
+) -> None:
+    _, scenario, gate_config, _, events = _bundle(
+        repository_root,
+        tmp_path,
+        faulted=False,
+    )
+
+    with pytest.raises(ValueError, match="unsupported verifier profile"):
+        run_verifiers_for_profile(profile, events, scenario, gate_config)
+
+
+def test_trace_event_v3_is_standalone_from_stored_v1_and_v2_event_schemas() -> None:
+    # Stored schema dispatch depends on V3 never satisfying V1/V2 type checks.
+    assert not issubclass(TraceEventV3, TraceEvent)
+    assert not issubclass(TraceEventV3, TraceEventV2)
+    assert not issubclass(TraceEvent, TraceEventV3)
+    assert not issubclass(TraceEventV2, TraceEventV3)
 
 
 def _wp5_closed_bundle(
