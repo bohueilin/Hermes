@@ -65,6 +65,49 @@ class FaultedAction(HermesModel):
     reason_codes: tuple[str, ...]
 
 
+def replay_control_fault_action(
+    *,
+    config: FaultConfig,
+    pre_saturation_action: Action,
+    execution_sequence: int,
+    source_sequence: int | None,
+) -> tuple[Action, tuple[str, ...]]:
+    """Replay the exact deterministic post-shield action transform."""
+    reasons: list[str] = []
+    delay = config.control_delay_steps
+    expected_source = execution_sequence
+    if delay:
+        delayed_sequence = execution_sequence - delay
+        if delayed_sequence < 0:
+            expected_source = None
+            if pre_saturation_action != config.neutral_startup_action:
+                raise ValueError("control-delay startup fill must use the neutral action")
+            reasons.append("CONTROL_DELAY_FILL")
+        else:
+            expected_source = delayed_sequence
+            reasons.append("CONTROL_DELAY")
+    if source_sequence != expected_source:
+        raise ValueError("control-delay source sequence contradicts deterministic delay")
+
+    steering = pre_saturation_action.steering
+    max_steering = config.max_abs_steering
+    if max_steering is not None and abs(steering) > max_steering:
+        steering = math.copysign(max_steering, steering)
+        reasons.append("STEERING_SATURATION")
+    brake = pre_saturation_action.brake
+    if config.max_brake is not None and brake > config.max_brake:
+        brake = config.max_brake
+        reasons.append("BRAKE_SATURATION")
+    return (
+        Action(
+            steering=steering,
+            throttle=pre_saturation_action.throttle,
+            brake=brake,
+        ),
+        tuple(reasons),
+    )
+
+
 def _canonical_config(config: FaultConfig) -> bytes:
     return json.dumps(
         config.model_dump(mode="json"),
@@ -234,7 +277,6 @@ class DeterministicFaultInjector:
             )
         self._next_action_sequence += 1
         self._permitted_actions[sequence] = (simulation_time_s, action)
-        reasons: list[str] = []
         delay = self._config.control_delay_steps
         source_sequence: int | None = sequence
         source_time: float | None = simulation_time_s
@@ -245,25 +287,14 @@ class DeterministicFaultInjector:
                 source_sequence = None
                 source_time = None
                 pre_saturation = self._config.neutral_startup_action
-                reasons.append("CONTROL_DELAY_FILL")
             else:
                 source_sequence = delayed_sequence
                 source_time, pre_saturation = self._permitted_actions[delayed_sequence]
-                reasons.append("CONTROL_DELAY")
-
-        steering = pre_saturation.steering
-        max_steering = self._config.max_abs_steering
-        if max_steering is not None and abs(steering) > max_steering:
-            steering = math.copysign(max_steering, steering)
-            reasons.append("STEERING_SATURATION")
-        brake = pre_saturation.brake
-        if self._config.max_brake is not None and brake > self._config.max_brake:
-            brake = self._config.max_brake
-            reasons.append("BRAKE_SATURATION")
-        executed = Action(
-            steering=steering,
-            throttle=pre_saturation.throttle,
-            brake=brake,
+        executed, reasons = replay_control_fault_action(
+            config=self._config,
+            pre_saturation_action=pre_saturation,
+            execution_sequence=sequence,
+            source_sequence=source_sequence,
         )
         return FaultedAction(
             action=executed,
@@ -272,5 +303,5 @@ class DeterministicFaultInjector:
             execution_time_s=simulation_time_s,
             source_sequence=source_sequence,
             source_simulation_time_s=source_time,
-            reason_codes=tuple(reasons),
+            reason_codes=reasons,
         )

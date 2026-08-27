@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import replace
 from pathlib import Path
 
@@ -20,7 +21,8 @@ from hermes.domain.models import (
     ScenarioDefinition,
     TraceEvent,
 )
-from hermes.evidence.verification import VerifiedArtifactSnapshot
+from hermes.evidence.canonical import canonical_json_bytes
+from hermes.evidence.verification import VerifiedArtifactSnapshot, inspect_artifact
 from hermes.gates.config import GateConfig
 from hermes.gates.release import VerifierProfile
 
@@ -171,6 +173,38 @@ def _snapshot(
 
 def _statuses(result) -> dict[str, ComparisonStatus]:
     return {dimension.name: dimension.status for dimension in result.dimensions}
+
+
+@pytest.mark.parametrize(
+    ("run_id", "expected_size", "expected_sha256"),
+    (
+        (
+            "phase1-nominal",
+            3_200,
+            "c9862ac647d3a2324b238cc6e7be017ddbecdc8fc067582d09c7ca666b6016c0",
+        ),
+        (
+            "handoff-p4-fault",
+            3_314,
+            "037842ff2965584d897065be100e19ed5d4e10c3d9602922caedeb2d2515f1a4",
+        ),
+    ),
+)
+def test_legacy_core_comparison_bytes_are_pinned(
+    repository_root: Path,
+    run_id: str,
+    expected_size: int,
+    expected_sha256: str,
+) -> None:
+    snapshot = inspect_artifact(repository_root / "artifacts" / run_id).snapshot
+    assert snapshot is not None
+
+    comparison = compare_artifacts(snapshot, snapshot)
+    payload = canonical_json_bytes(comparison.model_dump(mode="json"))
+
+    assert type(comparison).__name__ == "ArtifactComparison"
+    assert len(payload) == expected_size
+    assert hashlib.sha256(payload).hexdigest() == expected_sha256
 
 
 def test_comparison_reports_direction_without_hiding_tradeoffs() -> None:

@@ -19,6 +19,41 @@ class EvidenceAvailability(StrEnum):
     NOT_AVAILABLE = "NOT_AVAILABLE"
 
 
+class WarningLevel(StrEnum):
+    """Forward-collision warning output bound into schema-3 evidence."""
+
+    NO_WARNING = "NO_WARNING"
+    ADVISORY = "ADVISORY"
+    URGENT_WARNING = "URGENT_WARNING"
+
+
+class InterventionLevel(StrEnum):
+    """Automatic emergency braking output bound into schema-3 evidence."""
+
+    NO_INTERVENTION = "NO_INTERVENTION"
+    PARTIAL_BRAKE = "PARTIAL_BRAKE"
+    EMERGENCY_BRAKE = "EMERGENCY_BRAKE"
+
+
+class BrakeSource(StrEnum):
+    """Typed origin of a candidate, permitted, or executed braking command."""
+
+    NONE = "none"
+    DRIVER = "driver"
+    AEB = "aeb"
+    ACC = "acc"
+    SHIELD = "shield"
+
+
+class AdasMode(StrEnum):
+    """Supervisory mode of the simulated assistance stack."""
+
+    OFF = "OFF"
+    AVAILABLE = "AVAILABLE"
+    ACTIVE = "ACTIVE"
+    DEGRADED = "DEGRADED"
+
+
 class FindingStatus(StrEnum):
     """Result of evaluating one independent requirement."""
 

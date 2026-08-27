@@ -37,6 +37,7 @@ from hermes.review import (
     ReviewUnavailableError,
     ReviewUnavailableReason,
     canonical_envelope_bytes,
+    review_artifact,
 )
 from hermes.review.models import (
     ActionValue,
@@ -159,6 +160,25 @@ METRIC_META = {
     "steering_saturation_count": ("events", "LOWER", "SCALAR"),
     "brake_saturation_count": ("events", "LOWER", "SCALAR"),
 }
+
+
+@pytest.mark.parametrize(
+    ("run_id", "evidence_schema"),
+    (("phase1-nominal", "1.0"), ("handoff-p4-fault", "2.0")),
+)
+def test_legacy_review_models_round_trip_to_the_exact_same_canonical_envelope(
+    repository_root: Path,
+    run_id: str,
+    evidence_schema: str,
+) -> None:
+    review = review_artifact(repository_root / "artifacts", run_id)
+    canonical = canonical_envelope_bytes(review)
+    round_tripped = ReviewEnvelope.model_validate_json(canonical)
+
+    assert type(review) is ReviewEnvelope
+    assert type(round_tripped) is ReviewEnvelope
+    assert round_tripped.artifact.manifest_identity.evidence_schema_version == evidence_schema
+    assert canonical_envelope_bytes(round_tripped) == canonical
 TRACK_META = {
     "raw_observation": ("OBSERVATION", "OBSERVED"),
     "delivered_observation": ("OBSERVATION", "OBSERVED"),
@@ -1204,8 +1224,10 @@ def test_runtime_cache_key_and_unavailable_error_have_exact_stable_api() -> None
     key = ReviewCacheKey(SHA, "1.0", "0.1.0", "runs/candidate")
     assert dataclasses.fields(key)[0].name == "computed_bundle_digest_sha256"
     assert key.as_tuple() == (SHA, "1.0", "0.1.0", "runs/candidate")
+    schema2 = ReviewCacheKey(SHA, "2.0", "0.1.0", "runs/candidate")
+    assert schema2.as_tuple() == (SHA, "2.0", "0.1.0", "runs/candidate")
     with pytest.raises((TypeError, ValueError)):
-        ReviewCacheKey(SHA, "2.0", "0.1.0", "runs/candidate")  # type: ignore[arg-type]
+        ReviewCacheKey(SHA, "3.0", "0.1.0", "runs/candidate")  # type: ignore[arg-type]
     with pytest.raises((TypeError, ValueError)):
         ReviewCacheKey(SHA, "1.0", "", "/absolute")
     with pytest.raises((TypeError, ValueError)):

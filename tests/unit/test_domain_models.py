@@ -5,6 +5,7 @@ import math
 import pytest
 from pydantic import ValidationError
 
+import hermes.domain.models as domain_models
 from hermes.domain.enums import EvidenceAvailability, FindingStatus, Severity, Verdict
 from hermes.domain.models import Action, Finding, Measurement, RunContext, VehicleState
 
@@ -66,6 +67,39 @@ def test_measurement_requires_value_or_unavailable_reason_consistently() -> None
         Measurement(availability=EvidenceAvailability.AVAILABLE, reason="missing")
     with pytest.raises(ValidationError):
         Measurement(availability=EvidenceAvailability.NOT_AVAILABLE)
+
+
+@pytest.mark.parametrize("value", [True, False, 1.0, 1.5, 0.5, -1, "1"])
+def test_count_measurement_rejects_non_integral_or_negative_values(value: object) -> None:
+    count_measurement = domain_models.CountMeasurement
+
+    with pytest.raises(ValidationError):
+        count_measurement(availability=EvidenceAvailability.AVAILABLE, value=value)
+
+
+def test_count_and_boolean_measurements_are_strictly_typed_and_availability_wrapped() -> None:
+    count_measurement = domain_models.CountMeasurement
+    boolean_measurement = domain_models.BooleanMeasurement
+
+    assert count_measurement(
+        availability=EvidenceAvailability.AVAILABLE,
+        value=0,
+        unit="events",
+    ).value == 0
+    assert boolean_measurement(
+        availability=EvidenceAvailability.AVAILABLE,
+        value=False,
+    ).value is False
+    with pytest.raises(ValidationError):
+        boolean_measurement(availability=EvidenceAvailability.AVAILABLE, value=0)
+    with pytest.raises(ValidationError):
+        count_measurement(availability=EvidenceAvailability.NOT_AVAILABLE, unit="events")
+    with pytest.raises(ValidationError):
+        boolean_measurement(
+            availability=EvidenceAvailability.NOT_AVAILABLE,
+            value=False,
+            reason="not observed",
+        )
 
 
 def test_finding_requires_structured_measurement_and_criterion() -> None:

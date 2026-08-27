@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from hermes.agents.contracts import (
@@ -27,6 +27,11 @@ from hermes.agents.contracts import (
     WorkflowBudget,
     fail,
     ok,
+)
+from hermes.evidence.artifacts import REQUIRED_ARTIFACT_FILES
+from hermes.evidence.schema_registry import (
+    FINDINGS_DOCUMENT_BY_EVIDENCE_SCHEMA,
+    RUN_METRICS_BY_EVIDENCE_SCHEMA,
 )
 
 _MAX_EVENT_WINDOW = 40
@@ -61,23 +66,47 @@ class ToolContext:
         return self.ledger.exceeds(self.budget)
 
 
+@dataclass(frozen=True, slots=True)
+class _AgentBundle:
+    path: Path
+    capture: Any
+    payloads: dict[str, bytes]
+
+
 def _bundle(context: ToolContext, run_id: str) -> Path:
     return context.artifact_root / run_id
 
 
-def _read_json(bundle: Path, name: str) -> Any:
-    return json.loads((bundle / name).read_text(encoding="utf-8"))
+def _read_json(bundle: _AgentBundle, name: str) -> Any:
+    return json.loads(bundle.payloads[name])
 
 
-def _bundle_digest(bundle: Path) -> str:
+def _bundle_digest(bundle: _AgentBundle) -> str:
     """The bundle's own recorded digest, used to pin every citation to this evidence."""
-    text = (bundle / "bundle.sha256").read_text(encoding="utf-8").strip()
-    return text.split()[0]
+    digest = bundle.capture.inspection.observed_bundle_digest
+    if digest is None:
+        raise ValueError("captured bundle has no valid recorded digest")
+    return digest
+
+
+def _evidence_schema_version(bundle: _AgentBundle) -> str:
+    snapshot = bundle.capture.inspection.snapshot
+    if snapshot is not None:
+        return snapshot.manifest.evidence_schema_version
+    identity = bundle.capture.safe_manifest_identity
+    if identity is None:
+        raise ValueError("captured bundle has no safe evidence-schema identity")
+    return identity.evidence_schema_version
+
+
+def _malformed_capture_detail(artifact_file: str, exc: Exception) -> str:
+    detail = f"captured {artifact_file} is malformed: {exc}"
+    return detail if len(detail) <= 500 else f"{detail[:497]}..."
 
 
 def _citation(
     run_id: str,
-    bundle: Path,
+    bundle: _AgentBundle,
     artifact_file: str,
     locator: str,
     value: Any,
@@ -99,20 +128,75 @@ def _guard(context: ToolContext, tool: str, permission: ToolPermission) -> ToolR
 
 
 def _require_bundle(
-    context: ToolContext, tool: str, run_id: str
-) -> tuple[Path, None] | tuple[None, ToolResult]:
-    bundle = _bundle(context, run_id)
-    if not bundle.is_dir():
+    context: ToolContext,
+    tool: str,
+    run_id: str,
+    captured_bundle: _AgentBundle | None = None,
+) -> tuple[_AgentBundle, None] | tuple[None, ToolResult]:
+    path = PurePosixPath(run_id)
+    if (
+        not run_id
+        or path.is_absolute()
+        or "\\" in run_id
+        or "\x00" in run_id
+        or run_id.endswith("/")
+        or "//" in run_id
+        or any(part in {"", ".", ".."} for part in path.parts)
+        or str(path) != run_id
+    ):
+        return None, fail(
+            tool,
+            ToolErrorCode.INVALID_ARGUMENT,
+            ToolPermission.READ,
+            "run selection must be a lexical root-contained path",
+        )
+    if captured_bundle is not None:
+        if captured_bundle.path != _bundle(context, run_id):
+            return None, fail(
+                tool,
+                ToolErrorCode.INVALID_EVIDENCE,
+                ToolPermission.READ,
+                "workflow capture does not match the requested artifact selection",
+            )
+        return captured_bundle, None
+    from hermes.evidence.verification import _inspect_artifact_under_root_capture
+
+    capture = _inspect_artifact_under_root_capture(context.artifact_root, run_id)
+    if not capture.captured_files:
         return None, fail(
             tool, ToolErrorCode.NOT_FOUND, ToolPermission.READ, f"unknown run: {run_id}"
         )
-    return bundle, None
+    payloads = capture.payload_map()
+    safe_identity = capture.safe_manifest_identity
+    legacy_invalid_read = (
+        capture.inspection.snapshot is None
+        and safe_identity is not None
+        and safe_identity.evidence_schema_version in {"1.0", "2.0"}
+        and set(REQUIRED_ARTIFACT_FILES) <= payloads.keys()
+        and capture.inspection.observed_bundle_digest is not None
+    )
+    if capture.inspection.snapshot is None and not legacy_invalid_read:
+        detail = "; ".join(capture.inspection.verification.errors[:2])
+        return None, fail(
+            tool,
+            ToolErrorCode.INVALID_EVIDENCE,
+            ToolPermission.READ,
+            detail or "artifact did not pass independent stored verification",
+        )
+    return (
+        _AgentBundle(
+            path=_bundle(context, run_id),
+            capture=capture,
+            payloads=payloads,
+        ),
+        None,
+    )
 
 
 def _aeb_stale_observation_counterfactual(
     *,
     run_id: str,
-    bundle: Path,
+    bundle: _AgentBundle,
     controller_config: Any,
     stale_threshold_s: float,
     seed: int,
@@ -128,17 +212,13 @@ def _aeb_stale_observation_counterfactual(
     """
     from hermes.adas.interfaces import BrakeSource, InterventionLevel
     from hermes.adas.policy import AdasLongitudinalPolicy
-    from hermes.domain.models import TraceEventV2
-    from hermes.scenarios.loader import parse_scenario_yaml
 
     try:
-        scenario = parse_scenario_yaml(
-            (bundle / "scenario.resolved.yaml").read_text(encoding="utf-8")
-        )
-        events = tuple(
-            TraceEventV2.model_validate_json(line)
-            for line in (bundle / "events.jsonl").read_bytes().splitlines()
-        )
+        snapshot = bundle.capture.inspection.snapshot
+        if snapshot is None or snapshot.manifest.evidence_schema_version not in {"2.0", "3.0"}:
+            return None, ()
+        scenario = snapshot.scenario
+        events = snapshot.events
         raw_policy = AdasLongitudinalPolicy(controller_config)
         delivered_policy = AdasLongitudinalPolicy(controller_config)
         raw_policy.reset(scenario, seed)
@@ -146,9 +226,7 @@ def _aeb_stale_observation_counterfactual(
         for event in events:
             fault_evidence = event.observation_fault_evidence
             raw_candidate = raw_policy.act(fault_evidence.raw_observation)
-            delivered_candidate = delivered_policy.act(
-                fault_evidence.delivered_observation
-            )
+            delivered_candidate = delivered_policy.act(fault_evidence.delivered_observation)
             if delivered_candidate != event.candidate_action:
                 return None, ()
             raw_decision = raw_policy.last_decision
@@ -161,11 +239,8 @@ def _aeb_stale_observation_counterfactual(
             if not raw_aeb_intervention:
                 continue
             if (
-                fault_evidence.delivered_observation.observation_age_s
-                <= stale_threshold_s
-                or not STALE_OBSERVATION_FAULT_REASONS.intersection(
-                    fault_evidence.applied_faults
-                )
+                fault_evidence.delivered_observation.observation_age_s <= stale_threshold_s
+                or not STALE_OBSERVATION_FAULT_REASONS.intersection(fault_evidence.applied_faults)
                 or fault_evidence.delivered_from_sequence >= event.sequence
                 or event.candidate_action.brake != 0.0
             ):
@@ -213,10 +288,7 @@ def _aeb_stale_observation_counterfactual(
                     run_id,
                     bundle,
                     "events.jsonl",
-                    (
-                        f"{prefix}/observation_fault_evidence/"
-                        "raw_observation/front_distance_m"
-                    ),
+                    (f"{prefix}/observation_fault_evidence/raw_observation/front_distance_m"),
                     fault_evidence.raw_observation.front_distance_m,
                 ),
                 _citation(
@@ -301,7 +373,12 @@ def get_scenario(context: ToolContext, *, name: str) -> ToolResult:
     return fail(tool, ToolErrorCode.NOT_FOUND, ToolPermission.READ, f"unknown scenario: {name}")
 
 
-def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
+def query_run(
+    context: ToolContext,
+    *,
+    run_id: str,
+    _captured_bundle: _AgentBundle | None = None,
+) -> ToolResult:
     """Return a run's verdict, integrity state, and identity.
 
     Integrity is re-derived here rather than read from the bundle's stored claim: a bundle
@@ -311,17 +388,17 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
     guard = _guard(context, tool, ToolPermission.READ)
     if guard is not None:
         return guard
-    bundle, error = _require_bundle(context, tool, run_id)
+    bundle, error = _require_bundle(context, tool, run_id, _captured_bundle)
     if error is not None:
         return error
     assert bundle is not None
     from hermes.adas.interfaces import AdasControllerConfig
-    from hermes.domain.enums import IntegrityStatus
-    from hermes.domain.models import ExecutionContextV2
+    from hermes.domain.models import ExecutionContextV2, ExecutionContextV3
     from hermes.evidence.canonical import canonical_json_bytes
-    from hermes.evidence.verification import verify_artifact
 
-    verification = verify_artifact(bundle)
+    inspection = bundle.capture.inspection
+    verification = inspection.verification
+    snapshot = inspection.snapshot
     manifest = _read_json(bundle, "manifest.json")
     data: dict[str, Any] = {
         "run_id": run_id,
@@ -333,60 +410,58 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
         "seed": manifest.get("seed"),
         "errors": list(verification.errors),
     }
-    citations = [
-        _citation(run_id, bundle, "verdict.json", "/verdict", verification.verdict.value)
-    ]
-    if verification.integrity is IntegrityStatus.INTERNALLY_CONSISTENT:
+    citations = [_citation(run_id, bundle, "verdict.json", "/verdict", verification.verdict.value)]
+    if snapshot is not None:
         execution_document = _read_json(bundle, "execution-context.json")
-        if execution_document.get("evidence_schema_version") == "2.0":
-            execution = ExecutionContextV2.model_validate_json(
-                (bundle / "execution-context.json").read_bytes()
-            )
-            if execution.policy.name == "adas-longitudinal" and execution.policy.version == "1.0":
-                controller_keys = set(AdasControllerConfig.model_fields)
-                expected_keys = controller_keys | {
-                    "target_speed_mps",
-                    "simulated_policy_latency_ms",
-                }
-                if set(execution.policy.config) == expected_keys:
-                    controller_config = {
-                        key: execution.policy.config[key] for key in controller_keys
-                    }
-                    try:
-                        policy_config = AdasControllerConfig.model_validate_json(
-                            canonical_json_bytes(controller_config), strict=True
-                        )
-                        complete_controller_config = canonical_json_bytes(
-                            policy_config.model_dump(mode="json")
-                        ) == canonical_json_bytes(controller_config)
-                    except (RecursionError, ValueError):
-                        # Integrity verification binds this config but intentionally does
-                        # not interpret controller tunables. An invalid bounded value is
-                        # therefore unavailable to the agent, never exposed as evidence.
-                        policy_config = None
-                        complete_controller_config = False
-                    if policy_config is not None and complete_controller_config:
-                        threshold = policy_config.aeb.stale_observation_s
-                        data["aeb_stale_observation_s"] = threshold
-                        citations.append(
-                            _citation(
-                                run_id,
-                                bundle,
-                                "execution-context.json",
-                                "/policy/config/aeb/stale_observation_s",
-                                threshold,
-                            )
-                        )
-                        proof, proof_citations = _aeb_stale_observation_counterfactual(
-                            run_id=run_id,
-                            bundle=bundle,
-                            controller_config=policy_config,
-                            stale_threshold_s=threshold,
-                            seed=execution.run_context.seed,
-                        )
-                        if proof is not None:
-                            data["aeb_stale_observation_counterfactual"] = proof
-                            citations.extend(proof_citations)
+        execution = snapshot.context
+    if snapshot is not None and (
+        execution_document.get("evidence_schema_version") in {"2.0", "3.0"}
+        and type(execution) in {ExecutionContextV2, ExecutionContextV3}
+        and execution.policy.name == "adas-longitudinal"
+        and execution.policy.version == "1.0"
+    ):
+        controller_keys = set(AdasControllerConfig.model_fields)
+        expected_keys = controller_keys | {
+            "target_speed_mps",
+            "simulated_policy_latency_ms",
+        }
+        if set(execution.policy.config) == expected_keys:
+            controller_config = {key: execution.policy.config[key] for key in controller_keys}
+            try:
+                policy_config = AdasControllerConfig.model_validate_json(
+                    canonical_json_bytes(controller_config), strict=True
+                )
+                complete_controller_config = canonical_json_bytes(
+                    policy_config.model_dump(mode="json")
+                ) == canonical_json_bytes(controller_config)
+            except (RecursionError, ValueError):
+                # Integrity verification binds this config but intentionally does
+                # not interpret controller tunables. An invalid bounded value is
+                # therefore unavailable to the agent, never exposed as evidence.
+                policy_config = None
+                complete_controller_config = False
+            if policy_config is not None and complete_controller_config:
+                threshold = policy_config.aeb.stale_observation_s
+                data["aeb_stale_observation_s"] = threshold
+                citations.append(
+                    _citation(
+                        run_id,
+                        bundle,
+                        "execution-context.json",
+                        "/policy/config/aeb/stale_observation_s",
+                        threshold,
+                    )
+                )
+                proof, proof_citations = _aeb_stale_observation_counterfactual(
+                    run_id=run_id,
+                    bundle=bundle,
+                    controller_config=policy_config,
+                    stale_threshold_s=threshold,
+                    seed=execution.run_context.seed,
+                )
+                if proof is not None:
+                    data["aeb_stale_observation_counterfactual"] = proof
+                    citations.extend(proof_citations)
     return ok(
         tool,
         data,
@@ -394,18 +469,42 @@ def query_run(context: ToolContext, *, run_id: str) -> ToolResult:
     )
 
 
-def get_findings(context: ToolContext, *, run_id: str) -> ToolResult:
+def get_findings(
+    context: ToolContext,
+    *,
+    run_id: str,
+    _captured_bundle: _AgentBundle | None = None,
+) -> ToolResult:
     """Return a run's verifier findings, each bound to a citation."""
     tool = "get_findings"
     guard = _guard(context, tool, ToolPermission.READ)
     if guard is not None:
         return guard
-    bundle, error = _require_bundle(context, tool, run_id)
+    bundle, error = _require_bundle(context, tool, run_id, _captured_bundle)
     if error is not None:
         return error
     assert bundle is not None
-    document = _read_json(bundle, "findings.json")
-    items = document["findings"] if isinstance(document, dict) else document
+    try:
+        document = _read_json(bundle, "findings.json")
+        findings_type = FINDINGS_DOCUMENT_BY_EVIDENCE_SCHEMA[
+            _evidence_schema_version(bundle)
+        ]
+        findings_type.model_validate_json(bundle.payloads["findings.json"])
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError) as exc:
+        return fail(
+            tool,
+            ToolErrorCode.INVALID_EVIDENCE,
+            ToolPermission.READ,
+            _malformed_capture_detail("findings.json", exc),
+        )
+    if not isinstance(document, dict):
+        return fail(
+            tool,
+            ToolErrorCode.INVALID_EVIDENCE,
+            ToolPermission.READ,
+            "captured findings.json does not contain the legacy findings list",
+        )
+    items = document["findings"]
     citations = tuple(
         _citation(
             run_id,
@@ -419,24 +518,97 @@ def get_findings(context: ToolContext, *, run_id: str) -> ToolResult:
     return ok(tool, {"findings": items, "count": len(items)}, citations)
 
 
-def get_metrics(context: ToolContext, *, run_id: str) -> ToolResult:
+def get_metrics(
+    context: ToolContext,
+    *,
+    run_id: str,
+    _captured_bundle: _AgentBundle | None = None,
+) -> ToolResult:
     """Return a run's stored metrics, each scalar bound to a citation."""
     tool = "get_metrics"
     guard = _guard(context, tool, ToolPermission.READ)
     if guard is not None:
         return guard
-    bundle, error = _require_bundle(context, tool, run_id)
+    bundle, error = _require_bundle(context, tool, run_id, _captured_bundle)
     if error is not None:
         return error
     assert bundle is not None
-    metrics = _read_json(bundle, "metrics.json")
-    citations = [
-        _citation(run_id, bundle, "metrics.json", f"/{key}", value)
-        for key, value in sorted(metrics.items())
-        if isinstance(value, (int, float, str)) and not isinstance(value, bool)
-    ]
+    try:
+        metrics = _read_json(bundle, "metrics.json")
+        metrics_type = RUN_METRICS_BY_EVIDENCE_SCHEMA[_evidence_schema_version(bundle)]
+        metrics_type.model_validate_json(bundle.payloads["metrics.json"])
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError) as exc:
+        return fail(
+            tool,
+            ToolErrorCode.INVALID_EVIDENCE,
+            ToolPermission.READ,
+            _malformed_capture_detail("metrics.json", exc),
+        )
+    if not isinstance(metrics, dict):
+        return fail(
+            tool,
+            ToolErrorCode.INVALID_EVIDENCE,
+            ToolPermission.READ,
+            "captured metrics.json is not an object",
+        )
+    snapshot = bundle.capture.inspection.snapshot
+    evidence_schema_version = _evidence_schema_version(bundle)
+    if evidence_schema_version == "3.0":
+        from hermes.domain.models import RunMetricsV3
+        from hermes.evidence.metric_registry import SCHEMA2_METRIC_REGISTRY
+
+        if type(snapshot.metrics) is not RunMetricsV3:
+            return fail(
+                tool,
+                ToolErrorCode.INVALID_EVIDENCE,
+                ToolPermission.READ,
+                "evidence V3 did not retain exact RunMetricsV3",
+            )
+        citations = []
+        for spec in SCHEMA2_METRIC_REGISTRY:
+            stored = metrics
+            for token in spec.accessor:
+                stored = stored[token]
+            if isinstance(stored, dict) and {"availability", "value"} <= set(stored):
+                if stored["availability"] == "AVAILABLE":
+                    citations.append(
+                        _citation(
+                            run_id,
+                            bundle,
+                            "metrics.json",
+                            f"{spec.json_pointer}/value",
+                            stored["value"],
+                        )
+                    )
+                else:
+                    for field in ("availability", "reason"):
+                        citations.append(
+                            _citation(
+                                run_id,
+                                bundle,
+                                "metrics.json",
+                                f"{spec.json_pointer}/{field}",
+                                stored[field],
+                            )
+                        )
+            else:
+                citations.append(
+                    _citation(
+                        run_id,
+                        bundle,
+                        "metrics.json",
+                        spec.json_pointer,
+                        stored,
+                    )
+                )
+    else:
+        citations = [
+            _citation(run_id, bundle, "metrics.json", f"/{key}", value)
+            for key, value in sorted(metrics.items())
+            if isinstance(value, (int, float, str)) and not isinstance(value, bool)
+        ]
     maximum_age = metrics.get("max_observation_age_s")
-    if isinstance(maximum_age, dict):
+    if evidence_schema_version != "3.0" and isinstance(maximum_age, dict):
         value = maximum_age.get("value")
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             citations.append(
@@ -451,13 +623,18 @@ def get_metrics(context: ToolContext, *, run_id: str) -> ToolResult:
     fault_counts = metrics.get("fault_application_counts")
     if isinstance(fault_counts, dict):
         for reason, value in sorted(fault_counts.items()):
-            if isinstance(value, (int, float)) and not isinstance(value, bool):
+            if (
+                isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and value > 0
+            ):
+                token = reason.replace("~", "~0").replace("/", "~1")
                 citations.append(
                     _citation(
                         run_id,
                         bundle,
                         "metrics.json",
-                        f"/fault_application_counts/{reason}",
+                        f"/fault_application_counts/{token}",
                         value,
                     )
                 )
@@ -492,8 +669,7 @@ def get_events(
     if error is not None:
         return error
     assert bundle is not None
-    lines = (bundle / "events.jsonl").read_text(encoding="utf-8").splitlines()
-    events = [json.loads(line) for line in lines]
+    events = [json.loads(line) for line in bundle.payloads["events.jsonl"].splitlines()]
     low = max(0, around_sequence - window // 2)
     high = min(len(events), low + window)
     selected = events[low:high]

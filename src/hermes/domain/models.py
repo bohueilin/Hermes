@@ -8,13 +8,17 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from hermes.domain.enums import (
+    AdasMode,
     AuthenticityStatus,
+    BrakeSource,
     EvidenceAvailability,
     FindingStatus,
     IntegrityStatus,
+    InterventionLevel,
     Severity,
     TerminationReason,
     Verdict,
+    WarningLevel,
 )
 
 FiniteFloat = Annotated[float, Field(allow_inf_nan=False)]
@@ -75,6 +79,28 @@ class Observation(HermesModel):
         "POST_CUT_IN",
         "PRESENT",
     ] | None = None
+
+
+class AdasDecision(HermesModel):
+    """One typed ADAS decision before action attribution and execution."""
+
+    warning: WarningLevel
+    intervention: InterventionLevel
+    mode: AdasMode
+    brake_source: BrakeSource
+    throttle: Annotated[FiniteFloat, Field(ge=0.0, le=1.0)]
+    brake: Annotated[FiniteFloat, Field(ge=0.0, le=1.0)]
+    time_to_collision_s: FiniteFloat | None
+    required_deceleration_mps2: FiniteFloat | None
+    reasons: tuple[str, ...] = ()
+
+
+class AdasDecisionEvidence(HermesModel):
+    """One policy decision bound to the exact delivered input that produced it."""
+
+    input_sequence: Annotated[int, Field(ge=0)]
+    input_time_s: NonNegativeFloat
+    decision: AdasDecision
 
 
 class VerifierFacts(HermesModel):
@@ -539,6 +565,54 @@ class Measurement(HermesModel):
         return self
 
 
+class CountMeasurement(HermesModel):
+    """A strict non-negative integral count with explicit evidence availability."""
+
+    availability: EvidenceAvailability
+    value: Annotated[int, Field(ge=0)] | None = None
+    unit: str | None = None
+    reason: str | None = None
+
+    @model_validator(mode="after")
+    def require_consistent_availability(self) -> CountMeasurement:
+        if self.availability is EvidenceAvailability.AVAILABLE:
+            if self.value is None:
+                raise ValueError("available count measurement requires a value")
+            if self.reason is not None:
+                raise ValueError(
+                    "available count measurement cannot include an unavailable reason"
+                )
+        elif not self.reason:
+            raise ValueError("NOT_AVAILABLE count measurement requires a reason")
+        elif self.value is not None:
+            raise ValueError("NOT_AVAILABLE count measurement cannot include a value")
+        return self
+
+
+class BooleanMeasurement(HermesModel):
+    """A strict boolean result with explicit evidence availability."""
+
+    availability: EvidenceAvailability
+    value: bool | None = None
+    unit: str | None = None
+    reason: str | None = None
+
+    @model_validator(mode="after")
+    def require_consistent_availability(self) -> BooleanMeasurement:
+        if self.availability is EvidenceAvailability.AVAILABLE:
+            if self.value is None:
+                raise ValueError("available boolean measurement requires a value")
+            if self.reason is not None:
+                raise ValueError(
+                    "available boolean measurement cannot include an unavailable reason"
+                )
+        elif not self.reason:
+            raise ValueError("NOT_AVAILABLE boolean measurement requires a reason")
+        elif self.value is not None:
+            raise ValueError("NOT_AVAILABLE boolean measurement cannot include a value")
+        return self
+
+
 class ObservationFaultEvidence(HermesModel):
     """Typed policy-input provenance for an evidence-schema-2 fault run."""
 
@@ -653,6 +727,188 @@ class RunMetricsV2(RunMetrics):
     brake_saturation_count: Annotated[int, Field(ge=0)]
 
 
+_FUNCTION_NOT_IMPLEMENTED = "function not implemented in this phase"
+_WINDOW_NOT_REPRESENTED = (
+    "required/forbidden evaluation window is not represented in scenario schema 4.0"
+)
+_CHATTER_NOT_DEFINED = "FCW chatter window/formula is not defined in this phase"
+_SENSOR_INVALID_NOT_REPRESENTED = (
+    "invalid-sensor evidence is not represented in evidence schema 3.0"
+)
+_RUNTIME_ERRORS_NOT_RETAINED = (
+    "runtime errors abort the run and are not retained in successful bundle evidence"
+)
+
+
+def _require_permanently_unavailable(
+    measurement: Measurement | CountMeasurement | BooleanMeasurement,
+    *,
+    field_name: str,
+    reason: str,
+) -> None:
+    if (
+        measurement.availability is not EvidenceAvailability.NOT_AVAILABLE
+        or measurement.reason != reason
+    ):
+        raise ValueError(
+            f"{field_name} is permanently NOT_AVAILABLE with reason {reason!r}"
+        )
+
+
+class FcwMetricsV3(HermesModel):
+    """Typed per-run forward-collision-warning evidence metrics."""
+
+    warning_count: CountMeasurement
+    first_warning_time_s: Measurement
+    false_warning_count: CountMeasurement
+    missed_warning: BooleanMeasurement
+    warning_chatter_count: CountMeasurement
+
+    @model_validator(mode="after")
+    def require_owner_deferred_fields(self) -> FcwMetricsV3:
+        _require_permanently_unavailable(
+            self.missed_warning,
+            field_name="adas.fcw.missed_warning",
+            reason=_WINDOW_NOT_REPRESENTED,
+        )
+        _require_permanently_unavailable(
+            self.warning_chatter_count,
+            field_name="adas.fcw.warning_chatter_count",
+            reason=_CHATTER_NOT_DEFINED,
+        )
+        return self
+
+
+class AebMetricsV3(HermesModel):
+    """Typed per-run automatic-emergency-braking evidence metrics."""
+
+    intervention_count: CountMeasurement
+    first_intervention_time_s: Measurement
+    max_deceleration_mps2: Measurement
+    max_jerk_mps3: Measurement
+    false_intervention_count: CountMeasurement
+    missed_intervention: BooleanMeasurement
+    required_decel_at_onset_mps2: Measurement
+
+    @model_validator(mode="after")
+    def require_owner_deferred_fields(self) -> AebMetricsV3:
+        _require_permanently_unavailable(
+            self.missed_intervention,
+            field_name="adas.aeb.missed_intervention",
+            reason=_WINDOW_NOT_REPRESENTED,
+        )
+        return self
+
+
+class _UnavailableFunctionMetrics(HermesModel):
+    """Base enforcing the Phase-4 scope cut for unimplemented ADAS functions."""
+
+    @model_validator(mode="after")
+    def require_unimplemented_function_fields(self) -> _UnavailableFunctionMetrics:
+        for field_name in type(self).model_fields:
+            _require_permanently_unavailable(
+                getattr(self, field_name),
+                field_name=f"adas.{field_name}",
+                reason=_FUNCTION_NOT_IMPLEMENTED,
+            )
+        return self
+
+
+class AccMetricsV3(_UnavailableFunctionMetrics):
+    """Typed ACC metrics, unavailable until ACC is implemented."""
+
+    headway_target_s: Measurement
+    headway_minimum_s: Measurement
+    headway_mae_s: Measurement
+    speed_error_mae_mps: Measurement
+    cut_in_recovery_s: Measurement
+    max_acceleration_mps2: Measurement
+    max_deceleration_mps2: Measurement
+    max_jerk_mps3: Measurement
+
+
+class LkaMetricsV3(_UnavailableFunctionMetrics):
+    """Typed LKA metrics, unavailable until LKA is implemented."""
+
+    lateral_error_mae_m: Measurement
+    lateral_error_max_m: Measurement
+    lane_crossing_count: CountMeasurement
+    steering_oscillation_count: CountMeasurement
+    max_lateral_accel_mps2: Measurement
+    max_lateral_jerk_mps3: Measurement
+    degraded_count: CountMeasurement
+    curve_steady_state_error_m: Measurement
+
+
+class AssistMetricsV3(_UnavailableFunctionMetrics):
+    """Typed combined-assist metrics, unavailable until the supervisor exists."""
+
+    mode_transition_count: CountMeasurement
+    degraded_count: CountMeasurement
+    takeover_request_count: CountMeasurement
+    disengagement_count: CountMeasurement
+    route_completion_pct: Measurement
+    constraint_violation_count: CountMeasurement
+
+
+class AdasMetricsV3(HermesModel):
+    """The complete typed ADAS metric namespace for evidence schema 3.0."""
+
+    fcw: FcwMetricsV3
+    aeb: AebMetricsV3
+    acc: AccMetricsV3
+    lka: LkaMetricsV3
+    assist: AssistMetricsV3
+
+
+class RunMetricsV3(HermesModel):
+    """Standalone schema-3 metrics contract with 61 canonical review leaves."""
+
+    evidence_schema_version: Literal["3.0"] = "3.0"
+    event_count: Annotated[int, Field(ge=1)]
+    simulation_duration_s: NonNegativeFloat
+    collision_count: Annotated[int, Field(ge=0)]
+    max_abs_lateral_offset_m: NonNegativeFloat
+    offroad_duration_s: NonNegativeFloat
+    route_completion_pct: Measurement
+    minimum_ttc_s: Measurement
+    max_abs_acceleration_mps2: Measurement
+    max_abs_jerk_mps3: Measurement
+    p95_policy_latency_ms: Measurement
+    shield_override_count: Annotated[int, Field(ge=0)]
+    shield_override_reasons: dict[str, Annotated[int, Field(ge=0)]]
+    termination_reason: TerminationReason
+    fault_application_counts: dict[str, Annotated[int, Field(ge=0)]]
+    max_observation_age_s: Measurement
+    p95_control_latency_ms: Measurement
+    control_fill_count: Annotated[int, Field(ge=0)]
+    steering_saturation_count: Annotated[int, Field(ge=0)]
+    brake_saturation_count: Annotated[int, Field(ge=0)]
+    collision_occurred: BooleanMeasurement
+    ttc_at_warning_s: Measurement
+    ttc_at_brake_onset_s: Measurement
+    impact_residual_speed_mps: Measurement
+    minimum_lead_distance_m: Measurement
+    p95_observation_age_s: Measurement
+    sensor_invalid_count: CountMeasurement
+    runtime_error_count: CountMeasurement
+    adas: AdasMetricsV3
+
+    @model_validator(mode="after")
+    def require_owner_deferred_system_fields(self) -> RunMetricsV3:
+        _require_permanently_unavailable(
+            self.sensor_invalid_count,
+            field_name="sensor_invalid_count",
+            reason=_SENSOR_INVALID_NOT_REPRESENTED,
+        )
+        _require_permanently_unavailable(
+            self.runtime_error_count,
+            field_name="runtime_error_count",
+            reason=_RUNTIME_ERRORS_NOT_RETAINED,
+        )
+        return self
+
+
 class RunContext(HermesModel):
     """Deterministic inputs bound into every trace event."""
 
@@ -681,6 +937,54 @@ class RunContextV2(RunContext):
     fault_name: str
     fault_version: str
     fault_config_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+
+
+def _require_optional_fault_identity(
+    *,
+    fault_name: str | None,
+    fault_version: str | None,
+    fault_config_digest: str | None,
+) -> None:
+    present = (
+        fault_name is not None,
+        fault_version is not None,
+        fault_config_digest is not None,
+    )
+    if any(present) and not all(present):
+        raise ValueError("fault identity must be all present or all absent")
+
+
+class RunContextV3(HermesModel):
+    """Standalone schema-3 run identity for faulted and no-fault ADAS runs."""
+
+    evidence_schema_version: Literal["3.0"] = "3.0"
+    scenario_digest: str
+    gate_config_digest: str
+    adapter_name: str
+    adapter_version: str
+    adapter_config_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    policy_name: str
+    policy_version: str
+    policy_config_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    shield_name: str
+    shield_version: str
+    shield_config_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    verifier_suite_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    seed: Annotated[int, Field(ge=-(2**31), lt=2**31)]
+    control_frequency_hz: Annotated[int, Field(ge=1, le=100)]
+    horizon_steps: Annotated[int, Field(ge=1, le=10_000)]
+    fault_name: str | None = None
+    fault_version: str | None = None
+    fault_config_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")] | None = None
+
+    @model_validator(mode="after")
+    def require_complete_fault_identity(self) -> RunContextV3:
+        _require_optional_fault_identity(
+            fault_name=self.fault_name,
+            fault_version=self.fault_version,
+            fault_config_digest=self.fault_config_digest,
+        )
+        return self
 
 
 class ComponentContext(HermesModel):
@@ -719,6 +1023,31 @@ class ExecutionContextV2(ExecutionContext):
     faults: ComponentContext
 
 
+class ExecutionContextV3(HermesModel):
+    """Standalone schema-3 component context with optional exact fault identity."""
+
+    evidence_schema_version: Literal["3.0"] = "3.0"
+    run_context: RunContextV3
+    adapter: ComponentContext
+    policy: ComponentContext
+    shield: ComponentContext
+    verifier_suite: tuple[VerifierIdentity, ...]
+    faults: ComponentContext | None = None
+
+    @model_validator(mode="after")
+    def require_fault_component_to_match_run_identity(self) -> ExecutionContextV3:
+        identity_present = self.run_context.fault_name is not None
+        if identity_present != (self.faults is not None):
+            raise ValueError("faults component must match run_context fault identity presence")
+        if self.faults is not None and (
+            self.faults.name != self.run_context.fault_name
+            or self.faults.version != self.run_context.fault_version
+            or self.faults.config_digest != self.run_context.fault_config_digest
+        ):
+            raise ValueError("faults component must exactly match run_context fault identity")
+        return self
+
+
 class TraceEvent(HermesModel):
     """One hash-chained deterministic evidence event."""
 
@@ -750,6 +1079,69 @@ class TraceEventV2(TraceEvent):
     observation_fault_evidence: ObservationFaultEvidence
     control_fault_evidence: ControlFaultEvidence
     result_observation: Observation
+
+
+class TraceEventV3(HermesModel):
+    """Standalone schema-3 event with unified fault and typed ADAS evidence."""
+
+    evidence_schema_version: Literal["3.0"] = "3.0"
+    sequence: Annotated[int, Field(ge=0)]
+    simulation_time_s: NonNegativeFloat
+    run_context: RunContextV3
+    observation_summary: dict[str, JsonValue]
+    candidate_action: Action
+    permitted_action: Action
+    executed_action: Action
+    override_reasons: tuple[str, ...]
+    observation_fault_evidence: ObservationFaultEvidence
+    control_fault_evidence: ControlFaultEvidence
+    result_observation: Observation
+    adas_decision_input_sequence: Annotated[int, Field(ge=0)]
+    adas_decision_input_time_s: NonNegativeFloat
+    adas_decision: AdasDecision
+    candidate_brake_source: BrakeSource
+    permitted_brake_source: BrakeSource
+    executed_brake_source: BrakeSource
+    vehicle_state: VehicleState
+    policy_latency_ms: NonNegativeFloat
+    latency_source: Literal["simulated", "measured"]
+    terminated: bool
+    truncated: bool
+    termination_reason: TerminationReason
+    raw_facts: VerifierFacts
+    previous_hash: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    current_hash: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+
+    @model_validator(mode="after")
+    def require_truthful_no_fault_pass_through(self) -> TraceEventV3:
+        if self.run_context.fault_name is not None:
+            return self
+
+        observation = self.observation_fault_evidence
+        raw = observation.raw_observation
+        control = self.control_fault_evidence
+        latency = control.control_latency_ms
+        if (
+            observation.delivered_observation != raw
+            or observation.delivered_from_sequence != raw.sequence
+            or observation.delivered_from_time_s != raw.simulation_time_s
+            or observation.delivery_time_s != raw.simulation_time_s
+            or observation.applied_faults
+            or observation.speed_noise_delta_mps != 0.0
+            or observation.lateral_noise_delta_m != 0.0
+            or control.candidate_time_s != raw.simulation_time_s
+            or control.executed_from_sequence != self.sequence
+            or control.executed_from_candidate_time_s != raw.simulation_time_s
+            or control.execution_time_s != raw.simulation_time_s
+            or control.pre_saturation_action != self.permitted_action
+            or control.applied_faults
+            or self.executed_action != self.permitted_action
+            or latency.availability is not EvidenceAvailability.AVAILABLE
+            or latency.value != 0.0
+            or latency.unit != "ms"
+        ):
+            raise ValueError("no-fault V3 event must contain truthful pass-through evidence")
+        return self
 
 
 class ArtifactManifest(HermesModel):
@@ -817,6 +1209,70 @@ class ArtifactManifestV2(ArtifactManifest):
     fault_config_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 
 
+class ArtifactManifestV3(HermesModel):
+    """Standalone schema-3 bundle identity with optional exact fault provenance."""
+
+    evidence_schema_version: Literal["3.0"] = "3.0"
+    hermes_version: str
+    run_id: str
+    created_at_utc: datetime
+    repository_commit: str | None
+    repository_dirty: bool | None
+    repository_provenance_reason: str | None = None
+    adapter_name: str
+    adapter_version: str
+    adapter_config_digest: str
+    simulator_name: str | None = None
+    simulator_version: str | None = None
+    simulator_commit: str | None = None
+    scenario_name: str
+    scenario_version: str
+    scenario_schema_version: str
+    scenario_digest: str
+    policy_name: str
+    policy_version: str
+    policy_config_digest: str
+    shield_name: str
+    shield_version: str
+    shield_config_digest: str
+    gate_name: str
+    gate_version: str
+    gate_config_digest: str
+    verifier_suite_digest: str
+    seed: int
+    control_frequency_hz: int
+    horizon_steps: int
+    python_version: str
+    platform: str
+    architecture: str
+    trace_digest: str
+    required_files: tuple[str, ...]
+    file_digests: dict[str, str]
+    integrity_limitation: str
+    fault_name: str | None = None
+    fault_version: str | None = None
+    fault_config_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")] | None = None
+
+    @model_validator(mode="after")
+    def require_truthful_provenance_and_fault_identity(self) -> ArtifactManifestV3:
+        if (
+            self.created_at_utc.tzinfo is None
+            or self.created_at_utc.utcoffset() != timedelta(0)
+        ):
+            raise ValueError("created_at_utc must be timezone-aware UTC")
+        unavailable = self.repository_commit is None or self.repository_dirty is None
+        if unavailable and not self.repository_provenance_reason:
+            raise ValueError("unavailable repository provenance requires a reason")
+        if not unavailable and self.repository_provenance_reason is not None:
+            raise ValueError("available repository provenance cannot include a reason")
+        _require_optional_fault_identity(
+            fault_name=self.fault_name,
+            fault_version=self.fault_version,
+            fault_config_digest=self.fault_config_digest,
+        )
+        return self
+
+
 class FindingsDocument(HermesModel):
     """Complete deterministic structured verifier output."""
 
@@ -828,6 +1284,13 @@ class FindingsDocumentV2(FindingsDocument):
     """Schema-2 finding collection for a fault run."""
 
     evidence_schema_version: Literal["2.0"] = "2.0"
+
+
+class FindingsDocumentV3(HermesModel):
+    """Standalone schema-3 finding collection."""
+
+    evidence_schema_version: Literal["3.0"] = "3.0"
+    findings: tuple[Finding, ...]
 
 
 class ArtifactVerification(HermesModel):

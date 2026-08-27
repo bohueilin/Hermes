@@ -149,6 +149,47 @@ def _run_real_adas(
     ).artifact_path
 
 
+def _pin_test_producer_to_legacy_adas_v2(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep the historical schema-2 consumer-defense probes on their source schema."""
+    import hermes.runtime.orchestrator as orchestrator
+
+    original = orchestrator._evidence_schema_for_verifier_profile
+
+    def legacy_adas_v2(profile: object) -> str:
+        if profile is VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT:
+            return "2.0"
+        return original(profile)
+
+    monkeypatch.setattr(
+        orchestrator,
+        "_evidence_schema_for_verifier_profile",
+        legacy_adas_v2,
+    )
+
+
+def _assert_exact_v2_bundle(bundle: Path) -> None:
+    from hermes.domain.models import (
+        ArtifactManifestV2,
+        ExecutionContextV2,
+        FindingsDocumentV2,
+        RunContextV2,
+        RunMetricsV2,
+        TraceEventV2,
+    )
+    from hermes.evidence.verification import inspect_artifact
+
+    snapshot = inspect_artifact(bundle).snapshot
+    assert snapshot is not None
+    assert type(snapshot.manifest) is ArtifactManifestV2
+    assert type(snapshot.context) is ExecutionContextV2
+    assert type(snapshot.context.run_context) is RunContextV2
+    assert all(type(event) is TraceEventV2 for event in snapshot.events)
+    assert type(snapshot.metrics) is RunMetricsV2
+    assert type(snapshot.findings) is FindingsDocumentV2
+
+
 def _timely_control_path(repository_root: Path, tmp_path: Path) -> Path:
     delayed = load_scenario(repository_root / SCENARIO)
     control = delayed.model_copy(update={"faults": None})
@@ -437,8 +478,10 @@ def test_delayed_source_provenance_offline_replay_and_review_tracks(
 def test_query_run_omits_a_schema_two_adas_threshold_that_is_out_of_bounds(
     repository_root: Path,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _requires_metadrive(repository_root)
+    _pin_test_producer_to_legacy_adas_v2(monkeypatch)
     artifact_root = tmp_path / "invalid-threshold-artifacts"
     artifact_root.mkdir()
     bundle = _run_real_adas(
@@ -447,6 +490,7 @@ def test_query_run_omits_a_schema_two_adas_threshold_that_is_out_of_bounds(
         "invalid-stored-threshold",
         repository_root / SCENARIO,
     )
+    _assert_exact_v2_bundle(bundle)
     _rewrite_policy_config(bundle, "out-of-bounds-threshold")
 
     from hermes.agents import ToolContext
@@ -478,9 +522,11 @@ def test_query_and_triage_reject_incomplete_or_extended_stored_adas_config(
     repository_root: Path,
     tmp_path: Path,
     mutation: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Projection or Pydantic defaults must not legitimize undeclared stored identity."""
     _requires_metadrive(repository_root)
+    _pin_test_producer_to_legacy_adas_v2(monkeypatch)
     artifact_root = tmp_path / f"invalid-{mutation}-artifacts"
     artifact_root.mkdir()
     run_id = f"invalid-{mutation}"
@@ -490,6 +536,7 @@ def test_query_and_triage_reject_incomplete_or_extended_stored_adas_config(
         run_id,
         repository_root / SCENARIO,
     )
+    _assert_exact_v2_bundle(bundle)
     _rewrite_policy_config(bundle, mutation)
 
     from hermes.agents import ToolContext, triage_run
@@ -512,6 +559,42 @@ def test_query_and_triage_reject_incomplete_or_extended_stored_adas_config(
         citation.artifact_file != "execution-context.json"
         for citation in proposal.citations
     )
+
+
+@pytest.mark.metadrive
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        "out-of-bounds-threshold",
+        "unknown-extra-key",
+    ),
+)
+def test_v3_strict_replay_rejects_rebound_or_incomplete_stored_adas_config(
+    repository_root: Path,
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    _requires_metadrive(repository_root)
+    artifact_root = tmp_path / f"v3-invalid-{mutation}-artifacts"
+    artifact_root.mkdir()
+    bundle = _run_real_adas(
+        repository_root,
+        artifact_root,
+        f"v3-invalid-{mutation}",
+        repository_root / SCENARIO,
+    )
+
+    from hermes.domain.models import ArtifactManifestV3
+    from hermes.evidence.verification import inspect_artifact, verify_artifact
+
+    snapshot = inspect_artifact(bundle).snapshot
+    assert snapshot is not None
+    assert type(snapshot.manifest) is ArtifactManifestV3
+    _rewrite_policy_config(bundle, mutation)
+
+    verification = verify_artifact(bundle)
+    assert verification.integrity is IntegrityStatus.INVALID
+    assert verification.errors
 
 
 @pytest.mark.metadrive

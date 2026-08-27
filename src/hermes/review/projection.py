@@ -9,7 +9,14 @@ from types import MappingProxyType
 from typing import TypeVar
 from unicodedata import category as unicode_category
 
-from hermes.comparison.compare import ArtifactComparison
+from hermes.comparison.compare import ArtifactComparison, ArtifactComparisonV2
+from hermes.domain.models import BooleanMeasurement, CountMeasurement, Measurement
+from hermes.evidence.metric_registry import (
+    SCHEMA2_METRIC_BY_ID,
+    SCHEMA2_METRIC_REGISTRY,
+    metric_leaf_uses_wrapper,
+    metric_leaf_value,
+)
 from hermes.gates.release import EVIDENCE_REQUIREMENTS_BY_PROFILE
 from hermes.review.models import (
     ActionValue,
@@ -18,15 +25,20 @@ from hermes.review.models import (
     AvailabilityDelta,
     AvailabilityMapValue,
     AvailabilityValues,
+    BooleanMetricValue,
     CategorizedDigest,
     ChartSeries,
     ClauseExpression,
+    ComparisonDimensionV2Item,
     ComparisonEnvelope,
+    ComparisonEnvelopeV2,
     ComparisonStringListValue,
     CompatibilityInfo,
+    CountMetricValue,
     DiagnosticItem,
     DigestInfo,
     DimensionDelta,
+    EnumMetricValue,
     EvidenceSufficiency,
     ExactValue,
     FindingItem,
@@ -41,13 +53,16 @@ from hermes.review.models import (
     LocatorInfo,
     ManifestIdentityInfo,
     MeasurementDeltaValue,
+    MeasurementMetricValue,
     MetricItem,
+    MetricItemV2,
     ObservationValue,
     Point,
     PortableArtifactIdentity,
     Provenance,
     RecordedProvenance,
     ReviewEnvelope,
+    ReviewEnvelopeV2,
     ReviewUnavailableError,
     ReviewUnavailableReason,
     ScalarDeltaValue,
@@ -64,6 +79,7 @@ from hermes.review.models import (
     ThresholdClause,
     Timeline,
     ToolInfo,
+    ToolInfoV2,
     Track,
     TrustInfo,
     TrustRecord,
@@ -114,9 +130,7 @@ _FINDING_LABELS = MappingProxyType(
         "comfort.jerk": "Jerk comfort threshold",
         "fault.coverage.required": "Configured fault coverage",
         "adas.aeb.threat_response": "AEB responded to an oracle-labelled threat",
-        "adas.aeb.brake_onset_margin": (
-            "AEB braking began within the calibrated onset margin"
-        ),
+        "adas.aeb.brake_onset_margin": ("AEB braking began within the calibrated onset margin"),
         "adas.aeb.no_false_intervention": "No braking in a threat-free scenario",
         "adas.fcw.warning_timing": "Declared forward-collision warning exposure occurred",
     }
@@ -505,10 +519,26 @@ def _adas_threshold(snapshot: object, finding_id: str):
     projects those into the review vocabulary rather than re-deriving the rule, so the
     review surface cannot drift from what the verifier actually evaluated.
     """
-    finding = next(
-        item for item in snapshot.findings.findings if item.finding_id == finding_id
-    )
+    finding = next(item for item in snapshot.findings.findings if item.finding_id == finding_id)
     gate_reference = (_reference("GATE_CONFIG", "/adas"),)
+    if (
+        finding_id == "adas.aeb.brake_onset_margin"
+        and finding.verifier_version == "1.1"
+        and finding.measurement.unit == "m usable gap"
+    ):
+        return InvariantExpression(
+            kind="INVARIANT",
+            label="Usable gap at AEB brake onset (m usable gap)",
+            clause=None,
+            children=(),
+            invariant=InvariantRule(
+                operator="COMPLETE",
+                configuration_sources=gate_reference,
+                evidence_sources=_ordered_references(
+                    *_event_references(snapshot.events, "/executed_action/brake")
+                ),
+            ),
+        )
     if finding_id == "adas.aeb.threat_response":
         return InvariantExpression(
             kind="INVARIANT",
@@ -604,9 +634,7 @@ def _consequence(
         # Mirrors the gate's non-compensatory catch-all for hard findings that have no
         # branch of their own: FAIL holds, unavailable required evidence follows the
         # configured policy, and a soft finding is held for human review.
-        finding = next(
-            item for item in snapshot.findings.findings if item.finding_id == finding_id
-        )
+        finding = next(item for item in snapshot.findings.findings if item.finding_id == finding_id)
         if not finding.hard_invariant:
             effect = result = "CONDITIONAL"
             source = "FIXED_GATE_PRECEDENCE"
@@ -643,12 +671,45 @@ def _finding_references(
     finding_index: int,
 ) -> tuple[SourceReference, ...]:
     references = [_reference("FINDING", f"/findings/{finding_index}")]
-    # ADAS findings carry their measurement on the finding itself; there is no
-    # metrics.json counterpart until RunMetricsV3 exists, so no METRIC reference is
-    # fabricated for them. A dangling source reference would be worse than none.
     metric = _FINDING_METRICS.get(finding.finding_id)
+    if snapshot.manifest.evidence_schema_version == "3.0":
+        metrics = snapshot.metrics
+        measured = finding.measurement
+        if (
+            finding.finding_id == "adas.aeb.threat_response"
+            and measured.unit == "m/s"
+            and metrics.impact_residual_speed_mps.availability.value == "AVAILABLE"
+            and measured.value == metrics.impact_residual_speed_mps.value
+        ):
+            metric = "impact_residual_speed_mps"
+        elif (
+            finding.finding_id == "adas.aeb.brake_onset_margin"
+            and measured.unit == "m/s^2"
+            and metrics.adas.aeb.required_decel_at_onset_mps2.availability.value == "AVAILABLE"
+            and measured.value == metrics.adas.aeb.required_decel_at_onset_mps2.value
+        ):
+            metric = "adas.aeb.required_decel_at_onset_mps2"
+        elif (
+            finding.finding_id == "adas.fcw.warning_timing"
+            and measured.unit == "s"
+            and metrics.minimum_ttc_s.availability.value == "AVAILABLE"
+            and measured.value == metrics.minimum_ttc_s.value
+        ):
+            metric = "minimum_ttc_s"
     if metric is not None:
-        references.insert(0, _reference("METRIC", f"/{metric}"))
+        if snapshot.manifest.evidence_schema_version == "3.0":
+            spec = SCHEMA2_METRIC_BY_ID.get(metric)
+            if spec is None:
+                raise ReviewUnavailableError(
+                    ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+                    f"finding {finding.finding_id!r} links an unregistered metric {metric!r}",
+                )
+            pointer = spec.json_pointer
+            if metric_leaf_uses_wrapper(spec):
+                pointer += "/value"
+        else:
+            pointer = f"/{metric}"
+        references.insert(0, _reference("METRIC", pointer))
     references.extend(_reference("EVENT", "", sequence) for sequence in finding.event_sequences)
     return _ordered_references(*references)
 
@@ -991,6 +1052,89 @@ def _metrics(snapshot: object) -> tuple[MetricItem, ...]:
     return tuple(result)
 
 
+def _metrics_v2(snapshot: object) -> tuple[MetricItemV2, ...]:
+    result: list[MetricItemV2] = []
+    for spec in SCHEMA2_METRIC_REGISTRY:
+        stored = metric_leaf_value(snapshot.metrics, spec)
+        if isinstance(stored, Measurement):
+            availability = _enum_value(stored.availability)
+            reason = stored.reason
+            value = MeasurementMetricValue(
+                kind="MEASUREMENT",
+                availability=availability,
+                value=stored.value,
+                unit=stored.unit,
+                reason=reason,
+            )
+        elif isinstance(stored, CountMeasurement):
+            availability = _enum_value(stored.availability)
+            reason = stored.reason
+            value = CountMetricValue(
+                kind="COUNT",
+                availability=availability,
+                value=stored.value,
+                unit=stored.unit,
+                reason=reason,
+            )
+        elif isinstance(stored, BooleanMeasurement):
+            availability = _enum_value(stored.availability)
+            reason = stored.reason
+            value = BooleanMetricValue(
+                kind="BOOLEAN",
+                availability=availability,
+                value=stored.value,
+                unit=None,
+                reason=reason,
+            )
+        elif spec.value_kind == "STRING_COUNT_MAP":
+            availability = "AVAILABLE"
+            reason = None
+            value = StringCountMapMetricValue(
+                kind="STRING_COUNT_MAP", values=dict(sorted(stored.items()))
+            )
+        elif spec.value_kind == "ENUM":
+            availability = "AVAILABLE"
+            reason = None
+            value = EnumMetricValue(kind="ENUM", value=_enum_value(stored), unit=None)
+        elif spec.value_kind == "COUNT":
+            availability = "AVAILABLE"
+            reason = None
+            value = CountMetricValue(kind="COUNT", value=stored, unit=spec.unit)
+        else:
+            availability = "AVAILABLE"
+            reason = None
+            value = ScalarMetricValue(kind="SCALAR", value=_exact(stored, spec.unit))
+        pointer = spec.json_pointer
+        if isinstance(stored, (Measurement, CountMeasurement, BooleanMeasurement)):
+            pointers = (
+                (f"{pointer}/value",)
+                if availability == "AVAILABLE"
+                else (f"{pointer}/availability", f"{pointer}/reason")
+            )
+        else:
+            pointers = (pointer,)
+        result.append(
+            MetricItemV2(
+                metric_id=spec.leaf_id,
+                display_id=spec.display_id,
+                label=spec.display_id,
+                category=("COMPUTED" if availability == "AVAILABLE" else "NOT_AVAILABLE"),
+                value=value,
+                availability=availability,
+                unavailable_reason=reason,
+                desired_direction=spec.direction,
+                authoritative_view=spec.authoritative_view,
+                abs_tol=spec.abs_tol,
+                rel_tol=spec.rel_tol,
+                tolerance_label=spec.tolerance_label,
+                criticality=spec.criticality,
+                gating=spec.gating,
+                source_references=tuple(_reference("METRIC", item) for item in pointers),
+            )
+        )
+    return tuple(result)
+
+
 def _action(action: object) -> ActionValue:
     return ActionValue(
         steering=action.steering,
@@ -1233,6 +1377,15 @@ def _tool(hermes_version: str) -> ToolInfo:
         hermes_distribution="hermes-autonomy",
         hermes_version=hermes_version,
         review_schema_version="1.0",
+        category="COMPUTED",
+    )
+
+
+def _tool_v2(hermes_version: str) -> ToolInfoV2:
+    return ToolInfoV2(
+        hermes_distribution="hermes-autonomy",
+        hermes_version=hermes_version,
+        review_schema_version="2.0",
         category="COMPUTED",
     )
 
@@ -1528,8 +1681,18 @@ def _invalid_review(
     *,
     selected_relative_path: str,
     hermes_version: str,
-) -> ReviewEnvelope:
+) -> ReviewEnvelope | ReviewEnvelopeV2:
     inspection = capture.inspection
+    snapshot = inspection.snapshot
+    safe_identity = capture.safe_manifest_identity
+    evidence_schema = (
+        snapshot.manifest.evidence_schema_version
+        if snapshot is not None
+        else getattr(safe_identity, "evidence_schema_version", None)
+    )
+    schema2 = evidence_schema == "3.0"
+    envelope_type = ReviewEnvelopeV2 if schema2 else ReviewEnvelope
+    tool = _tool_v2(hermes_version) if schema2 else _tool(hermes_version)
     diagnostics = tuple(
         DiagnosticItem(
             id=f"verification.error.{index:04d}",
@@ -1541,9 +1704,9 @@ def _invalid_review(
         )
         for index, error in enumerate(inspection.verification.errors, start=1)
     )
-    return ReviewEnvelope(
-        review_schema_version="1.0",
-        tool=_tool(hermes_version),
+    return envelope_type(
+        review_schema_version="2.0" if schema2 else "1.0",
+        tool=tool,
         artifact=_artifact(capture, selected_relative_path),
         verification={
             "integrity": "INVALID_EVIDENCE",
@@ -1602,7 +1765,7 @@ def project_review_envelope(
     *,
     selected_relative_path: str,
     hermes_version: str,
-) -> ReviewEnvelope:
+) -> ReviewEnvelope | ReviewEnvelopeV2:
     """Project one already captured and stored-verified artifact without I/O."""
 
     if capture.inspection.snapshot is None:
@@ -1618,7 +1781,8 @@ def project_review_envelope(
             "accepted finding count exceeds the review budget",
         )
     findings = _findings(snapshot)
-    metrics = _metrics(snapshot)
+    schema2 = snapshot.manifest.evidence_schema_version == "3.0"
+    metrics = _metrics_v2(snapshot) if schema2 else _metrics(snapshot)
     if len(metrics) > 64:
         raise ReviewUnavailableError(
             ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
@@ -1627,9 +1791,10 @@ def project_review_envelope(
     sufficiency, unavailable = _sufficiency(snapshot, findings)
     limitations = _accepted_limitations(snapshot)
     inspection = capture.inspection
-    return ReviewEnvelope(
-        review_schema_version="1.0",
-        tool=_tool(hermes_version),
+    envelope_type = ReviewEnvelopeV2 if schema2 else ReviewEnvelope
+    return envelope_type(
+        review_schema_version="2.0" if schema2 else "1.0",
+        tool=_tool_v2(hermes_version) if schema2 else _tool(hermes_version),
         artifact=_artifact(capture, selected_relative_path),
         verification={
             "integrity": "INTERNALLY_CONSISTENT",
@@ -1815,6 +1980,137 @@ def _comparison_references(
     )
 
 
+def _comparison_v2_references(dimension: object) -> tuple[SideReference, ...]:
+    if dimension.name == "verdict":
+        return _ordered_side_references(
+            _side_reference("BASELINE", "VERDICT", "/verdict"),
+            _side_reference("CANDIDATE", "VERDICT", "/verdict"),
+        )
+    if dimension.name == "hard_failures":
+        return _ordered_side_references(
+            _side_reference("BASELINE", "VERDICT", "/hard_failures"),
+            _side_reference("CANDIDATE", "VERDICT", "/hard_failures"),
+        )
+    spec = next(
+        (item for item in SCHEMA2_METRIC_REGISTRY if item.leaf_id == dimension.name),
+        None,
+    )
+    if spec is None:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            f"unsupported schema-2 comparison dimension {dimension.name!r}",
+        )
+
+    def pointers(value: object) -> tuple[str, ...]:
+        if not metric_leaf_uses_wrapper(spec):
+            return (spec.json_pointer,)
+        if not isinstance(value, dict):
+            raise ReviewUnavailableError(
+                ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+                f"schema-2 comparison dimension {dimension.name!r} lost its wrapper",
+            )
+        if value.get("availability") == "AVAILABLE":
+            return (f"{spec.json_pointer}/value",)
+        return (
+            f"{spec.json_pointer}/availability",
+            f"{spec.json_pointer}/reason",
+        )
+
+    return _ordered_side_references(
+        *(
+            _side_reference(side, "METRIC", pointer)
+            for side, value in (
+                ("BASELINE", dimension.baseline_value),
+                ("CANDIDATE", dimension.candidate_value),
+            )
+            for pointer in pointers(value)
+        )
+    )
+
+
+def _project_comparison_envelope_v2(
+    comparison: ArtifactComparisonV2,
+    *,
+    baseline: ReviewEnvelope | ReviewEnvelopeV2,
+    candidate: ReviewEnvelope | ReviewEnvelopeV2,
+) -> ComparisonEnvelopeV2:
+    schema2_sibling = (
+        baseline
+        if type(baseline) is ReviewEnvelopeV2
+        else candidate
+        if type(candidate) is ReviewEnvelopeV2
+        else None
+    )
+    if schema2_sibling is None:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "schema-2 comparison requires at least one exact schema-2 review sibling",
+        )
+    if comparison.compatibility.comparable and (
+        type(baseline) is not ReviewEnvelopeV2 or type(candidate) is not ReviewEnvelopeV2
+    ):
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "compatible schema-2 comparison requires exact schema-2 review siblings",
+        )
+    if not comparison.compatibility.comparable and comparison.dimensions:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "incompatible schema-2 comparison cannot expose dimensions",
+        )
+    baseline_summary = SideSummary(
+        side="BASELINE",
+        artifact=baseline.artifact,
+        integrity=baseline.verification.integrity,
+        gate_verdict=baseline.gate.verdict,
+        category="COMPUTED",
+        source_references=_summary_references("BASELINE"),
+    )
+    candidate_summary = SideSummary(
+        side="CANDIDATE",
+        artifact=candidate.artifact,
+        integrity=candidate.verification.integrity,
+        gate_verdict=candidate.gate.verdict,
+        category="COMPUTED",
+        source_references=_summary_references("CANDIDATE"),
+    )
+    compatibility = CompatibilityInfo(
+        status=("COMPATIBLE" if comparison.compatibility.comparable else "INCOMPATIBLE"),
+        reasons=comparison.compatibility.reasons,
+        warnings=comparison.compatibility.warnings,
+        category="COMPUTED",
+    )
+    dimensions = tuple(
+        ComparisonDimensionV2Item(
+            dimension_id=item.name,
+            status=item.status.value,
+            baseline_value=item.baseline_value,
+            candidate_value=item.candidate_value,
+            value_kind=item.value_kind,
+            unit=item.unit,
+            explanation=item.explanation,
+            desired_direction=item.desired_direction,
+            abs_tol=item.abs_tol,
+            rel_tol=item.rel_tol,
+            tolerance_label=item.tolerance_label,
+            criticality=item.criticality,
+            gating=item.gating,
+            source_references=_comparison_v2_references(item),
+        )
+        for item in comparison.dimensions
+    )
+    return ComparisonEnvelopeV2(
+        comparison_schema_version="2.0",
+        tool=schema2_sibling.tool,
+        baseline=baseline_summary,
+        candidate=candidate_summary,
+        compatibility=compatibility,
+        dimensions=dimensions,
+        chart_series=(),
+        residual_limitations=(),
+    )
+
+
 def _comparison_scalar(value: object, unit: str | None) -> ScalarDeltaValue:
     if value is not None and not isinstance(value, (str, bool, int, float)):
         raise ReviewUnavailableError(
@@ -1963,14 +2259,26 @@ def _project_hard_failure(
 
 
 def project_comparison_envelope(
-    comparison: ArtifactComparison,
+    comparison: ArtifactComparison | ArtifactComparisonV2,
     *,
-    baseline: ReviewEnvelope,
-    candidate: ReviewEnvelope,
+    baseline: ReviewEnvelope | ReviewEnvelopeV2,
+    candidate: ReviewEnvelope | ReviewEnvelopeV2,
     baseline_snapshot: object,
     candidate_snapshot: object,
-) -> ComparisonEnvelope:
+) -> ComparisonEnvelope | ComparisonEnvelopeV2:
     """Map one authoritative core comparison into the portable review contract."""
+
+    if type(comparison) is ArtifactComparisonV2:
+        return _project_comparison_envelope_v2(
+            comparison,
+            baseline=baseline,
+            candidate=candidate,
+        )
+    if type(comparison) is not ArtifactComparison:
+        raise ReviewUnavailableError(
+            ReviewUnavailableReason.UNSUPPORTED_REVIEW_SHAPE,
+            "unsupported exact comparison result type",
+        )
 
     try:
         baseline_summary = SideSummary(

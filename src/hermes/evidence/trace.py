@@ -5,23 +5,43 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from hermes.adas.decision import (
+    candidate_brake_source,
+    executed_brake_source,
+    permitted_brake_source,
+    validate_decision_evidence,
+)
+from hermes.domain.enums import BrakeSource
 from hermes.domain.models import (
     Action,
+    AdasDecisionEvidence,
     ControlFaultEvidence,
+    Observation,
     ObservationFaultEvidence,
     RunContext,
     RunContextV2,
+    RunContextV3,
     ScenarioDefinition,
     TraceEvent,
     TraceEventV2,
+    TraceEventV3,
     VehicleState,
 )
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
-from hermes.faults.deterministic import ACTION_FAULT_REASONS, OBSERVATION_FAULT_REASONS
-from hermes.shields.deterministic import SUPPORTED_OVERRIDE_REASONS
+from hermes.faults.deterministic import (
+    ACTION_FAULT_REASONS,
+    OBSERVATION_FAULT_REASONS,
+    replay_control_fault_action,
+)
+from hermes.shields.config import ShieldConfig, shield_config_digest
+from hermes.shields.deterministic import (
+    SUPPORTED_OVERRIDE_REASONS,
+    DeterministicSafetyShield,
+)
 
 GENESIS_HASH = "0" * 64
-TraceEventLike = TraceEvent | TraceEventV2
+TraceEventLike = TraceEvent | TraceEventV2 | TraceEventV3
+_NOOP_SHIELD_CONFIG_DIGEST = sha256_hex(canonical_json_bytes({}))
 
 
 class TraceIntegrityError(ValueError):
@@ -124,6 +144,222 @@ def create_trace_event_v2(
     return TraceEventV2.model_validate({**payload, "current_hash": current_hash})
 
 
+def _v3_source_attribution(
+    *,
+    sequence: int,
+    permitted_action: Action,
+    permitted_source: BrakeSource,
+    control_fault_evidence: ControlFaultEvidence,
+    prior_events: tuple[TraceEventV3, ...],
+) -> tuple[Action | None, BrakeSource | None]:
+    if len(prior_events) != sequence or any(
+        event.sequence != expected for expected, event in enumerate(prior_events)
+    ):
+        raise ValueError("V3 event construction requires complete ordered prior events")
+    source_sequence = control_fault_evidence.executed_from_sequence
+    if source_sequence is None:
+        return None, None
+    if source_sequence > sequence:
+        raise ValueError("executed source sequence cannot be in the future")
+    if source_sequence == sequence:
+        source_action = permitted_action
+        source_attribution = permitted_source
+        expected_source_time = control_fault_evidence.candidate_time_s
+    else:
+        source_event = prior_events[source_sequence]
+        source_action = source_event.permitted_action
+        source_attribution = source_event.permitted_brake_source
+        expected_source_time = source_event.control_fault_evidence.candidate_time_s
+    if control_fault_evidence.executed_from_candidate_time_s != expected_source_time:
+        raise ValueError("executed source time does not match the source event")
+    return source_action, source_attribution
+
+
+def _validate_v3_shield_transition(
+    *,
+    run_context: RunContextV3,
+    observation: Observation,
+    candidate_action: Action,
+    permitted_action: Action,
+    override_reasons: tuple[str, ...],
+    scenario: ScenarioDefinition | None,
+    shield_config: ShieldConfig | None,
+) -> None:
+    identity = (run_context.shield_name, run_context.shield_version)
+    if identity == ("noop", "1.0"):
+        if shield_config is not None:
+            raise ValueError("no-op shield cannot use a deterministic shield config")
+        if run_context.shield_config_digest != _NOOP_SHIELD_CONFIG_DIGEST:
+            raise ValueError("no-op shield config digest is contradictory")
+        expected_action, expected_reasons = candidate_action, ()
+    elif identity == ("deterministic", "1.0"):
+        if scenario is None or shield_config is None:
+            raise ValueError(
+                "deterministic shield transition requires its bound scenario and config"
+            )
+        if run_context.shield_config_digest != shield_config_digest(shield_config):
+            raise ValueError("deterministic shield config digest is contradictory")
+        shield = DeterministicSafetyShield(shield_config)
+        shield.reset(scenario, run_context.seed)
+        expected_action, expected_reasons = shield.apply(observation, candidate_action)
+    else:
+        raise ValueError(
+            "unsupported shield identity for V3 evidence: "
+            f"{run_context.shield_name}/{run_context.shield_version}"
+        )
+    if permitted_action != expected_action or override_reasons != expected_reasons:
+        raise ValueError("shield transition does not match deterministic replay")
+
+
+def _validate_v3_control_fault_replay(
+    *,
+    run_context: RunContextV3,
+    scenario: ScenarioDefinition | None,
+    control_fault_evidence: ControlFaultEvidence,
+    executed_action: Action,
+    sequence: int,
+) -> None:
+    fault_identity = (
+        run_context.fault_name,
+        run_context.fault_version,
+        run_context.fault_config_digest,
+    )
+    if all(value is None for value in fault_identity):
+        if scenario is not None and scenario.faults is not None:
+            raise ValueError("fault scenario requires declared fault identity")
+        return
+    if any(value is None for value in fault_identity):
+        raise ValueError("declared fault identity is incomplete")
+    if scenario is None or scenario.faults is None:
+        raise ValueError("declared fault identity requires a fault scenario")
+    if fault_identity[:2] != ("deterministic-faults", "1.0"):
+        raise ValueError("declared fault identity is unsupported")
+    expected_digest = sha256_hex(
+        canonical_json_bytes(scenario.faults.model_dump(mode="json"))
+    )
+    if run_context.fault_config_digest != expected_digest:
+        raise ValueError("declared fault config digest contradicts the scenario")
+    expected_action, expected_reasons = replay_control_fault_action(
+        config=scenario.faults,
+        pre_saturation_action=control_fault_evidence.pre_saturation_action,
+        execution_sequence=sequence,
+        source_sequence=control_fault_evidence.executed_from_sequence,
+    )
+    if (
+        executed_action != expected_action
+        or control_fault_evidence.applied_faults != expected_reasons
+    ):
+        raise ValueError("control fault replay does not match executed action and reasons")
+
+
+def create_trace_event_v3(
+    *,
+    sequence: int,
+    simulation_time_s: float,
+    run_context: RunContextV3,
+    observation_summary: dict[str, Any],
+    candidate_action: Action,
+    permitted_action: Action,
+    executed_action: Action,
+    override_reasons: tuple[str, ...],
+    observation_fault_evidence: ObservationFaultEvidence,
+    control_fault_evidence: ControlFaultEvidence,
+    result_observation,
+    adas_decision_evidence: AdasDecisionEvidence | None,
+    vehicle_state: VehicleState,
+    policy_latency_ms: float,
+    latency_source: str,
+    terminated: bool,
+    truncated: bool,
+    termination_reason: object,
+    raw_facts: dict[str, Any],
+    previous_hash: str,
+    scenario: ScenarioDefinition | None = None,
+    shield_config: ShieldConfig | None = None,
+    prior_events: tuple[TraceEventV3, ...] = (),
+) -> TraceEventV3:
+    """Build one schema-3 event with deterministic action attribution."""
+    if adas_decision_evidence is None:
+        raise ValueError("V3 event construction requires ADAS decision evidence")
+    validate_decision_evidence(
+        adas_decision_evidence,
+        observation_fault_evidence.delivered_observation,
+        candidate_action,
+    )
+    _validate_v3_shield_transition(
+        run_context=run_context,
+        observation=observation_fault_evidence.delivered_observation,
+        candidate_action=candidate_action,
+        permitted_action=permitted_action,
+        override_reasons=override_reasons,
+        scenario=scenario,
+        shield_config=shield_config,
+    )
+    candidate_source = candidate_brake_source(
+        adas_decision_evidence.decision,
+        candidate_action,
+    )
+    permitted_source = permitted_brake_source(
+        candidate_action=candidate_action,
+        candidate_source=candidate_source,
+        permitted_action=permitted_action,
+        override_reasons=override_reasons,
+    )
+    source_action, source_attribution = _v3_source_attribution(
+        sequence=sequence,
+        permitted_action=permitted_action,
+        permitted_source=permitted_source,
+        control_fault_evidence=control_fault_evidence,
+        prior_events=prior_events,
+    )
+    executed_source = executed_brake_source(
+        control_evidence=control_fault_evidence,
+        executed_action=executed_action,
+        source_permitted_action=source_action,
+        source_permitted_brake_source=source_attribution,
+    )
+    _validate_v3_control_fault_replay(
+        run_context=run_context,
+        scenario=scenario,
+        control_fault_evidence=control_fault_evidence,
+        executed_action=executed_action,
+        sequence=sequence,
+    )
+    payload: dict[str, Any] = {
+        "evidence_schema_version": "3.0",
+        "sequence": sequence,
+        "simulation_time_s": simulation_time_s,
+        "run_context": run_context,
+        "observation_summary": observation_summary,
+        "candidate_action": candidate_action,
+        "permitted_action": permitted_action,
+        "executed_action": executed_action,
+        "override_reasons": override_reasons,
+        "observation_fault_evidence": observation_fault_evidence,
+        "control_fault_evidence": control_fault_evidence,
+        "result_observation": result_observation,
+        "adas_decision_input_sequence": adas_decision_evidence.input_sequence,
+        "adas_decision_input_time_s": adas_decision_evidence.input_time_s,
+        "adas_decision": adas_decision_evidence.decision,
+        "candidate_brake_source": candidate_source,
+        "permitted_brake_source": permitted_source,
+        "executed_brake_source": executed_source,
+        "vehicle_state": vehicle_state,
+        "policy_latency_ms": policy_latency_ms,
+        "latency_source": latency_source,
+        "terminated": terminated,
+        "truncated": truncated,
+        "termination_reason": termination_reason,
+        "raw_facts": raw_facts,
+        "previous_hash": previous_hash,
+    }
+    json_payload = TraceEventV3.model_validate(
+        {**payload, "current_hash": "0" * 64}
+    ).model_dump(mode="json", exclude={"current_hash"})
+    current_hash = sha256_hex(canonical_json_bytes(json_payload))
+    return TraceEventV3.model_validate({**payload, "current_hash": current_hash})
+
+
 def event_hash(event: TraceEventLike) -> str:
     """Recompute one event hash from its canonical hash material."""
     payload = event.model_dump(mode="json", exclude={"current_hash"})
@@ -183,6 +419,14 @@ _CHALLENGE_OBSERVATION_SUMMARY_FIELDS = _OBSERVATION_SUMMARY_FIELDS | {
     "result_challenge_actor_speed_mps",
     "result_challenge_phase",
 }
+_TYPED_CHALLENGE_OBSERVATION_FIELDS = (
+    "front_distance_m",
+    "front_relative_speed_mps",
+    "challenge_actor_longitudinal_m",
+    "challenge_actor_lateral_offset_m",
+    "challenge_actor_speed_mps",
+    "challenge_phase",
+)
 #: How many float32 steps of slack a declared-vs-observed geometry comparison allows.
 #:
 #: The simulator stores positions and velocities as float32 and we read them back as
@@ -231,7 +475,7 @@ _CHALLENGE_PHASES = {
 }
 
 
-def _summary_number(event: TraceEvent, field_name: str) -> float:
+def _summary_number(event: TraceEventLike, field_name: str) -> float:
     value = event.observation_summary[field_name]
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise TraceIntegrityError(
@@ -244,7 +488,7 @@ def _summary_number(event: TraceEvent, field_name: str) -> float:
     return float(value)
 
 
-def _verify_front_actor_fields(event: TraceEvent, *, prefix: str) -> None:
+def _verify_front_actor_fields(event: TraceEventLike, *, prefix: str) -> None:
     distance_name = f"{prefix}front_distance_m"
     relative_name = f"{prefix}front_relative_speed_mps"
     distance = event.observation_summary[distance_name]
@@ -331,8 +575,169 @@ def _challenge_values_match(left: object, right: object) -> bool:
     return left == right
 
 
+def _initial_vehicle_state(scenario: ScenarioDefinition) -> VehicleState:
+    """Return the exact simulator-neutral reset facts declared by a scenario."""
+    return VehicleState(
+        position_m=0.0,
+        speed_mps=scenario.initial_state.speed_mps,
+        acceleration_mps2=0.0,
+        lateral_offset_m=scenario.initial_state.lateral_offset_m,
+        route_progress_pct=0.0,
+        collision_count=0,
+        offroad=False,
+        destination_reached=False,
+    )
+
+
+def _typed_observation_summary(
+    event: TraceEventV2 | TraceEventV3,
+    scenario: ScenarioDefinition,
+) -> dict[str, Any]:
+    """Project the exact typed policy input and adapter result carried by one event."""
+    delivered = event.observation_fault_evidence.delivered_observation
+    result = event.result_observation
+    expected: dict[str, Any] = {
+        "input_sequence": delivered.sequence,
+        "input_simulation_time_s": delivered.simulation_time_s,
+        "speed_mps": delivered.vehicle_state.speed_mps,
+        "lateral_offset_m": delivered.vehicle_state.lateral_offset_m,
+        "route_progress_pct": delivered.vehicle_state.route_progress_pct,
+        "observation_age_s": delivered.observation_age_s,
+    }
+    if scenario.challenge is not None:
+        expected.update(
+            {
+                "front_distance_m": delivered.front_distance_m,
+                "front_relative_speed_mps": delivered.front_relative_speed_mps,
+                "challenge_actor_longitudinal_m": (
+                    delivered.challenge_actor_longitudinal_m
+                ),
+                "challenge_actor_lateral_offset_m": (
+                    delivered.challenge_actor_lateral_offset_m
+                ),
+                "challenge_actor_speed_mps": delivered.challenge_actor_speed_mps,
+                "challenge_phase": delivered.challenge_phase,
+                "result_front_distance_m": result.front_distance_m,
+                "result_front_relative_speed_mps": result.front_relative_speed_mps,
+                "result_challenge_actor_longitudinal_m": (
+                    result.challenge_actor_longitudinal_m
+                ),
+                "result_challenge_actor_lateral_offset_m": (
+                    result.challenge_actor_lateral_offset_m
+                ),
+                "result_challenge_actor_speed_mps": result.challenge_actor_speed_mps,
+                "result_challenge_phase": result.challenge_phase,
+            }
+        )
+    return expected
+
+
+def _has_typed_challenge_facts(observation: Observation) -> bool:
+    return any(
+        getattr(observation, field_name) is not None
+        for field_name in _TYPED_CHALLENGE_OBSERVATION_FIELDS
+    )
+
+
+def _verify_no_fault_v3_typed_observations(
+    events: tuple[TraceEventLike, ...],
+    index: int,
+    scenario: ScenarioDefinition | None,
+) -> None:
+    """Bind every no-fault V3 typed policy input and adapter result into one state chain."""
+    event = events[index]
+    if not isinstance(event, TraceEventV3):
+        raise TraceIntegrityError(
+            f"no-fault V3 trace requires a schema-3 event at sequence {event.sequence}"
+        )
+    if scenario is None or scenario.schema_version != "4.0" or scenario.faults is not None:
+        raise TraceIntegrityError(
+            "no-fault V3 typed observation verification requires a schema-4 no-fault scenario"
+        )
+
+    raw = event.observation_fault_evidence.raw_observation
+    delivered = event.observation_fault_evidence.delivered_observation
+    expected_input_time = event.sequence / event.run_context.control_frequency_hz
+    if raw.sequence != event.sequence or delivered.sequence != event.sequence:
+        raise TraceIntegrityError(
+            f"no-fault V3 observation sequence disagrees at sequence {event.sequence}"
+        )
+    if not math.isclose(raw.observation_age_s, 0.0, rel_tol=0.0, abs_tol=1e-12):
+        raise TraceIntegrityError(
+            f"no-fault V3 raw observation must be fresh at sequence {event.sequence}"
+        )
+    if not math.isclose(
+        raw.simulation_time_s,
+        expected_input_time,
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ) or not math.isclose(
+        delivered.simulation_time_s,
+        expected_input_time,
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        raise TraceIntegrityError(
+            f"no-fault V3 observation time disagrees at sequence {event.sequence}"
+        )
+    if index == 0:
+        if raw.vehicle_state != _initial_vehicle_state(scenario):
+            raise TraceIntegrityError(
+                "no-fault V3 raw initial observation contradicts the scenario"
+            )
+    else:
+        prior = events[index - 1]
+        if not isinstance(prior, TraceEventV3) or raw != prior.result_observation:
+            raise TraceIntegrityError(
+                "no-fault V3 raw observation disagrees with prior result at sequence "
+                f"{event.sequence}"
+            )
+
+    result = event.result_observation
+    if result.vehicle_state != event.vehicle_state:
+        raise TraceIntegrityError(
+            "no-fault V3 result observation disagrees with event state at sequence "
+            f"{event.sequence}"
+        )
+    if (
+        result.sequence != event.sequence + 1
+        or not math.isclose(
+            result.simulation_time_s,
+            event.simulation_time_s,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        )
+        or not math.isclose(
+            result.observation_age_s,
+            0.0,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        )
+    ):
+        raise TraceIntegrityError(
+            f"no-fault V3 result observation timing disagrees at sequence {event.sequence}"
+        )
+
+    if scenario.challenge is None:
+        if _has_typed_challenge_facts(raw):
+            raise TraceIntegrityError(
+                "no-fault V3 raw observation contradicts the scenario challenge at sequence "
+                f"{event.sequence}"
+            )
+        if _has_typed_challenge_facts(result):
+            raise TraceIntegrityError(
+                "no-fault V3 result observation contradicts the scenario challenge at "
+                f"sequence {event.sequence}"
+            )
+    if event.observation_summary != _typed_observation_summary(event, scenario):
+        raise TraceIntegrityError(
+            "no-fault V3 observation summary is not derived from typed evidence at sequence "
+            f"{event.sequence}"
+        )
+
+
 def _verify_observation_summary(
-    events: tuple[TraceEvent, ...],
+    events: tuple[TraceEventLike, ...],
     index: int,
     scenario: ScenarioDefinition | None,
 ) -> None:
@@ -530,7 +935,7 @@ def _verify_fault_challenge_evidence(
     scenario: ScenarioDefinition,
 ) -> None:
     event = events[index]
-    if not isinstance(event, TraceEventV2) or scenario.challenge is None:
+    if not isinstance(event, (TraceEventV2, TraceEventV3)) or scenario.challenge is None:
         raise TraceIntegrityError("fault challenge verification requires typed challenge evidence")
     _verify_front_actor_fields(event, prefix="")
     _verify_front_actor_fields(event, prefix="result_")
@@ -609,12 +1014,12 @@ def _verify_fault_challenge_evidence(
 
 def _verify_delivered_observation_source(
     events: tuple[TraceEventLike, ...],
-    event: TraceEventV2,
+    event: TraceEventV2 | TraceEventV3,
 ) -> None:
     """Bind a delivered policy packet to its declared raw source and noise deltas."""
     evidence = event.observation_fault_evidence
     source_event = events[evidence.delivered_from_sequence]
-    if not isinstance(source_event, TraceEventV2):
+    if not isinstance(source_event, type(event)):
         raise TraceIntegrityError(
             f"fault observation source has the wrong schema at sequence {event.sequence}"
         )
@@ -662,9 +1067,10 @@ def _verify_fault_event(
     scenario: ScenarioDefinition | None,
 ) -> None:
     event = events[index]
-    if not isinstance(event, TraceEventV2):
+    if not isinstance(event, (TraceEventV2, TraceEventV3)):
         raise TraceIntegrityError(
-            f"schema-2 fault trace requires schema-2 event at sequence {event.sequence}"
+            f"typed fault trace requires a schema-2 or schema-3 event at sequence "
+            f"{event.sequence}"
         )
     if (
         scenario is None
@@ -672,7 +1078,7 @@ def _verify_fault_event(
         or scenario.faults is None
     ):
         raise TraceIntegrityError(
-            "schema-2 fault trace requires a schema-3 or schema-4 fault scenario"
+            "typed fault trace requires a schema-3 or schema-4 fault scenario"
         )
     evidence = event.observation_fault_evidence
     raw = evidence.raw_observation
@@ -716,16 +1122,7 @@ def _verify_fault_event(
             f"fault observation age disagrees at sequence {event.sequence}"
         )
     if index == 0:
-        if raw.vehicle_state != VehicleState(
-            position_m=0.0,
-            speed_mps=scenario.initial_state.speed_mps,
-            acceleration_mps2=0.0,
-            lateral_offset_m=scenario.initial_state.lateral_offset_m,
-            route_progress_pct=0.0,
-            collision_count=0,
-            offroad=False,
-            destination_reached=False,
-        ):
+        if raw.vehicle_state != _initial_vehicle_state(scenario):
             raise TraceIntegrityError("fault raw initial observation contradicts the scenario")
         if scenario.challenge is not None and scenario.challenge.kind == "stationary_lead":
             if raw.challenge_actor_speed_mps != 0.0:
@@ -757,7 +1154,7 @@ def _verify_fault_event(
                 )
     else:
         prior = events[index - 1]
-        if not isinstance(prior, TraceEventV2) or raw != prior.result_observation:
+        if not isinstance(prior, type(event)) or raw != prior.result_observation:
             raise TraceIntegrityError(
                 f"fault raw observation disagrees with prior result at sequence "
                 f"{event.sequence}"
@@ -784,43 +1181,7 @@ def _verify_fault_event(
         raise TraceIntegrityError(
             f"fault result observation timing disagrees at sequence {event.sequence}"
         )
-    expected_summary: dict[str, Any] = {
-        "input_sequence": delivered.sequence,
-        "input_simulation_time_s": delivered.simulation_time_s,
-        "speed_mps": delivered.vehicle_state.speed_mps,
-        "lateral_offset_m": delivered.vehicle_state.lateral_offset_m,
-        "route_progress_pct": delivered.vehicle_state.route_progress_pct,
-        "observation_age_s": delivered.observation_age_s,
-    }
-    if scenario.challenge is not None:
-        expected_summary.update(
-            {
-                "front_distance_m": delivered.front_distance_m,
-                "front_relative_speed_mps": delivered.front_relative_speed_mps,
-                "challenge_actor_longitudinal_m": (
-                    delivered.challenge_actor_longitudinal_m
-                ),
-                "challenge_actor_lateral_offset_m": (
-                    delivered.challenge_actor_lateral_offset_m
-                ),
-                "challenge_actor_speed_mps": delivered.challenge_actor_speed_mps,
-                "challenge_phase": delivered.challenge_phase,
-                "result_front_distance_m": event.result_observation.front_distance_m,
-                "result_front_relative_speed_mps": (
-                    event.result_observation.front_relative_speed_mps
-                ),
-                "result_challenge_actor_longitudinal_m": (
-                    event.result_observation.challenge_actor_longitudinal_m
-                ),
-                "result_challenge_actor_lateral_offset_m": (
-                    event.result_observation.challenge_actor_lateral_offset_m
-                ),
-                "result_challenge_actor_speed_mps": (
-                    event.result_observation.challenge_actor_speed_mps
-                ),
-                "result_challenge_phase": event.result_observation.challenge_phase,
-            }
-        )
+    expected_summary = _typed_observation_summary(event, scenario)
     if event.observation_summary != expected_summary:
         raise TraceIntegrityError(
             f"fault observation summary is not derived from typed evidence at sequence "
@@ -861,9 +1222,114 @@ def _verify_fault_event(
     )
 
 
+def _verify_v3_decision_and_attribution(
+    events: tuple[TraceEventLike, ...],
+    index: int,
+    scenario: ScenarioDefinition | None,
+    shield_config: ShieldConfig | None,
+) -> None:
+    event = events[index]
+    if not isinstance(event, TraceEventV3):
+        raise TraceIntegrityError(
+            f"schema-3 ADAS trace requires schema-3 event at sequence {event.sequence}"
+        )
+    evidence = AdasDecisionEvidence(
+        input_sequence=event.adas_decision_input_sequence,
+        input_time_s=event.adas_decision_input_time_s,
+        decision=event.adas_decision,
+    )
+    try:
+        validate_decision_evidence(
+            evidence,
+            event.observation_fault_evidence.delivered_observation,
+            event.candidate_action,
+        )
+        _validate_v3_shield_transition(
+            run_context=event.run_context,
+            observation=event.observation_fault_evidence.delivered_observation,
+            candidate_action=event.candidate_action,
+            permitted_action=event.permitted_action,
+            override_reasons=event.override_reasons,
+            scenario=scenario,
+            shield_config=shield_config,
+        )
+        expected_candidate_source = candidate_brake_source(
+            event.adas_decision,
+            event.candidate_action,
+        )
+        expected_permitted_source = permitted_brake_source(
+            candidate_action=event.candidate_action,
+            candidate_source=expected_candidate_source,
+            permitted_action=event.permitted_action,
+            override_reasons=event.override_reasons,
+        )
+        prior_events = tuple(
+            prior for prior in events[:index] if isinstance(prior, TraceEventV3)
+        )
+        if len(prior_events) != index:
+            raise ValueError("V3 attribution source has the wrong event schema")
+        source_action, source_attribution = _v3_source_attribution(
+            sequence=event.sequence,
+            permitted_action=event.permitted_action,
+            permitted_source=expected_permitted_source,
+            control_fault_evidence=event.control_fault_evidence,
+            prior_events=prior_events,
+        )
+        expected_executed_source = executed_brake_source(
+            control_evidence=event.control_fault_evidence,
+            executed_action=event.executed_action,
+            source_permitted_action=source_action,
+            source_permitted_brake_source=source_attribution,
+        )
+        _validate_v3_control_fault_replay(
+            run_context=event.run_context,
+            scenario=scenario,
+            control_fault_evidence=event.control_fault_evidence,
+            executed_action=event.executed_action,
+            sequence=event.sequence,
+        )
+    except ValueError as exc:
+        raise TraceIntegrityError(
+            f"ADAS action attribution is contradictory at sequence {event.sequence}: {exc}"
+        ) from exc
+
+    if event.candidate_brake_source is not expected_candidate_source:
+        raise TraceIntegrityError(
+            f"candidate brake source disagrees at sequence {event.sequence}"
+        )
+    if event.permitted_brake_source is not expected_permitted_source:
+        raise TraceIntegrityError(
+            f"permitted brake source disagrees at sequence {event.sequence}"
+        )
+    if event.executed_brake_source is not expected_executed_source:
+        label = (
+            "startup fill executed brake source"
+            if event.control_fault_evidence.executed_from_sequence is None
+            else "executed brake source"
+        )
+        raise TraceIntegrityError(f"{label} disagrees at sequence {event.sequence}")
+
+    if scenario is None:
+        return
+    control_delay = scenario.faults.control_delay_steps if scenario.faults is not None else 0
+    expected_source = (
+        event.sequence
+        if control_delay == 0
+        else event.sequence - control_delay
+        if event.sequence >= control_delay
+        else None
+    )
+    if event.control_fault_evidence.executed_from_sequence != expected_source:
+        raise TraceIntegrityError(
+            f"control-delay source contradicts the scenario at sequence {event.sequence}"
+        )
+
+
 def verify_complete_trace(
     events: tuple[TraceEventLike, ...],
     scenario: ScenarioDefinition | None = None,
+    *,
+    shield_config: ShieldConfig | None = None,
 ) -> str:
     """Verify chain plus semantic completeness and redundant-fact consistency."""
     root = verify_event_chain(events)
@@ -875,6 +1341,27 @@ def verify_complete_trace(
     for index, event in enumerate(events):
         if event.evidence_schema_version == "2.0":
             _verify_fault_event(events, index, scenario)
+        elif event.evidence_schema_version == "3.0":
+            if not isinstance(event, TraceEventV3):
+                raise TraceIntegrityError("schema-3 trace contains a non-schema-3 event")
+            if event.run_context.fault_name is not None:
+                _verify_fault_event(events, index, scenario)
+            else:
+                try:
+                    event.require_truthful_no_fault_pass_through()
+                except ValueError as exc:
+                    raise TraceIntegrityError(
+                        f"no-fault V3 pass-through is contradictory at sequence "
+                        f"{event.sequence}: {exc}"
+                    ) from exc
+                _verify_no_fault_v3_typed_observations(events, index, scenario)
+                _verify_observation_summary(events, index, scenario)
+            _verify_v3_decision_and_attribution(
+                events,
+                index,
+                scenario,
+                shield_config,
+            )
         else:
             legacy_events = tuple(
                 legacy for legacy in events if isinstance(legacy, TraceEvent)
@@ -911,7 +1398,7 @@ def verify_complete_trace(
             )
         permitted_action = (
             event.permitted_action
-            if isinstance(event, TraceEventV2)
+            if isinstance(event, (TraceEventV2, TraceEventV3))
             else event.executed_action
         )
         if event.run_context.shield_name == "noop" and (

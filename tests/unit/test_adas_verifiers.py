@@ -9,17 +9,26 @@ than as a passing number.
 
 from __future__ import annotations
 
+from inspect import signature
 from pathlib import Path
 
 import pytest
+from tests.unit.test_run_metrics_v3 import _typed_fact_events
 
 from hermes.domain.enums import EvidenceAvailability, FindingStatus, TerminationReason
 from hermes.domain.models import Action, RunContext, VehicleState
+from hermes.evidence.adas_summary import summarize_adas_run
 from hermes.evidence.trace import GENESIS_HASH, create_trace_event
 from hermes.gates.config import GateConfig, gate_config_digest, load_gate_config
 from hermes.gates.release import VerifierProfile, select_verifier_profile
 from hermes.scenarios.loader import parse_scenario_yaml
-from hermes.verifiers.adas import run_adas_p0_longitudinal_verifiers
+from hermes.verifiers.adas import (
+    adas_brake_onset_margin,
+    adas_no_false_intervention,
+    adas_threat_response,
+    adas_warning_timing,
+    run_adas_p0_longitudinal_verifiers,
+)
 
 SCENARIO = """\
 schema_version: "4.0"
@@ -155,6 +164,75 @@ def _with_residual_impact_speed_limit(
             )
         }
     )
+
+
+_PUBLIC_ADAS_VERIFIERS = (
+    adas_threat_response,
+    adas_brake_onset_margin,
+    adas_no_false_intervention,
+    adas_warning_timing,
+)
+
+
+@pytest.mark.parametrize("verifier", _PUBLIC_ADAS_VERIFIERS)
+def test_public_adas_verifier_signatures_do_not_accept_precomputed_summaries(
+    verifier,
+) -> None:
+    assert "summary" not in signature(verifier).parameters
+
+
+@pytest.mark.parametrize("verifier", _PUBLIC_ADAS_VERIFIERS)
+@pytest.mark.parametrize("probe", ("cross-run", "empty-events", "changed-gate"))
+def test_public_adas_verifiers_reject_caller_supplied_summary_laundering(
+    repository_root: Path,
+    verifier,
+    probe: str,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    summary = summarize_adas_run(events, scenario, gate)
+    supplied_events = tuple(reversed(events)) if probe == "cross-run" else events
+    supplied_gate = gate
+    if probe == "empty-events":
+        supplied_events = ()
+    elif probe == "changed-gate":
+        assert gate.adas is not None
+        supplied_gate = gate.model_copy(
+            update={
+                "adas": gate.adas.model_copy(
+                    update={"threat_authority_fraction": 1.0}
+                )
+            }
+        )
+
+    with pytest.raises(TypeError, match="unexpected keyword argument 'summary'"):
+        verifier(  # type: ignore[call-arg]
+            supplied_events,
+            scenario,
+            supplied_gate,
+            summary=summary,
+        )
+
+
+def test_public_direct_v3_and_legacy_verifiers_match_the_exact_suite_outputs(
+    repository_root: Path,
+    adas_gate: GateConfig,
+) -> None:
+    v3_events, v3_scenario, v3_gate = _typed_fact_events(repository_root)
+    legacy_events = _events([(20.0, -20.0, 1.0, 20.0), (8.0, 0.0, 0.0, 0.0)])
+    legacy_scenario = _scenario()
+
+    for events, scenario, gate in (
+        (v3_events, v3_scenario, v3_gate),
+        (legacy_events, legacy_scenario, adas_gate),
+    ):
+        direct = tuple(verifier(events, scenario, gate) for verifier in _PUBLIC_ADAS_VERIFIERS)
+        suite = run_adas_p0_longitudinal_verifiers(events, scenario, gate)
+        assert direct == suite
+
+    mixed = (v3_events[0], legacy_events[0])
+    for verifier in _PUBLIC_ADAS_VERIFIERS:
+        with pytest.raises(ValueError, match="cannot mix evidence schema versions"):
+            verifier(mixed, v3_scenario, v3_gate)
 
 
 # --- gate-config identity --------------------------------------------------------------
@@ -399,6 +477,113 @@ def test_brake_onset_is_unavailable_when_nothing_braked(adas_gate: GateConfig) -
     assert finding.measurement.availability is EvidenceAvailability.NOT_AVAILABLE
     assert finding.measurement.value is None
     assert finding.measurement.reason
+
+
+def test_schema_v3_consumed_gap_is_a_finite_available_v1_1_failure(
+    repository_root: Path,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    source = events[0]
+    delivered = source.observation_fault_evidence.delivered_observation.model_copy(
+        update={"front_distance_m": 1.0, "front_relative_speed_mps": -3.0}
+    )
+    source = source.model_copy(
+        update={
+            "observation_fault_evidence": source.observation_fault_evidence.model_copy(
+                update={"delivered_observation": delivered}
+            )
+        }
+    )
+    events = (source, *events[1:])
+
+    finding = _by_id(run_adas_p0_longitudinal_verifiers(events, scenario, gate))[
+        "adas.aeb.brake_onset_margin"
+    ]
+
+    assert finding.verifier == "AdasBrakeOnsetVerifier"
+    assert finding.verifier_version == "1.1"
+    assert finding.status is FindingStatus.FAIL
+    assert finding.measurement.availability is EvidenceAvailability.AVAILABLE
+    assert finding.measurement.value == 0.0
+    assert finding.measurement.unit == "m usable gap"
+
+
+def test_schema_v3_brake_onset_uses_origin_geometry_and_execution_clock(
+    repository_root: Path,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    source = events[0]
+    delivered = source.observation_fault_evidence.delivered_observation.model_copy(
+        update={"front_relative_speed_mps": -12.0}
+    )
+    events = (
+        source.model_copy(
+            update={
+                "observation_fault_evidence": source.observation_fault_evidence.model_copy(
+                    update={"delivered_observation": delivered}
+                )
+            }
+        ),
+        *events[1:],
+    )
+
+    finding = _by_id(run_adas_p0_longitudinal_verifiers(events, scenario, gate))[
+        "adas.aeb.brake_onset_margin"
+    ]
+
+    assert finding.verifier_version == "1.1"
+    assert finding.event_sequences == (1,)
+    assert finding.first_failure_time_s == pytest.approx(0.1)
+    assert finding.measurement.value == pytest.approx(7.2)
+
+    false_intervention = _by_id(
+        run_adas_p0_longitudinal_verifiers(events, scenario, gate)
+    )["adas.aeb.no_false_intervention"]
+    assert false_intervention.event_sequences == (1,)
+    assert false_intervention.first_failure_time_s == pytest.approx(0.2)
+
+
+def test_schema_v3_direct_brake_onset_api_pins_v1_1_for_no_onset_and_undefined_geometry(
+    repository_root: Path,
+) -> None:
+    events, scenario, gate = _typed_fact_events(repository_root)
+    onset = events[1]
+    no_onset_events = (
+        events[0],
+        onset.model_copy(
+            update={
+                "executed_action": Action(
+                    steering=onset.executed_action.steering,
+                    throttle=onset.executed_action.throttle,
+                    brake=0.0,
+                ),
+                "executed_brake_source": "none",
+            }
+        ),
+        *events[2:],
+    )
+    no_onset = adas_brake_onset_margin(no_onset_events, scenario, gate)
+
+    source = events[0]
+    delivered = source.observation_fault_evidence.delivered_observation.model_copy(
+        update={"front_relative_speed_mps": 0.0}
+    )
+    undefined_events = (
+        source.model_copy(
+            update={
+                "observation_fault_evidence": source.observation_fault_evidence.model_copy(
+                    update={"delivered_observation": delivered}
+                )
+            }
+        ),
+        *events[1:],
+    )
+    undefined = adas_brake_onset_margin(undefined_events, scenario, gate)
+
+    assert no_onset.verifier_version == "1.1"
+    assert no_onset.status is FindingStatus.NOT_AVAILABLE
+    assert undefined.verifier_version == "1.1"
+    assert undefined.status is FindingStatus.NOT_AVAILABLE
 
 
 # --- warning exposure ------------------------------------------------------------------

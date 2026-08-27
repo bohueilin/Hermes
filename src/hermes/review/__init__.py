@@ -7,9 +7,11 @@ from hermes.review.facade import (
 )
 from hermes.review.models import (
     ComparisonEnvelope,
+    ComparisonEnvelopeV2,
     LocatorInfo,
     ReviewCacheKey,
     ReviewEnvelope,
+    ReviewEnvelopeV2,
     ReviewUnavailableError,
     ReviewUnavailableReason,
     canonical_envelope_bytes,
@@ -24,10 +26,12 @@ from hermes.review.projection import (
 
 __all__ = [
     "ComparisonEnvelope",
+    "ComparisonEnvelopeV2",
     "DisplayTextProjection",
     "LocatorInfo",
     "ReviewCacheKey",
     "ReviewEnvelope",
+    "ReviewEnvelopeV2",
     "ReviewUnavailableError",
     "ReviewUnavailableReason",
     "canonical_envelope_bytes",

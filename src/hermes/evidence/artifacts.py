@@ -19,19 +19,29 @@ from hermes import __version__
 from hermes.domain.models import (
     ArtifactManifest,
     ArtifactManifestV2,
+    ArtifactManifestV3,
     ExecutionContext,
     ExecutionContextV2,
+    ExecutionContextV3,
     Finding,
-    FindingsDocument,
-    FindingsDocumentV2,
     GateResult,
     RunMetrics,
     RunMetricsV2,
+    RunMetricsV3,
     ScenarioDefinition,
     TraceEvent,
     TraceEventV2,
+    TraceEventV3,
 )
 from hermes.evidence.canonical import canonical_json_bytes, sha256_hex
+from hermes.evidence.schema_registry import (
+    ARTIFACT_MANIFEST_BY_EVIDENCE_SCHEMA,
+    EXECUTION_CONTEXT_BY_EVIDENCE_SCHEMA,
+    FINDINGS_DOCUMENT_BY_EVIDENCE_SCHEMA,
+    RUN_CONTEXT_BY_EVIDENCE_SCHEMA,
+    RUN_METRICS_BY_EVIDENCE_SCHEMA,
+    TRACE_EVENT_BY_EVIDENCE_SCHEMA,
+)
 from hermes.evidence.trace import events_jsonl_bytes
 from hermes.gates.config import GateConfig, resolved_gate_config_yaml
 from hermes.scenarios.loader import resolved_scenario_yaml
@@ -179,9 +189,9 @@ def write_bundle(
     run_id: str,
     scenario: ScenarioDefinition,
     gate_config: GateConfig,
-    execution_context: ExecutionContext | ExecutionContextV2,
-    events: tuple[TraceEvent | TraceEventV2, ...],
-    metrics: RunMetrics | RunMetricsV2,
+    execution_context: ExecutionContext | ExecutionContextV2 | ExecutionContextV3,
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    metrics: RunMetrics | RunMetricsV2 | RunMetricsV3,
     findings: tuple[Finding, ...],
     verdict: GateResult,
     repository_commit: str | None,
@@ -190,8 +200,37 @@ def write_bundle(
     simulator_name: str | None = None,
     simulator_version: str | None = None,
     simulator_commit: str | None = None,
-) -> ArtifactManifest | ArtifactManifestV2:
+) -> ArtifactManifest | ArtifactManifestV2 | ArtifactManifestV3:
     """Write a complete deterministic payload, manifest inventory, and detached bundle root."""
+    version = execution_context.evidence_schema_version
+    expected_context_type = EXECUTION_CONTEXT_BY_EVIDENCE_SCHEMA.get(version)
+    expected_run_context_type = RUN_CONTEXT_BY_EVIDENCE_SCHEMA.get(version)
+    expected_event_type = TRACE_EVENT_BY_EVIDENCE_SCHEMA.get(version)
+    expected_metrics_type = RUN_METRICS_BY_EVIDENCE_SCHEMA.get(version)
+    findings_type = FINDINGS_DOCUMENT_BY_EVIDENCE_SCHEMA.get(version)
+    manifest_type = ARTIFACT_MANIFEST_BY_EVIDENCE_SCHEMA.get(version)
+    if (
+        expected_context_type is None
+        or expected_run_context_type is None
+        or expected_event_type is None
+        or expected_metrics_type is None
+        or findings_type is None
+        or manifest_type is None
+    ):
+        raise ArtifactError(f"unsupported evidence schema for artifact writing: {version}")
+    if type(execution_context) is not expected_context_type:
+        raise ArtifactError(
+            f"execution context must be the exact schema-{version[0]} model"
+        )
+    if type(execution_context.run_context) is not expected_run_context_type:
+        raise ArtifactError(f"run context must be the exact schema-{version[0]} model")
+    if type(metrics) is not expected_metrics_type:
+        raise ArtifactError(f"metrics must use the exact schema-{version[0]} metrics model")
+    if not events:
+        raise ArtifactError("artifact writing requires at least one trace event")
+    if any(type(event) is not expected_event_type for event in events):
+        raise ArtifactError(f"events must use the exact schema-{version[0]} event model")
+
     trace_digest = events[-1].current_hash
     payloads: dict[str, bytes] = {
         "execution-context.json": _json_file(execution_context.model_dump(mode="json")),
@@ -200,11 +239,7 @@ def write_bundle(
         "events.jsonl": events_jsonl_bytes(events),
         "metrics.json": _json_file(metrics.model_dump(mode="json")),
         "findings.json": _json_file(
-            (
-                FindingsDocumentV2(findings=findings)
-                if isinstance(execution_context, ExecutionContextV2)
-                else FindingsDocument(findings=findings)
-            ).model_dump(mode="json")
+            findings_type(findings=findings).model_dump(mode="json")
         ),
         "verdict.json": _json_file(verdict.model_dump(mode="json")),
         "trace.sha256": f"{trace_digest}\n".encode(),
@@ -251,16 +286,18 @@ def write_bundle(
         file_digests={name: sha256_hex(payloads[name]) for name in COMPANION_DIGEST_FILES},
         integrity_limitation=INTEGRITY_LIMITATION,
     )
-    manifest = (
-        ArtifactManifestV2(
-            **manifest_values,
-            fault_name=execution_context.faults.name,
-            fault_version=execution_context.faults.version,
-            fault_config_digest=execution_context.faults.config_digest,
-        )
-        if isinstance(execution_context, ExecutionContextV2)
-        else ArtifactManifest(**manifest_values)
-    )
+    fault_manifest_values: dict[str, object] = {}
+    if type(execution_context) is ExecutionContextV2 or (
+        type(execution_context) is ExecutionContextV3
+        and execution_context.faults is not None
+    ):
+        assert execution_context.faults is not None
+        fault_manifest_values = {
+            "fault_name": execution_context.faults.name,
+            "fault_version": execution_context.faults.version,
+            "fault_config_digest": execution_context.faults.config_digest,
+        }
+    manifest = manifest_type(**manifest_values, **fault_manifest_values)
     manifest_bytes = _json_file(manifest.model_dump(mode="json"))
     (directory / "manifest.json").write_bytes(manifest_bytes)
     bundle_files = {"manifest.json": manifest_bytes, **payloads}

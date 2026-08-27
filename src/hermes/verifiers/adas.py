@@ -9,14 +9,14 @@ Two properties keep the evaluation honest:
 * **No circularity.** The oracle recomputes the closing geometry from the trace and judges
   it against thresholds in *gate config*, never against the controller's configured trigger
   points. A controller cannot pass by being configured to agree with itself.
-* **No simulator access.** Everything here is derived from ``observation_summary`` and
-  ``vehicle_state`` in the stored events, so a bundle can be re-judged offline, long after
-  the run, without the simulator present.
+* **No simulator access.** Legacy schema-1/2 findings retain their historical derivation
+  from ``observation_summary`` and ``vehicle_state``. Schema-3 findings derive from the
+  typed delivered observation, result geometry/state, and execution source/attribution in
+  the stored events. A bundle can therefore be re-judged offline without the simulator.
 
-Attribution note: in the default ADAS configuration the scripted driver never brakes, so
-every braking command in the trace is AEB-attributable by construction. A configuration
-that raises ``DriverConfig.max_brake`` opts into ambiguous attribution, and these evaluators
-would over-count interventions for it.
+Attribution note: schema-3 evidence explicitly distinguishes candidate, permitted, and
+executed actions and records the executed source; its AEB findings use that typed
+attribution. Schema-1/2 findings retain the historical default-driver braking assumption.
 """
 
 from __future__ import annotations
@@ -29,7 +29,14 @@ from hermes.domain.models import (
     Measurement,
     ScenarioDefinition,
     TraceEvent,
+    TraceEventV2,
+    TraceEventV3,
     VerifierIdentity,
+)
+from hermes.evidence.adas_summary import (
+    AdasRunSummary,
+    LongitudinalFact,
+    summarize_adas_run,
 )
 from hermes.gates.config import AdasCriteria, GateConfig
 
@@ -54,6 +61,12 @@ ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES = (
         version="1.0",
         finding_id="adas.fcw.warning_timing",
     ),
+)
+ADAS_P0_LONGITUDINAL_V3_VERIFIER_IDENTITIES = tuple(
+    identity.model_copy(update={"version": "1.1"})
+    if identity.finding_id == "adas.aeb.brake_onset_margin"
+    else identity
+    for identity in ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
 )
 
 
@@ -133,14 +146,33 @@ def _criteria(gate: GateConfig) -> AdasCriteria:
     return gate.adas
 
 
+def _derive_v3_summary(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> AdasRunSummary | None:
+    """Derive typed schema-3 facts from the exact public verifier inputs."""
+    if events and type(events[0]) is TraceEventV3:
+        if any(type(event) is not TraceEventV3 for event in events):
+            raise ValueError("ADAS verifier trace cannot mix evidence schema versions")
+        return summarize_adas_run(
+            tuple(event for event in events if type(event) is TraceEventV3),
+            scenario,
+            gate,
+        )
+    if any(type(event) is TraceEventV3 for event in events):
+        raise ValueError("ADAS verifier trace cannot mix evidence schema versions")
+    return None
+
+
 def _threat_samples(
-    samples: tuple[_Sample, ...],
+    samples: tuple[_Sample | LongitudinalFact, ...],
     criteria: AdasCriteria,
     authority_mps2: float,
-) -> tuple[_Sample, ...]:
+) -> tuple[_Sample | LongitudinalFact, ...]:
     """Steps the oracle labels as a genuine threat, independent of what the controller did."""
     threshold = criteria.threat_authority_fraction * authority_mps2
-    threatening: list[_Sample] = []
+    threatening: list[_Sample | LongitudinalFact] = []
     for sample in samples:
         required = sample.required_deceleration_mps2(criteria.oracle_standoff_m)
         if required is not None and required >= threshold:
@@ -148,14 +180,17 @@ def _threat_samples(
     return tuple(threatening)
 
 
-def _first_brake(samples: tuple[_Sample, ...]) -> _Sample | None:
+def _first_brake(
+    samples: tuple[_Sample | LongitudinalFact, ...],
+) -> _Sample | LongitudinalFact | None:
     return next((sample for sample in samples if sample.brake > 0.0), None)
 
 
-def adas_threat_response(
-    events: tuple[TraceEvent, ...],
+def _adas_threat_response_from_summary(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
+    summary: AdasRunSummary | None,
 ) -> Finding:
     """A threat must produce braking; any contact must stay within its residual-speed limit.
 
@@ -167,19 +202,31 @@ def adas_threat_response(
     already invalid under the suite-identity correction in the same range.
     """
     criteria = _criteria(gate)
-    samples = _samples(events)
-    threats = _threat_samples(samples, criteria, scenario.control.max_braking_mps2)
+    samples = summary.policy_samples if summary is not None else _samples(events)  # type: ignore[arg-type]
+    threats = (
+        summary.threatening_policy_samples
+        if summary is not None
+        else _threat_samples(samples, criteria, scenario.control.max_braking_mps2)
+    )
     expected_required = (
         scenario.adas.expected_aeb.kind == "required"
         if scenario.adas is not None and scenario.adas.expected_aeb is not None
         else False
     )
     residual_speed_limit_mps = criteria.max_residual_impact_speed_mps
-    violating_contacts = tuple(
-        event
-        for event in events
-        if event.vehicle_state.collision_count > 0
-        and event.vehicle_state.speed_mps > residual_speed_limit_mps
+    violating_contacts = (
+        tuple(
+            contact
+            for contact in summary.collision_contacts
+            if contact.residual_speed_mps > residual_speed_limit_mps
+        )
+        if summary is not None
+        else tuple(
+            event
+            for event in events
+            if event.vehicle_state.collision_count > 0
+            and event.vehicle_state.speed_mps > residual_speed_limit_mps
+        )
     )
     criterion = (
         "an oracle-labelled threat produces AEB braking and every contact residual ego speed "
@@ -200,9 +247,19 @@ def adas_threat_response(
                 f"{len(violating_contacts)} contact event(s)"
             ),
             event_sequences=tuple(event.sequence for event in violating_contacts),
-            first_failure_time_s=violating_contacts[0].simulation_time_s,
+            first_failure_time_s=(
+                violating_contacts[0].time_s
+                if summary is not None
+                else violating_contacts[0].simulation_time_s
+            ),
             measurement=_available(
-                max(event.vehicle_state.speed_mps for event in violating_contacts), "m/s"
+                max(
+                    contact.residual_speed_mps
+                    if summary is not None
+                    else contact.vehicle_state.speed_mps
+                    for contact in violating_contacts
+                ),
+                "m/s",
             ),
         )
 
@@ -219,7 +276,9 @@ def adas_threat_response(
             measurement=_available(0.0, "threat steps"),
         )
 
-    braked = _first_brake(samples)
+    braked = _first_brake(
+        summary.positive_braking_steps if summary is not None else samples
+    )
     if braked is None:
         return Finding(
             finding_id="adas.aeb.threat_response",
@@ -253,10 +312,11 @@ def adas_threat_response(
     )
 
 
-def adas_brake_onset_margin(
-    events: tuple[TraceEvent, ...],
+def _adas_brake_onset_margin_from_summary(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
+    summary: AdasRunSummary | None,
 ) -> Finding:
     """Braking must begin within the calibrated required-deceleration margin.
 
@@ -275,8 +335,11 @@ def adas_brake_onset_margin(
     46% onset margin whether or not it happens to get away with it.
     """
     criteria = _criteria(gate)
-    samples = _samples(events)
-    braked = _first_brake(samples)
+    samples = summary.policy_samples if summary is not None else _samples(events)  # type: ignore[arg-type]
+    braked = _first_brake(
+        summary.aeb_onset_facts if summary is not None else samples
+    )
+    verifier_version = "1.1" if summary is not None else "1.0"
     authority = scenario.control.max_braking_mps2
     limit = criteria.onset_authority_fraction * authority
     criterion = (
@@ -289,7 +352,7 @@ def adas_brake_onset_margin(
         return Finding(
             finding_id="adas.aeb.brake_onset_margin",
             verifier="AdasBrakeOnsetVerifier",
-            verifier_version="1.0",
+            verifier_version=verifier_version,
             status=FindingStatus.NOT_AVAILABLE,
             severity=Severity.WARNING,
             hard_invariant=False,
@@ -306,7 +369,7 @@ def adas_brake_onset_margin(
         return Finding(
             finding_id="adas.aeb.brake_onset_margin",
             verifier="AdasBrakeOnsetVerifier",
-            verifier_version="1.0",
+            verifier_version=verifier_version,
             status=FindingStatus.NOT_AVAILABLE,
             severity=Severity.WARNING,
             hard_invariant=False,
@@ -317,10 +380,28 @@ def adas_brake_onset_margin(
         )
     if required == float("inf"):
         reason = "the usable gap was already consumed at brake onset"
+        if summary is not None:
+            assert braked.gap_m is not None
+            return Finding(
+                finding_id="adas.aeb.brake_onset_margin",
+                verifier="AdasBrakeOnsetVerifier",
+                verifier_version=verifier_version,
+                status=FindingStatus.FAIL,
+                severity=Severity.WARNING,
+                hard_invariant=False,
+                threshold_or_invariant=criterion,
+                message=reason,
+                event_sequences=(braked.sequence,),
+                first_failure_time_s=braked.time_s,
+                measurement=_available(
+                    max(0.0, braked.gap_m - criteria.oracle_standoff_m),
+                    "m usable gap",
+                ),
+            )
         return Finding(
             finding_id="adas.aeb.brake_onset_margin",
             verifier="AdasBrakeOnsetVerifier",
-            verifier_version="1.0",
+            verifier_version=verifier_version,
             status=FindingStatus.FAIL,
             severity=Severity.WARNING,
             hard_invariant=False,
@@ -335,7 +416,7 @@ def adas_brake_onset_margin(
     return Finding(
         finding_id="adas.aeb.brake_onset_margin",
         verifier="AdasBrakeOnsetVerifier",
-        verifier_version="1.0",
+        verifier_version=verifier_version,
         status=FindingStatus.FAIL if late else FindingStatus.PASS,
         severity=Severity.WARNING,
         hard_invariant=False,
@@ -352,10 +433,11 @@ def adas_brake_onset_margin(
     )
 
 
-def adas_no_false_intervention(
-    events: tuple[TraceEvent, ...],
+def _adas_no_false_intervention_from_summary(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
+    summary: AdasRunSummary | None,
 ) -> Finding:
     """Braking during an oracle-labelled threat-free scenario is a hard failure.
 
@@ -363,8 +445,12 @@ def adas_no_false_intervention(
     there is unusable, and a candidate can always buy a better collision number with one.
     """
     criteria = _criteria(gate)
-    samples = _samples(events)
-    threats = _threat_samples(samples, criteria, scenario.control.max_braking_mps2)
+    samples = summary.policy_samples if summary is not None else _samples(events)  # type: ignore[arg-type]
+    threats = (
+        summary.threatening_policy_samples
+        if summary is not None
+        else _threat_samples(samples, criteria, scenario.control.max_braking_mps2)
+    )
     expectation = scenario.adas.expected_aeb if scenario.adas is not None else None
     forbidden = expectation is not None and expectation.kind == "forbidden"
     declared_required = expectation is not None and expectation.kind == "required"
@@ -401,7 +487,11 @@ def adas_no_false_intervention(
             "false-intervention exposure does not apply"
         )
 
-    braking = tuple(sample for sample in samples if sample.brake > 0.0)
+    braking = (
+        summary.positive_braking_steps
+        if summary is not None
+        else tuple(sample for sample in samples if sample.brake > 0.0)
+    )
     exceeded = len(braking) > criteria.max_false_intervention_steps
     return Finding(
         finding_id="adas.aeb.no_false_intervention",
@@ -422,10 +512,11 @@ def adas_no_false_intervention(
     )
 
 
-def adas_warning_timing(
-    events: tuple[TraceEvent, ...],
+def _adas_warning_timing_from_summary(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
+    summary: AdasRunSummary | None,
 ) -> Finding:
     """A scenario declaring a required warning must reach the declared TTC in evidence.
 
@@ -435,7 +526,7 @@ def adas_warning_timing(
     output, and it says so rather than implying more than it establishes.
     """
     del gate
-    samples = _samples(events)
+    samples = summary.policy_samples if summary is not None else _samples(events)  # type: ignore[arg-type]
     expectation = scenario.adas.expected_fcw if scenario.adas is not None else None
     observed = [sample.ttc_s() for sample in samples]
     defined = [value for value in observed if value is not None]
@@ -486,15 +577,60 @@ def adas_warning_timing(
     )
 
 
+def adas_threat_response(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    """Evaluate threat response from the supplied trace and resolved inputs."""
+    return _adas_threat_response_from_summary(
+        events, scenario, gate, _derive_v3_summary(events, scenario, gate)
+    )
+
+
+def adas_brake_onset_margin(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    """Evaluate brake-onset margin from the supplied trace and resolved inputs."""
+    return _adas_brake_onset_margin_from_summary(
+        events, scenario, gate, _derive_v3_summary(events, scenario, gate)
+    )
+
+
+def adas_no_false_intervention(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    """Evaluate false intervention from the supplied trace and resolved inputs."""
+    return _adas_no_false_intervention_from_summary(
+        events, scenario, gate, _derive_v3_summary(events, scenario, gate)
+    )
+
+
+def adas_warning_timing(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    """Evaluate warning timing from the supplied trace and resolved inputs."""
+    return _adas_warning_timing_from_summary(
+        events, scenario, gate, _derive_v3_summary(events, scenario, gate)
+    )
+
+
 def run_adas_p0_longitudinal_verifiers(
-    events: tuple[TraceEvent, ...],
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
 ) -> tuple[Finding, ...]:
     """Run the ADAS longitudinal suite in deterministic finding order."""
+    summary = _derive_v3_summary(events, scenario, gate)
     return (
-        adas_threat_response(events, scenario, gate),
-        adas_brake_onset_margin(events, scenario, gate),
-        adas_no_false_intervention(events, scenario, gate),
-        adas_warning_timing(events, scenario, gate),
+        _adas_threat_response_from_summary(events, scenario, gate, summary),
+        _adas_brake_onset_margin_from_summary(events, scenario, gate, summary),
+        _adas_no_false_intervention_from_summary(events, scenario, gate, summary),
+        _adas_warning_timing_from_summary(events, scenario, gate, summary),
     )

@@ -12,7 +12,22 @@ import pytest
 
 from hermes.adapters.fake import FakeSimulatorAdapter
 from hermes.domain.enums import IntegrityStatus, Verdict
-from hermes.evidence.verification import verify_artifact
+from hermes.domain.models import (
+    ArtifactManifest,
+    ArtifactManifestV2,
+    ExecutionContext,
+    ExecutionContextV2,
+    FindingsDocument,
+    FindingsDocumentV2,
+    RunContext,
+    RunContextV2,
+    RunMetrics,
+    RunMetricsV2,
+    TraceEvent,
+    TraceEventV2,
+)
+from hermes.evidence.canonical import canonical_json_bytes
+from hermes.evidence.verification import inspect_artifact, verify_artifact
 from hermes.runtime.orchestrator import execute_fake_run
 from hermes.shields.config import load_shield_config
 from hermes.shields.deterministic import DeterministicSafetyShield
@@ -113,6 +128,87 @@ def _canonical(value) -> bytes:
 
 def _sha(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+_LEGACY_MODEL_PINS = {
+    "phase1-nominal": {
+        "classes": (
+            RunContext,
+            ExecutionContext,
+            TraceEvent,
+            ArtifactManifest,
+            RunMetrics,
+            FindingsDocument,
+        ),
+        "model_sha256": (
+            "38b8fb30407b4a6d39d7ceaac14e422b1b5205ea9c19b5b5ed277738ee13aee1",
+            "02c3433cbf2ab5daa11936c74dea26c7739df85c8a56d20668fbafffae285193",
+            "2b929163903dbca6f7a0ddb4226f4b72cc074095d8c8d9fae9502b9cc33f584f",
+            "75e33257b3029b036ba48fb7de069f0b6bc5e28d63192b9d1a363bfde41a6edf",
+            "0e1c6b37441a5fe66f3461343756d5e144a0e1d667802f97d7a77a7d976ab5ca",
+            "f2aab191047fd3bfd94049ef84f33697af3a91b03e5a81de7780a7bb1691685d",
+        ),
+        "events_sha256": "50e5cf7a1a82dc9e3a2f5b2a2185093faac99884a54ba02c98a2f60e92941daa",
+        "trace_digest": "f515c16243d2b07c8a4b4ffd286edd5ff1c4ffa9486d3b28d034b40420ba234e",
+    },
+    "handoff-p4-fault": {
+        "classes": (
+            RunContextV2,
+            ExecutionContextV2,
+            TraceEventV2,
+            ArtifactManifestV2,
+            RunMetricsV2,
+            FindingsDocumentV2,
+        ),
+        "model_sha256": (
+            "83f7bac8329a43905be72c5bd5a6771970717f971bc29395c625b782bcdfcc17",
+            "21994e4d1246bf0b9924abb4029183eb12927c0ce09985724e3866f80ddf9ba4",
+            "ddb7c42c085b8d7611d2345dba7a12cfb3513a1ee0b407ba61218d0d589f68d5",
+            "d09673bc707cd00c7a9e7643f330e143e9f429c1adff1daf9cdbf07397cdafe4",
+            "ee3d524c4435f28c1cb26dc8e04b79070e54cb13e6928d7705616e2c908d42c7",
+            "aa34437463085337b3b69ebf916fcdf850d2d60673da5d552721dfaffbf33838",
+        ),
+        "events_sha256": "335e76905dd53cf3ed53092295f304c8bee7a6196be6dfbdcfb87f4247bfadfc",
+        "trace_digest": "c365813d9ebda590299830a68d1683e3d8f413bc7b4b43da13ea77c5678552af",
+    },
+}
+
+
+@pytest.mark.parametrize("run_id", tuple(_LEGACY_MODEL_PINS))
+def test_legacy_six_family_models_event_jsonl_and_trace_digest_are_pinned(
+    repository_root: Path,
+    run_id: str,
+) -> None:
+    bundle = repository_root / "artifacts" / run_id
+    snapshot = inspect_artifact(bundle).snapshot
+    assert snapshot is not None
+    models = (
+        snapshot.context.run_context,
+        snapshot.context,
+        snapshot.events[0],
+        snapshot.manifest,
+        snapshot.metrics,
+        snapshot.findings,
+    )
+    expected = _LEGACY_MODEL_PINS[run_id]
+
+    assert tuple(type(model) for model in models) == expected["classes"]
+    assert tuple(
+        _sha(canonical_json_bytes(model.model_dump(mode="json"))) for model in models
+    ) == expected["model_sha256"]
+    assert _sha((bundle / "events.jsonl").read_bytes()) == expected["events_sha256"]
+    assert snapshot.manifest.trace_digest == expected["trace_digest"]
+    assert (bundle / "trace.sha256").read_text(encoding="ascii").strip() == expected[
+        "trace_digest"
+    ]
+
+
+def test_stored_v2_profile_dispatch_remains_accepted(repository_root: Path) -> None:
+    inspection = inspect_artifact(repository_root / "artifacts" / "handoff-p4-fault")
+
+    assert inspection.verification.integrity is IntegrityStatus.INTERNALLY_CONSISTENT
+    assert inspection.snapshot is not None
+    assert type(inspection.snapshot.events[0]) is TraceEventV2
 
 
 def _refresh_envelope(bundle: Path) -> None:

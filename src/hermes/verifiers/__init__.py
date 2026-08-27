@@ -11,16 +11,20 @@ from hermes.domain.models import (
     ScenarioDefinition,
     TraceEvent,
     TraceEventV2,
+    TraceEventV3,
     VerifierIdentity,
 )
 from hermes.evidence.metrics import compute_metrics
 from hermes.evidence.trace import TraceIntegrityError, verify_complete_trace
 from hermes.gates.config import GateConfig
-from hermes.gates.release import VerifierProfile
+from hermes.gates.release import VerifierProfile, trace_integrity_verifier_version
+from hermes.shields.config import ShieldConfig
 
 PHASE1_VERIFIER_IDENTITIES = (
     VerifierIdentity(
-        name="TraceIntegrityVerifier", version="1.0", finding_id="trace.integrity"
+        name="TraceIntegrityVerifier",
+        version=trace_integrity_verifier_version("1.0"),
+        finding_id="trace.integrity",
     ),
     VerifierIdentity(name="CollisionVerifier", version="1.0", finding_id="collision.zero"),
     VerifierIdentity(
@@ -43,20 +47,56 @@ PHASE4_VERIFIER_IDENTITIES = PHASE1_VERIFIER_IDENTITIES + (
 
 def verifier_identities_for_profile(
     profile: VerifierProfile,
+    *,
+    evidence_schema_version: str = "1.0",
 ) -> tuple[VerifierIdentity, ...]:
     """Return the exact ordered identities executed by one verifier profile."""
     if profile is VerifierProfile.LEGACY:
-        return PHASE1_VERIFIER_IDENTITIES
-    if profile is VerifierProfile.FAULT_COVERAGE:
-        return PHASE4_VERIFIER_IDENTITIES
+        identities = PHASE1_VERIFIER_IDENTITIES
+    elif profile is VerifierProfile.FAULT_COVERAGE:
+        identities = PHASE4_VERIFIER_IDENTITIES
+    else:
+        from hermes.verifiers.adas import (
+            ADAS_P0_LONGITUDINAL_V3_VERIFIER_IDENTITIES,
+            ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES,
+        )
 
-    from hermes.verifiers.adas import ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
+        adas_identities_by_schema_profile = {
+            (schema, adas_profile): (
+                ADAS_P0_LONGITUDINAL_V3_VERIFIER_IDENTITIES
+                if schema == "3.0"
+                else ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
+            )
+            for schema in ("1.0", "2.0", "3.0")
+            for adas_profile in (
+                VerifierProfile.ADAS_P0_LONGITUDINAL,
+                VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT,
+            )
+        }
+        try:
+            adas_identities = adas_identities_by_schema_profile[
+                (evidence_schema_version, profile)
+            ]
+        except (KeyError, TypeError) as exc:
+            raise ValueError(
+                "unsupported evidence-schema/verifier-profile pair: "
+                f"{evidence_schema_version!r}, {profile!r}"
+            ) from exc
 
-    if profile is VerifierProfile.ADAS_P0_LONGITUDINAL:
-        return PHASE1_VERIFIER_IDENTITIES + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
-    if profile is VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT:
-        return PHASE4_VERIFIER_IDENTITIES + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
-    raise ValueError(f"unsupported verifier profile: {profile}")
+        if profile is VerifierProfile.ADAS_P0_LONGITUDINAL:
+            identities = PHASE1_VERIFIER_IDENTITIES + adas_identities
+        elif profile is VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT:
+            identities = PHASE4_VERIFIER_IDENTITIES + adas_identities
+        else:
+            raise ValueError(f"unsupported verifier profile: {profile}")
+
+    trace_version = trace_integrity_verifier_version(evidence_schema_version)
+    if trace_version == identities[0].version:
+        return identities
+    return (
+        identities[0].model_copy(update={"version": trace_version}),
+        *identities[1:],
+    )
 
 
 def _available(value: float, unit: str) -> Measurement:
@@ -67,7 +107,9 @@ def _available(value: float, unit: str) -> Measurement:
     )
 
 
-def _collision(events: tuple[TraceEvent, ...], gate: GateConfig) -> Finding:
+def _collision(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...], gate: GateConfig
+) -> Finding:
     maximum = max(event.vehicle_state.collision_count for event in events)
     failed_events = tuple(
         event
@@ -96,11 +138,11 @@ def _collision(events: tuple[TraceEvent, ...], gate: GateConfig) -> Finding:
 
 
 def _boundary(
-    events: tuple[TraceEvent, ...],
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
 ) -> Finding:
-    metrics = compute_metrics(events)
+    metrics = compute_metrics(events, scenario=scenario, gate_config=gate)
     lateral_tolerance = min(
         gate.hard.max_abs_lateral_offset_m,
         scenario.road.boundary_tolerance_m,
@@ -139,8 +181,14 @@ def _boundary(
     )
 
 
-def _progress(events: tuple[TraceEvent, ...], gate: GateConfig) -> Finding:
-    measurement = compute_metrics(events).route_completion_pct
+def _progress(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    measurement = compute_metrics(
+        events, scenario=scenario, gate_config=gate
+    ).route_completion_pct
     criterion = (
         "destination_reached == true and "
         f"route_completion_pct >= {gate.hard.min_route_completion_pct}"
@@ -188,8 +236,14 @@ def _progress(events: tuple[TraceEvent, ...], gate: GateConfig) -> Finding:
     )
 
 
-def _comfort_acceleration(events: tuple[TraceEvent, ...], gate: GateConfig) -> Finding:
-    measurement = compute_metrics(events).max_abs_acceleration_mps2
+def _comfort_acceleration(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    measurement = compute_metrics(
+        events, scenario=scenario, gate_config=gate
+    ).max_abs_acceleration_mps2
     assert measurement.value is not None
     failed_events = tuple(
         event
@@ -220,8 +274,14 @@ def _comfort_acceleration(events: tuple[TraceEvent, ...], gate: GateConfig) -> F
     )
 
 
-def _comfort_jerk(events: tuple[TraceEvent, ...], gate: GateConfig) -> Finding:
-    measurement = compute_metrics(events).max_abs_jerk_mps3
+def _comfort_jerk(
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
+    scenario: ScenarioDefinition,
+    gate: GateConfig,
+) -> Finding:
+    measurement = compute_metrics(
+        events, scenario=scenario, gate_config=gate
+    ).max_abs_jerk_mps3
     criterion = f"max_abs_jerk_mps3 <= {gate.soft.max_abs_jerk_mps3}"
     if measurement.availability is EvidenceAvailability.NOT_AVAILABLE:
         return Finding(
@@ -269,13 +329,18 @@ def _comfort_jerk(events: tuple[TraceEvent, ...], gate: GateConfig) -> Finding:
 
 
 def _trace_integrity(
-    events: tuple[TraceEvent, ...],
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
+    *,
+    shield_config: ShieldConfig | None = None,
 ) -> Finding:
     measurement = _available(float(len(events)), "events")
     criterion = "complete trace sequence and SHA-256 chain are internally consistent"
+    verifier_version = trace_integrity_verifier_version(
+        events[0].evidence_schema_version if events else "1.0"
+    )
     try:
-        verify_complete_trace(events, scenario)
+        verify_complete_trace(events, scenario, shield_config=shield_config)
     except TraceIntegrityError as exc:
         match = re.search(r"sequence (\d+)", str(exc))
         sequence = int(match.group(1)) if match else None
@@ -287,7 +352,7 @@ def _trace_integrity(
         return Finding(
             finding_id="trace.integrity",
             verifier="TraceIntegrityVerifier",
-            verifier_version="1.0",
+            verifier_version=verifier_version,
             status=FindingStatus.FAIL,
             severity=Severity.CRITICAL,
             hard_invariant=True,
@@ -302,7 +367,7 @@ def _trace_integrity(
     return Finding(
         finding_id="trace.integrity",
         verifier="TraceIntegrityVerifier",
-        verifier_version="1.0",
+        verifier_version=verifier_version,
         status=FindingStatus.PASS,
         severity=Severity.CRITICAL,
         hard_invariant=True,
@@ -313,23 +378,25 @@ def _trace_integrity(
 
 
 def run_phase1_verifiers(
-    events: tuple[TraceEvent, ...],
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
+    *,
+    shield_config: ShieldConfig | None = None,
 ) -> tuple[Finding, ...]:
     """Run the stable Phase 1 suite in deterministic finding order."""
     return (
-        _trace_integrity(events, scenario),
+        _trace_integrity(events, scenario, shield_config=shield_config),
         _collision(events, gate),
         _boundary(events, scenario, gate),
-        _progress(events, gate),
-        _comfort_acceleration(events, gate),
-        _comfort_jerk(events, gate),
+        _progress(events, scenario, gate),
+        _comfort_acceleration(events, scenario, gate),
+        _comfort_jerk(events, scenario, gate),
     )
 
 
 def _fault_coverage(
-    events: tuple[TraceEventV2, ...],
+    events: tuple[TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
 ) -> Finding:
     config = scenario.faults
@@ -415,19 +482,31 @@ def _fault_coverage(
 
 
 def run_phase4_verifiers(
-    events: tuple[TraceEventV2, ...],
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
+    *,
+    shield_config: ShieldConfig | None = None,
 ) -> tuple[Finding, ...]:
     """Run legacy safety checks plus required deterministic fault coverage."""
-    return (*run_phase1_verifiers(events, scenario, gate), _fault_coverage(events, scenario))
+    return (
+        *run_phase1_verifiers(
+            events,
+            scenario,
+            gate,
+            shield_config=shield_config,
+        ),
+        _fault_coverage(events, scenario),
+    )
 
 
 def run_verifiers_for_profile(
     profile: VerifierProfile,
-    events: tuple[TraceEvent, ...],
+    events: tuple[TraceEvent | TraceEventV2 | TraceEventV3, ...],
     scenario: ScenarioDefinition,
     gate: GateConfig,
+    *,
+    shield_config: ShieldConfig | None = None,
 ) -> tuple[Finding, ...]:
     """Run exactly the suite a verifier profile enumerates.
 
@@ -440,14 +519,36 @@ def run_verifiers_for_profile(
 
     if profile is VerifierProfile.ADAS_P0_LONGITUDINAL:
         return (
-            *run_phase1_verifiers(events, scenario, gate),
+            *run_phase1_verifiers(
+                events,
+                scenario,
+                gate,
+                shield_config=shield_config,
+            ),
             *run_adas_p0_longitudinal_verifiers(events, scenario, gate),
         )
     if profile is VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT:
         return (
-            *run_phase4_verifiers(events, scenario, gate),  # type: ignore[arg-type]
+            *run_phase4_verifiers(
+                events,
+                scenario,
+                gate,
+                shield_config=shield_config,
+            ),
             *run_adas_p0_longitudinal_verifiers(events, scenario, gate),
         )
     if profile is VerifierProfile.FAULT_COVERAGE:
-        return run_phase4_verifiers(events, scenario, gate)  # type: ignore[arg-type]
-    return run_phase1_verifiers(events, scenario, gate)
+        return run_phase4_verifiers(
+            events,
+            scenario,
+            gate,
+            shield_config=shield_config,
+        )
+    if profile is VerifierProfile.LEGACY:
+        return run_phase1_verifiers(
+            events,
+            scenario,
+            gate,
+            shield_config=shield_config,
+        )
+    raise ValueError(f"unsupported verifier profile: {profile}")

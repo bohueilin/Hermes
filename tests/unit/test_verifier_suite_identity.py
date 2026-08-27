@@ -10,18 +10,80 @@ from hermes.adas.policy import AdasLongitudinalPolicy
 from hermes.evidence.artifacts import config_digest
 from hermes.faults.deterministic import DeterministicFaultInjector
 from hermes.gates.config import load_gate_config
+from hermes.gates.release import VerifierProfile
 from hermes.policies.baseline import BaselinePolicy
 from hermes.runtime.orchestrator import _build_execution_context
 from hermes.scenarios.loader import load_scenario
 from hermes.shields.noop import NoOpShield
-from hermes.verifiers import PHASE1_VERIFIER_IDENTITIES, PHASE4_VERIFIER_IDENTITIES
-from hermes.verifiers.adas import ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES
+from hermes.verifiers import (
+    PHASE1_VERIFIER_IDENTITIES,
+    PHASE4_VERIFIER_IDENTITIES,
+    verifier_identities_for_profile,
+)
 
 
 def _identity_triplets(identities) -> tuple[tuple[str, str, str], ...]:
     return tuple(
         (identity.name, identity.version, identity.finding_id) for identity in identities
     )
+
+
+@pytest.mark.parametrize("evidence_schema_version", ["1.0", "2.0"])
+def test_legacy_schema_suite_selectors_keep_trace_integrity_v1_0(
+    evidence_schema_version: str,
+) -> None:
+    identities = verifier_identities_for_profile(
+        VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT,
+        evidence_schema_version=evidence_schema_version,
+    )
+
+    assert identities[0].model_dump(mode="json") == {
+        "name": "TraceIntegrityVerifier",
+        "version": "1.0",
+        "finding_id": "trace.integrity",
+    }
+    assert identities[-3].model_dump(mode="json") == {
+        "name": "AdasBrakeOnsetVerifier",
+        "version": "1.0",
+        "finding_id": "adas.aeb.brake_onset_margin",
+    }
+
+
+@pytest.mark.parametrize(
+    "profile",
+    [
+        VerifierProfile.ADAS_P0_LONGITUDINAL,
+        VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT,
+    ],
+)
+def test_schema_v3_adas_suites_select_only_brake_onset_v1_1(profile: VerifierProfile) -> None:
+    identities = verifier_identities_for_profile(
+        profile,
+        evidence_schema_version="3.0",
+    )
+    triplets = _identity_triplets(identities)
+
+    assert ("TraceIntegrityVerifier", "1.1", "trace.integrity") in triplets
+    assert (
+        "AdasThreatResponseVerifier",
+        "1.1",
+        "adas.aeb.threat_response",
+    ) in triplets
+    assert (
+        "AdasBrakeOnsetVerifier",
+        "1.1",
+        "adas.aeb.brake_onset_margin",
+    ) in triplets
+    assert (
+        "AdasFalseInterventionVerifier",
+        "1.0",
+        "adas.aeb.no_false_intervention",
+    ) in triplets
+    assert (
+        "AdasWarningTimingVerifier",
+        "1.0",
+        "adas.fcw.warning_timing",
+    ) in triplets
 
 
 @pytest.mark.parametrize(
@@ -32,12 +94,18 @@ def _identity_triplets(identities) -> tuple[tuple[str, str, str], ...]:
         (
             "adas/aeb_stationary_lead.yaml",
             "adas",
-            PHASE1_VERIFIER_IDENTITIES + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES,
+            verifier_identities_for_profile(
+                VerifierProfile.ADAS_P0_LONGITUDINAL,
+                evidence_schema_version="3.0",
+            ),
         ),
         (
             "adas/aeb_stationary_lead.yaml",
             "adas_fault",
-            PHASE4_VERIFIER_IDENTITIES + ADAS_P0_LONGITUDINAL_VERIFIER_IDENTITIES,
+            verifier_identities_for_profile(
+                VerifierProfile.ADAS_P0_LONGITUDINAL_FAULT,
+                evidence_schema_version="3.0",
+            ),
         ),
     ],
 )

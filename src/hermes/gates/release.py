@@ -29,6 +29,23 @@ class EvidenceRequiredness(StrEnum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
+TRACE_INTEGRITY_VERIFIER_VERSION_BY_EVIDENCE_SCHEMA: Mapping[str, str] = (
+    MappingProxyType({"1.0": "1.0", "2.0": "1.0", "3.0": "1.1"})
+)
+
+
+def trace_integrity_verifier_version(evidence_schema_version: str) -> str:
+    """Select the one trace-verifier identity owned by an evidence schema."""
+    try:
+        return TRACE_INTEGRITY_VERIFIER_VERSION_BY_EVIDENCE_SCHEMA[
+            evidence_schema_version
+        ]
+    except (KeyError, TypeError) as exc:
+        raise ValueError(
+            f"unsupported evidence schema for trace verifier: {evidence_schema_version!r}"
+        ) from exc
+
+
 @dataclass(frozen=True, slots=True)
 class EvidenceRequirement:
     """One ordered finding requirement for a versioned verifier profile."""
@@ -47,7 +64,11 @@ class EvidenceRequirementProfile:
 
 LEGACY_EXPECTED_FINDINGS: Mapping[str, tuple[str, str, bool]] = MappingProxyType(
     {
-        "trace.integrity": ("TraceIntegrityVerifier", "1.0", True),
+        "trace.integrity": (
+            "TraceIntegrityVerifier",
+            trace_integrity_verifier_version("1.0"),
+            True,
+        ),
         "collision.zero": ("CollisionVerifier", "1.0", True),
         "boundary.within_tolerance": ("BoundaryVerifier", "1.0", True),
         "progress.required": ("ProgressVerifier", "1.1", True),
@@ -88,6 +109,47 @@ EXPECTED_FINDINGS_BY_PROFILE: Mapping[
         ),
     }
 )
+V3_EXPECTED_FINDINGS_BY_PROFILE: Mapping[
+    VerifierProfile, Mapping[str, tuple[str, str, bool]]
+] = MappingProxyType(
+    {
+        profile: MappingProxyType(
+            {
+                finding_id: (
+                    identity[0],
+                    trace_integrity_verifier_version("3.0"),
+                    identity[2],
+                )
+                if finding_id == "trace.integrity"
+                else (
+                    identity[0],
+                    "1.1",
+                    identity[2],
+                )
+                if finding_id == "adas.aeb.brake_onset_margin"
+                else identity
+                for finding_id, identity in expected.items()
+            }
+        )
+        for profile, expected in EXPECTED_FINDINGS_BY_PROFILE.items()
+    }
+)
+
+
+def expected_findings_for_profile(
+    profile: VerifierProfile,
+    *,
+    evidence_schema_version: str = "1.0",
+) -> Mapping[str, tuple[str, str, bool]]:
+    """Return the exact finding identities accepted for one profile and schema."""
+    if not isinstance(evidence_schema_version, str):
+        trace_integrity_verifier_version(evidence_schema_version)
+    if evidence_schema_version in {"1.0", "2.0"}:
+        return EXPECTED_FINDINGS_BY_PROFILE[profile]
+    if evidence_schema_version == "3.0":
+        return V3_EXPECTED_FINDINGS_BY_PROFILE[profile]
+    trace_integrity_verifier_version(evidence_schema_version)
+    raise AssertionError("trace verifier version selector returned an unknown schema")
 
 EXPLICITLY_ORDERED_HARD_FINDING_IDS: frozenset[str] = frozenset(
     {
@@ -220,6 +282,7 @@ def apply_release_gate(
     *,
     expected_profile: VerifierProfile,
     adapter_name: str = "fake",
+    evidence_schema_version: str = "1.0",
 ) -> GateResult:
     """Apply precedence against an explicitly selected verifier contract."""
     dynamics_limitation = (
@@ -231,7 +294,10 @@ def apply_release_gate(
     for finding in findings:
         by_id.setdefault(finding.finding_id, []).append(finding)
 
-    expected_findings = EXPECTED_FINDINGS_BY_PROFILE[expected_profile]
+    expected_findings = expected_findings_for_profile(
+        expected_profile,
+        evidence_schema_version=evidence_schema_version,
+    )
     malformed_finding_set = set(by_id) != set(expected_findings) or any(
         len(matches) != 1
         or (
