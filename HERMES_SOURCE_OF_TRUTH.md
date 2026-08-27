@@ -10,12 +10,12 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Checkouts** | main checkout `…/Hermes` (on `main` since 2026-08-22, another session's move; Phase 8 intact on its branch) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (execution plan local there) · Phase 7 codex worktree (read-only) |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
-| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25** on `feat/phase8-metrics-v3` @ `ab17958` — **pushed to GitHub 2026-08-25**, unmerged pending review, suite **1410 passed** (§11.1 item 2) |
+| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024` — pushed and in sync, unmerged pending the merge decision (§13), suite **1418 passed** (§11.1 item 2) |
 | **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 33 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | 965 tests pass (18 drive real MetaDrive) · ruff clean · `hermes doctor` 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-08-25 |
+| **Last updated** | 2026-08-26 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -405,7 +405,7 @@ renders envelopes; its read-only property is enforced by AST tests.
 | 5 | Contract closure: closed `VerifierProfile`, `simulator_support.py`; 273 tests | ″ @ `9e257a0` |
 | 6 | Review envelopes 1.0, `review-artifact`, `review-compare`, Streamlit workbench; reviewer-comprehension iteration; 756 tests | `feat/phase6-evidence-workbench` → `feat/phase6-reviewer-comprehension` @ `4eb8765` |
 | 7 | Evaluation-adequacy assessor, evaluation plans, provenance; 1,245 tests claimed | **codex worktree only** — `codex/phase7-…` @ `9d5c0ba`, 56 commits, **not merged** |
-| 8 | ADAS (FCW/AEB) + oracle + seeded defects + agent layer + regression flywheel; 965 tests; then calibration (merged `6b2f375`), Phase 3 (merged `a78287e`), and **evidence schema 3.0 / `RunMetricsV3`** (complete, unmerged) | trunk `feat/phase8-adas-lab` @ `e6e2c8c`; metrics V3 on `feat/phase8-metrics-v3` @ `ab17958` (14 commits from `a78287e`, pushed, unmerged) |
+| 8 | ADAS (FCW/AEB) + oracle + seeded defects + agent layer + regression flywheel; 965 tests; then calibration (merged `6b2f375`), Phase 3 (merged `a78287e`), and **evidence schema 3.0 / `RunMetricsV3`** (complete, unmerged) | trunk `feat/phase8-adas-lab` @ `e6e2c8c`; metrics V3 on `feat/phase8-metrics-v3` @ `2dda024` (15 commits from `a78287e`, pushed, unmerged) |
 | 9 | Fleet simulation — **FLEET-005 spike built**: contracts, world tape, minimal DES, paired loop, decision record; 33 tests incl. a hand-computed analytical fixture, clean-clone green | `feat/phase9-fleetlab` @ `00b2a48`; PRD stays local |
 
 Design decisions from early phases that still constrain everything: MetaDrive stays external and
@@ -810,8 +810,8 @@ Each item states how you know it is done and what it will break.
    every trace digest and every fixture — budget a full re-baseline. **Do before authoring more
    scenarios.**
 2. ~~`RunMetricsV3` / evidence schema 3.0~~ **DONE 2026-08-25, accepted, unmerged** —
-   `feat/phase8-metrics-v3` @ `ab17958` (14 commits from `a78287e`, **pushed to GitHub 2026-08-25**;
-   unmerged and not yet through the adversarial branch review every prior phase received).
+   `feat/phase8-metrics-v3` @ `2dda024` (15 commits from `a78287e`, pushed and in sync;
+   unmerged — the merge decision is §13's).
    Evidence schema 3.0 produced for exactly the two ADAS profiles (legacy → V1, non-ADAS fault
    → V2 — routing is exact, not inherited); typed decision plus candidate → permitted → executed
    attribution; independent policy/shield/fault/trace/metrics/findings/gate replay;
@@ -830,19 +830,27 @@ Each item states how you know it is done and what it will break.
    (ignored dir). *Done-when met:* ADAS `metrics.json` carries the ADAS metrics and
    `review-artifact` renders all 61 leaves.
 
-   > **Next on this branch — owner-approved maintenance pass** (2026-08-25, prompt handed to
-   > Codex: `…/Hermes-adas/.superpowers/sdd/phase4-maintenance-pass/codex-implementation-prompt.md`,
-   > ignored dir): drop the superseded WP-7 backup stash (`c82036c`, verified byte-identical to
-   > `ab17958`'s diff over its four files); fail closed on untyped profiles in
-   > `run_verifiers_for_profile` (review Minor 1); refresh two stale V3 prose texts
-   > (`schema_registry.py` docstring, `review/models.py:156` comment — review Minor 2); remove
-   > two `type: ignore[arg-type]` by widening `run_phase4_verifiers` typing; align stored-path
-   > event filters to exact-type checks and pin the `TraceEventV3` inheritance invariant. One
-   > commit, full gates, then a **fresh six-run seed-7 acceptance attempt at the new HEAD** —
-   > the eight companion files must reproduce the `ab179583` attempt byte-for-byte (only
-   > `manifest.json` embeds the commit), so the trace digests `3d5866…`/`5eae8e…` are the
-   > behavior-unchanged check. Owner-cut scope stays cut: actor roster, scenario windows, suite
-   > normalization, conditional telemetry files, gate-hosted tolerances, post-AEB re-approach.
+   > **Maintenance pass landed 2026-08-26** — `2dda024` (`fix: fail closed on untyped verifier
+   > profiles and refresh stale V3 prose`), implemented by Codex from the reviewed prompt and
+   > independently verified the same day by a six-agent read-only pass. Superseded WP-7 backup
+   > stash `c82036c` re-verified byte-identical and dropped (no stash refs remain).
+   > `run_verifiers_for_profile` now fails closed — explicit `LEGACY` branch, `ValueError` on
+   > anything untyped; both stale V3 prose texts refreshed; both `type: ignore[arg-type]`
+   > removed by widening `run_phase4_verifiers` to the three-event union; stored-path profile
+   > filters aligned to exact `type()` with the `TraceEventV3` inheritance invariant pinned.
+   > Measured at `2dda024` (`pytest -q`): suite **1,418 passed** — 8 additive tests, none
+   > removed; seeded 10/10; ruff clean; doctor 17/1/1; fixtures 13/13; fleet 27/27. **Fresh
+   > six-run seed-7 requalification** at `…/Hermes-adas-wp7-acceptance/2dda0246…/attempt-1`
+   > (60 files, composite `712c3375…`): all eight companion files byte-identical to the
+   > `ab179583` attempt, trace digests `3d5866…`/`5eae8e…` reproduced exactly — the
+   > zero-behavior-delta proof. **Preserve both acceptance roots byte-for-byte.** Report:
+   > `…/Hermes-adas/.superpowers/sdd/phase4-maintenance-pass/maintenance-report.md` (ignored
+   > dir). Owner-cut scope stays cut: actor roster, scenario windows, suite normalization,
+   > conditional telemetry files, gate-hosted tolerances, post-AEB re-approach. Two Minors
+   > logged for a future pass, no action needed: the widened union moves a latent
+   > static-typing mismatch one call deeper into `_fault_coverage` (no checker configured, no
+   > runtime effect), and the new stored-V2 test type-checks only `events[0]` (schema
+   > homogeneity already validated upstream).
 3. **Four remaining FCW/AEB named P0 scenarios** — `fcw_stationary_lead`, `aeb_stationary_lead`,
    `slow_lead_closing`, `cut_out_reveal_stopped` — plus the four named nominal entries. **Blocked
    on new challenge kinds** (`ChallengeConfig` has exactly two); each touches schema, adapter
@@ -963,7 +971,7 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
 | Is content-digest approval the right granularity? | A whitespace edit forces re-approval. |
 | Should the threat oracle read omniscient state rather than the trace? | Stronger; not implemented (§6.2). |
 | Phase 7A acceptance and any merge of the codex branch. | Built, not accepted; 7B blocked. |
-| Merge `feat/phase8-metrics-v3` onto `main`? | Phase 4 is accepted but its evidence is commit-bound to `ab17958`; a merge moves HEAD, so decide whether merge-time requalification (a fresh six-run attempt) is required or the branch-side evidence suffices. Sequence after the maintenance pass lands. |
+| Merge `feat/phase8-metrics-v3` onto `main`? | Phase 4 is accepted but its evidence is commit-bound to `ab17958`; a merge moves HEAD, so decide whether merge-time requalification (a fresh six-run attempt) is required or the branch-side evidence suffices. The maintenance pass landed and requalified at `2dda024` (2026-08-26), so this decision is now actionable; note evidence is commit-bound to `2dda024` now. |
 | Track the Phase 9 PRD in git? Push `main`? Set a default branch? LICENSE? | §11.4. |
 | Name the MuJoCo niche; assign an owner. | Nothing graduates without both. |
 
@@ -978,10 +986,12 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
   `/Hermes_Phase8_ADAS_Execution_Plan.md`.
 
 - The ADAS worktree moved to `feat/phase8-metrics-v3` on 2026-08-25 (Phase 4). Its Phase-4
-  working papers (task briefs/reports, review diffs, the maintenance-pass prompt) live under
-  `…/Hermes-adas/.superpowers/sdd/` — ignored by that directory's own `.gitignore`, deliberately
-  untracked. The Phase-4 acceptance evidence is **outside git entirely** at
-  `…/Hermes-adas-wp7-acceptance/ab179583…/attempt-1`; treat it as immutable (§11.1 item 2).
+  working papers (task briefs/reports, review diffs, the maintenance-pass prompt and report)
+  live under `…/Hermes-adas/.superpowers/sdd/` — ignored by that directory's own `.gitignore`,
+  deliberately untracked. The Phase-4 acceptance evidence is **outside git entirely** — TWO
+  immutable roots under `…/Hermes-adas-wp7-acceptance/`: `ab179583…/attempt-1` (composite
+  `cefd7bbc…`) and `2dda0246…/attempt-1` (composite `712c3375…`); treat both as immutable
+  (§11.1 item 2).
 
 - The main checkout `…/Hermes` was switched to `main` (Phase 0) by a parallel session on
   2026-08-22 ~22:09 (`git reflog`). Phase 8 is intact on its branch and on GitHub; nothing was
