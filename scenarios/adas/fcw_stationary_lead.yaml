@@ -1,0 +1,59 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# FCW warning-margin stationary-lead threat: the stopped in-lane actor begins far enough ahead
+# that warning-due geometry is reached long before the controller enters PARTIAL AEB staging.
+# AebConfig's controller (not gate-oracle) defaults give PARTIAL =
+# 0.1848650268712171 x 12.982444763183452 ~= 2.4 m/s^2, so at 20 m/s closing it begins at
+# gap ~= 85.33 m (TTC ~= 4.27 s). The first stored TTC is ~= 7.0 s, already <= 7.2 s at
+# t = 0, so the 140 m gap predicts ~= 2.7 s warning margin before PARTIAL staging. This is a
+# geometry-COVERAGE check, not warning-OUTPUT verification: V3 stores the warning stream but
+# no verifier consumes it. The stopped ego holds through the horizon, so progress.required
+# yields the documented HOLD mission-progress disposition rather than an ADAS finding failure.
+schema_version: "4.0"
+name: fcw_stationary_lead
+version: "1.0"
+description: Ego reaches FCW warning-due geometry well before stationary-lead AEB staging.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 300
+  target_speed_mps: 20.0
+  # Simulator-measured 20 m/s full-brake peak from
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+challenge:
+  kind: stationary_lead
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 140.0
+  initial_lane_delta: 0
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - stationary_object
+  - threat
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: required
+    before_ttc_s: 7.2
+  expected_aeb:
+    kind: required

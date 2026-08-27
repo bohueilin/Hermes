@@ -28,6 +28,7 @@ _COMMITTED_MAPS = {
     "scenarios/adas/aeb_lead_hard_brake.yaml": "S",
     "scenarios/adas/aeb_stationary_lead.yaml": "S",
     "scenarios/adas/aeb_stationary_lead_observation_delay.yaml": "S",
+    "scenarios/adas/fcw_stationary_lead.yaml": "SSS",
     "scenarios/adas/non_in_path_stationary_object.yaml": "S",
 }
 
