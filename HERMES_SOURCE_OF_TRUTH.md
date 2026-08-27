@@ -7,13 +7,13 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkouts** | main checkout `…/Hermes` (on `main` since 2026-08-22, another session's move; Phase 8 intact on its branch) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (execution plan local there) · Phase 7 codex worktree (read-only) |
+| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
-| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024` — pushed and in sync, unmerged pending the merge decision (§13), suite **1418 passed** (§11.1 item 2) |
+| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; suite union **1,451** (1,418 branch + 33 fleet — §11.1 item 2) |
 | **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 33 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
-| **Verification** | 965 tests pass (18 drive real MetaDrive) · ruff clean · `hermes doctor` 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
+| **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
 | **Last updated** | 2026-08-26 |
 
@@ -811,7 +811,7 @@ Each item states how you know it is done and what it will break.
    scenarios.**
 2. ~~`RunMetricsV3` / evidence schema 3.0~~ **DONE 2026-08-25, accepted, unmerged** —
    `feat/phase8-metrics-v3` @ `2dda024` (15 commits from `a78287e`, pushed and in sync;
-   unmerged — the merge decision is §13's).
+   **merged onto `main` 2026-08-26 as `b447fc4`**, conflict-free — §13).
    Evidence schema 3.0 produced for exactly the two ADAS profiles (legacy → V1, non-ADAS fault
    → V2 — routing is exact, not inherited); typed decision plus candidate → permitted → executed
    attribution; independent policy/shield/fault/trace/metrics/findings/gate replay;
@@ -971,7 +971,7 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
 | Is content-digest approval the right granularity? | A whitespace edit forces re-approval. |
 | Should the threat oracle read omniscient state rather than the trace? | Stronger; not implemented (§6.2). |
 | Phase 7A acceptance and any merge of the codex branch. | Built, not accepted; 7B blocked. |
-| Merge `feat/phase8-metrics-v3` onto `main`? | Phase 4 is accepted but its evidence is commit-bound to `ab17958`; a merge moves HEAD, so decide whether merge-time requalification (a fresh six-run attempt) is required or the branch-side evidence suffices. The maintenance pass landed and requalified at `2dda024` (2026-08-26), so this decision is now actionable; note evidence is commit-bound to `2dda024` now. |
+| ~~Merge `feat/phase8-metrics-v3` onto `main`?~~ **Decided 2026-08-26: merged** (`b447fc4`, conflict-free — only `src/hermes/cli.py` overlapped, additively). Branch-side evidence stands, commit-bound to `2dda024`; the merge commit was deliberately **not** separately requalified (its `src`+`tests` tree is the verified branch plus disjoint fleet files). | Any future claim of merge-commit-bound evidence still needs a fresh six-run attempt at `b447fc4` or later. |
 | Track the Phase 9 PRD in git? Push `main`? Set a default branch? LICENSE? | §11.4. |
 | Name the MuJoCo niche; assign an owner. | Nothing graduates without both. |
 
@@ -994,9 +994,16 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
   (§11.1 item 2).
 
 - The main checkout `…/Hermes` was switched to `main` (Phase 0) by a parallel session on
-  2026-08-22 ~22:09 (`git reflog`). Phase 8 is intact on its branch and on GitHub; nothing was
-  lost. Run nothing from that checkout while it sits on `main` — FleetLab work happens only in
-  the `…/Hermes-fleetlab` worktree.
+  2026-08-22 ~22:09 (`git reflog`); `main` has since become the integration trunk (ADAS trunk,
+  FleetLab, metrics-V3 merged). **Its untracked `artifacts/` tree is a stale pre-Phase-3
+  generation**: at merged `b447fc4`, exactly 8 named byte-pin tests fail there
+  (`test_artifact_verification` ×2, `test_comparison` ×2, `test_fixture_registry` ×1,
+  `test_review_projection` ×2, `test_wp6_v3_consumers` ×1 — all reading local
+  `phase1-nominal`/`handoff-p4-fault` bundles), while the identical code passes 1,418/1,418 in
+  the ADAS worktree, whose `artifacts/` holds the canonical 27-bundle fleet matching the
+  tracked registry digests. Run ADAS validation in the worktree; syncing the canonical bundles
+  into the main checkout (overwriting its stale strays) is an open housekeeping option — an
+  owner call, since it replaces local evidence files.
 
 - `Hermes_Fable5_Full_Project_Fresh_Eye_Design_Review_Master_Prompt.md` is in `.gitignore` (line
   47) **but tracked** (committed in `9efb811`). Public today.
