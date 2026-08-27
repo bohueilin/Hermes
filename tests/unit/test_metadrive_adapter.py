@@ -12,9 +12,21 @@ from hermes.adapters.metadrive import (
     MetaDriveDependencies,
     MetaDriveUnavailableError,
 )
+from hermes.adapters.metadrive_challenge import ChallengeActorState
 from hermes.domain.enums import TerminationReason
-from hermes.domain.models import Action, ScenarioDefinition
+from hermes.domain.models import (
+    Action,
+    ComponentContext,
+    ExecutionContextV3,
+    RunContextV3,
+    ScenarioDefinition,
+)
+from hermes.evidence.artifacts import config_digest
+from hermes.evidence.verification import _profile_errors
+from hermes.gates.release import select_verifier_profile
 from hermes.policies.metadrive_idm import MetaDriveIDMPolicy
+from hermes.scenarios.loader import scenario_digest
+from hermes.verifiers import verifier_identities_for_profile
 
 SIMULATOR_COMMIT = "85e5dadc6c7436d324348f6e3d8f8e680c06b4db"
 
@@ -41,6 +53,34 @@ def _scenario(
             },
             "road": {"destination_distance_m": 20.0, "boundary_tolerance_m": 1.5},
             "hazards": {},
+        }
+    )
+
+
+def _challenge_scenario(*, initial_gap_m: float = 140.0) -> ScenarioDefinition:
+    return ScenarioDefinition.model_validate(
+        {
+            "schema_version": "2.0",
+            "name": "metadrive_long_challenge_unit",
+            "version": "1.0",
+            "description": "Unit-only long challenge geometry contract scenario.",
+            "adapter": "metadrive",
+            "control": {
+                "frequency_hz": 10,
+                "horizon_steps": 2,
+                "target_speed_mps": 8.0,
+                "simulated_policy_latency_ms": 10.0,
+            },
+            "initial_state": {"speed_mps": 0.0, "lateral_offset_m": 0.0},
+            "road": {"destination_distance_m": 20.0, "boundary_tolerance_m": 1.5},
+            "hazards": {},
+            "challenge": {
+                "kind": "stationary_lead",
+                "actor_control_mode": "scripted_kinematic_replay",
+                "behavior_realism_claim": False,
+                "initial_gap_m": initial_gap_m,
+                "initial_lane_delta": 0,
+            },
         }
     )
 
@@ -106,6 +146,20 @@ class _Environment:
         self.closed = True
 
 
+class _ChallengeEnvironment(_Environment):
+    def __init__(self, config: dict[str, Any], initial_gap_m: float) -> None:
+        super().__init__(config)
+        gap = initial_gap_m
+        self.hermes_challenge_state = ChallengeActorState(
+            front_distance_m=gap,
+            front_relative_speed_mps=0.0,
+            actor_longitudinal_m=gap + 9.515,
+            actor_lateral_offset_m=0.0,
+            actor_speed_mps=0.0,
+            phase="PRESENT",
+        )
+
+
 class _IDM:
     def __init__(self, control_object: _Agent, seed: int) -> None:
         self.control_object = control_object
@@ -132,6 +186,89 @@ def _dependencies(created: list[_Environment]) -> MetaDriveDependencies:
         simulator_version="0.4.3",
         simulator_commit=SIMULATOR_COMMIT,
         simulator_source=Path("/verified/metadrive/metadrive/__init__.py"),
+    )
+
+
+def _challenge_dependencies(created: list[_Environment]) -> MetaDriveDependencies:
+    dependencies = _dependencies(created)
+
+    def challenge_environment_factory(
+        config: dict[str, Any], payload: dict[str, Any]
+    ) -> _ChallengeEnvironment:
+        environment = _ChallengeEnvironment(config, float(payload["initial_gap_m"]))
+        created.append(environment)
+        return environment
+
+    return MetaDriveDependencies(
+        environment_factory=dependencies.environment_factory,
+        idm_policy_factory=dependencies.idm_policy_factory,
+        action_array=dependencies.action_array,
+        simulator_version=dependencies.simulator_version,
+        simulator_commit=dependencies.simulator_commit,
+        simulator_source=dependencies.simulator_source,
+        challenge_environment_factory=challenge_environment_factory,
+    )
+
+
+def _verification_context(
+    scenario: ScenarioDefinition, adapter: MetaDriveAdapter
+) -> ExecutionContextV3:
+    adapter_config = adapter.evidence_config
+    policy_config = {
+        "backend": "metadrive.policy.idm_policy.IDMPolicy",
+        "backend_version": "0.4.3",
+        "deceleration_enabled": True,
+        "known_limitation": "upstream IDM internal fallback is not structurally surfaced",
+        "lane_change_enabled": False,
+        "output_clipping": "componentwise_bounds_then_ieee754_binary32",
+        "simulated_policy_latency_ms": scenario.control.simulated_policy_latency_ms,
+        "target_speed_km_h": scenario.control.target_speed_mps * 3.6,
+        "target_speed_mps": scenario.control.target_speed_mps,
+    }
+    shield_config: dict[str, object] = {}
+    verifier_suite = verifier_identities_for_profile(
+        select_verifier_profile(scenario), evidence_schema_version="3.0"
+    )
+    run_context = RunContextV3(
+        scenario_digest=scenario_digest(scenario),
+        gate_config_digest="0" * 64,
+        adapter_name="metadrive",
+        adapter_version=adapter.version,
+        adapter_config_digest=config_digest(adapter_config),
+        policy_name="metadrive-idm",
+        policy_version="1.0",
+        policy_config_digest=config_digest(policy_config),
+        shield_name="noop",
+        shield_version="1.0",
+        shield_config_digest=config_digest(shield_config),
+        verifier_suite_digest=config_digest(
+            [identity.model_dump(mode="json") for identity in verifier_suite]
+        ),
+        seed=7,
+        control_frequency_hz=scenario.control.frequency_hz,
+        horizon_steps=scenario.control.horizon_steps,
+    )
+    return ExecutionContextV3(
+        run_context=run_context,
+        adapter=ComponentContext(
+            name="metadrive",
+            version=adapter.version,
+            config=adapter_config,
+            config_digest=run_context.adapter_config_digest,
+        ),
+        policy=ComponentContext(
+            name="metadrive-idm",
+            version="1.0",
+            config=policy_config,
+            config_digest=run_context.policy_config_digest,
+        ),
+        shield=ComponentContext(
+            name="noop",
+            version="1.0",
+            config=shield_config,
+            config_digest=run_context.shield_config_digest,
+        ),
+        verifier_suite=verifier_suite,
     )
 
 
@@ -174,6 +311,41 @@ def test_adapter_translates_verified_headless_config_actions_and_facts() -> None
 
     adapter.close()
     assert created[0].closed is True
+
+
+def test_adapter_derives_a_longer_map_for_an_above_threshold_challenge() -> None:
+    created: list[_Environment] = []
+    adapter = MetaDriveAdapter(dependencies=_challenge_dependencies(created))
+
+    adapter.reset(_challenge_scenario(), seed=7)
+
+    assert created[0].config["map"] == "SSS"
+    adapter.close()
+
+
+def test_stored_verification_accepts_derived_and_committed_metadrive_maps() -> None:
+    challenge_created: list[_Environment] = []
+    challenge_scenario = _challenge_scenario()
+    challenge_adapter = MetaDriveAdapter(
+        dependencies=_challenge_dependencies(challenge_created)
+    )
+    challenge_adapter.reset(challenge_scenario, seed=7)
+    challenge_errors = _profile_errors(
+        _verification_context(challenge_scenario, challenge_adapter), challenge_scenario, None
+    )
+
+    nominal_created: list[_Environment] = []
+    nominal_scenario = _scenario()
+    nominal_adapter = MetaDriveAdapter(dependencies=_dependencies(nominal_created))
+    nominal_adapter.reset(nominal_scenario, seed=7)
+    nominal_errors = _profile_errors(
+        _verification_context(nominal_scenario, nominal_adapter), nominal_scenario, None
+    )
+
+    assert not any("MetaDrive adapter" in error for error in challenge_errors)
+    assert not any("MetaDrive adapter" in error for error in nominal_errors)
+    challenge_adapter.close()
+    nominal_adapter.close()
 
 
 def test_adapter_validates_and_preserves_nonzero_lateral_reset() -> None:
