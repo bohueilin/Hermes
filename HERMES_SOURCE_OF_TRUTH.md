@@ -857,7 +857,7 @@ Each item states how you know it is done and what it will break.
    scheduler, trace rules and oracle. Author in threat/nominal pairs using
    `tests/integration/test_cut_in_generalisation.py` as the template. Keep nominal exposure ≥30%.
 4. ~~Wire the faults to ADAS~~ **DONE** (Phase 3) — observation faults enabled for the exact ADAS
-   policy identity, with a measured delay scenario whose baseline degrades into a named finding. Plumbing exists and is unused.
+   policy identity, with a measured delay scenario whose baseline degrades into a named finding.
    `orchestrator.py:514-528` bars observation faults on MetaDrive — written for IDM, which ignores
    observations; the ADAS controller does not. Revisit, do not work around.
 5. **ACC, two-stage gate, review-envelope variation axis** (`review/models.py:2615`, `:2105-2114`,
