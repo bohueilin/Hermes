@@ -7,7 +7,15 @@ from pydantic import ValidationError
 
 import hermes.domain.models as domain_models
 from hermes.domain.enums import EvidenceAvailability, FindingStatus, Severity, Verdict
-from hermes.domain.models import Action, Finding, Measurement, RunContext, VehicleState
+from hermes.domain.models import (
+    Action,
+    Finding,
+    Measurement,
+    Observation,
+    RunContext,
+    ScenarioDefinition,
+    VehicleState,
+)
 
 
 def test_action_rejects_out_of_range_and_conflicting_longitudinal_commands() -> None:
@@ -139,6 +147,74 @@ def test_public_enum_values_are_stable_and_explicit() -> None:
     assert Verdict.HOLD.value == "HOLD"
     assert Verdict.INVALID_EVIDENCE.value == "INVALID_EVIDENCE"
     assert FindingStatus.NOT_AVAILABLE.value == "NOT_AVAILABLE"
+
+
+def _steady_lead_scenario_payload(*, actor_speed_mps: float = 4.0) -> dict[str, object]:
+    return {
+        "schema_version": "4.0",
+        "name": "steady_lead_domain_unit",
+        "version": "1.0",
+        "description": "Steady lead challenge schema unit scenario.",
+        "adapter": "metadrive",
+        "control": {
+            "frequency_hz": 10,
+            "horizon_steps": 2,
+            "target_speed_mps": 8.0,
+        },
+        "initial_state": {"speed_mps": 8.0, "lateral_offset_m": 0.0},
+        "road": {"destination_distance_m": 20.0, "boundary_tolerance_m": 1.5},
+        "challenge": {
+            "kind": "steady_lead",
+            "actor_control_mode": "scripted_kinematic_replay",
+            "behavior_realism_claim": False,
+            "initial_gap_m": 12.0,
+            "actor_speed_mps": actor_speed_mps,
+            "initial_lane_delta": 0,
+        },
+    }
+
+
+def test_steady_lead_challenge_is_an_additive_round_trippable_union_member() -> None:
+    scenario = ScenarioDefinition.model_validate(_steady_lead_scenario_payload())
+
+    assert scenario.challenge is not None
+    assert scenario.challenge.kind == "steady_lead"
+    assert scenario.challenge.model_dump(mode="json") == {
+        "kind": "steady_lead",
+        "actor_control_mode": "scripted_kinematic_replay",
+        "behavior_realism_claim": False,
+        "initial_gap_m": 12.0,
+        "actor_speed_mps": 4.0,
+        "initial_lane_delta": 0,
+    }
+    assert ScenarioDefinition.model_validate(
+        scenario.model_dump(mode="json")
+    ).challenge == scenario.challenge
+
+
+def test_steady_lead_challenge_rejects_zero_actor_speed() -> None:
+    with pytest.raises(ValidationError, match="actor_speed_mps"):
+        ScenarioDefinition.model_validate(_steady_lead_scenario_payload(actor_speed_mps=0.0))
+
+
+def test_observation_accepts_the_steady_challenge_phase() -> None:
+    observation = Observation(
+        sequence=0,
+        simulation_time_s=0.0,
+        vehicle_state=VehicleState(
+            position_m=0.0,
+            speed_mps=8.0,
+            acceleration_mps2=0.0,
+            lateral_offset_m=0.0,
+            route_progress_pct=0.0,
+            collision_count=0,
+            offroad=False,
+            destination_reached=False,
+        ),
+        challenge_phase="STEADY",
+    )
+
+    assert observation.challenge_phase == "STEADY"
 
 
 @pytest.mark.parametrize(

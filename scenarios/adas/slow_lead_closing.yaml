@@ -1,0 +1,59 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# Steady moving-lead threat with 10 m/s closure. Oracle threat begins near gap
+# 2 + 10^2 / 3.6 = 29.8 m (~0.2 s after reset). Controller PARTIAL staging begins near
+# gap 2 + 10^2 / 4.8 = 22.8 m (~0.9 s, TTC 2.28 s), where required deceleration is
+# 2.4 m/s^2, 40% of the 6.0 m/s^2 oracle onset limit. FCW advisory geometry crosses at
+# gap 26 m. The response window completes within roughly 45-60 m of the measured seed-7
+# ego travel budget of ~120.4 m. Gap 32 m derives map "S" / adapter 1.1; needed extent
+# 41.5 m remains below the 90 m worst-case-safe straight-block bound. Early
+# DESTINATION_REACHED and a possible post-release re-approach are expected; neither the
+# intervention count nor overall verdict is an authored acceptance assertion.
+schema_version: "4.0"
+name: slow_lead_closing
+version: "1.0"
+description: Ego closes on a constant-speed in-lane lead through FCW and AEB geometry.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 200
+  target_speed_mps: 20.0
+  # Simulator-measured 20 m/s full-brake peak from
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+challenge:
+  kind: steady_lead
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 32.0
+  actor_speed_mps: 10.0
+  initial_lane_delta: 0
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - threat
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: required
+    before_ttc_s: 2.6
+  expected_aeb:
+    kind: required

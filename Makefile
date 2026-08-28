@@ -20,7 +20,7 @@ DEMO_ARTIFACT := artifacts/$(DEMO_RUN_ID)
 
 .PHONY: install install-dev doctor test lint check demo-phase1 sim-smoke fixtures \
 	demo-adas demo-adas-tradeoff demo-seeded-defects demo-flywheel demo-cut-in \
-	demo-stationary demo-fcw-stationary preflight
+	demo-stationary demo-fcw-stationary demo-steady-lead preflight
 
 # Fail early and actionably rather than deep inside a demo.
 preflight:
@@ -174,6 +174,23 @@ demo-fcw-stationary: preflight
 	@echo ""
 	@echo "--- the FCW stationary pair must separate by geometry and preserve warning margin ---"
 	$(PYTHON) -m pytest -q tests/integration/test_fcw_stationary_lead_generalisation.py
+
+# Constant-speed moving-lead complement: the unchanged oracle separates a 10 m/s closing
+# threat from same-speed following geometry, while trace verification pins scripted speed.
+demo-steady-lead: preflight
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/slow_lead_closing.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "steady-lead-threat-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/fcw_aeb_nominal_following.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "steady-lead-nominal-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	@echo ""
+	@echo "--- the steady-lead pair must separate by geometry and preserve actor speed ---"
+	$(PYTHON) -m pytest -q tests/integration/test_steady_lead_generalisation.py
 
 # The evaluation's own acceptance criterion: controllers broken on purpose must be caught.
 demo-seeded-defects: preflight
