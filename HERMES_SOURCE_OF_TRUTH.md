@@ -864,8 +864,18 @@ Each item states how you know it is done and what it will break.
    `decelerating_but_safe_lead`, moving `adjacent_lane_pass` — unlocked by the
    **`steady_lead` contract, owner-approved as written 2026-08-27**
    (memo: `…/Hermes-adas/.superpowers/sdd/phase8-p0-fcw-scenarios/steady-lead-owner-memo.md`,
-   ignored dir; scenario VALUES still need measured per-scenario acceptance per its
-   decision 8; `decelerating_but_safe_lead` needs the separate `lead_decelerates` decision).
+   ignored dir; `decelerating_but_safe_lead` needs the separate `lead_decelerates`
+   decision). **Implemented 2026-08-28** on `feat/phase8-steady-lead` (2 commits from
+   `deeca8c`: the kind at `de19c19`, the pair `slow_lead_closing` +
+   `fcw_aeb_nominal_following` at `de29de7`) and independently verified by a six-agent
+   pass: suite **1,521** (+39 fully accounted), an INDEPENDENT rerun reproduced the
+   report's trace/events digests bit-for-bit, and the per-step speed check was proven
+   non-vacuous against a hash-consistent forgery (typed rejection). Measured: threat
+   PARTIAL at seq 10 (2.44 m/s²), four intervention cycles, min gap 4.01 m, zero
+   collisions, CONDITIONAL; nominal 61 events, zero braking, gap opens +1.18 m,
+   CONDITIONAL. **Awaiting two owner calls**: accept the measured Decision-8 values, and
+   ratify/reject the `actor_speed_mps > 0.0` narrowing (memo left the bound unstated).
+   Unmerged; report: `…/Hermes-adas/.superpowers/sdd/phase8-steady-lead/report.md`.
    `cut_out_reveal_stopped` stays owner-blocked (actor roster; a future roster needs a NEW
    evidence-schema version — 3.0 is taken by metrics-V3). Oracle is kind-agnostic by test;
    the newer template is `tests/integration/test_stationary_lead_generalisation.py`. Keep
