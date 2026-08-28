@@ -114,9 +114,9 @@ hermes regression promote <draft> --execute
 hermes fixtures regenerate                 # restore the test fixtures on a fresh clone
 ```
 
-Phase 8 is **partial**: FCW and AEB are implemented and evaluated, with the agentic layer and
-the regression flywheel closed; ACC, LKA, combined assist, `RunMetricsV3` and the workbench
-panels are not. See [HERMES_SOURCE_OF_TRUTH.md](HERMES_SOURCE_OF_TRUTH.md) §11 for what
+Phase 8 is **partial**: FCW and AEB are implemented and evaluated, with the agentic layer,
+the regression flywheel, and `RunMetricsV3` (evidence schema 3.0) closed; ACC, LKA, combined
+assist, and the remaining workbench panels are not. See [HERMES_SOURCE_OF_TRUTH.md](HERMES_SOURCE_OF_TRUTH.md) §11 for what
 remains. Two scenarios and one seed are a reference implementation, not a safety case.
 
 ## Safety boundary
