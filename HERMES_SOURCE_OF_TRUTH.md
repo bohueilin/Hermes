@@ -10,12 +10,12 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
-| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; suite union **1,451** (1,418 branch + 33 fleet — §11.1 item 2) |
+| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2` — suite **1,482** in the ADAS worktree (§11.1 item 3) |
 | **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 33 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-08-26 |
+| **Last updated** | 2026-08-27 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -851,11 +851,26 @@ Each item states how you know it is done and what it will break.
    > static-typing mismatch one call deeper into `_fault_coverage` (no checker configured, no
    > runtime effect), and the new stored-V2 test type-checks only `events[0]` (schema
    > homogeneity already validated upstream).
-3. **Four remaining FCW/AEB named P0 scenarios** — `fcw_stationary_lead`, `aeb_stationary_lead`,
-   `slow_lead_closing`, `cut_out_reveal_stopped` — plus the four named nominal entries. **Blocked
-   on new challenge kinds** (`ChallengeConfig` has exactly two); each touches schema, adapter
-   scheduler, trace rules and oracle. Author in threat/nominal pairs using
-   `tests/integration/test_cut_in_generalisation.py` as the template. Keep nominal exposure ≥30%.
+3. **P0 scenario catalog** (this note was re-measured 2026-08-26 — the old "four remaining /
+   two kinds / touches oracle" text was stale). Done: `aeb_stationary_lead` (+ delay variant,
+   Phase 3) and **`fcw_stationary_lead` merged 2026-08-27 (`deeca8c`)** — warning-margin
+   envelope on the `stationary_lead` kind, measured margin 2.9 s, geometry coverage only
+   (warning-OUTPUT verification is deliberately unimplemented); landed with the
+   **derived-map adapter change** (`metadrive_map_for_gap` shared by producer and verifier;
+   committed scenarios stay byte-identical on `"S"`; gap 140 → `"SSS"`) and **conditional
+   adapter `1.2`** (closed-set version contract, eleven-case matrix; cross-era claim is
+   re-verifiability only, never comparability — see the 2026-08-27 decision-log entry).
+   Remaining: `slow_lead_closing` + nominals `fcw_aeb_nominal_following`,
+   `decelerating_but_safe_lead`, moving `adjacent_lane_pass` — unlocked by the
+   **`steady_lead` contract, owner-approved as written 2026-08-27**
+   (memo: `…/Hermes-adas/.superpowers/sdd/phase8-p0-fcw-scenarios/steady-lead-owner-memo.md`,
+   ignored dir; scenario VALUES still need measured per-scenario acceptance per its
+   decision 8; `decelerating_but_safe_lead` needs the separate `lead_decelerates` decision).
+   `cut_out_reveal_stopped` stays owner-blocked (actor roster; a future roster needs a NEW
+   evidence-schema version — 3.0 is taken by metrics-V3). Oracle is kind-agnostic by test;
+   the newer template is `tests/integration/test_stationary_lead_generalisation.py`. Keep
+   nominal exposure ≥30% as a designed property (5 threat / 5 nominal tags after the fcw
+   pair reuse).
 4. ~~Wire the faults to ADAS~~ **DONE** (Phase 3) — observation faults enabled for the exact ADAS
    policy identity, with a measured delay scenario whose baseline degrades into a named finding.
    `orchestrator.py:514-528` bars observation faults on MetaDrive — written for IDM, which ignores
@@ -972,7 +987,7 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
 | Should the threat oracle read omniscient state rather than the trace? | Stronger; not implemented (§6.2). |
 | Phase 7A acceptance and any merge of the codex branch. | Built, not accepted; 7B blocked. |
 | ~~Merge `feat/phase8-metrics-v3` onto `main`?~~ **Decided 2026-08-26: merged** (`b447fc4`, conflict-free — only `src/hermes/cli.py` overlapped, additively). Branch-side evidence stands, commit-bound to `2dda024`; the merge commit was deliberately **not** separately requalified (its `src`+`tests` tree is the verified branch plus disjoint fleet files). | Any future claim of merge-commit-bound evidence still needs a fresh six-run attempt at `b447fc4` or later. |
-| ~~Authorize the MetaDrive longer-map derivation?~~ **Approved and executed 2026-08-26** — Tasks 0/A landed on `feat/phase8-p0-fcw-scenarios` (`b8defdd` shared derivation in `simulator_support.py`, every committed scenario stays `"S"`; `cae6c28` `fcw_stationary_lead` at 140 m, measured warning-margin 2.9 s, suite 1,471, all gates green; Phase-4 acceptance roots re-verified INTERNALLY_CONSISTENT under the new verifier). **HELD unmerged**: final review found the no-version-bump rule wrong for the declared input space — legacy long-gap (100.5–120 m band) adapter-`1.1`/`"S"` bundles, valid before, are now rejected (the verifier derives `"SSS"` with no version discriminator). | **Resolved 2026-08-27**: conditional adapter `1.2` landed as `fd82ead` and was independently verified (six-agent pass — suite 1,482; eleven-case matrix probed independently: the legacy `1.1`/`"S"` long-gap blocker shape now accepted, crossed/unknown shapes rejected at the correct layer; both acceptance-root composites byte-intact; zero transitional `1.1`/derived-map residue). Branch `feat/phase8-p0-fcw-scenarios` (3 commits from `b447fc4`) is **verified mergeable** — dry-run vs `main`: zero overlapping files, conflict-free. Cross-era claim is RE-VERIFIABILITY only, never comparability. Awaiting the owner's merge word; the steady-lead owner memo (`steady-lead-owner-memo.md`, same dir) separately awaits approve/amend/defer. |
+| ~~Authorize the MetaDrive longer-map derivation?~~ **Approved and executed 2026-08-26** — Tasks 0/A landed on `feat/phase8-p0-fcw-scenarios` (`b8defdd` shared derivation in `simulator_support.py`, every committed scenario stays `"S"`; `cae6c28` `fcw_stationary_lead` at 140 m, measured warning-margin 2.9 s, suite 1,471, all gates green; Phase-4 acceptance roots re-verified INTERNALLY_CONSISTENT under the new verifier). **HELD unmerged**: final review found the no-version-bump rule wrong for the declared input space — legacy long-gap (100.5–120 m band) adapter-`1.1`/`"S"` bundles, valid before, are now rejected (the verifier derives `"SSS"` with no version discriminator). | **Resolved 2026-08-27**: conditional adapter `1.2` landed as `fd82ead` and was independently verified (six-agent pass — suite 1,482; eleven-case matrix probed independently: the legacy `1.1`/`"S"` long-gap blocker shape now accepted, crossed/unknown shapes rejected at the correct layer; both acceptance-root composites byte-intact; zero transitional `1.1`/derived-map residue). Branch `feat/phase8-p0-fcw-scenarios` (3 commits from `b447fc4`) **merged onto `main` 2026-08-27 as `deeca8c`** (conflict-free, zero overlapping files). Cross-era claim is RE-VERIFIABILITY only, never comparability. The steady-lead owner memo was **approved as written 2026-08-27** — §11.1 item 3 carries the follow-through. |
 | Track the Phase 9 PRD in git? Push `main`? Set a default branch? LICENSE? | §11.4. |
 | Name the MuJoCo niche; assign an owner. | Nothing graduates without both. |
 
