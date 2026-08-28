@@ -161,7 +161,12 @@ def _challenge_event(
     initial_gap = scenario.challenge.initial_gap_m
     actor_speed = getattr(scenario.challenge, "actor_speed_mps", 0.0)
     in_path = getattr(scenario.challenge, "initial_lane_delta", 0) == 0
-    phase = "PRESENT" if scenario.challenge.kind == "stationary_lead" else "PRE_TRIGGER"
+    if scenario.challenge.kind == "stationary_lead":
+        phase = "PRESENT"
+    elif scenario.challenge.kind == "steady_lead":
+        phase = "STEADY"
+    else:
+        phase = "PRE_TRIGGER"
     context = _context(horizon_steps=scenario.control.horizon_steps).model_copy(
         update={"adapter_name": "metadrive", "policy_name": "metadrive-idm"}
     )
@@ -241,9 +246,14 @@ def _fault_challenge_event(
     assert scenario.challenge is not None
     actor_speed = getattr(scenario.challenge, "actor_speed_mps", 0.0)
     in_path = getattr(scenario.challenge, "initial_lane_delta", 0) == 0
-    phase = input_phase or (
-        "PRESENT" if scenario.challenge.kind == "stationary_lead" else "PRE_TRIGGER"
-    )
+    if input_phase is not None:
+        phase = input_phase
+    elif scenario.challenge.kind == "stationary_lead":
+        phase = "PRESENT"
+    elif scenario.challenge.kind == "steady_lead":
+        phase = "STEADY"
+    else:
+        phase = "PRE_TRIGGER"
     if front_relative_speed_mps is _UNSET:
         front_relative_speed_mps = actor_speed if in_path else None
     if result_actor_speed_mps is _UNSET:
@@ -597,6 +607,509 @@ def _stationary_scenario(
             "control_delay_steps": 1,
         }
     return ScenarioDefinition.model_validate(payload)
+
+
+def _steady_scenario(
+    *,
+    initial_lane_delta: int = 0,
+    with_fault: bool = False,
+) -> ScenarioDefinition:
+    payload: dict[str, object] = {
+        "schema_version": "4.0",
+        "name": "steady_trace_unit",
+        "version": "1.0",
+        "description": "Steady actor trace-contract unit scenario.",
+        "adapter": "metadrive",
+        "control": {
+            "frequency_hz": 10,
+            "horizon_steps": 2,
+            "target_speed_mps": 0.0,
+        },
+        "initial_state": {"speed_mps": 0.0, "lateral_offset_m": 0.0},
+        "road": {"destination_distance_m": 20.0, "boundary_tolerance_m": 1.5},
+        "challenge": {
+            "kind": "steady_lead",
+            "actor_control_mode": "scripted_kinematic_replay",
+            "behavior_realism_claim": False,
+            "initial_gap_m": 12.0,
+            "actor_speed_mps": 4.0,
+            "initial_lane_delta": initial_lane_delta,
+        },
+    }
+    if with_fault:
+        payload["faults"] = {
+            "schema_version": "1.0",
+            "name": "steady_control_delay",
+            "version": "1.0",
+            "label": "illustrative_simulation_faults_not_real_vehicle_limits",
+            "control_delay_steps": 1,
+        }
+    return ScenarioDefinition.model_validate(payload)
+
+
+def _steady_observations(scenario: ScenarioDefinition) -> tuple[Observation, ...]:
+    assert scenario.challenge is not None
+    assert scenario.challenge.kind == "steady_lead"
+    in_path = scenario.challenge.initial_lane_delta == 0
+    observations = []
+    for sequence in range(3):
+        actor_advance = scenario.challenge.actor_speed_mps * sequence / 10
+        observations.append(
+            Observation(
+                sequence=sequence,
+                simulation_time_s=sequence / 10,
+                vehicle_state=VehicleState(
+                    position_m=0.0,
+                    speed_mps=0.0,
+                    acceleration_mps2=0.0,
+                    lateral_offset_m=0.0,
+                    route_progress_pct=0.0,
+                    collision_count=0,
+                    offroad=False,
+                    destination_reached=False,
+                ),
+                front_distance_m=(
+                    scenario.challenge.initial_gap_m + actor_advance
+                    if in_path
+                    else None
+                ),
+                front_relative_speed_mps=(
+                    scenario.challenge.actor_speed_mps if in_path else None
+                ),
+                challenge_actor_longitudinal_m=(
+                    scenario.challenge.initial_gap_m + 4.515 + actor_advance
+                ),
+                challenge_actor_lateral_offset_m=(
+                    4.0 * scenario.challenge.initial_lane_delta
+                ),
+                challenge_actor_speed_mps=scenario.challenge.actor_speed_mps,
+                challenge_phase="STEADY",
+            )
+        )
+    return tuple(observations)
+
+
+def _challenge_summary(
+    delivered: Observation,
+    result: Observation,
+) -> dict[str, object]:
+    return {
+        "input_sequence": delivered.sequence,
+        "input_simulation_time_s": delivered.simulation_time_s,
+        "speed_mps": delivered.vehicle_state.speed_mps,
+        "lateral_offset_m": delivered.vehicle_state.lateral_offset_m,
+        "route_progress_pct": delivered.vehicle_state.route_progress_pct,
+        "observation_age_s": delivered.observation_age_s,
+        "front_distance_m": delivered.front_distance_m,
+        "front_relative_speed_mps": delivered.front_relative_speed_mps,
+        "challenge_actor_longitudinal_m": delivered.challenge_actor_longitudinal_m,
+        "challenge_actor_lateral_offset_m": (
+            delivered.challenge_actor_lateral_offset_m
+        ),
+        "challenge_actor_speed_mps": delivered.challenge_actor_speed_mps,
+        "challenge_phase": delivered.challenge_phase,
+        "result_front_distance_m": result.front_distance_m,
+        "result_front_relative_speed_mps": result.front_relative_speed_mps,
+        "result_challenge_actor_longitudinal_m": (
+            result.challenge_actor_longitudinal_m
+        ),
+        "result_challenge_actor_lateral_offset_m": (
+            result.challenge_actor_lateral_offset_m
+        ),
+        "result_challenge_actor_speed_mps": result.challenge_actor_speed_mps,
+        "result_challenge_phase": result.challenge_phase,
+    }
+
+
+def _multi_event_steady_trace(
+    scenario: ScenarioDefinition,
+    *,
+    later_summary_updates: dict[str, object] | None = None,
+):
+    assert scenario.faults is None
+    observations = _steady_observations(scenario)
+    context = _context(horizon_steps=scenario.control.horizon_steps).model_copy(
+        update={"adapter_name": "metadrive", "policy_name": "metadrive-idm"}
+    )
+    action = Action(steering=0.0, throttle=0.0, brake=0.0)
+    previous_hash = GENESIS_HASH
+    events = []
+    for sequence in range(2):
+        summary = _challenge_summary(observations[sequence], observations[sequence + 1])
+        if sequence == 1:
+            summary.update(later_summary_updates or {})
+        is_last = sequence == 1
+        event = create_trace_event(
+            sequence=sequence,
+            simulation_time_s=(sequence + 1) / 10,
+            run_context=context,
+            observation_summary=summary,
+            candidate_action=action,
+            executed_action=action,
+            override_reasons=(),
+            vehicle_state=observations[sequence + 1].vehicle_state,
+            policy_latency_ms=10.0,
+            latency_source="simulated",
+            terminated=False,
+            truncated=is_last,
+            termination_reason=(
+                TerminationReason.HORIZON if is_last else TerminationReason.NONE
+            ),
+            raw_facts={
+                "collision": False,
+                "collision_count": 0,
+                "offroad": False,
+                "destination_reached": False,
+                "route_progress_available": True,
+                "route_progress_pct": 0.0,
+            },
+            previous_hash=previous_hash,
+        )
+        events.append(event)
+        previous_hash = event.current_hash
+    return tuple(events)
+
+
+def _multi_event_fault_steady_trace(
+    scenario: ScenarioDefinition,
+    *,
+    later_delivered_updates: dict[str, object] | None = None,
+    later_result_updates: dict[str, object] | None = None,
+):
+    assert scenario.faults is not None
+    observations = _steady_observations(scenario)
+    context = RunContextV2(
+        scenario_digest="a" * 64,
+        gate_config_digest="b" * 64,
+        adapter_name="metadrive",
+        adapter_version="1.1",
+        adapter_config_digest="c" * 64,
+        policy_name="metadrive-idm",
+        policy_version="1.0",
+        policy_config_digest="d" * 64,
+        shield_name="noop",
+        shield_version="1.0",
+        shield_config_digest="e" * 64,
+        verifier_suite_digest="f" * 64,
+        fault_name="deterministic-faults",
+        fault_version="1.0",
+        fault_config_digest="1" * 64,
+        seed=7,
+        control_frequency_hz=10,
+        horizon_steps=scenario.control.horizon_steps,
+    )
+    action = Action(steering=0.0, throttle=0.0, brake=0.0)
+    previous_hash = GENESIS_HASH
+    events = []
+    for sequence in range(2):
+        raw = observations[sequence]
+        delivered = raw
+        result = observations[sequence + 1]
+        if sequence == 1:
+            delivered = delivered.model_copy(update=later_delivered_updates or {})
+            result = result.model_copy(update=later_result_updates or {})
+        observation_evidence = ObservationFaultEvidence(
+            raw_observation=raw,
+            delivered_observation=delivered,
+            delivered_from_sequence=sequence,
+            delivered_from_time_s=raw.simulation_time_s,
+            delivery_time_s=raw.simulation_time_s,
+            applied_faults=(),
+            speed_noise_delta_mps=0.0,
+            lateral_noise_delta_m=0.0,
+        )
+        if sequence == 0:
+            source_sequence = None
+            source_time = None
+            applied_faults = ("CONTROL_DELAY_FILL",)
+            latency = Measurement(
+                availability=EvidenceAvailability.NOT_AVAILABLE,
+                reason="control-delay startup fill has no originating candidate",
+                unit="ms",
+            )
+        else:
+            source_sequence = 0
+            source_time = 0.0
+            applied_faults = ("CONTROL_DELAY",)
+            latency = Measurement(
+                availability=EvidenceAvailability.AVAILABLE,
+                value=100.0,
+                unit="ms",
+            )
+        is_last = sequence == 1
+        event = create_trace_event_v2(
+            sequence=sequence,
+            simulation_time_s=(sequence + 1) / 10,
+            run_context=context,
+            observation_summary=_challenge_summary(delivered, result),
+            candidate_action=action,
+            permitted_action=action,
+            executed_action=action,
+            override_reasons=(),
+            observation_fault_evidence=observation_evidence,
+            control_fault_evidence=ControlFaultEvidence(
+                candidate_time_s=sequence / 10,
+                executed_from_sequence=source_sequence,
+                executed_from_candidate_time_s=source_time,
+                execution_time_s=sequence / 10,
+                pre_saturation_action=action,
+                applied_faults=applied_faults,
+                control_latency_ms=latency,
+                latency_source="simulated",
+            ),
+            result_observation=result,
+            vehicle_state=result.vehicle_state,
+            policy_latency_ms=10.0,
+            latency_source="simulated",
+            terminated=False,
+            truncated=is_last,
+            termination_reason=(
+                TerminationReason.HORIZON if is_last else TerminationReason.NONE
+            ),
+            raw_facts={
+                "collision": False,
+                "collision_count": 0,
+                "offroad": False,
+                "destination_reached": False,
+                "route_progress_available": True,
+                "route_progress_pct": 0.0,
+            },
+            previous_hash=previous_hash,
+        )
+        events.append(event)
+        previous_hash = event.current_hash
+    return tuple(events)
+
+
+def test_steady_challenge_trace_accepts_declared_speed_phase_and_in_lane_gap() -> None:
+    scenario = _steady_scenario()
+    event = _challenge_event(scenario)
+
+    assert verify_complete_trace((event,), scenario) == event.current_hash
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    ["challenge_actor_speed_mps", "result_challenge_actor_speed_mps"],
+)
+def test_steady_challenge_trace_rejects_off_speed_input_and_result(
+    field_name: str,
+) -> None:
+    scenario = _steady_scenario()
+    event = _challenge_event(scenario, summary_updates={field_name: 4.001})
+
+    with pytest.raises(TraceIntegrityError, match="initial challenge actor speed"):
+        verify_complete_trace((event,), scenario)
+
+
+def test_multi_event_steady_trace_accepts_later_constant_speed_and_continuity() -> None:
+    scenario = _steady_scenario()
+    events = _multi_event_steady_trace(scenario)
+
+    assert verify_complete_trace(events, scenario) == events[-1].current_hash
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    ["challenge_actor_speed_mps", "result_challenge_actor_speed_mps"],
+)
+def test_multi_event_steady_trace_rejects_later_off_speed_input_and_result(
+    field_name: str,
+) -> None:
+    scenario = _steady_scenario()
+    events = _multi_event_steady_trace(
+        scenario,
+        later_summary_updates={field_name: 4.001},
+    )
+
+    with pytest.raises(
+        TraceIntegrityError,
+        match=rf"{field_name} contradicts declared steady actor speed at sequence 1",
+    ):
+        verify_complete_trace(events, scenario)
+
+
+def test_multi_event_steady_trace_uses_generic_actor_continuity() -> None:
+    scenario = _steady_scenario()
+    events = _multi_event_steady_trace(
+        scenario,
+        later_summary_updates={"challenge_actor_longitudinal_m": 99.0},
+    )
+
+    with pytest.raises(
+        TraceIntegrityError,
+        match="challenge_actor_longitudinal_m disagrees with the prior result at sequence 1",
+    ):
+        verify_complete_trace(events, scenario)
+
+
+def test_steady_challenge_trace_rejects_false_phase_without_crashing() -> None:
+    scenario = _steady_scenario()
+    event = _challenge_event(scenario, summary_updates={"result_challenge_phase": "PRESENT"})
+
+    with pytest.raises(TraceIntegrityError, match="contradicts the scenario schedule"):
+        verify_complete_trace((event,), scenario)
+
+
+def test_steady_challenge_trace_binds_initial_in_lane_gap() -> None:
+    scenario = _steady_scenario()
+    event = _challenge_event(scenario, summary_updates={"front_distance_m": 11.0})
+
+    with pytest.raises(TraceIntegrityError, match="initial front gap"):
+        verify_complete_trace((event,), scenario)
+
+
+def test_adjacent_steady_trace_accepts_paired_null_front_fields() -> None:
+    scenario = _steady_scenario(initial_lane_delta=1)
+    event = _challenge_event(scenario)
+
+    assert verify_complete_trace((event,), scenario) == event.current_hash
+
+
+def test_adjacent_steady_trace_rejects_false_front_overlap() -> None:
+    scenario = _steady_scenario(initial_lane_delta=1)
+    event = _challenge_event(
+        scenario,
+        summary_updates={
+            "front_distance_m": scenario.challenge.initial_gap_m,
+            "front_relative_speed_mps": 4.0,
+        },
+    )
+
+    with pytest.raises(TraceIntegrityError, match="adjacent steady actor"):
+        verify_complete_trace((event,), scenario)
+
+
+def test_fault_steady_trace_accepts_declared_speed_phase_and_in_lane_gap() -> None:
+    scenario = _steady_scenario(with_fault=True)
+    event = _fault_challenge_event(scenario)
+
+    assert verify_complete_trace((event,), scenario) == event.current_hash
+
+
+def test_multi_event_fault_steady_trace_accepts_later_constant_speed_and_continuity() -> None:
+    scenario = _steady_scenario(with_fault=True)
+    events = _multi_event_fault_steady_trace(scenario)
+
+    assert verify_complete_trace(events, scenario) == events[-1].current_hash
+
+
+def test_multi_event_fault_steady_trace_rejects_later_off_speed_result() -> None:
+    scenario = _steady_scenario(with_fault=True)
+    events = _multi_event_fault_steady_trace(
+        scenario,
+        later_result_updates={"challenge_actor_speed_mps": 4.001},
+    )
+
+    with pytest.raises(
+        TraceIntegrityError,
+        match=(
+            "result_challenge_actor_speed_mps contradicts declared steady actor speed "
+            "at sequence 1"
+        ),
+    ):
+        verify_complete_trace(events, scenario)
+
+
+def test_multi_event_fault_steady_trace_rejects_later_off_speed_delivered_input() -> None:
+    scenario = _steady_scenario(with_fault=True)
+    events = _multi_event_fault_steady_trace(
+        scenario,
+        later_delivered_updates={"challenge_actor_speed_mps": 4.001},
+    )
+
+    with pytest.raises(
+        TraceIntegrityError,
+        match=(
+            "challenge_actor_speed_mps contradicts declared steady actor speed "
+            "at sequence 1"
+        ),
+    ):
+        verify_complete_trace(events, scenario)
+
+
+def test_fault_adjacent_steady_delivered_summary_accepts_paired_null_front_fields() -> None:
+    scenario = _steady_scenario(initial_lane_delta=1, with_fault=True)
+    event = _fault_challenge_event(scenario)
+
+    assert verify_complete_trace((event,), scenario) == event.current_hash
+
+
+def test_fault_in_lane_steady_delivered_summary_rejects_incorrect_initial_gap() -> None:
+    scenario = _steady_scenario(with_fault=True)
+    event = _fault_challenge_event(
+        scenario,
+        delivered_updates={"front_distance_m": 11.0},
+    )
+
+    with pytest.raises(TraceIntegrityError, match="initial front gap"):
+        verify_complete_trace((event,), scenario)
+
+
+def test_fault_adjacent_steady_delivered_summary_rejects_false_front_overlap() -> None:
+    scenario = _steady_scenario(initial_lane_delta=1, with_fault=True)
+    event = _fault_challenge_event(
+        scenario,
+        delivered_updates={
+            "front_distance_m": scenario.challenge.initial_gap_m,
+            "front_relative_speed_mps": 4.0,
+        },
+    )
+
+    with pytest.raises(TraceIntegrityError, match="adjacent steady actor"):
+        verify_complete_trace((event,), scenario)
+
+
+@pytest.mark.parametrize(
+    ("packet", "updates"),
+    [
+        ("delivered", {"delivered_updates": {"challenge_actor_speed_mps": 4.001}}),
+        ("result", {"result_updates": {"challenge_actor_speed_mps": 4.001}}),
+    ],
+)
+def test_fault_steady_trace_rejects_off_speed_delivered_and_result_packets(
+    packet: str,
+    updates: dict[str, object],
+) -> None:
+    del packet
+    scenario = _steady_scenario(with_fault=True)
+    event = _fault_challenge_event(scenario, **updates)
+
+    with pytest.raises(TraceIntegrityError, match="initial actor speed"):
+        verify_complete_trace((event,), scenario)
+
+
+@pytest.mark.parametrize(
+    ("raw_updates", "message"),
+    [
+        ({"challenge_actor_speed_mps": 4.001}, "raw steady actor speed"),
+        ({"challenge_phase": "PRESENT"}, "raw steady actor phase"),
+        ({"front_distance_m": 11.0}, "raw initial front gap"),
+    ],
+)
+def test_fault_steady_trace_binds_initial_raw_actor_to_scenario(
+    raw_updates: dict[str, object],
+    message: str,
+) -> None:
+    scenario = _steady_scenario(with_fault=True)
+    event = _fault_challenge_event(scenario, raw_updates=raw_updates)
+
+    with pytest.raises(TraceIntegrityError, match=message):
+        verify_complete_trace((event,), scenario)
+
+
+def test_fault_adjacent_steady_raw_actor_requires_paired_null_front_fields() -> None:
+    scenario = _steady_scenario(initial_lane_delta=1, with_fault=True)
+    event = _fault_challenge_event(
+        scenario,
+        raw_updates={
+            "front_distance_m": scenario.challenge.initial_gap_m,
+            "front_relative_speed_mps": 4.0,
+        },
+    )
+
+    with pytest.raises(TraceIntegrityError, match="paired-null front fields"):
+        verify_complete_trace((event,), scenario)
 
 
 def test_stationary_challenge_trace_accepts_present_zero_speed_and_initial_gap() -> None:

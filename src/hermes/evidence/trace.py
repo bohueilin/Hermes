@@ -472,6 +472,7 @@ _CHALLENGE_PHASES = {
     "CUT_IN",
     "POST_CUT_IN",
     "PRESENT",
+    "STEADY",
 }
 
 
@@ -550,6 +551,8 @@ def _expected_challenge_phase(
         raise TraceIntegrityError("challenge configuration is unavailable")
     if challenge.kind == "stationary_lead":
         return "PRESENT"
+    if challenge.kind == "steady_lead":
+        return "STEADY"
     if challenge.kind == "lead_vehicle_hard_brake":
         trigger = challenge.trigger_step
         end = trigger + challenge.brake_duration_steps
@@ -783,6 +786,24 @@ def _verify_observation_summary(
                         f"observation summary {field_name} contradicts stationary actor "
                         f"speed at sequence {event.sequence}"
                     )
+        if scenario.challenge.kind == "steady_lead":
+            for field_name in (
+                "challenge_actor_speed_mps",
+                "result_challenge_actor_speed_mps",
+            ):
+                if not _geometry_agrees(
+                    _summary_number(event, field_name),
+                    scenario.challenge.actor_speed_mps,
+                ):
+                    if event.sequence == 0:
+                        raise TraceIntegrityError(
+                            "observation summary initial challenge actor speed contradicts "
+                            "declared steady actor speed at sequence 0"
+                        )
+                    raise TraceIntegrityError(
+                        f"observation summary {field_name} contradicts declared steady "
+                        f"actor speed at sequence {event.sequence}"
+                    )
         if event.sequence == 0:
             actor_speed = _summary_number(event, "challenge_actor_speed_mps")
             declared_actor_speed = (
@@ -797,7 +818,7 @@ def _verify_observation_summary(
                 )
             initial_distance = event.observation_summary["front_distance_m"]
             if scenario.challenge.kind == "lead_vehicle_hard_brake" or (
-                scenario.challenge.kind == "stationary_lead"
+                scenario.challenge.kind in {"stationary_lead", "steady_lead"}
                 and scenario.challenge.initial_lane_delta == 0
             ):
                 if initial_distance is None or not _geometry_agrees(
@@ -810,7 +831,11 @@ def _verify_observation_summary(
                 label = (
                     "adjacent stationary actor"
                     if scenario.challenge.kind == "stationary_lead"
-                    else "cut-in actor"
+                    else (
+                        "adjacent steady actor"
+                        if scenario.challenge.kind == "steady_lead"
+                        else "cut-in actor"
+                    )
                 )
                 raise TraceIntegrityError(
                     f"observation summary {label} must start outside front overlap"
@@ -974,6 +999,24 @@ def _verify_fault_challenge_evidence(
                     f"fault challenge {field_name} contradicts stationary actor speed at "
                     f"sequence {event.sequence}"
                 )
+    if scenario.challenge.kind == "steady_lead":
+        for field_name in (
+            "challenge_actor_speed_mps",
+            "result_challenge_actor_speed_mps",
+        ):
+            if not _geometry_agrees(
+                _summary_number(event, field_name),
+                scenario.challenge.actor_speed_mps,
+            ):
+                if event.sequence == 0:
+                    raise TraceIntegrityError(
+                        "fault challenge initial actor speed contradicts declared steady "
+                        "actor speed at sequence 0"
+                    )
+                raise TraceIntegrityError(
+                    f"fault challenge {field_name} contradicts declared steady actor speed "
+                    f"at sequence {event.sequence}"
+                )
     if event.sequence == 0:
         actor_speed = _summary_number(event, "challenge_actor_speed_mps")
         declared_actor_speed = (
@@ -987,7 +1030,7 @@ def _verify_fault_challenge_evidence(
             )
         initial_distance = event.observation_summary["front_distance_m"]
         if scenario.challenge.kind == "lead_vehicle_hard_brake" or (
-            scenario.challenge.kind == "stationary_lead"
+            scenario.challenge.kind in {"stationary_lead", "steady_lead"}
             and scenario.challenge.initial_lane_delta == 0
         ):
             if initial_distance is None or not _geometry_agrees(
@@ -1000,7 +1043,11 @@ def _verify_fault_challenge_evidence(
             label = (
                 "adjacent stationary actor"
                 if scenario.challenge.kind == "stationary_lead"
-                else "cut-in actor"
+                else (
+                    "adjacent steady actor"
+                    if scenario.challenge.kind == "steady_lead"
+                    else "cut-in actor"
+                )
             )
             raise TraceIntegrityError(
                 f"fault challenge {label} must start outside front overlap"
@@ -1151,6 +1198,40 @@ def _verify_fault_event(
             ):
                 raise TraceIntegrityError(
                     "fault raw adjacent stationary actor must have paired-null front fields"
+                )
+        if scenario.challenge is not None and scenario.challenge.kind == "steady_lead":
+            if (
+                raw.challenge_actor_speed_mps is None
+                or not _geometry_agrees(
+                    raw.challenge_actor_speed_mps,
+                    scenario.challenge.actor_speed_mps,
+                )
+            ):
+                raise TraceIntegrityError(
+                    "fault raw steady actor speed contradicts the scenario at sequence 0"
+                )
+            if raw.challenge_phase != "STEADY":
+                raise TraceIntegrityError(
+                    "fault raw steady actor phase contradicts the scenario at sequence 0"
+                )
+            if scenario.challenge.initial_lane_delta == 0:
+                if (
+                    raw.front_distance_m is None
+                    or raw.front_relative_speed_mps is None
+                    or not _geometry_agrees(
+                        raw.front_distance_m,
+                        scenario.challenge.initial_gap_m,
+                    )
+                ):
+                    raise TraceIntegrityError(
+                        "fault raw initial front gap contradicts the steady challenge"
+                    )
+            elif (
+                raw.front_distance_m is not None
+                or raw.front_relative_speed_mps is not None
+            ):
+                raise TraceIntegrityError(
+                    "fault raw adjacent steady actor must have paired-null front fields"
                 )
     else:
         prior = events[index - 1]

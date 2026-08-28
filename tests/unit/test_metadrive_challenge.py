@@ -346,6 +346,62 @@ def test_cut_in_actor_follows_labeled_smooth_kinematic_replay() -> None:
     assert manager.snapshot.phase == "POST_CUT_IN"
 
 
+def test_steady_lead_actor_replays_constant_speed_and_phase_at_every_measurement() -> None:
+    _reset_runtime()
+    environment = create_challenge_environment(
+        _config(),
+        {
+            "kind": "steady_lead",
+            "actor_control_mode": "scripted_kinematic_replay",
+            "behavior_realism_claim": False,
+            "initial_gap_m": 8.0,
+            "actor_speed_mps": 4.0,
+            "initial_lane_delta": 0,
+        },
+        runtime_types=_runtime_types(),
+    )
+    manager = environment.engine.hermes_challenge_manager
+
+    manager.reset()
+    manager.after_reset()
+    actor = manager.actor
+
+    assert actor.static is True
+    assert actor.position == [22.0, 0.0]
+    assert manager.snapshot.front_distance_m == pytest.approx(8.0)
+    assert manager.snapshot.actor_speed_mps == 4.0
+    assert manager.snapshot.phase == "STEADY"
+
+    for episode_step, expected_longitudinal in ((1, 22.0), (2, 22.4), (10, 25.6)):
+        _ENGINE.episode_step = episode_step
+        manager.before_step()
+        assert actor.actions[-1] is None
+        assert actor.position == [expected_longitudinal, 0.0]
+        assert manager.snapshot.actor_speed_mps == 4.0
+        assert manager.snapshot.phase == "STEADY"
+
+        actor.velocity = [4.02, 0.0]
+        manager.after_step()
+        assert actor.velocity == [4.0, 0.0]
+        assert manager.snapshot.actor_speed_mps == 4.0
+        assert manager.snapshot.phase == "STEADY"
+
+
+def test_steady_lead_runtime_rejects_a_dynamic_control_mode() -> None:
+    with pytest.raises(ValueError, match="steady challenge requires"):
+        create_challenge_environment(
+            _config(),
+            {
+                "kind": "steady_lead",
+                "actor_control_mode": "metadrive_dynamic_action",
+                "behavior_realism_claim": False,
+                "initial_gap_m": 8.0,
+                "actor_speed_mps": 4.0,
+            },
+            runtime_types=_runtime_types(),
+        )
+
+
 def test_stationary_lead_actor_stays_static_in_one_present_phase() -> None:
     """Dispatching the stationary kind to cut-in replay would move it or require a speed."""
     _reset_runtime()

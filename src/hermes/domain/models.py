@@ -78,6 +78,7 @@ class Observation(HermesModel):
         "CUT_IN",
         "POST_CUT_IN",
         "PRESENT",
+        "STEADY",
     ] | None = None
 
 
@@ -289,8 +290,24 @@ class StationaryLeadChallenge(HermesModel):
     initial_lane_delta: Literal[-1, 0, 1] = 0
 
 
+class SteadyLeadChallenge(HermesModel):
+    """A deterministic kinematic lead replayed at constant speed in or beside the ego lane."""
+
+    kind: Literal["steady_lead"]
+    actor_control_mode: Literal["scripted_kinematic_replay"]
+    behavior_realism_claim: Literal[False]
+    initial_gap_m: Annotated[FiniteFloat, Field(gt=0.0, le=200.0)]
+    # Zero speed would duplicate stationary_lead's physical situation under a second kind
+    # identity, so this implementation-level narrowing excludes it.
+    actor_speed_mps: Annotated[FiniteFloat, Field(gt=0.0, le=50.0)]
+    initial_lane_delta: Literal[-1, 0, 1] = 0
+
+
 ChallengeConfig = Annotated[
-    LeadVehicleHardBrakeChallenge | CutInNearFieldChallenge | StationaryLeadChallenge,
+    LeadVehicleHardBrakeChallenge
+    | CutInNearFieldChallenge
+    | StationaryLeadChallenge
+    | SteadyLeadChallenge,
     Field(discriminator="kind"),
 ]
 

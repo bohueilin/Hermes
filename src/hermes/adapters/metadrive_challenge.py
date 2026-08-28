@@ -171,6 +171,11 @@ def _validated_challenge(challenge: Mapping[str, Any]) -> dict[str, Any]:
             raise ValueError(
                 "stationary challenge requires actor_control_mode scripted_kinematic_replay"
             )
+    elif kind == "steady_lead":
+        if payload.get("actor_control_mode") != "scripted_kinematic_replay":
+            raise ValueError(
+                "steady challenge requires actor_control_mode scripted_kinematic_replay"
+            )
     else:
         raise ValueError(f"unsupported MetaDrive challenge kind: {kind!r}")
     if payload.get("behavior_realism_claim") is not False:
@@ -206,6 +211,7 @@ def create_challenge_environment(
             self._phase = "PRE_TRIGGER"
             self._snapshot: ChallengeActorState | None = None
             self._commanded_this_step = False
+            self._steady_velocity: list[float] | None = None
 
         @property
         def actor(self) -> Any:
@@ -251,6 +257,7 @@ def create_challenge_environment(
             self._snapshot = None
             self._phase = "PRE_TRIGGER"
             self._commanded_this_step = False
+            self._steady_velocity = None
 
         def after_reset(self) -> None:
             agents = tuple(self.engine.agent_manager.active_agents.values())
@@ -279,6 +286,8 @@ def create_challenge_environment(
                 else float(self._challenge["actor_speed_mps"])
             )
             velocity = [math.cos(heading) * actor_speed, math.sin(heading) * actor_speed]
+            if self._challenge["kind"] == "steady_lead":
+                self._steady_velocity = list(velocity)
             self._actor = self.spawn_object(
                 actor_type,
                 name=ACTOR_NAME,
@@ -297,11 +306,18 @@ def create_challenge_environment(
                     "lidar": {"num_lasers": 0, "distance": 0, "num_others": 0},
                 },
             )
-            if self._challenge["kind"] in {"cut_in_near_field", "stationary_lead"}:
+            if self._challenge["kind"] in {
+                "cut_in_near_field",
+                "stationary_lead",
+                "steady_lead",
+            }:
                 self._actor.set_static(True)
-            self._phase = (
-                "PRESENT" if self._challenge["kind"] == "stationary_lead" else "PRE_TRIGGER"
-            )
+            if self._challenge["kind"] == "stationary_lead":
+                self._phase = "PRESENT"
+            elif self._challenge["kind"] == "steady_lead":
+                self._phase = "STEADY"
+            else:
+                self._phase = "PRE_TRIGGER"
             self._measure()
 
         def _before_lead_step(self, step: int) -> None:
@@ -350,6 +366,23 @@ def create_challenge_environment(
             self.actor.set_static(True)
             self._phase = "PRESENT"
 
+        def _before_steady_step(self, step: int) -> None:
+            assert self._reference_lane is not None
+            initial_lane_delta = int(self._challenge["initial_lane_delta"])
+            lateral = initial_lane_delta * self._lane_width
+            dt = float(config["physics_world_step_size"]) * int(config["decision_repeat"])
+            actor_speed = float(self._challenge["actor_speed_mps"])
+            longitudinal = self._initial_actor_longitudinal + actor_speed * step * dt
+            heading = float(self._reference_lane.heading_theta_at(longitudinal))
+            velocity = [math.cos(heading) * actor_speed, math.sin(heading) * actor_speed]
+            self._steady_velocity = velocity
+            self.actor.before_step(None)
+            self.actor.set_position(self._reference_lane.position(longitudinal, lateral))
+            self.actor.set_velocity(velocity, in_local_frame=False)
+            self.actor.set_heading_theta(heading)
+            self.actor.set_static(True)
+            self._phase = "STEADY"
+
         def before_step(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
             del args, kwargs
             step = int(self.engine.episode_step) - 1
@@ -359,8 +392,14 @@ def create_challenge_environment(
                 self._before_lead_step(step)
             elif self._challenge["kind"] == "cut_in_near_field":
                 self._before_cut_in_step(step)
-            else:
+            elif self._challenge["kind"] == "stationary_lead":
                 self._before_stationary_step()
+            elif self._challenge["kind"] == "steady_lead":
+                self._before_steady_step(step)
+            else:
+                raise RuntimeError(
+                    f"unsupported MetaDrive challenge kind: {self._challenge['kind']!r}"
+                )
             self._commanded_this_step = True
             self._measure()
             return {}
@@ -373,6 +412,12 @@ def create_challenge_environment(
             if self._actor is not None:
                 if self._challenge["kind"] == "stationary_lead":
                     self.actor.set_velocity([0.0, 0.0], in_local_frame=False)
+                    self.actor.set_static(True)
+                elif self._challenge["kind"] == "steady_lead":
+                    assert self._steady_velocity is not None
+                    self.actor.set_velocity(
+                        list(self._steady_velocity), in_local_frame=False
+                    )
                     self.actor.set_static(True)
                 self._measure()
             return {}

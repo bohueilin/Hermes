@@ -8,6 +8,7 @@ from hermes.domain.models import (
     CutInNearFieldChallenge,
     LeadVehicleHardBrakeChallenge,
     StationaryLeadChallenge,
+    SteadyLeadChallenge,
 )
 from hermes.scenarios.loader import load_scenario
 from hermes.simulator_support import metadrive_map_for_gap
@@ -49,6 +50,9 @@ def test_metadrive_map_for_no_challenge_preserves_single_straight() -> None:
         ("stationary_lead", 100.484, "S"),
         ("stationary_lead", 100.485, "S"),
         ("stationary_lead", 100.486, "SS"),
+        ("steady_lead", 100.484, "S"),
+        ("steady_lead", 100.485, "S"),
+        ("steady_lead", 100.486, "SS"),
     ),
 )
 def test_metadrive_map_for_challenge_gap_crosses_the_byte_identity_threshold(
@@ -77,13 +81,21 @@ def test_metadrive_map_for_challenge_gap_crosses_the_byte_identity_threshold(
             trigger_step=0,
             transition_steps=1,
         )
-    else:
-        assert challenge_kind == "stationary_lead"
+    elif challenge_kind == "stationary_lead":
         challenge = StationaryLeadChallenge(
             kind=challenge_kind,
             actor_control_mode="scripted_kinematic_replay",
             behavior_realism_claim=False,
             initial_gap_m=initial_gap_m,
+        )
+    else:
+        assert challenge_kind == "steady_lead"
+        challenge = SteadyLeadChallenge(
+            kind=challenge_kind,
+            actor_control_mode="scripted_kinematic_replay",
+            behavior_realism_claim=False,
+            initial_gap_m=initial_gap_m,
+            actor_speed_mps=1.0,
         )
 
     assert metadrive_map_for_gap(challenge.initial_gap_m) == expected_map
