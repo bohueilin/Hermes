@@ -44,10 +44,11 @@ ADAS_SCENARIOS = (
     "aeb_stationary_lead.yaml",
     "aeb_lead_hard_brake.yaml",
     "non_in_path_stationary_object.yaml",
+    "fcw_stationary_lead.yaml",
 )
 
 
-def test_seven_adas_scenarios_declare_the_measured_authority_without_changing_default(
+def test_eight_adas_scenarios_declare_the_measured_authority_without_changing_default(
     repository_root: Path,
 ) -> None:
     """Falling back to 6.0 or replacing its Python default must break this contract."""
@@ -155,7 +156,7 @@ def test_seeded_matrix_includes_the_observation_delay_environment_failure(
     assert suite.label == (
         "deliberately_seeded_policy_or_environment_failures_for_evaluation_acceptance"
     )
-    assert len(defects) == 8
+    assert len(defects) == 10
     delayed = defects["stationary_observation_delay"]
     assert delayed.policy_config == "config/adas/baseline.yaml"
     assert delayed.scenario == (

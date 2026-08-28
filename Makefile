@@ -20,7 +20,7 @@ DEMO_ARTIFACT := artifacts/$(DEMO_RUN_ID)
 
 .PHONY: install install-dev doctor test lint check demo-phase1 sim-smoke fixtures \
 	demo-adas demo-adas-tradeoff demo-seeded-defects demo-flywheel demo-cut-in \
-	demo-stationary preflight
+	demo-stationary demo-fcw-stationary preflight
 
 # Fail early and actionably rather than deep inside a demo.
 preflight:
@@ -157,6 +157,23 @@ demo-stationary: preflight
 	@echo ""
 	@echo "--- the stationary pair must separate by geometry and be complementary ---"
 	$(PYTHON) -m pytest -q tests/integration/test_stationary_lead_generalisation.py
+
+# FCW warning-margin stationary pair: warning-due geometry arrives before PARTIAL AEB
+# staging in the long-gap threat, while the existing adjacent-lane twin remains nominal.
+demo-fcw-stationary: preflight
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/fcw_stationary_lead.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "fcw-stationary-threat-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/non_in_path_stationary_object.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "fcw-stationary-nominal-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	@echo ""
+	@echo "--- the FCW stationary pair must separate by geometry and preserve warning margin ---"
+	$(PYTHON) -m pytest -q tests/integration/test_fcw_stationary_lead_generalisation.py
 
 # The evaluation's own acceptance criterion: controllers broken on purpose must be caught.
 demo-seeded-defects: preflight

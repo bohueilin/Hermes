@@ -67,6 +67,22 @@ defects:
     expected_failing_finding: adas.aeb.no_false_intervention
     expected_triage_category: OVER_INTERVENTION
 
+  # The long-gap FCW threat carries the same complementary diagonal, now with warning-due
+  # geometry materially ahead of controller PARTIAL staging.
+  - defect_id: no_aeb_fcw_stationary
+    description: Warns but never intervenes for the long-gap FCW stationary-lead threat.
+    policy_config: config/adas/defect_no_aeb.yaml
+    scenario: scenarios/adas/fcw_stationary_lead.yaml
+    expected_failing_finding: adas.aeb.threat_response
+    expected_triage_category: MISSED_INTERVENTION
+
+  - defect_id: over_braking_fcw_stationary
+    description: Brakes for a stopped adjacent-lane actor with no in-path front geometry.
+    policy_config: config/adas/defect_actor_presence_braking.yaml
+    scenario: scenarios/adas/non_in_path_stationary_object.yaml
+    expected_failing_finding: adas.aeb.no_false_intervention
+    expected_triage_category: OVER_INTERVENTION
+
   # Environment-path seed: the policy is the unchanged baseline. Verified metrics, fault
   # coverage, and the stored policy threshold prove the upstream stale-observation cause.
   - defect_id: stationary_observation_delay

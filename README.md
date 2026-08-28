@@ -87,12 +87,17 @@ away for the nominal twin. The baseline avoids contact in the threat case and ne
 for the adjacent object; deliberately broken controllers fail only the named criterion their
 opposite twin is designed to expose.
 
+`make demo-fcw-stationary` uses the same nominal twin with a longer in-lane gap, showing
+warning-due geometry before controller PARTIAL AEB staging; this remains a geometry-coverage
+check, not a warning-output verification.
+
 ### Phase 8 commands
 
 ```bash
 make demo-adas                             # threat and nominal scenarios, gate-evaluated
 make demo-cut-in                           # the same oracle on a manoeuvre it never saw
 make demo-stationary                       # classic stopped in-path / adjacent-object pair
+make demo-fcw-stationary                   # stationary FCW warning-margin / adjacent-object pair
 hermes agent tools                         # discoverable tool catalogue with permissions
 hermes agent triage <run-id>               # proposal vs deterministic classification
 hermes agent check-citations <run-id>      # re-resolve every citation against the evidence

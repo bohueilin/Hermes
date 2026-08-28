@@ -31,6 +31,7 @@ from hermes.simulator_support import (
     SUPPORTED_METADRIVE_COMMIT,
     SUPPORTED_METADRIVE_SOURCE,
     SUPPORTED_METADRIVE_VERSION,
+    metadrive_map_for_gap,
 )
 
 _PHYSICS_STEP_S = 0.02
@@ -328,7 +329,14 @@ class MetaDriveAdapter:
             "manual_control": False,
             "show_interface": False,
             "show_policy_mark": False,
-            "map": "S",
+            # Mirrors stored verification through metadrive_map_for_gap. Sharing is sound:
+            # verification never imports runtime adapters, and simulator_support is the
+            # sanctioned import-safe home both sides already use. The reviewed pinned
+            # map-table test makes edits tamper-evident; mirrored duplication would instead
+            # fail loudly only when the orchestrator publishes a bundle.
+            "map": metadrive_map_for_gap(
+                scenario.challenge.initial_gap_m if scenario.challenge is not None else None
+            ),
             "start_seed": seed,
             "num_scenarios": 1,
             "random_agent_model": False,
@@ -413,7 +421,12 @@ class MetaDriveAdapter:
             environment_factory = dependencies.environment_factory
             self._environment = environment_factory(config)
         else:
-            self.version = "1.1"
+            # Mirrors stored verification's closed adapter-version/map contract:
+            # 1.0: producer/verifier no challenge, expected map "S";
+            # 1.1: producer derived map "S", verifier any challenge, expected map "S";
+            # 1.2: producer/verifier challenge with derived map != "S", expected derived map.
+            derived_map = metadrive_map_for_gap(scenario.challenge.initial_gap_m)
+            self.version = "1.1" if derived_map == "S" else "1.2"
             self._challenge_payload = scenario.challenge.model_dump(mode="json")
             challenge_factory = dependencies.challenge_environment_factory
             if challenge_factory is None:

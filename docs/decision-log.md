@@ -1,5 +1,29 @@
 # Hermes Decision Log
 
+## 2026-08-27 — Version derived-map MetaDrive evidence as conditional adapter 1.2
+
+### Scope
+
+Correct MetaDrive adapter provenance for challenge scenarios whose deterministic map derivation
+emits a map other than `"S"`, while preserving re-verifiability of previously valid challenge
+evidence recorded under adapter 1.1. This is an adapter versioning correction; it changes no
+finding verifier, profile identity, finding pin, gate configuration, or deployment authority.
+
+### Decisions
+
+- Keep one exact map contract per stored adapter version: 1.0 is valid only without a challenge
+  and reconstructs `"S"`; 1.1 is valid for any challenge and reconstructs legacy `"S"`; 1.2 is
+  valid only for a challenge whose `metadrive_map_for_gap` result differs from `"S"` and
+  reconstructs that derived map. Reject every other version/scenario combination.
+- Emit 1.0 for non-challenge runs, 1.1 only when a challenge's derived map is `"S"`, and 1.2 when
+  the derived challenge map differs from `"S"`. The version remains outside
+  `adapter_config_digest`, so no committed scenario configuration digest changes.
+- Validate the stored version as a closed set before applying its map contract. Do not derive one
+  expected version solely from the current scenario: accepting legacy 1.1 for any challenge is the
+  deliberate compatibility rule that preserves old long-gap `1.1` / `"S"` evidence.
+- Preserve re-verifiability only. Comparisons remain fail-closed on adapter version, adapter-config
+  digest, and repository commit; legacy 1.1 and new 1.2 evidence are not cross-era comparable.
+
 ## 2026-08-13 — Implement reviewer comprehension and keep human gates open
 
 ### Scope
