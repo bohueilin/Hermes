@@ -1,3 +1,5 @@
+![Hermes, winged messenger of the gods, watching a sensor-equipped autonomous vehicle trace a lit, waypointed path across a valley at sunrise](Hermes_Github.png)
+
 # Hermes
 
 Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
