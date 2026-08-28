@@ -1067,20 +1067,36 @@ def _profile_errors(
                 0.0,
             ]
             expected_vehicle_config["spawn_velocity_car_frame"] = True
+        derived_metadrive_map = metadrive_map_for_gap(
+            scenario.challenge.initial_gap_m if scenario.challenge is not None else None
+        )
+        stored_adapter_version = context.adapter.version
+        # Mirrors the producer's closed adapter-version/map contract:
+        # 1.0: producer/verifier no challenge, expected map "S";
+        # 1.1: producer derived map "S", verifier any challenge, expected map "S";
+        # 1.2: producer/verifier challenge with derived map != "S", expected derived map.
+        adapter_version_ok = (
+            (stored_adapter_version == "1.0" and scenario.challenge is None)
+            or (stored_adapter_version == "1.1" and scenario.challenge is not None)
+            or (
+                stored_adapter_version == "1.2"
+                and scenario.challenge is not None
+                and derived_metadrive_map != "S"
+            )
+        )
+        expected_metadrive_map = (
+            derived_metadrive_map if stored_adapter_version == "1.2" else "S"
+        )
         expected_metadrive_config = {
             "use_render": False,
             "image_observation": False,
             "manual_control": False,
             "show_interface": False,
             "show_policy_mark": False,
-            # Mirrors producer configuration through metadrive_map_for_gap. Sharing is
-            # sound: verification never imports runtime adapters, and simulator_support is
-            # the sanctioned import-safe home both sides already use. The reviewed pinned
-            # map-table test makes edits tamper-evident; mirrored duplication would instead
-            # fail loudly only when the orchestrator publishes a bundle.
-            "map": metadrive_map_for_gap(
-                scenario.challenge.initial_gap_m if scenario.challenge is not None else None
-            ),
+            # The validated stored version selects the one exact map contract above.
+            # Shared derivation remains import-safe, and the pinned map table makes edits
+            # tamper-evident without importing runtime adapters during stored verification.
+            "map": expected_metadrive_map,
             "start_seed": context.run_context.seed,
             "num_scenarios": 1,
             "random_agent_model": False,
@@ -1127,9 +1143,7 @@ def _profile_errors(
             },
             "metadrive_config": expected_metadrive_config,
         }
-        expected_adapter_version = "1.0"
         if scenario.challenge is not None:
-            expected_adapter_version = "1.1"
             expected_adapter_config["signal_availability"] = {
                 "front_distance_m": {
                     "status": "AVAILABLE",
@@ -1177,7 +1191,7 @@ def _profile_errors(
             "target_speed_km_h": scenario.control.target_speed_mps * 3.6,
             "target_speed_mps": scenario.control.target_speed_mps,
         }
-        if context.adapter.version != expected_adapter_version:
+        if not adapter_version_ok:
             errors.append(
                 "execution-context.json contains an unsupported MetaDrive adapter version"
             )

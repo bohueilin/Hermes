@@ -421,7 +421,12 @@ class MetaDriveAdapter:
             environment_factory = dependencies.environment_factory
             self._environment = environment_factory(config)
         else:
-            self.version = "1.1"
+            # Mirrors stored verification's closed adapter-version/map contract:
+            # 1.0: producer/verifier no challenge, expected map "S";
+            # 1.1: producer derived map "S", verifier any challenge, expected map "S";
+            # 1.2: producer/verifier challenge with derived map != "S", expected derived map.
+            derived_map = metadrive_map_for_gap(scenario.challenge.initial_gap_m)
+            self.version = "1.1" if derived_map == "S" else "1.2"
             self._challenge_payload = scenario.challenge.model_dump(mode="json")
             challenge_factory = dependencies.challenge_environment_factory
             if challenge_factory is None:

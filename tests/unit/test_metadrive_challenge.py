@@ -505,7 +505,7 @@ class _AdapterIDM:
         return None
 
 
-def _lead_scenario() -> ScenarioDefinition:
+def _lead_scenario(*, initial_gap_m: float = 12.0) -> ScenarioDefinition:
     return ScenarioDefinition.model_validate(
         {
             "schema_version": "2.0",
@@ -526,7 +526,7 @@ def _lead_scenario() -> ScenarioDefinition:
                 "kind": "lead_vehicle_hard_brake",
                 "actor_control_mode": "metadrive_dynamic_action",
                 "behavior_realism_claim": False,
-                "initial_gap_m": 12.0,
+                "initial_gap_m": initial_gap_m,
                 "actor_speed_mps": 4.0,
                 "trigger_step": 1,
                 "brake_duration_steps": 1,
@@ -596,6 +596,39 @@ def test_adapter_selects_challenge_environment_and_surfaces_actual_actor_state()
     assert result.observation.front_relative_speed_mps == -6.0
     assert result.observation.challenge_actor_longitudinal_m == 12.0
     assert result.observation.challenge_phase == "BRAKING"
+    adapter.close()
+    assert created[0].closed is True
+
+
+def test_adapter_versions_an_above_threshold_challenge_as_1_2() -> None:
+    created: list[_AdapterChallengeEnvironment] = []
+
+    def fail_nominal_factory(config: dict[str, Any]) -> Any:
+        del config
+        raise AssertionError("challenge reset must not construct the nominal environment")
+
+    def challenge_factory(
+        config: dict[str, Any], challenge: dict[str, Any]
+    ) -> _AdapterChallengeEnvironment:
+        del challenge
+        environment = _AdapterChallengeEnvironment(config)
+        created.append(environment)
+        return environment
+
+    dependencies = MetaDriveDependencies(
+        environment_factory=fail_nominal_factory,
+        idm_policy_factory=_AdapterIDM,
+        action_array=lambda values: list(values),
+        simulator_version="0.4.3",
+        simulator_commit="85e5dadc6c7436d324348f6e3d8f8e680c06b4db",
+        simulator_source=__file__,
+        challenge_environment_factory=challenge_factory,
+    )
+    adapter = MetaDriveAdapter(dependencies=dependencies)
+
+    adapter.reset(_lead_scenario(initial_gap_m=140.0), seed=7)
+
+    assert adapter.version == "1.2"
     adapter.close()
     assert created[0].closed is True
 

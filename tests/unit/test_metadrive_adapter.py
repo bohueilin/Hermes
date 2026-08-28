@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import struct
 from pathlib import Path
 from typing import Any
@@ -211,9 +212,14 @@ def _challenge_dependencies(created: list[_Environment]) -> MetaDriveDependencie
 
 
 def _verification_context(
-    scenario: ScenarioDefinition, adapter: MetaDriveAdapter
+    scenario: ScenarioDefinition,
+    adapter: MetaDriveAdapter,
+    *,
+    version: str | None = None,
+    config: dict[str, Any] | None = None,
 ) -> ExecutionContextV3:
-    adapter_config = adapter.evidence_config
+    adapter_version = adapter.version if version is None else version
+    adapter_config = adapter.evidence_config if config is None else config
     policy_config = {
         "backend": "metadrive.policy.idm_policy.IDMPolicy",
         "backend_version": "0.4.3",
@@ -233,7 +239,7 @@ def _verification_context(
         scenario_digest=scenario_digest(scenario),
         gate_config_digest="0" * 64,
         adapter_name="metadrive",
-        adapter_version=adapter.version,
+        adapter_version=adapter_version,
         adapter_config_digest=config_digest(adapter_config),
         policy_name="metadrive-idm",
         policy_version="1.0",
@@ -252,7 +258,7 @@ def _verification_context(
         run_context=run_context,
         adapter=ComponentContext(
             name="metadrive",
-            version=adapter.version,
+            version=adapter_version,
             config=adapter_config,
             config_digest=run_context.adapter_config_digest,
         ),
@@ -323,29 +329,106 @@ def test_adapter_derives_a_longer_map_for_an_above_threshold_challenge() -> None
     adapter.close()
 
 
-def test_stored_verification_accepts_derived_and_committed_metadrive_maps() -> None:
-    challenge_created: list[_Environment] = []
-    challenge_scenario = _challenge_scenario()
-    challenge_adapter = MetaDriveAdapter(
-        dependencies=_challenge_dependencies(challenge_created)
+@pytest.mark.parametrize(
+    ("initial_gap_m", "stored_version", "stored_map", "expected_error"),
+    (
+        pytest.param(115.0, "1.1", "S", None, id="1-legacy-long-gap-1.1-S"),
+        pytest.param(100.485, "1.1", "S", None, id="2-carve-out-1.1-S"),
+        pytest.param(140.0, "1.2", None, None, id="3-new-derived-1.2-SSS"),
+        pytest.param(
+            140.0,
+            "1.1",
+            "SSS",
+            "execution-context.json MetaDrive adapter configuration is unsupported",
+            id="4-crossed-1.1-SSS",
+        ),
+        pytest.param(
+            140.0,
+            "1.2",
+            "S",
+            "execution-context.json MetaDrive adapter configuration is unsupported",
+            id="5-crossed-1.2-S",
+        ),
+        pytest.param(None, "1.0", None, None, id="6-non-challenge-1.0-S"),
+        pytest.param(
+            None,
+            "1.1",
+            "S",
+            "execution-context.json contains an unsupported MetaDrive adapter version",
+            id="7-non-challenge-1.1-S",
+        ),
+        pytest.param(
+            None,
+            "1.2",
+            "S",
+            "execution-context.json contains an unsupported MetaDrive adapter version",
+            id="8-non-challenge-1.2-S",
+        ),
+        pytest.param(
+            100.485,
+            "1.2",
+            "S",
+            "execution-context.json contains an unsupported MetaDrive adapter version",
+            id="9-carve-out-1.2-S",
+        ),
+        pytest.param(
+            100.485,
+            "1.0",
+            "S",
+            "execution-context.json contains an unsupported MetaDrive adapter version",
+            id="10-carve-out-1.0-S",
+        ),
+        pytest.param(
+            140.0,
+            "1.3",
+            "SSS",
+            "execution-context.json contains an unsupported MetaDrive adapter version",
+            id="11-unknown-1.3-SSS",
+        ),
+    ),
+)
+def test_stored_verification_enforces_versioned_metadrive_map_contract(
+    initial_gap_m: float | None,
+    stored_version: str,
+    stored_map: str | None,
+    expected_error: str | None,
+) -> None:
+    scenario = _scenario() if initial_gap_m is None else _challenge_scenario(
+        initial_gap_m=initial_gap_m
     )
-    challenge_adapter.reset(challenge_scenario, seed=7)
-    challenge_errors = _profile_errors(
-        _verification_context(challenge_scenario, challenge_adapter), challenge_scenario, None
+    created: list[_Environment] = []
+    dependencies = (
+        _dependencies(created)
+        if initial_gap_m is None
+        else _challenge_dependencies(created)
+    )
+    adapter = MetaDriveAdapter(dependencies=dependencies)
+    adapter.reset(scenario, seed=7)
+    config = json.loads(json.dumps(adapter.evidence_config))
+    if stored_map is not None:
+        config["metadrive_config"]["map"] = stored_map
+
+    errors = _profile_errors(
+        _verification_context(
+            scenario,
+            adapter,
+            version=stored_version,
+            config=config,
+        ),
+        scenario,
+        None,
     )
 
-    nominal_created: list[_Environment] = []
-    nominal_scenario = _scenario()
-    nominal_adapter = MetaDriveAdapter(dependencies=_dependencies(nominal_created))
-    nominal_adapter.reset(nominal_scenario, seed=7)
-    nominal_errors = _profile_errors(
-        _verification_context(nominal_scenario, nominal_adapter), nominal_scenario, None
-    )
-
-    assert not any("MetaDrive adapter" in error for error in challenge_errors)
-    assert not any("MetaDrive adapter" in error for error in nominal_errors)
-    challenge_adapter.close()
-    nominal_adapter.close()
+    if expected_error is None:
+        assert not any("MetaDrive adapter" in error for error in errors)
+    else:
+        assert expected_error in errors
+        if expected_error.endswith("adapter configuration is unsupported"):
+            assert (
+                "execution-context.json contains an unsupported MetaDrive adapter version"
+                not in errors
+            )
+    adapter.close()
 
 
 def test_adapter_validates_and_preserves_nonzero_lateral_reset() -> None:
