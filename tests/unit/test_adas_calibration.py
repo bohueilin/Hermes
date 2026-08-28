@@ -45,10 +45,12 @@ ADAS_SCENARIOS = (
     "aeb_lead_hard_brake.yaml",
     "non_in_path_stationary_object.yaml",
     "fcw_stationary_lead.yaml",
+    "slow_lead_closing.yaml",
+    "fcw_aeb_nominal_following.yaml",
 )
 
 
-def test_eight_adas_scenarios_declare_the_measured_authority_without_changing_default(
+def test_ten_adas_scenarios_declare_the_measured_authority_without_changing_default(
     repository_root: Path,
 ) -> None:
     """Falling back to 6.0 or replacing its Python default must break this contract."""
@@ -71,6 +73,52 @@ def test_eight_adas_scenarios_declare_the_measured_authority_without_changing_de
     for name in ADAS_SCENARIOS:
         scenario = load_scenario(repository_root / "scenarios" / "adas" / name)
         assert scenario.control.max_braking_mps2 == MEASURED_20_MPS_PEAK_AUTHORITY, name
+
+
+def test_steady_scenario_pair_pins_the_reviewed_authored_literals(
+    repository_root: Path,
+) -> None:
+    threat = load_scenario(repository_root / "scenarios/adas/slow_lead_closing.yaml")
+    nominal = load_scenario(
+        repository_root / "scenarios/adas/fcw_aeb_nominal_following.yaml"
+    )
+
+    assert threat.schema_version == "4.0"
+    assert threat.name == "slow_lead_closing"
+    assert threat.control.frequency_hz == 10
+    assert threat.control.horizon_steps == 200
+    assert threat.control.target_speed_mps == 20.0
+    assert threat.initial_state.speed_mps == 20.0
+    assert threat.challenge is not None
+    assert threat.challenge.kind == "steady_lead"
+    assert threat.challenge.actor_control_mode == "scripted_kinematic_replay"
+    assert threat.challenge.behavior_realism_claim is False
+    assert threat.challenge.actor_speed_mps == 10.0
+    assert threat.challenge.initial_gap_m == 32.0
+    assert threat.challenge.initial_lane_delta == 0
+    assert threat.tags == ("aeb", "fcw", "longitudinal", "threat")
+    assert threat.adas is not None
+    assert threat.adas.expected_fcw.kind == "required"
+    assert threat.adas.expected_fcw.before_ttc_s == 2.6
+    assert threat.adas.expected_aeb.kind == "required"
+
+    assert nominal.schema_version == "4.0"
+    assert nominal.name == "fcw_aeb_nominal_following"
+    assert nominal.control.frequency_hz == 10
+    assert nominal.control.horizon_steps == 200
+    assert nominal.control.target_speed_mps == 20.0
+    assert nominal.initial_state.speed_mps == 20.0
+    assert nominal.challenge is not None
+    assert nominal.challenge.kind == "steady_lead"
+    assert nominal.challenge.actor_control_mode == "scripted_kinematic_replay"
+    assert nominal.challenge.behavior_realism_claim is False
+    assert nominal.challenge.actor_speed_mps == 20.0
+    assert nominal.challenge.initial_gap_m == 40.0
+    assert nominal.challenge.initial_lane_delta == 0
+    assert nominal.tags == ("aeb", "fcw", "longitudinal", "nominal")
+    assert nominal.adas is not None
+    assert nominal.adas.expected_fcw.kind == "none"
+    assert nominal.adas.expected_aeb.kind == "forbidden"
 
 
 def test_calibrated_fractions_preserve_the_previous_absolute_boundaries(
@@ -147,6 +195,27 @@ def test_seeded_matrix_binds_each_stationary_twin_to_its_named_finding(
     assert over_braking.expected_failing_finding == "adas.aeb.no_false_intervention"
 
 
+def test_seeded_matrix_binds_each_steady_twin_to_its_named_finding(
+    repository_root: Path,
+) -> None:
+    suite = load_seeded_defects(repository_root / "config" / "phase8-seeded-defects.yaml")
+    defects = {item.defect_id: item for item in suite.defects}
+
+    no_aeb = defects["no_aeb_steady"]
+    assert no_aeb.scenario == "scenarios/adas/slow_lead_closing.yaml"
+    assert no_aeb.policy_config == "config/adas/defect_no_aeb.yaml"
+    assert no_aeb.expected_failing_finding == "adas.aeb.threat_response"
+    assert no_aeb.expected_triage_category == "MISSED_INTERVENTION"
+
+    over_braking = defects["actor_presence_braking_steady_nominal"]
+    assert over_braking.scenario == "scenarios/adas/fcw_aeb_nominal_following.yaml"
+    assert over_braking.policy_config == (
+        "config/adas/defect_actor_presence_braking.yaml"
+    )
+    assert over_braking.expected_failing_finding == "adas.aeb.no_false_intervention"
+    assert over_braking.expected_triage_category == "OVER_INTERVENTION"
+
+
 def test_seeded_matrix_includes_the_observation_delay_environment_failure(
     repository_root: Path,
 ) -> None:
@@ -156,7 +225,7 @@ def test_seeded_matrix_includes_the_observation_delay_environment_failure(
     assert suite.label == (
         "deliberately_seeded_policy_or_environment_failures_for_evaluation_acceptance"
     )
-    assert len(defects) == 10
+    assert len(defects) == 12
     delayed = defects["stationary_observation_delay"]
     assert delayed.policy_config == "config/adas/baseline.yaml"
     assert delayed.scenario == (

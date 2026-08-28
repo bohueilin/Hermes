@@ -1,0 +1,57 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# Constant-speed moving-lead nominal. At seed 7, the throttle-only driver rides about
+# 0.04-0.23 m/s below its 20 m/s target. A one-time sequence-zero transient closes the
+# authored 40 m gap to a 38.40 m first result; the gap then opens slowly to 39.58 m by the
+# final result. This is a following nominal, not a fixed-gap claim. It is expected to reach
+# DESTINATION_REACHED near step 60 with
+# zero braking and every hard finding PASS. The expected CONDITIONAL verdict reflects two
+# soft NOT_AVAILABLE findings by design: a never-braking nominal has no RELEASE/PASS
+# expectation, and expected_fcw none does not prove observed absence of warning output.
+schema_version: "4.0"
+name: fcw_aeb_nominal_following
+version: "1.0"
+description: Ego follows a same-speed scripted lead without FCW or AEB geometry becoming due.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 200
+  target_speed_mps: 20.0
+  # Simulator-measured 20 m/s full-brake peak from
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+challenge:
+  kind: steady_lead
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 40.0
+  actor_speed_mps: 20.0
+  initial_lane_delta: 0
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - nominal
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: none
+  expected_aeb:
+    kind: forbidden

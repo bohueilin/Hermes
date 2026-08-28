@@ -91,6 +91,9 @@ opposite twin is designed to expose.
 warning-due geometry before controller PARTIAL AEB staging; this remains a geometry-coverage
 check, not a warning-output verification.
 
+`make demo-steady-lead` measures the same oracle on a constant-speed moving lead, separating
+a closing threat from a same-speed following nominal while verifying stored actor-speed constancy.
+
 ### Phase 8 commands
 
 ```bash
@@ -98,6 +101,7 @@ make demo-adas                             # threat and nominal scenarios, gate-
 make demo-cut-in                           # the same oracle on a manoeuvre it never saw
 make demo-stationary                       # classic stopped in-path / adjacent-object pair
 make demo-fcw-stationary                   # stationary FCW warning-margin / adjacent-object pair
+make demo-steady-lead                      # moving steady-lead threat / following nominal pair
 hermes agent tools                         # discoverable tool catalogue with permissions
 hermes agent triage <run-id>               # proposal vs deterministic classification
 hermes agent check-citations <run-id>      # re-resolve every citation against the evidence

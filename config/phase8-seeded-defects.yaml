@@ -6,7 +6,7 @@
 # scenario that exposes it, the finding that must catch it, and the failure category the
 # triage agent must propose.
 #
-# The seven policy defects use config/adas/baseline.yaml with one property changed. The
+# The eleven policy defects use config/adas/baseline.yaml with one property changed. The
 # observation-delay row instead keeps the baseline policy and seeds the environment path.
 schema_version: "1.0"
 label: deliberately_seeded_policy_or_environment_failures_for_evaluation_acceptance
@@ -80,6 +80,22 @@ defects:
     description: Brakes for a stopped adjacent-lane actor with no in-path front geometry.
     policy_config: config/adas/defect_actor_presence_braking.yaml
     scenario: scenarios/adas/non_in_path_stationary_object.yaml
+    expected_failing_finding: adas.aeb.no_false_intervention
+    expected_triage_category: OVER_INTERVENTION
+
+  # A constant-speed moving-lead pair exercises the same complementary diagonal using
+  # geometry alone. The nominal defect intentionally reacts to actor presence, not threat.
+  - defect_id: no_aeb_steady
+    description: Warns but never intervenes for a steady moving-lead closing threat.
+    policy_config: config/adas/defect_no_aeb.yaml
+    scenario: scenarios/adas/slow_lead_closing.yaml
+    expected_failing_finding: adas.aeb.threat_response
+    expected_triage_category: MISSED_INTERVENTION
+
+  - defect_id: actor_presence_braking_steady_nominal
+    description: Brakes for a steady moving lead even though the following geometry is nominal.
+    policy_config: config/adas/defect_actor_presence_braking.yaml
+    scenario: scenarios/adas/fcw_aeb_nominal_following.yaml
     expected_failing_finding: adas.aeb.no_false_intervention
     expected_triage_category: OVER_INTERVENTION
 
