@@ -28,6 +28,7 @@ _COMMITTED_MAPS = {
     "scenarios/adas/adas_cut_in_near.yaml": "S",
     "scenarios/adas/adas_nominal_no_lead.yaml": "S",
     "scenarios/adas/adas_nominal_slow_closing.yaml": "S",
+    "scenarios/adas/decelerating_but_safe_lead.yaml": "S",
     "scenarios/adas/aeb_lead_hard_brake.yaml": "S",
     "scenarios/adas/aeb_stationary_lead.yaml": "S",
     "scenarios/adas/aeb_stationary_lead_observation_delay.yaml": "S",

@@ -1,0 +1,73 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# PREDICTIONS from the authored primary tuple: deceleration starts at t_s = 1.0 s, lasts
+# tau_T = 2.5 s / N = 25 intervals, and reaches the positive terminal speed at t = 3.5 s.
+# Inputs should be DECELERATING at sequences 10-34, results at 9-33, with terminal STEADY
+# results from sequence 34. If the donor nominal's approximately 6.1 s / 61-event
+# DESTINATION_REACHED shape transfers, deceleration completes about 57% into the stored run.
+# Predicted extrema over that finite run are approximately 19.4 m minimum gap, 0.71 m/s^2
+# maximum required deceleration, and 3.9 s minimum TTC, with zero oracle threat or warning-due
+# samples and zero braking.
+#
+# MEASURED on these values at seed 7: 61 events / 6.1 s, DESTINATION_REACHED, exact predicted
+# phase windows, 61/61 input and result schedule matches, and 60/60 input-to-prior-result
+# continuity transitions. The minimum result gap is 20.82934416472216 m, maximum oracle input
+# required deceleration is 0.6015678307197855 m/s^2, and minimum result TTC is
+# 4.354226883259174 s. There are zero oracle threat, warning-due, and positive-brake samples.
+# The sequence-zero input gap is 39.99999952316284 m and the result-gap transient is
+# 1.5991270542144775 m; result ego speed is 19.963645935058594 m/s, 0.03635406494140625 m/s
+# below target. The in-lane front pair is PRESENT in all 61 input and result samples.
+#
+# The run terminates mid-approach at the map end while closure remains open, so these margins
+# describe only the STORED run and are not an indefinite-following claim. The CONDITIONAL
+# verdict reflects two soft NOT_AVAILABLE findings by design. expected_fcw none does not prove
+# observed warning absence.
+schema_version: "4.0"
+name: decelerating_but_safe_lead
+version: "1.0"
+description: Ego follows a scripted lead that decelerates once at a declared constant rate to a safe positive terminal speed.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 200
+  target_speed_mps: 20.0
+  # Simulator-measured 20 m/s full-brake peak from
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+challenge:
+  kind: lead_decelerates
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 40.0
+  actor_speed_mps: 20.0
+  deceleration_mps2: 2.0
+  decel_start_step: 10
+  terminal_speed_mps: 15.0
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - nominal
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: none
+  expected_aeb:
+    kind: forbidden
