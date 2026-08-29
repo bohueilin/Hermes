@@ -217,6 +217,128 @@ def test_observation_accepts_the_steady_challenge_phase() -> None:
     assert observation.challenge_phase == "STEADY"
 
 
+def _lead_decelerates_scenario_payload(
+    *,
+    actor_speed_mps: float = 20.0,
+    terminal_speed_mps: float = 15.0,
+    deceleration_mps2: float = 2.0,
+    decel_start_step: int = 10,
+    frequency_hz: int = 10,
+    horizon_steps: int = 35,
+) -> dict[str, object]:
+    return {
+        "schema_version": "4.0",
+        "name": "lead_decelerates_domain_unit",
+        "version": "1.0",
+        "description": "Scripted decelerating lead challenge schema unit scenario.",
+        "adapter": "metadrive",
+        "control": {
+            "frequency_hz": frequency_hz,
+            "horizon_steps": horizon_steps,
+            "target_speed_mps": 20.0,
+        },
+        "initial_state": {"speed_mps": 20.0, "lateral_offset_m": 0.0},
+        "road": {"destination_distance_m": 240.0, "boundary_tolerance_m": 1.5},
+        "challenge": {
+            "kind": "lead_decelerates",
+            "actor_control_mode": "scripted_kinematic_replay",
+            "behavior_realism_claim": False,
+            "initial_gap_m": 40.0,
+            "actor_speed_mps": actor_speed_mps,
+            "deceleration_mps2": deceleration_mps2,
+            "decel_start_step": decel_start_step,
+            "terminal_speed_mps": terminal_speed_mps,
+        },
+    }
+
+
+def test_lead_decelerates_challenge_is_an_additive_round_trippable_union_member() -> None:
+    scenario = ScenarioDefinition.model_validate(_lead_decelerates_scenario_payload())
+
+    assert scenario.challenge is not None
+    assert scenario.challenge.kind == "lead_decelerates"
+    assert scenario.challenge.model_dump(mode="json") == {
+        "kind": "lead_decelerates",
+        "actor_control_mode": "scripted_kinematic_replay",
+        "behavior_realism_claim": False,
+        "initial_gap_m": 40.0,
+        "actor_speed_mps": 20.0,
+        "deceleration_mps2": 2.0,
+        "decel_start_step": 10,
+        "terminal_speed_mps": 15.0,
+    }
+    assert ScenarioDefinition.model_validate(
+        scenario.model_dump(mode="json")
+    ).challenge == scenario.challenge
+
+
+@pytest.mark.parametrize(
+    ("updates", "message"),
+    (
+        ({"terminal_speed_mps": 20.0}, "terminal_speed_mps must be less"),
+        ({"decel_start_step": 35}, "decel_start_step must be less"),
+        (
+            {"terminal_speed_mps": 14.8},
+            "lead deceleration schedule must fit within horizon_steps",
+        ),
+        (
+            {
+                "actor_speed_mps": 20.0,
+                "terminal_speed_mps": 19.9,
+                "deceleration_mps2": 2.0,
+            },
+            "lead deceleration must include an intermediate-speed sample",
+        ),
+    ),
+)
+def test_lead_decelerates_challenge_rejects_each_cross_field_contradiction(
+    updates: dict[str, float | int],
+    message: str,
+) -> None:
+    payload = _lead_decelerates_scenario_payload()
+    assert isinstance(payload["challenge"], dict)
+    payload["challenge"].update(updates)
+
+    with pytest.raises(ValidationError, match=message):
+        ScenarioDefinition.model_validate(payload)
+
+
+def test_lead_decelerates_horizon_fit_uses_exact_integer_boundary_arithmetic() -> None:
+    scenario = ScenarioDefinition.model_validate(
+        _lead_decelerates_scenario_payload(
+            actor_speed_mps=0.4,
+            terminal_speed_mps=0.1,
+            deceleration_mps2=0.1,
+            decel_start_step=0,
+            frequency_hz=10,
+            horizon_steps=30,
+        )
+    )
+
+    assert scenario.challenge is not None
+    assert scenario.challenge.terminal_speed_mps == 0.1
+
+
+def test_observation_accepts_the_decelerating_challenge_phase() -> None:
+    observation = Observation(
+        sequence=10,
+        simulation_time_s=1.0,
+        vehicle_state=VehicleState(
+            position_m=0.0,
+            speed_mps=20.0,
+            acceleration_mps2=0.0,
+            lateral_offset_m=0.0,
+            route_progress_pct=0.0,
+            collision_count=0,
+            offroad=False,
+            destination_reached=False,
+        ),
+        challenge_phase="DECELERATING",
+    )
+
+    assert observation.challenge_phase == "DECELERATING"
+
+
 @pytest.mark.parametrize(
     ("field_name", "value"),
     [("control_frequency_hz", 0), ("control_frequency_hz", 101), ("horizon_steps", 0)],

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from fractions import Fraction
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -79,6 +80,7 @@ class Observation(HermesModel):
         "POST_CUT_IN",
         "PRESENT",
         "STEADY",
+        "DECELERATING",
     ] | None = None
 
 
@@ -303,11 +305,27 @@ class SteadyLeadChallenge(HermesModel):
     initial_lane_delta: Literal[-1, 0, 1] = 0
 
 
+class LeadDeceleratesChallenge(HermesModel):
+    """A deterministic in-lane lead replayed with one constant-rate deceleration."""
+
+    kind: Literal["lead_decelerates"]
+    actor_control_mode: Literal["scripted_kinematic_replay"]
+    behavior_realism_claim: Literal[False]
+    initial_gap_m: Annotated[FiniteFloat, Field(gt=0.0, le=200.0)]
+    actor_speed_mps: Annotated[FiniteFloat, Field(gt=0.0, le=50.0)]
+    deceleration_mps2: Annotated[FiniteFloat, Field(gt=0.0, le=20.0)]
+    decel_start_step: Annotated[int, Field(ge=0, le=10_000)]
+    # Zero speed would duplicate stationary_lead's physical situation under a second kind
+    # identity, so the ratified first-package boundary requires a positive terminal speed.
+    terminal_speed_mps: Annotated[FiniteFloat, Field(gt=0.0, le=50.0)]
+
+
 ChallengeConfig = Annotated[
     LeadVehicleHardBrakeChallenge
     | CutInNearFieldChallenge
     | StationaryLeadChallenge
-    | SteadyLeadChallenge,
+    | SteadyLeadChallenge
+    | LeadDeceleratesChallenge,
     Field(discriminator="kind"),
 ]
 
@@ -488,6 +506,39 @@ class ScenarioDefinition(HermesModel):
         elif isinstance(self.challenge, CutInNearFieldChallenge):
             end_step = self.challenge.trigger_step + self.challenge.transition_steps
             window_name = "cut-in transition window"
+        elif isinstance(self.challenge, LeadDeceleratesChallenge):
+            if self.challenge.terminal_speed_mps >= self.challenge.actor_speed_mps:
+                raise ValueError(
+                    "terminal_speed_mps must be less than actor_speed_mps"
+                )
+            if self.challenge.decel_start_step >= self.control.horizon_steps:
+                raise ValueError(
+                    "decel_start_step must be less than horizon_steps "
+                    f"({self.control.horizon_steps})"
+                )
+            speed_delta = Fraction(str(self.challenge.actor_speed_mps)) - Fraction(
+                str(self.challenge.terminal_speed_mps)
+            )
+            deceleration = Fraction(str(self.challenge.deceleration_mps2))
+            terminal_intervals = speed_delta * self.control.frequency_hz / deceleration
+            interval_count = (
+                terminal_intervals.numerator + terminal_intervals.denominator - 1
+            ) // terminal_intervals.denominator
+            if (
+                self.challenge.decel_start_step + interval_count
+                > self.control.horizon_steps
+            ):
+                raise ValueError(
+                    "lead deceleration schedule must fit within horizon_steps "
+                    f"({self.control.horizon_steps})"
+                )
+            if speed_delta / deceleration <= Fraction(
+                1, self.control.frequency_hz
+            ):
+                raise ValueError(
+                    "lead deceleration must include an intermediate-speed sample"
+                )
+            return self
         else:
             return self
         if end_step > self.control.horizon_steps:
