@@ -22,6 +22,7 @@ _COMMITTED_MAPS = {
     "scenarios/metadrive_cut_in_near_field.yaml": "S",
     "scenarios/metadrive_lead_vehicle_hard_brake.yaml": "S",
     "scenarios/metadrive_nominal.yaml": "S",
+    "scenarios/adas/adjacent_lane_pass.yaml": "S",
     "scenarios/adas/adas_cut_in_far.yaml": "S",
     "scenarios/adas/adas_cut_in_near.yaml": "S",
     "scenarios/adas/adas_nominal_no_lead.yaml": "S",

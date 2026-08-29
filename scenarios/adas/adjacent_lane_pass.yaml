@@ -1,0 +1,76 @@
+# SIMULATION-ONLY ADAS scenario. Illustrative parameters; no standards or regulatory meaning.
+#
+# Exact-mirror oracle-separation nominal for slow_lead_closing: the same steady moving
+# actor, 10.0 m/s speed, 32.0 m gap, and 200-step horizon are placed one lane away, so
+# threat versus nominal classification can come only from lane placement. This is the
+# catalog's only moving mirror and the moving analogue of the
+# non_in_path_stationary_object / aeb_stationary_lead stationary pair.
+#
+# Contract prediction: initial_lane_delta +1 keeps the actor outside front-pair eligibility
+# for the whole run. The front pair requires an actor ahead plus oriented-box lateral overlap
+# (metadrive_challenge.py:123); at about 3.5 m lateral separation the boxes never overlap.
+# Trace verification enforces paired-null front fields only at sequence 0, while the
+# all-events absence is a measured claim asserted by this scenario's integration test.
+#
+# Passing dynamics measured at seed 7: the 20 m/s ego overtakes the adjacent 10 m/s actor.
+# Stored actor longitudinal position crosses zero around sequence 36 (+0.59 m to -0.39 m),
+# where negative values are permitted by trace rules. The actor remains measured through and
+# after the crossing, and both stored speed fields agree with 10.0 m/s under the verifier's
+# float32 tolerance. The episode continues to DESTINATION_REACHED around sequence 60 (61
+# events). Sign convention: config initial_lane_delta +1 spawns at lane-frame +3.5 m but is
+# measured as challenge_actor_lateral_offset_m about -3.5 m in the ego frame at sequence 0;
+# the stored lateral sign is opposite to the config sign.
+#
+# Expected disposition: zero oracle threat steps, zero braking steps, and
+# adas.aeb.no_false_intervention PASS with 0.0 steps; every hard finding passes. The
+# adas.aeb.threat_response PASS is vacuous, not threat-discrimination proof. The two soft
+# findings are NOT_AVAILABLE by design: onset margin has no braking, and expected_fcw none
+# is not observed warning absence. The resulting verdict is CONDITIONAL, matching both
+# committed nominals.
+schema_version: "4.0"
+name: adjacent_lane_pass
+version: "1.0"
+description: Ego overtakes a constant-speed adjacent-lane actor without FCW or AEB geometry becoming due.
+adapter: metadrive
+control:
+  frequency_hz: 10
+  horizon_steps: 200
+  target_speed_mps: 20.0
+  # Simulator-measured 20 m/s full-brake peak from
+  # evidence/calibration/metadrive-brake-curve-0.4.3.json.
+  max_braking_mps2: 12.982444763183452
+initial_state:
+  speed_mps: 20.0
+  lateral_offset_m: 0.0
+road:
+  destination_distance_m: 240.0
+  boundary_tolerance_m: 1.5
+challenge:
+  kind: steady_lead
+  actor_control_mode: scripted_kinematic_replay
+  behavior_realism_claim: false
+  initial_gap_m: 32.0
+  actor_speed_mps: 10.0
+  initial_lane_delta: 1
+tags:
+  - aeb
+  - fcw
+  - longitudinal
+  - nominal
+odd:
+  road_type:
+    - highway
+  weather:
+    - clear
+  lighting:
+    - daylight
+  min_speed_mps: 0.0
+  max_speed_mps: 30.0
+adas:
+  enabled:
+    - fcw
+    - aeb
+  expected_fcw:
+    kind: none
+  expected_aeb:
+    kind: forbidden
