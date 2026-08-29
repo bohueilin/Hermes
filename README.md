@@ -96,6 +96,9 @@ check, not a warning-output verification.
 `make demo-steady-lead` measures the same oracle on a constant-speed moving lead, separating
 a closing threat from a same-speed following nominal while verifying stored actor-speed constancy.
 
+`make demo-adjacent-pass` holds the closing-threat numbers fixed and moves the actor one lane
+over, verifying no front pair or false intervention through the ego's measured pass.
+
 ### Phase 8 commands
 
 ```bash
@@ -104,6 +107,7 @@ make demo-cut-in                           # the same oracle on a manoeuvre it n
 make demo-stationary                       # classic stopped in-path / adjacent-object pair
 make demo-fcw-stationary                   # stationary FCW warning-margin / adjacent-object pair
 make demo-steady-lead                      # moving steady-lead threat / following nominal pair
+make demo-adjacent-pass                    # identical moving tuple separated by lane placement
 hermes agent tools                         # discoverable tool catalogue with permissions
 hermes agent triage <run-id>               # proposal vs deterministic classification
 hermes agent check-citations <run-id>      # re-resolve every citation against the evidence

@@ -46,11 +46,12 @@ ADAS_SCENARIOS = (
     "non_in_path_stationary_object.yaml",
     "fcw_stationary_lead.yaml",
     "slow_lead_closing.yaml",
+    "adjacent_lane_pass.yaml",
     "fcw_aeb_nominal_following.yaml",
 )
 
 
-def test_ten_adas_scenarios_declare_the_measured_authority_without_changing_default(
+def test_eleven_adas_scenarios_declare_the_measured_authority_without_changing_default(
     repository_root: Path,
 ) -> None:
     """Falling back to 6.0 or replacing its Python default must break this contract."""
@@ -115,6 +116,30 @@ def test_steady_scenario_pair_pins_the_reviewed_authored_literals(
     assert nominal.challenge.actor_speed_mps == 20.0
     assert nominal.challenge.initial_gap_m == 40.0
     assert nominal.challenge.initial_lane_delta == 0
+    assert nominal.tags == ("aeb", "fcw", "longitudinal", "nominal")
+    assert nominal.adas is not None
+    assert nominal.adas.expected_fcw.kind == "none"
+    assert nominal.adas.expected_aeb.kind == "forbidden"
+
+
+def test_adjacent_lane_pass_pins_the_reviewed_authored_literals(
+    repository_root: Path,
+) -> None:
+    nominal = load_scenario(repository_root / "scenarios/adas/adjacent_lane_pass.yaml")
+
+    assert nominal.schema_version == "4.0"
+    assert nominal.name == "adjacent_lane_pass"
+    assert nominal.control.frequency_hz == 10
+    assert nominal.control.horizon_steps == 200
+    assert nominal.control.target_speed_mps == 20.0
+    assert nominal.initial_state.speed_mps == 20.0
+    assert nominal.challenge is not None
+    assert nominal.challenge.kind == "steady_lead"
+    assert nominal.challenge.actor_control_mode == "scripted_kinematic_replay"
+    assert nominal.challenge.behavior_realism_claim is False
+    assert nominal.challenge.actor_speed_mps == 10.0
+    assert nominal.challenge.initial_gap_m == 32.0
+    assert nominal.challenge.initial_lane_delta == 1
     assert nominal.tags == ("aeb", "fcw", "longitudinal", "nominal")
     assert nominal.adas is not None
     assert nominal.adas.expected_fcw.kind == "none"
@@ -225,7 +250,7 @@ def test_seeded_matrix_includes_the_observation_delay_environment_failure(
     assert suite.label == (
         "deliberately_seeded_policy_or_environment_failures_for_evaluation_acceptance"
     )
-    assert len(defects) == 12
+    assert len(defects) == 13
     delayed = defects["stationary_observation_delay"]
     assert delayed.policy_config == "config/adas/baseline.yaml"
     assert delayed.scenario == (
