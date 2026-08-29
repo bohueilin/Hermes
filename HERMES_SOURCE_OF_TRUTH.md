@@ -882,13 +882,14 @@ Each item states how you know it is done and what it will break.
    MOVING exact-mirror pair — identical numbers to `slow_lead_closing`, one lane over):
    suite 1,527 (+6 accounted), independent rerun reproduced the report's trace/events
    digests digit-for-digit, front pair absent 61/61 events through the seq-36 overtake,
-   stored-lateral sign inversion documented. Awaiting owner acceptance + merge, and the
-   **`lead_decelerates` contract decision**
+   stored-lateral sign inversion documented. **Accepted and merged onto `main`
+   2026-08-28 as `bd60b5b`** (conflict-free; README merged additively). The
+   **`lead_decelerates` contract memo was APPROVED as specified the same day**
    (`…/phase8-adjacent-pass/lead-decelerates-owner-memo.md`: scripted constant-rate
    member, `STEADY→DECELERATING→STEADY`, strictly positive terminal speed per the
-   ratified `gt=0.0` rationale — the LAST open contract in the P0 catalog). Remainder
-   after both: `decelerating_but_safe_lead` (buildable once the memo is approved) and
-   `cut_out_reveal_stopped` (owner-blocked, actor roster).
+   ratified `gt=0.0` rationale; author `decelerating_but_safe_lead` first, ACC flavor
+   deferred). Remainder: `decelerating_but_safe_lead` (implementation package in
+   preparation) and `cut_out_reveal_stopped` (owner-blocked, actor roster).
    `cut_out_reveal_stopped` stays owner-blocked (actor roster; a future roster needs a NEW
    evidence-schema version — 3.0 is taken by metrics-V3). Oracle is kind-agnostic by test;
    the newer template is `tests/integration/test_stationary_lead_generalisation.py`. Keep
