@@ -10,12 +10,12 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-fleetlab` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
-| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**: the `steady_lead` kind + measured `slow_lead_closing`/`fcw_aeb_nominal_following` pair — suite **1,521** in the ADAS worktree (§11.1 item 3) |
+| **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
 | **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 33 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-08-28 |
+| **Last updated** | 2026-08-29 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -888,13 +888,26 @@ Each item states how you know it is done and what it will break.
    (`…/phase8-adjacent-pass/lead-decelerates-owner-memo.md`: scripted constant-rate
    member, `STEADY→DECELERATING→STEADY`, strictly positive terminal speed per the
    ratified `gt=0.0` rationale; author `decelerating_but_safe_lead` first, ACC flavor
-   deferred). Remainder: `decelerating_but_safe_lead` (implementation package in
-   preparation) and `cut_out_reveal_stopped` (owner-blocked, actor roster).
-   `cut_out_reveal_stopped` stays owner-blocked (actor roster; a future roster needs a NEW
-   evidence-schema version — 3.0 is taken by metrics-V3). Oracle is kind-agnostic by test;
-   the newer template is `tests/integration/test_stationary_lead_generalisation.py`. Keep
-   nominal exposure ≥30% as a designed property (5 threat / 5 nominal tags after the fcw
-   pair reuse).
+   deferred). **`lead_decelerates` + `decelerating_but_safe_lead` implemented, verified,
+   and merged 2026-08-29** (`a721d60` kind / `579ca12` nominal on
+   `feat/phase8-lead-decelerates`, merged as `cb0b535`; branch pushed): six-agent
+   verification with a live reproduction matching every stored measurement to full
+   precision (min gap 20.8293 m, max a_req 0.6016 m/s² standoff-adjusted, min TTC
+   4.3542 s, phase windows exact, byte-identical determinism); suite **1,566**
+   (+39 fully accounted). Owner RATIFIED 2026-08-29: the three local-only commit
+   amendments (no pre-amend SHA ever reached a remote — AGENTS.md §19's blanket
+   no-history-rewriting text is Phase-6-era and does not distinguish local/shared;
+   ratification covers exactly these three) and the qualified defect-evidence ruling
+   (the actor-presence defect's all-hard set {progress.required, no_false_intervention}
+   reported beside the hard-ADAS singleton — a strengthening). Known issue carried
+   (fix before reuse): the UNUSED `lead_decelerates` arm of
+   `tests/unit/test_canonical_trace.py::_fault_challenge_event` swaps input/result
+   phases (observable only at `decel_start_step==1`; nothing committed calls it; misuse
+   fails loudly). The Task-A WIP stash on the branch is byte-superseded by `579ca12`
+   (safe to drop whenever). **P0 catalog position: every entry has its dedicated
+   scenario except roster-blocked `cut_out_reveal_stopped` and decision-deferred
+   `acc_lead_decelerates`.** Oracle is kind-agnostic by test. Nominal exposure ≥30%
+   holds as a designed property (6 threat-tagged / 7 nominal-tagged after this lane).
 4. ~~Wire the faults to ADAS~~ **DONE** (Phase 3) — observation faults enabled for the exact ADAS
    policy identity, with a measured delay scenario whose baseline degrades into a named finding.
    `orchestrator.py:514-528` bars observation faults on MetaDrive — written for IDM, which ignores
