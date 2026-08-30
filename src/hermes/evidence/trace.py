@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from fractions import Fraction
 from typing import Any
 
 from hermes.adas.decision import (
@@ -473,6 +474,7 @@ _CHALLENGE_PHASES = {
     "POST_CUT_IN",
     "PRESENT",
     "STEADY",
+    "DECELERATING",
 }
 
 
@@ -553,6 +555,24 @@ def _expected_challenge_phase(
         return "PRESENT"
     if challenge.kind == "steady_lead":
         return "STEADY"
+    if challenge.kind == "lead_decelerates":
+        speed_delta = Fraction(str(challenge.actor_speed_mps)) - Fraction(
+            str(challenge.terminal_speed_mps)
+        )
+        interval_fraction = (
+            speed_delta
+            * scenario.control.frequency_hz
+            / Fraction(str(challenge.deceleration_mps2))
+        )
+        interval_count = (
+            interval_fraction.numerator + interval_fraction.denominator - 1
+        ) // interval_fraction.denominator
+        sample = sequence + int(result)
+        if challenge.decel_start_step <= sample < (
+            challenge.decel_start_step + interval_count
+        ):
+            return "DECELERATING"
+        return "STEADY"
     if challenge.kind == "lead_vehicle_hard_brake":
         trigger = challenge.trigger_step
         end = trigger + challenge.brake_duration_steps
@@ -568,6 +588,34 @@ def _expected_challenge_phase(
     if sequence < end or (not result and sequence == end):
         return "CUT_IN"
     return "POST_CUT_IN"
+
+
+def _expected_actor_speed(
+    scenario: ScenarioDefinition,
+    sequence: int,
+    *,
+    result: bool,
+) -> float:
+    challenge = scenario.challenge
+    if challenge is None:
+        raise TraceIntegrityError("challenge configuration is unavailable")
+    if challenge.kind == "stationary_lead":
+        return 0.0
+    if challenge.kind == "steady_lead":
+        return challenge.actor_speed_mps
+    if challenge.kind == "lead_decelerates":
+        sample = sequence + int(result)
+        elapsed_s = max(
+            0.0,
+            (sample - challenge.decel_start_step) / scenario.control.frequency_hz,
+        )
+        return max(
+            challenge.terminal_speed_mps,
+            challenge.actor_speed_mps - challenge.deceleration_mps2 * elapsed_s,
+        )
+    raise TraceIntegrityError(
+        f"scripted actor speed is unavailable for challenge kind {challenge.kind!r}"
+    )
 
 
 def _challenge_values_match(left: object, right: object) -> bool:
@@ -787,13 +835,17 @@ def _verify_observation_summary(
                         f"speed at sequence {event.sequence}"
                     )
         if scenario.challenge.kind == "steady_lead":
-            for field_name in (
-                "challenge_actor_speed_mps",
-                "result_challenge_actor_speed_mps",
+            for field_name, result in (
+                ("challenge_actor_speed_mps", False),
+                ("result_challenge_actor_speed_mps", True),
             ):
                 if not _geometry_agrees(
                     _summary_number(event, field_name),
-                    scenario.challenge.actor_speed_mps,
+                    _expected_actor_speed(
+                        scenario,
+                        event.sequence,
+                        result=result,
+                    ),
                 ):
                     if event.sequence == 0:
                         raise TraceIntegrityError(
@@ -804,11 +856,29 @@ def _verify_observation_summary(
                         f"observation summary {field_name} contradicts declared steady "
                         f"actor speed at sequence {event.sequence}"
                     )
+        if scenario.challenge.kind == "lead_decelerates":
+            for field_name, result in (
+                ("challenge_actor_speed_mps", False),
+                ("result_challenge_actor_speed_mps", True),
+            ):
+                if not _geometry_agrees(
+                    _summary_number(event, field_name),
+                    _expected_actor_speed(
+                        scenario,
+                        event.sequence,
+                        result=result,
+                    ),
+                ):
+                    raise TraceIntegrityError(
+                        f"observation summary {field_name} contradicts declared "
+                        f"decelerating actor speed at sequence {event.sequence}"
+                    )
         if event.sequence == 0:
             actor_speed = _summary_number(event, "challenge_actor_speed_mps")
             declared_actor_speed = (
-                0.0
-                if scenario.challenge.kind == "stationary_lead"
+                _expected_actor_speed(scenario, event.sequence, result=False)
+                if scenario.challenge.kind
+                in {"stationary_lead", "steady_lead", "lead_decelerates"}
                 else scenario.challenge.actor_speed_mps
             )
             if not _geometry_agrees(actor_speed, declared_actor_speed):
@@ -817,7 +887,10 @@ def _verify_observation_summary(
                     "scenario at sequence 0"
                 )
             initial_distance = event.observation_summary["front_distance_m"]
-            if scenario.challenge.kind == "lead_vehicle_hard_brake" or (
+            if scenario.challenge.kind in {
+                "lead_vehicle_hard_brake",
+                "lead_decelerates",
+            } or (
                 scenario.challenge.kind in {"stationary_lead", "steady_lead"}
                 and scenario.challenge.initial_lane_delta == 0
             ):
@@ -1000,13 +1073,17 @@ def _verify_fault_challenge_evidence(
                     f"sequence {event.sequence}"
                 )
     if scenario.challenge.kind == "steady_lead":
-        for field_name in (
-            "challenge_actor_speed_mps",
-            "result_challenge_actor_speed_mps",
+        for field_name, sequence, result in (
+            (
+                "challenge_actor_speed_mps",
+                event.observation_fault_evidence.delivered_from_sequence,
+                False,
+            ),
+            ("result_challenge_actor_speed_mps", event.sequence, True),
         ):
             if not _geometry_agrees(
                 _summary_number(event, field_name),
-                scenario.challenge.actor_speed_mps,
+                _expected_actor_speed(scenario, sequence, result=result),
             ):
                 if event.sequence == 0:
                     raise TraceIntegrityError(
@@ -1017,11 +1094,29 @@ def _verify_fault_challenge_evidence(
                     f"fault challenge {field_name} contradicts declared steady actor speed "
                     f"at sequence {event.sequence}"
                 )
+    if scenario.challenge.kind == "lead_decelerates":
+        for field_name, sequence, result in (
+            (
+                "challenge_actor_speed_mps",
+                event.observation_fault_evidence.delivered_from_sequence,
+                False,
+            ),
+            ("result_challenge_actor_speed_mps", event.sequence, True),
+        ):
+            if not _geometry_agrees(
+                _summary_number(event, field_name),
+                _expected_actor_speed(scenario, sequence, result=result),
+            ):
+                raise TraceIntegrityError(
+                    f"fault challenge {field_name} contradicts declared decelerating "
+                    f"actor speed at sequence {event.sequence}"
+                )
     if event.sequence == 0:
         actor_speed = _summary_number(event, "challenge_actor_speed_mps")
         declared_actor_speed = (
-            0.0
-            if scenario.challenge.kind == "stationary_lead"
+            _expected_actor_speed(scenario, event.sequence, result=False)
+            if scenario.challenge.kind
+            in {"stationary_lead", "steady_lead", "lead_decelerates"}
             else scenario.challenge.actor_speed_mps
         )
         if not _geometry_agrees(actor_speed, declared_actor_speed):
@@ -1029,7 +1124,10 @@ def _verify_fault_challenge_evidence(
                 "fault challenge initial actor speed contradicts the scenario at sequence 0"
             )
         initial_distance = event.observation_summary["front_distance_m"]
-        if scenario.challenge.kind == "lead_vehicle_hard_brake" or (
+        if scenario.challenge.kind in {
+            "lead_vehicle_hard_brake",
+            "lead_decelerates",
+        } or (
             scenario.challenge.kind in {"stationary_lead", "steady_lead"}
             and scenario.challenge.initial_lane_delta == 0
         ):
@@ -1204,7 +1302,7 @@ def _verify_fault_event(
                 raw.challenge_actor_speed_mps is None
                 or not _geometry_agrees(
                     raw.challenge_actor_speed_mps,
-                    scenario.challenge.actor_speed_mps,
+                    _expected_actor_speed(scenario, 0, result=False),
                 )
             ):
                 raise TraceIntegrityError(
@@ -1232,6 +1330,40 @@ def _verify_fault_event(
             ):
                 raise TraceIntegrityError(
                     "fault raw adjacent steady actor must have paired-null front fields"
+                )
+        if (
+            scenario.challenge is not None
+            and scenario.challenge.kind == "lead_decelerates"
+        ):
+            expected_speed = _expected_actor_speed(scenario, 0, result=False)
+            if (
+                raw.challenge_actor_speed_mps is None
+                or not _geometry_agrees(
+                    raw.challenge_actor_speed_mps,
+                    expected_speed,
+                )
+            ):
+                raise TraceIntegrityError(
+                    "fault raw decelerating actor speed contradicts the scenario at sequence 0"
+                )
+            if raw.challenge_phase != _expected_challenge_phase(
+                scenario,
+                0,
+                result=False,
+            ):
+                raise TraceIntegrityError(
+                    "fault raw decelerating actor phase contradicts the scenario at sequence 0"
+                )
+            if (
+                raw.front_distance_m is None
+                or raw.front_relative_speed_mps is None
+                or not _geometry_agrees(
+                    raw.front_distance_m,
+                    scenario.challenge.initial_gap_m,
+                )
+            ):
+                raise TraceIntegrityError(
+                    "fault raw initial front gap contradicts the decelerating challenge"
                 )
     else:
         prior = events[index - 1]

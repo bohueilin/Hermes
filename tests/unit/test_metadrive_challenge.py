@@ -5,6 +5,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+from tests.unit.test_canonical_trace import LEAD_DECELERATION_CONFORMANCE_VECTORS
 
 from hermes.adapters.metadrive import MetaDriveAdapter, MetaDriveDependencies
 from hermes.adapters.metadrive_challenge import (
@@ -257,6 +258,27 @@ def _reset_runtime() -> None:
     _ENGINE.__init__()
 
 
+def _lead_decelerates_payload(
+    *,
+    actor_speed_mps: float = 20.0,
+    terminal_speed_mps: float = 15.0,
+    deceleration_mps2: float = 2.0,
+    decel_start_step: int = 10,
+    initial_gap_m: float = 40.0,
+    actor_control_mode: str = "scripted_kinematic_replay",
+) -> dict[str, object]:
+    return {
+        "kind": "lead_decelerates",
+        "actor_control_mode": actor_control_mode,
+        "behavior_realism_claim": False,
+        "initial_gap_m": initial_gap_m,
+        "actor_speed_mps": actor_speed_mps,
+        "deceleration_mps2": deceleration_mps2,
+        "decel_start_step": decel_start_step,
+        "terminal_speed_mps": terminal_speed_mps,
+    }
+
+
 def test_lead_actor_uses_fixed_seed_and_exact_hard_brake_schedule() -> None:
     _reset_runtime()
     environment = create_challenge_environment(
@@ -398,6 +420,166 @@ def test_steady_lead_runtime_rejects_a_dynamic_control_mode() -> None:
                 "initial_gap_m": 8.0,
                 "actor_speed_mps": 4.0,
             },
+            runtime_types=_runtime_types(),
+        )
+
+
+@pytest.mark.parametrize(
+    ("terminal_speed_mps", "deceleration_mps2", "last_sequence"),
+    ((15.0, 2.0, 36), (17.0, 1.5, 30)),
+)
+def test_lead_decelerates_actor_replays_literal_speed_phase_and_position_schedule(
+    terminal_speed_mps: float,
+    deceleration_mps2: float,
+    last_sequence: int,
+) -> None:
+    _reset_runtime()
+    environment = create_challenge_environment(
+        _config(),
+        _lead_decelerates_payload(
+            terminal_speed_mps=terminal_speed_mps,
+            deceleration_mps2=deceleration_mps2,
+        ),
+        runtime_types=_runtime_types(),
+    )
+    manager = environment.engine.hermes_challenge_manager
+
+    manager.reset()
+    manager.after_reset()
+    actor = manager.actor
+    initial_longitudinal = actor.position[0]
+    vectors = {
+        vector[5]: vector
+        for vector in LEAD_DECELERATION_CONFORMANCE_VECTORS
+        if vector[2] == terminal_speed_mps
+    }
+    primary_displacements = {
+        9: 18.0,
+        10: 20.0,
+        11: 21.99,
+        34: 62.24,
+        35: 63.75,
+        36: 65.25,
+    }
+    restored_decelerating_velocities: list[float] = []
+
+    assert actor.static is True
+    assert manager.snapshot.actor_speed_mps == 20.0
+    assert manager.snapshot.phase == "STEADY"
+
+    for sequence in range(last_sequence + 1):
+        vector = vectors.get(sequence)
+        if vector is not None:
+            assert manager.snapshot.phase == vector[8]
+
+        _ENGINE.episode_step = sequence + 1
+        manager.before_step()
+        assert actor.actions[-1] is None
+        if terminal_speed_mps == 15.0 and sequence in primary_displacements:
+            assert actor.position[0] - initial_longitudinal == pytest.approx(
+                primary_displacements[sequence], abs=1e-12
+            )
+        if vector is not None:
+            assert manager.snapshot.actor_speed_mps == pytest.approx(
+                vector[6], abs=1e-12
+            )
+            assert manager.snapshot.phase == vector[9]
+
+        actor.velocity = [99.0, 0.0]
+        manager.after_step()
+        if vector is not None:
+            assert actor.velocity[0] == pytest.approx(vector[7], abs=1e-12)
+            assert manager.snapshot.actor_speed_mps == pytest.approx(
+                vector[7], abs=1e-12
+            )
+            assert manager.snapshot.phase == vector[9]
+        if terminal_speed_mps == 15.0 and sequence in (10, 11):
+            restored_decelerating_velocities.append(actor.velocity[0])
+
+    if terminal_speed_mps == 15.0:
+        assert restored_decelerating_velocities == pytest.approx([19.8, 19.6])
+        assert restored_decelerating_velocities[0] != restored_decelerating_velocities[1]
+
+
+def test_lead_decelerates_spawn_is_decelerating_when_schedule_starts_at_zero() -> None:
+    _reset_runtime()
+    environment = create_challenge_environment(
+        _config(),
+        _lead_decelerates_payload(
+            actor_speed_mps=5.0,
+            terminal_speed_mps=2.0,
+            deceleration_mps2=10.0,
+            decel_start_step=0,
+        ),
+        runtime_types=_runtime_types(),
+    )
+    manager = environment.engine.hermes_challenge_manager
+
+    manager.reset()
+    manager.after_reset()
+
+    assert manager.actor.static is True
+    assert manager.snapshot.actor_speed_mps == 5.0
+    assert manager.snapshot.phase == "DECELERATING"
+
+
+def test_lead_decelerates_reset_time_after_step_holds_spawn_state() -> None:
+    """MetaDrive may call after_step during reset before the first before_step."""
+    _reset_runtime()
+    environment = create_challenge_environment(
+        _config(),
+        _lead_decelerates_payload(),
+        runtime_types=_runtime_types(),
+    )
+    manager = environment.engine.hermes_challenge_manager
+
+    manager.reset()
+    manager.after_reset()
+    actor = manager.actor
+    manager.after_step()
+
+    assert actor.velocity == [20.0, 0.0]
+    assert actor.static is True
+    assert manager.snapshot.actor_speed_mps == 20.0
+    assert manager.snapshot.phase == "STEADY"
+
+
+def test_lead_decelerates_terminal_phase_uses_exact_interval_boundary() -> None:
+    """A float quotient must not extend deceleration beyond result sample 29."""
+    _reset_runtime()
+    environment = create_challenge_environment(
+        _config(),
+        _lead_decelerates_payload(
+            actor_speed_mps=0.4,
+            terminal_speed_mps=0.1,
+            deceleration_mps2=0.1,
+            decel_start_step=0,
+        ),
+        runtime_types=_runtime_types(),
+    )
+    manager = environment.engine.hermes_challenge_manager
+
+    manager.reset()
+    manager.after_reset()
+
+    _ENGINE.episode_step = 29
+    manager.before_step()
+    manager.after_step()
+    assert manager.snapshot.actor_speed_mps == pytest.approx(0.11, abs=1e-12)
+    assert manager.snapshot.phase == "DECELERATING"
+
+    _ENGINE.episode_step = 30
+    manager.before_step()
+    manager.after_step()
+    assert manager.snapshot.actor_speed_mps == pytest.approx(0.1, abs=1e-12)
+    assert manager.snapshot.phase == "STEADY"
+
+
+def test_lead_decelerates_runtime_rejects_a_dynamic_control_mode() -> None:
+    with pytest.raises(ValueError, match="decelerating challenge requires"):
+        create_challenge_environment(
+            _config(),
+            _lead_decelerates_payload(actor_control_mode="metadrive_dynamic_action"),
             runtime_types=_runtime_types(),
         )
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+import hermes.evidence.trace as trace_module
 from hermes.domain.enums import EvidenceAvailability, TerminationReason
 from hermes.domain.models import (
     Action,
@@ -27,9 +28,95 @@ from hermes.evidence.trace import (
     verify_complete_trace,
     verify_event_chain,
 )
+from hermes.faults.deterministic import DeterministicFaultInjector
 from hermes.scenarios.loader import load_scenario
 
 _UNSET = object()
+
+
+LEAD_DECELERATION_CONFORMANCE_VECTORS = (
+    (10, 20.0, 15.0, 2.0, 10, 10, 20.0, 19.8, "DECELERATING", "DECELERATING"),
+    (10, 20.0, 15.0, 2.0, 10, 22, 17.6, 17.4, "DECELERATING", "DECELERATING"),
+    (10, 20.0, 15.0, 2.0, 10, 34, 15.2, 15.0, "DECELERATING", "STEADY"),
+    (10, 20.0, 15.0, 2.0, 10, 35, 15.0, 15.0, "STEADY", "STEADY"),
+    (10, 20.0, 17.0, 1.5, 10, 10, 20.0, 19.85, "DECELERATING", "DECELERATING"),
+    (10, 20.0, 17.0, 1.5, 10, 19, 18.65, 18.5, "DECELERATING", "DECELERATING"),
+    (10, 20.0, 17.0, 1.5, 10, 29, 17.15, 17.0, "DECELERATING", "STEADY"),
+    (10, 20.0, 17.0, 1.5, 10, 30, 17.0, 17.0, "STEADY", "STEADY"),
+)
+
+
+def _literal_decelerating_speed(
+    frequency_hz: int,
+    actor_speed_mps: float,
+    terminal_speed_mps: float,
+    deceleration_mps2: float,
+    decel_start_step: int,
+    sample: int,
+) -> float:
+    elapsed_s = max(0.0, (sample - decel_start_step) / frequency_hz)
+    return max(
+        terminal_speed_mps,
+        actor_speed_mps - deceleration_mps2 * elapsed_s,
+    )
+
+
+def _literal_decelerating_phase(
+    decel_start_step: int,
+    terminal_intervals: int,
+    sample: int,
+) -> str:
+    if decel_start_step <= sample < decel_start_step + terminal_intervals:
+        return "DECELERATING"
+    return "STEADY"
+
+
+def test_literal_lead_deceleration_fixture_reproduces_every_conformance_vector() -> None:
+    for (
+        frequency_hz,
+        actor_speed_mps,
+        terminal_speed_mps,
+        deceleration_mps2,
+        decel_start_step,
+        sequence,
+        expected_input_speed,
+        expected_result_speed,
+        expected_input_phase,
+        expected_result_phase,
+    ) in LEAD_DECELERATION_CONFORMANCE_VECTORS:
+        terminal_intervals = 25 if terminal_speed_mps == 15.0 else 20
+        assert _literal_decelerating_speed(
+            frequency_hz,
+            actor_speed_mps,
+            terminal_speed_mps,
+            deceleration_mps2,
+            decel_start_step,
+            sequence,
+        ) == pytest.approx(expected_input_speed, abs=1e-12)
+        assert _literal_decelerating_speed(
+            frequency_hz,
+            actor_speed_mps,
+            terminal_speed_mps,
+            deceleration_mps2,
+            decel_start_step,
+            sequence + 1,
+        ) == pytest.approx(expected_result_speed, abs=1e-12)
+        assert (
+            _literal_decelerating_phase(
+                decel_start_step,
+                terminal_intervals,
+                sequence,
+            )
+            == expected_input_phase
+        )
+        assert (
+            _literal_decelerating_phase(
+                decel_start_step,
+                terminal_intervals,
+                sequence + 1,
+            )
+            == expected_result_phase
+        )
 
 
 def _context(*, horizon_steps: int = 20) -> RunContext:
@@ -165,8 +252,30 @@ def _challenge_event(
         phase = "PRESENT"
     elif scenario.challenge.kind == "steady_lead":
         phase = "STEADY"
+    elif scenario.challenge.kind == "lead_decelerates":
+        phase = (
+            "DECELERATING"
+            if scenario.challenge.decel_start_step == 0
+            else "STEADY"
+        )
     else:
         phase = "PRE_TRIGGER"
+    result_phase = phase
+    result_actor_speed = actor_speed
+    if scenario.challenge.kind == "lead_decelerates":
+        result_actor_speed = _literal_decelerating_speed(
+            scenario.control.frequency_hz,
+            scenario.challenge.actor_speed_mps,
+            scenario.challenge.terminal_speed_mps,
+            scenario.challenge.deceleration_mps2,
+            scenario.challenge.decel_start_step,
+            1,
+        )
+        result_phase = _literal_decelerating_phase(
+            scenario.challenge.decel_start_step,
+            _literal_terminal_intervals(scenario),
+            1,
+        )
     context = _context(horizon_steps=scenario.control.horizon_steps).model_copy(
         update={"adapter_name": "metadrive", "policy_name": "metadrive-idm"}
     )
@@ -191,8 +300,8 @@ def _challenge_event(
         "result_challenge_actor_lateral_offset_m": (
             4.0 * getattr(scenario.challenge, "initial_lane_delta", 0)
         ),
-        "result_challenge_actor_speed_mps": actor_speed,
-        "result_challenge_phase": phase,
+        "result_challenge_actor_speed_mps": result_actor_speed,
+        "result_challenge_phase": result_phase,
     }
     summary.update(summary_updates or {})
     action = Action(steering=0.0, throttle=0.0, brake=0.0)
@@ -252,12 +361,29 @@ def _fault_challenge_event(
         phase = "PRESENT"
     elif scenario.challenge.kind == "steady_lead":
         phase = "STEADY"
+    elif scenario.challenge.kind == "lead_decelerates":
+        phase = (
+            "DECELERATING"
+            if scenario.challenge.decel_start_step == 0
+            else "STEADY"
+        )
     else:
         phase = "PRE_TRIGGER"
     if front_relative_speed_mps is _UNSET:
         front_relative_speed_mps = actor_speed if in_path else None
     if result_actor_speed_mps is _UNSET:
-        result_actor_speed_mps = actor_speed
+        result_actor_speed_mps = (
+            _literal_decelerating_speed(
+                scenario.control.frequency_hz,
+                scenario.challenge.actor_speed_mps,
+                scenario.challenge.terminal_speed_mps,
+                scenario.challenge.deceleration_mps2,
+                scenario.challenge.decel_start_step,
+                1,
+            )
+            if scenario.challenge.kind == "lead_decelerates"
+            else actor_speed
+        )
     assert isinstance(front_relative_speed_mps, (float, int)) or front_relative_speed_mps is None
     assert isinstance(result_actor_speed_mps, (float, int)) or result_actor_speed_mps is None
     state = VehicleState(
@@ -286,7 +412,15 @@ def _fault_challenge_event(
         challenge_actor_longitudinal_m=scenario.challenge.initial_gap_m + 4.515,
         challenge_actor_lateral_offset_m=0.0,
         challenge_actor_speed_mps=actor_speed,
-        challenge_phase=phase,
+        challenge_phase=(
+            _literal_decelerating_phase(
+                scenario.challenge.decel_start_step,
+                _literal_terminal_intervals(scenario),
+                1,
+            )
+            if scenario.challenge.kind == "lead_decelerates"
+            else phase
+        ),
     )
     raw = base_raw.model_copy(update=raw_updates or {})
     delivered = base_raw.model_copy(update=delivered_updates or {})
@@ -645,6 +779,307 @@ def _steady_scenario(
             "control_delay_steps": 1,
         }
     return ScenarioDefinition.model_validate(payload)
+
+
+def _decelerating_scenario(
+    *,
+    actor_speed_mps: float = 20.0,
+    terminal_speed_mps: float = 15.0,
+    deceleration_mps2: float = 2.0,
+    decel_start_step: int = 10,
+    horizon_steps: int = 36,
+    faults: dict[str, object] | None = None,
+) -> ScenarioDefinition:
+    payload: dict[str, object] = {
+        "schema_version": "4.0",
+        "name": "lead_decelerates_trace_unit",
+        "version": "1.0",
+        "description": "Scripted decelerating actor trace-contract unit scenario.",
+        "adapter": "metadrive",
+        "control": {
+            "frequency_hz": 10,
+            "horizon_steps": horizon_steps,
+            "target_speed_mps": 0.0,
+        },
+        "initial_state": {"speed_mps": 0.0, "lateral_offset_m": 0.0},
+        "road": {"destination_distance_m": 240.0, "boundary_tolerance_m": 1.5},
+        "challenge": {
+            "kind": "lead_decelerates",
+            "actor_control_mode": "scripted_kinematic_replay",
+            "behavior_realism_claim": False,
+            "initial_gap_m": 40.0,
+            "actor_speed_mps": actor_speed_mps,
+            "deceleration_mps2": deceleration_mps2,
+            "decel_start_step": decel_start_step,
+            "terminal_speed_mps": terminal_speed_mps,
+        },
+    }
+    if faults is not None:
+        payload["faults"] = {
+            "schema_version": "1.0",
+            "name": "lead_decelerates_observation_fault",
+            "version": "1.0",
+            "label": "illustrative_simulation_faults_not_real_vehicle_limits",
+            **faults,
+        }
+    return ScenarioDefinition.model_validate(payload)
+
+
+def _literal_terminal_intervals(scenario: ScenarioDefinition) -> int:
+    assert scenario.challenge is not None
+    assert scenario.challenge.kind == "lead_decelerates"
+    values = (
+        scenario.control.frequency_hz,
+        scenario.challenge.actor_speed_mps,
+        scenario.challenge.terminal_speed_mps,
+        scenario.challenge.deceleration_mps2,
+        scenario.challenge.decel_start_step,
+    )
+    if values == (10, 20.0, 15.0, 2.0, 10):
+        return 25
+    if values == (10, 20.0, 17.0, 1.5, 10):
+        return 20
+    if values == (10, 5.0, 2.0, 10.0, 1):
+        return 3
+    raise AssertionError(f"test fixture has no literal terminal interval for {values!r}")
+
+
+def _literal_decelerating_displacement(
+    scenario: ScenarioDefinition,
+    sample: int,
+) -> float:
+    assert scenario.challenge is not None
+    assert scenario.challenge.kind == "lead_decelerates"
+    dt = 1.0 / scenario.control.frequency_hz
+    time_s = sample * dt
+    start_s = scenario.challenge.decel_start_step * dt
+    terminal_elapsed_s = (
+        scenario.challenge.actor_speed_mps - scenario.challenge.terminal_speed_mps
+    ) / scenario.challenge.deceleration_mps2
+    elapsed_s = max(0.0, time_s - start_s)
+    active_s = min(elapsed_s, terminal_elapsed_s)
+    return (
+        scenario.challenge.actor_speed_mps * min(time_s, start_s)
+        + scenario.challenge.actor_speed_mps * active_s
+        - 0.5 * scenario.challenge.deceleration_mps2 * active_s * active_s
+        + scenario.challenge.terminal_speed_mps
+        * max(0.0, elapsed_s - terminal_elapsed_s)
+    )
+
+
+def _decelerating_observations(
+    scenario: ScenarioDefinition,
+    *,
+    updates_by_sequence: dict[int, dict[str, object]] | None = None,
+) -> tuple[Observation, ...]:
+    assert scenario.challenge is not None
+    assert scenario.challenge.kind == "lead_decelerates"
+    terminal_intervals = _literal_terminal_intervals(scenario)
+    observations = []
+    for sequence in range(scenario.control.horizon_steps + 1):
+        actor_speed = _literal_decelerating_speed(
+            scenario.control.frequency_hz,
+            scenario.challenge.actor_speed_mps,
+            scenario.challenge.terminal_speed_mps,
+            scenario.challenge.deceleration_mps2,
+            scenario.challenge.decel_start_step,
+            sequence,
+        )
+        displacement = _literal_decelerating_displacement(scenario, sequence)
+        observation = Observation(
+            sequence=sequence,
+            simulation_time_s=sequence / scenario.control.frequency_hz,
+            vehicle_state=VehicleState(
+                position_m=0.0,
+                speed_mps=0.0,
+                acceleration_mps2=0.0,
+                lateral_offset_m=0.0,
+                route_progress_pct=0.0,
+                collision_count=0,
+                offroad=False,
+                destination_reached=False,
+            ),
+            front_distance_m=scenario.challenge.initial_gap_m + displacement,
+            front_relative_speed_mps=actor_speed,
+            challenge_actor_longitudinal_m=(
+                scenario.challenge.initial_gap_m + 4.515 + displacement
+            ),
+            challenge_actor_lateral_offset_m=0.0,
+            challenge_actor_speed_mps=actor_speed,
+            challenge_phase=_literal_decelerating_phase(
+                scenario.challenge.decel_start_step,
+                terminal_intervals,
+                sequence,
+            ),
+        )
+        if updates_by_sequence and sequence in updates_by_sequence:
+            observation = observation.model_copy(
+                update=updates_by_sequence[sequence]
+            )
+        observations.append(observation)
+    return tuple(observations)
+
+
+def _multi_event_decelerating_trace(
+    scenario: ScenarioDefinition,
+    *,
+    summary_updates_by_sequence: dict[int, dict[str, object]] | None = None,
+):
+    assert scenario.faults is None
+    observations = _decelerating_observations(scenario)
+    context = _context(horizon_steps=scenario.control.horizon_steps).model_copy(
+        update={"adapter_name": "metadrive", "policy_name": "metadrive-idm"}
+    )
+    action = Action(steering=0.0, throttle=0.0, brake=0.0)
+    previous_hash = GENESIS_HASH
+    events = []
+    for sequence in range(scenario.control.horizon_steps):
+        summary = _challenge_summary(observations[sequence], observations[sequence + 1])
+        if summary_updates_by_sequence and sequence in summary_updates_by_sequence:
+            summary.update(summary_updates_by_sequence[sequence])
+        is_last = sequence == scenario.control.horizon_steps - 1
+        event = create_trace_event(
+            sequence=sequence,
+            simulation_time_s=(sequence + 1) / scenario.control.frequency_hz,
+            run_context=context,
+            observation_summary=summary,
+            candidate_action=action,
+            executed_action=action,
+            override_reasons=(),
+            vehicle_state=observations[sequence + 1].vehicle_state,
+            policy_latency_ms=10.0,
+            latency_source="simulated",
+            terminated=False,
+            truncated=is_last,
+            termination_reason=(
+                TerminationReason.HORIZON if is_last else TerminationReason.NONE
+            ),
+            raw_facts={
+                "collision": False,
+                "collision_count": 0,
+                "offroad": False,
+                "destination_reached": False,
+                "route_progress_available": True,
+                "route_progress_pct": 0.0,
+            },
+            previous_hash=previous_hash,
+        )
+        events.append(event)
+        previous_hash = event.current_hash
+    return tuple(events)
+
+
+def _multi_event_fault_decelerating_trace(
+    scenario: ScenarioDefinition,
+    *,
+    raw_updates_by_sequence: dict[int, dict[str, object]] | None = None,
+    delivered_updates_by_sequence: dict[int, dict[str, object]] | None = None,
+    result_updates_by_sequence: dict[int, dict[str, object]] | None = None,
+):
+    assert scenario.faults is not None
+    scheduled_observations = _decelerating_observations(scenario)
+    raw_observations = tuple(
+        observation.model_copy(
+            update=(raw_updates_by_sequence or {}).get(sequence, {})
+        )
+        for sequence, observation in enumerate(scheduled_observations)
+    )
+    injector = DeterministicFaultInjector(scenario.faults)
+    injector.reset(scenario, seed=7)
+    deliveries = [
+        injector.process_observation(raw_observations[sequence])
+        for sequence in range(scenario.control.horizon_steps)
+    ]
+    context = RunContextV2(
+        scenario_digest="a" * 64,
+        gate_config_digest="b" * 64,
+        adapter_name="metadrive",
+        adapter_version="1.1",
+        adapter_config_digest="c" * 64,
+        policy_name="metadrive-idm",
+        policy_version="1.0",
+        policy_config_digest="d" * 64,
+        shield_name="noop",
+        shield_version="1.0",
+        shield_config_digest="e" * 64,
+        verifier_suite_digest="f" * 64,
+        fault_name="deterministic-faults",
+        fault_version="1.0",
+        fault_config_digest="1" * 64,
+        seed=7,
+        control_frequency_hz=scenario.control.frequency_hz,
+        horizon_steps=scenario.control.horizon_steps,
+    )
+    action = Action(steering=0.0, throttle=0.0, brake=0.0)
+    previous_hash = GENESIS_HASH
+    events = []
+    for sequence, faulted in enumerate(deliveries):
+        delivered = faulted.observation
+        if delivered_updates_by_sequence and sequence in delivered_updates_by_sequence:
+            delivered = delivered.model_copy(
+                update=delivered_updates_by_sequence[sequence]
+            )
+        result = scheduled_observations[sequence + 1]
+        if result_updates_by_sequence and sequence in result_updates_by_sequence:
+            result = result.model_copy(update=result_updates_by_sequence[sequence])
+        is_last = sequence == scenario.control.horizon_steps - 1
+        event = create_trace_event_v2(
+            sequence=sequence,
+            simulation_time_s=(sequence + 1) / scenario.control.frequency_hz,
+            run_context=context,
+            observation_summary=_challenge_summary(delivered, result),
+            candidate_action=action,
+            permitted_action=action,
+            executed_action=action,
+            override_reasons=(),
+            observation_fault_evidence=ObservationFaultEvidence(
+                raw_observation=raw_observations[sequence],
+                delivered_observation=delivered,
+                delivered_from_sequence=faulted.source_sequence,
+                delivered_from_time_s=faulted.source_simulation_time_s,
+                delivery_time_s=faulted.delivery_time_s,
+                applied_faults=faulted.reason_codes,
+                speed_noise_delta_mps=faulted.noise_deltas.speed_mps,
+                lateral_noise_delta_m=faulted.noise_deltas.lateral_offset_m,
+            ),
+            control_fault_evidence=ControlFaultEvidence(
+                candidate_time_s=sequence / scenario.control.frequency_hz,
+                executed_from_sequence=sequence,
+                executed_from_candidate_time_s=(
+                    sequence / scenario.control.frequency_hz
+                ),
+                execution_time_s=sequence / scenario.control.frequency_hz,
+                pre_saturation_action=action,
+                applied_faults=(),
+                control_latency_ms=Measurement(
+                    availability=EvidenceAvailability.AVAILABLE,
+                    value=0.0,
+                    unit="ms",
+                ),
+                latency_source="simulated",
+            ),
+            result_observation=result,
+            vehicle_state=result.vehicle_state,
+            policy_latency_ms=10.0,
+            latency_source="simulated",
+            terminated=False,
+            truncated=is_last,
+            termination_reason=(
+                TerminationReason.HORIZON if is_last else TerminationReason.NONE
+            ),
+            raw_facts={
+                "collision": False,
+                "collision_count": 0,
+                "offroad": False,
+                "destination_reached": False,
+                "route_progress_available": True,
+                "route_progress_pct": 0.0,
+            },
+            previous_hash=previous_hash,
+        )
+        events.append(event)
+        previous_hash = event.current_hash
+    return tuple(events)
 
 
 def _steady_observations(scenario: ScenarioDefinition) -> tuple[Observation, ...]:
@@ -1110,6 +1545,262 @@ def test_fault_adjacent_steady_raw_actor_requires_paired_null_front_fields() -> 
 
     with pytest.raises(TraceIntegrityError, match="paired-null front fields"):
         verify_complete_trace((event,), scenario)
+
+
+@pytest.mark.parametrize(
+    ("terminal_speed_mps", "deceleration_mps2", "horizon_steps"),
+    ((15.0, 2.0, 36), (17.0, 1.5, 31)),
+)
+def test_decelerating_trace_accepts_literal_speed_and_phase_vectors_without_fallthrough(
+    terminal_speed_mps: float,
+    deceleration_mps2: float,
+    horizon_steps: int,
+) -> None:
+    scenario = _decelerating_scenario(
+        terminal_speed_mps=terminal_speed_mps,
+        deceleration_mps2=deceleration_mps2,
+        horizon_steps=horizon_steps,
+    )
+    events = _multi_event_decelerating_trace(scenario)
+
+    assert verify_complete_trace(events, scenario) == events[-1].current_hash
+    matching_vectors = [
+        vector
+        for vector in LEAD_DECELERATION_CONFORMANCE_VECTORS
+        if vector[2] == terminal_speed_mps
+    ]
+    for vector in matching_vectors:
+        sequence = vector[5]
+        summary = events[sequence].observation_summary
+        assert summary["challenge_actor_speed_mps"] == pytest.approx(
+            vector[6], abs=1e-12
+        )
+        assert summary["result_challenge_actor_speed_mps"] == pytest.approx(
+            vector[7], abs=1e-12
+        )
+        assert summary["challenge_phase"] == vector[8]
+        assert summary["result_challenge_phase"] == vector[9]
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    ("challenge_actor_speed_mps", "result_challenge_actor_speed_mps"),
+)
+def test_decelerating_clean_trace_rejects_mid_schedule_speed_mutations(
+    field_name: str,
+) -> None:
+    scenario = _decelerating_scenario()
+    events = _multi_event_decelerating_trace(
+        scenario,
+        summary_updates_by_sequence={22: {field_name: 17.0}},
+    )
+
+    with pytest.raises(
+        TraceIntegrityError,
+        match=rf"{field_name} contradicts declared decelerating actor speed at sequence 22",
+    ):
+        verify_complete_trace(events, scenario)
+
+
+@pytest.mark.parametrize(
+    ("sequence", "field_name", "wrong_phase"),
+    (
+        (10, "challenge_phase", "STEADY"),
+        (34, "result_challenge_phase", "DECELERATING"),
+    ),
+)
+def test_decelerating_clean_trace_rejects_wrong_half_open_boundary_phases(
+    sequence: int,
+    field_name: str,
+    wrong_phase: str,
+) -> None:
+    scenario = _decelerating_scenario()
+    events = _multi_event_decelerating_trace(
+        scenario,
+        summary_updates_by_sequence={sequence: {field_name: wrong_phase}},
+    )
+
+    with pytest.raises(TraceIntegrityError, match="contradicts the scenario schedule"):
+        verify_complete_trace(events, scenario)
+
+
+def test_decelerating_clean_trace_binds_the_initial_in_lane_gap() -> None:
+    scenario = _decelerating_scenario()
+    events = _multi_event_decelerating_trace(
+        scenario,
+        summary_updates_by_sequence={0: {"front_distance_m": 39.0}},
+    )
+
+    with pytest.raises(TraceIntegrityError, match="initial front gap"):
+        verify_complete_trace(events, scenario)
+
+
+def test_expected_actor_speed_helper_rejects_dynamic_challenge_kinds(
+    repository_root: Path,
+) -> None:
+    scenario = load_scenario(
+        repository_root / "scenarios" / "metadrive_lead_vehicle_hard_brake.yaml"
+    )
+
+    with pytest.raises(TraceIntegrityError, match="scripted actor speed is unavailable"):
+        trace_module._expected_actor_speed(scenario, 0, result=False)
+
+
+@pytest.mark.parametrize(
+    ("faults", "sequence", "source_sequence", "reason", "delivered_speed"),
+    (
+        (
+            {"observation_delay_steps": 1},
+            1,
+            0,
+            "OBSERVATION_DELAY",
+            5.0,
+        ),
+        (
+            {"frozen_observation_interval": {"start_step": 2, "duration_steps": 2}},
+            3,
+            2,
+            "OBSERVATION_FROZEN",
+            4.0,
+        ),
+        (
+            {"dropped_observation_steps": (3,)},
+            3,
+            2,
+            "OBSERVATION_DROPOUT_HOLD_LAST",
+            4.0,
+        ),
+    ),
+)
+def test_decelerating_fault_trace_preserves_schedule_provenance_across_fault_modes(
+    faults: dict[str, object],
+    sequence: int,
+    source_sequence: int,
+    reason: str,
+    delivered_speed: float,
+) -> None:
+    scenario = _decelerating_scenario(
+        actor_speed_mps=5.0,
+        terminal_speed_mps=2.0,
+        deceleration_mps2=10.0,
+        decel_start_step=1,
+        horizon_steps=4,
+        faults=faults,
+    )
+    events = _multi_event_fault_decelerating_trace(scenario)
+
+    assert verify_complete_trace(events, scenario) == events[-1].current_hash
+    evidence = events[sequence].observation_fault_evidence
+    assert evidence.delivered_from_sequence == source_sequence
+    assert reason in evidence.applied_faults
+    assert evidence.delivered_observation.challenge_actor_speed_mps == delivered_speed
+    assert evidence.raw_observation.challenge_actor_speed_mps == (5.0, 5.0, 4.0, 3.0)[
+        sequence
+    ]
+    assert events[sequence].result_observation.challenge_actor_speed_mps == (
+        5.0,
+        4.0,
+        3.0,
+        2.0,
+    )[sequence]
+
+    for boundary_sequence in (1, 2, 3):
+        assert (
+            events[boundary_sequence].observation_fault_evidence.raw_observation
+            == events[boundary_sequence - 1].result_observation
+        )
+        source = events[
+            events[boundary_sequence].observation_fault_evidence.delivered_from_sequence
+        ].observation_fault_evidence.raw_observation
+        delivered = events[
+            boundary_sequence
+        ].observation_fault_evidence.delivered_observation
+        assert delivered.challenge_actor_speed_mps == source.challenge_actor_speed_mps
+        assert delivered.challenge_phase == source.challenge_phase
+
+
+def test_decelerating_delay_can_deliver_steady_input_into_decelerating_result() -> None:
+    scenario = _decelerating_scenario(
+        actor_speed_mps=5.0,
+        terminal_speed_mps=2.0,
+        deceleration_mps2=10.0,
+        decel_start_step=1,
+        horizon_steps=4,
+        faults={"observation_delay_steps": 1},
+    )
+    events = _multi_event_fault_decelerating_trace(scenario)
+    cross_phase = events[1]
+
+    assert cross_phase.observation_fault_evidence.delivered_from_sequence == 0
+    assert cross_phase.observation_summary["challenge_phase"] == "STEADY"
+    assert cross_phase.observation_summary["result_challenge_phase"] == "DECELERATING"
+    assert verify_complete_trace(events, scenario) == events[-1].current_hash
+
+
+def test_decelerating_fault_trace_preserves_terminal_result_raw_and_delivery() -> None:
+    scenario = _decelerating_scenario(
+        actor_speed_mps=5.0,
+        terminal_speed_mps=2.0,
+        deceleration_mps2=10.0,
+        decel_start_step=1,
+        horizon_steps=5,
+        faults={"dropped_observation_steps": (2,)},
+    )
+    events = _multi_event_fault_decelerating_trace(scenario)
+
+    terminal_result = events[3].result_observation
+    terminal_event = events[4]
+    terminal_evidence = terminal_event.observation_fault_evidence
+
+    assert terminal_result.sequence == 4
+    assert terminal_result.challenge_actor_speed_mps == 2.0
+    assert terminal_result.challenge_phase == "STEADY"
+    assert terminal_evidence.raw_observation == terminal_result
+    assert terminal_evidence.delivered_from_sequence == 4
+    assert terminal_evidence.delivered_observation == terminal_result
+    assert terminal_event.result_observation.challenge_actor_speed_mps == 2.0
+    assert terminal_event.result_observation.challenge_phase == "STEADY"
+    assert verify_complete_trace(events, scenario) == events[-1].current_hash
+
+
+@pytest.mark.parametrize(
+    ("path", "kwargs", "message"),
+    (
+        (
+            "delivered",
+            {"delivered_updates_by_sequence": {2: {"challenge_actor_speed_mps": 4.5}}},
+            "challenge_actor_speed_mps contradicts declared decelerating actor speed",
+        ),
+        (
+            "result",
+            {"result_updates_by_sequence": {2: {"challenge_actor_speed_mps": 3.5}}},
+            "result_challenge_actor_speed_mps contradicts declared decelerating actor speed",
+        ),
+        (
+            "raw",
+            {"raw_updates_by_sequence": {2: {"challenge_actor_speed_mps": 4.5}}},
+            "raw observation disagrees with prior result",
+        ),
+    ),
+)
+def test_decelerating_fault_trace_rejects_mid_schedule_packet_mutations(
+    path: str,
+    kwargs: dict[str, object],
+    message: str,
+) -> None:
+    del path
+    scenario = _decelerating_scenario(
+        actor_speed_mps=5.0,
+        terminal_speed_mps=2.0,
+        deceleration_mps2=10.0,
+        decel_start_step=1,
+        horizon_steps=4,
+        faults={"observation_delay_steps": 1},
+    )
+    events = _multi_event_fault_decelerating_trace(scenario, **kwargs)
+
+    with pytest.raises(TraceIntegrityError, match=message):
+        verify_complete_trace(events, scenario)
 
 
 def test_stationary_challenge_trace_accepts_present_zero_speed_and_initial_gap() -> None:

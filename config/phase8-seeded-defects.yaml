@@ -6,7 +6,7 @@
 # scenario that exposes it, the finding that must catch it, and the failure category the
 # triage agent must propose.
 #
-# The twelve policy defects use config/adas/baseline.yaml with one property changed. The
+# The thirteen policy defects use config/adas/baseline.yaml with one property changed. The
 # observation-delay row instead keeps the baseline policy and seeds the environment path.
 schema_version: "1.0"
 label: deliberately_seeded_policy_or_environment_failures_for_evaluation_acceptance
@@ -103,6 +103,16 @@ defects:
     description: Brakes for a moving adjacent-lane actor with no in-path front geometry.
     policy_config: config/adas/defect_actor_presence_braking.yaml
     scenario: scenarios/adas/adjacent_lane_pass.yaml
+    expected_failing_finding: adas.aeb.no_false_intervention
+    expected_triage_category: OVER_INTERVENTION
+
+  # Measured at seed 7: 200/200 braking steps. Hard failures are progress.required at
+  # 14.177567142144234% and the named ADAS no_false_intervention finding; the seeded
+  # named finding and proposed/deterministic triage remain OVER_INTERVENTION.
+  - defect_id: actor_presence_braking_decel_nominal
+    description: Brakes for an in-lane decelerating lead even though the following geometry is nominal.
+    policy_config: config/adas/defect_actor_presence_braking.yaml
+    scenario: scenarios/adas/decelerating_but_safe_lead.yaml
     expected_failing_finding: adas.aeb.no_false_intervention
     expected_triage_category: OVER_INTERVENTION
 

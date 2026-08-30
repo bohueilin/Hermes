@@ -6,6 +6,7 @@ import importlib
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
+from fractions import Fraction
 from typing import Any
 
 ACTOR_NAME = "hermes_challenge_actor"
@@ -176,6 +177,12 @@ def _validated_challenge(challenge: Mapping[str, Any]) -> dict[str, Any]:
             raise ValueError(
                 "steady challenge requires actor_control_mode scripted_kinematic_replay"
             )
+    elif kind == "lead_decelerates":
+        if payload.get("actor_control_mode") != "scripted_kinematic_replay":
+            raise ValueError(
+                "decelerating challenge requires actor_control_mode "
+                "scripted_kinematic_replay"
+            )
     else:
         raise ValueError(f"unsupported MetaDrive challenge kind: {kind!r}")
     if payload.get("behavior_realism_claim") is not False:
@@ -212,6 +219,7 @@ def create_challenge_environment(
             self._snapshot: ChallengeActorState | None = None
             self._commanded_this_step = False
             self._steady_velocity: list[float] | None = None
+            self._decelerating_velocity: list[float] | None = None
 
         @property
         def actor(self) -> Any:
@@ -258,6 +266,7 @@ def create_challenge_environment(
             self._phase = "PRE_TRIGGER"
             self._commanded_this_step = False
             self._steady_velocity = None
+            self._decelerating_velocity = None
 
         def after_reset(self) -> None:
             agents = tuple(self.engine.agent_manager.active_agents.values())
@@ -288,6 +297,8 @@ def create_challenge_environment(
             velocity = [math.cos(heading) * actor_speed, math.sin(heading) * actor_speed]
             if self._challenge["kind"] == "steady_lead":
                 self._steady_velocity = list(velocity)
+            elif self._challenge["kind"] == "lead_decelerates":
+                self._decelerating_velocity = list(velocity)
             self._actor = self.spawn_object(
                 actor_type,
                 name=ACTOR_NAME,
@@ -310,12 +321,19 @@ def create_challenge_environment(
                 "cut_in_near_field",
                 "stationary_lead",
                 "steady_lead",
+                "lead_decelerates",
             }:
                 self._actor.set_static(True)
             if self._challenge["kind"] == "stationary_lead":
                 self._phase = "PRESENT"
             elif self._challenge["kind"] == "steady_lead":
                 self._phase = "STEADY"
+            elif self._challenge["kind"] == "lead_decelerates":
+                self._phase = (
+                    "DECELERATING"
+                    if int(self._challenge["decel_start_step"]) == 0
+                    else "STEADY"
+                )
             else:
                 self._phase = "PRE_TRIGGER"
             self._measure()
@@ -383,6 +401,70 @@ def create_challenge_environment(
             self.actor.set_static(True)
             self._phase = "STEADY"
 
+        def _before_decelerating_step(self, step: int) -> None:
+            assert self._reference_lane is not None
+            dt = float(config["physics_world_step_size"]) * int(
+                config["decision_repeat"]
+            )
+            actor_speed = float(self._challenge["actor_speed_mps"])
+            terminal_speed = float(self._challenge["terminal_speed_mps"])
+            deceleration = float(self._challenge["deceleration_mps2"])
+            start_step = int(self._challenge["decel_start_step"])
+            start_time = start_step * dt
+            terminal_elapsed = (actor_speed - terminal_speed) / deceleration
+            exact_dt = Fraction(str(config["physics_world_step_size"])) * int(
+                config["decision_repeat"]
+            )
+            exact_intervals = (
+                Fraction(str(self._challenge["actor_speed_mps"]))
+                - Fraction(str(self._challenge["terminal_speed_mps"]))
+            ) / (Fraction(str(self._challenge["deceleration_mps2"])) * exact_dt)
+            terminal_intervals = (
+                exact_intervals.numerator + exact_intervals.denominator - 1
+            ) // exact_intervals.denominator
+
+            input_time = step * dt
+            input_elapsed = max(0.0, input_time - start_time)
+            active_elapsed = min(input_elapsed, terminal_elapsed)
+            input_speed = max(
+                terminal_speed,
+                actor_speed - deceleration * input_elapsed,
+            )
+            displacement = (
+                actor_speed * min(input_time, start_time)
+                + actor_speed * active_elapsed
+                - 0.5 * deceleration * active_elapsed * active_elapsed
+                + terminal_speed * max(0.0, input_elapsed - terminal_elapsed)
+            )
+            longitudinal = self._initial_actor_longitudinal + displacement
+            heading = float(self._reference_lane.heading_theta_at(longitudinal))
+            input_velocity = [
+                math.cos(heading) * input_speed,
+                math.sin(heading) * input_speed,
+            ]
+
+            result_time = (step + 1) * dt
+            result_elapsed = max(0.0, result_time - start_time)
+            result_speed = max(
+                terminal_speed,
+                actor_speed - deceleration * result_elapsed,
+            )
+            self._decelerating_velocity = [
+                math.cos(heading) * result_speed,
+                math.sin(heading) * result_speed,
+            ]
+            result_sample = step + 1
+            if start_step <= result_sample < start_step + terminal_intervals:
+                self._phase = "DECELERATING"
+            else:
+                self._phase = "STEADY"
+
+            self.actor.before_step(None)
+            self.actor.set_position(self._reference_lane.position(longitudinal, 0.0))
+            self.actor.set_velocity(input_velocity, in_local_frame=False)
+            self.actor.set_heading_theta(heading)
+            self.actor.set_static(True)
+
         def before_step(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
             del args, kwargs
             step = int(self.engine.episode_step) - 1
@@ -396,6 +478,8 @@ def create_challenge_environment(
                 self._before_stationary_step()
             elif self._challenge["kind"] == "steady_lead":
                 self._before_steady_step(step)
+            elif self._challenge["kind"] == "lead_decelerates":
+                self._before_decelerating_step(step)
             else:
                 raise RuntimeError(
                     f"unsupported MetaDrive challenge kind: {self._challenge['kind']!r}"
@@ -417,6 +501,12 @@ def create_challenge_environment(
                     assert self._steady_velocity is not None
                     self.actor.set_velocity(
                         list(self._steady_velocity), in_local_frame=False
+                    )
+                    self.actor.set_static(True)
+                elif self._challenge["kind"] == "lead_decelerates":
+                    assert self._decelerating_velocity is not None
+                    self.actor.set_velocity(
+                        list(self._decelerating_velocity), in_local_frame=False
                     )
                     self.actor.set_static(True)
                 self._measure()

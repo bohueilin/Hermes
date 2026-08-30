@@ -1345,6 +1345,10 @@ def test_exact_action_observation_and_timeline_string_values_are_typed() -> None
     steady_payload["challenge_phase"] = "STEADY"
     steady = ObservationValue.model_validate(steady_payload)
     assert steady.challenge_phase == "STEADY"
+    decelerating_payload = observation.model_dump()
+    decelerating_payload["challenge_phase"] = "DECELERATING"
+    decelerating = ObservationValue.model_validate(decelerating_payload)
+    assert decelerating.challenge_phase == "DECELERATING"
     with pytest.raises(ValidationError):
         StringListValue(values=("DUP", "DUP"))
 

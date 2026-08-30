@@ -20,7 +20,8 @@ DEMO_ARTIFACT := artifacts/$(DEMO_RUN_ID)
 
 .PHONY: install install-dev doctor test lint check demo-phase1 sim-smoke fixtures \
 	demo-adas demo-adas-tradeoff demo-seeded-defects demo-flywheel demo-cut-in \
-	demo-stationary demo-fcw-stationary demo-steady-lead demo-adjacent-pass preflight
+	demo-stationary demo-fcw-stationary demo-steady-lead demo-adjacent-pass \
+	demo-lead-decelerates preflight
 
 # Fail early and actionably rather than deep inside a demo.
 preflight:
@@ -208,6 +209,25 @@ demo-adjacent-pass: preflight
 	@echo ""
 	@echo "--- the moving mirrored tuple must separate by lane placement alone ---"
 	$(PYTHON) -m pytest -q tests/integration/test_adjacent_lane_pass_generalisation.py
+
+# Declared constant-rate lead deceleration: the baseline stays quiet over the stored nominal
+# run, while the geometry-blind actor-presence defect exposes the false-intervention diagonal.
+demo-lead-decelerates: preflight
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/decelerating_but_safe_lead.yaml \
+		--policy adas-longitudinal --policy-config config/adas/baseline.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "lead-decelerates-nominal-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	$(PYTHON) -m hermes run --simulator metadrive --headless \
+		--scenario scenarios/adas/decelerating_but_safe_lead.yaml \
+		--policy adas-longitudinal \
+		--policy-config config/adas/defect_actor_presence_braking.yaml \
+		--gate-config config/gates.adas.yaml \
+		--seed 7 --run-id "lead-decelerates-defect-$(ADAS_RUN_SUFFIX)" $(ALLOW_VERDICT)
+	@echo ""
+	@echo "--- declared lead deceleration must stay nominal unless presence alone triggers braking ---"
+	$(PYTHON) -m pytest -q -p no:cacheprovider \
+		tests/integration/test_decelerating_but_safe_lead_generalisation.py
 
 # The evaluation's own acceptance criterion: controllers broken on purpose must be caught.
 demo-seeded-defects: preflight

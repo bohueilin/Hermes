@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import hermes.domain.models as domain_models
 from hermes.domain.models import (
     CutInNearFieldChallenge,
     LeadVehicleHardBrakeChallenge,
@@ -27,6 +28,7 @@ _COMMITTED_MAPS = {
     "scenarios/adas/adas_cut_in_near.yaml": "S",
     "scenarios/adas/adas_nominal_no_lead.yaml": "S",
     "scenarios/adas/adas_nominal_slow_closing.yaml": "S",
+    "scenarios/adas/decelerating_but_safe_lead.yaml": "S",
     "scenarios/adas/aeb_lead_hard_brake.yaml": "S",
     "scenarios/adas/aeb_stationary_lead.yaml": "S",
     "scenarios/adas/aeb_stationary_lead_observation_delay.yaml": "S",
@@ -56,6 +58,9 @@ def test_metadrive_map_for_no_challenge_preserves_single_straight() -> None:
         ("steady_lead", 100.484, "S"),
         ("steady_lead", 100.485, "S"),
         ("steady_lead", 100.486, "SS"),
+        ("lead_decelerates", 100.484, "S"),
+        ("lead_decelerates", 100.485, "S"),
+        ("lead_decelerates", 100.486, "SS"),
     ),
 )
 def test_metadrive_map_for_challenge_gap_crosses_the_byte_identity_threshold(
@@ -91,14 +96,25 @@ def test_metadrive_map_for_challenge_gap_crosses_the_byte_identity_threshold(
             behavior_realism_claim=False,
             initial_gap_m=initial_gap_m,
         )
-    else:
-        assert challenge_kind == "steady_lead"
+    elif challenge_kind == "steady_lead":
         challenge = SteadyLeadChallenge(
             kind=challenge_kind,
             actor_control_mode="scripted_kinematic_replay",
             behavior_realism_claim=False,
             initial_gap_m=initial_gap_m,
             actor_speed_mps=1.0,
+        )
+    else:
+        assert challenge_kind == "lead_decelerates"
+        challenge = domain_models.LeadDeceleratesChallenge(
+            kind=challenge_kind,
+            actor_control_mode="scripted_kinematic_replay",
+            behavior_realism_claim=False,
+            initial_gap_m=initial_gap_m,
+            actor_speed_mps=4.0,
+            deceleration_mps2=1.0,
+            decel_start_step=1,
+            terminal_speed_mps=2.0,
         )
 
     assert metadrive_map_for_gap(challenge.initial_gap_m) == expected_map

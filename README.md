@@ -99,6 +99,9 @@ a closing threat from a same-speed following nominal while verifying stored acto
 `make demo-adjacent-pass` holds the closing-threat numbers fixed and moves the actor one lane
 over, verifying no front pair or false intervention through the ego's measured pass.
 
+`make demo-lead-decelerates` verifies a declared one-time lead deceleration remains nominal and
+exposes the geometry-blind actor-presence braking defect.
+
 ### Phase 8 commands
 
 ```bash
@@ -108,6 +111,7 @@ make demo-stationary                       # classic stopped in-path / adjacent-
 make demo-fcw-stationary                   # stationary FCW warning-margin / adjacent-object pair
 make demo-steady-lead                      # moving steady-lead threat / following nominal pair
 make demo-adjacent-pass                    # identical moving tuple separated by lane placement
+make demo-lead-decelerates                 # scripted lead deceleration / false-braking diagonal
 hermes agent tools                         # discoverable tool catalogue with permissions
 hermes agent triage <run-id>               # proposal vs deterministic classification
 hermes agent check-citations <run-id>      # re-resolve every citation against the evidence

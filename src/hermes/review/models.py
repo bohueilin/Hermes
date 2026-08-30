@@ -1897,6 +1897,7 @@ class ObservationValue(ReviewModel):
         "POST_CUT_IN",
         "PRESENT",
         "STEADY",
+        "DECELERATING",
     ] | None
 
 

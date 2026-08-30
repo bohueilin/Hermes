@@ -47,11 +47,12 @@ ADAS_SCENARIOS = (
     "fcw_stationary_lead.yaml",
     "slow_lead_closing.yaml",
     "adjacent_lane_pass.yaml",
+    "decelerating_but_safe_lead.yaml",
     "fcw_aeb_nominal_following.yaml",
 )
 
 
-def test_eleven_adas_scenarios_declare_the_measured_authority_without_changing_default(
+def test_twelve_adas_scenarios_declare_the_measured_authority_without_changing_default(
     repository_root: Path,
 ) -> None:
     """Falling back to 6.0 or replacing its Python default must break this contract."""
@@ -142,6 +143,46 @@ def test_adjacent_lane_pass_pins_the_reviewed_authored_literals(
     assert nominal.challenge.initial_lane_delta == 1
     assert nominal.tags == ("aeb", "fcw", "longitudinal", "nominal")
     assert nominal.adas is not None
+    assert nominal.adas.expected_fcw.kind == "none"
+    assert nominal.adas.expected_aeb.kind == "forbidden"
+
+
+def test_decelerating_but_safe_lead_pins_the_reviewed_authored_literals(
+    repository_root: Path,
+) -> None:
+    nominal = load_scenario(
+        repository_root / "scenarios/adas/decelerating_but_safe_lead.yaml"
+    )
+
+    assert nominal.schema_version == "4.0"
+    assert nominal.name == "decelerating_but_safe_lead"
+    assert nominal.version == "1.0"
+    assert nominal.description == (
+        "Ego follows a scripted lead that decelerates once at a declared constant rate "
+        "to a safe positive terminal speed."
+    )
+    assert nominal.control.frequency_hz == 10
+    assert nominal.control.horizon_steps == 200
+    assert nominal.control.target_speed_mps == 20.0
+    assert nominal.control.max_braking_mps2 == MEASURED_20_MPS_PEAK_AUTHORITY
+    assert nominal.initial_state.speed_mps == 20.0
+    assert nominal.initial_state.lateral_offset_m == 0.0
+    assert nominal.road.destination_distance_m == 240.0
+    assert nominal.road.boundary_tolerance_m == 1.5
+    assert nominal.challenge is not None
+    assert nominal.challenge.model_dump(mode="json") == {
+        "kind": "lead_decelerates",
+        "actor_control_mode": "scripted_kinematic_replay",
+        "behavior_realism_claim": False,
+        "initial_gap_m": 40.0,
+        "actor_speed_mps": 20.0,
+        "deceleration_mps2": 2.0,
+        "decel_start_step": 10,
+        "terminal_speed_mps": 15.0,
+    }
+    assert nominal.tags == ("aeb", "fcw", "longitudinal", "nominal")
+    assert nominal.adas is not None
+    assert nominal.adas.enabled == ("fcw", "aeb")
     assert nominal.adas.expected_fcw.kind == "none"
     assert nominal.adas.expected_aeb.kind == "forbidden"
 
@@ -250,7 +291,7 @@ def test_seeded_matrix_includes_the_observation_delay_environment_failure(
     assert suite.label == (
         "deliberately_seeded_policy_or_environment_failures_for_evaluation_acceptance"
     )
-    assert len(defects) == 13
+    assert len(defects) == 14
     delayed = defects["stationary_observation_delay"]
     assert delayed.policy_config == "config/adas/baseline.yaml"
     assert delayed.scenario == (
