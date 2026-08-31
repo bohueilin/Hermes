@@ -8,6 +8,71 @@ Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
 
 Hermes is designed to make an autonomy experiment reproducible and reviewable: it preserves the scenario, versions, candidate action, executed action, findings, metrics, release verdict, and evidence-integrity checks in one bundle.
 
+## Phase 9 — FleetLab: fleet operations simulation and experimentation
+
+FleetLab asks a different question from the rest of Hermes: **not "how does the vehicle behave?"
+but "what happens to the service when an offboard policy changes across the fleet?"** Queues,
+demand, dispatch, depot capacity and service turnaround — discrete-event simulation, not vehicle
+physics.
+
+It is built around one idea: **an experiment is only worth running if its claim was fixed before
+its result existed.** An `ExperimentSpec` freezes the question, the single variation axis, the
+primary estimand with its equivalence margin, the guardrails and the seed set. A hashed world tape
+guarantees baseline and candidate meet the same exogenous demand — the tape is built from the
+*declared* scenario, so the variation axis cannot leak into the world it is measured against. The
+`DecisionRecord` then binds to all three digests, so the claim a reviewer reads afterwards is the
+claim that was preregistered.
+
+```text
+$ hermes fleet demo
+
+Experiment:      fleet-005-turnaround
+Question:        Does a 25% longer depot service turnaround degrade rider wait p90
+                 beyond the declared equivalence margin?
+Variation axis:  parameter:service_duration_s  (baseline 1800 -> candidate 2250)
+Replications:    10 paired seeds  (seed set 748c0bfe0a22)
+
+VALIDITY:        VALID
+OUTCOME:         REGRESSED
+
+Primary metric   wait.p90_s: mean delta +826.1 (median +768.0), 95% CI [+735.9, +919.2]
+                 baseline 793.1 -> candidate 1619.3
+Guardrail        unserved.fraction: mean delta +0.057  [REGRESSED]
+
+RECOMMENDATION:  HOLD
+Deployment permission: NONE
+```
+
+That run takes **0.50 s**, and reproduces from a clean clone on the four core dependencies alone —
+no simulator, no numpy, no stored fixtures. Measured 2026-08-31: **33 of 33 tests pass** in a fresh
+clone and virtualenv, and the decision-record digest `84ff1c91b600f29e…` comes back **bit-identical**
+to the development checkout.
+
+The recommendation is deliberately **non-compensatory**: a guardrail regression HOLDs a result even
+when the primary metric improves, because reducing wait time while stranding riders is not a win.
+`INCONCLUSIVE` is a first-class outcome — stochastic evidence does not always support a directional
+answer, and a platform that cannot say so will manufacture one. Of the twelve specified operational
+invariants, eight are checked inside every replication and replay determinism is checked before any
+of them run; the remaining three await the charging model. A violation yields `INVALID_EXPERIMENT`
+with no partial result — a broken run must not be reported as a weak one, because "the dispatcher
+double-assigned a vehicle" is not "the fleet is slow".
+
+**Everything here is `SIMULATION_ONLY` and `SYNTHETIC_UNCALIBRATED`.** A FleetLab result is a
+screening input to a next test, never a launch decision, and `deployment_permission` is always
+`NONE`.
+
+| Document | What it is |
+|---|---|
+| [HERMES_PHASE9_FLEET_SIMULATION_PRD.md](HERMES_PHASE9_FLEET_SIMULATION_PRD.md) | The requirements document: personas, fidelity lanes, domain and event model, experiment semantics, scenario catalog, acceptance criteria |
+| [docs/plans/2026-08-30-fleet-metric-contract-design.md](docs/plans/2026-08-30-fleet-metric-contract-design.md) | Design for a shared metric contract — and the defect in the code above that motivates it |
+
+**Built:** the FLEET-005 slice — preregistered specs, the hashed world tape, enforced invariants,
+bootstrap confidence intervals over paired replications, and a replayable decision record.
+**Not built:** five of the six flagship scenarios, the charging model, the policy SDK, the
+experiment registry, and the Studio front end. Nineteen of the twenty P0 acceptance criteria
+remain open.
+
+
 ## Phase 8 — ADAS development and agentic workflow lab
 
 Phase 8 extends Hermes into a simulation-based **ADAS development and agentic workflow lab**:
