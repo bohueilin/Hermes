@@ -257,3 +257,58 @@ def test_a_missing_record_is_named_only_as_given(
     assert str(tmp_path.resolve()) not in rendered
     assert error.why == os.strerror(errno.ENOENT)
     assert len(rendered.splitlines()) == 5
+
+
+def test_a_spec_read_failure_after_stat_is_named_only_as_given(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    given = Path("config/fleet/unreadable.yaml")
+    given.parent.mkdir(parents=True)
+    given.touch()
+
+    def deny_read_text(resolved: Path, *_args: object, **_kwargs: object) -> str:
+        raise PermissionError(errno.EACCES, os.strerror(errno.EACCES), str(resolved))
+
+    monkeypatch.setattr(Path, "read_text", deny_read_text)
+
+    with pytest.raises(SpecAuthoringError) as exc_info:
+        load_experiment_spec(given)
+
+    error = exc_info.value
+    rendered = str(error)
+    assert error.source == str(given)
+    assert str(given) in rendered
+    assert str(tmp_path.resolve()) not in rendered
+    assert str(Path.home()) not in rendered
+    assert error.why == os.strerror(errno.EACCES)
+    assert len(rendered.splitlines()) == 5
+
+
+def test_a_record_read_failure_after_stat_is_named_only_as_given(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    given = Path("~/experiments/probe/decision-record.json")
+    stored = tmp_path / "experiments/probe/decision-record.json"
+    stored.parent.mkdir(parents=True)
+    stored.write_bytes(b"{}")
+
+    def deny_read_bytes(resolved: Path) -> bytes:
+        raise PermissionError(errno.EACCES, os.strerror(errno.EACCES), str(resolved))
+
+    monkeypatch.setattr(Path, "read_bytes", deny_read_bytes)
+
+    with pytest.raises(SpecAuthoringError) as exc_info:
+        load_decision_record(given)
+
+    error = exc_info.value
+    rendered = str(error)
+    assert error.source == str(given)
+    assert str(given) in rendered
+    assert str(tmp_path) not in rendered
+    assert str(tmp_path.resolve()) not in rendered
+    assert error.why == os.strerror(errno.EACCES)
+    assert len(rendered.splitlines()) == 5
