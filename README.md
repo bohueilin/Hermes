@@ -65,7 +65,7 @@ Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7
 ```
 
 That run takes **0.50 s**, and reproduces from a clean clone on the four core dependencies alone —
-no simulator, no numpy, no stored fixtures. Measured 2026-09-03: **75 of 75 tests pass** in a fresh
+no simulator, no numpy, no stored fixtures. Measured 2026-09-04: **78 of 78 tests pass** in a fresh
 clone and virtualenv, and the decision-record digest `84ff1c91b600f29e…` comes back **bit-identical**
 to the development checkout.
 

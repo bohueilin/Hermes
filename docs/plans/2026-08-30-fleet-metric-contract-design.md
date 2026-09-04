@@ -1,8 +1,8 @@
 # FleetLab metric contract and operator view — design
 
 **Status:** sequencing steps 1–2 implemented across `1164f2e`, `60380b4`, `2afe4a0`, and
-`872ae2b`; `metrics list` landed at `d569672`; spec-file authoring is in this Stage 1 change;
-steps 3–4 are not started.
+`872ae2b`; `metrics list` landed at `d569672`; spec-file authoring at `6983198`; a forward-only
+repair of the authoring error envelope at `f0e4ded`; steps 3–4 are not started.
 **Date:** 2026-08-30.
 **Scope:** `src/hermes/fleet/` only. No `SimulatorAdapter` involvement, no
 `ScenarioDefinition` change, no `evidence_schema_version` change. Additive, per Phase 9 PRD §37.
@@ -207,10 +207,16 @@ The added tests are:
 - `test_experiment_run_reproduces_the_demo_digest_from_the_committed_spec`
 - `test_experiment_inspect_redigests_a_stored_record`
 - `test_experiment_template_prints_a_loadable_spec`
+- `test_a_missing_spec_is_named_only_as_given` (repair)
+- `test_a_missing_record_is_named_only_as_given` (repair)
+- `test_experiment_errors_name_a_missing_file_only_as_given` (repair)
 
 Gate G measured `76 passed`; the architecture boundary gate measured `43 passed, 2 deselected`;
 Ruff reported `All checks passed!`; and the artifact-bound full suite measured `186 failed, 1325
-passed, 55 deselected, 42 errors` with `SAME_FAILURE_SET`. The pinned identities are:
+passed, 55 deselected, 42 errors` with `SAME_FAILURE_SET`. After the repair `f0e4ded`, Gate G
+measured `79 passed`, the boundary gate again `43 passed, 2 deselected`, Ruff `All checks
+passed!`, and the full suite `186 failed, 1328 passed, 55 deselected, 42 errors`, again
+`SAME_FAILURE_SET` against `aa04786`. The pinned identities are:
 
 - FLEET-005 spec: `b68f75d295e4ace1c4f3e470e52fde828a8b433eec2682f66596dbebbd5360c2`
 - FLEET-005 decision record:
@@ -228,6 +234,19 @@ Clean-clone verification measured 2026-09-03 against the committed Task 6 tip:
 ```text
 6983198
 75 passed in 1.30s
+Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f
+```
+
+Clean-clone verification measured 2026-09-04 against the repair commit — a fresh clone of the
+branch, a fresh virtualenv holding only pydantic, PyYAML, rich, typer and pytest, then from the
+clone's root with `PYTHONPATH` at its `src`:
+
+```text
+$ git rev-parse --short HEAD
+f0e4ded
+$ pytest tests/unit/test_fleet_*.py -q -p no:cacheprovider | tail -1
+78 passed in 1.36s
+$ hermes fleet demo | tail -1
 Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f
 ```
 
@@ -254,3 +273,32 @@ Six implementation deviations from the original design and planning notes are de
 Also deliberately deferred: recording the registry version in `DecisionRecord` and the static
 operator view (Stage 2), plus the policy seam (Stage 3). Existing descriptive order, guardrail
 overlap, alias double-reporting, and the empty-population `unserved.fraction` behavior are unchanged.
+
+### Stage 1 repair — the error envelope names the file only as given (measured 2026-09-04)
+
+`f0e4ded`, one forward-only commit after the Stage 1 closing commit; no earlier commit was
+amended, rebased or squashed. Defect: `_bounded_source` resolves the given path before `stat`,
+and an `OSError`'s text carries that resolved path, so `why=str(exc)` put the expanded home
+directory or repository path on the `WHY` line even for a relative or tilde argument. Fix, in
+`src/hermes/fleet/authoring.py` only: the three `OSError` sites (`stat`, `read_text`,
+`read_bytes`) report `exc.strerror` (or the exception type when there is none). `source`, the
+`WHAT` lines, the five-line shape, exit code 40 and both pinned digests are unchanged. Proof from
+the repository root:
+
+```text
+$ hermes fleet experiment validate config/fleet/does-not-exist.yaml
+[CONFIGURATION_ERROR] Configuration error: INVALID_EXPERIMENT_SPEC: cannot read experiment spec config/fleet/does-not-exist.yaml
+WHAT FAILED:  experiment spec validation (config/fleet/does-not-exist.yaml)
+WHY:          No such file or directory
+HOW TO FIX:   provide an existing readable file
+WHICH CONFIG FIELD:  <document>
+Exit code: 40
+```
+
+The three repair tests were watched failing before the fix (the resolved path was in the
+rendered text) and, after a review found them unable to distinguish the fix from a blank `WHY`
+line, each gained `os.strerror(errno.ENOENT)` as the pinned reason; against a copy of the module
+with `why=""` all three fail, against the tree all three pass. Deliberately not changed: the
+`resolve()` failure site (a symlink-loop `RuntimeError` can name a resolved path; two Stage 1
+tests pin that text) and the `stat`-before-read size cap (the stat-to-read window is open;
+descriptor-bounded reading is a separate task shared with `scenarios/loader.py`).

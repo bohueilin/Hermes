@@ -11,11 +11,11 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
-| **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract built and gated** on `feat/phase9-metric-contract` — Gate G: **76 passed**; replayable decision record; spec-file authoring and metric-contract CLI. The PRD has been tracked since `aa04786` |
+| **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`) — Gate G: **79 passed**; replayable decision record; spec-file authoring and metric-contract CLI. The PRD has been tracked since `aa04786` |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-09-03 |
+| **Last updated** | 2026-09-04 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -608,11 +608,18 @@ replications; a non-compensatory recommendation (guardrail regression HOLDs an I
 primary); an analytical fixture whose three-request world is computed entirely by hand and
 asserted exactly, plus a metamorphic service-delay case; `hermes fleet demo` (~0.5 s).
 Measured demo result: baseline healthy, +25% turnaround
-→ REGRESSED, CI [+736, +919] s on wait p90, guardrail hit → HOLD. The Stage 1 Task 6 change,
-following `d569672`, measures **76 passed** in Gate G; all are simulator- and
-fixture-free; suite 761→794 in the worktree with zero new failures; **75/75 from a clean clone of
-`6983198` on 2026-09-03 using core deps only, decision-record digest bit-identical across
-checkouts.** Everything else in
+→ REGRESSED, CI [+736, +919] s on wait p90, guardrail hit → HOLD. Stage 1 (Task 6 at `6983198`,
+closing docs at `f2645ae`) measured **76 passed** in Gate G; the forward-only repair `f0e4ded`
+measures **79 passed** (`pytest tests/unit/test_fleet_*.py tests/unit/test_import_provenance.py
+-q -p no:cacheprovider`); all are simulator- and fixture-free. The full suite in this worktree
+is artifact-bound and is not a pass/fail claim: `186 failed, 1328 passed, 55 deselected, 42
+errors` (`pytest -q -m "not metadrive" -p no:cacheprovider`) with the failing node set
+identical to `aa04786` (`SAME_FAILURE_SET`) — the earlier "761→794" figure described the
+spike-era worktree and is superseded. **78/78 from a clean clone of `f0e4ded` on 2026-09-04** —
+a fresh clone of the branch and a fresh virtualenv holding only pydantic, PyYAML, rich, typer and
+pytest; `pytest tests/unit/test_fleet_*.py -q -p no:cacheprovider`, the fleet files alone, hence
+one fewer than Gate G (75/75 at `6983198` on 2026-09-03) — **decision-record digest
+bit-identical across checkouts.** Everything else in
 the PRD (charging, FLEET-001..004/006, policy SDK, forecast seam, Studio, experiment registry) remains
 unbuilt.
 
@@ -625,6 +632,22 @@ the registry version is not yet recorded in the decision record; there is no ope
 `MetricComparison.metric` is not validated against the registry; descriptive order is not aligned
 to producer order; guardrail metrics are not excluded from descriptives; aliases are still
 reported beside their targets; and `unserved.fraction = 0.0` on an empty population is unchanged.
+
+**Stage 1 repair, measured 2026-09-04 (`f0e4ded`, forward-only; no history rewritten):** the
+five-line authoring envelope's `WHY` line echoed the resolved path carried by an `OSError`, so
+`hermes fleet experiment validate config/fleet/does-not-exist.yaml` printed the expanded home
+directory although the caller gave a relative path. The three `OSError` sites in
+`src/hermes/fleet/authoring.py` now report `exc.strerror` (or the exception type when there is
+none) and name the file only as it was given; `SpecAuthoringError.source`, the five lines, exit
+code 40 and both pinned digests are unchanged (`DEMO_BYTE_IDENTICAL`). Three tests pin it —
+`test_a_missing_spec_is_named_only_as_given`, `test_a_missing_record_is_named_only_as_given`
+(a tilde path with `HOME` patched) and `test_experiment_errors_name_a_missing_file_only_as_given`
+(`validate` and `inspect`) — each asserting the reason via `os.strerror(errno.ENOENT)`, so a
+blank `WHY` line fails them (verified against a copy of the module with `why=""`).
+Deliberately not changed: the `resolve()` failure site still reports the exception text (a
+symlink-loop `RuntimeError` can name a resolved path; two Stage 1 tests pin that text), and the
+size cap still `stat`s before reading — the stat-to-read window stays open and descriptor-bounded
+reading is a separate task, as it is for `scenarios/loader.py`, which follows the same pattern.
 
 ### 7.2 MuJoCo sandbox — what exists
 
@@ -1087,6 +1110,11 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
 - `.superpowers/` is ignored by its own nested `.gitignore`, not the root one.
 - The Makefile `demo-flywheel` comment previously promised an approval and dry-run step the
   target does not run; corrected 2026-08-22 — the target stops at the listing by design.
+- Three Stage 1 commits on `feat/phase9-metric-contract` carry no parseable `Co-Authored-By`
+  trailer: `1164f2e` and `d569672` hold a literal `\n\n` in the body, so the trailer sits
+  mid-line, and `2afe4a0` has none (a `Tests:` trailer instead). Recorded 2026-09-04 and left
+  as is — the branch is not rewritten (no amend, rebase or squash);
+  `git log aa04786..HEAD --format='%h %(trailers:key=Co-Authored-By)'` shows the gap.
 
 ---
 
