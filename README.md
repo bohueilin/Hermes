@@ -43,6 +43,27 @@ RECOMMENDATION:  HOLD
 Deployment permission: NONE
 ```
 
+The metric contract and spec-file path form one local authoring session:
+
+```text
+$ hermes fleet metrics list | head -4
+Metric registry 0.1 - 10 metrics - simulation only; synthetic; not a forecast
+requests.total
+  unit: requests
+  direction: neutral
+
+$ hermes fleet experiment validate config/fleet/examples/invalid-unregistered-metric.yaml
+[CONFIGURATION_ERROR] Configuration error: INVALID_EXPERIMENT_SPEC: primary_metric.name 'wait.p95_s' is not a registered fleet metric (registry 0.1). Registered: requests.total, requests.served, requests.unserved, unserved.fraction, fleet.utilization_fraction, business_proxy.served_trips, business_proxy.unserved_demand, wait.p50_s, wait.p90_s, depot.queue_p90_s.
+WHAT FAILED:  experiment spec validation (config/fleet/examples/invalid-unregistered-metric.yaml)
+WHY:          'wait.p95_s' is not a registered fleet metric (registry 0.1). Registered: requests.total, requests.served, requests.unserved, unserved.fraction, fleet.utilization_fraction, business_proxy.served_trips, business_proxy.unserved_demand, wait.p50_s, wait.p90_s, depot.queue_p90_s.
+HOW TO FIX:   use one of the registered names, or register the metric in hermes.fleet.metrics with its producer.
+WHICH CONFIG FIELD:  primary_metric.name
+Exit code: 40
+
+$ hermes fleet experiment run config/fleet/fleet-005-turnaround.yaml | tail -1
+Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f
+```
+
 That run takes **0.50 s**, and reproduces from a clean clone on the four core dependencies alone —
 no simulator, no numpy, no stored fixtures. Measured 2026-08-31: **33 of 33 tests pass** in a fresh
 clone and virtualenv, and the decision-record digest `84ff1c91b600f29e…` comes back **bit-identical**
@@ -67,10 +88,12 @@ screening input to a next test, never a launch decision, and `deployment_permiss
 | [docs/plans/2026-08-30-fleet-metric-contract-design.md](docs/plans/2026-08-30-fleet-metric-contract-design.md) | Design for a shared metric contract — and the defect in the code above that motivates it |
 
 **Built:** the FLEET-005 slice — preregistered specs, the hashed world tape, enforced invariants,
-bootstrap confidence intervals over paired replications, and a replayable decision record.
+bootstrap confidence intervals over paired replications, a replayable decision record, a typed and
+versioned metric registry validated at authoring time and bound to its producer by test,
+`hermes fleet metrics list`, and spec-file `template`, `validate`, `run`, and `inspect` commands.
 **Not built:** five of the six flagship scenarios, the charging model, the policy SDK, the
-experiment registry, and the Studio front end. Nineteen of the twenty P0 acceptance criteria
-remain open.
+experiment registry, `experiment compare`, and the Studio front end. Nineteen of the twenty P0
+acceptance criteria remain open.
 
 
 ## Phase 8 — ADAS development and agentic workflow lab

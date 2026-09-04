@@ -11,11 +11,11 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
-| **Phase 9** | **FLEET-005 spike built and gated** (2026-08-23) on `feat/phase9-fleetlab`, pushed — `src/hermes/fleet/`, 33 tests, clean-clone green, replayable decision record. The PRD stays local/gitignored |
+| **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract built and gated** on `feat/phase9-metric-contract` — Gate G: **76 passed**; replayable decision record; spec-file authoring and metric-contract CLI. The PRD has been tracked since `aa04786` |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-08-29 |
+| **Last updated** | 2026-09-03 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -574,7 +574,7 @@ map); the decision is recorded in the artifact (`control_config_decision`).
 ### 7.1 Phase 9 — what the PRD is and is not
 
 `HERMES_PHASE9_FLEET_SIMULATION_PRD.md` (2,769 lines, "Hermes FleetLab", status "Design
-proposal / implementation handoff", local, gitignored). Question: *how can internal teams safely
+proposal / implementation handoff", tracked since `aa04786`). Question: *how can internal teams safely
 and quickly evaluate offboard fleet and operational changes before launch?* Thesis (L78): **the
 right simulation is the lowest-cost model with enough fidelity to answer the decision.**
 
@@ -608,11 +608,22 @@ replications; a non-compensatory recommendation (guardrail regression HOLDs an I
 primary); an analytical fixture whose three-request world is computed entirely by hand and
 asserted exactly, plus a metamorphic service-delay case; `hermes fleet demo` (~0.5 s).
 Measured demo result: baseline healthy, +25% turnaround
-→ REGRESSED, CI [+736, +919] s on wait p90, guardrail hit → HOLD. 30 tests, all simulator- and
+→ REGRESSED, CI [+736, +919] s on wait p90, guardrail hit → HOLD. The Stage 1 Task 6 change,
+following `d569672`, measures **76 passed** in Gate G; all are simulator- and
 fixture-free; suite 761→794 in the worktree with zero new failures; **33/33 from a clean clone
 on core deps only, decision-record digest bit-identical across checkouts.** Everything else in
-the PRD (charging, FLEET-001..004/006, policy SDK, forecast seam, Studio, registry) remains
+the PRD (charging, FLEET-001..004/006, policy SDK, forecast seam, Studio, experiment registry) remains
 unbuilt.
+
+**Stage 1 measured 2026-09-03:** the typed metric registry now binds the producer, experiment
+layer, authoring validator, and `metrics list` output; the committed FLEET-005 YAML is the in-code
+spec by digest; and `hermes fleet experiment template`, `validate`, `run`, and `inspect` provide a
+strict, bounded spec-file path. The demo record remains
+`84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f`. Deliberately not built:
+the registry version is not yet recorded in the decision record; there is no operator view;
+`MetricComparison.metric` is not validated against the registry; descriptive order is not aligned
+to producer order; guardrail metrics are not excluded from descriptives; aliases are still
+reported beside their targets; and `unserved.fraction = 0.0` on an empty population is unchanged.
 
 ### 7.2 MuJoCo sandbox — what exists
 
@@ -927,14 +938,18 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
    `DispatchPolicy` contract with decision-time-only views, latency counted, `[fleet-or]` extra.
 2. **FLEET-003 (charger outage) needs the charging model**; author regime pairs and keep
    outcomes separate per regime (no post-hoc MIXED).
-3. **Spec-file authoring + `hermes fleet run <spec.yaml>`** so the demo stops being the only
-   entry point; then the decision-record Comparison page on the workbench.
+3. **Spec-file authoring is done:** `hermes fleet experiment template`, `validate`, `run`, and
+   `inspect` make the committed YAML spec the entry point. **Not done:** the decision-record
+   Comparison page on the workbench.
 4. More analytical fixtures: the hand-computed three-request world exists
    (`test_fleet_analytical_fixture.py`); add an M/M/c depot check against closed form.
 5. Development-vs-evaluation seed separation and the leakage defects (ORACLE_LEAKAGE provider)
    when the forecast seam lands.
 6. The MetaDrive→FleetLab parameter bridge stays P1 and still needs §11.1 item 1's curve.
-7. Decide whether to track the PRD (still gitignored defensively).
+7. **Resolved:** the Phase 9 PRD has been tracked since `aa04786`.
+8. **Stage 2:** record the metric-registry version in the decision record as a deliberate digest
+   re-baseline, then add the static operator view as the second registry consumer.
+9. **Stage 3:** put dispatch behind a decision-time-only policy seam before adding a candidate.
 
 ### 11.3 MuJoCo — before graduation
 
@@ -1091,7 +1106,7 @@ separate "Hermes Evidence Lab" artifact is the portfolio page, not a status docu
 | [docs/PHASE6_*.md](docs/), [BUILD_PLAN.md](BUILD_PLAN.md), [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) | Phase 6 trust model, threat model, usability plan (`NOT YET OBSERVED` rows), validation matrix |
 | [PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md](PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md) | Phase 7 design (implementation in the codex worktree) |
 | `HERMES_PHASE7_ADAS_AGENTIC_WORKFLOW_PRD.md` | Phase 8 PRD — local, gitignored; §0-A normative |
-| `HERMES_PHASE9_FLEET_SIMULATION_PRD.md` | Phase 9 PRD — local, gitignored |
+| [HERMES_PHASE9_FLEET_SIMULATION_PRD.md](HERMES_PHASE9_FLEET_SIMULATION_PRD.md) | Phase 9 PRD — tracked since `aa04786` |
 | `sandbox/mujoco/{NOTES,SIMULATION_DESIGN_PACKAGE}.md` | MuJoCo sandbox — local, gitignored, NOT EVIDENCE |
 
 **Historical (Phase 5–6 era; superseded as entry points, kept for the record):**

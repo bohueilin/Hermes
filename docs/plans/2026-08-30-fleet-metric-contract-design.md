@@ -1,6 +1,8 @@
 # FleetLab metric contract and operator view — design
 
-**Status:** design proposal, not implemented.
+**Status:** sequencing steps 1–2 implemented across `1164f2e`, `60380b4`, `2afe4a0`, and
+`872ae2b`; `metrics list` landed at `d569672`; spec-file authoring is in this Stage 1 change;
+steps 3–4 are not started.
 **Date:** 2026-08-30.
 **Scope:** `src/hermes/fleet/` only. No `SimulatorAdapter` involvement, no
 `ScenarioDefinition` change, no `evidence_schema_version` change. Additive, per Phase 9 PRD §37.
@@ -143,3 +145,104 @@ Per Phase 9 PRD §20, fleet outcomes stay separate from AV safety verdicts and
 4. The static operator view.
 
 Steps 1–2 are the design. Steps 3–4 are worth cutting first if time is short.
+
+---
+
+## 8. What was built and what was not (measured)
+
+### Stage 1 — metric contract at authoring time
+
+Stage 1 adds or changes only these product/configuration files:
+
+- `src/hermes/fleet/metrics.py`, `contracts.py`, `experiment.py`, `cli.py`, `authoring.py`, and
+  `__init__.py`;
+- `config/fleet/fleet-005-turnaround.yaml` and
+  `config/fleet/examples/invalid-unregistered-metric.yaml`;
+- `tests/unit/test_fleet_demo_digest.py`, `test_fleet_metrics_registry.py`,
+  `test_fleet_analytical_fixture.py`, `test_fleet_contracts_and_world.py`,
+  `test_fleet_experiment.py`, `test_fleet_cli.py`, and `test_fleet_authoring.py`;
+- `README.md`, `HERMES_SOURCE_OF_TRUTH.md`, and this design document.
+
+The added tests are:
+
+- `test_the_fleet_005_demo_record_digest_is_pinned`
+- `test_the_fleet_005_spec_digest_is_pinned`
+- `test_a_conditional_definition_must_state_when_it_is_absent`
+- `test_an_always_definition_must_not_state_an_absence_condition`
+- `test_a_metric_name_must_be_namespaced`
+- `test_a_definition_is_frozen_and_rejects_unknown_fields`
+- `test_metrics_module_imports_nothing_from_the_fleet_package`
+- `test_the_hand_computed_world_satisfies_the_registry_declarations`
+- `test_every_produced_metric_is_registered_and_in_registration_order`
+- `test_every_always_metric_is_produced`
+- `test_conditional_metrics_are_absent_for_their_declared_reason`
+- `test_declared_aliases_carry_equal_values`
+- `test_resolving_an_unknown_name_lists_the_registered_names`
+- `test_descriptive_names_are_pinned_to_the_recorded_order`
+- `test_the_registry_is_immutable`
+- `test_the_registry_fails_closed_on_a_bad_alias`
+- `test_an_unregistered_primary_metric_is_rejected_at_authoring_time`
+- `test_an_unregistered_guardrail_metric_is_rejected`
+- `test_a_direction_contradicting_the_registry_is_rejected`
+- `test_a_unit_contradicting_the_registry_is_rejected`
+- `test_a_neutral_metric_cannot_carry_a_claim`
+- `test_descriptives_come_from_the_registry_not_a_tuple`
+- `test_a_metric_added_to_the_registry_appears_without_editing_the_experiment_module`
+- `test_metrics_list_prints_every_registered_definition_from_the_registry`
+- `test_metrics_list_is_deterministic`
+- `test_a_conditional_metric_groups_availability_and_absence_before_surfaces`
+- `test_the_committed_fleet_005_spec_is_the_in_code_spec`
+- `test_a_rendered_template_round_trips_to_the_same_digest`
+- `test_the_committed_invalid_example_fails_at_authoring_time_with_the_fix`
+- `test_malformed_yaml_is_an_authoring_error_not_a_yaml_exception`
+- `test_malformed_yaml_errors_render_as_exactly_five_labelled_lines`
+- `test_an_author_controlled_newline_cannot_spoof_an_error_label`
+- `test_an_extra_key_and_a_missing_key_name_the_field`
+- `test_an_oversized_spec_is_rejected_before_parsing`
+- `test_a_path_resolution_failure_is_an_authoring_error`
+- `test_runtime_and_os_errors_during_resolve_are_authoring_errors`
+- `test_a_written_decision_record_reloads_to_the_same_digest`
+- `test_experiment_validate_accepts_the_committed_spec`
+- `test_experiment_validate_rejects_the_committed_invalid_example`
+- `test_experiment_run_reproduces_the_demo_digest_from_the_committed_spec`
+- `test_experiment_inspect_redigests_a_stored_record`
+- `test_experiment_template_prints_a_loadable_spec`
+
+Gate G measured `76 passed`; the architecture boundary gate measured `43 passed, 2 deselected`;
+Ruff reported `All checks passed!`; and the artifact-bound full suite measured `186 failed, 1325
+passed, 55 deselected, 42 errors` with `SAME_FAILURE_SET`. The pinned identities are:
+
+- FLEET-005 spec: `b68f75d295e4ace1c4f3e470e52fde828a8b433eec2682f66596dbebbd5360c2`
+- FLEET-005 decision record:
+  `84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f`
+
+The digest-neutrality proof from Gate G is:
+
+```text
+Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f
+DEMO_BYTE_IDENTICAL
+```
+
+Six implementation deviations from the original design and planning notes are deliberate:
+
+1. `MetricDefinition` has no `calibration_state`. Calibration belongs to the spec inputs and is
+   already recorded on `ExperimentSpec` and `DecisionRecord`; copying it onto each metric would
+   create competing sources and reverse the required `contracts -> metrics` import direction.
+2. Registry order follows producer key order. A separate `descriptive_rank` preserves the existing
+   digest-bearing descriptive order. `wait.p90_s`, `requests.total`, and `unserved.fraction` have no
+   descriptive rank because adding them would change behavior before the deliberate Stage 2
+   re-baseline.
+3. Aliases must agree with targets on unit, direction, aggregation, availability, and absence
+   semantics. `business_proxy.served_trips` therefore uses `requests`, because it is the same number
+   as its target rather than a differently scaled measure.
+4. Authoring checks the primary metric's unit as well as its direction. The equivalence margin uses
+   that unit, so accepting a mismatch would silently rescale the decision boundary.
+5. Authoring failures use `INVALID_EXPERIMENT_SPEC`; the completed-run invalidity value remains
+   reserved for evidence voided by invariant or comparability failures.
+6. The CLI follows the PRD's `hermes fleet experiment validate|run <yaml>` shape and adds one-step
+   `template` and `inspect` commands. `experiment compare`, `scenario list`, `policy list`, and
+   `studio` remain unbuilt.
+
+Also deliberately deferred: recording the registry version in `DecisionRecord` and the static
+operator view (Stage 2), plus the policy seam (Stage 3). Existing descriptive order, guardrail
+overlap, alias double-reporting, and the empty-population `unserved.fraction` behavior are unchanged.

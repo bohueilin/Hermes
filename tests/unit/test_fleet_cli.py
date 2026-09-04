@@ -1,9 +1,15 @@
-"""Fleet CLI metric-contract behavior."""
+"""Fleet CLI metric-contract and experiment-authoring behavior."""
 
+from pathlib import Path
+
+from tests.unit.test_fleet_demo_digest import (
+    FLEET_005_RECORD_DIGEST,
+    FLEET_005_SPEC_DIGEST,
+)
 from typer.testing import CliRunner
 
 from hermes.cli import app
-from hermes.fleet.metrics import METRIC_REGISTRY_VERSION, Availability, definitions
+from hermes.fleet.metrics import METRIC_REGISTRY_VERSION, Availability, definitions, resolve
 
 runner = CliRunner()
 
@@ -59,3 +65,104 @@ def test_metrics_list_is_deterministic() -> None:
     assert first.exit_code == 0
     assert second.exit_code == 0
     assert first.output == second.output
+
+
+def test_a_conditional_metric_groups_availability_and_absence_before_surfaces() -> None:
+    result = runner.invoke(app, ["fleet", "metrics", "list"])
+    definition = resolve("wait.p50_s")
+    expected = (
+        f"  availability: {definition.availability.value}\n"
+        f"  absent when: {definition.absent_when}\n"
+        "  surfaces: "
+    )
+
+    assert result.exit_code == 0
+    assert expected in result.output
+
+
+def test_experiment_validate_accepts_the_committed_spec() -> None:
+    repository_root = Path(__file__).parents[2]
+    path = repository_root / "config/fleet/fleet-005-turnaround.yaml"
+    primary = resolve("wait.p90_s")
+
+    result = runner.invoke(app, ["fleet", "experiment", "validate", str(path)])
+
+    assert result.exit_code == 0
+    assert "VALID fleet-005-turnaround" in result.output
+    assert f"Spec digest: {FLEET_005_SPEC_DIGEST}" in result.output
+    assert f"Primary: wait.p90_s ({primary.unit}, {primary.direction.value}" in result.output
+
+
+def test_experiment_validate_rejects_the_committed_invalid_example() -> None:
+    repository_root = Path(__file__).parents[2]
+    path = repository_root / "config/fleet/examples/invalid-unregistered-metric.yaml"
+
+    result = runner.invoke(app, ["fleet", "experiment", "validate", str(path)])
+
+    assert result.exit_code == 40
+    for expected in (
+        "[CONFIGURATION_ERROR]",
+        "INVALID_EXPERIMENT_SPEC",
+        "WHAT FAILED",
+        "WHY",
+        "HOW TO FIX",
+        "WHICH CONFIG FIELD",
+        "wait.p95_s",
+        "primary_metric.name",
+        "wait.p90_s",
+        "Exit code: 40",
+    ):
+        assert expected in result.output
+
+
+def test_experiment_run_reproduces_the_demo_digest_from_the_committed_spec(
+    tmp_path: Path,
+) -> None:
+    repository_root = Path(__file__).parents[2]
+    path = repository_root / "config/fleet/fleet-005-turnaround.yaml"
+
+    result = runner.invoke(
+        app,
+        ["fleet", "experiment", "run", str(path), "--out-dir", str(tmp_path)],
+    )
+
+    assert result.exit_code == 0
+    assert (tmp_path / "fleet-005-turnaround" / "decision-record.json").exists()
+    assert result.output.splitlines()[-1] == f"Record digest:   {FLEET_005_RECORD_DIGEST}"
+
+
+def test_experiment_inspect_redigests_a_stored_record(tmp_path: Path) -> None:
+    repository_root = Path(__file__).parents[2]
+    spec_path = repository_root / "config/fleet/fleet-005-turnaround.yaml"
+    run_result = runner.invoke(
+        app,
+        ["fleet", "experiment", "run", str(spec_path), "--out-dir", str(tmp_path)],
+    )
+    record_path = tmp_path / "fleet-005-turnaround" / "decision-record.json"
+
+    result = runner.invoke(app, ["fleet", "experiment", "inspect", str(record_path)])
+
+    assert run_result.exit_code == 0
+    assert result.exit_code == 0
+    assert result.output.splitlines()[-1] == f"Record digest:   {FLEET_005_RECORD_DIGEST}"
+
+    invalid_path = tmp_path / "invalid-record.json"
+    invalid_path.write_text("{}", encoding="utf-8")
+    invalid_result = runner.invoke(
+        app,
+        ["fleet", "experiment", "inspect", str(invalid_path)],
+    )
+    assert invalid_result.exit_code == 40
+    assert "[CONFIGURATION_ERROR]" in invalid_result.output
+
+
+def test_experiment_template_prints_a_loadable_spec() -> None:
+    from hermes.fleet.authoring import parse_experiment_spec_yaml
+
+    result = runner.invoke(app, ["fleet", "experiment", "template"])
+
+    assert result.exit_code == 0
+    assert (
+        parse_experiment_spec_yaml(result.output).spec_digest()
+        == FLEET_005_SPEC_DIGEST
+    )
