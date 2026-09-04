@@ -131,3 +131,52 @@ def test_the_primary_metric_carries_a_ci_and_descriptives_do_not_claim() -> None
     assert record.primary.ci_low is not None and record.primary.ci_high is not None
     assert all(item.role == "DESCRIPTIVE" for item in record.descriptives)
     assert all(item.ci_low is None for item in record.descriptives)
+
+
+def test_descriptives_come_from_the_registry_not_a_tuple() -> None:
+    import hermes.fleet.experiment as experiment_module
+
+    assert not hasattr(experiment_module, "_DESCRIPTIVE_METRICS")
+    assert experiment_module.descriptive_metrics_for(small_spec()) == (
+        "wait.p50_s",
+        "requests.served",
+        "requests.unserved",
+        "fleet.utilization_fraction",
+        "depot.queue_p90_s",
+        "business_proxy.served_trips",
+        "business_proxy.unserved_demand",
+    )
+
+
+def test_a_metric_added_to_the_registry_appears_without_editing_the_experiment_module(
+    monkeypatch,
+) -> None:
+    from types import MappingProxyType
+
+    import hermes.fleet.metrics as metrics_module
+    from hermes.fleet.metrics import (
+        Availability,
+        MetricAggregation,
+        MetricDefinition,
+        MetricDirection,
+        Surface,
+    )
+
+    registry = dict(metrics_module.METRIC_REGISTRY)
+    registry["probe.extra_count"] = MetricDefinition(
+        name="probe.extra_count",
+        unit="count",
+        direction=MetricDirection.HIGHER_IS_BETTER,
+        population="probe observations",
+        aggregation=MetricAggregation.COUNT,
+        availability=Availability.ALWAYS,
+        surfaces=(Surface.EXPERIMENT,),
+        descriptive_rank=90,
+    )
+    monkeypatch.setattr(metrics_module, "METRIC_REGISTRY", MappingProxyType(registry))
+
+    from hermes.fleet.experiment import descriptive_metrics_for
+
+    assert descriptive_metrics_for(small_spec())[-1] == "probe.extra_count"
+    record = run_experiment(small_spec())
+    assert "probe.extra_count" not in {item.metric for item in record.descriptives}
