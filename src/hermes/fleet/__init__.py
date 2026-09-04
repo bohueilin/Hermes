@@ -17,6 +17,13 @@ from hermes.fleet.contracts import (
     InvalidityReason,
 )
 from hermes.fleet.experiment import run_experiment
+from hermes.fleet.metrics import (
+    METRIC_REGISTRY,
+    METRIC_REGISTRY_VERSION,
+    MetricDefinition,
+    UnknownMetricError,
+    resolve,
+)
 
 __all__ = [
     "DecisionRecord",
@@ -25,5 +32,10 @@ __all__ = [
     "ExperimentValidity",
     "FleetRecommendation",
     "InvalidityReason",
+    "METRIC_REGISTRY",
+    "METRIC_REGISTRY_VERSION",
+    "MetricDefinition",
+    "UnknownMetricError",
+    "resolve",
     "run_experiment",
 ]

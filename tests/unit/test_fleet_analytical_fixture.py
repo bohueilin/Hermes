@@ -109,3 +109,32 @@ def test_a_smaller_bay_delay_shifts_exactly_the_hand_computed_amount() -> None:
     assert log.requests["r1"].pickup_time_s == 120
     assert log.requests["r2"].pickup_time_s == 840
     assert log.requests["r3"].pickup_time_s == 2560
+
+
+def test_the_hand_computed_world_satisfies_the_registry_declarations() -> None:
+    from hermes.fleet.metrics import Availability, definitions
+
+    scenario = small_scenario(**_SCENARIO)
+    metrics = run_metrics(run_fleet(scenario, _hand_written_tape()))
+    expected = {
+        "requests.total": 3.0,
+        "requests.served": 3.0,
+        "requests.unserved": 0.0,
+        "unserved.fraction": 0.0,
+        "fleet.utilization_fraction": 2160 / 4000,
+        "business_proxy.served_trips": 3.0,
+        "business_proxy.unserved_demand": 0.0,
+        "wait.p50_s": 120.0,
+        "wait.p90_s": 616.0,
+        "depot.queue_p90_s": 0.0,
+    }
+
+    for definition in definitions():
+        assert definition.name in metrics
+        if definition.availability is Availability.ALWAYS:
+            assert definition.name in metrics
+        else:
+            assert definition.availability is Availability.CONDITIONAL
+        assert metrics[definition.name] == expected[definition.name]
+
+    assert metrics["depot.queue_p90_s"] == 0.0
