@@ -166,12 +166,14 @@ def _bounded_source(path: Path, *, subject: str) -> Path:
             field="<document>",
             source=given,
         ) from exc
+    # ``source`` is resolved and str(exc) of an OSError would echo it, so the OSError sites
+    # below report exc.strerror (or the exception type) and name the file only as it was given.
     try:
         size = source.stat().st_size
     except OSError as exc:
         raise SpecAuthoringError(
             what=f"cannot read {subject} {given}",
-            why=str(exc),
+            why=exc.strerror or type(exc).__name__,
             fix="provide an existing readable file",
             field="<document>",
             source=given,
@@ -203,7 +205,7 @@ def load_experiment_spec(path: Path) -> ExperimentSpec:
     except OSError as exc:
         raise SpecAuthoringError(
             what=f"cannot read experiment spec {path}",
-            why=str(exc),
+            why=exc.strerror or type(exc).__name__,
             fix="provide an existing readable file",
             field="<document>",
             source=str(path),
@@ -233,7 +235,7 @@ def load_decision_record(path: Path) -> DecisionRecord:
     except OSError as exc:
         raise SpecAuthoringError(
             what=f"cannot read decision record {path}",
-            why=str(exc),
+            why=exc.strerror or type(exc).__name__,
             fix="provide an existing readable file",
             field="<document>",
             source=str(path),

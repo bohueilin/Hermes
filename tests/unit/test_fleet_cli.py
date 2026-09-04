@@ -1,7 +1,10 @@
 """Fleet CLI metric-contract and experiment-authoring behavior."""
 
+import errno
+import os
 from pathlib import Path
 
+import pytest
 from tests.unit.test_fleet_demo_digest import (
     FLEET_005_RECORD_DIGEST,
     FLEET_005_SPEC_DIGEST,
@@ -166,3 +169,24 @@ def test_experiment_template_prints_a_loadable_spec() -> None:
         parse_experiment_spec_yaml(result.output).spec_digest()
         == FLEET_005_SPEC_DIGEST
     )
+
+
+def test_experiment_errors_name_a_missing_file_only_as_given(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository_root = Path(__file__).parents[2]
+    monkeypatch.chdir(repository_root)
+
+    for command, given in (
+        ("validate", "config/fleet/does-not-exist.yaml"),
+        ("inspect", "experiments/does-not-exist/decision-record.json"),
+    ):
+        result = runner.invoke(app, ["fleet", "experiment", command, given])
+
+        assert result.exit_code == 40
+        assert "[CONFIGURATION_ERROR]" in result.output
+        assert "Exit code: 40" in result.output
+        assert given in result.output
+        assert str(repository_root.resolve()) not in result.output
+        assert str(Path.home()) not in result.output
+        assert os.strerror(errno.ENOENT) in result.output

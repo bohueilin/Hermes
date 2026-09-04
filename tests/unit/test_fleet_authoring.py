@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import errno
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -215,3 +217,43 @@ def test_a_written_decision_record_reloads_to_the_same_digest(tmp_path: Path) ->
     changed_record = load_decision_record(changed_path)
     assert changed_record.spec_digest != record.spec_digest
     assert changed_record.record_digest() != record.record_digest()
+
+
+def test_a_missing_spec_is_named_only_as_given(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    given = Path("config/fleet/does-not-exist.yaml")
+
+    with pytest.raises(SpecAuthoringError) as exc_info:
+        load_experiment_spec(given)
+
+    error = exc_info.value
+    rendered = str(error)
+    assert error.source == str(given)
+    assert str(given) in rendered
+    assert str(tmp_path.resolve()) not in rendered
+    assert str(Path.home()) not in rendered
+    assert error.why == os.strerror(errno.ENOENT)
+    assert len(rendered.splitlines()) == 5
+
+
+def test_a_missing_record_is_named_only_as_given(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    given = Path("~/does-not-exist.json")
+
+    with pytest.raises(SpecAuthoringError) as exc_info:
+        load_decision_record(given)
+
+    error = exc_info.value
+    rendered = str(error)
+    assert error.source == str(given)
+    assert str(given) in rendered
+    assert str(tmp_path) not in rendered
+    assert str(tmp_path.resolve()) not in rendered
+    assert error.why == os.strerror(errno.ENOENT)
+    assert len(rendered.splitlines()) == 5
