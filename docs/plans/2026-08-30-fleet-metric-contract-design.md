@@ -2,7 +2,8 @@
 
 **Status:** sequencing steps 1–2 implemented across `1164f2e`, `60380b4`, `2afe4a0`, and
 `872ae2b`; `metrics list` landed at `d569672`; spec-file authoring at `6983198`; a forward-only
-repair of the authoring error envelope at `f0e4ded`; steps 3–4 are not started.
+repair of the authoring error envelope at `f0e4ded` and its handler-coverage tests at `aa8f406`;
+steps 3–4 are not started.
 **Date:** 2026-08-30.
 **Scope:** `src/hermes/fleet/` only. No `SimulatorAdapter` involvement, no
 `ScenarioDefinition` change, no `evidence_schema_version` change. Additive, per Phase 9 PRD §37.
@@ -210,13 +211,18 @@ The added tests are:
 - `test_a_missing_spec_is_named_only_as_given` (repair)
 - `test_a_missing_record_is_named_only_as_given` (repair)
 - `test_experiment_errors_name_a_missing_file_only_as_given` (repair)
+- `test_a_spec_read_failure_after_stat_is_named_only_as_given` (handler coverage)
+- `test_a_record_read_failure_after_stat_is_named_only_as_given` (handler coverage)
 
 Gate G measured `76 passed`; the architecture boundary gate measured `43 passed, 2 deselected`;
 Ruff reported `All checks passed!`; and the artifact-bound full suite measured `186 failed, 1325
 passed, 55 deselected, 42 errors` with `SAME_FAILURE_SET`. After the repair `f0e4ded`, Gate G
 measured `79 passed`, the boundary gate again `43 passed, 2 deselected`, Ruff `All checks
 passed!`, and the full suite `186 failed, 1328 passed, 55 deselected, 42 errors`, again
-`SAME_FAILURE_SET` against `aa04786`. The pinned identities are:
+`SAME_FAILURE_SET` against `aa04786`. After the handler-coverage tests `aa8f406`, Gate G measured
+`81 passed`, the boundary gate `43 passed, 2 deselected`, Ruff `All checks passed!`, and the full
+suite `186 failed, 1330 passed, 55 deselected, 42 errors`, again `SAME_FAILURE_SET`. The pinned
+identities are:
 
 - FLEET-005 spec: `b68f75d295e4ace1c4f3e470e52fde828a8b433eec2682f66596dbebbd5360c2`
 - FLEET-005 decision record:
@@ -246,6 +252,17 @@ $ git rev-parse --short HEAD
 f0e4ded
 $ pytest tests/unit/test_fleet_*.py -q -p no:cacheprovider | tail -1
 78 passed in 1.36s
+$ hermes fleet demo | tail -1
+Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f
+```
+
+Clean-clone verification measured 2026-09-04 against `aa8f406`, same setup and commands:
+
+```text
+$ git rev-parse --short HEAD
+aa8f406
+$ pytest tests/unit/test_fleet_*.py -q -p no:cacheprovider | tail -1
+80 passed in 1.36s
 $ hermes fleet demo | tail -1
 Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f
 ```
@@ -295,10 +312,34 @@ WHICH CONFIG FIELD:  <document>
 Exit code: 40
 ```
 
-The three repair tests were watched failing before the fix (the resolved path was in the
+The three `f0e4ded` tests were watched failing before the fix (the resolved path was in the
 rendered text) and, after a review found them unable to distinguish the fix from a blank `WHY`
 line, each gained `os.strerror(errno.ENOENT)` as the pinned reason; against a copy of the module
-with `why=""` all three fail, against the tree all three pass. Deliberately not changed: the
+with `why=""` at all three sites they fail, against the tree they pass. They all meet `ENOENT`
+at `stat()`, however, so they cover only the `stat` handler in `_bounded_source`: restoring
+`why=str(exc)` at the `read_text` handler in `load_experiment_spec` or at the `read_bytes`
+handler in `load_decision_record` survived all three. `aa8f406` (tests only) closes that:
+`test_a_spec_read_failure_after_stat_is_named_only_as_given` makes a relative spec file pass
+`stat` and has `Path.read_text` raise an `OSError` whose text carries the resolved path;
+`test_a_record_read_failure_after_stat_is_named_only_as_given` does the same for a tilde record
+path with `HOME` patched and `Path.read_bytes`. Each asserts the given path in `source` and the
+rendered text, the absence of the resolved and home paths, `why == os.strerror(errno.EACCES)`,
+and exactly five lines. Handler coverage after `aa8f406`, measured with single-site mutants
+(a copy of the module with exactly one handler restored to `why=str(exc)`):
+
+| handler restored to `why=str(exc)` | fails | passes |
+|---|---|---|
+| `stat` in `_bounded_source` | all three `f0e4ded` tests (the two authoring missing-file tests and the CLI `validate`/`inspect` test) | both read-failure tests |
+| `read_text` in `load_experiment_spec` | the spec read-failure test only | everything else |
+| `read_bytes` in `load_decision_record` | the record read-failure test only | everything else |
+
+Measured with the mutant copy first on `PYTHONPATH` and
+`pytest tests/unit/test_fleet_authoring.py tests/unit/test_fleet_cli.py -q -p no:cacheprovider -k
+"read_failure_after_stat or only_as_given"` over those five tests: `stat` mutant `3 failed, 2
+passed`; `read_text` mutant `1 failed, 4 passed`; `read_bytes` mutant `1 failed, 4 passed`; the
+unmodified tree `5 passed`.
+
+Deliberately not changed: the
 `resolve()` failure site (a symlink-loop `RuntimeError` can name a resolved path; two Stage 1
 tests pin that text) and the `stat`-before-read size cap (the stat-to-read window is open;
 descriptor-bounded reading is a separate task shared with `scenarios/loader.py`).
