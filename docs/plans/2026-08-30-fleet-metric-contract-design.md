@@ -223,6 +223,14 @@ Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7
 DEMO_BYTE_IDENTICAL
 ```
 
+Clean-clone verification measured 2026-09-03 against the committed Task 6 tip:
+
+```text
+6983198
+75 passed in 1.30s
+Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f
+```
+
 Six implementation deviations from the original design and planning notes are deliberate:
 
 1. `MetricDefinition` has no `calibration_state`. Calibration belongs to the spec inputs and is

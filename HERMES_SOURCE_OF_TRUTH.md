@@ -610,8 +610,9 @@ asserted exactly, plus a metamorphic service-delay case; `hermes fleet demo` (~0
 Measured demo result: baseline healthy, +25% turnaround
 → REGRESSED, CI [+736, +919] s on wait p90, guardrail hit → HOLD. The Stage 1 Task 6 change,
 following `d569672`, measures **76 passed** in Gate G; all are simulator- and
-fixture-free; suite 761→794 in the worktree with zero new failures; **33/33 from a clean clone
-on core deps only, decision-record digest bit-identical across checkouts.** Everything else in
+fixture-free; suite 761→794 in the worktree with zero new failures; **75/75 from a clean clone of
+`6983198` on 2026-09-03 using core deps only, decision-record digest bit-identical across
+checkouts.** Everything else in
 the PRD (charging, FLEET-001..004/006, policy SDK, forecast seam, Studio, experiment registry) remains
 unbuilt.
 
