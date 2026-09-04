@@ -14,10 +14,11 @@ import hashlib
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from hermes.domain.models import FiniteFloat, HermesModel
 from hermes.evidence.canonical import canonical_json_bytes
+from hermes.fleet.metrics import MetricDirection, UnknownMetricError, resolve
 
 #: Every FleetLab surface carries these labels verbatim (PRD §4.3). They are the honesty
 #: boundary: synthetic inputs, no calibration to any real operator, no forecast, no authority.
@@ -164,6 +165,52 @@ class ExperimentSpec(HermesModel):
     seeds: Annotated[tuple[int, ...], Field(min_length=10, max_length=200)]
     bootstrap_resamples: Annotated[int, Field(ge=1_000, le=100_000)] = 2_000
     calibration_state: CalibrationState = CalibrationState.SYNTHETIC_UNCALIBRATED
+
+    @field_validator("primary_metric")
+    @classmethod
+    def primary_metric_matches_registry(cls, metric: PrimaryMetric) -> PrimaryMetric:
+        try:
+            definition = resolve(metric.name)
+        except UnknownMetricError as exc:
+            raise ValueError(f"primary_metric.name: {exc}") from exc
+        if definition.direction is MetricDirection.NEUTRAL:
+            raise ValueError(
+                f"primary_metric.direction: metric '{metric.name}' has no declared direction. "
+                "Fix: choose a metric with a declared direction."
+            )
+        if metric.direction != definition.direction.value:
+            raise ValueError(
+                f"primary_metric.direction: declared direction '{metric.direction}' contradicts "
+                f"registered direction '{definition.direction.value}' for metric '{metric.name}'. "
+                "Fix: declare the registered direction."
+            )
+        if metric.unit != definition.unit:
+            raise ValueError(
+                f"primary_metric.unit: declared unit '{metric.unit}' contradicts registered unit "
+                f"'{definition.unit}' for metric '{metric.name}'. Fix: declare the registered unit."
+            )
+        return metric
+
+    @field_validator("guardrails")
+    @classmethod
+    def guardrails_match_registry(cls, guardrails: tuple[Guardrail, ...]) -> tuple[Guardrail, ...]:
+        for index, guardrail in enumerate(guardrails):
+            try:
+                definition = resolve(guardrail.metric)
+            except UnknownMetricError as exc:
+                raise ValueError(f"guardrails[{index}].metric: {exc}") from exc
+            if definition.direction is MetricDirection.NEUTRAL:
+                raise ValueError(
+                    f"guardrails[{index}].direction: metric '{guardrail.metric}' has no "
+                    "declared direction. Fix: choose a metric with a declared direction."
+                )
+            if guardrail.direction != definition.direction.value:
+                raise ValueError(
+                    f"guardrails[{index}].direction: declared direction '{guardrail.direction}' "
+                    f"contradicts registered direction '{definition.direction.value}' for metric "
+                    f"'{guardrail.metric}'. Fix: declare the registered direction."
+                )
+        return guardrails
 
     def spec_digest(self) -> str:
         return hashlib.sha256(canonical_json_bytes(self.model_dump(mode="json"))).hexdigest()

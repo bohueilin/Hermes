@@ -139,3 +139,102 @@ def test_zero_sigma_yields_a_deterministic_world() -> None:
     scenario = small_scenario(travel_sigma=0.0)
     tape = build_tape(scenario, 5)
     assert all(value == 1.0 for value in tape.travel_multiplier.values())
+
+
+def test_an_unregistered_primary_metric_is_rejected_at_authoring_time() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="wait.p95_s") as exc_info:
+        small_spec(
+            primary_metric=PrimaryMetric(
+                name="wait.p95_s",
+                unit="s",
+                direction="lower_is_better",
+                equivalence_margin=20.0,
+            )
+        )
+
+    message = str(exc_info.value)
+    assert "primary_metric.name" in message
+    assert "wait.p90_s" in message
+
+
+def test_an_unregistered_guardrail_metric_is_rejected() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="unserved.rate") as exc_info:
+        small_spec(
+            guardrails=(
+                Guardrail(
+                    metric="unserved.rate", max_harm=0.05, direction="lower_is_better"
+                ),
+            )
+        )
+
+    message = str(exc_info.value)
+    assert "guardrails[0].metric" in message
+    assert "unserved.fraction" in message
+
+
+def test_a_direction_contradicting_the_registry_is_rejected() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="higher_is_better") as exc_info:
+        small_spec(
+            primary_metric=PrimaryMetric(
+                name="wait.p90_s",
+                unit="s",
+                direction="higher_is_better",
+                equivalence_margin=20.0,
+            )
+        )
+
+    message = str(exc_info.value)
+    assert "primary_metric.direction" in message
+    assert "lower_is_better" in message
+
+
+def test_a_unit_contradicting_the_registry_is_rejected() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="ms") as exc_info:
+        small_spec(
+            primary_metric=PrimaryMetric(
+                name="wait.p90_s",
+                unit="ms",
+                direction="lower_is_better",
+                equivalence_margin=20.0,
+            )
+        )
+
+    message = str(exc_info.value)
+    assert "primary_metric.unit" in message
+    assert "s" in message
+
+
+def test_a_neutral_metric_cannot_carry_a_claim() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="has no declared direction") as primary_error:
+        small_spec(
+            primary_metric=PrimaryMetric(
+                name="fleet.utilization_fraction",
+                unit="fraction",
+                direction="lower_is_better",
+                equivalence_margin=20.0,
+            )
+        )
+
+    with pytest.raises(ValidationError, match="has no declared direction") as guardrail_error:
+        small_spec(
+            guardrails=(
+                Guardrail(
+                    metric="fleet.utilization_fraction",
+                    max_harm=0.05,
+                    direction="lower_is_better",
+                ),
+            )
+        )
+
+    assert "primary_metric.direction" in str(primary_error.value)
+    assert "guardrails[0].direction" in str(guardrail_error.value)
