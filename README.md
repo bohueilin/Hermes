@@ -61,7 +61,7 @@ WHICH CONFIG FIELD:  primary_metric.name
 Exit code: 40
 
 $ hermes fleet experiment run config/fleet/fleet-005-turnaround.yaml | tail -1
-Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f
+Record digest:   a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f
 ```
 
 That run takes **0.50 s**, and reproduces from a clean clone on the four core dependencies alone —

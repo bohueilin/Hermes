@@ -271,6 +271,10 @@ artifact parsing. It does not rerun an experiment or modify a decision record. G
 `a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f` and the spec digest stays
 `b68f75d295e4ace1c4f3e470e52fde828a8b433eec2682f66596dbebbd5360c2`.
 
+After STOP 2 review, one forward-only documentation correction updates the undated `README.md:64`
+live output to the measured Task 7 digest and replaces ambiguous source-of-truth commit references
+with their hashes.
+
 Per-zone wait is intentionally not rendered: `run_metrics` produces no per-zone wait metric.
 Adding it requires a registry and producer agreement change with its own agreement test, not a
 view-only change.
