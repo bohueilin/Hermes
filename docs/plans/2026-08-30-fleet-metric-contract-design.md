@@ -4,7 +4,8 @@
 `872ae2b`; `metrics list` landed at `d569672`; spec-file authoring at `6983198`; a forward-only
 repair of the authoring error envelope at `f0e4ded` and its handler-coverage tests at `aa8f406`;
 Stage 2 step 3 records metric-registry provenance and deliberately re-baselines the decision
-record digest; step 4 is not started.
+record digest at `3a7f595`; step 4 adds the static operator view at `4b2e8b8`; the forward review
+repair at `18b47db` tightens its disclosure schema and import guards without moving either pin.
 **Date:** 2026-08-30.
 **Scope:** `src/hermes/fleet/` only. No `SimulatorAdapter` involvement, no
 `ScenarioDefinition` change, no `evidence_schema_version` change. Additive, per Phase 9 PRD §37.
