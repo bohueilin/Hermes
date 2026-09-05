@@ -139,6 +139,36 @@ def _raise_experiment_error(error: Exception) -> None:
     raise typer.Exit(code=40)
 
 
+@fleet_app.command("view")
+def fleet_view(
+    host: Annotated[
+        str,
+        typer.Option(help="Numeric loopback address for the read-only local view."),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option(help="Loopback TCP port for the read-only local view."),
+    ] = 8502,
+    no_browser: Annotated[
+        bool,
+        typer.Option(help="Do not open a browser for the static synthetic-run view."),
+    ] = False,
+) -> None:
+    """Render one finished synthetic run in a read-only, loopback-only local view."""
+    try:
+        from hermes.fleet.operator_view import launch_operator_view
+
+        status = launch_operator_view(host=host, port=port, no_browser=no_browser)
+        if status != 0:
+            raise RuntimeError(f"operator view exited with status {status}")
+    except ValueError as exc:
+        render_cli_error(CliErrorCode.CONFIGURATION_ERROR, str(exc), 40)
+        raise typer.Exit(code=40) from exc
+    except Exception as exc:
+        render_cli_error(CliErrorCode.OPERATIONAL_ERROR, str(exc), 40)
+        raise typer.Exit(code=40) from exc
+
+
 @experiment_app.command("template")
 def experiment_template() -> None:
     """Print a complete FLEET-005 YAML template to standard output."""

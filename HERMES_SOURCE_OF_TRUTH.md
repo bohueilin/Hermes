@@ -11,11 +11,11 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
-| **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 record provenance built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline) — Gate G: **84 passed**; replayable decision record; spec-file authoring and metric-contract CLI. The PRD has been tracked since `aa04786` |
+| **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 registry provenance/static operator view built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline; Task 8 static view) — Gate G: **96 passed**; replayable decision record; spec-file authoring, metric-contract CLI, and one loopback-only finished synthetic-run view. The PRD has been tracked since `aa04786` |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-09-04 — Task 7 |
+| **Last updated** | 2026-09-04 — Task 8 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -628,8 +628,8 @@ unbuilt.
 layer, authoring validator, and `metrics list` output; the committed FLEET-005 YAML is the in-code
 spec by digest; and `hermes fleet experiment template`, `validate`, `run`, and `inspect` provide a
 strict, bounded spec-file path. The demo record remains
-`84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f`. Deliberately not built:
-the registry version is not yet recorded in the decision record; there is no operator view;
+`84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f`. Since then, Task 7 records
+the registry version and Task 8 provides the static operator view; deliberately not built:
 `MetricComparison.metric` is not validated against the registry; descriptive order is not aligned
 to producer order; guardrail metrics are not excluded from descriptives; aliases are still
 reported beside their targets; and `unserved.fraction = 0.0` on an empty population is unchanged.
@@ -666,6 +666,13 @@ moved from `84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f` to
 `a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f` because every
 `DecisionRecord` now records the required metric-registry version; `DecisionRecord` schema is 0.2,
 while `ExperimentSpec` and `FleetScenarioConfig` remain 0.1.
+
+**Task 8, measured 2026-09-04 (this commit):** the static operator view projects the completed
+FLEET-005 baseline through the metric registry in registration order, preserves declared absence
+reasons, and is loopback-only. It renders one finished synthetic run, not monitoring or a time
+axis; the decision-record Comparison page remains open. The FLEET-005 record digest remains
+`a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f` and the spec digest remains
+`b68f75d295e4ace1c4f3e470e52fde828a8b433eec2682f66596dbebbd5360c2`.
 
 ### 7.2 MuJoCo sandbox — what exists
 
@@ -992,8 +999,9 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
    when the forecast seam lands.
 6. The MetaDrive→FleetLab parameter bridge stays P1 and still needs §11.1 item 1's curve.
 7. **Resolved:** the Phase 9 PRD has been tracked since `aa04786`.
-8. **Stage 2:** record the metric-registry version in the decision record as a deliberate digest
-   re-baseline, then add the static operator view as the second registry consumer.
+8. **Stage 2 complete:** the decision record records metric-registry provenance with the one
+   deliberate digest re-baseline, and the static operator view is the second registry consumer.
+   The decision-record Comparison page remains open.
 9. **Stage 3:** put dispatch behind a decision-time-only policy seam before adding a candidate.
 
 ### 11.3 MuJoCo — before graduation

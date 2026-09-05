@@ -256,6 +256,22 @@ reporting, empty-population `unserved.fraction`, and `MetricComparison` validati
 Measured Gate G: `84 passed`; the architecture boundary gate: `43 passed, 2 deselected`; Ruff:
 `All checks passed!`; and the artifact-bound full suite remains a failure-set equality check.
 
+### Stage 2 — static operator view
+
+Task 8 adds a read-only, loopback-only static view of one completed synthetic FLEET-005 baseline
+run. Its pure projection queries the metric registry at call time, so names, units, directions,
+populations, aggregations, visibility, and declared absence reasons stay under the existing
+registry contract; business proxies do not appear on this surface. The thin optional Streamlit
+wrapper has no time axis, refresh, monitoring behavior, controls, thresholds, alerts, writes, or
+artifact parsing. It does not rerun an experiment or modify a decision record. Gate G measured
+`96 passed`; the record digest stays
+`a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f` and the spec digest stays
+`b68f75d295e4ace1c4f3e470e52fde828a8b433eec2682f66596dbebbd5360c2`.
+
+Per-zone wait is intentionally not rendered: `run_metrics` produces no per-zone wait metric.
+Adding it requires a registry and producer agreement change with its own agreement test, not a
+view-only change.
+
 Clean-clone verification measured 2026-09-03 against the committed Task 6 tip:
 
 ```text

@@ -90,10 +90,11 @@ screening input to a next test, never a launch decision, and `deployment_permiss
 **Built:** the FLEET-005 slice — preregistered specs, the hashed world tape, enforced invariants,
 bootstrap confidence intervals over paired replications, a replayable decision record, a typed and
 versioned metric registry validated at authoring time and bound to its producer by test,
-`hermes fleet metrics list`, and spec-file `template`, `validate`, `run`, and `inspect` commands.
+`hermes fleet metrics list`, spec-file `template`, `validate`, `run`, and `inspect` commands, and
+a static loopback-only operator view of one finished synthetic run.
 **Not built:** five of the six flagship scenarios, the charging model, the policy SDK, the
-experiment registry, `experiment compare`, and the Studio front end. Nineteen of the twenty P0
-acceptance criteria remain open.
+experiment registry, `experiment compare`, monitoring, a time axis, and the Studio front end.
+Nineteen of the twenty P0 acceptance criteria remain open.
 
 
 ## Phase 8 — ADAS development and agentic workflow lab
