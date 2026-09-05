@@ -307,6 +307,19 @@ $ hermes fleet demo | tail -1
 Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f
 ```
 
+Clean-clone verification measured 2026-09-04 against `e42ed2c`, with a fresh virtualenv holding
+only the core dependencies (pydantic, PyYAML, rich, typer, and pytest); the sole skip was the
+optional Streamlit-dependent render test, absent from that core-only environment:
+
+```text
+$ git rev-parse --short HEAD
+e42ed2c
+$ pytest tests/unit/test_fleet_*.py -q -p no:cacheprovider
+94 passed, 1 skipped in 1.98s
+$ hermes fleet demo | tail -1
+Record digest:   a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f
+```
+
 Six implementation deviations from the original design and planning notes are deliberate:
 
 1. `MetricDefinition` has no `calibration_state`. Calibration belongs to the spec inputs and is

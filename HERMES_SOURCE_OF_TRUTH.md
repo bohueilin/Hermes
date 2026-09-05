@@ -15,7 +15,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-09-04 — Task 8 |
+| **Last updated** | 2026-09-04 — Stage 2 clean-clone verification |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -673,6 +673,13 @@ reasons, and is loopback-only. It renders one finished synthetic run, not monito
 axis; the decision-record Comparison page remains open. The FLEET-005 record digest remains
 `a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f` and the spec digest remains
 `b68f75d295e4ace1c4f3e470e52fde828a8b433eec2682f66596dbebbd5360c2`.
+
+**STOP 2 clean-clone verification, measured 2026-09-04 (`e42ed2c`):** Gate G measured `96 passed
+in 2.05s`. The artifact-bound suite measured `186 failed, 1345 passed, 55 deselected, 42 errors in
+13.90s` with the same 228 failure/error nodes as `aa04786` (`SAME_FAILURE_SET`), explicitly not a
+pass/fail claim. A fresh core-only clone measured `94 passed, 1 skipped in 1.98s`; the sole skip was
+the optional Streamlit-dependent render test absent from that environment. It reproduced the full
+record digest `a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f` bit-identically.
 
 ### 7.2 MuJoCo sandbox — what exists
 
