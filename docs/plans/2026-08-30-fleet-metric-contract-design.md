@@ -146,7 +146,9 @@ Per Phase 9 PRD §20, fleet outcomes stay separate from AV safety verdicts and
 3. `registry_version` into the decision record; deliberate digest re-baseline.
 4. The static operator view.
 
-Steps 1–2 are the design. Steps 3–4 are worth cutting first if time is short.
+Steps 1–4 are implemented: the Task 7 record-provenance re-baseline landed at `3a7f595`, and
+the Task 8 static operator view landed at `4b2e8b8`. A forward-only review repair tightens the
+projection disclosure schema and import guards without changing either pinned digest.
 
 ---
 

@@ -151,7 +151,10 @@ def fleet_view(
     ] = 8502,
     no_browser: Annotated[
         bool,
-        typer.Option(help="Do not open a browser for the static synthetic-run view."),
+        typer.Option(
+            "--no-browser",
+            help="Do not open a browser for the static synthetic-run view.",
+        ),
     ] = False,
 ) -> None:
     """Render one finished synthetic run in a read-only, loopback-only local view."""

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 
 import hermes.fleet.metrics as fleet_metrics
 from hermes.domain.models import FiniteFloat, HermesModel
@@ -43,13 +43,20 @@ class OperatorProjection(HermesModel):
     """Static presentation model for one completed synthetic FleetLab run."""
 
     scenario_name: str
-    scenario_label: str
+    scenario_label: Literal["synthetic_fleet_scenario_not_calibrated_to_any_real_operation"]
     calibration_state: CalibrationState
     labels: tuple[str, ...]
     metric_registry_version: str
     world_tape_digest: str
     seed: int
     rows: tuple[OperatorRow, ...]
+
+    @field_validator("labels")
+    @classmethod
+    def labels_match_required_disclosures(cls, labels: tuple[str, ...]) -> tuple[str, ...]:
+        if labels != REQUIRED_LABELS:
+            raise ValueError("labels must equal REQUIRED_LABELS")
+        return labels
 
 
 def project_run(

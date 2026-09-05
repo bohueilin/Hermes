@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 from tests.unit.test_fleet_analytical_fixture import _SCENARIO, _hand_written_tape
 from tests.unit.test_fleet_contracts_and_world import small_scenario
 
@@ -27,7 +28,12 @@ from hermes.fleet.metrics import (
     names_for_surface,
     resolve,
 )
-from hermes.fleet.operator_projection import demo_run, project_run, render_rows
+from hermes.fleet.operator_projection import (
+    OperatorProjection,
+    demo_run,
+    project_run,
+    render_rows,
+)
 from hermes.fleet.operator_view import build_streamlit_argv, main
 from hermes.fleet.world import build_tape
 
@@ -121,6 +127,12 @@ def test_the_scenario_label_and_calibration_state_render() -> None:
     assert projection.calibration_state is CalibrationState.SYNTHETIC_UNCALIBRATED
     assert projection.labels == REQUIRED_LABELS
     assert projection.metric_registry_version == METRIC_REGISTRY_VERSION
+    with pytest.raises(ValidationError, match="scenario_label"):
+        OperatorProjection.model_validate(
+            {**projection.model_dump(), "scenario_label": "forged"}
+        )
+    with pytest.raises(ValidationError, match="labels"):
+        OperatorProjection.model_validate({**projection.model_dump(), "labels": ("FORGED",)})
 
 
 def test_the_demo_run_is_the_demo_baseline_arm() -> None:
@@ -169,6 +181,38 @@ def test_the_view_is_static_and_read_only() -> None:
         "metric",
     }
     allowed_streamlit = {"set_page_config", "title", "caption", "dataframe", "text"}
+
+    def assert_streamlit_import_boundary(tree: ast.AST, path: Path) -> None:
+        def is_streamlit_name(name: str | None) -> bool:
+            return name == "streamlit" or bool(name and name.startswith("streamlit."))
+
+        parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+        streamlit_imports = [
+            node
+            for node in ast.walk(tree)
+            if (
+                isinstance(node, ast.Import)
+                and any(is_streamlit_name(alias.name) for alias in node.names)
+            )
+            or isinstance(node, ast.ImportFrom)
+            and is_streamlit_name(node.module)
+        ]
+        if path.name == "operator_projection.py":
+            assert streamlit_imports == []
+            return
+        assert len(streamlit_imports) == 1
+        streamlit_import = streamlit_imports[0]
+        assert isinstance(streamlit_import, ast.Import)
+        assert [alias.name for alias in streamlit_import.names] == ["streamlit"]
+        ancestors: list[ast.AST] = []
+        current = parents.get(streamlit_import)
+        while current is not None:
+            ancestors.append(current)
+            current = parents.get(current)
+        assert any(
+            isinstance(node, ast.FunctionDef) and node.name == "main" for node in ancestors
+        )
+
     for path in paths:
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
@@ -192,12 +236,24 @@ def test_the_view_is_static_and_read_only() -> None:
                 and node.value.id == "st"
             ):
                 assert node.attr in allowed_streamlit
-        if path.name == "operator_view.py":
-            assert not any(
-                isinstance(node, ast.Import)
-                and any(alias.name == "streamlit" for alias in node.names)
-                for node in tree.body
-            )
+        assert_streamlit_import_boundary(tree, path)
+
+    with pytest.raises(AssertionError):
+        assert_streamlit_import_boundary(
+            ast.parse("from streamlit import title"), Path("operator_view.py")
+        )
+    with pytest.raises(AssertionError):
+        assert_streamlit_import_boundary(
+            ast.parse("import streamlit"), Path("operator_projection.py")
+        )
+    with pytest.raises(AssertionError):
+        assert_streamlit_import_boundary(
+            ast.parse("import streamlit.runtime"), Path("operator_projection.py")
+        )
+    with pytest.raises(AssertionError):
+        assert_streamlit_import_boundary(
+            ast.parse("if True:\n    import streamlit"), Path("operator_view.py")
+        )
 
 
 def test_fleet_cli_and_package_never_import_the_view_at_module_level() -> None:
@@ -208,14 +264,48 @@ def test_fleet_cli_and_package_never_import_the_view_at_module_level() -> None:
         "hermes.review",
         "streamlit",
     }
+
+    def assert_no_module_scope_prohibited_imports(tree: ast.AST) -> None:
+        parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+
+        def is_module_scope(node: ast.AST) -> bool:
+            current = parents.get(node)
+            while current is not None:
+                if isinstance(
+                    current,
+                    (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef),
+                ):
+                    return False
+                current = parents.get(current)
+            return True
+
+        def is_prohibited(name: str) -> bool:
+            return any(name == item or name.startswith(f"{item}.") for item in prohibited)
+
+        for node in ast.walk(tree):
+            if not is_module_scope(node):
+                continue
+            if isinstance(node, ast.Import):
+                assert not any(is_prohibited(alias.name) for alias in node.names)
+            if isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                assert not is_prohibited(module)
+                assert not any(
+                    is_prohibited(f"{module}.{alias.name}") for alias in node.names
+                )
+
     root = Path(__file__).parents[2]
     for relative_path in ("src/hermes/fleet/__init__.py", "src/hermes/fleet/cli.py"):
         tree = ast.parse((root / relative_path).read_text(encoding="utf-8"))
-        for node in tree.body:
-            if isinstance(node, ast.Import):
-                assert not any(alias.name in prohibited for alias in node.names)
-            if isinstance(node, ast.ImportFrom):
-                assert node.module not in prohibited
+        assert_no_module_scope_prohibited_imports(tree)
+
+    for source in (
+        "from hermes.fleet import operator_view",
+        "import hermes.workbench.launcher",
+        "if True:\n    import streamlit",
+    ):
+        with pytest.raises(AssertionError):
+            assert_no_module_scope_prohibited_imports(ast.parse(source))
 
 
 def test_main_renders_the_projection(monkeypatch: pytest.MonkeyPatch) -> None:
