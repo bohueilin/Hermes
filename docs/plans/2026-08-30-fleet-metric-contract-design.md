@@ -327,9 +327,9 @@ Six implementation deviations from the original design and planning notes are de
    `template` and `inspect` commands. `experiment compare`, `scenario list`, `policy list`, and
    `studio` remain unbuilt.
 
-Also deliberately deferred: recording the registry version in `DecisionRecord` and the static
-operator view (Stage 2), plus the policy seam (Stage 3). Existing descriptive order, guardrail
-overlap, alias double-reporting, and the empty-population `unserved.fraction` behavior are unchanged.
+Registry provenance in `DecisionRecord` and the static operator view (Stage 2) are now complete.
+The policy seam (Stage 3), existing descriptive order, guardrail overlap, alias double-reporting,
+and the empty-population `unserved.fraction` behavior remain deferred.
 
 ### Stage 1 repair — the error envelope names the file only as given (measured 2026-09-04)
 

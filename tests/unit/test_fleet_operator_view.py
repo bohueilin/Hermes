@@ -182,6 +182,19 @@ def test_the_view_is_static_and_read_only() -> None:
     }
     allowed_streamlit = {"set_page_config", "title", "caption", "dataframe", "text"}
 
+    def assert_no_forbidden_module_imports(tree: ast.AST) -> None:
+        def is_forbidden_module(name: str | None) -> bool:
+            return any(
+                name == module or bool(name and name.startswith(f"{module}."))
+                for module in forbidden_modules
+            )
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                assert not any(is_forbidden_module(alias.name) for alias in node.names)
+            if isinstance(node, ast.ImportFrom):
+                assert not is_forbidden_module(node.module)
+
     def assert_streamlit_import_boundary(tree: ast.AST, path: Path) -> None:
         def is_streamlit_name(name: str | None) -> bool:
             return name == "streamlit" or bool(name and name.startswith("streamlit."))
@@ -215,13 +228,8 @@ def test_the_view_is_static_and_read_only() -> None:
 
     for path in paths:
         tree = ast.parse(path.read_text(encoding="utf-8"))
+        assert_no_forbidden_module_imports(tree)
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                assert not any(
-                    alias.name.split(".")[0] in forbidden_modules for alias in node.names
-                )
-            if isinstance(node, ast.ImportFrom):
-                assert node.module not in forbidden_modules
             if isinstance(node, ast.Call):
                 name = (
                     node.func.attr
@@ -237,6 +245,11 @@ def test_the_view_is_static_and_read_only() -> None:
             ):
                 assert node.attr in allowed_streamlit
         assert_streamlit_import_boundary(tree, path)
+
+    with pytest.raises(AssertionError):
+        assert_no_forbidden_module_imports(
+            ast.parse("from asyncio.tasks import sleep as pause")
+        )
 
     with pytest.raises(AssertionError):
         assert_streamlit_import_boundary(
@@ -273,7 +286,7 @@ def test_fleet_cli_and_package_never_import_the_view_at_module_level() -> None:
             while current is not None:
                 if isinstance(
                     current,
-                    (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef),
+                    (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda),
                 ):
                     return False
                 current = parents.get(current)
@@ -282,13 +295,21 @@ def test_fleet_cli_and_package_never_import_the_view_at_module_level() -> None:
         def is_prohibited(name: str) -> bool:
             return any(name == item or name.startswith(f"{item}.") for item in prohibited)
 
+        def canonical_import_from_module(node: ast.ImportFrom) -> str:
+            if node.level == 0:
+                return node.module or ""
+            package_parts = ["hermes", "fleet"]
+            base = package_parts[: len(package_parts) - (node.level - 1)]
+            module_parts = (node.module or "").split(".") if node.module else []
+            return ".".join((*base, *module_parts))
+
         for node in ast.walk(tree):
             if not is_module_scope(node):
                 continue
             if isinstance(node, ast.Import):
                 assert not any(is_prohibited(alias.name) for alias in node.names)
             if isinstance(node, ast.ImportFrom):
-                module = node.module or ""
+                module = canonical_import_from_module(node)
                 assert not is_prohibited(module)
                 assert not any(
                     is_prohibited(f"{module}.{alias.name}") for alias in node.names
@@ -303,6 +324,9 @@ def test_fleet_cli_and_package_never_import_the_view_at_module_level() -> None:
         "from hermes.fleet import operator_view",
         "import hermes.workbench.launcher",
         "if True:\n    import streamlit",
+        "class ImportTimeBoundary:\n    import hermes.review",
+        "from . import operator_view",
+        "from .operator_view import main",
     ):
         with pytest.raises(AssertionError):
             assert_no_module_scope_prohibited_imports(ast.parse(source))
