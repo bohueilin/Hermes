@@ -7,9 +7,12 @@ the evidence with no partial outcome; and the same spec replays to a bit-identic
 
 from __future__ import annotations
 
+import pytest
+from pydantic import ValidationError
 from tests.unit.test_fleet_contracts_and_world import small_spec
 
 from hermes.fleet.contracts import (
+    DecisionRecord,
     ExperimentOutcome,
     ExperimentValidity,
     FleetRecommendation,
@@ -19,9 +22,11 @@ from hermes.fleet.contracts import (
 )
 from hermes.fleet.experiment import (
     _resolve_outcome,
+    render_record,
     resolve_recommendation,
     run_experiment,
 )
+from hermes.fleet.metrics import METRIC_REGISTRY_VERSION
 
 _METRIC = PrimaryMetric(
     name="wait.p90_s", unit="s", direction="lower_is_better", equivalence_margin=30.0
@@ -123,6 +128,31 @@ def test_a_valid_experiment_carries_its_preregistration_digests(tmp_path) -> Non
     assert record.labels[0] == "SIMULATION_ONLY"
     exported = tmp_path / spec.experiment_id / "decision-record.json"
     assert exported.exists()
+
+
+def test_the_record_carries_the_metric_registry_version() -> None:
+    """A reviewer can identify the metric contract behind either record outcome."""
+    assert run_experiment(small_spec()).metric_registry_version == METRIC_REGISTRY_VERSION
+    assert (
+        run_experiment(
+            small_spec(), dispatch_mode="defect_double_assign"
+        ).metric_registry_version
+        == METRIC_REGISTRY_VERSION
+    )
+
+
+def test_a_record_cannot_omit_the_registry_version() -> None:
+    """A completed decision without its metric contract is incomplete evidence."""
+    record_data = run_experiment(small_spec()).model_dump()
+    del record_data["metric_registry_version"]
+
+    with pytest.raises(ValidationError):
+        DecisionRecord.model_validate(record_data)
+
+
+def test_the_rendered_record_names_the_registry_version() -> None:
+    """The reviewer-facing record states which metric registry defined its results."""
+    assert "Metric registry: 0.1" in render_record(run_experiment(small_spec())).splitlines()
 
 
 def test_the_primary_metric_carries_a_ci_and_descriptives_do_not_claim() -> None:

@@ -3,7 +3,8 @@
 **Status:** sequencing steps 1–2 implemented across `1164f2e`, `60380b4`, `2afe4a0`, and
 `872ae2b`; `metrics list` landed at `d569672`; spec-file authoring at `6983198`; a forward-only
 repair of the authoring error envelope at `f0e4ded` and its handler-coverage tests at `aa8f406`;
-steps 3–4 are not started.
+Stage 2 step 3 records metric-registry provenance and deliberately re-baselines the decision
+record digest; step 4 is not started.
 **Date:** 2026-08-30.
 **Scope:** `src/hermes/fleet/` only. No `SimulatorAdapter` involvement, no
 `ScenarioDefinition` change, no `evidence_schema_version` change. Additive, per Phase 9 PRD §37.
@@ -73,7 +74,7 @@ Each definition carries:
    every `ALWAYS` metric is produced by the analytical fixture.
 
 The registry is versioned as its own schema, independent of `FleetScenarioConfig` 0.1 and
-`DecisionRecord` 0.1, and the resolved registry version is recorded in the decision record so a
+`DecisionRecord` 0.2, and the resolved registry version is recorded in the decision record so a
 replay can tell whether a metric's meaning moved.
 
 **Why a registry rather than an enum:** metrics carry properties (unit, direction, population,
@@ -234,6 +235,26 @@ The digest-neutrality proof from Gate G is:
 Record digest:   84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f
 DEMO_BYTE_IDENTICAL
 ```
+
+### Stage 2 — record metric-registry provenance
+
+Task 7 adds the required `metric_registry_version` field directly after `schema_version` on every
+`DecisionRecord`, populated from `METRIC_REGISTRY_VERSION` for both valid and invalid experiments.
+The owner selected the deliberate schema decision: `DecisionRecord` moves from 0.1 to 0.2 in the
+same commit; `ExperimentSpec` and `FleetScenarioConfig` remain 0.1. `render_record` shows the
+registry version, but not the schema version.
+
+This is the one deliberate FLEET-005 decision-record digest re-baseline:
+
+- Before: `84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f`
+- After: `a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f`
+
+The spec digest remains `b68f75d295e4ace1c4f3e470e52fde828a8b433eec2682f66596dbebbd5360c2`.
+The three Task 7 tests prove valid and invalid records carry the version, omission is invalid, and
+the rendered reviewer-facing record names it. Existing descriptive ordering, guardrail and alias
+reporting, empty-population `unserved.fraction`, and `MetricComparison` validation remain deferred.
+Measured Gate G: `84 passed`; the architecture boundary gate: `43 passed, 2 deselected`; Ruff:
+`All checks passed!`; and the artifact-bound full suite remains a failure-set equality check.
 
 Clean-clone verification measured 2026-09-03 against the committed Task 6 tip:
 

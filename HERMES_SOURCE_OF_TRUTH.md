@@ -11,11 +11,11 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
-| **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`) — Gate G: **81 passed**; replayable decision record; spec-file authoring and metric-contract CLI. The PRD has been tracked since `aa04786` |
+| **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 record provenance built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline) — Gate G: **84 passed**; replayable decision record; spec-file authoring and metric-contract CLI. The PRD has been tracked since `aa04786` |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-09-04 |
+| **Last updated** | 2026-09-04 — Task 7 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -661,6 +661,12 @@ symlink-loop `RuntimeError` can name a resolved path; two Stage 1 tests pin that
 size cap still `stat`s before reading — the stat-to-read window stays open and descriptor-bounded
 reading is a separate task, as it is for `scenarios/loader.py`, which follows the same pattern.
 
+**Task 7, measured 2026-09-04 (this commit):** the FLEET-005 decision-record digest deliberately
+moved from `84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f` to
+`a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f` because every
+`DecisionRecord` now records the required metric-registry version; `DecisionRecord` schema is 0.2,
+while `ExperimentSpec` and `FleetScenarioConfig` remain 0.1.
+
 ### 7.2 MuJoCo sandbox — what exists
 
 `sandbox/mujoco/` — gitignored (`.gitignore:50`), never committed on any branch, every record
@@ -749,6 +755,9 @@ must not: the number as a default edit (§10 rule 3).
 | Derived spawn speed not float32-exact | `cdb4637` | 18.515 → 18.514999… through MetaDrive's float32 storage; fixed by projecting to binary32 and comparing against the same projection — exact, not loosened. |
 | Geometry tolerance used the wrong error model | `65363ae` | The observed gap is a difference of two float32 *positions*; a fixed 1e-6 m held at 40 m by luck and failed at 28.816 m. Now derived from float32 spacing — tighter than the interim relative tolerance at every magnitude. |
 | README front-page table and status overclaims | `0c16c8f` | HOLD attribution conflated detection with verdict causation; "fresh clone reproduces" was false. Found by auditing as an outside reader. |
+| Fleet metric typos failed only after experiment execution | `2afe4a0` | The authoring boundary now rejects unregistered primary and guardrail metric names before a run can create late, wasted evidence. |
+| Fleet aliases were undeclared | `60380b4` | The typed registry records aliases and forces their unit, direction, aggregation, availability, and absence semantics to agree with their targets. |
+| Fleet decision records lacked metric-registry provenance | this Task 7 commit | A reviewer could not identify which registry defined a valid or invalid record's metrics; the required field and deliberate digest re-baseline close that gap. |
 
 ---
 
@@ -1060,6 +1069,9 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
     mid-run would be an unprovable identity change. See the WP-2 design note before attempting
     `cut_out_reveal`, and note that `adas_nominal_slow_closing` overstates "steady throughout" —
     its lead brakes on the final step.
+18. **The FLEET-005 decision-record digest is pinned by
+    `test_the_fleet_005_demo_record_digest_is_pinned`.** A moved pin is a deliberate re-baseline
+    recorded in the commit and §7.1, never a drive-by update.
 
 ---
 

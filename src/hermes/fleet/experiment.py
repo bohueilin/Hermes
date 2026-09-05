@@ -25,7 +25,7 @@ from hermes.fleet.contracts import (
 )
 from hermes.fleet.engine import run_fleet, run_metrics
 from hermes.fleet.invariants import check_invariants
-from hermes.fleet.metrics import descriptive_metric_names
+from hermes.fleet.metrics import METRIC_REGISTRY_VERSION, descriptive_metric_names
 from hermes.fleet.world import _u64, build_tape, tape_digest
 
 #: Limitations are part of the record, not a footnote. Every export carries all of them.
@@ -185,6 +185,7 @@ def run_experiment(
 
     def invalid(reason: InvalidityReason, detail: str) -> DecisionRecord:
         record = DecisionRecord(
+            metric_registry_version=METRIC_REGISTRY_VERSION,
             experiment_id=spec.experiment_id,
             decision_owner=spec.decision_owner,
             question=spec.question,
@@ -269,6 +270,7 @@ def run_experiment(
     recommendation = resolve_recommendation(outcome, tuple(regressions))
 
     record = DecisionRecord(
+        metric_registry_version=METRIC_REGISTRY_VERSION,
         experiment_id=spec.experiment_id,
         decision_owner=spec.decision_owner,
         question=spec.question,
@@ -320,6 +322,7 @@ def render_record(record: DecisionRecord) -> str:
         f"Spec digest:     {record.spec_digest[:12]}   "
         f"World tape: {record.world_tape_digest[:12]}",
         f"Calibration:     {record.calibration_state.value}",
+        f"Metric registry: {record.metric_registry_version}",
         "",
         f"VALIDITY:        {record.validity.value}"
         + (

@@ -243,7 +243,8 @@ class DecisionRecord(HermesModel):
     cannot be scrolled past. It never authorizes anything.
     """
 
-    schema_version: Literal["0.1"] = "0.1"
+    schema_version: Literal["0.2"] = "0.2"
+    metric_registry_version: Annotated[str, Field(pattern=r"^\d+\.\d+$")]
     experiment_id: str
     decision_owner: str
     question: str
