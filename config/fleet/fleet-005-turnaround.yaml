@@ -1,0 +1,54 @@
+schema_version: '0.1'
+experiment_id: fleet-005-turnaround
+decision_owner: AUTHOR_SELF_TEST
+question: Does a 25% longer depot service turnaround degrade rider wait p90 beyond
+  the declared equivalence margin?
+scenario:
+  schema_version: '0.1'
+  name: fleet_005_longer_turnaround
+  label: synthetic_fleet_scenario_not_calibrated_to_any_real_operation
+  horizon_s: 21600
+  zones:
+  - downtown
+  - airport
+  - residential
+  travel_time_s:
+    downtown->airport: 900
+    airport->downtown: 900
+    downtown->residential: 480
+    residential->downtown: 480
+    airport->residential: 720
+    residential->airport: 720
+  vehicle_count: 40
+  demand_per_zone_per_hour: 24
+  max_wait_s: 1200
+  trips_between_service: 6
+  service_bays: 6
+  service_duration_s: 1800
+  in_zone_pickup_s: 240
+  travel_sigma: 0.25
+variation_axis: parameter:service_duration_s
+baseline_value: 1800.0
+candidate_value: 2250.0
+primary_metric:
+  name: wait.p90_s
+  unit: s
+  direction: lower_is_better
+  equivalence_margin: 30.0
+guardrails:
+- metric: unserved.fraction
+  max_harm: 0.02
+  direction: lower_is_better
+seeds:
+- 101
+- 102
+- 103
+- 104
+- 105
+- 106
+- 107
+- 108
+- 109
+- 110
+bootstrap_resamples: 2000
+calibration_state: SYNTHETIC_UNCALIBRATED

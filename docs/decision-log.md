@@ -1,5 +1,25 @@
 # Hermes Decision Log
 
+## 2026-09-04 — Record the metric registry version in every FleetLab decision record
+
+### Scope
+
+Add metric-registry provenance to every valid and invalid FleetLab `DecisionRecord` as the single,
+deliberate FLEET-005 decision-record digest re-baseline. This changes no experiment metric,
+threshold, descriptive ordering, guardrail or alias reporting, empty-population behavior, or
+`MetricComparison` validation.
+
+### Decisions
+
+- Add required `metric_registry_version` directly after `schema_version`, constrained to a numeric
+  major.minor value and populated from `METRIC_REGISTRY_VERSION` in both record constructors.
+- Move `DecisionRecord.schema_version` from 0.1 to 0.2 in the same commit. `ExperimentSpec` and
+  `FleetScenarioConfig` remain at 0.1.
+- Deliberately move the FLEET-005 record digest from
+  `84ff1c91b600f29e3d3661d988339e1654db419d6ba500e7d79e616a58706e7f` to
+  `a61950c0ad3b960db1d3c55ff2704ed4a0ab99268330ab2c15ff313bc340aa2f`; the spec digest does not
+  move. The rendered record names the registry version, not the record schema version.
+
 ## 2026-08-27 — Version derived-map MetaDrive evidence as conditional adapter 1.2
 
 ### Scope

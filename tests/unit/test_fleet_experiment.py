@@ -7,9 +7,12 @@ the evidence with no partial outcome; and the same spec replays to a bit-identic
 
 from __future__ import annotations
 
+import pytest
+from pydantic import ValidationError
 from tests.unit.test_fleet_contracts_and_world import small_spec
 
 from hermes.fleet.contracts import (
+    DecisionRecord,
     ExperimentOutcome,
     ExperimentValidity,
     FleetRecommendation,
@@ -19,9 +22,11 @@ from hermes.fleet.contracts import (
 )
 from hermes.fleet.experiment import (
     _resolve_outcome,
+    render_record,
     resolve_recommendation,
     run_experiment,
 )
+from hermes.fleet.metrics import METRIC_REGISTRY_VERSION
 
 _METRIC = PrimaryMetric(
     name="wait.p90_s", unit="s", direction="lower_is_better", equivalence_margin=30.0
@@ -125,9 +130,83 @@ def test_a_valid_experiment_carries_its_preregistration_digests(tmp_path) -> Non
     assert exported.exists()
 
 
+def test_the_record_carries_the_metric_registry_version() -> None:
+    """A reviewer can identify the metric contract behind either record outcome."""
+    assert run_experiment(small_spec()).metric_registry_version == METRIC_REGISTRY_VERSION
+    assert (
+        run_experiment(
+            small_spec(), dispatch_mode="defect_double_assign"
+        ).metric_registry_version
+        == METRIC_REGISTRY_VERSION
+    )
+
+
+def test_a_record_cannot_omit_the_registry_version() -> None:
+    """A completed decision without its metric contract is incomplete evidence."""
+    record_data = run_experiment(small_spec()).model_dump()
+    del record_data["metric_registry_version"]
+
+    with pytest.raises(ValidationError):
+        DecisionRecord.model_validate(record_data)
+
+
+def test_the_rendered_record_names_the_registry_version() -> None:
+    """The reviewer-facing record states which metric registry defined its results."""
+    assert "Metric registry: 0.1" in render_record(run_experiment(small_spec())).splitlines()
+
+
 def test_the_primary_metric_carries_a_ci_and_descriptives_do_not_claim() -> None:
     record = run_experiment(small_spec())
     assert record.primary is not None
     assert record.primary.ci_low is not None and record.primary.ci_high is not None
     assert all(item.role == "DESCRIPTIVE" for item in record.descriptives)
     assert all(item.ci_low is None for item in record.descriptives)
+
+
+def test_descriptives_come_from_the_registry_not_a_tuple() -> None:
+    import hermes.fleet.experiment as experiment_module
+
+    assert not hasattr(experiment_module, "_DESCRIPTIVE_METRICS")
+    assert experiment_module.descriptive_metrics_for(small_spec()) == (
+        "wait.p50_s",
+        "requests.served",
+        "requests.unserved",
+        "fleet.utilization_fraction",
+        "depot.queue_p90_s",
+        "business_proxy.served_trips",
+        "business_proxy.unserved_demand",
+    )
+
+
+def test_a_metric_added_to_the_registry_appears_without_editing_the_experiment_module(
+    monkeypatch,
+) -> None:
+    from types import MappingProxyType
+
+    import hermes.fleet.metrics as metrics_module
+    from hermes.fleet.metrics import (
+        Availability,
+        MetricAggregation,
+        MetricDefinition,
+        MetricDirection,
+        Surface,
+    )
+
+    registry = dict(metrics_module.METRIC_REGISTRY)
+    registry["probe.extra_count"] = MetricDefinition(
+        name="probe.extra_count",
+        unit="count",
+        direction=MetricDirection.HIGHER_IS_BETTER,
+        population="probe observations",
+        aggregation=MetricAggregation.COUNT,
+        availability=Availability.ALWAYS,
+        surfaces=(Surface.EXPERIMENT,),
+        descriptive_rank=90,
+    )
+    monkeypatch.setattr(metrics_module, "METRIC_REGISTRY", MappingProxyType(registry))
+
+    from hermes.fleet.experiment import descriptive_metrics_for
+
+    assert descriptive_metrics_for(small_spec())[-1] == "probe.extra_count"
+    record = run_experiment(small_spec())
+    assert "probe.extra_count" not in {item.metric for item in record.descriptives}
