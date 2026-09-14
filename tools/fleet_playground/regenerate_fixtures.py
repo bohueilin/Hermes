@@ -14,14 +14,17 @@ Run from the repository root:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import math
 import sys
-from collections.abc import Callable
+from collections import Counter
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
+import hermes.fleet.experiment as fleet_experiment
 from hermes.fleet.cli import fleet_005_spec
 from hermes.fleet.contracts import (
     ExperimentOutcome,
@@ -35,6 +38,7 @@ from hermes.fleet.engine import (
     RequestState,
     RunLog,
     _Request,
+    _travel_s,
     _Vehicle,
     run_fleet,
     run_metrics,
@@ -49,7 +53,8 @@ from hermes.fleet.experiment import (
     resolve_recommendation,
     run_experiment,
 )
-from hermes.fleet.world import _u64, build_tape
+from hermes.fleet.invariants import check_invariants
+from hermes.fleet.world import RequestEvent, WorldTape, _u64, build_tape
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIR = REPOSITORY_ROOT / "tests" / "fixtures" / "fleet_playground"
@@ -163,8 +168,8 @@ def _u64_vectors(fleet_digest: str) -> list[Payload]:
         [1001, "ride", "r-EB-42"],
         ["fleet_005_longer_turnaround", "arrival", "downtown", 0],
         [101, "travel", "r-0-0"],
-        ["San José"],
-        ["東京", "gap", 3],
+        ["José"],
+        ["区域", "gap", 3],
         ["café", "über", "naïve"],
         ["\U0001f697", 7],
         ["Δt", "λ", 1000],
@@ -853,6 +858,260 @@ def _verdict_vectors(fleet: dict[str, Any]) -> list[Payload]:
     return rows
 
 
+# --- invalid verdicts ----------------------------------------------------------------------
+
+#: The ``DecisionRecord`` fields an invalid playground verdict must reproduce exactly.
+INVALID_RECORD_FIELDS = (
+    "validity",
+    "invalidity_reason",
+    "invalidity_detail",
+    *VERDICT_RECORD_FIELDS[1:],
+)
+
+#: A small two-zone world (the shape of the unit tests' probe scenario) so every invalid
+#: record runs in well under a second.
+_INVALID_SCENARIO: dict[str, Any] = {
+    "name": "parity_invalid_probe",
+    "horizon_s": 1800,
+    "zones": ("a", "b"),
+    "travel_time_s": {"a->b": 300, "b->a": 300},
+    "vehicle_count": 4,
+    "demand_per_zone_per_hour": 12,
+    "max_wait_s": 600,
+    "trips_between_service": 3,
+    "service_bays": 1,
+    "service_duration_s": 300,
+    "in_zone_pickup_s": 120,
+    "travel_sigma": 0.2,
+}
+
+
+def _invalid_spec(
+    experiment_id: str, primary_name: str, **scenario_overrides: Any
+) -> ExperimentSpec:
+    lower = "lower_is_better"
+    return ExperimentSpec(
+        experiment_id=experiment_id,
+        decision_owner="AUTHOR_SELF_TEST",
+        question="Does a longer service duration degrade the primary metric beyond the margin?",
+        scenario=FleetScenarioConfig(**{**_INVALID_SCENARIO, **scenario_overrides}),
+        variation_axis="parameter:service_duration_s",
+        baseline_value=300,
+        candidate_value=450,
+        primary_metric=PrimaryMetric(
+            name=primary_name, unit="s", direction=lower, equivalence_margin=30.0
+        ),
+        guardrails=(Guardrail(metric="unserved.fraction", max_harm=0.02, direction=lower),),
+        seeds=tuple(range(101, 111)),
+    )
+
+
+@contextlib.contextmanager
+def _second_precheck_metrics_changed() -> Iterator[None]:
+    """Make the second ``run_metrics`` call inside ``hermes.fleet.experiment`` differ.
+
+    ``run_experiment`` calls ``run_metrics`` twice for its determinism precheck before any
+    other call, so the second call is the replay. Only this regenerator patches it, only for
+    the duration of the block, and the original is restored in ``finally``.
+    """
+    original = fleet_experiment.run_metrics
+    calls = 0
+
+    def replay_differs(log: RunLog) -> dict[str, float]:
+        nonlocal calls
+        calls += 1
+        metrics = original(log)
+        if calls == 2:
+            metrics = {**metrics, "requests.total": metrics["requests.total"] + 1.0}
+        return metrics
+
+    fleet_experiment.run_metrics = replay_differs  # type: ignore[assignment]
+    try:
+        yield
+    finally:
+        fleet_experiment.run_metrics = original  # type: ignore[assignment]
+
+
+def _runs_until_failure(spec: ExperimentSpec, dispatch_mode: str) -> Payload:
+    """The per-seed runs ``run_experiment`` gathered before it stopped, in its own order.
+
+    This follows ``run_experiment``'s run order (precheck, then each seed's baseline and
+    candidate arm) only to collect the inputs ``computeVerdict`` receives; the record itself
+    always comes from ``run_experiment``, and ``_invalid_row`` checks that both stop at the
+    same point. ``run_metrics`` is looked up on the experiment module, so a precheck patch
+    applies here exactly as it does there.
+    """
+    baseline_scenario = apply_axis(spec, spec.baseline_value)
+    candidate_scenario = apply_axis(spec, spec.candidate_value)
+    probe = build_tape(baseline_scenario, spec.seeds[0])
+    first = fleet_experiment.run_metrics(
+        run_fleet(baseline_scenario, probe, dispatch_mode=dispatch_mode)
+    )
+    second = fleet_experiment.run_metrics(
+        run_fleet(baseline_scenario, probe, dispatch_mode=dispatch_mode)
+    )
+    baseline_runs: list[dict[str, float]] = []
+    candidate_runs: list[dict[str, float]] = []
+    gathered: Payload = {
+        "precheck_matched": first == second,
+        "invariant_violation": None,
+        "baseline_runs": baseline_runs,
+        "candidate_runs": candidate_runs,
+    }
+    if not gathered["precheck_matched"]:
+        return gathered
+    for seed in spec.seeds:
+        tape = build_tape(spec.scenario, seed)
+        for scenario, runs in (
+            (baseline_scenario, baseline_runs),
+            (candidate_scenario, candidate_runs),
+        ):
+            log = run_fleet(scenario, tape, dispatch_mode=dispatch_mode)
+            violations = check_invariants(log)
+            if violations:
+                gathered["invariant_violation"] = f"seed {seed}: {violations[0]}"
+                return gathered
+            runs.append(fleet_experiment.run_metrics(log))
+    return gathered
+
+
+def _invalid_row(
+    name: str,
+    spec: ExperimentSpec,
+    expected_reason: str,
+    *,
+    dispatch_mode: str = "nearest",
+    replay_differs: bool = False,
+) -> Payload:
+    """One invalid ``run_experiment`` record beside the inputs ``computeVerdict`` needs."""
+
+    def patched() -> contextlib.AbstractContextManager[None]:
+        if replay_differs:
+            return _second_precheck_metrics_changed()
+        return contextlib.nullcontext()
+
+    with patched():
+        record = run_experiment(spec, dispatch_mode=dispatch_mode).model_dump(mode="json")
+    with patched():
+        gathered = _runs_until_failure(spec, dispatch_mode)
+    if fleet_experiment.run_metrics is not run_metrics:
+        raise RuntimeError("run_metrics was not restored on hermes.fleet.experiment")
+
+    if record["validity"] != "INVALID_EXPERIMENT" or record["invalidity_reason"] != expected_reason:
+        raise RuntimeError(
+            f"invalid vector {name}: expected {expected_reason}, FleetLab gave "
+            f"{record['validity']} {record['invalidity_reason']}"
+        )
+    if not gathered["precheck_matched"]:
+        stopped_at = "REPLICATION_MISMATCH"
+    elif gathered["invariant_violation"] is not None:
+        stopped_at = "INVARIANT_VIOLATION"
+        if record["invalidity_detail"] != gathered["invariant_violation"][:300]:
+            raise RuntimeError(f"invalid vector {name}: violation text differs from the record")
+    elif (
+        _compare(
+            spec.primary_metric.name,
+            "PRIMARY",
+            gathered["baseline_runs"],
+            gathered["candidate_runs"],
+        )
+        is None
+    ):
+        stopped_at = "NOT_COMPARABLE"
+    else:
+        stopped_at = "VALID"
+    if stopped_at != expected_reason:
+        raise RuntimeError(
+            f"invalid vector {name}: gathered runs stop at {stopped_at}, "
+            f"run_experiment stopped at {expected_reason}"
+        )
+    return {
+        "name": name,
+        "dispatch_mode": dispatch_mode,
+        "primary": {
+            "name": spec.primary_metric.name,
+            "direction": spec.primary_metric.direction,
+            "equivalence_margin": spec.primary_metric.equivalence_margin,
+        },
+        "guardrails": [rail.model_dump(mode="json") for rail in spec.guardrails],
+        "descriptive_names": list(descriptive_metrics_for(spec)),
+        "resamples": spec.bootstrap_resamples,
+        "key": spec.spec_digest(),
+        "precheck_matched": gathered["precheck_matched"],
+        "invariant_violation": gathered["invariant_violation"],
+        "baseline_runs": gathered["baseline_runs"],
+        "candidate_runs": gathered["candidate_runs"],
+        "record": {field: record[field] for field in INVALID_RECORD_FIELDS},
+    }
+
+
+def _invalid_vectors() -> list[Payload]:
+    """``run_experiment`` records for each invalidity reason (ARCHITECTURE.md section 4.1)."""
+    rows = [
+        # The seeded dispatcher defect assigns a busy vehicle once; invariant I2 catches it.
+        _invalid_row(
+            "invariant-violation",
+            _invalid_spec("parity-invariant-violation", "wait.p90_s"),
+            "INVARIANT_VIOLATION",
+            dispatch_mode="defect_double_assign",
+        ),
+        # Three cars, a service after every second trip and very little demand: at seed 102 no car
+        # ever starts a service, so depot.queue_p90_s is absent there and present elsewhere.
+        _invalid_row(
+            "not-comparable",
+            _invalid_spec(
+                "parity-not-comparable",
+                "depot.queue_p90_s",
+                trips_between_service=2,
+                vehicle_count=3,
+                demand_per_zone_per_hour=2,
+                travel_sigma=1.0,
+                max_wait_s=300,
+            ),
+            "NOT_COMPARABLE",
+        ),
+        # The regenerator makes FleetLab's second precheck run return a different metric map.
+        _invalid_row(
+            "replication-mismatch",
+            _invalid_spec("parity-replication-mismatch", "wait.p90_s"),
+            "REPLICATION_MISMATCH",
+            replay_differs=True,
+        ),
+    ]
+    runs = rows[1]["baseline_runs"] + rows[1]["candidate_runs"]
+    present = ["depot.queue_p90_s" in run for run in runs]
+    if all(present) or not any(present):
+        raise RuntimeError(
+            "not-comparable vector: the primary must be absent in some replication and "
+            f"present in another, got {present}"
+        )
+    return rows
+
+
+def _detail_truncation_vectors() -> list[Payload]:
+    """Strings beside Python's ``text[:300]``, the cut ``run_experiment`` applies to details.
+
+    Python slices by code point; a port that slices UTF-16 code units splits astral
+    characters, so astral text sits on both sides of code point 300.
+    """
+    car = "\U0001f697"
+    cases = [
+        ("ascii-301", "x" * 301),
+        ("ascii-long-detail", "seed 101: I2: " + "vehicle v-10 overlaps r-1-0 and r-1-1; " * 12),
+        ("ascii-exactly-300", "y" * 300),
+        ("bmp-at-299-and-300", "a" * 299 + "éé" + "b" * 10),
+        ("bmp-cjk-350", "車両" * 175),
+        ("bmp-mixed-near-300", "a" * 297 + "Δt λ " + "z" * 20),
+        ("astral-last-kept", "a" * 299 + car + "tail"),
+        ("astral-first-dropped", "a" * 300 + car),
+        ("astral-straddles-300", "a" * 298 + car * 4),
+        ("astral-only-301", car * 301),
+        ("astral-exactly-300", "seed 7: " + car * 292),
+        ("short-non-ascii", "café " + car),
+    ]
+    return [{"name": name, "text": text, "truncated": text[:300]} for name, text in cases]
+
+
 def build_instrument_vectors() -> Payload:
     """Every instrument vector group of ARCHITECTURE.md section 4.1, from FleetLab."""
     fleet = _fleet_005()
@@ -872,12 +1131,436 @@ def build_instrument_vectors() -> Payload:
         "recommendation": _recommendation_vectors(),
         "end_to_end": _end_to_end_vectors(fleet),
         "verdict": _verdict_vectors(fleet),
+        "invalid": _invalid_vectors(),
+        "detail_truncation": _detail_truncation_vectors(),
     }
 
 
-#: Fixture file name -> builder. Later phases register legacy worlds and projections here.
+# --- legacy worlds (ARCHITECTURE.md section 5.1) ---------------------------------------------
+
+LEGACY_FORMAT = "fleet-playground-legacy-worlds"
+
+
+def _tape_json(tape: WorldTape) -> Payload:
+    return {
+        "seed": tape.seed,
+        "demand": [
+            [event.request_id, event.time_s, event.origin, event.destination]
+            for event in tape.demand
+        ],
+        "travel_multiplier": dict(tape.travel_multiplier),
+    }
+
+
+def events_digest(events: list[list[Any]]) -> str:
+    """SHA-256 of the compact ASCII JSON of the event log (JavaScript ``JSON.stringify`` bytes)."""
+    for entry in events:
+        for part in entry:
+            if isinstance(part, str) and not part.isascii():
+                raise RuntimeError(f"event {entry} is not ASCII; the digest would differ in JS")
+    text = json.dumps(events, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(text.encode("ascii")).hexdigest()
+
+
+def _legacy_world(
+    name: str,
+    origin: str,
+    scenario: FleetScenarioConfig,
+    tape: WorldTape,
+    dispatch_mode: str = "nearest",
+) -> tuple[Payload, RunLog | None]:
+    """One named world: FleetLab's run of ``scenario`` over ``tape`` and what it produced."""
+    log: RunLog | None
+    try:
+        log = run_fleet(scenario, tape, dispatch_mode=dispatch_mode)
+    except Exception as exc:  # the crash world records FleetLab's exception type
+        log = None
+        expected: Payload = {
+            "error": type(exc).__name__,
+            "events": None,
+            "events_digest": None,
+            "event_counts": None,
+            "metrics": None,
+            "invariant_violations": None,
+        }
+    else:
+        events = [[time_s, kind, entity_id] for time_s, kind, entity_id in log.events]
+        counts = Counter(kind for _, kind, _ in log.events)
+        expected = {
+            "error": None,
+            "events": events,
+            "events_digest": events_digest(events),
+            "event_counts": {kind: counts[kind] for kind in sorted(counts)},
+            "metrics": run_metrics(log),
+            "invariant_violations": check_invariants(log),
+        }
+    world = {
+        "name": name,
+        "origin": origin,
+        "scenario": scenario.model_dump(mode="json"),
+        "tape": _tape_json(tape),
+        "dispatch_mode": dispatch_mode,
+        "expected": expected,
+    }
+    return world, log
+
+
+def _legacy_file(worlds: dict[str, Payload]) -> Payload:
+    return {"format": LEGACY_FORMAT, "format_version": 1, "worlds": worlds}
+
+
+def _require_clean(world: Payload) -> None:
+    expected = world["expected"]
+    if expected["error"] is not None or expected["invariant_violations"]:
+        raise RuntimeError(
+            f"legacy world {world['name']}: expected a clean run, got error "
+            f"{expected['error']} and violations {expected['invariant_violations']}"
+        )
+
+
+def build_legacy_fleet005_seed101() -> Payload:
+    """FLEET-005's baseline and candidate arms over the declared tape at seed 101."""
+    spec = fleet_005_spec()
+    tape = build_tape(spec.scenario, 101)
+    worlds = {}
+    for arm, value in (("baseline", spec.baseline_value), ("candidate", spec.candidate_value)):
+        world, _ = _legacy_world(
+            f"fleet005-seed101-{arm}",
+            f"FLEET-005 {arm} arm from apply_axis; tape from the declared scenario at seed 101",
+            apply_axis(spec, value),
+            tape,
+        )
+        _require_clean(world)
+        worlds[arm] = world
+    return _legacy_file(worlds)
+
+
+#: The hand-computed world of ``tests/unit/test_fleet_analytical_fixture.py``: that test's
+#: overrides applied to its ``small_scenario`` defaults, and its three hand-written requests.
+_ANALYTICAL_SCENARIO: dict[str, Any] = {
+    "name": "fleet_probe",
+    "horizon_s": 4000,
+    "zones": ("a", "b"),
+    "travel_time_s": {"a->b": 600, "b->a": 600},
+    "vehicle_count": 1,
+    "demand_per_zone_per_hour": 12,
+    "max_wait_s": 1000,
+    "trips_between_service": 2,
+    "service_bays": 1,
+    "service_duration_s": 500,
+    "in_zone_pickup_s": 120,
+    "travel_sigma": 0.0,
+}
+_ANALYTICAL_DEMAND = (
+    ("r1", 0, "a", "b"),
+    ("r2", 100, "b", "a"),
+    ("r3", 2000, "a", "b"),
+)
+
+
+def build_legacy_analytical() -> Payload:
+    """The analytical reduction; its hand-derived numbers are asserted, not copied from a run."""
+    demand = tuple(
+        RequestEvent(request_id=rid, time_s=t, origin=o, destination=d)
+        for rid, t, o, d in _ANALYTICAL_DEMAND
+    )
+    tape = WorldTape(
+        seed=0, demand=demand, travel_multiplier={e.request_id: 1.0 for e in demand}
+    )
+    world, _ = _legacy_world(
+        "analytical",
+        "the hand-written three-request world of the FleetLab analytical fixture test",
+        FleetScenarioConfig(**_ANALYTICAL_SCENARIO),
+        tape,
+    )
+    _require_clean(world)
+    metrics = world["expected"]["metrics"]
+    hand_derived = {
+        "wait.p50_s": 120.0,
+        "wait.p90_s": 616.0,
+        "fleet.utilization_fraction": 2160 / 4000,
+        "depot.queue_p90_s": 0.0,
+    }
+    if any(metrics[name] != value for name, value in hand_derived.items()):
+        raise RuntimeError(f"analytical world no longer matches the hand derivation: {metrics}")
+    return _legacy_file({"analytical": world})
+
+
+# The collision world. Twelve cars in two zones are placed round-robin, so zone "a" holds
+# v-0, v-2, v-4, v-6, v-8, v-10 and zone "b" holds v-1, v-3, v-5, v-7, v-9, v-11. FleetLab
+# breaks travel-time ties with the vehicle id as a string, where "v-10" < "v-11" < "v-2".
+# Every trip sends its car to the single service bay (trips_between_service 1).
+#
+# At t = 0 six requests arrive, each dispatched on arrival (pickup in the same zone, 60 s x
+# multiplier; trip 600 s x multiplier):
+#   r-00 a->b x1.0  idle in a: v-0 v-2 v-4 v-6 v-8 v-10, all 60 s  -> v-0,  drop-off 660
+#   r-01 b->a x1.0  idle in b: v-1 ... v-11, all 60 s              -> v-1,  drop-off 660
+#   r-02 a->b x1.5  idle in a: v-10 v-2 v-4 v-6 v-8, all 90 s      -> v-10 (not v-2), 990
+#   r-03 b->a x1.5  idle in b: v-11 v-3 v-5 v-7 v-9, all 90 s      -> v-11 (not v-3), 990
+#   r-04 a->b x1.0  idle in a: v-2 v-4 v-6 v-8                     -> v-2,  drop-off 660
+#   r-05 b->a x1.0  idle in b: v-3 v-5 v-7 v-9                     -> v-3,  drop-off 660
+# Collision (a) is r-02 and r-03: string order of ids picks v-10 and v-11.
+#
+# Service (300 s, one bay):
+#   660   v-0, v-1, v-2, v-3 enter the queue in that order; v-0's try wins the bay (to 960).
+#   960   v-0 completes; queued v-1, v-2, v-3 retry at 960 in string order; v-1 starts.
+#   990   v-10 and v-11 enter the queue behind v-2 and v-3.
+#   1260  v-1 completes; queued v-10, v-11, v-2, v-3 all retry at 1260 in string order and
+#         v-10 starts, although v-2 is numerically first and queued 330 s earlier.
+# Collision (b) is the retry at 1260. At 960 three cars also retry in one second, but there
+# string, numeric and queue order agree, so that retry alone would not tell them apart.
+# Two late requests at 1500 reuse serviced cars, with idle cars in both zones at unequal
+# travel; r-06's car returns to the queue at 2160, the second in which v-2's service ends.
+_COLLISION_SCENARIO: dict[str, Any] = {
+    "name": "parity_collision_probe",
+    "horizon_s": 7200,
+    "zones": ("a", "b"),
+    "travel_time_s": {"a->b": 600, "b->a": 600},
+    "vehicle_count": 12,
+    "demand_per_zone_per_hour": 1,
+    "max_wait_s": 3600,
+    "trips_between_service": 1,
+    "service_bays": 1,
+    "service_duration_s": 300,
+    "in_zone_pickup_s": 60,
+    "travel_sigma": 0.0,
+}
+_COLLISION_DEMAND = (
+    ("r-00", 0, "a", "b", 1.0),
+    ("r-01", 0, "b", "a", 1.0),
+    ("r-02", 0, "a", "b", 1.5),
+    ("r-03", 0, "b", "a", 1.5),
+    ("r-04", 0, "a", "b", 1.0),
+    ("r-05", 0, "b", "a", 1.0),
+    ("r-06", 1500, "a", "b", 1.0),
+    ("r-07", 1500, "b", "a", 1.25),
+)
+
+
+def _vehicle_number(vehicle_id: str) -> int:
+    return int(vehicle_id.removeprefix("v-"))
+
+
+def collisions_in_log(scenario: FleetScenarioConfig, tape: WorldTape, log: RunLog) -> set[str]:
+    """Which string-order collisions FleetLab's log proves, replaying car state from events.
+
+    The replay tracks each car's zone and state from the event log alone (assignment, pickup,
+    drop-off, queue entry, service start and completion) and checks that it reproduces every
+    dispatch choice FleetLab made, so the collision claims rest on FleetLab's own output.
+    Service retries are heap entries, not log entries, so a same-second retry is proven by
+    two or more cars still queued when a service completes, and by which of them FleetLab's
+    log shows starting at that second.
+    """
+    count = len(scenario.zones)
+    zones = {f"v-{i}": scenario.zones[i % count] for i in range(scenario.vehicle_count)}
+    state = dict.fromkeys(zones, "IDLE")
+    queued_at: dict[str, int] = {}
+    found: set[str] = set()
+    for index, (now_s, kind, entity_id) in enumerate(log.events):
+        if kind.startswith("SERVICE"):
+            vehicle_id = entity_id
+        else:
+            request = log.requests[entity_id]
+            vehicle_id = request.assigned_vehicle_id or ""
+        if kind == "REQUEST_ASSIGNED":
+            multiplier = tape.travel_multiplier[entity_id]
+
+            def travel(car: str, origin: str = request.origin, m: float = multiplier) -> int:
+                return _travel_s(scenario, zones[car], origin, m)
+
+            idle = [car for car in zones if state[car] == "IDLE"]
+            if min(idle, key=lambda car: (travel(car), car)) != vehicle_id:
+                raise RuntimeError(f"collision replay disagrees with FleetLab at {entity_id}")
+            if any(
+                travel(car) == travel(vehicle_id)
+                and _vehicle_number(car) < _vehicle_number(vehicle_id)
+                for car in idle
+            ):
+                found.add("dispatch_tie_broken_by_string_order")
+            state[vehicle_id] = "BUSY"
+        elif kind == "PICKUP_COMPLETED":
+            zones[vehicle_id] = request.origin
+        elif kind == "TRIP_COMPLETED":
+            zones[vehicle_id] = request.destination
+            state[vehicle_id] = "IDLE"
+        elif kind == "SERVICE_QUEUE_ENTERED":
+            state[vehicle_id] = "QUEUED"
+            queued_at[vehicle_id] = now_s
+        elif kind == "SERVICE_STARTED":
+            state[vehicle_id] = "IN_SERVICE"
+        elif kind == "SERVICE_COMPLETED":
+            state[vehicle_id] = "IDLE"
+            queued = sorted(car for car in zones if state[car] == "QUEUED")
+            if len(queued) < 2:
+                continue
+            started = next(
+                (e for t, k, e in log.events[index + 1 :] if k == "SERVICE_STARTED" and t == now_s),
+                None,
+            )
+            if started != queued[0]:
+                raise RuntimeError(
+                    f"collision replay: {started} started at {now_s}, not {queued[0]}"
+                )
+            numeric_first = min(queued, key=_vehicle_number)
+            fifo_first = min(queued, key=lambda car: (queued_at[car], _vehicle_number(car)))
+            if started not in (numeric_first, fifo_first):
+                found.add("same_second_bay_retries_in_string_order")
+    return found
+
+
+def build_legacy_collision() -> Payload:
+    """A hand-written world where string-ordered ids decide a dispatch tie and a bay retry."""
+    demand = tuple(
+        RequestEvent(request_id=rid, time_s=t, origin=o, destination=d)
+        for rid, t, o, d, _ in _COLLISION_DEMAND
+    )
+    tape = WorldTape(
+        seed=0,
+        demand=demand,
+        travel_multiplier={rid: multiplier for rid, _, _, _, multiplier in _COLLISION_DEMAND},
+    )
+    scenario = FleetScenarioConfig(**_COLLISION_SCENARIO)
+    world, log = _legacy_world(
+        "collision",
+        "hand-written tape: twelve cars in two zones, one service bay, string-ordered ids",
+        scenario,
+        tape,
+    )
+    _require_clean(world)
+    assert log is not None
+    found = collisions_in_log(scenario, tape, log)
+    required = {"dispatch_tie_broken_by_string_order", "same_second_bay_retries_in_string_order"}
+    if found != required:
+        raise RuntimeError(f"collision world proves {sorted(found)}, needs {sorted(required)}")
+    return _legacy_file({"collision": world})
+
+
+def _horizon_axis_spec(
+    declared_horizon_s: int, baseline_s: int, candidate_s: int
+) -> ExperimentSpec:
+    """FLEET-005 with a declared horizon and a ``parameter:horizon_s`` axis (design FL-1, FL-11)."""
+    spec = fleet_005_spec()
+    return ExperimentSpec.model_validate(
+        {
+            **spec.model_dump(),
+            "experiment_id": "fleet-005-horizon-axis",
+            "scenario": {**spec.scenario.model_dump(), "horizon_s": declared_horizon_s},
+            "variation_axis": "parameter:horizon_s",
+            "baseline_value": baseline_s,
+            "candidate_value": candidate_s,
+        }
+    )
+
+
+def build_legacy_precheck_world_fed_axis() -> Payload:
+    """Design P-3: the precheck world and the paired world differ for a world-fed axis."""
+    spec = _horizon_axis_spec(1800, 3600, 1800)
+    baseline_arm = apply_axis(spec, spec.baseline_value)
+    seed = spec.seeds[0]
+    precheck_tape = build_tape(baseline_arm, seed)  # run_experiment's precheck probe
+    paired_tape = build_tape(spec.scenario, seed)  # run_experiment's paired loop
+    if len(precheck_tape.demand) <= len(paired_tape.demand):
+        raise RuntimeError("the precheck world should hold more requests than the paired world")
+    precheck, _ = _legacy_world(
+        "precheck",
+        "baseline arm (horizon_s 3600) over build_tape(baseline arm, 101), the precheck world",
+        baseline_arm,
+        precheck_tape,
+    )
+    paired, _ = _legacy_world(
+        "paired",
+        "baseline arm (horizon_s 3600) over build_tape(declared scenario, horizon_s 1800, 101)",
+        baseline_arm,
+        paired_tape,
+    )
+    _require_clean(precheck)
+    _require_clean(paired)
+    return _legacy_file({"precheck": precheck, "paired": paired})
+
+
+def build_legacy_fl11_horizon_crash() -> Payload:
+    """Design FL-11: an arm horizon below the declared one crashes FleetLab's engine."""
+    spec = _horizon_axis_spec(3600, 3600, 1800)
+    world, _ = _legacy_world(
+        "crash",
+        "arm horizon_s 1800 over build_tape(declared scenario, horizon_s 3600, 101)",
+        apply_axis(spec, spec.candidate_value),
+        build_tape(spec.scenario, spec.seeds[0]),
+    )
+    if world["expected"]["error"] != "ValueError":
+        raise RuntimeError(f"FL-11 world: expected ValueError, got {world['expected']['error']}")
+    return _legacy_file({"crash": world})
+
+
+# The seeded-defect world. One car, v-0, starts in zone a; every multiplier is 1.0.
+#   0     r1 (b->a) created; v-0 is idle in a: pickup 0 + 600 (a->b) = 600, drop-off
+#         600 + 600 = 1200.
+#   600   r1's pickup sets v-0 ON_TRIP and moves it to r1's origin, b.
+#   700   r2 (a->b) created. No car is idle, and the defect takes the smallest-id busy car
+#         once: v-0, still on r1, in b. Pickup 700 + 600 (b->a) = 1300, drop-off 1900.
+#   1200  r1 drops off. r1 spans [0, 1200] and r2 starts at 700 on the same car, so invariant
+#         I2 reports the overlap (700 < 1200).
+# Without the zone update at pickup r2's pickup would be 700 + 120 = 820, and without the
+# defect r2 would wait for r1 and be assigned at 1200.
+_DEFECT_DEMAND = (
+    ("r1", 0, "b", "a"),
+    ("r2", 700, "a", "b"),
+)
+_DEFECT_VIOLATION = "I2: vehicle v-0 overlaps r1 and r2 (700 < 1200)"
+
+
+def build_legacy_defect() -> Payload:
+    """The seeded dispatcher defect, the only engine path where FleetLab's invariants fire."""
+    demand = tuple(
+        RequestEvent(request_id=rid, time_s=t, origin=o, destination=d)
+        for rid, t, o, d in _DEFECT_DEMAND
+    )
+    tape = WorldTape(
+        seed=0, demand=demand, travel_multiplier={e.request_id: 1.0 for e in demand}
+    )
+    defect, log = _legacy_world(
+        "defect",
+        "hand-written tape: one car, the seeded double-assign defect takes it mid-trip",
+        FleetScenarioConfig(**_ANALYTICAL_SCENARIO),
+        tape,
+        dispatch_mode="defect_double_assign",
+    )
+    assert log is not None
+    pickups = [request.pickup_time_s for request in log.requests.values()]
+    if defect["expected"]["invariant_violations"] != [_DEFECT_VIOLATION] or pickups != [600, 1300]:
+        raise RuntimeError(
+            f"defect world no longer matches the hand derivation: pickups {pickups}, "
+            f"violations {defect['expected']['invariant_violations']}"
+        )
+    scenario = FleetScenarioConfig(**_INVALID_SCENARIO)
+    seeded, _ = _legacy_world(
+        "defect-seed101",
+        "the invalid-verdict probe scenario over build_tape(scenario, 101), seeded defect",
+        scenario,
+        build_tape(scenario, 101),
+        dispatch_mode="defect_double_assign",
+    )
+    violations = seeded["expected"]["invariant_violations"]
+    if (
+        seeded["expected"]["error"] is not None
+        or not violations
+        or not all(text.startswith("I2: ") for text in violations)
+    ):
+        raise RuntimeError(
+            f"defect-seed101 world: expected I2 violations, got {seeded['expected']}"
+        )
+    return _legacy_file({"defect": defect, "defect_seed101": seeded})
+
+
+#: Fixture file name -> builder. Phase 5 registers the reference panels here.
 FIXTURES: dict[str, Callable[[], Payload]] = {
     "instrument_vectors.json": build_instrument_vectors,
+    "legacy_fleet005_seed101.json": build_legacy_fleet005_seed101,
+    "legacy_analytical.json": build_legacy_analytical,
+    "legacy_collision.json": build_legacy_collision,
+    "legacy_precheck_world_fed_axis.json": build_legacy_precheck_world_fed_axis,
+    "legacy_fl11_horizon_crash.json": build_legacy_fl11_horizon_crash,
+    "legacy_defect.json": build_legacy_defect,
 }
 
 

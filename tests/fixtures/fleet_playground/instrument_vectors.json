@@ -340,17 +340,17 @@
   },
   {
    "parts": [
-    "San José"
+    "José"
    ],
-   "value": "2402455396309734052"
+   "value": "2648867984208931710"
   },
   {
    "parts": [
-    "東京",
+    "区域",
     "gap",
     3
    ],
-   "value": "2345114308795827674"
+   "value": "9375142021355060741"
   },
   {
    "parts": [
@@ -5206,6 +5206,435 @@
      }
     ]
    }
+  }
+ ],
+ "invalid": [
+  {
+   "name": "invariant-violation",
+   "dispatch_mode": "defect_double_assign",
+   "primary": {
+    "name": "wait.p90_s",
+    "direction": "lower_is_better",
+    "equivalence_margin": 30.0
+   },
+   "guardrails": [
+    {
+     "metric": "unserved.fraction",
+     "max_harm": 0.02,
+     "direction": "lower_is_better"
+    }
+   ],
+   "descriptive_names": [
+    "wait.p50_s",
+    "requests.served",
+    "requests.unserved",
+    "fleet.utilization_fraction",
+    "depot.queue_p90_s",
+    "business_proxy.served_trips",
+    "business_proxy.unserved_demand"
+   ],
+   "resamples": 2000,
+   "key": "561528ca63c715e50bba7f506bd06666fc4c33125a266bbbaed7d5ef15273013",
+   "precheck_matched": true,
+   "invariant_violation": "seed 101: I2: vehicle v-1 overlaps r-1-0 and r-1-1 (177 < 486)",
+   "baseline_runs": [],
+   "candidate_runs": [],
+   "record": {
+    "validity": "INVALID_EXPERIMENT",
+    "invalidity_reason": "INVARIANT_VIOLATION",
+    "invalidity_detail": "seed 101: I2: vehicle v-1 overlaps r-1-0 and r-1-1 (177 < 486)",
+    "outcome": null,
+    "recommendation": "NO_RECOMMENDATION",
+    "primary": null,
+    "guardrail_results": [],
+    "guardrail_regressions": [],
+    "descriptives": []
+   }
+  },
+  {
+   "name": "not-comparable",
+   "dispatch_mode": "nearest",
+   "primary": {
+    "name": "depot.queue_p90_s",
+    "direction": "lower_is_better",
+    "equivalence_margin": 30.0
+   },
+   "guardrails": [
+    {
+     "metric": "unserved.fraction",
+     "max_harm": 0.02,
+     "direction": "lower_is_better"
+    }
+   ],
+   "descriptive_names": [
+    "wait.p50_s",
+    "requests.served",
+    "requests.unserved",
+    "fleet.utilization_fraction",
+    "business_proxy.served_trips",
+    "business_proxy.unserved_demand"
+   ],
+   "resamples": 2000,
+   "key": "9dcfe3950570b2e7f02c6200747f461372f6aaa702db070dff3af58f9d1d14e7",
+   "precheck_matched": true,
+   "invariant_violation": null,
+   "baseline_runs": [
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.9574074074074074,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 368.0,
+     "wait.p90_s": 1469.6000000000001,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.6344444444444445,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 267.0,
+     "wait.p90_s": 616.6
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.2275925925925926,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 133.0,
+     "wait.p90_s": 292.20000000000005,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.1688888888888889,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 108.0,
+     "wait.p90_s": 143.2,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.2775925925925926,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 74.0,
+     "wait.p90_s": 426.0,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.14833333333333334,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 83.0,
+     "wait.p90_s": 170.2,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.4627777777777778,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 111.0,
+     "wait.p90_s": 784.6,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.5175925925925926,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 190.0,
+     "wait.p90_s": 794.0,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.2490740740740741,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 86.0,
+     "wait.p90_s": 345.2,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.5514814814814815,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 357.0,
+     "wait.p90_s": 375.4,
+     "depot.queue_p90_s": 0.0
+    }
+   ],
+   "candidate_runs": [
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.9574074074074074,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 368.0,
+     "wait.p90_s": 1469.6000000000001,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.6344444444444445,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 267.0,
+     "wait.p90_s": 616.6
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.2275925925925926,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 133.0,
+     "wait.p90_s": 292.20000000000005,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.1688888888888889,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 108.0,
+     "wait.p90_s": 143.2,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.2775925925925926,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 74.0,
+     "wait.p90_s": 426.0,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.14833333333333334,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 83.0,
+     "wait.p90_s": 170.2,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.4627777777777778,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 111.0,
+     "wait.p90_s": 784.6,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.5175925925925926,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 190.0,
+     "wait.p90_s": 794.0,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.2490740740740741,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 86.0,
+     "wait.p90_s": 345.2,
+     "depot.queue_p90_s": 0.0
+    },
+    {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.5514814814814815,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 357.0,
+     "wait.p90_s": 375.4,
+     "depot.queue_p90_s": 0.0
+    }
+   ],
+   "record": {
+    "validity": "INVALID_EXPERIMENT",
+    "invalidity_reason": "NOT_COMPARABLE",
+    "invalidity_detail": "primary metric depot.queue_p90_s unavailable in some replication",
+    "outcome": null,
+    "recommendation": "NO_RECOMMENDATION",
+    "primary": null,
+    "guardrail_results": [],
+    "guardrail_regressions": [],
+    "descriptives": []
+   }
+  },
+  {
+   "name": "replication-mismatch",
+   "dispatch_mode": "nearest",
+   "primary": {
+    "name": "wait.p90_s",
+    "direction": "lower_is_better",
+    "equivalence_margin": 30.0
+   },
+   "guardrails": [
+    {
+     "metric": "unserved.fraction",
+     "max_harm": 0.02,
+     "direction": "lower_is_better"
+    }
+   ],
+   "descriptive_names": [
+    "wait.p50_s",
+    "requests.served",
+    "requests.unserved",
+    "fleet.utilization_fraction",
+    "depot.queue_p90_s",
+    "business_proxy.served_trips",
+    "business_proxy.unserved_demand"
+   ],
+   "resamples": 2000,
+   "key": "d07d33d1e77e5a0cb6a3a42cd3fcbb39b61e732065f0aba42694eb18d97fdb51",
+   "precheck_matched": false,
+   "invariant_violation": null,
+   "baseline_runs": [],
+   "candidate_runs": [],
+   "record": {
+    "validity": "INVALID_EXPERIMENT",
+    "invalidity_reason": "REPLICATION_MISMATCH",
+    "invalidity_detail": "identical seed produced different metrics on replay",
+    "outcome": null,
+    "recommendation": "NO_RECOMMENDATION",
+    "primary": null,
+    "guardrail_results": [],
+    "guardrail_regressions": [],
+    "descriptives": []
+   }
+  }
+ ],
+ "detail_truncation": [
+  {
+   "name": "ascii-301",
+   "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "truncated": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "name": "ascii-long-detail",
+   "text": "seed 101: I2: vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; ",
+   "truncated": "seed 101: I2: vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 overlaps r-1-0 and r-1-1; vehicle v-10 "
+  },
+  {
+   "name": "ascii-exactly-300",
+   "text": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+   "truncated": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+  },
+  {
+   "name": "bmp-at-299-and-300",
+   "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaéébbbbbbbbbb",
+   "truncated": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaé"
+  },
+  {
+   "name": "bmp-cjk-350",
+   "text": "車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両",
+   "truncated": "車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両車両"
+  },
+  {
+   "name": "bmp-mixed-near-300",
+   "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaΔt λ zzzzzzzzzzzzzzzzzzzz",
+   "truncated": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaΔt "
+  },
+  {
+   "name": "astral-last-kept",
+   "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa🚗tail",
+   "truncated": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa🚗"
+  },
+  {
+   "name": "astral-first-dropped",
+   "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa🚗",
+   "truncated": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "name": "astral-straddles-300",
+   "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa🚗🚗🚗🚗",
+   "truncated": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa🚗🚗"
+  },
+  {
+   "name": "astral-only-301",
+   "text": "🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗",
+   "truncated": "🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗"
+  },
+  {
+   "name": "astral-exactly-300",
+   "text": "seed 7: 🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗",
+   "truncated": "seed 7: 🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗"
+  },
+  {
+   "name": "short-non-ascii",
+   "text": "café 🚗",
+   "truncated": "café 🚗"
   }
  ]
 }

@@ -1,0 +1,164 @@
+{
+ "format": "fleet-playground-legacy-worlds",
+ "format_version": 1,
+ "worlds": {
+  "analytical": {
+   "name": "analytical",
+   "origin": "the hand-written three-request world of the FleetLab analytical fixture test",
+   "scenario": {
+    "schema_version": "0.1",
+    "name": "fleet_probe",
+    "label": "synthetic_fleet_scenario_not_calibrated_to_any_real_operation",
+    "horizon_s": 4000,
+    "zones": [
+     "a",
+     "b"
+    ],
+    "travel_time_s": {
+     "a->b": 600,
+     "b->a": 600
+    },
+    "vehicle_count": 1,
+    "demand_per_zone_per_hour": 12,
+    "max_wait_s": 1000,
+    "trips_between_service": 2,
+    "service_bays": 1,
+    "service_duration_s": 500,
+    "in_zone_pickup_s": 120,
+    "travel_sigma": 0.0
+   },
+   "tape": {
+    "seed": 0,
+    "demand": [
+     [
+      "r1",
+      0,
+      "a",
+      "b"
+     ],
+     [
+      "r2",
+      100,
+      "b",
+      "a"
+     ],
+     [
+      "r3",
+      2000,
+      "a",
+      "b"
+     ]
+    ],
+    "travel_multiplier": {
+     "r1": 1.0,
+     "r2": 1.0,
+     "r3": 1.0
+    }
+   },
+   "dispatch_mode": "nearest",
+   "expected": {
+    "error": null,
+    "events": [
+     [
+      0,
+      "REQUEST_CREATED",
+      "r1"
+     ],
+     [
+      0,
+      "REQUEST_ASSIGNED",
+      "r1"
+     ],
+     [
+      100,
+      "REQUEST_CREATED",
+      "r2"
+     ],
+     [
+      120,
+      "PICKUP_COMPLETED",
+      "r1"
+     ],
+     [
+      720,
+      "TRIP_COMPLETED",
+      "r1"
+     ],
+     [
+      720,
+      "REQUEST_ASSIGNED",
+      "r2"
+     ],
+     [
+      840,
+      "PICKUP_COMPLETED",
+      "r2"
+     ],
+     [
+      1440,
+      "TRIP_COMPLETED",
+      "r2"
+     ],
+     [
+      1440,
+      "SERVICE_QUEUE_ENTERED",
+      "v-0"
+     ],
+     [
+      1440,
+      "SERVICE_STARTED",
+      "v-0"
+     ],
+     [
+      1940,
+      "SERVICE_COMPLETED",
+      "v-0"
+     ],
+     [
+      2000,
+      "REQUEST_CREATED",
+      "r3"
+     ],
+     [
+      2000,
+      "REQUEST_ASSIGNED",
+      "r3"
+     ],
+     [
+      2120,
+      "PICKUP_COMPLETED",
+      "r3"
+     ],
+     [
+      2720,
+      "TRIP_COMPLETED",
+      "r3"
+     ]
+    ],
+    "events_digest": "599d3bb81408fb99cabcc9c1f7eb376fb9346a50ef561452ca98f2db53558305",
+    "event_counts": {
+     "PICKUP_COMPLETED": 3,
+     "REQUEST_ASSIGNED": 3,
+     "REQUEST_CREATED": 3,
+     "SERVICE_COMPLETED": 1,
+     "SERVICE_QUEUE_ENTERED": 1,
+     "SERVICE_STARTED": 1,
+     "TRIP_COMPLETED": 3
+    },
+    "metrics": {
+     "requests.total": 3.0,
+     "requests.served": 3.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.54,
+     "business_proxy.served_trips": 3.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 120.0,
+     "wait.p90_s": 616.0,
+     "depot.queue_p90_s": 0.0
+    },
+    "invariant_violations": []
+   }
+  }
+ }
+}

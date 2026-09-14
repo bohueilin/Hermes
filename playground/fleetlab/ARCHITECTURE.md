@@ -247,8 +247,8 @@ name to `{name, scenario, tape, dispatchMode, expected}`, where `tape.demand` is
 `{request_id, time_s, origin, destination}` in the given order and `tape.travel_multiplier` maps id to double.
 
 `profile.js` is a line-by-line port of `src/hermes/fleet/engine.py`, `run_metrics` and `check_invariants`:
-- `runLegacyFleet(scenario, tape, {dispatchMode = "nearest"})` returns `{events, requests, vehicles,
-  service_queue_waits_s, max_bays_in_use}`, requests and vehicles in Python insertion order. Vehicles `v-0 … v-(n-1)` are
+- `runLegacyFleet(scenario, tape, {dispatchMode = "nearest"})` returns `{scenario, events, requests, vehicles,
+  service_queue_waits_s, max_bays_in_use}` (the scenario is kept, as FleetLab's `RunLog` keeps it), requests and vehicles in Python insertion order. Vehicles `v-0 … v-(n-1)` are
   placed round-robin over `scenario.zones`; fields and updates follow `_Vehicle` and `_Request` exactly (zone at pickup
   and at drop-off, `busy_since_s`, `busy_total_s`, `trips_since_service`, `completed_trips`, and `pickup_time_s` set at
   assignment).
@@ -312,6 +312,8 @@ Files:
   `horizon_s` 1800; the axis is `parameter:horizon_s` with baseline 3600. Both worlds run the 3600 s baseline arm:
   `precheck` on `build_tape(baseline_arm, 101)` (what `run_experiment` line 216 does), `paired` on
   `build_tape(declared, 101)` (line 230).
+- `legacy_defect.json`: worlds run with `dispatch_mode="defect_double_assign"`, the only legacy fixtures allowed to
+  hold invariant violations, so the ported checker is shown firing and the seeded-defect dispatch branch runs.
 - `legacy_fl11_horizon_crash.json`: world `crash`, the declared scenario FLEET-005's with `horizon_s` 3600, tape
   `build_tape(declared, 101)`, run under the arm scenario with `horizon_s` 1800. Expected error `ValueError`.
 
@@ -681,3 +683,5 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     repository or under `dist/`.
 23. Reference panels are a regenerator fixture (section 5.2) mirrored by a literal `REFERENCE_PANELS` in `presets.js`.
 24. The result summary's clipboard labels live in `instrument/summary.js` as an export format.
+25. `legacy_defect.json` is the one legacy fixture with invariant violations. Exact-half travel rounding is covered by a
+    hand-derived node test, because no FleetLab-derived world contains an exact half.

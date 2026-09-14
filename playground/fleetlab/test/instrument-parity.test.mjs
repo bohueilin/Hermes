@@ -202,6 +202,62 @@ describe("instrument parity with FleetLab's Python vectors", () => {
       assertExact(actual, row.record, `verdict ${row.name}`);
     }
   });
+
+  test("invalid verdicts (run_experiment records for every invalidity reason)", () => {
+    const rows = group("invalid");
+    for (const reason of INVALIDITY_REASONS) {
+      assert.ok(rows.some((row) => row.record.invalidity_reason === reason), `invalid row for ${reason}`);
+    }
+    for (const row of rows) {
+      const verdict = computeVerdict({
+        primary: row.primary,
+        guardrails: row.guardrails,
+        descriptiveNames: row.descriptive_names,
+        baselineRuns: row.baseline_runs,
+        candidateRuns: row.candidate_runs,
+        resamples: row.resamples,
+        key: row.key,
+        precheckMatched: row.precheck_matched,
+        invariantViolation: row.invariant_violation,
+      });
+      const actual = {
+        validity: verdict.validity,
+        invalidity_reason: verdict.invalidity_reason,
+        invalidity_detail: verdict.invalidity_detail,
+        outcome: verdict.outcome,
+        recommendation: verdict.recommendation,
+        primary: verdict.primary,
+        guardrail_results: verdict.guardrail_results,
+        guardrail_regressions: verdict.guardrail_regressions,
+        descriptives: verdict.descriptives,
+      };
+      assertExact(actual, row.record, `invalid ${row.name}`);
+      // Contract section 4: an invalid verdict carries no primary and empty lists, statuses included.
+      assert.equal(verdict.validity, "INVALID_EXPERIMENT", `invalid ${row.name} validity`);
+      assert.equal(verdict.primary, null, `invalid ${row.name} primary`);
+      assertExact(verdict.guardrail_statuses, [], `invalid ${row.name} guardrail_statuses`);
+    }
+  });
+
+  test("detail truncation (Python text[:300], by code point)", () => {
+    const rows = group("detail_truncation");
+    assert.ok(rows.some((row) => Array.from(row.text).length > 300 && /[^\x00-\x7f]/.test(row.text)), "a long non-ASCII row");
+    assert.ok(rows.some((row) => /[\u{10000}-\u{10ffff}]/u.test(row.text)), "an astral row");
+    const primary = { name: "wait.p90_s", direction: "lower_is_better", equivalence_margin: 30 };
+    for (const row of rows) {
+      // The invariant path passes the text through unchanged before the cut, so the detail is exactly text[:300].
+      const verdict = computeVerdict({
+        primary,
+        baselineRuns: [],
+        candidateRuns: [],
+        resamples: 1000,
+        key: "k",
+        precheckMatched: true,
+        invariantViolation: row.text,
+      });
+      assert.equal(verdict.invalidity_detail, row.truncated, `detail_truncation ${row.name}`);
+    }
+  });
 });
 
 describe("decision flow (hand-derived)", () => {
