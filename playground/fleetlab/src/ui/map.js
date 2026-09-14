@@ -733,6 +733,8 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
         const micro = svg("g", { "data-role": "micro-bar", class: "fl-fam-depot" });
         const lot = svg("g", { "data-role": "lot" });
         tileGroup.append(micro, lot);
+        // Pointer and touch open the depot's drawer; the keyboard path stays Enter to select and I to inspect.
+        tileGroup.addEventListener("click", () => onInspect({ depot: depot.id }));
         group.append(tileGroup);
         depots.set(depot.id, { depot, tile: tileGroup, micro, lot, x: tx, y: ty, key: null });
       });
@@ -910,12 +912,22 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
     entry.lot.replaceChildren(lotFillRect, lotOutline, title);
   }
 
+  // The pinned glyph is kept between frames and only moved, so a click or tap that lands during playback reaches one
+  // element; it is rebuilt when the car or its state changes.
+  let pinned = null;
+  pinnedLayer.addEventListener("click", (event) => {
+    const node = event.target?.closest?.("[data-car]");
+    if (node) onInspect({ car: node.getAttribute("data-car") });
+  });
+
   function drawPinned(input, model) {
-    pinnedLayer.replaceChildren();
     const { frame, log, pinnedCar } = input;
-    if (!model.hasLog || typeof pinnedCar !== "string") return;
-    const car = frame.cars.find((c) => c.id === pinnedCar);
-    if (car === undefined) return;
+    const car = model.hasLog && typeof pinnedCar === "string" ? frame.cars.find((c) => c.id === pinnedCar) : undefined;
+    if (car === undefined) {
+      pinnedLayer.replaceChildren();
+      pinned = null;
+      return;
+    }
     const place = placeCar(log, car, frame.at_s);
     let x;
     let y;
@@ -937,24 +949,33 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
       x = c.x + geometry.yard.width / 2 - 16;
       y = c.y - geometry.yard.height / 2 + 14;
     }
+    const transform = `translate(${String(round(x))} ${String(round(y))})`;
+    const rotation = car.state === "ENROUTE_PICKUP" || car.state === "ON_TRIP" ? `rotate(${String(round(angle))})` : null;
+    if (pinned !== null && pinned.id === car.id && pinned.state === car.state && pinned.group.parentNode === pinnedLayer) {
+      pinned.group.setAttribute("transform", transform);
+      if (rotation === null) pinned.glyph.removeAttribute("transform");
+      else pinned.glyph.setAttribute("transform", rotation);
+      return;
+    }
     const family = familyOf(car.state);
     const group = svg("g", {
+      class: "fl-pinned-car",
       "data-car": car.id,
       "data-state": car.state,
-      transform: `translate(${String(round(x))} ${String(round(y))})`,
+      transform,
       role: "img",
       "aria-label": pinnedCarName({ car: car.id, state: MAP.carStates[car.state] }),
     });
+    // A transparent 44 px circle under the glyph is the pointer and touch target (design §7.7).
+    const hit = svg("circle", { class: "fl-hit", r: 22, "data-role": "hit" });
     const ring = svg("circle", { class: "fl-glyph-ring", r: 9, "data-role": "surface-ring" });
     const focusRing = svg("circle", { r: 11, fill: "none", "stroke-width": 2, "data-role": "focus-ring" });
     focusRing.style.stroke = "var(--accent)";
-    const glyph = svg("g", {
-      class: FAMILY_CLASS[family],
-      transform: car.state === "ENROUTE_PICKUP" || car.state === "ON_TRIP" ? `rotate(${String(round(angle))})` : null,
-    });
+    const glyph = svg("g", { class: FAMILY_CLASS[family], transform: rotation });
     glyph.append(...glyphFor(car.state));
-    group.append(ring, focusRing, glyph);
-    pinnedLayer.append(group);
+    group.append(hit, ring, focusRing, glyph);
+    pinnedLayer.replaceChildren(group);
+    pinned = { id: car.id, state: car.state, group, glyph };
   }
 
   function drawTable(model, seed) {

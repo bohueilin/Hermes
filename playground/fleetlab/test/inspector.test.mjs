@@ -23,7 +23,7 @@ before(async () => {
   payload = await windowPayload();
 });
 
-function setup() {
+function setup(runPayload = payload) {
   const uninstall = installFakeDom(globalThis);
   const { document } = uninstall.dom;
   const region = document.createElement("aside");
@@ -34,7 +34,7 @@ function setup() {
   document.body.append(trigger, region);
   const store = createStore(createInitialState({ presetId: DEFAULT_PRESET_ID, scenario: presetScenario() }));
   store.dispatch({ type: "run/queued", id: "w1", total: 2 });
-  store.dispatch({ type: "run/done", id: "w1", payload });
+  store.dispatch({ type: "run/done", id: "w1", payload: runPayload });
   store.dispatch({ type: "clock/set", clock_s: D1_1930 });
   const forks = [];
   const inspector = mountInspector({ store, region, onOpenFork: (car) => forks.push(car) });
@@ -143,29 +143,55 @@ describe("depot inspector", () => {
   });
 
   test("the ledger keeps this replay and across replications in their own columns, with absence reasons", () => {
+    // EB-1, not SJ-1: since the SUP-1 recalibration (120 cars) and the recall that acts once, every SJ-1 visit of the
+    // seed 1001 replay finishes by the drain end, while EB-1 leaves 6 unfinished (SF-1 leaves 1), so EB-1 exercises the
+    // absence reason this test reads.
+    const depot = "EB-1";
     setup();
-    open({ depot: "SJ-1" });
+    open({ depot });
     const ledger = ctx.region.querySelectorAll("table").at(-1);
     assert.deepEqual(texts(ledger.querySelectorAll("th")), [INSPECTOR.ledger, INSPECTOR.value, labels.ledgerAcross(2)]);
     const rows = ledger.querySelectorAll("tbody > tr").map((tr) => texts(tr.children));
     assert.deepEqual(rows.map((r) => r[0]), Object.values(INSPECTOR.ledgerRows));
     const byName = Object.fromEntries(rows.map((r) => [r[0], r]));
 
-    const scoped = (metric) => computeMetric(result(), { metric, scope: { depot: "SJ-1" } });
+    const scoped = (metric) => computeMetric(result(), { metric, scope: { depot } });
     const turnaround = scoped("depot.turnaround_p90_s");
-    assert.ok("absent" in turnaround && /unfinished at drain end$/.test(turnaround.absent), "the fixture run leaves SJ-1 visits unfinished");
+    assert.ok("absent" in turnaround && /unfinished at drain end$/.test(turnaround.absent), `the fixture run leaves ${depot} visits unfinished`);
     assert.equal(byName[INSPECTOR.ledgerRows.timeToReady][1], labels.absentValue(turnaround.absent));
     assert.equal(byName[INSPECTOR.ledgerRows.bayWait][1], metricText(scoped("depot.bay_wait_p90_s"), minutes));
     // Depot-scoped percentiles are computed only for the logged replay; the lot peak is in every replication's metrics.
     assert.equal(byName[INSPECTOR.ledgerRows.bayWait][2], labels.absentValue(labels.ABSENT_REASONS.onlyThisReplay));
-    const lot = payload.runs.map((r) => r.metrics["depot.parking_peak_fraction{depot=SJ-1}"].value);
-    assert.equal(byName[INSPECTOR.ledgerRows.lotPeak][2], labels.acrossRange({ low: percent(Math.min(...lot), 1), high: percent(Math.max(...lot), 1) }));
+    const lot = payload.runs.map((r) => r.metrics[`depot.parking_peak_fraction{depot=${depot}}`].value);
+    // Changed with G7: the default preset runs at sigma 0, so both seeds build the same world and give the same EB-1 lot
+    // peak share; a range whose ends format alike reads as one value in every replication, not "56.7% to 56.7%".
+    const lotTexts = lot.map((v) => percent(v, 1));
+    assert.ok(lotTexts.every((t) => t === lotTexts[0]), "both replications show the same lot peak share at sigma 0");
+    assert.equal(byName[INSPECTOR.ledgerRows.lotPeak][2], labels.acrossSame(lotTexts[0]));
     for (const row of rows) {
       for (const cell of row.slice(1)) assert.ok(cell.length > 0 && cell !== "-", `a ledger cell reads ${cell}`);
     }
     for (const td of ledger.querySelectorAll("td")) {
       assert.equal((td.getAttribute("class") ?? "").includes("fl-absent"), td.textContent.startsWith(labels.ABSENT_PREFIX));
     }
+  });
+
+  test("the ledger reads a range across replications when the lot peak differs between seeds", () => {
+    // Review: at sigma 0 both seeds give the same lot peak, so no ledger test saw a range. Seed 1002's EB-1 lot peak
+    // share is moved 0.2 away from seed 1001's. Linear percentiles over two values lo < hi: p10 = lo + 0.1 (hi - lo),
+    // p90 = lo + 0.9 (hi - lo); their percent texts are 16 points apart, so they differ.
+    const key = "depot.parking_peak_fraction{depot=EB-1}";
+    const changed = structuredClone(payload);
+    const first = changed.runs[0].metrics[key].value;
+    const second = first > 0.5 ? first - 0.2 : first + 0.2;
+    changed.runs[1].metrics[key] = { value: second };
+    setup(changed);
+    open({ depot: "EB-1" });
+    const ledger = ctx.region.querySelectorAll("table").at(-1);
+    const rows = ledger.querySelectorAll("tbody > tr").map((tr) => texts(tr.children));
+    const lotPeak = rows.find((r) => r[0] === INSPECTOR.ledgerRows.lotPeak);
+    const [lo, hi] = [Math.min(first, second), Math.max(first, second)];
+    assert.equal(lotPeak[2], labels.acrossRange({ low: percent(lo + 0.1 * (hi - lo), 1), high: percent(lo + 0.9 * (hi - lo), 1) }));
   });
 
   test("the depot board is the charts.js board for this depot, after the NOW flow and before the ledger", () => {
@@ -187,6 +213,39 @@ describe("depot inspector", () => {
     assert.equal(ctx.region.hasAttribute("inert"), true);
     assert.equal(ctx.region.getAttribute("data-open"), "false");
     assert.equal(ctx.document.activeElement, ctx.trigger);
+  });
+
+  test("lists the cars at the depot with Inspect and Pin; Pin keeps focus, Inspect opens that car's drawer (G1)", () => {
+    setup();
+    // The snapshot where SJ-1 holds the most cars in this replay (SJ-1 is empty at D1 19:30 in the recalibrated preset).
+    const atSj1 = (snap) => snap.cars.filter((c) => c.location?.depot === "SJ-1").length;
+    const snapshot = payload.log.snapshots.reduce((best, snap) => (atSj1(snap) > atSj1(best) ? snap : best));
+    ctx.store.dispatch({ type: "clock/set", clock_s: snapshot.t });
+    open({ depot: "SJ-1" });
+    const { region, store, document } = ctx;
+    const here = snapshot.cars.filter((c) => c.location?.depot === "SJ-1").map((c) => c.id).sort();
+    assert.ok(here.length > 1, "SJ-1 holds cars at that snapshot");
+    const list = region.querySelector('[data-role="cars-here"]');
+    assert.equal(list.querySelector("summary").textContent, labels.carsHereHeading(here.length));
+    assert.deepEqual(list.querySelectorAll("li").map((li) => li.getAttribute("data-car")), here);
+    const car = snapshot.cars.find((c) => c.id === here[0]);
+    assert.equal(list.querySelector("li span").textContent, labels.carHere({ car: car.id, state: labels.carStateText(car) }));
+
+    const pin = list.querySelector(`li[data-car="${car.id}"] [data-role="pin-car"]`);
+    assert.equal(pin.textContent, labels.pinCarNamed(car.id));
+    pin.focus();
+    pin.click();
+    assert.equal(store.getState().fork.pinnedCar, car.id);
+    const pinned = region.querySelector(`[data-focus-key="pin:${car.id}"]`);
+    assert.equal(pinned.getAttribute("aria-pressed"), "true", "the list is rebuilt with the pin shown");
+    assert.equal(document.activeElement, pinned, "focus stays on the Pin button of that car");
+
+    const inspect = region.querySelector(`li[data-car="${car.id}"] [data-role="inspect-car"]`);
+    assert.equal(inspect.textContent, labels.inspectCar(car.id));
+    inspect.click();
+    assert.deepEqual(store.getState().inspector, { car: car.id });
+    assert.equal(region.querySelector("h2").textContent, labels.inspectorTitle({ heading: INSPECTOR.carHeading, name: car.id }));
+    assert.equal(document.activeElement.textContent, INSPECTOR.close, "focus moves to Close in the new drawer");
   });
 
   test("before any run the drawer says nothing has run and shows no replay stamp", () => {

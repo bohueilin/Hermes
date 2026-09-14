@@ -8,10 +8,11 @@ import { describe, test } from "node:test";
 
 import { computeVerdict } from "../src/instrument/paired.js";
 import { resultSummary, summaryText } from "../src/instrument/summary.js";
-import { freezeSpec, thresholdValue } from "../src/model/experiment.js";
+import { freezeSpec, isNullCheckDraft, thresholdValue } from "../src/model/experiment.js";
 import { DEFAULT_PRESET_ID, presetById, seedSet } from "../src/model/presets.js";
 import { REFERENCE_PANELS } from "../src/model/reference-panels.js";
 import { cloneScenario, describeDifferences } from "../src/model/schema.js";
+import { tabbables } from "../src/ui/a11y.js";
 import * as charts from "../src/ui/charts.js";
 import * as experiment from "../src/ui/experiment.js";
 import * as format from "../src/ui/format.js";
@@ -680,8 +681,12 @@ describe("verdict card (design §7.2, P-7 to P-9)", () => {
       const gate = container.querySelector('[data-gate="recommendation"]');
       assert.equal(gate.querySelector('[data-role="not-evaluable"]').textContent, labels.NOT_EVALUABLE_TEXT);
       assert.equal(gate.querySelector(".fl-verdict-chip__word").textContent, payload.verdict.recommendation);
+      // UC-03's own unserved guardrail regresses since the population-trap fix (candidate 5 min, max harm 0.01; harm about
+      // 0.018 on 10 seeds), so the gate reads one regressed guardrail beside the one that is not evaluable. It read the
+      // WITHIN word when UC-03 used 10 min against 0.02.
+      assert.equal(payload.verdict.guardrail_statuses[0].status, "REGRESSED");
       const railWords = container.querySelectorAll('[data-gate="guardrails"] .fl-verdict-chip__word').map((n) => n.textContent);
-      assert.deepEqual(railWords, [labels.STATUS_WORDS.guardrail.WITHIN.word, labels.guardrailsNotEvaluableCount(1)]);
+      assert.deepEqual(railWords, [labels.guardrailsRegressedCount(1), labels.guardrailsNotEvaluableCount(1)]);
     });
   });
 
@@ -1007,6 +1012,42 @@ describe("Experiment flow across modes, presets and seed sets (review: experimen
       assert.equal(container.querySelector('[data-role="baseline-line"]').textContent, labels.baselineLine({ presetName: presetById("UC-01").title, changes: 0 }));
       assertCopyRules(container);
       assertClassesDefined(container);
+    });
+  });
+
+  test("the null check note needs the UC-01 draft itself, not only its axis (G9)", async () => {
+    await withDom({}, async () => {
+      const uc01Axis = structuredClone(presetById("UC-01").experiment.axis);
+      const store = presetStore("L3");
+      store.dispatch({ type: "experiment/draft", patch: { axis: uc01Axis } });
+      const { container } = mount(store);
+      assert.equal(isNullCheckDraft(experiment.specDraftOf(store.getState().experiment.draft)), false);
+      assert.equal(container.querySelector('[data-role="null-check"]'), null, "L3's scenario and primary with UC-01's axis is not the null check");
+      const uc01 = presetStore("UC-01");
+      assert.equal(isNullCheckDraft(experiment.specDraftOf(uc01.getState().experiment.draft)), true);
+      assert.equal(mount(uc01).container.querySelector('[data-role="null-check"]').textContent, labels.EXPERIMENT_SETUP.nullCheck);
+    });
+  });
+
+  test("the seven Experiment presets are in the chooser, a tab stop that keeps focus as each one loads (G10)", async () => {
+    await withDom({}, async () => {
+      const store = defaultStore();
+      store.dispatch({ type: "mode/set", mode: "experiment" });
+      const { container } = mount(store);
+      const select = () => container.querySelector('[data-role="preset-chooser"] select');
+      assert.ok(tabbables(container).includes(select()), "keyboard: the chooser is a tab stop");
+      assert.equal(select().getAttribute("aria-label"), labels.EXPERIMENT_SETUP.startFromPreset);
+      const offered = select().querySelectorAll("option").map((o) => o.getAttribute("value"));
+      for (const id of ["UC-01", "UC-02", "UC-03", "UC-05", "UC-08a", "UC-08b", "UC-10"]) {
+        assert.ok(offered.includes(id), `${id} is offered`);
+        select().focus();
+        select().value = id;
+        select().dispatchEvent(new Event("change", { bubbles: true }));
+        assert.equal(store.getState().presetId, id);
+        assert.equal(select().value, id);
+        assert.equal(document.activeElement, select(), `focus stays on the chooser after ${id} loads`);
+        assert.equal(freezeSpec(experiment.specDraftOf(store.getState().experiment.draft)).digest, freezeSpec(presetById(id).experiment).digest);
+      }
     });
   });
 

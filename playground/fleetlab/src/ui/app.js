@@ -16,8 +16,12 @@
 //   replay the Sandbox world) are hidden and the top bar names the verdict seed, so only one THIS REPLAY seed is on
 //   screen (design §7.4, H-10). Closing the fork shows them again.
 // - The wait p90 values of the panel across replications and of the wait chart summary carry their completed rides.
+// - Before any run the NOW panel and the panel across replications each show one state line and no rows, so absence is
+//   said once and never reads as a value.
+// - Open the fork closes the inspector, scrolls the fork into view, focuses its heading and announces it politely.
+// - In an idle step after start (and after a traffic spread change), the host builds the lookup tables for the
+//   scenario's sigma, with a preparing line under the map, so the first run does not pay for them.
 
-import { percentileFleetLab } from "../core/stats.js";
 import { armScenarios, experimentEnvelope } from "../model/experiment.js";
 import { violationId } from "../model/invariants.js";
 import { metricKey } from "../model/metrics.js";
@@ -159,6 +163,8 @@ export function buildShell() {
     inspector: region("aside", "inspector", "fl-drawer fl-inspector", "MODES.inspect.name"),
     footer: region("footer", "footer", "fl-footer"),
   };
+  // The NOW panel is a tab stop of its own in the design §7.7 order (map, transport, NOW panel, charts).
+  regions.now.setAttribute("tabindex", "0");
   regions.inspector.hidden = true;
   regions.inspector.setAttribute("inert", "");
   regions.inspector.setAttribute("data-open", "false");
@@ -249,13 +255,18 @@ function focusArea(state) {
   return AREA_IDS.includes(area) ? area : "SF";
 }
 
-/** Across-replications text for a metric key: the 10th to 90th percentile, or why it is not available. */
-function acrossText(summaries, key, formatter) {
+/** Numbers of a metric key across replications, or the absent text that stands for them. */
+function acrossNumbers(summaries, key) {
   if (summaries.length === 0) return labels.absentValue(labels.ABSENT_REASONS.notRunYet);
   const values = summaries.map((s) => s.metrics[key]);
   if (values.some((v) => v === undefined || "absent" in v)) return labels.absentValue(labels.ABSENT_REASONS.metricAbsentInSomeReplication);
-  const numbers = values.map((v) => v.value);
-  return labels.acrossRange({ low: formatter(percentileFleetLab(numbers, 0.1)), high: formatter(percentileFleetLab(numbers, 0.9)) });
+  return values.map((v) => v.value);
+}
+
+/** Across-replications text for a metric key: the 10th to 90th percentile, one value in every replication, or why not. */
+function acrossText(summaries, key, formatter) {
+  const numbers = acrossNumbers(summaries, key);
+  return typeof numbers === "string" ? numbers : format.acrossText(numbers, formatter);
 }
 
 /** A count across replications as text: whole numbers plain, a percentile between two counts to one decimal. */
@@ -267,8 +278,12 @@ function countText(v) {
 function acrossWaitText(summaries, formatter) {
   const wait = acrossText(summaries, "wait.p90_s", formatter);
   if (wait.startsWith(labels.ABSENT_PREFIX)) return wait;
-  const population = acrossText(summaries, "wait.population_n", countText);
-  return labels.withWaitPopulation({ value: wait, population: population.startsWith(labels.ABSENT_PREFIX) ? population : labels.waitPopulation(population) });
+  const numbers = acrossNumbers(summaries, "wait.population_n");
+  if (typeof numbers === "string") return labels.withWaitPopulation({ value: wait, population: numbers });
+  // The count sits inside "from ... completed rides", so a count every replication shares reads as that one count.
+  const ends = format.acrossEnds(numbers, countText);
+  const counts = ends === null ? countText(numbers[0]) : labels.acrossRange(ends);
+  return labels.withWaitPopulation({ value: wait, population: labels.waitPopulation(counts) });
 }
 
 /** One replay's wait p90 with its completed rides, for the table across replications. */
@@ -311,6 +326,8 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
   const cleanups = [];
   let destroyed = false;
   const runs = { window: null, fork: null, forkArgs: null, forkMeta: null, forkNotice: false, copyStatus: null };
+  // Lookup tables built ahead of the first run: sigmas done (or failed, so they are not retried), the pending build, the idle handle.
+  const warm = { done: new Set(), pending: null, idle: null };
   const memo = { chartHandles: [], stripHandles: [], forkHandles: [], cursor: null };
 
   // ---- engine ------------------------------------------------------------------------------------------------------
@@ -397,19 +414,67 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
     return { baseline: withValueAt(state.scenario, change.path, change.from), candidate: state.scenario };
   }
 
-  /** Opens the fork for `car` (the inspector's Open the fork). Returns the run's promise, or null with a notice. */
+  /**
+   * Opens the fork for `car` (the inspector's Open the fork). Returns the run's promise, or null with a notice. Either way
+   * the inspector closes and the fork section is revealed: scrolled into view, its heading focused, and announced.
+   */
   function openFork(car) {
     const state = store.getState();
     const arms = forkArms(state);
+    if (state.inspector !== null) store.dispatch({ type: "inspector/close" });
     if (arms === null) {
       runs.forkNotice = true;
       render(store.getState());
+      revealFork(labels.FORK.needsChange);
       return null;
     }
     const seed = state.run.selectedSeed ?? seedSet(PRESET_SEED_SET, 1)[0];
     const learning = state.mode === "learn" && state.learn.case !== null;
     const depots = learning ? [...(LEARN_FORK_DEPOTS[state.learn.case] ?? [])] : [];
-    return startPair({ ...arms, seed, lambdaMaxPermille: sharedLambdaMaxPermille([arms.baseline, arms.candidate]), car, source: learning ? "learn" : "sandbox", depots });
+    const promise = startPair({ ...arms, seed, lambdaMaxPermille: sharedLambdaMaxPermille([arms.baseline, arms.candidate]), car, source: learning ? "learn" : "sandbox", depots });
+    revealFork(labels.forkOpened(car));
+    return promise;
+  }
+
+  /**
+   * Moves the reader to the fork section: on a phone the Charts group (which holds the fork) is shown first, then the
+   * heading takes focus, the section scrolls to the top and the live region speaks.
+   */
+  function revealFork(announcement) {
+    if (destroyed || forkHost.hidden) return;
+    showPhoneGroup(root, regions.segmented.querySelectorAll("button"), "charts");
+    forkHeading.focus({ preventScroll: true });
+    if (typeof forkHost.scrollIntoView === "function") forkHost.scrollIntoView({ block: "start" });
+    live.announce(announcement);
+  }
+
+  /** Schedules the lookup-table build for the scenario's sigma in an idle step, once per sigma, when the host offers it. */
+  function scheduleWarm() {
+    if (destroyed || typeof host.warmTables !== "function" || warm.pending !== null || warm.idle !== null) return;
+    if (warm.done.has(store.getState().scenario.sigma_permille)) return;
+    const idle = globalThis.requestIdleCallback;
+    const step = () => {
+      warm.idle = null;
+      warmTables();
+    };
+    warm.idle = typeof idle === "function"
+      ? { cancel: (id) => globalThis.cancelIdleCallback(id), id: idle(step, { timeout: 1000 }) }
+      : { cancel: (id) => clearTimeout(id), id: setTimeout(step, 0) };
+  }
+
+  function warmTables() {
+    const sigma = store.getState().scenario.sigma_permille;
+    if (destroyed || warm.done.has(sigma)) return;
+    const promise = host.warmTables({ sigmaPermille: sigma });
+    warm.pending = promise;
+    render(store.getState());
+    promise.then(() => {}, () => {}).finally(() => {
+      warm.done.add(sigma);
+      if (warm.pending === promise) warm.pending = null;
+      if (destroyed) return;
+      render(store.getState());
+      scheduleWarm();
+    });
   }
 
   /** From a verdict: opens `seed`'s world in both arms of the frozen spec (design §7.1). */
@@ -478,8 +543,9 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
   const transport = renderTransport(transportHost, { store, playback });
 
   const nowChip = el("span", { class: "fl-chip-replay", "data-role": "now-chip" });
+  const nowState = el("p", { class: "fl-absent", "data-role": "now-state" });
   const nowRows = el("div", { "data-role": "now-rows" });
-  regions.now.replaceChildren(el("div", { class: "fl-now__row" }, [el("h2", { class: "fl-small-label" }, labels.REGISTERS.nowThisReplay), nowChip]), nowRows);
+  regions.now.replaceChildren(el("div", { class: "fl-now__row" }, [el("h2", { class: "fl-small-label" }, labels.REGISTERS.nowThisReplay), nowChip]), nowState, nowRows);
 
   const acrossChip = el("h2", { class: "fl-chip-across", "data-role": "across-chip" });
   const acrossRows = el("div", { "data-role": "across-rows" });
@@ -489,11 +555,16 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
     acrossTable.hidden = !acrossTable.hidden;
     acrossToggle.setAttribute("aria-pressed", acrossTable.hidden ? "false" : "true");
   }, "across-table-toggle", { "aria-pressed": "false" });
-  regions.across.replaceChildren(acrossChip, acrossRows, acrossToggle, acrossTable);
+  const acrossState = el("p", { class: "fl-absent", "data-role": "across-state" });
+  regions.across.replaceChildren(acrossChip, acrossState, acrossRows, acrossToggle, acrossTable);
 
   const learnHost = el("div", { class: "fl-charts__wide", "data-role": "learn" });
   const experimentHost = el("div", { class: "fl-charts__wide", "data-role": "experiment" });
   const forkHost = el("section", { class: "fl-charts__wide fl-panel", "data-role": "fork", "aria-label": labels.FORK.heading });
+  // The heading stays in place across fork renders, so focus moved to it by Open the fork is never dropped.
+  const forkHeading = el("h2", { class: "fl-title", tabindex: "-1", "data-role": "fork-heading" }, labels.FORK.heading);
+  const forkBody = el("div", { "data-role": "fork-body" });
+  forkHost.replaceChildren(forkHeading, forkBody);
   forkHost.hidden = true;
   const armHost = el("div", { class: "fl-charts__wide", "data-role": "arm-comparison" });
   const chartSet = el("div", { class: "fl-charts__set", "data-role": "sandbox-charts" });
@@ -554,12 +625,13 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
       if (runs.copyStatus !== null) children.push(el("p", { role: "status", "data-role": "copy-status" }, runs.copyStatus === "copied" ? labels.VERDICT.copied : labels.VERDICT.copyFailed));
       return [el("div", { class: "fl-error", "data-role": "invariant-failure" }, children)];
     }
+    if (warm.pending !== null) return [el("p", { class: "fl-muted", role: "status", "data-role": "preparing" }, labels.STATES.preparing)];
     return [];
   }
 
   function renderRunStatus(state) {
     const run = state.run;
-    const key = [run.status, run.id, run.progress?.done, run.progress?.total, run.violation, runs.copyStatus];
+    const key = [run.status, run.id, run.progress?.done, run.progress?.total, run.violation, runs.copyStatus, warm.pending];
     if (sameKey(key, memo.status)) return;
     memo.status = key;
     runStatus.replaceChildren(...runStatusNodes(state));
@@ -587,7 +659,11 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
       ["highways", labels.NOW_PANEL.carsOnHighways, text(total(highway))],
     ];
     setText(nowChip, run.log !== null && run.selectedSeed !== null ? labels.thisReplayChip(run.selectedSeed) : labels.REGISTERS.thisReplay);
-    keyedList(nowRows, rows, { key: (row) => row[0], create: textRow, update: updateTextRow });
+    // Before any run one state line stands for every row (the values stay absent, never zero).
+    const before = run.log === null && run.status !== "void";
+    nowState.hidden = !before;
+    setText(nowState, before ? missing : "");
+    keyedList(nowRows, before ? [] : rows, { key: (row) => row[0], create: textRow, update: updateTextRow });
   }
 
   function renderAcross(state) {
@@ -606,7 +682,10 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
     if (summaries.length === 0 && state.run.status === "void") {
       for (const row of rows) row[2] = labels.absentValue(labels.ABSENT_REASONS.voidRun);
     }
-    keyedList(acrossRows, rows, { key: (row) => row[0], create: textRow, update: updateTextRow });
+    const before = summaries.length === 0 && state.run.status !== "void";
+    acrossState.hidden = !before;
+    setText(acrossState, before ? labels.absentValue(labels.ABSENT_REASONS.notRunYet) : "");
+    keyedList(acrossRows, before ? [] : rows, { key: (row) => row[0], create: textRow, update: updateTextRow });
     const heads = [labels.CHART_TEXT.heads.seed, labels.NOW_PANEL.waitP90, labels.NOW_PANEL.unservedShare];
     const cells = summaries.map((s) => [
       String(s.seed),
@@ -681,13 +760,13 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
     memo.forkHandles = [];
     if (fork.status === "closed" && !runs.forkNotice) {
       forkHost.hidden = true;
-      forkHost.replaceChildren();
+      forkBody.replaceChildren();
       return;
     }
     forkHost.hidden = false;
     forkHost.classList.toggle("fl-stale", fork.stale === true);
     // The §1.3 caption belongs to the two drawn runs, so carForkCharts places it once, above them.
-    const children = [el("h2", { class: "fl-title" }, labels.FORK.heading)];
+    const children = [];
     if (shownVerdictSeed(state) !== null) children.push(el("p", { class: "fl-muted", "data-role": "verdict-seed-note" }, labels.FORK.verdictSeedNote));
     if (fork.status === "closed") {
       children.push(el("p", { "data-role": "fork-needs-change" }, labels.FORK.needsChange));
@@ -704,7 +783,7 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
       children.push(group.node);
     }
     children.push(button(labels.FORK.close, () => closeFork(), "fork-close"));
-    forkHost.replaceChildren(...children);
+    forkBody.replaceChildren(...children);
   }
 
   function renderArms(state) {
@@ -779,12 +858,16 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
   cleanups.push(playback.onChange(() => render(store.getState())));
   cleanups.push(store.subscribe(createAnnouncer(live, announcement)));
   cleanups.push(watchReducedMotion(store, doc.documentElement));
+  cleanups.push(store.subscribe(() => scheduleWarm()));
   if (ENGINE_PATHS.includes(host.path)) reportPath();
   else Promise.resolve(host.ready).then(reportPath, () => {});
   render(store.getState());
+  scheduleWarm();
 
   function destroy() {
     if (destroyed) return;
+    if (warm.idle !== null) warm.idle.cancel(warm.idle.id);
+    warm.idle = null;
     host.cancel();
     destroyed = true;
     for (const stop of cleanups.splice(0)) stop();

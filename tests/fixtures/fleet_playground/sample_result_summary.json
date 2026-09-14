@@ -4,7 +4,7 @@
   "evidence_status": "NOT_EVIDENCE",
   "decision_authority": "NONE",
   "model_version": "playground-model 0.1",
-  "playground_spec": "playground-spec:8d4d8cd5",
+  "playground_spec": "playground-spec:fbcabddf",
   "question": "With trips between depot visits set to 10 in both arms, does the verdict read no change?",
   "variation_axis": "parameter:DEP-7",
   "baseline_value": 10,
@@ -42,8 +42,8 @@
   "primary": {
     "metric": "wait.p90_s",
     "role": "PRIMARY",
-    "baseline_mean": 3727.685,
-    "candidate_mean": 3727.685,
+    "baseline_mean": 2608.6800000000003,
+    "candidate_mean": 2608.6800000000003,
     "paired_deltas": [
       0,
       0,
@@ -83,8 +83,8 @@
     {
       "metric": "unserved.fraction",
       "role": "GUARDRAIL",
-      "baseline_mean": 0.25472504004271224,
-      "candidate_mean": 0.25472504004271224,
+      "baseline_mean": 0.04025627335824881,
+      "candidate_mean": 0.04025627335824881,
       "paired_deltas": [
         0,
         0,
@@ -146,8 +146,8 @@
     {
       "metric": "requests.served",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 1395.9,
-      "candidate_mean": 1395.9,
+      "baseline_mean": 1797.6,
+      "candidate_mean": 1797.6,
       "paired_deltas": [
         0,
         0,
@@ -176,8 +176,8 @@
     {
       "metric": "requests.unserved",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 477.1,
-      "candidate_mean": 477.1,
+      "baseline_mean": 75.4,
+      "candidate_mean": 75.4,
       "paired_deltas": [
         0,
         0,
@@ -206,8 +206,8 @@
     {
       "metric": "unserved.fraction",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 0.25472504004271224,
-      "candidate_mean": 0.25472504004271224,
+      "baseline_mean": 0.04025627335824881,
+      "candidate_mean": 0.04025627335824881,
       "paired_deltas": [
         0,
         0,
@@ -236,8 +236,8 @@
     {
       "metric": "wait.p50_s",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 727.05,
-      "candidate_mean": 727.05,
+      "baseline_mean": 546.1,
+      "candidate_mean": 546.1,
       "paired_deltas": [
         0,
         0,
@@ -266,8 +266,8 @@
     {
       "metric": "wait.population_n",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 1395.9,
-      "candidate_mean": 1395.9,
+      "baseline_mean": 1797.6,
+      "candidate_mean": 1797.6,
       "paired_deltas": [
         0,
         0,
@@ -296,8 +296,8 @@
     {
       "metric": "vehicle.empty_drive_fraction",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 0.5239683910165501,
-      "candidate_mean": 0.5239683910165501,
+      "baseline_mean": 0.43442148514044804,
+      "candidate_mean": 0.43442148514044804,
       "paired_deltas": [
         0,
         0,
@@ -326,8 +326,8 @@
     {
       "metric": "exposure.congested_empty_s",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 464545.25,
-      "candidate_mean": 464545.25,
+      "baseline_mean": 650481.75,
+      "candidate_mean": 650481.75,
       "paired_deltas": [
         0,
         0,
@@ -356,8 +356,8 @@
     {
       "metric": "exposure.congested_loaded_s",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 650720.6,
-      "candidate_mean": 650720.6,
+      "baseline_mean": 940450.7,
+      "candidate_mean": 940450.7,
       "paired_deltas": [
         0,
         0,
@@ -386,8 +386,8 @@
     {
       "metric": "fleet.available_fraction",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 0.33643567019400356,
-      "candidate_mean": 0.33643567019400356,
+      "baseline_mean": 0.5405102637235452,
+      "candidate_mean": 0.5405102637235452,
       "paired_deltas": [
         0,
         0,
@@ -416,8 +416,8 @@
     {
       "metric": "depot.bay_wait_p90_s",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 6783.68,
-      "candidate_mean": 6783.68,
+      "baseline_mean": 6894.010000000002,
+      "candidate_mean": 6894.010000000002,
       "paired_deltas": [
         0,
         0,
@@ -446,8 +446,8 @@
     {
       "metric": "depot.turnaround_completed_p90_s",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 14772.314999999999,
-      "candidate_mean": 14772.314999999999,
+      "baseline_mean": 8515.974999999999,
+      "candidate_mean": 8515.974999999999,
       "paired_deltas": [
         0,
         0,
@@ -476,8 +476,8 @@
     {
       "metric": "depot.censored_visits",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 19.95,
-      "candidate_mean": 19.95,
+      "baseline_mean": 2.8,
+      "candidate_mean": 2.8,
       "paired_deltas": [
         0,
         0,
@@ -506,8 +506,8 @@
     {
       "metric": "depot.parking_peak_fraction{depot=SF-1}",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 0.22333333333333338,
-      "candidate_mean": 0.22333333333333338,
+      "baseline_mean": 0.33749999999999997,
+      "candidate_mean": 0.33749999999999997,
       "paired_deltas": [
         0,
         0,
@@ -536,8 +536,8 @@
     {
       "metric": "depot.parking_peak_fraction{depot=SF-2}",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 0.5933333333333332,
-      "candidate_mean": 0.5933333333333332,
+      "baseline_mean": 0.755,
+      "candidate_mean": 0.755,
       "paired_deltas": [
         0,
         0,
@@ -566,8 +566,8 @@
     {
       "metric": "depot.parking_peak_fraction{depot=SJ-1}",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 0.4716666666666667,
-      "candidate_mean": 0.4716666666666667,
+      "baseline_mean": 0.7650000000000001,
+      "candidate_mean": 0.7650000000000001,
       "paired_deltas": [
         0,
         0,
@@ -596,8 +596,8 @@
     {
       "metric": "depot.parking_peak_fraction{depot=EB-1}",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 0.4966666666666667,
-      "candidate_mean": 0.4966666666666667,
+      "baseline_mean": 0.6466666666666665,
+      "candidate_mean": 0.6466666666666665,
       "paired_deltas": [
         0,
         0,
@@ -686,8 +686,8 @@
     {
       "metric": "fleet.placement_gap",
       "role": "DESCRIPTIVE",
-      "baseline_mean": 18,
-      "candidate_mean": 18,
+      "baseline_mean": 8,
+      "candidate_mean": 8,
       "paired_deltas": [
         0,
         0,

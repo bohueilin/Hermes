@@ -9,7 +9,11 @@
 //   counter (and so the service cadence) advances when the depot leg starts. A diversion keeps the visit number.
 // - Depot assignment logs a decision event DEPOT_ASSIGNED {car, depot, detail: {purpose, cause}}.
 // - The recall and the release act on the cars in the stated state when their clock event pops; a car that reaches
-//   that state as a consequence at the same second is not moved by that event.
+//   that state as a consequence at the same second is not moved by that event. The recall acts once: it sends IDLE
+//   cars and marks cars on a pickup or a trip, and a marked car goes to a depot when that trip completes, if the
+//   completion falls before the release (or the window end when the release is off); the mark clears at completion.
+//   This replaces the pending recall of design 5.3 (the Recall paragraph, POL-3, the ON_TRIP rows and the POL-3
+//   policy row), where a car dispatched from a depot during the recall also returned; that text awaits amendment.
 // - Access and in-area segments carry cls "IN_AREA" (the congestion row they read); PULL_OUT carries nulls.
 // - With keepLogs false the event list and snapshots are empty; intervals, visits, requests and depot series stay,
 //   because the metrics read them.
@@ -246,7 +250,7 @@ export function createRun(scenario, world, { seed, defect = null, keepLogs = tru
   const cars = specs.map((s, idx) => ({
     id: s.id, idx, home_area: s.home_area, home_depot: s.home_depot, state: s.state, task: null, blocked: false,
     loc: s.state === "IDLE" ? { area: s.location.area } : { depot: s.location.depot },
-    trips: s.trips_since_visit, visits: s.visits, request: -1, extra: [], target: null, serviceDue: false,
+    trips: s.trips_since_visit, visits: s.visits, request: -1, extra: [], target: null, serviceDue: false, recalled: false,
     cleanDone: false, visit: null, legEnd: 0, iv: null, intervals: [], bucket: null,
   }));
   const carById = new Map(cars.map((c) => [c.id, c]));
@@ -552,7 +556,10 @@ export function createRun(scenario, world, { seed, defect = null, keepLogs = tru
     push(leg.t1, K.DEPOT_ARRIVED, car.idx);
   };
 
-  const recallPending = (t) => t >= policies.recall_s && t < releaseOrEnd && t < end_s;
+  // The recall acts once, which replaces the pending recall that design 5.3 still states (see the header): RECALL_ORDERED marks the cars on a pickup or a trip at that second, and only a
+  // marked car goes to a depot when its trip completes, while the completion falls before the release (or the window
+  // end with the release off). A car dispatched after the recall is never marked.
+  const recallApplies = (car, t) => car.recalled && t < releaseOrEnd && t < end_s;
 
   const assign = (car, r, rIndex, t, planned_s) => {
     flag(checkAssignment({ car: car.id, held: car.request >= 0 ? requests[car.request].id : null, request: r.id, t }));
@@ -654,9 +661,11 @@ export function createRun(scenario, world, { seed, defect = null, keepLogs = tru
     car.extra = [];
     car.loc = { area: r.dest };
     car.trips += 1;
+    const recalled = recallApplies(car, t);
+    car.recalled = false;
     if (car.trips >= scenario.trips_between_visits) {
       goDepot(car, t, "SERVICE_DUE", "TRIP_COMPLETED");
-    } else if (recallPending(t)) {
+    } else if (recalled) {
       goDepot(car, t, "RECALL", "TRIP_COMPLETED");
     } else {
       const event = useDefect("illegal_transition") ? "PICKUP_COMPLETED" : "TRIP_COMPLETED";
@@ -767,6 +776,7 @@ export function createRun(scenario, world, { seed, defect = null, keepLogs = tru
   handlers[K.RECALL_ORDERED] = (t) => {
     if (t > end_s) return;
     log(t, "RECALL_ORDERED");
+    for (const car of cars) if (car.state === "ENROUTE_PICKUP" || car.state === "ON_TRIP") car.recalled = true;
     const idle = cars.filter((c) => c.state === "IDLE");
     for (const car of idle) {
       bucketRemove(car);

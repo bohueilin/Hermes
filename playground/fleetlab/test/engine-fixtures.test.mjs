@@ -52,7 +52,7 @@
 //
 // Clock seconds used below: D1 05:00 = 18,000 (window start); D1 10:00 = 36,000; D1 17:00 = 61,200;
 // D1 18:00 = 64,800; D1 19:00 = 68,400; D1 20:00 = 72,000; D2 00:00 = 86,400; D2 00:30 = 88,200 (recall);
-// D2 05:00 = 104,400; D2 05:45 = 107,100 (release); D2 06:00 = 108,000; D2 10:00 = 122,400 (window end).
+// D2 02:00 = 93,600; D2 05:00 = 104,400; D2 05:45 = 107,100 (release); D2 06:00 = 108,000; D2 10:00 = 122,400 (window end).
 // Hours 24 to 29 (D2 00:00 to 06:00) and hours 9 to 15 and 33 to 35 carry multiplier 1000 in every row.
 // Default times: pull_out 120, depot access 300, intake 180, clean 1200, service 2700, patience 600,
 // in-area SF 360, PEN 480, SJ 480, EB 420. Free flow: H1 1500, L1 3300, H2 3300, L2 6600, H3 1200, L3 2700,
@@ -205,7 +205,7 @@ function segmentArea(seg, scenario) {
 //   Release 107,100: SJ-1 is outside SF: MORNING_RELEASE, REPOSITIONING. Leg from {depot SJ-1} to {area SF}:
 //   PULL_OUT 107,100 to 107,220; ACCESS OUT SJ-1 hour 29 (1000) 300 s to 107,520; H2 SJ>SF chosen at 107,520
 //   (3300 against L2 6600), hours 29 and 30 at 1000: 3300 s to 110,820 (D2 06:47). REPOSITION_COMPLETED 110,820,
-//   IDLE in SF until the window end (the recall stopped pending at 107,100).
+//   IDLE in SF until the window end (the recall acted once, at 88,200, when SF-017 was already ready at SJ-1).
 //   Out of service 69,570 - 66,600 = 2970 s (49.5 min). Depot leg congested: 390 s. Release leg: 0 s.
 //
 // Congested empty seconds over [21,600, 122,400): the pickup leg adds 624 s in both arms (IN_AREA 1300, empty).
@@ -522,9 +522,11 @@ describe("3. service visit re-queued at a one-service-bay depot", () => {
 //
 // SF-003 (home depot SF-1) IDLE in SF, 0 trips, 0 visits. Rider r-SF-0 at 88,000 (hour 24, all 1000), SF to PEN.
 // 88,000 REQUEST_ASSIGNED; pickup IN_AREA SF 360 s; PICKUP_COMPLETED 88,360.
-// 88,200 RECALL_ORDERED: SF-003 is ENROUTE_PICKUP, so it is not moved.
-// 88,360 trip: H1 SF>PEN (1500 against 3300) to 89,860. TRIP_COMPLETED 89,860: trips 1 < 10, no visit due, the recall
-//   is pending (88,200 to 107,100): TO_DEPOT, purpose RECALL, home depot SF-1.
+// 88,200 RECALL_ORDERED: SF-003 is ENROUTE_PICKUP, so it is not moved now; the recall marks it (the recall acts once,
+//   replacing design 5.3's pending recall: a car on a pickup or a trip at the recall goes to a depot when that trip
+//   completes).
+// 88,360 trip: H1 SF>PEN (1500 against 3300) to 89,860. TRIP_COMPLETED 89,860: trips 1 < 10, no visit due, the car was
+//   on this trip at the recall and 89,860 < release 107,100: TO_DEPOT, purpose RECALL, home depot SF-1.
 //   H1 PEN>SF 89,860 to 91,360; ACCESS IN SF-1 to 91,660; INTAKE to 91,840; CLEAN 91,840 to 93,040; READY 93,040.
 // The request is terminal at 89,860 < window end: T_d = 122,400.
 
@@ -652,7 +654,8 @@ describe("5. gate wait when every lot that can serve the visit is full", () => {
 //   EB-006: H6 SJ>EB to 91,200, ACCESS IN to 91,500.
 // EB-1 stalls held: 4.
 //   90,900 EB-005 arrives, a stall is free: INTAKE (5). 91,080 intake done, bay 1 free: CLEAN (4).
-//   91,420 EB-007 TRIP_COMPLETED: 1 trip, recall pending: TO_DEPOT RECALL EB-1: H6 SJ>EB to 94,420, ACCESS IN 94,720.
+//   91,420 EB-007 TRIP_COMPLETED: 1 trip, on this trip at the recall (assigned at 88,000), before the release:
+//     TO_DEPOT RECALL EB-1: H6 SJ>EB to 94,420, ACCESS IN 94,720.
 //   91,500 EB-006 arrives: INTAKE (5). 91,680 intake done, bay 2 free: CLEAN (4).
 //   92,280 EB-005 clean done, a stall is free: READY_AT_DEPOT (5). No waiting rider.
 //   92,880 EB-006 clean done, no stall free, no service due: IN_SERVICE blocked; it keeps bay 2.
@@ -662,8 +665,8 @@ describe("5. gate wait when every lot that can serve the visit is full", () => {
 // 122,000 r-SF-0: SF-001 from SF-1: 120 + 300 + in-area 360 = 780; EB-1 cars 120 + 300 + H3 1200 = 1620. SF-001.
 //   PULL_OUT 122,000 to 122,120; ACCESS OUT SF-1 to 122,420; IN_AREA SF to 122,780 (PICKUP_COMPLETED).
 //   The stall SF-001 leaves at SF-1 has no blocked car or gate car at SF-1.
-// 122,400 WINDOW_END: drain. 122,780 trip SF>SJ: H2 3300 (L2 6600) to 126,080 (TRIP_COMPLETED); recall no longer
-//   pending, 1 trip: IDLE. r-SF-0 is the last request to become terminal: T_d = 126,080.
+// 122,400 WINDOW_END: drain. 122,780 trip SF>SJ: H2 3300 (L2 6600) to 126,080 (TRIP_COMPLETED); dispatched after the
+//   recall, so not marked, and 1 trip: IDLE. r-SF-0 is the last request to become terminal: T_d = 126,080.
 // At T_d: VISIT_CENSORED for EB-006 (blocked) and EB-007 (gate), in sorted-id order; no leg is open.
 // Depot metrics at EB-1 over arrivals in [21,600, 122,400): visits EB-005 (completed, 92,280 - 90,900 = 1380 s),
 // EB-006 and EB-007 (censored): censored_visits 2; turnaround_p90 absent; completed-only p90 1380;
@@ -1152,12 +1155,16 @@ describe("11. hand-off between a queued car and a blocked car", () => {
 //
 // EB-1 parking 5 with 4 stall holds (3 for the whole run, 1 until 96,000); default bays (2 cleaning, 1 service), and
 // the service bay held until S. EB-001 IDLE at PEN, visits 2 (visit 3: clean then service). EB-002 READY_AT_DEPOT at
-// SF-1 (visits 0), which fills the fifth stall at EB-1 while EB-001's clean ends.
+// SF-1 (visits 0, trips since its last visit 9), which fills the fifth stall at EB-1 while EB-001's clean ends.
+// Changed with the recall that acts once: EB-002 used to hold 0 trips and reach EB-1 on the recall, pending since
+// 88,200; dispatched at 89,900, after the recall, it would now end IDLE at EB. With 9 trips its trip is its tenth, so
+// it reaches EB-1 on a visit due instead: the same depot (home_depot EB-1), the same leg and every time below unchanged.
 //   88,200 recall: EB-001 H5 PEN>EB 2400 + access 300: DEPOT_ARRIVED 90,900 (5 held), INTAKE to 91,080, CLEAN 91,080 to
 //     92,280 (4 held). EB-002 is ready at a depot and keeps its course.
 //   89,900 r-SF-0 (SF to EB): EB-002 is the only dispatchable car. Pickup PULL_OUT 89,900 to 90,020, ACCESS OUT SF-1 to
-//     90,320, IN_AREA SF 360 to 90,680. Trip H3 SF>EB 1200 (L3 2700) to 91,880; 1 trip, recall pending: TO_DEPOT
-//     (home_depot EB-1), ACCESS IN to 92,180. DEPOT_ARRIVED 92,180: 5 held; INTAKE to 92,360.
+//     90,320, IN_AREA SF 360 to 90,680. Trip H3 SF>EB 1200 (L3 2700) to 91,880; trips 9 + 1 = 10 >= 10: visit 1 (1 % 3
+//     != 0, clean only), purpose SERVICE_DUE: TO_DEPOT (home_depot EB-1), ACCESS IN to 92,180. DEPOT_ARRIVED 92,180: 5
+//     held; INTAKE to 92,360.
 //   92,280 EB-001's clean is done: service due, the service bay is held, no stall free: IN_SERVICE CLEAN blocked. Only
 //     one of 2 cleaning bays is busy, so no hand-off.
 // 12a (S = 92,300). 92,300 the service hold ends: the freed-bay rule takes first the car blocked in a cleaning bay whose
@@ -1176,7 +1183,7 @@ describe("11. hand-off between a queued car and a blocked car", () => {
 describe("12. leaving the blocked state", () => {
   const scenario = applyAxis(defaultScenario(), "parameter:DEP-2.EB-1", 5);
   const fixture = (serviceUntil) => ({
-    cars: [car("EB-001", "EB", "EB-1", { area: "PEN" }, { visits: 2 }), readyCar("EB-002", "EB", "EB-1", "SF-1")],
+    cars: [car("EB-001", "EB", "EB-1", { area: "PEN" }, { visits: 2 }), car("EB-002", "EB", "EB-1", { depot: "SF-1" }, { state: "READY_AT_DEPOT", trips_since_visit: 9 })],
     requests: [{ id: "r-SF-0", time_s: 89900, origin: "SF", dest: "EB" }],
     depotOccupancy: { "EB-1": { stalls: [FAR, FAR, FAR, 96000], cleaning: [], service: [serviceUntil] } },
   });
@@ -1198,6 +1205,8 @@ describe("12. leaving the blocked state", () => {
 
   test("12a: a service bay frees for a car blocked in a cleaning bay, then a stall frees for it blocked in service", () => {
     const result = runFixture(scenario, fixture(92300));
+    // EB-002 reaches EB-1 on a visit due (its tenth trip), not on the recall: it was dispatched after 88,200.
+    assert.equal(intervalAt(result, "EB-002", "TO_DEPOT", 91880).purpose, "SERVICE_DUE");
     assert.deepEqual(spans(result, "EB-001"), [
       ...shared,
       ["IN_SERVICE:CLEAN:blocked", 92280, 92300],
@@ -1248,7 +1257,8 @@ describe("12. leaving the blocked state", () => {
 // two until 90,600 and two until 91,700. SF-1, SF-2 and SJ-1 full for the whole run. Clean-only visits (visits 0).
 // Cars: EB-001 IDLE at SJ, EB-002 at PEN, EB-003 and EB-004 at EB, EB-005 at SF. Rider r-SF-0 at 87,500, SF to PEN.
 //   87,500 r-SF-0: EB-005 is nearest (in-area 360; EB 1200, PEN 1500, SJ 3300 by route). Pickup to 87,860; trip H1
-//     SF>PEN 1500 to 89,360; recall pending: TO_DEPOT EB-1 by H5 PEN>EB 2400 + access 300: DEPOT_ARRIVED 92,060.
+//     SF>PEN 1500 to 89,360; on this trip at the recall 88,200: TO_DEPOT EB-1 by H5 PEN>EB 2400 + access 300:
+//     DEPOT_ARRIVED 92,060.
 //   88,200 recall: EB-001 H6 3000 + 300: 91,500. EB-002 H5 2400 + 300: 90,900. EB-003, EB-004 access 300: 88,500.
 //   88,500 EB-003, EB-004 claim stalls (3 + 2 = 5); INTAKE to 88,680; every cleaning bay held: QUEUED_SERVICE.
 //   90,600 two cleaning holds end: EB-003 then EB-004 start CLEAN 90,600 to 91,800 (3 held).
@@ -1344,8 +1354,8 @@ describe("13. freed-stall priority: blocked before gate, then vehicle id", () =>
 //     EB 420 to 88,240.
 //   87,900 r-SF-0: EB-003 and EB-004 at SF plan 360: EB-003. Pickup to 88,260; trip H3 SF>EB 1200 (L3 2700) to 89,460.
 //   87,960 r-SF-1: EB-004 at SF 360 (EB-002 at EB plans H3 1200): EB-004. Pickup to 88,320; trip to 89,520.
-//   88,200 recall: only EB-002 is IDLE: ACCESS IN to 88,500. The others finish their trips while it is pending and
-//     go to their home depot EB-1: EB-001 88,240 to 88,540; EB-003 89,460 to 89,760; EB-004 89,520 to 89,820.
+//   88,200 recall: only EB-002 is IDLE: ACCESS IN to 88,500. The others are on a pickup or a trip at the recall, so they
+//     finish and go to their home depot EB-1: EB-001 88,240 to 88,540; EB-003 89,460 to 89,760; EB-004 89,520 to 89,820.
 //   88,500 EB-002 arrives [5]; INTAKE to 88,680; CLEAN 88,680 to 89,880 [4 after EB-001 below].
 //   88,540 EB-001 arrives [6]; INTAKE to 88,720; CLEAN 88,720 to 89,920 [4].
 //   89,760 EB-003 arrives [5], INTAKE to 89,940. 89,820 EB-004 arrives [6], INTAKE to 90,000.
@@ -1526,13 +1536,16 @@ describe("14. congested seconds follow each second's hour, not the segment's dep
 //     100,400; READY 100,400.
 // 15c. EB-1 parking 5 (DEP-2.EB-1), 2 cleaning bays and 1 service bay. Holds: stalls two for the whole run and one until
 //   100,000; one cleaning bay for the whole run; the service bay until 92,300. EB-001 IDLE at EB and EB-002 IDLE at PEN,
-//   both visits 2 (service due); EB-003 READY_AT_DEPOT at SF-1, visits 0. Rider r-EB-0 at 89,860, EB to EB.
+//   both visits 2 (service due); EB-003 READY_AT_DEPOT at SF-1, visits 0, trips since its last visit 9. Rider r-EB-0 at
+//   89,860, EB to EB. Changed with the recall that acts once: EB-003 used to hold 0 trips and reach EB-1 on the pending
+//   recall; dispatched at 89,860, after the recall, it would now end IDLE at EB. With 9 trips its trip is its tenth, so
+//   it reaches EB-1 on a visit due: the same depot, leg and times.
 //   Stalls held at EB-1 in brackets.
 //   88,200 recall: EB-001 ACCESS IN to 88,500; EB-002 H5 PEN>EB 2400 (L5 4800) + 300 to 90,900.
 //   88,500 EB-001 arrives [4]; INTAKE to 88,680; the free cleaning bay: CLEAN 88,680 to 89,880 [3].
 //   89,860 r-EB-0: EB-003 is the only dispatchable car: PULL_OUT to 89,980, ACCESS OUT SF-1 to 90,280, H3 SF>EB 1200
-//     (L3 2700) to 91,480; trip IN_AREA EB 420 to 91,900; 1 trip, recall pending: TO_DEPOT EB-1 (home), ACCESS IN to
-//     92,200. Visit 1, clean only.
+//     (L3 2700) to 91,480; trip IN_AREA EB 420 to 91,900; trips 9 + 1 = 10 >= 10: visit due, purpose SERVICE_DUE:
+//     TO_DEPOT EB-1 (home), ACCESS IN to 92,200. Visit 1 (1 % 3 != 0), clean only.
 //   89,880 EB-001's clean ends: service due, the service bay is held, a stall is free: QUEUED_SERVICE [4].
 //   90,900 EB-002 arrives [5]; INTAKE to 91,080; the free cleaning bay: CLEAN 91,080 to 92,280 [4].
 //   92,200 EB-003 arrives [5]; INTAKE to 92,380.
@@ -1612,7 +1625,7 @@ describe("15. queue order and bay priority", () => {
       cars: [
         car("EB-001", "EB", "EB-1", { area: "EB" }, { visits: 2 }),
         car("EB-002", "EB", "EB-1", { area: "PEN" }, { visits: 2 }),
-        readyCar("EB-003", "EB", "EB-1", "SF-1"),
+        car("EB-003", "EB", "EB-1", { depot: "SF-1" }, { state: "READY_AT_DEPOT", trips_since_visit: 9 }),
       ],
       requests: [{ id: "r-EB-0", time_s: 89860, origin: "EB", dest: "EB" }],
       depotOccupancy: { "EB-1": { stalls: [FAR, FAR, 100000], cleaning: [FAR], service: [92300] } },
@@ -1645,6 +1658,7 @@ describe("15. queue order and bay priority", () => {
       ["IN_SERVICE:CLEAN", 92380, 93580],
       ["READY_AT_DEPOT", 93580, 122400],
     ]);
+    assert.equal(intervalAt(result, "EB-003", "TO_DEPOT", 91900).purpose, "SERVICE_DUE");
     expectInOrder(result.events, [
       { t: 92280, kind: "SERVICE_COMPLETED", car: "EB-002" },
       { t: 92300, kind: "FIXTURE_HOLD_ENDED", depot: "EB-1" },
@@ -1780,35 +1794,63 @@ describe("16. nearest_depot_with_capacity with a car inbound and then arrived", 
 });
 
 // ---------------------------------------------------------------------------------------------------------------
-// 17. The recall stops pending at the release time: a trip that ends then or later ends IDLE (design 5.3)
+// 17. The recall acts once: only a car on a pickup or a trip at the recall follows it (replaces design 5.3's pending
+//     recall, whose last sentence still reads that a car taken from READY_AT_DEPOT during the recall returns)
 // ---------------------------------------------------------------------------------------------------------------
 //
-// "A recall is pending from POL-3's time until POL-4's time." Default scenario: recall 88,200, release 107,100. SF-001
-// (home SF-1) IDLE in SF, 0 trips, 0 visits. Hours 24 to 30 carry 1000 in every row (hour 30 is D2 06:00).
-// Both arms: 88,200 recall: ACCESS IN SF-1 to 88,500; INTAKE to 88,680; CLEAN to 89,880; READY (visit 1). 107,100
-// release: SF-1 is in SF: no move. A dispatch from SF-1 to the SF centre: PULL_OUT 120 + ACCESS OUT 300 + IN_AREA 360 =
-// 780; the trip SF to SF: 360.
-// 17a. r-SF-0 at 108,000: pickup 108,000 to 108,780; trip to 109,140. 109,140 >= 107,100: the recall is no longer
-//   pending and 1 trip < 10: IDLE in SF until 122,400. One visit (arrival 88,500); no depot assignment after 88,200.
-// 17b. r-SF-0 at 105,960: pickup 105,960 to 106,740; trip to 107,100. TRIP_COMPLETED (class 0) pops before
-//   MORNING_RELEASE (class 3) at 107,100. The pending window is [88,200, 107,100): it has ended, so IDLE in SF.
+// Changed with the recall that acts once. The former case 17 read "a recall is pending from POL-3's time until POL-4's
+// time": every trip ending in [88,200, 107,100) sent its car to a depot. Now RECALL_ORDERED sends the IDLE cars and marks
+// the cars on a pickup or a trip; only a marked car goes to a depot when that trip completes, and only before the release
+// (or the window end when the release is off). A car dispatched after the recall is never marked.
+// Default scenario unless stated: recall 88,200, release 107,100. SF-001 (home SF-1), 0 trips, 0 visits. Hours 24 to 30
+// carry 1000 in every row (hour 30 is D2 06:00). A dispatch from SF-1 to the SF centre: PULL_OUT 120 + ACCESS OUT 300 +
+// IN_AREA SF 360 = 780; the trip SF to SF: 360.
+// 17a to 17c, SF-001 IDLE in SF: 88,200 recall: ACCESS IN SF-1 to 88,500; INTAKE to 88,680; CLEAN to 89,880; READY
+//   (visit 1). 107,100 release: SF-1 is in SF: no move.
+// 17a. r-SF-0 at 93,600 (D2 02:00), SF to PEN: SF-001 from READY_AT_DEPOT: pickup 93,600 to 94,380; trip H1 SF>PEN (1500
+//   against L1 3300) 94,380 to 95,880. TRIP_COMPLETED 95,880: 1 trip < 10, no visit due; SF-001 was ready at SF-1 at the
+//   recall, not on a pickup or a trip, so it is not marked: IDLE at PEN until 122,400. Under the former pending rule it
+//   would have left for a depot (purpose RECALL) at 95,880.
+// 17b. r-SF-0 at 108,000: pickup 108,000 to 108,780; trip to 109,140; dispatched after the recall: IDLE in SF.
+// 17c. r-SF-0 at 105,960: pickup 105,960 to 106,740; trip to 107,100; dispatched after the recall: IDLE in SF.
+// 17d. Recall moved to 106,000 (POL-3; the release 107,100 is still later). SF-001 READY_AT_DEPOT at SF-1 from the start.
+//   r-SF-0 at 105,960: pickup 105,960 to 106,740 (the recall at 106,000 marks SF-001 on this pickup and finds no IDLE car);
+//   trip to 107,100. TRIP_COMPLETED (class 0) pops before MORNING_RELEASE (class 3) at 107,100; 107,100 is not before the
+//   release, so the mark lapses: IDLE in SF until 122,400, no depot assignment at all.
+// 17e. As 17d with the release off (POL-4 off): 107,100 is before the window end 122,400, so the marked car goes: TO_DEPOT
+//   purpose RECALL to its home depot SF-1, ACCESS IN (hour 29, 1000) 107,100 to 107,400; INTAKE to 107,580; visit 1, clean
+//   only: CLEAN 107,580 to 108,780; READY to 122,400.
 
-describe("17. the recall no longer applies from the release time", () => {
-  const scenario = defaultScenario();
-  const runWith = (time_s) => runFixture(scenario, {
-    cars: [car("SF-001", "SF", "SF-1", { area: "SF" })],
-    requests: [{ id: "r-SF-0", time_s, origin: "SF", dest: "SF" }],
-    depotOccupancy: {},
-  });
+describe("17. the recall acts once", () => {
   const night = [
     ["IDLE", 18000, 88200],
     ["TO_DEPOT", 88200, 88500],
     ["INTAKE", 88500, 88680],
     ["IN_SERVICE:CLEAN", 88680, 89880],
   ];
+  const runWith = (scenario, fixtureCar, rider) => runFixture(scenario, { cars: [fixtureCar], requests: [rider], depotOccupancy: {} });
+  const idleSf = () => car("SF-001", "SF", "SF-1", { area: "SF" });
 
-  test("17a: a trip ending after the release leaves the car IDLE", () => {
-    const result = runWith(108000);
+  test("17a: a car dispatched from READY_AT_DEPOT at day 2 02:00 ends IDLE after its trip", () => {
+    const result = runWith(defaultScenario(), idleSf(), { id: "r-SF-0", time_s: 93600, origin: "SF", dest: "PEN" });
+    assert.equal(result.drain_end_s, WINDOW_END);
+    assert.deepEqual(spans(result, "SF-001"), [
+      ...night,
+      ["READY_AT_DEPOT", 89880, 93600],
+      ["ENROUTE_PICKUP", 93600, 94380],
+      ["ON_TRIP", 94380, 95880],
+      ["IDLE", 95880, 122400],
+    ]);
+    assert.deepEqual(intervalAt(result, "SF-001", "IDLE", 95880).location, { area: "PEN" });
+    assert.deepEqual(intervalAt(result, "SF-001", "ON_TRIP", 94380).segments.map(segText), [["ROUTE", "H1", "SF>PEN", 94380, 95880, true]]);
+    assert.deepEqual(visitsOf(result, "SF-001").map((v) => v.arrival_s), [88500]);
+    assert.deepEqual(eventsOf(result, (e) => e.kind === "DEPOT_ASSIGNED").map((e) => [e.t, e.detail.purpose]), [[88200, "RECALL"]]);
+    const r = requestOf(result, "r-SF-0");
+    assert.deepEqual([r.state, r.pickup_s, r.dropoff_s], ["COMPLETED", 94380, 95880]);
+  });
+
+  test("17b: a car dispatched after the release ends IDLE", () => {
+    const result = runWith(defaultScenario(), idleSf(), { id: "r-SF-0", time_s: 108000, origin: "SF", dest: "SF" });
     assert.deepEqual(spans(result, "SF-001"), [
       ...night,
       ["READY_AT_DEPOT", 89880, 108000],
@@ -1822,8 +1864,8 @@ describe("17. the recall no longer applies from the release time", () => {
     assert.equal(eventsOf(result, (e) => e.t >= 107100 && (e.kind === "DEPOT_ASSIGNED" || e.kind === "DEPOT_ARRIVED")).length, 0);
   });
 
-  test("17b: a trip ending at the release second leaves the car IDLE", () => {
-    const result = runWith(105960);
+  test("17c: a car dispatched between the recall and the release, whose trip ends at the release second, ends IDLE", () => {
+    const result = runWith(defaultScenario(), idleSf(), { id: "r-SF-0", time_s: 105960, origin: "SF", dest: "SF" });
     assert.deepEqual(spans(result, "SF-001"), [
       ...night,
       ["READY_AT_DEPOT", 89880, 105960],
@@ -1837,6 +1879,41 @@ describe("17. the recall no longer applies from the release time", () => {
     ]);
     assert.deepEqual(visitsOf(result, "SF-001").map((v) => v.arrival_s), [88500]);
     assert.deepEqual(eventsOf(result, (e) => e.kind === "DEPOT_ASSIGNED").map((e) => e.t), [88200]);
+  });
+
+  const lateRecall = (release) => applyAxis(applyAxis(defaultScenario(), "parameter:POL-3", 106000), "parameter:POL-4", release);
+  const readySf = () => readyCar("SF-001", "SF", "SF-1", "SF-1");
+  const rider = { id: "r-SF-0", time_s: 105960, origin: "SF", dest: "SF" };
+  const marked = [
+    ["READY_AT_DEPOT", 18000, 105960],
+    ["ENROUTE_PICKUP", 105960, 106740],
+    ["ON_TRIP", 106740, 107100],
+  ];
+
+  test("17d: a car marked on its pickup whose trip ends at the release second ends IDLE", () => {
+    const result = runWith(lateRecall(107100), readySf(), rider);
+    assert.deepEqual(spans(result, "SF-001"), [...marked, ["IDLE", 107100, 122400]]);
+    expectInOrder(result.events, [
+      { t: 105960, kind: "REQUEST_ASSIGNED", car: "SF-001" },
+      { t: 106000, kind: "RECALL_ORDERED" },
+      { t: 107100, kind: "TRIP_COMPLETED", car: "SF-001" },
+      { t: 107100, kind: "MORNING_RELEASE" },
+    ]);
+    assert.equal(eventsOf(result, (e) => e.kind === "DEPOT_ASSIGNED").length, 0);
+  });
+
+  test("17e: with the release off the marked car goes to its depot when the trip completes", () => {
+    const result = runWith(lateRecall("off"), readySf(), rider);
+    assert.deepEqual(spans(result, "SF-001"), [
+      ...marked,
+      ["TO_DEPOT", 107100, 107400],
+      ["INTAKE", 107400, 107580],
+      ["IN_SERVICE:CLEAN", 107580, 108780],
+      ["READY_AT_DEPOT", 108780, 122400],
+    ]);
+    const leg = intervalAt(result, "SF-001", "TO_DEPOT", 107100);
+    assert.deepEqual([leg.purpose, leg.depot], ["RECALL", "SF-1"]);
+    assert.deepEqual(eventsOf(result, (e) => e.kind === "DEPOT_ASSIGNED").map((e) => [e.t, e.car, e.depot]), [[107100, "SF-001", "SF-1"]]);
   });
 });
 

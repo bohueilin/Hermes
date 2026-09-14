@@ -915,7 +915,47 @@ export const STATES = frozen({
   reducedMotionOn: "On",
   reducedMotionOff: "Off",
   unknownRule: "a check the teaching model runs on itself failed",
+  preparing: "Preparing the simulator's lookup tables for the first run",
 });
+
+/**
+ * Registered metrics in words, for chart titles and summaries (the verdict card and the setup sheet keep the metric
+ * names). Keys are metric names from src/model/metrics.js.
+ */
+export const METRIC_WORDS = frozen({
+  "requests.total": "requests",
+  "requests.served": "served requests",
+  "requests.unserved": "unserved requests",
+  "unserved.fraction": "unserved share",
+  "wait.p50_s": "wait p50",
+  "wait.p90_s": "wait p90",
+  "wait.population_n": "completed rides counted",
+  "vehicle.empty_drive_fraction": "empty driving share",
+  "exposure.congested_empty_s": "empty driving in congestion",
+  "exposure.congested_loaded_s": "loaded driving in congestion",
+  "fleet.available_fraction": "available share",
+  "depot.bay_wait_p90_s": "bay wait p90",
+  "depot.turnaround_p50_s": "time to ready p50",
+  "depot.turnaround_p90_s": "time to ready p90",
+  "depot.turnaround_completed_p90_s": "time to ready p90, completed visits only",
+  "depot.censored_visits": "visits unfinished at drain end",
+  "depot.parking_peak_fraction": "lot peak share",
+  "depot.diversions": "diversions",
+  "depot.blocked_s": "bay time held with no stall free",
+  "fleet.placement_gap": "placement gap",
+});
+
+/**
+ * A metric in words with its scope: `bay wait p90 at SF-2`, `wait p90 in San Francisco, D2 07:00 to 09:00` (words, a
+ * depot id, an area name and a window already formatted; absent parts are null).
+ */
+export function metricInWords({ words, depot = null, area = null, window = null }) {
+  let text = words;
+  if (depot !== null) text += ` at ${depot}`;
+  if (area !== null) text += ` in ${area}`;
+  if (window !== null) text += `, ${window}`;
+  return text;
+}
 
 /** Sandbox progress: `Replication 3 of 5` (integers). */
 export function replicationProgress(done, total) {
@@ -946,7 +986,7 @@ export const INVARIANT_RULES = frozen({
   P17: "a depot visit was lost",
   P18: "the two arms did not share one world",
   P19: "the scenario broke a loading rule",
-  P20: "a car was moved outside the dispatch or release rules",
+  P20: "a car was moved outside the dispatch, recall or release rules",
   P21: "per-area or per-depot values did not add up to the whole",
 });
 
@@ -1142,6 +1182,7 @@ export const INSPECTOR = frozen({
   timelineHeading: "TIMELINE",
   noVisit: "No depot visit for this car in this replay.",
   noDecision: "No depot decision for this car in this replay.",
+  carsHereNone: "No car is at this depot at this moment.",
   ledgerRows: {
     bayWait: "bay wait p90",
     timeToReady: "time to ready p90",
@@ -1212,6 +1253,36 @@ export function carStateText({ state, task = null, blocked = false }) {
 /** A 10th to 90th percentile range across replications: `9 min to 14 min` (values formatted). */
 export function acrossRange({ low, high }) {
   return `${low} to ${high}`;
+}
+
+/** A value every replication shows alike, in place of a range whose ends match: `0.0% in every replication` (formatted). */
+export function acrossSame(value) {
+  return `${value} in every replication`;
+}
+
+/** The depot inspector's list of cars at the depot now: `Cars at this depot now: 12` (integer). */
+export function carsHereHeading(count) {
+  return `Cars at this depot now: ${String(count)}`;
+}
+
+/** One car in that list: `SJ-022 · in a bay` (car id, state in words). */
+export function carHere({ car, state }) {
+  return `${car} · ${state}`;
+}
+
+/** The button that opens the car inspector for one car: `Inspect SJ-022`. */
+export function inspectCar(car) {
+  return `Inspect ${car}`;
+}
+
+/** The button that pins one car on the map: `Pin SJ-022`. */
+export function pinCarNamed(car) {
+  return `Pin ${car}`;
+}
+
+/** The polite announcement after Open the fork: `Fork opened for SF-017. Both arms run on the same world.` */
+export function forkOpened(car) {
+  return `Fork opened for ${car}. Both arms run on the same world.`;
 }
 
 /** One depot decision: `D1 18:30 · DEPOT_ASSIGNED · SJ-1 · SERVICE_DUE · nearest_depot` (engine words verbatim). */
@@ -1454,8 +1525,8 @@ export const LEARN_CASES = frozen([
     moments: [
       { key: "learn.L1.m1", title: "The morning peak starts" },
       { key: "learn.L1.m2", title: "The evening peak starts" },
-      { key: "learn.L1.m3", title: "Where the fleet is at 17:30" },
-      { key: "learn.L1.m4", title: "After the evening peak" },
+      { key: "learn.L1.m3", title: "After the evening peak" },
+      { key: "learn.L1.m4", title: "Cars reach depots after the evening peak" },
     ],
   },
   {
@@ -1463,7 +1534,7 @@ export const LEARN_CASES = frozen([
     useCase: "UC-09",
     title: "Bays are not always the bottleneck",
     concept: "Which constraint binds; preregistration decides what counts.",
-    question: "If SJ-1 drops from three cleaning bays to one while San Jose is short of cars, does San Jose's evening wait change?",
+    question: "If SJ-1 drops from three cleaning bays to one while San Jose is short of cars and every car visits a depot after 5 trips, does San Jose's evening wait change?",
     note: "Shaped like an exploratory FleetLab run; these numbers are the teaching model's own.",
     moments: [
       { key: "learn.L2.m1", title: "The exploratory FleetLab panel" },
@@ -1478,7 +1549,7 @@ export const LEARN_CASES = frozen([
     concept: "Congestion, depot capacity, the morning release and the next peak together.",
     question: "When a car's depot visit comes due in San Jose, should it drive to its home depot or to the nearest one?",
     moments: [
-      { key: "learn.L3.m1", title: "SF-017 finishes a trip in San Jose" },
+      { key: "learn.L3.m1", title: "SF-005 finishes a trip in San Jose" },
       { key: "learn.L3.m2", title: "SJ-1's lot in B" },
       { key: "learn.L3.m3", title: "The morning release" },
       { key: "learn.L3.m4", title: "SF available cars in the first wave" },
@@ -1495,13 +1566,13 @@ export const LEARN_CAPTIONS = frozen(
 export const LEARN_LOOK = frozen({
   "learn.L1.m1": "At D1 07:00 the demand strip enters the morning peak window you set.",
   "learn.L1.m2": "At D1 16:00 the evening peak window you set opens, with the same fleet as the morning.",
-  "learn.L1.m3": "At D1 17:30 read the fleet-state stack and its At a depot band for this replay.",
-  "learn.L1.m4": "At D1 19:30 the evening peak window has closed; read the waiting riders on the map.",
+  "learn.L1.m3": "At D1 19:30 the evening peak window has closed; read the waiting riders on the map.",
+  "learn.L1.m4": "At D1 20:30 read the fleet-state stack and its At a depot band for this replay.",
   "learn.L2.m1": "The two-zone probe panel quotes an exploratory FleetLab run; read its primary row beside its depot queue row.",
-  "learn.L2.m2": "At D1 18:00 open SJ-1 on the map and read its bay queue while San Jose riders wait.",
+  "learn.L2.m2": "At D1 18:30 open SJ-1 on the map and read its cleaning bays and bay queue while San Jose riders wait.",
   "learn.L2.m3": "Both L2 specs are frozen before either runs, and the second one adds a bay wait guardrail at SJ-1.",
-  "learn.L3.m1": "At D1 18:30 SF-017 is due a depot visit in San Jose; open the fork to see both depot rules on one world.",
-  "learn.L3.m2": "At D1 19:30 read SJ-1's lot in lane B, where each car drives to the nearest depot.",
+  "learn.L3.m1": "At D1 17:14 SF-005 is due a depot visit in San Jose; open the fork to see both depot rules on one world.",
+  "learn.L3.m2": "At D1 21:00 read SJ-1's lot in lane B, where each car drives to the nearest depot.",
   "learn.L3.m3": "At D2 05:45 every ready car at a depot outside its home area drives home.",
   "learn.L3.m4": "At D2 07:15 read San Francisco's available cars in each lane.",
 });
@@ -1513,7 +1584,8 @@ export const LEARN_LOOK = frozen({
 export const LEARN_FINDINGS = frozen({
   "learn.L1.m1": "In the profile you set, every area asks for more requests per hour from 07:00 than in the hour before.",
   "learn.L1.m2": "In the profile you set, every area asks for more requests per hour from 16:00 than in the hour before.",
-  "learn.L3.m1": "In the traffic profile you set, the highway from San Jose toward San Francisco is slower at 18:30 than at 15:30.",
+  "learn.L1.m4": "In this replay the At a depot band holds more cars in the 20:00 hour than in the 17:00 hour, inside the peak.",
+  "learn.L3.m1": "In the traffic profile you set, the highway from San Jose toward San Francisco is slower at 17:14 than at 15:30.",
 });
 
 /** A moment's two-sentence caption: its look sentence, then its asserted finding or the fallback. */

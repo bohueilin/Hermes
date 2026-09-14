@@ -232,6 +232,9 @@ describe("pinned canonical bytes and digests (design 6, Spec digest and seed set
   // The digests below are pinned vectors: a change to the spec object, the scenario, the canonical serializer or the
   // presets moves them, and that change must be deliberate. Everything outside the scenario is written by hand here
   // in sorted key order, so the test also shows the byte layout; the scenario is pinned by its own digest.
+  // Re-pinned deliberately for the SUP-1 recalibration (default cars SF 30, PEN 18, SJ 24, EB 18 became 40, 24, 32, 24):
+  // only the scenario's car counts changed, each to a number of the same width, so the byte counts stay 9489 and 9848
+  // and the scenario and spec digests move. Values from canonicalJson and SHA-256 of the frozen presets.
   const seedsText = (k) => `[${seedSet(k, 20).join(",")}]`;
   const uc01 = (k, scenarioText) =>
     '{"axis":{"baseline":10,"candidate":10,"id":"parameter:DEP-7"},"format":"fleetlab-playground-spec","format_version":1,' +
@@ -251,9 +254,9 @@ describe("pinned canonical bytes and digests (design 6, Spec digest and seed set
     `"resamples":2000,"scenario":${scenarioText},"seed_set":1,"seeds":${seedsText(1)}}`;
 
   const vectors = [
-    { name: "UC-01 on seed set 1", draft: () => draftOf("UC-01"), text: (sc) => uc01(1, sc), scenario: "e9f6d41123c0cd23b83826a019df9d8995e52ab2ffb85b6f9a722e6fa4a0530a", bytes: 9489, digest: "8d4d8cd582c0ef8b29870dabcb26064c08b3542bd5c140e6e6261d36286bf767" },
-    { name: "L3 on seed set 1", draft: () => draftOf("L3"), text: l3, scenario: "c6d69c7ef44f1e54afdc80d286be68ddc64cc44dc7880b88039fba6f4a9af93d", bytes: 9848, digest: "22fe8faf4ceec0a52cba31761f6670dc7c93da0d789dfd9d6a36f3d409208769" },
-    { name: "UC-01 on seed set 2", draft: () => draftOf("UC-01", { seed_set: 2, seeds: seedSet(2, 20) }), text: (sc) => uc01(2, sc), scenario: "e9f6d41123c0cd23b83826a019df9d8995e52ab2ffb85b6f9a722e6fa4a0530a", bytes: 9489, digest: "485de0de34765a6c1de863b9225ae7f7dc6ef4f1dca4b86661664c483e3b3de9" },
+    { name: "UC-01 on seed set 1", draft: () => draftOf("UC-01"), text: (sc) => uc01(1, sc), scenario: "4d1c940632b29dd442bcfeac36dba68fcff3baae50a543cc2eb4139e1bcc61b6", bytes: 9489, digest: "fbcabddf75de09e18980ca6e90eb8c3d186c03d26efdf75935c939f7c0112669" },
+    { name: "L3 on seed set 1", draft: () => draftOf("L3"), text: l3, scenario: "b7aaab54daa424bf2165006e2d1046f53aff4f91f5ac1f13be786c577637c7fe", bytes: 9848, digest: "df5db7a2857cd9b520fa6064ad11f6a11bb1baaebc1bea231c64a77f911f5de4" },
+    { name: "UC-01 on seed set 2", draft: () => draftOf("UC-01", { seed_set: 2, seeds: seedSet(2, 20) }), text: (sc) => uc01(2, sc), scenario: "4d1c940632b29dd442bcfeac36dba68fcff3baae50a543cc2eb4139e1bcc61b6", bytes: 9489, digest: "dc778f556a0c5245c58617df3fd061a8f90aaf2d50835eabab28a7297599cf93" },
   ];
   for (const v of vectors) {
     test(v.name, () => {

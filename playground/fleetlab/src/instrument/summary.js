@@ -124,12 +124,47 @@ function textOf(value) {
   return JSON.stringify(value);
 }
 
-/** A delta with an explicit plus sign when positive. */
-function signed(value) {
-  return value > 0 ? `+${String(value)}` : String(value);
+/**
+ * `value` with `digits` decimals, rounding the exact decimal expansion of the double half to even (as Python's
+ * `f"{x:.1f}"` does), never `-0`. The summary object keeps the exact double; only the clipboard text is rounded.
+ */
+function fixed(value, digits) {
+  const [whole, fraction] = Math.abs(value).toFixed(100).split(".");
+  const kept = BigInt(whole + fraction.slice(0, digits));
+  const rest = fraction.slice(digits);
+  const up = rest[0] > "5" || (rest[0] === "5" && (/[1-9]/.test(rest.slice(1)) || kept % 2n === 1n));
+  const scaled = kept + (up ? 1n : 0n);
+  const unit = 10n ** BigInt(digits);
+  const text = digits === 0 ? String(scaled) : `${String(scaled / unit)}.${String(scaled % unit).padStart(digits, "0")}`;
+  return value < 0 && scaled !== 0n ? `-${text}` : text;
 }
 
-/** Clipboard text of a result summary, one fact per line. */
+/**
+ * A metric value as clipboard text in its unit, read from the metric key's name (the instrument does not import the
+ * registry): a name ending `_s` is seconds to one decimal with ` s`, a name holding `fraction` is a fraction to four
+ * decimals, anything else is a count to one decimal. A nonzero value never reads as zero: when rounding would leave no
+ * nonzero digit, the text is the exact double in plain decimals, so a regressed harm of 2.7e-5 against max harm 0 does
+ * not read `0.0000`. `withSign` adds `+` to a positive value whose text is not zero.
+ */
+function metricText(metric, value, { withSign = false } = {}) {
+  const name = String(metric).split("{")[0];
+  const seconds = name.endsWith("_s");
+  let text = fixed(value, name.includes("fraction") ? 4 : 1);
+  if (value !== 0 && !/[1-9]/.test(text)) text = `${value < 0 ? "-" : ""}${plainDecimal(Math.abs(value))}`;
+  const shown = withSign && !text.startsWith("-") && /[1-9]/.test(text) ? `+${text}` : text;
+  return seconds ? `${shown} s` : shown;
+}
+
+/** The shortest round-trip text of a small positive double in plain decimals: `1e-7` reads `0.0000001`. */
+function plainDecimal(magnitude) {
+  const text = String(magnitude);
+  const exponent = /^(\d)(?:\.(\d+))?e-(\d+)$/.exec(text);
+  return exponent === null ? text : `0.${"0".repeat(Number(exponent[3]) - 1)}${exponent[1]}${exponent[2] ?? ""}`;
+}
+
+const signed = (metric, value) => metricText(metric, value, { withSign: true });
+
+/** Clipboard text of a result summary, one fact per line; numbers are rounded for reading (see metricText). */
 export function summaryText(summary) {
   const lines = [
     "FleetLab Playground result summary",
@@ -150,23 +185,25 @@ export function summaryText(summary) {
     lines.push("Void evidence has no outcome. It says nothing about the candidate.");
   } else {
     const p = summary.primary;
+    const m = p.metric;
     lines.push(
       `Outcome: ${textOf(summary.outcome)}`,
-      `Primary ${p.metric}: mean delta ${signed(p.mean_delta)}, median delta ${signed(p.median_delta)}, ` +
-        `95% interval [${signed(p.ci_low)}, ${signed(p.ci_high)}]`,
-      `Primary ${p.metric}: baseline mean ${String(p.baseline_mean)}, candidate mean ${String(p.candidate_mean)}`,
+      `Primary ${m}: mean delta ${signed(m, p.mean_delta)}, median delta ${signed(m, p.median_delta)}, ` +
+        `95% interval [${signed(m, p.ci_low)}, ${signed(m, p.ci_high)}]`,
+      `Primary ${m}: baseline mean ${metricText(m, p.baseline_mean)}, candidate mean ${metricText(m, p.candidate_mean)}`,
     );
     for (const rail of summary.guardrails) {
+      const maxHarm = metricText(rail.metric, rail.max_harm);
       lines.push(
         rail.status === "NOT_EVALUABLE"
-          ? `Guardrail ${rail.metric}: NOT EVALUABLE: metric absent in some replication (max harm ${String(rail.max_harm)})`
-          : `Guardrail ${rail.metric}: ${rail.status} (harm ${signed(rail.harm)}, max harm ${String(rail.max_harm)})`,
+          ? `Guardrail ${rail.metric}: NOT EVALUABLE: metric absent in some replication (max harm ${maxHarm})`
+          : `Guardrail ${rail.metric}: ${rail.status} (harm ${signed(rail.metric, rail.harm)}, max harm ${maxHarm})`,
       );
     }
     for (const item of summary.descriptives) {
       lines.push(
-        `Descriptive, no claim, ${item.metric}: baseline mean ${String(item.baseline_mean)}, ` +
-          `candidate mean ${String(item.candidate_mean)}, mean delta ${signed(item.mean_delta)}`,
+        `Descriptive, no claim, ${item.metric}: baseline mean ${metricText(item.metric, item.baseline_mean)}, ` +
+          `candidate mean ${metricText(item.metric, item.candidate_mean)}, mean delta ${signed(item.metric, item.mean_delta)}`,
       );
     }
   }

@@ -209,24 +209,40 @@ function baseName(metricKey) {
   return brace === -1 ? metricKey : metricKey.slice(0, brace);
 }
 
-/**
- * A metric key as a chart names it (design §7.2 setup): the metric name, then each scope value, the window on the
- * simulated clock. `wait.p90_s{area=SF,window=111600-118800}` gives `wait.p90_s · SF · D2 07:00 to 09:00`. Tables keep
- * the key itself.
- */
-export function metricSubject(metricKey) {
+/** The scope of a metric key as `[name, readable value]` pairs: an area by its name, a window on the simulated clock. */
+function readableScopes(metricKey) {
   const brace = metricKey.indexOf("{");
-  if (brace === -1 || !metricKey.endsWith("}")) return metricKey;
-  const scopes = metricKey.slice(brace + 1, -1).split(",").map((part) => {
+  if (brace === -1 || !metricKey.endsWith("}")) return [];
+  return metricKey.slice(brace + 1, -1).split(",").map((part) => {
     const [name, value] = part.split("=");
-    if (name !== "window") return value;
+    if (name === "area") return [name, labels.MAP.areas[value] ?? value];
+    if (name !== "window") return [name, value];
     const [start, end] = value.split("-").map(Number);
     const startText = format.clock(start);
     const endText = format.clock(end);
     const sameDay = startText.split(" ")[0] === endText.split(" ")[0];
-    return labels.windowScope({ start: startText, end: sameDay ? endText.split(" ")[1] : endText });
+    return [name, labels.windowScope({ start: startText, end: sameDay ? endText.split(" ")[1] : endText })];
   });
-  return labels.scopedMetric({ metric: metricKey.slice(0, brace), scopes });
+}
+
+/**
+ * A metric key as the verdict card names it (design §7.2 verdict): the metric name, then each scope value, an area by
+ * its name and the window on the simulated clock. `wait.p90_s{area=SF,window=111600-118800}` gives
+ * `wait.p90_s · San Francisco · D2 07:00 to 09:00`. Tables keep the key itself.
+ */
+export function metricSubject(metricKey) {
+  const scopes = readableScopes(metricKey).map(([, value]) => value);
+  return scopes.length === 0 ? baseName(metricKey) : labels.scopedMetric({ metric: baseName(metricKey), scopes });
+}
+
+/**
+ * A metric key in words for chart titles and summaries: `depot.bay_wait_p90_s{depot=SF-2}` gives `bay wait p90 at SF-2`,
+ * `wait.p90_s{area=SF,window=111600-118800}` gives `wait p90 in San Francisco, D2 07:00 to 09:00`.
+ */
+export function metricWords(metricKey) {
+  const scope = Object.fromEntries(readableScopes(metricKey));
+  const words = labels.METRIC_WORDS[baseName(metricKey)] ?? baseName(metricKey);
+  return labels.metricInWords({ words, depot: scope.depot ?? null, area: scope.area ?? null, window: scope.window ?? null });
 }
 
 function registryRow(metricKey) {
@@ -747,7 +763,7 @@ function buildMetricByHourChart({ chart, runs, seed, window, panels = null, popu
       });
     }
     summary = lowest === null
-      ? labels.chartAbsentSummary({ register, subject: def.metric, reason: telling(data.flatMap((p) => p.replay)) })
+      ? labels.chartAbsentSummary({ register, subject: metricWords(def.metric), reason: telling(data.flatMap((p) => p.replay)) })
       : labels.availableSummary({ register, area: areaName(lowest.key), lowest: unit.text(lowest.v), clock: format.clock(own.starts_s[lowest.i]) });
   } else {
     let highest = null;
@@ -768,7 +784,7 @@ function buildMetricByHourChart({ chart, runs, seed, window, panels = null, popu
     }
     summary = labels.metricByHourSummary({
       register,
-      metric: metricSubject(target.metric),
+      metric: metricWords(target.metric),
       highest: highest === null ? { absent: telling(data.flatMap((p) => p.replay)) } : highestText,
       clock: highest === null ? undefined : format.clock(own.starts_s[highest.i]),
       absentHours,
@@ -1025,8 +1041,8 @@ function buildArmComparisonChart({ perSeed, metric }) {
   const [base, cand] = arms.map((a) => a.stats);
   const register = labels.acrossReplications(n);
   const summary = isAbsent(base) || isAbsent(cand)
-    ? labels.chartAbsentSummary({ register, subject: metricSubject(metric), reason: isAbsent(base) ? base.absent : cand.absent })
-    : labels.armComparisonSummary({ count: n, metric: metricSubject(metric), baseline: unit.text(base.mean), candidate: unit.text(cand.mean) });
+    ? labels.chartAbsentSummary({ register, subject: metricWords(metric), reason: isAbsent(base) ? base.absent : cand.absent })
+    : labels.armComparisonSummary({ count: n, metric: metricWords(metric), baseline: unit.text(base.mean), candidate: unit.text(cand.mean) });
   const statCell = (stats, key) => (isAbsent(stats) ? labels.absentValue(stats.absent) : unit.text(stats[key]));
   const rows = perSeed.map((p, i) => [String(p.seed), ...arms.map((a) => format.valueText(isAbsent(a.cells[i]) ? a.cells[i] : a.cells[i].value, unit.text))]);
   rows.push([labels.CHART_TEXT.heads.seedMean, statCell(base, "mean"), statCell(cand, "mean")]);
@@ -1040,7 +1056,7 @@ function buildArmComparisonChart({ perSeed, metric }) {
   if (isAbsent(base) || isAbsent(cand)) legend.push({ swatch: "hatch", label: labels.absentValue(labels.ABSENT_REASONS.metricAbsentInSomeReplication) });
   return chartFrame({
     chartId: "arm_comparison",
-    title: labels.chartTitle({ title: labels.CHARTS.titles.arm_comparison, subject: metricSubject(metric) }),
+    title: labels.chartTitle({ title: labels.CHARTS.titles.arm_comparison, subject: metricWords(metric) }),
     chips: [{ kind: "across", count: n }],
     summary,
     limits: limitsFor("arm_comparison", metric),

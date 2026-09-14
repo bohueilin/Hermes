@@ -112,10 +112,18 @@ export function defaultScenario() {
     bucket_s: 3600,
     placement_snapshot_s: 108000,
     areas: [
-      { id: "SF", cars: 30, in_area_s: 360, peak_per_h: 60, offpeak_per_h: 15 },
-      { id: "PEN", cars: 18, in_area_s: 480, peak_per_h: 20, offpeak_per_h: 8 },
-      { id: "SJ", cars: 24, in_area_s: 480, peak_per_h: 35, offpeak_per_h: 10 },
-      { id: "EB", cars: 18, in_area_s: 420, peak_per_h: 30, offpeak_per_h: 8 },
+      // SUP-1 recalibrated with the recall that acts once: 120 cars at SF:PEN:SJ:EB = 5:3:4:3 (was 30, 18, 24, 18 = 90).
+      // No swept total (90 to 165, seeds 1001 to 1005, σ 0) met every calibration target; 120 is the smallest that meets
+      // the busiest peak hour wait p90 (600 to 1,500 s: 1,134 s), worst-hour unserved (at most 20%: 8.2%), day 2 07:00 to
+      // 10:00 unserved (below 10%: 0%) and a positive placement gap (7). Two targets are accepted exceptions: unserved
+      // 0.50% against a 1% floor, and the longest bay wait 15,022 s (250.4 min) against a 5,400 s ceiling, from SF-2's
+      // overnight recall wave. The bay wait rises with the fleet at every swept total (180.4 min at 90), and more bays at
+      // SF-2, SJ-1 and EB-1 or nearest_depot_with_capacity at 105 to 120 cars missed at least one target in review runs.
+      // test/presets.test.mjs pins this envelope, so a later recalibration re-derives it.
+      { id: "SF", cars: 40, in_area_s: 360, peak_per_h: 60, offpeak_per_h: 15 },
+      { id: "PEN", cars: 24, in_area_s: 480, peak_per_h: 20, offpeak_per_h: 8 },
+      { id: "SJ", cars: 32, in_area_s: 480, peak_per_h: 35, offpeak_per_h: 10 },
+      { id: "EB", cars: 24, in_area_s: 420, peak_per_h: 30, offpeak_per_h: 8 },
     ],
     routes: ROUTES.map((route) => ({ ...route })),
     peaks: [

@@ -4,8 +4,9 @@
 // verdict and never hides a knob it changed: the differences from the Bay teaching map are always listed.
 //
 // Decisions this module makes where the design is silent (reported with the build):
-// - Every moment pins one car per case: SF-017 in L3 (design §3.5), SF-001 in L1 (the largest area's first car) and
-//   SJ-001 in L2 (the question is about San Jose).
+// - Every moment pins one car per case: SF-005 in L3, SF-001 in L1 (the largest area's first car) and SJ-001 in L2 (the
+//   question is about San Jose). L3 pins the car the fork's replay shows due a visit in San Jose (D1 17:13, seed 1001);
+//   SF-017 of design §3.5 is the single-car fixture's car and never finishes a San Jose trip in the full replay.
 // - L2's first moment opens the exploratory two-zone probe panel (design §4.2 walkthrough) with its depot queue row kept
 //   visible in the preview, because the moment's caption reads that row beside the primary.
 // - The L3 fork also draws SJ-1's lot held and queue in lanes A and B (design UC-07 "19:30, SJ-1's lot in B").
@@ -23,7 +24,7 @@ import * as labels from "./labels.js";
 export const LEARN_PRESETS = Object.freeze({ L1: Object.freeze(["L1"]), L2: Object.freeze(["L2a", "L2b"]), L3: Object.freeze(["L3"]) });
 
 /** The car each Learn case pins at every moment. */
-export const LEARN_PINNED_CARS = Object.freeze({ L1: "SF-001", L2: "SJ-001", L3: "SF-017" });
+export const LEARN_PINNED_CARS = Object.freeze({ L1: "SF-001", L2: "SJ-001", L3: "SF-005" });
 
 /** The reference panel a moment opens, by moment key. */
 export const MOMENT_REFERENCES = Object.freeze({ "learn.L2.m1": "probe" });

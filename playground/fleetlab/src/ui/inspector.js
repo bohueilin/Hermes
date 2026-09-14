@@ -1,13 +1,15 @@
 // Inspect drawer (design §7.1, §7.2): the day of one depot or one car in the replay being watched, stamped THIS REPLAY
 // with its seed and clock. The depot ledger adds a column across replications; a value that cannot be shown reads
 // "not available: <reason>". Escape closes the drawer and focus returns to where it was.
+//
+// Decision where the design is silent: the depot drawer lists the cars at the depot at the snapshot, each with Inspect
+// and Pin buttons, so a pointer or touch can open a car and pin it on the map (the keyboard keeps I on the map).
 
-import { percentileFleetLab } from "../core/stats.js";
 import { computeMetric, metricKey, metricRow } from "../model/metrics.js";
 import { rememberFocus } from "./a11y.js";
 import { carTimelineChart, depotBoardCharts } from "./charts.js";
 import { el, withArrows } from "./dom.js";
-import { clock, minutes, number, percent, valueText } from "./format.js";
+import { acrossText as spreadText, clock, minutes, number, percent, valueText } from "./format.js";
 import * as labels from "./labels.js";
 
 const { INSPECTOR } = labels;
@@ -57,8 +59,7 @@ function acrossText(summaries, key, format) {
   const values = summaries.map((s) => s.metrics[key]);
   if (values.some((v) => v === undefined)) return labels.absentValue(labels.ABSENT_REASONS.onlyThisReplay);
   if (values.some((v) => "absent" in v)) return labels.absentValue(labels.ABSENT_REASONS.metricAbsentInSomeReplication);
-  const numbers = values.map((v) => v.value);
-  return labels.acrossRange({ low: format(percentileFleetLab(numbers, 0.1)), high: format(percentileFleetLab(numbers, 0.9)) });
+  return spreadText(values.map((v) => v.value), format);
 }
 
 /** The NOW flow of a depot at the snapshot's second: arriving, intake, queue with its oldest wait, each bay, ready. */
@@ -111,6 +112,7 @@ export function mountInspector({ store, region, onOpenFork = () => {} }) {
 
   let restoreFocus = null;
   let rendered = null;
+  let carsOpen = false;
 
   const setOpen = (open) => {
     region.hidden = !open;
@@ -137,10 +139,36 @@ export function mountInspector({ store, region, onOpenFork = () => {} }) {
       el("p", { class: "fl-limits-chip" }, labels.MODEL_LIMITS.noStaff),
       heading(INSPECTOR.now),
       el("ol", { class: "fl-flow" }, withArrows(flowStages(log, snapshot, depot, scenario).map((text) => el("li", { class: "fl-mono" }, text)), labels.FLOW_ARROW)),
+      carsHere(state, snapshot, depotId),
       heading(INSPECTOR.board),
       board.node,
       table([INSPECTOR.ledger, INSPECTOR.value, labels.ledgerAcross(state.run.summaries.length)], ledgerRows),
     ];
+  }
+
+  /** The cars at the depot at the snapshot, each with Inspect and Pin (the pointer path to a car's drawer and the map). */
+  function carsHere(state, snapshot, depotId) {
+    const cars = snapshot.cars.filter((c) => c.location?.depot === depotId).sort((a, b) => (a.id < b.id ? -1 : 1));
+    const pinned = state.fork.pinnedCar;
+    const items = cars.map((car) => el("li", { class: "fl-group", "data-car": car.id }, [
+      el("span", { class: "fl-mono" }, labels.carHere({ car: car.id, state: labels.carStateText(car) })),
+      el("button", {
+        type: "button", class: "fl-button", "data-role": "inspect-car", "data-focus-key": `inspect:${car.id}`,
+        on: { click: () => store.dispatch({ type: "inspector/open", target: { car: car.id } }) },
+      }, labels.inspectCar(car.id)),
+      el("button", {
+        type: "button", class: "fl-button", "data-role": "pin-car", "data-focus-key": `pin:${car.id}`, "aria-pressed": pinned === car.id ? "true" : "false",
+        on: { click: () => store.dispatch({ type: "fork/pin", car: car.id }) },
+      }, labels.pinCarNamed(car.id)),
+    ]));
+    return el("details", {
+      "data-role": "cars-here",
+      open: carsOpen,
+      on: { toggle: (event) => { carsOpen = event.target.hasAttribute("open"); } },
+    }, [
+      el("summary", { class: "fl-title" }, labels.carsHereHeading(cars.length)),
+      cars.length === 0 ? el("p", { class: "fl-muted" }, INSPECTOR.carsHereNone) : el("ul", { class: "fl-list-plain" }, items),
+    ]);
   }
 
   function carSections(log, scenario, carId, t) {
@@ -167,7 +195,7 @@ export function mountInspector({ store, region, onOpenFork = () => {} }) {
       decisions.length === 0
         ? el("p", { class: "fl-muted" }, INSPECTOR.noDecision)
         : el("ul", {}, decisions.map((e) => el("li", { class: "fl-mono" }, labels.decisionLine({ clock: clock(e.t), kind: e.kind, depot: e.depot, target: e.detail.purpose ?? e.detail.to, cause: e.detail.cause })))),
-      el("button", { type: "button", class: "fl-button", on: { click: () => store.dispatch({ type: "fork/pin", car: carId }) } }, INSPECTOR.pinCar),
+      el("button", { type: "button", class: "fl-button", "data-focus-key": "pin-this-car", on: { click: () => store.dispatch({ type: "fork/pin", car: carId }) } }, INSPECTOR.pinCar),
       el("button", { type: "button", class: "fl-button fl-button--primary", on: { click: () => onOpenFork(carId) } }, INSPECTOR.openFork),
       el("p", { class: "fl-muted" }, labels.HONESTY.forkCaption),
     ];
@@ -189,14 +217,19 @@ export function mountInspector({ store, region, onOpenFork = () => {} }) {
     body.replaceChildren(...(target.depot === undefined ? carSections(log, scenario, target.car, t) : depotSections(state, log, scenario, target.depot, t)));
   }
 
-  /** Rebuilds when the target or the run changes, or the clock crosses into another snapshot. */
+  /**
+   * Rebuilds when the target, the run or the pinned car changes, or the clock crosses into another snapshot. Focus stays
+   * on the control it was on (by `data-focus-key`); when that control is gone with a new target, it moves to Close.
+   */
   function render(state) {
     const target = state.inspector;
     const log = state.run.log;
+    const pinned = state.fork.pinnedCar;
     const t = log === null ? state.clock_s : snapshotAt(log, state.clock_s).t;
-    if (rendered !== null && rendered.target === target && rendered.run === state.run && rendered.t === t) return;
+    if (rendered !== null && rendered.target === target && rendered.run === state.run && rendered.t === t && rendered.pinned === pinned) return;
     const opening = target !== null && (rendered === null || rendered.target === null);
-    rendered = { target, run: state.run, t };
+    const retargeted = !opening && target !== null && rendered.target !== target;
+    rendered = { target, run: state.run, t, pinned };
     if (target === null) {
       if (region.hidden) return;
       setOpen(false);
@@ -205,9 +238,14 @@ export function mountInspector({ store, region, onOpenFork = () => {} }) {
       return;
     }
     if (opening) restoreFocus = rememberFocus();
+    const doc = region.ownerDocument;
+    const active = doc.activeElement;
+    const focusKey = active && region.contains(active) ? active.getAttribute("data-focus-key") : null;
     fill(state, target, log, t);
     setOpen(true);
-    if (opening) close.focus();
+    const again = focusKey === null ? null : region.querySelector(`[data-focus-key="${focusKey}"]`);
+    if (again !== null) again.focus();
+    else if (opening || retargeted || (focusKey !== null && !region.contains(doc.activeElement))) close.focus();
   }
 
   const unsubscribe = store.subscribe(render);

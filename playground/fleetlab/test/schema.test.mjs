@@ -74,7 +74,8 @@ describe("KNOBS", () => {
       assert.deepEqual(byId[id].default, def, `${id} default`);
       if (range) assert.deepEqual(byId[id].range, range, `${id} range`);
     };
-    check("SUP-1", { SF: 30, PEN: 18, SJ: 24, EB: 18 }, { min: 0, max: 200, total_min: 1, total_max: 500 }); // total 90
+    // SUP-1 recalibration: default cars SF 30, PEN 18, SJ 24, EB 18 (90) became 40, 24, 32, 24 (120).
+    check("SUP-1", { SF: 40, PEN: 24, SJ: 32, EB: 24 }, { min: 0, max: 200, total_min: 1, total_max: 500 }); // total 120
     check("DEP-1", { SF: ["SF-1", "SF-2"], PEN: [], SJ: ["SJ-1"], EB: ["EB-1"] }, { min: 0, max: 2, total_min: 1 });
     check("DEP-2", { "SF-1": 60, "SF-2": 30, "SJ-1": 30, "EB-1": 30 }, { min: 5, max: 150 });
     check("DEP-3", { "SF-1": 4, "SF-2": 2, "SJ-1": 3, "EB-1": 2 }, { min: 1, max: 12 });
@@ -114,11 +115,12 @@ describe("defaultScenario", () => {
     assert.deepEqual(rest, {
       format: "playground-scenario", version: "0.1", name: "bay_teaching_map",
       window: { start_s: 18000, end_s: 122400 }, warmup_end_s: 21600, bucket_s: 3600, placement_snapshot_s: 108000,
+      // SUP-1 recalibration: default cars SF 30, PEN 18, SJ 24, EB 18 (90) became 40, 24, 32, 24 (120).
       areas: [
-        { id: "SF", cars: 30, in_area_s: 360, peak_per_h: 60, offpeak_per_h: 15 },
-        { id: "PEN", cars: 18, in_area_s: 480, peak_per_h: 20, offpeak_per_h: 8 },
-        { id: "SJ", cars: 24, in_area_s: 480, peak_per_h: 35, offpeak_per_h: 10 },
-        { id: "EB", cars: 18, in_area_s: 420, peak_per_h: 30, offpeak_per_h: 8 },
+        { id: "SF", cars: 40, in_area_s: 360, peak_per_h: 60, offpeak_per_h: 15 },
+        { id: "PEN", cars: 24, in_area_s: 480, peak_per_h: 20, offpeak_per_h: 8 },
+        { id: "SJ", cars: 32, in_area_s: 480, peak_per_h: 35, offpeak_per_h: 10 },
+        { id: "EB", cars: 24, in_area_s: 420, peak_per_h: 30, offpeak_per_h: 8 },
       ],
       // Design 2.9 in minutes × 60: H1 25, L1 55; H2 55, L2 110; H3 20, L3 45; H4 30, L4 70; H5 40, L5 80; H6 50, L6 95.
       routes: [
@@ -232,7 +234,7 @@ describe("defaultScenario", () => {
     a.congestion.IN_AREA[0] = 2000;
     a.areas[0].cars = 1;
     assert.equal(defaultScenario().congestion.IN_AREA[0], 1000);
-    assert.equal(defaultScenario().areas[0].cars, 30);
+    assert.equal(defaultScenario().areas[0].cars, 40); // SF default 40 since the SUP-1 recalibration (was 30)
     const b = defaultScenario();
     const c = cloneScenario(b);
     assert.deepEqual(c, b);
@@ -266,7 +268,8 @@ describe("validateScenario", () => {
   // [case, mutation, knob every error must name, pattern for the first error's WHAT slot]
   const REJECTIONS = [
     ["no depot on the map", (s) => { s.depots = []; }, "DEP-1", /^Depots on the map: 0$/],
-    ["total cars above 500", (s) => { s.areas[0].cars = 200; s.areas[1].cars = 200; s.areas[2].cars = 101; }, "SUP-1", /^Total cars: 519$/], // 200 + 200 + 101 + 18
+    // EB keeps its default, 24 since the SUP-1 recalibration (was 18): 200 + 200 + 101 + 24 = 525 (was 519).
+    ["total cars above 500", (s) => { s.areas[0].cars = 200; s.areas[1].cars = 200; s.areas[2].cars = 101; }, "SUP-1", /^Total cars: 525$/],
     ["no car at all", (s) => { for (const a of s.areas) a.cars = 0; }, "SUP-1", /^Total cars: 0$/],
     ["an area above 200 cars", (s) => { s.areas[0].cars = 201; }, "SUP-1", /^Cars in San Francisco: 201$/],
     ["an area below 0 cars", (s) => { s.areas[1].cars = -1; }, "SUP-1", /^Cars in Peninsula: -1$/],
@@ -395,7 +398,8 @@ describe("validateScenario", () => {
     accept((s) => { s.depots = [{ id: "EB-2", area: "EB", parking: 5, cleaning_bays: 12, service_bays: 6 }]; });
     accept((s) => { s.areas[1].offpeak_per_h = 0; s.areas[1].peak_per_h = 1; });
     accept((s) => { s.areas[0].offpeak_per_h = 60; }); // peak equal to off-peak
-    accept((s) => { s.areas[0].cars = 200; s.areas[1].cars = 200; s.areas[2].cars = 82; }); // 200 + 200 + 82 + 18 = 500
+    // The total edge with EB at its default, 24 since the SUP-1 recalibration: 200 + 200 + 76 + 24 = 500 (was 82 + 18).
+    accept((s) => { s.areas[0].cars = 200; s.areas[1].cars = 200; s.areas[2].cars = 76; });
     accept((s) => { s.peaks = [{ start_h: 0, end_h: 12 }, { start_h: 12, end_h: 24 }]; }); // touching windows
     accept((s) => { s.sigma_permille = 500; s.congestion.IN_AREA[47] = 3000; s.congestion_threshold_permille = 2000; });
     accept((s) => { s.window = { start_s: 0, end_s: 129600 }; }); // 36 h
@@ -416,7 +420,7 @@ describe("applyAxis", () => {
 
   // [axis, value, the only differences it makes]
   const FORMS = [
-    ["parameter:SUP-1.SJ", 16, [{ knob: "SUP-1.SJ", from: 24, to: 16 }]],
+    ["parameter:SUP-1.SJ", 16, [{ knob: "SUP-1.SJ", from: 32, to: 16 }]], // SJ default 32 since the SUP-1 recalibration (was 24)
     ["parameter:RD-2.SF", 300, [{ knob: "RD-2.SF", from: 360, to: 300 }]],
     ["parameter:DEM-1.PEN", 40, [{ knob: "DEM-1.PEN", from: 20, to: 40 }]],
     ["parameter:DEM-2.EB", 0, [{ knob: "DEM-2.EB", from: 8, to: 0 }]],
@@ -592,7 +596,7 @@ describe("describeDifferences", () => {
     b.depots[0].cleaning_bays = 5;
     b.areas[1].cars = 20;
     assert.deepEqual(describeDifferences(a, b), [
-      { knob: "SUP-1.PEN", from: 18, to: 20 },
+      { knob: "SUP-1.PEN", from: 24, to: 20 }, // PEN default 24 since the SUP-1 recalibration (was 18)
       { knob: "DEP-3.SF-1", from: 4, to: 5 },
       { knob: "RD-5", from: 0, to: 100 },
       { knob: "RID-1", from: 600, to: 1200 },
@@ -669,7 +673,14 @@ describe("PRESETS", () => {
         if (i > 0) assert.ok(m.clock_s > preset.moments[i - 1].clock_s);
       });
     }
-    assert.deepEqual(presetById("L3").moments.map((m) => m.clock_s), [d1(18, 30), d1(19, 30), d2(5, 45), d2(7, 15)]); // 66600, 70200, 107100, 112500
+    // L3 m1 and m2 moved from 18:30 and 19:30 to the replay the fork draws: SF-005's San Jose trip ends at 62,006 s, so
+    // m1 is 17:14; SJ-1's lot in lane B holds 3 stalls at 21:00 (1 at 19:30). See presets.js.
+    assert.deepEqual(presetById("L3").moments.map((m) => m.clock_s), [d1(17, 14), d1(21), d2(5, 45), d2(7, 15)]); // 62040, 75600, 107100, 112500
+    // L1 m3 and m4 are 19:30 and 20:30 (were 17:30 and 19:30): no car was at a depot at 17:30 in the replay.
+    assert.deepEqual(presetById("L1").moments.map((m) => m.clock_s), [d1(7), d1(16), d1(19, 30), d1(20, 30)]); // 25200, 57600, 70200, 73800
+    // L2 m2 is 18:30 (was 18:00): SJ-1 was empty at 18:00 in the replay and has a car in a cleaning bay at 18:30.
+    assert.deepEqual(presetById("L2a").moments.map((m) => m.clock_s), [d1(16), d1(18, 30), d1(19)]); // 57600, 66600, 68400
+    assert.deepEqual(presetById("L2b").moments, presetById("L2a").moments);
     for (const preset of PRESETS.filter((p) => p.kind !== "learn")) assert.deepEqual(preset.moments, []);
   });
 
@@ -726,13 +737,17 @@ describe("PRESETS", () => {
     },
     "UC-02": {
       axis: { id: "parameter:SUP-1.SJ", baseline: 16, candidate: 24 },
-      primary: { metric: "wait.p90_s", scope: { area: "SJ", window: { start_s: 57600, end_s: 68400 } }, direction: LOWER, margin_units: 60 },
+      // Day 1 07:00 = 25200 and 09:00 = 32400 (was the evening 57600 to 68400, where San Jose had no free car in either
+      // arm and the primary could not respond to the car count; measured in the review run, see presets.js).
+      primary: { metric: "wait.p90_s", scope: { area: "SJ", window: { start_s: 25200, end_s: 32400 } }, direction: LOWER, margin_units: 60 },
       guardrails: [unserved(10000), unserved(10000, { area: "SF" })],
     },
     "UC-03": {
-      axis: { id: "parameter:RID-1", baseline: 1200, candidate: 600 }, // 20 min and 10 min
+      // 20 min and 5 min (was 10 min = 600), guardrail 0.01 (was 0.02): at 10 min against 0.02 the unserved harm 0.0115
+      // stayed WITHIN and the population trap read ADVANCE; at 5 min against 0.01 the harm is 0.0179, REGRESSED, HOLD.
+      axis: { id: "parameter:RID-1", baseline: 1200, candidate: 300 },
       primary: { metric: "wait.p90_s", scope: {}, direction: LOWER, margin_units: 30 },
-      guardrails: [unserved(20000)],
+      guardrails: [unserved(10000)],
     },
     "UC-05": {
       axis: { id: "parameter:RD-3.highway.evening", baseline: 1000, candidate: 1600 },
@@ -759,6 +774,8 @@ describe("PRESETS", () => {
       guardrails: [
         { metric: "vehicle.empty_drive_fraction", scope: {}, direction: LOWER, max_harm_units: 20000 },
         { metric: "depot.parking_peak_fraction", scope: { depot: "SJ-1" }, direction: LOWER, max_harm_units: 100000 },
+        // Added so SJ-1's overnight bay saturation in layout A is on the card (review: teaching-value lens); 600 s as L2b.
+        { metric: "depot.bay_wait_p90_s", scope: { depot: "SJ-1" }, direction: LOWER, max_harm_units: 600 },
       ],
     },
   };
@@ -816,8 +833,10 @@ describe("PRESETS", () => {
       // L1 sets SF off-peak requests from 15 to 8 (DEM-2.SF) so the Learn preset differs visibly from the map (design
       // 4.1); describeDifferences lists knobs in KNOBS order, so DEM-2.SF comes before DEM-5 and RD-5.
       L1: [["DEM-2.SF"], ["DEM-2.SF", "DEM-5", "RD-5"]],
-      L2a: [["SUP-1.SJ"], ["SUP-1.SJ", "RD-5"]],
-      L2b: [["SUP-1.SJ"], ["SUP-1.SJ", "RD-5"]],
+      // L2 also sets trips between depot visits to 5 (DEP-7) so SJ-1 is visited inside the primary window (presets.js);
+      // KNOBS order puts SUP-1 before DEP-7.
+      L2a: [["SUP-1.SJ", "DEP-7"], ["SUP-1.SJ", "DEP-7", "RD-5"]],
+      L2b: [["SUP-1.SJ", "DEP-7"], ["SUP-1.SJ", "DEP-7", "RD-5"]],
       L3: [l3Rows, [...l3Rows, "RD-5"]],
       "UC-01": [["RD-5"], ["RD-5"]],
       "UC-02": [["SUP-1.SJ", "RD-5"], ["SUP-1.SJ", "RD-5"]],
@@ -833,8 +852,10 @@ describe("PRESETS", () => {
       if (experimentChanges) assert.deepEqual(changesOf(preset.experiment.scenario), experimentChanges, `${preset.id} experiment`);
     }
     const byKnob = (preset, knob) => describeDifferences(defaultScenario(), presetById(preset).experiment.scenario).find((c) => c.knob === knob);
-    assert.deepEqual(byKnob("L2a", "SUP-1.SJ"), { knob: "SUP-1.SJ", from: 24, to: 12 });
-    assert.deepEqual(byKnob("UC-02", "SUP-1.SJ"), { knob: "SUP-1.SJ", from: 24, to: 16 });
+    // SJ default 32 since the SUP-1 recalibration (was 24); the preset values 12 and 16 are kept (see the recalibration report).
+    assert.deepEqual(byKnob("L2a", "SUP-1.SJ"), { knob: "SUP-1.SJ", from: 32, to: 12 });
+    assert.deepEqual(byKnob("L2a", "DEP-7"), { knob: "DEP-7", from: 10, to: 5 });
+    assert.deepEqual(byKnob("UC-02", "SUP-1.SJ"), { knob: "SUP-1.SJ", from: 32, to: 16 });
     assert.deepEqual(byKnob("UC-03", "RID-1"), { knob: "RID-1", from: 600, to: 1200 });
     assert.deepEqual(byKnob("UC-10", "POL-2"), { knob: "POL-2", from: "home_depot", to: "nearest_depot_with_capacity" });
     assert.deepEqual(byKnob("L1", "DEM-5"), { knob: "DEM-5", from: "peaked", to: "flat" });

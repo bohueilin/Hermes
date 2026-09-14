@@ -797,7 +797,8 @@ describe("entry files", () => {
       "../model/metrics.js": ["computeAll", "computeSeries"],
       "../model/engine.js": ["createRun"],
       "../model/experiment.js": ["experimentSteps", "freezeSpec"],
-      "../model/world.js": ["buildWorld"],
+      // Changed with G8: the worker also binds warmTables, which builds the lookup tables before the first run.
+      "../model/world.js": ["buildWorld", "warmTables"],
       "./protocol.js": ["createWorkerHandler"],
     });
     const host = read("host.js");
@@ -820,6 +821,39 @@ describe("entry files", () => {
       const host = createEngineHost({ createWorker: throwingFactory, now: () => 0, schedule: () => {} });
       assert.equal(host.path, "main thread");
       for (const name of ["runWindow", "runPair", "runExperiment", "cancel"]) assert.equal(typeof host[name], "function");
+    },
+  );
+
+  test("warm_tables makes one model call in its own step and returns what warmTables returns (G8)", () => {
+    const calls = [];
+    const gen = createDrivers({ warmTables: (sigma) => { calls.push(sigma); return { sigma_permille: sigma }; } }).warm_tables({ type: "warm_tables", id: "t", sigmaPermille: 150 });
+    const first = gen.next();
+    assert.deepEqual(first.value, { done: 0, total: 1, label: "Lookup tables" });
+    assert.deepEqual(calls, [], "no model call before the first yield");
+    gen.next();
+    assert.deepEqual(calls, [150]);
+    assert.deepEqual(gen.next(), { value: { sigma_permille: 150 }, done: true });
+    assert.throws(() => createDrivers({ warmTables: () => null }).warm_tables({ sigmaPermille: 0.5 }).next(), /sigmaPermille must be a safe integer/);
+  });
+
+  test(
+    "with the real model, warm_tables builds the tables on the main-thread host and through the worker handler (G8)",
+    { skip: modelPresent ? false : "src/model is not built yet" },
+    async () => {
+      const { createEngineHost } = await import("../src/runtime/host.js");
+      const { MODEL_API } = await import("../src/runtime/worker.js");
+      const host = createEngineHost({ createWorker: throwingFactory });
+      assert.equal(typeof host.warmTables, "function");
+      assert.deepEqual(await host.warmTables({ sigmaPermille: 150 }), { sigma_permille: 150 });
+      const posted = [];
+      const handle = createWorkerHandler(MODEL_API, (message) => posted.push(message));
+      handle({ type: "warm_tables", id: "w", sigmaPermille: 100 });
+      await new Promise((resolve) => {
+        const wait = () => (posted.some((m) => m.id === "w" && (m.type === "result" || m.type === "error")) ? resolve() : setTimeout(wait, 5));
+        wait();
+      });
+      assert.deepEqual(posted.find((m) => m.id === "w" && m.type === "result").payload, { sigma_permille: 100 });
+      assert.deepEqual(posted.filter((m) => m.type === "progress").map((m) => m.label), ["Lookup tables"]);
     },
   );
 

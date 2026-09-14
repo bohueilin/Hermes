@@ -4,11 +4,11 @@
 import { computeAll, computeSeries } from "../model/metrics.js";
 import { createRun } from "../model/engine.js";
 import { experimentSteps, freezeSpec } from "../model/experiment.js";
-import { buildWorld } from "../model/world.js";
+import { buildWorld, warmTables } from "../model/world.js";
 import { createWorkerHandler } from "./protocol.js";
 
 /** The model functions the run generators call, by their contract names. */
-export const MODEL_API = Object.freeze({ buildWorld, createRun, computeAll, computeSeries, experimentSteps, freezeSpec });
+export const MODEL_API = Object.freeze({ buildWorld, createRun, computeAll, computeSeries, experimentSteps, freezeSpec, warmTables });
 
 // Bind only inside a worker scope, so importing this file on the page or under node binds nothing.
 if (typeof WorkerGlobalScope === "function" && typeof self === "object" && self instanceof WorkerGlobalScope) {

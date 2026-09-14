@@ -195,12 +195,96 @@ describe("result summary", () => {
     assert.match(valid, /^Evidence status: NOT_EVIDENCE$/m);
     assert.match(valid, /^Outcome: IMPROVED$/m);
     assert.match(valid, /^Recommendation: ADVANCE_TO_NEXT_TEST$/m);
-    assert.match(valid, /95% interval \[-68, -52\]/);
+    // Changed with G6: the text rounds seconds to one decimal and names the unit, so [-68, -52] reads [-68.0 s, -52.0 s].
+    assert.match(valid, /95% interval \[-68\.0 s, -52\.0 s\]/);
     assert.match(valid, /depot\.queue_p90_s: NOT EVALUABLE: metric absent in some replication/);
     const invalid = summaryText(resultSummary(invalidVerdict(), OPTIONS));
     assert.match(invalid, /Void evidence has no outcome\. It says nothing about the candidate\./);
     assert.doesNotMatch(invalid, /^Outcome:/m);
     assert.match(invalid, /^Recommendation: NO_RECOMMENDATION$/m);
+  });
+
+  test("text rounds numbers for reading while the summary keeps the exact values (G6)", () => {
+    const verdict = handBuiltVerdict();
+    // 826.15 is stored as 826.14999999999997726...; half to even on that exact expansion gives 826.1 at one decimal.
+    // 0.25 s is exact in binary, a tie at one decimal, so it rounds to the even 0.2. 0.00005 is stored as
+    // 0.0000500000000000000024..., above the tie, so at four decimals it reads 0.0001.
+    verdict.primary = { ...verdict.primary, mean_delta: 826.15, ci_high: 0.25 };
+    verdict.guardrail_statuses = [{ ...verdict.guardrail_statuses[0], harm: 0.00005 }, verdict.guardrail_statuses[1]];
+    const summary = resultSummary(verdict, OPTIONS);
+    assert.equal(summary.primary.mean_delta, 826.15, "the summary object keeps the exact double");
+    assert.equal(summary.guardrails[0].harm, 0.00005);
+    const text = summaryText(summary);
+    assert.match(text, /^Primary wait\.p90_s: mean delta \+826\.1 s, median delta -60\.0 s, 95% interval \[-68\.0 s, \+0\.2 s\]$/m);
+    // Means 600 and 540 s at one decimal.
+    assert.match(text, /^Primary wait\.p90_s: baseline mean 600\.0 s, candidate mean 540\.0 s$/m);
+    // A fraction reads at four decimals: harm 0.00005 is +0.0001 and max harm 0.02 is 0.0200.
+    assert.match(text, /^Guardrail unserved\.fraction: WITHIN \(harm \+0\.0001, max harm 0\.0200\)$/m);
+    // A seconds metric that is not evaluable keeps its max harm in seconds: 120 is 120.0 s.
+    assert.match(text, /^Guardrail depot\.queue_p90_s: NOT EVALUABLE: metric absent in some replication \(max harm 120\.0 s\)$/m);
+    // A count reads at one decimal: means 400 and 410, delta +10.
+    assert.match(text, /^Descriptive, no claim, requests\.served: baseline mean 400\.0, candidate mean 410\.0, mean delta \+10\.0$/m);
+    assert.match(text, /^Evidence status: NOT_EVIDENCE$/m);
+  });
+
+  test("text never reads -0: a small negative keeps its sign and digits, and a negative zero reads 0.0 (G6)", () => {
+    // Review: no test fed a negative value that rounds to zero. -0.00001 rounds to 0.0 at one decimal and to 0.0000 at
+    // four; a nonzero value never reads as zero (the honesty rule below), so each reads its exact double -0.00001, and
+    // neither "-0.0 s" nor "-0.0000" appears. -0 is zero and reads 0.0 s with no sign.
+    const verdict = handBuiltVerdict();
+    verdict.primary = { ...verdict.primary, ci_high: -0 };
+    verdict.descriptives = [{ ...verdict.descriptives[0], mean_delta: -0.00001 }];
+    verdict.guardrail_statuses = [{ ...verdict.guardrail_statuses[0], harm: -0.00001 }, verdict.guardrail_statuses[1]];
+    const text = summaryText(resultSummary(verdict, OPTIONS));
+    assert.match(text, /^Primary wait\.p90_s: mean delta -60\.0 s, median delta -60\.0 s, 95% interval \[-68\.0 s, 0\.0 s\]$/m);
+    assert.match(text, /^Descriptive, no claim, requests\.served: baseline mean 400\.0, candidate mean 410\.0, mean delta -0\.00001$/m);
+    assert.match(text, /^Guardrail unserved\.fraction: WITHIN \(harm -0\.00001, max harm 0\.0200\)$/m);
+    assert.doesNotMatch(text, /-0(?:\.0+)?(?![0-9.])/, "no text reads a negative zero");
+  });
+
+  test("text never rounds a nonzero value to zero, so a regressed guardrail keeps its harm (honesty review)", () => {
+    // One more unserved request out of 1,836 in one of 20 paired seeds gives a mean delta of 1/1836/20, about
+    // 2.7e-5. guardrails.js marks it REGRESSED against max harm 0 (strict harm > max_harm). At four decimals it would
+    // read 0.0000 with no sign, the same as its max harm, so the text falls back to the exact double instead.
+    const harm = 1 / 1836 / 20;
+    const [rail] = guardrailStatuses(
+      [{ metric: "unserved.fraction", mean_delta: harm }],
+      [{ metric: "unserved.fraction", max_harm: 0, direction: "lower_is_better" }],
+    );
+    assert.equal(rail.status, "REGRESSED");
+    const verdict = handBuiltVerdict();
+    verdict.guardrail_statuses = [rail, verdict.guardrail_statuses[1]];
+    // Small nonzero primary values on a fraction metric follow the same rule, including a negative bound and a value
+    // below 1e-6, which String() would print in exponent notation (1e-7 must read 0.0000001).
+    verdict.primary = {
+      ...verdict.primary,
+      metric: "unserved.fraction",
+      mean_delta: -harm,
+      median_delta: 0,
+      ci_low: -1e-7,
+      ci_high: 0.00003,
+      baseline_mean: 0.00001,
+      candidate_mean: 0.00001,
+    };
+    const text = summaryText(resultSummary(verdict, OPTIONS));
+    assert.doesNotMatch(text, /harm 0\.0000, max harm 0\.0000/);
+    assert.match(text, /^Guardrail unserved\.fraction: REGRESSED \(harm \+0\.00002723311546840959, max harm 0\.0000\)$/m);
+    assert.match(
+      text,
+      /^Primary unserved\.fraction: mean delta -0\.00002723311546840959, median delta 0\.0000, 95% interval \[-0\.0000001, \+0\.00003\]$/m,
+    );
+    assert.match(text, /^Primary unserved\.fraction: baseline mean 0\.00001, candidate mean 0\.00001$/m);
+    assert.doesNotMatch(text, /e-\d/);
+    // A seconds value below 0.05 s keeps its sign and unit the same way.
+    const seconds = handBuiltVerdict();
+    seconds.guardrail_statuses = [
+      seconds.guardrail_statuses[0],
+      { metric: "depot.queue_p90_s", status: "REGRESSED", harm: 0.025, max_harm: 0.01 },
+    ];
+    assert.match(
+      summaryText(resultSummary(seconds, OPTIONS)),
+      /^Guardrail depot\.queue_p90_s: REGRESSED \(harm \+0\.025 s, max harm 0\.01 s\)$/m,
+    );
   });
 
   test("refuses forbidden keys, the full digest and non-JSON values", () => {

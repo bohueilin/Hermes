@@ -2,8 +2,8 @@
 // This module imports nothing, so it runs under node --test with an injected model api. worker.js and
 // host.js bind it to the teaching model (contract section 7, design §5.9 and §9.4).
 
-/** Message types that start a run. */
-export const RUN_TYPES = Object.freeze(["run_window", "run_pair", "run_experiment"]);
+/** Message types that start a run; `warm_tables` builds the lookup tables for one sigma before the first run. */
+export const RUN_TYPES = Object.freeze(["run_window", "run_pair", "run_experiment", "warm_tables"]);
 
 /** Engine events per `run.step` call; one step is one slice point (count, not time). */
 export const STEP_EVENTS = 250;
@@ -19,6 +19,7 @@ const RUN_FIELDS = Object.freeze({
   run_window: ["scenario", "seeds", "logSeed", "lambdaMaxPermille"],
   run_pair: ["baseline", "candidate", "seed", "lambdaMaxPermille"],
   run_experiment: ["spec"],
+  warm_tables: ["sigmaPermille"],
 });
 
 const LOG_KEYS = ["events", "intervals", "visits", "requests", "cars", "depots", "snapshots", "drain_end_s"];
@@ -57,8 +58,8 @@ function logOf(seed, result) {
 
 /**
  * The run generators over a model api `{buildWorld, createRun, computeAll, computeSeries, experimentSteps,
- * freezeSpec}`. Each takes a run message, yields progress objects or undefined ticks, and returns the
- * contract section 7 payload.
+ * freezeSpec, warmTables}`. Each takes a run message, yields progress objects or undefined ticks, and returns the
+ * contract section 7 payload (`warm_tables` returns `{sigma_permille}`).
  */
 export function createDrivers(api) {
   // Every model call below sits alone between two yields, so the slicer can hand control back between any two of
@@ -140,7 +141,16 @@ export function createDrivers(api) {
     };
   }
 
-  return Object.freeze({ run_window, run_pair, run_experiment });
+  function* warm_tables(message) {
+    const { sigmaPermille } = message;
+    assertSafeInteger(sigmaPermille, "sigmaPermille");
+    yield progress(0, 1, "Lookup tables");
+    const out = api.warmTables(sigmaPermille);
+    yield;
+    return out;
+  }
+
+  return Object.freeze({ run_window, run_pair, run_experiment, warm_tables });
 }
 
 /** Keeps a run message's contract fields only, so both paths receive the same message. */
@@ -406,6 +416,8 @@ export function createHost({
     runPair: (args, options) => submit("run_pair", args, options),
     /** Runs a frozen experiment: `{spec}`; resolves with the payload. */
     runExperiment: (args, options) => submit("run_experiment", args, options),
+    /** Builds the lookup tables for `{sigmaPermille}` on the engine's path, before a run needs them. */
+    warmTables: (args, options) => submit("warm_tables", args, options),
     /** Cancels one run by the id on its promise, or every active run when no id is given. */
     cancel,
   };

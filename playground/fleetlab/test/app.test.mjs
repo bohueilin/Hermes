@@ -113,7 +113,12 @@ describe("start mounts the interface", () => {
       assert.ok(app.regions.map.querySelector("svg"), "the static map is drawn");
       assert.ok(buttonNamed(labels.PLAYBACK.play, app.regions.transport));
       const notRun = labels.absentValue(labels.ABSENT_REASONS.notRunYet);
-      for (const [, value] of [...rowValues(app.regions.now), ...rowValues(app.regions.across)]) assert.equal(value, notRun);
+      // Changed with G4: before any run each panel shows one state line and no rows, where it repeated notRun on every row.
+      assert.deepEqual([...rowValues(app.regions.now), ...rowValues(app.regions.across)], []);
+      for (const role of ["now-state", "across-state"]) {
+        assert.equal(find(`[data-role="${role}"]`).hidden, false);
+        assert.equal(find(`[data-role="${role}"]`).textContent, notRun);
+      }
       assert.equal(find('[data-role="across-chip"]').hidden, true, "no replication count before a run");
       assert.equal(find('[data-role="charts-absent"]').textContent, notRun);
       assert.equal(find('[data-role="engine-path"]').textContent, labels.enginePath("worker"));
@@ -169,13 +174,20 @@ describe("Run window", () => {
       assert.equal(find('[data-role="run-status"]').children.length, 0);
       assert.equal(find('[data-role="top-status"]').textContent, labels.topBarStatus({ clock: "D1 05:00", replay: 1, replays: 5, seed: 1001 }));
       assert.equal(find('[data-role="now-chip"]').textContent, labels.thisReplayChip(1001));
+      assert.equal(find('[data-role="now-state"]').hidden, true, "the state line gives way to the rows");
+      assert.equal(find('[data-role="across-state"]').hidden, true);
       const now = rowValues(app.regions.now);
       assert.deepEqual(now.map(([key]) => key), ["waiting", "unserved", "lot:SF-1", "lot:SF-2", "lot:SJ-1", "lot:EB-1", "highways"]);
       for (const [key, value] of now) assert.ok(!value.startsWith(labels.ABSENT_PREFIX), `${key} has a value from this replay`);
       assert.match(now.find(([key]) => key === "lot:SJ-1")[1], /^\d+\/30$/);
       assert.equal(find('[data-role="across-chip"]').hidden, false);
       assert.equal(find('[data-role="across-chip"]').textContent, labels.acrossReplicationsChip(5));
-      for (const [key, value] of rowValues(app.regions.across)) assert.match(value, / to /, `${key} reads a range across replications`);
+      // Changed with G7: the default preset runs at sigma 0, so every seed builds the same world and the 5 replications
+      // give identical metrics (wait p90 1968 s, 1968 / 60 = 32.8, shown 33 min; unserved 0.0050139, shown 0.5%). A range
+      // whose ends match now reads as one value in every replication instead of "33 min to 33 min".
+      const summaries = store.getState().run.summaries;
+      for (const key of ["wait.p90_s", "unserved.fraction"]) assert.ok(summaries.every((s) => s.metrics[key].value === summaries[0].metrics[key].value), `${key} is identical across replications at sigma 0`);
+      for (const [key, value] of rowValues(app.regions.across)) assert.match(value, / in every replication/, `${key} reads one value across identical replications`);
       assert.equal(find('[data-role="across-table"]').querySelectorAll("tbody tr").length, 5);
       // The Table toggle shows and hides the numeric twin of the across-replications values.
       const acrossTable = find('[data-role="across-table"]');
@@ -245,6 +257,13 @@ describe("Run window", () => {
       assert.deepEqual(chartIds(app.regions.charts), [], "no chart of a void run");
       assert.equal(find('[data-role="charts-absent"]'), null);
       const voidText = labels.absentValue(labels.ABSENT_REASONS.voidRun);
+      // Review: since G4 a panel can hold no rows, and the loop below then checks nothing. A void run shows every row
+      // (waiting, unserved, one lot per depot, highways; wait and unserved across replications) and no before-run line.
+      const depots = ctx.store.getState().scenario.depots.length;
+      assert.equal(rowValues(app.regions.now).length, 3 + depots, "every NOW row is shown for a void run");
+      assert.equal(rowValues(app.regions.across).length, 2, "both rows across replications are shown for a void run");
+      assert.equal(find('[data-role="now-state"]').hidden, true, "a void run is not the before-run state");
+      assert.equal(find('[data-role="across-state"]').hidden, true, "a void run did run");
       for (const [, value] of [...rowValues(app.regions.now), ...rowValues(app.regions.across)]) assert.equal(value, voidText);
       buttonNamed(labels.STATES.copyDetails, app.regions.map).click();
       await tick();
@@ -277,7 +296,8 @@ describe("the fork (design D-10)", () => {
       store.dispatch({ type: "knob/set", knob: "SUP-1.SJ", path: ["areas", 2, "cars"], value: 16 });
       const settled = app.openFork("SJ-001");
       const call = host.last("run_pair");
-      assert.equal(call.args.baseline.areas[2].cars, 24, "lane A undoes the last change");
+      // SJ default 32 since the SUP-1 recalibration (120 cars at 5:3:4:3); it was 24.
+      assert.equal(call.args.baseline.areas[2].cars, 32, "lane A undoes the last change");
       assert.equal(call.args.candidate.areas[2].cars, 16, "lane B keeps it");
       assert.equal(call.args.seed, 1001, "the fork runs on the watched replay's seed");
       assert.deepEqual(call.args.lambdaMaxPermille, sharedLambdaMaxPermille([call.args.baseline, call.args.candidate]));
@@ -315,6 +335,119 @@ describe("the fork (design D-10)", () => {
       assert.notEqual(again.id, first.id);
       assert.deepEqual(again.args, first.args);
     }));
+});
+
+describe("Open the fork moves the reader to the fork (G2)", () => {
+  test("the drawer closes, the fork scrolls into view, its heading takes focus and the live region says what opened", () =>
+    withApp({}, async (ctx) => {
+      const { app, host, find, buttonNamed, store, doc } = ctx;
+      await finishWindow(ctx);
+      const fork = find('[data-role="fork"]');
+      const heading = find('[data-role="fork-heading"]');
+      const live = app.regions.footer.querySelector('[aria-live="polite"]');
+      const scrolls = [];
+      fork.scrollIntoView = (options) => scrolls.push(options);
+
+      // Without a knob change the fork explains itself, and the reader is moved there all the same.
+      store.dispatch({ type: "inspector/open", target: { car: "SF-017" } });
+      buttonNamed(labels.INSPECTOR.openFork, app.regions.inspector).click();
+      assert.equal(store.getState().inspector, null);
+      assert.equal(find('[data-role="fork-needs-change"]').textContent, labels.FORK.needsChange);
+      assert.equal(doc.activeElement, heading);
+      assert.equal(live.textContent, labels.FORK.needsChange);
+      buttonNamed(labels.FORK.close, fork).click();
+
+      store.dispatch({ type: "knob/set", knob: "SUP-1.SJ", path: ["areas", 2, "cars"], value: 16 });
+      store.dispatch({ type: "inspector/open", target: { car: "SF-017" } });
+      assert.equal(app.regions.inspector.hidden, false);
+      buttonNamed(labels.INSPECTOR.openFork, app.regions.inspector).click();
+      assert.equal(store.getState().inspector, null, "the drawer closes");
+      assert.equal(app.regions.inspector.hidden, true);
+      assert.equal(fork.hidden, false);
+      assert.equal(heading.textContent, labels.FORK.heading);
+      assert.equal(doc.activeElement, heading, "focus moves to the fork heading");
+      assert.deepEqual(scrolls, [{ block: "start" }, { block: "start" }]);
+      // On a phone the fork lives in the Charts group, so that group is shown before focus moves.
+      assert.equal(ctx.root.getAttribute("data-phone-group"), "charts");
+      assert.equal(app.regions.segmented.querySelector('button[data-group="charts"]').getAttribute("aria-pressed"), "true");
+      assert.equal(live.textContent, labels.forkOpened("SF-017"));
+
+      // Rendering the result keeps the heading node, so focus is not dropped when the pair settles.
+      const call = host.last("run_pair");
+      call.resolve(await pairPayload({ baselineScenario: call.args.baseline, candidateScenario: call.args.candidate, seed: 1001 }));
+      await tick();
+      assert.equal(store.getState().fork.status, "open");
+      assert.equal(find('[data-role="fork-heading"]'), heading);
+      assert.equal(doc.activeElement, heading);
+    }));
+});
+
+describe("lookup tables before the first run (G8)", () => {
+  const later = () => new Promise((resolve) => setTimeout(resolve, 5));
+
+  test("an idle step builds the tables for the scenario's sigma with a preparing line, once per sigma", async () => {
+    const host = createFakeHost();
+    const calls = [];
+    const pending = [];
+    host.warmTables = (args) => {
+      calls.push(args);
+      return new Promise((resolve) => pending.push(resolve));
+    };
+    await withApp({ host }, async ({ find, store }) => {
+      assert.deepEqual(calls, [], "start itself builds nothing");
+      await later();
+      const sigma = store.getState().scenario.sigma_permille;
+      assert.deepEqual(calls, [{ sigmaPermille: sigma }]);
+      assert.equal(find('[data-role="preparing"]').textContent, labels.STATES.preparing);
+      assert.equal(find('[data-role="preparing"]').getAttribute("role"), "status");
+      pending.shift()({ sigma_permille: sigma });
+      await tick();
+      assert.equal(find('[data-role="preparing"]'), null);
+      assert.equal(find('[data-role="run-status"]').children.length, 0);
+      await later();
+      assert.equal(calls.length, 1, "a sigma is built once");
+      store.dispatch({ type: "knob/set", knob: "RD-5", path: ["sigma_permille"], value: sigma === 200 ? 250 : 200 });
+      await later();
+      assert.deepEqual(calls.at(-1), { sigmaPermille: sigma === 200 ? 250 : 200 }, "a new traffic spread is built in its own idle step");
+      pending.shift()({});
+      await tick();
+    });
+  });
+
+  test("a host without warmTables is left alone, and destroy cancels a scheduled build", async () => {
+    const host = createFakeHost();
+    let called = 0;
+    await withApp({}, async ({ find }) => {
+      await later();
+      assert.equal(find('[data-role="preparing"]'), null);
+    });
+    host.warmTables = () => {
+      called += 1;
+      return new Promise(() => {});
+    };
+    const ctx = mount({ host });
+    ctx.cleanup();
+    await later();
+    assert.equal(called, 0);
+  });
+
+  test("a rejected build is not retried and clears the preparing line", async () => {
+    // Review: only a build that resolves was tested. A failed sigma counts as done, so it is not built again after
+    // every idle step (the engine rejects an off-grid sigma, a worker error or a cancel).
+    const host = createFakeHost();
+    let calls = 0;
+    host.warmTables = () => {
+      calls += 1;
+      return Promise.reject(new Error("the table build failed"));
+    };
+    await withApp({ host }, async ({ find }) => {
+      await later();
+      assert.equal(calls, 1, "the first idle step builds once");
+      for (let i = 0; i < 5; i += 1) await later();
+      assert.equal(calls, 1, "a failed sigma is not built again");
+      assert.equal(find('[data-role="preparing"]'), null);
+    });
+  });
 });
 
 describe("modes", () => {
@@ -464,15 +597,17 @@ describe("honesty copy on the page (review: honesty-copy lens)", () => {
       app.regions.charts.querySelector('[data-case="L3"]').click();
       app.regions.charts.querySelector('[data-moment="1"]').click();
       assert.equal(app.regions.charts.querySelector('[data-role="caption"] [data-key]').getAttribute("data-key"), "learn.L3.m2");
-      const settled = app.openFork("SF-017");
+      // L3 pins SF-005 and its second moment is D1 21:00 = 75600 (was SF-017 at 19:30 = 70200): in the fork's replay SJ-1's
+      // lot in lane B holds 3 stalls at 21:00 and 1 at 19:30 (test/learn.test.mjs asserts the lot on this clock).
+      const settled = app.openFork("SF-005");
       const call = host.last("run_pair");
       call.resolve(await pairPayload({ baselineScenario: call.args.baseline, candidateScenario: call.args.candidate, seed: call.args.seed, lambdaMaxPermille: call.args.lambdaMaxPermille }));
       await settled;
       const lots = find('[data-role="fork"]').querySelectorAll('figure[data-chart="lot_and_queue"]').filter((f) => f.getAttribute("data-depot") === "SJ-1");
       assert.deepEqual(lots.map((f) => f.getAttribute("data-lane")), ["A", "B"]);
       assert.ok(lots[1].querySelector("h3").textContent.endsWith(labels.INSPECTOR.forkArms.B), "lane B is named on its chart");
-      assert.equal(store.getState().clock_s, 70200, "the moment's clock is D1 19:30");
-      for (const lot of lots) assert.equal(lot.querySelector('[data-role="cursor"]').getAttribute("visibility"), "visible", "the lot chart shows the 19:30 cursor");
+      assert.equal(store.getState().clock_s, 75600, "the moment's clock is D1 21:00");
+      for (const lot of lots) assert.equal(lot.querySelector('[data-role="cursor"]').getAttribute("visibility"), "visible", "the lot chart shows the 21:00 cursor");
     }));
 
   test("wait p90 across replications carries the completed rides it counts, and so does each replay's table cell", () =>
@@ -481,12 +616,48 @@ describe("honesty copy on the page (review: honesty-copy lens)", () => {
       const summaries = ctx.store.getState().run.summaries;
       const values = (key) => summaries.map((s) => s.metrics[key].value);
       const count = (v) => format.number(v, Number.isInteger(v) ? 0 : 1);
+      // Changed with G7: a range whose ends format alike reads as one value. The default preset runs at sigma 0, so all
+      // replications share wait p90 (1968 s, shown 33 min) and completed rides (1,786); the line reads
+      // "33 min in every replication, from 1,786 completed rides" where it read "33 min to 33 min, from 1,786 to 1,786 ...".
+      const alike = (key, fmt) => values(key).every((v) => fmt(v) === fmt(values(key)[0]));
       const range = (key, fmt) => labels.acrossRange({ low: fmt(percentileFleetLab(values(key), 0.1)), high: fmt(percentileFleetLab(values(key), 0.9)) });
-      const expected = labels.withWaitPopulation({ value: range("wait.p90_s", format.minutes), population: labels.waitPopulation(range("wait.population_n", count)) });
+      const waitText = alike("wait.p90_s", format.minutes) ? labels.acrossSame(format.minutes(values("wait.p90_s")[0])) : range("wait.p90_s", format.minutes);
+      const rides = alike("wait.population_n", count) ? count(values("wait.population_n")[0]) : range("wait.population_n", count);
+      assert.ok(alike("wait.p90_s", format.minutes) && alike("wait.population_n", count), "sigma 0: identical replications");
+      const expected = labels.withWaitPopulation({ value: waitText, population: labels.waitPopulation(rides) });
       assert.equal(ctx.app.regions.across.querySelector('[data-row="wait"] [data-role="value"]').textContent, expected);
       const cells = ctx.find('[data-role="across-table"]').querySelectorAll("tbody tr").map((tr) => tr.children[1].textContent);
       assert.deepEqual(cells, summaries.map((s) => labels.withWaitPopulation({ value: format.minutes(s.metrics["wait.p90_s"].value), population: labels.waitPopulation(format.count(s.metrics["wait.population_n"].value)) })));
       const waitChart = ctx.app.regions.charts.querySelector('figure[data-chart="wait_p90_by_hour"] [data-role="summary"]');
       assert.match(waitChart.textContent, /, from [0-9,]+ completed rides(; [^.]+)?\.$/);
+    }));
+
+  test("replications that differ read as ranges across replications, the completed rides too", () =>
+    withApp({}, async (ctx) => {
+      // Review: at sigma 0 every replication of the default preset is identical, so no test fed the panel differing
+      // replications. Replication 0 is set to wait p90 2400 s, 1,700 completed rides and 0.03 unserved; the other four
+      // stay as run. Linear percentiles over five values: p10 at index 0.4, p90 at index 3.6. With four equal values
+      // `b` above (or below) the changed one, p10 and p90 follow by hand below.
+      const changed = { "wait.p90_s": 2400, "wait.population_n": 1700, "unserved.fraction": 0.03 };
+      await finishWindow(ctx, (payload) => ({
+        ...payload,
+        runs: payload.runs.map((r, i) => (i === 0 ? { ...r, metrics: { ...r.metrics, ...Object.fromEntries(Object.entries(changed).map(([k, v]) => [k, { value: v }])) } } : r)),
+      }));
+      const summaries = ctx.store.getState().run.summaries;
+      assert.equal(summaries.length, 5);
+      const b = (key) => summaries[1].metrics[key].value;
+      for (const key of Object.keys(changed)) assert.ok(summaries.slice(1).every((s) => s.metrics[key].value === b(key)), `${key} alike in replications 2 to 5`);
+      const count = (v) => format.number(v, Number.isInteger(v) ? 0 : 1);
+      const pct = (v) => format.percent(v, 1);
+      assert.ok(b("wait.p90_s") < 2400 && b("unserved.fraction") < 0.03 && b("wait.population_n") > 1700, "the changed replication is the highest wait and unserved, the fewest rides");
+      // Sorted [b, b, b, b, x] (x above): p10 = b, p90 = b + 0.6 (x - b). Sorted [x, b, b, b, b] (x below): p10 = x + 0.4 (b - x), p90 = b.
+      const wait = labels.acrossRange({ low: format.minutes(b("wait.p90_s")), high: format.minutes(b("wait.p90_s") + 0.6 * (2400 - b("wait.p90_s"))) });
+      const rides = labels.acrossRange({ low: count(1700 + 0.4 * (b("wait.population_n") - 1700)), high: count(b("wait.population_n")) });
+      const unserved = labels.acrossRange({ low: pct(b("unserved.fraction")), high: pct(b("unserved.fraction") + 0.6 * (0.03 - b("unserved.fraction"))) });
+      const rows = Object.fromEntries(rowValues(ctx.app.regions.across));
+      assert.equal(rows.wait, labels.withWaitPopulation({ value: wait, population: labels.waitPopulation(rides) }));
+      assert.equal(rows.unserved, unserved);
+      for (const value of Object.values(rows)) assert.ok(!value.includes(labels.acrossSame("").trim()), value);
+      assert.match(rows.wait, /^\d+ min to \d+ min, from [0-9,.]+ to [0-9,.]+ completed rides$/);
     }));
 });

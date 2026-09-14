@@ -52,16 +52,33 @@ const ASSERTIONS = {
   // EB 30 against 8 requests per hour.
   "learn.L1.m1": () => demandRisesAt("L1", 7),
   "learn.L1.m2": () => demandRisesAt("L1", 16),
-  // L3 sets highways to ×1.6 in both directions from 16:00 to 19:00 (design §3.5); 15:00 to 16:00 is ×1.0. 18:30 falls in
-  // the 18:00 bucket and 15:30 in the 15:00 bucket.
+  // L3 sets highways to ×1.6 in both directions from 16:00 to 19:00 (design §3.5); 15:00 to 16:00 is ×1.0. The moment
+  // moved from 18:30 to 17:14 (the replay's SF-005 trip end, see presets.js), still inside the ×1.6 hours: 17:14 falls in
+  // the 17:00 bucket and 15:30 in the 15:00 bucket. The assertion also reads the moment's own clock from the preset.
   "learn.L3.m1": async () => {
+    const clock_s = presetById("L3").moments[0].clock_s;
+    assert.equal(clock_s, 17 * HOUR + 14 * 60); // 61200 + 840 = 62040
     const traffic = (await series("L3")).traffic_by_hour;
     const row = traffic.HIGHWAY["SJ>SF"];
-    const at1830 = row[bucketAt(traffic, 18 * HOUR + 1800)];
+    const atMoment = row[bucketAt(traffic, clock_s)];
     const at1530 = row[bucketAt(traffic, 15 * HOUR + 1800)];
-    assert.equal(at1830, 1600);
+    assert.equal(atMoment, 1600);
     assert.equal(at1530, 1000);
-    assert.ok(at1830 > at1530, "a larger multiplier is a slower highway");
+    assert.ok(atMoment > at1530, "a larger multiplier is a slower highway");
+  },
+  // L1's fleet-state stack counts car-seconds per hour; divided by 3,600 it is cars on average. Seed 1001 at σ 0 (review
+  // run): 1.89 cars at a depot in the 17:00 hour, inside the 16:00 to 19:00 peak, and 6.50 in the 20:00 hour.
+  "learn.L1.m4": async () => {
+    const clock_s = presetById("L1").moments[3].clock_s;
+    assert.equal(clock_s, 20 * HOUR + 30 * 60); // 72000 + 1800 = 73800
+    const scenario = presetById("L1").scenario;
+    assert.ok(scenario.peaks.some((p) => p.start_h <= 17 && 17 < p.end_h), "17:00 is inside a peak window");
+    assert.ok(!scenario.peaks.some((p) => p.start_h <= 20 && 20 < p.end_h), "20:00 is after every peak window");
+    const stack = (await series("L1")).fleet_state;
+    const atDepot = (t_s) => stack.families.atDepot[bucketAt(stack, t_s)] / HOUR;
+    const inPeak = atDepot(17 * HOUR);
+    const after = atDepot(clock_s);
+    assert.ok(after > inPeak, `${String(after)} cars at a depot in the 20:00 hour is more than ${String(inPeak)} in the 17:00 hour`);
   },
 };
 

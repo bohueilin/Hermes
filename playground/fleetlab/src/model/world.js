@@ -198,6 +198,16 @@ function resolveEnvelope(scenario, given) {
 }
 
 /**
+ * Builds and verifies the Exp(1) table and the multiplier table for `sigmaPermille` ahead of a run, so the first run
+ * does not pay for them (both are memoized). Returns `{sigma_permille}`; an off-grid sigma throws as buildWorld does.
+ */
+export function warmTables(sigmaPermille) {
+  expTable();
+  multiplierTable(sigmaPermille);
+  return { sigma_permille: sigmaPermille };
+}
+
+/**
  * Builds the frozen world of one seed from the declared scenario (contract 6.3): candidates per area as
  * `{t_s, thin, dest}` arrays (seconds, u32 draws), the envelope in thousandths, and bound factor accessors
  * `trafficPpm(segmentKey, dir, quarterHour)` and `ridePpm(requestId)` in parts per million.

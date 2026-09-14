@@ -3,8 +3,8 @@
 // Absence is never 0, blank or a dash: it reads `not available: <reason>` (design H-5).
 
 import { specHashLabel } from "../core/canon.js";
-import { roundHalfEven } from "../core/stats.js";
-import { absentValue, UNITS } from "./labels.js";
+import { percentileFleetLab, roundHalfEven } from "../core/stats.js";
+import { absentValue, acrossRange, acrossSame, UNITS } from "./labels.js";
 
 const DAY_S = 86400;
 
@@ -159,4 +159,29 @@ export function valueText(value, formatter) {
   if (typeof value === "number" && Number.isFinite(value)) return formatter(value);
   if (value !== null && typeof value === "object" && typeof value.absent === "string") return absentValue(value.absent);
   throw new TypeError("a displayed value must be a finite number or {absent: reason}");
+}
+
+/**
+ * The ends of a spread across replications as texts through `formatter`: null when every replication formats to the
+ * same text; otherwise the 10th and 90th percentile, or, when those two format alike while some replication does not,
+ * the lowest and highest value, so a spread never reads `0.0% to 0.0%`.
+ */
+export function acrossEnds(numbers, formatter) {
+  if (!Array.isArray(numbers) || numbers.length === 0) throw new TypeError("acrossEnds needs at least one number");
+  const texts = numbers.map((v) => formatter(v));
+  if (texts.every((t) => t === texts[0])) return null;
+  const low = formatter(percentileFleetLab(numbers, 0.1));
+  const high = formatter(percentileFleetLab(numbers, 0.9));
+  if (low !== high) return { low, high };
+  return { low: formatter(Math.min(...numbers)), high: formatter(Math.max(...numbers)) };
+}
+
+/**
+ * Numbers across replications as text: the ends of `acrossEnds` as a range, or, when every replication formats to the
+ * same text, that one value "in every replication".
+ */
+export function acrossText(numbers, formatter) {
+  if (!Array.isArray(numbers) || numbers.length === 0) throw new TypeError("acrossText needs at least one number");
+  const ends = acrossEnds(numbers, formatter);
+  return ends === null ? acrossSame(formatter(numbers[0])) : acrossRange(ends);
 }

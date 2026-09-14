@@ -4,6 +4,9 @@
 
 import { applyAxis, cloneScenario, deepFreeze, defaultScenario } from "./schema.js";
 
+// Contract 5.2 and design 9.3: the quoted FleetLab reference panels are reached through the presets module.
+export { REFERENCE_PANELS } from "./reference-panels.js";
+
 export const DEFAULT_PRESET_ID = "bay_teaching_map";
 export const EXPERIMENT_SIGMA_PERMILLE = 150;
 export const PRESET_SEED_SET = 1;
@@ -61,14 +64,20 @@ function experimentPreset({ id, useCase, title, base, experiment }) {
 }
 
 // UC-09: both preregistered L2 specs share this scenario and differ by one added guardrail.
-const L2_SCENARIO = scenarioFrom("l2_bays_not_bottleneck", [["parameter:SUP-1.SJ", 12]]);
+// Trips between depot visits is 5 (DEP-7, default 10) so SJ-1 receives visits inside the 16:00 to 19:00 primary window:
+// at 10, SJ-1 had about 0.2 visits arriving in that window, so the two arms could not differ there (every paired delta
+// 0 on 20 seeds) and the bay wait rose only in the overnight recall. At 5 (review calibration, 20 seeds, σ 0.15): 6.9
+// and 6.6 visits arrive in the window, SJ-1's bay wait p90 for those arrivals is 22.2 s with 3 bays and 2,572.3 s with 1,
+// and L2a reads INCONCLUSIVE (+25.3 s, interval [-143.4, 214.3]) while L2b's added guardrail regresses.
+const L2_SCENARIO = scenarioFrom("l2_bays_not_bottleneck", [["parameter:SUP-1.SJ", 12], ["parameter:DEP-7", 5]]);
 const L2_EXPERIMENT = {
-  question: "With 12 cars in San Jose, does cutting SJ-1 from 3 cleaning bays to 1 change San Jose rider wait p90 in the day 1 evening peak?",
+  question: "With 12 cars in San Jose and a depot visit every 5 trips, does cutting SJ-1 from 3 cleaning bays to 1 change San Jose rider wait p90 in the day 1 evening peak?",
   axis: { id: "parameter:DEP-3.SJ-1", baseline: 3, candidate: 1 },
   primary: waitP90(60, { area: "SJ", window: span(day1(16), day1(19)) }),
   guardrails: [guardrail("unserved.fraction", 20000)],
 };
-const L2_CLOCKS = [day1(16), day1(18), day1(19)];
+// m2 at 18:30: in the Learn replay (seed 1001, σ 0, 3 bays) a car that arrived at SJ-1 at 18:08 is in a cleaning bay.
+const L2_CLOCKS = [day1(16), day1(18, 30), day1(19)];
 
 /** Every preset in display order; frozen, so callers clone a scenario before editing it. */
 export const PRESETS = deepFreeze([
@@ -98,7 +107,10 @@ export const PRESETS = deepFreeze([
       primary: waitP90(60, { window: span(day1(16), day1(19)) }),
       guardrails: [guardrail("unserved.fraction", 20000)],
     },
-    clocks: [day1(7), day1(16), day1(17, 30), day1(19, 30)],
+    // m4 at 20:30, after the peak: in the replay (seed 1001) the At a depot band holds 1.9 cars in the 17:00 hour and
+    // 6.5 in the 20:00 hour, with 1 depot arrival in hour 17 and 10 in hour 20, so servicing lands after the peak. At
+    // 17:30 no car was at a depot. "After the evening peak" (19:30) moves to m3 so the clocks stay in order.
+    clocks: [day1(7), day1(16), day1(19, 30), day1(20, 30)],
   }),
   learnPreset({
     id: "L2a",
@@ -144,7 +156,11 @@ export const PRESETS = deepFreeze([
         guardrail("unserved.fraction", 10000),
       ],
     },
-    clocks: [day1(18, 30), day1(19, 30), day2(5, 45), day2(7, 15)],
+    // m1 and m2 follow the replay the fork draws (seed 1001, σ 0, shared envelope), not the single-car fixture: SF-005
+    // completes a San Jose trip at 62,006 s (D1 17:13) and is sent on a SERVICE_DUE visit, to SF-1 in lane A and to
+    // SJ-1 in lane B, so at 17:14 (62,040 s) it is driving to a depot in both lanes. At 21:00 SJ-1 holds 3 stalls in
+    // lane B and 0 in lane A; at 19:30 lane B held 1.
+    clocks: [day1(17, 14), day1(21), day2(5, 45), day2(7, 15)],
   }),
   experimentPreset({
     id: "UC-01",
@@ -164,9 +180,12 @@ export const PRESETS = deepFreeze([
     title: "How many cars does San Jose need?",
     base: scenarioFrom("uc02_san_jose_cars"),
     experiment: {
-      question: "Does giving San Jose 24 cars instead of 16 change San Jose rider wait p90 in the day 1 evening peak?",
+      // Morning peak, not evening: from 16:00 to 19:00 San Jose has almost no free car in either arm (0.9 and 0.8 per
+      // mille) and the primary read INCONCLUSIVE (+79.7 s). From 07:00 to 09:00 (review calibration, 20 seeds) 24 cars
+      // read IMPROVED, -743.0 s, interval [-897.3, -606.0], both guardrails WITHIN; seed sets 2 and 3 agree.
+      question: "Does giving San Jose 24 cars instead of 16 change San Jose rider wait p90 in the day 1 morning peak?",
       axis: { id: "parameter:SUP-1.SJ", baseline: 16, candidate: 24 },
-      primary: waitP90(60, { area: "SJ", window: span(day1(16), day1(19)) }),
+      primary: waitP90(60, { area: "SJ", window: span(day1(7), day1(9)) }),
       guardrails: [guardrail("unserved.fraction", 10000), guardrail("unserved.fraction", 10000, { area: "SF" })],
     },
   }),
@@ -176,10 +195,14 @@ export const PRESETS = deepFreeze([
     title: "Rider patience and the population trap",
     base: scenarioFrom("uc03_rider_patience"),
     experiment: {
-      question: "Does cutting rider patience from 20 minutes to 10 minutes change rider wait p90?",
-      axis: { id: "parameter:RID-1", baseline: 1200, candidate: 600 },
+      // The population trap needs its guardrail to catch it. At 10 minutes against 0.02 the unserved harm (0.0115) stayed
+      // WITHIN and the verdict read ADVANCE_TO_NEXT_TEST. At 5 minutes against 0.01, the threshold UC-02, UC-05 and L3 use
+      // (review calibration, 20 seeds): harm 0.0179, 0.0178 and 0.0171 on seed sets 1 to 3, REGRESSED, HOLD, while
+      // wait.population_n falls from 1,785.5 to 1,752.6 completed rides.
+      question: "Does cutting rider patience from 20 minutes to 5 minutes change rider wait p90?",
+      axis: { id: "parameter:RID-1", baseline: 1200, candidate: 300 },
       primary: waitP90(30),
-      guardrails: [guardrail("unserved.fraction", 20000)],
+      guardrails: [guardrail("unserved.fraction", 10000)],
     },
   }),
   experimentPreset({
@@ -234,9 +257,12 @@ export const PRESETS = deepFreeze([
         candidate: { "SF-1": 4, "SF-2": 2, "SJ-1": 3, "EB-1": 2 },
       },
       primary: waitP90(30),
+      // SJ-1's bay wait is a guardrail so its overnight saturation in layout A shows on the card (whole-run p90 25,697.7 s
+      // against 7,804.1 s, harm -17,893.6 s against 600 s, WITHIN), not only behind a whole-window wait p90.
       guardrails: [
         guardrail("vehicle.empty_drive_fraction", 20000),
         guardrail("depot.parking_peak_fraction", 100000, { depot: "SJ-1" }),
+        guardrail("depot.bay_wait_p90_s", 600, { depot: "SJ-1" }),
       ],
     },
   }),

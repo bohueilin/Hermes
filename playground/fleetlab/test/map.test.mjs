@@ -633,6 +633,23 @@ describe("roving focus and shortcuts", () => {
     ]);
   });
 
+  test("a click or tap on a depot tile opens its inspector, and on the pinned glyph opens the car's (G1)", () => {
+    const calls = [];
+    const { map, redraw } = drawn({ pinnedCar: "SF-017", handlers: { onInspect: (t) => calls.push(["inspect", t]), onSelect: (s) => calls.push(["select", s]) } });
+    map.svg.querySelector('g[data-depot="SJ-1"] rect').dispatchEvent(new Event("click", { bubbles: true }));
+    const glyph = map.svg.querySelector('[data-layer="pinned"] g[data-car="SF-017"]');
+    assert.equal(glyph.getAttribute("class"), "fl-pinned-car");
+    const hit = glyph.querySelector('circle[data-role="hit"]');
+    assert.equal(hit.getAttribute("r"), "22", "a 44 px pointer and touch target");
+    assert.equal(hit.getAttribute("class"), "fl-hit");
+    glyph.querySelector('[data-role="surface-ring"]').dispatchEvent(new Event("click", { bubbles: true }));
+    assert.deepEqual(calls, [["inspect", { depot: "SJ-1" }], ["inspect", { car: "SF-017" }]]);
+    redraw({});
+    assert.equal(map.svg.querySelector('[data-layer="pinned"] g[data-car="SF-017"]'), glyph, "the same glyph is moved, not rebuilt, while the car keeps its state");
+    redraw({ pinnedCar: null });
+    assert.equal(map.svg.querySelector('[data-layer="pinned"] g'), null);
+  });
+
   test("playback shortcuts reach the handler only while the map has focus", () => {
     const keys = [];
     const { map } = drawn({ handlers: { onKey: (event) => keys.push(event.key) === 0 } });

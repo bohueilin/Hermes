@@ -332,6 +332,12 @@ function checkIntervals(result, out) {
   const lo = result.window.start_s;
   const hi = result.window.end_s;
   const releaseAt = result.scenario.policies.release_s;
+  const recallAt = result.scenario.policies.recall_s;
+  // The recall acts once (the engine header; it replaces the pending recall design 5.3 still states): it sends IDLE cars at its second and marks cars on a pickup or a trip then; a
+  // marked car goes to a depot when that trip completes before the release (or the window end with the release off).
+  const recallEnd = Math.min(releaseAt ?? hi, hi);
+  const markedTrip = (list, j) =>
+    list[j].state === "ON_TRIP" && j > 0 && list[j - 1].state === "ENROUTE_PICKUP" && list[j - 1].t0 <= recallAt && list[j].t1 > recallAt;
   const homeOf = new Map(result.cars.map((c) => [c.id, c.home_area]));
   const areaOfDepot = new Map(result.scenario.depots.map((d) => [d.id, d.area]));
   const areaOf = (loc) => (loc.depot !== undefined ? areaOfDepot.get(loc.depot) : loc.area);
@@ -383,6 +389,13 @@ function checkIntervals(result, out) {
         if (iv.t0 !== releaseAt || fromArea === homeOf.get(car) || prev?.state !== "READY_AT_DEPOT") {
           out.push(`P20: ${car} repositions at ${iv.t0} from ${place(iv.from)} with home area ${homeOf.get(car)}`);
         }
+      }
+      if (iv.state === "TO_DEPOT" && iv.purpose === "RECALL" && prev?.state !== "TO_DEPOT") {
+        const byRecall = prev?.state === "IDLE" ? iv.t0 === recallAt : prev?.state === "ON_TRIP" && markedTrip(list, i - 1) && iv.t0 < recallEnd;
+        if (!byRecall) out.push(`P20: ${car} leaves for a depot on the recall at ${iv.t0} from ${prev ? label(prev) : "the start"}, outside the recall at ${recallAt}`);
+      }
+      if (iv.state === "IDLE" && prev?.state === "ON_TRIP" && markedTrip(list, i - 1) && iv.t0 < recallEnd) {
+        out.push(`P20: ${car} ends a trip at ${iv.t0} idle although it was on that trip at the recall at ${recallAt}`);
       }
       if (iv.state === "ENROUTE_PICKUP" && prev?.state === "READY_AT_DEPOT" && iv.request === undefined) {
         out.push(`P20: ${car} leaves a depot for a pickup at ${iv.t0} without a request`);

@@ -667,7 +667,8 @@ describe("fake DOM: frames, media, serialization and rule R5", () => {
   test("the interface shell starts on the fake DOM through dom.js", withDom(async () => {
     const root = build(document, ["div", { id: "fleetlab-root" }, ["div", { id: "fleetlab-teaching-strip" }]]);
     document.body.appendChild(root);
-    const { strip, regions } = start({ createWorker: () => null });
+    const app = start({ createWorker: () => null });
+    const { strip, regions } = app;
     assert.equal(root.getAttribute("class"), "fl-app");
     assert.equal(strip.parentNode, root);
     assert.equal(regions.inspector.hidden, true);
@@ -678,6 +679,9 @@ describe("fake DOM: frames, media, serialization and rule R5", () => {
     toggle.click();
     assert.equal(popover.hidden, false);
     assert.equal(toggle.getAttribute("aria-expanded"), "true");
+    // start() schedules idle work (the G8 table build); destroying the app before the fake DOM goes keeps that work
+    // from running against a removed document after the test.
+    app.destroy();
     const list = document.createElement("ul");
     const create = (item) => {
       const li = document.createElement("li");
@@ -781,7 +785,9 @@ describe("model payloads", () => {
       assertMetricMap(payload[arm].metrics, arm);
       assertLog(payload[arm].log, 1001);
     }
-    assert.equal(payload.baseline.log.cars.length - payload.candidate.log.cars.length, 8);
+    // The default fork candidate sets SJ to 16 (FORK_AXIS); the SUP-1 recalibration moved the SJ default from 24 to 32,
+    // so the baseline has 32 - 16 = 16 more cars (it was 24 - 16 = 8).
+    assert.equal(payload.baseline.log.cars.length - payload.candidate.log.cars.length, 16);
     const baseline = presetScenario();
     assert.equal(await pairPayload({ baselineScenario: baseline, candidateScenario: forkCandidate(baseline), seed: 1001 }), payload);
     assert.throws(() => presetScenario("no-such-preset"), /no preset/);

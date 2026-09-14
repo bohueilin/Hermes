@@ -8,13 +8,14 @@ import { describe, test } from "node:test";
 import { freezeSpec } from "../src/model/experiment.js";
 import { DEFAULT_PRESET_ID, presetById } from "../src/model/presets.js";
 import { REFERENCE_PANELS } from "../src/model/reference-panels.js";
-import { describeDifferences } from "../src/model/schema.js";
+import { applyAxis, describeDifferences } from "../src/model/schema.js";
 import { differenceText, specDraftOf } from "../src/ui/experiment.js";
 import * as format from "../src/ui/format.js";
 import * as labels from "../src/ui/labels.js";
 import * as learn from "../src/ui/learn.js";
 import { createInitialState, createStore } from "../src/ui/store.js";
 import { installFakeDom } from "./helpers/fake-dom.mjs";
+import { pairPayload, presetScenario, windowPayload } from "./helpers/model-payloads.mjs";
 
 const CSS = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 const BANNED_WORDS = /\b(predict|forecast|live|real-time|realtime|real time|monitoring)\b|expected traffic/i;
@@ -59,8 +60,10 @@ describe("Learn cases joined with their presets", () => {
     });
   }
 
-  test("L3 pins SF-017, the worked example's car, and L2 plays both preregistered specs", () => {
-    assert.equal(learn.learnCase("L3").car, "SF-017");
+  test("L3 pins SF-005, the replay's car due a visit in San Jose, and L2 plays both preregistered specs", () => {
+    // Was SF-017, the single-car fixture's car (design §3.5), which never finishes a San Jose trip in the full replay; the
+    // replay facts that make SF-005 the right car are asserted in "Learn moments show what their captions name" below.
+    assert.equal(learn.learnCase("L3").car, "SF-005");
     assert.deepEqual(learn.learnCase("L2").presetIds, ["L2a", "L2b"]);
     assert.throws(() => learn.learnCase("L4"), RangeError);
   });
@@ -79,10 +82,11 @@ describe("Learn view", () => {
       assert.deepEqual(s.scenario, presetById("L3").scenario);
       assert.deepEqual(s.learn, { case: "L3", moment: 0 });
       assert.equal(s.clock_s, c.moments[0].clock_s);
-      assert.equal(s.fork.pinnedCar, "SF-017");
-      assert.deepEqual(s.selection, { car: "SF-017" });
+      // SF-005 since L3 pins the replay's car due a visit in San Jose (was SF-017, which never finishes a trip there).
+      assert.equal(s.fork.pinnedCar, "SF-005");
+      assert.deepEqual(s.selection, { car: "SF-005" });
       assert.equal(container.querySelector('[data-role="question"]').textContent, c.question);
-      assert.equal(container.querySelector('[data-role="pinned-car"]').textContent, labels.learnPinnedCar("SF-017"));
+      assert.equal(container.querySelector('[data-role="pinned-car"]').textContent, labels.learnPinnedCar("SF-005"));
       assert.equal(container.querySelector('[data-role="caption"] [data-key]').textContent, c.moments[0].caption);
       const buttons = container.querySelectorAll("[data-moment]");
       assert.deepEqual(buttons.map((b) => b.textContent), c.moments.map((m) => labels.momentLine({ clock: format.clock(m.clock_s), title: m.title })));
@@ -227,5 +231,66 @@ describe("Learn captions name views that are on screen (review: honesty-copy len
       }
     }
     assert.ok(named >= 1, "L3's second moment reads SJ-1's lot in lane B");
+  });
+});
+
+describe("Learn moments show what their captions name in the replay (review: teaching-value lens)", () => {
+  /** The value of `field` on `depot`'s board at second `t_s` (the last row at or before it). */
+  function boardAt(log, depot, field, t_s) {
+    const d = log.depots.find((x) => x.id === depot);
+    let row = null;
+    for (const r of d.series) {
+      if (r[0] <= t_s) row = r;
+      else break;
+    }
+    assert.ok(row, `${depot} has a board row at ${String(t_s)} s`);
+    return row[d.series_fields.indexOf(field)];
+  }
+
+  /** The fork Learn opens on L3: home_depot in lane A, nearest_depot in lane B, seed 1001, shared envelope. */
+  async function l3Fork() {
+    const baselineScenario = presetScenario("L3");
+    const candidateScenario = applyAxis(baselineScenario, "policy:depot_assignment", "nearest_depot");
+    return pairPayload({ baselineScenario, candidateScenario, seed: 1001 });
+  }
+
+  test("L3 m1: at its clock the pinned car has just finished a San Jose trip and drives to a depot on a due visit, in both lanes", async () => {
+    const c = learn.learnCase("L3");
+    const t = c.moments[0].clock_s;
+    const pair = await l3Fork();
+    const destinations = [];
+    for (const lane of [pair.baseline, pair.candidate]) {
+      const { log } = lane;
+      const iv = log.intervals[c.car].find((x) => x.t0 <= t && t < x.t1);
+      assert.equal(iv.state, "TO_DEPOT", `${c.car} at ${format.clock(t)}`);
+      const assigned = log.events.filter((e) => e.car === c.car && e.kind === "DEPOT_ASSIGNED" && e.t <= t).at(-1);
+      assert.equal(assigned.detail.purpose, "SERVICE_DUE");
+      assert.equal(assigned.t, iv.t0);
+      assert.ok(t - assigned.t < 60, "the visit comes due within the moment's minute");
+      const trip = log.events.filter((e) => e.car === c.car && e.kind === "TRIP_COMPLETED" && e.t <= t).at(-1);
+      assert.equal(trip.t, assigned.t, "the visit comes due as the trip ends");
+      assert.equal(log.requests.find((r) => r.id === trip.req).dest, "SJ", "the trip ends in San Jose");
+      destinations.push(log.visits.find((v) => v.car === c.car && v.arrival_s >= t).depot);
+    }
+    // Lane A drives to the car's home depot, lane B to the nearest one: SJ-1.
+    assert.deepEqual(destinations, [pair.baseline.log.cars.find((x) => x.id === c.car).home_depot, "SJ-1"]);
+    assert.equal(destinations[0], "SF-1");
+  });
+
+  test("L3 m2: at its clock SJ-1's lot in lane B holds cars, and more than in lane A", async () => {
+    const t = learn.learnCase("L3").moments[1].clock_s;
+    const pair = await l3Fork();
+    const a = boardAt(pair.baseline.log, "SJ-1", "stalls_held", t);
+    const b = boardAt(pair.candidate.log, "SJ-1", "stalls_held", t);
+    assert.ok(b >= 1, `lane B holds ${String(b)} stalls at ${format.clock(t)}`);
+    assert.ok(b > a, `lane B ${String(b)} against lane A ${String(a)}`);
+  });
+
+  test("L2 m2: at its clock SJ-1 has a car in a cleaning bay and San Jose riders are waiting in the replay", async () => {
+    const t = learn.learnCase("L2").moments[1].clock_s;
+    const { log } = await windowPayload({ presetId: "L2a", seeds: [1001] });
+    assert.ok(boardAt(log, "SJ-1", "clean_busy", t) >= 1, `a cleaning bay in use at ${format.clock(t)}`);
+    const waiting = log.requests.filter((r) => r.origin === "SJ" && r.time_s <= t && (r.pickup_s == null || r.pickup_s > t) && (r.unserved_s == null || r.unserved_s > t));
+    assert.ok(waiting.length > 0, "San Jose riders are waiting");
   });
 });

@@ -230,14 +230,16 @@ describe("metric by hour", () => {
     const chart = keep(charts.metricByHourChart({ chart: "wait_p90_by_hour", runs: [cut], seed: run.seed, window }));
     assert.equal(
       summaryOf(chart),
-      labels.metricByHourSummary({ register: labels.REGISTERS.thisReplaySentence, metric: "wait.p90_s", highest: { absent: "warm-up, not counted" }, absentHours: 1 }),
+      // Changed with G5: chart summaries name the metric in words (labels.METRIC_WORDS), not by its key.
+      labels.metricByHourSummary({ register: labels.REGISTERS.thisReplaySentence, metric: "wait p90", highest: { absent: "warm-up, not counted" }, absentHours: 1 }),
     );
     assert.deepEqual(tableRows(chart), [[format.clock(window.start_s), labels.absentValue("warm-up, not counted")]]);
     assert.equal(all(chart.node, ".fl-chip-across").length, 0, "one replication draws no band and no across chip");
     const available = keep(charts.metricByHourChart({ chart: "available_by_area", runs: [cut], seed: run.seed, window }));
     assert.equal(
       summaryOf(available),
-      labels.chartAbsentSummary({ register: labels.REGISTERS.thisReplaySentence, subject: "fleet.available_fraction", reason: "warm-up, not counted" }),
+      // Changed with G5: fleet.available_fraction reads "available share".
+      labels.chartAbsentSummary({ register: labels.REGISTERS.thisReplaySentence, subject: "available share", reason: "warm-up, not counted" }),
     );
   });
 
@@ -251,12 +253,40 @@ describe("metric by hour", () => {
       summaryOf(chart),
       labels.metricByHourSummary({
         register: labels.REGISTERS.thisReplaySentence,
-        metric: "wait.p90_s",
+        // Changed with G5: the metric in words.
+        metric: "wait p90",
         highest: minutesText(max),
         clock: format.clock(run.series.wait_p90_by_hour.starts_s[values.indexOf(max)]),
         absentHours: values.length - numbers.length,
       }),
     );
+  });
+});
+
+describe("metric names in charts (G5)", () => {
+  test("metricWords names a metric and its scope in words; metricSubject keeps the name with readable scopes", () => {
+    assert.equal(charts.metricWords("depot.bay_wait_p90_s{depot=SF-2}"), "bay wait p90 at SF-2");
+    // 111,600 s is D2 07:00 and 118,800 s is D2 09:00 (86,400 + 25,200 and 86,400 + 32,400).
+    assert.equal(charts.metricWords("wait.p90_s{area=SF,window=111600-118800}"), "wait p90 in San Francisco, D2 07:00 to 09:00");
+    assert.equal(charts.metricWords("unserved.fraction"), "unserved share");
+    assert.equal(charts.metricSubject("wait.p90_s{area=SF,window=111600-118800}"), "wait.p90_s · San Francisco · D2 07:00 to 09:00");
+    assert.equal(charts.metricSubject("depot.bay_wait_p90_s{depot=SF-2}"), "depot.bay_wait_p90_s · SF-2");
+    assert.equal(charts.metricSubject("unserved.fraction"), "unserved.fraction");
+  });
+
+  test("every Sandbox chart title and summary names metrics in words, never by key or in engine seconds", () => {
+    const run = P.win.runs[0];
+    const built = [
+      charts.fleetStateChart({ series: run.series, window: P.window, seed: run.seed }),
+      ...["wait_p90_by_hour", "bay_wait_by_depot", "available_by_area"].map((chart) => charts.metricByHourChart({ chart, runs: P.win.runs, seed: run.seed, window: P.window })),
+    ].map(keep);
+    const raw = /[a-z]+\.[a-z_0-9]+|\{|=|\b\d{5,}\b/;
+    for (const chart of built) {
+      const text = `${one(chart.node, "h3").textContent} ${summaryOf(chart)}`;
+      assert.ok(!raw.test(text), `${chart.node.getAttribute("data-chart")}: ${text}`);
+    }
+    const bay = built.find((c) => c.node.getAttribute("data-chart") === "bay_wait_by_depot");
+    assert.match(summaryOf(bay), /bay wait p90 at [A-Z]+-\d/);
   });
 });
 
@@ -319,7 +349,8 @@ describe("arm comparison", () => {
     }
     const chart = keep(charts.armComparisonChart({ perSeed, metric }));
     assert.ok(all(chart.node, "rect[data-role=\"absent\"]").length >= 1);
-    assert.ok(summaryOf(chart).startsWith(`${labels.acrossReplications(n)}: ${metric} had no value; ${labels.ABSENT_PREFIX}`));
+    // Changed with G5: the absent summary names the metric in words (charts.metricWords), not by its key.
+    assert.ok(summaryOf(chart).startsWith(`${labels.acrossReplications(n)}: ${charts.metricWords(metric)} had no value; ${labels.ABSENT_PREFIX}`));
     assert.ok(tableRows(chart).some((row) => row[1].startsWith(labels.ABSENT_PREFIX)));
   });
 });
@@ -413,13 +444,16 @@ describe("verdict", () => {
     close(band.getAttribute("x"), -margin, "band left");
     close(Number(band.getAttribute("x")) + Number(band.getAttribute("width")), margin, "band right");
     // The scope is named on the simulated clock (design §7.2 setup), never in engine seconds; the table keeps the key.
-    assert.equal(primary.metric, "wait.p90_s{area=SJ,window=57600-68400}");
-    assert.equal(charts.metricSubject(primary.metric), "wait.p90_s · SJ · D1 16:00 to 19:00");
+    // UC-02's primary moved to the day 1 morning peak (07:00 = 25200, 09:00 = 32400; was 16:00 to 19:00 = 57600 to 68400)
+    // because San Jose had no free car in either arm in the evening (review: teaching-value lens, see presets.js).
+    assert.equal(primary.metric, "wait.p90_s{area=SJ,window=25200-32400}");
+    // Changed with G5: the verdict card keeps the metric name and names the area scope by its label (SJ is San Jose).
+    assert.equal(charts.metricSubject(primary.metric), "wait.p90_s · San Jose · D1 07:00 to 09:00");
     assert.equal(
       summaryOf(strip),
-      labels.verdictStripSummary({ count: seeds.length, metric: "wait.p90_s · SJ · D1 16:00 to 19:00", low: secondsSigned(primary.ci_low), high: secondsSigned(primary.ci_high), outcome: P.expUC02.verdict.outcome }),
+      labels.verdictStripSummary({ count: seeds.length, metric: "wait.p90_s · San Jose · D1 07:00 to 09:00", low: secondsSigned(primary.ci_low), high: secondsSigned(primary.ci_high), outcome: P.expUC02.verdict.outcome }),
     );
-    assert.equal(one(strip.node, "h3").textContent, labels.chartTitle({ title: labels.VERDICT.primary, subject: "wait.p90_s · SJ · D1 16:00 to 19:00" }));
+    assert.equal(one(strip.node, "h3").textContent, labels.chartTitle({ title: labels.VERDICT.primary, subject: "wait.p90_s · San Jose · D1 07:00 to 09:00" }));
     assert.ok(!/\{|window=/.test(summaryOf(strip) + one(strip.node, "h3").textContent), "no raw key in the title or summary");
     const rows = tableRows(strip);
     seeds.forEach((seed, i) => assert.deepEqual(rows[i], [String(seed), secondsSigned(primary.paired_deltas[i])]));

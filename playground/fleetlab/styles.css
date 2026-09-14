@@ -18,6 +18,7 @@ Text         .fl-mono .fl-title .fl-muted .fl-small-label .fl-learn-text .fl-sr-
 Map and SVG  .fl-yard .fl-route-highway__casing .fl-route-highway__centre .fl-route-local .fl-route--congested
              .fl-chevron .fl-depot-tile .fl-rider-ring .fl-glyph-edge .fl-glyph-ring
              .fl-fam-rider .fl-fam-empty .fl-fam-available .fl-fam-depot (set color; glyphs fill with currentColor)
+             .fl-pinned-car (the pinned glyph, clickable) .fl-hit (a transparent pointer target)
              .fl-chart__grid .fl-chart__axis .fl-chart__line .fl-chart__band .fl-chart__cursor .fl-hatch-line
              .fl-map-legend (swatch and word per state family)
 Lists        .fl-flow (ordered steps as an arrow flow, no number markers) .fl-flow__arrow (aria-hidden) .fl-list-plain
@@ -264,6 +265,11 @@ summary {
 .fl-route--highway:focus-visible .fl-route-highway__casing { stroke: var(--accent); }
 .fl-route--local:focus-visible .fl-route-local { stroke: var(--accent); }
 .fl-verdict-chip__word { letter-spacing: 0.02em; }
+/* The pinned car opens its inspector on click or tap; its transparent hit circle gives the small glyph a 44 px target. */
+.fl-pinned-car { cursor: pointer; }
+.fl-hit { fill: transparent; stroke: none; }
+/* Scrolling the fork into view leaves its heading below the sticky teaching strip. */
+.fl-charts__wide { scroll-margin-top: calc(var(--strip-block) + 8px); }
 
 /* Tablet, 768 to 1279 px: knobs become a left drawer, the column follows DOM and tab order, charts form a 2 by 2 grid. */
 @media (min-width: 768px) {
@@ -289,11 +295,14 @@ summary {
       "knobs charts charts"
       "knobs footer footer";
   }
+  /* A static column has nothing to animate. Without transition: none, a page that loads narrow and is then widened
+     runs the sheet's slide from below (translateY(100%)) inside the column, and a paused or hidden view keeps it there. */
   .fl-knobs {
     grid-area: knobs;
     position: static;
     width: auto;
     transform: none;
+    transition: none;
     border-radius: 6px;
     border-right: 1px solid var(--rule);
   }

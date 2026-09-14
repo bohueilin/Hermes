@@ -594,6 +594,29 @@ describe("interface checks that arrive with the interface modules", () => {
     }
   });
 
+  test("the NOW panel is a named tab stop between the transport and the charts (design 7.7, G3)", () => {
+    const { root, shell, cleanup } = mountedShell();
+    try {
+      const order = tabbables(root);
+      const now = shell.regions.now;
+      assert.ok(order.includes(now), "the NOW panel itself takes focus");
+      assert.equal(now.getAttribute("aria-label"), uiLabels.REGISTERS.nowThisReplay);
+      const at = order.indexOf(now);
+      assert.ok(shell.regions.transport.contains(order[at - 1]) || shell.regions.segmented.contains(order[at - 1]), "it follows the transport");
+      const regionOf = (node) => REGION_IDS.findIndex((id) => shell.regions[id].contains(node));
+      assert.ok(order.slice(at + 1).every((node) => regionOf(node) >= REGION_IDS.indexOf("now")), "nothing after it goes back to an earlier region");
+    } finally {
+      cleanup();
+    }
+  });
+
+  test("the desktop knob column never animates its transform (G11: no band after a narrow page is widened)", () => {
+    const desktop = RULES.filter((rule) => rule.context.includes("@media (min-width: 1280px)") && rule.selectors?.includes(".fl-knobs"));
+    const decls = desktop.flatMap((rule) => rule.declarations);
+    assert.ok(decls.some((d) => d.name === "transform" && d.value === "none"));
+    assert.ok(decls.some((d) => d.name === "transition" && d.value === "none"), "the sheet's slide from the phone layout must not run inside the column");
+  });
+
   test("every class the shell sets is defined in styles.css", async () => {
     const { root } = await startShell();
     const selectorText = RULES.flatMap((rule) => rule.selectors ?? []).join(" ");
@@ -727,6 +750,9 @@ function mountedShell() {
   const cleanup = () => {
     controls.destroy();
     inspector.destroy();
+    // start() schedules idle work (the G8 table build); destroying it before the fake DOM goes keeps that work from
+    // running against a removed document after the test.
+    shell.destroy();
     uninstall();
   };
   return { doc, root, shell, store, cleanup };

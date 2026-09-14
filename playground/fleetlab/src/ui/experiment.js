@@ -30,7 +30,7 @@
 //   the fewer-seeds advice, with the interval widening by the square root of the seed ratio.
 
 import { resultSummary, summaryText } from "../instrument/summary.js";
-import { freezeSpec, isNullCheckAxis, SpecError, thresholdValue, validateDraft, verdictDeclarations } from "../model/experiment.js";
+import { freezeSpec, isNullCheckDraft, SpecError, thresholdValue, validateDraft, verdictDeclarations } from "../model/experiment.js";
 import { violationId } from "../model/invariants.js";
 import { METRICS, metricRow } from "../model/metrics.js";
 import { PRESETS, presetById, seedSet } from "../model/presets.js";
@@ -835,7 +835,8 @@ function axisBlock(draft, dispatch) {
   };
   const notes = [];
   if (isTeachingModelAxis(axis.id)) notes.push(el("p", { class: "fl-small-label", "data-role": "axis-tag" }, labels.HONESTY.axisFleetLabCannotRun));
-  if (plainAxis && axis.baseline !== undefined && axis.candidate !== undefined && isNullCheckAxis({ id: axis.id, baseline: axis.baseline, candidate: axis.candidate })) {
+  // The note names the labelled null check itself (model isNullCheckDraft), not any draft whose axis happens to match.
+  if (isNullCheckDraft(specDraftOf(draft))) {
     notes.push(el("p", { class: "fl-muted", "data-role": "null-check" }, labels.EXPERIMENT_SETUP.nullCheck));
   }
   return [

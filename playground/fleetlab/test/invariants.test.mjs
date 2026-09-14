@@ -342,6 +342,39 @@ describe("every whole-run check fails on a constructed violation of its own", ()
     only(b, "P20", { configuredCars: ["SF-001"] });
   });
 
+  test("P20: a recall that does not act once at its second", () => {
+    // Fixture A sends SF-001 and PEN-001 from IDLE at the recall 88,200. With the recall read as 88,100 those legs start
+    // 100 s after it, which no rule allows.
+    const late = clone(A);
+    late.scenario.policies.recall_s = 88100;
+    only(late, "P20");
+    // With the recall read as 37,000, SF-001 was on r-SF-1 then (pickup from 36,720, trip to 37,440) and PEN-001 on
+    // r-PEN-0 (pickup from 36,100, trip to 37,060): both trips end before the release 107,100, yet both cars end IDLE,
+    // and the legs at 88,200 are no longer at the recall second.
+    const marked = clone(A);
+    marked.scenario.policies.recall_s = 37000;
+    const found = only(marked, "P20");
+    assert.ok(found.some((text) => text === "P20: SF-001 ends a trip at 37440 idle although it was on that trip at the recall at 37000"), found.join(" | "));
+    assert.ok(found.some((text) => text === "P20: PEN-001 ends a trip at 37060 idle although it was on that trip at the recall at 37000"), found.join(" | "));
+  });
+
+  test("P20: a car dispatched after the recall does not follow it, as it did under the former pending rule", () => {
+    // Engine fixture 4: SF-003 is assigned r-SF-0 at 88,000 (pickup 88,000 to 88,360, trip 88,360 to 89,860), is on that
+    // pickup at the recall 88,200, and leaves for SF-1 on the recall at 89,860. That trace holds. With the recall read as
+    // 87,900 the same trace is the former pending rule's: the car was IDLE at the recall, was dispatched after it, and
+    // still leaves for a depot on the recall when its trip ends (review: 111 such legs in the former default run).
+    const trace = runFixture(defaultScenario(), {
+      cars: [car("SF-003", "SF", "SF-1", { area: "SF" })],
+      requests: [{ id: "r-SF-0", time_s: 88000, origin: "SF", dest: "PEN" }],
+      depotOccupancy: {},
+    });
+    assert.deepEqual(checkRun(trace, { configuredCars: ["SF-003"] }), []);
+    const pending = clone(trace);
+    pending.scenario.policies.recall_s = 87900;
+    const found = only(pending, "P20", { configuredCars: ["SF-003"] });
+    assert.ok(found.includes("P20: SF-003 leaves for a depot on the recall at 89860 from ON_TRIP, outside the recall at 87900"), found.join(" | "));
+  });
+
   test("P21: a metric whose area values do not sum to the unscoped value", () => {
     assert.deepEqual(partitionViolations(A), []);
     const faulty = (result, ref) => {

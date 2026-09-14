@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { METRICS } from "../src/model/metrics.js";
 import * as format from "../src/ui/format.js";
 import * as labels from "../src/ui/labels.js";
 
@@ -187,6 +188,13 @@ const SAMPLES = {
   carHome: [[{ area: "SF", depot: "SF-1" }]],
   carStateText: [[{ state: "IN_SERVICE", task: "CLEAN", blocked: true }], [{ state: "IDLE" }]],
   acrossRange: [[{ low: "9 min", high: "14 min" }]],
+  acrossSame: [["0.0%"]],
+  carsHereHeading: [[12], [0]],
+  carHere: [[{ car: "SJ-022", state: "in a bay" }]],
+  inspectCar: [["SJ-022"]],
+  pinCarNamed: [["SJ-022"]],
+  forkOpened: [["SF-017"]],
+  metricInWords: [[{ words: "bay wait p90", depot: "SF-2" }], [{ words: "wait p90", area: "San Francisco", window: "D2 07:00 to 09:00" }], [{ words: "unserved share" }]],
   decisionLine: [[{ clock: "D1 18:30", kind: "DEPOT_ASSIGNED", depot: "SJ-1", target: "SERVICE_DUE", cause: "nearest_depot" }]],
   // Experiment sheet, verdict, reference panels and Learn (src/ui/experiment.js, src/ui/learn.js).
   openReferencePanel: [["FLEET-005 depot turnaround"]],
@@ -505,6 +513,36 @@ describe("status words", () => {
 });
 
 describe("templates", () => {
+  test("every registered metric has words for charts, and a scoped metric reads in words", () => {
+    assert.deepEqual(Object.keys(labels.METRIC_WORDS).sort(), METRICS.map((m) => m.name).sort());
+    for (const [name, words] of Object.entries(labels.METRIC_WORDS)) assert.ok(!words.includes(".") && !words.includes("_"), `${name} reads as words`);
+    assert.equal(labels.metricInWords({ words: "bay wait p90", depot: "SF-2" }), "bay wait p90 at SF-2");
+    assert.equal(labels.metricInWords({ words: "wait p90", area: "San Francisco", window: "D2 07:00 to 09:00" }), "wait p90 in San Francisco, D2 07:00 to 09:00");
+  });
+
+  test("a range whose ends match reads as one value in every replication (format.acrossText)", () => {
+    const pct = (v) => format.percent(v, 1);
+    // 0.0001 and 0.0003 both format to 0.0%, so every replication shows the same text.
+    assert.equal(format.acrossText([0.0001, 0.0003, 0], pct), labels.acrossSame("0.0%"));
+    assert.equal(labels.acrossSame("0.0%"), "0.0% in every replication");
+    // 600, 900 and 1200 s are 10, 15 and 20 min; p10 and p90 over three values (linear) are 11 and 19 min.
+    assert.equal(format.acrossText([600, 900, 1200], format.minutes), labels.acrossRange({ low: "11 min", high: "19 min" }));
+    assert.throws(() => format.acrossText([], pct), TypeError);
+  });
+
+  test("a spread whose 10th and 90th percentiles format alike reads its lowest to highest value (format.acrossText)", () => {
+    const pct = (v) => format.percent(v, 1);
+    // Review: [0, 0, 0, 0, 0.0008] read "0.0% to 0.0%", the text the helper's comment rules out. Linear percentiles over
+    // five values: p10 at index 0.4 is 0, p90 at index 3.6 is 0 + 0.6 * 0.0008 = 0.00048, both 0.0%. One replication
+    // shows 0.1%, so the text is neither a collapsed range nor one value in every replication: min 0 and max 0.0008.
+    const text = format.acrossText([0, 0, 0, 0, 0.0008], pct);
+    assert.equal(text, labels.acrossRange({ low: "0.0%", high: "0.1%" }));
+    assert.notEqual(text, labels.acrossRange({ low: "0.0%", high: "0.0%" }));
+    assert.ok(!text.includes(labels.acrossSame("").trim()), text);
+    assert.deepEqual(format.acrossEnds([0, 0, 0, 0, 0.0008], pct), { low: "0.0%", high: "0.1%" });
+    assert.equal(format.acrossEnds([0.0001, 0.0003, 0], pct), null);
+  });
+
   test("freeze notice counts knobs in the right number", () => {
     assert.equal(
       labels.freezeNotice({ frozenAt: "09:15", changedKnobs: 1 }),
