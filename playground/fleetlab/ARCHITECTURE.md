@@ -335,8 +335,8 @@ on the Appendix A.9 spec, which the regenerator holds as a literal. Descriptives
 `fleet.utilization_fraction`, `business_proxy.served_trips` and `business_proxy.unserved_demand` appear only by name in
 `suppressed`. There are no labels, digests or `deployment_permission`. The pytest rebuilds both panels, requires byte
 equality, and asserts that the file contains no `REQUIRED_LABELS` string and no 64-character hexadecimal string.
-`src/model/presets.js` exports a literal `REFERENCE_PANELS` object (design §9.3), and a node test requires it to
-deep-equal the fixture.
+`src/model/reference-panels.js` exports a literal `REFERENCE_PANELS` object that `src/model/presets.js` re-exports
+(design §9.3), and a node test requires it to deep-equal the fixture.
 
 ## 6. Teaching model (`src/model/`)
 
@@ -350,7 +350,7 @@ Integer seconds from day 1 00:00. Day 2 00:00 is 86,400. Hour index `h = Math.fl
 
 All numbers are integers in engine units. `schema.js` exports `KNOBS` (every design §2 knob: id, label, unit shown,
 engine unit, type, range, default, first-build flag, help text), `defaultScenario()`, `validateScenario(s)` returning
-`{ok: true}` or `{ok: false, errors: [{what, why, fix, knob}]}` (design §7.6 four slots, P19), `cloneScenario`,
+`{ok, errors: [{what, why, fix, knob}], warnings}` (design §7.6 four slots, P19), `cloneScenario`,
 `applyAxis(scenario, axis, value)` and `describeDifferences(a, b)`.
 
 ```js
@@ -404,7 +404,9 @@ every depot); `parameter:DEM-1.<area>` and `parameter:DEM-2.<area>`; `parameter:
 `parameter:RD-3.<class>.<period>` with class `highway` (every direction of every HIGHWAY route), `local` (every direction
 of every LOCAL route) or `in_area` (the `IN_AREA` row) and period `morning` (hours 7-8), `evening` (16-18) or `late` (19),
 the per-mille value set on both days, where `local` never changes `IN_AREA`; `parameter:POL-4` with a clock integer or the
-named value `off` (null); `policy:depot_assignment`; and `parameter:<knob id>` for every other knob.
+named value `off` (null); `policy:depot_assignment`; and `parameter:<knob id>` for every other first-build knob. SUP-2, DEP-1, DEM-3, DEM-4, RD-5 and CLK-1 to CLK-4 are
+not axes: each is derived, structural, a measurement setting, or an input of the shared world where an axis would be
+silently inert (design FL-1).
 
 ### 6.3 World (`routes.js`, `world.js`)
 
@@ -452,7 +454,9 @@ named value `off` (null); `policy:depot_assignment`; and `parameter:<knob id>` f
 
 ### 6.4 Engine (`policies.js`, `engine.js`)
 
-`engine.js` exports `createRun(scenario, world, {seed, defect = null, keepLogs = true})` returning a run object with
+`engine.js` exports `createRun(scenario, world, {seed, defect = null, keepLogs = true, fixture = null})`, where
+`fixture` is the test hook documented at the top of `test/engine-fixtures.test.mjs` (injected cars, requests and depot
+holds), returning a run object with
 `step(maxEvents): boolean` (true when finished) and `result()`, plus `runToEnd(...)`. It is resumable so the runtime can
 time-slice it.
 
@@ -492,17 +496,25 @@ Rules the design fixes and this contract makes exact:
 - Recall, release, gate, blocked cars, freed stalls, drain: design §5.3 and §5.7 exactly. When a bay frees, candidates in
   order: first a car blocked in a cleaning bay at that depot whose service is due (for a service bay), then queued cars in
   FIFO order of `INTAKE_COMPLETED` time, then vehicle id.
+- Hand-off (design §5.3): when every stall of a depot is held, every bay for a task holds a car, one is blocked and a car
+  is queued for that task, the queued car gives up its stall and starts the task while the blocked car takes the stall, at
+  the same second (`STALL_CLAIMED`, then `SERVICE_STARTED`).
+- Decision events carry their cause: `DEPOT_ASSIGNED` `{purpose, cause}` and `DEPOT_DIVERTED` `{to, cause}`, the cause
+  suffixed `_service_bays_only` when skipping depots without a service bay changed the target.
+- Event seconds are bounded by `MAX_EVENT_TIME_S` = 2^23 - 1, derived from the schema maxima (see `engine.js`).
 - Segment bookkeeping: every realized segment records `{kind, key, dir, cls, t0, t1, loaded}` so metrics can clip and
   attribute seconds; the congested test uses the declared multiplier of the hour containing each realized second.
 - Defects for tests (`defect` option): `double_assign`, `bay_overfill`, `lot_overfill`, `teleport`,
   `illegal_transition`. Each must be caught by its own named invariant (design §9.5).
 
-`result()` returns `{scenario_digest, world_digest, seed, events, intervals, visits, requests, cars, depots, drain_end_s,
-snapshots, invariant_violations, counters}`: `events` entries `{ord, t, kind, car?, req?, depot?, detail?}`; `intervals`
-per car `[{state, t0, t1, location | segments, task?, blocked?, request?}]`; `visits` `{car, depot, arrival_s,
-intake_end_s, first_task_s, clean_start_s, clean_end_s, service_start_s, service_end_s, ready_s, censored}`; `snapshots`
-the fleet state every 300 simulated seconds from `window.start_s` to `drain_end_s` (per car: state, location or leg with
-its fraction done; per depot: stalls held, queue, bays busy by task, ready) for playback seeks.
+`result()` returns `{scenario, window, scenario_digest, world_digest, seed, events, intervals, visits, requests, cars,
+depots, drain_end_s, snapshots, invariant_violations, counters}`: `events` entries `{ord, t, kind, car?, req?, depot?,
+detail?}`; `intervals` an object keyed by car id, each `[{state, t0, t1, location | segments, task?, blocked?,
+request?}]`; `visits` `{car, depot, arrival_s, intake_end_s, first_task_s, clean_start_s, clean_end_s, service_start_s,
+service_end_s, ready_s, censored}`; `depots` with their series and fixture `holds: [{resource, until_s}]`; `snapshots` the
+fleet state every 300 simulated seconds from `window.start_s` to `drain_end_s` (per car: state, location or leg with
+`done_permille`; per depot: stalls held, queue, bays busy by task, ready) for playback seeks. With `keepLogs` false the
+events and snapshots are empty; intervals, visits, requests and depot series stay, because the metrics read them.
 
 ### 6.5 Metrics and invariants
 
@@ -623,14 +635,15 @@ or a size over 2 MB. The one allowed `http:` string is the SVG namespace `http:/
 `legacy-parity.test.mjs`, `routes.test.mjs`, `world.test.mjs`, `engine-fixtures.test.mjs`, `invariants.test.mjs`,
 `metrics.test.mjs`, `determinism.test.mjs`, `pairing.test.mjs`, `properties.test.mjs`, `performance.test.mjs`,
 `experiment.test.mjs`, `captions.test.mjs`, `runtime.test.mjs`, `store.test.mjs`, `labels.test.mjs`, `a11y.test.mjs`,
-`boundaries.test.mjs`, `pack.test.mjs`. Fixture paths resolve from `import.meta.url` to the repository's
+`boundaries.test.mjs`, `pack.test.mjs`, `packed.test.mjs`, and interface test files named after their module. Fixture
+paths resolve from `import.meta.url` to the repository's
 `tests/fixtures/fleet_playground/`. Hand-derived expectations carry their arithmetic in comments, never copied from a run.
-- `core.test.mjs` also holds the demand gap and destination vectors of design §9.5, hand-derived, including an exact half
+- `world.test.mjs` holds the demand gap and destination vectors of design §9.5, hand-derived, including an exact half
   and a product near 2^53.
 - `performance.test.mjs`: deterministic proxies on the design §5.9 reference preset (events, heap pushes, dispatch scans
   within bounds declared in the test); wall-clock budgets run only when `FLEET_PLAYGROUND_PERF=1`.
-- `determinism.test.mjs`: the same scenario and seed twice in one process give one event-log digest, and the engine
-  extracted from the packed file gives it again.
+- `determinism.test.mjs`: the same scenario and seed twice in one process give one event-log digest; `packed.test.mjs`
+  extracts the engine from the packed file and requires the same digest.
 - `runtime.test.mjs`: with injected fakes, the worker path and the main-thread path give identical payloads for one scenario
   and seed; the fallback triggers on a throwing factory and on no `ready` within 1 s.
 - `a11y.test.mjs`: every text token of design §8.1 on every surface it may sit on, in both themes, at 4.5:1 or more, read
@@ -685,7 +698,7 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     300 simulated seconds.
 22. `pack.mjs` builds separate page and worker bundles, the page passes a worker factory, and output goes outside the
     repository or under `dist/`.
-23. Reference panels are a regenerator fixture (section 5.2) mirrored by a literal `REFERENCE_PANELS` in `presets.js`.
+23. Reference panels are a regenerator fixture (section 5.2) mirrored by a literal `REFERENCE_PANELS` in `reference-panels.js`, re-exported by `presets.js`.
 24. The result summary's clipboard labels live in `instrument/summary.js` as an export format.
 25. `legacy_defect.json` is the one legacy fixture with invariant violations. Exact-half travel rounding is covered by a
     hand-derived node test, because no FleetLab-derived world contains an exact half.
@@ -694,3 +707,9 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     beyond section 8 when a reducer needs them; section 8 lists the keys other modules may read.
 27. Source modules end exported declarations with semicolons and read mutable exports through namespace imports
     (section 9), and `check-dist` allows only the SVG namespace string as an `http:` text.
+28. `validateScenario` always returns `{ok, errors, warnings}`; nine knobs are refused as axes (section 6.2).
+29. `createRun` takes the fixture hook; `result()` carries `scenario`, `window`, intervals keyed by car id, depot holds and
+    snapshot leg fractions in per-mille (section 6.4).
+30. The depot hand-off rule, decision-event causes and the event-time bound (section 6.4, design §5.3).
+31. `REFERENCE_PANELS` lives in `src/model/reference-panels.js` and `presets.js` re-exports it.
+32. The demand vectors sit in `world.test.mjs`; the packed-file determinism check is `packed.test.mjs`.

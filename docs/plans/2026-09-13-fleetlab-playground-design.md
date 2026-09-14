@@ -340,7 +340,9 @@ and a car finishing intake at 18:40 waits 20 minutes. The visit is not a service
 
 **What the page must make visible, as trade-offs rather than a winner**
 - For this one car, B gives **lower** out-of-service time and **fewer** congested empty minutes tonight,
-  and a **higher** morning drive; A gives a **lower** placement gap at the day 2 snapshot.
+  and a **higher** morning drive; at the day 2 06:00 snapshot the placement gap is **equal**, because the released car
+  is on its way to SF and counts there, so the morning cost shows in `vehicle.empty_drive_fraction` and day 2 exposure,
+  not in the gap.
 - Across the fleet, the evening flow away from SF (DEM-4) ends many SF-home cars in the south. Under
   `nearest_depot`, SJ-1's lot fills; later cars divert north in congestion; and the SF morning wait can
   end **higher** than under `home_depot`, even though the first cars' congested minutes fell.
@@ -695,6 +697,11 @@ DEP-8 is above 0 when no depot on the map has a service bay.
 
 **A freed stall** goes first to a car blocked in a bay at that depot (the earliest finished, then vehicle id), then
 to a car at its gate (the earliest arrival, then vehicle id).
+
+**Hand-off.** When every stall of a depot is held, every bay for a task holds a car, one of those cars is blocked and
+a car is queued for that task, no stall or bay can ever free. Both then move at the same second: the queued car gives up
+its stall and starts the task, and the blocked car (the earliest finished, then vehicle id) takes the stall
+(`STALL_CLAIMED`, then `SERVICE_STARTED`). Without this rule a depot could lock for good.
 
 A car on a leg is never re-tasked mid-leg; this overstates the cost of the morning release, and its card says
 so.
