@@ -188,7 +188,9 @@ Exports `OUTCOMES = ["IMPROVED", "REGRESSED", "MIXED", "UNCHANGED", "INCONCLUSIV
   label), and the verdict's words and numbers. It never contains the keys `spec_digest`, `world_tape_digest`,
   `seed_set_digest`, `deployment_permission`, `labels` or `schema_version`, and never the full digest.
 - `summaryText(summary): string` for the clipboard. Its field labels are an export format, not interface copy, so they
-  live in `summary.js` (section 12); they obey the banned-word and dash rules, and `check-dist` scans them.
+  live in `summary.js` (section 12); they obey the banned-word and dash rules, and `check-dist` scans them. The text rounds for reading (a `_s` metric in seconds to
+  one decimal, a fraction to four decimals, anything else to one), half to even on the exact decimal expansion, and a
+  nonzero value that would round to zero prints its exact value with its sign; the summary object keeps exact doubles.
 
 ### 4.1 Instrument vector fixture
 
@@ -359,10 +361,10 @@ engine unit, type, range, default, first-build flag, help text), `defaultScenari
 {
   format: "playground-scenario", version: "0.1", name: "bay_teaching_map",
   window: { start_s: 18000, end_s: 122400 }, warmup_end_s: 21600, bucket_s: 3600, placement_snapshot_s: 108000,
-  areas: [ { id: "SF", cars: 30, in_area_s: 360, peak_per_h: 60, offpeak_per_h: 15 },
-           { id: "PEN", cars: 18, in_area_s: 480, peak_per_h: 20, offpeak_per_h: 8 },
-           { id: "SJ", cars: 24, in_area_s: 480, peak_per_h: 35, offpeak_per_h: 10 },
-           { id: "EB", cars: 18, in_area_s: 420, peak_per_h: 30, offpeak_per_h: 8 } ],
+  areas: [ { id: "SF", cars: 40, in_area_s: 360, peak_per_h: 60, offpeak_per_h: 15 },
+           { id: "PEN", cars: 24, in_area_s: 480, peak_per_h: 20, offpeak_per_h: 8 },
+           { id: "SJ", cars: 32, in_area_s: 480, peak_per_h: 35, offpeak_per_h: 10 },
+           { id: "EB", cars: 24, in_area_s: 420, peak_per_h: 30, offpeak_per_h: 8 } ],
   routes: [ { id: "H1", a: "SF", b: "PEN", cls: "HIGHWAY", free_flow_s: 1500 },
             { id: "L1", a: "SF", b: "PEN", cls: "LOCAL", free_flow_s: 3300 } /* … H2-H6, L2-L6 per design §2.9 */ ],
   peaks: [ { start_h: 7, end_h: 9 }, { start_h: 16, end_h: 19 } ],
@@ -389,8 +391,8 @@ first the morning peak and the second the evening peak, the first ending no late
 peak hour when `start_h ≤ h % 24 < end_h` for either window. A candidate's destination period is `morning` inside the
 first window, `evening` inside the second, and `other` otherwise.
 
-`policies.release_s` is a safe integer or `null`, which means the release is off. The recall is pending over
-`[recall_s, release_s ?? window.end_s)`. P19 checks `release_s > recall_s` only when it is not null. `validateScenario`
+`policies.release_s` is a safe integer or `null`, which means the release is off. The recall acts once at `recall_s`: it sends `IDLE` cars then and marks cars on a pickup or a
+trip; a marked car goes to a depot when that trip completes before `release_s ?? window.end_s`. P19 checks `release_s > recall_s` only when it is not null. `validateScenario`
 rejects a missing key and any value that is neither a safe integer nor null.
 
 Default congestion (design RD-3), by hour of day on both days, per-mille:
@@ -448,6 +450,7 @@ silently inert (design FL-1).
 - Factors: `trafficPpm(seed, segmentKey, dir, quarterHour)` = `MULT_TABLE_σ[u16(seed, "traffic", segmentKey, dir, qh)]`
   where `segmentKey` is the route id, `IN-<area>` or `ACC-<depot>`, `dir` is `"<from>><to>"`, `IN` or `OUT` (in-area uses
   `-`), and `qh = Math.floor(depart_s / 900)`. `ridePpm(seed, requestId)` = `MULT_TABLE_σ[u16(seed, "ride", id)]`.
+- `warmTables(sigmaPermille)` builds and verifies both memoized tables for that sigma and returns `{sigma_permille}`.
 - `realizedSeconds(planned_s, trafficPpm, ridePpm)` = `Number(roundHalfEvenDiv(BigInt(planned) × tf × rf, 10^12))`, with
   `ridePpm` 1,000,000 for a leg no rider causes.
 - `worldDigest(world)` hashes canonical JSON of `{name, window, lambdaMax, candidates: per area [[t_k, thin, dest]],
@@ -495,7 +498,11 @@ Rules the design fixes and this contract makes exact:
   `home_depot` (falls back to `nearest_depot` when the home depot cannot serve it, logged); `nearest_depot` by `planPath`
   arrival, then depot id; `nearest_depot_with_capacity` the nearest whose `parking - stalls held - cars inbound ≥ 1` when
   the car leaves, falling back to `nearest_depot` when none qualifies (logged).
-- Recall, release, gate, blocked cars, freed stalls, drain: design §5.3 and §5.7 exactly. When a bay frees, candidates in
+- Recall (POL-3, design D-12): when `RECALL_ORDERED` pops, every `IDLE` car leaves for a depot in sorted-id order and every
+  `ENROUTE_PICKUP` or `ON_TRIP` car is marked. On `TRIP_COMPLETED` a marked car with no visit due goes `TO_DEPOT` with
+  purpose `RECALL` when the second is before `release_s ?? window.end_s`, and otherwise goes `IDLE`; the mark clears there.
+  A car dispatched after the recall is never marked.
+- Release, gate, blocked cars, freed stalls, drain: design §5.3 and §5.7 exactly. When a bay frees, candidates in
   order: first a car blocked in a cleaning bay at that depot whose service is due (for a service bay), then queued cars in
   FIFO order of `INTAKE_COMPLETED` time, then vehicle id.
 - Hand-off (design §5.3): when every stall of a depot is held, every bay for a task holds a car, one is blocked and a car
@@ -580,6 +587,8 @@ ascend.
 - `{type: "run_pair", id, baseline, candidate, seed, lambdaMaxPermille}`, which builds one world with that envelope and
   runs both scenarios on it with logs (the fork, and opening a verdict seed with the frozen spec's shared envelope);
 - `{type: "run_experiment", id, spec}`;
+- `{type: "warm_tables", id, sigmaPermille}`, which builds the quantile tables before a run needs them (payload
+  `{sigma_permille}`);
 - `{type: "cancel", id}`.
 
 It posts `{type: "ready"}` once after loading, then `{type: "progress", id, done, total, label}`,
@@ -589,7 +598,7 @@ It posts `{type: "ready"}` once after loading, then `{type: "progress", id, done
 - `run_pair`: `{world_digest, baseline: {metrics, series, log}, candidate: {metrics, series, log}}`;
 - `run_experiment`: `{verdict, digest, label, lambdaMaxPermille, per_seed: [{seed, baseline_metrics, candidate_metrics}]}`.
 
-`host.js` exports `createEngineHost({createWorker})`, returning `{path, runWindow, runPair, runExperiment, cancel}`, each
+`host.js` exports `createEngineHost({createWorker})`, returning `{path, ready, runWindow, runPair, runExperiment, warmTables, cancel}`, each
 of the run functions returning a promise. It calls `createWorker()` and uses the worker when construction does not throw
 and `ready` arrives within 1 s (design §9.4); otherwise it terminates any worker and drives the same generators on the main
 thread in slices of at most 8 ms, measured with `performance.now()`. `path` is `"worker"` or `"main thread"`, and the store
@@ -639,7 +648,7 @@ or a size over 2 MB. The one allowed `http:` string is the SVG namespace `http:/
 
 `playground/fleetlab/test/`: `core.test.mjs`, `tables.test.mjs`, `instrument-parity.test.mjs`, `summary.test.mjs`,
 `legacy-parity.test.mjs`, `routes.test.mjs`, `world.test.mjs`, `engine-fixtures.test.mjs`, `invariants.test.mjs`,
-`metrics.test.mjs`, `determinism.test.mjs`, `pairing.test.mjs`, `properties.test.mjs`, `performance.test.mjs`,
+`metrics.test.mjs`, `determinism.test.mjs`, `pairing.test.mjs`, `properties.test.mjs`, `performance.test.mjs`, `presets.test.mjs` (verdicts pinned per preset and the default's calibration envelope),
 `experiment.test.mjs`, `captions.test.mjs`, `runtime.test.mjs`, `store.test.mjs`, `labels.test.mjs`, `a11y.test.mjs`,
 `boundaries.test.mjs`, `pack.test.mjs`, `packed.test.mjs`, and interface test files named after their module. Fixture
 paths resolve from `import.meta.url` to the repository's
@@ -719,3 +728,12 @@ final sample summary in phase 5) and is absent, not skipped, before then.
 30. The depot hand-off rule, decision-event causes and the event-time bound (section 6.4, design §5.3).
 31. `REFERENCE_PANELS` lives in `src/model/reference-panels.js` and `presets.js` re-exports it.
 32. The demand vectors sit in `world.test.mjs`; the packed-file determinism check is `packed.test.mjs`.
+33. The recall acts once (design D-12); P20 guards the marked-trip rule.
+34. The default fleet is 120 cars (SF 40, PEN 24, SJ 32, EB 24); `presets.test.mjs` pins the calibration envelope and its two
+    accepted exceptions (design §2.2).
+35. Before any run the NOW and across-replications panels show one state line and no rows; a range whose values all format
+    alike reads "in every replication".
+36. Open the fork closes the inspector, shows the charts group, focuses and scrolls to the fork heading, and announces it.
+37. An idle step warms the quantile tables for the scenario's sigma before the first run (`warm_tables`).
+38. The depot tile and the pinned car glyph open their inspectors on click or tap; the depot inspector lists its cars with
+    Inspect and Pin.

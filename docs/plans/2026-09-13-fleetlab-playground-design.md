@@ -13,7 +13,7 @@
   not a committed decision record; the spec is reproduced in Appendix A. *From code* means read from
   the repository at `bca4ccd`, cited by file. *Expected by reasoning* means nobody has run it.
 - **First build** is the slice in §10.1. *Later* means designed here, not built first.
-- **Owner decisions** are numbered D-01 to D-11 (§11). The owner accepted every recommended default on 2026-09-13,
+- **Owner decisions** are numbered D-01 to D-12 (§11). The owner accepted every recommended default on 2026-09-13,
   with D-03 strengthened after the design audit.
 - **Where things live.** This document is `docs/plans/2026-09-13-fleetlab-playground-design.md`. The code is in
   `playground/fleetlab/`, the parity fixtures in `tests/fixtures/fleet_playground/`, and the explicitly invoked fixture
@@ -150,9 +150,19 @@ minutes and never shows a distance (D-07).
 
 | Id | Knob | What it controls in the model | Unit | Default (range) | First build |
 |---|---|---|---|---|---|
-| SUP-1 | Cars per area at start | How supply is spread when the day opens; replaces FleetLab's round-robin placement | cars per area | SF 30, PEN 18, SJ 24, EB 18 = 90 (0-200 each; total 1-500) | yes |
+| SUP-1 | Cars per area at start | How supply is spread when the day opens; replaces FleetLab's round-robin placement | cars per area | SF 40, PEN 24, SJ 32, EB 24 = 120 (0-200 each; total 1-500) | yes |
 | SUP-2 | Home area and home depot per car | A car's **home area** is the area it starts in under SUP-1, which is also its id prefix; the morning release returns cars there. Its **home depot** is the depot it visits under `home_depot`: the depot nearest its home area by free-flow time including depot access; cars share tied depots in turn, in vehicle-id order, starting with the lowest depot id. Shown, not edited | area id; depot id | derived (SF-017 is the 17th SF car, so SF-1) | yes |
 | SUP-3 | Operating window, staggered launch, out-of-service rate, special vehicles | Fleet availability refinements | various | none | later |
+
+**Calibration of the default (build, 2026-09-14).** The audited default of 90 cars was never run at fleet scale before
+the build. Run in the built engine it gave 23% of requests unserved and a wait p90 of 60 min, mostly because the
+recall then stayed pending all night (D-12). With the recall acting once, a sweep of 90 to 165 cars at the proportions
+SF:PEN:SJ:EB = 5:3:4:3, demand unchanged, chose 120: on seeds 1001 to 1005 at sigma 0 the busiest peak hour's wait p90 is
+1,134 s, the worst hour loses 8.2% of its requests, the day 2 07:00 to 10:00 window loses none, and the placement gap at
+the day 2 06:00 snapshot is 7. Two targets are accepted exceptions: unserved is 0.50% (9 of 1,795), below the 1% floor,
+and the longest overnight bay wait is 15,022 s at SF-2, which shares its home cars equally with SF-1 but has half its
+bays; every car is ready before the morning release. At 105 cars the busiest peak hour's wait p90 is 2,400 s. The envelope
+is pinned by `test/presets.test.mjs`.
 
 ### 2.3 Depots
 
@@ -204,7 +214,7 @@ values are named layouts, as long as the layouts differ only in that knob (UC-10
 |---|---|---|---|---|---|
 | POL-1 | Dispatch | Which car serves a waiting rider | `nearest_idle` (idle cars and cars ready at a depot, by planned arrival time) | `nearest_idle` | yes |
 | POL-2 | Depot assignment (PRD §13.4 "service/depot assignment") | Which depot a car heads to when a visit is due | `home_depot`, `nearest_depot`, `nearest_depot_with_capacity` | `home_depot` | yes |
-| POL-3 | End-of-service recall | At this time every idle car heads to a depot under POL-2, and a car on a pickup or trip follows when it finishes; the recall stays pending until POL-4's time | clock | day 2 00:30 | yes |
+| POL-3 | End-of-service recall | At this time every idle car heads to a depot under POL-2, and a car then on a pickup or trip follows when that trip completes before POL-4's time (or the window end when POL-4 is off); a car dispatched after this time is not recalled (D-12) | clock | day 2 00:30 | yes |
 | POL-4 | Morning release to home area | At this time every ready car at a depot outside its home area drives to its home area | clock or off | day 2 05:45 | yes |
 | POL-5 | Depot queue order | Order of service inside a depot | FIFO | FIFO | yes |
 | POL-6 | Repositioning, scarcity-aware dispatch, maximum pickup time, release on ready | Policy refinements | various | none | later |
@@ -320,7 +330,9 @@ SERVICE_DUE`). The table below is **expected by reasoning**. The build pins it w
 declared as fixture inputs (cars already queued, with their remaining times); and no request in SJ after 18:30,
 so SF-017 is not dispatched from SJ-1 overnight. The fixture test derives every time by hand in its comments, and
 every caption on screen is generated from that fixture (H-9). In the full preset other cars and riders act too:
-SF-017 can be dispatched from SJ-1 after 19:20, which changes its night and morning, and the fork shows that.
+SF-017 can be dispatched from SJ-1 after 19:20, which changes its night and morning, and the fork shows that. In the full
+L3 preset at the 120-car default (seed 1001) the car due a visit in San Jose is SF-005, at D1 17:13; Learn pins that car,
+and the single-car fixture keeps SF-017.
 
 **Traffic you set for this preset:** highways ×1.6 in both directions 16:00-19:00 and ×1.3 19:00-20:00;
 local routes ×1.3 16:00-19:00. **Depots in the fixture:** SF-1 has 60 stalls, 4 cleaning bays and enough cars already queued that a car
@@ -375,24 +387,26 @@ exploratory). Everything else is later.
 - **PRD:** FLEET-001. **First build:** Experiment preset. **Chart:** fleet-state stack.
 
 ### UC-02 How many cars does San Jose need?
-- **Experiment:** axis `parameter:SUP-1.SJ`, baseline 16, candidate 24. Primary `wait.p90_s` scoped to SJ,
-  day 1 16:00-19:00, margin 60 s. Guardrails `unserved.fraction`, 0.01; `unserved.fraction` scoped to SF,
+- **Experiment:** axis `parameter:SUP-1.SJ`, baseline 16, candidate 24. Primary `wait.p90_s` scoped to SJ, day 1 07:00-09:00, margin 60 s. Guardrails `unserved.fraction`, 0.01; `unserved.fraction` scoped to SF,
   0.01.
-- **Watch:** SJ available cars against SJ waiting riders, day 1 16:00-19:00.
+- **Watch:** SJ available cars against SJ waiting riders, day 1 07:00-09:00.
 - **Mechanism:** a queue near saturation; waits climb steeply as busy time approaches supply, then level off
   once cars are usually free.
-- **Expected by reasoning:** 24 cars lower SJ's evening-peak wait against 16.
+- **Expected by reasoning:** 24 cars lower SJ's morning-peak wait against 16. **Measured** at the 120-car default
+  (seed set 1): IMPROVED, ADVANCE_TO_NEXT_TEST, mean delta -743.0 s. In the evening peak San Jose had almost no free cars
+  in either arm and the primary did not respond, so the preset reads the morning peak.
 - **Lesson:** extra cars help most where supply is shortest. Seeing the knee of the curve needs a descriptive
   sweep, which is later; its chart would say "the knee of this toy model's curve, not a sizing recommendation" (H-6).
 - **First build:** Experiment preset. **Chart:** Metric by hour, `wait.p90_s` scoped to SJ for each arm, above
   Available cars by area (SJ panel), on one time axis (§7.5).
 
 ### UC-03 Rider patience and the population trap
-- **Experiment:** axis `parameter:RID-1`, baseline 20 min, candidate 10 min. Primary `wait.p90_s`, margin
-  30 s. Guardrail `unserved.fraction`, 0.02.
+- **Experiment:** axis `parameter:RID-1`, baseline 20 min, candidate 5 min. Primary `wait.p90_s`, margin
+  30 s. Guardrail `unserved.fraction`, 0.01.
 - **Watch:** waiting riders giving up before a car is assigned; `wait.population_n` beside the wait value.
 - **Mechanism:** wait percentiles count completed rides only, so impatient riders leave the population.
-- **Expected by reasoning:** the primary reads IMPROVED; the guardrail regresses; HOLD.
+- **Expected by reasoning:** the primary reads IMPROVED; the guardrail regresses; HOLD. **Measured:** IMPROVED, HOLD
+  (mean delta -572.8 s; unserved harm 0.0179 against 0.01). At 10 min against 0.02 the harm stayed within its limit.
 - **Lesson:** read who a metric counts; that is why every primary has guardrails.
 - **First build:** Experiment preset. **Chart:** Arm comparison (§7.5), two panels: `wait.p90_s` in minutes, and
   `wait.population_n`.
@@ -400,15 +414,18 @@ exploratory). Everything else is later.
 ### UC-04 Peak and off-peak with the same fleet (Learn case L1)
 - **Experiment:** axis `parameter:DEM-5`, baseline `flat`, candidate `peaked` (the same total requests over the
   window). Primary `wait.p90_s` scoped to day 1 16:00-19:00, margin 60 s. Guardrail `unserved.fraction`, 0.02.
-- **Watch:** cars reaching their tenth trip and heading to depots around 17:30.
-- **Mechanism:** a visit triggered by trip count arrives fastest in the peak, so depots fill when the street
-  needs cars most.
+- **Watch:** the At a depot band at 20:30 against the 17:00 hour: the peak pulls parked cars out of depots and visits
+  land after it.
+- **Mechanism:** visits come due fastest in the peak but land after it. Demand concentration carries most of the effect:
+  with visits all but switched off (DEP-7 at 100) the verdict is still REGRESSED, and the delta falls from 3,479 s to
+  2,220 s.
 - **Learn preset:** the Bay teaching map with San Francisco off-peak requests lowered from 15 to 8 per hour (DEM-2.SF,
   the value PEN and EB use), so the demand strip shows a sharper peak; fleet, peak rates, peak windows and the peaked
   shape are unchanged.
 - **Expected by reasoning:** the evening-peak window is higher, and the effect lasts past 19:00. A probe of the teaching
-  model at sigma 0 also moved the whole-window wait, so no caption may say the whole window barely moves.
-- **Lesson:** averages hide peaks, and trip-count servicing lands in the busiest hour.
+  model at sigma 0 also moved the whole-window wait, so no caption may say the whole window barely moves. **Measured:**
+  REGRESSED, HOLD, mean delta +3,479 s, with the unserved guardrail regressed.
+- **Lesson:** averages hide peaks, and trip-count servicing adds to a peak's cost after it.
 - **PRD:** uses the §10.1 demand model. FleetLab cannot run this axis today: its demand axes are silently
   inert (§14, FL-1). **First build:** Learn case. **Chart:** the demand strip (requests per hour) above the fleet-state stack,
   whose At a depot band counts cars at depots, on one time axis (§7.5).
@@ -436,19 +453,22 @@ exploratory). Everything else is later.
 - **Experiment:** axis `policy:depot_assignment`, baseline `home_depot`, candidate `nearest_depot`. Primary
   `wait.p90_s` scoped to SF, day 2 07:00-09:00, margin 60 s. Guardrails `exposure.congested_empty_s`, 0 s (any
   increase is harm); `depot.parking_peak_fraction` scoped to SJ-1, 0.10; `unserved.fraction`, 0.01.
-- **Watch:** pin SF-017; at 18:30 open the fork, which shows two full runs on the same world (D-10) with the
-  caption "every other car also differs between A and B"; 19:30, SJ-1's lot in B; day 2 05:45, the release;
+- **Watch:** pin SF-005; at 17:14 open the fork, which shows two full runs on the same world (D-10) with the
+  caption "every other car also differs between A and B"; 21:00, SJ-1's lot in B; day 2 05:45, the release;
   day 2 07:15, SF available cars in each lane; both depot boards on one clock (the depot move, seed 1006).
 - **Mechanism:** the depot choice decides when the empty drive is paid (in congestion tonight, in free flow
   tomorrow) and which depot absorbs the work.
 - **Expected by reasoning:** for the first cars, `nearest_depot` gives fewer congested minutes and earlier
   readiness; as SJ-1's lot fills, later cars divert north in congestion and the SF morning wait can end higher,
   which regresses the primary or the exposure guardrail and gives HOLD. A follow-up with
-  `nearest_depot_with_capacity` separates capacity from distance.
-- **Lesson:** the right depot depends on tomorrow's first peak and tonight's depot capacity, not on tonight's
-  distance.
-- **PRD:** §13.4 service and depot assignment. **First build:** Learn case. **Chart:** a two-lane timeline for
-  SF-017 (A above B) with a strip of SF available cars for day 2 06:00-09:00 on the same time axis.
+  `nearest_depot_with_capacity` separates capacity from distance. **Measured** at the 120-car default: `nearest_depot`
+  lowers SF's day 2 07:00 to 09:00 wait p90 (seed set 1: mean delta -646.5 s, interval [-949.7, -341.8]; seed sets 2 and
+  3 agree) with every guardrail within its limit, because under `home_depot` SF cars recalled overnight queue at SF-2's two
+  cleaning bays. With 90 cars the same spec read REGRESSED, HOLD. The capacity trade-off above needs a busier SJ-1 than the
+  default gives, and no Learn caption states either direction (H-9).
+- **Lesson:** the right depot depends on tonight's depot capacity and the fleet's slack for tomorrow's first peak, not on
+  tonight's distance.
+- **PRD:** §13.4 service and depot assignment. **First build:** Learn case. **Chart:** a two-lane timeline for SF-005 (A above B) with a strip of SF available cars for day 2 06:00-09:00 on the same time axis.
 
 ### UC-08 Depot throughput
 - **Measured anchor (FleetLab):** FLEET-005, committed as `config/fleet/fleet-005-turnaround.yaml`: 40 cars,
@@ -459,10 +479,13 @@ exploratory). Everything else is later.
   101 for parity.
 - **Teaching-engine presets (Bay teaching map):** UC-08a, axis `parameter:DEP-3.SF-1` 4 to 6; UC-08b, axis
   `parameter:DEP-4` 20 min to 15 min. Each: primary `wait.p90_s`, margin 30 s; guardrail `unserved.fraction`, 0.02.
-- **Watch:** the SF-1 board, 16:00-20:00: bays in use against stalls held.
+- **Watch:** the SF-1 board from day 2 00:30 to 05:45, where its bay wait moves; between 16:00 and 20:00 SF-1 is nearly
+  idle, so the street primary cannot move.
 - **Mechanism:** only the binding resource moves throughput; near saturation a small change to time per car has
   an outsized effect on the street.
 - **Expected by reasoning:** when SF-1's lot is the limit, more bays change little and a shorter clean helps.
+  **Measured:** UC-08a UNCHANGED (mean delta -3.4 s); UC-08b INCONCLUSIVE (-32.2 s). At the default no depot resource binds
+  while riders need cars, so the lesson shows as "more bays change little", not as a binding resource on the street.
 - **Lesson:** find the binding depot resource before adding capacity.
 - **PRD:** FLEET-005, FLEET-004. **First build:** Experiment presets UC-08a and UC-08b (the staff arm is later, D-06).
   **Chart:** the SF-1 depot board (bays in use, stalls held) above Available cars by area (SF panel), on one time
@@ -479,13 +502,14 @@ exploratory). Everything else is later.
   600 s would give HOLD, which follows from its +2,481.8 s delta.
 - **The Learn case** runs the teaching engine's own version on the Bay teaching map, labelled "shaped like an
   exploratory FleetLab run; these numbers are the teaching model's own". **Experiment:** axis
-  `parameter:DEP-3.SJ-1`, baseline 3, candidate 1, with SUP-1 SJ at 12 cars in both arms so SJ is short of
-  cars. Primary `wait.p90_s` scoped to SJ, day 1 16:00-19:00, margin 60 s. Guardrail `unserved.fraction`, 0.02.
+  `parameter:DEP-3.SJ-1`, baseline 3, candidate 1, with SUP-1 SJ at 12 cars and trips between depot visits (DEP-7) at 5 in both arms, so SJ is short of cars
+  and SJ-1 is visited inside the primary window. Primary `wait.p90_s` scoped to SJ, day 1 16:00-19:00, margin 60 s. Guardrail `unserved.fraction`, 0.02.
   A second preset is the same spec plus one guardrail, `depot.bay_wait_p90_s` scoped to SJ-1 with a maximum harm
   of 600 s. Both are preregistered and frozen before either runs; neither is edited after a result.
 - **Expected by reasoning:** the first spec's primary stays near its margin while SJ-1's bay wait rises; the
   second spec can read HOLD on its added guardrail. On screen those words appear only as run results, or in a
-  caption once a fixture test asserts them (H-9).
+  caption once a fixture test asserts them (H-9). **Measured:** L2a INCONCLUSIVE, RUN_MORE_EXPERIMENTS (mean delta
+  +25.3 s, interval [-135.3, +209.2]); L2b INCONCLUSIVE, HOLD on its bay-wait guardrail.
 - **Mechanism:** a constraint that does not bind does not show in the outcome.
 - **Lesson:** a flat primary can mean another constraint binds, and what you preregister decides what counts.
 - **Note:** the same FleetLab run reported a utilization of 1.1166, which is a metric defect (§14, FL-2), never a
@@ -496,14 +520,14 @@ exploratory). Everything else is later.
 ### UC-10 Pool the bays or spread them?
 - **Experiment:** axis `parameter:DEP-3` as named layouts with the same total, baseline `SF-1: 6, SJ-1: 1`,
   candidate `SF-1: 4, SJ-1: 3`, with depot assignment `nearest_depot_with_capacity` in both arms. Primary
-  `wait.p90_s`, margin 30 s. Guardrails `vehicle.empty_drive_fraction`, 0.02; `depot.parking_peak_fraction` scoped to
-  SJ-1, 0.10.
-- **Watch:** SJ-1's bay wait and lot at 17:00 in each arm; SJ cars sent past a full SJ-1 to the nearest depot
-  with room.
+  `wait.p90_s`, margin 30 s. Guardrails `vehicle.empty_drive_fraction`, 0.02; `depot.parking_peak_fraction` scoped to SJ-1, 0.10; `depot.bay_wait_p90_s` scoped to
+  SJ-1, 600 s.
+- **Watch:** SJ-1's bay wait for arrivals from 16:00 to 18:00 in each arm, and SF-1's whole-run bay wait in layout B.
 - **Mechanism:** bays set how fast a depot empties its lot. With one bay SJ-1's lot fills, and under
   `nearest_depot_with_capacity` later SJ cars drive to another depot; with three, more of them stay.
 - **Expected by reasoning:** layout A gives SJ-1 a longer bay wait, a fuller lot and more empty driving to other
-  depots; layout B moves that pressure to SF-1 during SF's own return wave.
+  depots; layout B moves that pressure to SF-1 during SF's own return wave. **Measured:** IMPROVED,
+  ADVANCE_TO_NEXT_TEST (mean delta -193.0 s): one bay saturates SJ-1 overnight, and three move that pressure to SF-1.
 - **Lesson:** splitting capacity trades pooling for proximity; check the smaller site's peak.
 - **First build:** Experiment preset. **Chart:** Metric by hour, `depot.bay_wait_p90_s` for SF-1 and SJ-1 on
   shared axes (§7.5); the empty-drive fraction reads as its guardrail row.
@@ -533,13 +557,12 @@ UC-05, UC-10 before the capstone) is later.
 
 ### 4.2 Five-minute live walkthrough
 1. **L2, about 90 seconds.** Show the exploratory FleetLab panel (queue up, wait unchanged, 42% unserved), then
-   play the teaching run to 18:00 and point at the SJ-1 bay queue while SJ wait holds. Open the two
+   play the teaching run to 18:30 and point at SJ-1's cleaning bays and queue while SJ wait holds. Open the two
    preregistered L2 presets, freeze and run both, and read each verdict as it arrives. Say: what you declare before
    the run decides what counts.
 2. **FLEET-005 panel, about 60 seconds.** REGRESSED, +826.1 s, interval [+735.9, +919.2], unserved +0.057 against
    0.02, HOLD. Say what you expect from more bays against a shorter clean before running UC-08's preset.
-3. **L3, about 120 seconds.** Pin SF-017, scrub to 18:30, open the fork, play at 900×, pause at 19:30 on SJ-1's
-   lot, jump to day 2 05:45 and 07:15, then Freeze and run. Follow up with `nearest_depot_with_capacity`.
+3. **L3, about 120 seconds.** Pin SF-005, scrub to 17:14, open the fork, play at 900×, pause at 21:00 on SJ-1's lot, jump to day 2 05:45 and 07:15, then Freeze and run. Follow up with `nearest_depot_with_capacity`.
 
 ### 4.3 What this model shows (not claims about real operations)
 
@@ -547,7 +570,7 @@ UC-05, UC-10 before the capstone) is later.
 |---|---|---|
 | More cars always fix wait. | Cars in the wrong area or parked at a depot add little. | UC-02, UC-07 |
 | Depot throughput is the bay count. | Throughput is the minimum over bays and parking. | UC-08, UC-09 |
-| The nearest depot is always the right one. | Nearest can fill up and leave tomorrow's first wave short. | UC-07 |
+| The home depot is the safe choice. | At the default, the nearest depot readies cars sooner and lowers the next morning's wait; whether nearest backfires depends on how busy the small depot is. | UC-07 |
 | The peak hour is the hard hour. | The trouble often follows the peak, when servicing synchronizes. | UC-04 |
 | Size the fleet to average demand. | The peak shape matters. | UC-04 |
 | A car at a depot is available. | Parked is not ready. | UC-08 |
@@ -668,9 +691,9 @@ state; playback derives it.
 | IDLE | ENROUTE_PICKUP | REQUEST_ASSIGNED | dispatch |
 | READY_AT_DEPOT | ENROUTE_PICKUP | REQUEST_ASSIGNED | dispatch; the leg is pull-out, depot access, then the in-area pickup (§5.2.1) |
 | ENROUTE_PICKUP | ON_TRIP | PICKUP_COMPLETED | none |
-| ON_TRIP | IDLE | TRIP_COMPLETED | no visit due and no recall pending |
+| ON_TRIP | IDLE | TRIP_COMPLETED | no visit due, and the car was not marked by the recall or its trip ends at or after the release |
 | ON_TRIP | TO_DEPOT | TRIP_COMPLETED | visit due; depot assignment picks the depot (`purpose SERVICE_DUE`) |
-| ON_TRIP | TO_DEPOT | TRIP_COMPLETED | no visit due and a recall pending; depot assignment picks the depot (`purpose RECALL`) |
+| ON_TRIP | TO_DEPOT | TRIP_COMPLETED | no visit due, the car was marked by the recall, and its trip ends before the release (or the window end when the release is off); depot assignment picks the depot (`purpose RECALL`) |
 | IDLE | TO_DEPOT | RECALL_ORDERED | end-of-service recall (`purpose RECALL`) |
 | TO_DEPOT | TO_DEPOT | DEPOT_DIVERTED | on arrival the target lot is full and a depot that can serve the visit has a free stall; the nearest such depot becomes the target |
 | TO_DEPOT | GATE_WAIT | DEPOT_ARRIVED | on arrival the target lot is full and no depot that can serve the visit has a free stall |
@@ -689,10 +712,11 @@ state; playback derives it.
 | READY_AT_DEPOT | REPOSITIONING | MORNING_RELEASE | the car's depot is outside its home area (SUP-2) |
 | REPOSITIONING | IDLE | REPOSITION_COMPLETED | none |
 
-**Recall.** A recall is pending from POL-3's time up to, but not including, POL-4's time, or until the end of the window when the
-release is off. At the recall time every `IDLE` car goes to a depot; a car on a pickup or a trip finishes it and
-then goes; cars already bound for a depot, at a depot or in a bay keep their course. Dispatch still takes
-`READY_AT_DEPOT` cars while a recall is pending, so a car can serve a late rider and return.
+**Recall.** The recall acts once (D-12). At POL-3's time every `IDLE` car goes to a depot, and every car on a pickup or
+a trip is marked; a marked car goes to a depot when that trip completes before POL-4's time (or the window end when the
+release is off), and the mark clears at completion. Cars already bound for a depot, at a depot or in a bay keep their
+course. Dispatch still takes `READY_AT_DEPOT` cars after the recall; such a car is not marked and ends `IDLE` where its trip
+ends.
 
 **A depot with no service bay** (DEP-5 = 0) never receives a visit that includes service: depot assignment and
 diversion consider only depots with a service bay for such a visit, and log that cause. P19 rejects a scenario whose
@@ -748,7 +772,7 @@ run. Every decision is logged with its cause.
 |---|---|---|
 | Dispatch (POL-1) | the waiting rider oldest first; the car with the earliest planned arrival among `IDLE` and `READY_AT_DEPOT` cars | planned arrival, then vehicle id |
 | Depot assignment (POL-2) | `home_depot`; `nearest_depot` by planned arrival; `nearest_depot_with_capacity`, the nearest depot whose free stalls minus cars already inbound is at least 1 when the car leaves | planned arrival, then depot id |
-| End-of-service recall (POL-3) | at the declared time, every `IDLE` car goes `TO_DEPOT`; a car on a pickup or trip finishes it and then goes (the recall rule of §5.3) | vehicle id |
+| End-of-service recall (POL-3) | at the declared time, every `IDLE` car goes `TO_DEPOT`; a car on a pickup or trip at that time finishes it and then goes, if it finishes before the release; a car dispatched later is not recalled (the recall rule of §5.3) | vehicle id |
 | Morning release (POL-4) | at the declared time, every `READY_AT_DEPOT` car whose depot is outside its home area repositions home | vehicle id |
 | Queue order (POL-5) | FIFO by intake time, for each bay type; not used by the legacy profile (§5.10) | vehicle id |
 
@@ -779,7 +803,7 @@ are withheld behind a model-error panel.
 | P17 | Visits started equal visits completed plus visits censored at the drain end `T_d`; every `TO_DEPOT` leg ends in exactly one arrival, diversion or censoring | yes |
 | P18 | The world digest covers the candidate stream of P-1 (envelope, draws and factors), not the accepted requests, and is identical across arms for every seed, including under a demand axis; `lambda_a(h) ≤ lambda_max_a` in both arms | yes |
 | P19 | When a scenario loads: profiles cover every hour of both days; multipliers within bounds; peak ≥ off-peak; every car has a home area and an existing home depot; the release time is later than the recall time; when DEP-8 is above 0, at least one depot has a service bay | yes (scenario rejected) |
-| P20 | Dispatch takes a car from `READY_AT_DEPOT` only through the dispatch rule; the morning release moves only cars outside their home area | yes |
+| P20 | Dispatch takes a car from `READY_AT_DEPOT` only through the dispatch rule; a recall leg starts only from `IDLE` at the recall second or at the end of a marked trip before the release, and a marked trip never ends `IDLE` before the release; the morning release moves only cars outside their home area | yes |
 | P21 | For every count or seconds metric that accepts `area` or `depot`, the values over every area, or every depot, sum to the unscoped value (§5.7) | yes |
 
 ### 5.7 Metrics and scopes
@@ -1007,8 +1031,8 @@ An invalid experiment always shows **NO_RECOMMENDATION** and no outcome.
 It never writes, exports or labels anything as a FleetLab decision record, never shows a
 record digest in FleetLab's format, and never feeds `artifacts/` or `experiments/`. Its
 export is a result summary copied to the clipboard, with `format: fleetlab-playground-result-summary`,
-`evidence_status: NOT_EVIDENCE`, `decision_authority: NONE` and the playground model version; its
-spec hash displays as `playground-spec:` plus 8 characters. It never carries the keys
+`evidence_status: NOT_EVIDENCE`, `decision_authority: NONE` and the playground model version; its spec hash displays as `playground-spec:` plus 8 characters. Its clipboard text rounds values for reading (seconds to
+one decimal, fractions to four), and a nonzero value never reads as zero. It never carries the keys
 `spec_digest`, `world_tape_digest` or `deployment_permission`, and a pytest check asserts that it fails
 `DecisionRecord` and `ExperimentSpec` validation.
 
@@ -1246,7 +1270,9 @@ about the candidate.`
 
 ### 7.5 Charts
 
-Every chart has a one-sentence summary generated from its data, a `Table` view, a model-limits chip (§5.8), and the
+Chart titles and summaries name a metric in words ("wait p90", "bay wait p90 at SF-2") with windows on the clock; the
+verdict card and setup sheet keep FleetLab's metric names with readable scopes. Every chart has a one-sentence summary
+generated from its data, a `Table` view, a model-limits chip (§5.8), and the
 shared cursor.
 
 | Chart | Form | Reads |
@@ -1551,7 +1577,7 @@ wall-clock more than twice a budget; a label removed or hidden; a test deleted o
 ## 11. Owner decisions
 
 The owner answered on 2026-09-13: every recommended default below, D-03 as strengthened after the design audit, and
-D-11.
+D-11. D-12 was decided during the build on 2026-09-14 on measured evidence and stays open to the owner's review.
 
 | Id | Question | Recommended default | If the other answer is chosen |
 |---|---|---|---|
@@ -1566,6 +1592,7 @@ D-11.
 | D-09 | Distribution? | Source committed; the single-file build made locally, not committed; system fonts under a strict policy; publishing is a separate owner action. | Committing the build needs a byte-freshness test and puts generated code in a public repository; web fonts break the no-network policy unless inlined. |
 | D-10 | What does "fork this car" mean? | Two full runs on the same world with the pinned car highlighted, captioned that every other car also differs. | A single-car calculator with the rest of the fleet frozen is easier to read but is arithmetic, not simulation, and cannot show the depot pressure other recalled cars cause. |
 | D-11 | May the first build remember anything between visits? | No. A reload returns to the default preset and the system theme. | Remembering the last preset and theme needs two storage keys with schema validation, a reset control, and tests for blocked storage. |
+| D-12 | Does the end-of-service recall stay pending until the release, or act once? | Once: idle cars go at the recall time, and cars then on a pickup or trip follow when it ends before the release; a car dispatched later stays in service. The pending recall sent every car dispatched overnight back for a full visit and jammed the depots (on the 90-car default: 23% unserved, 61 cars at depots at 06:00 on day 2). | A pending recall returns each overnight car to a depot after every trip, which needs a lighter overnight visit (for example no clean after a single trip) to avoid gridlock. |
 
 ## 12. Audit checklist
 
@@ -1787,3 +1814,4 @@ against the repository. The conflicts that changed the design:
 | Whether FleetLab's demand axes work | they do not (FL-1, measured); the teaching engine shares candidates and accepts demand per arm (P-1) |
 | Twenty-eight findings of a pre-audit review (five review lenses; each finding challenged by a separate refuter) | fixed in place: banned words in required copy (H-3); missing transitions, gate waits and recall (§5.3); a single-car fixture and access-leg exposure (§3.5, §5.7); demand units, coupling and parity (§5.2.2, P-1, P18); empty scopes and the bay-wait rename (§5.7); home area and depot ties (SUP-2); FleetLab's service-queue order (§5.10); the horizon-axis crash (FL-11); the L2 walkthrough, the probe panel, the chart list, UC-10, keys, the scrubber, the lot count, the seed range and one contrast token |
 | Thirteen required changes from the design audit (approve with required changes) | an `INTAKE` state; a defined drain and censoring time; completed-only turnaround no longer called a bound; scope rules for every metric class; a time-based empty-drive share instead of invented distance; seed sets and a canonical spec digest; a log ordinal for decision events; FleetLab's precheck world source (P-3); a worker the content policy allows; full event-log parity (D-03); no storage (D-11); the arrival process and the FLEET-005 projection named precisely |
+| The default preset, run at fleet scale in the built engine | the recall acts once (D-12); the default fleet recalibrated to 120 cars with two accepted exceptions (§2.2); presets UC-02, UC-03, UC-09 and UC-10 adjusted so their mechanisms show, and every use case records its measured verdict (§4) |
