@@ -13,11 +13,26 @@ export function bootstrapIndices(resamples) {
   return [low, high];
 }
 
+/** Hash draws between two yields of bootstrapCiSteps (a count, not a clock). */
+const DRAWS_PER_YIELD = 4096;
+
 /**
  * 95% percentile bootstrap `[low, high]` over paired deltas, in the deltas' unit. Draw `j` of resample `i` is
  * `deltas[u64(key, "bootstrap", i, j) mod n]`; the hash runs through a prefix hasher on `${key}|bootstrap|`.
  */
 export function bootstrapCi(deltas, resamples, key) {
+  const steps = bootstrapCiSteps(deltas, resamples, key);
+  for (;;) {
+    const next = steps.next();
+    if (next.done) return next.value;
+  }
+}
+
+/**
+ * bootstrapCi as a generator for time-sliced callers (design 5.9): yields undefined after every whole resample that
+ * completes at least DRAWS_PER_YIELD draws since the last yield, and once before the sort; returns `[low, high]`.
+ */
+export function* bootstrapCiSteps(deltas, resamples, key) {
   if (typeof key !== "string") throw new TypeError("bootstrap key must be a string");
   const n = deltas.length;
   if (n === 0) throw new RangeError("bootstrap needs at least one delta (Python raises ZeroDivisionError)");
@@ -25,6 +40,7 @@ export function bootstrapCi(deltas, resamples, key) {
   const hasher = prefixHasher(`${key}|bootstrap|`);
   const modulus = BigInt(n);
   const means = new Array(resamples);
+  let draws = 0;
   for (let i = 0; i < resamples; i++) {
     let total = 0;
     for (let j = 0; j < n; j++) {
@@ -34,7 +50,13 @@ export function bootstrapCi(deltas, resamples, key) {
       total += deltas[Number(((BigInt(high) << 32n) | BigInt(low)) % modulus)];
     }
     means[i] = total / n;
+    draws += n;
+    if (draws >= DRAWS_PER_YIELD) {
+      draws = 0;
+      yield;
+    }
   }
+  yield;
   means.sort(numericAscending);
   return [means[lowIndex], means[highIndex]];
 }

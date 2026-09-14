@@ -9,7 +9,13 @@
 // - A draft may give a threshold as `margin_units` / `max_harm_units` (a safe integer in engine units) or as
 //   `margin_text` / `max_harm_text` (decimal text in the metric's shown unit: a fraction for ppm metrics, whole
 //   seconds or counts otherwise); the frozen spec keeps only the integer.
-// - Equal axis values are the labelled null check only when the axis equals the UC-01 preset's axis.
+// - Equal axis values are allowed only for the labelled null check (design 2.8, UC-01): a draft whose scenario, axis,
+//   primary and guardrails canonically equal the UC-01 preset's once checked. Question, seed set, seeds and resamples
+//   stay free, so "Use another seed set" and a reworded question keep the exemption; any other change loses it.
+// - experimentSteps honours the main-thread slice rule (design 5.9, contract 7) by yielding its current progress
+//   marker before and after every unit it cannot slice: the table builds for the spec's sigma (each its own step), each
+//   world, createRun, result(), each whole-run check group, each metric computation, and inside the replay digests and
+//   the verdict bootstrap. The marker sequence, with repeats removed, and the payload are unchanged.
 // - Seeds must be exactly seed set `seed_set`: `1000 × k + 1` to `1000 × k + N`.
 // - A draft direction must equal the registry's; a missing one is filled from the registry.
 // - `parameter:POL-4` value `off` is stored as null.
@@ -22,9 +28,10 @@
 //   name or null, and `compute(result, refs)` replaces computeAll.
 
 import { canonicalJson, specDigest, specHashLabel } from "../core/canon.js";
-import { computeVerdict } from "../instrument/paired.js";
+import { expTable, multiplierTable } from "../core/tables.js";
+import { computeVerdictSteps } from "../instrument/paired.js";
 import { createRun } from "./engine.js";
-import { checkArms, checkReplay, checkWorld, runViolations } from "./invariants.js";
+import { checkArms, checkReplaySteps, checkWorld, runViolationsSteps } from "./invariants.js";
 import { computeAll, defaultRefs, metricKey, metricRow, METRICS_VERSION, validateMetricRef } from "./metrics.js";
 import { PRESETS } from "./presets.js";
 import { applyAxis, AxisError, cloneScenario, deepFreeze, parseAxis, validateScenario } from "./schema.js";
@@ -92,10 +99,39 @@ export function thresholdValue(metric, units) {
   return row.engine_unit === "ppm" ? units / PPM : units;
 }
 
-/** True when an axis `{id, baseline, candidate}` is the labelled null check of the UC-01 preset. */
+/**
+ * True when an axis `{id, baseline, candidate}` equals the UC-01 preset's axis. Necessary but not sufficient for the
+ * null-check exemption: validateDraft grants it only to a draft for which isNullCheckDraft holds.
+ */
 export function isNullCheckAxis(axis) {
   const text = canonicalJson(axis);
   return PRESETS.some((p) => p.useCase === "UC-01" && p.experiment !== null && canonicalJson(p.experiment.axis) === text);
+}
+
+/** Canonical text of the parts that make a checked draft the null check: scenario, axis, primary and guardrails. */
+const nullCheckText = ({ scenario, axis, primary, guardrails }) => canonicalJson({ scenario: cloneScenario(scenario), axis, primary, guardrails });
+
+let uc01NullCheckText;
+/** nullCheckText of the UC-01 preset, checked with equal values allowed; null when the registry holds no UC-01 preset. */
+function uc01Text() {
+  if (uc01NullCheckText === undefined) {
+    const preset = PRESETS.find((p) => p.useCase === "UC-01" && p.experiment !== null);
+    const checked = preset === undefined ? null : checkDraft(preset.experiment, () => true);
+    uc01NullCheckText = checked !== null && checked.ok ? nullCheckText(checked.spec) : null;
+  }
+  return uc01NullCheckText;
+}
+
+const isUc01Parts = (parts) => uc01Text() !== null && nullCheckText(parts) === uc01Text();
+
+/**
+ * True when a draft is the labelled null check of UC-01 (design 2.8): it passes every check with equal values allowed,
+ * and its scenario, axis, primary and guardrails canonically equal the preset's. Question, seed set, seeds and
+ * resamples may differ.
+ */
+export function isNullCheckDraft(draft) {
+  const checked = checkDraft(draft, () => true);
+  return checked.ok && isUc01Parts(checked.spec);
 }
 
 /** Copy of a scope with only the keys it uses; a window keeps `start_s` and `end_s`. */
@@ -121,6 +157,11 @@ function normalizeAxisValue(axisId, value) {
  * Returns `{ok, errors, spec}`; `errors` are `{check, what, why, fix}`, `spec` is null unless ok.
  */
 export function validateDraft(draft) {
+  return checkDraft(draft, isUc01Parts);
+}
+
+/** validateDraft with the equal-values rule as a predicate on the checked `{scenario, axis, primary, guardrails}`. */
+function checkDraft(draft, equalValuesAllowed) {
   const errors = [];
   const fail = (check, what, why, fix) => errors.push({ check, what, why, fix });
   if (!isPlainObject(draft)) {
@@ -150,8 +191,10 @@ export function validateDraft(draft) {
   const scenario = scenarioCheck.ok ? draft.scenario : null;
   for (const e of scenarioCheck.errors) fail("scenario", e.what, e.why, e.fix);
 
-  // Axis: exactly one, both values in range, different unless it is the labelled null check.
+  // Axis: exactly one, both values in range, different unless it is the labelled null check. Equal values are judged
+  // once the metric references are checked; the error keeps its place in the list.
   let axis = null;
+  let equalValues = null;
   const rawAxis = draft.axis;
   if (Array.isArray(rawAxis)) {
     fail("one axis", `Variation axis: ${rawAxis.length} axes`, "An experiment varies exactly one axis.", "Keep one axis and test the others in their own experiments.");
@@ -187,8 +230,11 @@ export function validateDraft(draft) {
       }
       if (has(values, "baseline") && has(values, "candidate")) {
         axis = { id: rawAxis.id, baseline: values.baseline, candidate: values.candidate };
-        if (canonicalJson(axis.baseline) === canonicalJson(axis.candidate) && !isNullCheckAxis(axis)) {
-          fail("one axis", `Baseline and candidate for ${axis.id}: both ${shown(axis.baseline)}`, "The two arms must differ; only the labelled null check keeps them equal.", "Change the candidate value.");
+        if (canonicalJson(axis.baseline) === canonicalJson(axis.candidate)) {
+          equalValues = {
+            at: errors.length,
+            error: { check: "one axis", what: `Baseline and candidate for ${axis.id}: both ${shown(axis.baseline)}`, why: "The two arms must differ; only the labelled null check keeps them equal.", fix: "Change the candidate value." },
+          };
         }
       }
     }
@@ -270,6 +316,10 @@ export function validateDraft(draft) {
       if (ref === null) guardrailsOk = false;
       else guardrails.push(ref);
     });
+  }
+  if (equalValues !== null) {
+    const exempt = scenario !== null && primary !== null && guardrailsOk && equalValuesAllowed({ scenario, axis, primary, guardrails });
+    if (!exempt) errors.splice(equalValues.at, 0, equalValues.error);
   }
 
   // Seeds and resamples.
@@ -383,12 +433,25 @@ function sameMetricMaps(a, b) {
   return keys.every((key) => has(b, key) && Object.is(a[key].value, b[key].value) && a[key].absent === b[key].absent);
 }
 
-/** Runs one arm on a world in steps, yielding `marker` between steps; returns the engine result. */
+/** Drives a generator that yields undefined, yielding `marker` in its place; returns its value. */
+function* marked(steps, marker) {
+  for (;;) {
+    const next = steps.next();
+    if (next.done) return next.value;
+    yield marker;
+  }
+}
+
+/** Runs one arm on a world in steps, yielding `marker` around createRun, between steps and around result(). */
 function* driveRun(scenario, world, seed, keepLogs, defect, marker) {
+  yield marker;
   const run = createRun(scenario, world, { seed, keepLogs, defect });
   yield marker;
   while (!run.step(STEP_EVENTS)) yield marker;
-  return run.result();
+  yield marker;
+  const result = run.result();
+  yield marker;
+  return result;
 }
 
 /**
@@ -408,8 +471,9 @@ export function* experimentSteps(spec, { defectAt = () => null, compute = comput
   const candidateRuns = [];
   const perSeed = [];
 
-  const finish = (precheckMatched, invariantViolation) => ({
-    verdict: computeVerdict({
+  // The verdict, computed in slices; `marker` is yielded while the bootstrap runs.
+  function* finish(precheckMatched, invariantViolation, marker) {
+    const verdict = yield* marked(computeVerdictSteps({
       primary: declarations.primary,
       guardrails: declarations.guardrails,
       descriptiveNames: declarations.descriptiveNames,
@@ -419,65 +483,83 @@ export function* experimentSteps(spec, { defectAt = () => null, compute = comput
       key: frozen.digest,
       precheckMatched,
       invariantViolation,
-    }),
-    digest: frozen.digest,
-    label: frozen.label,
-    lambdaMaxPermille: { ...envelope },
-    per_seed: perSeed,
-  });
+    }), marker);
+    return { verdict, digest: frozen.digest, label: frozen.label, lambdaMaxPermille: { ...envelope }, per_seed: perSeed };
+  }
 
   // Precheck (P-3, as the teaching engine departs): the baseline arm twice on the first seed's shared world.
   const seed0 = s.seeds[0];
+  const first = { done, total, label: `Replay check on seed ${seed0}, run 1 of 2` };
+  // Tables for the spec's sigma, each its own step (memoized, so only the first experiment pays for them).
+  yield first;
+  expTable();
+  yield first;
+  multiplierTable(s.scenario.sigma_permille);
+  yield first;
   const world0 = seedWorld(s, seed0, envelope);
+  yield first;
   const worldProblems0 = checkWorld(world0, [baseline, candidate]);
   const precheck = [];
   for (let run = 1; run <= 2; run += 1) {
-    const marker = { done, total, label: `Replay check on seed ${seed0}, run ${run} of 2` };
+    const marker = run === 1 ? first : { done, total, label: `Replay check on seed ${seed0}, run ${run} of 2` };
     const defect = defectAt({ phase: "precheck", seed: seed0, arm: "baseline", run });
     const result = yield* driveRun(baseline, world0, seed0, true, defect, marker);
     done += 1;
-    const violations = [...(run === 1 ? worldProblems0 : []), ...runViolations(result), ...checkArms([result], world0)];
+    const found = yield* marked(runViolationsSteps(result), marker);
+    const violations = [...(run === 1 ? worldProblems0 : []), ...found, ...checkArms([result], world0)];
+    yield marker;
     const metrics = compute(result, declarations.refs);
+    yield marker;
     precheck.push({ result, metrics });
     if (run === 2) {
-      if (!sameMetricMaps(precheck[0].metrics, metrics)) return finish(false, null);
-      violations.push(...checkReplay(precheck[0].result, result));
+      if (!sameMetricMaps(precheck[0].metrics, metrics)) return yield* finish(false, null, marker);
+      violations.push(...(yield* marked(checkReplaySteps(precheck[0].result, result), marker)));
     }
-    if (violations.length > 0) return finish(true, `seed ${seed0}: ${violations[0]}`);
+    if (violations.length > 0) return yield* finish(true, `seed ${seed0}: ${violations[0]}`, marker);
   }
 
   // Paired loop: seeds in spec order, baseline arm before candidate arm, one world per seed.
   for (let i = 0; i < n; i += 1) {
     const seed = s.seeds[i];
+    const opening = { done, total, label: `Seed ${i + 1} of ${n}, baseline arm` };
+    yield opening;
     const world = i === 0 ? world0 : seedWorld(s, seed, envelope);
+    yield opening;
     const worldProblems = i === 0 ? [] : checkWorld(world, [baseline, candidate]);
     const pair = {};
     const results = [];
     for (const [arm, scenario] of [["baseline", baseline], ["candidate", candidate]]) {
       const replayed = i === 0 && arm === "candidate";
-      const marker = { done, total, label: `Seed ${i + 1} of ${n}, ${arm} arm` };
+      const marker = arm === "baseline" ? opening : { done, total, label: `Seed ${i + 1} of ${n}, ${arm} arm` };
       const defect = defectAt({ phase: "paired", seed, arm, run: 1 });
       const result = yield* driveRun(scenario, world, seed, replayed, defect, marker);
       done += 1;
       results.push(result);
-      const violations = [...(arm === "baseline" ? worldProblems : []), ...runViolations(result), ...checkArms(results, world)];
-      if (violations.length > 0) return finish(true, `seed ${seed}: ${violations[0]}`);
+      const found = yield* marked(runViolationsSteps(result), marker);
+      const violations = [...(arm === "baseline" ? worldProblems : []), ...found, ...checkArms(results, world)];
+      if (violations.length > 0) return yield* finish(true, `seed ${seed}: ${violations[0]}`, marker);
+      let current = marker;
       if (replayed) {
         // Design 5.4 item 6: the first seed of each arm runs twice; the baseline arm's pair is the precheck above.
         const again = { done, total, label: `Replay check on seed ${seed}, candidate arm` };
         const replay = yield* driveRun(scenario, world, seed, true, defectAt({ phase: "replay", seed, arm, run: 2 }), again);
         done += 1;
-        const replayProblems = [...runViolations(replay), ...checkReplay(result, replay)];
-        if (replayProblems.length > 0) return finish(true, `seed ${seed}: ${replayProblems[0]}`);
+        const replayViolations = yield* marked(runViolationsSteps(replay), again);
+        const replayProblems = [...replayViolations, ...(yield* marked(checkReplaySteps(result, replay), again))];
+        if (replayProblems.length > 0) return yield* finish(true, `seed ${seed}: ${replayProblems[0]}`, again);
+        current = again; // progress never steps back to the finished run's count
       }
+      yield current;
       pair[arm] = compute(result, declarations.refs);
+      yield current;
     }
     baselineRuns.push(instrumentRun(pair.baseline));
     candidateRuns.push(instrumentRun(pair.candidate));
     perSeed.push({ seed, baseline_metrics: pair.baseline, candidate_metrics: pair.candidate });
   }
-  yield { done, total, label: "Computing the verdict" };
-  return finish(true, null);
+  const verdictMarker = { done, total, label: "Computing the verdict" };
+  yield verdictMarker;
+  return yield* finish(true, null, verdictMarker);
 }
 
 /** Drives experimentSteps to the end in one call and returns its payload (options as experimentSteps). */

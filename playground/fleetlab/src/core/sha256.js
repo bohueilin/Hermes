@@ -152,12 +152,54 @@ export function sha256(bytes) {
   return stateBytes(H);
 }
 
-/** Lowercase hexadecimal SHA-256 (64 characters) of the UTF-8 bytes of `text`. */
-export function sha256Hex(text) {
-  const digest = sha256(utf8Bytes(text));
+/** Lowercase hexadecimal text of a 32-byte digest. */
+function hexOf(digest) {
   let hex = "";
   for (let i = 0; i < 32; i++) hex += (digest[i] < 16 ? "0" : "") + digest[i].toString(16);
   return hex;
+}
+
+/** Lowercase hexadecimal SHA-256 (64 characters) of the UTF-8 bytes of `text`. */
+export function sha256Hex(text) {
+  return hexOf(sha256(utf8Bytes(text)));
+}
+
+/**
+ * Incremental SHA-256 over UTF-8 text: call `update(text)` any number of times, then `hex()` once. The digest equals
+ * `sha256Hex` of the joined text whenever no piece ends inside a surrogate pair (complete JSON texts never do).
+ */
+export function sha256Stream() {
+  const H = new Int32Array(IV);
+  const W = new Int32Array(64);
+  const pad = new Uint8Array(128);
+  let work = new Uint8Array(1024);
+  let carried = 0; // bytes at the start of `work` not yet compressed, always fewer than 64
+  let total = 0;
+  let finished = false;
+  return {
+    update(text) {
+      if (finished) throw new Error("sha256Stream already returned its digest");
+      if (typeof text !== "string") throw new TypeError("sha256Stream expects a string");
+      const needed = carried + text.length * 3;
+      if (work.length < needed) {
+        const bigger = new Uint8Array(needed * 2);
+        bigger.set(work.subarray(0, carried));
+        work = bigger;
+      }
+      const end = carried + encodeUtf8Into(text, work, carried);
+      total += end - carried;
+      let offset = 0;
+      for (; end - offset >= 64; offset += 64) compress(H, work, offset, W);
+      work.copyWithin(0, offset, end);
+      carried = end - offset;
+    },
+    hex() {
+      if (finished) throw new Error("sha256Stream already returned its digest");
+      finished = true;
+      finish(H, W, pad, work, 0, carried, total);
+      return hexOf(stateBytes(H));
+    },
+  };
 }
 
 /**

@@ -288,6 +288,13 @@ describe("1. design 3.5 worked example, arm A (home_depot)", () => {
     assert.deepEqual(computeMetric(result, { metric: "exposure.congested_empty_s", scope: {} }), { value: 5252 });
     assert.deepEqual(computeMetric(result, { metric: "exposure.congested_loaded_s", scope: {} }), { value: 624 });
   });
+
+  test("placement gap at the day 2 06:00 snapshot", () => {
+    // CLK-4 snapshot 108,000. SF-017 starts at the SJ centre, so its start area is SJ. At 108,000 it is READY_AT_DEPOT
+    // at SF-1 (75,008 to 122,400), which counts in SF. Gap = (|SF 1 - 0| + |SJ 0 - 1|) / 2 = 1. Arm B gives the same 1
+    // (see there): the gap is equal in both arms, and it is 1 rather than 0 only because the fixture car starts in SJ.
+    assert.deepEqual(computeMetric(result, { metric: "fleet.placement_gap", scope: {} }), { value: 1 });
+  });
 });
 
 describe("1. design 3.5 worked example, arm B (nearest_depot)", () => {
@@ -366,6 +373,14 @@ describe("1. design 3.5 worked example, arm B (nearest_depot)", () => {
     assert.equal(congestedSeconds(result, scenario, { loaded: false }), 1014);
     assert.equal(congestedSeconds(result, scenario, { loaded: true }), 624);
     assert.deepEqual(computeMetric(result, { metric: "exposure.congested_empty_s", scope: {} }), { value: 1014 });
+  });
+
+  test("placement gap at the day 2 06:00 snapshot equals arm A's", () => {
+    // CLK-4 snapshot 108,000. The release leg runs 107,100 to 110,820, so at 108,000 SF-017 is REPOSITIONING to
+    // {area SF}; a car on a leg counts in its destination area (design 5.7), so SF. Start area SJ, as in arm A:
+    // gap = (|SF 1 - 0| + |SJ 0 - 1|) / 2 = 1. Equal to arm A, not higher: the morning cost of arm B shows in the
+    // release leg's empty driving and day 2 exposure, not in the gap.
+    assert.deepEqual(computeMetric(result, { metric: "fleet.placement_gap", scope: {} }), { value: 1 });
   });
 });
 
@@ -1314,5 +1329,545 @@ describe("13. freed-stall priority: blocked before gate, then vehicle id", () =>
     const v = visitsOf(result, "EB-005")[0];
     assert.deepEqual([v.arrival_s, v.intake_end_s, v.ready_s], [92060, 97180, 98380]);
     assert.deepEqual(computeMetric(result, { metric: "depot.blocked_s", scope: { depot: "EB-1" } }), { value: 5200 });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// 13b. Among blocked cars finished at different seconds, a freed stall goes to the earliest finished (design 5.3)
+// ---------------------------------------------------------------------------------------------------------------
+//
+// EB-1 parking 6 (DEP-2.EB-1), 2 cleaning bays; stall holds two for the whole run, one until 95,000 and one until
+// 89,930 (4 held). Clean-only visits (visits 0). Hours 24 and 25 carry 1000 in every row. Stalls held in brackets.
+// Cars: EB-001 and EB-002 IDLE at EB, EB-003 and EB-004 IDLE at SF. Riders: r-EB-0 at 87,400 EB to EB; r-SF-0 at
+// 87,900 and r-SF-1 at 87,960, SF to EB.
+//   87,400 r-EB-0: EB-001 and EB-002 at EB plan 420, the SF cars H3 1200: EB-001 by id. Pickup to 87,820; trip IN_AREA
+//     EB 420 to 88,240.
+//   87,900 r-SF-0: EB-003 and EB-004 at SF plan 360: EB-003. Pickup to 88,260; trip H3 SF>EB 1200 (L3 2700) to 89,460.
+//   87,960 r-SF-1: EB-004 at SF 360 (EB-002 at EB plans H3 1200): EB-004. Pickup to 88,320; trip to 89,520.
+//   88,200 recall: only EB-002 is IDLE: ACCESS IN to 88,500. The others finish their trips while it is pending and
+//     go to their home depot EB-1: EB-001 88,240 to 88,540; EB-003 89,460 to 89,760; EB-004 89,520 to 89,820.
+//   88,500 EB-002 arrives [5]; INTAKE to 88,680; CLEAN 88,680 to 89,880 [4 after EB-001 below].
+//   88,540 EB-001 arrives [6]; INTAKE to 88,720; CLEAN 88,720 to 89,920 [4].
+//   89,760 EB-003 arrives [5], INTAKE to 89,940. 89,820 EB-004 arrives [6], INTAKE to 90,000.
+//   89,880 EB-002's clean ends, no stall free: blocked. 89,920 EB-001's clean ends: blocked. Nobody is queued for a
+//     clean (both others are in intake), so no hand-off.
+//   89,930 a stall hold ends [5]: the earliest finished blocked car, EB-002 (89,880), not EB-001 (89,920, the lower
+//     id): STALL_CLAIMED EB-002, READY_AT_DEPOT [6].
+//   89,940 EB-003's intake ends: a cleaning bay is free: CLEAN 89,940 to 91,140 [5]; the freed stall goes to blocked
+//     EB-001: STALL_CLAIMED, READY [6]. 90,000 EB-004: CLEAN 90,000 to 91,200 [5].
+//   91,140 EB-003 ready [6]. 91,200 EB-004's clean ends, no stall free: blocked. 95,000 the hold ends: EB-004 READY.
+//   depot.blocked_s at EB-1: 50 + 20 + 3800 = 3870.
+
+describe("13b. freed-stall priority: the earliest finished blocked car, then vehicle id", () => {
+  const scenario = applyAxis(defaultScenario(), "parameter:DEP-2.EB-1", 6);
+  const result = runFixture(scenario, {
+    cars: [
+      car("EB-001", "EB", "EB-1", { area: "EB" }),
+      car("EB-002", "EB", "EB-1", { area: "EB" }),
+      car("EB-003", "EB", "EB-1", { area: "SF" }),
+      car("EB-004", "EB", "EB-1", { area: "SF" }),
+    ],
+    requests: [
+      { id: "r-EB-0", time_s: 87400, origin: "EB", dest: "EB" },
+      { id: "r-SF-0", time_s: 87900, origin: "SF", dest: "EB" },
+      { id: "r-SF-1", time_s: 87960, origin: "SF", dest: "EB" },
+    ],
+    depotOccupancy: { "EB-1": { stalls: [FAR, FAR, 95000, 89930], cleaning: [], service: [] } },
+  });
+
+  test("timelines", () => {
+    assert.deepEqual(spans(result, "EB-001"), [
+      ["IDLE", 18000, 87400],
+      ["ENROUTE_PICKUP", 87400, 87820],
+      ["ON_TRIP", 87820, 88240],
+      ["TO_DEPOT", 88240, 88540],
+      ["INTAKE", 88540, 88720],
+      ["IN_SERVICE:CLEAN", 88720, 89920],
+      ["IN_SERVICE:CLEAN:blocked", 89920, 89940],
+      ["READY_AT_DEPOT", 89940, 122400],
+    ]);
+    assert.deepEqual(spans(result, "EB-002"), [
+      ["IDLE", 18000, 88200],
+      ["TO_DEPOT", 88200, 88500],
+      ["INTAKE", 88500, 88680],
+      ["IN_SERVICE:CLEAN", 88680, 89880],
+      ["IN_SERVICE:CLEAN:blocked", 89880, 89930],
+      ["READY_AT_DEPOT", 89930, 122400],
+    ]);
+    assert.deepEqual(spans(result, "EB-003"), [
+      ["IDLE", 18000, 87900],
+      ["ENROUTE_PICKUP", 87900, 88260],
+      ["ON_TRIP", 88260, 89460],
+      ["TO_DEPOT", 89460, 89760],
+      ["INTAKE", 89760, 89940],
+      ["IN_SERVICE:CLEAN", 89940, 91140],
+      ["READY_AT_DEPOT", 91140, 122400],
+    ]);
+    assert.deepEqual(spans(result, "EB-004"), [
+      ["IDLE", 18000, 87960],
+      ["ENROUTE_PICKUP", 87960, 88320],
+      ["ON_TRIP", 88320, 89520],
+      ["TO_DEPOT", 89520, 89820],
+      ["INTAKE", 89820, 90000],
+      ["IN_SERVICE:CLEAN", 90000, 91200],
+      ["IN_SERVICE:CLEAN:blocked", 91200, 95000],
+      ["READY_AT_DEPOT", 95000, 122400],
+    ]);
+  });
+
+  test("stall claims and blocked seconds", () => {
+    assert.deepEqual(eventsOf(result, (e) => e.kind === "STALL_CLAIMED").map((e) => [e.t, e.car]), [[89930, "EB-002"], [89940, "EB-001"], [95000, "EB-004"]]);
+    assert.deepEqual(eventsOf(result, (e) => e.kind === "REQUEST_ASSIGNED").map((e) => [e.t, e.car, e.req]), [
+      [87400, "EB-001", "r-EB-0"], [87900, "EB-003", "r-SF-0"], [87960, "EB-004", "r-SF-1"],
+    ]);
+    assert.deepEqual(computeMetric(result, { metric: "depot.blocked_s", scope: { depot: "EB-1" } }), { value: 3870 });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// 14. Exposure when a segment crosses between a congested hour and an uncongested one (contract 6.4 Legs)
+// ---------------------------------------------------------------------------------------------------------------
+//
+// "The congested test uses the declared multiplier of the hour containing each realized second." Default scenario,
+// threshold 1300; IN_AREA row: hour 15 1000, hours 16 to 18 1300, hour 19 1000. SJ-001 (home SJ-1) IDLE at the SJ
+// centre; riders r-SJ-0 at 57,500 and r-SJ-1 at 68,100, both SJ to SJ; in-area SJ 480 s. Planned-time integration in
+// micro-units (routes.test.mjs):
+//   57,500 pickup, hour 15 into hour 16 (uncongested into congested): S = 57,600 - 57,500 = 100,
+//     covered = floor(100 x 10^9 / 1000) = 100,000,000 < 480,000,000; R = 380,000,000 at 1300: 380,000,000 x 1300 /
+//     10^9 = 494 exactly. 100 + 494 = 594: 57,500 to 58,094. Congested: 57,600 to 58,094 = 494 s, empty.
+//   58,094 trip, hour 16: S = 61,200 - 58,094 = 3106, covered 2,389,230,769 >= 480,000,000: 480 x 1.3 = 624:
+//     58,094 to 58,718, all congested, loaded. 1 trip: IDLE at SJ.
+//   68,100 pickup, hour 18 into hour 19 (congested into uncongested): S = 68,400 - 68,100 = 300,
+//     covered = floor(300 x 10^9 / 1300) = 230,769,230 < 480,000,000; R = 249,230,770 at 1000: 249.23077 rounds to
+//     249. 300 + 249 = 549: 68,100 to 68,649. Congested: 68,100 to 68,400 = 300 s; the 249 s in hour 19 are not.
+//   68,649 trip, hour 19 at 1000: 480: 68,649 to 69,129, not congested. IDLE at SJ.
+//   88,200 recall: ACCESS IN SJ-1 (hour 24, 1000) to 88,500; INTAKE to 88,680; CLEAN to 89,880; READY to 122,400.
+// Congested empty 494 + 300 = 794, loaded 624, all in area SJ. By window: [54,000, 61,200) empty 494 and loaded 624;
+// [64,800, 72,000) empty 300 and loaded 0. Classifying a whole segment by its departure hour would give empty 0 in the
+// first window (hour 15) and 549 in the second (hour 18): 549 in total.
+
+describe("14. congested seconds follow each second's hour, not the segment's departure hour", () => {
+  const scenario = defaultScenario();
+  const result = runFixture(scenario, {
+    cars: [car("SJ-001", "SJ", "SJ-1", { area: "SJ" })],
+    requests: [
+      { id: "r-SJ-0", time_s: 57500, origin: "SJ", dest: "SJ" },
+      { id: "r-SJ-1", time_s: 68100, origin: "SJ", dest: "SJ" },
+    ],
+    depotOccupancy: {},
+  });
+
+  test("segments", () => {
+    assert.equal(scenario.congestion.IN_AREA[15], 1000);
+    assert.equal(scenario.congestion.IN_AREA[16], 1300);
+    assert.equal(scenario.congestion.IN_AREA[18], 1300);
+    assert.equal(scenario.congestion.IN_AREA[19], 1000);
+    assert.deepEqual(spans(result, "SJ-001"), [
+      ["IDLE", 18000, 57500],
+      ["ENROUTE_PICKUP", 57500, 58094],
+      ["ON_TRIP", 58094, 58718],
+      ["IDLE", 58718, 68100],
+      ["ENROUTE_PICKUP", 68100, 68649],
+      ["ON_TRIP", 68649, 69129],
+      ["IDLE", 69129, 88200],
+      ["TO_DEPOT", 88200, 88500],
+      ["INTAKE", 88500, 88680],
+      ["IN_SERVICE:CLEAN", 88680, 89880],
+      ["READY_AT_DEPOT", 89880, 122400],
+    ]);
+    const seg = (state, t0) => intervalAt(result, "SJ-001", state, t0).segments.map(segText);
+    assert.deepEqual(seg("ENROUTE_PICKUP", 57500), [["IN_AREA", "IN-SJ", "-", 57500, 58094, false]]);
+    assert.deepEqual(seg("ON_TRIP", 58094), [["IN_AREA", "IN-SJ", "-", 58094, 58718, true]]);
+    assert.deepEqual(seg("ENROUTE_PICKUP", 68100), [["IN_AREA", "IN-SJ", "-", 68100, 68649, false]]);
+    assert.deepEqual(seg("ON_TRIP", 68649), [["IN_AREA", "IN-SJ", "-", 68649, 69129, true]]);
+  });
+
+  test("exposure metrics, whole window and per hour window", () => {
+    assert.equal(congestedSeconds(result, scenario, { loaded: false }), 794);
+    assert.equal(congestedSeconds(result, scenario, { loaded: true }), 624);
+    const m = (metric, scope) => computeMetric(result, { metric, scope });
+    assert.deepEqual(m("exposure.congested_empty_s", {}), { value: 794 });
+    assert.deepEqual(m("exposure.congested_empty_s", { area: "SJ" }), { value: 794 });
+    assert.deepEqual(m("exposure.congested_empty_s", { area: "SF" }), { value: 0 });
+    assert.deepEqual(m("exposure.congested_loaded_s", {}), { value: 624 });
+    const early = { start_s: 54000, end_s: 61200 };
+    const late = { start_s: 64800, end_s: 72000 };
+    assert.deepEqual(m("exposure.congested_empty_s", { window: early }), { value: 494 });
+    assert.deepEqual(m("exposure.congested_loaded_s", { window: early }), { value: 624 });
+    assert.deepEqual(m("exposure.congested_empty_s", { window: late }), { value: 300 });
+    assert.deepEqual(m("exposure.congested_loaded_s", { window: late }), { value: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// 15. POL-5 FIFO by INTAKE_COMPLETED time, and the bay priority rule (contract 6.4)
+// ---------------------------------------------------------------------------------------------------------------
+//
+// "When a bay frees, candidates in order: first a car blocked in a cleaning bay at that depot whose service is due (for
+// a service bay), then queued cars in FIFO order of INTAKE_COMPLETED time, then vehicle id." Default scenario; hours 24
+// to 29 carry 1000 in every row. Recall 88,200: from SF to an SF depot ACCESS IN 300 (88,500); from PEN H1 PEN>SF 1500
+// (L1 3300) + 300 (90,000); from EB to EB-1 300 (88,500).
+//
+// 15a. SF-1 cleaning holds: one until 91,000, three for the whole run. SF-001 (at PEN) and SF-002 (at SF), home SF-1,
+//   clean-only visits. The higher id finishes intake first, so FIFO and vehicle-id order disagree.
+//   SF-002: arrives 88,500, INTAKE to 88,680, every cleaning bay held: QUEUED_SERVICE (FIFO key 88,680).
+//   SF-001: arrives 90,000, INTAKE to 90,180, QUEUED_SERVICE behind SF-002 (90,180 > 88,680).
+//   91,000 one bay frees: SF-002 (FIFO), CLEAN 91,000 to 92,200; READY 92,200 (stalls free).
+//   92,200 its bay frees: SF-001, CLEAN 92,200 to 93,400; READY 93,400.
+// 15b. SF-2 (2 cleaning bays, 1 service bay): cleaning holds two until 91,000, the service bay held until 95,000.
+//   SF-001 (PEN) and SF-002 (SF), home SF-2, visits 2 (visit 3: clean, then service).
+//   SF-002 INTAKE 88,500 to 88,680, SF-001 INTAKE 90,000 to 90,180: both QUEUED_SERVICE, SF-002 first.
+//   91,000 the two holds end in push order: the first takes SF-002, the second SF-001: both CLEAN 91,000 to 92,200.
+//     SF-002's completion was pushed first, so it pops first.
+//   92,200 both cleans end at the same second: service due, the service bay is held, stalls free: both re-queue for
+//     service, keyed by their INTAKE_COMPLETED times, 88,680 (SF-002) before 90,180 (SF-001). Keyed by the clean end
+//     both would be 92,200 and the vehicle id would put SF-001 first.
+//   95,000 the service hold ends: SF-002 SERVICE 95,000 to 97,700; READY 97,700 frees the bay: SF-001 SERVICE 97,700 to
+//     100,400; READY 100,400.
+// 15c. EB-1 parking 5 (DEP-2.EB-1), 2 cleaning bays and 1 service bay. Holds: stalls two for the whole run and one until
+//   100,000; one cleaning bay for the whole run; the service bay until 92,300. EB-001 IDLE at EB and EB-002 IDLE at PEN,
+//   both visits 2 (service due); EB-003 READY_AT_DEPOT at SF-1, visits 0. Rider r-EB-0 at 89,860, EB to EB.
+//   Stalls held at EB-1 in brackets.
+//   88,200 recall: EB-001 ACCESS IN to 88,500; EB-002 H5 PEN>EB 2400 (L5 4800) + 300 to 90,900.
+//   88,500 EB-001 arrives [4]; INTAKE to 88,680; the free cleaning bay: CLEAN 88,680 to 89,880 [3].
+//   89,860 r-EB-0: EB-003 is the only dispatchable car: PULL_OUT to 89,980, ACCESS OUT SF-1 to 90,280, H3 SF>EB 1200
+//     (L3 2700) to 91,480; trip IN_AREA EB 420 to 91,900; 1 trip, recall pending: TO_DEPOT EB-1 (home), ACCESS IN to
+//     92,200. Visit 1, clean only.
+//   89,880 EB-001's clean ends: service due, the service bay is held, a stall is free: QUEUED_SERVICE [4].
+//   90,900 EB-002 arrives [5]; INTAKE to 91,080; the free cleaning bay: CLEAN 91,080 to 92,280 [4].
+//   92,200 EB-003 arrives [5]; INTAKE to 92,380.
+//   92,280 EB-002's clean ends: service due, the service bay is held, no stall free: IN_SERVICE CLEAN blocked. No car is
+//     queued for cleaning, so no hand-off.
+//   92,300 the service hold ends. Both EB-002 (blocked in a cleaning bay, service due) and EB-001 (queued, clean done,
+//     service due) wait for it: the blocked car goes first: EB-002 SERVICE 92,300 to 95,000.
+//   92,380 EB-003's intake ends: the freed cleaning bay: CLEAN 92,380 to 93,580 [4]; 93,580 READY [5].
+//   95,000 EB-002's service ends, no stall free: blocked in the only service bay while EB-001 is queued for service:
+//     hand-off (engine.js): STALL_CLAIMED EB-002, READY_AT_DEPOT; EB-001 SERVICE 95,000 to 97,700 [5].
+//   97,700 EB-001's service ends, no stall free: blocked. 100,000 the stall hold ends: STALL_CLAIMED EB-001, READY.
+//   depot.blocked_s at EB-1: EB-002 92,280 to 92,300 (20) + EB-001 97,700 to 100,000 (2300) = 2320.
+//   Serving the queued car first instead would start EB-001's service at 92,300 and free its stall for blocked EB-002.
+
+describe("15. queue order and bay priority", () => {
+  test("15a: a freed cleaning bay goes to the earliest INTAKE_COMPLETED, not the lowest vehicle id", () => {
+    const result = runFixture(defaultScenario(), {
+      cars: [car("SF-001", "SF", "SF-1", { area: "PEN" }), car("SF-002", "SF", "SF-1", { area: "SF" })],
+      requests: [],
+      depotOccupancy: { "SF-1": { stalls: [], cleaning: [91000, FAR, FAR, FAR], service: [] } },
+    });
+    assert.deepEqual(spans(result, "SF-002"), [
+      ["IDLE", 18000, 88200],
+      ["TO_DEPOT", 88200, 88500],
+      ["INTAKE", 88500, 88680],
+      ["QUEUED_SERVICE", 88680, 91000],
+      ["IN_SERVICE:CLEAN", 91000, 92200],
+      ["READY_AT_DEPOT", 92200, 122400],
+    ]);
+    assert.deepEqual(spans(result, "SF-001"), [
+      ["IDLE", 18000, 88200],
+      ["TO_DEPOT", 88200, 90000],
+      ["INTAKE", 90000, 90180],
+      ["QUEUED_SERVICE", 90180, 92200],
+      ["IN_SERVICE:CLEAN", 92200, 93400],
+      ["READY_AT_DEPOT", 93400, 122400],
+    ]);
+    assert.deepEqual(eventsOf(result, (e) => e.kind === "SERVICE_STARTED").map((e) => [e.t, e.car]), [[91000, "SF-002"], [92200, "SF-001"]]);
+  });
+
+  test("15b: re-queued for service after a clean, the key stays the INTAKE_COMPLETED time", () => {
+    const result = runFixture(defaultScenario(), {
+      cars: [car("SF-001", "SF", "SF-2", { area: "PEN" }, { visits: 2 }), car("SF-002", "SF", "SF-2", { area: "SF" }, { visits: 2 })],
+      requests: [],
+      depotOccupancy: { "SF-2": { stalls: [], cleaning: [91000, 91000], service: [95000] } },
+    });
+    assert.deepEqual(spans(result, "SF-002"), [
+      ["IDLE", 18000, 88200],
+      ["TO_DEPOT", 88200, 88500],
+      ["INTAKE", 88500, 88680],
+      ["QUEUED_SERVICE", 88680, 91000],
+      ["IN_SERVICE:CLEAN", 91000, 92200],
+      ["QUEUED_SERVICE", 92200, 95000],
+      ["IN_SERVICE:SERVICE", 95000, 97700],
+      ["READY_AT_DEPOT", 97700, 122400],
+    ]);
+    assert.deepEqual(spans(result, "SF-001"), [
+      ["IDLE", 18000, 88200],
+      ["TO_DEPOT", 88200, 90000],
+      ["INTAKE", 90000, 90180],
+      ["QUEUED_SERVICE", 90180, 91000],
+      ["IN_SERVICE:CLEAN", 91000, 92200],
+      ["QUEUED_SERVICE", 92200, 97700],
+      ["IN_SERVICE:SERVICE", 97700, 100400],
+      ["READY_AT_DEPOT", 100400, 122400],
+    ]);
+    const at92200 = eventsOf(result, (e) => e.t === 92200 && e.kind === "SERVICE_COMPLETED").map((e) => e.car);
+    assert.deepEqual(at92200, ["SF-002", "SF-001"]);
+    const pick = (v) => [v.intake_end_s, v.clean_end_s, v.service_start_s, v.ready_s];
+    assert.deepEqual(visitsOf(result, "SF-002").map(pick), [[88680, 92200, 95000, 97700]]);
+    assert.deepEqual(visitsOf(result, "SF-001").map(pick), [[90180, 92200, 97700, 100400]]);
+  });
+
+  test("15c: a freed service bay goes to the car blocked in a cleaning bay before a queued car", () => {
+    const scenario = applyAxis(defaultScenario(), "parameter:DEP-2.EB-1", 5);
+    const result = runFixture(scenario, {
+      cars: [
+        car("EB-001", "EB", "EB-1", { area: "EB" }, { visits: 2 }),
+        car("EB-002", "EB", "EB-1", { area: "PEN" }, { visits: 2 }),
+        readyCar("EB-003", "EB", "EB-1", "SF-1"),
+      ],
+      requests: [{ id: "r-EB-0", time_s: 89860, origin: "EB", dest: "EB" }],
+      depotOccupancy: { "EB-1": { stalls: [FAR, FAR, 100000], cleaning: [FAR], service: [92300] } },
+    });
+    assert.deepEqual(spans(result, "EB-001"), [
+      ["IDLE", 18000, 88200],
+      ["TO_DEPOT", 88200, 88500],
+      ["INTAKE", 88500, 88680],
+      ["IN_SERVICE:CLEAN", 88680, 89880],
+      ["QUEUED_SERVICE", 89880, 95000],
+      ["IN_SERVICE:SERVICE", 95000, 97700],
+      ["IN_SERVICE:SERVICE:blocked", 97700, 100000],
+      ["READY_AT_DEPOT", 100000, 122400],
+    ]);
+    assert.deepEqual(spans(result, "EB-002"), [
+      ["IDLE", 18000, 88200],
+      ["TO_DEPOT", 88200, 90900],
+      ["INTAKE", 90900, 91080],
+      ["IN_SERVICE:CLEAN", 91080, 92280],
+      ["IN_SERVICE:CLEAN:blocked", 92280, 92300],
+      ["IN_SERVICE:SERVICE", 92300, 95000],
+      ["READY_AT_DEPOT", 95000, 122400],
+    ]);
+    assert.deepEqual(spans(result, "EB-003"), [
+      ["READY_AT_DEPOT", 18000, 89860],
+      ["ENROUTE_PICKUP", 89860, 91480],
+      ["ON_TRIP", 91480, 91900],
+      ["TO_DEPOT", 91900, 92200],
+      ["INTAKE", 92200, 92380],
+      ["IN_SERVICE:CLEAN", 92380, 93580],
+      ["READY_AT_DEPOT", 93580, 122400],
+    ]);
+    expectInOrder(result.events, [
+      { t: 92280, kind: "SERVICE_COMPLETED", car: "EB-002" },
+      { t: 92300, kind: "FIXTURE_HOLD_ENDED", depot: "EB-1" },
+      { t: 92300, kind: "SERVICE_STARTED", car: "EB-002" },
+      { t: 95000, kind: "STALL_CLAIMED", car: "EB-002" },
+      { t: 95000, kind: "SERVICE_STARTED", car: "EB-001" },
+      { t: 100000, kind: "STALL_CLAIMED", car: "EB-001" },
+    ]);
+    const pick = (v) => [v.arrival_s, v.intake_end_s, v.clean_start_s, v.clean_end_s, v.service_start_s, v.service_end_s, v.ready_s];
+    assert.deepEqual(visitsOf(result, "EB-001").map(pick), [[88500, 88680, 88680, 89880, 95000, 97700, 100000]]);
+    assert.deepEqual(visitsOf(result, "EB-002").map(pick), [[90900, 91080, 91080, 92280, 92300, 95000, 95000]]);
+    assert.deepEqual(computeMetric(result, { metric: "depot.blocked_s", scope: { depot: "EB-1" } }), { value: 2320 });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// 16. nearest_depot_with_capacity counts cars inbound, and a car stops counting once it arrives
+// ---------------------------------------------------------------------------------------------------------------
+//
+// Policy nearest_depot_with_capacity (POL-2): the nearest depot whose parking - stalls held - cars inbound >= 1 when
+// the car leaves. Hours 10 and 11 carry 1000 in every row. SF-1: 60 stall holds for the whole run. SF-2: 28 for the
+// whole run plus one until 39,000 (16a) or for the whole run (16b). SF-001 and SF-002 (home SF-1) IDLE in SF with 9
+// trips since their last visit, 0 visits. Riders r-SF-0 at 36,000 and r-SF-1 at 40,000, both SF to SF. Planned arrival
+// from the SF centre: SF-1 and SF-2 300; EB-1 H3 1200 + 300 = 1500; SJ-1 H2 3300 + 300 = 3600.
+// 16a. 36,000 r-SF-0: both cars IDLE at SF, SF-001 by id. Pickup 360 to 36,360; trip 360 to 36,720. 10 trips: visit 1
+//   (clean only). Room: SF-1 60 - 60 - 0 = 0; SF-2 30 - 29 - 0 = 1; EB-1 and SJ-1 30. Nearest with room: SF-2.
+//   ACCESS IN to 37,020 (SF-2 inbound back to 0); 30 held; INTAKE to 37,200; CLEAN 37,200 to 38,400 (29); READY (30).
+//   39,000 the hold ends (29).
+//   40,000 r-SF-1: SF-002 IDLE at SF plans 360, SF-001 at SF-2 plans 120 + 300 + 360 = 780: SF-002. Pickup to 40,360;
+//   trip to 40,720; 10 trips. Room at SF-2: 30 - 29 - 0 = 1 (SF-001 arrived at 37,020 and is no longer inbound): SF-2.
+//   ACCESS IN 40,720 to 41,020; INTAKE to 41,200; CLEAN to 42,400; READY. A counter still holding SF-001 as inbound would
+//   give 30 - 29 - 1 = 0 and send SF-002 to EB-1.
+//   Recall 88,200: no IDLE car. Release 107,100: both cars wait at SF-2, in their home area: no move.
+// 16b. The SF-2 hold never ends: at 40,720 SF-2 has 30 - 30 - 0 = 0, so SF-002 goes to EB-1: H3 SF>EB 40,720 to 41,920,
+//   ACCESS IN EB-1 to 42,220; INTAKE to 42,400; CLEAN to 43,600; READY. Release 107,100: EB-1 is outside SF:
+//   PULL_OUT to 107,220, ACCESS OUT EB-1 (hour 29) to 107,520, H3 EB>SF (hours 29 and 30 at 1000) 1200 to 108,720; IDLE.
+// 16c. As 16b with both riders at 36,000: while SF-001 is still inbound to SF-2, SF-002 leaves and finds no room there
+//   (derivation in the test).
+
+describe("16. nearest_depot_with_capacity with a car inbound and then arrived", () => {
+  const scenario = applyAxis(defaultScenario(), "policy:depot_assignment", "nearest_depot_with_capacity");
+  const fixture = (lastSf2Hold, secondRiderAt = 40000) => ({
+    cars: [car("SF-001", "SF", "SF-1", { area: "SF" }, { trips_since_visit: 9 }), car("SF-002", "SF", "SF-1", { area: "SF" }, { trips_since_visit: 9 })],
+    requests: [
+      { id: "r-SF-0", time_s: 36000, origin: "SF", dest: "SF" },
+      { id: "r-SF-1", time_s: secondRiderAt, origin: "SF", dest: "SF" },
+    ],
+    depotOccupancy: {
+      "SF-1": { stalls: holds(60, FAR), cleaning: [], service: [] },
+      "SF-2": { stalls: [...holds(28, FAR), lastSf2Hold], cleaning: [], service: [] },
+    },
+  });
+  const firstCar = [
+    ["IDLE", 18000, 36000],
+    ["ENROUTE_PICKUP", 36000, 36360],
+    ["ON_TRIP", 36360, 36720],
+    ["TO_DEPOT", 36720, 37020],
+    ["INTAKE", 37020, 37200],
+    ["IN_SERVICE:CLEAN", 37200, 38400],
+    ["READY_AT_DEPOT", 38400, 122400],
+  ];
+
+  test("16a: the freed stall at SF-2 counts once SF-001 has arrived", () => {
+    const result = runFixture(scenario, fixture(39000));
+    assert.deepEqual(spans(result, "SF-001"), firstCar);
+    assert.deepEqual(spans(result, "SF-002"), [
+      ["IDLE", 18000, 40000],
+      ["ENROUTE_PICKUP", 40000, 40360],
+      ["ON_TRIP", 40360, 40720],
+      ["TO_DEPOT", 40720, 41020],
+      ["INTAKE", 41020, 41200],
+      ["IN_SERVICE:CLEAN", 41200, 42400],
+      ["READY_AT_DEPOT", 42400, 122400],
+    ]);
+    assert.deepEqual(eventsOf(result, (e) => e.kind === "DEPOT_ASSIGNED").map((e) => [e.t, e.car, e.depot, e.detail.cause]), [
+      [36720, "SF-001", "SF-2", "nearest_depot_with_capacity"],
+      [40720, "SF-002", "SF-2", "nearest_depot_with_capacity"],
+    ]);
+    const leg = intervalAt(result, "SF-002", "TO_DEPOT", 40720);
+    assert.deepEqual([leg.depot, leg.cause, leg.purpose], ["SF-2", "nearest_depot_with_capacity", "SERVICE_DUE"]);
+    assert.deepEqual(leg.segments.map(segText), [["ACCESS", "ACC-SF-2", "IN", 40720, 41020, false]]);
+  });
+
+  test("16b: with that stall still held, SF-2 has no room and SF-002 goes to EB-1", () => {
+    const result = runFixture(scenario, fixture(FAR));
+    assert.deepEqual(spans(result, "SF-001"), firstCar);
+    assert.deepEqual(spans(result, "SF-002"), [
+      ["IDLE", 18000, 40000],
+      ["ENROUTE_PICKUP", 40000, 40360],
+      ["ON_TRIP", 40360, 40720],
+      ["TO_DEPOT", 40720, 42220],
+      ["INTAKE", 42220, 42400],
+      ["IN_SERVICE:CLEAN", 42400, 43600],
+      ["READY_AT_DEPOT", 43600, 107100],
+      ["REPOSITIONING", 107100, 108720],
+      ["IDLE", 108720, 122400],
+    ]);
+    const leg = intervalAt(result, "SF-002", "TO_DEPOT", 40720);
+    assert.deepEqual([leg.depot, leg.cause], ["EB-1", "nearest_depot_with_capacity"]);
+    assert.deepEqual(leg.segments.map(segText), [
+      ["ROUTE", "H3", "SF>EB", 40720, 41920, false],
+      ["ACCESS", "ACC-EB-1", "IN", 41920, 42220, false],
+    ]);
+  });
+
+  test("16c: a car still inbound to SF-2 takes its last free stall, so the next car goes to EB-1", () => {
+    // As 16b (SF-2 29 held for the whole run), with r-SF-1 also at 36,000. r-SF-0 takes SF-001 and r-SF-1 SF-002 (by
+    // request id, then vehicle id); both pickups 36,000 to 36,360 and trips to 36,720. SF-001's completion was pushed
+    // first and pops first: SF-2 room 30 - 29 - 0 = 1: SF-2, inbound 1, ACCESS IN to 37,020. SF-002 at the same second:
+    // SF-2 room 30 - 29 - 1 = 0 (SF-001 is inbound), SF-1 0: EB-1 by H3 36,720 to 37,920 and ACCESS IN to 38,220;
+    // INTAKE to 38,400; CLEAN to 39,600; READY. Release 107,100: EB-1 is outside SF: 107,100 to 108,720 as in 16b.
+    // SF-001: arrival 37,020 (30 held), INTAKE to 37,200, CLEAN to 38,400, READY. Ignoring inbound would send SF-002
+    // to SF-2 too, where it would find the lot full at 37,020.
+    const result = runFixture(scenario, fixture(FAR, 36000));
+    assert.deepEqual(spans(result, "SF-001"), firstCar);
+    assert.deepEqual(spans(result, "SF-002"), [
+      ["IDLE", 18000, 36000],
+      ["ENROUTE_PICKUP", 36000, 36360],
+      ["ON_TRIP", 36360, 36720],
+      ["TO_DEPOT", 36720, 38220],
+      ["INTAKE", 38220, 38400],
+      ["IN_SERVICE:CLEAN", 38400, 39600],
+      ["READY_AT_DEPOT", 39600, 107100],
+      ["REPOSITIONING", 107100, 108720],
+      ["IDLE", 108720, 122400],
+    ]);
+    assert.deepEqual(eventsOf(result, (e) => e.kind === "DEPOT_ASSIGNED").map((e) => [e.t, e.car, e.depot, e.detail.cause]), [
+      [36720, "SF-001", "SF-2", "nearest_depot_with_capacity"],
+      [36720, "SF-002", "EB-1", "nearest_depot_with_capacity"],
+    ]);
+    assert.equal(eventsOf(result, (e) => e.kind === "DEPOT_DIVERTED").length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// 17. The recall stops pending at the release time: a trip that ends then or later ends IDLE (design 5.3)
+// ---------------------------------------------------------------------------------------------------------------
+//
+// "A recall is pending from POL-3's time until POL-4's time." Default scenario: recall 88,200, release 107,100. SF-001
+// (home SF-1) IDLE in SF, 0 trips, 0 visits. Hours 24 to 30 carry 1000 in every row (hour 30 is D2 06:00).
+// Both arms: 88,200 recall: ACCESS IN SF-1 to 88,500; INTAKE to 88,680; CLEAN to 89,880; READY (visit 1). 107,100
+// release: SF-1 is in SF: no move. A dispatch from SF-1 to the SF centre: PULL_OUT 120 + ACCESS OUT 300 + IN_AREA 360 =
+// 780; the trip SF to SF: 360.
+// 17a. r-SF-0 at 108,000: pickup 108,000 to 108,780; trip to 109,140. 109,140 >= 107,100: the recall is no longer
+//   pending and 1 trip < 10: IDLE in SF until 122,400. One visit (arrival 88,500); no depot assignment after 88,200.
+// 17b. r-SF-0 at 105,960: pickup 105,960 to 106,740; trip to 107,100. TRIP_COMPLETED (class 0) pops before
+//   MORNING_RELEASE (class 3) at 107,100. The pending window is [88,200, 107,100): it has ended, so IDLE in SF.
+
+describe("17. the recall no longer applies from the release time", () => {
+  const scenario = defaultScenario();
+  const runWith = (time_s) => runFixture(scenario, {
+    cars: [car("SF-001", "SF", "SF-1", { area: "SF" })],
+    requests: [{ id: "r-SF-0", time_s, origin: "SF", dest: "SF" }],
+    depotOccupancy: {},
+  });
+  const night = [
+    ["IDLE", 18000, 88200],
+    ["TO_DEPOT", 88200, 88500],
+    ["INTAKE", 88500, 88680],
+    ["IN_SERVICE:CLEAN", 88680, 89880],
+  ];
+
+  test("17a: a trip ending after the release leaves the car IDLE", () => {
+    const result = runWith(108000);
+    assert.deepEqual(spans(result, "SF-001"), [
+      ...night,
+      ["READY_AT_DEPOT", 89880, 108000],
+      ["ENROUTE_PICKUP", 108000, 108780],
+      ["ON_TRIP", 108780, 109140],
+      ["IDLE", 109140, 122400],
+    ]);
+    assert.deepEqual(intervalAt(result, "SF-001", "IDLE", 109140).location, { area: "SF" });
+    assert.deepEqual(visitsOf(result, "SF-001").map((v) => v.arrival_s), [88500]);
+    assert.deepEqual(eventsOf(result, (e) => e.kind === "DEPOT_ASSIGNED").map((e) => e.t), [88200]);
+    assert.equal(eventsOf(result, (e) => e.t >= 107100 && (e.kind === "DEPOT_ASSIGNED" || e.kind === "DEPOT_ARRIVED")).length, 0);
+  });
+
+  test("17b: a trip ending at the release second leaves the car IDLE", () => {
+    const result = runWith(105960);
+    assert.deepEqual(spans(result, "SF-001"), [
+      ...night,
+      ["READY_AT_DEPOT", 89880, 105960],
+      ["ENROUTE_PICKUP", 105960, 106740],
+      ["ON_TRIP", 106740, 107100],
+      ["IDLE", 107100, 122400],
+    ]);
+    expectInOrder(result.events, [
+      { t: 107100, kind: "TRIP_COMPLETED", car: "SF-001" },
+      { t: 107100, kind: "MORNING_RELEASE" },
+    ]);
+    assert.deepEqual(visitsOf(result, "SF-001").map((v) => v.arrival_s), [88500]);
+    assert.deepEqual(eventsOf(result, (e) => e.kind === "DEPOT_ASSIGNED").map((e) => e.t), [88200]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// 18. A dispatch tie across two locations goes to the lower vehicle id (design 5.5, contract 6.4)
+// ---------------------------------------------------------------------------------------------------------------
+//
+// Default scenario, hour 10 (every multiplier 1000). SF-002 (home SF-1) READY_AT_DEPOT at SF-1 and SF-001 (home SF-2)
+// READY_AT_DEPOT at SF-2. Rider r-SF-0 at 36,000, SF to SF. Planned arrival from either depot: PULL_OUT 120 + ACCESS OUT
+// 300 + IN_AREA SF 360 = 780, so 36,780 for both: the tie goes to SF-001. Pickup from SF-2 36,000 to 36,780; trip 360 to
+// 37,140; IDLE in SF. SF-002 stays ready at SF-1 through the recall and the release (SF-1 is in SF) to 122,400.
+
+describe("18. dispatch tie across locations", () => {
+  const result = runFixture(defaultScenario(), {
+    cars: [readyCar("SF-001", "SF", "SF-2", "SF-2"), readyCar("SF-002", "SF", "SF-1", "SF-1")],
+    requests: [{ id: "r-SF-0", time_s: 36000, origin: "SF", dest: "SF" }],
+    depotOccupancy: {},
+  });
+
+  test("the lower vehicle id wins the tie", () => {
+    const assigned = eventsOf(result, (e) => e.kind === "REQUEST_ASSIGNED");
+    assert.deepEqual(assigned.map((e) => [e.t, e.car, e.req, e.detail.planned_arrive_s]), [[36000, "SF-001", "r-SF-0", 36780]]);
+    assert.deepEqual(spans(result, "SF-001").slice(0, 4), [
+      ["READY_AT_DEPOT", 18000, 36000],
+      ["ENROUTE_PICKUP", 36000, 36780],
+      ["ON_TRIP", 36780, 37140],
+      ["IDLE", 37140, 88200],
+    ]);
+    const pickup = intervalAt(result, "SF-001", "ENROUTE_PICKUP", 36000);
+    assert.deepEqual(pickup.segments.map((s) => [s.kind, s.t0, s.t1]), [["PULL_OUT", 36000, 36120], ["ACCESS", 36120, 36420], ["IN_AREA", 36420, 36780]]);
+    assert.equal(pickup.segments[1].key, "ACC-SF-2");
+    assert.deepEqual(spans(result, "SF-002"), [["READY_AT_DEPOT", 18000, 122400]]);
   });
 });

@@ -813,7 +813,9 @@ describe("PRESETS", () => {
     const l3Rows = DIRECTIONS.filter((k) => !AWAY_FROM_SF.includes(k)).map((k) => `RD-3.highway.${k}`);
     const expected = {
       bay_teaching_map: [[], null],
-      L1: [[], ["DEM-5", "RD-5"]],
+      // L1 sets SF off-peak requests from 15 to 8 (DEM-2.SF) so the Learn preset differs visibly from the map (design
+      // 4.1); describeDifferences lists knobs in KNOBS order, so DEM-2.SF comes before DEM-5 and RD-5.
+      L1: [["DEM-2.SF"], ["DEM-2.SF", "DEM-5", "RD-5"]],
       L2a: [["SUP-1.SJ"], ["SUP-1.SJ", "RD-5"]],
       L2b: [["SUP-1.SJ"], ["SUP-1.SJ", "RD-5"]],
       L3: [l3Rows, [...l3Rows, "RD-5"]],
@@ -836,6 +838,9 @@ describe("PRESETS", () => {
     assert.deepEqual(byKnob("UC-03", "RID-1"), { knob: "RID-1", from: 600, to: 1200 });
     assert.deepEqual(byKnob("UC-10", "POL-2"), { knob: "POL-2", from: "home_depot", to: "nearest_depot_with_capacity" });
     assert.deepEqual(byKnob("L1", "DEM-5"), { knob: "DEM-5", from: "peaked", to: "flat" });
+    assert.deepEqual(byKnob("L1", "DEM-2.SF"), { knob: "DEM-2.SF", from: 15, to: 8 });
+    // Design 4.1: every Learn preset has a visible difference from the Bay teaching map, and it is not the name.
+    for (const preset of learn) assert.ok(describeDifferences(defaultScenario(), preset.scenario).length > 0, preset.id);
     assert.deepEqual(byKnob("UC-05", "RD-3.highway.SF>SJ").to.slice(15, 21), [1000, 1000, 1000, 1000, 1300, 1000]);
     assert.equal(presetById("L1").scenario.demand_shape, "peaked");
     // The two L2 specs are preregistered together: one scenario and question, L2b adds one guardrail at the end.

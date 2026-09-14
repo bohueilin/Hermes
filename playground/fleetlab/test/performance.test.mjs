@@ -6,7 +6,7 @@ import { describe, test } from "node:test";
 
 import { bootstrapCi } from "../src/instrument/bootstrap.js";
 import { runToEnd } from "../src/model/engine.js";
-import { freezeSpec, runExperimentSpec } from "../src/model/experiment.js";
+import { experimentSteps, freezeSpec, runExperimentSpec } from "../src/model/experiment.js";
 import { computeAll, computeSeries } from "../src/model/metrics.js";
 import { seedSet } from "../src/model/presets.js";
 import { applyAxis, defaultScenario } from "../src/model/schema.js";
@@ -20,6 +20,22 @@ function reference(sigma) {
   for (const [area, n] of [["SF", 50], ["PEN", 30], ["SJ", 40], ["EB", 30]]) s = applyAxis(s, `parameter:SUP-1.${area}`, n);
   s.sigma_permille = sigma;
   return s;
+}
+
+/** The frozen experiment of the design 5.9 budget: reference preset at σ 0.15, DEP-4 20 min to 15 min, 20 seeds, 2,000 resamples. */
+function referenceSpec() {
+  const base = reference(150);
+  base.name = "reference_150";
+  return freezeSpec({
+    question: "Does a 15 minute clean instead of a 20 minute clean change rider wait p90?",
+    scenario: base,
+    axis: { id: "parameter:DEP-4", baseline: 1200, candidate: 900 },
+    primary: { metric: "wait.p90_s", scope: {}, direction: "lower_is_better", margin_units: 30 },
+    guardrails: [{ metric: "unserved.fraction", scope: {}, direction: "lower_is_better", max_harm_units: 20000 }],
+    seed_set: 1,
+    seeds: seedSet(1, 20),
+    resamples: 2000,
+  }).spec;
 }
 
 describe("deterministic work proxies on the reference preset (design 5.9)", () => {
@@ -75,23 +91,47 @@ describe("wall-clock budgets of design 5.9 (FLEET_PLAYGROUND_PERF=1)", { skip: P
   });
 
   test("an experiment of 20 seeds × 2 arms on the reference preset, at most 10 s", () => {
-    const base = reference(150);
-    base.name = "reference_150";
-    const { spec } = freezeSpec({
-      question: "Does a 15 minute clean instead of a 20 minute clean change rider wait p90?",
-      scenario: base,
-      axis: { id: "parameter:DEP-4", baseline: 1200, candidate: 900 },
-      primary: { metric: "wait.p90_s", scope: {}, direction: "lower_is_better", margin_units: 30 },
-      guardrails: [{ metric: "unserved.fraction", scope: {}, direction: "lower_is_better", max_harm_units: 20000 }],
-      seed_set: 1,
-      seeds: seedSet(1, 20),
-      resamples: 2000,
-    });
+    const spec = referenceSpec();
     const t0 = performance.now();
     const out = runExperimentSpec(spec);
     const ms = performance.now() - t0;
     assert.equal(out.per_seed.length, 20);
     assert.ok(ms <= 10000, `${ms.toFixed(0)} ms`);
+  });
+
+  test("experimentSteps on the reference preset: every gap between next() calls at most 8 ms after one warm-up (design 5.9, contract 7)", (t) => {
+    const spec = referenceSpec();
+    // Warm-up: builds the sigma 150 tables (memoized) and compiles the hot paths. A cold first experiment still pays
+    // for the table build in one step of its own.
+    const warm = runExperimentSpec(spec);
+    const steps = experimentSteps(spec);
+    // Each gap also records this process's CPU time (all threads, so garbage collector and compiler helper threads can
+    // push it above the wall time): a gap far above its CPU time means the machine preempted the process under another
+    // load, not that one step did too much work. The budget is on wall time all the same.
+    let largest = { ms: 0, cpuMs: 0, label: "" };
+    let yields = 0;
+    let out;
+    let before = performance.now();
+    let cpuBefore = process.cpuUsage();
+    for (;;) {
+      const next = steps.next();
+      const after = performance.now();
+      const cpuAfter = process.cpuUsage(cpuBefore);
+      if (after - before > largest.ms) {
+        largest = { ms: after - before, cpuMs: (cpuAfter.user + cpuAfter.system) / 1000, label: next.done ? "the return" : next.value.label };
+      }
+      before = performance.now();
+      cpuBefore = process.cpuUsage();
+      if (next.done) {
+        out = next.value;
+        break;
+      }
+      yields += 1;
+    }
+    const text = `largest gap ${largest.ms.toFixed(2)} ms (process CPU ${largest.cpuMs.toFixed(2)} ms), ending at ${largest.label}, over ${yields} yields`;
+    t.diagnostic(text);
+    assert.deepEqual(out, warm, "slicing never changes the payload");
+    assert.ok(largest.ms <= 8, text);
   });
 
   test("a bootstrap of 2,000 resamples over 20 deltas, at most 100 ms", () => {

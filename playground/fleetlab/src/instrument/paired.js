@@ -2,7 +2,7 @@
 // design P-3 to P-9. The runs are metric maps already computed; this module decides nothing else.
 
 import { meanFleetLab, medianFleetLab } from "../core/stats.js";
-import { bootstrapCi } from "./bootstrap.js";
+import { bootstrapCiSteps } from "./bootstrap.js";
 import { guardrailRegressions, guardrailStatuses } from "./guardrails.js";
 import { resolveOutcome } from "./outcome.js";
 import { resolveRecommendation } from "./recommendation.js";
@@ -73,7 +73,19 @@ function invalidVerdict(reason, detail) {
  * The verdict of `run_experiment` from per-seed metric maps, in the metrics' units. `primary` is
  * `{name, direction, equivalence_margin}`; guardrails are `{metric, max_harm, direction}`; `key` is the full digest.
  */
-export function computeVerdict({
+export function computeVerdict(args) {
+  const steps = computeVerdictSteps(args);
+  for (;;) {
+    const next = steps.next();
+    if (next.done) return next.value;
+  }
+}
+
+/**
+ * computeVerdict as a generator for time-sliced callers (design 5.9): the same arguments and return value, yielding
+ * undefined inside the bootstrap (bootstrapCiSteps) and once after it.
+ */
+export function* computeVerdictSteps({
   primary,
   guardrails = [],
   descriptiveNames = [],
@@ -98,7 +110,8 @@ export function computeVerdict({
   if (compared === null) {
     return invalidVerdict("NOT_COMPARABLE", `primary metric ${primary.name} unavailable in some replication`);
   }
-  const [low, high] = bootstrapCi(compared.paired_deltas, resamples, key);
+  const [low, high] = yield* bootstrapCiSteps(compared.paired_deltas, resamples, key);
+  yield;
   const primaryResult = { ...compared, ci_low: low, ci_high: high };
 
   const guardrailResults = [];

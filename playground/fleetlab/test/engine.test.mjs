@@ -185,6 +185,19 @@ describe("bucketed dispatch equals the brute-force ranking (design 5.9)", () => 
     }
   });
 
+  test("a tie in planned arrival across two locations goes to the lower vehicle id, in either location order", () => {
+    // Rider in SF at 36,000 (hour 10, every multiplier 1000). From a depot in SF to the SF centre: PULL_OUT 120, ACCESS
+    // OUT 300, IN_AREA SF 360, so SF-1 and SF-2 both plan 36,000 + 780 = 36,780. SF-002 is first at SF-1 and SF-001 at
+    // SF-2, so only the vehicle-id tie-break (design 5.5, contract 6.4) picks SF-001, whichever location is listed first.
+    const atSf1 = { location: { depot: "SF-1" }, firstCar: "SF-002" };
+    const atSf2 = { location: { depot: "SF-2" }, firstCar: "SF-001" };
+    assert.equal(plan({ depot: "SF-1" }, { area: "SF" }, 36000, "PICKUP"), 36780);
+    assert.equal(plan({ depot: "SF-2" }, { area: "SF" }, 36000, "PICKUP"), 36780);
+    for (const locations of [[atSf1, atSf2], [atSf2, atSf1]]) {
+      assert.deepEqual(nearestIdle({ t: 36000, riderArea: "SF", locations, plan }), { car: "SF-001", location: { depot: "SF-2" }, arrive_s: 36780 });
+    }
+  });
+
   test("depot assignment falls back when capacity or a service bay is missing", () => {
     // From the SF centre at 36,000 (hour 10, every multiplier 1000): SF-1 and SF-2 300, EB-1 1500, SJ-1 3600.
     const depots = [

@@ -9,14 +9,17 @@ import { describe, test } from "node:test";
 
 import { canonicalJson } from "../src/core/canon.js";
 import { meanFleetLab } from "../src/core/stats.js";
+import { bootstrapCi, bootstrapCiSteps } from "../src/instrument/bootstrap.js";
 import { guardrailRegressions } from "../src/instrument/guardrails.js";
-import { computeVerdict } from "../src/instrument/paired.js";
+import { computeVerdict, computeVerdictSteps } from "../src/instrument/paired.js";
 import { createRun } from "../src/model/engine.js";
 import {
-  armScenarios, experimentEnvelope, experimentSteps, freezeSpec, isNullCheckAxis, MODEL_VERSION, parseDecimalPpm,
-  runExperimentSpec, seedWorld, SpecError, thresholdValue, validateDraft, verdictDeclarations,
+  armScenarios, experimentEnvelope, experimentSteps, freezeSpec, isNullCheckAxis, isNullCheckDraft, MODEL_VERSION,
+  parseDecimalPpm, runExperimentSpec, seedWorld, SpecError, thresholdValue, validateDraft, verdictDeclarations,
 } from "../src/model/experiment.js";
-import { runViolations } from "../src/model/invariants.js";
+import {
+  checkReplay, checkReplaySteps, checkRun, checkRunSteps, runDigest, runDigestSteps, runViolations, runViolationsSteps,
+} from "../src/model/invariants.js";
 import { computeAll, METRICS_VERSION } from "../src/model/metrics.js";
 import { presetById, seedSet } from "../src/model/presets.js";
 import { applyAxis } from "../src/model/schema.js";
@@ -69,7 +72,10 @@ describe("thresholds reach the instrument as one division (contract 6.6)", () =>
     const candidateRuns = Array.from({ length: n }, () => ({ "wait.p90_s": 100, "unserved.fraction": harm }));
     assert.ok(Object.is(meanFleetLab(candidateRuns.map((r) => r["unserved.fraction"] - 0)), harm));
 
-    const frozen = freezeSpec(draftOf("UC-01", { guardrails: [{ metric: "unserved.fraction", scope: {}, direction: "lower_is_better", max_harm_text: "0.000015" }] }));
+    // UC-08a, not UC-01: a UC-01 draft with another guardrail is no longer the null check, so its equal arms would not
+    // freeze (design 2.8). UC-08a's primary is the same wait.p90_s, unscoped, margin 30 s; only the guardrail is set here.
+    const frozen = freezeSpec(draftOf("UC-08a", { guardrails: [{ metric: "unserved.fraction", scope: {}, direction: "lower_is_better", max_harm_text: "0.000015" }] }));
+    assert.equal(verdictDeclarations(frozen.spec).primary.name, "wait.p90_s");
     assert.equal(frozen.spec.guardrails[0].max_harm_units, 15);
     const { primary, guardrails } = verdictDeclarations(frozen.spec);
     assert.ok(Object.is(guardrails[0].max_harm, harm));
@@ -137,6 +143,38 @@ describe("freezeSpec builds exactly the contract 6.6 object", () => {
     assert.equal(freezeSpec(draftOf("UC-01")).spec.axis.candidate, 10);
     assert.deepEqual(checksOf(draftOf("UC-08a", { axis: { id: "parameter:DEP-3.SF-1", baseline: 4, candidate: 4 } })), ["one axis"]);
     assert.deepEqual(checksOf(draftOf("UC-01", { axis: { id: "parameter:DEP-7", baseline: 11, candidate: 11 } })), ["one axis"]);
+  });
+
+  test("the exemption belongs to the UC-01 preset, not to any draft with its axis", () => {
+    // UC-02's scenario, primary, guardrails and question with UC-01's axis at 10 and 10.
+    const copied = draftOf("UC-02", { axis: { id: "parameter:DEP-7", baseline: 10, candidate: 10 } });
+    assert.equal(isNullCheckAxis(copied.axis), true, "the axis alone matches UC-01's");
+    assert.equal(isNullCheckDraft(copied), false);
+    assert.deepEqual(checksOf(copied), ["one axis"]);
+    assert.throws(() => freezeSpec(copied), (error) => error instanceof SpecError && error.errors.length === 1 && error.errors[0].check === "one axis");
+    // The same draft with 999 resamples: the equal-values error keeps its place ahead of later checks.
+    assert.deepEqual(checksOf({ ...copied, resamples: 999 }), ["one axis", "resamples"]);
+    // UC-01 itself loses the exemption when its scenario, primary or guardrails change.
+    assert.deepEqual(checksOf(draftOf("UC-01", { guardrails: [] })), ["one axis"]);
+    assert.deepEqual(checksOf(draftOf("UC-01", { primary: { metric: "wait.p90_s", scope: {}, margin_units: 31 } })), ["one axis"]);
+    assert.deepEqual(checksOf(draftOf("UC-01", { scenario: applyAxis(presetById("UC-01").experiment.scenario, "parameter:SUP-1.SJ", 12) })), ["one axis"]);
+  });
+
+  test("UC-01 keeps the exemption with another seed set, question or resample count, and threshold as text", () => {
+    const set2 = freezeSpec(draftOf("UC-01", { seed_set: 2, seeds: seedSet(2, 20) }));
+    assert.deepEqual(set2.spec.axis, { id: "parameter:DEP-7", baseline: 10, candidate: 10 });
+    assert.deepEqual(set2.spec.seeds, seedSet(2, 20));
+    for (const patch of [
+      { seed_set: 2, seeds: seedSet(2, 20) },
+      { seed_set: 3, seeds: seedSet(3, 10), resamples: 1000 },
+      { question: "Does the null check read no change on these seeds?" },
+      // Direction and scope filled from the registry, 30 s typed as text: the checked primary is UC-01's.
+      { primary: { metric: "wait.p90_s", margin_text: "30" } },
+    ]) {
+      const draft = draftOf("UC-01", patch);
+      assert.equal(isNullCheckDraft(draft), true, JSON.stringify(patch));
+      assert.deepEqual(checksOf(draft), [], JSON.stringify(patch));
+    }
   });
 });
 
@@ -286,6 +324,88 @@ describe("experimentSteps runs the contract 6.6 order", () => {
     assert.deepEqual(out.lambdaMaxPermille, envelope);
     assert.deepEqual(out.per_seed.map((p) => p.seed), spec.seeds);
     assert.equal(out.verdict.validity, "VALID");
+  });
+});
+
+describe("sliced variants return what the one-shot functions return (design 5.9 slice rule)", () => {
+  const spec = freezeSpec(draftOf("L1", { seeds: seedSet(1, 10), resamples: 1000 })).spec;
+  const arms = armScenarios(spec);
+  const world = seedWorld(spec, 1001);
+  const drain = (steps) => {
+    let yields = 0;
+    for (;;) {
+      const next = steps.next();
+      if (next.done) return { value: next.value, yields };
+      assert.equal(next.value, undefined, "the check generators yield bare ticks");
+      yields += 1;
+    }
+  };
+
+  test("whole-run checks, violations, digests and replay on clean and defective runs, with and without logs", () => {
+    for (const keepLogs of [true, false]) {
+      for (const defect of [null, "double_assign"]) {
+        const r = createRun(arms.candidate, world, { seed: 1001, keepLogs, defect }).runToEnd();
+        const again = createRun(arms.candidate, world, { seed: 1001, keepLogs, defect }).runToEnd();
+        const name = `logs ${keepLogs}, defect ${defect}`;
+        const checks = drain(checkRunSteps(r));
+        assert.deepEqual(checks.value, checkRun(r), name);
+        // One yield after each of the 11 check groups.
+        assert.equal(checks.yields, 11, name);
+        assert.deepEqual(drain(runViolationsSteps(r)).value, runViolations(r), name);
+        if (defect !== null) assert.ok(runViolations(r).length > 0, name);
+        const digest = drain(runDigestSteps(r));
+        assert.equal(digest.value, runDigest(r), name);
+        if (keepLogs) assert.ok(digest.yields > 0, `${name}: a logged run's digest is hashed in more than one piece`);
+        assert.deepEqual(drain(checkReplaySteps(r, again)).value, checkReplay(r, again), name);
+      }
+    }
+    // A replay mismatch reads the same text both ways.
+    const clean = createRun(arms.candidate, world, { seed: 1001 }).runToEnd();
+    const other = createRun(arms.baseline, world, { seed: 1001 }).runToEnd();
+    assert.equal(checkReplay(clean, other).length, 1);
+    assert.deepEqual(drain(checkReplaySteps(clean, other)).value, checkReplay(clean, other));
+  });
+
+  test("runDigestSteps hashes exactly the JSON.stringify text: empty slots, skipped keys, non-ASCII across pieces", () => {
+    const odd = {
+      events: [{ kind: "é", note: undefined, f: () => 1 }, undefined, null],
+      intervals: { a: [1, 2], skipped: undefined, "clé": [{ t0: 1 }] },
+      visits: [],
+      requests: [Number.NaN],
+      drain_end_s: undefined,
+    };
+    assert.equal(drain(runDigestSteps(odd)).value, runDigest(odd));
+    // 3,000 events of about 110 characters each, with surrogate pairs, cross the 262,144-character piece boundary.
+    const long = { events: Array.from({ length: 3000 }, (_, i) => ({ ord: i, text: "\u{1F600}".repeat(50) })), intervals: {}, visits: [], requests: [], drain_end_s: 7 };
+    const sliced = drain(runDigestSteps(long));
+    assert.ok(sliced.yields > 0);
+    assert.equal(sliced.value, runDigest(long));
+  });
+
+  test("bootstrapCiSteps and computeVerdictSteps", () => {
+    const deltas = Array.from({ length: 20 }, (_, i) => ((i * 37) % 11) - 5 + i / 8);
+    const key = "cd".repeat(32);
+    const ci = drain(bootstrapCiSteps(deltas, 2000, key));
+    assert.deepEqual(ci.value, bootstrapCi(deltas, 2000, key));
+    // 2,000 resamples × 20 draws = 40,000 draws: a yield after every 205th resample (4,100 draws, the first multiple of 20
+    // at or above 4,096) gives floor(2000 / 205) = 9 yields, then one before the sort.
+    assert.equal(ci.yields, 10);
+    const baselineRuns = deltas.map(() => ({ "wait.p90_s": 100 }));
+    const candidateRuns = deltas.map((d) => ({ "wait.p90_s": 100 + d }));
+    const args = { primary: { name: "wait.p90_s", direction: "lower_is_better", equivalence_margin: 30 }, baselineRuns, candidateRuns, resamples: 2000, key, precheckMatched: true };
+    assert.deepEqual(drain(computeVerdictSteps(args)).value, computeVerdict(args));
+    assert.deepEqual(drain(computeVerdictSteps({ ...args, precheckMatched: false })).value, computeVerdict({ ...args, precheckMatched: false }));
+  });
+
+  test("experimentSteps yields only progress markers, and its de-duplicated marker sequence never steps back", () => {
+    let last = null;
+    const steps = experimentSteps(spec);
+    for (let next = steps.next(); !next.done; next = steps.next()) {
+      const p = next.value;
+      assert.ok(p !== null && typeof p === "object" && Number.isSafeInteger(p.done) && p.total === 23 && typeof p.label === "string");
+      if (last !== null) assert.ok(p.done >= last.done, `${p.label} (${p.done}) after ${last.label} (${last.done})`);
+      last = p;
+    }
   });
 });
 

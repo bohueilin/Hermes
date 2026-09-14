@@ -16,7 +16,7 @@
 // - P13 and 5 hold on both the engine's counters (the series) and the occupancy rebuilt from car states and the result's
 //   fixture holds (`depots[i].holds`), so a counter that drifts from the cars cannot hide an overfilled lot or bay.
 
-import { sha256Hex } from "../core/sha256.js";
+import { sha256Hex, sha256Stream } from "../core/sha256.js";
 import { computeMetric, METRICS } from "./metrics.js";
 import { validateScenario } from "./schema.js";
 import { lambdaProfilePermille, worldDigest } from "./world.js";
@@ -480,24 +480,48 @@ function checkHomes(result, out) {
 
 const ORDER = new Map(CHECK_IDS.map((id, i) => [id, i]));
 
+/** Drives a generator to its end and returns its value. */
+function drain(steps) {
+  for (;;) {
+    const next = steps.next();
+    if (next.done) return next.value;
+  }
+}
+
+/** The whole-run check groups in report order; each appends to `out`. */
+const RUN_GROUPS = Object.freeze([
+  (result, logs, options, out) => checkFleet(result, options, out),
+  (result, logs, options, out) => checkRequests(result, logs, out),
+  (result, logs, options, out) => checkReferences(result, logs, out),
+  (result, logs, options, out) => logs && checkLog(result, out),
+  (result, logs, options, out) => checkDepotSeries(result, out),
+  (result, logs, options, out) => checkOccupancy(result, out),
+  (result, logs, options, out) => checkIntervals(result, out),
+  (result, logs, options, out) => logs && checkReleaseDispatch(result, out),
+  (result, logs, options, out) => checkSeriesIntegrals(result, out),
+  (result, logs, options, out) => checkHomes(result, out),
+  (result, logs, options, out) => checkPartition(result, out),
+]);
+
 /**
  * Whole-run checks on an engine result (contract 6.5); returns strings "<id>: detail" sorted by check id, stable inside
  * one id. `options.configuredCars` lists the configured car ids when the run's fleet is not built from SUP-1.
  */
 export function checkRun(result, options = {}) {
+  return drain(checkRunSteps(result, options));
+}
+
+/**
+ * checkRun as a generator for time-sliced callers (design 5.9): yields undefined after each check group, then returns
+ * the same array checkRun returns.
+ */
+export function* checkRunSteps(result, options = {}) {
   const out = [];
   const logs = result.events.length > 0;
-  checkFleet(result, options, out);
-  checkRequests(result, logs, out);
-  checkReferences(result, logs, out);
-  if (logs) checkLog(result, out);
-  checkDepotSeries(result, out);
-  checkOccupancy(result, out);
-  checkIntervals(result, out);
-  if (logs) checkReleaseDispatch(result, out);
-  checkSeriesIntegrals(result, out);
-  checkHomes(result, out);
-  checkPartition(result, out);
+  for (const group of RUN_GROUPS) {
+    group(result, logs, options, out);
+    yield;
+  }
   return out
     .map((text, i) => [ORDER.get(violationId(text)) ?? CHECK_IDS.length, i, text])
     .sort((a, b) => a[0] - b[0] || a[1] - b[1])
@@ -509,17 +533,84 @@ export function runViolations(result, options = {}) {
   return [...result.invariant_violations, ...checkRun(result, options)];
 }
 
+/** runViolations as a generator (yields as checkRunSteps does); returns the same array. */
+export function* runViolationsSteps(result, options = {}) {
+  const found = yield* checkRunSteps(result, options);
+  return [...result.invariant_violations, ...found];
+}
+
 /** Lowercase hex SHA-256 of a run's event log, intervals, visits, requests and drain end (check 12). */
 export function runDigest(result) {
   return sha256Hex(JSON.stringify([result.events, result.intervals, result.visits, result.requests, result.drain_end_s]));
 }
 
-/** Check 12: two runs of the same world, policy and seed replay to one digest. */
-export function checkReplay(first, second) {
-  const a = runDigest(first);
-  const b = runDigest(second);
+/** Characters of JSON text hashed between two yields of runDigestSteps (a count, not a clock). */
+const DIGEST_CHARS_PER_YIELD = 1 << 18;
+
+/** JSON.stringify of a value in an array slot: undefined, functions and symbols read `null`. */
+const slotText = (value) => JSON.stringify(value) ?? "null";
+
+/** The text of `JSON.stringify(value)` in pieces: one per array element, one per object entry (arrays and plain objects). */
+function* jsonPieces(value) {
+  if (Array.isArray(value)) {
+    yield "[";
+    for (let i = 0; i < value.length; i += 1) yield (i > 0 ? "," : "") + slotText(value[i]);
+    yield "]";
+  } else if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype && typeof value.toJSON !== "function") {
+    yield "{";
+    let first = true;
+    for (const key of Object.keys(value)) {
+      const text = JSON.stringify(value[key]);
+      if (text === undefined) continue;
+      yield (first ? "" : ",") + JSON.stringify(key) + ":" + text;
+      first = false;
+    }
+    yield "}";
+  } else {
+    yield slotText(value);
+  }
+}
+
+/**
+ * runDigest as a generator for time-sliced callers (design 5.9): the same JSON text hashed incrementally, yielding
+ * undefined after about DIGEST_CHARS_PER_YIELD characters; returns the same digest runDigest returns.
+ */
+export function* runDigestSteps(result) {
+  const hash = sha256Stream();
+  let batch = "";
+  const parts = [result.events, result.intervals, result.visits, result.requests, result.drain_end_s];
+  for (let p = 0; p < parts.length; p += 1) {
+    batch += p === 0 ? "[" : ",";
+    for (const piece of jsonPieces(parts[p])) {
+      batch += piece;
+      if (batch.length >= DIGEST_CHARS_PER_YIELD) {
+        hash.update(batch);
+        batch = "";
+        yield;
+      }
+    }
+  }
+  hash.update(batch + "]");
+  return hash.hex();
+}
+
+/** The check 12 text for two digests of a replayed seed. */
+function replayProblems(first, a, b) {
   if (a === b) return [];
   return [`12: seed ${first.seed} replayed to digest ${b.slice(0, 12)}, not ${a.slice(0, 12)}`];
+}
+
+/** Check 12: two runs of the same world, policy and seed replay to one digest. */
+export function checkReplay(first, second) {
+  return replayProblems(first, runDigest(first), runDigest(second));
+}
+
+/** checkReplay as a generator (yields inside and between the two runDigestSteps); returns the same array. */
+export function* checkReplaySteps(first, second) {
+  const a = yield* runDigestSteps(first);
+  yield;
+  const b = yield* runDigestSteps(second);
+  return replayProblems(first, a, b);
 }
 
 /**

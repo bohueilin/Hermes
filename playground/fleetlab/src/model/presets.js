@@ -87,7 +87,11 @@ export const PRESETS = deepFreeze([
     learnCase: "L1",
     useCase: "UC-04",
     title: "Peak and off-peak with the same fleet",
-    scenario: scenarioFrom("l1_peak_and_offpeak"),
+    // Design 4.1 asks every Learn preset for a visible difference from the Bay teaching map. The smallest one that keeps
+    // UC-04 intact: San Francisco off-peak requests 15 to 8 per hour (DEM-2.SF, the value PEN and EB already use), so
+    // the demand strip shows a sharper peak against off-peak hours. The fleet, the peak rates, the peak windows (and so
+    // the 16:00 to 19:00 primary window) and the peaked shape stay as the Bay teaching map sets them.
+    scenario: scenarioFrom("l1_peak_and_offpeak", [["parameter:DEM-2.SF", 8]]),
     experiment: {
       question: "With the same total requests, does peaked demand instead of flat demand change rider wait p90 in the day 1 evening peak?",
       axis: { id: "parameter:DEM-5", baseline: "flat", candidate: "peaked" },
