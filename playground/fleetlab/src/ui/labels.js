@@ -47,10 +47,14 @@ export function routeShield({ routeId, freeFlow }) {
 const SLOWDOWN_PERIODS = frozen({ morning: "Morning", evening: "Evening", late: "Late evening" });
 const ROAD_CLASSES = frozen({ highway: "highways", local: "local routes", in_area: "trips inside an area" });
 
-/** One direction of a traffic label: `{toward: "SF"}`, `{awayFrom: "SF"}` or `{}` for both directions. */
+/**
+ * One direction of a traffic label: `{toward: "SF"}`, `{awayFrom: "SF"}`, `{from: "SJ", to: "SF"}` for one route direction
+ * (used when the routes of one direction do not share a profile), or `{}` for both directions.
+ */
 function directionWords(part) {
   if (typeof part.toward === "string") return `toward ${part.toward} `;
   if (typeof part.awayFrom === "string") return `away from ${part.awayFrom} `;
+  if (typeof part.from === "string" && typeof part.to === "string") return `from ${part.from} to ${part.to} `;
   return "";
 }
 
@@ -102,6 +106,13 @@ export const ABSENT_REASONS = frozen({
   noCompletedVisit: "no completed visit in scope",
   metricAbsentInSomeReplication: "metric absent in some replication",
   notComputed: "this value was not computed for this run",
+  notRunYet: "nothing has run yet",
+  enginePathNotReported: "the engine path was not reported",
+  noBaselineScenario: "no baseline scenario yet; open Experiment from Sandbox or a preset",
+  noAxisValue: "no value set",
+  onlyThisReplay: "computed only for the replay you are watching",
+  voidRun: "the last run broke a model rule, so it is void",
+  seedCountNotValid: "the seed count is not a whole number from 1 to 1000",
 });
 
 /** Absent reason for censored visits: `2 visits unfinished at drain end` (count is an integer). */
@@ -109,15 +120,68 @@ export function visitsUnfinished(count) {
   return `${plural(count, "visit")} unfinished at drain end`;
 }
 
-/** Suppressed row of a quoted reference panel (design §7.2). */
+const SUPPRESSED_LEAD = "not shown here: ";
+const SUPPRESSED_LINK = "see the differences panel";
+
+/** Suppressed row of a quoted reference panel (design §7.2): the lead, then the link to the differences panel. */
 export const REFERENCE = frozen({
-  suppressedRow: "not shown here: see the differences panel",
+  suppressedRow: `${SUPPRESSED_LEAD}${SUPPRESSED_LINK}`,
+  suppressedRowLead: SUPPRESSED_LEAD,
+  suppressedRowLink: SUPPRESSED_LINK,
   fleet005Title: "FLEET-005 depot turnaround",
   twoZoneProbeTitle: "Two-zone probe",
   differencesPanel: "Differences from FleetLab",
   open: "Open reference panel",
   close: "Close reference panel",
+  heading: "FleetLab reference panels",
+  question: "Question",
+  axis: "Variation axis",
 });
+
+/** Button name of one reference panel: `Open reference panel: FLEET-005 depot turnaround`. */
+export function openReferencePanel(title) {
+  return `${REFERENCE.open}: ${title}`;
+}
+
+/** A suppressed row of a quoted panel: `fleet.utilization_fraction: not shown here: see the differences panel`. */
+export function suppressedMetric(metric) {
+  return `${metric}: ${REFERENCE.suppressedRow}`;
+}
+
+/**
+ * The differences panel beside the quoted reference panels (design §1.2 "intentionally different, and stated on screen",
+ * §7.2 suppressed values, D-05, §14 FL-2): what FleetLab and the teaching model share, what differs on purpose, and why
+ * each suppressed value is withheld.
+ */
+export const REFERENCE_DIFFERENCES = frozen({
+  shared: "Shared with FleetLab: the verdict rules, the metric declaration shape, the outcome and recommendation words, and the honesty stance.",
+  differentHeading: "Intentionally different",
+  different: [
+    "The world: FleetLab places one shared fleet, services a car in place from one shared pool of bays, and uses flat demand and one travel time per zone pair. The teaching model has four areas, depots with parking, two routes per area pair, traffic by hour and direction, and peak demand.",
+    "The grammar: policy axes, named values, per-area and per-depot values, and metrics scoped to an area, a depot or a time window are teaching-model grammar that FleetLab cannot run.",
+    "The random draws: one seed number gives a different world here and in FleetLab.",
+    "The record: a teaching run shows only a playground-spec label and is never a FleetLab decision record.",
+    "Metric definitions: a metric defined differently from FleetLab's carries a different name here.",
+  ],
+  withheldHeading: "Values these panels do not show",
+  withheld: {
+    "fleet.utilization_fraction": "FleetLab does not clip it to the horizon (defect FL-2), so trips that finish after the horizon still count and the value can exceed 1.",
+    "business_proxy.served_trips": "an alias FleetLab keeps for requests.served; the teaching model carries no business-proxy aliases, so that row is shown once, under its own name.",
+    "business_proxy.unserved_demand": "an alias FleetLab keeps for requests.unserved; the teaching model carries no business-proxy aliases, so that row is shown once, under its own name.",
+  },
+});
+
+/** Why a quoted panel withholds a metric: `fleet.utilization_fraction: FleetLab does not clip it ...`. */
+export function withheldReason(metric) {
+  const reason = REFERENCE_DIFFERENCES.withheld[metric];
+  if (typeof reason !== "string") throw new RangeError(`no withheld reason for ${String(metric)}`);
+  return `${metric}: ${reason}`;
+}
+
+/** Axis line of a quoted panel: `parameter:service_bays · baseline 4 · candidate 2` (values formatted). */
+export function referenceAxisLine({ axis, baseline, candidate }) {
+  return `${axis} · baseline ${baseline} · candidate ${candidate}`;
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // Units (format.js reads these).
@@ -137,6 +201,12 @@ export const UNITS = frozen({
   visits: "visits",
 });
 
+/** Words inside displayed values: a clock or morning release that is off, and the word between two ends of a range. */
+export const VALUE_WORDS = frozen({
+  off: "off",
+  to: "to",
+});
+
 // ---------------------------------------------------------------------------------------------------------------
 // Top bar and modes (design §7.1).
 
@@ -149,6 +219,14 @@ export const TOP_BAR = frozen({
 /** Top bar status: `D1 18:30 · replay 1 of 5 · seed 1001` (clock formatted; replay, replays and seed integers). */
 export function topBarStatus({ clock, replay, replays, seed }) {
   return `${clock} · replay ${String(replay)} of ${String(replays)} · seed ${String(seed)}`;
+}
+
+/**
+ * Top bar status while the fork shows a verdict seed: `D1 18:30 · seed 1005 · 5 of 20` (clock formatted; seed, index and
+ * total integers). It names the seed the fork replays and its place in the frozen spec, never a Sandbox replay.
+ */
+export function verdictSeedStatus({ clock, seed, index, total }) {
+  return `${clock} · seed ${String(seed)} · ${String(index)} of ${String(total)}`;
 }
 
 /** Mode names, jobs, what each produces and what it never does (design §7.1). */
@@ -203,6 +281,7 @@ export const SESSION_LOG = frozen({
   heading: "Session log",
   empty: "No experiment has run in this session.",
   useAnotherSeedSet: "Use another seed set",
+  anotherSeedSetOff: "Use another seed set runs the frozen spec on new seeds, so it is off while the setup is out of date.",
   noOutcome: "no outcome",
 });
 
@@ -219,7 +298,7 @@ export function seedSetText({ seedSet, firstSeed, lastSeed }) {
 
 /**
  * One session log entry: seed set, spec label, validity, outcome, recommendation and engine path, joined by ` · `.
- * `outcome` is null for an invalid experiment.
+ * `outcome` is null for an invalid experiment; `engine` is null when the host never reported its path.
  */
 export function sessionLogEntry({ seedSet, firstSeed, lastSeed, label, validity, outcome, recommendation, engine }) {
   return [
@@ -228,7 +307,7 @@ export function sessionLogEntry({ seedSet, firstSeed, lastSeed, label, validity,
     validity,
     outcome === null ? SESSION_LOG.noOutcome : outcome,
     recommendation,
-    enginePath(engine),
+    engine === null ? `engine: ${absentValue(ABSENT_REASONS.enginePathNotReported)}` : enginePath(engine),
   ].join(" · ");
 }
 
@@ -273,6 +352,7 @@ export const PLAYBACK = frozen({
   forwardHour: "Forward 1 hour",
   speed: "Playback speed",
   scrubber: "Simulated time",
+  clock: "Simulated clock",
   jumps: { am_peak: "AM peak", pm_peak: "PM peak", d2_first_wave: "D2 first wave" },
   jumpsName: "Jump to a moment",
   transportName: "Playback",
@@ -287,6 +367,11 @@ export const PLAYBACK = frozen({
     "?: list these shortcuts",
   ],
   shortcutsScope: "Shortcuts work only while the map, transport or timeline has focus.",
+});
+
+/** Accessibility strings that belong to no single region. */
+export const A11Y = frozen({
+  closeShortcuts: "Close keyboard shortcuts",
 });
 
 /** Speed button text: `900×` (speed integer). */
@@ -339,7 +424,51 @@ export const VERDICT = frozen({
   invalidReasonHeading: "Why this experiment is void",
   noStrip: "No interval is drawn for void evidence.",
   mixedNote: "MIXED is defined but cannot occur in a single-regime experiment; FleetLab's code resolves that case to IMPROVED with HOLD.",
+  gateChain: "Gate chain",
+  baselineMean: "baseline mean",
+  candidateMean: "candidate mean",
+  meanDelta: "mean delta",
+  medianDelta: "median delta",
+  metric: "metric",
+  fewerRows: "fewer rows",
+  noGuardrails: "no guardrail declared",
+  noDescriptives: "No descriptive row was available in every replication.",
+  copySummary: "Copy result summary",
+  copied: "Result summary copied. It carries NOT_EVIDENCE and no decision authority.",
+  copyFailed: "The result summary could not be copied.",
+  running: "Running the frozen spec",
+  specLabel: "Spec",
+  actions: "Verdict actions",
 });
+
+/**
+ * What the primary strip plots (design P-7): `candidate minus baseline per seed · left is better` for a lower-is-better
+ * primary, and the normalized `baseline minus candidate per seed, so left is better` for a higher-is-better one. The verdict
+ * card's heading and the strip both read it, so they always agree.
+ */
+export function primaryDeltaCaption(direction) {
+  return direction === "higher_is_better" ? CHART_TEXT.normalizedDelta : `${VERDICT.perSeedDelta} · ${VERDICT.leftIsBetter}`;
+}
+
+/** A raw delta term of the verdict card: `mean delta, candidate minus baseline` (the term is a VERDICT string). */
+export function candidateMinusBaseline(term) {
+  return `${term}, candidate minus baseline`;
+}
+
+/** Interval text: `+735.9 to +919.2 s` (bounds already formatted; the unit is part of the high bound). */
+export function intervalText({ low, high }) {
+  return `${low} to ${high}`;
+}
+
+/** Count of NOT EVALUABLE guardrails in the gate chain: `1 NOT EVALUABLE` (integer). */
+export function guardrailsNotEvaluableCount(count) {
+  return `${String(count)} NOT EVALUABLE`;
+}
+
+/** Experiment progress by runs: `7 of 23 runs finished` (integers). */
+export function experimentRunProgress(done, total) {
+  return `${String(done)} of ${String(total)} runs finished`;
+}
 
 /** Verdict header: `Teaching run, not a decision record · spec frozen · 10 paired seeds` (count integer). */
 export function verdictHeader(pairedSeeds) {
@@ -473,7 +602,80 @@ export const EXPERIMENT_SETUP = frozen({
   freezeDisabled: "Freeze and run stays off until every check passes.",
   nullCheck: "Null check: both arms use the same value on purpose.",
   testItProperly: "Test it properly",
+  otherChecks: {
+    question: "question written",
+    scenario: "scenario valid",
+    seeds: "seeds valid",
+    resamples: "resamples valid",
+    format: "setup format valid",
+  },
+  checkPasses: "passes",
+  checkFails: "fails",
+  checkGlyphs: { passes: "✓", fails: "✕" },
+  axisId: "axis id",
+  metric: "metric",
+  chooseMetric: "Choose a metric",
+  area: "area",
+  allAreas: "every area",
+  depot: "depot",
+  allDepots: "every depot",
+  windowStart: "window starts",
+  windowEnd: "window ends",
+  wholeSpan: "whole measured span",
+  engineUnit: "engine unit",
+  layoutValue: "layout, set by the preset",
+  hideDifferences: "Hide differences",
+  noDifferences: "No differences from the preset.",
+  guardrailsNone: "No guardrails. Add one so a harmed metric can hold the change.",
+  progress: "Progress",
+  startFromPreset: "Start from a preset",
+  choosePreset: "Choose a preset",
 });
+
+/** One preset in the Experiment preset chooser: `UC-01 Null check`. */
+export function presetOption({ id, title }) {
+  return `${id} ${title}`;
+}
+
+/** How much wider an interval grows: `1.4 times` (factor formatted). */
+export function timesAsWide(factor) {
+  return `${factor} times`;
+}
+
+/** Direction and unit of a metric: `lower is better · s` (both already worded). */
+export function directionUnit({ direction, unit }) {
+  return `${direction} · ${unit}`;
+}
+
+/** Margin field prefix and unit: `±60 s` is written by the field; this names the unit after it: `± s`. */
+export function marginUnit(unit) {
+  return `± ${unit}`;
+}
+
+/** Name of one guardrail's remove button: `Remove guardrail 2` (integer). */
+export function removeGuardrailNumber(n) {
+  return `${EXPERIMENT_SETUP.removeGuardrail} ${String(n)}`;
+}
+
+/** A guardrail's heading in the setup sheet: `Guardrail 2` (integer). */
+export function guardrailNumber(n) {
+  return `Guardrail ${String(n)}`;
+}
+
+/** `Test it properly: Bays are not always the bottleneck` for a Learn case with more than one preregistered spec. */
+export function testItProperlyFor(title) {
+  return `${EXPERIMENT_SETUP.testItProperly}: ${title}`;
+}
+
+/** A knob difference on hourly values: `6 hours changed` (integer). */
+export function hoursChanged(count) {
+  return `${plural(count, "hour")} changed`;
+}
+
+/** One check with its state for screen readers: `margin above 0: fails`. */
+export function checkState({ check, passes }) {
+  return `${check}: ${passes ? EXPERIMENT_SETUP.checkPasses : EXPERIMENT_SETUP.checkFails}`;
+}
 
 /** Scenario line: `Baseline = "Evening depot visit in San Jose" + 0 changes` (changes integer). */
 export function baselineLine({ presetName, changes }) {
@@ -515,6 +717,24 @@ export const KNOB_PANEL = frozen({
   noChanges: "No changes from the preset",
   knobPathSeparator: " › ",
   goToKnob: "Go to knob",
+  closeKnobs: "Close knobs",
+  off: "off",
+  derived: "Shown, not edited.",
+  noDepots: "no depots",
+  hourOfDay: "hour of day",
+  listSeparator: ", ",
+  minusGlyph: "−",
+  plusGlyph: "+",
+  mixedDirections: "Differs by direction; a value here sets both directions.",
+  dep9Parts: { intake: "intake", pull_out: "pull-out" },
+  windowParts: { start: "window start", end: "window end" },
+  peakParts: {
+    morning: { start: "morning peak start", end: "morning peak end" },
+    evening: { start: "evening peak start", end: "evening peak end" },
+  },
+  rd3Classes: { highway: "highways", local: "local routes", in_area: "trips inside an area" },
+  rd3Periods: { morning: "07:00 to 09:00", evening: "16:00 to 19:00", late: "19:00 to 20:00" },
+  weightPeriods: { morning: "morning peak", evening: "evening peak", other: "other hours" },
 });
 
 /** Changes header: `3 changes` (integer). */
@@ -550,6 +770,51 @@ export function outOfRange({ value, min, max, unit }) {
 /** Knob location in a four-slot message: `Depots › Depots per area`. */
 export function knobPath(group, knob) {
   return `${group}${KNOB_PANEL.knobPathSeparator}${knob}`;
+}
+
+/** A field of a knob that holds several values: `Cleaning bays per depot, SJ-1`. */
+export function knobPart({ knobName, part }) {
+  return `${knobName}, ${part}`;
+}
+
+/** Stepper name: `Decrease Clean time`. */
+export function stepDown(fieldName) {
+  return `Decrease ${fieldName}`;
+}
+
+/** Stepper name: `Increase Clean time`. */
+export function stepUp(fieldName) {
+  return `Increase ${fieldName}`;
+}
+
+/** A formatted value and what follows it: `20 min`, or a period and its factor, `16:00 to 19:00 ×1.6`. */
+export function valueWithUnit({ value, unit }) {
+  return `${value} ${unit}`;
+}
+
+/** Destination weight field part: `morning peak, from SF to PEN`. */
+export function weightPart({ period, origin, dest }) {
+  return `${period}, from ${origin} to ${dest}`;
+}
+
+/** Typed text a knob cannot read; it stays as typed (`example` is a formatted value the knob reads). */
+export function notReadable({ value, example }) {
+  return `${value} is not a value this knob reads, such as ${example}. The value stays as typed; change it to run.`;
+}
+
+/** A typed value between a knob's steps; it stays as typed (values formatted). */
+export function notAStep({ value, step, unit }) {
+  return `${value} is not on this knob's steps of ${step} ${unit}. The value stays as typed; change it to run.`;
+}
+
+/** A typed clock outside the simulated window; it stays as typed (clocks formatted). */
+export function outOfClockRange({ value, min, max }) {
+  return `${value} is outside the window ${min} to ${max}. The value stays as typed; change it to run.`;
+}
+
+/** Why a field is locked while another change stands: `Reset Depots per area first to change this.` */
+export function lockedUntilReset(knobName) {
+  return `Reset ${knobName} first to change this.`;
 }
 
 /** Slot names of an invalid combination (design §7.6), as FleetLab's authoring errors show them. */
@@ -649,6 +914,7 @@ export const STATES = frozen({
   reducedMotionSystem: "Follow system setting",
   reducedMotionOn: "On",
   reducedMotionOff: "Off",
+  unknownRule: "a check the teaching model runs on itself failed",
 });
 
 /** Sandbox progress: `Replication 3 of 5` (integers). */
@@ -723,6 +989,14 @@ export function waitPopulation(count) {
   return `from ${count} completed rides`;
 }
 
+/**
+ * A wait value with its population beside it: `8.2 to 9.1 min, from 1,350 to 1,420 completed rides`. `population` is a
+ * waitPopulation text or an absent value; both parts are already formatted and carry the same register.
+ */
+export function withWaitPopulation({ value, population }) {
+  return `${value}, ${population}`;
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Map (design §7.3, §8.2, §8.3).
 
@@ -731,7 +1005,6 @@ export const MAP = frozen({
   name: "Schematic map of the four areas",
   cornerStamp: "Teaching model",
   unitBarLegend: "1 block = 5 cars",
-  familyLegend: "rider work · empty drive · available · at a depot",
   tableTwin: "Map as a table",
   pinnedCar: "pinned car",
   localRoute: "local route",
@@ -771,7 +1044,9 @@ export const MAP = frozen({
     route: "Route and direction",
     plannedNow: "Planned time leaving now",
     chevrons: "Slowdown level",
+    carsOnRoute: "Cars on the route",
   },
+  tableToggle: "Show the map as a table",
 });
 
 /** Unserved marker text: `4 unserved` (count integer). */
@@ -789,10 +1064,50 @@ export function lotFill(held, stalls) {
   return `${String(held)}/${String(stalls)}`;
 }
 
+/** Waiting riders in a yard: `3 riders waiting` (count integer). */
+export function waitingRiders(count) {
+  return `${plural(count, "rider")} waiting`;
+}
+
+/** One direction of a route: `H2 San Jose to San Francisco` (route id, area names). */
+export function routeDirection({ routeId, from, to }) {
+  return `${routeId} ${from} to ${to}`;
+}
+
+/** Accessible name of the pinned car: `pinned car SF-017, on a trip` (car id, state words from MAP.carStates). */
+export function pinnedCarName({ car, state }) {
+  return `${MAP.pinnedCar} ${car}, ${state}`;
+}
+
 /** Map announcement on pause, on step and at most once per simulated hour (clock formatted, counts integers). */
 export function mapAnnouncement({ clock, waiting, unservedLastHour }) {
   return `${clock}, this replay: ${plural(waiting, "rider")} waiting, ${String(unservedLastHour)} unserved in the last hour.`;
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// NOW panel, the panel across replications, and the fork section (design §7.2 Sandbox wireframe, §7.4, D-10).
+
+/** Row names of the NOW panel (this replay) and the panel across replications. */
+export const NOW_PANEL = frozen({
+  carsOnHighways: "cars on highways",
+  waitP90: "wait p90",
+  unservedShare: "unserved share",
+});
+
+/** NOW panel row of a depot's lot: `SJ-1 lot` (depot id). */
+export function nowLot(depotId) {
+  return `${depotId} lot`;
+}
+
+/** The fork section (design D-10): two full runs on the same world for the pinned car. */
+export const FORK = frozen({
+  heading: "Fork",
+  running: "Running both arms on the same world",
+  close: "Close the fork",
+  needsChange: "Change one knob first: lane A runs the value before the change and lane B the value after it.",
+  verdictSeedNote:
+    "The map, the NOW panel, the panel across replications and the strips under the scrubber replay the Sandbox world, so they are hidden while the fork shows a verdict seed. Close the fork to see them again.",
+});
 
 /** Chevron level words for the table twin (0 to 3, design §7.3). */
 export const CHEVRON_LEVELS = frozen([
@@ -822,11 +1137,86 @@ export const INSPECTOR = frozen({
   pinCar: "Pin this car",
   openFork: "Open the fork",
   forkArms: { A: "A: baseline", B: "B: candidate" },
+  whyHeading: "WHY IT WENT WHERE",
+  visitsHeading: "VISITS",
+  timelineHeading: "TIMELINE",
+  noVisit: "No depot visit for this car in this replay.",
+  noDecision: "No depot decision for this car in this replay.",
+  ledgerRows: {
+    bayWait: "bay wait p90",
+    timeToReady: "time to ready p90",
+    timeToReadyCompleted: "time to ready p90, completed visits only",
+    diversions: "diversions",
+    lotPeak: "lot peak share",
+  },
+  columns: { hour: "hour", state: "state", from: "from", to: "to", depot: "depot", arrival: "arrival", ready: "ready" },
 });
 
 /** Inspector ledger column: `across 5 replications` (integer). */
 export function ledgerAcross(count) {
   return `across ${String(count)} replications`;
+}
+
+/** Drawer title: `DEPOT SJ-1 · San Jose` or `CAR SF-017`. */
+export function inspectorTitle({ heading, name }) {
+  return `${heading} ${name}`;
+}
+
+/** Drawer register stamp: `THIS REPLAY · seed 1001 · D1 19:30` (seed integer, clock formatted). */
+export function inspectorStamp({ seed, clock }) {
+  return `${thisReplayChip(seed)} · ${clock}`;
+}
+
+/** Depot status line: `Stalls 22/30 · in bays 3 · 3 clean + 1 service bays · 24 h` (integers). */
+export function depotStatus({ held, stalls, inBays, cleanBays, serviceBays }) {
+  return `Stalls ${lotFill(held, stalls)} · in bays ${String(inBays)} · ${String(cleanBays)} clean + ${String(serviceBays)} service bays · 24 h`;
+}
+
+/** A NOW flow stage: `Arriving 3` (count integer). */
+export function flowStage({ stage, count }) {
+  return `${stage} ${String(count)}`;
+}
+
+/** The queue stage: `Queue 2 (oldest 11 min)`, or `Queue 0` when `oldest` is null (oldest formatted). */
+export function queueStage({ count, oldest }) {
+  const stage = flowStage({ stage: INSPECTOR.stages.queue, count });
+  return oldest === null ? stage : `${stage} (oldest ${oldest})`;
+}
+
+/** Bay id: `C1` for a cleaning bay, `S1` for a service bay (index integer from 1). */
+export function bayId({ task, index }) {
+  return `${task === "SERVICE" ? "S" : "C"}${String(index)}`;
+}
+
+/** A busy bay: `C1 SJ-022 clean 14/20` in minutes, with the blocked words when the task is done and no stall is free. */
+export function bayBusy({ bay, car, task, done, total, blocked = false }) {
+  const text = `${bay} ${car} ${MAP.tasks[task]} ${String(done)}/${String(total)}`;
+  return blocked ? `${text} · ${MAP.blocked}` : text;
+}
+
+/** A free bay: `C3 free`. */
+export function bayFree(bay) {
+  return `${bay} free`;
+}
+
+/** A car's home: `home area SF · home depot SF-1`. */
+export function carHome({ area, depot }) {
+  return `home area ${area} · home depot ${depot}`;
+}
+
+/** A car state in words: `in a bay, clean, finished, no stall free`. */
+export function carStateText({ state, task = null, blocked = false }) {
+  return [MAP.carStates[state], task === null ? null : MAP.tasks[task], blocked ? MAP.blocked : null].filter(Boolean).join(", ");
+}
+
+/** A 10th to 90th percentile range across replications: `9 min to 14 min` (values formatted). */
+export function acrossRange({ low, high }) {
+  return `${low} to ${high}`;
+}
+
+/** One depot decision: `D1 18:30 · DEPOT_ASSIGNED · SJ-1 · SERVICE_DUE · nearest_depot` (engine words verbatim). */
+export function decisionLine({ clock, kind, depot, target, cause }) {
+  return [clock, kind, depot, target, cause].join(" · ");
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -893,6 +1283,11 @@ export function armComparisonSummary({ count, metric, baseline, candidate }) {
   return `${acrossReplications(count)}: ${metric} averaged ${baseline} in the baseline and ${candidate} in the candidate.`;
 }
 
+/** Lot held and queue in one fork lane: `This replay, B: candidate: SJ-1 held at most 29 of 30 stalls, ...` (formatted). */
+export function forkDepotSummary({ lane, depot, held, stalls, bayWait }) {
+  return `This replay, ${lane}: ${depot} held at most ${String(held)} of ${String(stalls)} stalls, and its bay wait p90 was ${bayWait}.`;
+}
+
 /** Available cars by area summary: the area's lowest hour (share formatted). */
 export function availableSummary({ register, area, lowest, clock }) {
   return `${register}: ${area} had its lowest share of available cars, ${lowest}, in the hour from ${clock}.`;
@@ -913,13 +1308,142 @@ export function verdictStripSummary({ count, metric, low, high, outcome }) {
   return `Across ${plural(count, "paired seed")}: the ${metric} interval runs from ${low} to ${high}, so the outcome is ${outcome}.`;
 }
 
+/** Chart furniture: extra titles, legend items, table heads, axis words and road classes (design §7.5, §8.3). */
+export const CHART_TEXT = frozen({
+  titles: {
+    bay_lanes: "Depot bays",
+    lot_and_queue: "Lot held and queue",
+    descriptive: "Descriptive deltas",
+  },
+  legend: {
+    demandDeclared: "profile you set",
+    demandAccepted: "requests accepted in this replay",
+    stallsHeld: "stalls held",
+    queue: "cars queued for a bay",
+    seedDots: "one dot per paired seed",
+    meanDelta: "mean delta",
+    harmBar: "bar: mean harm",
+    maxHarmTick: "tick: max harm",
+  },
+  heads: {
+    hour: "Hour starting",
+    panel: "Scope",
+    thisReplay: "This replay",
+    p10: "10th percentile across replications",
+    p90: "90th percentile across replications",
+    state: "State",
+    from: "From",
+    to: "To",
+    duration: "Duration",
+    lane: "Lane",
+    car: "Car",
+    task: "Task",
+    time: "Time",
+    seed: "Seed",
+    seedMean: "Mean of seeds",
+    delta: "Candidate minus baseline",
+    metric: "Metric",
+    baselineMean: "Baseline mean",
+    candidateMean: "Candidate mean",
+    meanDelta: "Mean delta",
+    medianDelta: "Median delta",
+    intervalLow: "Interval low",
+    intervalHigh: "Interval high",
+    margin: "Equivalence margin",
+    declaredRate: "Profile you set, requests per hour",
+    acceptedRequests: "Requests accepted in this replay",
+    multiplier: "Multiplier you set",
+    shareOfFleet: "Average cars in the hour",
+  },
+  axes: {
+    shareOfFleetTime: "% of fleet time",
+    availableCars: "cars available",
+  },
+  roadClasses: { HIGHWAY: "highways", LOCAL: "local routes", IN_AREA: "trips inside an area" },
+  inEveryArea: "in every area",
+  normalizedDelta: "baseline minus candidate per seed, so left is better",
+  wholeFleet: "whole fleet",
+});
+
+/** The arrow between steps of an ordered flow (gate chain, depot stages), as the design §7.2 wireframes draw it. */
+export const FLOW_ARROW = "→";
+
+/** A scoped metric as charts and the verdict card name it: `wait.p90_s · SF · D2 07:00 to 09:00` (scopes worded). */
+export function scopedMetric({ metric, scopes }) {
+  return [metric, ...scopes].join(" · ");
+}
+
+/** A window scope on the simulated clock: `D2 07:00 to 09:00` (both ends already formatted). */
+export function windowScope({ start, end }) {
+  return `${start} to ${end}`;
+}
+
+/** A chart title with its subject: `Arm comparison · wait.p90_s` (both already worded). */
+export function chartTitle({ title, subject }) {
+  return `${title} · ${subject}`;
+}
+
+/** Bay lane name on the depot board: `C1` for a cleaning bay, `S1` for a service bay (index from 1). */
+export function bayLane({ task, index }) {
+  if (task !== "CLEAN" && task !== "SERVICE") throw new TypeError(`unknown bay task ${String(task)}`);
+  return `${task === "CLEAN" ? "C" : "S"}${String(index)}`;
+}
+
+/** A strip title: `Available cars in San Francisco` (area name). */
+export function availableCarsTitle(area) {
+  return `Available cars in ${area}`;
+}
+
+/** One direction of a traffic profile row: `SF to PEN` (area ids). */
+export function trafficDirection({ from, to }) {
+  return `${from} to ${to}`;
+}
+
+/** Fleet state summary from the hourly stack: the hour with the most car time at depots (values formatted). */
+export function fleetStateHourSummary({ register, clock, atDepot, fleet }) {
+  return `${register}: the hour from ${clock} had the most cars at depots, ${atDepot} of ${String(fleet)} on average.`;
+}
+
+/** A chart summary when its data has no value at all: names the subject and the absence (design H-5). */
+export function chartAbsentSummary({ register, subject, reason }) {
+  return `${register}: ${subject} had no value; ${absentValue(reason)}.`;
+}
+
+/** Fork lanes summary for one car in both arms (durations formatted). */
+export function forkTimelineSummary({ car, atDepotsA, atDepotsB }) {
+  return `This replay: ${car} spent ${atDepotsA} at depots in A and ${atDepotsB} in B.`;
+}
+
+/** Fork strip summary: the fewest available cars of an area in each arm (values formatted, clocks formatted). */
+export function forkAvailableSummary({ area, lowestA, clockA, lowestB, clockB }) {
+  return `This replay: ${area} had the fewest available cars in A, ${lowestA}, in the hour from ${clockA}, and in B, ${lowestB}, in the hour from ${clockB}.`;
+}
+
+/** Bay lanes summary for one replay (integers). */
+export function bayLanesSummary({ depot, bays, tasks }) {
+  return `This replay: ${depot} worked ${plural(tasks, "task")} in ${plural(bays, "bay")} during the window.`;
+}
+
+/** Guardrail bullet row summary across paired seeds (harm values formatted, status word literal). */
+export function guardrailRowSummary({ count, metric, harm, maxHarm, status }) {
+  return `Across ${plural(count, "paired seed")}: ${metric} mean harm was ${harm} against a max harm of ${maxHarm}, so its status is ${status}.`;
+}
+
+/** Guardrail row summary when its metric was absent in some replication (design §6 P-8). */
+export function notEvaluableSummary({ count, metric }) {
+  return `Across ${plural(count, "paired seed")}: ${metric} is ${NOT_EVALUABLE_TEXT}.`;
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Learn cases (design §4.1, §4.2, H-9).
 
 /** Caption shown until a fixture test asserts a direction (design H-9). */
 export const RUN_IT_AND_SEE = "Run it and see.";
 
-/** The three Learn cases: question, concept and named moments with caption keys. */
+/**
+ * The three Learn cases: question, concept and named moments. A moment's `key` is the caption key of its preset moment
+ * in src/model/presets.js (`learn.<case>.m<n>`), so moment n of a case is moment n of its preset, at the preset's clock.
+ */
 export const LEARN_CASES = frozen([
   {
     id: "L1",
@@ -928,9 +1452,10 @@ export const LEARN_CASES = frozen([
     concept: "Time windows; averages hide peaks.",
     question: "With the same fleet and the same total requests, does evening wait change when demand comes in peaks?",
     moments: [
-      { key: "L1.evening_peak_starts", title: "The evening peak starts" },
-      { key: "L1.tenth_trip", title: "Cars reach their tenth trip and head to depots" },
-      { key: "L1.after_the_peak", title: "After the evening peak" },
+      { key: "learn.L1.m1", title: "The morning peak starts" },
+      { key: "learn.L1.m2", title: "The evening peak starts" },
+      { key: "learn.L1.m3", title: "Where the fleet is at 17:30" },
+      { key: "learn.L1.m4", title: "After the evening peak" },
     ],
   },
   {
@@ -941,9 +1466,9 @@ export const LEARN_CASES = frozen([
     question: "If SJ-1 drops from three cleaning bays to one while San Jose is short of cars, does San Jose's evening wait change?",
     note: "Shaped like an exploratory FleetLab run; these numbers are the teaching model's own.",
     moments: [
-      { key: "L2.reference_panel", title: "The exploratory FleetLab panel" },
-      { key: "L2.bay_queue", title: "The SJ-1 bay queue in the evening" },
-      { key: "L2.two_specs", title: "Two preregistered specs, frozen before either runs" },
+      { key: "learn.L2.m1", title: "The exploratory FleetLab panel" },
+      { key: "learn.L2.m2", title: "The SJ-1 bay queue in the evening" },
+      { key: "learn.L2.m3", title: "Two preregistered specs, frozen before either runs" },
     ],
   },
   {
@@ -953,19 +1478,51 @@ export const LEARN_CASES = frozen([
     concept: "Congestion, depot capacity, the morning release and the next peak together.",
     question: "When a car's depot visit comes due in San Jose, should it drive to its home depot or to the nearest one?",
     moments: [
-      { key: "L3.trip_ends_in_sj", title: "SF-017 finishes a trip in San Jose" },
-      { key: "L3.sj1_lot", title: "SJ-1's lot in B" },
-      { key: "L3.morning_release", title: "The morning release" },
-      { key: "L3.first_wave", title: "SF available cars in the first wave" },
-      { key: "L3.depot_boards", title: "Both depot boards on one clock" },
+      { key: "learn.L3.m1", title: "SF-017 finishes a trip in San Jose" },
+      { key: "learn.L3.m2", title: "SJ-1's lot in B" },
+      { key: "learn.L3.m3", title: "The morning release" },
+      { key: "learn.L3.m4", title: "SF available cars in the first wave" },
     ],
   },
 ]);
 
-/** Caption text per moment key; every entry reads "Run it and see." until a fixture asserts its direction. */
+/** Fallback second sentence per moment key (design H-9): every entry reads "Run it and see.". */
 export const LEARN_CAPTIONS = frozen(
   Object.fromEntries(LEARN_CASES.flatMap((c) => c.moments.map((m) => [m.key, RUN_IT_AND_SEE]))),
 );
+
+/** First sentence of each moment's caption: what to look at, stating no direction. */
+export const LEARN_LOOK = frozen({
+  "learn.L1.m1": "At D1 07:00 the demand strip enters the morning peak window you set.",
+  "learn.L1.m2": "At D1 16:00 the evening peak window you set opens, with the same fleet as the morning.",
+  "learn.L1.m3": "At D1 17:30 read the fleet-state stack and its At a depot band for this replay.",
+  "learn.L1.m4": "At D1 19:30 the evening peak window has closed; read the waiting riders on the map.",
+  "learn.L2.m1": "The two-zone probe panel quotes an exploratory FleetLab run; read its primary row beside its depot queue row.",
+  "learn.L2.m2": "At D1 18:00 open SJ-1 on the map and read its bay queue while San Jose riders wait.",
+  "learn.L2.m3": "Both L2 specs are frozen before either runs, and the second one adds a bay wait guardrail at SJ-1.",
+  "learn.L3.m1": "At D1 18:30 SF-017 is due a depot visit in San Jose; open the fork to see both depot rules on one world.",
+  "learn.L3.m2": "At D1 19:30 read SJ-1's lot in lane B, where each car drives to the nearest depot.",
+  "learn.L3.m3": "At D2 05:45 every ready car at a depot outside its home area drives home.",
+  "learn.L3.m4": "At D2 07:15 read San Francisco's available cars in each lane.",
+});
+
+/**
+ * Second sentences that state a direction. Each one replaces the fallback of LEARN_CAPTIONS only because
+ * test/captions.test.mjs runs the moment's preset and asserts that direction (design H-9).
+ */
+export const LEARN_FINDINGS = frozen({
+  "learn.L1.m1": "In the profile you set, every area asks for more requests per hour from 07:00 than in the hour before.",
+  "learn.L1.m2": "In the profile you set, every area asks for more requests per hour from 16:00 than in the hour before.",
+  "learn.L3.m1": "In the traffic profile you set, the highway from San Jose toward San Francisco is slower at 18:30 than at 15:30.",
+});
+
+/** A moment's two-sentence caption: its look sentence, then its asserted finding or the fallback. */
+export function learnCaption(key) {
+  const look = LEARN_LOOK[key];
+  const second = LEARN_FINDINGS[key] ?? LEARN_CAPTIONS[key];
+  if (typeof look !== "string" || typeof second !== "string") throw new RangeError(`no Learn caption for ${String(key)}`);
+  return `${look} ${second}`;
+}
 
 /** Learn navigation strings. */
 export const LEARN = frozen({
@@ -974,7 +1531,22 @@ export const LEARN = frozen({
   previousMoment: "Previous moment",
   question: "Question",
   concept: "What it teaches",
+  casesName: "Learn cases",
+  momentsName: "Moments on the timeline",
+  chooseCase: "Choose a Learn case to walk through one question.",
+  differences: "Changed from the Bay teaching map",
+  noDifferences: "No knob changed from the Bay teaching map.",
 });
+
+/** The moment line: `D1 18:30 · SF-017 finishes a trip in San Jose` (clock formatted). */
+export function momentLine({ clock, title }) {
+  return `${clock} · ${title}`;
+}
+
+/** The pinned car of a Learn case: `Pinned car: SF-017`. */
+export function learnPinnedCar(car) {
+  return `Pinned car: ${car}`;
+}
 
 /** Moment position: `Moment 2 of 5` (integers). */
 export function momentPosition(index, total) {

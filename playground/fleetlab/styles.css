@@ -2,10 +2,11 @@
 FleetLab Playground styles. Tokens, type and motion follow design section 8; layout follows design section 7.2.
 Interface modules use these classes (and write text only through textContent):
 
-Shell        .fl-app[data-phone-group="now|charts|across"]  .fl-strip .fl-strip__full .fl-strip__short
-             .fl-topbar .fl-modes .fl-clock .fl-knobs[data-open] .fl-knobs__run .fl-knobs-toggle .fl-map
-             .fl-map__stamp .fl-transport .fl-side .fl-now .fl-now__row .fl-across .fl-segmented .fl-charts
-             .fl-chart .fl-chart__summary .fl-footer
+Shell        .fl-app[data-phone-group="now|charts|across"][data-mode="learn|sandbox|experiment"]  .fl-strip
+             .fl-strip__full .fl-strip__short .fl-topbar .fl-modes .fl-clock .fl-knobs[data-open] .fl-knobs__run
+             .fl-knobs-toggle .fl-map .fl-map__stamp .fl-transport .fl-transport__strips .fl-side .fl-now .fl-now__row
+             .fl-across .fl-segmented .fl-charts .fl-charts__set .fl-charts__wide .fl-chart .fl-chart__summary
+             .fl-footer .fl-group (a row of related buttons) .fl-contents (a wrapper without its own box)
 Surfaces     .fl-panel .fl-panel-alt .fl-drawer[data-open] .fl-inspector .fl-popover[data-open] .fl-tooltip[data-open]
 Controls     .fl-button .fl-button--primary .fl-field .fl-field--changed .fl-field--invalid .fl-field__note
 Registers    .fl-chip-replay (filled) .fl-chip-across (outlined) .fl-limits-chip
@@ -18,6 +19,9 @@ Map and SVG  .fl-yard .fl-route-highway__casing .fl-route-highway__centre .fl-ro
              .fl-chevron .fl-depot-tile .fl-rider-ring .fl-glyph-edge .fl-glyph-ring
              .fl-fam-rider .fl-fam-empty .fl-fam-available .fl-fam-depot (set color; glyphs fill with currentColor)
              .fl-chart__grid .fl-chart__axis .fl-chart__line .fl-chart__band .fl-chart__cursor .fl-hatch-line
+             .fl-map-legend (swatch and word per state family)
+Lists        .fl-flow (ordered steps as an arrow flow, no number markers) .fl-flow__arrow (aria-hidden) .fl-list-plain
+Transport    .fl-scrubber .fl-scrubber__band (style --warmup: fraction) .fl-scrubber__input .fl-scrubber__ticks
 Motion       :root[data-motion="reduce|full"] is the in-app override; without it the system setting applies.
              A closed drawer, sheet or popover also gets the inert attribute from the interface.
 */
@@ -140,9 +144,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 /* Touch targets of at least 44 px. */
-.fl-button, .fl-segmented button, .fl-knobs-toggle, .fl-strip__short, input, select {
+.fl-button, .fl-segmented button, .fl-knobs-toggle, .fl-strip__short, input, select, summary {
   min-height: var(--target);
   min-width: var(--target);
+}
+/* A disclosure summary stays a list item so its marker shows; block padding centres one line in the 44 px target. */
+summary {
+  display: list-item;
+  padding-block: 12px;
+  padding-block: calc((var(--target) - 1lh) / 2);
+  cursor: pointer;
 }
 
 /* Teaching-model strip (design H-1): no rule on this page may hide it, and it stacks above every overlay. */
@@ -178,8 +189,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .fl-transport { grid-area: transport; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .fl-segmented { grid-area: segmented; display: flex; }
 .fl-side { grid-area: side; display: grid; gap: 12px; align-content: start; }
-.fl-charts { grid-area: charts; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); grid-auto-rows: 220px; }
-.fl-footer { grid-area: footer; color: var(--muted); }
+.fl-charts { grid-area: charts; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(220px, auto); }
+.fl-footer { grid-area: footer; color: var(--muted); display: grid; gap: 8px; }
+
+/* Top bar: product name, the three modes (the pressed one marked like the segmented control), the clock line. */
+.fl-topbar .fl-title { margin: 0; font-size: 16px; }
+.fl-modes { display: flex; flex-wrap: wrap; gap: 4px; }
+.fl-modes .fl-button[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
+
+/* A wrapper whose children lay out as children of its parent (the transport row). */
+.fl-contents { display: contents; }
+/* Demand and traffic strips sit under the scrubber: stacked on a phone, side by side from 768 px. */
+.fl-transport__strips { flex: 1 1 100%; min-width: 0; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+/* Learn, Experiment, the fork and wide notices span the whole chart row. */
+.fl-charts__wide { grid-column: 1 / -1; min-width: 0; }
+.fl-now, .fl-across { display: grid; gap: 4px; align-content: start; }
+.fl-group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.fl-group .fl-button[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
+/* The Sandbox charts keep the chart row's columns inside one wrapper, so the out-of-date filter covers all of them. */
+.fl-charts__set { grid-column: 1 / -1; min-width: 0; display: grid; gap: 12px; grid-template-columns: inherit; grid-auto-rows: inherit; }
+.fl-charts__wide.fl-panel { padding: 12px; }
+.fl-topbar > *, .fl-now h2, .fl-now p, .fl-across h2, .fl-across p, .fl-group p, .fl-charts__wide > h2 { margin: 0; }
 
 .fl-panel, .fl-map, .fl-now, .fl-across, .fl-chart, .fl-knobs, .fl-drawer, .fl-popover {
   background: var(--panel);
@@ -223,11 +253,22 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .fl-app[data-phone-group="charts"] .fl-side,
   .fl-app[data-phone-group="across"] .fl-now,
   .fl-app:not([data-phone-group="across"]) .fl-across { display: none; }
+  /* Learn and Experiment live in the chart row, so it stays on screen in those modes. */
+  .fl-app[data-mode="learn"] .fl-charts,
+  .fl-app[data-mode="experiment"] .fl-charts { display: grid; }
 }
+
+/* Focusable map entities (roving focus, design 7.7): focus marks the shape in the accent, never in a status colour. */
+.fl-area, .fl-depot, .fl-route { cursor: pointer; }
+.fl-area:focus-visible .fl-yard, .fl-depot:focus-visible .fl-depot-tile { stroke: var(--accent); stroke-width: 2px; }
+.fl-route--highway:focus-visible .fl-route-highway__casing { stroke: var(--accent); }
+.fl-route--local:focus-visible .fl-route-local { stroke: var(--accent); }
+.fl-verdict-chip__word { letter-spacing: 0.02em; }
 
 /* Tablet, 768 to 1279 px: knobs become a left drawer, the column follows DOM and tab order, charts form a 2 by 2 grid. */
 @media (min-width: 768px) {
   .fl-app { grid-template-areas: "strip" "top" "map" "transport" "side" "charts" "footer"; }
+  .fl-transport__strips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fl-segmented, .fl-strip__short { display: none; }
   .fl-strip__full { display: inline; }
   .fl-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -239,7 +280,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (min-width: 1280px) {
   .fl-app {
     grid-template-columns: 280px minmax(0, 1fr) 260px;
-    grid-template-rows: auto auto minmax(420px, auto) auto 220px auto;
+    grid-template-rows: auto auto minmax(420px, auto) auto minmax(220px, auto) auto;
     grid-template-areas:
       "strip strip strip"
       "top top top"
@@ -257,7 +298,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
     border-right: 1px solid var(--rule);
   }
   .fl-knobs-toggle { display: none; }
-  .fl-charts { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 220px; }
+  .fl-charts { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(220px, auto); }
 }
 
 /* Drawers, popovers and tooltips */
@@ -406,6 +447,43 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .fl-chart__band { fill: var(--ink); fill-opacity: 0.1; stroke: none; }
 .fl-chart__cursor { stroke: var(--ink); stroke-width: 1px; }
 .fl-hatch-line { stroke: var(--faint); stroke-width: 1px; }
+
+/* The map legend: one swatch and word per state family, in unit-bar row order (design 8.2: colour is never the only cue). */
+.fl-map-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 4px 0 0; padding: 0; list-style: none; }
+.fl-map-legend > li { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Ordered steps drawn as an arrow flow, never with number markers (design 8.5); a vertical list on a phone. */
+.fl-flow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; padding: 0; list-style: none; }
+.fl-flow__arrow { margin-inline-start: 8px; color: var(--muted); }
+.fl-list-plain { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+@media (max-width: 767.98px) {
+  .fl-flow { flex-direction: column; }
+  .fl-flow__arrow { display: none; }
+}
+
+/* Scrubber (design 7.4): the warm-up is shaded inside the track, from the track start to where the thumb centre sits at
+   the warm-up end; the thumb has a fixed 16 px size so that position is known. Tick labels never wrap. */
+.fl-scrubber { position: relative; display: grid; align-items: center; min-height: var(--target); }
+.fl-scrubber__band {
+  position: absolute;
+  inset-inline-start: 0;
+  top: calc(50% - 5px);
+  height: 10px;
+  width: calc(8px + (100% - 16px) * var(--warmup, 0));
+  background: var(--rule-strong);
+  border-radius: 5px 0 0 5px;
+  pointer-events: none;
+}
+.fl-scrubber__input { position: relative; width: 100%; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; }
+.fl-scrubber__input::-webkit-slider-runnable-track { height: 10px; background: transparent; border: 1px solid var(--rule-strong); border-radius: 5px; }
+.fl-scrubber__input::-moz-range-track { height: 10px; background: transparent; border: 1px solid var(--rule-strong); border-radius: 5px; }
+.fl-scrubber__input::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -4px; border-radius: 50%; background: var(--ink); border: 2px solid var(--panel); }
+.fl-scrubber__input::-moz-range-thumb { box-sizing: border-box; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 2px solid var(--panel); }
+.fl-scrubber__ticks { position: relative; height: 1.5em; }
+.fl-scrubber__ticks > span { position: absolute; width: max-content; }
+@media (max-width: 767.98px) {
+  .fl-scrubber__ticks > [data-near-edge] { display: none; }
+}
 
 /* Reduced motion, element by element (design 7.4, 8.4). The in-app setting wins over the system setting. */
 

@@ -1,6 +1,26 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, test } from "node:test";
+
+import { installFakeDom } from "./helpers/fake-dom.mjs";
+import { presetScenario, windowPayload } from "./helpers/model-payloads.mjs";
+import { DEFAULT_PRESET_ID } from "../src/model/presets.js";
+import {
+  bindShortcuts,
+  createAnnouncer,
+  createLiveRegion,
+  createShortcutHelp,
+  roving,
+  syncSheetInert,
+  tabbables,
+  watchReducedMotion,
+} from "../src/ui/a11y.js";
+import { REGION_IDS, start } from "../src/ui/app.js";
+import { mountControls } from "../src/ui/controls.js";
+import { clock } from "../src/ui/format.js";
+import { mountInspector } from "../src/ui/inspector.js";
+import * as uiLabels from "../src/ui/labels.js";
+import { createInitialState, createStore } from "../src/ui/store.js";
 
 const CSS = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 const DARK_MEDIA = "@media (prefers-color-scheme: dark)";
@@ -221,7 +241,7 @@ describe("focus, targets, strip and narrow layout", () => {
   });
 
   test("every control rule applies the 44 px target as min-height and min-width", () => {
-    const controls = [".fl-button", ".fl-segmented button", ".fl-knobs-toggle", ".fl-strip__short", "input", "select"];
+    const controls = [".fl-button", ".fl-segmented button", ".fl-knobs-toggle", ".fl-strip__short", "input", "select", "summary"];
     for (const selector of controls) {
       const rules = RULES.filter((rule) => rule.selectors?.includes(selector));
       for (const name of ["min-height", "min-width"]) {
@@ -230,6 +250,36 @@ describe("focus, targets, strip and narrow layout", () => {
         for (const rule of rules) {
           for (const d of rule.declarations.filter((decl) => decl.name === name)) assert.equal(d.value, "var(--target)", `${rule.prelude} ${name}`);
         }
+      }
+    }
+  });
+
+  test("a disclosure summary keeps its marker and centres its text in the 44 px target", () => {
+    const rules = RULES.filter((rule) => rule.selectors?.some((s) => /(^|[\s>+~,])summary(?![\w-])/.test(s)));
+    const base = rules.filter((rule) => rule.context.length === 0 && rule.selectors.includes("summary"));
+    const all = rules.flatMap((rule) => rule.declarations);
+    // A flex or grid summary loses its disclosure triangle in Chromium and WebKit, and ::marker cannot bring it back.
+    for (const d of all.filter((decl) => decl.name === "display")) assert.equal(d.value, "list-item", `summary display ${d.value}`);
+    assert.ok(base.some((rule) => rule.declarations.some((d) => d.name === "display" && d.value === "list-item")));
+    assert.ok(!all.some((d) => d.name === "list-style" || d.name === "list-style-type"), "the marker is not removed");
+    const padding = base.flatMap((rule) => rule.declarations).filter((d) => d.name === "padding-block").map((d) => d.value);
+    assert.ok(padding.includes("calc((var(--target) - 1lh) / 2)"), `padding-block centres one line: ${padding.join(" | ")}`);
+    // The fallback for a browser without the lh unit still reaches 44 px for a 14 px line at line-height 1.45.
+    const fallback = Number.parseFloat(padding[0]);
+    assert.ok(2 * fallback + 14 * 1.45 >= Number.parseFloat(THEMES.light["--target"]), `fallback padding ${padding[0]}`);
+  });
+
+  test("every summary the interface builds is a tappable control under the 44 px rule", () => {
+    const dir = new URL("../src/ui/", import.meta.url);
+    const builders = readdirSync(dir).filter((file) => file.endsWith(".js") && /el\("summary"/.test(readFileSync(new URL(file, dir), "utf8")));
+    // The Model limits chip and the six Experiment setup blocks (design §5.8, §7.6).
+    assert.ok(builders.includes("charts.js") && builders.includes("experiment.js"), builders.join(","));
+    // The target rule names the summary element itself, so no class a builder puts on a summary can escape it.
+    const target = RULES.find((rule) => rule.context.length === 0 && rule.selectors?.includes(".fl-button") && rule.declarations.some((d) => d.name === "min-height"));
+    assert.ok(target.selectors.includes("summary"), target.prelude);
+    for (const rule of RULES.filter((r) => r.selectors?.some((s) => /summary(?![\w-])/.test(s)))) {
+      for (const d of rule.declarations.filter((decl) => ["min-height", "min-width", "height", "max-height"].includes(decl.name))) {
+        assert.equal(d.value, "var(--target)", `${rule.prelude} ${d.name}: ${d.value}`);
       }
     }
   });
@@ -413,7 +463,11 @@ class FakeElement {
   *walk() { yield this; for (const c of this.children) yield* c.walk(); }
 }
 
-/** Builds the development shell's body from index.html's two ids, then runs `start` against it. */
+/**
+ * Builds the development shell's body from index.html's two ids, then builds the shell against it with `buildShell`, the
+ * part of `start` that lays out the regions (`start` then mounts the interface, which this minimal document cannot
+ * hold; test/app.test.mjs runs the whole of `start` on the full fake DOM).
+ */
 async function startShell() {
   const root = new FakeElement("div");
   root.setAttribute("id", "fleetlab-root");
@@ -427,8 +481,8 @@ async function startShell() {
   const previous = globalThis.document;
   globalThis.document = doc;
   try {
-    const { start } = await import("../src/ui/app.js");
-    return { root, strip, shell: start({ createWorker: () => null }) };
+    const { buildShell } = await import("../src/ui/app.js");
+    return { root, strip, shell: buildShell() };
   } finally {
     if (previous === undefined) delete globalThis.document;
     else globalThis.document = previous;
@@ -438,7 +492,37 @@ async function startShell() {
 const classesOf = (node) => (node.getAttribute("class") ?? "").split(/\s+/).filter(Boolean);
 
 describe("interface checks that arrive with the interface modules", () => {
-  test("every control has an accessible name from labels.js", { todo: "needs src/ui/labels.js and the controls" });
+  test("every control has an accessible name from labels.js", async () => {
+    const { doc, root, store, cleanup } = mountedShell();
+    try {
+      store.dispatch({ type: "run/queued", id: "w", total: 2 });
+      store.dispatch({ type: "run/done", id: "w", payload: await windowPayload() });
+      store.dispatch({ type: "inspector/open", target: { depot: "SJ-1" } });
+      const controls = root.querySelectorAll("button, input, select");
+      assert.ok(controls.length > 200);
+      const names = new Set(
+        controls.map((node) => {
+          const id = node.getAttribute("id");
+          const byLabel = id ? doc.querySelector(`label[for="${id}"]`) : null;
+          const name = node.getAttribute("aria-label") ?? byLabel?.textContent ?? node.textContent;
+          assert.ok(name.trim().length > 0, `a ${node.localName} without a name`);
+          assert.doesNotMatch(name, /[\u2013\u2014]/);
+          return name;
+        }),
+      );
+      const expected = [
+        uiLabels.HONESTY.stripPhoneHint,
+        uiLabels.KNOB_PANEL.runWindow,
+        uiLabels.KNOB_PANEL.closeKnobs,
+        uiLabels.INSPECTOR.close,
+        ...Object.values(uiLabels.KNOB_PANEL.groups),
+        ...Object.values(uiLabels.CHARTS.phoneSegments),
+      ];
+      for (const name of expected) assert.ok(names.has(name), name);
+    } finally {
+      cleanup();
+    }
+  });
 
   test("shell regions follow design 7.7 order: strip, top bar, knobs, map, transport, NOW, charts, footer", async () => {
     const { root } = await startShell();
@@ -473,7 +557,42 @@ describe("interface checks that arrive with the interface modules", () => {
     }
   });
 
-  test("modes sit after the top bar and Run window closes the knobs in tab order", { todo: "needs src/ui/controls.js" });
+  test("Run window closes the knobs in tab order, and tab stops follow the design 7.7 region order", () => {
+    const { root, shell, cleanup } = mountedShell();
+    try {
+      const regionOf = (node) => REGION_IDS.findIndex((id) => shell.regions[id].contains(node));
+      const order = tabbables(root);
+      const positions = order.map(regionOf);
+      assert.equal(positions[0], -1, "the teaching strip's phone button comes first");
+      assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "tab stops never go back to an earlier region");
+      const knobs = order.filter((node) => regionOf(node) === REGION_IDS.indexOf("knobs"));
+      assert.ok(knobs.length > 5);
+      assert.equal(knobs.at(-1).textContent, uiLabels.KNOB_PANEL.runWindow);
+      assert.ok(!order.some((node) => shell.regions.inspector.contains(node)), "the closed inspector holds no tab stop");
+    } finally {
+      cleanup();
+    }
+  });
+
+  test("modes sit after the top bar and Run window closes the knobs in tab order", () => {
+    const { root, shell, cleanup } = mountedShell();
+    try {
+      const order = tabbables(root);
+      const topbar = order.filter((node) => shell.regions.topbar.contains(node));
+      assert.deepEqual(
+        topbar.slice(0, 3).map((node) => node.textContent),
+        [uiLabels.MODES.learn.name, uiLabels.MODES.sandbox.name, uiLabels.MODES.experiment.name],
+        "the three modes are the top bar's first tab stops",
+      );
+      assert.ok(topbar.slice(0, 3).every((node) => node.parentNode.getAttribute("role") === "group"));
+      assert.equal(order.indexOf(topbar[0]), 1, "the modes follow the teaching strip's phone button");
+      const run = order.findIndex((node) => node.textContent === uiLabels.KNOB_PANEL.runWindow && shell.regions.knobs.contains(node));
+      assert.ok(order.slice(0, run).some((node) => shell.regions.knobs.contains(node)));
+      assert.ok(shell.regions.map.contains(order[run + 1]), "the map follows Run window");
+    } finally {
+      cleanup();
+    }
+  });
 
   test("every class the shell sets is defined in styles.css", async () => {
     const { root } = await startShell();
@@ -526,8 +645,55 @@ describe("interface checks that arrive with the interface modules", () => {
     assert.match(html, /<div id="fleetlab-root" class="fl-app"[^>]*>\s*<div id="fleetlab-teaching-strip" class="fl-strip"><\/div>\s*<\/div>/);
   });
 
-  test("polite announcement region speaks on pause, on step, and at most once per simulated hour during play", {
-    todo: "needs src/ui/a11y.js",
+  test("polite announcement region speaks on pause, on step, and at most once per simulated hour during play", () => {
+    const uninstall = installFakeDom();
+    try {
+      const live = createLiveRegion(document.body);
+      assert.equal(live.node.getAttribute("aria-live"), "polite");
+      assert.equal(live.node.getAttribute("class"), "fl-sr-only");
+      const spoken = [];
+      const store = createStore(createInitialState({ presetId: DEFAULT_PRESET_ID, scenario: presetScenario() }));
+      const speak = { announce: (text) => { spoken.push(text); live.announce(text); } };
+      store.subscribe(createAnnouncer(speak, (state) => clock(state.clock_s)));
+      store.dispatch({ type: "playback/play" });
+      // 36 frames of 5 simulated minutes from D1 05:00 reach D1 08:00; the hour changes three times.
+      for (let i = 0; i < 36; i += 1) store.dispatch({ type: "clock/advance", seconds: 300 });
+      assert.deepEqual(spoken, ["D1 06:00", "D1 07:00", "D1 08:00"]);
+      store.dispatch({ type: "playback/pause" });
+      store.dispatch({ type: "clock/set", clock_s: 30000 }); // a scrub to D1 08:20 is not announced
+      store.dispatch({ type: "clock/step", unit: "5min", direction: 1 });
+      store.dispatch({ type: "clock/jump", target: "pm_peak" });
+      assert.deepEqual(spoken.slice(3), ["D1 08:00", "D1 08:25", "D1 16:00"]);
+      assert.equal(live.node.textContent, "D1 16:00");
+    } finally {
+      uninstall();
+    }
+  });
+
+  test("with reduced motion, the playback steps are spoken and a plain scrub is not (design §7.7)", async () => {
+    const { createPlayback } = await import("../src/ui/playback.js");
+    const uninstall = installFakeDom();
+    try {
+      for (const reducedMotion of [{ system: true, override: null }, { system: false, override: true }]) {
+        const spoken = [];
+        const store = createStore(createInitialState({ presetId: DEFAULT_PRESET_ID, scenario: presetScenario(), reducedMotionSystem: reducedMotion.system }));
+        if (reducedMotion.override !== null) store.dispatch({ type: "motion/override", value: reducedMotion.override });
+        const scheduler = { request: () => 1, cancel: () => {} };
+        const playback = createPlayback({ store, scheduler });
+        store.subscribe(createAnnouncer({ announce: (text) => spoken.push(text) }, (state) => clock(state.clock_s)));
+        const start = store.getState().clock_s;
+        playback.step("5min", 1);
+        assert.equal(store.getState().clock_s, start + 300, "the step moved the clock");
+        playback.step("1h", 1);
+        playback.step("1h", -1);
+        playback.step("5min", -1);
+        assert.deepEqual(spoken, [clock(start + 300), clock(start + 3900), clock(start + 300), clock(start)], JSON.stringify(reducedMotion));
+        store.dispatch({ type: "clock/set", clock_s: start + 1200 }); // a scrub
+        assert.equal(spoken.length, 4, "a plain clock/set scrub is not announced");
+      }
+    } finally {
+      uninstall();
+    }
   });
 
   test("reduced-motion reducer: the in-app setting wins over the system setting", async () => {
@@ -542,4 +708,132 @@ describe("interface checks that arrive with the interface modules", () => {
   });
 
   test("no horizontal page scroll at 400 px", { todo: "browser smoke, local only (design 9.5)" });
+});
+
+/** The shell on a fake DOM at desktop width with the knob panel and the inspector mounted on the default preset. */
+function mountedShell() {
+  const uninstall = installFakeDom(globalThis, { media: { "(min-width: 1280px)": true, "(min-width: 768px)": true } });
+  const doc = uninstall.dom.document;
+  const root = doc.createElement("div");
+  root.setAttribute("id", "fleetlab-root");
+  const strip = doc.createElement("div");
+  strip.setAttribute("id", "fleetlab-teaching-strip");
+  root.appendChild(strip);
+  doc.body.appendChild(root);
+  const shell = start({ createWorker: () => null });
+  const store = createStore(createInitialState({ presetId: DEFAULT_PRESET_ID, scenario: presetScenario() }));
+  const controls = mountControls({ store, region: shell.regions.knobs });
+  const inspector = mountInspector({ store, region: shell.regions.inspector });
+  const cleanup = () => {
+    controls.destroy();
+    inspector.destroy();
+    uninstall();
+  };
+  return { doc, root, shell, store, cleanup };
+}
+
+describe("a11y.js helpers", () => {
+  test("shortcuts apply only inside their region and never while typing; ? lists them and returns focus", () => {
+    const uninstall = installFakeDom();
+    try {
+      const section = () => document.body.appendChild(document.createElement("section"));
+      const map = section();
+      const other = section();
+      const inMap = map.appendChild(document.createElement("button"));
+      const field = map.appendChild(document.createElement("input"));
+      const outside = other.appendChild(document.createElement("button"));
+      const calls = [];
+      const help = createShortcutHelp(document.body);
+      bindShortcuts(map, { " ": () => calls.push("play"), "Shift+,": () => calls.push("back an hour"), "]": () => calls.push("faster") }, help);
+      const key = (target, init) => target.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init }));
+      key(outside, { key: " " });
+      key(field, { key: " " });
+      key(inMap, { key: " " });
+      key(inMap, { key: "<", shiftKey: true });
+      key(inMap, { key: "]" });
+      assert.deepEqual(calls, ["play", "back an hour", "faster"]);
+
+      inMap.focus();
+      assert.equal(help.node.hidden, true);
+      key(inMap, { key: "?", shiftKey: true });
+      assert.equal(help.node.hidden, false);
+      assert.equal(help.node.hasAttribute("inert"), false);
+      assert.deepEqual(help.node.querySelectorAll("li").map((li) => li.textContent), uiLabels.PLAYBACK.shortcutList);
+      assert.equal(document.activeElement.textContent, uiLabels.A11Y.closeShortcuts);
+      key(document.activeElement, { key: "Escape" });
+      assert.equal(help.node.hidden, true);
+      assert.equal(help.node.hasAttribute("inert"), true);
+      assert.equal(document.activeElement, inMap);
+    } finally {
+      uninstall();
+    }
+  });
+
+  test("roving tabindex keeps one tab stop and wraps around", () => {
+    const uninstall = installFakeDom();
+    try {
+      const items = [0, 1, 2].map(() => document.body.appendChild(document.createElement("button")));
+      assert.equal(roving(items, 0), 0);
+      assert.deepEqual(items.map((b) => b.getAttribute("tabindex")), ["0", "-1", "-1"]);
+      assert.equal(roving(items, -1, { focus: true }), 2);
+      assert.deepEqual(items.map((b) => b.getAttribute("tabindex")), ["-1", "-1", "0"]);
+      assert.equal(document.activeElement, items[2]);
+    } finally {
+      uninstall();
+    }
+  });
+
+  test("reduced motion: the system setting reaches the store and the in-app override sets data-motion", () => {
+    const query = "(prefers-reduced-motion: reduce)";
+    const uninstall = installFakeDom(globalThis, { media: { [query]: true } });
+    try {
+      const root = document.createElement("div"); // stands in for :root
+      const store = createStore(createInitialState({ presetId: DEFAULT_PRESET_ID, scenario: presetScenario() }));
+      const stop = watchReducedMotion(store, root);
+      assert.equal(store.getState().reducedMotion.system, true);
+      assert.equal(root.hasAttribute("data-motion"), false, "without an override the CSS media query applies");
+      store.dispatch({ type: "motion/override", value: false });
+      assert.equal(root.getAttribute("data-motion"), "full");
+      store.dispatch({ type: "motion/override", value: true });
+      assert.equal(root.getAttribute("data-motion"), "reduce");
+      store.dispatch({ type: "motion/override", value: null });
+      assert.equal(root.hasAttribute("data-motion"), false);
+      uninstall.dom.media.set(query, false);
+      assert.equal(store.getState().reducedMotion.system, false);
+      stop();
+    } finally {
+      uninstall();
+    }
+  });
+
+  test("a sheet is inert only while it is off screen in the phone or tablet layout", () => {
+    const uninstall = installFakeDom();
+    try {
+      const sheet = document.createElement("aside");
+      const inert = (layout, open) => {
+        syncSheetInert(sheet, layout, open);
+        return sheet.hasAttribute("inert");
+      };
+      assert.deepEqual([inert("phone", false), inert("phone", true), inert("tablet", false), inert("tablet", true), inert("desktop", false)], [true, false, true, false, false]);
+    } finally {
+      uninstall();
+    }
+  });
+
+  test("every class the knob panel and the inspector set is defined in styles.css", async () => {
+    const { root, store, cleanup } = mountedShell();
+    try {
+      store.dispatch({ type: "run/queued", id: "w", total: 2 });
+      store.dispatch({ type: "run/done", id: "w", payload: await windowPayload() });
+      const selectorText = RULES.flatMap((rule) => rule.selectors ?? []).join(" ");
+      for (const target of [{ depot: "SJ-1" }, { car: "SF-017" }]) {
+        store.dispatch({ type: "inspector/open", target });
+        for (const node of root.querySelectorAll("[class]")) {
+          for (const name of classesOf(node)) assert.match(selectorText, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
+        }
+      }
+    } finally {
+      cleanup();
+    }
+  });
 });

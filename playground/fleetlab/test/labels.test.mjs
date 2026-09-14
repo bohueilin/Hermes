@@ -79,17 +79,20 @@ const SAMPLES = {
     [{ period: "late", roadClass: "highway", parts: [{ factor: "×1.3" }], start: "19:00", end: "20:00" }],
     [{ period: "morning", roadClass: "local", parts: [{ factor: "×1.3" }], start: "07:00", end: "09:00" }],
     [{ period: "evening", roadClass: "in_area", parts: [{ factor: "×1.3" }], start: "16:00", end: "19:00" }],
+    [{ period: "evening", roadClass: "highway", parts: [{ from: "SF", to: "PEN", factor: "×1.6" }, { from: "SJ", to: "PEN", factor: "×1.2" }], start: "16:00", end: "19:00" }],
   ],
   routeTooltip: [[{ clock: "D1 18:30", planned: "77 min", freeFlow: "55 min" }], [{ clock: "D1 03:00", planned: "55 min", freeFlow: "55 min", slowed: false }]],
   absentValue: [["no completed request in scope"]],
   visitsUnfinished: [[1], [2]],
   topBarStatus: [[{ clock: "D1 18:30", replay: 1, replays: 5, seed: 1001 }]],
+  verdictSeedStatus: [[{ clock: "D1 18:30", seed: 1005, index: 5, total: 20 }]],
   freezeNotice: [[{ frozenAt: "14:02", changedKnobs: 3 }], [{ frozenAt: "14:02", changedKnobs: 1 }], [{ frozenAt: "14:02", changedKnobs: 0 }]],
   enginePath: [["worker"], ["main thread"]],
   seedSetText: [[{ seedSet: 1, firstSeed: 1001, lastSeed: 1020 }]],
   sessionLogEntry: [
     [{ seedSet: 1, firstSeed: 1001, lastSeed: 1020, label: "playground-spec:3f9a1c2e", validity: "VALID", outcome: "IMPROVED", recommendation: "ADVANCE_TO_NEXT_TEST", engine: "worker" }],
     [{ seedSet: 2, firstSeed: 2001, lastSeed: 2020, label: "playground-spec:0badc0de", validity: "INVALID_EXPERIMENT", outcome: null, recommendation: "NO_RECOMMENDATION", engine: "main thread" }],
+    [{ seedSet: 1, firstSeed: 1001, lastSeed: 1010, label: "playground-spec:3f9a1c2e", validity: "VALID", outcome: "UNCHANGED", recommendation: "NO_RECOMMENDATION", engine: null }],
   ],
   thisReplayChip: [[1001]],
   acrossReplicationsChip: [[5]],
@@ -126,9 +129,13 @@ const SAMPLES = {
   invariantFailure: [[{ rule: labels.INVARIANT_RULES[2], id: 2 }], [{ rule: labels.INVARIANT_RULES.P13, id: "P13" }]],
   slowExperimentAdvice: [[{ estimate: "about 90 s", seeds: 40, fewerSeeds: 20, widening: "1.4 times" }]],
   waitPopulation: [["412"]],
+  withWaitPopulation: [[{ value: "8.2 to 9.1 min", population: "from 1,350 to 1,420 completed rides" }]],
   unservedCount: [[4]],
   depotName: [[{ depotId: "SJ-1", areaName: "San Jose" }]],
   lotFill: [[22, 30]],
+  waitingRiders: [[1], [3]],
+  routeDirection: [[{ routeId: "H2", from: "San Jose", to: "San Francisco" }]],
+  pinnedCarName: [[{ car: "SF-017", state: "on a trip" }]],
   mapAnnouncement: [[{ clock: "D1 18:30", waiting: 23, unservedLastHour: 4 }], [{ clock: "D1 06:00", waiting: 1, unservedLastHour: 0 }]],
   ledgerAcross: [[5]],
   fleetStateSummary: [[{ register: "This replay", atDepot: 23, fleet: 90, clock: "D1 18:00" }]],
@@ -144,7 +151,67 @@ const SAMPLES = {
   carTimelineSummary: [[{ car: "SF-017", atDepots: "2 h 20 min", congestedEmpty: "77 min" }]],
   depotBoardSummary: [[{ depot: "SJ-1", held: 29, stalls: 30, bayWait: "11 min" }]],
   verdictStripSummary: [[{ count: 10, metric: "wait.p90_s", low: "+735.9 s", high: "+919.2 s", outcome: "REGRESSED" }]],
+  chartTitle: [[{ title: "Arm comparison", subject: "wait.p90_s" }]],
+  scopedMetric: [[{ metric: "wait.p90_s", scopes: ["SF", "D2 07:00 to 09:00"] }], [{ metric: "unserved.fraction", scopes: [] }]],
+  windowScope: [[{ start: "D2 07:00", end: "09:00" }], [{ start: "D2 23:00", end: "D3 01:00" }]],
+  availableCarsTitle: [["San Francisco"]],
+  bayLane: [[{ task: "CLEAN", index: 1 }], [{ task: "SERVICE", index: 2 }]],
+  trafficDirection: [[{ from: "SF", to: "PEN" }]],
+  fleetStateHourSummary: [[{ register: "This replay", clock: "D1 19:00", atDepot: "23.4", fleet: 90 }]],
+  chartAbsentSummary: [[{ register: "Across 10 replications", subject: "wait.p90_s", reason: "metric absent in some replication" }]],
+  forkTimelineSummary: [[{ car: "SF-017", atDepotsA: "2 h 20 min", atDepotsB: "1 h 5 min" }]],
+  forkDepotSummary: [[{ lane: "B: candidate", depot: "SJ-1", held: 29, stalls: 30, bayWait: "11 min" }]],
+  forkAvailableSummary: [[{ area: "San Francisco", lowestA: "3.2", clockA: "D2 07:00", lowestB: "1.0", clockB: "D2 08:00" }]],
+  bayLanesSummary: [[{ depot: "SJ-1", bays: 4, tasks: 31 }], [{ depot: "SJ-1", bays: 1, tasks: 1 }]],
+  guardrailRowSummary: [[{ count: 10, metric: "unserved.fraction", harm: "+0.057", maxHarm: "0.020", status: "REGRESSED" }]],
+  notEvaluableSummary: [[{ count: 10, metric: "depot.bay_wait_p90_s" }]],
   momentPosition: [[2, 5]],
+  // Knob panel and inspector (src/ui/controls.js, src/ui/inspector.js).
+  knobPart: [[{ knobName: "Cleaning bays per depot", part: "SJ-1" }]],
+  stepDown: [["Clean time"]],
+  stepUp: [["Clean time"]],
+  valueWithUnit: [[{ value: "20", unit: "min" }], [{ value: "16:00 to 19:00", unit: "×1.6" }]],
+  weightPart: [[{ period: "morning peak", origin: "SF", dest: "PEN" }]],
+  notReadable: [[{ value: "twenty", example: "20" }]],
+  notAStep: [[{ value: "0.07", step: "0.05", unit: "σ" }]],
+  outOfClockRange: [[{ value: "D2 11:00", min: "D1 05:00", max: "D2 10:00" }]],
+  lockedUntilReset: [["Depots per area"]],
+  inspectorTitle: [[{ heading: "DEPOT", name: "SJ-1 · San Jose" }], [{ heading: "CAR", name: "SF-017" }]],
+  inspectorStamp: [[{ seed: 1001, clock: "D1 19:30" }]],
+  depotStatus: [[{ held: 22, stalls: 30, inBays: 3, cleanBays: 3, serviceBays: 1 }]],
+  flowStage: [[{ stage: "Arriving", count: 3 }]],
+  queueStage: [[{ count: 2, oldest: "11 min" }], [{ count: 0, oldest: null }]],
+  bayId: [[{ task: "CLEAN", index: 1 }], [{ task: "SERVICE", index: 2 }]],
+  bayBusy: [[{ bay: "C1", car: "SJ-022", task: "CLEAN", done: 14, total: 20 }], [{ bay: "S1", car: "SJ-011", task: "SERVICE", done: 45, total: 45, blocked: true }]],
+  bayFree: [["C3"]],
+  carHome: [[{ area: "SF", depot: "SF-1" }]],
+  carStateText: [[{ state: "IN_SERVICE", task: "CLEAN", blocked: true }], [{ state: "IDLE" }]],
+  acrossRange: [[{ low: "9 min", high: "14 min" }]],
+  decisionLine: [[{ clock: "D1 18:30", kind: "DEPOT_ASSIGNED", depot: "SJ-1", target: "SERVICE_DUE", cause: "nearest_depot" }]],
+  // Experiment sheet, verdict, reference panels and Learn (src/ui/experiment.js, src/ui/learn.js).
+  openReferencePanel: [["FLEET-005 depot turnaround"]],
+  suppressedMetric: [["fleet.utilization_fraction"]],
+  withheldReason: [["fleet.utilization_fraction"], ["business_proxy.served_trips"], ["business_proxy.unserved_demand"]],
+  primaryDeltaCaption: [["lower_is_better"], ["higher_is_better"]],
+  candidateMinusBaseline: [["mean delta"]],
+  referenceAxisLine: [[{ axis: "parameter:service_bays", baseline: "4", candidate: "2" }]],
+  intervalText: [[{ low: "+735.9", high: "+919.2 s" }]],
+  guardrailsNotEvaluableCount: [[1]],
+  experimentRunProgress: [[7, 23]],
+  directionUnit: [[{ direction: "lower is better", unit: "s" }]],
+  marginUnit: [["s"]],
+  removeGuardrailNumber: [[2]],
+  guardrailNumber: [[2]],
+  testItProperlyFor: [["Bays are not always the bottleneck"]],
+  presetOption: [[{ id: "UC-01", title: "Null check" }]],
+  timesAsWide: [["1.4"]],
+  hoursChanged: [[6], [1]],
+  checkState: [[{ check: "margin above 0", passes: false }], [{ check: "one axis", passes: true }]],
+  learnCaption: [["learn.L1.m1"], ["learn.L2.m2"], ["learn.L3.m1"]],
+  momentLine: [[{ clock: "D1 18:30", title: "SF-017 finishes a trip in San Jose" }]],
+  learnPinnedCar: [["SF-017"]],
+  // Shell panels (src/ui/app.js).
+  nowLot: [["SJ-1"]],
 };
 
 /** Every string reachable from the labels exports, with template outputs for the sample inputs. */
@@ -266,6 +333,14 @@ describe("copy quoted elsewhere in the design", () => {
     labels.EXPERIMENT_SETUP.frozenWhenYouRun,
     ...Object.values(labels.KNOB_PANEL.groups),
     ...Object.values(labels.EXPERIMENT_SETUP.checks),
+    // The depot inspector wireframe of §7.2.
+    labels.inspectorTitle({ heading: labels.INSPECTOR.depotHeading, name: labels.depotName({ depotId: "SJ-1", areaName: "San Jose" }) }),
+    labels.inspectorStamp({ seed: 1001, clock: "D1 19:30" }),
+    labels.depotStatus({ held: 22, stalls: 30, inBays: 3, cleanBays: 3, serviceBays: 1 }),
+    labels.flowStage({ stage: labels.INSPECTOR.stages.arriving, count: 3 }),
+    labels.queueStage({ count: 2, oldest: "11 min" }),
+    labels.bayBusy({ bay: "C1", car: "SJ-022", task: "CLEAN", done: 14, total: 20 }),
+    labels.MODEL_LIMITS.noStaff,
   ];
   // The design wraps long lines, so compare against its text with every whitespace run as one space.
   const flat = DESIGN.replace(/\s+/g, " ");
@@ -568,5 +643,37 @@ describe("format", () => {
     assert.throws(() => format.valueText(undefined, format.minutes), TypeError);
     assert.throws(() => format.valueText(Number.NaN, format.minutes), TypeError);
     assert.throws(() => format.absent(""), TypeError);
+  });
+});
+
+describe("honesty copy reaches the page (review: honesty-copy lens)", () => {
+  const UI_SOURCES = ["a11y.js", "app.js", "charts.js", "controls.js", "experiment.js", "inspector.js", "learn.js", "map.js", "playback.js"]
+    .map((f) => readFileSync(join(PLAYGROUND_ROOT, "src/ui", f), "utf8"))
+    .join("\n");
+
+  test("every §1.3 copy helper is called by some interface module, not only defined", () => {
+    for (const name of ["routeShield", "trafficLabel", "routeTooltip", "waitPopulation"]) {
+      assert.match(UI_SOURCES, new RegExp(`\\b${name}\\(`), `${name} is rendered somewhere`);
+    }
+  });
+
+  test("every HONESTY string of the §1.3 exact copy table is read by some interface module", () => {
+    const table = new Set(exactCopyRows().map((row) => row.text));
+    const keys = Object.entries(labels.HONESTY).filter(([, text]) => table.has(text)).map(([key]) => key);
+    assert.ok(keys.length >= 9, "the table's fixed strings are HONESTY entries");
+    for (const key of keys) assert.match(UI_SOURCES, new RegExp(`HONESTY\\.${key}(?![A-Za-z])`), `HONESTY.${key} is rendered somewhere`);
+  });
+
+  test("the suppressed row is the design §7.2 copy, split only where its link starts", () => {
+    assert.equal(labels.REFERENCE.suppressedRow, `${labels.REFERENCE.suppressedRowLead}${labels.REFERENCE.suppressedRowLink}`);
+    assert.ok(DESIGN.replace(/\s+/g, " ").includes(`\`${labels.REFERENCE.suppressedRow}\``), "design §7.2 names the suppressed values with this copy");
+    assert.throws(() => labels.withheldReason("wait.p90_s"), RangeError);
+  });
+
+  test("the primary delta caption follows design P-7: the §7.2 heading when lower is better, normalized when higher", () => {
+    assert.ok(DESIGN.includes(`wait.p90_s · ${labels.primaryDeltaCaption("lower_is_better")}`), "the §7.2 verdict mockup heading");
+    assert.equal(labels.primaryDeltaCaption("higher_is_better"), labels.CHART_TEXT.normalizedDelta);
+    assert.ok(!labels.primaryDeltaCaption("higher_is_better").includes(labels.VERDICT.perSeedDelta));
+    assert.ok(!labels.candidateMinusBaseline(labels.VERDICT.meanDelta).includes(labels.VERDICT.leftIsBetter));
   });
 });

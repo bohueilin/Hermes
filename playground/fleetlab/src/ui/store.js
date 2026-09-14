@@ -74,11 +74,15 @@ function checkSeconds(t_s, name) {
 // ---------------------------------------------------------------------------------------------------------------
 // Initial state.
 
-/** A fresh experiment draft; `baselineScenario` is filled when Experiment opens. */
+/**
+ * A fresh experiment draft; `baselineScenario` is filled when Experiment opens. `baselineSource` is `{presetId}`, the
+ * preset the baseline was taken from, so the setup lists differences from that preset even after another one is chosen.
+ */
 function emptyDraft() {
   return {
     question: "",
     baselineScenario: null,
+    baselineSource: null,
     axis: null,
     axisSource: null,
     primary: null,
@@ -235,20 +239,35 @@ function applyKnob(state, { knob, path, value, axis }) {
   };
 }
 
+/**
+ * Whether a setup edit now makes the shown verdict out of date (design §7.1 freeze rule): a verdict is showing, one is
+ * on its way (an edit during the run), or an earlier edit already marked it.
+ */
+function editMarksStale(experiment) {
+  return experiment.verdictStale || experiment.verdict !== null || experiment.status === "running";
+}
+
 /** Mode switch with carried state (design §7.1): nothing is recomputed or cleared. */
 function switchMode(state, mode) {
   if (!MODES.includes(mode)) throw new TypeError(`unknown mode ${String(mode)}`);
   if (mode === state.mode) return state;
   let experiment = state.experiment;
   if (mode === "experiment") {
-    // The scenario becomes the baseline; the last knob changed pre-fills the axis unless the user wrote one.
+    // The scenario becomes the baseline; the last knob changed pre-fills the axis unless the user wrote one. A draft a
+    // preset declared (Test it properly or a chosen preset) keeps its own scenario while Sandbox still shows that preset
+    // unchanged, because the declared scenario differs from the preset on purpose (design §2.5 RD-5).
+    const before = experiment.draft;
     const change = lastChange(state);
-    const draft = { ...experiment.draft, baselineScenario: state.scenario };
+    const declared = before.axisSource === "learn" || before.axisSource === "preset";
+    const keep = declared && before.baselineScenario !== null && state.changes.length === 0 && before.baselineSource?.presetId === state.presetId;
+    const draft = keep ? { ...before } : { ...before, baselineScenario: state.scenario, baselineSource: { presetId: state.presetId } };
     if (change !== null && draft.axisSource !== "user") {
       draft.axis = { id: change.axis, baseline: change.from, candidate: change.to };
       draft.axisSource = "sandbox";
     }
-    experiment = { ...experiment, draft };
+    // A switch that changes what would be frozen is a setup edit: the verdict is marked out of date, nothing re-runs.
+    const edited = !deepEqual(before.baselineScenario, draft.baselineScenario) || !deepEqual(before.axis, draft.axis);
+    experiment = { ...experiment, draft, verdictStale: edited ? editMarksStale(experiment) : experiment.verdictStale };
   }
   return { ...state, mode, experiment };
 }
@@ -361,8 +380,18 @@ function playbackCase(state, action) {
 /** Reducer cases for Experiment: draft, freeze, run lifecycle, verdict and seed choice. */
 function experimentCase(state, action) {
   const ex = state.experiment;
-  const withDraft = (draft) => ({ ...state, experiment: { ...ex, draft, verdictStale: ex.verdict !== null } });
+  const withDraft = (draft) => ({ ...state, experiment: { ...ex, draft, verdictStale: editMarksStale(ex) } });
   switch (action.type) {
+    case "experiment/fromPreset": {
+      // A preset's declared experiment (design §10.1): its scenario in Sandbox and its whole draft, marked as the preset's.
+      if (action.draft === null || typeof action.draft !== "object" || action.draft.baselineScenario === null || typeof action.draft.baselineScenario !== "object") {
+        throw new TypeError("experiment/fromPreset needs a draft with its baseline scenario");
+      }
+      const selected = selectPreset(state, action);
+      const sx = selected.experiment;
+      const draft = { ...emptyDraft(), ...action.draft, axisSource: "preset", baselineSource: { presetId: action.presetId } };
+      return { ...selected, mode: "experiment", experiment: { ...sx, draft, verdictStale: editMarksStale(sx) } };
+    }
     case "experiment/draft": {
       const patch = { ...action.patch };
       if ("axis" in patch) patch.axisSource = "user";
@@ -432,7 +461,8 @@ function experimentCase(state, action) {
           progress: null,
           verdict,
           perSeed: payload.per_seed ?? [],
-          verdictStale: false,
+          // An edit made while the run was going already marked it; the freeze cleared the flag.
+          verdictStale: ex.verdictStale,
           selectedSeed,
           largestWarning: false,
           sessionLog: [...ex.sessionLog, entry],
@@ -467,6 +497,21 @@ function chooseSeed(state, seed) {
   return { ...state, experiment: { ...ex, selectedSeed: seed, largestWarning: seed === largest && largest !== median } };
 }
 
+/** A preset's scenario with no changes; results computed before stay visible, marked out of date. */
+function selectPreset(state, action) {
+  if (action.scenario === null || typeof action.scenario !== "object") throw new TypeError("preset/select needs a scenario");
+  const experiment = trackSinceFreeze(state.experiment, "preset", state.presetId, action.presetId);
+  const next = {
+    ...state,
+    presetId: action.presetId,
+    scenario: action.scenario,
+    changes: [],
+    clock_s: clampToWindow(action.scenario, state.clock_s),
+    experiment,
+  };
+  return markResultsStale(next);
+}
+
 /** The pure reducer: every action is one case; an unknown type returns the same state. */
 export function reduce(state, action) {
   const type = action.type;
@@ -476,19 +521,8 @@ export function reduce(state, action) {
   switch (type) {
     case "mode/set":
       return switchMode(state, action.mode);
-    case "preset/select": {
-      if (action.scenario === null || typeof action.scenario !== "object") throw new TypeError("preset/select needs a scenario");
-      const experiment = trackSinceFreeze(state.experiment, "preset", state.presetId, action.presetId);
-      const next = {
-        ...state,
-        presetId: action.presetId,
-        scenario: action.scenario,
-        changes: [],
-        clock_s: clampToWindow(action.scenario, state.clock_s),
-        experiment,
-      };
-      return markResultsStale(next);
-    }
+    case "preset/select":
+      return selectPreset(state, action);
     case "knob/set":
       checkPath(action.path);
       if (typeof action.knob !== "string") throw new TypeError("knob/set needs a knob id");
@@ -551,12 +585,19 @@ export function reduce(state, action) {
       return action.clock_s === undefined ? next : { ...next, clock_s: clampToWindow(state.scenario, action.clock_s), playing: false };
     }
     case "learn/testItProperly": {
-      // "Test it properly": open Experiment on the Learn preset with the case's axis filled in (design §4.1).
-      const draft = { ...state.experiment.draft, ...action.draft, baselineScenario: state.scenario, axisSource: "learn" };
+      // "Test it properly": open Experiment on the Learn preset with the case's axis filled in (design §4.1). The draft may
+      // carry the preset's declared scenario; without one the current scenario is the baseline.
+      const draft = {
+        ...state.experiment.draft,
+        ...action.draft,
+        baselineScenario: action.draft.baselineScenario ?? state.scenario,
+        baselineSource: { presetId: state.presetId },
+        axisSource: "learn",
+      };
       return {
         ...state,
         mode: "experiment",
-        experiment: { ...state.experiment, draft, verdictStale: state.experiment.verdict !== null },
+        experiment: { ...state.experiment, draft, verdictStale: editMarksStale(state.experiment) },
       };
     }
     case "motion/system":

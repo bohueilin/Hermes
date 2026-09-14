@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -21,7 +22,7 @@ import pytest
 
 import hermes.fleet.engine as fleet_engine
 import hermes.fleet.experiment as fleet_experiment
-from hermes.fleet.contracts import FleetScenarioConfig
+from hermes.fleet.contracts import REQUIRED_LABELS, FleetScenarioConfig
 from hermes.fleet.engine import run_fleet
 from hermes.fleet.invariants import check_invariants
 from hermes.fleet.world import RequestEvent, WorldTape, build_tape
@@ -30,6 +31,43 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 REGENERATOR_PATH = REPOSITORY_ROOT / "tools" / "fleet_playground" / "regenerate_fixtures.py"
 FIXTURE_DIR = REPOSITORY_ROOT / "tests" / "fixtures" / "fleet_playground"
 INSTRUMENT_VECTORS = FIXTURE_DIR / "instrument_vectors.json"
+REFERENCE_PANELS = FIXTURE_DIR / "reference_panels.json"
+
+#: ARCHITECTURE.md section 5.2, in file order.
+PANEL_KEYS = (
+    "experiment_id",
+    "question",
+    "variation_axis",
+    "baseline_value",
+    "candidate_value",
+    "replications",
+    "validity",
+    "invalidity_reason",
+    "outcome",
+    "recommendation",
+    "primary",
+    "guardrails",
+    "descriptives",
+    "suppressed",
+)
+PANEL_PRIMARY_KEYS = (
+    "metric",
+    "direction",
+    "equivalence_margin",
+    "baseline_mean",
+    "candidate_mean",
+    "mean_delta",
+    "median_delta",
+    "ci_low",
+    "ci_high",
+)
+PANEL_GUARDRAIL_KEYS = ("metric", "direction", "max_harm", "mean_delta", "regressed")
+PANEL_DESCRIPTIVE_KEYS = ("metric", "baseline_mean", "candidate_mean", "mean_delta")
+SUPPRESSED_METRICS = (
+    "fleet.utilization_fraction",
+    "business_proxy.served_trips",
+    "business_proxy.unserved_demand",
+)
 
 VECTOR_GROUPS = (
     "u64",
@@ -492,3 +530,104 @@ def test_legacy_defect_worlds_fire_invariant_two() -> None:
     row = next(row for row in vectors["invalid"] if row["name"] == "invariant-violation")
     violations = seeded["expected"]["invariant_violations"]
     assert row["invariant_violation"] == f"seed 101: {violations[0]}"
+
+
+# --- reference panels (ARCHITECTURE.md section 5.2) ----------------------------------------
+
+
+@pytest.fixture(scope="module")
+def rebuilt_panels(regenerator: ModuleType) -> dict[str, Any]:
+    if sys.version_info[:2] != (3, 11):
+        pytest.skip("reference panels are defined only under Python 3.11")
+    return regenerator.build_reference_panels()
+
+
+def _panels_text() -> str:
+    assert REFERENCE_PANELS.is_file(), f"missing committed fixture {REFERENCE_PANELS}"
+    return REFERENCE_PANELS.read_text(encoding="utf-8")
+
+
+def test_reference_panels_registered(regenerator: ModuleType) -> None:
+    assert regenerator.FIXTURES["reference_panels.json"] is regenerator.build_reference_panels
+
+
+def test_reference_panels_file_is_byte_identical(
+    regenerator: ModuleType, rebuilt_panels: dict[str, Any]
+) -> None:
+    assert regenerator.serialize(rebuilt_panels) == _panels_text()
+
+
+def test_reference_panels_have_exactly_the_projection_fields() -> None:
+    data = json.loads(_panels_text())
+    assert tuple(data) == ("format", "format_version", "fleet005", "probe")
+    assert data["format"] == "fleet-playground-reference-panels"
+    assert data["format_version"] == 1
+    for name in ("fleet005", "probe"):
+        panel = data[name]
+        assert tuple(panel) == PANEL_KEYS, name
+        assert tuple(panel["primary"]) == PANEL_PRIMARY_KEYS, name
+        assert panel["guardrails"] and panel["descriptives"], name
+        for rail in panel["guardrails"]:
+            assert tuple(rail) == PANEL_GUARDRAIL_KEYS, name
+        for row in panel["descriptives"]:
+            assert tuple(row) == PANEL_DESCRIPTIVE_KEYS, name
+
+
+def test_reference_panels_name_the_suppressed_metrics_only() -> None:
+    text = _panels_text()
+    data = json.loads(text)
+    for name in ("fleet005", "probe"):
+        panel = data[name]
+        assert panel["suppressed"] == list(SUPPRESSED_METRICS), name
+        shown = {
+            panel["primary"]["metric"],
+            *(rail["metric"] for rail in panel["guardrails"]),
+            *(row["metric"] for row in panel["descriptives"]),
+        }
+        assert not shown & set(SUPPRESSED_METRICS), name
+    for metric in SUPPRESSED_METRICS:
+        # Once per panel, in its suppressed list, and nowhere else in the file.
+        assert text.count(f'"{metric}"') == 2, metric
+
+
+def test_reference_panels_are_the_design_records(regenerator: ModuleType) -> None:
+    data = json.loads(_panels_text())
+    fleet, probe = data["fleet005"], data["probe"]
+    # Design Appendix A.9 records the probe's spec digest prefix; A.10 and A.9 the verdict words.
+    assert regenerator.probe_spec().spec_digest().startswith("e8f30fec61b7")
+    assert (fleet["validity"], fleet["outcome"], fleet["recommendation"]) == (
+        "VALID",
+        "REGRESSED",
+        "HOLD",
+    )
+    assert [rail["regressed"] for rail in fleet["guardrails"]] == [True]
+    assert (probe["validity"], probe["outcome"], probe["recommendation"]) == (
+        "VALID",
+        "UNCHANGED",
+        "NO_RECOMMENDATION",
+    )
+    assert (probe["primary"]["ci_low"], probe["primary"]["ci_high"]) == (0.0, 0.0)
+    for name, spec in (
+        ("fleet005", regenerator.fleet_005_spec()),
+        ("probe", regenerator.probe_spec()),
+    ):
+        names = [row["metric"] for row in data[name]["descriptives"]]
+        registered = regenerator.descriptive_metrics_for(spec)
+        assert names == [metric for metric in registered if metric not in SUPPRESSED_METRICS]
+
+
+def test_reference_panels_hold_no_label_or_digest() -> None:
+    text = _panels_text()
+    assert REQUIRED_LABELS, "the imported label tuple must not be empty"
+    for index, label in enumerate(REQUIRED_LABELS):
+        assert label not in text, f"REQUIRED_LABELS[{index}] in the reference panels"
+    assert re.search(r"[0-9a-fA-F]{64}", text) is None
+    for key in (
+        "labels",
+        "deployment_permission",
+        "spec_digest",
+        "world_tape_digest",
+        "seed_set_digest",
+        "limitations",
+    ):
+        assert f'"{key}"' not in text, key

@@ -61,10 +61,26 @@ function logOf(seed, result) {
  * contract section 7 payload.
  */
 export function createDrivers(api) {
+  // Every model call below sits alone between two yields, so the slicer can hand control back between any two of
+  // them (contract section 7): buildWorld, createRun, each run.step, run.result, computeAll and computeSeries.
   function* drive(scenario, world, seed, keepLogs) {
+    yield;
     const run = api.createRun(scenario, world, { seed, keepLogs });
+    yield;
     while (!run.step(STEP_EVENTS)) yield;
-    return run.result();
+    yield;
+    const result = run.result();
+    yield;
+    return result;
+  }
+
+  /** The metrics and series of one result, each computed in a step of its own. */
+  function* measure(result, scenario) {
+    const metrics = api.computeAll(result);
+    yield;
+    const series = api.computeSeries(result, scenario);
+    yield;
+    return { metrics, series };
   }
 
   function* run_window(message) {
@@ -79,11 +95,12 @@ export function createDrivers(api) {
       const keepLogs = seed === logSeed && log === null;
       const world = api.buildWorld(scenario, worldOptions(seed, lambdaMaxPermille));
       const result = yield* drive(scenario, world, seed, keepLogs);
+      const { metrics, series } = yield* measure(result, scenario);
       runs.push({
         seed,
         world_digest: result.world_digest,
-        metrics: api.computeAll(result),
-        series: api.computeSeries(result, scenario),
+        metrics,
+        series,
         invariant_violations: result.invariant_violations,
       });
       if (keepLogs) log = logOf(seed, result);
@@ -100,14 +117,8 @@ export function createDrivers(api) {
     for (const [i, scenario, label] of [[0, baseline, "Baseline arm"], [1, candidate, "Candidate arm"]]) {
       yield progress(i, 2, label);
       const result = yield* drive(scenario, world, seed, true);
-      arms.push({
-        digest: result.world_digest,
-        arm: {
-          metrics: api.computeAll(result),
-          series: api.computeSeries(result, scenario),
-          log: logOf(seed, result),
-        },
-      });
+      const { metrics, series } = yield* measure(result, scenario);
+      arms.push({ digest: result.world_digest, arm: { metrics, series, log: logOf(seed, result) } });
     }
     if (arms[0].digest !== arms[1].digest) throw new Error("the two arms do not share one world");
     return { world_digest: arms[0].digest, baseline: arms[0].arm, candidate: arms[1].arm };
@@ -146,8 +157,9 @@ export function runMessage(type, id, args) {
 /**
  * Drives generator `gen` in slices of at most `budgetMs` milliseconds of `now()` time, handing control back
  * through `schedule` between slices. A slice always makes one step, then stops before a step whose estimated
- * cost would cross the budget. Resolves with the generator's return value; rejects on a throw or when
- * `job.cancelled` becomes true. Progress objects reach `onProgress` only when they change.
+ * cost would cross the budget. A step's cost includes the `onProgress` call it triggers (on the page that call
+ * renders synchronously), so the clock is read after the callback. Resolves with the generator's return value;
+ * rejects on a throw or when `job.cancelled` becomes true. Progress objects reach `onProgress` only when they change.
  */
 export function runSliced(gen, job, { now, schedule, budgetMs, onProgress }) {
   return new Promise((resolve, reject) => {
@@ -168,8 +180,6 @@ export function runSliced(gen, job, { now, schedule, budgetMs, onProgress }) {
         for (;;) {
           const before = now();
           const step = gen.next();
-          const after = now();
-          estimate = Math.max(after - before, estimate / 2);
           if (step.done) return resolve(step.value);
           const p = step.value;
           if (p && typeof p === "object" &&
@@ -178,7 +188,9 @@ export function runSliced(gen, job, { now, schedule, budgetMs, onProgress }) {
             if (onProgress) onProgress({ ...last });
           }
           if (job.cancelled) return stop(cancelledError());
-          if (after - start + estimate > budgetMs) break;
+          const end = now();
+          estimate = Math.max(end - before, estimate / 2);
+          if (end - start + estimate > budgetMs) break;
         }
       } catch (error) {
         return reject(error);

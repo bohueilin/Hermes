@@ -42,6 +42,15 @@ export function el(tag, attrs = {}, children = []) {
   return node;
 }
 
+/**
+ * Ends every list item in `items` but the last with an aria-hidden `.fl-flow__arrow` span holding `arrowText`, so an
+ * ordered flow (`ol.fl-flow`) reads as steps without number markers. Returns `items`.
+ */
+export function withArrows(items, arrowText) {
+  items.slice(0, -1).forEach((li) => li.appendChild(el("span", { class: "fl-flow__arrow", "aria-hidden": "true" }, arrowText)));
+  return items;
+}
+
 /** Remove every child of `node`. */
 export function clear(node) {
   while (node.firstChild) node.removeChild(node.firstChild);

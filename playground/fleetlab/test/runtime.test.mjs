@@ -411,6 +411,106 @@ describe("time slicing", () => {
     assert.equal(outcome.value, 7);
     assert.deepEqual(durations.filter((d) => d > 0), [8, 4]);
   });
+
+  // On the page, onProgress dispatches to the store, which renders synchronously; that time belongs to the slice.
+  for (const callbackCost of [0, 3, 6, 7]) {
+    test(`an onProgress call of ${callbackCost} ms after each 1 ms step counts toward the ${MAIN_SLICE_MS} ms slice`, async () => {
+      const loop = createLoop();
+      const durations = [];
+      const total = 40;
+      const seen = [];
+      const gen = (function* () {
+        for (let i = 0; i < total; i += 1) {
+          loop.advance(1);
+          yield { done: i, total, label: `Step ${i + 1}` };
+        }
+        return "finished";
+      })();
+      const promise = runSliced(gen, { cancelled: false }, {
+        now: loop.now,
+        schedule: measuredSchedule(loop, durations),
+        budgetMs: MAIN_SLICE_MS,
+        onProgress: (p) => {
+          loop.advance(callbackCost);
+          seen.push(p.done);
+        },
+      });
+      const outcome = await settle(loop, promise);
+      assert.equal(outcome.value, "finished");
+      assert.equal(seen.length, total, "every changed progress reached onProgress");
+      const slices = durations.filter((d) => d > 0);
+      assert.ok(slices.length > 1);
+      for (const d of slices) assert.ok(d <= MAIN_SLICE_MS, `slice of ${d} ms with a ${callbackCost} ms callback`);
+    });
+  }
+
+  test("a callback after quiet steps overshoots by at most one step and one callback, and never accumulates", async () => {
+    // Quiet 1 ms steps decay the estimate; every fifth step reports progress and its callback costs 6 ms.
+    const loop = createLoop();
+    const durations = [];
+    const gen = (function* () {
+      for (let i = 0; i < 60; i += 1) {
+        loop.advance(1);
+        yield i % 5 === 4 ? { done: i, total: 60, label: `Step ${i + 1}` } : undefined;
+      }
+      return "finished";
+    })();
+    const promise = runSliced(gen, { cancelled: false }, {
+      now: loop.now,
+      schedule: measuredSchedule(loop, durations),
+      budgetMs: MAIN_SLICE_MS,
+      onProgress: () => loop.advance(6),
+    });
+    assert.equal((await settle(loop, promise)).value, "finished");
+    for (const d of durations.filter((x) => x > 0)) assert.ok(d <= MAIN_SLICE_MS + 7, `slice of ${d} ms`);
+  });
+});
+
+describe("run generators hand control back between model calls (contract section 7)", () => {
+  /** Wraps a fake api so each call to a model unit (world, run creation, step, result, metrics, series) is counted. */
+  function countingApi(loop) {
+    const { api } = createFakeApi(loop);
+    const counter = { calls: 0, names: [] };
+    const count = (name, fn) => (...args) => {
+      counter.calls += 1;
+      counter.names.push(name);
+      return fn(...args);
+    };
+    const wrapped = {
+      ...api,
+      buildWorld: count("buildWorld", api.buildWorld),
+      computeAll: count("computeAll", api.computeAll),
+      computeSeries: count("computeSeries", api.computeSeries),
+      createRun: (...args) => {
+        counter.calls += 1;
+        counter.names.push("createRun");
+        const run = api.createRun(...args);
+        return { step: count("step", run.step), result: count("result", run.result) };
+      },
+    };
+    return { api: wrapped, counter };
+  }
+
+  for (const [type, message] of [["run_window", { type: "run_window", id: "w", ...WINDOW_ARGS }], ["run_pair", { type: "run_pair", id: "p", ...PAIR_ARGS }]]) {
+    test(`${type}: every next() makes at most one model call`, () => {
+      const loop = createLoop();
+      const { api, counter } = countingApi(loop);
+      const gen = createDrivers(api)[type](structuredClone(message));
+      let crowded = [];
+      let next;
+      do {
+        const names = counter.names.length;
+        next = gen.next();
+        const made = counter.names.slice(names);
+        if (made.length > 1) crowded.push(made.join(" + "));
+      } while (!next.done);
+      assert.deepEqual(crowded, []);
+      assert.ok(counter.calls > 0);
+      for (const name of ["buildWorld", "createRun", "step", "result", "computeAll", "computeSeries"]) {
+        assert.ok(counter.names.includes(name), name);
+      }
+    });
+  }
 });
 
 describe("cancellation", () => {
@@ -546,6 +646,32 @@ describe("errors", () => {
     await flush();
     worker.onerror({ message: "worker crashed" });
     assert.equal((await outcome).error.message, "worker crashed");
+    assert.equal(host.path, "worker");
+  });
+
+  test("a worker error message with no id rejects every pending run with its message, and their progress stops", async () => {
+    const loop = createLoop();
+    const { api } = createFakeApi(loop);
+    const worker = createFakeWorker(loop, api);
+    const host = createHost({ createWorker: () => worker, drivers: createDrivers(api), now: loop.now, schedule: loop.schedule });
+    const progress = [];
+    const onProgress = (p) => progress.push(p);
+    const windowRun = settle(loop, host.runWindow({ scenario: SCENARIO, seeds: [1001, 1002, 1003] }, { onProgress }));
+    const pairRun = settle(loop, host.runPair(PAIR_ARGS, { onProgress }));
+    while (host.path === "starting") loop.runPending();
+    for (let i = 0; i < 1000 && progress.length === 0; i += 1) loop.runPending();
+    assert.ok(progress.length > 0, "the runs report progress before the error");
+    // The worker posts an error without an id when a message reaches it with none (createWorkerHandler).
+    worker.onmessage({ data: { type: "error", message: "boom" } });
+    const outcomes = [await windowRun, await pairRun];
+    for (const outcome of outcomes) {
+      assert.equal(outcome.value, undefined, "the run does not resolve");
+      assert.equal(outcome.error.message, "boom");
+    }
+    const seen = progress.length;
+    for (let i = 0; i < 50; i += 1) loop.runPending();
+    await flush();
+    assert.equal(progress.length, seen, "no progress reaches the caller after the error");
     assert.equal(host.path, "worker");
   });
 
@@ -696,4 +822,111 @@ describe("entry files", () => {
       for (const name of ["runWindow", "runPair", "runExperiment", "cancel"]) assert.equal(typeof host[name], "function");
     },
   );
+
+  test(
+    "with the real model, the host's main-thread path gives the worker handler's payloads for all three run kinds",
+    { skip: modelPresent ? false : "src/model is not built yet" },
+    async () => {
+      const { createEngineHost } = await import("../src/runtime/host.js");
+      const { experimentDraft, forkCandidate, presetScenario, runThroughWorkerHandler } = await import("./helpers/model-payloads.mjs");
+      const { sharedLambdaMaxPermille } = await import("../src/model/world.js");
+      const { freezeSpec } = await import("../src/model/experiment.js");
+      const host = createEngineHost({ createWorker: throwingFactory });
+      assert.equal(host.path, "main thread");
+
+      const scenario = presetScenario();
+      const candidate = forkCandidate(scenario);
+      const draft = experimentDraft();
+      const messages = {
+        run_window: { scenario, seeds: [1001], logSeed: 1001 },
+        run_pair: { baseline: scenario, candidate, seed: 1001, lambdaMaxPermille: sharedLambdaMaxPermille([scenario, candidate]) },
+        run_experiment: { spec: draft },
+      };
+      const progress = { run_window: [], run_pair: [], run_experiment: [] };
+      const onProgress = (type) => ({ onProgress: (p) => progress[type].push(p) });
+      const viaHost = {
+        run_window: await host.runWindow(messages.run_window, onProgress("run_window")),
+        run_pair: await host.runPair(messages.run_pair, onProgress("run_pair")),
+        run_experiment: await host.runExperiment(messages.run_experiment, onProgress("run_experiment")),
+      };
+      for (const [type, message] of Object.entries(messages)) {
+        const viaWorker = await runThroughWorkerHandler({ type, ...message });
+        assert.deepEqual(viaHost[type], viaWorker.payload, `${type} payload`);
+        const workerProgress = viaWorker.messages.filter((m) => m.type === "progress").map(({ done, total, label }) => ({ done, total, label }));
+        assert.deepEqual(progress[type], workerProgress, `${type} progress`);
+      }
+      // Contract section 7 shapes with the real model.
+      assert.ok(viaHost.run_window.log.events.length > 1000);
+      assert.equal(viaHost.run_pair.baseline.log.seed, 1001);
+      const frozen = freezeSpec(draft);
+      assert.equal(viaHost.run_experiment.digest, frozen.digest, "the experiment ran the spec the model froze");
+      assert.equal(viaHost.run_experiment.label, frozen.label);
+      assert.deepEqual(viaHost.run_experiment.per_seed.map((p) => p.seed), frozen.spec.seeds);
+      assert.equal(typeof viaHost.run_experiment.verdict.validity, "string");
+    },
+  );
+});
+
+describe("run_window and run_pair gaps on the reference preset (FLEET_PLAYGROUND_PERF=1, contract section 7)", {
+  skip: process.env.FLEET_PLAYGROUND_PERF === "1" ? false : "set FLEET_PLAYGROUND_PERF=1",
+}, () => {
+  /**
+   * Steps a driver after one warm-up pass and returns the largest gap between next() calls, with the time the model's
+   * computeSeries took inside that gap. computeSeries is one model call the driver cannot divide.
+   */
+  async function largestGaps(type, message) {
+    const { MODEL_API } = await import("../src/runtime/worker.js");
+    let seriesMs = 0;
+    const api = {
+      ...MODEL_API,
+      computeSeries: (...args) => {
+        const t0 = performance.now();
+        const out = MODEL_API.computeSeries(...args);
+        seriesMs += performance.now() - t0;
+        return out;
+      },
+    };
+    const drive = () => {
+      const gen = createDrivers(api)[type](structuredClone(message));
+      const gaps = [];
+      let next;
+      do {
+        seriesMs = 0;
+        const before = performance.now();
+        next = gen.next();
+        gaps.push({ ms: performance.now() - before, seriesMs, label: next.done ? "the return" : next.value?.label ?? "tick" });
+      } while (!next.done);
+      return { gaps, payload: next.value };
+    };
+    const warm = drive();
+    const measured = drive();
+    assert.deepEqual(measured.payload, warm.payload, "stepping twice gives one payload");
+    return measured.gaps;
+  }
+
+  async function referenceScenarios() {
+    const { applyAxis, defaultScenario } = await import("../src/model/schema.js");
+    let s = defaultScenario();
+    for (const [area, n] of [["SF", 50], ["PEN", 30], ["SJ", 40], ["EB", 30]]) s = applyAxis(s, `parameter:SUP-1.${area}`, n);
+    s.sigma_permille = 150;
+    s.name = "reference_150";
+    return { baseline: s, candidate: applyAxis(s, "parameter:DEP-4", 900) };
+  }
+
+  for (const type of ["run_window", "run_pair"]) {
+    test(`${type}: every gap without computeSeries at most ${MAIN_SLICE_MS} ms after one warm-up`, async (t) => {
+      const { sharedLambdaMaxPermille } = await import("../src/model/world.js");
+      const { baseline, candidate } = await referenceScenarios();
+      const message = type === "run_window"
+        ? { type, id: "w", scenario: baseline, seeds: [1001, 1002, 1003, 1004, 1005], logSeed: 1001 }
+        : { type, id: "p", baseline, candidate, seed: 1001, lambdaMaxPermille: sharedLambdaMaxPermille([baseline, candidate]) };
+      const gaps = await largestGaps(type, message);
+      const own = gaps.reduce((a, g) => (g.ms - g.seriesMs > a.ms - a.seriesMs ? g : a));
+      const series = gaps.reduce((a, g) => (g.seriesMs > a.seriesMs ? g : a));
+      const text = `largest gap less computeSeries ${(own.ms - own.seriesMs).toFixed(2)} ms at ${own.label}; ` +
+        `largest computeSeries call ${series.seriesMs.toFixed(2)} ms; over ${gaps.length} steps`;
+      t.diagnostic(text);
+      assert.ok(own.ms - own.seriesMs <= MAIN_SLICE_MS, text);
+    });
+  }
 });

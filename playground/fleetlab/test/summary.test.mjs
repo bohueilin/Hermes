@@ -8,6 +8,8 @@ import { guardrailStatuses } from "../src/instrument/guardrails.js";
 import { resolveOutcome } from "../src/instrument/outcome.js";
 import { resolveRecommendation } from "../src/instrument/recommendation.js";
 import { FORBIDDEN_SUMMARY_KEYS, resultSummary, summaryText } from "../src/instrument/summary.js";
+import { MODEL_VERSION, freezeSpec, runExperimentSpec } from "../src/model/experiment.js";
+import { presetById, seedSet } from "../src/model/presets.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const PLAYGROUND_ROOT = fileURLToPath(new URL("../", import.meta.url));
@@ -137,9 +139,28 @@ describe("result summary", () => {
     assert.deepEqual(guardrailStatuses(verdict.guardrail_results, GUARDRAILS), verdict.guardrail_statuses);
   });
 
-  test("equals the committed sample summary", () => {
+  test("the committed sample summary is the UC-01 preset's real verdict from the model", () => {
+    // Built in-process from the preset exactly as the Experiment sheet freezes it; the fixture was written by hand from
+    // a scratch run of this same call, and no playground code writes it (contract section 12, item 12).
+    const frozen = freezeSpec(structuredClone(presetById("UC-01").experiment));
+    const { verdict, digest, label } = runExperimentSpec(frozen.spec);
+    const { spec } = frozen;
+    const summary = resultSummary(verdict, {
+      specDigest: digest,
+      modelVersion: spec.model_version,
+      question: spec.question,
+      axis: spec.axis.id,
+      baselineValue: spec.axis.baseline,
+      candidateValue: spec.axis.candidate,
+      seedSet: { set: spec.seed_set, seeds: [...spec.seeds] },
+    });
     const expected = JSON.parse(readFileSync(SAMPLE_PATH, "utf8"));
-    assert.deepEqual(resultSummary(handBuiltVerdict(), OPTIONS), expected);
+    assert.deepStrictEqual(summary, expected);
+    assert.equal(summary.model_version, MODEL_VERSION);
+    assert.equal(summary.playground_spec, label);
+    assert.deepEqual(summary.seed_set, { set: 1, seeds: seedSet(1, 20) });
+    // UC-01 is the labelled null check (both arms 10), so the verdict must read no change.
+    assert.equal(summary.outcome, "UNCHANGED");
   });
 
   for (const [name, build] of [["valid", handBuiltVerdict], ["invalid", invalidVerdict]]) {

@@ -691,3 +691,91 @@ describe("Experiment: draft, freeze, verdict and session log", () => {
     );
   });
 });
+
+describe("Experiment flow across modes and presets (review: experiment-flow lens)", () => {
+  const AXIS = { id: "policy:depot_assignment", baseline: "home_depot", candidate: "nearest_depot" };
+  const VERDICT_X1 = { type: "experiment/verdict", id: "x1", payload: { verdict: validVerdict(), digest: DIGEST } };
+  const toSandbox = { type: "mode/set", mode: "sandbox" };
+  const toExperiment = { type: "mode/set", mode: "experiment" };
+
+  test("a draft Test it properly declared keeps its scenario across a Sandbox round trip with no knob changed", () => {
+    const declared = { ...fakeScenario(), sigma_permille: 150 };
+    const s0 = steps(initial(), [
+      { type: "engine/path", path: "worker" },
+      { type: "learn/case", caseId: "L3" },
+      { type: "learn/testItProperly", draft: { axis: AXIS, question: "Home depot or nearest depot?", baselineScenario: declared } },
+      { type: "experiment/freeze", id: "x1", spec: fakeSpec(), digest: DIGEST, label: "playground-spec:3f9a1c2e", frozenAt: "14:02" },
+      VERDICT_X1,
+    ]);
+    assert.deepEqual(s0.experiment.draft.baselineScenario, declared);
+    assert.deepEqual(s0.experiment.draft.baselineSource, { presetId: "bay" });
+    const s = steps(s0, [toSandbox, toExperiment]);
+    assert.deepEqual(s.experiment.draft, s0.experiment.draft, "nothing in the setup moved");
+    assert.equal(s.experiment.verdictStale, false);
+
+    const moved = steps(s, [toSandbox, SJ1_BAYS, toExperiment]);
+    assert.equal(moved.experiment.draft.baselineScenario, moved.scenario, "a Sandbox change makes the scenario the baseline");
+    assert.deepEqual(moved.experiment.draft.axis, { id: "parameter:DEP-3.SJ-1", baseline: 3, candidate: 1 });
+    assert.equal(moved.experiment.draft.axisSource, "sandbox");
+    assert.equal(moved.experiment.verdictStale, true, "the setup changed, so the verdict is out of date");
+
+    const other = steps(s, [toSandbox, { type: "preset/select", presetId: "uc07", scenario: fakeScenario("uc07") }, toExperiment]);
+    assert.equal(other.experiment.draft.baselineScenario, other.scenario, "another preset is not the declared one");
+    assert.deepEqual(other.experiment.draft.baselineSource, { presetId: "uc07" });
+    assert.equal(other.experiment.verdictStale, true);
+  });
+
+  test("a Sandbox round trip that changes nothing leaves the verdict current; one that moves the baseline marks it", () => {
+    let s = step(frozenState([SJ_CARS]), VERDICT_X1);
+    s = steps(s, [toSandbox, toExperiment]);
+    assert.equal(s.experiment.verdictStale, false);
+    s = steps(s, [toSandbox, SJ1_BAYS, toExperiment]);
+    assert.equal(s.experiment.verdictStale, true);
+    assert.equal(s.experiment.draft.baselineScenario, s.scenario);
+  });
+
+  test("an edit made while the experiment runs marks the verdict out of date when it arrives", () => {
+    const edits = [
+      [{ type: "experiment/draft", patch: { question: "edited during the run" } }],
+      [{ type: "experiment/guardrailAdd", guardrail: { metric: "unserved.fraction", scope: {}, max_harm_text: "0.02" } }],
+      [{ type: "experiment/nextSeedSet" }],
+      [toSandbox, SJ1_BAYS, toExperiment],
+    ];
+    for (const edit of edits) {
+      const s = steps(frozenState(), [...edit, VERDICT_X1]);
+      assert.equal(s.experiment.status, "done");
+      assert.equal(s.experiment.verdictStale, true, edit.map((a) => a.type).join(", "));
+    }
+    const untouched = step(frozenState(), VERDICT_X1);
+    assert.equal(untouched.experiment.verdictStale, false);
+    const edited = steps(frozenState(), [{ type: "experiment/draft", patch: { resamples: 5000 } }, VERDICT_X1]);
+    const refrozen = step(edited, { type: "experiment/freeze", id: "x2", spec: fakeSpec(), digest: DIGEST, label: "playground-spec:3f9a1c2e", frozenAt: "14:05" });
+    assert.equal(refrozen.experiment.verdictStale, false, "a new freeze is about the current setup");
+  });
+
+  test("a chosen preset loads its scenario and declared draft, survives a round trip, and marks a shown verdict out of date", () => {
+    const declared = { ...fakeScenario("uc01"), sigma_permille: 150 };
+    const draft = {
+      question: "Null check?",
+      baselineScenario: declared,
+      axis: { id: "parameter:DEP-7", baseline: 10, candidate: 10 },
+      primary: { metric: "wait.p90_s", scope: {}, direction: "lower_is_better", margin_units: 60 },
+      guardrails: [],
+      seedSet: 1,
+      seedCount: 20,
+      resamples: 2000,
+    };
+    let s = step(frozenState([SJ_CARS]), VERDICT_X1);
+    s = steps(s, [toSandbox, { type: "experiment/fromPreset", presetId: "UC-01", scenario: fakeScenario("uc01"), draft }]);
+    assert.equal(s.mode, "experiment");
+    assert.equal(s.presetId, "UC-01");
+    assert.equal(s.scenario.name, "uc01");
+    assert.deepEqual(s.changes, []);
+    assert.deepEqual(s.experiment.draft, { ...draft, axisSource: "preset", baselineSource: { presetId: "UC-01" } });
+    assert.equal(s.experiment.verdictStale, true);
+    assert.equal(sandboxChangesSinceFreeze(s), 1, "the preset change counts in the freeze notice");
+    const back = steps(s, [toSandbox, toExperiment]);
+    assert.deepEqual(back.experiment.draft, s.experiment.draft);
+    assert.throws(() => reduce(s, { type: "experiment/fromPreset", presetId: "UC-01", scenario: fakeScenario(), draft: { question: "" } }), TypeError);
+  });
+});

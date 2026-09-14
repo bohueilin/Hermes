@@ -357,6 +357,17 @@ describe("module rewriter", () => {
 });
 
 describe("packed HTML", () => {
+  test("the policy constant is the design section 9.4 text, read from the design, not from pack.mjs", () => {
+    const design = readFileSync(join(REPO_ROOT, "docs/plans/2026-09-13-fleetlab-playground-design.md"), "utf8");
+    const match = design.match(/content security policy of `([^`]+)`/);
+    assert.ok(match, "the design names the content security policy in backticks");
+    assert.equal(CONTENT_SECURITY_POLICY, match[1].replace(/\s+/g, " "));
+    // The no-network directives stay named here too, so the design line and the constant cannot both lose one.
+    for (const directive of ["default-src 'none'", "connect-src 'none'", "form-action 'none'", "base-uri 'none'", "worker-src blob:"]) {
+      assert.ok(CONTENT_SECURITY_POLICY.split("; ").includes(directive), directive);
+    }
+  });
+
   test("policy first in head, styles inlined, worker source escaped, start call with the Blob factory", () => {
     const { playground } = fakeRepository("html");
     const html = buildHtml(playground);
@@ -532,13 +543,19 @@ describe("output path rules and R3", () => {
     assert.equal(existsSync(out2), false);
   });
 
-  test("R3: only tools/pack.mjs imports fs; check-dist.mjs imports existsSync and readFileSync by name only", () => {
+  test("R3: only tools/pack.mjs imports fs or loads modules through node:module or getBuiltinModule; check-dist.mjs imports existsSync and readFileSync by name only", () => {
     const FS = "[\"'`](?:node:)?fs(?:/promises)?[\"'`]";
     const fsUses = new RegExp(`\\bfrom\\s*${FS}|\\bimport\\s*\\(?\\s*${FS}|\\brequire\\s*\\(\\s*${FS}`, "g");
     const namedImports = new RegExp(`\\bimport\\s*([^;]*?)\\s*from\\s*${FS}`, "g");
     const readOnly = ["existsSync", "readFileSync"];
+    // createRequire and process.getBuiltinModule reach fs without naming it in an import, so both are refused outright.
+    const MODULE = "[\"'`](?:node:)?module[\"'`]";
+    const loaderUses = new RegExp(`\\bfrom\\s*${MODULE}|\\bimport\\s*\\(?\\s*${MODULE}|\\brequire\\s*\\(\\s*${MODULE}|\\bcreateRequire\\b|\\bgetBuiltinModule\\b`, "g");
     /** Problems with one file's use of fs; `allowRead` permits only `import { existsSync, readFileSync } from "node:fs"`. */
     const fsProblems = (text, allowRead) => {
+      const problems = [];
+      const loaders = [...text.matchAll(loaderUses)].length;
+      if (loaders > 0) problems.push(`${loaders} use of node:module, createRequire or getBuiltinModule`);
       const uses = [...text.matchAll(fsUses)].length;
       const allowed = !allowRead
         ? 0
@@ -547,7 +564,8 @@ describe("output path rules and R3", () => {
             const list = names ? names[1].split(",").map((s) => s.trim()).filter(Boolean) : [];
             return /["'`]node:fs["'`]$/.test(m[0]) && list.length > 0 && list.every((name) => readOnly.includes(name));
           }).length;
-      return uses === allowed ? [] : [`${uses - allowed} import or require of fs beyond existsSync and readFileSync`];
+      if (uses !== allowed) problems.push(`${uses - allowed} import or require of fs beyond existsSync and readFileSync`);
+      return problems;
     };
     // The check names no write call, so an unlisted one (openSync, cp, truncate, mkdtemp) cannot slip past it.
     const refused = [
@@ -562,11 +580,19 @@ describe("output path rules and R3", () => {
       'import { existsSync, readFileSync, openSync } from "node:fs";',
       'import { readFileSync as writeFileSync } from "node:fs";',
       'import { existsSync, readFileSync } from "node:fs";\nconst fs = require("node:fs");',
+      'import { createRequire } from "node:module";\nconst load = createRequire(import.meta.url);\nconst { writeFileSync } = load("node:fs");',
+      'const { writeFileSync } = process.getBuiltinModule("node:fs");',
+      'const { rmSync } = process["getBuiltinModule"]("fs");',
+      'import * as loader from "module";\nconst load = loader["create" + "Require"](import.meta.url);',
+      'const load = require("node:module").createRequire(__filename);',
+      'const loader = await import("node:module");',
+      'import { existsSync, readFileSync } from "node:fs";\nconst { openSync } = process.getBuiltinModule("fs");',
     ];
     for (const probe of refused) assert.notDeepEqual(fsProblems(probe, true), [], probe);
     assert.deepEqual(fsProblems('import { existsSync, readFileSync } from "node:fs";', true), []);
     assert.notDeepEqual(fsProblems('import { existsSync, readFileSync } from "node:fs";', false), []);
     assert.deepEqual(fsProblems('import { join } from "node:path";\nconst note = "fsync";', false), []);
+    assert.deepEqual(fsProblems('const worker = new Worker(url, { type: "module" });', false), []);
 
     const offenders = [];
     const walk = (dir) => {
@@ -650,6 +676,43 @@ describe("check-dist", () => {
     expectProblem(withBody('<style>b{background:image-set("a.png" 1x, "//example.org/b.png" 2x)}</style>'), /^external URL: a protocol-relative reference in CSS/);
     expectProblem(withBody('<style>@import "//example.org/a.css";</style>'), /^external URL: a protocol-relative reference in CSS/);
     expectProblem(valid.replace("FLEETLAB_WORKER_SOURCE = \"", 'FLEETLAB_WORKER_SOURCE = "https://example.org/w.js '), /^external URL/);
+  });
+
+  test("protocol-relative strings in script, the worker source included, comments and regular expressions excluded", () => {
+    const inScript = /^external URL: a protocol-relative string in script/;
+    expectProblem(withBody('<script>img.src = "//example.org/a.png";</script>'), inScript);
+    expectProblem(withBody("<script>img.src = ' \\/\\/example.org/a.png';</script>"), inScript);
+    expectProblem(withBody('<script>img.src = "\\u002f\\u002fexample.org/a.png";</script>'), inScript);
+    expectProblem(withBody("<script>img.src = `//${host}/a.png`;</script>"), inScript);
+    expectProblem(valid.replace('const FLEETLAB_WORKER_SOURCE = "', 'const FLEETLAB_WORKER_SOURCE = "img.src = \\"//example.org/a.png\\"; '), inScript);
+    expectProblem(withBody('<script>const s = "unterminated;</script>'), /^script: a script element that cannot be scanned/);
+    const clean = [
+      '<script>// see //example.org\n/* and //example.org */ const note = "// a note", root = "/", pair = "//";</script>',
+      "<script>const pattern = /\\/\\/example\\.org/;</script>",
+    ];
+    for (const extra of clean) assert.deepEqual(checkDist(withBody(extra), { requiredLabels: labels }), [], extra);
+  });
+
+  test("a meta refresh, whatever its spelling or content", () => {
+    const metas = [
+      '<meta http-equiv="refresh" content="0;url=//example.org">',
+      "<META HTTP-EQUIV=Refresh CONTENT=5>",
+      "<meta content='1' http-equiv=' refresh '>",
+      '<meta http-equiv="&#114;efresh" content="0">',
+    ];
+    for (const meta of metas) expectProblem(valid.replace("</head>", `${meta}</head>`), /^forbidden element: a meta refresh/);
+    assert.deepEqual(checkDist(withBody('<meta name="refresh" content="0"><p>refresh</p>'), { requiredLabels: labels }), []);
+  });
+
+  test("tags are tokenized as a browser reads them: a stray quote belongs to the value or name it sits in", () => {
+    const inSrc = /^external URL: a protocol-relative reference in src/;
+    expectProblem(withBody("<img alt=x' src=//example.org/a.png>"), inSrc);
+    expectProblem(withBody('<img alt=x" src=//example.org/a.png>'), inSrc);
+    expectProblem(withBody("<img x'y src=//example.org/a.png>"), inSrc);
+    expectProblem(withBody("<img alt=it's title=Live>"), /^banned word: "Live" in title attribute/);
+    // A bare < is text, so the words after it are still copy.
+    expectProblem(withBody("<p>1 < 2 Live view</p>"), /^banned word: "Live" in text/);
+    assert.deepEqual(checkDist(withBody("<p>it's <b title=\"it's > fine\">fine</b></p>"), { requiredLabels: labels }), []);
   });
 
   test("a missing, different, duplicated or misplaced policy", () => {

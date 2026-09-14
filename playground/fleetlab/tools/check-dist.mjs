@@ -81,15 +81,75 @@ function markupOf(html) {
   return html.replace(/<!--[\s\S]*?-->/g, "").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "<$1></$1>");
 }
 
-/** `[name, value]` for every attribute of every tag: names lower-cased, quoted or unquoted values entity-decoded. */
-function attributesOf(markup) {
-  const found = [];
-  for (const tag of markup.matchAll(/<[a-z][^\s/>]*((?:[^>"']|"[^"]*"|'[^']*')*)>/gi)) {
-    for (const m of tag[1].matchAll(/([^\s"'<>/=]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g)) {
-      found.push([m[1].toLowerCase(), decodeEntities(m[2] ?? m[3] ?? m[4])]);
+/**
+ * Start tags and text runs of markup, tokenized as a browser's HTML tokenizer reads them: a quote inside an
+ * unquoted value or an attribute name belongs to it, and only whitespace or `>` ends an unquoted value.
+ * Tags are `{ name, attributes }` with names lower-cased and values entity-decoded; end tags are skipped.
+ */
+function tokensOf(markup) {
+  const tags = [];
+  const texts = [];
+  const n = markup.length;
+  const space = /[\t\n\f\r ]/;
+  let textStart = 0;
+  const flushText = (to) => {
+    if (to > textStart) texts.push(decodeEntities(markup.slice(textStart, to)));
+  };
+  for (let i = markup.indexOf("<"); i !== -1; i = markup.indexOf("<", i)) {
+    const isEnd = markup[i + 1] === "/";
+    const nameAt = i + (isEnd ? 2 : 1);
+    if (!/[a-z]/i.test(markup[nameAt] ?? "")) {
+      if (!/[!?/]/.test(markup[i + 1] ?? "")) {
+        i += 1;
+        continue;
+      }
+      // A doctype, a bogus comment or a nameless end tag runs to the next `>`.
+      flushText(i);
+      const close = markup.indexOf(">", i);
+      i = textStart = close === -1 ? n : close + 1;
+      continue;
     }
+    flushText(i);
+    let j = nameAt;
+    while (j < n && !space.test(markup[j]) && markup[j] !== "/" && markup[j] !== ">") j += 1;
+    const tag = { name: markup.slice(nameAt, j).toLowerCase(), attributes: [] };
+    while (j < n && markup[j] !== ">") {
+      if (space.test(markup[j]) || markup[j] === "/") {
+        j += 1;
+        continue;
+      }
+      let k = j + 1; // the first character of a name may be "="
+      while (k < n && !space.test(markup[k]) && !"/>=".includes(markup[k])) k += 1;
+      const name = markup.slice(j, k).toLowerCase();
+      for (j = k; j < n && space.test(markup[j]); j += 1);
+      if (markup[j] !== "=") {
+        tag.attributes.push([name, ""]);
+        continue;
+      }
+      for (j += 1; j < n && space.test(markup[j]); j += 1);
+      let value;
+      if (markup[j] === '"' || markup[j] === "'") {
+        const close = markup.indexOf(markup[j], j + 1);
+        value = markup.slice(j + 1, close === -1 ? n : close);
+        j = close === -1 ? n : close + 1;
+      } else {
+        for (k = j; k < n && !space.test(markup[k]) && markup[k] !== ">"; k += 1);
+        value = markup.slice(j, k);
+        j = k;
+      }
+      tag.attributes.push([name, decodeEntities(value)]);
+    }
+    // A tag cut off by the end of the file is still reported, which is stricter than a browser.
+    if (!isEnd) tags.push(tag);
+    i = textStart = Math.min(j + 1, n);
   }
-  return found;
+  flushText(n);
+  return { tags, texts };
+}
+
+/** `[name, value]` for every attribute of every start tag. */
+function attributesOf(tags) {
+  return tags.flatMap((tag) => tag.attributes);
 }
 
 /** URL candidates of a srcset value, split as a browser splits them (a data URL may hold commas). */
@@ -126,15 +186,39 @@ function decodeJsEscapes(text) {
 /** Visible copy of the HTML: text nodes (title included) and aria-label, title, alt and placeholder values, quoted or not. */
 export function visibleCopy(html) {
   const items = [];
-  const markup = markupOf(html);
-  for (const m of markup.matchAll(/>([^<]+)</g)) {
-    const text = decodeEntities(m[1]).trim();
+  const { tags, texts } = tokensOf(markupOf(html));
+  for (const text of texts.map((t) => t.trim())) {
     if (text) items.push({ where: "text", text });
   }
-  for (const [name, text] of attributesOf(markup)) {
+  for (const [name, text] of attributesOf(tags)) {
     if (COPY_ATTRIBUTES.has(name)) items.push({ where: `${name} attribute`, text });
   }
   return items;
+}
+
+/** A string that a URL parser reads as protocol-relative: two slashes (either way) then a host character. */
+const PROTOCOL_RELATIVE_STRING = /^[\\/]{2}[^\\/\s]/;
+
+/**
+ * Protocol-relative string and template literals in JavaScript source, comments excluded. Literals are scanned
+ * again as source, so the worker source string is covered; a template text ending in `//` before `${` counts.
+ * Returns null when the source cannot be scanned.
+ */
+function protocolRelativeStrings(source, depth = 0) {
+  const literals = [];
+  try {
+    maskSource(source, { literals });
+  } catch {
+    return null;
+  }
+  const found = [];
+  for (const [from, to] of literals) {
+    const value = decodeJsEscapes(source.slice(from, to));
+    const url = value.replace(/[\t\n\r]/g, "").replace(/^[\u0000-\u0020]+/, "");
+    if (PROTOCOL_RELATIVE_STRING.test(url) || (/^[\\/]{2}$/.test(url) && source.startsWith("${", to))) found.push(value);
+    if (depth < 2) found.push(...(protocolRelativeStrings(value, depth + 1) ?? []));
+  }
+  return found;
 }
 
 /** String and template literal texts of the named module sections in the page script, escapes decoded. */
@@ -176,13 +260,25 @@ export function checkDist(html, { requiredLabels, byteLength = Buffer.byteLength
     problems.push(`external URL: ${JSON.stringify(decoded.slice(m.index, m.index + 60))}`);
   }
   // Attributes are read from markup only, so script text such as `const data = x; // note` is never taken for one.
-  for (const [name, value] of attributesOf(markupOf(html))) {
+  const { tags } = tokensOf(markupOf(html));
+  for (const [name, value] of attributesOf(tags)) {
     const local = name.slice(name.lastIndexOf(":") + 1);
     if (URL_ATTRIBUTES.has(local) && isProtocolRelative(local, value)) {
       problems.push(`external URL: a protocol-relative reference in ${name} ${JSON.stringify(value.slice(0, 60))}`);
     }
   }
   if (CSS_REMOTE.some((pattern) => pattern.test(decoded))) problems.push("external URL: a protocol-relative reference in CSS");
+  for (const script of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)) {
+    const strings = protocolRelativeStrings(script[1]);
+    if (strings === null) problems.push("script: a script element that cannot be scanned for protocol-relative strings");
+    for (const value of strings ?? []) {
+      problems.push(`external URL: a protocol-relative string in script ${JSON.stringify(value.slice(0, 60))}`);
+    }
+  }
+  // A meta refresh navigates the page (design section 9.4), whatever its content says.
+  if (tags.some((tag) => tag.name === "meta" && tag.attributes.some(([name, value]) => name === "http-equiv" && value.trim().toLowerCase() === "refresh"))) {
+    problems.push("forbidden element: a meta refresh");
+  }
 
   const policies = [...html.matchAll(/<meta\b[^>]*http-equiv\s*=\s*["']?Content-Security-Policy["']?[^>]*>/gi)];
   const head = /<head\b[^>]*>/i.exec(html);

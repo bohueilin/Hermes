@@ -1552,7 +1552,144 @@ def build_legacy_defect() -> Payload:
     return _legacy_file({"defect": defect, "defect_seed101": seeded})
 
 
-#: Fixture file name -> builder. Phase 5 registers the reference panels here.
+# --- reference panels (ARCHITECTURE.md section 5.2) ----------------------------------------
+
+REFERENCE_PANELS_FORMAT = "fleet-playground-reference-panels"
+
+#: Descriptive metrics whose values a panel never shows (design sections 5.7 and 7.2, FL-2).
+SUPPRESSED_METRICS = (
+    "fleet.utilization_fraction",
+    "business_proxy.served_trips",
+    "business_proxy.unserved_demand",
+)
+
+#: The exploratory two-zone probe, exactly as design Appendix A.9 writes it.
+PROBE_SPEC: Payload = {
+    "schema_version": "0.1",
+    "experiment_id": "bay-area-bay-outage-probe",
+    "decision_owner": "AUTHOR_SELF_TEST",
+    "question": (
+        "If the shared depot loses half its service bays, does rider wait p90 across "
+        "San Francisco and San Jose degrade beyond the declared margin?"
+    ),
+    "scenario": {
+        "schema_version": "0.1",
+        "name": "bay_area_two_zone_probe",
+        "label": "synthetic_fleet_scenario_not_calibrated_to_any_real_operation",
+        "horizon_s": 21600,
+        "zones": ["san_francisco", "san_jose"],
+        "travel_time_s": {"san_francisco->san_jose": 3000, "san_jose->san_francisco": 3000},
+        "vehicle_count": 25,
+        "demand_per_zone_per_hour": 18,
+        "max_wait_s": 1200,
+        "trips_between_service": 6,
+        "service_bays": 4,
+        "service_duration_s": 1800,
+        "in_zone_pickup_s": 300,
+        "travel_sigma": 0.25,
+    },
+    "variation_axis": "parameter:service_bays",
+    "baseline_value": 4.0,
+    "candidate_value": 2.0,
+    "primary_metric": {
+        "name": "wait.p90_s",
+        "unit": "s",
+        "direction": "lower_is_better",
+        "equivalence_margin": 60.0,
+    },
+    "guardrails": [
+        {"metric": "unserved.fraction", "max_harm": 0.02, "direction": "lower_is_better"}
+    ],
+    "seeds": [301, 302, 303, 304, 305, 306, 307, 308, 309, 310],
+    "bootstrap_resamples": 2000,
+    "calibration_state": "SYNTHETIC_UNCALIBRATED",
+}
+#: The spec digest prefix design Appendix A.9 records for the probe.
+PROBE_SPEC_DIGEST_PREFIX = "e8f30fec61b7"
+
+
+def probe_spec() -> ExperimentSpec:
+    """The Appendix A.9 spec, validated from JSON as FleetLab reads a spec file."""
+    spec = ExperimentSpec.model_validate_json(json.dumps(PROBE_SPEC))
+    digest = spec.spec_digest()
+    if not digest.startswith(PROBE_SPEC_DIGEST_PREFIX):
+        raise RuntimeError(
+            f"probe spec digest {digest[:12]} is not the design's {PROBE_SPEC_DIGEST_PREFIX}"
+        )
+    return spec
+
+
+def _reference_panel(spec: ExperimentSpec) -> Payload:
+    """Design section 7.2 projection of ``run_experiment(spec)``: values unmodified, no digests."""
+    record = run_experiment(spec)
+    declared = {spec.primary_metric.name, *(rail.metric for rail in spec.guardrails)}
+    suppressed = [row.metric for row in record.descriptives if row.metric in SUPPRESSED_METRICS]
+    if sorted(suppressed) != sorted(SUPPRESSED_METRICS) or declared & set(SUPPRESSED_METRICS):
+        raise RuntimeError(
+            f"{spec.experiment_id}: suppressed metrics must be descriptive rows only: {suppressed}"
+        )
+    results = {row.metric: row for row in record.guardrail_results}
+    primary = record.primary
+    reason = record.invalidity_reason
+    return {
+        "experiment_id": record.experiment_id,
+        "question": record.question,
+        "variation_axis": record.variation_axis,
+        "baseline_value": record.baseline_value,
+        "candidate_value": record.candidate_value,
+        "replications": record.replications,
+        "validity": record.validity.value,
+        "invalidity_reason": None if reason is None else reason.value,
+        "outcome": None if record.outcome is None else record.outcome.value,
+        "recommendation": record.recommendation.value,
+        "primary": None
+        if primary is None
+        else {
+            "metric": primary.metric,
+            "direction": spec.primary_metric.direction,
+            "equivalence_margin": spec.primary_metric.equivalence_margin,
+            "baseline_mean": primary.baseline_mean,
+            "candidate_mean": primary.candidate_mean,
+            "mean_delta": primary.mean_delta,
+            "median_delta": primary.median_delta,
+            "ci_low": primary.ci_low,
+            "ci_high": primary.ci_high,
+        },
+        "guardrails": [
+            {
+                "metric": rail.metric,
+                "direction": rail.direction,
+                "max_harm": rail.max_harm,
+                "mean_delta": results[rail.metric].mean_delta if rail.metric in results else None,
+                "regressed": rail.metric in record.guardrail_regressions,
+            }
+            for rail in spec.guardrails
+        ],
+        "descriptives": [
+            {
+                "metric": row.metric,
+                "baseline_mean": row.baseline_mean,
+                "candidate_mean": row.candidate_mean,
+                "mean_delta": row.mean_delta,
+            }
+            for row in record.descriptives
+            if row.metric not in SUPPRESSED_METRICS
+        ],
+        "suppressed": suppressed,
+    }
+
+
+def build_reference_panels() -> Payload:
+    """The quoted FLEET-005 panel and the exploratory two-zone probe panel."""
+    return {
+        "format": REFERENCE_PANELS_FORMAT,
+        "format_version": 1,
+        "fleet005": _reference_panel(fleet_005_spec()),
+        "probe": _reference_panel(probe_spec()),
+    }
+
+
+#: Fixture file name -> builder.
 FIXTURES: dict[str, Callable[[], Payload]] = {
     "instrument_vectors.json": build_instrument_vectors,
     "legacy_fleet005_seed101.json": build_legacy_fleet005_seed101,
@@ -1561,6 +1698,7 @@ FIXTURES: dict[str, Callable[[], Payload]] = {
     "legacy_precheck_world_fed_axis.json": build_legacy_precheck_world_fed_axis,
     "legacy_fl11_horizon_crash.json": build_legacy_fl11_horizon_crash,
     "legacy_defect.json": build_legacy_defect,
+    "reference_panels.json": build_reference_panels,
 }
 
 
