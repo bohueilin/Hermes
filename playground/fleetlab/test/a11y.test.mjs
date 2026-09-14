@@ -220,6 +220,56 @@ describe("focus, targets, strip and narrow layout", () => {
     assert.ok(Number.parseInt(THEMES.light["--gutter"], 10) >= 16);
   });
 
+  test("every control rule applies the 44 px target as min-height and min-width", () => {
+    const controls = [".fl-button", ".fl-segmented button", ".fl-knobs-toggle", ".fl-strip__short", "input", "select"];
+    for (const selector of controls) {
+      const rules = RULES.filter((rule) => rule.selectors?.includes(selector));
+      for (const name of ["min-height", "min-width"]) {
+        const applies = rules.some((rule) => rule.context.length === 0 && rule.declarations.some((d) => d.name === name && d.value === "var(--target)"));
+        assert.ok(applies, `${selector} has ${name}: var(--target) outside any media block`);
+        for (const rule of rules) {
+          for (const d of rule.declarations.filter((decl) => decl.name === name)) assert.equal(d.value, "var(--target)", `${rule.prelude} ${name}`);
+        }
+      }
+    }
+  });
+
+  test("the teaching-model strip stacks above every overlay, and fixed overlays start below it (design H-1)", () => {
+    const zIndex = (rules) => rules.flatMap((rule) => rule.declarations).filter((d) => d.name === "z-index").map((d) => Number(d.value));
+    const stripRules = RULES.filter((rule) => rule.selectors?.includes(".fl-strip"));
+    const [stripZ] = zIndex(stripRules);
+    assert.ok(Number.isInteger(stripZ), "the strip declares a z-index");
+    const fixed = new Set(
+      RULES.filter((rule) => rule.declarations.some((d) => d.name === "position" && d.value === "fixed")).flatMap((rule) => rule.selectors),
+    );
+    assert.ok(fixed.size > 0);
+    const names = (selector) => [...fixed].filter((f) => new RegExp(`${f.replace(/[.[\]()*+?^$|\\]/g, "\\$&")}(?![\\w-])`).test(selector));
+    const overlayRules = RULES.filter((rule) => rule.selectors?.some((s) => names(s).length > 0));
+    for (const z of zIndex(overlayRules)) assert.ok(z < stripZ, `a fixed overlay at z-index ${z} is under the strip at ${stripZ}`);
+    for (const z of zIndex(RULES.filter((rule) => !stripRules.includes(rule)))) assert.ok(z < stripZ, `z-index ${z} is under the strip`);
+
+    const top = (d) => (d.name === "top" || d.name === "inset-block-start" ? d.value : ["inset", "inset-block"].includes(d.name) ? d.value.split(/\s+(?![^(]*\))/)[0] : null);
+    for (const selector of fixed) {
+      const rules = overlayRules.filter((rule) => rule.selectors.some((s) => names(s).includes(selector)));
+      assert.ok(
+        rules.some((rule) => rule.context.length === 0 && rule.selectors.includes(selector) && rule.declarations.some((d) => top(d) === "var(--strip-block)")),
+        `${selector} starts at var(--strip-block) on a phone`,
+      );
+      for (const rule of rules) {
+        for (const d of rule.declarations.filter((decl) => top(decl) !== null)) {
+          assert.equal(top(d), "var(--strip-block)", `${rule.context.join(" ") || "base"} ${rule.prelude} ${d.name}: ${d.value}`);
+        }
+      }
+    }
+    // The phone strip is one block-level target tall; the token must cover it and its padding and rule.
+    const decl = (name) => stripRules.flatMap((rule) => rule.declarations).find((d) => d.name === name)?.value;
+    const padding = decl("padding-block").split(/\s+/).map(Number.parseFloat);
+    const stripHeight = Number.parseFloat(THEMES.light["--target"]) + padding[0] + (padding[1] ?? padding[0]) + Number.parseFloat(decl("border-bottom"));
+    const short = RULES.find((rule) => rule.context.length === 0 && rule.selectors?.includes(".fl-strip__short") && rule.declarations.some((d) => d.name === "display"));
+    assert.equal(short?.declarations.find((d) => d.name === "display").value, "block", "the phone strip button is a block, so no line box adds height");
+    assert.ok(Number.parseFloat(THEMES.light["--strip-block"]) >= stripHeight, `--strip-block ${THEMES.light["--strip-block"]} covers the ${stripHeight} px phone strip`);
+  });
+
   test("no rule hides the teaching-model strip", () => {
     const stripRules = RULES.filter((rule) => rule.selectors?.some((s) => /\.fl-strip(?![\w-])/.test(s)));
     assert.ok(stripRules.length > 0);
@@ -236,12 +286,39 @@ describe("focus, targets, strip and narrow layout", () => {
 
   test("widths of 200 px or more appear only at 768 px and wider", () => {
     const widthLike = /^(min-)?(width|inline-size)$|^flex-basis$|^grid-template-columns$/;
+    // rem and em at the 16 px default; ch at 1em, an upper bound for any Latin font.
+    const pxPer = { px: 1, rem: 16, em: 16, ch: 16 };
+    const widestOf = (value) => Math.max(0, ...[...value.matchAll(/(\d*\.?\d+)(px|rem|em|ch)\b/g)].map((m) => Number(m[1]) * pxPer[m[2]]));
+    assert.deepEqual(["30rem", "12.5em", "25ch", "199px"].map(widestOf), [480, 200, 400, 199]);
     for (const rule of RULES) {
       const minWidth = Math.max(0, ...rule.context.map((c) => Number(c.match(/min-width:\s*(\d+)px/)?.[1] ?? 0)));
       for (const d of rule.declarations.filter((decl) => widthLike.test(decl.name))) {
-        const widest = Math.max(0, ...[...d.value.matchAll(/(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1])));
+        const widest = widestOf(d.value);
         assert.ok(widest < 200 || minWidth >= 768, `${rule.prelude} ${d.name}: ${d.value}`);
       }
+    }
+  });
+
+  test("sentence-length chips wrap at 400 px; only short register and verdict chips keep one line", async () => {
+    const { MODEL_LIMITS } = await import("../src/ui/labels.js");
+    // At 12 px monospace (about 7.2 px a character) the longest model-limits chip is wider than a 400 px screen.
+    assert.ok(Math.max(...Object.values(MODEL_LIMITS).map((s) => s.length)) * 7.2 > 400 - 32);
+    const sentenceChips = [".fl-limits-chip", ".fl-teaching-chip"];
+    for (const chip of sentenceChips) {
+      const rules = RULES.filter((rule) => rule.selectors?.some((s) => new RegExp(`\\${chip}(?![\\w-])`).test(s)));
+      for (const rule of rules) {
+        for (const d of rule.declarations.filter((decl) => decl.name === "white-space")) {
+          assert.ok(!["nowrap", "pre"].includes(d.value), `${rule.prelude} white-space: ${d.value} would keep ${chip} on one line`);
+        }
+      }
+      const own = rules.filter((rule) => rule.context.length === 0 && rule.selectors.includes(chip)).flatMap((rule) => rule.declarations);
+      for (const [name, value] of [["white-space", "normal"], ["overflow-wrap", "anywhere"], ["max-width", "100%"]]) {
+        assert.ok(own.some((d) => d.name === name && d.value === value), `${chip} sets ${name}: ${value}, so no parent's nowrap is inherited`);
+      }
+    }
+    const oneLine = new Set([".fl-chip-replay", ".fl-chip-across", ".fl-verdict-chip", ".fl-sr-only"]);
+    for (const rule of RULES.filter((r) => r.declarations.some((d) => d.name === "white-space" && d.value === "nowrap"))) {
+      assert.ok(rule.selectors.every((s) => oneLine.has(s)), `white-space: nowrap only on short chips, not ${rule.prelude}`);
     }
   });
 
@@ -375,6 +452,25 @@ describe("interface checks that arrive with the interface modules", () => {
     }
     const inspector = root.children.find((node) => classesOf(node).includes("fl-inspector"));
     assert.ok(inspector.hidden && inspector.hasAttribute("inert"), "the closed inspector drawer is hidden and inert");
+  });
+
+  test("single-column grid areas follow the DOM and tab order of src/ui/app.js", async () => {
+    const { root } = await startShell();
+    const areaOf = (name) => RULES.filter((rule) => rule.selectors?.includes(`.${name}`)).flatMap((rule) => rule.declarations).find((d) => d.name === "grid-area")?.value;
+    const domAreas = root.children.map((node) => areaOf(classesOf(node)[0])).filter(Boolean);
+    assert.ok(domAreas.includes("transport") && domAreas.includes("side"));
+    const layouts = RULES.filter((rule) => rule.selectors?.includes(".fl-app")).flatMap((rule) =>
+      rule.declarations
+        .filter((d) => d.name === "grid-template-areas")
+        .map((d) => ({ where: rule.context.join(" ") || "base", rows: [...d.value.matchAll(/"([^"]*)"/g)].map((m) => m[1].trim().split(/\s+/)) })),
+    );
+    const singleColumn = layouts.filter(({ rows }) => rows.every((row) => row.length === 1));
+    assert.ok(singleColumn.length >= 2, "the phone and tablet layouts are single-column");
+    for (const { where, rows } of singleColumn) {
+      const positions = rows.map(([name]) => domAreas.indexOf(name));
+      assert.ok(positions.every((i) => i !== -1), `${where}: every area names a shell region`);
+      assert.deepEqual(positions, [...positions].sort((a, b) => a - b), `${where}: ${rows.join(", ")} follows ${domAreas.join(", ")}`);
+    }
   });
 
   test("modes sit after the top bar and Run window closes the knobs in tab order", { todo: "needs src/ui/controls.js" });

@@ -60,6 +60,8 @@ Motion       :root[data-motion="reduce|full"] is the in-app override; without it
 
   --gutter: 16px;
   --target: 44px;
+  /* Phone strip height: the 44 px button, 8 px padding above and below, a 1 px rule. Overlays start below it. */
+  --strip-block: 61px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -143,14 +145,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
   min-width: var(--target);
 }
 
-/* Teaching-model strip (design H-1): no rule on this page may hide it. */
+/* Teaching-model strip (design H-1): no rule on this page may hide it, and it stacks above every overlay. */
 .fl-strip, .fl-strip[hidden] {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 80;
   padding-block: 8px;
   background: var(--panel-alt);
   color: var(--ink);
@@ -200,11 +202,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .fl-segmented button[aria-pressed="true"]:focus-visible { box-shadow: 0 0 0 2px var(--ground), inset 0 -2px 0 var(--accent); }
 
 .fl-strip__full { display: none; }
+/* A block button keeps the phone strip exactly one target tall, which --strip-block assumes. */
+.fl-strip__short { display: block; }
 
-/* Knobs on a phone: a full-height sheet with a sticky Run window button. */
+/* Knobs on a phone: a sheet from below the strip to the bottom, with a sticky Run window button. */
 .fl-knobs {
   position: fixed;
-  inset: 0;
+  inset: var(--strip-block) 0 0 0;
   z-index: 40;
   overflow-y: auto;
   border-radius: 0;
@@ -221,13 +225,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .fl-app:not([data-phone-group="across"]) .fl-across { display: none; }
 }
 
-/* Tablet, 768 to 1279 px: knobs become a left drawer, NOW folds under the map, charts form a 2 by 2 grid. */
+/* Tablet, 768 to 1279 px: knobs become a left drawer, the column follows DOM and tab order, charts form a 2 by 2 grid. */
 @media (min-width: 768px) {
-  .fl-app { grid-template-areas: "strip" "top" "map" "side" "transport" "charts" "footer"; }
+  .fl-app { grid-template-areas: "strip" "top" "map" "transport" "side" "charts" "footer"; }
   .fl-segmented, .fl-strip__short { display: none; }
   .fl-strip__full { display: inline; }
   .fl-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .fl-knobs { inset: 0 auto 0 0; width: 320px; transform: translateX(-100%); border-right: 1px solid var(--rule-strong); }
+  .fl-knobs { inset: var(--strip-block) auto 0 0; width: 320px; transform: translateX(-100%); border-right: 1px solid var(--rule-strong); }
   .fl-drawer.fl-inspector { width: 560px; }
 }
 
@@ -260,7 +264,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .fl-drawer {
   position: fixed;
-  inset: 0 0 0 auto;
+  inset: var(--strip-block) 0 0 auto;
   z-index: 50;
   width: 100%;
   overflow-y: auto;
@@ -335,8 +339,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-family: var(--font-mono);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
+/* Short register and verdict words stay on one line. */
+.fl-chip-replay, .fl-chip-across, .fl-verdict-chip { white-space: nowrap; }
+/* Model-limits and teaching-run chips hold sentences, so they wrap inside a 400 px screen. */
+.fl-limits-chip, .fl-teaching-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 .fl-chip-replay { background: var(--ink); color: var(--panel); border: 1px solid var(--ink); }
 .fl-chip-across { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
 .fl-limits-chip { background: var(--panel-alt); color: var(--ink); border: 1px solid var(--rule-strong); }

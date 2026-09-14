@@ -89,9 +89,12 @@ function emptyDraft() {
   };
 }
 
-/** A run slot with nothing computed. */
+/**
+ * A run slot with nothing computed. `scenarioAtQueue` is the scenario the run was queued on, so a result that arrives
+ * after a knob or preset change is marked out of date.
+ */
 function emptyRun() {
-  return { status: "idle", id: null, progress: null, summaries: [], selectedSeed: null, log: null, stale: false, violation: null, error: null };
+  return { status: "idle", id: null, progress: null, summaries: [], selectedSeed: null, log: null, stale: false, violation: null, error: null, scenarioAtQueue: null };
 }
 
 /**
@@ -114,7 +117,7 @@ export function createInitialState({ presetId, scenario, mode = "sandbox", reduc
     speed: 900,
     selection: null,
     inspector: null,
-    fork: { pinnedCar: null, status: "closed", id: null, pair: null, stale: false, error: null },
+    fork: { pinnedCar: null, status: "closed", id: null, pair: null, stale: false, error: null, scenarioAtOpen: null },
     experiment: {
       draft: emptyDraft(),
       frozen: null,
@@ -271,7 +274,10 @@ function runCase(state, action) {
   const run = state.run;
   switch (action.type) {
     case "run/queued":
-      return { ...state, run: { ...run, status: "queued", id: action.id, progress: { done: 0, total: action.total ?? 0, label: action.label ?? "" }, error: null } };
+      return {
+        ...state,
+        run: { ...run, status: "queued", id: action.id, progress: { done: 0, total: action.total ?? 0, label: action.label ?? "" }, error: null, scenarioAtQueue: state.scenario },
+      };
     case "run/progress":
       if (action.id !== run.id) return state;
       return { ...state, run: { ...run, status: "running", progress: { done: action.done, total: action.total, label: action.label } } };
@@ -280,7 +286,7 @@ function runCase(state, action) {
       const runs = action.payload.runs;
       const violations = runs.flatMap((r) => r.invariant_violations ?? []);
       if (violations.length > 0) {
-        return { ...state, run: { ...emptyRun(), status: "void", id: run.id, violation: violations[0] } };
+        return { ...state, run: { ...emptyRun(), status: "void", id: run.id, violation: violations[0], scenarioAtQueue: run.scenarioAtQueue } };
       }
       const log = action.payload.log ?? null;
       return {
@@ -292,9 +298,11 @@ function runCase(state, action) {
           summaries: runs.map((r) => ({ seed: r.seed, world_digest: r.world_digest, metrics: r.metrics, series: r.series })),
           selectedSeed: log !== null ? log.seed : (runs[0]?.seed ?? null),
           log,
-          stale: false,
+          // Every scenario change makes a new object, so identity tells whether the scenario moved while it ran.
+          stale: state.scenario !== run.scenarioAtQueue,
           violation: null,
           error: null,
+          scenarioAtQueue: run.scenarioAtQueue,
         },
       };
     }
@@ -518,16 +526,16 @@ export function reduce(state, action) {
     case "fork/open":
       return {
         ...state,
-        fork: { ...state.fork, pinnedCar: action.car ?? state.fork.pinnedCar, status: "running", id: action.id, pair: null, stale: false, error: null },
+        fork: { ...state.fork, pinnedCar: action.car ?? state.fork.pinnedCar, status: "running", id: action.id, pair: null, stale: false, error: null, scenarioAtOpen: state.scenario },
       };
     case "fork/result":
       if (action.id !== state.fork.id) return state;
-      return { ...state, fork: { ...state.fork, status: "open", pair: action.pair, stale: false } };
+      return { ...state, fork: { ...state.fork, status: "open", pair: action.pair, stale: state.scenario !== state.fork.scenarioAtOpen } };
     case "fork/error":
       if (action.id !== state.fork.id) return state;
       return { ...state, fork: { ...state.fork, status: "error", error: action.message } };
     case "fork/close":
-      return { ...state, fork: { ...state.fork, status: "closed", id: null, pair: null, stale: false, error: null } };
+      return { ...state, fork: { ...state.fork, status: "closed", id: null, pair: null, stale: false, error: null, scenarioAtOpen: null } };
     case "reference/open":
       if (typeof action.id !== "string") throw new TypeError("reference/open needs a panel id");
       return { ...state, reference: action.id };

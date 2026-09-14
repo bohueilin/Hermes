@@ -283,6 +283,29 @@ describe("stale results", () => {
     assert.equal(reduce(s, { type: "run/stale" }), s);
   });
 
+  test("a knob or preset change while a run or fork is in flight marks its result out of date when it arrives", () => {
+    const result = (id) => ({ type: "run/done", id, payload: { runs: [{ seed: 1001, world_digest: "w", metrics: {}, series: {}, invariant_violations: [] }], log: null } });
+    // The first run of the session: nothing was on screen to mark when the knob moved.
+    let s = steps(initial(), [{ type: "run/queued", id: "r1" }, SJ_CARS, result("r1")]);
+    assert.equal(s.run.status, "done");
+    assert.equal(s.run.stale, true, "computed on 24 SJ cars, shown with 16");
+    assert.equal(s.run.summaries.length, 1, "the result stays visible");
+    // A later run with earlier results on screen.
+    s = steps(done(), [{ type: "run/queued", id: "r2" }, SJ_CARS]);
+    assert.equal(s.run.stale, true);
+    assert.equal(step(s, result("r2")).run.stale, true);
+    // A preset change counts too; a run queued after the change is current.
+    s = steps(initial(), [{ type: "run/queued", id: "r3" }, { type: "preset/select", presetId: "b", scenario: fakeScenario("b") }, result("r3")]);
+    assert.equal(s.run.stale, true);
+    assert.equal(steps(s, [{ type: "run/queued", id: "r4" }, result("r4")]).run.stale, false);
+
+    let f = steps(initial(), [{ type: "fork/open", id: "f1", car: "SF-017" }, SJ_CARS, { type: "fork/result", id: "f1", pair: { world_digest: "w" } }]);
+    assert.equal(f.fork.status, "open");
+    assert.equal(f.fork.stale, true);
+    f = steps(f, [{ type: "fork/open", id: "f2" }, { type: "fork/result", id: "f2", pair: { world_digest: "v" } }]);
+    assert.equal(f.fork.stale, false, "a fork opened after the change is current");
+  });
+
   test("a scenario change marks an open fork out of date", () => {
     const s = steps(initial(), [
       { type: "fork/open", id: "f1", car: "SF-017" },

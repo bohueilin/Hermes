@@ -19,6 +19,18 @@ export const MAX_BYTES = 2 * 1024 * 1024;
 /** The one http URL allowed: the SVG namespace name, an identifier that is never requested. */
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
+/** Text that may precede the SVG namespace name: an xmlns attribute value or a createElementNS argument. */
+const SVG_NAMESPACE_CONTEXT = /(?:\bxmlns(?::[\w.-]+)?\s*=\s*["']?|\bcreateElementNS\s*\(\s*\\?["'`])$/;
+
+/** Attributes a browser resolves as URLs; a prefixed name such as xlink:href counts by its local part. */
+const URL_ATTRIBUTES = new Set(["src", "href", "action", "formaction", "poster", "srcset", "imagesrcset", "data", "background", "cite", "ping", "manifest"]);
+
+/** Protocol-relative references in CSS: url(, image-set( (any candidate) and @import. */
+const CSS_REMOTE = [/(?:url\(|image-set\(|@import)\s*["']?\s*\/\//i, /image-set\([^;{}<]*?,\s*(?:url\(\s*)?["']?\s*\/\//i];
+
+/** Attributes whose values are interface copy (design H-3). */
+const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledescription", "title", "alt", "placeholder"]);
+
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
 const COPY_MODULES = ["src/ui/labels.js", "src/instrument/summary.js"];
 
@@ -50,16 +62,56 @@ const FORBIDDEN_TOKENS = [
 const BANNED_WORDS = /\b(predict(?:s|ed|ing|ion|ions|ive)?|forecast(?:s|ed|ing|er|ers)?|expected\s+traffic|live|real[\s-]?time|monitoring)\b/i;
 const DASHES = /[\u2013\u2014]/;
 
-const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", mdash: "\u2014", ndash: "\u2013" };
+const ENTITIES = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: "\u00a0", mdash: "\u2014", ndash: "\u2013",
+  colon: ":", sol: "/", bsol: "\\", lpar: "(", rpar: ")", comma: ",", period: ".", tab: "\t", newline: "\n",
+};
 
+/** Decodes character references as a browser does: numeric ones with or without `;`, out-of-range ones to U+FFFD. */
 function decodeEntities(text) {
-  return text.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (whole, body) => {
-    if (body[0] === "#") {
-      const code = body[1] === "x" || body[1] === "X" ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
-      return String.fromCodePoint(code);
-    }
-    return ENTITIES[body.toLowerCase()] ?? whole;
+  return text.replace(/&(?:#x([0-9a-f]+);?|#([0-9]+);?|([a-z][a-z0-9]*);)/gi, (whole, hex, dec, name) => {
+    if (name !== undefined) return ENTITIES[name.toLowerCase()] ?? whole;
+    const code = hex !== undefined ? parseInt(hex, 16) : parseInt(dec, 10);
+    return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : "\uFFFD";
   });
+}
+
+/** The HTML with comments removed and script and style contents emptied, so only markup and text remain. */
+function markupOf(html) {
+  return html.replace(/<!--[\s\S]*?-->/g, "").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "<$1></$1>");
+}
+
+/** `[name, value]` for every attribute of every tag: names lower-cased, quoted or unquoted values entity-decoded. */
+function attributesOf(markup) {
+  const found = [];
+  for (const tag of markup.matchAll(/<[a-z][^\s/>]*((?:[^>"']|"[^"]*"|'[^']*')*)>/gi)) {
+    for (const m of tag[1].matchAll(/([^\s"'<>/=]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g)) {
+      found.push([m[1].toLowerCase(), decodeEntities(m[2] ?? m[3] ?? m[4])]);
+    }
+  }
+  return found;
+}
+
+/** URL candidates of a srcset value, split as a browser splits them (a data URL may hold commas). */
+function srcsetUrls(value) {
+  const urls = [];
+  let i = 0;
+  while (i < value.length) {
+    while (i < value.length && /[\s,]/.test(value[i])) i += 1;
+    const start = i;
+    while (i < value.length && !/\s/.test(value[i])) i += 1;
+    const url = value.slice(start, i);
+    urls.push(url.replace(/,+$/, ""));
+    if (url.endsWith(",")) continue;
+    for (let depth = 0; i < value.length && !(value[i] === "," && depth === 0); i += 1) depth += { "(": 1, ")": -1 }[value[i]] ?? 0;
+  }
+  return urls.filter(Boolean);
+}
+
+/** Whether a URL attribute value holds a protocol-relative reference (tabs and newlines are ignored, as browsers do). */
+function isProtocolRelative(name, value) {
+  const urls = name === "srcset" || name === "imagesrcset" ? srcsetUrls(value) : name === "ping" ? value.split(/\s+/) : [value];
+  return urls.some((url) => /^[\\/]{2}/.test(url.replace(/[\t\n\r]/g, "").replace(/^[\u0000-\u0020]+/, "")));
 }
 
 function decodeJsEscapes(text) {
@@ -71,16 +123,17 @@ function decodeJsEscapes(text) {
   });
 }
 
-/** Visible copy of the HTML: text nodes (title included) and aria-label, title, alt and placeholder values. */
+/** Visible copy of the HTML: text nodes (title included) and aria-label, title, alt and placeholder values, quoted or not. */
 export function visibleCopy(html) {
   const items = [];
-  const markup = html.replace(/<!--[\s\S]*?-->/g, "").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "<$1></$1>");
+  const markup = markupOf(html);
   for (const m of markup.matchAll(/>([^<]+)</g)) {
     const text = decodeEntities(m[1]).trim();
     if (text) items.push({ where: "text", text });
   }
-  const attr = /\s(aria-label|aria-description|aria-roledescription|title|alt|placeholder)\s*=\s*("([^"]*)"|'([^']*)')/gi;
-  for (const m of markup.matchAll(attr)) items.push({ where: `${m[1]} attribute`, text: decodeEntities(m[3] ?? m[4]) });
+  for (const [name, text] of attributesOf(markup)) {
+    if (COPY_ATTRIBUTES.has(name)) items.push({ where: `${name} attribute`, text });
+  }
   return items;
 }
 
@@ -114,14 +167,22 @@ export function checkDist(html, { requiredLabels, byteLength = Buffer.byteLength
   const problems = [];
   if (byteLength > MAX_BYTES) problems.push(`size: ${byteLength} bytes is over the ${MAX_BYTES} byte limit`);
 
-  for (const m of html.matchAll(/https?:/gi)) {
-    const rest = html.slice(m.index, m.index + SVG_NAMESPACE.length + 1);
-    if (rest.startsWith(SVG_NAMESPACE) && !/[A-Za-z0-9._~/?#%:@-]/.test(rest[SVG_NAMESPACE.length] ?? "")) continue;
-    problems.push(`external URL: ${JSON.stringify(html.slice(m.index, m.index + 60))}`);
+  // Scanned after decoding character references, which never removes a literal scheme, so this covers the raw text too.
+  const decoded = decodeEntities(html);
+  for (const m of decoded.matchAll(/https?:/gi)) {
+    const rest = decoded.slice(m.index, m.index + SVG_NAMESPACE.length + 1);
+    const namespaceName = rest.startsWith(SVG_NAMESPACE) && !/[A-Za-z0-9._~/?#%:@-]/.test(rest[SVG_NAMESPACE.length] ?? "");
+    if (namespaceName && SVG_NAMESPACE_CONTEXT.test(decoded.slice(Math.max(0, m.index - 80), m.index))) continue;
+    problems.push(`external URL: ${JSON.stringify(decoded.slice(m.index, m.index + 60))}`);
   }
-  if (/\s(?:src|href|action|poster|srcset)\s*=\s*["']?\s*\/\//i.test(html) || /url\(\s*["']?\s*\/\//i.test(html)) {
-    problems.push("external URL: a protocol-relative reference");
+  // Attributes are read from markup only, so script text such as `const data = x; // note` is never taken for one.
+  for (const [name, value] of attributesOf(markupOf(html))) {
+    const local = name.slice(name.lastIndexOf(":") + 1);
+    if (URL_ATTRIBUTES.has(local) && isProtocolRelative(local, value)) {
+      problems.push(`external URL: a protocol-relative reference in ${name} ${JSON.stringify(value.slice(0, 60))}`);
+    }
   }
+  if (CSS_REMOTE.some((pattern) => pattern.test(decoded))) problems.push("external URL: a protocol-relative reference in CSS");
 
   const policies = [...html.matchAll(/<meta\b[^>]*http-equiv\s*=\s*["']?Content-Security-Policy["']?[^>]*>/gi)];
   const head = /<head\b[^>]*>/i.exec(html);

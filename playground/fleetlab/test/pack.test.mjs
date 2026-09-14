@@ -532,6 +532,57 @@ describe("output path rules and R3", () => {
     assert.equal(existsSync(out2), false);
   });
 
+  test("R3: only tools/pack.mjs imports fs; check-dist.mjs imports existsSync and readFileSync by name only", () => {
+    const FS = "[\"'`](?:node:)?fs(?:/promises)?[\"'`]";
+    const fsUses = new RegExp(`\\bfrom\\s*${FS}|\\bimport\\s*\\(?\\s*${FS}|\\brequire\\s*\\(\\s*${FS}`, "g");
+    const namedImports = new RegExp(`\\bimport\\s*([^;]*?)\\s*from\\s*${FS}`, "g");
+    const readOnly = ["existsSync", "readFileSync"];
+    /** Problems with one file's use of fs; `allowRead` permits only `import { existsSync, readFileSync } from "node:fs"`. */
+    const fsProblems = (text, allowRead) => {
+      const uses = [...text.matchAll(fsUses)].length;
+      const allowed = !allowRead
+        ? 0
+        : [...text.matchAll(namedImports)].filter((m) => {
+            const names = /^\{([^}]*)\}$/.exec(m[1].trim());
+            const list = names ? names[1].split(",").map((s) => s.trim()).filter(Boolean) : [];
+            return /["'`]node:fs["'`]$/.test(m[0]) && list.length > 0 && list.every((name) => readOnly.includes(name));
+          }).length;
+      return uses === allowed ? [] : [`${uses - allowed} import or require of fs beyond existsSync and readFileSync`];
+    };
+    // The check names no write call, so an unlisted one (openSync, cp, truncate, mkdtemp) cannot slip past it.
+    const refused = [
+      'import { openSync, writeSync } from "node:fs";',
+      'import * as fs from "fs";',
+      "import fs from 'node:fs/promises';",
+      'const { cp } = await import("node:fs");',
+      'const fs = require("fs");',
+      "const { truncate } = require(`node:fs/promises`);",
+      'export { mkdtempSync } from "node:fs";',
+      'import "node:fs";',
+      'import { existsSync, readFileSync, openSync } from "node:fs";',
+      'import { readFileSync as writeFileSync } from "node:fs";',
+      'import { existsSync, readFileSync } from "node:fs";\nconst fs = require("node:fs");',
+    ];
+    for (const probe of refused) assert.notDeepEqual(fsProblems(probe, true), [], probe);
+    assert.deepEqual(fsProblems('import { existsSync, readFileSync } from "node:fs";', true), []);
+    assert.notDeepEqual(fsProblems('import { existsSync, readFileSync } from "node:fs";', false), []);
+    assert.deepEqual(fsProblems('import { join } from "node:path";\nconst note = "fsync";', false), []);
+
+    const offenders = [];
+    const walk = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        const name = relative(PLAYGROUND_ROOT, path);
+        if (entry.isDirectory()) walk(path);
+        else if (/\.[mc]?js$/.test(entry.name) && name !== "tools/pack.mjs") {
+          offenders.push(...fsProblems(readFileSync(path, "utf8"), name === "tools/check-dist.mjs").map((problem) => `${name}: ${problem}`));
+        }
+      }
+    };
+    for (const folder of ["src", "tools"]) if (existsSync(join(PLAYGROUND_ROOT, folder))) walk(join(PLAYGROUND_ROOT, folder));
+    assert.deepEqual(offenders, []);
+  });
+
   test("R3: no playground code writes files except tools/pack.mjs", () => {
     const writers = /\b(writeFileSync|writeFile|appendFileSync|appendFile|createWriteStream|mkdirSync|mkdir|rmSync|rm|unlinkSync|unlink|renameSync|rename|copyFileSync|copyFile|cpSync|symlinkSync|truncateSync)\s*\(/;
     const offenders = [];
@@ -564,6 +615,15 @@ describe("check-dist", () => {
   test("a clean packed file passes, and the SVG namespace name is not a URL", () => {
     assert.deepEqual(checkDist(valid, { requiredLabels: labels }), []);
     assert.deepEqual(checkDist(withBody('<svg xmlns="http://www.w3.org/2000/svg"></svg>'), { requiredLabels: labels }), []);
+    // Script text is not markup, a data URL may hold "//", createElementNS may name the namespace, and an
+    // out-of-range character reference is not a crash.
+    const clean = [
+      "<script>const data = compute(); // note\nimg.src = url; // set it</script>",
+      '<img srcset="data:image/png;base64,//8AAA 1x" alt="">',
+      '<script>document.createElementNS("http://www.w3.org/2000/svg", "svg");</script>',
+      '<p title="a &#x110000; b">c &#0; d</p>',
+    ];
+    for (const extra of clean) assert.deepEqual(checkDist(withBody(extra), { requiredLabels: labels }), [], extra);
   });
 
   test("external URLs", () => {
@@ -571,6 +631,24 @@ describe("check-dist", () => {
     expectProblem(withBody("<p>see http://example.org</p>"), /^external URL/);
     expectProblem(withBody('<svg xmlns="http://www.w3.org/2000/svg/../evil"></svg>'), /^external URL/);
     expectProblem(withBody('<img src="//example.org/a.png">'), /^external URL: a protocol-relative/);
+    // Character references are decoded first, with or without the semicolon.
+    expectProblem(withBody('<a href="https&#58;//example.org/">x</a>'), /^external URL: "https:\/\/example/);
+    expectProblem(withBody('<img src="http&colon;//example.org/a.png">'), /^external URL: "http:\/\/example/);
+    expectProblem(withBody('<a href="http&#58//example.org/">x</a>'), /^external URL: "http:\/\/example/);
+    // The namespace name is allowed only as an xmlns value or a createElementNS argument.
+    expectProblem(withBody('<img src="http://www.w3.org/2000/svg">'), /^external URL: "http:\/\/www\.w3\.org/);
+    // Protocol-relative references in any URL attribute, prefixed, unquoted, spaced, encoded or in a later srcset candidate.
+    expectProblem(withBody('<svg><image xlink:href="//example.org/a.png"/></svg>'), /^external URL: a protocol-relative reference in xlink:href/);
+    expectProblem(withBody('<img srcset="data:image/png;base64,AA 1x, //example.org/b.png 2x">'), /^external URL: a protocol-relative reference in srcset/);
+    expectProblem(withBody("<img src=//example.org/a.png>"), /^external URL: a protocol-relative reference in src/);
+    expectProblem(withBody('<a href=" &#47;&#47;example.org/">x</a>'), /^external URL: a protocol-relative reference in href/);
+    expectProblem(withBody('<form action="/\t/example.org/"></form>'), /^external URL: a protocol-relative reference in action/);
+    expectProblem(withBody('<video poster="//example.org/a.png"></video>'), /^external URL: a protocol-relative reference in poster/);
+    // CSS: url(, every image-set( candidate, and @import.
+    expectProblem(withBody('<i style="background:url( //example.org/a.png)"></i>'), /^external URL: a protocol-relative reference in CSS/);
+    expectProblem(withBody('<style>b{background:image-set("//example.org/a.png" 1x)}</style>'), /^external URL: a protocol-relative reference in CSS/);
+    expectProblem(withBody('<style>b{background:image-set("a.png" 1x, "//example.org/b.png" 2x)}</style>'), /^external URL: a protocol-relative reference in CSS/);
+    expectProblem(withBody('<style>@import "//example.org/a.css";</style>'), /^external URL: a protocol-relative reference in CSS/);
     expectProblem(valid.replace("FLEETLAB_WORKER_SOURCE = \"", 'FLEETLAB_WORKER_SOURCE = "https://example.org/w.js '), /^external URL/);
   });
 
@@ -597,6 +675,13 @@ describe("check-dist", () => {
     expectProblem(valid.replace("<title>Scratch playground</title>", "<title>Demand forecast</title>"), /^banned word: "forecast" in text/);
     expectProblem(withBody('<button aria-label="Real-time map"></button>'), /^banned word: "Real-time" in aria-label attribute/);
     expectProblem(withBody('<span title="monitoring panel"></span>'), /^banned word: "monitoring" in title attribute/);
+    // Unquoted attribute values are copy too, entity-decoded.
+    expectProblem(withBody("<button aria-label=Live>x</button>"), /^banned word: "Live" in aria-label attribute/);
+    expectProblem(withBody("<span title=monitoring></span>"), /^banned word: "monitoring" in title attribute/);
+    expectProblem(withBody("<img alt=real-time>"), /^banned word: "real-time" in alt attribute/);
+    expectProblem(withBody("<input placeholder=Forecasts>"), /^banned word: "Forecasts" in placeholder attribute/);
+    expectProblem(withBody("<i aria-roledescription=Predictive></i>"), /^banned word: "Predictive" in aria-roledescription attribute/);
+    expectProblem(withBody("<i aria-description=a&mdash;b></i>"), /^dash: .* in aria-description attribute/);
     expectProblem(withLabels("We predict nothing"), /^banned word: "predict" in src\/ui\/labels\.js string/);
     expectProblem(withLabels("Expected traffic profile"), /^banned word: "Expected traffic"/);
     assert.deepEqual(checkDist(withLabels("delivery and alive"), { requiredLabels: labels }), []);
