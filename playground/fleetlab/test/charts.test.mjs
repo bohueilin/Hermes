@@ -494,6 +494,25 @@ describe("verdict", () => {
     assert.equal(tableRows(rail)[0][1], labels.NOT_EVALUABLE_TEXT);
   });
 
+  test("a tiny regressed harm or delta never reads as zero in a summary or table (honesty review)", () => {
+    const verdict = {
+      ...P.expUC02.verdict,
+      guardrail_statuses: [{ metric: "unserved.fraction", status: "REGRESSED", harm: 2.7e-5, max_harm: 0 }],
+      descriptives: [{ metric: "unserved.fraction", baseline_mean: 0.001, candidate_mean: 0.001027, mean_delta: 2.7e-5 }],
+    };
+    const group = keep(charts.verdictCharts({ verdict, declarations: P.decUC02 }));
+    const rail = group.charts[1];
+    const count = verdict.primary.paired_deltas.length;
+    // At three decimals 2.7e-5 rounds to 0.000, which beside REGRESSED would read as no harm at all.
+    assert.equal(
+      summaryOf(rail),
+      labels.guardrailRowSummary({ count, metric: charts.metricSubject("unserved.fraction"), harm: "+0.000027", maxHarm: "0", status: labels.STATUS_WORDS.guardrail.REGRESSED.word }),
+    );
+    assert.deepEqual(tableRows(rail)[0], ["unserved.fraction", "+0.000027", "0", labels.STATUS_WORDS.guardrail.REGRESSED.word]);
+    const descriptive = all(one(group.node, "[data-role=\"descriptive\"]"), "tbody tr").map((tr) => tr.children.map((cell) => cell.textContent));
+    assert.deepEqual(descriptive, [["unserved.fraction", "0.001", "0.001", "+0.000027"]]);
+  });
+
   test("an invalid verdict draws no strip, no interval and no outcome", () => {
     const verdict = computeVerdict({
       primary: { name: "wait.p90_s{area=SJ}", direction: "lower_is_better", equivalence_margin: 60 },

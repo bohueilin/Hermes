@@ -284,28 +284,25 @@ function trimmed(v) {
   return text.includes(".") ? text.replace(/0+$/, "").replace(/\.$/, "") : text;
 }
 
-/** Display rules of a metric on a verdict strip: seconds in seconds, fractions as fractions (design §7.2 verdict). */
+/**
+ * Display rules of a metric on a verdict strip: seconds in seconds, fractions as fractions (design §7.2 verdict). A
+ * nonzero mean, delta or harm never reads as zero, as on the verdict card (`format.nonzero`).
+ */
 function verdictUnit(metricKey) {
   const row = registryRow(metricKey);
+  const digits = row.engine_unit === "ppm" ? 3 : 1;
+  const signed = (v) => format.nonzero(v, digits, { withSign: true });
+  const plain = (v) => format.nonzero(v, digits);
   if (row.engine_unit === "s") {
     return {
-      signed: (v) => `${format.signed(v, 1)} ${labels.UNITS.seconds}`,
-      plain: (v) => `${format.number(v, 1)} ${labels.UNITS.seconds}`,
+      signed: (v) => `${signed(v)} ${labels.UNITS.seconds}`,
+      plain: (v) => `${plain(v)} ${labels.UNITS.seconds}`,
       threshold: (v) => `${trimmed(v)} ${labels.UNITS.seconds}`,
       tick: (t, d) => format.signed(t, d),
       unit: labels.UNITS.seconds,
     };
   }
-  if (row.engine_unit === "ppm") {
-    return { signed: (v) => format.signed(v, 3), plain: (v) => format.number(v, 3), threshold: trimmed, tick: (t, d) => format.signed(t, d), unit: "" };
-  }
-  return {
-    signed: (v) => format.signed(v, 1),
-    plain: (v) => format.number(v, 1),
-    threshold: trimmed,
-    tick: (t, d) => format.signed(t, d),
-    unit: row.unit,
-  };
+  return { signed, plain, threshold: trimmed, tick: (t, d) => format.signed(t, d), unit: row.engine_unit === "ppm" ? "" : row.unit };
 }
 
 /** Model-limits keys for a chart, plus those of the metric it shows, without repeats. */

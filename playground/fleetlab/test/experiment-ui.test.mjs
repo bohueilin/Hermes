@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 
+import { guardrailStatuses } from "../src/instrument/guardrails.js";
 import { computeVerdict } from "../src/instrument/paired.js";
 import { resultSummary, summaryText } from "../src/instrument/summary.js";
 import { freezeSpec, isNullCheckDraft, thresholdValue } from "../src/model/experiment.js";
@@ -874,6 +875,74 @@ describe("value text", () => {
     const spec = freezeSpec(experimentDraft({ presetId: "UC-03" })).spec;
     assert.equal(experiment.specDraftOf({ question: spec.question, baselineScenario: spec.scenario, axis: spec.axis, primary: spec.primary, guardrails: spec.guardrails, seedSet: 1, seedCount: 10, resamples: 2000 }).seeds.length, 10);
     assert.equal(experiment.specDraftOf({ seedSet: 1, seedCount: "ten" }).seeds, null);
+  });
+
+  test("a nonzero metric value never reads as zero, keeps its sign, and a zero never reads -0 (honesty review)", () => {
+    const text = experiment.metricValueText;
+    const signed = { withSign: true };
+    // At three decimals 2.7e-5 rounds to 0.000, so the text falls back to the exact double, signed on a delta.
+    assert.equal(text("unserved.fraction", 2.7e-5, signed), "+0.000027");
+    assert.equal(text("unserved.fraction", 2.7e-5), "0.000027");
+    assert.equal(text("unserved.fraction", -2.7e-5, signed), "-0.000027");
+    // Below 1e-6 String() prints an exponent; the text stays plain decimals. Seconds and counts follow the same rule.
+    assert.equal(text("unserved.fraction", -1e-7, signed), "-0.0000001");
+    assert.equal(text("wait.p90_s", -0.00001, signed), "-0.00001 s");
+    assert.equal(text("requests.served", 0.04, signed), "+0.04");
+    // A value that keeps a nonzero digit still rounds: 0.0005 is stored just above the tie and reads +0.001.
+    assert.equal(text("unserved.fraction", 0.0005, signed), "+0.001");
+    // Zero and negative zero round to zero exactly and read with no sign.
+    for (const zero of [0, -0]) {
+      assert.equal(text("unserved.fraction", zero, signed), "0.000");
+      assert.equal(text("wait.p90_s", zero, signed), "0.0 s");
+    }
+  });
+
+  test("a REGRESSED fraction guardrail with harm 2.7e-5 against max harm 0 reads a signed nonzero harm on the card (honesty review)", async () => {
+    await withDom({}, async () => {
+      const [rail] = guardrailStatuses([{ metric: "unserved.fraction", mean_delta: 2.7e-5 }], [{ metric: "unserved.fraction", max_harm: 0, direction: "lower_is_better" }]);
+      assert.equal(rail.status, "REGRESSED", "harm above max harm 0 regresses (strict)");
+      // UC-03's frozen spec (one unserved.fraction guardrail, 10 seeds) with a fraction primary, so the small primary
+      // values read on the fraction rule too. Every number of the verdict is written here.
+      const frozen = structuredClone(frozenExperiment({ presetId: "UC-03" }));
+      frozen.spec.primary = { metric: "unserved.fraction", scope: {}, direction: "lower_is_better", margin_units: 1000 };
+      const verdict = {
+        validity: "VALID",
+        invalidity_reason: null,
+        invalidity_detail: null,
+        outcome: "UNCHANGED",
+        recommendation: "HOLD",
+        primary: { metric: "unserved.fraction", role: "PRIMARY", baseline_mean: 0.05, candidate_mean: 0.05, paired_deltas: [-0.00027, ...Array(9).fill(0)], mean_delta: -2.7e-5, median_delta: 0, ci_low: -0.00004, ci_high: -0 },
+        guardrail_results: [],
+        guardrail_statuses: [rail],
+        guardrail_regressions: ["unserved.fraction"],
+        descriptives: [{ metric: "wait.p90_s", role: "DESCRIPTIVE", baseline_mean: 600, candidate_mean: 600, paired_deltas: [], mean_delta: -0.00001, median_delta: 0 }],
+      };
+      const card = experiment.renderVerdictCard(experiment.verdictView({ verdict }, frozen));
+
+      // The harm used to read 0.000 with no sign beside max harm 0, so a regression looked like no harm at all.
+      const row = card.querySelector('[data-section="guardrails"] tr[data-metric="unserved.fraction"]');
+      assert.equal(row.getAttribute("data-status"), "REGRESSED");
+      const harm = row.querySelector('[data-field="harm"]').textContent;
+      const maxHarm = row.querySelector('[data-field="max_harm"]').textContent;
+      assert.equal(harm, "+0.000027");
+      assert.match(harm, /^\+0\.0*[1-9]/, "the harm is signed and nonzero");
+      assert.equal(maxHarm, "0", "the max harm is a plain zero");
+      assert.notEqual(Number(harm), Number(maxHarm), "harm and max harm never read as the same number");
+
+      // A tiny negative delta keeps its sign and digits; a zero and a negative zero read 0.000 with no sign.
+      const shown = (field) => card.querySelector(`[data-field="${field}"]`).textContent;
+      assert.equal(shown("primary.mean_delta"), "-0.000027");
+      assert.equal(shown("primary.median_delta"), "0.000");
+      assert.equal(shown("primary.ci_low"), "-0.00004");
+      assert.equal(shown("primary.ci_high"), "0.000", "a negative zero bound never reads -0.000");
+      assert.equal(card.querySelector('[data-section="descriptives"] [data-field="mean_delta"]').textContent, "-0.00001 s");
+      for (const node of card.querySelectorAll("[data-value]")) {
+        const field = node.getAttribute("data-field");
+        if (Number(node.getAttribute("data-value")) !== 0) assert.match(node.textContent, /[1-9]/, `${field} reads ${node.textContent}`);
+        assert.doesNotMatch(node.textContent, /^-0(?:\.0+)?(?: s)?$/, `${field} reads a negative zero`);
+      }
+      assertCopyRules(card);
+    });
   });
 });
 

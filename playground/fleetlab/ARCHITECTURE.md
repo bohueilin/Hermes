@@ -737,3 +737,6 @@ final sample summary in phase 5) and is absent, not skipped, before then.
 37. An idle step warms the quantile tables for the scenario's sigma before the first run (`warm_tables`).
 38. The depot tile and the pinned car glyph open their inspectors on click or tap; the depot inspector lists its cars with
     Inspect and Pin.
+39. A nonzero mean, delta or harm never reads as zero on the verdict card, in the verdict charts or in the copied summary:
+    when the declared decimals leave no nonzero digit, the text is the exact double in plain decimals with its sign
+    (`format.nonzero` for the card and charts, section 4 for the summary).

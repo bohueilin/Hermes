@@ -96,6 +96,18 @@ export function signed(value, digits = 0) {
   return /[1-9]/.test(text) ? `+${text}` : text;
 }
 
+/**
+ * A number at the declared decimals that never hides a nonzero value, signed as `signed` is when asked. When rounding
+ * leaves no nonzero digit, the text is the shortest round-trip decimal of the double in plain digits, so 2.7e-5 at 3
+ * digits reads `0.000027` and -1e-7 reads `-0.0000001`; an exact zero keeps its decimals and never reads `-0`.
+ */
+export function nonzero(value, digits = 0, { withSign = false } = {}) {
+  const text = withSign ? signed(value, digits) : number(value, digits);
+  if (value === 0 || /[1-9]/.test(text)) return text;
+  const plain = String(Math.abs(value)).replace(/^(\d)(?:\.(\d+))?e-(\d+)$/, (_, lead, rest = "", exponent) => `0.${"0".repeat(Number(exponent) - 1)}${lead}${rest}`);
+  return `${value < 0 ? "-" : withSign ? "+" : ""}${plain}`;
+}
+
 /** An integer count with thousands grouped: `2,628`. */
 export function count(value) {
   if (!Number.isSafeInteger(value)) throw new TypeError(`count must be a safe integer, got ${String(value)}`);

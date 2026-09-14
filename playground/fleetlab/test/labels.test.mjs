@@ -661,6 +661,19 @@ describe("format", () => {
     assert.equal(format.number(27 / 20, 1), "1.4"); // 1.35 is 1.35000000000000008882...
   });
 
+  test("a nonzero value never reads as zero at its declared decimals, and a zero never reads -0", () => {
+    assert.equal(format.nonzero(2.7e-5, 3), "0.000027"); // number(2.7e-5, 3) is 0.000
+    assert.equal(format.nonzero(2.7e-5, 3, { withSign: true }), "+0.000027");
+    assert.equal(format.nonzero(-2.7e-5, 3, { withSign: true }), "-0.000027");
+    assert.equal(format.nonzero(-1e-7, 3, { withSign: true }), "-0.0000001"); // String(1e-7) is 1e-7
+    assert.equal(format.nonzero(1.5e-7, 1), "0.00000015");
+    assert.equal(format.nonzero(0.04, 1, { withSign: true }), "+0.04");
+    assert.equal(format.nonzero(0.0012, 3), "0.001"); // a surviving digit keeps the declared rounding
+    assert.equal(format.nonzero(826.15, 1, { withSign: true }), "+826.1");
+    assert.equal(format.nonzero(0, 3, { withSign: true }), "0.000");
+    assert.equal(format.nonzero(-0, 3), "0.000");
+  });
+
   test("multipliers from per-mille", () => {
     assert.equal(format.multiplier(1600), "×1.6");
     assert.equal(format.multiplier(1000), "×1.0");

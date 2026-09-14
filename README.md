@@ -97,6 +97,31 @@ a static loopback-only operator view of one finished synthetic run.
 experiment registry, `experiment compare`, monitoring, a time axis, and the Studio front end.
 Nineteen of the twenty P0 acceptance criteria remain open.
 
+### FleetLab Playground: the same verdict rules in a teaching model you can play with
+
+`playground/fleetlab/` is a static page, and one offline HTML file, for building intuition about fleet and depot
+operations. You set cars per area, depots with parking, cleaning and service bays, peak and off-peak demand, highway and
+local routes with hourly congestion, and the depot rules; watch a simulated evening and the next morning; and run a
+preregistered paired A/B. Its verdict uses FleetLab's rules value for value, proven by vectors FleetLab's own functions
+generate. Its world is a teaching model with invented numbers, so a playground run is never a decision record.
+
+```bash
+python3 -m http.server 8765 --bind 127.0.0.1 --directory playground/fleetlab
+```
+
+```bash
+node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-playground.html
+```
+
+```bash
+node --test "playground/fleetlab/test/*.test.mjs"
+```
+
+| Document | What it is |
+|---|---|
+| [docs/plans/2026-09-13-fleetlab-playground-design.md](docs/plans/2026-09-13-fleetlab-playground-design.md) | The audited design: knobs, depot visit, use cases with measured verdicts, model, verdict parity, interface, and the FleetLab defects found while designing it |
+| [playground/fleetlab/README.md](playground/fleetlab/README.md) | How to open, pack and test the playground |
+
 
 ## Phase 8 — ADAS development and agentic workflow lab
 

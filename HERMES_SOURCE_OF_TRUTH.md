@@ -7,15 +7,16 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-metric-contract` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) |
+| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-metric-contract` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (local, not pushed) |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
 | **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 registry provenance/static operator view built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline `3a7f595`; Task 8 static view `4b2e8b8`; forward-only repairs `18b47db`, `e42ed2c`) — Gate G: **96 passed**; replayable decision record; spec-file authoring, metric-contract CLI, and one loopback-only finished synthetic-run view; **lane merged onto `main` 2026-09-06 (`61a7145`) and pushed**. The PRD has been tracked since `aa04786` |
+| **Playground** | **FleetLab Playground built** on local branch `feat/fleetlab-playground` (from `main` @ `bca4ccd`; not pushed): a zero-dependency JavaScript teaching simulator of a stylized Bay Area fleet with depots. Its Experiment mode reproduces FleetLab's verdict rules value for value (vectors FleetLab's own functions generate), and its legacy profile reproduces FleetLab's engine event log entry by entry. Design audited (approve with required changes, all applied): `docs/plans/2026-09-13-fleetlab-playground-design.md`; contract `playground/fleetlab/ARCHITECTURE.md`. Node suite **1,229 tests, 1,227 passed** (1 timing test behind a flag, 1 browser-only todo); parity and boundary pytest **89 passed**; offline file 1.10 MB, `check-dist` OK; headless browser smoke 693 of 693 checks. The CI step for `node --test` (design phase 6) is not started: owner decision |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-09-06 |
+| **Last updated** | 2026-09-14 |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -407,6 +408,7 @@ renders envelopes; its read-only property is enforced by AST tests.
 | 7 | Evaluation-adequacy assessor, evaluation plans, provenance; 1,245 tests claimed | **codex worktree only** — `codex/phase7-…` @ `9d5c0ba`, 56 commits, **not merged** |
 | 8 | ADAS (FCW/AEB) + oracle + seeded defects + agent layer + regression flywheel; 965 tests; then calibration (merged `6b2f375`), Phase 3 (merged `a78287e`), and **evidence schema 3.0 / `RunMetricsV3`** (complete, unmerged) | trunk `feat/phase8-adas-lab` @ `e6e2c8c`; metrics V3 on `feat/phase8-metrics-v3` @ `2dda024` (15 commits from `a78287e`, pushed, unmerged) |
 | 9 | Fleet simulation — **FLEET-005 spike built**: contracts, world tape, minimal DES, paired loop, decision record; 33 tests incl. a hand-computed analytical fixture, clean-clone green | `feat/phase9-fleetlab` @ `00b2a48`; PRD stays local |
+| 9P | FleetLab Playground: verdict core with FleetLab-generated vectors; legacy port with event-log parity; teaching model (tables, routes, world, engine, metrics, invariants, experiments); interface with Experiment and Learn; offline packer; the recall acts once and the default fleet was calibrated after a browser run exposed depot gridlock | `feat/fleetlab-playground`; local, not pushed |
 
 Design decisions from early phases that still constrain everything: MetaDrive stays external and
 unmodified; every event hashes scenario/gate/component digests; hard invariants cannot be
@@ -741,6 +743,31 @@ must not: the number as a default edit (§10 rule 3).
 
 ---
 
+### 7.5 FleetLab Playground (teaching model, not evidence)
+
+`playground/fleetlab/` is a static page and one offline HTML file for building intuition about fleet and depot
+operations. It sits outside `src/hermes/` by design: nothing in `src/hermes/` imports or mentions it, and boundary tests
+enforce the design's placement rules R1 to R9.
+
+- **What it teaches.** Cars per area, depots with parking, cleaning and service bays, peak and off-peak demand, highway
+  and local routes with hourly congestion, depot assignment, the end-of-service recall and the morning release, from day 1
+  05:00 to day 2 10:00. Three Learn cases and seven Experiment presets follow design §4, each with its measured verdict.
+- **What it shares with FleetLab.** The verdict rules, proven by `tests/fixtures/fleet_playground/instrument_vectors.json`,
+  which FleetLab's own functions generate and both `pytest` and `node --test` check; FleetLab's own world, reproduced by
+  the legacy profile against exported worlds (FLEET-005 seed 101 in both arms, collision, precheck, horizon crash, seeded
+  defects); and the quoted FLEET-005 and two-zone probe reference panels.
+- **What it never is.** A decision record. A playground run is a teaching run; its result summary carries `NOT_EVIDENCE`
+  and fails `DecisionRecord` and `ExperimentSpec` validation (R9).
+- **Changed during the build, on evidence.** The audited default (90 cars, a recall pending all night) gave 23% unserved and
+  depot gridlock in a real run. The recall now acts once (design D-12), and the default is 120 cars, calibrated by a sweep
+  with two accepted exceptions (design §2.2). At that default the model does not show two audited lessons: the nearest
+  depot reads IMPROVED in the worked example (UC-07), and no depot resource binds while riders need cars (UC-08). The design
+  records both, and no Learn caption states an unasserted direction.
+- **FleetLab defects found while designing it** (design §14, none fixed here): FL-1 demand and horizon axes never reach the
+  world (a silent false UNCHANGED); FL-2 utilization unclipped (clipping moves the pinned FLEET-005 digest); FL-3 an
+  unavailable guardrail is skipped silently; FL-4 and FL-5 invariants that cannot fail or check only some events; FL-11 a
+  horizon axis shortened below the declared horizon crashes `run_experiment` with an uncaught `ValueError`.
+
 ## 8. What is not claimed
 
 - **Not a safety case.** No ISO 26262, ASIL, HARA, regulation, assessor or vehicle. The gate
@@ -1013,6 +1040,12 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
    deliberate digest re-baseline, and the static operator view is the second registry consumer.
    The decision-record Comparison page remains open.
 9. **Stage 3:** put dispatch behind a decision-time-only policy seam before adding a candidate.
+10. **Playground merge is an owner decision.** The branch is local. Before merging, run the node suite and the parity and
+    boundary pytest with `FLEET_PLAYGROUND_BASE=bca4ccd`, and decide on the CI step for `node --test`. Review design D-12
+    (the recall acts once) and the use cases whose lessons the calibrated default does not show (UC-07, UC-08).
+11. **Evidence-path follow-ups from the playground design** (§14 there): reject world-feeding axes in `apply_axis` (FL-1,
+    FL-11); a registry bump for clipped utilization with a recorded re-baseline (FL-2); record not-evaluable guardrails
+    instead of skipping them (FL-3); transition-level invariants (FL-4, FL-5).
 
 ### 11.3 MuJoCo — before graduation
 
@@ -1039,6 +1072,11 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
 ---
 
 ## 12. Landmines
+
+- **Playground R6 runs only with its base.** `tests/unit/test_fleet_playground_boundaries.py` checks that the playground
+  branch never changed `src/hermes/`, `pyproject.toml`, `.gitignore`, `Makefile` or `.github/` only when
+  `FLEET_PLAYGROUND_BASE` names the base commit; a plain full-suite run skips that check. The playground parity vectors
+  also assert Python 3.11: widening the pin moves FleetLab's means and digests.
 
 1. **Any new model field can invalidate stored evidence.** `scenario_digest` and
    `gate_config_digest` hash `model_dump()` and are re-derived in verification. Every version-only
@@ -1178,6 +1216,8 @@ separate "Hermes Evidence Lab" artifact is the portfolio page, not a status docu
 | [PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md](PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md) | Phase 7 design (implementation in the codex worktree) |
 | `HERMES_PHASE7_ADAS_AGENTIC_WORKFLOW_PRD.md` | Phase 8 PRD — local, gitignored; §0-A normative |
 | [HERMES_PHASE9_FLEET_SIMULATION_PRD.md](HERMES_PHASE9_FLEET_SIMULATION_PRD.md) | Phase 9 PRD — tracked since `aa04786` |
+| [docs/plans/2026-09-13-fleetlab-playground-design.md](docs/plans/2026-09-13-fleetlab-playground-design.md) | FleetLab Playground design, audited, with D-12 and the measured use cases; §14 lists FleetLab defects found |
+| [playground/fleetlab/README.md](playground/fleetlab/README.md), [playground/fleetlab/ARCHITECTURE.md](playground/fleetlab/ARCHITECTURE.md) | How to open, pack and test the playground; its build contract |
 | `sandbox/mujoco/{NOTES,SIMULATION_DESIGN_PACKAGE}.md` | MuJoCo sandbox — local, gitignored, NOT EVIDENCE |
 
 **Historical (Phase 5–6 era; superseded as entry points, kept for the record):**

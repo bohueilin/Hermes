@@ -178,11 +178,15 @@ export function metricUnitFamily(metricOrKey) {
   return name.includes("fraction") ? "fraction" : "count";
 }
 
-/** A metric mean or delta as text in the metric's unit: seconds to 0.1 s, fractions to 0.001, counts to 0.1. */
+/**
+ * A metric mean or delta as text in the metric's unit: seconds to 0.1 s, fractions to 0.001, counts to 0.1. A nonzero
+ * value never reads as zero: when rounding leaves no nonzero digit, the text is the exact double in plain decimals (as
+ * the copied summary does, via `format.nonzero`), so a regressed harm of 2.7e-5 against max harm 0 reads `+0.000027`,
+ * not `0.000`. Never `-0`.
+ */
 export function metricValueText(metricOrKey, value, { withSign = false } = {}) {
   const family = metricUnitFamily(metricOrKey);
-  const digits = family === "fraction" ? 3 : 1;
-  const text = withSign ? format.signed(value, digits) : format.number(value, digits);
+  const text = format.nonzero(value, family === "fraction" ? 3 : 1, { withSign });
   return family === "s" ? `${text} ${labels.UNITS.seconds}` : text;
 }
 
