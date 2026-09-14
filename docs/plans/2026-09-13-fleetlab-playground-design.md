@@ -403,8 +403,11 @@ exploratory). Everything else is later.
 - **Watch:** cars reaching their tenth trip and heading to depots around 17:30.
 - **Mechanism:** a visit triggered by trip count arrives fastest in the peak, so depots fill when the street
   needs cars most.
-- **Expected by reasoning:** whole-window wait barely moves; the evening-peak window is higher, and the effect
-  lasts past 19:00.
+- **Learn preset:** the Bay teaching map with San Francisco off-peak requests lowered from 15 to 8 per hour (DEM-2.SF,
+  the value PEN and EB use), so the demand strip shows a sharper peak; fleet, peak rates, peak windows and the peaked
+  shape are unchanged.
+- **Expected by reasoning:** the evening-peak window is higher, and the effect lasts past 19:00. A probe of the teaching
+  model at sigma 0 also moved the whole-window wait, so no caption may say the whole window barely moves.
 - **Lesson:** averages hide peaks, and trip-count servicing lands in the busiest hour.
 - **PRD:** uses the §10.1 demand model. FleetLab cannot run this axis today: its demand axes are silently
   inert (§14, FL-1). **First build:** Learn case. **Chart:** the demand strip (requests per hour) above the fleet-state stack,
@@ -686,7 +689,7 @@ state; playback derives it.
 | READY_AT_DEPOT | REPOSITIONING | MORNING_RELEASE | the car's depot is outside its home area (SUP-2) |
 | REPOSITIONING | IDLE | REPOSITION_COMPLETED | none |
 
-**Recall.** A recall is pending from POL-3's time until POL-4's time, or until the end of the window when the
+**Recall.** A recall is pending from POL-3's time up to, but not including, POL-4's time, or until the end of the window when the
 release is off. At the recall time every `IDLE` car goes to a depot; a car on a pickup or a trip finishes it and
 then goes; cars already bound for a depot, at a depot or in a bay keep their course. Dispatch still takes
 `READY_AT_DEPOT` cars while a recall is pending, so a car can serve a late rider and return.
@@ -867,7 +870,9 @@ FleetLab's business-proxy aliases, and every charging, staff, cancellation and s
 - **Structures:** a binary heap on parallel typed arrays; idle and ready cars bucketed by location so dispatch scans
   at most 8 locations in planned-arrival order instead of every car; route plans computed per departure second on
   demand and cached per quarter hour.
-- **Threading:** a Web Worker when the host allows one (§9.4 says how the packed file starts it); otherwise time-sliced execution on the main thread in slices
+- **Threading:** a Web Worker when the host allows one (§9.4 says how the packed file starts it). The 8 ms slice rule
+  holds once the quantile tables are built; the first experiment in a fresh page builds them in steps of up to about
+  110 ms on a laptop; otherwise time-sliced execution on the main thread in slices
   of at most 8 ms. Both paths are tested.
 - **Playback:** the engine records the vehicle interval log that P15 and P16 need, and playback interpolates positions
   from it, so playback never runs the model. Only the selected seed of each arm keeps its log; other runs keep

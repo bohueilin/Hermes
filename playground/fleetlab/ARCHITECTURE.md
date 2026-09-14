@@ -95,6 +95,7 @@ Every exported function has a one-line JSDoc comment stating units. Numbers name
 `sha256.js`
 - `sha256(bytes: Uint8Array): Uint8Array` synchronous, FIPS 180-4.
 - `sha256Hex(text: string): string` over UTF-8 bytes, lowercase hex.
+- `sha256Stream(): {update(text), hex()}` incremental SHA-256 over UTF-8 text, equal to `sha256Hex` of the joined text.
 - `prefixHasher(prefix: string): (suffix: string) => Uint8Array` caches the compression state after every whole
   64-byte block of the prefix, so hashing `prefix + suffix` repeats only the tail. Must equal `sha256` exactly.
 
@@ -149,9 +150,10 @@ These functions reproduce `src/hermes/fleet/experiment.py` value for value (desi
   `min(R - 1, roundHalfEven(0.975 * R))`.
 - `bootstrapCi(deltas: number[], resamples: number, key: string): [low, high]`: for `i` in `0..R-1`, `total = 0`;
   for `j` in `0..n-1`, `total += deltas[Number(u64(key, "bootstrap", i, j) % BigInt(n))]`; `means.push(total / n)`;
-  sort ascending (stable, section 3 comparator); return the two indexed means.
+  sort ascending (stable, section 3 comparator); return the two indexed means. `bootstrapCiSteps` is the generator
+  behind it, yielding after about every 4,096 hash draws and once before the sort.
 
-`paired.js`
+`paired.js` (`computeVerdictSteps` is the generator behind `computeVerdict`, same arguments and result)
 - `compareMetric(metric, role, baselineRuns, candidateRuns)`: returns `null` if any run lacks the metric (a missing
   key or `undefined`); else `{metric, role, baseline_mean, candidate_mean, paired_deltas, mean_delta,
   median_delta}` using `candidate - baseline` per index, `meanFleetLab`, `medianFleetLab`.
@@ -527,7 +529,8 @@ scopes); `computeMetric(result, ref)` returning `{value}` or `{absent: reason}`;
 measurement span is `[warmup_end_s, end_s)`; a scope window must lie inside it. Percentiles use `percentileFleetLab`.
 Absence is never 0.
 
-`invariants.js`: design §5.6 checks 1-3, 5, 8-12, Conservation and P13-P21, each returning strings `"<id>: detail"`. The
+`invariants.js`: design §5.6 checks 1-3, 5, 8-12, Conservation and P13-P21, each returning strings `"<id>: detail"`. `checkRunSteps`, `runViolationsSteps`, `runDigestSteps` and
+`checkReplaySteps` are generator variants for time-sliced callers that return exactly what their synchronous forms return. The
 engine runs the per-change checks as it goes; `checkRun(result)` runs the rest. A violation voids the run.
 
 ### 6.6 Experiments (`experiment.js`)
@@ -553,7 +556,8 @@ reference does not use are omitted. `margin_units` and `max_harm_units` are safe
 seconds for `_s` metrics, the count for counts, parts per million for fractions. Guardrails keep the user's order; seeds
 ascend.
 
-- `freezeSpec(draft)` validates (one axis, values in range and different except for the labelled null check of UC-01,
+- `freezeSpec(draft)` validates (one axis, values in range and different except for the labelled null check of UC-01 (a draft whose checked scenario, axis,
+  primary and guardrails canonically equal the UC-01 preset's; `isNullCheckDraft(draft)`),
   margin above 0, registered metrics with a direction, valid scopes, seeds 10-100, resamples 1,000-100,000) and returns
   `{spec, digest, label}`. A fraction typed in the draft is parsed from its decimal text into integer ppm without
   floating-point arithmetic (at most 6 decimal places; more is rejected).
@@ -561,7 +565,9 @@ ascend.
   rounded division, never `units * 1e-6`), and the integer itself for other units. `experiment.test.mjs` includes a
   guardrail at 15 ppm with harm exactly `15 / 1000000`, expected not regressed.
 - `experimentSteps(spec)` is a generator yielding `{done, total, label}` and returning the run payload; `runExperimentSpec`
-  drives it to the end. Order: build one world per seed from the declared scenario with the shared `lambdaMaxPermille`
+  drives it to the end. It yields its progress marker before and after every unit it cannot slice (the table builds
+  for the spec's sigma, each world, `createRun`, `result()`, each whole-run check group, each metric computation) and
+  inside the replay digests and the verdict bootstrap, so a main-thread host keeps steps within 8 ms once tables are warm. Order: build one world per seed from the declared scenario with the shared `lambdaMaxPermille`
   over both arms; the precheck runs the baseline arm on `seeds[0]`'s world twice and compares the metric maps; then seeds
   in spec order, baseline arm before candidate arm. It stops at the first run whose invariant check returns any
   violation, runs nothing later, and passes `` `seed ${seed}: ${violations[0]}` `` to `computeVerdict`. The key is the full
