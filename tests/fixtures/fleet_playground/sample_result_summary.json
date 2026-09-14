@@ -1,0 +1,56 @@
+{
+  "format": "fleetlab-playground-result-summary",
+  "format_version": 1,
+  "evidence_status": "NOT_EVIDENCE",
+  "decision_authority": "NONE",
+  "model_version": "playground-model 0.1",
+  "playground_spec": "playground-spec:3f9a1c2e",
+  "question": "Does a fourth cleaning bay at SJ-1 lower the evening p90 wait?",
+  "variation_axis": "parameter:DEP-3.SJ-1",
+  "baseline_value": 3,
+  "candidate_value": 4,
+  "seed_set": {"set": 1, "seeds": [1001, 1002, 1003]},
+  "validity": "VALID",
+  "invalidity_reason": null,
+  "invalidity_detail": null,
+  "outcome": "IMPROVED",
+  "recommendation": "ADVANCE_TO_NEXT_TEST",
+  "primary": {
+    "metric": "wait.p90_s",
+    "role": "PRIMARY",
+    "baseline_mean": 600,
+    "candidate_mean": 540,
+    "paired_deltas": [-50, -70, -60],
+    "mean_delta": -60,
+    "median_delta": -60,
+    "ci_low": -68,
+    "ci_high": -52
+  },
+  "guardrails": [
+    {"metric": "unserved.fraction", "status": "WITHIN", "harm": 0.01, "max_harm": 0.02},
+    {"metric": "depot.queue_p90_s", "status": "NOT_EVALUABLE", "harm": null, "max_harm": 120}
+  ],
+  "guardrail_results": [
+    {
+      "metric": "unserved.fraction",
+      "role": "GUARDRAIL",
+      "baseline_mean": 0.05,
+      "candidate_mean": 0.06,
+      "paired_deltas": [0.01, 0.01, 0.01],
+      "mean_delta": 0.01,
+      "median_delta": 0.01
+    }
+  ],
+  "guardrail_regressions": [],
+  "descriptives": [
+    {
+      "metric": "requests.served",
+      "role": "DESCRIPTIVE",
+      "baseline_mean": 400,
+      "candidate_mean": 410,
+      "paired_deltas": [10, 12, 8],
+      "mean_delta": 10,
+      "median_delta": 10
+    }
+  ]
+}
