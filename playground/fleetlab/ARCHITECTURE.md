@@ -63,7 +63,7 @@ playground/fleetlab/
   src/instrument/  paired.js bootstrap.js outcome.js guardrails.js recommendation.js summary.js
   src/legacy/      world-import.js profile.js
   src/model/       schema.js presets.js routes.js world.js policies.js engine.js metrics.js invariants.js experiment.js
-  src/runtime/     worker.js host.js
+  src/runtime/     worker.js host.js protocol.js
   src/ui/          app.js store.js labels.js format.js dom.js map.js playback.js charts.js inspector.js controls.js
                    experiment.js learn.js a11y.js
   tools/           pack.mjs check-dist.mjs
@@ -607,11 +607,15 @@ The development shell `index.html` starts the app from an inline module script w
 `createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), {type: "module"})`. The output path
 must resolve outside the repository root (found by walking up to the directory that holds `.git`) or inside `<root>/dist/`;
 anything else, including the repository's `artifacts/` and `experiments/`, exits with status 2 before writing.
-`pack.mjs` may use `node:fs`, `node:path` and `node:url`.
+`pack.mjs` may use `node:fs`, `node:path`, `node:url` and `node:vm` (to compile, never run, each bundle). Because the
+rewriter is text-based, source modules follow two rules it enforces: every exported declaration ends with a semicolon,
+and a mutable export (`export let` or `export var`) is read only through a namespace import (`import * as NS`), since
+named imports become one-time copies in the packed file.
 
 `check-dist.mjs` fails on any `http:` or `https:` URL, a missing or different policy, a forbidden token, a banned word in
 copy, an em or en dash in copy, a `REQUIRED_LABELS` string (from a list the test passes in, never spelled in the tool),
-or a size over 2 MB.
+or a size over 2 MB. The one allowed `http:` string is the SVG namespace `http://www.w3.org/2000/svg`, used only as a
+`createElementNS` argument or an `xmlns` attribute.
 
 ## 10. Tests
 
@@ -685,3 +689,8 @@ final sample summary in phase 5) and is absent, not skipped, before then.
 24. The result summary's clipboard labels live in `instrument/summary.js` as an export format.
 25. `legacy_defect.json` is the one legacy fixture with invariant violations. Exact-half travel rounding is covered by a
     hand-derived node test, because no FleetLab-derived world contains an exact half.
+26. `src/runtime/protocol.js` holds the message names and payload checks shared by the host and the worker, so runtime
+    tests load without the model. The store may add private bookkeeping keys (for example the clock of the last freeze)
+    beyond section 8 when a reducer needs them; section 8 lists the keys other modules may read.
+27. Source modules end exported declarations with semicolons and read mutable exports through namespace imports
+    (section 9), and `check-dist` allows only the SVG namespace string as an `http:` text.

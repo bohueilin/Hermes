@@ -1,0 +1,419 @@
+/*
+FleetLab Playground styles. Tokens, type and motion follow design section 8; layout follows design section 7.2.
+Interface modules use these classes (and write text only through textContent):
+
+Shell        .fl-app[data-phone-group="now|charts|across"]  .fl-strip .fl-strip__full .fl-strip__short
+             .fl-topbar .fl-modes .fl-clock .fl-knobs[data-open] .fl-knobs__run .fl-knobs-toggle .fl-map
+             .fl-map__stamp .fl-transport .fl-side .fl-now .fl-now__row .fl-across .fl-segmented .fl-charts
+             .fl-chart .fl-chart__summary .fl-footer
+Surfaces     .fl-panel .fl-panel-alt .fl-drawer[data-open] .fl-inspector .fl-popover[data-open] .fl-tooltip[data-open]
+Controls     .fl-button .fl-button--primary .fl-field .fl-field--changed .fl-field--invalid .fl-field__note
+Registers    .fl-chip-replay (filled) .fl-chip-across (outlined) .fl-limits-chip
+Verdict      .fl-verdict .fl-teaching-chip .fl-verdict__footer
+             .fl-verdict-chip[data-status="pass|cond|hold|invalid|neutral"] .fl-verdict-chip__glyph .fl-verdict-chip__word
+States       .fl-stale .fl-absent .fl-error .fl-error__slot .fl-unserved
+Scrollers    .fl-scroll (tables, the depot board and code scroll inside it) .fl-table .fl-board .fl-code
+Text         .fl-mono .fl-title .fl-muted .fl-small-label .fl-learn-text .fl-sr-only
+Map and SVG  .fl-yard .fl-route-highway__casing .fl-route-highway__centre .fl-route-local .fl-route--congested
+             .fl-chevron .fl-depot-tile .fl-rider-ring .fl-glyph-edge .fl-glyph-ring
+             .fl-fam-rider .fl-fam-empty .fl-fam-available .fl-fam-depot (set color; glyphs fill with currentColor)
+             .fl-chart__grid .fl-chart__axis .fl-chart__line .fl-chart__band .fl-chart__cursor .fl-hatch-line
+Motion       :root[data-motion="reduce|full"] is the in-app override; without it the system setting applies.
+             A closed drawer, sheet or popover also gets the inert attribute from the interface.
+*/
+
+:root {
+  color-scheme: light dark;
+
+  --ground: #F7F8FA;
+  --panel: #FFFFFF;
+  --panel-alt: #EEF1F5;
+  --ink: #14181F;
+  --muted: #5C6673;
+  --faint: #8A93A0;
+  --faint-text: #666D77;
+  --rule: #DDE2E8;
+  --rule-strong: #C3CBD5;
+  --accent: #1F5FD4;
+  --accent-soft: #E8EEFB;
+  --pass: #2C784C;
+  --pass-bg: #E4F0E9;
+  --cond: #935F00;
+  --cond-bg: #F6EDDA;
+  --hold: #C0392B;
+  --hold-bg: #F8E6E3;
+  --invalid: #5C6673;
+  --invalid-bg: #E7EAEE;
+
+  --car-rider: #2a78d6;
+  --car-empty: #eb6834;
+  --car-available: #1baf7a;
+  --car-depot: #eda100;
+
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --dur-press: 120ms;
+  --dur-tooltip: 160ms;
+  --dur-drawer: 240ms;
+
+  --gutter: 16px;
+  --target: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #0F1319;
+    --panel: #161B23;
+    --panel-alt: #1C222C;
+    --ink: #E6EAF0;
+    --muted: #9BA5B4;
+    --faint: #6E7885;
+    --faint-text: #9BA5B4;
+    --rule: #262D38;
+    --rule-strong: #38414F;
+    --accent: #7BA5F0;
+    --accent-soft: #1A2437;
+    --pass: #6FBF8E;
+    --pass-bg: #16281E;
+    --cond: #D9A441;
+    --cond-bg: #2B2314;
+    --hold: #E8776A;
+    --hold-bg: #2E1917;
+    --invalid: #9BA5B4;
+    --invalid-bg: #1F252E;
+
+    --car-rider: #3987e5;
+    --car-empty: #d95926;
+    --car-available: #199e70;
+    --car-depot: #c98500;
+  }
+}
+
+/* Base */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+img, svg, canvas { max-width: 100%; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+.fl-mono, .fl-clock, input[type="number"], .fl-table td, .fl-table th {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.fl-title { font-weight: 600; }
+.fl-muted { color: var(--muted); }
+.fl-small-label { color: var(--faint-text); font-size: 12px; }
+.fl-learn-text { font-size: 16px; }
+
+.fl-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Focus: a 2 px ring with a 2 px ground-coloured offset (design 7.7). */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--ground);
+}
+
+/* Touch targets of at least 44 px. */
+.fl-button, .fl-segmented button, .fl-knobs-toggle, .fl-strip__short, input, select {
+  min-height: var(--target);
+  min-width: var(--target);
+}
+
+/* Teaching-model strip (design H-1): no rule on this page may hide it. */
+.fl-strip, .fl-strip[hidden] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding-block: 8px;
+  background: var(--panel-alt);
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+/* Shell: phone first (below 768 px), one column. */
+
+.fl-app {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "strip" "top" "map" "transport" "segmented" "side" "charts" "footer";
+  padding-inline: var(--gutter);
+  padding-block-end: var(--gutter);
+}
+
+.fl-app > * { min-width: 0; }
+
+.fl-strip { grid-area: strip; margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); }
+.fl-topbar { grid-area: top; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.fl-map { grid-area: map; position: relative; }
+.fl-transport { grid-area: transport; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fl-segmented { grid-area: segmented; display: flex; }
+.fl-side { grid-area: side; display: grid; gap: 12px; align-content: start; }
+.fl-charts { grid-area: charts; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); grid-auto-rows: 220px; }
+.fl-footer { grid-area: footer; color: var(--muted); }
+
+.fl-panel, .fl-map, .fl-now, .fl-across, .fl-chart, .fl-knobs, .fl-drawer, .fl-popover {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+.fl-panel-alt { background: var(--panel-alt); }
+.fl-map, .fl-now, .fl-across, .fl-chart { padding: 12px; }
+.fl-chart { min-width: 0; }
+.fl-chart__summary { color: var(--muted); }
+
+.fl-map__stamp { position: absolute; right: 8px; bottom: 8px; color: var(--faint-text); font-size: 12px; }
+
+.fl-now__row { display: flex; justify-content: space-between; gap: 8px; }
+.fl-now__row > :last-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: end; }
+
+.fl-segmented { gap: 2px; padding: 2px; border: 1px solid var(--rule-strong); border-radius: 6px; }
+.fl-segmented button { flex: 1 1 0; border: 0; border-radius: 4px; background: var(--panel); cursor: pointer; }
+.fl-segmented button[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
+.fl-segmented button[aria-pressed="true"]:focus-visible { box-shadow: 0 0 0 2px var(--ground), inset 0 -2px 0 var(--accent); }
+
+.fl-strip__full { display: none; }
+
+/* Knobs on a phone: a full-height sheet with a sticky Run window button. */
+.fl-knobs {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow-y: auto;
+  border-radius: 0;
+  transform: translateY(100%);
+  transition: transform var(--dur-drawer) var(--ease-out);
+}
+.fl-knobs[data-open="true"] { transform: none; }
+.fl-knobs__run { position: sticky; bottom: 0; padding-block: 8px; background: var(--panel); }
+
+@media (max-width: 767.98px) {
+  .fl-app:not([data-phone-group="charts"]) .fl-charts,
+  .fl-app[data-phone-group="charts"] .fl-side,
+  .fl-app[data-phone-group="across"] .fl-now,
+  .fl-app:not([data-phone-group="across"]) .fl-across { display: none; }
+}
+
+/* Tablet, 768 to 1279 px: knobs become a left drawer, NOW folds under the map, charts form a 2 by 2 grid. */
+@media (min-width: 768px) {
+  .fl-app { grid-template-areas: "strip" "top" "map" "side" "transport" "charts" "footer"; }
+  .fl-segmented, .fl-strip__short { display: none; }
+  .fl-strip__full { display: inline; }
+  .fl-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fl-knobs { inset: 0 auto 0 0; width: 320px; transform: translateX(-100%); border-right: 1px solid var(--rule-strong); }
+  .fl-drawer.fl-inspector { width: 560px; }
+}
+
+/* Desktop, 1280 px and wider: 280 px knobs, a flexible map, a 260 px NOW panel, a 220 px chart row. */
+@media (min-width: 1280px) {
+  .fl-app {
+    grid-template-columns: 280px minmax(0, 1fr) 260px;
+    grid-template-rows: auto auto minmax(420px, auto) auto 220px auto;
+    grid-template-areas:
+      "strip strip strip"
+      "top top top"
+      "knobs map side"
+      "knobs transport transport"
+      "knobs charts charts"
+      "knobs footer footer";
+  }
+  .fl-knobs {
+    grid-area: knobs;
+    position: static;
+    width: auto;
+    transform: none;
+    border-radius: 6px;
+    border-right: 1px solid var(--rule);
+  }
+  .fl-knobs-toggle { display: none; }
+  .fl-charts { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 220px; }
+}
+
+/* Drawers, popovers and tooltips */
+
+.fl-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 50;
+  width: 100%;
+  overflow-y: auto;
+  padding: var(--gutter);
+  border-radius: 0;
+  transform: translateX(100%);
+  transition: transform var(--dur-drawer) var(--ease-out);
+}
+.fl-drawer[data-open="true"] { transform: none; }
+
+.fl-popover {
+  position: absolute;
+  z-index: 60;
+  max-width: min(36rem, calc(100vw - 2 * var(--gutter)));
+  padding: 12px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity var(--dur-tooltip) var(--ease-out), transform var(--dur-tooltip) var(--ease-out);
+}
+.fl-popover[data-open="true"] { opacity: 1; transform: none; }
+
+/* A tooltip never gates a value: the same value is always in a table or label. */
+.fl-tooltip {
+  position: absolute;
+  z-index: 70;
+  pointer-events: none;
+  padding: 4px 8px;
+  background: var(--ink);
+  color: var(--panel);
+  border-radius: 4px;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity var(--dur-tooltip) var(--ease-out), transform var(--dur-tooltip) var(--ease-out);
+}
+.fl-tooltip[data-open="true"] { opacity: 1; transform: none; }
+
+/* Controls */
+
+.fl-button {
+  padding: 8px 12px;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out);
+}
+.fl-button:active { transform: scale(0.97); }
+.fl-button:disabled { color: var(--muted); cursor: not-allowed; }
+.fl-button--primary { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+
+.fl-field { display: grid; gap: 4px; padding-inline-start: 8px; border-inline-start: 2px solid transparent; }
+.fl-field--changed { border-inline-start-color: var(--ink); }
+.fl-field input, .fl-field select {
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+}
+/* An out-of-range value stays in the field, marked in ink with a written note: status colours are for verdicts. */
+.fl-field--invalid input, .fl-field--invalid select { border: 2px solid var(--ink); }
+.fl-field__note { color: var(--ink); }
+
+/* Registers (design 7.4) */
+
+.fl-chip-replay, .fl-chip-across, .fl-limits-chip, .fl-teaching-chip, .fl-verdict-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fl-chip-replay { background: var(--ink); color: var(--panel); border: 1px solid var(--ink); }
+.fl-chip-across { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+.fl-limits-chip { background: var(--panel-alt); color: var(--ink); border: 1px solid var(--rule-strong); }
+
+/* Verdict (design 7.2, 8.1): the chips sit inside the card border so a cropped screenshot keeps them. */
+
+.fl-verdict { background: var(--panel); border: 1px solid var(--rule-strong); border-radius: 6px; padding: 12px; }
+.fl-teaching-chip { background: var(--panel-alt); color: var(--ink); border: 1px solid var(--rule-strong); }
+.fl-verdict__footer { color: var(--muted); border-top: 1px solid var(--rule); padding-block-start: 8px; }
+
+.fl-verdict-chip { border: 1px solid transparent; font-weight: 600; }
+.fl-verdict-chip__glyph { display: inline-grid; place-items: center; inline-size: 1em; block-size: 1em; }
+.fl-verdict-chip[data-status="pass"] { color: var(--pass); background: var(--pass-bg); }
+.fl-verdict-chip[data-status="cond"] { color: var(--cond); background: var(--cond-bg); }
+.fl-verdict-chip[data-status="hold"] { color: var(--hold); background: var(--hold-bg); }
+.fl-verdict-chip[data-status="invalid"] { color: var(--invalid); background: var(--invalid-bg); }
+/* UNCHANGED and NO_RECOMMENDATION: no status colour. */
+.fl-verdict-chip[data-status="neutral"] { color: var(--ink); background: var(--panel-alt); border-color: var(--rule-strong); }
+
+/* States */
+
+.fl-stale { filter: grayscale(1); }
+.fl-absent { color: var(--muted); }
+.fl-unserved { color: var(--hold); }
+.fl-error { display: grid; gap: 4px; padding: 12px; background: var(--panel-alt); border: 1px solid var(--rule-strong); border-radius: 6px; }
+.fl-error__slot { color: var(--faint-text); font-family: var(--font-mono); font-size: 12px; }
+
+/* Wide content scrolls inside its own container, never the page. */
+
+/* The padding keeps the focus ring of an edge cell visible inside the scroller. */
+.fl-scroll { max-width: 100%; overflow-x: auto; padding: 4px; }
+.fl-table { border-collapse: collapse; }
+.fl-table th { background: var(--panel-alt); text-align: start; font-weight: 600; }
+.fl-table th, .fl-table td { padding: 4px 8px; border-bottom: 1px solid var(--rule); }
+.fl-table td { text-align: end; }
+.fl-code { margin: 0; padding: 12px; background: var(--panel-alt); font-family: var(--font-mono); white-space: pre; }
+
+/* Map and chart marks (SVG). Status colours never colour a series, a car or an area. */
+
+.fl-yard { fill: var(--panel-alt); stroke: var(--rule-strong); stroke-width: 1px; }
+.fl-route-highway__casing { fill: none; stroke: var(--rule-strong); stroke-width: 6px; }
+.fl-route--congested .fl-route-highway__casing { stroke: var(--faint); }
+.fl-route-highway__centre { fill: none; stroke: var(--ink); stroke-width: 2px; }
+.fl-route-local { fill: none; stroke: var(--muted); stroke-width: 2px; }
+.fl-chevron { fill: none; stroke: var(--ink); stroke-width: 1.5px; }
+.fl-depot-tile { fill: var(--panel); stroke: var(--ink); stroke-width: 1px; }
+.fl-rider-ring { fill: none; stroke: var(--ink); stroke-width: 1.5px; }
+
+.fl-fam-rider { color: var(--car-rider); }
+.fl-fam-empty { color: var(--car-empty); }
+.fl-fam-available { color: var(--car-available); }
+.fl-fam-depot { color: var(--car-depot); }
+/* Light Available and At a depot fall under 3:1, so their glyphs always carry this 1 px ink edge (design 8.2). */
+.fl-glyph-edge { fill: none; stroke: var(--ink); stroke-width: 1px; }
+.fl-glyph-ring { fill: none; stroke: var(--panel); stroke-width: 2px; }
+
+.fl-chart__grid { stroke: var(--rule); stroke-width: 1px; }
+.fl-chart__axis { fill: var(--faint-text); stroke: var(--faint); font-size: 12px; }
+.fl-chart__line { fill: none; stroke: var(--ink); stroke-width: 2px; }
+.fl-chart__band { fill: var(--ink); fill-opacity: 0.1; stroke: none; }
+.fl-chart__cursor { stroke: var(--ink); stroke-width: 1px; }
+.fl-hatch-line { stroke: var(--faint); stroke-width: 1px; }
+
+/* Reduced motion, element by element (design 7.4, 8.4). The in-app setting wins over the system setting. */
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) .fl-knobs,
+  :root:not([data-motion="full"]) .fl-drawer,
+  :root:not([data-motion="full"]) .fl-popover,
+  :root:not([data-motion="full"]) .fl-tooltip,
+  :root:not([data-motion="full"]) .fl-button { transition: none; }
+  :root:not([data-motion="full"]) .fl-button:active { transform: none; }
+}
+
+:root[data-motion="reduce"] .fl-knobs,
+:root[data-motion="reduce"] .fl-drawer,
+:root[data-motion="reduce"] .fl-popover,
+:root[data-motion="reduce"] .fl-tooltip,
+:root[data-motion="reduce"] .fl-button { transition: none; }
+:root[data-motion="reduce"] .fl-button:active { transform: none; }

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FleetLab Playground</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div id="fleetlab-root" class="fl-app" data-phone-group="now">
+<div id="fleetlab-teaching-strip" class="fl-strip"></div>
+</div>
+<script type="module">
+import { start } from "./src/ui/app.js";
+start({ createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });
+</script>
+</body>
+</html>
