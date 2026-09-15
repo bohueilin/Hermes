@@ -1513,7 +1513,11 @@ tools/fleet_playground/regenerate_fixtures.py   the explicitly invoked fixture r
 - **Disclosure** in a public repository: no operator, company, team or person names in code, presets, comments or commit
   messages; area names and route ids from allowlists (H-2); all numbers labelled illustrative; no claim of calibration, forecast or
   deployment relevance; nothing copied from files the repository ignores.
-- **Publishing** the packed file anywhere is a separate owner action, never part of a build phase.
+- **Publishing** the packed file anywhere is a separate owner action, never part of a build phase. A folder for a static
+  host (`pack.mjs --site`) carries the stricter policy `default-src 'none'; script-src 'self'; worker-src 'self'; style-src
+  'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'`, with no inline
+  script, and a `_headers` file that repeats it with `frame-ancestors 'none'`; `check-dist --site` holds it to the same
+  rules as the packed file. Putting that folder online is the same owner action.
 
 ### 9.5 Tests
 

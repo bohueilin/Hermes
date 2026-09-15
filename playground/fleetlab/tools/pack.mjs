@@ -4,9 +4,10 @@
 // import and export statements rewritten to local bindings. No eval, no network, no dependency.
 //
 // Usage: node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-playground.html [--playground <dir>]
+//        node playground/fleetlab/tools/pack.mjs --site dist/site [--playground <dir>]   (a folder for a static host)
 // Exit 0 on success, 1 on a bundling error, 2 on a usage error or a refused output path (nothing written).
 
-import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import vm from "node:vm";
@@ -18,6 +19,34 @@ export const CONTENT_SECURITY_POLICY =
 
 /** Marker comment written before every module in a bundle; check-dist reads it to find module text. */
 export const MODULE_MARKER = "// fleetlab-module: ";
+
+/**
+ * The hosted folder's policy (`--site`): the page, its modules, the worker and the stylesheet come from the site's own
+ * origin and nothing comes from anywhere else. Inline scripts are refused; style attributes on chart nodes need
+ * `'unsafe-inline'` in style-src, as in the packed file.
+ */
+export const SITE_CONTENT_SECURITY_POLICY =
+  "default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+  "connect-src 'none'; form-action 'none'; base-uri 'none'";
+
+/** Response headers a static host serves for the folder (the `_headers` format): the policy again, with frame-ancestors. */
+export const SITE_HEADERS = [
+  "/*",
+  `  Content-Security-Policy: ${SITE_CONTENT_SECURITY_POLICY}; frame-ancestors 'none'`,
+  "  X-Frame-Options: DENY",
+  "  X-Content-Type-Options: nosniff",
+  "  Referrer-Policy: no-referrer",
+  "  Cross-Origin-Opener-Policy: same-origin",
+  "  Cache-Control: public, max-age=600",
+  "",
+].join("\n");
+
+/** The hosted folder's boot module: the development shell's inline script as a file, so the policy can refuse inline code. */
+export const SITE_BOOT = [
+  'import { start } from "./src/ui/app.js";',
+  'start({ createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });',
+  "",
+].join("\n");
 
 /** Throwable build error with a clear message. */
 export class PackError extends Error {
@@ -413,10 +442,11 @@ function resolveSpecifier(fromFile, specifier, sourceRoot) {
 }
 
 /**
- * Bundles the module graph reachable from `entryFile` into one classic script defining `const <globalName>`
- * as the entry module's namespace. `sourceRoot` bounds resolution and names modules in marker comments.
+ * The module graph reachable from `entryFile` in dependency order (a module after everything it imports):
+ * `{root, entry, order, records}`, each record `{file, label, src, parsed, deps, id, exportNames, mutableExports}`.
+ * `sourceRoot` bounds resolution and names modules by their path from its parent, for example `src/ui/labels.js`.
  */
-export function bundle(entryFile, { sourceRoot, globalName }) {
+export function moduleGraph(entryFile, sourceRoot) {
   const root = resolve(sourceRoot);
   const entry = resolve(entryFile);
   if (!existsSync(entry)) throw new PackError(`entry module not found: ${relative(root, entry) || entry}`);
@@ -446,6 +476,15 @@ export function bundle(entryFile, { sourceRoot, globalName }) {
     record.exportNames = exportNamesOf(record, records);
   };
   visit(entry, []);
+  return { root, entry, order, records };
+}
+
+/**
+ * Bundles the module graph reachable from `entryFile` into one classic script defining `const <globalName>`
+ * as the entry module's namespace. `sourceRoot` bounds resolution and names modules in marker comments.
+ */
+export function bundle(entryFile, { sourceRoot, globalName }) {
+  const { entry, order, records } = moduleGraph(entryFile, sourceRoot);
 
   const parts = [`const ${globalName} = (() => {`, `"use strict";`];
   for (const record of order) parts.push(MODULE_MARKER + record.label, renderModule(record, records));
@@ -612,12 +651,58 @@ export function checkOutputPath(outPath, repoRoot) {
     return { ok: false, reason: `refusing a path that cannot be resolved (${err.code ?? err.message}), such as a broken symbolic link: ${outPath}` };
   }
   if (!target.toLowerCase().endsWith(".html")) return { ok: false, reason: `output must be an .html file: ${target}` };
+  const location = locationRule(target, repoRoot);
+  return location.ok ? { ok: true, path: target } : location;
+}
+
+/** The one place rule: a real path outside the repository, or inside `<root>/dist/`; anything else is refused. */
+function locationRule(target, repoRoot) {
   const root = realpathSync.native(repoRoot);
-  if (target !== root && !target.startsWith(root + sep)) return { ok: true, path: target };
+  if (target !== root && !target.startsWith(root + sep)) return { ok: true };
   const inside = relative(root, target).split(sep);
-  if (inside[0] === "dist" && inside.length > 1) return { ok: true, path: target };
+  if (inside[0] === "dist" && inside.length > 1) return { ok: true };
   const area = inside[0] === "artifacts" || inside[0] === "experiments" ? `the repository's ${inside[0]}/ folder` : "the repository";
   return { ok: false, reason: `refusing to write inside ${area}: ${target}. Write outside the repository or under dist/.` };
+}
+
+/** The first entry under `dir` that the site manifest `files` does not name (a symbolic link always counts), or null. */
+function foreignEntry(dir, files, prefix = "") {
+  const paths = [...files.keys()];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const rel = prefix + entry.name;
+    if (entry.isSymbolicLink()) return rel;
+    if (entry.isDirectory()) {
+      if (!paths.some((p) => p.startsWith(`${rel}/`))) return rel;
+      const inner = foreignEntry(join(dir, entry.name), files, `${rel}/`);
+      if (inner !== null) return inner;
+    } else if (!entry.isFile() || !files.has(rel)) return rel;
+  }
+  return null;
+}
+
+/**
+ * Decides whether the site folder `outDir` may be written: the same place rule as `checkOutputPath`, a folder rather
+ * than an .html file, and, once the manifest `files` is known, a folder that holds nothing the manifest does not name,
+ * so a stale or foreign file can never ride along to a host. Returns {ok: true, path} or {ok: false, reason}.
+ */
+export function checkSitePath(outDir, repoRoot, files = null) {
+  let target;
+  try {
+    target = realPathOf(outDir);
+  } catch (err) {
+    return { ok: false, reason: `refusing a path that cannot be resolved (${err.code ?? err.message}), such as a broken symbolic link: ${outDir}` };
+  }
+  if (target.toLowerCase().endsWith(".html")) return { ok: false, reason: `a site is a folder, not an .html file: ${target}` };
+  const location = locationRule(target, repoRoot);
+  if (!location.ok) return location;
+  if (entryExists(target)) {
+    if (!lstatSync(target).isDirectory()) return { ok: false, reason: `refusing to write over something that is not a folder: ${target}` };
+    const foreign = files === null ? null : foreignEntry(target, files);
+    if (foreign !== null) {
+      return { ok: false, reason: `refusing to write into a folder that holds an entry the site does not name (${foreign}): ${target}. Empty it first.` };
+    }
+  }
+  return { ok: true, path: target };
 }
 
 /** Builds the packed HTML text from the playground folder. */
@@ -658,20 +743,57 @@ export function buildHtml(playgroundDir) {
   return html;
 }
 
+/**
+ * The hosted folder as a map from relative path to text (`--site`): every module the page or the worker reaches,
+ * unchanged, at its `src/` path; `styles.css`; `index.html` as the development shell with the site policy first in
+ * `<head>`, the stylesheet link and one module script for `boot.js`; `boot.js`; and `_headers`. Nothing else, so
+ * tests, tools and fixtures never reach a host.
+ */
+export function buildSite(playgroundDir) {
+  const dir = resolve(playgroundDir);
+  const workerEntry = join(dir, "src/runtime/worker.js");
+  if (!existsSync(workerEntry)) throw new PackError("src/runtime/worker.js does not exist yet; the site cannot be built");
+  const sourceRoot = join(dir, "src");
+  const files = new Map();
+  for (const entry of [join(dir, "src/ui/app.js"), workerEntry]) {
+    for (const record of moduleGraph(entry, sourceRoot).order) files.set(record.label, record.src);
+  }
+  const cssPath = join(dir, "styles.css");
+  if (!existsSync(cssPath)) throw new PackError("styles.css does not exist; the site links it");
+  files.set("styles.css", readFileSync(cssPath, "utf8"));
+  let html = readFileSync(join(dir, "index.html"), "utf8");
+  html = html.replace(/<script\b[\s\S]*?<\/script>\s*/gi, "").replace(/<link\b[^>]*>\s*/gi, "");
+  const head = /<head\b[^>]*>/i.exec(html);
+  if (!head || !/<\/head>/i.test(html) || !/<\/body>/i.test(html)) {
+    throw new PackError("index.html needs <head>, </head> and </body>");
+  }
+  if (/Content-Security-Policy/i.test(html)) throw new PackError("index.html already declares a policy");
+  const at = head.index + head[0].length;
+  html = html.slice(0, at) + `<meta http-equiv="Content-Security-Policy" content="${SITE_CONTENT_SECURITY_POLICY}">` + html.slice(at);
+  html = html.replace(/<\/head>/i, () => '<link rel="stylesheet" href="./styles.css">\n</head>');
+  html = html.replace(/<\/body>/i, () => '<script type="module" src="./boot.js"></script>\n</body>');
+  files.set("index.html", html);
+  files.set("boot.js", SITE_BOOT);
+  files.set("_headers", SITE_HEADERS);
+  return files;
+}
+
 /** Command-line entry. Returns the exit status; writes only the requested output. */
 export function main(argv, { cwd = process.cwd(), log = console.log, error = console.error } = {}) {
   let out = null;
+  let site = null;
   let playground = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === "--out") out = argv[++i];
+    if (argv[i] === "--out") out = argv[++i] ?? null;
+    else if (argv[i] === "--site") site = argv[++i] ?? null;
     else if (argv[i] === "--playground") playground = resolve(cwd, argv[++i] ?? "");
     else {
       error(`pack: unknown argument ${argv[i]}`);
       return 2;
     }
   }
-  if (!out) {
-    error("pack: usage: pack.mjs --out <file.html> [--playground <dir>]");
+  if (!out === !site) {
+    error("pack: usage: pack.mjs --out <file.html> | --site <folder> [--playground <dir>]");
     return 2;
   }
   const repoRoot = findRepositoryRoot(playground);
@@ -679,6 +801,7 @@ export function main(argv, { cwd = process.cwd(), log = console.log, error = con
     error(`pack: no repository root (.git) found above ${playground}`);
     return 2;
   }
+  if (site) return writeSite(resolve(cwd, site), { playground, repoRoot, log, error });
   const decision = checkOutputPath(resolve(cwd, out), repoRoot);
   if (!decision.ok) {
     error(`pack: ${decision.reason}`);
@@ -705,6 +828,41 @@ export function main(argv, { cwd = process.cwd(), log = console.log, error = con
   }
   writeFileSync(decision.path, html);
   log(`pack: wrote ${decision.path} (${Buffer.byteLength(html)} bytes)`);
+  return 0;
+}
+
+/** `--site`: the place rule before building, the build, then the foreign-entry rule right before writing each file. */
+function writeSite(outDir, { playground, repoRoot, log, error }) {
+  const place = checkSitePath(outDir, repoRoot);
+  if (!place.ok) {
+    error(`pack: ${place.reason}`);
+    return 2;
+  }
+  let files;
+  try {
+    files = buildSite(playground);
+  } catch (err) {
+    if (!(err instanceof PackError)) throw err;
+    error(`pack: ${err.message}`);
+    return 1;
+  }
+  const decision = checkSitePath(outDir, repoRoot, files);
+  if (!decision.ok || decision.path !== place.path) {
+    error(`pack: ${decision.ok ? `the output path changed while building: ${place.path}` : decision.reason}`);
+    return 2;
+  }
+  let bytes = 0;
+  for (const [path, text] of files) {
+    const file = join(decision.path, ...path.split("/"));
+    mkdirSync(dirname(file), { recursive: true });
+    if (entryExists(file) && !lstatSync(file).isFile()) {
+      error(`pack: refusing to write over something that is not a regular file: ${file}`);
+      return 2;
+    }
+    writeFileSync(file, text);
+    bytes += Buffer.byteLength(text);
+  }
+  log(`pack: wrote ${files.size} files to ${decision.path} (${bytes} bytes)`);
   return 0;
 }
 

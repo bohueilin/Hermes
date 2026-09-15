@@ -114,6 +114,10 @@ node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-playground.html
 ```
 
 ```bash
+node playground/fleetlab/tools/pack.mjs --site dist/site
+```
+
+```bash
 node --test "playground/fleetlab/test/*.test.mjs"
 ```
 

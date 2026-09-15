@@ -45,6 +45,20 @@ node playground/fleetlab/tools/check-dist.mjs dist/fleetlab-playground.html
 
 The packed file carries a content security policy with no network access. It stores nothing between visits.
 
+A folder for a static host (the page, its modules, the worker, the stylesheet and a `_headers` file; nothing else):
+
+```bash
+node playground/fleetlab/tools/pack.mjs --site dist/site
+```
+
+```bash
+node playground/fleetlab/tools/check-dist.mjs --site dist/site
+```
+
+Upload the folder as it is. Its page carries a stricter policy than the packed file (`script-src 'self'`, no inline
+script) and `_headers` repeats it for hosts that read that file. Putting the folder online is an owner action, never part
+of a build.
+
 ## Test it
 
 From the repository root:

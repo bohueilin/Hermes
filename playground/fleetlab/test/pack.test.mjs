@@ -18,18 +18,23 @@ import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
-import { checkDist, main as checkDistMain, MAX_BYTES } from "../tools/check-dist.mjs";
+import { checkDist, checkSite, main as checkDistMain, MAX_BYTES } from "../tools/check-dist.mjs";
 import {
   assertCompiles,
   assertNoModuleSyntax,
   buildHtml,
+  buildSite,
   bundle,
   checkOutputPath,
+  checkSitePath,
   CONTENT_SECURITY_POLICY,
   findRepositoryRoot,
   main as packMain,
   PackError,
   parseModule,
+  SITE_BOOT,
+  SITE_CONTENT_SECURITY_POLICY,
+  SITE_HEADERS,
 } from "../tools/pack.mjs";
 
 const PLAYGROUND_ROOT = fileURLToPath(new URL("../", import.meta.url));
@@ -543,15 +548,15 @@ describe("output path rules and R3", () => {
     assert.equal(existsSync(out2), false);
   });
 
-  test("R3: only tools/pack.mjs imports fs or loads modules through node:module or getBuiltinModule; check-dist.mjs imports existsSync and readFileSync by name only", () => {
+  test("R3: only tools/pack.mjs imports fs or loads modules through node:module or getBuiltinModule; check-dist.mjs imports existsSync, readdirSync and readFileSync by name only", () => {
     const FS = "[\"'`](?:node:)?fs(?:/promises)?[\"'`]";
     const fsUses = new RegExp(`\\bfrom\\s*${FS}|\\bimport\\s*\\(?\\s*${FS}|\\brequire\\s*\\(\\s*${FS}`, "g");
     const namedImports = new RegExp(`\\bimport\\s*([^;]*?)\\s*from\\s*${FS}`, "g");
-    const readOnly = ["existsSync", "readFileSync"];
+    const readOnly = ["existsSync", "readdirSync", "readFileSync"]; // reads only: check-dist walks a site folder, never writes
     // createRequire and process.getBuiltinModule reach fs without naming it in an import, so both are refused outright.
     const MODULE = "[\"'`](?:node:)?module[\"'`]";
     const loaderUses = new RegExp(`\\bfrom\\s*${MODULE}|\\bimport\\s*\\(?\\s*${MODULE}|\\brequire\\s*\\(\\s*${MODULE}|\\bcreateRequire\\b|\\bgetBuiltinModule\\b`, "g");
-    /** Problems with one file's use of fs; `allowRead` permits only `import { existsSync, readFileSync } from "node:fs"`. */
+    /** Problems with one file's use of fs; `allowRead` permits only a named import of `readOnly` functions from "node:fs". */
     const fsProblems = (text, allowRead) => {
       const problems = [];
       const loaders = [...text.matchAll(loaderUses)].length;
@@ -564,7 +569,7 @@ describe("output path rules and R3", () => {
             const list = names ? names[1].split(",").map((s) => s.trim()).filter(Boolean) : [];
             return /["'`]node:fs["'`]$/.test(m[0]) && list.length > 0 && list.every((name) => readOnly.includes(name));
           }).length;
-      if (uses !== allowed) problems.push(`${uses - allowed} import or require of fs beyond existsSync and readFileSync`);
+      if (uses !== allowed) problems.push(`${uses - allowed} import or require of fs beyond ${readOnly.join(", ")}`);
       return problems;
     };
     // The check names no write call, so an unlisted one (openSync, cp, truncate, mkdtemp) cannot slip past it.
@@ -590,6 +595,8 @@ describe("output path rules and R3", () => {
     ];
     for (const probe of refused) assert.notDeepEqual(fsProblems(probe, true), [], probe);
     assert.deepEqual(fsProblems('import { existsSync, readFileSync } from "node:fs";', true), []);
+    assert.deepEqual(fsProblems('import { existsSync, readdirSync, readFileSync } from "node:fs";', true), []);
+    assert.notDeepEqual(fsProblems('import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";', true), []);
     assert.notDeepEqual(fsProblems('import { existsSync, readFileSync } from "node:fs";', false), []);
     assert.deepEqual(fsProblems('import { join } from "node:path";\nconst note = "fsync";', false), []);
     assert.deepEqual(fsProblems('const worker = new Worker(url, { type: "module" });', false), []);
@@ -790,5 +797,181 @@ describe("check-dist", () => {
     assert.equal(checkDistMain([], { env, ...io }), 2);
     assert.equal(checkDistMain([join(dir, "missing.html")], { env, ...io }), 2);
     assert.equal(statSync(cleanPath).size, Buffer.byteLength(valid));
+  });
+});
+
+describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
+  const labels = requiredLabels();
+  const quiet = { log: () => {}, error: () => {} };
+  const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const SITE_FILES = ["_headers", "boot.js", "index.html", "src/core/a.js", "src/core/b.js", "src/core/c.js", "src/core/side.js", "src/runtime/worker.js", "src/ui/app.js", "src/ui/labels.js", "styles.css"];
+
+  test("buildSite holds the page shell, the boot module, the stylesheet, the headers and every reachable module unchanged, nothing else", () => {
+    const graph = { ...GRAPH, "src/core/unreachable.js": "export const dead = 1;\n", "test/x.test.mjs": "// never shipped\n" };
+    const { playground } = fakeRepository("site-build", graph);
+    const files = buildSite(playground);
+    assert.deepEqual([...files.keys()].sort(), SITE_FILES);
+    for (const path of SITE_FILES.filter((p) => p.startsWith("src/"))) assert.equal(files.get(path), graph[path], path);
+    assert.equal(files.get("styles.css"), graph["styles.css"]);
+    assert.equal(files.get("boot.js"), SITE_BOOT);
+    assert.equal(files.get("_headers"), SITE_HEADERS);
+    const html = files.get("index.html");
+    assert.match(html, new RegExp(`^<!doctype html>\\n<html lang="en">\\n<head><meta http-equiv="Content-Security-Policy" content="${escapeRegExp(SITE_CONTENT_SECURITY_POLICY)}">\\n<meta charset="utf-8">`));
+    assert.ok(html.includes('<link rel="stylesheet" href="./styles.css">\n</head>'));
+    assert.ok(html.includes('<script type="module" src="./boot.js"></script>\n</body>'));
+    assert.equal((html.match(/<script\b/g) ?? []).length, 1, "the inline module script is gone");
+    assert.equal((html.match(/<link\b/g) ?? []).length, 1);
+    assert.ok(!html.includes("import {"));
+    assert.ok(html.includes('<div id="fleetlab-root"></div>'), "the shell body is kept");
+    assert.deepEqual(checkSite(files, { requiredLabels: labels }), []);
+  });
+
+  test("the hosted policy takes scripts, the worker and the stylesheet from the site only, and the headers repeat it with frame-ancestors", () => {
+    assert.equal(
+      SITE_CONTENT_SECURITY_POLICY,
+      "default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'",
+    );
+    const directive = (name) => SITE_CONTENT_SECURITY_POLICY.split(";").map((d) => d.trim()).find((d) => d.startsWith(`${name} `));
+    assert.equal(directive("script-src"), "script-src 'self'");
+    assert.equal(directive("connect-src"), "connect-src 'none'");
+    assert.ok(SITE_HEADERS.startsWith(`/*\n  Content-Security-Policy: ${SITE_CONTENT_SECURITY_POLICY}; frame-ancestors 'none'\n`));
+    assert.ok(SITE_HEADERS.endsWith("\n"));
+    assert.ok(/^\/\*\n(  [A-Za-z-]+: [^\n]+\n)+$/.test(SITE_HEADERS), "one path block of indented header lines");
+    assert.equal(SITE_BOOT, 'import { start } from "./src/ui/app.js";\nstart({ createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });\n');
+  });
+
+  test("--site writes exactly the manifest under dist/ or outside, twice over, and refuses other places", () => {
+    const { root, playground } = fakeRepository("site-paths");
+    const before = snapshot(root);
+    const logs = [];
+    assert.equal(packMain(["--site", "dist/site", "--playground", playground], { cwd: root, log: (m) => logs.push(m), error: () => {} }), 0);
+    assert.match(logs.join("\n"), /^pack: wrote 11 files to .*dist\/site \(\d+ bytes\)$/m);
+    const after = snapshot(root);
+    assert.deepEqual([...after.keys()].filter((k) => !before.has(k)).sort(), SITE_FILES.map((p) => `dist/site/${p}`));
+    for (const [path, text] of before) assert.equal(after.get(path), text, `${path} unchanged`);
+    for (const [path, text] of buildSite(playground)) assert.equal(after.get(`dist/site/${path}`), text, path);
+    // A second build over the same folder rewrites the same files and adds nothing.
+    assert.equal(packMain(["--site", "dist/site", "--playground", playground], { cwd: root, ...quiet }), 0);
+    assert.deepEqual(snapshot(root), after);
+    const outside = scratch("site-outside");
+    assert.equal(packMain(["--site", join(outside, "site"), "--playground", playground], { cwd: root, ...quiet }), 0);
+    assert.deepEqual([...snapshot(outside).keys()].sort(), SITE_FILES.map((p) => `site/${p}`));
+
+    for (const out of ["artifacts/site", "experiments/site", "playground/fleetlab/site", "site", "dist", "dist/../artifacts/site"]) {
+      const errors = [];
+      assert.equal(packMain(["--site", out, "--playground", playground], { cwd: root, log: () => {}, error: (m) => errors.push(m) }), 2, out);
+      assert.match(errors.join("\n"), /refusing/, out);
+    }
+    assert.equal(packMain(["--site", "dist/page.html", "--playground", playground], { cwd: root, ...quiet }), 2, "an .html path is not a folder");
+    assert.equal(packMain(["--site", "dist/a", "--out", "dist/b.html", "--playground", playground], { cwd: root, ...quiet }), 2, "one of --site and --out");
+    assert.equal(packMain(["--site"], { cwd: root, ...quiet }), 2);
+    assert.match(checkSitePath(join(root, "artifacts/site"), root).reason, /artifacts\/ folder/);
+    assert.equal(checkSitePath(join(root, "dist/site"), root).ok, true);
+  });
+
+  test("--site refuses a folder that holds an entry the site does not name, a symbolic link, or a file at the path", () => {
+    const { root, playground } = fakeRepository("site-foreign");
+    mkdirSync(join(root, "dist/site/src/ui"), { recursive: true });
+    writeFileSync(join(root, "dist/site/src/ui/stale.js"), "// left over from an earlier build\n");
+    const before = snapshot(root);
+    const errors = [];
+    assert.equal(packMain(["--site", "dist/site", "--playground", playground], { cwd: root, log: () => {}, error: (m) => errors.push(m) }), 2);
+    assert.match(errors.join("\n"), /refusing to write into a folder that holds an entry the site does not name \(src\/ui\/stale\.js\)/);
+    assert.deepEqual(snapshot(root), before);
+    const files = buildSite(playground);
+    assert.equal(checkSitePath(join(root, "dist/site"), root, files).ok, false);
+    assert.equal(checkSitePath(join(root, "dist/site"), root).ok, true, "the place rule alone passes; the manifest rule refuses");
+
+    const linked = fakeRepository("site-symlink");
+    mkdirSync(join(linked.root, "dist/site"), { recursive: true });
+    symlinkSync(join(linked.root, "artifacts"), join(linked.root, "dist/site/src"));
+    const linkedBefore = snapshot(linked.root);
+    assert.equal(packMain(["--site", "dist/site", "--playground", linked.playground], { cwd: linked.root, ...quiet }), 2);
+    assert.deepEqual(snapshot(linked.root), linkedBefore);
+    assert.equal(existsSync(join(linked.root, "artifacts/ui")), false);
+
+    const filed = fakeRepository("site-file");
+    mkdirSync(join(filed.root, "dist"));
+    writeFileSync(join(filed.root, "dist/site"), "a file\n");
+    const filedErrors = [];
+    assert.equal(packMain(["--site", "dist/site", "--playground", filed.playground], { cwd: filed.root, log: () => {}, error: (m) => filedErrors.push(m) }), 2);
+    assert.match(filedErrors.join("\n"), /not a folder/);
+    assert.equal(readFileSync(join(filed.root, "dist/site"), "utf8"), "a file\n");
+  });
+
+  test("checkSite reports each crafted violation and names the file", () => {
+    const { playground } = fakeRepository("site-check");
+    const clean = buildSite(playground);
+    const withFile = (path, text) => {
+      const files = new Map(clean);
+      if (text === null) files.delete(path);
+      else files.set(path, text);
+      return files;
+    };
+    const expectProblem = (files, pattern) => {
+      const problems = checkSite(files, { requiredLabels: labels });
+      assert.ok(problems.some((p) => pattern.test(p)), `expected ${pattern} in ${JSON.stringify(problems)}`);
+    };
+    assert.deepEqual(checkSite(clean, { requiredLabels: labels }), []);
+    assert.deepEqual(checkSite(Object.fromEntries(clean), { requiredLabels: labels }), [], "a plain object works too");
+    expectProblem(withFile("src/core/c.js", `${clean.get("src/core/c.js")}const cdn = "https://example.org/x.js";\n`), /^external URL in src\/core\/c\.js: "https:/);
+    expectProblem(withFile("src/core/c.js", `${clean.get("src/core/c.js")}img.src = "//example.org/a.png";\n`), /^external URL in src\/core\/c\.js: a protocol-relative string/);
+    expectProblem(withFile("src/core/c.js", `${clean.get("src/core/c.js")}const r = fetch("/x");\n`), /^forbidden token in src\/core\/c\.js: fetch\(/);
+    expectProblem(withFile("styles.css", `${clean.get("styles.css")}.x { background: url(//example.org/a.png); }\n`), /^external URL in styles\.css: a protocol-relative reference in CSS/);
+    expectProblem(withFile("styles.css", `@import "other.css";\n${clean.get("styles.css")}`), /^forbidden token in styles\.css: @import/);
+    expectProblem(withFile("src/ui/labels.js", clean.get("src/ui/labels.js").replace("Teaching model", "Live teaching model")), /^banned word: "Live" in src\/ui\/labels\.js string/);
+    expectProblem(withFile("src/ui/labels.js", clean.get("src/ui/labels.js").replace("Teaching model", `Teaching ${EM_DASH} model`)), /^dash: an em or en dash in src\/ui\/labels\.js string/);
+    expectProblem(withFile("src/ui/labels.js", null), /^labels: no src\/ui\/labels\.js module in the site/);
+    expectProblem(withFile("index.html", clean.get("index.html").replace("<title>Scratch playground</title>", `<title>Scratch ${EN_DASH} playground</title>`)), /^dash: an em or en dash in text/);
+    expectProblem(withFile("index.html", clean.get("index.html").replace("</body>", '<img src="//example.org/a.png">\n</body>')), /^external URL in index\.html: a protocol-relative reference in src/);
+    expectProblem(withFile("index.html", clean.get("index.html").replace("</head>", '<meta http-equiv="refresh" content="0">\n</head>')), /^forbidden element in index\.html: a meta refresh/);
+    expectProblem(withFile("index.html", clean.get("index.html").replace("</body>", "<script>alert(1)</script>\n</body>")), /^index\.html: expected exactly one module script/);
+    expectProblem(withFile("index.html", clean.get("index.html").replace("</head>", '<link rel="icon" href="./x.png">\n</head>')), /^index\.html: expected exactly one stylesheet link/);
+    expectProblem(withFile("index.html", clean.get("index.html").replace("</head>", '<link rel="icon" href="./x.png">\n</head>')), /^forbidden token in index\.html: <link/);
+    expectProblem(withFile("index.html", clean.get("index.html").replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")), /^policy: content differs from the design policy/);
+    expectProblem(withFile("index.html", clean.get("index.html").replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, "")), /^policy: no Content-Security-Policy meta element/);
+    expectProblem(withFile("boot.js", `${SITE_BOOT}console.log("extra");\n`), /^boot: boot\.js differs from the module pack\.mjs writes/);
+    expectProblem(withFile("_headers", SITE_HEADERS.replace("frame-ancestors 'none'", "frame-ancestors *")), /^headers: _headers differs from the text pack\.mjs writes/);
+    for (const name of ["index.html", "boot.js", "styles.css", "_headers"]) expectProblem(withFile(name, null), new RegExp(`^file: ${escapeRegExp(name)} is missing`));
+    for (const extra of ["notes.txt", ".DS_Store", "src/ui/app.js.map", "test/x.test.mjs", "src/ui/App.html"]) expectProblem(withFile(extra, "x"), new RegExp(`^file: unexpected ${escapeRegExp(extra)}`));
+    expectProblem(withFile("src/core/c.js", `${clean.get("src/core/c.js")}const label = ${JSON.stringify(labels[1])};\n`), /^required label: entry 1 of the label tuple appears in src\/core\/c\.js/);
+    assert.ok(checkSite(withFile("src/core/c.js", `${clean.get("src/core/c.js")}const label = ${JSON.stringify(labels[1])};\n`), { requiredLabels: labels }).every((p) => !p.includes(labels[1])), "messages never repeat the label");
+    expectProblem(withFile("src/core/big.js", `export const big = "${"x".repeat(MAX_BYTES)}";\n`), /^size: \d+ bytes is over the 2097152 byte limit/);
+    assert.throws(() => checkSite(clean, { requiredLabels: [] }), TypeError);
+  });
+
+  test("the command line checks a folder: 0 when clean, 1 with one line per problem, 2 when the folder cannot be read", () => {
+    const { root, playground } = fakeRepository("site-cli");
+    assert.equal(packMain(["--site", "dist/site", "--playground", playground], { cwd: root, ...quiet }), 0);
+    const env = { FLEETLAB_REQUIRED_LABELS: JSON.stringify(labels) };
+    const logs = [];
+    const errors = [];
+    const io = { log: (m) => logs.push(m), error: (m) => errors.push(m) };
+    assert.equal(checkDistMain(["--site", join(root, "dist/site")], { env, ...io }), 0);
+    assert.match(logs.join("\n"), /^check-dist: OK .*dist\/site \(11 files, \d+ bytes; policy, files, URLs, tokens, copy and labels checked\)$/m);
+    writeFileSync(join(root, "dist/site/notes.txt"), "stale\n");
+    symlinkSync(join(root, "README.md"), join(root, "dist/site/src/link.js"));
+    writeFileSync(join(root, "dist/site/src/core/c.js"), `${readFileSync(join(root, "dist/site/src/core/c.js"), "utf8")}const u = "http://example.org";\n`);
+    assert.equal(checkDistMain(["--site", join(root, "dist/site")], { env, ...io }), 1);
+    for (const pattern of [/check-dist: file: unexpected notes\.txt/, /check-dist: file: src\/link\.js is a symbolic link/, /check-dist: external URL in src\/core\/c\.js/, /FAILED with 3 problem/]) {
+      assert.match(errors.join("\n"), pattern);
+    }
+    assert.equal(checkDistMain(["--site", join(root, "dist/missing")], { env, ...io }), 2);
+    assert.equal(checkDistMain(["--site"], { env, ...io }), 2);
+    assert.equal(checkDistMain(["--site", join(root, "dist/site"), join(root, "dist/site/index.html")], { env, ...io }), 2, "a folder or a file, not both");
+  });
+
+  test("the real playground's site passes check-dist, and every module in it equals its source", () => {
+    const logs = [];
+    assert.equal(packMain(["--site", "dist/site"], { cwd: REPO_ROOT, log: (m) => logs.push(m), error: (m) => logs.push(m) }), 0, logs.join("\n"));
+    const files = buildSite(PLAYGROUND_ROOT);
+    assert.deepEqual(checkSite(files, { requiredLabels: labels }), []);
+    assert.equal(checkDistMain(["--site", join(REPO_ROOT, "dist/site")], { env: { FLEETLAB_REQUIRED_LABELS: JSON.stringify(labels) }, ...quiet }), 0);
+    for (const [path, text] of files) {
+      if (path.startsWith("src/")) assert.equal(text, readFileSync(join(PLAYGROUND_ROOT, path), "utf8"), path);
+      assert.equal(readFileSync(join(REPO_ROOT, "dist/site", path), "utf8"), text, path);
+    }
+    assert.ok([...files.keys()].some((p) => p === "src/runtime/worker.js") && [...files.keys()].some((p) => p === "src/ui/app.js"));
+    assert.ok(![...files.keys()].some((p) => p.startsWith("test/") || p.startsWith("tools/")));
   });
 });

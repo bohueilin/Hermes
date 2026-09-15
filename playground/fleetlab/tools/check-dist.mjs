@@ -3,15 +3,18 @@
 // or an em or en dash in interface copy, a string from FleetLab's label tuple, or a size over 2 MB.
 //
 // Usage: node playground/fleetlab/tools/check-dist.mjs <file.html> [--required-labels <file.json>]
+//        node playground/fleetlab/tools/check-dist.mjs --site <folder> [--required-labels <file.json>]
+// A folder is the hosted site pack.mjs --site writes: the same rules on every file, the site policy instead of the
+// packed one, exactly the files the packer writes and no other, and boot.js and _headers verbatim.
 // The label tuple comes from --required-labels (a JSON array), else the FLEETLAB_REQUIRED_LABELS environment
 // variable (a JSON array), else it is read from the repository's contracts module; it is never spelled here.
 // Exit 0 when clean, 1 with one line per problem, 2 on a usage error.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { CONTENT_SECURITY_POLICY, MODULE_MARKER, findRepositoryRoot, maskSource } from "./pack.mjs";
+import { CONTENT_SECURITY_POLICY, MODULE_MARKER, SITE_BOOT, SITE_CONTENT_SECURITY_POLICY, SITE_HEADERS, findRepositoryRoot, maskSource } from "./pack.mjs";
 
 /** Largest packed file accepted, in bytes. */
 export const MAX_BYTES = 2 * 1024 * 1024;
@@ -221,6 +224,13 @@ function protocolRelativeStrings(source, depth = 0) {
   return found;
 }
 
+/** String and template literal texts of one JavaScript source, escapes decoded. */
+export function literalsOf(source) {
+  const literals = [];
+  maskSource(source, { literals });
+  return literals.map(([a, b]) => decodeJsEscapes(source.slice(a, b)));
+}
+
 /** String and template literal texts of the named module sections in the page script, escapes decoded. */
 export function moduleCopy(html, modules = COPY_MODULES) {
   const found = new Map();
@@ -232,12 +242,99 @@ export function moduleCopy(html, modules = COPY_MODULES) {
     let to = index + 1 < starts.length ? starts[index + 1].index : html.length;
     const end = html.slice(from, to).search(/^return __fleetlab_m\d+;$/m);
     if (end !== -1) to = from + end;
-    const section = html.slice(from, to);
-    const literals = [];
-    maskSource(section, { literals });
-    found.set(m[1], literals.map(([a, b]) => decodeJsEscapes(section.slice(a, b))));
+    found.set(m[1], literalsOf(html.slice(from, to)));
   });
   return found;
+}
+
+const at = (where) => (where === null ? "" : ` in ${where}`);
+
+function requireLabels(requiredLabels) {
+  if (!Array.isArray(requiredLabels) || requiredLabels.length === 0 || requiredLabels.some((s) => typeof s !== "string" || s === "")) {
+    throw new TypeError("checkDist needs requiredLabels: a non-empty array of non-empty strings");
+  }
+}
+
+/** `http:` and `https:` anywhere in the text after decoding character references; the SVG namespace name is not a URL. */
+function schemeProblems(text, where = null) {
+  const problems = [];
+  const decoded = decodeEntities(text);
+  for (const m of decoded.matchAll(/https?:/gi)) {
+    const rest = decoded.slice(m.index, m.index + SVG_NAMESPACE.length + 1);
+    const namespaceName = rest.startsWith(SVG_NAMESPACE) && !/[A-Za-z0-9._~/?#%:@-]/.test(rest[SVG_NAMESPACE.length] ?? "");
+    if (namespaceName && SVG_NAMESPACE_CONTEXT.test(decoded.slice(Math.max(0, m.index - 80), m.index))) continue;
+    problems.push(`external URL${at(where)}: ${JSON.stringify(decoded.slice(m.index, m.index + 60))}`);
+  }
+  if (CSS_REMOTE.some((pattern) => pattern.test(decoded))) problems.push(`external URL${at(where)}: a protocol-relative reference in CSS`);
+  return problems;
+}
+
+/** Protocol-relative URL attributes and a meta refresh, read from markup only. */
+function markupProblems(html, tags, where = null) {
+  const problems = [];
+  for (const [name, value] of attributesOf(tags)) {
+    const local = name.slice(name.lastIndexOf(":") + 1);
+    if (URL_ATTRIBUTES.has(local) && isProtocolRelative(local, value)) {
+      problems.push(`external URL${at(where)}: a protocol-relative reference in ${name} ${JSON.stringify(value.slice(0, 60))}`);
+    }
+  }
+  // A meta refresh navigates the page (design section 9.4), whatever its content says.
+  if (tags.some((tag) => tag.name === "meta" && tag.attributes.some(([name, value]) => name === "http-equiv" && value.trim().toLowerCase() === "refresh"))) {
+    problems.push(`forbidden element${at(where)}: a meta refresh`);
+  }
+  return problems;
+}
+
+/** Protocol-relative string literals in JavaScript source. */
+function scriptProblems(source, where = null) {
+  const strings = protocolRelativeStrings(source);
+  if (strings === null) return [`script${at(where)}: a script element that cannot be scanned for protocol-relative strings`];
+  return strings.map((value) => `external URL${at(where)}: a protocol-relative string in script ${JSON.stringify(value.slice(0, 60))}`);
+}
+
+/** Exactly one policy meta element, holding `expected`, as the first child of `<head>`. */
+function policyProblems(html, expected) {
+  const problems = [];
+  const policies = [...html.matchAll(/<meta\b[^>]*http-equiv\s*=\s*["']?Content-Security-Policy["']?[^>]*>/gi)];
+  const head = /<head\b[^>]*>/i.exec(html);
+  if (policies.length === 0) problems.push("policy: no Content-Security-Policy meta element");
+  else if (policies.length > 1) problems.push(`policy: ${policies.length} Content-Security-Policy meta elements, expected 1`);
+  else {
+    const content = /\scontent\s*=\s*"([^"]*)"/i.exec(policies[0][0]);
+    if (!content || decodeEntities(content[1]) !== expected) {
+      problems.push(`policy: content differs from the design policy: ${JSON.stringify(content ? content[1] : null)}`);
+    }
+    if (!head || policies[0].index !== head.index + head[0].length) {
+      problems.push("policy: the Content-Security-Policy meta element is not the first child of <head>");
+    }
+  }
+  return problems;
+}
+
+function tokenProblems(text, where = null) {
+  const problems = [];
+  for (const [pattern, name] of FORBIDDEN_TOKENS) {
+    if (pattern.test(text)) problems.push(`forbidden token${at(where)}: ${name}`);
+  }
+  return problems;
+}
+
+/** Banned words and dashes in copy items `{where, text}`. */
+function copyProblems(copy) {
+  const problems = [];
+  for (const { where, text } of copy) {
+    const word = BANNED_WORDS.exec(text);
+    if (word) problems.push(`banned word: "${word[0]}" in ${where} ${JSON.stringify(text.slice(0, 80))}`);
+    if (DASHES.test(text)) problems.push(`dash: an em or en dash in ${where} ${JSON.stringify(text.slice(0, 80))}`);
+  }
+  return problems;
+}
+
+/** Quoted excerpts must never repeat a label string, so every message is redacted. */
+function redacted(problems, requiredLabels) {
+  return problems.map((problem) =>
+    requiredLabels.reduce((text, label, index) => text.split(label).join(`[label tuple entry ${index}]`), problem),
+  );
 }
 
 /**
@@ -245,76 +342,110 @@ export function moduleCopy(html, modules = COPY_MODULES) {
  * Returns an array of problem strings; empty means clean.
  */
 export function checkDist(html, { requiredLabels, byteLength = Buffer.byteLength(html) }) {
-  if (!Array.isArray(requiredLabels) || requiredLabels.length === 0 || requiredLabels.some((s) => typeof s !== "string" || s === "")) {
-    throw new TypeError("checkDist needs requiredLabels: a non-empty array of non-empty strings");
-  }
+  requireLabels(requiredLabels);
   const problems = [];
   if (byteLength > MAX_BYTES) problems.push(`size: ${byteLength} bytes is over the ${MAX_BYTES} byte limit`);
 
   // Scanned after decoding character references, which never removes a literal scheme, so this covers the raw text too.
-  const decoded = decodeEntities(html);
-  for (const m of decoded.matchAll(/https?:/gi)) {
-    const rest = decoded.slice(m.index, m.index + SVG_NAMESPACE.length + 1);
-    const namespaceName = rest.startsWith(SVG_NAMESPACE) && !/[A-Za-z0-9._~/?#%:@-]/.test(rest[SVG_NAMESPACE.length] ?? "");
-    if (namespaceName && SVG_NAMESPACE_CONTEXT.test(decoded.slice(Math.max(0, m.index - 80), m.index))) continue;
-    problems.push(`external URL: ${JSON.stringify(decoded.slice(m.index, m.index + 60))}`);
-  }
+  problems.push(...schemeProblems(html));
   // Attributes are read from markup only, so script text such as `const data = x; // note` is never taken for one.
   const { tags } = tokensOf(markupOf(html));
-  for (const [name, value] of attributesOf(tags)) {
-    const local = name.slice(name.lastIndexOf(":") + 1);
-    if (URL_ATTRIBUTES.has(local) && isProtocolRelative(local, value)) {
-      problems.push(`external URL: a protocol-relative reference in ${name} ${JSON.stringify(value.slice(0, 60))}`);
-    }
-  }
-  if (CSS_REMOTE.some((pattern) => pattern.test(decoded))) problems.push("external URL: a protocol-relative reference in CSS");
-  for (const script of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)) {
-    const strings = protocolRelativeStrings(script[1]);
-    if (strings === null) problems.push("script: a script element that cannot be scanned for protocol-relative strings");
-    for (const value of strings ?? []) {
-      problems.push(`external URL: a protocol-relative string in script ${JSON.stringify(value.slice(0, 60))}`);
-    }
-  }
-  // A meta refresh navigates the page (design section 9.4), whatever its content says.
-  if (tags.some((tag) => tag.name === "meta" && tag.attributes.some(([name, value]) => name === "http-equiv" && value.trim().toLowerCase() === "refresh"))) {
-    problems.push("forbidden element: a meta refresh");
-  }
-
-  const policies = [...html.matchAll(/<meta\b[^>]*http-equiv\s*=\s*["']?Content-Security-Policy["']?[^>]*>/gi)];
-  const head = /<head\b[^>]*>/i.exec(html);
-  if (policies.length === 0) problems.push("policy: no Content-Security-Policy meta element");
-  else if (policies.length > 1) problems.push(`policy: ${policies.length} Content-Security-Policy meta elements, expected 1`);
-  else {
-    const content = /\scontent\s*=\s*"([^"]*)"/i.exec(policies[0][0]);
-    if (!content || decodeEntities(content[1]) !== CONTENT_SECURITY_POLICY) {
-      problems.push(`policy: content differs from the design policy: ${JSON.stringify(content ? content[1] : null)}`);
-    }
-    if (!head || policies[0].index !== head.index + head[0].length) {
-      problems.push("policy: the Content-Security-Policy meta element is not the first child of <head>");
-    }
-  }
-
-  for (const [pattern, name] of FORBIDDEN_TOKENS) {
-    if (pattern.test(html)) problems.push(`forbidden token: ${name}`);
-  }
+  problems.push(...markupProblems(html, tags));
+  for (const script of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)) problems.push(...scriptProblems(script[1]));
+  problems.push(...policyProblems(html, CONTENT_SECURITY_POLICY));
+  problems.push(...tokenProblems(html));
 
   const copy = visibleCopy(html);
   const modules = moduleCopy(html);
   if (!modules.has("src/ui/labels.js")) problems.push("labels: no src/ui/labels.js module found in the page script");
   for (const [name, texts] of modules) for (const text of texts) copy.push({ where: `${name} string`, text });
-  for (const { where, text } of copy) {
-    const word = BANNED_WORDS.exec(text);
-    if (word) problems.push(`banned word: "${word[0]}" in ${where} ${JSON.stringify(text.slice(0, 80))}`);
-    if (DASHES.test(text)) problems.push(`dash: an em or en dash in ${where} ${JSON.stringify(text.slice(0, 80))}`);
-  }
+  problems.push(...copyProblems(copy));
 
   requiredLabels.forEach((label, index) => {
     if (html.includes(label)) problems.push(`required label: entry ${index} of the label tuple appears in the file`);
   });
-  // Quoted excerpts must never repeat a label string, so every message is redacted.
-  return problems.map((problem) =>
-    requiredLabels.reduce((text, label, index) => text.split(label).join(`[label tuple entry ${index}]`), problem),
-  );
+  return redacted(problems, requiredLabels);
+}
+
+const SITE_FIXED_FILES = ["index.html", "boot.js", "styles.css", "_headers"];
+const SITE_MODULE_PATH = /^src\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.js$/;
+const SITE_STYLESHEET_LINK = '<link rel="stylesheet" href="./styles.css">';
+const SITE_BOOT_SCRIPT = '<script type="module" src="./boot.js"></script>';
+
+/**
+ * Checks a hosted folder as a map (or plain object) from relative path to text, as pack.mjs --site writes it:
+ * exactly index.html, boot.js, styles.css, _headers and `src/**.js` modules; boot.js and _headers verbatim; the site
+ * policy first in <head>; one stylesheet link and one module script and no other script or link; and on every file
+ * the packed file's rules (no external URL, no forbidden token, no banned word or dash in copy, no label string).
+ * Returns an array of problem strings; empty means clean.
+ */
+export function checkSite(files, { requiredLabels }) {
+  requireLabels(requiredLabels);
+  const entries = files instanceof Map ? files : new Map(Object.entries(files));
+  const problems = [];
+  let bytes = 0;
+  for (const [path, text] of entries) {
+    if (typeof text !== "string") {
+      problems.push(`file: ${path} is not text`);
+      continue;
+    }
+    bytes += Buffer.byteLength(text);
+    if (!SITE_FIXED_FILES.includes(path) && !SITE_MODULE_PATH.test(path)) problems.push(`file: unexpected ${path}`);
+  }
+  if (bytes > MAX_BYTES) problems.push(`size: ${bytes} bytes is over the ${MAX_BYTES} byte limit`);
+  for (const name of SITE_FIXED_FILES) if (!entries.has(name)) problems.push(`file: ${name} is missing`);
+  if (!entries.has("src/ui/labels.js")) problems.push("labels: no src/ui/labels.js module in the site");
+  const text = (path) => (typeof entries.get(path) === "string" ? entries.get(path) : null);
+  if (text("boot.js") !== null && text("boot.js") !== SITE_BOOT) problems.push("boot: boot.js differs from the module pack.mjs writes");
+  if (text("_headers") !== null && text("_headers") !== SITE_HEADERS) problems.push("headers: _headers differs from the text pack.mjs writes");
+
+  const html = text("index.html");
+  if (html !== null) {
+    problems.push(...policyProblems(html, SITE_CONTENT_SECURITY_POLICY));
+    const links = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]);
+    const scripts = [...html.matchAll(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi)].map((m) => m[0]);
+    if (links.length !== 1 || links[0] !== SITE_STYLESHEET_LINK) problems.push(`index.html: expected exactly one stylesheet link, ${SITE_STYLESHEET_LINK}`);
+    if (scripts.length !== 1 || scripts[0] !== SITE_BOOT_SCRIPT) problems.push(`index.html: expected exactly one module script, ${SITE_BOOT_SCRIPT}`);
+    const remainder = html.split(SITE_STYLESHEET_LINK).join("").split(SITE_BOOT_SCRIPT).join("");
+    problems.push(...tokenProblems(remainder, "index.html"));
+    problems.push(...markupProblems(html, tokensOf(markupOf(html)).tags, "index.html"));
+  }
+  const copy = html === null ? [] : visibleCopy(html);
+  for (const [path, source] of entries) {
+    if (typeof source !== "string" || path === "boot.js" || path === "_headers") continue;
+    problems.push(...schemeProblems(source, path));
+    if (path.endsWith(".js")) {
+      problems.push(...scriptProblems(source, path));
+      problems.push(...tokenProblems(source, path));
+      if (COPY_MODULES.includes(path)) for (const literal of literalsOf(source)) copy.push({ where: `${path} string`, text: literal });
+    }
+    if (path === "styles.css") problems.push(...tokenProblems(source, path));
+  }
+  problems.push(...copyProblems(copy));
+  for (const [path, source] of entries) {
+    if (typeof source !== "string") continue;
+    requiredLabels.forEach((label, index) => {
+      if (source.includes(label)) problems.push(`required label: entry ${index} of the label tuple appears in ${path}`);
+    });
+  }
+  return redacted(problems, requiredLabels);
+}
+
+/** Every entry under `dir` as a map from relative path to text; a symbolic link or a non-file entry is a problem. */
+function readSite(dir) {
+  const files = new Map();
+  const problems = [];
+  const walk = (folder, prefix) => {
+    for (const entry of readdirSync(folder, { withFileTypes: true })) {
+      const rel = prefix + entry.name;
+      if (entry.isSymbolicLink()) problems.push(`file: ${rel} is a symbolic link`);
+      else if (entry.isDirectory()) walk(join(folder, entry.name), `${rel}/`);
+      else if (entry.isFile()) files.set(rel, readFileSync(join(folder, entry.name), "utf8"));
+      else problems.push(`file: ${rel} is not a regular file`);
+    }
+  };
+  walk(dir, "");
+  return { files, problems };
 }
 
 /** Reads FleetLab's label tuple from the repository's contracts module without spelling it. */
@@ -328,17 +459,19 @@ export function labelsFromContracts(repoRoot) {
 /** Command-line entry. Returns the exit status. */
 export function main(argv, { env = process.env, cwd = process.cwd(), log = console.log, error = console.error } = {}) {
   let file = null;
+  let site = null;
   let labelsFile = null;
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--required-labels") labelsFile = argv[++i];
+    else if (argv[i] === "--site") site = argv[++i] ?? null;
     else if (file === null && !argv[i].startsWith("--")) file = argv[i];
     else {
       error(`check-dist: unexpected argument ${argv[i]}`);
       return 2;
     }
   }
-  if (!file) {
-    error("check-dist: usage: check-dist.mjs <file.html> [--required-labels <file.json>]");
+  if (!file === !site) {
+    error("check-dist: usage: check-dist.mjs <file.html> | --site <folder> [--required-labels <file.json>]");
     return 2;
   }
   let requiredLabels;
@@ -356,6 +489,25 @@ export function main(argv, { env = process.env, cwd = process.cwd(), log = conso
   if (!Array.isArray(requiredLabels) || requiredLabels.length === 0) {
     error("check-dist: no label tuple: pass --required-labels or FLEETLAB_REQUIRED_LABELS");
     return 2;
+  }
+  if (site) {
+    const dir = resolve(cwd, site);
+    let read;
+    try {
+      read = readSite(dir);
+    } catch (err) {
+      error(`check-dist: cannot read the folder ${dir}: ${err.code ?? err.message}`);
+      return 2;
+    }
+    const problems = [...read.problems, ...checkSite(read.files, { requiredLabels })];
+    if (problems.length > 0) {
+      for (const problem of problems) error(`check-dist: ${problem}`);
+      error(`check-dist: FAILED with ${problems.length} problem(s) in ${dir}`);
+      return 1;
+    }
+    const bytes = [...read.files.values()].reduce((sum, text) => sum + Buffer.byteLength(text), 0);
+    log(`check-dist: OK ${dir} (${read.files.size} files, ${bytes} bytes; policy, files, URLs, tokens, copy and labels checked)`);
+    return 0;
   }
   const path = resolve(cwd, file);
   if (!existsSync(path)) {

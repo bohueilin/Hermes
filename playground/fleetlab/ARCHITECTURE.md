@@ -49,6 +49,14 @@ node playground/fleetlab/tools/check-dist.mjs dist/fleetlab-playground.html
 ```
 
 ```bash
+node playground/fleetlab/tools/pack.mjs --site dist/site
+```
+
+```bash
+node playground/fleetlab/tools/check-dist.mjs --site dist/site
+```
+
+```bash
 python3 -m http.server 8765 --bind 127.0.0.1 --directory playground/fleetlab
 ```
 
@@ -644,6 +652,19 @@ copy, an em or en dash in copy, a `REQUIRED_LABELS` string (from a list the test
 or a size over 2 MB. The one allowed `http:` string is the SVG namespace `http://www.w3.org/2000/svg`, used only as a
 `createElementNS` argument or an `xmlns` attribute.
 
+`pack.mjs --site <folder>` writes a folder for a static host instead of one file: every module the page or the worker
+reaches, unchanged, at its `src/` path; `styles.css`; `index.html` as the development shell with the site policy
+`default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;
+connect-src 'none'; form-action 'none'; base-uri 'none'` first in `<head>`, the stylesheet link and one module script;
+`boot.js`, the shell's inline script as a file, so the policy can refuse inline code; and `_headers`, the policy again
+with `frame-ancestors 'none'` and a few response headers in the format static hosts read. Nothing else reaches the folder
+(no tests, tools, fixtures or the legacy profile, which only tests import). The folder obeys the same place rule as the
+packed file, and a folder that already holds an entry the site does not name (a stale module, a symbolic link) is refused
+before anything is written, so a leftover can never ride along to a host. `check-dist.mjs --site <folder>` applies the
+packed file's rules to every file, requires the site policy, exactly the files the packer writes, one stylesheet link and
+one module script in `index.html`, and `boot.js` and `_headers` verbatim; it may read a folder (`readdirSync`) but never
+writes.
+
 ## 10. Tests
 
 `playground/fleetlab/test/`: `core.test.mjs`, `tables.test.mjs`, `instrument-parity.test.mjs`, `summary.test.mjs`,
@@ -740,3 +761,6 @@ final sample summary in phase 5) and is absent, not skipped, before then.
 39. A nonzero mean, delta or harm never reads as zero on the verdict card, in the verdict charts or in the copied summary:
     when the declared decimals leave no nonzero digit, the text is the exact double in plain decimals with its sign
     (`format.nonzero` for the card and charts, section 4 for the summary).
+40. A hosted folder (`pack.mjs --site`) is a second delivery beside the packed file, with a stricter policy (no inline
+    script, everything from the site's own origin) and a `_headers` file; putting it online stays an owner action
+    (design §9.4). `check-dist.mjs` may list a folder, never write.
