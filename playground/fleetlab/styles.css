@@ -21,7 +21,7 @@ Map and SVG  .fl-yard .fl-route-highway__casing .fl-route-highway__centre .fl-ro
              .fl-pinned-car (the pinned glyph, clickable) .fl-hit (a transparent pointer target)
              .fl-chart__grid .fl-chart__axis .fl-chart__line .fl-chart__band .fl-chart__cursor .fl-hatch-line
              .fl-map-legend (swatch and word per state family)
-Lists        .fl-flow (ordered steps as an arrow flow, no number markers) .fl-flow__arrow (aria-hidden) .fl-list-plain
+Lists        .fl-flow (ordered steps as an arrow flow, no number markers) .fl-flow__arrow (aria-hidden) .fl-list-plain .fl-situation__proxy
 Transport    .fl-scrubber .fl-scrubber__band (style --warmup: fraction) .fl-scrubber__input .fl-scrubber__ticks
 Motion       :root[data-motion="reduce|full"] is the in-app override; without it the system setting applies.
              A closed drawer, sheet or popover also gets the inert attribute from the interface.
@@ -465,6 +465,9 @@ summary {
 .fl-flow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; padding: 0; list-style: none; }
 .fl-flow__arrow { margin-inline-start: 8px; color: var(--muted); }
 .fl-list-plain { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+/* The SITUATION block of a casebook preset (design 4.4): a proxy's three parts, without the browser's dd indent. */
+.fl-situation__proxy { display: grid; gap: 2px; margin: 0; }
+.fl-situation__proxy dd { margin: 0 0 6px; }
 @media (max-width: 767.98px) {
   .fl-flow { flex-direction: column; }
   .fl-flow__arrow { display: none; }

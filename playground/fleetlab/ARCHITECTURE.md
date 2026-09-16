@@ -70,7 +70,7 @@ playground/fleetlab/
   src/core/        sha256.js keyed.js stats.js canon.js tables.js
   src/instrument/  paired.js bootstrap.js outcome.js guardrails.js recommendation.js summary.js
   src/legacy/      world-import.js profile.js
-  src/model/       schema.js presets.js routes.js world.js policies.js engine.js metrics.js invariants.js experiment.js
+  src/model/       schema.js presets.js ops-cases.js routes.js world.js policies.js engine.js metrics.js invariants.js experiment.js
   src/runtime/     worker.js host.js protocol.js
   src/ui/          app.js store.js labels.js format.js dom.js map.js playback.js charts.js inspector.js controls.js
                    experiment.js learn.js a11y.js
@@ -621,8 +621,9 @@ passes the factory (section 9).
   result and pinned car), `experiment` (draft, frozen spec, label, verdict, per-seed metrics, selected seed, session log),
   `reference` (the open reference panel), `learn` (case, moment), `reducedMotion` (system or override), `engine` (path).
   Every action is a pure reducer case, testable in Node without a page.
-- `labels.js`: every interface string, including the exact copy of design §1.3. Only `instrument/summary.js` holds other
-  text, for the export format (section 4).
+- `labels.js`: every interface string, including the exact copy of design §1.3, except preset copy: the titles and
+  questions in `model/presets.js` and the casebook records in `model/ops-cases.js` (decision 41), which `check-dist`
+  scans as copy. Only `instrument/summary.js` holds other text, for the export format (section 4).
 - `app.js` exports `start({createWorker})` and builds the shell of design §7.2 with `dom.js` helpers; `map.js`,
   `playback.js`, `charts.js`, `inspector.js`, `controls.js`, `experiment.js`, `learn.js` and `a11y.js` each render one
   region from the store.
@@ -670,6 +671,7 @@ writes.
 `playground/fleetlab/test/`: `core.test.mjs`, `tables.test.mjs`, `instrument-parity.test.mjs`, `summary.test.mjs`,
 `legacy-parity.test.mjs`, `routes.test.mjs`, `world.test.mjs`, `engine-fixtures.test.mjs`, `invariants.test.mjs`,
 `metrics.test.mjs`, `determinism.test.mjs`, `pairing.test.mjs`, `properties.test.mjs`, `performance.test.mjs`, `presets.test.mjs` (verdicts pinned per preset and the default's calibration envelope),
+`ops-cases.test.mjs` (the operations casebook: every spec verbatim and every verdict pinned to `ops-cases.pins.json`),
 `experiment.test.mjs`, `captions.test.mjs`, `runtime.test.mjs`, `store.test.mjs`, `labels.test.mjs`, `a11y.test.mjs`,
 `boundaries.test.mjs`, `pack.test.mjs`, `packed.test.mjs`, and interface test files named after their module. Fixture
 paths resolve from `import.meta.url` to the repository's
@@ -686,7 +688,9 @@ paths resolve from `import.meta.url` to the repository's
   from `styles.css`; accessible names from `labels.js` on every control; the focus order of design §7.7; the live-region
   throttle; the reduced-motion reducer.
 - Boundary rules: R3 is `pack.test.mjs`; R4 is `boundaries.test.mjs` (import graph and tokens); R5 is `boundaries.test.mjs`
-  plus the pytest text scan.
+  plus the pytest text scan. The text scans in `boundaries.test.mjs` also refuse a home-directory, temp-dir or scratch
+  path in any playground or fixture file, in the slash spelling and in the dash-encoded spelling a temp directory gives
+  it, and this machine's own home directory in both.
 
 Python: `test_fleet_playground_parity.py` (instrument vectors from phase 1, legacy worlds from phase 2, reference panels
 from phase 5) and `test_fleet_playground_boundaries.py` (R1, R2, R5 text part, R6, R7, R8, R9). R6 compares against the base commit named by the environment variable `FLEET_PLAYGROUND_BASE`. The section 1
@@ -764,3 +768,16 @@ final sample summary in phase 5) and is absent, not skipped, before then.
 40. A hosted folder (`pack.mjs --site`) is a second delivery beside the packed file, with a stricter policy (no inline
     script, everything from the site's own origin) and a `_headers` file; putting it online stays an owner action
     (design §9.4). `check-dist.mjs` may list a folder, never write.
+41. The operations casebook (design section 4.4) is twenty presets of kind `ops`, one record each in
+    `src/model/ops-cases.js` (id, theme, slug, title, situation, proxy, watch, outsideModel, base, experiment), built by
+    `opsPreset` in `presets.js` exactly as an Experiment preset is, with the record's copy attached. A record's slug is
+    its scenario name, and the scenario name keys the demand trace (section 6.3), so slugs are frozen with their measured
+    verdicts: `test/ops-cases.test.mjs` pins every spec verbatim, by its digest, and every seed set 1 verdict, mean
+    delta, interval and guardrail harm exactly, as doubles, to `test/ops-cases.pins.json` (seed sets 2 and 3 under
+    `FLEET_PLAYGROUND_PERF=1`). A pin holds the spec, the three measured blocks (each with the rounded numbers the design
+    tables print and the exact doubles they round from) and the lesson text, nothing else; calibration notes never leave
+    the port. Casebook copy never names a verdict or a direction, and never cites another case's result (design H-9):
+    lessons are in the design document beside the pins. `check-dist` scans the string literals of `presets.js` and
+    `ops-cases.js` as copy. The interface lists the casebook in the Experiment preset chooser as one group per theme and
+    shows a Situation block above the setup blocks for an `ops` preset; once the draft no longer matches the case's spec
+    (the question aside) the block keeps the lead and the situation and says so in place of the proxy and watch lines.

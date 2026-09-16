@@ -375,7 +375,8 @@ caption only when a fixture test asserts it (H-9).
 
 **First build.** Three guided Learn cases (UC-04, UC-09, UC-07) and seven Experiment presets without narration (UC-01, UC-02, UC-03, UC-05, UC-08a, UC-08b, UC-10), plus the
 two preregistered L2 presets and two quoted FleetLab reference panels (FLEET-005, measured; the two-zone probe,
-exploratory). Everything else is later.
+exploratory). Everything else is later. The operations casebook (§4.4), twenty more Experiment presets with every
+verdict pinned, came after the first build.
 
 ### UC-01 Null check: does "no change" read as no change?
 - **Experiment:** axis `parameter:DEP-7`, baseline 10, candidate 10 (the one preset allowed equal values).
@@ -541,6 +542,216 @@ exploratory). Everything else is later.
 | UC-14 The shift-change gap | a short capacity dip builds a backlog that lands in the next peak | D-06 |
 | UC-15 Soiled-vehicle rate | rare unscheduled removals matter once the resource they need is nearly full | soiled trips, deep clean |
 | UC-16 Dispatch rule change | a greedy rule trades median riders against tail riders, and the guardrail decides | dispatch variants |
+
+### 4.4 Operations casebook (OPS-01 to OPS-20)
+
+Built on 2026-09-14 and 2026-09-15, after the first build. The casebook is twenty situations an operations lead meets, in
+five themes of four cases each: San Francisco core operations, launching a new service area, rain, busy areas with many
+people, and police activity and emergency response. Each case is an Experiment preset of kind `ops` (contract decision
+41), built from one record in `src/model/ops-cases.js` exactly as the presets above are, with the record's copy attached.
+The Experiment preset chooser lists the casebook as one group per theme, and for a casebook preset the setup sheet shows a
+SITUATION block above its six blocks (§7.2). Every number in the casebook is invented, and every verdict is a teaching
+result (H-1, H-4).
+
+**The proxy discipline.** The model has no rain, crowds, police, incidents, venues or closures (§5.8). Each case is a
+proxy built from the knobs of §2: a slowdown becomes a congestion scaling or a longer pickup time, an event becomes a
+demand knob, cars held at scenes become fewer cars for the whole run, a closure becomes a longer route time. Each proxy
+part on the page says what it stands for, how it is set (the knob and its value) and what it misses, and each case
+carries an "Outside this model" list of what it cannot show. A proxy holds for the whole run, or for the named hours
+where the knob is a congestion row, so most casebook worlds are harsher than the situation they stand for; the copy
+says so where it matters (the rain world below).
+
+**The slug rule.** A record's slug is its scenario name, and the scenario name keys the demand trace (§5.2.2), so every
+baseline number belongs to its slug: two cases on the same map draw different request streams, and their baselines
+differ a little. Renaming a slug moves its numbers, so slugs are frozen with their measured verdicts, and the test
+asserts every slug against the pins. The launch cases were also run under two other names each, to see whether a
+verdict depends on the draw; where it does, the lesson says so (OPS-08). Those runs are exploratory: their slugs are
+not pinned, so the claim rests on the calibration record, not on a test.
+
+**Seed sets and pins.** Every spec ran on seed sets 1 to 3 (20 paired seeds each, σ 0.15, 2,000 resamples).
+`test/ops-cases.test.mjs` pins every spec verbatim, by its digest, and, for seed set 1, every verdict, mean delta,
+interval and guardrail status and harm to `test/ops-cases.pins.json`, exactly, as the doubles the deterministic runs
+give; seed sets 2 and 3 run under `FLEET_PLAYGROUND_PERF=1`, and a test requires all three sets to agree on outcome and
+recommendation. What is pinned is what the tables below print: the outcome, the recommendation, the mean delta, the
+interval and each guardrail's status and harm, and a test holds each rounded table number to its exact pinned double.
+Every lesson direction (lower, higher, no clear change, and the guardrail statuses) is one of those pinned results and
+holds on all three sets. The other figures quoted in the lessons, in "What did not show" and in the world paragraphs
+(per-window or per-depot descriptive means, queue clear times, unfinished visits, lot occupancy, the launch world's
+comparison) are calibration notes: measured by the calibration and review scripts on seed set 1 from the same frozen
+specs, reproduced by the review, but held in no pin and asserted by no test. Two lesson claims rest on runs whose specs
+are not pinned at all and say so: OPS-08's other demand draws and OPS-12's SF-2 contrast are **Exploratory** in the §4
+sense. Both files are generated from the casebook's calibration records by a port script kept outside the repository,
+which carries the spec, the measured blocks and the lesson text and nothing else, so a change to a record re-derives
+the pins first.
+
+**H-9 on the page.** The copy a casebook preset shows (title, situation, question, proxy parts, watch, outside the
+model) never names a verdict or a direction; a test asserts that, with the H-3 and H-6 word rules and the dash rule.
+The verdicts and the lessons are here, beside the pins, so a reader who runs a preset sees the numbers this section
+quotes. A review re-ran every case from its recorded base and experiment and reproduced every measured block; a
+cross-theme critique then replaced one case (OPS-19, whose earlier version duplicated the rain clean-time case) and
+moved another onto the home depot rule (OPS-20), and a last pass rewrote the on-page copy so that each Watch line names
+the primary against its margin and each guardrail against its maximum harm, with setup facts only.
+
+**Shared worlds.** OPS-01 to OPS-04, OPS-13, OPS-14, OPS-16 and OPS-17 to OPS-20 run on the Bay teaching map as it ships (§2.9:
+San Francisco 40 cars with 60 requests per hour in the 07:00 to 09:00 and 16:00 to 19:00 peaks and 15 off peak, SF-1 and
+SF-2 as home depots for San Francisco and Peninsula cars, a depot visit every 10 trips, the recall at 00:30 on day 2 and
+the release at 05:45, each acting once) under its home depot rule. The other nine share three worlds:
+
+- **The launch world (OPS-05 to OPS-08).** East Bay stands in for a newly opened service area. San Francisco, Peninsula
+  and San Jose stay as the map sets them; East Bay has 12 cars instead of 24 (SUP-1.EB 12), a 10 minute pickup and
+  in-area trip time instead of 7, for pickups spread over a wider area (RD-2.EB 600), and EB-1 as a small temporary depot
+  with 12 stalls, 1 cleaning bay and 1 service bay (DEP-2.EB-1 12, DEP-3.EB-1 1, DEP-5.EB-1 1); OPS-08 cuts the lot to 6
+  stalls (DEP-2.EB-1 6) so that it overflows. East Bay demand stays at plan, 30 requests per hour in peaks and 8 outside
+  them. As a calibration note (seed set 1, descriptive means, held in no pin), the launch world moves East Bay unserved
+  from 5.6 to 9.0 percent, San Francisco unserved from 5.5 to 9.2 percent (nearest idle dispatch borrows San Francisco
+  cars), whole run unserved from 5.3 to 8.8 percent, and East Bay wait p90 from day 1 07:00 to 09:00 from 1,097.7 s to
+  2,466.7 s.
+- **The rain world (OPS-09 to OPS-12).** On day 1 from 13:00 to 23:00 every highway, local and in-area congestion row is
+  multiplied by 1.35, capped at ×3.0, so a ×1.6 evening highway becomes ×2.16 and a ×1.3 local peak becomes ×1.755.
+  Pickups and in-area trips take 2 minutes longer in every area (RD-2: SF 480 s, PEN 600 s, SJ 600 s, EB 540 s) and
+  San Francisco requests rise about 25 percent (DEM-1.SF 75 per hour in peaks, DEM-2.SF 19 off peak). The model cannot
+  limit pickup time or demand to the rain hours, so those two changes last all day on both days and make the world
+  harsher than the rain alone. OPS-09 leaves the pickup change out of its base and makes San Francisco pickup time its
+  axis; OPS-12 adds 30 minute cleans (DEP-4 1800) to the base.
+- **The event world (OPS-15, and the candidate arm of OPS-14).** San Francisco peak requests of 90 per hour instead of 60 (DEM-1.SF), a knob
+  that applies to both peak windows on both days, with the map's default destination mix (84 of every 100 San Francisco
+  evening peak trips leave San Francisco). In OPS-14 the event is the axis; in OPS-15 it is the base and the neighbouring
+  area adds cars.
+
+Every case has one axis, a primary with an equivalence margin and one to three guardrails each with a maximum harm, in
+the grammar of §2.8; a scope reads as an area and a window of the map's clock. The tables and the lesson list below are
+generated from the pins, never retyped; "agree" in the last column means seed sets 2 and 3 gave the same outcome and
+recommendation as set 1, with their mean deltas in brackets.
+
+#### San Francisco core operations
+
+| Case | Axis (baseline, candidate) | Primary, margin | Guardrails, max harm | Measured, seed set 1 | Sets 2 and 3 |
+|---|---|---|---|---|---|
+| OPS-01 Evening crunch: more cars in San Francisco | `parameter:SUP-1.SF` 40, 52 | `wait.p90_s` (SF, day 1 16:00 to 19:00), 60 s | `depot.bay_wait_p90_s` (SF-2), 1800 s; `wait.p90_s` (SF, day 2 07:00 to 09:00), 120 s | IMPROVED, HOLD; mean delta -1565.6 s, interval [-1922.4 s, -1149.4 s]; depot.bay_wait_p90_s{depot=SF-2} REGRESSED | agree (-1753.0 s, -1913.2 s) |
+| OPS-02 Late night recall: 00:30 or 02:00 | `parameter:POL-3` 88200, 93600 | `wait.p50_s` (SF, day 2 00:30 to 02:00), 60 s | `wait.p90_s` (SF, day 2 07:00 to 09:00), 120 s; `depot.bay_wait_p90_s` (SF-2), 1800 s | IMPROVED, ADVANCE_TO_NEXT_TEST; mean delta -357.9 s, interval [-429.2 s, -292.2 s]; every guardrail within | agree (-335.1 s, -301.0 s) |
+| OPS-03 Defer depot visits through the evening peak | `parameter:DEP-7` 10, 15 | `unserved.fraction` (SF, day 1 16:00 to 19:00), 0.01 | `wait.p90_s` (SF, day 1 16:00 to 19:00), 120 s; `depot.bay_wait_p90_s` (SF-2), 1800 s; `wait.p90_s` (SF, day 2 07:00 to 09:00), 120 s | IMPROVED, ADVANCE_TO_NEXT_TEST; mean delta -0.0323, interval [-0.0424, -0.0222]; every guardrail within | agree (-0.0430, -0.0329) |
+| OPS-04 Release cars to home areas earlier | `parameter:POL-4` 107100, 104400 | `wait.p90_s` (SF, day 2 07:00 to 09:00), 30 s | `wait.p90_s` (PEN, day 2 07:00 to 09:00), 120 s; `exposure.congested_empty_s` (day 2 05:00 to 10:00), 3600 s | INCONCLUSIVE, RUN_MORE_EXPERIMENTS; mean delta +63.7 s, interval [+22.6 s, +118.1 s]; every guardrail within | agree (+39.3 s, +50.8 s) |
+
+#### Launching a new service area
+
+| Case | Axis (baseline, candidate) | Primary, margin | Guardrails, max harm | Measured, seed set 1 | Sets 2 and 3 |
+|---|---|---|---|---|---|
+| OPS-05 Launch fleet size with a 12 stall depot | `parameter:SUP-1.EB` 12, 18 | `wait.p90_s` (EB, day 2 07:00 to 09:00), 60 s | `unserved.fraction` (EB), 0.01; `depot.diversions` (EB-1), 0.000002; `depot.bay_wait_p90_s` (EB-1), 1800 s | IMPROVED, HOLD; mean delta -412.5 s, interval [-641.4 s, -171.4 s]; depot.diversions{depot=EB-1} REGRESSED, depot.bay_wait_p90_s{depot=EB-1} REGRESSED | agree (-637.1 s, -396.0 s) |
+| OPS-06 Launch demand above plan | `parameter:DEM-1.EB` 30, 45 | `wait.p90_s` (EB, day 1 07:00 to 09:00), 60 s | `unserved.fraction` (EB), 0.01; `unserved.fraction` (SF), 0.01 | REGRESSED, HOLD; mean delta +951.0 s, interval [+748.3 s, +1182.3 s]; unserved.fraction{area=EB} REGRESSED, unserved.fraction{area=SF} REGRESSED | agree (+941.5 s, +1042.4 s) |
+| OPS-07 One cleaning bay or three at the launch depot | `parameter:DEP-3.EB-1` 1, 3 | `wait.p90_s` (EB, day 2 07:00 to 09:00), 60 s | `depot.bay_wait_p90_s` (EB-1), 600 s; `fleet.available_fraction` (EB, day 2 06:00 to 09:00), 0.02; `unserved.fraction` (EB), 0.01 | INCONCLUSIVE, RUN_MORE_EXPERIMENTS; mean delta +146.5 s, interval [-19.5 s, +321.8 s]; every guardrail within | agree (+14.3 s, +57.7 s) |
+| OPS-08 Launch lot overflow: nearest depot with a free stall | `policy:depot_assignment` home_depot, nearest_depot_with_capacity | `wait.p90_s` (EB, day 2 07:00 to 09:00), 60 s | `exposure.congested_empty_s`, 18000 s; `depot.parking_peak_fraction` (SF-1), 0.1; `depot.bay_wait_p90_s` (SF-1), 600 s | INCONCLUSIVE, HOLD; mean delta +71.9 s, interval [-123.7 s, +257.2 s]; depot.parking_peak_fraction{depot=SF-1} REGRESSED, depot.bay_wait_p90_s{depot=SF-1} REGRESSED | agree (+108.6 s, +36.7 s) |
+
+#### Rain
+
+| Case | Axis (baseline, candidate) | Primary, margin | Guardrails, max harm | Measured, seed set 1 | Sets 2 and 3 |
+|---|---|---|---|---|---|
+| OPS-09 Rain: slower curbside pickups in San Francisco | `parameter:RD-2.SF` 360, 540 | `wait.p90_s` (SF, day 1 16:00 to 19:00), 60 s | `unserved.fraction`, 0.01; `unserved.fraction` (SF, day 1 16:00 to 19:00), 0.02 | INCONCLUSIVE, HOLD; mean delta -126.7 s, interval [-398.7 s, +138.6 s]; unserved.fraction REGRESSED | agree (-2.1 s, +180.9 s) |
+| OPS-10 Rain: more cars for San Francisco | `parameter:SUP-1.SF` 40, 48 | `unserved.fraction`, 0.005 | `fleet.available_fraction` (day 2 06:00 to 07:00), 0.02; `depot.blocked_s` (SF-2), 0 s; `vehicle.empty_drive_fraction`, 0.02 | IMPROVED, ADVANCE_TO_NEXT_TEST; mean delta -0.0299, interval [-0.0323, -0.0269]; every guardrail within | agree (-0.0308, -0.0295) |
+| OPS-11 Rain: wet interiors and 30 minute cleans | `parameter:DEP-4` 1200, 1800 | `wait.p90_s` (SF, day 2 07:00 to 09:00), 60 s | `unserved.fraction`, 0.01; `fleet.available_fraction` (day 2 06:00 to 07:00), 0.02; `depot.bay_wait_p90_s` (SF-2), 900 s | INCONCLUSIVE, HOLD; mean delta -1.3 s, interval [-328.1 s, +320.8 s]; fleet.available_fraction{window=108000-111600} REGRESSED, depot.bay_wait_p90_s{depot=SF-2} REGRESSED | agree (+173.4 s, -3.9 s) |
+| OPS-12 Rain: add bays where the queue reaches riders | `parameter:DEP-3.SJ-1` 3, 5 | `wait.p90_s` (SF, day 2 07:00 to 09:00), 60 s | `unserved.fraction`, 0.01; `vehicle.empty_drive_fraction`, 0.02; `wait.p90_s` (SJ, day 2 07:00 to 09:00), 120 s | IMPROVED, ADVANCE_TO_NEXT_TEST; mean delta -550.8 s, interval [-777.1 s, -311.2 s]; every guardrail within | agree (-436.1 s, -392.2 s) |
+
+#### Busy areas with many people
+
+| Case | Axis (baseline, candidate) | Primary, margin | Guardrails, max harm | Measured, seed set 1 | Sets 2 and 3 |
+|---|---|---|---|---|---|
+| OPS-13 Crowded curbs slow every downtown pickup | `parameter:RD-2.SF` 360, 600 | `wait.p90_s` (SF, day 1 07:00 to 09:00), 60 s | `unserved.fraction` (SF), 0.01; `wait.p90_s` (SF, day 1 16:00 to 19:00), 120 s | REGRESSED, HOLD; mean delta +1037.5 s, interval [+897.8 s, +1166.3 s]; every guardrail within | agree (+1071.2 s, +1030.7 s) |
+| OPS-14 An event lets out in San Francisco | `parameter:DEM-1.SF` 60, 90 | `unserved.fraction` (EB, day 1 16:00 to 19:00), 0.01 | `wait.p90_s` (EB, day 1 16:00 to 19:00), 120 s; `unserved.fraction` (SF, day 1 16:00 to 19:00), 0.02 | REGRESSED, HOLD; mean delta +0.1452, interval [+0.1210, +0.1699]; unserved.fraction{area=SF,window=57600-68400} REGRESSED | agree (+0.1425, +0.1661) |
+| OPS-15 The neighbour adds cars for an event next door | `parameter:SUP-1.EB` 24, 32 | `unserved.fraction` (EB, day 1 16:00 to 19:00), 0.01 | `depot.bay_wait_p90_s` (EB-1), 1800 s; `depot.parking_peak_fraction` (EB-1), 0.1; `unserved.fraction` (SF, day 1 16:00 to 19:00), 0.01 | IMPROVED, HOLD; mean delta -0.0528, interval [-0.0725, -0.0337]; depot.bay_wait_p90_s{depot=EB-1} REGRESSED, depot.parking_peak_fraction{depot=EB-1} REGRESSED | agree (-0.0596, -0.0612) |
+| OPS-16 Streets full of people in the evening peak | `parameter:RD-3.in_area.evening` 1300, 2000 | `unserved.fraction` (day 1 17:00 to 20:00), 0.01 | `wait.p90_s` (SF, day 1 17:00 to 20:00), 120 s; `exposure.congested_loaded_s` (day 1 17:00 to 20:00), 3600 s; `unserved.fraction`, 0.01 | REGRESSED, HOLD; mean delta +0.0576, interval [+0.0462, +0.0691]; exposure.congested_loaded_s{window=61200-72000} REGRESSED, unserved.fraction REGRESSED | agree (+0.0535, +0.0581) |
+
+#### Police activity and emergency response
+
+| Case | Axis (baseline, candidate) | Primary, margin | Guardrails, max harm | Measured, seed set 1 | Sets 2 and 3 |
+|---|---|---|---|---|---|
+| OPS-17 Highway closure between SF and the Peninsula | `parameter:RD-1.H1` 1500, 5400 | `wait.p90_s` (PEN, day 1 07:00 to 09:00), 60 s | `unserved.fraction` (PEN), 0.01; `exposure.congested_empty_s` (PEN), 18000 s; `depot.diversions` (SJ-1), 0 | REGRESSED, HOLD; mean delta +709.8 s, interval [+298.7 s, +1170.2 s]; unserved.fraction{area=PEN} REGRESSED, exposure.congested_empty_s{area=PEN} REGRESSED, depot.diversions{depot=SJ-1} REGRESSED | agree (+943.7 s, +915.1 s) |
+| OPS-18 Cars held at incident scenes in San Francisco | `parameter:SUP-1.SF` 40, 34 | `wait.p90_s` (SF, day 2 07:00 to 09:00), 60 s | `unserved.fraction` (SF), 0.01; `wait.p90_s` (PEN, day 2 07:00 to 09:00), 300 s | REGRESSED, HOLD; mean delta +860.6 s, interval [+620.8 s, +1098.6 s]; wait.p90_s{area=PEN,window=111600-118800} REGRESSED | agree (+806.7 s, +692.0 s) |
+| OPS-19 A service check every second depot visit | `parameter:DEP-8` 3, 2 | `wait.p90_s` (SF, day 2 07:00 to 09:00), 60 s | `unserved.fraction` (SF), 0.01; `fleet.available_fraction` (day 2 06:00 to 07:00), 0.02; `depot.censored_visits` (SF-2), 0.000001 | REGRESSED, HOLD; mean delta +841.0 s, interval [+605.0 s, +1059.5 s]; unserved.fraction{area=SF} REGRESSED, fleet.available_fraction{window=108000-111600} REGRESSED, depot.censored_visits{depot=SF-2} REGRESSED | agree (+833.3 s, +715.7 s) |
+| OPS-20 A staging area on two thirds of the SF-1 lot | `parameter:DEP-2.SF-1` 60, 20 | `wait.p90_s` (SF, day 2 07:00 to 09:00), 60 s | `depot.diversions`, 0; `vehicle.empty_drive_fraction`, 0.01 | UNCHANGED, HOLD; mean delta -14.0 s, interval [-32.7 s, +3.5 s]; depot.diversions REGRESSED | agree (-17.9 s, -19.4 s) |
+
+#### Lessons (measured on the frozen specs above; each direction holds on seed sets 1 to 3)
+
+- **OPS-01.** Twelve more San Francisco cars give lower evening rider wait and higher overnight bay wait, turnaround and parking at SF-2, and since the next morning still improves, the HOLD rests on the 30 minute allowance granted to the overnight depot queue rather than on the street.
+- **OPS-02.** A 02:00 recall gives lower late night wait for San Francisco riders and higher overnight bay wait at SF-2 as the later wave catches more cars, with no next morning change the runs can separate from noise.
+- **OPS-03.** A visit every 15 trips gives a lower unserved share in the San Francisco evening peak and a higher whole run bay wait p90 at SF-2 that is in good part composition, because the near zero wait day visits that used to dilute the overnight tail are gone; so read depot percentiles by window and judge a change that serves more riders by the unserved share, not by the served rider wait alone.
+- **OPS-04.** An earlier release gives lower ready stock at SF-1 and SF-2 before the peak and higher San Francisco morning wait by an amount the runs cannot size against a 30 s margin, while Peninsula wait does not change, so an earlier release is not earlier readiness.
+- **OPS-05.** Lower East Bay rider wait p90 on the second morning and lower East Bay unserved, higher EB-1 bay wait and more cars turned away at EB-1: added launch cars also have to park and clean at a 12 stall, one bay depot, and those guardrails hold the change.
+- **OPS-06.** Demand above plan on a 12 car launch fleet gives higher East Bay wait and unserved and higher San Francisco unserved too, because dispatch borrows San Francisco cars: a launch guardrail belongs in the neighbouring area as well.
+- **OPS-07.** A one bay launch depot shows a long overnight queue on the depot board, but the queue clears before the morning release and cars ready earlier are dispatched away overnight, so 3 bays leave East Bay rider wait on the second morning INCONCLUSIVE on every seed set: check when a depot queue happens, and where ready cars go, before adding bays.
+- **OPS-08.** A depot rule chosen for one launch lot moves the whole fleet: fewer cars turned away at EB-1, more East Bay cars cleaning and sleeping at SF-1 and SJ-1, higher SF-1 lot peak and bay wait as SF-2 empties, while East Bay rider wait on the second morning reads INCONCLUSIVE on every seed set, and REGRESSED on 1 of 2 other demand draws in exploratory runs under other slugs, which are not pinned.
+- **OPS-09.** When the primary window is one the axis cannot reach, the verdict reads no clear change while the harm is displaced: in the rain world a slower San Francisco curb leaves the evening tail where cross area pickups put it, raises San Francisco day 1 morning unserved from 3.4 to 13.1 requests and whole run unserved in San Jose and the Peninsula from 40.2 to 47.9 and 28.0 to 32.6, and only the whole run unserved guardrail holds the change, lower sensitivity in the evening window, higher harm in the morning and in the neighbouring areas.
+- **OPS-10.** In this model 8 more San Francisco cars give lower unserved and a fleet still ready at the 05:45 release, with a higher SF-2 overnight bay wait and a fuller SF-2 lot, and they add more than twice as many served rides in the rain world as in the dry map, but most of that extra comes from the higher San Francisco demand the proxy keeps outside the rain hours.
+- **OPS-11.** Longer cleans spend the overnight slack before riders feel it: at 30 minutes the day 2 morning San Francisco wait reads no clear change on all three seed sets, while the SF-2 bay wait and the 06:00 readiness guardrails already regress.
+- **OPS-12.** The depot with the longest queue is not always where bays help riders: in this model 2 more bays at SJ-1 lower San Francisco morning wait p90 on all three seed sets, because San Jose cars that finish their cleans hours earlier take overnight San Francisco trips and stand in San Francisco by 07:00, while the same 2 bays at SF-2 read no clear change in an exploratory contrast run that is not pinned.
+- **OPS-13.** In this model a slower curb shows where trips stay inside the area: the San Francisco morning wait p90 rises by about 17 minutes on every seed set, while the evening tail, set by cars from other areas, stays inside its 2 minute guardrail.
+- **OPS-14.** In this model a demand surge in one area spills into its neighbours through shared cars: East Bay leaves about 15 more of every 100 evening peak requests unserved while its wait p90 stays within 2 minutes, so the neighbour's unserved fraction shows the spillover and its wait tail does not.
+- **OPS-15.** In this model cars added in a neighbouring area to protect it are borrowed into the event area: 8 more East Bay cars give lower unserved in both East Bay and San Francisco, and a higher overnight bay wait and a fuller lot at EB-1, the one depot that homes them.
+- **OPS-16.** In this model a slowdown inside every area at once shows up as riders left unserved in all four areas, about 5 more of every 100 across the map from 17:00 to 20:00, and as more rider time in slow traffic, while the San Francisco evening wait tail, set by cars from other areas, gives no clear direction.
+- **OPS-17.** Closing H1 raises Peninsula wait p90 in the day 1 morning peak by 709.8 to 943.7 s across the three seed sets, more than in the evening, because its cars have left for San Francisco and must come back on L1, and because depot homes follow route times it also sends Peninsula depot visits to SJ-1, lower SF-2 overnight bay wait, higher SJ-1 parking and diversions.
+- **OPS-18.** Six cars held all run leave the day 1 morning unchanged, because San Francisco starts it with spare idle cars, but raise San Francisco wait p90 on the day 2 morning by 692.0 to 860.6 s across the three seed sets, when fewer spare cars are ready: lower fleet, higher next morning wait.
+- **OPS-19.** In this model a service check every second depot visit instead of every third makes the single service bay at SF-2 the overnight bottleneck (its service bay wait p90 1,257.0 to 14,446.4 s while its cleaning bay wait stays near 8,403.8 s) and raises the San Francisco day 2 morning wait p90 by about 12 to 14 minutes on every seed set, higher depot time per car, lower fleet readiness at 06:00, so the depot guardrail must name the service queue, which a cleaning bay metric cannot see.
+- **OPS-20.** Under the home depot rule a staging area on two thirds of SF-1 binds at the gate, not in rider wait: 1.6 to 1.9 cars per run are turned away from a lot at 99.0 percent of its 20 stalls and finish their night at SF-2, whose queue still ends before 07:00, so the day 2 morning wait reads unchanged on every seed set and only the diversions guardrail sees the change, lower SF-1 stall slack, higher SF-2 overnight queue.
+
+**What did not show.** Six cases did not read IMPROVED or REGRESSED on their primary, and each shows something the
+instrument says on purpose. OPS-04 (INCONCLUSIVE, RUN_MORE_EXPERIMENTS) is a real change too small for its margin: the
+05:00 release moves ready cars out of SF-1 and SF-2, which count as available to San Francisco riders under nearest idle
+dispatch, and the San Francisco morning wait rises on every seed set (+39.3 to +63.7 s) with every interval above zero
+and across the 30 s margin; INCONCLUSIVE here is not "no effect" but an effect the margin cannot size, and the
+direction is the lesson: an earlier release is not earlier readiness. OPS-07 (INCONCLUSIVE, RUN_MORE_EXPERIMENTS) is a
+queue that is not a rider harm: with one bay the EB-1 queue clears at a mean of day 2 02:17 (01:07 with three), before
+the release, and the cars readied earlier are dispatched to night riders, some out of East Bay, so the second morning's
+East Bay wait does not separate from noise on any set and every guardrail stays within; ask when a queue happens and
+where the ready cars go before adding bays. OPS-08 (INCONCLUSIVE, HOLD) is a HOLD from the guardrails alone: the
+capacity-aware rule stops the turn-aways at the 6 stall lot (5.4 per run to 0.05) but sends East Bay cars to clean and
+sleep at SF-1 and SJ-1, so SF-1's lot peak and bay wait regress while the East Bay primary reads INCONCLUSIVE on every
+seed set and REGRESSED on one of two other demand draws (exploratory runs under other slugs, not pinned); the primary
+said nothing, the receiving depot's guardrails decided, and the draw dependence is why the slug is part of the spec. OPS-09 (INCONCLUSIVE, HOLD) is a primary window the
+axis cannot reach: in the rain world the San Francisco evening tail is set by cars sent in from other areas, so a slower
+San Francisco curb leaves it where it was, while the harm lands on the day 1 morning unserved in San Francisco (3.4 to
+13.1 requests) and on the neighbouring areas, and only the whole run unserved guardrail holds the change; choose a
+primary the axis can move, and keep a whole run guardrail for the harm that moves elsewhere. OPS-11 (INCONCLUSIVE, HOLD)
+is slack spent before riders feel it: 30 minute cleans land on the overnight queue (SF-2 bay wait p90 from 8,322.4 s to
+13,936.2 s, and 5.7 SF-2 visits unfinished at the release instead of 0) and the 06:00 readiness guardrail regresses, but
+the San Francisco morning wait reads no clear change on all three sets because San Francisco is short of cars at that
+hour in both arms; the guardrails see what the primary cannot, and they are the HOLD. OPS-20 (UNCHANGED, HOLD) is a
+change that binds at a gate, not on the street: cutting SF-1 to 20 stalls under the home depot rule turns 1.6 to 1.9
+cars per run away from a lot at 99.0 percent of its stalls, and they finish their night at SF-2, whose queue still ends
+before 07:00, so the morning wait reads UNCHANGED on every set and only the diversions guardrail, with a maximum harm of
+0, sees the change; a change that lands on a resource and not on riders is reported by a guardrail, and a zero-harm
+guardrail is what made this one visible.
+
+**Model limits the casebook leans on.** Drawn from the cases' "Outside this model" lists. Each is a simplification of
+§5.8 or §10.1 that a case depends on for its result, so a reader holds the lesson to the model, not to a real fleet.
+
+- **Nothing switches on or off within a day except a congestion row.** Rain, crowds, a closure, an event, cars held at
+  scenes and added cars hold for the whole run, or for the named hours of a named day where the knob is congestion. No
+  slowdown builds and fades, no car is removed and returned partway through the day, no delay applies only while a crowd
+  is present, and demand neither ramps over days nor falls back once the rain stops (OPS-01, 05, 06, 09, 10, 13, 16, 17,
+  18).
+- **Riders only wait or give up.** No cancellation after assignment, no riders who stop requesting after long waits or
+  request more once waits are shorter, no shared rides, no walking to a meeting point or waiting under cover, no
+  waitlists, pricing or promotions (OPS-01, 06, 09, 10, 14, 16, 17, 18).
+- **Nothing repositions an idle car.** No rule moves a car back to its area, toward where morning requests start, or
+  into an area ahead of a closure; nothing keeps cars inside a home area or caps pickup distance; the release sends cars
+  to a home area, not to demand (OPS-01, 04, 05, 07, 10, 12, 15, 17, 18).
+- **Depots have bays, stalls and times, not people or hours.** No crew, shifts, breaks, opening hours or closing-time
+  surge; no charging, inspection, drying or supplies; no quick clean for a lightly used car; a service check is the full
+  45 minute service; a car that fails a check stays in the fleet; no mobile crew on the street (OPS-01, 02, 03, 04, 05,
+  07, 08, 11, 12, 15, 19).
+- **Depot geography is route time.** Depot homes follow route times, so a closure moves depot visits as well as riders
+  (OPS-17); there are no real depot locations at different distances, no overflow parking outside a depot, no stall
+  reservations, and no dispatcher who knows a lot is full before the car reaches the gate; the capacity-aware rule
+  counts free stalls, never free bays (OPS-08, 17, 20).
+- **The recall and the release act once (D-12).** No second recall for cars sent out after the first, no night pool
+  kept out, no car released as soon as it is ready, no staging that covers only part of the night (OPS-02, 04, 20).
+- **Fleet changes are whole-run and whole-area.** A launch fleet does not grow over weeks, no car is held out for launch
+  checks, no spare vehicle backfills a car held at a scene, and cars added for an event or a peak stay all day (OPS-01,
+  05, 10, 15, 18).
+- **Maintenance is by visit count.** A visit comes due by trips, never by distance, faults or cabin condition; a deferral
+  rule cannot switch on only in the peak; a check cannot be limited to cars near an incident or to a few days (OPS-03,
+  19).
+- **No venue, streets or pedestrians.** An event is a demand knob on both peak windows of both days, a crowd is a slower
+  in-area row or a longer pickup time everywhere in an area, and a closure is a longer route time with no detour traffic
+  on other corridors and no reopening time (OPS-13, 14, 16, 17).
 
 ### 4.1 Learn cases
 
@@ -1196,6 +1407,13 @@ Deviation from PRD §27 Page 1: the ten wizard steps collapse into six blocks on
 whole preregistration at once is the lesson. On a phone the blocks become an accordion, and `Freeze and run` stays
 disabled until every check passes.
 
+The preset chooser groups its entries: the Experiment presets, the two L2 specs, and one group per casebook theme, headed
+`Operations casebook: Rain` and so on (§4.4). For a casebook preset a SITUATION block sits above block 1: a lead line
+saying the situation is played through the knobs as a proxy, every number invented and the verdict a teaching result;
+the situation; each proxy part as *stands for*, *set as* and *misses*; an "Outside this model" list; and a Watch line
+that names the primary against its margin and each guardrail against its maximum harm, with setup facts only. The block
+never names a verdict or a direction (H-9).
+
 **Verdict.** The layout below quotes FleetLab's measured FLEET-005 record through a public-safe projection (margin 30 s, the
 single guardrail `unserved.fraction` at 0.02, seeds 101-110), to illustrate the card. A teaching run shows its own
 numbers in the same layout.
@@ -1459,7 +1677,7 @@ playground/fleetlab/
   README.md          what it is, how to open it, "teaching model, not evidence"
   index.html         development shell
   src/core/          sha256.js keyed.js stats.js (round_half_even, percentile, left-to-right sum)
-  src/model/         schema.js presets.js world.js engine.js invariants.js metrics.js policies.js
+  src/model/         schema.js presets.js ops-cases.js reference-panels.js routes.js world.js engine.js invariants.js metrics.js policies.js experiment.js
   src/legacy/        profile.js world-import.js
   src/instrument/    paired.js bootstrap.js outcome.js guardrails.js recommendation.js summary.js
   src/ui/            app.js store.js labels.js map.js playback.js charts.js inspector.js controls.js experiment.js a11y.js
@@ -1489,7 +1707,7 @@ tools/fleet_playground/regenerate_fixtures.py   the explicitly invoked fixture r
   assertion that parts are strings or safe integers; `round_half_even`; FleetLab's percentile interpolation; left-to-right sums.
 - **model:** `schema.js` declares `playground-scenario 0.1` (every knob with type, range, default, unit and plain help text);
   `presets.js` holds the Bay teaching map, the three Learn presets, the Experiment presets, the quoted FLEET-005 reference and the exploratory two-zone probe panel (quoted from Appendix
-  A.9);
+  A.9), and builds the twenty operations casebook presets from the records in `ops-cases.js` (§4.4);
   `world.js` builds demand by thinning and the traffic and ride factors; `engine.js` runs the states of §5.3 and emits the event
   log, interval log and snapshots; `invariants.js` checks §5.6; `metrics.js` holds the registry and scopes of §5.7; `policies.js`
   holds §5.5.
@@ -1557,7 +1775,7 @@ The smallest build that fully serves the six seed variables and the worked examp
 | Metrics | §5.7 in full, with FleetLab's utilization hidden |
 | Invariants | §5.6 rows marked yes |
 | Learn | L1 UC-04, L2 UC-09, L3 UC-07 |
-| Experiment | presets UC-01, UC-02, UC-03, UC-05, UC-08a, UC-08b, UC-10 and the two L2 presets; one axis; scopes; guardrails with NOT EVALUABLE; frozen spec; session log; the quoted FLEET-005 reference panel and the exploratory two-zone probe panel, with their §1.3 labels |
+| Experiment | presets UC-01, UC-02, UC-03, UC-05, UC-08a, UC-08b, UC-10 and the two L2 presets; one axis; scopes; guardrails with NOT EVALUABLE; frozen spec; session log; the quoted FLEET-005 reference panel and the exploratory two-zone probe panel, with their §1.3 labels; after the first build, the operations casebook of §4.4: twenty presets of kind `ops`, one chooser group per theme, each with a SITUATION block |
 | Inspect | car and depot drawers |
 | Views | §7.2 layouts; the map with unit bars and the pinned car; the charts of §7.5 |
 | Engineering | §9.2 placement and rules R1-R9; §9.5 suites; the packed file built locally, not committed (D-09) |
@@ -1819,3 +2037,4 @@ against the repository. The conflicts that changed the design:
 | Twenty-eight findings of a pre-audit review (five review lenses; each finding challenged by a separate refuter) | fixed in place: banned words in required copy (H-3); missing transitions, gate waits and recall (§5.3); a single-car fixture and access-leg exposure (§3.5, §5.7); demand units, coupling and parity (§5.2.2, P-1, P18); empty scopes and the bay-wait rename (§5.7); home area and depot ties (SUP-2); FleetLab's service-queue order (§5.10); the horizon-axis crash (FL-11); the L2 walkthrough, the probe panel, the chart list, UC-10, keys, the scrubber, the lot count, the seed range and one contrast token |
 | Thirteen required changes from the design audit (approve with required changes) | an `INTAKE` state; a defined drain and censoring time; completed-only turnaround no longer called a bound; scope rules for every metric class; a time-based empty-drive share instead of invented distance; seed sets and a canonical spec digest; a log ordinal for decision events; FleetLab's precheck world source (P-3); a worker the content policy allows; full event-log parity (D-03); no storage (D-11); the arrival process and the FLEET-005 projection named precisely |
 | The default preset, run at fleet scale in the built engine | the recall acts once (D-12); the default fleet recalibrated to 120 cars with two accepted exceptions (§2.2); presets UC-02, UC-03, UC-09 and UC-10 adjusted so their mechanisms show, and every use case records its measured verdict (§4) |
+| The operations casebook: twenty situations the model has no entities for (rain, crowds, police, a new area) | proxies built from the knobs that say what they stand for and what they miss; slugs frozen with their measured verdicts because the scenario name keys the demand trace; on-page copy never names a direction (H-9); every seed set 1 verdict pinned, sets 2 and 3 behind a flag; a review re-ran every case, a cross-theme critique replaced one and moved another, and a copy pass rewrote the Watch lines (§4.4) |

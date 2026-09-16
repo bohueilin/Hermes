@@ -633,14 +633,16 @@ describe("describeDifferences", () => {
 describe("PRESETS", () => {
   const ids = PRESETS.map((p) => p.id);
   const learn = PRESETS.filter((p) => p.kind === "learn");
-  const withExperiment = PRESETS.filter((p) => p.experiment);
+  // The operations casebook (OPS-01 to OPS-20, kind "ops") is pinned in ops-cases.test.mjs; here only design section 4.
+  const withExperiment = PRESETS.filter((p) => p.experiment && p.kind !== "ops");
+  const OPS_IDS = Array.from({ length: 20 }, (_, i) => `OPS-${String(i + 1).padStart(2, "0")}`);
   const d1 = (h, m = 0) => h * 3600 + m * 60;
   const d2 = (h, m = 0) => 86400 + d1(h, m);
   const changesOf = (scenario) => describeDifferences(defaultScenario(), scenario).map((c) => c.knob);
 
-  test("holds the Bay teaching map, the Learn cases and the seven Experiment presets", () => {
-    assert.deepEqual(ids, ["bay_teaching_map", "L1", "L2a", "L2b", "L3", "UC-01", "UC-02", "UC-03", "UC-05", "UC-08a", "UC-08b", "UC-10"]);
-    assert.deepEqual(PRESETS.map((p) => p.kind), ["default", "learn", "learn", "learn", "learn", ...new Array(7).fill("experiment")]);
+  test("holds the Bay teaching map, the Learn cases, the seven Experiment presets and the twenty casebook presets", () => {
+    assert.deepEqual(ids, ["bay_teaching_map", "L1", "L2a", "L2b", "L3", "UC-01", "UC-02", "UC-03", "UC-05", "UC-08a", "UC-08b", "UC-10", ...OPS_IDS]);
+    assert.deepEqual(PRESETS.map((p) => p.kind), ["default", "learn", "learn", "learn", "learn", ...new Array(7).fill("experiment"), ...new Array(20).fill("ops")]);
     assert.equal(DEFAULT_PRESET_ID, "bay_teaching_map");
     assert.equal(presetById("L3").title, "Evening depot visit in San Jose");
     assert.equal(presetById("nope"), null);
@@ -810,7 +812,7 @@ describe("PRESETS", () => {
       }
       assert.doesNotThrow(() => canonicalJson(e), preset.id);
     }
-    for (const preset of PRESETS.filter((p) => p.kind === "experiment")) {
+    for (const preset of PRESETS.filter((p) => p.kind === "experiment" || p.kind === "ops")) {
       assert.deepEqual(preset.scenario, preset.experiment.scenario, preset.id);
     }
   });
@@ -846,7 +848,7 @@ describe("PRESETS", () => {
       "UC-08b": [["RD-5"], ["RD-5"]],
       "UC-10": [["DEP-3.SF-1", "DEP-3.SJ-1", "RD-5", "POL-2"], ["DEP-3.SF-1", "DEP-3.SJ-1", "RD-5", "POL-2"]],
     };
-    for (const preset of PRESETS) {
+    for (const preset of PRESETS.filter((p) => p.kind !== "ops")) {
       const [scenarioChanges, experimentChanges] = expected[preset.id];
       assert.deepEqual(changesOf(preset.scenario), scenarioChanges, `${preset.id} scenario`);
       if (experimentChanges) assert.deepEqual(changesOf(preset.experiment.scenario), experimentChanges, `${preset.id} experiment`);
@@ -887,7 +889,7 @@ describe("text rules", () => {
   });
 
   test("the schema, preset and test files hold no em or en dash", () => {
-    for (const path of ["../src/model/schema.js", "../src/model/presets.js", "./schema.test.mjs"]) {
+    for (const path of ["../src/model/schema.js", "../src/model/presets.js", "../src/model/ops-cases.js", "./schema.test.mjs"]) {
       assert.doesNotMatch(readFileSync(new URL(path, import.meta.url), "utf8"), DASHES, path);
     }
   });

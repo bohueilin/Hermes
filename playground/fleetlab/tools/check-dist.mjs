@@ -35,7 +35,7 @@ const CSS_REMOTE = [/(?:url\(|image-set\(|@import)\s*["']?\s*\/\//i, /image-set\
 const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledescription", "title", "alt", "placeholder"]);
 
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
-const COPY_MODULES = ["src/ui/labels.js", "src/instrument/summary.js"];
+const COPY_MODULES = ["src/ui/labels.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js"];
 
 const FORBIDDEN_TOKENS = [
   [/\bfetch\s*\(/, "fetch("],

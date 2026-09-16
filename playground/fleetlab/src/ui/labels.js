@@ -568,6 +568,7 @@ export const DIRECTIONS = frozen({
 export const EXPERIMENT_SETUP = frozen({
   heading: "EXPERIMENT · setup",
   blocks: {
+    situation: "SITUATION",
     question: "1 QUESTION",
     scenario: "2 SCENARIO",
     oneChange: "3 ONE CHANGE",
@@ -635,6 +636,48 @@ export const EXPERIMENT_SETUP = frozen({
 /** One preset in the Experiment preset chooser: `UC-01 Null check`. */
 export function presetOption({ id, title }) {
   return `${id} ${title}`;
+}
+
+/** Group headings of the Experiment preset chooser: the Experiment presets, the two L2 specs, and the casebook's prefix. */
+export const PRESET_GROUPS = frozen({
+  experiment: "Experiment presets",
+  learn: "Learn case L2, two preregistered specs",
+  casebook: "Operations casebook",
+});
+
+/** The operations casebook themes (design section 4.4), keyed by the theme ids of src/model/ops-cases.js. */
+export const OPS_THEMES = frozen({
+  sf: "San Francisco core operations",
+  new_area: "Launching a new service area",
+  rain: "Rain",
+  crowds: "Busy areas with many people",
+  police: "Police activity and emergency response",
+});
+
+/** A casebook group heading in the chooser: `Operations casebook: Rain` (a theme id of OPS_THEMES). */
+export function casebookGroup(themeId) {
+  const theme = OPS_THEMES[themeId];
+  if (typeof theme !== "string") throw new RangeError(`no casebook theme ${String(themeId)}`);
+  return `${PRESET_GROUPS.casebook}: ${theme}`;
+}
+
+/**
+ * The SITUATION block of a casebook preset (design section 4.4, H-9): the lead, the small labels of a proxy's three parts,
+ * and the headings. The situation, proxy, outside-model and watch texts are the preset's own copy.
+ */
+export const SITUATION = frozen({
+  lead: "A situation from the operations casebook, played through the knobs as a proxy. Every number is invented, and the verdict is a teaching result.",
+  proxyHeading: "What stands for what",
+  standsFor: "stands for",
+  setAs: "set as",
+  misses: "misses",
+  outsideHeading: "Outside this model",
+  watchHeading: "Watch",
+});
+
+/** Under an edited setup: `Edited: this setup no longer matches OPS-01, so its proxy and watch lines are not shown.` */
+export function situationEdited({ id }) {
+  return `Edited: this setup no longer matches ${id}, so its proxy and watch lines are not shown.`;
 }
 
 /** How much wider an interval grows: `1.4 times` (factor formatted). */

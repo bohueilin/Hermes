@@ -16,13 +16,19 @@
 // - The gate chain and the depot stages are ordered lists drawn as arrow flows without number markers (design §8.5).
 // - Every displayed number carries `data-field` and `data-value` (the unrounded double), so a test can compare the card
 //   with the payload exactly.
-// - On a phone (below 768 px) the six blocks are an accordion of `details` elements with only the first open; the
+// - On a phone (below 768 px) the blocks are an accordion of `details` elements with only the question open; the
 //   open blocks are kept across re-renders.
 // - A quoted reference panel carries no teaching-run footer and no teaching-model limits (it ran in FleetLab's world); it
 //   carries the differences panel instead, and each suppressed row's link moves focus to it.
-// - "Start from a preset" (design §10.1) is a select at the top of the setup sheet listing every Experiment preset, then
-//   L2a and L2b. The scenario block lists differences from the preset the baseline came from, so a Learn preset's
-//   declared Experiment travel variation (design §2.5 RD-5) stays listed.
+// - "Start from a preset" (design §10.1) is a select at the top of the setup sheet in groups: every Experiment preset,
+//   then L2a and L2b, then the operations casebook, one group per theme (section 4.4). The scenario block lists
+//   differences from the preset the baseline came from, so a Learn preset's declared Experiment travel variation
+//   (design §2.5 RD-5) stays listed.
+// - A casebook preset adds an unnumbered SITUATION block before 1 QUESTION: the situation, what each change stands for,
+//   how it is set and what it misses, what lies outside the model, and what to watch (the preset's copy, never a
+//   verdict). Once the draft no longer matches the case's spec (the question aside), the block keeps the lead and the
+//   situation and says so in place of the proxy, outside-model and watch lines, so the sheet never carries two accounts
+//   of what the run changes. Every other preset has no such block, and on a phone it joins the accordion closed.
 // - "Use another seed set" freezes the frozen spec moved to seed set k + 1, never the draft, and is off while the setup
 //   is out of date (design §6, §7.1).
 // - The run estimate (design §7.2 seeds block) scales the last finished experiment's time per seed on this page; before
@@ -33,7 +39,7 @@ import { resultSummary, summaryText } from "../instrument/summary.js";
 import { freezeSpec, isNullCheckDraft, SpecError, thresholdValue, validateDraft, verdictDeclarations } from "../model/experiment.js";
 import { violationId } from "../model/invariants.js";
 import { METRICS, metricRow } from "../model/metrics.js";
-import { PRESETS, presetById, seedSet } from "../model/presets.js";
+import { OPS_THEME_IDS, opsPresetsOf, PRESETS, presetById, seedSet } from "../model/presets.js";
 import { REFERENCE_PANELS } from "../model/reference-panels.js";
 import { AxisError, cloneScenario, describeDifferences, KNOBS, parseAxis } from "../model/schema.js";
 import { metricSubject, verdictCharts } from "./charts.js";
@@ -115,8 +121,18 @@ export function isTeachingModelAxis(axisId) {
 // ---------------------------------------------------------------------------------------------------------------
 // Presets and the run estimate.
 
-/** The presets the setup sheet offers (design §10.1): every Experiment preset in preset order, then the two L2 presets. */
-export const CHOOSER_PRESET_IDS = Object.freeze([...PRESETS.filter((p) => p.kind === "experiment").map((p) => p.id), "L2a", "L2b"]);
+/**
+ * The groups of "Start from a preset" (design §10.1, section 4.4), each `{label, ids}`: every Experiment preset in preset
+ * order, the two L2 presets, then the operations casebook, one group per theme in OPS_THEME_IDS order.
+ */
+export const CHOOSER_GROUPS = Object.freeze([
+  [labels.PRESET_GROUPS.experiment, PRESETS.filter((p) => p.kind === "experiment").map((p) => p.id)],
+  [labels.PRESET_GROUPS.learn, ["L2a", "L2b"]],
+  ...OPS_THEME_IDS.map((theme) => [labels.casebookGroup(theme), opsPresetsOf(theme).map((p) => p.id)]),
+].map(([label, ids]) => Object.freeze({ label, ids: Object.freeze(ids) })));
+
+/** The presets the setup sheet offers, flat, in chooser order. */
+export const CHOOSER_PRESET_IDS = Object.freeze(CHOOSER_GROUPS.flatMap((g) => g.ids));
 
 /**
  * The store draft of a preset's declared experiment: question, declared scenario (a copy), axis, primary, guardrails,
@@ -636,11 +652,13 @@ function field(labelText, control, notes = []) {
   return el("label", { class: "fl-field" }, [el("span", { class: "fl-small-label" }, labelText), control, ...notes]);
 }
 
-function selectControl({ key, name, value, options, onChange }) {
+/** A select: `options` (`[value, text]` pairs) first, then one `optgroup` per entry of `groups` (`{label, options}`). */
+function selectControl({ key, name, value, options, groups = [], onChange }) {
+  const option = ([v, text]) => el("option", { value: v }, text);
   const select = el(
     "select",
     { "aria-label": name, "data-focus-key": key, on: { change: (event) => onChange(event.target.value) } },
-    options.map(([v, text]) => el("option", { value: v }, text)),
+    [...options.map(option), ...groups.map((g) => el("optgroup", { label: g.label }, g.options.map(option)))],
   );
   select.value = value ?? "";
   return select;
@@ -955,36 +973,93 @@ function seedsBlock(draft, dispatch, estimateOptions) {
 function presetChooser(state, dispatch) {
   const source = state.experiment.draft.baselineSource?.presetId;
   const value = CHOOSER_PRESET_IDS.includes(source) ? source : "";
+  const option = (id) => [id, labels.presetOption({ id, title: presetById(id).title })];
   return el("div", { "data-role": "preset-chooser" }, field(labels.EXPERIMENT_SETUP.startFromPreset, selectControl({
     key: "preset",
     name: labels.EXPERIMENT_SETUP.startFromPreset,
     value,
-    options: [["", labels.EXPERIMENT_SETUP.choosePreset], ...CHOOSER_PRESET_IDS.map((id) => [id, labels.presetOption({ id, title: presetById(id).title })])],
+    options: [["", labels.EXPERIMENT_SETUP.choosePreset]],
+    groups: CHOOSER_GROUPS.map((g) => ({ label: g.label, options: g.ids.map(option) })),
     onChange: (v) => {
       if (v !== "") startFromPreset(dispatch, v);
     },
   })));
 }
 
+/** The casebook preset the draft's baseline came from (else the Sandbox preset), or null when it is not one. */
+function situationPreset(state) {
+  const preset = presetById(state.experiment.draft.baselineSource?.presetId ?? state.presetId);
+  return preset !== null && preset.kind === "ops" ? preset : null;
+}
+
+/** One proxy entry of a casebook preset: what it stands for, how it is set and what it misses, each under its label. */
+function proxyEntry(entry, index) {
+  const s = labels.SITUATION;
+  const parts = [["standsFor", s.standsFor], ["setAs", s.setAs], ["misses", s.misses]];
+  return el("li", { "data-proxy": String(index) }, el("dl", { class: "fl-situation__proxy" }, parts.flatMap(([key, name]) => [
+    el("dt", { class: "fl-small-label" }, name),
+    el("dd", { "data-part": key }, entry[key]),
+  ])));
+}
+
 /**
- * The six-block setup sheet with its checks and Freeze and run (design §7.2). `msPerSeed` is the last finished
- * experiment's time per seed (null before any), for the run estimate.
+ * Whether a draft is still the casebook preset's spec: the same scenario, axis, primary, guardrails, seeds and resamples.
+ * The question is left out, because the proxy and watch lines do not depend on it. `ok` is the setup check result, so
+ * an invalid draft never reaches freezeSpec and counts as edited.
+ */
+function draftMatchesPreset(draft, preset, ok) {
+  if (!ok) return false;
+  const spec = { ...specDraftOf(draft), question: preset.experiment.question };
+  return freezeSpec(spec).digest === freezeSpec(preset.experiment).digest;
+}
+
+/**
+ * The SITUATION block of a casebook preset (design section 4.4): the lead, the situation, the proxy, what lies outside the
+ * model and what to watch. All of it is the preset's copy; nothing here names a verdict. Under an edited draft only the
+ * lead and the situation stay, with one line saying the setup no longer matches the case.
+ */
+function situationBlock(preset, matches) {
+  const s = labels.SITUATION;
+  const head = [
+    el("p", { class: "fl-muted", "data-role": "situation-lead" }, s.lead),
+    el("p", { "data-role": "situation" }, preset.situation),
+  ];
+  if (!matches) return [...head, el("p", { class: "fl-muted", "data-role": "situation-edited" }, labels.situationEdited({ id: preset.id }))];
+  return [
+    ...head,
+    heading(3, s.proxyHeading),
+    el("ul", { class: "fl-list-plain", "data-role": "proxy" }, preset.proxy.map(proxyEntry)),
+    heading(3, s.outsideHeading),
+    el("ul", { "data-role": "outside-model" }, preset.outsideModel.map((text) => el("li", {}, text))),
+    heading(3, s.watchHeading),
+    el("p", { "data-role": "watch" }, preset.watch),
+  ];
+}
+
+/**
+ * The setup sheet (design §7.2): a casebook preset's SITUATION block, the six numbered blocks, the checks and Freeze and
+ * run. `msPerSeed` is the last finished experiment's time per seed (null before any), for the run estimate.
  */
 export function renderSetup(state, { dispatch, ui, rerender, onFreeze, phone = false, msPerSeed = null }) {
   const draft = state.experiment.draft;
   const { ok, checks, errors } = setupChecks(draft);
   const running = state.experiment.status === "running";
+  const situation = situationPreset(state);
+  // The SITUATION block exists only for a casebook preset (absent, not hidden, for every other one).
   const blocks = [
+    situation === null ? null : ["situation", () => situationBlock(situation, draftMatchesPreset(draft, situation, ok))],
     ["question", () => questionBlock(draft, dispatch)],
     ["scenario", () => scenarioBlock(state, ui, rerender)],
     ["oneChange", () => axisBlock(draft, dispatch)],
     ["primary", () => primaryBlock(draft, dispatch)],
     ["guardrails", () => guardrailsBlock(draft, dispatch)],
     ["seeds", () => seedsBlock(draft, dispatch, { msPerSeed, phone })],
-  ];
+  ].filter((block) => block !== null);
   if (!ui.accordionReady) {
     ui.accordionReady = true;
-    ui.blocksOpen = new Set(phone ? ["question"] : blocks.map(([id]) => id));
+    // Every block starts open on a desktop, the SITUATION block included for when a casebook preset is chosen later;
+    // on a phone only the question does.
+    ui.blocksOpen = new Set(phone ? ["question"] : Object.keys(labels.EXPERIMENT_SETUP.blocks));
   }
   const sections = blocks.map(([id, build]) => {
     const details = el("details", {

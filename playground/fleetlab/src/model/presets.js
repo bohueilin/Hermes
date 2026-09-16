@@ -2,10 +2,12 @@
 // (design sections 3.5, 4 and 4.1; contract section 6.2). Every threshold is an integer in the metric's engine unit:
 // seconds for `_s` metrics, parts per million for fractions.
 
-import { applyAxis, cloneScenario, deepFreeze, defaultScenario } from "./schema.js";
+import { OPS_CASES, OPS_THEME_IDS } from "./ops-cases.js";
+import { applyAxis, cloneScenario, deepFreeze, defaultScenario, validateScenario } from "./schema.js";
 
 // Contract 5.2 and design 9.3: the quoted FleetLab reference panels are reached through the presets module.
 export { REFERENCE_PANELS } from "./reference-panels.js";
+export { OPS_THEME_IDS };
 
 export const DEFAULT_PRESET_ID = "bay_teaching_map";
 export const EXPERIMENT_SIGMA_PERMILLE = 150;
@@ -61,6 +63,54 @@ function learnPreset({ id, learnCase, useCase, title, scenario, experiment, cloc
 function experimentPreset({ id, useCase, title, base, experiment }) {
   const built = draft(base, experiment);
   return { id, kind: "experiment", learnCase: null, useCase, title, scenario: cloneScenario(built.scenario), experiment: built, moments: [] };
+}
+
+/**
+ * Congestion scaled by `factorPermille / 1000` on every row of the named classes (HIGHWAY, LOCAL, IN_AREA), all
+ * directions, at the named hours of day on the named days, rounded and capped at ×3.0 (ops-cases.js base.congestion).
+ */
+function scaleCongestion(scenario, { classes, hours, days, factorPermille }) {
+  const s = cloneScenario(scenario);
+  for (const cls of classes) {
+    const table = s.congestion[cls];
+    if (table === undefined) throw new RangeError(`no congestion class ${String(cls)}`);
+    for (const row of Array.isArray(table) ? [table] : Object.values(table)) {
+      for (const day of days) for (const hour of hours) {
+        const at = hour + 24 * (day - 1);
+        row[at] = Math.min(3000, Math.max(1000, Math.round((row[at] * factorPermille) / 1000)));
+      }
+    }
+  }
+  return s;
+}
+
+/**
+ * An operations casebook preset (design section 4.4) from its record: the record's slug is the scenario name, so the
+ * demand trace and the measured verdict belong to it; its base changes and congestion scalings are applied to the Bay
+ * teaching map in that order; the rest is an Experiment preset with the record's copy attached.
+ */
+function opsPreset(record) {
+  if (!OPS_THEME_IDS.includes(record.theme)) throw new RangeError(`${record.id}: unknown theme ${String(record.theme)}`);
+  let base = scenarioFrom(record.slug, record.base.changes);
+  for (const scaling of record.base.congestion) base = scaleCongestion(base, scaling);
+  const problems = validateScenario(base);
+  if (!problems.ok) throw new RangeError(`${record.id}: ${problems.errors[0].what}`);
+  const built = draft(base, record.experiment);
+  return {
+    id: record.id,
+    kind: "ops",
+    learnCase: null,
+    useCase: null,
+    theme: record.theme,
+    title: record.title,
+    situation: record.situation,
+    proxy: record.proxy,
+    watch: record.watch,
+    outsideModel: record.outsideModel,
+    scenario: cloneScenario(built.scenario),
+    experiment: built,
+    moments: [],
+  };
 }
 
 // UC-09: both preregistered L2 specs share this scenario and differ by one added guardrail.
@@ -266,9 +316,16 @@ export const PRESETS = deepFreeze([
       ],
     },
   }),
+  // The operations casebook, OPS-01 to OPS-20, in theme order (design section 4.4); records in ops-cases.js.
+  ...OPS_CASES.map(opsPreset),
 ]);
 
 /** The frozen preset with this id, or null. */
 export function presetById(id) {
   return PRESETS.find((preset) => preset.id === id) ?? null;
+}
+
+/** The operations casebook presets of one theme id, in casebook order. */
+export function opsPresetsOf(themeId) {
+  return PRESETS.filter((preset) => preset.kind === "ops" && preset.theme === themeId);
 }

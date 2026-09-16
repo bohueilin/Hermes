@@ -215,6 +215,30 @@ describe("text scans", () => {
     assert.deepEqual(problems, []);
   });
 
+  test("no playground or fixture file carries a home-directory, temp-dir or scratch path, in either spelling (contract section 0)", () => {
+    // The fixed forms are spelled with escapes so that this file's own text never contains them. A macOS temp
+    // directory encodes a home path with dashes in place of slashes, so that form is refused too, and so is this
+    // machine's own home directory as the environment names it, in both spellings, so a path that carries the user's
+    // name fails wherever it lands.
+    const fixed = [/\/Users\//, /\/home\//, /\/private\/tmp/, /-Users[-]/, /\/scratchpad\//];
+    const home = (process.env.HOME ?? "").replace(/\/+$/, "");
+    const spellings = home.split("/").filter(Boolean).length >= 2 ? [home, home.replaceAll("/", "-")] : [];
+    const found = (text) => fixed.find((pattern) => pattern.test(text))?.source ?? spellings.find((s) => text.includes(s)) ?? null;
+    const roots = [PLAYGROUND_ROOT, join(REPO_ROOT, "tests/fixtures/fleet_playground")];
+    const files = roots.flatMap((root) => filesUnder(root));
+    assert.ok(files.length > 0);
+    const problems = [];
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      const hit = found(text);
+      if (hit !== null) problems.push(`${relative(REPO_ROOT, file).split(sep).join("/")} carries ${hit}`);
+    }
+    assert.deepEqual(problems, []);
+    // The scan itself sees each form.
+    assert.deepEqual(["/Users" + "/x/y", "/home" + "/x", "/private" + "/tmp/x", "-Users" + "-x-y", "a/scratchpad" + "/b"].map(found).filter((hit) => hit !== null).length, 5);
+    for (const s of spellings) assert.notEqual(found(`see ${s}/notes`), null, s);
+  });
+
   test("src/ui/labels.js holds no em or en dash, written or escaped", () => {
     const file = join(SRC, "ui/labels.js");
     if (!existsSync(file)) return; // scanned as soon as the file exists

@@ -123,8 +123,8 @@ describe("every preset's verdict on seed set 1 is pinned", () => {
     "UC-10": ["IMPROVED", "ADVANCE_TO_NEXT_TEST"], // -193.0 s, [-237.6, -143.2]
   };
 
-  test("the pinned table covers every preset with an experiment", () => {
-    assert.deepEqual(PRESETS.filter((p) => p.experiment !== null).map((p) => p.id).sort(), Object.keys(PINNED).sort());
+  test("the pinned table covers every design section 4 preset with an experiment; the casebook is pinned in ops-cases.test.mjs", () => {
+    assert.deepEqual(PRESETS.filter((p) => p.experiment !== null && p.kind !== "ops").map((p) => p.id).sort(), Object.keys(PINNED).sort());
   });
 
   for (const [id, [outcome, recommendation]] of Object.entries(PINNED)) {

@@ -5,6 +5,7 @@ import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { METRICS } from "../src/model/metrics.js";
+import { OPS_THEME_IDS } from "../src/model/presets.js";
 import * as format from "../src/ui/format.js";
 import * as labels from "../src/ui/labels.js";
 
@@ -212,6 +213,8 @@ const SAMPLES = {
   guardrailNumber: [[2]],
   testItProperlyFor: [["Bays are not always the bottleneck"]],
   presetOption: [[{ id: "UC-01", title: "Null check" }]],
+  casebookGroup: [["rain"], ["sf"]],
+  situationEdited: [[{ id: "OPS-01" }]],
   timesAsWide: [["1.4"]],
   hoursChanged: [[6], [1]],
   checkState: [[{ check: "margin above 0", passes: false }], [{ check: "one axis", passes: true }]],
@@ -464,9 +467,49 @@ describe("copy rules on every exported string", () => {
   });
 
   test("exported string tables are frozen", () => {
-    for (const name of ["HONESTY", "MODES", "VERDICT", "STATUS_WORDS", "MODEL_LIMITS", "LEARN_CASES", "CHECKS"]) {
+    for (const name of ["HONESTY", "MODES", "VERDICT", "STATUS_WORDS", "MODEL_LIMITS", "LEARN_CASES", "CHECKS", "OPS_THEMES", "PRESET_GROUPS", "SITUATION"]) {
       assert.ok(Object.isFrozen(labels[name]), name);
     }
+  });
+});
+
+describe("operations casebook copy (design section 4.4)", () => {
+  test("every casebook theme of the model has one title, keyed by its theme id, and nothing else", () => {
+    assert.deepEqual(Object.keys(labels.OPS_THEMES), [...OPS_THEME_IDS]);
+    assert.deepEqual(labels.OPS_THEMES, {
+      sf: "San Francisco core operations",
+      new_area: "Launching a new service area",
+      rain: "Rain",
+      crowds: "Busy areas with many people",
+      police: "Police activity and emergency response",
+    });
+  });
+
+  test("a casebook group heading names the casebook and the theme; an unknown theme is refused", () => {
+    assert.equal(labels.casebookGroup("rain"), "Operations casebook: Rain");
+    assert.equal(labels.casebookGroup("police"), `${labels.PRESET_GROUPS.casebook}: ${labels.OPS_THEMES.police}`);
+    assert.throws(() => labels.casebookGroup("snow"), RangeError);
+    // Three distinct headings, so no two groups of the chooser read alike.
+    const headings = [labels.PRESET_GROUPS.experiment, labels.PRESET_GROUPS.learn, ...OPS_THEME_IDS.map((t) => labels.casebookGroup(t))];
+    assert.equal(new Set(headings).size, headings.length);
+  });
+
+  test("the Situation block heading comes first and unnumbered; the six setup blocks keep their numbers", () => {
+    const [first, ...rest] = Object.entries(labels.EXPERIMENT_SETUP.blocks);
+    assert.deepEqual(first, ["situation", "SITUATION"]);
+    assert.deepEqual(rest.map(([, text]) => text.slice(0, 2)), ["1 ", "2 ", "3 ", "4 ", "5 ", "6 "]);
+    for (const key of ["lead", "proxyHeading", "standsFor", "setAs", "misses", "outsideHeading", "watchHeading"]) {
+      assert.equal(typeof labels.SITUATION[key], "string", key);
+      assert.ok(labels.SITUATION[key].length > 0, key);
+    }
+    // The lead states the honesty stance (design H-9): invented numbers and a teaching result, never a lesson.
+    assert.match(labels.SITUATION.lead, /invented/);
+    assert.match(labels.SITUATION.lead, /teaching/);
+  });
+
+  test("an edited setup names the case it no longer matches and says what is left out", () => {
+    assert.equal(labels.situationEdited({ id: "OPS-01" }), "Edited: this setup no longer matches OPS-01, so its proxy and watch lines are not shown.");
+    assert.match(labels.situationEdited({ id: "OPS-20" }), /OPS-20/);
   });
 });
 

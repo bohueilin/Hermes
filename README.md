@@ -105,6 +105,13 @@ local routes with hourly congestion, and the depot rules; watch a simulated even
 preregistered paired A/B. Its verdict uses FleetLab's rules value for value, proven by vectors FleetLab's own functions
 generate. Its world is a teaching model with invented numbers, so a playground run is never a decision record.
 
+The Experiment preset chooser also holds an operations casebook: twenty situations in five themes (San Francisco core
+operations, launching a new service area, rain, busy areas with many people, police activity and emergency response).
+The model has none of those things, so each case is a proxy built from the knobs that says on the page what it stands
+for, how it is set and what it misses; its measured verdict is pinned in the tests, and its lesson is in the design
+document, never on the page. Beside the single offline file, `pack.mjs --site` writes a folder for a static host and
+`check-dist.mjs --site` checks it; putting either online stays an owner action.
+
 ```bash
 python3 -m http.server 8765 --bind 127.0.0.1 --directory playground/fleetlab
 ```
@@ -118,12 +125,16 @@ node playground/fleetlab/tools/pack.mjs --site dist/site
 ```
 
 ```bash
+node playground/fleetlab/tools/check-dist.mjs --site dist/site
+```
+
+```bash
 node --test "playground/fleetlab/test/*.test.mjs"
 ```
 
 | Document | What it is |
 |---|---|
-| [docs/plans/2026-09-13-fleetlab-playground-design.md](docs/plans/2026-09-13-fleetlab-playground-design.md) | The audited design: knobs, depot visit, use cases with measured verdicts, model, verdict parity, interface, and the FleetLab defects found while designing it |
+| [docs/plans/2026-09-13-fleetlab-playground-design.md](docs/plans/2026-09-13-fleetlab-playground-design.md) | The audited design: knobs, depot visit, use cases and the operations casebook with measured verdicts, model, verdict parity, interface, and the FleetLab defects found while designing it |
 | [playground/fleetlab/README.md](playground/fleetlab/README.md) | How to open, pack and test the playground |
 
 

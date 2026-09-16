@@ -10,7 +10,7 @@ import { guardrailStatuses } from "../src/instrument/guardrails.js";
 import { computeVerdict } from "../src/instrument/paired.js";
 import { resultSummary, summaryText } from "../src/instrument/summary.js";
 import { freezeSpec, isNullCheckDraft, thresholdValue } from "../src/model/experiment.js";
-import { DEFAULT_PRESET_ID, presetById, seedSet } from "../src/model/presets.js";
+import { DEFAULT_PRESET_ID, OPS_THEME_IDS, opsPresetsOf, presetById, seedSet } from "../src/model/presets.js";
 import { REFERENCE_PANELS } from "../src/model/reference-panels.js";
 import { cloneScenario, describeDifferences } from "../src/model/schema.js";
 import { tabbables } from "../src/ui/a11y.js";
@@ -152,7 +152,9 @@ describe("setup sheet and checks (design §7.2)", () => {
       const { container } = mount(presetStore("UC-03"));
       const blocks = container.querySelectorAll("[data-block]");
       assert.deepEqual(blocks.map((b) => b.getAttribute("data-block")), ["question", "scenario", "oneChange", "primary", "guardrails", "seeds"]);
-      assert.deepEqual(blocks.map((b) => b.querySelector("summary").textContent), Object.values(labels.EXPERIMENT_SETUP.blocks));
+      // The Situation block belongs to a casebook preset only (section 4.4); an Experiment preset shows the six numbered ones.
+      const { situation: _situation, ...numbered } = labels.EXPERIMENT_SETUP.blocks;
+      assert.deepEqual(blocks.map((b) => b.querySelector("summary").textContent), Object.values(numbered));
       assert.deepEqual(checksOf(container), { "one axis": true, "margin above 0": true, "metrics registered": true, "ranges valid": true, "scopes valid": true });
       assert.equal(container.querySelector('[data-role="freeze"]').textContent, labels.EXPERIMENT_SETUP.freezeAndRun);
       assert.equal(container.querySelector('[data-role="freeze-disabled"]'), null);
@@ -1016,7 +1018,16 @@ describe("honesty copy on the verdict card (review: honesty-copy lens)", () => {
 });
 
 describe("Experiment flow across modes, presets and seed sets (review: experiment-flow lens)", () => {
-  const CHOOSER = ["UC-01", "UC-02", "UC-03", "UC-05", "UC-08a", "UC-08b", "UC-10", "L2a", "L2b"];
+  // The seven Experiment presets, the two L2 specs, then the operations casebook in theme order (design §10.1, section 4.4).
+  const CHOOSER = [
+    "UC-01", "UC-02", "UC-03", "UC-05", "UC-08a", "UC-08b", "UC-10",
+    "L2a", "L2b",
+    "OPS-01", "OPS-02", "OPS-03", "OPS-04",
+    "OPS-05", "OPS-06", "OPS-07", "OPS-08",
+    "OPS-09", "OPS-10", "OPS-11", "OPS-12",
+    "OPS-13", "OPS-14", "OPS-15", "OPS-16",
+    "OPS-17", "OPS-18", "OPS-19", "OPS-20",
+  ];
 
   function defaultStore() {
     const base = presetById(DEFAULT_PRESET_ID);
@@ -1055,7 +1066,36 @@ describe("Experiment flow across modes, presets and seed sets (review: experimen
     });
   });
 
-  test("Start from a preset offers every Experiment preset and both L2 presets; UC-01 reaches Freeze and run with the null check note", async () => {
+  test("the chooser groups its options: the Experiment presets, the L2 specs, then one casebook theme each (section 4.4)", async () => {
+    await withDom({}, async () => {
+      const store = defaultStore();
+      store.dispatch({ type: "mode/set", mode: "experiment" });
+      const { container } = mount(store);
+      const select = container.querySelector('[data-role="preset-chooser"] select');
+      // The placeholder stays first and outside any group; every preset sits inside a labelled group.
+      const [placeholder, ...groups] = select.children;
+      assert.equal(placeholder.localName, "option");
+      assert.equal(placeholder.getAttribute("value"), "");
+      assert.ok(groups.every((g) => g.localName === "optgroup"), "every other child is a group");
+      const casebook = OPS_THEME_IDS.map((theme) => ({ label: labels.casebookGroup(theme), ids: opsPresetsOf(theme).map((p) => p.id) }));
+      const expected = [
+        { label: labels.PRESET_GROUPS.experiment, ids: ["UC-01", "UC-02", "UC-03", "UC-05", "UC-08a", "UC-08b", "UC-10"] },
+        { label: labels.PRESET_GROUPS.learn, ids: ["L2a", "L2b"] },
+        ...casebook,
+      ];
+      assert.deepEqual(groups.map((g) => ({ label: g.getAttribute("label"), ids: g.querySelectorAll("option").map((o) => o.getAttribute("value")) })), expected);
+      assert.deepEqual(experiment.CHOOSER_GROUPS.map((g) => ({ label: g.label, ids: [...g.ids] })), expected);
+      assert.deepEqual(experiment.CHOOSER_GROUPS.flatMap((g) => [...g.ids]), CHOOSER);
+      for (const { ids } of casebook) {
+        assert.equal(ids.length, 4, "four presets per theme");
+        assert.ok(ids.every((id) => presetById(id).kind === "ops"));
+      }
+      assert.ok(Object.isFrozen(experiment.CHOOSER_GROUPS) && experiment.CHOOSER_GROUPS.every((g) => Object.isFrozen(g) && Object.isFrozen(g.ids)));
+      assertCopyRules(container);
+    });
+  });
+
+  test("Start from a preset offers every Experiment preset, both L2 presets and the casebook; UC-01 reaches Freeze and run with the null check note", async () => {
     await withDom({}, async () => {
       const store = defaultStore();
       store.dispatch({ type: "mode/set", mode: "experiment" });
@@ -1064,6 +1104,7 @@ describe("Experiment flow across modes, presets and seed sets (review: experimen
       const options = Array.from(select.querySelectorAll("option"));
       assert.deepEqual(options.map((o) => o.getAttribute("value")), ["", ...CHOOSER]);
       assert.deepEqual(experiment.CHOOSER_PRESET_IDS, CHOOSER);
+      assert.equal(CHOOSER.length, 29);
       assert.deepEqual(options.slice(1).map((o) => o.textContent), CHOOSER.map((id) => labels.presetOption({ id, title: presetById(id).title })));
       assert.equal(options[0].textContent, labels.EXPERIMENT_SETUP.choosePreset);
       assert.equal(container.querySelector('[data-role="freeze"]').disabled, true);
@@ -1098,7 +1139,7 @@ describe("Experiment flow across modes, presets and seed sets (review: experimen
     });
   });
 
-  test("the seven Experiment presets are in the chooser, a tab stop that keeps focus as each one loads (G10)", async () => {
+  test("all 29 offered presets are in the chooser, a tab stop that keeps focus as each one loads (G10)", async () => {
     await withDom({}, async () => {
       const store = defaultStore();
       store.dispatch({ type: "mode/set", mode: "experiment" });
@@ -1107,7 +1148,7 @@ describe("Experiment flow across modes, presets and seed sets (review: experimen
       assert.ok(tabbables(container).includes(select()), "keyboard: the chooser is a tab stop");
       assert.equal(select().getAttribute("aria-label"), labels.EXPERIMENT_SETUP.startFromPreset);
       const offered = select().querySelectorAll("option").map((o) => o.getAttribute("value"));
-      for (const id of ["UC-01", "UC-02", "UC-03", "UC-05", "UC-08a", "UC-08b", "UC-10"]) {
+      for (const id of CHOOSER) {
         assert.ok(offered.includes(id), `${id} is offered`);
         select().focus();
         select().value = id;
@@ -1117,6 +1158,165 @@ describe("Experiment flow across modes, presets and seed sets (review: experimen
         assert.equal(document.activeElement, select(), `focus stays on the chooser after ${id} loads`);
         assert.equal(freezeSpec(experiment.specDraftOf(store.getState().experiment.draft)).digest, freezeSpec(presetById(id).experiment).digest);
       }
+    });
+  });
+
+  /** The chooser set to `id`, as a reader would do it. */
+  function choose(container, id) {
+    const select = container.querySelector('[data-role="preset-chooser"] select');
+    select.value = id;
+    assert.equal(select.value, id, `${id} is offered`);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  test("a casebook preset loads its draft and shows its Situation block before the question; an Experiment preset removes it (section 4.4)", async () => {
+    await withDom({}, async () => {
+      const store = defaultStore();
+      store.dispatch({ type: "mode/set", mode: "experiment" });
+      const { container } = mount(store);
+      const blockIds = () => container.querySelectorAll("[data-block]").map((b) => b.getAttribute("data-block"));
+      assert.equal(container.querySelector('[data-block="situation"]'), null, "no Situation block before a casebook preset is chosen");
+
+      choose(container, "OPS-01");
+      const preset = presetById("OPS-01");
+      assert.equal(preset.kind, "ops");
+      assert.equal(store.getState().presetId, "OPS-01");
+      assert.equal(freezeSpec(experiment.specDraftOf(store.getState().experiment.draft)).digest, freezeSpec(preset.experiment).digest);
+      assert.equal(container.querySelector('[data-role="freeze"]').disabled, false);
+      assert.deepEqual(blockIds(), ["situation", "question", "scenario", "oneChange", "primary", "guardrails", "seeds"]);
+
+      const block = container.querySelector('[data-block="situation"]');
+      assert.equal(block.localName, "details");
+      assert.ok(block.hasAttribute("open"), "open on a desktop like the other blocks");
+      const summary = block.firstChild;
+      assert.equal(summary.localName, "summary");
+      assert.equal(summary.textContent, labels.EXPERIMENT_SETUP.blocks.situation);
+      assert.equal(summary.getAttribute("class"), "fl-title");
+      assert.equal(summary.getAttribute("data-focus-key"), "block-situation");
+      assert.doesNotMatch(summary.textContent, /^[0-9]/, "unnumbered: the six numbered blocks keep their numbers");
+
+      // The body, in order: the lead, the situation, the proxy, what lies outside the model, and what to watch.
+      assert.equal(block.querySelector('[data-role="situation-lead"]').textContent, labels.SITUATION.lead);
+      assert.equal(block.querySelector('[data-role="situation"]').textContent, preset.situation);
+      assert.deepEqual(block.querySelectorAll("h3").map((h) => h.textContent), [labels.SITUATION.proxyHeading, labels.SITUATION.outsideHeading, labels.SITUATION.watchHeading]);
+      const entries = block.querySelectorAll('[data-role="proxy"] > li');
+      assert.equal(entries.length, preset.proxy.length);
+      assert.ok(entries.length > 0, "OPS-01 declares a proxy");
+      entries.forEach((entry, i) => {
+        assert.equal(entry.getAttribute("data-proxy"), String(i));
+        assert.deepEqual(entry.querySelectorAll("dt").map((dt) => dt.textContent), [labels.SITUATION.standsFor, labels.SITUATION.setAs, labels.SITUATION.misses]);
+        for (const part of ["standsFor", "setAs", "misses"]) assert.equal(entry.querySelector(`[data-part="${part}"]`).textContent, preset.proxy[i][part]);
+      });
+      assert.deepEqual(block.querySelectorAll('[data-role="outside-model"] li').map((li) => li.textContent), [...preset.outsideModel]);
+      assert.ok(preset.outsideModel.length > 0, "OPS-01 names what lies outside the model");
+      assert.equal(block.querySelector('[data-role="watch"]').textContent, preset.watch);
+      const order = [labels.SITUATION.lead, preset.situation, labels.SITUATION.proxyHeading, labels.SITUATION.outsideHeading, labels.SITUATION.watchHeading, preset.watch].map((t) => block.textContent.indexOf(t));
+      assert.deepEqual(order, [...order].sort((a, b) => a - b), "the parts read in that order");
+      assert.ok(order.every((at) => at >= 0));
+
+      // Keyboard: the block sits between the chooser and the question, and its summary (a native tab stop) adds no
+      // control that would break the sheet's order: the chooser is still followed by the question field.
+      const setup = container.querySelector('[data-role="setup"]');
+      const chooser = setup.querySelector('[data-role="preset-chooser"]');
+      assert.equal(chooser.nextSibling, block, "the Situation block follows the chooser");
+      assert.equal(block.nextSibling.getAttribute("data-block"), "question");
+      const stops = tabbables(setup);
+      assert.equal(stops[0], chooser.querySelector("select"));
+      assert.equal(stops[1].getAttribute("data-focus-key"), "question");
+      assert.ok(!stops.some((node) => block.contains(node) && node !== summary), "no control inside the block precedes the question");
+      assertCopyRules(container);
+      assertClassesDefined(container);
+
+      choose(container, "UC-02");
+      assert.equal(store.getState().presetId, "UC-02");
+      assert.equal(freezeSpec(experiment.specDraftOf(store.getState().experiment.draft)).digest, freezeSpec(presetById("UC-02").experiment).digest);
+      assert.equal(container.querySelector('[data-block="situation"]'), null, "absent, not hidden");
+      assert.deepEqual(blockIds(), ["question", "scenario", "oneChange", "primary", "guardrails", "seeds"]);
+      assert.ok(!container.textContent.includes(preset.situation));
+
+      // Back to the casebook: the block returns, still open, with the new preset's situation.
+      choose(container, "OPS-07");
+      assert.deepEqual(blockIds().slice(0, 2), ["situation", "question"]);
+      assert.ok(container.querySelector('[data-block="situation"]').hasAttribute("open"));
+      assert.equal(container.querySelector('[data-role="situation"]').textContent, presetById("OPS-07").situation);
+    });
+  });
+
+  test("an edited setup keeps the lead and the situation and says it no longer matches the case; the other lines return when it matches again", async () => {
+    await withDom({}, async () => {
+      const store = defaultStore();
+      store.dispatch({ type: "mode/set", mode: "experiment" });
+      const { container } = mount(store);
+      choose(container, "OPS-01");
+      const preset = presetById("OPS-01");
+      const block = () => container.querySelector('[data-block="situation"]');
+      assert.ok(block().querySelector('[data-role="proxy"]'), "the proxy shows while the draft is the case");
+      assert.equal(block().querySelector('[data-role="situation-edited"]'), null);
+
+      // Rephrasing the question keeps the lines: the proxy and watch do not depend on it.
+      store.dispatch({ type: "experiment/draft", patch: { question: "A question in the reader's words?" } });
+      assert.ok(block().querySelector('[data-role="proxy"]'));
+      assert.equal(block().querySelector('[data-role="watch"]').textContent, preset.watch);
+
+      // Another axis is another setup: the block keeps the lead and the situation and says so in place of the rest, so
+      // the sheet never shows the case's proxy beside a ONE CHANGE block that names a different knob.
+      store.dispatch({ type: "experiment/draft", patch: { axis: { id: "parameter:DEP-4", baseline: 1200, candidate: 1800 } } });
+      assert.notEqual(freezeSpec(experiment.specDraftOf(store.getState().experiment.draft)).digest, freezeSpec(preset.experiment).digest);
+      assert.equal(block().querySelector('[data-role="situation-lead"]').textContent, labels.SITUATION.lead);
+      assert.equal(block().querySelector('[data-role="situation"]').textContent, preset.situation);
+      assert.equal(block().querySelector('[data-role="situation-edited"]').textContent, labels.situationEdited({ id: "OPS-01" }));
+      for (const role of ["proxy", "outside-model", "watch"]) assert.equal(block().querySelector(`[data-role="${role}"]`), null, `${role} is absent, not hidden`);
+      assert.deepEqual(block().querySelectorAll("h3"), []);
+      assert.ok(!container.textContent.includes(preset.watch));
+      assertCopyRules(container);
+
+      // Back on the case's axis, the lines return.
+      store.dispatch({ type: "experiment/draft", patch: { axis: preset.experiment.axis } });
+      assert.equal(block().querySelector('[data-role="situation-edited"]'), null);
+      assert.equal(block().querySelector('[data-role="watch"]').textContent, preset.watch);
+
+      // An invalid draft is an edited one too, and the sheet renders without freezing it.
+      store.dispatch({ type: "experiment/draft", patch: { axis: { id: "parameter:DEP-4", baseline: 1200, candidate: 999999 } } });
+      assert.equal(container.querySelector('[data-role="freeze"]').disabled, true);
+      assert.ok(block().querySelector('[data-role="situation-edited"]'));
+      assert.equal(block().querySelector('[data-role="proxy"]'), null);
+    });
+  });
+
+  test("the Situation block also follows a casebook preset opened from Sandbox, and closes with the reader's choice", async () => {
+    await withDom({}, async () => {
+      const preset = presetById("OPS-12");
+      const store = createStore(createInitialState({ presetId: preset.id, scenario: cloneScenario(preset.scenario) }));
+      store.dispatch({ type: "mode/set", mode: "experiment" });
+      const { container } = mount(store);
+      assert.equal(store.getState().experiment.draft.baselineSource.presetId, "OPS-12");
+      const block = () => container.querySelector('[data-block="situation"]');
+      assert.equal(block().querySelector('[data-role="situation"]').textContent, preset.situation);
+      assert.ok(block().hasAttribute("open"));
+      block().removeAttribute("open");
+      block().dispatchEvent(new Event("toggle"));
+      store.dispatch({ type: "experiment/draft", patch: { question: "A new question?" } });
+      assert.ok(!block().hasAttribute("open"), "the reader's closed block stays closed across a re-render");
+      assert.ok(container.querySelector('[data-block="question"]').hasAttribute("open"));
+    });
+  });
+
+  test("on a phone the Situation block starts closed and the question stays the one open block", async () => {
+    await withDom({ media: { [PHONE]: true } }, async () => {
+      const store = defaultStore();
+      store.dispatch({ type: "mode/set", mode: "experiment" });
+      const { container } = mount(store);
+      choose(container, "OPS-15");
+      const open = () => container.querySelectorAll("details[data-block]").filter((d) => d.hasAttribute("open")).map((d) => d.getAttribute("data-block"));
+      assert.equal(container.querySelectorAll("details[data-block]").length, 7);
+      assert.deepEqual(open(), ["question"]);
+      const situation = container.querySelector('details[data-block="situation"]');
+      situation.setAttribute("open", "");
+      situation.dispatchEvent(new Event("toggle"));
+      store.dispatch({ type: "experiment/draft", patch: { question: "A new question?" } });
+      assert.deepEqual(open(), ["situation", "question"]);
+      assertCopyRules(container);
+      assertClassesDefined(container);
     });
   });
 

@@ -13,6 +13,10 @@ NO_RECOMMENDATION.
   any real operation, says what will happen, or can approve a change to a real fleet.
 - A playground run is a teaching run. It is never a FleetLab decision record, and its result summary is marked
   `NOT_EVIDENCE`.
+- The Experiment preset chooser also holds an operations casebook: twenty situations (San Francisco core operations, a
+  newly opened service area, rain, busy areas with many people, police activity and emergency response), each played
+  through the knobs as a proxy that says what it stands for and what it misses, with its measured verdict pinned in the
+  tests and its lesson in the design document.
 
 ## What it shares with FleetLab
 
@@ -84,7 +88,7 @@ PYTHONPATH="$PWD/src" PYTHONDONTWRITEBYTECODE=1 python tools/fleet_playground/re
 | `src/core` | synchronous SHA-256, FleetLab's keyed draws, rounding and summation rules, canonical JSON, integer quantile tables |
 | `src/instrument` | paired comparison, bootstrap interval, outcome, guardrails, recommendation, result summary |
 | `src/legacy` | the port of FleetLab's engine, metrics and invariants |
-| `src/model` | knobs and presets, routes, world, engine, metrics, invariants, experiments, reference panels |
+| `src/model` | knobs and presets, the operations casebook records, routes, world, engine, metrics, invariants, experiments, reference panels |
 | `src/runtime` | the engine host, with a worker and a time-sliced main-thread fallback |
 | `src/ui` | interface copy, store, map, playback, charts, knob panel, inspector, Experiment and Learn |
 | `tools` | the offline packer and its checker |
