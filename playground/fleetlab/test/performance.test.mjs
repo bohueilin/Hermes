@@ -4,7 +4,11 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
+import { installFakeDom } from "./helpers/fake-dom.mjs";
+import { presetScenario, runThroughWorkerHandler } from "./helpers/model-payloads.mjs";
 import { bootstrapCi } from "../src/instrument/bootstrap.js";
+import { start } from "../src/ui/app.js";
+import { AREA_ORDER, CARS_PER_BLOCK, FAMILY_ORDER, frameModelCounts } from "../src/ui/map.js";
 import { runToEnd } from "../src/model/engine.js";
 import { experimentSteps, freezeSpec, runExperimentSpec } from "../src/model/experiment.js";
 import { computeAll, computeSeries } from "../src/model/metrics.js";
@@ -140,5 +144,178 @@ describe("wall-clock budgets of design 5.9 (FLEET_PLAYGROUND_PERF=1)", { skip: P
     bootstrapCi(deltas, 2000, "ab".repeat(32));
     const ms = performance.now() - t0;
     assert.ok(ms <= 100, `${ms.toFixed(1)} ms`);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// What one drawn frame costs (design 5.9). The budget is "a frame <= 8 ms with 150 cars drawn", and a frame is style,
+// layout, paint and composite. None of those exist under node --test, so nothing below is called a frame cost: these
+// are deterministic work proxies, what one frame asks of the model and of the DOM before a pixel is touched, each
+// bound with its arithmetic. The whole-frame measurement is a browser gate, run in a window that reports
+// document.hidden === false; a number measured here, or on any fake DOM, is JavaScript and layout, never a frame.
+
+/** Fleet sizes drawn: the default preset, the design 5.9 reference, and the largest SUP-1 allows (5.9 records it). */
+const FLEETS = Object.freeze([120, 150, 500]);
+
+/** The scenario of a fleet size; 120 is the preset's own. */
+function fleetScenario(cars) {
+  const sizes = { 150: { SF: 50, PEN: 30, SJ: 40, EB: 30 }, 500: { SF: 200, PEN: 100, SJ: 120, EB: 80 } };
+  let scenario = presetScenario();
+  for (const [area, n] of Object.entries(sizes[cars] ?? {})) scenario = applyAxis(scenario, `parameter:SUP-1.${area}`, n);
+  return scenario;
+}
+
+/**
+ * The whole page on a fake DOM at desktop width, showing one replication of `cars` cars at D1 18:15, the busiest hour
+ * of the run. The log is wrapped so reads of `log.snapshots` can be counted: `frameAt` makes exactly two per frame it
+ * builds (one in `snapshotIndex`, one for the snapshot itself), so those reads stand for frames taken from the log.
+ */
+async function drawnPage(cars) {
+  const { payload } = await runThroughWorkerHandler({ type: "run_window", scenario: fleetScenario(cars), seeds: [1001], logSeed: 1001 });
+  const reads = { snapshots: 0 };
+  const log = new Proxy(payload.log, {
+    get(target, key, receiver) {
+      if (key === "snapshots") reads.snapshots += 1;
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const uninstall = installFakeDom(globalThis, { media: { "(min-width: 1280px)": true, "(min-width: 768px)": true } });
+  const doc = uninstall.dom.document;
+  const root = doc.createElement("div");
+  root.setAttribute("id", "fleetlab-root");
+  const strip = doc.createElement("div");
+  strip.setAttribute("id", "fleetlab-teaching-strip");
+  root.appendChild(strip);
+  doc.body.appendChild(root);
+  const app = start({ createWorker: () => null });
+  app.store.dispatch({ type: "run/queued", id: "w", total: 1 });
+  app.store.dispatch({ type: "run/done", id: "w", payload: { ...payload, log } });
+  const busy = payload.log.snapshots[0].t + 47700;
+  app.store.dispatch({ type: "clock/set", clock_s: busy });
+  return { app, fleet: payload.log.cars.length, busy, reads, map: app.regions.map, close: () => { app.destroy(); uninstall(); } };
+}
+
+/** One frame in ten of a measured window announces, so the announcer, the third reader of the model, is measured too. */
+const ANNOUNCE_EVERY = 10;
+
+/**
+ * Advances the clock one second at a time for `frames` frames and counts what each frame cost: models computed and
+ * handed on, attribute writes, child replacements, and reads of the log. The window is synchronous, so no idle work
+ * the page schedules for itself can land inside it. It holds both kinds of frame the page draws, ordinary and
+ * announcing, because the announcer asks for the frame's model on its own and only an announcing frame runs it.
+ */
+function costOfFrames(page, frames) {
+  const element = globalThis.Element.prototype;
+  const node = globalThis.Node.prototype;
+  const original = { setAttribute: element.setAttribute, replaceChildren: node.replaceChildren };
+  const writes = { attributes: 0, replacements: 0 };
+  element.setAttribute = function setAttribute(...args) {
+    writes.attributes += 1;
+    return original.setAttribute.apply(this, args);
+  };
+  node.replaceChildren = function replaceChildren(...args) {
+    writes.replacements += 1;
+    return original.replaceChildren.apply(this, args);
+  };
+  const before = { computed: frameModelCounts.computed, reused: frameModelCounts.reused, snapshots: page.reads.snapshots };
+  const t0 = performance.now();
+  try {
+    // A reduced-motion step is a clock/set tagged "step", and it is the one action here that also announces. Plain
+    // clock/set frames alone would leave the announcer's call site unmeasured, free to take a frame of its own.
+    for (let i = 1; i <= frames; i += 1) {
+      page.app.store.dispatch({ type: "clock/set", clock_s: page.busy + i, reason: i % ANNOUNCE_EVERY === 0 ? "step" : undefined });
+    }
+  } finally {
+    element.setAttribute = original.setAttribute;
+    node.replaceChildren = original.replaceChildren;
+  }
+  const ms = performance.now() - t0;
+  const per = (n) => n / frames;
+  return {
+    models: per(frameModelCounts.computed - before.computed),
+    reused: per(frameModelCounts.reused - before.reused),
+    snapshotReads: per(page.reads.snapshots - before.snapshots),
+    attributes: per(writes.attributes),
+    replacements: per(writes.replacements),
+    ms: per(ms),
+  };
+}
+
+/**
+ * Attribute writes one frame may make. A frame writes only where a number moved, and one of those numbers is now the
+ * place of every car driving a route: the map draws one mark per driving car and moves each with one composed
+ * transform, written only when its rounded place has changed. Measured over the 60 frames from D1 18:15: 255.9 a
+ * frame at 120 cars, where about 102 marks are moving, then 198.4 at 150 and 188.4 at 500, where more of the fleet is
+ * standing in an area or parked. The bound keeps its teeth at that shape: two writes a mark would land near 360.
+ */
+const ATTRIBUTE_WRITES_PER_FRAME = 320;
+
+/** Child replacements one frame may make: a guard that missed and rebuilt a bar row, a band or the table twin. */
+const REPLACEMENTS_PER_FRAME = 12;
+
+describe("what one drawn frame costs (design 5.9)", () => {
+  test("one model and one frame per page frame, and a drawing that does not grow with the fleet", async (t) => {
+    const rows = [];
+    for (const cars of FLEETS) {
+      const page = await drawnPage(cars);
+      try {
+        const cost = costOfFrames(page, 60);
+        const where = `${cars} cars`;
+
+        // The map, the NOW panel and the announcer draw one second between them, so one frame computes one model.
+        // The announcing frames of the window have that third reader, so the mean handed on stands above one.
+        assert.equal(cost.models, 1, `${where}: models computed per frame`);
+        assert.ok(cost.reused > 1, `${where}: ${cost.reused} regions were handed the model instead of computing it`);
+
+        // Two readers touch the log on a frame: the one frameAt (twice, snapshotIndex and the snapshot) and the
+        // closed inspector's own snapshotAt (twice). Two frames taken would be six reads, and three would be eight.
+        // An announcer taking a frame of its own would add two reads on every tenth frame, landing the mean at 4.2.
+        assert.ok(cost.snapshotReads <= 4, `${where}: ${cost.snapshotReads} reads of log.snapshots per frame`);
+
+        // A frame writes attributes only where a number moved: nothing is rebuilt while the guards hold.
+        assert.ok(cost.attributes <= ATTRIBUTE_WRITES_PER_FRAME, `${where}: ${cost.attributes} attribute writes per frame`);
+        assert.ok(cost.replacements <= REPLACEMENTS_PER_FRAME, `${where}: ${cost.replacements} child replacements per frame`);
+
+        // The drawing itself: the schematic and its tooltip, without the legend and the table twin beside them.
+        const nodes = page.map.querySelectorAll('[data-role="stage"] *').length;
+        rows.push({ cars, fleet: page.fleet, nodes, ...cost });
+      } finally {
+        page.close();
+      }
+    }
+    for (const r of rows) {
+      t.diagnostic(
+        `${String(r.cars).padStart(3)} cars (fleet ${String(r.fleet).padStart(3)}): model ${r.models}, handed on ${r.reused}, ` +
+        `log.snapshots reads ${r.snapshotReads}, ${r.attributes.toFixed(1)} attribute writes, ${r.replacements.toFixed(2)} replacements, ` +
+        `${r.nodes} nodes, ${r.ms.toFixed(3)} ms of JavaScript (not a frame cost)`,
+      );
+    }
+    // The drawing grows with the fleet, because a unit bar draws one block per five cars; it grows far below one node
+    // per car. A block is at most two rects (the under-3:1 families carry an ink edge), so five more cars add at most
+    // two more nodes, and each of the four rows in each of the four yards may hold one partial block of its own.
+    const first = rows[0];
+    const last = rows[rows.length - 1];
+    const added = last.fleet - first.fleet;
+    const ceiling = (2 * added) / CARS_PER_BLOCK + 2 * AREA_ORDER.length * FAMILY_ORDER.length;
+    assert.ok(
+      last.nodes - first.nodes <= ceiling,
+      `${String(added)} more cars added ${String(last.nodes - first.nodes)} nodes, against a ceiling of ${String(ceiling)}`,
+    );
+    assert.ok(last.nodes - first.nodes < added, "the map never draws one node per car");
+  });
+});
+
+describe("wall clock of the drawn page, JavaScript only (FLEET_PLAYGROUND_PERF=1)", { skip: PERF ? false : "set FLEET_PLAYGROUND_PERF=1" }, () => {
+  test("one page frame at the reference preset, model and DOM writes only, at most 2 ms", async (t) => {
+    const page = await drawnPage(150);
+    try {
+      const cost = costOfFrames(page, 120);
+      t.diagnostic(`${cost.ms.toFixed(3)} ms per frame of JavaScript and fake-DOM writes; this is not a frame cost`);
+      // Not the design 5.9 budget: no style, layout, paint or composite happens here. The 8 ms budget is settled in a
+      // browser, on a window that paints. This bound only catches the drawing growing by an order of magnitude.
+      assert.ok(cost.ms <= 2, `${cost.ms.toFixed(3)} ms per frame`);
+    } finally {
+      page.close();
+    }
   });
 });

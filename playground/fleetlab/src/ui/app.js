@@ -38,7 +38,7 @@ import * as format from "./format.js";
 import { mountInspector } from "./inspector.js";
 import * as labels from "./labels.js";
 import { LEARN_FORK_DEPOTS, learnCase, mountLearn } from "./learn.js";
-import { mapModel, mountMap } from "./map.js";
+import { frameModel, mountMap } from "./map.js";
 import { createPlayback, renderTransport } from "./playback.js";
 import { createInitialState, createStore, ENGINE_PATHS, lastChange, MODES } from "./store.js";
 
@@ -328,7 +328,7 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
   const runs = { window: null, fork: null, forkArgs: null, forkMeta: null, forkNotice: false, copyStatus: null };
   // Lookup tables built ahead of the first run: sigmas done (or failed, so they are not retried), the pending build, the idle handle.
   const warm = { done: new Set(), pending: null, idle: null };
-  const memo = { chartHandles: [], stripHandles: [], forkHandles: [], cursor: null };
+  const memo = { chartHandles: [], stripHandles: [], forkHandles: [], cursor: null, frameKey: null, frame: null };
 
   // ---- engine ------------------------------------------------------------------------------------------------------
 
@@ -535,7 +535,7 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
   regions.map.replaceChildren(runStatus, mapHost);
   const help = createShortcutHelp(regions.map);
   const playback = createPlayback({ store });
-  const map = mountMap(mapHost, { store, playback, onShortcuts: () => help.toggle() });
+  const map = mountMap(mapHost, { store, playback, onShortcuts: () => help.toggle(), frame: () => frameOf(store.getState()) });
 
   const transportHost = el("div", { class: "fl-contents" });
   const strips = el("div", { class: "fl-transport__strips", "data-role": "strips" });
@@ -593,6 +593,19 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
 
   // ---- rendering ---------------------------------------------------------------------------------------------------
 
+  /**
+   * The one frame the page draws at `state`. `playback.frame()` rebuilds a car view of the whole fleet, and the map,
+   * the NOW panel and the announcer all draw the same second, so they take one frame between them. Handing them the
+   * same frame object is also what lets `frameModel` give them one model: it keys on the frame's identity.
+   */
+  function frameOf(state) {
+    const key = [state.run.log, state.clock_s, state.reducedMotion, playback.simplified];
+    if (sameKey(key, memo.frameKey)) return memo.frame;
+    memo.frameKey = key;
+    memo.frame = state.run.log === null ? null : playback.frame();
+    return memo.frame;
+  }
+
   function renderTopBar(state) {
     root.setAttribute("data-mode", state.mode);
     for (const b of modeButtons) b.setAttribute("aria-pressed", b.getAttribute("data-mode") === state.mode ? "true" : "false");
@@ -643,7 +656,7 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
     if (sameKey(key, memo.now)) return;
     memo.now = key;
     const scenario = scenarioOfRun(state);
-    const model = mapModel({ scenario, log: run.log, frame: run.log === null ? null : playback.frame(), clock_s: state.clock_s });
+    const model = frameModel({ scenario, log: run.log, frame: frameOf(state), clock_s: state.clock_s });
     const missing = labels.absentValue(run.status === "void" ? labels.ABSENT_REASONS.voidRun : labels.ABSENT_REASONS.notRunYet);
     const total = (values) => (values.includes(null) ? null : values.reduce((a, b) => a + b, 0));
     const text = (value) => (value === null ? missing : format.count(value));
@@ -845,7 +858,7 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
   function announcement(state) {
     const clock = format.clock(state.clock_s);
     if (state.run.log === null) return clock;
-    const model = mapModel({ scenario: scenarioOfRun(state), log: state.run.log, frame: playback.frame(), clock_s: state.clock_s });
+    const model = frameModel({ scenario: scenarioOfRun(state), log: state.run.log, frame: frameOf(state), clock_s: state.clock_s });
     const areas = Object.values(model.areas);
     return labels.mapAnnouncement({
       clock,

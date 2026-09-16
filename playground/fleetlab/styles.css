@@ -16,7 +16,7 @@ States       .fl-stale .fl-absent .fl-error .fl-error__slot .fl-unserved
 Scrollers    .fl-scroll (tables, the depot board and code scroll inside it) .fl-table .fl-board .fl-code
 Text         .fl-mono .fl-title .fl-muted .fl-small-label .fl-learn-text .fl-sr-only
 Map and SVG  .fl-yard .fl-route-highway__casing .fl-route-highway__centre .fl-route-local .fl-route--congested
-             .fl-chevron .fl-depot-tile .fl-rider-ring .fl-glyph-edge .fl-glyph-ring
+             .fl-chevron .fl-depot-tile .fl-rider-ring .fl-glyph-edge .fl-glyph-ring .fl-car (one mark per driving car)
              .fl-fam-rider .fl-fam-empty .fl-fam-available .fl-fam-depot (set color; glyphs fill with currentColor)
              .fl-pinned-car (the pinned glyph, clickable) .fl-hit (a transparent pointer target)
              .fl-chart__grid .fl-chart__axis .fl-chart__line .fl-chart__band .fl-chart__cursor .fl-hatch-line
@@ -449,6 +449,9 @@ summary {
 /* Light Available and At a depot fall under 3:1, so their glyphs always carry this 1 px ink edge (design 8.2). */
 .fl-glyph-edge { fill: none; stroke: var(--ink); stroke-width: 1px; }
 .fl-glyph-ring { fill: none; stroke: var(--panel); stroke-width: 2px; }
+/* A car driving a route (design 7.3 as amended, 8.2): one mark per car, on the panel surface, in the route hues.
+   The pinned glyph keeps the only pointer target a car has, so a mark never takes a click away from the route under it. */
+.fl-car { pointer-events: none; }
 
 .fl-chart__grid { stroke: var(--rule); stroke-width: 1px; }
 .fl-chart__axis { fill: var(--faint-text); stroke: var(--faint); font-size: 12px; }

@@ -132,6 +132,7 @@ const SAMPLES = {
   slowExperimentAdvice: [[{ estimate: "about 90 s", seeds: 40, fewerSeeds: 20, widening: "1.4 times" }]],
   waitPopulation: [["412"]],
   withWaitPopulation: [[{ value: "8.2 to 9.1 min", population: "from 1,350 to 1,420 completed rides" }]],
+  "MAP.crowdedRoute": [[{ routeId: "H1", from: "San Francisco", to: "Peninsula" }]],
   unservedCount: [[4]],
   depotName: [[{ depotId: "SJ-1", areaName: "San Jose" }]],
   lotFill: [[22, 30]],

@@ -1460,9 +1460,35 @@ about the candidate.`
   casing step; never a hue, never dashed. Chevrons are static: they change only when the clock crosses an hour.
 - **Depots:** a square tile inside its area with its id and a three-part micro-bar (queued, in a bay, ready) above a
   lot fill. An area with no depot shows its yard only.
-- **Cars:** each yard shows unit bars (one block per 5 cars, grouped by state family, labelled `1 block = 5 cars`),
-  and each route shows a flow band split into rider work and empty driving. The pinned car is always drawn
-  individually with its glyph and a 2 px focus ring. Individual glyphs for every car are later.
+- **Cars:** each yard shows unit bars (one block per 5 cars, grouped by state family, labelled `1 block = 5 cars`).
+  Individual glyphs for every car on a route; cars standing in an area are drawn as unit bars, because the model gives
+  an area no inside geography. A car at a depot stays part of that tile's micro-bar for the same reason: a queue
+  position is model state, a position inside an area is not. A glyph sits at the progress the interval log gives its
+  car along the route's visible segment and points along that direction; only the four driving states reach it, so a
+  route mark is only ever a triangle or a diamond in the two route hues of §8.2. The pinned car is always drawn
+  individually with its glyph and a 2 px focus ring, and on a route it takes the same heading, so it covers its own
+  mark rather than sitting unrotated on top of it. Marks paint above the yards and below the shields (nothing covers a
+  shield id), carry no `tabindex` and are hidden from assistive technology: they rearrange numbers the table twin
+  already carries per route and direction and add no fact of their own, so the schematic is still exactly one tab stop
+  (§7.7). The legend carries both encodings at once, `1 block = 5 cars` beside `One mark is one car on a route. Cars
+  inside an area are drawn as blocks of 5.`
+- **The route fallback:** a route direction draws marks only where its visible length on this schematic is at least
+  three units for every car it holds at that direction's busiest snapshot of the run; otherwise it keeps the flow band
+  split into rider work and empty driving, and the map writes the reason in visible text under the schematic
+  (`H1 Peninsula to San Francisco is short on this schematic, so the cars going that way are drawn as a band.`). Three
+  units a car is a measured legibility floor, not a model number. The decision is made once per run and geometry from
+  the run's own snapshots, so no direction changes encoding mid-playback, and it is made per direction rather than per
+  route, because a corridor can band one way and draw marks the other, and a reason written for the whole route would
+  then contradict half of what is drawn on it. A banded direction's band counts that direction's cars alone, so one
+  quantity is never drawn twice. Measured: at the default preset the wide map bands one direction of H1, whose San
+  Francisco to Peninsula corridor is 50 units against 104 on the phone, and the phone bands nothing; at the 150-car
+  reference fleet of §5.9 the wide map bands both directions of H1 and the phone still bands nothing.
+- **Model limits:** the map carries a limits chip with two of §5.8's caveats in that table's own words, `Traffic
+  changes on the hour, as you set it.` and `Areas are points: pickups inside an area take a fixed time.` The first is
+  owed because a car never re-plans mid-leg, so marks of different leg times share a stretch of road and read as
+  driving behaviour the model does not have; the second is why the yards still show bars while the routes show cars.
+  Both are visible text with no tab stop, and both stand before a run as well as during one, because they are about
+  the model and not about a replay.
 - **Corner stamp:** `Teaching model` in the map's lower-right corner.
 
 ### 7.4 Time and the two registers
@@ -1620,6 +1646,19 @@ only cue.
   `--ink` edge, and every chart direct-labels its bands or offers its table view.
 - Glyphs are at least 10 px with a 2 px surface ring. States inside a family are told apart by shape on the map and by label and
   lane in the inspector, never by a new hue.
+- That 10 px floor with its 2 px surface ring is a floor on each glyph, not a spacing rule between glyphs. Overlap between two
+  route glyphs is meaningful and is not a layout failure: two cars at nearly the same point on a route genuinely are at nearly
+  the same place, and a chain of overlapping marks is bunching on a slow leg. What decides whether a route direction draws marks
+  at all is the measured legibility floor of §7.3 (a visible route of at least three units a car at that direction's
+  peak), never this rule. As drawn, a route mark is 10.1 to 11.1 px at 400 px and 10.7 to 11.8 px at 1280 px, inside a surface
+  ring of 18.1 to 19.3 px, so the floor is cleared at every width by the ring class the glyphs already carry.
+- A route mark is drawn on `--panel`, the surface these hues are pinned against, but the route geometry is clipped at the yard
+  boundary rather than short of it, so that holds for a mark's centre and not always for the whole mark. Measured over the whole
+  run, default preset wide and phone: the glyph body overlaps a yard on 8.33% and 11.95% of drawn car-frames, the surface ring
+  touches one on 12.13% and 17.52%, and the centre lies on a yard edge on about 0.7%, never strictly inside a yard (7.27% and
+  11.99%, 10.43% and 17.61%, and about 0.8% at the 150-car reference). On `--panel-alt` rider work is 3.90 and empty drive 2.82,
+  and the surface ring is 1.13:1, so it does not separate the mark there either. Both pairs are recorded in `test/a11y.test.mjs`
+  beside the unit bars, which have always drawn on that surface; the drawing is not changed here and the gap is stated.
 
 ### 8.3 Other encodings
 
@@ -1638,6 +1677,15 @@ only cue.
 ### 8.4 Motion
 
 - Playback moves cars `linear`, the one continuous motion, because it depicts an ongoing process.
+- That motion is written by the drawing and never by CSS. The car layer writes one composed `transform` per car per frame
+  (`translate(x y) rotate(a)`, one attribute so a car is never caught half-moved), and only where the rounded value has changed,
+  so a car that has not moved costs nothing. The layer adds no transition, animation, keyframe or `will-change` anywhere, which
+  is what keeps `linear` true by construction: cars move because the clock moves, and nothing carries on after the frame that
+  says to stop.
+- Under reduced motion, cars step on the 5-minute snapshot grid through the interpolation the frame already carries
+  (`frameAt(log, clock_s, {interpolate: false})`), which is the path the slow-device fallback of §7.7 already used. The map reads
+  no reduced-motion flag of its own and has no second code path: the frame it is handed is already the still one, so position
+  stays a pure function of the log and the clock and the same second drawn twice is identical, mark for mark.
 - Interface transitions use `ease-out` `cubic-bezier(0.23, 1, 0.32, 1)`: presses 100-160 ms, tooltips 125-200 ms, drawers 200-300 ms;
   `transform` and `opacity` only.
 - Knob changes and scrubbing are frequent and keyboard-reachable, so they do not animate.
@@ -1777,9 +1825,9 @@ The smallest build that fully serves the six seed variables and the worked examp
 | Learn | L1 UC-04, L2 UC-09, L3 UC-07 |
 | Experiment | presets UC-01, UC-02, UC-03, UC-05, UC-08a, UC-08b, UC-10 and the two L2 presets; one axis; scopes; guardrails with NOT EVALUABLE; frozen spec; session log; the quoted FLEET-005 reference panel and the exploratory two-zone probe panel, with their §1.3 labels; after the first build, the operations casebook of §4.4: twenty presets of kind `ops`, one chooser group per theme, each with a SITUATION block |
 | Inspect | car and depot drawers |
-| Views | §7.2 layouts; the map with unit bars and the pinned car; the charts of §7.5 |
+| Views | §7.2 layouts; the map with unit bars, one mark for every car driving a route (with the banded fallback and the limits chip of §7.3) and the pinned car; the charts of §7.5 |
 | Engineering | §9.2 placement and rules R1-R9; §9.5 suites; the packed file built locally, not committed (D-09) |
-| Not in the first build | charging, staff, closing hours, inspection and quality stages, deep clean, soiled trips, disruptions, cancellations, suppressed demand, planning profiles, offsets inside an area, demand that varies by replication, variable task times, multi-regime experiments, sweeps of any kind, a fifth area, editable geography, individual glyphs for every car, URL state, import, FleetLab spec export, a CI step, graduation |
+| Not in the first build | charging, staff, closing hours, inspection and quality stages, deep clean, soiled trips, disruptions, cancellations, suppressed demand, planning profiles, offsets inside an area, demand that varies by replication, variable task times, multi-regime experiments, sweeps of any kind, a fifth area, editable geography, individual glyphs for cars that are not driving a route (a car standing in an area or sitting at a depot has no place inside it to draw, §7.3), bay cells inside the depot tile, a day-long bar under the scrubber, URL state, import, FleetLab spec export, a CI step, graduation |
 
 ### 10.2 Phases
 
@@ -2038,3 +2086,4 @@ against the repository. The conflicts that changed the design:
 | Thirteen required changes from the design audit (approve with required changes) | an `INTAKE` state; a defined drain and censoring time; completed-only turnaround no longer called a bound; scope rules for every metric class; a time-based empty-drive share instead of invented distance; seed sets and a canonical spec digest; a log ordinal for decision events; FleetLab's precheck world source (P-3); a worker the content policy allows; full event-log parity (D-03); no storage (D-11); the arrival process and the FLEET-005 projection named precisely |
 | The default preset, run at fleet scale in the built engine | the recall acts once (D-12); the default fleet recalibrated to 120 cars with two accepted exceptions (§2.2); presets UC-02, UC-03, UC-09 and UC-10 adjusted so their mechanisms show, and every use case records its measured verdict (§4) |
 | The operations casebook: twenty situations the model has no entities for (rain, crowds, police, a new area) | proxies built from the knobs that say what they stand for and what they miss; slugs frozen with their measured verdicts because the scenario name keys the demand trace; on-page copy never names a direction (H-9); every seed set 1 verdict pinned, sets 2 and 3 behind a flag; a review re-ran every case, a cross-theme critique replaced one and moved another, and a copy pass rewrote the Watch lines (§4.4) |
+| How much of the fleet the map should draw individually, after a survey of the built page found it nearly still (over 600 consecutive frames at 900x, unit bars changed on 10.8% of area-frames and depot bars on 4 of 2,400 depot-frames; the pinned car was the only thing moving continuously) | cars driving a route become individual marks at the progress the interval log gives them; cars standing in an area stay unit bars and cars at a depot stay part of the depot tile, because the model gives neither a place inside it; a direction whose corridor is too short for its own busiest snapshot keeps its flow band and writes the reason in visible text; the map gains its first model-limits chip and a second legend line so the two encodings cannot contradict each other; no CSS transition, animation, keyframe or `will-change` is added anywhere, and reduced motion steps cars on the snapshot grid through the path that already existed (§7.3, §8.2, §8.4, §10.1) |

@@ -626,7 +626,17 @@ passes the factory (section 9).
   scans as copy. Only `instrument/summary.js` holds other text, for the export format (section 4).
 - `app.js` exports `start({createWorker})` and builds the shell of design §7.2 with `dom.js` helpers; `map.js`,
   `playback.js`, `charts.js`, `inspector.js`, `controls.js`, `experiment.js`, `learn.js` and `a11y.js` each render one
-  region from the store.
+  region from the store. `app.js` takes one `playback.frame()` per state and hands it to the map, the NOW panel and the
+  announcer, so the three regions that describe one second describe the same one.
+- `map.js` draws the schematic in five layers, painted `routes`, `yards`, `cars`, `shields`, `pinned`. Every car whose
+  `placeCar` place is a route is one `<g>` in the `cars` layer, built once through `dom.js keyedList` and afterwards
+  moved by one composed `transform` written only when its rounded place changes; a car standing in an area stays a unit
+  bar and a car at a depot stays part of that tile's micro-bar, because the model gives neither a place inside it
+  (design §7.3 as amended, §8.5). Where a route direction is too short on this schematic for its own busiest snapshot
+  it keeps the flow band and the map writes the reason in visible text. The layer is `aria-hidden` with no `tabindex`
+  and no focusable child, so the map is still exactly one tab stop (design §7.7), and it draws no fact the table twin
+  does not already carry. `mapModel` returns those placements beside the counts, so `placeCar` runs once per car per
+  frame, and `frameModel` gives one frame's model to all three regions that read it (decision 42).
 - Visual tokens and type: design §8 exactly, light and dark via `prefers-color-scheme` on `:root`, system font stacks.
 - Accessibility and states: design §7.7. Layout: design §7.2 breakpoints, no horizontal page scroll at 400 px.
 
@@ -781,3 +791,47 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     `ops-cases.js` as copy. The interface lists the casebook in the Experiment preset chooser as one group per theme and
     shows a Situation block above the setup blocks for an `ops` preset; once the draft no longer matches the case's spec
     (the question aside) the block keeps the lead and the situation and says so in place of the proxy and watch lines.
+42. The cars layer, the route fallback and one model per frame (design §7.3 as amended, §8.2, §8.4, §5.9).
+    **Marks.** `map.js` draws one `<g class="fl-car fl-fam-rider|fl-fam-empty" data-car data-state>` per car on a route,
+    in a `cars` layer between the yards and the shields; its children are a `.fl-glyph-ring` of radius 9 and the glyph
+    of the car's own state, and it moves by one composed `transform` (`translate(x y) rotate(a)`), written only when
+    that string changes, so an unchanged car costs nothing and a moving one is never caught half-moved. `routePoint`
+    is the one arithmetic for a mark and for the pinned glyph, so a pinned car covers its own mark; the pinned glyph
+    now rotates whenever its place is a route, rather than only in the two rider-work states. Only `ENROUTE_PICKUP`,
+    `ON_TRIP`, `TO_DEPOT` and `REPOSITIONING` ever reach the layer. `test/map.test.mjs` holds it to the four classes
+    above and refuses a status colour, a fourth hue or any dash inside it. The layer is `aria-hidden` with no
+    `tabindex` and no focusable child. `styles.css` adds `.fl-car` only, with no transition, animation, keyframe or
+    `will-change`, so both reduced-motion blocks stay exactly as they are; reduced motion needs no code path in the map
+    because `frameAt`'s existing `interpolate: false` already hands it snapshot positions.
+    **The fallback.** `bandedDirections(log, routes, geometry)` returns the route directions that keep today's flow
+    band: those whose visible length is under `FLOOR_UNITS_PER_CAR = 3` units for every car they hold at that
+    direction's busiest snapshot of the run. It walks the run's own snapshots once, per log and geometry, and the
+    answer is kept in a `WeakMap` for the whole run, so no direction flips mid-playback; a direction the run never puts
+    a car on is never banded. The kept answer is deliberately not keyed on the routes handed in, which rests on every
+    scenario of this preset drawing its routes at the same lengths, and `map.test.mjs` asserts those lengths so a
+    scenario that moved a route's endpoints fails there instead of being answered from the cache. `drawFlow` then sums
+    only banded directions, so a band and a mark never count the same car. Each banded direction writes its own visible
+    reason (`MAP.crowdedRoute`), per direction and not per route, because a corridor can band one way and draw marks
+    the other. Measured: the default preset bands `H1|PEN>SF` on the wide map and nothing on the phone (that corridor
+    is 50 units wide against 104 on the phone); the design §5.9 reference fleet of 150 cars bands both directions of H1
+    wide and nothing on the phone. `test/helpers/model-payloads.mjs` gains `referenceScenario()` and
+    `referencePayload()` for that second case.
+    **What the map says out loud.** The map carries its first `.fl-limits-chip`, holding design §5.8's traffic and area
+    caveats in that table's own words, and a second legend line (`MAP.oneMarkOneCar`) beside `1 block = 5 cars`, because
+    the map now draws two encodings of one quantity at once. Both stand before a run as well as during one.
+    `map.test.mjs` asserts the presence of the chip, the legend line and every banded reason, not only their wording.
+    **One model per frame.** `frameModel` memoises `mapModel` on the identity of its four inputs and counts hits in
+    `frameModelCounts`; `releaseFrameModel` drops it, and `map.destroy()` calls it, so a torn-down map stops holding the
+    run's log. The map's table twin is redrawn from a kept array holding one number per value it draws, compared in
+    place, rather than from a `JSON.stringify` of the whole model computed every frame; `tableValues()` exposes the
+    length so a cell cannot be added without its watch. `test/performance.test.mjs` asserts one model computed per page
+    frame at 120, 150 and 500 cars, at most four reads of `log.snapshots`, bounded attribute writes and child
+    replacements, and that the drawing never grows by one node per car. Those are deterministic proxies: the 8 ms
+    whole-frame budget of design §5.9 is a browser measurement and is not measured by the node suite.
+    **Recorded, not fixed here.** A shield is an opaque plate on the route line and cars paint below it (design §7.3:
+    nothing covers a shield id), so the centre of a drawn mark falls inside a plate on 18.4% of car-frames wide and
+    37.2% on the phone (17.9% and 38.1% at the reference). A mark may not be nudged clear, which would invent a place;
+    the two drawings that would fix it both change `placeShields` and the shield copy, and are a later decision. The
+    route geometry is clipped at the yard boundary, so a mark near an end overhangs a yard on 8.33% of car-frames wide
+    and 11.95% on the phone, where the car hues are 3.90 and 2.82 and `.fl-glyph-ring` is 1.13:1; `test/a11y.test.mjs`
+    records those ratios beside the unit bars that already draw on that surface.

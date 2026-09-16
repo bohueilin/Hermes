@@ -6,18 +6,24 @@
 // The map reads a frame from playback.js and the run log; it never runs the model. Planned times for a departure now
 // come from the declared profile through routes.js plannedLegSeconds, which is arithmetic on the scenario only.
 //
+// A car driving a route is drawn as its own mark, at the progress placeCar reports along that route. A car standing in
+// an area or sitting at a depot is not: the model gives an area no inside geography, so those cars stay unit bars and
+// the depot tile's micro-bar rather than being given a place they do not have (design §8.5, H-2). Where a route is too
+// short on this schematic to hold its own busiest moment, that direction keeps its flow band and says so in words.
+//
 // Where cars are counted (one partition, used by the yards, the flow bands and the table twin, so the counts sum to
 // the fleet): a car standing at an area centre or at a depot counts in that area; a car on a leg counts on a route
 // direction while its current segment is a route segment, and otherwise in the area of that segment (a trip or pickup
 // inside an area, depot access, pull-out). A car whose leg has ended before the next snapshot counts at its leg's end.
 
-import { el, setText } from "./dom.js";
+import { el, keyedList, setText } from "./dom.js";
 import * as format from "./format.js";
 import {
   ABSENT_REASONS,
   CHARTS,
   CHEVRON_LEVELS,
   MAP,
+  MODEL_LIMITS,
   STATES,
   depotName,
   lotFill,
@@ -367,6 +373,55 @@ export function placeCar(log, car, at_s = null) {
   }
 }
 
+/**
+ * Visible route a car needs before its direction draws marks instead of a band. Measured on this preset: at 3 units a
+ * car the busiest wide moment draws 104 of its 110 driving cars as marks, and marks overlap by about seven tenths,
+ * which is what a convoy looks like; at 6 the phone bands four directions and that moment collapses to 62 marks.
+ */
+export const FLOOR_UNITS_PER_CAR = 3;
+
+const bandedByLog = new WeakMap();
+
+/**
+ * The route directions that keep today's flow band instead of drawing one mark per car: those whose busiest snapshot
+ * of the whole run holds more cars than the route has room for at `FLOOR_UNITS_PER_CAR` units each. Keys are
+ * `"H1|SF>PEN"`. Decided from the run's own snapshots and kept for the whole run, so no direction flips mid-playback;
+ * a direction the run never puts a car on is never banded. The routes of a log are fixed by the run that made it, so
+ * the answer is kept per log and geometry, and `routes` is deliberately not part of the key. That rests on one thing:
+ * every scenario of this preset draws its routes at the same lengths, so the same log and geometry give the same
+ * answer whichever scenario's routes are handed in. `test/map.test.mjs` asserts those lengths are equal, so a scenario
+ * that ever moved a route's endpoints fails there instead of silently being answered with a kept set.
+ */
+export function bandedDirections(log, routes, geometry = GEOMETRIES.wide) {
+  if (log === null) return new Set();
+  let byGeometry = bandedByLog.get(log);
+  if (byGeometry === undefined) {
+    byGeometry = new Map();
+    bandedByLog.set(log, byGeometry);
+  }
+  const kept = byGeometry.get(geometry);
+  if (kept !== undefined) return kept;
+  const peak = new Map();
+  for (const snap of log.snapshots) {
+    const counts = new Map();
+    for (const car of snap.cars) {
+      const place = placeCar(log, car, snap.t);
+      if (place.kind !== "route") continue;
+      const key = `${place.route}|${place.dir}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    for (const [key, cars] of counts) if (cars > (peak.get(key) ?? 0)) peak.set(key, cars);
+  }
+  const room = new Map(routes.map((route) => [route.id, routeGeometry(route, geometry).length]));
+  const banded = new Set();
+  for (const [key, cars] of peak) {
+    const length = room.get(key.slice(0, key.indexOf("|")));
+    if (length !== undefined && length < FLOOR_UNITS_PER_CAR * cars) banded.add(key);
+  }
+  byGeometry.set(geometry, banded);
+  return banded;
+}
+
 /** Depots to draw: the log's when a run exists (it names what ran), else the scenario's; each `{id, area, parking}`. */
 function depotList(scenario, log) {
   const source = log?.depots ?? scenario.depots;
@@ -375,7 +430,9 @@ function depotList(scenario, log) {
 
 /**
  * Every number the map and its table twin show, from this replay: `{hasLog, clock_s, at_s, hour, areas, depots,
- * routes}`. Areas hold `families` (car counts by family), `waiting`, `unservedLastHour` and `unservedRecent`; depots
+ * routes, onRoutes}`. `onRoutes` holds every driving car as `{id, state, family, route, dir, fraction}`, in frame
+ * order, so the drawing places each car from the one pass that already called `placeCar` for the counts.
+ * Areas hold `families` (car counts by family), `waiting`, `unservedLastHour` and `unservedRecent`; depots
  * hold `held`, `parking`, `queued` (queue plus gate), `inBays` (cleaning and service bays busy, blocked cars included)
  * and `ready`; each route holds `directions` with `multiplier`, `level`, `planned_s`, `riderWork` and `emptyDrive`.
  * Without a log, every replay number is null. Replay numbers use `frame.at_s`; planned times and chevrons use the clock.
@@ -415,6 +472,7 @@ export function mapModel({ scenario, log = null, frame = null, clock_s }) {
     }),
   }));
   const depots = depotList(scenario, log).map((d) => ({ ...d, held: null, queued: null, inBays: null, ready: null }));
+  const onRoutes = [];
   if (hasLog) {
     const routeDirs = new Map();
     for (const r of routes) for (const d of r.directions) routeDirs.set(`${r.id}|${d.dir}`, d);
@@ -422,6 +480,7 @@ export function mapModel({ scenario, log = null, frame = null, clock_s }) {
       const family = familyOf(car.state);
       const place = placeCar(log, car, at_s);
       if (place.kind === "route") {
+        onRoutes.push({ id: car.id, state: car.state, family, route: place.route, dir: place.dir, fraction: place.fraction });
         const d = routeDirs.get(`${place.route}|${place.dir}`);
         if (d !== undefined && (family === "riderWork" || family === "emptyDrive")) d[family] += 1;
         continue;
@@ -448,7 +507,40 @@ export function mapModel({ scenario, log = null, frame = null, clock_s }) {
       d.ready = v.ready;
     }
   }
-  return { hasLog, clock_s, at_s, hour: Math.min(47, Math.floor(clock_s / 3600)), areas, depots, routes };
+  return { hasLog, clock_s, at_s, hour: Math.min(47, Math.floor(clock_s / 3600)), areas, depots, routes, onRoutes };
+}
+
+/** What `frameModel` computed and what it handed back unchanged, so a test can hold one page frame to one model. */
+export const frameModelCounts = { computed: 0, reused: 0 };
+
+let sharedModel = { scenario: null, log: null, frame: null, clock_s: null, model: null };
+
+/**
+ * `mapModel` for the frame the whole page is drawing. The map, the NOW panel and the announcer describe the same
+ * second, and the model walks every car in the fleet, so the first of them computes it and the others are handed that
+ * same model (design §5.9: one frame's work is done once). The key is the identity of the four inputs `mapModel`
+ * reads, and playback builds a fresh frame for every second it draws, so a new second is never answered with the
+ * model of the one before it.
+ */
+export function frameModel({ scenario, log = null, frame = null, clock_s }) {
+  const last = sharedModel;
+  if (last.model !== null && last.scenario === scenario && last.log === log && last.frame === frame && last.clock_s === clock_s) {
+    frameModelCounts.reused += 1;
+    return last.model;
+  }
+  const model = mapModel({ scenario, log, frame, clock_s });
+  sharedModel = { scenario, log, frame, clock_s, model };
+  frameModelCounts.computed += 1;
+  return model;
+}
+
+/**
+ * Drops the memoised frame and its model. The map calls this as it is torn down, so the run's log stops being reachable
+ * from this module once nothing is drawing it. One map is mounted at a time; were there a second, releasing one would
+ * leave the other a model to recompute, never a wrong one, because a hand-back is checked against all four inputs.
+ */
+export function releaseFrameModel() {
+  sharedModel = { scenario: null, log: null, frame: null, clock_s: null, model: null };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -556,6 +648,21 @@ function familySwatch(family) {
   return box;
 }
 
+/**
+ * Where a car on a route sits and which way it is pointing: `{x, y, angle}` in view box px, from the route's own
+ * visible segment. One arithmetic for the car layer and the pinned glyph, so a pinned car sits exactly on its mark.
+ */
+function routePoint(entry, dir, fraction) {
+  const forward = dir === `${entry.route.a}>${entry.route.b}`;
+  const { pA, pB, ux, uy } = entry.geometry;
+  const f = forward ? fraction : 1 - fraction;
+  return {
+    x: pA.x + (pB.x - pA.x) * f,
+    y: pA.y + (pB.y - pA.y) * f,
+    angle: (Math.atan2(forward ? uy : -uy, forward ? ux : -ux) * 180) / Math.PI,
+  };
+}
+
 /** Absent text for a table cell before any run. */
 const notRun = () => format.absent(ABSENT_REASONS.notRunYet);
 const countOrAbsent = (value) => (value === null ? notRun() : format.count(value));
@@ -585,27 +692,52 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
   const root = svg("svg", { width: "100%", role: "group", "aria-label": MAP.name, tabindex: -1 });
   const routesLayer = svg("g", { "data-layer": "routes" });
   const yardsLayer = svg("g", { "data-layer": "yards" });
+  // Cars paint above the yards they have left and below the shields. The layer holds no name, no tab stop and nothing
+  // focusable: what it draws is arrangement, and every number in it is already a row of the table twin (design §7.7).
+  // What that paint order costs, measured over the whole run rather than left to be noticed: a shield is an opaque
+  // plate on the route line, and the centre of a drawn mark falls inside one on 18.4% of car-frames wide and 37.2% on
+  // the phone (default preset; 17.9% and 38.1% at the 150-car reference). Worst single snapshot, 26 of 99 marks wide
+  // and 49 of 106 on the phone; one phone mark stayed under a plate for 14 snapshots, because a plate is 79 units
+  // wide and the phone draws H3 and H4 at 88. The paint order is not what to change (design §7.3: nothing covers a
+  // shield id), and a mark may not be nudged clear of one, which would invent a place the model does not give. The
+  // two drawings that would fix it, a shorter shield on the phone and shields set off the line the way local labels
+  // sit, both change placeShields and the shield copy, which this phase does not touch: it is a Phase 3 decision.
+  const carsLayer = svg("g", { "data-layer": "cars", "aria-hidden": "true" });
   // Shields paint after the yards and every route (design §7.3: a shield with its id), so nothing covers or strikes one.
   const shieldsLayer = svg("g", { "data-layer": "shields" });
   const pinnedLayer = svg("g", { "data-layer": "pinned" });
-  root.append(routesLayer, yardsLayer, shieldsLayer, pinnedLayer);
+  root.append(routesLayer, yardsLayer, carsLayer, shieldsLayer, pinnedLayer);
 
   const tooltip = el("div", { class: "fl-tooltip", role: "tooltip", id: "fleetlab-map-tooltip", "data-open": "false" });
   const stage = el("div", { "data-role": "stage" }, [root, tooltip]);
   stage.style.position = "relative";
 
   // One swatch and word per family, in unit-bar row order: the key glyph and the block as drawn, so hue is never the only
-  // cue (design §8.2). The unit legend is its own line.
+  // cue (design §8.2). The unit legend is its own line, and the mark legend beside it, because the map draws two
+  // encodings of one quantity at once and neither may be left to be guessed (design §7.3 as amended, motion plan H-c).
   const legend = el("div", { class: "fl-small-label", "data-role": "legend" }, [
     el("p", { "data-role": "unit-legend", style: "margin: 0" }, MAP.unitBarLegend),
+    el("p", { "data-role": "mark-legend", style: "margin: 0" }, MAP.oneMarkOneCar),
     el("ul", { class: "fl-map-legend", "data-role": "family-legend" }, FAMILY_ORDER.map((family) =>
       el("li", { "data-family": family }, [familySwatch(family), el("span", {}, MAP.families[family])]))),
   ]);
   const stamp = el("span", { class: "fl-map__stamp" }, MAP.cornerStamp);
 
+  // The written reason each banded direction owes, where the drawing it explains is (motion plan H-d).
+  const crowded = el("div", { class: "fl-small-label", "data-role": "crowded-routes" });
+  // The map's first model-limits chip (design §5.8, H-7). Marks that move make two limits easy to misread: a car on a
+  // leg never re-plans, so cars of different leg times share a stretch; and an area keeps no place inside it, which is
+  // why its cars are still bars. Both sentences are visible text, never a tooltip, and the chip takes no tab stop.
+  const limits = el("p", { class: "fl-limits-chip", "data-role": "model-limits", style: "margin: 4px 0 0" }, el("span", {}, [
+    el("span", { "data-limit": "hourlyTraffic" }, MODEL_LIMITS.hourlyTraffic),
+    " ",
+    el("span", { "data-limit": "areasArePoints" }, MODEL_LIMITS.areasArePoints),
+  ]));
+
   const table = el("table", { class: "fl-table" });
   const tableWrap = el("div", { class: "fl-sr-only", "data-role": "table-twin" }, table);
-  const element = el("div", { "data-role": "map" }, [header, nothingRun, stage, legend, tableWrap, stamp]);
+  // The legend stays the last visible block, where the corner stamp has always sat beside its short last row.
+  const element = el("div", { "data-role": "map" }, [header, nothingRun, stage, crowded, limits, legend, tableWrap, stamp]);
 
   let tableOpen = false;
   function setTableOpen(open) {
@@ -742,6 +874,9 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
       areas.set(id, { group, bars, keys, waiting, waitingText, unserved, unservedText, x0, y0, barsKey: null, depots: inArea.map((d) => d.id) });
     }
     built = { scenario, geometry, depotKey: depotRows.map((d) => `${d.id}:${String(d.parking)}`).join(","), routes, areas, depots, shields };
+    // The table twin names its rows from the depots and routes just built, and those names are not numbers, so a
+    // rebuild always redraws it rather than waiting for one of its numbers to move.
+    tableRebuilt = true;
     applyRoving(false);
   }
 
@@ -807,9 +942,12 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
     entry.group.setAttribute("class", `${entry.route.cls === "HIGHWAY" ? "fl-route fl-route--highway" : "fl-route fl-route--local"}${congested ? " fl-route--congested" : ""}`);
   }
 
-  function drawFlow(entry, r) {
-    const rider = r.directions.reduce((n, d) => n + (d.riderWork ?? 0), 0);
-    const empty = r.directions.reduce((n, d) => n + (d.emptyDrive ?? 0), 0);
+  function drawFlow(entry, r, banded) {
+    // Only a banded direction still draws a band. Everywhere else its cars are marks of their own, so one quantity is
+    // drawn once and the band and the marks can never contradict each other on the same stretch of road.
+    const shown = r.directions.filter((d) => banded.has(`${r.id}|${d.dir}`));
+    const rider = shown.reduce((n, d) => n + (d.riderWork ?? 0), 0);
+    const empty = shown.reduce((n, d) => n + (d.emptyDrive ?? 0), 0);
     const key = `${String(rider)}|${String(empty)}`;
     if (entry.flowKey === key) return;
     entry.flowKey = key;
@@ -912,6 +1050,44 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
     entry.lot.replaceChildren(lotFillRect, lotOutline, title);
   }
 
+  /** The nodes of one car mark: the surface ring design §8.2 asks for, then the glyph of the car's own state. */
+  function carNodes(state) {
+    return [svg("circle", { class: "fl-glyph-ring", r: 9 }), ...glyphFor(state)];
+  }
+
+  /** `translate(x y) rotate(a)`: one composed attribute, so a car that has moved is one write and never half a move. */
+  function carTransform(car) {
+    const { x, y, angle } = routePoint(built.routes.get(car.route), car.dir, car.fraction);
+    return `translate(${String(round(x))} ${String(round(y))}) rotate(${String(round(angle))})`;
+  }
+
+  /**
+   * One mark per car on a route direction that draws marks, at the progress `placeCar` reports and pointing the way
+   * it is going. Cars standing in an area and cars at a depot are not drawn here, and that is the line this drawing
+   * does not cross: a mark would give them a place inside an area that the model does not have.
+   * A mark is built once and afterwards only its transform is written, and only when its rounded place has changed.
+   */
+  function drawCars(model, banded) {
+    const cars = model.onRoutes.filter((car) => built.routes.has(car.route) && !banded.has(`${car.route}|${car.dir}`));
+    keyedList(carsLayer, cars, {
+      key: (car) => car.id,
+      create: (car) => {
+        const group = svg("g", { class: `fl-car ${FAMILY_CLASS[car.family]}`, "data-car": car.id, "data-state": car.state, transform: carTransform(car) });
+        group.append(...carNodes(car.state));
+        return group;
+      },
+      update: (group, car) => {
+        if (group.getAttribute("data-state") !== car.state) {
+          group.setAttribute("class", `fl-car ${FAMILY_CLASS[car.family]}`);
+          group.setAttribute("data-state", car.state);
+          group.replaceChildren(...carNodes(car.state));
+        }
+        const transform = carTransform(car);
+        if (group.getAttribute("transform") !== transform) group.setAttribute("transform", transform);
+      },
+    });
+  }
+
   // The pinned glyph is kept between frames and only moved, so a click or tap that lands during playback reaches one
   // element; it is rebuilt when the car or its state changes.
   let pinned = null;
@@ -933,13 +1109,10 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
     let y;
     let angle = 0;
     if (place.kind === "route" && built.routes.has(place.route)) {
-      const entry = built.routes.get(place.route);
-      const forward = place.dir === `${entry.route.a}>${entry.route.b}`;
-      const { pA, pB, ux, uy } = entry.geometry;
-      const f = forward ? place.fraction : 1 - place.fraction;
-      x = pA.x + (pB.x - pA.x) * f;
-      y = pA.y + (pB.y - pA.y) * f;
-      angle = (Math.atan2(forward ? uy : -uy, forward ? ux : -ux) * 180) / Math.PI;
+      const point = routePoint(built.routes.get(place.route), place.dir, place.fraction);
+      x = point.x;
+      y = point.y;
+      angle = point.angle;
     } else if (place.kind === "depot" && built.depots.has(place.depot)) {
       const entry = built.depots.get(place.depot);
       x = entry.x + geometry.tile.width - 10;
@@ -950,7 +1123,9 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
       y = c.y - geometry.yard.height / 2 + 14;
     }
     const transform = `translate(${String(round(x))} ${String(round(y))})`;
-    const rotation = car.state === "ENROUTE_PICKUP" || car.state === "ON_TRIP" ? `rotate(${String(round(angle))})` : null;
+    // A car on a route points the way it is going, here as in the car layer, so the pinned glyph covers its own mark
+    // exactly. Off a route there is no heading to draw: the model gives an area and a depot no direction.
+    const rotation = place.kind === "route" ? `rotate(${String(round(angle))})` : null;
     if (pinned !== null && pinned.id === car.id && pinned.state === car.state && pinned.group.parentNode === pinnedLayer) {
       pinned.group.setAttribute("transform", transform);
       if (rotation === null) pinned.glyph.removeAttribute("transform");
@@ -1047,14 +1222,94 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
   }
 
   let lastModel = null;
-  let tableKey = null;
+  // The table twin stays in the DOM for a screen reader whether or not the Table toggle shows it, so its numbers are
+  // kept current on every frame. They are compared in place in one reused array, because stringifying the whole model
+  // sixty times a second costs more than the drawing it guards (design §5.9).
+  let tableNumbers = [];
+  let tableRebuilt = true;
+
+  /** Whether a number the table twin shows has moved since it was drawn; records the new ones. Absent stays null. */
+  function tableChanged(model, seed) {
+    let i = 0;
+    let changed = tableRebuilt;
+    tableRebuilt = false;
+    const put = (value) => {
+      // Kept as it stands, with no sentinel for absent: a seed is an integer like any other, so a stand-in number
+      // would collide with the value it stands for. Comparing with !== already separates null from every number,
+      // and the first undefined from both.
+      if (tableNumbers[i] !== value) {
+        tableNumbers[i] = value;
+        changed = true;
+      }
+      i += 1;
+    };
+    for (const id of AREA_ORDER) {
+      const a = model.areas[id];
+      for (const family of FAMILY_ORDER) put(a.families === null ? null : a.families[family]);
+      put(a.waiting);
+      put(a.unservedLastHour);
+    }
+    for (const d of model.depots) {
+      put(d.held);
+      put(d.parking);
+      put(d.queued);
+      put(d.inBays);
+      put(d.ready);
+    }
+    for (const r of model.routes) {
+      for (const d of r.directions) {
+        put(d.planned_s);
+        put(d.level);
+        put(d.riderWork);
+        put(d.emptyDrive);
+      }
+    }
+    put(seed);
+    if (tableNumbers.length !== i) {
+      tableNumbers.length = i;
+      changed = true;
+    }
+    return changed;
+  }
+
+  // Which directions draw a band, for the run being drawn. It is not decided in build(): a result arrives on the very
+  // scenario the map was built on, so build() does not run again for it, and the decision needs the run's snapshots.
+  let bands = { log: null, geometry: null, set: new Set() };
+
+  /** The banded directions of `log` at this geometry, walked once for a run and then kept (motion plan §3.4). */
+  function bandsFor(log) {
+    if (bands.log === log && bands.geometry === geometry) return bands.set;
+    const set = bandedDirections(log, built.scenario.routes, geometry);
+    bands = { log, geometry, set };
+    drawCrowded(set);
+    return set;
+  }
+
+  /**
+   * The reason each banded direction owes, one paragraph per direction, in the scenario's own route and direction
+   * order. Per direction and not per route, because that is how the fallback decides: at the default preset H1 bands
+   * the way to San Francisco and draws marks the way back, so a reason written for the route would contradict half of
+   * what is drawn on it. Naming the direction is also what tells the reader which way the band counts.
+   */
+  function drawCrowded(banded) {
+    const reasons = [];
+    for (const route of built.scenario.routes) {
+      for (const [from, to] of [[route.a, route.b], [route.b, route.a]]) {
+        const dir = `${from}>${to}`;
+        if (!banded.has(`${route.id}|${dir}`)) continue;
+        const text = MAP.crowdedRoute({ routeId: route.id, from: MAP.areas[from], to: MAP.areas[to] });
+        reasons.push(el("p", { "data-role": "crowded-route", "data-route": route.id, "data-dir": dir, style: "margin: 4px 0 0" }, text));
+      }
+    }
+    crowded.replaceChildren(...reasons);
+  }
 
   /** Draw `input`: `{scenario, log, frame, clock_s, pinnedCar, seed, stale}` (log and frame null before a run). */
   function update(input) {
     const { scenario, log = null, frame = null, clock_s, pinnedCar = null, seed = null, stale = false } = input;
     const depotKey = depotList(scenario, log).map((d) => `${d.id}:${String(d.parking)}`).join(",");
     if (built === null || built.scenario !== scenario || built.depotKey !== depotKey || built.geometry !== geometry) build(scenario, log);
-    const model = mapModel({ scenario, log, frame, clock_s });
+    const model = frameModel({ scenario, log, frame, clock_s });
     lastModel = model;
     lastInput = input;
 
@@ -1063,10 +1318,11 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
     if (!chip.hidden) setText(chip, thisReplayChip(seed));
     stage.setAttribute("class", stale ? "fl-stale" : "");
 
+    const banded = bandsFor(log);
     for (const r of model.routes) {
       const entry = built.routes.get(r.id);
       drawChevrons(entry, r);
-      drawFlow(entry, r);
+      drawFlow(entry, r, banded);
     }
     for (const id of AREA_ORDER) {
       const a = model.areas[id];
@@ -1079,13 +1335,10 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
       if (recent > 0) setText(area.unservedText, unservedCount(recent));
     }
     for (const d of model.depots) drawDepot(built.depots.get(d.id), d);
+    drawCars(model, banded);
     drawPinned(input, model);
 
-    const key = JSON.stringify([model.areas, model.depots, model.routes.map((r) => r.directions), seed]);
-    if (key !== tableKey) {
-      tableKey = key;
-      drawTable(model, seed);
-    }
+    if (tableChanged(model, seed)) drawTable(model, seed);
     if (tooltip.getAttribute("data-open") === "true") showRoute(tooltip.getAttribute("data-route"), true);
     return model;
   }
@@ -1182,22 +1435,26 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
     update,
     /** The geometry in use: "wide" or "phone". */
     geometry: () => geometry.name,
-    /** Stops following the phone media query. */
+    /** Stops following the phone media query, and drops the frame this map was drawing. */
     destroy() {
       media?.removeEventListener?.("change", onMedia);
+      releaseFrameModel();
     },
     /** The roving focus position: `{level, area, index, key}`. */
     focusState: () => ({ ...focus, key: currentKey() }),
     /** Whether the table twin is shown. */
     tableOpen: () => tableOpen,
+    /** How many numbers the table twin is watched by: one for every number it draws. */
+    tableValues: () => tableNumbers.length,
   };
 }
 
 /**
  * Mounts the map in the map region, following `store` and the `playback` controller. `onShortcuts` opens the shortcut
- * list for `?`. Returns the map object with a `destroy()`.
+ * list for `?`. `frame()` gives the frame to draw, so a caller that already took one for the whole page hands the map
+ * that one instead of a second (the default takes playback's own). Returns the map object with a `destroy()`.
  */
-export function mountMap(region, { store, playback, onShortcuts = null }) {
+export function mountMap(region, { store, playback, onShortcuts = null, frame = () => playback.frame() }) {
   const map = createMap({
     onKey: (event) => playback.handleKey(event, { arrows: false, onShortcuts }),
     onInspect: (target) => store.dispatch({ type: "inspector/open", target }),
@@ -1212,7 +1469,7 @@ export function mountMap(region, { store, playback, onShortcuts = null }) {
     map.update({
       scenario,
       log,
-      frame: playback.frame(),
+      frame: frame(),
       clock_s: s.clock_s,
       pinnedCar: s.fork.pinnedCar ?? s.selection?.car ?? null,
       seed: s.run.selectedSeed,

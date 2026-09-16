@@ -1088,6 +1088,9 @@ export const MAP = frozen({
   name: "Schematic map of the four areas",
   cornerStamp: "Teaching model",
   unitBarLegend: "1 block = 5 cars",
+  // The map draws two encodings of one quantity at once, so the legend carries both at once (design §7.3 as amended,
+  // motion plan H-c).
+  oneMarkOneCar: "One mark is one car on a route. Cars inside an area are drawn as blocks of 5.",
   tableTwin: "Map as a table",
   pinnedCar: "pinned car",
   localRoute: "local route",
@@ -1130,6 +1133,15 @@ export const MAP = frozen({
     carsOnRoute: "Cars on the route",
   },
   tableToggle: "Show the map as a table",
+  /**
+   * Why one direction draws a band where the others draw marks: `H1 San Francisco to Peninsula is short on this
+   * schematic, so the cars going that way are drawn as a band.` (route id, area names). The fallback decides per
+   * direction, not per route, so the reason is written per direction: a corridor can band one way and draw marks the
+   * other, and a reason written for the whole route would say something false about half of what is drawn. It names a
+   * drawing limit, not a model fact (motion plan H-d).
+   */
+  crowdedRoute: ({ routeId, from, to }) =>
+    `${routeDirection({ routeId, from, to })} is short on this schematic, so the cars going that way are drawn as a band.`,
 });
 
 /** Unserved marker text: `4 unserved` (count integer). */

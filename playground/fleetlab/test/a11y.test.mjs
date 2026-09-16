@@ -169,6 +169,23 @@ const DOCUMENTED = [
   ["light", "--car-empty", "--panel", 3.2], ["dark", "--car-empty", "--panel", 4.45],
   ["light", "--car-available", "--panel", 2.82], ["dark", "--car-available", "--panel", 5.07],
   ["light", "--car-depot", "--panel", 2.17], ["dark", "--car-depot", "--panel", 5.63],
+  // A yard is a panel-alt shape, so its unit bars draw the car hues on that surface and not on the panel the design
+  // pins them against. Three of the four fall under 3:1 in light theme, and two of those three carry the ink edge
+  // (the blockNodes rule of src/ui/map.js). Empty drive is the exception and is recorded here rather than closed:
+  // EDGE_FAMILIES was derived from the --panel ratios, where empty drive is 3.20 and needs no edge, so on panel-alt
+  // it is 2.82 and is drawn as a hollow 1.5 px stroke in the hue with no edge at all. Adding it to EDGE_FAMILIES
+  // would change the drawing, which the phase that measured this was not free to do; the gap is stated, not hidden.
+  // The car layer draws on this surface too, which the motion plan's X-1 answer ("every individual glyph sits on
+  // --panel") does not allow for: routeGeometry clips a route at the yard boundary, so that is true of a mark's
+  // centre, not of the mark. Measured over the whole run, default preset wide / phone and then the 150-car reference
+  // wide / phone: the glyph body overlaps a yard rect on 8.33% / 11.95% and 7.27% / 11.99% of drawn car-frames, the
+  // 2 px surface ring touches one on 12.13% / 17.52% and 10.43% / 17.61%, and the centre lies on a yard edge on
+  // 0.71% / 0.75% and 0.77% / 0.76%, never strictly inside one. There rider work is 3.90 and empty drive 2.82, and
+  // .fl-glyph-ring is var(--panel), 1.13:1 against panel-alt, so the ring does not separate the mark either. Empty
+  // drive carries no ink edge (EDGE_FAMILIES was derived from the --panel ratios) and the car layer's class allowlist
+  // in test/map.test.mjs forbids adding one, so this is recorded here with the bars above rather than closed.
+  ["light", "--car-rider", "--panel-alt", 3.9], ["light", "--car-empty", "--panel-alt", 2.82],
+  ["light", "--car-available", "--panel-alt", 2.48], ["light", "--car-depot", "--panel-alt", 1.91],
 ];
 
 describe("design tokens in styles.css", () => {
@@ -238,6 +255,26 @@ describe("focus, targets, strip and narrow layout", () => {
     assert.equal(get("box-shadow"), "0 0 0 2px var(--ground)");
     assert.equal(THEMES.light["--target"], "44px");
     assert.ok(Number.parseInt(THEMES.light["--gutter"], 10) >= 16);
+  });
+
+  test("the map draws focus per shape, and each shape's ring stays 2 px", () => {
+    // An outline cannot reach an SVG shape, so the map strokes the shape itself. The rule above reads only the bare
+    // :focus-visible outline, so a map ring quietly thinned to 1 px would pass every other test in this file.
+    for (const selector of [".fl-area:focus-visible .fl-yard", ".fl-depot:focus-visible .fl-depot-tile"]) {
+      const rules = RULES.filter((rule) => rule.selectors?.includes(selector));
+      assert.equal(rules.length, 1, `styles.css carries one focus rule for ${selector}`);
+      assert.deepEqual(
+        rules[0].declarations.filter((d) => d.name.startsWith("stroke")).map((d) => [d.name, d.value]),
+        [["stroke", "var(--accent)"], ["stroke-width", "2px"]],
+        selector,
+      );
+    }
+    // And nothing anywhere else thins the focus stroke of those two shapes.
+    const focusRules = RULES.filter((rule) => rule.selectors?.some((s) => s.includes(":focus-visible") && /\.fl-yard|\.fl-depot-tile/.test(s)));
+    assert.ok(focusRules.length > 0);
+    for (const rule of focusRules) {
+      for (const d of rule.declarations.filter((x) => x.name === "stroke-width")) assert.equal(d.value, "2px", rule.prelude);
+    }
   });
 
   test("every control rule applies the 44 px target as min-height and min-width", () => {

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 
 import { installFakeDom } from "./helpers/fake-dom.mjs";
-import { presetScenario, windowPayload } from "./helpers/model-payloads.mjs";
+import { presetScenario, referencePayload, referenceScenario, windowPayload } from "./helpers/model-payloads.mjs";
 import * as format from "../src/ui/format.js";
 import * as labels from "../src/ui/labels.js";
 import {
@@ -13,16 +13,21 @@ import {
   EDGE_FAMILIES,
   FAMILY_CLASS,
   FAMILY_ORDER,
+  FLOOR_UNITS_PER_CAR,
   GEOMETRIES,
   PHONE_QUERY,
   VIEW,
+  bandedDirections,
   chevronCount,
   chevronLevel,
   createMap,
   familyKey,
   familyOf,
+  frameModel,
+  frameModelCounts,
   mapModel,
   mountMap,
+  placeCar,
   placeShields,
   routeGeometry,
   unitBlocks,
@@ -55,11 +60,48 @@ function drawn({ clock_s = 66600, withLog = true, pinnedCar = null, interpolate 
 
 const textOf = (node) => node.textContent;
 const cellText = (row, selector) => row.querySelector(selector).textContent;
+/** Every heading and value one table twin shows, as one string, so two twins can be compared cell by cell. */
+const tableText = (table) =>
+  [
+    table.querySelector("caption").textContent,
+    ...table.querySelectorAll("tr").map((row) => row.querySelectorAll("th").concat(row.querySelectorAll("td")).map(textOf).join(" · ")),
+  ].join(" | ");
 
 /** The interval segment a car is on at second `t`, found directly in the log. */
 function segmentAt(log, carId, t) {
   const iv = log.intervals[carId].find((i) => i.t0 <= t && t < i.t1 && Array.isArray(i.segments));
   return iv?.segments.find((s) => s.t0 <= t && t < s.t1) ?? null;
+}
+
+/** The most cars a route direction ever holds at one snapshot of a run: `Map("H1|SF>PEN" -> peak)`. */
+function peakConcurrency(log) {
+  const peak = new Map();
+  for (const snap of log.snapshots) {
+    const counts = new Map();
+    for (const car of snap.cars) {
+      const place = placeCar(log, car, snap.t);
+      if (place.kind !== "route") continue;
+      const key = `${place.route}|${place.dir}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    for (const [key, cars] of counts) if (cars > (peak.get(key) ?? 0)) peak.set(key, cars);
+  }
+  return peak;
+}
+
+/** The transform a car glyph must carry: its point along the route's visible segment, and its direction's heading. */
+function carTransform(route, dir, fraction, geometry = GEOMETRIES.wide) {
+  const { pA, pB, ux, uy } = routeGeometry(route, geometry);
+  const forward = dir === `${route.a}>${route.b}`;
+  const f = forward ? fraction : 1 - fraction;
+  const angle = (Math.atan2(forward ? uy : -uy, forward ? ux : -ux) * 180) / Math.PI;
+  const round = (n) => Math.round(n * 10) / 10;
+  return `translate(${String(round(pA.x + (pB.x - pA.x) * f))} ${String(round(pA.y + (pB.y - pA.y) * f))}) rotate(${String(round(angle))})`;
+}
+
+/** Every car of a frame with where the map places it, as `{car, place}`. */
+function placements(log, frame) {
+  return frame.cars.map((car) => ({ car, place: placeCar(log, car, frame.at_s) }));
 }
 
 describe("static structure of the default preset", () => {
@@ -162,7 +204,9 @@ describe("shields, legend and the phone geometry (review: design-fidelity lens)"
           for (const box of shields) assert.ok(!(x > box.x0 && x < box.x1 && y > box.y0 && y < box.y1), `${line.getAttribute("data-family")} band under a shield at ${String(x)},${String(y)}`);
         }
       }
-      assert.ok(bands > 0, "some bands are drawn at 18:30");
+      // A band is left only where the fallback fires: one direction of H1 on the wide map, none on the phone, where
+      // the same corridor is drawn at twice the length and every car is its own mark.
+      assert.equal(bands > 0, name === "wide", `${name}: ${String(bands)} bands at 18:30`);
       map.destroy();
     });
   }
@@ -170,7 +214,8 @@ describe("shields, legend and the phone geometry (review: design-fidelity lens)"
   test("shields are painted after the yards and routes, hidden from assistive technology, and hovering one opens its route", () => {
     const { map } = drawn({ clock_s: 66600 });
     const layers = map.svg.children.map((n) => n.getAttribute("data-layer"));
-    assert.deepEqual(layers, ["routes", "yards", "shields", "pinned"]);
+    // Cars paint above the yards they leave and below the shields, so a mark never covers a route id (design §7.3).
+    assert.deepEqual(layers, ["routes", "yards", "cars", "shields", "pinned"]);
     assert.equal(map.svg.querySelectorAll('[data-layer="routes"] [data-role="shield"]').length, 0);
     const shield = map.svg.querySelector('[data-role="shield"][data-route-id="H4"]');
     assert.equal(shield.getAttribute("aria-hidden"), "true");
@@ -211,8 +256,10 @@ describe("shields, legend and the phone geometry (review: design-fidelity lens)"
       assert.equal(node.localName, "line");
       assert.equal(node.getAttribute("stroke-width"), "4");
     }
-    const hollow = map.svg.querySelectorAll('[data-role="flow"] [data-family="emptyDrive"]');
-    assert.ok(hollow.length > 0, "some empty driving on routes at 18:30");
+    // A band is drawn only where the fallback fires, so the hollow cue is asserted at D1 19:00, the clock at which
+    // the one banded direction carries an empty-driving car beside its rider work.
+    const hollow = drawn({ clock_s: 68400 }).map.svg.querySelectorAll('[data-role="flow"] [data-family="emptyDrive"]');
+    assert.ok(hollow.length > 0, "the banded direction carries empty driving at D1 19:00");
     for (const node of hollow) {
       assert.equal(node.getAttribute("data-shape"), "hollow");
       assert.equal(node.getAttribute("fill"), "none");
@@ -251,7 +298,7 @@ describe("shields, legend and the phone geometry (review: design-fidelity lens)"
       assert.ok(x >= 0 && y >= 0 && x + Number(rect.getAttribute("width")) <= phone.view.width && y + Number(rect.getAttribute("height")) <= phone.view.height);
     }
     for (const block of map.svg.querySelectorAll('[data-role="unit-bars"] rect[data-block="full"]')) assert.ok(Number(block.getAttribute("height")) * scale >= 7);
-    assert.ok(map.svg.querySelector('g[data-car="SF-017"]'), "the pinned car is redrawn");
+    assert.ok(map.svg.querySelector('[data-layer="pinned"] g[data-car="SF-017"]'), "the pinned car is redrawn");
     for (const tile of map.svg.querySelectorAll("g[data-depot]")) {
       const area = tile.closest("[data-area]").getAttribute("data-area");
       const yard = yardRects(phone).find((r) => r.id === area);
@@ -479,6 +526,97 @@ describe("the table twin", () => {
     assert.equal(cellText(h1, '[data-col="planned"]'), "25 min");
     assert.equal(cellText(h1, '[data-family="riderWork"]'), absent);
   });
+
+  test("stays current: at every clock it equals a twin drawn by a map built fresh on that frame", () => {
+    // The twin is redrawn only when one of the numbers it watches has moved, and that watch list is kept by hand
+    // beside drawTable. A map built fresh draws its twin unconditionally, so it is the reference the kept one is
+    // held to: a number that stopped being watched would freeze here at the value its frame was built on.
+    const log = payload.log;
+    const start = log.snapshots[150].t;
+    const { map, input } = drawn({ clock_s: start });
+    const seen = new Set();
+    for (let i = 1; i <= 60; i += 1) {
+      const clock_s = start + i * 60;
+      const frame = frameAt(log, clock_s);
+      map.update({ ...input, frame, clock_s });
+      const fresh = createMap();
+      document.body.appendChild(fresh.element);
+      fresh.update({ ...input, frame, clock_s });
+      assert.equal(tableText(map.table), tableText(fresh.table), `the twin at ${format.clock(clock_s)}`);
+      seen.add(tableText(map.table));
+      fresh.destroy();
+    }
+    assert.ok(seen.size > 1, "the numbers moved across the window, so a twin that had frozen would have been caught");
+  });
+
+  test("watches one number for every number it draws, so a cell cannot be added without its watch", () => {
+    const { map } = drawn({ clock_s: 66600 });
+    const cells = map.table.querySelectorAll("td").length;
+    const depots = map.table.querySelectorAll('tbody[data-section="depots"] tr').length;
+    // One watched number per value cell, plus each lot's parking, which shares the held cell with the stalls held,
+    // plus the seed in the caption. A cell drawn but not watched would keep the value its frame was built on.
+    assert.equal(map.tableValues(), cells + depots + 1);
+  });
+});
+
+describe("one model for one frame (design §5.9)", () => {
+  test("a render computes one model, and the regions drawing that frame are handed the same one", () => {
+    const log = payload.log;
+    const frame = frameAt(log, 66600);
+    const input = { scenario, log, frame, clock_s: 66600, pinnedCar: null, seed: log.seed };
+    const map = createMap();
+    document.body.appendChild(map.element);
+    const before = { ...frameModelCounts };
+    const drawnModel = map.update(input);
+    assert.equal(frameModelCounts.computed - before.computed, 1, "one render, one model");
+
+    // The NOW panel and the announcer draw the frame the map drew, so they are handed that model rather than walking
+    // the fleet again. Position is a pure function of the frame, so the shared model is the model each would compute.
+    const shared = frameModel({ scenario, log, frame, clock_s: 66600 });
+    assert.equal(shared, drawnModel, "the same model object, not a copy");
+    assert.equal(frameModelCounts.computed - before.computed, 1, "the second caller computed nothing");
+    assert.equal(frameModelCounts.reused - before.reused, 1);
+    assert.deepEqual(shared, mapModel({ scenario, log, frame, clock_s: 66600 }), "and it equals the model computed directly");
+
+    // A different second is a different frame and is never answered with the model of the one before it.
+    const next = frameAt(log, 66900);
+    const later = map.update({ ...input, frame: next, clock_s: 66900 });
+    assert.equal(frameModelCounts.computed - before.computed, 2);
+    assert.notEqual(later.at_s, drawnModel.at_s);
+    assert.deepEqual(later, mapModel({ scenario, log, frame: next, clock_s: 66900 }));
+  });
+
+  test("mounted on a store, one clock change computes one model", () => {
+    const store = createStore(createInitialState({ presetId: "bay_teaching_map", scenario }));
+    const playback = createPlayback({ store, scheduler: { request: () => 1, cancel: () => {} } });
+    const region = document.createElement("section");
+    document.body.appendChild(region);
+    const map = mountMap(region, { store, playback });
+    store.dispatch({ type: "run/queued", id: "r" });
+    store.dispatch({ type: "run/done", id: "r", payload });
+    const before = frameModelCounts.computed;
+    store.dispatch({ type: "clock/set", clock_s: 66600 });
+    assert.equal(frameModelCounts.computed - before, 1);
+    map.destroy();
+  });
+
+  test("a destroyed map drops the frame it was drawing, so the run's log is not held after it", () => {
+    const log = payload.log;
+    const frame = frameAt(log, 66600);
+    const map = createMap();
+    document.body.appendChild(map.element);
+    map.update({ scenario, log, frame, clock_s: 66600, pinnedCar: null, seed: log.seed });
+
+    const held = { ...frameModelCounts };
+    frameModel({ scenario, log, frame, clock_s: 66600 });
+    assert.equal(frameModelCounts.reused - held.reused, 1, "while the map is up, the model is there to be handed back");
+
+    map.destroy();
+    const dropped = { ...frameModelCounts };
+    frameModel({ scenario, log, frame, clock_s: 66600 });
+    assert.equal(frameModelCounts.reused - dropped.reused, 0, "the memo went with the map");
+    assert.equal(frameModelCounts.computed - dropped.computed, 1);
+  });
 });
 
 describe("the pinned car", () => {
@@ -507,12 +645,341 @@ describe("the pinned car", () => {
     const onRoute = snap.cars.find((c) => c.leg && segmentAt(log, c.id, snap.t)?.kind === "ROUTE" && segmentAt(log, c.id, snap.t + 120)?.kind === "ROUTE");
     assert.ok(onRoute, "a car on a route segment at 18:30");
     const { map, redraw } = drawn({ clock_s: snap.t, pinnedCar: onRoute.id });
-    const at = () => map.svg.querySelector(`g[data-car="${onRoute.id}"]`).getAttribute("transform");
+    // The pinned glyph, not the car layer's mark of the same car: both move, and this test is about the pinned one.
+    const at = () => map.svg.querySelector(`[data-layer="pinned"] g[data-car="${onRoute.id}"]`).getAttribute("transform");
     const first = at();
     redraw({ clock_s: snap.t + 120, frame: frameAt(log, snap.t + 120) });
     assert.notEqual(at(), first, "interpolated");
     redraw({ clock_s: snap.t + 120, frame: frameAt(log, snap.t + 120, { interpolate: false }) });
     assert.equal(at(), first, "reduced motion stays at the snapshot position");
+  });
+
+  test("a pinned car on a route points the way its own mark does, whatever it is doing there", () => {
+    // The rotation follows where a car is, not what it is doing: a pinned TO_DEPOT car on a route turns with the
+    // route, so the pinned glyph covers its own mark in the cars layer instead of sitting unrotated on top of it.
+    const log = payload.log;
+    const banded = bandedDirections(log, scenario.routes, GEOMETRIES.wide);
+    let checked = 0;
+    for (const snap of log.snapshots) {
+      if (checked === 3) break;
+      const found = snap.cars.find((c) => {
+        if (c.leg === undefined || c.state !== "TO_DEPOT") return false;
+        const place = placeCar(log, c, snap.t);
+        return place.kind === "route" && !banded.has(`${place.route}|${place.dir}`);
+      });
+      if (found === undefined) continue;
+      const { map } = drawn({ clock_s: snap.t, pinnedCar: found.id, interpolate: false });
+      const mark = map.svg.querySelector(`[data-layer="cars"] g[data-car="${found.id}"]`);
+      const rotation = mark.getAttribute("transform").match(/rotate\((-?[\d.]+)\)$/);
+      assert.ok(rotation, mark.getAttribute("transform"));
+      assert.equal(map.svg.querySelector(`[data-layer="pinned"] g[data-car="${found.id}"] g`).getAttribute("transform"), `rotate(${rotation[1]})`, found.id);
+      checked += 1;
+    }
+    assert.equal(checked, 3, "three pinned TO_DEPOT cars on routes were drawn");
+  });
+});
+
+describe("cars on routes: one mark per driving car (design §7.3 as amended)", () => {
+  const glyphsOf = (map) => map.svg.querySelectorAll('[data-layer="cars"] g[data-car]');
+  const markOf = (map, car) => map.svg.querySelector(`[data-layer="cars"] g[data-car="${car}"]`);
+
+  test("the layer paints between the yards and the shields, hidden from assistive technology", () => {
+    const { map } = drawn({ clock_s: 66600 });
+    const layer = map.svg.querySelector('[data-layer="cars"]');
+    assert.equal(layer.getAttribute("aria-hidden"), "true");
+    assert.equal(layer.getAttribute("tabindex"), null);
+    assert.ok(glyphsOf(map).length > 0, "cars are drawn at D1 18:30");
+  });
+
+  test("one glyph for every car on a route that draws marks, and none for a standing or at-depot car", () => {
+    const log = payload.log;
+    const snap = log.snapshots[162];
+    const { map, input } = drawn({ clock_s: snap.t, interpolate: false });
+    const banded = bandedDirections(log, scenario.routes, GEOMETRIES.wide);
+    const all = placements(log, input.frame);
+    const marks = all.filter(({ place }) => place.kind === "route" && !banded.has(`${place.route}|${place.dir}`));
+    const standing = all.filter(({ place }) => place.kind === "area");
+    const atDepot = all.filter(({ place }) => place.kind === "depot");
+    assert.ok(marks.length > 50, `${String(marks.length)} cars on routes at D1 18:30`);
+    assert.ok(standing.length > 0 && atDepot.length > 0, "and cars standing in an area and sitting at a depot");
+    assert.deepEqual(glyphsOf(map).map((g) => g.getAttribute("data-car")).sort(), marks.map(({ car }) => car.id).sort());
+    // The honesty line of the whole layer: the model gives an area no inside geography, so a car standing in one
+    // stays a unit bar and a car at a depot stays part of the tile's micro-bar. Neither is ever placed on the map.
+    for (const { car } of [...standing, ...atDepot]) assert.equal(markOf(map, car.id), null, car.id);
+  });
+
+  test("a glyph sits at placeCar's fraction along its route, points along its direction, and carries its state", () => {
+    const log = payload.log;
+    const snap = log.snapshots[162];
+    const { map, input } = drawn({ clock_s: snap.t, interpolate: false });
+    const banded = bandedDirections(log, scenario.routes, GEOMETRIES.wide);
+    let checked = 0;
+    for (const { car, place } of placements(log, input.frame)) {
+      if (place.kind !== "route" || banded.has(`${place.route}|${place.dir}`)) continue;
+      const node = markOf(map, car.id);
+      const route = scenario.routes.find((r) => r.id === place.route);
+      assert.equal(node.getAttribute("transform"), carTransform(route, place.dir, place.fraction), car.id);
+      assert.equal(node.getAttribute("data-state"), car.state);
+      assert.equal(node.getAttribute("class"), `fl-car ${FAMILY_CLASS[familyOf(car.state)]}`);
+      // The surface ring design §8.2 asks for, then the state's own glyph: a 10 px mark inside a 2 px panel ring.
+      const [ring, glyph] = node.children;
+      assert.equal(ring.getAttribute("class"), "fl-glyph-ring");
+      assert.equal(ring.getAttribute("r"), "9");
+      assert.equal(glyph.localName, "polygon");
+      assert.equal(node.children.length, 2);
+      checked += 1;
+    }
+    assert.ok(checked > 50, `${String(checked)} glyphs checked`);
+  });
+
+  test("only the four driving states are ever drawn, so a route mark is only ever a triangle or a diamond", () => {
+    const log = payload.log;
+    const banded = bandedDirections(log, scenario.routes, GEOMETRIES.wide);
+    const drawnStates = new Set();
+    const logStates = new Set();
+    for (const clock_s of [25200, 43200, 66600, 68400, 111600]) {
+      const { map, input } = drawn({ clock_s });
+      for (const node of glyphsOf(map)) drawnStates.add(node.getAttribute("data-state"));
+      for (const { car, place } of placements(log, input.frame)) {
+        if (place.kind === "route" && !banded.has(`${place.route}|${place.dir}`)) logStates.add(car.state);
+      }
+    }
+    assert.deepEqual([...drawnStates].sort(), [...logStates].sort());
+    for (const state of drawnStates) assert.ok(["ENROUTE_PICKUP", "ON_TRIP", "TO_DEPOT", "REPOSITIONING"].includes(state), state);
+    assert.ok(drawnStates.size >= 2, [...drawnStates].join(","));
+  });
+
+  test("a car whose rounded place has not moved keeps its exact transform string; a moved one takes one write", () => {
+    const log = payload.log;
+    const snap = log.snapshots[162];
+    const banded = bandedDirections(log, scenario.routes, GEOMETRIES.wide);
+    const moving = snap.cars.find((c) => {
+      if (c.leg === undefined) return false;
+      const here = placeCar(log, c, snap.t);
+      const later = placeCar(log, c, snap.t + 120);
+      return here.kind === "route" && later.kind === "route" && here.route === later.route
+        && !banded.has(`${here.route}|${here.dir}`) && here.fraction !== later.fraction;
+    });
+    assert.ok(moving, "a car still on the same route two minutes later");
+    const { map, redraw } = drawn({ clock_s: snap.t });
+    const node = markOf(map, moving.id);
+    const before = node.getAttribute("transform");
+    const writes = [];
+    const write = node.setAttribute.bind(node);
+    node.setAttribute = (name, value) => {
+      writes.push(name);
+      write(name, value);
+    };
+
+    redraw({});
+    assert.deepEqual(writes, [], "the same second drawn again costs an unchanged car nothing");
+    assert.equal(node.getAttribute("transform"), before);
+
+    redraw({ clock_s: snap.t + 120, frame: frameAt(log, snap.t + 120) });
+    assert.deepEqual(writes, ["transform"], "a move is one composed attribute, never a translate and a rotate");
+    assert.notEqual(node.getAttribute("transform"), before);
+    assert.equal(markOf(map, moving.id), node, "the same node is moved, never rebuilt");
+    assert.match(node.getAttribute("transform"), /^translate\(-?[\d.]+ -?[\d.]+\) rotate\(-?[\d.]+\)$/);
+  });
+
+  test("with interpolation off every glyph is at its snapshot position, and the same clock drawn twice is identical", () => {
+    const log = payload.log;
+    const snap = log.snapshots[162];
+    const clock_s = snap.t + 150; // between two snapshots: reduced motion steps on the 5-minute grid
+    const { map, input } = drawn({ clock_s, interpolate: false });
+    assert.equal(input.frame.at_s, snap.t, "the frame is the snapshot second, with no new code path in the map");
+    const banded = bandedDirections(log, scenario.routes, GEOMETRIES.wide);
+    let checked = 0;
+    for (const { car, place } of placements(log, input.frame)) {
+      if (place.kind !== "route" || banded.has(`${place.route}|${place.dir}`)) continue;
+      const route = scenario.routes.find((r) => r.id === place.route);
+      assert.equal(markOf(map, car.id).getAttribute("transform"), carTransform(route, place.dir, place.fraction), car.id);
+      checked += 1;
+    }
+    assert.ok(checked > 0);
+    // Position is a pure function of (log, clock_s): a second map drawn on the same clock is identical, mark for mark.
+    const twin = createMap();
+    document.body.appendChild(twin.element);
+    twin.update({ ...input, frame: frameAt(log, clock_s, { interpolate: false }) });
+    const marks = (m) => m.svg.querySelectorAll('[data-layer="cars"] g[data-car]').map((g) => [g.getAttribute("data-car"), g.getAttribute("data-state"), g.getAttribute("transform")]);
+    assert.deepEqual(marks(twin), marks(map));
+    twin.destroy();
+  });
+
+  test("the layer adds no tab stop, so the schematic is still exactly one (design §7.7)", () => {
+    const { map } = drawn({ clock_s: 66600, pinnedCar: "SF-017" });
+    assert.ok(glyphsOf(map).length > 0);
+    const stops = [map.svg, ...map.svg.querySelectorAll("*")].filter((node) => node.getAttribute("tabindex") !== null && node.tabIndex >= 0);
+    assert.equal(stops.length, 1);
+    assert.notEqual(stops[0].closest('[data-layer="cars"]'), stops[0]);
+    assert.equal(map.svg.querySelectorAll('[data-layer="cars"] [tabindex]').length, 0);
+    assert.equal(map.svg.querySelectorAll('[data-layer="cars"] [data-focus-key]').length, 0);
+  });
+
+  test("car marks use only the mark classes and the two route hues, never a status colour or a dash", () => {
+    const allowed = new Set(["fl-car", "fl-glyph-ring", "fl-fam-rider", "fl-fam-empty"]);
+    for (const clock_s of [25200, 43200, 66600, 68400, 111600]) {
+      const { map } = drawn({ clock_s });
+      const layer = map.svg.querySelector('[data-layer="cars"]');
+      for (const node of [layer, ...layer.querySelectorAll("*")]) {
+        for (const cls of (node.getAttribute("class") ?? "").split(/\s+/).filter(Boolean)) {
+          assert.ok(allowed.has(cls), `car element class ${cls} at ${String(clock_s)}`);
+        }
+        for (const name of node.getAttributeNames()) {
+          assert.doesNotMatch(node.getAttribute(name), /--(hold|pass|cond|invalid|car-depot|car-available)|dasharray/, `${name} at ${String(clock_s)}`);
+          assert.notEqual(name, "stroke-dasharray");
+        }
+      }
+      assert.ok(layer.querySelectorAll("g[data-car]").length > 0, `cars drawn at ${String(clock_s)}`);
+    }
+  });
+});
+
+describe("the route fallback: where a direction draws a band instead of marks", () => {
+  test("a direction bands exactly when its route is shorter than three units a car at its peak", () => {
+    const log = payload.log;
+    const peak = peakConcurrency(log);
+    assert.equal(FLOOR_UNITS_PER_CAR, 3);
+    assert.ok(peak.size > 0);
+    for (const geometry of [GEOMETRIES.wide, GEOMETRIES.phone]) {
+      const banded = bandedDirections(log, scenario.routes, geometry);
+      for (const [key, cars] of peak) {
+        const route = scenario.routes.find((r) => r.id === key.slice(0, key.indexOf("|")));
+        const room = routeGeometry(route, geometry).length;
+        assert.equal(banded.has(key), room < FLOOR_UNITS_PER_CAR * cars, `${key} at ${geometry.name}: ${room.toFixed(1)} units for ${String(cars)} cars`);
+      }
+      // A direction this run never puts a car on is never banded: there is nothing to draw either way.
+      for (const key of banded) assert.ok(peak.has(key), key);
+    }
+  });
+
+  test("the default preset bands one direction of H1 on the wide map and nothing on the phone (measured)", () => {
+    assert.deepEqual([...bandedDirections(payload.log, scenario.routes, GEOMETRIES.wide)], ["H1|PEN>SF"]);
+    assert.equal(bandedDirections(payload.log, scenario.routes, GEOMETRIES.phone).size, 0);
+    // Why the two differ: the wide map draws the San Francisco to Peninsula corridor at 50 units and the phone at 104.
+    const h1 = scenario.routes.find((r) => r.id === "H1");
+    assert.equal(Math.round(routeGeometry(h1, GEOMETRIES.wide).length), 50);
+    assert.equal(Math.round(routeGeometry(h1, GEOMETRIES.phone).length), 104);
+  });
+
+  test("every scenario of this preset draws its routes at the same lengths, which is what the kept answer rests on", () => {
+    // bandedDirections keeps its answer per log and geometry and does not key on the routes it is handed, because a
+    // log's routes are fixed by the run that made it. That is only safe while no scenario can move a route: if one
+    // ever did, the decision would differ and a kept set would be wrong. This fails here first, loudly.
+    const referenced = referenceScenario();
+    assert.deepEqual(referenced.routes.map((r) => r.id), scenario.routes.map((r) => r.id));
+    for (const geometry of [GEOMETRIES.wide, GEOMETRIES.phone]) {
+      for (const route of scenario.routes) {
+        const other = referenced.routes.find((r) => r.id === route.id);
+        assert.deepEqual([other.a, other.b], [route.a, route.b], `${route.id} endpoints`);
+        assert.equal(routeGeometry(other, geometry).length, routeGeometry(route, geometry).length, `${route.id} at ${geometry.name}`);
+      }
+    }
+  });
+
+  test("the design 5.9 reference fleet bands both directions of H1 wide, and writes a reason for each", async () => {
+    const reference = await referencePayload();
+    const referenced = referenceScenario();
+    assert.equal(reference.log.cars.length, 150);
+    assert.deepEqual([...bandedDirections(reference.log, referenced.routes, GEOMETRIES.wide)].sort(), ["H1|PEN>SF", "H1|SF>PEN"]);
+    assert.equal(bandedDirections(reference.log, referenced.routes, GEOMETRIES.phone).size, 0);
+    const map = createMap();
+    document.body.appendChild(map.element);
+    map.update({ scenario: referenced, log: reference.log, frame: frameAt(reference.log, 66600), clock_s: 66600, pinnedCar: null, seed: reference.log.seed });
+    const reasons = map.element.querySelectorAll('[data-role="crowded-route"]');
+    // Two banded directions, two reasons, in the scenario's own direction order. One reason for the route would
+    // leave the reader to guess which way a band that is drawn down the middle of the corridor counts.
+    assert.deepEqual(reasons.map((n) => n.getAttribute("data-route")), ["H1", "H1"]);
+    assert.deepEqual(reasons.map((n) => n.getAttribute("data-dir")), ["SF>PEN", "PEN>SF"]);
+    assert.deepEqual(reasons.map(textOf), [
+      labels.MAP.crowdedRoute({ routeId: "H1", from: labels.MAP.areas.SF, to: labels.MAP.areas.PEN }),
+      labels.MAP.crowdedRoute({ routeId: "H1", from: labels.MAP.areas.PEN, to: labels.MAP.areas.SF }),
+    ]);
+    assert.ok(map.svg.querySelectorAll('[data-layer="cars"] g[data-car]').length > 0);
+    map.destroy();
+  });
+
+  test("the decision is made once for the run: the same directions band at every clock", () => {
+    const log = payload.log;
+    const banded = bandedDirections(log, scenario.routes, GEOMETRIES.wide);
+    const { map, redraw } = drawn({ clock_s: 25200 });
+    for (const clock_s of [25200, 43200, 66600, 68400, 90000, 111600]) {
+      const frame = frameAt(log, clock_s);
+      redraw({ clock_s, frame });
+      const marks = new Set(map.svg.querySelectorAll('[data-layer="cars"] g[data-car]').map((g) => g.getAttribute("data-car")));
+      for (const { car, place } of placements(log, frame)) {
+        const drawsAMark = place.kind === "route" && !banded.has(`${place.route}|${place.dir}`);
+        assert.equal(marks.has(car.id), drawsAMark, `${car.id} at ${format.clock(clock_s)}`);
+      }
+    }
+  });
+
+  test("a banded direction keeps today's flow band, and the direction beside it still draws marks", () => {
+    const log = payload.log;
+    const { map, model, input } = drawn({ clock_s: 66600 });
+    const banded = bandedDirections(log, scenario.routes, GEOMETRIES.wide);
+    const h1 = model.routes.find((r) => r.id === "H1");
+    const bandDir = h1.directions.find((d) => banded.has(`H1|${d.dir}`));
+    const markDir = h1.directions.find((d) => !banded.has(`H1|${d.dir}`));
+    assert.ok(bandDir !== undefined && markDir !== undefined, "H1 draws one of each at the default preset");
+    assert.ok(bandDir.riderWork + bandDir.emptyDrive > 0, "the banded direction carries cars at D1 18:30");
+    // The band counts the banded direction's cars, and only those.
+    const band = map.svg.querySelectorAll('g[data-route="H1"] [data-role="flow"] [data-cars]');
+    assert.equal(band.reduce((n, node) => n + Number(node.getAttribute("data-cars")), 0), bandDir.riderWork + bandDir.emptyDrive);
+    const marks = placements(log, input.frame).filter(({ place }) => place.kind === "route" && place.route === "H1" && place.dir === markDir.dir);
+    assert.equal(marks.length, markDir.riderWork + markDir.emptyDrive);
+    for (const { car } of marks) assert.ok(map.svg.querySelector(`[data-layer="cars"] g[data-car="${car.id}"]`), car.id);
+  });
+
+  test("a route whose directions both draw marks carries no flow band at all", () => {
+    const { map, model } = drawn({ clock_s: 66600 });
+    for (const r of model.routes) {
+      if (r.id === "H1") continue;
+      assert.equal(map.svg.querySelectorAll(`g[data-route="${r.id}"] [data-role="flow"] *`).length, 0, `${r.id} draws its cars as marks, so its band is gone`);
+    }
+  });
+});
+
+describe("what the map now says out loud (the motion plan's H-a to H-d)", () => {
+  test("the map carries its first model-limits chip: traffic on the hour, and areas as points", () => {
+    const { map } = drawn({ clock_s: 66600 });
+    const chip = map.element.querySelector(".fl-limits-chip");
+    assert.ok(chip, "the map carries a model-limits chip");
+    assert.equal(chip.getAttribute("data-role"), "model-limits");
+    const limits = chip.querySelectorAll("[data-limit]");
+    assert.deepEqual(limits.map((n) => n.getAttribute("data-limit")), ["hourlyTraffic", "areasArePoints"]);
+    assert.deepEqual(limits.map(textOf), [labels.MODEL_LIMITS.hourlyTraffic, labels.MODEL_LIMITS.areasArePoints]);
+  });
+
+  test("the legend carries both encodings at once: one mark is one car, and one block is five", () => {
+    const { map } = drawn({ clock_s: 66600 });
+    assert.equal(map.element.querySelector('[data-role="unit-legend"]').textContent, labels.MAP.unitBarLegend);
+    assert.equal(map.element.querySelector('[data-role="mark-legend"]').textContent, labels.MAP.oneMarkOneCar);
+    assert.equal(labels.MAP.oneMarkOneCar, "One mark is one car on a route. Cars inside an area are drawn as blocks of 5.");
+  });
+
+  test("each banded direction carries its written reason, in visible text, and names a drawing limit", () => {
+    const { map, model } = drawn({ clock_s: 66600 });
+    const banded = bandedDirections(payload.log, scenario.routes, GEOMETRIES.wide);
+    const reasons = map.element.querySelectorAll('[data-role="crowded-route"]');
+    // The default preset bands H1 one way only, so the reason has to name that way. The same corridor draws marks
+    // toward the Peninsula at this very clock, and a reason written for the whole route would contradict them.
+    assert.deepEqual([...banded], ["H1|PEN>SF"]);
+    assert.deepEqual(reasons.map((n) => n.getAttribute("data-route")), ["H1"]);
+    assert.deepEqual(reasons.map((n) => n.getAttribute("data-dir")), ["PEN>SF"]);
+    assert.equal(reasons[0].textContent, labels.MAP.crowdedRoute({ routeId: "H1", from: labels.MAP.areas.PEN, to: labels.MAP.areas.SF }));
+    assert.equal(reasons[0].textContent, "H1 Peninsula to San Francisco is short on this schematic, so the cars going that way are drawn as a band.");
+    assert.equal(reasons[0].hidden, false);
+    const theOtherWay = model.onRoutes.filter((car) => car.route === "H1" && car.dir === "SF>PEN");
+    assert.ok(theOtherWay.length > 0, "H1 carries cars the other way at D1 18:30");
+    for (const car of theOtherWay) assert.ok(map.svg.querySelector(`[data-layer="cars"] g[data-car="${car.id}"]`), car.id);
+  });
+
+  test("before a run nothing is banded and no reason is written, and the chip stands all the same", () => {
+    const { map } = drawn({ withLog: false, clock_s: 18000 });
+    assert.equal(map.element.querySelectorAll('[data-role="crowded-route"]').length, 0);
+    assert.equal(map.svg.querySelectorAll('[data-layer="cars"] g[data-car]').length, 0);
+    assert.ok(map.element.querySelector(".fl-limits-chip"), "the limits are about the model, not about a replay");
   });
 });
 
@@ -534,7 +1001,9 @@ describe("no status colour and no fourth hue on routes", () => {
           assert.notEqual(name, "stroke-dasharray");
         }
       }
-      assert.ok(layer.querySelectorAll(".fl-fam-rider, .fl-fam-empty").length > 0, `flow bands drawn at ${String(clock_s)}`);
+      // Cars are marks in their own layer now, so what the route layer must keep carrying at every clock is its
+      // geometry and its chevrons; the cars themselves are asserted on the layer that draws them.
+      assert.ok(map.svg.querySelectorAll('[data-layer="cars"] g[data-car]').length > 0, `cars drawn at ${String(clock_s)}`);
       if (pinned !== undefined) {
         const g = map.svg.querySelector(`[data-layer="pinned"] g[data-car="${pinned.id}"]`);
         const hues = g.querySelectorAll(".fl-fam-rider, .fl-fam-empty, .fl-fam-available, .fl-fam-depot").map((n) => n.getAttribute("class"));
@@ -681,7 +1150,7 @@ describe("roving focus and shortcuts", () => {
     press(" ");
     assert.equal(store.getState().playing, true);
     store.dispatch({ type: "fork/pin", car: "SF-017" });
-    assert.ok(region.querySelector('g[data-car="SF-017"]'));
+    assert.ok(region.querySelector('[data-layer="pinned"] g[data-car="SF-017"]'));
     press("I");
     assert.deepEqual(store.getState().inspector, { car: "SF-017" });
     map.destroy();

@@ -43,6 +43,11 @@
 //     per_seed: [{seed, baseline_metrics, candidate_metrics}]                  metrics maps as above
 //   }
 //
+// referencePayload() -> run_window payload
+//   The design 5.9 reference fleet (150 cars: SF 50, PEN 30, SJ 40, EB 30) on the default preset, one replication of
+//   seed 1001 with its log. The map's route fallback decides differently at 120 and 150 cars, and 150 is the fleet
+//   design 5.9's frame budget is written around, so a drawing test that only ever sees 120 cars misses that decision.
+//
 // Helpers for the arguments a test also needs:
 //   presetScenario(presetId)        a mutable clone of a preset's scenario
 //   forkCandidate(scenario)         the default fork candidate of a scenario
@@ -128,6 +133,21 @@ function cached(message) {
 /** The run_window payload for a preset's scenario (see the header). */
 export function windowPayload({ presetId = DEFAULT_PRESET_ID, seeds = seedSet(1, 2), logSeed = seeds[0] } = {}) {
   return cached({ type: "run_window", scenario: presetScenario(presetId), seeds: [...seeds], logSeed });
+}
+
+/** The fleet of the design 5.9 reference, by area: 150 cars in all. */
+export const REFERENCE_FLEET = Object.freeze({ SF: 50, PEN: 30, SJ: 40, EB: 30 });
+
+/** The scenario referencePayload runs: the default preset with the design 5.9 reference fleet. A mutable clone. */
+export function referenceScenario() {
+  let scenario = presetScenario();
+  for (const [area, cars] of Object.entries(REFERENCE_FLEET)) scenario = applyAxis(scenario, `parameter:SUP-1.${area}`, cars);
+  return scenario;
+}
+
+/** The run_window payload of the design 5.9 reference fleet, one replication of seed 1001 (see the header). */
+export function referencePayload() {
+  return cached({ type: "run_window", scenario: referenceScenario(), seeds: [1001], logSeed: 1001 });
 }
 
 /** The run_pair payload for two scenarios on one world (see the header). */
