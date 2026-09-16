@@ -16,6 +16,8 @@ import {
   FLOOR_UNITS_PER_CAR,
   GEOMETRIES,
   PHONE_QUERY,
+  PLATE_CLEAR_PX,
+  SHIELD_GAP_PX,
   VIEW,
   bandedDirections,
   chevronCount,
@@ -160,9 +162,22 @@ describe("static structure of the default preset", () => {
 describe("shields, legend and the phone geometry (review: design-fidelity lens)", () => {
   const boxOf = (b) => ({ x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1 });
   const overlaps = (a, b) => Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 0 && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 0;
+  /** The clear distance between two boxes that do not overlap; 0 where they touch or overlap. */
+  const boxGap = (a, b) => Math.hypot(Math.max(a.x0 - b.x1, b.x0 - a.x1, 0), Math.max(a.y0 - b.y1, b.y0 - a.y1, 0));
+  /** The closest any point of a route's visible segment comes to a box, sampled every 0.5 px; 0 if it enters one. */
+  const segmentClearance = (pA, pB, box) => {
+    const steps = Math.max(1, Math.ceil(Math.hypot(pB.x - pA.x, pB.y - pA.y) * 2));
+    let closest = Infinity;
+    for (let i = 0; i <= steps; i += 1) {
+      const x = pA.x + ((pB.x - pA.x) * i) / steps;
+      const y = pA.y + ((pB.y - pA.y) * i) / steps;
+      closest = Math.min(closest, Math.hypot(Math.max(box.x0 - x, 0, x - box.x1), Math.max(box.y0 - y, 0, y - box.y1)));
+    }
+    return closest;
+  };
 
   for (const name of ["wide", "phone"]) {
-    test(`${name}: every shield clears every yard, every other shield and the view box, and sits on its route`, () => {
+    test(`${name}: every shield clears every yard, every other shield and the view box, and stands on or beside its route`, () => {
       const geometry = GEOMETRIES[name];
       const shields = placeShields(scenario.routes, geometry);
       const highways = scenario.routes.filter((r) => r.cls === "HIGHWAY");
@@ -171,14 +186,37 @@ describe("shields, legend and the phone geometry (review: design-fidelity lens)"
       for (const route of highways) {
         const box = boxOf(shields.get(route.id));
         for (const yard of yards) assert.ok(!overlaps(box, yard), `${route.id} shield over the ${yard.id} yard`);
-        for (const other of highways) if (other !== route) assert.ok(!overlaps(box, boxOf(shields.get(other.id))), `${route.id} x ${other.id}`);
+        // Plates stand clear of each other, not merely unoverlapped. A plate is stroked 1 px centred on its edge, so
+        // two plates 0.5 px apart paint one shared hairline and read as a single stacked block carrying two route
+        // ids and two free-flow times, each trailing a leader to a different road. Setting plates off their line
+        // first brought the wide pair H6 x H2 to exactly that 0.5 px; PLATE_CLEAR_PX is what forbids it, and the
+        // measured clearances are 5.0 px wide and 5.1 px on the phone.
+        for (const other of highways) {
+          if (other === route) continue;
+          const gap = boxGap(box, boxOf(shields.get(other.id)));
+          assert.ok(gap >= PLATE_CLEAR_PX - 0.01, `${route.id} x ${other.id} plates ${gap.toFixed(1)} px apart`);
+        }
         assert.ok(box.x0 >= 0 && box.y0 >= 0 && box.x1 <= geometry.view.width && box.y1 <= geometry.view.height, `${route.id} inside the view`);
-        // The shield centre lies on the route's visible segment.
-        const { pA, pB, ux, uy } = routeGeometry(route, geometry);
+        // The shield's anchor lies on the route's visible segment, and the plate is that anchor moved along the
+        // route's normal. This read `off < 0.01` before: the plate was centred on the line, and since the cars layer
+        // draws one mark per car under the shields layer, that put 18.42% of wide car-frames and 37.24% of phone ones
+        // under an opaque plate. The plate steps off the line now, by its own reach along the normal plus
+        // SHIELD_GAP_PX, or keeps the line where nothing off it clears; the anchor is what stays on the route.
         const s = shields.get(route.id);
-        const along = (s.x - pA.x) * ux + (s.y - pA.y) * uy;
-        const off = Math.abs((s.x - pA.x) * -uy + (s.y - pA.y) * ux);
-        assert.ok(along > 0 && along < Math.hypot(pB.x - pA.x, pB.y - pA.y) && off < 0.01, `${route.id} on its route`);
+        const { pA, pB, ux, uy, nx, ny } = routeGeometry(route, geometry);
+        const along = (s.anchor.x - pA.x) * ux + (s.anchor.y - pA.y) * uy;
+        const beside = Math.abs((s.anchor.x - pA.x) * nx + (s.anchor.y - pA.y) * ny);
+        assert.ok(along > 0 && along < Math.hypot(pB.x - pA.x, pB.y - pA.y) && beside < 0.01, `${route.id} anchored on its route`);
+        assert.ok(Math.abs(s.anchor.x + nx * s.off - s.x) < 1e-9 && Math.abs(s.anchor.y + ny * s.off - s.y) < 1e-9, `${route.id} plate is its anchor moved along the normal`);
+        // Either it kept the line, or it stepped off by exactly the plate's reach along the normal plus the gap: half
+        // the plate's width for a road drawn up the page, half its height for one drawn across it.
+        const reach = Math.abs(nx) * (s.width / 2) + Math.abs(ny) * ((s.y1 - s.y0) / 2);
+        assert.ok(s.off === 0 || Math.abs(Math.abs(s.off) - (reach + SHIELD_GAP_PX)) < 1e-9, `${route.id} offset ${String(s.off)}`);
+        // And what that buys, as the property rather than the arithmetic: a plate that has left the line covers none
+        // of its own road and stands a clear SHIELD_GAP_PX from it, which is past a mark's 9 px surface ring.
+        const clearance = segmentClearance(pA, pB, s);
+        if (s.off === 0) assert.equal(clearance, 0, `${route.id} keeps its line`);
+        else assert.ok(clearance >= SHIELD_GAP_PX - 0.01, `${route.id} stands ${clearance.toFixed(1)} px clear of its road`);
         // Wide enough for its words at the geometry's character width.
         assert.ok(s.width >= labels.routeShield({ routeId: route.id, freeFlow: format.minutes(route.free_flow_s) }).length * geometry.charPx);
       }
@@ -313,6 +351,163 @@ describe("shields, legend and the phone geometry (review: design-fidelity lens)"
     map.destroy();
     assert.equal(listener, null, "destroy stops following the query");
   });
+});
+
+describe("shields stand clear of the cars on their road (the phase 2 review's occlusion defect)", () => {
+  /** Every shield the map has drawn, as the whole of what placement decides: its route, its plate and its leader. */
+  const shieldsIn = (map) => map.svg.querySelectorAll('[data-role="shield"]').map((g) => {
+    const leader = g.querySelector('[data-role="shield-leader"]');
+    return `${g.getAttribute("data-route-id")} ${g.getAttribute("transform")} ${leader === null ? "no leader" : `${leader.getAttribute("x1")},${leader.getAttribute("y1")}`}`;
+  });
+
+  /**
+   * The defect, counted the way the phase 2 review counted it: over every snapshot of the run, every car the map
+   * draws as a mark, and whether its centre lies inside a shield plate. A plate is opaque and the shields layer
+   * paints above the cars layer, so a centre inside one is a car the reader cannot see. `worst` is the most marks
+   * hidden at one snapshot and `longest` the most consecutive snapshots one mark stayed hidden.
+   */
+  function occlusion(log, geometry) {
+    const plates = [...placeShields(scenario.routes, geometry).values()];
+    const banded = bandedDirections(log, scenario.routes, geometry);
+    const byId = new Map(scenario.routes.map((r) => [r.id, r]));
+    const streak = new Map();
+    const counted = { drawn: 0, hidden: 0, worst: 0, longest: 0, perRoute: new Map() };
+    for (const snap of log.snapshots) {
+      let here = 0;
+      const now = new Set();
+      for (const car of snap.cars) {
+        const place = placeCar(log, car, snap.t);
+        if (place.kind !== "route" || banded.has(`${place.route}|${place.dir}`)) continue;
+        const route = byId.get(place.route);
+        const { pA, pB } = routeGeometry(route, geometry);
+        const f = place.dir === `${route.a}>${route.b}` ? place.fraction : 1 - place.fraction;
+        const x = pA.x + (pB.x - pA.x) * f;
+        const y = pA.y + (pB.y - pA.y) * f;
+        counted.drawn += 1;
+        let row = counted.perRoute.get(route.id);
+        if (row === undefined) {
+          row = { drawn: 0, hidden: 0 };
+          counted.perRoute.set(route.id, row);
+        }
+        row.drawn += 1;
+        if (plates.some((b) => x > b.x0 && x < b.x1 && y > b.y0 && y < b.y1)) {
+          counted.hidden += 1;
+          row.hidden += 1;
+          here += 1;
+          now.add(car.id);
+        }
+      }
+      for (const id of now) {
+        const run = (streak.get(id) ?? 0) + 1;
+        streak.set(id, run);
+        counted.longest = Math.max(counted.longest, run);
+      }
+      for (const id of [...streak.keys()]) if (!now.has(id)) streak.delete(id);
+      counted.worst = Math.max(counted.worst, here);
+    }
+    return counted;
+  }
+
+  test("a mark's centre is never under a plate on the wide map, and seldom on the phone (measured over the run)", () => {
+    // Measured over all 360 snapshots of this payload, before this placement and after it:
+    //   wide   1,960 of 10,642 drawn car-frames = 18.42%  ->  0 of 10,642 = 0.00%
+    //   phone  4,244 of 11,397 = 37.24%  ->  998 of 11,397 = 8.76%
+    // The phone's whole remainder is H1 and H6, the two corridors it draws up the page, but only half of it is
+    // those corridors having nowhere else to go. A plate is 78.6 px wide and the free gutter between the yards is
+    // 88, so H1 and H6 keep their line and each takes 16 px of its own road: 500 of the 998. The other 498 are this
+    // placement's own doing, and are the half worth stating plainly: stepping H5's plate aside put it across the
+    // H1 corridor and H2's across the H6 corridor, each covering 16.0 px of a road it does not name. So the two
+    // corridors roughly double rather than improve: H1 13.53% -> 27.25% and H6 15.26% -> 30.04%. Both are pinned
+    // below, because the aggregate alone would let a later placement shift more occlusion onto these two and still
+    // pass. The bounds are the measured shares with room for arithmetic, not targets: 0.10 = 1,140 of 11,397
+    // against the 998 measured, and 0.32 against H6's 30.04%.
+    const wide = occlusion(payload.log, GEOMETRIES.wide);
+    assert.ok(wide.drawn > 10000, `${String(wide.drawn)} drawn car-frames wide`);
+    assert.equal(wide.hidden, 0, `${String(wide.hidden)} of ${String(wide.drawn)} wide car-frames under a plate`);
+    const phone = occlusion(payload.log, GEOMETRIES.phone);
+    assert.ok(phone.drawn > 10000, `${String(phone.drawn)} drawn car-frames on the phone`);
+    assert.ok(phone.hidden / phone.drawn <= 0.1, `${((phone.hidden / phone.drawn) * 100).toFixed(2)}% of phone car-frames under a plate`);
+    // And the symptom a reader actually sees: a car that goes behind a label and stays there. The worst single
+    // moment was 26 of 99 marks wide and 49 of 106 on the phone, and one phone mark stayed under a plate for 14
+    // consecutive snapshots; the measurements after are 0, 20 of 106, and 4 snapshots.
+    assert.equal(wide.worst, 0);
+    assert.equal(wide.longest, 0);
+    assert.ok(phone.worst <= 25, `${String(phone.worst)} marks under plates at one phone snapshot`);
+    assert.ok(phone.longest <= 5, `a phone mark stayed under a plate for ${String(phone.longest)} snapshots`);
+    // Per corridor, so the cost lands where a reader would see it rather than averaged away. Every other highway
+    // measures 0.00% on the phone; H1 and H6 carry the whole remainder, half of it from another route's plate.
+    for (const [id, row] of phone.perRoute) {
+      const share = row.hidden / row.drawn;
+      const bound = id === "H1" || id === "H6" ? 0.32 : 0.001;
+      assert.ok(share <= bound, `${id}: ${(share * 100).toFixed(2)}% of its phone car-frames under a plate`);
+    }
+    for (const id of ["H1", "H6"]) assert.ok(phone.perRoute.get(id).hidden > 0, `${id} is the corridor that still pays`);
+  });
+
+  for (const name of ["wide", "phone"]) {
+    test(`${name}: placement is a pure function of the scenario and the geometry, so nothing a run does moves a shield`, () => {
+      // A shield that moved when a result landed, or while a replay played, would be a worse defect than the one
+      // this placement fixes: the reader would be watching the labels move rather than the cars. placeShields is
+      // handed the scenario's routes and the geometry and reads nothing else, and this is what says so out loud.
+      const map = createMap({ matchMedia: () => ({ matches: name === "phone" }) });
+      document.body.appendChild(map.element);
+      const input = { scenario, log: null, frame: null, clock_s: 18000, pinnedCar: null, seed: null };
+      map.update(input);
+      const beforeRun = shieldsIn(map);
+      assert.equal(beforeRun.length, 6);
+      assert.equal(map.geometry(), name);
+      // A result arriving rebuilds the static drawing, because the log names the depots that ran, so this is exactly
+      // the redraw that would move a shield if placement read any of the run.
+      const log = payload.log;
+      for (const clock_s of [25200, 66600, 111600]) {
+        map.update({ ...input, log, frame: frameAt(log, clock_s), clock_s, seed: log.seed });
+        assert.deepEqual(shieldsIn(map), beforeRun, `the shields at ${format.clock(clock_s)}`);
+      }
+      // The same holds of the placement itself, which is where a later reader will look.
+      const geometry = GEOMETRIES[name];
+      assert.deepEqual([...placeShields(scenario.routes, geometry).entries()], [...placeShields(scenario.routes, geometry).entries()]);
+      map.destroy();
+    });
+
+    test(`${name}: a plate standing off its road carries a leader back to it, and keeps its own opaque surface`, () => {
+      const geometry = GEOMETRIES[name];
+      const shields = placeShields(scenario.routes, geometry);
+      const map = createMap({ matchMedia: () => ({ matches: name === "phone" }) });
+      document.body.appendChild(map.element);
+      map.update({ scenario, log: payload.log, frame: frameAt(payload.log, 66600), clock_s: 66600, pinnedCar: null, seed: payload.log.seed });
+      let moved = 0;
+      for (const route of scenario.routes.filter((r) => r.cls === "HIGHWAY")) {
+        const box = shields.get(route.id);
+        const group = map.svg.querySelector(`[data-role="shield"][data-route-id="${route.id}"]`);
+        const leader = group.querySelector('[data-role="shield-leader"]');
+        if (box.off === 0) {
+          assert.equal(leader, null, `${route.id} keeps its line, so there is nothing to lead back to`);
+        } else {
+          moved += 1;
+          // The leader runs from the point of the road the plate names to the plate's own origin, and is drawn
+          // first, so the opaque plate covers all of it but the gap. One hairline meets the road, never a mark.
+          assert.equal(group.children[0], leader, `${route.id} draws its leader under its plate`);
+          assert.deepEqual([leader.getAttribute("x2"), leader.getAttribute("y2")], ["0", "0"]);
+          assert.equal(Number(leader.getAttribute("x1")), Math.round((box.anchor.x - box.x) * 10) / 10);
+          assert.equal(Number(leader.getAttribute("y1")), Math.round((box.anchor.y - box.y) * 10) / 10);
+          assert.equal(leader.style.stroke, "var(--ink)");
+        }
+        // Wherever it stands, the plate is the surface its words sit on: var(--panel) filled and var(--ink) stroked,
+        // the pair test/a11y.test.mjs pins at 17.79:1 light and 14.31:1 dark, whatever the plate now covers.
+        const rect = group.querySelector("rect");
+        assert.equal(rect.style.fill, "var(--panel)");
+        assert.equal(rect.style.stroke, "var(--ink)");
+        assert.equal(group.querySelector("text").textContent, labels.routeShield({ routeId: route.id, freeFlow: format.minutes(route.free_flow_s) }));
+      }
+      // Wide every shield steps aside; the phone keeps two on their line for want of anywhere to stand.
+      assert.equal(moved, name === "wide" ? 6 : 4, `${String(moved)} of 6 shields stand off their road at ${name}`);
+      // A leader names nothing and reaches nothing: the shield group is aria-hidden and takes no tab stop.
+      assert.equal(map.svg.querySelectorAll('[data-layer="shields"] [tabindex]').length, 0);
+      assert.equal(map.svg.querySelectorAll('[data-layer="shields"] [data-focus-key]').length, 0);
+      for (const g of map.svg.querySelectorAll('[data-role="shield"]')) assert.equal(g.getAttribute("aria-hidden"), "true");
+      map.destroy();
+    });
+  }
 });
 
 describe("congestion chevrons", () => {

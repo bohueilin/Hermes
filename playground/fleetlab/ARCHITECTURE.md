@@ -828,10 +828,19 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     frame at 120, 150 and 500 cars, at most four reads of `log.snapshots`, bounded attribute writes and child
     replacements, and that the drawing never grows by one node per car. Those are deterministic proxies: the 8 ms
     whole-frame budget of design §5.9 is a browser measurement and is not measured by the node suite.
-    **Recorded, not fixed here.** A shield is an opaque plate on the route line and cars paint below it (design §7.3:
-    nothing covers a shield id), so the centre of a drawn mark falls inside a plate on 18.4% of car-frames wide and
-    37.2% on the phone (17.9% and 38.1% at the reference). A mark may not be nudged clear, which would invent a place;
-    the two drawings that would fix it both change `placeShields` and the shield copy, and are a later decision. The
+    **The plate moves, never the car.** A shield is an opaque plate and cars paint below it (design §7.3: nothing
+    covers a shield id), so a plate on the route line hid the centre of a drawn mark on 18.4% of car-frames wide and
+    37.2% on the phone (17.9% and 38.1% at the reference). A mark may not be nudged clear, which would invent a place,
+    so the plate stands aside instead: `placeShields` offers every candidate position three placements, on the line and
+    either side of it, and scores them by the pixels of drawn line (route centre lines and flow lanes, clipped exactly)
+    a plate would cover, with `SHIELD_GAP_PX` 21 standing its nearest corner clear of a mark's 9 px ring and of the flow
+    lane, `PLATE_CLEAR_PX` 4 keeping plates apart, and a 1 px leader drawn before the plate tying it back to its anchor.
+    Placement stays a pure function of the routes and the geometry, so a shield never moves when a run lands or the
+    clock advances, and `map.test.mjs` pins that as well as the per-route shares. Measured over every snapshot: centre
+    occlusion falls to 0.00% wide and 8.76% on the phone (0.00% and 8.36% at the reference). The phone's remainder sits
+    in two corridors, H1 rising from 13.5% to 27.3% and H6 from 15.3% to 30.0%, because H5's and H2's plates now stand
+    in them and their own plates have nowhere to go in an 88 px gutter; half of that remainder is each corridor's own
+    plate. Flow spans widen as a side effect, wide H2 from 81 of 245 units to 237. The
     route geometry is clipped at the yard boundary, so a mark near an end overhangs a yard on 8.33% of car-frames wide
     and 11.95% on the phone, where the car hues are 3.90 and 2.82 and `.fl-glyph-ring` is 1.13:1; `test/a11y.test.mjs`
     records those ratios beside the unit bars that already draw on that surface.

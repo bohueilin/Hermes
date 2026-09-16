@@ -139,6 +139,28 @@ const BAR_START_PX = 22;
 const FLOW_OFFSET_PX = 16;
 const SHIELD_HEIGHT_PX = 16;
 
+/**
+ * How far a shield plate's nearest corner stands clear of the road it names, in view box px, when it is set off the
+ * line: past the 9 px surface ring of a car mark, and past the flow band's lane beside the road (FLOW_OFFSET_PX, the
+ * band's own 2 px half stroke and the 3 px margin flowSpan cuts with), so a plate that has left the line covers
+ * neither the marks on that road nor the band next to it.
+ */
+export const SHIELD_GAP_PX = FLOW_OFFSET_PX + 5;
+
+/**
+ * How far one plate's nearest corner stands clear of another's, in view box px. Not overlapping is not enough: a
+ * plate is stroked 1 px centred on its edge, so two plates half a px apart paint their outlines over each other and
+ * two opaque rectangles carrying different route ids and different free-flow times render as one stacked block with
+ * a single shared border, each with a hairline leader running off to a different road.
+ *
+ * Four px leaves two clear px between the two strokes, and at this scenario it is free: it moves the wide pair
+ * H6 x H2 from 0.5 px apart to 5.0 px and changes no other plate, at either geometry or either fleet, and no
+ * occlusion number anywhere. It is not to be raised past 4 without re-measuring, because the phone has no room to
+ * pay for it: at a 6 px target phone car-frames hidden go 8.76% to 9.04% and the worst snapshot 20 to 22, and at
+ * 8 px the 150-car reference reaches 26 marks hidden at one phone snapshot, past the bound map.test.mjs pins.
+ */
+export const PLATE_CLEAR_PX = 4;
+
 const FAMILY_BY_STATE = Object.freeze(
   Object.fromEntries(Object.entries(STATE_FAMILIES).flatMap(([family, states]) => states.map((s) => [s, family]))),
 );
@@ -228,6 +250,9 @@ export function yardRects(geometry, pad = 0) {
 
 const boxOverlap = (a, b) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
 
+/** The clear distance between two boxes that do not overlap, in view box px; 0 where they touch or overlap. */
+const boxGap = (a, b) => Math.hypot(Math.max(a.x0 - b.x1, b.x0 - a.x1, 0), Math.max(a.y0 - b.y1, b.y0 - a.y1, 0));
+
 /** Whether segment p to q passes through the inside of `box` (sampled every 2 px or finer). */
 function crossesBox(p, q, box) {
   const steps = Math.max(1, Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / 2));
@@ -239,34 +264,111 @@ function crossesBox(p, q, box) {
   return false;
 }
 
+/** The length of segment p to q lying inside `box`, in view box px (the Liang-Barsky clip, exact and allocation free). */
+function lengthInBox(p, q, box) {
+  const dx = q.x - p.x;
+  const dy = q.y - p.y;
+  let t0 = 0;
+  let t1 = 1;
+  for (const [d, lo, hi] of [[dx, box.x0 - p.x, box.x1 - p.x], [dy, box.y0 - p.y, box.y1 - p.y]]) {
+    if (d === 0) {
+      // Parallel to this pair of edges: either the whole segment is between them or none of it is.
+      if (lo > 0 || hi < 0) return 0;
+      continue;
+    }
+    t0 = Math.max(t0, Math.min(lo / d, hi / d));
+    t1 = Math.min(t1, Math.max(lo / d, hi / d));
+  }
+  return t1 <= t0 ? 0 : (t1 - t0) * Math.hypot(dx, dy);
+}
+
+/** The side of its own line a route's flow band takes: highways one side, local routes the other (drawFlow). */
+const flowSide = (route) => (route.cls === "HIGHWAY" ? -1 : 1);
+
 /**
- * Highway shield boxes in `geometry`: `Map(routeId -> {x, y, x0, y0, x1, y1, width})`, centred on the route's visible
- * segment (design §7.3). Each shield takes the first place along the segment, from the middle outwards, whose box clears
- * every yard (with a 2 px margin), every shield placed before it and the view box; failing that, the place with the
- * least overlap. Among clear places it prefers one that no other route line crosses. Shields draw above the yards, so
- * nothing covers the id.
+ * Every line of `geometry` that draws cars, as `[p, q]` pairs: each route's visible centre line, where one mark per
+ * car rides, and the lane its flow band takes where its direction is banded. A plate over either hides work that a
+ * reader is meant to see. Both are arithmetic on the scenario and the geometry: no log, clock or car is read here.
+ */
+function drawnLines(routes, geometry) {
+  return routes.flatMap((route) => {
+    const g = routeGeometry(route, geometry);
+    const o = FLOW_OFFSET_PX * flowSide(route);
+    return [
+      [g.pA, g.pB],
+      [{ x: g.pA.x + g.nx * o, y: g.pA.y + g.ny * o }, { x: g.pB.x + g.nx * o, y: g.pB.y + g.ny * o }],
+    ];
+  });
+}
+
+/**
+ * Highway shield boxes in `geometry`: `Map(routeId -> {x, y, x0, y0, x1, y1, width, anchor, off})`, anchored on the
+ * route's visible segment (design §7.3) and set off it, to the side that covers least of the drawing. `anchor` is the
+ * point of the route line the plate names and `off` its signed offset along that route's normal, so the drawing can
+ * put a leader between the two; `off` is 0 where the plate keeps the line.
+ *
+ * Why the plate leaves the line. A shield is opaque (`--panel` filled) and the cars layer paints below the shields
+ * layer, so a plate on the line hides the marks under it: measured over the whole run of the default preset, the
+ * centre of a drawn mark lay inside a plate on 18.42% of car-frames wide and 37.24% on the phone. The car is not what
+ * moves, here or anywhere: a mark sits at the progress the model reports, and nudging one clear of a label would
+ * invent a place (design §8.5). Neither does the paint order change (design §7.3: nothing covers a shield id).
+ *
+ * Each shield takes the place, from the middle of the segment outwards and on either side of the line, whose box
+ * clears every yard (with a 2 px margin), every shield placed before it by PLATE_CLEAR_PX, and the view box; among
+ * those it takes the one covering the fewest px of `drawnLines`, then the one nearest its own road, then the one
+ * nearest the middle. Where nothing off the line clears, the plate keeps the line, as it always did. This is a pure
+ * function of (routes, geometry): nothing here reads the run log, the clock or a car, so a shield never moves while
+ * a run lands or a replay plays.
+ *
+ * **A bound this scorer does not clear, recorded rather than hidden.** `drawnLines` counts a local route exactly as
+ * it counts a highway, because `drawCars` filters on the routes the map built and not on class, so a car driving a
+ * local would be hidden under a plate just as a highway car was. It is still the least-bad placement available, not
+ * an oversight: three of the six wide plates end nearer a local line than their own highway, and two sit on one
+ * (H1's plate covers 16.0 px of L1, H4's 22.0 px of L2, and H2's nearest line is L5 at 18.6 px against its own road
+ * at 21.0); on the phone H1's covers 16.0 px of L1, H6's 16.0 px of L6, and H2's and H5's 12.6 px each of L5 and L2.
+ * Nothing is hidden by this today, and the measurement says so rather than assuming it: over every snapshot of both
+ * payloads, at both geometries, every drawn mark is on H1..H6 and not one is on a local. This placement is in fact
+ * the better of the two on that count, since the plates it replaced sat on four wide local lines (53.3 px) against
+ * these two (38.0 px). But the occlusion bounds below hold only for runs that keep their cars on the highways: a
+ * scenario or ops preset that routed cars over a local would reintroduce the defect, and would do it silently. The
+ * honest form of this is the recorded bound, not a weight: weighting a line by whether any preset's run draws marks
+ * on it would mean reading a log, which is exactly what this function must never do.
  */
 export function placeShields(routes, geometry) {
   const yards = yardRects(geometry, 2);
-  const lines = routes.map((route) => ({ route, ...routeGeometry(route, geometry) }));
+  const lines = drawnLines(routes, geometry);
   const placed = new Map();
   for (const route of routes) {
     if (route.cls !== "HIGHWAY") continue;
     const g = routeGeometry(route, geometry);
     const text = routeShield({ routeId: route.id, freeFlow: format.minutes(route.free_flow_s) });
     const width = geometry.shieldPad + text.length * geometry.charPx;
+    // A plate is drawn axis aligned, so how far it reaches along the route's normal is set by the road's heading:
+    // half the plate's width for a road drawn up the page, half its height for one drawn across it. Offsetting by
+    // that reach plus the gap stands the plate's nearest corner SHIELD_GAP_PX clear of the road, whichever way it runs.
+    const reach = Math.abs(g.nx) * (width / 2) + Math.abs(g.ny) * (SHIELD_HEIGHT_PX / 2);
+    const offsets = [0, reach + SHIELD_GAP_PX, -(reach + SHIELD_GAP_PX)];
     let best = null;
     for (let k = 0; k <= 16; k += 1) {
       const f = 0.5 + (k % 2 === 1 ? 1 : -1) * Math.ceil(k / 2) * 0.025;
-      const x = g.pA.x + (g.pB.x - g.pA.x) * f;
-      const y = g.pA.y + (g.pB.y - g.pA.y) * f;
-      const box = { x, y, width, x0: x - width / 2, x1: x + width / 2, y0: y - SHIELD_HEIGHT_PX / 2, y1: y + SHIELD_HEIGHT_PX / 2 };
-      const overlap = yards.reduce((n, r) => n + boxOverlap(box, r), 0) + [...placed.values()].reduce((n, r) => n + boxOverlap(box, r), 0);
-      const outside = box.x0 < 0 || box.y0 < 0 || box.x1 > geometry.view.width || box.y1 > geometry.view.height;
-      const samePair = (other) => (other.a === route.a && other.b === route.b) || (other.a === route.b && other.b === route.a);
-      const crossings = lines.filter((l) => !samePair(l.route) && crossesBox(l.pA, l.pB, box)).length;
-      const score = overlap * 1000 + (outside ? 1e9 : 0) + crossings * 10 + Math.abs(f - 0.5);
-      if (best === null || score < best.score) best = { box, score };
+      const anchor = { x: g.pA.x + (g.pB.x - g.pA.x) * f, y: g.pA.y + (g.pB.y - g.pA.y) * f };
+      for (const off of offsets) {
+        const x = anchor.x + g.nx * off;
+        const y = anchor.y + g.ny * off;
+        const box = { x, y, width, x0: x - width / 2, x1: x + width / 2, y0: y - SHIELD_HEIGHT_PX / 2, y1: y + SHIELD_HEIGHT_PX / 2, anchor, off };
+        const overlap = yards.reduce((n, r) => n + boxOverlap(box, r), 0) + [...placed.values()].reduce((n, r) => n + boxOverlap(box, r), 0);
+        const outside = box.x0 < 0 || box.y0 < 0 || box.x1 > geometry.view.width || box.y1 > geometry.view.height;
+        // Px of drawn line under the plate, its own road's included. This replaces a count of the other route lines
+        // the box crossed, which weighed a plate straddling a whole corridor the same as one clipping a corner, and
+        // which excused a plate from covering the local route of its own area pair.
+        const covered = lines.reduce((n, [p, q]) => n + lengthInBox(p, q, box), 0);
+        // Clearance from the plates already placed, on the same footing as the yard term above: two plates that only
+        // just miss each other read as one block with a shared border, which the overlap term alone permits.
+        const gap = [...placed.values()].reduce((m, r) => Math.min(m, boxGap(box, r)), Infinity);
+        const crowd = Math.max(0, PLATE_CLEAR_PX - gap) * 50;
+        const score = overlap * 1000 + (outside ? 1e9 : 0) + covered * 4 + crowd + Math.abs(off) * 0.05 + Math.abs(f - 0.5);
+        if (best === null || score < best.score) best = { box, score };
+      }
     }
     placed.set(route.id, best.box);
   }
@@ -694,14 +796,26 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
   const yardsLayer = svg("g", { "data-layer": "yards" });
   // Cars paint above the yards they have left and below the shields. The layer holds no name, no tab stop and nothing
   // focusable: what it draws is arrangement, and every number in it is already a row of the table twin (design §7.7).
-  // What that paint order costs, measured over the whole run rather than left to be noticed: a shield is an opaque
-  // plate on the route line, and the centre of a drawn mark falls inside one on 18.4% of car-frames wide and 37.2% on
-  // the phone (default preset; 17.9% and 38.1% at the 150-car reference). Worst single snapshot, 26 of 99 marks wide
-  // and 49 of 106 on the phone; one phone mark stayed under a plate for 14 snapshots, because a plate is 79 units
-  // wide and the phone draws H3 and H4 at 88. The paint order is not what to change (design §7.3: nothing covers a
-  // shield id), and a mark may not be nudged clear of one, which would invent a place the model does not give. The
-  // two drawings that would fix it, a shorter shield on the phone and shields set off the line the way local labels
-  // sit, both change placeShields and the shield copy, which this phase does not touch: it is a Phase 3 decision.
+  // What that paint order cost, measured over the whole run rather than left to be noticed: a shield is an opaque
+  // plate, and while every plate sat on its route line the centre of a drawn mark fell inside one on 18.42% of
+  // car-frames wide and 37.24% on the phone (default preset; 17.85% and 38.07% at the 150-car reference). Worst
+  // single snapshot, 26 of 99 marks wide and 49 of 106 on the phone; one phone mark stayed under a plate for 14
+  // snapshots, because a plate is 78.6 units wide and the phone draws H3 and H4 at 88. Neither the paint order
+  // (design §7.3: nothing covers a shield id) nor the mark (design §8.5: a nudge would invent a place) is what
+  // changed: placeShields now stands the plate SHIELD_GAP_PX clear of the road, on the side covering least of the
+  // drawing, and a leader ties it back to the point it names. That leaves 0.00% wide and 8.76% on the phone (0.00%
+  // and 8.36% at the reference).
+  // What is left, and the half of it that is this placement's own doing. The phone's two vertical corridors are the
+  // whole remainder: a 78.6 unit plate has nowhere to stand in the 88 unit gutter between a yard and the view edge,
+  // so H1 and H6 keep their line and each takes 16 px of its own road. That accounts for 500 of the 998 residual
+  // car-frames. The other 498 are a cost this placement added, and naming only the first half would be the more
+  // comfortable half: stepping H5's plate aside put it across the H1 corridor at (98.5,178.9) and H2's across the
+  // H6 corridor at (241.5,178.9), each covering 16.0 px of a road it does not name. Per corridor, against the
+  // placement this replaced, H1 goes 13.53% to 27.25% and H6 15.26% to 30.04%: each roughly doubles, and half of
+  // each doubling is another route's plate. The enumeration of candidate placements found none that clears every
+  // phone plate of every other route's line, so this is a genuine cost of setting plates off the line, not a slip
+  // left in. test/map.test.mjs pins the aggregate, the worst snapshot, the longest streak and both per-corridor
+  // shares, so a later placement cannot quietly move more occlusion onto these two and still pass.
   const carsLayer = svg("g", { "data-layer": "cars", "aria-hidden": "true" });
   // Shields paint after the yards and every route (design §7.3: a shield with its id), so nothing covers or strikes one.
   const shieldsLayer = svg("g", { "data-layer": "shields" });
@@ -792,6 +906,14 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
         // group already carries the same words as its name, so the shield is hidden from assistive technology.
         const box = shields.get(route.id);
         const shieldGroup = svg("g", { "data-role": "shield", "data-route-id": route.id, "aria-hidden": "true", transform: `translate(${String(round(box.x))} ${String(round(box.y))})` });
+        // A plate standing off its road carries a leader back to the point of the line it names, so which road a
+        // shield belongs to is never a guess. It is appended first, so the opaque plate covers all of it but the gap,
+        // and it is one hairline: it meets the road at the anchor and hides no mark.
+        if (box.off !== 0) {
+          const leader = svg("line", { "data-role": "shield-leader", x1: round(box.anchor.x - box.x), y1: round(box.anchor.y - box.y), x2: 0, y2: 0 });
+          leader.style.stroke = "var(--ink)";
+          shieldGroup.append(leader);
+        }
         const rect = svg("rect", { x: round(-box.width / 2), y: -SHIELD_HEIGHT_PX / 2, width: round(box.width), height: SHIELD_HEIGHT_PX, rx: 3 });
         rect.style.fill = "var(--panel)";
         rect.style.stroke = "var(--ink)";

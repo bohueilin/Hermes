@@ -1457,7 +1457,12 @@ about the candidate.`
   minutes) and a local route (2 px line, labelled on hover or focus), drawn as parallel paths. Congestion shows as
   chevron density per 40 px (0 below ×1.2; 1 from ×1.2 to below the RD-4 threshold; 2 from the threshold to below
   ×2.0; 3 at ×2.0 or more, so every congested minute draws at least 2), the route tooltip of §1.3, and a neutral
-  casing step; never a hue, never dashed. Chevrons are static: they change only when the clock crosses an hour.
+  casing step; never a hue, never dashed. Chevrons are static: they change only when the clock crosses an hour. A
+  highway shield stands beside its road rather than on it, with a 1 px leader back to the line, because a plate is
+  opaque and cars paint below it: the placement scorer counts the pixels of drawn line a plate would cover, keeps
+  plates clear of one another, and reads only the routes and the geometry, so a shield never moves when a run lands or
+  the clock advances. It takes the centre of a drawn mark out from under a plate entirely on the wide map, and from
+  37.2% of car-frames to 8.76% on the phone, where two short corridors have no room and keep their plates on the line.
 - **Depots:** a square tile inside its area with its id and a three-part micro-bar (queued, in a bay, ready) above a
   lot fill. An area with no depot shows its yard only.
 - **Cars:** each yard shows unit bars (one block per 5 cars, grouped by state family, labelled `1 block = 5 cars`).
