@@ -95,10 +95,12 @@ function emptyDraft() {
 
 /**
  * A run slot with nothing computed. `scenarioAtQueue` is the scenario the run was queued on, so a result that arrives
- * after a knob or preset change is marked out of date.
+ * after a knob or preset change is marked out of date. `worldAtQueue` is the world that scenario came from, as
+ * `{presetId, changes}`: a finished replay stays on screen through a preset switch, so the line under its chip has to
+ * name the world that produced the picture and not the one now set in the knobs (the slug rule).
  */
 function emptyRun() {
-  return { status: "idle", id: null, progress: null, summaries: [], selectedSeed: null, log: null, stale: false, violation: null, error: null, scenarioAtQueue: null };
+  return { status: "idle", id: null, progress: null, summaries: [], selectedSeed: null, log: null, stale: false, violation: null, error: null, scenarioAtQueue: null, worldAtQueue: null };
 }
 
 /**
@@ -139,6 +141,10 @@ export function createInitialState({ presetId, scenario, mode = "sandbox", reduc
     },
     reference: null,
     learn: { case: null, moment: 0 },
+    // The walkthrough is a layer over the three modes, never a fourth mode (ARCHITECTURE decision 44): `on` is whether
+    // it is showing, `chapter` and `beat` where it stands, `stop_s` the second a played beat pauses at (null when the
+    // beat is a still), and `prepared` whether Prepare's two runs both landed.
+    present: { on: false, chapter: 0, beat: 0, stop_s: null, prepared: false },
     reducedMotion: { system: Boolean(reducedMotionSystem), override: null },
     engine: { path: null },
   };
@@ -295,7 +301,15 @@ function runCase(state, action) {
     case "run/queued":
       return {
         ...state,
-        run: { ...run, status: "queued", id: action.id, progress: { done: 0, total: action.total ?? 0, label: action.label ?? "" }, error: null, scenarioAtQueue: state.scenario },
+        run: {
+          ...run,
+          status: "queued",
+          id: action.id,
+          progress: { done: 0, total: action.total ?? 0, label: action.label ?? "" },
+          error: null,
+          scenarioAtQueue: state.scenario,
+          worldAtQueue: { presetId: state.presetId, changes: state.changes.length },
+        },
       };
     case "run/progress":
       if (action.id !== run.id) return state;
@@ -305,7 +319,7 @@ function runCase(state, action) {
       const runs = action.payload.runs;
       const violations = runs.flatMap((r) => r.invariant_violations ?? []);
       if (violations.length > 0) {
-        return { ...state, run: { ...emptyRun(), status: "void", id: run.id, violation: violations[0], scenarioAtQueue: run.scenarioAtQueue } };
+        return { ...state, run: { ...emptyRun(), status: "void", id: run.id, violation: violations[0], scenarioAtQueue: run.scenarioAtQueue, worldAtQueue: run.worldAtQueue } };
       }
       const log = action.payload.log ?? null;
       return {
@@ -322,6 +336,7 @@ function runCase(state, action) {
           violation: null,
           error: null,
           scenarioAtQueue: run.scenarioAtQueue,
+          worldAtQueue: run.worldAtQueue,
         },
       };
     }
@@ -487,6 +502,34 @@ function experimentCase(state, action) {
   }
 }
 
+/**
+ * Reducer cases for the walkthrough layer. Opening it starts at the first beat of the first chapter; leaving it keeps
+ * `prepared`, because the runs Prepare made are still in the store and re-entering must not run them again.
+ */
+function presentCase(state, action) {
+  const present = state.present;
+  switch (action.type) {
+    case "present/open":
+      return present.on ? state : { ...state, present: { ...present, on: true, chapter: 0, beat: 0, stop_s: null } };
+    case "present/goto": {
+      if (!Number.isInteger(action.chapter) || action.chapter < 0) throw new RangeError("a chapter index is a non-negative integer");
+      if (!Number.isInteger(action.beat) || action.beat < 0) throw new RangeError("a beat index is a non-negative integer");
+      // A repeat of the beat already showing still clears the stop clock, so replaying a beat pauses at its second again.
+      if (present.chapter === action.chapter && present.beat === action.beat && present.stop_s === null) return state;
+      return { ...state, present: { ...present, chapter: action.chapter, beat: action.beat, stop_s: null } };
+    }
+    case "present/stop":
+      if (action.stop_s !== null) checkSeconds(action.stop_s, "stop_s");
+      return present.stop_s === action.stop_s ? state : { ...state, present: { ...present, stop_s: action.stop_s } };
+    case "present/prepared":
+      return present.prepared ? state : { ...state, present: { ...present, prepared: true } };
+    case "present/close":
+      return present.on ? { ...state, present: { ...present, on: false, stop_s: null } } : state;
+    default:
+      return state;
+  }
+}
+
 /** Select a verdict seed; the warning shows whenever it is the largest delta and not also the median. */
 function chooseSeed(state, seed) {
   const ex = state.experiment;
@@ -518,6 +561,7 @@ export function reduce(state, action) {
   if (type.startsWith("run/")) return runCase(state, action);
   if (type.startsWith("clock/") || type.startsWith("playback/")) return playbackCase(state, action);
   if (type.startsWith("experiment/")) return experimentCase(state, action);
+  if (type.startsWith("present/")) return presentCase(state, action);
   switch (type) {
     case "mode/set":
       return switchMode(state, action.mode);

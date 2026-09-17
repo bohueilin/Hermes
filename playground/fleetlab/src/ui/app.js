@@ -33,13 +33,15 @@ import { createAnnouncer, createLiveRegion, createShortcutHelp, watchReducedMoti
 import { armComparisonCharts, carForkCharts, demandStrip, fleetStateChart, metricByHourChart, setCursorAll, trafficStrip } from "./charts.js";
 import { mountControls } from "./controls.js";
 import { el, keyedList, setText } from "./dom.js";
-import { mountExperiment } from "./experiment.js";
+import { mountExperiment, startFromPreset } from "./experiment.js";
 import * as format from "./format.js";
 import { mountInspector } from "./inspector.js";
+import { createIsoView } from "./iso.js";
 import * as labels from "./labels.js";
 import { LEARN_FORK_DEPOTS, learnCase, mountLearn } from "./learn.js";
 import { frameModel, mountMap } from "./map.js";
 import { createPlayback, renderTransport } from "./playback.js";
+import { mountPresent, PRESENT_PRESET_ID } from "./present.js";
 import { createInitialState, createStore, ENGINE_PATHS, lastChange, MODES } from "./store.js";
 
 /** Shell regions in document order, which is the design section 7.7 tab order; `now` and `across` sit in `side`. */
@@ -160,6 +162,10 @@ export function buildShell() {
     now: region("section", "now", "fl-now", "REGISTERS.nowThisReplay"),
     across: region("section", "across", "fl-across", "CHARTS.phoneSegments.all"),
     charts: region("section", "charts", "fl-charts", "CHARTS.phoneSegments.charts"),
+    // The walkthrough's two containers (demo plan section 4.1). They are shell regions so the presenting grid can place
+    // them by area and the DOM order tests can read them, and they stay hidden and inert until Present opens.
+    ledger: region("section", "ledger", "fl-ledger", "PRESENT.ledgerName"),
+    rail: region("section", "rail", "fl-rail", "PRESENT.name"),
     inspector: region("aside", "inspector", "fl-drawer fl-inspector", "MODES.inspect.name"),
     footer: region("footer", "footer", "fl-footer"),
   };
@@ -168,13 +174,21 @@ export function buildShell() {
   regions.inspector.hidden = true;
   regions.inspector.setAttribute("inert", "");
   regions.inspector.setAttribute("data-open", "false");
+  for (const id of ["ledger", "rail"]) {
+    regions[id].hidden = true;
+    regions[id].setAttribute("inert", "");
+  }
   const side = el("div", { class: "fl-side" }, [regions.now, regions.across]);
 
+  // The walkthrough reads stage, ledger, rail in that order, which is this DOM order: the presenting grid never moves
+  // a region past another, so what a reader tabs through is what a reader sees (design 7.7).
   root.replaceChildren(
     strip,
     regions.topbar,
     regions.knobs,
     regions.map,
+    regions.ledger,
+    regions.rail,
     regions.transport,
     regions.segmented,
     side,
@@ -182,7 +196,7 @@ export function buildShell() {
     regions.inspector,
     regions.footer,
   );
-  return { root, strip, regions };
+  return { root, strip, regions, side };
 }
 
 /**
@@ -318,17 +332,18 @@ function updateTextRow(node, [, name, value]) {
 }
 
 /** Mounts every region into the shell and wires the store to the engine host. */
-function mountInterface({ root, regions }, { createWorker, engineHost, copyText }) {
+function mountInterface({ root, regions, side }, { createWorker, engineHost, copyText }) {
   const doc = globalThis.document;
   const preset = presetById(DEFAULT_PRESET_ID);
   const store = createStore(createInitialState({ presetId: preset.id, scenario: cloneScenario(preset.scenario) }));
   const host = engineHost ?? createEngineHost({ createWorker });
   const cleanups = [];
   let destroyed = false;
-  const runs = { window: null, fork: null, forkArgs: null, forkMeta: null, forkNotice: false, copyStatus: null };
+  const runs = { window: null, fork: null, forkArgs: null, forkMeta: null, forkNotice: false, copyStatus: null, prepareTimes: null };
   // Lookup tables built ahead of the first run: sigmas done (or failed, so they are not retried), the pending build, the idle handle.
   const warm = { done: new Set(), pending: null, idle: null };
   const memo = { chartHandles: [], stripHandles: [], forkHandles: [], cursor: null, frameKey: null, frame: null };
+  let wasPresenting = false;
 
   // ---- engine ------------------------------------------------------------------------------------------------------
 
@@ -523,9 +538,12 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
     el("button", { type: "button", class: "fl-button", "data-mode": mode, "aria-pressed": "false", on: { click: () => store.dispatch({ type: "mode/set", mode }) } }, labels.MODES[mode].name),
   );
   const topStatus = el("p", { class: "fl-clock", "data-role": "top-status" });
+  // Present is a layer over whichever mode is showing, so it sits after the modes and is pressed, never selected.
+  const presentButton = button(labels.PRESENT.open, () => togglePresent(), "present-toggle", { "aria-pressed": "false" });
   regions.topbar.replaceChildren(
     el("h1", { class: "fl-title" }, labels.TOP_BAR.product),
     el("div", { class: "fl-modes", role: "group", "aria-label": labels.TOP_BAR.modesName }, modeButtons),
+    presentButton,
     controls.toggle,
     topStatus,
   );
@@ -535,7 +553,9 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
   regions.map.replaceChildren(runStatus, mapHost);
   const help = createShortcutHelp(regions.map);
   const playback = createPlayback({ store });
-  const map = mountMap(mapHost, { store, playback, onShortcuts: () => help.toggle(), frame: () => frameOf(store.getState()) });
+  // The isometric picture is the page's (design §7.3 as amended); the flat schematic stays behind its toggle and
+  // is what a browser without a 2D canvas gets, with the reason written.
+  const map = mountMap(mapHost, { store, playback, onShortcuts: () => help.toggle(), frame: () => frameOf(store.getState()), isoView: createIsoView });
 
   const transportHost = el("div", { class: "fl-contents" });
   const strips = el("div", { class: "fl-transport__strips", "data-role": "strips" });
@@ -578,6 +598,63 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
     onWatchSeed: (seed) => watchVerdictSeed(seed),
   });
   const inspector = mountInspector({ store, region: regions.inspector, onOpenFork: (car) => openFork(car) });
+  // The `Isometric | Flat` group belongs to the map header outside the walkthrough (owner answer 3): while presenting,
+  // the rail is the only row of controls and the picture is not a thing to choose between.
+  const viewGroup = regions.map.querySelector('[data-role="view-group"]');
+
+  /** The one model the whole page draws this frame, so the walkthrough takes map.js's model and never a second one. */
+  const modelOf = (state) => frameModel({ scenario: scenarioOfRun(state), log: state.run.log, frame: frameOf(state), clock_s: state.clock_s });
+
+  const present = mountPresent({
+    store,
+    playback,
+    ledger: regions.ledger,
+    rail: regions.rail,
+    modelOf,
+    frameOf,
+    scenarioOf: scenarioOfRun,
+    prepare: () => preparePresent(),
+    times: () => runs.prepareTimes,
+    // The beat that shows both arms of one verdict seed opens the fork the page already has (demo plan Phase B); the
+    // map region steps aside for it exactly as it does when a reader opens it from the verdict card.
+    onWatchSeed: (seed) => watchVerdictSeed(seed),
+    onGoToKnobs: () => {
+      const run = [...regions.knobs.querySelectorAll("button")].find((b) => b.textContent === labels.KNOB_PANEL.runWindow);
+      run?.focus();
+    },
+  });
+  // The reading card stands above the picture, where a lone visitor meets the page before anything has run.
+  regions.map.insertBefore(present.card, mapHost);
+
+  function togglePresent() {
+    if (store.getState().present.on) present.close();
+    else present.open();
+  }
+
+  /**
+   * Prepare (demo plan section 4.4): the casebook situation in Sandbox, the window at 5 seeds, then the frozen spec at
+   * its 20 paired seeds. Both runs are the runtime's ordinary public calls, so what the walkthrough shows is what this
+   * visitor's browser computed; the two wall times are measured here and shown as this visitor's own clock. Nothing is
+   * cached and nothing is shipped, and `prepared` is set only when both runs actually landed.
+   */
+  async function preparePresent() {
+    if (destroyed) return null;
+    const windowStart = performance.now();
+    startFromPreset(store.dispatch, PRESENT_PRESET_ID);
+    store.dispatch({ type: "mode/set", mode: "sandbox" });
+    await runWindow();
+    const windowMs = performance.now() - windowStart;
+    if (destroyed) return null;
+    const experimentStart = performance.now();
+    await experiment.freezeAndRun();
+    const experimentMs = performance.now() - experimentStart;
+    if (destroyed) return null;
+    const state = store.getState();
+    if (state.run.log === null || state.experiment.verdict === null) return null;
+    runs.prepareTimes = { windowMs, experimentMs };
+    store.dispatch({ type: "present/prepared" });
+    return runs.prepareTimes;
+  }
 
   const engineText = el("p", { "data-role": "engine-path" });
   const motionChoices = [[null, labels.STATES.reducedMotionSystem], [true, labels.STATES.reducedMotionOn], [false, labels.STATES.reducedMotionOff]];
@@ -838,6 +915,29 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
     const sandboxAside = shownVerdictSeed(state) !== null;
     for (const node of [regions.map, regions.now, regions.across, strips]) node.hidden = sandboxAside;
     root.setAttribute("data-verdict-seed", sandboxAside ? "true" : "false");
+    // Presenting (demo plan section 4.1): the stage and the ledger take the screen. The knobs, the side column, the
+    // chart row and the transport's control row are hidden and inert while presenting, because their numbers are the
+    // ledger's numbers; the strips container stays, with its strips hidden, because it is where the day bar mounts.
+    const presenting = state.present.on;
+    root.setAttribute("data-present", presenting ? "true" : "false");
+    presentButton.setAttribute("aria-pressed", presenting ? "true" : "false");
+    // The knob sheet owns its own inert (it is inert only while it is off screen), so presenting only hides it.
+    for (const node of [regions.knobs, controls.toggle]) node.hidden = presenting;
+    for (const node of [side, regions.charts, regions.segmented, transportHost, ...strips.children]) {
+      node.hidden = presenting;
+      node.toggleAttribute("inert", presenting);
+    }
+    for (const id of ["ledger", "rail"]) {
+      regions[id].hidden = !presenting;
+      regions[id].toggleAttribute("inert", !presenting);
+    }
+    if (viewGroup !== null) {
+      viewGroup.hidden = presenting;
+      viewGroup.toggleAttribute("inert", presenting);
+    }
+    // Leaving puts the reader back on the control that opened the walkthrough.
+    if (wasPresenting && !presenting) presentButton.focus();
+    wasPresenting = presenting;
     for (const node of [regions.now, regions.across, chartSet, strips]) node.classList.toggle("fl-stale", stale);
     renderTopBar(state);
     renderRunStatus(state);
@@ -884,8 +984,8 @@ function mountInterface({ root, regions }, { createWorker, engineHost, copyText 
     host.cancel();
     destroyed = true;
     for (const stop of cleanups.splice(0)) stop();
-    for (const part of [controls, inspector, map, transport, playback, learn, experiment]) part.destroy();
+    for (const part of [controls, inspector, map, transport, playback, learn, experiment, present]) part.destroy();
   }
 
-  return { store, host, playback, runWindow, openFork, watchVerdictSeed, destroy };
+  return { store, host, playback, runWindow, openFork, watchVerdictSeed, present, destroy };
 }

@@ -403,7 +403,9 @@ describe("focus, targets, strip and narrow layout", () => {
         assert.ok(own.some((d) => d.name === name && d.value === value), `${chip} sets ${name}: ${value}, so no parent's nowrap is inherited`);
       }
     }
-    const oneLine = new Set([".fl-chip-replay", ".fl-chip-across", ".fl-verdict-chip", ".fl-sr-only"]);
+    // The isometric overlay's plates and texts are short labels positioned over a picture (an id, `H2 · 55 min`,
+    // `×19`, `queue 21`, a car's name); a wrap would move a label off the point it names, so they keep one line too.
+    const oneLine = new Set([".fl-chip-replay", ".fl-chip-across", ".fl-verdict-chip", ".fl-sr-only", ".fl-iso__plate", ".fl-iso__text", ".fl-iso__numbers", ".fl-iso__count", ".fl-iso__pin"]);
     for (const rule of RULES.filter((r) => r.declarations.some((d) => d.name === "white-space" && d.value === "nowrap"))) {
       assert.ok(rule.selectors.every((s) => oneLine.has(s)), `white-space: nowrap only on short chips, not ${rule.prelude}`);
     }
@@ -469,6 +471,62 @@ describe("motion", () => {
         assert.ok(system, `${selector} override sits inside the prefers-reduced-motion block`);
       }
     }
+  });
+});
+
+describe("the isometric picture's faces and classes (design 7.3 and 8.2 as amended)", () => {
+  // Every box on the canvas is one hue shaded per face: the top keeps it, the +y side takes 0.84 of it and the +x side
+  // 0.68 on the light theme, where darkening a side can only raise its ratio on the panel; on the dark theme a darkened
+  // side would fall toward the ground, so sides lighten (1.14, 1.28, clamped). Ratios against --panel, to two decimals,
+  // computed here with iso.js's own arithmetic. The two route hues reach 3:1 on every face in both themes; the cube
+  // and bay hues fall under 3:1 on some light faces and carry the 1 px ink edge, as their flat glyphs do.
+  const FACES = [
+    ["light", "--car-rider", [4.42, 5.85, 7.85]], ["dark", "--car-rider", [4.75, 6, 7.16]],
+    ["light", "--car-empty", [3.2, 4.4, 6.14]], ["dark", "--car-empty", [4.45, 5.64, 6.34]],
+    ["light", "--car-available", [2.82, 3.89, 5.54]], ["dark", "--car-available", [5.07, 6.49, 8.15]],
+    ["light", "--car-depot", [2.17, 3.05, 4.47]], ["dark", "--car-depot", [5.63, 7.26, 9.05]],
+  ];
+
+  test("documented face ratios match the computed ones, and the route hues keep 3:1 on every face in both themes", async () => {
+    const { SHADES, faceHue } = await import("../src/ui/iso.js");
+    assert.deepEqual(SHADES, { light: { top: 1, sideY: 0.84, sideX: 0.68 }, dark: { top: 1, sideY: 1.14, sideX: 1.28 } });
+    for (const [theme, hue, documented] of FACES) {
+      const computed = ["top", "sideY", "sideX"].map((face) => Math.round(contrast(faceHue(THEMES[theme][hue], face, theme === "dark"), THEMES[theme]["--panel"]) * 100) / 100);
+      assert.deepEqual(computed, documented, `${theme} ${hue}`);
+      if (hue === "--car-rider" || hue === "--car-empty") for (const ratio of computed) assert.ok(ratio >= 3, `${theme} ${hue} face at ${String(ratio)}:1`);
+    }
+    // On the dark theme lightening never falls below the top face; on the light theme darkening never rises above it.
+    for (const hue of ["--car-rider", "--car-empty", "--car-available", "--car-depot"]) {
+      const light = ["top", "sideY", "sideX"].map((face) => contrast(faceHue(THEMES.light[hue], face, false), THEMES.light["--panel"]));
+      const dark = ["top", "sideY", "sideX"].map((face) => contrast(faceHue(THEMES.dark[hue], face, true), THEMES.dark["--panel"]));
+      assert.ok(light[1] >= light[0] && light[2] >= light[1], `${hue} light sides rise`);
+      assert.ok(dark[1] >= dark[0] && dark[2] >= dark[1], `${hue} dark sides rise`);
+    }
+  });
+
+  test("every class iso.js sets is defined in styles.css, listed in its header inventory, and carries no motion", () => {
+    const source = readFileSync(new URL("../src/ui/iso.js", import.meta.url), "utf8");
+    const classes = new Set([...source.matchAll(/fl-iso[\w-]*/g)].map((m) => m[0]));
+    assert.ok(classes.size >= 10, [...classes].join(","));
+    const selectorText = RULES.flatMap((rule) => rule.selectors ?? []).join(" ");
+    const header = CSS.slice(0, CSS.indexOf("*/"));
+    for (const name of classes) {
+      assert.match(selectorText, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
+      assert.match(header, new RegExp(`\\.${name}(?![\\w-])`), `the header inventory lists .${name}`);
+    }
+    for (const rule of RULES.filter((r) => r.selectors?.some((sel) => sel.includes(".fl-iso")))) {
+      for (const d of rule.declarations) assert.ok(!/^(transition|animation)/.test(d.name) && d.name !== "will-change", `${rule.prelude} ${d.name}`);
+    }
+    // No canvas text: every word of the picture is DOM, where the copy scans and a screen reader see it.
+    assert.doesNotMatch(source, /\b(fillText|strokeText)\b/);
+  });
+
+  test("the two reduced-motion blocks are exactly as they were before the isometric picture", () => {
+    const system = RULES.filter((rule) => rule.context.includes(REDUCE_MEDIA)).flatMap((rule) => rule.selectors);
+    const inApp = RULES.filter((rule) => rule.context.length === 0 && rule.selectors?.every((sel) => sel.startsWith(':root[data-motion="reduce"]'))).flatMap((rule) => rule.selectors);
+    const names = [".fl-knobs", ".fl-drawer", ".fl-popover", ".fl-tooltip", ".fl-button", ".fl-button:active"];
+    assert.deepEqual(system, names.map((n) => `:root:not([data-motion="full"]) ${n}`));
+    assert.deepEqual(inApp, names.map((n) => `:root[data-motion="reduce"] ${n}`));
   });
 });
 
@@ -565,7 +623,7 @@ describe("interface checks that arrive with the interface modules", () => {
     const { root } = await startShell();
     assert.equal(root.getAttribute("class"), "fl-app");
     const order = root.children.map((node) => classesOf(node)[0]);
-    assert.deepEqual(order, ["fl-strip", "fl-topbar", "fl-knobs", "fl-map", "fl-transport", "fl-segmented", "fl-side", "fl-charts", "fl-drawer", "fl-footer"]);
+    assert.deepEqual(order, ["fl-strip", "fl-topbar", "fl-knobs", "fl-map", "fl-ledger", "fl-rail", "fl-transport", "fl-segmented", "fl-side", "fl-charts", "fl-drawer", "fl-footer"]);
     const side = root.children.find((node) => classesOf(node).includes("fl-side"));
     assert.deepEqual(side.children.map((node) => classesOf(node)[0]), ["fl-now", "fl-across"]);
     for (const node of root.walk()) {

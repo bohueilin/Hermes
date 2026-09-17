@@ -27,15 +27,19 @@ import {
   STATES,
   depotName,
   lotFill,
+  pickedLabel,
   pinnedCarName,
+  presetOption,
   routeDirection,
   routeShield,
   routeTooltip,
   thisReplayChip,
   unservedCount,
   waitingRiders,
+  worldLine,
 } from "./labels.js";
 import { STATE_FAMILIES } from "../model/metrics.js";
+import { DEFAULT_PRESET_ID, presetById } from "../model/presets.js";
 import { depotArea, plannedLegSeconds } from "../model/routes.js";
 
 /** SVG view box width and height in px of the wide map (768 px and wider, where the map box is at least 640 px). */
@@ -483,6 +487,29 @@ export function placeCar(log, car, at_s = null) {
 export const FLOOR_UNITS_PER_CAR = 3;
 
 const bandedByLog = new WeakMap();
+const peaksByLog = new WeakMap();
+
+/**
+ * The most cars each route direction holds at one snapshot of a run: `Map("H1|SF>PEN" -> cars)`, walked once per
+ * log and kept. Both pictures decide their band fallback from it, each against its own route lengths.
+ */
+export function peakConcurrency(log) {
+  const kept = peaksByLog.get(log);
+  if (kept !== undefined) return kept;
+  const peak = new Map();
+  for (const snap of log.snapshots) {
+    const counts = new Map();
+    for (const car of snap.cars) {
+      const place = placeCar(log, car, snap.t);
+      if (place.kind !== "route") continue;
+      const key = `${place.route}|${place.dir}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    for (const [key, cars] of counts) if (cars > (peak.get(key) ?? 0)) peak.set(key, cars);
+  }
+  peaksByLog.set(log, peak);
+  return peak;
+}
 
 /**
  * The route directions that keep today's flow band instead of drawing one mark per car: those whose busiest snapshot
@@ -503,17 +530,7 @@ export function bandedDirections(log, routes, geometry = GEOMETRIES.wide) {
   }
   const kept = byGeometry.get(geometry);
   if (kept !== undefined) return kept;
-  const peak = new Map();
-  for (const snap of log.snapshots) {
-    const counts = new Map();
-    for (const car of snap.cars) {
-      const place = placeCar(log, car, snap.t);
-      if (place.kind !== "route") continue;
-      const key = `${place.route}|${place.dir}`;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-    for (const [key, cars] of counts) if (cars > (peak.get(key) ?? 0)) peak.set(key, cars);
-  }
+  const peak = peakConcurrency(log);
   const room = new Map(routes.map((route) => [route.id, routeGeometry(route, geometry).length]));
   const banded = new Set();
   for (const [key, cars] of peak) {
@@ -524,10 +541,13 @@ export function bandedDirections(log, routes, geometry = GEOMETRIES.wide) {
   return banded;
 }
 
-/** Depots to draw: the log's when a run exists (it names what ran), else the scenario's; each `{id, area, parking}`. */
+/**
+ * Depots to draw: the log's when a run exists (it names what ran), else the scenario's; each `{id, area, parking,
+ * cleaning_bays, service_bays}` (the bays are what the isometric block draws as cells).
+ */
 function depotList(scenario, log) {
   const source = log?.depots ?? scenario.depots;
-  return source.map((d) => ({ id: d.id, area: d.area, parking: d.parking }));
+  return source.map((d) => ({ id: d.id, area: d.area, parking: d.parking, cleaning_bays: d.cleaning_bays, service_bays: d.service_bays }));
 }
 
 /**
@@ -771,19 +791,32 @@ const countOrAbsent = (value) => (value === null ? notRun() : format.count(value
 
 /**
  * Creates the map. Options: `onKey(event)` for playback shortcuts while the map has focus (returns true when handled),
- * `onInspect(target)` with `{depot}` or `{car}`, `onSelect(selection)` with `{depot}`. Returns
- * `{element, svg, table, update(input), focusState()}`; `update` takes `{scenario, log, frame, clock_s, pinnedCar,
- * seed, stale}`.
+ * `onInspect(target)` with `{depot}` or `{car}`, `onSelect(selection)` with `{depot}`, `onPin(car)` from the
+ * isometric picture's pick output; `view` is `"flat"` (the SVG schematic, the default, so every test that built the
+ * map before the isometric picture existed still builds exactly that) or `"iso"`, which mounts the picture `isoView`
+ * makes (src/ui/iso.js createIsoView, handed in so this module never imports the one that imports it) and adds the
+ * `Isometric | Flat` group to the header; when the picture cannot be made (no 2D context) the flat one stays and the
+ * status line says why. `context2d` and `theme` are seams the isometric picture takes for tests. Returns
+ * `{element, svg, table, update(input), focusState(), iso()}`; `update` takes `{scenario, log, frame, clock_s,
+ * pinnedCar, seed, stale, world, still}`.
  */
-export function createMap({ onKey = () => false, onInspect = () => {}, onSelect = () => {}, matchMedia = defaultMatchMedia } = {}) {
+export function createMap({ onKey = () => false, onInspect = () => {}, onSelect = () => {}, onPin = () => {}, matchMedia = defaultMatchMedia, view = "flat", isoView = null, context2d, theme } = {}) {
+  if (view !== "flat" && view !== "iso") throw new TypeError(`a map view is "flat" or "iso", got ${String(view)}`);
   const chip = el("span", { class: "fl-chip-replay", "data-role": "replay-chip" }, "");
+  // The world line under the chip names the preset and its changed-knob count, so a chip that names a seed can never
+  // pass off one world as another (the slug rule).
+  const world = el("p", { class: "fl-small-label", "data-role": "world-line", style: "margin: 0" });
+  world.hidden = true;
   const tableToggle = el(
     "button",
     { type: "button", class: "fl-button", "aria-pressed": "false", "aria-label": MAP.tableToggle, on: { click: () => setTableOpen(!tableOpen) } },
     CHARTS.table,
   );
-  const header = el("div", { class: "fl-now__row" }, [chip, tableToggle]);
+  const controls = el("div", { class: "fl-group" }, [tableToggle]);
+  const header = el("div", { class: "fl-now__row" }, [el("div", {}, [chip, world]), controls]);
   const nothingRun = el("p", { class: "fl-muted", "data-role": "nothing-run" }, STATES.nothingRun);
+  const viewStatus = el("p", { class: "fl-muted", "data-role": "view-status" });
+  viewStatus.hidden = true;
 
   // Below 768 px the map switches to its phone geometry, so its text and glyphs keep their size (design §7.2, §8.2).
   const media = typeof matchMedia === "function" ? matchMedia(PHONE_QUERY) : null;
@@ -823,15 +856,42 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
   root.append(routesLayer, yardsLayer, carsLayer, shieldsLayer, pinnedLayer);
 
   const tooltip = el("div", { class: "fl-tooltip", role: "tooltip", id: "fleetlab-map-tooltip", "data-open": "false" });
-  const stage = el("div", { "data-role": "stage" }, [root, tooltip]);
-  stage.style.position = "relative";
+  const stage = el("div", { "data-role": "stage" }, [root]);
+  // The isometric picture, when asked for and when the browser gives a 2D context; otherwise the flat picture is all
+  // there is and the status line says so. The two pictures share the tooltip, the table twin, the chip, the legend
+  // and the limits chip; only one of them is visible, and only the visible one draws.
+  const iso = view === "iso" && typeof isoView === "function"
+    ? isoView({
+      context2d,
+      theme,
+      matchMedia,
+      onInspect,
+      onSelect,
+      onPin,
+      onRoute: (routeId, open) => showRoute(routeId, open),
+      onLabel: (text) => writeLabelPick(text),
+    })
+    : null;
+  const pictures = el("div", { "data-role": "pictures" }, [stage, iso === null ? null : iso.element, tooltip]);
+  pictures.style.position = "relative";
+  let isoShown = iso !== null;
+  const viewButtons = iso === null ? [] : [["iso", MAP.viewIso], ["flat", MAP.viewFlat]].map(([which, text]) =>
+    el("button", { type: "button", class: "fl-button", "data-view": which, "aria-pressed": "false", on: { click: () => setView(which) } }, text));
+  if (iso !== null) controls.append(el("div", { class: "fl-group", role: "group", "aria-label": MAP.viewName, "data-role": "view-group" }, viewButtons));
+  if (view === "iso" && iso === null) {
+    viewStatus.hidden = false;
+    setText(viewStatus, MAP.isoFallback);
+  }
 
   // One swatch and word per family, in unit-bar row order: the key glyph and the block as drawn, so hue is never the only
   // cue (design §8.2). The unit legend is its own line, and the mark legend beside it, because the map draws two
   // encodings of one quantity at once and neither may be left to be guessed (design §7.3 as amended, motion plan H-c).
+  // The isometric picture swaps the line: one body is one car or carries a count, and a cube is a tally of five.
+  const unitLegend = el("p", { "data-role": "unit-legend", style: "margin: 0" }, MAP.unitBarLegend);
+  const markLegend = el("p", { "data-role": "mark-legend", style: "margin: 0" }, MAP.oneMarkOneCar);
   const legend = el("div", { class: "fl-small-label", "data-role": "legend" }, [
-    el("p", { "data-role": "unit-legend", style: "margin: 0" }, MAP.unitBarLegend),
-    el("p", { "data-role": "mark-legend", style: "margin: 0" }, MAP.oneMarkOneCar),
+    unitLegend,
+    markLegend,
     el("ul", { class: "fl-map-legend", "data-role": "family-legend" }, FAMILY_ORDER.map((family) =>
       el("li", { "data-family": family }, [familySwatch(family), el("span", {}, MAP.families[family])]))),
   ]);
@@ -842,22 +902,50 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
   // The map's first model-limits chip (design §5.8, H-7). Marks that move make two limits easy to misread: a car on a
   // leg never re-plans, so cars of different leg times share a stretch; and an area keeps no place inside it, which is
   // why its cars are still bars. Both sentences are visible text, never a tooltip, and the chip takes no tab stop.
+  // The isometric picture owes five more (design §5.8 as amended): the geometry is an invented sketch, a body's shape
+  // is a convention and its motion an interpolation, and the block's bay cells are neither numbered nor staffed.
+  const isoLimits = iso === null ? [] : ["isoSketch", "bodyIsConvention", "fixedTaskTimes", "noStaff", "baysNotNumbered"].map((key) => el("span", { "data-limit": key }, MODEL_LIMITS[key]));
   const limits = el("p", { class: "fl-limits-chip", "data-role": "model-limits", style: "margin: 4px 0 0" }, el("span", {}, [
     el("span", { "data-limit": "hourlyTraffic" }, MODEL_LIMITS.hourlyTraffic),
     " ",
     el("span", { "data-limit": "areasArePoints" }, MODEL_LIMITS.areasArePoints),
+    ...isoLimits.flatMap((node) => [" ", node]),
   ]));
 
   const table = el("table", { class: "fl-table" });
   const tableWrap = el("div", { class: "fl-sr-only", "data-role": "table-twin" }, table);
   // The legend stays the last visible block, where the corner stamp has always sat beside its short last row.
-  const element = el("div", { "data-role": "map" }, [header, nothingRun, stage, crowded, limits, legend, tableWrap, stamp]);
+  const element = el("div", { "data-role": "map" }, [header, viewStatus, nothingRun, pictures, crowded, limits, legend, tableWrap, stamp]);
 
   let tableOpen = false;
   function setTableOpen(open) {
     tableOpen = open;
     tableToggle.setAttribute("aria-pressed", open ? "true" : "false");
     tableWrap.setAttribute("class", open ? "fl-scroll" : "fl-sr-only");
+  }
+
+  /** The pick output of the isometric picture says when a click landed on a label rather than a body. */
+  function writeLabelPick(text) {
+    if (iso === null) return;
+    iso.output.replaceChildren(el("span", {}, pickedLabel(text)));
+  }
+
+  /**
+   * Shows one picture and hides the other with `hidden` and `inert`, so the hidden one's stops leave the tab order
+   * and the map stays one tab stop; the legend line and the limits chip follow the picture; the visible one redraws.
+   */
+  function setView(which) {
+    isoShown = iso !== null && which === "iso";
+    stage.hidden = isoShown;
+    stage.toggleAttribute("inert", isoShown);
+    if (iso !== null) iso.setHidden(!isoShown);
+    for (const b of viewButtons) b.setAttribute("aria-pressed", (b.getAttribute("data-view") === "iso") === isoShown ? "true" : "false");
+    unitLegend.hidden = isoShown;
+    setText(markLegend, isoShown ? MAP.oneBodyOneCar : MAP.oneMarkOneCar);
+    for (const node of isoLimits) node.hidden = !isoShown;
+    crowdedKey = null;
+    if (lastInput !== null) update(lastInput);
+    applyRoving(false);
   }
 
   // Static structure, rebuilt when the scenario or the depot list changes.
@@ -996,6 +1084,10 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
       areas.set(id, { group, bars, keys, waiting, waitingText, unserved, unservedText, x0, y0, barsKey: null, depots: inArea.map((d) => d.id) });
     }
     built = { scenario, geometry, depotKey: depotRows.map((d) => `${d.id}:${String(d.parking)}`).join(","), routes, areas, depots, shields };
+    // The isometric picture is built on the same scenario, geometry and depot list, so the two pictures and the twin
+    // can never name different depots.
+    if (iso !== null) iso.build({ scenario, geometry, depots: depotRows });
+    crowdedKey = null;
     // The table twin names its rows from the depots and routes just built, and those names are not numbers, so a
     // rebuild always redraws it rather than waiting for one of its numbers to move.
     tableRebuilt = true;
@@ -1031,8 +1123,9 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
         ]),
       ),
     );
-    tooltip.style.left = pct(entry.mid.x / geometry.view.width);
-    tooltip.style.top = pct(entry.mid.y / geometry.view.height);
+    const mid = isoShown ? iso.routeMid(routeId) : null;
+    tooltip.style.left = pct(mid === null ? entry.mid.x / geometry.view.width : mid.x);
+    tooltip.style.top = pct(mid === null ? entry.mid.y / geometry.view.height : mid.y);
     tooltip.hidden = false;
     tooltip.setAttribute("data-open", "true");
     tooltip.setAttribute("data-route", routeId);
@@ -1397,13 +1490,14 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
   // Which directions draw a band, for the run being drawn. It is not decided in build(): a result arrives on the very
   // scenario the map was built on, so build() does not run again for it, and the decision needs the run's snapshots.
   let bands = { log: null, geometry: null, set: new Set() };
+  // The written reasons follow the picture on screen: each picture bands against its own route lengths.
+  let crowdedKey = null;
 
   /** The banded directions of `log` at this geometry, walked once for a run and then kept (motion plan §3.4). */
   function bandsFor(log) {
     if (bands.log === log && bands.geometry === geometry) return bands.set;
     const set = bandedDirections(log, built.scenario.routes, geometry);
     bands = { log, geometry, set };
-    drawCrowded(set);
     return set;
   }
 
@@ -1426,9 +1520,21 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
     crowded.replaceChildren(...reasons);
   }
 
-  /** Draw `input`: `{scenario, log, frame, clock_s, pinnedCar, seed, stale}` (log and frame null before a run). */
+  /** The pinned car's place for the isometric picture: `{car, place, family}`, or null when nothing is pinned. */
+  function pinnedFor(input, model) {
+    const { frame, log, pinnedCar } = input;
+    const car = model.hasLog && typeof pinnedCar === "string" ? frame.cars.find((c) => c.id === pinnedCar) : undefined;
+    if (car === undefined) return null;
+    return { car, place: placeCar(log, car, frame.at_s), family: familyOf(car.state) };
+  }
+
+  /**
+   * Draw `input`: `{scenario, log, frame, clock_s, pinnedCar, seed, stale, world, still}` (log and frame null before a
+   * run; `world` is `{name, changes}` for the world line; `still` is whether the picture is at rest, when the
+   * isometric canvas writes its accessible name). Only the visible picture draws; the table twin always does.
+   */
   function update(input) {
-    const { scenario, log = null, frame = null, clock_s, pinnedCar = null, seed = null, stale = false } = input;
+    const { scenario, log = null, frame = null, clock_s, pinnedCar = null, seed = null, stale = false, world: worldOf = null, still = true } = input;
     const depotKey = depotList(scenario, log).map((d) => `${d.id}:${String(d.parking)}`).join(",");
     if (built === null || built.scenario !== scenario || built.depotKey !== depotKey || built.geometry !== geometry) build(scenario, log);
     const model = frameModel({ scenario, log, frame, clock_s });
@@ -1438,27 +1544,40 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
     nothingRun.hidden = model.hasLog;
     chip.hidden = !(model.hasLog && Number.isSafeInteger(seed));
     if (!chip.hidden) setText(chip, thisReplayChip(seed));
+    world.hidden = worldOf === null;
+    if (worldOf !== null) setText(world, worldLine(worldOf));
     stage.setAttribute("class", stale ? "fl-stale" : "");
+    if (iso !== null) iso.stage.classList.toggle("fl-stale", stale);
 
-    const banded = bandsFor(log);
-    for (const r of model.routes) {
-      const entry = built.routes.get(r.id);
-      drawChevrons(entry, r);
-      drawFlow(entry, r, banded);
+    let banded;
+    if (isoShown) {
+      iso.update({ model, frame, log, scenario, pinned: pinnedFor(input, model), still, peaks: log === null ? null : peakConcurrency(log), floorUnitsPerCar: FLOOR_UNITS_PER_CAR });
+      banded = iso.banded();
+    } else {
+      banded = bandsFor(log);
+      for (const r of model.routes) {
+        const entry = built.routes.get(r.id);
+        drawChevrons(entry, r);
+        drawFlow(entry, r, banded);
+      }
+      for (const id of AREA_ORDER) {
+        const a = model.areas[id];
+        const area = built.areas.get(id);
+        drawBars(area, a.families);
+        area.waiting.toggleAttribute("hidden", a.waiting === null);
+        if (a.waiting !== null) setText(area.waitingText, waitingRiders(a.waiting));
+        const recent = a.unservedRecent ?? 0;
+        area.unserved.toggleAttribute("hidden", recent === 0);
+        if (recent > 0) setText(area.unservedText, unservedCount(recent));
+      }
+      for (const d of model.depots) drawDepot(built.depots.get(d.id), d);
+      drawCars(model, banded);
+      drawPinned(input, model);
     }
-    for (const id of AREA_ORDER) {
-      const a = model.areas[id];
-      const area = built.areas.get(id);
-      drawBars(area, a.families);
-      area.waiting.toggleAttribute("hidden", a.waiting === null);
-      if (a.waiting !== null) setText(area.waitingText, waitingRiders(a.waiting));
-      const recent = a.unservedRecent ?? 0;
-      area.unserved.toggleAttribute("hidden", recent === 0);
-      if (recent > 0) setText(area.unservedText, unservedCount(recent));
+    if (crowdedKey !== banded) {
+      crowdedKey = banded;
+      drawCrowded(banded);
     }
-    for (const d of model.depots) drawDepot(built.depots.get(d.id), d);
-    drawCars(model, banded);
-    drawPinned(input, model);
 
     if (tableChanged(model, seed)) drawTable(model, seed);
     if (tooltip.getAttribute("data-open") === "true") showRoute(tooltip.getAttribute("data-route"), true);
@@ -1480,17 +1599,21 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
     return items[Math.min(focus.index, items.length - 1)];
   }
 
+  /** The picture that holds the roving stops now: the isometric overlay or the SVG root. */
+  const pictureNode = () => (isoShown ? iso.overlay : root);
+
   function nodeFor(key) {
-    return root.querySelector(`[data-focus-key="${key}"]`);
+    return pictureNode().querySelector(`[data-focus-key="${key}"]`);
   }
 
   function applyRoving(moveFocus) {
     const key = currentKey();
-    for (const node of root.querySelectorAll("[data-focus-key]")) node.setAttribute("tabindex", node.getAttribute("data-focus-key") === key ? "0" : "-1");
+    for (const node of pictureNode().querySelectorAll("[data-focus-key]")) node.setAttribute("tabindex", node.getAttribute("data-focus-key") === key ? "0" : "-1");
     if (moveFocus) nodeFor(key)?.focus();
   }
 
-  root.addEventListener("focusin", (event) => {
+  // Both pictures share one roving grammar (design §7.7): the listeners bind to whichever holds the stops.
+  const onFocusIn = (event) => {
     const node = event.target?.closest?.("[data-focus-key]");
     if (!node) return;
     const [kind, id] = node.getAttribute("data-focus-key").split(/:(.*)/s);
@@ -1502,9 +1625,9 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
       if (index >= 0) focus = { level: "inner", area, index };
     }
     applyRoving(false);
-  });
+  };
 
-  root.addEventListener("keydown", (event) => {
+  const onKeyDown = (event) => {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const key = event.key;
     let handled = true;
@@ -1540,7 +1663,12 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
       return;
     }
     if (handled) event.preventDefault();
-  });
+  };
+  for (const node of iso === null ? [root] : [root, iso.overlay]) {
+    node.addEventListener("focusin", onFocusIn);
+    node.addEventListener("keydown", onKeyDown);
+  }
+  setView(isoShown ? "iso" : "flat");
 
   const onMedia = () => {
     const next = geometryNow();
@@ -1557,9 +1685,14 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
     update,
     /** The geometry in use: "wide" or "phone". */
     geometry: () => geometry.name,
+    /** The isometric picture (src/ui/iso.js), or null when the map draws the flat one only. */
+    iso: () => iso,
+    /** Which picture is on screen: "iso" or "flat". */
+    view: () => (isoShown ? "iso" : "flat"),
     /** Stops following the phone media query, and drops the frame this map was drawing. */
     destroy() {
       media?.removeEventListener?.("change", onMedia);
+      iso?.destroy();
       releaseFrameModel();
     },
     /** The roving focus position: `{level, area, index, key}`. */
@@ -1572,19 +1705,43 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
 }
 
 /**
+ * The world the picture is drawing, for the world line: the preset's name and the changed-knob count. It comes from
+ * the run whenever a replay is on screen, because a finished run survives a preset switch or a knob change (the store
+ * only marks it out of date), and a line naming the world now in the knobs over a picture of another world would be
+ * the misattribution the line exists to prevent.
+ */
+function worldOf(state) {
+  const world = state.run.log !== null && state.run.worldAtQueue !== null ? state.run.worldAtQueue : { presetId: state.presetId, changes: state.changes.length };
+  const preset = presetById(world.presetId);
+  const name = preset === null ? String(world.presetId) : preset.id === DEFAULT_PRESET_ID ? preset.title : presetOption({ id: preset.id, title: preset.title });
+  return { name, changes: world.changes };
+}
+
+/** Whether a store action landed the clock on a step or a jump, which the picture treats as a rest (design §7.7). */
+function stepped(action) {
+  if (action === null || action === undefined) return false;
+  return action.type === "clock/step" || action.type === "clock/jump" || (action.type === "clock/set" && action.reason === "step");
+}
+
+/**
  * Mounts the map in the map region, following `store` and the `playback` controller. `onShortcuts` opens the shortcut
  * list for `?`. `frame()` gives the frame to draw, so a caller that already took one for the whole page hands the map
- * that one instead of a second (the default takes playback's own). Returns the map object with a `destroy()`.
+ * that one instead of a second (the default takes playback's own). `isoView` is src/ui/iso.js createIsoView when the
+ * page wants the isometric picture (the flat one stays the fallback and the test default). Returns the map object
+ * with a `destroy()`.
  */
-export function mountMap(region, { store, playback, onShortcuts = null, frame = () => playback.frame() }) {
+export function mountMap(region, { store, playback, onShortcuts = null, frame = () => playback.frame(), isoView = null }) {
   const map = createMap({
+    view: isoView === null ? "flat" : "iso",
+    isoView,
     onKey: (event) => playback.handleKey(event, { arrows: false, onShortcuts }),
     onInspect: (target) => store.dispatch({ type: "inspector/open", target }),
     onSelect: (selection) => store.dispatch({ type: "selection/set", selection }),
+    onPin: (car) => store.dispatch({ type: "fork/pin", car }),
   });
   region.replaceChildren(map.element);
-  const render = () => {
-    const s = store.getState();
+  const render = (state = store.getState(), action = null) => {
+    const s = state;
     const log = s.run.log;
     // A result drawn after a knob change keeps the scenario it ran on (the store marks it out of date).
     const scenario = log !== null && s.run.scenarioAtQueue !== null ? s.run.scenarioAtQueue : s.scenario;
@@ -1596,10 +1753,13 @@ export function mountMap(region, { store, playback, onShortcuts = null, frame = 
       pinnedCar: s.fork.pinnedCar ?? s.selection?.car ?? null,
       seed: s.run.selectedSeed,
       stale: s.run.stale,
+      world: worldOf(s),
+      // At rest (paused, or a step just landed) the isometric canvas writes its name; while playing it never does.
+      still: !s.playing || stepped(action),
     });
   };
-  const unsubscribeStore = store.subscribe(render);
-  const unsubscribePlayback = playback.onChange(render);
+  const unsubscribeStore = store.subscribe((state, action) => render(state, action));
+  const unsubscribePlayback = playback.onChange(() => render());
   render();
   return {
     ...map,

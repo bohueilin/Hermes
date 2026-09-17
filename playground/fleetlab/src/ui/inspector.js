@@ -62,18 +62,46 @@ function acrossText(summaries, key, format) {
   return spreadText(values.map((v) => v.value), format);
 }
 
+/**
+ * One depot at second `t_s` in this replay, read from the snapshot at or before it and from the visits still open
+ * there: `{id, at_s, held, stalls, queued, oldestWait_s, inBays, bays, cleanBays, serviceBays, ready}`. `queued` counts
+ * the cars that finished intake and have not started a task, which is the queue the drawer's NOW flow writes. The
+ * walkthrough's four-depot table reads this same function, so the table and the drawer cannot disagree about one depot
+ * at one second.
+ */
+export function depotView(log, depotId, t_s) {
+  const depot = log.depots.find((d) => d.id === depotId);
+  if (depot === undefined) return null;
+  const snapshot = snapshotAt(log, t_s);
+  const t = snapshot.t;
+  const view = snapshot.depots.find((d) => d.id === depotId);
+  const open = log.visits.filter((v) => v.depot === depotId && v.arrival_s <= t && (v.ready_s === null || v.ready_s > t));
+  const waiting = open.filter((v) => v.intake_end_s !== null && v.intake_end_s <= t && (v.first_task_s === null || v.first_task_s > t));
+  return {
+    id: depotId,
+    at_s: t,
+    held: view.stalls_held,
+    stalls: depot.parking,
+    queued: waiting.length,
+    oldestWait_s: waiting.length === 0 ? null : t - Math.min(...waiting.map((v) => v.intake_end_s)),
+    inBays: snapshot.cars.filter((c) => c.state === "IN_SERVICE" && c.location?.depot === depotId).length,
+    bays: depot.cleaning_bays + depot.service_bays,
+    cleanBays: depot.cleaning_bays,
+    serviceBays: depot.service_bays,
+    ready: view.ready,
+  };
+}
+
 /** The NOW flow of a depot at the snapshot's second: arriving, intake, queue with its oldest wait, each bay, ready. */
-function flowStages(log, snapshot, depot, scenario) {
+function flowStages(log, snapshot, depot, scenario, depotNow) {
   const t = snapshot.t;
   const { stages } = INSPECTOR;
-  const view = snapshot.depots.find((d) => d.id === depot.id);
   const here = snapshot.cars.filter((c) => c.location?.depot === depot.id);
   const openVisits = log.visits.filter((v) => v.depot === depot.id && v.arrival_s <= t && (v.ready_s === null || v.ready_s > t));
-  const waiting = openVisits.filter((v) => v.intake_end_s !== null && v.intake_end_s <= t && (v.first_task_s === null || v.first_task_s > t));
   const lines = [
     labels.flowStage({ stage: stages.arriving, count: snapshot.cars.filter((c) => c.state === "TO_DEPOT" && c.leg.to.depot === depot.id).length }),
     labels.flowStage({ stage: stages.intake, count: here.filter((c) => c.state === "INTAKE").length }),
-    labels.queueStage({ count: waiting.length, oldest: waiting.length === 0 ? null : minutes(t - Math.min(...waiting.map((v) => v.intake_end_s))) }),
+    labels.queueStage({ count: depotNow.queued, oldest: depotNow.oldestWait_s === null ? null : minutes(depotNow.oldestWait_s) }),
   ];
   const tasks = [["CLEAN", depot.cleaning_bays, "clean_start_s", scenario.clean_s], ["SERVICE", depot.service_bays, "service_start_s", scenario.service_s]];
   for (const [task, bays, startKey, seconds] of tasks) {
@@ -90,7 +118,7 @@ function flowStages(log, snapshot, depot, scenario) {
       }));
     }
   }
-  lines.push(labels.flowStage({ stage: stages.ready, count: view.ready }));
+  lines.push(labels.flowStage({ stage: stages.ready, count: depotNow.ready }));
   return lines;
 }
 
@@ -124,8 +152,7 @@ export function mountInspector({ store, region, onOpenFork = () => {} }) {
     const depot = log.depots.find((d) => d.id === depotId);
     if (depot === undefined) return [absentLine(labels.ABSENT_REASONS.notComputed)];
     const snapshot = snapshotAt(log, t);
-    const view = snapshot.depots.find((d) => d.id === depotId);
-    const inBays = snapshot.cars.filter((c) => c.state === "IN_SERVICE" && c.location?.depot === depotId).length;
+    const now = depotView(log, depotId, t);
     const board = depotBoardCharts({ log, scenario, depots: [depotId], seed: log.seed });
     board.setCursor(t);
     const result = { ...log, scenario, window: scenario.window };
@@ -135,10 +162,10 @@ export function mountInspector({ store, region, onOpenFork = () => {} }) {
       return [INSPECTOR.ledgerRows[row], metricText(computeMetric(result, ref), format), acrossText(state.run.summaries, metricKey(ref), format)];
     });
     return [
-      el("p", { class: "fl-mono" }, labels.depotStatus({ held: view.stalls_held, stalls: depot.parking, inBays, cleanBays: depot.cleaning_bays, serviceBays: depot.service_bays })),
+      el("p", { class: "fl-mono" }, labels.depotStatus({ held: now.held, stalls: now.stalls, inBays: now.inBays, cleanBays: now.cleanBays, serviceBays: now.serviceBays })),
       el("p", { class: "fl-limits-chip" }, labels.MODEL_LIMITS.noStaff),
       heading(INSPECTOR.now),
-      el("ol", { class: "fl-flow" }, withArrows(flowStages(log, snapshot, depot, scenario).map((text) => el("li", { class: "fl-mono" }, text)), labels.FLOW_ARROW)),
+      el("ol", { class: "fl-flow" }, withArrows(flowStages(log, snapshot, depot, scenario, now).map((text) => el("li", { class: "fl-mono" }, text)), labels.FLOW_ARROW)),
       carsHere(state, snapshot, depotId),
       heading(INSPECTOR.board),
       board.node,

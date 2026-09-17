@@ -114,7 +114,11 @@ every digest, and every metric whose definition differs from FleetLab's (it carr
 | Points, streaks, badges, leaderboards, "best configuration" | Rewards pushing a number; guardrails are non-compensatory, so any ranking is a hidden composite score. |
 | A single score or fleet-health gauge | PRD §49: lower wait with more unserved riders is not an unqualified win. |
 | Colour-flooded verdict cards | They encode the verdict in colour alone and read as a scoreboard. |
-| 3D city or vehicle models | Device budget spent on fidelity the question does not need; occlusion hurts counting and accessibility. |
+| A rendered 3D city, vehicle models, baked frames, textures or sprite sheets | Still rejected, and rejected again in 2026-09-16's build. Device budget spent on fidelity the question does not need; occlusion hurts counting and accessibility; every asset would be a `data:` URI against the 2 MB cap and would need a build step the zero-dependency rule forbids; and a rendered city reads as a real place, which H-2 forbids. A hero still made outside the page and never in `dist/` is the one legitimate use. |
+| A camera the visitor can move, perspective, lighting, a sky, a day-and-night tint | A moving camera invites reading the picture as a place. The model has no daylight, so a tint would be a lighting simulation it does not run: the canvas is the same grey at 03:00 as at 15:00, and the overnight is named by the two knobs that bound it, the recall and the release. |
+| A language model in the page or the loop | A sampled model is not a pure function of scenario and seed, so the first token it produced would void the pinned verdicts and the parity proof; a 4-bit 2B model is about 1.5 GB against a 2 MB cap, and `connect-src 'none'` leaves no way to fetch one. |
+| An imported world model or traffic simulator | A dependency; a second source of truth for position that would disagree with the interval log every number reads; it cannot run offline; and it breaks §5.9's "playback never runs the model" at the root. Richer travel belongs in the teaching model as a declared, seeded rule with fixtures, never in the drawing layer. |
+| WebGL for the isometric picture | Measured three times cheaper in JavaScript than Canvas 2D, and that saving is 0.1 ms of an 8 ms budget bought with a second renderer, a context-loss path during a screen share and a line pass for the 1 px ink edge (the prototype measured both). |
 | Animating Experiment statistics during playback | Makes all-seed numbers look tied to the one replay being watched. |
 | Re-running an experiment when a knob changes | Breaks preregistration: the spec is frozen before results are seen. |
 | Exporting teaching runs as decision records, or exporting FleetLab specs | A decision record is evidence-path and digest-bound; almost no first-build scenario fits FleetLab's grammar anyway (D-04). |
@@ -128,6 +132,18 @@ every digest, and every metric whose definition differs from FleetLab's (it carr
 | Depot staff and shifts (first build) | Bays and parking already carry the throughput lesson; staff adds rosters, a resource and more metrics (D-06). |
 | Editable geography, a fifth area, distances on screen (first build) | Four fixed areas and minutes only keep fixtures hand-derivable (D-07). |
 | URL deep links, a full-page inspector, JSON import (first build) | The single-file build has no routing; revisit later. |
+
+**Accepted instead, and built on 2026-09-16: a procedural isometric schematic.** The map region can draw the same four
+areas as a Canvas 2D isometric picture, generated at run time from the interval log and the schematic's own centres,
+with no asset, no dependency, no build step and no WebGL. It is a schematic stood up, not a place: platforms are flat
+squares at the areas' own centres with no texture, shoreline, street or building; roads are ribbons; a car on a route
+is a shaded box pointing along its ribbon; cars standing in an area stay a tally of cubes, five cars each, whose place
+on the platform means nothing; a depot is a white block. Nothing is lit and no camera moves. Where several cars share
+a leg exactly, one body carries a written count, grouped in model space so the count is a fact of the log and not of
+the screen. The picture draws no word: every label, number and name is DOM over the canvas, where the copy scans and a
+screen reader can read it. The limits chip says all of this before a run as well as during one (§5.8, §7.3, §8.2). The
+flat SVG schematic stays: it is what the tests build by default, what a browser with no 2D context gets with the reason
+written, and one toggle away in the map header.
 
 ## 2. The world knobs
 
@@ -766,14 +782,39 @@ five named moments on the timeline with two-sentence captions generated from the
 properly" action that opens Experiment with the axis filled in. The longer path (UC-01, UC-02, UC-03, UC-08,
 UC-05, UC-10 before the capstone) is later.
 
-### 4.2 Five-minute live walkthrough
-1. **L2, about 90 seconds.** Show the exploratory FleetLab panel (queue up, wait unchanged, 42% unserved), then
-   play the teaching run to 18:30 and point at SJ-1's cleaning bays and queue while SJ wait holds. Open the two
-   preregistered L2 presets, freeze and run both, and read each verdict as it arrives. Say: what you declare before
-   the run decides what counts.
-2. **FLEET-005 panel, about 60 seconds.** REGRESSED, +826.1 s, interval [+735.9, +919.2], unserved +0.057 against
-   0.02, HOLD. Say what you expect from more bays against a shorter clean before running UC-08's preset.
-3. **L3, about 120 seconds.** Pin SF-005, scrub to 17:14, open the fork, play at 900×, pause at 21:00 on SJ-1's lot, jump to day 2 05:45 and 07:15, then Freeze and run. Follow up with `nearest_depot_with_capacity`.
+### 4.2 The walkthrough: four chapters over one replay
+
+Built on 2026-09-16 as `Present`, a layer over the three modes (§7.1). It replaces the hand-driven route this section
+first described, which needed three presets, two mode switches and a detour that lost the verdict. The walk plays one
+world: the operations casebook's OPS-01 evening crunch, animated at the first seed of the preset seed set, which is the
+one replay every beat reads.
+
+`Prepare` runs the window once and the experiment once, in this visitor's browser, through the runtime's ordinary
+public calls, and shows what each took on this visitor's own clock. Until both land, `Next` is off and every figure in
+the ledger reads `not available: nothing has run yet`. After that no beat runs the model again: a beat is a silent seek,
+a pin, an open and a projection of what the run already computed.
+
+| Chapter | Beats | What each beat shows |
+|---|---|---|
+| 1 Operations | the evening peak; the 18:00 hour; the recall; the watched depot at the recall plus 90 minutes; the morning after | riders waiting and cars carrying riders; riders who gave up in that hour beside the completed-ride wait p90 of the area the frozen spec measures; the cars the recall sent in one second and the cars driving to a depot; the queue across the four depots and the watched depot's stalls; the cars driving home, the cars ready, and the second the watched depot's bay queue cleared. Every one of these beats also carries the four-depot table `depot · held · queue · bays · ready` |
+| 2 Analytics | two registers; the verdict | the metric registry, eight rows, each under both registers with its unit, direction, FleetLab status and population, `all rows` to open the rest, and the two charts by hour (the primary's area, the guardrail's depot); then the frozen spec in words and the verdict readout composed from the verdict card's own builders, with minutes beside seconds |
+| 3 Simulation | how a frame is made; one world, two arms | the snapshot second against the second being drawn, whether the positions are interpolated (read from the frame, never from the option passed in), cars on a leg, events so far of the log's own total, the snapshot step, the engine path and what the run took; then the verdict's own watched seed, both arms read at one second at the depot the guardrail names |
+| 4 Product sense | what this stands for; not on this page, and the next question | OPS-01's situation block verbatim (stands for, set as, misses, outside the model, watch) and what the run trades as lower one thing and higher another; then five refusals with their reasons, and the next casebook question by id, title and situation alone, with a button that opens it in Experiment |
+
+Eleven beats behind one `Next` that keeps its own focus. A beat lands on its declared second and stays there: nothing
+autoplays, and where a beat has somewhere to run to the ledger says `Press Play to watch to D1 18:00.` Playback runs at
+300x while presenting, so a played beat of 15 or 30 simulated minutes takes 3 or 6 real seconds. Beat clocks are derived
+from the scenario's own declared knobs (the peak windows, `recall_s`, `release_s`), never searched and never typed, so
+moving a knob moves the beat with it, and a scenario with the release turned off retitles that beat instead of naming a
+second the knobs never set. Every figure carries exactly one register chip, at most three a beat; the narration is
+generated from the run in the second person and speaks once a beat; the rule line names the mechanism the beat shows and
+the chip beside it names the model limit that mechanism owes (§5.8). `Leave the walkthrough`, or Escape from the rail,
+puts the page back as it was with the run, the clock, the pinned car and the verdict kept.
+
+A lone visitor meets the same walk through a reading card that stands above the picture before anything has run:
+`A teaching model of a stylized Bay Area fleet. Every number is invented; the verdict rules are FleetLab's.` with a
+button into the knobs, a button that enters the walk and runs `Prepare`, and a button that closes the card. The card is
+a section, never a dialog, and a reload starts clean (§9.4, D-11).
 
 ### 4.3 What this model shows (not claims about real operations)
 
@@ -1097,6 +1138,23 @@ FleetLab's business-proxy aliases, and every charging, staff, cancellation and s
 | One seed animated | the replay looks like the result | the "This replay" and "Across N replications" registers (§7.4) |
 | An interval over replications | measures simulation variation, not model error | "The interval says nothing about whether the model is right." |
 
+**Rows added 2026-09-16**, the first three for the isometric picture and the rest for the walkthrough, where each is the
+chip of the beat whose mechanism owes it. All of them are visible text with no tab stop, and the picture's three stand
+before a run as well as during one, because they are about the model and not about a replay.
+
+| Simplification | Bias | On-screen caveat |
+|---|---|---|
+| A third dimension over invented geometry | a tilted picture reads as a place, and a platform reads as a footprint | "An isometric sketch of invented geometry. Platforms are areas, not places; roads are ribbons, not streets." |
+| One shaded box per car, moved between snapshots | a box reads as a vehicle type and its motion as a trajectory | "A car's shape and height are drawing conventions, not vehicle types. A car's position between events is an interpolation." |
+| Bay cells drawn in a row on the depot block | a cell reads as a numbered bay with an identity the engine lacks | "Bays are not numbered in this model: cars fill them in the order their task started." (beside the existing fixed-task-time and no-staff rows) |
+| The recall and the release are single events | a real operation staggers both; this one does not | "The recall and the release each act once, at the second you set." |
+| Patience is a fixed limit | unserved arrives as a step inside one hour and nowhere else | "A rider waits exactly the patience you set, then goes unserved; once a car is on its way, the rider waits." |
+| Nothing repositions an idle car | an empty area stays empty until the release sends cars home | "Nothing repositions an idle car; the release sends cars to a home area, not to demand." |
+| Depot assignment counts stalls | a queued car is never sent to another depot's free bays | "Depot assignment counts free stalls, never free bays." |
+| Seeds vary travel only | replications look independent when their demand is shared by design | "Seeds vary travel time; the request stream is the same in every seed of a scenario." |
+| Playback interpolates between 5-minute snapshots | a smooth body reads as a tracked position | "A car's position between events is an interpolation." |
+| Travel variation 0 in a preset | five replications agreeing to the digit read as a broken panel | "Travel variation is 0 in this preset, so every replication repeats the first." |
+
 ### 5.9 Performance
 
 - **Reference preset:** the Bay teaching map scaled to 150 cars (SF 50, PEN 30, SJ 40, EB 30) over the 29-hour window. Budgets, laptop and phone: one
@@ -1317,15 +1375,24 @@ left-to-right sum differ (for example `[1e16, 1.0, -1e16]`).
 | **Experiment** | A preregistered paired A/B on one axis with the verdict rules. | a verdict card in FleetLab's words, marked as a teaching run | produces a decision record, a winner or a score |
 | **Inspect** | The day of one car or one depot, as a drawer opened from any mode. | a timeline and a ledger for that entity | changes the scenario |
 
-Top bar: `FleetLab Playground  Learn · Sandbox · Experiment  |  D1 18:30 · replay 1 of 5 · seed 1001  |  Teaching model`.
+Top bar: `FleetLab Playground  Learn · Sandbox · Experiment  |  Present  |  D1 18:30 · replay 1 of 5 · seed 1001  |  Teaching model`.
 There is no URL state in the first build.
+
+**Present is a layer, never a fourth mode (built 2026-09-16).** The four modes above are unchanged. `Present` is a
+pressed toggle after them that turns the page into a stage, a ledger and a rail and walks §4.2's four chapters; the mode
+underneath carries and is restored untouched when the walk is left. It has its own store key (`present: {on, chapter,
+beat, stop_s, prepared}`) with pure reducers, so where the walk stands is state like any other. Opening it starts at the
+first beat of the first chapter; leaving it keeps `prepared`, because the two runs `Prepare` made are still in the store
+and re-entering must not run them again. Nothing about it is persisted: a reload starts clean (§9.4, D-11). The walk's
+keys (arrows, Home, End, 1 to 4, Space, Escape, `?`) are bound to the rail alone, so they change nothing the page does
+elsewhere.
 
 **What carries across.** From Learn to Sandbox: the preset, the clock and the selected entity. From Sandbox to
 Experiment: the scenario becomes the baseline, and the last knob changed pre-fills the axis with its old and new
 values. From a verdict to Inspect: choosing a seed opens that seed's world in both arms.
 
 **Freeze rule.** Running an experiment freezes its spec. If Sandbox changes afterwards, the verdict shows
-`Spec frozen at 14:02. Sandbox has changed since (3 knobs). This verdict is about the frozen spec.` Editing the
+`Spec frozen at 14:02 (your clock). Sandbox has changed since (3 knobs). This verdict is about the frozen spec.` Editing the
 setup marks the verdict out of date; nothing re-runs silently. A session log lists every run with its seed set and spec digest, so choosing another seed set stays
 visible.
 
@@ -1362,6 +1429,55 @@ flexible map, a 260 px NOW panel; the chart row is 220 px and shares the clock c
 a left drawer (`Knobs · 3 changes`), the NOW panel folds under the map, charts form a 2 × 2 grid. **Phone:** map,
 then transport, then a segmented control (`Now | Charts | All replications`) showing one group at a time; knobs
 open as a full-height sheet with a sticky `Run window` button.
+
+**Presenting, 1280 px and wider (built 2026-09-16)**
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Teaching model: a sketch of Bay Area place names with invented numbers. Not evidence about … │ strip
+├──────────────────────────────────────────────────────────────────────────────────────────────┤
+│ FleetLab Playground  Learn Sandbox Experiment  [Present]      D2 02:00 · replay 1 of 5        │ top bar
+├───────────────────────────────────────────────────────┬──────────────────────────────────────┤
+│ THIS REPLAY · seed 1001                    [Table]    │ 1 Operations                         │
+│ OPS-01 Evening crunch: more cars in SF · 0 changes     │ SF-2 at 02:00          D2 02:00      │
+│                                                       │ queued across the four depots        │
+│        the isometric picture, or the flat one         │ 56                  THIS REPLAY      │
+│                                                       │ SF-2 stalls held                     │
+│ Traffic changes on the hour … An isometric sketch …   │ 25/30               THIS REPLAY      │
+│ One body is one car on a route, or carries a count …  │ depot held queue bays ready          │
+│ pick output: SF-017, on a trip  [Inspect] [Pin]       │ narration · rule · caveat chip       │
+│ Teaching model                                        │ JUST HAPPENED · THIS REPLAY          │
+├───────────────────────────────────────────────────────┴──────────────────────────────────────┤
+│ [Play][Back][Next] 1 Operations 2 Analytics 3 Simulation 4 Product sense Step 4 of 5 300×     │ rail
+│                    [Leave the walkthrough]  ▸ Keyboard shortcuts                              │
+├──────────────────────────────────────────────────────────────────────────────────────────────┤
+│ footer: Every number here is illustrative. engine: worker  reduced motion                     │
+└──────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+Grid areas `strip / top / map ledger / rail / transport / footer`, columns `minmax(0, 1fr) minmax(360px, 480px)`. The
+knobs, the side column (NOW and across replications), the chart row, the segmented control and the transport's control
+row are `hidden` and `inert` while presenting, because their numbers are the ledger's numbers; the strips container
+stays. The map region keeps its replay chip, its world line, its `Table` toggle, its honesty captions and its legend;
+the `Isometric | Flat` group is hidden while presenting, because the rail is the only row of controls there and the
+picture is not a thing to choose between (owner answer, 2026-09-16). The one beat that shows both arms of a verdict seed
+hides the map region exactly as opening the fork from the verdict card does, and the rail says why in words.
+
+DOM order is stage, ledger, rail, which is the order they are read and tabbed through: the presenting grid never moves a
+region past another (§7.7). The ledger is itself a tab stop, because its own box is what scrolls and a beat with no
+control inside it would otherwise put its overflow out of every keyboard's reach.
+
+The stage is capped by the viewport height at the picture's own 640 by 500 ratio, against a constant
+`--present-chrome: 412px` for everything above and below it: the strip, the top bar, the rail, the gaps, and the map
+panel's own header, honesty captions, legend and pick output. Measured in a browser on this source, light theme, with
+`document.hidden` true, so these are layout numbers and never frame numbers: the strip, the top bar, the rail and the
+gaps take 161 px, and the map panel spends 57 px above the picture and 171 px at 1512 px or 188 px at 1280 px below it.
+At 1512 x 982 the canvas is 730 x 570 (scale 1.14) and the rail's foot stands at 958 of 982; at 1280 x 800 it is
+497 x 388 (scale 0.78) and the foot at 794 of 800. The smallest body face on screen, measured off the canvas's own
+fills, is 5.65 px at 1512 x 982 and 3.85 px at 1280 x 800, which is why the advice is to present from a 14-inch display
+at 100 percent zoom (§8.2).
+
+Below 1280 px the presenting layout is one column in DOM and tab order: strip, top bar, stage, ledger, rail, transport,
+footer. It works and it is not polished for a phone: the compact rail, two figures a beat and the phone form of the
+reading card were planned as a later phase and are not built.
 
 **Depot inspector (drawer, 560 px on desktop)**
 ```
@@ -1495,6 +1611,72 @@ about the candidate.`
   Both are visible text with no tab stop, and both stand before a run as well as during one, because they are about
   the model and not about a replay.
 - **Corner stamp:** `Teaching model` in the map's lower-right corner.
+
+**The isometric picture (built 2026-09-16), and the flat fallback.** The map region can draw the same second as a
+Canvas 2D isometric schematic instead of the SVG one. Only one picture is on screen and only the visible one draws; the
+hidden one is `hidden` and `inert`, so its stops leave the tab order and the map stays exactly one tab stop. Both read
+the one frame model the page computes per frame (`frameModel`, decision 42) and share the chip, the world line, the
+table twin, the tooltip, the crowded-route reasons, the limits chip and the legend, so the two can never disagree about
+one second. `Isometric | Flat` sits in the map header outside the walkthrough. A browser whose canvas gives no 2D
+context keeps the flat picture and the map writes the reason in visible text.
+
+- **Projection and geometry.** A 2:1 dimetric projection (`sx = x - y`, `sy = (x + y) / 2 - z`), a fixed camera, no pan,
+  zoom or rotate. Platform centres are the flat schematic's own area centres pulled back through the inverse
+  projection, so the tilted picture is the same diagram stood up. Platforms are flat squares of half-side 49 units wide
+  and 31 on the phone, filled in `--panel-alt` with a 1 px `--rule-strong` edge: no texture, no shoreline, no street,
+  no building, and no raised slab that could hide a body.
+- **Ribbons.** A highway is 7 units wide at offset -8 from the centre line, a local route 3.5 at +8, both flat on the
+  ground and clipped at the platform edges. Congestion is the same encoding as the flat picture: chevron density per
+  40 units of ribbon, cached per direction and level, plus a neutral step from `--rule-strong` to `--faint` on a
+  congested half; never a hue, never dashed.
+- **Bodies.** One box per car whose place is a route, at `placeCar`'s own fraction along its ribbon and pointing along
+  it; three visible faces, each the family's hue shaded per face; a 1 px `--ink` edge on every body; a hollow top for
+  `ENROUTE_PICKUP` and `REPOSITIONING` against a filled one for `ON_TRIP` and `TO_DEPOT`. Only those four states ever
+  reach the picture, and only the two route hues (§8.2).
+- **Cubes.** One cube stands for five cars standing in an area, in rows from the platform's back corner by family, for
+  the same reason the flat picture draws unit bars: the model gives an area no inside geography. Where a cube stands on
+  its platform means nothing, and the legend says so.
+- **Depot blocks.** A white block at its platform's own corner, a second depot of the same area below the first. Its
+  lot fill is a band climbing the two visible side faces at `stalls_held / parking`, with a 1 px `--ink` line along its
+  top edge; its bay cells are one row along the top, the cleaning bays then the service bays, flat and panel-coloured
+  when free and raised and filling when busy, the fill being elapsed over the task time you set, clamped to 1, with a
+  blocked car's cell full and its reason written. The queue and ready bars stand at the back corners, capped at 12
+  units, so the bar is a hint and the number under the block is the fact. This is where the map motion plan's Phase 3
+  (bay cells) landed.
+- **Coincidence.** Bodies are grouped per frame in model space by `(route, direction, fraction)` and then by state
+  family: one body and one `×N` plate per family in a group, so a mixed group draws two bodies and never one in one
+  hue, and the same clock at two canvas sizes gives the same counts. Grouping in model space is the honesty rule: a key
+  coarser than the leg's own fraction invents coincidence the log does not hold. Measured on the default preset at the
+  recall second, the recall puts whole convoys on one leg at one instant and five stacks of 22, 18, 9, 9 and 9 carry 67
+  of the 85 cars on routes.
+- **Riders.** Up to eight `--ink` rings along a platform's front edge, each arc the rider's elapsed time over the
+  patience you set, with the true count always written beside them; an unserved rider is the word and the count in
+  `--hold`, folded after ten simulated minutes, never on a ribbon.
+- **Every word is DOM.** The canvas never calls `fillText` or `strokeText`. Area names, depot ids, route shields, the
+  numbers under each block, the waiting and unserved texts, the count plates and the pinned car's plate are HTML in an
+  overlay with `contain: layout paint`; static labels are placed once per geometry by a scorer that refuses any overlap
+  of two 44 px targets and keeps the numbers tag inside the stage at both geometries, and per-frame elements move by
+  `transform` behind a same-string guard, never by `left` or `top`. The overlay carries the map's 20 roving stops (4
+  areas, 4 depots, 12 routes) with the same grammar as the flat picture; the canvas itself is `role="img"` with
+  `tabindex="-1"` and writes its accessible name only when the picture is at rest. The replay chip, the world line, the
+  `Table` toggle and the `Isometric | Flat` group stay in the map header as they were, and the corner stamp stays where
+  it has always sat.
+- **The route fallback.** The same rule as the flat picture's, applied to the isometric ribbon lengths: a direction
+  whose corridor is shorter than three units for every car it holds at its busiest snapshot keeps a flat band and the
+  map writes the reason. Measured: nothing bands on the wide picture at the default fleet or at §5.9's 150-car
+  reference, and nothing bands on the phone, where the two short corridors are 77 units and hold at most 20 cars a
+  direction. The isometric ribbons are longer than the flat ones in the corridors that band there, which is why the
+  flat picture bands one direction of H1 wide and this one bands nothing.
+- **Reduced motion and staleness.** Reduced motion is the frame the page already hands it (`interpolate: false`), so
+  bodies land on the 5-minute grid with no second code path, and the same second drawn twice is call-for-call
+  identical. A stale replay greys the picture through the same class the SVG uses.
+- **Model limits.** Three more caveats join the map's chip whenever the isometric picture is on screen (§5.8), and the
+  legend line swaps to `One body is one car on a route, or carries a count. One cube is 5 cars standing in an area.
+  Where a cube stands on its platform means nothing. A car inside an area is a cube, not a body.`
+- **The world line.** Under the replay chip, on every replay surface: the preset's name and its changed-knob count
+  (`OPS-01 Evening crunch: more cars in San Francisco · 0 changes`). It comes from the run, not from the knobs, because
+  a finished replay survives a preset switch and a chip that named a seed but not a world would let one world pass for
+  another.
 
 ### 7.4 Time and the two registers
 
@@ -1665,6 +1847,34 @@ only cue.
   and the surface ring is 1.13:1, so it does not separate the mark there either. Both pairs are recorded in `test/a11y.test.mjs`
   beside the unit bars, which have always drawn on that surface; the drawing is not changed here and the gap is stated.
 
+**The body, in the isometric picture (built 2026-09-16).** A body is a box of 10 by 7 by 4 plan units with pixel floors
+of 12 px on its longest side and 8 px on its shortest, which bind below scale 1.2 and 1.15 and keep the box legible when
+the stage is small. Shape still carries the state: hollow top for `ENROUTE_PICKUP` and `REPOSITIONING`, filled for
+`ON_TRIP` and `TO_DEPOT`, in the same two route hues, with a 1 px `--ink` edge on every body. Colour is never the only
+cue, and no fourth hue reaches a route.
+
+- **Faces.** One hue per box, three visible faces. On the light theme the two side faces darken to 0.84 and 0.68 of the
+  hue, where darkening can only raise the ratio against `--panel`; on the dark theme a darkened side would fall toward
+  the ground, so sides lighten to 1.14 and 1.28, clamped. Measured on the tokens (top, +y side, +x side, against
+  `--panel`, computed by the drawing's own arithmetic and pinned in `test/a11y.test.mjs`): rider work 4.42, 5.85, 7.85
+  light and 4.75, 6.00, 7.16 dark; empty drive 3.20, 4.40, 6.14 light and 4.45, 5.64, 6.34 dark; available 2.82, 3.89,
+  5.54 light and 5.07, 6.49, 8.15 dark; at a depot 2.17, 3.05, 4.47 light and 5.63, 7.26, 9.05 dark. The two route hues
+  hold 3:1 on every face in both themes. The cube and block hues fall under 3:1 on some light faces and carry the 1 px
+  `--ink` edge there, exactly as their flat glyphs do. A side face never sits below its own top face.
+- **Extents on screen.** At scale 1.0 a body on the two steep corridors is about 8 by 12 px and on the flattened
+  corridors about 15 by 9 px with a top face about 5 px tall. On the presenting stage the smallest body face measures
+  5.65 px at 1512 x 982 and 3.85 px at 1280 x 800 (§7.2). On the flattened corridors the within-family difference
+  (a hollow top against a filled one) is a thin band, so the state is also carried by the table twin and, while
+  presenting, by the ledger's counts. The advice that follows from the measurement is to present from a 14-inch display
+  at 100 percent zoom.
+- **Overlap is meaningful here too.** Two bodies at nearly the same point genuinely are at nearly the same place. Exact
+  coincidence is not drawn twice: the group carries a written count (§7.3). What decides whether a direction draws
+  bodies at all is the same measured legibility floor, against the isometric ribbon's own length, never a rule about
+  glyph spacing.
+- **No hue is spelled in JavaScript.** The picture reads its tokens from the stylesheet at mount and again on a theme
+  change, so colour stays in `styles.css` where `test/a11y.test.mjs` reads it, and every fill and stroke on the canvas
+  is a token or a shaded face of one. A status colour on a car, an area or a series is still refused.
+
 ### 8.3 Other encodings
 
 - **Depot board:** position encodes the bay (one lane per bay, `C1`, `S1`); fill encodes busy (solid) or waiting (outline); lot held
@@ -1696,6 +1906,16 @@ only cue.
 - Knob changes and scrubbing are frequent and keyboard-reachable, so they do not animate.
 - No infinite attention motion: no pulsing depots, shimmering figures or looping idle cars.
 - Reduced motion is written per element (§7.4), never as a global kill switch.
+- **The isometric picture adds no motion of its own (2026-09-16).** A body moves because the clock moves, and the
+  canvas redraws only when the model, the pinned car, the hues or the stage size has changed. There is no lighting and
+  no tint to animate: the canvas is the same grey at 03:00 as at 15:00, and the overnight is the span between the
+  recall second and the release second the knobs set, never a day-and-night cycle the model does not run. The overlay's plates
+  move by `transform` behind a same-string guard under `contain: layout paint`, so a frame never touches the page's
+  layout. No `transition`, `animation`, `keyframes` or `will-change` was added for it anywhere.
+- **A beat change is instant (2026-09-16).** The walkthrough's ledger swaps and the clock cuts; nothing tweens across a
+  jump, because a tween would pass through seconds the model never produced, and no figure ever counts up, for the same
+  reason. Both reduced-motion blocks in `styles.css` stay exactly as they were, which `test/a11y.test.mjs` asserts
+  selector for selector.
 
 ### 8.5 Never on this page
 
@@ -1830,9 +2050,26 @@ The smallest build that fully serves the six seed variables and the worked examp
 | Learn | L1 UC-04, L2 UC-09, L3 UC-07 |
 | Experiment | presets UC-01, UC-02, UC-03, UC-05, UC-08a, UC-08b, UC-10 and the two L2 presets; one axis; scopes; guardrails with NOT EVALUABLE; frozen spec; session log; the quoted FLEET-005 reference panel and the exploratory two-zone probe panel, with their §1.3 labels; after the first build, the operations casebook of §4.4: twenty presets of kind `ops`, one chooser group per theme, each with a SITUATION block |
 | Inspect | car and depot drawers |
-| Views | §7.2 layouts; the map with unit bars, one mark for every car driving a route (with the banded fallback and the limits chip of §7.3) and the pinned car; the charts of §7.5 |
+| Views | §7.2 layouts; the map with unit bars, one mark for every car driving a route (with the banded fallback and the limits chip of §7.3) and the pinned car; the charts of §7.5; since 2026-09-16 the isometric picture of §7.3 with its depot blocks and bay cells, the flat schematic behind `Isometric | Flat` and as the no-context fallback, `Present` with §4.2's four chapters, the metric registry and the verdict readout, the refusals list and the reading card |
 | Engineering | §9.2 placement and rules R1-R9; §9.5 suites; the packed file built locally, not committed (D-09) |
-| Not in the first build | charging, staff, closing hours, inspection and quality stages, deep clean, soiled trips, disruptions, cancellations, suppressed demand, planning profiles, offsets inside an area, demand that varies by replication, variable task times, multi-regime experiments, sweeps of any kind, a fifth area, editable geography, individual glyphs for cars that are not driving a route (a car standing in an area or sitting at a depot has no place inside it to draw, §7.3), bay cells inside the depot tile, a day-long bar under the scrubber, URL state, import, FleetLab spec export, a CI step, graduation |
+| Not in the first build | charging, staff, closing hours, inspection and quality stages, deep clean, soiled trips, disruptions, cancellations, suppressed demand, planning profiles, offsets inside an area, demand that varies by replication, variable task times, multi-regime experiments, sweeps of any kind, a fifth area, editable geography, individual glyphs for cars that are not driving a route (a car standing in an area or sitting at a depot has no place inside it to draw, §7.3), a day-long bar under the scrubber, URL state, import, FleetLab spec export, a CI step, graduation. Bay cells were in this row until 2026-09-16, when they arrived on the isometric picture's depot block (§7.3) rather than inside the flat depot tile |
+
+**What the 2026-09-16 demo build did and did not do.** Two of four approved phases were built. Phase A is the isometric
+world (§7.3, §8.2): the picture, its overlay, the depot block with its bay cells, coincidence in model space, the
+pinned plate, picking, the world line, the new captions and the `Isometric | Flat` group. Phase B is the walkthrough
+(§4.2, §7.1, §7.2): `Present` as a layer with its own store key, the four chapters and eleven beats, the ledger, the
+rail, the ticker, the reading card, `Prepare`, the metric registry, the verdict readout composed from the verdict card's
+own builders, the situation block and the refusals list. Phase C and Phase D were cut from this build on purpose and
+none of their scaffolding was left behind.
+
+- **Phase C, not built.** The verdict's candidate arm drawn in the world with an `A baseline | B candidate` toggle at
+  one second (so beat 3.2 still hides the map region and carries both arms as two lines of numbers in the ledger); the
+  day-long bar under the scrubber with the recall and the release ruled on it and the beats ticked (the map motion
+  plan's Phase 4), so the day still has no strip and the walk reads clocks instead; a beat that runs another seed set
+  to show that the verdict holds; and a place for the `Flat` toggle inside `Present`.
+- **Phase D, not built.** The phone polish of the presenting layout: a compact rail, two figures a beat, the reading
+  card's phone form, the 768 to 1279 arrangement, and the `Try it` lines that would hand a lone visitor from a chapter
+  into Sandbox or Experiment. The layout below 1280 px stacks in one column and works; it is not tuned.
 
 ### 10.2 Phases
 
@@ -2091,4 +2328,7 @@ against the repository. The conflicts that changed the design:
 | Thirteen required changes from the design audit (approve with required changes) | an `INTAKE` state; a defined drain and censoring time; completed-only turnaround no longer called a bound; scope rules for every metric class; a time-based empty-drive share instead of invented distance; seed sets and a canonical spec digest; a log ordinal for decision events; FleetLab's precheck world source (P-3); a worker the content policy allows; full event-log parity (D-03); no storage (D-11); the arrival process and the FLEET-005 projection named precisely |
 | The default preset, run at fleet scale in the built engine | the recall acts once (D-12); the default fleet recalibrated to 120 cars with two accepted exceptions (§2.2); presets UC-02, UC-03, UC-09 and UC-10 adjusted so their mechanisms show, and every use case records its measured verdict (§4) |
 | The operations casebook: twenty situations the model has no entities for (rain, crowds, police, a new area) | proxies built from the knobs that say what they stand for and what they miss; slugs frozen with their measured verdicts because the scenario name keys the demand trace; on-page copy never names a direction (H-9); every seed set 1 verdict pinned, sets 2 and 3 behind a flag; a review re-ran every case, a cross-theme critique replaced one and moved another, and a copy pass rewrote the Watch lines (§4.4) |
+| Whether a demo needs 3D, after the owner set it as a requirement rather than a means, and what a third dimension may honestly be here (a spike measured three renderers on the built page: Canvas 2D at 0.15 / 0.3 ms of JavaScript a frame at 150 cars against WebGL's 0.05 / 0.1 and the shipped SVG's 0.13 / 0.3, all far inside §5.9's 8 ms) | a procedural isometric schematic in Canvas 2D, generated from the interval log, replaces the rendered city the design had already rejected and keeps that rejection: flat platforms, a fixed camera, no lighting and no tint, cubes for cars that stand, a written count wherever bodies coincide exactly, and every word DOM over the canvas. WebGL was refused for 0.1 ms of an 8 ms budget bought with a second renderer and a context-loss path. The flat SVG schematic stays as the test default, the header toggle and the no-context fallback (§1.4, §7.3, §8.2, §8.4) |
+| Whether a screen-share demo should be a script the owner performs across three modes or a surface the page owns | `Present`, a layer over the three modes with its own store key: `Prepare` runs the window and the experiment once in the visitor's browser, and every beat after that is a silent seek and a projection. Eleven beats in four chapters behind one `Next`, each landing still on a second the scenario's own knobs declare; the narration is generated from the run, scanned for direction words, and the four comparing lines are pinned on OPS-01 at seed 1001 (§4.2, §7.1, §7.2, H-9) |
+| Whether the walkthrough may restate the verdict in its own words, and whether the ledger and the drawer may read a depot twice | neither: the readout is composed from the verdict card's own builders with minutes added beside seconds, and the four-depot table is the depot drawer's own reading, exported so the two cannot disagree about one depot at one second |
 | How much of the fleet the map should draw individually, after a survey of the built page found it nearly still (over 600 consecutive frames at 900x, unit bars changed on 10.8% of area-frames and depot bars on 4 of 2,400 depot-frames; the pinned car was the only thing moving continuously) | cars driving a route become individual marks at the progress the interval log gives them; cars standing in an area stay unit bars and cars at a depot stay part of the depot tile, because the model gives neither a place inside it; a direction whose corridor is too short for its own busiest snapshot keeps its flow band and writes the reason in visible text; the map gains its first model-limits chip and a second legend line so the two encodings cannot contradict each other; no CSS transition, animation, keyframe or `will-change` is added anywhere, and reduced motion steps cars on the snapshot grid through the path that already existed (§7.3, §8.2, §8.4, §10.1) |

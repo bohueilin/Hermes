@@ -105,7 +105,10 @@ const SAMPLES = {
   verdictHeader: [[10], [1]],
   marginBand: [["30 s"]],
   guardrailsRegressedCount: [[1]],
-  tradeOff: [[{ lower: "out-of-service time", higher: "morning drive" }]],
+  tradeOff: [
+    [{ primaryWord: labels.TRADE_WORDS.lower, primary: "out-of-service time", guardrailWord: labels.TRADE_WORDS.higher, guardrail: "morning drive" }],
+    [{ primaryWord: labels.TRADE_WORDS.higher, primary: "available share", guardrailWord: labels.TRADE_WORDS.lower, guardrail: "served requests" }],
+  ],
   baselineLine: [[{ presetName: "Evening depot visit in San Jose", changes: 0 }]],
   aboutDuration: [["6 s"]],
   invalidScope: [[{ metric: "depot.parking_peak_fraction", key: "area" }]],
@@ -140,6 +143,15 @@ const SAMPLES = {
   routeDirection: [[{ routeId: "H2", from: "San Jose", to: "San Francisco" }]],
   pinnedCarName: [[{ car: "SF-017", state: "on a trip" }]],
   mapAnnouncement: [[{ clock: "D1 18:30", waiting: 23, unservedLastHour: 4 }], [{ clock: "D1 06:00", waiting: 1, unservedLastHour: 0 }]],
+  // The isometric picture (src/ui/iso.js): the world line, the canvas name, the plates and the pick output.
+  worldLine: [[{ name: "Bay teaching map", changes: 0 }], [{ name: "OPS-01 Evening crunch: more cars in San Francisco", changes: 1 }]],
+  isoLabel: [[{ clock: "D2 02:00" }]],
+  countPlate: [[19], [2]],
+  pickedCar: [[{ car: "SF-017", state: "on a trip" }]],
+  pickedLabel: [["SF-2"], ["H2 · 55 min"]],
+  withOthers: [[1], [18]],
+  numbersLines: [[{ queue: 21, inBays: 2, bays: 3, ready: 4, held: 25, stalls: 30 }], [{ queue: 0, inBays: 3, bays: 3, ready: 1, held: 12, stalls: 30, blocked: 1 }]],
+  numbersWords: [[{ queue: 21, inBays: 2, bays: 3, ready: 4, held: 25, stalls: 30 }], [{ queue: 0, inBays: 3, bays: 3, ready: 1, held: 12, stalls: 30, blocked: 1 }]],
   ledgerAcross: [[5]],
   fleetStateSummary: [[{ register: "This replay", atDepot: 23, fleet: 90, clock: "D1 18:00" }]],
   metricByHourSummary: [
@@ -222,6 +234,53 @@ const SAMPLES = {
   learnCaption: [["learn.L1.m1"], ["learn.L2.m2"], ["learn.L3.m1"]],
   momentLine: [[{ clock: "D1 18:30", title: "SF-017 finishes a trip in San Jose" }]],
   learnPinnedCar: [["SF-017"]],
+  // The walkthrough (src/ui/present.js): its position, its figure labels, its ticker lines and its narration, which is
+  // generated from the run. test/present.test.mjs scans every PRESENT string for a direction word as well (H-9).
+  stepOf: [[4, 5]],
+  outOf: [[{ count: 113, total: 120 }], [{ count: "4,210", total: "10,376" }]],
+  withMinutes: [[{ seconds: "-1,565.6 s", minutes: "-26.1" }]],
+  registryFacts: [[{ unit: "s", direction: "lower is better", status: "identical to FleetLab" }]],
+  frameLine: [[{ snapshot: "D2 00:45", drawn: "D2 00:46", interpolated: true }], [{ snapshot: "D2 00:45", drawn: "D2 00:45", interpolated: false }]],
+  snapshotsLine: [
+    [{ snapshots: 369, every: "5 min", engine: "engine: worker", replications: 5, took: "1.2 s" }],
+    [{ snapshots: 369, every: "5 min", engine: "engine: worker", replications: 5 }],
+  ],
+  validationLine: [[{ invariants: 19, cases: 20 }]],
+  specSentence: [[{ axis: "parameter:SUP-1.SF", margin: "60 s", guardrails: 2, seeds: 20, resamples: "2,000" }]],
+  narrationQueueCleared: [
+    [{ depot: "SF-2", cleared: "D2 05:34", release: "D2 05:45", before: true }],
+    [{ depot: "SF-2", cleared: "D2 06:12", release: "D2 05:45", before: false }],
+  ],
+  depotFigure: [[{ depot: "SF-2", label: "stalls held" }]],
+  hourFigure: [[{ label: "wait p90", clock: "D1 18:00" }]],
+  areaHourFigure: [[{ label: "wait p90", area: "San Francisco", clock: "D1 18:00" }]],
+  playToWatch: [["D2 00:45"]],
+  armDepotLine: [[{ arm: "A: baseline", depot: "SF-2", held: "22 of 30", queued: 16 }], [{ arm: "B: candidate", depot: "SF-2", held: "27 of 30", queued: 1 }]],
+  yourClock: [["4.8 s"]],
+  prepareTimes: [[{ window: "1.2 s", experiment: "4.8 s" }]],
+  tickerUnserved: [[{ area: "San Francisco", after: "10 min" }]],
+  tickerRecall: [[77], [1]],
+  tickerBay: [[{ car: "SF-040", after: "250 min" }]],
+  tickerQueued: [[{ car: "SF-040", depot: "SF-2" }]],
+  narrationPeak: [[{ clock: "D1 17:30", waiting: 15, riders: 113, fleet: 120 }], [{ clock: "D1 17:30", waiting: 1, riders: 0, fleet: 120 }]],
+  narrationUnservedHour: [
+    [{ clock: "D1 18:00", unserved: 63, area: "San Francisco", wait: "68 min" }],
+    [{ clock: "D1 18:00", unserved: 0, area: "San Francisco", wait: "not available: no rider was picked up in this hour" }],
+  ],
+  narrationRecall: [[{ clock: "D2 00:30", sent: 77, driving: 82 }]],
+  narrationDepots: [[{ clock: "D2 02:00", queued: 56, depot: "SF-2", held: 25, stalls: 30 }]],
+  narrationRelease: [[{ clock: "D2 05:45", home: 12, ready: 64 }]],
+  narrationPinnedBay: [
+    [{ car: "SF-040", took: "D2 05:34", ready: "D2 05:54", release: "D2 05:45", before: false }],
+    [{ car: "SF-040", took: "D2 05:34", ready: "D2 05:40", release: "D2 05:45", before: true }],
+    [{ car: "SF-040", took: "D2 05:34", ready: "D2 05:54" }],
+  ],
+  narrationRegisters: [[5]],
+  narrationVerdict: [[{ seeds: 20, resamples: 2000 }]],
+  narrationFrame: [[{ snapshot: "D2 00:45:00", drawn: "D2 00:46:31" }]],
+  narrationArms: [[{ seed: 1006, index: 6, total: 20 }]],
+  narrationSituation: [["OPS-01"]],
+  narrationNext: [["OPS-02 Late night recall: 00:30 or 02:00"]],
   // Shell panels (src/ui/app.js).
   nowLot: [["SJ-1"]],
 };
@@ -590,7 +649,7 @@ describe("templates", () => {
   test("freeze notice counts knobs in the right number", () => {
     assert.equal(
       labels.freezeNotice({ frozenAt: "09:15", changedKnobs: 1 }),
-      "Spec frozen at 09:15. Sandbox has changed since (1 knob). This verdict is about the frozen spec.",
+      "Spec frozen at 09:15 (your clock). Sandbox has changed since (1 knob). This verdict is about the frozen spec.",
     );
   });
 
@@ -646,8 +705,15 @@ describe("format", () => {
     assert.equal(format.clock(107100), "D2 05:45"); // 86400 + 5.75 × 3600
     assert.equal(format.clock(122400), "D2 10:00");
     assert.equal(format.clockHour(111600), "D2 07");
+    // The walkthrough's Simulation beat compares two seconds inside one minute, so that one line keeps the seconds
+    // the minute clock drops (demo plan beat 3.1).
+    assert.equal(format.clockSeconds(0), "D1 00:00:00");
+    assert.equal(format.clockSeconds(66659), "D1 18:30:59");
+    assert.equal(format.clockSeconds(88200), "D2 00:30:00"); // the recall, 86400 + 1800
+    assert.equal(format.clockSeconds(88300), "D2 00:31:40");
     assert.throws(() => format.clock(-1), RangeError);
     assert.throws(() => format.clock(Number.NaN), TypeError);
+    assert.throws(() => format.clockSeconds(-1), RangeError);
   });
 
   test("hour and session clocks", () => {

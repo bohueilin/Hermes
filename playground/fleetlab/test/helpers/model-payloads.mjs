@@ -57,7 +57,7 @@
 
 import { canonicalJson } from "../../src/core/canon.js";
 import { freezeSpec } from "../../src/model/experiment.js";
-import { DEFAULT_PRESET_ID, presetById, seedSet } from "../../src/model/presets.js";
+import { DEFAULT_PRESET_ID, PRESET_SEED_SET, presetById, seedSet } from "../../src/model/presets.js";
 import { applyAxis, cloneScenario } from "../../src/model/schema.js";
 import { sharedLambdaMaxPermille } from "../../src/model/world.js";
 import { createWorkerHandler } from "../../src/runtime/protocol.js";
@@ -180,4 +180,16 @@ export function frozenExperiment(options) {
 /** The run_experiment payload for a preset's experiment draft (see the header). */
 export function experimentPayload(options = {}) {
   return cached({ type: "run_experiment", spec: experimentDraft(options) });
+}
+
+/** Replications the walkthrough's Prepare runs for its window, as src/ui/app.js SANDBOX_REPLICATIONS does. */
+export const OPS01_REPLICATIONS = 5;
+
+/**
+ * The run_window payload of the casebook's OPS-01, the world the walkthrough plays (demo plan section 1.1): five
+ * replications of seed set 1 with the log of seed 1001, which is exactly what Prepare runs. Same shape as
+ * windowPayload; cached and deep-frozen like every other payload here.
+ */
+export function ops01Payload({ seeds = seedSet(PRESET_SEED_SET, OPS01_REPLICATIONS), logSeed = seeds[0] } = {}) {
+  return windowPayload({ presetId: "OPS-01", seeds, logSeed });
 }

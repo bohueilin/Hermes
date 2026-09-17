@@ -10,11 +10,15 @@ import { percentileFleetLab } from "../src/core/stats.js";
 import { armScenarios, experimentEnvelope } from "../src/model/experiment.js";
 import { seedSet } from "../src/model/presets.js";
 import { sharedLambdaMaxPermille } from "../src/model/world.js";
+import { tabbables } from "../src/ui/a11y.js";
 import { REGION_IDS, ROW_CHARTS, SANDBOX_REPLICATIONS, start } from "../src/ui/app.js";
+import { depotView } from "../src/ui/inspector.js";
+import { frameAt } from "../src/ui/playback.js";
+import { beatAt } from "../src/ui/present.js";
 import * as format from "../src/ui/format.js";
 import * as labels from "../src/ui/labels.js";
 import { installFakeDom } from "./helpers/fake-dom.mjs";
-import { experimentPayload, frozenExperiment, pairPayload, windowPayload } from "./helpers/model-payloads.mjs";
+import { experimentPayload, frozenExperiment, ops01Payload, pairPayload, windowPayload } from "./helpers/model-payloads.mjs";
 
 const BANNED_WORDS = /\b(predict|forecast|live|real-time|realtime|real time|monitoring)\b|expected traffic/i;
 const H6_WORDS = /\b(wins?|winners?|beats|scores?|scoring|gauges?|grades?|leaderboards?|revenue|costs?)\b|better option|best configuration/i;
@@ -102,7 +106,7 @@ const chartIds = (container) => container.querySelectorAll("figure[data-chart]")
 describe("start mounts the interface", () => {
   test("every region is filled in design 7.7 order before anything runs", () =>
     withApp({}, ({ root, app, find, buttonNamed, store }) => {
-      assert.deepEqual(root.children.map((n) => n.getAttribute("class").split(" ")[0]), ["fl-strip", "fl-topbar", "fl-knobs", "fl-map", "fl-transport", "fl-segmented", "fl-side", "fl-charts", "fl-drawer", "fl-footer"]);
+      assert.deepEqual(root.children.map((n) => n.getAttribute("class").split(" ")[0]), ["fl-strip", "fl-topbar", "fl-knobs", "fl-map", "fl-ledger", "fl-rail", "fl-transport", "fl-segmented", "fl-side", "fl-charts", "fl-drawer", "fl-footer"]);
       for (const id of REGION_IDS) assert.ok(app.regions[id].children.length > 0, `${id} holds content`);
       assert.equal(root.getAttribute("data-mode"), "sandbox");
       const modes = find(".fl-modes").querySelectorAll("button");
@@ -124,6 +128,18 @@ describe("start mounts the interface", () => {
       assert.equal(find('[data-role="engine-path"]').textContent, labels.enginePath("worker"));
       assert.equal(store.getState().engine.path, "worker", "the host's path reaches the store at once");
       assert.equal(find('[data-role="run-status"]').children.length, 0);
+    }));
+
+  test("the map region mounts the isometric picture, and on a document without a 2D canvas keeps the flat one and says why", () =>
+    withApp({}, ({ app, find, store }) => {
+      // The fake DOM's canvas has no getContext, which is the browser-without-canvas case the page must survive.
+      assert.equal(find('[data-role="view-status"]').hidden, false);
+      assert.equal(find('[data-role="view-status"]').textContent, labels.MAP.isoFallback);
+      assert.equal(find('[data-role="view-group"]'), null);
+      assert.ok(app.regions.map.querySelector("svg"), "the flat picture is drawn");
+      assert.equal(find('[data-role="world-line"]').textContent, labels.worldLine({ name: "Bay teaching map", changes: 0 }));
+      store.dispatch({ type: "knob/set", knob: "SUP-1.SJ", path: ["areas", 2, "cars"], value: 16 });
+      assert.equal(find('[data-role="world-line"]').textContent, labels.worldLine({ name: "Bay teaching map", changes: 1 }));
     }));
 
   test("the knob sheet handle sits in the top bar, outside the knobs sheet", () =>
@@ -548,6 +564,146 @@ describe("accessibility and copy", () => {
     assert.equal(status.textContent, "D1 05:00");
     ctx.cleanup();
   });
+});
+
+describe("the walkthrough layer (demo plan section 4.1)", () => {
+  test("Present is a layer, not a fourth mode: the mode underneath carries and the modes stay as they were", () =>
+    withApp({}, ({ root, find, store }) => {
+      const present = find('[data-role="present-toggle"]');
+      assert.equal(present.textContent, labels.PRESENT.open);
+      assert.equal(present.getAttribute("aria-pressed"), "false");
+      assert.equal(root.getAttribute("data-present"), "false");
+      present.click();
+      assert.equal(store.getState().present.on, true);
+      assert.equal(store.getState().mode, "sandbox", "the mode underneath carries");
+      assert.equal(root.getAttribute("data-mode"), "sandbox");
+      assert.equal(present.getAttribute("aria-pressed"), "true");
+      assert.equal(root.getAttribute("data-present"), "true");
+    }));
+
+  test("presenting hides the knobs, the side column, the chart row and the transport's controls, and keeps the strips container", () =>
+    withApp({}, ({ root, app, find }) => {
+      const strips = find('[data-role="strips"]');
+      find('[data-role="present-toggle"]').click();
+      assert.equal(app.regions.ledger.hidden, false);
+      assert.equal(app.regions.rail.hidden, false);
+      assert.equal(app.regions.map.hidden, false, "the map region is the stage");
+      assert.equal(strips.hidden, false, "the strips container stays, with its strips hidden");
+      for (const node of [app.regions.knobs, app.regions.charts, app.regions.segmented]) assert.equal(node.hidden, true);
+      assert.equal(root.querySelector(".fl-side").hidden, true);
+      for (const id of ["ledger", "rail"]) assert.equal(app.regions[id].hasAttribute("inert"), false);
+      // Leaving restores the page it was, and puts the reader back on the control that opened it.
+      find('[data-role="present-toggle"]').click();
+      for (const node of [app.regions.knobs, app.regions.charts]) assert.equal(node.hidden, false);
+      assert.equal(app.regions.ledger.hidden, true);
+      assert.equal(app.regions.ledger.hasAttribute("inert"), true);
+      assert.equal(root.ownerDocument.activeElement, find('[data-role="present-toggle"]'));
+    }));
+
+  test("while presenting, the ledger and the rail hold the only tab stops of the regions they replace", () =>
+    withApp({}, ({ root, app }) => {
+      const stops = () => tabbables(root);
+      assert.equal(stops().some((node) => app.regions.rail.contains(node)), false, "a closed walkthrough holds no tab stop");
+      root.querySelector('[data-role="present-toggle"]').click();
+      const open = stops();
+      assert.ok(open.some((node) => app.regions.rail.contains(node)), "the rail is reachable");
+      for (const id of ["knobs", "charts"]) {
+        assert.equal(open.some((node) => app.regions[id].contains(node)), false, `${id} is out of the tab order while presenting`);
+      }
+      // DOM order is visual order: the stage, then the ledger, then the rail.
+      const order = root.children.map((n) => n.getAttribute("class").split(" ")[0]);
+      assert.ok(order.indexOf("fl-map") < order.indexOf("fl-ledger"));
+      assert.ok(order.indexOf("fl-ledger") < order.indexOf("fl-rail"));
+    }));
+
+  test("while presenting, Next is reachable from the top bar in at most six tabs", () =>
+    withApp({}, ({ root, find, store }) => {
+      find('[data-role="present-toggle"]').click();
+      // The rail's controls are off until Prepare lands, and an off control is not a tab stop; this measures the
+      // distance a reader tabs once the walkthrough is ready, which is what the reachability gate is about.
+      store.dispatch({ type: "present/prepared" });
+      const order = tabbables(root);
+      const from = order.indexOf(find('[data-role="present-toggle"]'));
+      const to = order.indexOf(find('[data-role="present-next"]'));
+      assert.ok(from >= 0, "Present is a tab stop");
+      assert.ok(to > from, "Next follows Present in the tab order");
+      assert.ok(to - from <= 6, `Next is ${String(to - from)} tabs after Present`);
+    }));
+
+  test("the walk keeps the presenter's hands in the rail, and the arms beat carries both arms in words", () =>
+    withApp({}, async (ctx) => {
+      const { app, host, store, find, root } = ctx;
+      find('[data-role="present-toggle"]').click();
+      const prepared = app.present.prepare();
+      const windowCall = host.last("run_window");
+      windowCall.resolve(await ops01Payload({ seeds: windowCall.args.seeds, logSeed: windowCall.args.logSeed }));
+      await tick();
+      const experimentCall = host.last("run_experiment");
+      experimentCall.resolve(await experimentPayload({ presetId: "OPS-01", replications: experimentCall.args.spec.seeds.length }));
+      await prepared;
+      assert.equal(store.getState().present.prepared, true);
+      // The ledger is the scroll container while presenting, so it is one of the tab stops a reader can reach.
+      assert.ok(tabbables(root).includes(app.regions.ledger), "the ledger is a tab stop while presenting");
+
+      const next = find('[data-role="present-next"]');
+      next.focus();
+      while (beatAt(store.getState().present.chapter, store.getState().present.beat).key !== "depotNight") next.click();
+      // The real drawer is mounted here and moves focus to its Close button when it opens; the walkthrough's keys are
+      // bound to the rail, so a Next that lost focus would stop the walk at step 4 of 5.
+      assert.deepEqual(store.getState().inspector, { depot: "SF-2" });
+      assert.equal(app.regions.inspector.getAttribute("data-open"), "true");
+      assert.equal(root.ownerDocument.activeElement, next, "Next kept the hands");
+
+      while (beatAt(store.getState().present.chapter, store.getState().present.beat).key !== "arms") next.click();
+      const pair = host.last("run_pair");
+      assert.ok(pair, "the arms beat opens the page's own fork on the watched seed");
+      pair.resolve(await pairPayload({ baselineScenario: pair.args.baseline, candidateScenario: pair.args.candidate, seed: pair.args.seed, lambdaMaxPermille: pair.args.lambdaMaxPermille }));
+      await tick();
+      // The picture steps aside for this beat, so the ledger has to carry the evidence in words and numbers.
+      const arms = app.regions.ledger.querySelectorAll('[data-role="present-arm"]');
+      assert.deepEqual(arms.map((n) => n.getAttribute("data-arm")), ["A", "B"]);
+      const at_s = frameAt(store.getState().fork.pair.baseline.log, store.getState().clock_s).at_s;
+      for (const [lane, node] of [["A", arms[0]], ["B", arms[1]]]) {
+        const log = lane === "A" ? store.getState().fork.pair.baseline.log : store.getState().fork.pair.candidate.log;
+        const view = depotView(log, "SF-2", at_s);
+        assert.equal(node.textContent, labels.armDepotLine({
+          arm: labels.INSPECTOR.forkArms[lane],
+          depot: "SF-2",
+          held: labels.lotFill(view.held, view.stalls),
+          queued: view.queued,
+        }), lane);
+      }
+    }));
+
+  test("Prepare starts the casebook situation, runs the window at 5 seeds with the log of seed 1001, then freezes and runs the experiment", () =>
+    withApp({}, async (ctx) => {
+      const { app, host, store, find } = ctx;
+      find('[data-role="present-toggle"]').click();
+      const prepared = app.present.prepare();
+      const windowCall = host.last("run_window");
+      assert.equal(store.getState().presetId, "OPS-01");
+      assert.equal(store.getState().mode, "sandbox", "the situation is set up in Sandbox, where the walk watches it");
+      assert.deepEqual(windowCall.args.seeds, seedSet(1, SANDBOX_REPLICATIONS));
+      assert.equal(windowCall.args.logSeed, 1001);
+      assert.deepEqual(windowCall.args.scenario, store.getState().scenario);
+      assert.equal(find('[data-role="present-next"]').disabled, true, "Next waits for both runs");
+
+      windowCall.resolve(await ops01Payload({ seeds: windowCall.args.seeds, logSeed: windowCall.args.logSeed }));
+      await tick();
+      const experimentCall = host.last("run_experiment");
+      assert.ok(experimentCall, "the frozen spec runs after the window");
+      assert.equal(experimentCall.args.spec.seeds.length, 20);
+      assert.equal(experimentCall.args.spec.resamples, 2000);
+      assert.equal(store.getState().present.prepared, false, "one run of the two is not a prepared walkthrough");
+      assert.equal(find('[data-role="present-next"]').disabled, true);
+
+      const abort = new Error("cancelled");
+      abort.name = "AbortError";
+      experimentCall.reject(abort);
+      await prepared;
+      assert.equal(store.getState().present.prepared, false, "a run that never landed never marks the walkthrough ready");
+      assert.equal(find('[data-role="present-next"]').disabled, true);
+    }));
 });
 
 describe("honesty copy on the page (review: honesty-copy lens)", () => {

@@ -42,7 +42,7 @@ import { METRICS, metricRow } from "../model/metrics.js";
 import { OPS_THEME_IDS, opsPresetsOf, PRESETS, presetById, seedSet } from "../model/presets.js";
 import { REFERENCE_PANELS } from "../model/reference-panels.js";
 import { AxisError, cloneScenario, describeDifferences, KNOBS, parseAxis } from "../model/schema.js";
-import { metricSubject, verdictCharts } from "./charts.js";
+import { metricSubject, metricWords, verdictCharts } from "./charts.js";
 import { el, withArrows } from "./dom.js";
 import * as format from "./format.js";
 import * as labels from "./labels.js";
@@ -425,24 +425,48 @@ function gateChain(view) {
   ]);
 }
 
-function primarySection(view, strip) {
+/**
+ * A primary value in the metric's own unit and, where the walkthrough's readout asks for it, the same seconds with
+ * their minutes beside them: `-1,565.6 s (-26.1 min)` (demo plan graft 1). The seconds are the card's own text and
+ * stay first, so the two surfaces show one number; a metric that is not in seconds has no minutes to add.
+ */
+export function valueWithMinutes(metricOrKey, value, { withSign = false } = {}) {
+  const seconds = metricValueText(metricOrKey, value, { withSign });
+  if (metricUnitFamily(metricOrKey) !== "s") return seconds;
+  return labels.withMinutes({ seconds, minutes: withSign ? format.signed(value / 60, 1) : format.number(value / 60, 1) });
+}
+
+/**
+ * The primary block's rows, `[term, node]` each: both means, both deltas, the interval and the declared margin. The
+ * verdict card and the walkthrough's readout are built from this one list, so neither can show a value the other does
+ * not; `minutes` adds the minutes of a seconds metric beside its seconds.
+ */
+function primaryRows(view, { minutes = false } = {}) {
   const p = view.primary;
   const key = p.metric;
-  const rows = [
-    [labels.VERDICT.baselineMean, valueSpan("primary.baseline_mean", p.baseline_mean, metricValueText(key, p.baseline_mean))],
-    [labels.VERDICT.candidateMean, valueSpan("primary.candidate_mean", p.candidate_mean, metricValueText(key, p.candidate_mean))],
-    [labels.candidateMinusBaseline(labels.VERDICT.meanDelta), valueSpan("primary.mean_delta", p.mean_delta, metricValueText(key, p.mean_delta, { withSign: true }))],
-    [labels.candidateMinusBaseline(labels.VERDICT.medianDelta), valueSpan("primary.median_delta", p.median_delta, metricValueText(key, p.median_delta, { withSign: true }))],
+  const text = (value, options) => (minutes ? valueWithMinutes(key, value, options) : metricValueText(key, value, options));
+  const signed = { withSign: true };
+  return [
+    [labels.VERDICT.baselineMean, valueSpan("primary.baseline_mean", p.baseline_mean, text(p.baseline_mean))],
+    [labels.VERDICT.candidateMean, valueSpan("primary.candidate_mean", p.candidate_mean, text(p.candidate_mean))],
+    [labels.candidateMinusBaseline(labels.VERDICT.meanDelta), valueSpan("primary.mean_delta", p.mean_delta, text(p.mean_delta, signed))],
+    [labels.candidateMinusBaseline(labels.VERDICT.medianDelta), valueSpan("primary.median_delta", p.median_delta, text(p.median_delta, signed))],
     [
       labels.candidateMinusBaseline(labels.VERDICT.interval95),
       el("span", {}, [
-        valueSpan("primary.ci_low", p.ci_low, metricValueText(key, p.ci_low, { withSign: true })),
+        valueSpan("primary.ci_low", p.ci_low, text(p.ci_low, signed)),
         el("span", {}, ` ${labels.VALUE_WORDS.to} `),
-        valueSpan("primary.ci_high", p.ci_high, metricValueText(key, p.ci_high, { withSign: true })),
+        valueSpan("primary.ci_high", p.ci_high, text(p.ci_high, signed)),
       ]),
     ],
     [labels.EXPERIMENT_SETUP.marginLabel, valueSpan("primary.equivalence_margin", p.equivalence_margin, labels.marginBand(thresholdText(key, p.equivalence_margin)))],
   ];
+}
+
+function primarySection(view, strip, { minutes = false } = {}) {
+  const p = view.primary;
+  const key = p.metric;
+  const rows = primaryRows(view, { minutes });
   const low = metricValueText(key, p.ci_low, { withSign: true });
   const high = metricValueText(key, p.ci_high, { withSign: true });
   return el("section", { "data-section": "primary" }, [
@@ -596,6 +620,28 @@ function invalidSection(view) {
  * `showRows` (descriptive metrics kept visible in the preview). A quoted panel carries the differences panel and no
  * teaching-run footer.
  */
+/**
+ * The article every verdict surface is: the title, the teaching chip and the register chip inside the border, then the
+ * body sections, the caller's actions, and the footer. The card and the walkthrough's readout are this same article
+ * with different bodies, so one of them can never carry a chip or a footer the other drops (design §1.3, H-7).
+ */
+function verdictArticle({ view, className, title, chipText, panelId = null, notices = [], body, actions = [], footer }) {
+  const header = [
+    heading(2, title),
+    el("p", { class: "fl-teaching-chip", "data-role": "teaching-chip" }, chipText),
+    el("p", {}, [
+      el("span", { class: "fl-chip-across", "data-role": "register" }, labels.acrossReplicationsChip(view.replications)),
+      view.label === null ? null : el("span", { class: "fl-mono", "data-field": "label" }, ` ${view.label}`),
+    ]),
+    ...notices,
+  ];
+  return el(
+    "article",
+    { class: className, "data-kind": view.kind, "data-validity": view.validity, "data-panel": panelId, "aria-label": title },
+    [...header, ...body, actions.length > 0 ? el("div", { "data-role": "actions", role: "group", "aria-label": labels.VERDICT.actions }, actions) : null, footer],
+  );
+}
+
 export function renderVerdictCard(view, { ui = { open: new Set() }, rerender = () => {}, strip = null, rails = [], actions = [], notices = [], panelId = null, showRows = [] } = {}) {
   const valid = view.validity === "VALID";
   const reference = view.kind === "reference";
@@ -605,25 +651,89 @@ export function renderVerdictCard(view, { ui = { open: new Set() }, rerender = (
     differences.focus();
     if (typeof differences.scrollIntoView === "function") differences.scrollIntoView({ block: "nearest" });
   };
-  const chipText = view.kind === "reference" ? PANEL_TEXT[panelId].chip() : labels.verdictHeader(view.replications);
-  const header = [
-    heading(2, view.kind === "reference" ? PANEL_TEXT[panelId].title() : labels.VERDICT.heading),
-    el("p", { class: "fl-teaching-chip", "data-role": "teaching-chip" }, chipText),
-    el("p", {}, [
-      el("span", { class: "fl-chip-across", "data-role": "register" }, labels.acrossReplicationsChip(view.replications)),
-      view.label === null ? null : el("span", { class: "fl-mono", "data-field": "label" }, ` ${view.label}`),
-    ]),
-    ...notices,
-  ];
   const body = valid
     ? [gateChain(view), primarySection(view, strip), guardrailSection(view), guardrailRowsSection(rails), descriptiveSection(view, ui, rerender, { showRows, onDifferences }), limitationSection(view, ui, rerender)]
     : [gateChain(view), invalidSection(view), limitationSection(view, ui, rerender)];
-  const footer = reference ? differences : el("p", { class: "fl-verdict__footer" }, labels.HONESTY.verdictFooter);
-  return el(
-    "article",
-    { class: "fl-verdict", "data-kind": view.kind, "data-validity": view.validity, "data-panel": panelId, "aria-label": view.kind === "reference" ? PANEL_TEXT[panelId].title() : labels.VERDICT.heading },
-    [...header, ...body, actions.length > 0 ? el("div", { "data-role": "actions", role: "group", "aria-label": labels.VERDICT.actions }, actions) : null, footer],
-  );
+  return verdictArticle({
+    view,
+    className: "fl-verdict",
+    title: reference ? PANEL_TEXT[panelId].title() : labels.VERDICT.heading,
+    chipText: reference ? PANEL_TEXT[panelId].chip() : labels.verdictHeader(view.replications),
+    panelId,
+    notices,
+    body,
+    actions,
+    footer: reference ? differences : el("p", { class: "fl-verdict__footer" }, labels.HONESTY.verdictFooter),
+  });
+}
+
+/**
+ * What this run trades, in the design H-6 form `lower X, higher Y`: the primary that improved against the guardrail
+ * that was harmed. Null when nothing improved or nothing was harmed, because then there is no trade to name.
+ */
+function tradeOffOf(view) {
+  if (view.validity !== "VALID" || view.primary === null || view.outcome !== "IMPROVED") return null;
+  const harmed = view.guardrails.find((g) => g.status === "REGRESSED");
+  if (harmed === undefined) return null;
+  // IMPROVED and REGRESSED are already normalised for direction (src/instrument/outcome.js), so the word comes from the
+  // metric's own declared direction and not from its place in the sentence: a primary that improved went down when
+  // lower is better and up when higher is better, and a harmed guardrail went the other way.
+  const { lower, higher } = labels.TRADE_WORDS;
+  return labels.tradeOff({
+    primaryWord: view.primary.direction === "higher_is_better" ? higher : lower,
+    primary: metricWords(view.primary.metric),
+    guardrailWord: harmed.direction === "higher_is_better" ? lower : higher,
+    guardrail: metricWords(harmed.metric),
+  });
+}
+
+/** The trade-off sentence of a finished run under its frozen spec, or null when the run trades nothing nameable. */
+export function tradeOffSentence({ verdict, frozen }) {
+  if (verdict === null || frozen === null) return null;
+  return tradeOffOf(verdictView({ verdict }, frozen));
+}
+
+function tradeOffSection(view) {
+  const sentence = tradeOffOf(view);
+  // A harmed guardrail with no improved primary trades nothing either way, and saying so would name a direction the
+  // gates did not find; the gate chain above has already said what happened.
+  if (sentence === null && view.guardrails.some((g) => g.status === "REGRESSED")) return null;
+  return el("section", { "data-section": "trade-off" }, [
+    el("p", { class: "fl-small-label" }, labels.PRESENT.tradeOffHeading),
+    el("p", { "data-role": "trade-off" }, sentence ?? labels.PRESENT.noTradeOff),
+  ]);
+}
+
+/**
+ * The verdict as the walkthrough's ledger shows it (demo plan beat 2.2): the card's own gate chain, its primary rows
+ * with minutes beside their seconds, its seed dots, its guardrail table and bullet rows, and what the run trades. The
+ * descriptive rows and the limitations list stay on the card itself, where there is room to read them.
+ */
+export function renderVerdictReadout(view, { strip = null, rails = [], actions = [], notices = [] } = {}) {
+  const body = view.validity === "VALID"
+    ? [gateChain(view), primarySection(view, strip, { minutes: true }), guardrailSection(view), guardrailRowsSection(rails), tradeOffSection(view)]
+    : [gateChain(view), invalidSection(view)];
+  return verdictArticle({
+    view,
+    className: "fl-verdict fl-readout",
+    title: labels.VERDICT.heading,
+    chipText: labels.verdictHeader(view.replications),
+    notices,
+    body,
+    actions,
+    footer: el("p", { class: "fl-verdict__footer" }, labels.HONESTY.verdictFooter),
+  });
+}
+
+/** A frozen spec in words: one change, one primary with its margin, its guardrails, its paired seeds and resamples. */
+export function specInWords(spec) {
+  return labels.specSentence({
+    axis: spec.axis.id,
+    margin: thresholdText(spec.primary.metric, thresholdValue(spec.primary.metric, spec.primary.margin_units)),
+    guardrails: spec.guardrails.length,
+    seeds: spec.seeds.length,
+    resamples: format.count(spec.resamples),
+  });
 }
 
 /**
@@ -1018,7 +1128,7 @@ function draftMatchesPreset(draft, preset, ok) {
  * model and what to watch. All of it is the preset's copy; nothing here names a verdict. Under an edited draft only the
  * lead and the situation stay, with one line saying the setup no longer matches the case.
  */
-function situationBlock(preset, matches) {
+export function situationBlock(preset, matches) {
   const s = labels.SITUATION;
   const head = [
     el("p", { class: "fl-muted", "data-role": "situation-lead" }, s.lead),

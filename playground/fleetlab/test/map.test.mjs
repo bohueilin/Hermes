@@ -3,8 +3,11 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 
+import { createFakeContext } from "./helpers/fake-canvas.mjs";
 import { installFakeDom } from "./helpers/fake-dom.mjs";
 import { presetScenario, referencePayload, referenceScenario, windowPayload } from "./helpers/model-payloads.mjs";
+import { presetById } from "../src/model/presets.js";
+import { createIsoView } from "../src/ui/iso.js";
 import * as format from "../src/ui/format.js";
 import * as labels from "../src/ui/labels.js";
 import {
@@ -1348,6 +1351,151 @@ describe("roving focus and shortcuts", () => {
     assert.ok(region.querySelector('[data-layer="pinned"] g[data-car="SF-017"]'));
     press("I");
     assert.deepEqual(store.getState().inspector, { car: "SF-017" });
+    map.destroy();
+  });
+});
+
+describe("the two pictures: the flat schematic is the default and the fallback, the isometric one the page's", () => {
+  const isoMap = (extra = {}) => {
+    const ctx = createFakeContext();
+    const map = createMap({ view: "iso", isoView: createIsoView, context2d: () => ctx, theme: () => ({}), ...extra });
+    document.body.appendChild(map.element);
+    return { map, ctx };
+  };
+  const input = (clock_s, log) => ({ scenario, log, frame: log === null ? null : frameAt(log, clock_s), clock_s, pinnedCar: null, seed: log === null ? null : log.seed });
+
+  test("createMap() is the flat picture alone: no canvas, no view group, the two limits spans, as every test above built it", () => {
+    const { map } = drawn();
+    assert.equal(map.view(), "flat");
+    assert.equal(map.iso(), null);
+    assert.equal(map.element.querySelector("canvas"), null);
+    assert.equal(map.element.querySelector('[data-role="view-group"]'), null);
+    assert.equal(map.element.querySelector('[data-role="view-status"]').hidden, true);
+    assert.deepEqual(map.element.querySelectorAll("[data-limit]").map((n) => n.getAttribute("data-limit")), ["hourlyTraffic", "areasArePoints"]);
+    assert.throws(() => createMap({ view: "3d" }), TypeError);
+  });
+
+  test("with the isometric picture the header gains Isometric | Flat, and only the visible picture draws a frame", () => {
+    const { map, ctx } = isoMap();
+    const group = map.element.querySelector('[data-role="view-group"]');
+    assert.equal(group.getAttribute("role"), "group");
+    assert.equal(group.getAttribute("aria-label"), labels.MAP.viewName);
+    const [isoButton, flatButton] = group.querySelectorAll("button");
+    assert.deepEqual([isoButton.textContent, flatButton.textContent], [labels.MAP.viewIso, labels.MAP.viewFlat]);
+    assert.deepEqual([isoButton.getAttribute("aria-pressed"), flatButton.getAttribute("aria-pressed")], ["true", "false"]);
+    // The Table toggle stays the header's first pressed button, where every test above finds it.
+    assert.equal(map.element.querySelector("button[aria-pressed]").textContent, labels.CHARTS.table);
+    map.update(input(66600, payload.log));
+    assert.ok(ctx.calls.length > 100, "the canvas drew");
+    const svgStage = map.element.querySelector('[data-role="stage"]');
+    assert.equal(svgStage.hidden, true);
+    assert.ok(svgStage.hasAttribute("inert"));
+    assert.equal(map.svg.querySelectorAll('[data-layer="cars"] g[data-car]').length, 0, "the hidden flat picture draws no car");
+    assert.equal(map.element.querySelector('[data-role="mark-legend"]').textContent, labels.MAP.oneBodyOneCar);
+    assert.equal(map.element.querySelector('[data-role="unit-legend"]').hidden, true);
+    assert.deepEqual(map.element.querySelectorAll("[data-limit]").filter((n) => !n.hidden).map((n) => n.getAttribute("data-limit")), ["hourlyTraffic", "areasArePoints", "isoSketch", "bodyIsConvention", "fixedTaskTimes", "noStaff", "baysNotNumbered"]);
+
+    flatButton.click();
+    assert.equal(map.view(), "flat");
+    assert.deepEqual([isoButton.getAttribute("aria-pressed"), flatButton.getAttribute("aria-pressed")], ["false", "true"]);
+    assert.equal(svgStage.hidden, false);
+    assert.equal(svgStage.hasAttribute("inert"), false);
+    assert.equal(map.iso().element.hidden, true);
+    assert.ok(map.iso().element.hasAttribute("inert"));
+    assert.ok(map.svg.querySelectorAll('[data-layer="cars"] g[data-car]').length > 50, "the flat picture draws now");
+    assert.equal(map.element.querySelector('[data-role="mark-legend"]').textContent, labels.MAP.oneMarkOneCar);
+    assert.equal(map.element.querySelector('[data-role="unit-legend"]').hidden, false);
+    assert.deepEqual(map.element.querySelectorAll("[data-limit]").filter((n) => !n.hidden).map((n) => n.getAttribute("data-limit")), ["hourlyTraffic", "areasArePoints"]);
+    ctx.reset();
+    map.update(input(66900, payload.log));
+    assert.equal(ctx.calls.length, 0, "the hidden isometric picture draws nothing");
+    // One tab stop whichever picture shows, and the stop belongs to the picture on screen.
+    const stops = () => map.element.querySelectorAll("[tabindex]").filter((n) => n.tabIndex >= 0 && !n.inHiddenOrInert());
+    assert.equal(stops().length, 1);
+    assert.equal(stops()[0].closest("svg"), map.svg);
+    isoButton.click();
+    assert.equal(stops().length, 1);
+    assert.equal(stops()[0].closest(".fl-iso__overlay") !== null, true);
+    map.destroy();
+  });
+
+  test("the twin, the chip, the crowded reasons and the world line are shared by both pictures", () => {
+    const { map } = isoMap();
+    map.update({ ...input(66600, payload.log), world: { name: "Bay teaching map", changes: 2 } });
+    const twinIso = tableText(map.table);
+    assert.equal(map.element.querySelector('[data-role="world-line"]').textContent, labels.worldLine({ name: "Bay teaching map", changes: 2 }));
+    assert.equal(map.element.querySelector('[data-role="world-line"]').hidden, false);
+    // The isometric picture bands nothing at the wide geometry, so no reason is written; the flat one bands H1 one way.
+    assert.equal(map.element.querySelectorAll('[data-role="crowded-route"]').length, 0);
+    map.element.querySelector('[data-view="flat"]').click();
+    assert.equal(tableText(map.table), twinIso, "one twin serves both pictures");
+    assert.deepEqual(map.element.querySelectorAll('[data-role="crowded-route"]').map((n) => n.getAttribute("data-dir")), ["PEN>SF"]);
+    map.update({ ...input(66600, payload.log), world: null });
+    assert.equal(map.element.querySelector('[data-role="world-line"]').hidden, true);
+    map.destroy();
+  });
+
+  test("mounted on a store with the picture factory, the map names the world and writes the canvas name at rest only", () => {
+    const store = createStore(createInitialState({ presetId: "bay_teaching_map", scenario }));
+    const playback = createPlayback({ store, scheduler: { request: () => 1, cancel: () => {} } });
+    const region = document.createElement("section");
+    document.body.appendChild(region);
+    const ctx = createFakeContext();
+    const map = mountMap(region, { store, playback, isoView: (options) => createIsoView({ ...options, context2d: () => ctx, theme: () => ({}) }) });
+    assert.equal(map.view(), "iso");
+    assert.equal(region.querySelector('[data-role="world-line"]').textContent, labels.worldLine({ name: "Bay teaching map", changes: 0 }));
+    store.dispatch({ type: "knob/set", knob: "SUP-1.SJ", path: ["areas", 2, "cars"], value: 16 });
+    assert.equal(region.querySelector('[data-role="world-line"]').textContent, labels.worldLine({ name: "Bay teaching map", changes: 1 }));
+    store.dispatch({ type: "run/queued", id: "r" });
+    store.dispatch({ type: "run/done", id: "r", payload });
+    const canvas = region.querySelector("canvas");
+    store.dispatch({ type: "clock/set", clock_s: 66600 });
+    assert.equal(canvas.getAttribute("aria-label"), labels.isoLabel({ clock: format.clock(66600) }), "paused: the name follows the clock");
+    store.dispatch({ type: "playback/play" });
+    for (let i = 1; i <= 30; i += 1) store.dispatch({ type: "clock/advance", seconds: 10 });
+    assert.equal(canvas.getAttribute("aria-label"), labels.isoLabel({ clock: format.clock(66600) }), "playing: the name is not rewritten per frame");
+    store.dispatch({ type: "clock/step", unit: "5min", direction: 1 });
+    assert.equal(canvas.getAttribute("aria-label"), labels.isoLabel({ clock: format.clock(store.getState().clock_s) }), "a step writes it");
+    store.dispatch({ type: "playback/pause" });
+    assert.equal(canvas.getAttribute("aria-label"), labels.isoLabel({ clock: format.clock(store.getState().clock_s) }));
+    // The pick output's Pin reaches the store, as the drawer's Pin does.
+    region.querySelector('.fl-iso__overlay [data-focus-key="depot:SJ-1"]').click();
+    assert.deepEqual(store.getState().inspector, { depot: "SJ-1" });
+    map.destroy();
+  });
+
+  test("the world line names the world the drawn replay ran on, not the world now set in the knobs", () => {
+    const store = createStore(createInitialState({ presetId: "bay_teaching_map", scenario }));
+    const playback = createPlayback({ store, scheduler: { request: () => 1, cancel: () => {} } });
+    const region = document.createElement("section");
+    document.body.appendChild(region);
+    const map = mountMap(region, { store, playback });
+    const line = () => region.querySelector('[data-role="world-line"]').textContent;
+    store.dispatch({ type: "run/queued", id: "r" });
+    store.dispatch({ type: "run/done", id: "r", payload });
+    assert.equal(line(), labels.worldLine({ name: "Bay teaching map", changes: 0 }));
+    // A finished replay stays on screen through a preset switch or a knob change (the store only marks it out of
+    // date), so a line that read the knobs would name one world over a picture of another (the slug rule).
+    store.dispatch({ type: "preset/select", presetId: "OPS-01", scenario: presetById("OPS-01").scenario });
+    assert.notEqual(store.getState().run.log, null, "the replay is still the one being drawn");
+    assert.equal(store.getState().run.stale, true);
+    assert.equal(line(), labels.worldLine({ name: "Bay teaching map", changes: 0 }), "the picture's own world");
+    store.dispatch({ type: "knob/set", knob: "SUP-1.SJ", path: ["areas", 2, "cars"], value: 16 });
+    assert.equal(line(), labels.worldLine({ name: "Bay teaching map", changes: 0 }), "a knob change is not the replay's");
+    map.destroy();
+  });
+
+  test("with nothing drawn the world line is the world the knobs hold, which is the world the next run will use", () => {
+    const store = createStore(createInitialState({ presetId: "bay_teaching_map", scenario }));
+    const playback = createPlayback({ store, scheduler: { request: () => 1, cancel: () => {} } });
+    const region = document.createElement("section");
+    document.body.appendChild(region);
+    const map = mountMap(region, { store, playback });
+    const line = () => region.querySelector('[data-role="world-line"]').textContent;
+    assert.equal(line(), labels.worldLine({ name: "Bay teaching map", changes: 0 }));
+    store.dispatch({ type: "preset/select", presetId: "OPS-01", scenario: presetById("OPS-01").scenario });
+    store.dispatch({ type: "knob/set", knob: "SUP-1.SJ", path: ["areas", 2, "cars"], value: 16 });
+    assert.equal(line(), labels.worldLine({ name: labels.presetOption({ id: "OPS-01", title: presetById("OPS-01").title }), changes: 1 }));
     map.destroy();
   });
 });

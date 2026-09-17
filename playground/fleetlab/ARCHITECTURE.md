@@ -619,15 +619,29 @@ passes the factory (section 9).
   (`learn`, `sandbox`, `experiment`), `presetId`, `scenario`, `changes`, `run` (status, per-seed summaries, selected seed,
   log, progress), `clock_s`, `playing`, `speed`, `selection` (`{car}` or `{depot}` or null), `inspector`, `fork` (pair
   result and pinned car), `experiment` (draft, frozen spec, label, verdict, per-seed metrics, selected seed, session log),
-  `reference` (the open reference panel), `learn` (case, moment), `reducedMotion` (system or override), `engine` (path).
-  Every action is a pure reducer case, testable in Node without a page.
+  `reference` (the open reference panel), `learn` (case, moment), `present` (the walkthrough layer: `on`, `chapter`,
+  `beat`, `stop_s`, `prepared`; decision 44), `reducedMotion` (system or override), `engine` (path). `run` also carries
+  `worldAtQueue` (`{presetId, changes}`), the world the queued run came from, so the line under the replay chip names
+  the world that produced the picture and not the one now set in the knobs. Every action is a pure reducer case,
+  testable in Node without a page.
 - `labels.js`: every interface string, including the exact copy of design §1.3, except preset copy: the titles and
   questions in `model/presets.js` and the casebook records in `model/ops-cases.js` (decision 41), which `check-dist`
   scans as copy. Only `instrument/summary.js` holds other text, for the export format (section 4).
 - `app.js` exports `start({createWorker})` and builds the shell of design §7.2 with `dom.js` helpers; `map.js`,
-  `playback.js`, `charts.js`, `inspector.js`, `controls.js`, `experiment.js`, `learn.js` and `a11y.js` each render one
-  region from the store. `app.js` takes one `playback.frame()` per state and hands it to the map, the NOW panel and the
-  announcer, so the three regions that describe one second describe the same one.
+  `playback.js`, `charts.js`, `inspector.js`, `controls.js`, `experiment.js`, `learn.js`, `iso.js`, `present.js`,
+  `analytics.js` and `a11y.js` each render one region from the store. `app.js` takes one `playback.frame()` per state
+  and hands it to the map, the NOW panel and the announcer, so the three regions that describe one second describe the
+  same one; the walkthrough is handed that same frame model rather than taking a second one.
+- `iso.js` draws the isometric picture of design §7.3 on a Canvas 2D context the page owns, with an HTML overlay that
+  carries every word and the map's roving stops (decision 43). `map.js` takes it as an injected factory (`isoView`), so
+  the module that owns the schematic never imports the module that reads it, and `createMap()` with no factory is the
+  flat picture alone, which is what every test built before the isometric one existed.
+- `present.js` mounts the walkthrough layer of design §4.2 and §7.1 into the shell's `ledger` and `rail` regions, with
+  its chapters and beats as data (decision 44); `analytics.js` holds what its Analytics chapter shows (the metric
+  registry in two registers, the two charts by hour, and the verdict readout composed from `experiment.js`'s own
+  builders). `experiment.js` exports `situationBlock`, `renderVerdictReadout`, `specInWords`, `tradeOffSentence` and
+  `valueWithMinutes` for it, and `inspector.js` exports `depotView`, so the walkthrough's four-depot table and the
+  depot drawer read one depot at one second through one function.
 - `map.js` draws the schematic in five layers, painted `routes`, `yards`, `cars`, `shields`, `pinned`. Every car whose
   `placeCar` place is a route is one `<g>` in the `cars` layer, built once through `dom.js keyedList` and afterwards
   moved by one composed `transform` written only when its rounded place changes; a car standing in an area stays a unit
@@ -683,6 +697,8 @@ writes.
 `metrics.test.mjs`, `determinism.test.mjs`, `pairing.test.mjs`, `properties.test.mjs`, `performance.test.mjs`, `presets.test.mjs` (verdicts pinned per preset and the default's calibration envelope),
 `ops-cases.test.mjs` (the operations casebook: every spec verbatim and every verdict pinned to `ops-cases.pins.json`),
 `experiment.test.mjs`, `captions.test.mjs`, `runtime.test.mjs`, `store.test.mjs`, `labels.test.mjs`, `a11y.test.mjs`,
+`iso.test.mjs` (the isometric picture on a fake 2D context that records every call), `present.test.mjs` and
+`analytics.test.mjs` (the walkthrough and what its Analytics chapter shows),
 `boundaries.test.mjs`, `pack.test.mjs`, `packed.test.mjs`, and interface test files named after their module. Fixture
 paths resolve from `import.meta.url` to the repository's
 `tests/fixtures/fleet_playground/`. Hand-derived expectations carry their arithmetic in comments, never copied from a run.
@@ -844,3 +860,84 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     route geometry is clipped at the yard boundary, so a mark near an end overhangs a yard on 8.33% of car-frames wide
     and 11.95% on the phone, where the car hues are 3.90 and 2.82 and `.fl-glyph-ring` is 1.13:1; `test/a11y.test.mjs`
     records those ratios beside the unit bars that already draw on that surface.
+43. The isometric world and its overlay (design §7.3 as amended, §8.2, §8.4).
+    **The picture.** `src/ui/iso.js` draws the four areas as a Canvas 2D isometric schematic: a 2:1 dimetric projection
+    (`sx = x - y`, `sy = (x + y) / 2 - z`), a fixed camera, flat plan squares at the flat schematic's own area centres
+    pulled back through the inverse projection, ribbons at the class offsets clipped at the platform edges, one shaded
+    box per car on a route, a cube per five cars standing in an area, and a block per depot with bay cells, queue and
+    ready bars and a lot fill up its side faces. Everything that stands is sorted back to front by `x + y + z / 2` and
+    drawn as boxes: `boxCorners` gives the eight corners, `visibleFaces` the three the camera sees, and each face takes
+    the hue shaded by its own factor. Position comes only from the frame model `map.js` already computed for that
+    second (`onRoutes` from `placeCar`, the areas' family tallies, the frame's depot views, `log.visits` for the bay
+    fills): the view has no arithmetic of its own for where a car is, and it never runs the model.
+    **Every word is DOM.** The canvas never calls `fillText` or `strokeText`, which `test/a11y.test.mjs` asserts on the
+    source. Area names, depot ids, route shields, the numbers under each block, the count plates and the pinned car's
+    plate live in an HTML overlay with `contain: layout paint`; static labels are placed once per geometry by a scorer
+    that refuses any overlap of two 44 px targets and keeps the numbers tag inside the stage at both geometries, and
+    per-frame elements move by one `transform` behind a same-string guard, never by `left` or `top`. The overlay holds
+    the map's 20 roving stops with the flat picture's grammar (`AREA_NEIGHBOURS`, Enter in, Escape out, `I` inspects),
+    and the canvas is `role="img"` with `tabindex="-1"` whose name is written only at rest.
+    **Coincidence.** `bodyGroups` keys on `(route, dir, fraction)` exactly as the model holds them and then splits by
+    state family, so a stack is a fact of the log and not of the screen, a mixed stack draws two bodies and never one in
+    one hue, and the counts at one clock are equal at two canvas sizes. Measured on the default preset at the recall
+    second: stacks of 22, 18, 9, 9 and 9 carry 67 of the 85 cars on routes. Pinned, because a key rounded to a twentieth
+    of a leg makes those five stacks six and claims 69 cars coincident.
+    **Hues.** `SHADES` is `{light: {top: 1, sideY: 0.84, sideX: 0.68}, dark: {top: 1, sideY: 1.14, sideX: 1.28}}`: sides
+    darken on the light theme, where darkening only raises the ratio on the panel, and lighten on the dark one. The
+    tokens are read from the stylesheet at mount and again on a `prefers-color-scheme` change; nothing in `iso.js`
+    spells a colour, `test/iso.test.mjs` holds every fill and stroke to a token or a shaded face of one, and
+    `test/a11y.test.mjs` pins all twenty-four face ratios and requires 3:1 on both route hues in both themes.
+    **Two pictures, one map.** `createMap({view})` defaults to `"flat"`, so every test written before this decision
+    builds exactly the picture it built then; `mountMap` passes the factory and the page gets `"iso"`. Only the visible
+    picture draws; the hidden one is `hidden` and `inert`, so the map is still exactly one tab stop. Both share the
+    chip, the world line, the table twin, the tooltip, the crowded reasons, the limits chip and the legend. A canvas
+    that gives no 2D context leaves the flat picture standing and writes `MAP.isoFallback` in visible text. The band
+    fallback is the flat picture's rule against isometric ribbon lengths (`peakConcurrency` is now shared by both):
+    measured, nothing bands wide at the default fleet or at design §5.9's 150-car reference, and nothing bands on the
+    phone. `styles.css` adds `.fl-iso*` only, with no transition, animation, keyframe or `will-change`, so both
+    reduced-motion blocks stay exactly as they are; reduced motion needs no code path, because `frameAt`'s
+    `interpolate: false` already hands the picture snapshot positions and the same second drawn twice is call-for-call
+    identical. `test/performance.test.mjs` records what one isometric frame asks on a fake context at 120, 150 and 500
+    cars: one model a frame, context calls bounded by the bodies and cubes actually drawn, no overlay write where no
+    number moved, and an overlay of 78 static nodes at every fleet size that grows only by count plates, never by one
+    node per car. Those are deterministic proxies; design §5.9's 8 ms whole-frame budget is a browser measurement and is
+    not recorded in the repository.
+44. `Present` is a layer with a store key, and its beats seek silently (design §4.2, §7.1, §7.2).
+    **The layer.** `MODES` is unchanged and `Present` is not a fourth mode: it is a pressed toggle in the top bar over
+    whichever mode is showing, with its own store key `present: {on, chapter, beat, stop_s, prepared}` and pure reducer
+    cases (`present/open`, `present/goto`, `present/stop`, `present/prepared`, `present/close`). Leaving keeps
+    `prepared`, because the runs it made are still in the store and re-entering must not run them again. The shell gains
+    two regions, `ledger` and `rail`, in DOM order after the map, hidden and inert until the layer opens;
+    `data-present="true"` on the root moves them into the presenting grid, and the knobs, the side column, the chart
+    row, the segmented control, the transport's control row and the `Isometric | Flat` group go hidden and inert while
+    it is on. Nothing is stored between visits.
+    **The walk.** `src/ui/present.js` holds four chapters of eleven beats as data. Every beat declares where the clock
+    goes, what it pins, what it opens, which figures it projects, the mechanism its rule line names and the model limit
+    that rule owes. Beat clocks are functions of the scenario's declared knobs (`peaks`, `recall_s`, `release_s`), never
+    searched and never typed, so moving a knob moves the beat; the morning beat retitles itself when a scenario turns
+    the release off. `applyBeat` is a silent seek (an untagged `clock/set`, which the announcer stays quiet for), a pin,
+    an open and a stop clock, run inside one `settle` so the several dispatches render once and the narration describes
+    the second the walk arrived at. A beat never starts the clock: it lands still on its declared second, the ledger
+    says `Press Play to watch to D1 18:00.`, and a store subscriber pauses playback the first time the clock passes the
+    stop second. Playback runs at 300x while presenting. `Prepare` is the only thing that runs the model: it starts the
+    casebook's OPS-01, runs the window at its five seeds, then freezes and runs the experiment at its twenty paired
+    seeds, through the runtime's ordinary public calls, timing both with `performance.now()` and showing the result as
+    `(your clock)`; `prepared` is dispatched only when both landed, and until then `Next` is off and every figure reads
+    `not available: nothing has run yet`.
+    **What a figure may be.** Every value is a projection of the frame model, the interval log, the run summaries or the
+    frozen verdict through the formatters the rest of the page already uses: no number is typed, stored or shipped, and
+    none is computed a second way. The four-depot table is `inspector.js`'s `depotView`, the readout is
+    `experiment.js`'s own gate chain, primary rows, seed dots and guardrail rows with minutes added beside seconds, and
+    the situation block is the casebook record's copy verbatim (decision 41). At most three figures a beat, each under
+    exactly one register chip, and a verdict figure's chip counts the paired seeds rather than the window's
+    replications. Narration is generated from the run in the second person, speaks once a beat through one polite
+    region, and is capped at three lines; `test/captions.test.mjs` scans every string in `PRESENT` for a direction word
+    and pins the four comparing lines on OPS-01 at seed 1001 and seed set 1 (H-9). Nothing tweens, counts up or
+    transitions: `styles.css` adds `.fl-ledger*`, `.fl-ticker*`, `.fl-rail`, `.fl-reading-card`, `.fl-registry`,
+    `.fl-hourly`, `.fl-readout` and `.fl-refusals` with no motion of any kind.
+    **Phases C and D of the demo plan are not built and left no scaffolding.** There is no `A baseline | B candidate`
+    toggle and no arm reducer: the beat that shows both arms opens the fork the page already has, the map region steps
+    aside as it does from the verdict card, and the ledger carries each arm's depot line in words. There is no day bar
+    and no moment stamp (the map keeps its own corner stamp and nothing else), no second seed set beat, no `Flat`
+    toggle inside `Present`, no `Try it` handoff and no phone-specific presenting rule; `charts.js` and `playback.js`
+    are untouched.

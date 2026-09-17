@@ -48,6 +48,15 @@ export function clock(t_s) {
   return `D${String(day)} ${two(Math.floor(inDay / 3600))}:${two(Math.floor((inDay % 3600) / 60))}`;
 }
 
+/**
+ * Simulated clock with its seconds, `D2 00:46:40`. The walkthrough's Simulation beat compares the second a snapshot
+ * was taken with the second being drawn, and those two are usually inside the same minute, so that one line needs the
+ * seconds the minute clock drops.
+ */
+export function clockSeconds(t_s) {
+  return `${clock(t_s)}:${two(Math.floor(t_s) % 60)}`;
+}
+
 /** Scrubber tick `D1 05` from seconds since day 1 00:00 (the hour the second falls in). */
 export function clockHour(t_s) {
   finite(t_s, "clock seconds");

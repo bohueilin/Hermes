@@ -4,11 +4,15 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
+import { createFakeContext } from "./helpers/fake-canvas.mjs";
 import { installFakeDom } from "./helpers/fake-dom.mjs";
 import { presetScenario, runThroughWorkerHandler } from "./helpers/model-payloads.mjs";
 import { bootstrapCi } from "../src/instrument/bootstrap.js";
 import { start } from "../src/ui/app.js";
-import { AREA_ORDER, CARS_PER_BLOCK, FAMILY_ORDER, frameModelCounts } from "../src/ui/map.js";
+import { createIsoView } from "../src/ui/iso.js";
+import { AREA_ORDER, CARS_PER_BLOCK, FAMILY_ORDER, frameModelCounts, mountMap } from "../src/ui/map.js";
+import { createPlayback } from "../src/ui/playback.js";
+import { createInitialState, createStore } from "../src/ui/store.js";
 import { runToEnd } from "../src/model/engine.js";
 import { experimentSteps, freezeSpec, runExperimentSpec } from "../src/model/experiment.js";
 import { computeAll, computeSeries } from "../src/model/metrics.js";
@@ -317,5 +321,85 @@ describe("wall clock of the drawn page, JavaScript only (FLEET_PLAYGROUND_PERF=1
     } finally {
       page.close();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// What one isometric frame asks (design 5.9, decision 43). The canvas is a fake that records calls, so what is counted
+// is what the picture asks of the model, of the context and of the DOM: never a frame cost. The painted frame is the
+// browser gate of the demo plan's Phase A, run in a window that reports document.hidden === false.
+
+/** The isometric map alone on a store, at `cars` cars, on a fake 2D context, at D1 18:15. */
+async function isoPage(cars) {
+  const { payload } = await runThroughWorkerHandler({ type: "run_window", scenario: fleetScenario(cars), seeds: [1001], logSeed: 1001 });
+  const uninstall = installFakeDom(globalThis, { media: { "(min-width: 1280px)": true, "(min-width: 768px)": true } });
+  const doc = uninstall.dom.document;
+  const region = doc.createElement("section");
+  doc.body.appendChild(region);
+  const store = createStore(createInitialState({ presetId: "bay_teaching_map", scenario: fleetScenario(cars) }));
+  const playback = createPlayback({ store, scheduler: { request: () => 1, cancel: () => {} } });
+  const ctx = createFakeContext();
+  const map = mountMap(region, { store, playback, isoView: (options) => createIsoView({ ...options, context2d: () => ctx, theme: () => ({}) }) });
+  store.dispatch({ type: "run/queued", id: "w", total: 1 });
+  store.dispatch({ type: "run/done", id: "w", payload });
+  const busy = payload.log.snapshots[0].t + 47700;
+  store.dispatch({ type: "clock/set", clock_s: busy });
+  return { store, map, ctx, busy, fleet: payload.log.cars.length, overlay: region.querySelector(".fl-iso__overlay"), canvas: region.querySelector("canvas"), close: () => { map.destroy(); uninstall(); } };
+}
+
+/** Advances the clock a second at a time for `frames` frames and counts what each frame asked. */
+function isoCost(page, frames) {
+  const element = globalThis.Element.prototype;
+  const original = { setAttribute: element.setAttribute };
+  const writes = { attributes: 0, styles: 0 };
+  // The picture's own writes: the overlay's and the canvas's. The table twin beside them is the map's, redrawn when
+  // a number it shows moves, whichever picture is on screen (test/map.test.mjs holds it to its numbers).
+  element.setAttribute = function setAttribute(name, ...rest) {
+    if (page.overlay.contains(this) || this === page.canvas) writes[name === "style" ? "styles" : "attributes"] += 1;
+    return original.setAttribute.call(this, name, ...rest);
+  };
+  const before = { computed: frameModelCounts.computed, calls: page.ctx.calls.length };
+  const t0 = performance.now();
+  try {
+    for (let i = 1; i <= frames; i += 1) page.store.dispatch({ type: "clock/set", clock_s: page.busy + i });
+  } finally {
+    element.setAttribute = original.setAttribute;
+  }
+  const ms = performance.now() - t0;
+  const per = (n) => n / frames;
+  return { models: per(frameModelCounts.computed - before.computed), calls: per(page.ctx.calls.length - before.calls), attributes: per(writes.attributes), styles: per(writes.styles), ms: per(ms) };
+}
+
+describe("what one isometric frame asks (design 5.9, decision 43)", () => {
+  test("one model a frame, a bounded number of context calls per body, and an overlay that does not grow with the fleet", async (t) => {
+    const rows = [];
+    for (const cars of FLEETS) {
+      const page = await isoPage(cars);
+      try {
+        const cost = isoCost(page, 60);
+        const where = `${String(cars)} cars`;
+        assert.equal(cost.models, 1, `${where}: models computed per frame`);
+        const { bodies, cubes } = page.map.iso().lastDraw();
+        // A body or a cube is at most three faces, each a path of four points, a fill and a stroke: about 30 calls.
+        // The static scene (ground, platforms, ribbons, chevrons, blocks and their parts) is a few hundred more.
+        assert.ok(cost.calls <= 40 * (bodies + cubes) + 900, `${where}: ${cost.calls.toFixed(0)} context calls a frame for ${String(bodies)} bodies and ${String(cubes)} cubes`);
+        // The overlay writes per frame only where a number moved: the numbers under four blocks, the waiting texts,
+        // the count plates by transform. Attribute writes stay far under the flat picture's one transform per car.
+        assert.ok(cost.attributes + cost.styles <= 40, `${where}: ${(cost.attributes + cost.styles).toFixed(1)} overlay writes a frame`);
+        const nodes = page.overlay.querySelectorAll("*").length;
+        const plates = page.overlay.querySelectorAll('[data-role="count"]').length;
+        rows.push({ cars, fleet: page.fleet, bodies, cubes, nodes, plates, ...cost });
+      } finally {
+        page.close();
+      }
+    }
+    for (const r of rows) {
+      t.diagnostic(`${String(r.cars).padStart(3)} cars (fleet ${String(r.fleet).padStart(3)}): model ${String(r.models)}, ${r.calls.toFixed(0)} context calls for ${String(r.bodies)} bodies and ${String(r.cubes)} cubes, ${r.attributes.toFixed(1)} attribute and ${r.styles.toFixed(1)} style writes, ${String(r.nodes)} overlay nodes (${String(r.plates)} count plates), ${r.ms.toFixed(3)} ms of JavaScript (not a frame cost)`);
+    }
+    // Bodies have no DOM. The overlay grows only by count plates, one per stack of coinciding cars, never per car.
+    const first = rows[0];
+    const last = rows[rows.length - 1];
+    assert.ok(last.nodes - last.plates === first.nodes - first.plates, "the overlay's static nodes are the same at every fleet size");
+    assert.ok(last.nodes - first.nodes < last.fleet - first.fleet, "the overlay never grows one node per car");
   });
 });

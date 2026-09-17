@@ -692,6 +692,70 @@ describe("Experiment: draft, freeze, verdict and session log", () => {
   });
 });
 
+describe("the walkthrough layer (demo plan section 4.4)", () => {
+  const fresh = () => createInitialState({ presetId: "bay_teaching_map", scenario: fakeScenario() });
+
+  test("a fresh state has the walkthrough closed, at its first beat, with nothing prepared", () => {
+    assert.deepEqual(fresh().present, { on: false, chapter: 0, beat: 0, stop_s: null, prepared: false });
+  });
+
+  test("opening starts at the first beat of the first chapter and never moves the mode", () => {
+    const s = steps(fresh(), [{ type: "present/goto", chapter: 2, beat: 1 }, { type: "present/open" }]);
+    assert.deepEqual(s.present, { on: true, chapter: 0, beat: 0, stop_s: null, prepared: false });
+    assert.equal(s.mode, "sandbox", "the walkthrough is a layer, so the mode underneath carries");
+    assert.equal(step(s, { type: "present/open" }), s, "opening an open walkthrough changes nothing");
+  });
+
+  test("goto moves to a beat and clears the stop clock, so replaying a beat pauses at its second again", () => {
+    let s = steps(fresh(), [{ type: "present/open" }, { type: "present/goto", chapter: 1, beat: 3 }]);
+    assert.equal(s.present.chapter, 1);
+    assert.equal(s.present.beat, 3);
+    s = step(s, { type: "present/stop", stop_s: 88200 });
+    assert.equal(s.present.stop_s, 88200);
+    const again = step(s, { type: "present/goto", chapter: 1, beat: 3 });
+    assert.equal(again.present.stop_s, null, "the same beat again clears the stop clock");
+    assert.equal(step(again, { type: "present/goto", chapter: 1, beat: 3 }), again, "with no stop clock it is already there");
+  });
+
+  test("a beat index must be a non-negative integer", () => {
+    const open = step(fresh(), { type: "present/open" });
+    for (const action of [
+      { type: "present/goto", chapter: -1, beat: 0 },
+      { type: "present/goto", chapter: 0, beat: 1.5 },
+      { type: "present/goto", chapter: "1", beat: 0 },
+      { type: "present/goto", chapter: 0, beat: null },
+    ]) {
+      assert.throws(() => reduce(open, action), RangeError, JSON.stringify(action));
+    }
+  });
+
+  test("the stop clock takes a second or null, and refuses anything else", () => {
+    const open = step(fresh(), { type: "present/open" });
+    assert.equal(step(open, { type: "present/stop", stop_s: 89100 }).present.stop_s, 89100);
+    assert.equal(step(step(open, { type: "present/stop", stop_s: 89100 }), { type: "present/stop", stop_s: null }).present.stop_s, null);
+    assert.equal(step(open, { type: "present/stop", stop_s: null }), open, "clearing a clear stop clock changes nothing");
+    assert.throws(() => reduce(open, { type: "present/stop", stop_s: "88200" }), TypeError);
+    assert.throws(() => reduce(open, { type: "present/stop", stop_s: Number.NaN }), TypeError);
+  });
+
+  test("prepared is set once and kept when the walkthrough is left, because its runs are still in the store", () => {
+    let s = steps(fresh(), [{ type: "present/open" }, { type: "present/prepared" }]);
+    assert.equal(s.present.prepared, true);
+    assert.equal(step(s, { type: "present/prepared" }), s, "preparing twice changes nothing");
+    s = steps(s, [{ type: "present/goto", chapter: 2, beat: 1 }, { type: "present/stop", stop_s: 93600 }, { type: "present/close" }]);
+    assert.equal(s.present.on, false);
+    assert.equal(s.present.stop_s, null, "leaving clears the stop clock");
+    assert.equal(s.present.prepared, true, "Prepare is not run again on the way back in");
+    assert.equal(s.present.chapter, 2, "where it stood is kept; opening again is what returns to the first beat");
+    assert.equal(step(s, { type: "present/close" }), s, "leaving a closed walkthrough changes nothing");
+  });
+
+  test("an unknown walkthrough action leaves the state alone", () => {
+    const open = step(fresh(), { type: "present/open" });
+    assert.equal(reduce(open, { type: "present/nothing" }), open);
+  });
+});
+
 describe("Experiment flow across modes and presets (review: experiment-flow lens)", () => {
   const AXIS = { id: "policy:depot_assignment", baseline: "home_depot", candidate: "nearest_depot" };
   const VERDICT_X1 = { type: "experiment/verdict", id: "x1", payload: { verdict: validVerdict(), digest: DIGEST } };

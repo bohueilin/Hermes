@@ -265,8 +265,11 @@ export const MODES = frozen({
  * `frozenAt` is the session clock passed by the caller; `changedKnobs` an integer. With no change, one sentence less.
  */
 export function freezeNotice({ frozenAt, changedKnobs }) {
-  if (changedKnobs === 0) return `Spec frozen at ${frozenAt}. This verdict is about the frozen spec.`;
-  return `Spec frozen at ${frozenAt}. Sandbox has changed since (${plural(changedKnobs, "knob")}). This verdict is about the frozen spec.`;
+  // The freeze time is this visitor's own wall clock, not the simulated one and not a time this page shipped, so it
+  // says whose clock it is (demo plan 4.7).
+  const at = `Spec frozen at ${yourClock(frozenAt)}.`;
+  if (changedKnobs === 0) return `${at} This verdict is about the frozen spec.`;
+  return `${at} Sandbox has changed since (${plural(changedKnobs, "knob")}). This verdict is about the frozen spec.`;
 }
 
 /** Freeze rule strings. */
@@ -549,9 +552,19 @@ export const STATUS_WORDS = frozen({
   unserved: { word: "unserved", glyph: "✕", status: "hold" },
 });
 
-/** Trade-off wording (design H-6): `lower out-of-service time, higher morning drive`. */
-export function tradeOff({ lower, higher }) {
-  return `lower ${lower}, higher ${higher}`;
+/**
+ * The two words a trade-off may use for where a metric went (design H-6: never a winner, only a direction).
+ * Each is chosen from the metric's own declared direction, never from which side of the sentence it stands on.
+ */
+export const TRADE_WORDS = frozen({ lower: "lower", higher: "higher" });
+
+/**
+ * Trade-off wording (design H-6): `lower out-of-service time, higher morning drive`. Both words come from
+ * `TRADE_WORDS`, chosen by the caller from each metric's declared direction: a primary that improved went down when
+ * lower is better and up when higher is better, and a harmed guardrail the other way round.
+ */
+export function tradeOff({ primaryWord, primary, guardrailWord, guardrail }) {
+  return `${primaryWord} ${primary}, ${guardrailWord} ${guardrail}`;
 }
 
 /** Direction words for a metric. */
@@ -1065,6 +1078,23 @@ export const MODEL_LIMITS = frozen({
   noStaff: "Staff not modelled: a free bay always has someone to work it.",
   oneSeedAnimated: "One replay is animated; results across replications carry their own chip.",
   intervalIsSimulationOnly: "The interval says nothing about whether the model is right.",
+  // Why five replications can agree to the digit: at travel variation 0 the seed changes nothing, so the band across
+  // replications has no width and every replication repeats the first (demo plan 4.7; the audit read five identical
+  // replications as a broken panel).
+  noTravelVariation: "Travel variation is 0 in this preset, so every replication repeats the first.",
+  // The isometric picture (design 7.3 as amended): a third dimension must not read as a place, a body as a vehicle
+  // type, or a bay cell as a numbered bay the engine lacks.
+  isoSketch: "An isometric sketch of invented geometry. Platforms are areas, not places; roads are ribbons, not streets.",
+  bodyIsConvention: "A car's shape and height are drawing conventions, not vehicle types. A car's position between events is an interpolation.",
+  baysNotNumbered: "Bays are not numbered in this model: cars fill them in the order their task started.",
+  // The walkthrough (demo plan section 4.7): a beat that shows a mechanism names the rule that produced it, before a
+  // reader can take the drawing for an operation. Each row is the chip of the beat that needs it.
+  recallActsOnce: "The recall and the release each act once, at the second you set.",
+  fixedPatience: "A rider waits exactly the patience you set, then goes unserved; once a car is on its way, the rider waits.",
+  noRepositioning: "Nothing repositions an idle car; the release sends cars to a home area, not to demand.",
+  stallsNotBays: "Depot assignment counts free stalls, never free bays.",
+  seedsVaryTravel: "Seeds vary travel time; the request stream is the same in every seed of a scenario.",
+  interpolation: "A car's position between events is an interpolation.",
 });
 
 /** Wait population beside every wait value: `from 412 completed rides` (count formatted). */
@@ -1096,6 +1126,16 @@ export const MAP = frozen({
   localRoute: "local route",
   highwayRoute: "highway",
   noDepot: "no depot in this area",
+  // The isometric picture (design 7.3 as amended, ARCHITECTURE decision 43): its name, its legend line (one body is
+  // one car or carries a count; a cube is a tally, not a place), the two pictures a reader can switch between, why the
+  // flat one may be all there is, and what a click on the canvas says back.
+  isoName: "Isometric sketch of the four areas",
+  oneBodyOneCar: "One body is one car on a route, or carries a count. One cube is 5 cars standing in an area. Where a cube stands on its platform means nothing. A car inside an area is a cube, not a body.",
+  viewName: "Picture",
+  viewIso: "Isometric",
+  viewFlat: "Flat",
+  isoFallback: "The isometric picture needs a 2D canvas this browser did not provide, so the flat picture is shown.",
+  pickNothing: "No car within reach of that click.",
   areas: { SF: "San Francisco", PEN: "Peninsula", SJ: "San Jose", EB: "East Bay" },
   families: {
     riderWork: "rider work",
@@ -1120,7 +1160,9 @@ export const MAP = frozen({
   tableHeads: {
     area: "Area",
     carsByFamily: "Cars by state family",
-    waitingRiders: "Waiting riders",
+    // The count is the frame's own, so the head says which second it belongs to; the column beside it says its hour
+    // (demo plan 4.7: the bridge between a whole-run wait and a count of riders standing right now).
+    waitingRiders: "Waiting riders at this second",
     unservedLastHour: "Unserved in the last hour",
     depot: "Depot",
     stallsHeld: "Stalls held",
@@ -1179,13 +1221,78 @@ export function mapAnnouncement({ clock, waiting, unservedLastHour }) {
   return `${clock}, this replay: ${plural(waiting, "rider")} waiting, ${String(unservedLastHour)} unserved in the last hour.`;
 }
 
+/**
+ * The world line under the replay chip: `Bay teaching map · 0 changes` or `OPS-01 Evening crunch: more cars in San
+ * Francisco · 1 change` (the preset's name, the changed-knob count an integer). A chip that names a seed but not a
+ * world lets a preset switch pass unnoticed; this line names the world on every replay surface.
+ */
+export function worldLine({ name, changes }) {
+  return `${name} · ${changesCount(changes)}`;
+}
+
+/** The isometric canvas's accessible name: `Isometric sketch of the four areas · D2 02:00` (clock formatted). */
+export function isoLabel({ clock }) {
+  return `${MAP.isoName} · ${clock}`;
+}
+
+/** A coincidence plate over one body that stands for several cars: `×19` (count integer, 2 or more). */
+export function countPlate(count) {
+  return `${UNITS.times}${String(count)}`;
+}
+
+/** The car a click on the canvas picked: `SF-017, on a trip` (car id, state words from MAP.carStates). */
+export function pickedCar({ car, state }) {
+  return `${car}, ${state}`;
+}
+
+/** What the output says when a click on the canvas landed on an overlay label instead: `That was the SF-2 label.` */
+export function pickedLabel(text) {
+  return `That was the ${text} label.`;
+}
+
+/** The pinned car's stack, beside its id: `with 18 others` (count integer, 1 or more). */
+export function withOthers(count) {
+  return `with ${plural(count, "other")}`;
+}
+
+/**
+ * The lines under a depot block, one fact each: `queue 21`, `bays 2/3`, `ready 4`, `stalls 25/30`, and `1 blocked`
+ * while a finished car has no stall free (integers). One fact a line keeps the tag 12 characters wide, so it stands
+ * under its block on a phone stage too.
+ */
+export function numbersLines({ queue, inBays, bays, ready, held, stalls, blocked = 0 }) {
+  const lines = [`queue ${String(queue)}`, `bays ${String(inBays)}/${String(bays)}`, `ready ${String(ready)}`, `stalls ${lotFill(held, stalls)}`];
+  if (blocked > 0) lines.push(`${String(blocked)} blocked`);
+  return lines;
+}
+
+/**
+ * The numbers under a block in full words, for their accessible name: `Queue 21 · In bays 2 of 3 · Ready 4 · Stalls held 25 of
+ * 30`, plus ` · 1 blocked, finished, no stall free` while a car is blocked (integers).
+ */
+export function numbersWords({ queue, inBays, bays, ready, held, stalls, blocked = 0 }) {
+  const heads = MAP.tableHeads;
+  const parts = [
+    `${heads.queue} ${String(queue)}`,
+    `${heads.inBays} ${String(inBays)} of ${String(bays)}`,
+    `${heads.ready} ${String(ready)}`,
+    `${heads.stallsHeld} ${String(held)} of ${String(stalls)}`,
+  ];
+  if (blocked > 0) parts.push(`${String(blocked)} blocked, ${MAP.blocked}`);
+  return parts.join(" · ");
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // NOW panel, the panel across replications, and the fork section (design §7.2 Sandbox wireframe, §7.4, D-10).
 
-/** Row names of the NOW panel (this replay) and the panel across replications. */
+/**
+ * Row names of the NOW panel (this replay) and the panel across replications. The wait row carries its own scope: a
+ * whole-run wait p90 beside a count of riders waiting at this second reads as a contradiction until each says what it
+ * covers, and the wait counts completed rides only (demo plan 4.7).
+ */
 export const NOW_PANEL = frozen({
   carsOnHighways: "cars on highways",
-  waitP90: "wait p90",
+  waitP90: "wait p90, whole run, completed rides",
   unservedShare: "unserved share",
 });
 
@@ -1678,4 +1785,326 @@ export function learnPinnedCar(car) {
 /** Moment position: `Moment 2 of 5` (integers). */
 export function momentPosition(index, total) {
   return `Moment ${String(index)} of ${String(total)}`;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The walkthrough (demo plan sections 1.1, 4.4 and 4.7; ARCHITECTURE decision 44). Four chapters of scripted beats over
+// one replay of the casebook's OPS-01. Every narration line below is a template filled from the run: no sentence here
+// states a direction the pins do not carry (H-9), which test/present.test.mjs scans for over every string in PRESENT.
+
+/** Fixed strings of the walkthrough: its controls, its chapters and beats, the rule line of each beat, and its copy. */
+export const PRESENT = frozen({
+  open: "Present",
+  leave: "Leave the walkthrough",
+  name: "Walkthrough",
+  ledgerName: "What this beat shows",
+  prepare: "Prepare",
+  prepareWhat: "Prepare runs the window once and the experiment once, here in your browser. Nothing is stored and nothing is shipped.",
+  prepareWait: "Next stays off until both runs land.",
+  preparing: "Preparing the walkthrough",
+  next: "Next",
+  back: "Back",
+  play: "Play",
+  pause: "Pause",
+  chaptersName: "Chapters",
+  ticker: "JUST HAPPENED · THIS REPLAY",
+  chapters: {
+    operations: "1 Operations",
+    analytics: "2 Analytics",
+    simulation: "3 Simulation",
+    product: "4 Product sense",
+  },
+  beats: {
+    peak: "The evening peak",
+    unservedHour: "The 18:00 hour",
+    recall: "The recall",
+    depotNight: "SF-2 at 02:00",
+    morning: "The morning after",
+    registers: "Two registers",
+    verdict: "The verdict",
+    frame: "How a frame is made",
+    arms: "One world, two arms",
+    standsFor: "What this stands for",
+    refusals: "Not on this page, and the next question",
+    // The morning beat is the release; a scenario with the release turned off still has the beat, and it says so
+    // instead of naming a second the scenario never set.
+    morningNoRelease: "No release in this scenario",
+  },
+  /** The model rule each beat shows, under its figures: a mechanism, never a result. */
+  rules: {
+    peak: "Every car on a route is one body; cars standing in an area are cubes of five.",
+    unservedHour: "A rider not assigned within the patience you set is counted unserved.",
+    recall: "At the recall second every idle car leaves for its home depot.",
+    depotNight: "A depot works its bays in the order tasks started; a car with no free stall waits. In the table: held is stalls taken of stalls, queue is cars that finished intake and have no bay, bays is bays busy of bays, ready is cars parked with their tasks done.",
+    morning: "At the release second every ready car outside its home area drives home.",
+    registers: "Two registers, never mixed: this replay, and across replications.",
+    verdict: "The gates run in order: validity, then guardrails, then the primary.",
+    frame: "Playback seeks a snapshot every 5 minutes and places each car along its leg.",
+    arms: "Both arms run one world and one request stream; one knob differs.",
+    standsFor: "Each change says what it stands for, how it is set and what it misses.",
+    refusals: "The casebook holds twenty situations; this page ran one of them.",
+  },
+  /** Figure labels; a figure that names a depot or an hour wraps one of these with depotFigure or hourFigure. */
+  figures: {
+    ridersWaiting: "riders waiting",
+    carsWithRiders: "cars with riders",
+    unservedLastHour: "unserved in the last hour",
+    waitP90: "wait p90",
+    sentThisSecond: "sent at this second",
+    drivingToDepot: "driving to a depot",
+    queuedAcross: "queued across the four depots",
+    stallsHeld: "stalls held",
+    readyAtDepots: "ready at depots",
+    drivingHome: "driving home",
+    queueCleared: "queue cleared",
+    carsOnLeg: "cars on a leg",
+    eventsSoFar: "events so far",
+  },
+  /** Chapter 2's own content: the registry of what this page can compute, and the two charts by hour under it. */
+  registry: {
+    heading: "The metric registry",
+    hourly: "By hour",
+  },
+  /** Chapter 3's own content: where the drawn frame came from, and what the model checks on itself. */
+  simulation: {
+    snapshot: "snapshot",
+    drawnAt: "drawn at",
+    interpolated: "interpolated",
+    onSnapshot: "on the snapshot second",
+    determinism: "determinism precheck",
+    parity: "verdict rules parity-tested against the instrument's vectors",
+  },
+  /** Chapter 4's own content: what this page was not built to be, and the casebook question after this one. */
+  refusalsHeading: "Not on this page, each for a reason",
+  nextHeading: "The next question in the casebook",
+  openInExperiment: "Open in Experiment",
+  tradeOffHeading: "What it trades",
+  noTradeOff: "No guardrail was harmed in this run, so it trades nothing.",
+  /** Beat 3.2: the two arms of the watched seed, each at the depot the frozen spec's guardrail names. */
+  armsHeading: "Both arms at this second",
+  /** One line each of the ticker, for the events that carry a step of the day. */
+  tickerRelease: "morning release",
+  /** The card a reader meets before any run (demo plan section 1.2). */
+  card: {
+    lead: "A teaching model of a stylized Bay Area fleet. Every number is invented; the verdict rules are FleetLab's.",
+    sandbox: "Set the knobs and Run window.",
+    walk: "Walk through one day (about 6 minutes)",
+    close: "Close this card",
+  },
+  /** What this page was not built to be, each with the reason (demo plan section 4.6, design 1.4). */
+  refusals: [
+    "A real basemap or street tiles: they would imply geography and routing the model does not have.",
+    "A rendered city or vehicle models: fidelity the question does not need, and a picture that reads as a place.",
+    "A language model in the loop: a sampled model is not a pure function of scenario and seed, so no verdict could be pinned.",
+    "An imported traffic simulator: a second source of position that could disagree with the log every number reads.",
+    "A single fleet-health dial: rider wait and riders left unserved are two numbers, never one.",
+  ],
+  shortcutList: [
+    "Right arrow and left arrow: the next or the previous step",
+    "Home and End: the first or the last step",
+    "1 to 4: go to a chapter",
+    "Space: play or pause",
+    "Escape: leave the walkthrough",
+  ],
+  shortcutsScope: "These keys work only while the walkthrough row has focus.",
+});
+
+/** A beat that has somewhere to run to: `Press Play to watch to D2 00:45.` (clock formatted). */
+export function playToWatch(clock) {
+  return `Press Play to watch to ${clock}.`;
+}
+
+/** Where the walkthrough stands inside its chapter: `Step 4 of 5` (integers). */
+export function stepOf(index, total) {
+  return `Step ${String(index)} of ${String(total)}`;
+}
+
+/** A count against a whole: `113 of 120` cars, `4,210 of 10,376` events (integers, or counts already formatted). */
+export function outOf({ count, total }) {
+  return `${String(count)} of ${String(total)}`;
+}
+
+/** A value in seconds with its minutes beside it, never instead of them: `-1,565.6 s (-26.1 min)` (both formatted). */
+export function withMinutes({ seconds, minutes }) {
+  return `${seconds} (${minutes} ${UNITS.minutes})`;
+}
+
+/** A figure label scoped to one depot: `SF-2 stalls held` (a depot id and a PRESENT.figures label). */
+export function depotFigure({ depot, label }) {
+  return `${depot} ${label}`;
+}
+
+/** A figure label scoped to one hour: `wait p90, D1 18:00 hour` (a label and a formatted clock). */
+export function hourFigure({ label, clock }) {
+  return `${label}, ${clock} hour`;
+}
+
+/** A figure label scoped to one area and one hour: `wait p90, San Francisco, D1 18:00 hour` (area name, clock formatted). */
+export function areaHourFigure({ label, area, clock }) {
+  return `${label}, ${area}, ${clock} hour`;
+}
+
+/** A duration this visitor's own machine took, never a number this page shipped: `4.8 s (your clock)` (formatted). */
+export function yourClock(duration) {
+  return `${duration} (your clock)`;
+}
+
+/** What Prepare took: `window 1.2 s · experiment 4.8 s` (both formatted). */
+export function prepareTimes({ window, experiment }) {
+  return `window ${window} · experiment ${experiment}`;
+}
+
+/** A ticker line: a rider gave up waiting: `a rider in San Francisco went unserved after 10 min` (area name, formatted). */
+export function tickerUnserved({ area, after }) {
+  return `a rider in ${area} went unserved after ${after}`;
+}
+
+/** A ticker line: the recall acted: `recall ordered: 77 cars sent to a depot` (count integer). */
+export function tickerRecall(count) {
+  return `recall ordered: ${plural(count, "car")} sent to a depot`;
+}
+
+/** A ticker line: a car's first task began: `SF-040 took a bay after 250 min` (car id, wait formatted). */
+export function tickerBay({ car, after }) {
+  return `${car} took a bay after ${after}`;
+}
+
+/** A ticker line: a car finished intake with no bay free: `SF-040 queued at SF-2` (car and depot ids). */
+export function tickerQueued({ car, depot }) {
+  return `${car} queued at ${depot}`;
+}
+
+/** Beat 1.1, from the frame: `At D1 17:30 in this replay, 15 riders are waiting and 113 of 120 cars carry a rider.` */
+export function narrationPeak({ clock, waiting, riders, fleet }) {
+  return `At ${clock} in this replay, ${plural(waiting, "rider")} are waiting and ${outOf({ count: riders, total: fleet })} cars carry a rider.`;
+}
+
+/**
+ * Beat 1.2, from the log and the hourly series (counts integers, wait already formatted or an absent value). The wait
+ * names the area it counts, because it is the area the frozen spec's primary is scoped to and the hourly chart in the
+ * next chapter plots that same population.
+ */
+export function narrationUnservedHour({ clock, unserved, area, wait }) {
+  return `In the hour from ${clock}, ${plural(unserved, "rider")} went unserved; wait p90 in ${area} for rides completed in that hour is ${wait}.`;
+}
+
+/** Beat 1.3, from the events and the frame (counts integers, clock formatted). */
+export function narrationRecall({ clock, sent, driving }) {
+  return `At ${clock} the recall sent ${plural(sent, "car")} to a depot, and ${String(driving)} are driving to one.`;
+}
+
+/** Beat 1.4, from the frame's depot views (counts integers, clock formatted). */
+export function narrationDepots({ clock, queued, depot, held, stalls }) {
+  return `At ${clock}, ${plural(queued, "car")} wait for a bay across the four depots, and ${depot} holds ${lotFill(held, stalls)} stalls.`;
+}
+
+/** Beat 1.5, from the frame (counts integers, clock formatted). */
+export function narrationRelease({ clock, home, ready }) {
+  return `At ${clock}, ${plural(home, "car")} are driving home and ${String(ready)} stand ready at a depot.`;
+}
+
+/**
+ * Beat 1.5's pinned car, from its visit: `SF-040 took a bay at D2 05:34 and is ready at D2 05:54, after the release at
+ * D2 05:45.` (clocks formatted). `release` is null in a scenario that turns the release off, and then the sentence
+ * compares nothing. The comparing words are chosen from the two clocks at render time and pinned in
+ * test/captions.test.mjs on OPS-01 at seed 1001 (H-9).
+ */
+export function narrationPinnedBay({ car, took, ready, release = null, before = false }) {
+  const base = `${car} took a bay at ${took} and is ready at ${ready}`;
+  return release === null ? `${base}.` : `${base}, ${before ? "before" : "after"} the release at ${release}.`;
+}
+
+/**
+ * Beat 1.5's depot: the second its bay queue was next empty, against the release second the knobs set (clocks
+ * formatted). A pinned finding: the comparing word comes from the two clocks and is asserted on OPS-01 (H-9).
+ */
+export function narrationQueueCleared({ depot, cleared, release, before }) {
+  return `${depot}'s bay queue is empty at ${cleared}, ${before ? "before" : "after"} the release at ${release}.`;
+}
+
+/** What FleetLab's registry says about a metric, by the registered status word. */
+export const REGISTRY_STATUS = frozen({
+  identical: "identical to FleetLab",
+  playground_only: "this teaching model only",
+});
+
+/** Registry facts under a metric's name: `s · lower is better · identical to FleetLab` (each part already worded). */
+export function registryFacts({ unit, direction, status }) {
+  return `${unit} · ${direction} · ${status}`;
+}
+
+/**
+ * Beat 3.1: where the drawn frame came from: `snapshot D2 00:45:00 · drawn at D2 00:46:40 · interpolated`, or
+ * `· on the snapshot second` when the clock sits exactly on a snapshot. Both clocks are formatted with their seconds,
+ * because the two are usually inside the same minute.
+ */
+export function frameLine({ snapshot, drawn, interpolated }) {
+  const s = PRESENT.simulation;
+  return `${s.snapshot} ${snapshot} · ${s.drawnAt} ${drawn} · ${interpolated ? s.interpolated : s.onSnapshot}`;
+}
+
+/**
+ * Beat 3.1: what playback reads and what the two runs took on this visitor's own machine:
+ * `369 snapshots, one every 5 min · engine: worker · 5 replications in 1.2 s (your clock)` (counts integers, the step,
+ * the engine path and the duration already formatted).
+ */
+export function snapshotsLine({ snapshots, every, engine, replications, took = null }) {
+  const parts = [`${plural(snapshots, "snapshot")}, one every ${every}`, engine];
+  // The wall time is measured on this visitor's machine; before Prepare has measured one, the line says the rest.
+  if (took !== null) parts.push(`${plural(replications, "replication")} in ${yourClock(took)}`);
+  return parts.join(" · ");
+}
+
+/** Beat 3.1: what the model checks on itself, every run and in its tests (counts integers). */
+export function validationLine({ invariants, cases }) {
+  const s = PRESENT.simulation;
+  return `${plural(invariants, "invariant")} checked every run · ${s.determinism} · ${s.parity} · ${plural(cases, "casebook verdict")} pinned in tests`;
+}
+
+/**
+ * The frozen spec in words, for the beat that shows the verdict: `One change on parameter:SUP-1.SF, one primary with
+ * an equivalence margin of 60 s, 2 guardrails each with a maximum harm, 20 paired seeds and 2,000 resamples, frozen
+ * before the run.` (the axis id, the margin and the resample count already formatted).
+ */
+export function specSentence({ axis, margin, guardrails, seeds, resamples }) {
+  return `One change on ${axis}, one primary with an equivalence margin of ${margin}, ${plural(guardrails, "guardrail")} each with a maximum harm, ${plural(seeds, "paired seed")} and ${resamples} resamples, frozen before the run.`;
+}
+
+/** Beat 2.1: the two registers named, with the replication count this page ran (integer). */
+export function narrationRegisters(replications) {
+  return `Two registers stand apart on this page: what this replay did, and what ${String(replications)} replications did.`;
+}
+
+/** Beat 2.2: what was frozen before the run (integers). */
+export function narrationVerdict({ seeds, resamples }) {
+  return `The spec was frozen before this run: ${plural(seeds, "paired seed")} and ${String(resamples)} resamples.`;
+}
+
+/** Beat 3.1: where the drawn frame came from (clocks formatted). */
+export function narrationFrame({ snapshot, drawn }) {
+  return `This frame comes from the snapshot at ${snapshot} and is drawn at ${drawn}, with each car placed along its leg.`;
+}
+
+/**
+ * Beat 3.2: one arm at one depot at the second both arms stand at: `A: baseline · SF-2 holds 22 of 30 stalls, 16 cars
+ * queued for a bay.` (the arm word, the depot id, the lot fill already formatted, the count an integer). The two lines
+ * carry their numbers and say nothing about the difference: for one seed, that is a direction the verdict did not pin.
+ */
+export function armDepotLine({ arm, depot, held, queued }) {
+  return `${arm} · ${depot} holds ${held} stalls, ${plural(queued, "car")} queued for a bay.`;
+}
+
+/** Beat 3.2: the seed being watched against the seeds the verdict counted (integers). */
+export function narrationArms({ seed, index, total }) {
+  return `Seed ${String(seed)} is paired seed ${String(index)} of ${String(total)}, and the verdict counted them all.`;
+}
+
+/** Beat 4.1: the casebook record's discipline, named by its id. */
+export function narrationSituation(id) {
+  return `${id} says what it stands for, how it is set and what it misses, before anything runs.`;
+}
+
+/** Beat 4.2: the next casebook question, by title alone (H-9: never a verdict for it). */
+export function narrationNext(name) {
+  return `The next question in the casebook is ${name}, by its title alone.`;
 }

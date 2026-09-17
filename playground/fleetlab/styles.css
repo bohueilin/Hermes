@@ -21,6 +21,15 @@ Map and SVG  .fl-yard .fl-route-highway__casing .fl-route-highway__centre .fl-ro
              .fl-pinned-car (the pinned glyph, clickable) .fl-hit (a transparent pointer target)
              .fl-chart__grid .fl-chart__axis .fl-chart__line .fl-chart__band .fl-chart__cursor .fl-hatch-line
              .fl-map-legend (swatch and word per state family)
+Isometric    .fl-iso (the canvas and its overlay) .fl-iso__canvas .fl-iso__overlay (HTML labels over the canvas: every word)
+             .fl-iso__label .fl-iso__label--area .fl-iso__label--depot .fl-iso__label--route .fl-iso__label--local
+             .fl-iso__plate .fl-iso__leader .fl-iso__text .fl-iso__numbers .fl-iso__count .fl-iso__pin .fl-iso__pick
+Walkthrough  .fl-ledger (what the beat shows, a tab stop because it scrolls) .fl-ledger__beat .fl-ledger__prepare
+             .fl-ledger__figures .fl-ledger__figure .fl-ledger__foot (the ticker, pinned to the ledger's bottom edge)
+             .fl-ledger__value (32 px mono) .fl-ledger__table .fl-ticker .fl-ticker__line .fl-rail (one row of controls)
+             .fl-reading-card  on .fl-app[data-present="true"] the knobs, the side column and the chart row are hidden
+             .fl-registry (the metric registry in two registers) .fl-hourly (two charts by hour, side by side)
+             .fl-readout (the verdict in gate order, on .fl-verdict) .fl-refusals (what this page is not)
 Lists        .fl-flow (ordered steps as an arrow flow, no number markers) .fl-flow__arrow (aria-hidden) .fl-list-plain .fl-situation__proxy
 Transport    .fl-scrubber .fl-scrubber__band (style --warmup: fraction) .fl-scrubber__input .fl-scrubber__ticks
 Motion       :root[data-motion="reduce|full"] is the in-app override; without it the system setting applies.
@@ -463,6 +472,139 @@ summary {
 /* The map legend: one swatch and word per state family, in unit-bar row order (design 8.2: colour is never the only cue). */
 .fl-map-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 4px 0 0; padding: 0; list-style: none; }
 .fl-map-legend > li { display: inline-flex; align-items: center; gap: 4px; }
+
+/* The isometric world (design 7.3 as amended, decision 43): a canvas the page owns and HTML labels over it that carry
+   every word. No transition, animation or will-change here: a body moves because the clock moves, and a plate moves
+   by transform behind a same-string guard under contain: layout paint, so a frame never touches the page's layout. */
+.fl-iso { position: relative; }
+.fl-iso__canvas { display: block; width: 100%; height: auto; }
+.fl-iso__overlay { position: absolute; inset: 0; contain: layout paint; pointer-events: none; }
+/* A label is a 44 px transparent target centred on its anchor; the visible plate inside it is the words. */
+.fl-iso__label {
+  position: absolute;
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--target);
+  min-height: var(--target);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+}
+.fl-iso__plate { padding: 4px 6px; background: var(--panel); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 4px; font-size: 12px; line-height: 1.2; white-space: nowrap; }
+.fl-iso__label--area .fl-iso__plate { background: transparent; border-color: transparent; color: var(--faint-text); font-weight: 600; font-size: 14px; }
+/* Depot ids and route shields are the schematic's own names: monospace, as the flat picture writes them. */
+.fl-iso__label--depot .fl-iso__plate, .fl-iso__label--route .fl-iso__plate { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* A local route's words show on focus or hover, as the flat picture shows them; its 44 px target is always there,
+   and the hidden words are taken out of the button's flow so the target is 44 px and not the width of the words. */
+.fl-iso__label--local .fl-iso__plate { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); visibility: hidden; }
+.fl-iso__label--local:focus-visible .fl-iso__plate, .fl-iso__label--local:hover .fl-iso__plate { visibility: visible; }
+.fl-iso__leader { position: absolute; width: 1px; background: var(--rule-strong); transform-origin: 0 0; }
+.fl-iso__text { position: absolute; transform: translate(-50%, -50%); font-size: 12px; color: var(--ink); white-space: nowrap; }
+.fl-iso__numbers {
+  position: absolute;
+  display: grid;
+  margin: 0;
+  padding: 2px 4px;
+  /* The tag hangs from its bottom edge, so the blocked state's fifth line grows up into the gap under its own block
+     instead of down past the stage edge, where the overlay's contain: layout paint would clip it. */
+  transform: translate(-50%, -100%);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--ink);
+  background: var(--panel);
+  white-space: nowrap;
+}
+.fl-iso__count, .fl-iso__pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 0;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.2;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.fl-iso__pin { border-color: var(--accent); pointer-events: auto; cursor: pointer; }
+.fl-iso__pick { display: block; margin: 4px 0 0; }
+
+/* The walkthrough (demo plan section 4.5, ARCHITECTURE decision 44): a stage, a ledger and a rail on one screen. The
+   layer only rearranges what the page already has, so there is no transition, animation or will-change here: a beat
+   change is instant (a tween across a jump would pass through seconds the model never produced). */
+.fl-app[data-present="true"] { grid-template-areas: "strip" "top" "map" "ledger" "rail" "transport" "footer"; }
+.fl-ledger { grid-area: ledger; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
+.fl-ledger p, .fl-ledger h2 { margin: 0; }
+.fl-ledger__beat { font-size: 20px; }
+.fl-ledger__prepare { display: grid; gap: 4px; justify-items: start; }
+.fl-ledger__figures { display: grid; gap: 12px; }
+.fl-ledger__figure { display: grid; gap: 2px; justify-items: start; }
+/* A figure is read across a room: 32 px, tabular, and never counted up to. */
+.fl-ledger__value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 32px; line-height: 1.1; }
+.fl-ledger__table td, .fl-ledger__table th { font-family: var(--font-mono); font-size: 14px; }
+/* What just happened, newest first: hairlines between lines, and no live region (the narration is the one voice).
+   The foot stays at the ledger's bottom edge while the rest of the beat scrolls under it: the ticker is where the
+   steps of the day are, and a beat taller than its box would otherwise push it out of sight. Sticky is a position,
+   not a motion: nothing here transitions. */
+.fl-ledger__foot { position: sticky; bottom: 0; display: grid; gap: 4px; background: var(--ground); padding-block-start: 4px; }
+.fl-ticker { display: grid; }
+.fl-ticker__line { display: flex; gap: 8px; margin: 0; padding: 4px 0; border-top: 1px solid var(--rule); }
+.fl-rail { grid-area: rail; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.fl-rail .fl-button[aria-current="step"] { background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
+.fl-reading-card { display: grid; gap: 8px; padding: 12px; }
+
+/* What chapters 2 to 4 put in the ledger (demo plan beats 2.1, 2.2 and 4.2): the registry in two registers, the two
+   charts by hour, the readout composed from the verdict card, and the refusals. No transition, animation or
+   will-change here either: these are what a beat shows, and a beat change is instant. */
+.fl-registry { display: grid; gap: 8px; justify-items: start; }
+/* The three parts of a row's name stack inside its cell; the cell stays a table cell so the columns stay aligned. */
+.fl-registry th > span { display: block; }
+.fl-hourly { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.fl-readout { display: grid; gap: 8px; }
+.fl-refusals { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+
+@media (min-width: 1280px) {
+  .fl-hourly { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Presenting from 1280 px: the stage beside the ledger, the rail under both. This block sits after the presenting
+   rules above because it overrides them at the same specificity, and the later rule is the one that applies.
+   The stage is capped by the viewport height at the picture's own 640 by 500 ratio, so the stage, the ledger and the
+   rail hold one screen. --present-chrome is everything above and below the picture: the strip, the top bar, the rail,
+   the gaps, and the map panel's own header, captions and legend under the picture. */
+@media (min-width: 1280px) {
+  .fl-app[data-present="true"] {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
+    grid-template-areas:
+      "strip strip"
+      "top top"
+      "map ledger"
+      "rail rail"
+      "transport transport"
+      "footer footer";
+    /* The ordinary layout's rows are the ordinary layout's: row 5 is a 220 px chart row there and the transport here,
+       and the transport is empty while presenting (its control row is hidden and inert, and the day bar is not built),
+       so inheriting that template stood 220 px of blank panel between the rail and the footer. */
+    grid-template-rows: auto auto minmax(0, auto) auto auto auto;
+    /* Measured in the browser on this source at 1512 x 982 and 1280 x 800 (document.hidden was true, so these are
+       layout numbers, never frame numbers): the strip, the top bar, the rail and the gaps take 161 px, and the map
+       panel spends another 57 above the picture (its padding and its header row) and 171 to 188 below it (the honesty
+       captions, the legend and the pick output, which wrap further in the narrower column). 412 leaves the rail's foot
+       at 958 of 982 at 1512 and at 794 of 800 at 1280, and the canvas at 730 x 570 and 497 x 388. The captions are what the picture owes a reader and they stay;
+       what the picture gives up beyond them bought nothing, so it is given back. */
+    --present-chrome: 412px;
+  }
+  .fl-app[data-present="true"] .fl-iso { width: min(100%, calc((100vh - var(--present-chrome)) * 1.28)); margin-inline: auto; }
+  .fl-app[data-present="true"] .fl-ledger { max-height: calc(100vh - var(--present-chrome)); }
+}
 
 /* Ordered steps drawn as an arrow flow, never with number markers (design 8.5); a vertical list on a phone. */
 .fl-flow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; padding: 0; list-style: none; }

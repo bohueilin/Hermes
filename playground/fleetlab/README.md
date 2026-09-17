@@ -18,6 +18,36 @@ NO_RECOMMENDATION.
   through the knobs as a proxy that says what it stands for and what it misses, with its measured verdict pinned in the
   tests and its lesson in the design document.
 
+## The picture, the walkthrough and the reading card
+
+**An isometric world.** The map region draws the four areas as an isometric schematic on a 2D canvas, generated at run
+time from the interval log: no asset, no dependency, no build step, no WebGL. Platforms are flat squares at the areas'
+own centres, roads are ribbons, a car driving a route is a shaded box pointing along its ribbon, cars standing in an
+area are cubes of five, and a depot is a block whose lot fill climbs its sides and whose bay cells fill as their tasks
+run. Where several cars share a leg exactly, one body carries a written count. The canvas draws no word: every label,
+number and name is HTML over it, which is what a screen reader reads and what the copy scans see. Nothing is lit, no
+camera moves, and the picture is a sketch of invented geometry, which its caption says before a run as well as during
+one. `Isometric | Flat` in the map header switches back to the SVG schematic, and a browser whose canvas gives no 2D
+context keeps the flat one and says why.
+
+**Present.** A layer over the three modes, not a fourth mode. It turns the page into a stage, a ledger and a rail and
+walks four chapters over one replay of the casebook's OPS-01: Operations (the evening peak, the hour riders gave up in,
+the recall, a depot at two in the morning, the release), Analytics (the metric registry in both registers with two
+charts by hour, then the verdict readout and the spec that was frozen before the run), Simulation (which snapshot the
+frame came from and whether the positions are interpolated, then both arms of the verdict's own watched seed) and
+Product sense (what the case stands for and what it misses, what the run trades, five things this page refuses with
+their reasons, and the next casebook question by title alone). `Prepare` runs the window once and the experiment once in
+your own browser and says what each took on your clock; after that every beat is a seek and a projection of numbers the
+run already produced. Eleven beats behind one `Next` that keeps its focus, each landing still on a second the scenario's
+knobs declare, with `Play` in your hands. `Leave the walkthrough` puts the page back as it was.
+
+**The reading card** stands above the picture before anything has run, with a button into the knobs and a button that
+walks the day. It is a section, never a dialog, and a reload starts clean.
+
+Two later phases were planned and are deliberately not built: the candidate arm drawn in the world with an `A | B`
+toggle, a day-long bar under the scrubber, and the phone polish of the presenting layout. The design document says what
+each holds.
+
 ## What it shares with FleetLab
 
 | | FleetLab (`src/hermes/fleet/`) | FleetLab Playground |
@@ -90,7 +120,7 @@ PYTHONPATH="$PWD/src" PYTHONDONTWRITEBYTECODE=1 python tools/fleet_playground/re
 | `src/legacy` | the port of FleetLab's engine, metrics and invariants |
 | `src/model` | knobs and presets, the operations casebook records, routes, world, engine, metrics, invariants, experiments, reference panels |
 | `src/runtime` | the engine host, with a worker and a time-sliced main-thread fallback |
-| `src/ui` | interface copy, store, map, playback, charts, knob panel, inspector, Experiment and Learn |
+| `src/ui` | interface copy, store, map (the flat schematic and the isometric picture), playback, charts, knob panel, inspector, Experiment, Learn and the Present walkthrough |
 | `tools` | the offline packer and its checker |
 | `test` | node tests; the Python tests live in `tests/unit/test_fleet_playground_*.py` |
 

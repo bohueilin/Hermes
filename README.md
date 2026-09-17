@@ -112,6 +112,15 @@ for, how it is set and what it misses; its measured verdict is pinned in the tes
 document, never on the page. Beside the single offline file, `pack.mjs --site` writes a folder for a static host and
 `check-dist.mjs --site` checks it; putting either online stays an owner action.
 
+The map region draws the four areas as an isometric schematic on a 2D canvas, generated at run time from the interval
+log with no asset, no dependency and no WebGL: flat platforms at the areas' own centres, ribbons for roads, one shaded
+box per car driving a route, cubes of five for cars standing in an area, and a depot block whose bay cells fill as their
+tasks run. The canvas draws no word, because every label and number is HTML over it; nothing is lit and no camera moves,
+and the caption says it is a sketch of invented geometry. The flat SVG schematic is one toggle away and is what a
+browser without a 2D canvas gets. `Present` is a layer over the three modes that turns the page into a stage, a ledger
+and a rail and walks four chapters over one replay of the casebook's first situation, with one `Prepare` that runs the
+window and the experiment in your own browser and eleven beats that only seek and read what the run already produced.
+
 ```bash
 python3 -m http.server 8765 --bind 127.0.0.1 --directory playground/fleetlab
 ```

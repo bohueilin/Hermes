@@ -857,6 +857,54 @@ describe("FleetLab reference panels (design §1.3, §7.2; contract 5.2)", () => 
   }
 });
 
+describe("what the walkthrough borrows from the verdict card (demo plan beat 2.2)", () => {
+  test("the frozen spec in words names its axis, its margin, its guardrails, its seeds and its resamples", () => {
+    const { spec } = frozenExperiment({ presetId: "OPS-01", replications: 20 });
+    const sentence = experiment.specInWords(spec);
+    assert.equal(sentence, labels.specSentence({
+      axis: spec.axis.id,
+      margin: experiment.thresholdText(spec.primary.metric, thresholdValue(spec.primary.metric, spec.primary.margin_units)),
+      guardrails: spec.guardrails.length,
+      seeds: spec.seeds.length,
+      resamples: format.count(spec.resamples),
+    }));
+    assert.ok(sentence.includes(spec.axis.id), sentence);
+    assert.ok(sentence.includes(String(spec.seeds.length)), sentence);
+  });
+
+  test("the SITUATION block the setup sheet draws is exported whole, and is the record's own copy", async () => {
+    await withDom({}, () => {
+      const preset = presetById("OPS-01");
+      const root = document.createElement("div");
+      for (const node of experiment.situationBlock(preset, true)) root.appendChild(node);
+      assert.equal(root.querySelector('[data-role="situation-lead"]').textContent, labels.SITUATION.lead);
+      assert.equal(root.querySelector('[data-role="situation"]').textContent, preset.situation);
+      assert.deepEqual(root.querySelectorAll('[data-role="proxy"] [data-part="standsFor"]').map((n) => n.textContent), preset.proxy.map((p) => p.standsFor));
+      assert.deepEqual(root.querySelectorAll('[data-role="outside-model"] li').map((li) => li.textContent), [...preset.outsideModel]);
+      assert.equal(root.querySelector('[data-role="watch"]').textContent, preset.watch);
+      assertCopyRules(root);
+    });
+  });
+
+  test("a value in seconds carries its minutes beside it in a readout, and a value that is not in seconds does not", () => {
+    assert.equal(
+      experiment.valueWithMinutes("wait.p90_s", -1565.6, { withSign: true }),
+      labels.withMinutes({ seconds: experiment.metricValueText("wait.p90_s", -1565.6, { withSign: true }), minutes: format.signed(-1565.6 / 60, 1) }),
+    );
+    assert.equal(experiment.valueWithMinutes("unserved.fraction", 0.034), experiment.metricValueText("unserved.fraction", 0.034));
+    assert.equal(experiment.valueWithMinutes("requests.total", 1870), experiment.metricValueText("requests.total", 1870));
+  });
+
+  test("the freeze notice says whose clock the freeze time is on", async () => {
+    await withDom({}, async () => {
+      const { container } = await finishedRun("UC-01");
+      const notice = container.querySelector('[data-role="freeze-notice"]');
+      assert.equal(notice.textContent, labels.freezeNotice({ frozenAt: "14:02", changedKnobs: 0 }));
+      assert.ok(notice.textContent.includes(labels.yourClock("14:02")), notice.textContent);
+    });
+  });
+});
+
 describe("value text", () => {
   test("metric values and thresholds read in their unit, and knob values in the knob's unit", () => {
     assert.equal(experiment.metricValueText("wait.p90_s", 826.15, { withSign: true }), "+826.1 s");

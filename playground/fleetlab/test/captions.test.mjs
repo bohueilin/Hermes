@@ -5,10 +5,15 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import { presetById } from "../src/model/presets.js";
+import { metricWords } from "../src/ui/charts.js";
+import { tradeOffSentence } from "../src/ui/experiment.js";
 import * as format from "../src/ui/format.js";
 import * as labels from "../src/ui/labels.js";
 import * as learn from "../src/ui/learn.js";
-import { windowPayload } from "./helpers/model-payloads.mjs";
+import { frameAt } from "../src/ui/playback.js";
+import { longestBayWait, PRESENT_PRESET_ID, queueClearedAt } from "../src/ui/present.js";
+import { depotView } from "../src/ui/inspector.js";
+import { experimentPayload, frozenExperiment, ops01Payload, presetScenario, windowPayload } from "./helpers/model-payloads.mjs";
 
 /** Words that state a direction. */
 const DIRECTION = /\b(lower|higher|unchanged|more|fewer|less|rises?|rising|falls?|falling|longer|shorter|slower|faster|increases?|increased|decreases?|decreased|grows?|drops?|up|down|above|below|better|worse)\b/i;
@@ -129,4 +134,125 @@ describe("caption directions asserted on their presets (H-9)", () => {
       await assertDirection();
     });
   }
+});
+
+// The walkthrough's narration is generated from the run, so the same rule holds for it: a sentence may state a
+// direction only where this file runs OPS-01 and asserts it. The comparing lines choose their words from two clocks
+// the replay produced; these tests are the pins behind those words (demo plan section 4.7).
+
+/** Paired seeds the casebook's OPS-01 declares, which is what the walkthrough freezes and runs. */
+const VERDICT_SEEDS = 20;
+
+describe("the walkthrough's copy states no direction of its own (H-9)", () => {
+  test("every string of PRESENT passes the direction scan", () => {
+    const out = [];
+    const walk = (value, path) => {
+      if (typeof value === "string") out.push({ path, text: value });
+      else if (Array.isArray(value)) value.forEach((v, i) => walk(v, `${path}[${String(i)}]`));
+      else if (value !== null && typeof value === "object") for (const [k, v] of Object.entries(value)) walk(v, `${path}.${k}`);
+    };
+    walk(labels.PRESENT, "PRESENT");
+    assert.ok(out.length > 40, `only ${String(out.length)} strings reached`);
+    assert.deepEqual(out.filter((s) => DIRECTION.test(s.text)).map((s) => `${s.path}: ${s.text}`), []);
+  });
+});
+
+describe("the walkthrough's comparing lines, pinned on OPS-01 at seed 1001 and seed set 1 (H-9)", () => {
+  test("the car that waited longest for a bay at SF-2 is ready after the release, and its line says so", async () => {
+    const payload = await ops01Payload();
+    const scenario = presetScenario(PRESENT_PRESET_ID);
+    const release_s = scenario.policies.release_s;
+    const waited = longestBayWait(payload.log, "SF-2", release_s);
+    assert.ok(waited !== null && waited.ready_s !== null, "this replay has such a car");
+    assert.ok(waited.ready_s > release_s, `${format.clock(waited.ready_s)} is after the release at ${format.clock(release_s)}`);
+    const line = labels.narrationPinnedBay({
+      car: waited.car,
+      took: format.clock(waited.took_s),
+      ready: format.clock(waited.ready_s),
+      release: format.clock(release_s),
+      before: waited.ready_s < release_s,
+    });
+    assert.match(line, /after the release/);
+    assert.doesNotMatch(line, /before the release/);
+  });
+
+  test("SF-2's bay queue clears after a backlog and before the release, and its line says so", async () => {
+    const payload = await ops01Payload();
+    const scenario = presetScenario(PRESENT_PRESET_ID);
+    const release_s = scenario.policies.release_s;
+    const recall_s = scenario.policies.recall_s;
+    const cleared = queueClearedAt(payload.log, "SF-2", recall_s);
+    assert.ok(cleared !== null, "the queue empties inside this run");
+    // `cleared` has to be the second a queue that held cars ran out, not any second whose count reads zero: the
+    // minutes just after the recall read zero because the backlog has not built yet, and they satisfy the release
+    // comparison below just as well. So pin the backlog itself.
+    const queued = payload.log.snapshots
+      .filter((snapshot) => snapshot.t > recall_s && snapshot.t < cleared)
+      .map((snapshot) => depotView(payload.log, "SF-2", snapshot.t).queued);
+    assert.ok(Math.max(...queued) >= 20, `SF-2 stood ${String(Math.max(...queued))} cars deep before it cleared`);
+    assert.ok(cleared < release_s, `${format.clock(cleared)} is before the release at ${format.clock(release_s)}`);
+    const line = labels.narrationQueueCleared({ depot: "SF-2", cleared: format.clock(cleared), release: format.clock(release_s), before: cleared < release_s });
+    assert.match(line, /before the release/);
+    assert.doesNotMatch(line, /after the release/);
+  });
+
+  test("the frame beat's two clocks carry their seconds, so they cannot read the same while the frame says interpolated", async () => {
+    const payload = await ops01Payload();
+    const scenario = presetScenario(PRESENT_PRESET_ID);
+    // A second inside the same minute as its snapshot: the frame line and the narration are about exactly this gap.
+    const frame = frameAt(payload.log, scenario.policies.recall_s + 900 + 31, { interpolate: true });
+    assert.notEqual(frame.at_s, frame.snapshot_t, "this frame is drawn past its snapshot");
+    assert.equal(format.clock(frame.at_s), format.clock(frame.snapshot_t), "and inside the same minute");
+    const sentence = labels.narrationFrame({ snapshot: format.clockSeconds(frame.snapshot_t), drawn: format.clockSeconds(frame.at_s) });
+    assert.ok(sentence.includes(format.clockSeconds(frame.snapshot_t)) && sentence.includes(format.clockSeconds(frame.at_s)));
+    assert.notEqual(format.clockSeconds(frame.at_s), format.clockSeconds(frame.snapshot_t), "the sentence names two seconds, never one twice");
+    const line = labels.frameLine({ snapshot: format.clockSeconds(frame.snapshot_t), drawn: format.clockSeconds(frame.at_s), interpolated: true });
+    assert.ok(line.includes(labels.PRESENT.simulation.interpolated));
+  });
+
+  test("the trade-off sentence names the primary that improved and the guardrail that was harmed", async () => {
+    const frozen = frozenExperiment({ presetId: PRESENT_PRESET_ID, replications: VERDICT_SEEDS });
+    const { verdict } = await experimentPayload({ presetId: PRESENT_PRESET_ID, replications: VERDICT_SEEDS });
+    assert.equal(verdict.validity, "VALID");
+    assert.equal(verdict.outcome, "IMPROVED");
+    const harmed = verdict.guardrail_statuses.find((g) => g.status === "REGRESSED");
+    assert.ok(harmed, "a guardrail was harmed, which is what makes this a trade");
+    // Both of OPS-01's metrics are declared lower is better, so an improved primary went down and a harmed guardrail
+    // went up. The words are read here from the declared directions, not from the order of the sentence's two halves.
+    assert.equal(frozen.spec.primary.direction, "lower_is_better");
+    const harmedIndex = verdict.guardrail_statuses.indexOf(harmed);
+    assert.equal(frozen.spec.guardrails[harmedIndex].direction, "lower_is_better");
+    const sentence = tradeOffSentence({ verdict, frozen });
+    assert.equal(sentence, `${labels.TRADE_WORDS.lower} ${metricWords(verdict.primary.metric)}, ${labels.TRADE_WORDS.higher} ${metricWords(harmed.metric)}`);
+    // The two direction words are the gates' own, and each names the metric the gate decided on.
+    assert.match(sentence, DIRECTION);
+    assert.ok(sentence.startsWith(`${labels.TRADE_WORDS.lower} `), sentence);
+  });
+
+  test("a metric declared higher is better turns both words round, because improved means it went up", async () => {
+    const frozen = frozenExperiment({ presetId: PRESENT_PRESET_ID, replications: VERDICT_SEEDS });
+    const { verdict } = await experimentPayload({ presetId: PRESENT_PRESET_ID, replications: VERDICT_SEEDS });
+    const harmed = verdict.guardrail_statuses.find((g) => g.status === "REGRESSED");
+    const harmedIndex = verdict.guardrail_statuses.indexOf(harmed);
+    // The same run read under the other declaration: IMPROVED and REGRESSED are already normalised for direction
+    // (src/instrument/outcome.js), so a primary declared higher is better improved by rising, and a guardrail
+    // declared higher is better was harmed by falling.
+    const flipped = {
+      ...frozen,
+      spec: {
+        ...frozen.spec,
+        primary: { ...frozen.spec.primary, direction: "higher_is_better" },
+        guardrails: frozen.spec.guardrails.map((g, i) => (i === harmedIndex ? { ...g, direction: "higher_is_better" } : g)),
+      },
+    };
+    const sentence = tradeOffSentence({ verdict, frozen: flipped });
+    assert.equal(sentence, `${labels.TRADE_WORDS.higher} ${metricWords(verdict.primary.metric)}, ${labels.TRADE_WORDS.lower} ${metricWords(harmed.metric)}`);
+  });
+
+  test("a run with no harmed guardrail names no trade", async () => {
+    const frozen = frozenExperiment({ presetId: PRESENT_PRESET_ID, replications: VERDICT_SEEDS });
+    const { verdict } = await experimentPayload({ presetId: PRESENT_PRESET_ID, replications: VERDICT_SEEDS });
+    const kept = { ...verdict, guardrail_statuses: verdict.guardrail_statuses.map((g) => ({ ...g, status: "WITHIN" })) };
+    assert.equal(tradeOffSentence({ verdict: kept, frozen }), null);
+  });
 });
