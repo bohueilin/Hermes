@@ -1,5 +1,6 @@
 import { PRESETS } from '../model/presets.js';
 import { el } from './dom.js';
+import { STREET_PRESETS } from '../model/street-simulation.js';
 
 export const OPERATIONAL_LESSONS=Object.freeze([
   {id:'bay-area',title:'Real Bay Area routes in 3D',question:'How does the geography of service change the fleet day?',controls:'18 named places, city focus, orbit, zoom and road speed',outputs:'Recorded cars on OpenStreetMap routes; distance and travel time',lesson:'Longer road routes consume vehicle time and energy before the next rider.',limits:'Sparse undirected major-road routes between anchors; no turn rules, local access or service-area verification.',patch:{}},
@@ -21,6 +22,7 @@ const axisValue=value=>value&&typeof value==='object'?Object.entries(value).map(
 export function simulationCatalog(){
   return [
     ...OPERATIONAL_LESSONS.map(x=>({...x,model:'Fleet day',target:'operations'})),
+    ...STREET_PRESETS.map(p=>({id:`street-${p.id}`,title:p.title,model:'Street lab',target:'streets',hotspot:p.id,question:p.question,controls:'AV count, rider/background demand, capacity loss, routing, weather, pickup dwell and trip mix',outputs:'Directed street replay, queues and spillback; completed and unfinished journeys; same-demand route comparison',lesson:p.action,limits:'Frozen OSM subset and supported turn rules; synthetic signals/capacity/demand; no lane changing, calibrated traffic, actual curb permission or depot energy model.'})),
     ...PRESETS.map(p=>({id:p.id,title:p.title,model:'Regional experiments',target:'regional',preset:p,
       question:p.experiment?.question??'How do supply, demand, routes and depot rules interact across four areas?',
       controls:p.experiment?`One declared change: ${p.experiment.axis.id}. ${axisValue(p.experiment.axis.baseline)} → ${axisValue(p.experiment.axis.candidate)}.`:'Fleet, demand, traffic, depot capacity, recall and release.',
@@ -31,17 +33,18 @@ export function simulationCatalog(){
   ];
 }
 
-export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{}}={}){
+export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},onStreets=()=>{}}={}){
   const records=simulationCatalog();const cards=el('div',{class:'catalog-grid'});const count=el('p',{class:'catalog-count',role:'status'});
   const search=el('input',{type:'search',placeholder:'Try charging, rain, depot, recall…','aria-label':'Search simulations',on:{input:()=>render()}});
-  const filter=el('select',{'aria-label':'Simulation model',on:{change:()=>render()}},['All simulations','Fleet day','Regional experiments'].map(x=>el('option',{value:x},x)));
+  const filter=el('select',{'aria-label':'Simulation model',on:{change:()=>render()}},['All simulations','Fleet day','Street lab','Regional experiments'].map(x=>el('option',{value:x},x)));
   const element=el('main',{class:'simulation-catalog'},[
     el('section',{class:'catalog-intro'},[el('p',{class:'eyebrow'},'THE COMPLETE LEARNING CATALOG'),el('h1',{},'What can I simulate?'),el('p',{class:'hero-lede'},'Start with a question. Know what to change, what to watch and what the result cannot tell you.'),el('div',{class:'catalog-models'},[
       el('article',{},[el('h2',{},'Fleet day'),el('p',{},'3D I-PACE and Ojai cars on real Bay Area roads, battery, weather and a complete depot work cycle. Start here to learn capacity and bottlenecks.')]),
+      el('article',{},[el('h2',{},'Street lab'),el('p',{},'Six downtown SF bottlenecks, directed street routes to SFO and the East Bay, finite road queues and same-demand routing comparisons. Start here to inspect congestion at block level.')]),
       el('article',{},[el('h2',{},'Regional experiments'),el('p',{},'The existing four-area workbench: declared A/B changes, paired uncertainty and guardrails. Its model has different scope; results are not interchangeable.')]),
     ])]),
     el('div',{class:'catalog-search'},[search,filter]),count,cards,
-    el('section',{class:'catalog-outside'},[el('h2',{},'What is still outside this playground?'),el('p',{},'Physical autonomous driving, lane changes and collisions; calibrated demand; staff shifts; repair failures; electrical network dynamics; optimized routing; real dispatch or vehicle commands. A computed recommendation never authorizes an operational change.')]),
+    el('section',{class:'catalog-outside'},[el('h2',{},'What is still outside this playground?'),el('p',{},'Physical autonomous driving, lane changes and collisions; calibrated demand; staff shifts; repair failures; electrical network dynamics; globally optimal fleet routing; real dispatch or vehicle commands. A computed recommendation never authorizes an operational change.')]),
   ]);
   function render(){
     const query=search.value.toLowerCase().trim();const model=filter.value;
@@ -51,7 +54,7 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{}}=
       el('div',{class:'catalog-card-meta'},[el('span',{},r.model),el('span',{},r.id)]),el('h2',{},r.title),el('p',{class:'catalog-question'},r.question),
       el('dl',{},[['Change',r.controls],['Watch',r.outputs],['Learn',r.lesson]].flatMap(([label,value])=>[el('dt',{},label),el('dd',{},value)])),
       el('details',{},[el('summary',{},'Limits of this example'),el('p',{},r.limits)]),
-      el('button',{type:'button',class:'studio-button',on:{click:()=>r.target==='operations'?onOperations(r.patch):onRegional(r.preset)}},r.target==='operations'?'Try this in Fleet day  →':'Open regional example  →'),
+      el('button',{type:'button',class:'studio-button',on:{click:()=>r.target==='operations'?onOperations(r.patch):r.target==='streets'?onStreets(r.hotspot):onRegional(r.preset)}},r.target==='operations'?'Try this in Fleet day  →':r.target==='streets'?'Open Street lab  →':'Open regional example  →'),
     ])));
     if(!shown.length)cards.appendChild(el('p',{},'No matching simulation. Try a resource or a different model.'));
   }

@@ -17,7 +17,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { CONTENT_SECURITY_POLICY, MODULE_MARKER, SITE_BOOT, SITE_CONTENT_SECURITY_POLICY, SITE_HEADERS, findRepositoryRoot, maskSource } from "./pack.mjs";
 
 /** Largest packed file accepted, in bytes. */
-export const MAX_BYTES = 2 * 1024 * 1024;
+// The directed street extract raises the offline budget from 2 to 2.5 MiB; see the street model design record.
+export const MAX_BYTES = 2.5 * 1024 * 1024;
 
 /** The one http URL allowed: the SVG namespace name, an identifier that is never requested. */
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
@@ -261,6 +262,7 @@ function schemeProblems(text, where = null) {
   // Frozen OSM provenance and explicit license links are inert metadata/navigation.
   // No image, script, style, worker or API URL is exempt; CSP still forbids connections.
   const decoded = decodeEntities(text)
+    .replace(/(["']source["']\s*:\s*["'])https:\/\/www\.openstreetmap\.org\/copyright(["'])/g, '$1OSM_LICENSE_SOURCE$2')
     .replace(/((?:["']?source["']?\s*:\s*)["'])https:\/\/www\.openstreetmap\.org\/(?:node|way)\/\d+(["'])/g, '$1OSM_SOURCE$2')
     .replace(/`https:\/\/www\.openstreetmap\.org\/way\/\$\{(?:osmIds\[0\]|id)\}`/g, '`OSM_WAY_SOURCE`')
     .replace(/(["']license["']\s*:\s*["']ODbL 1\.0[^"']*)https:\/\/opendatacommons\.org\/licenses\/odbl\/1-0\/(["'])/g, '$1ODBL_LICENSE$2')

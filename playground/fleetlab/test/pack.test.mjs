@@ -781,7 +781,7 @@ describe("check-dist", () => {
 
   test("a file over 2 MB", () => {
     const big = withBody(`<p>${"x".repeat(MAX_BYTES)}</p>`);
-    expectProblem(big, /^size: \d+ bytes is over the 2097152 byte limit/);
+    expectProblem(big, new RegExp(`^size: \\d+ bytes is over the ${MAX_BYTES} byte limit`));
   });
 
   test("the command line exits 0 on a clean file and 1 on crafted violations, labels from argument or environment", () => {
@@ -945,7 +945,7 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     for (const extra of ["notes.txt", ".DS_Store", "src/ui/app.js.map", "test/x.test.mjs", "src/ui/App.html"]) expectProblem(withFile(extra, "x"), new RegExp(`^file: unexpected ${escapeRegExp(extra)}`));
     expectProblem(withFile("src/core/c.js", `${clean.get("src/core/c.js")}const label = ${JSON.stringify(labels[1])};\n`), /^required label: entry 1 of the label tuple appears in src\/core\/c\.js/);
     assert.ok(checkSite(withFile("src/core/c.js", `${clean.get("src/core/c.js")}const label = ${JSON.stringify(labels[1])};\n`), { requiredLabels: labels }).every((p) => !p.includes(labels[1])), "messages never repeat the label");
-    expectProblem(withFile("src/core/big.js", `export const big = "${"x".repeat(MAX_BYTES)}";\n`), /^size: \d+ bytes is over the 2097152 byte limit/);
+    expectProblem(withFile("src/core/big.js", `export const big = "${"x".repeat(MAX_BYTES)}";\n`), new RegExp(`^size: \\d+ bytes is over the ${MAX_BYTES} byte limit`));
     assert.throws(() => checkSite(clean, { requiredLabels: [] }), TypeError);
   });
 

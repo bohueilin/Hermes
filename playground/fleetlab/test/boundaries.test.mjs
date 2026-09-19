@@ -52,7 +52,7 @@ const ALLOWED = {
 /** The one exception: model/experiment.js may import the instrument. */
 function allowedEdge(fromFolder, fromFile, toFolder) {
   if (ALLOWED[fromFolder].includes(toFolder)) return true;
-  return fromFolder === "model" && ((fromFile === "src/model/experiment.js" && toFolder === "instrument") || (fromFile === "src/model/bay-area.js" && toFolder === "data"));
+  return fromFolder === "model" && ((fromFile === "src/model/experiment.js" && toFolder === "instrument") || (["src/model/bay-area.js", "src/model/street-network.js"].includes(fromFile) && toFolder === "data"));
 }
 
 /** Line of a match offset, for readable failures. */

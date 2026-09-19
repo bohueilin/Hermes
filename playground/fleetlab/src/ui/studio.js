@@ -1,10 +1,11 @@
-// Product entry and navigation across two explicit teaching models.
+// Product entry and navigation across three explicit teaching models.
 import { el } from "./dom.js";
 import { createDepotScene } from "./depot-scene.js";
 import { startFromPreset, CHOOSER_PRESET_IDS } from "./experiment.js";
 import { openLearnCase } from "./learn.js";
 import { createOperationsLab } from "./operations-lab.js";
 import { createSimulationCatalog } from "./simulation-catalog.js";
+import { createStreetLab } from "./street-lab.js";
 import {defaultBayAreaConfig as defaultOperationsConfig} from "../model/bay-operations.js";
 
 const action = (text, fn, primary = false) => el("button", { type:"button",class:primary?"studio-button studio-button-primary":"studio-button",on:{click:fn} },text);
@@ -47,21 +48,21 @@ function overview(navigate) {
       el("div",{class:"decision-grid"},[
         decisionCard({number:"01",category:"MARKET OPERATIONS",title:"Can supply keep up with the peak?",text:"Set fleet size and demand. Follow each AV through trips and depot work, then compare the capacity of different fleet and depot sizes.",measure:"Trips completed · Battery · Depot queues",cta:"Run a fleet day  →",target:"simulation"},navigate),
         decisionCard({number:"02",category:"DEPOT OPTIMIZATION",title:"Would two more bays actually help?",text:"Compare four cleaning bays with six. Inspect depot delay alongside rider outcomes before drawing a conclusion.",measure:"Bay wait · Depot turnaround · Guardrails",cta:"Test depot capacity  →",target:"depots"},navigate),
-        decisionCard({number:"03",category:"PRODUCT & PLATFORM",title:"What would make this useful in practice?",text:"Connect the model to user needs, measurement contracts and the next steps toward a calibrated planning tool.",measure:"Comprehension · Reproducibility · Model gaps",cta:"Read the product approach  →",target:"approach"},navigate),
+        decisionCard({number:"03",category:"STREET OPERATIONS",title:"Can one block tie up the fleet?",text:"Explore downtown SF, SFO and East Bay journeys on directed roads. Follow queues across blocks and compare routing decisions.",measure:"Spillback · Pickup wait · Empty distance",cta:"Open the Street lab  →",target:"streets"},navigate),
       ]),
     ]),
     el("section",{class:"loop-section","aria-label":"Three-minute demo"},[
       el("div",{class:"demo-heading"},[el("div",{},[eyebrow("HOW TO TRY IT"),el("h2",{},"Your first three minutes.")]),action("Run a fleet day  ↗",()=>navigate("simulation"),true)]),
       el("ol",{class:"decision-loop"},[
-        ["01 / RUN","Start with the default fleet.","Open Simulation and run a fleet day. Watch trips and depot activity unfold across the Bay Area."],
+        ["01 / RUN","Start with the default fleet.","Open Fleet day and run the default scenario. Watch trips and depot activity unfold across the Bay Area."],
         ["02 / INSPECT","Follow one vehicle.","Pick an AV. Inspect its trips, battery and depot work, then connect its day to the fleet outcomes."],
         ["03 / EXPLORE","Change one constraint.","Try a different fleet size or depot capacity and run again. Read completed trips alongside queues and energy."],
       ].map(([n,title,text])=>el("li",{},[el("span",{class:"loop-number"},n),el("h3",{},title),el("p",{},text)]))),
     ]),
     el("section",{class:"scope-section"},[
       el("div",{},[eyebrow("A CLEAR MODEL BOUNDARY"),el("h2",{},"Useful questions. Honest limits.")]),
-      el("div",{},[el("h3",{},"Two ways to learn"),el("p",{},"Fleet day covers weather, energy and sequential depot work. Regional experiments cover a four-area network, parking, dispatch, recall and paired guardrails. The catalog explains each model's scope.")]),
-      el("div",{},[el("h3",{},"Outside the model"),el("p",{},"Staffing, physical driving, calibrated demand and real vehicle operations. Demand, traffic and vehicle operating values are teaching assumptions. Neither model is a calibrated digital twin or permission to change a fleet.")]),
+      el("div",{},[el("h3",{},"Three ways to learn"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Regional experiments cover dispatch, recall and paired guardrails. The catalog explains each model's scope.")]),
+      el("div",{},[el("h3",{},"Outside the model"),el("p",{},"Staffing, physical driving, calibrated demand and real vehicle operations. Demand, traffic and vehicle operating values are teaching assumptions. None of these models is a calibrated digital twin or permission to change a fleet.")]),
     ]),
   ]);
 }
@@ -108,7 +109,7 @@ export function mountStudio(app) {
   const {root,store,playback,present} = app;
   const container = el("div",{class:"fleet-studio","data-page":"overview"});
   root.parentNode.insertBefore(container,root);
-  const navItems = [["overview","Overview"],["simulation","Simulation"],["depots","Experiments"],["catalog","Learning catalog"],["approach","Product approach"]];
+  const navItems = [["overview","Overview"],["simulation","Fleet day"],["streets","Street lab"],["depots","Experiments"],["catalog","Learning catalog"],["approach","Product approach"]];
   const navButtons = navItems.map(([id,text])=>el("button",{type:"button","data-nav":id,on:{click:()=>navigate(id)}},text));
   const brand = action("F",()=>navigate("overview"));
   brand.setAttribute("class","studio-monogram");
@@ -118,11 +119,13 @@ export function mountStudio(app) {
     el("nav",{"aria-label":"Main navigation"},navButtons),
     el("span",{class:"studio-status"},[el("span",{"aria-hidden":"true"},"◉"),"SIMULATION LAB"]),
   ]);
-  const boundary = el("div",{class:"studio-boundary",role:"note"},[el("strong",{},"Teaching model"),"Real geography in Fleet day. Simulated demand and operations. No real fleet performance claim."]);
+  const boundary = el("div",{class:"studio-boundary",role:"note"},[el("strong",{},"Teaching model"),"Real geography in Fleet day and Street lab. Simulated demand and operations. No real fleet performance claim."]);
   const home = overview(navigate);
   const product = approach(navigate);
   const operations = createOperationsLab({onCatalog:()=>navigate("catalog")});
+  const streets = createStreetLab();
   const catalog = createSimulationCatalog({
+    onStreets(hotspot){streets.setConfig({hotspot});navigate("streets");},
     onOperations(patch){operations.setConfig({...defaultOperationsConfig(),...patch});navigate("simulation");},
     onRegional(preset){
       if(CHOOSER_PRESET_IDS.includes(preset.id)){navigate("depots");startFromPreset(store.dispatch,preset.id);}
@@ -136,6 +139,7 @@ export function mountStudio(app) {
   container.appendChild(home);
   container.appendChild(product);
   container.appendChild(operations.element);
+  container.appendChild(streets.element);
   container.appendChild(catalog.element);
   container.appendChild(workspaceIntro);
   container.appendChild(root);
@@ -150,6 +154,7 @@ export function mountStudio(app) {
     current = page;
     playback.pause();
     operations.pause();
+    streets.pause();
     if (store.getState().present.on && page !== "tour") present.close();
     const workspace = ["operations","depots","tour"].includes(page);
     root.hidden = !workspace;
@@ -157,6 +162,7 @@ export function mountStudio(app) {
     home.hidden = page !== "overview";
     product.hidden = page !== "approach";
     operations.element.hidden = page !== "simulation";
+    streets.element.hidden = page !== "streets";
     catalog.element.hidden = page !== "catalog";
     workspaceIntro.hidden = !workspace;
     boundary.hidden = workspace || page === "overview" || page === "approach";
@@ -181,7 +187,8 @@ export function mountStudio(app) {
       workspaceIntro.replaceChildren(eyebrow("GUIDED WALKTHROUGH / ABOUT 6 MINUTES"),el("h1",{},"One day. Four ways to understand it."),el("p",{},"Follow operations, analytics, simulation and product decisions. Prepare the example, then move through the chapters at your pace."));
       if (!store.getState().present.on) present.open();
     }
-    const destination = workspace ? workspaceIntro : page === "approach" ? product : page === "simulation" ? operations.element : page === "catalog" ? catalog.element : home;
+    if(page === "streets")streets.refresh();
+    const destination = workspace ? workspaceIntro : page === "approach" ? product : page === "simulation" ? operations.element : page === "streets" ? streets.element : page === "catalog" ? catalog.element : home;
     const heading = destination.querySelector("h1");
     if (initialized) {
       heading?.setAttribute("tabindex","-1");
@@ -197,5 +204,5 @@ export function mountStudio(app) {
     previousPresent = state.present.on;
     if (wasPresenting && !state.present.on && current === "tour") navigate("operations");
   });
-  return {navigate,operations,element:container,destroy(){operations.destroy();unsubscribe();root.hidden=false;root.removeAttribute("inert");container.parentNode?.insertBefore(root,container);container.remove();}};
+  return {navigate,operations,streets,element:container,destroy(){operations.destroy();streets.destroy();unsubscribe();root.hidden=false;root.removeAttribute("inert");container.parentNode?.insertBefore(root,container);container.remove();}};
 }

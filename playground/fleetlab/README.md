@@ -2,18 +2,24 @@
 
 **[Open the public playground](https://fleetlab-playground.pages.dev/)** · Independent project by Bo-Huei Lin
 
-For an interview walkthrough: **Overview → Simulation → Run fleet day → Product approach**. Configure the day, select a car, step through its activities, then explain the service and depot trade-offs. The [Cloudflare guide](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) records the exact publishing and optional custom-domain steps.
+For an interview walkthrough: **Overview → Fleet day → Run fleet day → Product approach**. For congestion: **Street lab → Bridge rush → Largest queue → Compare route policies**. Configure the experiment, inspect a car and a constraint, then explain the service trade-offs. The [Cloudflare guide](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) records the exact publishing and optional custom-domain steps.
+
+## Downtown street bottlenecks in 3D
+
+The **Street lab** adds First Street, Harrison/Bryant, Stockton, Van Ness, the Embarcadero and Lombard to a directed OSM network with 2,343 road links. Follow individual AVs toward SFO or the East Bay, inspect finite road queues and upstream spillback, then compare free-flow and queue-aware routes using identical demand. Step five seconds, scrub the replay, follow an AV, or inspect a queued block and its front-car exit wait.
+
+Sourced geography and supported one-way/turn rules are separate from synthetic traffic, signal timing, capacity, incidents and off-road pickup service. SFO and Oakland are modeled gateway handoffs, not authorized pickup zones. There is no live traffic feed or physical driving model. Street lab does not share the Fleet day energy/depot engine. See the [model guide and interview story](../../docs/FLEETLAB_STREET_LAB.md) and [directed OSM provenance](../../docs/FLEETLAB_STREET_MAP_DATA.md).
 
 ## Bay Area fleet day in 3D
 
-Start with **Simulation → Run fleet day**. Fleet day uses native WebGL cars and depots on a frozen OpenStreetMap road extract. Select any two or more of the 18 city/airport anchors, configure Jaguar I-PACE and Ojai profiles, then inspect service, energy and depot constraints. The static site and offline HTML contain the same experience; no account, renderer dependency or runtime map download is needed.
+Start with **Fleet day → Run fleet day**. Fleet day uses native WebGL cars and depots on a frozen OpenStreetMap road extract. Select any two or more of the 18 city/airport anchors, configure Jaguar I-PACE and Ojai profiles, then inspect service, energy and depot constraints. The static site and offline HTML contain the same experience; no account, renderer dependency or runtime map download is needed.
 
 - **Geography:** all requested Bay Area places, with separate SFO and SJC airport selections. Sparse major-road paths are sourced; one-way, turn and access restrictions are absent. These are teaching routes, not navigation or a verified operator service area.
 - **3D replay:** orbit, zoom, tilt, city focus, selected-car follow, label density, exact-minute and next-activity navigation. Flat view and the vehicle table remain available. Stationary display slots and enlarged vehicle/depot geometry do not change model coordinates.
 - **Vehicle mix:** 0–100% Ojai with editable per-type modeled battery, charge acceptance, energy per kilometer, boarding and service-time factors. Ojai numerical defaults are illustrative; I-PACE retail nominal battery is distinct from modeled usable energy. Neither label changes road speed or party capacity.
 - **Operations:** real route distance drives travel time and energy; synthetic time-of-day, weather and congestion modifiers are explicit. Finite software, cleaning, charging and upload resources constrain readiness. Power respects vehicle, port, site and charge-target limits.
 - **Comparisons:** shared demand for fleet/depot and vehicle-mix trials. Results include completed, unserved and unfinished demand, per-type and per-pickup-place outcomes, completed depot time, active work and queues. A first sufficient tested depot count is not a global optimum.
-- **Learning:** 44 examples and lessons: 12 Fleet day lessons and all 32 original regional presets.
+- **Learning:** 50 examples and lessons: 12 Fleet day lessons, six Street lab cases and all 32 original regional presets.
 
 The Bay model is `fleetlab-bay-operations-1.0.0`. The original synthetic `operations.js` and regional simulator/instrument/golden fixtures remain unchanged. Google Maps estimates remain a separate optional local companion and do not supply this OSM replay. No CARLA or physical driving integration is introduced.
 

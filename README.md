@@ -12,7 +12,7 @@ Hermes is designed to make an autonomy experiment reproducible and reviewable: i
 
 **[Open the interactive FleetLab playground](https://fleetlab-playground.pages.dev/)** · [Source and quick start](playground/fleetlab/README.md) · [Cloudflare publishing guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md)
 
-An independent product exploration by **Bo-Huei Lin**: follow a fleet through a simulated day, inspect its depot bottlenecks, and compare capacity decisions. The 3D Bay Area experience includes 18 city and airport locations, editable Jaguar I-PACE and Ojai vehicle profiles, weather and demand scenarios, and 44 lessons across two teaching models. Start with **Run a fleet day**, then visit **Product approach** for the user needs, hypotheses and validation roadmap.
+An independent product exploration by **Bo-Huei Lin**: follow a fleet through a simulated day, inspect its depot bottlenecks, and compare capacity decisions. The 3D Bay Area experience includes 18 city and airport locations, editable Jaguar I-PACE and Ojai vehicle profiles, and weather and demand scenarios. The new **Street lab** adds six downtown San Francisco bottlenecks, directed routes to SFO and the East Bay, block queues and same-demand routing comparisons. The catalog contains 50 cases and lessons across three teaching models. Start with **Run a fleet day** or **Street lab**, then visit **Product approach** for the user needs, hypotheses and validation roadmap. See the [Street lab model and interview walkthrough](docs/FLEETLAB_STREET_LAB.md).
 
 Real OpenStreetMap geography supports the replay; demand, traffic and vehicle operating values are illustrative. This is a browser-based teaching experience, separate from the Python evidence engine and its decision records. It is not affiliated with a fleet operator. See the [repository integration recommendation](docs/FLEETLAB_REPOSITORY_RECOMMENDATION.md) for ownership and release boundaries.
 
@@ -111,7 +111,7 @@ The **Experiments** workspace in `playground/fleetlab/` retains the original fou
 new Bay Area **Simulation** workspace described above. In Regional experiments, you set cars per area, depots with parking, cleaning and service bays, peak and off-peak demand, highway and
 local routes with hourly congestion, and the depot rules; watch a simulated evening and the next morning; and run a
 preregistered paired A/B. The Regional experiments verdict uses FleetLab's rules value for value, proven by vectors
-FleetLab's own functions generate. This parity claim applies to that instrument, not to the newer Bay Area fleet-day model. Both worlds are teaching models, so a playground run is never a decision record.
+FleetLab's own functions generate. This parity claim applies to that instrument, not to the newer Fleet day or Street lab models. All three are teaching models, so a playground run is never a decision record.
 
 The Experiment preset chooser also holds an operations casebook: twenty situations in five themes (San Francisco core
 operations, launching a new service area, rain, busy areas with many people, police activity and emergency response).

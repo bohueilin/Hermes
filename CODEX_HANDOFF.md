@@ -1,5 +1,7 @@
 # Latest FleetLab release
 
+The new [Street lab model and design record](docs/FLEETLAB_STREET_LAB.md) and [directed street data record](docs/FLEETLAB_STREET_MAP_DATA.md) describe the downtown SF, SFO and East Bay enhancement. Its release validation and publication identity are recorded in [the Street lab release handoff](docs/FLEETLAB_STREET_RELEASE_2026-09-19.md). This extends only the isolated static playground; Hermes Python, evidence contracts and main-branch integration remain unchanged.
+
 See the [public release record](docs/FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) for current validation and publication state, the [Cloudflare guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) for owner steps, and the [repository recommendation](docs/FLEETLAB_REPOSITORY_RECOMMENDATION.md) for main integration. The explicit user request authorizes static publication and a feature-branch push. The [Bay Area 3D handoff](docs/FLEETLAB_BAY_AREA_3D_HANDOFF_2026-09-19.md) and [earlier operations wave](docs/FLEETLAB_OPERATIONS_HANDOFF_2026-09-19.md) preserve the preceding local-only checkpoints. The historical Hermes handoff below is unchanged.
 
 # Hermes Phase 6 Codex handoff

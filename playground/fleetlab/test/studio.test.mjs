@@ -59,3 +59,9 @@ test("walkthrough uses the existing presenter and returning does not erase its s
     assert.match(document.querySelector('.studio-approach').textContent, /not.*digital twin/i);
   } finally { x.studio.destroy(); x.restore(); }
 });
+test("Street lab navigation keeps the separate models idle and restores the page",()=>{
+ const x=setup();try{x.studio.navigate('streets');assert.equal(x.studio.streets.element.hidden,false);assert.equal(x.studio.operations.element.hidden,true);assert.equal(x.root.hidden,true);assert.equal(x.studio.streets.getState().run,null);x.studio.navigate('overview');assert.equal(x.studio.streets.element.hidden,true);}finally{x.studio.destroy();x.restore();}
+});
+test('a catalog street case opens its named corridor before running',()=>{
+ const x=setup();try{x.studio.navigate('catalog');x.studio.element.querySelector('[data-simulation="street-lombard"] button').click();assert.equal(x.studio.streets.element.querySelector('[aria-label="Street map focus"]').value,'lombard');assert.equal(x.studio.streets.getState().run,null);}finally{x.studio.destroy();x.restore();}
+});
