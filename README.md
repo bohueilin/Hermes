@@ -8,6 +8,14 @@ Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
 
 Hermes is designed to make an autonomy experiment reproducible and reviewable: it preserves the scenario, versions, candidate action, executed action, findings, metrics, release verdict, and evidence-integrity checks in one bundle.
 
+## Try FleetLab in your browser
+
+**[Open the interactive FleetLab playground](https://fleetlab-playground.pages.dev/)** · [Source and quick start](playground/fleetlab/README.md) · [Cloudflare publishing guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md)
+
+An independent product exploration by **Bo-Huei Lin**: follow a fleet through a simulated day, inspect its depot bottlenecks, and compare capacity decisions. The 3D Bay Area experience includes 18 city and airport locations, editable Jaguar I-PACE and Ojai vehicle profiles, weather and demand scenarios, and 44 lessons across two teaching models. Start with **Run a fleet day**, then visit **Product approach** for the user needs, hypotheses and validation roadmap.
+
+Real OpenStreetMap geography supports the replay; demand, traffic and vehicle operating values are illustrative. This is a browser-based teaching experience, separate from the Python evidence engine and its decision records. It is not affiliated with a fleet operator. See the [repository integration recommendation](docs/FLEETLAB_REPOSITORY_RECOMMENDATION.md) for ownership and release boundaries.
+
 ## Phase 9 — FleetLab: fleet operations simulation and experimentation
 
 FleetLab asks a different question from the rest of Hermes: **not "how does the vehicle behave?"
@@ -97,13 +105,13 @@ a static loopback-only operator view of one finished synthetic run.
 experiment registry, `experiment compare`, monitoring, a time axis, and the Studio front end.
 Nineteen of the twenty P0 acceptance criteria remain open.
 
-### FleetLab Playground: the same verdict rules in a teaching model you can play with
+### Regional experiments: the original playground model
 
-`playground/fleetlab/` is a static page, and one offline HTML file, for building intuition about fleet and depot
-operations. You set cars per area, depots with parking, cleaning and service bays, peak and off-peak demand, highway and
+The **Experiments** workspace in `playground/fleetlab/` retains the original four-area regional model, alongside the
+new Bay Area **Simulation** workspace described above. In Regional experiments, you set cars per area, depots with parking, cleaning and service bays, peak and off-peak demand, highway and
 local routes with hourly congestion, and the depot rules; watch a simulated evening and the next morning; and run a
-preregistered paired A/B. Its verdict uses FleetLab's rules value for value, proven by vectors FleetLab's own functions
-generate. Its world is a teaching model with invented numbers, so a playground run is never a decision record.
+preregistered paired A/B. The Regional experiments verdict uses FleetLab's rules value for value, proven by vectors
+FleetLab's own functions generate. This parity claim applies to that instrument, not to the newer Bay Area fleet-day model. Both worlds are teaching models, so a playground run is never a decision record.
 
 The Experiment preset chooser also holds an operations casebook: twenty situations in five themes (San Francisco core
 operations, launching a new service area, rain, busy areas with many people, police activity and emergency response).
@@ -112,7 +120,7 @@ for, how it is set and what it misses; its measured verdict is pinned in the tes
 document, never on the page. Beside the single offline file, `pack.mjs --site` writes a folder for a static host and
 `check-dist.mjs --site` checks it; putting either online stays an owner action.
 
-The map region draws the four areas as an isometric schematic on a 2D canvas, generated at run time from the interval
+The Regional experiments map draws its four areas as an isometric schematic on a 2D canvas, generated at run time from the interval
 log with no asset, no dependency and no WebGL: flat platforms at the areas' own centres, ribbons for roads, one shaded
 box per car driving a route, cubes of five for cars standing in an area, and a depot block whose bay cells fill as their
 tasks run. The canvas draws no word, because every label and number is HTML over it; nothing is lit and no camera moves,

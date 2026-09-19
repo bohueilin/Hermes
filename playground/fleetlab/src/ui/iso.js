@@ -1098,6 +1098,15 @@ export function createIsoView({
       items.push({ key: g.x + g.y, draw: () => {
         for (const family of g.families) {
           drawBox({ cx: g.x, cy: g.y, z: 0.2, l: size.l, w: size.w, h: size.h, hx: g.hx, hy: g.hy, hue: family.family === "riderWork" ? hues.carRider : hues.carEmpty, edge: true, hollow: family.hollow });
+          // Cabin and tires make moving vehicles legible without changing group counts or route positions.
+          ctx.fillStyle = hues.muted;
+          fillPoly([[-1,-1],[1,-1],[1,1],[-1,1]].map(([along,side]) => [g.x + g.hx * size.l * along * 0.24 - g.hy * size.w * side * 0.36, g.y + g.hy * size.l * along * 0.24 + g.hx * size.w * side * 0.36, size.h + 0.3]));
+          ctx.fill();
+          for (const along of [-0.28, 0.28]) for (const side of [-1, 1]) {
+            const tire = project(g.x + g.hx * size.l * along - g.hy * size.w * side * 0.48, g.y + g.hy * size.l * along + g.hx * size.w * side * 0.48, 0.2);
+            ctx.fillStyle = hues.ink;
+            ctx.fillRect(tire.sx - cssPx(1), tire.sy - cssPx(1), cssPx(2), cssPx(2));
+          }
           out.bodies += 1;
         }
       } });

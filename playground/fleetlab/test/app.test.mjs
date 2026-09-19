@@ -62,7 +62,7 @@ function createFakeHost(path = "worker") {
 }
 
 /** The development shell's body on the full fake DOM at desktop width, with start() run against it. */
-function mount({ host = createFakeHost(), copyText = null, media = { "(min-width: 1280px)": true, "(min-width: 768px)": true } } = {}) {
+function mount({ host = createFakeHost(), copyText = null, studio = false, media = { "(min-width: 1280px)": true, "(min-width: 768px)": true } } = {}) {
   const uninstall = installFakeDom(globalThis, { media });
   const { document: doc } = uninstall.dom;
   const root = doc.createElement("div");
@@ -71,7 +71,7 @@ function mount({ host = createFakeHost(), copyText = null, media = { "(min-width
   strip.setAttribute("id", "fleetlab-teaching-strip");
   root.appendChild(strip);
   doc.body.appendChild(root);
-  const app = start({ createWorker: () => null, engineHost: host, copyText });
+  const app = start({ createWorker: () => null, engineHost: host, copyText, studio });
   const find = (selector) => root.querySelector(selector);
   const buttonNamed = (text, within = root) => within.querySelectorAll("button").find((b) => b.textContent === text);
   const cleanup = () => {
@@ -104,6 +104,29 @@ const rowValues = (container) => container.querySelectorAll("[data-row]").map((r
 const chartIds = (container) => container.querySelectorAll("figure[data-chart]").map((f) => f.getAttribute("data-chart"));
 
 describe("start mounts the interface", () => {
+  test("studio navigation preserves an edited experiment and follows the presenter exit", () =>
+    withApp({ studio: true }, ({ app, root, store, host }) => {
+      assert.equal(root.hidden, true);
+      app.studio.navigate("depots");
+      assert.ok(root.children.indexOf(app.regions.charts) < root.children.indexOf(app.regions.map));
+      store.dispatch({ type: "experiment/draft", patch: { question: "Does this capacity change affect the rider?" } });
+      const experiment = store.getState().experiment;
+      const scenario = store.getState().scenario;
+      app.studio.navigate("approach");
+      app.studio.navigate("depots");
+      assert.equal(store.getState().experiment, experiment);
+      assert.equal(store.getState().scenario, scenario);
+      assert.equal(host.calls.length, 0, "navigation never runs the simulation");
+      app.studio.navigate("tour");
+      assert.equal(store.getState().present.on, true);
+      assert.ok(root.children.indexOf(app.regions.rail) < root.children.indexOf(app.regions.map));
+      app.present.close();
+      assert.equal(app.studio.element.getAttribute("data-page"), "operations");
+      assert.equal(store.getState().mode, "sandbox");
+      assert.equal(root.hidden, false);
+      assert.ok(root.children.indexOf(app.regions.map) < root.children.indexOf(app.regions.charts));
+    }));
+
   test("every region is filled in design 7.7 order before anything runs", () =>
     withApp({}, ({ root, app, find, buttonNamed, store }) => {
       assert.deepEqual(root.children.map((n) => n.getAttribute("class").split(" ")[0]), ["fl-strip", "fl-topbar", "fl-knobs", "fl-map", "fl-ledger", "fl-rail", "fl-transport", "fl-segmented", "fl-side", "fl-charts", "fl-drawer", "fl-footer"]);
@@ -171,6 +194,36 @@ describe("start mounts the interface", () => {
 });
 
 describe("Run window", () => {
+  for (const interruption of ["pause", "navigate back", "switch modes", "edit", "seek", "step", "jump"]) {
+    test(`a pending studio Run window respects ${interruption}`, () =>
+      withApp({studio:true},async ctx=>{
+        ctx.app.studio.navigate("operations");
+        const pending=ctx.app.runWindow();const call=ctx.host.last("run_window");
+        if(interruption==="pause")ctx.app.playback.pause();
+        if(interruption==="seek")ctx.app.playback.seek(ctx.store.getState().scenario.window.start_s+60);
+        if(interruption==="step")ctx.app.playback.step("5min",1);
+        if(interruption==="jump")ctx.app.playback.jump("am_peak");
+        if(interruption==="navigate back"){ctx.app.studio.navigate("overview");ctx.app.studio.navigate("operations");}
+        if(interruption==="switch modes")ctx.app.studio.navigate("depots");
+        if(interruption==="edit")ctx.store.dispatch({type:"knob/set",knob:"SUP-1.SJ",path:["areas",2,"cars"],value:16});
+        call.resolve(await windowPayload({seeds:call.args.seeds,logSeed:call.args.logSeed}));await pending;
+        assert.equal(ctx.store.getState().playing,false);
+      }));
+  }
+  test("studio Run window starts the replay and navigation cancels pending autoplay", () =>
+    withApp({ studio: true }, async (ctx) => {
+      ctx.app.studio.navigate("operations");
+      await finishWindow(ctx);
+      assert.equal(ctx.store.getState().playing, true);
+      ctx.app.playback.pause();
+      const pending=ctx.app.runWindow();
+      const call=ctx.host.last("run_window");
+      ctx.app.studio.navigate("overview");
+      call.resolve(await windowPayload({seeds:call.args.seeds,logSeed:call.args.logSeed}));
+      await pending;
+      assert.equal(ctx.store.getState().playing,false);
+    }));
+
   test(`runs ${String(SANDBOX_REPLICATIONS)} replications of seed set 1 through the host, with progress, then fills every region`, () =>
     withApp({}, async (ctx) => {
       const { app, host, find, buttonNamed, store } = ctx;

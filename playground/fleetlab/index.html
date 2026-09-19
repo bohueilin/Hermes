@@ -3,16 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FleetLab Playground</title>
+<title>FleetLab | Fleet operations, made visible</title>
+<meta name="description" content="An interactive fleet operations project by Bo-Huei Lin. Explore a 3D Bay Area fleet, compare depot capacity, and understand the trade-offs behind vehicle readiness.">
+<meta name="author" content="Bo-Huei Lin">
+<meta property="og:type" content="website">
+<meta property="og:title" content="FleetLab | Fleet operations, made visible">
+<meta property="og:description" content="Follow a fleet through its day. Explore 18 Bay Area locations, two vehicle profiles, and the decisions connecting rider service with depot capacity. An independent simulation project by Bo-Huei Lin.">
+<meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+<noscript>FleetLab is an interactive simulation and needs JavaScript enabled. This independent project by Bo-Huei Lin explores fleet operations, vehicle readiness and depot capacity.</noscript>
 <div id="fleetlab-root" class="fl-app" data-phone-group="now">
 <div id="fleetlab-teaching-strip" class="fl-strip"></div>
 </div>
 <script type="module">
 import { start } from "./src/ui/app.js";
-start({ createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });
+start({ studio: true, createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });
 </script>
 </body>
 </html>

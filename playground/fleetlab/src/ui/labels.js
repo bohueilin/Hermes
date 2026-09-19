@@ -496,7 +496,7 @@ export const OUTCOME_SENTENCES = frozen({
 export const RECOMMENDATION_REASONS = frozen({
   guardrailHarmed: "a guardrail was harmed; hold",
   primaryRegressed: "the primary regressed; hold",
-  improved: "the primary improved and no guardrail was harmed; test it next",
+  improved: "the primary improved and no evaluated guardrail exceeded its limit; test it next",
   inconclusive: "the interval is too wide to call; run more experiments",
   unchanged: "no difference beyond the margin; nothing to recommend",
   invalid: "void evidence; nothing to recommend",
@@ -753,7 +753,7 @@ export function invalidScope({ metric, key }) {
 
 /** Knob groups, greyed groups and panel strings. */
 export const KNOB_PANEL = frozen({
-  heading: "KNOBS",
+  heading: "SCENARIO SETUP",
   groups: {
     fleet: "Fleet",
     depots: "Depots",
@@ -1879,7 +1879,7 @@ export const PRESENT = frozen({
   nextHeading: "The next question in the casebook",
   openInExperiment: "Open in Experiment",
   tradeOffHeading: "What it trades",
-  noTradeOff: "No guardrail was harmed in this run, so it trades nothing.",
+  noTradeOff: "No evaluated guardrail exceeded its limit. Review the metric deltas and unavailable results.",
   /** Beat 3.2: the two arms of the watched seed, each at the depot the frozen spec's guardrail names. */
   armsHeading: "Both arms at this second",
   /** One line each of the ticker, for the events that carry a step of the day. */

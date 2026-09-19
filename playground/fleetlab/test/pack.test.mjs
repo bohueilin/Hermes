@@ -153,7 +153,7 @@ const GRAPH = {
     '<div id="fleetlab-root"></div>',
     '<script type="module">',
     'import { start } from "./src/ui/app.js";',
-    'start({ createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });',
+    'start({ studio: true, createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });',
     "</script>",
     "</body>",
     "</html>",
@@ -659,6 +659,15 @@ describe("check-dist", () => {
     for (const extra of clean) assert.deepEqual(checkDist(withBody(extra), { requiredLabels: labels }), [], extra);
   });
 
+  test("OSM attribution and source metadata are allowed, external loads remain blocked", () => {
+    assert.deepEqual(checkDist(withBody('<a href="https://www.openstreetmap.org/copyright">OSM</a>'),{requiredLabels:labels}),[]);
+    expectProblem(withBody('<img src="https://www.openstreetmap.org/copyright">'),/^external URL/);
+    expectProblem(withBody('<img src="https://support.google.com/waymo/answer/9059053?hl=en-GB">'),/^external URL/);
+    expectProblem(withBody('<img src="https://waymo.com/blog/2026/05/welcoming-riders-in-the-ojai/">'),/^external URL/);
+    expectProblem(withBody('<a href="https://www.openstreetmap.org/copyright/evil">OSM</a>'),/^external URL/);
+    expectProblem(withBody('<a href="https://www.openstreetmap.org.evil/copyright">OSM</a>'),/^external URL/);
+  });
+
   test("external URLs", () => {
     expectProblem(withBody('<a href="https://example.org/">x</a>'), /^external URL/);
     expectProblem(withBody("<p>see http://example.org</p>"), /^external URL/);
@@ -837,7 +846,7 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     assert.ok(SITE_HEADERS.startsWith(`/*\n  Content-Security-Policy: ${SITE_CONTENT_SECURITY_POLICY}; frame-ancestors 'none'\n`));
     assert.ok(SITE_HEADERS.endsWith("\n"));
     assert.ok(/^\/\*\n(  [A-Za-z-]+: [^\n]+\n)+$/.test(SITE_HEADERS), "one path block of indented header lines");
-    assert.equal(SITE_BOOT, 'import { start } from "./src/ui/app.js";\nstart({ createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });\n');
+    assert.equal(SITE_BOOT, 'import { start } from "./src/ui/app.js";\nstart({ studio: true, createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });\n');
   });
 
   test("--site writes exactly the manifest under dist/ or outside, twice over, and refuses other places", () => {

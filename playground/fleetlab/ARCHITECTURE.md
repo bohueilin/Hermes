@@ -1,5 +1,68 @@
 # FleetLab Playground: build contract
 
+## Bay Area / vehicle / 3D amendment, 2026-09-19
+
+Current user authorization extends the playground to real geography and configurable vehicle profiles. It supersedes historical invented-map-only and presentation-only constraints for this extension; Hermes evidence-core contracts are unchanged. The design is `docs/plans/2026-09-19-bay-area-3d.md`.
+
+Dependency direction: inert `src/data/bay-area-map.js` → `src/model/bay-area.js` → `src/model/bay-operations.js` → recorded results → `src/ui/operations-lab.js` / `operations-3d.js`. The map facade alone may import `src/data`; the data folder may import nothing. Boundary tests cover the new folder and retain all prior forbidden directions. Original `operations.js`, regional engine and instrument remain independent and unchanged.
+
+The Bay model uses per-type energy and charging profiles, actual extracted route distance, minute intervals, explicit stationary boarding and finite sequential depot servers. Shared generated requests support fleet/depot/mix comparisons. Reserve calculations use the nearest return distance; equally near co-located depots receive visits by least unfinished inbound/on-site load with stable ties. UI never recalculates these outcomes.
+
+`scene-3d.js` builds x/y/z meshes, perspective matrices and depth-tested native WebGL. Moving cars interpolate recorded routes by arc length. Stationary cars receive declared display-only slots so multiple cars at a representative anchor remain visible and selectable. Those offsets never feed the model. Camera controls and label density do not advance model time. Actual integer fleet/type counts remain inspectable through the selector and table. WebGL failure/context loss exposes flat mode with a named reason.
+
+Frozen OSM provenance, a narrowly scoped copyright link and exact primary vehicle-source metadata are allowed by the distribution checker. All fetch/socket/storage/dynamic-code bans, source-load restrictions and connect-src-none CSP remain. The checker still rejects those same URLs as image loads and rejects lookalike attribution domains/paths. `bayAreaSourceJSON()` provides a fresh serialized copy of the complete derived database; a local data-URL download requires no network.
+
+Published vehicle context is separate from mutable teaching profiles. Ojai battery and charging limits are invented illustrations, not validated specifications. The I-PACE retail 90 kWh nominal reference is not the model's 84 kWh usable assumption. Both labels retain the same road-speed and maximum-four-rider rules. Source geography never implies coverage, airport access, production performance or safety validation.
+
+The following amendments describe earlier waves and are historical where this amendment differs.
+
+## Operational simulation amendment, 2026-09-19
+
+The current extension is specified in `docs/plans/2026-09-19-fleetlab-operations-lab.md`. It adds
+`src/model/operations.js` as an independent, versioned synthetic fleet/depot model. Existing regional engines,
+instrument math, runtime, golden fixtures and evidence boundaries remain unchanged. Capacity comparisons in the new
+model are same-demand scenario sweeps, with no instrument verdict, optimizer or operational authority.
+
+`operations-lab.js` projects frames, events, service breakdowns and capacity trials; `operations-map.js` and
+`car-glyph.js` render every recorded vehicle. Interpolation explains movement between minute snapshots and does not
+simulate lanes or collisions. `simulation-catalog.js` derives all regional entries from PRESETS and adds ten explicit
+operational lessons. Both models remain distinguishable in navigation, catalog and scope text.
+
+A submitted run snapshots its configuration. Later edits/navigation/pause suppress pending autoplay. Reduced motion
+never autoplays. Missing metrics stay unavailable; incomplete visits and requests remain visible; on-site depot time
+excludes return travel. Stage tables use completed visits only. No browser persistence or hidden automatic run exists.
+
+The optional `tools/fleetlab-traffic/` server is outside the static/offline packages. It provides an attributed non-map
+Google Maps route estimate, keeps the key server-side, and does not import provider data into the synthetic schematic.
+Its network access is an explicit exception only for the owner-requested separate companion. This is not deployment
+of the evidence workbench. See the configuration/research document for account and distribution prerequisites.
+
+The copy checker now scans the new UI modules. Responsive styles use shared target tokens; the individual vehicle
+selector and full table complement diagram selection. The car diagram can enlarge and pan without changing a run.
+
+## Presentation amendment, 2026-09-18
+
+The current owner-requested experience redesign is specified in
+`docs/plans/2026-09-18-fleetlab-experience-redesign.md`. It supersedes the historical presentation choices below where
+explicitly stated; model, instrument, runtime, parity and offline security contracts remain in force.
+
+`src/ui/studio.js` mounts decision-oriented navigation around `start({studio:true})`. Development and both packaged
+entry points enable it; standalone component tests may retain `studio:false`. `src/ui/depot-scene.js` is a conceptual
+SVG explanation with no simulation state or computed metrics. Navigation pauses playback and preserves work; only
+explicit run/prepare actions execute the existing host. The first depot visit selects the existing capacity preset;
+later visits retain edits and provide a separate reset action.
+
+The light palette is deliberate in both OS color schemes. Charts, forms, maps and presenter share its contrast-tested
+tokens. The depot workspace places setup/results before the map in visual and DOM order. A native map disclosure
+keeps complete assumptions accessible. Desktop presenter explanations scroll within a bounded ledger while its
+controls remain accessible; the map does not stretch to the length of a verdict. No new dependency or network
+access is introduced. The pack checker includes the two new UI modules in its copy scan.
+
+The owner-requested role analysis lives in root-level audit documentation; shipped product copy remains independent
+and contains no employer branding or invented ownership/adoption claims.
+
+## Original implementation contract
+
 This file is the implementation contract for `playground/fleetlab/`. The design is
 `docs/plans/2026-09-13-fleetlab-playground-design.md` (called "the design" below, cited by section).
 Where the design decides something, the design wins. Where it is silent, this file decides, and every such

@@ -12,7 +12,7 @@ import { maskSource, parseModule } from "../tools/pack.mjs";
 const PLAYGROUND_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const SRC = join(PLAYGROUND_ROOT, "src");
-const FOLDERS = ["core", "instrument", "legacy", "model", "runtime", "ui"];
+const FOLDERS = ["core", "instrument", "legacy", "model", "runtime", "ui", "data"];
 
 /** FleetLab's label tuple, read from its source so this test never spells the strings (design H-8). */
 function requiredLabels() {
@@ -40,6 +40,7 @@ const label = (path) => relative(PLAYGROUND_ROOT, path).split(sep).join("/");
 
 /** Folders each source folder may import from (contract section 2). */
 const ALLOWED = {
+  data: [],
   core: ["core"],
   instrument: ["core", "instrument"],
   legacy: ["core", "legacy"],
@@ -51,7 +52,7 @@ const ALLOWED = {
 /** The one exception: model/experiment.js may import the instrument. */
 function allowedEdge(fromFolder, fromFile, toFolder) {
   if (ALLOWED[fromFolder].includes(toFolder)) return true;
-  return fromFolder === "model" && fromFile === "src/model/experiment.js" && toFolder === "instrument";
+  return fromFolder === "model" && ((fromFile === "src/model/experiment.js" && toFolder === "instrument") || (fromFile === "src/model/bay-area.js" && toFolder === "data"));
 }
 
 /** Line of a match offset, for readable failures. */
@@ -130,7 +131,7 @@ describe("R4 import graph", () => {
           const target = resolve(dirname(file), specifier);
           const inside = relative(SRC, target).split(sep);
           if (inside[0] === ".." || !FOLDERS.includes(inside[0]) || !target.endsWith(".js")) {
-            problems.push(`${name}: imports "${specifier}", outside the six source folders`);
+            problems.push(`${name}: imports "${specifier}", outside the declared source folders`);
             continue;
           }
           if (!allowedEdge(folder, name, inside[0])) {
@@ -143,6 +144,10 @@ describe("R4 import graph", () => {
   }
 
   test("the rule table itself refuses the directions the contract forbids", () => {
+    assert.equal(allowedEdge("model", "src/model/bay-area.js", "data"), true);
+    assert.equal(allowedEdge("model", "src/model/engine.js", "data"), false);
+    assert.equal(allowedEdge("data", "src/data/bay-area-map.js", "model"), false);
+    assert.equal(allowedEdge("ui", "src/ui/app.js", "data"), false);
     assert.equal(allowedEdge("core", "src/core/stats.js", "model"), false);
     assert.equal(allowedEdge("model", "src/model/engine.js", "instrument"), false);
     assert.equal(allowedEdge("model", "src/model/experiment.js", "instrument"), true);
@@ -155,7 +160,7 @@ describe("R4 import graph", () => {
 });
 
 describe("R4 tokens in core, instrument, legacy and model", () => {
-  for (const folder of ["core", "instrument", "legacy", "model"]) {
+  for (const folder of ["core", "instrument", "legacy", "model", "data"]) {
     test(`src/${folder} uses no clock, randomness, page globals, storage or network`, () => {
       const problems = [];
       for (const file of sourceFiles(folder)) {

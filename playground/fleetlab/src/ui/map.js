@@ -915,7 +915,11 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
   const table = el("table", { class: "fl-table" });
   const tableWrap = el("div", { class: "fl-sr-only", "data-role": "table-twin" }, table);
   // The legend stays the last visible block, where the corner stamp has always sat beside its short last row.
-  const element = el("div", { "data-role": "map" }, [header, viewStatus, nothingRun, pictures, crowded, limits, legend, tableWrap, stamp]);
+  const assumptions = el("details", { class: "fl-map-assumptions" }, [
+    el("summary", {}, "Model assumptions and drawing conventions"), limits,
+  ]);
+  const scope = el("p", { class: "fl-map-scope" }, "Schematic only. Invented geography; positions between events are interpolated.");
+  const element = el("div", { "data-role": "map" }, [header, viewStatus, nothingRun, pictures, crowded, scope, assumptions, legend, tableWrap, stamp]);
 
   let tableOpen = false;
   function setTableOpen(open) {

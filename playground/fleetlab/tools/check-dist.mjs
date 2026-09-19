@@ -35,7 +35,7 @@ const CSS_REMOTE = [/(?:url\(|image-set\(|@import)\s*["']?\s*\/\//i, /image-set\
 const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledescription", "title", "alt", "placeholder"]);
 
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
-const COPY_MODULES = ["src/ui/labels.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js"];
+const COPY_MODULES = ["src/ui/labels.js", "src/ui/studio.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js"];
 
 const FORBIDDEN_TOKENS = [
   [/\bfetch\s*\(/, "fetch("],
@@ -258,7 +258,15 @@ function requireLabels(requiredLabels) {
 /** `http:` and `https:` anywhere in the text after decoding character references; the SVG namespace name is not a URL. */
 function schemeProblems(text, where = null) {
   const problems = [];
-  const decoded = decodeEntities(text);
+  // Frozen OSM provenance and explicit license links are inert metadata/navigation.
+  // No image, script, style, worker or API URL is exempt; CSP still forbids connections.
+  const decoded = decodeEntities(text)
+    .replace(/((?:["']?source["']?\s*:\s*)["'])https:\/\/www\.openstreetmap\.org\/(?:node|way)\/\d+(["'])/g, '$1OSM_SOURCE$2')
+    .replace(/`https:\/\/www\.openstreetmap\.org\/way\/\$\{(?:osmIds\[0\]|id)\}`/g, '`OSM_WAY_SOURCE`')
+    .replace(/(["']license["']\s*:\s*["']ODbL 1\.0[^"']*)https:\/\/opendatacommons\.org\/licenses\/odbl\/1-0\/(["'])/g, '$1ODBL_LICENSE$2')
+    .replace(/(const seating=["'])https:\/\/support\.google\.com\/waymo\/answer\/9059053\?hl=en-GB(["'])/g, '$1VEHICLE_SEATING_SOURCE$2')
+    .replace(/(sources:Object\.freeze\(\[["'])https:\/\/(?:media\.jlr\.com\/corporate\/en-us\/news\/2018\/03\/2019-jaguar-i-pace|waymo\.com\/blog\/2026\/05\/welcoming-riders-in-the-ojai\/)(["'])/g, '$1VEHICLE_SOURCE$2')
+    .replace(/(<a\b[^>]*?\bhref\s*=\s*["']|\bel\(\s*["']a["']\s*,\s*\{\s*href\s*:\s*["'])https:\/\/www\.openstreetmap\.org\/copyright(["'])/g, '$1OSM_ATTRIBUTION$2');
   for (const m of decoded.matchAll(/https?:/gi)) {
     const rest = decoded.slice(m.index, m.index + SVG_NAMESPACE.length + 1);
     const namespaceName = rest.startsWith(SVG_NAMESPACE) && !/[A-Za-z0-9._~/?#%:@-]/.test(rest[SVG_NAMESPACE.length] ?? "");

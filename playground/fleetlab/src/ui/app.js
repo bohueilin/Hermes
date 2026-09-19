@@ -42,6 +42,7 @@ import { LEARN_FORK_DEPOTS, learnCase, mountLearn } from "./learn.js";
 import { frameModel, mountMap } from "./map.js";
 import { createPlayback, renderTransport } from "./playback.js";
 import { mountPresent, PRESENT_PRESET_ID } from "./present.js";
+import { mountStudio } from "./studio.js";
 import { createInitialState, createStore, ENGINE_PATHS, lastChange, MODES } from "./store.js";
 
 /** Shell regions in document order, which is the design section 7.7 tab order; `now` and `across` sit in `side`. */
@@ -205,11 +206,18 @@ export function buildShell() {
  * `runPair`, `runExperiment` and `cancel`), and `copyText(text)` replaces the clipboard (null disables copying).
  * Returns `{root, strip, regions, createWorker, store, host, playback, runWindow, openFork, watchVerdictSeed, destroy}`.
  */
-export function start({ createWorker, engineHost = null, copyText = clipboardWriter() } = {}) {
+export function start({ createWorker, engineHost = null, copyText = clipboardWriter(), studio = false } = {}) {
   if (typeof createWorker !== "function") throw new TypeError("start needs a createWorker factory");
   const shell = buildShell();
-  const app = mountInterface(shell, { createWorker, engineHost, copyText });
-  return { ...shell, createWorker, ...app };
+  const app = mountInterface(shell, { createWorker, engineHost, copyText, studio });
+  const handle = { ...shell, createWorker, ...app };
+  if (studio) {
+    const experience = mountStudio(handle);
+    const destroy = handle.destroy;
+    handle.studio = experience;
+    handle.destroy = () => { experience.destroy(); destroy(); };
+  }
+  return handle;
 }
 
 /** The page clipboard's writeText, or null where the page has none. */
@@ -332,13 +340,14 @@ function updateTextRow(node, [, name, value]) {
 }
 
 /** Mounts every region into the shell and wires the store to the engine host. */
-function mountInterface({ root, regions, side }, { createWorker, engineHost, copyText }) {
+function mountInterface({ root, regions, side }, { createWorker, engineHost, copyText, studio }) {
   const doc = globalThis.document;
   const preset = presetById(DEFAULT_PRESET_ID);
   const store = createStore(createInitialState({ presetId: preset.id, scenario: cloneScenario(preset.scenario) }));
   const host = engineHost ?? createEngineHost({ createWorker });
   const cleanups = [];
   let destroyed = false;
+  let autoplayVersion = 0;
   const runs = { window: null, fork: null, forkArgs: null, forkMeta: null, forkNotice: false, copyStatus: null, prepareTimes: null };
   // Lookup tables built ahead of the first run: sigmas done (or failed, so they are not retried), the pending build, the idle handle.
   const warm = { done: new Set(), pending: null, idle: null };
@@ -357,6 +366,8 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
   /** Run window (design §7.4): computes the whole log of the first replication and the metrics of every one. */
   function runWindow() {
     const scenario = store.getState().scenario;
+    const requestedAutoplayVersion = autoplayVersion;
+    const requestedMode = store.getState().mode;
     if (runs.window !== null) host.cancel(runs.window.id);
     const seeds = seedSet(PRESET_SEED_SET, SANDBOX_REPLICATIONS);
     let id = null;
@@ -375,6 +386,13 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
           if (destroyed) return;
           reportPath();
           store.dispatch({ type: "run/done", id, payload });
+          const state = store.getState();
+          if (studio && requestedAutoplayVersion === autoplayVersion && runs.window === promise
+              && !root.hidden && !state.present.on && !state.run.stale && state.run.id === id
+              && state.scenario === scenario && state.mode === requestedMode && state.mode !== "experiment") {
+            playback.seek(scenario.window.start_s);
+            playback.autoplay();
+          }
         },
         (error) => {
           if (destroyed) return;
@@ -553,6 +571,13 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
   regions.map.replaceChildren(runStatus, mapHost);
   const help = createShortcutHelp(regions.map);
   const playback = createPlayback({ store });
+  for (const method of ["pause", "seek", "step", "jump", "play"]) {
+    const action = playback[method];
+    playback[method] = (...args) => { autoplayVersion++; return action(...args); };
+  }
+  cleanups.push(store.subscribe((state, action) => {
+    if (action.type === "mode/set" || action.type === "present/open") autoplayVersion++;
+  }));
   // The isometric picture is the page's (design §7.3 as amended); the flat schematic stays behind its toggle and
   // is what a browser without a 2D canvas gets, with the reason written.
   const map = mountMap(mapHost, { store, playback, onShortcuts: () => help.toggle(), frame: () => frameOf(store.getState()), isoView: createIsoView });

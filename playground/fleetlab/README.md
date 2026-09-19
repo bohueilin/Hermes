@@ -1,5 +1,28 @@
 # FleetLab Playground
 
+**[Open the public playground](https://fleetlab-playground.pages.dev/)** · Independent project by Bo-Huei Lin
+
+For an interview walkthrough: **Overview → Simulation → Run fleet day → Product approach**. Configure the day, select a car, step through its activities, then explain the service and depot trade-offs. The [Cloudflare guide](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) records the exact publishing and optional custom-domain steps.
+
+## Bay Area fleet day in 3D
+
+Start with **Simulation → Run fleet day**. Fleet day uses native WebGL cars and depots on a frozen OpenStreetMap road extract. Select any two or more of the 18 city/airport anchors, configure Jaguar I-PACE and Ojai profiles, then inspect service, energy and depot constraints. The static site and offline HTML contain the same experience; no account, renderer dependency or runtime map download is needed.
+
+- **Geography:** all requested Bay Area places, with separate SFO and SJC airport selections. Sparse major-road paths are sourced; one-way, turn and access restrictions are absent. These are teaching routes, not navigation or a verified operator service area.
+- **3D replay:** orbit, zoom, tilt, city focus, selected-car follow, label density, exact-minute and next-activity navigation. Flat view and the vehicle table remain available. Stationary display slots and enlarged vehicle/depot geometry do not change model coordinates.
+- **Vehicle mix:** 0–100% Ojai with editable per-type modeled battery, charge acceptance, energy per kilometer, boarding and service-time factors. Ojai numerical defaults are illustrative; I-PACE retail nominal battery is distinct from modeled usable energy. Neither label changes road speed or party capacity.
+- **Operations:** real route distance drives travel time and energy; synthetic time-of-day, weather and congestion modifiers are explicit. Finite software, cleaning, charging and upload resources constrain readiness. Power respects vehicle, port, site and charge-target limits.
+- **Comparisons:** shared demand for fleet/depot and vehicle-mix trials. Results include completed, unserved and unfinished demand, per-type and per-pickup-place outcomes, completed depot time, active work and queues. A first sufficient tested depot count is not a global optimum.
+- **Learning:** 44 examples and lessons: 12 Fleet day lessons and all 32 original regional presets.
+
+The Bay model is `fleetlab-bay-operations-1.0.0`. The original synthetic `operations.js` and regional simulator/instrument/golden fixtures remain unchanged. Google Maps estimates remain a separate optional local companion and do not supply this OSM replay. No CARLA or physical driving integration is introduced.
+
+Map attribution appears below the scene. **Download attributed map data** offers the complete compact derived database under ODbL in both packages. Source queries, hashes and reproduction script are in `tools/map-data/` at the repository root.
+
+See the [Bay Area handoff](../../docs/FLEETLAB_BAY_AREA_3D_HANDOFF_2026-09-19.md), [simulation guide](../../docs/FLEETLAB_SIMULATION_GUIDE.md), [map provenance](../../docs/FLEETLAB_BAY_AREA_MAP_DATA.md), [vehicle assumptions](../../docs/FLEETLAB_VEHICLE_PROFILES.md), and [Google traffic/CARLA research](../../docs/FLEETLAB_GOOGLE_TRAFFIC_CARLA_RESEARCH.md). The [original audit](../../docs/FLEETLAB_DESIGN_AUDIT_2026-09-18.md) records the broader product redesign.
+
+## The underlying regional teaching model
+
 A teaching model, not evidence. FleetLab Playground is a static web page that works offline. You set the knobs of a
 stylized Bay Area fleet (cars per area, depots with parking, cleaning bays and service bays, peak and off-peak demand,
 highway and local routes with hourly congestion, depot assignment, the end-of-service recall and the morning release),
@@ -22,7 +45,7 @@ NO_RECOMMENDATION.
 
 **An isometric world.** The map region draws the four areas as an isometric schematic on a 2D canvas, generated at run
 time from the interval log: no asset, no dependency, no build step, no WebGL. Platforms are flat squares at the areas'
-own centres, roads are ribbons, a car driving a route is a shaded box pointing along its ribbon, cars standing in an
+own centres, roads are ribbons, a moving car has a shaded body, cabin and tires pointing along its ribbon, cars standing in an
 area are cubes of five, and a depot is a block whose lot fill climbs its sides and whose bay cells fill as their tasks
 run. Where several cars share a leg exactly, one body carries a written count. The canvas draws no word: every label,
 number and name is HTML over it, which is what a screen reader reads and what the copy scans see. Nothing is lit, no
@@ -90,8 +113,7 @@ node playground/fleetlab/tools/check-dist.mjs --site dist/site
 ```
 
 Upload the folder as it is. Its page carries a stricter policy than the packed file (`script-src 'self'`, no inline
-script) and `_headers` repeats it for hosts that read that file. Putting the folder online is an owner action, never part
-of a build.
+script) and `_headers` repeats it for hosts that read that file. Publishing is a separate, explicitly authorized action; building alone never uploads anything.
 
 ## Test it
 

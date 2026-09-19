@@ -44,7 +44,7 @@ export const SITE_HEADERS = [
 /** The hosted folder's boot module: the development shell's inline script as a file, so the policy can refuse inline code. */
 export const SITE_BOOT = [
   'import { start } from "./src/ui/app.js";',
-  'start({ createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });',
+  'start({ studio: true, createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });',
   "",
 ].join("\n");
 
@@ -733,7 +733,7 @@ export function buildHtml(playgroundDir) {
     "<script>",
     `const FLEETLAB_WORKER_SOURCE = ${workerLiteral};`,
     pageBundle,
-    'FleetLabPage.start({createWorker: () => new Worker(URL.createObjectURL(new Blob([FLEETLAB_WORKER_SOURCE], {type: "text/javascript"})))});',
+    'FleetLabPage.start({studio: true, createWorker: () => new Worker(URL.createObjectURL(new Blob([FLEETLAB_WORKER_SOURCE], {type: "text/javascript"})))});',
     "</script>",
   ].join("\n");
   const at = head.index + head[0].length;

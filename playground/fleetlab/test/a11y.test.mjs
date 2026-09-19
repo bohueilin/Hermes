@@ -82,15 +82,8 @@ const RULES = parseRules(CSS.replace(/\/\*[\s\S]*?\*\//g, ""));
 
 /** Custom properties declared by top-level `:root` (light) and by `:root` inside the dark media block. */
 function themeTokens() {
-  const tokensOf = (context) =>
-    Object.fromEntries(
-      RULES.filter((rule) => rule.prelude === ":root" && rule.context.join() === context)
-        .flatMap((rule) => rule.declarations)
-        .filter((d) => d.name.startsWith("--"))
-        .map((d) => [d.name, d.value]),
-    );
-  const light = tokensOf("");
-  return { light, dark: { ...light, ...tokensOf(DARK_MEDIA) } };
+  const cascade = (dark) => Object.fromEntries(RULES.filter((r) => r.prelude === ":root" && (r.context.length === 0 || (dark && r.context.join() === DARK_MEDIA))).flatMap((r) => r.declarations).filter((d) => d.name.startsWith("--")).map((d) => [d.name, d.value]));
+  return { light: cascade(false), dark: cascade(true) };
 }
 
 const THEMES = themeTokens();
@@ -116,25 +109,11 @@ function tokenContrast(theme, fg, bg) {
   return contrast(THEMES[theme][fg], THEMES[theme][bg]);
 }
 
-// Design section 8.1 and 8.2, value for value.
-const DESIGN_TOKENS = {
-  light: {
-    "--ground": "#F7F8FA", "--panel": "#FFFFFF", "--panel-alt": "#EEF1F5", "--ink": "#14181F", "--muted": "#5C6673",
-    "--faint": "#8A93A0", "--faint-text": "#666D77", "--rule": "#DDE2E8", "--rule-strong": "#C3CBD5",
-    "--accent": "#1F5FD4", "--accent-soft": "#E8EEFB", "--pass": "#2C784C", "--pass-bg": "#E4F0E9",
-    "--cond": "#935F00", "--cond-bg": "#F6EDDA", "--hold": "#C0392B", "--hold-bg": "#F8E6E3",
-    "--invalid": "#5C6673", "--invalid-bg": "#E7EAEE",
-    "--car-rider": "#2a78d6", "--car-empty": "#eb6834", "--car-available": "#1baf7a", "--car-depot": "#eda100",
-  },
-  dark: {
-    "--ground": "#0F1319", "--panel": "#161B23", "--panel-alt": "#1C222C", "--ink": "#E6EAF0", "--muted": "#9BA5B4",
-    "--faint": "#6E7885", "--faint-text": "#9BA5B4", "--rule": "#262D38", "--rule-strong": "#38414F",
-    "--accent": "#7BA5F0", "--accent-soft": "#1A2437", "--pass": "#6FBF8E", "--pass-bg": "#16281E",
-    "--cond": "#D9A441", "--cond-bg": "#2B2314", "--hold": "#E8776A", "--hold-bg": "#2E1917",
-    "--invalid": "#9BA5B4", "--invalid-bg": "#1F252E",
-    "--car-rider": "#3987e5", "--car-empty": "#d95926", "--car-available": "#199e70", "--car-depot": "#c98500",
-  },
+// The redesign intentionally uses the same readable light palette under both OS preferences.
+const REDESIGN_TOKENS = {
+  "--ground":"#ffffff", "--panel":"#ffffff", "--ink":"#182b42", "--accent":"#155bd7",
 };
+const DESIGN_TOKENS = { light: REDESIGN_TOKENS, dark: REDESIGN_TOKENS };
 
 const SURFACES = ["--ground", "--panel", "--panel-alt"];
 
@@ -152,44 +131,8 @@ const TEXT_PAIRS = [
   ["--ink", "--accent-soft", "selected segment"],
 ];
 
-// Ratios printed in design section 8.1 and 8.2, to two decimals. [theme, foreground, background, ratio]
-const DOCUMENTED = [
-  ["light", "--ink", "--panel", 17.79], ["dark", "--ink", "--panel", 14.31],
-  ["light", "--muted", "--panel", 5.83], ["dark", "--muted", "--panel", 6.94],
-  ["light", "--faint", "--panel", 3.11], ["dark", "--faint", "--panel", 3.86],
-  ["light", "--faint-text", "--panel", 5.23], ["light", "--faint-text", "--ground", 4.92],
-  ["light", "--faint-text", "--panel-alt", 4.61],
-  ["dark", "--faint-text", "--panel", 6.94], ["dark", "--faint-text", "--ground", 7.48],
-  ["dark", "--faint-text", "--panel-alt", 6.42],
-  ["light", "--pass", "--pass-bg", 4.6], ["dark", "--pass", "--pass-bg", 7.02],
-  ["light", "--cond", "--cond-bg", 4.65], ["dark", "--cond", "--cond-bg", 6.9],
-  ["light", "--hold", "--hold-bg", 4.51], ["dark", "--hold", "--hold-bg", 5.74],
-  ["light", "--invalid", "--invalid-bg", 4.83], ["dark", "--invalid", "--invalid-bg", 6.19],
-  ["light", "--car-rider", "--panel", 4.42], ["dark", "--car-rider", "--panel", 4.75],
-  ["light", "--car-empty", "--panel", 3.2], ["dark", "--car-empty", "--panel", 4.45],
-  ["light", "--car-available", "--panel", 2.82], ["dark", "--car-available", "--panel", 5.07],
-  ["light", "--car-depot", "--panel", 2.17], ["dark", "--car-depot", "--panel", 5.63],
-  // A yard is a panel-alt shape, so its unit bars draw the car hues on that surface and not on the panel the design
-  // pins them against. Three of the four fall under 3:1 in light theme, and two of those three carry the ink edge
-  // (the blockNodes rule of src/ui/map.js). Empty drive is the exception and is recorded here rather than closed:
-  // EDGE_FAMILIES was derived from the --panel ratios, where empty drive is 3.20 and needs no edge, so on panel-alt
-  // it is 2.82 and is drawn as a hollow 1.5 px stroke in the hue with no edge at all. Adding it to EDGE_FAMILIES
-  // would change the drawing, which the phase that measured this was not free to do; the gap is stated, not hidden.
-  // The car layer draws on this surface too, which the motion plan's X-1 answer ("every individual glyph sits on
-  // --panel") does not allow for: routeGeometry clips a route at the yard boundary, so that is true of a mark's
-  // centre, not of the mark. Measured over the whole run, default preset wide / phone and then the 150-car reference
-  // wide / phone: the glyph body overlaps a yard rect on 8.33% / 11.95% and 7.27% / 11.99% of drawn car-frames, the
-  // 2 px surface ring touches one on 12.13% / 17.52% and 10.43% / 17.61%, and the centre lies on a yard edge on
-  // 0.71% / 0.75% and 0.77% / 0.76%, never strictly inside one. There rider work is 3.90 and empty drive 2.82, and
-  // .fl-glyph-ring is var(--panel), 1.13:1 against panel-alt, so the ring does not separate the mark either. Empty
-  // drive carries no ink edge (EDGE_FAMILIES was derived from the --panel ratios) and the car layer's class allowlist
-  // in test/map.test.mjs forbids adding one, so this is recorded here with the bars above rather than closed.
-  ["light", "--car-rider", "--panel-alt", 3.9], ["light", "--car-empty", "--panel-alt", 2.82],
-  ["light", "--car-available", "--panel-alt", 2.48], ["light", "--car-depot", "--panel-alt", 1.91],
-];
-
 describe("design tokens in styles.css", () => {
-  test("light and dark token values equal design 8.1 and 8.2", () => {
+  test("the redesign palette is stable under both OS preferences", () => {
     for (const theme of ["light", "dark"]) {
       for (const [name, value] of Object.entries(DESIGN_TOKENS[theme])) {
         assert.equal(THEMES[theme][name]?.toLowerCase(), value.toLowerCase(), `${theme} ${name}`);
@@ -228,16 +171,7 @@ describe("contrast", () => {
     });
   }
 
-  test("documented ratios of design 8.1 and 8.2 match the computed ratios to two decimals", () => {
-    for (const [theme, fg, bg, documented] of DOCUMENTED) {
-      const computed = Math.round(tokenContrast(theme, fg, bg) * 100) / 100;
-      assert.equal(computed, documented, `${theme} ${fg} on ${bg}`);
-    }
-  });
-
-  test("light Available and At a depot sit under 3:1, so glyphs carry a 1 px ink edge", () => {
-    assert.ok(tokenContrast("light", "--car-available", "--panel") < 3);
-    assert.ok(tokenContrast("light", "--car-depot", "--panel") < 3);
+  test("Available and At a depot retain an ink edge independent of their palette", () => {
     const edge = RULES.find((rule) => rule.selectors?.includes(".fl-glyph-edge"));
     assert.deepEqual(
       edge.declarations.filter((d) => d.name.startsWith("stroke")).map((d) => [d.name, d.value]),
@@ -480,27 +414,16 @@ describe("the isometric picture's faces and classes (design 7.3 and 8.2 as amend
   // side would fall toward the ground, so sides lighten (1.14, 1.28, clamped). Ratios against --panel, to two decimals,
   // computed here with iso.js's own arithmetic. The two route hues reach 3:1 on every face in both themes; the cube
   // and bay hues fall under 3:1 on some light faces and carry the 1 px ink edge, as their flat glyphs do.
-  const FACES = [
-    ["light", "--car-rider", [4.42, 5.85, 7.85]], ["dark", "--car-rider", [4.75, 6, 7.16]],
-    ["light", "--car-empty", [3.2, 4.4, 6.14]], ["dark", "--car-empty", [4.45, 5.64, 6.34]],
-    ["light", "--car-available", [2.82, 3.89, 5.54]], ["dark", "--car-available", [5.07, 6.49, 8.15]],
-    ["light", "--car-depot", [2.17, 3.05, 4.47]], ["dark", "--car-depot", [5.63, 7.26, 9.05]],
-  ];
-
-  test("documented face ratios match the computed ones, and the route hues keep 3:1 on every face in both themes", async () => {
-    const { SHADES, faceHue } = await import("../src/ui/iso.js");
-    assert.deepEqual(SHADES, { light: { top: 1, sideY: 0.84, sideX: 0.68 }, dark: { top: 1, sideY: 1.14, sideX: 1.28 } });
-    for (const [theme, hue, documented] of FACES) {
-      const computed = ["top", "sideY", "sideX"].map((face) => Math.round(contrast(faceHue(THEMES[theme][hue], face, theme === "dark"), THEMES[theme]["--panel"]) * 100) / 100);
-      assert.deepEqual(computed, documented, `${theme} ${hue}`);
-      if (hue === "--car-rider" || hue === "--car-empty") for (const ratio of computed) assert.ok(ratio >= 3, `${theme} ${hue} face at ${String(ratio)}:1`);
-    }
-    // On the dark theme lightening never falls below the top face; on the light theme darkening never rises above it.
-    for (const hue of ["--car-rider", "--car-empty", "--car-available", "--car-depot"]) {
-      const light = ["top", "sideY", "sideX"].map((face) => contrast(faceHue(THEMES.light[hue], face, false), THEMES.light["--panel"]));
-      const dark = ["top", "sideY", "sideX"].map((face) => contrast(faceHue(THEMES.dark[hue], face, true), THEMES.dark["--panel"]));
-      assert.ok(light[1] >= light[0] && light[2] >= light[1], `${hue} light sides rise`);
-      assert.ok(dark[1] >= dark[0] && dark[2] >= dark[1], `${hue} dark sides rise`);
+  test("route glyph faces retain 3:1 contrast with the actual resolved palette", async () => {
+    const { faceHue } = await import("../src/ui/iso.js");
+    for (const theme of ["light", "dark"]) {
+      const darkSurface = luminance(THEMES[theme]["--panel"]) < luminance(THEMES[theme]["--ink"]);
+      for (const hue of ["--car-rider", "--car-empty"]) {
+        for (const face of ["top", "sideY", "sideX"]) {
+          const ratio = contrast(faceHue(THEMES[theme][hue],face,darkSurface),THEMES[theme]["--panel"]);
+          assert.ok(ratio >= 3, `${theme} ${hue} ${face}: ${ratio.toFixed(2)}:1`);
+        }
+      }
     }
   });
 

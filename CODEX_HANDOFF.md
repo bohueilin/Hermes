@@ -1,4 +1,15 @@
+# Latest FleetLab release
+
+See the [public release record](docs/FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) for current validation and publication state, the [Cloudflare guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) for owner steps, and the [repository recommendation](docs/FLEETLAB_REPOSITORY_RECOMMENDATION.md) for main integration. The explicit user request authorizes static publication and a feature-branch push. The [Bay Area 3D handoff](docs/FLEETLAB_BAY_AREA_3D_HANDOFF_2026-09-19.md) and [earlier operations wave](docs/FLEETLAB_OPERATIONS_HANDOFF_2026-09-19.md) preserve the preceding local-only checkpoints. The historical Hermes handoff below is unchanged.
+
 # Hermes Phase 6 Codex handoff
+
+## FleetLab experience redesign addendum — 2026-09-18
+
+The current `feat/fleetlab-playground` worktree contains a local website redesign and a product/simulation audit.
+See [the redesign handoff](docs/FLEETLAB_REDESIGN_HANDOFF_2026-09-18.md) for actual validation, package digests,
+browser observations, unresolved fixture failures and remaining model limitations. This is a separate playground
+presentation wave, not a new Phase 6 evidence contract. The historical handoff below is preserved.
 
 ## Current reviewer-comprehension addendum — 2026-08-13
 
