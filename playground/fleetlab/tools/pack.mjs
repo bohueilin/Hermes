@@ -11,6 +11,7 @@ import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSy
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import vm from "node:vm";
+import {APP_MAX_BYTES,MEDIA_MODULE,MEDIA_LIMITS,mediaProblems} from "./media.mjs";
 
 /** The design section 9.4 content security policy, verbatim. */
 export const CONTENT_SECURITY_POLICY =
@@ -26,7 +27,7 @@ export const MODULE_MARKER = "// fleetlab-module: ";
  * `'unsafe-inline'` in style-src, as in the packed file.
  */
 export const SITE_CONTENT_SECURITY_POLICY =
-  "default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+  "default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; " +
   "connect-src 'none'; form-action 'none'; base-uri 'none'";
 
 /** Response headers a static host serves for the folder (the `_headers` format): the policy again, with frame-ancestors. */
@@ -483,11 +484,14 @@ export function moduleGraph(entryFile, sourceRoot) {
  * Bundles the module graph reachable from `entryFile` into one classic script defining `const <globalName>`
  * as the entry module's namespace. `sourceRoot` bounds resolution and names modules in marker comments.
  */
-export function bundle(entryFile, { sourceRoot, globalName }) {
+export function bundle(entryFile, { sourceRoot, globalName, replacements = new Map() }) {
   const { entry, order, records } = moduleGraph(entryFile, sourceRoot);
 
   const parts = [`const ${globalName} = (() => {`, `"use strict";`];
-  for (const record of order) parts.push(MODULE_MARKER + record.label, renderModule(record, records));
+  for (const record of order) {
+    if (replacements.has(record.label)) { record.src = replacements.get(record.label); record.parsed = parseModule(record.src, record.label); }
+    parts.push(MODULE_MARKER + record.label, renderModule(record, records));
+  }
   parts.push(`return ${records.get(entry).id};`, `})();`, "");
   const code = parts.join("\n");
   assertNoModuleSyntax(code, globalName);
@@ -705,6 +709,21 @@ export function checkSitePath(outDir, repoRoot, files = null) {
   return { ok: true, path: target };
 }
 
+function readMedia(dir){
+  const folder=join(dir,'media');const state=lstatSync(folder);
+  if(state.isSymbolicLink()||!state.isDirectory())throw new PackError('media: directory must be regular, no symlinks');
+  const result=new Map();
+  for(const name of readdirSync(folder)){
+    const path=`media/${name}`,limit=MEDIA_LIMITS.get(path),file=join(folder,name),stat=lstatSync(file);
+    if(!limit)throw new PackError(`media: unexpected ${path}`);
+    if(stat.isSymbolicLink()||!stat.isFile())throw new PackError(`media: regular file required, no symlinks: ${path}`);
+    if(stat.size>limit)throw new PackError(`media size: ${path} exceeds ${limit} byte limit`);
+    const data=readFileSync(file),problems=mediaProblems(path,data);if(problems.length)throw new PackError(problems.join('; '));result.set(path,data);
+  }
+  for(const path of MEDIA_LIMITS.keys())if(!result.has(path))throw new PackError(`media: missing ${path}`);
+  return result;
+}
+
 /** Builds the packed HTML text from the playground folder. */
 export function buildHtml(playgroundDir) {
   const dir = resolve(playgroundDir);
@@ -713,7 +732,13 @@ export function buildHtml(playgroundDir) {
     throw new PackError("src/runtime/worker.js does not exist yet; the worker bundle cannot be built");
   }
   const sourceRoot = join(dir, "src");
-  const pageBundle = bundle(join(dir, "src/ui/app.js"), { sourceRoot, globalName: "FleetLabPage" });
+  const pageEntry = join(dir, "src/ui/app.js");
+  const replacements = new Map();
+  if (moduleGraph(pageEntry, sourceRoot).order.some(record => record.label === MEDIA_MODULE)) {
+    const media = readMedia(dir);
+    replacements.set(MEDIA_MODULE, `export const FILM_URL = "";\nexport const POSTER_URL = "data:image/webp;base64,${media.get("media/fleet-film-poster.webp").toString("base64")}";`);
+  }
+  const pageBundle = bundle(pageEntry, { sourceRoot, globalName: "FleetLabPage", replacements });
   const workerBundle = bundle(workerEntry, { sourceRoot, globalName: "FleetLabWorker" });
   const cssPath = join(dir, "styles.css");
   if (!existsSync(cssPath)) throw new PackError("styles.css does not exist; it is inlined into the packed file");
@@ -740,6 +765,7 @@ export function buildHtml(playgroundDir) {
   html = html.slice(0, at) + meta + html.slice(at);
   html = html.replace(/<\/head>/i, () => `<style>\n${css}\n</style>\n</head>`);
   html = html.replace(/<\/body>/i, () => `${script}\n</body>`);
+  if (Buffer.byteLength(html) > APP_MAX_BYTES) throw new PackError("app size exceeds offline byte limit");
   return html;
 }
 
@@ -775,6 +801,9 @@ export function buildSite(playgroundDir) {
   files.set("index.html", html);
   files.set("boot.js", SITE_BOOT);
   files.set("_headers", SITE_HEADERS);
+  const codeBytes = [...files.values()].reduce((sum, text) => sum + Buffer.byteLength(text), 0);
+  if (codeBytes > APP_MAX_BYTES) throw new PackError("app size exceeds source byte limit");
+  if (files.has(MEDIA_MODULE)) for (const [path, data] of readMedia(dir)) files.set(path, data);
   return files;
 }
 

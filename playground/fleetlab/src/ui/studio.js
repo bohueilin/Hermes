@@ -1,5 +1,6 @@
 // Product entry and navigation across three explicit teaching models.
 import { el } from "./dom.js";
+import { createHeroFilm } from "./hero-film.js";
 import { createDepotScene } from "./depot-scene.js";
 import { startFromPreset, CHOOSER_PRESET_IDS } from "./experiment.js";
 import { openLearnCase } from "./learn.js";
@@ -19,22 +20,25 @@ function decisionCard({number,category,title,text,measure,cta,target},navigate) 
   ]);
 }
 
-function overview(navigate) {
+function overview(navigate, film) {
   return el("main",{class:"studio-overview",id:"studio-overview"},[
-    el("section",{class:"studio-hero"},[
-      el("div",{class:"hero-copy"},[
-        el("div",{class:"hero-title"},[
-          eyebrow("FLEET OPERATIONS, MADE EXPLORABLE"),
-          el("h1",{},["A whole fleet day.",el("br"),el("span",{},"A clearer decision.")]),
-          el("p",{class:"creator-credit"},"Independent project by Bo-Huei Lin"),
-        ]),
-        el("div",{class:"hero-summary"},[
-          el("p",{class:"hero-lede"},"Every trip depends on what happens between trips."),
-          el("p",{class:"hero-description"},"Explore how vehicles, demand and depot resources work together. Run a simulated day across the Bay Area, follow the fleet in 3D, and inspect what changes when a constraint moves."),
-          el("div",{class:"hero-actions"},[action("Run a fleet day  ↗",()=>navigate("simulation"),true),action("Explore the models  →",()=>navigate("catalog"))]),
-          el("p",{class:"hero-duration"},"Start in three minutes · Runs in your browser"),
-        ]),
+    el("section",{class:"studio-film-hero"},[
+      film.element,
+      el("div",{class:"film-scrim","aria-hidden":"true"}),
+      el("div",{class:"film-copy"},[
+        eyebrow("FLEET OPERATIONS, MADE EXPLORABLE"),
+        el("h1",{},"Every great ride starts with a ready fleet."),
+        el("p",{class:"film-lede"},"Explore the work between rides. Run a simulated fleet day, follow vehicles through the Bay Area, and see how demand, energy and depot capacity shape the day."),
+        el("div",{class:"hero-actions"},[action("Run a fleet day  ↗",()=>navigate("simulation"),true),action("Explore the models  →",()=>navigate("catalog"))]),
+        el("p",{class:"hero-duration"},"Start in three minutes · Runs in your browser"),
       ]),
+    ]),
+    el("div",{class:"film-caption"},[
+      el("p",{},[el("strong",{},"Original 3D concept film"),"Waterfront travel, a neighborhood and a charging depot connect the ride to fleet readiness. An illustration, not a simulation result."]),
+      el("p",{class:"creator-credit"},"Independent project by Bo-Huei Lin"),
+    ]),
+    el("section",{class:"depot-introduction"},[
+      el("div",{class:"section-heading"},[el("div",{},[eyebrow("BETWEEN EVERY RIDE"),el("h2",{},"Readiness is a connected cycle.")]),el("p",{},"Explore the depot stages, then run the model to see how finite resources shape vehicle availability.")]),
       createDepotScene(),
     ]),
     el("section",{class:"studio-facts","aria-label":"Model scope"},[
@@ -120,7 +124,8 @@ export function mountStudio(app) {
     el("span",{class:"studio-status"},[el("span",{"aria-hidden":"true"},"◉"),"SIMULATION LAB"]),
   ]);
   const boundary = el("div",{class:"studio-boundary",role:"note"},[el("strong",{},"Teaching model"),"Real geography in Fleet day and Street lab. Simulated demand and operations. No real fleet performance claim."]);
-  const home = overview(navigate);
+  const film = createHeroFilm();
+  const home = overview(navigate, film);
   const product = approach(navigate);
   const operations = createOperationsLab({onCatalog:()=>navigate("catalog")});
   const streets = createStreetLab();
@@ -160,6 +165,7 @@ export function mountStudio(app) {
     root.hidden = !workspace;
     if (workspace) root.removeAttribute("inert"); else root.setAttribute("inert","");
     home.hidden = page !== "overview";
+    film.setActive(page === "overview");
     product.hidden = page !== "approach";
     operations.element.hidden = page !== "simulation";
     streets.element.hidden = page !== "streets";
@@ -204,5 +210,5 @@ export function mountStudio(app) {
     previousPresent = state.present.on;
     if (wasPresenting && !state.present.on && current === "tour") navigate("operations");
   });
-  return {navigate,operations,streets,element:container,destroy(){operations.destroy();streets.destroy();unsubscribe();root.hidden=false;root.removeAttribute("inert");container.parentNode?.insertBefore(root,container);container.remove();}};
+  return {navigate,operations,streets,element:container,destroy(){film.destroy();operations.destroy();streets.destroy();unsubscribe();root.hidden=false;root.removeAttribute("inert");container.parentNode?.insertBefore(root,container);container.remove();}};
 }

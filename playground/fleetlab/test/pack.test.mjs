@@ -838,7 +838,7 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
   test("the hosted policy takes scripts, the worker and the stylesheet from the site only, and the headers repeat it with frame-ancestors", () => {
     assert.equal(
       SITE_CONTENT_SECURITY_POLICY,
-      "default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'",
+      "default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'",
     );
     const directive = (name) => SITE_CONTENT_SECURITY_POLICY.split(";").map((d) => d.trim()).find((d) => d.startsWith(`${name} `));
     assert.equal(directive("script-src"), "script-src 'self'");
@@ -978,7 +978,8 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     assert.equal(checkDistMain(["--site", join(REPO_ROOT, "dist/site")], { env: { FLEETLAB_REQUIRED_LABELS: JSON.stringify(labels) }, ...quiet }), 0);
     for (const [path, text] of files) {
       if (path.startsWith("src/")) assert.equal(text, readFileSync(join(PLAYGROUND_ROOT, path), "utf8"), path);
-      assert.equal(readFileSync(join(REPO_ROOT, "dist/site", path), "utf8"), text, path);
+      if (Buffer.isBuffer(text)) assert.deepEqual(readFileSync(join(REPO_ROOT, "dist/site", path)), text, path);
+      else assert.equal(readFileSync(join(REPO_ROOT, "dist/site", path), "utf8"), text, path);
     }
     assert.ok([...files.keys()].some((p) => p === "src/runtime/worker.js") && [...files.keys()].some((p) => p === "src/ui/app.js"));
     assert.ok(![...files.keys()].some((p) => p.startsWith("test/") || p.startsWith("tools/")));

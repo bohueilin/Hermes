@@ -12,7 +12,7 @@ Sourced geography and supported one-way/turn rules are separate from synthetic t
 
 ## Bay Area fleet day in 3D
 
-Start with **Fleet day → Run fleet day**. Fleet day uses native WebGL cars and depots on a frozen OpenStreetMap road extract. Select any two or more of the 18 city/airport anchors, configure Jaguar I-PACE and Ojai profiles, then inspect service, energy and depot constraints. The static site and offline HTML contain the same experience; no account, renderer dependency or runtime map download is needed.
+Start with **Fleet day → Run fleet day**. Fleet day uses native WebGL cars and depots on a frozen OpenStreetMap road extract. Select any two or more of the 18 city/airport anchors, configure Jaguar I-PACE and Ojai profiles, then inspect service, energy and depot constraints. The static site and offline HTML contain the same simulation tools; no account, renderer dependency or runtime map download is needed. The hosted homepage also includes an optional original 3D concept film. The offline edition uses its embedded still image to keep the file small.
 
 - **Geography:** all requested Bay Area places, with separate SFO and SJC airport selections. Sparse major-road paths are sourced; one-way, turn and access restrictions are absent. These are teaching routes, not navigation or a verified operator service area.
 - **3D replay:** orbit, zoom, tilt, city focus, selected-car follow, label density, exact-minute and next-activity navigation. Flat view and the vehicle table remain available. Stationary display slots and enlarged vehicle/depot geometry do not change model coordinates.

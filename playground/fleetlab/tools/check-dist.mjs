@@ -10,6 +10,7 @@
 // variable (a JSON array), else it is read from the repository's contracts module; it is never spelled here.
 // Exit 0 when clean, 1 with one line per problem, 2 on a usage error.
 
+import {APP_MAX_BYTES,MEDIA_LIMITS,MEDIA_MODULE,mediaProblems} from "./media.mjs";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -18,7 +19,7 @@ import { CONTENT_SECURITY_POLICY, MODULE_MARKER, SITE_BOOT, SITE_CONTENT_SECURIT
 
 /** Largest packed file accepted, in bytes. */
 // The directed street extract raises the offline budget from 2 to 2.5 MiB; see the street model design record.
-export const MAX_BYTES = 2.5 * 1024 * 1024;
+export const MAX_BYTES = APP_MAX_BYTES;
 
 /** The one http URL allowed: the SVG namespace name, an identifier that is never requested. */
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
@@ -36,7 +37,7 @@ const CSS_REMOTE = [/(?:url\(|image-set\(|@import)\s*["']?\s*\/\//i, /image-set\
 const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledescription", "title", "alt", "placeholder"]);
 
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
-const COPY_MODULES = ["src/ui/labels.js", "src/ui/studio.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js"];
+const COPY_MODULES = ["src/ui/labels.js", "src/ui/studio.js", "src/ui/hero-film.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js"];
 
 const FORBIDDEN_TOKENS = [
   [/\bfetch\s*\(/, "fetch("],
@@ -395,6 +396,7 @@ export function checkSite(files, { requiredLabels }) {
   const problems = [];
   let bytes = 0;
   for (const [path, text] of entries) {
+    if (MEDIA_LIMITS.has(path)) { problems.push(...mediaProblems(path, text)); continue; }
     if (typeof text !== "string") {
       problems.push(`file: ${path} is not text`);
       continue;
@@ -402,6 +404,7 @@ export function checkSite(files, { requiredLabels }) {
     bytes += Buffer.byteLength(text);
     if (!SITE_FIXED_FILES.includes(path) && !SITE_MODULE_PATH.test(path)) problems.push(`file: unexpected ${path}`);
   }
+  if (entries.has(MEDIA_MODULE)) for (const path of MEDIA_LIMITS.keys()) if (!entries.has(path)) problems.push(`media: missing ${path}`);
   if (bytes > MAX_BYTES) problems.push(`size: ${bytes} bytes is over the ${MAX_BYTES} byte limit`);
   for (const name of SITE_FIXED_FILES) if (!entries.has(name)) problems.push(`file: ${name} is missing`);
   if (!entries.has("src/ui/labels.js")) problems.push("labels: no src/ui/labels.js module in the site");
@@ -450,7 +453,7 @@ function readSite(dir) {
       const rel = prefix + entry.name;
       if (entry.isSymbolicLink()) problems.push(`file: ${rel} is a symbolic link`);
       else if (entry.isDirectory()) walk(join(folder, entry.name), `${rel}/`);
-      else if (entry.isFile()) files.set(rel, readFileSync(join(folder, entry.name), "utf8"));
+      else if (entry.isFile()) files.set(rel, readFileSync(join(folder, entry.name), MEDIA_LIMITS.has(rel) ? undefined : "utf8"));
       else problems.push(`file: ${rel} is not a regular file`);
     }
   };

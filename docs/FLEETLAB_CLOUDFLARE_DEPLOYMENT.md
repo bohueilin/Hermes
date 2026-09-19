@@ -41,7 +41,9 @@ npx --yes wrangler@4.135.0 pages deploy dist/site \
 
 If authentication has expired, run `npx --yes wrangler@4.135.0 login` and complete Cloudflare's sign-in. No token belongs in this repository or in chat. Deploy **`dist/site`**, not `dist`, the source directory or the repository root. The offline HTML is a separate distributable.
 
-After upload, open the stable address in a private browser. Check the title, Overview, Fleet day, **Run fleet day**, a selected vehicle's next activity, **Street lab → Largest queue → Compare route policies**, and Product approach. Confirm the Pages deployment source hash matches the reviewed Git commit. The release record also compares public files against the local package; request `/` for `index.html`, since Pages redirects the explicit filename.
+After upload, open the stable address in a private browser. Check the title, Overview film playback and pause, Fleet day, **Run fleet day**, a selected vehicle's next activity, **Street lab → Largest queue → Compare route policies**, and Product approach. Leaving Overview must pause the film. Confirm the Pages deployment source hash matches the reviewed Git commit. The release record also compares public files against the local package; request `/` for `index.html`, since Pages redirects the explicit filename.
+
+The homepage film and poster are included automatically by the static packer. No video account, API key or Cloudflare Stream setup is needed. The packer enforces a 4 MiB movie limit, 200 KiB poster limit and separate 2.5 MiB application limit. The offline file embeds the poster and retains all simulation tools. Re-rendering is optional: the checked-in MP4 and WebP are the publication inputs; Blender is an authoring tool outside the website build.
 
 Direct Upload supports Wrangler folder uploads. The existing project cannot be converted to native Git integration; a new project would be needed for that route. Keeping this project preserves its current address. [Cloudflare Direct Upload documentation](https://developers.cloudflare.com/pages/get-started/direct-upload/)
 
@@ -117,4 +119,4 @@ Open **Workers & Pages → fleetlab-playground → Deployments**. On the previou
 
 ## Published scope
 
-The public bundle includes only the static playground and its attributed map extract. Hermes evidence files, local server tools, credentials and the optional Google Maps traffic companion are outside the upload. The page has no analytics, persistence or external data requests. Google traffic requires separate billing/key configuration and an architecture review before any public integration; it is not active in this release.
+The public bundle includes only the static playground, its attributed map extracts, and two original film/poster media files. Hermes evidence files, render frames, Blender source scenes, local server tools, credentials and the optional Google Maps traffic companion are outside the upload. The page has no analytics, persistence or external data requests. Google traffic requires separate billing/key configuration and an architecture review before any public integration; it is not active in this release.
