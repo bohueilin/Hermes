@@ -58,6 +58,27 @@ git diff --check
 
 The existing validation environment was reused. The whole Hermes Python suite was not rerun or described as passing: historical missing evidence-fixture failures remain documented in the [prior public release](FLEETLAB_PUBLIC_RELEASE_2026-09-19.md).
 
+## Publication verified
+
+Published September 19, 2026 UTC. The source commit was pushed before uploading the validated `dist/site` folder. A subsequent documentation-only commit records this publication without changing the site bytes.
+
+| Item | Verified identity |
+| --- | --- |
+| Published source commit | `f85a28f69a8a8819fea620d06837ae530a390030` |
+| GitHub branch | [feat/fleetlab-playground](https://github.com/bohueilin/Hermes/tree/feat/fleetlab-playground) |
+| Stable interview address | **[fleetlab-playground.pages.dev](https://fleetlab-playground.pages.dev/)** |
+| Movie address | [Original 16-second AV film](https://fleetlab-playground.pages.dev/media/fleet-film.mp4) |
+| Deployment ID | `ccb82b11-986c-4ad1-8658-e1bc30917992` |
+| Immutable deployment | [ccb82b11.fleetlab-playground.pages.dev](https://ccb82b11.fleetlab-playground.pages.dev/) |
+| Pages project / production branch | `fleetlab-playground` / `feat/fleetlab-playground` |
+| Upload | Seven assets uploaded, 61 reused, `_headers` applied separately |
+| Public readback | All 68 served files byte-equal to the local manifest, 2,962,822 bytes; `index.html` checked through canonical `/` |
+| Headers | Same-origin `media-src`, `connect-src 'none'`, frame restriction, nosniff and no-referrer confirmed; movie served as `video/mp4` |
+| Public browser | Actual muted 16-second movie playback/pause/resume; default Fleet day run produces trip and depot results; return to Overview works |
+| Main branch | Unchanged at `bca4ccd4d881e58904e59bb1b1ff594442099654`; no merge or PR |
+
+The host returned the complete 1.08 MB movie with HTTP 200 for the byte-range probe; partial-range delivery is not claimed. The fast-start movie was confirmed working in the public browser. No owner action or additional Cloudflare video service is needed. The [Cloudflare guide](FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) contains exact redeployment and optional domain steps.
+
 ## Recommendation
 
 Use the film as a short introduction, then open **Fleet day** or **Street lab** to demonstrate the inspectable product. The movie is not the evidence for an operational recommendation.
@@ -70,6 +91,6 @@ Use the film as a short introduction, then open **Fleet day** or **Street lab** 
 
 ## Next three actions
 
-1. Publish and verify the reviewed static package on the existing Pages project.
-2. Share the stable interview address and move from the film into an actual scenario.
+1. Share the verified stable interview address.
+2. Move from the film into an actual Fleet day or Street lab scenario.
 3. Ask a first-time reviewer to explain FleetLab's purpose and start one experiment without guidance.

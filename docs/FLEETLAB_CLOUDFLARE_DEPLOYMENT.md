@@ -2,7 +2,7 @@
 
 ## What you need to do now
 
-**No account setup is required for the public Pages address.** The existing Cloudflare account is authenticated on the development machine and already owns the project. The public address to share is **https://fleetlab-playground.pages.dev/**. The [Street lab release record](FLEETLAB_STREET_RELEASE_2026-09-19.md) identifies current deployment `0b302024`, published source `10863f2`, and successful public-file and browser checks. The [preceding release](FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) preserves the earlier Bay Area publication checkpoint.
+**No account setup is required for the public Pages address.** The existing Cloudflare account is authenticated on the development machine and already owns the project. The public address to share is **https://fleetlab-playground.pages.dev/**. The [homepage film release record](FLEETLAB_FILM_RELEASE_2026-09-19.md) identifies current deployment `ccb82b11`, published source `f85a28f`, and successful public-file and browser checks. The [Street lab record](FLEETLAB_STREET_RELEASE_2026-09-19.md) and [preceding release](FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) preserve earlier publication checkpoints.
 
 | Setting | Value |
 |---|---|
