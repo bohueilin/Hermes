@@ -59,7 +59,23 @@ The candidate completes four more journeys but adds approximately 37.5 km of emp
 
 ## Publication
 
-Pre-publication checkpoint: validated package is ready for the existing Cloudflare `fleetlab-playground` Direct Upload project and production branch `feat/fleetlab-playground`. Publish only `dist/site`; no source checkout, raw OSM responses, Python artifacts or credentials belong in the upload. The stable interview address remains **https://fleetlab-playground.pages.dev/**. The next documentation checkpoint will record the actual source commit, deployment ID and public readback results after publication.
+Published and verified on September 19, 2026 UTC:
+
+| Item | Verified identity |
+| --- | --- |
+| Published source commit | `10863f28c73236ce2c9a15db35f270e05226cb16` |
+| GitHub source | [feat/fleetlab-playground](https://github.com/bohueilin/Hermes/tree/feat/fleetlab-playground) |
+| Pages project / production branch | `fleetlab-playground` / `feat/fleetlab-playground` |
+| Deployment ID | `0b302024-3840-474c-a806-f11792740267` |
+| Immutable deployment | [0b302024.fleetlab-playground.pages.dev](https://0b302024.fleetlab-playground.pages.dev/) |
+| Stable interview link | **[fleetlab-playground.pages.dev](https://fleetlab-playground.pages.dev/)** |
+| Upload | Only `dist/site`; nine new/changed assets uploaded, 55 reused, `_headers` applied separately |
+| Public file readback | All 64 served files byte-equal to the validated package, totaling 1,840,205 served bytes. `index.html` was checked via canonical `/`; Cloudflare redirects the explicit filename. |
+| Public headers | Expected CSP with `connect-src 'none'`, frame restrictions, `nosniff` and no-referrer confirmed |
+| Public browser | WebGL default run, Largest queue, same-demand comparison and candidate replay verified; no stale block observations after a new run |
+| Main branch | Remains `bca4ccd4d881e58904e59bb1b1ff594442099654`; no merge or PR created |
+
+The feature commit was pushed to `github` before deployment. A subsequent documentation-only checkpoint records this readback; it does not change the deployed site bytes. The public upload contains no source checkout, raw OSM response, Python artifact or credential. The [Cloudflare owner guide](FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) remains the publishing runbook; no owner action is required for the current Pages address.
 
 ## Recommendation
 
@@ -73,6 +89,6 @@ Demonstrate **Street lab → Bridge rush → Largest queue → Compare route pol
 
 ## Next three actions
 
-1. Complete and read back the authorized GitHub/Cloudflare publication.
+1. Share the verified stable interview link and use the Street lab walkthrough.
 2. Use the worked mixed trade-off for the interview, with scope and cohort limits explicit.
 3. Prioritize approved traffic calibration, curb data and depot coupling over additional visual fidelity.

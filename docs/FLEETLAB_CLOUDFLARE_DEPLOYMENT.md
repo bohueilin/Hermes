@@ -2,7 +2,7 @@
 
 ## What you need to do now
 
-**No account setup is required for the public Pages address.** The existing Cloudflare account is authenticated on the development machine and already owns the project. The public address to share is **https://fleetlab-playground.pages.dev/**. The [completed release record](FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) identifies deployment `5f2ce6b9`, published source `b65895d`, and the successful public-file and browser checks.
+**No account setup is required for the public Pages address.** The existing Cloudflare account is authenticated on the development machine and already owns the project. The public address to share is **https://fleetlab-playground.pages.dev/**. The [Street lab release record](FLEETLAB_STREET_RELEASE_2026-09-19.md) identifies current deployment `0b302024`, published source `10863f2`, and successful public-file and browser checks. The [preceding release](FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) preserves the earlier Bay Area publication checkpoint.
 
 | Setting | Value |
 |---|---|
@@ -41,7 +41,7 @@ npx --yes wrangler@4.135.0 pages deploy dist/site \
 
 If authentication has expired, run `npx --yes wrangler@4.135.0 login` and complete Cloudflare's sign-in. No token belongs in this repository or in chat. Deploy **`dist/site`**, not `dist`, the source directory or the repository root. The offline HTML is a separate distributable.
 
-After upload, open the stable address in a private browser. Check the title, Overview, Simulation, **Run fleet day**, a selected vehicle's next activity, and Product approach. Confirm the Pages deployment source hash matches the reviewed Git commit. The release record also compares public files against the local package.
+After upload, open the stable address in a private browser. Check the title, Overview, Fleet day, **Run fleet day**, a selected vehicle's next activity, **Street lab → Largest queue → Compare route policies**, and Product approach. Confirm the Pages deployment source hash matches the reviewed Git commit. The release record also compares public files against the local package; request `/` for `index.html`, since Pages redirects the explicit filename.
 
 Direct Upload supports Wrangler folder uploads. The existing project cannot be converted to native Git integration; a new project would be needed for that route. Keeping this project preserves its current address. [Cloudflare Direct Upload documentation](https://developers.cloudflare.com/pages/get-started/direct-upload/)
 
