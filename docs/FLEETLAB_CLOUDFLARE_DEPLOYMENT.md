@@ -2,7 +2,7 @@
 
 ## What you need to do now
 
-**No account setup is required for the public Pages address.** The existing Cloudflare account is authenticated on the development machine and already owns the project. The public address to share is **https://fleetlab-playground.pages.dev/**. The dated release record contains the deployment and verification results.
+**No account setup is required for the public Pages address.** The existing Cloudflare account is authenticated on the development machine and already owns the project. The public address to share is **https://fleetlab-playground.pages.dev/**. The [completed release record](FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) identifies deployment `5f2ce6b9`, published source `b65895d`, and the successful public-file and browser checks.
 
 | Setting | Value |
 |---|---|

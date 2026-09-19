@@ -38,4 +38,51 @@ The broad Python suite is **not claimed green**. The preceding redesign wave rec
 
 ## Release identity and external verification
 
-The completed deployment, source commit, package checks and browser observations are recorded here after publication.
+- **Stable public site:** [fleetlab-playground.pages.dev](https://fleetlab-playground.pages.dev/).
+- **Immutable deployment address:** [5f2ce6b9.fleetlab-playground.pages.dev](https://5f2ce6b9.fleetlab-playground.pages.dev/).
+- **Deployment ID:** `5f2ce6b9-c91c-4f8c-b935-1fba64af954a`, Production, source branch `feat/fleetlab-playground`.
+- **Published source commit:** [`b65895dccc0259d1abf012da65354e1ff700874e`](https://github.com/bohueilin/Hermes/commit/b65895dccc0259d1abf012da65354e1ff700874e).
+- GitHub accepted the normal feature-branch push from `fb07b66` to `b65895d`. Cloudflare lists the same source commit. Main was not merged or modified.
+- All **58 publicly served files** match the local checked package byte for byte, totaling **1,442,247 bytes**. The 59th file is the 392-byte `_headers` configuration; its CSP, frame restriction and content-type protection were verified as HTTP response headers.
+- Anonymous HTTPS requests returned the new page and matching assets. A fresh browser opened the stable public address, ran the default 24-AV / 2-depot / seed-42 day, paused, and advanced to the next activity. Native WebGL was visible and the tested flow produced no browser error logs.
+- Local desktop and 390px phone checks showed no horizontal document overflow. Phone replay, camera controls and named-city labels remained available.
+- A Python urllib probe received Cloudflare `403 / 1010`; the normal browser and curl client succeeded. No Cloudflare security setting was weakened. Public-file comparisons used unauthenticated curl requests.
+- A documentation-only follow-up records these facts after deployment; it does not change the published application bytes.
+
+## Commands and review
+
+```bash
+node --test playground/fleetlab/test/*.test.mjs
+node --test tools/fleetlab-traffic/test/*.test.mjs
+FLEET_PLAYGROUND_BASE=bca4ccd PYTHONPATH="$PWD/src" PYTHONDONTWRITEBYTECODE=1 python -m pytest -q tests/unit/test_fleet_playground_parity.py tests/unit/test_fleet_playground_boundaries.py
+python -m ruff check .
+python -m hermes doctor
+node playground/fleetlab/tools/pack.mjs --site dist/site
+node playground/fleetlab/tools/check-dist.mjs --site dist/site
+node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-playground.html
+node playground/fleetlab/tools/check-dist.mjs dist/fleetlab-playground.html
+git diff --check
+git diff --cached --check
+git push github feat/fleetlab-playground
+npx --yes wrangler@4.135.0 pages deploy dist/site --project-name fleetlab-playground --branch feat/fleetlab-playground --commit-hash b65895dccc0259d1abf012da65354e1ff700874e --commit-dirty=false
+```
+
+JavaScript ran under Node `22.22.0`; Python checks used the existing isolated validation environment and doctor used `hermes-dev` (Python `3.11.15`, MetaDrive `0.4.3`). This is a record of executed commands, not a request to reinstall or alter the environments.
+
+The bounded release review found one README scope issue: the original 2D renderer and Python verdict parity were described as applying to the entire playground. That is corrected to explicitly describe **Regional experiments**. The final review found no additional blocking publication defect. It checked navigation cleanup, experiment preservation, static payload separation and the source/assumption boundary; it was not an exhaustive numerical audit or a whole-repository security review.
+
+## Recommendation
+
+Share the stable public address for interviews. Keep FleetLab under `playground/fleetlab`, and review main integration separately from the working public release.
+
+## Top risks and mitigations
+
+- Illustrative operations can be mistaken for operator performance: retain the model scope, source attribution and editable-assumption labels.
+- Inherited core tests limit a main-merge claim: resolve the historical fixture prerequisites before claiming all Hermes checks pass.
+- Hosted source can drift on later updates: keep publishing explicit, attach the source commit and repeat the public-file check.
+
+## Next three actions
+
+1. Demonstrate **Overview → Simulation → Run fleet day → Product approach** in the interview.
+2. Review the published feature branch for integration into main.
+3. Optionally configure a custom subdomain or future GitHub publishing workflow using the Cloudflare guide; no account setup is needed for the current public link.
