@@ -773,6 +773,14 @@ describe("check-dist", () => {
     expectProblem(valid.replace("// fleetlab-module: src/ui/labels.js", "// fleetlab-module: src/ui/other.js"), /^labels: no src\/ui\/labels\.js/);
   });
 
+  test("M3 allows only reviewed synthetic forecast literals in its own view", () => {
+    const moduleText=(name,copy)=>withBody('<script>\n// fleetlab-module: '+name+'\nconst copy = '+JSON.stringify(copy)+';\nreturn __fleetlab_m999;\n</script>');
+    assert.deepEqual(checkDist(moduleText('src/ui/advanced-operations-view.js','Current time-valid synthetic forecast'),{requiredLabels:labels}),[]);
+    expectProblem(moduleText('src/ui/advanced-operations-view.js','Accurate production forecast'),/^banned word:/);
+    expectProblem(moduleText('src/ui/advanced-operations-view.js','Live forecast'),/^banned word:/);
+    expectProblem(moduleText('src/ui/labels.js','Current time-valid synthetic forecast'),/^banned word:/);
+  });
+
   test("a string from the label tuple", () => {
     for (const label of labels) expectProblem(withBody(`<p>${label}</p>`), /^required label: entry \d of the label tuple/);
     expectProblem(withLabels(labels[2]), /^required label/);

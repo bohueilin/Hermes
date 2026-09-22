@@ -36,6 +36,8 @@ import { computeAll, defaultRefs, metricKey, metricRow, METRICS_VERSION, validat
 import { PRESETS } from "./presets.js";
 import { applyAxis, AxisError, cloneScenario, deepFreeze, parseAxis, validateScenario } from "./schema.js";
 import { buildWorld, ownLambdaMaxPermille, sharedLambdaMaxPermille } from "./world.js";
+/** Shared numeric instrument adapter. Producers must first validate their own versions, populations and missing data. */
+export function* pairedMetricSteps(args){return yield* computeVerdictSteps(args);}
 
 /** Format name of a frozen teaching-run spec. */
 export const SPEC_FORMAT = "fleetlab-playground-spec";

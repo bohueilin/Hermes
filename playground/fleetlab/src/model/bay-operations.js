@@ -2,6 +2,10 @@
 import {defaultOperationsConfig,validateOperationsConfig,OPERATIONS_STATES} from './operations.js';
 import {BAY_AREA_PLACES,bayAreaRoute} from './bay-area.js';
 import {createReadiness,validateReadiness,READINESS_VERSION,defaultReadiness,compareReadinessRuns} from './depot-readiness.js';
+import {validateCharging} from './charging-allocation.js';
+import {validateResources} from './resource-observations.js';
+import {validateAirport,generateAirportWave,forecastTarget} from './airport-demand.js';
+import {createBaySystems} from './bay-systems.js';
 import {VEHICLE_PROFILES,defaultVehicleProfiles} from './vehicle-profiles.js';
 export const BAY_OPERATIONS_VERSION='fleetlab-bay-operations-1.0.0';
 export const BAY_OPERATIONS_STATES=Object.freeze({...OPERATIONS_STATES,boarding:'Rider boarding'});
@@ -27,10 +31,13 @@ export function validateBayAreaConfig(c) {
     }
   }
   if(Object.hasOwn(c,'readiness'))errors.push(...validateReadiness(c.readiness));
+  if(Object.hasOwn(c,'charging'))errors.push(...validateCharging(c.charging));
+  if(Object.hasOwn(c,'resources'))errors.push(...validateResources(c));
+  if(Object.hasOwn(c,'airport'))errors.push(...validateAirport(c));
   return errors;
 }
 const STAGES=['software','cleaning','charging','upload'];
-const MOVING=new Set(['pickup','passenger_trip','drive_to_depot']);
+const MOVING=new Set(['pickup','passenger_trip','drive_to_depot','airport_reposition']);
 const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
 const effectFor=w=>({clear:{travel:1,energy:1,demand:1},rain:{travel:1.3,energy:1.12,demand:1.12},heat:{travel:1.05,energy:1.25,demand:1.05}}[w]);
 const rush=clock=>{const h=(clock%1440)/60;return (h>=7&&h<10)||(h>=16&&h<19);};
@@ -45,7 +52,7 @@ const routeKey=(a,b)=>`bay-area:${a}->${b}`;
 function makeDemand(c,network) {
   const {places,routes}=network,rng=random(c.seed),effect=effectFor(c.weather),requests=[];
   const destinations=new Map(places.map(from=>[from.id,places.filter(p=>p.id!==from.id).map(to=>({id:to.id,weight:1/(2+routes[routeKey(from.id,to.id)].distance_km)**1.5}))]));
-  for(let minute=0;minute<Math.ceil(c.duration_hours*60);minute++) {
+  for(let minute=0;minute<(c.airport?.intake_end_min??Math.ceil(c.duration_hours*60));minute++) {
     const rate=c.requests_per_hour/60*(rush(Math.round(c.start_hour*60)+minute)?c.peak_multiplier:1)*effect.demand;
     const count=Math.floor(rate)+(rng()<rate%1?1:0);
     for(let i=0;i<count;i++) {
@@ -59,6 +66,16 @@ function makeDemand(c,network) {
         pickup_distance_km:null,pickup_drive_min:null,boarding_min:null,passenger_drive_min:null,trip_minutes:null});
     }
   }
+  if(c.airport){
+    const a=c.airport,options=places.filter(p=>p.id!==a.airport_id);
+    for(const q of generateAirportWave(c)){
+      const to=options[Math.floor(q.destination_draw*options.length)].id,r=routes[routeKey(a.airport_id,to)];
+      requests.push({id:q.id,created_minute:q.minute,pickup_node:a.airport_id,dropoff_node:to,trip_route_id:r.id,trip_distance_km:r.distance_km,
+        status:'waiting',vehicle_id:null,vehicle_type:null,assigned_minute:null,picked_up_minute:null,departed_minute:null,completed_minute:null,
+        pickup_distance_km:null,pickup_drive_min:null,boarding_min:null,passenger_drive_min:null,trip_minutes:null});
+    }
+    return requests.filter(q=>q.created_minute<a.intake_end_min).sort((a,b)=>a.created_minute-b.created_minute||a.id.localeCompare(b.id,'en'));
+  }
   return requests;
 }
 function signature(requests){let h=2166136261;for(const r of requests){const s=`${r.id}|${r.created_minute}|${r.pickup_node}|${r.dropoff_node}|${r.trip_distance_km};`;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619)>>>0;}return h.toString(16).padStart(8,'0');}
@@ -67,6 +84,9 @@ export function simulateBayAreaOperations(config,{capture=true}={}){const c=chec
 
 function simulate(c,demand,network,capture) {
   const readiness=c.readiness?createReadiness(c):null;
+  const systems=c.charging||c.resources||c.airport?createBaySystems(c):null,staged=new Set();
+  const states=c.airport?{...BAY_OPERATIONS_STATES,airport_reposition:'Forecast preparation'}:BAY_OPERATIONS_STATES;
+  const forecast=c.airport?{published_min:c.airport.forecast_published_min,expires_min:c.airport.forecast_expires_min,wave_min:c.airport.forecast_wave_min,count:c.airport.forecast_count}:null;
   const requests=demand.map(r=>({...r})),byRequest=new Map(requests.map(r=>[r.id,r]));
   const placeLocations=network.places.map(p=>({...p,road_anchor:{...p.road_anchor}}));
   const ordered=[...placeLocations].sort((a,b)=>b.y-a.y||a.x-b.x);
@@ -92,7 +112,7 @@ function simulate(c,demand,network,capture) {
     const duration=leg.distance_km===0?0:Math.ceil(leg.distance_km/c.road_speed_kph*60*traffic(c,t)*effect.travel);
     v.state=state;v.from=v.node;v.to=toNode;v.to_place=toPlace;v.route_id=leg.id;v.remaining_min=duration;v.total_min=duration;v.progress=0;
     v.leg_distance=leg.distance_km;v.leg_energy=leg.distance_km*v.profile.energy_kwh_per_km*effect.energy;
-    log(t,v,state,`${BAY_OPERATIONS_STATES[state]} · ${leg.distance_km.toFixed(2)} km · ${duration} min; OSM teaching route.`);
+    log(t,v,state,`${states[state]} · ${leg.distance_km.toFixed(2)} km · ${duration} min; OSM teaching route.`);
     return duration;
   }
   function queue(v,stage,t) {
@@ -109,13 +129,13 @@ function simulate(c,demand,network,capture) {
     const d=candidates.reduce((best,site)=>load(site)<load(best)?site:best,candidates[0]);
     const needed=route(v.place_id,d.place_id).distance_km*v.profile.energy_kwh_per_km*effect.energy+reserve(v);
     if(v.soc_kwh+1e-8<needed){blocked.add(v.id);return false;}
-    v.depot_id=d.id;v.visit_count++;
+    staged.delete(v.id);v.depot_id=d.id;v.visit_count++;
     v.visit={id:`${v.id}-visit-${v.visit_count}`,vehicle_id:v.id,vehicle_type:v.vehicle_type,depot_id:d.id,started_minute:t,arrived_minute:null,completed_minute:null,software_scheduled:v.visit_count%c.software_every_visits===0,stages:[],active_service_min:0};
-    readiness?.begin(v,t);
+    readiness?.begin(v,t);systems?.begin(v,t);
     visits.push(v.visit);move(v,'drive_to_depot',d.id,d.place_id,t);return true;
   }
   function finishStage(v,t) {
-    readiness?.finished(v,t);
+    readiness?.finished(v,t);if(v.state==='charging')systems?.pool?.release(v.id);
     const stage=v.state;v.visit.stages.at(-1).completed_minute=t;log(t,v,`${stage}_completed`,`${BAY_OPERATIONS_STATES[stage]} finished.`);
     if(stage==='upload'){readiness?.release(v);v.visit.completed_minute=t;v.state='ready';v.remaining_min=1;v.trips_since_visit=0;log(t,v,'ready','Depot visit complete.');}
     else queue(v,STAGES[STAGES.indexOf(stage)+1],t);
@@ -127,13 +147,14 @@ function simulate(c,demand,network,capture) {
       if(MOVING.has(v.state)&&v.remaining_min<=0) {
         const state=v.state;v.node=v.to;v.place_id=v.to_place;v.from=null;v.to=null;v.route_id=null;v.progress=0;
         if(state==='pickup') {
-          const q=byRequest.get(v.request_id);q.picked_up_minute=t;q.status='boarding';q.boarding_min=Math.ceil(v.profile.boarding_minutes);
+          const q=byRequest.get(v.request_id);q.picked_up_minute=t;q.status='boarding';q.boarding_min=Math.ceil(v.profile.boarding_minutes)+(c.airport&&q.pickup_node===c.airport.airport_id?c.airport.pickup_dwell_min:0);
           v.state='boarding';v.remaining_min=q.boarding_min;log(t,v,'boarding',`Rider boarding: ${q.boarding_min} min.`);
         } else if(state==='passenger_trip') {
           const q=byRequest.get(v.request_id);q.status='completed';q.completed_minute=t;v.completed_trips++;v.trips_since_visit++;v.request_id=null;v.state='available';
           log(t,v,'trip_completed',`${q.id} completed.`);
           if(t<horizon&&(v.trips_since_visit>=c.trips_between_visits||v.soc_kwh<=reserve(v)))startVisit(v,t);
-        } else {v.visit.arrived_minute=t;queue(v,v.visit.software_scheduled?'software':'cleaning',t);}
+        } else if(state==='airport_reposition'){v.state='available';}
+        else {v.visit.arrived_minute=t;queue(v,v.visit.software_scheduled?'software':'cleaning',t);}
         continue;
       }
       if(v.state==='boarding'&&v.remaining_min<=0) {
@@ -146,6 +167,7 @@ function simulate(c,demand,network,capture) {
     throw new Error('Bay lifecycle failed to settle within its finite transition bound.');
   }
   for(let minute=0;minute<=horizon;minute++) {
+    systems?.pool?.tick(minute);
     for(const v of vehicles)settle(v,minute);
     while(nextRequest<requests.length&&requests[nextRequest].created_minute<=minute)waiting.push(requests[nextRequest++]);
     for(let i=waiting.length-1;i>=0;i--)if(minute-waiting[i].created_minute>=Math.ceil(c.patience_minutes)){const q=waiting.splice(i,1)[0];q.status='unserved';log(minute,null,'request_unserved',`${q.id} exceeded assignment patience.`);}
@@ -164,17 +186,30 @@ function simulate(c,demand,network,capture) {
           if(v.soc_kwh+1e-8>=needed&&pickup.distance_km<pickupKm){selected=j;pickupKm=pickup.distance_km;}
         }
         if(selected<0){i++;continue;}
-        const v=available.splice(selected,1)[0];waiting.splice(i,1);
+        const v=available.splice(selected,1)[0];waiting.splice(i,1);staged.delete(v.id);
         q.status='pickup';q.vehicle_id=v.id;q.vehicle_type=v.vehicle_type;q.assigned_minute=minute;q.pickup_distance_km=pickupKm;v.request_id=q.id;
         q.pickup_drive_min=move(v,'pickup',q.pickup_node,q.pickup_node,minute);settle(v,minute);
         maximumRange=available.reduce((best,car)=>Math.max(best,(car.soc_kwh-reserve(car))/(car.profile.energy_kwh_per_km*effect.energy)),0);
       }
       if(waiting.length)for(const v of available){blocked.add(v.id);if(v.soc_kwh<target(v)-1e-8&&startVisit(v,minute))settle(v,minute);}
     }
+    if(c.airport?.policy==='forecast'&&minute<horizon){
+      const desired=forecastTarget(forecast,minute,c.airport.preparation_lead_min,c.airport.staging_capacity);
+      for(const v of vehicles){
+        if(staged.size>=desired)break;
+        if(v.state!=='available'||v.place_id===c.airport.airport_id||staged.has(v.id))continue;
+        const to=route(v.place_id,c.airport.airport_id),back=route(c.airport.airport_id,nearestByPlace.get(c.airport.airport_id)[0].place_id);
+        if(v.soc_kwh+1e-8<(to.distance_km+back.distance_km)*v.profile.energy_kwh_per_km*effect.energy+reserve(v))continue;
+        staged.add(v.id);move(v,'airport_reposition',c.airport.airport_id,c.airport.airport_id,minute);settle(v,minute);
+      }
+    }
     for(const d of depots)for(const stage of STAGES) {
+      if(stage==='charging')systems?.order(d.queues[stage],minute);
       const capacity=c[stage==='charging'?'chargers':`${stage}_bays`];let active=vehicles.filter(v=>v.depot_id===d.id&&v.state===stage).length;
       while(minute<horizon&&active<capacity&&d.queues[stage].length) {
         if(readiness&&!readiness.mayStart(d.queues[stage][0],minute))break;
+        if(stage==='charging'&&systems?.pool){const v=d.queues[stage][0],reservation=systems.pool.reserve(v.id,d.id,minute);
+          v.resource_blocked=reservation.accepted?null:reservation.reason;if(!reservation.accepted)break;v.port_id=reservation.resource_id;}
         const v=d.queues[stage].shift(),record=v.visit.stages.at(-1);v.state=stage;record.started_minute=minute;
         v.remaining_min=stage==='charging'?0:Math.ceil(c[`${stage}_minutes`]*v.profile[`${stage}_multiplier`]);
         readiness?.started(v,minute);
@@ -183,16 +218,17 @@ function simulate(c,demand,network,capture) {
     }
     const depotQueues=depots.map(d=>{const active=Object.fromEntries(STAGES.map(stage=>[stage,vehicles.filter(v=>v.depot_id===d.id&&v.state===stage).length]));return {depot_id:d.id,...Object.fromEntries(STAGES.map(s=>[s,d.queues[s].length])),active,charging_kw:0};});
     maxQueue=Math.max(maxQueue,...depotQueues.flatMap(d=>STAGES.map(s=>d[s])));
-    for(const d of depotQueues)for(const v of vehicles)if(v.depot_id===d.depot_id&&v.state==='charging') {
+    if(systems)for(const d of depotQueues)systems.allocate(vehicles,d,minute);
+    else for(const d of depotQueues)for(const v of vehicles)if(v.depot_id===d.depot_id&&v.state==='charging') {
       const kw=Math.min(c.charger_kw,v.profile.charge_limit_kw,c.site_power_kw/d.active.charging);
       v.remaining_min=Math.ceil(Math.max(0,target(v)-v.soc_kwh)/(kw/60));
       v.charge_next=minute===horizon?0:Math.min(Math.max(0,target(v)-v.soc_kwh),kw/60);d.charging_kw+=v.charge_next*60;
     }
     if(readiness)for(const d of depotQueues)d.cleaning_workers=readiness.resources(d.depot_id);
     if(capture)frames.push({minute,clock_minute:(start+minute)%1440,traffic_multiplier:traffic(c,minute),
-      vehicles:vehicles.map((v)=>{const {id,state,node,from,to,progress,soc_kwh,depot_id,request_id,remaining_min,vehicle_type,battery_kwh,route_id}=v;return {id,state,node,from,to,progress,soc_kwh,depot_id,request_id,remaining_min,vehicle_type,battery_kwh,route_id,...(readiness?{readiness:readiness.inspect(v)}:{})};}),
-      counts:Object.fromEntries(Object.keys(BAY_OPERATIONS_STATES).map(s=>[s,vehicles.filter(v=>v.state===s).length])),depot_queues:depotQueues});
-    readiness?.observe(vehicles,depotQueues,minute);
+      vehicles:vehicles.map((v)=>{const {id,state,node,from,to,progress,soc_kwh,depot_id,request_id,remaining_min,vehicle_type,battery_kwh,route_id}=v;return {id,state,node,from,to,progress,soc_kwh,depot_id,request_id,remaining_min,vehicle_type,battery_kwh,route_id,...(readiness?{readiness:readiness.inspect(v)}:{}),...(systems?{power_kw:v.state==='charging'?v.power_kw:0,port_id:v.state==='charging'?v.port_id??null:null,resource_blocked:['queued_charging','charging'].includes(v.state)?v.resource_blocked??null:null}:{})};}),
+      counts:Object.fromEntries(Object.keys(states).map(s=>[s,vehicles.filter(v=>v.state===s).length])),depot_queues:depotQueues,...(c.airport?{airport:{staged_vehicle_ids:[...staged],forecast:minute>=forecast.published_min&&minute<=forecast.expires_min?{...forecast}:null}}:{})});
+    readiness?.observe(vehicles,depotQueues,minute);systems?.observe(vehicles,requests,placeLocations,staged,minute);
     if(minute===horizon)break;
     for(const v of vehicles) {
       if(MOVING.has(v.state)) {
@@ -218,7 +254,7 @@ function simulate(c,demand,network,capture) {
     by_vehicle_type:['ipace','ojai'].map(type=>{const selected=vehicles.filter(v=>v.vehicle_type===type),count=sum('completed_trips',selected);return {vehicle_type:type,label:VEHICLE_PROFILES[type].label,vehicle_count:selected.length,completed_trips:count,trips_per_vehicle:selected.length?count/selected.length:null,energy_consumed_kwh:sum('energy_consumed',selected),energy_delivered_kwh:sum('energy_delivered',selected),distance_km:sum('distance',selected)};}),
     by_place:placeLocations.map(p=>({place_id:p.id,label:p.label,...populations(requests.filter(q=>q.pickup_node===p.id))})),
   };
-  return {...(readiness?{readiness:readiness.finish(visits,metrics)}:{}),version:readiness?`${BAY_OPERATIONS_VERSION}+${READINESS_VERSION}`:BAY_OPERATIONS_VERSION,config:c,locations,routes,frames,events,requests,visits,metrics,demand_signature:signature(demand),assumptions:[
+  return {...(readiness?{readiness:readiness.finish(visits,metrics)}:{}),...(systems?{extensions:systems.finish(visits,vehicles,requests,metrics)}:{}),version:[BAY_OPERATIONS_VERSION,...['readiness','charging','resources','airport'].filter(k=>c[k]).map(k=>c[k].version)].join('+'),config:c,locations,routes,frames,events,requests,visits,metrics,demand_signature:signature(demand),assumptions:[
     'Real frozen OpenStreetMap geometry, synthetic demand and operational parameters. Undirected teaching routes ignore one-way, turn and access restrictions; not navigation, service coverage, airport permission or safety evidence.',
     'City and airport representative points remain separate from snapped major-road anchors. Depot sites are hypothetical and co-located with selected road anchors; no off-road access legs are fabricated.',
     'Dispatch processes requests FIFO and chooses the nearest energy-feasible available car, with stable car-order ties. An infeasible earlier request can remain queued while a later feasible request is served.',
@@ -226,7 +262,11 @@ function simulate(c,demand,network,capture) {
     'All quantitative vehicle operational values are editable teaching assumptions. Ojai 90 kWh / 150 kW are illustrative, not published specifications. I-PACE 84 kWh is modeled usable energy, not the published 90 kWh retail nominal pack.',
     'Travel minutes=ceil(route km / selected km/h × 60 × synthetic traffic × weather), evaluated at each leg departure. Both types have identical speed rules. Zero-distance legs consume zero minutes and zero energy; boarding is stationary and separately timed.',
     'Morning 07:00–10:00 and evening 16:00–19:00 demand peaks and a 1.25 traffic factor are synthetic. Rain multiplies travel by 1.30, energy by 1.12 and demand by 1.12; heat uses 1.05, 1.25 and 1.05. Energy is proportional to route distance, distributed evenly over moving intervals; no standby or boarding energy.',
-    'Dispatch requires pickup + passenger + nearest-depot return energy plus the individual reserve. Charging is linear, equal site share capped by port and individual vehicle acceptance and target SOC; unused capped share is not redistributed. No charge taper, degradation or thermal model.',
+    ...(systems?['Named opt-in extensions: '+['charging','resources','airport'].filter(k=>c[k]).map(k=>c[k].version).join(', ')+'. Battery-side kW, unit efficiency, no auxiliary draw or taper; site caps remain fixed.',
+      'Declared charging deadlines are visit-start plus budget and stable vehicle-ID tiers; readiness requires the whole serial visit. Deadline priority promotes oldest jobs at the declared age; it does not guarantee every deadline under overload.',
+      'Resource observations are fictional delayed sequenced snapshots. Unknown ports are unavailable; last-known planning may infer stale capacity, but current truth and exclusive ownership always constrain delivery.',
+      'Airport demand is a keyed synthetic passenger realization, separate from the published forecast. Intake cutoff precedes observation end. Forecast preparation uses finite inbound/staged slots, releases them on trip assignment, and reserves return energy. Existing initially available airport cars do not occupy preparation slots. No real airport access authority.']:[]),
+    c.charging?'Dispatch reserves pickup, passenger and nearest-depot return energy. Named charging policy '+c.charging.policy+' allocates battery-side power each elapsed minute with target, acceptance, port and site limits. No taper, losses or thermal model.':'Dispatch requires pickup + passenger + nearest-depot return energy plus the individual reserve. Charging is linear, equal site share capped by port and individual vehicle acceptance and target SOC; unused capped share is not redistributed. No charge taper, degradation or thermal model.',
     'Software when scheduled → cleaning → charging → upload, finite per-site resources. Per-type multipliers alter service minutes. Turnaround includes depot driving, queues and service; active time excludes queues and travel. Completed-only averages exclude explicitly counted censored visits.',
     'Patience is assignment waiting; completed wait includes pickup driving and excludes boarding. Horizon and durations round up to minutes; start clock rounds nearest and wraps midnight. Terminal observation consumes no interval energy and retains unfinished requests and visits.',
     'Legacy battery_kwh, energy_kwh_per_minute, pickup_minutes and trip_minutes are retained only for configuration compatibility; Bay calculations use individual profiles and road routes.',
@@ -235,7 +275,7 @@ function simulate(c,demand,network,capture) {
 }
 export function analyzeBayAreaCapacity(config) {
   const c=checkedConfig(config),network=prepare(c),demand=makeDemand(c,network),sig=signature(demand);
-  const trial=(fleet_size,depot_count)=>{const r=simulate(structuredClone({...c,fleet_size,depot_count}),demand,network,false);return {fleet_size,depot_count,metrics:r.metrics,completion_fraction:r.metrics.total_requests?r.metrics.completed_trips/r.metrics.total_requests:null,demand_signature:sig};};
+  const trial=(fleet_size,depot_count)=>{const r=simulate(checkedConfig({...c,fleet_size,depot_count}),demand,network,false);return {fleet_size,depot_count,metrics:r.metrics,completion_fraction:r.metrics.total_requests?r.metrics.completed_trips/r.metrics.total_requests:null,demand_signature:sig};};
   const fleetCounts=[...new Set([Math.max(1,Math.floor(c.fleet_size/2)),c.fleet_size,Math.min(120,Math.ceil(c.fleet_size*1.5)),Math.min(120,c.fleet_size*2)])].sort((a,b)=>a-b);
   const fleet_trials=fleetCounts.map(n=>trial(n,c.depot_count)),depot_trials=Array.from({length:6},(_,i)=>trial(c.fleet_size,i+1));
   return {target_completion_fraction:.95,fleet_trials,depot_trials,min_depots:depot_trials.find(t=>t.completion_fraction!==null&&t.completion_fraction>=.95)?.depot_count??null,assumptions:['Identical generated demand for every trial. First tested count reaching 95% completed/all requests; not a global optimum. Late unfinished demand remains in the denominator; zero demand is unavailable.','Depot trials hold fleet fixed; extra depots add bays, charging ports and site power. No monotonic gain is guaranteed.']};

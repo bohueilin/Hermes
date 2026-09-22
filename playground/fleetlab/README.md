@@ -164,3 +164,12 @@ PYTHONPATH="$PWD/src" PYTHONDONTWRITEBYTECODE=1 python tools/fleet_playground/re
 | `test` | node tests; the Python tests live in `tests/unit/test_fleet_playground_*.py` |
 
 The playground imports nothing from `src/hermes/`, and nothing in `src/hermes/` refers to the playground.
+
+## Fleet day M2/M3 extensions
+
+The optional charging, resource-observation and synthetic airport situations extend the
+existing Bay lifecycle. Each has a versioned opt-in; the historical default and M1 stay
+compatible. Paired experiments hold non-treatment inputs and exogenous demand fixed,
+separate tuning/evaluation seeds, and display service, unfinished work, energy and named
+guardrails. One seed is descriptive. See [the M2/M3 runbook](../../docs/FLEETLAB_DEPOT_M2_M3.md)
+for exact local commands, treatments, metric populations and limits. M4 remains deferred.

@@ -1364,3 +1364,12 @@ body { margin: 0; background: var(--ground); }
 .ops-readiness-result details,.ops-readiness-comparison details{margin:16px 0;}
 .ops-readiness-result summary,.ops-readiness-comparison summary{cursor:pointer;padding:12px 0;}
 .ops-readiness-result p,.ops-readiness-comparison p,.ops-readiness-result li,.ops-readiness-comparison li{line-height:1.6;}
+
+/* Optional model inputs and exact recorded projections. */
+.ops-advanced-controls h3 { margin: 1rem 0 .5rem; }
+.ops-advanced-result pre, .ops-advanced-comparison pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28rem; overflow: auto; font-size: .8rem; }
+.ops-advanced-result section, .ops-airport-frame { margin-block: 1rem; }
+.ops-experiment-settings { display: grid; grid-template-columns: 1fr; gap: .75rem; }
+@media (min-width: 768px) { .ops-experiment-settings { grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); } }
+.ops-experiment-settings input, .ops-experiment-settings select { min-width: 0; max-width: 100%; }
+.ops-depot-status td { overflow-wrap: anywhere; }

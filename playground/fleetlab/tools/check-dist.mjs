@@ -37,7 +37,7 @@ const CSS_REMOTE = [/(?:url\(|image-set\(|@import)\s*["']?\s*\/\//i, /image-set\
 const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledescription", "title", "alt", "placeholder"]);
 
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
-const COPY_MODULES = ["src/ui/labels.js", "src/ui/studio.js", "src/ui/hero-film.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/readiness-view.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js"];
+const COPY_MODULES = ["src/ui/labels.js", "src/ui/studio.js", "src/ui/hero-film.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/readiness-view.js", "src/ui/advanced-operations-view.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js"];
 
 const FORBIDDEN_TOKENS = [
   [/\bfetch\s*\(/, "fetch("],
@@ -65,6 +65,15 @@ const FORBIDDEN_TOKENS = [
 
 // Design H-3, as whole words ignoring case, with their inflections.
 const BANNED_WORDS = /\b(predict(?:s|ed|ing|ion|ions|ive)?|forecast(?:s|ed|ing|er|ers)?|expected\s+traffic|live|real[\s-]?time|monitoring)\b/i;
+// M3 explicitly introduces an independent synthetic forecast, not a production prediction.
+// Only these exact literals in its versioned view are permitted. All legacy modules and
+// any other forecast/live/prediction claims remain covered by the existing copy policy.
+const SYNTHETIC_FORECAST_COPY=new Set([
+  'forecast',
+  'SFO anchor; fictional access rule synthetic-access-2026-09-22. Forecast is separately published synthetic input, no external airport feed.',
+  'Current time-valid synthetic forecast',
+  'Forecast: Not available at this minute.',
+]);
 const DASHES = /[\u2013\u2014]/;
 
 const ENTITIES = {
@@ -334,7 +343,7 @@ function tokenProblems(text, where = null) {
 function copyProblems(copy) {
   const problems = [];
   for (const { where, text } of copy) {
-    const word = BANNED_WORDS.exec(text);
+    const word = where==='src/ui/advanced-operations-view.js string'&&SYNTHETIC_FORECAST_COPY.has(text)?null:BANNED_WORDS.exec(text);
     if (word) problems.push(`banned word: "${word[0]}" in ${where} ${JSON.stringify(text.slice(0, 80))}`);
     if (DASHES.test(text)) problems.push(`dash: an em or en dash in ${where} ${JSON.stringify(text.slice(0, 80))}`);
   }

@@ -1025,3 +1025,26 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     and no moment stamp (the map keeps its own corner stamp and nothing else), no second seed set beat, no `Flat`
     toggle inside `Present`, no `Try it` handoff and no phone-specific presenting rule; `charts.js` and `playback.js`
     are untouched.
+
+## Fleet day optional M2/M3 contracts (2026-09-22)
+
+`charging-allocation.js`, `resource-observations.js` and `airport-demand.js` add bounded
+helpers to `bay-operations.js`; `bay-systems.js` records their metrics and frame state.
+No extension key means the original full result remains byte-identical. Enabled versions
+append to the Bay version; new metric namespace is `bay-systems-metrics-1.0.0`. Rendering
+reads records and never schedules. Serial work, energy/reserve checks and terminal
+accounting remain in the existing engine.
+
+`bay-experiment-contract.js` freezes one policy axis, exact configurations, seed sets and
+metric definitions. It validates producer/version/population/missing-data compatibility
+and exact external demand before handing paired numeric run maps to `pairedMetricSteps`
+in the existing `model/experiment.js`. Only that existing model module imports the
+instrument. It does not import Bay geography, keeping the regional worker independent.
+Bay sorted finite-number JSON is explicitly separate from regional integer-unit canonical
+JSON. The original instrument and Python vectors are unchanged.
+
+`advanced-operations-view.js` provides controls and projections. Comparisons yield between
+whole runs and within bootstrap steps; configuration changes/destroy discard pending
+results. One seed has no interval or recommendation. Required unavailable populations
+block analysis. Outputs remain NOT_EVIDENCE with deployment permission NONE. See
+[the full metric and lifecycle contract](../../docs/FLEETLAB_DEPOT_M2_M3.md).

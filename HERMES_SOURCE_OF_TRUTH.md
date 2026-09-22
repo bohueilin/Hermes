@@ -7,16 +7,16 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-metric-contract` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, clean at `6b376fb`) · M1 worktree `…/Hermes-depot-m1` on `codex/fleetlab-depot-readiness-m1` |
-| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git`; website lineage tracks `github/feat/fleetlab-playground`. The M1 branch is local and unpublished; no remote action in this task. |
+| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-metric-contract` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, clean at `6b376fb`) · Depot extension worktree `…/Hermes-depot-m1` on `codex/fleetlab-m2-m3` |
+| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git`; website lineage tracks `github/feat/fleetlab-playground`. M1 was committed locally as `7e0389d`; M2/M3 are being validated on `codex/fleetlab-m2-m3`. User authorized conditional website publication on 2026-09-22; release state is recorded in §7.5. |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
 | **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 registry provenance/static operator view built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline `3a7f595`; Task 8 static view `4b2e8b8`; forward-only repairs `18b47db`, `e42ed2c`) — Gate G: **96 passed**; replayable decision record; spec-file authoring, metric-contract CLI, and one loopback-only finished synthetic-run view; **lane merged onto `main` 2026-09-06 (`61a7145`) and pushed**. The PRD has been tracked since `aa04786` |
-| **Playground** | Website lineage `feat/fleetlab-playground` @ `6b376fb`; recorded published source `f85a28f`, deployment `ccb82b11` (2026-09-19). **Depot readiness M1 implemented locally, uncommitted and unpublished**, on isolated `codex/fleetlab-depot-readiness-m1` in `…/Hermes-depot-m1`. Explicit staffing extension, serial mandatory work, finite cleaning workers/bays, recorded blockers, all-visit accounting and controlled worker/bay trials. **2026-09-22 observed checks: 1,643 Node passed, 2 skipped, 1 browser-only TODO; 89 Python parity/boundary passed; Ruff and both package checks passed.** Current details and limitations: §7.5 below; earlier counts elsewhere are historical. |
+| **Playground** | Website lineage `feat/fleetlab-playground` @ `6b376fb`; recorded published source `f85a28f`, deployment `ccb82b11` (2026-09-19). **M1 plus M2/M3 implemented locally** in `…/Hermes-depot-m1`: staffing/required work, two charging treatments, compatible paired runs, resource observations/outages, minimum synthetic SFO preparation. Explicit opt-ins preserve historical fixtures. **Observed release checks: 1,689 Node passed with performance enabled, zero failures/skips, 1 browser-only TODO; 89 Python parity/boundary passed; Ruff and both package checks passed.** Security and publication record: §7.5. |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
-| **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated for local M1; publishing was not authorized. |
-| **Last updated** | 2026-09-22 (Playground M1 only; other tracks retain their recorded dates) |
+| **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
+| **Last updated** | 2026-09-22 (Playground M1–M3; other tracks retain their recorded dates) |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -748,6 +748,58 @@ must not: the number as a default edit (§10 rule 3).
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
 
+
+**M2/M3 implementation and release gate, 2026-09-22.** The current user explicitly
+superseded the M1-only/no-publication scope: proceed with M2 and M3, test, update the
+repository and deploy the existing site if validation/security gates pass. The older
+Phase 6 design-stop/read-only and branch instructions do not govern this authorized
+browser extension. Main, Python evidence and unrelated worktrees remain untouched.
+M1 is retained at local commit `7e0389d`; current work is isolated on
+`codex/fleetlab-m2-m3` in `Hermes-depot-m1`.
+
+Implemented **B2 in two separate treatments**: equal-share versus capped redistribution,
+then redistribution versus deadline/aged-job priority. **B3** adds fictional port identity,
+commissioning/health truth, sequenced delayed observations, unknown/stale knowledge,
+exclusive idempotent leases, current feasibility checks, outage and recovery. **Minimum
+B4** adds keyed passenger realization, independently published/expiring forecasts,
+finite inbound/staging slots, reserve-constrained preparation and explicit intake/SLA
+censoring. Each is an optional version `1.0.0`; `bay-systems-metrics-1.0.0` and paired
+format `fleetlab-bay-paired-experiment` version 1 are separate from regional/Python
+contracts. The UI projects records, displays actual policy changes and per-seed outcomes,
+and cancels/stales comparisons on edits. No framework, backend or runtime dependency.
+
+Paired experiments validate producer/version/configuration/population/demand, replay the
+first pair, require all declared metrics, and then reuse existing numeric instrument
+math through `model/experiment.js`. One seed remains descriptive. Default evaluation
+1001–1012 is disjoint from declared tuning 42–44; margin 0.02 fraction units, 2,000
+bootstrap resamples. Model recommendations remain `NOT_EVIDENCE`, simulation-only,
+`deployment_permission: NONE`. Positive service differences cannot compensate for
+regressed guardrails. [Runbook, definitions and reproducible recipes](docs/FLEETLAB_DEPOT_M2_M3.md).
+
+Observed validation at this checkpoint: Node 22.22.0, performance-enabled full suite
+**1,690 total, 1,689 pass, zero fail/skip, one existing browser-only TODO, 245 suites**;
+Python 3.11 parity/boundary **89 pass**; Ruff and diff check pass. Static package **77
+files / 3,048,314 bytes including existing media** and offline HTML **2,407,765 bytes**
+pass existing checks/budgets. No historical test was deleted or weakened. A worker import
+that duplicated Bay map bytes was removed; a narrow-screen layout and accidental Python
+evidence-label copy were corrected. Independent spec/code review found no critical or
+important issue. Direct offline file-URL browser execution remains blocked by browser
+policy; offline worker parity and package checks pass. Full unrelated Python/MetaDrive
+suite is not represented by these browser release gates.
+
+Local browser acceptance exercised charging and airport paired comparisons, UNKNOWN and
+INFERRED_STALE resource tables against current truth, six-slot forecast preparation,
+stale-result invalidation and disabled comparison after edits. Mobile viewport showed
+no page overflow (375 CSS-pixel content width); visual inspection confirmed readable
+forecast/staging and selected-vehicle panels. Airport comparison retained its HOLD for
+unfinished-visit/terminal-energy guardrail regressions despite improved airport pickup.
+
+Release security scan and served-build acceptance are pending; the recorded public build
+is still `f85a28f` / `ccb82b11` until publication and readback are recorded here. On this
+turn, remote `github/feat/fleetlab-playground` was observed at `6b376fb`; a push alone does
+not deploy this direct-upload Pages project. No PR or main merge is requested.
+
+**Historical M1 delivery checkpoint (superseded by M2/M3 above):**
 
 **Current browser status, verified 2026-09-22.** This paragraph supersedes the older
 Playground-only scope/count/release statements below; Python and ADAS history is unchanged.
