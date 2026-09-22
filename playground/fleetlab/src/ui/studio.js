@@ -66,7 +66,7 @@ function overview(navigate, film) {
     el("section",{class:"scope-section"},[
       el("div",{},[eyebrow("A CLEAR MODEL BOUNDARY"),el("h2",{},"Useful questions. Honest limits.")]),
       el("div",{},[el("h3",{},"Three ways to learn"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Regional experiments cover dispatch, recall and paired guardrails. The catalog explains each model's scope.")]),
-      el("div",{},[el("h3",{},"Outside the model"),el("p",{},"Staffing, physical driving, calibrated demand and real vehicle operations. Demand, traffic and vehicle operating values are teaching assumptions. None of these models is a calibrated digital twin or permission to change a fleet.")]),
+      el("div",{},[el("h3",{},"Outside the model"),el("p",{},"Worker shifts, physical driving, calibrated demand and real vehicle operations. Demand, traffic and vehicle operating values are teaching assumptions. None of these models is a calibrated digital twin or permission to change a fleet.")]),
     ]),
   ]);
 }
@@ -75,7 +75,7 @@ function approach(navigate) {
   const rows = [
     ["Market lead","Locate a supply shortfall and understand the service impact.","Region availability, wait and unserved demand, with time and population in view."],
     ["Depot lead","Find the limiting resource before adding capacity.","Parking, cleaning and service queues; compare capacity and assignment rules."],
-    ["Planning partner","Identify what must be true before expanding a depot.","Declared assumptions and a repeatable experiment; energy is simplified in Fleet day; staffing and calibration remain next work."],
+    ["Planning partner","Identify what must be true before expanding a depot.","Declared assumptions and a repeatable experiment; energy is simplified in Fleet day; a serial cleaning-worker extension is available; shifts and calibration remain future work."],
   ];
   return el("main",{class:"studio-approach",id:"studio-approach"},[
     el("section",{class:"approach-intro"},[eyebrow("PRODUCT APPROACH"),el("h1",{},"Start with the operator.\nWork back to the model."),el("p",{class:"hero-lede"},"A map shows where things are. A useful tool helps someone decide what to do next."),el("p",{},"FleetLab connects the market and the depot through one operating cycle. It makes the consequences of a change inspectable, then uses repeated experiments to challenge the first impression.")]),
@@ -94,7 +94,7 @@ function approach(navigate) {
       el("p",{class:"section-lede"},"This is not a calibrated digital twin. The next work should improve the decisions the model can support, with each extension tested separately."),
       el("div",{class:"roadmap"},[
         ["NOW","Run a fleet day","Individual AVs, time and weather, battery, shared charging power, cleaning, software and upload queues."],
-        ["NEXT","Increase model fidelity","Charge acceptance, outages, staffing, service-time distributions and a broader operational validation set."],
+        ["NEXT","Increase model fidelity","Charge taper, outages, worker shifts, service-time distributions and a broader operational validation set."],
         ["THEN","Calibrate & validate","Use approved operational data, fit travel and service distributions, check held-out periods and publish the error envelope."],
         ["LATER","Repeatable depot setup","Versioned site/resource configuration, validation contracts and a bring-up API with testable commissioning criteria."],
       ].map(([phase,title,text])=>el("article",{},[eyebrow(phase),el("h3",{},title),el("p",{},text)]))),

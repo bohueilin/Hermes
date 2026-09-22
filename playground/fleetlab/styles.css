@@ -1357,3 +1357,10 @@ body { margin: 0; background: var(--ground); }
   .film-control { right: 14px; bottom: 14px; }
   .depot-introduction { padding-top: 24px; }
 }
+
+/* Readiness disclosures stay usable without widening the page or hiding exact values. */
+.ops-readiness-result,.ops-readiness-comparison{min-width:0;overflow-wrap:anywhere;}
+.ops-readiness-result pre,.ops-readiness-comparison pre{max-height:28rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;padding:14px;background:#f3f6fa;}
+.ops-readiness-result details,.ops-readiness-comparison details{margin:16px 0;}
+.ops-readiness-result summary,.ops-readiness-comparison summary{cursor:pointer;padding:12px 0;}
+.ops-readiness-result p,.ops-readiness-comparison p,.ops-readiness-result li,.ops-readiness-comparison li{line-height:1.6;}

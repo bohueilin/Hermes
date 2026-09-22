@@ -4,6 +4,17 @@
 
 For an interview walkthrough: **Overview → Fleet day → Run fleet day → Product approach**. For congestion: **Street lab → Bridge rush → Largest queue → Compare route policies**. Configure the experiment, inspect a car and a constraint, then explain the service trade-offs. The [Cloudflare guide](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) records the exact publishing and optional custom-domain steps.
 
+## Depot readiness M1 (local opt-in)
+
+**Fleet day → Staffing: an empty bay needs a worker → Run fleet day → Compare staffing and bays**
+adds one qualified cleaning-worker pool to the existing serial work cycle. Inspect required
+work, recorded worker/bay blockers, completed-only means and unfinished visits/tasks. Compare
+one extra worker, then separately one extra bay, against the same demand. These are one-seed
+`NOT_EVIDENCE` descriptions, with named policy checks and no inferred recommendation.
+Historical defaults remain `fleetlab-bay-operations-1.0.0`; the explicit extension is
+`depot-readiness-1.0.0`. The public URL above is the older recorded release; this M1 work
+has not been published. See [local instructions, demo and metric contract](../../docs/FLEETLAB_DEPOT_READINESS.md).
+
 ## Downtown street bottlenecks in 3D
 
 The **Street lab** adds First Street, Harrison/Bryant, Stockton, Van Ness, the Embarcadero and Lombard to a directed OSM network with 2,343 road links. Follow individual AVs toward SFO or the East Bay, inspect finite road queues and upstream spillback, then compare free-flow and queue-aware routes using identical demand. Step five seconds, scrub the replay, follow an AV, or inspect a queued block and its front-car exit wait.

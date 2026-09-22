@@ -1,8 +1,10 @@
-import {defaultBayAreaConfig as defaultOperationsConfig,simulateBayAreaOperations as simulateOperations,analyzeBayAreaCapacity as analyzeOperationsCapacity,validateBayAreaConfig as validateOperationsConfig,BAY_OPERATIONS_STATES as OPERATIONS_STATES,BAY_OPERATIONS_VERSION as OPERATIONS_VERSION,analyzeVehicleMix} from '../model/bay-operations.js';
+import {defaultBayAreaConfig as defaultOperationsConfig,simulateBayAreaOperations as simulateOperations,analyzeBayAreaCapacity as analyzeOperationsCapacity,validateBayAreaConfig as validateOperationsConfig,BAY_OPERATIONS_STATES as OPERATIONS_STATES,BAY_OPERATIONS_VERSION as OPERATIONS_VERSION,analyzeVehicleMix,analyzeDepotReadiness,depotReadinessDemoConfig} from '../model/bay-operations.js';
 import {BAY_AREA_PLACES,BAY_AREA_MAP,bayAreaSourceJSON} from '../model/bay-area.js';
 import {VEHICLE_PROFILES} from '../model/vehicle-profiles.js';
 import {createOperations3D} from './operations-3d.js';
 import {createVehiclePortrait} from './vehicle-portrait.js';
+import {defaultReadiness} from '../model/depot-readiness.js';
+import {readinessResultView,readinessComparisonView,blockerText} from './readiness-view.js';
 import { el } from './dom.js';
 import { ACTIVITY_COLORS } from './operations-map.js';
 import { createCarGlyph } from './car-glyph.js';
@@ -14,6 +16,7 @@ export const operationsClock=minutes=>`${minutes>=1440?'Day '+String(Math.floor(
 const stateName=id=>OPERATIONS_STATES[id]??String(id).replaceAll('_',' ');
 const presets=[
   ['balanced','A regular service day',{}],
+  ['staffing','Staffing: an empty bay needs a worker',depotReadinessDemoConfig()],
   ['rain','A rainy evening peak',{start_hour:15,weather:'rain',requests_per_hour:45,fleet_size:24}],
   ['depot','A busy depot',{fleet_size:32,depot_count:1,trips_between_visits:2,chargers:1,cleaning_bays:1}],
   ['power','More ports, limited power',{fleet_size:32,depot_count:2,chargers:4,charger_kw:80,site_power_kw:40,trips_between_visits:2}],
@@ -41,15 +44,23 @@ const groups=[
 ];
 
 export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false,requestFrame=fn=>requestAnimationFrame(fn),cancelFrame=id=>cancelAnimationFrame(id),onCatalog=()=>{}}={}){
-  let config=defaultOperationsConfig(),result=null,capacity=null,minute=0,playing=false,stale=false,selected='car-1',speed=5,raf=null,lastTime=null,busy=false,destroyed=false,lastDetailKey=null,interactionVersion=0;
+  let config=defaultOperationsConfig(),result=null,capacity=null,readinessComparison=null,minute=0,playing=false,stale=false,selected='car-1',speed=5,raf=null,lastTime=null,busy=false,destroyed=false,lastDetailKey=null,interactionVersion=0;
   const inputs=new Map();
   const element=el('main',{class:'operations-lab',id:'operations-lab'});
   const status=el('p',{class:'ops-status',role:'status'},'Choose your fleet and press Run fleet day.');
   const error=el('p',{class:'ops-error',role:'alert',hidden:true});
   const runButton=button('Run fleet day  ▶',()=>run(),true);
-  const preset=el('select',{'aria-label':'Start with a situation',on:{change:()=>{const p=presets.find(x=>x[0]===preset.value);setConfig({...defaultOperationsConfig(),...p[2]});}}},presets.map(([id,label])=>el('option',{value:id},label)));
+  const preset=el('select',{'aria-label':'Start with a situation',on:{change:()=>{const p=presets.find(x=>x[0]===preset.value);setConfig({...defaultOperationsConfig(),readiness:undefined,...p[2]});}}},presets.map(([id,label])=>el('option',{value:id},label)));
   const weather=el('select',{'aria-label':'Weather',on:{change:()=>setConfig({weather:weather.value})}},[['clear','Clear'],['rain','Rain'],['heat','Hot day']].map(([value,label])=>el('option',{value},label)));
   const controls=el('aside',{class:'ops-controls','aria-label':'Simulation settings'},[eyebrow('1 / SET UP YOUR DAY'),el('label',{class:'ops-preset'},['Start with a situation',preset]),el('label',{class:'ops-weather'},['Weather',weather])]);
+  const readinessMode=el('select',{'aria-label':'Depot work model',on:{change:()=>setConfig({readiness:readinessMode.value==='staffing'?defaultReadiness():undefined})}},[
+    el('option',{value:'legacy'},'Historical serial work'),el('option',{value:'staffing'},'M1: staffing-aware serial work')]);
+  const workerInput=el('input',{type:'number',min:0,max:120,step:1,value:1,'aria-label':'Qualified cleaning workers / depot',on:{change:()=>setConfig({readiness:{...config.readiness,cleaning_workers:workerInput.value===''?NaN:Number(workerInput.value)}})}});
+  const schedulerInput=el('select',{'aria-label':'Cleaning policy',on:{change:()=>setConfig({readiness:{...config.readiness,scheduler:schedulerInput.value}})}},[
+    ['fifo','FIFO: do required work'],['defer_cleaning','Counterexample: defer cleaning'],['skip_cleaning','Counterexample: attempt to skip cleaning'],['cancel_cleaning','Counterexample: attempt to cancel cleaning']].map(([value,label])=>el('option',{value},label)));
+  const readinessFields=el('div',{},[el('label',{class:'ops-field'},['Qualified cleaning workers / depot',workerInput]),el('label',{class:'ops-field'},['Cleaning policy',schedulerInput]),el('p',{},'One qualified worker and one bay per active cleaning task. Serial work; no shifts. Every visit requires cleaning. Counterexample policies deliberately fail named checks.')]);
+  controls.appendChild(el('details',{open:true},[el('summary',{},'Depot readiness extension'),el('label',{class:'ops-field'},['Depot work model',readinessMode]),readinessFields]));
+  function syncReadinessControls(){readinessMode.value=config.readiness?'staffing':'legacy';readinessFields.hidden=!config.readiness;workerInput.value=String(config.readiness?.cleaning_workers??1);schedulerInput.value=config.readiness?.scheduler??'fifo';}
   const cityInputs=new Map();
   const cityCount=el('strong',{},'18 locations selected');
   const cityOptions=el('div',{class:'bay-place-options'},BAY_AREA_PLACES.map(p=>{
@@ -116,6 +127,11 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   const outcomesNote=el('p',{class:'ops-outcomes-note'},'Run a day to see outcomes.');
   const serviceBreakdown=el('div',{class:'ops-service-breakdown'});
   const outcomeSection=el('section',{class:'ops-results'},[eyebrow('3 / UNDERSTAND THE RESULT'),el('h2',{},'How much service did this fleet deliver?'),outcomeCards,outcomesNote,serviceBreakdown]);
+  const readinessResult=el('div',{class:'ops-readiness-result'});
+  outcomeSection.appendChild(readinessResult);
+  const readinessButton=button('Compare staffing and bays',()=>compareReadiness(),true);
+  const readinessContent=el('div',{class:'ops-readiness-comparison'});
+  const readinessSection=el('section',{class:'ops-capacity'},[eyebrow('TEST DEPOT READINESS'),el('h2',{},'Would another worker help? Would another bay?'),el('p',{},'Enable M1 or select the staffing situation, then run the day. Compare two separate changes against your submitted baseline.'),readinessButton,readinessContent]);
   const capacityButton=button('Compare fleet & depot sizes',()=>compareCapacity(),true);
   const capacityContent=el('div',{class:'ops-capacity-content'});
   const capacitySection=el('section',{class:'ops-capacity'},[eyebrow('4 / TEST THE CAPACITY QUESTION'),el('h2',{},'More cars, more depots, or a different constraint?'),el('p',{},'Run the same demand across a bounded set of fleet and depot sizes. The target is completing at least 95% of all requests by the end of the chosen day, including late arrivals in the denominator.'),capacityButton,capacityContent]);
@@ -126,11 +142,11 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   const assumptions=el('ul',{class:'ops-assumptions'});
   traffic.appendChild(assumptions);
   element.appendChild(el('section',{class:'ops-intro'},[eyebrow('FLEET SIMULATION / LEARN BY CHANGING ONE THING'),el('h1',{},'How many trips can your fleet serve today?'),el('p',{},'Build a Jaguar I-PACE and Ojai fleet across 18 Bay Area locations. Follow real road routes in 3D, change the depot resources and see what keeps a car from its next rider.'),el('div',{class:'ops-run-line'},[runButton,status]),error]));
-  element.appendChild(el('div',{class:'ops-workspace'},[controls,stage]));element.appendChild(outcomeSection);element.appendChild(capacitySection);element.appendChild(mixSection);element.appendChild(traffic);
-  element.appendChild(el('p',{class:'ops-model-boundary'},`Operational teaching model ${OPERATIONS_VERSION}. Real OpenStreetMap geography with synthetic demand and vehicle assumptions. This is a capacity experiment, not a calibrated digital twin or operational authorization. The regional A/B workbench uses its own unchanged model.`));
+  element.appendChild(el('div',{class:'ops-workspace'},[controls,stage]));element.appendChild(outcomeSection);element.appendChild(readinessSection);element.appendChild(capacitySection);element.appendChild(mixSection);element.appendChild(traffic);
+  const modelBoundary=el('p',{class:'ops-model-boundary'},`Operational teaching model ${OPERATIONS_VERSION}. Real OpenStreetMap geography with synthetic demand and vehicle assumptions. This is a capacity experiment, not a calibrated digital twin or operational authorization. The regional A/B workbench uses its own unchanged model.`);element.appendChild(modelBoundary);
 
-  function setConfig(patch){config={...config,...patch};syncVehicleControls();for(const [key,input]of inputs)if(key in patch)input.value=String(patch[key]);weather.value=config.weather;pause();if(result||capacity||busy)stale=true;capacity=null;capacityContent.replaceChildren();mixContent.replaceChildren();renderStatus();if(!result)clock.textContent=operationsClock(config.start_hour*60);}
-  function renderStatus(){status.textContent=busy?'Computing your simulated day…':stale?'Settings changed. These results use previous settings; run again to update.':result?`Day computed · ${result.config.fleet_size} AVs · ${result.config.depot_count} depots · seed ${result.config.seed}. ${playing?'Replay moving.':'Replay paused.'}`:'Choose your fleet and press Run fleet day.';status.classList.toggle('is-stale',stale);runButton.disabled=busy;runSettingsButton.disabled=busy;capacityButton.disabled=busy;mixButton.disabled=busy;}
+  function setConfig(patch){config={...config,...patch};if(config.readiness===undefined)delete config.readiness;syncReadinessControls();syncVehicleControls();for(const [key,input]of inputs)if(key in patch)input.value=String(patch[key]);weather.value=config.weather;pause();if(result||capacity||readinessComparison||busy)stale=true;readinessComparison=null;readinessContent.replaceChildren(el('p',{},'Settings changed. Compare again with the current settings.'));capacity=null;capacityContent.replaceChildren();mixContent.replaceChildren();renderStatus();if(!result)clock.textContent=operationsClock(config.start_hour*60);}
+  function renderStatus(){status.textContent=busy?'Computing your simulated day…':stale?'Settings changed. These results use previous settings; run again to update.':result?`Day computed · ${result.config.fleet_size} AVs · ${result.config.depot_count} depots · seed ${result.config.seed}. ${playing?'Replay moving.':'Replay paused.'}`:'Choose your fleet and press Run fleet day.';status.classList.toggle('is-stale',stale);runButton.disabled=busy;runSettingsButton.disabled=busy;capacityButton.disabled=busy;mixButton.disabled=busy;readinessButton.disabled=busy||!config.readiness||!result||stale;}
   function pause(){interactionVersion++;playing=false;if(raf!==null)cancelFrame(raf);raf=null;lastTime=null;play.textContent='Play';renderStatus();}
   function resume(){if(!result||stale||destroyed)return;if(minute>=result.frames.length-1)minute=0;playing=true;lastTime=null;play.textContent='Pause';renderStatus();raf=requestFrame(tick);}
   function tick(time){if(!playing||destroyed)return;if(lastTime!==null)minute=Math.min(result.frames.length-1,minute+Math.min(.25,(time-lastTime)/1000)*speed);lastTime=time;renderFrame();if(minute>=result.frames.length-1){pause();return;}raf=requestFrame(tick);}
@@ -144,7 +160,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     error.hidden=true;busy=true;renderStatus();await new Promise(resolve=>setTimeout(resolve,0));
     if(destroyed){busy=false;return;}
     try{
-      result=simulateOperations(submitted);capacity=null;capacityContent.replaceChildren();minute=0;lastDetailKey=null;
+      result=simulateOperations(submitted);modelBoundary.textContent=`Operational teaching model ${result.version}. Real OpenStreetMap geography with synthetic demand and vehicle assumptions. Simulation-only, NOT_EVIDENCE, decision authority NONE. Street lab, regional experiments and Python evidence remain separate.`;readinessComparison=null;readinessContent.replaceChildren();readinessResult.replaceChildren(...(result.readiness?[readinessResultView(result)]:[]));capacity=null;capacityContent.replaceChildren();minute=0;lastDetailKey=null;
       stale=JSON.stringify(config)!==JSON.stringify(submitted);
       selected=result.frames[0].vehicles[0]?.id??null;
       vehicleSelect.replaceChildren(...result.frames[0].vehicles.map(c=>el('option',{value:c.id},`${c.id} · ${VEHICLE_PROFILES[c.vehicle_type]?.label??''}`)));
@@ -177,12 +193,14 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     const car=frame.vehicles.find(c=>c.id===selected);if(car){
       const battery=Math.max(0,Math.min(100,car.soc_kwh/car.battery_kwh*100));
       vehicleDetail.replaceChildren(el('strong',{},`${VEHICLE_PROFILES[car.vehicle_type]?.label??car.vehicle_type} · ${stateName(car.state)}`),el('span',{},`${fmt(battery,0)}% battery · ${fmt(car.soc_kwh)} kWh`),el('meter',{min:0,max:car.battery_kwh,value:car.soc_kwh,'aria-label':`${car.id} battery energy`}),el('p',{},car.from&&car.to?`${result.locations.find(p=>p.id===car.from)?.label??car.from} → ${result.locations.find(p=>p.id===car.to)?.label??car.to} · ${fmt(result.routes?.[car.route_id]?.distance_km)} km${car.request_id?' · '+car.request_id:''}`:car.depot_id?`At ${result.locations.find(p=>p.id===car.depot_id)?.label??car.depot_id}`:`${result.locations.find(p=>p.id===car.node)?.label??'Road anchor'} · ${car.request_id??'Ready for assignment'}`));
+      if(car.readiness)vehicleDetail.appendChild(el('p',{},`Required work remaining: ${car.readiness.mandatory_remaining.join(', ')}. Blocked reason: ${car.readiness.blocked_reason?blockerText(car.readiness.blocked_reason):'None; task active or transitioning'}. ${car.readiness.worker_id?'Worker: '+car.readiness.worker_id+'; bay: '+car.readiness.bay_id:''}`));
       const events=result.events.filter(e=>e.vehicle_id===selected&&e.minute<=minute).slice(-7).reverse();trail.replaceChildren(...events.map(e=>el('li',{},[el('time',{},operationsClock(result.config.start_hour*60+e.minute)),`${String(e.kind).replaceAll('_',' ')}${typeof e.detail==='string'?' · '+e.detail:''}`])));
     }
     if(element.querySelector('.ops-vehicle-table').open)vehicleTable.replaceChildren(table(['Vehicle','Activity','Battery (kWh)'],frame.vehicles.map(c=>[c.id,stateName(c.state),fmt(c.soc_kwh)])));
     if(element.querySelector('.ops-depot-detail').open)depotStatus.replaceChildren(...frame.depot_queues.map(d=>el('article',{},[
       el('h4',{},d.depot_id.replace('depot-','Depot ')),
       el('p',{},`${fmt(d.charging_kw)} / ${result.config.site_power_kw} kW charging power in use`),
+      ...(d.cleaning_workers?[el('p',{},`Qualified cleaning workers: ${d.cleaning_workers.in_use} working / ${d.cleaning_workers.capacity} total; ${d.cleaning_workers.free} free.`)]:[]),
       table(['Stage','Waiting','Working','Capacity'],['software','cleaning','charging','upload'].map(s=>[stateName(s),String(d[s]),String(d.active[s]),String(result.config[{software:'software_bays',cleaning:'cleaning_bays',charging:'chargers',upload:'upload_bays'}[s]])])),
     ])));
   }
@@ -222,8 +240,22 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     try{const comparison=analyzeVehicleMix(submitted);mixContent.replaceChildren(table(['Fleet','Trips done','Trips / AV','Mean trip (min)','Depot time (min)','Energy used (kWh)'],comparison.trials.map(t=>[t.ojai_share_pct===0?'All I-PACE':t.ojai_share_pct===100?'All Ojai':'50 / 50',fmt(t.metrics.completed_trips,0),fmt(t.metrics.trips_per_vehicle),fmt(t.metrics.avg_trip_min_completed??t.metrics.avg_trip_minutes_completed),fmt(t.metrics.avg_depot_onsite_min),fmt(t.metrics.energy_consumed_kwh)])),el('p',{},'Differences reflect the declared profiles and this scenario. They do not establish the performance of either commercial fleet. Charging is linear; taper and thermal limits are not modeled.'));}
     catch(e){mixContent.replaceChildren(el('p',{},`Comparison unavailable: ${e.message}`));}finally{busy=false;renderStatus();}
   }
+  async function compareReadiness(){
+    if(busy||!config.readiness)return;
+    if(!result||stale){readinessContent.replaceChildren(el('p',{},'Run fleet day with these settings before comparing.'));return;}
+    const issues=validateOperationsConfig(config);
+    if(issues.length){error.hidden=false;error.textContent=issues.join(' ');return;}
+    pause();error.hidden=true;const submitted=structuredClone(config);busy=true;renderStatus();
+    readinessContent.replaceChildren(el('p',{},'Comparing staffing and bays with the same external demand…'));
+    await new Promise(resolve=>setTimeout(resolve,0));
+    if(destroyed){busy=false;return;}
+    if(JSON.stringify(config)!==JSON.stringify(submitted)){busy=false;readinessContent.replaceChildren(el('p',{},'Settings changed. Compare again.'));renderStatus();return;}
+    try{readinessComparison=analyzeDepotReadiness(submitted);readinessContent.replaceChildren(readinessComparisonView(readinessComparison));}
+    catch(e){readinessComparison=null;readinessContent.replaceChildren(el('p',{},`Comparison unavailable: ${e.message}`));}
+    finally{busy=false;renderStatus();}return readinessComparison;
+  }
   function table(headings,rows){return el('div',{class:'ops-table-wrap'},el('table',{},[el('thead',{},el('tr',{},headings.map(x=>el('th',{scope:'col'},x)))),el('tbody',{},rows.map(row=>el('tr',{},row.map(x=>el('td',{},x)))))]));}
   for(const selector of ['.ops-vehicle-table','.ops-depot-detail'])element.querySelector(selector).addEventListener('toggle',()=>renderFrame());
-  syncVehicleControls();renderFrame();
-  return {element,run,pause,seek,nextActivity,setConfig,compareCapacity,getState:()=>({config,result,capacity,minute,playing,stale}),destroy(){pause();destroyed=true;map.destroy();portraits.forEach(p=>p.destroy());}};
+  syncReadinessControls();syncVehicleControls();renderFrame();renderStatus();
+  return {element,run,pause,seek,nextActivity,setConfig,compareCapacity,compareReadiness,getState:()=>({config,result,capacity,readinessComparison,minute,playing,stale}),destroy(){pause();destroyed=true;map.destroy();portraits.forEach(p=>p.destroy());}};
 }

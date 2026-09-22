@@ -7,16 +7,16 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-metric-contract` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (local, not pushed) |
-| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
+| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-metric-contract` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, clean at `6b376fb`) · M1 worktree `…/Hermes-depot-m1` on `codex/fleetlab-depot-readiness-m1` |
+| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git`; website lineage tracks `github/feat/fleetlab-playground`. The M1 branch is local and unpublished; no remote action in this task. |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
 | **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 registry provenance/static operator view built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline `3a7f595`; Task 8 static view `4b2e8b8`; forward-only repairs `18b47db`, `e42ed2c`) — Gate G: **96 passed**; replayable decision record; spec-file authoring, metric-contract CLI, and one loopback-only finished synthetic-run view; **lane merged onto `main` 2026-09-06 (`61a7145`) and pushed**. The PRD has been tracked since `aa04786` |
-| **Playground** | **FleetLab Playground built** on local branch `feat/fleetlab-playground` (from `main` @ `bca4ccd`; not pushed): a zero-dependency JavaScript teaching simulator of a stylized Bay Area fleet with depots. Its Experiment mode reproduces FleetLab's verdict rules value for value (vectors FleetLab's own functions generate), and its legacy profile reproduces FleetLab's engine event log entry by entry. Design audited (approve with required changes, all applied): `docs/plans/2026-09-13-fleetlab-playground-design.md`; contract `playground/fleetlab/ARCHITECTURE.md`. **Operations casebook added 2026-09-15** (design §4.4): twenty preregistered situations in five themes (San Francisco core operations, a new service area, rain, busy areas, police activity), each a proxy built from the knobs with its measured verdict pinned on seed set 1 in `test/ops-cases.pins.json` (sets 2 and 3 behind `FLEET_PLAYGROUND_PERF=1`) and its lesson in the design, never on the page (H-9); the packer also writes a **hosted folder** (`pack.mjs --site`, checked by `check-dist.mjs --site`) with a stricter policy, and putting it online stays an owner action. **Map motion phases 1 and 2 added 2026-09-15** (the approved motion plan; phases 3 and 4 are approved but deliberately not built): phase 1 changed nothing on screen and computes one map model and takes one playback frame per drawn frame, shared by the map, the NOW panel and the announcer, with the map's table twin kept current by one watched number per drawn value instead of a stringified model; phase 2 draws every car driving a route as its own mark, at the progress the interval log gives it, moved by one composed `transform` written only when its rounded place changes. Cars standing in an area stay unit bars and cars at a depot stay part of the depot tile, because the model gives neither a place inside it; a route direction whose corridor is too short for its own busiest snapshot keeps its flow band and writes a visible reason (measured: one direction of H1 on the wide map, none on the phone, both directions of H1 at the 150-car reference). The map gains its first model-limits chip and a second legend line. **No CSS transition, animation, keyframe or `will-change` was added anywhere**, and reduced motion steps cars on the 5-minute snapshot grid through the `interpolate: false` path that already existed. **Isometric world and the Present walkthrough added 2026-09-16** (the approved demo plan's phases A and B; phases C and D are approved but deliberately not built, and left no scaffolding): the map region can draw the four areas as a Canvas 2D isometric schematic generated at run time from the interval log, with flat platforms at the areas' own centres, ribbons for roads, one shaded box per car driving a route, cubes of five for cars standing in an area, a depot block with bay cells, queue and ready bars and a lot fill, and a written count wherever cars share a leg exactly. No asset, no dependency, no WebGL, no lighting, no camera, and no word on the canvas: every label and number is HTML over it. The flat SVG schematic stays as the test default, the header toggle and the no-2D-context fallback. `Present` is a layer over the three modes with its own store key that walks four chapters and eleven beats over one replay of the casebook's OPS-01; `Prepare` runs the window and the experiment once in the visitor's browser and every beat after that is a silent seek and a projection of numbers the run already produced, with the four-depot table taken from the depot drawer's own reading and the verdict readout composed from the verdict card's own builders. Still no CSS transition, animation, keyframe or `will-change` anywhere, and both reduced-motion blocks are asserted unchanged. Node suite on 2026-09-16: **1,478 tests, 1,475 passed, 0 failed**, 2 skipped and 1 browser-only todo (the skips and the suites behind `FLEET_PLAYGROUND_PERF=1`: wall-clock budgets, the seed set 2 and 3 pins, and the drawn-page frame cost); packed file 1,490,669 bytes against the 2,097,152-byte cap and hosted folder 45 files, 1,071,329 bytes, both `check-dist` OK; parity and boundary pytest **89 passed** and headless browser smoke 693 of 693 checks at the first build (neither the casebook, the motion phases nor the demo build touches Python). The frame-cost tests hold deterministic proxies only (one model and one frame per drawn frame, context calls bounded by what was drawn, attribute writes, node growth); design §5.9's 8 ms whole-frame budget is a browser measurement and **the painted-frame gate was not recorded**, so the only browser numbers in the repository are layout ones taken with `document.hidden` true and labelled as such. The casebook, the hosted folder, the motion phases and the demo build sit in the worktree, not yet committed. The CI step for `node --test` (design phase 6) is not started: owner decision |
+| **Playground** | Website lineage `feat/fleetlab-playground` @ `6b376fb`; recorded published source `f85a28f`, deployment `ccb82b11` (2026-09-19). **Depot readiness M1 implemented locally, uncommitted and unpublished**, on isolated `codex/fleetlab-depot-readiness-m1` in `…/Hermes-depot-m1`. Explicit staffing extension, serial mandatory work, finite cleaning workers/bays, recorded blockers, all-visit accounting and controlled worker/bay trials. **2026-09-22 observed checks: 1,643 Node passed, 2 skipped, 1 browser-only TODO; 89 Python parity/boundary passed; Ruff and both package checks passed.** Current details and limitations: §7.5 below; earlier counts elsewhere are historical. |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
-| **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-09-15 |
+| **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated for local M1; publishing was not authorized. |
+| **Last updated** | 2026-09-22 (Playground M1 only; other tracks retain their recorded dates) |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -747,6 +747,102 @@ must not: the number as a default edit (§10 rule 3).
 ---
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
+
+
+**Current browser status, verified 2026-09-22.** This paragraph supersedes the older
+Playground-only scope/count/release statements below; Python and ADAS history is unchanged.
+The active task started in clean `Hermes-fleetlab` at `9daacef` on
+`feat/phase9-metric-contract`, which has no browser app. The clean website worktree
+`Hermes-playground` was at `6b376fb`, whose differences from recorded published source
+`f85a28f` are documentation only. M1 is isolated in `Hermes-depot-m1` on
+`codex/fleetlab-depot-readiness-m1`, based on `6b376fb`. Both pre-existing worktrees
+remain clean; no push, merge, PR, remote modification or deployment occurred.
+
+**M1 completed locally:** opt-in `readiness.version = depot-readiness-1.0.0`, producing
+`fleetlab-bay-operations-1.0.0+depot-readiness-1.0.0` and
+`depot-readiness-metrics-1.0.0`. Every visit records mandatory cleaning, charging and
+upload plus scheduled software; a cleaning task acquires a bay and qualified worker
+atomically. Completion/release, exclusive blocking, queue/active time, unfinished
+work, deadlines at observation end, terminal ownership and rejected policy actions
+are recorded. The existing replay and new operator tables project those records.
+The historical default remains unchanged; two complete Bay outputs match published
+`f85a28f` byte for byte and are pinned in tests. No Python code, historical fixture,
+regional statistical instrument, Street lab, map or charging implementation changed.
+
+**Reproduce:** [Fleet day M1 runbook and metric contract](docs/FLEETLAB_DEPOT_READINESS.md).
+In Fleet day select **Staffing: an empty bay needs a worker**, **Run fleet day**, then
+**Compare staffing and bays**. The comparison needs a fresh submitted replay. Seed 42,
+240 minutes, 16 vehicles, one fictional site, the same 179 exogenous requests and the
+same required-work rule produced these observations on Node 22.22.0:
+
+| Observed measure | Baseline: 1 worker, 3 bays | Worker treatment: 2 workers, 3 bays | Bay control: 1 worker, 4 bays |
+|---|---:|---:|---:|
+| Completed / all requests | 26 / 179 | 36 / 179 | 26 / 179 |
+| Unserved / waiting / assigned-in-progress | 146 / 7 / 0 | 135 / 7 / 1 | 146 / 7 / 0 |
+| Ready by end / started depot visits | 11 / 26 | 22 / 36 | 11 / 26 |
+| Unfinished visits / mandatory tasks | 15 / 45 | 14 / 42 | 15 / 45 |
+| All-visit queue task-min / active task-min | 3,208 / 260 | 2,857 / 519 | 3,208 / 260 |
+| Oldest unfinished task age, min | 220 | 139 | 220 |
+| Maximum observed task queue, min | 215 | 135 | 215 |
+
+These are descriptive one-seed results, not hard-coded UI outcomes or statistical
+confidence. **All three fail the illustrative 60-minute maximum-wait check** despite
+valid simulator state. The extra worker changes service but does not establish an
+acceptable staffing plan; the extra bay does not improve this worker-constrained
+scenario. Counts of visits/work may change through dispatch consequences. Mean depot
+times remain explicitly completed-only; all-visit queue/active totals and unfinished
+work accompany them. Browser outputs remain `NOT_EVIDENCE`, simulation-only and
+decision authority `NONE`; no deployment authority is added.
+
+**Validation actually run in this worktree:**
+
+- Baseline Node: 1,629 total, 1,626 passed, zero failed, 2 skipped, 1 browser-only TODO.
+  Final `node --test playground/fleetlab/test/*.test.mjs`: **1,646 total, 1,643 passed,
+  zero failed, 2 skipped, 1 browser-only TODO**, 245 suites. Historical tests retained.
+- `FLEET_PLAYGROUND_BASE=bca4ccd PYTHONPATH="$PWD/src" PYTHONDONTWRITEBYTECODE=1`
+  with `hermes-dev` Python 3.11 on the two `test_fleet_playground_*` modules:
+  **89 passed**, baseline and after changes. Python distribution remains `0.1.0`.
+  `python -m ruff check .` passes. Full Python/MetaDrive suite was not rerun for this
+  browser-only change; this worktree has only `artifacts/.gitkeep`, no evidence fleet.
+- `pack.mjs --site dist/site` and `check-dist.mjs --site dist/site`: **71 files,
+  2,992,206 bytes total** (including existing film/poster); unchanged separate budgets.
+  Offline `pack.mjs --out dist/fleetlab-playground.html` and checker: **2,349,012 bytes**,
+  under the existing 2.5 MiB cap. Baseline sizes were 69 files / 2,963,232 bytes and
+  2,319,114 bytes respectively. No budget increase or runtime dependency.
+- Local packaged-site browser checks: staffing preset, run, stage jump, selected car,
+  worker/bay resource detail, measured comparison, keyboard-driven stale warnings,
+  rejected skip policy and named checks; phone viewport/table and expanded exact-JSON
+  disclosure without page overflow; no console errors observed in those flows.
+  Direct offline `file://` execution was **not browser-tested** because the browser
+  URL security policy blocked opening it. Its build and offline security checker pass.
+- Independent read-only review found and resolved two P2s: unobserved queues now
+  remain unavailable/null; a +1 treatment beyond the maximum is unavailable without
+  hiding the other valid trial. Reviewer recheck: 24 focused tests passed; no new
+  reporting errors. `git diff --check` passes.
+
+**Published versus local:** read-only served-asset checks matched `f85a28f` for the
+Bay engine, operations UI, studio UI, paired instrument and stylesheet. These sample
+hashes do not authenticate the deployment ID. `ccb82b11` remains the recorded release;
+M1 is **not deployed and has no hosted acceptance result**. No credentials or account
+APIs were used. The failed direct-file browser action was not bypassed.
+
+**Limits and deferred work:** only one qualified cleaning pool per site and serial
+work; no optional-task execution, successful mandatory cancellation, worker shifts,
+parallel scheduler, optimized charging/taper, stale-resource feeds, airport forecasts,
+region bring-up or physics. No usability study or production calibration. Four
+systems stay separate: Fleet day, Street lab, regional experiments and Python evidence.
+The current user's M1 authorization supersedes the older Phase 6 workflow for this
+browser extension; the decision and exact metric contracts are in the linked runbook.
+
+**Recommendation:** review the local M1 artifact as a mechanism demonstration; do
+not treat the service gain as a guardrail pass. **Top risks + mitigations:** synthetic
+assumptions → keep scope/versions visible; censored work → retain full cohorts;
+missing measurements → null/Not available; cross-model confusion → strict producer
+compatibility and no statistical/evidence reuse. **Next 3 actions:** review the local
+comparison, rehearse one binding/nonbinding resource example, and select any next
+milestone explicitly. Publishing remains a separate owner-authorized action.
+
+**Historical regional-model description (preceding M1):**
 
 `playground/fleetlab/` is a static page and one offline HTML file for building intuition about fleet and depot
 operations. It sits outside `src/hermes/` by design: nothing in `src/hermes/` imports or mentions it, and boundary tests

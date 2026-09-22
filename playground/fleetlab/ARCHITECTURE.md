@@ -1,5 +1,26 @@
 # FleetLab Playground: build contract
 
+## Depot readiness M1 amendment, 2026-09-22
+
+The current user authorizes only a bounded staffing/work-order slice. Contract and decision
+record: `docs/FLEETLAB_DEPOT_READINESS.md`. The default Bay producer remains 1.0.0. An explicit
+`readiness.version = depot-readiness-1.0.0` adds a suffix to its producer ID and a separate
+`depot-readiness-metrics-1.0.0` result namespace. No historical fixture is regenerated.
+
+`model/depot-readiness.js` supplies serial task/reservation/check accounting to the existing
+`model/bay-operations.js` loop. It is not another engine. Cleaning needs both a bay and a
+qualified worker, acquired together and released on recorded completion. Required tasks are
+created at visit start, tracked through the horizon, and checked at depot release. Rejected
+mandatory skip/cancel proposals fail a policy check; actual state violations invalidate the
+simulation. External demand is generated once before any treatment run; no new random draws.
+
+`ui/readiness-view.js` projects recorded results; the existing operations UI owns controls,
+replay and stale-state handling. M1 comparison requires a fresh submitted replay and checks
+producer, metric version, requirement rule, non-treatment config, demand and validity. It
+uses no regional instrument verdict or evidence backend. New numeric values are inspectable
+exactly; every unfinished task/visit stays counted. The copy checker includes the new view.
+Zero dependencies, package budgets, CSP, text escaping and import boundaries are unchanged.
+
 ## Bay Area / vehicle / 3D amendment, 2026-09-19
 
 Current user authorization extends the playground to real geography and configurable vehicle profiles. It supersedes historical invented-map-only and presentation-only constraints for this extension; Hermes evidence-core contracts are unchanged. The design is `docs/plans/2026-09-19-bay-area-3d.md`.

@@ -1,6 +1,7 @@
 /** Route-driven operational teaching model. OSM geometry is not navigation permission. */
 import {defaultOperationsConfig,validateOperationsConfig,OPERATIONS_STATES} from './operations.js';
 import {BAY_AREA_PLACES,bayAreaRoute} from './bay-area.js';
+import {createReadiness,validateReadiness,READINESS_VERSION,defaultReadiness,compareReadinessRuns} from './depot-readiness.js';
 import {VEHICLE_PROFILES,defaultVehicleProfiles} from './vehicle-profiles.js';
 export const BAY_OPERATIONS_VERSION='fleetlab-bay-operations-1.0.0';
 export const BAY_OPERATIONS_STATES=Object.freeze({...OPERATIONS_STATES,boarding:'Rider boarding'});
@@ -25,6 +26,7 @@ export function validateBayAreaConfig(c) {
       for(const [key,[min,max]] of Object.entries(profileBounds))if(!Number.isFinite(p[key])||p[key]<min||p[key]>max)errors.push(`${type}.${key} must be finite between ${min} and ${max}.`);
     }
   }
+  if(Object.hasOwn(c,'readiness'))errors.push(...validateReadiness(c.readiness));
   return errors;
 }
 const STAGES=['software','cleaning','charging','upload'];
@@ -64,6 +66,7 @@ function checkedConfig(config){const errors=validateBayAreaConfig(config);if(err
 export function simulateBayAreaOperations(config,{capture=true}={}){const c=checkedConfig(config),network=prepare(c);return simulate(c,makeDemand(c,network),network,capture);}
 
 function simulate(c,demand,network,capture) {
+  const readiness=c.readiness?createReadiness(c):null;
   const requests=demand.map(r=>({...r})),byRequest=new Map(requests.map(r=>[r.id,r]));
   const placeLocations=network.places.map(p=>({...p,road_anchor:{...p.road_anchor}}));
   const ordered=[...placeLocations].sort((a,b)=>b.y-a.y||a.x-b.x);
@@ -95,6 +98,7 @@ function simulate(c,demand,network,capture) {
   function queue(v,stage,t) {
     v.state=`queued_${stage}`;v.remaining_min=0;
     v.visit.stages.push({stage,queued_minute:t,started_minute:null,completed_minute:null,active_minutes:0,energy_delivered_kwh:0});
+    readiness?.queued(v,t);
     byDepot.get(v.depot_id).queues[stage].push(v);log(t,v,v.state,`Waiting for ${stage} at ${v.depot_id}.`);
   }
   function startVisit(v,t) {
@@ -107,11 +111,13 @@ function simulate(c,demand,network,capture) {
     if(v.soc_kwh+1e-8<needed){blocked.add(v.id);return false;}
     v.depot_id=d.id;v.visit_count++;
     v.visit={id:`${v.id}-visit-${v.visit_count}`,vehicle_id:v.id,vehicle_type:v.vehicle_type,depot_id:d.id,started_minute:t,arrived_minute:null,completed_minute:null,software_scheduled:v.visit_count%c.software_every_visits===0,stages:[],active_service_min:0};
+    readiness?.begin(v,t);
     visits.push(v.visit);move(v,'drive_to_depot',d.id,d.place_id,t);return true;
   }
   function finishStage(v,t) {
+    readiness?.finished(v,t);
     const stage=v.state;v.visit.stages.at(-1).completed_minute=t;log(t,v,`${stage}_completed`,`${BAY_OPERATIONS_STATES[stage]} finished.`);
-    if(stage==='upload'){v.visit.completed_minute=t;v.state='ready';v.remaining_min=1;v.trips_since_visit=0;log(t,v,'ready','Depot visit complete.');}
+    if(stage==='upload'){readiness?.release(v);v.visit.completed_minute=t;v.state='ready';v.remaining_min=1;v.trips_since_visit=0;log(t,v,'ready','Depot visit complete.');}
     else queue(v,STAGES[STAGES.indexOf(stage)+1],t);
   }
   function settle(v,t) {
@@ -168,8 +174,10 @@ function simulate(c,demand,network,capture) {
     for(const d of depots)for(const stage of STAGES) {
       const capacity=c[stage==='charging'?'chargers':`${stage}_bays`];let active=vehicles.filter(v=>v.depot_id===d.id&&v.state===stage).length;
       while(minute<horizon&&active<capacity&&d.queues[stage].length) {
+        if(readiness&&!readiness.mayStart(d.queues[stage][0],minute))break;
         const v=d.queues[stage].shift(),record=v.visit.stages.at(-1);v.state=stage;record.started_minute=minute;
         v.remaining_min=stage==='charging'?0:Math.ceil(c[`${stage}_minutes`]*v.profile[`${stage}_multiplier`]);
+        readiness?.started(v,minute);
         log(minute,v,stage,`${BAY_OPERATIONS_STATES[stage]} started.`);active++;
       }
     }
@@ -180,9 +188,11 @@ function simulate(c,demand,network,capture) {
       v.remaining_min=Math.ceil(Math.max(0,target(v)-v.soc_kwh)/(kw/60));
       v.charge_next=minute===horizon?0:Math.min(Math.max(0,target(v)-v.soc_kwh),kw/60);d.charging_kw+=v.charge_next*60;
     }
+    if(readiness)for(const d of depotQueues)d.cleaning_workers=readiness.resources(d.depot_id);
     if(capture)frames.push({minute,clock_minute:(start+minute)%1440,traffic_multiplier:traffic(c,minute),
-      vehicles:vehicles.map(({id,state,node,from,to,progress,soc_kwh,depot_id,request_id,remaining_min,vehicle_type,battery_kwh,route_id})=>({id,state,node,from,to,progress,soc_kwh,depot_id,request_id,remaining_min,vehicle_type,battery_kwh,route_id})),
+      vehicles:vehicles.map((v)=>{const {id,state,node,from,to,progress,soc_kwh,depot_id,request_id,remaining_min,vehicle_type,battery_kwh,route_id}=v;return {id,state,node,from,to,progress,soc_kwh,depot_id,request_id,remaining_min,vehicle_type,battery_kwh,route_id,...(readiness?{readiness:readiness.inspect(v)}:{})};}),
       counts:Object.fromEntries(Object.keys(BAY_OPERATIONS_STATES).map(s=>[s,vehicles.filter(v=>v.state===s).length])),depot_queues:depotQueues});
+    readiness?.observe(vehicles,depotQueues,minute);
     if(minute===horizon)break;
     for(const v of vehicles) {
       if(MOVING.has(v.state)) {
@@ -208,7 +218,7 @@ function simulate(c,demand,network,capture) {
     by_vehicle_type:['ipace','ojai'].map(type=>{const selected=vehicles.filter(v=>v.vehicle_type===type),count=sum('completed_trips',selected);return {vehicle_type:type,label:VEHICLE_PROFILES[type].label,vehicle_count:selected.length,completed_trips:count,trips_per_vehicle:selected.length?count/selected.length:null,energy_consumed_kwh:sum('energy_consumed',selected),energy_delivered_kwh:sum('energy_delivered',selected),distance_km:sum('distance',selected)};}),
     by_place:placeLocations.map(p=>({place_id:p.id,label:p.label,...populations(requests.filter(q=>q.pickup_node===p.id))})),
   };
-  return {version:BAY_OPERATIONS_VERSION,config:c,locations,routes,frames,events,requests,visits,metrics,demand_signature:signature(demand),assumptions:[
+  return {...(readiness?{readiness:readiness.finish(visits,metrics)}:{}),version:readiness?`${BAY_OPERATIONS_VERSION}+${READINESS_VERSION}`:BAY_OPERATIONS_VERSION,config:c,locations,routes,frames,events,requests,visits,metrics,demand_signature:signature(demand),assumptions:[
     'Real frozen OpenStreetMap geometry, synthetic demand and operational parameters. Undirected teaching routes ignore one-way, turn and access restrictions; not navigation, service coverage, airport permission or safety evidence.',
     'City and airport representative points remain separate from snapped major-road anchors. Depot sites are hypothetical and co-located with selected road anchors; no off-road access legs are fabricated.',
     'Dispatch processes requests FIFO and chooses the nearest energy-feasible available car, with stable car-order ties. An infeasible earlier request can remain queued while a later feasible request is served.',
@@ -233,4 +243,33 @@ export function analyzeBayAreaCapacity(config) {
 export function analyzeVehicleMix(config) {
   const c=checkedConfig(config),network=prepare(c),demand=makeDemand(c,network),sig=signature(demand);
   return {trials:[0,50,100].map(ojai_share_pct=>({ojai_share_pct,metrics:simulate(structuredClone({...c,ojai_share_pct}),demand,network,false).metrics,demand_signature:sig})),assumptions:['All three trials use identical demand, fleet count, road-speed rules and depot resources. Actual integer vehicle counts follow round(fleet × Ojai share / 100).','Differences come from editable battery, energy, boarding and service parameters, not branding or added rider capacity. No real fleet-performance claim.']};
+}
+
+/** A synthetic mechanism example, not an optimized staffing plan. */
+export function depotReadinessDemoConfig(){
+  return {...defaultBayAreaConfig(),place_ids:['menlo-park','palo-alto'],fleet_size:16,depot_count:1,
+    duration_hours:4,start_hour:0,requests_per_hour:45,peak_multiplier:1,trips_between_visits:1,cleaning_minutes:18,
+    cleaning_bays:3,software_every_visits:100,upload_minutes:1,chargers:8,charger_kw:150,site_power_kw:1000,
+    initial_soc_pct:85,charge_target_pct:85,readiness:defaultReadiness()};
+}
+/** Two separate treatments against one submitted baseline; same pregenerated exogenous requests. */
+export function analyzeDepotReadiness(config){
+  const c=checkedConfig(config);
+  if(!c.readiness)throw new RangeError('Enable the readiness extension before comparing.');
+  const worker=structuredClone(c),bay=structuredClone(c);
+  worker.readiness.cleaning_workers++;bay.cleaning_bays++;
+  const network=prepare(c),demand=makeDemand(c,network);
+  const definitions=[['baseline','Baseline',c,null],['worker','Cleaning workers per depot',worker,'cleaning_workers'],['bay','Cleaning bays per depot',bay,'cleaning_bays']];
+  const arms=definitions.map(([id,label,settings,axis])=>{
+    const issues=validateBayAreaConfig(settings);
+    return {id,label,axis,from:axis==='cleaning_workers'?c.readiness.cleaning_workers:axis==='cleaning_bays'?c.cleaning_bays:null,
+      to:axis==='cleaning_workers'?settings.readiness.cleaning_workers:axis==='cleaning_bays'?settings.cleaning_bays:null,
+      available:issues.length===0,reason:issues.length?issues.join(' '):null,requested_config:settings,
+      result:issues.length?null:simulate(settings,demand,network,false)};
+  });
+  for(const arm of arms.slice(1))arm.comparison=arm.available?compareReadinessRuns(arms[0].result,arm.result,arm.axis):{comparable:false,reason:arm.reason,deltas:null};
+  return {format:'fleetlab-depot-readiness-comparison',format_version:1,evidence_status:'NOT_EVIDENCE',decision_authority:'NONE',replications:1,
+    question:'Does an extra qualified cleaning worker change completed service? Separately, does an extra cleaning bay?',
+    primary_estimand:'candidate completed trips minus baseline completed trips at observation end (trips); both arms account for all requests created before H',
+    practical_margin:null,horizon_minutes:Math.ceil(c.duration_hours*60),seed_set:[c.seed],arms};
 }

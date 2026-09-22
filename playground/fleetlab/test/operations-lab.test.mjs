@@ -92,3 +92,60 @@ test('selected car details use its own vehicle battery and identify its type',as
   assert.match(lab.element.querySelector('.ops-vehicle-detail').textContent,/Ojai/);lab.destroy();
  }finally{restore();}
 });
+
+test('staffing demo displays recorded work, comparisons, denominators and stale warnings',async()=>{
+  const restore=installFakeDom();try{
+    const lab=createOperationsLab({reducedMotion:()=>true});
+    const preset=lab.element.querySelector('[aria-label="Start with a situation"]');
+    assert.ok([...preset.children].some(o=>o.value==='staffing'));
+    preset.value='staffing';preset.dispatchEvent(new Event('change'));
+    await lab.run();const r=lab.getState().result;assert.ok(r.readiness);
+    const frame=r.frames.find(f=>f.vehicles.some(v=>v.readiness?.blocked_reason==='WORKER_UNAVAILABLE'));
+    const vehicle=frame.vehicles.find(v=>v.readiness?.blocked_reason==='WORKER_UNAVAILABLE');
+    const picker=lab.element.querySelector('[aria-label="Follow a car"]');picker.value=vehicle.id;picker.dispatchEvent(new Event('change'));lab.seek(frame.minute);
+    assert.match(lab.element.querySelector('.ops-vehicle-detail').textContent,/WORKER_UNAVAILABLE/);
+    assert.match(lab.element.querySelector('.ops-readiness-result').textContent,/Unfinished required tasks/);
+    await lab.compareReadiness();assert.equal(lab.getState().readinessComparison.replications,1);
+    assert.match(lab.element.querySelector('.ops-readiness-comparison').textContent,/Cleaning workers per depot: 1 → 2/);
+    assert.match(lab.element.querySelector('.ops-readiness-comparison').textContent,/Cleaning bays per depot: 3 → 4/);
+    assert.match(lab.element.textContent,/NOT_EVIDENCE/);
+    const input=lab.element.querySelector('[aria-label="Qualified cleaning workers / depot"]');input.value='2';input.dispatchEvent(new Event('change'));
+    assert.equal(lab.getState().stale,true);assert.match(lab.element.querySelector('.ops-readiness-comparison').textContent,/Settings changed/);
+    assert.equal(r.config.readiness.cleaning_workers,1);lab.destroy();
+  }finally{restore();}
+});
+
+test('initial preset matches legacy config and readiness comparison requires a fresh replay',async()=>{
+  const restore=installFakeDom();try{
+    const lab=createOperationsLab({reducedMotion:()=>true});
+    assert.equal(lab.element.querySelector('[aria-label="Start with a situation"]').value,'balanced');
+    const preset=lab.element.querySelector('[aria-label="Start with a situation"]');preset.value='staffing';preset.dispatchEvent(new Event('change'));
+    await lab.compareReadiness();assert.equal(lab.getState().readinessComparison,null);
+    await lab.run();const pending=lab.compareReadiness();lab.setConfig({requests_per_hour:20});await pending;
+    assert.equal(lab.getState().readinessComparison,null);assert.equal(lab.getState().stale,true);
+    await lab.compareReadiness();assert.equal(lab.getState().readinessComparison,null);
+    lab.destroy();
+  }finally{restore();}
+});
+
+test('empty readiness populations display unavailable values rather than null',async()=>{
+  const restore=installFakeDom();try{
+    const lab=createOperationsLab({reducedMotion:()=>true});
+    const preset=lab.element.querySelector('[aria-label="Start with a situation"]');preset.value='staffing';preset.dispatchEvent(new Event('change'));
+    lab.setConfig({requests_per_hour:0});await lab.run();
+    const rows=lab.element.querySelector('.ops-readiness-result').querySelectorAll('tr');
+    assert.match([...rows].find(r=>r.textContent.includes('Oldest unfinished')).textContent,/Not available/);
+    lab.destroy();
+  }finally{restore();}
+});
+
+test('an unavailable resource treatment is rendered without hiding the valid trial',async()=>{
+  const restore=installFakeDom();try{
+    const lab=createOperationsLab({reducedMotion:()=>true});const preset=lab.element.querySelector('[aria-label="Start with a situation"]');preset.value='staffing';preset.dispatchEvent(new Event('change'));
+    lab.setConfig({cleaning_bays:120});await lab.run();await lab.compareReadiness();
+    const content=lab.element.querySelector('.ops-readiness-comparison');
+    assert.match(content.textContent,/Cleaning bays per depot: 120 → 121. Not available/);
+    assert.match(content.textContent,/Cleaning workers per depot: 1 → 2/);
+    assert.ok(content.querySelector('table'));lab.destroy();
+  }finally{restore();}
+});
