@@ -2,6 +2,10 @@
 
 **[Open the public playground](https://fleetlab-playground.pages.dev/)** · Independent project by Bo-Huei Lin
 
+M1–M4 and the 56-lesson catalog are published from source `7874c7e`, deployment `40858080`.
+See the [verified release record](../../docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md) for tests,
+security coverage, hosted acceptance and remaining limits.
+
 For an interview walkthrough: **Overview → Fleet day → Run fleet day → Product approach**. For congestion: **Street lab → Bridge rush → Largest queue → Compare route policies**. Configure the experiment, inspect a car and a constraint, then explain the service trade-offs. The [Cloudflare guide](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) records the exact publishing and optional custom-domain steps.
 
 ## Depot readiness M1 (explicit opt-in)

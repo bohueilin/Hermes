@@ -2,7 +2,7 @@
 
 ## What you need to do now
 
-**No account setup is required for the public Pages address.** The existing Cloudflare account is authenticated on the development machine and already owns the project. The public address to share is **https://fleetlab-playground.pages.dev/**. The [homepage film release record](FLEETLAB_FILM_RELEASE_2026-09-19.md) identifies current deployment `ccb82b11`, published source `f85a28f`, and successful public-file and browser checks. The [Street lab record](FLEETLAB_STREET_RELEASE_2026-09-19.md) and [preceding release](FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) preserve earlier publication checkpoints.
+**No account setup is required for the public Pages address.** Existing authentication was rechecked for this release; the account already owns the project. The public address to share is **https://fleetlab-playground.pages.dev/**. The [depot milestones release record](FLEETLAB_DEPOT_RELEASE_2026-09-24.md) identifies current deployment `40858080`, published source `7874c7e`, all 80 matching public files and successful hosted browser checks. The [homepage film](FLEETLAB_FILM_RELEASE_2026-09-19.md), [Street lab](FLEETLAB_STREET_RELEASE_2026-09-19.md) and [preceding release](FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) records preserve earlier publication checkpoints. A documentation-only branch head after release does not change the deployed application source.
 
 | Setting | Value |
 |---|---|
@@ -24,7 +24,7 @@ Run from your Hermes checkout on the intended release branch. Check `git status 
 
 ```bash
 set -e
-node --test playground/fleetlab/test/*.test.mjs
+FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs
 node playground/fleetlab/tools/pack.mjs --site dist/site
 node playground/fleetlab/tools/check-dist.mjs --site dist/site
 node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-playground.html
@@ -41,7 +41,7 @@ npx --yes wrangler@4.135.0 pages deploy dist/site \
 
 If authentication has expired, run `npx --yes wrangler@4.135.0 login` and complete Cloudflare's sign-in. No token belongs in this repository or in chat. Deploy **`dist/site`**, not `dist`, the source directory or the repository root. The offline HTML is a separate distributable.
 
-After upload, open the stable address in a private browser. Check the title, Overview film playback and pause, Fleet day, **Run fleet day**, a selected vehicle's next activity, **Street lab → Largest queue → Compare route policies**, and Product approach. Leaving Overview must pause the film. Confirm the Pages deployment source hash matches the reviewed Git commit. The release record also compares public files against the local package; request `/` for `index.html`, since Pages redirects the explicit filename.
+After upload, open the stable address in a fresh browser tab. Check the title, Overview film playback and pause, Fleet day, **Run fleet day**, a selected vehicle's next activity, **Street lab → Largest queue → Compare route policies**, and Product approach. Leaving Overview must pause the film. Exercise the [depot lesson recipes](FLEETLAB_DEPOT_M2_M3.md) and [launch rehearsal](FLEETLAB_DEPOT_LAUNCH.md), including stale edits and one-seed labeling; run the separate regional comparison. Confirm the Pages deployment source hash matches the reviewed Git commit. Compare every public file against the local package; request `/` for `index.html`, since Pages redirects the explicit filename. Verify response security headers separately from the package's `_headers` file.
 
 The homepage film and poster are included automatically by the static packer. No video account, API key or Cloudflare Stream setup is needed. The packer enforces a 4 MiB movie limit, 200 KiB poster limit and separate 2.5 MiB application limit. The offline file embeds the poster and retains all simulation tools. Re-rendering is optional: the checked-in MP4 and WebP are the publication inputs; Blender is an authoring tool outside the website build.
 

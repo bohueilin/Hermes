@@ -1,5 +1,30 @@
 # Latest FleetLab release
 
+The [depot milestones release](docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md) is published at
+**https://fleetlab-playground.pages.dev/** from source `7874c7ed1453b97123946b43b153f80a7228088c`,
+deployment `40858080-b229-44f1-8169-4f8b4faf5c86`. M1–M4 add staffing-aware readiness,
+two charging treatments, compatible paired evaluation, resource observations, synthetic airport
+preparation and configuration-driven launch rehearsal through the existing browser architecture.
+The 56-lesson catalog connects each question, assumption and outcome to a fleet decision.
+
+Observed gates: **1,714 Node tests pass**, zero fail/skip, one existing browser-only TODO
+manually exercised; **89 Python parity/boundary tests pass**; Ruff, static and offline checks
+pass. Final security scan `1d70bf64-6294-45d9-bb71-29588f1fbfa8` has complete scoped coverage,
+zero findings and no deferred candidates. All **80 public files** match the reviewed package;
+security headers, new lesson/stale flows and existing Fleet day/Street/regional flows were
+checked live. Offline direct-file browser execution remains untested because browser policy
+blocks it; no full unrelated Python/MetaDrive pass or zero-risk guarantee is claimed.
+
+Code was committed in `Hermes-depot-m1` on `codex/fleetlab-m2-m3` and pushed without force
+to `github/feat/fleetlab-playground` before Direct Upload. The final documentation-only commit
+records publication and does not change deployed bytes. Main and other worktrees are unchanged;
+no PR or main merge. The current user authorized this publication. All simulation outputs
+remain `NOT_EVIDENCE`, simulation-only, deployment permission `NONE`; Python evidence contracts
+are unchanged. See the release record for commands, package digests, controls, limitations and
+rollback, and [M4 local instructions](docs/FLEETLAB_DEPOT_LAUNCH.md) for the reproducible demo.
+
+## Previous homepage film release — historical
+
 The [original AV homepage film](docs/FLEETLAB_FILM_RELEASE_2026-09-19.md) is published at **https://fleetlab-playground.pages.dev/** from source `f85a28f69a8a8819fea620d06837ae530a390030`, deployment `ccb82b11-986c-4ad1-8658-e1bc30917992`. The 16-second Blender film connects a waterfront ride, charging-depot readiness and the wider fleet. It includes preference-aware motion, pause and an offline poster. All 68 served files match the checked package. Public movie playback and the default Fleet day run were verified. JavaScript: 1,626 pass, zero failures, two skips, one existing TODO. Python parity/boundaries: 89 pass. Ruff and both distribution checks pass. The release record contains exact commands, media/offline hashes, visual and negative results, limitations and publication provenance. The [design rationale](docs/FLEETLAB_HOMEPAGE_FILM.md) and [authoring workflow](tools/fleet-film/README.md) explain the product framing and original assets.
 
 The earlier [Street lab model and design record](docs/FLEETLAB_STREET_LAB.md) and [directed street data record](docs/FLEETLAB_STREET_MAP_DATA.md) describe the downtown SF, SFO and East Bay enhancement. Its release validation and publication identity are recorded in [the Street lab release handoff](docs/FLEETLAB_STREET_RELEASE_2026-09-19.md). These changes extend only the isolated static playground; Hermes Python, evidence contracts and main-branch integration remain unchanged. The whole Python suite's historical missing-fixture failures are not represented as passing. No real-fleet performance or safety claim is made.

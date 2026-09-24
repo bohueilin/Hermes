@@ -758,21 +758,23 @@ named imports become one-time copies in the packed file.
 
 `check-dist.mjs` fails on any `http:` or `https:` URL, a missing or different policy, a forbidden token, a banned word in
 copy, an em or en dash in copy, a `REQUIRED_LABELS` string (from a list the test passes in, never spelled in the tool),
-or a size over 2 MB. The one allowed `http:` string is the SVG namespace `http://www.w3.org/2000/svg`, used only as a
+or an application size over 2.5 MiB (fixed media has separate limits). The one allowed `http:` string is the SVG namespace `http://www.w3.org/2000/svg`, used only as a
 `createElementNS` argument or an `xmlns` attribute.
 
 `pack.mjs --site <folder>` writes a folder for a static host instead of one file: every module the page or the worker
 reaches, unchanged, at its `src/` path; `styles.css`; `index.html` as the development shell with the site policy
 `default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;
-connect-src 'none'; form-action 'none'; base-uri 'none'` first in `<head>`, the stylesheet link and one module script;
+media-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'` first in `<head>`, the stylesheet link and one module script;
 `boot.js`, the shell's inline script as a file, so the policy can refuse inline code; and `_headers`, the policy again
-with `frame-ancestors 'none'` and a few response headers in the format static hosts read. Nothing else reaches the folder
+with `frame-ancestors 'none'` and a few response headers in the format static hosts read. The fixed film MP4 and WebP poster
+are also included through the media allowlist (4 MiB and 200 KiB respectively). Nothing else reaches the folder
 (no tests, tools, fixtures or the legacy profile, which only tests import). The folder obeys the same place rule as the
 packed file, and a folder that already holds an entry the site does not name (a stale module, a symbolic link) is refused
 before anything is written, so a leftover can never ride along to a host. `check-dist.mjs --site <folder>` applies the
-packed file's rules to every file, requires the site policy, exactly the files the packer writes, one stylesheet link and
-one module script in `index.html`, and `boot.js` and `_headers` verbatim; it may read a folder (`readdirSync`) but never
-writes.
+packed file's rules to every file, requires the site policy, supported source-module path shapes and the fixed media
+allowlist, one stylesheet link and one module script in `index.html`, and `boot.js` and `_headers` verbatim; it may read a
+folder (`readdirSync`) but never writes. The checker does not independently compare an exact reachable-module manifest;
+the packer owns that inventory check. Release custody and post-upload file hashes bind the public payload to the reviewed build.
 
 ## 10. Tests
 
