@@ -48,6 +48,7 @@ export function advancedOperationsDemoConfig(kind){
 }
 export function bayModelVersion(c){return [BAY_OPERATIONS_VERSION,...['readiness','charging','resources','airport'].filter(k=>c[k]).map(k=>c[k].version)].join('+');}
 export function freezeBayExperiment(config,options={}){
+  if(config?.launch)throw new RangeError('M4 launch contracts are unsupported by the M2/M3 experimental adapter; use the descriptive launch rehearsal.');
   const {treatment,seeds=Array.from({length:12},(_,i)=>1001+i),tuning_seeds=[42,43,44],margin=.02,resamples=2000,null_treatment=false}=options;
   if(Object.keys(options).some(k=>!['treatment','seeds','tuning_seeds','margin','resamples','null_treatment'].includes(k)))throw new RangeError('Unknown experiment option.');
   const definition=treatments[treatment];if(!definition)throw new RangeError('Select a supported single treatment.');
@@ -91,6 +92,7 @@ export function bayMetricMap(r){
 }
 export function validateBayPair(spec,a,b,seed){
   const fail=reason=>({ok:false,reason,maps:null});
+  if(spec?.baseline?.launch||spec?.candidate?.launch||a?.config?.launch||b?.config?.launch)return fail('M4 launch contracts are unsupported by this experimental adapter.');
   for(const [r,expected] of [[a,spec.baseline],[b,spec.candidate]]){
     if(r?.version!==spec.model_version||r?.extensions?.producer!=='fleetlab-bay-operations'||r.extensions.metric_version!==spec.metric_version)return fail('Incompatible producer or model/metric version.');
     if(r.extensions.validity!=='VALID'||r.readiness&&r.readiness.validity!=='VALID')return fail('Invalid simulator state.');

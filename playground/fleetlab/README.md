@@ -4,7 +4,7 @@
 
 For an interview walkthrough: **Overview → Fleet day → Run fleet day → Product approach**. For congestion: **Street lab → Bridge rush → Largest queue → Compare route policies**. Configure the experiment, inspect a car and a constraint, then explain the service trade-offs. The [Cloudflare guide](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) records the exact publishing and optional custom-domain steps.
 
-## Depot readiness M1 (local opt-in)
+## Depot readiness M1 (explicit opt-in)
 
 **Fleet day → Staffing: an empty bay needs a worker → Run fleet day → Compare staffing and bays**
 adds one qualified cleaning-worker pool to the existing serial work cycle. Inspect required
@@ -12,8 +12,7 @@ work, recorded worker/bay blockers, completed-only means and unfinished visits/t
 one extra worker, then separately one extra bay, against the same demand. These are one-seed
 `NOT_EVIDENCE` descriptions, with named policy checks and no inferred recommendation.
 Historical defaults remain `fleetlab-bay-operations-1.0.0`; the explicit extension is
-`depot-readiness-1.0.0`. The public URL above is the older recorded release; this M1 work
-has not been published. See [local instructions, demo and metric contract](../../docs/FLEETLAB_DEPOT_READINESS.md).
+`depot-readiness-1.0.0`. The source of truth records current publication state. See [local instructions, demo and metric contract](../../docs/FLEETLAB_DEPOT_READINESS.md).
 
 ## Downtown street bottlenecks in 3D
 
@@ -30,7 +29,7 @@ Start with **Fleet day → Run fleet day**. Fleet day uses native WebGL cars and
 - **Vehicle mix:** 0–100% Ojai with editable per-type modeled battery, charge acceptance, energy per kilometer, boarding and service-time factors. Ojai numerical defaults are illustrative; I-PACE retail nominal battery is distinct from modeled usable energy. Neither label changes road speed or party capacity.
 - **Operations:** real route distance drives travel time and energy; synthetic time-of-day, weather and congestion modifiers are explicit. Finite software, cleaning, charging and upload resources constrain readiness. Power respects vehicle, port, site and charge-target limits.
 - **Comparisons:** shared demand for fleet/depot and vehicle-mix trials. Results include completed, unserved and unfinished demand, per-type and per-pickup-place outcomes, completed depot time, active work and queues. A first sufficient tested depot count is not a global optimum.
-- **Learning:** 50 examples and lessons: 12 Fleet day lessons, six Street lab cases and all 32 original regional presets.
+- **Learning:** 56 examples and lessons: 18 Fleet day lessons, six Street lab cases and all 32 original regional presets.
 
 The Bay model is `fleetlab-bay-operations-1.0.0`. The original synthetic `operations.js` and regional simulator/instrument/golden fixtures remain unchanged. Google Maps estimates remain a separate optional local companion and do not supply this OSM replay. No CARLA or physical driving integration is introduced.
 
@@ -172,4 +171,12 @@ existing Bay lifecycle. Each has a versioned opt-in; the historical default and 
 compatible. Paired experiments hold non-treatment inputs and exogenous demand fixed,
 separate tuning/evaluation seeds, and display service, unfinished work, energy and named
 guardrails. One seed is descriptive. See [the M2/M3 runbook](../../docs/FLEETLAB_DEPOT_M2_M3.md)
-for exact local commands, treatments, metric populations and limits. M4 remains deferred.
+for exact local commands, treatments, metric populations and limits. M4 adds configuration-driven launch rehearsal through the same engine.
+
+## Launch rehearsal and scenario learning (M4)
+
+Choose **Fleet day → Launch rehearsal**, configure Peninsula or fictional Region B, validate
+owners/dependencies/resources, and compare immediate versus delayed mock commissioning.
+Inspect all-request service, unfinished work, queue/active time, energy and recorded port states.
+The 56-entry catalog explains each model’s question and fleet-optimization decision.
+[Exact recipe, versions, controls and limits](../../docs/FLEETLAB_DEPOT_LAUNCH.md).

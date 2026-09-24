@@ -1,5 +1,6 @@
 /** Record projections only. Policies and statistical decisions remain in the model. */
 import {el} from './dom.js';
+import {comparisonLearning} from './scenario-learning.js';
 import {defaultCharging} from '../model/charging-allocation.js';
 import {defaultResources} from '../model/resource-observations.js';
 import {defaultAirport} from '../model/airport-demand.js';
@@ -70,6 +71,7 @@ export function advancedComparisonView(r){
   node.appendChild(table(['Guardrail','Status','Mean harm','Maximum allowed harm'],a.guardrail_statuses.map(g=>[g.metric,g.status,g.harm,g.max_harm])));
  }
  node.appendChild(raw('Frozen specification and exact per-seed records',r));
+ node.appendChild(el('section',{class:'ops-result-learning'},[el('h3',{},'What this comparison teaches'),el('p',{},comparisonLearning(r)),el('p',{},'Next experiment: inspect the limiting resource, choose one assumption to vary, and freeze a new comparison. Keep the metric population and all other inputs fixed.')]));
  node.appendChild(el('a',{class:'studio-button',download:'fleetlab-bay-experiment.json',href:'data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(r,null,2))},'Download full experiment JSON'));
  return node;
 }
@@ -82,5 +84,5 @@ export function createAdvancedExperimentControls(compare,invalidate){
  const options=()=>({treatment:treatment.value,seeds:parse(seeds.value),tuning_seeds:parse(tuning.value),margin:Number(margin.value),resamples:Number(resamples.value),null_treatment:nullTreatment.checked});
  const button=el('button',{type:'button',class:'studio-button studio-button-primary',on:{click:()=>compare(options())}},'Run paired policy experiment');
  const element=el('div',{class:'ops-experiment-settings'},[...[[treatment,'Treatment (requires matching extension)'],[seeds,'Evaluation seeds (comma separated, 1 to 40)'],[tuning,'Separate tuning seeds'],[margin,'Practical margin (fraction)'],[resamples,'Bootstrap resamples'],[nullTreatment,'Null control: baseline policy in both arms']].map(([control,caption])=>el('label',{class:'ops-field'},[caption,control])),button]);
- return {element,button,options};
+ return {element,button,options,setTreatment(name){if(!['charging_redistribution','charging_deadlines','resource_freshness','airport_forecast'].includes(name))throw new RangeError('Unsupported treatment.');treatment.value=name;}};
 }

@@ -1,6 +1,18 @@
 import { PRESETS } from '../model/presets.js';
 import { el } from './dom.js';
 import { STREET_PRESETS } from '../model/street-simulation.js';
+import {depotReadinessDemoConfig} from '../model/bay-operations.js';
+import {advancedOperationsDemoConfig} from '../model/bay-experiment-contract.js';
+import {decisionForConfig} from './scenario-learning.js';
+
+const extensionLessons=[
+  ['staffing-readiness','Staffing: workers versus bays',depotReadinessDemoConfig],
+  ['power-redistribution','Use acceptance-limited power shares',()=>advancedOperationsDemoConfig('charging')],
+  ['deadline-charging','Prioritize readiness deadlines',()=>{const c=advancedOperationsDemoConfig('charging');c.charging.policy='deadline';return c;}],
+  ['resource-freshness','Stale resource status and recovery',()=>advancedOperationsDemoConfig('resources')],
+  ['airport-preparation','Prepare for a synthetic airport wave',()=>advancedOperationsDemoConfig('airport')],
+  ['region-launch','Rehearse commissioning in Region B',()=>({launch_rehearsal:'region_b'})],
+].map(([id,title,patch])=>{const d=decisionForConfig(id==='region-launch'?{launch:{}}:patch());return {id,title,patch,question:d.question,controls:d.change,outputs:d.watch,lesson:d.meaning+' Next experiment: '+d.next,limits:d.limits};});
 
 export const OPERATIONAL_LESSONS=Object.freeze([
   {id:'bay-area',title:'Real Bay Area routes in 3D',question:'How does the geography of service change the fleet day?',controls:'18 named places, city focus, orbit, zoom and road speed',outputs:'Recorded cars on OpenStreetMap routes; distance and travel time',lesson:'Longer road routes consume vehicle time and energy before the next rider.',limits:'Sparse undirected major-road routes between anchors; no turn rules, local access or service-area verification.',patch:{}},
@@ -15,6 +27,7 @@ export const OPERATIONAL_LESSONS=Object.freeze([
   {id:'software',title:'Software-update scheduling',question:'What happens when updates take longer or occur more often?',controls:'Update duration, update stations and visit cadence',outputs:'Update queues and time away from riders',lesson:'Fleet software operations consume real service capacity.',limits:'Occupied-resource delay only; no actual update or failure/rollback model.',patch:{software_minutes:30,software_every_visits:1}},
   {id:'upload',title:'Trip-data transfer bottlenecks',question:'Can data-upload work delay the return to service?',controls:'Upload minutes and simultaneous upload stations',outputs:'Upload queues, active work and depot turnaround',lesson:'Data operations belong in the readiness path.',limits:'Fixed transfer duration; no bytes, bandwidth contention or retry model.',patch:{upload_minutes:30,upload_bays:1}},
   {id:'full-cycle',title:'Follow a car through its day',question:'Where does one vehicle spend its time?',controls:'Vehicle selector, next activity, stage buttons and clock',outputs:'Pickup, trip, depot journey, queues, work and return to readiness',lesson:'The activity trail connects fleet outcomes to individual transitions.',limits:'One-minute model resolution; motion between snapshots is explanatory.',patch:{trips_between_visits:2}},
+  ...extensionLessons,
 ]);
 
 const axisValue=value=>value&&typeof value==='object'?Object.entries(value).map(([key,v])=>`${key}: ${axisValue(v)}`).join(', '):String(value);
@@ -54,7 +67,7 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
       el('div',{class:'catalog-card-meta'},[el('span',{},r.model),el('span',{},r.id)]),el('h2',{},r.title),el('p',{class:'catalog-question'},r.question),
       el('dl',{},[['Change',r.controls],['Watch',r.outputs],['Learn',r.lesson]].flatMap(([label,value])=>[el('dt',{},label),el('dd',{},value)])),
       el('details',{},[el('summary',{},'Limits of this example'),el('p',{},r.limits)]),
-      el('button',{type:'button',class:'studio-button',on:{click:()=>r.target==='operations'?onOperations(r.patch):r.target==='streets'?onStreets(r.hotspot):onRegional(r.preset)}},r.target==='operations'?'Try this in Fleet day  →':r.target==='streets'?'Open Street lab  →':'Open regional example  →'),
+      el('button',{type:'button',class:'studio-button',on:{click:()=>r.target==='operations'?onOperations(typeof r.patch==='function'?r.patch():structuredClone(r.patch)):r.target==='streets'?onStreets(r.hotspot):onRegional(r.preset)}},r.target==='operations'?'Try this in Fleet day  →':r.target==='streets'?'Open Street lab  →':'Open regional example  →'),
     ])));
     if(!shown.length)cards.appendChild(el('p',{},'No matching simulation. Try a resource or a different model.'));
   }

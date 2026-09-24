@@ -25,9 +25,10 @@ export function acceptObservation(previous,event,minute){
   if(previous&&(event.resource_id!==previous.resource_id||event.sequence<=previous.sequence||event.observed_minute<previous.observed_minute))return reject('DUPLICATE_OR_OUT_OF_ORDER');
   return {accepted:true,reason:null,observation:{...event}};
 }
-export function createResourcePool(config){
+export function createResourcePool(config,launch=null){
   const c=config.resources,horizon=Math.ceil(config.duration_hours*60),ports=[],pending=[],observations=new Map(),actions=[];
-  for(let d=1;d<=config.depot_count;d++)for(let i=0;i<config.chargers;i++)ports.push({id:`depot-${d}:port-${i+1}`,depot_id:`depot-${d}`,index:i,
+  if(launch)ports.push(...launch.ports);
+  else for(let d=1;d<=config.depot_count;d++)for(let i=0;i<config.chargers;i++)ports.push({id:`depot-${d}:port-${i+1}`,depot_id:`depot-${d}`,index:i,
     installed:i<config.chargers-c.planned_ports,commissioned:i<config.chargers-c.planned_ports-c.uncommissioned_ports,healthy:true,compatible:true,owner:null,expires_minute:null});
   const knowledge=(p,t)=>{const o=observations.get(p.id);return !o?'UNKNOWN':t-o.observed_minute>c.ttl_min?'INFERRED_STALE':'OBSERVED';};
   const eligible=(p,t)=>{const o=observations.get(p.id);return !p.owner&&o&&o.installed&&o.commissioned&&o.healthy&&o.compatible&&(c.policy==='last_known'||knowledge(p,t)==='OBSERVED');};
@@ -36,28 +37,30 @@ export function createResourcePool(config){
     tick(t){
       // Visit every elapsed observation boundary even when a test jumps the clock.
       for(let minute=lastMinute+1;minute<=t;minute++){
-        for(const p of ports){p.healthy=!(p.index<c.outage_ports&&minute>=c.outage_start_min&&minute<c.outage_end_min);if(p.owner&&minute>=p.expires_minute){p.owner=null;p.expires_minute=null;}}
+        launch?.tick(minute);
+        for(const p of ports){if(!launch)p.healthy=!(p.index<c.outage_ports&&minute>=c.outage_start_min&&minute<c.outage_end_min);if(p.owner&&minute>=p.expires_minute){p.owner=null;p.expires_minute=null;}}
         if(minute%c.period_min===0)for(const p of ports)pending.push({source:'synthetic-port-feed-1',idempotency_key:`${p.id}:${Math.floor(minute/c.period_min)+1}`,resource_id:p.id,sequence:Math.floor(minute/c.period_min)+1,observed_minute:minute,received_minute:minute+c.delay_min,
           installed:p.installed,commissioned:p.commissioned,healthy:p.healthy,compatible:p.compatible});
         while(pending.length&&pending[0].received_minute<=minute){const event=pending.shift(),result=acceptObservation(observations.get(event.resource_id),event,minute);if(result.accepted)observations.set(event.resource_id,result.observation);}
       }
       lastMinute=t;
     },
-    reserve(vehicle,depot,t){
+    reserve(vehicle,depot,t,vehicleType=null){
       const held=ports.find(p=>p.owner===vehicle);
       if(held)return held.depot_id===depot&&t<held.expires_minute?{accepted:true,resource_id:held.id,idempotent:true}:{accepted:false,reason:'ALREADY_RESERVED'};
-      const candidates=ports.filter(p=>p.depot_id===depot&&eligible(p,t));
+      const candidates=ports.filter(p=>p.depot_id===depot&&eligible(p,t)&&(!launch||p.compatible_vehicle_types.includes(vehicleType)));
       if(!candidates.length)return {accepted:false,reason:'NO_FRESH_ELIGIBLE_RESOURCE'};
       for(const p of candidates){
         const reason=!p.installed||!p.commissioned?'NOT_COMMISSIONED':!p.healthy?'RESOURCE_UNHEALTHY':!p.compatible?'INCOMPATIBLE':p.owner?'RESOURCE_RESERVED':null;
         if(reason){if(!actions.some(a=>a.minute===t&&a.vehicle_id===vehicle&&a.resource_id===p.id))actions.push({minute:t,vehicle_id:vehicle,resource_id:p.id,status:'REJECTED',reason});continue;}
-        p.owner=vehicle;p.expires_minute=horizon+1;return {accepted:true,resource_id:p.id};
+        p.owner=vehicle;p.expires_minute=horizon+1;if(launch)p.vehicle_type=vehicleType;return {accepted:true,resource_id:p.id};
       }
       return {accepted:false,reason:'RESOURCE_UNHEALTHY'};
     },
     release(vehicle){const p=ports.find(p=>p.owner===vehicle);if(p){p.owner=null;p.expires_minute=null;}},
-    usable(vehicle,t){const p=ports.find(p=>p.owner===vehicle);return !!p&&p.installed&&p.commissioned&&p.healthy&&p.compatible&&t<p.expires_minute;},
-    snapshot(depot,t){return {policy:c.policy,ports:ports.filter(p=>p.depot_id===depot).map(p=>({id:p.id,truth:{installed:p.installed,commissioned:p.commissioned,healthy:p.healthy,compatible:p.compatible,available:!p.owner},
+    usable(vehicle,t){const p=ports.find(p=>p.owner===vehicle);return !!p&&p.installed&&p.commissioned&&p.healthy&&p.compatible&&(!launch||p.compatible_vehicle_types.includes(p.vehicle_type))&&t<p.expires_minute;},
+    cap(vehicle){return ports.find(p=>p.owner===vehicle)?.cap_kw??Infinity;},
+    snapshot(depot,t){return {policy:c.policy,ports:ports.filter(p=>p.depot_id===depot).map(p=>({id:p.id,...(launch?{cap_kw:p.cap_kw,compatible_vehicle_types:[...p.compatible_vehicle_types]}:{}),truth:{installed:p.installed,commissioned:p.commissioned,healthy:p.healthy,compatible:p.compatible,available:!p.owner},
       observation:observations.get(p.id)?{...observations.get(p.id)}:null,knowledge:knowledge(p,t),planner_eligible:!!eligible(p,t),owner:p.owner,expires_minute:p.expires_minute}))};},
     result(){return {version:RESOURCES_VERSION,rejected_actions:actions,checks:[{name:'RESOURCE_PROPOSAL_FEASIBILITY',status:actions.length?'FAIL':'PASS',rejected_count:actions.length}],
       lease_rule:'Exclusive per-port reservation expires after the declared observation window; outages retain connected ownership and deliver zero power.',

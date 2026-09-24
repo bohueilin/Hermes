@@ -24,7 +24,7 @@ The existing models remain separate:
 | Street lab | Directed street congestion, pickup capacity and route trade-offs | Synthetic traffic; no charging or depot resource network |
 | Regional experiments | Declared paired changes, uncertainty and guardrails on four invented areas | Different geography and operating scope |
 
-The catalog now contains 50 cases and lessons: 12 Fleet day, six Street lab and 32 regional examples. Results from different models are not interchangeable.
+The catalog now contains 56 cases and lessons: 18 Fleet day, six Street lab and 32 regional examples. Results from different models are not interchangeable.
 
 ## What is sourced
 

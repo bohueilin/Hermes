@@ -189,6 +189,7 @@ release; the browser-only narrow-layout TODO is manually exercised. Direct file-
 of the offline package remains blocked by browser policy; packing, security checks and its
 worker parity test still run. No bypass of that browser restriction is used.
 
-M4 region bring-up, second regions, concurrent work, optimized physical charging/taper,
+M4 configuration-driven launch rehearsal is documented in [its runbook](FLEETLAB_DEPOT_LAUNCH.md).
+Concurrent work, optimized physical charging/taper,
 tariffs, worker shifts, production feeds, physical simulation and real airport operations
 remain out of scope. See the existing source of truth for observed release validation.

@@ -2,6 +2,18 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {installFakeDom} from './helpers/fake-dom.mjs';
 import {createOperationsLab} from '../src/ui/operations-lab.js';
+import {advancedOperationsDemoConfig} from '../src/model/bay-experiment-contract.js';
+
+test('loading a decision lesson selects its actual paired treatment; ordinary edits retain user choice',async()=>{
+ const restore=installFakeDom();try{const lab=createOperationsLab({reducedMotion:()=>true});
+ for(const [kind,expected]of [['resources','resource_freshness'],['airport','airport_forecast'],['charging','charging_redistribution']]){
+  lab.loadScenario(advancedOperationsDemoConfig(kind));const control=lab.element.querySelector('[aria-label="Paired treatment"]');assert.equal(control.value,expected);
+ }
+ const c=advancedOperationsDemoConfig('charging');c.charging.policy='deadline';lab.loadScenario(c);assert.equal(lab.element.querySelector('[aria-label="Paired treatment"]').value,'charging_deadlines');
+ await lab.run();const r=await lab.compareAdvanced({treatment:lab.element.querySelector('[aria-label="Paired treatment"]').value,seeds:[1001],resamples:1000});assert.equal(r.spec.axis.baseline,'redistribute');assert.equal(r.spec.axis.candidate,'deadline');
+ lab.setConfig({seed:45});assert.equal(lab.element.querySelector('[aria-label="Paired treatment"]').value,'charging_deadlines');lab.destroy();
+ }finally{restore();}
+});
 
 test('extensions are independent opt-ins and historical preset clears them',()=>{
  const restore=installFakeDom();try{const lab=createOperationsLab({reducedMotion:()=>true});

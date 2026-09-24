@@ -2,31 +2,34 @@
 import {allocateChargingPower,checkPowerProposal,chargingOrder} from './charging-allocation.js';
 import {createResourcePool} from './resource-observations.js';
 import {airportCohort} from './airport-demand.js';
+import {createLaunchState,sitePower,siteOpen} from './launch-contract.js';
 export const BAY_SYSTEM_METRICS='bay-systems-metrics-1.0.0';
 export function createBaySystems(c){
-  const horizon=Math.ceil(c.duration_hours*60),pool=c.resources?createResourcePool(c):null,rejected=[],invalid=new Set();
+  const launch=c.launch?createLaunchState(c):null;
+  const horizon=Math.ceil(c.duration_hours*60),pool=c.resources?createResourcePool(c,launch):null,rejected=[],invalid=new Set();
   const resourceMinutes={unknown_port_minutes:0,stale_port_minutes:0,false_ready_port_minutes:0,prediction_error_port_minutes:0,observed_port_minutes:0};
   let terminalStaging=[];
   const recoveries=new Map(),power={connected_vehicle_min:0,zero_power_vehicle_min:0,aged_job_minutes:0},areaTimeline=[];
-  const job=v=>({id:v.id,cap_kw:Math.min(c.charger_kw,v.profile.charge_limit_kw),needed_kwh:Math.max(0,v.battery_kwh*c.charge_target_pct/100-v.soc_kwh),
+  const job=v=>({id:v.id,cap_kw:Math.min(c.charger_kw,v.profile.charge_limit_kw,pool?.cap(v.id)??Infinity),needed_kwh:Math.max(0,v.battery_kwh*c.charge_target_pct/100-v.soc_kwh),
     queued_minute:v.visit.stages.at(-1).queued_minute,deadline_minute:v.visit.charge_deadline_minute});
   return {
-    pool,
+    pool,launch,
     begin(v,t){if(c.charging)v.visit.charge_deadline_minute=t+c.charging.deadline_budget_min+((Number(v.id.slice(4))-1)%3)*c.charging.deadline_spread_min;},
     order(queue,t){if(c.charging?.policy==='deadline'){const ids=chargingOrder(queue.map(job),'deadline',t,c.charging.starvation_min).map(j=>j.id);queue.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));}},
     allocate(vehicles,d,t){
       const active=vehicles.filter(v=>v.depot_id===d.depot_id&&v.state==='charging');
       const jobs=active.map(v=>({...job(v),cap_kw:pool&&!pool.usable(v.id,t)?0:job(v).cap_kw}));
-      const proposal=allocateChargingPower(jobs,c.site_power_kw,c.charging?.policy??'equal_share',t,c.charging?.starvation_min??60);
-      const reason=checkPowerProposal(jobs,c.site_power_kw,proposal);
+      const powerCap=sitePower(c,d.depot_id,t);
+      const proposal=allocateChargingPower(jobs,powerCap,c.charging?.policy??'equal_share',t,c.charging?.starvation_min??60);
+      const reason=checkPowerProposal(jobs,powerCap,proposal);
       if(reason&&t<horizon)rejected.push({minute:t,depot_id:d.depot_id,reason,status:'REJECTED'});
       for(const v of active){
         const kw=reason?0:proposal[v.id];v.charge_next=t===horizon?0:kw/60;
         v.remaining_min=kw>0?Math.ceil(job(v).needed_kwh/(kw/60)):null;d.charging_kw+=v.charge_next*60;
-        v.power_kw=v.charge_next*60;v.resource_blocked=pool&&!pool.usable(v.id,t)?'CONNECTED_RESOURCE_UNAVAILABLE':null;
+        v.power_kw=v.charge_next*60;v.resource_blocked=!siteOpen(c,d.depot_id,t)?'SITE_CLOSED':pool&&!pool.usable(v.id,t)?'CONNECTED_RESOURCE_UNAVAILABLE':null;
         if(t<horizon){power.connected_vehicle_min++;if(kw===0)power.zero_power_vehicle_min++;}
       }
-      if(d.charging_kw>c.site_power_kw+1e-7||!Number.isFinite(d.charging_kw))invalid.add('SITE_POWER_INVARIANT');
+      if(d.charging_kw>powerCap+1e-7||!Number.isFinite(d.charging_kw))invalid.add('SITE_POWER_INVARIANT');
       if(pool){d.resources=pool.snapshot(d.depot_id,t);for(const p of d.resources.ports){
         const truth=p.truth.installed&&p.truth.commissioned&&p.truth.healthy&&p.truth.compatible;
         if(t<horizon){

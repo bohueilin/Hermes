@@ -1,4 +1,5 @@
 /** Optional serial work-order contract for the Bay engine; no independent simulator. */
+import {launchDepot,stageCapacity,sitePower,siteOpen} from './launch-contract.js';
 export const READINESS_VERSION='depot-readiness-1.0.0';
 export const READINESS_METRICS_VERSION='depot-readiness-metrics-1.0.0';
 export const REQUIRED_WORK_RULE='serial-every-visit-clean-charge-upload-scheduled-software-1';
@@ -29,15 +30,17 @@ export function mandatoryWorkComplete(visit){
 export function createReadiness(c){
   const horizon=Math.ceil(c.duration_hours*60),allocations=new Map(),rejections=[],invalid=[];
   let queueMinutes=0,activeMinutes=0,maxWait=0;
-  const blockedMinutes={WORKER_UNAVAILABLE:0,BAY_UNAVAILABLE:0,BAY_AND_WORKER_UNAVAILABLE:0,POLICY_DEFERRED:0,OTHER_RESOURCE:0};
+  const blockedMinutes={WORKER_UNAVAILABLE:0,BAY_UNAVAILABLE:0,BAY_AND_WORKER_UNAVAILABLE:0,POLICY_DEFERRED:0,OTHER_RESOURCE:0,...(c.launch?{SITE_CLOSED:0}:{})};
+  const workers=depot=>launchDepot(c,depot)?.cleaning_workers??c.readiness.cleaning_workers;
   const task=v=>v.visit.work_order.find(t=>t.stage===v.state.replace('queued_',''));
   const owners=depot=>[...allocations.values()].filter(a=>a.depot_id===depot);
   function reject(v,minute,action){
     const id=task(v).id;
     if(!rejections.some(r=>r.task_id===id&&r.action===action))rejections.push({task_id:id,minute,action,check:'MANDATORY_WORK_POLICY',reason:'Mandatory work cannot be skipped or canceled.'});
   }
-  function reason(v){
-    const held=owners(v.depot_id),bay=held.length>=c.cleaning_bays,worker=held.length>=c.readiness.cleaning_workers;
+  function reason(v,minute){
+    if(c.launch&&!siteOpen(c,v.depot_id,minute))return 'SITE_CLOSED';
+    const held=owners(v.depot_id),bay=held.length>=stageCapacity(c,v.depot_id,'cleaning'),worker=held.length>=workers(v.depot_id);
     if(bay&&worker)return 'BAY_AND_WORKER_UNAVAILABLE';
     if(bay)return 'BAY_UNAVAILABLE';if(worker)return 'WORKER_UNAVAILABLE';
     return c.readiness.scheduler==='fifo'?null:'POLICY_DEFERRED';
@@ -55,14 +58,14 @@ export function createReadiness(c){
     mayStart(v,t){
       if(v.state!=='queued_cleaning')return true;
       if(c.readiness.scheduler==='skip_cleaning'||c.readiness.scheduler==='cancel_cleaning')reject(v,t,c.readiness.scheduler);
-      return reason(v)===null;
+      return reason(v,t)===null;
     },
     started(v,t){
       const item=task(v);item.status='active';item.started_minute=t;
       if(v.state==='cleaning'){
         const held=owners(v.depot_id);
         const free=(kind,count)=>Array.from({length:count},(_,i)=>`${v.depot_id}:${kind}-${i+1}`).find(id=>!held.some(a=>a[`${kind}_id`]===id));
-        const bay_id=free('bay',c.cleaning_bays),worker_id=free('worker',c.readiness.cleaning_workers);
+        const bay_id=free('bay',stageCapacity(c,v.depot_id,'cleaning')),worker_id=free('worker',workers(v.depot_id));
         if(!bay_id||!worker_id)throw new Error('INVALID_SIMULATION: cleaning acquired without both resources.');
         item.bay_id=bay_id;item.worker_id=worker_id;allocations.set(v.id,{depot_id:v.depot_id,bay_id,worker_id,task_id:item.id});
       }
@@ -78,28 +81,28 @@ export function createReadiness(c){
       }
     },
     release(v){if(!mandatoryWorkComplete(v.visit))throw new Error('INVALID_SIMULATION: mandatory release check failed.');},
-    inspect(v){
+    inspect(v,minute){
       if(!v.visit||v.visit.completed_minute!==null)return null;
       const item=v.visit.work_order.find(t=>['queued','active'].includes(t.status));
       return {visit_id:v.visit.id,task_id:item?.id??null,stage:item?.stage??null,
-        blocked_reason:v.state==='queued_cleaning'?reason(v):v.state.startsWith('queued_')?'OTHER_RESOURCE':v.state==='drive_to_depot'?'INBOUND_TRAVEL':null,
+        blocked_reason:v.state.startsWith('queued_')&&c.launch&&!siteOpen(c,v.depot_id,minute)?'SITE_CLOSED':v.state==='queued_cleaning'?reason(v,minute):v.state.startsWith('queued_')?'OTHER_RESOURCE':v.state==='drive_to_depot'?'INBOUND_TRAVEL':null,
         mandatory_remaining:v.visit.work_order.filter(t=>t.required&&t.status!=='completed').map(t=>t.stage),
         bay_id:item?.status==='active'?item.bay_id:null,worker_id:item?.status==='active'?item.worker_id:null};
     },
-    resources(depot){const held=owners(depot);return {capacity:c.readiness.cleaning_workers,in_use:held.length,free:c.readiness.cleaning_workers-held.length};},
+    resources(depot){const held=owners(depot);return {capacity:workers(depot),in_use:held.length,free:workers(depot)-held.length};},
     observe(vehicles,depots,minute){
       for(const v of vehicles){
         if(!Number.isFinite(v.soc_kwh)||v.soc_kwh<v.battery_kwh*c.reserve_soc_pct/100-1e-8||v.soc_kwh>v.battery_kwh+1e-8)invalid.push('BATTERY_RESERVE_BOUNDS');
         if(v.visit&&v.state.startsWith('queued_')){
           const item=task(v);maxWait=Math.max(maxWait,minute-item.queued_minute);
-          if(minute<horizon){item.queue_minutes++;queueMinutes++;blockedMinutes[this.inspect(v).blocked_reason]++;}
+          if(minute<horizon){item.queue_minutes++;queueMinutes++;blockedMinutes[this.inspect(v,minute).blocked_reason]++;}
         }else if(STAGES.includes(v.state)&&minute<horizon){task(v).active_minutes++;activeMinutes++;}
       }
       for(const d of depots){
-        if(d.charging_kw>c.site_power_kw+1e-8||!Number.isFinite(d.charging_kw))invalid.push('SITE_POWER_LIMIT');
-        for(const stage of STAGES)if(d.active[stage]>c[stage==='charging'?'chargers':`${stage}_bays`])invalid.push('RESOURCE_CONSERVATION');
+        if(d.charging_kw>sitePower(c,d.depot_id,minute)+1e-8||!Number.isFinite(d.charging_kw))invalid.push('SITE_POWER_LIMIT');
+        for(const stage of STAGES)if(d.active[stage]>stageCapacity(c,d.depot_id,stage))invalid.push('RESOURCE_CONSERVATION');
         const held=owners(d.depot_id);
-        if(held.length!==d.active.cleaning||held.length>c.readiness.cleaning_workers||new Set(held.map(a=>a.worker_id)).size!==held.length||new Set(held.map(a=>a.bay_id)).size!==held.length)invalid.push('RESOURCE_CONSERVATION');
+        if(held.length!==d.active.cleaning||held.length>workers(d.depot_id)||new Set(held.map(a=>a.worker_id)).size!==held.length||new Set(held.map(a=>a.bay_id)).size!==held.length)invalid.push('RESOURCE_CONSERVATION');
       }
     },
     finish(visits,metrics){

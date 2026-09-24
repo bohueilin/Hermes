@@ -8,15 +8,15 @@ create a new status, handoff, alignment or overview document; edit this one.
 | | |
 |---|---|
 | **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-metric-contract` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, clean at `6b376fb`) · Depot extension worktree `…/Hermes-depot-m1` on `codex/fleetlab-m2-m3` |
-| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git`; website lineage tracks `github/feat/fleetlab-playground`. M1 was committed locally as `7e0389d`; M2/M3 are being validated on `codex/fleetlab-m2-m3`. User authorized conditional website publication on 2026-09-22; release state is recorded in §7.5. |
+| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git`; website lineage tracks `github/feat/fleetlab-playground`. M1 source `7e0389d`, M2/M3 source `277d8e4`; M4 and scenario learning are validated on `codex/fleetlab-m2-m3`. User authorized M2/M3/M4 completion and website publication; release state is recorded in §7.5. |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
 | **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 registry provenance/static operator view built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline `3a7f595`; Task 8 static view `4b2e8b8`; forward-only repairs `18b47db`, `e42ed2c`) — Gate G: **96 passed**; replayable decision record; spec-file authoring, metric-contract CLI, and one loopback-only finished synthetic-run view; **lane merged onto `main` 2026-09-06 (`61a7145`) and pushed**. The PRD has been tracked since `aa04786` |
-| **Playground** | Website lineage `feat/fleetlab-playground` @ `6b376fb`; recorded published source `f85a28f`, deployment `ccb82b11` (2026-09-19). **M1 plus M2/M3 implemented locally** in `…/Hermes-depot-m1`: staffing/required work, two charging treatments, compatible paired runs, resource observations/outages, minimum synthetic SFO preparation. Explicit opt-ins preserve historical fixtures. **Observed release checks: 1,689 Node passed with performance enabled, zero failures/skips, 1 browser-only TODO; 89 Python parity/boundary passed; Ruff and both package checks passed.** Security and publication record: §7.5. |
+| **Playground** | Website lineage `feat/fleetlab-playground`; previous published source `f85a28f`, deployment `ccb82b11`. M1–M4 implemented and locally validated: staffing, charging treatments, paired evaluation, resource observations, synthetic SFO preparation and configuration-driven launch rehearsal. **1,714 Node passed, zero fail/skip, one existing browser-only TODO manually exercised; 89 Python parity/boundary passed; Ruff and static/offline packages passed.** Final security and publication gate: §7.5. |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
-| **Last updated** | 2026-09-22 (Playground M1–M3; other tracks retain their recorded dates) |
+| **Last updated** | 2026-09-24 (Playground M1–M4; other tracks retain their recorded dates) |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -747,6 +747,50 @@ must not: the number as a default edit (§10 rule 3).
 ---
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
+
+
+**M4 and scenario learning, validated 2026-09-24; publication pending.** The active user
+goal extends the prior M2/M3 instruction through M4 and authorizes conditional repository
+update and existing-site deployment. Main and unrelated worktrees remain untouched.
+`depot-launch-1.0.0` adds versioned RegionConfig/DepotConfig, owned setup tasks and dependency
+checks, per-site calendars/resources, mock commissioning actions and a second fictional
+region through the existing Bay lifecycle. Its result adapter checks producer/model/metric/
+rule compatibility, nested populations, unchanged external demand and recorded action/capacity
+consistency. Broken actions are rejected separately from invalid simulator state.
+
+The in-app template → configure → validate → rehearse workflow displays actual treatment,
+all-request pickup/completion, unfinished work, queue/active time, energy and recorded state.
+It invalidates stale results/exports on edits. The catalog now has **56 lessons** (18 Fleet day,
+six Street lab, 32 regional), with explicit decision questions, controls, outcomes and limits.
+No new engine, framework, backend or runtime dependency. All browser results remain
+`NOT_EVIDENCE`, simulation-only, deployment permission `NONE`; Python evidence is separate.
+[Exact local commands, demo, model/metric versions and limits](docs/FLEETLAB_DEPOT_LAUNCH.md).
+
+Fresh settled-tree release gates: `FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1
+playground/fleetlab/test/*.test.mjs`: **1,715 total, 1,714 pass, zero failure/cancel/skip,
+one existing browser-only layout TODO, 245 suites, 144.226 seconds**. Relevant Python parity/
+boundary **89 pass (9.29 seconds)**; Ruff and `git diff --check` pass. Static package **81 files,
+3,105,220 bytes including media**; offline HTML **2,466,050 bytes**, both within unchanged
+budgets and passing package checks. An earlier concurrent run saw a test/module edit race and
+one 28.79-ms wall/3.43-ms CPU timing outlier; the settled serialized run passed all unchanged
+performance limits. No test was deleted or weakened. Independent review found and fixed three
+comparison-boundary defects and three UI issues; regressions cover their failure modes.
+
+Local browser acceptance: Region B seed42/delay120 shows completed trips34→29 but on-time
+pickups24→26, with unfinished tasks42→49; Peninsula delay0 gives identical outcomes. Recorded
+port tables distinguish unreserved from usable. Keyboard owner removal invalidates output
+before validation, then `TASK_OWNER` blocks. Deadline catalog loading selects the proper axis;
+12 evaluation seeds return the recorded UNCHANGED/NO_RECOMMENDATION. At400px viewport,
+content385px has no page overflow. Offline direct-file browser execution remains blocked;
+package and worker parity pass. No full unrelated Python/MetaDrive suite is claimed.
+
+The earlier M1–M3 security scan `c37f68ed-0c6b-44c8-a4fb-f99e6e260580` sealed zero findings
+but retained an earlier pending-review marker and reports partial coverage. Its sealed result
+is preserved. The final M1–M4 immutable release range receives a separate, expanded-scope
+security review before publication; it does not replace that historical scan. Current served
+source remains `f85a28f`/`ccb82b11` until a deployment and public readback are recorded here.
+
+**Historical M2/M3 validation checkpoint (superseded by M4 above):**
 
 
 **M2/M3 implementation and release gate, 2026-09-22.** The current user explicitly

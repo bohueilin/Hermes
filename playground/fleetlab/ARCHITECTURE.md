@@ -1048,3 +1048,22 @@ whole runs and within bootstrap steps; configuration changes/destroy discard pen
 results. One seed has no interval or recommendation. Required unavailable populations
 block analysis. Outputs remain NOT_EVIDENCE with deployment permission NONE. See
 [the full metric and lifecycle contract](../../docs/FLEETLAB_DEPOT_M2_M3.md).
+
+## Configuration-driven launch rehearsal (M4, 2026-09-24)
+
+`launch-contract.js` validates explicit region/depot/mock-event versions and supplies optional
+geometry, fixed site identities, calendars, per-site capacities and physical port truth to
+the existing Bay lifecycle. `launch-rehearsal.js` constructs two config templates, validates
+setup, runs a uniform commissioning-time shift, and rejects incompatible recorded comparisons.
+The latter verifies exact producer/model/metric/rule versions, nested populations and setup
+actions/capacity before exposing deltas. Only setup transitions are replayed by this checker.
+
+`launch-view.js` owns a separate submitted config within Fleet day and renders recorded
+validation, actions, service, unfinished work, energy and minute tables. Every input edit
+invalidates results and export. `scenario-learning.js` supplies question/decision context and
+projects descriptive or instrument-recorded conclusions. Catalog scenario loading sets the
+matching paired treatment; no winner is computed by rendering.
+
+All launch versions start at 1.0.0. Existing unextended result hashes are preserved; the M2/M3
+paired adapter rejects launch configs. Region B uses explicit synthetic geometry through the
+same engine, not a second map simulator. [Contracts and exact metric populations](../../docs/FLEETLAB_DEPOT_LAUNCH.md).

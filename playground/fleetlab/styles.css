@@ -1373,3 +1373,16 @@ body { margin: 0; background: var(--ground); }
 @media (min-width: 768px) { .ops-experiment-settings { grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); } }
 .ops-experiment-settings input, .ops-experiment-settings select { min-width: 0; max-width: 100%; }
 .ops-depot-status td { overflow-wrap: anywhere; }
+.ops-decision-guide, .ops-launch-rehearsal {margin:1.2rem 0;padding:1.3rem;border:1px solid #d4ded0;border-radius:16px;background:#f8faf5;min-width:0;}
+.ops-decision-guide h2 {font-size:1.35rem;line-height:1.3;max-width:70ch;}
+.ops-decision-guide dl {display:grid;grid-template-columns:minmax(7rem, 1fr) minmax(0, 5fr);gap:.45rem 1rem;max-width:95ch;}
+.ops-decision-guide dt {font-weight:650;color:#335644;}
+.ops-decision-guide dd {margin:0;line-height:1.5;}
+.ops-launch-rehearsal > summary {font-size:1.15rem;font-weight:650;cursor:pointer;}
+.launch-settings, .launch-results, .launch-validation, .launch-site {min-width:0;}
+.launch-site {border-top:1px solid #d4ded0;padding-top:1rem;margin-top:1rem;}
+.launch-results pre {overflow:auto;max-height:24rem;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;}
+.launch-results td {max-width:32rem;overflow-wrap:anywhere;white-space:normal;}
+.launch-results caption, .launch-settings caption, .launch-validation caption {text-align:left;font-weight:650;padding:.6rem 0;}
+.ops-result-learning {border-left:3px solid #5c866c;padding:.4rem 1rem;margin:1rem 0;max-width:90ch;}
+@media(max-width:600px){.ops-decision-guide dl {grid-template-columns:1fr;gap:.25rem;}.ops-decision-guide dd {margin-bottom:.7rem;}.ops-launch-rehearsal,.ops-decision-guide {padding:.85rem;}}

@@ -30,3 +30,14 @@ test('multi-depot changes retain readable depot ids and values',()=>{
   assert.doesNotMatch(change,/\[object Object\]/);
   assert.match(change,/SF-1/);assert.match(change,/SJ-1/);
 });
+
+test('new decision lessons launch their versioned scenarios without mutating shared templates',()=>{
+  const restore=installFakeDom();try{
+    let patch;const catalog=createSimulationCatalog({onOperations:p=>{patch=p;}});
+    for(const [id,key] of [['staffing-readiness','readiness'],['power-redistribution','charging'],['deadline-charging','charging'],['resource-freshness','resources'],['airport-preparation','airport']]){
+      const card=catalog.element.querySelector(`[data-simulation="${id}"]`);assert.ok(card,id);card.querySelector('button').click();assert.ok(patch[key]?.version,id);
+      patch[key].version='tampered';card.querySelector('button').click();assert.notEqual(patch[key].version,'tampered');
+    }
+    catalog.element.querySelector('[data-simulation="region-launch"]').querySelector('button').click();assert.equal(patch.launch_rehearsal,'region_b');
+  }finally{restore();}
+});

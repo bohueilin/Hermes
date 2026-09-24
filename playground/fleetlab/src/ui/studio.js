@@ -7,7 +7,6 @@ import { openLearnCase } from "./learn.js";
 import { createOperationsLab } from "./operations-lab.js";
 import { createSimulationCatalog } from "./simulation-catalog.js";
 import { createStreetLab } from "./street-lab.js";
-import {defaultBayAreaConfig as defaultOperationsConfig} from "../model/bay-operations.js";
 
 const action = (text, fn, primary = false) => el("button", { type:"button",class:primary?"studio-button studio-button-primary":"studio-button",on:{click:fn} },text);
 const eyebrow = (text) => el("p",{class:"eyebrow"},text);
@@ -93,10 +92,11 @@ function approach(navigate) {
       eyebrow("03 / MODEL FIDELITY & ROADMAP"),el("h2",{},"The next fidelity is operational."),
       el("p",{class:"section-lede"},"This is not a calibrated digital twin. The next work should improve the decisions the model can support, with each extension tested separately."),
       el("div",{class:"roadmap"},[
-        ["NOW","Run a fleet day","Individual AVs, time and weather, battery, shared charging power, cleaning, software and upload queues."],
-        ["NEXT","Increase model fidelity","Charge taper, outages, worker shifts, service-time distributions and a broader operational validation set."],
+        ["NOW","Test depot readiness","Serial staffing, two charging allocation treatments, delayed resource observations and synthetic airport preparation with paired guardrails."],
+        ["NOW","Rehearse depot setup","Versioned region/site configuration, owned setup tasks, usable-resource checks and commissioning-delay rehearsals in Peninsula and fictional Region B."],
+        ["NEXT","Increase model fidelity","Charge taper, worker shifts, service-time distributions and a broader operational validation set."],
         ["THEN","Calibrate & validate","Use approved operational data, fit travel and service distributions, check held-out periods and publish the error envelope."],
-        ["LATER","Repeatable depot setup","Versioned site/resource configuration, validation contracts and a bring-up API with testable commissioning criteria."],
+        ["LATER","Study physical questions","Choose a specific movement or mechanical question before adding a higher-fidelity simulator. These browser models have no physical actuation."],
       ].map(([phase,title,text])=>el("article",{},[eyebrow(phase),el("h3",{},title),el("p",{},text)]))),
     ]),
     el("section",{class:"approach-section"},[eyebrow("04 / HOW TO EVALUATE THE PRODUCT"),el("h2",{},"Test understanding, then usefulness."),el("div",{class:"people-grid"},[
@@ -123,7 +123,7 @@ export function mountStudio(app) {
     el("nav",{"aria-label":"Main navigation"},navButtons),
     el("span",{class:"studio-status"},[el("span",{"aria-hidden":"true"},"◉"),"SIMULATION LAB"]),
   ]);
-  const boundary = el("div",{class:"studio-boundary",role:"note"},[el("strong",{},"Teaching model"),"Real geography in Fleet day and Street lab. Simulated demand and operations. No real fleet performance claim."]);
+  const boundary = el("div",{class:"studio-boundary",role:"note"},[el("strong",{},"Teaching model"),"Bay Area geography in Fleet day and Street lab; Region B is fictional. Simulated demand and operations. No real fleet performance claim."]);
   const film = createHeroFilm();
   const home = overview(navigate, film);
   const product = approach(navigate);
@@ -131,7 +131,7 @@ export function mountStudio(app) {
   const streets = createStreetLab();
   const catalog = createSimulationCatalog({
     onStreets(hotspot){streets.setConfig({hotspot});navigate("streets");},
-    onOperations(patch){operations.setConfig({...defaultOperationsConfig(),...patch});navigate("simulation");},
+    onOperations(patch){if(patch.launch_rehearsal)operations.chooseLaunchTemplate(patch.launch_rehearsal);else operations.loadScenario(patch);navigate("simulation");},
     onRegional(preset){
       if(CHOOSER_PRESET_IDS.includes(preset.id)){navigate("depots");startFromPreset(store.dispatch,preset.id);}
       else {navigate("operations");if(preset.learnCase){openLearnCase(store.dispatch,preset.learnCase);store.dispatch({type:"mode/set",mode:"learn"});}else store.dispatch({type:"preset/select",presetId:preset.id,scenario:preset.scenario});}
