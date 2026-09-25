@@ -10,7 +10,7 @@ Hermes is designed to make an autonomy experiment reproducible and reviewable: i
 
 ## Try FleetLab in your browser
 
-**[Open the interactive FleetLab playground](https://fleetlab-playground.pages.dev/)** · [Source and quick start](playground/fleetlab/README.md) · [Cloudflare publishing guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md)
+**[Open the interactive FleetLab playground](https://fleetlab-playground.pages.dev/)** · [Source and quick start](playground/fleetlab/README.md) · [Project review and next-phase brief](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) · [Cloudflare publishing guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md)
 
 An independent product exploration by **Bo-Huei Lin**: follow a fleet through a simulated day, inspect its depot bottlenecks, and compare capacity decisions. The 3D Bay Area experience includes 18 city and airport locations, editable Jaguar I-PACE and Ojai vehicle profiles, and weather and demand scenarios. The new **Street lab** adds six downtown San Francisco bottlenecks, directed routes to SFO and the East Bay, block queues and same-demand routing comparisons. The catalog contains 56 cases and lessons across three teaching model families, including the newer depot readiness, charging, resource-observation, airport-preparation and launch-rehearsal extensions. Start with **Run a fleet day** or **Street lab**, then visit **Product approach** for the user needs, hypotheses and validation roadmap. See the [Street lab model and interview walkthrough](docs/FLEETLAB_STREET_LAB.md).
 

@@ -8,16 +8,16 @@ create a new status, handoff, alignment or overview document; edit this one.
 | | |
 |---|---|
 | **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-metric-contract` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, clean at `6b376fb`) · Depot extension worktree `…/Hermes-depot-m1` on `codex/fleetlab-m2-m3` |
-| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git`; website lineage tracks `github/feat/fleetlab-playground`. M1 source `7e0389d`, M2/M3 source `277d8e4`, M4/scenario-learning release `7874c7e` pushed without force and published. Final documentation records publication separately from the deployed source. User authorized M2/M3/M4 completion and website publication; verified release state is in §7.5. |
+| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git`; website lineage tracks `github/feat/fleetlab-playground`. Design-enhancement source `96fde5b` pushed normally and published after explicit owner authorization; publication records follow in a documentation-only commit. Main remains unchanged. Exact release state is in §7.5. |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
 | **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 registry provenance/static operator view built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline `3a7f595`; Task 8 static view `4b2e8b8`; forward-only repairs `18b47db`, `e42ed2c`) — Gate G: **96 passed**; replayable decision record; spec-file authoring, metric-contract CLI, and one loopback-only finished synthetic-run view; **lane merged onto `main` 2026-09-06 (`61a7145`) and pushed**. The PRD has been tracked since `aa04786` |
-| **Playground** | Website lineage `feat/fleetlab-playground`; published source **`7874c7e`**, deployment **`40858080`**, all **80 public files** matched. M1–M4 and 56 lessons are live: staffing, charging treatments, paired evaluation, resource observations, synthetic SFO preparation and configuration-driven launch rehearsal. **1,714 Node passed, zero fail/skip, one existing browser-only TODO manually exercised; 89 Python parity/boundary passed; Ruff and static/offline packages passed.** Final scoped security review complete with zero findings; hosted flows verified (§7.5). |
+| **Playground** | Website lineage `feat/fleetlab-playground`; published source **`96fde5b`**, Production deployment **`e72ae87d`**, all **84 public files** matched. M1–M4 plus addressable views/56 lessons, complete setup sharing, result provenance and accessibility improvements are live. **1,778 Node passed, zero fail/skip/cancel, one existing browser TODO; 89 Python parity/boundary passed; Ruff and static/offline packages passed.** Hosted flows and security headers verified. Previous security scan remains limited to its older range; broad Python fixture gate is non-green. |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
-| **Design enhancements release preparation** | Current user explicitly requests GitHub push and live-site publication after local review. Addressable views/56 lessons, complete versioned setup sharing, provenance and accessibility improvements are prepared in `Hermes-depot-m1`. Website and focused Python gates are rerun before release. Full Python fixture failures remain disclosed; current authorization supersedes the prior local-only restriction for this static website release. Publication identity will be recorded after readback. |
-| **Last updated** | 2026-09-24 (Playground M1–M4; other tracks retain their recorded dates) |
+| **Design review and next phase** | [Comprehensive portable review brief](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md): project history, accepted/rejected feedback, exact release, tests/limits, 56 lessons and ChatGPT review prompt. Full Python retained-fixture failures and a cosmetic Street-panel literal-null observation remain disclosed; proposed next phases are not implementation approval. |
+| **Last updated** | 2026-09-25 UTC (Playground design release; other tracks retain their recorded dates) |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -748,6 +748,27 @@ must not: the number as a default edit (§10 rule 3).
 ---
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
+
+**Current design release, published September 25, 2026 UTC.** Explicit owner authorization
+superseded the local-only design handoff. Source `96fde5b862119c9bbcd7a2ae76450f8dee616f93`
+was pushed normally to the website branch and deployed as Production
+`e72ae87d-6b96-47a0-950d-4d4a87b8bb95`; main and unrelated worktrees remain unchanged.
+All 84 public payloads match the checked build. Native routes and all 56 lesson links,
+complete validated setup snapshots, accessible structure, exact result context and selective
+copy improvements are live. No model-engine changes, backend, accounts or telemetry were added.
+
+Fresh release validation: 1,778 Node pass, no fail/skip/cancel, one existing TODO; 89 Python
+playground pass; Ruff and static/offline checks pass. Static package 85 files / 3,149,404 bytes;
+offline HTML 2,510,896 bytes. Hosted sharing restores 24 versus 48 AV inputs without autorun;
+explicit runs reproduce 95/284 versus 197/284. Direct Lombard lesson reproduces 39/71.
+Malformed links recover explicitly; history, visible landmarks and security headers verified.
+The broader Python fixture gate remains non-green (1,433 pass, 186 fail, 42 errors, 56 skip);
+this scoped publication does not establish main-integration readiness. A cosmetic literal-null
+text node in an existing Street vehicle panel is recorded for follow-up. No new exhaustive
+security scan or unsupported AT/cross-browser/page-load measurement is claimed.
+
+[Full project review, release evidence, limitations and proposed next phases](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md).
+The following M1–M4 release narrative is a historical September 24 checkpoint.
 
 
 **M1–M4 and scenario learning, validated and published 2026-09-24.** The active user

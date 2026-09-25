@@ -1,12 +1,27 @@
-# Current local FleetLab design enhancements — September 24, 2026
+# Current FleetLab design release — September 25, 2026 UTC
 
-The approved design-audit enhancements are implemented locally in `Hermes-depot-m1`, with no commit, push or publication. See [the implementation and validation report](docs/FLEETLAB_DESIGN_ENHANCEMENTS_HANDOFF_2026-09-24.md) for behavior, commands, package digests, review findings and limits.
+Published at **https://fleetlab-playground.pages.dev/** from source `96fde5b862119c9bbcd7a2ae76450f8dee616f93`,
+deployment `e72ae87d-6b96-47a0-950d-4d4a87b8bb95`. The normal GitHub push targets
+`feat/fleetlab-playground`; main is unchanged. The owner explicitly authorized publication.
 
-Added addressable views and all 56 lessons, validated complete setup snapshots, current-versus-submitted settings, accessible main/heading structure, precise provenance and focused copy improvements. Final website suite: 1,778 pass, zero fail/skip and one existing TODO; final presentation follow-up: 111 pass and the same TODO. Playground Python contracts: 89 pass against `cce9fe0`. Both local distribution checks pass. The full repository Python gate remains non-green because retained evidence fixtures are absent: 186 fail, 42 errors, 56 skip, 1,433 pass. No Python or protected-path changes. Native file browser validation is policy-blocked; unsupported performance/AT/browser measurements are disclosed.
+The [complete review and next-phase brief](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) covers the entire FleetLab trajectory,
+accepted/rejected Muse feedback, shipped enhancements, exact release identity, validation,
+known limits, all 56 lesson links and a ready-to-use ChatGPT review prompt.
 
-The published release below remains unchanged. Current HEAD is still `cce9fe027a9509e30695c2c741a6c6a406292940`; intended changes remain uncommitted for local review.
+Fresh release checks: **1,778 Node passed**, zero fail/skip/cancel and one existing browser-only
+TODO; **89 Python playground parity/boundary passed**; Ruff, static/offline package checks and
+whitespace passed. All **84 public files** match the local build. Response security headers
+and live navigation, sharing, direct-lesson, invalid-link and deterministic-run flows passed.
+The full repository Python fixture gate remains non-green: 1,433 pass, 186 fail, 42 errors,
+56 skip. No Python or protected-path change. Native file-browser execution, real assistive
+technology, cross-browser/device and page-load lab coverage remain unverified. A small existing
+Street-panel literal-null rendering defect was observed and recorded for follow-up.
 
-# Latest FleetLab release
+The [pre-publication report](docs/FLEETLAB_DESIGN_ENHANCEMENTS_HANDOFF_2026-09-24.md)
+is preserved as a historical checkpoint. Publication records follow the deployed source in a
+documentation-only commit; that does not change the served package.
+
+# Previous M1–M4 release — September 24, 2026
 
 The [depot milestones release](docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md) is published at
 **https://fleetlab-playground.pages.dev/** from source `7874c7ed1453b97123946b43b153f80a7228088c`,

@@ -2,7 +2,7 @@
 
 ## What you need to do now
 
-**No account setup is required for the public Pages address.** Existing authentication was rechecked for this release; the account already owns the project. The public address to share is **https://fleetlab-playground.pages.dev/**. The [depot milestones release record](FLEETLAB_DEPOT_RELEASE_2026-09-24.md) identifies current deployment `40858080`, published source `7874c7e`, all 80 matching public files and successful hosted browser checks. The [homepage film](FLEETLAB_FILM_RELEASE_2026-09-19.md), [Street lab](FLEETLAB_STREET_RELEASE_2026-09-19.md) and [preceding release](FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) records preserve earlier publication checkpoints. A documentation-only branch head after release does not change the deployed application source.
+**No account setup is required for the public Pages address.** Existing authentication was rechecked for this release; the account already owns the project. The public address to share is **https://fleetlab-playground.pages.dev/**. The [design release and review brief](FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) identifies current deployment `e72ae87d`, published source `96fde5b`, all 84 matching public files and successful hosted browser checks. The [depot milestones record](FLEETLAB_DEPOT_RELEASE_2026-09-24.md) preserves the previous release and its security scope. The [homepage film](FLEETLAB_FILM_RELEASE_2026-09-19.md), [Street lab](FLEETLAB_STREET_RELEASE_2026-09-19.md) and [preceding release](FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) records preserve earlier publication checkpoints. A documentation-only branch head after release does not change the deployed application source.
 
 | Setting | Value |
 |---|---|

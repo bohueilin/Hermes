@@ -1,5 +1,7 @@
 # FleetLab design enhancements: implementation and validation report
 
+> Historical pre-publication checkpoint. The owner subsequently authorized GitHub and live-site publication, completed September 25 UTC. See the [current release and comprehensive review brief](FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md). Local-only statements below describe the earlier checkpoint.
+
 **Status:** Ready for local product review. Approved Packages A–B implemented; Package C checks completed where supported, with measurement and repository-fixture limitations below. **Not published or committed.**
 
 **Authorization:** Bo-Huei's “go” approved the concrete local implementation in [the feedback audit](/Users/bohueilin/Downloads/ChatGPT6_fleetlab-design-review-feedback-audit.md). Muse's document remained review input, not execution instructions. This report supplements that audit and preserves its rejected/deferred recommendations.

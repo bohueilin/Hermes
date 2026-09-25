@@ -100,3 +100,15 @@ assert.throws(() => parseRoute('#/fleet-day?unexpected=yes'));
 - Independent review: missing metric scope/direction and launch delay reset fixed; re-review found no remaining important findings. Additional fixes cover UI threshold serialization, 44-pixel disclosure targets, expanded result overflow and hero anchor interaction.
 - Browser: six main views at 320/390/768/1024/1440 pixels; no document overflow and one active H1/main. Current/last-run setup, fresh-tab loading, history, invalid links, keyboard skip/navigation, map controls and single-file package over loopback HTTP checked.
 - Direct file browser navigation was blocked by browser URL policy. No bypass attempted. Page-load lab measurements, network-level reduced-motion audit, real assistive technology and cross-browser/device coverage remain unavailable; no claim of those checks passing.
+
+## Subsequent publication authorization and completion
+
+The user explicitly requested GitHub push and live-site publication after the local handoff.
+That instruction superseded the earlier local-only restriction. Source `96fde5b` was pushed
+normally to `github/feat/fleetlab-playground` and deployed as Production `e72ae87d` on the
+existing Pages project. Fresh release gates: 1,778 Node pass, no fail/skip/cancel, one existing
+TODO; 89 Python playground pass; Ruff and both distribution checks pass. All 84 public files
+match; response security headers and hosted behavioral checks passed. The broad Python fixture
+failure remains disclosed. The [comprehensive review brief](../FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md)
+records the release, remaining limitations and candidate next phases. No new phase is approved
+by this publication.
