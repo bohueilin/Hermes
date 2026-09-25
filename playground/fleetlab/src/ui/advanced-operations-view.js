@@ -53,6 +53,7 @@ export function airportFrameView(airport){
 export function advancedComparisonView(r){
  const node=el('section',{},[el('p',{},`Synthetic teaching experiment; ${r.replications} paired repetitions. NOT_EVIDENCE; deployment permission NONE.`),el('p',{},`Validity: ${r.validity}. ${r.reason??''}`)]);
  if(r.spec){const s=r.spec;node.appendChild(el('div',{class:'ops-experiment-spec'},[
+  el('p',{class:'result-provenance'},`Fleet day paired model ${s.model_version??'Not available'}. Seeds ${s.seeds.join(', ')}. NOT_EVIDENCE; simulation-only; decision authority NONE.`),
   el('p',{},`Changed axis: ${s.axis.path}: ${s.axis.baseline} → ${s.axis.candidate}. All other scenario inputs are held fixed.`),
   el('p',{},`Held-out evaluation seeds: ${s.seeds.join(', ')}. Separate tuning seeds: ${s.tuning_seeds.join(', ')}.`),
   el('p',{},`Practical margin: ${s.margin} (fraction). Null treatment control: ${s.null_treatment?'enabled':'disabled'}.`)
@@ -84,5 +85,10 @@ export function createAdvancedExperimentControls(compare,invalidate){
  const options=()=>({treatment:treatment.value,seeds:parse(seeds.value),tuning_seeds:parse(tuning.value),margin:Number(margin.value),resamples:Number(resamples.value),null_treatment:nullTreatment.checked});
  const button=el('button',{type:'button',class:'studio-button studio-button-primary',on:{click:()=>compare(options())}},'Run paired policy experiment');
  const element=el('div',{class:'ops-experiment-settings'},[...[[treatment,'Treatment (requires matching extension)'],[seeds,'Evaluation seeds (comma separated, 1 to 40)'],[tuning,'Separate tuning seeds'],[margin,'Practical margin (fraction)'],[resamples,'Bootstrap resamples'],[nullTreatment,'Null control: baseline policy in both arms']].map(([control,caption])=>el('label',{class:'ops-field'},[caption,control])),button]);
- return {element,button,options,setTreatment(name){if(!['charging_redistribution','charging_deadlines','resource_freshness','airport_forecast'].includes(name))throw new RangeError('Unsupported treatment.');treatment.value=name;}};
+ function setTreatment(name){if(!['charging_redistribution','charging_deadlines','resource_freshness','airport_forecast'].includes(name))throw new RangeError('Unsupported treatment.');treatment.value=name;}
+ function setOptions(values={}){
+  const next={treatment:'charging_redistribution',seeds:Array.from({length:12},(_,i)=>1001+i),tuning_seeds:[42,43,44],margin:.02,resamples:2000,null_treatment:false,...structuredClone(values)};
+  setTreatment(next.treatment);seeds.value=next.seeds.join(',');tuning.value=next.tuning_seeds.join(',');margin.value=String(next.margin);resamples.value=String(next.resamples);nullTreatment.checked=next.null_treatment;
+ }
+ return {element,button,options,setTreatment,setOptions};
 }

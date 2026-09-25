@@ -16,6 +16,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
+| **Design enhancements release preparation** | Current user explicitly requests GitHub push and live-site publication after local review. Addressable views/56 lessons, complete versioned setup sharing, provenance and accessibility improvements are prepared in `Hermes-depot-m1`. Website and focused Python gates are rerun before release. Full Python fixture failures remain disclosed; current authorization supersedes the prior local-only restriction for this static website release. Publication identity will be recorded after readback. |
 | **Last updated** | 2026-09-24 (Playground M1–M4; other tracks retain their recorded dates) |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·

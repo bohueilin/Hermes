@@ -1,3 +1,5 @@
+import {routeHref,followLink} from './routes.js';
+import {CHOOSER_PRESET_IDS} from './experiment.js';
 import { PRESETS } from '../model/presets.js';
 import { el } from './dom.js';
 import { STREET_PRESETS } from '../model/street-simulation.js';
@@ -46,7 +48,7 @@ export function simulationCatalog(){
   ];
 }
 
-export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},onStreets=()=>{}}={}){
+export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},onStreets=()=>{},onLesson=null,hrefForLesson=r=>routeHref({page:r.target==='operations'?'simulation':r.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(r.id)?'depots':'operations',lesson:r.id})}={}){
   const records=simulationCatalog();const cards=el('div',{class:'catalog-grid'});const count=el('p',{class:'catalog-count',role:'status'});
   const search=el('input',{type:'search',placeholder:'Try charging, rain, depot, recall…','aria-label':'Search simulations',on:{input:()=>render()}});
   const filter=el('select',{'aria-label':'Simulation model',on:{change:()=>render()}},['All simulations','Fleet day','Street lab','Regional experiments'].map(x=>el('option',{value:x},x)));
@@ -67,7 +69,7 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
       el('div',{class:'catalog-card-meta'},[el('span',{},r.model),el('span',{},r.id)]),el('h2',{},r.title),el('p',{class:'catalog-question'},r.question),
       el('dl',{},[['Change',r.controls],['Watch',r.outputs],['Learn',r.lesson]].flatMap(([label,value])=>[el('dt',{},label),el('dd',{},value)])),
       el('details',{},[el('summary',{},'Limits of this example'),el('p',{},r.limits)]),
-      el('button',{type:'button',class:'studio-button',on:{click:()=>r.target==='operations'?onOperations(typeof r.patch==='function'?r.patch():structuredClone(r.patch)):r.target==='streets'?onStreets(r.hotspot):onRegional(r.preset)}},r.target==='operations'?'Try this in Fleet day  →':r.target==='streets'?'Open Street lab  →':'Open regional example  →'),
+      el('a',{href:hrefForLesson(r),class:'studio-button',on:{click:event=>followLink(event,()=>onLesson?onLesson(r):r.target==='operations'?onOperations(typeof r.patch==='function'?r.patch():structuredClone(r.patch)):r.target==='streets'?onStreets(r.hotspot):onRegional(r.preset))}},r.target==='operations'?'Try this in Fleet day  →':r.target==='streets'?'Open Street lab  →':'Open regional example  →'),
     ])));
     if(!shown.length)cards.appendChild(el('p',{},'No matching simulation. Try a resource or a different model.'));
   }

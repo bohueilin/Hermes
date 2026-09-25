@@ -1,3 +1,11 @@
+# Current local FleetLab design enhancements — September 24, 2026
+
+The approved design-audit enhancements are implemented locally in `Hermes-depot-m1`, with no commit, push or publication. See [the implementation and validation report](docs/FLEETLAB_DESIGN_ENHANCEMENTS_HANDOFF_2026-09-24.md) for behavior, commands, package digests, review findings and limits.
+
+Added addressable views and all 56 lessons, validated complete setup snapshots, current-versus-submitted settings, accessible main/heading structure, precise provenance and focused copy improvements. Final website suite: 1,778 pass, zero fail/skip and one existing TODO; final presentation follow-up: 111 pass and the same TODO. Playground Python contracts: 89 pass against `cce9fe0`. Both local distribution checks pass. The full repository Python gate remains non-green because retained evidence fixtures are absent: 186 fail, 42 errors, 56 skip, 1,433 pass. No Python or protected-path changes. Native file browser validation is policy-blocked; unsupported performance/AT/browser measurements are disclosed.
+
+The published release below remains unchanged. Current HEAD is still `cce9fe027a9509e30695c2c741a6c6a406292940`; intended changes remain uncommitted for local review.
+
 # Latest FleetLab release
 
 The [depot milestones release](docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md) is published at

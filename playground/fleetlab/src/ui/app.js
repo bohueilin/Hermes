@@ -559,7 +559,7 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
   // Present is a layer over whichever mode is showing, so it sits after the modes and is pressed, never selected.
   const presentButton = button(labels.PRESENT.open, () => togglePresent(), "present-toggle", { "aria-pressed": "false" });
   regions.topbar.replaceChildren(
-    el("h1", { class: "fl-title" }, labels.TOP_BAR.product),
+    el(studio ? "p" : "h1", { class: "fl-title" }, labels.TOP_BAR.product),
     el("div", { class: "fl-modes", role: "group", "aria-label": labels.TOP_BAR.modesName }, modeButtons),
     presentButton,
     controls.toggle,

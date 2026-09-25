@@ -11,6 +11,7 @@ const metrics=[['All requests','requests'],['Pickups within target','pickup_with
 
 export function launchComparisonView(r){
  const root=el('section',{},[el('h3',{},'What did commissioning change?'),el('p',{},`Rehearsal validity: ${r.validity}. ${r.reason??''}`)]);
+ root.appendChild(el('p',{class:'result-provenance'},`Launch rehearsal model ${r.version??'Not available'}. Demand seed ${r.spec?.seed??'Not available'}. NOT_EVIDENCE; simulation-only; decision authority NONE.`));
  if(r.validity!=='VALID'||!r.comparison?.comparable){root.appendChild(el('p',{},r.comparison?.reason??'No compatible comparison is available.'));return root;}
  const arms=[r.baseline,r.candidate],s=r.spec;
  root.appendChild(el('p',{},`Only commissioning time changes: ${s.baseline_delay_minutes} → ${s.delay_minutes} elapsed minutes. Region: ${s.region_id}. Seed: ${s.seed}. Observation: ${s.horizon_minutes} minutes.`));
@@ -50,7 +51,7 @@ export function launchComparisonView(r){
 }
 
 export function createLaunchPanel(){
- let config=createLaunchConfig('peninsula'),delay=90,result=null,token=0,destroyed=false,busy=false;
+ let config=createLaunchConfig('peninsula'),delay=90,result=null,lastSubmitted=null,token=0,destroyed=false,busy=false;
  const taskRefresh=[];
  const status=el('p',{role:'status'},'Choose a template, configure differences, validate, then rehearse.'),checks=el('div',{class:'launch-validation'}),results=el('div',{class:'launch-results'}),settings=el('div',{class:'launch-settings'});
  const select=el('select',{'aria-label':'Launch region template',on:{change:()=>chooseTemplate(select.value)}},[el('option',{value:'peninsula'},'Peninsula template'),el('option',{value:'region_b'},'Region B: fictional compact region')]);
@@ -90,7 +91,25 @@ export function createLaunchPanel(){
   ])),
   el('p',{},'Try a broken setup by clearing a commissioning owner, then validate to find the named blocker. Restore the owner or reload the template to continue. Pending commissioning can be rehearsed with reduced usable capacity. Setup checks do not grant launch permission.'),
  );}
- function chooseTemplate(name){config=createLaunchConfig(name);select.value=name;invalidate();renderSettings();element.open=true;}
+ function chooseTemplate(name){config=createLaunchConfig(name);delay=90;select.value=name;invalidate();renderSettings();element.open=true;}
+ /** Detached inputs in model units; delay is elapsed minutes from shift start. */
+ function getSharedSetup(source='current'){
+  if(source==='last-run'){
+   if(!lastSubmitted)throw new RangeError('No completed launch rehearsal. Rehearse first.');
+   return structuredClone(lastSubmitted);
+  }
+  if(source!=='current')throw new RangeError('Unsupported setup source.');
+  return structuredClone({model:'launch-rehearsal',config,options:{delay}});
+ }
+ /** Replace a validated launch setup and cancel pending results without running it. */
+ function loadSharedSetup(envelope){
+  if(envelope?.model!=='launch-rehearsal')throw new RangeError('Unsupported setup model.');
+  const next=structuredClone(envelope),report=validateLaunchConfig(next.config);
+  if(!report.ok)throw new RangeError(report.checks.filter(check=>check.status==='FAIL').map(check=>check.detail).join(' '));
+  if(!Number.isInteger(next.options?.delay)||next.options.delay<0||next.options.delay>1440)throw new RangeError('Commissioning delay must be an integer from 0 to 1440 minutes.');
+  invalidate();config=next.config;delay=next.options.delay;select.value=config.launch.region.id;renderSettings();element.open=true;
+  return getSharedSetup();
+ }
  function validate(){const report=validateLaunchConfig(config);checks.replaceChildren(
   table('Setup validation',['Check','Status','Detail'],report.checks.map(c=>[c.name,c.status,c.detail])),
   table('Configuration counts',['Measure','Count'],Object.entries(report.summary??{})),
@@ -99,9 +118,9 @@ export function createLaunchPanel(){
   const submitted=structuredClone(config),submittedDelay=delay,current=++token;busy=true;runButton.disabled=true;result=null;results.replaceChildren(el('p',{},'Rehearsing both arms against the same demand…'));
   await new Promise(resolve=>setTimeout(resolve,0));
   try{if(destroyed||token!==current)return;const r=compareCommissioning(submitted,submittedDelay);if(destroyed||token!==current)return;
-   result=r;results.replaceChildren(launchComparisonView(r));status.textContent='Rehearsal recorded. Review service, unfinished work and infrastructure together.';return r;
+   result=r;lastSubmitted={model:'launch-rehearsal',config:submitted,options:{delay:submittedDelay}};results.replaceChildren(launchComparisonView(r));status.textContent='Rehearsal recorded. Review service, unfinished work and infrastructure together.';return r;
   }catch(e){if(!destroyed&&token===current)results.replaceChildren(el('p',{role:'alert'},`Rehearsal unavailable: ${e.message}`));}
   finally{busy=false;if(!destroyed)runButton.disabled=false;}
  }
- renderSettings();return {element,chooseTemplate,validate,run,getState:()=>({config,result,delay}),destroy(){destroyed=true;token++;}};
+ renderSettings();return {element,chooseTemplate,validate,run,getSharedSetup,loadSharedSetup,getState:()=>structuredClone({config,result,delay}),destroy(){destroyed=true;token++;}};
 }

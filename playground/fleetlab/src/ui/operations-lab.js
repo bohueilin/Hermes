@@ -49,7 +49,7 @@ const groups=[
 ];
 
 export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false,requestFrame=fn=>requestAnimationFrame(fn),cancelFrame=id=>cancelAnimationFrame(id),onCatalog=()=>{}}={}){
-  let advancedComparison=null,comparisonVersion=0;
+  let advancedComparison=null,comparisonVersion=0,requestVersion=0,lastExperimentSetup=null,lastExperimentRun=null;
   let config=defaultOperationsConfig(),result=null,capacity=null,readinessComparison=null,minute=0,playing=false,stale=false,selected='car-1',speed=5,raf=null,lastTime=null,busy=false,destroyed=false,lastDetailKey=null,interactionVersion=0;
   const inputs=new Map();
   const element=el('main',{class:'operations-lab',id:'operations-lab'});
@@ -58,7 +58,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   const status=el('p',{class:'ops-status',role:'status'},'Choose your fleet and press Run fleet day.');
   const error=el('p',{class:'ops-error',role:'alert',hidden:true});
   const runButton=button('Run fleet day  ▶',()=>run(),true);
-  const preset=el('select',{'aria-label':'Start with a situation',on:{change:()=>{const p=presets.find(x=>x[0]===preset.value);loadScenario(typeof p[2]==='function'?p[2]():p[2]);}}},presets.map(([id,label])=>el('option',{value:id},label)));
+  const preset=el('select',{'aria-label':'Start with a situation',on:{change:()=>{const p=presets.find(x=>x[0]===preset.value);if(!p)return;loadScenario(typeof p[2]==='function'?p[2]():p[2]);preset.value=p[0];}}},[...presets.map(([id,label])=>el('option',{value:id},label)),el('option',{value:'custom',disabled:true},'Custom or shared setup')]);
   const weather=el('select',{'aria-label':'Weather',on:{change:()=>setConfig({weather:weather.value})}},[['clear','Clear'],['rain','Rain'],['heat','Hot day']].map(([value,label])=>el('option',{value},label)));
   const controls=el('aside',{class:'ops-controls','aria-label':'Simulation settings'},[eyebrow('1 / SET UP YOUR DAY'),el('label',{class:'ops-preset'},['Start with a situation',preset]),el('label',{class:'ops-weather'},['Weather',weather])]);
   const readinessMode=el('select',{'aria-label':'Depot work model',on:{change:()=>setConfig({readiness:readinessMode.value==='staffing'?defaultReadiness():undefined})}},[
@@ -84,7 +84,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   controls.appendChild(el('div',{class:'bay-profile-portraits'},portraits.map((portrait,i)=>el('figure',{},[portrait.element,el('figcaption',{},i?'Ojai · minivan':'I-PACE · SUV')]))));
   const profileInputs=new Map();
   const profileFields=[['battery_kwh','modeled battery','kWh',10,200,1],['charge_limit_kw','vehicle charge limit','kW',1,350,1],['energy_kwh_per_km','driving energy','kWh/km',.05,1,.01],['boarding_minutes','boarding time','min',.1,20,.1],['cleaning_multiplier','cleaning time factor','× base',.1,5,.1],['software_multiplier','software time factor','× base',.1,5,.1],['upload_multiplier','upload time factor','× base',.1,5,.1]];
-  controls.appendChild(el('details',{class:'bay-profile-editor'},[el('summary',{},'Vehicle assumptions · editable'),el('p',{},'Jaguar I-PACE and Ojai both support up to four riders. Battery, energy, power and timing below are teaching inputs. Ojai values are illustrative, not published vehicle specifications.'),...['ipace','ojai'].map(type=>el('section',{},[el('h3',{},VEHICLE_PROFILES[type].label),...profileFields.map(([key,label,unit,min,max,step])=>{
+  controls.appendChild(el('details',{class:'bay-profile-editor'},[el('summary',{},'Vehicle assumptions · editable'),el('p',{},'Jaguar I-PACE and Ojai are real vehicle names. Energy, charging and service values below are editable, synthetic teaching assumptions, not validated fleet measurements. Both profiles allow up to four riders. Ojai numerical defaults are illustrative, not published vehicle specifications.'),...['ipace','ojai'].map(type=>el('section',{},[el('h3',{},VEHICLE_PROFILES[type].label),...profileFields.map(([key,label,unit,min,max,step])=>{
     const input=el('input',{type:'number',value:config.vehicle_profiles[type][key],min,max,step,'aria-label':`${VEHICLE_PROFILES[type].label} ${label}`,on:{change:()=>setConfig({vehicle_profiles:{...config.vehicle_profiles,[type]:{...config.vehicle_profiles[type],[key]:input.value===''?NaN:Number(input.value)}}})}});profileInputs.set(`${type}.${key}`,input);
     return el('label',{class:'ops-field'},[el('span',{},label),el('span',{class:'ops-input-unit'},[input,el('small',{},unit)])]);
   })])),el('p',{},'Retail I-PACE nominal battery: 90 kWh. The modeled usable capacity here is an assumption. Both types use the same road-speed rules; profile names never add a speed advantage.')]));
@@ -136,7 +136,8 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   const outcomeCards=el('div',{class:'ops-outcome-cards'});
   const outcomesNote=el('p',{class:'ops-outcomes-note'},'Run a day to see outcomes.');
   const serviceBreakdown=el('div',{class:'ops-service-breakdown'});
-  const outcomeSection=el('section',{class:'ops-results'},[eyebrow('3 / UNDERSTAND THE RESULT'),el('h2',{},'How much service did this fleet deliver?'),outcomeCards,outcomesNote,serviceBreakdown]);
+  const resultProvenance=el('div',{class:'ops-result-provenance'});
+  const outcomeSection=el('section',{class:'ops-results'},[eyebrow('3 / UNDERSTAND THE RESULT'),el('h2',{},'How much service did this fleet deliver?'),resultProvenance,outcomeCards,outcomesNote,serviceBreakdown]);
   const readinessResult=el('div',{class:'ops-readiness-result'});
   outcomeSection.appendChild(readinessResult);
   const advancedResult=el('div',{class:'ops-advanced-result'});outcomeSection.appendChild(advancedResult);
@@ -159,8 +160,35 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   element.appendChild(launchPanel.element);element.appendChild(learning);element.appendChild(el('div',{class:'ops-workspace'},[controls,stage]));element.appendChild(outcomeSection);element.appendChild(readinessSection);element.appendChild(advancedSection);element.appendChild(capacitySection);element.appendChild(mixSection);element.appendChild(traffic);
   const modelBoundary=el('p',{class:'ops-model-boundary'},`Operational teaching model ${OPERATIONS_VERSION}. Real OpenStreetMap geography with synthetic demand and vehicle assumptions. This is a capacity experiment, not a calibrated digital twin or operational authorization. The regional A/B workbench uses its own unchanged model.`);element.appendChild(modelBoundary);
 
-  function loadScenario(patch){setConfig({...defaultOperationsConfig(),readiness:undefined,charging:undefined,resources:undefined,airport:undefined,...patch});experimentControls.setTreatment(config.airport?'airport_forecast':config.resources?'resource_freshness':config.charging?.policy==='deadline'?'charging_deadlines':'charging_redistribution');}
-  function setConfig(patch){config={...config,...patch};learning.replaceChildren(decisionView(decisionForConfig(config)));for(const key of ['readiness','charging','resources','airport'])if(config[key]===undefined)delete config[key];comparisonVersion++;advancedComparison=null;advancedContent.replaceChildren(el('p',{},'Settings changed. Run fleet day and compare again.'));advancedControls.sync();syncReadinessControls();syncVehicleControls();for(const [key,input]of inputs)if(key in patch)input.value=String(patch[key]);weather.value=config.weather;pause();if(result||capacity||readinessComparison||busy)stale=true;readinessComparison=null;readinessContent.replaceChildren(el('p',{},hasExtensions()?'M1 comparison unavailable with optional charging, resources or airport models.':'Settings changed. Compare again with the current settings.'));capacity=null;capacityContent.replaceChildren();mixContent.replaceChildren();renderStatus();if(!result)clock.textContent=operationsClock(config.start_hour*60);}
+  function loadScenario(patch){requestVersion++;setConfig({...defaultOperationsConfig(),...patch},{replace:true});experimentControls.setOptions();experimentControls.setTreatment(config.airport?'airport_forecast':config.resources?'resource_freshness':config.charging?.policy==='deadline'?'charging_deadlines':'charging_redistribution');}
+  function setConfig(patch,{replace=false}={}){config=structuredClone(replace?patch:{...config,...patch});preset.value='custom';learning.replaceChildren(decisionView(decisionForConfig(config)));for(const key of ['readiness','charging','resources','airport'])if(config[key]===undefined)delete config[key];comparisonVersion++;advancedComparison=null;advancedContent.replaceChildren(el('p',{},'Settings changed. Run fleet day and compare again.'));advancedControls.sync();syncReadinessControls();syncVehicleControls();for(const [key,input]of inputs)input.value=String(config[key]);weather.value=config.weather;pause();stale=!!result&&JSON.stringify(config)!==JSON.stringify(result.config);readinessComparison=null;readinessContent.replaceChildren(el('p',{},hasExtensions()?'M1 comparison unavailable with optional charging, resources or airport models.':'Settings changed. Compare again with the current settings.'));capacity=null;capacityContent.replaceChildren();mixContent.replaceChildren();error.hidden=true;renderStatus();if(!result)clock.textContent=operationsClock(config.start_hour*60);}
+  /** Return complete inputs in native model units; sharing never executes a model. */
+  function getSharedSetup(source='current',model='fleet-day'){
+    if(model==='launch-rehearsal')return launchPanel.getSharedSetup(source);
+    if(model!=='fleet-day')throw new RangeError('Unsupported setup model.');
+    if(source==='last-experiment'){
+      if(!lastExperimentSetup)throw new RangeError('No completed paired experiment. Run a comparison first.');
+      return structuredClone(lastExperimentSetup);
+    }
+    if(source==='last-run'){
+      if(!result)throw new RangeError('No completed fleet run. Run fleet day first.');
+      return structuredClone({model,config:result.config,options:lastExperimentRun===result?lastExperimentSetup.options:{}});
+    }
+    if(source!=='current')throw new RangeError('Unsupported setup source.');
+    const options=experimentControls.options(),group={charging_redistribution:'charging',charging_deadlines:'charging',resource_freshness:'resources',airport_forecast:'airport'}[options.treatment];
+    return structuredClone({model,config,options:group&&config[group]?options:{}});
+  }
+  /** Load an already validated setup, replacing effective inputs without running or replaying. */
+  function loadSharedSetup(envelope){
+    if(envelope?.model==='launch-rehearsal'){pause();return launchPanel.loadSharedSetup(envelope);}
+    if(envelope?.model!=='fleet-day')throw new RangeError('Unsupported setup model.');
+    const next=structuredClone(envelope),issues=validateOperationsConfig(next.config);
+    if(issues.length)throw new RangeError(issues.join(' '));
+    if(Object.keys(next.options??{}).length)freezeBayExperiment(next.config,next.options);
+    requestVersion++;setConfig(next.config,{replace:true});experimentControls.setOptions(next.options??{});
+    if(!Object.keys(next.options??{}).length)experimentControls.setTreatment(config.airport?'airport_forecast':config.resources?'resource_freshness':config.charging?.policy==='deadline'?'charging_deadlines':'charging_redistribution');
+    return getSharedSetup();
+  }
   function renderStatus(){status.textContent=busy?'Computing your simulated day…':stale?'Settings changed. These results use previous settings; run again to update.':result?`Day computed · ${result.config.fleet_size} AVs · ${result.config.depot_count} depots · seed ${result.config.seed}. ${playing?'Replay moving.':'Replay paused.'}`:'Choose your fleet and press Run fleet day.';status.classList.toggle('is-stale',stale);runButton.disabled=busy;runSettingsButton.disabled=busy;capacityButton.disabled=busy;mixButton.disabled=busy;readinessButton.disabled=busy||!config.readiness||!result||stale||hasExtensions();experimentControls.button.disabled=busy||!result||stale;}
   function pause(){interactionVersion++;playing=false;if(raf!==null)cancelFrame(raf);raf=null;lastTime=null;play.textContent='Play';renderStatus();}
   function resume(){if(!result||stale||destroyed)return;if(minute>=result.frames.length-1)minute=0;playing=true;lastTime=null;play.textContent='Pause';renderStatus();raf=requestFrame(tick);}
@@ -171,12 +199,13 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   async function run(){
     if(busy)return;comparisonVersion++;advancedComparison=null;advancedContent.replaceChildren();pause();const issues=validateOperationsConfig(config);
     if(issues.length){error.hidden=false;error.textContent=issues.join(' ');return;}
-    const submitted=JSON.parse(JSON.stringify(config)),version=interactionVersion;
+    const submitted=JSON.parse(JSON.stringify(config)),version=interactionVersion,request=requestVersion;
     error.hidden=true;busy=true;renderStatus();await new Promise(resolve=>setTimeout(resolve,0));
-    if(destroyed){busy=false;return;}
+    if(destroyed||request!==requestVersion){busy=false;if(!destroyed)renderStatus();return;}
     try{
       result=simulateOperations(submitted);modelBoundary.textContent=`Operational teaching model ${result.version}. Real OpenStreetMap geography with synthetic demand and vehicle assumptions. Simulation-only, NOT_EVIDENCE, decision authority NONE. Street lab, regional experiments and Python evidence remain separate.`;readinessComparison=null;readinessContent.replaceChildren(...(hasExtensions()?[el('p',{},'M1 comparison unavailable with optional charging, resources or airport models.')]:[]));advancedResult.replaceChildren(...(result.extensions?[advancedResultView(result)]:[]));readinessResult.replaceChildren(...(result.readiness?[readinessResultView(result)]:[]));capacity=null;capacityContent.replaceChildren();minute=0;lastDetailKey=null;
       stale=JSON.stringify(config)!==JSON.stringify(submitted);
+      resultProvenance.replaceChildren(el('p',{},`Fleet day model ${result.version}. Demand seed ${result.config.seed}. NOT_EVIDENCE; simulation-only; decision authority NONE.`),el('details',{class:'ops-result-details'},[el('summary',{},'Exact submitted configuration and recorded metrics'),el('pre',{},JSON.stringify({model_version:result.version,config:result.config,metrics:result.metrics,evidence_status:'NOT_EVIDENCE',decision_authority:'NONE'},null,2))]));
       selected=result.frames[0].vehicles[0]?.id??null;
       vehicleSelect.replaceChildren(...result.frames[0].vehicles.map(c=>el('option',{value:c.id},`${c.id} · ${VEHICLE_PROFILES[c.vehicle_type]?.label??''}`)));
       vehicleSelect.value=selected;slider.max=String(result.frames.length-1);renderOutcomes();renderMeasuredStages();renderFrame();
@@ -247,15 +276,15 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     serviceBreakdown.appendChild(el('p',{},'Each row includes only completed depot visits containing that stage. Unfinished visits are excluded and counted above. Return travel is excluded from on-site time.'));
     serviceBreakdown.appendChild(el('details',{},[el('summary',{},'Outcomes by vehicle type and pickup location'),table(['Type','AVs','Trips','Trips / AV','Distance (km)','Energy (kWh)'],result.metrics.by_vehicle_type.map(t=>[t.label,fmt(t.vehicle_count,0),fmt(t.completed_trips,0),fmt(t.trips_per_vehicle),fmt(t.distance_km),fmt(t.energy_consumed_kwh)])),table(['Pickup location','Requests','Completed','Unserved','Waiting','In progress'],result.metrics.by_place.map(p=>[p.label,...['total_requests','completed_trips','unserved_requests','pending_requests','in_progress_trips'].map(key=>fmt(p[key],0))]))]));
   }
-  async function compareCapacity(){if(busy)return;const issues=validateOperationsConfig(config);if(issues.length){error.hidden=false;error.textContent=issues.join(' ');return;}pause();error.hidden=true;const submitted=JSON.parse(JSON.stringify(config));busy=true;renderStatus();capacityContent.replaceChildren(el('p',{},'Comparing the same demand across fleet and depot counts…'));await new Promise(resolve=>setTimeout(resolve,0));if(destroyed){busy=false;return;}if(JSON.stringify(config)!==JSON.stringify(submitted)){busy=false;capacityContent.replaceChildren(el('p',{},'Settings changed. Compare again with the current settings.'));renderStatus();return;}try{
+  async function compareCapacity(){if(busy)return;const issues=validateOperationsConfig(config);if(issues.length){error.hidden=false;error.textContent=issues.join(' ');return;}pause();error.hidden=true;const submitted=JSON.parse(JSON.stringify(config)),request=requestVersion;busy=true;renderStatus();capacityContent.replaceChildren(el('p',{},'Comparing the same demand across fleet and depot counts…'));await new Promise(resolve=>setTimeout(resolve,0));if(destroyed||request!==requestVersion){busy=false;if(!destroyed)renderStatus();return;}if(JSON.stringify(config)!==JSON.stringify(submitted)){busy=false;capacityContent.replaceChildren(el('p',{},'Settings changed. Compare again with the current settings.'));renderStatus();return;}try{
     capacity=analyzeOperationsCapacity(submitted);
     const trialsTable=trials=>table(['AV cars','Depots','Trips done','Requests','Completed','95% target','Unserved'],trials.map(t=>{const m=t.metrics??t;return [String(t.fleet_size??m.fleet_size),String(t.depot_count??m.depot_count),fmt(m.completed_trips,0),fmt(m.total_requests,0),t.completion_fraction===null?'Not available':`${fmt(t.completion_fraction*100)}%`,t.completion_fraction===null?'Not available':t.completion_fraction>=capacity.target_completion_fraction?'Met':'Below target',fmt(m.unserved_requests,0)];}));
     capacityContent.replaceChildren(el('p',{class:'ops-capacity-answer'},capacity.min_depots===null?'No tested depot count met the 95% end-of-day completion target. Inspect fleet supply, the time window and service constraints.':`${capacity.min_depots} depot${capacity.min_depots===1?'':'s'} is the first tested count to meet the 95% target for this fleet and these assumptions.`),el('p',{},'This is a bounded scenario comparison, not an optimal site plan. Late unfinished trips remain in the denominator. Depot size and resources per site are held fixed.'),el('div',{class:'ops-capacity-tables'},[el('section',{},[el('h3',{},'Change fleet size; keep depots fixed'),trialsTable(capacity.fleet_trials)]),el('section',{},[el('h3',{},'Change depot count; keep fleet fixed'),trialsTable(capacity.depot_trials)])]));
   }catch(e){capacityContent.replaceChildren(el('p',{},`Capacity comparison unavailable: ${e.message}`));}finally{busy=false;renderStatus();}}
   async function compareMix(){
     if(busy)return;const issues=validateOperationsConfig(config);if(issues.length){error.hidden=false;error.textContent=issues.join(' ');return;}
-    pause();error.hidden=true;const submitted=JSON.parse(JSON.stringify(config));busy=true;renderStatus();mixContent.replaceChildren(el('p',{},'Reusing the same demand for all three fleets…'));await new Promise(resolve=>setTimeout(resolve,0));
-    if(destroyed){busy=false;return;}if(JSON.stringify(config)!==JSON.stringify(submitted)){busy=false;mixContent.replaceChildren(el('p',{},'Settings changed. Compare again.'));renderStatus();return;}
+    pause();error.hidden=true;const submitted=JSON.parse(JSON.stringify(config)),request=requestVersion;busy=true;renderStatus();mixContent.replaceChildren(el('p',{},'Reusing the same demand for all three fleets…'));await new Promise(resolve=>setTimeout(resolve,0));
+    if(destroyed||request!==requestVersion){busy=false;if(!destroyed)renderStatus();return;}if(JSON.stringify(config)!==JSON.stringify(submitted)){busy=false;mixContent.replaceChildren(el('p',{},'Settings changed. Compare again.'));renderStatus();return;}
     try{const comparison=analyzeVehicleMix(submitted);mixContent.replaceChildren(table(['Fleet','Trips done','Trips / AV','Mean trip (min)','Depot time (min)','Energy used (kWh)'],comparison.trials.map(t=>[t.ojai_share_pct===0?'All I-PACE':t.ojai_share_pct===100?'All Ojai':'50 / 50',fmt(t.metrics.completed_trips,0),fmt(t.metrics.trips_per_vehicle),fmt(t.metrics.avg_trip_min_completed??t.metrics.avg_trip_minutes_completed),fmt(t.metrics.avg_depot_onsite_min),fmt(t.metrics.energy_consumed_kwh)])),el('p',{},'Differences reflect the declared profiles and this scenario. They do not establish the performance of either commercial fleet. Charging is linear; taper and thermal limits are not modeled.'));}
     catch(e){mixContent.replaceChildren(el('p',{},`Comparison unavailable: ${e.message}`));}finally{busy=false;renderStatus();}
   }
@@ -265,10 +294,10 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     if(!result||stale){readinessContent.replaceChildren(el('p',{},'Run fleet day with these settings before comparing.'));return;}
     const issues=validateOperationsConfig(config);
     if(issues.length){error.hidden=false;error.textContent=issues.join(' ');return;}
-    pause();error.hidden=true;const submitted=structuredClone(config);busy=true;renderStatus();
+    pause();error.hidden=true;const submitted=structuredClone(config),request=requestVersion;busy=true;renderStatus();
     readinessContent.replaceChildren(el('p',{},'Comparing staffing and bays with the same external demand…'));
     await new Promise(resolve=>setTimeout(resolve,0));
-    if(destroyed){busy=false;return;}
+    if(destroyed||request!==requestVersion){busy=false;if(!destroyed)renderStatus();return;}
     if(JSON.stringify(config)!==JSON.stringify(submitted)){busy=false;readinessContent.replaceChildren(el('p',{},'Settings changed. Compare again.'));renderStatus();return;}
     try{readinessComparison=analyzeDepotReadiness(submitted);readinessContent.replaceChildren(readinessComparisonView(readinessComparison));}
     catch(e){readinessComparison=null;readinessContent.replaceChildren(el('p',{},`Comparison unavailable: ${e.message}`));}
@@ -278,8 +307,8 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   async function compareAdvanced(options=experimentControls.options()){
     if(busy)return;
     if(!result||stale){advancedContent.replaceChildren(el('p',{},'Run fleet day with these settings before comparing.'));return;}
-    pause();advancedComparison=null;const token=++comparisonVersion;let frozen;
-    try{frozen=freezeBayExperiment(structuredClone(config),options);}catch(e){advancedContent.replaceChildren(el('p',{},`Experiment unavailable: ${e.message}`));return;}
+    pause();advancedComparison=null;const token=++comparisonVersion,submitted=structuredClone(config),submittedRun=result;let frozen;
+    try{frozen=freezeBayExperiment(submitted,structuredClone(options));}catch(e){advancedContent.replaceChildren(el('p',{},`Experiment unavailable: ${e.message}`));return;}
     busy=true;renderStatus();advancedContent.replaceChildren(el('p',{},'Preparing paired repetitions…'));
     const iterator=bayExperimentSteps(frozen);
     try{
@@ -287,7 +316,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
         await new Promise(resolve=>setTimeout(resolve,0));
         if(destroyed||token!==comparisonVersion){iterator.return?.();return;}
         const next=iterator.next();
-        if(next.done){advancedComparison=next.value;advancedContent.replaceChildren(advancedComparisonView(advancedComparison));return advancedComparison;}
+        if(next.done){advancedComparison=next.value;const s=frozen.spec;lastExperimentSetup={model:'fleet-day',config:submitted,options:structuredClone({treatment:s.treatment,seeds:s.seeds,tuning_seeds:s.tuning_seeds,margin:s.margin,resamples:s.resamples,null_treatment:s.null_treatment})};lastExperimentRun=submittedRun;advancedContent.replaceChildren(advancedComparisonView(advancedComparison));return advancedComparison;}
         advancedContent.replaceChildren(el('p',{role:'status'},`${next.value.phase}: ${next.value.completed} / ${next.value.total}. Paired teaching simulations, NOT_EVIDENCE.`));
       }
     }catch(e){if(!destroyed&&token===comparisonVersion)advancedContent.replaceChildren(el('p',{},`Experiment unavailable: ${e.message}`));}
@@ -296,5 +325,5 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   function table(headings,rows){return el('div',{class:'ops-table-wrap'},el('table',{},[el('thead',{},el('tr',{},headings.map(x=>el('th',{scope:'col'},x)))),el('tbody',{},rows.map(row=>el('tr',{},row.map(x=>el('td',{},x)))))]));}
   for(const selector of ['.ops-vehicle-table','.ops-depot-detail'])element.querySelector(selector).addEventListener('toggle',()=>renderFrame());
   advancedControls.sync();syncReadinessControls();syncVehicleControls();renderFrame();renderStatus();
-  return {element,run,pause,seek,nextActivity,setConfig,loadScenario,compareCapacity,compareReadiness,compareAdvanced,chooseLaunchTemplate:name=>launchPanel.chooseTemplate(name),getState:()=>({config,result,capacity,readinessComparison,advancedComparison,minute,playing,stale}),destroy(){comparisonVersion++;pause();destroyed=true;launchPanel.destroy();map.destroy();portraits.forEach(p=>p.destroy());}};
+  return {element,run,pause,seek,nextActivity,setConfig,loadScenario,getSharedSetup,loadSharedSetup,compareCapacity,compareReadiness,compareAdvanced,chooseLaunchTemplate:name=>launchPanel.chooseTemplate(name),getState:()=>({config:structuredClone(config),result,capacity,readinessComparison,advancedComparison,minute,playing,stale}),destroy(){comparisonVersion++;requestVersion++;pause();destroyed=true;launchPanel.destroy();map.destroy();portraits.forEach(p=>p.destroy());}};
 }

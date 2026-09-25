@@ -10,7 +10,7 @@ const clock=(seconds,start=0)=>{const min=Math.floor(seconds/60)+start*60;return
 function download(name,data){const link=el('a',{href:'data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data)),download:name});document.body.appendChild(link);link.click();link.remove();}
 
 export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>requestAnimationFrame(fn),cancelFrame=id=>cancelAnimationFrame(id),reducedMotion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false}={}){
- let config=defaultStreetConfig(),result=null,comparison=null,time=0,playing=false,raf=null,lastTime=null,stale=false,busy=false,destroyed=false,selected='AV-01',edgeId=null,lastDetails='',revision=0,pauseVersion=0;
+ let config=defaultStreetConfig(),result=null,comparison=null,time=0,playing=false,raf=null,lastTime=null,stale=false,busy=false,destroyed=false,selected='AV-01',edgeId=null,lastDetails='',revision=0,pauseVersion=0,runGeneration=0;
  const inputs=new Map(),anchors=new Map(network.anchors.map(a=>[a.id,a])),edges=new Map(network.edges.map(e=>[e.id,e]));
  const label=id=>anchors.get(id)?.label??id;
  const status=el('p',{class:'street-status',role:'status'},'Choose a bottleneck, then run the street scenario.');
@@ -31,7 +31,7 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   el('details',{},[el('summary',{},'Repeatability & model rules'),field('seed','Street demand seed','same seed repeats inputs',0,4294967295),el('p',{},'Five-second road steps. FIFO links with 7.5 m storage per vehicle per modeled lane. Base discharge 0.32 vehicles/second/lane, up to four lanes. Tagged signals use an illustrative 90-second cycle, 45 seconds green. Rain adds 20% travel time and reduces discharge 15%.'),el('p',{},'Background demand: 60% on this hotspot route, 20% across hotspot routes, 20% toward SFO or the East Bay. Vehicle mix is 50/50 illustrative I-PACE and Ojai bodies with identical road behavior. No lane changing, collisions or calibrated vehicle dynamics.')]),
  ]);
  const settings=el('aside',{class:'street-settings'},[fields,el('p',{class:'street-input-note'},'Every operating value here is a teaching assumption.'),runButton,compareButton,status,error]);
- const timeLabel=el('strong',{class:'street-clock'},clock(0,config.start_hour)),live=el('span',{class:'street-live-count'});
+ const timeLabel=el('strong',{class:'street-clock'},clock(0,config.start_hour)),live=el('span',{class:'street-replay-count'});
  const playButton=button('Play',()=>{if(playing)pause();else play();}),stepButton=button('Step 5 sec',()=>seek(time+5));
  const timeline=el('input',{type:'range',min:0,max:7200,step:5,value:0,'aria-label':'Street replay time',on:{input:()=>seek(Number(timeline.value))}});
  const speed=el('select',{'aria-label':'Street replay speed'},[[30,'30×'],[60,'60×'],[180,'180×']].map(([v,t])=>el('option',{value:v},t)));speed.value='60';
@@ -50,7 +50,7 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
  ]);
  const results=el('section',{class:'street-results'},[eyebrow('3 / READ THE TRADE-OFF'),el('h2',{},'What did the fleet manage to serve?'),el('p',{},'Run a scenario to see completed and unfinished journeys together.')]);
  const element=el('main',{class:'street-lab',id:'street-lab'},[
-  el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),el('h1',{},['One blocked street.',el('br'),el('span',{},'A citywide ripple.')]),el('p',{class:'hero-lede'},'A bridge queue can delay an airport pickup. Follow the cars, find the constraint, and test what a routing change actually improves.'),el('p',{class:'street-scope-line'},`${fmt(network.edges.length,0)} directed road links · Six downtown hotspots · Five-second replay`),button('Start the street demo  ↗',async()=>{await run();scene.element.scrollIntoView?.({block:'center',behavior:'instant'});},true)]),
+  el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),el('h1',{},['One blocked street.',el('br'),el('span',{},'A citywide ripple.')]),el('p',{class:'hero-lede'},'A bridge queue can delay an airport pickup. Follow the cars, find the constraint, and test what a routing change actually improves.'),el('p',{class:'street-scope-line'},`${fmt(network.edges.length,0)} directed road links · Six downtown hotspots · Five-second replay`),button('Start the street demo  ▶',async()=>{await run();scene.element.scrollIntoView?.({block:'center',behavior:'instant'});},true)]),
   presetRow,el('div',{class:'street-layout'},[settings,el('div',{class:'street-main'},[replay,inspect])]),results,
   el('section',{class:'street-learning'},[eyebrow('WHAT THIS MODEL HELPS YOU ASK'),el('h2',{},'Connect the street problem to an operating decision.'),el('div',{class:'street-learning-grid'},[
    ['Market lead','Is supply unavailable or simply stuck?','Read assigned, boarded and completed populations. Inspect time tied up in roads, pickup berths and turnaround before adding more AVs.'],
@@ -60,7 +60,7 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   el('details',{class:'street-method'},[el('summary',{},'Real geography, synthetic traffic: sources and limits'),
    el('p',{},'Sourced OpenStreetMap roads, one-way tags and supported node-via turn restrictions. Missing tags, time-dependent and via-way restrictions remain gaps. Market Street is conservatively excluded from this model; this is not a statement of current commercial access rules.'),
    el('p',{},'SFO is an airport-approach handoff. East Bay is an Oakland-side network gateway. Neither is an actual pickup zone or a claim of AV operating permission. The 15 to 45 minute delays motivating these cases are user-supplied stress descriptions, not verified typical travel times.'),
-   el('p',{},'Traffic signals, pedestrian friction, delivery blockages and event pressure are represented through capacity and timing assumptions. No live Google traffic feed, individual pedestrian model, driving safety validation or calibrated digital twin. Queue-aware routing reacts at leg departure; it does not reroute continuously or guarantee an optimal fleet.'),
+   el('p',{},'Traffic signals, pedestrian friction, delivery blockages and event pressure are represented through capacity and timing assumptions. No external Google traffic feed, individual pedestrian model, driving safety validation or calibrated digital twin. Queue-aware routing reacts at leg departure; it does not reroute continuously or guarantee an optimal fleet.'),
    el('p',{},'Next fidelity: validate these mechanisms against counted traffic and a SUMO street network. CARLA is complementary when a question needs sensor or driving-policy detail. Neither simulator alone establishes real-world safety.'),
    button('Download attributed street map',()=>download('fleetlab-sf-streets-odbl.json',streetMapDownload())),
   ]),
@@ -71,6 +71,20 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   for(const[key,input]of inputs)input.value=String(config[key]);policy.value=config.policy;weather.value=config.weather;
  }
  function setConfig(patch){config={...config,...patch};revision++;pause();stale=!!result;if(stale)status.textContent='Settings changed. Replay and results show the previous run until you run again.';sync();if(patch.hotspot)scene.focus(patch.hotspot);}
+ /** Returns detached current or submitted settings; time values retain their configured units. */
+ function getSharedSetup(source='current'){
+  if(!['current','last-run'].includes(source))throw new RangeError('Unknown setup source');
+  if(source==='last-run'&&!result)throw new Error('Run a street scenario before sharing its submitted settings.');
+  return {model:'street-lab',config:{...(source==='last-run'?result.config:config)},options:{}};
+ }
+ /** Loads a validated street setup without executing it; minute/second settings retain their units. */
+ function loadSharedSetup(envelope){
+  if(envelope?.model!=='street-lab'||!envelope.config)throw new TypeError('A street-lab setup is required');
+  config={...defaultStreetConfig(),...envelope.config};revision++;runGeneration++;pause();busy=false;stale=!!result;
+  fields.disabled=false;runButton.disabled=false;compareButton.disabled=false;error.hidden=true;
+  status.textContent=stale?'Shared settings loaded. Replay and results show the previous run until you run again.':'Shared settings loaded. Run the street scenario when ready.';
+  sync();scene.focus(config.hotspot);render();
+ }
  function pause(){pauseVersion++;playing=false;if(raf!==null)cancelFrame(raf);raf=null;lastTime=null;playButton.textContent='Play';}
  function play(){if(!result||destroyed)return;if(time>=result.config.duration_minutes*60)time=0;playing=true;lastTime=null;playButton.textContent='Pause';raf=requestFrame(tick);}
  function tick(timestamp){if(!playing||destroyed)return;if(lastTime!==null)time=Math.min(result.config.duration_minutes*60,time+Math.min(.1,(timestamp-lastTime)/1000)*Number(speed.value));lastTime=timestamp;render();if(time>=result.config.duration_minutes*60)pause();else raf=requestFrame(tick);}
@@ -102,8 +116,10 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   if(road&&s)blockDetail.appendChild(el('p',{},`Front car exit wait: ${fmt(s.front_wait_seconds/60)} min beyond its uncongested exit time. This is a recorded model wait, not an estimated clearance time.`));
  }
  function showResults(){
-  const s=result.summary;const metric=(title,value,note)=>el('article',{},[el('span',{},title),el('strong',{},value),el('small',{},note)]);
+  const s=result.summary,metadata=resultMetadata();const metric=(title,value,note)=>el('article',{},[el('span',{},title),el('strong',{},value),el('small',{},note)]);
   results.replaceChildren(eyebrow('3 / READ THE TRADE-OFF'),el('h2',{},'What did the fleet manage to serve?'),el('p',{},`${result.config.duration_minutes}-minute run · seed ${result.config.seed} · ${result.config.policy==='queue-aware'?'queue-aware':'free-flow'} routes. End-of-run totals, separate from the replay clock.`),
+   el('p',{class:'street-result-provenance'},`Model ${metadata.model_version} · Network ${metadata.network_version} · Seed ${metadata.seed} · ${metadata.evidence_status} · Authority: ${metadata.authority}`),
+   el('details',{class:'street-result-details'},[el('summary',{},'Exact submitted settings and results'),el('pre',{},JSON.stringify({metadata,config:result.config,summary:result.summary},null,2))]),
    el('div',{class:'street-metrics'},[metric('Completed journeys',`${s.completed} / ${s.requests}`,`${s.waiting} waiting · ${s.in_progress} in progress · ${s.expired} expired · ${s.unroutable} no route`),metric('Pickup wait',fmt(s.mean_pickup_minutes)+' min',`Mean for ${s.boarded} boarded riders, including pickup dwell`),metric('Passenger leg',fmt(s.mean_trip_minutes)+' min',`Mean for ${s.completed} completed journeys only`),metric('Empty road distance',fmt(s.empty_km)+' km','Actual traveled pickup distance, including partial legs')]),
    el('p',{class:'street-result-note'},`${fmt(s.busy_vehicle_minutes,0)} vehicle-minutes unavailable for another request. ${s.traffic.pending} road journeys still waiting outside the network; ${s.traffic.on_road} on a road; ${s.unavailable_background} background journeys had no modeled route. These are not completed trips.`),
    el('div',{class:'street-destination-results'},s.destinations.map(d=>metric(d.id==='sfo'?'SFO-bound':d.id==='east-bay'?'East Bay-bound':'Local / return to SF',`${d.completed} / ${d.requests}`,'Completed / requested network legs'))));
@@ -115,18 +131,19 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   }
   results.appendChild(el('h3',{},'Where did the queue move?'));
   results.appendChild(el('div',{class:'street-hotspot-results'},result.hotspots.map(h=>el('article',{},[el('strong',{},network.hotspots.find(x=>x.id===h.id).label),el('span',{},`${h.peak_queued} vehicles at peak queue`),el('small',{},`${fmt(h.blocked_link_minutes)} blocked link-minutes. Several blocked links count separately.`),button('Inspect this corridor',()=>{scene.focus(h.id);seek(result.frames.reduce((a,b)=>{const ids=new Set(network.hotspots.find(x=>x.id===h.id).edge_ids);const count=f=>f.roads.filter(e=>ids.has(e.id)).reduce((n,e)=>n+e.queued,0);return count(b)>count(a)?b:a;}).time);scene.element.scrollIntoView?.({block:'center',behavior:'instant'});})]))));
-  results.appendChild(button('Download experiment results',()=>download('fleetlab-street-experiment.json',{version:result.version,network_version:result.network_version,config:result.config,summary:result.summary,requests:result.requests,hotspots:result.hotspots,routes:result.routes,comparison:comparison?{baseline:comparison.baseline.summary,candidate:comparison.candidate.summary,delta:comparison.delta}:null})));
+  results.appendChild(button('Download experiment results',()=>download('fleetlab-street-experiment.json',{version:result.version,network_version:result.network_version,metadata:resultMetadata(),config:result.config,summary:result.summary,requests:result.requests,hotspots:result.hotspots,routes:result.routes,comparison:comparison?{baseline:comparison.baseline.summary,candidate:comparison.candidate.summary,delta:comparison.delta}:null})));
  }
+ function resultMetadata(){return {model_version:result.version,network_version:result.network_version,seed:result.config.seed,evidence_status:'NOT_EVIDENCE',authority:'NONE'};}
  function chooseRun(which){if(!comparison)return;pause();result=comparison[which];time=0;edgeId=null;lastDetails='';showResults();status.textContent=`Replaying ${result.config.policy} routes on the same demand.${stale?' Settings changed; this is the previous run.':''}`;render();}
  async function run(compare=false){
-  if(busy||destroyed)return;pause();busy=true;const captured={...config},version=revision,playIntent=pauseVersion;fields.disabled=true;runButton.disabled=true;compareButton.disabled=true;status.textContent=compare?'Comparing both policies on identical demand…':'Building the street experiment…';error.hidden=true;
+  if(busy||destroyed)return;pause();busy=true;const captured={...config},version=revision,playIntent=pauseVersion,generation=++runGeneration;fields.disabled=true;runButton.disabled=true;compareButton.disabled=true;status.textContent=compare?'Comparing both policies on identical demand…':'Building the street experiment…';error.hidden=true;
   await new Promise(resolve=>setTimeout(resolve,0));
-  try{if(destroyed)return;const nextComparison=compare?compareStreetPolicies(captured,network):null,nextResult=nextComparison?.baseline??simulateStreets(captured,network);comparison=nextComparison;result=nextResult;time=0;stale=revision!==version;selected='AV-01';edgeId=null;lastDetails='';timeline.max=String(captured.duration_minutes*60);
+  try{if(destroyed||generation!==runGeneration)return;const nextComparison=compare?compareStreetPolicies(captured,network):null,nextResult=nextComparison?.baseline??simulateStreets(captured,network);comparison=nextComparison;result=nextResult;time=0;stale=revision!==version;selected='AV-01';edgeId=null;lastDetails='';timeline.max=String(captured.duration_minutes*60);
    vehicleSelect.replaceChildren(...result.frames[0].vehicles.map(v=>el('option',{value:v.id},v.id)));vehicleSelect.value=selected;comparisonView.hidden=!comparison;
    status.textContent=stale?'Settings changed; this is the previous run.':compare?'Comparison ready. Replay either policy, then read the trade-offs below.':'Scenario ready. Use Largest queue to jump to the bottleneck, or follow an AV.';
    showResults();scene.focus(captured.hotspot);render();if(!reducedMotion()&&!stale&&!element.hidden&&pauseVersion===playIntent)play();
-  }catch(e){error.textContent=e.message;error.hidden=false;status.textContent='Check the settings and try again.';}finally{busy=false;fields.disabled=false;runButton.disabled=false;compareButton.disabled=false;}
+  }catch(e){error.textContent=e.message;error.hidden=false;status.textContent='Check the settings and try again.';}finally{if(generation===runGeneration){busy=false;fields.disabled=false;runButton.disabled=false;compareButton.disabled=false;}}
  }
  sync();render();
- return {element,run,setConfig,pause,seek,refresh:()=>scene.refresh(),getState:()=>({run:result,time,playing,stale,busy}),destroy(){destroyed=true;pause();scene.destroy();}};
+ return {element,run,setConfig,getSharedSetup,loadSharedSetup,pause,seek,refresh:()=>scene.refresh(),getState:()=>({run:result,time,playing,stale,busy}),destroy(){destroyed=true;pause();scene.destroy();}};
 }

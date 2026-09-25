@@ -1,6 +1,8 @@
 # FleetLab simulation and learning guide
 
-Updated 2026-09-19 UTC. 44 runnable examples and lessons: 12 Fleet day lessons and 32 regional presets. Fleet day combines frozen real geography with synthetic operations; neither model is real-fleet evidence.
+This baseline guide was written on 2026-09-19 for 44 examples (12 Fleet day and 32 regional). The current catalog contains **56**: 18 Fleet day, six Street lab and 32 regional lessons. Its original Fleet day descriptions below apply to the base configuration; newer opt-in staffing, charging, resource-observation, airport-preparation and launch models have separate contracts.
+
+Current model guides: [Street lab](FLEETLAB_STREET_LAB.md), [readiness M1](FLEETLAB_DEPOT_READINESS.md), [M2/M3 operating experiments](FLEETLAB_DEPOT_M2_M3.md), [launch rehearsal M4](FLEETLAB_DEPOT_LAUNCH.md). All browser results remain teaching results, not real-fleet evidence.
 
 ## Start here
 

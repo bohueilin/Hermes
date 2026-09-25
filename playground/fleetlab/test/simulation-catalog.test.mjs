@@ -20,7 +20,7 @@ test('search filters and an operational lesson launches its actual setup',()=>{
     let patch=null;const catalog=createSimulationCatalog({onOperations:p=>{patch=p;}});
     const search=catalog.element.querySelector('input');search.value='Software-update';search.dispatchEvent(new Event('input'));
     assert.equal(catalog.element.querySelectorAll('[data-simulation]').length,1);
-    catalog.element.querySelector('[data-simulation="software"]').querySelector('button').click();
+    catalog.element.querySelector('[data-simulation="software"]').querySelector('a').click();
     assert.equal(patch.software_every_visits,1);
   }finally{restore();}
 });
@@ -35,9 +35,9 @@ test('new decision lessons launch their versioned scenarios without mutating sha
   const restore=installFakeDom();try{
     let patch;const catalog=createSimulationCatalog({onOperations:p=>{patch=p;}});
     for(const [id,key] of [['staffing-readiness','readiness'],['power-redistribution','charging'],['deadline-charging','charging'],['resource-freshness','resources'],['airport-preparation','airport']]){
-      const card=catalog.element.querySelector(`[data-simulation="${id}"]`);assert.ok(card,id);card.querySelector('button').click();assert.ok(patch[key]?.version,id);
-      patch[key].version='tampered';card.querySelector('button').click();assert.notEqual(patch[key].version,'tampered');
+      const card=catalog.element.querySelector(`[data-simulation="${id}"]`);assert.ok(card,id);card.querySelector('a').click();assert.ok(patch[key]?.version,id);
+      patch[key].version='tampered';card.querySelector('a').click();assert.notEqual(patch[key].version,'tampered');
     }
-    catalog.element.querySelector('[data-simulation="region-launch"]').querySelector('button').click();assert.equal(patch.launch_rehearsal,'region_b');
+    catalog.element.querySelector('[data-simulation="region-launch"]').querySelector('a').click();assert.equal(patch.launch_rehearsal,'region_b');
   }finally{restore();}
 });
