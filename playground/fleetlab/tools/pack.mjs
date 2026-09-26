@@ -11,6 +11,8 @@ import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSy
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import vm from "node:vm";
+import { stripFullLineComments } from "./comment-strip.mjs";
+export { stripFullLineComments, assertSameTokens } from "./comment-strip.mjs";
 import {APP_MAX_BYTES,MEDIA_MODULE,MEDIA_LIMITS,mediaProblems} from "./media.mjs";
 
 /** The design section 9.4 content security policy, verbatim. */
@@ -484,13 +486,14 @@ export function moduleGraph(entryFile, sourceRoot) {
  * Bundles the module graph reachable from `entryFile` into one classic script defining `const <globalName>`
  * as the entry module's namespace. `sourceRoot` bounds resolution and names modules in marker comments.
  */
-export function bundle(entryFile, { sourceRoot, globalName, replacements = new Map() }) {
+export function bundle(entryFile, { sourceRoot, globalName, replacements = new Map(), stripComments = false }) {
   const { entry, order, records } = moduleGraph(entryFile, sourceRoot);
 
   const parts = [`const ${globalName} = (() => {`, `"use strict";`];
   for (const record of order) {
     if (replacements.has(record.label)) { record.src = replacements.get(record.label); record.parsed = parseModule(record.src, record.label); }
-    parts.push(MODULE_MARKER + record.label, renderModule(record, records));
+    const rendered = renderModule(record, records);
+    parts.push(MODULE_MARKER + record.label, stripComments ? stripFullLineComments(rendered, record.label) : rendered);
   }
   parts.push(`return ${records.get(entry).id};`, `})();`, "");
   const code = parts.join("\n");
@@ -738,8 +741,8 @@ export function buildHtml(playgroundDir) {
     const media = readMedia(dir);
     replacements.set(MEDIA_MODULE, `export const FILM_URL = "";\nexport const POSTER_URL = "data:image/webp;base64,${media.get("media/fleet-film-poster.webp").toString("base64")}";`);
   }
-  const pageBundle = bundle(pageEntry, { sourceRoot, globalName: "FleetLabPage", replacements });
-  const workerBundle = bundle(workerEntry, { sourceRoot, globalName: "FleetLabWorker" });
+  const pageBundle = bundle(pageEntry, { sourceRoot, globalName: "FleetLabPage", replacements, stripComments: true });
+  const workerBundle = bundle(workerEntry, { sourceRoot, globalName: "FleetLabWorker", stripComments: true });
   const cssPath = join(dir, "styles.css");
   if (!existsSync(cssPath)) throw new PackError("styles.css does not exist; it is inlined into the packed file");
   const css = readFileSync(cssPath, "utf8");

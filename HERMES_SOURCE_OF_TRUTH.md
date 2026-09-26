@@ -749,6 +749,23 @@ must not: the number as a default edit (§10 rule 3).
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
 
+**Offline packer route A, 2026-09-26 (local only):** The offline build removes only complete
+comments whose first and last lines contain no code tokens. Every one of 107 module renders
+must preserve exact lexical tokens and line terminators and compile before and after removal.
+Templates, mixed-boundary comments, directives and protected license/preservation/source-map
+comments remain intact; the 84-module inventory found no protected comments. Native site
+output is byte-identical (90 files / 3,189,179 bytes; inventory SHA-256
+`cf355b9b5544354866e81681a82b8173cf4590bb7dccd86b42a6098cb7ff1603`). Offline size is
+**2,257,953 bytes**, down **293,925**, leaving **363,487 bytes** below the unchanged 2,621,440
+limit. The exact line terminators and template contents are retained, so the result differs from
+the audit scratch estimate. All 86 source files remain unchanged. Fixed-seed packed-worker
+parity reproduces all 10,153 events, world digest, metrics and series; the stripped page initializes
+on the fake DOM. Both distribution checks pass. Full serial performance-enabled Node suite:
+**1,859 tests, 1,858 pass, one existing TODO, zero fail/cancel/skip** (32 new tests). No performance
+rerun was needed. The small lexer rejects unsupported Unicode-set regex mode; per-module
+compilation supplements token checks. No dependency, source, threshold, push or deployment
+change; current public D1 remains unchanged.
+
 **N2 design v2.1, 2026-09-26:** The [standalone v2.1 draft](docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md)
 (SHA-256 `8bb68d09da0b6738b02cdf179a8993dfda4b00aa2cdce5cde23fef7fa33d75de`; 901 lines)
 restates all 19 fixture groups, all 26 owner-decision entries and the 50-correction conformance
