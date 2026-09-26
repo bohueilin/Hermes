@@ -2,7 +2,16 @@
 
 ## What you need to do now
 
-**No account setup is required for the public Pages address.** Existing authentication was rechecked for this release; the account already owns the project. The public address to share is **https://fleetlab.pages.dev/**. The [source of truth](../HERMES_SOURCE_OF_TRUTH.md#75-fleetlab-playground-teaching-model-not-evidence) records current Austin deployment `f08b6b6f`, published source `345b427`, all 88 matching public payloads and hosted browser checks. The [regional runbook](FLEETLAB_REGIONAL_POWER.md) explains the new slice and [N2 draft](plans/2026-09-25-fleetlab-n2-design.md) describes proposed next work. The [earlier design review](FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md), [depot milestones](FLEETLAB_DEPOT_RELEASE_2026-09-24.md), [homepage film](FLEETLAB_FILM_RELEASE_2026-09-19.md) and [Street lab](FLEETLAB_STREET_RELEASE_2026-09-19.md) preserve earlier publication checkpoints and their review scope. The [Claude review packet](FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md) contains the new design proposal, Waymo pilot steps and N2 audit. A documentation-only branch head after release does not change the deployed application source.
+**No account setup is required for the public Pages address.** Current D1 source is
+`b99ab046ee0ee233c1e9d0db32dfa850c08cad8a`, Production
+`dd4bfa44-7226-4502-9d66-01bb1790f2b6`, immutable
+https://dd4bfa44.fleetlab.pages.dev/, stable **https://fleetlab.pages.dev/**.
+All89 public payloads match; actual security headers and hosted Bay/Austin checks passed.
+The [D1 release record](FLEETLAB_D1_RELEASE_2026-09-26.md) contains counts, bytes, digests,
+browser scope and deviations. The [source of truth](../HERMES_SOURCE_OF_TRUTH.md#75-fleetlab-playground-teaching-model-not-evidence)
+records current state. [N2 v2](plans/2026-09-26-fleetlab-n2-design-v2.md) is design-only;
+G2 is open pending S1. Rollback target: `f08b6b6f-c5d0-44f7-905b-5f16087fbc85`.
+The documentation commit after upload records the release; it does not change deployed source.
 
 | Setting | Value |
 |---|---|
@@ -16,7 +25,7 @@
 | Build tooling | Node.js 22+; Wrangler pinned to `4.135.0` for this release |
 | Website runtime | Static HTML, CSS and JavaScript; no account or backend |
 
-The owner requested the shorter address on September 25 Pacific / September 26 UTC, 2026. Cloudflare Pages cannot rename an existing `pages.dev` hostname, so a new `fleetlab` project now serves the same checked application source `345b427`. Production is `f08b6b6f-c5d0-44f7-905b-5f16087fbc85`, immutable address https://f08b6b6f.fleetlab.pages.dev/. All 88 public payloads matched, response headers were verified, and a browser run reproduced 95/284 completed. The old `fleetlab-playground` project and https://fleetlab-playground.pages.dev/ are preserved for existing links; there is no automatic redirect. Use the new stable address for sharing. [Cloudflare hostname limitation](https://developers.cloudflare.com/pages/platform/known-issues/).
+The owner requested the shorter address on September 25 Pacific / September 26 UTC, 2026. Cloudflare Pages cannot rename an existing `pages.dev` hostname, so a new `fleetlab` project initially served the checked application source `345b427`. Its initial Production was `f08b6b6f-c5d0-44f7-905b-5f16087fbc85`, immutable address https://f08b6b6f.fleetlab.pages.dev/. All 88 public payloads matched, response headers were verified, and a browser run reproduced 95/284 completed. The old `fleetlab-playground` project and https://fleetlab-playground.pages.dev/ are preserved for existing links; there is no automatic redirect. Use the new stable address for sharing. [Cloudflare hostname limitation](https://developers.cloudflare.com/pages/platform/known-issues/).
 
 ## Repeat a deployment from a reviewed source commit
 

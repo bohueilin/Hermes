@@ -1,3 +1,79 @@
+# FleetLab D1 release and N2 S0 handoff — September 26, 2026
+
+D1 is live at **https://fleetlab.pages.dev/** from source
+`b99ab046ee0ee233c1e9d0db32dfa850c08cad8a`. Production
+`dd4bfa44-7226-4502-9d66-01bb1790f2b6`; immutable
+https://dd4bfa44.fleetlab.pages.dev/. Branch: `codex/fleetlab-d1-result-first`.
+Part A design commit: `76439c617f6d647b7ad441834a37199f2ec68454`.
+The owner's explicit brief authorizes these commits, this deployment, and only normal
+pushes to this branch and `feat/fleetlab-playground` after an ancestry check. The records
+commit follows deployment by the brief's exception; final remote refs/task report establish
+push completion. Other worktrees, main, regional-power branch, remotes and PRs are untouched.
+The only untracked entry remains the preserved owner's `FleetLab-ChatGPT-review-and-next-phase.md`.
+
+[Release record](docs/FLEETLAB_D1_RELEASE_2026-09-26.md) has inventories, per-item byte tally,
+rewrite reasons, browser evidence, privacy dispositions and publication receipts.
+D1 changes only UI/tests/package-copy inventory: result-first partition/focus; no autoplay;
+shared effective motion; version/geography/stale labels; five compatible setup controls;
+Four-area names/non-affiliation; field-driven Austin verdict/resource text with exact disclosure.
+No model, instrument, core or runtime source changed.
+
+[N2 v2](docs/plans/2026-09-26-fleetlab-n2-design-v2.md) is complete design-only S0:
+19 fixture groups, owner choices, dictionaries/ownership/versions/accounting. G2 remains
+**OPEN pending S1**. Independent review corrections are included. No N2 implementation,
+registration, external data, terms acceptance, package install or execution seam was run.
+V1 SHA-256 remains `c574b8df41d0378363e18f75452f09e15a2cf62581e8fb01f6f365229d7e25bf`;
+v2 is `da7b80690711116dc7a11874db4199468f2581ab6c5e87d4251698ead48d383d`.
+
+Executed commands and outcomes (Node22.22.0; activated hermes-dev Python3.11.15):
+
+```bash
+FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs
+node playground/fleetlab/tools/pack.mjs --site dist/site
+node playground/fleetlab/tools/check-dist.mjs --site dist/site
+node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-playground.html
+node playground/fleetlab/tools/check-dist.mjs dist/fleetlab-playground.html
+# hermes-dev was activated; correct worktree src was confirmed immediately before:
+FLEET_PLAYGROUND_BASE=bca4ccd PYTHONPATH="$PWD/src" PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider tests/unit/test_fleet_playground_parity.py tests/unit/test_fleet_playground_boundaries.py
+PYTHONPATH="$PWD/src" python -m ruff check --no-cache .
+git diff --check
+npx --yes wrangler@4.135.0 whoami
+npx --yes wrangler@4.135.0 pages deploy dist/site --project-name fleetlab --branch feat/fleetlab-playground --commit-hash b99ab046ee0ee233c1e9d0db32dfa850c08cad8a --commit-dirty=false
+python3 artifacts/fleetlab-d1/verify_public.py https://fleetlab.pages.dev b99ab046ee0ee233c1e9d0db32dfa850c08cad8a
+curl -sSI https://fleetlab.pages.dev/
+npx --yes wrangler@4.135.0 pages deployment list --project-name fleetlab --json
+```
+
+Baseline Node1,792 total/1,791 pass/1TODO; final **1,827 total/1,826 pass/1TODO**, zero
+fail/cancel/skip;35 added tests. No performance retry. Python**89 pass** in5.31s; Ruff clean.
+Both packages pass; static90 files/3,189,179 bytes; offline**2,551,878 bytes**, **+8,223**
+against11,264 allowance. All89 public hashes match. Actual CSP retains `connect-src 'none'`,
+nosniff/frame denial/no-referrer/same-origin opener policy. No new security-scan claim.
+
+Real browser: native and packed1280×720/400×812 keyboard Run focus/visibility and no jump;
+Fleet and Street no autoplay, explicit Play; effective reduced-motion whole-minute replay;
+all5 setup-model links idle/correct focus; native/packed Austin60% table480/77/391/11/1 and
+12-seed+0.19-point CI−0.24 to+0.62 UNCHANGED, unfinished+0.33/allowance0 HOLD. Offline-over-HTTP
+default Bay passes; hosted Bay95/176/4/9=284 focused/paused and Austin checks pass. No console
+errors. System-media emulation is unavailable in the supported browser API, so browser motion
+uses the actual in-app override, complemented by system/override automated tests. No AT,
+other-browser, physical-device or direct-file claim. In-app motion controls remain reachable
+only in Four-area views. No full Python suite/doctor was rerun; retained-fixture failures below
+remain historical, not new release failures. Wrangler's dirty warning was solely the preserved
+untracked owner note; all public source was committed and that file is not in the pack.
+
+Offline SHA-256 `219203088d3ec9a4c7ae7536ac3651ffb541555dbd6aac0994ec8db0f7acdfc8`.
+Public manifest SHA-256 `b613c8dabab9e75e14e87c5ba447e5a036f627662359bcf02993f71bb2de6104`.
+Readback receipt SHA-256 `9a48697f50bf0160de26803bad1c04abb26686ddbd5834931a1010664a099980`.
+Rollback target `f08b6b6f-c5d0-44f7-905b-5f16087fbc85`; no rollback needed.
+
+Recommendation: retain the bounded D1 release; review v2 before more model work.
+Top risks + mitigations: unregistered N2 parameters → S1; execution responsiveness → X1;
+unmeasured learning impact → P0 study. Next3 actions: S1 owner decisions; separately approved
+X1 seam; scope P2 vehicle-time strip, P0 Home/catalog prototype/study and R0 no-data lessons.
+
+---
+
 # FleetLab address and review follow-up — September 25 Pacific / September 26 UTC, 2026
 
 Canonical public site: **https://fleetlab.pages.dev/**. New Production

@@ -131,3 +131,30 @@ D1 items landed in parallel and were measured at integration checkpoints rather 
 Part A staged privacy scan: **zero pattern hits and zero added credential-token mentions**. V2 first line, 19 fixture groups, required owner/F/G/R coverage and computed key/arithmetic values were checked; v1 hash matched. An independent bounded contract review found the F2 population/window wording and G3 executed-distance window issues, both corrected. V2 SHA-256: `da7b80690711116dc7a11874db4199468f2581ab6c5e87d4251698ead48d383d`. The ignored probe `node artifacts/fleetlab-n2-s0/fixture-values.mjs` was re-run; no N2 simulation was executed.
 
 D1 source staged privacy scan: **zero pattern hits**. Added `token` matches are benign: Launch invalidation and destruction counters; Austin invalidation, pending-result comparison and destruction counters; and this privacy documentation. Each is an existing local cancellation/generation mechanism or explanatory prose, not an authentication value. No unapproved hit remains.
+
+
+### Publication and handoff
+
+- Branch: `codex/fleetlab-d1-result-first`. Part A: `76439c617f6d647b7ad441834a37199f2ec68454`. D1 application source: `b99ab046ee0ee233c1e9d0db32dfa850c08cad8a`.
+- Repacked and checked `dist/site` from committed source. The working tree contained only the preserved untracked owner note. Wrangler reported that untracked-file warning; the explicit `--commit-dirty=false` was retained because every deployed source file was committed and the owner note is excluded from the pack.
+- Pinned Wrangler 4.135.0 authentication rechecked. Authorized deployment command used project `fleetlab`, branch `feat/fleetlab-playground`, exact source SHA and `--commit-dirty=false`. Uploaded9 changed files, reused80, and applied `_headers`.
+- Production: **`dd4bfa44-7226-4502-9d66-01bb1790f2b6`**, source `b99ab04`. Stable [fleetlab.pages.dev](https://fleetlab.pages.dev/); immutable [dd4bfa44.fleetlab.pages.dev](https://dd4bfa44.fleetlab.pages.dev/). Wrangler deployment listing confirmed environment, branch and source.
+- Copied the existing readback helper to ignored `artifacts/fleetlab-d1/verify_public.py`, changing only its receipt destination. `python3 artifacts/fleetlab-d1/verify_public.py https://fleetlab.pages.dev b99ab046ee0ee233c1e9d0db32dfa850c08cad8a`: **89/89 public payload SHA-256 matches**. `_headers` is deployment configuration, not a public payload.
+- HTTP200 and actual response headers: restrictive CSP including `connect-src 'none'`, nosniff, `DENY`, no-referrer and same-origin opener policy.
+- Hosted real browser: default Bay95/176/4/9=284, Result summary focused, replay paused; Austin default60% retained, horizon480/77/391/11/1;12 seeds gave +0.19 percentage points, interval−0.24 to+0.62, UNCHANGED and unfinished-visit HOLD(+0.33 versus0). No console errors.
+- Rollback target: **`f08b6b6f-c5d0-44f7-905b-5f16087fbc85`** through the existing Pages deployment UI. No rollback or second upload was needed.
+- Publication records follow deployment in a separate documentation commit, an explicitly authorized exception to the source-of-truth same-commit rule: the deployment ID did not exist before upload.
+- The records commit is followed by only the two authorized normal pushes: this branch, then `HEAD:feat/fleetlab-playground` after an ancestry check. Final remote refs and the task report establish push completion; no other branch, other worktree, main merge or PR is changed.
+
+| Digest | SHA-256 |
+|---|---|
+| Static index.html | `97ec391c70a0df2ce392065692128c23a5876848a3369ea723acee1031a50cbe` |
+| Offline HTML | `219203088d3ec9a4c7ae7536ac3651ffb541555dbd6aac0994ec8db0f7acdfc8` |
+| Public payload manifest | `b613c8dabab9e75e14e87c5ba447e5a036f627662359bcf02993f71bb2de6104` |
+| Readback receipt | `9a48697f50bf0160de26803bad1c04abb26686ddbd5834931a1010664a099980` |
+
+Manifest digest is SHA-256 over path-sorted UTF-8 lines `path + NUL + file SHA-256 + newline`, excluding `_headers`. Hashes establish byte identity, not authenticity or model validity. The receipt remains ignored.
+
+Recommendation: keep D1 as the bounded presentation release and review S0 before N2 implementation. Top risks are unregistered N2 parameters and unmeasured learning benefit; S1 registration and P0 study address them. Next three actions: (1) S1 owner choices for patience, inherited values, seed blocks, tapes and dispositions; (2) separately authorize X1; (3) scope P2's vehicle-time strip, P0 Home/catalog prototype and study, and R0 no-data lessons. Nothing in this release authorizes those steps.
+
+Post-deployment records staged scan: **zero pattern hits; zero added credential-counter mentions**. The committed release range was also scanned: zero pattern hits; its five code-counter lines and two explanatory privacy lines were individually reviewed as benign. The range scan is repeated immediately before each authorized push; any new unapproved match stops that push.
