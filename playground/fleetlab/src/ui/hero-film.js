@@ -2,7 +2,7 @@ import { el } from './dom.js';
 import { FILM_URL, POSTER_URL } from './hero-media.js';
 
 /** Optional motion; the poster and product actions never depend on video playback. */
-export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL } = {}) {
+export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL, reducedMotion } = {}) {
   if (filmUrl && !/^\.\/media\/[a-z0-9-]+\.mp4$/.test(filmUrl)) {
     throw new Error('Film must use a local media path');
   }
@@ -35,11 +35,13 @@ export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL } = 
   let generation = 0;
   const view = document.defaultView;
   const motion = view?.matchMedia?.('(prefers-reduced-motion: reduce)');
+  const reduced = () => reducedMotion ? reducedMotion() : Boolean(motion?.matches);
+  let lastReduced = reduced();
   const connection = view?.navigator?.connection;
   const canObserve = typeof view?.IntersectionObserver === 'function';
   const allowed = () => (canObserve || optedIn) && !destroyed && active && visible &&
     !document.hidden && !userPaused && !blocked &&
-    (optedIn || (!motion?.matches && !connection?.saveData));
+    (optedIn || (!reduced() && !connection?.saveData));
 
   function label() {
     const playing = video.paused === false && !destroyed;
@@ -60,6 +62,8 @@ export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL } = 
     status.textContent = 'Film unavailable. The concept image is shown.';
   }
   function reconcile() {
+    const currentReduced = reduced();
+    if (currentReduced !== lastReduced) { lastReduced = currentReduced; optedIn = false; }
     if (!allowed()) { pause(); return; }
     if (pending || video.paused === false || typeof video.play !== 'function') { label(); return; }
     if (!video.getAttribute('src')) video.setAttribute('src', filmUrl);

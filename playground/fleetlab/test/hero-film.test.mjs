@@ -3,7 +3,7 @@ import {test} from 'node:test';
 import {installFakeDom} from './helpers/fake-dom.mjs';
 import {createHeroFilm} from '../src/ui/hero-film.js';
 
-function setup({reduced=false,saveData=false,pending=false,denied=false,nativeStart=false,noObserver=false,filmUrl}={}) {
+function setup({reduced=false,reducedMotion,saveData=false,pending=false,denied=false,nativeStart=false,noObserver=false,filmUrl}={}) {
   const restore=installFakeDom(globalThis,{media:{'(prefers-reduced-motion: reduce)':reduced}});
   let observer, complete, rejectPlay, plays=0, pauses=0;
   window.navigator={connection:{saveData}};
@@ -16,12 +16,15 @@ function setup({reduced=false,saveData=false,pending=false,denied=false,nativeSt
     node.play=()=>{plays++;if(denied)return Promise.reject(new Error('denied')); if(nativeStart){node.paused=false;node.dispatchEvent(new Event('play'));} return new Promise((resolve,reject)=>{rejectPlay=(name)=>{node.paused=true;reject(Object.assign(new Error(name),{name}));};complete=()=>{node.paused=false;node.dispatchEvent(new Event('playing'));resolve();};if(!pending)complete();});};
     node.load=()=>{};
   }return node;};
-  const hero=createHeroFilm(filmUrl===undefined?{}:{filmUrl,posterUrl:'data:image/webp;base64,AAAA'});
+  const hero=createHeroFilm({reducedMotion,...(filmUrl===undefined?{}:{filmUrl,posterUrl:'data:image/webp;base64,AAAA'})});
   document.body.appendChild(hero.element);hero.setActive(true);
   const video=hero.element.querySelector('video'),button=hero.element.querySelector('button');
   return {hero,video,button,restore,show:(visible=true)=>observer.cb([{isIntersecting:visible,intersectionRatio:visible?1:0}]),complete:()=>complete(),reject:(name='AbortError')=>rejectPlay(name),get plays(){return plays;},get pauses(){return pauses;},get observer(){return observer;}};
 }
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
+test('effective reduced motion prevents autoplay even when the system allows it',async()=>{const x=setup({reducedMotion:()=>true});try{x.show();await tick();assert.equal(x.plays,0);assert.equal(x.video.getAttribute('src'),null);x.button.click();await tick();assert.equal(x.plays,1);}finally{x.hero.destroy();x.restore();}});
+test('effective full-motion override permits autoplay over the system preference',async()=>{const x=setup({reduced:true,reducedMotion:()=>false});try{x.show();await tick();assert.equal(x.plays,1);}finally{x.hero.destroy();x.restore();}});
+test('changing the effective motion preference clears a prior film opt-in and pauses immediately',async()=>{let reduced=false;const x=setup({reducedMotion:()=>reduced});try{x.show();await tick();x.button.click();x.button.click();await tick();assert.equal(x.video.paused,false);reduced=true;x.hero.setActive(true);assert.equal(x.video.paused,true);const plays=x.plays;x.show(false);x.show();await tick();assert.equal(x.plays,plays);x.button.click();await tick();assert.equal(x.plays,plays+1);}finally{x.hero.destroy();x.restore();}});
 test('visible playback reports actual state and user pause persists across navigation',async()=>{const x=setup();try{assert.equal(x.video.getAttribute('src'),null);x.show();await tick();assert.equal(x.video.muted,true);assert.match(x.button.textContent,/Pause/);x.button.click();x.hero.setActive(false);x.hero.setActive(true);x.show();await tick();assert.equal(x.plays,1);assert.match(x.button.textContent,/Play/);}finally{x.hero.destroy();x.restore();}});
 for(const preference of [{reduced:true},{saveData:true}])test('motion/data preference prevents download until explicit play '+JSON.stringify(preference),async()=>{const x=setup(preference);try{x.show();assert.equal(x.video.getAttribute('src'),null);x.button.click();await tick();assert.equal(x.plays,1);assert.match(x.button.textContent,/Pause/);}finally{x.hero.destroy();x.restore();}});
 for(const hide of ['navigation','document','intersection','destroy'])test('pending play is cancelled by '+hide,async()=>{const x=setup({pending:true});try{x.show();if(hide==='navigation')x.hero.setActive(false);if(hide==='document'){document.hidden=true;document.dispatchEvent(new Event('visibilitychange'));}if(hide==='intersection')x.show(false);if(hide==='destroy')x.hero.destroy();x.complete();await tick();assert.equal(x.video.paused,true);assert.match(x.button.textContent,/Play/);if(hide==='destroy'){assert.equal(x.observer.disconnected,true);const n=x.plays;x.button.click();assert.equal(x.plays,n);}}finally{x.hero.destroy();x.restore();}});

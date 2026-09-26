@@ -1,3 +1,5 @@
+import {modelHeader} from './model-identity.js';
+import {LAUNCH_VERSION} from '../model/launch-contract.js';
 /** Configuration-driven rehearsal UI; validation and simulation stay in the model. */
 import {el} from './dom.js';
 import {createLaunchConfig,validateLaunchConfig,compareCommissioning} from '../model/launch-rehearsal.js';
@@ -52,14 +54,16 @@ export function launchComparisonView(r){
 
 export function createLaunchPanel(){
  let config=createLaunchConfig('peninsula'),delay=90,result=null,lastSubmitted=null,token=0,destroyed=false,busy=false;
+ const geography=()=>config.launch.region.id==='region_b'?'Fictional compact Region B (synthetic km)':'OpenStreetMap Bay Area routes (Peninsula template)';
+ const identity=modelHeader('Launch rehearsal',geography(),LAUNCH_VERSION),heading=el('h2',{tabindex:-1},'Launch rehearsal'),shareSlot=el('div');
  const taskRefresh=[];
  const status=el('p',{role:'status'},'Choose a template, configure differences, validate, then rehearse.'),checks=el('div',{class:'launch-validation'}),results=el('div',{class:'launch-results'}),settings=el('div',{class:'launch-settings'});
  const select=el('select',{'aria-label':'Launch region template',on:{change:()=>chooseTemplate(select.value)}},[el('option',{value:'peninsula'},'Peninsula template'),el('option',{value:'region_b'},'Region B: fictional compact region')]);
  const runButton=button('Rehearse commissioning delay',()=>run());
  const element=el('details',{class:'ops-launch-rehearsal'},[el('summary',{},'Launch rehearsal: configure a region and test commissioning'),
-  decisionView(decisionForConfig({launch:{}})),el('label',{class:'ops-field'},['1. Choose a template',select]),
+  heading,identity.element,shareSlot,decisionView(decisionForConfig({launch:{}})),el('label',{class:'ops-field'},['1. Choose a template',select]),
   el('h3',{},'2. Configure the differences'),settings,button('3. Validate setup',()=>validate()),status,checks,runButton,results]);
- function invalidate(){token++;result=null;checks.replaceChildren();results.replaceChildren(el('p',{},'Settings changed. Validate and rehearse again.'));status.textContent='Setup has changed; previous results are unavailable.';for(const refresh of taskRefresh)refresh();}
+ function invalidate(){token++;result=null;identity.update(LAUNCH_VERSION,false,geography());checks.replaceChildren();results.replaceChildren(el('p',{},'Settings changed. Validate and rehearse again.'));status.textContent='Setup has changed; previous results are unavailable.';for(const refresh of taskRefresh)refresh();}
  function input(label,current,set,{min,max,step=1,type='number'}={}){
   const edit=()=>{set(type==='number'?(control.value===''?NaN:Number(control.value)):control.value);invalidate();};
   const control=el('input',{type,value:current,'aria-label':label,...(type==='number'?{min,max,step}:{}),on:{input:edit,change:edit}});
@@ -68,7 +72,7 @@ export function createLaunchPanel(){
  function taskView(d){const holder=el('div');const refresh=()=>holder.replaceChildren(table('Owned setup tasks',['Task','Owner','State','Dependencies'],d.tasks.map(t=>[t.label,t.owner,t.status,t.depends_on])));taskRefresh.push(refresh);refresh();return holder;}
  function portView(d){const holder=el('div');const refresh=()=>holder.replaceChildren(table('Configured charging resources',['Port','Installed','Commissioned','Healthy','Supported profiles','kW cap'],d.ports.map(p=>[p.id,p.installed,p.commissioned,p.healthy,p.compatible_vehicle_types,p.cap_kw])));taskRefresh.push(refresh);refresh();return holder;}
  function flag(label,record,key){const control=el('input',{type:'checkbox',checked:record[key],'aria-label':label,on:{change:()=>{record[key]=control.checked;invalidate();}}});return el('label',{class:'ops-field'},[label,control]);}
- function renderSettings(){taskRefresh.length=0;settings.replaceChildren(
+ function renderSettings(){identity.update(result?.version??LAUNCH_VERSION,false,geography());taskRefresh.length=0;settings.replaceChildren(
   el('p',{},`${config.launch.region.label}. Calendar: ${config.launch.region.local_date}; ${config.launch.region.timezone}. Opening and closing are local minutes after midnight (0 to 1440); commissioning delay is elapsed shift time. No timezone or daylight-saving conversion.`),
   el('div',{class:'ops-fields'},[
    input('Rehearsal fleet size',config.fleet_size,v=>config.fleet_size=v,{min:1,max:120}),
@@ -118,9 +122,9 @@ export function createLaunchPanel(){
   const submitted=structuredClone(config),submittedDelay=delay,current=++token;busy=true;runButton.disabled=true;result=null;results.replaceChildren(el('p',{},'Rehearsing both arms against the same demand…'));
   await new Promise(resolve=>setTimeout(resolve,0));
   try{if(destroyed||token!==current)return;const r=compareCommissioning(submitted,submittedDelay);if(destroyed||token!==current)return;
-   result=r;lastSubmitted={model:'launch-rehearsal',config:submitted,options:{delay:submittedDelay}};results.replaceChildren(launchComparisonView(r));status.textContent='Rehearsal recorded. Review service, unfinished work and infrastructure together.';return r;
+   result=r;identity.update(r.version,false,geography());lastSubmitted={model:'launch-rehearsal',config:submitted,options:{delay:submittedDelay}};results.replaceChildren(launchComparisonView(r));status.textContent='Rehearsal recorded. Review service, unfinished work and infrastructure together.';return r;
   }catch(e){if(!destroyed&&token===current)results.replaceChildren(el('p',{role:'alert'},`Rehearsal unavailable: ${e.message}`));}
   finally{busy=false;if(!destroyed)runButton.disabled=false;}
  }
- renderSettings();return {element,chooseTemplate,validate,run,getSharedSetup,loadSharedSetup,getState:()=>structuredClone({config,result,delay}),destroy(){destroyed=true;token++;}};
+ renderSettings();return {element,heading,shareSlot,chooseTemplate,validate,run,getSharedSetup,loadSharedSetup,getState:()=>structuredClone({config,result,delay}),destroy(){destroyed=true;token++;}};
 }

@@ -38,7 +38,7 @@ export function simulationCatalog(){
   return [
     ...OPERATIONAL_LESSONS.map(x=>({...x,model:'Fleet day',target:'operations'})),
     ...STREET_PRESETS.map(p=>({id:`street-${p.id}`,title:p.title,model:'Street lab',target:'streets',hotspot:p.id,question:p.question,controls:'AV count, rider/background demand, capacity loss, routing, weather, pickup dwell and trip mix',outputs:'Directed street replay, queues and spillback; completed and unfinished journeys; same-demand route comparison',lesson:p.action,limits:'Frozen OSM subset and supported turn rules; synthetic signals/capacity/demand; no lane changing, calibrated traffic, actual curb permission or depot energy model.'})),
-    ...PRESETS.map(p=>({id:p.id,title:p.title,model:'Regional experiments',target:'regional',preset:p,
+    ...PRESETS.map(p=>({id:p.id,title:p.title,model:'Four-area experiments',target:'regional',preset:p,
       question:p.experiment?.question??'How do supply, demand, routes and depot rules interact across four areas?',
       controls:p.experiment?`One declared change: ${p.experiment.axis.id}. ${axisValue(p.experiment.axis.baseline)} → ${axisValue(p.experiment.axis.candidate)}.`:'Fleet, demand, traffic, depot capacity, recall and release.',
       outputs:p.experiment?`Primary: ${p.experiment.primary.metric}; ${(p.experiment.guardrails??[]).length} guardrails; paired uncertainty and recommendation.`:'Recorded replay, rider wait, unserved demand, fleet state and depot queues.',
@@ -51,12 +51,12 @@ export function simulationCatalog(){
 export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},onStreets=()=>{},onLesson=null,hrefForLesson=r=>routeHref({page:r.target==='operations'?'simulation':r.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(r.id)?'depots':'operations',lesson:r.id})}={}){
   const records=simulationCatalog();const cards=el('div',{class:'catalog-grid'});const count=el('p',{class:'catalog-count',role:'status'});
   const search=el('input',{type:'search',placeholder:'Try charging, rain, depot, recall…','aria-label':'Search simulations',on:{input:()=>render()}});
-  const filter=el('select',{'aria-label':'Simulation model',on:{change:()=>render()}},['All simulations','Fleet day','Street lab','Regional experiments'].map(x=>el('option',{value:x},x)));
+  const filter=el('select',{'aria-label':'Simulation model',on:{change:()=>render()}},['All simulations','Fleet day','Street lab','Four-area experiments'].map(x=>el('option',{value:x},x)));
   const element=el('main',{class:'simulation-catalog'},[
     el('section',{class:'catalog-intro'},[el('p',{class:'eyebrow'},'THE COMPLETE LEARNING CATALOG'),el('h1',{},'What can I simulate?'),el('p',{class:'hero-lede'},'Start with a question. Know what to change, what to watch and what the result cannot tell you.'),el('div',{class:'catalog-models'},[
       el('article',{},[el('h2',{},'Fleet day'),el('p',{},'3D I-PACE and Ojai cars on real Bay Area roads, battery, weather and a complete depot work cycle. Start here to learn capacity and bottlenecks.')]),
       el('article',{},[el('h2',{},'Street lab'),el('p',{},'Six downtown SF bottlenecks, directed street routes to SFO and the East Bay, finite road queues and same-demand routing comparisons. Start here to inspect congestion at block level.')]),
-      el('article',{},[el('h2',{},'Regional experiments'),el('p',{},'The existing four-area workbench: declared A/B changes, paired uncertainty and guardrails. Its model has different scope; results are not interchangeable.')]),
+      el('article',{},[el('h2',{},'Four-area experiments'),el('p',{},'The existing four-area workbench: declared A/B changes, paired uncertainty and guardrails. Its model has different scope; results are not interchangeable.')]),
     ])]),
     el('div',{class:'catalog-search'},[search,filter]),count,cards,
     el('section',{class:'catalog-outside'},[el('h2',{},'What is still outside this playground?'),el('p',{},'Physical autonomous driving, lane changes and collisions; calibrated demand; staff shifts; repair failures; electrical network dynamics; globally optimal fleet routing; real dispatch or vehicle commands. A computed recommendation never authorizes an operational change.')]),

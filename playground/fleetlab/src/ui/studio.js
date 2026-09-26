@@ -1,3 +1,6 @@
+import {modelHeader,NON_AFFILIATION} from './model-identity.js';
+import {isReducedMotion} from './store.js';
+import {MODEL_VERSION} from '../model/experiment.js';
 // Product entry and navigation across three explicit teaching models.
 import { el } from "./dom.js";
 import { createHeroFilm } from "./hero-film.js";
@@ -57,7 +60,7 @@ function overview(navigate, film) {
       el("div",{class:"section-heading"},[el("div",{},[eyebrow("WHY THIS EXISTS"),el("h2",{},"A local change can move the whole system.")]),el("p",{},"Explore the decisions behind rider service, vehicle readiness and limited capacity.")]),
       el("div",{class:"decision-grid"},[
         decisionCard({number:"01",category:"MARKET OPERATIONS",title:"Can supply keep up with the peak?",text:"Set fleet size and demand. Follow each AV through trips and depot work, then compare the capacity of different fleet and depot sizes.",measure:"Trips completed · Battery · Depot queues",cta:"Run a fleet day  →",target:"simulation"},navigate),
-        decisionCard({number:"02",category:"DEPOT OPTIMIZATION",title:"Would two more bays actually help?",text:"Compare four cleaning bays with six. Inspect depot delay alongside rider outcomes before drawing a conclusion.",measure:"Bay wait · Depot turnaround · Guardrails",cta:"Test depot capacity  →",target:"depots"},navigate),
+        decisionCard({number:"02",category:"DEPOT OPTIMIZATION",title:"Would two more bays actually help?",text:"Use the four-area teaching model to compare four cleaning bays with six. Inspect depot delay alongside rider outcomes before drawing a conclusion.",measure:"Bay wait · Depot turnaround · Guardrails",cta:"Test depot capacity  →",target:"depots"},navigate),
         decisionCard({number:"03",category:"STREET OPERATIONS",title:"Can one block tie up the fleet?",text:"Explore downtown SF, SFO and East Bay journeys on directed roads. Follow queues across blocks and compare routing decisions.",measure:"Spillback · Pickup wait · Empty distance",cta:"Open the Street lab  →",target:"streets"},navigate),
       ]),
     ]),
@@ -71,7 +74,7 @@ function overview(navigate, film) {
     ]),
     el("section",{class:"scope-section"},[
       el("div",{},[eyebrow("A CLEAR MODEL BOUNDARY"),el("h2",{},"Useful questions. Honest limits.")]),
-      el("div",{},[el("h3",{},"Three ways to learn"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Regional experiments cover dispatch, recall and paired guardrails. The catalog explains each model's scope.")]),
+      el("div",{},[el("h3",{},"Three ways to learn"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Four-area experiments cover dispatch, recall and paired guardrails. The catalog explains each model's scope.")]),
       el("div",{},[el("h3",{},"Outside the model"),el("p",{},"Worker shifts, physical driving, calibrated demand and real vehicle operations. Demand, traffic and vehicle operating values are teaching assumptions. None of these models is a calibrated digital twin or permission to change a fleet.")]),
     ]),
   ]);
@@ -85,6 +88,7 @@ function approach(navigate) {
   ];
   return el("main",{class:"studio-approach",id:"studio-approach"},[
     el("section",{class:"approach-intro"},[eyebrow("PRODUCT APPROACH"),el("h1",{},"Start with the operator.\nWork back to the model."),el("p",{class:"hero-lede"},"A map shows where things are. A useful tool helps someone decide what to do next."),el("p",{},"FleetLab is the browser learning playground in Hermes, an independent simulation and evidence-review project. It connects the market and the depot through one operating cycle. It makes the consequences of a change inspectable, then uses repeated experiments to challenge the first impression.")]),
+    el('p',{},NON_AFFILIATION),
     el("section",{class:"approach-section"},[eyebrow("01 / PEOPLE & DECISIONS"),el("h2",{},"Different users. A shared operating picture."),el("div",{class:"people-grid"},rows.map(([role,job,tool])=>el("article",{},[el("h3",{},role),el("p",{class:"person-job"},job),el("p",{},tool)])))]),
     el("section",{class:"approach-case"},[
       el("div",{},[eyebrow("02 / A WORKED PRODUCT HYPOTHESIS"),el("h2",{},"More cleaning capacity should reduce depot delay."),el("p",{},"That hypothesis needs a second question: do rider outcomes improve, stay similar, or get worse? A local capacity change can move the constraint to another part of the system."),pageLink("Open the capacity experiment  →","depots",navigate,true)]),
@@ -121,7 +125,7 @@ export function mountStudio(app) {
   const browserWindow=globalThis.window;
   const container=el('div',{class:'fleet-studio','data-page':'overview'});
   root.parentNode.insertBefore(container,root);
-  const navItems=[['overview','Overview'],['simulation','Fleet day'],['streets','Street lab'],['depots','Experiments'],['catalog','Learning catalog'],['approach','Product approach']];
+  const navItems=[['overview','Overview'],['simulation','Fleet day'],['streets','Street lab'],['depots','Four-area workbench'],['catalog','Learning catalog'],['approach','Product approach']];
   const navLinks=navItems.map(([id,text])=>{
     const link=pageLink(text,id,navigate);link.setAttribute('data-nav',id);return link;
   });
@@ -131,15 +135,16 @@ export function mountStudio(app) {
     el('div',{class:'studio-brand'},[brand,el('div',{},[el('strong',{},'FleetLab'),el('span',{},'by Hermes')])]),
     el('nav',{'aria-label':'Main navigation'},navLinks),el('span',{class:'studio-status'},[el('span',{'aria-hidden':'true'},'◉'),'SIMULATION LAB']),
   ]);
-  const boundary=el('div',{class:'studio-boundary',role:'note'},[el('strong',{},'Teaching model'),'Bay Area geography in Fleet day and Street lab; Region B is fictional. Simulated demand and operations. No real fleet performance claim.']);
-  const film=createHeroFilm();
+  const reducedMotion=()=>isReducedMotion(store.getState());
+  const film=createHeroFilm({reducedMotion});
   const home=overview(navigate,film),product=approach(navigate);
-  const operations=createOperationsLab({onCatalog:()=>navigate('catalog')});
-  const streets=createStreetLab();
+  const operations=createOperationsLab({reducedMotion,onCatalog:()=>navigate('catalog')});
+  const streets=createStreetLab({reducedMotion});
   const records=simulationCatalog();
   const lessonPage=record=>record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
   const catalog=createSimulationCatalog({hrefForLesson:record=>routeHref({page:lessonPage(record),lesson:record.id}),onLesson:record=>visit({page:lessonPage(record),lesson:record.id})});
   const workspaceIntro=el('section',{class:'workspace-intro',tabindex:'-1'});
+  const workspaceIdentity=modelHeader('Four-area experiments','Schematic four-area Bay Area zones (San Francisco, Peninsula, San Jose, East Bay); not road geometry',MODEL_VERSION);
   const workspaceMain=el('main',{class:'studio-workspace'},[workspaceIntro,root]);
   const errorText=el('p',{});
   const routeError=el('main',{class:'studio-route-error',hidden:true},[eyebrow('LINK COULD NOT BE LOADED'),el('h1',{},'This setup needs attention.'),errorText,el('p',{},'No simulation was run. Check the complete link and the FleetLab version that created it, or choose a view from the navigation.'),el('button',{type:'button',class:'studio-button','data-action':'recover-route',on:{click:()=>navigate('overview')}},'Open the overview')]);
@@ -151,13 +156,15 @@ export function mountStudio(app) {
   let current='overview',initialized=false,capacityLoaded=false,activeMain=null,lastHandledHash=null,applying=false;
   const baseUrl=()=>browserWindow?.location?.href?.split('#')[0]??'';
   const shareLink=href=>{writeAddress(href,true);lastHandledHash=href;};
-  const fleetShare=createSetupSharing({page:'simulation',models:[['fleet-day','Fleet day'],['launch-rehearsal','Launch rehearsal'],['regional-power','Austin regional power']],capture:(source,model)=>operations.getSharedSetup(source,model),onLink:shareLink,baseUrl});
+  const fleetShare=createSetupSharing({page:'simulation',models:[['fleet-day','Fleet day']],capture:(source,model)=>operations.getSharedSetup(source,model),onLink:shareLink,baseUrl});
+  const launchShare=createSetupSharing({page:'simulation',models:[['launch-rehearsal','Launch rehearsal']],capture:source=>operations.getSharedSetup(source,'launch-rehearsal'),onLink:shareLink,baseUrl});
+  const austinShare=createSetupSharing({page:'simulation',models:[['regional-power','Austin power and readiness']],capture:source=>operations.getSharedSetup(source,'regional-power'),onLink:shareLink,baseUrl});
   const streetShare=createSetupSharing({page:'streets',models:[['street-lab','Street lab']],capture:source=>streets.getSharedSetup(source),onLink:shareLink,baseUrl});
-  const regionalShare=createSetupSharing({page:setup=>setup.config.mode==='experiment'?'depots':'operations',models:[['regional','Regional experiments']],capture:source=>getRegionalSetup(store.getState(),source),onLink:shareLink,baseUrl});
-  operations.element.insertBefore(fleetShare.element,operations.element.children[1]??null);
+  const regionalShare=createSetupSharing({page:setup=>setup.config.mode==='experiment'?'depots':'operations',models:[['regional','Four-area experiments']],capture:source=>getRegionalSetup(store.getState(),source),onLink:shareLink,baseUrl});
+  operations.shareSlot.appendChild(fleetShare.element);operations.launchPanel.shareSlot.appendChild(launchShare.element);operations.regionalPanel.shareSlot.appendChild(austinShare.element);
   streets.element.insertBefore(streetShare.element,streets.element.children[1]??null);
   workspaceMain.insertBefore(regionalShare.element,root);
-  for(const node of [skip,header,boundary,home,product,operations.element,streets.element,catalog.element,workspaceMain,routeError,footer])container.appendChild(node);
+  for(const node of [skip,header,home,product,operations.element,streets.element,catalog.element,workspaceMain,routeError,footer])container.appendChild(node);
   if(app.regions?.rail&&app.regions?.map)root.insertBefore(app.regions.rail,app.regions.map);
 
   function writeAddress(href,replace=false){
@@ -182,13 +189,12 @@ export function mountStudio(app) {
     home.hidden=page!=='overview';film.setActive(page==='overview');product.hidden=page!=='approach';
     operations.element.hidden=page!=='simulation';streets.element.hidden=page!=='streets';catalog.element.hidden=page!=='catalog';
     workspaceIntro.hidden=!workspace;regionalShare.element.hidden=page==='tour';routeError.hidden=true;
-    boundary.hidden=workspace||page==='overview'||page==='approach';
     if(app.regions?.charts&&app.regions?.map&&app.regions?.inspector)root.insertBefore(app.regions.charts,page==='depots'?app.regions.map:app.regions.inspector);
     container.setAttribute('data-page',page);
     for(const link of navLinks){if(link.getAttribute('data-nav')===page)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
     if(page==='operations'){
       store.dispatch({type:'mode/set',mode:'sandbox'});
-      workspaceIntro.replaceChildren(eyebrow('WORKSPACE / REGIONAL OPERATIONS'),el('h1',{},'Follow the fleet through a day.'),el('p',{},'Set up a scenario, run the simulated day, then inspect an area or depot. Read rider wait and unserved demand together. This is the older regional teaching model.'));
+      workspaceIntro.replaceChildren(eyebrow('WORKSPACE / REGIONAL OPERATIONS'),el('h1',{},'Follow the fleet through a day.'),el('p',{},'Set up a scenario, run the simulated day, then inspect an area or depot. Read rider wait and unserved demand together. This is the four-area teaching model.'));
     }
     if(page==='depots'){
       if(!capacityLoaded){startFromPreset(store.dispatch,'UC-08a');capacityLoaded=true;}
@@ -199,14 +205,15 @@ export function mountStudio(app) {
       workspaceIntro.replaceChildren(eyebrow('GUIDED WALKTHROUGH / ABOUT 6 MINUTES'),el('h1',{},'One day. Four ways to understand it.'),el('p',{},'Follow operations, analytics, simulation and product decisions. Prepare the example, then move through the chapters at your pace.'));
       if(!store.getState().present.on)present.open();
     }
+    if(workspace){workspaceIntro.appendChild(workspaceIdentity.element);updateWorkspaceIdentity(store.getState());}
     if(page==='streets')streets.refresh();
     focusMain(workspace?workspaceMain:page==='approach'?product:page==='simulation'?operations.element:page==='streets'?streets.element:page==='catalog'?catalog.element:home,ROUTES[page].title);
   }
   function applyLesson(record){
     if(record.target==='operations'){
       const patch=typeof record.patch==='function'?record.patch():structuredClone(record.patch);
-      if(patch.launch_rehearsal){operations.chooseLaunchTemplate(patch.launch_rehearsal);fleetShare.setModel('launch-rehearsal');}
-      else{operations.loadScenario(patch);fleetShare.setModel('fleet-day');}
+      if(patch.launch_rehearsal){operations.chooseLaunchTemplate(patch.launch_rehearsal);}
+      else{operations.loadScenario(patch);}
     }else if(record.target==='streets')streets.loadSharedSetup({model:'street-lab',config:{...defaultStreetConfig(),hotspot:record.hotspot},options:{}});
     else{
       app.host?.cancel();
@@ -233,15 +240,15 @@ export function mountStudio(app) {
       if(setup){
         if(setup.model==='street-lab')streets.loadSharedSetup(setup);
         else if(setup.model==='regional'){app.host?.cancel();loadRegionalSetup(store,setup);}
-        else{operations.loadSharedSetup(setup);fleetShare.setModel(setup.model);}
+        else operations.loadSharedSetup(setup);
         pause();
       }
       if(record)document.title=`${record.title} · FleetLab by Hermes`;
-      for(const share of [fleetShare,streetShare,regionalShare])share.clear();
-      if(setup)(setup.model==='street-lab'?streetShare:setup.model==='regional'?regionalShare:fleetShare).loaded();
+      for(const share of [fleetShare,launchShare,austinShare,streetShare,regionalShare])share.clear();
+      if(setup){const shared={'fleet-day':fleetShare,'launch-rehearsal':launchShare,'regional-power':austinShare,'street-lab':streetShare,regional:regionalShare};shared[setup.model].loaded();const target=setup.model==='launch-rehearsal'?operations.launchPanel.heading:setup.model==='regional-power'?operations.regionalPanel.heading:setup.model==='fleet-day'?operations.summaryHeading:setup.model==='street-lab'?streets.element.querySelector('h1'):workspaceIntro.querySelector('h1');target.setAttribute('tabindex','-1');target.focus();}
     }catch(error){
       pause();current='error';if(store.getState().present.on)present.close();
-      for(const node of [home,product,operations.element,streets.element,catalog.element,workspaceMain,root,boundary])node.hidden=true;
+      for(const node of [home,product,operations.element,streets.element,catalog.element,workspaceMain,root])node.hidden=true;
       film.setActive(false);root.setAttribute('inert','');routeError.hidden=false;errorText.textContent=error.message;container.setAttribute('data-page','error');
       for(const link of navLinks)link.removeAttribute('aria-current');
       focusMain(routeError,'Link could not be loaded');
@@ -250,7 +257,9 @@ export function mountStudio(app) {
   const addressChanged=()=>{const hash=browserWindow?.location?.hash??'';if(hash!==lastHandledHash)applyRoute(hash);};
   browserWindow?.addEventListener('hashchange',addressChanged);
   applyRoute(browserWindow?.location?.hash??'');
+  function updateWorkspaceIdentity(state){workspaceIdentity.update(state.experiment.frozen?.spec.model_version??MODEL_VERSION,state.experiment.verdictStale||state.run.stale);}
+  let previousMotion=reducedMotion();
   let previousPresent=store.getState().present.on;
-  const unsubscribe=store.subscribe(state=>{const was=previousPresent;previousPresent=state.present.on;if(was&&!state.present.on&&current==='tour'&&!applying)navigate('operations');});
+  const unsubscribe=store.subscribe(state=>{updateWorkspaceIdentity(state);const motion=reducedMotion();if(motion!==previousMotion){previousMotion=motion;film.setActive(current==='overview');}const was=previousPresent;previousPresent=state.present.on;if(was&&!state.present.on&&current==='tour'&&!applying)navigate('operations');});
   return {navigate,applyRoute,operations,streets,element:container,destroy(){browserWindow?.removeEventListener('hashchange',addressChanged);film.destroy();operations.destroy();streets.destroy();unsubscribe();root.hidden=false;root.removeAttribute('inert');container.parentNode?.insertBefore(root,container);container.remove();}};
 }

@@ -33,6 +33,7 @@ test('street shares separate current controls from the submitted result and deta
 test('loading street settings replaces all controls, pauses, and keeps an existing result visibly stale',()=>withLab(async(lab,canceled)=>{
  lab.setConfig({...quick,seed:321,weather:'rain',fleet_size:12});await lab.run();
  const previous=lab.getState().run;
+ lab.element.querySelector('.street-playback button').click();
  const setup={model:'street-lab',config:{...defaultStreetConfig(),...quick,hotspot:'stockton',seed:678},options:{}};
  lab.loadSharedSetup(setup);
  assert.equal(lab.getState().run,previous);

@@ -57,12 +57,13 @@ test('fleet counters account for every vehicle including queues and depot work',
   }finally{restore();}
 });
 
-test('explicit run starts playback; pause and next activity retain the recorded day',async()=>{
+test('explicit Run stays paused; Play and next activity retain the recorded day',async()=>{
   const restore=installFakeDom();
   try{
     const lab=createOperationsLab({reducedMotion:()=>false,requestFrame:()=>77,cancelFrame:()=>{}});
     lab.setConfig({fleet_size:8,requests_per_hour:8,duration_hours:2});
-    await lab.run(); assert.equal(lab.getState().playing,true);
+    await lab.run(); assert.equal(lab.getState().playing,false);
+    lab.element.querySelector('.ops-transport button').click();assert.equal(lab.getState().playing,true);
     lab.pause(); assert.equal(lab.getState().playing,false);
     const result=lab.getState().result;
     lab.nextActivity(); assert.ok(lab.getState().minute>0);

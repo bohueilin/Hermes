@@ -3,10 +3,10 @@ export const ROUTES=Object.freeze({
   overview:{path:'overview',title:'Overview'},
   simulation:{path:'fleet-day',title:'Fleet day'},
   streets:{path:'street-lab',title:'Street lab'},
-  depots:{path:'experiments',title:'Experiments'},
+  depots:{path:'experiments',title:'Four-area workbench'},
   catalog:{path:'catalog',title:'Learning catalog'},
   approach:{path:'approach',title:'Product approach'},
-  operations:{path:'regional',title:'Regional workspace'},
+  operations:{path:'regional',title:'Four-area workspace'},
   tour:{path:'walkthrough',title:'Guided walkthrough'},
 });
 const MAX_ROUTE_LENGTH=33000;

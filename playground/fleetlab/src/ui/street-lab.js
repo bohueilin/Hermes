@@ -2,6 +2,7 @@ import {el} from './dom.js';
 import {STREET_NETWORK,streetMapDownload} from '../model/street-network.js';
 import {defaultStreetConfig,simulateStreets,compareStreetPolicies,STREET_PRESETS} from '../model/street-simulation.js';
 import {createStreetScene} from './street-scene.js';
+import {modelHeader} from './model-identity.js';
 const button=(text,fn,primary=false)=>el('button',{type:'button',class:primary?'studio-button studio-button-primary':'studio-button',on:{click:fn}},text);
 const eyebrow=text=>el('p',{class:'eyebrow'},text);
 const fmt=(v,d=1)=>v===null||v===undefined?'Not available':Number(v).toLocaleString('en-US',{maximumFractionDigits:d});
@@ -10,7 +11,8 @@ const clock=(seconds,start=0)=>{const min=Math.floor(seconds/60)+start*60;return
 function download(name,data){const link=el('a',{href:'data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data)),download:name});document.body.appendChild(link);link.click();link.remove();}
 
 export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>requestAnimationFrame(fn),cancelFrame=id=>cancelAnimationFrame(id),reducedMotion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false}={}){
- let config=defaultStreetConfig(),result=null,comparison=null,time=0,playing=false,raf=null,lastTime=null,stale=false,busy=false,destroyed=false,selected='AV-01',edgeId=null,lastDetails='',revision=0,pauseVersion=0,runGeneration=0;
+ let config=defaultStreetConfig(),result=null,comparison=null,time=0,playing=false,raf=null,lastTime=null,minuteCarry=0,stale=false,busy=false,destroyed=false,selected='AV-01',edgeId=null,lastDetails='',revision=0,runGeneration=0;
+ const streetVersion='street-lab-v1',identity=modelHeader('Street lab','OpenStreetMap San Francisco street extracts',streetVersion);
  const inputs=new Map(),anchors=new Map(network.anchors.map(a=>[a.id,a])),edges=new Map(network.edges.map(e=>[e.id,e]));
  const label=id=>anchors.get(id)?.label??id;
  const status=el('p',{class:'street-status',role:'status'},'Choose a bottleneck, then run the street scenario.');
@@ -48,9 +50,10 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   el('div',{},[eyebrow('FOLLOW ONE AV'),vehicleSelect,button('Next AV activity',()=>{const event=result?.vehicles.find(v=>v.id===selected)?.log.find(e=>e.time>time);if(event)seek(event.time);}),vehicleDetail]),
   el('div',{},[eyebrow('INSPECT A BLOCK'),el('p',{},'Select a queued block to zoom in and inspect its direction, storage and downstream constraint.'),queueList,blockDetail]),
  ]);
- const results=el('section',{class:'street-results'},[eyebrow('3 / READ THE TRADE-OFF'),el('h2',{},'What did the fleet manage to serve?'),el('p',{},'Run a scenario to see completed and unfinished journeys together.')]);
+ const resultHeading=el('h2',{tabindex:'-1'},'Result summary');
+ const results=el('section',{class:'street-results'},[eyebrow('3 / READ THE TRADE-OFF'),resultHeading,el('p',{},'Run a scenario to see completed and unfinished journeys together.')]);
  const element=el('main',{class:'street-lab',id:'street-lab'},[
-  el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),el('h1',{},['One blocked street.',el('br'),el('span',{},'A citywide ripple.')]),el('p',{class:'hero-lede'},'A bridge queue can delay an airport pickup. Follow the cars, find the constraint, and test what a routing change actually improves.'),el('p',{class:'street-scope-line'},`${fmt(network.edges.length,0)} directed road links · Six downtown hotspots · Five-second replay`),button('Start the street demo  ▶',async()=>{await run();scene.element.scrollIntoView?.({block:'center',behavior:'instant'});},true)]),
+  el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),el('h1',{},['One blocked street.',el('br'),el('span',{},'A citywide ripple.')]),identity.element,el('p',{class:'hero-lede'},'A bridge queue can delay an airport pickup. Follow the cars, find the constraint, and test what a routing change actually improves.'),el('p',{class:'street-scope-line'},`${fmt(network.edges.length,0)} directed road links · Six downtown hotspots · Five-second replay`),button('Start the street demo  ▶',()=>run(),true)]),
   presetRow,el('div',{class:'street-layout'},[settings,el('div',{class:'street-main'},[replay,inspect])]),results,
   el('section',{class:'street-learning'},[eyebrow('WHAT THIS MODEL HELPS YOU ASK'),el('h2',{},'Connect the street problem to an operating decision.'),el('div',{class:'street-learning-grid'},[
    ['Market lead','Is supply unavailable or simply stuck?','Read assigned, boarded and completed populations. Inspect time tied up in roads, pickup berths and turnaround before adding more AVs.'],
@@ -66,6 +69,7 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   ]),
  ]);
  function sync(){
+  identity.update(result?.version??streetVersion,stale);
   const p=STREET_PRESETS.find(p=>p.id===config.hotspot);heading.textContent=p.question;cause.textContent=p.cause;advice.textContent=p.action;
   presetButtons.forEach((b,i)=>b.setAttribute('aria-pressed',STREET_PRESETS[i].id===config.hotspot?'true':'false'));
   for(const[key,input]of inputs)input.value=String(config[key]);policy.value=config.policy;weather.value=config.weather;
@@ -85,15 +89,20 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   status.textContent=stale?'Shared settings loaded. Replay and results show the previous run until you run again.':'Shared settings loaded. Run the street scenario when ready.';
   sync();scene.focus(config.hotspot);render();
  }
- function pause(){pauseVersion++;playing=false;if(raf!==null)cancelFrame(raf);raf=null;lastTime=null;playButton.textContent='Play';}
- function play(){if(!result||destroyed)return;if(time>=result.config.duration_minutes*60)time=0;playing=true;lastTime=null;playButton.textContent='Pause';raf=requestFrame(tick);}
- function tick(timestamp){if(!playing||destroyed)return;if(lastTime!==null)time=Math.min(result.config.duration_minutes*60,time+Math.min(.1,(timestamp-lastTime)/1000)*Number(speed.value));lastTime=timestamp;render();if(time>=result.config.duration_minutes*60)pause();else raf=requestFrame(tick);}
+ function pause(){playing=false;if(raf!==null)cancelFrame(raf);raf=null;lastTime=null;minuteCarry=0;playButton.textContent='Play';}
+ function play(){if(!result||destroyed)return;if(time>=result.config.duration_minutes*60)time=0;if(reducedMotion())time=Math.floor(time/60)*60;playing=true;lastTime=null;minuteCarry=0;playButton.textContent='Pause';render();raf=requestFrame(tick);}
+ function tick(timestamp){
+  if(!playing||destroyed)return;const reduced=reducedMotion(),end=result.config.duration_minutes*60;
+  if(reduced)time=Math.floor(time/60)*60;
+  if(lastTime!==null){const elapsed=Math.max(0,timestamp-lastTime);if(reduced){minuteCarry+=elapsed;if(minuteCarry>=1000){time=Math.min(end,time+60);minuteCarry=0;}}else{minuteCarry=0;time=Math.min(end,time+Math.min(.1,elapsed/1000)*Number(speed.value));}}
+  lastTime=timestamp;render();if(time>=end)pause();else raf=requestFrame(tick);
+ }
  function seek(value){pause();time=Math.max(0,Math.min(result?.config.duration_minutes*60??0,value));lastDetails='';render();}
  function frame(){return result?.frames[Math.min(result.frames.length-1,Math.floor(time/5))]??null;}
  function render(){
   const f=frame(),index=f?Math.floor(time/5):0;timeLabel.textContent=clock(time,result?.config.start_hour??config.start_hour);timeline.value=String(Math.floor(time/5)*5);
   live.textContent=f?`${f.requests.completed} completed · ${f.queued} road vehicles queued · ${f.traffic.pending} waiting to enter`:'Ready to simulate';
-  scene.render(result,f,result?.frames[index+1]??f,(time%5)/5,selected);
+  scene.render(result,f,result?.frames[index+1]??f,reducedMotion()?0:(time%5)/5,selected);
   const key=`${index}|${selected}|${edgeId}`;if(key!==lastDetails){lastDetails=key;renderDetails();}
  }
  function renderDetails(){
@@ -116,8 +125,9 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   if(road&&s)blockDetail.appendChild(el('p',{},`Front car exit wait: ${fmt(s.front_wait_seconds/60)} min beyond its uncongested exit time. This is a recorded model wait, not an estimated clearance time.`));
  }
  function showResults(){
+  identity.update(result.version,stale);
   const s=result.summary,metadata=resultMetadata();const metric=(title,value,note)=>el('article',{},[el('span',{},title),el('strong',{},value),el('small',{},note)]);
-  results.replaceChildren(eyebrow('3 / READ THE TRADE-OFF'),el('h2',{},'What did the fleet manage to serve?'),el('p',{},`${result.config.duration_minutes}-minute run · seed ${result.config.seed} · ${result.config.policy==='queue-aware'?'queue-aware':'free-flow'} routes. End-of-run totals, separate from the replay clock.`),
+  results.replaceChildren(eyebrow('3 / READ THE TRADE-OFF'),resultHeading,el('p',{},`${result.config.duration_minutes}-minute run · seed ${result.config.seed} · ${result.config.policy==='queue-aware'?'queue-aware':'free-flow'} routes. End-of-run totals, separate from the replay clock.`),
    el('p',{class:'street-result-provenance'},`Model ${metadata.model_version} · Network ${metadata.network_version} · Seed ${metadata.seed} · ${metadata.evidence_status} · Authority: ${metadata.authority}`),
    el('details',{class:'street-result-details'},[el('summary',{},'Exact submitted settings and results'),el('pre',{},JSON.stringify({metadata,config:result.config,summary:result.summary},null,2))]),
    el('div',{class:'street-metrics'},[metric('Completed journeys',`${s.completed} / ${s.requests}`,`${s.waiting} waiting · ${s.in_progress} in progress · ${s.expired} expired · ${s.unroutable} no route`),metric('Pickup wait',fmt(s.mean_pickup_minutes)+' min',`Mean for ${s.boarded} boarded riders, including pickup dwell`),metric('Passenger leg',fmt(s.mean_trip_minutes)+' min',`Mean for ${s.completed} completed journeys only`),metric('Empty road distance',fmt(s.empty_km)+' km','Actual traveled pickup distance, including partial legs')]),
@@ -136,12 +146,12 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
  function resultMetadata(){return {model_version:result.version,network_version:result.network_version,seed:result.config.seed,evidence_status:'NOT_EVIDENCE',authority:'NONE'};}
  function chooseRun(which){if(!comparison)return;pause();result=comparison[which];time=0;edgeId=null;lastDetails='';showResults();status.textContent=`Replaying ${result.config.policy} routes on the same demand.${stale?' Settings changed; this is the previous run.':''}`;render();}
  async function run(compare=false){
-  if(busy||destroyed)return;pause();busy=true;const captured={...config},version=revision,playIntent=pauseVersion,generation=++runGeneration;fields.disabled=true;runButton.disabled=true;compareButton.disabled=true;status.textContent=compare?'Comparing both policies on identical demand…':'Building the street experiment…';error.hidden=true;
+  if(busy||destroyed)return;pause();busy=true;const captured={...config},version=revision,generation=++runGeneration;fields.disabled=true;runButton.disabled=true;compareButton.disabled=true;status.textContent=compare?'Comparing both policies on identical demand…':'Building the street experiment…';error.hidden=true;
   await new Promise(resolve=>setTimeout(resolve,0));
   try{if(destroyed||generation!==runGeneration)return;const nextComparison=compare?compareStreetPolicies(captured,network):null,nextResult=nextComparison?.baseline??simulateStreets(captured,network);comparison=nextComparison;result=nextResult;time=0;stale=revision!==version;selected='AV-01';edgeId=null;lastDetails='';timeline.max=String(captured.duration_minutes*60);
    vehicleSelect.replaceChildren(...result.frames[0].vehicles.map(v=>el('option',{value:v.id},v.id)));vehicleSelect.value=selected;comparisonView.hidden=!comparison;
-   status.textContent=stale?'Settings changed; this is the previous run.':compare?'Comparison ready. Replay either policy, then read the trade-offs below.':'Scenario ready. Use Largest queue to jump to the bottleneck, or follow an AV.';
-   showResults();scene.focus(captured.hotspot);render();if(!reducedMotion()&&!stale&&!element.hidden&&pauseVersion===playIntent)play();
+   status.textContent=stale?'Settings changed; this is the previous run.':compare?'Comparison complete. Result summary ready. Press Play to replay either policy.':'Scenario complete. Result summary ready. Press Play to replay.';
+   showResults();scene.focus(captured.hotspot);render();if(!element.hidden)resultHeading.focus({preventScroll:true});
   }catch(e){error.textContent=e.message;error.hidden=false;status.textContent='Check the settings and try again.';}finally{if(generation===runGeneration){busy=false;fields.disabled=false;runButton.disabled=false;compareButton.disabled=false;}}
  }
  sync();render();

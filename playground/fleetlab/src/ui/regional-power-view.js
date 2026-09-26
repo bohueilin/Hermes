@@ -3,8 +3,10 @@ import {el} from './dom.js';
 import {AUSTIN_REGION} from '../model/region-package.js';
 import {POWER_CONDITIONS,regionalPowerDemoConfig,regionalPowerProfile} from '../model/regional-power.js';
 import {simulateBayAreaOperations} from '../model/bay-operations.js';
-import {freezeBayExperiment,bayExperimentSteps,canonicalBayJson} from '../model/bay-experiment-contract.js';
+import {freezeBayExperiment,bayExperimentSteps,canonicalBayJson,bayModelVersion} from '../model/bay-experiment-contract.js';
 import {createSetup,encodeSetup,decodeSetup} from './setup-codec.js';
+import {number,nonzero} from './format.js';
+import {modelHeader} from './model-identity.js';
 
 const value=v=>v===null||v===undefined?'Not available':typeof v==='object'?JSON.stringify(v):String(v);
 const button=(label,click)=>el('button',{type:'button',class:'studio-button',on:{click}},label);
@@ -26,10 +28,39 @@ function schematic(){
   for(const p of byId.values()){const [x,y]=point(p),depot=AUSTIN_REGION.depots.find(d=>d.place_id===p.id);graph.appendChild(svg('circle',{cx:x,cy:y,r:8,fill:depot?'#d5903b':'#236457'}));graph.appendChild(svg('text',{x:x+13,y:y-12,fill:'#203a32','font-size':14},p.label));if(depot)graph.appendChild(svg('text',{x:x+13,y:y+8,fill:'#71511f','font-size':12},depot.label));}
   return el('figure',{class:'regional-power-graph'},[graph,el('figcaption',{},'Schematic graph · local meters converted to kilometers. All locations, edges, demand and operating parameters are synthetic. America/Chicago is a display label; the model uses elapsed minutes.')]);
 }
+function resources(c){const r=c.resources;return el('p',{},r?`This setup includes a ${r.delay_min}-minute resource-observation delay and ${r.outage_ports} charging port(s) per depot out from minute ${r.outage_start_min} to ${r.outage_end_min}.`:'Resource observations are not modeled in this setup.');}
+// Shift the stored decimal without losing a near-threshold digit to multiplication.
+function decimal(v,scale){
+  const [base,e=0]=String(Math.abs(v)).split('e'),digits=base.replace('.',''),point=(base.includes('.')?base.indexOf('.'):base.length)+Number(e)+(scale===100?2:0);
+  const text=(point<=0?'0.'+'0'.repeat(-point)+digits:point>=digits.length?digits+'0'.repeat(point-digits.length):digits.slice(0,point)+'.'+digits.slice(point)).replace(/^0+(?=\d)/,'');
+  return (v<0?'-':'')+text;
+}
+function thresholdFormat(values,limits,scale=1){
+  let d=2;
+  const displayed=v=>Number(number(v*scale,d).replaceAll(',',''));
+  for(;d<=6;d++)if(values.every(v=>limits.every(t=>Math.sign(v-t)===Math.sign(displayed(v)-displayed(t)))))break;
+  return (v,sign=false)=>d<=6?nonzero(v*scale,d,{withSign:sign}):(sign&&v>0?'+':'')+decimal(v,scale);
+}
+const railLabels={max_request_wait_min:['Maximum request wait','min'],unfinished_visits:['Unfinished depot visits','per seed'],terminal_energy_kwh:['Terminal energy','kWh'],rejected_actions:['Rejected actions','per seed']};
+function verdict(r){
+  const a=r.analysis,p=a.primary,m=r.spec.primary.equivalence_margin,f=thresholdFormat([p.mean_delta,p.ci_low,p.ci_high],[-m,m],100);
+  const relation={IMPROVED:`above the +${f(m)}-point improvement margin`,REGRESSED:`below the -${f(m)}-point regression margin`,UNCHANGED:`inside the ±${f(m)}-point equivalence band`,INCONCLUSIVE:'crossing a practical-margin boundary'};
+  const root=el('div',{class:'regional-verdict'},el('p',{},`${r.spec.null_treatment?'Same-policy control':'Deadline priority'} changed completion by ${f(p.mean_delta,true)} percentage points (95% interval ${f(p.ci_low,true)} to ${f(p.ci_high,true)}), ${relation[a.outcome]} → ${a.outcome}.`));
+  for(const g of a.guardrail_statuses){
+    const [label,unit]=railLabels[g.metric]??[g.metric,'fraction'],direction=r.spec.guardrails.find(d=>d.metric===g.metric).direction;
+    const f=thresholdFormat(g.harm===null?[]:[g.harm],[g.max_harm]),allowed=decimal(g.max_harm,1);
+    const change=g.status==='NOT_EVALUABLE'?`${label}: not evaluable; allowed ${allowed} ${unit}.`:`${label} ${g.harm===0?`did not change (${f(0)} ${unit})`:`${(direction==='higher_is_better')===(g.harm>0)?'fell':'rose'} by ${f(Math.abs(g.harm))} ${unit}`}; allowed ${allowed} → ${g.status==='REGRESSED'?'HOLD':'within allowance'}.`;
+    root.appendChild(el('p',{},change));
+  }
+  const next={ADVANCE_TO_NEXT_TEST:'Advance to the next simulation test → ADVANCE_TO_NEXT_TEST.',RUN_MORE_EXPERIMENTS:'Run more experiments to resolve the interval → RUN_MORE_EXPERIMENTS.',NO_RECOMMENDATION:'No change is recommended within this equivalence band → NO_RECOMMENDATION.',HOLD:'Completion regressed beyond its practical margin → HOLD.'};
+  if(a.recommendation!=='HOLD'||!a.guardrail_statuses.some(g=>g.status==='REGRESSED'))root.appendChild(el('p',{},next[a.recommendation]));
+  return root;
+}
 function runView(r){
   const m=r.metrics,x=r.extensions,c=x.charging,root=el('section',{},[
     el('h3',{},'Recorded Austin shift'),el('p',{class:'result-provenance'},`Seed ${r.config.seed} · ${r.version} · ${x.validity} · Simulation only · NOT_EVIDENCE · deployment permission NONE.`),
     el('p',{},`Submitted condition ${r.config.site_power_profile.condition_id} at ${r.config.site_power_profile.site_id}; ${r.config.duration_hours} hours, ${r.config.fleet_size} vehicles, nominal ${r.config.site_power_kw} kW per site.`),
+    resources(r.config),
     table('Every request at the horizon',['All requests','Completed','Unserved','Waiting','Assigned / boarding / trip'],[[m.total_requests,m.completed_trips,m.unserved_requests,m.pending_requests,m.in_progress_trips]]),
     table('Readiness, unfinished work and energy',['Measure','Recorded value'],[
       ['Ready by deadline (visits)',c.ready_by_deadline],['Missed deadline (visits)',c.missed_deadline],['Deadline pending (visits)',c.deadline_pending],
@@ -57,19 +88,16 @@ function runView(r){
   root.appendChild(download('Download regional shift JSON','fleetlab-regional-power-run.json',r));
   return root;
 }
-function comparisonView(r){
+export function comparisonView(r){
   const root=el('section',{},[el('h3',{},'Redistribution versus deadline priority'),el('p',{},`${r.replications} paired seeds · ${r.validity} · NOT_EVIDENCE · deployment permission NONE.`),
     el('p',{},'Both arms receive identical demand and external power conditions. Only charging.policy changes. Same-policy controls retain the baseline in both arms.'),
     el('p',{},`Submitted condition ${r.spec.baseline.site_power_profile.condition_id}; ${r.spec.baseline.duration_hours} hours, ${r.spec.baseline.fleet_size} vehicles, nominal ${r.spec.baseline.site_power_kw} kW per site.`),
+    resources(r.spec.baseline),
     exact('Frozen experiment inputs, versions and graph provenance',{spec:r.spec,digest:r.digest,region:r.region}),
   ]);
   if(r.validity!=='VALID'){root.appendChild(el('p',{role:'alert'},r.reason??'Comparison unavailable.'));return root;}
   if(r.descriptive)root.appendChild(el('p',{},'One seed is descriptive; no interval or recommendation.'));
-  if(r.analysis){const a=r.analysis,p=a.primary;
-    root.appendChild(el('h4',{},a.outcome));root.appendChild(el('p',{},value(a.recommendation)));
-    root.appendChild(table('Registered completion primary',['Baseline mean','Candidate mean','Mean paired delta','Interval low','Interval high','Practical margin'],[[p.baseline_mean,p.candidate_mean,p.mean_delta,p.ci_low,p.ci_high,r.spec.margin]]));
-    root.appendChild(table('Separate guardrails',['Metric','Status','Mean harm','Maximum allowed'],a.guardrail_statuses.map(g=>[g.metric,g.status,g.harm,g.max_harm])));
-  }
+  if(r.analysis){root.appendChild(verdict(r));const details=exact('Exact comparison values',{analysis:r.analysis,primary:r.spec.primary,guardrails:r.spec.guardrails});details.className='regional-exact-values';root.appendChild(details);}
   root.appendChild(table('Complete service and work by seed',['Seed','Arm','All requests','Completed','Unserved','Waiting','In progress','Ready / missed / pending deadlines','Unfinished visits','Unfinished tasks','Ending kWh','Rejected power'],r.per_seed.flatMap(pair=>['baseline','candidate'].map(arm=>{const a=pair[arm],m=a.metrics,c=a.extensions.charging;return [pair.seed,arm,m.total_requests,m.completed_trips,m.unserved_requests,m.pending_requests,m.in_progress_trips,`${c.ready_by_deadline} / ${c.missed_deadline} / ${c.deadline_pending}`,m.censored_visits,a.readiness?.metrics.unfinished_tasks,m.final_energy_kwh,c.rejected_actions.length];}))));
   root.appendChild(el('p',{},'A policy can improve completion and still worsen a guardrail. An unchanged result can mean the affected site was not binding. Test full power, 60%, 20%, and an outage separately; only tested conditions support conclusions. Rejected proposals are distinct from invalid simulator accounting.'));
   root.appendChild(el('ul',{},r.limitations.map(t=>el('li',{},t))));
@@ -78,6 +106,7 @@ function comparisonView(r){
 }
 export function createRegionalPowerPanel(){
   let config=regionalPowerDemoConfig(),options=defaultOptions(),result=null,lastRun=null,lastExperiment=null,stale=false,busy=false,token=0,destroyed=false;
+  const identity=modelHeader('Austin power and readiness','Fictional Austin-inspired schematic (not imported roads)',bayModelVersion(config)),heading=el('h2',{tabindex:-1},'What happens when charging power falls during the shift?'),shareSlot=el('div');
   const status=el('p',{role:'status'},'Configure a synthetic condition, then run explicitly.'),results=el('div',{class:'regional-power-results'}),comparisons=el('div',{class:'regional-power-comparison'}),timeline=el('div'),resultLabel=el('p',{class:'regional-result-context',role:'note'}),fields=new Map();
   const condition=el('select',{'aria-label':'Regional power condition',on:{change:()=>{
     const p=POWER_CONDITIONS.find(p=>p.id===condition.value);if(!p)return;
@@ -88,7 +117,7 @@ export function createRegionalPowerPanel(){
   const nullControl=el('input',{type:'checkbox','aria-label':'Regional same-policy control',on:{change:()=>{options.null_treatment=nullControl.checked;invalidate();}}});
   const runButton=button('Run Austin shift',()=>run()),compareButton=button('Compare Austin charging policies',()=>compare()),cancelButton=button('Cancel regional computation',()=>cancel());cancelButton.disabled=true;
   const element=el('details',{class:'ops-regional-power'},[el('summary',{},'Regional stress lab: Austin power and readiness'),
-    el('p',{class:'eyebrow'},'TX-AUS-01 / REGIONAL POLICY STRESS TEST'),el('h2',{},'What happens when charging power falls during the shift?'),
+    el('p',{class:'eyebrow'},'TX-AUS-01 / REGIONAL POLICY STRESS TEST'),heading,identity.element,shareSlot,
     el('p',{},'Austin-inspired operating testbed. Compare existing capped redistribution with deadline/aged priority, holding the fleet, demand, required work and external conditions fixed.'),
     el('p',{class:'result-provenance'},'Simulation only · NOT_EVIDENCE · deployment permission NONE. Synthetic inputs; no real operating, airport-access or vehicle-safety claim.'),schematic(),
     el('div',{class:'ops-fields'},[el('label',{class:'ops-field'},['Condition at the selected site',condition]),number('Regional nominal site power (kW)','site_power_kw',.01,10000),number('Regional fleet size','fleet_size',1,120),number('Regional demand per hour','requests_per_hour',0,240),number('Regional demand seed','seed',0,4294967295)]),timeline,
@@ -96,7 +125,7 @@ export function createRegionalPowerPanel(){
     el('div',{class:'ops-run-line'},[runButton,compareButton,cancelButton]),status,
     el('details',{},[el('summary',{},'Paired experiment controls'),el('label',{class:'ops-field'},['Evaluation seeds',seeds]),el('label',{class:'ops-field'},[nullControl,'Same-policy control']),el('p',{},'Defaults: tuning seeds 42, 43, 44; evaluation 1001 to 1012; completion margin 0.02; 2,000 bootstrap resamples. Complete submitted settings are recorded with each result.')]),resultLabel,results,comparisons]);
   function renderTimeline(){timeline.replaceChildren(table('External power condition, equal in both arms',['Site','Start minute inclusive','End minute exclusive','Fraction','Usable battery-side kW'],config.site_power_profile.segments.map(s=>[config.site_power_profile.site_id,s.start_minute,s.end_minute,s.fraction,s.fraction*config.site_power_kw])));}
-  function invalidate(){token++;stale=!!result;if(result)resultLabel.textContent='Recorded shift below uses previous settings; its submitted condition remains attached.';status.textContent=result?'Settings changed. Recorded results use previous settings. Run or compare again.':'Settings changed. Run explicitly to compute.';comparisons.replaceChildren();}
+  function invalidate(){token++;stale=!!result;identity.update(result?.version??bayModelVersion(config),stale);if(result)resultLabel.textContent='Recorded shift below uses previous settings; its submitted condition remains attached.';status.textContent=result?'Settings changed. Recorded results use previous settings. Run or compare again.':'Settings changed. Run explicitly to compute.';comparisons.replaceChildren();}
   function cancel(){token++;status.textContent='Regional computation canceled. Any recorded result still uses its original settings.';}
   function snapshot(){return structuredClone({model:'regional-power',config,options});}
   function getSharedSetup(source='current'){
@@ -116,13 +145,13 @@ export function createRegionalPowerPanel(){
       if(destroyed||token!==current)return;
       if(paired){const steps=bayExperimentSteps(frozen);let step;
         do{step=steps.next();if(!step.done){status.textContent=`Regional comparison: ${step.value.phase}, ${step.value.completed} / ${step.value.total}.`;await yieldPage();if(destroyed||token!==current){steps.return();return;}}}while(!step.done);
-        if(destroyed||token!==current)return;lastExperiment={model:submitted.model,config:submitted.config,options:submitted.options};comparisons.replaceChildren(comparisonView(step.value));status.textContent='Comparison recorded. Review completion, guardrails and unfinished work together.';return step.value;
+        if(destroyed||token!==current)return;lastExperiment={model:submitted.model,config:submitted.config,options:submitted.options};comparisons.replaceChildren(comparisonView(step.value));if(!result)identity.update(step.value.spec.model_version);status.textContent='Comparison recorded. Review completion, guardrails and unfinished work together.';return step.value;
       }
       const run=simulateBayAreaOperations(submitted.config);if(destroyed||token!==current)return;
-      result=run;lastRun={model:submitted.model,config:submitted.config,options:submitted.options};stale=false;resultLabel.textContent='Recorded shift matches the submitted settings.';results.replaceChildren(runView(run));status.textContent='Austin shift recorded. Inspect power, required work and complete request populations.';return run;
+      result=run;identity.update(run.version);lastRun={model:submitted.model,config:submitted.config,options:submitted.options};stale=false;resultLabel.textContent='Recorded shift matches the submitted settings.';results.replaceChildren(runView(run));status.textContent='Austin shift recorded. Inspect power, required work and complete request populations.';return run;
     }catch(e){if(!destroyed&&token===current)status.textContent=`Regional computation unavailable: ${e.message}`;}
     finally{busy=false;if(!destroyed){runButton.disabled=compareButton.disabled=false;cancelButton.disabled=true;}}
   }
   function run(){return execute(false);}function compare(){return execute(true);}
-  renderTimeline();return {element,run,compare,cancel,getSharedSetup,loadSharedSetup,getState:()=>({config:structuredClone(config),result,stale,busy}),destroy(){destroyed=true;token++;}};
+  renderTimeline();return {element,heading,shareSlot,run,compare,cancel,getSharedSetup,loadSharedSetup,getState:()=>({config:structuredClone(config),result,stale,busy}),destroy(){destroyed=true;token++;}};
 }
