@@ -16,8 +16,8 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
-| **Design review and next phase** | [N2 design draft](docs/plans/2026-09-25-fleetlab-n2-design.md): one fictional Las Vegas pickup hub, two event waves, finite berths/approach queue, explicit boarding metrics and responsive execution prerequisites. Design only; no N2 implementation approval. The [Claude review packet](docs/FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md) adds a live design audit, editorial-studio proposal, Waymo pilot runbook and independent N2 audit (four P1 contract gaps, one P2 correction). No WOD data has been used. The [earlier portable review](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) preserves history and 56 lessons. Full Python retained-fixture failures and the older cosmetic Street observation remain disclosed. |
-| **Last updated** | 2026-09-25 Pacific / 09-26 UTC (new fleetlab.pages.dev address verified; experience/data/N2 review packet delivered; N2 remains draft; other tracks retain recorded dates) |
+| **Design review and next phase** | [N2 design draft](docs/plans/2026-09-25-fleetlab-n2-design.md): one fictional Las Vegas pickup hub, two event waves, finite berths/approach queue, explicit boarding metrics and responsive execution prerequisites. Design only; no N2 implementation approval. The [Claude review packet](docs/FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md) adds a live design audit, editorial-studio proposal, Waymo pilot runbook and independent N2 audit (four P1 contract gaps, one P2 correction). No WOD data has been used. The [independent packet review](docs/FLEETLAB_PACKET_REVIEW_2026-09-26.md) upholds the five N2 findings with corrected contract texts, adds six gaps (G1–G6), and recommends no WOD work now; the [Codex brief](docs/plans/2026-09-26-fleetlab-d1-and-n2-s0-codex-brief.md) scopes the N2 S0 addendum (docs) and release D1 (result-first Fleet day, model identity, readable Austin verdict). Not yet executed. The [earlier portable review](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) preserves history and 56 lessons. Full Python retained-fixture failures and the older cosmetic Street observation remain disclosed. |
+| **Last updated** | 2026-09-26 (packet review and Codex D1/S0 brief committed; packet L385/L424 corrected in `bff69d7`; N2 remains draft; application source and deployment unchanged; other tracks retain recorded dates) |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -748,6 +748,19 @@ must not: the number as a default edit (§10 rule 3).
 ---
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
+
+**Packet review and next brief, 2026-09-26:** An independent read-only review of the
+2026-09-25 packet ([review](docs/FLEETLAB_PACKET_REVIEW_2026-09-26.md)) upholds N2 findings
+F1–F5 with corrected, paste-ready contract texts and discriminating fixtures, adds six
+verified gaps (G1–G6), flags that the proposed completion primary may be uninformative
+(ceiling or abandonment-driven in analogs) and that seeds 2001–2012/3001–3012 coincide with
+the four-area teaching model's seed sets, and recommends no Waymo Open Dataset work now.
+Packet corrections in `bff69d7`: L424 no longer carries an absolute local path; L385 warns
+that the PyPI name `waymax` is an unrelated third-party package (FleetLab does not use
+Waymax). The [Codex brief](docs/plans/2026-09-26-fleetlab-d1-and-n2-s0-codex-brief.md)
+scopes Part A (N2 S0 v2 design, docs only) and release D1 (presentation only; no
+`src/model`/`src/instrument`/`src/core`/`src/runtime` edits; ≤11,264 offline bytes; model
+parity 95/284 and Austin 77/480 as gates). No application code or deployment changed here.
 
 **Current address and review follow-up, 2026-09-25 Pacific / 09-26 UTC:** At the owner's
 request, the new `fleetlab` Cloudflare Pages project serves **https://fleetlab.pages.dev/**,
