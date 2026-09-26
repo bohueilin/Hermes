@@ -17,7 +17,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
 | **Design review and next phase** | [N2 S0 v2 draft](docs/plans/2026-09-26-fleetlab-n2-design-v2.md) supersedes immutable v1 for future implementation planning. Owner decisions, corrected lifecycle/accounting/metrics and19 fixture groups are documented; **G2 OPEN pending S1**, no N2 implementation approval. [D1/S0 brief](docs/plans/2026-09-26-fleetlab-d1-and-n2-s0-codex-brief.md) executed within scope; [release record](docs/FLEETLAB_D1_RELEASE_2026-09-26.md) preserves checks and deviations. The earlier review packet and independent packet review remain historical rationale. No WOD work; S1, X1, P2 remainder, P0 study and R0 lessons remain separate future work. |
-| **Last updated** | 2026-09-26 (D1 deployed/read back from `b99ab04`; N2 S0 v2 design `76439c6`; post-deployment records are the authorized same-commit-rule exception; push targets checked after this records commit; other tracks retain recorded dates) |
+| **Last updated** | 2026-09-26 (design audit [docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md](docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md) committed: owner decided OD-1/3/4/5/6/19; next tasks v2.1, packer route A, T1 teaching frame; D1 deployed/read back from `b99ab04`; N2 S0 v2 design `76439c6`; post-deployment records are the authorized same-commit-rule exception; push targets checked after this records commit; other tracks retain recorded dates) |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -748,6 +748,19 @@ must not: the number as a default edit (§10 rule 3).
 ---
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
+
+**Design audit and next implementation steps, 2026-09-26:** The read-only
+[design audit](docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md) reviews the N2 v2 contract (§0-§10) and the
+live site's teaching clarity (§11), and explains every simulation and all 56 lessons in three parts:
+What & why, How we simulate, and What you learn plus an ops takeaway to test (§12, Appendix B).
+All of it is grounded in model runs, test pins or recorded artifacts, and labelled NOT_EVIDENCE.
+Owner decisions recorded: OD-1 (packer route A: offline-only removal of full-line comments,
+measured -300,476 bytes), OD-3 (G3 fix B, depot-major type order), OD-4 (integer share
+arithmetic), OD-5 (nearest-eligible preparation), OD-6 (checker split into runtime invariants and
+test-time policy checks) and OD-19 (S1a before X1; S1b before any forecast-arm run; S5 after S4).
+Next tasks, in order (§13): Task 1, N2 design v2.1 (docs only); Task 2, the packer route A change;
+Task 3, the T1 teaching frame (presentation only, stop budget 61,440 B). Task 3 needs OD-2 and
+OD-T1 to OD-T7 first. No application code, deployment or remote branch changed with this entry.
 
 **D1 published, 2026-09-26:** Source `b99ab046ee0ee233c1e9d0db32dfa850c08cad8a`,
 Production `dd4bfa44-7226-4502-9d66-01bb1790f2b6`, immutable
