@@ -1,4 +1,54 @@
-# Current FleetLab Austin release — September 25 Pacific / September 26 UTC, 2026
+# FleetLab address and review follow-up — September 25 Pacific / September 26 UTC, 2026
+
+Canonical public site: **https://fleetlab.pages.dev/**. New Production
+`f08b6b6f-c5d0-44f7-905b-5f16087fbc85` serves the unchanged application source
+`345b427cdddeb6e8946542c66786d3acbaacaa5c`; immutable address
+https://f08b6b6f.fleetlab.pages.dev/. The old project/address is preserved with no redirect.
+The owner explicitly requested this address change; it supersedes older local-only website
+restrictions. Cloudflare does not support changing a Pages hostname in place.
+
+The [self-contained Claude review packet](docs/FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md)
+contains the shipped context, live design audit, editorial-studio proposal, bounded Waymo
+Motion research runbook, independent N2 audit and full unchanged N2 draft. There is no WOD
+importer/data use in current product code. No dataset was downloaded, agreement accepted,
+research runtime installed or N2/redesign code implemented. Four P1 N2 contract gaps and one
+P2 wait-label correction should be resolved before an implementation freeze.
+
+Validation for this follow-up: both current package checks passed; all 88 new-host public
+payloads matched SHA-256; actual headers include restrictive CSP, nosniff, frame denial,
+no-referrer and same-origin opener policy; the new-host browser default run returned 95/284,
+with 176 unserved, 4 waiting and 9 in progress. The new-host Austin 60% shift reproduced
+77/480 completed, 391 unserved, 11 waiting and 1 in progress. The independent audit's focused Node command
+passed 24/24. Existing full release tests below remain commit-bound to unchanged source;
+the full suite was not rerun for this address/documentation change. Python fixture limitations
+remain disclosed. No other-worktree or main changes; owner's untracked note preserved.
+
+Executed address commands:
+
+```bash
+node playground/fleetlab/tools/check-dist.mjs --site dist/site
+node playground/fleetlab/tools/check-dist.mjs dist/fleetlab-playground.html
+npx --yes wrangler@4.135.0 pages project create fleetlab --production-branch feat/fleetlab-playground --force
+npx --yes wrangler@4.135.0 pages deploy dist/site --project-name fleetlab --branch feat/fleetlab-playground --commit-hash 345b427cdddeb6e8946542c66786d3acbaacaa5c --commit-dirty=false
+npx --yes wrangler@4.135.0 pages deployment list --project-name fleetlab --json
+python3 artifacts/fleetlab-design-review/verify_public.py https://fleetlab.pages.dev 345b427cdddeb6e8946542c66786d3acbaacaa5c
+```
+
+The first create attempt, without the Pages routing opt-out, failed while the CLI attempted
+to delegate to Workers; it created no project/deployment. Installed Wrangler source confirmed
+that this create command's `--force` only bypasses that platform delegation, not an overwrite
+or Git operation. Project list was rechecked before the successful retry. Do not add the
+flag to future deploy commands. The untracked owner file explains the deployment dirty-tree
+warning; application paths and package bytes were unchanged.
+
+Readback records: ignored `artifacts/fleetlab-design-review/published-readback.json` and
+`fleetlab-headers.txt`. Original N2 SHA-256 remains
+`c574b8df41d0378363e18f75452f09e15a2cf62581e8fb01f6f365229d7e25bf`.
+The new Pages project has no earlier rollback release yet; historical old-project deployments
+cannot be selected as new-project rollback targets. Use the updated
+[publishing runbook](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) for future releases.
+
+# Previous-address FleetLab Austin release — September 25 Pacific / September 26 UTC, 2026
 
 Published at **https://fleetlab-playground.pages.dev/** from source
 `345b427cdddeb6e8946542c66786d3acbaacaa5c`, Production deployment
