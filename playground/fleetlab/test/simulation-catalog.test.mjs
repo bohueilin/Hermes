@@ -11,7 +11,7 @@ test('catalog includes every registered regional preset and every operational le
   assert.equal(new Set(rows.map(x=>x.id)).size,rows.length);
   assert.deepEqual(rows.filter(x=>x.model==='Four-area experiments').map(x=>x.id),PRESETS.map(x=>x.id));
   assert.deepEqual(rows.filter(x=>x.model==='Street lab').map(x=>x.hotspot),STREET_PRESETS.map(x=>x.id));
-  for(const r of rows)for(const key of ['question','controls','outputs','lesson','limits'])assert.ok(r[key].length>0,`${r.id}: ${key}`);
+  for(const r of rows)for(const key of ['what_why','how','look_for','ops_takeaway','limits'])assert.ok(r.frame[key].length>0,`${r.id}: ${key}`);
 });
 
 test('search filters and an operational lesson launches its actual setup',()=>{

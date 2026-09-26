@@ -1,10 +1,12 @@
+import {teachingResult} from './teaching-projection.js';
+import {displayText,setBusy} from './display-text.js';
 /** Projection of recorded Bay work orders and comparisons. No scheduling or metric production. */
 import {el} from './dom.js';
 const fmt=v=>v===null||v===undefined?'Not available':Number(v).toLocaleString('en-US',{maximumFractionDigits:2});
 const cell=v=>v===null||v===undefined?'Not available':typeof v==='number'?el('span',{title:String(v)},fmt(v)):String(v);
 const table=(headings,rows)=>el('div',{class:'ops-table-wrap',tabindex:0,'aria-label':headings.join(', ')},el('table',{},[
   el('thead',{},el('tr',{},headings.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map(v=>el('td',{},cell(v))))))]));
-const exact=value=>el('details',{},[el('summary',{},'Exact recorded values and submitted settings'),el('pre',{},JSON.stringify(value,null,2))]);
+const exact=value=>el('details',{},[el('summary',{},'Exact values'),el('pre',{},JSON.stringify(value,null,2))]);
 export const blockerText=code=>({WORKER_UNAVAILABLE:'No qualified cleaning worker is free',BAY_UNAVAILABLE:'No cleaning bay is free',BAY_AND_WORKER_UNAVAILABLE:'Both cleaning bays and workers are occupied',POLICY_DEFERRED:'The policy is withholding required cleaning',OTHER_RESOURCE:'Waiting for another stage resource',INBOUND_TRAVEL:'Vehicle is still traveling to its depot'}[code]??code)+(code?' ('+code+')':'');
 const checkText=check=>`${check.name}: ${check.status}${check.threshold===undefined?'':` · observed ${fmt(check.value)} ${check.unit}; limit ${check.operator} ${check.threshold} ${check.unit}`}`;
 
@@ -24,15 +26,15 @@ export function readinessResultView(result){
     el('details',{},[el('summary',{},'Work-order ledger at observation end'),table(['Visit','Task','Required','State','Queued at','Started at','Finished at','Queue min','Active min'],
       result.visits.flatMap(v=>v.work_order.map(t=>[v.id,t.stage,t.required?'Yes':'Not applicable',t.status,...[t.queued_minute,t.started_minute,t.completed_minute].map(x=>x===null?'Not available':x),t.queue_minutes,t.active_minutes]))),
       el('p',{},'Times are elapsed minutes from run start. Not-reached tasks remain required; no completion is inferred from a vehicle location.')]),
-    el('ul',{},r.limitations.map(s=>el('li',{},s))),exact({model_version:result.version,config:result.config,readiness:r,visits:result.visits}),
+    el('ul',{},r.limitations.map(s=>el('li',{},displayText(s)))),exact({model_version:result.version,config:result.config,readiness:r,visits:result.visits}),
   ]);
 }
 
 export function readinessComparisonView(comparison){
   const invalid=comparison.arms.slice(1).find(a=>a.available&&!a.comparison.comparable);
   if(invalid)return el('p',{},`Comparison unavailable: ${invalid.comparison.reason}`);
-  return el('section',{},[el('h3',{},'Test one resource at a time'),el('p',{},comparison.question),
-    el('p',{},`One seed (${comparison.seed_set.join(', ')}), ${comparison.horizon_minutes} minutes. Descriptive only; no confidence interval, winner or recommendation. NOT_EVIDENCE.`),
+  return el('section',{},[teachingResult('staffing',{...comparison,type:'staffing'}),el('h3',{},'Test one resource at a time'),el('p',{},comparison.question),
+    el('p',{},`One seed (${comparison.seed_set.join(', ')}), ${comparison.horizon_minutes} minutes. Descriptive only; no confidence interval or recommendation. NOT_EVIDENCE.`),
     ...comparison.arms.slice(1).map(a=>el('p',{},`${a.label}: ${a.from} → ${a.to}. ${a.available?'All other inputs and the required-work rule held fixed against baseline.':'Not available: '+a.reason}`)),
     table(['Measure','Baseline','Extra worker','Extra bay'],[
       ['Trips completed / all requests',...comparison.arms.map(a=>a.result?`${a.result.metrics.completed_trips} / ${a.result.metrics.total_requests}`:'Not available')],
@@ -41,6 +43,7 @@ export function readinessComparisonView(comparison){
       ['Ready by end / started visits',...comparison.arms.map(a=>a.result?`${a.result.readiness.metrics.ready_by_deadline} / ${a.result.readiness.metrics.deadline_visits}`:'Not available')],
       ['Completed-trip delta vs baseline','Reference',...comparison.arms.slice(1).map(a=>a.comparison.deltas?.completed_trips??null)],
     ]),
+    el('h4',{},'Where queued cleaning time went'),table(['Exclusive blocker','Baseline','Extra worker','Extra bay'],['WORKER_UNAVAILABLE','BAY_UNAVAILABLE','BAY_AND_WORKER_UNAVAILABLE'].map(k=>[blockerText(k),...comparison.arms.map(a=>a.result?.readiness.metrics.blocked_minutes[k]??null)])),
     ...comparison.arms.filter(a=>a.available).map(a=>el('details',{},[el('summary',{},`${a.id}: checks and blocked time`),el('ul',{},a.result.readiness.checks.map(c=>el('li',{},checkText(c)))),table(['Exclusive blocker','Queued task-minutes'],Object.entries(a.result.readiness.metrics.blocked_minutes).map(([k,v])=>[blockerText(k),v]))])),
     el('p',{},'Completed service includes every request created before the horizon in its denominator, including late unfinished demand. This is not a pickup SLA. Queue, active time and work mix can change as consequences of availability and dispatch. A resource addition can leave outcomes unchanged or worse; inspect checks and unfinished work before interpreting the trade-off.'),
     el('a',{class:'studio-button',download:'fleetlab-readiness-NOT_EVIDENCE.json',href:'data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(comparison,null,2))},'Download exact comparison JSON'),

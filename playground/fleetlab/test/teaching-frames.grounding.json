@@ -1,0 +1,665 @@
+{
+  "bay-area": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: fleet-core probe.mjs, probe3.mjs; verify v2.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Same fleet and demand rate; only the served places change. Trips follow frozen OSM major roads between 18 anchors, with no turn rules, one-way streets or local access. Run all 18, then SF and SFO only.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, 11 seeds: all 18 places give 25 km pickups for 13 km trips. SF and SFO only (22 km trips) adds about 17 trips, but charger queues grow from about 14 to 54 min. Ops check: does a tighter zone move the bottleneck?",
+    "lane_file": "fleet-core probe.mjs, probe3.mjs; verify v2.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "vehicle-mix": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: fleet-core probe3-5.mjs; verify v3.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Press Compare I-PACE, mixed, Ojai: the same requests replay with 0, 50 and 100% Ojai. Profiles differ in battery size, energy per km, charge limit, and cleaning and upload time. Ojai values are invented.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, 11 seeds: all Ojai vs all I-PACE moves completed trips by -8 to +2, yet always uses more energy and depot time. Its 150 kW limit never binds at 50 kW ports. Ops check: which charging cap binds first?",
+    "lane_file": "fleet-core probe3-5.mjs; verify v3.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "fleet-day": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: fleet-core probe.mjs, probe3.mjs; pin d1-presentation.test.mjs:24; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Run the day, then press Compare fleet & depot sizes: the same requests replay with 12, 24, 36 and 48 cars, then 1 to 6 depots. Only that count changes. Demand and depot sites are synthetic.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, seed 42: 12, 24, 36 and 48 cars complete 21, 33, 52 and 69% of 284 requests. No tested depot count (1 to 6) reaches 95%. Ops check: how much car time is empty pickup driving before sizing a fleet?",
+    "lane_file": "fleet-core probe.mjs, probe3.mjs; pin d1-presentation.test.mjs:24",
+    "kind_reason": "Declared lesson setting"
+  },
+  "weather-day": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: fleet-core probe2-3.mjs; live check; verify v2.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Rain multiplies travel time by 1.3, energy by 1.12 and demand by 1.12; heat uses 1.05, 1.25 and 1.05. Demand changes too, so compare counts. Declared multipliers only: no grip, visibility or sensor model.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, 11 seeds: rain averages 12 fewer completed trips and 44 more unserved. Slower travel alone removes about 13; extra demand alone mostly adds unserved. Ops test: weather-adjusted travel times first.",
+    "lane_file": "fleet-core probe2-3.mjs; live check; verify v2.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "rush-hour": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: fleet-core probe3.mjs, probe5.mjs; verify v2.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "This lesson raises the 07-10 and 16-19 peak from 1.6x to 2.4x base demand; start time, base demand and fleet stay fixed. Peak hours also slow travel by 1.25x. Demand is synthetic.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, 11 seeds: a 2.4x peak adds 74 requests but about 1 more completed trip, while unserved rises by 71. Ops check: if the fleet is short all day, a peak plan alone will not close the gap.",
+    "lane_file": "fleet-core probe3.mjs, probe5.mjs; verify v2.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "full-cycle": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: fleet-core probe2.mjs, probe4.mjs; verify v1.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Cars visit a depot after 2 trips instead of 3. Choose a car, then use Next activity or a stage button to step through pickup, trip, depot drive, cleaning, charging and upload.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, seed 42: car-7 is ready again at 09:02 after 2 trips and a 50 min depot visit. Over 11 seeds, visiting after 2 trips gives 15 fewer trips but 126 kWh more energy at the end. Ops check: weigh both.",
+    "lane_file": "fleet-core probe2.mjs, probe4.mjs; verify v1.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "depot-count": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: depot-work run-depot-count.mjs, run-extra.mjs; verify v-depots.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "The same demand runs with 1 to 6 depots (fleet fixed) and 12 to 48 cars (one depot). Every added depot brings its own bays, ports and site power. Target: 95% of all requests done by the end of the run.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, seed 42: no depot count reaches 95%; 1 to 6 depots give 28% to 39%, while 48 cars at one depot give 59%. Over 10 seeds each added depot adds fewer trips. Ops check: test fleet supply first.",
+    "lane_file": "depot-work run-depot-count.mjs, run-extra.mjs; verify v-depots.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "cleaning": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: depot-work run-lessons.mjs, run-decomp.mjs; verify v-lessons.mjs, v-sw.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Every depot visit includes a fixed-time clean in a limited number of bays, first come first served. This lesson sets 1 bay per depot and a visit every 2 trips; all else stays at the default day.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, seed 42: cars wait 2.7 min to clean but 17.8 to charge. A 2nd bay or a 4 min clean shows no consistent change (10 seeds); the 15 trip drop comes from visiting every 2 trips. Ops check: find the longest queue.",
+    "lane_file": "depot-work run-lessons.mjs, run-decomp.mjs; verify v-lessons.mjs, v-sw.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "charging": {
+    "source": "fixture",
+    "command": "Historical grounding recorded by audit Appendix B: depot-work run-lessons.mjs, run-profile.mjs; verify v-lessons.mjs, v-more.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "12 paired seeds, 4 hours, 24 cars, 8 ports sharing 120 kW; I-PACE accepts 10 kW. Equal shares versus redistributing unused power. All else the same; linear charging, no taper.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "depot-work run-lessons.mjs, run-profile.mjs; verify v-lessons.mjs, v-more.mjs"
+  },
+  "shared-power": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: depot-work run-lessons.mjs, run-profile.mjs; verify v-lessons.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "4 ports rated 80 kW share 40 kW per depot, split equally among charging cars. Compare 2, 4 or 8 ports at 40 kW, then raise site power with 4 ports. Demand and fleet stay fixed.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, 10 seeds: energy delivered stays near 390 kWh at 2, 4 or 8 ports, and 8 ports finish fewer visits than 2. Raising site power to 160 kW added 24 trips on average. Ops check: delivered kW before ports.",
+    "lane_file": "depot-work run-lessons.mjs, run-profile.mjs; verify v-lessons.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "software": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: depot-work run-lessons.mjs, run-decomp.mjs, run-sw-check.mjs; verify v-sw.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Updates run first on scheduled visits, at a fixed time, in limited stations per depot. This lesson sets 30 min on every visit (default: 12 min, every 2nd visit). No failed or rolled-back updates.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, seed 42: 31 min queue at 1 update station, 3 min at 4, but charging then queues 11 min. Every 2nd visit equals the default (10 seeds): none finishes in 8 h. Ops check: update minutes per car per day, and the next stage.",
+    "lane_file": "depot-work run-lessons.mjs, run-decomp.mjs, run-sw-check.mjs; verify v-sw.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "upload": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: depot-work run-lessons.mjs, run-decomp.mjs; verify v-lessons.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Upload takes a fixed time in limited stations per depot, after charging. This lesson sets 30 min and 1 station (default: 6 min, 2 stations). No bytes, bandwidth sharing or retries.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, seed 42: charged cars wait 16 min for the upload station. A 2nd station cuts that to under 1 min (+3 trips, 10 of 10 seeds) and charging queues 12 min again; a 4th adds little. Ops check: the transfer time itself.",
+    "lane_file": "depot-work run-lessons.mjs, run-decomp.mjs; verify v-lessons.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "staffing-readiness": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: depot-experiments staffing.mjs, staffing-sweep.mjs; verify staff.mjs, sweep.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One seed, same demand: 16 cars, 1 depot, 18 min base cleaning after every trip. Baseline has 1 worker and 3 bays; one arm adds a worker, the other adds a bay. Descriptive only.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, seed 42: one more worker completed 36 of 179 trips vs 26; one more bay stayed at 26. Every queued cleaning minute lacked a worker. Ops check: log what each waiting car lacks before adding capacity.",
+    "lane_file": "depot-experiments staffing.mjs, staffing-sweep.mjs; verify staff.mjs, sweep.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "power-redistribution": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: digest eb54e3e4085050ec (tools/demo-depot.mjs); depot-experiments paired.mjs; verify pv.mjs, one.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "12 paired seeds, 4 hours, 24 cars, 8 ports sharing 120 kW; I-PACE accepts 10 kW. Equal shares vs redistributing unused power. All else fixed; linear charging, no taper.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, seeds 1001 to 1012: energy delivered rose from 441 to 455 kWh per run, yet completion stayed 23.0% and 24 visits were unfinished in both arms. Ops check: whether faster charging releases a car before the run ends.",
+    "lane_file": "digest eb54e3e4085050ec (tools/demo-depot.mjs); depot-experiments paired.mjs; verify pv.mjs, one.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "deadline-charging": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: digest 0820f90872c54a1d; depot-experiments paired.mjs, variants.mjs; verify pv.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Same 24 cars, 8 ports, 120 kW. Redistribution vs deadline-first charging; jobs waiting 60 min or more go oldest first. Deadlines are tiers by car (45, 90 or 135 min after the visit starts).",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, 12 seeds: completion 23.0% to 23.5%, inside the 2-point margin. Cars ready by deadline 0 to 2 per run, but missed deadlines 24.8 to 26 and idle plugged-in time 0 to 1,263 car-min. Ops check: who waits longer.",
+    "lane_file": "digest 0820f90872c54a1d; depot-experiments paired.mjs, variants.mjs; verify pv.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "resource-freshness": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: digest 47a2006bb775f099; depot-experiments paired.mjs, variants.mjs; verify pv.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "4 of 8 ports fail from minute 10 to 100. Status arrives 8 min late and stays valid 10 min. Last-known vs fresh-only status. A rejected try moves to the next port in the same minute.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, 12 seeds: rejected tries fell from 17.7 to 10.3 per run, yet completion held at 20.1% because a rejected try takes no time here. Ops check: keep the validity window above your status delay.",
+    "lane_file": "digest 47a2006bb775f099; depot-experiments paired.mjs, variants.mjs; verify pv.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "airport-preparation": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: digest 8b1ddd9f13db8551; depot-experiments airport-check.mjs; verify pv.mjs; n2-planned-verify airport-energy2.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Same passenger wave and 24 cars in both arms. Reactive dispatch vs staging up to 6 cars from a declared wave estimate; the policy never sees actual requests. Fictional access rule.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, 12 seeds: cars reaching airport riders within 10 min rose from 34% to 50%, but unfinished depot visits and stored energy passed their limits, so the result is HOLD. Ops check: size staging with an energy reserve.",
+    "lane_file": "digest 8b1ddd9f13db8551; depot-experiments airport-check.mjs; verify pv.mjs; n2-planned-verify airport-energy2.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "region-launch": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: austin-launch probe-launch.mjs, probe-launch-timing.mjs; verify; pin launch-rehearsal.test.mjs (delay 0 null); this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Two runs on Region B with the same demand seed: ports commissioned at minute 0 versus minute 90. All else fixed. Sites, tasks and owners are fictional; setup checks are not inspections.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Model output, seed 42: completed trips fell from 34 to 29; late pickups fell from 11 to 6 as missed rose by 5. On-time pickups held at 24, one per car before its first depot visit. Ops: give each port task a date; test a slip.",
+    "lane_file": "austin-launch probe-launch.mjs, probe-launch-timing.mjs; verify; pin launch-rehearsal.test.mjs (delay 0 null)",
+    "kind_reason": "Declared lesson setting"
+  },
+  "street-first": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: street probe.mjs, probe2-4.mjs; verify v-*.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Defaults: 24 AVs, 36 rider requests/h, 900 other vehicles/h with about 60% on 1st Street, 75% capacity loss from minute 15 to 90. Compare route policies runs both rules on the same demand.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed 42: 37 of 71 journeys finished; 38 with no incident, 46 at half the other traffic: volume drives this queue. Queue-aware routes added 0 to 4 over five seeds, mostly East Bay, usually adding empty km. Ops: test it on bridge legs.",
+    "lane_file": "street probe.mjs, probe2-4.mjs; verify v-*.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "street-harrison": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: street probe.mjs, probe2-4.mjs, probe6.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Defaults with the incident and about 60% of other traffic on Harrison, Bryant, Essex and 4th. Queue-aware routes weigh current queues, full blocks and the incident when each leg starts.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed 42: queue-aware routes finished 50 vs 48 journeys (-1 to +3 over five seeds) and added 17 to 78 empty km; nearby corridor queues barely moved. At 95% loss the gain was 16 to 22 (three seeds). Ops: test severity triggers.",
+    "lane_file": "street probe.mjs, probe2-4.mjs, probe6.mjs; verify",
+    "kind_reason": "Declared lesson setting"
+  },
+  "street-stockton": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: street probe.mjs, probe3-4.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Friction is a capacity loss on Stockton and its tunnel from minute 15 to 90; pedestrians and buses are not modeled one by one. Try 0, 50 and 95% loss, then pickup dwell, then compare routes.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed 42: 44 of 71 finished with no incident, 46 with no other traffic, 31 with both. Queue-aware routes restored 44 by sending AVs out on streets with room, adding 106 to 234 empty km over five seeds. Ops: test pickup exits.",
+    "lane_file": "street probe.mjs, probe3-4.mjs; verify",
+    "kind_reason": "Declared lesson setting"
+  },
+  "street-van-ness": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: street probe4.mjs, probe2.mjs; verify (framing refuted and corrected); this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Defaults on Van Ness. Signals use the shared synthetic 90 second cycle and imported turn restrictions apply; no signal control is modeled. Run 12, 24, 36 and 48 AVs on the same seed and compare.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed 42: 12 AVs finished 22 of 71, 24 finished 43, 36 finished 50. Pickup wait fell from 29.6 to 9.5 min. Rides stayed near 24 min, 23 with no other traffic, so this day is supply-limited. Ops: test fleet size first.",
+    "lane_file": "street probe4.mjs, probe2.mjs; verify (framing refuted and corrected)",
+    "kind_reason": "Declared lesson setting"
+  },
+  "street-embarcadero": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: street probe4.mjs, probe3.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Event pressure is the Other road traffic setting: about 60% of it runs along The Embarcadero, and about half of pickups start at the Ferry Building approach. Try 0, 450 and 900 vehicles/h.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed 42: 44 of 71 finished with no other traffic, 17 at 450/h, 14 at 900/h; SFO-bound fell from 14 to 2. Pickup wait stayed near 15 min because it counts boarded riders only. Ops: test pickups off the event street.",
+    "lane_file": "street probe4.mjs, probe3.mjs; verify",
+    "kind_reason": "Declared lesson setting"
+  },
+  "street-lombard": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: street probe2.mjs, probe5.mjs; live page check; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Defaults with the incident and about 60% of other traffic on Lombard. Use Largest queue, then Inspect a block, to see which street holds the most queued vehicles.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed 42: Lombard peaked at 32 queued vehicles, but at the busiest moment 57 of 120 queued vehicles were on Hyde Street, an exit from the Lombard pickup. 0 to 95% loss left 39 of 71 finished. Ops: check pickup exits first.",
+    "lane_file": "street probe2.mjs, probe5.mjs; live page check; verify",
+    "kind_reason": "Declared lesson setting"
+  },
+  "bay_teaching_map": {
+    "source": "run",
+    "command": "Historical grounding recorded by audit Appendix B: four-area default-replay.mjs; verify baymap-detail.mjs; pin presets.test.mjs:194-221; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "120 cars in four zones, four depots, peaks from 07:00 and 16:00, a depot visit every 10 trips, recall at D2 00:30, release at 05:45. Travel variation is 0, so every replay repeats.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "In this replay the evening peak and San Jose wait longest, and SF-2's bay queue builds overnight while few riders are out. An ops team would first map its own waits and depot queues by hour.",
+    "lane_file": "four-area default-replay.mjs; verify baymap-detail.mjs; pin presets.test.mjs:194-221",
+    "kind_reason": "Declared lesson setting"
+  },
+  "L1": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs, probes2.mjs P9; captions.test.mjs L1 pins; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Flat versus peaked demand with the same declared total. Primary: rider wait p90 from 16:00 to 19:00, 60 s margin. Guardrail: unserved share. 20 paired seeds.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "In this model the peak lifts evening wait p90 from about 14 to 72 minutes and unserved from 0.03% to 4.7%. HOLD means this fleet does not absorb the peak, not a choice. Ops check: size and schedule to peak windows.",
+    "lane_file": "four-area run-presets.mjs, probes2.mjs P9; captions.test.mjs L1 pins",
+    "kind_reason": "External condition rather than an operating choice"
+  },
+  "L2a": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs, probes.mjs P3; verify l2-cars.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "12 San Jose cars, a depot visit every 5 trips. One change: SJ-1 bays 3 to 1. Primary: San Jose wait p90, 16:00 to 19:00, 60 s margin. 20 paired seeds.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "San Jose riders already wait about 96 minutes at p90 this evening. Cutting bays moves that by +25 s, interval -135 to +209 s: unresolved. Ops check: what binds before cutting bays, and a guardrail on the queue you cut.",
+    "lane_file": "four-area run-presets.mjs, probes.mjs P3; verify l2-cars.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "L2b": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs; presets.test.mjs:65; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Identical arms and seeds to L2a. Added guardrail: SJ-1 bay wait p90, max harm 600 s, declared before the run.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Rider wait reads as in L2a, but SJ-1 bay wait p90 grows from about 5 to 56 minutes, so the recommendation becomes HOLD. Ops check: a guardrail on the resource you cut, written before the run.",
+    "lane_file": "four-area run-presets.mjs; presets.test.mjs:65",
+    "kind_reason": "Declared lesson setting"
+  },
+  "L3": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs, probes2.mjs P8; verify draw-robust.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Evening highway slowdown set. One change: home depot to nearest depot. Primary: San Francisco wait p90, D2 07:00 to 09:00. Guardrails: congested empty driving, SJ-1 lot, unserved.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "With this preset's riders, nearest depot lowers SF morning wait p90 by about 11 minutes; 3 of 4 other rider draws read worse. In every draw SF-2 gets no visits and another lot fills. Ops check: a guardrail per depot.",
+    "lane_file": "four-area run-presets.mjs, probes2.mjs P8; verify draw-robust.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "UC-01": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs; summary.test.mjs:142-162; verify sigma-iso.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Both arms set trips between depot visits to 10. Same riders and travel draws in both arms. Primary: rider wait p90, 30 s margin. 20 paired seeds.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Every paired gap is 0 s: UNCHANGED. Later experiments start from a harness that adds no noise of its own. Ops check: run an A/A test in your own tooling before any A/B.",
+    "lane_file": "four-area run-presets.mjs; summary.test.mjs:142-162; verify sigma-iso.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "UC-02": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs, probes.mjs P4; verify draw-robust.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: San Jose cars 16 to 24; other areas stay the same. Primary: San Jose wait p90, 07:00 to 09:00, 60 s margin. Guardrails: unserved share, all areas and San Francisco.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Wait p90 falls by about 12 minutes (interval 10 to 15) and unserved falls in San Francisco too. Probe runs at 24 to 32 and 32 to 40 cars show no plateau yet. Ops check: sweep sizes before choosing one.",
+    "lane_file": "four-area run-presets.mjs, probes.mjs P4; verify draw-robust.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "UC-03": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs; presets.test.mjs:82-95; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: rider patience 20 to 5 minutes. Primary: rider wait p90, 30 s margin. Guardrail: unserved share, max harm 1 point. 20 paired seeds.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Wait p90 falls by about 10 minutes while unserved rises from 2.7% to 4.4%, so the recommendation is HOLD: fewer riders are counted. Ops check: read wait beside unserved and population size.",
+    "lane_file": "four-area run-presets.mjs; presets.test.mjs:82-95",
+    "kind_reason": "Declared lesson setting"
+  },
+  "UC-05": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs, probes.mjs P5; verify uc05-context.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: every highway from free flow (x1.0) to x1.6, 16:00 to 19:00; the map's own evening sits between. Primary: San Jose wait p90, 17:00 to 20:00, 60 s margin. Guardrails: unserved, available fleet.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "San Jose wait p90 rises from about 14 minutes on free-flowing highways to 96 at x1.6. HOLD means the condition harms service, not a choice. In probes, 8 more cars recover about 3 minutes. Ops check: which areas depend on highway trips.",
+    "lane_file": "four-area run-presets.mjs, probes.mjs P5; verify uc05-context.mjs",
+    "kind_reason": "External condition rather than an operating choice"
+  },
+  "UC-08a": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs, probes.mjs P2; framing-verify v-*.mjs (SF-1 queue); verify draw-robust.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: SF-1 cleaning bays 4 to 6. Primary: rider wait p90 over the whole run, 30 s margin. Guardrail: unserved share. 20 paired seeds.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "SF-1's own bay wait p90 halves (about 59 to 31 min, 20 of 20 seeds), yet rider wait p90 moves -3 s (interval -10 to 0): UNCHANGED. A shorter depot queue did not reach riders. Ops check: who waits in that queue?",
+    "lane_file": "four-area run-presets.mjs, probes.mjs P2; framing-verify v-*.mjs (SF-1 queue); verify draw-robust.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "UC-08b": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs, probes.mjs P3; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: clean time 20 to 15 minutes at every depot. Primary: rider wait p90 over the whole run, 30 s margin. Guardrail: unserved share. 20 paired seeds.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Depot turnaround p90 falls by about 42 minutes, but rider wait p90 moves -32 s (interval -70 to +1): unresolved. With 100 seeds it stays near the margin. Ops check: set the margin that matters first.",
+    "lane_file": "four-area run-presets.mjs, probes.mjs P3",
+    "kind_reason": "Declared lesson setting"
+  },
+  "UC-10": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: four-area run-presets.mjs, probes2.mjs P8; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Rule: nearest depot with a free stall. One change: bays 6, 2, 1, 2 to 4, 2, 3, 2 at SF-1, SF-2, SJ-1, EB-1. Primary: rider wait p90, 30 s margin. Three guardrails.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Spreading lowers wait p90 by about 3 minutes and SJ-1 bay wait p90 from 7.1 to 2.2 hours. SF-2 gets no visits in either layout under this rule. Ops check: put bays where your routing sends cars.",
+    "lane_file": "four-area run-presets.mjs, probes2.mjs P8",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-01": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 089edeff; casebook-1 verify-pins.mjs; live browser run; verify pins3.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Only the SF fleet changes, 40 to 52 cars all day. Same riders and 20 paired seeds in both runs. Extra cars sleep at SF-1 and SF-2 stalls. Staff and charging for them are not modeled.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: SF evening wait p90 fell {primary:min} min while SF-2 bay wait p90 rose {g1:min} min, past its 30 min allowance, so the call is HOLD. SF wait p90 the next morning also fell {g2:min} min, inside its allowance. Ops check: the overnight depot wave.",
+    "lane_file": "pins 089edeff; casebook-1 verify-pins.mjs; live browser run; verify pins3.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-02": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 5e6da8a7; casebook-1 probe.mjs, probe-ops02-sets.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Only the recall time moves, 00:30 to 02:00 on day 2; the 05:45 release stays. Same riders and 20 paired seeds. No closing time surge, night crew hours or charging windows.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: a 02:00 recall gives late night SF riders pickups {primary:min} min faster (p50); SF-2 bay wait p90 rises {g2:min} min, inside its 30 min limit. Ops check: rerun with a 06:00 fleet readiness guardrail.",
+    "lane_file": "pins 5e6da8a7; casebook-1 probe.mjs, probe-ops02-sets.mjs; verify",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-03": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins bea8dbfd; casebook-1 probe-visits.mjs; verify draws.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Only the cleaning cadence changes, 10 to 15 trips, for every car at every hour; the model cannot defer only in the peak. Same riders and 20 paired seeds. Cabin condition is not modeled.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: every 15 trips serves {primary:pts} more of every 100 SF evening requests, and SF-2 bay wait p90 rises {g2:min} min, inside its 30 min limit for this set of riders. Ops check: read depot waits by window and track cabin condition.",
+    "lane_file": "pins bea8dbfd; casebook-1 probe-visits.mjs; verify draws.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-04": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 4134c2a4; casebook-1 probe.mjs; verify draws.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Only the release time moves, 05:45 to 05:00 on day 2; the recall stays at 00:30. Same riders and 20 paired seeds. The release sends cars to a home area, not to where requests start.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: with a 05:00 release, SF morning wait p90 rises {primary:s} s for this set of riders; its interval sits above zero but straddles the 30 s margin. An earlier release is not earlier readiness here. Ops check: see where ready cars wait.",
+    "lane_file": "pins 4134c2a4; casebook-1 probe.mjs; verify draws.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-05": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins bfaabbfa; casebook-1 verify-pins.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Only the East Bay fleet changes, 12 to 18 cars. The depot stays at 12 stalls, 1 cleaning bay, 1 service bay. Same riders and 20 paired seeds. No staged delivery or demand ramp.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: 6 more cars shorten East Bay morning wait p90 by {primary:min} min, but the 12 stall, one bay depot turns away {g2:n} cars a run and its bay wait p90 rises {g3:min} min. Ops check: size the launch depot with the fleet.",
+    "lane_file": "pins bfaabbfa; casebook-1 verify-pins.mjs; verify",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-06": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins c35d4d31; casebook-1 probe.mjs; verify mech.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Only East Bay peak demand changes, 30 to 45 requests an hour; fleet and depot stay small. Same seeds. Dispatch sends the nearest idle car, so cars cross area lines. A stress test, not a decision.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: at 45 requests an hour East Bay morning wait p90 rises {primary:min} min, and San Francisco leaves {g2:pts} more of every 100 riders unserved, past its 1 point limit. Ops check: put a guardrail on the neighbouring area in any launch plan.",
+    "lane_file": "pins c35d4d31; casebook-1 probe.mjs; verify mech.mjs",
+    "kind_reason": "External condition rather than an operating choice"
+  },
+  "OPS-07": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 33571abe; casebook-1 probe-visits.mjs; verify (corrected times); this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Only the launch depot bays change, 1 to 3; stalls, fleet and demand stay. Same riders and 20 paired seeds. Staff, opening hours and charging are not modeled.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: 3 bays cut EB-1 bay wait p90 by {g1:min} min, yet East Bay morning wait shows no clear benefit: its interval crosses the margin. Ops check: ask when a queue happens and where ready cars go.",
+    "lane_file": "pins 33571abe; casebook-1 probe-visits.mjs; verify (corrected times)",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-08": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins f6c229cb; casebook-1 verify-pins.mjs; verify draws.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Only the depot rule changes, home depot to nearest free stall, for the whole fleet. SF-1 and SF-2 are equally near, so ties go to SF-1. Same riders and 20 paired seeds.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: turn-aways fall from {b.depot.diversions:n} to {c.depot.diversions:n} a run, but SF-1 takes the San Francisco night wave: its bay wait p90 rises {g3:min} min, while East Bay riders see no clear change. Ops check: scope the rule.",
+    "lane_file": "pins f6c229cb; casebook-1 verify-pins.mjs; verify draws.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-09": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 70a21ebe; casebook-1 probe.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "In a rain world (slower roads 13:00 to 23:00, more SF requests all day), only SF pickup and short trip time changes, 6 to 9 min, all day. Same riders and 20 paired seeds.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: 9 min pickups leave the SF evening wait tail with no clear change, but whole run unserved rises {g1:pts} points, past its 1 point limit. Ops check: keep a whole run guardrail.",
+    "lane_file": "pins 70a21ebe; casebook-1 probe.mjs; verify",
+    "kind_reason": "External condition rather than an operating choice"
+  },
+  "OPS-10": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 22831304; casebook-1 probe.mjs, probe-variants.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "In a rain world (slower roads, 2 min longer pickups, about 25 percent more SF requests all day), only the SF fleet changes, 40 to 48 cars. Same riders and 20 paired seeds.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: 8 more cars lower whole run unserved by {primary:pts} points, with every guardrail inside its limit: 06:00 to 07:00 availability, SF-2 stall blocking and empty driving. Ops check: split rain into demand and road speed before sizing.",
+    "lane_file": "pins 22831304; casebook-1 probe.mjs, probe-variants.mjs; verify",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-11": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins c23a8ba8; casebook-2 rerun.mjs, sets23.mjs; verify verify30.mjs, mech.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Rain world: slower roads and pickups, more SF requests. One change: clean time 20 to 30 min at every depot. Primary: SF p90 wait, day 2 07:00 to 09:00. Guardrails include available share, 06:00 to 07:00.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "On 3 seed sets: no clear shift in SF morning wait, while SF-2 bay wait and the 06:00 to 07:00 available share pass their limits. Ops check: when clean time grows, watch the overnight queue and early readiness first.",
+    "lane_file": "pins c23a8ba8; casebook-2 rerun.mjs, sets23.mjs; verify verify30.mjs, mech.mjs",
+    "kind_reason": "External condition rather than an operating choice"
+  },
+  "OPS-12": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 1505ff49; casebook-2 explore3.mjs; verify explore-verify.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Rain world with 30 min cleans at every depot. One change: SJ-1 cleaning bays 3 to 5, while SF-2 keeps the longest queue. Primary: SF p90 wait, day 2 07:00 to 09:00.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: 2 more bays at SJ-1 lower SF morning p90 wait by {primary:min} min, with every guardrail inside its limit. Ops check: rank bay sites by their effect on riders, not by queue length.",
+    "lane_file": "pins 1505ff49; casebook-2 explore3.mjs; verify explore-verify.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-13": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 83a51e1f; casebook-2 rerun.mjs; verify pickups.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: SF in-area trip and pickup time 6 to 10 min, all run. Legs between areas skip it. Primary: SF p90 wait, day 1 07:00 to 09:00. Guardrails: SF unserved share, SF evening wait.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: SF morning p90 wait {primary:min} min higher; the evening wait stays inside its 2 min limit. Ops check: aim curb fixes at in-area peaks.",
+    "lane_file": "pins 83a51e1f; casebook-2 rerun.mjs; verify pickups.mjs",
+    "kind_reason": "External condition rather than an operating choice"
+  },
+  "OPS-14": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins cec780af; casebook-2 explore2.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: SF peak requests 60 to 90 per hour, day 1 peaks and day 2 morning. The nearest idle car serves any area. Primary: East Bay unserved share, day 1 16:00 to 19:00. Guardrails: EB wait, SF unserved.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: East Bay leaves {primary:pts} more of every 100 evening requests unserved, while its p90 wait stays inside its 2 min limit. A rider with no car in 10 min leaves and is not in the wait. Ops check: watch the neighbour's unserved share.",
+    "lane_file": "pins cec780af; casebook-2 explore2.mjs; verify",
+    "kind_reason": "External condition rather than an operating choice"
+  },
+  "OPS-15": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins f06dffe7; casebook-2 explore2.mjs; verify pickups.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "Event world: SF at 90 peak requests per hour. One change: East Bay cars 24 to 32, all homed at EB-1. Nearest idle dispatch can send any car anywhere. Primary: East Bay evening unserved share.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: East Bay evening unserved falls {primary:pts} points and SF unserved falls too, while EB-1 bay wait and lot peak pass their limits. Ops check: count where the added cars pick up, and whether their home depot can take them overnight.",
+    "lane_file": "pins f06dffe7; casebook-2 explore2.mjs; verify pickups.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-16": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 607e34c7; casebook-2 rerun.mjs, sets23.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: in-area traffic x1.3 to x2.0, day 1 16:00 to 19:00, in all four areas and on depot entries at once. Primary: map-wide unserved share, day 1 17:00 to 20:00.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: {primary:pts} more of every 100 riders unserved map-wide in the evening, and more rider time in slow traffic; SF p90 wait shows no steady direction across the 3 seed sets. Ops check: track unserved share by area.",
+    "lane_file": "pins 607e34c7; casebook-2 rerun.mjs, sets23.mjs; verify",
+    "kind_reason": "External condition rather than an operating choice"
+  },
+  "OPS-17": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 1b429508; casebook-2 explore3.mjs; verify mech.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: H1 from 25 to 90 min, so every SF to Peninsula leg uses local route L1. Depot homes follow route times, so Peninsula cars move to SJ-1. Primary: Peninsula p90 wait, day 1 07:00 to 09:00.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: Peninsula morning p90 wait {primary:min} min higher, and SJ-1, where Peninsula cars now sleep, turns {g3:n} cars away per run. Ops check: staging cars in the cut-off area (not modeled here) and the backup depot.",
+    "lane_file": "pins 1b429508; casebook-2 explore3.mjs; verify mech.mjs",
+    "kind_reason": "External condition rather than an operating choice"
+  },
+  "OPS-18": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins a940e907; casebook-2 explore3.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: SF fleet 40 to 34 cars, whole run. Day 1 starts with every car idle at home; day 2 starts where the recall and depot queues left the fleet. Primary: SF p90 wait, day 2 07:00 to 09:00.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: SF p90 wait on the day 2 morning is {primary:min} min higher. Ops check: plan backfill for the next morning peak, not only the same day, and watch the neighbour's next morning too.",
+    "lane_file": "pins a940e907; casebook-2 explore3.mjs; verify",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-19": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins f1a88379; casebook-2 explore3.mjs; verify; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: service every 3rd visit to every 2nd, on the service bays the map has (SF-1 2, SF-2 1, SJ-1 1, EB-1 1). The 00:30 recall sends the fleet through them. Primary: SF p90 wait, day 2 07:00 to 09:00.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: SF morning p90 wait {primary:min} min higher and 06:00 to 07:00 availability {g2:pts} points lower, while cleaning bay wait moves under 1 min. Ops check: name the service bay queue in a guardrail.",
+    "lane_file": "pins f1a88379; casebook-2 explore3.mjs; verify",
+    "kind_reason": "Declared lesson setting"
+  },
+  "OPS-20": {
+    "source": "pin",
+    "command": "Historical grounding recorded by audit Appendix B: pins 800a66ff; casebook-2 explore3.mjs; verify mech.mjs; this change reuses that accepted audit, not a new measurement.",
+    "config_or_patch": "One change: SF-1 stalls 60 to 20. Cars still go to their home depot; a car turned away drives to the nearest depot with a free stall. Primary: SF p90 wait, day 2 07:00 to 09:00. Guardrail: turn-aways, max 0.",
+    "seeds": "As documented in the cited audit row",
+    "numbers": "Seed set {set}: SF morning wait stays inside its 1 min band, while {g1:n} cars per run are turned away at SF-1. Only the zero-limit gate guardrail sees it. Ops check: keep a gate guardrail when lots shrink.",
+    "lane_file": "pins 800a66ff; casebook-2 explore3.mjs; verify mech.mjs",
+    "kind_reason": "Declared lesson setting"
+  },
+  "day": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "One synthetic 8 hour day from 07:00 on OpenStreetMap Bay Area roads: requests, pickups, trips, then depot cleaning, charging and upload. One replay per setting, fixed seed. Not calibrated.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "street": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Synthetic traffic on frozen OpenStreetMap SF streets. Each block holds a finite queue, and a full block stops the one behind it. Presets move the hotspot only; Compare runs two route rules on one demand.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "workbench": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Invented riders from day 1 05:00 to day 2 10:00, with an overnight recall. An experiment changes one setting, replays the same riders on 20 travel seeds and reads the paired gap.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "four-area": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "One replay of the chosen scenario with travel variation at 0, so every replay repeats. Moments mark the peaks, the 00:30 recall and the 05:45 release.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "regional-power": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Fictional Austin-inspired map, 40 cars, 2 depots, 8 hours. Site A power drops in minutes 90 to 180; Site B keeps 120 kW. Every run also has 1 port per depot out in minutes 60 to 120.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "launch": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Two runs of the chosen template, Peninsula by default or fictional Region B, on the same demand seed: ports commissioned at minute 0 versus minute 90. All else the same. Setup checks are not inspections.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "reference-panels": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Quoted text only: nothing here runs. FLEET-005 is a committed decision record and the two-zone probe is an exploratory run, both from the reference harness, a separate tool whose world differs from this model.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "preset:rain": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Fleet day with three changes at once: start 15:00 instead of 07:00, rain (declared: travel x1.3, energy x1.12, demand x1.12) and base demand 45 requests an hour instead of 30. Fleet and places stay the same. One replay.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "preset:depot": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Fleet day with five changes at once: 32 cars instead of 24, 1 depot instead of 2, 1 charger instead of 4, 1 cleaning bay instead of 2, a visit every 2 trips instead of 3. Synthetic demand stays the same. One replay.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "preset:power": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Fleet day with four changes at once: 32 cars instead of 24, 80 kW ports instead of 50, 40 kW site power instead of 120, a visit every 2 trips instead of 3. Ports, depots and synthetic demand stay the same. One replay.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "staffing": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "One seed, same demand: 16 cars, 1 depot, 18 min base cleaning after every trip. Baseline has 1 worker and 3 bays; one arm adds a worker, the other adds a bay. Descriptive only.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "deadlines": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Same 24 cars, 8 ports, 120 kW. Redistribution vs deadline-first charging; jobs waiting 60 min or more go oldest first. Deadlines are tiers by car (45, 90 or 135 min after the visit starts).",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "resources": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "4 of 8 ports fail from minute 10 to 100. Status arrives 8 min late and stays valid 10 min. Last-known vs fresh-only status. A rejected try moves to the next port in the same minute.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "airport": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Same passenger wave and 24 cars in both arms. Reactive dispatch vs staging up to 6 cars from a declared wave estimate; the policy never sees actual requests. Fictional access rule.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "preset:balanced": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "One synthetic 8 hour day from 07:00 on OpenStreetMap Bay Area roads: requests, pickups, trips, then depot cleaning, charging and upload. One replay per setting, fixed seed. Not calibrated.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "preset:charging": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "12 paired seeds, 4 hours, 24 cars, 8 ports sharing 120 kW; I-PACE accepts 10 kW. Equal shares versus redistributing unused power. All else the same; linear charging, no taper.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "preset:resources": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "4 of 8 ports fail from minute 10 to 100. Status arrives 8 min late and stays valid 10 min. Last-known vs fresh-only status. A rejected try moves to the next port in the same minute.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "preset:airport": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Same passenger wave and 24 cars in both arms. Reactive dispatch vs staging up to 6 cars from a declared wave estimate; the policy never sees actual requests. Fictional access rule.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "preset:staffing": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "One seed, same demand: 16 cars, 1 depot, 18 min base cleaning after every trip. Baseline has 1 worker and 3 bays; one arm adds a worker, the other adds a bay. Descriptive only.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "walkthrough": {
+    "source": "fixture",
+    "command": "Existing surface default/spec and audit section 11.3.10",
+    "config_or_patch": "Only the SF fleet changes, 40 to 52 cars all run. Same riders and roads, 20 paired seeds. Extra cars sleep at SF-1 and SF-2. Staff and charging are not modeled.",
+    "seeds": "Read from submitted spec",
+    "numbers": [],
+    "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  }
+}

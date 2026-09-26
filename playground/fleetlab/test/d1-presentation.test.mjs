@@ -18,7 +18,7 @@ test('Fleet day puts a paused partition before the workspace; Run focuses withou
  const x=setup();try{const lab=x.studio.operations;x.studio.navigate('simulation');
   const children=[...lab.element.children],summary=lab.element.querySelector('.ops-result-summary'),workspace=lab.element.querySelector('.ops-workspace');
   assert.ok(summary);assert.ok(children.indexOf(summary)<children.indexOf(workspace));assert.match(children.at(-1).textContent,/Other experiments on this page/);
-  assert.equal(lab.element.querySelector('.ops-scenario-learning').hasAttribute('open'),false);
+  assert.equal(lab.element.querySelector('.teaching-glossary').hasAttribute('open'),false);assert.ok(children.indexOf(lab.element.querySelector('.teaching-frame').closest('.ops-intro'))<children.indexOf(summary));
   let scrolls=0;for(const node of [lab.element,...lab.element.querySelectorAll('*')])node.scrollIntoView=()=>scrolls++;
   await lab.run();assert.equal(document.activeElement,summary.querySelector('h2'));assert.equal(scrolls,0);assert.equal(lab.getState().playing,false);
   assert.match(summary.textContent,/95 completed · 176 unserved · 4 waiting · 9 in progress = 284 requests/);

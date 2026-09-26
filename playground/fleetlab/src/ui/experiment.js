@@ -1,3 +1,4 @@
+import {LESSON_FRAMES,SURFACE_FRAMES,CASEBOOK_READINGS,resultView,exactView} from './teaching-frames.js';
 // Experiment mode (design §6, §7.1 freeze rule, §7.2 setup and verdict, §1.3 reference panels): the setup sheet in
 // six blocks with its checks, Freeze and run, the freeze notice, the verdict card, the session log and the two quoted
 // FleetLab reference panels. Views are built from the store state with dom.js helpers; text enters only through
@@ -661,7 +662,7 @@ export function renderVerdictCard(view, { ui = { open: new Set() }, rerender = (
     chipText: reference ? PANEL_TEXT[panelId].chip() : labels.verdictHeader(view.replications),
     panelId,
     notices,
-    body,
+    body: reference ? body : [resultView(Object.values(LESSON_FRAMES).find(f=>CASEBOOK_READINGS[f.id]?.labels.includes(view.label))??SURFACE_FRAMES.workbench,view,{words:metricWords,number:format.number,signed:format.signed,nonzero:format.nonzero,metricValue:metricValueText,threshold:thresholdText}),el('details',{class:'teaching-exact'},[el('summary',{},'Exact values'),...body,el('p',{},'Harm is signed so that a negative value means the candidate did better.'),el('pre',{},JSON.stringify(view,null,2))]),tradeOffSection(view)],
     actions,
     footer: reference ? differences : el("p", { class: "fl-verdict__footer" }, labels.HONESTY.verdictFooter),
   });
@@ -1199,10 +1200,7 @@ export function renderSetup(state, { dispatch, ui, rerender, onFreeze, phone = f
     on: { click: () => onFreeze() },
   }, labels.EXPERIMENT_SETUP.freezeAndRun);
   return el("section", { class: "fl-panel", "data-role": "setup", "aria-label": labels.EXPERIMENT_SETUP.heading }, [
-    el("header", {}, [heading(2, labels.EXPERIMENT_SETUP.heading), el("p", { class: "fl-teaching-chip" }, labels.HONESTY.verdictChip)]),
-    presetChooser(state, dispatch),
-    ...sections,
-    el("section", { "data-role": "checks-section" }, [heading(3, labels.EXPERIMENT_SETUP.checksHeading), checkList, checkErrors(errors)]),
+    el("details", {class:"teaching-configuration",open:!!ui.configurationOpen,on:{toggle:event=>{ui.configurationOpen=event.target.hasAttribute("open");}}}, [el("summary", {}, "Review or change this paired test"),el("header", {}, [heading(2, labels.EXPERIMENT_SETUP.heading), el("p", { class: "fl-teaching-chip" }, labels.HONESTY.verdictChip)]),presetChooser(state, dispatch),...sections,el("section", { "data-role": "checks-section" }, [heading(3, labels.EXPERIMENT_SETUP.checksHeading), checkList, checkErrors(errors)])]),
     freeze,
     ok ? null : el("p", { class: "fl-muted", "data-role": "freeze-disabled" }, labels.EXPERIMENT_SETUP.freezeDisabled),
   ]);
@@ -1420,6 +1418,7 @@ export function mountExperiment(container, { store, host, copy = null, now = wal
       type: "button",
       class: "fl-button",
       "data-role": "cancel",
+      "data-focus-key": "cancel",
       on: { click: () => { if (host && ui.pending && ui.pending.id !== undefined) host.cancel(ui.pending.id); } },
     }, labels.STATES.cancel));
     return el("section", { class: "fl-panel", "data-role": "running" }, children);
@@ -1479,8 +1478,10 @@ export function mountExperiment(container, { store, host, copy = null, now = wal
       referenceList(state),
     );
     if (activeKey !== null) {
-      const again = container.querySelector(`[data-focus-key="${activeKey}"]`);
+      let again = container.querySelector(`[data-focus-key="${activeKey}"]`);
+      if(!again||again.disabled)again=container.querySelector(state.experiment.status==="running"?'[data-role="cancel"]':'.teaching-result h3');
       if (again && typeof again.focus === "function") {
+        if(again.localName!=="button"&&!again.hasAttribute("tabindex"))again.setAttribute("tabindex","-1");
         again.focus();
         if (selection !== null && typeof again.setSelectionRange === "function") again.setSelectionRange(selection[0], selection[1]);
       }

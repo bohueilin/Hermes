@@ -497,7 +497,7 @@ export const RECOMMENDATION_REASONS = frozen({
   guardrailHarmed: "a guardrail was harmed; hold",
   primaryRegressed: "the primary regressed; hold",
   improved: "the primary improved and no evaluated guardrail exceeded its limit; test it next",
-  inconclusive: "the interval is too wide to call; run more experiments",
+  inconclusive: "the interval crosses the margin; run more paired seeds or test a larger step",
   unchanged: "no difference beyond the margin; nothing to recommend",
   invalid: "void evidence; nothing to recommend",
 });

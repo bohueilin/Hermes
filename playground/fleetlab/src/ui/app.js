@@ -1,3 +1,4 @@
+import {teachingResult} from './teaching-projection.js';
 // Interface entry (contract section 8, design §7): builds the shell of design §7.2 and wires every region to one store
 // and to the engine host. The region modules render the knobs, map, transport, inspector, Learn and Experiment; this
 // file renders the top bar, the NOW panel, the panel across replications, the chart row, the fork section, the run
@@ -838,7 +839,7 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
       fleetStateChart({ series: replay.series, window, seed }),
       ...ROW_CHARTS.map((chart) => metricByHourChart({ chart, runs: run.summaries, seed, window, population: run.log !== null && run.log.seed === seed ? { log: run.log, scenario: scenarioOfRun(state) } : null })),
     ];
-    chartSet.replaceChildren(...memo.chartHandles.map((handle) => handle.node));
+    chartSet.replaceChildren(teachingResult('four-area',{type:'text',line:`Seed ${seed}: rider wait p90 ${Number.isFinite(replay.metrics['wait.p90_s']?.value)?format.minutes(replay.metrics['wait.p90_s'].value):'not available'}; unserved share ${Number.isFinite(replay.metrics['unserved.fraction']?.value)?format.percent(replay.metrics['unserved.fraction'].value,1):'not available'}. One replay; no paired interval.`}),...memo.chartHandles.map((handle) => handle.node));
   }
 
   function renderStrips(state) {

@@ -1,3 +1,4 @@
+import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView} from './teaching-frames.js';
 import {modelHeader,NON_AFFILIATION} from './model-identity.js';
 import {isReducedMotion} from './store.js';
 import {MODEL_VERSION} from '../model/experiment.js';
@@ -37,7 +38,7 @@ function overview(navigate, film) {
       el("div",{class:"film-copy"},[
         eyebrow("FLEET OPERATIONS, MADE EXPLORABLE"),
         el("h1",{},"Every great ride starts with a ready fleet."),
-        el("p",{class:"film-lede"},"Explore the work between rides. Run a simulated fleet day, follow vehicles through the Bay Area, and see how demand, energy and depot capacity shape the day."),
+        el("p",{class:"film-lede"},"Riders wait when cars are busy elsewhere. Find out which work between rides limits service: driving, charging, cleaning or a street queue."),
         el("div",{class:"hero-actions"},[pageLink("Run a fleet day  →","simulation",navigate,true),pageLink("Explore the models  →","catalog",navigate)]),
         el("p",{class:"hero-duration"},"Start in three minutes · Runs in your browser"),
       ]),
@@ -125,7 +126,7 @@ export function mountStudio(app) {
   const browserWindow=globalThis.window;
   const container=el('div',{class:'fleet-studio','data-page':'overview'});
   root.parentNode.insertBefore(container,root);
-  const navItems=[['overview','Overview'],['simulation','Fleet day'],['streets','Street lab'],['depots','Four-area workbench'],['catalog','Learning catalog'],['approach','Product approach']];
+  const navItems=[['overview','Overview'],['simulation','Fleet day'],['streets','Street lab'],['depots','Four-area experiments'],['catalog','Learning catalog'],['approach','Product approach']];
   const navLinks=navItems.map(([id,text])=>{
     const link=pageLink(text,id,navigate);link.setAttribute('data-nav',id);return link;
   });
@@ -153,6 +154,9 @@ export function mountStudio(app) {
     el('nav',{'aria-label':'Footer navigation'},[pageLink('Learning catalog','catalog',navigate),pageLink('Product approach','approach',navigate),pageLink('Guided walkthrough','tour',navigate)]),
     el('span',{},'Simulation for learning and exploration'),
   ]);
+  let workspaceLesson=null,lessonSetup=null;
+  const setupKey=state=>JSON.stringify([state.scenario,state.experiment.draft]);
+  function renderLesson(state){workspaceIntro.replaceChildren(frameView(LESSON_FRAMES[workspaceLesson.id],{title:workspaceLesson.title,heading:'h1',seeds:state.experiment.draft?.seedCount,edited:setupKey(state)!==lessonSetup}),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),glossaryView());}
   let current='overview',initialized=false,capacityLoaded=false,activeMain=null,lastHandledHash=null,applying=false;
   const baseUrl=()=>browserWindow?.location?.href?.split('#')[0]??'';
   const shareLink=href=>{writeAddress(href,true);lastHandledHash=href;};
@@ -181,7 +185,7 @@ export function mountStudio(app) {
     initialized=true;
   }
   function renderPage(page){
-    current=page;pause();
+    workspaceLesson=null;current=page;pause();
     if(store.getState().present.on&&page!=='tour')present.close();
     const workspace=['operations','depots','tour'].includes(page);
     root.hidden=!workspace;workspaceMain.hidden=!workspace;
@@ -202,26 +206,29 @@ export function mountStudio(app) {
       workspaceIntro.replaceChildren(eyebrow('WORKSPACE / DEPOT CAPACITY'),el('h1',{},'Test a depot capacity decision.'),el('p',{},'The first example compares four and six cleaning bays at SF-1. Your current setup and results are kept when you navigate away. Review the assumptions below, then freeze and run.'),action('Reset to the 4 vs 6 bay example',()=>{startFromPreset(store.dispatch,'UC-08a');store.dispatch({type:'mode/set',mode:'experiment'});}));
     }
     if(page==='tour'){
-      workspaceIntro.replaceChildren(eyebrow('GUIDED WALKTHROUGH / ABOUT 6 MINUTES'),el('h1',{},'One day. Four ways to understand it.'),el('p',{},'Follow operations, analytics, simulation and product decisions. Prepare the example, then move through the chapters at your pace.'));
+      workspaceIntro.replaceChildren(eyebrow('GUIDED WALKTHROUGH / ABOUT 6 MINUTES'),el('h1',{},'One question, one day, one verdict.'),el('p',{},'OPS-01 asks whether 52 San Francisco cars instead of 40 change evening rider wait. Watch the day, read the verdict, then see what it trades and what to test next.'));
       if(!store.getState().present.on)present.open();
     }
-    if(workspace){workspaceIntro.appendChild(workspaceIdentity.element);updateWorkspaceIdentity(store.getState());}
+    if(workspace){workspaceIntro.appendChild(el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));updateWorkspaceIdentity(store.getState());}
+    if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Run an A/B test';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));}
     if(page==='streets')streets.refresh();
     focusMain(workspace?workspaceMain:page==='approach'?product:page==='simulation'?operations.element:page==='streets'?streets.element:page==='catalog'?catalog.element:home,ROUTES[page].title);
   }
   function applyLesson(record){
     if(record.target==='operations'){
       const patch=typeof record.patch==='function'?record.patch():structuredClone(record.patch);
-      if(patch.launch_rehearsal){operations.chooseLaunchTemplate(patch.launch_rehearsal);}
-      else{operations.loadScenario(patch);}
-    }else if(record.target==='streets')streets.loadSharedSetup({model:'street-lab',config:{...defaultStreetConfig(),hotspot:record.hotspot},options:{}});
+      if(patch.launch_rehearsal){operations.chooseLaunchTemplate(patch.launch_rehearsal);operations.launchPanel.setLesson(record);}
+      else{operations.loadScenario(patch);operations.setLesson(record);}
+    }else if(record.target==='streets'){streets.loadSharedSetup({model:'street-lab',config:{...defaultStreetConfig(),hotspot:record.hotspot},options:{}});streets.setLesson(record);}
     else{
       app.host?.cancel();
       const preset=record.preset;
       if(CHOOSER_PRESET_IDS.includes(preset.id))startFromPreset(store.dispatch,preset.id);
       else if(preset.learnCase){openLearnCase(store.dispatch,preset.learnCase);store.dispatch({type:'mode/set',mode:'learn'});}
       else store.dispatch({type:'preset/select',presetId:preset.id,scenario:preset.scenario});
+      workspaceLesson=record;lessonSetup=setupKey(store.getState());renderLesson(store.getState());
     }
+
     pause();
   }
   function applyRoute(hash){
@@ -243,6 +250,7 @@ export function mountStudio(app) {
         else operations.loadSharedSetup(setup);
         pause();
       }
+      if(record?.id==='region-launch'){const h=operations.launchPanel.heading;h.focus();h.scrollIntoView?.({block:'start'});}
       if(record)document.title=`${record.title} · FleetLab by Hermes`;
       for(const share of [fleetShare,launchShare,austinShare,streetShare,regionalShare])share.clear();
       if(setup){const shared={'fleet-day':fleetShare,'launch-rehearsal':launchShare,'regional-power':austinShare,'street-lab':streetShare,regional:regionalShare};shared[setup.model].loaded();const target=setup.model==='launch-rehearsal'?operations.launchPanel.heading:setup.model==='regional-power'?operations.regionalPanel.heading:setup.model==='fleet-day'?operations.summaryHeading:setup.model==='street-lab'?streets.element.querySelector('h1'):workspaceIntro.querySelector('h1');target.setAttribute('tabindex','-1');target.focus();}
@@ -260,6 +268,6 @@ export function mountStudio(app) {
   function updateWorkspaceIdentity(state){workspaceIdentity.update(state.experiment.frozen?.spec.model_version??MODEL_VERSION,state.experiment.verdictStale||state.run.stale);}
   let previousMotion=reducedMotion();
   let previousPresent=store.getState().present.on;
-  const unsubscribe=store.subscribe(state=>{updateWorkspaceIdentity(state);const motion=reducedMotion();if(motion!==previousMotion){previousMotion=motion;film.setActive(current==='overview');}const was=previousPresent;previousPresent=state.present.on;if(was&&!state.present.on&&current==='tour'&&!applying)navigate('operations');});
+  const unsubscribe=store.subscribe(state=>{if(workspaceLesson&&!applying)renderLesson(state);updateWorkspaceIdentity(state);const motion=reducedMotion();if(motion!==previousMotion){previousMotion=motion;film.setActive(current==='overview');}const was=previousPresent;previousPresent=state.present.on;if(was&&!state.present.on&&current==='tour'&&!applying)navigate('operations');});
   return {navigate,applyRoute,operations,streets,element:container,destroy(){browserWindow?.removeEventListener('hashchange',addressChanged);film.destroy();operations.destroy();streets.destroy();unsubscribe();root.hidden=false;root.removeAttribute('inert');container.parentNode?.insertBefore(root,container);container.remove();}};
 }

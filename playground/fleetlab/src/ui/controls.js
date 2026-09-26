@@ -436,8 +436,7 @@ export function mountControls({ store, region, onRunWindow = () => {} }) {
   region.replaceChildren(
     el("div", {}, [el("h2", { class: "fl-title" }, KNOB_PANEL.heading), closeButton, presetText, countText, resetAll, changeList]),
     ...groups.flatMap((g) => [g.button, g.body]),
-    el("p", { class: "fl-muted" }, KNOB_PANEL.greyed.charging),
-    el("p", { class: "fl-muted" }, KNOB_PANEL.greyed.staff),
+    el("details", {}, [el("summary", {}, "Limits and what this misses"),el("p", { class: "fl-muted" }, KNOB_PANEL.greyed.charging),el("p", { class: "fl-muted" }, KNOB_PANEL.greyed.staff)]),
     problems,
     el("div", { class: "fl-knobs__run" }, [staleText, runButton]),
   );

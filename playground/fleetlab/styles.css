@@ -1433,3 +1433,26 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
   .setup-sharing { padding: 12px; }
   .studio-footer nav { width: 100%; }
 }
+
+/* Purpose, mechanics, and reading stay together at each lesson entry. */
+.teaching-frame { margin: 1rem 0; min-width: 0; }
+.teaching-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1rem; }
+.teaching-title { margin: 0; }
+.teaching-chips { display: flex; flex-wrap: wrap; gap: .35rem; font-size: .75rem; }
+.teaching-chips span { padding: .2rem .5rem; border: 1px solid var(--line); border-radius: 1rem; }
+.teaching-parts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1rem; }
+.teaching-parts h3 { font-size: .85rem; margin-bottom: .3rem; }
+.teaching-parts p { font-size: .85rem; line-height: 1.5; }
+.teaching-limits,.teaching-glossary,.teaching-exact,.teaching-configuration { margin: .7rem 0; }
+.teaching-exact pre { max-width: 100%; overflow: auto; }
+.teaching-result { border-left: 3px solid var(--accent); padding-left: 1rem; margin: 1rem 0; }
+.teaching-edited { font-weight: 600; }
+.catalog-start a { display:inline-block; margin: .2rem .7rem .2rem 0; }
+.fl-button--primary:disabled { color: #fff; background: #355879; opacity: 1; }
+@media(max-width:767px) { .teaching-parts { grid-template-columns: minmax(0,1fr); gap: .15rem; } }
+.teaching-run-line { font-weight: 600; }
+.casebook-reading { margin-top: .8rem; }
+.teaching-change { font-size: .85rem; }
+
+/* The paired setup contains its own scenario editor; leave the replay editor to Explore a day. */
+.studio-workspace .fl-app[data-mode="experiment"] .fl-knobs { display: none; }
