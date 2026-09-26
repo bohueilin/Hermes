@@ -151,7 +151,7 @@ export function mountStudio(app) {
   let current='overview',initialized=false,capacityLoaded=false,activeMain=null,lastHandledHash=null,applying=false;
   const baseUrl=()=>browserWindow?.location?.href?.split('#')[0]??'';
   const shareLink=href=>{writeAddress(href,true);lastHandledHash=href;};
-  const fleetShare=createSetupSharing({page:'simulation',models:[['fleet-day','Fleet day'],['launch-rehearsal','Launch rehearsal']],capture:(source,model)=>operations.getSharedSetup(source,model),onLink:shareLink,baseUrl});
+  const fleetShare=createSetupSharing({page:'simulation',models:[['fleet-day','Fleet day'],['launch-rehearsal','Launch rehearsal'],['regional-power','Austin regional power']],capture:(source,model)=>operations.getSharedSetup(source,model),onLink:shareLink,baseUrl});
   const streetShare=createSetupSharing({page:'streets',models:[['street-lab','Street lab']],capture:source=>streets.getSharedSetup(source),onLink:shareLink,baseUrl});
   const regionalShare=createSetupSharing({page:setup=>setup.config.mode==='experiment'?'depots':'operations',models:[['regional','Regional experiments']],capture:source=>getRegionalSetup(store.getState(),source),onLink:shareLink,baseUrl});
   operations.element.insertBefore(fleetShare.element,operations.element.children[1]??null);

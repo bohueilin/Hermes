@@ -16,6 +16,8 @@ import {MODEL_VERSION, SPEC_FORMAT_VERSION, validateDraft} from '../model/experi
 import {METRICS_VERSION} from '../model/metrics.js';
 import {PRESETS, PRESET_SEED_SET, presetById, seedSet} from '../model/presets.js';
 import {sha256Hex} from '../core/sha256.js';
+import {AUSTIN_REGION,regionReference} from '../model/region-package.js';
+import {SITE_POWER_VERSION,SITE_POWER_METRICS} from '../model/site-power.js';
 
 /** Encoded characters, before the route prefix. Large configurations fail explicitly; nothing is truncated. */
 export const MAX_SETUP_LENGTH = 32768;
@@ -26,7 +28,7 @@ const MAX_NODES = 12000;
 const MAX_ARRAY = 2048;
 const MAX_STRING = 400;
 const DANGEROUS = new Set(['__proto__', 'prototype', 'constructor']);
-const MODELS = ['fleet-day', 'street-lab', 'launch-rehearsal', 'regional'];
+const MODELS = ['fleet-day', 'street-lab', 'launch-rehearsal', 'regional', 'regional-power'];
 const extensionTemplates = {readiness:defaultReadiness(), charging:defaultCharging(), resources:defaultResources(), airport:defaultAirport()};
 const extensionVersions = {readiness:READINESS_VERSION, charging:CHARGING_VERSION, resources:RESOURCES_VERSION, airport:AIRPORT_VERSION, launch:LAUNCH_VERSION};
 const launchTemplates = [createLaunchConfig('peninsula'), createLaunchConfig('region_b')];
@@ -108,11 +110,12 @@ function launchPrivacy(value) {
   }
 }
 
-function validateBay(config, launch) {
+function validateBay(config, launch, regionalPower=false) {
   const base = defaultBayAreaConfig();
-  keys(config, [...Object.keys(base), ...(launch ? ['launch'] : [])], Object.keys(extensionTemplates), 'config');
+  keys(config, [...Object.keys(base), ...(launch ? ['launch'] : []), ...(regionalPower?['region','site_power_profile','readiness','charging','resources']:[])], Object.keys(extensionTemplates), 'config');
   for (const key of Object.keys(base)) shape(config[key], base[key], `config.${key}`);
   for (const [key, template] of Object.entries(extensionTemplates)) if (Object.hasOwn(config, key)) shape(config[key], template, `config.${key}`);
+  if(regionalPower)shape(config.region,regionReference(),'config.region');
   if (launch) {
     shape(config.launch, launchTemplates[0].launch, 'config.launch');
     launchPrivacy(config.launch);
@@ -174,6 +177,8 @@ function versionsFor(model, config) {
   if (model === 'street-lab') return {producer:'street-lab-v1',network:STREET_NETWORK.version};
   // The app currently runs five sandbox replications. A parity test binds this schema-owned count to its public constant.
   if (model === 'regional') return {producer:MODEL_VERSION,scenario:SCENARIO_VERSION,metrics:METRICS_VERSION,spec:SPEC_FORMAT_VERSION,sandbox_seed_set:PRESET_SEED_SET,sandbox_replications:5};
+  if (model === 'regional-power') return {producer:[BAY_OPERATIONS_VERSION,...['readiness','charging','resources'].map(k=>config[k].version),config.region.version,SITE_POWER_VERSION].join('+'),map:AUSTIN_REGION.graph_digest,region_sources:AUSTIN_REGION.provenance.version,
+    readiness_metrics:READINESS_METRICS_VERSION,required_work:REQUIRED_WORK_RULE,system_metrics:BAY_SYSTEM_METRICS,site_power_metrics:SITE_POWER_METRICS};
   if (bayMapDigest === undefined) bayMapDigest = sha256Hex(bayAreaSourceJSON());
   const extensions = Object.keys(extensionVersions).filter(key => Object.hasOwn(config, key));
   const versions = {producer:[BAY_OPERATIONS_VERSION,...extensions.map(key => extensionVersions[key])].join('+'),map:bayMapDigest};
@@ -186,8 +191,9 @@ function versionsFor(model, config) {
 function validateInputs(model, config, options) {
   if (!MODELS.includes(model)) fail('Unsupported setup model.');
   if (!object(options)) fail('Setup options must be an object.');
-  if (model === 'fleet-day') {
-    validateBay(config, false);
+  if (model === 'fleet-day'||model === 'regional-power') {
+    validateBay(config, false, model === 'regional-power');
+    if(model==='regional-power'&&options.treatment!=='charging_deadlines')fail('Regional power compares redistribution with deadline charging.');
     if (Object.keys(options).length) {
       keys(options, ['treatment','seeds','tuning_seeds','margin','resamples','null_treatment'], [], 'options');
       freezeBayExperiment(config, options);

@@ -8,6 +8,8 @@ import {validateAirport,generateAirportWave,forecastTarget} from './airport-dema
 import {createBaySystems} from './bay-systems.js';
 import {VEHICLE_PROFILES,defaultVehicleProfiles} from './vehicle-profiles.js';
 import {validateLaunchStructure,prepareLaunchNetwork,stageCapacity,siteOpen} from './launch-contract.js';
+import {validateRegion,prepareRegionNetwork,AUSTIN_REGION} from './region-package.js';
+import {validateSitePower} from './site-power.js';
 export const BAY_OPERATIONS_VERSION='fleetlab-bay-operations-1.0.0';
 export const BAY_OPERATIONS_STATES=Object.freeze({...OPERATIONS_STATES,boarding:'Rider boarding'});
 export function defaultBayAreaConfig() {
@@ -17,7 +19,7 @@ export function validateBayAreaConfig(c) {
   const errors=validateOperationsConfig(c);
   if(!c||typeof c!=='object'||Array.isArray(c))return errors;
   const known=new Set(BAY_AREA_PLACES.map(p=>p.id));
-  if(!c.launch&&(!Array.isArray(c.place_ids)||c.place_ids.length<2||new Set(c.place_ids).size!==c.place_ids.length||c.place_ids.some(id=>!known.has(id))))errors.push('Select at least two distinct known Bay Area places.');
+  if(!c.launch&&!c.region&&(!Array.isArray(c.place_ids)||c.place_ids.length<2||new Set(c.place_ids).size!==c.place_ids.length||c.place_ids.some(id=>!known.has(id))))errors.push('Select at least two distinct known Bay Area places.');
   if(!Number.isFinite(c.ojai_share_pct)||c.ojai_share_pct<0||c.ojai_share_pct>100)errors.push('ojai_share_pct must be between 0 and 100.');
   if(!Number.isFinite(c.road_speed_kph)||c.road_speed_kph<5||c.road_speed_kph>100)errors.push('road_speed_kph must be between 5 and 100.');
   const profileBounds={battery_kwh:[1,300],charge_limit_kw:[1,500],energy_kwh_per_km:[0.01,3],boarding_minutes:[0,30],cleaning_multiplier:[0.1,10],software_multiplier:[0.1,10],upload_multiplier:[0.1,10]};
@@ -36,6 +38,8 @@ export function validateBayAreaConfig(c) {
   if(Object.hasOwn(c,'resources'))errors.push(...validateResources(c));
   if(Object.hasOwn(c,'airport'))errors.push(...validateAirport(c));
   if(Object.hasOwn(c,'launch'))errors.push(...validateLaunchStructure(c).checks.filter(q=>q.status==='FAIL').map(q=>q.detail));
+  if(Object.hasOwn(c,'region'))errors.push(...validateRegion(c));
+  if(Object.hasOwn(c,'site_power_profile'))errors.push(...validateSitePower(c));
   return errors;
 }
 const STAGES=['software','cleaning','charging','upload'];
@@ -46,6 +50,7 @@ const rush=clock=>{const h=(clock%1440)/60;return (h>=7&&h<10)||(h>=16&&h<19);};
 const traffic=(c,t)=>c.traffic_multiplier*(rush(Math.round(c.start_hour*60)+t)?1.25:1);
 function random(seed){let value=seed>>>0;return ()=>{value=(Math.imul(value,1664525)+1013904223)>>>0;return value/4294967296;};}
 function prepare(c) {
+  if(c.region)return prepareRegionNetwork(c);
   if(c.launch)return prepareLaunchNetwork(c);
   const places=BAY_AREA_PLACES.filter(p=>c.place_ids.includes(p.id)),routes={};
   for(const from of places)for(const to of places){const r=bayAreaRoute(from.id,to.id);if(!r.available)throw new RangeError(`No road route available: ${from.id} to ${to.id}`);routes[r.id]=r;}
@@ -94,7 +99,8 @@ function simulate(c,demand,network,capture) {
   const requests=demand.map(r=>({...r})),byRequest=new Map(requests.map(r=>[r.id,r]));
   const placeLocations=network.places.map(p=>({...p,road_anchor:{...p.road_anchor}}));
   const ordered=[...placeLocations].sort((a,b)=>b.y-a.y||a.x-b.x);
-  const depots=c.launch?c.launch.depots.map(d=>{const p=placeLocations.find(p=>p.id===d.place_id);return {id:d.id,label:d.label,kind:'depot',place_id:p.id,x:p.road_anchor.x,y:p.road_anchor.y,queues:Object.fromEntries(STAGES.map(s=>[s,[]]))};}):Array.from({length:c.depot_count},(_,i)=>{const p=ordered[Math.floor(i*ordered.length/c.depot_count)];return {id:`depot-${i+1}`,label:`Illustrative depot ${i+1} · ${p.label}`,kind:'depot',place_id:p.id,x:p.road_anchor.x,y:p.road_anchor.y,queues:Object.fromEntries(STAGES.map(s=>[s,[]]))};});
+  const fixedDepots=c.launch?.depots??network.depots;
+  const depots=fixedDepots?fixedDepots.map(d=>{const p=placeLocations.find(p=>p.id===d.place_id);return {id:d.id,label:d.label,kind:'depot',place_id:p.id,x:p.road_anchor.x,y:p.road_anchor.y,queues:Object.fromEntries(STAGES.map(s=>[s,[]]))};}):Array.from({length:c.depot_count},(_,i)=>{const p=ordered[Math.floor(i*ordered.length/c.depot_count)];return {id:`depot-${i+1}`,label:`Illustrative depot ${i+1} · ${p.label}`,kind:'depot',place_id:p.id,x:p.road_anchor.x,y:p.road_anchor.y,queues:Object.fromEntries(STAGES.map(s=>[s,[]]))};});
   const locations=[...placeLocations,...depots.map(({queues,...d})=>d)],byDepot=new Map(depots.map(d=>[d.id,d]));
   const ojaiCount=Math.round(c.fleet_size*c.ojai_share_pct/100);
   const vehicles=Array.from({length:c.fleet_size},(_,i)=>{const type=i<ojaiCount?'ojai':'ipace',p=c.vehicle_profiles[type];return {
@@ -116,7 +122,7 @@ function simulate(c,demand,network,capture) {
     const duration=leg.distance_km===0?0:Math.ceil(leg.distance_km/c.road_speed_kph*60*traffic(c,t)*effect.travel);
     v.state=state;v.from=v.node;v.to=toNode;v.to_place=toPlace;v.route_id=leg.id;v.remaining_min=duration;v.total_min=duration;v.progress=0;
     v.leg_distance=leg.distance_km;v.leg_energy=leg.distance_km*v.profile.energy_kwh_per_km*effect.energy;
-    log(t,v,state,`${states[state]} · ${leg.distance_km.toFixed(2)} km · ${duration} min; ${c.launch?.region.geography==='synthetic_km'?'synthetic kilometer link':'OSM teaching route'}.`);
+    log(t,v,state,`${states[state]} · ${leg.distance_km.toFixed(2)} km · ${duration} min; ${c.region?'synthetic regional graph path':c.launch?.region.geography==='synthetic_km'?'synthetic kilometer link':'OSM teaching route'}.`);
     return duration;
   }
   function queue(v,stage,t) {
@@ -259,15 +265,15 @@ function simulate(c,demand,network,capture) {
     by_place:placeLocations.map(p=>({place_id:p.id,label:p.label,...populations(requests.filter(q=>q.pickup_node===p.id))})),
   };
   const readinessResult=readiness?.finish(visits,metrics),extensionResult=systems?.finish(visits,vehicles,requests,metrics);
-  return {...(readiness?{readiness:readinessResult}:{}),...(systems?{extensions:extensionResult}:{}),...(c.launch?{launch:systems.launch.finish(requests,visits,metrics,readinessResult,extensionResult)}:{}),version:[BAY_OPERATIONS_VERSION,...['readiness','charging','resources','airport','launch'].filter(k=>c[k]).map(k=>c[k].version)].join('+'),config:c,locations,routes,frames,events,requests,visits,metrics,demand_signature:signature(demand),assumptions:[
-    c.launch?.region.geography==='synthetic_km'?'Fictional straight-line kilometer geometry, synthetic demand and operational parameters. No Bay roads, real geography, service coverage or safety evidence.':'Real frozen OpenStreetMap geometry, synthetic demand and operational parameters. Undirected teaching routes ignore one-way, turn and access restrictions; not navigation, service coverage, airport permission or safety evidence.',
-    c.launch?.region.geography==='synthetic_km'?'All places and depot anchors are fictional positions in the declared local kilometer plane; no external route provenance.':'City and airport representative points remain separate from snapped major-road anchors. Depot sites are hypothetical and co-located with selected road anchors; no off-road access legs are fabricated.',
+  return {...(c.region?{region:structuredClone(AUSTIN_REGION)}:{}),...(readiness?{readiness:readinessResult}:{}),...(systems?{extensions:extensionResult}:{}),...(c.launch?{launch:systems.launch.finish(requests,visits,metrics,readinessResult,extensionResult)}:{}),version:[BAY_OPERATIONS_VERSION,...['readiness','charging','resources','airport','launch','region','site_power_profile'].filter(k=>c[k]).map(k=>c[k].version)].join('+'),config:c,locations,routes,frames,events,requests,visits,metrics,demand_signature:signature(demand),assumptions:[
+    c.region?'Synthetic Austin-inspired schematic graph, demand and operations; Simulation only, NOT_EVIDENCE, deployment permission NONE. No calibration, road safety or airport access claim.':c.launch?.region.geography==='synthetic_km'?'Fictional straight-line kilometer geometry, synthetic demand and operational parameters. No Bay roads, real geography, service coverage or safety evidence.':'Real frozen OpenStreetMap geometry, synthetic demand and operational parameters. Undirected teaching routes ignore one-way, turn and access restrictions; not navigation, service coverage, airport permission or safety evidence.',
+    c.region?'Pinned local-meter graph converted to kilometers; routes follow declared edges. No external geography or operating data.':c.launch?.region.geography==='synthetic_km'?'All places and depot anchors are fictional positions in the declared local kilometer plane; no external route provenance.':'City and airport representative points remain separate from snapped major-road anchors. Depot sites are hypothetical and co-located with selected road anchors; no off-road access legs are fabricated.',
     'Dispatch processes requests FIFO and chooses the nearest energy-feasible available car, with stable car-order ties. An infeasible earlier request can remain queued while a later feasible request is served.',
     'Demand origins are uniform across selected places; destinations have weight 1 / (2 + road distance km)^1.5, favoring nearby trips. Requests are identical across fleet, depot and vehicle-mix trials. One request is one party of at most four riders; no pooling or branding capacity bonus.',
     'All quantitative vehicle operational values are editable teaching assumptions. Ojai 90 kWh / 150 kW are illustrative, not published specifications. I-PACE 84 kWh is modeled usable energy, not the published 90 kWh retail nominal pack.',
     'Travel minutes=ceil(route km / selected km/h × 60 × synthetic traffic × weather), evaluated at each leg departure. Both types have identical speed rules. Zero-distance legs consume zero minutes and zero energy; boarding is stationary and separately timed.',
     'Morning 07:00–10:00 and evening 16:00–19:00 demand peaks and a 1.25 traffic factor are synthetic. Rain multiplies travel by 1.30, energy by 1.12 and demand by 1.12; heat uses 1.05, 1.25 and 1.05. Energy is proportional to route distance, distributed evenly over moving intervals; no standby or boarding energy.',
-    ...(systems?['Named opt-in extensions: '+['charging','resources','airport'].filter(k=>c[k]).map(k=>c[k].version).join(', ')+'. Battery-side kW, unit efficiency, no auxiliary draw or taper; site caps remain fixed.',
+    ...(systems?['Named opt-in extensions: '+['charging','resources','airport'].filter(k=>c[k]).map(k=>c[k].version).join(', ')+(c.site_power_profile?'. Battery-side kW, unit efficiency, no auxiliary draw or taper; a versioned external profile changes the selected site cap before each interval.':'. Battery-side kW, unit efficiency, no auxiliary draw or taper; site caps remain fixed.'),
       'Declared charging deadlines are visit-start plus budget and stable vehicle-ID tiers; readiness requires the whole serial visit. Deadline priority promotes oldest jobs at the declared age; it does not guarantee every deadline under overload.',
       'Resource observations are fictional delayed sequenced snapshots. Unknown ports are unavailable; last-known planning may infer stale capacity, but current truth and exclusive ownership always constrain delivery.',
       'Airport demand is a keyed synthetic passenger realization, separate from the published forecast. Intake cutoff precedes observation end. Forecast preparation uses finite inbound/staged slots, releases them on trip assignment, and reserves return energy. Existing initially available airport cars do not occupy preparation slots. No real airport access authority.']:[]),
@@ -275,7 +281,7 @@ function simulate(c,demand,network,capture) {
     'Software when scheduled → cleaning → charging → upload, finite per-site resources. Per-type multipliers alter service minutes. Turnaround includes depot driving, queues and service; active time excludes queues and travel. Completed-only averages exclude explicitly counted censored visits.',
     'Patience is assignment waiting; completed wait includes pickup driving and excludes boarding. Horizon and durations round up to minutes; start clock rounds nearest and wraps midnight. Terminal observation consumes no interval energy and retains unfinished requests and visits.',
     'Legacy battery_kwh, energy_kwh_per_minute, pickup_minutes and trip_minutes are retained only for configuration compatibility; Bay calculations use individual profiles and road routes.',
-    c.launch?'Launch sites retain configured identities, anchors and heterogeneous capacities. Depot selection remains nearest distance, with fewest unfinished visits for ties; it does not optimize around commissioning, calendars or queues. Only accepted mock actions commission installed resources.':'Depot locations are spread north-to-south across the selected places. When there are more depots than selected places, multiple independent illustrative sites share an anchor. Among equally near sites, visits choose the fewest unfinished inbound and on-site visits, with stable depot-order ties; return-energy reservation still uses minimum road distance. Additional sites also add bays, ports and site power.',
+    c.region?'Two fictional fixed depots on the regional graph. Nearest-distance assignment does not optimize around future power constraints.':c.launch?'Launch sites retain configured identities, anchors and heterogeneous capacities. Depot selection remains nearest distance, with fewest unfinished visits for ties; it does not optimize around commissioning, calendars or queues. Only accepted mock actions commission installed resources.':'Depot locations are spread north-to-south across the selected places. When there are more depots than selected places, multiple independent illustrative sites share an anchor. Among equally near sites, visits choose the fewest unfinished inbound and on-site visits, with stable depot-order ties; return-energy reservation still uses minimum road distance. Additional sites also add bays, ports and site power.',
   ]};
 }
 export function analyzeBayAreaCapacity(config) {

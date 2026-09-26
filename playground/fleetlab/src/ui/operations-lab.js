@@ -1,6 +1,7 @@
 import {advancedOperationsDemoConfig,freezeBayExperiment,bayExperimentSteps} from '../model/bay-experiment-contract.js';
 import {createAdvancedControls,advancedResultView,resourceFrameView,airportFrameView,advancedComparisonView,createAdvancedExperimentControls} from './advanced-operations-view.js';
 import {decisionForConfig,decisionView} from './scenario-learning.js';
+import {createRegionalPowerPanel} from './regional-power-view.js';
 import {createLaunchPanel} from './launch-view.js';
 import {defaultBayAreaConfig as defaultOperationsConfig,simulateBayAreaOperations as simulateOperations,analyzeBayAreaCapacity as analyzeOperationsCapacity,validateBayAreaConfig as validateOperationsConfig,BAY_OPERATIONS_STATES as OPERATIONS_STATES,BAY_OPERATIONS_VERSION as OPERATIONS_VERSION,analyzeVehicleMix,analyzeDepotReadiness,depotReadinessDemoConfig} from '../model/bay-operations.js';
 import {BAY_AREA_PLACES,BAY_AREA_MAP,bayAreaSourceJSON} from '../model/bay-area.js';
@@ -54,7 +55,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   const inputs=new Map();
   const element=el('main',{class:'operations-lab',id:'operations-lab'});
   const learning=el('div',{class:'ops-scenario-learning'},decisionView(decisionForConfig(config)));
-  const launchPanel=createLaunchPanel();
+  const launchPanel=createLaunchPanel(),regionalPanel=createRegionalPowerPanel();
   const status=el('p',{class:'ops-status',role:'status'},'Choose your fleet and press Run fleet day.');
   const error=el('p',{class:'ops-error',role:'alert',hidden:true});
   const runButton=button('Run fleet day  ▶',()=>run(),true);
@@ -157,13 +158,14 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   const assumptions=el('ul',{class:'ops-assumptions'});
   traffic.appendChild(assumptions);
   element.appendChild(el('section',{class:'ops-intro'},[eyebrow('FLEET SIMULATION / LEARN BY CHANGING ONE THING'),el('h1',{},'How many trips can your fleet serve today?'),el('p',{},'Build a Jaguar I-PACE and Ojai fleet across 18 Bay Area locations. Follow real road routes in 3D, change the depot resources and see what keeps a car from its next rider.'),el('div',{class:'ops-run-line'},[runButton,status]),error]));
-  element.appendChild(launchPanel.element);element.appendChild(learning);element.appendChild(el('div',{class:'ops-workspace'},[controls,stage]));element.appendChild(outcomeSection);element.appendChild(readinessSection);element.appendChild(advancedSection);element.appendChild(capacitySection);element.appendChild(mixSection);element.appendChild(traffic);
+  element.appendChild(regionalPanel.element);element.appendChild(launchPanel.element);element.appendChild(learning);element.appendChild(el('div',{class:'ops-workspace'},[controls,stage]));element.appendChild(outcomeSection);element.appendChild(readinessSection);element.appendChild(advancedSection);element.appendChild(capacitySection);element.appendChild(mixSection);element.appendChild(traffic);
   const modelBoundary=el('p',{class:'ops-model-boundary'},`Operational teaching model ${OPERATIONS_VERSION}. Real OpenStreetMap geography with synthetic demand and vehicle assumptions. This is a capacity experiment, not a calibrated digital twin or operational authorization. The regional A/B workbench uses its own unchanged model.`);element.appendChild(modelBoundary);
 
   function loadScenario(patch){requestVersion++;setConfig({...defaultOperationsConfig(),...patch},{replace:true});experimentControls.setOptions();experimentControls.setTreatment(config.airport?'airport_forecast':config.resources?'resource_freshness':config.charging?.policy==='deadline'?'charging_deadlines':'charging_redistribution');}
   function setConfig(patch,{replace=false}={}){config=structuredClone(replace?patch:{...config,...patch});preset.value='custom';learning.replaceChildren(decisionView(decisionForConfig(config)));for(const key of ['readiness','charging','resources','airport'])if(config[key]===undefined)delete config[key];comparisonVersion++;advancedComparison=null;advancedContent.replaceChildren(el('p',{},'Settings changed. Run fleet day and compare again.'));advancedControls.sync();syncReadinessControls();syncVehicleControls();for(const [key,input]of inputs)input.value=String(config[key]);weather.value=config.weather;pause();stale=!!result&&JSON.stringify(config)!==JSON.stringify(result.config);readinessComparison=null;readinessContent.replaceChildren(el('p',{},hasExtensions()?'M1 comparison unavailable with optional charging, resources or airport models.':'Settings changed. Compare again with the current settings.'));capacity=null;capacityContent.replaceChildren();mixContent.replaceChildren();error.hidden=true;renderStatus();if(!result)clock.textContent=operationsClock(config.start_hour*60);}
   /** Return complete inputs in native model units; sharing never executes a model. */
   function getSharedSetup(source='current',model='fleet-day'){
+    if(model==='regional-power')return regionalPanel.getSharedSetup(source);
     if(model==='launch-rehearsal')return launchPanel.getSharedSetup(source);
     if(model!=='fleet-day')throw new RangeError('Unsupported setup model.');
     if(source==='last-experiment'){
@@ -180,6 +182,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   }
   /** Load an already validated setup, replacing effective inputs without running or replaying. */
   function loadSharedSetup(envelope){
+    if(envelope?.model==='regional-power'){pause();return regionalPanel.loadSharedSetup(envelope);}
     if(envelope?.model==='launch-rehearsal'){pause();return launchPanel.loadSharedSetup(envelope);}
     if(envelope?.model!=='fleet-day')throw new RangeError('Unsupported setup model.');
     const next=structuredClone(envelope),issues=validateOperationsConfig(next.config);
@@ -325,5 +328,5 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   function table(headings,rows){return el('div',{class:'ops-table-wrap'},el('table',{},[el('thead',{},el('tr',{},headings.map(x=>el('th',{scope:'col'},x)))),el('tbody',{},rows.map(row=>el('tr',{},row.map(x=>el('td',{},x)))))]));}
   for(const selector of ['.ops-vehicle-table','.ops-depot-detail'])element.querySelector(selector).addEventListener('toggle',()=>renderFrame());
   advancedControls.sync();syncReadinessControls();syncVehicleControls();renderFrame();renderStatus();
-  return {element,run,pause,seek,nextActivity,setConfig,loadScenario,getSharedSetup,loadSharedSetup,compareCapacity,compareReadiness,compareAdvanced,chooseLaunchTemplate:name=>launchPanel.chooseTemplate(name),getState:()=>({config:structuredClone(config),result,capacity,readinessComparison,advancedComparison,minute,playing,stale}),destroy(){comparisonVersion++;requestVersion++;pause();destroyed=true;launchPanel.destroy();map.destroy();portraits.forEach(p=>p.destroy());}};
+  return {element,run,pause,seek,nextActivity,setConfig,loadScenario,getSharedSetup,loadSharedSetup,compareCapacity,compareReadiness,compareAdvanced,chooseLaunchTemplate:name=>launchPanel.chooseTemplate(name),getState:()=>({config:structuredClone(config),result,capacity,readinessComparison,advancedComparison,minute,playing,stale}),destroy(){comparisonVersion++;requestVersion++;pause();destroyed=true;launchPanel.destroy();regionalPanel.destroy();map.destroy();portraits.forEach(p=>p.destroy());}};
 }

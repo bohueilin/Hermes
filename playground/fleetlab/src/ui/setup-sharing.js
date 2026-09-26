@@ -9,7 +9,7 @@ export function createSetupSharing({models,page,capture,onLink=()=>{},baseUrl=()
  function sources(){
   const previous=source.value;
   const items=[['current','Current inputs'],['last-run','Last completed run']];
-  if(['fleet-day','regional'].includes(model.value))items.push(['last-experiment','Last completed paired experiment']);
+  if(['fleet-day','regional','regional-power'].includes(model.value))items.push(['last-experiment','Last completed paired experiment']);
   source.replaceChildren(...items.map(([value,label])=>el('option',{value},label)));
   source.value=items.some(([value])=>value===previous)?previous:'current';
  }

@@ -7,7 +7,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-metric-contract` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, clean at `6b376fb`) · Depot extension worktree `…/Hermes-depot-m1` on `codex/fleetlab-m2-m3` |
+| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `codex/fleetlab-regional-power` (local N0 + N1 work from website base `4b7a276`) · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, clean at `6b376fb`) · Depot extension worktree `…/Hermes-depot-m1` on `codex/fleetlab-m2-m3` |
 | **Remote** | `github` = `https://github.com/bohueilin/Hermes.git`; website lineage tracks `github/feat/fleetlab-playground`. Design-enhancement source `96fde5b` pushed normally and published after explicit owner authorization; publication records follow in a documentation-only commit. Main remains unchanged. Exact release state is in §7.5. |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
@@ -17,7 +17,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
 | **Design review and next phase** | [Comprehensive portable review brief](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md): project history, accepted/rejected feedback, exact release, tests/limits, 56 lessons and ChatGPT review prompt. Full Python retained-fixture failures and a cosmetic Street-panel literal-null observation remain disclosed; proposed next phases are not implementation approval. |
-| **Last updated** | 2026-09-25 UTC (Playground design release; other tracks retain their recorded dates) |
+| **Last updated** | 2026-09-25 UTC (local Austin N0 + N1; public release unchanged; other tracks retain recorded dates) |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -748,6 +748,74 @@ must not: the number as a default edit (§10 rule 3).
 ---
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
+
+**Local regional N0 + N1 build, 2026-09-25 UTC (not published):** The owner's “read and
+build, go” request implemented the first slice of the regional brief on
+`codex/fleetlab-regional-power`, starting from the actual released website lineage at
+`4b7a276` (application `96fde5b`). The entry worktree was at `9daacef` with no website;
+its untracked owner review file was preserved. Other worktrees and main were untouched.
+
+Fleet day now includes an opt-in Austin-inspired schematic, two fictional depots, versioned
+site-power intervals, exact per-minute cap/delivery records, required-work/resource inspection,
+strict setup sharing and existing redistribution/deadline paired evaluation. Historical Bay
+numerical defaults and all 56 lesson contracts remain supported. The original regional model,
+Street model, launch rehearsal and Python evidence contracts remain separate.
+[Mechanics and reproduction](docs/FLEETLAB_REGIONAL_POWER.md).
+
+Observed four-condition rehearsal (12 fixed evaluation seeds 1001–1012, separate development
+seed 42/tuning declarations 42–44, completion margin 0.02, 2,000 bootstrap resamples):
+
+| Power at Site A during minutes 90–179 | Mean completion baseline → candidate | Primary | Existing recommendation | Binding guardrail |
+|---|---|---|---|---|
+| Full | 0.163888889 → 0.168923611 | UNCHANGED | NO_RECOMMENDATION | None regressed |
+| 60% | 0.160243056 → 0.162152778 | UNCHANGED | HOLD | Mean unfinished visits +0.333333333; allowed 0 |
+| 20% | 0.150694444 → 0.157638889 | UNCHANGED | NO_RECOMMENDATION | None regressed |
+| Outage | 0.147395833 → 0.153298611 | UNCHANGED | HOLD | Mean terminal-energy harm 5.392090652 kWh; allowed 5 |
+
+These are synthetic model results, not an operating recommendation. All-request within-target
+pickup remains unavailable in this experiment; completion is its registered primary. Exact
+machine values, frozen inputs, digests and source provenance are in ignored
+`artifacts/fleetlab-regional-power/demo/`. The sweep includes 96 primary arms and 16 repeatability
+probe arms. No search for favorable evaluation seeds or new winner score occurred.
+
+Validation: standard Node suite **1,779 passed, zero failures, two opt-in performance suites
+skipped, one existing browser TODO**; all 13 new regional tests passed. Python website
+parity/boundaries **89 passed**, Ruff and static/offline checks passed. Full Python remains
+**1,433 passed, 186 failed, 42 errors, 56 skipped**, reproducing the retained-fixture limitation;
+no fixture fabrication or regeneration. Doctor: 16 PASS, two WARN (ambient Conda-base label
+and dirty worktree), one optional display NOT_AVAILABLE. Tests used a local Python 3.11 venv
+with explicit checkout `PYTHONPATH`, without repointing the shared editable environment.
+
+The all-suite optional timing run hit the existing original-regional 8 ms yield budget
+(12.76 ms under concurrent tests; 8.58 ms with sequential files). Its isolated performance
+suite passed **9/9**; timing sensitivity remains disclosed rather than weakening a check.
+Independent code review found two P2 defects and one minor: shared-horizon condition changes,
+missing paired-export regional provenance, and order-sensitive preset recognition. All three
+were reproduced with failing tests and fixed. No critical findings were reported.
+
+Actual Chromium 152 inspection at 1280×720: default Bay run returned in 34.1 ms, busy-depot
+Bay in 27.6 ms, default Austin in 48.4 ms, 12-seed Austin comparison in 603.7 ms; no recorded
+long tasks over 50 ms in those samples. A 120-vehicle comparison produced 62–83 ms tasks;
+cancel worked between arms (0.3 ms from received cancel click to status change, excluding
+any waiting to dispatch the click). This is one local measurement, not an accessibility or
+performance certification. At 400 px, the regional setup and result caused no page overflow;
+wide data tables scroll inside their containers. Native, static and offline-over-HTTP boot/run,
+last-run setup restoration without execution, stale labels and comparison cancellation were
+checked. Direct file URLs, physical phones, screen readers and other browsers were not tested.
+
+Offline file: **2,543,655 bytes**, within the unchanged 2,621,440-byte limit. Static folder:
+**89 files, 3,181,153 bytes**. No new network capability or dependency. Work remains local and
+uncommitted because wider gates are not green; nothing was pushed, merged or published.
+The previously verified public release below remained unchanged at that local handoff.
+
+**Publication follow-up, 2026-09-25:** The owner subsequently requested deployment and GitHub
+push, superseding the earlier local-only scope for this website release. Fresh sequential Node
+validation with `FLEET_PLAYGROUND_PERF=1` passed **1,791 tests, zero failed/skipped/cancelled,
+one existing TODO**; Python website checks passed **89/89**, with Ruff and both rebuilt
+packages passing. The broader Python retained-fixture limitation remains separate and
+unchanged. Publication uses the existing website branch and Pages project; main stays separate.
+Exact published source and deployment will be recorded after successful readback.
+
 
 **Current design release, published September 25, 2026 UTC.** Explicit owner authorization
 superseded the local-only design handoff. Source `96fde5b862119c9bbcd7a2ae76450f8dee616f93`

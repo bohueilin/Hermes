@@ -1408,6 +1408,18 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .setup-share-output input { width: 100%; min-width: 0; box-sizing: border-box; font-size: 12px; }
 .setup-sharing [hidden] { display: none !important; }
 .setup-share-status { font-weight: 550; overflow-wrap: anywhere; }
+.ops-regional-power {border:1px solid #bdd2c2;border-radius:12px;background:#f4f8f3;padding:20px;margin:20px 0;min-width:0;}
+.ops-regional-power > summary {font-size:1.15rem;font-weight:650;cursor:pointer;min-height:var(--target);}
+.ops-regional-power p {line-height:1.6;max-width:100ch;overflow-wrap:anywhere;}
+.ops-regional-power input,.ops-regional-power select {min-height:44px;max-width:100%;box-sizing:border-box;}
+.regional-power-graph {margin:16px 0;max-width:760px;}
+.regional-power-graph svg {width:100%;height:auto;display:block;}
+.regional-power-graph figcaption {font-size:12px;line-height:1.5;}
+.ops-regional-power pre {overflow:auto;max-height:24rem;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;}
+.ops-regional-power caption {text-align:left;font-weight:650;padding:.7rem 0;}
+.ops-regional-power .result-provenance {font-size:12px;overflow-wrap:anywhere;}
+.ops-regional-power details {margin:12px 0;}
+@media(max-width:600px){.ops-regional-power {padding:12px;}.ops-regional-power .ops-fields {grid-template-columns:1fr;}}
 .studio-workspace > .setup-sharing { margin: 0 max(40px, calc((100vw - 1320px)/2)) 24px; }
 .street-result-details pre, .ops-result-details pre { max-width: 100%; max-height: 380px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
 .street-result-provenance, .ops-result-provenance { font-size: 11px; line-height: 1.65; overflow-wrap: anywhere; }

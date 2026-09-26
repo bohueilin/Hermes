@@ -6,6 +6,7 @@ import {defaultCharging} from './charging-allocation.js';
 import {defaultResources} from './resource-observations.js';
 import {defaultAirport} from './airport-demand.js';
 import {pairedMetricSteps} from './experiment.js';
+import {AUSTIN_REGION} from './region-package.js';
 import {BAY_SYSTEM_METRICS} from './bay-systems.js';
 /** Bay v1 canonical JSON: sorted plain-object keys and finite JSON numbers (IEEE-754 shortest representation).
  * Deliberately separate from regional experiment integer-unit serialization. Hash is identity, not authentication. */
@@ -46,7 +47,7 @@ export function advancedOperationsDemoConfig(kind){
   if(kind==='airport'){c.place_ids=['sfo','menlo-park','palo-alto'];c.requests_per_hour=5;c.initial_soc_pct=85;c.airport=defaultAirport();return c;}
   throw new RangeError('Unknown advanced situation.');
 }
-export function bayModelVersion(c){return [BAY_OPERATIONS_VERSION,...['readiness','charging','resources','airport'].filter(k=>c[k]).map(k=>c[k].version)].join('+');}
+export function bayModelVersion(c){return [BAY_OPERATIONS_VERSION,...['readiness','charging','resources','airport','region','site_power_profile'].filter(k=>c[k]).map(k=>c[k].version)].join('+');}
 export function freezeBayExperiment(config,options={}){
   if(config?.launch)throw new RangeError('M4 launch contracts are unsupported by the M2/M3 experimental adapter; use the descriptive launch rehearsal.');
   const {treatment,seeds=Array.from({length:12},(_,i)=>1001+i),tuning_seeds=[42,43,44],margin=.02,resamples=2000,null_treatment=false}=options;
@@ -69,6 +70,7 @@ export function freezeBayExperiment(config,options={}){
   if(config.airport)guardrails.push({metric:'nonairport_completion_fraction',direction:'higher_is_better',max_harm:.02},
     {metric:'airport_within_target_fraction',direction:'higher_is_better',max_harm:.02});
   const spec=deepFreeze({format:BAY_EXPERIMENT_FORMAT,format_version:1,model_version:bayModelVersion(config),metric_version:BAY_SYSTEM_METRICS,
+    ...(config.region?{region_digest:AUSTIN_REGION.graph_digest,region_sources:AUSTIN_REGION.provenance.version}:{}),
     treatment,axis:{path:`${group}.policy`,baseline:baselinePolicy,candidate:candidate[group].policy},baseline,candidate,seeds:[...seeds],tuning_seeds:[...tuning_seeds],margin,resamples,primary,guardrails,null_treatment});
   return Object.freeze({spec,digest:bayDigest(spec)});
 }
@@ -95,6 +97,7 @@ export function validateBayPair(spec,a,b,seed){
   if(spec?.baseline?.launch||spec?.candidate?.launch||a?.config?.launch||b?.config?.launch)return fail('M4 launch contracts are unsupported by this experimental adapter.');
   for(const [r,expected] of [[a,spec.baseline],[b,spec.candidate]]){
     if(r?.version!==spec.model_version||r?.extensions?.producer!=='fleetlab-bay-operations'||r.extensions.metric_version!==spec.metric_version)return fail('Incompatible producer or model/metric version.');
+    if(expected.region&&canonicalBayJson(r.region??null)!==canonicalBayJson(AUSTIN_REGION))return fail('Incompatible region graph or provenance.');
     if(r.extensions.validity!=='VALID'||r.readiness&&r.readiness.validity!=='VALID')return fail('Invalid simulator state.');
     if(canonicalBayJson(r.config)!==canonicalBayJson({...expected,seed}))return fail('Non-treatment inputs differ from the frozen spec.');
     const m=r.metrics;
@@ -112,6 +115,7 @@ export function validateBayPair(spec,a,b,seed){
 export function* bayExperimentSteps(frozen){
   const {spec,digest}=requireBaySpec(frozen),per_seed=[],baselineRuns=[],candidateRuns=[];
   const out={format:BAY_EXPERIMENT_FORMAT,format_version:1,evidence_status:'NOT_EVIDENCE',deployment_permission:'NONE',spec,digest,
+    ...(spec.baseline.region?{region:structuredClone(AUSTIN_REGION)}:{}),
     replications:spec.seeds.length,per_seed,metric_definitions:BAY_METRIC_DEFINITIONS,validity:'VALID',reason:null,analysis:null,descriptive:spec.seeds.length===1,
     limitations:['Run-level paired deltas across declared held-out seeds. Tuning seeds are excluded by contract, not authenticated as unseen by an operator.',
       'Bootstrap percentile interval for the synthetic-model mean delta; small seed sets can give narrow or unstable intervals. No real-world confidence or deployment authority.',
@@ -124,7 +128,7 @@ export function* bayExperimentSteps(frozen){
     yield {phase:'candidate run',completed:i,total:spec.seeds.length};
     const candidate=simulateBayAreaOperations({...spec.candidate,seed},{capture:false});
     const pair=validateBayPair(spec,baseline,candidate,seed);
-    per_seed.push({seed,baseline:{metrics:baseline.metrics,extensions:baseline.extensions},candidate:{metrics:candidate.metrics,extensions:candidate.extensions}});
+    per_seed.push({seed,baseline:{metrics:baseline.metrics,extensions:baseline.extensions,...(baseline.config.region?{readiness:baseline.readiness}: {})},candidate:{metrics:candidate.metrics,extensions:candidate.extensions,...(candidate.config.region?{readiness:candidate.readiness}: {})}});
     if(!pair.ok)return invalid(pair.reason);
     if(i===0){for(const r of [baseline,candidate]){
       yield {phase:'repeatability check',completed:i,total:spec.seeds.length};

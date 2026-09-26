@@ -436,6 +436,214 @@ python -m pytest -q \
 hermes workbench --artifact-root artifacts --host 127.0.0.1 --port 8501 --no-browser
 ```
 
+---
+
+## Regional power implementation addendum — 2026-09-24 Pacific / 09-25 UTC
+
+This addendum describes the current FleetLab website work. The Phase 6 checkpoint above is
+historical; its clean-tree and completion statements do not describe this working tree.
+
+### Executive summary and scope
+
+- **Request:** read the supplied regional simulation brief and build. Its embedded prompts were
+  treated as proposal content; the user's explicit “build, go” authorized the recommended N0/N1
+  Austin slice. The later region and dataset proposals remain deferred.
+- **Highest milestone:** N0 code/contract mapping and N1 synthetic Austin site-power demo,
+  paired evaluation, recorded vehicle inspection, setup sharing, exports and local packages.
+- **Verdict:** ready for local feature review; **HOLD repository-wide green/integration claims**.
+- **Branch:** `codex/fleetlab-regional-power` in the existing `Hermes-fleetlab` worktree.
+- **Starting and ending HEAD:** `4b7a2768d93891fab95383d4c20cf828f56b2557`.
+- **Working tree:** intentionally dirty. No commits, staging, merge, push, PR, deployment,
+  publication, remote edits or changes to another worktree.
+- **Baseline selection:** the opening worktree was on `feat/phase9-metric-contract` at
+  `9daacef` without the website. The inspected `codex/fleetlab-m2-m3` tip supplied the newer
+  release, including application source `96fde5b862119c9bbcd7a2ae76450f8dee616f93`.
+  The new local branch starts there. The owner's untracked
+  `FleetLab-ChatGPT-review-and-next-phase.md` remains untouched.
+
+### Product boundary and design decisions
+
+Browser calculations are **SIMULATION_ONLY / NOT_EVIDENCE / deployment permission NONE**.
+No Python `ReviewEnvelope`, `ComparisonEnvelope`, canonical bundle, verifier, gate or workbench
+behavior changed. No new Phase 6 bundle or trust-state demonstration was generated. Experiment
+recommendations such as `HOLD` concern the existing browser policy experiment; they are not
+Hermes evidence-gate verdicts or release authority. Hashes identify content and do not
+authenticate it. The UI uses synthetic locations and operating inputs, with no real airport
+access, vehicle safety, commercial coverage, calibration or affiliation claim.
+
+The Phase 6 design/implementation gate applies to that separate review product. This task
+adds to the existing website teaching model; the conflict and scope decision are recorded in
+`docs/plans/2026-09-25-regional-power.md`. No Phase 6 prompt was executed.
+
+| Decision | Implementation |
+|---|---|
+| Regional package | `region-package-1.0.0`, pinned five-node Austin schematic, two fictional depot identities, explicit local-meter to kilometer conversion, graph shortest paths |
+| Source registry | Synthetic status per input family, units, transformation/version, graph digest, missing measured fields; timezone is a display label only |
+| Power contract | `site-power-profile-1.0.0`; 1–48 contiguous integer half-open intervals exactly covering `[0,H)`, finite fractions in `[0,1]`, one known site |
+| Allocation boundary | Apply external current cap before existing policy allocation; policy sees the current scalar, not the future power tape |
+| Accounting | No energy after H; terminal frame retains last cap for context; no thermal, auxiliary, loss or taper mechanism added |
+| Experiment | Existing completion primary and paired mean-harm guardrails; graph digest/source version bound into the regional spec; no new winner score |
+| Sharing | Distinct strict `regional-power` codec, current/last-run/last-experiment snapshots, no automatic execution; older setup models unchanged |
+| Interface | Existing native DOM and CSS, compact Fleet day panel, recorded-minute/vehicle inspection; no framework or dependency added |
+| Responsiveness | Yield between full arms and bootstrap steps; cancellation at those boundaries; retain measured per-arm stall limitation |
+
+### Architecture and changed surfaces
+
+`region-package.js` and `site-power.js` validate explicit opt-in inputs. The existing
+`bay-operations.js` lifecycle and `bay-systems.js` charging/accounting consume them.
+`regional-power.js` supplies demo configurations. `bay-experiment-contract.js` retains the
+statistical and validity authority. `regional-power-view.js` renders results; it does not
+implement a second simulator, allocation policy or comparison method.
+
+- Model: three new regional/power modules and narrow opt-in hooks in the three Bay modules.
+- Interface: regional panel, operations integration, sharing/codec/studio options and styles.
+- Validation: three new test files, 13 tests; existing distribution checker includes new UI copy.
+- Development tool: `tools/fleet_playground/regional_power_demo.mjs`, outside the read-only
+  browser tree. Writes only requested local rehearsal output.
+- Documentation: the plan, `docs/FLEETLAB_REGIONAL_POWER.md`, `HERMES_SOURCE_OF_TRUTH.md`
+  §7.5 and this addendum.
+- Unchanged: Python implementation/tests, `pyproject.toml`, existing evidence contracts,
+  numerical defaults, lesson routes and publication configuration.
+
+### Actual commands and validation
+
+Python commands below used Python 3.11 through
+`artifacts/fleetlab-regional-power/venv/bin/python`, with `PYTHONPATH="$PWD/src"` so imports
+resolve this worktree. The local environment uses the existing dependency set; the shared
+Conda environment's editable installation was not repointed.
+
+| Command | Exit | Actual result |
+|---|---:|---|
+| `python -m pip install --no-deps --no-build-isolation -e '.[dev,workbench]'` | 0 | Installed local editable `hermes-autonomy` 0.1.0 in the artifact-local venv |
+| `node --test 'playground/fleetlab/test/*.test.mjs'` | 0 | **1,779 passed, 0 failed, 2 skipped, 1 todo**; 1,782 tests, 245 suites |
+| `FLEET_PLAYGROUND_PERF=1 node --test playground/fleetlab/test/performance.test.mjs` | 0 | **9/9 passed** in isolation |
+| `FLEET_PLAYGROUND_BASE=bca4ccd PYTHONDONTWRITEBYTECODE=1 python -m pytest -q tests/unit/test_fleet_playground_parity.py tests/unit/test_fleet_playground_boundaries.py` | 0 | **89 passed** |
+| `python -m pytest -q` | 1 | **1,433 passed, 186 failed, 42 errors, 56 skipped**; repeats the recorded broader fixture-failure baseline |
+| `python -m ruff check .` | 0 | All checks passed |
+| `python -m hermes doctor` | 0 | **16 PASS, 2 WARN, 1 optional NOT_AVAILABLE**; ambient Conda `base` label and dirty tree warnings; no simulator launched |
+| `git diff --check` | 0 | No whitespace errors |
+| `node tools/fleet_playground/regional_power_demo.mjs --out artifacts/fleetlab-regional-power/demo` | 0 | Four conditions × 12 evaluation seeds × two policies, 16 replay probes and one development replay |
+| `node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-regional-power.html` | 0 | 2,543,655 bytes; below unchanged 2,621,440-byte application budget |
+| `node playground/fleetlab/tools/check-dist.mjs dist/fleetlab-regional-power.html` | 0 | Offline package checks passed |
+| `node playground/fleetlab/tools/pack.mjs --site dist/regional-site` | 0 | 89 files, 3,181,153 bytes |
+| `node playground/fleetlab/tools/check-dist.mjs --site dist/regional-site` | 0 | Static package checks passed |
+
+The initial standard Node baseline was 1,766 passed with the same two skips and one todo.
+Optional performance tests run within the whole suite exceeded the old regional p95 8 ms
+budget twice (12.76 ms and 8.58 ms); the isolated nine-test timing run passed. Do not describe
+the complete opt-in timing suite as green or silently relax its budget. An accessibility
+target-size token and the development tool's initial placement inside the browser tree were
+fixed; the final standard suite includes those checks. Missing Python fixtures were not
+manufactured, regenerated or excluded. Logs are under `artifacts/fleetlab-regional-power/`.
+
+Negative coverage includes gaps/overlaps/versions/sites, interval edges, full-power identity,
+zero-power occupied ports, physical cap/energy accounting, resource truth/observation separation,
+work and service populations, same-seed replay, malformed shared setups and short-horizon
+preset changes. Existing tests cover legacy setup compatibility and browser/Python boundaries.
+
+### Local rehearsal, records and digests
+
+The four tests share 40 vehicles, 480 minutes, two fictional 120 kW sites and 60 requests/hour.
+Only the Site A external condition changes: full, 60%, 20%, or zero during `[90,180)`.
+Within each test, capped redistribution and deadline/aged priority share external inputs and
+evaluation seeds 1001–1012, disjoint from declared tuning seeds 42–44. The practical primary
+margin remains 0.02. No operating parameters were tuned against evaluation outcomes.
+
+| Condition | Candidate minus baseline completion fraction | Primary classification | Existing recommendation | Guardrail observation |
+|---|---:|---|---|---|
+| Full | 0.005034722222222225 | UNCHANGED | NO_RECOMMENDATION | All within |
+| 60% | 0.00190972222222222 | UNCHANGED | HOLD | Mean unfinished visits increased by 0.3333333333333333; allowed harm 0 |
+| 20% | 0.006944444444444443 | UNCHANGED | NO_RECOMMENDATION | All within |
+| Outage | 0.00590277777777778 | UNCHANGED | HOLD | Mean terminal-energy harm 5.392090651592032 kWh; allowed harm 5 |
+
+Complete paired results, intervals, guardrails, per-seed outcomes, required-work inventory,
+region provenance and power traces remain in the generated JSON. Completion over all requests
+is retained; all-request within-target pickup is explicitly unavailable. These overloaded
+synthetic cases are not successful operating plans or calibrated regional forecasts.
+
+| Object | SHA-256 identity |
+|---|---|
+| Region graph | `fa30de4f4796a8ca254427f9927f9ed9017c888c2fa68e896ed53c4bd9770352` |
+| Full experiment spec | `d4d07ad0167b9c42774266bfa3b1d3a784a52163c6de47171a7836a45246a948` |
+| 60% experiment spec | `294fa1555ae60ba7f8ee5584f7da50f2be09421462896607a5dd72c79f573f56` |
+| 20% experiment spec | `445720105454737f3bdd1e68814dd9ed95961f061f56c296ec4e9e0a278f4445` |
+| Outage experiment spec | `3e89005a12e3c4f95652cfc19a2d86ea5f0e5a80b3584c735337417754eb24ab` |
+| `demo/observed-results.json` | `5f817632dd1da51c81dd1acb8d397c61db2113c94d1e584a4d67650050da8a5a` |
+| `dist/fleetlab-regional-power.html` | `4b7b09fd0a2f4773406b61df2f2faa97d85dc51194575a76a184c80ef416c939` |
+| `dist/regional-site/index.html` only, not whole tree | `97ec391c70a0df2ce392065692128c23a5876848a3369ea723acee1031a50cbe` |
+
+Generated exports honestly record source HEAD plus `dirty: true`; the commit alone does not
+reconstruct this uncommitted implementation. Rebuilds can change package hashes. The artifacts
+are ignored local outputs; none were staged as evidence or fixtures.
+
+### Independent review and browser observations
+
+A separate read-only review found two P2 defects: choosing a condition after loading a short
+shared horizon installed a fixed 480-minute profile; paired exports omitted source provenance.
+Both were fixed and covered by red/green regression tests. Canonical key-order comparison also
+fixes a decoded preset being mislabeled custom. The reviewer independently ran all 13 new
+tests successfully; no Critical findings were reported. This was bounded correctness review,
+not a repository-wide security scan or evidence of real-world validity.
+
+In the in-app Chromium 152 browser on this Mac, source, static package and the offline package
+served over loopback booted. An actual shared last-run setup restored the previous moderate
+condition after current controls changed to outage, with no automatic execution. Source and
+offline runs matched. At a 400 px viewport, document width remained within the viewport and
+wide tables scrolled internally. Recorded results and responsive layout were visually inspected.
+
+Instrumented actual clicks at 1280×720 measured default Bay 34.1 ms, busy-depot Bay 27.6 ms,
+Austin replay 48.4 ms, and the 12-seed Austin pair 603.7 ms from click to completed result.
+First-frame times were 9.9, 9.7, 11.1 and 10.5 ms respectively; no over-50-ms task was recorded
+in these samples. A 120-vehicle comparison recorded individual 62–83 ms tasks. Cancellation
+worked between arms (0.3 ms after click dispatch, excluding time waiting for dispatch).
+These are bounded observations, not latency guarantees. The UI cannot interrupt a synchronous
+arm. Physical mobile devices, other browsers, direct `file://` launch, screen-reader behavior
+and formal human usability have not been assessed. The pre-existing cosmetic Street `null`
+observation was not reproduced or altered.
+
+### Recommendation, remaining risks and next actions
+
+Review this N1 locally before widening regional scope. Retain the full-suite fixture failures,
+timing sensitivity, synchronous-arm cancellation limit, synthetic data and unavailable pickup
+metric as explicit limitations. No worker, new primary metric or dataset ingestion is implied.
+
+1. Inspect the default and outage cases, including unfinished work and terminal energy.
+2. Address the retained Python fixture baseline before claiming a green repository or integrating.
+3. Select one next measured assumption or separately reviewed mechanism; defer additional regions,
+   thermal behavior, Street coupling, Waymo/Open Dataset work, cloud, signing and physical hardware.
+
+### Single best next command
+
+```bash
+python -m http.server 8765 --bind 127.0.0.1 --directory playground/fleetlab
+```
+
+Open `http://127.0.0.1:8765/#/fleet-day`, expand **Regional stress lab: Austin power and
+readiness**, and run explicitly. Choose an unused port if 8765 is occupied. At handoff the
+static preview is also running on loopback at
+`http://127.0.0.1:60689/regional-site/#/fleet-day`. No external service is required.
+
+## Regional publication follow-up — 2026-09-25
+
+The owner explicitly requested deployment and GitHub push after receiving the local result
+and disclosure of the wider Python fixture failures. That current instruction supersedes
+the earlier no-push/local-only restriction for the static website. The release uses the
+existing website branch and Cloudflare Pages project; it is not a main merge or authorization
+to advance the Python evidence lane. The next-phase design remains a draft only.
+
+The original local-build statements above are historical. Publication identity and final
+release checks will be recorded here after successful remote readback.
+
+Fresh release checks before commit: `FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1
+playground/fleetlab/test/*.test.mjs` exited 0 with **1,791 passed, zero failed/skipped/cancelled,
+one existing TODO**, 1,792 tests and 245 suites. Website Python parity/boundary checks again
+passed **89/89**, Ruff and `git diff --check` passed. Static `dist/site` and offline
+`dist/fleetlab-playground.html` were rebuilt and passed both distribution checks at the same
+89 files / 3,181,153 bytes and 2,543,655 bytes respectively. The older timing failures remain
+part of the record; this run does not establish a latency guarantee. No product code changed
+between local handoff and these checks. GitHub website head was still `4b7a276`, main was
+`bca4ccd`, and Cloudflare's current Production deployment was still `e72ae87d` from `96fde5b`.
+
 - **Bound address:** numeric loopback `127.0.0.1` only.
 - **Port:** 8501 by default; validated integer 1–65535.
 - **Browser behavior:** disabled by the exact command above.
