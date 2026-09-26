@@ -66,7 +66,7 @@ The browser baseline explains the walkthrough exception: at 400×812, 164 visibl
 
 ## Task 3 implementation, acceptance and final review
 
-Task 3 is on `codex/fleetlab-t1-teaching-frame`, descended from the accepted Task 2 commit. Implementation and browser verification are complete. The first independent review found two presentation defects; both were fixed, regression-tested and approved on the immutable correction snapshot. Implementation commit: `caaf8f2d8f02b3df9e68a5a675fa488f99161d6d`. This record and the source-of-truth/handoff updates follow in a documentation-only commit.
+Task 3 is on `codex/fleetlab-t1-teaching-frame`, descended from the accepted Task 2 commit. Implementation and browser verification are complete. The first independent review found two presentation defects; both were fixed, regression-tested and approved on the immutable correction snapshot. Implementation commit: `caaf8f2d8f02b3df9e68a5a675fa488f99161d6d`. The record and source-of-truth/handoff updates were committed in `0497b9b7a0348d47e95beb1a241b7974b502fbb2`, followed by the aggregate-time unit clarification in `45efd43a2623cfd50f55c44607ec06075a9702a1`. The final review record is a documentation-only follow-up; the implementation is unchanged.
 
 ### Implementation and decisions
 
@@ -149,6 +149,8 @@ The initial immutable review found two P2 presentation defects: a 90-second marg
 
 Numeric ruling: canonical fraction formatting retains three decimal places where §11.3 requires it; threshold integrity also permits exact seconds at a boundary. These explicit exceptions take precedence over generic two-decimal presentation. Exact records remain available. No threshold or outcome logic changed.
 
+A fresh final whole-branch review covered `4ba5626..45efd43`, including the design, packer, teaching implementation and release report. It approved local acceptance with no Critical or Important findings. Four independently rerun checks passed: all 60 pinned readings, precise-table disclosure, threshold-side time formatting and edited-lesson context. The reviewer independently confirmed protected source/design hashes, package sizes and final test-log counts. Browser execution remained controller-owned, and the reviewer inspected its record; the full suite was not redundantly rerun. The walkthrough scope exception and working-target overrun remain explicitly accepted interpretations, while N2 engine correctness, real-world validity and remote release readiness remain outside this implementation’s evidence. The only optional copy correction was spacing in the handoff, now fixed.
+
 Browser evidence is saved locally in artifacts/fleetlab-t1/browser-checks.json. Actual checks include Street Lombard 39/71, Austin 77/480 with 391 unserved and 120 zero-power vehicle-minutes, Region B completed trips 34 to 29, full-cycle 84/284 with the first recorded ready event selected, OPS-07’s label-matched reading, keyboard Freeze→Cancel→result focus, accessible Exact values toggling, and cleared native/ARIA busy states. The final H check confirms OPS-07 20→5 seeds updates its chip and changed-setup note; Region B→Peninsula shows the note. Browser logs contain no warnings/errors. Mobile Run window is reachable through the existing Knobs drawer. No full 56-route real-browser sweep, hosted deployment/readback or new data acquisition was performed; all 56 arrivals were exercised through the actual app in fake DOM. Controller owns browser and scope evidence; implementer did not duplicate those sessions. N2 implementation, walkthrough structure and Fleet day motion-control reachability remain outside this slice.
 
 ### Gate commands and scope
@@ -161,9 +163,9 @@ Browser evidence is saved locally in artifacts/fleetlab-t1/browser-checks.json. 
 
 The protected ops-cases.test.mjs stays unchanged despite the audit’s proposed assertPinned edit; its added descriptive checks live in the new teaching test instead. This follows the explicit scope ruling. Source literals/model errors are mapped only at the presentation boundary. No model, preset, patch, verdict, metric, pin, media or byte-cap contract changed.
 
-### Privacy, scope and remaining review
+### Privacy and scope
 
-Staging uses explicit paths. artifacts/, dist/, scratch notes, caches and the owner's untracked note are excluded. Code staging: all 24 explicit paths reviewed; staged diff/check/stat passed and the required privacy pattern scan had zero hits. The four documentation paths passed the same staged checks and privacy scan with zero hits. No telemetry, credentials, new network service, runtime dependency, map/data acquisition or physical actuation was added. No push, deployment, PR or production readback occurred.
+Staging uses explicit paths. artifacts/, dist/, scratch notes, caches and the owner's untracked note are excluded. Code staging: all 24 explicit paths reviewed; staged diff/check/stat passed and the required privacy pattern scan had zero hits. The four documentation paths and unit clarification passed the same staged checks and privacy scan with zero hits. The final review-record follow-up uses those checks and changes documentation only. No telemetry, credentials, new network service, runtime dependency, map/data acquisition or physical actuation was added. No push, deployment, PR or production readback occurred.
 
 Recommendation: accept this as a local T1 teaching implementation after the recorded final gates, with no deployment authority. Treat the documented walkthrough word-cap exception and target-byte overrun as explicit review decisions, not invisible passes. Keep N2 v2.1 at design-only status.
 
