@@ -608,6 +608,8 @@ cross-theme critique then replaced one case (OPS-19, whose earlier version dupli
 moved another onto the home depot rule (OPS-20), and a last pass rewrote the on-page copy so that each Watch line names
 the primary against its margin and each guardrail against its maximum harm, with setup facts only.
 
+**2026-09-26 OD-T1 allowance.** After a completed run, a “Casebook reading, checked by tests” may name a result only when the recorded frozen label, validity, outcome and recommendation exactly match its pinned case. Required numeric slots come from that runtime result; a missing slot or mismatch hides the reading. Pre-run frame copy remains direction-free. This allowance does not alter the exact-copy rows in §1.3 or the model/pins.
+
 **Shared worlds.** OPS-01 to OPS-04, OPS-13, OPS-14, OPS-16 and OPS-17 to OPS-20 run on the Bay teaching map as it ships (§2.9:
 San Francisco 40 cars with 60 requests per hour in the 07:00 to 09:00 and 16:00 to 19:00 peaks and 15 off peak, SF-1 and
 SF-2 as home depots for San Francisco and Peninsula cars, a depot visit every 10 trips, the recall at 00:30 on day 2 and

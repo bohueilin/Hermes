@@ -749,6 +749,8 @@ must not: the number as a default edit (§10 rule 3).
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
 
+**T1 teaching frames, 2026-09-26 (local only):** Implementation `caaf8f2d8f02b3df9e68a5a675fa488f99161d6d` adds three-part teaching frames for all 56 unchanged lessons, generated result readings, gated casebook readings and accessible exact-value disclosures. Final serial Node gate: 1,876 tests / 1,875 pass / one existing TODO / zero failures; Python parity/boundaries: 89 pass. Independent scope verification preserves all 47 core/model/instrument files, every resolved lesson setup and existing tests except three authorized copy-assertion rewrites. Browser fold/overflow/focus/contrast checks pass, with the explicit OD-T7 walkthrough exception: 146 fresh visible words before Prepare (153 with inherited context), above 130; structure is deferred. Two review findings about threshold rounding and edited lesson context were fixed and independently approved. Final offline size 2,318,855 bytes, growth 60,902: 538 below the hard stop and 7,654 over the target. Native site: 93 files / 3,249,227 bytes; both distribution checks pass. No push, deploy, new data or N2 engine implementation. The prior public D1 release remains current. Full evidence, exceptions, scope decisions and T2 queue: [T1 release record](docs/FLEETLAB_T1_RELEASE_2026-09-26.md).
+
 **Offline packer route A, 2026-09-26 (local only):** The offline build removes only complete
 comments whose first and last lines contain no code tokens. Every one of 107 module renders
 must preserve exact lexical tokens and line terminators and compile before and after removal.
