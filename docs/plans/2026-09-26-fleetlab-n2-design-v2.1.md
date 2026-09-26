@@ -184,8 +184,8 @@ Publication rows are `{id,event_id,published_min,expires_min,wave_min,predicted_
 Background ordinals are 1-based in (minute, within-minute index) order over [0,I). IDs are pure functions of source_kind and immutable ordinals: `n2-background-${ordinal}` and `n2-event-${eventOrdinal}-${partyOrdinal}`; never a shared request counter. Weighted background destination uses stable options excluding origin, verbatim legacy subtract-accumulate procedure (`bay-operations.js:69–70`):
 
 ```js
-let cursor=choice()*options.reduce((sum,p)=>sum+p.weight,0),to options.at(-1).id;
-for(const option of options){cursor-=option.weight;if(cursor<=0){to option.id;break;}}
+let cursor=choice()*options.reduce((sum,p)=>sum+p.weight,0),to=options.at(-1).id;
+for(const option of options){cursor-=option.weight;if(cursor<=0){to=option.id;break;}}
 ```
 
 Here choice supplies the one keyed destination draw, not a legacy RNG stream.
@@ -321,7 +321,7 @@ Historical maximum detail per arm/seed stores attaining request ID, terminal boa
 | `cohorts.C.{within_target,late,missed,pending}` / P | W,L,M,Pn counts in C / 1 cohort | Each 0 if empty; requests |
 | `cohorts.C.{boarded,abandoned_status,censored_assigned,censored_unassigned}` / P | Four terminal boarding-status counts in C / 1 cohort | 0 if empty; requests; sum=\|C\| |
 | `cohorts.{event_1,event_2,events}.completion_fraction` / P | Completed(C)/\|C\| | Null if empty; fraction. All/background use the required maps above; no duplicate fraction aliases. |
-| `cohorts.{event_1,event_2,events}.boarding_within_target_fraction` / P | W(C)/\|C\| | Null if empty; fraction. All/background aliases equal guardrails; event-only values descriptive. |
+| `cohorts.{event_1,event_2,events}.boarding_within_target_fraction` / P | W(C)/\|C\| | Null if empty; fraction. All/background values exist only at the required §6.1 keys; no duplicate cohort-fraction aliases. Event-only values are descriptive. |
 | `potential_parties.{event_1,event_2}.{total,converted_eligible,converted_post_intake,nonconverted}` / P | Count of each disjoint conversion/intake category; denominator 1 event | 0 if modeled event has no parties; parties; latter three sum to total |
 | `boarding_wait_min_by_request` / P | Boarded: start−creation, denominator 1 request; accompanying status counts mandatory | Null for every unboarded request; min. Do not pool censoring or abandonment into this distribution. |
 | `censored_assigned_age_min_by_request` / P | H−creation for CENSORED_ASSIGNED / 1 request | Null otherwise; min; right-censor bound ≥age, not predicted final wait |
@@ -782,7 +782,7 @@ The N2 view must enter COPY_MODULES (`tools/check-dist.mjs:40`) and receive a re
 
 Keep the request trace under operative route-A scope; register its default request rule before tuning (OD-24), with explicit unavailable stages. OD-23’s sharing decision remains pending. Arrival averages retain their legacy labels beside boarding measures. After the timeline, always show “What this result does not show”: calibrated travel or demand; real vehicle or curb performance; authentication; commercial access; safety or deployment permission. Do not repeat modelHeader’s sentence. An optional registered-digest match may be added only after S4 under OD-19; it conveys reproduction, not authenticity. At most one N2 catalog lesson may open this panel without running; if added, explicitly change `test/navigation.test.mjs:14` from 56 to 57.
 
-The launch also records OD-T=1/OD-T=2/OD-T=4/OD-T=5/OD-T=6/OD-T=7=Yes for the separately scoped teaching task: gated casebook readings; visible Fleet day frame before result summary; only teaching-frames and street-simulation additions to COPY_MODULES in T=1; canonical Four-area names; “What & why”, “How we simulate”, “Learning & ops takeaway”; walkthrough intro only, structural edits deferred. These do not authorize N2 code in this documentation task.
+The launch also records `OD-T1`/`OD-T2`/`OD-T4`/`OD-T5`/`OD-T6`/`OD-T7`=Yes for the separately scoped teaching task: gated casebook readings; visible Fleet day frame before result summary; only teaching-frames and street-simulation additions to COPY_MODULES in `T1`; canonical Four-area names; “What & why”, “How we simulate”, “Learning & ops takeaway”; walkthrough intro only, structural edits deferred. These do not authorize N2 code in this documentation task.
 
 
 Implementation acceptance must include all §9 fixtures plus: zero demand; required empty background; one slot/berth; all berths closed; close exactly at admission; recovery; false/unpublished/expired forecasts; zero staging; boundary target equality; exact I/H; malformed/mixed-version tapes; unknown/duplicate/invalid reservations; missing/altered records; capture/chunk/replay equality; null-treatment identity except enumerated policy fields; complete exogenous equality versus allowed realized differences; package/provenance mismatch; strict v1/v2 readers; legacy Bay/Austin/airport/launch and setup bytes; resource-not-modeled display; null/late/pending cohorts; cross-seed check; and guardrail adverse cases. A positive result is not a required outcome.

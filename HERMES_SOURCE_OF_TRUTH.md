@@ -750,7 +750,7 @@ must not: the number as a default edit (§10 rule 3).
 ### 7.5 FleetLab Playground (teaching model, not evidence)
 
 **N2 design v2.1, 2026-09-26:** The [standalone v2.1 draft](docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md)
-(SHA-256 `e336a0fdd001fca200f9f7fd77fd71aba92dac6751376748e0d0d5f930ef33f0`; 901 lines)
+(SHA-256 `8bb68d09da0b6738b02cdf179a8993dfda4b00aa2cdce5cde23fef7fa33d75de`; 901 lines)
 restates all 19 fixture groups, all 26 owner-decision entries and the 50-correction conformance
 map. OD-1/3/4/5/6/19 remain DECIDED; this launch additionally decides OD-2 using the audit’s
 §4.6 budgets, including package T stop 61,440 bytes / target 53,248. The launch records
