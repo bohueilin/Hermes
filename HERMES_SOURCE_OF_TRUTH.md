@@ -749,6 +749,23 @@ must not: the number as a default edit (§10 rule 3).
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
 
+**N2 design v2.1, 2026-09-26:** The [standalone v2.1 draft](docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md)
+(SHA-256 `e336a0fdd001fca200f9f7fd77fd71aba92dac6751376748e0d0d5f930ef33f0`; 901 lines)
+restates all 19 fixture groups, all 26 owner-decision entries and the 50-correction conformance
+map. OD-1/3/4/5/6/19 remain DECIDED; this launch additionally decides OD-2 using the audit’s
+§4.6 budgets, including package T stop 61,440 bytes / target 53,248. The launch records
+OD-T1/2/4/5/6/7=Yes for the separate teaching task. All other numbered N2 decisions remain
+PENDING; the unnumbered C-32 record merge is also pending. S1 recommendations are not
+operative contract. G2 is OPEN. No N2 implementation or registration is authorized by the draft.
+The new ignored v2.1 probe re-derives changed type, selection, travel, energy and instrument
+values through fixture-specific calculations and shipped helpers; retained hand traces are
+explicitly distinguished from executed calculations. Documentary structure, separators, privacy,
+table consistency and immutable hashes passed. V1, v2 and all three original S0 probe files are
+unchanged. Read-only baseline checks reconfirm 1,827 Node tests (1,826 pass, one existing TODO),
+offline 2,551,878 bytes and site 90 files / 3,189,179 bytes, with clean distribution checks.
+Only this record and v2.1 change in the documentation commit; no application, packer, test,
+Python, owner note, remote, deployment or publication changes belong to this task.
+
 **Design audit and next implementation steps, 2026-09-26:** The read-only
 [design audit](docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md) reviews the N2 v2 contract (§0-§10) and the
 live site's teaching clarity (§11), and explains every simulation and all 56 lessons in three parts:
