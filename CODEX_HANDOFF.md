@@ -1,4 +1,21 @@
-# Current FleetLab design release — September 25, 2026 UTC
+# Current FleetLab Austin release — September 25 Pacific / September 26 UTC, 2026
+
+Published at **https://fleetlab-playground.pages.dev/** from source
+`345b427cdddeb6e8946542c66786d3acbaacaa5c`, Production deployment
+`6265159a-a13e-4ca7-9f9c-4acde9bcf6e7`. Source was pushed normally to
+`feat/fleetlab-playground` and `codex/fleetlab-regional-power`; main is unchanged.
+
+The [Austin runbook](docs/FLEETLAB_REGIONAL_POWER.md) describes the delivered N0/N1 slice.
+The [N2 design draft](docs/plans/2026-09-25-fleetlab-n2-design.md) proposes one finite
+event-pickup hub and explicit boarding metrics; no N2 implementation is approved or claimed.
+
+Release validation: **1,791 Node passed** with performance enabled, zero fail/skip/cancel,
+one existing TODO; **89 scoped Python passed**, Ruff and both packages passed. All **88 public
+payloads** match. Hosted Austin replay/comparison, no-autorun sharing, the default Bay flow
+and response security headers were verified. Broader Python retained-fixture failures remain
+disclosed. See the final regional publication addendum below for commands, hashes and limits.
+
+# Previous FleetLab design release — September 25, 2026 UTC
 
 Published at **https://fleetlab-playground.pages.dev/** from source `96fde5b862119c9bbcd7a2ae76450f8dee616f93`,
 deployment `e72ae87d-6b96-47a0-950d-4d4a87b8bb95`. The normal GitHub push targets
@@ -623,7 +640,7 @@ readiness**, and run explicitly. Choose an unused port if 8765 is occupied. At h
 static preview is also running on loopback at
 `http://127.0.0.1:60689/regional-site/#/fleet-day`. No external service is required.
 
-## Regional publication follow-up — 2026-09-25
+## Regional publication follow-up — 2026-09-25 Pacific / 09-26 UTC
 
 The owner explicitly requested deployment and GitHub push after receiving the local result
 and disclosure of the wider Python fixture failures. That current instruction supersedes
@@ -631,8 +648,8 @@ the earlier no-push/local-only restriction for the static website. The release u
 existing website branch and Cloudflare Pages project; it is not a main merge or authorization
 to advance the Python evidence lane. The next-phase design remains a draft only.
 
-The original local-build statements above are historical. Publication identity and final
-release checks will be recorded here after successful remote readback.
+The original local-build statements above are historical. Publication succeeded with the
+identities and checks below; this does not establish repository-wide green status.
 
 Fresh release checks before commit: `FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1
 playground/fleetlab/test/*.test.mjs` exited 0 with **1,791 passed, zero failed/skipped/cancelled,
@@ -643,6 +660,64 @@ passed **89/89**, Ruff and `git diff --check` passed. Static `dist/site` and off
 part of the record; this run does not establish a latency guarantee. No product code changed
 between local handoff and these checks. GitHub website head was still `4b7a276`, main was
 `bca4ccd`, and Cloudflare's current Production deployment was still `e72ae87d` from `96fde5b`.
+
+### Published identity and commands
+
+| Surface | Observed identity |
+|---|---|
+| Application source | `345b427cdddeb6e8946542c66786d3acbaacaa5c` |
+| GitHub source branches | `feat/fleetlab-playground` and `codex/fleetlab-regional-power` |
+| Production deployment | `6265159a-a13e-4ca7-9f9c-4acde9bcf6e7` |
+| Stable address | https://fleetlab-playground.pages.dev/ |
+| Immutable address | https://6265159a.fleetlab-playground.pages.dev/ |
+| Previous Production / rollback target | `e72ae87d-6b96-47a0-950d-4d4a87b8bb95`, source `96fde5b862119c9bbcd7a2ae76450f8dee616f93` |
+| Main unchanged | `bca4ccd4d881e58904e59bb1b1ff594442099654` |
+
+Executed successfully, after staged status/diff/whitespace review:
+
+```bash
+git commit -m "feat(playground): add Austin regional power stress lab"
+git push --atomic github HEAD:refs/heads/codex/fleetlab-regional-power HEAD:refs/heads/feat/fleetlab-playground
+node playground/fleetlab/tools/pack.mjs --site dist/site
+node playground/fleetlab/tools/check-dist.mjs --site dist/site
+npx --yes wrangler@4.135.0 pages deploy dist/site \
+  --project-name fleetlab-playground --branch feat/fleetlab-playground \
+  --commit-hash 345b427cdddeb6e8946542c66786d3acbaacaa5c --commit-dirty=false
+npx --yes wrangler@4.135.0 pages deployment list --project-name fleetlab-playground --json
+git ls-remote github refs/heads/feat/fleetlab-playground refs/heads/codex/fleetlab-regional-power refs/heads/main
+```
+
+The two source branches both read back at the exact commit above. No force, PR, main merge,
+remote-URL change or other-worktree checkout change occurred. Wrangler's dirty warning was
+caused by the unrelated owner review file (and later the draft); committed application paths
+were clean. Only the 89-file `dist/site` package was uploaded. The offline HTML and index
+hashes match the local-build hashes recorded above. Publication documentation and the N2 draft
+are a subsequent documentation-only commit; they do not change deployed application bytes.
+
+All **88 public payloads** match their local SHA-256 values. `_headers` is server configuration;
+actual responses retain restrictive CSP including `connect-src 'none'`, frame denial,
+nosniff, no-referrer and same-origin opener policy. The first Python HTTP probe returned 403;
+normal curl requests succeeded without credential/access changes. Logs and per-file hashes
+are in ignored `artifacts/fleetlab-regional-power/published-readback.json`,
+`public-headers.txt`, `release-node.txt` and `release-deployments.json`.
+
+Hosted browser acceptance: moderate Austin replay **77/480 completed**, with 391 unserved,
+11 waiting and one in progress; 12 paired seeds **VALID / UNCHANGED / HOLD**, unfinished-visits
+harm **0.3333333333333333**. Last-experiment sharing restored without autorun. Existing default
+Bay run remained **95/284**. No console errors were observed during these actions.
+
+### Next design and release recommendation
+
+The requested [N2 design draft](docs/plans/2026-09-25-fleetlab-n2-design.md) proposes two
+synthetic event waves at one fictional Las Vegas pickup hub, finite approach/berth capacity,
+explicit arrival-versus-boarding events, and responsive execution prerequisites. It includes
+versioning, paired experiments, fresh seed discipline, staged acceptance, risks and decisions.
+No N2 implementation was performed or approved. The unchanged wider Python fixture gate and
+the bounded browser/performance limitations remain disclosed.
+
+Recommendation: use the published N1 demonstration and review N2 before implementation.
+Next actions: inspect the live Austin tradeoffs; review the N2 pickup/overflow/closure defaults;
+then freeze its metric and execution contracts before authoring implementation tasks.
 
 - **Bound address:** numeric loopback `127.0.0.1` only.
 - **Port:** 8501 by default; validated integer 1–65535.

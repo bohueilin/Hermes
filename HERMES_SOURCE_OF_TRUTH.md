@@ -7,17 +7,17 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `codex/fleetlab-regional-power` (local N0 + N1 work from website base `4b7a276`) · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, clean at `6b376fb`) · Depot extension worktree `…/Hermes-depot-m1` on `codex/fleetlab-m2-m3` |
-| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git`; website lineage tracks `github/feat/fleetlab-playground`. Design-enhancement source `96fde5b` pushed normally and published after explicit owner authorization; publication records follow in a documentation-only commit. Main remains unchanged. Exact release state is in §7.5. |
+| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `codex/fleetlab-regional-power` (published Austin source `345b427`, N2 design draft only) · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, clean at `6b376fb`) · Depot extension worktree `…/Hermes-depot-m1` on `codex/fleetlab-m2-m3` |
+| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git`; website lineage tracks `github/feat/fleetlab-playground`. Austin source `345b427` pushed normally to the website branch and `codex/fleetlab-regional-power`, then published after explicit owner authorization. Publication records and the N2 draft follow in a documentation-only commit. Main remains unchanged at `bca4ccd`. Exact release state is in §7.5. |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
 | **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 registry provenance/static operator view built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline `3a7f595`; Task 8 static view `4b2e8b8`; forward-only repairs `18b47db`, `e42ed2c`) — Gate G: **96 passed**; replayable decision record; spec-file authoring, metric-contract CLI, and one loopback-only finished synthetic-run view; **lane merged onto `main` 2026-09-06 (`61a7145`) and pushed**. The PRD has been tracked since `aa04786` |
-| **Playground** | Website lineage `feat/fleetlab-playground`; published source **`96fde5b`**, Production deployment **`e72ae87d`**, all **84 public files** matched. M1–M4 plus addressable views/56 lessons, complete setup sharing, result provenance and accessibility improvements are live. **1,778 Node passed, zero fail/skip/cancel, one existing browser TODO; 89 Python parity/boundary passed; Ruff and static/offline packages passed.** Hosted flows and security headers verified. Previous security scan remains limited to its older range; broad Python fixture gate is non-green. |
+| **Playground** | Website lineage `feat/fleetlab-playground`; published source **`345b427`**, Production deployment **`6265159a`**, all **88 public files** matched. Austin N0/N1 regional power joins M1–M4 and the existing 56 lessons. **1,791 Node passed with performance enabled, zero fail/skip/cancel, one existing TODO; 89 Python parity/boundary passed; Ruff and static/offline packages passed.** Hosted Austin replay/comparison, setup restoration, default Bay flow and security headers verified. Previous security scan remains limited to its older range; broad Python fixture gate is non-green. |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
-| **Design review and next phase** | [Comprehensive portable review brief](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md): project history, accepted/rejected feedback, exact release, tests/limits, 56 lessons and ChatGPT review prompt. Full Python retained-fixture failures and a cosmetic Street-panel literal-null observation remain disclosed; proposed next phases are not implementation approval. |
-| **Last updated** | 2026-09-25 UTC (local Austin N0 + N1; public release unchanged; other tracks retain recorded dates) |
+| **Design review and next phase** | [N2 design draft](docs/plans/2026-09-25-fleetlab-n2-design.md): one fictional Las Vegas pickup hub, two event waves, finite berths/approach queue, explicit boarding metrics and responsive execution prerequisites. Design only; no N2 implementation approval. The [earlier portable review](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) preserves history and 56 lessons. Full Python retained-fixture failures and the older cosmetic Street observation remain disclosed. |
+| **Last updated** | 2026-09-25 Pacific / 09-26 UTC (Austin N0/N1 published; N2 draft only; other tracks retain recorded dates) |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -749,7 +749,7 @@ must not: the number as a default edit (§10 rule 3).
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
 
-**Local regional N0 + N1 build, 2026-09-25 UTC (not published):** The owner's “read and
+**Local regional N0 + N1 build checkpoint, 2026-09-25 UTC:** The owner's “read and
 build, go” request implemented the first slice of the regional brief on
 `codex/fleetlab-regional-power`, starting from the actual released website lineage at
 `4b7a276` (application `96fde5b`). The entry worktree was at `9daacef` with no website;
@@ -808,16 +808,42 @@ Offline file: **2,543,655 bytes**, within the unchanged 2,621,440-byte limit. St
 uncommitted because wider gates are not green; nothing was pushed, merged or published.
 The previously verified public release below remained unchanged at that local handoff.
 
-**Publication follow-up, 2026-09-25:** The owner subsequently requested deployment and GitHub
+**Publication follow-up, 2026-09-25 Pacific / 09-26 UTC:** The owner subsequently requested deployment and GitHub
 push, superseding the earlier local-only scope for this website release. Fresh sequential Node
 validation with `FLEET_PLAYGROUND_PERF=1` passed **1,791 tests, zero failed/skipped/cancelled,
 one existing TODO**; Python website checks passed **89/89**, with Ruff and both rebuilt
 packages passing. The broader Python retained-fixture limitation remains separate and
 unchanged. Publication uses the existing website branch and Pages project; main stays separate.
-Exact published source and deployment will be recorded after successful readback.
+Published application source **`345b427cdddeb6e8946542c66786d3acbaacaa5c`** was pushed
+atomically without force to `feat/fleetlab-playground` and `codex/fleetlab-regional-power`.
+Cloudflare Production deployment **`6265159a-a13e-4ca7-9f9c-4acde9bcf6e7`** serves
+**https://fleetlab-playground.pages.dev/**; immutable address
+**https://6265159a.fleetlab-playground.pages.dev/**. All **88 public payloads** matched the
+local static package; `_headers` is the 89th deployment file and its security policies were
+checked on actual responses. Both remote branches resolved to the release commit; main stayed
+at `bca4ccd4d881e58904e59bb1b1ff594442099654`. No PR or main merge occurred.
+
+Hosted browser checks reproduced the moderate seed-42 shift: 480 requests, 77 completed,
+391 unserved, 11 waiting and one in progress. The 12-seed comparison reported UNCHANGED/HOLD
+with unfinished-visits mean harm 0.3333333333333333. A generated last-experiment setup restored
+without execution; the original Bay default still produced 95/284. No console errors were
+reported during those actions. Source/static/offline local QA from the build remains applicable;
+no new cross-browser, assistive-technology or real-world validity claim is made.
+
+Wrangler warned that the worktree contained the owner's unrelated untracked review; committed
+application paths were clean and the deployment package was rebuilt from those paths. The
+draft/owner note and all generated artifacts were excluded from the public package. An initial
+Python HTTP readback received 403; normal public requests with curl succeeded and matched every
+payload. No authentication, credential or access-policy change was made to obtain readback.
+
+[N2 draft](docs/plans/2026-09-25-fleetlab-n2-design.md) recommends a bounded event/curb question,
+with arrival versus boarding semantics and deterministic responsive execution before expansion.
+It adds no N2 product code and preserves the completion primary. The previous deployment
+`e72ae87d-6b96-47a0-950d-4d4a87b8bb95` remains the rollback target; rollback changes served
+content through Cloudflare, not Git history. Exact commands and hashes are in `CODEX_HANDOFF.md`.
 
 
-**Current design release, published September 25, 2026 UTC.** Explicit owner authorization
+**Previous design release, published September 25, 2026 UTC.** Explicit owner authorization
 superseded the local-only design handoff. Source `96fde5b862119c9bbcd7a2ae76450f8dee616f93`
 was pushed normally to the website branch and deployed as Production
 `e72ae87d-6b96-47a0-950d-4d4a87b8bb95`; main and unrelated worktrees remain unchanged.
