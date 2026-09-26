@@ -17,7 +17,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
 | **Design review and next phase** | [N2 design draft](docs/plans/2026-09-25-fleetlab-n2-design.md): one fictional Las Vegas pickup hub, two event waves, finite berths/approach queue, explicit boarding metrics and responsive execution prerequisites. Design only; no N2 implementation approval. The [Claude review packet](docs/FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md) adds a live design audit, editorial-studio proposal, Waymo pilot runbook and independent N2 audit (four P1 contract gaps, one P2 correction). No WOD data has been used. The [independent packet review](docs/FLEETLAB_PACKET_REVIEW_2026-09-26.md) upholds the five N2 findings with corrected contract texts, adds six gaps (G1–G6), and recommends no WOD work now; the [Codex brief](docs/plans/2026-09-26-fleetlab-d1-and-n2-s0-codex-brief.md) scopes the N2 S0 addendum (docs) and release D1 (result-first Fleet day, model identity, readable Austin verdict). Not yet executed. The [earlier portable review](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) preserves history and 56 lessons. Full Python retained-fixture failures and the older cosmetic Street observation remain disclosed. |
-| **Last updated** | 2026-09-26 (packet review and Codex D1/S0 brief committed; packet L385/L424 corrected in `bff69d7`; N2 remains draft; application source and deployment unchanged; other tracks retain recorded dates) |
+| **Last updated** | 2026-09-26 (N2 S0 v2 contract draft recorded with immutable v1; G2 open pending S1; D1 release work is separate and publication remains pending; other tracks retain recorded dates) |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -748,6 +748,17 @@ must not: the number as a default edit (§10 rule 3).
 ---
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
+
+**N2 S0 / WP0 v2 contract addendum, 2026-09-26:** The owner-authorized
+[v2 draft](docs/plans/2026-09-26-fleetlab-n2-design-v2.md) is a complete design-only
+replacement for implementation planning, with owner decisions, lifecycle/ownership,
+metric populations/nulls, capture-independent accounting, version contracts and exact
+fixtures. Independent review corrected the F2 holder population and G3 observation
+window. G2 cell tapes remain **OPEN pending S1**; patience, inherited values, seeds,
+controls and dispositions are unregistered. V1 SHA-256 remains
+`c574b8df41d0378363e18f75452f09e15a2cf62581e8fb01f6f365229d7e25bf`.
+No N2 implementation, campaign, data acquisition or execution-seam work is authorized
+by this draft. D1 release verification is separate and will be recorded after publication.
 
 **Packet review and next brief, 2026-09-26:** An independent read-only review of the
 2026-09-25 packet ([review](docs/FLEETLAB_PACKET_REVIEW_2026-09-26.md)) upholds N2 findings
