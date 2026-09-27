@@ -511,6 +511,7 @@ function chipNode(chip) {
 /** The model-limits chip (design H-7): its heading, then every applicable §5.8 caveat as visible list text. */
 function limitsChip(keys) {
   const items = keys.map((key) => {
+    if (key !== null && typeof key === "object") return el("li", {}, key.text);
     const text = labels.MODEL_LIMITS[key];
     if (typeof text !== "string" || key === "heading") throw new RangeError(`unknown model limit ${key}`);
     return el("li", { "data-limit": key }, text);
@@ -1579,6 +1580,86 @@ function buildVerdictCharts({ verdict, declarations, seeds = null }) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Ladder: one measure over named categories (fleet rungs, weeks, settings), for models outside the metric registry.
+
+const LADDER_MARKS = Object.freeze([
+  { bar: "bar-ink", line: "line", style: SWATCH_STYLE.ink, stroke: null },
+  { bar: "bar-muted", line: "line-muted", style: SWATCH_STYLE.muted, stroke: SWATCH_STYLE.mutedStroke },
+  { bar: "bar-hollow", line: "line", style: "fill: var(--panel); stroke: var(--ink); stroke-width: 1px", stroke: null },
+]);
+
+/**
+ * A categorical ladder. `categories` are 2 to 60 labels in order; `series` are 1 to 3 of `{id, label, mark, values}`
+ * with `mark` "bar" or "line" and one finite number or `{absent: reason}` per category. Every string comes from the
+ * caller: `title`, `summary` (one sentence that names its register), `axisUnit`, `categoryLabel` (the table's first
+ * head), `gapLabel` (the legend entry of a hatched gap) and `limits` (sentences). `text(v)` formats a value for the table and `tick(t, decimals)` an axis tick.
+ * Lines join neighbouring categories that both hold a value; a category with no value is a hatched gap.
+ */
+function buildLadderChart({ chartId = "scale_ladder", title, chips, summary, limits, axisUnit, categoryLabel, gapLabel, categories, series, text, tick }) {
+  if (!Array.isArray(categories) || categories.length < 2 || categories.length > 60) throw new RangeError("a ladder needs 2 to 60 categories");
+  if (!Array.isArray(series) || series.length < 1 || series.length > LADDER_MARKS.length) throw new RangeError("a ladder draws 1 to 3 series");
+  if (!Array.isArray(limits) || limits.length === 0) throw new RangeError("a ladder needs at least one limits sentence");
+  for (const s of series) if (checkValues(s.values, `series ${s.id}`).length !== categories.length) throw new RangeError(`series ${s.id} needs one value per category`);
+  const height = 220;
+  const plotTop = MARGIN.top;
+  const plotBottom = height - MARGIN.bottom;
+  const plot = createPlot({ height, plotTop, plotBottom });
+  const present = series.flatMap((s) => s.values.filter(isValue));
+  const ticks = niceTicks(Math.min(0, ...present), present.length === 0 ? 1 : Math.max(0, ...present), 4);
+  const y = linearScale(ticks.domain, [plotBottom, plotTop]);
+  drawVerticalTicks(plot, y, ticks.ticks, (t) => tick(t, ticks.decimals));
+  const slot = (plot.right - plot.left) / categories.length;
+  const centre = (i) => round2(plot.left + slot * (i + 0.5));
+  const every = Math.max(1, Math.ceil(MIN_TIME_TICK_GAP_PX / slot));
+  categories.forEach((name, i) => {
+    if (i % every === 0) plot.marks.appendChild(svgText(centre(i), plotBottom + 18, name, { "text-anchor": "middle", "data-role": "category" }));
+  });
+  const bars = series.filter((s) => s.mark === "bar");
+  const barWidth = Math.min(32, (slot * 0.8) / Math.max(1, bars.length));
+  const legend = [];
+  let gap = false;
+  series.forEach((s, k) => {
+    const mark = LADDER_MARKS[k];
+    const bar = s.mark === "bar";
+    legend.push({ swatch: bar ? mark.bar : mark.line, label: s.label });
+    const offset = bar ? (bars.indexOf(s) - (bars.length - 1) / 2) * barWidth : 0;
+    s.values.forEach((v, i) => {
+      if (isAbsent(v)) {
+        gap = true;
+        hatch(plot, round2(centre(i) - slot * 0.4), round2(centre(i) + slot * 0.4), plotTop, plotBottom, v.absent).setAttribute("data-series", s.id);
+        return;
+      }
+      if (bar) {
+        const top = Math.min(y(v), y(0));
+        plot.marks.appendChild(svg("rect", { x: round2(centre(i) + offset - barWidth / 2), y: top, width: round2(barWidth), height: round2(Math.abs(y(v) - y(0))), style: mark.style, "data-series": s.id }));
+        return;
+      }
+      const next = s.values[i + 1];
+      if (isValue(next)) plot.marks.appendChild(svg("line", { x1: centre(i), x2: centre(i + 1), y1: y(v), y2: y(next), class: "fl-chart__line", style: mark.stroke, "data-series": s.id }));
+      if (i % every === 0 || !isValue(next) || !isValue(s.values[i - 1])) {
+        plot.marks.appendChild(k === 2
+          ? svg("rect", { x: round2(centre(i) - 4), y: round2(y(v) - 4), width: 8, height: 8, style: mark.style, "data-role": "point", "data-series": s.id })
+          : svg("circle", { cx: centre(i), cy: y(v), r: 4, style: `${mark.style}; stroke: var(--panel); stroke-width: 2px`, "data-role": "point", "data-series": s.id }));
+      }
+    });
+  });
+  plot.root.appendChild(svg("line", { x1: plot.left, x2: plot.right, y1: y(0), y2: y(0), class: "fl-chart__axis" }));
+  if (gap) legend.push({ swatch: "hatch", label: gapLabel });
+  return chartFrame({
+    chartId,
+    title,
+    chips,
+    summary,
+    limits: limits.map((sentence) => ({ text: sentence })),
+    legend,
+    axisUnit,
+    plot,
+    heads: [categoryLabel, ...series.map((s) => s.label)],
+    rows: categories.map((name, i) => [name, ...series.map((s) => format.valueText(s.values[i], text))]),
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Public builders: each one draws at the width of the box its plots sit in (see responsive above).
 
 /** Fleet state chart; see buildFleetStateChart. */
@@ -1629,4 +1710,9 @@ export function depotBoardCharts(options) {
 /** Verdict charts: the primary strip, then one guardrail bullet row per guardrail; see buildVerdictCharts. */
 export function verdictCharts(options) {
   return responsive(buildVerdictCharts, options);
+}
+
+/** A categorical ladder for models outside the metric registry; see buildLadderChart. */
+export function ladderChart(options) {
+  return responsive(buildLadderChart, options);
 }

@@ -661,5 +661,29 @@
     "seeds": "Read from submitted spec",
     "numbers": [],
     "lane_file": "docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md"
+  },
+  "response-reserve": {
+    "source": "pin",
+    "command": "node --test playground/fleetlab/test/scale-response.test.mjs",
+    "config_or_patch": "The lab descriptor defaults. The derived setup and the frozen test are recorded in the pins file.",
+    "seeds": "Read from the frozen test in the pins file",
+    "numbers": [],
+    "lane_file": "playground/fleetlab/test/scale-response.pins.json"
+  },
+  "fleet-intake": {
+    "source": "pin",
+    "command": "node --test playground/fleetlab/test/scale-intake.test.mjs",
+    "config_or_patch": "The lab descriptor defaults. The derived setup and the frozen test are recorded in the pins file.",
+    "seeds": "Read from the frozen test in the pins file",
+    "numbers": [],
+    "lane_file": "playground/fleetlab/test/scale-intake.pins.json"
+  },
+  "density-ladder": {
+    "source": "pin",
+    "command": "node --test playground/fleetlab/test/scale-density.test.mjs",
+    "config_or_patch": "The lab descriptor defaults. The derived setup and the frozen test are recorded in the pins file.",
+    "seeds": "Read from the frozen test in the pins file",
+    "numbers": [],
+    "lane_file": "playground/fleetlab/test/scale-density.pins.json"
   }
 }

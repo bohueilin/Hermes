@@ -32,6 +32,8 @@ Walkthrough  .fl-ledger (what the beat shows, a tab stop because it scrolls) .fl
              .fl-readout (the verdict in gate order, on .fl-verdict) .fl-refusals (what this page is not)
 Lists        .fl-flow (ordered steps as an arrow flow, no number markers) .fl-flow__arrow (aria-hidden) .fl-list-plain .fl-situation__proxy
 Transport    .fl-scrubber .fl-scrubber__band (style --warmup: fraction) .fl-scrubber__input .fl-scrubber__ticks
+Scale lab    .scale-lab (the page) .scale-chooser (links to the three labs) .scale-run (Run, Cancel and status; sticks to the
+             screen bottom on a phone until its own place scrolls in) .scale-setup .scale-result .scale-chart
 Motion       :root[data-motion="reduce|full"] is the in-app override; without it the system setting applies.
              A closed drawer, sheet or popover also gets the inert attribute from the interface.
 */
@@ -737,7 +739,7 @@ body { margin: 0; background: var(--ground); }
 .section-heading h2, .loop-section h2, .scope-section h2 { font-size: clamp(28px,3vw,40px); line-height: 1.15; margin: 15px 0 0; }
 .section-heading h2 { max-width: 620px; }
 .section-heading > p { max-width: 285px; font-size: 13px; color: var(--muted); margin: 0; line-height: 1.8; }
-.decision-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 22px; }
+.decision-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px; }
 .decision-card { padding: 29px; background: #f5f8fc; border: 1px solid #e9eef5; border-radius: 18px; display: flex; flex-direction: column; align-items: start; }
 .card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin-bottom: 30px; }
 .card-top .eyebrow { font-size: 10px; }
@@ -966,7 +968,7 @@ body { margin: 0; background: var(--ground); }
 }
 
 /* Fleet day: a readable operational simulation with explicit, finite resources. */
-.operations-lab,.simulation-catalog{max-width:1500px;margin:0 auto;padding:42px 34px 60px;color:var(--ink);}
+.operations-lab,.simulation-catalog,.scale-lab{max-width:1500px;margin:0 auto;padding:42px 34px 60px;color:var(--ink);}
 .ops-intro{max-width:1000px;margin-bottom:30px;}
 .ops-intro h1,.catalog-intro h1{font-size:clamp(32px,3.7vw,52px);line-height:1.12;letter-spacing:-.045em;margin:13px 0 18px;}
 .ops-intro>p:not(.eyebrow),.catalog-intro>.hero-lede{max-width:790px;font-size:15px;line-height:1.8;color:#566579;}
@@ -1089,7 +1091,7 @@ body { margin: 0; background: var(--ground); }
   .catalog-grid{grid-template-columns:1fr 1fr;}
 }
 @media(max-width:767.98px){
-  .operations-lab,.simulation-catalog{padding:28px 18px 40px;}
+  .operations-lab,.simulation-catalog,.scale-lab{padding:28px 18px 40px;}
   .ops-intro h1,.catalog-intro h1{font-size:37px;}
   .ops-intro>p:not(.eyebrow),.catalog-intro>.hero-lede{font-size:13px;}
   .ops-run-line{align-items:start;flex-direction:column;gap:13px;}
@@ -1296,7 +1298,6 @@ body { margin: 0; background: var(--ground); }
  .street-metrics{grid-template-columns:repeat(4,minmax(0,1fr));}
  .street-destination-results,.street-hotspot-results,.street-learning-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
  .street-inspect{grid-template-columns:repeat(2,minmax(0,1fr));}
- .catalog-models{grid-template-columns:repeat(3,minmax(0,1fr));}
 }
 @media(max-width:767.98px){
  .street-intro .hero-lede{font-size:16px;}
@@ -1456,3 +1457,20 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 
 /* The paired setup contains its own scenario editor; leave the replay editor to Explore a day. */
 .studio-workspace .fl-app[data-mode="experiment"] .fl-knobs { display: none; }
+
+/* Scale lab: one generic view for three labs. Nothing here moves, so no reduced-motion rule is needed. */
+.scale-chooser { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.scale-chooser a { display: inline-flex; align-items: center; min-height: var(--target); padding: 0 16px; border: 1px solid var(--rule-strong); border-radius: 26px; color: var(--ink); font-size: 13px; text-decoration: none; }
+.scale-chooser a[aria-current="page"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 650; }
+.scale-setup, .scale-result { margin: 24px 0; min-width: 0; }
+.scale-setup > summary { font-weight: 600; cursor: pointer; }
+.scale-result > h2 { font-size: 22px; margin: 0 0 12px; }
+.scale-chart { max-width: 900px; margin: 16px 0; }
+.scale-run progress { inline-size: 120px; }
+.scale-lab caption { text-align: left; font-weight: 650; padding: .7rem 0; }
+.scale-lab .result-provenance { font-size: 12px; overflow-wrap: anywhere; }
+.scale-lab pre { max-width: 100%; max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
+@media (max-width: 767.98px) {
+  .scale-run { position: sticky; bottom: 0; z-index: 1; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-inline: -18px; padding: 10px 18px; background: var(--panel); border-top: 1px solid var(--rule); }
+  .scale-lab .ops-intro a, .scale-lab .ops-intro summary { scroll-margin-bottom: 120px; }
+}

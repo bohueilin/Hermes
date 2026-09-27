@@ -11,6 +11,7 @@ import { openLearnCase } from "./learn.js";
 import { createOperationsLab } from "./operations-lab.js";
 import { createSimulationCatalog, simulationCatalog } from "./simulation-catalog.js";
 import { createStreetLab } from "./street-lab.js";
+import {createScaleLab} from './scale-lab.js';
 import {defaultStreetConfig} from '../model/street-simulation.js';
 import {ROUTES,routeHref,parseRoute,followLink} from './routes.js';
 import {decodeSetup} from './setup-codec.js';
@@ -63,6 +64,7 @@ function overview(navigate, film) {
         decisionCard({number:"01",category:"MARKET OPERATIONS",title:"Can supply keep up with the peak?",text:"Set fleet size and demand. Follow each AV through trips and depot work, then compare the capacity of different fleet and depot sizes.",measure:"Trips completed · Battery · Depot queues",cta:"Run a fleet day  →",target:"simulation"},navigate),
         decisionCard({number:"02",category:"DEPOT OPTIMIZATION",title:"Would two more bays actually help?",text:"Use the four-area teaching model to compare four cleaning bays with six. Inspect depot delay alongside rider outcomes before drawing a conclusion.",measure:"Bay wait · Depot turnaround · Guardrails",cta:"Test depot capacity  →",target:"depots"},navigate),
         decisionCard({number:"03",category:"STREET OPERATIONS",title:"Can one block tie up the fleet?",text:"Explore downtown SF, SFO and East Bay journeys on directed roads. Follow queues across blocks and compare routing decisions.",measure:"Spillback · Pickup wait · Empty distance",cta:"Open the Street lab  →",target:"streets"},navigate),
+        decisionCard({number:"04",category:"FLEET SCALING",title:"What changes as the fleet scales?",text:"Three labs on scaling a fleet: a pooled support desk under an area-wide event, the path from delivered vehicles to rider service, and density at rungs of fleet and demand.",measure:"Governing ratio · Paired test · Guardrails",cta:"Open the Scale lab  →",target:"scale"},navigate),
       ]),
     ]),
     el("section",{class:"loop-section","aria-label":"Three-minute demo"},[
@@ -75,7 +77,7 @@ function overview(navigate, film) {
     ]),
     el("section",{class:"scope-section"},[
       el("div",{},[eyebrow("A CLEAR MODEL BOUNDARY"),el("h2",{},"Useful questions. Honest limits.")]),
-      el("div",{},[el("h3",{},"Three ways to learn"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Four-area experiments cover dispatch, recall and paired guardrails. The catalog explains each model's scope.")]),
+      el("div",{},[el("h3",{},"Four ways to learn"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Four-area experiments cover dispatch, recall and paired guardrails. Scale lab covers a support desk, fleet intake and density at rungs. The catalog explains each model's scope.")]),
       el("div",{},[el("h3",{},"Outside the model"),el("p",{},"Worker shifts, physical driving, calibrated demand and real vehicle operations. Demand, traffic and vehicle operating values are teaching assumptions. None of these models is a calibrated digital twin or permission to change a fleet.")]),
     ]),
   ]);
@@ -141,8 +143,10 @@ export function mountStudio(app) {
   const home=overview(navigate,film),product=approach(navigate);
   const operations=createOperationsLab({reducedMotion,onCatalog:()=>navigate('catalog')});
   const streets=createStreetLab({reducedMotion});
+  const scale=createScaleLab({onLab:id=>visit({page:'scale',lesson:id})});
+  operations.element.querySelector('.ops-intro').appendChild(el('p',{class:'ops-status'},['Fleet day stops at 120 cars. For what changes as a fleet scales, ',el('a',{href:routeHref({page:'scale'}),on:{click:event=>followLink(event,()=>navigate('scale'))}},'open the Scale lab'),'.']));
   const records=simulationCatalog();
-  const lessonPage=record=>record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
+  const lessonPage=record=>record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
   const catalog=createSimulationCatalog({hrefForLesson:record=>routeHref({page:lessonPage(record),lesson:record.id}),onLesson:record=>visit({page:lessonPage(record),lesson:record.id})});
   const workspaceIntro=el('section',{class:'workspace-intro',tabindex:'-1'});
   const workspaceIdentity=modelHeader('Four-area experiments','Schematic four-area Bay Area zones (San Francisco, Peninsula, San Jose, East Bay); not road geometry',MODEL_VERSION);
@@ -168,7 +172,7 @@ export function mountStudio(app) {
   operations.shareSlot.appendChild(fleetShare.element);operations.launchPanel.shareSlot.appendChild(launchShare.element);operations.regionalPanel.shareSlot.appendChild(austinShare.element);
   streets.element.insertBefore(streetShare.element,streets.element.children[1]??null);
   workspaceMain.insertBefore(regionalShare.element,root);
-  for(const node of [skip,header,home,product,operations.element,streets.element,catalog.element,workspaceMain,routeError,footer])container.appendChild(node);
+  for(const node of [skip,header,home,product,operations.element,streets.element,scale.element,catalog.element,workspaceMain,routeError,footer])container.appendChild(node);
   if(app.regions?.rail&&app.regions?.map)root.insertBefore(app.regions.rail,app.regions.map);
 
   function writeAddress(href,replace=false){
@@ -178,7 +182,7 @@ export function mountStudio(app) {
   }
   function navigate(page){visit({page});}
   function visit(route){const href=routeHref(route);writeAddress(href);applyRoute(href);}
-  function pause(){playback.pause();operations.pause();streets.pause();}
+  function pause(){playback.pause();operations.pause();streets.pause();scale.pause();}
   function focusMain(main,title){
     activeMain?.removeAttribute('id');activeMain=main;main.id='studio-content';main.setAttribute('tabindex','-1');document.title=`${title} · FleetLab by Hermes`;
     if(initialized){const heading=main.querySelector('h1');heading?.setAttribute('tabindex','-1');heading?.focus({preventScroll:true});container.scrollIntoView?.({block:'start',behavior:'instant'});}
@@ -191,7 +195,7 @@ export function mountStudio(app) {
     root.hidden=!workspace;workspaceMain.hidden=!workspace;
     if(workspace)root.removeAttribute('inert');else root.setAttribute('inert','');
     home.hidden=page!=='overview';film.setActive(page==='overview');product.hidden=page!=='approach';
-    operations.element.hidden=page!=='simulation';streets.element.hidden=page!=='streets';catalog.element.hidden=page!=='catalog';
+    operations.element.hidden=page!=='simulation';streets.element.hidden=page!=='streets';scale.element.hidden=page!=='scale';catalog.element.hidden=page!=='catalog';
     workspaceIntro.hidden=!workspace;regionalShare.element.hidden=page==='tour';routeError.hidden=true;
     if(app.regions?.charts&&app.regions?.map&&app.regions?.inspector)root.insertBefore(app.regions.charts,page==='depots'?app.regions.map:app.regions.inspector);
     container.setAttribute('data-page',page);
@@ -212,10 +216,11 @@ export function mountStudio(app) {
     if(workspace){workspaceIntro.appendChild(el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));updateWorkspaceIdentity(store.getState());}
     if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Run an A/B test';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));}
     if(page==='streets')streets.refresh();
-    focusMain(workspace?workspaceMain:page==='approach'?product:page==='simulation'?operations.element:page==='streets'?streets.element:page==='catalog'?catalog.element:home,ROUTES[page].title);
+    focusMain(workspace?workspaceMain:page==='approach'?product:page==='simulation'?operations.element:page==='streets'?streets.element:page==='scale'?scale.element:page==='catalog'?catalog.element:home,ROUTES[page].title);
   }
   function applyLesson(record){
-    if(record.target==='operations'){
+    if(record.target==='scale')scale.setLesson(record);
+    else if(record.target==='operations'){
       const patch=typeof record.patch==='function'?record.patch():structuredClone(record.patch);
       if(patch.launch_rehearsal){operations.chooseLaunchTemplate(patch.launch_rehearsal);operations.launchPanel.setLesson(record);}
       else{operations.loadScenario(patch);operations.setLesson(record);}
@@ -256,7 +261,7 @@ export function mountStudio(app) {
       if(setup){const shared={'fleet-day':fleetShare,'launch-rehearsal':launchShare,'regional-power':austinShare,'street-lab':streetShare,regional:regionalShare};shared[setup.model].loaded();const target=setup.model==='launch-rehearsal'?operations.launchPanel.heading:setup.model==='regional-power'?operations.regionalPanel.heading:setup.model==='fleet-day'?operations.summaryHeading:setup.model==='street-lab'?streets.element.querySelector('h1'):workspaceIntro.querySelector('h1');target.setAttribute('tabindex','-1');target.focus();}
     }catch(error){
       pause();current='error';if(store.getState().present.on)present.close();
-      for(const node of [home,product,operations.element,streets.element,catalog.element,workspaceMain,root])node.hidden=true;
+      for(const node of [home,product,operations.element,streets.element,scale.element,catalog.element,workspaceMain,root])node.hidden=true;
       film.setActive(false);root.setAttribute('inert','');routeError.hidden=false;errorText.textContent=error.message;container.setAttribute('data-page','error');
       for(const link of navLinks)link.removeAttribute('aria-current');
       focusMain(routeError,'Link could not be loaded');
@@ -269,5 +274,5 @@ export function mountStudio(app) {
   let previousMotion=reducedMotion();
   let previousPresent=store.getState().present.on;
   const unsubscribe=store.subscribe(state=>{if(workspaceLesson&&!applying)renderLesson(state);updateWorkspaceIdentity(state);const motion=reducedMotion();if(motion!==previousMotion){previousMotion=motion;film.setActive(current==='overview');}const was=previousPresent;previousPresent=state.present.on;if(was&&!state.present.on&&current==='tour'&&!applying)navigate('operations');});
-  return {navigate,applyRoute,operations,streets,element:container,destroy(){browserWindow?.removeEventListener('hashchange',addressChanged);film.destroy();operations.destroy();streets.destroy();unsubscribe();root.hidden=false;root.removeAttribute('inert');container.parentNode?.insertBefore(root,container);container.remove();}};
+  return {navigate,applyRoute,operations,streets,scale,element:container,destroy(){browserWindow?.removeEventListener('hashchange',addressChanged);film.destroy();operations.destroy();streets.destroy();scale.destroy();unsubscribe();root.hidden=false;root.removeAttribute('inert');container.parentNode?.insertBefore(root,container);container.remove();}};
 }

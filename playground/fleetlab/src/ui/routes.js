@@ -8,6 +8,7 @@ export const ROUTES=Object.freeze({
   approach:{path:'approach',title:'Product approach'},
   operations:{path:'regional',title:'Four-area workspace'},
   tour:{path:'walkthrough',title:'Guided walkthrough'},
+  scale:{path:'scale-lab',title:'Scale lab'},
 });
 const MAX_ROUTE_LENGTH=33000;
 

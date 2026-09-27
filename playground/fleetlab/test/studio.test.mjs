@@ -75,9 +75,9 @@ test('a catalog street case opens its named corridor before running',()=>{
 test('all lesson links restore the named setup without running either engine',()=>{
  const x=setup();try{
   const snapshots=new Map();
-  const capture=record=>record.target==='operations'?x.studio.operations.getSharedSetup('current',record.id==='region-launch'?'launch-rehearsal':'fleet-day'):record.target==='streets'?x.studio.streets.getSharedSetup():getRegionalSetup(x.store.getState());
+  const capture=record=>record.target==='scale'?x.studio.scale.getState():record.target==='operations'?x.studio.operations.getSharedSetup('current',record.id==='region-launch'?'launch-rehearsal':'fleet-day'):record.target==='streets'?x.studio.streets.getSharedSetup():getRegionalSetup(x.store.getState());
   for(const record of simulationCatalog()){
-   const page=record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
+   const page=record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
    const href=routeHref({page,lesson:record.id});x.studio.applyRoute(href);
    assert.equal(x.studio.element.getAttribute('data-page'),page,record.id);
    assert.equal(x.store.getState().run.status,'idle',record.id);
@@ -88,7 +88,7 @@ test('all lesson links restore the named setup without running either engine',()
    snapshots.set(record.id,capture(record));
   }
   for(const record of simulationCatalog().reverse()){
-   const page=record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
+   const page=record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
    x.studio.applyRoute(routeHref({page,lesson:record.id}));
    assert.deepEqual(capture(record),snapshots.get(record.id),`${record.id} restores complete lesson settings after other lessons`);
   }
@@ -108,7 +108,7 @@ test('malformed and wrong-model links quarantine the view until an explicit reco
 });
 test('workspace main, native navigation, page titles and skip focus follow the active view',()=>{
  const x=setup();try{
-  for(const page of ['overview','simulation','streets','depots','catalog','approach','operations','tour']){
+  for(const page of ['overview','simulation','streets','depots','catalog','approach','operations','tour','scale']){
    x.studio.navigate(page);
    const mains=x.studio.element.querySelectorAll('main').filter(n=>!n.inHiddenOrInert());assert.equal(mains.length,1,page);
    assert.ok(document.title.includes('FleetLab'));
