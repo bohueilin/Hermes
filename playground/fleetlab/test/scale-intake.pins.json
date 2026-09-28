@@ -1,0 +1,1961 @@
+{
+ "lab": "fleet-intake",
+ "version": "scale-intake-1.0.0",
+ "seeds": [
+  7001,
+  7002,
+  7003,
+  7004,
+  7005,
+  7006,
+  7007,
+  7008,
+  7009,
+  7010,
+  7011,
+  7012
+ ],
+ "tuning_seeds": [
+  3001,
+  3002,
+  3003,
+  3004,
+  3005,
+  3006,
+  3007,
+  3008,
+  3009,
+  3010,
+  3011,
+  3012
+ ],
+ "public_counts_to_stay_away_from": [
+  300,
+  2000,
+  3200,
+  4000
+ ],
+ "defaults": {
+  "arm": "middle",
+  "power": 48,
+  "ports": 24
+ },
+ "provenance": "NOT_EVIDENCE; simulation-only; decision authority NONE. Every input is a teaching assumption.",
+ "how": "Written from one press of each arm at the defaults, after the design review. Regenerate only with a change of the module.",
+ "arms": {
+  "middle": {
+   "setup": {
+    "ratio": 2,
+    "room": 24,
+    "ahead": 24,
+    "ranges": [
+     [
+      36,
+      60
+     ],
+     [
+      18,
+      30
+     ],
+     [
+      9,
+      15
+     ],
+     [
+      6,
+      10
+     ]
+    ],
+    "release": [
+     12,
+     20
+    ]
+   },
+   "label": "scale-spec:1aa8c833",
+   "digest": "1aa8c833d067cb4ea2afa744044b011d1fd234b9e6db93e213ef78d843adebf2",
+   "change": "Order week of site power: with the delivery calendar in the control arm, 24 weeks ahead of it in the other arm.",
+   "result_sha256": "44ec9d75abacdcacc6e6531ee4e2cdcdac6f482d4387a83b375f5aec2de0ccbb",
+   "result_chars": 33720,
+   "main": {
+    "validity": "VALID",
+    "outcome": "IMPROVED",
+    "recommendation": "ADVANCE_TO_NEXT_TEST",
+    "baseline_mean": 0.5695802296710117,
+    "candidate_mean": 0.7542451535119133,
+    "mean_delta": 0.1846649238409015,
+    "median_delta": 0.19037387193811778,
+    "ci_low": 0.17220252590364324,
+    "ci_high": 0.19649763644177054,
+    "paired_deltas": [
+     0.16396289929809482,
+     0.18908465835840138,
+     0.19166308551783418,
+     0.20088454376163867,
+     0.2044298811058588,
+     0.18394570978369862,
+     0.1360836556367283,
+     0.17142959461395224,
+     0.15801819223606928,
+     0.1972854891849305,
+     0.20342715943274603,
+     0.21576421716086525
+    ],
+    "guardrail": {
+     "metric": "idle weeks per ordered place",
+     "status": "WITHIN",
+     "harm": 5.6024305555555545,
+     "max_harm": 13
+    },
+    "descriptive": [
+     {
+      "metric": "weeks not in service per delivered vehicle",
+      "baseline_mean": 40.52256944444444,
+      "candidate_mean": 23.995058760683758,
+      "mean_delta": -16.527510683760685
+     }
+    ]
+   },
+   "controls": [
+    {
+     "title": "Null control, both arms order with the delivery calendar, declared to read zero on every measure",
+     "label": "scale-spec:494f724a",
+     "control": "null",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 0.5695802296710117,
+     "candidate_mean": 0.5695802296710117,
+     "mean_delta": 0,
+     "median_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "paired_deltas": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "guardrail": {
+      "metric": "idle weeks per ordered place",
+      "status": "WITHIN",
+      "harm": 0,
+      "max_harm": 13
+     },
+     "descriptive": [
+      {
+       "metric": "weeks not in service per delivered vehicle",
+       "baseline_mean": 40.52256944444444,
+       "candidate_mean": 40.52256944444444,
+       "mean_delta": 0
+      }
+     ]
+    },
+    {
+     "title": "Non-binding order control, site power with a lead time of 0 weeks in both arms, declared to read zero on the main measure",
+     "label": "scale-spec:fc0d0072",
+     "control": "non-binding",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "HOLD",
+     "baseline_mean": 0.7879288425726972,
+     "candidate_mean": 0.7879288425726972,
+     "mean_delta": 0,
+     "median_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "paired_deltas": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "guardrail": {
+      "metric": "idle weeks per ordered place",
+      "status": "REGRESSED",
+      "harm": 24,
+      "max_harm": 13
+     },
+     "descriptive": [
+      {
+       "metric": "weeks not in service per delivered vehicle",
+       "baseline_mean": 20.980368589743588,
+       "candidate_mean": 20.980368589743588,
+       "mean_delta": 0
+      }
+     ]
+    },
+    {
+     "title": "Non-binding deliveries control, deliveries 1.5 times as fast while vehicles wait at the depot door, declared to read zero on the main measure",
+     "label": "scale-spec:7bad40d3",
+     "control": "non-binding",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "HOLD",
+     "baseline_mean": 0.5695802296710117,
+     "candidate_mean": 0.5695802296710117,
+     "mean_delta": 0,
+     "median_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "paired_deltas": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "guardrail": {
+      "metric": "weeks not in service per delivered vehicle",
+      "status": "REGRESSED",
+      "harm": 4.3269230769230775,
+      "max_harm": 2
+     },
+     "descriptive": [
+      {
+       "metric": "idle weeks per ordered place",
+       "baseline_mean": 3.121527777777778,
+       "candidate_mean": 3.121527777777778,
+       "mean_delta": 0
+      }
+     ]
+    }
+   ],
+   "tables": [
+    {
+     "caption": "One fleet, several counts: end of week 26, the last delivery week of the control, mean of 12 paired seeds.",
+     "heads": [
+      "Count",
+      "Which vehicles are in it",
+      "Control",
+      "Site power ordered 24 weeks ahead"
+     ],
+     "rows": [
+      [
+       "Delivered",
+       "Handed over, at any stage",
+       {
+        "v": 624,
+        "d": 0
+       },
+       {
+        "v": 624,
+        "d": 0
+       }
+      ],
+      [
+       "Integrated",
+       "Through the integration line",
+       {
+        "v": 600,
+        "d": 0
+       },
+       {
+        "v": 600,
+        "d": 0
+       }
+      ],
+      [
+       "Validated",
+       "Passed validation, first time or after rework",
+       {
+        "v": 573.3333333333334,
+        "d": 0
+       },
+       {
+        "v": 573.3333333333334,
+        "d": 0
+       }
+      ],
+      [
+       "Released",
+       "Let through the release gate",
+       {
+        "v": 573.3333333333334,
+        "d": 0
+       },
+       {
+        "v": 573.3333333333334,
+        "d": 0
+       }
+      ],
+      [
+       "Accepted at a depot",
+       "Given a depot place",
+       {
+        "v": 96,
+        "d": 0
+       },
+       {
+        "v": 120,
+        "d": 0
+       }
+      ],
+      [
+       "In rider service",
+       "Accepted and not removed",
+       {
+        "v": 93.5,
+        "d": 0
+       },
+       {
+        "v": 117.16666666666667,
+        "d": 0
+       }
+      ],
+      [
+       "Out of service",
+       "Removed and not yet back; keeps its place",
+       {
+        "v": 2.5,
+        "d": 0
+       },
+       {
+        "v": 2.8333333333333335,
+        "d": 0
+       }
+      ],
+      [
+       "First week at 90 percent",
+       "The first week with 562 vehicles in rider service",
+       {
+        "v": 68.5,
+        "d": 1
+       },
+       {
+        "v": 46.916666666666664,
+        "d": 1
+       }
+      ]
+     ]
+    },
+    {
+     "caption": "The gate that binds. Where delivered vehicle-weeks went over 104 weeks, mean of 12 paired seeds. Waiting is stock past the 2 process weeks. Most depot door waiting: site power under the control; site power in the other arm. The rows sum to the total.",
+     "heads": [
+      "Vehicle-weeks",
+      "Control",
+      "Site power ordered 24 weeks ahead"
+     ],
+     "rows": [
+      [
+       "Waiting: integration",
+       {
+        "v": 0,
+        "d": 0
+       },
+       {
+        "v": 0,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: validation and rework",
+       {
+        "v": 66.66666666666667,
+        "d": 0
+       },
+       {
+        "v": 66.66666666666667,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: the release gate",
+       {
+        "v": 2707.1666666666665,
+        "d": 0
+       },
+       {
+        "v": 2707.1666666666665,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: depot induction",
+       {
+        "v": 1819.5,
+        "d": 0
+       },
+       {
+        "v": 1904.5,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: site power",
+       {
+        "v": 18576.666666666668,
+        "d": 0
+       },
+       {
+        "v": 4131.75,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: ports",
+       {
+        "v": 0,
+        "d": 0
+       },
+       {
+        "v": 3762.9166666666665,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: stalls",
+       {
+        "v": 0,
+        "d": 0
+       },
+       {
+        "v": 0,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: staff",
+       {
+        "v": 0,
+        "d": 0
+       },
+       {
+        "v": 0,
+        "d": 0
+       }
+      ],
+      [
+       "Inside the process weeks",
+       {
+        "v": 1248,
+        "d": 0
+       },
+       {
+        "v": 1248,
+        "d": 0
+       }
+      ],
+      [
+       "Out of service",
+       {
+        "v": 868.0833333333334,
+        "d": 0
+       },
+       {
+        "v": 1151.9166666666667,
+        "d": 0
+       }
+      ],
+      [
+       "In rider service",
+       {
+        "v": 31809.916666666668,
+        "d": 0
+       },
+       {
+        "v": 42123.083333333336,
+        "d": 0
+       }
+      ],
+      [
+       "Total: delivered vehicle-weeks",
+       {
+        "v": 57096,
+        "d": 0
+       },
+       {
+        "v": 57096,
+        "d": 0
+       }
+      ]
+     ]
+    },
+    {
+     "caption": "Lead-time mismatch. Weeks ahead, gain and idle weeks: site power ordered 0 to 48 weeks ahead, mean of 12 paired seeds. The allowance is 13 idle weeks per ordered place.",
+     "heads": [
+      "Weeks ahead",
+      "Gain, fraction of plan",
+      "Idle weeks per ordered place, past the control",
+      "Against the allowance"
+     ],
+     "rows": [
+      [
+       {
+        "v": 0,
+        "d": 0
+       },
+       {
+        "v": 0,
+        "d": 4
+       },
+       {
+        "v": 0,
+        "d": 2
+       },
+       "inside it"
+      ],
+      [
+       {
+        "v": 12,
+        "d": 0
+       },
+       {
+        "v": 0.10839839087045791,
+        "d": 4
+       },
+       {
+        "v": 1.1996527777777775,
+        "d": 2
+       },
+       "inside it"
+      ],
+      [
+       {
+        "v": 24,
+        "d": 0
+       },
+       {
+        "v": 0.1846649238409015,
+        "d": 4
+       },
+       {
+        "v": 5.602430555555555,
+        "d": 2
+       },
+       "inside it"
+      ],
+      [
+       {
+        "v": 36,
+        "d": 0
+       },
+       {
+        "v": 0.21607458339301913,
+        "d": 4
+       },
+       {
+        "v": 14.472222222222223,
+        "d": 2
+       },
+       "past it"
+      ],
+      [
+       {
+        "v": 48,
+        "d": 0
+       },
+       {
+        "v": 0.2183486129016855,
+        "d": 4
+       },
+       {
+        "v": 26.24652777777778,
+        "d": 2
+       },
+       "past it"
+      ]
+     ]
+    },
+    {
+     "caption": "The gain and the release stock by hand: arithmetic a reader can repeat beside the simulated value. A check outside its tolerance is reported and does not void the run.",
+     "heads": [
+      "Check",
+      "Rule",
+      "By hand",
+      "Simulated",
+      "Simulated, ranges as drawn",
+      "Tolerance",
+      "Reading"
+     ],
+     "rows": [
+      [
+       "Gain of the other arm at the middle of every range, fraction of plan",
+       "24 weeks of room x (624 planned vehicles - 96 places ready in week 1) x (1 - 0.0279 out of service) / 55,848 plan vehicle-weeks",
+       {
+        "v": 0.22057023673101997,
+        "d": 4
+       },
+       {
+        "v": 0.22078827054385713,
+        "d": 4
+       },
+       {
+        "v": 0.1846649238409015,
+        "d": 4
+       },
+       "2 percent of the hand value",
+       "inside the tolerance"
+      ],
+      [
+       "Stock at the release gate in its opening week, vehicles",
+       "24 a week x (release week as drawn - 2 process weeks), mean of seeds",
+       {
+        "v": 372,
+        "d": 1
+       },
+       {
+        "v": 369.5,
+        "d": 1
+       },
+       {
+        "absent": "this check has one simulated value"
+       },
+       "one week of deliveries",
+       "inside the tolerance"
+      ]
+     ]
+    }
+   ],
+   "chart": {
+    "title": "One fleet by week: delivered, and in rider service under both arms",
+    "category": "Week",
+    "axis": {
+     "d": 0,
+     "u": "vehicles"
+    },
+    "categories": [
+     "2",
+     "4",
+     "6",
+     "8",
+     "10",
+     "12",
+     "14",
+     "16",
+     "18",
+     "20",
+     "22",
+     "24",
+     "26",
+     "28",
+     "30",
+     "32",
+     "34",
+     "36",
+     "38",
+     "40",
+     "42",
+     "44",
+     "46",
+     "48",
+     "50",
+     "52",
+     "54",
+     "56",
+     "58",
+     "60",
+     "62",
+     "64",
+     "66",
+     "68",
+     "70",
+     "72",
+     "74",
+     "76",
+     "78",
+     "80",
+     "82",
+     "84",
+     "86",
+     "88",
+     "90",
+     "92",
+     "94",
+     "96",
+     "98",
+     "100",
+     "102",
+     "104"
+    ],
+    "seed": 7001,
+    "series": [
+     {
+      "id": "delivered",
+      "label": "Delivered",
+      "mark": "line",
+      "values": [
+       48,
+       96,
+       144,
+       192,
+       240,
+       288,
+       336,
+       384,
+       432,
+       480,
+       528,
+       576,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624
+      ]
+     },
+     {
+      "id": "control",
+      "label": "In rider service, control",
+      "mark": "line",
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       96,
+       94,
+       94,
+       93,
+       91,
+       92,
+       94,
+       92,
+       92,
+       92,
+       94,
+       94,
+       189,
+       189,
+       188,
+       187,
+       187,
+       248,
+       340,
+       374,
+       432,
+       472,
+       469,
+       465,
+       467,
+       581,
+       604,
+       609,
+       604,
+       602,
+       604,
+       608,
+       609,
+       610,
+       605,
+       604,
+       604,
+       604,
+       603,
+       611,
+       609,
+       607,
+       603,
+       599
+      ]
+     },
+     {
+      "id": "other",
+      "label": "In rider service, site power ordered 24 weeks ahead",
+      "mark": "line",
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       96,
+       94,
+       94,
+       93,
+       91,
+       152,
+       189,
+       186,
+       246,
+       363,
+       374,
+       377,
+       374,
+       496,
+       610,
+       608,
+       606,
+       607,
+       604,
+       607,
+       605,
+       610,
+       610,
+       603,
+       606,
+       601,
+       602,
+       607,
+       604,
+       602,
+       604,
+       608,
+       609,
+       610,
+       605,
+       604,
+       604,
+       604,
+       603,
+       611,
+       609,
+       607,
+       603,
+       599
+      ]
+     }
+    ],
+    "summary": {
+     "t": "This replay: at the end of week {w}, {d} vehicles are delivered and {c} are in rider service under the control. At the end of week {y}, {e} are in rider service under the control and {a} in the other arm.",
+     "v": {
+      "w": 26,
+      "d": 624,
+      "c": 91,
+      "y": 52,
+      "e": 248,
+      "a": 607
+     }
+    }
+   },
+   "notes": [
+    "The slowest depot resource, the next gate, the weeks ahead, the horizon and the plan follow from the setup.",
+    "In every setup sampled inside the accepted region an order arm read as a gain beyond the margin. A run adds the size of the gain, its interval, the idle weeks and where the waiting goes.",
+    "At the middle of every range the gain is arithmetic on inputs, as the first hand check shows. Spread takes some away: a tranche that lands late loses service and one that lands early gains none.",
+    "Whether an order arm stays inside the idle allowance follows from its weeks ahead and from the allowance, a rule of this lab. The first arm stayed inside it in every setup sampled; the second went past it in about half. The weeks ahead table shows where any allowance would cut the curve.",
+    "The control orders with the delivery calendar. Every gain follows from how late that is, so the control is a reference line, not a practice.",
+    "The deliveries control reads the same in every accepted setup: rider service is as it was while vehicles wait at the depot door, and the added waiting is arithmetic on the delivery plan. Line rates stay, so the extra vehicles wait at integration.",
+    "The release stock follows from the delivery rate and the release week. Both arms share the release gate, so it hardly moves the paired change.",
+    "The plan has no gate and no removal, so no arm reaches it. The vehicle-weeks table shows what the rest is made of."
+   ],
+   "inputs": [
+    [
+     "Deliveries",
+     {
+      "v": 24,
+      "d": 0,
+      "u": "vehicles a week for 26 weeks, 624 in all"
+     },
+     "Teaching assumption"
+    ],
+    [
+     "Lead time of site power",
+     {
+      "v": 36,
+      "d": 0,
+      "u": "to 60 weeks"
+     },
+     "You choose the middle. Teaching assumption: the range runs a quarter either side"
+    ],
+    [
+     "Lead time of ports",
+     {
+      "v": 18,
+      "d": 0,
+      "u": "to 30 weeks"
+     },
+     "You choose the middle. Teaching assumption: the range runs a quarter either side"
+    ],
+    [
+     "Lead time of stalls",
+     {
+      "v": 9,
+      "d": 0,
+      "u": "to 15 weeks"
+     },
+     "Teaching assumption"
+    ],
+    [
+     "Lead time of staff",
+     {
+      "v": 6,
+      "d": 0,
+      "u": "to 10 weeks"
+     },
+     "Teaching assumption"
+    ],
+    [
+     "Release gate opens, week",
+     {
+      "v": 12,
+      "d": 0,
+      "u": "to 20"
+     },
+     "Teaching assumption"
+    ],
+    [
+     "Unscheduled removals",
+     "12 per 1,000 vehicles in rider service a week; back after 1 to 8 weeks, 2.4 on average",
+     "Teaching assumption"
+    ],
+    [
+     "Integration, validation and depot induction",
+     "30, 32 and 60 vehicles a week; 0.95 pass validation first time; rework takes 2 weeks",
+     "Teaching assumption"
+    ],
+    [
+     "Depot tranche",
+     {
+      "v": 96,
+      "d": 0,
+      "u": "places; 1 tranche ready in week 1, 6 on order, one every 4 weeks"
+     },
+     "Sizing rule: the deliveries of one tranche interval"
+    ],
+    [
+     "Room over the tranche interval",
+     {
+      "v": 6,
+      "d": 2,
+      "u": "with 24 weeks of room"
+     },
+     "Governing ratio: weeks between the slowest depot resource and the next gate, over the weeks between tranches. The lab reads from 2.0. Site power over ports is 2.00"
+    ],
+    [
+     "Order ahead in the other arm",
+     {
+      "v": 24,
+      "d": 0,
+      "u": "weeks"
+     },
+     "Sizing rule: the room, the middle lead time minus the next gate"
+    ],
+    [
+     "Plan",
+     {
+      "v": 55848,
+      "d": 0,
+      "u": "vehicle-weeks over 104 weeks"
+     },
+     "Teaching assumption: a planned vehicle counts from 2 weeks after its delivery week. The plan has no gate and no removal"
+    ],
+    [
+     "Allowances",
+     "13 idle weeks per ordered place for an order arm; 2 weeks not in service per delivered vehicle for the deliveries control; margin 0.02 of plan, 1,117 vehicle-weeks",
+     "Teaching assumption: rules of this lab, not standards"
+    ]
+   ]
+  },
+  "end": {
+   "setup": {
+    "ratio": 2,
+    "room": 24,
+    "ahead": 36,
+    "ranges": [
+     [
+      36,
+      60
+     ],
+     [
+      18,
+      30
+     ],
+     [
+      9,
+      15
+     ],
+     [
+      6,
+      10
+     ]
+    ],
+    "release": [
+     12,
+     20
+    ]
+   },
+   "label": "scale-spec:a0b5e327",
+   "digest": "a0b5e327938ad151801e3b19ea06e6fec3b2b1e4ce773d5cb520c17b23f75bcf",
+   "change": "Order week of site power: with the delivery calendar in the control arm, 36 weeks ahead of it in the other arm.",
+   "result_sha256": "e3f3fb5d4cf5a16c593f0dc1e3b268676a3778b04e500e4f8ce081fe897c0586",
+   "result_chars": 33856,
+   "main": {
+    "validity": "VALID",
+    "outcome": "IMPROVED",
+    "recommendation": "HOLD",
+    "baseline_mean": 0.5695802296710117,
+    "candidate_mean": 0.785654813064031,
+    "mean_delta": 0.21607458339301913,
+    "median_delta": 0.21621186076493337,
+    "ci_low": 0.19610072577949675,
+    "ci_high": 0.2354888865014563,
+    "paired_deltas": [
+     0.20058014611087238,
+     0.26029580289356824,
+     0.23243446497636444,
+     0.22253258845437618,
+     0.2286742587021917,
+     0.20419710643174327,
+     0.1360836556367283,
+     0.2071157427302679,
+     0.17724896146683855,
+     0.20989113307549057,
+     0.23759131929522992,
+     0.27624982094255834
+    ],
+    "guardrail": {
+     "metric": "idle weeks per ordered place",
+     "status": "REGRESSED",
+     "harm": 14.472222222222223,
+     "max_harm": 13
+    },
+    "descriptive": [
+     {
+      "metric": "weeks not in service per delivered vehicle",
+      "baseline_mean": 40.52256944444444,
+      "candidate_mean": 21.18389423076923,
+      "mean_delta": -19.338675213675213
+     }
+    ]
+   },
+   "controls": [
+    {
+     "title": "Null control, both arms order with the delivery calendar, declared to read zero on every measure",
+     "label": "scale-spec:494f724a",
+     "control": "null",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 0.5695802296710117,
+     "candidate_mean": 0.5695802296710117,
+     "mean_delta": 0,
+     "median_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "paired_deltas": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "guardrail": {
+      "metric": "idle weeks per ordered place",
+      "status": "WITHIN",
+      "harm": 0,
+      "max_harm": 13
+     },
+     "descriptive": [
+      {
+       "metric": "weeks not in service per delivered vehicle",
+       "baseline_mean": 40.52256944444444,
+       "candidate_mean": 40.52256944444444,
+       "mean_delta": 0
+      }
+     ]
+    },
+    {
+     "title": "Non-binding order control, site power with a lead time of 0 weeks in both arms, declared to read zero on the main measure",
+     "label": "scale-spec:fc0d0072",
+     "control": "non-binding",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "HOLD",
+     "baseline_mean": 0.7879288425726972,
+     "candidate_mean": 0.7879288425726972,
+     "mean_delta": 0,
+     "median_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "paired_deltas": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "guardrail": {
+      "metric": "idle weeks per ordered place",
+      "status": "REGRESSED",
+      "harm": 24,
+      "max_harm": 13
+     },
+     "descriptive": [
+      {
+       "metric": "weeks not in service per delivered vehicle",
+       "baseline_mean": 20.980368589743588,
+       "candidate_mean": 20.980368589743588,
+       "mean_delta": 0
+      }
+     ]
+    },
+    {
+     "title": "Non-binding deliveries control, deliveries 1.5 times as fast while vehicles wait at the depot door, declared to read zero on the main measure",
+     "label": "scale-spec:7bad40d3",
+     "control": "non-binding",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "HOLD",
+     "baseline_mean": 0.5695802296710117,
+     "candidate_mean": 0.5695802296710117,
+     "mean_delta": 0,
+     "median_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "paired_deltas": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "guardrail": {
+      "metric": "weeks not in service per delivered vehicle",
+      "status": "REGRESSED",
+      "harm": 4.3269230769230775,
+      "max_harm": 2
+     },
+     "descriptive": [
+      {
+       "metric": "idle weeks per ordered place",
+       "baseline_mean": 3.121527777777778,
+       "candidate_mean": 3.121527777777778,
+       "mean_delta": 0
+      }
+     ]
+    }
+   ],
+   "tables": [
+    {
+     "caption": "One fleet, several counts: end of week 26, the last delivery week of the control, mean of 12 paired seeds.",
+     "heads": [
+      "Count",
+      "Which vehicles are in it",
+      "Control",
+      "Site power ordered 36 weeks ahead"
+     ],
+     "rows": [
+      [
+       "Delivered",
+       "Handed over, at any stage",
+       {
+        "v": 624,
+        "d": 0
+       },
+       {
+        "v": 624,
+        "d": 0
+       }
+      ],
+      [
+       "Integrated",
+       "Through the integration line",
+       {
+        "v": 600,
+        "d": 0
+       },
+       {
+        "v": 600,
+        "d": 0
+       }
+      ],
+      [
+       "Validated",
+       "Passed validation, first time or after rework",
+       {
+        "v": 573.3333333333334,
+        "d": 0
+       },
+       {
+        "v": 573.3333333333334,
+        "d": 0
+       }
+      ],
+      [
+       "Released",
+       "Let through the release gate",
+       {
+        "v": 573.3333333333334,
+        "d": 0
+       },
+       {
+        "v": 573.3333333333334,
+        "d": 0
+       }
+      ],
+      [
+       "Accepted at a depot",
+       "Given a depot place",
+       {
+        "v": 96,
+        "d": 0
+       },
+       {
+        "v": 165,
+        "d": 0
+       }
+      ],
+      [
+       "In rider service",
+       "Accepted and not removed",
+       {
+        "v": 93.5,
+        "d": 0
+       },
+       {
+        "v": 161.41666666666666,
+        "d": 0
+       }
+      ],
+      [
+       "Out of service",
+       "Removed and not yet back; keeps its place",
+       {
+        "v": 2.5,
+        "d": 0
+       },
+       {
+        "v": 3.5833333333333335,
+        "d": 0
+       }
+      ],
+      [
+       "First week at 90 percent",
+       "The first week with 562 vehicles in rider service",
+       {
+        "v": 68.5,
+        "d": 1
+       },
+       {
+        "v": 44.083333333333336,
+        "d": 1
+       }
+      ]
+     ]
+    },
+    {
+     "caption": "The gate that binds. Where delivered vehicle-weeks went over 104 weeks, mean of 12 paired seeds. Waiting is stock past the 2 process weeks. Most depot door waiting: site power under the control; ports in the other arm. The rows sum to the total.",
+     "heads": [
+      "Vehicle-weeks",
+      "Control",
+      "Site power ordered 36 weeks ahead"
+     ],
+     "rows": [
+      [
+       "Waiting: integration",
+       {
+        "v": 0,
+        "d": 0
+       },
+       {
+        "v": 0,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: validation and rework",
+       {
+        "v": 66.66666666666667,
+        "d": 0
+       },
+       {
+        "v": 66.66666666666667,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: the release gate",
+       {
+        "v": 2707.1666666666665,
+        "d": 0
+       },
+       {
+        "v": 2707.1666666666665,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: depot induction",
+       {
+        "v": 1819.5,
+        "d": 0
+       },
+       {
+        "v": 1927.5,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: site power",
+       {
+        "v": 18576.666666666668,
+        "d": 0
+       },
+       {
+        "v": 686.9166666666666,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: ports",
+       {
+        "v": 0,
+        "d": 0
+       },
+       {
+        "v": 5381.75,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: stalls",
+       {
+        "v": 0,
+        "d": 0
+       },
+       {
+        "v": 0,
+        "d": 0
+       }
+      ],
+      [
+       "Waiting: staff",
+       {
+        "v": 0,
+        "d": 0
+       },
+       {
+        "v": 0,
+        "d": 0
+       }
+      ],
+      [
+       "Inside the process weeks",
+       {
+        "v": 1248,
+        "d": 0
+       },
+       {
+        "v": 1248,
+        "d": 0
+       }
+      ],
+      [
+       "Out of service",
+       {
+        "v": 868.0833333333334,
+        "d": 0
+       },
+       {
+        "v": 1200.75,
+        "d": 0
+       }
+      ],
+      [
+       "In rider service",
+       {
+        "v": 31809.916666666668,
+        "d": 0
+       },
+       {
+        "v": 43877.25,
+        "d": 0
+       }
+      ],
+      [
+       "Total: delivered vehicle-weeks",
+       {
+        "v": 57096,
+        "d": 0
+       },
+       {
+        "v": 57096,
+        "d": 0
+       }
+      ]
+     ]
+    },
+    {
+     "caption": "Lead-time mismatch. Weeks ahead, gain and idle weeks: site power ordered 0 to 48 weeks ahead, mean of 12 paired seeds. The allowance is 13 idle weeks per ordered place.",
+     "heads": [
+      "Weeks ahead",
+      "Gain, fraction of plan",
+      "Idle weeks per ordered place, past the control",
+      "Against the allowance"
+     ],
+     "rows": [
+      [
+       {
+        "v": 0,
+        "d": 0
+       },
+       {
+        "v": 0,
+        "d": 4
+       },
+       {
+        "v": 0,
+        "d": 2
+       },
+       "inside it"
+      ],
+      [
+       {
+        "v": 12,
+        "d": 0
+       },
+       {
+        "v": 0.10839839087045791,
+        "d": 4
+       },
+       {
+        "v": 1.1996527777777775,
+        "d": 2
+       },
+       "inside it"
+      ],
+      [
+       {
+        "v": 24,
+        "d": 0
+       },
+       {
+        "v": 0.1846649238409015,
+        "d": 4
+       },
+       {
+        "v": 5.602430555555555,
+        "d": 2
+       },
+       "inside it"
+      ],
+      [
+       {
+        "v": 36,
+        "d": 0
+       },
+       {
+        "v": 0.21607458339301913,
+        "d": 4
+       },
+       {
+        "v": 14.472222222222223,
+        "d": 2
+       },
+       "past it"
+      ],
+      [
+       {
+        "v": 48,
+        "d": 0
+       },
+       {
+        "v": 0.2183486129016855,
+        "d": 4
+       },
+       {
+        "v": 26.24652777777778,
+        "d": 2
+       },
+       "past it"
+      ]
+     ]
+    },
+    {
+     "caption": "The gain and the release stock by hand: arithmetic a reader can repeat beside the simulated value. A check outside its tolerance is reported and does not void the run.",
+     "heads": [
+      "Check",
+      "Rule",
+      "By hand",
+      "Simulated",
+      "Simulated, ranges as drawn",
+      "Tolerance",
+      "Reading"
+     ],
+     "rows": [
+      [
+       "Gain of the other arm at the middle of every range, fraction of plan",
+       "24 weeks of room x (624 planned vehicles - 96 places ready in week 1) x (1 - 0.0279 out of service) / 55,848 plan vehicle-weeks",
+       {
+        "v": 0.22057023673101997,
+        "d": 4
+       },
+       {
+        "v": 0.22078827054385713,
+        "d": 4
+       },
+       {
+        "v": 0.21607458339301913,
+        "d": 4
+       },
+       "2 percent of the hand value",
+       "inside the tolerance"
+      ],
+      [
+       "Stock at the release gate in its opening week, vehicles",
+       "24 a week x (release week as drawn - 2 process weeks), mean of seeds",
+       {
+        "v": 372,
+        "d": 1
+       },
+       {
+        "v": 369.5,
+        "d": 1
+       },
+       {
+        "absent": "this check has one simulated value"
+       },
+       "one week of deliveries",
+       "inside the tolerance"
+      ]
+     ]
+    }
+   ],
+   "chart": {
+    "title": "One fleet by week: delivered, and in rider service under both arms",
+    "category": "Week",
+    "axis": {
+     "d": 0,
+     "u": "vehicles"
+    },
+    "categories": [
+     "2",
+     "4",
+     "6",
+     "8",
+     "10",
+     "12",
+     "14",
+     "16",
+     "18",
+     "20",
+     "22",
+     "24",
+     "26",
+     "28",
+     "30",
+     "32",
+     "34",
+     "36",
+     "38",
+     "40",
+     "42",
+     "44",
+     "46",
+     "48",
+     "50",
+     "52",
+     "54",
+     "56",
+     "58",
+     "60",
+     "62",
+     "64",
+     "66",
+     "68",
+     "70",
+     "72",
+     "74",
+     "76",
+     "78",
+     "80",
+     "82",
+     "84",
+     "86",
+     "88",
+     "90",
+     "92",
+     "94",
+     "96",
+     "98",
+     "100",
+     "102",
+     "104"
+    ],
+    "seed": 7001,
+    "series": [
+     {
+      "id": "delivered",
+      "label": "Delivered",
+      "mark": "line",
+      "values": [
+       48,
+       96,
+       144,
+       192,
+       240,
+       288,
+       336,
+       384,
+       432,
+       480,
+       528,
+       576,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624,
+       624
+      ]
+     },
+     {
+      "id": "control",
+      "label": "In rider service, control",
+      "mark": "line",
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       96,
+       94,
+       94,
+       93,
+       91,
+       92,
+       94,
+       92,
+       92,
+       92,
+       94,
+       94,
+       189,
+       189,
+       188,
+       187,
+       187,
+       248,
+       340,
+       374,
+       432,
+       472,
+       469,
+       465,
+       467,
+       581,
+       604,
+       609,
+       604,
+       602,
+       604,
+       608,
+       609,
+       610,
+       605,
+       604,
+       604,
+       604,
+       603,
+       611,
+       609,
+       607,
+       603,
+       599
+      ]
+     },
+     {
+      "id": "other",
+      "label": "In rider service, site power ordered 36 weeks ahead",
+      "mark": "line",
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       96,
+       94,
+       94,
+       93,
+       91,
+       152,
+       273,
+       340,
+       373,
+       465,
+       467,
+       530,
+       562,
+       611,
+       607,
+       607,
+       605,
+       606,
+       604,
+       607,
+       605,
+       610,
+       610,
+       603,
+       606,
+       601,
+       602,
+       607,
+       604,
+       602,
+       604,
+       608,
+       609,
+       610,
+       605,
+       604,
+       604,
+       604,
+       603,
+       611,
+       609,
+       607,
+       603,
+       599
+      ]
+     }
+    ],
+    "summary": {
+     "t": "This replay: at the end of week {w}, {d} vehicles are delivered and {c} are in rider service under the control. At the end of week {y}, {e} are in rider service under the control and {a} in the other arm.",
+     "v": {
+      "w": 26,
+      "d": 624,
+      "c": 91,
+      "y": 52,
+      "e": 248,
+      "a": 606
+     }
+    }
+   },
+   "notes": [
+    "The slowest depot resource, the next gate, the weeks ahead, the horizon and the plan follow from the setup.",
+    "In every setup sampled inside the accepted region an order arm read as a gain beyond the margin. A run adds the size of the gain, its interval, the idle weeks and where the waiting goes.",
+    "At the middle of every range the gain is arithmetic on inputs, as the first hand check shows. Spread takes some away: a tranche that lands late loses service and one that lands early gains none.",
+    "Whether an order arm stays inside the idle allowance follows from its weeks ahead and from the allowance, a rule of this lab. The first arm stayed inside it in every setup sampled; the second went past it in about half. The weeks ahead table shows where any allowance would cut the curve.",
+    "The control orders with the delivery calendar. Every gain follows from how late that is, so the control is a reference line, not a practice.",
+    "The deliveries control reads the same in every accepted setup: rider service is as it was while vehicles wait at the depot door, and the added waiting is arithmetic on the delivery plan. Line rates stay, so the extra vehicles wait at integration.",
+    "The release stock follows from the delivery rate and the release week. Both arms share the release gate, so it hardly moves the paired change.",
+    "The plan has no gate and no removal, so no arm reaches it. The vehicle-weeks table shows what the rest is made of."
+   ],
+   "inputs": [
+    [
+     "Deliveries",
+     {
+      "v": 24,
+      "d": 0,
+      "u": "vehicles a week for 26 weeks, 624 in all"
+     },
+     "Teaching assumption"
+    ],
+    [
+     "Lead time of site power",
+     {
+      "v": 36,
+      "d": 0,
+      "u": "to 60 weeks"
+     },
+     "You choose the middle. Teaching assumption: the range runs a quarter either side"
+    ],
+    [
+     "Lead time of ports",
+     {
+      "v": 18,
+      "d": 0,
+      "u": "to 30 weeks"
+     },
+     "You choose the middle. Teaching assumption: the range runs a quarter either side"
+    ],
+    [
+     "Lead time of stalls",
+     {
+      "v": 9,
+      "d": 0,
+      "u": "to 15 weeks"
+     },
+     "Teaching assumption"
+    ],
+    [
+     "Lead time of staff",
+     {
+      "v": 6,
+      "d": 0,
+      "u": "to 10 weeks"
+     },
+     "Teaching assumption"
+    ],
+    [
+     "Release gate opens, week",
+     {
+      "v": 12,
+      "d": 0,
+      "u": "to 20"
+     },
+     "Teaching assumption"
+    ],
+    [
+     "Unscheduled removals",
+     "12 per 1,000 vehicles in rider service a week; back after 1 to 8 weeks, 2.4 on average",
+     "Teaching assumption"
+    ],
+    [
+     "Integration, validation and depot induction",
+     "30, 32 and 60 vehicles a week; 0.95 pass validation first time; rework takes 2 weeks",
+     "Teaching assumption"
+    ],
+    [
+     "Depot tranche",
+     {
+      "v": 96,
+      "d": 0,
+      "u": "places; 1 tranche ready in week 1, 6 on order, one every 4 weeks"
+     },
+     "Sizing rule: the deliveries of one tranche interval"
+    ],
+    [
+     "Room over the tranche interval",
+     {
+      "v": 6,
+      "d": 2,
+      "u": "with 24 weeks of room"
+     },
+     "Governing ratio: weeks between the slowest depot resource and the next gate, over the weeks between tranches. The lab reads from 2.0. Site power over ports is 2.00"
+    ],
+    [
+     "Order ahead in the other arm",
+     {
+      "v": 36,
+      "d": 0,
+      "u": "weeks"
+     },
+     "Sizing rule: the end of the lead range minus the next gate"
+    ],
+    [
+     "Plan",
+     {
+      "v": 55848,
+      "d": 0,
+      "u": "vehicle-weeks over 104 weeks"
+     },
+     "Teaching assumption: a planned vehicle counts from 2 weeks after its delivery week. The plan has no gate and no removal"
+    ],
+    [
+     "Allowances",
+     "13 idle weeks per ordered place for an order arm; 2 weeks not in service per delivered vehicle for the deliveries control; margin 0.02 of plan, 1,117 vehicle-weeks",
+     "Teaching assumption: rules of this lab, not standards"
+    ]
+   ]
+  }
+ }
+}
