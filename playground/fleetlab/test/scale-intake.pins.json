@@ -29,7 +29,7 @@
   3011,
   3012
  ],
- "public_counts_to_stay_away_from": [
+ "counts_the_default_page_stays_away_from": [
   300,
   2000,
   3200,
@@ -74,8 +74,8 @@
    "label": "scale-spec:1aa8c833",
    "digest": "1aa8c833d067cb4ea2afa744044b011d1fd234b9e6db93e213ef78d843adebf2",
    "change": "Order week of site power: with the delivery calendar in the control arm, 24 weeks ahead of it in the other arm.",
-   "result_sha256": "44ec9d75abacdcacc6e6531ee4e2cdcdac6f482d4387a83b375f5aec2de0ccbb",
-   "result_chars": 33720,
+   "result_sha256": "da4b66bda20f271c45045a41f69db13a9c794a7527bc91b4b0d2e6995fec97d4",
+   "result_chars": 33961,
    "main": {
     "validity": "VALID",
     "outcome": "IMPROVED",
@@ -352,7 +352,7 @@
      ]
     },
     {
-     "caption": "The gate that binds. Where delivered vehicle-weeks went over 104 weeks, mean of 12 paired seeds. Waiting is stock past the 2 process weeks. Most depot door waiting: site power under the control; site power in the other arm. The rows sum to the total.",
+     "caption": "The gate that binds. Where delivered vehicle-weeks went over 104 weeks, mean of 12 paired seeds. Waiting is stock past the 2 process weeks. Each week, depot door stock up to the free places waits on depot induction, the rest on the resource the next tranche waits for. Most depot door waiting: site power under the control; site power in the other arm. The rows sum to the total before each is rounded to a whole vehicle-week.",
      "heads": [
       "Vehicle-weeks",
       "Control",
@@ -395,22 +395,22 @@
       [
        "Waiting: depot induction",
        {
-        "v": 1819.5,
+        "v": 290,
         "d": 0
        },
        {
-        "v": 1904.5,
+        "v": 321,
         "d": 0
        }
       ],
       [
        "Waiting: site power",
        {
-        "v": 18576.666666666668,
+        "v": 20106.166666666668,
         "d": 0
        },
        {
-        "v": 4131.75,
+        "v": 4943.666666666667,
         "d": 0
        }
       ],
@@ -421,7 +421,7 @@
         "d": 0
        },
        {
-        "v": 3762.9166666666665,
+        "v": 4534.5,
         "d": 0
        }
       ],
@@ -888,7 +888,7 @@
     "At the middle of every range the gain is arithmetic on inputs, as the first hand check shows. Spread takes some away: a tranche that lands late loses service and one that lands early gains none.",
     "Whether an order arm stays inside the idle allowance follows from its weeks ahead and from the allowance, a rule of this lab. The first arm stayed inside it in every setup sampled; the second went past it in about half. The weeks ahead table shows where any allowance would cut the curve.",
     "The control orders with the delivery calendar. Every gain follows from how late that is, so the control is a reference line, not a practice.",
-    "The deliveries control reads the same in every accepted setup: rider service is as it was while vehicles wait at the depot door, and the added waiting is arithmetic on the delivery plan. Line rates stay, so the extra vehicles wait at integration.",
+    "The deliveries control reads the same in every accepted setup: rider service is as it was while vehicles wait at the depot door, and the added waiting is arithmetic on the delivery plan. Line rates stay, so two fifths of it sits at integration and the rest at validation and rework, the release gate and the depot door.",
     "The release stock follows from the delivery rate and the release week. Both arms share the release gate, so it hardly moves the paired change.",
     "The plan has no gate and no removal, so no arm reaches it. The vehicle-weeks table shows what the rest is made of."
    ],
@@ -1031,8 +1031,8 @@
    "label": "scale-spec:a0b5e327",
    "digest": "a0b5e327938ad151801e3b19ea06e6fec3b2b1e4ce773d5cb520c17b23f75bcf",
    "change": "Order week of site power: with the delivery calendar in the control arm, 36 weeks ahead of it in the other arm.",
-   "result_sha256": "e3f3fb5d4cf5a16c593f0dc1e3b268676a3778b04e500e4f8ce081fe897c0586",
-   "result_chars": 33856,
+   "result_sha256": "12529def58fec1fd7973f6a94df3ef09c923c1c1db39e3252cf54d5686195208",
+   "result_chars": 34099,
    "main": {
     "validity": "VALID",
     "outcome": "IMPROVED",
@@ -1309,7 +1309,7 @@
      ]
     },
     {
-     "caption": "The gate that binds. Where delivered vehicle-weeks went over 104 weeks, mean of 12 paired seeds. Waiting is stock past the 2 process weeks. Most depot door waiting: site power under the control; ports in the other arm. The rows sum to the total.",
+     "caption": "The gate that binds. Where delivered vehicle-weeks went over 104 weeks, mean of 12 paired seeds. Waiting is stock past the 2 process weeks. Each week, depot door stock up to the free places waits on depot induction, the rest on the resource the next tranche waits for. Most depot door waiting: site power under the control; ports in the other arm. The rows sum to the total before each is rounded to a whole vehicle-week.",
      "heads": [
       "Vehicle-weeks",
       "Control",
@@ -1352,22 +1352,22 @@
       [
        "Waiting: depot induction",
        {
-        "v": 1819.5,
+        "v": 290,
         "d": 0
        },
        {
-        "v": 1927.5,
+        "v": 386,
         "d": 0
        }
       ],
       [
        "Waiting: site power",
        {
-        "v": 18576.666666666668,
+        "v": 20106.166666666668,
         "d": 0
        },
        {
-        "v": 686.9166666666666,
+        "v": 947.9166666666666,
         "d": 0
        }
       ],
@@ -1378,7 +1378,7 @@
         "d": 0
        },
        {
-        "v": 5381.75,
+        "v": 6662.25,
         "d": 0
        }
       ],
@@ -1845,7 +1845,7 @@
     "At the middle of every range the gain is arithmetic on inputs, as the first hand check shows. Spread takes some away: a tranche that lands late loses service and one that lands early gains none.",
     "Whether an order arm stays inside the idle allowance follows from its weeks ahead and from the allowance, a rule of this lab. The first arm stayed inside it in every setup sampled; the second went past it in about half. The weeks ahead table shows where any allowance would cut the curve.",
     "The control orders with the delivery calendar. Every gain follows from how late that is, so the control is a reference line, not a practice.",
-    "The deliveries control reads the same in every accepted setup: rider service is as it was while vehicles wait at the depot door, and the added waiting is arithmetic on the delivery plan. Line rates stay, so the extra vehicles wait at integration.",
+    "The deliveries control reads the same in every accepted setup: rider service is as it was while vehicles wait at the depot door, and the added waiting is arithmetic on the delivery plan. Line rates stay, so two fifths of it sits at integration and the rest at validation and rework, the release gate and the depot door.",
     "The release stock follows from the delivery rate and the release week. Both arms share the release gate, so it hardly moves the paired change.",
     "The plan has no gate and no removal, so no arm reaches it. The vehicle-weeks table shows what the rest is made of."
    ],

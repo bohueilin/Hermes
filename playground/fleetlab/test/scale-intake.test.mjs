@@ -5,11 +5,13 @@ import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {LAB,INTERNALS} from '../src/model/scale-intake.js';
 import {scaleJson} from '../src/model/scale-contract.js';
+import {cellText} from '../src/ui/scale-lab.js';
 import {sha256Hex} from '../src/core/sha256.js';
 import {u32} from '../src/core/keyed.js';
 
 const PINS=JSON.parse(readFileSync(new URL('./scale-intake.pins.json',import.meta.url),'utf8'));
 const SOURCE=readFileSync(new URL('../src/model/scale-intake.js',import.meta.url),'utf8');
+const SELF=readFileSync(new URL(import.meta.url),'utf8'),PINS_TEXT=readFileSync(new URL('./scale-intake.pins.json',import.meta.url),'utf8');
 const {size,tapeOf,simulate,PLAN,STANDING}=INTERNALS;
 const FLEET=624,PLACES=96,RATE=24,WEEKS=26,H=104,IDLE=13,HELD=2,MARGIN=.02,EVERY=4;
 const CONTROL={id:'control',ahead:0,pace:1,open:false};
@@ -48,6 +50,10 @@ test('the default setup reproduces its pinned values exactly, for both arms',()=
   assert.deepEqual([f(m.baseline_mean),f(m.mean_delta),f(m.ci_low),f(m.ci_high),f(m.guardrail.harm)],[.5696,.1847,.1722,.1965,5.6024]);
   assert.deepEqual([f(e.mean_delta),f(e.ci_low),f(e.ci_high),f(e.guardrail.harm)],[.2161,.1961,.2355,14.4722]);
   assert.deepEqual([m.outcome,m.recommendation,e.outcome,e.recommendation],['IMPROVED','ADVANCE_TO_NEXT_TEST','IMPROVED','HOLD']);
+  // The depot door rows of the vehicle-weeks table, control then other arm: depot induction, site power, ports.
+  const door=arm=>PINS.arms[arm].tables[1].rows.slice(3,6).map(row=>[row[0],f(row[1].v),f(row[2].v)]);
+  assert.deepEqual(door('middle'),[['Waiting: depot induction',290,321],['Waiting: site power',20106.1667,4943.6667],['Waiting: ports',0,4534.5]]);
+  assert.deepEqual(door('end'),[['Waiting: depot induction',290,386],['Waiting: site power',20106.1667,947.9167],['Waiting: ports',0,6662.25]]);
 });
 
 test('conservation, the order of the counts, the gap identity and the horizon hold in every run',()=>{
@@ -65,6 +71,26 @@ test('conservation, the order of the counts, the gap identity and the horizon ho
     }
   }
   assert.equal(runs,SETUPS.length*2*12*7);
+});
+
+test('each week the depot door stock is split: depot induction holds what a place was left for, the resource that holds the next tranche holds the rest',()=>{
+  let runs=0,most=0;
+  for(const c of SETUPS)for(const arm of ['middle','end']){
+    const s=LAB.derive({...c,arm}).setup;
+    for(const a of [s.main.spec.candidate,...s.checks.flatMap(k=>[k.spec.baseline,k.spec.candidate])])for(const seed of LAB.seeds){
+      const r=simulate(a,tapeOf(s,seed)),lands=r.tape.lead.map((row,i)=>row.map((lead,k)=>1+k*EVERY+(i?lead:(a.open?0:lead)-a.ahead)));
+      const ready=lands[0].map((_,k)=>Math.max(...lands.map(x=>x[k]))),door=[0,0,0,0,0];let places=0,last=0;
+      for(const [t,row] of r.rows.entries()){
+        const stock=row[3]-row[4],left=PLACES*(1+ready.filter(w=>w<=t+1).length)-row[5]-row[6],next=Math.min(...ready.filter(w=>w>t+1)),held=next===Infinity?stock:Math.min(stock,left);
+        assert.ok(left>=0&&stock>=0);door[0]+=held;if(stock>held)door[1+lands.findIndex(x=>x[ready.indexOf(next)]===next)]+=stock-held;
+        if(stock>0){if(next===Infinity)last+=stock;else places+=left;}
+      }
+      runs++;most=Math.max(most,r.held[3]);
+      assert.deepEqual(r.held.slice(3),door,`${JSON.stringify(c)} ${a.id} seed ${seed}: the depot door rows, induction first`);
+      assert.ok(r.held[3]<=places+last,'depot induction holds no vehicle that had no place to enter');
+    }
+  }
+  assert.equal(runs,SETUPS.length*2*12*7);assert.ok(most>0);
 });
 
 test('with every gate open and no removal, rider service is delivery two weeks earlier and the plan is met exactly',()=>{
@@ -134,6 +160,24 @@ test('the three controls read as declared at every pinned setup',()=>{
   }
 });
 
+test('the note on the deliveries control says where the added waiting sits, as the recorded rows have it',()=>{
+  for(const c of SETUPS){
+    const {d,r}=press({...c,arm:'middle'}),s=d.setup,pace=s.checks[2].spec.candidate,added=new Array(8).fill(0);
+    assert.equal(pace.id,'pace');
+    for(const seed of LAB.seeds){
+      const tape=tapeOf(s,seed),a=simulate(CONTROL,tape),b=simulate(pace,tape);
+      assert.deepEqual([b.sumD-a.sumD,b.sumS-a.sumS,b.sumR-a.sumR,b.sumIn-a.sumIn],[2700,0,0,0],'all of the added vehicle-weeks are waiting');
+      assert.equal(5*(b.held[0]-a.held[0]),2*2700,'two fifths of the added waiting is at integration, on every seed');
+      b.held.forEach((h,g)=>{added[g]+=h-a.held[g];});
+    }
+    const [line,check,gate,...door]=added,depot=door.reduce((x,y)=>x+y,0);
+    assert.ok(check>0&&gate>0&&depot>0,'each gate the note names holds some of the rest');assert.equal(line+check+gate+depot,2700*12,'and the note leaves no gate out');
+    assert.ok(line<gate+depot,`${JSON.stringify(c)}: the release gate and the depot door hold over the share of integration`);
+    assert.match(r.notes[5],/^The deliveries control reads the same in every accepted setup: .* Line rates stay, so two fifths of it sits at integration and the rest at validation and rework, the release gate and the depot door\.$/);
+    assert.doesNotMatch(r.notes.join(' '),/the extra vehicles wait at integration/);
+  }
+});
+
 test('the four laws show at every pinned setup, and the recommendation varies with the setup',()=>{
   const seen=new Set();
   for(const c of SETUPS){
@@ -170,6 +214,27 @@ test('the four laws show at every pinned setup, and the recommendation varies wi
   assert.deepEqual([...seen].sort(),['ADVANCE_TO_NEXT_TEST','HOLD'],'the second arm is inside the allowance at some setups and past it at others');
 });
 
+test('the vehicle-weeks rows sum to the total before rounding, and as printed they stay within the number of rows of it, as the caption says',()=>{
+  const shown=c=>Number(cellText(c).replace(/,/g,''));let apart=0,widest=0;
+  for(const c of [...SETUPS,{power:26,ports:17}])for(const arm of ['middle','end']){
+    const t=press({...c,arm}).r.tables[1],body=t.rows.slice(0,-1),total=t.rows.at(-1);
+    assert.match(total[0],/^Total: /);assert.equal(body.length,11);
+    for(const col of [1,2]){
+      for(const row of t.rows)assert.match(cellText(row[col]),/^\d{1,3}(,\d{3})*$/,'a whole number of vehicle-weeks, grouped');
+      assert.ok(Math.abs(body.reduce((n,row)=>n+row[col].v,0)-total[col].v)<1e-6,'the exact rows sum to the exact total');
+      const added=body.reduce((n,row)=>n+shown(row[col]),0),gap=Math.abs(added-shown(total[col])),where=`${JSON.stringify(c)} ${arm}, ${t.heads[col]}: the printed rows add to ${added} and the printed total is ${shown(total[col])}`;
+      widest=Math.max(widest,gap);if(gap)apart++;
+      assert.ok(gap<=body.length,where);
+      if(gap)assert.doesNotMatch(t.caption,/The rows sum to the total\.$/,`${where}, so the caption may not say the rows sum to the total as printed`);
+    }
+    assert.match(t.caption,/ The rows sum to the total before each is rounded to a whole vehicle-week\.$/,`${JSON.stringify(c)} ${arm}`);
+  }
+  assert.ok(apart>0&&widest>=1,'the printed rows do not add to the printed total in every press, so the caption may not say that they do');
+  // One press a reader can type, added as a reader would add it: site power 40, ports 24, the second arm, the column of the other arm.
+  const t=press({arm:'end',power:40,ports:24}).r.tables[1];
+  assert.deepEqual([t.rows.slice(0,-1).reduce((n,row)=>n+shown(row[2]),0),shown(t.rows.at(-1)[2])],[57097,57096]);
+});
+
 test('the hand checks hold at every pinned setup, and the closed form with spread holds on the displayed plan',()=>{
   const span=([a,b])=>Array.from({length:b-a+1},(_,i)=>a+i);
   for(const c of SETUPS)for(const arm of ['middle','end']){
@@ -186,7 +251,10 @@ test('the hand checks hold at every pinned setup, and the closed form with sprea
 });
 
 test('the refusal region: what runs, what is refused, and how each refusal reads',()=>{
-  const runs=[[48,24],[24,16],[32,24],[56,28],[36,28],[44,20]],refused=[[31,24,/leave 7 weeks of room, 1\.75 tranche intervals\. The lab reads from 2\.0: set site power to 32 weeks or past it, or ports to 23 or before it$/],[24,28,/leave -4 weeks of room, -1\.00 tranche intervals\./],[35,28,/^site power \(35\) and ports, the next gate \(28\), leave 7 weeks of room/]];
+  const runs=[[48,24],[24,16],[32,24],[56,28],[36,28],[44,20]],refused=[[31,24,/^site power \(31\) and ports, the next gate \(24\), leave 7 weeks of room, 1\.75 tranche intervals\. The lab reads from 2\.0: set site power to 32 weeks or past it, or ports to 23 or before it$/],
+    [35,28,/^site power \(35\) and ports, the next gate \(28\), leave 7 weeks of room/],[24,23,/^site power \(24\) and ports, the next gate \(23\), leave 1 week of room, 0\.25 tranche intervals\. The lab reads from 2\.0: set site power to 31 weeks or past it, or ports to 16 or before it$/],
+    [24,24,/^site power \(24\) leaves no room past ports \(24\)\. The lab reads from 8 weeks of room: set site power to 32 weeks or past it, or ports to 16 or before it$/],
+    [24,25,/^site power \(24\) leaves no room past ports \(25\)\. The lab reads from 8 weeks of room: set site power to 33 weeks or past it, or ports to 16 or before it$/],[24,28,/^site power \(24\) leaves no room past ports \(28\)\. /]];
   for(const [power,ports] of runs)assert.equal(LAB.derive({arm:'middle',power,ports}).ok,true,`${power}/${ports}`);
   for(const [power,ports,message] of refused){const d=LAB.derive({arm:'end',power,ports});assert.equal(d.ok,false);assert.match(d.reason,message);assert.equal(d.setup,undefined,'a refused setup has nothing to run');}
   // The governing ratio governs: no value of the room over the tranche interval is both accepted and refused.
@@ -198,8 +266,13 @@ test('the refusal region: what runs, what is refused, and how each refusal reads
     if(d.ok){accepted++;continue;}
     const shown=d.reason;longest=Math.max(longest,shown.length);
     assert.ok(shown.length<=192,shown);clean(shown,[H3,H6,V,DIRECTION,HOUSE,LINKS,DASH],'refusal');assert.doesNotMatch(shown,/undefined|NaN|_|power:|ports:/);
+    // A whole sentence at every value: no count under zero, one week is a week, and ports is the next gate only when site power arrives after it.
+    assert.doesNotMatch(shown,/-\d|\b[01] weeks\b|\b0\.00\b|  |[.,:;] ?$/,shown);assert.equal(/the next gate/.test(shown),power>ports,shown);
+    const remedy=/^site power \(\d+\) [a-z].*\. The lab reads from [\d.]+( weeks of room)?: set site power to (\d+) weeks or past it, or ports to (\d+) or before it$/.exec(shown);
+    assert.ok(remedy,shown);assert.deepEqual([+remedy[2],+remedy[3]],[ports+8,power-8]);
+    assert.equal(LAB.derive({arm:'middle',power:ports+8,ports}).ok,true,'the first remedy is a value the control offers, and it runs');assert.equal(LAB.derive({arm:'middle',power,ports:power-8}).ok,true,'so is the second');
   }
-  assert.deepEqual([all,accepted,longest],[429,351,186]);assert.ok(![...seen.true].some(x=>seen.false.has(x)));
+  assert.deepEqual([all,accepted,longest],[429,351,184]);assert.ok(![...seen.true].some(x=>seen.false.has(x)));
   assert.equal(LAB.derive({...LAB.defaults(),release:12}).ok,true,'a release week is not an input: a typed one is ignored');assert.equal(LAB.controls.length,3);
   for(const bad of [{arm:'pace'},{arm:undefined},{power:23},{power:57},{power:40.5},{power:'40'},{ports:15},{ports:29},{ports:null}]){
     const d=LAB.derive({...LAB.defaults(),...bad});assert.equal(d.ok,false,JSON.stringify(bad));assert.doesNotMatch(d.reason,/undefined|NaN/);
@@ -228,13 +301,18 @@ test('copy: sources are named, absence carries a reason, numbers are grouped and
   assert.match(take,/^An ops team would map /);assert.doesNotMatch(look+take,/\d/);assert.match(what,/\?$/,'the first part asks; it states no cause and no result');
 });
 
-test('no count on the default page sits near a publicly reported count',()=>{
-  const listed=PINS.public_counts_to_stay_away_from;assert.deepEqual(listed,[300,2000,3200,4000]);
+test('no count on the default page sits near a count the default page stays away from',()=>{
+  const listed=PINS.counts_the_default_page_stays_away_from;assert.deepEqual(listed,[300,2000,3200,4000]);
   for(const arm of ['middle','end']){
     const pin=PINS.arms[arm],counts=[FLEET,PLACES,...pin.tables[0].rows.slice(0,7).flatMap(row=>[row[2].v,row[3].v]),...Object.values(pin.chart.summary.v),pin.tables[3].rows[1][2].v,pin.tables[3].rows[1][3].v];
     for(const n of counts)for(const p of listed)assert.ok(Math.abs(n-p)>.1*p,`${n} is within a tenth of ${p}`);
   }
-  assert.doesNotMatch(SOURCE,/shipload/i);
+  // One word the page stays away from as well, held by its digest: no file spells it.
+  const spelled=text=>[...new Set(text.toLowerCase().match(/[a-z]{8,}/g))].some(w=>Array.from({length:w.length-7},(_,i)=>w.slice(i,i+8)).some(x=>sha256Hex(x)==='959f91e0abc611bba8234c0d62d9c07f53a8c037a32a94438e5d0742c2c44382'));
+  for(const text of [SOURCE,SELF,PINS_TEXT])assert.equal(spelled(text),false);
+  // The list is described as counts the default page stays away from, and by no word that says whose counts they are.
+  assert.deepEqual(Object.keys(PINS).filter(k=>/count/.test(k)),['counts_the_default_page_stays_away_from']);
+  for(const text of [SELF,PINS_TEXT])assert.doesNotMatch(text,/publi[c]|operato[r]|compan[y]|compet[i]/i);
 });
 
 test('a pinned sample of the accepted region keeps every law, every control and every hand check',()=>{

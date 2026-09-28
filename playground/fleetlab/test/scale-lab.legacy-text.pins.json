@@ -1,0 +1,4387 @@
+{
+ "from": "the verdict card module and the teaching frames module as they were at commit c79eccf, before the Scale lab",
+ "inputs": "test/helpers/legacy-text.mjs",
+ "texts": {
+  "wait.p90_s | 0 | none": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 0 | empty": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 0 | plain": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 0 | signed": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s | -0 | none": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s | -0 | empty": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s | -0 | plain": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s | -0 | signed": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.000027 | none": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.000027 | empty": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.000027 | plain": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.000027 | signed": [
+   "+0.000027 s",
+   "+0.000027 s (0.0 min)"
+  ],
+  "wait.p90_s | -1e-7 | none": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "wait.p90_s | -1e-7 | empty": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "wait.p90_s | -1e-7 | plain": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "wait.p90_s | -1e-7 | signed": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.0005 | none": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.0005 | empty": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.0005 | plain": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.0005 | signed": [
+   "+0.0005 s",
+   "+0.0005 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.0104 | none": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.0104 | empty": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.0104 | plain": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.0104 | signed": [
+   "+0.0104 s",
+   "+0.0104 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.01049136786188579 | none": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.01049136786188579 | empty": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.01049136786188579 | plain": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.01049136786188579 | signed": [
+   "+0.01049136786188579 s",
+   "+0.01049136786188579 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.017993456924754632 | none": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.017993456924754632 | empty": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.017993456924754632 | plain": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.017993456924754632 | signed": [
+   "+0.017993456924754632 s",
+   "+0.017993456924754632 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.02004 | none": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.02004 | empty": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.02004 | plain": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.02004 | signed": [
+   "+0.02004 s",
+   "+0.02004 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.020119956379498365 | none": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.020119956379498365 | empty": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.020119956379498365 | plain": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.020119956379498365 | signed": [
+   "+0.020119956379498365 s",
+   "+0.020119956379498365 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.04166666666666572 | none": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.04166666666666572 | empty": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.04166666666666572 | plain": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.04166666666666572 | signed": [
+   "+0.04166666666666572 s",
+   "+0.04166666666666572 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.00003417167851284857 | none": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.00003417167851284857 | empty": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.00003417167851284857 | plain": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.00003417167851284857 | signed": [
+   "+0.00003417167851284857 s",
+   "+0.00003417167851284857 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.95 | none": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.95 | empty": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.95 | plain": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.95 | signed": [
+   "+0.9 s",
+   "+0.9 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.9500000000000455 | none": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.9500000000000455 | empty": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.9500000000000455 | plain": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 0.9500000000000455 | signed": [
+   "+1.0 s",
+   "+1.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 1.036363636363686 | none": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 1.036363636363686 | empty": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 1.036363636363686 | plain": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s | 1.036363636363686 | signed": [
+   "+1.0 s",
+   "+1.0 s (0.0 min)"
+  ],
+  "wait.p90_s | -29.96 | none": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s | -29.96 | empty": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s | -29.96 | plain": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s | -29.96 | signed": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s | -30.04 | none": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s | -30.04 | empty": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s | -30.04 | plain": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s | -30.04 | signed": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s | 30.04 | none": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "wait.p90_s | 30.04 | empty": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "wait.p90_s | 30.04 | plain": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "wait.p90_s | 30.04 | signed": [
+   "+30.0 s",
+   "+30.0 s (+0.5 min)"
+  ],
+  "wait.p90_s | 59.97 | none": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "wait.p90_s | 59.97 | empty": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "wait.p90_s | 59.97 | plain": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "wait.p90_s | 59.97 | signed": [
+   "+60.0 s",
+   "+60.0 s (+1.0 min)"
+  ],
+  "wait.p90_s | -484.95000000000016 | none": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "wait.p90_s | -484.95000000000016 | empty": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "wait.p90_s | -484.95000000000016 | plain": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "wait.p90_s | -484.95000000000016 | signed": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "wait.p90_s | -1565.6 | none": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "wait.p90_s | -1565.6 | empty": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "wait.p90_s | -1565.6 | plain": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "wait.p90_s | -1565.6 | signed": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "wait.p90_s | 1799.96 | none": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "wait.p90_s | 1799.96 | empty": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "wait.p90_s | 1799.96 | plain": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "wait.p90_s | 1799.96 | signed": [
+   "+1,800.0 s",
+   "+1,800.0 s (+30.0 min)"
+  ],
+  "wait.p90_s | -1800.0000000000002 | none": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "wait.p90_s | -1800.0000000000002 | empty": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "wait.p90_s | -1800.0000000000002 | plain": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "wait.p90_s | -1800.0000000000002 | signed": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "wait.p90_s | 13.0000000000001 | none": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "wait.p90_s | 13.0000000000001 | empty": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "wait.p90_s | 13.0000000000001 | plain": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "wait.p90_s | 13.0000000000001 | signed": [
+   "+13.0 s",
+   "+13.0 s (+0.2 min)"
+  ],
+  "wait.p90_s | 12345.678 | none": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "wait.p90_s | 12345.678 | empty": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "wait.p90_s | 12345.678 | plain": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "wait.p90_s | 12345.678 | signed": [
+   "+12,345.7 s",
+   "+12,345.7 s (+205.8 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0 | none": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0 | empty": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0 | plain": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0 | signed": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -0 | none": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -0 | empty": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -0 | plain": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -0 | signed": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.000027 | none": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.000027 | empty": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.000027 | plain": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.000027 | signed": [
+   "+0.000027 s",
+   "+0.000027 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1e-7 | none": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1e-7 | empty": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1e-7 | plain": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1e-7 | signed": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.0005 | none": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.0005 | empty": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.0005 | plain": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.0005 | signed": [
+   "+0.0005 s",
+   "+0.0005 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.0104 | none": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.0104 | empty": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.0104 | plain": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.0104 | signed": [
+   "+0.0104 s",
+   "+0.0104 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.01049136786188579 | none": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.01049136786188579 | empty": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.01049136786188579 | plain": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.01049136786188579 | signed": [
+   "+0.01049136786188579 s",
+   "+0.01049136786188579 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.017993456924754632 | none": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.017993456924754632 | empty": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.017993456924754632 | plain": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.017993456924754632 | signed": [
+   "+0.017993456924754632 s",
+   "+0.017993456924754632 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.02004 | none": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.02004 | empty": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.02004 | plain": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.02004 | signed": [
+   "+0.02004 s",
+   "+0.02004 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.020119956379498365 | none": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.020119956379498365 | empty": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.020119956379498365 | plain": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.020119956379498365 | signed": [
+   "+0.020119956379498365 s",
+   "+0.020119956379498365 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.04166666666666572 | none": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.04166666666666572 | empty": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.04166666666666572 | plain": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.04166666666666572 | signed": [
+   "+0.04166666666666572 s",
+   "+0.04166666666666572 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.00003417167851284857 | none": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.00003417167851284857 | empty": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.00003417167851284857 | plain": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.00003417167851284857 | signed": [
+   "+0.00003417167851284857 s",
+   "+0.00003417167851284857 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.95 | none": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.95 | empty": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.95 | plain": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.95 | signed": [
+   "+0.9 s",
+   "+0.9 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.9500000000000455 | none": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.9500000000000455 | empty": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.9500000000000455 | plain": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 0.9500000000000455 | signed": [
+   "+1.0 s",
+   "+1.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 1.036363636363686 | none": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 1.036363636363686 | empty": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 1.036363636363686 | plain": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 1.036363636363686 | signed": [
+   "+1.0 s",
+   "+1.0 s (0.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -29.96 | none": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -29.96 | empty": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -29.96 | plain": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -29.96 | signed": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -30.04 | none": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -30.04 | empty": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -30.04 | plain": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -30.04 | signed": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 30.04 | none": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 30.04 | empty": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 30.04 | plain": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 30.04 | signed": [
+   "+30.0 s",
+   "+30.0 s (+0.5 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 59.97 | none": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 59.97 | empty": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 59.97 | plain": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 59.97 | signed": [
+   "+60.0 s",
+   "+60.0 s (+1.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -484.95000000000016 | none": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -484.95000000000016 | empty": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -484.95000000000016 | plain": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -484.95000000000016 | signed": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1565.6 | none": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1565.6 | empty": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1565.6 | plain": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1565.6 | signed": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 1799.96 | none": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 1799.96 | empty": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 1799.96 | plain": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 1799.96 | signed": [
+   "+1,800.0 s",
+   "+1,800.0 s (+30.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1800.0000000000002 | none": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1800.0000000000002 | empty": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1800.0000000000002 | plain": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | -1800.0000000000002 | signed": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 13.0000000000001 | none": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 13.0000000000001 | empty": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 13.0000000000001 | plain": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 13.0000000000001 | signed": [
+   "+13.0 s",
+   "+13.0 s (+0.2 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 12345.678 | none": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 12345.678 | empty": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 12345.678 | plain": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "wait.p90_s{area=SF,window=111600-118800} | 12345.678 | signed": [
+   "+12,345.7 s",
+   "+12,345.7 s (+205.8 min)"
+  ],
+  "unserved.fraction{area=SF} | 0 | none": [
+   "0.000",
+   "0.000"
+  ],
+  "unserved.fraction{area=SF} | 0 | empty": [
+   "0.000",
+   "0.000"
+  ],
+  "unserved.fraction{area=SF} | 0 | plain": [
+   "0.000",
+   "0.000"
+  ],
+  "unserved.fraction{area=SF} | 0 | signed": [
+   "0.000",
+   "0.000"
+  ],
+  "unserved.fraction{area=SF} | -0 | none": [
+   "0.000",
+   "0.000"
+  ],
+  "unserved.fraction{area=SF} | -0 | empty": [
+   "0.000",
+   "0.000"
+  ],
+  "unserved.fraction{area=SF} | -0 | plain": [
+   "0.000",
+   "0.000"
+  ],
+  "unserved.fraction{area=SF} | -0 | signed": [
+   "0.000",
+   "0.000"
+  ],
+  "unserved.fraction{area=SF} | 0.000027 | none": [
+   "0.000027",
+   "0.000027"
+  ],
+  "unserved.fraction{area=SF} | 0.000027 | empty": [
+   "0.000027",
+   "0.000027"
+  ],
+  "unserved.fraction{area=SF} | 0.000027 | plain": [
+   "0.000027",
+   "0.000027"
+  ],
+  "unserved.fraction{area=SF} | 0.000027 | signed": [
+   "+0.000027",
+   "+0.000027"
+  ],
+  "unserved.fraction{area=SF} | -1e-7 | none": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "unserved.fraction{area=SF} | -1e-7 | empty": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "unserved.fraction{area=SF} | -1e-7 | plain": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "unserved.fraction{area=SF} | -1e-7 | signed": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "unserved.fraction{area=SF} | 0.0005 | none": [
+   "0.001",
+   "0.001"
+  ],
+  "unserved.fraction{area=SF} | 0.0005 | empty": [
+   "0.001",
+   "0.001"
+  ],
+  "unserved.fraction{area=SF} | 0.0005 | plain": [
+   "0.001",
+   "0.001"
+  ],
+  "unserved.fraction{area=SF} | 0.0005 | signed": [
+   "+0.001",
+   "+0.001"
+  ],
+  "unserved.fraction{area=SF} | 0.0104 | none": [
+   "0.010",
+   "0.010"
+  ],
+  "unserved.fraction{area=SF} | 0.0104 | empty": [
+   "0.010",
+   "0.010"
+  ],
+  "unserved.fraction{area=SF} | 0.0104 | plain": [
+   "0.010",
+   "0.010"
+  ],
+  "unserved.fraction{area=SF} | 0.0104 | signed": [
+   "+0.010",
+   "+0.010"
+  ],
+  "unserved.fraction{area=SF} | 0.01049136786188579 | none": [
+   "0.010",
+   "0.010"
+  ],
+  "unserved.fraction{area=SF} | 0.01049136786188579 | empty": [
+   "0.010",
+   "0.010"
+  ],
+  "unserved.fraction{area=SF} | 0.01049136786188579 | plain": [
+   "0.010",
+   "0.010"
+  ],
+  "unserved.fraction{area=SF} | 0.01049136786188579 | signed": [
+   "+0.010",
+   "+0.010"
+  ],
+  "unserved.fraction{area=SF} | 0.017993456924754632 | none": [
+   "0.018",
+   "0.018"
+  ],
+  "unserved.fraction{area=SF} | 0.017993456924754632 | empty": [
+   "0.018",
+   "0.018"
+  ],
+  "unserved.fraction{area=SF} | 0.017993456924754632 | plain": [
+   "0.018",
+   "0.018"
+  ],
+  "unserved.fraction{area=SF} | 0.017993456924754632 | signed": [
+   "+0.018",
+   "+0.018"
+  ],
+  "unserved.fraction{area=SF} | 0.02004 | none": [
+   "0.020",
+   "0.020"
+  ],
+  "unserved.fraction{area=SF} | 0.02004 | empty": [
+   "0.020",
+   "0.020"
+  ],
+  "unserved.fraction{area=SF} | 0.02004 | plain": [
+   "0.020",
+   "0.020"
+  ],
+  "unserved.fraction{area=SF} | 0.02004 | signed": [
+   "+0.020",
+   "+0.020"
+  ],
+  "unserved.fraction{area=SF} | 0.020119956379498365 | none": [
+   "0.020",
+   "0.020"
+  ],
+  "unserved.fraction{area=SF} | 0.020119956379498365 | empty": [
+   "0.020",
+   "0.020"
+  ],
+  "unserved.fraction{area=SF} | 0.020119956379498365 | plain": [
+   "0.020",
+   "0.020"
+  ],
+  "unserved.fraction{area=SF} | 0.020119956379498365 | signed": [
+   "+0.020",
+   "+0.020"
+  ],
+  "unserved.fraction{area=SF} | 0.04166666666666572 | none": [
+   "0.042",
+   "0.042"
+  ],
+  "unserved.fraction{area=SF} | 0.04166666666666572 | empty": [
+   "0.042",
+   "0.042"
+  ],
+  "unserved.fraction{area=SF} | 0.04166666666666572 | plain": [
+   "0.042",
+   "0.042"
+  ],
+  "unserved.fraction{area=SF} | 0.04166666666666572 | signed": [
+   "+0.042",
+   "+0.042"
+  ],
+  "unserved.fraction{area=SF} | 0.00003417167851284857 | none": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "unserved.fraction{area=SF} | 0.00003417167851284857 | empty": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "unserved.fraction{area=SF} | 0.00003417167851284857 | plain": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "unserved.fraction{area=SF} | 0.00003417167851284857 | signed": [
+   "+0.00003417167851284857",
+   "+0.00003417167851284857"
+  ],
+  "unserved.fraction{area=SF} | 0.95 | none": [
+   "0.950",
+   "0.950"
+  ],
+  "unserved.fraction{area=SF} | 0.95 | empty": [
+   "0.950",
+   "0.950"
+  ],
+  "unserved.fraction{area=SF} | 0.95 | plain": [
+   "0.950",
+   "0.950"
+  ],
+  "unserved.fraction{area=SF} | 0.95 | signed": [
+   "+0.950",
+   "+0.950"
+  ],
+  "unserved.fraction{area=SF} | 0.9500000000000455 | none": [
+   "0.950",
+   "0.950"
+  ],
+  "unserved.fraction{area=SF} | 0.9500000000000455 | empty": [
+   "0.950",
+   "0.950"
+  ],
+  "unserved.fraction{area=SF} | 0.9500000000000455 | plain": [
+   "0.950",
+   "0.950"
+  ],
+  "unserved.fraction{area=SF} | 0.9500000000000455 | signed": [
+   "+0.950",
+   "+0.950"
+  ],
+  "unserved.fraction{area=SF} | 1.036363636363686 | none": [
+   "1.036",
+   "1.036"
+  ],
+  "unserved.fraction{area=SF} | 1.036363636363686 | empty": [
+   "1.036",
+   "1.036"
+  ],
+  "unserved.fraction{area=SF} | 1.036363636363686 | plain": [
+   "1.036",
+   "1.036"
+  ],
+  "unserved.fraction{area=SF} | 1.036363636363686 | signed": [
+   "+1.036",
+   "+1.036"
+  ],
+  "unserved.fraction{area=SF} | -29.96 | none": [
+   "-29.960",
+   "-29.960"
+  ],
+  "unserved.fraction{area=SF} | -29.96 | empty": [
+   "-29.960",
+   "-29.960"
+  ],
+  "unserved.fraction{area=SF} | -29.96 | plain": [
+   "-29.960",
+   "-29.960"
+  ],
+  "unserved.fraction{area=SF} | -29.96 | signed": [
+   "-29.960",
+   "-29.960"
+  ],
+  "unserved.fraction{area=SF} | -30.04 | none": [
+   "-30.040",
+   "-30.040"
+  ],
+  "unserved.fraction{area=SF} | -30.04 | empty": [
+   "-30.040",
+   "-30.040"
+  ],
+  "unserved.fraction{area=SF} | -30.04 | plain": [
+   "-30.040",
+   "-30.040"
+  ],
+  "unserved.fraction{area=SF} | -30.04 | signed": [
+   "-30.040",
+   "-30.040"
+  ],
+  "unserved.fraction{area=SF} | 30.04 | none": [
+   "30.040",
+   "30.040"
+  ],
+  "unserved.fraction{area=SF} | 30.04 | empty": [
+   "30.040",
+   "30.040"
+  ],
+  "unserved.fraction{area=SF} | 30.04 | plain": [
+   "30.040",
+   "30.040"
+  ],
+  "unserved.fraction{area=SF} | 30.04 | signed": [
+   "+30.040",
+   "+30.040"
+  ],
+  "unserved.fraction{area=SF} | 59.97 | none": [
+   "59.970",
+   "59.970"
+  ],
+  "unserved.fraction{area=SF} | 59.97 | empty": [
+   "59.970",
+   "59.970"
+  ],
+  "unserved.fraction{area=SF} | 59.97 | plain": [
+   "59.970",
+   "59.970"
+  ],
+  "unserved.fraction{area=SF} | 59.97 | signed": [
+   "+59.970",
+   "+59.970"
+  ],
+  "unserved.fraction{area=SF} | -484.95000000000016 | none": [
+   "-484.950",
+   "-484.950"
+  ],
+  "unserved.fraction{area=SF} | -484.95000000000016 | empty": [
+   "-484.950",
+   "-484.950"
+  ],
+  "unserved.fraction{area=SF} | -484.95000000000016 | plain": [
+   "-484.950",
+   "-484.950"
+  ],
+  "unserved.fraction{area=SF} | -484.95000000000016 | signed": [
+   "-484.950",
+   "-484.950"
+  ],
+  "unserved.fraction{area=SF} | -1565.6 | none": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "unserved.fraction{area=SF} | -1565.6 | empty": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "unserved.fraction{area=SF} | -1565.6 | plain": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "unserved.fraction{area=SF} | -1565.6 | signed": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "unserved.fraction{area=SF} | 1799.96 | none": [
+   "1,799.960",
+   "1,799.960"
+  ],
+  "unserved.fraction{area=SF} | 1799.96 | empty": [
+   "1,799.960",
+   "1,799.960"
+  ],
+  "unserved.fraction{area=SF} | 1799.96 | plain": [
+   "1,799.960",
+   "1,799.960"
+  ],
+  "unserved.fraction{area=SF} | 1799.96 | signed": [
+   "+1,799.960",
+   "+1,799.960"
+  ],
+  "unserved.fraction{area=SF} | -1800.0000000000002 | none": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "unserved.fraction{area=SF} | -1800.0000000000002 | empty": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "unserved.fraction{area=SF} | -1800.0000000000002 | plain": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "unserved.fraction{area=SF} | -1800.0000000000002 | signed": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "unserved.fraction{area=SF} | 13.0000000000001 | none": [
+   "13.000",
+   "13.000"
+  ],
+  "unserved.fraction{area=SF} | 13.0000000000001 | empty": [
+   "13.000",
+   "13.000"
+  ],
+  "unserved.fraction{area=SF} | 13.0000000000001 | plain": [
+   "13.000",
+   "13.000"
+  ],
+  "unserved.fraction{area=SF} | 13.0000000000001 | signed": [
+   "+13.000",
+   "+13.000"
+  ],
+  "unserved.fraction{area=SF} | 12345.678 | none": [
+   "12,345.678",
+   "12,345.678"
+  ],
+  "unserved.fraction{area=SF} | 12345.678 | empty": [
+   "12,345.678",
+   "12,345.678"
+  ],
+  "unserved.fraction{area=SF} | 12345.678 | plain": [
+   "12,345.678",
+   "12,345.678"
+  ],
+  "unserved.fraction{area=SF} | 12345.678 | signed": [
+   "+12,345.678",
+   "+12,345.678"
+  ],
+  "fleet.available_fraction | 0 | none": [
+   "0.000",
+   "0.000"
+  ],
+  "fleet.available_fraction | 0 | empty": [
+   "0.000",
+   "0.000"
+  ],
+  "fleet.available_fraction | 0 | plain": [
+   "0.000",
+   "0.000"
+  ],
+  "fleet.available_fraction | 0 | signed": [
+   "0.000",
+   "0.000"
+  ],
+  "fleet.available_fraction | -0 | none": [
+   "0.000",
+   "0.000"
+  ],
+  "fleet.available_fraction | -0 | empty": [
+   "0.000",
+   "0.000"
+  ],
+  "fleet.available_fraction | -0 | plain": [
+   "0.000",
+   "0.000"
+  ],
+  "fleet.available_fraction | -0 | signed": [
+   "0.000",
+   "0.000"
+  ],
+  "fleet.available_fraction | 0.000027 | none": [
+   "0.000027",
+   "0.000027"
+  ],
+  "fleet.available_fraction | 0.000027 | empty": [
+   "0.000027",
+   "0.000027"
+  ],
+  "fleet.available_fraction | 0.000027 | plain": [
+   "0.000027",
+   "0.000027"
+  ],
+  "fleet.available_fraction | 0.000027 | signed": [
+   "+0.000027",
+   "+0.000027"
+  ],
+  "fleet.available_fraction | -1e-7 | none": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "fleet.available_fraction | -1e-7 | empty": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "fleet.available_fraction | -1e-7 | plain": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "fleet.available_fraction | -1e-7 | signed": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "fleet.available_fraction | 0.0005 | none": [
+   "0.001",
+   "0.001"
+  ],
+  "fleet.available_fraction | 0.0005 | empty": [
+   "0.001",
+   "0.001"
+  ],
+  "fleet.available_fraction | 0.0005 | plain": [
+   "0.001",
+   "0.001"
+  ],
+  "fleet.available_fraction | 0.0005 | signed": [
+   "+0.001",
+   "+0.001"
+  ],
+  "fleet.available_fraction | 0.0104 | none": [
+   "0.010",
+   "0.010"
+  ],
+  "fleet.available_fraction | 0.0104 | empty": [
+   "0.010",
+   "0.010"
+  ],
+  "fleet.available_fraction | 0.0104 | plain": [
+   "0.010",
+   "0.010"
+  ],
+  "fleet.available_fraction | 0.0104 | signed": [
+   "+0.010",
+   "+0.010"
+  ],
+  "fleet.available_fraction | 0.01049136786188579 | none": [
+   "0.010",
+   "0.010"
+  ],
+  "fleet.available_fraction | 0.01049136786188579 | empty": [
+   "0.010",
+   "0.010"
+  ],
+  "fleet.available_fraction | 0.01049136786188579 | plain": [
+   "0.010",
+   "0.010"
+  ],
+  "fleet.available_fraction | 0.01049136786188579 | signed": [
+   "+0.010",
+   "+0.010"
+  ],
+  "fleet.available_fraction | 0.017993456924754632 | none": [
+   "0.018",
+   "0.018"
+  ],
+  "fleet.available_fraction | 0.017993456924754632 | empty": [
+   "0.018",
+   "0.018"
+  ],
+  "fleet.available_fraction | 0.017993456924754632 | plain": [
+   "0.018",
+   "0.018"
+  ],
+  "fleet.available_fraction | 0.017993456924754632 | signed": [
+   "+0.018",
+   "+0.018"
+  ],
+  "fleet.available_fraction | 0.02004 | none": [
+   "0.020",
+   "0.020"
+  ],
+  "fleet.available_fraction | 0.02004 | empty": [
+   "0.020",
+   "0.020"
+  ],
+  "fleet.available_fraction | 0.02004 | plain": [
+   "0.020",
+   "0.020"
+  ],
+  "fleet.available_fraction | 0.02004 | signed": [
+   "+0.020",
+   "+0.020"
+  ],
+  "fleet.available_fraction | 0.020119956379498365 | none": [
+   "0.020",
+   "0.020"
+  ],
+  "fleet.available_fraction | 0.020119956379498365 | empty": [
+   "0.020",
+   "0.020"
+  ],
+  "fleet.available_fraction | 0.020119956379498365 | plain": [
+   "0.020",
+   "0.020"
+  ],
+  "fleet.available_fraction | 0.020119956379498365 | signed": [
+   "+0.020",
+   "+0.020"
+  ],
+  "fleet.available_fraction | 0.04166666666666572 | none": [
+   "0.042",
+   "0.042"
+  ],
+  "fleet.available_fraction | 0.04166666666666572 | empty": [
+   "0.042",
+   "0.042"
+  ],
+  "fleet.available_fraction | 0.04166666666666572 | plain": [
+   "0.042",
+   "0.042"
+  ],
+  "fleet.available_fraction | 0.04166666666666572 | signed": [
+   "+0.042",
+   "+0.042"
+  ],
+  "fleet.available_fraction | 0.00003417167851284857 | none": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "fleet.available_fraction | 0.00003417167851284857 | empty": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "fleet.available_fraction | 0.00003417167851284857 | plain": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "fleet.available_fraction | 0.00003417167851284857 | signed": [
+   "+0.00003417167851284857",
+   "+0.00003417167851284857"
+  ],
+  "fleet.available_fraction | 0.95 | none": [
+   "0.950",
+   "0.950"
+  ],
+  "fleet.available_fraction | 0.95 | empty": [
+   "0.950",
+   "0.950"
+  ],
+  "fleet.available_fraction | 0.95 | plain": [
+   "0.950",
+   "0.950"
+  ],
+  "fleet.available_fraction | 0.95 | signed": [
+   "+0.950",
+   "+0.950"
+  ],
+  "fleet.available_fraction | 0.9500000000000455 | none": [
+   "0.950",
+   "0.950"
+  ],
+  "fleet.available_fraction | 0.9500000000000455 | empty": [
+   "0.950",
+   "0.950"
+  ],
+  "fleet.available_fraction | 0.9500000000000455 | plain": [
+   "0.950",
+   "0.950"
+  ],
+  "fleet.available_fraction | 0.9500000000000455 | signed": [
+   "+0.950",
+   "+0.950"
+  ],
+  "fleet.available_fraction | 1.036363636363686 | none": [
+   "1.036",
+   "1.036"
+  ],
+  "fleet.available_fraction | 1.036363636363686 | empty": [
+   "1.036",
+   "1.036"
+  ],
+  "fleet.available_fraction | 1.036363636363686 | plain": [
+   "1.036",
+   "1.036"
+  ],
+  "fleet.available_fraction | 1.036363636363686 | signed": [
+   "+1.036",
+   "+1.036"
+  ],
+  "fleet.available_fraction | -29.96 | none": [
+   "-29.960",
+   "-29.960"
+  ],
+  "fleet.available_fraction | -29.96 | empty": [
+   "-29.960",
+   "-29.960"
+  ],
+  "fleet.available_fraction | -29.96 | plain": [
+   "-29.960",
+   "-29.960"
+  ],
+  "fleet.available_fraction | -29.96 | signed": [
+   "-29.960",
+   "-29.960"
+  ],
+  "fleet.available_fraction | -30.04 | none": [
+   "-30.040",
+   "-30.040"
+  ],
+  "fleet.available_fraction | -30.04 | empty": [
+   "-30.040",
+   "-30.040"
+  ],
+  "fleet.available_fraction | -30.04 | plain": [
+   "-30.040",
+   "-30.040"
+  ],
+  "fleet.available_fraction | -30.04 | signed": [
+   "-30.040",
+   "-30.040"
+  ],
+  "fleet.available_fraction | 30.04 | none": [
+   "30.040",
+   "30.040"
+  ],
+  "fleet.available_fraction | 30.04 | empty": [
+   "30.040",
+   "30.040"
+  ],
+  "fleet.available_fraction | 30.04 | plain": [
+   "30.040",
+   "30.040"
+  ],
+  "fleet.available_fraction | 30.04 | signed": [
+   "+30.040",
+   "+30.040"
+  ],
+  "fleet.available_fraction | 59.97 | none": [
+   "59.970",
+   "59.970"
+  ],
+  "fleet.available_fraction | 59.97 | empty": [
+   "59.970",
+   "59.970"
+  ],
+  "fleet.available_fraction | 59.97 | plain": [
+   "59.970",
+   "59.970"
+  ],
+  "fleet.available_fraction | 59.97 | signed": [
+   "+59.970",
+   "+59.970"
+  ],
+  "fleet.available_fraction | -484.95000000000016 | none": [
+   "-484.950",
+   "-484.950"
+  ],
+  "fleet.available_fraction | -484.95000000000016 | empty": [
+   "-484.950",
+   "-484.950"
+  ],
+  "fleet.available_fraction | -484.95000000000016 | plain": [
+   "-484.950",
+   "-484.950"
+  ],
+  "fleet.available_fraction | -484.95000000000016 | signed": [
+   "-484.950",
+   "-484.950"
+  ],
+  "fleet.available_fraction | -1565.6 | none": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "fleet.available_fraction | -1565.6 | empty": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "fleet.available_fraction | -1565.6 | plain": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "fleet.available_fraction | -1565.6 | signed": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "fleet.available_fraction | 1799.96 | none": [
+   "1,799.960",
+   "1,799.960"
+  ],
+  "fleet.available_fraction | 1799.96 | empty": [
+   "1,799.960",
+   "1,799.960"
+  ],
+  "fleet.available_fraction | 1799.96 | plain": [
+   "1,799.960",
+   "1,799.960"
+  ],
+  "fleet.available_fraction | 1799.96 | signed": [
+   "+1,799.960",
+   "+1,799.960"
+  ],
+  "fleet.available_fraction | -1800.0000000000002 | none": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "fleet.available_fraction | -1800.0000000000002 | empty": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "fleet.available_fraction | -1800.0000000000002 | plain": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "fleet.available_fraction | -1800.0000000000002 | signed": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "fleet.available_fraction | 13.0000000000001 | none": [
+   "13.000",
+   "13.000"
+  ],
+  "fleet.available_fraction | 13.0000000000001 | empty": [
+   "13.000",
+   "13.000"
+  ],
+  "fleet.available_fraction | 13.0000000000001 | plain": [
+   "13.000",
+   "13.000"
+  ],
+  "fleet.available_fraction | 13.0000000000001 | signed": [
+   "+13.000",
+   "+13.000"
+  ],
+  "fleet.available_fraction | 12345.678 | none": [
+   "12,345.678",
+   "12,345.678"
+  ],
+  "fleet.available_fraction | 12345.678 | empty": [
+   "12,345.678",
+   "12,345.678"
+  ],
+  "fleet.available_fraction | 12345.678 | plain": [
+   "12,345.678",
+   "12,345.678"
+  ],
+  "fleet.available_fraction | 12345.678 | signed": [
+   "+12,345.678",
+   "+12,345.678"
+  ],
+  "depot.diversions{depot=EB-1} | 0 | none": [
+   "0.0",
+   "0.0"
+  ],
+  "depot.diversions{depot=EB-1} | 0 | empty": [
+   "0.0",
+   "0.0"
+  ],
+  "depot.diversions{depot=EB-1} | 0 | plain": [
+   "0.0",
+   "0.0"
+  ],
+  "depot.diversions{depot=EB-1} | 0 | signed": [
+   "0.0",
+   "0.0"
+  ],
+  "depot.diversions{depot=EB-1} | -0 | none": [
+   "0.0",
+   "0.0"
+  ],
+  "depot.diversions{depot=EB-1} | -0 | empty": [
+   "0.0",
+   "0.0"
+  ],
+  "depot.diversions{depot=EB-1} | -0 | plain": [
+   "0.0",
+   "0.0"
+  ],
+  "depot.diversions{depot=EB-1} | -0 | signed": [
+   "0.0",
+   "0.0"
+  ],
+  "depot.diversions{depot=EB-1} | 0.000027 | none": [
+   "0.000027",
+   "0.000027"
+  ],
+  "depot.diversions{depot=EB-1} | 0.000027 | empty": [
+   "0.000027",
+   "0.000027"
+  ],
+  "depot.diversions{depot=EB-1} | 0.000027 | plain": [
+   "0.000027",
+   "0.000027"
+  ],
+  "depot.diversions{depot=EB-1} | 0.000027 | signed": [
+   "+0.000027",
+   "+0.000027"
+  ],
+  "depot.diversions{depot=EB-1} | -1e-7 | none": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "depot.diversions{depot=EB-1} | -1e-7 | empty": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "depot.diversions{depot=EB-1} | -1e-7 | plain": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "depot.diversions{depot=EB-1} | -1e-7 | signed": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "depot.diversions{depot=EB-1} | 0.0005 | none": [
+   "0.0005",
+   "0.0005"
+  ],
+  "depot.diversions{depot=EB-1} | 0.0005 | empty": [
+   "0.0005",
+   "0.0005"
+  ],
+  "depot.diversions{depot=EB-1} | 0.0005 | plain": [
+   "0.0005",
+   "0.0005"
+  ],
+  "depot.diversions{depot=EB-1} | 0.0005 | signed": [
+   "+0.0005",
+   "+0.0005"
+  ],
+  "depot.diversions{depot=EB-1} | 0.0104 | none": [
+   "0.0104",
+   "0.0104"
+  ],
+  "depot.diversions{depot=EB-1} | 0.0104 | empty": [
+   "0.0104",
+   "0.0104"
+  ],
+  "depot.diversions{depot=EB-1} | 0.0104 | plain": [
+   "0.0104",
+   "0.0104"
+  ],
+  "depot.diversions{depot=EB-1} | 0.0104 | signed": [
+   "+0.0104",
+   "+0.0104"
+  ],
+  "depot.diversions{depot=EB-1} | 0.01049136786188579 | none": [
+   "0.01049136786188579",
+   "0.01049136786188579"
+  ],
+  "depot.diversions{depot=EB-1} | 0.01049136786188579 | empty": [
+   "0.01049136786188579",
+   "0.01049136786188579"
+  ],
+  "depot.diversions{depot=EB-1} | 0.01049136786188579 | plain": [
+   "0.01049136786188579",
+   "0.01049136786188579"
+  ],
+  "depot.diversions{depot=EB-1} | 0.01049136786188579 | signed": [
+   "+0.01049136786188579",
+   "+0.01049136786188579"
+  ],
+  "depot.diversions{depot=EB-1} | 0.017993456924754632 | none": [
+   "0.017993456924754632",
+   "0.017993456924754632"
+  ],
+  "depot.diversions{depot=EB-1} | 0.017993456924754632 | empty": [
+   "0.017993456924754632",
+   "0.017993456924754632"
+  ],
+  "depot.diversions{depot=EB-1} | 0.017993456924754632 | plain": [
+   "0.017993456924754632",
+   "0.017993456924754632"
+  ],
+  "depot.diversions{depot=EB-1} | 0.017993456924754632 | signed": [
+   "+0.017993456924754632",
+   "+0.017993456924754632"
+  ],
+  "depot.diversions{depot=EB-1} | 0.02004 | none": [
+   "0.02004",
+   "0.02004"
+  ],
+  "depot.diversions{depot=EB-1} | 0.02004 | empty": [
+   "0.02004",
+   "0.02004"
+  ],
+  "depot.diversions{depot=EB-1} | 0.02004 | plain": [
+   "0.02004",
+   "0.02004"
+  ],
+  "depot.diversions{depot=EB-1} | 0.02004 | signed": [
+   "+0.02004",
+   "+0.02004"
+  ],
+  "depot.diversions{depot=EB-1} | 0.020119956379498365 | none": [
+   "0.020119956379498365",
+   "0.020119956379498365"
+  ],
+  "depot.diversions{depot=EB-1} | 0.020119956379498365 | empty": [
+   "0.020119956379498365",
+   "0.020119956379498365"
+  ],
+  "depot.diversions{depot=EB-1} | 0.020119956379498365 | plain": [
+   "0.020119956379498365",
+   "0.020119956379498365"
+  ],
+  "depot.diversions{depot=EB-1} | 0.020119956379498365 | signed": [
+   "+0.020119956379498365",
+   "+0.020119956379498365"
+  ],
+  "depot.diversions{depot=EB-1} | 0.04166666666666572 | none": [
+   "0.04166666666666572",
+   "0.04166666666666572"
+  ],
+  "depot.diversions{depot=EB-1} | 0.04166666666666572 | empty": [
+   "0.04166666666666572",
+   "0.04166666666666572"
+  ],
+  "depot.diversions{depot=EB-1} | 0.04166666666666572 | plain": [
+   "0.04166666666666572",
+   "0.04166666666666572"
+  ],
+  "depot.diversions{depot=EB-1} | 0.04166666666666572 | signed": [
+   "+0.04166666666666572",
+   "+0.04166666666666572"
+  ],
+  "depot.diversions{depot=EB-1} | 0.00003417167851284857 | none": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "depot.diversions{depot=EB-1} | 0.00003417167851284857 | empty": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "depot.diversions{depot=EB-1} | 0.00003417167851284857 | plain": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "depot.diversions{depot=EB-1} | 0.00003417167851284857 | signed": [
+   "+0.00003417167851284857",
+   "+0.00003417167851284857"
+  ],
+  "depot.diversions{depot=EB-1} | 0.95 | none": [
+   "0.9",
+   "0.9"
+  ],
+  "depot.diversions{depot=EB-1} | 0.95 | empty": [
+   "0.9",
+   "0.9"
+  ],
+  "depot.diversions{depot=EB-1} | 0.95 | plain": [
+   "0.9",
+   "0.9"
+  ],
+  "depot.diversions{depot=EB-1} | 0.95 | signed": [
+   "+0.9",
+   "+0.9"
+  ],
+  "depot.diversions{depot=EB-1} | 0.9500000000000455 | none": [
+   "1.0",
+   "1.0"
+  ],
+  "depot.diversions{depot=EB-1} | 0.9500000000000455 | empty": [
+   "1.0",
+   "1.0"
+  ],
+  "depot.diversions{depot=EB-1} | 0.9500000000000455 | plain": [
+   "1.0",
+   "1.0"
+  ],
+  "depot.diversions{depot=EB-1} | 0.9500000000000455 | signed": [
+   "+1.0",
+   "+1.0"
+  ],
+  "depot.diversions{depot=EB-1} | 1.036363636363686 | none": [
+   "1.0",
+   "1.0"
+  ],
+  "depot.diversions{depot=EB-1} | 1.036363636363686 | empty": [
+   "1.0",
+   "1.0"
+  ],
+  "depot.diversions{depot=EB-1} | 1.036363636363686 | plain": [
+   "1.0",
+   "1.0"
+  ],
+  "depot.diversions{depot=EB-1} | 1.036363636363686 | signed": [
+   "+1.0",
+   "+1.0"
+  ],
+  "depot.diversions{depot=EB-1} | -29.96 | none": [
+   "-30.0",
+   "-30.0"
+  ],
+  "depot.diversions{depot=EB-1} | -29.96 | empty": [
+   "-30.0",
+   "-30.0"
+  ],
+  "depot.diversions{depot=EB-1} | -29.96 | plain": [
+   "-30.0",
+   "-30.0"
+  ],
+  "depot.diversions{depot=EB-1} | -29.96 | signed": [
+   "-30.0",
+   "-30.0"
+  ],
+  "depot.diversions{depot=EB-1} | -30.04 | none": [
+   "-30.0",
+   "-30.0"
+  ],
+  "depot.diversions{depot=EB-1} | -30.04 | empty": [
+   "-30.0",
+   "-30.0"
+  ],
+  "depot.diversions{depot=EB-1} | -30.04 | plain": [
+   "-30.0",
+   "-30.0"
+  ],
+  "depot.diversions{depot=EB-1} | -30.04 | signed": [
+   "-30.0",
+   "-30.0"
+  ],
+  "depot.diversions{depot=EB-1} | 30.04 | none": [
+   "30.0",
+   "30.0"
+  ],
+  "depot.diversions{depot=EB-1} | 30.04 | empty": [
+   "30.0",
+   "30.0"
+  ],
+  "depot.diversions{depot=EB-1} | 30.04 | plain": [
+   "30.0",
+   "30.0"
+  ],
+  "depot.diversions{depot=EB-1} | 30.04 | signed": [
+   "+30.0",
+   "+30.0"
+  ],
+  "depot.diversions{depot=EB-1} | 59.97 | none": [
+   "60.0",
+   "60.0"
+  ],
+  "depot.diversions{depot=EB-1} | 59.97 | empty": [
+   "60.0",
+   "60.0"
+  ],
+  "depot.diversions{depot=EB-1} | 59.97 | plain": [
+   "60.0",
+   "60.0"
+  ],
+  "depot.diversions{depot=EB-1} | 59.97 | signed": [
+   "+60.0",
+   "+60.0"
+  ],
+  "depot.diversions{depot=EB-1} | -484.95000000000016 | none": [
+   "-485.0",
+   "-485.0"
+  ],
+  "depot.diversions{depot=EB-1} | -484.95000000000016 | empty": [
+   "-485.0",
+   "-485.0"
+  ],
+  "depot.diversions{depot=EB-1} | -484.95000000000016 | plain": [
+   "-485.0",
+   "-485.0"
+  ],
+  "depot.diversions{depot=EB-1} | -484.95000000000016 | signed": [
+   "-485.0",
+   "-485.0"
+  ],
+  "depot.diversions{depot=EB-1} | -1565.6 | none": [
+   "-1,565.6",
+   "-1,565.6"
+  ],
+  "depot.diversions{depot=EB-1} | -1565.6 | empty": [
+   "-1,565.6",
+   "-1,565.6"
+  ],
+  "depot.diversions{depot=EB-1} | -1565.6 | plain": [
+   "-1,565.6",
+   "-1,565.6"
+  ],
+  "depot.diversions{depot=EB-1} | -1565.6 | signed": [
+   "-1,565.6",
+   "-1,565.6"
+  ],
+  "depot.diversions{depot=EB-1} | 1799.96 | none": [
+   "1,800.0",
+   "1,800.0"
+  ],
+  "depot.diversions{depot=EB-1} | 1799.96 | empty": [
+   "1,800.0",
+   "1,800.0"
+  ],
+  "depot.diversions{depot=EB-1} | 1799.96 | plain": [
+   "1,800.0",
+   "1,800.0"
+  ],
+  "depot.diversions{depot=EB-1} | 1799.96 | signed": [
+   "+1,800.0",
+   "+1,800.0"
+  ],
+  "depot.diversions{depot=EB-1} | -1800.0000000000002 | none": [
+   "-1,800.0",
+   "-1,800.0"
+  ],
+  "depot.diversions{depot=EB-1} | -1800.0000000000002 | empty": [
+   "-1,800.0",
+   "-1,800.0"
+  ],
+  "depot.diversions{depot=EB-1} | -1800.0000000000002 | plain": [
+   "-1,800.0",
+   "-1,800.0"
+  ],
+  "depot.diversions{depot=EB-1} | -1800.0000000000002 | signed": [
+   "-1,800.0",
+   "-1,800.0"
+  ],
+  "depot.diversions{depot=EB-1} | 13.0000000000001 | none": [
+   "13.0",
+   "13.0"
+  ],
+  "depot.diversions{depot=EB-1} | 13.0000000000001 | empty": [
+   "13.0",
+   "13.0"
+  ],
+  "depot.diversions{depot=EB-1} | 13.0000000000001 | plain": [
+   "13.0",
+   "13.0"
+  ],
+  "depot.diversions{depot=EB-1} | 13.0000000000001 | signed": [
+   "+13.0",
+   "+13.0"
+  ],
+  "depot.diversions{depot=EB-1} | 12345.678 | none": [
+   "12,345.7",
+   "12,345.7"
+  ],
+  "depot.diversions{depot=EB-1} | 12345.678 | empty": [
+   "12,345.7",
+   "12,345.7"
+  ],
+  "depot.diversions{depot=EB-1} | 12345.678 | plain": [
+   "12,345.7",
+   "12,345.7"
+  ],
+  "depot.diversions{depot=EB-1} | 12345.678 | signed": [
+   "+12,345.7",
+   "+12,345.7"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0 | none": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0 | empty": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0 | plain": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0 | signed": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -0 | none": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -0 | empty": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -0 | plain": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -0 | signed": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.000027 | none": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.000027 | empty": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.000027 | plain": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.000027 | signed": [
+   "+0.000027 s",
+   "+0.000027 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1e-7 | none": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1e-7 | empty": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1e-7 | plain": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1e-7 | signed": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.0005 | none": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.0005 | empty": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.0005 | plain": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.0005 | signed": [
+   "+0.0005 s",
+   "+0.0005 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.0104 | none": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.0104 | empty": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.0104 | plain": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.0104 | signed": [
+   "+0.0104 s",
+   "+0.0104 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.01049136786188579 | none": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.01049136786188579 | empty": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.01049136786188579 | plain": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.01049136786188579 | signed": [
+   "+0.01049136786188579 s",
+   "+0.01049136786188579 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.017993456924754632 | none": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.017993456924754632 | empty": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.017993456924754632 | plain": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.017993456924754632 | signed": [
+   "+0.017993456924754632 s",
+   "+0.017993456924754632 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.02004 | none": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.02004 | empty": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.02004 | plain": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.02004 | signed": [
+   "+0.02004 s",
+   "+0.02004 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.020119956379498365 | none": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.020119956379498365 | empty": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.020119956379498365 | plain": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.020119956379498365 | signed": [
+   "+0.020119956379498365 s",
+   "+0.020119956379498365 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.04166666666666572 | none": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.04166666666666572 | empty": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.04166666666666572 | plain": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.04166666666666572 | signed": [
+   "+0.04166666666666572 s",
+   "+0.04166666666666572 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.00003417167851284857 | none": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.00003417167851284857 | empty": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.00003417167851284857 | plain": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.00003417167851284857 | signed": [
+   "+0.00003417167851284857 s",
+   "+0.00003417167851284857 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.95 | none": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.95 | empty": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.95 | plain": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.95 | signed": [
+   "+0.9 s",
+   "+0.9 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.9500000000000455 | none": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.9500000000000455 | empty": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.9500000000000455 | plain": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 0.9500000000000455 | signed": [
+   "+1.0 s",
+   "+1.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 1.036363636363686 | none": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 1.036363636363686 | empty": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 1.036363636363686 | plain": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 1.036363636363686 | signed": [
+   "+1.0 s",
+   "+1.0 s (0.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -29.96 | none": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -29.96 | empty": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -29.96 | plain": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -29.96 | signed": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -30.04 | none": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -30.04 | empty": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -30.04 | plain": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -30.04 | signed": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 30.04 | none": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 30.04 | empty": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 30.04 | plain": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 30.04 | signed": [
+   "+30.0 s",
+   "+30.0 s (+0.5 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 59.97 | none": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 59.97 | empty": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 59.97 | plain": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 59.97 | signed": [
+   "+60.0 s",
+   "+60.0 s (+1.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -484.95000000000016 | none": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -484.95000000000016 | empty": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -484.95000000000016 | plain": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -484.95000000000016 | signed": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1565.6 | none": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1565.6 | empty": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1565.6 | plain": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1565.6 | signed": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 1799.96 | none": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 1799.96 | empty": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 1799.96 | plain": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 1799.96 | signed": [
+   "+1,800.0 s",
+   "+1,800.0 s (+30.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1800.0000000000002 | none": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1800.0000000000002 | empty": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1800.0000000000002 | plain": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | -1800.0000000000002 | signed": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 13.0000000000001 | none": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 13.0000000000001 | empty": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 13.0000000000001 | plain": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 13.0000000000001 | signed": [
+   "+13.0 s",
+   "+13.0 s (+0.2 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 12345.678 | none": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 12345.678 | empty": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 12345.678 | plain": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "depot.bay_wait_p90_s{depot=SF-2} | 12345.678 | signed": [
+   "+12,345.7 s",
+   "+12,345.7 s (+205.8 min)"
+  ],
+  "idle weeks per ordered place | 0 | none": [
+   "0.0",
+   "0.0"
+  ],
+  "idle weeks per ordered place | 0 | empty": [
+   "0.0",
+   "0.0"
+  ],
+  "idle weeks per ordered place | 0 | plain": [
+   "0.0",
+   "0.0"
+  ],
+  "idle weeks per ordered place | 0 | signed": [
+   "0.0",
+   "0.0"
+  ],
+  "idle weeks per ordered place | -0 | none": [
+   "0.0",
+   "0.0"
+  ],
+  "idle weeks per ordered place | -0 | empty": [
+   "0.0",
+   "0.0"
+  ],
+  "idle weeks per ordered place | -0 | plain": [
+   "0.0",
+   "0.0"
+  ],
+  "idle weeks per ordered place | -0 | signed": [
+   "0.0",
+   "0.0"
+  ],
+  "idle weeks per ordered place | 0.000027 | none": [
+   "0.000027",
+   "0.000027"
+  ],
+  "idle weeks per ordered place | 0.000027 | empty": [
+   "0.000027",
+   "0.000027"
+  ],
+  "idle weeks per ordered place | 0.000027 | plain": [
+   "0.000027",
+   "0.000027"
+  ],
+  "idle weeks per ordered place | 0.000027 | signed": [
+   "+0.000027",
+   "+0.000027"
+  ],
+  "idle weeks per ordered place | -1e-7 | none": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "idle weeks per ordered place | -1e-7 | empty": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "idle weeks per ordered place | -1e-7 | plain": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "idle weeks per ordered place | -1e-7 | signed": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "idle weeks per ordered place | 0.0005 | none": [
+   "0.0005",
+   "0.0005"
+  ],
+  "idle weeks per ordered place | 0.0005 | empty": [
+   "0.0005",
+   "0.0005"
+  ],
+  "idle weeks per ordered place | 0.0005 | plain": [
+   "0.0005",
+   "0.0005"
+  ],
+  "idle weeks per ordered place | 0.0005 | signed": [
+   "+0.0005",
+   "+0.0005"
+  ],
+  "idle weeks per ordered place | 0.0104 | none": [
+   "0.0104",
+   "0.0104"
+  ],
+  "idle weeks per ordered place | 0.0104 | empty": [
+   "0.0104",
+   "0.0104"
+  ],
+  "idle weeks per ordered place | 0.0104 | plain": [
+   "0.0104",
+   "0.0104"
+  ],
+  "idle weeks per ordered place | 0.0104 | signed": [
+   "+0.0104",
+   "+0.0104"
+  ],
+  "idle weeks per ordered place | 0.01049136786188579 | none": [
+   "0.01049136786188579",
+   "0.01049136786188579"
+  ],
+  "idle weeks per ordered place | 0.01049136786188579 | empty": [
+   "0.01049136786188579",
+   "0.01049136786188579"
+  ],
+  "idle weeks per ordered place | 0.01049136786188579 | plain": [
+   "0.01049136786188579",
+   "0.01049136786188579"
+  ],
+  "idle weeks per ordered place | 0.01049136786188579 | signed": [
+   "+0.01049136786188579",
+   "+0.01049136786188579"
+  ],
+  "idle weeks per ordered place | 0.017993456924754632 | none": [
+   "0.017993456924754632",
+   "0.017993456924754632"
+  ],
+  "idle weeks per ordered place | 0.017993456924754632 | empty": [
+   "0.017993456924754632",
+   "0.017993456924754632"
+  ],
+  "idle weeks per ordered place | 0.017993456924754632 | plain": [
+   "0.017993456924754632",
+   "0.017993456924754632"
+  ],
+  "idle weeks per ordered place | 0.017993456924754632 | signed": [
+   "+0.017993456924754632",
+   "+0.017993456924754632"
+  ],
+  "idle weeks per ordered place | 0.02004 | none": [
+   "0.02004",
+   "0.02004"
+  ],
+  "idle weeks per ordered place | 0.02004 | empty": [
+   "0.02004",
+   "0.02004"
+  ],
+  "idle weeks per ordered place | 0.02004 | plain": [
+   "0.02004",
+   "0.02004"
+  ],
+  "idle weeks per ordered place | 0.02004 | signed": [
+   "+0.02004",
+   "+0.02004"
+  ],
+  "idle weeks per ordered place | 0.020119956379498365 | none": [
+   "0.020119956379498365",
+   "0.020119956379498365"
+  ],
+  "idle weeks per ordered place | 0.020119956379498365 | empty": [
+   "0.020119956379498365",
+   "0.020119956379498365"
+  ],
+  "idle weeks per ordered place | 0.020119956379498365 | plain": [
+   "0.020119956379498365",
+   "0.020119956379498365"
+  ],
+  "idle weeks per ordered place | 0.020119956379498365 | signed": [
+   "+0.020119956379498365",
+   "+0.020119956379498365"
+  ],
+  "idle weeks per ordered place | 0.04166666666666572 | none": [
+   "0.04166666666666572",
+   "0.04166666666666572"
+  ],
+  "idle weeks per ordered place | 0.04166666666666572 | empty": [
+   "0.04166666666666572",
+   "0.04166666666666572"
+  ],
+  "idle weeks per ordered place | 0.04166666666666572 | plain": [
+   "0.04166666666666572",
+   "0.04166666666666572"
+  ],
+  "idle weeks per ordered place | 0.04166666666666572 | signed": [
+   "+0.04166666666666572",
+   "+0.04166666666666572"
+  ],
+  "idle weeks per ordered place | 0.00003417167851284857 | none": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "idle weeks per ordered place | 0.00003417167851284857 | empty": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "idle weeks per ordered place | 0.00003417167851284857 | plain": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "idle weeks per ordered place | 0.00003417167851284857 | signed": [
+   "+0.00003417167851284857",
+   "+0.00003417167851284857"
+  ],
+  "idle weeks per ordered place | 0.95 | none": [
+   "0.9",
+   "0.9"
+  ],
+  "idle weeks per ordered place | 0.95 | empty": [
+   "0.9",
+   "0.9"
+  ],
+  "idle weeks per ordered place | 0.95 | plain": [
+   "0.9",
+   "0.9"
+  ],
+  "idle weeks per ordered place | 0.95 | signed": [
+   "+0.9",
+   "+0.9"
+  ],
+  "idle weeks per ordered place | 0.9500000000000455 | none": [
+   "1.0",
+   "1.0"
+  ],
+  "idle weeks per ordered place | 0.9500000000000455 | empty": [
+   "1.0",
+   "1.0"
+  ],
+  "idle weeks per ordered place | 0.9500000000000455 | plain": [
+   "1.0",
+   "1.0"
+  ],
+  "idle weeks per ordered place | 0.9500000000000455 | signed": [
+   "+1.0",
+   "+1.0"
+  ],
+  "idle weeks per ordered place | 1.036363636363686 | none": [
+   "1.0",
+   "1.0"
+  ],
+  "idle weeks per ordered place | 1.036363636363686 | empty": [
+   "1.0",
+   "1.0"
+  ],
+  "idle weeks per ordered place | 1.036363636363686 | plain": [
+   "1.0",
+   "1.0"
+  ],
+  "idle weeks per ordered place | 1.036363636363686 | signed": [
+   "+1.0",
+   "+1.0"
+  ],
+  "idle weeks per ordered place | -29.96 | none": [
+   "-30.0",
+   "-30.0"
+  ],
+  "idle weeks per ordered place | -29.96 | empty": [
+   "-30.0",
+   "-30.0"
+  ],
+  "idle weeks per ordered place | -29.96 | plain": [
+   "-30.0",
+   "-30.0"
+  ],
+  "idle weeks per ordered place | -29.96 | signed": [
+   "-30.0",
+   "-30.0"
+  ],
+  "idle weeks per ordered place | -30.04 | none": [
+   "-30.0",
+   "-30.0"
+  ],
+  "idle weeks per ordered place | -30.04 | empty": [
+   "-30.0",
+   "-30.0"
+  ],
+  "idle weeks per ordered place | -30.04 | plain": [
+   "-30.0",
+   "-30.0"
+  ],
+  "idle weeks per ordered place | -30.04 | signed": [
+   "-30.0",
+   "-30.0"
+  ],
+  "idle weeks per ordered place | 30.04 | none": [
+   "30.0",
+   "30.0"
+  ],
+  "idle weeks per ordered place | 30.04 | empty": [
+   "30.0",
+   "30.0"
+  ],
+  "idle weeks per ordered place | 30.04 | plain": [
+   "30.0",
+   "30.0"
+  ],
+  "idle weeks per ordered place | 30.04 | signed": [
+   "+30.0",
+   "+30.0"
+  ],
+  "idle weeks per ordered place | 59.97 | none": [
+   "60.0",
+   "60.0"
+  ],
+  "idle weeks per ordered place | 59.97 | empty": [
+   "60.0",
+   "60.0"
+  ],
+  "idle weeks per ordered place | 59.97 | plain": [
+   "60.0",
+   "60.0"
+  ],
+  "idle weeks per ordered place | 59.97 | signed": [
+   "+60.0",
+   "+60.0"
+  ],
+  "idle weeks per ordered place | -484.95000000000016 | none": [
+   "-485.0",
+   "-485.0"
+  ],
+  "idle weeks per ordered place | -484.95000000000016 | empty": [
+   "-485.0",
+   "-485.0"
+  ],
+  "idle weeks per ordered place | -484.95000000000016 | plain": [
+   "-485.0",
+   "-485.0"
+  ],
+  "idle weeks per ordered place | -484.95000000000016 | signed": [
+   "-485.0",
+   "-485.0"
+  ],
+  "idle weeks per ordered place | -1565.6 | none": [
+   "-1,565.6",
+   "-1,565.6"
+  ],
+  "idle weeks per ordered place | -1565.6 | empty": [
+   "-1,565.6",
+   "-1,565.6"
+  ],
+  "idle weeks per ordered place | -1565.6 | plain": [
+   "-1,565.6",
+   "-1,565.6"
+  ],
+  "idle weeks per ordered place | -1565.6 | signed": [
+   "-1,565.6",
+   "-1,565.6"
+  ],
+  "idle weeks per ordered place | 1799.96 | none": [
+   "1,800.0",
+   "1,800.0"
+  ],
+  "idle weeks per ordered place | 1799.96 | empty": [
+   "1,800.0",
+   "1,800.0"
+  ],
+  "idle weeks per ordered place | 1799.96 | plain": [
+   "1,800.0",
+   "1,800.0"
+  ],
+  "idle weeks per ordered place | 1799.96 | signed": [
+   "+1,800.0",
+   "+1,800.0"
+  ],
+  "idle weeks per ordered place | -1800.0000000000002 | none": [
+   "-1,800.0",
+   "-1,800.0"
+  ],
+  "idle weeks per ordered place | -1800.0000000000002 | empty": [
+   "-1,800.0",
+   "-1,800.0"
+  ],
+  "idle weeks per ordered place | -1800.0000000000002 | plain": [
+   "-1,800.0",
+   "-1,800.0"
+  ],
+  "idle weeks per ordered place | -1800.0000000000002 | signed": [
+   "-1,800.0",
+   "-1,800.0"
+  ],
+  "idle weeks per ordered place | 13.0000000000001 | none": [
+   "13.0",
+   "13.0"
+  ],
+  "idle weeks per ordered place | 13.0000000000001 | empty": [
+   "13.0",
+   "13.0"
+  ],
+  "idle weeks per ordered place | 13.0000000000001 | plain": [
+   "13.0",
+   "13.0"
+  ],
+  "idle weeks per ordered place | 13.0000000000001 | signed": [
+   "+13.0",
+   "+13.0"
+  ],
+  "idle weeks per ordered place | 12345.678 | none": [
+   "12,345.7",
+   "12,345.7"
+  ],
+  "idle weeks per ordered place | 12345.678 | empty": [
+   "12,345.7",
+   "12,345.7"
+  ],
+  "idle weeks per ordered place | 12345.678 | plain": [
+   "12,345.7",
+   "12,345.7"
+  ],
+  "idle weeks per ordered place | 12345.678 | signed": [
+   "+12,345.7",
+   "+12,345.7"
+  ],
+  "in-service fraction of plan | 0 | none": [
+   "0.000",
+   "0.000"
+  ],
+  "in-service fraction of plan | 0 | empty": [
+   "0.000",
+   "0.000"
+  ],
+  "in-service fraction of plan | 0 | plain": [
+   "0.000",
+   "0.000"
+  ],
+  "in-service fraction of plan | 0 | signed": [
+   "0.000",
+   "0.000"
+  ],
+  "in-service fraction of plan | -0 | none": [
+   "0.000",
+   "0.000"
+  ],
+  "in-service fraction of plan | -0 | empty": [
+   "0.000",
+   "0.000"
+  ],
+  "in-service fraction of plan | -0 | plain": [
+   "0.000",
+   "0.000"
+  ],
+  "in-service fraction of plan | -0 | signed": [
+   "0.000",
+   "0.000"
+  ],
+  "in-service fraction of plan | 0.000027 | none": [
+   "0.000027",
+   "0.000027"
+  ],
+  "in-service fraction of plan | 0.000027 | empty": [
+   "0.000027",
+   "0.000027"
+  ],
+  "in-service fraction of plan | 0.000027 | plain": [
+   "0.000027",
+   "0.000027"
+  ],
+  "in-service fraction of plan | 0.000027 | signed": [
+   "+0.000027",
+   "+0.000027"
+  ],
+  "in-service fraction of plan | -1e-7 | none": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "in-service fraction of plan | -1e-7 | empty": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "in-service fraction of plan | -1e-7 | plain": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "in-service fraction of plan | -1e-7 | signed": [
+   "-0.0000001",
+   "-0.0000001"
+  ],
+  "in-service fraction of plan | 0.0005 | none": [
+   "0.001",
+   "0.001"
+  ],
+  "in-service fraction of plan | 0.0005 | empty": [
+   "0.001",
+   "0.001"
+  ],
+  "in-service fraction of plan | 0.0005 | plain": [
+   "0.001",
+   "0.001"
+  ],
+  "in-service fraction of plan | 0.0005 | signed": [
+   "+0.001",
+   "+0.001"
+  ],
+  "in-service fraction of plan | 0.0104 | none": [
+   "0.010",
+   "0.010"
+  ],
+  "in-service fraction of plan | 0.0104 | empty": [
+   "0.010",
+   "0.010"
+  ],
+  "in-service fraction of plan | 0.0104 | plain": [
+   "0.010",
+   "0.010"
+  ],
+  "in-service fraction of plan | 0.0104 | signed": [
+   "+0.010",
+   "+0.010"
+  ],
+  "in-service fraction of plan | 0.01049136786188579 | none": [
+   "0.010",
+   "0.010"
+  ],
+  "in-service fraction of plan | 0.01049136786188579 | empty": [
+   "0.010",
+   "0.010"
+  ],
+  "in-service fraction of plan | 0.01049136786188579 | plain": [
+   "0.010",
+   "0.010"
+  ],
+  "in-service fraction of plan | 0.01049136786188579 | signed": [
+   "+0.010",
+   "+0.010"
+  ],
+  "in-service fraction of plan | 0.017993456924754632 | none": [
+   "0.018",
+   "0.018"
+  ],
+  "in-service fraction of plan | 0.017993456924754632 | empty": [
+   "0.018",
+   "0.018"
+  ],
+  "in-service fraction of plan | 0.017993456924754632 | plain": [
+   "0.018",
+   "0.018"
+  ],
+  "in-service fraction of plan | 0.017993456924754632 | signed": [
+   "+0.018",
+   "+0.018"
+  ],
+  "in-service fraction of plan | 0.02004 | none": [
+   "0.020",
+   "0.020"
+  ],
+  "in-service fraction of plan | 0.02004 | empty": [
+   "0.020",
+   "0.020"
+  ],
+  "in-service fraction of plan | 0.02004 | plain": [
+   "0.020",
+   "0.020"
+  ],
+  "in-service fraction of plan | 0.02004 | signed": [
+   "+0.020",
+   "+0.020"
+  ],
+  "in-service fraction of plan | 0.020119956379498365 | none": [
+   "0.020",
+   "0.020"
+  ],
+  "in-service fraction of plan | 0.020119956379498365 | empty": [
+   "0.020",
+   "0.020"
+  ],
+  "in-service fraction of plan | 0.020119956379498365 | plain": [
+   "0.020",
+   "0.020"
+  ],
+  "in-service fraction of plan | 0.020119956379498365 | signed": [
+   "+0.020",
+   "+0.020"
+  ],
+  "in-service fraction of plan | 0.04166666666666572 | none": [
+   "0.042",
+   "0.042"
+  ],
+  "in-service fraction of plan | 0.04166666666666572 | empty": [
+   "0.042",
+   "0.042"
+  ],
+  "in-service fraction of plan | 0.04166666666666572 | plain": [
+   "0.042",
+   "0.042"
+  ],
+  "in-service fraction of plan | 0.04166666666666572 | signed": [
+   "+0.042",
+   "+0.042"
+  ],
+  "in-service fraction of plan | 0.00003417167851284857 | none": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "in-service fraction of plan | 0.00003417167851284857 | empty": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "in-service fraction of plan | 0.00003417167851284857 | plain": [
+   "0.00003417167851284857",
+   "0.00003417167851284857"
+  ],
+  "in-service fraction of plan | 0.00003417167851284857 | signed": [
+   "+0.00003417167851284857",
+   "+0.00003417167851284857"
+  ],
+  "in-service fraction of plan | 0.95 | none": [
+   "0.950",
+   "0.950"
+  ],
+  "in-service fraction of plan | 0.95 | empty": [
+   "0.950",
+   "0.950"
+  ],
+  "in-service fraction of plan | 0.95 | plain": [
+   "0.950",
+   "0.950"
+  ],
+  "in-service fraction of plan | 0.95 | signed": [
+   "+0.950",
+   "+0.950"
+  ],
+  "in-service fraction of plan | 0.9500000000000455 | none": [
+   "0.950",
+   "0.950"
+  ],
+  "in-service fraction of plan | 0.9500000000000455 | empty": [
+   "0.950",
+   "0.950"
+  ],
+  "in-service fraction of plan | 0.9500000000000455 | plain": [
+   "0.950",
+   "0.950"
+  ],
+  "in-service fraction of plan | 0.9500000000000455 | signed": [
+   "+0.950",
+   "+0.950"
+  ],
+  "in-service fraction of plan | 1.036363636363686 | none": [
+   "1.036",
+   "1.036"
+  ],
+  "in-service fraction of plan | 1.036363636363686 | empty": [
+   "1.036",
+   "1.036"
+  ],
+  "in-service fraction of plan | 1.036363636363686 | plain": [
+   "1.036",
+   "1.036"
+  ],
+  "in-service fraction of plan | 1.036363636363686 | signed": [
+   "+1.036",
+   "+1.036"
+  ],
+  "in-service fraction of plan | -29.96 | none": [
+   "-29.960",
+   "-29.960"
+  ],
+  "in-service fraction of plan | -29.96 | empty": [
+   "-29.960",
+   "-29.960"
+  ],
+  "in-service fraction of plan | -29.96 | plain": [
+   "-29.960",
+   "-29.960"
+  ],
+  "in-service fraction of plan | -29.96 | signed": [
+   "-29.960",
+   "-29.960"
+  ],
+  "in-service fraction of plan | -30.04 | none": [
+   "-30.040",
+   "-30.040"
+  ],
+  "in-service fraction of plan | -30.04 | empty": [
+   "-30.040",
+   "-30.040"
+  ],
+  "in-service fraction of plan | -30.04 | plain": [
+   "-30.040",
+   "-30.040"
+  ],
+  "in-service fraction of plan | -30.04 | signed": [
+   "-30.040",
+   "-30.040"
+  ],
+  "in-service fraction of plan | 30.04 | none": [
+   "30.040",
+   "30.040"
+  ],
+  "in-service fraction of plan | 30.04 | empty": [
+   "30.040",
+   "30.040"
+  ],
+  "in-service fraction of plan | 30.04 | plain": [
+   "30.040",
+   "30.040"
+  ],
+  "in-service fraction of plan | 30.04 | signed": [
+   "+30.040",
+   "+30.040"
+  ],
+  "in-service fraction of plan | 59.97 | none": [
+   "59.970",
+   "59.970"
+  ],
+  "in-service fraction of plan | 59.97 | empty": [
+   "59.970",
+   "59.970"
+  ],
+  "in-service fraction of plan | 59.97 | plain": [
+   "59.970",
+   "59.970"
+  ],
+  "in-service fraction of plan | 59.97 | signed": [
+   "+59.970",
+   "+59.970"
+  ],
+  "in-service fraction of plan | -484.95000000000016 | none": [
+   "-484.950",
+   "-484.950"
+  ],
+  "in-service fraction of plan | -484.95000000000016 | empty": [
+   "-484.950",
+   "-484.950"
+  ],
+  "in-service fraction of plan | -484.95000000000016 | plain": [
+   "-484.950",
+   "-484.950"
+  ],
+  "in-service fraction of plan | -484.95000000000016 | signed": [
+   "-484.950",
+   "-484.950"
+  ],
+  "in-service fraction of plan | -1565.6 | none": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "in-service fraction of plan | -1565.6 | empty": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "in-service fraction of plan | -1565.6 | plain": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "in-service fraction of plan | -1565.6 | signed": [
+   "-1,565.600",
+   "-1,565.600"
+  ],
+  "in-service fraction of plan | 1799.96 | none": [
+   "1,799.960",
+   "1,799.960"
+  ],
+  "in-service fraction of plan | 1799.96 | empty": [
+   "1,799.960",
+   "1,799.960"
+  ],
+  "in-service fraction of plan | 1799.96 | plain": [
+   "1,799.960",
+   "1,799.960"
+  ],
+  "in-service fraction of plan | 1799.96 | signed": [
+   "+1,799.960",
+   "+1,799.960"
+  ],
+  "in-service fraction of plan | -1800.0000000000002 | none": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "in-service fraction of plan | -1800.0000000000002 | empty": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "in-service fraction of plan | -1800.0000000000002 | plain": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "in-service fraction of plan | -1800.0000000000002 | signed": [
+   "-1,800.000",
+   "-1,800.000"
+  ],
+  "in-service fraction of plan | 13.0000000000001 | none": [
+   "13.000",
+   "13.000"
+  ],
+  "in-service fraction of plan | 13.0000000000001 | empty": [
+   "13.000",
+   "13.000"
+  ],
+  "in-service fraction of plan | 13.0000000000001 | plain": [
+   "13.000",
+   "13.000"
+  ],
+  "in-service fraction of plan | 13.0000000000001 | signed": [
+   "+13.000",
+   "+13.000"
+  ],
+  "in-service fraction of plan | 12345.678 | none": [
+   "12,345.678",
+   "12,345.678"
+  ],
+  "in-service fraction of plan | 12345.678 | empty": [
+   "12,345.678",
+   "12,345.678"
+  ],
+  "in-service fraction of plan | 12345.678 | plain": [
+   "12,345.678",
+   "12,345.678"
+  ],
+  "in-service fraction of plan | 12345.678 | signed": [
+   "+12,345.678",
+   "+12,345.678"
+  ],
+  "custom_s | 0 | none": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "custom_s | 0 | empty": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "custom_s | 0 | plain": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "custom_s | 0 | signed": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "custom_s | -0 | none": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "custom_s | -0 | empty": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "custom_s | -0 | plain": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "custom_s | -0 | signed": [
+   "0.0 s",
+   "0.0 s (0.0 min)"
+  ],
+  "custom_s | 0.000027 | none": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "custom_s | 0.000027 | empty": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "custom_s | 0.000027 | plain": [
+   "0.000027 s",
+   "0.000027 s (0.0 min)"
+  ],
+  "custom_s | 0.000027 | signed": [
+   "+0.000027 s",
+   "+0.000027 s (0.0 min)"
+  ],
+  "custom_s | -1e-7 | none": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "custom_s | -1e-7 | empty": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "custom_s | -1e-7 | plain": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "custom_s | -1e-7 | signed": [
+   "-0.0000001 s",
+   "-0.0000001 s (0.0 min)"
+  ],
+  "custom_s | 0.0005 | none": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "custom_s | 0.0005 | empty": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "custom_s | 0.0005 | plain": [
+   "0.0005 s",
+   "0.0005 s (0.0 min)"
+  ],
+  "custom_s | 0.0005 | signed": [
+   "+0.0005 s",
+   "+0.0005 s (0.0 min)"
+  ],
+  "custom_s | 0.0104 | none": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "custom_s | 0.0104 | empty": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "custom_s | 0.0104 | plain": [
+   "0.0104 s",
+   "0.0104 s (0.0 min)"
+  ],
+  "custom_s | 0.0104 | signed": [
+   "+0.0104 s",
+   "+0.0104 s (0.0 min)"
+  ],
+  "custom_s | 0.01049136786188579 | none": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "custom_s | 0.01049136786188579 | empty": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "custom_s | 0.01049136786188579 | plain": [
+   "0.01049136786188579 s",
+   "0.01049136786188579 s (0.0 min)"
+  ],
+  "custom_s | 0.01049136786188579 | signed": [
+   "+0.01049136786188579 s",
+   "+0.01049136786188579 s (0.0 min)"
+  ],
+  "custom_s | 0.017993456924754632 | none": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "custom_s | 0.017993456924754632 | empty": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "custom_s | 0.017993456924754632 | plain": [
+   "0.017993456924754632 s",
+   "0.017993456924754632 s (0.0 min)"
+  ],
+  "custom_s | 0.017993456924754632 | signed": [
+   "+0.017993456924754632 s",
+   "+0.017993456924754632 s (0.0 min)"
+  ],
+  "custom_s | 0.02004 | none": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "custom_s | 0.02004 | empty": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "custom_s | 0.02004 | plain": [
+   "0.02004 s",
+   "0.02004 s (0.0 min)"
+  ],
+  "custom_s | 0.02004 | signed": [
+   "+0.02004 s",
+   "+0.02004 s (0.0 min)"
+  ],
+  "custom_s | 0.020119956379498365 | none": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "custom_s | 0.020119956379498365 | empty": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "custom_s | 0.020119956379498365 | plain": [
+   "0.020119956379498365 s",
+   "0.020119956379498365 s (0.0 min)"
+  ],
+  "custom_s | 0.020119956379498365 | signed": [
+   "+0.020119956379498365 s",
+   "+0.020119956379498365 s (0.0 min)"
+  ],
+  "custom_s | 0.04166666666666572 | none": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "custom_s | 0.04166666666666572 | empty": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "custom_s | 0.04166666666666572 | plain": [
+   "0.04166666666666572 s",
+   "0.04166666666666572 s (0.0 min)"
+  ],
+  "custom_s | 0.04166666666666572 | signed": [
+   "+0.04166666666666572 s",
+   "+0.04166666666666572 s (0.0 min)"
+  ],
+  "custom_s | 0.00003417167851284857 | none": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "custom_s | 0.00003417167851284857 | empty": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "custom_s | 0.00003417167851284857 | plain": [
+   "0.00003417167851284857 s",
+   "0.00003417167851284857 s (0.0 min)"
+  ],
+  "custom_s | 0.00003417167851284857 | signed": [
+   "+0.00003417167851284857 s",
+   "+0.00003417167851284857 s (0.0 min)"
+  ],
+  "custom_s | 0.95 | none": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "custom_s | 0.95 | empty": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "custom_s | 0.95 | plain": [
+   "0.9 s",
+   "0.9 s (0.0 min)"
+  ],
+  "custom_s | 0.95 | signed": [
+   "+0.9 s",
+   "+0.9 s (0.0 min)"
+  ],
+  "custom_s | 0.9500000000000455 | none": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "custom_s | 0.9500000000000455 | empty": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "custom_s | 0.9500000000000455 | plain": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "custom_s | 0.9500000000000455 | signed": [
+   "+1.0 s",
+   "+1.0 s (0.0 min)"
+  ],
+  "custom_s | 1.036363636363686 | none": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "custom_s | 1.036363636363686 | empty": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "custom_s | 1.036363636363686 | plain": [
+   "1.0 s",
+   "1.0 s (0.0 min)"
+  ],
+  "custom_s | 1.036363636363686 | signed": [
+   "+1.0 s",
+   "+1.0 s (0.0 min)"
+  ],
+  "custom_s | -29.96 | none": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "custom_s | -29.96 | empty": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "custom_s | -29.96 | plain": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "custom_s | -29.96 | signed": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "custom_s | -30.04 | none": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "custom_s | -30.04 | empty": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "custom_s | -30.04 | plain": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "custom_s | -30.04 | signed": [
+   "-30.0 s",
+   "-30.0 s (-0.5 min)"
+  ],
+  "custom_s | 30.04 | none": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "custom_s | 30.04 | empty": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "custom_s | 30.04 | plain": [
+   "30.0 s",
+   "30.0 s (0.5 min)"
+  ],
+  "custom_s | 30.04 | signed": [
+   "+30.0 s",
+   "+30.0 s (+0.5 min)"
+  ],
+  "custom_s | 59.97 | none": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "custom_s | 59.97 | empty": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "custom_s | 59.97 | plain": [
+   "60.0 s",
+   "60.0 s (1.0 min)"
+  ],
+  "custom_s | 59.97 | signed": [
+   "+60.0 s",
+   "+60.0 s (+1.0 min)"
+  ],
+  "custom_s | -484.95000000000016 | none": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "custom_s | -484.95000000000016 | empty": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "custom_s | -484.95000000000016 | plain": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "custom_s | -484.95000000000016 | signed": [
+   "-485.0 s",
+   "-485.0 s (-8.1 min)"
+  ],
+  "custom_s | -1565.6 | none": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "custom_s | -1565.6 | empty": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "custom_s | -1565.6 | plain": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "custom_s | -1565.6 | signed": [
+   "-1,565.6 s",
+   "-1,565.6 s (-26.1 min)"
+  ],
+  "custom_s | 1799.96 | none": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "custom_s | 1799.96 | empty": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "custom_s | 1799.96 | plain": [
+   "1,800.0 s",
+   "1,800.0 s (30.0 min)"
+  ],
+  "custom_s | 1799.96 | signed": [
+   "+1,800.0 s",
+   "+1,800.0 s (+30.0 min)"
+  ],
+  "custom_s | -1800.0000000000002 | none": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "custom_s | -1800.0000000000002 | empty": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "custom_s | -1800.0000000000002 | plain": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "custom_s | -1800.0000000000002 | signed": [
+   "-1,800.0 s",
+   "-1,800.0 s (-30.0 min)"
+  ],
+  "custom_s | 13.0000000000001 | none": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "custom_s | 13.0000000000001 | empty": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "custom_s | 13.0000000000001 | plain": [
+   "13.0 s",
+   "13.0 s (0.2 min)"
+  ],
+  "custom_s | 13.0000000000001 | signed": [
+   "+13.0 s",
+   "+13.0 s (+0.2 min)"
+  ],
+  "custom_s | 12345.678 | none": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "custom_s | 12345.678 | empty": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "custom_s | 12345.678 | plain": [
+   "12,345.7 s",
+   "12,345.7 s (205.8 min)"
+  ],
+  "custom_s | 12345.678 | signed": [
+   "+12,345.7 s",
+   "+12,345.7 s (+205.8 min)"
+  ]
+ },
+ "views": [
+  {
+   "name": "wait.p90_s{area=SF} -180 to -30.04",
+   "readouts": [
+    "d08f18c6c6e770d1ad027c41bb5099ebe374d6c5a1323230bd0680252bbe1997",
+    "d08f18c6c6e770d1ad027c41bb5099ebe374d6c5a1323230bd0680252bbe1997",
+    "d29ee3dccf9e4ef9776288233e14654101125595dc04a9e9d0a46d3df357e3c9"
+   ],
+   "card": "c9c7fcf88f6802c9e906be21585397d1bc27facb6ef0c6a2bce4b0d46ec7bdf1",
+   "lines": [
+    [
+     {
+      "line": "Improved beyond the margin: wait p90 in San Francisco -105.0 s (95% interval -180.0 s to -30.0 s; margin 30 s). 1 guardrail not available: required population missing. Held because the main result regressed.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     },
+     {
+      "line": "Improved beyond the margin: wait.p90 s{area=SF} -105.0 (95% interval -180.0 to -30.0; margin 30.0). 1 guardrail not available: required population missing. Held because the main result regressed.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: wait p90 in San Francisco -105.0 s (95% interval -180.0 s to -30.0 s; margin 30 s). 1 guardrail not available: required population missing. Held: this condition harms service past an allowance.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     },
+     {
+      "line": "Improved beyond the margin: wait.p90 s{area=SF} -105.0 (95% interval -180.0 to -30.0; margin 30.0). 1 guardrail not available: required population missing. Held: this condition harms service past an allowance.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: wait p90 in San Francisco -105.0 s (95% interval -180.0 s to -30.0 s; margin 30 s). 1 guardrail not available: required population missing. Held because the main result regressed.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     },
+     {
+      "line": "Improved beyond the margin: wait.p90 s{area=SF} -105.0 (95% interval -180.0 to -30.0; margin 30.0). 1 guardrail not available: required population missing. Held because the main result regressed.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "unserved.fraction -180 to -30.04",
+   "readouts": [
+    "afe8d670e95007945646e67e38f757f80500f898d45c4c991679dd48259775c9",
+    "afe8d670e95007945646e67e38f757f80500f898d45c4c991679dd48259775c9",
+    "d599e16a641d31da5db2b16d1a0f498cc72e77a37648259f3328aa1c946c4eb1"
+   ],
+   "card": "983f7d1ece02903be2cf21b116152cf96dd745d208b88d2afab595529adbbb51",
+   "lines": [
+    [
+     {
+      "line": "Improved beyond the margin: unserved share -105.020 (95% interval -180.000 to -30.040; margin 30). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: unserved.fraction -105.0 (95% interval -180.0 to -30.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: unserved share -105.020 (95% interval -180.000 to -30.040; margin 30). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: unserved.fraction -105.0 (95% interval -180.0 to -30.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: unserved share -105.020 (95% interval -180.000 to -30.040; margin 30). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: unserved.fraction -105.0 (95% interval -180.0 to -30.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "requests.served -180 to -30.04",
+   "readouts": [
+    "4ff09ad6be418b37e34e17b0d722091da684196b853df2203bc80a8fcc12bf62",
+    "4ff09ad6be418b37e34e17b0d722091da684196b853df2203bc80a8fcc12bf62",
+    "41c1ce98c41c9af865becd6dc888fc37c24acc366afca0562b0fefaa9d2695cf"
+   ],
+   "card": "69db1bc51969167f729768432a811255c28e3da7e2736d000809aa1235463820",
+   "lines": [
+    [
+     {
+      "line": "Improved beyond the margin: served requests -105.0 (95% interval -180.0 to -30.0; margin 30). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: requests.served -105.0 (95% interval -180.0 to -30.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: served requests -105.0 (95% interval -180.0 to -30.0; margin 30). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: requests.served -105.0 (95% interval -180.0 to -30.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: served requests -105.0 (95% interval -180.0 to -30.0; margin 30). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: requests.served -105.0 (95% interval -180.0 to -30.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "wait.p90_s{area=SF} 0 to 0.9500000000000455",
+   "readouts": [
+    "53b1da27cdc068fcad080f4e88335137b92182e09e461553adc1fd33cf7ac793",
+    "53b1da27cdc068fcad080f4e88335137b92182e09e461553adc1fd33cf7ac793",
+    "8ef4813d4890391a2cfbc87185fe947c3cb276bee16a30ef476f526ca494366b"
+   ],
+   "card": "179d9ba4f9bca429bdb4796206edf780c4c62417ed5c9b70a0b2d7b955f04580",
+   "lines": [
+    [
+     {
+      "line": "Within the margin: wait p90 in San Francisco +0.5 s (95% interval 0.0 s to +1.0 s; margin 1 s). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: wait.p90 s{area=SF} +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: wait p90 in San Francisco +0.5 s (95% interval 0.0 s to +1.0 s; margin 1 s). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: wait.p90 s{area=SF} +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: wait p90 in San Francisco +0.5 s (95% interval 0.0 s to +1.0 s; margin 1 s). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: wait.p90 s{area=SF} +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "unserved.fraction 0 to 0.9500000000000455",
+   "readouts": [
+    "e6d5d2349d6f70235682a6f00908c982f721fd136e54a891b1577c0c62cb9f62",
+    "e6d5d2349d6f70235682a6f00908c982f721fd136e54a891b1577c0c62cb9f62",
+    "49740d24beb691bf46d9049714a7c985105ce141478864427d086357233e0f10"
+   ],
+   "card": "b4bff1cf69a0eac350dc0b81be781f9627610466ad5c0d847090c9e3f2a1ff0e",
+   "lines": [
+    [
+     {
+      "line": "Within the margin: unserved share +0.475 (95% interval 0.000 to +0.950; margin 1). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: unserved.fraction +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: unserved share +0.475 (95% interval 0.000 to +0.950; margin 1). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: unserved.fraction +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: unserved share +0.475 (95% interval 0.000 to +0.950; margin 1). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: unserved.fraction +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "requests.served 0 to 0.9500000000000455",
+   "readouts": [
+    "fa6d430c12162a671658befeb1da7770bf0d7f086daf8805bfc5e544b6aaf269",
+    "fa6d430c12162a671658befeb1da7770bf0d7f086daf8805bfc5e544b6aaf269",
+    "385785874902adf843b51b287ff2d518585595312e68563051c19f3dcbf06a41"
+   ],
+   "card": "102779ae784ebdd3e8fb0e35701008edb84c3d7613b36f9072aa7a552218435f",
+   "lines": [
+    [
+     {
+      "line": "Within the margin: served requests +0.5 (95% interval 0.0 to +1.0; margin 1). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     },
+     {
+      "line": "Within the margin: requests.served +0.5 (95% interval 0.0 to +1.0; margin 1.0). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: served requests +0.5 (95% interval 0.0 to +1.0; margin 1). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     },
+     {
+      "line": "Within the margin: requests.served +0.5 (95% interval 0.0 to +1.0; margin 1.0). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: served requests +0.5 (95% interval 0.0 to +1.0; margin 1). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     },
+     {
+      "line": "Within the margin: requests.served +0.5 (95% interval 0.0 to +1.0; margin 1.0). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "wait.p90_s{area=SF} 0 to 1.036363636363686",
+   "readouts": [
+    "1ccf86ed5c97ff2c8566e7a263fdc88ddbdc08363aba9bece083b8dee6cc835e",
+    "1ccf86ed5c97ff2c8566e7a263fdc88ddbdc08363aba9bece083b8dee6cc835e",
+    "52dd8e83feb4437b07e9f4885529cb48f152310d0a628f7028562e31d96bd633"
+   ],
+   "card": "a2bdc46148b62e591fcee3f7f69220bb32a038457bc6af8f8fda93d9576b173e",
+   "lines": [
+    [
+     {
+      "line": "Interval crosses the margin, not decided: wait p90 in San Francisco +0.5 s (95% interval 0.0 s to +1.0 s; margin 1 s). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Interval crosses the margin, not decided: wait.p90 s{area=SF} +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Interval crosses the margin, not decided: wait p90 in San Francisco +0.5 s (95% interval 0.0 s to +1.0 s; margin 1 s). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Interval crosses the margin, not decided: wait.p90 s{area=SF} +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Interval crosses the margin, not decided: wait p90 in San Francisco +0.5 s (95% interval 0.0 s to +1.0 s; margin 1 s). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Interval crosses the margin, not decided: wait.p90 s{area=SF} +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. Run more paired seeds before reading a direction.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "unserved.fraction 0 to 1.036363636363686",
+   "readouts": [
+    "31a7d157acabe8ed2de6c07893544d191d14ac2bbdbb88e0880d51e9f08a9cac",
+    "31a7d157acabe8ed2de6c07893544d191d14ac2bbdbb88e0880d51e9f08a9cac",
+    "fffeeec4b627d1bb53927214f754629fb2d63d2d967c3e2705767b5131e221a6"
+   ],
+   "card": "5f4a491357d62758a67131c6e51b5abb314ae52f2addd47d915a18ca016e4d33",
+   "lines": [
+    [
+     {
+      "line": "Interval crosses the margin, not decided: unserved share +0.518 (95% interval 0.000 to +1.036; margin 1). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Add paired seeds or test a larger step of the same setting."
+     },
+     {
+      "line": "Interval crosses the margin, not decided: unserved.fraction +0.5 (95% interval 0.0 to +1.0; margin 1.0). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Add paired seeds or test a larger step of the same setting."
+     }
+    ],
+    [
+     {
+      "line": "Interval crosses the margin, not decided: unserved share +0.518 (95% interval 0.000 to +1.036; margin 1). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Add paired seeds or test a larger step of the same setting."
+     },
+     {
+      "line": "Interval crosses the margin, not decided: unserved.fraction +0.5 (95% interval 0.0 to +1.0; margin 1.0). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Add paired seeds or test a larger step of the same setting."
+     }
+    ],
+    [
+     {
+      "line": "Interval crosses the margin, not decided: unserved share +0.518 (95% interval 0.000 to +1.036; margin 1). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Add paired seeds or test a larger step of the same setting."
+     },
+     {
+      "line": "Interval crosses the margin, not decided: unserved.fraction +0.5 (95% interval 0.0 to +1.0; margin 1.0). 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Add paired seeds or test a larger step of the same setting."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "requests.served 0 to 1.036363636363686",
+   "readouts": [
+    "1ccb7144eb66a7b94da93e38daf2cad01b0e2c23cfc5e15b4a001070c5533f49",
+    "1ccb7144eb66a7b94da93e38daf2cad01b0e2c23cfc5e15b4a001070c5533f49",
+    "b323fbe15088d7f10d00312ba762bb31e1ccbab2e8c3f49807088f74df44805c"
+   ],
+   "card": "cfaf84779e3d3394a734e9a1bbc61c83436c59906f9722abff1ed90591f7c205",
+   "lines": [
+    [
+     {
+      "line": "Interval crosses the margin, not decided: served requests +0.5 (95% interval 0.0 to +1.0; margin 1). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Interval crosses the margin, not decided: requests.served +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Interval crosses the margin, not decided: served requests +0.5 (95% interval 0.0 to +1.0; margin 1). 2 guardrails went past their allowances; see the guardrail table. Held: this condition harms service past an allowance.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Interval crosses the margin, not decided: requests.served +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. Held: this condition harms service past an allowance.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Interval crosses the margin, not decided: served requests +0.5 (95% interval 0.0 to +1.0; margin 1). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Interval crosses the margin, not decided: requests.served +0.5 (95% interval 0.0 to +1.0; margin 1.0). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "wait.p90_s{area=SF} -1800.0000000000002 to 1799.96",
+   "readouts": [
+    "77b5b90866cdae241d2409274328a4c7bee27ca7220a9dd766ddb356adf6e5d6",
+    "77b5b90866cdae241d2409274328a4c7bee27ca7220a9dd766ddb356adf6e5d6",
+    "cfbc3b52bd2dc33304410b48d13e4a9c21aa62acca62c16fc82042d2c4d8e3e1"
+   ],
+   "card": "d58474c1ad2ec695a5d8e3edb4c603205880d00b8655d0d4e226d6ca2647d750",
+   "lines": [
+    [
+     {
+      "line": "Within the margin: wait p90 in San Francisco -0.020000000000095497 s; interval and margin under Exact values. 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     },
+     {
+      "line": "Within the margin: wait.p90 s{area=SF} -0.00033333333333492493 min; interval and margin under Exact values. 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: wait p90 in San Francisco -0.020000000000095497 s; interval and margin under Exact values. 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     },
+     {
+      "line": "Within the margin: wait.p90 s{area=SF} -0.00033333333333492493 min; interval and margin under Exact values. 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: wait p90 in San Francisco -0.020000000000095497 s; interval and margin under Exact values. 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     },
+     {
+      "line": "Within the margin: wait.p90 s{area=SF} -0.00033333333333492493 min; interval and margin under Exact values. 1 guardrail not available: required population missing. Advance to the next simulation test, not a rollout.",
+      "next": "Check whether the queue this change relieved held cars riders needed, then test the resource that did."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "unserved.fraction -1800.0000000000002 to 1799.96",
+   "readouts": [
+    "d607be91f9b153fba3cc89d3229419048ada79c80493b2a8b22c80eab60a18d5",
+    "d607be91f9b153fba3cc89d3229419048ada79c80493b2a8b22c80eab60a18d5",
+    "f9b3d4e24591c2db22f71f6aeacdc4d5a7e00c5733c0126bded4818c141e7229"
+   ],
+   "card": "d0b19c05851d0471c9dc5180e1b0292a0c07f505e74a732a30228fc053b67d9a",
+   "lines": [
+    [
+     {
+      "line": "Within the margin: unserved share -0.020 (95% interval -1,800.000 to +1,799.960; margin 1,800). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: unserved.fraction -0.020000000000095497 (95% interval -1800.0 to +1800.0; margin 1800.0). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: unserved share -0.020 (95% interval -1,800.000 to +1,799.960; margin 1,800). 2 guardrails went past their allowances; see the guardrail table. Held: this condition harms service past an allowance.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: unserved.fraction -0.020000000000095497 (95% interval -1800.0 to +1800.0; margin 1800.0). 2 guardrails went past their allowances; see the guardrail table. Held: this condition harms service past an allowance.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: unserved share -0.020 (95% interval -1,800.000 to +1,799.960; margin 1,800). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: unserved.fraction -0.020000000000095497 (95% interval -1800.0 to +1800.0; margin 1800.0). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "requests.served -1800.0000000000002 to 1799.96",
+   "readouts": [
+    "a9c4eea768678e855126928477e79a93a2a046409a56039ba2ac896d4701622d",
+    "a9c4eea768678e855126928477e79a93a2a046409a56039ba2ac896d4701622d",
+    "498f2eac9184a484b1945657e3e63a5ca037e0dc5ae3b13da250efe7491255e4"
+   ],
+   "card": "8859602b8ab147f0ca715f9e19a6130c02dd4282d5e3d1126f049b4058206779",
+   "lines": [
+    [
+     {
+      "line": "Within the margin: served requests -0.020000000000095497 (95% interval -1,800.0 to +1,800.0; margin 1,800). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: requests.served -0.020000000000095497 (95% interval -1800.0 to +1800.0; margin 1800.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: served requests -0.020000000000095497 (95% interval -1,800.0 to +1,800.0; margin 1,800). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: requests.served -0.020000000000095497 (95% interval -1800.0 to +1800.0; margin 1800.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Within the margin: served requests -0.020000000000095497 (95% interval -1,800.0 to +1,800.0; margin 1,800). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Within the margin: requests.served -0.020000000000095497 (95% interval -1800.0 to +1800.0; margin 1800.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "wait.p90_s{area=SF} -1565.6 to -735.9",
+   "readouts": [
+    "e6367620527dda732e17610d924a0994381f89ce9e19ea9ede08cb02b94d104d",
+    "e6367620527dda732e17610d924a0994381f89ce9e19ea9ede08cb02b94d104d",
+    "d003356aa239c386bff20d55855c7bce5b79f7a41be6f14a350e373911597319"
+   ],
+   "card": "936ee4df62eedf10d567b467f0807859779d71f9fa1fb3b2f9144cdc20f7d7dc",
+   "lines": [
+    [
+     {
+      "line": "Improved beyond the margin: wait p90 in San Francisco -19.2 min (95% interval -26.1 min to -12.3 min; margin 1.0 min). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: wait.p90 s{area=SF} -19.2 min (95% interval -26.1 min to -12.3 min; margin 1.0 min). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: wait p90 in San Francisco -19.2 min (95% interval -26.1 min to -12.3 min; margin 1.0 min). 2 guardrails went past their allowances; see the guardrail table. Held: this condition harms service past an allowance.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: wait.p90 s{area=SF} -19.2 min (95% interval -26.1 min to -12.3 min; margin 1.0 min). 2 guardrails went past their allowances; see the guardrail table. Held: this condition harms service past an allowance.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: wait p90 in San Francisco -19.2 min (95% interval -26.1 min to -12.3 min; margin 1.0 min). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: wait.p90 s{area=SF} -19.2 min (95% interval -26.1 min to -12.3 min; margin 1.0 min). 2 guardrails went past their allowances; see the guardrail table. Held because a guardrail went past its allowance.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "unserved.fraction -1565.6 to -735.9",
+   "readouts": [
+    "9b9d4d57d86ac307c5e77c120f810d8f5d6798723fbe136e21efbd275b07ab91",
+    "9b9d4d57d86ac307c5e77c120f810d8f5d6798723fbe136e21efbd275b07ab91",
+    "eaf3dc0438185975ab39ed4e19258467f2577afd5c854c7a7d1a155d3e2b4aef"
+   ],
+   "card": "810dda9f234922c82befce999b00eed886af6f82c8cb7157a3e7cdfc9484b61f",
+   "lines": [
+    [
+     {
+      "line": "Improved beyond the margin: unserved share -1,150.750 (95% interval -1,565.600 to -735.900; margin 60). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: unserved.fraction -1150.8 (95% interval -1565.6 to -735.9; margin 60.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: unserved share -1,150.750 (95% interval -1,565.600 to -735.900; margin 60). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: unserved.fraction -1150.8 (95% interval -1565.6 to -735.9; margin 60.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: unserved share -1,150.750 (95% interval -1,565.600 to -735.900; margin 60). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Improved beyond the margin: unserved.fraction -1150.8 (95% interval -1565.6 to -735.9; margin 60.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "requests.served -1565.6 to -735.9",
+   "readouts": [
+    "29ec1b16899c041d41e726a45884b7d31b84d0ca4b18a3e527628d8da4b3f310",
+    "29ec1b16899c041d41e726a45884b7d31b84d0ca4b18a3e527628d8da4b3f310",
+    "3ac5cafbb9792a9ee91ec2801435e1337f0085311e75187df8a7cd6442fcd1d5"
+   ],
+   "card": "4bc4f12a37075f38d80584b89e35be456ab2aea88498ef81b3ae75b170a9be1e",
+   "lines": [
+    [
+     {
+      "line": "Improved beyond the margin: served requests -1,150.8 (95% interval -1,565.6 to -735.9; margin 60). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     },
+     {
+      "line": "Improved beyond the margin: requests.served -1150.8 (95% interval -1565.6 to -735.9; margin 60.0). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: served requests -1,150.8 (95% interval -1,565.6 to -735.9; margin 60). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     },
+     {
+      "line": "Improved beyond the margin: requests.served -1150.8 (95% interval -1565.6 to -735.9; margin 60.0). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     }
+    ],
+    [
+     {
+      "line": "Improved beyond the margin: served requests -1,150.8 (95% interval -1,565.6 to -735.9; margin 60). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     },
+     {
+      "line": "Improved beyond the margin: requests.served -1150.8 (95% interval -1565.6 to -735.9; margin 60.0). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Repeat on another seed set and another rider draw, then read measures no guardrail covered."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "wait.p90_s{area=SF} 30.04 to 180",
+   "readouts": [
+    "4ba430765c8d018fa624a7cbc4ec73d2b86c448e0da82af9b11945daff564cdc",
+    "4ba430765c8d018fa624a7cbc4ec73d2b86c448e0da82af9b11945daff564cdc",
+    "2c8ee7dc4e802c33d3af5bf46ca255f3413efa4a4e79945a81cfd82c4b3a516c"
+   ],
+   "card": "523efd4b8f282152d68f69653cf6dbcd5d4e7d7a3c879f9f3bf017274037ccb7",
+   "lines": [
+    [
+     {
+      "line": "Worse beyond the margin: wait p90 in San Francisco +105.0 s (95% interval +30.0 s to +180.0 s; margin 30 s). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Worse beyond the margin: wait.p90 s{area=SF} +105.0 (95% interval +30.0 to +180.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Worse beyond the margin: wait p90 in San Francisco +105.0 s (95% interval +30.0 s to +180.0 s; margin 30 s). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Worse beyond the margin: wait.p90 s{area=SF} +105.0 (95% interval +30.0 to +180.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Worse beyond the margin: wait p90 in San Francisco +105.0 s (95% interval +30.0 s to +180.0 s; margin 30 s). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Worse beyond the margin: wait.p90 s{area=SF} +105.0 (95% interval +30.0 to +180.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. No recommendation: nothing moved beyond the margin.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "unserved.fraction 30.04 to 180",
+   "readouts": [
+    "459259062f920b187857257370b9230755a36586dc383392832053c83457941b",
+    "459259062f920b187857257370b9230755a36586dc383392832053c83457941b",
+    "56d76ab8a3b89eb734cd85f2a687495bfea2adc018b1ed4630b720fa98168268"
+   ],
+   "card": "ea6fe5e6606c197f51361cb060ad0f9d60f93f3140d205f889c4c501a72f9fd8",
+   "lines": [
+    [
+     {
+      "line": "Worse beyond the margin: unserved share +105.020 (95% interval +30.040 to +180.000; margin 30). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Keep the current setting and look for the resource this change took time from."
+     },
+     {
+      "line": "Worse beyond the margin: unserved.fraction +105.0 (95% interval +30.0 to +180.0; margin 30.0). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Keep the current setting and look for the resource this change took time from."
+     }
+    ],
+    [
+     {
+      "line": "Worse beyond the margin: unserved share +105.020 (95% interval +30.040 to +180.000; margin 30). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Keep the current setting and look for the resource this change took time from."
+     },
+     {
+      "line": "Worse beyond the margin: unserved.fraction +105.0 (95% interval +30.0 to +180.0; margin 30.0). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Keep the current setting and look for the resource this change took time from."
+     }
+    ],
+    [
+     {
+      "line": "Worse beyond the margin: unserved share +105.020 (95% interval +30.040 to +180.000; margin 30). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Keep the current setting and look for the resource this change took time from."
+     },
+     {
+      "line": "Worse beyond the margin: unserved.fraction +105.0 (95% interval +30.0 to +180.0; margin 30.0). 1 guardrail not available: required population missing. Run more paired seeds before reading a direction.",
+      "next": "Keep the current setting and look for the resource this change took time from."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "requests.served 30.04 to 180",
+   "readouts": [
+    "5f5db9d00e5fe1a28a7d107cf44e01e7e53e85e5b173b2c49e565db4e49f2130",
+    "5f5db9d00e5fe1a28a7d107cf44e01e7e53e85e5b173b2c49e565db4e49f2130",
+    "e31e856d6bac759f84590dcc3aab2a1983571d9b99c307dcf72dc2d7e780f8af"
+   ],
+   "card": "c65a693d84b00c528095b37e08a08ec6ab1c91417157dd8bfe0fc1199d90d172",
+   "lines": [
+    [
+     {
+      "line": "Worse beyond the margin: served requests +105.0 (95% interval +30.0 to +180.0; margin 30). 2 guardrails went past their allowances; see the guardrail table. Advance to the next simulation test, not a rollout.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Worse beyond the margin: requests.served +105.0 (95% interval +30.0 to +180.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. Advance to the next simulation test, not a rollout.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Worse beyond the margin: served requests +105.0 (95% interval +30.0 to +180.0; margin 30). 2 guardrails went past their allowances; see the guardrail table. Advance to the next simulation test, not a rollout.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Worse beyond the margin: requests.served +105.0 (95% interval +30.0 to +180.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. Advance to the next simulation test, not a rollout.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ],
+    [
+     {
+      "line": "Worse beyond the margin: served requests +105.0 (95% interval +30.0 to +180.0; margin 30). 2 guardrails went past their allowances; see the guardrail table. Advance to the next simulation test, not a rollout.",
+      "next": "Relieve unserved share in San Francisco as its own change, then retry this one with both declared."
+     },
+     {
+      "line": "Worse beyond the margin: requests.served +105.0 (95% interval +30.0 to +180.0; margin 30.0). 2 guardrails went past their allowances; see the guardrail table. Advance to the next simulation test, not a rollout.",
+      "next": "Relieve unserved.fraction{area=SF} as its own change, then retry this one with both declared."
+     }
+    ]
+   ]
+  },
+  {
+   "name": "invalid  to ",
+   "readouts": [
+    "2386c67a3c60f1afa38713b8b2a2563d0dfd46a235842fc0b31e41eaefd39ff3",
+    "2386c67a3c60f1afa38713b8b2a2563d0dfd46a235842fc0b31e41eaefd39ff3",
+    "2386c67a3c60f1afa38713b8b2a2563d0dfd46a235842fc0b31e41eaefd39ff3"
+   ],
+   "card": "a09982d7159858fa332f261568a48598c1a19adae95d09232a77d82241f79dc6",
+   "lines": [
+    [
+     {
+      "line": "Invalid run: REPLICATION_MISMATCH. No result can be read.",
+      "next": "Fix the invalid run first."
+     },
+     {
+      "line": "Invalid run: REPLICATION_MISMATCH. No result can be read.",
+      "next": "Fix the invalid run first."
+     }
+    ],
+    [
+     {
+      "line": "Invalid run: REPLICATION_MISMATCH. No result can be read.",
+      "next": "Fix the invalid run first."
+     },
+     {
+      "line": "Invalid run: REPLICATION_MISMATCH. No result can be read.",
+      "next": "Fix the invalid run first."
+     }
+    ],
+    [
+     {
+      "line": "Invalid run: REPLICATION_MISMATCH. No result can be read.",
+      "next": "Fix the invalid run first."
+     },
+     {
+      "line": "Invalid run: REPLICATION_MISMATCH. No result can be read.",
+      "next": "Fix the invalid run first."
+     }
+    ]
+   ]
+  }
+ ]
+}

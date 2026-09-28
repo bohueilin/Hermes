@@ -467,9 +467,13 @@ function swatch(kind) {
   // flex: none keeps the swatch at 24 px in a narrow legend row, so its 2 px line is not squeezed thinner.
   const box = svg("svg", { width: 24, height: 12, viewBox: "0 0 24 12", "aria-hidden": "true", focusable: "false", style: "flex: none" });
   const add = (node) => box.appendChild(node);
-  if (kind === "line") add(svg("line", { x1: 1, x2: 23, y1: 6, y2: 6, class: "fl-chart__line" }));
-  else if (kind === "line-muted") add(svg("line", { x1: 1, x2: 23, y1: 6, y2: 6, class: "fl-chart__line", style: SWATCH_STYLE.mutedStroke }));
-  else if (kind === "band-line") {
+  if (/^line(-muted|-ring|-square)?$/.test(kind)) {
+    add(svg("line", { x1: 1, x2: 23, y1: 6, y2: 6, class: "fl-chart__line", style: kind === "line-muted" || kind === "line-ring" ? SWATCH_STYLE.mutedStroke : null }));
+    // The second and third line of a ladder carry the marker of their points, a ring and a square, so the three swatches
+    // differ by shape and not by ink alone.
+    if (kind === "line-ring") add(svg("circle", { cx: 12, cy: 6, r: 4, style: LADDER_MARKS[1].point }));
+    if (kind === "line-square") add(svg("rect", { x: 8, y: 2, width: 8, height: 8, style: LADDER_MARKS[2].style }));
+  } else if (kind === "band-line") {
     add(svg("rect", { x: 1, y: 1, width: 22, height: 10, class: "fl-chart__band" }));
     add(svg("line", { x1: 1, x2: 23, y1: 6, y2: 6, class: "fl-chart__line" }));
   } else if (kind === "band") add(svg("rect", { x: 1, y: 1, width: 22, height: 10, class: "fl-chart__band" }));
@@ -1584,8 +1588,8 @@ function buildVerdictCharts({ verdict, declarations, seeds = null }) {
 
 const LADDER_MARKS = Object.freeze([
   { bar: "bar-ink", line: "line", style: SWATCH_STYLE.ink, stroke: null },
-  { bar: "bar-muted", line: "line-muted", style: SWATCH_STYLE.muted, stroke: SWATCH_STYLE.mutedStroke },
-  { bar: "bar-hollow", line: "line", style: "fill: var(--panel); stroke: var(--ink); stroke-width: 1px", stroke: null },
+  { bar: "bar-muted", line: "line-ring", style: SWATCH_STYLE.muted, stroke: SWATCH_STYLE.mutedStroke, point: "fill: var(--panel); stroke: var(--muted); stroke-width: 2px" },
+  { bar: "bar-hollow", line: "line-square", style: "fill: var(--panel); stroke: var(--ink); stroke-width: 1px", stroke: null },
 ]);
 
 /**
@@ -1593,7 +1597,10 @@ const LADDER_MARKS = Object.freeze([
  * with `mark` "bar" or "line" and one finite number or `{absent: reason}` per category. Every string comes from the
  * caller: `title`, `summary` (one sentence that names its register), `axisUnit`, `categoryLabel` (the table's first
  * head), `gapLabel` (the legend entry of a hatched gap) and `limits` (sentences). `text(v)` formats a value for the table and `tick(t, decimals)` an axis tick.
- * Lines join neighbouring categories that both hold a value; a category with no value is a hatched gap.
+ * Lines join neighbouring categories that both hold a value; a category with no value is a hatched gap. Every bar is
+ * drawn before every line and point, so a filled bar covers no line; legend, mark style and table keep the given order.
+ * Category labels thin by the widest label, taken as 0.6 em a character at the 12 px label size, plus 8 px between two,
+ * and a label that would pass the right margin of the drawing is left to the table.
  */
 function buildLadderChart({ chartId = "scale_ladder", title, chips, summary, limits, axisUnit, categoryLabel, gapLabel, categories, series, text, tick }) {
   if (!Array.isArray(categories) || categories.length < 2 || categories.length > 60) throw new RangeError("a ladder needs 2 to 60 categories");
@@ -1611,17 +1618,20 @@ function buildLadderChart({ chartId = "scale_ladder", title, chips, summary, lim
   const slot = (plot.right - plot.left) / categories.length;
   const centre = (i) => round2(plot.left + slot * (i + 0.5));
   const every = Math.max(1, Math.ceil(MIN_TIME_TICK_GAP_PX / slot));
+  const room = 7.2 * Math.max(...categories.map((c) => c.length));
+  // Labels that all fit are all drawn; labels that have to thin keep at least the gap of a time axis.
+  const fit = Math.ceil((room + 8) / slot);
+  const step = fit === 1 ? 1 : Math.max(every, fit);
   categories.forEach((name, i) => {
-    if (i % every === 0) plot.marks.appendChild(svgText(centre(i), plotBottom + 18, name, { "text-anchor": "middle", "data-role": "category" }));
+    if (i % step === 0 && centre(i) + room / 2 <= drawWidth + MARGIN.right) plot.marks.appendChild(svgText(centre(i), plotBottom + 18, name, { "text-anchor": "middle", "data-role": "category" }));
   });
   const bars = series.filter((s) => s.mark === "bar");
   const barWidth = Math.min(32, (slot * 0.8) / Math.max(1, bars.length));
-  const legend = [];
+  const legend = series.map((s, k) => ({ swatch: LADDER_MARKS[k][s.mark === "bar" ? "bar" : "line"], label: s.label }));
   let gap = false;
-  series.forEach((s, k) => {
+  [true, false].forEach((bar) => series.forEach((s, k) => {
+    if ((s.mark === "bar") !== bar) return;
     const mark = LADDER_MARKS[k];
-    const bar = s.mark === "bar";
-    legend.push({ swatch: bar ? mark.bar : mark.line, label: s.label });
     const offset = bar ? (bars.indexOf(s) - (bars.length - 1) / 2) * barWidth : 0;
     s.values.forEach((v, i) => {
       if (isAbsent(v)) {
@@ -1639,10 +1649,10 @@ function buildLadderChart({ chartId = "scale_ladder", title, chips, summary, lim
       if (i % every === 0 || !isValue(next) || !isValue(s.values[i - 1])) {
         plot.marks.appendChild(k === 2
           ? svg("rect", { x: round2(centre(i) - 4), y: round2(y(v) - 4), width: 8, height: 8, style: mark.style, "data-role": "point", "data-series": s.id })
-          : svg("circle", { cx: centre(i), cy: y(v), r: 4, style: `${mark.style}; stroke: var(--panel); stroke-width: 2px`, "data-role": "point", "data-series": s.id }));
+          : svg("circle", { cx: centre(i), cy: y(v), r: 4, style: mark.point ?? `${mark.style}; stroke: var(--panel); stroke-width: 2px`, "data-role": "point", "data-series": s.id }));
       }
     });
-  });
+  }));
   plot.root.appendChild(svg("line", { x1: plot.left, x2: plot.right, y1: y(0), y2: y(0), class: "fl-chart__axis" }));
   if (gap) legend.push({ swatch: "hatch", label: gapLabel });
   return chartFrame({

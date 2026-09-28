@@ -1470,6 +1470,7 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .scale-lab caption { text-align: left; font-weight: 650; padding: .7rem 0; }
 .scale-lab .result-provenance { font-size: 12px; overflow-wrap: anywhere; }
 .scale-lab pre { max-width: 100%; max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
+.scale-lab .fl-readout { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 767.98px) {
   .scale-run { position: sticky; bottom: 0; z-index: 1; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-inline: -18px; padding: 10px 18px; background: var(--panel); border-top: 1px solid var(--rule); }
   .scale-lab .ops-intro a, .scale-lab .ops-intro summary { scroll-margin-bottom: 120px; }

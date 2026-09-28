@@ -37,7 +37,7 @@ function size(config){
   if(!ARMS.some(a=>a[0]===config?.arm))return {reason:'the other arm must be one of the two listed arms'};
   for(const c of CONTROLS.slice(1))if(!Number.isInteger(config[c.key])||config[c.key]<c.min||config[c.key]>c.max)return {reason:`${c.label.toLowerCase()} must be a whole number from ${c.min} to ${c.max}`};
   const {arm,power,ports}=config,ratio=power/ports,room=power-ports,mids=[power,ports,STALLS,STAFF],ranges=mids.map(range);
-  if(room<MIN_ROOM)return {reason:`site power (${power}) and ports, the next gate (${ports}), leave ${room} weeks of room, ${(room/EVERY).toFixed(2)} tranche intervals. The lab reads from ${(MIN_ROOM/EVERY).toFixed(1)}: set site power to ${ports+MIN_ROOM} weeks or past it, or ports to ${power-MIN_ROOM} or before it`};
+  if(room<MIN_ROOM)return {reason:`site power (${power}) ${room>0?`and ports, the next gate (${ports}), leave ${room} week${room>1?'s':''} of room, ${(room/EVERY).toFixed(2)} tranche intervals. The lab reads from ${(MIN_ROOM/EVERY).toFixed(1)}`:`leaves no room past ports (${ports}). The lab reads from ${MIN_ROOM} weeks of room`}: set site power to ${ports+MIN_ROOM} weeks or past it, or ports to ${power-MIN_ROOM} or before it`};
   return {arm,mids,ranges,release:range(RELEASE),mid:RELEASE,ratio,room,ahead:arm==='end'?ranges[0][1]-ports:room};
 }
 /** Every draw of one seed, made without reference to any arm. Quantiles are kept as whole numbers so two tapes compare exactly. */
@@ -72,7 +72,8 @@ function simulate(arm,tape,bend){
     const del=t<last?rate:t===last?FLEET-rate*(last-1):0;
     qInt+=del;delivered+=del;
     held[0]+=qInt-del;held[1]+=qVal-i+pipe;held[2]+=qRel;
-    if(qDoor>0){const k=ready.reduce((best,w,j)=>w>t&&(best<0||w<ready[best])?j:best,-1);held[free-a>0||k<0?3:4+holder[k]]+=qDoor;}
+    // The depot door stock is split each week: what a free place could take is held by the induction rate, the rest by the resource the next tranche waits for.
+    if(qDoor>0){const k=ready.reduce((best,w,j)=>w>t&&(best<0||w<ready[best])?j:best,-1);const n=k<0?qDoor:Math.min(qDoor,free-a);held[3]+=n;if(qDoor>n)held[4+holder[k]]+=qDoor-n;}
     sumS+=S;sumR+=R;sumD+=delivered;sumIn+=del+i;idle+=Ks-Math.max(PLACES,S+R);
     if(reach===null&&S>=TARGET*FLEET)reach=t;
     if(violation===null&&!(delivered===qInt+qVal+pipe+qRel+qDoor+S+R&&delivered>=integrated&&integrated>=validated&&validated>=released&&released>=accepted&&accepted===S+R&&S>=0&&R>=0&&S+R<=K&&K<=Ks))violation=`week ${t}: the stage counts do not sum to delivered, are out of order or pass depot capacity`;
@@ -147,7 +148,7 @@ function* steps(setup,hooks={}){
       {caption:`One fleet, several counts: end of week ${WEEKS}, the last delivery week of the control, mean of ${n} paired seeds.`,heads:['Count','Which vehicles are in it',...heads],
         rows:[...[['Delivered','Handed over, at any stage'],['Integrated','Through the integration line'],['Validated','Passed validation, first time or after rework'],['Released','Let through the release gate'],['Accepted at a depot','Given a depot place'],['In rider service','Accepted and not removed'],['Out of service','Removed and not yet back; keeps its place']].map((row,c)=>[...row,...arms.map(id=>at(id,c))]),
           ['First week at 90 percent',`The first week with ${Math.ceil(TARGET*FLEET)} vehicles in rider service`,...arms.map(id=>{const w=all(id).map(r=>r.reach);return w.includes(null)?{absent:'target not reached within the horizon on one or more seeds'}:{v:mean(w,x=>x),d:1};})]]},
-      {caption:`The gate that binds. Where delivered vehicle-weeks went over ${H} weeks, mean of ${n} paired seeds. Waiting is stock past the ${PROCESS} process weeks. Most depot door waiting: ${door('control')} under the control; ${door(s.arm)} in the other arm. The rows sum to the total.`,heads:['Vehicle-weeks',...heads],
+      {caption:`The gate that binds. Where delivered vehicle-weeks went over ${H} weeks, mean of ${n} paired seeds. Waiting is stock past the ${PROCESS} process weeks. Each week, depot door stock up to the free places waits on depot induction, the rest on the resource the next tranche waits for. Most depot door waiting: ${door('control')} under the control; ${door(s.arm)} in the other arm. The rows sum to the total before each is rounded to a whole vehicle-week.`,heads:['Vehicle-weeks',...heads],
         rows:[...GATES.map((g,k)=>[`Waiting: ${g}`,...arms.map(id=>sum(id,r=>r.held[k]))]),['Inside the process weeks',...arms.map(id=>sum(id,r=>r.sumIn))],['Out of service',...arms.map(id=>sum(id,r=>r.sumR))],['In rider service',...arms.map(id=>sum(id,r=>r.sumS))],['Total: delivered vehicle-weeks',...arms.map(id=>sum(id,r=>r.sumD))]]},
       {caption:`Lead-time mismatch. Weeks ahead, gain and idle weeks: site power ordered 0 to ${s.mids[0]} weeks ahead, mean of ${n} paired seeds. The allowance is ${IDLE} idle weeks per ordered place.`,heads:['Weeks ahead','Gain, fraction of plan','Idle weeks per ordered place, past the control','Against the allowance'],
         rows:doses.map(d=>[{v:d.ahead,d:0},{v:d.gain,d:4},{v:d.idle,d:2},d.idle>IDLE?'past it':'inside it'])},
@@ -162,7 +163,7 @@ const NOTES=Object.freeze([
   'At the middle of every range the gain is arithmetic on inputs, as the first hand check shows. Spread takes some away: a tranche that lands late loses service and one that lands early gains none.',
   'Whether an order arm stays inside the idle allowance follows from its weeks ahead and from the allowance, a rule of this lab. The first arm stayed inside it in every setup sampled; the second went past it in about half. The weeks ahead table shows where any allowance would cut the curve.',
   'The control orders with the delivery calendar. Every gain follows from how late that is, so the control is a reference line, not a practice.',
-  'The deliveries control reads the same in every accepted setup: rider service is as it was while vehicles wait at the depot door, and the added waiting is arithmetic on the delivery plan. Line rates stay, so the extra vehicles wait at integration.',
+  'The deliveries control reads the same in every accepted setup: rider service is as it was while vehicles wait at the depot door, and the added waiting is arithmetic on the delivery plan. Line rates stay, so two fifths of it sits at integration and the rest at validation and rework, the release gate and the depot door.',
   'The release stock follows from the delivery rate and the release week. Both arms share the release gate, so it hardly moves the paired change.',
   'The plan has no gate and no removal, so no arm reaches it. The vehicle-weeks table shows what the rest is made of.']);
 export const LAB=Object.freeze({id:'fleet-intake',version:VERSION,short:'Fleet intake',title:'From delivered to in service',geography:'Fictional market, weekly counts, no map',seeds:SEEDS,

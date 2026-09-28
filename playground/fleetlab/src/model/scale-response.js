@@ -28,13 +28,14 @@ export function rates(load,lean=1){
   return {load:W,moved,peak,drain,answer,stopped:peak*(SPAN+drain)/2+answer,depth:over*Math.sqrt(pool(SMALL)*60/H*SPAN/W),requests:K*B*3600/H};
 }
 /** Rates only for a lever arm at the tested fleet: stopped vehicle-minutes per 1,000 vehicles. The backlog runs through segments
- * of [minutes, net load]; a directive releases the waiting requests that were moved into the event and removes the later ones. */
+ * of [minutes, net load]; a directive releases the waiting vehicle requests that were moved into the event and removes the later
+ * ones. A directive with nothing left to remove returns the no-lever value itself, so that its change is an exact zero. */
 export function leverRates(load,lever,size,d){
   const r=rates(load),W=r.load,c=K*60/H,o=B*(1-r.moved),f=1+size/pool(TEST);
   let q=0,a=0;const go=(...s)=>{for(const [t,x] of s){const e=q+x*c*t;a+=x<0&&e<0?q*q/-x/c/2:(q+e)/2*t;q=Math.max(0,e);}};
   go(...d<SPAN?[[d,W-1]]:[[SPAN,W-1],[d-SPAN,o-1]]);
   if(lever==='reserve')go(...d<SPAN?[[SPAN-d,W-f]]:[],[1e9,o-f]);
-  else{const m=Math.min(q,Math.max(0,c*(W*SPAN-d)))*(1-o/W);q-=m;a-=(m+Math.max(0,SPAN-d)*(W-o)*c)*(1-LINE)*H/60;go([1e9,o-1]);}
+  else{const m=Math.min(q,Math.max(0,c*(W*SPAN-d)))*(1-o/W);if(!m&&d>=SPAN)return r.stopped;q-=m;a-=(m+Math.max(0,SPAN-d)*(W-o)*c)*(1-LINE)*H/60;go([1e9,o-1]);}
   return a+r.answer;
 }
 const stream=s=>{let a=s>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};};
@@ -74,6 +75,7 @@ export function simulateDay(tape,agents,arm){
     let tc=Infinity,first=0;for(let i=0;i<ends.length;i++)if(ends[i]<tc){tc=ends[i];first=i;}
     const now=Math.min(next<n?t[next]:Infinity,tc,joined?Infinity:R,directed?Infinity:D);
     if(now===Infinity)break;
+    const past=clear===null&&end!==null&&now>=end;if(past&&!waiting)clear=0;
     if(now===tc){ends[first]=ends.at(-1);ends.pop();}
     else if(!joined&&now===R){joined=true;staff+=arm.size;}
     else if(!directed&&now===D){directed=true;for(let i=vh;i<next;i++)if(moved[i]&&!line[i])waiting--;}
@@ -84,7 +86,7 @@ export function simulateDay(tape,agents,arm){
       const V=vh<next,L=lh<next;if(!V&&!L)break;
       if(L&&(!shared||!V||lh<vh)){if(now-t[lh]>RULE.target_s)late++;serve(lh++,now);}else{waiting--;serve(vh++,now);}
     }
-    if(clear===null&&end!==null&&now>=end&&waiting===0)clear=(now-end)/60;
+    if(past&&clear===null&&!waiting)clear=(now-end)/60;
   }
   let answered=0,wait=0,stopped=0,long=0,gone=0,vehicles=0;
   for(let i=0;i<n;i++){
@@ -99,18 +101,20 @@ export function simulateDay(tape,agents,arm){
 }
 const ID='response-reserve',VERSION='scale-response-1.0.0',SEEDS=Object.freeze(Array.from({length:12},(_,i)=>3001+i)),SIZES=[1,2,3,4,5,6],A='Teaching assumption',S='Sizing rule: ',V=' per 1,000 vehicles';
 const P='stopped vehicle-minutes'+V,G='late responder call fraction',LEVERS=[['reserve','Reserve staff join the pool'],['directive','A directive removes the ask']],group=f=>f/1000+',000',T=group(TEST),L=group(LARGE),up=s=>s[0].toUpperCase()+s.slice(1);
-const n=(v,d=0,u)=>Number.isFinite(v)?{v,d,u}:{absent:'no value in some run'};
+/** A cell. A value under half a unit of its last printed decimal is handed over at two significant digits. */
+const n=(v,d=0,u)=>Number.isFinite(v)?{v:Math.abs(v)<.5/10**d?+v.toPrecision(2):v,d,u}:{absent:'no value in some run'};
 const arm=(fleet,load,lever='none',size=0,delay=0,agents=pool(fleet))=>({fleet,agents,load,lever,size,delay}),key=a=>[a.fleet,a.agents,a.load,a.lever,a.size,a.delay,''].join('|');
 /** Pure and cheap. `seeds` is a test seam; the page always uses the declared seeds. */
 export function deriveResponse(config,seeds=SEEDS){
-  const load=Math.round(config?.load*1000),lever=LEVERS.find(l=>l[0]===config?.lever),delay=config?.delay,r=rates(load),no=reason=>({ok:false,reason});
+  const load=Math.round(config?.load*100)*10,lever=LEVERS.find(l=>l[0]===config?.lever),delay=config?.delay,r=rates(load),no=reason=>({ok:false,reason});
   if(!(load<=1600&&r.depth>=RULE.depth))return no('event load is read from a burst depth of 4 at the smallest fleet, near 1.17 times capacity, to 1.6 times capacity. Short of that depth chance hides the event, and past 1.6 no shape was checked');
+  if(Math.abs(config.load*1000-load)>1e-6)return no('event load takes steps of 0.01, so that the load shown is the load used');
   if(!lever)return no('choose one of the two listed levers');
   if(!(Number.isInteger(delay)&&delay>=15&&delay<=240))return no('a lever lands 15 to 240 whole minutes after the event starts');
   const size=Math.ceil(pool(TEST)*(load-1000)/1000),margin=x=>Math.round(x*50)/1000,base=arm(TEST,load),reserve=arm(TEST,load,'reserve',size,delay),calm=arm(LARGE,CALM);
   const declare=(control,change,baseline,candidate,m=r.stopped)=>freezeScale({lab:ID,version:VERSION,control,change,baseline,candidate,seeds,primary:{name:P,direction:'lower_is_better',equivalence_margin:margin(m)},guardrails:[{metric:G,direction:'lower_is_better',max_harm:.05}]});
   return {ok:true,setup:{load,delay,size,word:lever[1],
-    main:lever[0]==='reserve'?declare(null,`Reserve staff join the pool: 0 to ${size} agents, ${delay} min after the event starts.`,base,reserve):declare(null,`A directive removes the ask of every request moved into the event, from ${delay} min after the event starts.`,base,arm(TEST,load,'directive',0,delay)),
+    main:lever[0]==='reserve'?declare(null,`Reserve staff join the pool: 0 to ${size} agents, ${delay} min after the event starts.`,base,reserve):declare(null,`A directive removes the ask of every vehicle request moved into the event, from ${delay} min after the event starts.`,base,arm(TEST,load,'directive',0,delay)),
     nullCheck:declare('null','None. A reserve of zero agents joins the pool.',base,{...reserve,size:0}),
     ample:declare('non-binding','Reserve staff join a pool that can absorb the burst.',calm,{...calm,lever:'reserve',size,delay},r.answer*(1+closedForm(pool(LARGE)).mean_wait_s/H)),
     guard:declare('guardrail','Responder calls wait in turn with vehicle requests on one shared line.',base,arm(TEST,load,'shared'))},rows:[
@@ -124,7 +128,7 @@ export function deriveResponse(config,seeds=SEEDS){
     ['Pools',`${FLEETS.map(pool).join(', ')} agents at ${FLEETS.map(group).join(', ')} vehicles. Levers act at ${T}.`,A+'. Pools are set small so that an ordinary wait can be read, not as an estimate of any staffing ratio.'],
     ['Agent busy share on an ordinary day, %',n(B*100),A+', the staffing rule at every fleet size'],
     ['Mean answer time',n(H,0,'s'),A],
-    ['Requests',`Each one stops its vehicle until the answer ends. ${LINE*100}% are responder calls, made to the same pool by a first responder, answered first, with the same answer time.`,A],
+    ['Requests',`Each one stops its vehicle until the answer ends. ${LINE*100}% are responder calls, made to the same pool by a first responder, answered first, with the same answer time. A directive removes vehicle requests only. Responder calls stay in the pool.`,A],
     ['Event',`${SPAN} min from minute ${RULE.start_min} of the day`,A],
     ['Responder call target and long stop',`${RULE.target_s} s and ${RULE.long_s} s`,A],
     ['Lean pool','The smallest pool whose ordinary wait by the queue formula does not pass the wait at the smallest fleet',A],
@@ -152,15 +156,15 @@ function* steps(setup,engine={buildTape,applyEvent,simulateDay}){
   const sorted=a=>of(a,'stopped').sort((x,y)=>x-y),sized=s=>arm(TEST,load,'reserve',s,delay),late=d=>[arm(TEST,load,'reserve',size,d),arm(TEST,load,'directive',0,d)];
   const plan=[[base,lean(TEST)],[lead,sized(0),setup.guard.spec.candidate,arm(TEST,0),arm(TEST,CALM),...SIZES.map(sized),...DELAYS.flatMap(late)],[arm(SMALL,load),arm(SMALL,0),arm(SMALL,CALM)],[arm(LARGE,load),lean(LARGE),arm(LARGE,0),arm(LARGE,CALM),setup.ample.spec.candidate]];
   const total=seeds.length*new Set(plan.flat().map(key)).size,rung=a=>days.has(key(arm(a.fleet,load))+seeds.at(-1))?n(avg(a)):{absent:'this rung has not run yet'};
-  const chart=()=>{const one=FLEETS.map(f=>rung(arm(f,load)));
-    return {title:'Event day by fleet size, one staffing ratio',category:'Fleet size',axis:{d:0,u:'vehicle-min'+V},categories:FLEETS.map(f=>group(f)+' vehicles'),series:[{id:'ratio',label:'Event day',mark:'bar',values:one.map(c=>c.v??c)},{id:'rates',label:'Rates only',mark:'line',values:FLEETS.map(()=>r.stopped)}],
-      summary:{t:'Across {n} paired seeds: event day {a}, {b} and {c} with one staffing ratio, and {h} by rates only at every size. The lean pool is in the table.',v:{n:n(seeds.length),h:n(r.stopped),a:one[0],b:one[1],c:one[2]}}};};
+  const chart=part=>{const one=FLEETS.map(f=>rung(arm(f,load)));
+    return {title:'Event day by fleet size, one staffing ratio',category:'Fleet size, vehicles',axis:{d:0,u:'vehicle-min'+V},categories:FLEETS.map(group),series:[{id:'ratio',label:'Event day',mark:'bar',values:one.map(c=>c.v??c)},{id:'rates',label:'Rates only',mark:'line',values:FLEETS.map(()=>r.stopped)}],
+      summary:{t:part?'Computing across {n} paired seeds: event day has run at {k} of 3 fleet sizes.':`Across {n} paired seeds, in ${P}: event day {a}, {b} and {c} at ${group(SMALL)}, ${T} and ${L} vehicles with one staffing ratio, and {h} by rates only at every size. The lean pool is in the table.`,v:{n:n(seeds.length),h:n(r.stopped),a:one[0],b:one[1],c:one[2],k:n(one.filter(c=>!c.absent).length)}}};};
   for(const arms of plan){
     for(const seed of seeds)for(const a of arms)if(!days.has(key(a)+seed)){
       if(held.fleet!==a.fleet||held.seed!==seed){tapeOf(a,seed);yield;}
       run(a,seed);yield {done:++done,total,label:'Simulated days'};
     }
-    yield {done,total,label:'Simulated days',partial:{chart:chart()}};
+    yield {done,total,label:'Simulated days',partial:{chart:chart(1)}};
   }
   for(const f of FLEETS)for(const s of seeds){const o=days.get(key(arm(f,0))+s),e=days.get(key(arm(f,load))+s);if(o.vehicles!==e.vehicles||o.calls!==e.calls)broken??='equal request count';}
   const pair=function*(frozen,label){let calls=0;return yield* scalePairSteps(frozen,function*(a,seed){yield;const d=run(a,seed,calls++===2);return broken?{}:{[P]:d.stopped,[G]:d.late};},label);};
@@ -172,7 +176,7 @@ function* steps(setup,engine={buildTape,applyEvent,simulateDay}){
     return [`${label} at ${group(f)} vehicles`,n(calc,d,unit),n(m,d,unit),n(tol/calc*100),Math.abs(m-calc)<=tol?'inside tolerance':'outside tolerance'];};
   const calc=leverRates(load,lead.lever,size,delay);
   return {...result,controls,chart:chart(),notes:[
-    {t:`By rates only the tested arm reads {x} and the change {y}. ${lead.lever==='reserve'?'The reserve is sized to bring event load to capacity':'A directive removes the ask at its source'}, so the direction of the main result follows from the inputs. The run adds chance, the ordinary wait and the ${G}.`,v:{x:n(calc),y:n(calc-r.stopped)}},
+    {t:`By rates only at ${T} vehicles, in ${P}, the tested arm reads {x} and the change {y}. ${result.analysis?.outcome==='IMPROVED'?(lead.lever==='reserve'?'The reserve is sized to bring event load to capacity':'A directive removes the ask at its source')+', so the direction of the main result follows from the inputs':'The main result reads no reduction past the margin, so no direction is said to follow from the inputs'}. The run adds chance, the ordinary wait and the ${G}.`,v:{x:n(calc),y:n(calc-r.stopped)}},
     'Agents are busy the same share of an ordinary day at every fleet size: the staffing rule sets it.',
     'Ordinary and event days carry the same requests, responder calls and answer times. The event changes timing only.',
     'The event takes the same share of requests at every fleet size and the rates-only value holds no fleet size, so the event-day ladder with one staffing ratio follows from the inputs. Fleet size still changes the chance part of the backlog.',
@@ -185,9 +189,9 @@ function* steps(setup,engine={buildTape,applyEvent,simulateDay}){
   tables:[
     {caption:`Arms at ${T} vehicles, means over the paired seeds. The guardrail allows 0.05 on the change in ${G} against the no-lever day. The fraction itself is a level.`,
       heads:['Arm',up(P),'Stops of at least two minutes'+V,'Most vehicles waiting at once'+V,'Minutes to clear after the event',up(G)],rows:[row('No lever',base),row(setup.word,lead),row('One shared line',setup.guard.spec.candidate)]},
-    {caption:`Pooling and a correlated event. Ordinary and event day by fleet size, means over the paired seeds. Event-day columns are ${P}.`,heads:['Vehicles','Agents','Ordinary wait','By the queue formula','Event day','Second lowest seed','Second highest seed','Rates only','Added by a burst at 0.8 of capacity','Reserve by rule, agents','Lean pool','Lean pool busy share on an ordinary day','Lean pool event load','Lean pool event day'],
+    {caption:`Pooling and a correlated event. Ordinary and event day by fleet size, means over the paired seeds. Event-day columns, the two seed columns, rates only and the burst column are ${P}.`,heads:['Vehicles','Agents','Ordinary wait','By the queue formula','Event day','Second lowest seed','Second highest seed','Rates only','Added by a burst at 0.8 of capacity','Reserve by rule, agents','Lean pool','Lean pool busy share on an ordinary day','Lean pool event load','Lean pool event day'],
       rows:FLEETS.map(f=>{const e=arm(f,load),o=arm(f,0),l=lean(f);return [n(f),n(pool(f)),n(avg(o,'wait_s'),2,'s'),n(closedForm(pool(f)).mean_wait_s,2,'s'),n(avg(e)),n(sorted(e)[1]),n(sorted(e).at(-2)),n(r.stopped),n(avg(arm(f,CALM))-avg(o),1),n(Math.ceil(pool(f)*(load-1000)/1000)),n(l.agents,0,'agents'),n(pool(f)*B/l.agents,2),n(rates(load,pool(f)/l.agents).load,2,'x capacity'),n(avg(l))];})},
-    {caption:`Capacity near saturation. Reserve size at ${T} vehicles, landing after ${delay} min`,heads:['Reserve agents','Event load once they arrive',up(P)],rows:[0,...SIZES].map(s=>[n(s),n(load/1000*pool(TEST)/(pool(TEST)+s),2,'x capacity'),n(avg(s?sized(s):base))])},
+    {caption:`Capacity near saturation. Reserve size at ${T} vehicles, landing after ${delay} min`,heads:['Reserve agents','Event load once they arrive',up(P)],rows:[0,...SIZES].map(s=>{const w=load/1000*pool(TEST)/(pool(TEST)+s);let d=2;while(w!==1&&+w.toFixed(d)===1)d++;return [n(s),n(w,d,'x capacity'),n(avg(s?sized(s):base))];})},
     {caption:`Landing in time. ${up(P)} at ${T} vehicles by landing time, means over the paired seeds`,heads:['Lever lands after',LEVERS[0][1],'By rates only',LEVERS[1][1],'By rates only'],rows:[['No lever',...[0,0].flatMap(()=>[n(avg(base)),n(r.stopped)])],...DELAYS.map(d=>[n(d,0,'min'),...late(d).flatMap(a=>[n(avg(a)),n(leverRates(load,a.lever,size,d))])])]},
     {caption:'Cross-check against the queue formula and rates-only arithmetic. It checks the arithmetic, not any fleet.',heads:['Check','Calculated','Simulated','Tolerance, % of calculated','This press'],rows:[
       ...FLEETS.map(f=>check('Mean wait on an ordinary day, queue formula,',f,'s',2,closedForm(pool(f)).mean_wait_s,'wait_s',(se,v)=>Math.max(4*se,.1*v,.05))),

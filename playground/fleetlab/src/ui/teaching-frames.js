@@ -152,7 +152,8 @@ export function frameView(frame,view={}){
   el('details',{class:'teaching-limits'},[el('summary',{},'Limits and what this misses'),...(view.limits||f.limits!==make('',[0,0,0]).limits?[el('p',{},view.limits??f.limits??absent)]:[]),el('p',{},'Each model has its own assumptions, so numbers from different models are not interchangeable.')]),
  ]);
 }
-/** Display arithmetic over recorded fields; never consumes frames or logs. */
+/** Display arithmetic over recorded fields; never consumes frames or logs. `tools.sided` is a page that asks for numbers
+ * kept on their side of the margin and for a line that keeps its interval: it drops the guardrail sentence first. */
 export function runLine(frame,r,tools={}){
  const words=tools.words??(key=>String(key??'Main result').replaceAll('_',' '));
  const n=tools.number??num,s=tools.signed??sign,NEXT=tools.next??NEXT_TEST;
@@ -181,7 +182,7 @@ export function runLine(frame,r,tools={}){
  const value=(v,threshold=false)=>{
   if(!Number.isFinite(v))return absent;
   if(String(metric).split('{')[0].endsWith('_s')&&margin>=60){const rounded=Number(n(v/60,1))*60;if(Number(n(margin/60,1))*60===margin&&[-margin,0,margin].every(t=>Math.sign(v-t)===Math.sign(rounded-t)))return (threshold?n(v/60,1):s(v/60,1))+' min';return (v>0&&!threshold?'+':'')+v+' s';}
-  return threshold?(tools.threshold?.(metric,v)??n(v)):(tools.metricValue?.(metric,v,{withSign:true,against:margin>0?[-margin,margin]:[]})??s(v));
+  return threshold?(tools.threshold?.(metric,v)??n(v)):(tools.metricValue?.(metric,v,tools.sided?{withSign:true,against:margin>0?[-margin,margin]:[]}:{withSign:true})??s(v));
  };
  let primary=`${OUTCOME_WORDS[r.outcome]??'Result not decided'}: ${words(metric)} ${value(p.mean_delta)} (95% interval ${value(p.ci_low)} to ${value(p.ci_high)}; margin ${value(margin,true)}).`;
  let rail=bad.length?bad.map(g=>`${upper(words(g.metric))} went past its allowance.`).join(' '):guards.length&&!missing.length?'Every guardrail stayed within its allowance.':guards.length?'':'No guardrails were declared.';
@@ -192,6 +193,7 @@ export function runLine(frame,r,tools={}){
  if(line().length>240&&bad.length&&r.recommendation==='HOLD'){
   if(frame.kind==='condition'){rail='';recommendation=`Held: this condition harms service past ${bad.length===1?'an allowance':bad.length+' allowances'}; see the guardrail table.`;}else recommendation='Held.';
  }
+ if(tools.sided&&line().length>240)rail='';
  if(line().length>240)primary=`${OUTCOME_WORDS[r.outcome]??'Result not decided'}: ${words(metric)} ${value(p.mean_delta)}; interval and margin under Exact values.`;
  return result(line(),NEXT[reason].replace('{guardrail}',bad.length?words(bad[0].metric):'the affected measure'));
 }

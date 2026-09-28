@@ -196,20 +196,43 @@ export function metricUnitFamily(metricOrKey) {
 }
 
 /**
+ * Sided text of a number: `against` lists the declared thresholds it is judged by. The text never reads as equal to, or
+ * across, a threshold the value is not equal to or across, and never as zero for a value that is not: it gains one decimal
+ * at a time. A value that would round to zero at `digits` starts at two significant digits (`+0.000034`, `+0.042`). At
+ * most 12 decimals, thousands grouped, never the raw double: where 12 decimals still read on or across a threshold, the
+ * last one is moved one step to the value's own side. Rounds half to even on the exact expansion, as `format.number` does,
+ * and throws as it does for a value that is not a finite number below 1e21.
+ */
+export function sidedText(value, digits, { withSign = false, against = [] } = {}) {
+  const [whole, rest] = value.toFixed(100).replace("-", "").split(".");
+  const at = (d, step = 0n) => {
+    let n = BigInt(whole + rest.slice(0, d));
+    if (rest[d] > "5" || (rest[d] === "5" && (/[1-9]/.test(rest.slice(d + 1)) || n % 2n))) n += 1n;
+    const text = String(n + step).padStart(d + 1, "0");
+    const cut = text.length - d;
+    return text.slice(0, cut).replace(/\B(?=(...)+$)/g, ",") + (d ? `.${text.slice(cut)}` : "");
+  };
+  // The threshold a text misreads, zero among them so that only zero reads as zero; undefined when the text reads true.
+  // A threshold that is not a finite number judges nothing.
+  const missed = (text) => [0, ...against].find((t) => Number.isFinite(t) && Math.sign(Number(text.replace(/,/g, "")) * Math.sign(value) - t) !== Math.sign(value - t));
+  let d = digits;
+  if (value && !/[1-9]/.test(at(d))) d = Math.min(12, Math.ceil(-Math.log10(Math.abs(value))) + 1);
+  while (d < 12 && missed(at(d)) !== undefined) d += 1;
+  const t = missed(at(d));
+  return (value < 0 ? "-" : withSign && value > 0 ? "+" : "") + at(d, t === undefined ? 0n : (value > t) === (value > 0) ? 1n : -1n);
+}
+
+/**
  * A metric mean or delta as text in the metric's unit: seconds to 0.1 s, fractions to 0.001, counts to 0.1. A nonzero
  * value never reads as zero: when rounding leaves no nonzero digit, the text is the exact double in plain decimals (as
  * the copied summary does, via `format.nonzero`), so a regressed harm of 2.7e-5 against max harm 0 reads `+0.000027`,
- * not `0.000`. Never `-0`.
+ * not `0.000`. Never `-0`. A page opts in to sided text by passing `against`, an array of thresholds (see `sidedText`);
+ * without it the text is what it always was.
  */
-export function metricValueText(metricOrKey, value, { withSign = false, against = [] } = {}) {
+export function metricValueText(metricOrKey, value, { withSign = false, against = null } = {}) {
   const family = metricUnitFamily(metricOrKey);
-  let digits = family === "fraction" ? 3 : 1;
-  let text = format.nonzero(value, digits, { withSign });
-  // `against` lists declared thresholds: one more decimal at a time while the text would sit on or across one that the
-  // value does not, and the exact double when six decimals still would.
-  const moved = () => against.some((t) => Math.sign(Number(text.replace(/[,+]/g, "")) - t) !== Math.sign(value - t));
-  while (digits < 6 && moved()) text = format.nonzero(value, (digits += 1), { withSign });
-  if (moved()) text = `${value < 0 ? "-" : withSign ? "+" : ""}${Math.abs(value)}`;
+  const digits = family === "fraction" ? 3 : 1;
+  const text = against ? sidedText(value, digits, { withSign, against }) : format.nonzero(value, digits, { withSign });
   return family === "s" ? `${text} ${labels.UNITS.seconds}` : text;
 }
 
@@ -438,22 +461,24 @@ function gateChain(view) {
  * their minutes beside them: `-1,565.6 s (-26.1 min)` (demo plan graft 1). The seconds are the card's own text and
  * stay first, so the two surfaces show one number; a metric that is not in seconds has no minutes to add.
  */
-export function valueWithMinutes(metricOrKey, value, { withSign = false, against = [] } = {}) {
+export function valueWithMinutes(metricOrKey, value, { withSign = false, against = null } = {}) {
   const seconds = metricValueText(metricOrKey, value, { withSign, against });
   if (metricUnitFamily(metricOrKey) !== "s") return seconds;
-  return labels.withMinutes({ seconds, minutes: withSign ? format.signed(value / 60, 1) : format.number(value / 60, 1) });
+  const minutes = against ? sidedText(value / 60, 1, { withSign, against: against.map((t) => t / 60) }) : withSign ? format.signed(value / 60, 1) : format.number(value / 60, 1);
+  return labels.withMinutes({ seconds, minutes });
 }
 
 /**
  * The primary block's rows, `[term, node]` each: both means, both deltas, the interval and the declared margin. The
  * verdict card and the walkthrough's readout are built from this one list, so neither can show a value the other does
- * not; `minutes` adds the minutes of a seconds metric beside its seconds.
+ * not; `minutes` adds the minutes of a seconds metric beside its seconds, and `band` (the margin on both sides) asks for
+ * sided text.
  */
-function primaryRows(view, { minutes = false } = {}) {
+function primaryRows(view, { minutes = false, band = null } = {}) {
   const p = view.primary;
   const key = p.metric;
-  const text = (value, options) => (minutes ? valueWithMinutes(key, value, options) : metricValueText(key, value, options));
-  const signed = { withSign: true, against: [-p.equivalence_margin, p.equivalence_margin].filter(Number.isFinite) };
+  const text = (value, options = { against: band }) => (minutes ? valueWithMinutes(key, value, options) : metricValueText(key, value, options));
+  const signed = { withSign: true, against: band };
   return [
     [labels.VERDICT.baselineMean, valueSpan("primary.baseline_mean", p.baseline_mean, text(p.baseline_mean))],
     [labels.VERDICT.candidateMean, valueSpan("primary.candidate_mean", p.candidate_mean, text(p.candidate_mean))],
@@ -471,33 +496,39 @@ function primaryRows(view, { minutes = false } = {}) {
   ];
 }
 
-function primarySection(view, strip, { minutes = false } = {}) {
+/**
+ * `plotted` false is a page that draws no strip: its numbers are sided against the margin, its caption names the declared
+ * direction only, and the sentence that states the interval as printed is the one a reader sees.
+ */
+function primarySection(view, strip, { minutes = false, plotted = true } = {}) {
   const p = view.primary;
   const key = p.metric;
-  const rows = primaryRows(view, { minutes });
-  const low = metricValueText(key, p.ci_low, { withSign: true });
-  const high = metricValueText(key, p.ci_high, { withSign: true });
+  const band = plotted ? null : [-p.equivalence_margin, p.equivalence_margin];
+  const rows = primaryRows(view, { minutes, band });
+  const low = metricValueText(key, p.ci_low, { withSign: true, against: band });
+  const high = metricValueText(key, p.ci_high, { withSign: true, against: band });
+  const summary = labels.verdictStripSummary({ count: view.replications, metric: metricSubject(key), low, high, outcome: view.outcome });
   return el("section", { "data-section": "primary" }, [
     heading(3, labels.VERDICT.primary),
     el("p", {}, [
       el("span", { class: "fl-mono", "data-field": "primary.metric", "data-metric": key }, metricSubject(key)),
-      el("span", { class: "fl-muted", "data-role": "delta-caption" }, ` · ${labels.primaryDeltaCaption(p.direction)} · ${labels.DIRECTIONS[p.direction] ?? labels.DIRECTIONS.neutral}`),
+      el("span", { class: "fl-muted", "data-role": "delta-caption" }, `${plotted ? ` · ${labels.primaryDeltaCaption(p.direction)}` : ""} · ${labels.DIRECTIONS[p.direction] ?? labels.DIRECTIONS.neutral}`),
     ]),
     el("dl", {}, rows.flatMap(([term, value]) => [el("dt", { class: "fl-small-label" }, term), el("dd", {}, value)])),
     strip,
-    el("p", { "data-role": "outcome-sentence" }, labels.OUTCOME_SENTENCES[view.outcome]),
-    el("p", { class: "fl-sr-only" }, labels.verdictStripSummary({ count: view.replications, metric: metricSubject(key), low, high, outcome: view.outcome })),
+    el("p", { "data-role": "outcome-sentence" }, plotted ? labels.OUTCOME_SENTENCES[view.outcome] : summary),
+    plotted ? el("p", { class: "fl-sr-only" }, summary) : null,
   ]);
 }
 
-function guardrailSection(view) {
+function guardrailSection(view, sided = false) {
   if (view.guardrails.length === 0) {
     return el("section", { "data-section": "guardrails" }, [heading(3, labels.VERDICT.guardrailsHeading), el("p", { class: "fl-muted" }, labels.VERDICT.noGuardrails)]);
   }
   const head = el("tr", {}, [labels.VERDICT.metric, labels.VERDICT.meanHarm, labels.VERDICT.maxHarm, labels.VERDICT.status].map((t) => el("th", { scope: "col" }, t)));
   const rows = view.guardrails.map((g) => {
     const words = labels.STATUS_WORDS.guardrail[g.status];
-    const harm = g.harm === null ? absentSpan("harm", labels.ABSENT_REASONS.metricAbsentInSomeReplication) : valueSpan("harm", g.harm, metricValueText(g.metric, g.harm, { withSign: true, against: [g.max_harm].filter(Number.isFinite) }));
+    const harm = g.harm === null ? absentSpan("harm", labels.ABSENT_REASONS.metricAbsentInSomeReplication) : valueSpan("harm", g.harm, metricValueText(g.metric, g.harm, { withSign: true, against: sided ? [g.max_harm] : null }));
     const status = g.status === "NOT_EVALUABLE" ? [chip(words), el("span", { class: "fl-muted" }, labels.NOT_EVALUABLE_TEXT)] : [chip(words)];
     return el("tr", { "data-metric": g.metric, "data-status": g.status }, [
       el("th", { scope: "row", class: "fl-mono" }, metricSubject(g.metric)),
@@ -715,11 +746,12 @@ function tradeOffSection(view) {
 /**
  * The verdict as the walkthrough's ledger shows it (demo plan beat 2.2): the card's own gate chain, its primary rows
  * with minutes beside their seconds, its seed dots, its guardrail table and bullet rows, and what the run trades. The
- * descriptive rows and the limitations list stay on the card itself, where there is room to read them.
+ * descriptive rows and the limitations list stay on the card itself, where there is room to read them. A page that draws
+ * no strip passes `plotted: false` (see primarySection); its harms are sided against their allowances.
  */
-export function renderVerdictReadout(view, { strip = null, rails = [], actions = [], notices = [] } = {}) {
+export function renderVerdictReadout(view, { strip = null, rails = [], actions = [], notices = [], plotted = true } = {}) {
   const body = view.validity === "VALID"
-    ? [gateChain(view), primarySection(view, strip, { minutes: true }), guardrailSection(view), guardrailRowsSection(rails), tradeOffSection(view)]
+    ? [gateChain(view), primarySection(view, strip, { minutes: true, plotted }), guardrailSection(view, !plotted), guardrailRowsSection(rails), tradeOffSection(view)]
     : [gateChain(view), invalidSection(view)];
   return verdictArticle({
     view,

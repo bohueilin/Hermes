@@ -17,7 +17,7 @@
  "presses": {
   "capacity|0.64|0.4": {
    "engine_runs": 113,
-   "record_characters": 31248,
+   "record_characters": 31230,
    "inputs": [
     1.1035208344172824,
     "190 kW, 4, 3, 3, 3",
@@ -216,7 +216,7 @@
   },
   "capacity|0.64|0.5": {
    "engine_runs": 113,
-   "record_characters": 31500,
+   "record_characters": 31482,
    "inputs": [
     1.1035208344172824,
     "160 kW, 4, 3, 2, 2",
@@ -415,7 +415,7 @@
   },
   "capacity|0.64|0.6": {
    "engine_runs": 113,
-   "record_characters": 31774,
+   "record_characters": 31756,
    "inputs": [
     1.1035208344172824,
     "130 kW, 3, 2, 2, 2",
@@ -614,7 +614,7 @@
   },
   "capacity|0.68|0.4": {
    "engine_runs": 113,
-   "record_characters": 31432,
+   "record_characters": 31414,
    "inputs": [
     1.1724908865683628,
     "210 kW, 5, 4, 3, 3",
@@ -813,7 +813,7 @@
   },
   "capacity|0.68|0.5": {
    "engine_runs": 113,
-   "record_characters": 31683,
+   "record_characters": 31665,
    "inputs": [
     1.1724908865683628,
     "170 kW, 4, 3, 2, 2",
@@ -1012,7 +1012,7 @@
   },
   "capacity|0.68|0.6": {
    "engine_runs": 113,
-   "record_characters": 31644,
+   "record_characters": 31626,
    "inputs": [
     1.1724908865683628,
     "140 kW, 3, 3, 2, 2",
@@ -1211,7 +1211,7 @@
   },
   "capacity|0.72|0.4": {
    "engine_runs": 113,
-   "record_characters": 31234,
+   "record_characters": 31216,
    "inputs": [
     1.2414609387194426,
     "220 kW, 5, 4, 3, 3",
@@ -1410,7 +1410,7 @@
   },
   "capacity|0.72|0.5": {
    "engine_runs": 113,
-   "record_characters": 31634,
+   "record_characters": 31616,
    "inputs": [
     1.2414609387194426,
     "180 kW, 4, 3, 2, 2",
@@ -1609,7 +1609,7 @@
   },
   "capacity|0.72|0.6": {
    "engine_runs": 113,
-   "record_characters": 31745,
+   "record_characters": 31727,
    "inputs": [
     1.2414609387194426,
     "150 kW, 3, 3, 2, 2",
@@ -1808,7 +1808,7 @@
   },
   "sites|0.64|0.4": {
    "engine_runs": 103,
-   "record_characters": 31168,
+   "record_characters": 31118,
    "inputs": [
     1.1035208344172824,
     "190 kW, 4, 3, 3, 3",
@@ -2007,7 +2007,7 @@
   },
   "sites|0.64|0.5": {
    "engine_runs": 103,
-   "record_characters": 31376,
+   "record_characters": 31326,
    "inputs": [
     1.1035208344172824,
     "160 kW, 4, 3, 2, 2",
@@ -2209,7 +2209,7 @@
   },
   "sites|0.68|0.4": {
    "engine_runs": 103,
-   "record_characters": 31002,
+   "record_characters": 30952,
    "inputs": [
     1.1724908865683628,
     "210 kW, 5, 4, 3, 3",
@@ -2408,7 +2408,7 @@
   },
   "sites|0.68|0.5": {
    "engine_runs": 103,
-   "record_characters": 31438,
+   "record_characters": 31388,
    "inputs": [
     1.1724908865683628,
     "170 kW, 4, 3, 2, 2",
@@ -2610,7 +2610,7 @@
   },
   "sites|0.72|0.4": {
    "engine_runs": 103,
-   "record_characters": 31081,
+   "record_characters": 31031,
    "inputs": [
     1.2414609387194426,
     "220 kW, 5, 4, 3, 3",
@@ -2809,7 +2809,7 @@
   },
   "sites|0.72|0.5": {
    "engine_runs": 103,
-   "record_characters": 31539,
+   "record_characters": 31489,
    "inputs": [
     1.2414609387194426,
     "180 kW, 4, 3, 2, 2",
@@ -3008,7 +3008,7 @@
   },
   "sites|0.72|0.6": {
    "engine_runs": 103,
-   "record_characters": 31486,
+   "record_characters": 31436,
    "inputs": [
     1.2414609387194426,
     "150 kW, 3, 3, 2, 2",
@@ -3207,7 +3207,7 @@
   },
   "one|0.64|0.4": {
    "engine_runs": 113,
-   "record_characters": 31047,
+   "record_characters": 30984,
    "inputs": [
     1.1035208344172824,
     "190 kW, 4, 3, 3, 3",
@@ -3406,7 +3406,7 @@
   },
   "one|0.64|0.5": {
    "engine_runs": 113,
-   "record_characters": 31450,
+   "record_characters": 31387,
    "inputs": [
     1.1035208344172824,
     "160 kW, 4, 3, 2, 2",
@@ -3605,7 +3605,7 @@
   },
   "one|0.64|0.6": {
    "engine_runs": 113,
-   "record_characters": 31592,
+   "record_characters": 31529,
    "inputs": [
     1.1035208344172824,
     "130 kW, 3, 2, 2, 2",
@@ -3804,7 +3804,7 @@
   },
   "one|0.68|0.4": {
    "engine_runs": 113,
-   "record_characters": 31136,
+   "record_characters": 31073,
    "inputs": [
     1.1724908865683628,
     "210 kW, 5, 4, 3, 3",
@@ -4003,7 +4003,7 @@
   },
   "one|0.68|0.5": {
    "engine_runs": 113,
-   "record_characters": 31449,
+   "record_characters": 31386,
    "inputs": [
     1.1724908865683628,
     "170 kW, 4, 3, 2, 2",
@@ -4202,7 +4202,7 @@
   },
   "one|0.68|0.6": {
    "engine_runs": 113,
-   "record_characters": 31449,
+   "record_characters": 31386,
    "inputs": [
     1.1724908865683628,
     "140 kW, 3, 3, 2, 2",
@@ -4401,7 +4401,7 @@
   },
   "one|0.72|0.4": {
    "engine_runs": 113,
-   "record_characters": 31102,
+   "record_characters": 31039,
    "inputs": [
     1.2414609387194426,
     "220 kW, 5, 4, 3, 3",
@@ -4600,7 +4600,7 @@
   },
   "one|0.72|0.5": {
    "engine_runs": 113,
-   "record_characters": 31537,
+   "record_characters": 31474,
    "inputs": [
     1.2414609387194426,
     "180 kW, 4, 3, 2, 2",
@@ -4799,7 +4799,7 @@
   },
   "one|0.72|0.6": {
    "engine_runs": 113,
-   "record_characters": 31517,
+   "record_characters": 31454,
    "inputs": [
     1.2414609387194426,
     "150 kW, 3, 3, 2, 2",

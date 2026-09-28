@@ -406,16 +406,16 @@
     "delay_min": 180
    },
    "main": {
-    "label": "scale-spec:42aa34d4",
-    "digest": "42aa34d4302b04df5158370ddf86fad6bdd19202a5f697c421176078452e9f75",
+    "label": "scale-spec:16d331de",
+    "digest": "16d331de9326aafee95076a2dac69f5cbc798e24770f4cb49f21db1cf30e4879",
     "validity": "VALID",
     "outcome": "IMPROVED",
     "recommendation": "ADVANCE_TO_NEXT_TEST",
     "baseline_mean": 17737.85156681938,
     "candidate_mean": 11988.968772056052,
     "mean_delta": -5748.882794763326,
-    "ci_low": -6198.470750410374,
-    "ci_high": -5266.6636960701535,
+    "ci_low": -6185.890698568787,
+    "ci_high": -5266.524797076622,
     "margin": 861.558,
     "guardrail_status": "WITHIN",
     "guardrail_harm": 0,
@@ -1042,8 +1042,8 @@
     "delay_min": 240
    },
    "main": {
-    "label": "scale-spec:6905c5e1",
-    "digest": "6905c5e1d6330afe674367ae5b16c893e7a7cd0c99cbb958e9f5616ca951f1cc",
+    "label": "scale-spec:2f4598cb",
+    "digest": "2f4598cb32f2e85a91aa9b136a6f278fb3b15b35dd68214c655856f80425fca4",
     "validity": "VALID",
     "outcome": "UNCHANGED",
     "recommendation": "NO_RECOMMENDATION",

@@ -8,13 +8,13 @@ import {LAB} from '../src/model/scale-density.js';
 import {freezeScale} from '../src/model/scale-contract.js';
 import {BAY_AREA_PLACES,bayAreaRoute} from '../src/model/bay-area.js';
 import {defaultBayAreaConfig,simulateBayAreaOperations} from '../src/model/bay-operations.js';
-import {createScaleLab} from '../src/ui/scale-lab.js';
+import {createScaleLab,cellText,fillText} from '../src/ui/scale-lab.js';
 import {installFakeDom} from './helpers/fake-dom.mjs';
 
 const PERF=process.env.FLEET_PLAYGROUND_PERF==='1';
 const pins=JSON.parse(readFileSync(new URL('./scale-density.pins.json',import.meta.url),'utf8'));
 const source=readFileSync(new URL('../src/model/scale-density.js',import.meta.url),'utf8');
-const TRIP='completed trips per 100 car-hours in hours 5 to 8',PLANS=['capacity','sites','one'],RUNGS=[24,48,72,96,120];
+const TRIP='completed trips per 100 car-hours in hours 5 to 8',FAST='prompt pickup fraction of requests in hours 5 to 8',PLANS=['capacity','sites','one'],RUNGS=[24,48,72,96,120];
 const drain=g=>{let s;do{s=g.next();}while(!s.done);return s.value;};
 const counted=fn=>{const real=globalThis.structuredClone,configs=[];globalThis.structuredClone=x=>{configs.push(x);return real(x);};try{return {value:fn(),configs};}finally{globalThis.structuredClone=real;}};
 const close=(a,b,tol=1e-9)=>Math.abs(a-b)<=tol*Math.max(1,Math.abs(a),Math.abs(b));
@@ -27,7 +27,7 @@ const PLACES=new RegExp(BAY_AREA_PLACES.map(p=>p.id).join('|')+'|ojai|ipace|i-pa
 const cache=new Map();
 function press(plan,config={}){
   const key=JSON.stringify([plan,config]);
-  if(!cache.has(key)){const d=LAB.derive({...LAB.defaults(),plan,...config});assert.equal(d.ok,true,key);cache.set(key,{...counted(()=>drain(LAB.steps(d.setup))),derived:d});}
+  if(!cache.has(key)){const d=LAB.derive({...LAB.defaults(),plan,...config}),partials=[];assert.equal(d.ok,true,key);cache.set(key,{...counted(()=>{const g=LAB.steps(d.setup);let s;while(!(s=g.next()).done)if(s.value?.partial)partials.push(s.value.partial);return s.value;}),derived:d,partials});}
   return cache.get(key);
 }
 
@@ -41,23 +41,34 @@ function cellFacts(sitePlaces){
 }
 const engineSites=n=>simulateBayAreaOperations({...defaultBayAreaConfig(),place_ids:CELL.map(p=>p.id),depot_count:n,fleet_size:1,requests_per_hour:0,duration_hours:1/60},{capture:false}).locations.filter(l=>l.kind==='depot').map(l=>CELL.find(p=>p.id===l.place_id));
 const visitKwh=(f,empty)=>.24*(2*(f.trip+empty)+f.leg),busyMin=(f,empty)=>2+f.ride+(f.legMin+8+6+6+1+visitKwh(f,empty)/50*60)/2;
+const known=new Map(),factsOf=n=>{if(!known.has(n))known.set(n,cellFacts(engineSites(n)));return known.get(n);};
+// The sizing rule and the depot load by hand, written again: exact values, no rounding anywhere.
+function second(street,depot){
+  const two=factsOf(2),q=street*60/busyMin(two,two.trip),visits=24*q/2*two.busier,kw=Math.ceil(visits*visitKwh(two,two.trip)/depot/10)*10,bays=[8,6,6].map(m=>Math.max(1,Math.ceil(visits*m/60/depot)));
+  const loadOf=(n,sites,m)=>{const f=factsOf(sites),v=n*q/2*f.busier/m;return Math.max(v*visitKwh(f,two.trip)/kw,...[8,6,6].map((x,i)=>v*x/60/bays[i]));};
+  return {q,kw,bays,control:(plan,n)=>loadOf(n,2,plan==='capacity'?1:n/24),tested:plan=>loadOf(120,...{capacity:[2,5],sites:[5,2],one:[1,10]}[plan])};
+}
+// The printing rule of a hand load, written again: two decimals, and one more at a time while the text would read as equal to,
+// or across, a threshold the load is not on. `side` is true when a printed number stands where the exact one does.
+const sidedText=(v,t)=>{for(let d=2;;d++){const s=v.toFixed(d);if(d>=17||v===t||Math.sign(Number(s)-t)===Math.sign(v-t))return s;}};
+const side=(text,exact,t)=>/^\d+\.\d{2,17}$/.test(text)&&Math.sign(Number(text)-t)===Math.sign(exact-t);
+const refusal=text=>`by hand the busier site of the tested plan would stand at ${text} of its capacity at 120 cars, past the 0.9 this lab allows, so siting would mix with a capacity shortfall`;
 
 test('the typed assumptions equal the engine defaults, and the hand rule matches the road table and the engine site places',()=>{
   const c=defaultBayAreaConfig(),car=Object.values(c.vehicle_profiles)[0];
   assert.deepEqual([c.cleaning_minutes,c.software_minutes,c.software_every_visits,c.upload_minutes,c.road_speed_kph,c.patience_minutes,c.reserve_soc_pct,c.traffic_multiplier,c.weather],[8,12,2,6,38,12,15,1,'clear']);
   assert.deepEqual([car.battery_kwh,car.energy_kwh_per_km,car.boarding_minutes,car.cleaning_multiplier,car.software_multiplier,car.upload_multiplier],[84,.24,2,1,1,1]);assert.ok(car.charge_limit_kw>=50);
   assert.equal(CELL.length,9);assert.ok(!CELL.some(p=>p.kind==='airport'),'no airport place in the cell');
-  const two=cellFacts(engineSites(2));
+  const two=factsOf(2);
   assert.ok(close(two.trip,pins.hand.trip_km)&&close(two.ride,pins.hand.ride_min)&&close(two.leg,pins.hand.leg_km)&&close(two.legMin,pins.hand.leg_min)&&close(two.busier,pins.hand.busier));
   for(const [street,depot] of [[.68,.5],[.64,.4],[.72,.6],[.66,.55]]){
-    const q=street*60/busyMin(two,two.trip),visits=24*q/2*two.busier,kw=Math.ceil(visits*visitKwh(two,two.trip)/depot/10)*10,bays=[8,6,6].map(m=>Math.max(1,Math.ceil(visits*m/60/depot)));
-    const loadOf=(n,sites,m)=>{const f=cellFacts(engineSites(sites)),v=n*q/2*f.busier/m;return Math.max(v*visitKwh(f,two.trip)/kw,...[8,6,6].map((x,i)=>v*x/60/bays[i]));};
-    for(const [plan,sites,m] of [['capacity',2,5],['sites',5,2],['one',1,10]]){
-      const d=LAB.derive({plan,street,depot}),tested=loadOf(120,sites,m);
-      if(!d.ok){assert.ok(Number(tested.toFixed(2))>.9,`${plan} ${street} ${depot} is refused only past the ceiling`);assert.match(d.reason,new RegExp(tested.toFixed(2).replace('.','\\.')));continue;}
-      assert.ok(Number(tested.toFixed(2))<=.9);assert.ok(close(d.rows[3][1].v,q),'requests per car-hour');assert.ok(close(street,q*busyMin(two,two.trip)/60),'street load is requests times busy hours');
-      assert.equal(d.rows[4][1],`${kw} kW, ${Math.max(2,Math.ceil(kw/50))}, ${bays.join(', ')}`);assert.ok(close(d.rows[6][1].v,tested),'tested plan load by hand');
-      assert.equal(d.rows[5][1],RUNGS.map(n=>loadOf(n,2,plan==='capacity'?1:n/24).toFixed(2)).join(', '));
+    const {q,kw,bays,control,tested:load}=second(street,depot);
+    for(const plan of PLANS){
+      const d=LAB.derive({plan,street,depot}),tested=load(plan);
+      if(!d.ok){assert.ok(tested>.9,`${plan} ${street} ${depot} is refused only past the ceiling`);assert.equal(d.reason,refusal(sidedText(tested,.9)));continue;}
+      assert.ok(tested<=.9);assert.ok(close(d.rows[3][1].v,q),'requests per car-hour');assert.ok(close(street,q*busyMin(two,two.trip)/60),'street load is requests times busy hours');
+      assert.equal(d.rows[4][1],`${kw} kW, ${Math.max(2,Math.ceil(kw/50))}, ${bays.join(', ')}`);assert.ok(close(d.rows[6][1].v,tested),'tested plan load by hand');assert.equal(cellText(d.rows[6][1]),sidedText(tested,.9));
+      assert.equal(d.rows[5][1],RUNGS.map(n=>sidedText(control(plan,n),1)).join(', '));
     }
   }
 });
@@ -76,7 +87,7 @@ test('derive is pure: it never runs the engine, and it refuses every setup outsi
     if(!inBand||!d.ok){assert.equal(d.ok,false,`${plan} ${street} ${depot}`);assert.ok(d.reason.length>10);assert.doesNotMatch(d.reason,/NaN|undefined|null|_|Infinity/);assert.doesNotMatch(d.reason,/^[A-Z]/,'a fragment that continues the sentence of the view');for(const re of [H3,H6,HOUSE,DASH,LINKS])assert.doesNotMatch(d.reason,re);}
     if(inBand&&plan!=='sites')assert.equal(d.ok,true,`${plan} ${street} ${depot} is inside the region`);
     if(inBand&&plan==='sites'&&!d.ok)assert.match(d.reason,/^by hand the busier site of the tested plan would stand at (0\.9[1-9]|1\.\d\d) of its capacity/);
-    if(d.ok){assert.ok(Number(d.rows[6][1].v.toFixed(2))<=.9);assert.notEqual(LAB.derive({plan,street,depot}).rows,d.rows);}
+    if(d.ok){assert.ok(d.rows[6][1].v<=.9,'the ceiling is held by the load itself, not by its rounded text');assert.notEqual(LAB.derive({plan,street,depot}).rows,d.rows);}
   }
   assert.equal(LAB.derive({plan:'sites',street:.68,depot:.6}).ok,false,'a refusal a reader can reach');
   assert.equal(LAB.derive({plan:'sites',street:.68,depot:.55}).ok,true);
@@ -201,12 +212,120 @@ test('the record and the module name no place, car model or operator, and the ge
     assert.deepEqual(Object.keys(r.spec.baseline).sort(),['depot','fleet','rule','street']);
     for(const re of [H3,H6,HOUSE,DASH,LINKS])assert.doesNotMatch(text,re);
     assert.ok(r.notes.length>=3);assert.match(r.chart.summary.t,/^Across \{n\} paired seeds: /);assert.match(r.chart.title,/hours 5 to 8/);assert.match(r.spec.primary.name,/hours 5 to 8/);
-    assert.ok(r.chart.categories.every((c,i)=>c.startsWith(`${RUNGS[i]} cars`)));
-    if(plan==='sites')assert.deepEqual(r.chart.categories.slice(2),['72 cars, 3 sites tested','96 cars, 4 sites tested','120 cars, 5 sites tested']);
   }
   assert.match(LAB.limits,/another window length gives another size of effect/);assert.match(LAB.limits,/road distances are those of the Fleet day map/);assert.match(LAB.limits,/no fleet, depot or service in those places is described\.$/);
   assert.doesNotMatch(LAB.limits+LAB.unknowns.join(' '),/real (fleet|depot|place)/,'the lab does not say that nothing here is real: its road distances are');
   const road=LAB.derive(LAB.defaults()).rows.filter(row=>/^Fleet day map/.test(row[2]));assert.equal(road.length,1);assert.equal(road[0][0],'Road distances');assert.match(road[0][2],/real region/);
+});
+
+test('the lab says that it reads the Fleet day road map and carries its credit sentence, with the inputs row kept as the detail',()=>{
+  assert.equal(LAB.map,true);assert.equal(LAB.credit,'Road distances in this lab come from the frozen Fleet day road table. Distances only; no service in those places is described.');
+  assert.ok(LAB.credit.length<=160);for(const re of [H3,H6,HOUSE,DASH,LINKS,PLACES,/\b(improved|regressed|unchanged|inconclusive|hold|lower|higher|more|fewer|less|up|down|above|below|better|worse)\b/i])assert.doesNotMatch(LAB.credit,re);
+  assert.equal(LAB.derive(LAB.defaults()).rows.at(-1)[0],'Road distances');
+});
+
+test('a depot load by hand never prints as equal to, or across, capacity or the ceiling when it is not',()=>{
+  // The reviewed case: street load 0.674 and depot load 0.505. By hand the control stands at 1.000178 of its capacity at 48 cars.
+  const at={street:.674,depot:.505},exact=RUNGS.map(n=>second(.674,.505).control('capacity',n)),text=['0.50','1.0002','1.50','2.00','2.50'];
+  assert.ok(exact[1]>1&&exact[1]<1.0002&&exact[0]<1);
+  assert.equal(LAB.derive({plan:'capacity',...at}).rows[5][1],text.join(', '),'inputs row');
+  const r=press('capacity',at).value;
+  assert.deepEqual(r.tables[0].rows.map(row=>cellText(row[3])),text,'table column');r.tables[0].rows.forEach((row,i)=>assert.ok(close(row[3].v,exact[i])));
+  assert.match(fillText(r.notes[0]),/^By hand the busier control site passes its capacity at 48 cars and stands at 2\.50 times its capacity at 120 cars\./);
+  assert.equal(r.analysis.outcome,'IMPROVED');assert.equal(r.work.engine_runs,113);
+  // A stepper setting below the ceiling: five sites stand at 0.8957, which two decimals would print as the ceiling itself.
+  assert.equal(cellText(LAB.derive({plan:'sites',street:.72,depot:.6}).rows[6][1]),'0.896');
+  // Every setting a reader can type, three decimals at most. Without the flag, the settings with a load within 0.006 of a threshold.
+  let seen=0,longest=2;
+  for(let a=640;a<=720;a++)for(let b=400;b<=600;b++){
+    const street=a/1000,depot=b/1000,s=second(street,depot);
+    for(const plan of PLANS){
+      const control=RUNGS.map(n=>s.control(plan,n)),tested=s.tested(plan),name=`${plan} ${street} ${depot}`;
+      if(!PERF&&!control.some(v=>Math.abs(v-1)<.006)&&Math.abs(tested-.9)>=.006)continue;
+      const d=LAB.derive({plan,street,depot});seen++;
+      assert.equal(d.ok,tested<=.9,`${name}: refused when, and only when, the load itself is past the ceiling`);
+      if(!d.ok){const shown=/stand at (\S+) of its capacity/.exec(d.reason)[1];assert.ok(side(shown,tested,.9),`${name}: refusal prints ${shown} for ${tested}`);assert.equal(d.reason,refusal(sidedText(tested,.9)));continue;}
+      const shown=cellText(d.rows[6][1]),rung=d.rows[5][1].split(', ');
+      assert.ok(side(shown,tested,.9)&&close(d.rows[6][1].v,tested),`${name}: tested load prints ${shown} for ${tested}`);
+      rung.forEach((x,i)=>assert.ok(side(x,control[i],1),`${name}: control load prints ${x} for ${control[i]}`));
+      longest=Math.max(longest,...[shown,...rung].map(x=>x.split('.')[1].length));
+    }
+  }
+  assert.ok(seen>(PERF?48000:600),`${seen} settings read`);assert.ok(longest<=6,'on this grid six decimals keep every load on its side, so every load is a number cell');
+});
+
+test('a load closer to its threshold than six decimals keeps its side, down to the nearest load a ratio can give',()=>{
+  // The load by hand is in proportion to street load while the base site stays, so a street load can be aimed at a load.
+  const aim=(street,depot,pick,to)=>street*to/pick(second(street,depot));
+  const street=aim(.674,.505,s=>s.control('capacity',48),1+3e-8),exact=second(street,.505).control('capacity',48);
+  assert.ok(exact>1&&exact-1<5e-7,`the control stands at ${exact} of its capacity at 48 cars`);
+  const d=LAB.derive({plan:'capacity',street,depot:.505}),shown=d.rows[5][1].split(', ');
+  assert.match(shown[1],/^1\.0{7}\d{1,5}$/);assert.ok(side(shown[1],exact,1));assert.deepEqual(shown.filter((_,i)=>i!==1),['0.50','1.50','2.00','2.50']);
+  assert.equal(cellText(d.rows[1][1]),`${street} of car time`,'a ratio of more than six decimals is echoed whole');assert.equal(d.setup.main.spec.baseline.street,street);
+  // Both sides of the ceiling and of capacity, from 1e-7 away to the last place a load holds. Inside 1e-14 the two copies of the
+  // hand rule can differ in the last place, so there the text is held to the decision of the module and to nothing else.
+  let nearest=1;
+  for(let k=7;k<=16.5;k+=.25)for(const sign of [-1,1]){
+    const by=sign*10**-k,near=aim(.679,.6,s=>s.tested('sites'),.9*(1+by)),load=second(near,.6).tested('sites'),r=LAB.derive({plan:'sites',street:near,depot:.6});
+    const text=r.ok?cellText(r.rows[6][1]):/stand at (\S+) of its capacity/.exec(r.reason)[1],top=LAB.derive({plan:'capacity',street:aim(.674,.505,s=>s.control('capacity',48),1+by),depot:.505}).rows[5][1].split(', ')[1];
+    assert.ok(Math.abs(load-.9)<5e-7);assert.match(text,/^0\.\d{2,17}$/);assert.match(top,/^\d\.\d{2,17}$/);
+    assert.ok(r.ok?Number(text)<=.9:Number(text)>.9,`${r.ok?'accepted':'refused'} and printed as ${text}`);
+    if(k>14)continue;
+    nearest=Math.min(nearest,Math.abs(load-.9));assert.equal(r.ok,sign<0);assert.ok(side(text,load,.9),`${text} for ${load}`);assert.match(text,/^0\.\d{7,17}$/);
+    assert.equal(Math.sign(Number(top)-1),sign,top);assert.match(top,/^\d\.\d{7,17}$/);
+  }
+  assert.ok(nearest<2e-14,`the nearest load judged stands ${nearest} from the ceiling`);
+  if(!PERF)return;
+  const r=press('capacity',{street,depot:.505}).value,cells=r.tables[0].rows.map(row=>cellText(row[3]));
+  assert.equal(cells[1],shown[1]);assert.match(fillText(r.notes[0]),/passes its capacity at 48 cars and stands at 2\.50 times its capacity at 120 cars\./);assert.equal(r.analysis.outcome,'IMPROVED');
+});
+
+test('the ceiling is held by the hand load itself, and a refusal prints the load past the ceiling',()=>{
+  for(const [street,depot,text] of [[.679,.6,'0.905'],[.678,.58,'0.904'],[.68,.6,'0.91'],[.64,.6,'1.03']]){
+    const exact=second(street,depot).tested('sites'),d=LAB.derive({plan:'sites',street,depot});
+    assert.ok(exact>.9&&side(text,exact,.9));assert.equal(d.ok,false,`${street} ${depot} stands at ${exact}`);assert.equal(d.reason,refusal(text));
+  }
+});
+
+test('the inputs table prints each governing ratio at the decimals it holds, so the input printed is the input the sizing rule used',()=>{
+  const typed=LAB.derive({plan:'capacity',street:.674,depot:.505}),usual=LAB.derive(LAB.defaults());
+  assert.deepEqual(typed.rows.slice(1,3).map(r=>cellText(r[1])),['0.674 of car time','0.505 of capacity at the busier site']);
+  assert.deepEqual(usual.rows.slice(1,3).map(r=>cellText(r[1])),['0.68 of car time','0.50 of capacity at the busier site']);
+  assert.ok(close(typed.rows[3][1].v,second(.674,.505).q)&&!close(typed.rows[3][1].v,second(.67,.505).q,1e-4),'requests per car-hour belong to the printed ratio');
+  for(let a=640;a<=720;a++){const d=LAB.derive({plan:'capacity',street:a/1000,depot:.5});assert.equal(Number(cellText(d.rows[1][1]).split(' ')[0]),a/1000);assert.equal(d.setup.main.spec.baseline.street,a/1000);}
+  for(let b=400;b<=600;b++){const d=LAB.derive({plan:'capacity',street:.68,depot:b/1000});assert.equal(Number(cellText(d.rows[2][1]).split(' ')[0]),b/1000);}
+  for(const [v,text] of [[.64,'0.64'],[.7,'0.70'],[.6745,'0.6745'],[.650001,'0.650001'],[.6500001,'0.6500001'],[.68+1e-12,'0.680000000001'],[.6400219593251124,'0.6400219593251124']]){
+    const d=LAB.derive({...LAB.defaults(),street:v});assert.equal(d.ok,true,text);assert.equal(cellText(d.rows[1][1]),text+' of car time');assert.equal(Number(text),v);
+  }
+  for(const [v,text] of [[.4,'0.40'],[.5051,'0.5051'],[.59999,'0.59999'],[.5201623083786108,'0.5201623083786108']]){
+    const d=LAB.derive({...LAB.defaults(),depot:v});assert.equal(d.ok,true,text);assert.equal(cellText(d.rows[2][1]),text+' of capacity at the busier site');assert.equal(Number(text),v);
+  }
+});
+
+test('the prompt pickup guardrail counts requests made at least 15 minutes before the window ends, and the inputs say so',()=>{
+  const {value:r,configs}=press('capacity'),fixed=configs.filter(c=>c.fleet_size===120&&c.site_power_kw===configs[0].site_power_kw)[0];
+  const asked=simulateBayAreaOperations(fixed,{capture:false}).requests.filter(q=>q.created_minute>=240&&q.created_minute<480),counted=asked.filter(q=>q.created_minute<465);
+  const prompt=qs=>qs.filter(q=>q.picked_up_minute!==null&&q.picked_up_minute-q.created_minute<=15).length/qs.length;
+  assert.ok(asked.length>counted.length,'requests are made in the last 15 minutes');
+  assert.ok(close(r.per_seed[0].baseline[FAST],prompt(counted))&&!close(r.per_seed[0].baseline[FAST],prompt(asked)),'the measure is the fraction of the counted requests');
+  const held=press('capacity').derived.rows.find(row=>row[0]==='Held fixed');
+  assert.match(held[1],/prompt pickup within 15 min, counted over requests made at least 15 min before the window ends$/);
+  assert.equal(r.spec.guardrails[0].metric,FAST,'the declared name stays, so the frozen test stays');
+});
+
+test('chart categories are short, and the site count of the tested plan is carried by the table and the summary',()=>{
+  const sited={capacity:RUNGS.map(n=>`${n} cars`),sites:['24 cars','48 cars','72 cars, 3 sites tested','96 cars, 4 sites tested','120 cars, 5 sites tested'],one:['24 cars',...RUNGS.slice(1).map(n=>`${n} cars, 1 site tested`)]};
+  for(const plan of PLANS){
+    const {value:r,partials}=press(plan);
+    assert.equal(partials.length,5);
+    for(const [i,c] of [...partials.map(p=>p.chart),r.chart].entries()){
+      assert.deepEqual(c.categories,RUNGS.map(String),'a rung is named by its number, so that all five are drawn on a phone');assert.equal(c.category,'Fleet size, cars');assert.ok(c.categories.every(x=>x.length<=4));
+      assert.ok(fillText(c.summary).startsWith(`Across 10 paired seeds: at ${sited[plan][Math.min(i,4)]}, pickup driving takes `),fillText(c.summary));
+      // Lines first and the bar third: the queue keeps the hollow mark, and the view draws bars under lines.
+      assert.deepEqual(c.series.map(s=>[s.id,s.mark]),[['control','line'],['tested','line'],['queue','bar']]);
+    }
+    assert.deepEqual(r.tables[0].rows.map(row=>row[0]),sited[plan]);assert.match(r.tables[0].caption,/The control plan has two sites at every rung$/);
+  }
 });
 
 test('the reader grid reproduces its pins, and the refused corner stays refused (FLEET_PLAYGROUND_PERF=1)',{skip:!PERF&&'set FLEET_PLAYGROUND_PERF=1'},()=>{

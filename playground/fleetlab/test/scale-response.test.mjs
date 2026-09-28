@@ -6,10 +6,16 @@ import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {LAB,FLEETS,RULE,closedForm,leanPool,rates,leverRates,buildTape,applyEvent,simulateDay,deriveResponse} from '../src/model/scale-response.js';
 import {scaleJson} from '../src/model/scale-contract.js';
+import {cellText,fillText} from '../src/ui/scale-lab.js';
 
 const PINS=JSON.parse(readFileSync(new URL('./scale-response.pins.json',import.meta.url),'utf8'));
 const drain=g=>{let s;do{s=g.next();}while(!s.done);return s.value;};
 const press=(config={},seeds,engine)=>{const d=deriveResponse({...LAB.defaults(),...config},seeds);assert.equal(d.ok,true,JSON.stringify(config));return drain(engine?LAB.steps(d.setup,engine):LAB.steps(d.setup));};
+// One press a setup on the declared seeds, shared by the tests that read what the page prints.
+const kept=new Map(),once=(config={})=>{const k=JSON.stringify(config);if(!kept.has(k))kept.set(k,press(config));return kept.get(k);};
+// What a visitor reads: every table cell, every note and the chart summary, through the view's own text functions.
+const printed=r=>[...r.tables.flatMap(t=>t.rows.flat().map(c=>[cellText(c),t.caption.split('.')[0]])),...r.notes.map((n,i)=>[fillText(n),'note '+(i+1)]),[fillText(r.chart.summary),'chart summary']];
+const LONG=/\.\d{6,}/;
 const value=c=>Number.isFinite(c?.v)?c.v:c,rows=t=>t.rows.map(r=>r.map(value)),near=(a,b,rel=1e-9)=>Math.abs(a-b)<=rel*Math.max(1,Math.abs(a),Math.abs(b));
 const NONE={lever:'none',size:0,delay:0},shipped={buildTape,applyEvent,simulateDay},DESIGN=Array.from({length:12},(_,i)=>1001+i);
 // Retyped from test/teaching-frames.test.mjs, which exports nothing.
@@ -143,7 +149,7 @@ test('copy: every string the lab can show keeps the copy rules, before and after
   const before=new Set([LAB.title,LAB.short,LAB.limits,LAB.geography,...LAB.frame.slice(0,4),...LAB.controls.flatMap(c=>[c.label,c.unit??'',...(c.options??[]).map(o=>o[1])])]);
   for(const load of [1.2,1.3,1.4,1.5,1.6])for(const lever of ['reserve','directive'])for(let delay=15;delay<=240;delay+=15){const d=deriveResponse({load,lever,delay});before.add(d.setup.main.spec.change);
     for(const r of d.rows){assert.match(r[2],/^(You choose|Teaching assumption|Sizing rule|Governing ratio)/);for(const s of [r[0],typeof r[1]==='string'?r[1]:r[1].u??'',r[2]])before.add(s);}}
-  for(const bad of [{load:1},{lever:'x'},{delay:1}])before.add(deriveResponse({...LAB.defaults(),...bad}).reason);
+  for(const bad of [{load:1},{load:1.334},{lever:'x'},{delay:1}])before.add(deriveResponse({...LAB.defaults(),...bad}).reason);
   for(const s of before)for(const re of [...ALWAYS,V,D])assert.doesNotMatch(s,re,s);
   const r=press(),after=[...LAB.unknowns,...r.notes.map(n=>typeof n==='string'?n:n.t),...r.controls.map(c=>c.title),...r.tables.flatMap(t=>[t.caption,...t.heads,...t.rows.flat().filter(c=>typeof c==='string')]),r.chart.title,r.chart.summary.t,...r.chart.series.map(s=>s.label)];
   for(const s of after)for(const re of ALWAYS)assert.doesNotMatch(s,re,s);
@@ -176,9 +182,109 @@ test('rates only for a lever arm: hand values, identities, and the simulated cha
   assert.equal(read,154,'settings of the page grid whose simulated change passes the margin');
 });
 
+test('C1: a queue that is empty when the event ends clears in 0 min, and no early directive prints a long decimal',()=>{
+  const day=(seed,arm)=>simulateDay(applyEvent(buildTape(6000,seed),1300),6,arm),early={lever:'directive',size:0,delay:15};
+  for(const seed of [3001,3008])assert.equal(day(seed,early).clear,0,`seed ${seed}: nothing waits at the instant the event ends`);
+  assert.equal(day(3006,early).clear,0.31592848337847196,'seed 3006: vehicles wait when the event ends, so the day keeps its reading');
+  assert.equal(day(3001,NONE).clear,PINS.engine.day_no_lever_6000_seed_3001.clear,'a day with a backlog at the end of the event keeps its reading');
+  for(const config of [{lever:'directive',delay:15},{lever:'directive',delay:45},{load:1.6,lever:'directive',delay:120},{load:1.2,lever:'directive',delay:135}]){
+    const r=once(config),name=JSON.stringify(config);
+    for(const [text,where] of printed(r))assert.doesNotMatch(text,LONG,`${name} ${where}`);
+    for(const t of r.tables)for(const c of t.rows.flat())if(Number.isFinite(c?.v)&&c.v&&Math.abs(c.v)<.5/10**c.d)assert.equal(c.v,+c.v.toPrecision(2),`${name}: a value under half a unit of its last decimal is handed over at two significant digits`);
+    const load=r.spec.baseline.load,days=LAB.seeds.map(s=>simulateDay(applyEvent(buildTape(6000,s),load),6,r.spec.candidate).clear),mean=days.reduce((s,v)=>s+v,0)/12;
+    assert.ok(days.filter(v=>v===0).length>=6&&mean<.5,name+': most days are empty when the event ends');
+    assert.equal(r.tables[0].rows[1][4].v,+mean.toPrecision(2),name+': the cell is the mean of the days, the empty ones as 0');assert.match(cellText(r.tables[0].rows[1][4]),/^0\.\d{2,3}$/);
+  }
+  assert.deepEqual(LAB.seeds.map(s=>day(s,early).clear).filter(v=>v),[0.31592848337847196],'at the default load one day of twelve has vehicles waiting when the event ends');
+});
+
+test('C2, C11: a directive that lands after the last moved request is answered reads the no-lever value itself',()=>{
+  for(let load=1161;load<=1600;load++)for(let d=15;d<=240;d++){
+    const c=leverRates(load,'directive',0,d)-rates(load).stopped;
+    assert.ok(c===0||c<=-.5,`${load} ${d}: the rates-only change ${c} is zero or a change that can be read`);
+    if(d>=load*.18+1e-9)assert.equal(c,0,`${load} ${d}: nothing is left to remove`);
+  }
+  for(const load of [1200,1300,1400,1500,1600])for(let d=15;d<=240;d+=15){const c=leverRates(load,'reserve',Math.ceil(6*(load-1000)/1000),d)-rates(load).stopped;assert.ok(c<=-.5,`reserve ${load} ${d}: ${c}`);}
+  for(const config of [{load:1.2,lever:'directive',delay:225},{load:1.25,lever:'directive',delay:240}]){
+    const r=once(config),name=JSON.stringify(config);
+    assert.equal(r.notes[0].v.y.v,0,`${name}: the note would print ${r.notes[0].v.y.v}`);assert.equal(r.notes[0].v.x.v,rates(config.load*1000).stopped);
+    for(const [text,where] of printed(r))assert.doesNotMatch(text,LONG,`${name} ${where}`);
+    assert.equal(r.tables[3].rows[5][4].v,r.tables[3].rows[0][4].v,name+': landing after 240 min by rates only equals no lever');
+  }
+});
+
+test('M1: the inputs say that a directive leaves responder calls in the pool, as the model does',()=>{
+  for(const lever of ['reserve','directive'])assert.match(deriveResponse({...LAB.defaults(),lever}).rows.find(r=>r[0]==='Requests')[1],/A directive removes vehicle requests only\. Responder calls stay in the pool\./);
+  for(const seed of [3001,3002]){
+    const e=applyEvent(buildTape(6000,seed),1300),none=simulateDay(e,6,NONE),d=simulateDay(e,6,{lever:'directive',size:0,delay:15}),moved=Array.from(e.moved).filter((m,i)=>m&&e.line[i]).length;
+    assert.ok(moved>0,'the event moved responder calls');assert.equal(d.calls,none.calls);assert.equal(d.broken,null,'every responder call is answered, the moved ones too: a call that is never answered breaks the request partition');
+  }
+});
+
+test('M2: an event load off a step of 0.01 is refused with its reason, and no printed load reads as capacity when it is not',()=>{
+  for(const load of [1.334,1.166,1.167,1.169,1.2001,1.3301,1.596,1.604]){const d=deriveResponse({...LAB.defaults(),load});assert.equal(d.ok,false,String(load));assert.match(d.reason,/steps of 0\.01/,String(load));assert.doesNotMatch(d.reason,/undefined|NaN/);}
+  for(const load of [1.161,1.164,1.606])assert.match(deriveResponse({...LAB.defaults(),load}).reason,/burst depth of 4/,String(load));
+  for(const load of [1.17,1.25,1.33,1.34,1.6]){
+    const d=deriveResponse({...LAB.defaults(),load});assert.equal(d.ok,true,String(load));assert.equal(d.setup.load,Math.round(load*1000));
+    assert.equal(cellText(d.rows[0][1]),load.toFixed(2)+' x capacity','the load shown is the load used');assert.equal(d.setup.size,Math.ceil(6*(d.setup.load-1000)/1000));
+  }
+  for(const load of [1.17,1.34,1.5]){
+    const r=once({load}),size=deriveResponse({...LAB.defaults(),load}).setup.size;
+    for(const [agents,after] of r.tables[2].rows){
+      const shown=parseFloat(cellText(after));
+      assert.equal(Math.sign(shown-1),Math.sign(after.v-1),`${load}, reserve of ${agents.v}: ${after.v} is printed as ${cellText(after)}`);
+      assert.equal(after.v<=1,agents.v>=size,'the reserve by rule is the smallest that brings event load to capacity');
+    }
+  }
+});
+
+test('M17: the first note claims a direction from the inputs only on a press that read one',()=>{
+  const claim=/so the direction of the main result follows from the inputs/,none=/The main result reads no reduction past the margin, so no direction is said to follow from the inputs\./;
+  for(const [config,outcome] of [[{},'IMPROVED'],[{lever:'directive',delay:15},'IMPROVED'],[{delay:240},'INCONCLUSIVE'],[{load:1.2,lever:'directive',delay:225},'UNCHANGED']]){
+    const r=once(config),text=fillText(r.notes[0]);
+    assert.equal(r.analysis.outcome,outcome,JSON.stringify(config));
+    assert.match(text,outcome==='IMPROVED'?claim:none,text);assert.doesNotMatch(text,outcome==='IMPROVED'?none:claim,text);
+    assert.match(text,/The run adds chance, the ordinary wait and the late responder call fraction\.$/);
+    for(const re of ALWAYS)assert.doesNotMatch(text,re,text);
+  }
+});
+
+test('M20: every number of the chart summary, the first note and the burst column is named by unit and fleet size',()=>{
+  const r=once(),unit='stopped vehicle-minutes per 1,000 vehicles';
+  assert.equal(fillText(r.chart.summary),`Across 12 paired seeds, in ${unit}: event day 18,908, 17,738 and 17,032 at 2,000, 6,000 and 20,000 vehicles with one staffing ratio, and 17,231 by rates only at every size. The lean pool is in the table.`);
+  assert.match(fillText(r.notes[0]),/^By rates only at 6,000 vehicles, in stopped vehicle-minutes per 1,000 vehicles, the tested arm reads 4,676 and the change -12,555\. /);
+  assert.ok(r.tables[1].caption.endsWith(`Event-day columns, the two seed columns, rates only and the burst column are ${unit}.`),r.tables[1].caption);
+  assert.equal(r.tables[1].heads[8],'Added by a burst at 0.8 of capacity');
+});
+
+test('M22: a chart painted while the press computes carries a whole sentence of its own',()=>{
+  const g=LAB.steps(deriveResponse(LAB.defaults()).setup),seen=[];let s;
+  while(!(s=g.next()).done)if(s.value?.partial)seen.push(s.value.partial.chart);
+  assert.deepEqual(seen.map(c=>fillText(c.summary)),[1,1,2,3].map(k=>`Computing across 12 paired seeds: event day has run at ${k} of 3 fleet sizes.`));
+  assert.deepEqual(seen.map(c=>c.series[0].values.map(v=>Number.isFinite(v))),[[false,true,false],[false,true,false],[true,true,false],[true,true,true]],'the bars still show each fleet size as it ends');
+  for(const c of seen)for(const re of [...ALWAYS,/not available|table/])assert.doesNotMatch(fillText(c.summary),re);
+  assert.match(fillText(s.value.chart.summary),/^Across 12 paired seeds, .* The lean pool is in the table\.$/,'the recorded chart keeps the full sentence');
+});
+
+test('M8: chart categories are the fleet sizes as short numbers, and the category head names their unit',()=>{
+  // The view thins labels by the widest one. At 14 and 15 characters a phone kept two of three and dropped the tested fleet size.
+  const d=deriveResponse(LAB.defaults()),g=LAB.steps(d.setup);let s,first=null;
+  while(!(s=g.next()).done)first??=s.value?.partial?.chart;
+  for(const c of [first,s.value.chart]){
+    assert.deepEqual(c.categories,['2,000','6,000','20,000']);assert.ok(c.categories.every(x=>x.length<=8));
+    assert.equal(c.category,'Fleet size, vehicles','the table twin names the unit the labels leave out');
+    for(const re of [...ALWAYS,V,D])assert.doesNotMatch(c.category,re);
+  }
+});
+
 test('timing on the reference laptop',{skip:process.env.FLEET_PLAYGROUND_PERF!=='1'},()=>{
   for(let i=0;i<3;i++)press();
   const d=deriveResponse(LAB.defaults()),g=LAB.steps(d.setup),t0=performance.now();let last=t0,longest=0,first=null,s;
   while(!(s=g.next()).done){const now=performance.now();longest=Math.max(longest,now-last);last=now;if(first===null&&s.value?.partial)first=now-t0;}
   assert.ok(first<=1000,`first painted rung after ${first} ms`);assert.ok(performance.now()-t0<=3000);assert.ok(longest<=8,`longest block ${longest} ms`);
+});
+
+test('M1: the declared change of a directive says what the model does, vehicle requests only',()=>{
+  const d=LAB.derive({load:1.3,lever:'directive',delay:45});assert.equal(d.ok,true);
+  assert.equal(d.setup.main.spec.change,'A directive removes the ask of every vehicle request moved into the event, from 45 min after the event starts.');
 });

@@ -63,26 +63,34 @@ function read(r){
 const label=s=>s[0].toUpperCase()+s.slice(1),cars=n=>`${n} cars`;
 /** A cell. A value that would round to zero at its decimals keeps two significant digits; an absent value says why. */
 const cell=(v,d,u)=>Number.isFinite(v)?{v:Math.abs(v)<.5/10**d?+v.toPrecision(2):v,d,u}:{absent:'no request was given a car in the measured hours'};
-/** Rung labels. The control plan has two sites at every rung; a tested plan with another site count says so in the label. */
+/** A hand load on its true side of a threshold, capacity unless named: two decimals, and one more at a time while the text
+ * would read as equal to, or across, a threshold the load is not on. 17 decimals tell any two loads apart, so the rule has
+ * no exception. `put` is the text and `side` the cell; a cell holds six decimals at most, so a load closer to its
+ * threshold than that is a text cell. */
+const places=(v,t)=>{let d=2;while(d<17&&v!==t&&(+v.toFixed(d)-t)*(v-t)<=0)d++;return d;},put=(v,t=1)=>v.toFixed(places(v,t)),side=(v,t=1,d=places(v,t))=>d>6?v.toFixed(d):{v,d};
+/** A governing ratio at the decimals it holds, two at least, so that the input printed is the input the sizing rule used. */
+const ratio=(v,u,d=`${v}`.length-2)=>d>6?`${v} ${u}`:{v,d:Math.max(2,d),u};
+/** Rung labels of the table and the summary. The control plan has two sites at every rung; a tested plan with another site
+ * count says so in the label. The chart keeps the short label, 8 characters at most, which the view can thin. */
 const rungs=c=>RUNGS.map(n=>{const k=RULES[PLANS[c.plan][1]](n/24)[0];return cars(n)+(k===2?'':k>1?`, ${k} sites tested`:', 1 site tested');});
 function derive(c){
   const plan=PLANS[c?.plan];
   if(!plan)return {ok:false,reason:'the comparison is one of the three listed plans'};
   for(const [k,name,lo,hi] of BANDS)if(typeof c[k]!=='number'||!(c[k]>=lo&&c[k]<=hi))return {ok:false,reason:`${name.toLowerCase()} takes a number from ${lo} to ${hi}; outside that range the lab has no tested reading`};
   const arm=(rule,fleet=TOP)=>({rule,fleet,street:c.street,depot:c.depot}),p=size(c),tested=load(arm(plan[1]));
-  if(+tested.toFixed(2)>CEILING)return {ok:false,reason:`by hand the busier site of the tested plan would stand at ${tested.toFixed(2)} of its capacity at ${TOP} cars, past the ${CEILING} this lab allows, so siting would mix with a capacity shortfall`};
+  if(tested>CEILING)return {ok:false,reason:`by hand the busier site of the tested plan would stand at ${put(tested,CEILING)} of its capacity at ${TOP} cars, past the ${CEILING} this lab allows, so siting would mix with a capacity shortfall`};
   const declare=(a,b,change,control=null)=>freezeScale({lab:'density-ladder',version:VERSION,change,control,baseline:arm(a),candidate:arm(b),seeds:SEEDS,primary:{name:TRIP,direction:'higher_is_better',equivalence_margin:3},
     guardrails:[{metric:FAST,direction:'higher_is_better',max_harm:.02},{metric:OPEN,direction:'lower_is_better',max_harm:5},{metric:STORE,direction:'higher_is_better',max_harm:2}]});
   return {ok:true,setup:{...c,main:declare(plan[0],plan[1],`Depot plan at ${TOP} cars: ${plan[3]} in the control arm, ${plan[2]} in the tested arm.`),
     replay:declare(plan[0],plan[0],'None. Both arms are the control plan, and the engine runs again for the second arm.','null'),
     spare:declare('step','spare',`Depot plan at ${TOP} cars: ${STEP} in the control arm, the same sites doubled again in the tested arm.`,'non-binding')},rows:[
     ['Comparison',label(plan[2]),'You choose'],
-    ...BANDS.map(([k,name,,,unit],i)=>[name,{v:c[k],d:2,u:unit},'Governing ratio. You choose. '+(i?'Depot work asked over capacity':'Rider, depot leg and depot work time by hand, every request served')]),
+    ...BANDS.map(([k,name,,,unit],i)=>[name,ratio(c[k],unit),'Governing ratio. You choose. '+(i?'Depot work asked over capacity':'Rider, depot leg and depot work time by hand, every request served')]),
     ['Requests per car-hour',{v:p.q,d:3},'Sizing rule: street load over busy hours per trip by hand'],
     ['Each base site: power, ports, cleaning, software and upload bays',`${p.kw} kW, ${p.ports}, ${p.bays.join(', ')}`,'Sizing rule: work at the busier site over depot load, in whole units and steps of 10 kW'],
-    ['Depot load by hand, control plan by rung',RUNGS.map(n=>load(arm(plan[0],n)).toFixed(2)).join(', '),'Sizing rule: busier site, after whole units'],
-    [`Depot load by hand, tested plan at ${TOP} cars`,{v:tested,d:2},'Sizing rule: busier site, after whole units'],
-    ['Held fixed',`9 places, 8 hours from 19:00 with hours 5 to 8 measured, flat requests, ${SPEED} km per hour, rider patience 12 min, prompt pickup within ${PROMPT} min`,'Teaching assumption'],
+    ['Depot load by hand, control plan by rung',RUNGS.map(n=>put(load(arm(plan[0],n)))).join(', '),'Sizing rule: busier site, after whole units'],
+    [`Depot load by hand, tested plan at ${TOP} cars`,side(tested,CEILING),'Sizing rule: busier site, after whole units'],
+    ['Held fixed',`9 places, 8 hours from 19:00 with hours 5 to 8 measured, flat requests, ${SPEED} km per hour, rider patience 12 min, prompt pickup within ${PROMPT} min, counted over requests made at least ${PROMPT} min before the window ends`,'Teaching assumption'],
     ['Car and depot, held fixed',`84 kWh, ${KWH_KM} kWh per km, charged to 85%, a visit after every ${TRIPS} trips: cleaning ${CLEAN} min, software 12 min every second visit, upload ${UPLOAD} min, ${KW} kW ports`,'Teaching assumption'],
     ['Pickup allowance in the sizing rule','1 empty km per rider km','Teaching assumption: an allowance, not a result'],
     ['Road distances','Road table of the Fleet day map, nine places','Fleet day map: frozen OpenStreetMap road geometry of a real region, under its open licence. Distances only. No fleet, depot or service in those places is described'],
@@ -90,9 +98,9 @@ function derive(c){
 }
 function chart(rows,c,n){
   const j=PLANS[c.plan][0]==='fixed'?0:1,who=['control','tested'],at=(j,k)=>RUNGS.map((_,i)=>rows[j][i]?cell(rows[j][i][k],3).v:{absent:'this rung has not run yet'}),last=(i,k)=>cell(rows[i].at(-1)[k],3);
-  return {title:'Car time by fleet rung, hours 5 to 8',category:'Fleet size',axis:{d:3,u:'of car time'},categories:rungs(c),
+  return {title:'Car time by fleet rung, hours 5 to 8',category:'Fleet size, cars',axis:{d:3,u:'of car time'},categories:RUNGS.map(String),
     series:[...who.map((w,i)=>({id:w,label:`Pickup driving, ${w} plan`,mark:'line',values:at(i,'drive')})),{id:'queue',label:`Depot queue, ${who[j]} plan`,mark:'bar',values:at(j,'queue')}],
-    summary:{t:'Across {n} paired seeds: at {f} pickup driving takes {a} of car time in the control plan and {b} in the tested plan, and the depot queue shown takes {c}.',v:{n,f:cars(RUNGS[rows[0].length-1]),a:last(0,'drive'),b:last(1,'drive'),c:last(j,'queue')}}};
+    summary:{t:'Across {n} paired seeds: at {f}, pickup driving takes {a} of car time in the control plan and {b} in the tested plan, and the depot queue shown takes {c}.',v:{n,f:rungs(c)[rows[0].length-1],a:last(0,'drive'),b:last(1,'drive'),c:last(j,'queue')}}};
 }
 /** The second argument is a seam for tests, which hand in an engine with a defect. The page always uses the public function. */
 function* steps(setup,simulate=simulateBayAreaOperations){
@@ -122,10 +130,10 @@ function report(rows,c,rules){
   const top=rows[1][4],by=hand(RULES[rules[1]](5)[0],top.km).busy,at=fleet=>({...c,rule:rules[0],fleet}),full=RUNGS.find(n=>load(at(n))>1);
   return {tables:[
     {caption:'Density and the depot limit. By rung, hours 5 to 8, mean of the paired seeds. The control plan has two sites at every rung',heads:['Fleet','Pickup distance, control','Pickup distance, tested','Depot load by hand, control','Idle, control','Idle, tested','Trips per 100 car-hours, control','Trips per 100 car-hours, tested'],
-      rows:rungs(c).map((n,i)=>[n,cell(rows[0][i].km,2,'km'),cell(rows[1][i].km,2,'km'),cell(load(at(RUNGS[i])),2),...[['idle',3],['trips',1]].flatMap(([k,d])=>[0,1].map(j=>cell(rows[j][i][k],d)))])},
+      rows:rungs(c).map((n,i)=>[n,cell(rows[0][i].km,2,'km'),cell(rows[1][i].km,2,'km'),side(load(at(RUNGS[i]))),...[['idle',3],['trips',1]].flatMap(([k,d])=>[0,1].map(j=>cell(rows[j][i][k],d)))])},
     {caption:`Check by hand, tested plan at ${TOP} cars: busy minutes per trip. It checks the trip, depot leg and depot work times of the inputs, and no law of the ladder`,heads:['By hand, from the inputs and the recorded pickup distance','Simulated','Simulated over by hand','Declared tolerance'],rows:[[cell(by,2,'min'),cell(top.busy,2,'min'),cell(top.busy/by,3),'0.95 to 1.05']]}],
   notes:[
-    full?{t:'By hand the busier control site passes its capacity at {n} and stands at {x} times its capacity at 120 cars. The direction of the main result and the rung at which the depot queue passes pickup driving follow from the sizing rule. The size belongs to hours 5 to 8 of this window. The tested plan adds capacity and takes nothing from the fleet, so the guardrails have nothing to catch in this comparison. The press shows that a limit was passed, not how small a depot would have served the same trips: read trips per 100 car-hours beside the depot load by hand.',v:{n:cars(full),x:cell(load(at(TOP)),2)}}
+    full?{t:'By hand the busier control site passes its capacity at {n} and stands at {x} times its capacity at 120 cars. The direction of the main result and the rung at which the depot queue passes pickup driving follow from the sizing rule. The size belongs to hours 5 to 8 of this window. The tested plan adds capacity and takes nothing from the fleet, so the guardrails have nothing to catch in this comparison. The press shows that a limit was passed, not how small a depot would have served the same trips: read trips per 100 car-hours beside the depot load by hand.',v:{n:cars(full),x:side(load(at(TOP)))}}
       :{t:'At 120 cars pickups read {a} in the control plan and {b} in the tested plan. '+(rules[1]==='one'?'The single site stands at the northern edge of the cell by the spacing rule of the engine, so the size of the harm follows from that placement.':'The tested plan has 2, 2, 3, 4 and 5 sites by rung, so its pickup distance mixes layout with density. Trips per car are capped by requests per car, so the primary measure cannot register a closer pickup.'),v:{a:cell(rows[0][4].km,2,'km'),b:cell(top.km,2,'km')}},
     'A comparison whose control is the in-step depot, the non-binding control included, can read within the margin or worse and cannot read improved: that control already serves the requests it is given.',
     'Requests per car are equal at every rung, so density shows as pickup distance and idle car time, not as added trips.',
@@ -142,4 +150,4 @@ export const LAB=Object.freeze({id:'density-ladder',version:VERSION,short:'Densi
     'Where idle cars or sites would be moved, or whether adding, enlarging or merging sites suits any network. Cars wait where a trip or a depot visit ends and use the nearest site, and the engine spaces the sites.',
     'What depot capacity takes to buy, staff or permit, and when it would arrive. Lead times are the subject of the fleet intake lab.'],
   controls:[{key:'plan',label:'Comparison',options:Object.entries(PLANS).map(([k,p])=>[k,`${label(p[2])}, against ${p[3]}`])},...BANDS.map(([key,label,min,max,unit],i)=>({key,label,unit,min,max,step:i?.05:.02}))],
-  defaults:()=>({plan:'capacity',street:.68,depot:.5}),derive,steps});
+  defaults:()=>({plan:'capacity',street:.68,depot:.5}),derive,steps,map:true,credit:'Road distances in this lab come from the frozen Fleet day road table. Distances only; no service in those places is described.'});
