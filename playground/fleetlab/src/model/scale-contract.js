@@ -22,6 +22,14 @@ export function freezeScale({lab,version,change,baseline,candidate,seeds,primary
   const digest=sha256Hex(scaleJson(spec));
   return Object.freeze({spec,digest,label:'scale-spec:'+digest.slice(0,8)});
 }
+/** A shipped control that is invalid, is marked `as_declared: false`, or is a null control with any paired difference other
+ * than 0 voids the press: the record keeps its provenance and loses its reading. */
+export function readable(r){
+  const bad=r.controls?.find(c=>c.validity!=='VALID'||c.as_declared===false||c.spec.control==='null'&&[c.analysis.primary,...c.analysis.guardrail_results].some(m=>m.paired_deltas.some(d=>d)));
+  if(!bad)return r;
+  const {controls,chart,tables,notes,...rest}=r;
+  return {...rest,validity:'INVALID_EXPERIMENT',reason:`the ${bad.title.split(',')[0].toLowerCase()} did not read as declared, so there is no comparison`,analysis:null};
+}
 const finite=map=>Object.fromEntries(Object.entries(map).filter(([,v])=>Number.isFinite(v)));
 /** `measure(arm, seed)` is a generator that returns one metric map per whole run. An absent value is left out, never zero. */
 export function* scalePairSteps(frozen,measure,label='Paired runs'){
@@ -39,6 +47,9 @@ export function* scalePairSteps(frozen,measure,label='Paired runs'){
     per_seed.push({seed,baseline,candidate});
   }
   if(out.descriptive)return out;
+  /** A declared guardrail missing from any run voids the press: the instrument would read it as not evaluable and still recommend. */
+  const has=(p,k)=>k in p.baseline&&k in p.candidate;
+  if(matched&&per_seed.every(p=>has(p,spec.primary.name))&&!per_seed.every(p=>spec.guardrails.every(g=>has(p,g.metric)))){out.validity='INVALID_EXPERIMENT';out.reason='a required measure was not available in a run, so there is no comparison';return out;}
   yield {done:total,total,label:'Paired bootstrap'};
   out.analysis=yield* pairedMetricSteps({primary:spec.primary,guardrails:spec.guardrails,descriptiveNames:spec.descriptives,baselineRuns:per_seed.map(p=>p.baseline),candidateRuns:per_seed.map(p=>p.candidate),resamples:spec.resamples,key:digest,precheckMatched:matched});
   if(out.analysis.validity!=='VALID'){out.validity='INVALID_EXPERIMENT';out.reason=out.analysis.invalidity_detail;}

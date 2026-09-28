@@ -86,7 +86,7 @@ test('the shared contract fails closed: a changed spec, an absent primary and a 
   let n=0;const drift=drain(scalePairSteps(frozen,function*(){return {'wait fraction':n++,queue:1};}));
   assert.equal(drift.analysis.invalidity_reason,'REPLICATION_MISMATCH');
   const gap=drain(scalePairSteps(frozen,function*(arm){return {'wait fraction':arm.a,queue:undefined};}));
-  assert.equal(gap.analysis.guardrail_statuses[0].status,'NOT_EVALUABLE');
+  assert.equal(gap.validity,'INVALID_EXPERIMENT');assert.equal(gap.analysis,null);assert.match(gap.reason,/required measure was not available/);
   for(const bad of [{seeds:[1,1]},{seeds:[]},{resamples:10},{primary:{name:'m',direction:'lower_is_better',equivalence_margin:0}}])assert.throws(()=>freezeScale({lab:'x',version:'v',change:'c',baseline:{},candidate:{},seeds:[1,2],primary:{name:'m',direction:'lower_is_better',equivalence_margin:1},...bad}),RangeError);
 });
 
@@ -286,4 +286,37 @@ test('the labs are page-only and the packed copy scan covers them',async()=>{
   const checker=readFileSync(new URL('../tools/check-dist.mjs',import.meta.url),'utf8');
   assert.ok(page.length>=5);
   for(const name of page)assert.ok(checker.includes(`"${name}"`),`${name} is in COPY_MODULES`);
+});
+
+// Amendments after integration and review: the contract rules, the reading rules, then copy, order and page structure.
+test('a shipped control that does not read as declared voids the press: no verdict, no recommendation, and the reason names the control',async()=>{
+  const {readable}=await import('../src/model/scale-contract.js');
+  for(const other of SCALE_LABS){const r=drain(other.steps(other.derive(other.defaults()).setup));assert.equal(readable(r),r,`${other.id}: a press whose controls read as declared is returned as it is`);}
+  // A press built on the shared contract alone: a main test and three controls that read as declared.
+  const lab=SCALE_LABS[0],declare=(control,candidate)=>freezeScale({lab:lab.id,version:lab.version,change:'c',control,baseline:{a:0},candidate:{a:candidate},seeds:[1,2,3,4,5,6],primary:{name:'wait fraction',direction:'lower_is_better',equivalence_margin:.1},guardrails:[{metric:'queue fraction',direction:'lower_is_better',max_harm:.05}]});
+  const pair=frozen=>drain(scalePairSteps(frozen,function*(arm,seed){return {'wait fraction':.5-arm.a*.3+seed%3*.01,'queue fraction':.2};}));
+  const good={...pair(declare(null,1)),controls:[{...pair(declare('null',0)),title:'Null control, both arms alike'},{...pair(declare('non-binding',0)),as_declared:true,title:'Ample pool control, a pool with room'},{...pair(declare('guardrail',0)),as_declared:true,title:'Guardrail control, one shared line'}],chart:{},tables:[],notes:['n']};
+  assert.equal(good.validity,'VALID');assert.equal(good.analysis.outcome,'IMPROVED');assert.equal(readable(good),good);
+  // One paired difference of one guardrail moves by a billionth in the null control: the margin would pass it, the exact rule does not.
+  const bump=c=>({...c,analysis:{...c.analysis,guardrail_results:c.analysis.guardrail_results.map(g=>({...g,paired_deltas:g.paired_deltas.map((d,j)=>j===3?1e-9:d)}))}});
+  const cases=[['null control',good.controls.map(c=>c.spec.control==='null'?bump(c):c)],['ample pool control',good.controls.map((c,i)=>i===1?{...c,as_declared:false}:c)],['guardrail control',good.controls.map((c,i)=>i===2?{...c,validity:'INVALID_EXPERIMENT'}:c)]];
+  for(const [name,controls] of cases){
+    const r=readable({...good,controls});
+    assert.equal(r.validity,'INVALID_EXPERIMENT',name);assert.equal(r.analysis,null);assert.equal(r.reason,`the ${name} did not read as declared, so there is no comparison`);
+    for(const k of ['controls','chart','tables','notes'])assert.equal(k in r,false,`${name}: a press that cannot be read carries no ${k}`);
+    assert.equal(r.evidence_status,'NOT_EVIDENCE');assert.equal(r.decision_authority,'NONE');assert.equal(r.label,good.label);assert.deepEqual(r.per_seed,good.per_seed);
+    for(const re of [H3,H6,HOUSE,LINKS,DASH])assert.doesNotMatch(r.reason,re);
+  }
+  const restore=installFakeDom();
+  try{
+    const fake={...lab,steps:function*(){yield {done:0,total:1,label:'Paired runs'};return {...good,controls:cases[0][1]};}};
+    const view=createScaleLab({labs:[fake]});document.body.appendChild(view.element);
+    const r=await view.run(),root=view.element;
+    assert.equal(r.validity,'INVALID_EXPERIMENT');assert.equal(view.getState().result,r,'the record is the voided one');
+    assert.equal(root.querySelector('.fl-readout'),null,'no verdict readout');assert.equal(root.querySelector('figure.fl-chart'),null,'no chart');
+    assert.equal(root.querySelector('.teaching-run-line').textContent,'Invalid run: the null control did not read as declared, so there is no comparison. No result can be read.');
+    assert.doesNotMatch(root.querySelector('.scale-result').textContent,/Advance to the next|ADVANCE_TO_NEXT_TEST|Improved beyond|Controls run with this test/);
+    assert.match(root.querySelector('.result-provenance').textContent,/NOT_EVIDENCE; simulation-only; decision authority NONE\.$/);
+    assert.equal(root.querySelector('[role="status"]').textContent,'Recorded as invalid. This press has no reading.');
+  }finally{restore();}
 });

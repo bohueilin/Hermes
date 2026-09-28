@@ -9,6 +9,7 @@ import {nonzero,number,absent} from './format.js';
 import {routeHref,followLink} from './routes.js';
 import {runSliced,MAIN_SLICE_MS} from '../runtime/protocol.js';
 import {SCALE_LABS} from './scale-labs.js';
+import {readable} from '../model/scale-contract.js';
 /** One generic view for every Scale lab. A lab descriptor owns its model, copy and numbers; this file owns none. */
 import {el} from './dom.js';
 
@@ -49,7 +50,7 @@ export function createScaleLab({labs=SCALE_LABS,hrefFor=id=>routeHref({page:'sca
     el('section',{class:'scale-result'},[resultHeading,reading,chartSlot,records]),
     el('details',{class:'teaching-limits'},[el('summary',{},'What this model cannot know'),unknowns]),glossaryView(),
   ]);
-  const idle=()=>result?stale?'Setup changed. The result shown used the previous setup. Run again to replace it.':'Recorded. Read the result, then the declared test behind it.':'Nothing has run yet. Press Run the paired test.';
+  const idle=()=>result?stale?'Setup changed. The result shown used the previous setup. Run again to replace it.':result.validity!=='VALID'?'Recorded as invalid. This press has no reading.':'Recorded. Read the result, then the declared test behind it.':'Nothing has run yet. Press Run the paired test.';
   function refresh(){
     const focused=document.activeElement===heading,derivation=lab.derive(config);
     setup=derivation.ok?derivation.setup:null;
@@ -103,9 +104,9 @@ export function createScaleLab({labs=SCALE_LABS,hrefFor=id=>routeHref({page:'sca
     try{
       const r=await runSliced(tap(lab.steps(submitted),p=>{if(p.chart&&job===mine)chartSlot.replaceChildren(chartOf(p.chart,submitted.main.spec.seeds.length));}),mine,{now:()=>performance.now(),schedule:yieldToPage,budgetMs:MAIN_SLICE_MS,onProgress:p=>{meter.value=p.total?p.done/p.total:0;status.textContent=`${displayText(p.label)}: ${p.done} of ${p.total}.`;}});
       if(destroyed||job!==mine)return;
-      result=r;stale=JSON.stringify(config)!==before;job=null;refresh();renderResult();
+      result=readable(r);stale=JSON.stringify(config)!==before;job=null;refresh();renderResult();
       resultHeading.focus({preventScroll:true});resultHeading.scrollIntoView?.({block:'start',behavior:'instant'});
-      return r;
+      return result;
     }catch(e){
       if(destroyed||job!==mine)return;
       job=null;renderResult();
