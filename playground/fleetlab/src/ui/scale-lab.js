@@ -45,9 +45,9 @@ export function createScaleLab({labs=SCALE_LABS,hrefFor=id=>routeHref({page:'sca
   const meter=el('progress',{max:1,value:0,hidden:true,'aria-label':'Progress of this press'});
   const fields=el('div',{class:'ops-fields'}),derived=el('div'),resultHeading=el('h2',{tabindex:-1},'Result'),reading=el('div'),chartSlot=el('div',{class:'scale-chart'}),records=el('div'),unknowns=el('ul');
   const element=el('main',{class:'scale-lab'},[
-    el('section',{class:'ops-intro'},[el('p',{class:'eyebrow'},'SCALE LAB / WHAT CHANGES AS A FLEET SCALES'),el('nav',{class:'scale-chooser','aria-label':'Scale lab lessons'},links),frameSlot,el('details',{},[el('summary',{},'Exact values'),identitySlot]),
+    el('section',{class:'ops-intro'},[el('p',{class:'eyebrow'},'SCALE LAB / WHAT CHANGES AS A FLEET SCALES'),el('p',{},'Three labs, one question: which capacity meets its load first as a fleet scales, and how early the fix has to start.'),el('nav',{class:'scale-chooser','aria-label':'Scale lab lessons'},links),frameSlot,el('details',{},[el('summary',{},'Model and version'),identitySlot]),
       el('div',{class:'ops-run-line scale-run'},[runButton,cancelButton,meter,status]),error,
-      el('p',{class:'ops-status'},'Every input on this page is a teaching assumption. No value is a measurement of any fleet.')]),
+      el('p',{class:'ops-status'},'Every input on this page is a teaching assumption unless its source row says otherwise. No value is a measurement of any fleet.')]),
     el('details',{class:'scale-setup'},[el('summary',{},'Change the setup and read the declared test'),fields,derived]),
     el('section',{class:'scale-result'},[resultHeading,reading,chartSlot,records]),
     el('details',{class:'teaching-limits'},[el('summary',{},'What this model cannot know'),unknowns]),glossaryView(),
@@ -62,7 +62,7 @@ export function createScaleLab({labs=SCALE_LABS,hrefFor=id=>routeHref({page:'sca
     for(const a of links){if(a.getAttribute('data-lab')===lab.id)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}
     error.hidden=derivation.ok;error.textContent=derivation.ok?'':`Not available: outside what this lab can read: ${displayText(derivation.reason)}.`;
     const spec=setup?.main.spec;
-    derived.replaceChildren(...(derivation.ok?[table('Inputs and where each comes from',['Input','Value','Source'],derivation.rows),
+    derived.replaceChildren(...(derivation.ok?[table('Inputs and where each comes from. A sizing rule works on teaching assumptions',['Input','Value','Source'],derivation.rows),
       el('p',{},`Changed setting: ${displayText(spec.change)} All other inputs stay the same in both arms.`),
       el('h3',{},'Declared test, set before the run'),el('ul',{},[['Primary',spec.primary.name,spec.primary.direction,'margin',spec.margin],...spec.guardrails.map(g=>['Guardrail',g.metric,g.direction,'allowance',g.max_harm])].map(([role,name,direction,word,limit])=>el('li',{},[`${role}: ${name}, `,el('span',{'data-role':'direction'},DIRECTIONS[direction]),`, ${word} ${thresholdText(name,limit)}.`]))),
       el('p',{},`Paired seeds ${spec.seeds.join(', ')}. ${number(spec.resamples,0)} bootstrap resamples. The 95% interval is a bootstrap label, nominal at this seed count. A harmed guardrail cannot be bought back by the primary measure.`)]:[]));
@@ -78,7 +78,7 @@ export function createScaleLab({labs=SCALE_LABS,hrefFor=id=>routeHref({page:'sca
   }
   function changed(){if(job)job.cancelled=true;stale=!!result;refresh();renderResult();}
   function chartOf(data,count){
-    return ladderChart({title:displayText(data.title),chips:[data.seed===undefined?{kind:'across',count}:{kind:'replay',seed:data.seed}],summary:fillText(data.summary),limits:[lab.limits,'Every input is a teaching assumption, so the shape is a property of this model.'],
+    return ladderChart({title:displayText(data.title),chips:[data.seed===undefined?{kind:'across',count}:{kind:'replay',seed:data.seed}],summary:fillText(data.summary),limits:[lab.limits,'The shape is a property of this model and its assumed inputs.'],
       axisUnit:data.axis.u,categoryLabel:data.category,gapLabel:'hatched: not available, the table gives the reason',categories:data.categories,series:data.series,text:v=>cellText({...data.axis,v}),tick:(t,d)=>number(t,d)}).node;
   }
   function renderResult(){
@@ -90,11 +90,11 @@ export function createScaleLab({labs=SCALE_LABS,hrefFor=id=>routeHref({page:'sca
       stale?el('p',{class:'teaching-edited'},'Setup changed after this run. This result used the previous setup.'):null,
       resultView(frame,pairedProjection(r),TOOLS),
       r.validity==='VALID'&&r.analysis?renderVerdictReadout(verdictOf(r)):null,
+      r.notes?.length?el('section',{},[el('h3',{},'Set by the inputs, not found by the run'),el('ul',{},r.notes.map(n=>el('li',{},fillText(n))))]):null,
       r.controls?.length?el('section',{},[el('h3',{},'Controls run with this test'),...r.controls.map(c=>el('p',{},[el('strong',{},displayText(c.title)+': '),runLine(frame,pairedProjection(c),TOOLS).line]))]):null,
     ].filter(Boolean));
     records.replaceChildren(...[
       ...(r.tables??[]).map(t=>table(t.caption,t.heads,t.rows)),
-      r.notes?.length?el('section',{},[el('h3',{},'Set by the inputs, not found by the run'),el('ul',{},r.notes.map(n=>el('li',{},fillText(n))))]):null,
       exactView(r),
     ].filter(Boolean));
   }

@@ -64,7 +64,7 @@ function overview(navigate, film) {
         decisionCard({number:"01",category:"MARKET OPERATIONS",title:"Can supply keep up with the peak?",text:"Set fleet size and demand. Follow each AV through trips and depot work, then compare the capacity of different fleet and depot sizes.",measure:"Trips completed · Battery · Depot queues",cta:"Run a fleet day  →",target:"simulation"},navigate),
         decisionCard({number:"02",category:"DEPOT OPTIMIZATION",title:"Would two more bays actually help?",text:"Use the four-area teaching model to compare four cleaning bays with six. Inspect depot delay alongside rider outcomes before drawing a conclusion.",measure:"Bay wait · Depot turnaround · Guardrails",cta:"Test depot capacity  →",target:"depots"},navigate),
         decisionCard({number:"03",category:"STREET OPERATIONS",title:"Can one block tie up the fleet?",text:"Explore downtown SF, SFO and East Bay journeys on directed roads. Follow queues across blocks and compare routing decisions.",measure:"Spillback · Pickup wait · Empty distance",cta:"Open the Street lab  →",target:"streets"},navigate),
-        decisionCard({number:"04",category:"FLEET SCALING",title:"What changes as the fleet scales?",text:"Three labs on scaling a fleet: a pooled support desk under an area-wide event, the path from delivered vehicles to rider service, and density at rungs of fleet and demand.",measure:"Governing ratio · Paired test · Guardrails",cta:"Open the Scale lab  →",target:"scale"},navigate),
+        decisionCard({number:"04",category:"FLEET SCALING",title:"What changes as the fleet scales?",text:"Three labs on scaling a fleet: density and the depot limit at rungs of fleet and demand, the path from delivered vehicles to rider service, and a support pool under an area-wide event.",measure:"Governing ratio · Paired test · Guardrails",cta:"Open the Scale lab  →",target:"scale"},navigate),
       ]),
     ]),
     el("section",{class:"loop-section","aria-label":"Three-minute demo"},[
@@ -77,7 +77,7 @@ function overview(navigate, film) {
     ]),
     el("section",{class:"scope-section"},[
       el("div",{},[eyebrow("A CLEAR MODEL BOUNDARY"),el("h2",{},"Useful questions. Honest limits.")]),
-      el("div",{},[el("h3",{},"Four ways to learn"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Four-area experiments cover dispatch, recall and paired guardrails. Scale lab covers a support desk, fleet intake and density at rungs. The catalog explains each model's scope.")]),
+      el("div",{},[el("h3",{},"Four ways to learn"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Four-area experiments cover dispatch, recall and paired guardrails. Scale lab covers density at rungs, fleet intake and a support pool. The catalog explains each model's scope.")]),
       el("div",{},[el("h3",{},"Outside the model"),el("p",{},"Worker shifts, physical driving, calibrated demand and real vehicle operations. Demand, traffic and vehicle operating values are teaching assumptions. None of these models is a calibrated digital twin or permission to change a fleet.")]),
     ]),
   ]);

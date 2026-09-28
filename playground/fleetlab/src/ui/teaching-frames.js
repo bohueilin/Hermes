@@ -88,7 +88,7 @@ surfaceBase["preset:staffing"]={...surfaceBase["staffing"],id:"preset:staffing"}
 export const SURFACE_FRAMES=Object.freeze(surfaceBase);
 export const GLOSSARY=Object.freeze({
 "p90":"p90: 9 in 10 results are at or under this value. A p90 wait of 20 min means at most 1 rider in 10 waited longer.",
-"Paired seeds":"Paired seeds: both runs share the same riders and random draws, so a difference comes from the one changed setting.",
+"Paired seeds":"Paired seeds: both runs share the same random draws, and the same riders where a model has riders, so a difference comes from the one changed setting.",
 "Margin":"Margin: the smallest change in the main result that the test treats as real. It is set before the run.",
 "Guardrail":"Guardrail: a measure the change must not harm past its allowance, set before the run. One harmed guardrail stops the change.",
 "Allowance":"Allowance (max harm): how far a guardrail may move the wrong way before the change is stopped.",
@@ -106,7 +106,7 @@ export const GLOSSARY=Object.freeze({
 "Recall, release":"Recall and release: at day 2 00:30 idle cars head to their depot. At 05:45 ready cars outside their home area drive home.",
 "NOT_EVIDENCE":"NOT_EVIDENCE: every number is invented teaching output from an uncalibrated model, not a measurement of any fleet.",
 "Null control":"Null control: both arms get the same setup, so every paired difference is zero by construction. If it reads otherwise, the test is broken.",
-"Governing ratio":"Governing ratio: the one ratio of load to capacity that decides whether a mechanism shows. The lab sets it and derives the other inputs.",
+"Governing ratio":"Governing ratio: load over capacity, or a lag over the interval between arrivals, that decides whether a mechanism shows. The lab derives the other inputs.",
 });
 export const CASEBOOK_READINGS=Object.freeze({
 "OPS-01":{"labels":["playground-spec:089edeff","playground-spec:0e605b63","playground-spec:5f23aed6"],"outcome":"IMPROVED","recommendation":"HOLD","template":"Seed set {set}: SF evening wait p90 fell {primary:min} min while SF-2 bay wait p90 rose {g1:min} min, past its 30 min allowance, so the call is HOLD. SF wait p90 the next morning also fell {g2:min} min, inside its allowance."},

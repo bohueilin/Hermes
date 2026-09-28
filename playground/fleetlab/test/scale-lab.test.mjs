@@ -14,6 +14,8 @@ import {createStore,createInitialState} from '../src/ui/store.js';
 import {defaultScenario} from '../src/model/schema.js';
 import {moduleGraph} from '../tools/pack.mjs';
 import {fileURLToPath} from 'node:url';
+import vm from 'node:vm';
+import {buildHtml} from '../tools/pack.mjs';
 
 const H3=/\b(predict(?:s|ed|ing|ion|ions|ive)?|forecast(?:s|ed|ing|er|ers)?|expected\s+traffic|live|real[\s-]?time|monitoring)\b/i;
 const H6=/\b(wins?|winners?|beats|scores?|scoring|gauges?|grades?|leaderboards?|revenue|costs?)\b|better option|best configuration/i;
@@ -46,7 +48,7 @@ test('every lab satisfies the contract the generic view relies on',()=>{
     for(const c of lab.controls){assert.ok(c.key in lab.defaults(),c.key);assert.ok(c.label&&(Array.isArray(c.options)||Number.isFinite(c.min)&&Number.isFinite(c.max)));}
     assert.notEqual(lab.defaults(),lab.defaults(),'defaults returns a fresh object');
     const d=lab.derive(lab.defaults());assert.equal(d.ok,true,lab.id);
-    assert.ok(d.rows.length>=2);for(const row of d.rows){assert.equal(row.length,3);assert.match(row[2],/^(You choose|Teaching assumption|Sizing rule|Governing ratio)/,`${lab.id} ${row[0]} names its source`);}
+    assert.ok(d.rows.length>=2);for(const row of d.rows){assert.equal(row.length,3);assert.match(row[2],/^(You choose|Teaching assumption|Sizing rule|Governing ratio|Fleet day map)/,`${lab.id} ${row[0]} names its source`);}
     assert.ok(d.rows.some(row=>/^Governing ratio/.test(row[2])),`${lab.id} shows its governing ratio`);
     const spec=d.setup.main.spec;
     assert.deepEqual(spec.seeds,[...lab.seeds]);assert.equal(spec.lab,lab.id);assert.equal(spec.model_version,lab.version);
@@ -125,7 +127,11 @@ test('before a run the page states no result, no verdict word and no direction, 
       const text=visible(x.view.element);
       for(const re of [H3,H6,V,DIRECTION,HOUSE,LINKS,DASH]){const m=re.exec(text);assert.ok(!m,m?`${lab.id}: "${m[0]}" in ...${text.slice(Math.max(0,m.index-60),m.index+60)}`:'');}
       assert.match(text,/not available: nothing has run yet/);
-      assert.match(text,/teaching assumption/i);
+      assert.match(text,/Every input on this page is a teaching assumption unless its source row says otherwise\. No value is a measurement of any fleet\./);
+      assert.deepEqual([...x.view.element.querySelectorAll('summary')].map(s=>s.textContent).filter(t=>t==='Exact values'),[],'before a run no disclosure is titled Exact values: the record is the only one');
+      assert.equal(x.view.element.querySelector('.scale-setup caption').textContent,'Inputs and where each comes from. A sizing rule works on teaching assumptions');
+      const thesis=[...x.view.element.querySelectorAll('p')].find(p=>/^Three labs, one question: /.test(p.textContent)),nodes=[...x.view.element.querySelectorAll('*')];
+      assert.ok(thesis&&nodes.indexOf(thesis)<nodes.indexOf(x.view.element.querySelector('h1')),'the thesis line sits above the heading');
       assert.equal(x.view.element.querySelectorAll('button.studio-button-primary').filter(b=>!b.disabled).length,1);
       assert.equal(x.view.element.querySelector('h1').textContent,lab.title);
       assert.equal(x.view.element.querySelectorAll('.scale-chooser a').filter(a=>a.getAttribute('aria-current')==='page').length,1);
@@ -157,6 +163,9 @@ test('Run records one result with provenance, a generated line, the verdict, a c
       for(const d of root.querySelectorAll('.scale-result details'))assert.equal(d.hasAttribute('open'),false);
       const parts=[...root.querySelector('.scale-result').querySelectorAll('*')],at=s=>parts.indexOf(root.querySelector(s));
       assert.ok(at('.result-provenance')<at('.teaching-run-line')&&at('.teaching-run-line')<at('.fl-readout')&&at('.fl-readout')<at('figure.fl-chart')&&at('figure.fl-chart')<at('.teaching-exact'),'provenance, reading, verdict, chart, exact values');
+      const set=[...root.querySelectorAll('.scale-result h3')].find(h=>h.textContent==='Set by the inputs, not found by the run');
+      assert.ok(set&&at('.fl-readout')<parts.indexOf(set)&&parts.indexOf(set)<at('figure.fl-chart'),`${lab.id}: what follows from the inputs is read under the verdict, before the chart and the tables`);
+      assert.equal(set.parentNode.querySelectorAll('li').length,r.notes.length);
       assert.doesNotMatch(root.querySelector('.teaching-result').textContent,/seed set|Add paired seeds|Run more paired seeds|rider draw|cars riders needed/,`${lab.id}: the next test is one this page can honour`);
       const stray=node=>[...node.childNodes].some(n=>n.nodeType===3?/^(null|undefined)$/.test(n.textContent.trim()):stray(n));
       assert.equal(stray(root),false,`${lab.id}: an absent part must add no node, a browser prints null as text`);
@@ -214,7 +223,7 @@ test('a long run hands the page back between slices, reports progress and stops 
 
 test('a refused setup disables Run in words, and a changed setup marks the last result as from the previous setup',async()=>{
   const x=mount();try{
-    const root=x.view.element,lab=SCALE_LABS[0],control=lab.controls.find(c=>!c.options);
+    const root=x.view.element,lab=SCALE_LABS.find(l=>l.controls.some(c=>!c.options)),control=lab.controls.find(c=>!c.options);
     x.view.setLesson(lab);await x.view.run();
     const input=root.querySelector(`[aria-label="${control.label}"]`);
     input.value=String(control.max+50);input.dispatchEvent(new Event('change'));
@@ -245,7 +254,7 @@ test('the route opens a lab without running it, refuses a lesson of another page
     studio.navigate('simulation');assert.equal(studio.scale.element.hidden,true);
     const link=[...studio.operations.element.querySelectorAll('.ops-intro a')].find(a=>a.getAttribute('href')==='#/scale-lab');assert.ok(link);assert.equal(link.getAttribute('class'),null,'an ordinary link, not a button');
     assert.ok([...studio.element.querySelectorAll('.decision-card a')].some(a=>a.getAttribute('href')==='#/scale-lab'));
-    assert.ok([...studio.element.querySelectorAll('.catalog-start a')].some(a=>a.getAttribute('href')==='#/scale-lab?lesson=response-reserve'));
+    assert.ok([...studio.element.querySelectorAll('.catalog-start a')].some(a=>a.getAttribute('href')==='#/scale-lab?lesson=density-ladder'));
     studio.navigate('catalog');const filter=studio.element.querySelector('[aria-label="Simulation model"]');filter.value='Scale lab';filter.dispatchEvent(new Event('change'));
     assert.equal(studio.element.querySelectorAll('[data-simulation]').length,3);
   }finally{studio.destroy();restore();}
@@ -380,4 +389,23 @@ test('the declared test says before any run that the interval label is nominal a
       view.destroy();
     }
   }finally{restore();}
+});
+
+test('the packed page presses Run for every lab and records what the native module records (FLEET_PLAYGROUND_PERF=1)',{skip:process.env.FLEET_PLAYGROUND_PERF!=='1'&&'set FLEET_PLAYGROUND_PERF=1'},async()=>{
+  // The Fleet day engine clones its configuration, so the packed page needs structuredClone, as every browser gives it.
+  const context=vm.createContext({console,performance,setTimeout,clearTimeout,URL,URLSearchParams,Blob,structuredClone}),uninstall=installFakeDom(context),document=uninstall.dom.document;
+  const shell=document.createElement('div'),strip=document.createElement('div');shell.id='fleetlab-root';strip.id='fleetlab-teaching-strip';shell.append(strip);document.body.append(shell);
+  context.Worker=class{constructor(){queueMicrotask(()=>this.onmessage?.({data:{type:'ready'}}));}postMessage(){}terminate(){}};
+  const app=new vm.Script(/<script>\n([\s\S]*)\n<\/script>/.exec(buildHtml(fileURLToPath(new URL('../',import.meta.url))))[1]).runInContext(context);
+  await app.host.ready;
+  try{
+    for(const lab of SCALE_LABS){
+      app.studio.applyRoute(`#/scale-lab?lesson=${lab.id}`);
+      assert.equal(app.studio.element.getAttribute('data-page'),'scale');assert.equal(app.studio.scale.getState().lab,lab.id);
+      const packed=await app.studio.scale.run(),native=drain(lab.steps(lab.derive(lab.defaults()).setup)),root=app.studio.scale.element;
+      assert.ok(packed,`${lab.id}: ${root.querySelector('[role="alert"]').textContent}`);assert.equal(packed.validity,'VALID');
+      assert.equal(scaleJson(JSON.parse(JSON.stringify(packed))),scaleJson(JSON.parse(JSON.stringify(native))),`${lab.id}: the packed record equals the native record`);
+      assert.ok(root.querySelector('.fl-readout')&&root.querySelector('figure.fl-chart'));assert.equal(root.querySelector('[role="alert"]').hidden,true);
+    }
+  }finally{app.destroy();uninstall();}
 });
