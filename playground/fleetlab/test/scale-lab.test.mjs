@@ -409,3 +409,15 @@ test('the packed page presses Run for every lab and records what the native modu
     }
   }finally{app.destroy();uninstall();}
 });
+
+test('every press stays inside its run budget and names its controls from the allowed set',()=>{
+  for(const lab of SCALE_LABS){
+    const setup=lab.derive(lab.defaults()).setup,r=drain(lab.steps(setup));
+    if(r.work)assert.ok(Number.isInteger(r.work.engine_runs)&&r.work.engine_runs>=1&&r.work.engine_runs<=120,`${lab.id} engine runs`);
+    if(lab.id==='density-ladder')assert.ok(r.work,'a lab on the Fleet day engine reports its engine runs');
+    assert.equal(r.spec.control,null,`${lab.id} main comparison is not a control`);
+    assert.ok(r.controls.some(c=>c.spec.control==='null'),`${lab.id} ships a null control`);
+    for(const c of r.controls){assert.ok(['null','non-binding','guardrail'].includes(c.spec.control),`${lab.id} ${c.spec.control}`);assert.equal(c.validity,'VALID');assert.ok(c.analysis.guardrail_statuses.every(g=>g.status!=='NOT_EVALUABLE'));}
+    assert.ok(r.analysis.guardrail_statuses.every(g=>g.status!=='NOT_EVALUABLE'),`${lab.id} no valid record holds a guardrail that was not evaluated`);
+  }
+});
