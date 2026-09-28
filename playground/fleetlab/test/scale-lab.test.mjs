@@ -157,6 +157,7 @@ test('Run records one result with provenance, a generated line, the verdict, a c
       for(const d of root.querySelectorAll('.scale-result details'))assert.equal(d.hasAttribute('open'),false);
       const parts=[...root.querySelector('.scale-result').querySelectorAll('*')],at=s=>parts.indexOf(root.querySelector(s));
       assert.ok(at('.result-provenance')<at('.teaching-run-line')&&at('.teaching-run-line')<at('.fl-readout')&&at('.fl-readout')<at('figure.fl-chart')&&at('figure.fl-chart')<at('.teaching-exact'),'provenance, reading, verdict, chart, exact values');
+      assert.doesNotMatch(root.querySelector('.teaching-result').textContent,/seed set|Add paired seeds|Run more paired seeds|rider draw|cars riders needed/,`${lab.id}: the next test is one this page can honour`);
       const stray=node=>[...node.childNodes].some(n=>n.nodeType===3?/^(null|undefined)$/.test(n.textContent.trim()):stray(n));
       assert.equal(stray(root),false,`${lab.id}: an absent part must add no node, a browser prints null as text`);
       assert.equal(root.querySelector('.scale-run progress').hidden,true);
@@ -217,7 +218,7 @@ test('a refused setup disables Run in words, and a changed setup marks the last 
     x.view.setLesson(lab);await x.view.run();
     const input=root.querySelector(`[aria-label="${control.label}"]`);
     input.value=String(control.max+50);input.dispatchEvent(new Event('change'));
-    assert.match(root.querySelector('[role="alert"]').textContent,/^This setup is outside what the lab can read: /);
+    assert.match(root.querySelector('[role="alert"]').textContent,/^Not available: outside what this lab can read: /);
     assert.equal(root.querySelector('.scale-run button').getAttribute('aria-disabled'),'true');
     assert.equal(await x.view.run(),undefined);
     assert.match(root.querySelector('.scale-result').textContent,/This result used the previous setup/);
@@ -318,5 +319,65 @@ test('a shipped control that does not read as declared voids the press: no verdi
     assert.doesNotMatch(root.querySelector('.scale-result').textContent,/Advance to the next|ADVANCE_TO_NEXT_TEST|Improved beyond|Controls run with this test/);
     assert.match(root.querySelector('.result-provenance').textContent,/NOT_EVIDENCE; simulation-only; decision authority NONE\.$/);
     assert.equal(root.querySelector('[role="status"]').textContent,'Recorded as invalid. This press has no reading.');
+  }finally{restore();}
+});
+
+test('a number never reads as equal to, or across, the threshold it is judged against',async()=>{
+  const {metricValueText}=await import('../src/ui/experiment.js');
+  const rows=[['idle weeks per ordered place',13.04,[13],'+13.04'],['idle weeks per ordered place',12.96,[13],'+12.96'],['in-service fraction of plan',.02004,[-.02,.02],'+0.02004'],['in-service fraction of plan',.1847,[-.02,.02],'+0.185'],['x',13.0000000000001,[13],'+13.0000000000001'],['x',5,[5],'+5.0'],['x',-2.96,[-3,3],'-2.96']];
+  for(const [name,value,against,text] of rows){assert.equal(metricValueText(name,value,{withSign:true,against}),text);assert.equal(metricValueText(name,value,{withSign:true,against:[]}),metricValueText(name,value,{withSign:true}),'no threshold, no change');}
+  const restore=installFakeDom();
+  try{
+    const lab=SCALE_LABS[0],frozen=lab.derive(lab.defaults()).setup.main,m=frozen.spec.margin;
+    const fake={...lab,id:lab.id,steps:function*(){return yield* scalePairSteps(frozen,function*(arm,seed){yield;return {...Object.fromEntries(frozen.spec.guardrails.map(g=>[g.metric,.001])),[frozen.spec.primary.name]:arm===frozen.spec.baseline?0:(m-.002)+seed%2*1e-9};});}};
+    const view=createScaleLab({labs:[fake]});document.body.appendChild(view.element);
+    const r=await view.run(),line=view.element.querySelector('.teaching-run-line').textContent;
+    assert.equal(r.validity,'VALID');
+    const low=Number(line.match(/95% interval ([-+]?[\d,.]+)/)[1].replace(/[,+]/g,''));
+    assert.ok(Math.abs(low)<m,`the printed bound ${low} stays inside the margin ${m}: ${line}`);assert.match(line,/^Within the margin/);
+    assert.doesNotMatch(view.element.textContent,/rider draw|cars riders needed/);
+    // A result that is not decided: the reading line, the next test and the gate chain name no seed the reader cannot add.
+    const wide={...lab,steps:function*(){return yield* scalePairSteps(frozen,function*(arm,seed){yield;return {...Object.fromEntries(frozen.spec.guardrails.map(g=>[g.metric,.001])),[frozen.spec.primary.name]:arm===frozen.spec.baseline?0:seed%2?3*m:-m};});}};
+    const open=createScaleLab({labs:[wide]});document.body.appendChild(open.element);
+    const u=await open.run(),text=open.element.querySelector('.scale-result').textContent;
+    assert.equal(u.analysis.outcome,'INCONCLUSIVE');assert.doesNotMatch(text,/more paired seeds|Add paired seeds|seed set/i);
+    assert.match(text,/The interval crosses the margin at these paired seeds, so no direction is read\./);assert.match(text,/test a larger step, as this page holds its paired seeds fixed/);
+  }finally{restore();}
+});
+
+test('every refusal a reader can reach or type prints in the absence form inside 240 characters',()=>{
+  const restore=installFakeDom();
+  try{
+    for(const lab of SCALE_LABS){
+      const view=createScaleLab({labs:[lab]}),alert=view.element.querySelector('[role="alert"]');document.body.appendChild(view.element);
+      const axes=lab.controls.map(c=>c.options?[...c.options.map(o=>o[0]),'other']:[...Array.from({length:Math.round((c.max-c.min)/c.step)+5},(_,i)=>Number((c.min+(i-2)*c.step).toFixed(6))),NaN]);
+      let refused=0;
+      const walk=(i,config)=>{
+        if(i<axes.length){for(const v of axes[i])walk(i+1,{...config,[lab.controls[i].key]:v});return;}
+        const d=lab.derive(config);if(d.ok)return;
+        refused++;const shown=`Not available: outside what this lab can read: ${d.reason}.`;
+        assert.ok(shown.length<=240,`${lab.id} ${shown.length}: ${shown}`);
+        for(const p of [H3,H6,V,DIRECTION,HOUSE,LINKS,DASH])assert.doesNotMatch(shown,p,`${lab.id}: ${shown}`);
+        assert.doesNotMatch(d.reason,/undefined|NaN|null|_/);
+      };
+      walk(0,{});assert.ok(refused>0,`${lab.id} refuses a typed value outside its ranges`);
+      const c=lab.controls[0],input=view.element.querySelector(`[aria-label="${c.label}"]`);
+      input.value=c.options?'':String(c.max+50*c.step);input.dispatchEvent(new Event('change'));
+      assert.match(alert.textContent,/^Not available: outside what this lab can read: .{11,}\.$/);
+      view.destroy();
+    }
+  }finally{restore();}
+});
+
+test('the declared test says before any run that the interval label is nominal at its seed count',()=>{
+  const restore=installFakeDom();
+  try{
+    for(const lab of SCALE_LABS){
+      const view=createScaleLab({labs:[lab]});document.body.appendChild(view.element);
+      const setup=view.element.querySelector('.scale-setup');
+      assert.match(setup.textContent,/The 95% interval is a bootstrap label, nominal at this seed count\./,lab.id);
+      assert.match(setup.textContent,new RegExp(`Paired seeds ${lab.seeds.join(', ')}\\.`),lab.id);
+      view.destroy();
+    }
   }finally{restore();}
 });

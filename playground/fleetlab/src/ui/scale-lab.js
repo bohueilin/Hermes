@@ -1,5 +1,5 @@
-import {LESSON_FRAMES,frameView,glossaryView,exactView,runLine} from './teaching-frames.js';
-import {teachingResult,pairedProjection,teachingTools} from './teaching-projection.js';
+import {LESSON_FRAMES,NEXT_TEST,frameView,glossaryView,exactView,runLine,resultView} from './teaching-frames.js';
+import {pairedProjection,teachingTools} from './teaching-projection.js';
 import {displayText,setBusy} from './display-text.js';
 import {modelHeader} from './model-identity.js';
 import {renderVerdictReadout,thresholdText} from './experiment.js';
@@ -30,7 +30,9 @@ export function cellText(c){
 /** Text is a sentence or `{t, v}`: a template whose `{slot}` names are filled from cells. */
 export const fillText=x=>typeof x==='string'?displayText(x):x.t.replace(/\{(\w+)\}/g,(_,k)=>cellText(x.v[k]));
 const table=(caption,heads,rows)=>el('div',{class:'ops-table-wrap',tabindex:0,role:'region','aria-label':caption},el('table',{},[el('caption',{},caption),el('thead',{},el('tr',{},heads.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(r=>el('tr',{},r.map(c=>el('td',{},cellText(c))))))]));
-const verdictOf=r=>({kind:'teaching',replications:r.replications,label:r.label,validity:r.validity,invalidityReason:null,invalidityDetail:null,outcome:r.analysis.outcome,recommendation:r.analysis.recommendation,primary:{...r.analysis.primary,direction:r.spec.primary.direction,equivalence_margin:r.spec.margin},deltas:[],guardrails:r.analysis.guardrail_statuses.map((g,i)=>({...g,direction:r.spec.guardrails[i].direction})),descriptives:r.analysis.descriptives,suppressed:[]});
+const verdictOf=r=>({undecided:'the interval crosses the margin; test a larger step, as this page holds its paired seeds fixed',kind:'teaching',replications:r.replications,label:r.label,validity:r.validity,invalidityReason:null,invalidityDetail:null,outcome:r.analysis.outcome,recommendation:r.analysis.recommendation,primary:{...r.analysis.primary,direction:r.spec.primary.direction,equivalence_margin:r.spec.margin},deltas:[],guardrails:r.analysis.guardrail_statuses.map((g,i)=>({...g,direction:r.spec.guardrails[i].direction})),descriptives:r.analysis.descriptives,suppressed:[]});
+/** The site's reading tools with next tests this page can honour: no rider, no car, and no seed set the reader cannot choose. */
+const TOOLS={...teachingTools,more:'The interval crosses the margin at these paired seeds, so no direction is read.',next:{...NEXT_TEST,improved:'Move one input toward the edge of its range and run again, then read the measures no guardrail covered.',inconclusive:'Test a larger step of the same setting. This page holds its paired seeds fixed.',unchanged:'Check whether this change reached the limit that binds, then test the one that does.'}};
 const tap=function*(steps,paint){try{for(;;){const s=steps.next();if(s.done)return s.value;if(s.value?.partial)paint(s.value.partial);yield s.value;}}finally{steps.return?.();}};
 
 export function createScaleLab({labs=SCALE_LABS,hrefFor=id=>routeHref({page:'scale',lesson:id}),onLab=null}={}){
@@ -58,12 +60,12 @@ export function createScaleLab({labs=SCALE_LABS,hrefFor=id=>routeHref({page:'sca
     frameSlot.replaceChildren(frameView(LESSON_FRAMES[lab.id],{titleNode:heading,seeds:lab.seeds.length,limits:lab.limits,edited:JSON.stringify(config)!==JSON.stringify(lab.defaults())}));
     identitySlot.replaceChildren(modelHeader(lab.short,lab.geography,result?.version??lab.version).element);
     for(const a of links){if(a.getAttribute('data-lab')===lab.id)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}
-    error.hidden=derivation.ok;error.textContent=derivation.ok?'':`This setup is outside what the lab can read: ${displayText(derivation.reason)}.`;
+    error.hidden=derivation.ok;error.textContent=derivation.ok?'':`Not available: outside what this lab can read: ${displayText(derivation.reason)}.`;
     const spec=setup?.main.spec;
     derived.replaceChildren(...(derivation.ok?[table('Inputs and where each comes from',['Input','Value','Source'],derivation.rows),
       el('p',{},`Changed setting: ${displayText(spec.change)} All other inputs stay the same in both arms.`),
       el('h3',{},'Declared test, set before the run'),el('ul',{},[['Primary',spec.primary.name,spec.primary.direction,'margin',spec.margin],...spec.guardrails.map(g=>['Guardrail',g.metric,g.direction,'allowance',g.max_harm])].map(([role,name,direction,word,limit])=>el('li',{},[`${role}: ${name}, `,el('span',{'data-role':'direction'},DIRECTIONS[direction]),`, ${word} ${thresholdText(name,limit)}.`]))),
-      el('p',{},`Paired seeds ${spec.seeds.join(', ')}. ${number(spec.resamples,0)} bootstrap resamples. A harmed guardrail cannot be bought back by the primary measure.`)]:[]));
+      el('p',{},`Paired seeds ${spec.seeds.join(', ')}. ${number(spec.resamples,0)} bootstrap resamples. The 95% interval is a bootstrap label, nominal at this seed count. A harmed guardrail cannot be bought back by the primary measure.`)]:[]));
     setBusy(runButton,!!job,!derivation.ok);if(!job)status.textContent=idle();
     if(focused)heading.focus({preventScroll:true});
   }
@@ -86,9 +88,9 @@ export function createScaleLab({labs=SCALE_LABS,hrefFor=id=>routeHref({page:'sca
     reading.replaceChildren(...[
       el('p',{class:'result-provenance'},`Scale lab model ${r.version}. ${r.label}. Paired seeds ${r.spec.seeds.join(', ')}. NOT_EVIDENCE; simulation-only; decision authority NONE.`),
       stale?el('p',{class:'teaching-edited'},'Setup changed after this run. This result used the previous setup.'):null,
-      teachingResult(frame,pairedProjection(r)),
+      resultView(frame,pairedProjection(r),TOOLS),
       r.validity==='VALID'&&r.analysis?renderVerdictReadout(verdictOf(r)):null,
-      r.controls?.length?el('section',{},[el('h3',{},'Controls run with this test'),...r.controls.map(c=>el('p',{},[el('strong',{},displayText(c.title)+': '),runLine(frame,pairedProjection(c),teachingTools).line]))]):null,
+      r.controls?.length?el('section',{},[el('h3',{},'Controls run with this test'),...r.controls.map(c=>el('p',{},[el('strong',{},displayText(c.title)+': '),runLine(frame,pairedProjection(c),TOOLS).line]))]):null,
     ].filter(Boolean));
     records.replaceChildren(...[
       ...(r.tables??[]).map(t=>table(t.caption,t.heads,t.rows)),

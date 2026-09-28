@@ -155,9 +155,9 @@ export function frameView(frame,view={}){
 /** Display arithmetic over recorded fields; never consumes frames or logs. */
 export function runLine(frame,r,tools={}){
  const words=tools.words??(key=>String(key??'Main result').replaceAll('_',' '));
- const n=tools.number??num,s=tools.signed??sign;
+ const n=tools.number??num,s=tools.signed??sign,NEXT=tools.next??NEXT_TEST;
  const result=(line,next=null)=>({line,next});
- if(!r||r.validity?.startsWith('INVALID'))return result(`Invalid run: ${r?.reason??r?.invalidityReason??'required result unavailable'}. No result can be read.`,NEXT_TEST.invalid);
+ if(!r||r.validity?.startsWith('INVALID'))return result(`Invalid run: ${r?.reason??r?.invalidityReason??'required result unavailable'}. No result can be read.`,NEXT.invalid);
  if(r.type==='replay'||r.type==='street'){
   const m=r.metrics??{},keys=r.type==='street'?['completed','requests','expired','waiting','in_progress']:['completed_trips','total_requests','unserved_requests','pending_requests','in_progress_trips'];
   const v=keys.map(k=>m[k]);if(v.some(x=>!Number.isFinite(x)))return result('Run counts not available: the request partition was not recorded.');
@@ -181,19 +181,19 @@ export function runLine(frame,r,tools={}){
  const value=(v,threshold=false)=>{
   if(!Number.isFinite(v))return absent;
   if(String(metric).split('{')[0].endsWith('_s')&&margin>=60){const rounded=Number(n(v/60,1))*60;if(Number(n(margin/60,1))*60===margin&&[-margin,0,margin].every(t=>Math.sign(v-t)===Math.sign(rounded-t)))return (threshold?n(v/60,1):s(v/60,1))+' min';return (v>0&&!threshold?'+':'')+v+' s';}
-  return threshold?(tools.threshold?.(metric,v)??n(v)):(tools.metricValue?.(metric,v,{withSign:true})??s(v));
+  return threshold?(tools.threshold?.(metric,v)??n(v)):(tools.metricValue?.(metric,v,{withSign:true,against:margin>0?[-margin,margin]:[]})??s(v));
  };
  let primary=`${OUTCOME_WORDS[r.outcome]??'Result not decided'}: ${words(metric)} ${value(p.mean_delta)} (95% interval ${value(p.ci_low)} to ${value(p.ci_high)}; margin ${value(margin,true)}).`;
  let rail=bad.length?bad.map(g=>`${upper(words(g.metric))} went past its allowance.`).join(' '):guards.length&&!missing.length?'Every guardrail stayed within its allowance.':guards.length?'':'No guardrails were declared.';
  if(missing.length)rail+=` ${missing.length} guardrail${missing.length===1?'':'s'} not available: ${missing[0].reason??'required population missing'}.`;
- let recommendation=r.recommendation==='HOLD'?frame.kind==='condition'?'Held: this condition harms service past an allowance.':reason==='guardrail'?'Held because a guardrail went past its allowance.':'Held because the main result regressed.':r.recommendation==='ADVANCE_TO_NEXT_TEST'?'Advance to the next simulation test, not a rollout.':r.recommendation==='RUN_MORE_EXPERIMENTS'?'Run more paired seeds before reading a direction.':'No recommendation: nothing moved beyond the margin.';
+ let recommendation=r.recommendation==='HOLD'?frame.kind==='condition'?'Held: this condition harms service past an allowance.':reason==='guardrail'?'Held because a guardrail went past its allowance.':'Held because the main result regressed.':r.recommendation==='ADVANCE_TO_NEXT_TEST'?'Advance to the next simulation test, not a rollout.':r.recommendation==='RUN_MORE_EXPERIMENTS'?tools.more??'Run more paired seeds before reading a direction.':'No recommendation: nothing moved beyond the margin.';
  let line=()=>`${primary} ${rail} ${recommendation}`.replace(/\s+/g,' ').trim();
  if(line().length>240&&bad.length)rail=`${bad.length} guardrail${bad.length===1?' went past its allowance':'s went past their allowances'}; see the guardrail table.`;
  if(line().length>240&&bad.length&&r.recommendation==='HOLD'){
   if(frame.kind==='condition'){rail='';recommendation=`Held: this condition harms service past ${bad.length===1?'an allowance':bad.length+' allowances'}; see the guardrail table.`;}else recommendation='Held.';
  }
  if(line().length>240)primary=`${OUTCOME_WORDS[r.outcome]??'Result not decided'}: ${words(metric)} ${value(p.mean_delta)}; interval and margin under Exact values.`;
- return result(line(),NEXT_TEST[reason].replace('{guardrail}',bad.length?words(bad[0].metric):'the affected measure'));
+ return result(line(),NEXT[reason].replace('{guardrail}',bad.length?words(bad[0].metric):'the affected measure'));
 }
 export function casebookReading(frame,r,tools={}){
  const read=CASEBOOK_READINGS[frame.id];if(!read||r.validity!=='VALID'||read.outcome!==r.outcome||read.recommendation!==r.recommendation)return null;

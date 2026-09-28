@@ -201,9 +201,15 @@ export function metricUnitFamily(metricOrKey) {
  * the copied summary does, via `format.nonzero`), so a regressed harm of 2.7e-5 against max harm 0 reads `+0.000027`,
  * not `0.000`. Never `-0`.
  */
-export function metricValueText(metricOrKey, value, { withSign = false } = {}) {
+export function metricValueText(metricOrKey, value, { withSign = false, against = [] } = {}) {
   const family = metricUnitFamily(metricOrKey);
-  const text = format.nonzero(value, family === "fraction" ? 3 : 1, { withSign });
+  let digits = family === "fraction" ? 3 : 1;
+  let text = format.nonzero(value, digits, { withSign });
+  // `against` lists declared thresholds: one more decimal at a time while the text would sit on or across one that the
+  // value does not, and the exact double when six decimals still would.
+  const moved = () => against.some((t) => Math.sign(Number(text.replace(/[,+]/g, "")) - t) !== Math.sign(value - t));
+  while (digits < 6 && moved()) text = format.nonzero(value, (digits += 1), { withSign });
+  if (moved()) text = `${value < 0 ? "-" : withSign ? "+" : ""}${Math.abs(value)}`;
   return family === "s" ? `${text} ${labels.UNITS.seconds}` : text;
 }
 
@@ -381,12 +387,13 @@ function heading(level, text, attrs = {}) {
 // ---------------------------------------------------------------------------------------------------------------
 // Verdict card.
 
-/** The reason under the recommendation (design §7.2 gate chain). */
+/** The reason under the recommendation (design §7.2 gate chain). A page that holds its paired seeds fixed hands in its own
+ * sentence for a result that is not decided, as `view.undecided`. */
 function recommendationReason(view, regressions) {
   const r = labels.RECOMMENDATION_REASONS;
   if (view.validity !== "VALID") return r.invalid;
   if (regressions > 0) return r.guardrailHarmed;
-  return { REGRESSED: r.primaryRegressed, IMPROVED: r.improved, INCONCLUSIVE: r.inconclusive, UNCHANGED: r.unchanged }[view.outcome] ?? r.unchanged;
+  return { REGRESSED: r.primaryRegressed, IMPROVED: r.improved, INCONCLUSIVE: view.undecided ?? r.inconclusive, UNCHANGED: r.unchanged }[view.outcome] ?? r.unchanged;
 }
 
 function gate(id, name, content) {
@@ -431,8 +438,8 @@ function gateChain(view) {
  * their minutes beside them: `-1,565.6 s (-26.1 min)` (demo plan graft 1). The seconds are the card's own text and
  * stay first, so the two surfaces show one number; a metric that is not in seconds has no minutes to add.
  */
-export function valueWithMinutes(metricOrKey, value, { withSign = false } = {}) {
-  const seconds = metricValueText(metricOrKey, value, { withSign });
+export function valueWithMinutes(metricOrKey, value, { withSign = false, against = [] } = {}) {
+  const seconds = metricValueText(metricOrKey, value, { withSign, against });
   if (metricUnitFamily(metricOrKey) !== "s") return seconds;
   return labels.withMinutes({ seconds, minutes: withSign ? format.signed(value / 60, 1) : format.number(value / 60, 1) });
 }
@@ -446,7 +453,7 @@ function primaryRows(view, { minutes = false } = {}) {
   const p = view.primary;
   const key = p.metric;
   const text = (value, options) => (minutes ? valueWithMinutes(key, value, options) : metricValueText(key, value, options));
-  const signed = { withSign: true };
+  const signed = { withSign: true, against: [-p.equivalence_margin, p.equivalence_margin].filter(Number.isFinite) };
   return [
     [labels.VERDICT.baselineMean, valueSpan("primary.baseline_mean", p.baseline_mean, text(p.baseline_mean))],
     [labels.VERDICT.candidateMean, valueSpan("primary.candidate_mean", p.candidate_mean, text(p.candidate_mean))],
@@ -490,7 +497,7 @@ function guardrailSection(view) {
   const head = el("tr", {}, [labels.VERDICT.metric, labels.VERDICT.meanHarm, labels.VERDICT.maxHarm, labels.VERDICT.status].map((t) => el("th", { scope: "col" }, t)));
   const rows = view.guardrails.map((g) => {
     const words = labels.STATUS_WORDS.guardrail[g.status];
-    const harm = g.harm === null ? absentSpan("harm", labels.ABSENT_REASONS.metricAbsentInSomeReplication) : valueSpan("harm", g.harm, metricValueText(g.metric, g.harm, { withSign: true }));
+    const harm = g.harm === null ? absentSpan("harm", labels.ABSENT_REASONS.metricAbsentInSomeReplication) : valueSpan("harm", g.harm, metricValueText(g.metric, g.harm, { withSign: true, against: [g.max_harm].filter(Number.isFinite) }));
     const status = g.status === "NOT_EVALUABLE" ? [chip(words), el("span", { class: "fl-muted" }, labels.NOT_EVALUABLE_TEXT)] : [chip(words)];
     return el("tr", { "data-metric": g.metric, "data-status": g.status }, [
       el("th", { scope: "row", class: "fl-mono" }, metricSubject(g.metric)),
