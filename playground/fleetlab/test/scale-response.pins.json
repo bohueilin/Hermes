@@ -1,0 +1,1670 @@
+{
+ "note": "Pinned by the design-stage prototype of Scale lab A. Synthetic teaching model, NOT_EVIDENCE, decision authority NONE. Means and changes are exact doubles from Node 22. Interval bounds are compared to a relative 1e-9, because one browser build differed from Node in the last digits of one bound.",
+ "model_version": "scale-response-1.0.0",
+ "seeds": [
+  3001,
+  3002,
+  3003,
+  3004,
+  3005,
+  3006,
+  3007,
+  3008,
+  3009,
+  3010,
+  3011,
+  3012
+ ],
+ "engine": {
+  "rates_1300": {
+   "load": 1.3,
+   "moved": 0.14285714285714285,
+   "peak": 108.00000000000001,
+   "drain": 121.93548387096776,
+   "answer": 926.64,
+   "stopped": 17231.15612903226,
+   "depth": 7.060180864974626,
+   "requests": 78
+  },
+  "rates_1300_lean_large": {
+   "load": 1.8571428571428572,
+   "moved": 0.14285714285714285,
+   "peak": 216.00000000000003,
+   "drain": 756.0000000000005,
+   "answer": 926.64,
+   "stopped": 102014.64000000006,
+   "depth": 16.877060313785837,
+   "requests": 78
+  },
+  "lean_pools": [
+   2,
+   5,
+   14
+  ],
+  "closed_form_wait_s": [
+   21.948051948051955,
+   3.727618597895038,
+   0.21453778490646877
+  ],
+  "closed_form_two_agents_hand": 21.948051948051955,
+  "tape_6000_seed_3001": {
+   "n": 11158,
+   "first_t": 6.532506758661561,
+   "first_h": 30.353507572456447,
+   "last_t": 86393.0904119787,
+   "line_calls": 99,
+   "sum_h": 334477.3359070632
+  },
+  "event_6000_seed_3001": {
+   "n": 11158,
+   "moved": 1549,
+   "sum_h": 334477.33590706333
+  },
+  "day_no_lever_6000_seed_3001": {
+   "vehicles": 11059,
+   "calls": 99,
+   "stopped": 14486.849314937182,
+   "late": 0,
+   "long": 587.6666666666666,
+   "long_share": 31.883533773397232,
+   "peak": 97.66666666666666,
+   "clear": 105.45987447670062,
+   "wait_s": 437.68581231102695,
+   "busy": 0.6452109103145534,
+   "broken": null
+  }
+ },
+ "setups": [
+  {
+   "name": "default",
+   "config": {
+    "load": 1.3,
+    "lever": "reserve",
+    "delay": 45
+   },
+   "derived": {
+    "load_permille": 1300,
+    "reserve_agents": 2,
+    "delay_min": 45
+   },
+   "main": {
+    "label": "scale-spec:443de567",
+    "digest": "443de5678452b6fcbaed8e13706be800ef67f28c283f4ae42d3adca32c656724",
+    "validity": "VALID",
+    "outcome": "IMPROVED",
+    "recommendation": "ADVANCE_TO_NEXT_TEST",
+    "baseline_mean": 17737.85156681938,
+    "candidate_mean": 4745.813513818904,
+    "mean_delta": -12992.038053000475,
+    "ci_low": -13394.778992875907,
+    "ci_high": -12545.804281982228,
+    "margin": 861.558,
+    "guardrail_status": "WITHIN",
+    "guardrail_harm": 0.00003417167851284857,
+    "guardrail_baseline_mean": 0.00151379385250353,
+    "guardrail_candidate_mean": 0.0015479655310163785
+   },
+   "controls": [
+    {
+     "title": "Null control, a reserve of zero agents, declared to leave every paired difference at zero. Read as declared",
+     "as_declared": true,
+     "control": "null",
+     "label": "scale-spec:3fbf35ea",
+     "digest": "3fbf35ea9e16e50f90d883cd0c95fc2908e43f8f34209e7ddcc70eb98ebfdf38",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 17737.85156681938,
+     "candidate_mean": 17737.85156681938,
+     "mean_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "margin": 861.558,
+     "guardrail_status": "WITHIN",
+     "guardrail_harm": 0,
+     "guardrail_baseline_mean": 0.00151379385250353,
+     "guardrail_candidate_mean": 0.00151379385250353,
+     "all_paired_deltas_zero": true
+    },
+    {
+     "title": "Ample pool control, reserve staff where the pool can absorb the burst, declared to stay inside its margin. Read as declared",
+     "as_declared": true,
+     "control": "non-binding",
+     "label": "scale-spec:b98f9b28",
+     "digest": "b98f9b2807a4dbb60d92a12e5f039fee455f10a1d25df8052b36f855d5626d0b",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 939.9577325942263,
+     "candidate_mean": 934.2001262621319,
+     "mean_delta": -5.757606332094459,
+     "ci_low": -6.394524631608903,
+     "ci_high": -5.168556582097693,
+     "margin": 46.663,
+     "guardrail_status": "WITHIN",
+     "guardrail_harm": 0,
+     "guardrail_baseline_mean": 0,
+     "guardrail_candidate_mean": 0,
+     "all_paired_deltas_zero": false
+    },
+    {
+     "title": "Guardrail control, one shared line, declared to stay inside the margin and to be stopped by the guardrail. Read as declared",
+     "as_declared": true,
+     "control": "guardrail",
+     "label": "scale-spec:7b210b97",
+     "digest": "7b210b974fe057605c664d1378f9e936fa8ec9db12556efcd3bf75e6869bf839",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "HOLD",
+     "baseline_mean": 17737.85156681938,
+     "candidate_mean": 17587.002745182024,
+     "mean_delta": -150.84882163735378,
+     "ci_low": -172.08288943291214,
+     "ci_high": -128.79381642211743,
+     "margin": 861.558,
+     "guardrail_status": "REGRESSED",
+     "guardrail_harm": 0.32397763577646504,
+     "guardrail_baseline_mean": 0.00151379385250353,
+     "guardrail_candidate_mean": 0.32549142962896854,
+     "all_paired_deltas_zero": false
+    }
+   ],
+   "chart": [
+    {
+     "id": "ratio",
+     "values": [
+      18907.711031708885,
+      17737.85156681938,
+      17031.836086802097
+     ]
+    },
+    {
+     "id": "rates",
+     "values": [
+      17231.15612903226,
+      17231.15612903226,
+      17231.15612903226
+     ]
+    }
+   ],
+   "arms": [
+    [
+     "No lever",
+     17737.85156681938,
+     617.1388888888888,
+     110.59722222222221,
+     128.0577267763049,
+     0.00151379385250353
+    ],
+    [
+     "Reserve staff join the pool",
+     4745.813513818904,
+     487.34722222222223,
+     32.20833333333333,
+     13.269379646122806,
+     0.0015479655310163785
+    ],
+    [
+     "One shared line",
+     17587.002745182024,
+     616.7916666666666,
+     109.625,
+     128.0563059051047,
+     0.32549142962896854
+    ]
+   ],
+   "ladder": [
+    [
+     2000,
+     2,
+     20.218988539088958,
+     21.948051948051955,
+     18907.711031708885,
+     10672.14852877764,
+     24248.51516216689,
+     17231.15612903226,
+     82.04402628867206,
+     1,
+     2,
+     0.65,
+     1.3,
+     18907.711031708885
+    ],
+    [
+     6000,
+     6,
+     4.105931602732158,
+     3.727618597895038,
+     17737.85156681938,
+     15469.93704064126,
+     19607.889710316005,
+     17231.15612903226,
+     40.51966095139005,
+     2,
+     5,
+     0.78,
+     1.56,
+     43417.83321609173
+    ],
+    [
+     20000,
+     20,
+     0.2281945834648671,
+     0.21453778490646877,
+     17031.836086802097,
+     15273.365366922928,
+     18800.34330505854,
+     17231.15612903226,
+     5.043647833403838,
+     6,
+     14,
+     0.9285714285714286,
+     1.8571428571428572,
+     100819.65316400987
+    ]
+   ],
+   "reserve_sizes": [
+    [
+     0,
+     1.3,
+     17737.85156681938
+    ],
+    [
+     1,
+     1.1142857142857143,
+     9440.635905731831
+    ],
+    [
+     2,
+     0.9750000000000001,
+     4745.813513818904
+    ],
+    [
+     3,
+     0.8666666666666667,
+     2545.664359252504
+    ],
+    [
+     4,
+     0.78,
+     2111.9773770739807
+    ],
+    [
+     5,
+     0.7090909090909091,
+     1936.9481964852505
+    ],
+    [
+     6,
+     0.65,
+     1844.5226717409262
+    ]
+   ],
+   "checks": [
+    [
+     "Mean wait on an ordinary day, queue formula, at 2,000 vehicles",
+     21.948051948051955,
+     20.218988539088958,
+     14.15873758117225,
+     "inside tolerance"
+    ],
+    [
+     "Mean wait on an ordinary day, queue formula, at 6,000 vehicles",
+     3.727618597895038,
+     4.105931602732158,
+     12.57803746208175,
+     "inside tolerance"
+    ],
+    [
+     "Mean wait on an ordinary day, queue formula, at 20,000 vehicles",
+     0.21453778490646877,
+     0.2281945834648671,
+     23.72743888226446,
+     "inside tolerance"
+    ],
+    [
+     "Stops of at least two minutes on an ordinary day, % of stops, queue formula, at 6,000 vehicles",
+     2.2657878505737643,
+     2.4585272765140065,
+     14.735001971387373,
+     "inside tolerance"
+    ],
+    [
+     "Most vehicles waiting at once on the event day, rates only, at 6,000 vehicles",
+     108.00000000000001,
+     110.59722222222221,
+     20,
+     "inside tolerance"
+    ],
+    [
+     "Minutes to clear after the event, rates only, at 6,000 vehicles",
+     121.93548387096776,
+     128.0577267763049,
+     20,
+     "inside tolerance"
+    ]
+   ],
+   "rates_only": [
+    4675.995828220862,
+    -12555.1603008114
+   ],
+   "landing": [
+    [
+     "No lever",
+     17737.85156681938,
+     17231.15612903226,
+     17737.85156681938,
+     17231.15612903226
+    ],
+    [
+     15,
+     2140.903349506403,
+     1601.6400000000024,
+     953.2756445841711,
+     878.6471889400922
+    ],
+    [
+     60,
+     6184.06629705732,
+     6099.155337423316,
+     2118.857853682149,
+     2042.5835944700466
+    ],
+    [
+     120,
+     11070.989093783892,
+     10935.965153374238,
+     5796.977514316597,
+     5719.6600921659
+    ],
+    [
+     180,
+     14624.442339858411,
+     14403.449815950924,
+     11988.968772056052,
+     11825.492350230417
+    ],
+    [
+     240,
+     16828.327971049534,
+     16501.60932515338,
+     17692.710169699716,
+     17231.15612903226
+    ]
+   ]
+  },
+  {
+   "name": "directive after 180 min",
+   "config": {
+    "load": 1.3,
+    "lever": "directive",
+    "delay": 180
+   },
+   "derived": {
+    "load_permille": 1300,
+    "reserve_agents": 2,
+    "delay_min": 180
+   },
+   "main": {
+    "label": "scale-spec:42aa34d4",
+    "digest": "42aa34d4302b04df5158370ddf86fad6bdd19202a5f697c421176078452e9f75",
+    "validity": "VALID",
+    "outcome": "IMPROVED",
+    "recommendation": "ADVANCE_TO_NEXT_TEST",
+    "baseline_mean": 17737.85156681938,
+    "candidate_mean": 11988.968772056052,
+    "mean_delta": -5748.882794763326,
+    "ci_low": -6198.470750410374,
+    "ci_high": -5266.6636960701535,
+    "margin": 861.558,
+    "guardrail_status": "WITHIN",
+    "guardrail_harm": 0,
+    "guardrail_baseline_mean": 0.00151379385250353,
+    "guardrail_candidate_mean": 0.00151379385250353
+   },
+   "controls": [
+    {
+     "title": "Null control, a reserve of zero agents, declared to leave every paired difference at zero. Read as declared",
+     "as_declared": true,
+     "control": "null",
+     "label": "scale-spec:db183e7e",
+     "digest": "db183e7e4bd997e6805769c83a142c5074e745aa0585159ac29e9c9345dacc8c",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 17737.85156681938,
+     "candidate_mean": 17737.85156681938,
+     "mean_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "margin": 861.558,
+     "guardrail_status": "WITHIN",
+     "guardrail_harm": 0,
+     "guardrail_baseline_mean": 0.00151379385250353,
+     "guardrail_candidate_mean": 0.00151379385250353,
+     "all_paired_deltas_zero": true
+    },
+    {
+     "title": "Ample pool control, reserve staff where the pool can absorb the burst, declared to stay inside its margin. Read as declared",
+     "as_declared": true,
+     "control": "non-binding",
+     "label": "scale-spec:be132077",
+     "digest": "be132077d389cc59d38250d5c4581c0d95b22c82b5bc5161bc4a619f2babeff1",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 939.9577325942263,
+     "candidate_mean": 938.1558270657032,
+     "mean_delta": -1.801905528523264,
+     "ci_low": -2.052331712484308,
+     "ci_high": -1.5567982897631982,
+     "margin": 46.663,
+     "guardrail_status": "WITHIN",
+     "guardrail_harm": 0,
+     "guardrail_baseline_mean": 0,
+     "guardrail_candidate_mean": 0,
+     "all_paired_deltas_zero": false
+    },
+    {
+     "title": "Guardrail control, one shared line, declared to stay inside the margin and to be stopped by the guardrail. Read as declared",
+     "as_declared": true,
+     "control": "guardrail",
+     "label": "scale-spec:7b210b97",
+     "digest": "7b210b974fe057605c664d1378f9e936fa8ec9db12556efcd3bf75e6869bf839",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "HOLD",
+     "baseline_mean": 17737.85156681938,
+     "candidate_mean": 17587.002745182024,
+     "mean_delta": -150.84882163735378,
+     "ci_low": -172.08288943291214,
+     "ci_high": -128.79381642211743,
+     "margin": 861.558,
+     "guardrail_status": "REGRESSED",
+     "guardrail_harm": 0.32397763577646504,
+     "guardrail_baseline_mean": 0.00151379385250353,
+     "guardrail_candidate_mean": 0.32549142962896854,
+     "all_paired_deltas_zero": false
+    }
+   ],
+   "chart": [
+    {
+     "id": "ratio",
+     "values": [
+      18907.711031708885,
+      17737.85156681938,
+      17031.836086802097
+     ]
+    },
+    {
+     "id": "rates",
+     "values": [
+      17231.15612903226,
+      17231.15612903226,
+      17231.15612903226
+     ]
+    }
+   ],
+   "arms": [
+    [
+     "No lever",
+     17737.85156681938,
+     617.1388888888888,
+     110.59722222222221,
+     128.0577267763049,
+     0.00151379385250353
+    ],
+    [
+     "A directive removes the ask",
+     11988.968772056052,
+     535.5555555555554,
+     110.49999999999999,
+     55.33604048815355,
+     0.00151379385250353
+    ],
+    [
+     "One shared line",
+     17587.002745182024,
+     616.7916666666666,
+     109.625,
+     128.0563059051047,
+     0.32549142962896854
+    ]
+   ],
+   "ladder": [
+    [
+     2000,
+     2,
+     20.218988539088958,
+     21.948051948051955,
+     18907.711031708885,
+     10672.14852877764,
+     24248.51516216689,
+     17231.15612903226,
+     82.04402628867206,
+     1,
+     2,
+     0.65,
+     1.3,
+     18907.711031708885
+    ],
+    [
+     6000,
+     6,
+     4.105931602732158,
+     3.727618597895038,
+     17737.85156681938,
+     15469.93704064126,
+     19607.889710316005,
+     17231.15612903226,
+     40.51966095139005,
+     2,
+     5,
+     0.78,
+     1.56,
+     43417.83321609173
+    ],
+    [
+     20000,
+     20,
+     0.2281945834648671,
+     0.21453778490646877,
+     17031.836086802097,
+     15273.365366922928,
+     18800.34330505854,
+     17231.15612903226,
+     5.043647833403838,
+     6,
+     14,
+     0.9285714285714286,
+     1.8571428571428572,
+     100819.65316400987
+    ]
+   ],
+   "reserve_sizes": [
+    [
+     0,
+     1.3,
+     17737.85156681938
+    ],
+    [
+     1,
+     1.1142857142857143,
+     15747.900737903148
+    ],
+    [
+     2,
+     0.9750000000000001,
+     14624.442339858411
+    ],
+    [
+     3,
+     0.8666666666666667,
+     13902.489049914695
+    ],
+    [
+     4,
+     0.78,
+     13398.055693053204
+    ],
+    [
+     5,
+     0.7090909090909091,
+     13028.770234098389
+    ],
+    [
+     6,
+     0.65,
+     12746.050404689611
+    ]
+   ],
+   "checks": [
+    [
+     "Mean wait on an ordinary day, queue formula, at 2,000 vehicles",
+     21.948051948051955,
+     20.218988539088958,
+     14.15873758117225,
+     "inside tolerance"
+    ],
+    [
+     "Mean wait on an ordinary day, queue formula, at 6,000 vehicles",
+     3.727618597895038,
+     4.105931602732158,
+     12.57803746208175,
+     "inside tolerance"
+    ],
+    [
+     "Mean wait on an ordinary day, queue formula, at 20,000 vehicles",
+     0.21453778490646877,
+     0.2281945834648671,
+     23.72743888226446,
+     "inside tolerance"
+    ],
+    [
+     "Stops of at least two minutes on an ordinary day, % of stops, queue formula, at 6,000 vehicles",
+     2.2657878505737643,
+     2.4585272765140065,
+     14.735001971387373,
+     "inside tolerance"
+    ],
+    [
+     "Most vehicles waiting at once on the event day, rates only, at 6,000 vehicles",
+     108.00000000000001,
+     110.59722222222221,
+     20,
+     "inside tolerance"
+    ],
+    [
+     "Minutes to clear after the event, rates only, at 6,000 vehicles",
+     121.93548387096776,
+     128.0577267763049,
+     20,
+     "inside tolerance"
+    ]
+   ],
+   "rates_only": [
+    11825.492350230417,
+    -5405.663778801843
+   ],
+   "landing": [
+    [
+     "No lever",
+     17737.85156681938,
+     17231.15612903226,
+     17737.85156681938,
+     17231.15612903226
+    ],
+    [
+     15,
+     2140.903349506403,
+     1601.6400000000024,
+     953.2756445841711,
+     878.6471889400922
+    ],
+    [
+     60,
+     6184.06629705732,
+     6099.155337423316,
+     2118.857853682149,
+     2042.5835944700466
+    ],
+    [
+     120,
+     11070.989093783892,
+     10935.965153374238,
+     5796.977514316597,
+     5719.6600921659
+    ],
+    [
+     180,
+     14624.442339858411,
+     14403.449815950924,
+     11988.968772056052,
+     11825.492350230417
+    ],
+    [
+     240,
+     16828.327971049534,
+     16501.60932515338,
+     17692.710169699716,
+     17231.15612903226
+    ]
+   ]
+  },
+  {
+   "name": "event load 1.6, reserve after 120 min",
+   "config": {
+    "load": 1.6,
+    "lever": "reserve",
+    "delay": 120
+   },
+   "derived": {
+    "load_permille": 1600,
+    "reserve_agents": 4,
+    "delay_min": 120
+   },
+   "main": {
+    "label": "scale-spec:ee3e401b",
+    "digest": "ee3e401b5f2c65482f102510c3afde8ec8857680f66c7ad5cb5acca3fb2d5c3f",
+    "validity": "VALID",
+    "outcome": "IMPROVED",
+    "recommendation": "ADVANCE_TO_NEXT_TEST",
+    "baseline_mean": 44911.296411367475,
+    "candidate_mean": 21949.614961416515,
+    "mean_delta": -22961.68144995096,
+    "ci_low": -23942.059701986673,
+    "ci_high": -21912.585795948777,
+    "margin": 2219.038,
+    "guardrail_status": "WITHIN",
+    "guardrail_harm": -0.0007507507507507507,
+    "guardrail_baseline_mean": 0.0024342524342524344,
+    "guardrail_candidate_mean": 0.0016835016835016836
+   },
+   "controls": [
+    {
+     "title": "Null control, a reserve of zero agents, declared to leave every paired difference at zero. Read as declared",
+     "as_declared": true,
+     "control": "null",
+     "label": "scale-spec:7d90f7e6",
+     "digest": "7d90f7e611fed525759077f9ac2ed70bb9f98cdc3ccb355b494193ee9e905aaf",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 44911.296411367475,
+     "candidate_mean": 44911.296411367475,
+     "mean_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "margin": 2219.038,
+     "guardrail_status": "WITHIN",
+     "guardrail_harm": 0,
+     "guardrail_baseline_mean": 0.0024342524342524344,
+     "guardrail_candidate_mean": 0.0024342524342524344,
+     "all_paired_deltas_zero": true
+    },
+    {
+     "title": "Ample pool control, reserve staff where the pool can absorb the burst, declared to stay inside its margin. Read as declared",
+     "as_declared": true,
+     "control": "non-binding",
+     "label": "scale-spec:2f20d986",
+     "digest": "2f20d98696183c4936db6d30f89e70f04f715e0a09716cae55887f919474f016",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 939.9577325942263,
+     "candidate_mean": 935.3970344549062,
+     "mean_delta": -4.560698139319783,
+     "ci_low": -5.14041050453478,
+     "ci_high": -3.939539312391446,
+     "margin": 46.663,
+     "guardrail_status": "WITHIN",
+     "guardrail_harm": 0,
+     "guardrail_baseline_mean": 0,
+     "guardrail_candidate_mean": 0,
+     "all_paired_deltas_zero": false
+    },
+    {
+     "title": "Guardrail control, one shared line, declared to stay inside the margin and to be stopped by the guardrail. Read as declared",
+     "as_declared": true,
+     "control": "guardrail",
+     "label": "scale-spec:a447b064",
+     "digest": "a447b064665457e360f3aa87ed939c8c0510e7b8ffbd6d95074dfb8a765c88a3",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "HOLD",
+     "baseline_mean": 44911.296411367475,
+     "candidate_mean": 44507.18303824306,
+     "mean_delta": -404.11337312440264,
+     "ci_low": -464.5850507224853,
+     "ci_high": -342.6102052401232,
+     "margin": 2219.038,
+     "guardrail_status": "REGRESSED",
+     "guardrail_harm": 0.4313165965247077,
+     "guardrail_baseline_mean": 0.0024342524342524344,
+     "guardrail_candidate_mean": 0.43375084895896016,
+     "all_paired_deltas_zero": false
+    }
+   ],
+   "chart": [
+    {
+     "id": "ratio",
+     "values": [
+      48022.33661359638,
+      44911.296411367475,
+      43931.91349915426
+     ]
+    },
+    {
+     "id": "rates",
+     "values": [
+      44380.75764705883,
+      44380.75764705883,
+      44380.75764705883
+     ]
+    }
+   ],
+   "arms": [
+    [
+     "No lever",
+     44911.296411367475,
+     813.3333333333334,
+     217.01388888888889,
+     227.57343937964833,
+     0.0024342524342524344
+    ],
+    [
+     "Reserve staff join the pool",
+     21949.614961416515,
+     644.5277777777777,
+     144.18055555555557,
+     59.6860982377593,
+     0.0016835016835016836
+    ],
+    [
+     "One shared line",
+     44507.18303824306,
+     813.2222222222222,
+     215.43055555555551,
+     227.59469876188658,
+     0.43375084895896016
+    ]
+   ],
+   "ladder": [
+    [
+     2000,
+     2,
+     20.218988539088958,
+     21.948051948051955,
+     48022.33661359638,
+     34568.32797320398,
+     55915.93941612842,
+     44380.75764705883,
+     82.04402628867206,
+     2,
+     2,
+     0.65,
+     1.6,
+     48022.33661359638
+    ],
+    [
+     6000,
+     6,
+     4.105931602732158,
+     3.727618597895038,
+     44911.296411367475,
+     41658.99110651701,
+     49936.77178096492,
+     44380.75764705883,
+     40.51966095139005,
+     4,
+     5,
+     0.78,
+     1.92,
+     87349.47171926437
+    ],
+    [
+     20000,
+     20,
+     0.2281945834648671,
+     0.21453778490646877,
+     43931.91349915426,
+     41818.8274925857,
+     46616.63110473626,
+     44380.75764705883,
+     5.043647833403838,
+     12,
+     14,
+     0.9285714285714286,
+     2.285714285714286,
+     169026.25010042125
+    ]
+   ],
+   "reserve_sizes": [
+    [
+     0,
+     1.6000000000000003,
+     44911.296411367475
+    ],
+    [
+     1,
+     1.3714285714285717,
+     34701.06429433617
+    ],
+    [
+     2,
+     1.2000000000000002,
+     28694.863207961916
+    ],
+    [
+     3,
+     1.0666666666666669,
+     24750.742210112152
+    ],
+    [
+     4,
+     0.9600000000000002,
+     21949.614961416515
+    ],
+    [
+     5,
+     0.8727272727272729,
+     19857.279426414996
+    ],
+    [
+     6,
+     0.8000000000000002,
+     18240.118815446
+    ]
+   ],
+   "checks": [
+    [
+     "Mean wait on an ordinary day, queue formula, at 2,000 vehicles",
+     21.948051948051955,
+     20.218988539088958,
+     14.15873758117225,
+     "inside tolerance"
+    ],
+    [
+     "Mean wait on an ordinary day, queue formula, at 6,000 vehicles",
+     3.727618597895038,
+     4.105931602732158,
+     12.57803746208175,
+     "inside tolerance"
+    ],
+    [
+     "Mean wait on an ordinary day, queue formula, at 20,000 vehicles",
+     0.21453778490646877,
+     0.2281945834648671,
+     23.72743888226446,
+     "inside tolerance"
+    ],
+    [
+     "Stops of at least two minutes on an ordinary day, % of stops, queue formula, at 6,000 vehicles",
+     2.2657878505737643,
+     2.4585272765140065,
+     14.735001971387373,
+     "inside tolerance"
+    ],
+    [
+     "Most vehicles waiting at once on the event day, rates only, at 6,000 vehicles",
+     216.00000000000003,
+     217.01388888888889,
+     20,
+     "inside tolerance"
+    ],
+    [
+     "Minutes to clear after the event, rates only, at 6,000 vehicles",
+     222.3529411764706,
+     227.57343937964833,
+     20,
+     "inside tolerance"
+    ]
+   ],
+   "rates_only": [
+    21979.201983471085,
+    -22401.555663587747
+   ],
+   "landing": [
+    [
+     "No lever",
+     44911.296411367475,
+     44380.75764705883,
+     44911.296411367475,
+     44380.75764705883
+    ],
+    [
+     15,
+     2601.1009413042957,
+     2276.640000000005,
+     943.8657562833906,
+     895.4720168067226
+    ],
+    [
+     60,
+     11418.531198144403,
+     11446.970578512404,
+     3279.871886876171,
+     3209.1451260504205
+    ],
+    [
+     120,
+     21949.614961416515,
+     21979.201983471085,
+     10658.952300928433,
+     10556.469075630253
+    ],
+    [
+     180,
+     30471.733093460793,
+     30488.292892561993,
+     22836.70510970044,
+     22775.13756302521
+    ],
+    [
+     240,
+     37041.44105879876,
+     36974.24330578513,
+     36124.26267534046,
+     35956.579159663874
+    ]
+   ]
+  },
+  {
+   "name": "event load 1.2, directive after 240 min",
+   "config": {
+    "load": 1.2,
+    "lever": "directive",
+    "delay": 240
+   },
+   "derived": {
+    "load_permille": 1200,
+    "reserve_agents": 2,
+    "delay_min": 240
+   },
+   "main": {
+    "label": "scale-spec:6905c5e1",
+    "digest": "6905c5e1d6330afe674367ae5b16c893e7a7cd0c99cbb958e9f5616ca951f1cc",
+    "validity": "VALID",
+    "outcome": "UNCHANGED",
+    "recommendation": "NO_RECOMMENDATION",
+    "baseline_mean": 10706.808766559507,
+    "candidate_mean": 10706.808766559507,
+    "mean_delta": 0,
+    "ci_low": 0,
+    "ci_high": 0,
+    "margin": 521.532,
+    "guardrail_status": "WITHIN",
+    "guardrail_harm": 0,
+    "guardrail_baseline_mean": 0.0008417508417508418,
+    "guardrail_candidate_mean": 0.0008417508417508418
+   },
+   "controls": [
+    {
+     "title": "Null control, a reserve of zero agents, declared to leave every paired difference at zero. Read as declared",
+     "as_declared": true,
+     "control": "null",
+     "label": "scale-spec:24b73c74",
+     "digest": "24b73c74968d179eeac8d13c8099258590e2f00b60cb67c6ba3e157fc5831dbe",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 10706.808766559507,
+     "candidate_mean": 10706.808766559507,
+     "mean_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "margin": 521.532,
+     "guardrail_status": "WITHIN",
+     "guardrail_harm": 0,
+     "guardrail_baseline_mean": 0.0008417508417508418,
+     "guardrail_candidate_mean": 0.0008417508417508418,
+     "all_paired_deltas_zero": true
+    },
+    {
+     "title": "Ample pool control, reserve staff where the pool can absorb the burst, declared to stay inside its margin. Read as declared",
+     "as_declared": true,
+     "control": "non-binding",
+     "label": "scale-spec:6553babb",
+     "digest": "6553babb66f148f0aa9cc03c05c74390e564820743be28068845a111333eaabd",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 939.9577325942263,
+     "candidate_mean": 938.3416943581555,
+     "mean_delta": -1.6160382360707974,
+     "ci_low": -1.80761436497131,
+     "ci_high": -1.4166288909811253,
+     "margin": 46.663,
+     "guardrail_status": "WITHIN",
+     "guardrail_harm": 0,
+     "guardrail_baseline_mean": 0,
+     "guardrail_candidate_mean": 0,
+     "all_paired_deltas_zero": false
+    },
+    {
+     "title": "Guardrail control, one shared line, declared to stay inside the margin and to be stopped by the guardrail. Read as declared",
+     "as_declared": true,
+     "control": "guardrail",
+     "label": "scale-spec:7261de88",
+     "digest": "7261de88eac2ca8821de67fe81b7aece0581df3e4cd41e55de99041ead81e1c1",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "HOLD",
+     "baseline_mean": 10706.808766559507,
+     "candidate_mean": 10615.892132213312,
+     "mean_delta": -90.91663434619666,
+     "ci_low": -106.32305699161073,
+     "ci_high": -74.42857002809797,
+     "margin": 521.532,
+     "guardrail_status": "REGRESSED",
+     "guardrail_harm": 0.28362108837008104,
+     "guardrail_baseline_mean": 0.0008417508417508418,
+     "guardrail_candidate_mean": 0.28446283921183185,
+     "all_paired_deltas_zero": false
+    }
+   ],
+   "chart": [
+    {
+     "id": "ratio",
+     "values": [
+      12414.91866941067,
+      10706.808766559507,
+      10387.10675657517
+     ]
+    },
+    {
+     "id": "rates",
+     "values": [
+      10430.639999999998,
+      10430.639999999998,
+      10430.639999999998
+     ]
+    }
+   ],
+   "arms": [
+    [
+     "No lever",
+     10706.808766559507,
+     533.8055555555555,
+     74.41666666666667,
+     88.546333764042,
+     0.0008417508417508418
+    ],
+    [
+     "A directive removes the ask",
+     10706.808766559507,
+     533.8055555555555,
+     74.41666666666667,
+     88.546333764042,
+     0.0008417508417508418
+    ],
+    [
+     "One shared line",
+     10615.892132213312,
+     533.6666666666667,
+     73.68055555555554,
+     88.5375709309351,
+     0.28446283921183185
+    ]
+   ],
+   "ladder": [
+    [
+     2000,
+     2,
+     20.218988539088958,
+     21.948051948051955,
+     12414.91866941067,
+     6084.392391455025,
+     15843.38050079081,
+     10430.639999999998,
+     82.04402628867206,
+     1,
+     2,
+     0.65,
+     1.2,
+     12414.91866941067
+    ],
+    [
+     6000,
+     6,
+     4.105931602732158,
+     3.727618597895038,
+     10706.808766559507,
+     8502.63499118376,
+     12055.340045525243,
+     10430.639999999998,
+     40.51966095139005,
+     2,
+     5,
+     0.78,
+     1.44,
+     30718.050987113736
+    ],
+    [
+     20000,
+     20,
+     0.2281945834648671,
+     0.21453778490646877,
+     10387.10675657517,
+     8837.344330070528,
+     11680.163297640938,
+     10430.639999999998,
+     5.043647833403838,
+     4,
+     14,
+     0.9285714285714286,
+     1.7142857142857142,
+     79226.7832708952
+    ]
+   ],
+   "reserve_sizes": [
+    [
+     0,
+     1.2,
+     10706.808766559507
+    ],
+    [
+     1,
+     1.0285714285714285,
+     10574.824927420797
+    ],
+    [
+     2,
+     0.8999999999999999,
+     10508.319883221493
+    ],
+    [
+     3,
+     0.7999999999999999,
+     10467.730984292228
+    ],
+    [
+     4,
+     0.72,
+     10440.07351344368
+    ],
+    [
+     5,
+     0.6545454545454544,
+     10419.986988827877
+    ],
+    [
+     6,
+     0.6,
+     10404.866944559551
+    ]
+   ],
+   "checks": [
+    [
+     "Mean wait on an ordinary day, queue formula, at 2,000 vehicles",
+     21.948051948051955,
+     20.218988539088958,
+     14.15873758117225,
+     "inside tolerance"
+    ],
+    [
+     "Mean wait on an ordinary day, queue formula, at 6,000 vehicles",
+     3.727618597895038,
+     4.105931602732158,
+     12.57803746208175,
+     "inside tolerance"
+    ],
+    [
+     "Mean wait on an ordinary day, queue formula, at 20,000 vehicles",
+     0.21453778490646877,
+     0.2281945834648671,
+     23.72743888226446,
+     "inside tolerance"
+    ],
+    [
+     "Stops of at least two minutes on an ordinary day, % of stops, queue formula, at 6,000 vehicles",
+     2.2657878505737643,
+     2.4585272765140065,
+     14.735001971387373,
+     "inside tolerance"
+    ],
+    [
+     "Most vehicles waiting at once on the event day, rates only, at 6,000 vehicles",
+     71.99999999999999,
+     74.41666666666667,
+     20,
+     "inside tolerance"
+    ],
+    [
+     "Minutes to clear after the event, rates only, at 6,000 vehicles",
+     83.99999999999997,
+     88.546333764042,
+     20,
+     "inside tolerance"
+    ]
+   ],
+   "rates_only": [
+    10430.639999999998,
+    0
+   ],
+   "landing": [
+    [
+     "No lever",
+     10706.808766559507,
+     10430.639999999998,
+     10706.808766559507,
+     10430.639999999998
+    ],
+    [
+     15,
+     1265.504574253948,
+     1039.1399999999999,
+     953.1446840549202,
+     872.1690476190477
+    ],
+    [
+     60,
+     2819.3853026901656,
+     2726.6399999999994,
+     1697.6863203254907,
+     1641.933333333333
+    ],
+    [
+     120,
+     6561.4090738147,
+     6542.6399999999985,
+     4085.5960428591206,
+     4061.6190476190463
+    ],
+    [
+     180,
+     9199.187502576635,
+     9107.639999999998,
+     8157.8299394122005,
+     8073.685714285713
+    ],
+    [
+     240,
+     10508.319883221493,
+     10322.639999999998,
+     10706.808766559507,
+     10430.639999999998
+    ]
+   ]
+  },
+  {
+   "name": "event load 1.3, reserve after 240 min",
+   "config": {
+    "load": 1.3,
+    "lever": "reserve",
+    "delay": 240
+   },
+   "derived": {
+    "load_permille": 1300,
+    "reserve_agents": 2,
+    "delay_min": 240
+   },
+   "main": {
+    "label": "scale-spec:aa3ca7e3",
+    "digest": "aa3ca7e3346b14049d54ca3a571fcd8fa107b8c40737964315abcc1dc258c843",
+    "validity": "VALID",
+    "outcome": "INCONCLUSIVE",
+    "recommendation": "RUN_MORE_EXPERIMENTS",
+    "baseline_mean": 17737.85156681938,
+    "candidate_mean": 16828.327971049534,
+    "mean_delta": -909.5235957698451,
+    "ci_low": -1064.6498450849087,
+    "ci_high": -761.4853131921033,
+    "margin": 861.558,
+    "guardrail_status": "WITHIN",
+    "guardrail_harm": 0,
+    "guardrail_baseline_mean": 0.00151379385250353,
+    "guardrail_candidate_mean": 0.00151379385250353
+   },
+   "controls": [
+    {
+     "title": "Null control, a reserve of zero agents, declared to leave every paired difference at zero. Read as declared",
+     "as_declared": true,
+     "control": "null",
+     "label": "scale-spec:32a04283",
+     "digest": "32a042832365ae79c36ef866303d750cf834753f83c8b37a943ebbe50b7e50b8",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 17737.85156681938,
+     "candidate_mean": 17737.85156681938,
+     "mean_delta": 0,
+     "ci_low": 0,
+     "ci_high": 0,
+     "margin": 861.558,
+     "guardrail_status": "WITHIN",
+     "guardrail_harm": 0,
+     "guardrail_baseline_mean": 0.00151379385250353,
+     "guardrail_candidate_mean": 0.00151379385250353,
+     "all_paired_deltas_zero": true
+    },
+    {
+     "title": "Ample pool control, reserve staff where the pool can absorb the burst, declared to stay inside its margin. Read as declared",
+     "as_declared": true,
+     "control": "non-binding",
+     "label": "scale-spec:6553babb",
+     "digest": "6553babb66f148f0aa9cc03c05c74390e564820743be28068845a111333eaabd",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "NO_RECOMMENDATION",
+     "baseline_mean": 939.9577325942263,
+     "candidate_mean": 938.3416943581555,
+     "mean_delta": -1.6160382360707974,
+     "ci_low": -1.80761436497131,
+     "ci_high": -1.4166288909811253,
+     "margin": 46.663,
+     "guardrail_status": "WITHIN",
+     "guardrail_harm": 0,
+     "guardrail_baseline_mean": 0,
+     "guardrail_candidate_mean": 0,
+     "all_paired_deltas_zero": false
+    },
+    {
+     "title": "Guardrail control, one shared line, declared to stay inside the margin and to be stopped by the guardrail. Read as declared",
+     "as_declared": true,
+     "control": "guardrail",
+     "label": "scale-spec:7b210b97",
+     "digest": "7b210b974fe057605c664d1378f9e936fa8ec9db12556efcd3bf75e6869bf839",
+     "validity": "VALID",
+     "outcome": "UNCHANGED",
+     "recommendation": "HOLD",
+     "baseline_mean": 17737.85156681938,
+     "candidate_mean": 17587.002745182024,
+     "mean_delta": -150.84882163735378,
+     "ci_low": -172.08288943291214,
+     "ci_high": -128.79381642211743,
+     "margin": 861.558,
+     "guardrail_status": "REGRESSED",
+     "guardrail_harm": 0.32397763577646504,
+     "guardrail_baseline_mean": 0.00151379385250353,
+     "guardrail_candidate_mean": 0.32549142962896854,
+     "all_paired_deltas_zero": false
+    }
+   ],
+   "chart": [
+    {
+     "id": "ratio",
+     "values": [
+      18907.711031708885,
+      17737.85156681938,
+      17031.836086802097
+     ]
+    },
+    {
+     "id": "rates",
+     "values": [
+      17231.15612903226,
+      17231.15612903226,
+      17231.15612903226
+     ]
+    }
+   ],
+   "arms": [
+    [
+     "No lever",
+     17737.85156681938,
+     617.1388888888888,
+     110.59722222222221,
+     128.0577267763049,
+     0.00151379385250353
+    ],
+    [
+     "Reserve staff join the pool",
+     16828.327971049534,
+     583.4722222222222,
+     110.59722222222221,
+     98.0480366264668,
+     0.00151379385250353
+    ],
+    [
+     "One shared line",
+     17587.002745182024,
+     616.7916666666666,
+     109.625,
+     128.0563059051047,
+     0.32549142962896854
+    ]
+   ],
+   "ladder": [
+    [
+     2000,
+     2,
+     20.218988539088958,
+     21.948051948051955,
+     18907.711031708885,
+     10672.14852877764,
+     24248.51516216689,
+     17231.15612903226,
+     82.04402628867206,
+     1,
+     2,
+     0.65,
+     1.3,
+     18907.711031708885
+    ],
+    [
+     6000,
+     6,
+     4.105931602732158,
+     3.727618597895038,
+     17737.85156681938,
+     15469.93704064126,
+     19607.889710316005,
+     17231.15612903226,
+     40.51966095139005,
+     2,
+     5,
+     0.78,
+     1.56,
+     43417.83321609173
+    ],
+    [
+     20000,
+     20,
+     0.2281945834648671,
+     0.21453778490646877,
+     17031.836086802097,
+     15273.365366922928,
+     18800.34330505854,
+     17231.15612903226,
+     5.043647833403838,
+     6,
+     14,
+     0.9285714285714286,
+     1.8571428571428572,
+     100819.65316400987
+    ]
+   ],
+   "reserve_sizes": [
+    [
+     0,
+     1.3,
+     17737.85156681938
+    ],
+    [
+     1,
+     1.1142857142857143,
+     17153.05091928931
+    ],
+    [
+     2,
+     0.9750000000000001,
+     16828.327971049534
+    ],
+    [
+     3,
+     0.8666666666666667,
+     16620.62930150917
+    ],
+    [
+     4,
+     0.78,
+     16477.638670134573
+    ],
+    [
+     5,
+     0.7090909090909091,
+     16372.199914939556
+    ],
+    [
+     6,
+     0.65,
+     16291.18125217277
+    ]
+   ],
+   "checks": [
+    [
+     "Mean wait on an ordinary day, queue formula, at 2,000 vehicles",
+     21.948051948051955,
+     20.218988539088958,
+     14.15873758117225,
+     "inside tolerance"
+    ],
+    [
+     "Mean wait on an ordinary day, queue formula, at 6,000 vehicles",
+     3.727618597895038,
+     4.105931602732158,
+     12.57803746208175,
+     "inside tolerance"
+    ],
+    [
+     "Mean wait on an ordinary day, queue formula, at 20,000 vehicles",
+     0.21453778490646877,
+     0.2281945834648671,
+     23.72743888226446,
+     "inside tolerance"
+    ],
+    [
+     "Stops of at least two minutes on an ordinary day, % of stops, queue formula, at 6,000 vehicles",
+     2.2657878505737643,
+     2.4585272765140065,
+     14.735001971387373,
+     "inside tolerance"
+    ],
+    [
+     "Most vehicles waiting at once on the event day, rates only, at 6,000 vehicles",
+     108.00000000000001,
+     110.59722222222221,
+     20,
+     "inside tolerance"
+    ],
+    [
+     "Minutes to clear after the event, rates only, at 6,000 vehicles",
+     121.93548387096776,
+     128.0577267763049,
+     20,
+     "inside tolerance"
+    ]
+   ],
+   "rates_only": [
+    16501.60932515338,
+    -729.5468038788822
+   ],
+   "landing": [
+    [
+     "No lever",
+     17737.85156681938,
+     17231.15612903226,
+     17737.85156681938,
+     17231.15612903226
+    ],
+    [
+     15,
+     2140.903349506403,
+     1601.6400000000024,
+     953.2756445841711,
+     878.6471889400922
+    ],
+    [
+     60,
+     6184.06629705732,
+     6099.155337423316,
+     2118.857853682149,
+     2042.5835944700466
+    ],
+    [
+     120,
+     11070.989093783892,
+     10935.965153374238,
+     5796.977514316597,
+     5719.6600921659
+    ],
+    [
+     180,
+     14624.442339858411,
+     14403.449815950924,
+     11988.968772056052,
+     11825.492350230417
+    ],
+    [
+     240,
+     16828.327971049534,
+     16501.60932515338,
+     17692.710169699716,
+     17231.15612903226
+    ]
+   ]
+  }
+ ],
+ "node": "v22.22.0"
+}
