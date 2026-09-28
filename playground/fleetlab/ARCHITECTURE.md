@@ -1027,6 +1027,276 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     and no moment stamp (the map keeps its own corner stamp and nothing else), no second seed set beat, no `Flat`
     toggle inside `Present`, no `Try it` handoff and no phone-specific presenting rule; `charts.js` and `playback.js`
     are untouched.
+45. Scale lab: one route, one generic view, one lab contract and one shared paired contract. Every decision in this item
+    is assumed at the lead's recommendation, not ratified by the owner. Every result is `NOT_EVIDENCE`, simulation only,
+    with decision authority `NONE`. Every input of a lab is a teaching assumption unless its source row says otherwise.
+    FleetLab is independent and unaffiliated. The three labs are `density-ladder` (`src/model/scale-density.js`, version
+    `scale-density-1.0.0`, 10 paired seeds), `fleet-intake` (`src/model/scale-intake.js`, version `scale-intake-1.0.0`,
+    12 paired seeds) and `response-reserve` (`src/model/scale-response.js`, version `scale-response-1.0.0`, 12 paired
+    seeds). Fleet intake and response reserve are count models with no map. The density ladder reruns the Fleet day
+    engine at five fleet sizes of at most 120 cars, the largest fleet that engine accepts. This item describes the tree
+    at `c08f60d`, the eighth commit past `c79eccf`, which holds the fixes of an independent review of the build. Each
+    version string names the first version of its lab, and the fixes changed none of them.
+    **The route.** `ROUTES.scale` in `src/ui/routes.js` has the path `scale-lab`, so the address is `#/scale-lab`, and
+    `#/scale-lab?lesson=<lab id>` opens one lab. The bare address opens the first lab of the registry, the density
+    ladder. Arriving runs nothing. The route refuses a lesson of another page, an unknown lesson, an unknown key and a
+    shared setup (`?setup=`). The labs offer no setup link and no download. The header keeps its 6 links. The entry
+    points are a fourth Overview card, three catalog lessons with their own model filter, a third link under Start here
+    in the catalog, and one ordinary link in the Fleet day intro. `test/scale-lab.test.mjs` asserts the route, the
+    refusals, the 6 links and the entry points.
+    **One generic view.** `src/ui/scale-lab.js` exports `createScaleLab`, which draws every lab: the chooser, the frame,
+    Run and Cancel with one progress meter and the status line, the credit line, the controls, the inputs table with the
+    declared test, the result, and the list under What this model cannot know. The file names no lab id and has no
+    branch on which lab is showing (read in source). It knows a lab only through its descriptor. The registry
+    `src/ui/scale-labs.js` imports `LAB` from each lab file and exports the frozen list `SCALE_LABS` in chooser order:
+    density ladder, fleet intake, response reserve. The result is drawn by builders that other pages use as well:
+    `resultView` and `runLine` of `teaching-frames.js`, `renderVerdictReadout` of `experiment.js`, and `ladderChart` of
+    `charts.js`, which this wave added as one builder for a category axis. The view hands those builders its own reading
+    tools: `sided: true`, the sentence `No direction is read.` for a result that is not decided, and six next-test
+    sentences that name only what the page offers, with no rider, no car, no second declared change and no seed set that
+    the reader cannot choose. The shell test requires every reading line of a Scale lab press to fit 240 characters and
+    to keep its interval. It holds every lab of `SCALE_LABS` to the same checks, so a new lab adds no case to it.
+    **The lab contract.** A lab is one file under `src/model` that exports one frozen descriptor, `LAB`, with `id`,
+    `version`, `short`, `title`, `geography`, `seeds`, `frame`, `limits`, `unknowns`, `controls`, `defaults`, `derive`
+    and `steps`. A lab may add `map` and `credit` (see **The map credit**). `id` is the lesson id, the catalog id and
+    the chooser value. `seeds` holds the declared paired seeds, 2 to 40 distinct whole numbers. `frame` has five
+    entries: what and why, how the lab simulates, what to look for, the ops takeaway, and the kind (`decision` or
+    `condition`). `limits` is one sentence and `unknowns` holds 3 to 6 sentences. `controls` holds 1 to 4 control
+    descriptors, and `defaults()` returns a fresh object with one value per control. `derive(config)` is pure and cheap
+    and runs no model. For a setup the lab can read it returns `{ok: true, setup, rows}`, where `setup.main` is a
+    declared test frozen by the shared contract and every row of the inputs table names its source with one of five
+    prefixes (`You choose`, `Teaching assumption`, `Sizing rule`, `Governing ratio`, `Fleet day map`). For any other
+    setup it returns `{ok: false, reason}` and does not throw. `steps(setup)` is a synchronous generator that yields
+    progress (`{done, total, label}`) and partial charts (`{partial: {chart}}`) and returns the result record. A lab
+    file may also export names for its own tests, and `steps` may take a second parameter as a test seam. The registry
+    imports `LAB` only and the view calls `steps(setup)` with one argument. At `c08f60d`, `scale-response.js` exports 10
+    such names, `scale-intake.js` exports 1 (`INTERNALS`) and `scale-density.js` exports none.
+    **The shared paired contract.** `src/model/scale-contract.js` is the only Scale lab module that calls the site's
+    paired instrument, through `pairedMetricSteps` of `src/model/experiment.js`. No lab file and no view file calls it
+    (read in source). `freezeScale` validates one declared comparison: 1 to 40 distinct whole-number seeds, 1,000 to
+    10,000 bootstrap resamples with 2,000 as the default, one primary measure with a direction and a margin above 0, and
+    guardrails that each have a direction and an allowance of 0 or more. It returns `{spec, digest, label}`, where the
+    digest is the SHA-256 of the frozen spec as JSON with sorted keys and the label is `scale-spec:` plus the first 8
+    characters of the digest. The hash is identity, not authentication. `scalePairSteps(frozen, measure, label)` refuses
+    a spec whose digest no longer matches. For every seed it runs the baseline arm and then the candidate arm through
+    the lab's `measure` generator, and on the first seed it runs the baseline arm a second time as the replay check. A
+    value that is not finite is left out of a metric map, so an absent value is never read as zero. The paired maps then
+    go to the instrument with the digest as the bootstrap key. Every record carries `format: "fleetlab-scale-lab"`,
+    `evidence_status: "NOT_EVIDENCE"` and `decision_authority: "NONE"`.
+    **Two void rules.** Both are assumed at the lead's recommendation, not ratified. First, a declared guardrail that is
+    missing from any run voids the press. When the replay matched and the primary is present in every run,
+    `scalePairSteps` returns `INVALID_EXPERIMENT` with no analysis and does not call the instrument, because the
+    instrument would mark that guardrail as not evaluable and still recommend. Second, a shipped control that does not
+    read as declared voids the press. `readable(result)`, which the view applies to every result before it records it,
+    treats a control as failed when it is invalid, when it is marked `as_declared: false`, or when it is a null control
+    and any paired difference of the primary or of a guardrail is other than 0. The voided record keeps its provenance
+    and its per-seed runs and loses its analysis, controls, chart, tables and notes. The page then prints an invalid run
+    with no verdict and no recommendation. The allowed control names are `null`, `non-binding` and `guardrail`. Every
+    lab ships a null control, and every valid press carries all of its shipped controls.
+    **Page-only, and no work at import.** The four `scale-` files under `src/model` are reached from the page bundle
+    only. `test/scale-lab.test.mjs` asserts that no `scale-` module under `src/model` or `src/ui` is reachable from
+    `src/runtime/worker.js`, and that the copy scan of `check-dist.mjs` lists every such module the page reaches. No
+    existing file under `src/core`, `src/model`, `src/instrument`, `src/legacy`, `src/runtime` or `src/data` was edited
+    for the labs: the diff from `c79eccf` to `c08f60d` in those folders is four new files. Every lab is imported on
+    every page load, because `teaching-frames.js` and `simulation-catalog.js` import the registry. A lab must therefore
+    do no model work at import: no run, no engine call and no keyed draw. Module evaluation defines constants and
+    functions only. `test/scale-density.test.mjs` counts zero engine calls while the view mounts, a lesson arrives and a
+    control changes. No test measures import itself, so that part of the rule is held by review.
+    **How a long run yields.** A press runs on the main thread. The view drives `lab.steps(setup)` through the existing
+    slicer `runSliced` of `src/runtime/protocol.js`, which this wave did not edit, with a budget of `MAIN_SLICE_MS`, 8
+    ms per slice, read from `performance.now()`. Between slices the view hands the page back through `yieldToPage`,
+    which uses `scheduler.yield()` where it exists, else a `MessageChannel` message, else `setTimeout(fn, 0)`. A test
+    pins that order. The slicer checks its budget between generator steps, so a step that cannot be divided runs to its
+    end, and one engine run of the density ladder is one step. Progress reaches the status line and the meter, and a
+    partial chart is drawn as soon as a lab yields one. Cancel, a changed control, a changed lesson and leaving the page
+    stop the generator, and nothing is recorded from that press. Measured during design in Node 22.22.0 on one laptop:
+    the longest step of a density ladder press took 17.0 ms. Measured by the lead in a browser on the native modules at
+    `c08f60d`, in a pane of 1024 by 768 px with no throttle, three presses of each lab: from press to recorded result
+    the density ladder took 966 to 1,034 ms with its first chart after 51 to 70 ms, fleet intake took 111 to 115 ms and
+    response reserve took 477 to 491 ms. Focus landed on the Result heading, one primary button was enabled and the
+    console showed no error. The pane was hidden, so no painted frame was seen, and every reading is a measured layout
+    or a measured time. At 375 by 812 px Run sat in the sticky bar at y 721 to 774 px on arrival for all three labs.
+    After the default press of each lab `scrollWidth` equalled `clientWidth` at 375 px, so the page did not scroll
+    sideways. At `319b4a9` it did: after a press the page was 522 px wide for the response reserve and 406 px wide for
+    the density ladder. The fix is one rule of `styles.css`, `.scale-lab .fl-readout { grid-template-columns: minmax(0,
+    1fr); }`, so the guardrail table scrolls inside its own region. The shared `.fl-readout` rule of the other pages is
+    as it was, and the shell test asserts both rules. No timing under throttle was taken.
+    **One meter, one current job.** A press has one progress meter. A lab reports progress in phases, and the view
+    counts a new phase when the label changes or the count falls. Each phase takes half of what is left of the meter, so
+    the meter only rises and never reads full while the press runs. It is hidden when the press ends. The status line
+    names the phase and its count. The view holds the press it started as the current job. A changed lesson ends the job
+    at once: Cancel and the meter are hidden, Run is available again and the status line shows the idle text of the new
+    lab. A press that is no longer the current job is ignored: its progress, its partial chart, its result and its error
+    reach nothing on the page. An error thrown while a recorded result is read or drawn reaches the alert region in
+    words, records nothing and leaves the previous result on the page. A result is marked as from another setup only
+    while the controls differ from the values it used, so a control changed back to that value clears the mark.
+    `test/scale-lab.test.mjs` holds each of these rules.
+    **The run budget of the density ladder.** One press makes at most 120 runs of the Fleet day engine. Each run covers
+    8 simulated hours with `capture: false`, and the ladder has five fleet sizes (24, 48, 72, 96 and 120 cars) at 10
+    paired seeds. The record reports the count as `work.engine_runs`. `test/scale-lab.test.mjs` holds any lab that
+    reports engine runs to 120 and requires the density ladder to report them. `test/scale-density.test.mjs` counts the
+    engine calls from outside and requires the recorded count to equal the counted count and the pinned count. Pinned at
+    the default ratios: 113 engine runs for the capacity comparison, 103 for sites added and 113 for one site. The pins
+    hold 27 presses, of which 25 run and 2 are refused, and over the 25 that run the count is 103 to 113. The count is
+    the ladder plus 23 runs. Two arms that hold one configuration at a rung share one run, so the ladder takes 90 runs,
+    or 80 runs when the two plans are equal at two rungs. One press holds three paired tests: the main test, the null
+    control and the non-binding control. A stored ladder run is handed out once to each of them. Past the ladder the
+    engine runs 3 times for the replay checks of the three paired tests, 10 times for the second arm of the null control
+    and 10 times for the tested arm of the non-binding control, whose plan is not on the ladder. The fixes of `c08f60d`
+    moved no engine run count. They moved the pinned length of each record, in characters.
+    **Side-preserving numbers, asked for by the page.** On a page that asks for it, a printed number never reads as
+    equal to, or across, the threshold it is compared with, unless the value itself is, and never reads as zero unless
+    the value is zero. The rule is opt-in. At `c08f60d` only the Scale lab asks. `sidedText(value, digits, {withSign,
+    against})`, exported from `src/ui/experiment.js`, writes the text, and `against` lists the declared thresholds. Zero
+    is always among them. The text starts at `digits` decimals, or at two significant digits for a value that would
+    round to zero at `digits`. It gains one decimal at a time while it would sit on or across a threshold that the value
+    does not. It holds at most 12 decimals, groups thousands and is never the raw double. `metricValueText` starts at
+    three decimals for a fraction and at one decimal for any other measure. `metricValueText` and `valueWithMinutes`
+    take `against` with the default `null`. With `null` the text is the text of `c79eccf`, byte for byte. An array, an
+    empty one included, asks for sided text. `renderVerdictReadout` takes `plotted` with the default `true`, which gives
+    the readout of `c79eccf`. A page that draws no strip passes `plotted: false`. Its primary rows are then sided
+    against the margin on both sides, and each guardrail harm against its allowance. Its caption names the measure and
+    the declared direction only. Its visible outcome sentence states the interval as printed, in the form `the ...
+    interval runs from ... to ..., so the outcome is ...`. `runLine` in `src/ui/teaching-frames.js` passes the margin on
+    both sides only when `tools.sided` is true. A sided line of more than 240 characters drops its guardrail sentence
+    before it gives up its interval. The Scale view passes `plotted: false` and `sided: true`. Its table cells and
+    filled sentences are written by `sidedText` as well, so a value that would round to zero prints at two significant
+    digits. Before the fix the readout of the Scale lab named a side of a band that the page does not draw, over printed
+    numbers that were all on the other side. Pinned in `test/scale-lab.test.mjs`: a harm of 13.04 against an allowance
+    of 13 prints `+13.04`, a change of 0.02004 against a margin of 0.02 prints `+0.02004`, and a value of
+    13.0000000000001 against 13 prints `+13.000000000001`. In one press of the view the readout row, the reading line
+    and the outcome sentence print one text for one interval end. A sweep of 4,000 values in the same file requires each
+    text to keep its side of every threshold, its sign, its grouping and at most 12 decimals. The shell test also
+    requires that no number in the result of a default press, outside the record under Exact values, has more than 12
+    decimals. That record keeps every double as it is. The rule is assumed at the lead's recommendation, not ratified.
+    **Pages older than the Scale lab print what they printed before.** This wave changes no text on any page that
+    existed before it. The second amendment (`953ebce`) had put the side rule in the shared builders for every page.
+    There it reached the card rows and the reading line of the four-area pages but not their chart summaries, their
+    hidden summary or the walkthrough chip, so one value could print two ways. The review found this, and `c08f60d` made
+    the rule opt-in. The other additions to the shared builders are asked for in the same way: `view.undecided`,
+    `tools.more` and `tools.next` are absent on the older pages, which keep their sentences.
+    `test/scale-lab.legacy-text.pins.json` holds the text of before. It pins 900 pairs of number text, one pair for each
+    of 9 measure names, 25 values and 4 forms of the options, where a pair is the text of `metricValueText` and the text
+    of `valueWithMinutes`. It pins 19 verdict views, each with three readouts, one card and six reading lines. The pins
+    were computed once from the two interface modules as they were at `c79eccf`, and `test/helpers/legacy-text.mjs`
+    holds the inputs. A card or a readout is pinned as the SHA-256 of its serialized nodes, and a line of text is pinned
+    whole. The shell test computes the same text from the two modules of the tree and requires it to equal the pins. It
+    also requires a readout that is given `plotted: true` to equal a readout that is given no option. Decision 39 stays
+    as it was on those pages. Extending the side rule to every surface of the four-area pages is a proposal for a later
+    wave and is not part of this one.
+    **The ladder chart.** `ladderChart` draws 2 to 60 categories and 1 to 3 series, each a bar series or a line series.
+    Every bar series is drawn before every line series and its points, so a filled bar covers no line. At `319b4a9` the
+    queue bars of the density ladder were drawn over both pickup lines and hid their points from 48 cars on. The legend,
+    the mark of each series and the table keep the order the lab gave. The three line marks differ by shape and not by
+    ink alone: the first line has filled round points and the swatch `line`, the second has ring points and the swatch
+    `line-ring`, and the third has square points and the swatch `line-square`. No mark uses a dash pattern. At `319b4a9`
+    two of the three lines of the fleet intake chart were drawn alike under one swatch. Category labels that all fit are
+    all drawn. The width of a label is taken as 7.2 px a character of the widest label, which is 0.6 em at the 12 px
+    label size, plus 8 px between two labels. Labels that do not all fit are thinned to a step that keeps at least the
+    48 px tick gap of a time axis, and a label that would pass the right margin of the drawing is left to the table.
+    Points thin by the tick gap alone, so a rung of a five-rung ladder keeps its point when its label is thinned. A lab
+    names its categories in short labels and puts the unit in the head: the density ladder uses `24` to `120` under
+    `Fleet size, cars`, and the response reserve uses `2,000`, `6,000` and `20,000` under `Fleet size, vehicles`.
+    Measured by the lead at 375 by 812 px: all five rung labels of the density ladder and all three of the response
+    reserve were drawn.
+    **The map credit.** A lab that reads the Fleet day road map sets `LAB.map` to `true`. Any lab may set `LAB.credit`,
+    one sentence of at most 160 characters that ends in a full stop. For a lab with `map` the view shows the attribution
+    link `© OpenStreetMap contributors` and the licence name `ODbL`, followed by the credit sentence. The line sits in
+    the intro, outside every disclosure, and the view sets it on every refresh. It therefore shows in every state:
+    before a run, while a press computes, after a run, beside a result from another setup and while a setup is refused.
+    A lab with `credit` and no `map` shows its sentence alone, and a lab with neither shows no line. At `c08f60d` only
+    the density ladder sets them, because its road distances come from the frozen Fleet day road table. At `319b4a9` the
+    page printed road distances with no visible credit or licence, and the one mention of the map was a row of the
+    inputs table, which a refused setup removes. Measured by the lead at 375 by 812 px: the credit line was on the
+    density ladder page and on no other.
+    **The keyed-draw rule as read for the response reserve lab.** The rule: a lab draws only keyed values from
+    `src/core/keyed.js`, and no file under `src/model` uses a clock, `Math.random` or a page global (section 2). Fleet
+    intake makes every draw as a keyed `u32` on a tape that never sees an arm. The density ladder makes one keyed draw
+    per declared seed and hands it to the Fleet day engine as its seed. The response reserve lab meets the rule by a
+    declared reading, which is assumed at the lead's recommendation, not ratified. `buildTape` makes one keyed draw per
+    simulated minute, `u32("response-reserve", seed, fleet, "minute", m)` for each of the 1,440 minutes of a day, and
+    that draw seeds a local 32-bit stream that is a pure function of it. Each request takes five draws from the stream
+    in a fixed order: its answer time, its class (vehicle request or responder call), the draw that decides whether the
+    event moves it, its time inside the event, and the gap to the next request. A tape depends on the seed and the fleet
+    size only, never on staffing, event load or a lever, and a test pins that a day replays exactly. The reason is cost.
+    One ladder of three fleet sizes at 12 seeds holds 3,144,960 random numbers by its rates: 52,416 requests per seed
+    over the three fleet sizes, five draws each. Measured during design on one laptop with Node 22.22.0: one keyed `u32`
+    per random number costs 0.81 to 0.83 microseconds per draw, about 2.6 s per ladder, and the cached prefix hasher
+    `keyedU64Source` costs 0.33 to 0.35 microseconds per draw, about 1.1 s per ladder. Using both halves of each 64-bit
+    value was not measured and is estimated at about 0.6 s per ladder. The reading as built takes 64 to 70 ms per
+    ladder, as stated by the designer of the lab. Read again for this document at `319b4a9`, on one laptop with other
+    work running and 400,000 draws per reading: 0.98 to 1.05 and 0.38 to 0.39 microseconds per draw, and 69 to 73 ms for
+    the 36 tapes of one ladder. The fixes of `c08f60d` did not edit `buildTape` or `applyEvent`, and the reading was not
+    taken again at `c08f60d`. The shipped engines already draw from a local stream seeded by the declared seed (`random`
+    in `bay-operations.js`, `randomFor` in `street-simulation.js`), so the reading follows the site's practice. If the
+    reading is declined, the lab draws through the cached prefix hasher, every pin of the lab is recorded again, and a
+    press takes about 1 s longer, which is an estimate.
+    **The review after the build.** An independent review read the range from `c79eccf` to `319b4a9` through seven
+    lenses: the response model, the intake model, the density model, the view and its contract, regression of the shared
+    files, copy with honesty and privacy, and packaging with security. Each critical or important finding then went to
+    two verifiers, one that ran code and one that read it. Both verifiers confirmed 13 findings and refuted none. The
+    review also listed 25 minor findings beside them. Several confirmed findings are one defect seen through more than
+    one lens, which leaves 9 distinct defects. None moved a verdict number. `c08f60d` fixes all 9. Six of them touch
+    this contract and are described above: the readout of a page that draws no strip, the opt-in side rule, the order of
+    bars and lines, the three line marks, the map credit and the sideways scroll at 375 px. Three are in the models.
+    First, fleet intake booked the whole depot door stock to depot induction in any week with a place left over, which
+    overstated that row about six times. Each week the stock is now split between what the induction rate holds and what
+    waits for the resource that holds the next tranche. At the default press the control arm now holds 290 vehicle-weeks
+    waiting on depot induction, where the pin of `319b4a9` held 1,819.5, and 20,106 vehicle-weeks waiting on site power
+    (`test/scale-intake.pins.json`). Second, the caption of that table said that the rows sum to the total while the
+    printed whole numbers did not. It now says that the rows sum to the total before each is rounded to a whole
+    vehicle-week. Third, the response reserve printed floating point residue as a result, sometimes with a positive
+    sign, and printed the minutes to clear with 17 digits. A lever that removes nothing now returns the no-lever value
+    exactly, the minutes to clear read zero for a day on which nothing waits at the end of the event, and a cell prints
+    a tiny value at two significant digits. The declared change of a directive now says `every vehicle request moved
+    into the event`. That moved the label, the digest and the interval ends of the two pinned directive setups, whose
+    labels are now `scale-spec:16d331de` and `scale-spec:2f4598cb`, and it moved no mean. An event load typed off a step
+    of 0.01 is refused with a reason. The labels of the default presses did not move: `scale-spec:b4c7f5da` for the
+    density ladder, `scale-spec:1aa8c833` and `scale-spec:a0b5e327` for the two arms of fleet intake, and
+    `scale-spec:443de567` for the response reserve. `c08f60d` also acts on minor findings of the same review. Among
+    them, a depot load by hand in the density ladder no longer prints as equal to a threshold it is not equal to. What
+    stays open is listed under **Open at `c08f60d`**.
+    **Open at `c08f60d`.** These are known and not fixed. An address with a lesson sets that lab to its defaults and
+    clears its result (`applyLesson` in `src/ui/studio.js`), so going back to a lesson address discards the recorded
+    result and the edited setup. A lesson link has the same meaning on Fleet day. A typed governing ratio of more than
+    12 decimals is echoed whole in the inputs table of the density ladder, because it is the reader's own input. Where
+    12 decimals still read on or across a threshold, `sidedText` moves the last decimal one step to the value's own
+    side, so the printed number is off by less than 1e-12. The event load control of the response reserve declares a
+    step of 0.1 while typed steps of 0.01 are accepted. The first table of fleet intake can print `Accepted at a depot`
+    one off from the sum of its two parts after rounding, and its caption makes no claim about a sum. In sided mode a
+    measure in seconds with a margin of 60 s or more would take the older minutes branch of the reading line, which is
+    not sided. No Scale lab declares a measure in seconds, and the shell test refuses a measure name that ends in `_s`.
+    **Measured on the final tree.** The lead measured the working files of `c08f60d` with Node v22.22.0 on one laptop.
+    The full serial node suite, `FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1
+    playground/fleetlab/test/*.test.mjs`, ran 1,968 tests in 281.9 s, with 1,967 passing, 0 failing, 0 cancelled, 0
+    skipped and 1 existing todo. With the flag the four Scale lab test files hold 92 tests and all pass: 34 in
+    `scale-lab`, 20 in `scale-response`, 17 in `scale-intake` and 21 in `scale-density`. The Python parity and boundary
+    tests passed, 89 of 89, in 5.12 s. `ruff check` passed and `git diff --check` was clean. The offline package is
+    2,408,323 bytes, and its package check reported OK. That is 89,468 bytes over the baseline of 2,318,855 bytes at
+    `c79eccf`. The growth is 7,548 bytes over the package target of 81,920 bytes and 2,692 bytes under the hard stop of
+    92,160 bytes. Growth past the target is assumed at the lead's recommendation, not ratified. Under the offline cap of
+    2,621,440 bytes, 213,117 bytes are left. Of those, 135,904 bytes are reserved for other work, which leaves 77,213
+    bytes unassigned, where 166,681 bytes were unassigned before this wave. The hosted site is 99 files and 3,349,602
+    bytes, and its package check reported OK. The offline package was measured at each step of the wave, in bytes:
+    2,357,617 for the shell with stub labs, then 2,358,553, 2,359,746 and 2,360,022 after the three amendments,
+    2,376,259 with the response reserve, 2,391,500 with fleet intake, 2,403,901 with the density ladder and 2,408,323
+    with the review fixes. For this document the four Scale lab test files were run again on the same tree, on one
+    laptop with Node v22.22.0. Without the flag: 92 tests, 86 passing, 0 failing and 6 skipped by the flag, in 55.2 s.
+    With the flag, one file at a time: 92 of 92 passing, in 133.7 s of reported test time. Measured by the lead in the
+    browser at 375 by 812 px after the default press of each lab: the readout held no `left of the band` and no `left is
+    better`, and no number in the visible text had more than 12 decimals. In fleet intake a typed site power lead time
+    of 26 weeks was refused with a reason of 232 characters, and Run read as unavailable. The entry points were present:
+    the fourth Overview card in a grid that reads two by two, the Fleet day link, the fourth catalog article and the
+    Start here link to the density ladder. Not measured: 1440 by 900 px, a painted frame, a throttled phone profile, a
+    physical phone, a screen reader, Safari or Firefox. On the owner's word the Scale lab was deployed on 2026-09-27 to
+    https://fleetlab.pages.dev/ as Production deployment `19e17ac6` of the Pages project `fleetlab`, from source
+    `c08f60d`. The branch that holds `c08f60d` is not pushed, so that source is not yet in the public repository. The
+    deployment, its public readback and its rollback target are recorded in
+    `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`. Publishing stays an owner action (decision 40). One later
+    commit, `1aeaace`, changes `src/ui/studio.js` to fix a Fleet day heading defect older than this wave. It changes
+    no rule of this item, and it is not deployed. Two sweeps of the lesson links after the deployment found that
+    defect: one in a real browser on the live site with the pane hidden, so no frame was painted, and one on the fake
+    DOM with the modules of the live site.
 
 ## Fleet day optional M2/M3 contracts (2026-09-22)
 

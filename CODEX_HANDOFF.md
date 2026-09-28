@@ -1,3 +1,623 @@
+# FleetLab handoff for the next builder, September 27, 2026
+
+Read this section before any FleetLab work. It covers every FleetLab wave up to 2026-09-27: what is live, what is local, what waits for the owner and what to build next. The state below was read on 2026-09-27 between about 22:30 and 23:15 Pacific time from git, the pins files, the records of the `Hermes-scale` worktree and read-only inventories of the live site, the branches and deployments, and the plans. Rows marked "measured for this handoff" were taken at about 23:10 to 23:15 Pacific on that day. Later on 2026-09-27 the lead added two facts, a sweep of the lesson links in a real browser and a second full serial run at `1aeaace`, and committed these records in one documents commit on top of `1aeaace`. The sections below include both facts and describe that commit as made. A record cannot name the hash of the commit that holds it, so this file calls it "the documents commit on top of `1aeaace`".
+
+FleetLab is an independent, synthetic teaching simulator under `playground/fleetlab/`: static HTML, CSS and JavaScript with no backend, no account, no storage and no network request beyond its own files. It is not affiliated with any operator, vehicle maker, regulator or utility. Every result is NOT_EVIDENCE, simulation only, decision authority NONE. The repository is public.
+
+## 1. Read this first
+
+| Item | State |
+|---|---|
+| Live address | https://fleetlab.pages.dev/ (stable) and https://19e17ac6.fleetlab.pages.dev/ (immutable) |
+| Deployment | Cloudflare Pages project `fleetlab`, Direct Upload, Production deployment `19e17ac6-d617-4789-9260-ca259c53e076`, uploaded with Wrangler 4.135.0 on the owner's instruction of 2026-09-27. The Pages branch label reads `feat/fleetlab-playground`; it is a label, not the git branch of the source |
+| Deployed source | `c08f60d8830df877fac2c7321bb47d75a5ae56ad`, "fix: resolve the findings of the independent Scale lab review", on the local branch `claude/fleetlab-scale-lab` in the worktree `Hermes-scale` |
+| What that source contains | The D1 release (`b99ab04`) plus 17 later commits: the D1 release record `790573e` (already public), N2 design documents, the offline packer change `8e04b49`, the T1 teaching frames (`caaf8f2`, with records up to `c79eccf`) and the eight Scale lab commits (`2caeac6` to `c08f60d`). The site has 10 route addresses and 59 lessons: 18 Fleet day, 6 Street lab, 32 four-area, 3 Scale lab |
+| Branch head now | The documents commit on top of `1aeaace`. It holds the records of this wave and changes no site input, so its site inputs equal those of `1aeaace`. Below it, `1aeaacecb25e17853f852d7bbd7141ff75d9cb69`, "fix: reset the Fleet day heading when a launch lesson opens", is one commit after the deployed source. It changes one site file, `src/ui/studio.js` (27 bytes more in each package), and one test file. **Not deployed** |
+| Pushed | **No.** The branch head holds 18 commits that are on no remote: the 16 of `c08f60d`, `1aeaace` and the documents commit. The remote website branch `github/feat/fleetlab-playground` is at `790573e`, an ancestor of all three, so a push of any of them would be a fast-forward. Nobody has authorized a push. The public default branch `main` (`bca4ccd`) has no `playground/` folder at all |
+| Tests at the deployed source | Full serial Node suite with the performance flag: 1,968 tests, 1,967 pass, 0 fail, 0 cancelled, 0 skipped, 1 existing todo, in 281.9 s. The four Scale test files: 92 of 92. Python parity and boundary tests: 89 pass. `ruff check`: all checks passed |
+| Tests at `1aeaace`, whose site inputs the branch head keeps | Two full serial runs with the performance flag, each 1,969 tests, 1,967 pass, 1 fail, 1 existing todo. Run 1, while other work loaded the machine, 342.8 s: the failure was the response reserve timing test, "timing on the reference laptop" in `test/scale-response.test.mjs`, longest block 9.34 ms against a limit of 8 ms. Run 2, machine otherwise idle, 292.9 s: the failure was a four-area runtime timing test that this wave did not change, "run_window and run_pair gaps on the reference preset" in `test/runtime.test.mjs`, largest run_window gap 11.34 ms against 8 ms. Each failure passed its one isolated rerun, the second at 5.73 ms (run_window) and 5.52 ms (run_pair). No run at `1aeaace` failed a test other than a timing test. A full run at `1aeaace` with zero failures is not recorded. Measured for this handoff at `1aeaace`, Node v22.22.0: the studio test and the four Scale test files without the flag, 101 tests, 95 pass, 6 skipped (the timing tests behind the flag), 0 fail; Python parity and boundary 89 pass in 5.02 s; `ruff check` all checks passed; `git diff --check` clean; both package checks OK |
+| Readback | At the release: 98 of 98 public files matched the local package by SHA-256 and size on both addresses. Measured for this handoff at 23:13 Pacific: 98 of 98 on the stable address against a fresh build of a `git archive` export of `c08f60d`, whose hosted inventory SHA-256 is `5c071dc69e353f6118ab43078c12d2470c9d709cf2ac7c501fe4fb807c669da3` (99 files with `_headers`, 3,349,602 bytes) |
+| Owner decisions | **None ratified.** The 25 decisions of the Scale lab design and its package decisions D1 to D11 are all assumed at the lead's recommendation. The N2 decisions that its design does not mark DECIDED stay pending. Section 7 lists every open decision with its recommended default |
+| Uncommitted | Nothing of this wave. The ten document files of the wave are in the documents commit on top of `1aeaace`: five modified (`CODEX_HANDOFF.md`, `HERMES_SOURCE_OF_TRUTH.md`, `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md`, `playground/fleetlab/ARCHITECTURE.md`, `playground/fleetlab/README.md`) and five new under `docs/`. None of them is a site input, so the site inputs of that commit equal those of `1aeaace` |
+| Not yet done | A look by a person with a visible pane: no painted frame of any page of this release has been seen at any stage. The sweep of the lesson links in a real browser ran with the pane hidden (section 2.1), so it painted no frame either. Also: a pane of 1440 by 900 px, a throttled or physical phone, a screen reader, Safari, Firefox, a security scan, the broad Python suite, a full serial run at `1aeaace` with zero failures, the push, a deployment of `1aeaace`, and the lesson snapshot declared again for 59 lessons |
+
+State in one line: the site is live and reads back byte for byte, and the records are committed on top of `1aeaace`; it waits for a person's look with a visible pane, the owner's rulings and a push decision.
+
+## 2. Deployment status
+
+### 2.1 What https://fleetlab.pages.dev/ serves today
+
+Two sweeps of the lesson links ran after the deployment.
+
+In a real browser. The lead opened the stable address https://fleetlab.pages.dev/ in the in-app browser (Chromium engine) with the pane hidden, so no frame was painted, and opened every lesson link of the catalog (59) and the 9 page routes by changing the address hash, with no reload between them. Result: 0 error pages; 59 lessons by page (Fleet day 18, Street lab 6, Four-area experiments 29, Four-area workspace 3, Scale lab 3); 6 header links; no console error; exactly one lesson whose main heading did not match its document title, `#/fleet-day?lesson=region-launch` opened after another Fleet day lesson (the first known defect below).
+
+On the fake DOM. Every public file was downloaded from the stable address, checked against the release inventory and mounted on the repository's fake DOM (no layout, no paint), then visited route by route and lesson by lesson. Result: 10 route visits, 59 lesson visits and 4 deliberately bad links; 0 error pages from a good link; 0 network attempts, 0 engine run calls, 0 storage or cookie accesses and 0 exceptions over 78 navigations. It saw the same heading defect. The fake DOM measures structure and text, not what a browser paints.
+
+Neither sweep painted a frame. No person has looked at any page of this release with a visible pane.
+
+Header, footer and head of every page.
+
+| Place | Content |
+|---|---|
+| Header | A monogram and "FleetLab by Hermes", a "SIMULATION LAB" status mark, a "Skip to main content" link and 6 navigation links: Overview, Fleet day, Street lab, Four-area experiments, Learning catalog, Product approach. There is no Scale lab link in the header or the footer, by design decision 1 of the Scale lab |
+| Footer | "FleetLab / Hermes", a creator credit line, 3 links (Learning catalog, Product approach, Guided walkthrough) and "Simulation for learning and exploration" |
+| Head | Title "FleetLab \| Fleet operations, made visible", a meta content security policy, and description and Open Graph text that describe 18 Bay Area places and two vehicle profiles. That text predates the Scale lab |
+
+Pages, as the live `src/ui/routes.js` defines them.
+
+| Address | Document title (before " · FleetLab by Hermes") | Main heading | What a visitor finds |
+|---|---|---|---|
+| empty, `#/overview` | Overview | Every great ride starts with a ready fleet. | A concept film labelled "Concept illustration · not simulation output" with a Play film button; a depot stage explorer with 4 stages; 4 decision cards in a two by two grid, the fourth ("Fleet scaling") opening the Scale lab; a three-step first-visit guide; a model boundary section |
+| `#/fleet-day` | Fleet day | Fleet day | A result-first synthetic Bay Area day on frozen OpenStreetMap routes: 18 places, a vehicle profile mix, a 3D map with camera controls, a timeline, a result summary, comparisons of fleet and depot size, vehicle profiles, staffing and bays and one operating policy, the Austin power and readiness stress lab (TX-AUS-01), the Region B launch rehearsal, an attributed map download, and the line "Fleet day stops at 120 cars. For what changes as a fleet scales, open the Scale lab." |
+| `#/street-lab` | Street lab | Street lab | Directed San Francisco streets with block queues in 5 s steps: 6 corridor presets, Run street scenario, Compare route policies, a 3D view, an attributed street map download |
+| `#/experiments` | Four-area workbench | Run an A/B test | The paired A/B workbench. It loads UC-08a (4 against 6 cleaning bays at SF-1) without running, then offers a six-step declared test and Freeze and run |
+| `#/regional` | Four-area workspace | Explore a day | The four-area sandbox: Run window and replay |
+| `#/walkthrough` | Guided walkthrough | One question, one day, one verdict. | The presenter over OPS-01, about 6 min, in 4 chapters: Operations, Analytics, Simulation, Product sense |
+| `#/catalog` | Learning catalog | Which lesson answers my question? | 59 lesson cards, each with its teaching frame and a "Run this lesson" link; search; a model filter with 5 options; a question family filter with 10 options; "Start here"; a glossary of 20 terms |
+| `#/approach` | Product approach | Start with the operator. Work back to the model. | People and decisions, a worked product hypothesis, a roadmap, evaluation questions, a non-affiliation sentence |
+| `#/scale-lab` | Scale lab | Density ladder: one depot cell, five fleet sizes | The three Scale labs behind one chooser; the table below |
+| an unknown route or a bad lesson link | Link could not be loaded | This setup needs attention. | The reason, the sentence that no simulation was run, and one button, "Open the overview" |
+
+Lessons by model. Every lesson address opens its page with one visible main heading and a document title of the form "lesson title · FleetLab by Hermes", and runs nothing.
+
+| Model | Lessons | Address form | Lesson ids |
+|---|---:|---|---|
+| Fleet day | 18 | `#/fleet-day?lesson=<id>` | bay-area, vehicle-mix, fleet-day, weather-day, rush-hour, depot-count, cleaning, charging, shared-power, software, upload, full-cycle, staffing-readiness, power-redistribution, deadline-charging, resource-freshness, airport-preparation, region-launch |
+| Street lab | 6 | `#/street-lab?lesson=<id>` | street-first, street-harrison, street-stockton, street-van-ness, street-embarcadero, street-lombard |
+| Four-area experiments | 32 | 29 on `#/experiments?lesson=<id>`, 3 on `#/regional?lesson=<id>` | On `#/regional`: bay_teaching_map, L1, L3. On `#/experiments`: L2a, L2b, UC-01, UC-02, UC-03, UC-05, UC-08a, UC-08b, UC-10, OPS-01 to OPS-20 |
+| Scale lab | 3 | `#/scale-lab?lesson=<id>` | density-ladder, fleet-intake, response-reserve |
+| Total | 59 | | |
+
+Question families in the catalog filter, lessons each: depot work and capacity 14; roads and streets 9; demand, crowds and weather 9; fleet size and supply 6; energy and charging 5; launching a new area 5; reading a run and a result 4; recall, release and depot choice 4; scaling the fleet 3. Evidence chips over the 59 lessons: 10 "One replay", 11 "One seed, same demand", 38 "Paired test".
+
+The three Scale labs. The chooser order is the story order. Each lab has one primary button, "Run the paired test", with Cancel and a progress meter during a press; before a press its status reads "Nothing has run yet. Press Run the paired test."
+
+| | Density ladder | Fleet intake | Response reserve |
+|---|---|---|---|
+| Main heading | Density ladder: one depot cell, five fleet sizes | From delivered to in service | Response reserve for an area-wide event |
+| Model version | scale-density-1.0.0 | scale-intake-1.0.0 | scale-response-1.0.0 |
+| Geography | Nine neighbouring places of the Fleet day road map | A fictional market as weekly counts, no map | A fictional market as counts, no map |
+| Paired seeds | 10 (31001 to 31010) | 12 (7001 to 7012) | 12 (3001 to 3012) |
+| Controls a reader sets, defaults in brackets | Comparison of 3 depot plans (capacity); street load at the first rung 0.64 to 0.72 of car time in steps of 0.02 (0.68); depot load at the first rung 0.40 to 0.60 of capacity at the busier site in steps of 0.05 (0.50) | The other arm, site power ordered for the middle or the end of its lead range (middle); site power lead time 24 to 56 weeks (48); ports lead time 16 to 28 weeks (24) | Event load 1.2 to 1.6 times capacity, declared step 0.1 (1.3); lever, reserve staff or a directive (reserve); lever lands after 15 to 240 min in steps of 15 (45) |
+| Default press label | `scale-spec:b4c7f5da` | `scale-spec:1aa8c833` | `scale-spec:443de567` |
+| Map credit on the page | "© OpenStreetMap contributors" linked to the copyright page, the licence name "ODbL" and the road table sentence, in every state | none | none |
+
+Entry points to the Scale lab: the fourth Overview card ("Open the Scale lab", `#/scale-lab`); the Fleet day introduction ("open the Scale lab" after "Fleet day stops at 120 cars."); the catalog "Start here" entry for the density ladder; 3 catalog cards; the catalog model filter "Scale lab" and the question family "Scaling the fleet". The plain `#/scale-lab` address shows the last Scale lab lesson opened in the session, and the density ladder on a fresh load.
+
+Teaching frames of the T1 wave, public since this deployment (feature commit `caaf8f2`). They were recorded as local only until the Scale lab deployment carried them.
+
+| Feature | What is on the page |
+|---|---|
+| A frame for every lesson | 59 of 59 lessons: chips for question family, model, evidence type and test kind; "What & why", "How we simulate", "Learning & ops takeaway" with "What to look for" and "Ops takeaway to test"; a "Limits and what this misses" disclosure; the sentence that numbers from different models are not interchangeable |
+| Page frames | 21 frames for pages and panels outside a lesson |
+| Lesson titles | A lesson link puts the lesson title in the main heading |
+| Edited marker | "Setup changed from this lesson. The frame still describes the lesson setup." after an edit |
+| Glossary | "Words used here", 20 terms, with first-use tooltips for p90, paired seeds, guardrail, margin, unserved and empty distance |
+| Run readings | After a run, a sentence built only from recorded fields: outcome words, the guardrail that stopped a change, a next test |
+| Casebook readings | 20 pinned readings for OPS-01 to OPS-20, each tied to its seed-set labels |
+| Exact values | "Exact values" disclosures beside readings |
+
+What the site never does, with the evidence.
+
+| Claim | Evidence |
+|---|---|
+| No network request from the page beyond its own files | Response policy `connect-src 'none'`, `form-action 'none'`, `default-src 'none'`; 0 occurrences of `fetch(`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon`, `importScripts` or `serviceWorker` in the downloaded code; 0 attempts in the fake DOM visits |
+| No storage and no cookies | 0 occurrences of `localStorage`, `sessionStorage`, `indexedDB`, `document.cookie` or `caches.` |
+| No telemetry | No analytics or tag script. `src/ui/analytics.js` is the Analytics chapter of the four-area app, not telemetry |
+| No account and no form that submits | No sign-in; `form-action 'none'` |
+| No foreign code or media | `script-src 'self'`, `worker-src 'self'`, `media-src 'self'`, `img-src 'self' data:` |
+| No simulation on arrival | 0 run messages in 69 arrivals. The page does post one lookup table warm-up (`warm_tables`) to its own engine worker at load; it builds two memoized tables and produces no result. This dates from 2026-09-14 |
+| Downloads are made in the page | Map, setup and result downloads are `data:application/json` links built from in-page data |
+| Package check | `node playground/fleetlab/tools/check-dist.mjs --site` on the downloaded copy plus the built `_headers`: OK, 99 files, 3,349,602 bytes |
+
+The concept film on the Overview has no source until it plays; playing loads `media/fleet-film.mp4` (1,079,939 bytes) from the same origin. Read from the code; not verified in a browser in this pass.
+
+Response headers, read with `curl -I` on 2026-09-27 on both addresses: status 200; `content-security-policy: default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'`; `x-frame-options: DENY`; `x-content-type-options: nosniff`; `referrer-policy: no-referrer`; `cross-origin-opener-policy: same-origin`; `cache-control: public, max-age=600`. Pages adds `access-control-allow-origin: *` on both and `x-robots-tag: noindex` on the immutable address. `/index.html` answers 308 to `/`. Any unknown path, `/_headers` included, answers 200 with the page itself, so the site has no 404 page and a status code alone proves nothing in a readback.
+
+Known defects on the live site today.
+
+| Defect | Where | State |
+|---|---|---|
+| After another Fleet day lesson, `#/fleet-day?lesson=region-launch` keeps the previous lesson's main heading while the document title and the launch panel name the launch lesson. A fresh load is right | `src/ui/studio.js` | Fixed in `1aeaace`, not deployed. Both sweeps saw it. The lead confirmed it on the live site after a reload and from three starting pages, and reproduced it on the fake DOM at the T1 head `c79eccf` and at `c08f60d` with identical results. The previous Production `dd4bfa44` (D1) does not set the heading per lesson at all, so the defect came in with the T1 teaching frames and became public with this deployment |
+| Going back to a lesson address discards the recorded result and the edited setup | `src/ui/studio.js`; Scale lab and Fleet day | Open |
+| After a Fleet day lesson, the plain `#/fleet-day` keeps the lesson title in the main heading while the document title reads "Fleet day" | Navigation keeps a loaded setup by rule | Open, by rule |
+| The document title of `#/experiments` reads "Four-area workbench"; the header link reads "Four-area experiments" | Routes and header | Open |
+| The meta description and Open Graph text predate the Scale lab | `index.html` | Open |
+| A leftover D1 label, "Regional experiment model" | `src/ui/depot-scene.js:106` | Open, D1 follow-up D1R-5 |
+| The Scale lab items of section 9 (decimals, typed steps, one rounding row) | Scale lab | Open |
+
+### 2.2 Deployment history
+
+Wrangler lists 3 deployments on project `fleetlab` and 10 on project `fleetlab-playground`. All 13 are Production and carry the label `feat/fleetlab-playground`. Dates come from the release records or, where none names the deployment, from the source commit.
+
+Project `fleetlab`, stable address https://fleetlab.pages.dev/.
+
+| Deployment | Source | Wave and date | Record | Source pushed | Role now |
+|---|---|---|---|---|---|
+| `19e17ac6-d617-4789-9260-ca259c53e076` | `c08f60d` | T1 teaching frames plus the Scale lab, 2026-09-27 | `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md` (in the documents commit on top of `1aeaace`) | **No** | Production |
+| `dd4bfa44-7226-4502-9d66-01bb1790f2b6` | `b99ab04` | D1 result-first Fleet day, 2026-09-26 | `docs/FLEETLAB_D1_RELEASE_2026-09-26.md` | Yes | Rollback target. Its 89 public files equal a build of `b99ab04` (90 files, 3,189,179 bytes) |
+| `f08b6b6f-c5d0-44f7-905b-5f16087fbc85` | `345b427` | Regional power stress lab, first release of the new project, 2026-09-25 Pacific | Source of truth section 7.5, "Current address and review follow-up" | Yes | Former rollback target |
+
+Project `fleetlab-playground`, former address https://fleetlab-playground.pages.dev/.
+
+| Deployment | Source | Wave and date | Record |
+|---|---|---|---|
+| `6265159a-a13e-4ca7-9f9c-4acde9bcf6e7` | `345b427` | Regional power stress lab, 2026-09-25 Pacific. Still this project's Production | Source of truth section 7.5, "Publication follow-up" |
+| `e72ae87d-6b96-47a0-950d-4d4a87b8bb95` | `96fde5b` | Design release: addressable lessons and setup sharing, 2026-09-24 Pacific | `docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md` |
+| `40858080-b229-44f1-8169-4f8b4faf5c86` | `7874c7e` | Depot M1 to M4 and scenario learning, 2026-09-24 | `docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md` |
+| `ccb82b11-986c-4ad1-8658-e1bc30917992` | `f85a28f` | Homepage film, 2026-09-19 | `docs/FLEETLAB_FILM_RELEASE_2026-09-19.md` |
+| `0b302024-3840-474c-a806-f11792740267` | `10863f2` | Street congestion lab, 2026-09-19 | `docs/FLEETLAB_STREET_RELEASE_2026-09-19.md` |
+| `5f2ce6b9-c91c-4f8c-b935-1fba64af954a` | `b65895d` | Bay Area 3D public release, 2026-09-19 | `docs/FLEETLAB_PUBLIC_RELEASE_2026-09-19.md` |
+| `b6e30d08-d7a2-40e4-a46b-a44dc08d98fb` | `fb07b66` | Isometric world and presenter walk, commit of 2026-09-16 | none names this id |
+| `7071bf6b-19c0-46ff-8009-6fd9a59b77c4` | `fb07b66` | The same source, an earlier upload | none names this id |
+| `f4de0997-b50d-4efd-9960-6a8beceb4877` | `f5fac85` | Route shield fix, commit of 2026-09-16 | none names this id |
+| `42fc13c3-d280-468d-92cb-0495edc497b8` | `abfad09` | Operations casebook, commit of 2026-09-15 | none names this id |
+
+Every source in the second table and `345b427` and `b99ab04` are contained in `github/feat/fleetlab-playground`.
+
+### 2.3 The former address
+
+https://fleetlab-playground.pages.dev/ still serves `345b427`, the regional power release of 2026-09-25: two releases behind, with no D1, no teaching frames and no Scale lab. Its `src/ui/studio.js` equals the blob at `345b427` (measured for this handoff), and 71 of the 98 current public files match. There is no redirect: Cloudflare Pages cannot rename a `pages.dev` hostname, so the owner moved to the new project `fleetlab` on 2026-09-25 Pacific and kept the old one for existing links. Line 3 of `playground/fleetlab/README.md` still links the former address.
+
+### 2.4 Rollback
+
+The rollback target is `dd4bfa44-7226-4502-9d66-01bb1790f2b6` (D1, source `b99ab04`); its immutable address https://dd4bfa44.fleetlab.pages.dev/ still serves D1 bytes (its `src/ui/studio.js` equals the blob at `b99ab04`, measured for this handoff). A rollback is an owner action in the Cloudflare dashboard: Workers & Pages, project `fleetlab`, Deployments, the three-dot menu of `dd4bfa44`, "Rollback to this deployment". Then check the stable address: `src/ui/studio.js` must equal `git show b99ab04:playground/fleetlab/src/ui/studio.js`, and the 89 public files of a `b99ab04` build must read back. A rollback rewrites no git history. Preview deployments are not rollback targets. After the next deployment, the rollback target becomes `19e17ac6`.
+
+### 2.5 Not yet deployed
+
+| Work | Form | Where it lives | Effect on the site if deployed |
+|---|---|---|---|
+| Launch lesson heading fix | Commit `1aeaace` | `claude/fleetlab-scale-lab`, local only | One site file; hosted 99 files, 3,349,629 bytes, inventory SHA-256 `dd3c2f2a659b18a0caacf5df639238916719f8a5294e653c2566ac39328e94b5`; offline 2,408,350 bytes, SHA-256 `ccd3f7a01a3ddd03dd8a58336c52da32a50ec1c7b0b27a297b5e82496877325a`; both package checks OK (measured for this handoff) |
+| Scale lab records and this section | Ten document files, committed in the documents commit on top of `1aeaace` | `claude/fleetlab-scale-lab`, local only | None. The site is built only from `src`, `styles.css`, `index.html`, `media` and `tools` under `playground/fleetlab/`, so the site inputs of the documents commit equal those of `1aeaace` |
+| README Scale lab paragraph, ARCHITECTURE item 45 and the deployment guide status paragraph | Committed edits, in the documents commit | `playground/fleetlab/README.md`, `playground/fleetlab/ARCHITECTURE.md`, `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` | None. None of them is a site input |
+| The offline single-file page | Built locally, never hosted | `dist/fleetlab-playground.html`, ignored. Since 22:48 Pacific it holds the `1aeaace` build, not the deployed one | Not a hosted file. Its size is the byte budget of section 8 |
+| Lesson snapshot for 59 lessons | Not declared | Outside the tree; it still counts 56 | None |
+| N2: finite pickup resources and preparation from published event estimates | Design v2.1 only | `docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md` and the audit | Reserved bytes: X1 8,192, S2 65,536, S5 32,768. No N2 module exists |
+| P2 remainder (vehicle-time strip, D1 follow-ups), R0 no-data lessons, P0 prototype and study, P3 navigation rename | Designed | `docs/FLEETLAB_PACKET_REVIEW_2026-09-26.md`, the audit | Not built |
+| T2 teaching follow-ups and 19 lesson proposals | Queued | `docs/FLEETLAB_T1_RELEASE_2026-09-26.md`, `docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md` | Not built |
+| Scale lab candidates: an operating view of one simulated period, side-preserving numbers on every page, more demand draws, road class withdrawal | Candidates | `docs/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md` section 11 | Not built |
+| Scale lab options declined for this wave | Declined | Design sections 11 and 12, decision 21 | Not built |
+| Demo plan phases C and D; map motion phase 4 | Approved, deliberately unbuilt | Source of truth section 7.5 | Not built |
+| Release automation workflow; a custom domain | A template in the deployment guide | `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` | No workflow and no credential exist |
+| Evidence-path fixes FL-1 to FL-11 | Python, not the site | `docs/plans/2026-09-13-fleetlab-playground-design.md` section 14 | None on the site; they belong to a Phase 9 branch |
+
+## 3. Git and remote status
+
+The remote is named `github`. Its default branch is `main`. All facts below were read with read-only commands and local copies of the remote branches; no fetch was run.
+
+Worktrees of the one repository. Folder names are siblings of the main checkout unless noted.
+
+| Worktree | Branch | Head | FleetLab website | Working tree |
+|---|---|---|---|---|
+| `Hermes` (main checkout) | `main` | `bca4ccd` | No; holds the Phase 9 Python FleetLab lane merge | Clean |
+| `Hermes-scale` | `claude/fleetlab-scale-lab` | The documents commit on top of `1aeaace` | Yes; the parent of `1aeaace` is the deployed source | The ten document files of the wave are committed in the documents commit. Ignored `dist/` holds the `1aeaace` build |
+| `Hermes-fleetlab` | `codex/fleetlab-t1-teaching-frame` | `c79eccf` | Yes, the T1 head | One untracked owner note at the root, never read and never staged |
+| `Hermes-playground` | `feat/fleetlab-playground` | `6b376fb` | Yes, the website branch | Clean; 14 commits behind its upstream `790573e`, 0 ahead |
+| `Hermes-depot-m1` | `codex/fleetlab-m2-m3` | `4b7a276` | Yes, the depot wave | Clean |
+| `Hermes-adas` | `feat/phase8-lead-decelerates` | `579ca12` | No, Phase 8 | Not inspected |
+| A Phase 7 worktree outside the repository folder | `codex/phase7-evaluation-adequacy-human-validation` | `56ed606` | No, Phase 7 | Not inspected |
+
+One stash entry exists, on `feat/phase8-lead-decelerates`. It is not FleetLab work.
+
+Branches. "On no remote" counts commits reachable from the head and from no remote branch. Every other branch in the table is an ancestor of `c08f60d`, so every one of them is in the deployed source; `claude/fleetlab-scale-lab` holds `c08f60d` and two commits past it.
+
+| Local branch | Head | Same-named remote head | On no remote | Deployed | State |
+|---|---|---|---:|---|---|
+| `claude/fleetlab-scale-lab` | The documents commit on top of `1aeaace` | none | 18 | `c08f60d` yes; `1aeaace` and the documents commit no | **Deployed at `c08f60d`, not pushed** |
+| `codex/fleetlab-t1-teaching-frame` | `c79eccf` | none | 8 | Inside `19e17ac6` | Local only |
+| `codex/fleetlab-packer-comment-strip` | `8e04b49` | none | 4 | Offline file only | Local only |
+| `codex/fleetlab-d1-result-first` | `82df3b5` | `790573e` | 3 | D1 source `b99ab04` is `dd4bfa44` | 3 ahead, 0 behind its remote namesake; the 3 extra commits are documents |
+| `codex/fleetlab-regional-power` | `b1c12b6` | `b1c12b6` | 0 | `345b427` is `6265159a` and `f08b6b6f` | Pushed, in sync |
+| `feat/fleetlab-playground` | `6b376fb` (local), `790573e` (remote) | `790573e` | 0 | The label of every deployment | Pushed; the local copy is 14 behind |
+| `codex/fleetlab-m2-m3` | `4b7a276` | none | 0 | `96fde5b` is `e72ae87d` | Contained in remote branches |
+| `codex/fleetlab-depot-readiness-m1` | `7e0389d` | none | 0 | Superseded | Contained in remote branches |
+| `feat/phase9-metric-contract` | `9daacef` | `9daacef` | 0 | Not a website | Python lane; pushed and merged onto `main` |
+| `feat/phase9-fleetlab` | `1c202af` | `1c202af` | 0 | Not a website | Python spike lane; pushed |
+| `main` | `bca4ccd` | `bca4ccd` | 0 | Not a website | Pushed, in sync. `c08f60d` is 55 commits ahead of it, `1aeaace` 56 and the documents commit 57 |
+
+The 18 commits of the branch head that are on no remote, oldest first.
+
+| Wave | Commits | Site effect |
+|---|---|---|
+| N2 design documents and audit | `4ba5626`, `62547a8`, `82df3b5` | None |
+| Offline packer route A | `8e04b49` | The offline file only |
+| T1 teaching frames | `caaf8f2` (implementation), `0497b9b`, `45efd43`, `c79eccf` (records) | Hosted since `19e17ac6` |
+| Scale lab | `2caeac6`, `05113ab`, `953ebce`, `9fdb160`, `27f6014`, `1a81ae8`, `319b4a9`, `c08f60d` | Hosted since `19e17ac6` |
+| After the deployment | `1aeaace` | One site file, not deployed |
+| Records of this wave | The documents commit on top of `1aeaace` | None; it changes no site input |
+
+The push that would publish the deployed source is a fast-forward of the website branch from `790573e` to `c08f60d`. **It needs the owner's explicit word, and nobody has given it.** Before the word, the owner reads the privacy items of section 9 (rows P1 and P2). If the owner chooses it, the commands are:
+
+```bash
+# Owner's word required. Run from the Hermes-scale worktree. Never add --force.
+git fetch github
+git merge-base --is-ancestor github/feat/fleetlab-playground c08f60d8830df877fac2c7321bb47d75a5ae56ad && echo "fast-forward: yes"
+git push github c08f60d8830df877fac2c7321bb47d75a5ae56ad:refs/heads/feat/fleetlab-playground
+git ls-remote --heads github feat/fleetlab-playground
+# The last line must print c08f60d8830df877fac2c7321bb47d75a5ae56ad. If the ancestry check prints nothing, stop.
+```
+
+This publishes the source the site serves and nothing newer. Pushing the branch head instead is also a fast-forward of `790573e`, but it publishes `1aeaace` and the documents commit, which are not on the site; do that after `1aeaace` is deployed, or with records that say so. `git push github claude/fleetlab-scale-lab` would create a new remote branch of that name; no record asks for one. A push does not deploy: the Pages project uses Direct Upload.
+
+## 4. What was done in this wave
+
+Research. The site taught one market on one day and could not show what changes when a fleet grows by a factor of five to ten. The research reduced that question to mechanisms: density with diminishing returns; the limit moving from street to depot; vehicles arriving in weeks while site power, ports, stalls and staff arrive after their own lead times; a release gate building a stock that leaves as a wave; one fleet with several counts (delivered, integrated, validated, released, accepted, in service); pooling that pays on independent load; one area-wide event that defeats pooling; a fix that helps only if it lands before the queue forms. Two findings shaped the design. First, the engines that move single cars cannot show scale, because Fleet day stops at 120 cars; so two labs are count models with no map, and the third reruns the Fleet day engine at five sizes and calls itself a cell of at most 120 cars. Second, a lesson reads only in one band of its inputs: a prototype of the response queue showed its lesson in 15 to 19 percent of sampled settings with every input free and in about 90 percent with staffing derived from a sizing rule. So each lab has one governing ratio that the reader sets; the lab derives the rest and refuses a setup outside the band with a reason. Public facts set orders of magnitude in the design only; no page cites a public source or sets a lab number beside a public count.
+
+Design. `docs/plans/2026-09-27-fleetlab-scale-lab-design.md`: the shell, three labs, package decisions D1 to D11, a byte ledger and 25 owner decisions. Three reviews of the design (feasibility; honesty and privacy; teaching value) returned 3 blockers, 25 important and 33 minor findings; design section 14 gives the disposition of each.
+
+Build. Seven local commits on `c79eccf`: `2caeac6` the shell (route `#/scale-lab`, one generic view, the shared paired contract `src/model/scale-contract.js`, the ladder chart, three stub labs, entry points, pin edits for 56 to 59 lessons); `05113ab` a press is void when a declared guardrail is missing or a shipped control does not read as declared; `953ebce` reading rules (refusals in the absence form, the interval sentence, next tests the page can honour, side-preserving numbers); `9fdb160` the story order, the thesis line and "Set by the inputs, not found by the run" under the verdict; `27f6014` the response reserve; `1a81ae8` the fleet intake; `319b4a9` the density ladder. No existing file under `src/core`, `src/model`, `src/instrument`, `src/legacy`, `src/runtime` or `src/data` changed; four new page-only files were added under `src/model`. At `319b4a9`: 1,937 tests, 1,936 pass, 1 existing todo; offline 2,403,901 bytes.
+
+Independent review. It ran as a stage of the same assisted workflow as the build; no independent human review has taken place. Seven lenses, one of them on packaging and security, read `c79eccf..319b4a9`. Each critical or important finding went to two verifiers, one running code and one reading. 13 findings were confirmed by both, 0 refuted, 25 minor listed. The 13 are 9 distinct defects. None moved a verdict number. None of the 1,937 tests at `319b4a9` caught any of them.
+
+| # | Defect | Fix in `c08f60d` |
+|---|---|---|
+| 1 | A readout with no strip said "lies left of the band" and "left is better" over numbers all to the right | `renderVerdictReadout` option `plotted`, default true; the Scale lab passes false, so the caption names the measure and declared direction only and the outcome sentence states the interval as printed |
+| 2 | At 375 px the page scrolled sideways after a press: 522 px wide (response reserve), 406 px (density ladder) | `.scale-lab .fl-readout { grid-template-columns: minmax(0, 1fr); }` |
+| 3 | Density ladder bars drawn over both lines | Every bar series drawn before every line series and its points |
+| 4 | Two of three fleet intake lines drawn alike | Filled points (swatch `line`), ring points (`line-ring`), square points (`line-square`) |
+| 5 | Fleet intake booked the whole depot door stock to depot induction in any week with a place left over (1,819.5 vehicle-weeks where the split gives 290) | The stock is split between the induction rate and the resource that holds the next tranche. Control rows in `test/scale-intake.pins.json`: depot induction 290 and site power 20,106.17 vehicle-weeks |
+| 6 | Floating point residue and a 17-digit minutes-to-clear in the response reserve | A lever that removes nothing returns the no-lever value exactly; minutes to clear read 0 on a day with nothing waiting at the event end; tiny cells print at two significant digits |
+| 7 | A caption claimed rounded rows sum to the total | "before each is rounded to a whole vehicle-week" |
+| 8 | No visible map credit on the density ladder | `LAB.map` and `LAB.credit`: the attribution link, the licence name ODbL and the credit sentence in every state |
+| 9 | Side-preserving numbers of `953ebce` reached only some surfaces of the four-area card | Opt-in: `metricValueText` and `valueWithMinutes` take `against`, default `null`, which gives the text of `c79eccf` byte for byte; `runLine` passes it only when `tools.sided`; only the Scale lab opts in. `test/scale-lab.legacy-text.pins.json` holds 900 pairs of number text and 19 verdict views of the older pages, with inputs in `test/helpers/legacy-text.mjs` |
+
+Fixes. `c08f60d` fixed all 9 test-first and added 31 tests (1,937 to 1,968) and 4,422 bytes. After the fix pass the lead also replaced a test that read git history and wrote temporary files with the pinned text test; gave the second chart line ring points; named the density rungs by number ("24" to "120", under "Fleet size, cars") and made a chart draw every label when all fit; and changed the declared change of a directive to "every vehicle request moved into the event". That last change moved the labels, digests and interval ends of the two pinned directive setups, now `scale-spec:16d331de` (load 1.3, directive, 180 min) and `scale-spec:2f4598cb` (load 1.2, directive, 240 min), and no mean. The default press labels did not move. Each lab stays at version 1.0.0.
+
+Deployment. On the owner's instruction of 2026-09-27 the lead deployed `c08f60d` as `19e17ac6`. The upload held 98 files and `_headers`: 25 new to the host and 73 already held. It went ahead before design gate 5 (a browser pane of 1440 by 900 px with painted frames and the tab order) and gate 6 (a throttled phone) had passed; the deployment followed the owner's instruction, not the design's rule. Hosted smoke: all three labs pressed and recorded `scale-spec:b4c7f5da`, `scale-spec:1aa8c833` and `scale-spec:443de567` (one press each: 1,044 ms, 102 ms, 513 ms); Fleet day seed 42 read 95 completed, 176 unserved, 4 waiting and 9 in progress of 284 requests; a teaching-frame lesson opened by its link; no console error.
+
+After the deployment. Two sweeps of the lesson links ran (section 2.1): the lead's sweep of all 59 lesson links and the 9 page routes on the stable address in the in-app browser (Chromium engine) with the pane hidden, and an inventory stage's sweep on the fake DOM with the modules downloaded from the live site. Both found one defect older than the Scale lab: the launch lesson heading of section 2.1. The lead confirmed it on the live site after a reload and from three starting pages, reproduced it on the fake DOM at `c79eccf` and at `c08f60d` with identical results, and saw that D1 (`dd4bfa44`) sets no heading per lesson at all, so the defect came in with the T1 teaching frames and became public with this deployment. `1aeaace` fixes it: in `applyLesson` of `src/ui/studio.js`, a launch lesson now calls `operations.setLesson(null)` before it hands itself to the Launch panel. A new test in `test/studio.test.mjs` failed first with "after airport-preparation the page heading names the page, not airport-preparation" and passes after. `1aeaace` is not deployed. Two full serial runs at `1aeaace` each read 1,967 of 1,969 tests passing with one timing failure that passed its one isolated rerun (section 5). The records were committed in one documents commit on top of `1aeaace`, which changes no site input.
+
+The three labs.
+
+| | Density ladder | Fleet intake | Response reserve |
+|---|---|---|---|
+| Lesson link | `#/scale-lab?lesson=density-ladder` | `#/scale-lab?lesson=fleet-intake` | `#/scale-lab?lesson=response-reserve` |
+| Question | At which fleet size does one depot cell pass its capacity, and does siting matter at equal capacity? | Which gate keeps delivered vehicles out of rider service, and when is the slowest depot resource ordered? | How does a pooled support team staffed for ordinary days meet one area-wide event? |
+| Model | The Fleet day engine through its public function at 24, 48, 72, 96 and 120 cars in one cell of nine places, equal requests per car, 8 hours a run, hours 5 to 8 measured | Weekly counts over 104 weeks: integration, validation, a release gate and depot intake; places open in tranches; site power, ports, stalls and staff each have a lead time | Counts only: one pooled team at 2,000, 6,000 and 20,000 vehicles with 2, 6 and 20 agents on one staffing rule; the event moves a share of the same requests into three hours |
+| Governing ratio | Street load and depot load at the first rung | Room in weeks between the slowest depot resource and the next gate, over the tranche interval: 6.00 at the default; the lab reads from 2.0 | Event load: work offered inside the event over what the pool can answer |
+| Primary measure | Completed trips per 100 car-hours in hours 5 to 8, higher is better, margin 3 | In-service fraction of plan, higher is better, margin 0.02 | Stopped vehicle-minutes per 1,000 vehicles, lower is better, margin 5 percent of the rates-only value (861.558 at the default) |
+| Guardrails | Prompt pickup fraction (allowance 0.02); unfinished depot visits per 100 cars (5); stored energy per car in kWh (2) | Idle weeks per ordered place (13) | Late responder call fraction (0.05 on the change) |
+| Controls in every press | A null control replayed by fresh engine runs; a non-binding control with the in-step depot doubled | A null control; a non-binding order control; a non-binding deliveries control | A null control with a reserve of zero agents; an ample pool control; a guardrail control |
+| Default press | Control 54.6, tested 117.2, change +62.6 trips per 100 car-hours, 95% interval +60.6 to +64.4; VALID, IMPROVED, ADVANCE_TO_NEXT_TEST | Control 0.570, other arm 0.754, change +0.185 of plan, interval +0.172 to +0.196, idle weeks +5.6 of 13; VALID, IMPROVED, ADVANCE_TO_NEXT_TEST. The other arm ("end") improves more, passes the idle allowance and is held: `scale-spec:a0b5e327` | No lever 17,737.9, reserve 4,745.8, change -12,992.0 stopped vehicle-minutes per 1,000 vehicles, interval -13,394.8 to -12,545.8; VALID, IMPROVED, ADVANCE_TO_NEXT_TEST |
+| Press to recorded result, desktop browser pane of 1024 by 768 px, hidden, no throttle, three presses | 113 engine runs, never more than 120; 966 to 1,034 ms, first chart after 51 to 70 ms | 111 to 115 ms | 477 to 491 ms |
+| Items under "What this model cannot know" | 4 | 6 | 6 |
+
+Every default press reads an improvement because of how each readable band was chosen, and each lab says so under the verdict in "Set by the inputs, not found by the run". The 95 percent interval is a nominal bootstrap label; at 12 seeds the response reserve measured 90.0 to 93.5 percent coverage. No shipped control estimates a false alarm rate. The fleet intake idle allowance of 13 weeks and the default site power lead time of 48 weeks were chosen with sight of outcomes, and the model notes say so.
+
+## 5. How to reproduce every gate
+
+Environment. Node 22 or later; every recorded run used Node v22.22.0. There is no install step and no package file for the site. Pins compare doubles that come through `Math.log`, `Math.exp` and `**`, so a change of Node version can move them; `test/scale-response.pins.json` records v22.22.0. The Python gates need the project's `hermes-dev` environment (Python 3.11), with `PYTHONPATH="$PWD/src"` (the editable install may point at another checkout) and `FLEET_PLAYGROUND_BASE=bca4ccd` (without it the boundary check R6 skips). Timed tests run only with `FLEET_PLAYGROUND_PERF=1` and need an idle machine; one isolated rerun of a timing test that failed under load is the recorded practice. The second run at `1aeaace` shows that a timing test can also fail on an otherwise idle machine and pass its isolated rerun. `test/packed.test.mjs` writes the ignored `dist/` inside the repository. Run everything from the root of the worktree.
+
+| Gate | Command | Expected at `c08f60d` (deployed) | At `1aeaace` (the site inputs of the branch head) |
+|---|---|---|---|
+| Full serial suite | `FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs` | 1,968 tests, 1,967 pass, 0 fail, 1 existing todo (the browser-only layout check at 400 px), 281.9 s | Two recorded runs, each 1,969 tests, 1,967 pass, 1 fail, 1 existing todo. Run 1, machine loaded by other work, 342.8 s: the response reserve timing test failed, longest block 9.34 ms against 8 ms. Run 2, machine otherwise idle, 292.9 s: "run_window and run_pair gaps on the reference preset" (`test/runtime.test.mjs`, not changed by this wave) failed, largest run_window gap 11.34 ms against 8 ms. Each passed its one isolated rerun. No other test failed. A full run with zero failures at `1aeaace` is not recorded |
+| Isolated timing rerun, response reserve | `FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1 --test-name-pattern="timing on the reference laptop" playground/fleetlab/test/scale-response.test.mjs` | Pass | Pass (recorded in the message of `1aeaace`) |
+| Isolated timing rerun, four-area runtime | `FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1 --test-name-pattern="run_window and run_pair gaps on the reference preset" playground/fleetlab/test/runtime.test.mjs` | Passed inside the clean full run | Pass: 5.73 ms (run_window) and 5.52 ms (run_pair) against 8 ms |
+| Scale tests | `FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1 playground/fleetlab/test/scale-lab.test.mjs playground/fleetlab/test/scale-density.test.mjs playground/fleetlab/test/scale-intake.test.mjs playground/fleetlab/test/scale-response.test.mjs` | 34, 21, 17 and 20 tests: 92 of 92, about 125 s | Same. Without the flag, with `test/studio.test.mjs` added: 101 tests, 95 pass, 6 skipped, 0 fail, 20.7 s (measured for this handoff) |
+| Hosted package | `node playground/fleetlab/tools/pack.mjs --site dist/site` then `node playground/fleetlab/tools/check-dist.mjs --site dist/site` | 99 files, 3,349,602 bytes, OK | 99 files, 3,349,629 bytes, OK |
+| Offline package | `node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-playground.html` then `node playground/fleetlab/tools/check-dist.mjs dist/fleetlab-playground.html` | 2,408,323 bytes, SHA-256 `4828cded63f5c23f99a8d13cc32716f587717f57847dd79bdba59215786800b5`, OK | 2,408,350 bytes, SHA-256 `ccd3f7a01a3ddd03dd8a58336c52da32a50ec1c7b0b27a297b5e82496877325a`, OK |
+| Python parity and boundary | `FLEET_PLAYGROUND_BASE=bca4ccd PYTHONPATH="$PWD/src" PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider tests/unit/test_fleet_playground_parity.py tests/unit/test_fleet_playground_boundaries.py` | 89 passed | 89 passed in 5.02 s (measured for this handoff) |
+| Lint | `PYTHONPATH="$PWD/src" python -m ruff check --no-cache .` | All checks passed | All checks passed |
+| Whitespace | `git diff --check` | Clean | Clean |
+| Model parity | Inside the suite, `test/d1-model-parity.test.mjs` | Fleet day seed 42, 24 cars, 8 hours: 95 completed, 176 unserved, 4 waiting, 9 in progress of 284 requests; Austin 60 percent shift: 77 of 480 completed, 391 unserved, 11 waiting, 1 in progress | Same |
+
+Byte checkpoints of the offline package in this wave, in bytes: baseline `c79eccf` 2,318,855; `2caeac6` 2,357,617; `05113ab` 2,358,553; `953ebce` 2,359,746; `9fdb160` 2,360,022; `27f6014` 2,376,259; `1a81ae8` 2,391,500; `319b4a9` 2,403,901; `c08f60d` 2,408,323; `1aeaace` 2,408,350.
+
+A timing harness that watched the whole page for changes made the fixed build look 4 to 8 times slower than the commit before it; a harness that watched only the status line showed no difference. Time a press against the status line.
+
+Rebuild the deployed package and prove it equals the live site. `pack.mjs` looks for a `.git` entry above the playground folder, so an export needs an empty `.git` folder at its root. This is how the readback of this handoff was made.
+
+```bash
+EXPORT=$(mktemp -d); OUT=$(mktemp -d)
+git archive c08f60d8830df877fac2c7321bb47d75a5ae56ad playground/fleetlab | tar -x -C "$EXPORT"
+mkdir "$EXPORT/.git"
+(cd "$EXPORT" && node playground/fleetlab/tools/pack.mjs --site "$OUT/site" && node playground/fleetlab/tools/pack.mjs --out "$OUT/fleetlab-playground.html")
+shasum -a 256 "$OUT/fleetlab-playground.html"   # expect 4828cded63f5c23f99a8d13cc32716f587717f57847dd79bdba59215786800b5
+python3 - "$OUT/site" <<'EOF'
+import hashlib, os, sys
+root = sys.argv[1]; rows = []
+for d, _, files in os.walk(root):
+    for f in files:
+        p = os.path.join(d, f); b = open(p, 'rb').read()
+        rows.append((os.path.relpath(p, root).replace(os.sep, '/'), hashlib.sha256(b).hexdigest(), len(b)))
+rows.sort(key=lambda r: r[0].encode())
+data = b''.join(f'{p}\0{h}\0{n}\n'.encode() for p, h, n in rows)
+print(len(rows), 'files', sum(r[2] for r in rows), 'bytes', hashlib.sha256(data).hexdigest())
+EOF
+# expect: 99 files 3349602 bytes 5c071dc69e353f6118ab43078c12d2470c9d709cf2ac7c501fe4fb807c669da3
+cd "$OUT/site"
+for f in $(find . -type f ! -name _headers | sed 's|^\./||' | sort); do
+  if [ "$f" = index.html ]; then u=https://fleetlab.pages.dev/; else u="https://fleetlab.pages.dev/$f"; fi
+  [ "$(curl -s "$u" | shasum -a 256 | cut -d' ' -f1)" = "$(shasum -a 256 "$f" | cut -d' ' -f1)" ] || echo "MISMATCH $f"
+done
+# expect no MISMATCH line over 98 files; then read the headers
+curl -sI https://fleetlab.pages.dev/
+```
+
+Compare file hashes, never status codes: a missing file answers 200 with the page. Do not assume the worktree `dist/site` equals the deployment; since 22:48 Pacific on 2026-09-27 it holds the `1aeaace` build.
+
+## 6. How to deploy next time
+
+Each deployment needs the owner's explicit word, naming the source commit. A push does not deploy and a deployment does not push. The owner runs any Cloudflare login; no token belongs in the repository or in chat. The full procedure is `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md`. The lead corrected its status paragraph on 2026-09-27: it names the Scale lab Production `19e17ac6` from `c08f60d` as current, D1 `dd4bfa44` as the rollback target, three Production deployments in the project, and `1aeaace` as committed and not deployed. Its commands stand. Its rollback heading keeps older wording that is a privacy item for the owner (row P2 of section 9).
+
+1. Commit every reviewed change first. Confirm the site inputs equal the commit: `git diff --quiet HEAD -- playground/fleetlab/src playground/fleetlab/styles.css playground/fleetlab/index.html playground/fleetlab/media playground/fleetlab/tools`. Wrangler warns on any uncommitted file in the tree, including owner notes; record the warning and its cause.
+2. Run the gates of section 5 on an idle machine: the full serial suite, both packs and both checks, the Python gates and `git diff --check`.
+3. `npx --yes wrangler@4.135.0 whoami`
+4. `npx --yes wrangler@4.135.0 pages deploy dist/site --project-name fleetlab --branch feat/fleetlab-playground --commit-hash "$(git rev-parse HEAD)" --commit-dirty=false`. Deploy `dist/site` only: never `dist`, the source folder or the repository root. Never add `--force`; it was used once, for `pages project create`, and only to skip a platform delegation.
+5. `npx --yes wrangler@4.135.0 pages deployment list --project-name fleetlab`: the new deployment is Production with the intended source hash.
+6. Read back every public file on the stable and the immutable address with the loop of section 5 (request `/` for `index.html`), read the response headers, and press each Scale lab (expect the three default labels), run Fleet day seed 42 (95 of 284), open one lesson by its link, and check the console.
+7. Record the release: a dated release record under `docs/`, a new top entry of source of truth section 7.5 with the header rows corrected, and a new top section of this file. The rollback target becomes the previous Production (`19e17ac6` after the next deployment). The records commit follows the deployment because the deployment id exists only afterwards; it changes no site input.
+
+The smallest next release is the documents commit on top of `1aeaace`, whose site inputs equal those of `1aeaace`: one site file, `src/ui/studio.js`, differs from the live site, and each package is 27 bytes larger. Its acceptance is Q4 of section 8.1.
+
+## 7. Decisions that wait for the owner
+
+Every row is open. "Recommended" is the recorded default of the lead or the audit, not a ruling. A declined Scale lab decision is undone by revert commits, newest first, or by a branch cut from `c79eccf`, then a new deployment or a rollback; never a hard reset or a rewrite of history.
+
+### 7.1 Before any build (no site bytes)
+
+| # | Decision | Recommended default |
+|---|---|---|
+| O1 | Look at the three labs at https://fleetlab.pages.dev/#/scale-lab in a visible browser at desktop and phone size, press Run on each, roll back if anything reads wrong | Do it first. No person has looked at any page of this release with a visible pane; the real-browser sweep of the lesson links ran with the pane hidden |
+| O2 | Push: fast-forward `feat/fleetlab-playground` to `c08f60d` (section 3), and whether to publish `claude/fleetlab-scale-lab` | A separate explicit word. Read the privacy items P1 and P2 of section 9 first |
+| O3 | Deploy `1aeaace`, the launch lesson heading fix | Yes, as its own small release from the documents commit on top of `1aeaace`, which is made and whose site inputs equal those of `1aeaace`, with full readback; rollback target `19e17ac6` |
+| O4 | Rule on the 25 Scale lab decisions, first decision 3 (bytes) and decision 15 (release scope) | Table 7.2 |
+| O5 | Accept the T1 exceptions, now public | Table 7.3 |
+| O6 | `playground/fleetlab/README.md`: the former address on line 3, an older release line and a byline | The owner's decision, because the repository is public. No default recorded |
+| O7 | Merge the playground work to `main`, and a CI step for `node --test` | Owner decision. `main` is an ancestor of `c08f60d`. First run the Node suite and the Python gates with `FLEET_PLAYGROUND_BASE=bca4ccd` |
+| O8 | Optional: a custom domain; release automation through a repository workflow with a Pages token | Optional. No workflow and no credential exist. Never deploy from untrusted pull request code |
+| O9 | Approval of each N2 step (S1a, X1, S2, S1b, S3, S4, S5) and of each T2 item | Each needs its own approval and prompt |
+| O10 | A licence for the public repository | The owner's choice |
+| O11 | Two Austin lesson ids (`austin-power-stress`, `austin-deadline-priority`) or one Austin lesson | No default. Either choice moves the lesson count past 59; the N2 lesson is already reserved as lesson 60 |
+
+### 7.2 The 25 Scale lab decisions
+
+All assumed at the lead's recommendation, not ratified. Design section 12 holds each row in full; the handoff of the wave condenses them to 13 rows.
+
+| # | Decision | Commit | Recommended |
+|---:|---|---|---|
+| 1 | The shell with its defaults: the "VERDICT" title with the chip "Teaching run, not a decision record", the sticky Run bar on phones, the ninth question family, two glossary entries, two by two grids on the Overview and in the catalog, frames kept in the lab files, the shared contract under `src/model`, leaving the page cancels a press, declared directions before a run in one marked span, no download and no setup link, metric names as display phrases, the Result heading scrolled to the top; one route and 6 header links | `2caeac6` | Ratify all; look at the grids and the directions before a run in a browser first |
+| 2 | Lesson count 56 to 59; the lesson reserved for the next model becomes lesson 60; the out-of-tree snapshot declared again | `2caeac6` | Approve |
+| 3 | Bytes: growth 89,468, which is 7,548 over the lead's target of 81,920 and 2,692 under the lead's hard stop of 92,160; the density ladder stands 31 bytes past its own limit of 17,408 | all eight | Grant the 7,548; keep the 2,692 as the room of this wave; more than that takes a trim first or a new line from the owner |
+| 4 | Keyed draws in the response reserve: one keyed draw per simulated minute, expanded by a local stream that is a pure function of that draw | `27f6014` | Accept. The rule is item 45 of `ARCHITECTURE.md` (in the documents commit). The alternative redraws every pin and adds about 1 s per press |
+| 5 | A missing declared guardrail voids the press | `05113ab` | Approve |
+| 6 | A refusal prints in the absence form, capped at 240 characters | `953ebce` | Approve |
+| 7 | Side-preserving numbers, opt-in, only the Scale lab | `953ebce`, `c08f60d` | Approve as opt-in; a site-wide rule is a later wave with its own pins |
+| 8 | Next tests and reasons the page can honour | `953ebce`, `c08f60d` | Approve |
+| 9 | The declared test calls the 95 percent interval a nominal bootstrap label | `953ebce` | Approve |
+| 10 | Four copy corrections, one a glossary entry every page shows | `9fdb160` | Approve |
+| 11 | Response reserve design: pools of 2, 6 and 20 agents; 12 seeds; three controls every press; the lean pool in the table and out of the chart; the landing time table; the rates-only note | `27f6014`, `c08f60d` | Approve |
+| 12 | Fleet intake design: the governing ratio; release week fixed; the weeks ahead table; two hand checks; idle allowance 13 weeks and default site power lead time 48 weeks, chosen with sight of outcomes; the deliveries lever as a control | `1a81ae8`, `c08f60d` | Approve |
+| 13 | Density ladder design: trips between depot visits held at 2 (Fleet day default 3); the depot load column; the chart shows car time; a ceiling of 0.9; control arms reuse ladder runs, so a press is 113 engine runs; the engine's car-mix key stays an identifier | `319b4a9`, `c08f60d` | Approve |
+| 14 | The set of repository documents of the wave | The documents commit on top of `1aeaace` | Approve |
+| 15 | Push and deployment scope: one deployment published T1 and the Scale lab together, before gates 5 and 6 | deployed; not pushed | One word covered the deployment; the push is a separate word. Declined deployment: rollback to `dd4bfa44` |
+| 16 | The requests declined in design section 11: setup links, a result download, a header change, protected file edits, a second verdict engine, money, fleets past 120 cars on the Fleet day engine, a combined arm | none | Let them stand; any can be reopened later |
+| 17 | A shipped control that does not read as declared voids the press | `05113ab` | Approve |
+| 18 | What follows from the inputs under the verdict, the assumption sentence, captions, titles | `9fdb160` | Approve |
+| 19 | The thesis line and the story order; the bare link opens the density ladder, the slowest lab | `9fdb160` | Approve; nothing runs on arrival |
+| 20 | The road table row names the map project and its open licence | `319b4a9` | Approve, and confirm the row is enough for the licence |
+| 21 | Three options declined for this wave: the lagging depot comparison, pickup distance as a siting primary, the lean pool as a lever | none built | Decline for this wave; each needs its own sweep |
+| 22 | Whether citations in the design carry the names of authors | held on the cautious side | The lead recommended yes; until the owner rules, cite by title, venue and year |
+| 23 | `LAB.map` and `LAB.credit`: the attribution link, ODbL and a credit sentence outside every disclosure, in every state | `c08f60d` | Approve, and confirm it is enough for the licence |
+| 24 | Option `plotted` of `renderVerdictReadout`; the Scale lab passes false | `c08f60d` | Approve |
+| 25 | Short numbers in the Scale lab: a value that would round to zero prints at two significant digits, never more than 12 decimals; older pages keep the exact double | `c08f60d` | Approve for the Scale lab; a site-wide rule is a later wave with its own pins |
+
+### 7.3 T1 exceptions, public since `19e17ac6`
+
+OD-T1 to OD-T7 were decided yes on 2026-09-26. The T1 record gave its wave no deployment authority; the Scale lab deployment published it.
+
+| # | Item | Recommended |
+|---|---|---|
+| T-E1 | The walkthrough shows 146 visible words before Prepare (153 with an inherited lesson context) against a cap of 130 | Accept as the explicit OD-T7 scope exception; the fix is walkthrough structure, a T2 item |
+| T-E2 | Package T grew 60,902 bytes: 7,654 over the 53,248 target, 538 under the 61,440 stop | Accept as an explicit review decision |
+| T-E3 | Fractions keep three decimals where the frame contract requires; exact signed seconds at a threshold boundary | Accept as exceptions to a generic two-decimal rule |
+| T-E4 | Recorded interpretations of that wave's lead (unchanged `ops-cases.test.mjs`, exact machine JSON excluded from the copy scan, OD-T7 over the word cap, Situation content retained, first ready car as a navigation default) | No owner ruling is recorded |
+| T-E5 | T1 went public with the Scale lab | The owner's instruction of 2026-09-27 covered the deployment; the scope stays decision 15 |
+
+### 7.4 N2 decisions still pending
+
+Decided and not repeated: OD-1 (packer route A, landed as `8e04b49`), OD-2 (byte budgets), OD-3, OD-4, OD-5, OD-6, OD-19 (order: S1a before X1; S1b after S2 and before any forecast-arm run; S5 after S4).
+
+| Id | Decision | Recommended default | Needed before |
+|---|---|---|---|
+| OD-7 | Condition tape (berth closure and recovery) in N2.0 | Keep, under route A | S2 |
+| OD-8 | Identities | Merge pickup metrics into `B2`; keep event, curb and accounting identities | S2 |
+| OD-9 | Arrival at the horizon H | Keep DL9; register H minus I at least T | S1 |
+| OD-10 | Arm names on the page | "Respond to requests" and "Stage from published crowd estimates" | S5 |
+| OD-11 | Role of the approach refusal guardrail F2 | Strict harm above 0.02 only where attainable; descriptive if the cell saturates | Any forecast-arm run |
+| OD-12 | Role of the historical maximum age F5 | Descriptive; keep key, label and attaining request | Any forecast-arm run |
+| OD-13 | Terminal energy | Decide after the placebo control; default descriptive plus a normalized preparation energy measure | Any forecast-arm run |
+| OD-14 | Unfinished visits | Reaffirm limit 0 with the placebo false HOLD rate stated, or make descriptive | Any forecast-arm run |
+| OD-15 | Charging policy and `rejected_actions` | A named charging policy; `rejected_actions` a structural zero sanity guardrail | S1 |
+| OD-16 | Informativeness factor | The owner's number before inspection; 1.5 suggested floor | S1a |
+| OD-17 | Cells and patience | Drop the b=8 overlap completion cell; redesign isolation; patience 12 or 20 min by screen | S1b |
+| OD-18 | Placebo control and guardrail classes | Register both | S1a |
+| OD-20 | Time of day | Disable demand and travel modulation with a closed N2 literal | S1a |
+| OD-21 | Short N2 identity line | Yes, low priority | S5 |
+| OD-22 | Approach bound | Fixed 1 to 120, no control-only exception | S1a |
+| OD-23 | Trace and setup sharing scope | Trace under route A; sharing deferred | S5 |
+| OD-24 | Default traced request | First event request of the cell, registered before tuning | S5 |
+| OD-25 | A required metric that is unavailable | A distinct blocked state; both readings block the instrument | S2 |
+| OD-26 | "Visible" includes an opened preparation window | Include it | S1 |
+| C-32 | Merge of record kinds | Pending | S2 |
+| G2 | Cell tapes and stock timelines | Registered in S1; OPEN until then | S1a |
+
+S1 registration also needs the owner's choices of patience, every inherited parameter as a literal, seed blocks (recommended 2501 to 2512 and 3501 to 3512, because 2001 to 2012 and 3001 to 3012 are public four-area seed sets), the condition matrix, a false-alarm cell, the isolation cell, the curb-capacity bound B, refusal ceiling headroom, a cross-seed independence check, detectable effect and dispositions, an INCONCLUSIVE extension (none, or one preregistered with at most 40 seeds), tolerances and nulls, control execution counts, a registration and inspection log, and which engine the walkthrough runs.
+
+## 8. The next plan
+
+### 8.1 The build queue, in recommended order
+
+Zero-byte work and owner gates first, then small fixes of what is live, then the candidates, then the reserved tracks. Take one item at a time, with its acceptance criteria written first.
+
+| Order | Item | Bytes | Blocked by | Done when |
+|---|---|---|---|---|
+| Q0 | Documents commit | 0 | Nothing | Done: the documents commit on top of `1aeaace` is made. It changes no site input (the site inputs equal those of `1aeaace`); the records name `c08f60d` as live and `1aeaace` as not deployed; rows R1 to R4 of section 9 are corrected; the source of truth is updated in place. Its criteria also were: `git diff --cached --check` clean; the staged privacy scan, with the repository pattern and the patterns added for this wave, with zero unexplained hits; `artifacts/`, `dist/` and owner notes not staged. This file is part of that commit and records no result of those staged checks |
+| Q1 | Acceptance in a visible browser (design gates 5 and 6) | 0 | Nothing | At 1440 by 900 px with painted frames: Run inside the first screen, thesis line above the heading, focus on the Result heading after Run, tab order equal to document order, Overview and catalog grids two by two. At 375 by 812 px with 4 and 6 times throttling: press to painted result, first chart and longest task for each lab recorded in place of the estimates (density ladder 4 to 13 s, fleet intake 0.4 to 0.8 s, response reserve 1.8 to 2.9 s); wide tables scroll inside their region, which takes focus; the resize observer count after ten presses. Also open: a screen reader, Safari, Firefox, and a look at the lesson pages with a visible pane. The real-browser sweep of all 59 lesson links is done (section 2.1), but with the pane hidden, so it painted no frame |
+| Q2 | Owner rulings and the push | 0 | The owner | Section 7.1 answered row by row; the source of truth records each answer |
+| Q3 | Declare the lesson snapshot again for 59 lessons | 0 | Nothing | A digest over 59 resolved lesson records is recorded; the 56 older records equal the T1 snapshot (SHA-256 `cb290591f6a208974c269200a6da2d7a0002b2303d8ec540b821aba69c8d2f94`) byte for byte |
+| Q4 | Deploy `1aeaace`, from the documents commit on top of it | 27, measured | The owner's word (O3) | A full serial run of the 1,969 tests on an idle machine whose only failures, if any, are timing tests that each pass their one isolated rerun, every failure and rerun recorded (the two runs so far each had one such failure, section 5); both packages checked at the deployed commit; every public file read back on both addresses; the launch heading checked in a browser; rollback target `19e17ac6` recorded |
+| Q5 | Small Scale lab open items: back navigation keeps the recorded result and edited setup; a typed ratio past 12 decimals is not echoed whole; the event load control accepts only its declared step; fleet intake table 1 rounding; the last-decimal nudge of `sidedText` | A few hundred, estimated; inside the 2,692 room | A wave that names `src/model/scale-*.js` first if it edits them (the event load step is declared at `src/model/scale-response.js:214`; `sidedText` is in `src/ui/experiment.js`) | Each fix behind a test that failed first for the right reason; `test/scale-lab.legacy-text.pins.json` unchanged; the three default labels unchanged unless the wave declares it |
+| Q6 | Side-preserving numbers on every page | About 1,500 | Owner approval of a site-wide rule | One rule on every surface of the four-area pages (verdict card, chart summaries, hidden summary, walkthrough chip), so no value prints two ways on one card; the pinned case of an interval end of -30.04 s against a 30 s margin no longer prints "-30.0 s" beside IMPROVED; every moved pin listed with its reason |
+| Q7 | More than one demand draw | Small; near 0 if pins only | Owner approval as a T2 item | Four-area readings pinned on at least 3 rider draws in the pattern of `test/ops-cases.pins.json`; a reading shows only where its label and verdict match a pin; a changed direction on another draw is reported, not hidden (L3's direction and UC-08a's call already change with the draw) |
+| Q8 | An operating view of one simulated period | About 20,000 | Owner approval | Every number is a field of the recorded fleet intake result; no new engine and no measure computed in the interface; the page calls itself a replay of a simulated period; nothing runs on arrival; absence reads "not available: reason"; no banned word, "live", "real-time" and "monitoring" included; no sideways scroll at 375 px; its own byte line |
+| Q9 | N2, in the order of OD-19: S1a registration (documents) first, then X1, S2 (fixtures first), S1b, S3 and S4, S5 last | Stops: X1 8,192; S2 65,536; S5 32,768 (reserved) | Owner approval of each step; the decisions of 7.4 | X1: legacy byte parity, deterministic cancellation, identical outputs synchronous, chunked, capture on and off and cancel then restart, no simulation task over 50 ms, cancellation p95 at most 100 ms and maximum 200 ms over at least 20 offsets at 40 and 85 vehicles. S2: the 19 fixture groups of N2 section 9 as tests first; legacy Bay, Austin, airport, launch and setup bytes unchanged. S1b: every cell classified before any forecast-arm run. S3 and S4: every registered cell reported, null and adverse results kept. S5: a closed panel between Austin and Launch inside Fleet day; no "forecast", "win", "score", "beats" or "cost" in copy; at most one N2 lesson (59 to 60) |
+| Q10 | P2 remainder: the vehicle-time strip and the open D1 follow-ups | Stop 12,288 (reserved) | Owner approval | Strip segments sum to H; blocked minutes equal the aggregate; sentences equal fields |
+| Q11 | R0 no-data lessons: lessons 3 and 4, a synthetic lesson 1, runbook corrections | Stop 5,120 (reserved) | Owner approval | No external dataset bytes or terms; stop if a lesson needs dataset bytes, dataset terms or a new engine |
+| Q12 | T2 teaching follow-ups, one at a time | Per item; pinned readings for the 36 non-OPS lessons about 10,300, estimated from 5,726 bytes for 20 OPS readings | Owner approval per item | New pins where a result changes; its own byte line; the lesson count pin moves only with a new lesson id |
+| Q13 | Withdraw a road class fleet-wide | About 25,000 | A wave that names the protected files first | Every older pin kept; its own byte line |
+| Q14 | Evidence-path fixes FL-1 to FL-11 (Python instrument, not the site) | 0 site bytes | Work on a Phase 9 branch, never the playground branch | FL-1 and FL-11: `apply_axis` rejects an axis that feeds the world. FL-2: a registry version bump with a recorded re-baseline of the FLEET-005 digest. FL-3: an unavailable guardrail is recorded as not evaluable, never skipped. FL-4 and FL-5: invariants check every transition and event kind |
+| Q15 | Demo plan phases C and D; map motion phase 4 | Not estimated | Owner approval | Not written beyond the scope lines of source of truth section 7.5 |
+| Q16 | P0 prototype and formative study; optional P3 navigation rename | Not estimated | Owner approval; P3 only after the study passes and never during an N2 build | A study of 5 to 8 reviewers with a frozen protocol, pass rule 4 of 5 per task |
+
+### 8.2 Bytes
+
+The offline cap is 2,621,440 bytes (`APP_MAX_BYTES` in `playground/fleetlab/tools/media.mjs`). Of the room under it, 135,904 bytes are reserved: X1 8,192; S2 65,536; S5 32,768; P2 remainder 12,288; R0 5,120; an unallocated floor of 12,000. Do not spend them on other work.
+
+| State | Offline bytes | Left under the cap | Unassigned after the reserve |
+|---|---:|---:|---:|
+| `c08f60d`, deployed | 2,408,323 | 213,117 | 77,213 |
+| `1aeaace`, and the documents commit on top of it (the head) | 2,408,350 | 213,090 | 77,186 |
+
+Estimates against the unassigned room at `1aeaace`: Q6 about 1,500 leaves about 75,686; Q8 about 20,000 leaves about 55,686; Q12 readings about 10,300 leave about 45,386; Q13 about 25,000 leaves about 20,386. Q5 draws on the Scale lab room, which the lead set at 2,692 bytes under the wave's hard stop at `c08f60d` (2,665 once the 27 bytes of `1aeaace` are counted) and which sits inside the unassigned room. The audit estimates the N2 model plus review at 52,500 (low), 81,800 (likely) and 118,500 (high) bytes against 98,304 for S2 and S5 together; at the high estimate it passes those stops by 20,196. The rule for that case: a work package stops above its own budget, deep checks move to test-only and review scope is cut before more bytes are asked for; required behaviour is never removed silently.
+
+### 8.3 Designed but not built
+
+| Item | Where designed | State |
+|---|---|---|
+| N2 model (one fictional event graph, two event cohorts, one constrained hub) | N2 v2.1 (901 lines, SHA-256 `8bb68d09da0b6738b02cdf179a8993dfda4b00aa2cdce5cde23fef7fa33d75de`) and the audit | Design only; no implementation, registration or execution seam authorized |
+| N2 fixture contracts, 19 groups | N2 section 9 | Hand-traced and re-derived by a probe; G2 is the only OPEN family |
+| The N2 review surface and its lesson `event-curb-staging` | N2 section 11 | Planned; lesson 60 |
+| P2 vehicle-time strip, Austin sentences and lessons, one-seed capture-on fork | Packet review section 5 | Not built |
+| R0 no-data lessons; P0 prototype and study; P3 rename | Packet review section 5 | Not built |
+| T2 teaching follow-ups; 19 new lesson proposals | Audit section 11.6 and Appendix B; T1 record | Queued; each new id moves the lesson count pin |
+| Scale lab options out for now: backlog and longest wait at the landing minute (574 bytes); fixed inputs of the response reserve as controls; a shared helper for invalid results; a stale mark naming the changed control; a model fault seam for a fleet intake hand check | Design sections 11 and 14.3 | Out for this wave |
+| A second model file per lab, `src/model/scale-<lab>-engine.js` | Plan section 1.1 | Reserved in the copy-scan list (3 of its 34 names); used by no lab |
+| A study of the false alarm rate of the Scale lab instrument | Model notes section 8 | Not done; no shipped control estimates one |
+| Release automation and a custom domain | Deployment guide | Template only |
+
+### 8.4 Never build or claim
+
+| Area | Never |
+|---|---|
+| Scope and safety | A connection to a road vehicle, vehicle bus, remote control channel or production safety-critical system; any claim of an automation level, road readiness, production safety, certification, compliance, regulatory approval or deployment permission; a language model in a real-time control loop (AGENTS.md section 5) |
+| Status of results | A result presented as anything but NOT_EVIDENCE, simulation only, decision authority NONE; a teaching run exported as a decision record (exports must fail `DecisionRecord` and `ExperimentSpec` validation); a claim that a hash authenticates a producer |
+| Claims about the world | Any claim about a real fleet, operator, depot, city or past event; a lab number set beside another lab's number; a lab fleet size set to a current public count; a public source cited on a page; two public figures joined into a ratio; a threshold read as a standard |
+| Decision integrity | A second verdict engine; statistics in interface code; a UI-only score or winner; a guardrail offset by a primary gain or by another guardrail; a verdict beside a missing guardrail or a failed control; a forecast-arm run before S1 rules freeze; seeds added because a result is inconclusive; pooled cells; a favourable metric chosen after the fact; patience tuned to create a gain |
+| Rejected designs | A real basemap or street tiles; live or real data feeds; points, badges, leaderboards, a single score or gauge; colour-only verdicts; a rendered 3D city, vehicle models or textures; a movable camera, lighting or a day and night tint; a language model in the page; an imported traffic simulator; WebGL for the isometric picture; rerunning an experiment when a knob changes; revenue or cost panels; Python in the browser; guided-tour modals on first load |
+| N2 scope | Extra hubs, road spillback, rerouting, post-assignment abandonment, Street coupling, combined power and weather stress, pricing, an optimizer, RL or language model policy, live maps or events, external data ingestion, cloud or backends, physical control; mechanisms added to rescue a null result |
+| External data | Dataset-derived parameters; acquiring, accepting the terms of or installing tooling for an external driving dataset |
+| Scale lab scope (decision 16, not ratified) | Setup sharing through links; a result download; a header navigation change; a fleet past 120 cars on the Fleet day engine; money, fares or energy prices; a combined arm |
+| Architecture and bytes | Passing the offline cap; spending the reserved bytes on other work; any runtime dependency, network service, telemetry, account or backend; importing the playground from `src/hermes`, or changing `src/hermes`, `pyproject.toml`, `.gitignore`, `Makefile` or `.github` from the playground branch |
+| Tests and pins | Deleting a prior test to make new work pass; rewriting a pin after a Node version change without a reason; changing the model parity values of section 5 |
+
+## 9. Known open items and risks
+
+Privacy and records.
+
+| # | Item | Action |
+|---|---|---|
+| P1 | The unpushed commits add two lines that name a real operator's open dataset, each to say it was not used (in the T1 section of this file and in the T1 record); the public branch already carries the same name elsewhere | The owner reads them before the push (O2) |
+| P2 | `playground/fleetlab/README.md` carries a byline and older facts (the former address, an older release line); the rollback heading of `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` carries personal framing | The owner's decision (O6); the repository is public |
+| R1 | `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` named D1 as current (Production `dd4bfa44`, rollback `f08b6b6f`) and said the project had one Production deployment | Corrected by the lead on 2026-09-27, in the documents commit: the status paragraph names the Scale lab Production `19e17ac6` from `c08f60d` as current, D1 `dd4bfa44` as the rollback target, three Production deployments in the project, and `1aeaace` as committed and not deployed. The rollback heading is left as it was, row P2 |
+| R2 | Source of truth header rows: "Checkouts" opened with the FleetLab worktree on `codex/fleetlab-d1-result-first`; "Remote" described the D1 push plan; "Design review and next phase" pointed to N2 v2, not v2.1 | Corrected on 2026-09-27 (Checkouts, Remote, Playground, Design review and Last updated rows), in the documents commit. Confirmed against git with read-only commands on 2026-09-27: `Hermes-fleetlab` on `codex/fleetlab-t1-teaching-frame` at `c79eccf`; `Hermes-adas` on `feat/phase8-lead-decelerates` at `579ca12`; `Hermes-playground` at `6b376fb`, 14 commits behind `790573e`; `github/feat/fleetlab-playground` at `790573e`, an ancestor of `c08f60d`; `main` and `github/main` at `bca4ccd`, whose tree has no `playground/` folder; 16 commits of `c08f60d` and 17 of `1aeaace` on no remote; `docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md` present. The rows now also name the documents commit |
+| R3 | The Scale lab release record gave the N2 document range as starting at `76439c6`, which was already in the D1 source; the range after `b99ab04` starts at `790573e` | Corrected on 2026-09-27, in the documents commit. Confirmed against `git log b99ab04..c08f60d`: the row lists `790573e`, `4ba5626`, `62547a8`, `82df3b5`, the D1 release record and N2 design commits of that range |
+| R4 | Some drafts carried the state of `319b4a9` or said nothing was deployed | Corrected on 2026-09-27, in the documents commit: each record was read against section 1 of this file and names `c08f60d` as deployed and `1aeaace` as not deployed; every record that mentions the documents commit describes it as made. Numbers of `319b4a9` stay only where a record labels them as that commit or as the state before the review |
+
+Site and code.
+
+| # | Item | Size |
+|---|---|---|
+| S1 | No person has looked at the pages in a visible browser; no painted frame, no 1440 by 900 px, no throttled or physical phone, no screen reader, Safari or Firefox | Process gate, Q1 |
+| S2 | The launch lesson heading defect is live. Both sweeps after the deployment saw it; it came in with the T1 teaching frames (`c79eccf`) and became public with `19e17ac6` | Fixed in `1aeaace`, not deployed; Q4 |
+| S3 | Back to a lesson address discards the recorded result and edited setup (`src/ui/studio.js`) | Small |
+| S4 | A typed governing ratio of more than 12 decimals is echoed whole in the density ladder inputs table | Small |
+| S5 | Where 12 decimals still read on a threshold, `sidedText` moves the last decimal one step toward the value's side, off by under 1e-12 | Small |
+| S6 | The event load control declares step 0.1 and accepts typed steps of 0.01 | Small |
+| S7 | Fleet intake table 1 can print a row one off from its two parts after rounding; its caption makes no sum claim | Small |
+| S8 | Older pages print a long raw number for a tiny value (the site rule, held by existing tests) | A wave of its own |
+| S9 | The out-of-tree lesson snapshot of the T1 wave still counts 56 lessons | Q3 |
+| S10 | No 404 page; the `#/experiments` title and header link disagree; meta and Open Graph text predate the Scale lab; one D1 label remains in `src/ui/depot-scene.js:106` | Small |
+| S11 | The four `src/model/scale-*.js` files now count as existing protected files, so a fix inside them needs a wave that names them first | Rule |
+
+Environment and process.
+
+| # | Item | Mitigation |
+|---|---|---|
+| E1 | Timed tests fail now and then. At `1aeaace`: the response reserve timing test read 9.34 ms against 8 ms on a loaded machine, and the four-area runtime test "run_window and run_pair gaps on the reference preset", which this wave did not change, read 11.34 ms against 8 ms on an otherwise idle machine; each passed its one isolated rerun, the second at 5.73 ms and 5.52 ms. The T1 record shows the same family of timing tests needing isolated retries before (18.78 ms and 10.87 ms) | Run the flagged suite serially on an idle machine; rerun one failure in isolation before believing it; record every failure and its rerun. Accept a full run whose only failures are timing tests that pass their one isolated rerun (Q4) |
+| E2 | The worktree `dist/` holds the `1aeaace` build, not the deployed package | Rebuild from an export of the deployed commit for any readback (section 5) |
+| E3 | The `Hermes-playground` worktree is 14 commits behind its upstream | Fast-forward it (it is clean) before starting work there |
+| E4 | The local ref `refs/remotes/github/HEAD` points to the Phase 7 branch while the remote default is `main` | Name branches explicitly; do not trust the local default |
+| E5 | Four deployments of `fleetlab-playground` are named by no record | Table 2.2 lists them |
+| E6 | The review that found the 9 defects was a stage of the same assisted workflow; it did not read `c08f60d` or the T1 wave | Q1, and an independent human review when the owner wants one |
+| E7 | A green suite missed 9 defects; the fake DOM computes no layout and paints nothing. The real-browser lesson sweep ran with the pane hidden and painted nothing either | A visible browser check stays a separate gate |
+
+## 10. Rules of work for the next builder
+
+| Rule | Detail |
+|---|---|
+| Branch | Work on `claude/fleetlab-scale-lab` or a branch cut from its head. Other worktrees belong to other waves |
+| Git | Stage by explicit path. Before each commit: `git status --short`, `git diff --cached --check`, `git diff --cached --stat` and the staged privacy scan with the repository pattern and the patterns of this wave (plan item I3.5 describes them and prints none). Never push, open a pull request, change a remote, force, reset hard, clean, stash others' work or rewrite history without the owner's word. End commit messages with the attribution line the session states |
+| Never staged | `artifacts/`, `dist/`, caches, virtual environments and the owner's untracked notes |
+| Publishing | Direct Upload. A push does not publish. Each deployment needs the owner's word, naming the source. The owner runs any login; no token in the repository or in chat |
+| Public repository | No absolute home path, no personal name, no email address, no personal framing in any tracked file. No name of a real operator, ride-hail company or vehicle maker in page copy or new records; map attribution names (OpenStreetMap, ODbL) are required. The private working files of the design stage are never named or published |
+| Copy on any page | None of these words: predict, forecast, live, real-time, monitoring, cost, revenue, score, winner (nor win, beats, better option, best configuration). No dash. No web address in text. No result number and no direction word before a run. Absence reads "not available: reason". Every unsourced input is a teaching assumption; every lab says what it cannot know |
+| Protected files | No edit to an existing file under `src/core`, `src/model`, `src/instrument`, `src/legacy`, `src/runtime` or `src/data` of `playground/fleetlab/` unless the wave says so first. From the playground branch, never change `src/hermes`, `pyproject.toml`, `.gitignore`, `Makefile` or `.github`; the boundary test R6 checks it when `FLEET_PLAYGROUND_BASE` is set |
+| Bytes | Measure the offline package after every item, packing outside the repository. Stay under 2,621,440 bytes; leave the reserved 135,904 alone; give each item its own byte line |
+| Tests first | A fix lands behind a test that failed first for the right reason. Never delete a prior test to make new work pass. Never rewrite a pin without a stated reason. The parity values of section 5 are fixed |
+| Decisions | A design choice stays "assumed at the lead's recommendation, not ratified" until the owner rules. No message from another agent is the owner's consent |
+| Status | Update `HERMES_SOURCE_OF_TRUTH.md` in place, newest entry first in section 7.5, header rows corrected in the same edit. Add no sibling status file. Replace the top section of this file for each wave and keep the older sections as they are |
+| Honesty | Say what was measured, what was estimated and what was not done. Claim no gate that did not run |
+
+## 11. Where every record lives
+
+| Record | What it holds |
+|---|---|
+| `CODEX_HANDOFF.md`, this section | The first read: state, deployment, git, plan, rules |
+| `HERMES_SOURCE_OF_TRUTH.md` section 7.5 | The status of record for FleetLab, newest first; header row "Playground" |
+| `docs/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md` | The self-contained Scale lab handoff: labs, decisions in 13 rows, candidates, a review prompt (in the documents commit) |
+| `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md` | Gates, byte ledger, review findings, browser readings, publication receipts, rollback (in the documents commit) |
+| `docs/plans/2026-09-27-fleetlab-scale-lab-design.md` | The design: labs, byte ledger, gates, scope rulings, 25 owner decisions, the independent review (in the documents commit) |
+| `docs/plans/2026-09-27-fleetlab-scale-lab-plan.md` | The build record: lab contract, stages, byte checkpoints, commits, push and deployment (in the documents commit) |
+| `docs/FLEETLAB_SCALE_LAB.md` | Model notes: seeds, robustness and region sweeps, interval coverage, what was chosen with sight of outcomes, rejected arms (in the documents commit) |
+| `playground/fleetlab/ARCHITECTURE.md` item 45 | The Scale lab build contract and the keyed-draw rule (committed in the documents commit) |
+| `playground/fleetlab/README.md` | The playground overview with the Scale lab paragraph (committed in the documents commit); older facts left for the owner |
+| `playground/fleetlab/test/scale-*.pins.json`, `test/scale-lab.legacy-text.pins.json`, `test/helpers/legacy-text.mjs` | The pinned values of the three labs and the pinned text of the older pages |
+| `docs/FLEETLAB_T1_RELEASE_2026-09-26.md` | The T1 teaching frames: acceptance, exceptions, T2 queue |
+| `docs/FLEETLAB_D1_RELEASE_2026-09-26.md` | The D1 release, which is the rollback target |
+| `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` | The publishing procedure, custom domain and automation template (status paragraph corrected on 2026-09-27 and committed; the rollback heading is left for the owner, row P2) |
+| `docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md` | The N2 design, design only |
+| `docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md` | The design audit: N2 review, teaching clarity, three-part explanations of every lesson, 19 lesson proposals, next tasks |
+| `docs/FLEETLAB_PACKET_REVIEW_2026-09-26.md` | The P, S, X and R tracks: P2, R0, P0, P3 |
+| `docs/plans/2026-09-13-fleetlab-playground-design.md` | The original playground design, rejected designs, defects FL-1 to FL-11 |
+| `docs/FLEETLAB_PUBLIC_RELEASE_2026-09-19.md`, `docs/FLEETLAB_STREET_RELEASE_2026-09-19.md`, `docs/FLEETLAB_FILM_RELEASE_2026-09-19.md`, `docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md`, `docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md` | Records of the older releases on the former address |
+| `playground/fleetlab/tools/pack.mjs`, `check-dist.mjs`, `media.mjs` | The packer, the package check and the byte and media limits |
+| `AGENTS.md`, `CODEX_HANDOFF_TEMPLATE.md` | Repository rules (safety boundary in section 5; this handoff is required by section 21) and the Phase 6 template this section adapts |
+
+## Recommendation
+
+Keep the release live. The documents commit on top of `1aeaace` is made (Q0), with rows R1 to R4 of section 9 corrected, so the repository says which source is live and which is not. Now ask the owner for one look at the three labs with a visible pane, for the rulings of section 7.1, for a word on deploying `1aeaace` as its own small release, and for a separate word on the push. The next builder then takes Q1, the visible-browser and throttled-phone acceptance, because it costs no bytes and no person has seen the release. Of the build candidates, the operating view (Q8) closes the largest gap and side-preserving numbers everywhere (Q6) is the smallest honesty fix. N2 stays design-only until S1a is approved.
+
+## Top risks + mitigations
+
+| Risk | Mitigation |
+|---|---|
+| The pages were never seen by a person with a visible pane; a lab could read wrong on a phone | Q1 first; the rollback to `dd4bfa44` is one dashboard action |
+| The live site and the public repository disagree; a reader who follows the site finds no `c08f60d` | The records say so; the push is a fast-forward the owner can choose (section 3) |
+| An undeployed change (`1aeaace`) is read as live, or deployed without the owner's word | Sections 1 and 2.5 name it as not deployed; section 6 requires the word and a full readback |
+| A push publishes lines or framing the owner would not publish | Rows P1 and P2 of section 9 go to the owner before the push |
+| A decision is read as ratified | Every row of section 7 is marked open |
+| The unassigned bytes are spent by several items at once | Each item gets its own byte line; section 8.2 shows about 20,386 bytes left after the four largest estimates |
+| A timing test or a harness misleads | Serial runs on an idle machine, one isolated rerun, and timing against the status line. Both full runs at `1aeaace` had one timing failure that passed in isolation; Q4 accepts only that kind of failure, recorded |
+
+## Next 3 actions
+
+1. The owner opens https://fleetlab.pages.dev/#/scale-lab in a visible browser at desktop and phone size, presses Run on each lab, and answers O2 (push) and O3 (deploy `1aeaace` from the documents commit on top of it), then the decisions of section 7.2.
+2. The next builder runs Q1 (painted frames at 1440 by 900 px, tab order, 375 by 812 px with 4 and 6 times throttling, a look at the lesson pages with a visible pane) and records the readings in the source of truth.
+3. On the owner's word for O3, the next builder deploys by section 6 and accepts by Q4; otherwise the next builder takes one item of section 8.1 with its acceptance criteria written first. No push without the owner's separate word.
+
+---
+
 # FleetLab T1 local teaching handoff — September 26, 2026
 
 Branch: `codex/fleetlab-t1-teaching-frame`. Implementation: `caaf8f2d8f02b3df9e68a5a675fa488f99161d6d`; documentation: `0497b9b`, with unit clarification `45efd43`. Task 1 design commits: `62547a8b9834f0eead16331873ac6a76a041efed`, `82df3b54d265c26bd3f8472e4dc12dca9ca636ef`. Task 2 offline packer: `8e04b498c71c92c3462eb2737af86df5b3f0620c`.

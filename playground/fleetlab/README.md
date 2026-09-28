@@ -4,7 +4,8 @@
 
 The design enhancements are published from source `96fde5b`, deployment `e72ae87d`.
 See the [complete review and next-phase brief](../../docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md)
-for the project history, exact release, tests, hosted acceptance, known limits and all 56 lessons.
+for the project history, exact release, tests, hosted acceptance, known limits and every lesson of that release.
+The catalog in this source tree holds 59 lessons: the three Scale lab lessons were added after that brief and are not in it.
 The [previous M1–M4 record](../../docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md) preserves that release's security scope.
 
 Views and lessons have direct links. **Share a reproducible setup** captures complete current
@@ -38,13 +39,17 @@ Start with **Fleet day → Run fleet day**. Fleet day uses native WebGL cars and
 - **Vehicle mix:** 0–100% Ojai with editable per-type modeled battery, charge acceptance, energy per kilometer, boarding and service-time factors. Ojai numerical defaults are illustrative; I-PACE retail nominal battery is distinct from modeled usable energy. Neither label changes road speed or party capacity.
 - **Operations:** real route distance drives travel time and energy; synthetic time-of-day, weather and congestion modifiers are explicit. Finite software, cleaning, charging and upload resources constrain readiness. Power respects vehicle, port, site and charge-target limits.
 - **Comparisons:** shared demand for fleet/depot and vehicle-mix trials. Results include completed, unserved and unfinished demand, per-type and per-pickup-place outcomes, completed depot time, active work and queues. A first sufficient tested depot count is not a global optimum.
-- **Learning:** 56 examples and lessons: 18 Fleet day lessons, six Street lab cases and all 32 original regional presets.
+- **Learning:** 59 examples and lessons: 18 Fleet day lessons, six Street lab cases, three Scale lab lessons and all 32 original regional presets.
 
 The Bay model is `fleetlab-bay-operations-1.0.0`. The original synthetic `operations.js` and regional simulator/instrument/golden fixtures remain unchanged. Google Maps estimates remain a separate optional local companion and do not supply this OSM replay. No CARLA or physical driving integration is introduced.
 
 Map attribution appears below the scene. **Download attributed map data** offers the complete compact derived database under ODbL in both packages. Source queries, hashes and reproduction script are in `tools/map-data/` at the repository root.
 
 See the [Bay Area handoff](../../docs/FLEETLAB_BAY_AREA_3D_HANDOFF_2026-09-19.md), [simulation guide](../../docs/FLEETLAB_SIMULATION_GUIDE.md), [map provenance](../../docs/FLEETLAB_BAY_AREA_MAP_DATA.md), [vehicle assumptions](../../docs/FLEETLAB_VEHICLE_PROFILES.md), and [Google traffic/CARLA research](../../docs/FLEETLAB_GOOGLE_TRAFFIC_CARLA_RESEARCH.md). The [original audit](../../docs/FLEETLAB_DESIGN_AUDIT_2026-09-18.md) records the broader product redesign.
+
+## Scale lab
+
+The **Scale lab** at `#/scale-lab` asks which capacity meets its load first as a fleet scales. It shows three labs, one at a time, and each ends in a paired test with guardrails. **Density ladder** puts one depot cell of nine places through five fleet sizes from 24 to 120 cars at equal requests per car, and compares depot plans. **Fleet intake** follows one fleet of 624 vehicles as weekly counts from delivered to in rider service, through integration, validation, a release gate and depot places that open in tranches. **Response reserve** puts one pooled support queue through an ordinary day and one area-wide event at 2,000, 6,000 and 20,000 vehicles, and reads reserve staff or a directive against no lever. Two labs, fleet intake and response reserve, are count models with no map. One, the density ladder, reruns the Fleet day engine at five fleet sizes of at most 120 cars, the largest fleet that engine accepts. Its road distances come from the frozen Fleet day road table, so its page shows the map credit (OpenStreetMap contributors, ODbL) in every state, a refused setup among them. FleetLab is independent and is not affiliated with any operator, vehicle maker, regulator or utility. Every input is a teaching assumption unless its source row says otherwise, and every result is `NOT_EVIDENCE`, simulation only, with decision authority `NONE`. The Scale lab is not part of the release recorded at the top of this file. On the owner's word it was deployed on 2026-09-27 to https://fleetlab.pages.dev/ as Production deployment `19e17ac6` from source `c08f60d`. The branch that holds `c08f60d` is not pushed, so that source is not yet in the public repository. A later commit on that branch, `1aeaace`, fixes a Fleet day heading defect older than the Scale lab and is not deployed. The deployment, its public readback and its rollback target are in [the Scale lab release record](../../docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md). Its design decisions, the lesson count of 59 among them, are assumed at the lead's recommendation, not ratified. The build contract is item 45 of `ARCHITECTURE.md`, and every decision in that item is also assumed at the lead's recommendation, not ratified. The model notes are in [the Scale lab guide](../../docs/FLEETLAB_SCALE_LAB.md).
 
 ## The underlying regional teaching model
 
@@ -187,5 +192,5 @@ for exact local commands, treatments, metric populations and limits. M4 adds con
 Choose **Fleet day → Launch rehearsal**, configure Peninsula or fictional Region B, validate
 owners/dependencies/resources, and compare immediate versus delayed mock commissioning.
 Inspect all-request service, unfinished work, queue/active time, energy and recorded port states.
-The 56-entry catalog explains each model’s question and fleet-optimization decision.
+The 59-entry catalog explains each model’s question and fleet-optimization decision.
 [Exact recipe, versions, controls and limits](../../docs/FLEETLAB_DEPOT_LAUNCH.md).

@@ -2,16 +2,23 @@
 
 ## What you need to do now
 
-**No account setup is required for the public Pages address.** Current D1 source is
-`b99ab046ee0ee233c1e9d0db32dfa850c08cad8a`, Production
-`dd4bfa44-7226-4502-9d66-01bb1790f2b6`, immutable
-https://dd4bfa44.fleetlab.pages.dev/, stable **https://fleetlab.pages.dev/**.
-All89 public payloads match; actual security headers and hosted Bay/Austin checks passed.
-The [D1 release record](FLEETLAB_D1_RELEASE_2026-09-26.md) contains counts, bytes, digests,
-browser scope and deviations. The [source of truth](../HERMES_SOURCE_OF_TRUTH.md#75-fleetlab-playground-teaching-model-not-evidence)
-records current state. [N2 v2](plans/2026-09-26-fleetlab-n2-design-v2.md) is design-only;
-G2 is open pending S1. Rollback target: `f08b6b6f-c5d0-44f7-905b-5f16087fbc85`.
-The documentation commit after upload records the release; it does not change deployed source.
+**No account setup is required for the public Pages address.** As of September 27, 2026 the
+stable address **https://fleetlab.pages.dev/** serves the Scale lab release: source
+`c08f60d8830df877fac2c7321bb47d75a5ae56ad`, Production
+`19e17ac6-d617-4789-9260-ca259c53e076`, immutable https://19e17ac6.fleetlab.pages.dev/.
+All 98 public files read back by SHA-256 on both addresses, and the response headers match
+`_headers`. The same upload published the T1 teaching frames. The source is on a local branch
+only: it was deployed on the owner's instruction and has not been pushed. The
+[Scale lab release record](FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md) holds the gates, bytes,
+digests, browser readings and receipts. Rollback target: the D1 Production
+`dd4bfa44-7226-4502-9d66-01bb1790f2b6`, source `b99ab04`
+([D1 release record](FLEETLAB_D1_RELEASE_2026-09-26.md)). The project now holds three
+Production deployments, so the rollback in the dashboard section below applies. A later fix,
+`1aeaace`, is committed and not deployed. The top section of `CODEX_HANDOFF.md` lists what is
+live and what is not. The [source of truth](../HERMES_SOURCE_OF_TRUTH.md#75-fleetlab-playground-teaching-model-not-evidence)
+records current state. [N2 v2.1](plans/2026-09-26-fleetlab-n2-design-v2.1.md) is design-only;
+G2 is open pending S1. The documentation commit after an upload records the release; it does
+not change deployed source.
 
 | Setting | Value |
 |---|---|
@@ -126,7 +133,7 @@ The current boundary suite freezes `.github` relative to the playground base. A 
 
 ## Roll back an interview release
 
-The new `fleetlab` project currently has one Production deployment. Historical deployments in `fleetlab-playground` cannot be selected as rollback targets in this different project. If an earlier application must be restored now, rebuild and verify its exact source in an isolated checkout, then upload that checked package to `fleetlab` with matching commit metadata. Once this project has multiple successful Production releases, open **Workers & Pages → fleetlab → Deployments**. On the previous successful **Production** deployment, open its three-dot menu and choose **Rollback to this deployment**. Verify the stable address afterward. Preview deployments are not rollback targets. This changes the served version without rewriting Git history. [Cloudflare rollback documentation](https://developers.cloudflare.com/pages/configuration/rollbacks/)
+As of September 27, 2026 the `fleetlab` project holds three Production deployments: `19e17ac6` (current), `dd4bfa44` (D1, the rollback target) and `f08b6b6f`. Historical deployments in `fleetlab-playground` cannot be selected as rollback targets in this different project. If an earlier application must be restored now, rebuild and verify its exact source in an isolated checkout, then upload that checked package to `fleetlab` with matching commit metadata. Once this project has multiple successful Production releases, open **Workers & Pages → fleetlab → Deployments**. On the previous successful **Production** deployment, open its three-dot menu and choose **Rollback to this deployment**. Verify the stable address afterward. Preview deployments are not rollback targets. This changes the served version without rewriting Git history. [Cloudflare rollback documentation](https://developers.cloudflare.com/pages/configuration/rollbacks/)
 
 ## Published scope
 
