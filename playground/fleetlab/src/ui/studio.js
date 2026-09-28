@@ -222,7 +222,7 @@ export function mountStudio(app) {
     if(record.target==='scale')scale.setLesson(record);
     else if(record.target==='operations'){
       const patch=typeof record.patch==='function'?record.patch():structuredClone(record.patch);
-      if(patch.launch_rehearsal){operations.chooseLaunchTemplate(patch.launch_rehearsal);operations.launchPanel.setLesson(record);}
+      if(patch.launch_rehearsal){operations.setLesson(null);operations.chooseLaunchTemplate(patch.launch_rehearsal);operations.launchPanel.setLesson(record);}
       else{operations.loadScenario(patch);operations.setLesson(record);}
     }else if(record.target==='streets'){streets.loadSharedSetup({model:'street-lab',config:{...defaultStreetConfig(),hotspot:record.hotspot},options:{}});streets.setLesson(record);}
     else{
