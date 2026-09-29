@@ -3,7 +3,7 @@ export const ROUTES=Object.freeze({
   overview:{path:'overview',title:'Overview'},
   simulation:{path:'fleet-day',title:'Fleet day'},
   streets:{path:'street-lab',title:'Street lab'},
-  depots:{path:'experiments',title:'Four-area workbench'},
+  depots:{path:'experiments',title:'Four-area experiments'},
   catalog:{path:'catalog',title:'Learning catalog'},
   approach:{path:'approach',title:'Product approach'},
   operations:{path:'regional',title:'Four-area workspace'},

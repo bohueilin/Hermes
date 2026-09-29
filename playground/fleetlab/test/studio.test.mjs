@@ -111,10 +111,15 @@ test('workspace main, native navigation, page titles and skip focus follow the a
   for(const page of ['overview','simulation','streets','depots','catalog','approach','operations','tour','scale']){
    x.studio.navigate(page);
    const mains=x.studio.element.querySelectorAll('main').filter(n=>!n.inHiddenOrInert());assert.equal(mains.length,1,page);
-   assert.ok(document.title.includes('FleetLab'));
-   x.studio.element.querySelector('.studio-skip').click();assert.equal(document.activeElement,mains[0]);
+    assert.ok(document.title.includes('FleetLab'));
+    if(page==='depots'){
+     const name=x.studio.element.querySelector('[data-nav="depots"]').textContent;
+     assert.equal(mains[0].querySelector('h1').textContent,name);
+     assert.equal(document.title.split(' · ')[0],name);
+    }
+    x.studio.element.querySelector('.studio-skip').click();assert.equal(document.activeElement,mains[0]);
   }
-  assert.equal(x.studio.element.querySelectorAll('.studio-header nav a').length,6);
+  assert.equal(x.studio.element.querySelectorAll('.studio-header nav a').length,7);
  }finally{x.studio.destroy();x.restore();}
 });
 
@@ -169,8 +174,11 @@ test('compact navigation exposes its state and closes after a destination is cho
   assert.equal(toggle.getAttribute('aria-expanded'),'false');
   toggle.click();assert.equal(toggle.getAttribute('aria-expanded'),'true');
   assert.equal(nav.getAttribute('data-expanded'),'true');
-  nav.querySelector('[data-nav="catalog"]').click();
-  assert.equal(x.studio.element.getAttribute('data-page'),'catalog');
+  const scale=nav.querySelector('[data-nav="scale"]');assert.ok(scale,'Scale lab is discoverable from the header');
+  scale.click();
+  assert.equal(x.studio.element.getAttribute('data-page'),'scale');
+  assert.equal(scale.getAttribute('aria-current'),'page');
+  assert.equal(x.studio.scale.getState().result,null,'navigation keeps the lab idle');
   assert.equal(toggle.getAttribute('aria-expanded'),'false');
   assert.equal(nav.getAttribute('data-expanded'),'false');
   assert.equal(x.store.getState().run.status,'idle');

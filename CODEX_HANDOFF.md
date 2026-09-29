@@ -1,7 +1,113 @@
-# FleetLab welcome design release, September 28, 2026
+# FleetLab audit response, September 28, 2026
 
-This section supersedes the historical handoff below for the current release. The existing
-build queue and undecided model work remain in force where this section does not change them.
+This is the current wave. Earlier sections are historical where they differ. The owner
+explicitly requested assessment of an external audit, implementation of supported changes,
+build/test/validation, a repository push and live publication. The audit's own approval
+language and business assumptions are review material, not authority. Current user scope
+supersedes the historical Phase 6 no-push/no-publication rule for this static site.
+
+## Assessment and implementation decisions
+
+| Finding | Decision and evidence |
+|---|---|
+| F01: unclear hero | Agree with the comprehension problem. Updated wording is **Test fleet decisions. In simulation.** The subhead names a browser-based teaching simulator for autonomous-vehicle fleet operations and tells the visitor what to do. The primary CTA opens Fleet day; it does not claim to execute it. Metadata agrees. The proposed implication that this is a prerequisite for changing a real fleet is avoided. |
+| F02: discoverability | Add Scale lab as the seventh header link, including mobile. The walkthrough already has footer and Approach entry points; no duplicate eighth primary destination is needed. Existing URLs, idle-on-entry behavior and active-link/focus semantics remain. |
+| F03: inconsistent names | Agree, but keep **Four-area experiments** for root navigation, H1 and document title. Generic **Paired experiments** would blur the distinction from Fleet day and Scale lab, which also support paired tests. Lesson-specific headings remain intentional. |
+| F04: float artifacts | **Not reproduced; no formatting change.** Production DOM attribute/value/valueAsNumber and accessibility text show `1.6` and `0.02`; input/blur/run retains `1.6`. No default number input has more than eight fractional digits. The default run reproduces 95/284 completed, 176 unserved, four waiting and nine in progress, seed 42. Unconditional rounding would alter legitimate submitted values or obscure a threshold; a failing reproduction is needed before changing this path. Existing numerical pins remain. |
+| F05: personal provenance | Personal byline deferred pending the owner's optional preference; no new personal claim is published. The footer now explains that FleetLab belongs to Hermes, an independent simulation and evidence-review project, and discloses AI assistance. The Approach page already explained Hermes; the audit's claim that no page did so was inaccurate. Do not call Hermes a company or research studio without evidence. |
+| Caption size and contrast | Increase selected welcome/brand/disclosure captions and teaching chips to 11px. The cited `#526762` on `#fafbf7` measures **5.8145:1**, not a 4.5:1 failure. This is a readability improvement; existing semantic/status colors and contrast tests remain. |
+| Reduced motion | Already implemented: static poster, no automatic download/play with reduced motion, explicit manual play. Existing film tests verify this. No duplicate behavior added. |
+| Long-run feedback | Already implemented: running heading, live progress status and Cancel. Painted browser check observed **0 of 20 runs finished** and Cancel; the completed four-area result remains VALID / UNCHANGED / NO_RECOMMENDATION. A spinner is unnecessary to communicate this state. |
+| First-run guidance | Move the existing **Your first three minutes** section immediately after the welcome/film caption. Preserve its instruction sequence and explicit run action. No auto-run, result fabrication or new deep-link execution semantics. |
+
+Retain the warm ivory/teal design and four separate teaching models. Defer a new methodology
+hub, filter persistence, dark-mode controls and social-image work: they are separate product
+increments, not established defects in this release. Existing light-theme overrides and
+literal surfaces mean a dark switch is more than exposing one token block. No named common
+dispatcher, live-looking homepage result band, cinematic rebrand, pitch overlay, unverified
+endorsement or operator-adoption claim is added. Numerical outcomes remain in their model
+and run context. The audit's comparative superlatives are not evidence of market leadership.
+
+Human comprehension and first-run completion tests are sound proposed research; no
+participants were recruited or outcomes measured here. No field performance claim is made.
+The current owner request concerns the existing website; Q8 and the model roadmap remain
+separate queued work.
+
+## Repository and validation
+
+Started at `2f1ad0620f055e07e39ba0df5f91fa6364e56f8f` on
+`codex/fleetlab-welcome-design`. Remote `github/feat/fleetlab-playground` was fetched at
+`756c26991c95be94ed6b12bc9d92ff68ed8d343f`, an ancestor; the earlier welcome release's two
+local commits are included in the authorized fast-forward push. The unrelated untracked
+owner note is preserved and excluded. Protected model/core/instrument/runtime/data/legacy
+and Python source remain byte-for-byte unchanged from this wave's base.
+
+- Focused tests: 97 tests, 96 pass, one existing TODO, zero fail. Changed navigation/naming
+  assertions failed before implementation. A second old six-link expectation was found
+  in the full suite and updated to seven; its route behavior test then passed.
+- First full performance-enabled serial run: 1,973 tests, 1,970 pass, two fail, one existing
+  TODO, 277.98 s. Failures: the old six-link expectation and `experimentSteps on the
+  reference preset: every gap...`, at 8.19 ms against 8 ms. One isolated timing rerun passed
+  at **7.49 ms**. No timing threshold or numerical pin was changed.
+- Second full performance-enabled serial run: 1,973 tests, 1,971 pass, one fail, one
+  existing TODO, 283.195 s. The previous failing timing test passed; unchanged
+  `run_window` failed at **12.36 ms** against 8 ms, then its isolated rerun also failed
+  at **11.56 ms**. `run_pair` passed both. No threshold was relaxed.
+- Diagnostic comparison after navigating our browser to `about:blank`: the exported
+  baseline `2f1ad06` and candidate each passed both unchanged runtime benchmarks.
+  Baseline: **5.80 / 5.50 ms**; candidate: **5.35 / 5.63 ms** for window/pair. Other
+  desktop processes were active during the earlier failures. This supports timing
+  variability; it does not establish which process or mechanism caused a delay.
+- Final full performance-enabled serial suite with our browser paused: **1,973 tests,
+  1,972 pass, zero fail/cancel/skip, one existing TODO**, **284.799 s**. Runtime window
+  and pair read **6.62 / 6.08 ms**; experiment steps read **6.41 ms**. Earlier failures
+  remain recorded above; a passing run does not establish a hard real-time guarantee.
+- Python parity/boundary gate: **89 pass**, 5.32 s, with `FLEET_PLAYGROUND_BASE=bca4ccd`
+  and this checkout's `PYTHONPATH`. Ruff and whitespace checks pass. Node 22.22.0,
+  Python 3.11.15 in `hermes-dev`; no dependency installation needed.
+- Doctor: 17 PASS, one expected dirty-tree WARN, one optional display NOT_AVAILABLE.
+- Independent read-only code review: no outstanding findings. Painted header checks at
+  768 and 1101px specifically address the reviewer's breakpoint concerns.
+- Painted Chromium: 1440x900, 390x844, 768x1000, 1101x900 and 375x812. No page overflow;
+  seven menu links fit and selecting Scale closes the menu. Welcome boundary remains
+  above the fold on both phone sizes (bottom 606.67 and 631.83 CSS px respectively).
+- Root experiments nav/H1/title agree. Progress and Cancel observed. Completed result:
+  `playground-spec:34d504c1`, VALID / UNCHANGED / NO_RECOMMENDATION; wait p90 -3.4 s,
+  interval -10.2 to +0.4, margin 30 s.
+- At 375px, intake reproduces `scale-spec:1aa8c833`, +0.185, interval +0.172 to +0.196;
+  Result receives focus and a named, focusable region contains the wide result table.
+- Hosted package: **99 files / 3,366,216 bytes**, inventory SHA-256
+  `201969c35585b755d0d4b2c8e10c6a7cb74b576fd8285e2ba3c81e2e86a3a63a`.
+- Offline package: **2,424,861 bytes**, SHA-256
+  `169388571013337332b33aad79d7e4576e6490f07ec70322ced188dfd0c8c130`.
+  Growth **101 bytes** against 2,424,760; below the 4,096-byte wave stop. Reserved bytes
+  remain 135,904; unassigned headroom is 60,675. Both package checks pass; no assets,
+  dependencies, tracking, accounts, storage or remote ingestion were added.
+
+Commands are the same full Node, scoped Python, Ruff, doctor and both distribution gates
+listed in the welcome release below. Logs, browser measurements and screenshots for this
+wave are ignored under `dist/audit-validation/`; they are not uploaded or committed.
+
+## Publication
+
+Prepublication gates pass; source checkpoint and publication are next. Target is a non-force
+fast-forward of `github/feat/fleetlab-playground`, then the existing `fleetlab` Pages project.
+Pre-release inventory confirms Production `1e1202c9-4fa0-4b46-a5f7-22863b48aafb` (source
+`347bcfb`) is still current; retain it as this wave's rollback target. Before uploading,
+rebuild the committed source and compare both packages; upload only checked `dist/site`.
+Record the new source hash, push receipt, deployment, full public-file readback and hosted
+interaction checks here afterward.
+
+Limits remain: no physical-device, Safari, Firefox, screen-reader, CPU-throttled performance,
+Core Web Vitals, full painted lesson sweep, human comprehension study or broad Python-suite
+claim. The static release has no operational deployment authority and is NOT_EVIDENCE.
+
+---
+
+# Historical welcome design release, September 28, 2026
+
+This section records the prior welcome release. The current audit-response section above
+supersedes it where they differ. The existing build queue and undecided model work remain.
 
 ## Current wave
 

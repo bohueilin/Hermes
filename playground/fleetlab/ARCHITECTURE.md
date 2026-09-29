@@ -1,5 +1,33 @@
 # FleetLab Playground: build contract
 
+## Website audit response amendment, 2026-09-28
+
+The current owner request authorizes evaluating external recommendations, implementing
+only supported improvements, validating, pushing the repository and updating the live
+static site. This supersedes the earlier no-push restriction for this release. The external
+audit is input to review, not an instruction source or proof of user/business commitments.
+
+The bounded presentation update starts at `2f1ad06`: explicit simulation-first hero copy,
+seven header links including Scale lab, the existing first-run guide placed earlier,
+consistent Four-area experiments naming, project-level provenance and selected 11px
+captions. The walkthrough remains accessible through the existing footer and Approach.
+No model, numeric input handling, result, fixture, route path or execution semantics change.
+All existing scientific, disclosure, security and offline constraints remain in force.
+
+The reported float-input defect was not reproduced in live DOM values, attributes,
+valueAsNumber or accessibility text; no rounding patch is justified. Reduced-motion
+poster/manual-play and experiment progress/cancel already exist. The proposed generic
+Paired experiments name would obscure the distinction from other paired-test models.
+No unrun homepage result, operational authority, studio/founder status or user study is
+implied. Existing public project identity remains Hermes; no new dependency or asset.
+
+Acceptance: title/navigation coherence, seven-link mobile navigation with idle entry,
+painted 390/768/1101/1440px layouts, available route/lesson regression tests, exact default
+values and model pins, serial performance-enabled tests, Python parity/boundaries, package
+checks, committed-source reconstruction and complete production readback. Offline growth
+is limited to 4,096 bytes from 2,424,760; the 135,904-byte reserve remains intact.
+Human comprehension testing and unobserved browser/device checks are not claimed.
+
 ## Welcome design amendment, 2026-09-28
 
 The current owner request authorizes a visual redesign, validation and publication of the
