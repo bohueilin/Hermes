@@ -99,6 +99,10 @@ export function createScaleLab({labs=SCALE_LABS,hrefFor=id=>routeHref({page:'sca
       r.notes?.length?el('section',{},[el('h3',{},'Set by the inputs, not found by the run'),el('ul',{},r.notes.map(n=>el('li',{},fillText(n))))]):null,
       r.controls?.length?el('section',{},[el('h3',{},'Controls run with this test'),...r.controls.map(c=>el('p',{},[el('strong',{},displayText(c.title)+': '),runLine(frame,pairedProjection(c),TOOLS).line]))]):null,
     ].filter(Boolean));
+    // The shared readout's wide tables need a keyboard entry point in this view.
+    for(const region of [...reading.querySelectorAll('.fl-scroll'),...chartSlot.querySelectorAll('.fl-scroll')]){
+      region.setAttribute('tabindex','0');region.setAttribute('role','region');region.setAttribute('aria-label','Paired test result table');
+    }
     records.replaceChildren(...[
       ...(r.tables??[]).map(t=>table(t.caption,t.heads,t.rows)),
       exactView(r),

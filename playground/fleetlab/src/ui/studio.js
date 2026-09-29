@@ -34,19 +34,23 @@ function overview(navigate, film) {
   film.element.appendChild(el("span",{class:"film-illustration-label"},"Concept illustration · not simulation output"));
   return el("main",{class:"studio-overview",id:"studio-overview"},[
     el("section",{class:"studio-film-hero"},[
-      film.element,
-      el("div",{class:"film-scrim","aria-hidden":"true"}),
       el("div",{class:"film-copy"},[
-        eyebrow("FLEET OPERATIONS, MADE EXPLORABLE"),
-        el("h1",{},"Every great ride starts with a ready fleet."),
-        el("p",{class:"film-lede"},"Riders wait when cars are busy elsewhere. Find out which work between rides limits service: driving, charging, cleaning or a street queue."),
-        el("div",{class:"hero-actions"},[pageLink("Run a fleet day  →","simulation",navigate,true),pageLink("Explore the models  →","catalog",navigate)]),
-        el("p",{class:"hero-duration"},"Start in three minutes · Runs in your browser"),
+        eyebrow("A PLAYGROUND FOR FLEET CURIOSITY"),
+        el("h1",{},["Big fleet questions.",el("span",{},"Room to explore.")]),
+        el("p",{class:"film-lede"},"Follow the work between rides. Try an idea, explore a constraint, and discover how the pieces of a fleet fit together."),
+        el("div",{class:"hero-actions"},[pageLink("Explore a fleet day  →","simulation",navigate,true),pageLink("Open the Scale lab  →","scale",navigate)]),
+        el("p",{class:"hero-duration"},"Start in three minutes · No account needed"),
+        el("div",{class:"welcome-boundary"},[el("strong",{},"Synthetic teaching simulator"),el("span",{},"NOT_EVIDENCE · simulation only · decision authority NONE")]),
+      ]),
+      el("div",{class:"welcome-visual"},[
+        el("div",{class:"welcome-visual-heading"},[el("span",{},"THE WORK BETWEEN RIDES"),el("span",{"aria-hidden":"true"},"↗")]),
+        film.element,
+        el("div",{class:"welcome-cycle","aria-label":"Illustrated fleet cycle"},["Ride","Recharge","Reset","Repeat"].map((word,i)=>el("span",{},[el("small",{},`0${i+1}`),word]))),
       ]),
     ]),
     el("div",{class:"film-caption"},[
       el("p",{},[el("strong",{},"Original 3D concept film"),"Waterfront travel, a neighborhood and a charging depot connect the ride to fleet readiness. An illustration, not a simulation result."]),
-      el("p",{class:"creator-credit"},"Independent project by Bo-Huei Lin"),
+      el("p",{class:"creator-credit"},"Independent exploration. Built with curiosity."),
     ]),
     el("section",{class:"depot-introduction"},[
       el("div",{class:"section-heading"},[el("div",{},[eyebrow("BETWEEN EVERY RIDE"),el("h2",{},"Readiness is a connected cycle.")]),el("p",{},"Explore the depot stages, then run the model to see how finite resources shape vehicle availability.")]),
@@ -54,7 +58,7 @@ function overview(navigate, film) {
     ]),
     el("section",{class:"studio-facts","aria-label":"Model scope"},[
       el("div",{},[el("strong",{},"18 Bay Area locations"),el("span",{},"Real geography, simulated operations")]),
-      el("div",{},[el("strong",{},"Two vehicle profiles"),el("span",{},"Jaguar I-PACE and Ojai assumptions")]),
+      el("div",{},[el("strong",{},"Two vehicle profiles"),el("span",{},"Explicit energy and service assumptions")]),
       el("div",{},[el("strong",{},"A connected operating cycle"),el("span",{},"Trips, energy and finite depot resources")]),
       el("div",{},[el("strong",{},"Repeatable experiments"),el("span",{},"Declared inputs and inspectable trade-offs")]),
     ]),
@@ -134,9 +138,12 @@ export function mountStudio(app) {
   });
   const brand=pageLink('F','overview',navigate);brand.setAttribute('class','studio-monogram');brand.setAttribute('aria-label','FleetLab overview');
   const skip=el('a',{href:'#studio-content',class:'studio-skip',on:{click:event=>{event.preventDefault();activeMain?.focus();}}},'Skip to main content');
+  const navigation=el('nav',{id:'studio-navigation','aria-label':'Main navigation','data-expanded':'false'},navLinks);
+  const menu=el('button',{type:'button',class:'studio-menu','aria-controls':'studio-navigation','aria-expanded':'false',on:{click:()=>setMenu(menu.getAttribute('aria-expanded')!=='true')}},'Explore +');
+  function setMenu(open){menu.setAttribute('aria-expanded',String(open));navigation.setAttribute('data-expanded',String(open));menu.textContent=open?'Close ×':'Explore +';}
   const header=el('header',{class:'studio-header'},[
     el('div',{class:'studio-brand'},[brand,el('div',{},[el('strong',{},'FleetLab'),el('span',{},'by Hermes')])]),
-    el('nav',{'aria-label':'Main navigation'},navLinks),el('span',{class:'studio-status'},[el('span',{'aria-hidden':'true'},'◉'),'SIMULATION LAB']),
+    menu,navigation,el('span',{class:'studio-status'},[el('span',{'aria-hidden':'true'},'◉'),'SIMULATION LAB']),
   ]);
   const reducedMotion=()=>isReducedMotion(store.getState());
   const film=createHeroFilm({reducedMotion});
@@ -154,7 +161,7 @@ export function mountStudio(app) {
   const errorText=el('p',{});
   const routeError=el('main',{class:'studio-route-error',hidden:true},[eyebrow('LINK COULD NOT BE LOADED'),el('h1',{},'This setup needs attention.'),errorText,el('p',{},'No simulation was run. Check the complete link and the FleetLab version that created it, or choose a view from the navigation.'),el('button',{type:'button',class:'studio-button','data-action':'recover-route',on:{click:()=>navigate('overview')}},'Open the overview')]);
   const footer=el('footer',{class:'studio-footer'},[
-    el('div',{},[el('strong',{},'FleetLab / Hermes'),el('p',{},'Designed and built by Bo-Huei Lin. Independent exploration of fleet operations and simulation-based decisions.')]),
+    el('div',{},[el('strong',{},'FleetLab / Hermes'),el('p',{},'An independent, AI-assisted exploration of fleet operations. Synthetic models, inspectable assumptions, and room for curiosity.')]),
     el('nav',{'aria-label':'Footer navigation'},[pageLink('Learning catalog','catalog',navigate),pageLink('Product approach','approach',navigate),pageLink('Guided walkthrough','tour',navigate)]),
     el('span',{},'Simulation for learning and exploration'),
   ]);
@@ -189,6 +196,7 @@ export function mountStudio(app) {
     initialized=true;
   }
   function renderPage(page){
+    setMenu(false);
     workspaceLesson=null;current=page;pause();
     if(store.getState().present.on&&page!=='tour')present.close();
     const workspace=['operations','depots','tour'].includes(page);

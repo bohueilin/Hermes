@@ -109,9 +109,10 @@ function tokenContrast(theme, fg, bg) {
   return contrast(THEMES[theme][fg], THEMES[theme][bg]);
 }
 
-// The redesign intentionally uses the same readable light palette under both OS preferences.
+// The welcome edition replaces the blue palette with ivory and teal in both OS preferences.
+// Contrast checks below remain unchanged; this pin records the deliberate visual change.
 const REDESIGN_TOKENS = {
-  "--ground":"#ffffff", "--panel":"#ffffff", "--ink":"#182b42", "--accent":"#155bd7",
+  "--ground":"#fafbf7", "--panel":"#ffffff", "--ink":"#183c37", "--accent":"#166653",
 };
 const DESIGN_TOKENS = { light: REDESIGN_TOKENS, dark: REDESIGN_TOKENS };
 

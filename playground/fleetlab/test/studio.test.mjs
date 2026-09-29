@@ -135,3 +135,44 @@ test("a launch lesson reached from another Fleet day lesson does not keep that l
     x.restore();
   }
 });
+
+test('welcome actions open the fleet and scale workspaces without producing a result',()=>{
+ const x=setup();try{
+  const actions=x.studio.element.querySelector('.hero-actions');
+  const fleet=actions.querySelector('a[href="#/fleet-day"]');
+  const scale=actions.querySelector('a[href="#/scale-lab"]');
+  assert.ok(fleet,'the welcome has a fleet-day entry');
+  assert.ok(scale,'the welcome has a direct scale-lab entry');
+  fleet.click();assert.equal(x.studio.operations.element.hidden,false);
+  assert.equal(x.studio.operations.getState().result,null);
+  x.studio.navigate('overview');scale.click();
+  assert.equal(x.studio.scale.element.hidden,false);
+  assert.equal(x.studio.scale.getState().result,null);
+  assert.equal(x.store.getState().experiment.verdict,null);
+ }finally{x.studio.destroy();x.restore();}
+});
+
+test('welcome names the teaching boundary before a visitor enters a model',()=>{
+ const x=setup();try{
+  const welcome=x.studio.element.querySelector('.studio-film-hero');
+  assert.match(welcome.textContent,/Synthetic teaching simulator/);
+  assert.match(welcome.textContent,/NOT_EVIDENCE/);
+  assert.match(welcome.textContent,/decision authority NONE/);
+ }finally{x.studio.destroy();x.restore();}
+});
+
+test('compact navigation exposes its state and closes after a destination is chosen',()=>{
+ const x=setup();try{
+  const toggle=x.studio.element.querySelector('[aria-controls="studio-navigation"]');
+  assert.ok(toggle,'compact navigation has an accessible toggle');
+  const nav=x.studio.element.querySelector('#studio-navigation');
+  assert.equal(toggle.getAttribute('aria-expanded'),'false');
+  toggle.click();assert.equal(toggle.getAttribute('aria-expanded'),'true');
+  assert.equal(nav.getAttribute('data-expanded'),'true');
+  nav.querySelector('[data-nav="catalog"]').click();
+  assert.equal(x.studio.element.getAttribute('data-page'),'catalog');
+  assert.equal(toggle.getAttribute('aria-expanded'),'false');
+  assert.equal(nav.getAttribute('data-expanded'),'false');
+  assert.equal(x.store.getState().run.status,'idle');
+ }finally{x.studio.destroy();x.restore();}
+});

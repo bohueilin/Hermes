@@ -1,4 +1,90 @@
-# FleetLab handoff for the next builder, September 28, 2026
+# FleetLab welcome design release, September 28, 2026
+
+This section supersedes the historical handoff below for the current release. The existing
+build queue and undecided model work remain in force where this section does not change them.
+
+## Current wave
+
+The owner requested a welcoming, professional visual refresh, build, test, validation and
+publication of the existing static FleetLab experience. Work started at `756c269`, whose
+site inputs match `1aeaace`, on `codex/fleetlab-welcome-design`. An unrelated untracked owner
+note was preserved. No push, PR, simulator execution, backend, dependency or data change.
+The current deployment instruction supersedes the historical Phase 6 publication restriction
+for the static playground only. The architecture amendment records this scope decision.
+
+Warm ivory and teal unify the welcome, teaching panels, catalog and results. The existing
+concept film is framed beside the welcome; direct links enter Fleet day and Scale lab.
+A compact mobile menu retains six destinations. Scale result tables receive named keyboard
+scroll regions. The synthetic teaching boundary is visible on entry. No model, core,
+instrument, runtime, data, legacy implementation or numerical pin changed.
+
+## Validation before publication
+
+- Final serial Node suite with performance enabled: **1,973 tests, 1,972 pass, zero fail,
+  zero skipped, one existing TODO**, 280.65 seconds, Node 22.22.0.
+- Python parity and boundary suite with `FLEET_PLAYGROUND_BASE=bca4ccd` and this checkout's
+  `PYTHONPATH`: **89 pass**, 4.97 seconds, Python 3.11.15. Ruff and `git diff --check` pass.
+- Doctor in `hermes-dev` with this checkout's `PYTHONPATH`: 17 PASS, one WARN for intended
+  working-tree changes, one optional display NOT_AVAILABLE. No simulator was launched.
+- Independent code review found a tablet background/order conflict; fixed and reviewed
+  again with no remaining findings. Painted 768 and 900 px checks confirm the fix.
+- Tests first exposed missing direct Scale entry, missing welcome boundary, missing mobile
+  menu state and missing table focus. These fail before implementation and pass afterward.
+  The old exact palette pin was updated for the intended colors; contrast checks were kept.
+- Painted Chromium at 1440x900 and 375x812: all three Scale defaults reproduce their labels
+  and readings, Run stays in the first screen, focus moves to Result, no page overflow.
+  Named wide result regions take focus. Held intake preserves its HOLD despite an improved
+  primary measure. Mobile navigation opens, closes and navigates correctly.
+- Fleet day: 95/284 completed, 176 unserved, four waiting, nine in progress, seed 42.
+  Street comparison: 37 to 41 completed of 71, with +37.5 km empty distance; mixed trade-off.
+  Four-area default: `playground-spec:34d504c1`, VALID / UNCHANGED / NO_RECOMMENDATION;
+  wait p90 -3.4 seconds, interval -10.2 to +0.4 against a 30-second margin.
+- Catalog filtering to Scale lab and searching intake returns one of 59 lessons.
+  Film playback/pause and pause on navigation pass. Product approach has no page overflow.
+- Hosted package: **99 files / 3,366,116 bytes**. Inventory SHA-256:
+  `b039c11c4c3d76cdfe358041feb85ae903491390e43b697768c47a58186e45d5`.
+- Offline package: **2,424,760 bytes**, SHA-256
+  `8bb4ea9b2f03346458755bd5bc203a2e7b0f006f86b0fc7f6dc01ae7a64d97d7`.
+  Growth 16,410 bytes versus 2,408,350; below the 20,000 wave stop. 135,904 reserved bytes
+  remain untouched; 60,776 bytes remain unassigned under the hard cap. Both distribution
+  checks pass, including policy, URLs, copy, tokens, labels and hosted file inventory.
+
+Reproduce from the repository root (Python commands run in `hermes-dev`):
+
+```sh
+FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs
+FLEET_PLAYGROUND_BASE=bca4ccd PYTHONPATH="$PWD/src" PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider tests/unit/test_fleet_playground_parity.py tests/unit/test_fleet_playground_boundaries.py
+PYTHONPATH="$PWD/src" python -m ruff check --no-cache .
+PYTHONPATH="$PWD/src" python -m hermes doctor
+node playground/fleetlab/tools/pack.mjs --site dist/site
+node playground/fleetlab/tools/check-dist.mjs --site dist/site
+node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-playground.html
+node playground/fleetlab/tools/check-dist.mjs dist/fleetlab-playground.html
+git diff --check
+```
+
+## Publication and remaining checks
+
+Publication is pending at this source checkpoint. Target: existing `fleetlab` Pages project,
+production branch metadata `feat/fleetlab-playground`; upload only the checked `dist/site`.
+The pre-upload inventory confirms the current production is `77922688-6d87-4d15-94bf-442beab31712`
+(source `1aeaace`); retain it as the rollback target. Record the new source hash, deployment
+receipt, stable and immutable address readback and hosted browser result after upload.
+
+Q1 remains **partially complete**: these are painted Chromium checks, not CPU-throttled
+phone measurements. No physical phone, Safari, Firefox, screen reader, complete painted
+59-lesson sweep, ten-run resize-observer accounting, security scan or broad Python suite
+is claimed. Browser elapsed values include automation overhead and are not instrumented
+press-to-paint timings. Q8's simulated-period replay remains queued. No private preparation
+material is included in the public site or release record. Results remain NOT_EVIDENCE,
+simulation only, decision authority NONE; nothing here establishes real-world safety.
+
+Local logs, screenshots and inventory are ignored under `dist/validation/` and are not
+part of the public package. Do not stage them or the unrelated untracked owner note.
+
+---
+
+# Historical handoff before the welcome release, September 28, 2026
 
 Read this section before any FleetLab work. It covers every FleetLab wave up to 2026-09-28: what is live, what is public, what waits for the owner and what to build next. It was updated on 2026-09-28 with the owner's answers to the four questions of section 7.0, the heading fix release and the push. The state of 2026-09-27 was read on that day between about 22:30 and 23:15 Pacific time from git, the pins files, the records of the `Hermes-scale` worktree and read-only inventories of the live site, the branches and deployments, and the plans. Rows marked "measured for this handoff" were taken at about 23:10 to 23:15 Pacific on that day. Later on 2026-09-27 the lead added a sweep of the lesson links in a real browser and a second full serial run at `1aeaace`, and committed the records in one documents commit on top of `1aeaace`, which is `44569f8`. On 2026-09-28 the lead made the privacy commit `0bc2f25`, deployed `1aeaace` as Production `77922688`, committed these records in one records commit on top of `0bc2f25`, and right after that commit pushed the branch head to github. The sections below describe that commit and that push as made. A record cannot name the hash of the commit that holds it, so this file calls it "the records commit of 2026-09-28".
 

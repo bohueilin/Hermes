@@ -716,3 +716,19 @@ test('M25: an error thrown while a recorded result is rendered reaches the alert
     view.destroy();
   }finally{restore();}
 });
+
+test('result tables expose a named keyboard scroll region on narrow screens',async()=>{
+ const restore=installFakeDom();
+ const view=createScaleLab({labs:[SCALE_LABS[1]]});
+ document.body.appendChild(view.element);
+ try{
+  await view.run();
+  const regions=view.element.querySelectorAll('.scale-result .fl-scroll');
+  assert.ok(regions.length>0);
+  for(const region of regions){
+   assert.equal(region.getAttribute('tabindex'),'0','every result table can receive keyboard focus');
+   assert.equal(region.getAttribute('role'),'region');
+   assert.ok(region.getAttribute('aria-label'));
+  }
+ }finally{view.destroy();restore();}
+});

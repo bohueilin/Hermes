@@ -1,5 +1,35 @@
 # FleetLab Playground: build contract
 
+## Welcome design amendment, 2026-09-28
+
+The current owner request authorizes a visual redesign, validation and publication of the
+existing static FleetLab site. For this wave it supersedes the historical Phase 6 branch
+and no-publication rules only for the playground; the evidence workbench stays separate.
+Work begins at `756c269`, whose site inputs equal the currently published `1aeaace`, on
+`codex/fleetlab-welcome-design`. No push, pull request, simulator launch or evidence change
+is part of this wave. Private preparation material is not a product or release-record input.
+
+Design: warm ivory surfaces, deep teal typography, mint/peach/lilac supporting panels,
+generous spacing and a split welcome with the existing illustrative film. Fleet day and
+Scale lab receive direct entry links. Six navigation destinations remain; below 768 CSS
+pixels a native disclosure button controls the navigation and closes on route changes.
+Scale result table regions are named and keyboard-focusable. The welcome labels the
+synthetic teaching boundary before a visitor opens a model. No execution starts on entry.
+
+Acceptance is written before release: all model/instrument/runtime/data/legacy files and
+pins unchanged; no dependencies, network or storage capability added; contrast, focus,
+375/768/900/1440-pixel layouts and contained table scrolling checked; all three Scale
+defaults, held intake, Fleet day, Street comparison, catalog filters and film controls
+exercised; serial tests, Python parity/boundaries, distribution policy and byte checks
+pass; every public payload is checked after upload. The offline growth stop is 20,000
+bytes against 2,408,350, retaining 135,904 reserved bytes under the 2,621,440 cap.
+
+Q1 is only partly covered by the available painted Chromium checks. CPU-throttled phone
+timings, physical devices, Safari, Firefox, a screen reader, ten-run observer counts and
+the complete painted lesson sweep remain unclaimed. Q8's simulated-period replay stays
+in the existing build queue. This wave improves the existing experience and adds no model
+or result view. See the current top section of `CODEX_HANDOFF.md` for measured results.
+
 ## Depot readiness M1 amendment, 2026-09-22
 
 The current user authorizes only a bounded staffing/work-order slice. Contract and decision
