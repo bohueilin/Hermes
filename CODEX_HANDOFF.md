@@ -90,13 +90,34 @@ wave are ignored under `dist/audit-validation/`; they are not uploaded or commit
 
 ## Publication
 
-Prepublication gates pass; source checkpoint and publication are next. Target is a non-force
-fast-forward of `github/feat/fleetlab-playground`, then the existing `fleetlab` Pages project.
-Pre-release inventory confirms Production `1e1202c9-4fa0-4b46-a5f7-22863b48aafb` (source
-`347bcfb`) is still current; retain it as this wave's rollback target. Before uploading,
-rebuild the committed source and compare both packages; upload only checked `dist/site`.
-Record the new source hash, push receipt, deployment, full public-file readback and hosted
-interaction checks here afterward.
+**Published and verified.** Source **`e90764a99661a579de3dc976afedc45e7417f49a`** was
+pushed without force to `github/feat/fleetlab-playground`, fast-forwarding `756c269`.
+The push includes the earlier welcome source and records commits. No PR or main merge.
+Production **`f4018c2a-3127-4807-af90-3a4ae0f33faa`** serves https://fleetlab.pages.dev/;
+immutable address https://f4018c2a.fleetlab.pages.dev/. Wrangler 4.135.0 uploaded four
+changed files, reused 94 public files and applied `_headers`; Pages metadata confirms
+Production, source `e90764a`, branch `feat/fleetlab-playground`.
+
+Both packages were rebuilt from a committed-source export and match all **99 hosted
+files** and the offline HTML exactly. The initial isolated export omitted the contracts
+module needed by `check-dist`; that validation invocation stopped with “no label tuple.”
+Including the same commit's `src/hermes/fleet/contracts.py` in the local validation export
+resolved the harness setup; both distribution checks then passed. It is not a site file.
+Wrangler's dirty-tree warning refers to the preserved unrelated untracked owner note;
+the committed rebuild proves the uploaded input. Only `dist/site` was uploaded.
+
+**98/98 public files match by SHA-256 and bytes on both addresses. All six configured
+response headers match.** Painted production checks show the revised welcome and seven
+navigation links. Scale entry stays idle; intake then reproduces `scale-spec:1aa8c833`,
++0.185, interval +0.172 to +0.196, and focuses Result without page overflow. Four-area
+navigation, root H1 and title agree. Fleet day reproduces **95 completed, 176 unserved,
+four waiting and nine in progress of 284 requests**, seed 42; numeric inputs show 1.6
+and 0.02. These hosted interactions supplement the local viewport checks above.
+
+Rollback target: **`1e1202c9-4fa0-4b46-a5f7-22863b48aafb`**, source `347bcfb`,
+https://1e1202c9.fleetlab.pages.dev/. All six Production deployments remain available.
+The records-only follow-up to this source changes no deployed input. Source and release
+records are on the authorized release branch; other worktrees have not been moved.
 
 Limits remain: no physical-device, Safari, Firefox, screen-reader, CPU-throttled performance,
 Core Web Vitals, full painted lesson sweep, human comprehension study or broad Python-suite
