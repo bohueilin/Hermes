@@ -19,7 +19,7 @@ The right investment order is comprehension, metric clarity, experimental covera
 - Reviewed the model, instrument, UI, runtime boundary, packaging, tests and historical design. An independent code reviewer checked simulation semantics and the redesign.
 - Ran the JavaScript baseline: 1,475 passing, no failures, two skipped, one TODO. Ran Python parity/boundary checks: 89 passing. Final validation is recorded in the accompanying handoff.
 - Researched public operator/partner material, simulation tools and interaction-design guidance. Public information is a source of design questions, not knowledge of an employer's internal systems.
-- This is a source review and heuristic interface audit. No operator interviews, hiring-manager study, screen-reader session with a participant, adoption study or controlled usability experiment was conducted. Descriptions of visitor confusion are reasoned risks supported by the screen, not observed participant behavior.
+- This is a source review and heuristic interface audit. No operator interviews, reviewer study, screen-reader session with a participant, adoption study or controlled usability experiment was conducted. Descriptions of visitor confusion are reasoned risks supported by the screen, not observed participant behavior.
 
 ## 1. Source-tree audit
 
@@ -35,7 +35,7 @@ The right investment order is comprehension, metric clarity, experimental covera
 | `tools` | Offline and hosted packaging, CSP and content checks | Valuable self-contained demonstration and controlled dependency surface |
 | Python Hermes core | Evidence-path implementation and parity reference | A distinct product boundary, not interchangeable with playground output |
 
-There is no requirement to replace this stack with a framework to improve the design. Its zero-dependency, no-network distribution is useful for an interview and for repeatable evaluation. The redesign adds a presentation shell and conceptual SVG drawing, not a second model or a second gate.
+There is no requirement to replace this stack with a framework to improve the design. Its zero-dependency, no-network distribution is useful for a demonstration and for repeatable evaluation. The redesign adds a presentation shell and conceptual SVG drawing, not a second model or a second gate.
 
 ### What the model actually does
 

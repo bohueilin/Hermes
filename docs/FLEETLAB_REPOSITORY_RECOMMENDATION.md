@@ -37,6 +37,6 @@ The root README links directly to the public demo and playground documentation s
 
 ## Next three actions
 
-1. Use the stable Pages link in the interview and demonstrate one vehicle's full operating cycle.
+1. Use the stable Pages link in a demonstration and show one vehicle's full operating cycle.
 2. Review the feature branch for main integration, including the inherited core-test fixture issue.
 3. Optionally add a custom subdomain and the isolated publishing workflow described in the Cloudflare guide.

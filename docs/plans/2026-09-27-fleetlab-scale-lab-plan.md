@@ -1193,7 +1193,7 @@ Open items of the deployed build, each known at the time of writing and none fix
 | 4 | The event load control declares a step of 0.1 and accepts typed steps of 0.01 | Response reserve |
 | 5 | Table 1, "One fleet, several counts", can print a row one off from its two parts after rounding. Its caption makes no sum claim | Fleet intake |
 | 6 | Pages older than the Scale lab still print a long raw number for a tiny value. That is the rule of the site, held by existing tests. Only the Scale lab prints two significant digits | Four-area card on other pages |
-| 7 | `playground/fleetlab/README.md` carries facts and wording older than this wave: the former address `fleetlab-playground.pages.dev`, an older release line and a byline. Left for the owner | README |
+| 7 | `playground/fleetlab/README.md` carried facts and wording older than this wave. Resolved on 2026-09-28: the current address and release, no personal wording; the byline stays |
 | 8 | The lesson snapshot kept outside the tree by the teaching-frame wave still counts 56 lessons | Outside the repository |
 | 9 | Lab C stands 31 bytes past its own hard limit on the estimate of item R1 | Section 6 |
 

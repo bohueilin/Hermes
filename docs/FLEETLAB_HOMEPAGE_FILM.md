@@ -26,7 +26,7 @@ The user requested a front-page AV film and previously explicitly authorized fea
 
 Inspect the rendered frames and loop, then verify desktop and mobile layout, actual video playback, pause/resume, navigation cleanup, poster fallback, and offline packaging. Run the relevant UI/packaging tests and repository checks. Record measured media size, format, hashes and publication outcome in the release handoff.
 
-## Product rationale and interview use
+## Product rationale and demonstration use
 
 The film earns its place by introducing the rider outcome, then pointing directly into an inspectable operational model. It is a short introduction to the product's question, not the evidence for its answer. The following workflow demonstrates the substance:
 

@@ -243,8 +243,9 @@ Rollback is a separate owner action in the Pages dashboard: open the deployments
    claim.
 6. The verdict readout on other pages still shows a long raw number for a tiny value. That is the rule of the site,
    held by existing tests. Only the Scale lab prints two significant digits.
-7. `playground/fleetlab/README.md` carries facts and personal wording older than this release: the former address,
-   an older release line and a byline. They predate this wave and were left for the owner.
+7. `playground/fleetlab/README.md` carried facts and personal wording older than this release. Resolved on
+   2026-09-28: it links the current address, names the current release and no longer carries the personal wording;
+   the byline stays.
 8. After another Fleet day lesson, the launch lesson link `#/fleet-day?lesson=region-launch` keeps the previous
    lesson's main heading while the document title names the launch lesson. A fresh load is right. The defect is older
    than the Scale lab: `c79eccf` behaves the same way, and D1 (`dd4bfa44`) sets no heading per lesson at all, so it

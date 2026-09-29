@@ -1,10 +1,11 @@
 # FleetLab Playground
 
-**[Open the public playground](https://fleetlab-playground.pages.dev/)** · Independent project by Bo-Huei Lin
+**[Open the public playground](https://fleetlab.pages.dev/)** · Independent project by Bo-Huei Lin
 
-The design enhancements are published from source `96fde5b`, deployment `e72ae87d`.
-See the [complete review and next-phase brief](../../docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md)
-for the project history, exact release, tests, hosted acceptance, known limits and every lesson of that release.
+The live site serves source `c08f60d`, the Scale lab release of 2026-09-27 (Production `19e17ac6`); the
+[Scale lab release record](../../docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md) holds its gates and receipts.
+The [review and next-phase brief of 2026-09-25](../../docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md)
+holds the earlier project history, the release of that date, its tests, hosted acceptance, known limits and lessons.
 The catalog in this source tree holds 59 lessons: the three Scale lab lessons were added after that brief and are not in it.
 The [previous M1–M4 record](../../docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md) preserves that release's security scope.
 
@@ -12,7 +13,7 @@ Views and lessons have direct links. **Share a reproducible setup** captures com
 inputs or the selected completed-run/experiment inputs; opening a setup restores settings and
 waits for an explicit Run. Result exports remain separate from setup links.
 
-For an interview walkthrough: **Overview → Fleet day → Run fleet day → Product approach**. For congestion: **Street lab → Bridge rush → Largest queue → Compare route policies**. Configure the experiment, inspect a car and a constraint, then explain the service trade-offs. The [Cloudflare guide](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) records the exact publishing and optional custom-domain steps.
+For a short guided path: **Overview → Fleet day → Run fleet day → Product approach**. For congestion: **Street lab → Bridge rush → Largest queue → Compare route policies**. Configure the experiment, inspect a car and a constraint, then explain the service trade-offs. The [Cloudflare guide](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) records the exact publishing and optional custom-domain steps.
 
 ## Depot readiness M1 (explicit opt-in)
 
@@ -28,7 +29,7 @@ Historical defaults remain `fleetlab-bay-operations-1.0.0`; the explicit extensi
 
 The **Street lab** adds First Street, Harrison/Bryant, Stockton, Van Ness, the Embarcadero and Lombard to a directed OSM network with 2,343 road links. Follow individual AVs toward SFO or the East Bay, inspect finite road queues and upstream spillback, then compare free-flow and queue-aware routes using identical demand. Step five seconds, scrub the replay, follow an AV, or inspect a queued block and its front-car exit wait.
 
-Sourced geography and supported one-way/turn rules are separate from synthetic traffic, signal timing, capacity, incidents and off-road pickup service. SFO and Oakland are modeled gateway handoffs, not authorized pickup zones. There is no live traffic feed or physical driving model. Street lab does not share the Fleet day energy/depot engine. See the [model guide and interview story](../../docs/FLEETLAB_STREET_LAB.md) and [directed OSM provenance](../../docs/FLEETLAB_STREET_MAP_DATA.md).
+Sourced geography and supported one-way/turn rules are separate from synthetic traffic, signal timing, capacity, incidents and off-road pickup service. SFO and Oakland are modeled gateway handoffs, not authorized pickup zones. There is no live traffic feed or physical driving model. Street lab does not share the Fleet day energy/depot engine. See the [model guide and demonstration](../../docs/FLEETLAB_STREET_LAB.md) and [directed OSM provenance](../../docs/FLEETLAB_STREET_MAP_DATA.md).
 
 ## Bay Area fleet day in 3D
 

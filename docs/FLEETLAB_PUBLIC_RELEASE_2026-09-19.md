@@ -2,7 +2,7 @@
 
 ## Scope and authorization
 
-The user explicitly requested GitHub publication and a public Cloudflare website for interviews. That authorizes publishing this isolated static playground and supersedes the historical local-only/no-push rule for this release. It does not authorize a production fleet connection, change the Hermes evidence workbench, or establish real-world validation.
+The user explicitly requested GitHub publication and a public Cloudflare website for demonstrations. That authorizes publishing this isolated static playground and supersedes the historical local-only/no-push rule for this release. It does not authorize a production fleet connection, change the Hermes evidence workbench, or establish real-world validation.
 
 Repository worktree: `Hermes-playground`, branch `feat/fleetlab-playground`. Release starting commit: `fb07b66ddaa786020f2176efdb82727bd55c5d4b`. Package identity remains `hermes-autonomy` / `hermes`, version `0.1.0`. Other worktrees are untouched.
 
@@ -73,7 +73,7 @@ The bounded release review found one README scope issue: the original 2D rendere
 
 ## Recommendation
 
-Share the stable public address for interviews. Keep FleetLab under `playground/fleetlab`, and review main integration separately from the working public release.
+Share the stable public address for demonstrations. Keep FleetLab under `playground/fleetlab`, and review main integration separately from the working public release.
 
 ## Top risks and mitigations
 
@@ -83,6 +83,6 @@ Share the stable public address for interviews. Keep FleetLab under `playground/
 
 ## Next three actions
 
-1. Demonstrate **Overview → Simulation → Run fleet day → Product approach** in the interview.
+1. Demonstrate **Overview → Simulation → Run fleet day → Product approach** in a demonstration.
 2. Review the published feature branch for integration into main.
 3. Optionally configure a custom subdomain or future GitHub publishing workflow using the Cloudflare guide; no account setup is needed for the current public link.

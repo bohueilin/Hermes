@@ -66,7 +66,7 @@ Published September 19, 2026 UTC. The source commit was pushed before uploading 
 | --- | --- |
 | Published source commit | `f85a28f69a8a8819fea620d06837ae530a390030` |
 | GitHub branch | [feat/fleetlab-playground](https://github.com/bohueilin/Hermes/tree/feat/fleetlab-playground) |
-| Stable interview address | **[fleetlab-playground.pages.dev](https://fleetlab-playground.pages.dev/)** |
+| Stable public address | **[fleetlab-playground.pages.dev](https://fleetlab-playground.pages.dev/)** |
 | Movie address | [Original 16-second AV film](https://fleetlab-playground.pages.dev/media/fleet-film.mp4) |
 | Deployment ID | `ccb82b11-986c-4ad1-8658-e1bc30917992` |
 | Immutable deployment | [ccb82b11.fleetlab-playground.pages.dev](https://ccb82b11.fleetlab-playground.pages.dev/) |
@@ -91,6 +91,6 @@ Use the film as a short introduction, then open **Fleet day** or **Street lab** 
 
 ## Next three actions
 
-1. Share the verified stable interview address.
+1. Share the verified stable public address.
 2. Move from the film into an actual Fleet day or Street lab scenario.
 3. Ask a first-time reviewer to explain FleetLab's purpose and start one experiment without guidance.

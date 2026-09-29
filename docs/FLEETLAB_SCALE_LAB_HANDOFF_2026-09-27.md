@@ -231,7 +231,7 @@ the lines were invisible to it. A review that runs the real page found them.
 | 4 | A typed governing ratio of more than 12 decimals is echoed whole in the density ladder inputs table | Small |
 | 5 | The event load control declares a step of 0.1 and accepts typed steps of 0.01 | Small |
 | 6 | Table 1 of the fleet intake can print one row one off from its two parts after rounding | Small |
-| 7 | `playground/fleetlab/README.md` holds facts and personal wording older than this release: the former address, an older release line, a byline | Owner's decision, since the repository is public |
+| 7 | `playground/fleetlab/README.md` held facts and personal wording older than this release | Resolved on 2026-09-28: the README links https://fleetlab.pages.dev/, names the current release and carries no personal framing; the byline stays |
 | 8 | The lesson snapshot that the teaching-frame wave kept outside the tree still counts 56 | Declare it again for 59 |
 | 9 | One stash entry and one untracked owner note exist in sibling worktrees from before this wave | Untouched |
 | 10 | After another Fleet day lesson, the launch lesson link keeps the previous lesson's main heading. The defect is older than this wave and is live: it came in with the teaching frames of `c79eccf`. Two sweeps after the deployment found it: the lead's sweep of all 59 lesson links in a real browser on the live site with the pane hidden, and a sweep on the fake DOM with the modules of the live site | Fixed in `1aeaace` behind a new test in `test/studio.test.mjs`; not deployed, not pushed |

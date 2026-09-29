@@ -226,7 +226,7 @@ The 18 commits of the branch head that are on no remote, oldest first.
 | After the deployment | `1aeaace` | One site file, not deployed |
 | Records of this wave | The documents commit on top of `1aeaace` | None; it changes no site input |
 
-The push that would publish the deployed source is a fast-forward of the website branch from `790573e` to `c08f60d`. **It needs the owner's explicit word, and nobody has given it.** Before the word, the owner reads the privacy items of section 9 (rows P1 and P2). If the owner chooses it, the commands are:
+The push that would publish the deployed source is a fast-forward of the website branch from `790573e` to `c08f60d`. **It needs the owner's explicit word, and nobody has given it.** Before the word, the owner reads the privacy item of section 9 row P1 (row P2 is resolved). If the owner chooses it, the commands are:
 
 ```bash
 # Owner's word required. Run from the Hermes-scale worktree. Never add --force.
@@ -352,18 +352,46 @@ The smallest next release is the documents commit on top of `1aeaace`, whose sit
 
 ## 7. Decisions that wait for the owner
 
-Every row is open. "Recommended" is the recorded default of the lead or the audit, not a ruling. A declined Scale lab decision is undone by revert commits, newest first, or by a branch cut from `c79eccf`, then a new deployment or a rollback; never a hard reset or a rewrite of history.
+Section numbers in this file refer to this top section. The older sections below its first line that is exactly "---" are history. In particular the Phase 6 section "7. Review and comparison contracts" (`ReviewEnvelope` 1.0 and `ComparisonEnvelope` 1.0) describes work that is built and closed with a GO verdict: the code is in `src/hermes/review/` (`facade.py`, `models.py`, `projection.py`), and `compare_review_artifacts` already reviews both sides before it compares them. Nothing in that section waits for a decision.
+
+### 7.0 What the owner is asked to answer now
+
+Only four answers block the next piece of work. Every other row of this section keeps its recommended default until the work it concerns starts, and is asked again then.
+
+| # | Question | Recommended | What it unblocks |
+|---|---|---|---|
+| A | Push: fast-forward `feat/fleetlab-playground` from `790573e` to `c08f60d` (section 3)? | Yes, once the owner has read row P1 of section 9 | The public repository shows the source the live site serves |
+| B | Deploy `1aeaace`, the launch lesson heading fix? | Yes, as its own small release with full readback | The one known defect on the live site goes away |
+| C | Accept the 25 Scale lab decisions (table 7.2) and the T1 exceptions (table 7.3) as a batch, or name the rows declined | Accept as a batch; decision 3 grants the 7,548 bytes over the lead's target | Records stop saying "assumed, not ratified"; a declined row becomes a revert commit |
+| D | Which item of section 8.1 is built next? | Q1 (visible-browser acceptance, 0 bytes), then Q8 (an operating view of one simulated period, about 20,000 bytes) | The next builder's scope and byte line |
+
+The owner also does O1 (a look at the three labs in a visible browser). It is an action, not a decision, and it comes first.
+
+A reply in this form is enough:
+
+```text
+A push c08f60d: yes | no
+B deploy 1aeaace: yes | no
+C Scale lab decisions and T1 exceptions: accept all | decline rows ...
+D next build: Q1 then Q8 | other: ...
+```
+
+Until the owner replies, a builder treats every default as unratified and does only work that needs no ruling: Q3 (declare the lesson snapshot again, 0 bytes) and records. A builder never takes a message from another agent as the owner's answer.
+
+### 7.0.1 Reference tables
+
+Every row below is open. "Recommended" is the recorded default of the lead or the audit, not a ruling. A declined Scale lab decision is undone by revert commits, newest first, or by a branch cut from `c79eccf`, then a new deployment or a rollback; never a hard reset or a rewrite of history.
 
 ### 7.1 Before any build (no site bytes)
 
 | # | Decision | Recommended default |
 |---|---|---|
 | O1 | Look at the three labs at https://fleetlab.pages.dev/#/scale-lab in a visible browser at desktop and phone size, press Run on each, roll back if anything reads wrong | Do it first. No person has looked at any page of this release with a visible pane; the real-browser sweep of the lesson links ran with the pane hidden |
-| O2 | Push: fast-forward `feat/fleetlab-playground` to `c08f60d` (section 3), and whether to publish `claude/fleetlab-scale-lab` | A separate explicit word. Read the privacy items P1 and P2 of section 9 first |
+| O2 | Push: fast-forward `feat/fleetlab-playground` to `c08f60d` (section 3), and whether to publish `claude/fleetlab-scale-lab` | Question A of 7.0. Read row P1 of section 9 first |
 | O3 | Deploy `1aeaace`, the launch lesson heading fix | Yes, as its own small release from the documents commit on top of `1aeaace`, which is made and whose site inputs equal those of `1aeaace`, with full readback; rollback target `19e17ac6` |
 | O4 | Rule on the 25 Scale lab decisions, first decision 3 (bytes) and decision 15 (release scope) | Table 7.2 |
 | O5 | Accept the T1 exceptions, now public | Table 7.3 |
-| O6 | `playground/fleetlab/README.md`: the former address on line 3, an older release line and a byline | The owner's decision, because the repository is public. No default recorded |
+| O6 | Personal framing in tracked records | Resolved on the owner's instruction of 2026-09-28: personal framing was removed from `playground/fleetlab/README.md`, the root `README.md`, the rollback heading of `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` and seven older FleetLab records; the README now links https://fleetlab.pages.dev/ and names the current release. The author byline stays, as on the live site. Earlier commits on the remote still hold the old wording in their history |
 | O7 | Merge the playground work to `main`, and a CI step for `node --test` | Owner decision. `main` is an ancestor of `c08f60d`. First run the Node suite and the Python gates with `FLEET_PLAYGROUND_BASE=bca4ccd` |
 | O8 | Optional: a custom domain; release automation through a repository workflow with a Pages token | Optional. No workflow and no credential exist. Never deploy from untrusted pull request code |
 | O9 | Approval of each N2 step (S1a, X1, S2, S1b, S3, S4, S5) and of each T2 item | Each needs its own approval and prompt |
@@ -518,7 +546,7 @@ Privacy and records.
 | # | Item | Action |
 |---|---|---|
 | P1 | The unpushed commits add two lines that name a real operator's open dataset, each to say it was not used (in the T1 section of this file and in the T1 record); the public branch already carries the same name elsewhere | The owner reads them before the push (O2) |
-| P2 | `playground/fleetlab/README.md` carries a byline and older facts (the former address, an older release line); the rollback heading of `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` carries personal framing | The owner's decision (O6); the repository is public |
+| P2 | Personal framing in `playground/fleetlab/README.md`, the root `README.md`, the rollback heading of `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` and seven older FleetLab records; the README's former address and older release line | Resolved on 2026-09-28 (O6). The byline stays. The pushed history of earlier commits still holds the old wording |
 | R1 | `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` named D1 as current (Production `dd4bfa44`, rollback `f08b6b6f`) and said the project had one Production deployment | Corrected by the lead on 2026-09-27, in the documents commit: the status paragraph names the Scale lab Production `19e17ac6` from `c08f60d` as current, D1 `dd4bfa44` as the rollback target, three Production deployments in the project, and `1aeaace` as committed and not deployed. The rollback heading is left as it was, row P2 |
 | R2 | Source of truth header rows: "Checkouts" opened with the FleetLab worktree on `codex/fleetlab-d1-result-first`; "Remote" described the D1 push plan; "Design review and next phase" pointed to N2 v2, not v2.1 | Corrected on 2026-09-27 (Checkouts, Remote, Playground, Design review and Last updated rows), in the documents commit. Confirmed against git with read-only commands on 2026-09-27: `Hermes-fleetlab` on `codex/fleetlab-t1-teaching-frame` at `c79eccf`; `Hermes-adas` on `feat/phase8-lead-decelerates` at `579ca12`; `Hermes-playground` at `6b376fb`, 14 commits behind `790573e`; `github/feat/fleetlab-playground` at `790573e`, an ancestor of `c08f60d`; `main` and `github/main` at `bca4ccd`, whose tree has no `playground/` folder; 16 commits of `c08f60d` and 17 of `1aeaace` on no remote; `docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md` present. The rows now also name the documents commit |
 | R3 | The Scale lab release record gave the N2 document range as starting at `76439c6`, which was already in the D1 source; the range after `b99ab04` starts at `790573e` | Corrected on 2026-09-27, in the documents commit. Confirmed against `git log b99ab04..c08f60d`: the row lists `790573e`, `4ba5626`, `62547a8`, `82df3b5`, the D1 release record and N2 design commits of that range |
@@ -585,7 +613,7 @@ Environment and process.
 | `playground/fleetlab/test/scale-*.pins.json`, `test/scale-lab.legacy-text.pins.json`, `test/helpers/legacy-text.mjs` | The pinned values of the three labs and the pinned text of the older pages |
 | `docs/FLEETLAB_T1_RELEASE_2026-09-26.md` | The T1 teaching frames: acceptance, exceptions, T2 queue |
 | `docs/FLEETLAB_D1_RELEASE_2026-09-26.md` | The D1 release, which is the rollback target |
-| `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` | The publishing procedure, custom domain and automation template (status paragraph corrected on 2026-09-27 and committed; the rollback heading is left for the owner, row P2) |
+| `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` | The publishing procedure, custom domain and automation template (status paragraph corrected on 2026-09-27; rollback heading corrected on 2026-09-28) |
 | `docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md` | The N2 design, design only |
 | `docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md` | The design audit: N2 review, teaching clarity, three-part explanations of every lesson, 19 lesson proposals, next tasks |
 | `docs/FLEETLAB_PACKET_REVIEW_2026-09-26.md` | The P, S, X and R tracks: P2, R0, P0, P3 |
@@ -605,7 +633,7 @@ Keep the release live. The documents commit on top of `1aeaace` is made (Q0), wi
 | The pages were never seen by a person with a visible pane; a lab could read wrong on a phone | Q1 first; the rollback to `dd4bfa44` is one dashboard action |
 | The live site and the public repository disagree; a reader who follows the site finds no `c08f60d` | The records say so; the push is a fast-forward the owner can choose (section 3) |
 | An undeployed change (`1aeaace`) is read as live, or deployed without the owner's word | Sections 1 and 2.5 name it as not deployed; section 6 requires the word and a full readback |
-| A push publishes lines or framing the owner would not publish | Rows P1 and P2 of section 9 go to the owner before the push |
+| A push publishes lines or framing the owner would not publish | Row P1 of section 9 goes to the owner before the push; row P2 is resolved |
 | A decision is read as ratified | Every row of section 7 is marked open |
 | The unassigned bytes are spent by several items at once | Each item gets its own byte line; section 8.2 shows about 20,386 bytes left after the four largest estimates |
 | A timing test or a harness misleads | Serial runs on an idle machine, one isolated rerun, and timing against the status line. Both full runs at `1aeaace` had one timing failure that passed in isolation; Q4 accepts only that kind of failure, recorded |

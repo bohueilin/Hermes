@@ -68,7 +68,7 @@ Published and verified on September 19, 2026 UTC:
 | Pages project / production branch | `fleetlab-playground` / `feat/fleetlab-playground` |
 | Deployment ID | `0b302024-3840-474c-a806-f11792740267` |
 | Immutable deployment | [0b302024.fleetlab-playground.pages.dev](https://0b302024.fleetlab-playground.pages.dev/) |
-| Stable interview link | **[fleetlab-playground.pages.dev](https://fleetlab-playground.pages.dev/)** |
+| Stable public link | **[fleetlab-playground.pages.dev](https://fleetlab-playground.pages.dev/)** |
 | Upload | Only `dist/site`; nine new/changed assets uploaded, 55 reused, `_headers` applied separately |
 | Public file readback | All 64 served files byte-equal to the validated package, totaling 1,840,205 served bytes. `index.html` was checked via canonical `/`; Cloudflare redirects the explicit filename. |
 | Public headers | Expected CSP with `connect-src 'none'`, frame restrictions, `nosniff` and no-referrer confirmed |
@@ -89,6 +89,6 @@ Demonstrate **Street lab → Bridge rush → Largest queue → Compare route pol
 
 ## Next three actions
 
-1. Share the verified stable interview link and use the Street lab walkthrough.
-2. Use the worked mixed trade-off for the interview, with scope and cohort limits explicit.
+1. Share the verified stable public link and use the Street lab walkthrough.
+2. Use the worked mixed trade-off for a demonstration, with scope and cohort limits explicit.
 3. Prioritize approved traffic calibration, curb data and depot coupling over additional visual fidelity.

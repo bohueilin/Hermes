@@ -100,7 +100,7 @@ The attributed directed extract adds approximately 329 KB. The measured offline 
 
 ## Recommendation
 
-Use this as the interview demonstration of decision framing: local constraints affect rider service and infrastructure planning, and a policy needs inspectable trade-offs. Keep the distinction between a useful mechanism demonstration and a decision-grade planning tool explicit.
+Use this as a demonstration of decision framing: local constraints affect rider service and infrastructure planning, and a policy needs inspectable trade-offs. Keep the distinction between a useful mechanism demonstration and a decision-grade planning tool explicit.
 
 ## Top risks and mitigations
 
@@ -111,6 +111,6 @@ Use this as the interview demonstration of decision framing: local constraints a
 
 ## Next three actions
 
-1. Use the default comparison in an interview: inspect First Street spillback, follow a gateway-bound rider, then explain the completion/empty-distance trade-off.
+1. Use the default comparison in a demonstration: inspect First Street spillback, follow a gateway-bound rider, then explain the completion/empty-distance trade-off.
 2. Calibrate one corridor first in SUMO using measured signals, turns and counts. Preserve shared demand and compare model error before expanding coverage.
 3. Add curb access, repositioning and depot coupling as separate policy axes with repeated paired seeds and explicit service/energy guardrails. CARLA can complement this when a question needs sensor/driving-policy fidelity; no CARLA runtime is installed or embedded here.

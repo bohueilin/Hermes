@@ -131,7 +131,7 @@ jobs:
 
 The current boundary suite freezes `.github` relative to the playground base. A future automation PR must explicitly allow only this isolated workflow and preserve the existing Python CI checks. After main integration, change the trigger and Pages production-branch mapping together. Do not enable deployment on untrusted pull-request code or expose deployment secrets to it.
 
-## Roll back an interview release
+## Roll back a release
 
 As of September 27, 2026 the `fleetlab` project holds three Production deployments: `19e17ac6` (current), `dd4bfa44` (D1, the rollback target) and `f08b6b6f`. Historical deployments in `fleetlab-playground` cannot be selected as rollback targets in this different project. If an earlier application must be restored now, rebuild and verify its exact source in an isolated checkout, then upload that checked package to `fleetlab` with matching commit metadata. Once this project has multiple successful Production releases, open **Workers & Pages → fleetlab → Deployments**. On the previous successful **Production** deployment, open its three-dot menu and choose **Rollback to this deployment**. Verify the stable address afterward. Preview deployments are not rollback targets. This changes the served version without rewriting Git history. [Cloudflare rollback documentation](https://developers.cloudflare.com/pages/configuration/rollbacks/)
 
