@@ -1,6 +1,8 @@
 # FleetLab Scale lab release record
 
-Date: September 27, 2026. Status: built, reviewed, fixed, deployed and read back. Not pushed.
+Date: September 27, 2026. Status: built, reviewed, fixed, deployed and read back. Updated on September 28, 2026: the
+heading fix `1aeaace` is deployed as Production `77922688` and read back, the owner ratified the design decisions,
+and the branch is pushed on the owner's word. Section "Follow-up release of 2026-09-28" gives the receipts.
 
 FleetLab is an independent, synthetic teaching simulator. It is not affiliated with any operator, vehicle maker,
 regulator or utility. Every result is NOT_EVIDENCE, simulation only, decision authority NONE. Every input of the
@@ -20,8 +22,11 @@ The [model notes](FLEETLAB_SCALE_LAB.md) describe each lab.
 
 Authority. On September 27, 2026 the owner instructed the lead to finish, deploy, test and validate, and to write a
 handoff.
-That instruction covers the local commits and this deployment. It does not name a push, so nothing was pushed. Every
-design decision was taken at the lead's recommendation and is not ratified by the owner.
+That instruction covers the local commits and this deployment. It does not name a push, so nothing was pushed on
+that day. Every design decision was taken at the lead's recommendation. On 2026-09-28 the owner answered four
+questions: yes to the push, yes to the deployment of `1aeaace`, every decision accepted as recommended, and the next
+builds in order. The 25 decisions of section 12 of the design, the package decisions D1 to D11 and the T1
+exceptions T-E1 to T-E5 were therefore ratified by the owner on 2026-09-28.
 
 ## Release identity
 
@@ -29,17 +34,17 @@ design decision was taken at the lead's recommendation and is not ratified by th
 |---|---|
 | Stable address | https://fleetlab.pages.dev/ |
 | Immutable address | https://19e17ac6.fleetlab.pages.dev/ |
-| Pages project | `fleetlab`, Direct Upload, Production |
-| Deployment | `19e17ac6-d617-4789-9260-ca259c53e076` |
+| Pages project | `fleetlab`, Direct Upload, Production from 2026-09-27 to 2026-09-28 |
+| Deployment | `19e17ac6-d617-4789-9260-ca259c53e076`. Since the follow-up release of 2026-09-28 it is the rollback target |
 | Pages branch label | `feat/fleetlab-playground` |
 | Deployed source | `c08f60d8830df877fac2c7321bb47d75a5ae56ad` |
-| Source branch | `claude/fleetlab-scale-lab`, local only |
-| Branch after the deployment | `1aeaace`, one Fleet day fix past the deployed source (known open item 8). Not deployed. On top of it, the documents commit that holds this record and the other records of the wave. It changes no site input, so its site inputs equal those of `1aeaace` |
-| Previous Production, the rollback target | `dd4bfa44-7226-4502-9d66-01bb1790f2b6`, source `b99ab04` |
+| Source branch | `claude/fleetlab-scale-lab`, local only on 2026-09-27. Its head is pushed to the remote branch `feat/fleetlab-playground` on 2026-09-28. The name `claude/fleetlab-scale-lab` is not created on the remote |
+| Branch after the deployment | `1aeaace`, one Fleet day fix past the deployed source (known open item 8), deployed on 2026-09-28 as Production `77922688`. On top of it: the documents commit `44569f8`, the privacy commit `0bc2f25` and the records commit of 2026-09-28, which holds this update. None of them changes a site input, so the site inputs of the branch head equal those of `1aeaace`. The lead pushed the branch head as a fast-forward of `feat/fleetlab-playground` from `790573e` right after the records commit of 2026-09-28 |
+| Previous Production, the rollback target of this release | `dd4bfa44-7226-4502-9d66-01bb1790f2b6`, source `b99ab04`, until 2026-09-28. Since then the rollback target is `19e17ac6` |
 | Upload tool | Wrangler 4.135.0, as the deployment guide pins it |
 
-**The deployed source is on no remote branch.** A reader who follows the site to the public repository will not find
-commit `c08f60d` there until the owner pushes the branch.
+**On 2026-09-27 the deployed source was on no remote branch.** A reader who followed the site to the public
+repository could not find commit `c08f60d` there. The push of 2026-09-28 publishes it, together with `1aeaace`.
 
 ## What this release publishes
 
@@ -113,8 +118,10 @@ Archived checkpoints, each measured in the worktree with the repository's packer
 | Reserved for other work | 135,904 | Untouched |
 | Unassigned after this release | 77,213 | It was 166,681 before |
 
-The target and the hard stop were the lead's own lines. The owner approved neither. The review fixes cost 4,422
-bytes, and the lead weighed them above the target.
+The target and the hard stop were the lead's own lines. The review fixes cost 4,422 bytes, and the lead weighed them
+above the target. On 2026-09-28 the owner ratified both lines (D4) and decision 3 of the design, as recommended,
+which grants the 7,548 bytes over the target. The heading fix `1aeaace` adds 27 bytes: its offline file is 2,408,350
+bytes, 2,665 bytes under the hard stop.
 
 ## Independent review and its fixes
 
@@ -212,23 +219,25 @@ The upload tool warned that the working directory held uncommitted changes. Thos
 release. They are not part of the site, as the first row of the table shows. They are now committed in one
 documents commit on top of `1aeaace`, which changes no site input.
 
-Rollback is a separate owner action in the Pages dashboard: open the deployments of project `fleetlab`, choose
-`dd4bfa44-7226-4502-9d66-01bb1790f2b6`, roll back, then check the stable address. It rewrites no history.
+While this release was Production, rollback was a separate owner action in the Pages dashboard: open the
+deployments of project `fleetlab`, choose `dd4bfa44-7226-4502-9d66-01bb1790f2b6`, roll back, then check the stable
+address. It rewrites no history. Since the follow-up release of 2026-09-28 the rollback target is this release,
+`19e17ac6-d617-4789-9260-ca259c53e076`.
 
 ## What was not done
 
 | Item | State |
 |---|---|
-| Push to any remote | Not done. Not authorized |
+| Push to any remote | Not done on 2026-09-27, when it was not authorized. Done on 2026-09-28 on the owner's word, by the lead, right after the records commit of 2026-09-28, section "Follow-up release of 2026-09-28" |
 | Pull request or merge to main | Not done |
 | A painted frame, 1440 by 900 px, a throttled phone profile, a physical phone | Not measured |
 | Screen reader, Safari, Firefox | Not tested |
 | A look at the pages by a person with a visible pane | Not done. No painted frame of any page of this release has been seen. The sweep of all 59 lesson links in a real browser is done, but with the pane hidden, section "Sweeps of the lesson links after the deployment" |
 | A full serial run at `1aeaace` with zero failures | Not recorded. Two runs each had one timing failure that passed its one isolated rerun, known open item 8 |
-| A deployment of `1aeaace` | Not done. It needs the owner's word |
+| A deployment of `1aeaace` | Done on 2026-09-28 on the owner's word, as Production `77922688`, section "Follow-up release of 2026-09-28" |
 | The broad Python suite of the repository | Not run. Only the two playground files ran |
 | A security scan of this range | Not run. The review had one packaging and security lens |
-| Owner ratification of any design decision | Not given |
+| Owner ratification of any design decision | Given on 2026-09-28: every decision of section 12 of the design, D1 to D11 and T-E1 to T-E5, as recommended |
 | The lesson snapshot kept outside the tree by the teaching-frame wave | Not declared again for 59 lessons |
 
 ## Known open items
@@ -254,8 +263,9 @@ Rollback is a separate owner action in the Pages dashboard: open the deployments
    serial runs with the performance flag at `1aeaace` each read 1,969 tests, 1,967 pass, 1 existing todo and 1 timing
    failure: the response reserve timing test at 9.34 ms against 8 ms while other work loaded the machine (342.8 s),
    then the four-area runtime test "run_window and run_pair gaps on the reference preset", which this wave did not
-   change, at 11.34 ms against 8 ms on an otherwise idle machine (292.9 s). Each passed its one isolated rerun. That
-   commit is not deployed and not pushed, so the live site still shows the defect.
+   change, at 11.34 ms against 8 ms on an otherwise idle machine (292.9 s). Each passed its one isolated rerun.
+   Fixed and live since 2026-09-28: `1aeaace` is Production `77922688`, and the hosted check reads the fix, section
+   "Follow-up release of 2026-09-28". It is pushed with the branch head on the same day.
 
 ## Privacy and scope
 
@@ -264,12 +274,87 @@ each of the eight commits of the wave found no home path, no personal name and n
 the documents commit that holds this record belongs to that commit, and this record holds no result of it. No page names an operator. No telemetry, credential,
 network service, dependency, map data or media file was added.
 
+## Follow-up release of 2026-09-28
+
+Authority. On 2026-09-28 the owner answered the four questions of section 7.0 of the top section of
+`CODEX_HANDOFF.md`: yes to the push, yes to the deployment of `1aeaace`, every decision accepted as recommended, and
+the next builds Q1 then Q8. This section records the deployment of `1aeaace`, the fix of known open item 8, and the
+push. It changes no finding of the release above.
+
+Release identity.
+
+| Item | Value |
+|---|---|
+| Stable address | https://fleetlab.pages.dev/ |
+| Immutable address | https://77922688.fleetlab.pages.dev/ |
+| Pages project | `fleetlab`, Direct Upload, Production |
+| Deployment | `77922688-6d87-4d15-94bf-442beab31712` |
+| Pages branch label | `feat/fleetlab-playground` |
+| Deployed source | `1aeaacecb25e17853f852d7bbd7141ff75d9cb69` |
+| What it changes on the site | One file, `src/ui/studio.js`: a launch lesson opened after another Fleet day lesson now resets the main heading. 27 bytes more in each package |
+| Previous Production, the rollback target | `19e17ac6-d617-4789-9260-ca259c53e076`, source `c08f60d` |
+| Production deployments the project holds | Four: `77922688`, `19e17ac6`, `dd4bfa44` and `f08b6b6f` |
+| Upload tool | Wrangler 4.135.0 |
+
+Build, upload and readback.
+
+| Step | Result |
+|---|---|
+| Build input | A `git archive` export of `1aeaacecb25e17853f852d7bbd7141ff75d9cb69`, packed outside the tree. The site inputs of the branch head equal those of `1aeaace` |
+| Hosted package | 99 files with `_headers`, 3,349,629 bytes, package check OK. Inventory SHA-256 `dd3c2f2a659b18a0caacf5df639238916719f8a5294e653c2566ac39328e94b5`, by the rule of section "Publication and readback" |
+| Offline package | 2,408,350 bytes, package check OK. SHA-256 `ccd3f7a01a3ddd03dd8a58336c52da32a50ec1c7b0b27a297b5e82496877325a` |
+| Tools | Both package checks ran with the repository's own tools, which are identical at `1aeaace` |
+| Upload | 98 files and `_headers`. 1 file was new to the host, `src/ui/studio.js`, and 97 were already held |
+| Public files, stable address | 98 of 98 match the local package by SHA-256 and size |
+| Public files, immutable address | 98 of 98 match |
+| Response headers | Unchanged from the release above, and verified |
+
+Hosted checks. They ran in the in-app browser with the pane hidden, so no painted frame was seen.
+
+| Check | Reading |
+|---|---|
+| The fix | After the airport-preparation lesson, and after the cleaning lesson, the region-launch lesson shows the main heading "Fleet day" and the document title "Rehearse commissioning in Region B" |
+| Labs | The three labs record `scale-spec:b4c7f5da`, `scale-spec:1aa8c833` and `scale-spec:443de567`, the labels of the default presses |
+| Fleet day parity | Default seed 42 on a fresh load reads 95 completed, 176 unserved, 4 waiting and 9 in progress of 284 requests. The setup of the cleaning lesson reads 82 of 284 requests. That reading belongs to the lesson and is not a regression |
+| Press times, pane hidden | 4,725 ms, 1,058 ms and 2,660 ms on `77922688`, against 4,790 ms, 1,103 ms and 2,656 ms on `19e17ac6` in the same session and under the same conditions. No regression. Both sets are slower than the hosted readings of 2026-09-27, 1,044 ms, 102 ms and 513 ms, because of the state of the pane |
+| Network policy | A same-origin fetch that the tester attempted was refused by the page's own policy, `connect-src 'none'`, as intended |
+| Console | No application console error |
+
+Tests at `1aeaace`, as known open item 8 records them. Two full serial runs with the performance flag each read
+1,969 tests, 1,967 pass, 1 existing todo and 1 timing failure: 9.34 ms against 8 ms in the first run and 11.34 ms
+against 8 ms in the second. Each failure passed its one isolated rerun. Python parity and boundary tests: 89 pass.
+`ruff`: all checks passed. A full serial run at `1aeaace` with zero failures is not recorded.
+
+Rollback is an owner action in the Pages dashboard: open the deployments of project `fleetlab`, choose
+`19e17ac6-d617-4789-9260-ca259c53e076`, roll back, then check the stable address. It rewrites no history. Nothing in
+the site inputs of the branch is undeployed now.
+
+The push. The owner gave the push word on 2026-09-28, after row P1 of section 9 of the top section of
+`CODEX_HANDOFF.md` was raised. Right after the records commit of 2026-09-28, which holds this section, the lead
+pushed the branch head to the remote as a fast-forward of `feat/fleetlab-playground` from `790573e`. The push
+published 20 commits:
+
+| Group | Commits |
+|---|---|
+| N2 design documents | `4ba5626`, `62547a8`, `82df3b5` |
+| Offline packer | `8e04b49` |
+| Teaching-frame wave | `caaf8f2`, `0497b9b`, `45efd43`, `c79eccf` |
+| Scale lab | The eight commits `2caeac6` to `c08f60d` |
+| Heading fix | `1aeaace`, the deployed source of `77922688` |
+| Documents | `44569f8`, `0bc2f25` and the records commit of 2026-09-28 |
+
+The name `claude/fleetlab-scale-lab` was not created on the remote. A push does not deploy. The local branch
+`feat/fleetlab-playground` of the playground worktree stays behind its upstream and needs a fast-forward before
+anyone works there.
+
 ## Recommendation
 
-Keep this release live and review it in a visible browser before sharing the link widely. The design decisions are
-assumed, so read the decision table of the design and ratify or decline each one. Decide separately whether to push
-the branch, because the deployed source is not yet public. Treat `1aeaace`, the fix of known open item 8, as its own
-small release when the owner wants it live.
+Keep Production `77922688` live and review it in a visible browser before sharing the link widely; the rollback
+target is `19e17ac6`. The design decisions were ratified by the owner on 2026-09-28, as recommended, so a change to
+one of them is a new decision. The deployed sources `c08f60d` and `1aeaace` are public since the push of 2026-09-28.
+The next builder is Codex. It builds Q1 first, the acceptance in a visible browser that closes gates 5 and 6 of the
+design at 0 bytes, then Q8, an operating view of one simulated period of about 20,000 bytes, each with its
+acceptance criteria written first.
 
 ## Top risks + mitigations
 
@@ -279,14 +364,17 @@ small release when the owner wants it live.
 | An assumed rate is read as an estimate | Every input row names its source. The reader sets one governing ratio and the lab derives the rest. Setups outside the readable region are refused |
 | The default press of each lab always reads the same verdict | The design says so. The section "Set by the inputs, not found by the run" sits directly under the verdict |
 | The visual result was never seen by a person | Every browser reading here is measured. The owner's look at 1440 by 900 px and on a phone is the first action below |
-| Deployed source that is not public | The release identity table says so. The push is the owner's action |
-| The undeployed fix `1aeaace` is read as live | The release identity table and known open item 8 say it is not deployed. Deploying it needs the owner's word and a full readback |
-| Package headroom is finite | 77,213 bytes stay unassigned. The reserved 135,904 bytes are untouched |
+| Deployed source that is not public | Closed on 2026-09-28. The push published `c08f60d` and `1aeaace` on the remote branch `feat/fleetlab-playground` |
+| The fix `1aeaace` is read as live before it is | Closed on 2026-09-28. `1aeaace` is Production `77922688`, read back file by file, and the hosted check reads the fix |
+| A local branch behind its upstream is built on | The local `feat/fleetlab-playground` of the playground worktree needs a fast-forward before anyone works there |
+| Package headroom is finite | After `1aeaace`, 77,186 bytes stay unassigned under the offline cap. The reserved 135,904 bytes are untouched |
 
 ## Next 3 actions
 
 1. The owner opens https://fleetlab.pages.dev/#/scale-lab in a visible browser at desktop and phone size, presses Run
-   on each lab, and rolls back if anything reads wrong.
-2. The owner ratifies or declines the decisions of the design, and says whether to push `claude/fleetlab-scale-lab`.
-3. The next wave takes one item: a throttled phone measurement with a visible pane, the site-wide side-preserving
-   number rule as its own change, or the next model that the byte reservation already names.
+   on each lab, and rolls back to `19e17ac6` if anything reads wrong. This look (O1) stays first for the owner.
+2. Codex builds Q1: the acceptance in a visible browser that closes gates 5 and 6 of the design, at 0 bytes, with its
+   acceptance criteria written first.
+3. Codex then builds Q8: an operating view of one simulated period, about 20,000 bytes, with its acceptance criteria
+   written first. O7 to O11 and the pending N2 decisions stay open, and their recommended defaults hold until the
+   related work starts.

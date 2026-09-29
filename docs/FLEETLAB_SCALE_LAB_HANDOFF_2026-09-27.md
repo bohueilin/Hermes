@@ -1,6 +1,7 @@
 # FleetLab Scale lab: handoff for the next reviewer or builder
 
-Date: September 27, 2026. This file is self-contained. A reader with no access to the repository can review the
+Date: September 27, 2026; updated on September 28, 2026 with the owner's answers, the heading fix release and the
+push. This file is self-contained. A reader with no access to the repository can review the
 work from it. A reader with access can reproduce every gate from the commands in section 6.
 
 FleetLab is an independent, synthetic teaching simulator. It is not affiliated with any operator, vehicle maker,
@@ -11,15 +12,15 @@ regulator or utility. Every result is NOT_EVIDENCE, simulation only, decision au
 | Item | State |
 |---|---|
 | What was added | One route, `#/scale-lab`, with three labs on what changes as a fleet scales. Three new lessons, so the catalog holds 59 |
-| Live | https://fleetlab.pages.dev/#/scale-lab, Production deployment `19e17ac6-d617-4789-9260-ca259c53e076` |
-| Deployed source | `c08f60d8830df877fac2c7321bb47d75a5ae56ad` on branch `claude/fleetlab-scale-lab` |
-| Branch head now | The documents commit on top of `1aeaace`. It holds this file and the other records of the wave and changes no site input, so its site inputs equal those of `1aeaace`. `1aeaace` is one commit past the deployed source. It fixes a Fleet day heading defect older than this wave (known open item 10). **Not deployed** |
-| Pushed | **No.** The branch is local. Neither the deployed source, nor `1aeaace`, nor the documents commit is on a remote |
+| Live | https://fleetlab.pages.dev/#/scale-lab. Since 2026-09-28, Production deployment `77922688-6d87-4d15-94bf-442beab31712` from `1aeaace`; the Scale lab release of 2026-09-27, `19e17ac6-d617-4789-9260-ca259c53e076` from `c08f60d`, is the rollback target |
+| Deployed source | `1aeaacecb25e17853f852d7bbd7141ff75d9cb69` since 2026-09-28, one commit past the Scale lab source `c08f60d8830df877fac2c7321bb47d75a5ae56ad`, on branch `claude/fleetlab-scale-lab` |
+| Branch head now | The records commit of 2026-09-28, on top of the privacy commit `0bc2f25`, the documents commit `44569f8` and `1aeaace`. None of the three changes a site input, so the site inputs of the branch head equal those of `1aeaace`. `1aeaace` fixes a Fleet day heading defect older than this wave (known open item 10). **Deployed on 2026-09-28** as `77922688`; no site input is undeployed |
+| Pushed | **Yes, on 2026-09-28.** On the owner's word, right after the records commit of 2026-09-28, the lead pushed the branch head to github as a fast-forward of `feat/fleetlab-playground` from `790573e`. The Scale lab source, `1aeaace` and the documents commits are public there. No remote branch `claude/fleetlab-scale-lab` was created |
 | Also published by this deployment | The teaching frames for the 56 older lessons, which had been local only |
-| Tests | At `c08f60d`: 1,968 tests, 1,967 pass, 0 fail, 0 cancelled, 0 skipped, 1 existing todo. `1aeaace` adds one test, 1,969 in all. Two full serial runs at `1aeaace` each read 1,967 pass, 1 existing todo and 1 timing failure that passed its one isolated rerun (section 6). A full run at `1aeaace` with zero failures is not recorded |
-| Public readback | 98 of 98 public files match the local package by SHA-256 |
-| Owner decisions | None ratified. Every design decision was taken at the lead's recommendation |
-| Not yet done | A look at the pages by a person with a visible pane. Every browser reading so far is measured, not seen. The sweep of all 59 lesson links in a real browser ran with the pane hidden, so it painted no frame |
+| Tests | At `c08f60d`, the Scale lab release: 1,968 tests, 1,967 pass, 0 fail, 0 cancelled, 0 skipped, 1 existing todo. `1aeaace` adds one test, 1,969 in all. Two full serial runs at `1aeaace` each read 1,967 pass, 1 existing todo and 1 timing failure that passed its one isolated rerun (section 6). A full run at `1aeaace` with zero failures is not recorded |
+| Public readback | 98 of 98 public files match the local package by SHA-256, at the Scale lab release of 2026-09-27 and again at the release of `1aeaace` on 2026-09-28, on both addresses each time |
+| Owner decisions | **Ratified by the owner on 2026-09-28**, as recommended. Every design decision was taken at the lead's recommendation. Section 7 lists them |
+| Not yet done | A look at the pages by the owner, or any person, with a visible pane. Every browser reading so far is measured, not seen. The sweep of all 59 lesson links in a real browser and the hosted checks of 2026-09-28 ran with the pane hidden, so they painted no frame. The owner chose the next builds on 2026-09-28: candidate 1 (acceptance in a visible browser) then candidate 2 (an operating view of one simulated period) |
 
 Four documents hold the detail: the [release record](FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md), the
 [design](plans/2026-09-27-fleetlab-scale-lab-design.md), the [build record](plans/2026-09-27-fleetlab-scale-lab-plan.md)
@@ -188,12 +189,13 @@ against 8 ms. Each passed its one isolated rerun. A full run at `1aeaace` with z
 The Python parity and boundary tests need the project's Python 3.11 environment, with the checkout on `PYTHONPATH`
 and `FLEET_PLAYGROUND_BASE=bca4ccd`. They read 89 passed.
 
-## 7. Decisions that wait for the owner
+## 7. Decisions of the owner, ratified on 2026-09-28
 
-Every row was taken at the lead's recommendation. None is ratified. Each amendment and each lab is its own commit,
-but since `c08f60d` the reverse patch of no earlier commit of the wave applies cleanly. A declined decision is undone
-by revert commits, newest first, with a merge by hand where a patch does not apply and a rerun of the four Scale
-test files, then a new deployment or a rollback.
+Every row was taken at the lead's recommendation. All were ratified by the owner on 2026-09-28, as recommended,
+with the other decisions of the design. None was declined, so no revert follows. Each amendment and each lab is its
+own commit, but since `c08f60d` the reverse patch of no earlier commit of the wave applies cleanly. A decision the
+owner declines later is undone by revert commits, newest first, with a merge by hand where a patch does not apply
+and a rerun of the four Scale test files, then a new deployment or a rollback.
 
 | # | Decision | What was done |
 |---|---|---|
@@ -209,7 +211,7 @@ test files, then a new deployment or a rollback.
 | 10 | Fleet intake idle allowance of 13 weeks and default lead time of 48 weeks | Chosen with sight of outcomes, so that the two arms read one advance and one hold. The model notes say so |
 | 11 | Map credit on the density ladder | The attribution link and licence name, shown in every state |
 | 12 | Deployment scope | One deployment published the teaching frames and the Scale lab together |
-| 13 | Push | Not done. It waits for the owner's word |
+| 13 | Push | Done on 2026-09-28 on the owner's word: a fast-forward of `feat/fleetlab-playground` |
 
 ## 8. What the independent review found
 
@@ -234,7 +236,7 @@ the lines were invisible to it. A review that runs the real page found them.
 | 7 | `playground/fleetlab/README.md` held facts and personal wording older than this release | Resolved on 2026-09-28: the README links https://fleetlab.pages.dev/, names the current release and carries no personal framing; the byline stays |
 | 8 | The lesson snapshot that the teaching-frame wave kept outside the tree still counts 56 | Declare it again for 59 |
 | 9 | One stash entry and one untracked owner note exist in sibling worktrees from before this wave | Untouched |
-| 10 | After another Fleet day lesson, the launch lesson link keeps the previous lesson's main heading. The defect is older than this wave and is live: it came in with the teaching frames of `c79eccf`. Two sweeps after the deployment found it: the lead's sweep of all 59 lesson links in a real browser on the live site with the pane hidden, and a sweep on the fake DOM with the modules of the live site | Fixed in `1aeaace` behind a new test in `test/studio.test.mjs`; not deployed, not pushed |
+| 10 | After another Fleet day lesson, the launch lesson link keeps the previous lesson's main heading. The defect is older than this wave and was live until 2026-09-28: it came in with the teaching frames of `c79eccf`. Two sweeps after the deployment found it: the lead's sweep of all 59 lesson links in a real browser on the live site with the pane hidden, and a sweep on the fake DOM with the modules of the live site | Fixed in `1aeaace` behind a new test in `test/studio.test.mjs`; fixed and live since `77922688` (2026-09-28), and pushed |
 | 11 | Where 12 decimals still read on a threshold, `sidedText` moves the last decimal one step toward the value's own side, so the printed number is off by less than 1e-12 | Small, in `src/ui/experiment.js` |
 
 ## 10. Rules of work for whoever continues
@@ -244,7 +246,7 @@ the lines were invisible to it. A review that runs the real page found them.
 | Git | Work on `claude/fleetlab-scale-lab` or a branch cut from it. Stage by explicit path. Never push, open a pull request, force, reset hard, clean or rewrite history without the owner's word |
 | Publishing | The Pages project uses Direct Upload. A push does not publish. A deployment needs the owner's word each time |
 | Protected files | No edit to an existing file under `src/core`, `src/model`, `src/instrument`, `src/legacy`, `src/runtime`, `src/data` unless the wave says so first |
-| Bytes | The offline file may not pass 2,621,440 bytes. 77,213 bytes are unassigned and 135,904 are reserved. Measure after every item |
+| Bytes | The offline file may not pass 2,621,440 bytes. 77,186 bytes are unassigned at `1aeaace` (77,213 bytes at `c08f60d`) and 135,904 bytes are reserved. Measure after every item |
 | Copy | No word of this list on any page: predict, forecast, live, real-time, monitoring, cost, revenue, score, winner. No dash. No operator or personal name. No web address in text. No result number and no direction word before a run. Absence reads "not available: reason" |
 | Honesty | Every unsourced input is labelled a teaching assumption. Every lab says what it cannot know. No claim about any real fleet |
 | Status | Update `HERMES_SOURCE_OF_TRUTH.md` in place. Add no sibling status file |
@@ -263,7 +265,8 @@ Ranked by what a reader would learn, not by size. Take one.
 | 5 | The curb and staging model | The design exists and its bytes are reserved | As its own design says | Reserved |
 | 6 | Withdrawing a road class fleet-wide | How many more cars does each area need to hold its wait allowance? | A new axis form over the four-area routes. It edits protected files | About 25,000 |
 
-Candidate 2 is the largest gap. The site shows simulation in depth and shows tooling hardly at all.
+Candidate 2 is the largest gap. The site shows simulation in depth and shows tooling hardly at all. On 2026-09-28
+the owner chose candidate 1, then candidate 2.
 
 ## 12. A prompt to give with this file
 
@@ -289,23 +292,26 @@ Candidate 2 is the largest gap. The site shows simulation in depth and shows too
 
 ## Recommendation
 
-Look at the three labs in a visible browser before sharing the link. Then ratify or decline the decisions of
-section 7, and decide on the push. Deploy `1aeaace` only on the owner's word, as its own small release with a full
-readback. Take candidate 1 next, because it costs nothing and nobody has yet seen the pages.
+Keep `77922688` live: it fixes known open item 10 and reads back byte for byte, and its source is public. The owner
+ratified the decisions of section 7 on 2026-09-28 and chose the next builds. First, the owner looks at the three labs
+in a visible browser before sharing the link. Then the next builder takes candidate 1, because it costs nothing and
+nobody has yet seen the pages, and then candidate 2, with its acceptance criteria written first.
 
 ## Top risks + mitigations
 
 | Risk | Mitigation |
 |---|---|
-| The pages were never seen by a person | Candidate 1, first. The previous Production is one rollback away |
+| The pages were never seen by a person | The owner's look, then candidate 1. The previous Production, `19e17ac6`, is one rollback away |
 | A lab is read as a statement about a real fleet | Counts and fictional markets, generic names, the assumption sentence, the limits and unknowns lists |
-| The decisions are read as ratified | Section 7 marks every one as assumed. A declined one is undone by revert commits, newest first |
-| The deployed source is not public | Section 1 says so. The push is the owner's action |
-| The next wave spends the reserved bytes | The ledger names 77,213 unassigned bytes and 135,904 reserved |
+| The ratified decisions are read as covering other open rows | Section 7 covers only this wave's rows; the open rows of other work stay in the top section of `CODEX_HANDOFF.md` |
+| The operating view reads as a tool that watches a real fleet | Every number a field of the recorded result; the page calls itself a replay of a simulated period |
+| The next wave spends the reserved bytes | The ledger names 77,213 unassigned bytes at `c08f60d`, 77,186 bytes after `1aeaace`, and 135,904 bytes reserved |
 
 ## Next 3 actions
 
 1. The owner opens https://fleetlab.pages.dev/#/scale-lab at desktop and phone size with the pane visible and
    presses Run on each lab.
-2. The owner rules on the decisions of section 7 and on the push.
-3. The next builder takes one candidate of section 11 with its acceptance criteria written first.
+2. Codex, the next builder, runs candidate 1, acceptance in a visible browser, with its acceptance criteria written
+   first.
+3. Codex builds candidate 2, an operating view of one simulated period, with its acceptance criteria
+   written first and its own byte line.

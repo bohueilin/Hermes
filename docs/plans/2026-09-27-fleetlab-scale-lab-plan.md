@@ -9,19 +9,22 @@ fixes of an independent review, item R1. The last of them is `c08f60d`. On the o
 the site was built from `c08f60d` and deployed to Production of the Pages project `fleetlab` as deployment
 `19e17ac6-d617-4789-9260-ca259c53e076`, item I3.11. After the deployment one more commit, `1aeaace`, landed on the
 branch: a Fleet day fix outside this wave, found by two sweeps of the lesson links on the live site, one in a real
-browser with the pane hidden and one on the fake DOM, and not deployed. The documents commit on top of `1aeaace`
-holds this record and the other records of the wave; it changes no site input. Nothing was pushed: neither
-`c08f60d`, nor `1aeaace`, nor the documents commit is on a remote branch. This record was first written at
-`319b4a9`, the seventh commit, and was brought in line with `c08f60d` and the deployment afterwards. Numbers that
-belong to `319b4a9` keep their commit name.
+browser with the pane hidden and one on the fake DOM. The documents commit on top of `1aeaace` holds this record
+and the other records of the wave; it changes no site input. On 2026-09-27 nothing was pushed. On 2026-09-28, on
+the owner's word, the lead deployed `1aeaace` as Production deployment `77922688-6d87-4d15-94bf-442beab31712`, with
+`19e17ac6` as the rollback target, and pushed the branch head as a fast-forward of the remote branch
+`feat/fleetlab-playground` right after the records commit of 2026-09-28, item I3.11. This record was first written
+at `319b4a9`, the seventh commit, and was brought in line with `c08f60d`, the deployment and the events of
+2026-09-28 afterwards. Numbers that belong to `319b4a9` keep their commit name.
 
 FleetLab is an independent, synthetic teaching simulator. It is not affiliated with any operator, vehicle maker,
 regulator or utility. Every result is NOT_EVIDENCE, simulation only, decision authority NONE. Every input of the
 three labs is a teaching assumption unless its source row says otherwise. The one sourced input is the road
 distances of Lab C, which come from the shipped Fleet day road map.
 
-The owner has not ratified any decision of the design. Wherever this record names a decision, that decision is
-assumed at the lead's recommendation, not ratified.
+The owner ratified every decision of the design on 2026-09-28, as recommended: the 25 decisions of section 12 of
+the design and the package decisions D1 to D11. Wherever this record names a decision, that decision was taken at
+the lead's recommendation and ratified by the owner on 2026-09-28.
 
 Tags.
 
@@ -31,7 +34,7 @@ Tags.
 | **[W]** | Measured by the lead in the worktree, at the commit named |
 | **[V]** | Measured in the worktree at `319b4a9` while this record was written, with the command shown (Node 22.22.0) |
 | **[F]** | Measured on the files of `c08f60d`, or on a working tree whose Scale lab files equal them, while this record was brought in line, with the command shown (Node 22.22.0, one laptop, one run unless stated) |
-| **[P]** | Measured by the lead against the public site after the deployment of `c08f60d` |
+| **[P]** | Measured by the lead against the public site after the deployment of `c08f60d`, or after the deployment of `1aeaace` on 2026-09-28 where the row says so |
 | **[S]** | Stated by the designer of a lab and held by that lab's pinned test |
 | **[R]** | Read in source or in a commit message |
 | **[E]** | Estimate |
@@ -56,14 +59,14 @@ file.
 | Fact | Value |
 |---|---|
 | Branch | `claude/fleetlab-scale-lab` |
-| Last commit of the wave | `c08f60d8830df877fac2c7321bb47d75a5ae56ad`, "fix: resolve the findings of the independent Scale lab review" [R]. It is the deployed source |
-| HEAD at the time of writing | `1aeaacecb25e17853f852d7bbd7141ff75d9cb69`, "fix: reset the Fleet day heading when a launch lesson opens" [R]. It changes `src/ui/studio.js` and `test/studio.test.mjs` only. Its message says the defect is older than the Scale lab, that it was found by a sweep of all 59 lesson links on the live site, and that the commit is not deployed. The offline package of `1aeaace` is 2,408,350 bytes, 27 more than `c08f60d` [F: `git archive 1aeaace`, packed outside the tree]. The documents commit on top of `1aeaace`, which holds this record, is now the branch head; a record cannot state the hash of the commit that holds it |
+| Last commit of the wave | `c08f60d8830df877fac2c7321bb47d75a5ae56ad`, "fix: resolve the findings of the independent Scale lab review" [R]. It is the source deployed on 2026-09-27. Its Scale lab files are unchanged in `1aeaace`, the source deployed on 2026-09-28 |
+| HEAD when this record was first committed | `1aeaacecb25e17853f852d7bbd7141ff75d9cb69`, "fix: reset the Fleet day heading when a launch lesson opens" [R]. It changes `src/ui/studio.js` and `test/studio.test.mjs` only. Its message says the defect is older than the Scale lab, that it was found by a sweep of all 59 lesson links on the live site, and that the commit is not deployed, which held until 2026-09-28, when it became Production `77922688`. The offline package of `1aeaace` is 2,408,350 bytes, 27 more than `c08f60d` [F: `git archive 1aeaace`, packed outside the tree]. The documents commit on top of `1aeaace`, `44569f8`, first held this record. On it stand `0bc2f25` and the records commit of 2026-09-28, which holds this update and is the branch head; a record cannot state the hash of the commit that holds it |
 | Base | `c79eccf`, the commit the design stage started from. It is the head of the teaching-frame wave |
 | Commits of this wave | 8, all local, listed in the table below. `git log c79eccf..c08f60d` shows them |
 | Files changed from `c79eccf` to `c08f60d` | 29 files, 16,032 lines added and 67 removed, of which 13,275 lines are the four pins files [F: `git diff --shortstat` and `git diff --numstat`]. At `319b4a9` it was 27 files, 10,914 lines added and 47 removed, 8,888 of them in three pins files [V] |
-| Status | The eight commits of the wave, `1aeaace` and the documents commit on top of `1aeaace` are made. The documents commit holds the documents of items I3.5 and I3.10 |
-| Deployed | Yes, from `c08f60d`, on the owner's instruction of 2026-09-27. Deployment `19e17ac6-d617-4789-9260-ca259c53e076` is Production of the Pages project `fleetlab`, item I3.11 [P] |
-| Pushed | No. No remote branch holds `c79eccf`, `c08f60d`, `1aeaace` or the documents commit on top of `1aeaace`. The local copy of the remote branch `feat/fleetlab-playground` stands at `790573e`, an ancestor of all four, so a push of `c08f60d` or of `1aeaace` to it would be a fast-forward. Nobody has authorized that push [F, read from the local copies of the remote branches, with no fetch] |
+| Status | The eight commits of the wave, `1aeaace`, the documents commit on top of `1aeaace`, `0bc2f25` and the records commit of 2026-09-28 are made. The documents commit holds the documents of items I3.5 and I3.10 |
+| Deployed | Yes. From `c08f60d` on the owner's instruction of 2026-09-27, as deployment `19e17ac6-d617-4789-9260-ca259c53e076` [P]. From `1aeaace` on the owner's word of 2026-09-28, as deployment `77922688-6d87-4d15-94bf-442beab31712`, which is Production of the Pages project `fleetlab`; `19e17ac6` is the rollback target, item I3.11 |
+| Pushed | Yes, on the owner's word of 2026-09-28. Before it no remote branch held `c79eccf`, `c08f60d`, `1aeaace` or the documents commit on top of `1aeaace`, and the local copy of the remote branch `feat/fleetlab-playground` stood at `790573e`, an ancestor of all four [F, read from the local copies of the remote branches, with no fetch]. Right after the records commit of 2026-09-28 the lead pushed the branch head as a fast-forward of `feat/fleetlab-playground` from `790573e`, which published 20 commits. The name `claude/fleetlab-scale-lab` is not created on the remote, item I3.11 |
 | Distance from `main` | `c79eccf` is 47 commits ahead of the local `main`, `319b4a9` 54, `c08f60d` 55 and `1aeaace` 56 [F: `git rev-list --count main..<commit>`] |
 | Not in the eight commits | The README counts, the architecture section, the model notes, the design and this record, the release record, the handoff, the source of truth entry, and the corrected status paragraph of the deployment guide. They are in the documents commit on top of `1aeaace`, item I3.5. None of them is a site file, so that commit leaves the deployed site byte for byte as it is, and its site inputs equal those of `1aeaace` |
 | What no commit before `319b4a9` may be used for | A release. From `2caeac6` to `1a81ae8` the route is open and at least one stub returns a valid verdict with a recommendation. `319b4a9` is the first commit that holds three real labs. `c08f60d` is the commit that was deployed |
@@ -89,7 +92,7 @@ verifies it with the real labs and does the work that remained.
 
 | Rule | Detail |
 |---|---|
-| Git | Work only on `claude/fleetlab-scale-lab` or a branch cut from it. Stage by explicit path. Never push, open a pull request, change a remote, force, reset hard, clean or rewrite history |
+| Git | Work only on `claude/fleetlab-scale-lab` or a branch cut from it. Stage by explicit path. Never push without the owner's word, and never open a pull request, change a remote, force, reset hard, clean or rewrite history. The owner gave the push word on 2026-09-28, item I3.11 |
 | Commits | Only after the gates of the item pass. Review `git status --short`, `git diff --cached --check` and `git diff --cached --stat` first. Run the staged privacy scan with the patterns of item I3.5. End the message with the attribution line the session states |
 | Protected files | No edit to any existing file under `src/core`, `src/model`, `src/instrument`, `src/legacy`, `src/runtime`, `src/data`. Held: under those folders the diff from `c79eccf` to `319b4a9` holds only the four new `scale-` files of `src/model` [V], and so does the diff from `c79eccf` to `c08f60d` [F] |
 | Existing tests | No edit after the shell. The pin edits landed in `2caeac6`. Held: from `2caeac6` to `319b4a9` the only test files that change are the four `scale-` test files and the three pins files [V]. From `2caeac6` to `c08f60d` they are the same files plus two new ones of item R1, `test/scale-lab.legacy-text.pins.json` and its helper `test/helpers/legacy-text.mjs` [F] |
@@ -97,7 +100,7 @@ verifies it with the real labs and does the work that remained.
 | Bytes | Measure after every item with the packer writing outside the repository. Stop and report if a checkpoint is passed |
 | Output outside the tree | The packer writes outside the repository. `test/packed.test.mjs` writes `dist/` inside the repository, which git ignores |
 | Copy | D5 of the design binds every shipped string. Fictional markets and generic names only |
-| Release | Not part of this plan as written. The plan held that nothing is deployed before gates 1 to 6 of the design have passed, and that push and deployment need the owner's explicit word, naming both waves that the branch carries. On 2026-09-27 the owner instructed the lead to finish, deploy, test and validate. That instruction covered the deployment of `c08f60d`, which published both waves, and named no push. Gates 5 and 6 had not passed when it was deployed, item I3.8 |
+| Release | Not part of this plan as written. The plan held that nothing is deployed before gates 1 to 6 of the design have passed, and that push and deployment need the owner's explicit word, naming both waves that the branch carries. On 2026-09-27 the owner instructed the lead to finish, deploy, test and validate. That instruction covered the deployment of `c08f60d`, which published both waves, and named no push. Gates 5 and 6 had not passed when it was deployed, item I3.8. On 2026-09-28 the owner gave the word to deploy `1aeaace` and to push, item I3.11. Gates 5 and 6 had still not passed |
 
 ---
 
@@ -266,8 +269,8 @@ readable(result) -> the result itself, or an invalid copy of it when a shipped c
 
 ### 1.9 Differences resolved
 
-Every ruling of this table that rests on a decision of the design is
-assumed at the lead's recommendation, not ratified.
+Every ruling of this table that rests on a decision of the design was taken at the lead's recommendation and
+ratified by the owner on 2026-09-28.
 
 | # | Shell text or code | Lab descriptor | Ruling | Code change |
 |---|---|---|---|---|
@@ -286,19 +289,20 @@ assumed at the lead's recommendation, not ratified.
 | 13 | The shell says nothing about interval coverage | Labs A and C said on the page that the label is nominal. Lab B did not | The declared test says it once for every lab. Labs A and C no longer repeat it | `scale-lab.js`, labs A and C |
 | 14 | Catalog article "from one ratio"; glossary "the one ratio of load to capacity"; Overview "support desk"; glossary "share the same riders" | Lab C has two governing ratios. Lab B's is a lag over an interval. Lab A says pool. Labs A and B have no riders | Four copy corrections, item S1.7c | three interface files |
 | 15 | The shell planned a test that every press of Lab C reports at most 120 engine runs | Lab C reports `work.engine_runs` and counts engine calls from outside in its own test | The shell test asserts the reported count. Lab C's test asserts the counted calls, the 8-hour duration and `capture: false` | a shell test, item I3.3 |
-| 16 | D8: keyed draws | Lab A takes one keyed draw per simulated minute and expands it with a local stream | Decision 4 of the design, assumed at the lead's recommendation, not ratified | none |
+| 16 | D8: keyed draws | Lab A takes one keyed draw per simulated minute and expands it with a local stream | Decision 4 of the design, ratified by the owner on 2026-09-28 | none |
 | 17 | The lab id is the key prefix of keyed draws in labs A and C | Lab B keys its draws with `'scale-intake'`, not its id | Kept. A change would move every pin of Lab B | none |
 | 18 | Every input row carries one of four source prefixes | Lab C takes its road distances from the shipped map | A fifth prefix, `Fleet day map` | a shell test, Lab C |
 | 19 | The registry order was A, B, C | The story runs C, B, A | Section 1.2. The order of landing stays A, B, C, so that Lab C is the last to land and the first to be cut | `scale-labs.js`, the catalog, the Overview |
 
 Requests declined for this wave: a shared helper for invalid results; an invariant callback in `scalePairSteps`; a
 three-digit fallback in the shared number formatter; the stale mark naming the changed control; backlog and
-longest wait at the landing minute in Lab A; the three options of decision 21 of the design. Each of these is
-assumed at the lead's recommendation, not ratified.
+longest wait at the landing minute in Lab A; the three options of decision 21 of the design. Each of these was
+declined at the lead's recommendation, and the owner ratified decisions 16 and 21 on 2026-09-28.
 
 ### 1.10 Reading tools added in `c08f60d`
 
-Item R1 added these to the contract. Each is assumed at the lead's recommendation, not ratified. Read in source at
+Item R1 added these to the contract. Each was taken at the lead's recommendation and ratified by the owner on
+2026-09-28, with decisions 7, 23 and 24 of the design. Read in source at
 `c08f60d` [R].
 
 | Name | File | Rule |
@@ -320,29 +324,29 @@ surface, against 900 pinned pairs of number text and 19 pinned verdict views in
 ## 2. Stage 0: decisions, and how the build proceeded without them
 
 The owner asked for this run to finish. No message of the workflow is the owner's consent. The build proceeded to
-local commits on the lead's recommendations. Every decision of section 12 of the design is recorded in the design
-as **assumed at the lead's recommendation, not ratified**, and the table below repeats that state for the
-decisions that a commit holds. The handoff and the source of truth entry record it in the same words. Both are
-in the documents commit on top of `1aeaace`, items I3.5 and I3.10. The owner has ruled on none of the
-decisions at the time of writing. The owner's instruction of 2026-09-27 to finish, deploy, test and validate led to
-the deployment of item I3.11. It is not a ruling on any decision of the table.
+local commits on the lead's recommendations. Every decision of section 12 of the design was first recorded as
+assumed at the lead's recommendation. The owner's instruction of 2026-09-27 to finish, deploy, test and validate
+led to the deployment of item I3.11 and was not a ruling on any decision. On 2026-09-28 the owner accepted every
+decision as recommended, so each decision of section 12 of the design is **ratified by the owner on 2026-09-28**,
+and the table below repeats that state for the decisions that a commit holds. The handoff and the source of truth
+entry are in the documents commit on top of `1aeaace`, items I3.5 and I3.10.
 
 | Decision of the design | State | Held by commit | Undone by |
 |---|---|---|---|
-| 1. The shell as committed | Assumed at the lead's recommendation, not ratified | `2caeac6` | A revert commit of `2caeac6`, or a new branch cut from `c79eccf`. Never a hard reset |
-| 2. Lesson count 56 to 59 | Assumed at the lead's recommendation, not ratified | `2caeac6`, and the documents commit | With decision 1 |
-| 3. Bytes past the target | Assumed at the lead's recommendation, not ratified | Every commit. The growth stood at 85,046 bytes at `319b4a9` and stands at 89,468 bytes at `c08f60d`, 7,548 past the target | The trims of section 8 of the design, in order |
-| 4. The reading of D8 for Lab A | Assumed at the lead's recommendation, not ratified | `27f6014` | Lab A redrawn through the cached prefix hasher, pins recorded again |
-| 5 and 17. Missing guardrail, failed control | Assumed at the lead's recommendation, not ratified | `05113ab` | A revert of `05113ab` |
-| 6, 7, 8, 9. Refusal form, side-preserving numbers, next tests, interval sentence | Assumed at the lead's recommendation, not ratified | `953ebce`. Side-preserving numbers and the next-test sentences revised by `c08f60d`, sections 1.9 and 1.10 | A revert of `953ebce` and of the matching parts of `c08f60d`, or the named strings |
-| 10, 18, 19. Copy corrections, page structure, story order | Assumed at the lead's recommendation, not ratified | `9fdb160` | A revert of `9fdb160`, or the named strings |
-| 11. Lab A | Assumed at the lead's recommendation, not ratified | `27f6014` | A revert of that commit |
-| 12. Lab B | Assumed at the lead's recommendation, not ratified | `1a81ae8` | A revert of that commit |
-| 13. Lab C | Assumed at the lead's recommendation, not ratified | `319b4a9` | A revert of that commit |
-| 14. Repository documents | Assumed at the lead's recommendation, not ratified | The documents commit on top of `1aeaace` | A revert commit of the documents commit |
-| 15. Push and deployment | Assumed at the lead's recommendation, not ratified. Deployment: done on the owner's instruction of 2026-09-27, which named no push. Push: not done, not authorized | Deployment `19e17ac6`, source `c08f60d`. No push | A rollback to deployment `dd4bfa44`, source `b99ab04`, in the Pages dashboard, the owner's action. It rewrites no history |
-| 20. The map project named in the road table row | Assumed at the lead's recommendation, not ratified | `319b4a9`, and the credit line of `c08f60d` | One string of Lab C and its test line, and `LAB.map` and `LAB.credit` |
-| No number. The fixes of the independent review and the lead's four follow-up changes, item R1 | Assumed at the lead's recommendation, not ratified | `c08f60d` | A revert of `c08f60d`, which brings the nine defects of item R1 back |
+| 1. The shell as committed | Ratified by the owner on 2026-09-28 | `2caeac6` | A revert commit of `2caeac6`, or a new branch cut from `c79eccf`. Never a hard reset |
+| 2. Lesson count 56 to 59 | Ratified by the owner on 2026-09-28 | `2caeac6`, and the documents commit | With decision 1 |
+| 3. Bytes past the target | Ratified by the owner on 2026-09-28 | Every commit. The growth stood at 85,046 bytes at `319b4a9` and stands at 89,468 bytes at `c08f60d`, 7,548 past the target | The trims of section 8 of the design, in order |
+| 4. The reading of D8 for Lab A | Ratified by the owner on 2026-09-28 | `27f6014` | Lab A redrawn through the cached prefix hasher, pins recorded again |
+| 5 and 17. Missing guardrail, failed control | Ratified by the owner on 2026-09-28 | `05113ab` | A revert of `05113ab` |
+| 6, 7, 8, 9. Refusal form, side-preserving numbers, next tests, interval sentence | Ratified by the owner on 2026-09-28 | `953ebce`. Side-preserving numbers and the next-test sentences revised by `c08f60d`, sections 1.9 and 1.10 | A revert of `953ebce` and of the matching parts of `c08f60d`, or the named strings |
+| 10, 18, 19. Copy corrections, page structure, story order | Ratified by the owner on 2026-09-28 | `9fdb160` | A revert of `9fdb160`, or the named strings |
+| 11. Lab A | Ratified by the owner on 2026-09-28 | `27f6014` | A revert of that commit |
+| 12. Lab B | Ratified by the owner on 2026-09-28 | `1a81ae8` | A revert of that commit |
+| 13. Lab C | Ratified by the owner on 2026-09-28 | `319b4a9` | A revert of that commit |
+| 14. Repository documents | Ratified by the owner on 2026-09-28 | The documents commit on top of `1aeaace` | A revert commit of the documents commit |
+| 15. Push and deployment | Ratified by the owner on 2026-09-28. Deployment: done on the owner's instruction of 2026-09-27, which named no push. The heading fix followed on the owner's word of 2026-09-28. Push: done on the owner's word of 2026-09-28, by the lead, right after the records commit of 2026-09-28 | Deployment `19e17ac6`, source `c08f60d`, then Production `77922688`, source `1aeaace`. The push, a fast-forward of `feat/fleetlab-playground` from `790573e` | A rollback in the Pages dashboard, the owner's action, to deployment `19e17ac6`, source `c08f60d`, since 2026-09-28. It was `dd4bfa44`, source `b99ab04`, before. It rewrites no history. A pushed commit is undone by a new commit, never by a rewrite |
+| 20. The map project named in the road table row | Ratified by the owner on 2026-09-28 | `319b4a9`, and the credit line of `c08f60d` | One string of Lab C and its test line, and `LAB.map` and `LAB.credit` |
+| No number. The fixes of the independent review and the lead's four follow-up changes, item R1 | Taken at the lead's recommendation. The row has no number of its own. The rows of decisions 7, 8, 11, 12, 13, 20, 23, 24 and 25 of the design, ratified by the owner on 2026-09-28, name the parts of `c08f60d` that they hold | `c08f60d` | A revert of `c08f60d`, which brings the nine defects of item R1 back |
 
 A revert of `05113ab` or `953ebce` after a lab has landed needs the shell test rerun, because later tests rest on
 those rules. Since `c08f60d`, the reverse patch of every earlier commit of this wave no longer applies cleanly to the
@@ -548,7 +552,7 @@ with one planned exception: `319b4a9` also adds the run budget test of item I3.3
 The route, the chooser, the frame, the catalog card, the grounding entry, the copy scan and the contract tests are
 all driven by `LAB`. Later, `c08f60d` edited all nine lab files and four shared files, item R1.
 
-SHA-256 of the lab files, the shared files and the shell test as committed at `c08f60d`, the deployed source [F:
+SHA-256 of the lab files, the shared files and the shell test as committed at `c08f60d`, the source deployed on 2026-09-27 [F:
 `git show c08f60d:playground/fleetlab/<file> | shasum -a 256`]. `shasum -a 256` on the working file gives the same
 value for every row but `src/ui/studio.js`, which `1aeaace` changed after the deployment; its working file reads
 `377cc4a4aba7c2e2813d160d9984baa7388fefeb673abf9c31f22f6d35eeebb4` [F].
@@ -703,7 +707,7 @@ test/scale-density.test.mjs`, then the same with `FLEET_PLAYGROUND_PERF=1` and `
 | Pins that must hold | Capacity label `scale-spec:b4c7f5da`, IMPROVED, ADVANCE_TO_NEXT_TEST, change 62.604166666666664, 113 engine runs. Sites added `scale-spec:d9387e05`, UNCHANGED, 103 runs. One site `scale-spec:4eb5ad2f`, REGRESSED, HOLD, 113 runs. Null control change 0 on every measure. Of the by-rung table only the third column moved in review: it holds 0.47, 0.95, 1.42, 1.90, 2.37 in the capacity comparison. `test/scale-density.pins.json` holds them [F]. `c08f60d` moved only the record sizes of this file |
 | Acceptance, beyond the common checks | Lab test 18 pass and 3 skipped [F], 21 of 21 with the flag [W] [F]. 72 of 75 grid settings accepted, 3 refused, none invalid, none voided, both controls as declared at 72 of 72, at most 113 engine runs a press [M]. Test 19 of the lab test holds the reader grid by flag and passed inside the full suite [W] and in the serial run of the four files [F]. Engine calls counted from outside equal `work.engine_runs` and never pass 120. Zero engine calls while the view mounts, a lesson arrives or a control changes. Record at most 65,536 characters: 31,665 at the default [F], 31,683 at `319b4a9`. The 25 pinned records run from 30,952 to 31,756 characters [F] |
 | Compute | In Node at design: 1,153 ms per press, first partial chart after 30 ms, longest block 17.0 ms, 180 steps of the generator [M]. On `c08f60d`: 1,257 ms per press, first partial chart after 76 ms, longest block 18.5 ms, 179 yields and the return, 5 partial charts, 113 engine runs [F, one run on a laptop that was not idle]. The timing test asserts 1,000 ms to the first chart and 3,000 ms a press and passed inside the full suite [W] and in the serial run of the four files [F]. In the browser: item I3.8 |
-| Byte line | Allocation 13,312 bytes. The lab stood 3,652 bytes over its allocation at `319b4a9`, which the lead allowed inside the lab's own hard limit. The owner has not ruled on that allowance. It is part of decision 3 of the design, assumed at the lead's recommendation, not ratified. Measured **16,964 bytes** at `319b4a9` [M], of which 1,084 bytes are review fixes. The worktree checkpoints give the same: 12,401 bytes net of a stub of 4,563 bytes [W]. `c08f60d` added 475 bytes to this module in the offline package [F, by the method of Lab A], so the line reads 17,439 bytes [E]. **That is 31 bytes past the lab's hard limit of 17,408 bytes.** The commit message of `c08f60d` and the release record state no per-lab line. The package as a whole stays 2,692 bytes under its hard stop. It belongs to decision 3 for the owner |
+| Byte line | Allocation 13,312 bytes. The lab stood 3,652 bytes over its allocation at `319b4a9`, which the lead allowed inside the lab's own hard limit. It is part of decision 3 of the design, which the owner ratified on 2026-09-28, as recommended. Measured **16,964 bytes** at `319b4a9` [M], of which 1,084 bytes are review fixes. The worktree checkpoints give the same: 12,401 bytes net of a stub of 4,563 bytes [W]. `c08f60d` added 475 bytes to this module in the offline package [F, by the method of Lab A], so the line reads 17,439 bytes [E]. **That is 31 bytes past the lab's hard limit of 17,408 bytes.** The commit message of `c08f60d` and the release record state no per-lab line. The package as a whole stays 2,692 bytes under its hard stop. Decision 3, ratified by the owner on 2026-09-28, grants the band and with it these 31 bytes |
 
 ---
 
@@ -720,11 +724,11 @@ State of the items of this stage at the time of writing.
 | I3.5 Documents | Written and committed in the documents commit on top of `1aeaace` |
 | I3.6 Packaging checks | Run at `319b4a9` and again at `c08f60d`, passed |
 | I3.7 Full gates | Run at `319b4a9` and again at `c08f60d`, passed |
-| I3.8 Browser acceptance | Run in part at `319b4a9`, and again in part at `c08f60d`, locally and on the hosted site. No painted frame, no 1440 by 900 px, no throttle, no physical phone |
+| I3.8 Browser acceptance | Run in part at `319b4a9`, and again in part at `c08f60d`, locally and on the hosted site, and on the hosted heading fix release of 2026-09-28. No painted frame, no 1440 by 900 px, no throttle, no physical phone. Q1, the next build, completes it |
 | R1 Independent review and its fixes | Landed in `c08f60d`, the eighth commit |
 | I3.9 Commits | Seven commits made after the shell, which with the shell are the eight commits of this wave. One more, the documents commit on top of `1aeaace`, is made |
 | I3.10 Release record and handoff | Written: `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`, `docs/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md` and a new top section of `CODEX_HANDOFF.md`. Committed in the documents commit on top of `1aeaace` |
-| I3.11 Push and deployment | Deployment done on the owner's instruction of 2026-09-27: deployment `19e17ac6`, source `c08f60d`, 98 of 98 public files read back. Push not done, not authorized |
+| I3.11 Push and deployment | Done. Deployment on the owner's instruction of 2026-09-27: deployment `19e17ac6`, source `c08f60d`, 98 of 98 public files read back. The heading fix release on the owner's word of 2026-09-28: Production `77922688`, source `1aeaace`, 98 of 98 public files read back. The push on the owner's word of 2026-09-28, made by the lead right after the records commit of 2026-09-28 |
 
 ### I3.1 Lab A replaces its stub. Landed in `27f6014`
 
@@ -788,9 +792,9 @@ documents commit leaves the deployed site byte for byte as it is.
 | `docs/plans/2026-09-27-fleetlab-scale-lab-design.md` | The design, with every source of its section 2 opened again first and the titles of rows 16a to 16c added |
 | This record | The plan, with every measurement given as a number or as the committed test that holds it |
 | `docs/FLEETLAB_SCALE_LAB.md` | Model notes for the three labs. The list below |
-| `HERMES_SOURCE_OF_TRUTH.md` | One dated entry in section 7.5, newest first, with every number measured and the command that produced it, and every decision marked as assumed at the lead's recommendation, not ratified. Correct the stale header rows in the same edit. No sibling status file |
+| `HERMES_SOURCE_OF_TRUTH.md` | One dated entry in section 7.5, newest first, with every number measured and the command that produced it, and every decision marked as it then stood, assumed at the lead's recommendation; the owner ratified them on 2026-09-28. Correct the stale header rows in the same edit. No sibling status file |
 | `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`, `docs/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md`, the new top section of `CODEX_HANDOFF.md` | Item I3.10 |
-| `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` | The status paragraph, corrected by the lead: the Scale lab Production `19e17ac6` from `c08f60d` is current, D1 `dd4bfa44` is the rollback target, the project holds three Production deployments, and `1aeaace` is committed and not deployed. The rollback heading is left for the owner |
+| `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` | The status paragraph, as the documents commit corrected it: the Scale lab Production `19e17ac6` from `c08f60d` was current, D1 `dd4bfa44` was the rollback target, the project held three Production deployments, and `1aeaace` was committed and not deployed. Those facts changed on 2026-09-28, item I3.11. The rollback heading was made neutral in `0bc2f25` on 2026-09-28 |
 | The lesson snapshot kept outside the tree | Declared again for 59 lesson records. It is not a file of the repository. Not done: it still counts 56 lessons |
 
 What the model notes hold.
@@ -835,7 +839,7 @@ node playground/fleetlab/tools/check-dist.mjs --site <outside>/site
 | `node --test playground/fleetlab/test/pack.test.mjs` | 41 of 41 [E]. Two of its tests need the repository root, so the file read 39 of 41 on a copy at design | 41 of 41, run from the repository root [V] |
 | Run pressed inside the packed page | Shell test 21, by flag. The packed record equals the native record for all three labs [M] | Shell test 21 passed inside the full suite with the flag [W] |
 
-Measured at `c08f60d`, the deployed source.
+Measured at `c08f60d`, the source deployed on 2026-09-27.
 
 | Check | Measured at `c08f60d` |
 |---|---|
@@ -867,7 +871,7 @@ git diff --check
 The 1 existing todo is a test of `test/a11y.test.mjs` for horizontal page scroll at 400 px. It needs a browser and
 is older than this wave. It is not counted as passed.
 
-The same gates at `c08f60d`, the deployed source.
+The same gates at `c08f60d`, the source deployed on 2026-09-27.
 
 | Gate | Expected | Measured at `c08f60d` |
 |---|---|---|
@@ -962,8 +966,9 @@ visits and 4 deliberately bad links, 0 error pages from a good link, 0 network a
 storage accesses. It saw the same defect: after another Fleet day lesson, `#/fleet-day?lesson=region-launch`
 keeps that lesson's title in the main heading. The lead confirmed it on the live site after a reload and from
 three starting pages and reproduced it on the fake DOM at `c79eccf` and at `c08f60d`; D1 sets no heading per
-lesson, so the defect came in with the teaching frames. `1aeaace` fixes it and is not deployed. What stays not done
-is a look by a person with a visible pane.
+lesson, so the defect came in with the teaching frames. `1aeaace` fixes it. It was deployed on 2026-09-28 as
+Production `77922688`, and the hosted check there reads the fix, item I3.11. What stays not done is a look by a
+person with a visible pane.
 
 ### R1 Independent review and its fixes. Landed in `c08f60d`
 
@@ -1026,9 +1031,11 @@ the three labs that `c08f60d` recorded again, and the tests of the minor finding
 ### State of the six gates of the design
 
 Section 9.2 of the design names six gates. As written, no package is built for release before all six have passed.
-The site was deployed from `c08f60d` on the owner's instruction with gates 5 and 6 not passed, item I3.11.
+The site was deployed from `c08f60d` on the owner's instruction with gates 5 and 6 not passed, item I3.11. The
+heading fix `1aeaace` was deployed on 2026-09-28 on the owner's word, with gates 5 and 6 still not passed. The
+owner chose Q1, which closes them, as the next build.
 
-| # | Gate | State at `319b4a9` | State at `c08f60d`, the deployed source |
+| # | Gate | State at `319b4a9` | State at `c08f60d`, the source deployed on 2026-09-27 |
 |---|---|---|---|
 | 1 | Full serial Node suite with the performance flag | Passed [W] | Passed: 1,968 tests, 1,967 pass, 1 existing todo [W] |
 | 2 | Pack the offline page and the site, both checks, and the pack test | Passed. Offline page [W] [V]. Hosted folder and pack test [V] | Passed. Both packages and both checks [W] [F]. Pack test inside the full suite [W] |
@@ -1048,14 +1055,18 @@ The site was deployed from `c08f60d` on the owner's instruction with gates 5 and
 | 5 | `1a81ae8` | `feat: add the fleet intake lab` | I3.2 |
 | 6 | `319b4a9` | `feat: add the density ladder lab` | I3.3 |
 | 7 | `c08f60d` | `fix: resolve the findings of the independent Scale lab review` | R1 |
-| Outside the wave | `1aeaace` | `fix: reset the Fleet day heading when a launch lesson opens` | A Fleet day fix made after the deployment. Not deployed |
-| 8 | The documents commit on top of `1aeaace`, made | Planned as `docs: record the Scale lab design, model notes and counts` | I3.5 and I3.10, with the source of truth entry in the same commit as the work it records |
+| Outside the wave | `1aeaace` | `fix: reset the Fleet day heading when a launch lesson opens` | A Fleet day fix made after the deployment. Deployed on 2026-09-28 as Production `77922688`, item I3.11 |
+| 8 | `44569f8`, the documents commit on top of `1aeaace` | `docs: record the Scale lab design, model notes and counts` | I3.5 and I3.10, with the source of truth entry in the same commit as the work it records |
+| After the wave | `0bc2f25` | `docs: remove personal framing and ask the owner four questions` | The privacy pass of 2026-09-28 and the four questions to the owner |
+| After the wave | The records commit of 2026-09-28 | Set when the commit is made | The owner's answers, the heading fix release and the push. This update. The lead pushed the branch head right after it, item I3.11 |
 
 The table counts the commits after the shell, `2caeac6`. Rows 1 to 7 with the shell are the eight commits of this
-wave. Row 8 is the documents commit, made on top of `1aeaace` after the deployment. It changes no site file, so it
-leaves the deployed site as it is and its site inputs equal those of `1aeaace`. `1aeaace` does change one site file, so a site built from HEAD now differs from
-the deployed site in `src/ui/studio.js`. Each commit follows the rules of section 0.2. No generated package, cache or
-working file is staged. This record is part of the documents commit, so it cannot state the hash of that commit.
+wave. Row 8 is the documents commit, made on top of `1aeaace` after the deployment. It changes no site file, so its
+site inputs equal those of `1aeaace`, and so do those of `0bc2f25` and of the records commit of 2026-09-28. On
+2026-09-27 a site built from HEAD differed from the deployed site in `src/ui/studio.js`. Since the heading fix
+release of 2026-09-28 a site built from HEAD equals Production `77922688`. Each commit follows the rules of section
+0.2. No generated package, cache or working file is staged. This record was first committed in `44569f8`. This
+update is part of the records commit of 2026-09-28, so it cannot state the hash of that commit.
 
 ### I3.10 Release record and handoff. Committed in the documents commit
 
@@ -1063,31 +1074,32 @@ working file is staged. This record is part of the documents commit, so it canno
 |---|---|
 | `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md` | Modelled on the D1 record: release identity, what the deployment publishes, every gate with its command and result, the byte ledger as archived checkpoints, the review and its fixes, the browser evidence, publication and readback, what was not done, known open items |
 | `docs/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md` | The Scale lab handoff |
-| `CODEX_HANDOFF.md` | A new top section: branch and HEAD; what landed, commit by commit; the commands to reproduce the gates; every decision of section 12 of the design with its state, which is assumed at the lead's recommendation, not ratified, unless the owner has ruled; the deployment; the next work |
+| `CODEX_HANDOFF.md` | A new top section: branch and HEAD; what landed, commit by commit; the commands to reproduce the gates; every decision of section 12 of the design with its state, which was assumed at the lead's recommendation until the owner ratified every decision on 2026-09-28; the deployment; the next work |
 | `HERMES_SOURCE_OF_TRUTH.md` | Updated in I3.5: a new entry at the head of section 7.5 and updated header rows. The handoff points to it and does not repeat it |
 
 What the handoff was to state plainly, and what now holds.
 
-| Point | State at the time of writing |
+| Point | State on 2026-09-28 |
 |---|---|
-| 1. Nothing was pushed or deployed, and both need the owner's word | Changed. The owner's instruction of 2026-09-27 covered the deployment. Nothing was pushed, and a push still needs the owner's word |
+| 1. Nothing was pushed or deployed, and both need the owner's word | Changed. The owner's instruction of 2026-09-27 covered the first deployment. On 2026-09-28 the owner gave the word to deploy `1aeaace` and to push, and both were done, item I3.11 |
 | 2. The branch carries two waves, and a deploy publishes both | Happened. The deployment published the teaching frames of the teaching-frame wave, built on `c79eccf` and recorded as local only until then, together with the Scale lab. The release record lists both |
 | 3. Which gates of section 9.2 of the design have run on the integrated tree | The table above gives the state at `319b4a9` and at `c08f60d` |
-| 4. Every decision is assumed at the lead's recommendation, not ratified, unless the owner has ruled | Holds. The owner has ruled on none |
+| 4. Every decision is assumed at the lead's recommendation, not ratified, unless the owner has ruled | Closed on 2026-09-28. The owner ratified every decision of section 12 of the design and D1 to D11, as recommended |
 
-### I3.11 Push and deployment. Deployment done, push not done
+### I3.11 Push and deployment. Both done on the owner's word
 
 On the owner's instruction of 2026-09-27 the lead deployed the site built from `c08f60d` by the standing procedure:
 direct upload with the pinned tool version, a readback of every public file hash, a check of the response headers,
 and a check of the hosted parity numbers [P]. In the smoke, one teaching-frame lesson was opened by its link. Two sweeps
 of all 59 lesson links on the live site followed, one in a real browser with the pane hidden [P] and one on the fake
-DOM, item I3.8; both found one Fleet day defect older than the Scale lab, fixed in `1aeaace`, which is not
-deployed [R: the message of `1aeaace`].
+DOM, item I3.8; both found one Fleet day defect older than the Scale lab, fixed in `1aeaace` [R: the message of
+`1aeaace`]. On the owner's word of 2026-09-28 the lead deployed `1aeaace` by the same procedure and pushed the
+branch head. Both follow the table below.
 
 | Item | Value |
 |---|---|
-| Pages project | `fleetlab`, Direct Upload, Production |
-| Deployment | `19e17ac6-d617-4789-9260-ca259c53e076` |
+| Pages project | `fleetlab`, Direct Upload, Production from 2026-09-27 to 2026-09-28 |
+| Deployment | `19e17ac6-d617-4789-9260-ca259c53e076`. Since 2026-09-28 the rollback target |
 | Addresses | Stable `https://fleetlab.pages.dev/`, immutable `https://19e17ac6.fleetlab.pages.dev/` |
 | Deployed source | `c08f60d8830df877fac2c7321bb47d75a5ae56ad`. Pages branch label `feat/fleetlab-playground` |
 | Upload tool | Wrangler 4.135.0 |
@@ -1097,9 +1109,39 @@ deployed [R: the message of `1aeaace`].
 | Hosted inventory SHA-256 | `5c071dc69e353f6118ab43078c12d2470c9d709cf2ac7c501fe4fb807c669da3` [P], over one row for each of the 99 files of the package, `_headers` included: path, file SHA-256 in lower-case hex and size in bytes, separated by NUL, each row ended by a newline, rows sorted by path. Reproduced on a package built from `c08f60d` outside the tree [F]. Over the 98 public files alone the same rows give another digest |
 | Response headers | Content security policy with `connect-src 'none'` and `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, same-origin opener policy, `cache-control: public, max-age=600` [P] |
 | Hosted smoke | All three labs pressed: `scale-spec:b4c7f5da`, `scale-spec:1aa8c833`, `scale-spec:443de567`. Fleet day seed 42: 95 completed, 176 unserved, 4 waiting, 9 in progress of 284. A teaching-frame lesson opened by its link. No console error [P] |
-| Previous Production, the rollback target | `dd4bfa44-7226-4502-9d66-01bb1790f2b6`, the D1 release, source `b99ab04`. A rollback is the owner's action in the Pages dashboard and rewrites no history |
-| Push | Not done, not authorized. The local copy of the remote branch `feat/fleetlab-playground` stands at `790573e`, an ancestor of `c08f60d`, so a push would be a fast-forward. Until then a reader who follows the site to the public repository will not find `c08f60d` there |
-| After the deployment | `1aeaace` fixes the Fleet day heading after a launch lesson. It is on no remote branch and not deployed. Deploying it is a new release by the same procedure and needs the owner's word |
+| Previous Production, the rollback target | `dd4bfa44-7226-4502-9d66-01bb1790f2b6`, the D1 release, source `b99ab04`, while `19e17ac6` was Production. A rollback is the owner's action in the Pages dashboard and rewrites no history |
+| Push | Not done on 2026-09-27, and not authorized then. The local copy of the remote branch `feat/fleetlab-playground` stood at `790573e`, an ancestor of `c08f60d`, so a push would be a fast-forward. Done on 2026-09-28, below |
+| After the deployment | `1aeaace` fixes the Fleet day heading after a launch lesson. On 2026-09-27 it was on no remote branch and not deployed. Deployed on 2026-09-28, below |
+
+The heading fix release of 2026-09-28. On the owner's word the lead built the site from a `git archive` export of
+`1aeaacecb25e17853f852d7bbd7141ff75d9cb69` and deployed it by the same procedure [P]. The site inputs of the branch
+head equal those of `1aeaace`, so nothing in the site inputs of the branch is undeployed now.
+
+| Item | Value |
+|---|---|
+| Deployment | `77922688-6d87-4d15-94bf-442beab31712`, Production of project `fleetlab` |
+| Addresses | Stable `https://fleetlab.pages.dev/`, immutable `https://77922688.fleetlab.pages.dev/` |
+| Deployed source | `1aeaacecb25e17853f852d7bbd7141ff75d9cb69`. Pages branch label `feat/fleetlab-playground` |
+| Upload tool | Wrangler 4.135.0 |
+| Upload | 98 files and `_headers`: 1 new to the host, `src/ui/studio.js`, and 97 already held |
+| Package | 99 files with `_headers`, 3,349,629 bytes, package check OK. Hosted inventory SHA-256 `dd3c2f2a659b18a0caacf5df639238916719f8a5294e653c2566ac39328e94b5`, by the rule above |
+| Offline file | 2,408,350 bytes, package check OK. SHA-256 `ccd3f7a01a3ddd03dd8a58336c52da32a50ec1c7b0b27a297b5e82496877325a`. Both checks ran with the repository's tools, which are identical at `1aeaace` |
+| Readback | 98 of 98 public files match by SHA-256 and size on both addresses [P] |
+| Response headers | Unchanged and verified [P] |
+| Hosted checks | In the in-app browser with the pane hidden, so no painted frame was seen. After the airport-preparation lesson, and after the cleaning lesson, the region-launch lesson shows the main heading "Fleet day" and the document title "Rehearse commissioning in Region B". The three labs record `scale-spec:b4c7f5da`, `scale-spec:1aa8c833` and `scale-spec:443de567`. Fleet day default seed 42 on a fresh load reads 95 completed, 176 unserved, 4 waiting and 9 in progress of 284 requests; the setup of the cleaning lesson reads 82 of 284 requests, which is that lesson and not a regression. A same-origin fetch that the tester attempted was refused by the page's own policy, `connect-src 'none'`, as intended. No application console error [P] |
+| Press times | One press each with the pane hidden: 4,725 ms, 1,058 ms and 2,660 ms, against 4,790 ms, 1,103 ms and 2,656 ms on `19e17ac6` in the same session and conditions, so no regression. Both sets are slower than the readings of 2026-09-27 because of the state of the pane [P] |
+| Tests at `1aeaace` | Two full serial runs with the performance flag, each 1,969 tests, 1,967 pass, 1 existing todo and 1 timing failure, 9.34 ms and 11.34 ms against 8 ms. Each failure passed its one isolated rerun. Python parity and boundary tests 89 pass. `ruff` passes |
+| Rollback target | `19e17ac6-d617-4789-9260-ca259c53e076`, source `c08f60d`. The project holds four Production deployments: `77922688`, `19e17ac6`, `dd4bfa44` and `f08b6b6f` |
+
+The push of 2026-09-28. The owner gave the push word after row P1 of section 9 of the top section of
+`CODEX_HANDOFF.md` was raised. Right after the records commit of 2026-09-28 the lead pushed the branch head, which
+stands on `0bc2f25`, `44569f8`, `1aeaace` and `c08f60d`, as a fast-forward of `feat/fleetlab-playground` from
+`790573e`. It published 20 commits: the N2 documents `4ba5626`, `62547a8` and `82df3b5`; the packer `8e04b49`; the
+teaching-frame wave `caaf8f2`, `0497b9b`, `45efd43` and `c79eccf`; the eight Scale lab commits `2caeac6` to
+`c08f60d`; `1aeaace`; the documents commits `44569f8` and `0bc2f25`; and the records commit. The name
+`claude/fleetlab-scale-lab` is not created on the remote. A push does not deploy. The local branch
+`feat/fleetlab-playground` of the playground worktree stays behind its upstream and needs a fast-forward before
+anyone works there.
 
 ---
 
@@ -1107,13 +1149,14 @@ deployed [R: the message of `1aeaace`].
 
 The package passes the target and stays under the hard stop: +89,468 bytes at `c08f60d` against 81,920 bytes and
 92,160 bytes [W] [F]. It was +85,046 bytes at `319b4a9` [M] [W]. The lead's recommendation is to grant the
-difference, decision 3 of the design. That decision is assumed at the lead's recommendation, not ratified. This
+difference, decision 3 of the design. The owner ratified that decision on 2026-09-28, as recommended. This
 section is the procedure for the other cases.
 
 One line inside the package is passed. On the estimate of item R1, Lab C stands at 17,439 bytes against its own
 hard limit of 17,408 bytes, 31 bytes past it [E]. The plan names no procedure for a lab past its own hard limit
-while the package stays under its hard stop. The owner can grant the 31 bytes as part of decision 3, or ask for a
-trim of at least 31 bytes in `src/model/scale-density.js` with its pins recorded again. Neither was done.
+while the package stays under its hard stop. The owner could grant the 31 bytes as part of decision 3, or ask for
+a trim of at least 31 bytes in `src/model/scale-density.js` with its pins recorded again. On 2026-09-28 the owner
+ratified decision 3 as recommended, which grants them. No trim was asked.
 
 | Growth | Action |
 |---|---|
@@ -1158,8 +1201,11 @@ gives the measured size of a part against its allocation.
 | Hard stop | | | 92,160 | 2,692 left. It was 7,114 at `319b4a9` |
 
 The deployed offline page of `c08f60d` has SHA-256 `4828cded63f5c23f99a8d13cc32716f587717f57847dd79bdba59215786800b5`
-[W] [F]. The hosted package is 99 files and 3,349,602 bytes [W] [F]. `1aeaace`, outside the wave and not deployed,
-adds 27 bytes: its offline package is 2,408,350 bytes, growth +89,495, 2,665 bytes under the hard stop [F].
+[W] [F]. The hosted package is 99 files and 3,349,602 bytes [W] [F]. `1aeaace`, outside the wave and deployed on
+2026-09-28 as Production `77922688`, adds 27 bytes: its offline package is 2,408,350 bytes, growth +89,495, 2,665
+bytes under the hard stop [F]. Its offline file has SHA-256
+`ccd3f7a01a3ddd03dd8a58336c52da32a50ec1c7b0b27a297b5e82496877325a`, and its hosted package is 99 files and
+3,349,629 bytes [P].
 
 The whole offline file has its own cap, which this wave did not change [R: the release record]. The numbers left
 are arithmetic on the checkpoints [F].
@@ -1195,31 +1241,32 @@ Open items of the deployed build, each known at the time of writing and none fix
 | 6 | Pages older than the Scale lab still print a long raw number for a tiny value. That is the rule of the site, held by existing tests. Only the Scale lab prints two significant digits | Four-area card on other pages |
 | 7 | `playground/fleetlab/README.md` carried facts and wording older than this wave. Resolved on 2026-09-28: the current address and release, no personal wording; the byline stays |
 | 8 | The lesson snapshot kept outside the tree by the teaching-frame wave still counts 56 lessons | Outside the repository |
-| 9 | Lab C stands 31 bytes past its own hard limit on the estimate of item R1 | Section 6 |
+| 9 | Lab C stands 31 bytes past its own hard limit on the estimate of item R1. Granted with decision 3 on 2026-09-28 | Section 6 |
 
-Not done at the time of writing: a push; a pull request or a merge to `main`; a painted frame; any check at 1440 by
-900 px; a throttled phone profile or a physical phone; a screen reader, Safari or Firefox; a security scan of this
-range (the review had one packaging and security lens); the broad Python suite of the repository (only the two
-playground files ran); a look by a person with a visible pane; a full serial run at `1aeaace` with zero failures; a
-deployment of `1aeaace`; an owner ruling on any decision. The lesson links were swept after the deployment in a real
+Done on 2026-09-28: the deployment of `1aeaace`, the owner's ratification of every decision of the design, and the
+push, made by the lead right after the records commit of 2026-09-28, item I3.11. Not done: a pull request or a
+merge to `main`; a painted frame; any check at 1440 by 900 px; a throttled phone profile or a physical phone; a
+screen reader, Safari or Firefox; a security scan of this range (the review had one packaging and security lens);
+the broad Python suite of the repository (only the two playground files ran); a look by a person with a visible
+pane; a full serial run at `1aeaace` with zero failures. The lesson links were swept after the deployment in a real
 browser with the pane hidden and on the fake DOM, item I3.8.
 
 ## Recommendation
 
-Keep the eight commits as built, and keep deployment `19e17ac6` live unless the owner's first look in a visible
-browser finds something that reads wrong; the rollback target is `dd4bfa44`. The commits landed in the order of this
-plan: the shell, then the three amendment commits before any lab, because those change the shared contract and the
-sentences that lab tests read, then the labs in the order A, B, C with a byte measurement after each, then the fixes
-of the independent review in one commit behind tests that fail on `319b4a9`. The committed files carry the digests of
-section 4, so the pins decide any later difference.
+Keep the eight commits as built, and keep Production `77922688`, source `1aeaace`, live unless the owner's first
+look in a visible browser finds something that reads wrong; the rollback target is `19e17ac6`. The commits landed in
+the order of this plan: the shell, then the three amendment commits before any lab, because those change the shared
+contract and the sentences that lab tests read, then the labs in the order A, B, C with a byte measurement after
+each, then the fixes of the independent review in one commit behind tests that fail on `319b4a9`. The committed
+files carry the digests of section 4, so the pins decide any later difference.
 
 The documents commit on top of `1aeaace` is made. It changes no site file. Treat gates 1 to 3 of the design as
 passed at `c08f60d`, gate 4 as run in part (its staged checks belong to the documents commit, and this record, part
 of that commit, holds no result of them), and gates 5 and 6 as not passed, although the site is live on the owner's
-instruction. Decide
-the push separately: the deployed source is on no remote branch. Treat `1aeaace` as its own small release when the
-owner wants it live. Record every decision as assumed at the lead's
-recommendation, not ratified, until the owner rules, and put decision 3 first, with the 31 bytes of Lab C.
+word. The owner ratified every decision on 2026-09-28, decision 3 with the 31 bytes of Lab C among them, and the
+push of 2026-09-28 makes the deployed sources public. The next builder is Codex: Q1 first, the acceptance in a
+visible browser that closes gates 5 and 6 at 0 bytes, then Q8, an operating view of one simulated period of about
+20,000 bytes, each with its acceptance criteria written first.
 
 ## Top risks + mitigations
 
@@ -1233,23 +1280,20 @@ recommendation, not ratified, until the owner rules, and put decision 3 first, w
 | A timing test fails in a full run | Open, and seen twice at `1aeaace` | The flagged tests run serially on an idle machine, and a failure is rerun in isolation before it is believed. None failed in the full suite at `c08f60d` [W] or in the serial run of the four Scale files [F]. In the first full run of `1aeaace` the timing test of the response reserve read a longest block of 9.34 ms against 8 ms while other work loaded the machine, and passed on its one isolated rerun [R: the message of `1aeaace`]. In the second, on an otherwise idle machine, a four-area runtime timing test read 11.34 ms against 8 ms and passed its one isolated rerun at 5.73 ms and 5.52 ms [W] |
 | A timing harness misreads the page | Open | A harness that watched the whole page made `c08f60d` look 4 to 8 times slower. Time the status line, and read two harnesses before believing a slowdown |
 | Bytes drift further past the target | Open | Measure after every item. 2,692 bytes stay under the package hard stop. Lab C is 31 bytes past its own hard limit [E]. Trims are ordered and measured |
-| Browser and phone behaviour is read as accepted | Open, and now public | The site is live with gates 5 and 6 of the design not passed. Item I3.8 says row by row what was measured and what has no record. Every browser reading was taken in a hidden pane. Phone timing under throttle stays an estimate. The owner's look in a visible browser comes first, with the rollback target `dd4bfa44` at hand |
-| The deployed source is not public | Open until a push | The deployment published `c08f60d`, which is on no remote branch. The release record and item I3.11 say so. A push of `c08f60d` to `feat/fleetlab-playground` would be a fast-forward, and it needs the owner's word |
+| Browser and phone behaviour is read as accepted | Open, and now public | The site is live with gates 5 and 6 of the design not passed. Item I3.8 says row by row what was measured and what has no record. Every browser reading was taken in a hidden pane. Phone timing under throttle stays an estimate. The owner's look in a visible browser comes first, with the rollback target `19e17ac6` at hand. Q1 is the next build |
+| The deployed source is not public | Closed on 2026-09-28 | The lead pushed the branch head as a fast-forward of `feat/fleetlab-playground` on the owner's word, which publishes `c08f60d` and `1aeaace`, item I3.11. The local `feat/fleetlab-playground` of the playground worktree needs a fast-forward before anyone works there |
 | A deploy publishes more than the owner meant | Recorded | The deployment published two waves at once: the teaching frames of the teaching-frame wave and the Scale lab. The release record lists both waves and their commits, so the owner can see what went live |
-| The build is read as ratified | Open | Every decision is marked as assumed at the lead's recommendation, not ratified. The deployment is not a ratification. Each amendment group, each lab and the review fixes are one commit each |
+| The build is read as ratified before it was | Closed on 2026-09-28 | The owner ratified every decision of the design, as recommended. Until then every decision was marked as assumed at the lead's recommendation, and the deployment of 2026-09-27 was not a ratification. Each amendment group, each lab and the review fixes are one commit each |
 | A declined decision is undone by one revert | Open | Since `c08f60d` the reverse patch of every earlier commit of the wave no longer applies cleanly [F]. A revert may need a merge by hand and a rerun of the four Scale test files, then a new deployment |
 | Machine paths or private file names leak into a public document | Open for every later commit | This record holds no location on any machine and names no working file. The staged scan gains the patterns of item I3.5 |
 
 ## Next 3 actions
 
 1. The owner opens `https://fleetlab.pages.dev/#/scale-lab` in a visible browser at desktop and phone size, presses
-   Run on each lab, and rolls back to `dd4bfa44` if anything reads wrong. The lead then completes item I3.8: the
-   checks at 1440 by 900 px with painted frames, the phone checks at 375 by 812 px with 4 and 6 times throttle, and
-   every row that has no record, so that gates 5 and 6 can pass.
-2. The owner rules on the decisions of section 12 of the design, first on decision 3 with the 31 bytes of Lab C,
-   says whether to push `claude/fleetlab-scale-lab`, and says whether to deploy `1aeaace`. Until the owner rules,
-   every decision stands as assumed at the lead's recommendation, not ratified, and nothing is pushed.
-3. On the owner's word, the lead deploys `1aeaace` from the documents commit on top of it, whose site inputs equal
-   those of `1aeaace`, as its own small release: a full serial run whose only failures, if any, are timing tests
-   that pass their one isolated rerun, both package checks, and a readback of every public file on both addresses,
-   with `19e17ac6` as the rollback target.
+   Run on each lab, and rolls back to `19e17ac6` if anything reads wrong. This look (O1) stays first for the owner.
+2. Codex builds Q1 and completes item I3.8: it writes the acceptance criteria first, then runs the checks at 1440 by
+   900 px with painted frames, the phone checks at 375 by 812 px with 4 and 6 times throttle, and every row that has
+   no record, so that gates 5 and 6 can pass. It adds 0 bytes.
+3. Codex then builds Q8, an operating view of one simulated period of about 20,000 bytes, with its acceptance
+   criteria written first. O7 to O11 and the pending N2 decisions stay open, and their recommended defaults hold
+   until the related work starts.

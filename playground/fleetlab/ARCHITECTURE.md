@@ -1028,7 +1028,8 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     toggle inside `Present`, no `Try it` handoff and no phone-specific presenting rule; `charts.js` and `playback.js`
     are untouched.
 45. Scale lab: one route, one generic view, one lab contract and one shared paired contract. Every decision in this item
-    is assumed at the lead's recommendation, not ratified by the owner. Every result is `NOT_EVIDENCE`, simulation only,
+    was taken at the lead's recommendation and ratified by the owner on 2026-09-28. Every result is `NOT_EVIDENCE`,
+    simulation only,
     with decision authority `NONE`. Every input of a lab is a teaching assumption unless its source row says otherwise.
     FleetLab is independent and unaffiliated. The three labs are `density-ladder` (`src/model/scale-density.js`, version
     `scale-density-1.0.0`, 10 paired seeds), `fleet-intake` (`src/model/scale-intake.js`, version `scale-intake-1.0.0`,
@@ -1083,7 +1084,8 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     value that is not finite is left out of a metric map, so an absent value is never read as zero. The paired maps then
     go to the instrument with the digest as the bootstrap key. Every record carries `format: "fleetlab-scale-lab"`,
     `evidence_status: "NOT_EVIDENCE"` and `decision_authority: "NONE"`.
-    **Two void rules.** Both are assumed at the lead's recommendation, not ratified. First, a declared guardrail that is
+    **Two void rules.** Both were taken at the lead's recommendation and ratified by the owner on 2026-09-28. First, a
+    declared guardrail that is
     missing from any run voids the press. When the replay matched and the primary is present in every run,
     `scalePairSteps` returns `INVALID_EXPERIMENT` with no analysis and does not call the instrument, because the
     instrument would mark that guardrail as not evaluable and still recommend. Second, a shipped control that does not
@@ -1168,7 +1170,8 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     and the outcome sentence print one text for one interval end. A sweep of 4,000 values in the same file requires each
     text to keep its side of every threshold, its sign, its grouping and at most 12 decimals. The shell test also
     requires that no number in the result of a default press, outside the record under Exact values, has more than 12
-    decimals. That record keeps every double as it is. The rule is assumed at the lead's recommendation, not ratified.
+    decimals. That record keeps every double as it is. The rule was taken at the lead's recommendation and ratified by
+    the owner on 2026-09-28.
     **Pages older than the Scale lab print what they printed before.** This wave changes no text on any page that
     existed before it. The second amendment (`953ebce`) had put the side rule in the shared builders for every page.
     There it reached the card rows and the reading line of the four-area pages but not their chart summaries, their
@@ -1213,7 +1216,8 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     `src/core/keyed.js`, and no file under `src/model` uses a clock, `Math.random` or a page global (section 2). Fleet
     intake makes every draw as a keyed `u32` on a tape that never sees an arm. The density ladder makes one keyed draw
     per declared seed and hands it to the Fleet day engine as its seed. The response reserve lab meets the rule by a
-    declared reading, which is assumed at the lead's recommendation, not ratified. `buildTape` makes one keyed draw per
+    declared reading, which was taken at the lead's recommendation and ratified by the owner on 2026-09-28. `buildTape`
+    makes one keyed draw per
     simulated minute, `u32("response-reserve", seed, fleet, "minute", m)` for each of the 1,440 minutes of a day, and
     that draw seeds a local 32-bit stream that is a pure function of it. Each request takes five draws from the stream
     in a fixed order: its answer time, its class (vehicle request or responder call), the draw that decides whether the
@@ -1274,7 +1278,8 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     tests passed, 89 of 89, in 5.12 s. `ruff check` passed and `git diff --check` was clean. The offline package is
     2,408,323 bytes, and its package check reported OK. That is 89,468 bytes over the baseline of 2,318,855 bytes at
     `c79eccf`. The growth is 7,548 bytes over the package target of 81,920 bytes and 2,692 bytes under the hard stop of
-    92,160 bytes. Growth past the target is assumed at the lead's recommendation, not ratified. Under the offline cap of
+    92,160 bytes. Growth past the target was taken at the lead's recommendation and granted by the owner on 2026-09-28
+    (decision 3). Under the offline cap of
     2,621,440 bytes, 213,117 bytes are left. Of those, 135,904 bytes are reserved for other work, which leaves 77,213
     bytes unassigned, where 166,681 bytes were unassigned before this wave. The hosted site is 99 files and 3,349,602
     bytes, and its package check reported OK. The offline package was measured at each step of the wave, in bytes:
@@ -1290,11 +1295,13 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     Start here link to the density ladder. Not measured: 1440 by 900 px, a painted frame, a throttled phone profile, a
     physical phone, a screen reader, Safari or Firefox. On the owner's word the Scale lab was deployed on 2026-09-27 to
     https://fleetlab.pages.dev/ as Production deployment `19e17ac6` of the Pages project `fleetlab`, from source
-    `c08f60d`. The branch that holds `c08f60d` is not pushed, so that source is not yet in the public repository. The
+    `c08f60d`. Since 2026-09-28 that source is in the public repository, on the branch `feat/fleetlab-playground`. The
     deployment, its public readback and its rollback target are recorded in
     `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`. Publishing stays an owner action (decision 40). One later
     commit, `1aeaace`, changes `src/ui/studio.js` to fix a Fleet day heading defect older than this wave. It changes
-    no rule of this item, and it is not deployed. Two sweeps of the lesson links after the deployment found that
+    no rule of this item. On the owner's word it was deployed on 2026-09-28 as Production deployment `77922688`, which
+    is the live site, and the rollback target became `19e17ac6`. Two sweeps of the lesson links after the deployment
+    of 2026-09-27 found that
     defect: one in a real browser on the live site with the pane hidden, so no frame was painted, and one on the fake
     DOM with the modules of the live site.
 
