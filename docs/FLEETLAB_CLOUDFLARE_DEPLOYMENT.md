@@ -2,31 +2,25 @@
 
 ## What you need to do now
 
-**No account setup is required for the public Pages address.** As of September 28, 2026 the
-stable address **https://fleetlab.pages.dev/** serves the heading fix release: source
-`1aeaacecb25e17853f852d7bbd7141ff75d9cb69`, Production
-`77922688-6d87-4d15-94bf-442beab31712`, immutable https://77922688.fleetlab.pages.dev/.
-It was built from a `git archive` export of that commit and deployed with Wrangler 4.135.0 on
-the owner's word. All 98 public files read back by SHA-256 and size on both addresses, and the
-response headers are unchanged and match `_headers`. It adds one fix, the Fleet day heading
-after a launch lesson, to the Scale lab release of September 27, 2026 (source `c08f60d`,
-Production `19e17ac6`), which also published the T1 teaching frames. The
-[Scale lab release record](FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md) holds the gates, bytes,
-digests, browser readings and receipts of that release. Rollback target: the Scale lab
-Production `19e17ac6-d617-4789-9260-ca259c53e076`, source `c08f60d`. The project now holds
-four Production deployments (`77922688`, `19e17ac6`, `dd4bfa44` and `f08b6b6f`), so the
-rollback in the dashboard section below applies. The source is pushed: on September 28, 2026
-the branch head that holds `1aeaace` was pushed to `feat/fleetlab-playground` as a
-fast-forward. The top section of `CODEX_HANDOFF.md` lists what is live and what is not. The
-[source of truth](../HERMES_SOURCE_OF_TRUTH.md#75-fleetlab-playground-teaching-model-not-evidence)
-records current state. [N2 v2.1](plans/2026-09-26-fleetlab-n2-design-v2.1.md) is design-only;
-G2 is open pending S1. The documentation commit after an upload records the release; it does
-not change deployed source.
+**The welcome redesign is live.** As of September 28, 2026, https://fleetlab.pages.dev/
+serves source `347bcfbd3dc20b830f1a59eeda3fc80403d894d0`, Production
+`1e1202c9-4fa0-4b46-a5f7-22863b48aafb`, immutable https://1e1202c9.fleetlab.pages.dev/.
+The committed-source export matches the checked package exactly: 99 files / 3,366,116 bytes.
+All 98 public payloads match by bytes and SHA-256 on both addresses, and all configured
+response security headers match `_headers`. Offline: 2,424,760 bytes. See the top section of
+[CODEX_HANDOFF.md](../CODEX_HANDOFF.md) for tests, browser checks, digests and limitations.
+
+The current owner request explicitly authorized publication. Source is committed locally on
+`codex/fleetlab-welcome-design`; **no push or PR was made**. Direct Upload used Wrangler
+4.135.0 with production branch metadata `feat/fleetlab-playground`. The record after upload
+changes no deployed input. Rollback target: Production `77922688-6d87-4d15-94bf-442beab31712`
+(source `1aeaace`), https://77922688.fleetlab.pages.dev/. All five Production deployments
+remain available in the project. Q1 is partly complete; Q8 remains queued. N2 remains design-only.
 
 | Setting | Value |
 |---|---|
 | Repository | `bohueilin/Hermes` |
-| Source branch | `feat/fleetlab-playground` |
+| Current release source branch | `codex/fleetlab-welcome-design` (local only) |
 | Pages project | `fleetlab` |
 | Upload mode | Direct Upload; no Git provider attached |
 | Current Pages production branch | `feat/fleetlab-playground` |
@@ -136,7 +130,7 @@ The current boundary suite freezes `.github` relative to the playground base. A 
 
 ## Roll back a release
 
-As of September 28, 2026 the `fleetlab` project holds four Production deployments: `77922688` (current, source `1aeaace`), `19e17ac6` (the Scale lab release, source `c08f60d`, the rollback target), `dd4bfa44` (D1) and `f08b6b6f`. Historical deployments in `fleetlab-playground` cannot be selected as rollback targets in this different project. If an earlier application must be restored now, rebuild and verify its exact source in an isolated checkout, then upload that checked package to `fleetlab` with matching commit metadata. Once this project has multiple successful Production releases, open **Workers & Pages → fleetlab → Deployments**. On the previous successful **Production** deployment, open its three-dot menu and choose **Rollback to this deployment**. Verify the stable address afterward. Preview deployments are not rollback targets. This changes the served version without rewriting Git history. [Cloudflare rollback documentation](https://developers.cloudflare.com/pages/configuration/rollbacks/)
+As of September 28, 2026 the `fleetlab` project holds five Production deployments: `1e1202c9` (current, source `347bcfb`), `77922688` (source `1aeaace`, the rollback target), `19e17ac6`, `dd4bfa44` and `f08b6b6f`. Historical deployments in `fleetlab-playground` belong to a different project and are not rollback targets here. To roll back, open **Workers & Pages → fleetlab → Deployments**, open the previous successful **Production** deployment's three-dot menu and choose **Rollback to this deployment**. Verify all public files and response headers on the stable address afterward. Preview deployments are not rollback targets. This changes the served version without rewriting Git history. [Cloudflare rollback documentation](https://developers.cloudflare.com/pages/configuration/rollbacks/)
 
 ## Published scope
 

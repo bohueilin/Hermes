@@ -65,11 +65,36 @@ git diff --check
 
 ## Publication and remaining checks
 
-Publication is pending at this source checkpoint. Target: existing `fleetlab` Pages project,
-production branch metadata `feat/fleetlab-playground`; upload only the checked `dist/site`.
-The pre-upload inventory confirms the current production is `77922688-6d87-4d15-94bf-442beab31712`
-(source `1aeaace`); retain it as the rollback target. Record the new source hash, deployment
-receipt, stable and immutable address readback and hosted browser result after upload.
+**Published and read back.** Source `347bcfbd3dc20b830f1a59eeda3fc80403d894d0`, Production
+`1e1202c9-4fa0-4b46-a5f7-22863b48aafb`, stable https://fleetlab.pages.dev/ and immutable
+https://1e1202c9.fleetlab.pages.dev/. Wrangler 4.135.0 uploaded four changed files and reused
+94 files, then applied `_headers`. Pages metadata uses `feat/fleetlab-playground`; source
+is committed locally on `codex/fleetlab-welcome-design` and **has not been pushed**.
+
+Both packages were rebuilt from a `git archive` export of this commit; all 99 hosted files
+and the offline HTML match the checked worktree packages exactly. **98/98 public files**
+match by bytes and SHA-256 on **both** deployment addresses. All six configured response
+headers match `_headers`, including `connect-src 'none'` and frame-embedding denial.
+Initial Python urllib readback received HTTP 403; curl on the same public URLs completed
+the entire readback successfully. No access-control setting was changed.
+
+The browser opened the production welcome with painted frames. All three production Scale
+runs reproduce `scale-spec:b4c7f5da` (+62.6, interval +60.6 to +64.4),
+`scale-spec:1aa8c833` (+0.185, interval +0.172 to +0.196) and `scale-spec:443de567`
+(-12,992.0, interval -13,394.8 to -12,545.8); each focuses Result without page overflow.
+The production phone welcome/menu and Fleet day run were also exercised. The viewport
+was restored after QA. The self-contained offline build loaded and ran intake with `scale-spec:1aa8c833`, +0.185, interval +0.172 to +0.196;
+focus moved to Result and there was no page overflow. The deployment command was:
+
+```sh
+npx --yes wrangler@4.135.0 pages deploy dist/site --project-name fleetlab --branch feat/fleetlab-playground --commit-hash 347bcfbd3dc20b830f1a59eeda3fc80403d894d0 --commit-dirty=false
+```
+
+Wrangler warned about the unrelated untracked owner note. No tracked source changes were
+present, and the committed-export equality check verifies the uploaded source independently.
+Rollback: previous Production `77922688-6d87-4d15-94bf-442beab31712`, source `1aeaace`,
+immutable https://77922688.fleetlab.pages.dev/. No rollback or remote Git action occurred.
+This records-only follow-up changes no site input.
 
 Q1 remains **partially complete**: these are painted Chromium checks, not CPU-throttled
 phone measurements. No physical phone, Safari, Firefox, screen reader, complete painted
