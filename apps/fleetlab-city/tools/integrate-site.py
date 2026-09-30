@@ -2,9 +2,11 @@
 """Create an additive hosted release; never publish or modify input distributions."""
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import shutil
+import tarfile
 import tempfile
 from pathlib import Path
 
@@ -15,6 +17,46 @@ launch = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(launch)
 ASSETS = Path(__file__).resolve().parents[1] / "hosted"
 EXCEPTIONS = frozenset(("index.html", "boot.js", "_headers"))
+
+
+def check_temporal_offer(release, offered, offer):
+    selection = release.get("temporal_candidate")
+    if not selection:
+        return
+    identity = selection.get("candidate_bundle_digest")
+    archive = "sf-temporal-v3-complete.tar.gz"
+    if not identity or identity != offered.get("temporal_candidate_bundle_digest"):
+        raise ValueError("temporal source offer does not match viewer")
+    path = offer / archive
+    if not path.is_file():
+        raise ValueError("temporal source offer missing complete database")
+    declared = offered.get("archive_members", {}).get(archive, {})
+    with tarfile.open(path, "r:gz") as tar:
+        manifests = [m for m in tar.getmembers() if m.name.endswith("/manifest.json")]
+        if len(manifests) != 1 or not manifests[0].isfile() or manifests[0].size > 1024**2:
+            raise ValueError("temporal source offer has no unique bounded manifest")
+        raw = tar.extractfile(manifests[0]).read()
+        manifest = json.loads(raw)
+        claimed = manifest.pop("content_digest", None)
+        canonical = json.dumps(
+            manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode()
+        if claimed != identity or hashlib.sha256(canonical).hexdigest() != identity:
+            raise ValueError("temporal source offer candidate identity mismatch")
+        prefix = manifests[0].name.removesuffix("manifest.json")
+        for name, record in manifest["files"].items():
+            key = prefix + name
+            if declared.get(key) != record:
+                raise ValueError("temporal source offer constituent identity mismatch")
+            member = tar.getmember(key)
+            if not member.isfile() or member.size != record["bytes"]:
+                raise ValueError("temporal source offer constituent size mismatch")
+            checksum = hashlib.sha256()
+            with tar.extractfile(member) as stream:
+                for chunk in iter(lambda: stream.read(1024**2), b""):
+                    checksum.update(chunk)
+            if checksum.hexdigest() != record["sha256"]:
+                raise ValueError("temporal source offer constituent bytes mismatch")
 
 
 def check_preservation(before, after):
@@ -38,6 +80,7 @@ def integrate(legacy, viewer, previous, offer, out, offline, readback=None):
         raise ValueError("source offer integrity mismatch")
     if not {"index.html", "ODbL-1.0.txt"}.issubset(offer_files):
         raise ValueError("source offer missing required notices")
+    check_temporal_offer(json.loads((viewer / "release.json").read_text()), offer_manifest, offer)
     offline_before = launch.sha_file(offline)
     established = launch.verify_legacy(legacy, readback)
     boot = (legacy / "boot.js").read_text()

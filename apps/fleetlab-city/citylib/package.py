@@ -53,7 +53,9 @@ def require_matching_report(stored, recomputed, label):
         raise ValueError(f"{label} differs from captured runs and fresh verification")
 
 
-def build_viewer(root, out, run_path=None, power_study=None, power_status=None):
+def build_viewer(
+    root, out, run_path=None, power_study=None, power_status=None, temporal_candidate=False
+):
     root = Path(root)
     app = root / "apps/fleetlab-city"
     out = Path(out)
@@ -101,6 +103,7 @@ def build_viewer(root, out, run_path=None, power_study=None, power_status=None):
         "model-lessons.css",
         "study-status.mjs",
         "qualification-progress.mjs",
+        "temporal-candidate.mjs",
     ):
         shutil.copyfile(app / "web" / name, out / name)
     shutil.copytree(app / "web/assets", out / "assets")
@@ -250,13 +253,38 @@ def build_viewer(root, out, run_path=None, power_study=None, power_status=None):
         # Fresh read-only verification has a separate process lifetime from the
         # large legacy/candidate map projections. No simulation is run here.
         status = subprocess.run(
-            [sys.executable, "-m", "citylib.power_status", str(root.absolute()),
-             str(Path(power_status).absolute())],
+            [
+                sys.executable,
+                "-m",
+                "citylib.power_status",
+                str(root.absolute()),
+                str(Path(power_status).absolute()),
+            ],
             env={**os.environ, "PYTHONPATH": str(app.absolute())},
-            capture_output=True, text=True, check=True, timeout=600,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=600,
         )
         save_json(out / "data/power-status.json", json.loads(status.stdout))
         catalog["power_status_file"] = "data/power-status.json"
+        catalog["files"] = file_inventory(out / "data")
+    if temporal_candidate:
+        temporal = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "citylib.temporal_export_v1",
+                str(root.absolute()),
+                str(out.absolute()),
+            ],
+            env={**os.environ, "PYTHONPATH": str(app.absolute())},
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=180,
+        )
+        catalog["temporal_candidate"] = json.loads(temporal.stdout)
         catalog["files"] = file_inventory(out / "data")
     catalog["files"] = {"data/" + k: v for k, v in catalog["files"].items()}
     save_json(out / "data/catalog.json", catalog)
@@ -301,6 +329,7 @@ def build_viewer(root, out, run_path=None, power_study=None, power_status=None):
             },
             "pack_digest": pack_digest,
             "candidate_map_digest": candidate_digest,
+            "temporal_candidate": catalog.get("temporal_candidate"),
             "files": file_inventory(out),
             "pair_compressed_bytes": pair_bytes,
             "rollback_unit": "viewer + compatible manifest + city pack + run/metric schema",
@@ -424,6 +453,16 @@ process.stdout.write(JSON.stringify(dependencies));"""
             if source in modules:
                 for target in targets:
                     require(source, target)
+        if load_json(root / "data/catalog.json").get("temporal_candidate"):
+            for target in (
+                "data/temporal-summary.json",
+                "data/temporal-roads.geo.json",
+                "data/temporal-review-envelope.json",
+                "data/temporal-review-requirements.json",
+                "data/temporal-human-review.json",
+                "notes/sf-temporal-inspection-worksheet.csv",
+            ):
+                require("index.html", target)
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         failures.append(f"viewer dependency validation unavailable: {type(error).__name__}")
     return {"pass": not failures, "failures": failures}
@@ -449,8 +488,10 @@ def check_dist(root):
         "model-lessons.mjs",
         "model-lessons.css",
         "data/model-lessons.json",
+        "data/temporal-summary.json",
         "study-status.mjs",
         "qualification-progress.mjs",
+        "temporal-candidate.mjs",
         "data/sf-review-envelope.json",
         "assets/vehicle-generic.svg",
         "assets/vehicle-ojai-concept.svg",
@@ -472,8 +513,10 @@ def check_dist(root):
         "model-lessons.mjs",
         "model-lessons.css",
         "data/model-lessons.json",
+        "data/temporal-summary.json",
         "study-status.mjs",
         "qualification-progress.mjs",
+        "temporal-candidate.mjs",
         "data/sf-review-envelope.json",
         "fleet-insights.mjs",
         "power-study.mjs",

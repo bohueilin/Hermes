@@ -100,3 +100,11 @@ class PackageDependencyTests(unittest.TestCase):
         self.files["app.mjs"] = "import 'node:fs';"
         self.package()
         self.assertFalse(check_dist(self.root)["pass"])
+
+    def test_initial_transfer_includes_optional_temporal_summary(self):
+        self.package()
+        before = check_dist(self.root)["first_view_gzip_bytes"]
+        self.files["data/temporal-summary.json"] = '{"new_candidate":true}'
+        self.package()
+        extra = (self.root / "data/temporal-summary.json.gz").stat().st_size
+        self.assertEqual(check_dist(self.root)["first_view_gzip_bytes"], before + extra)

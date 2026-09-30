@@ -14,6 +14,7 @@ function harness() {
   const readData = path => new Promise((resolve,reject)=>pending.push({path,resolve,reject}));
   const build = new Function('readData','atlasGate',`
     let atlasVersion='recorded', roads={}, mask='support';
+    const report={after:{}},temporal={report:{after:{}}};
     const ui=new Map(); const $=id=>{if(!ui.has(id))ui.set(id,{textContent:'',setAttribute(){}});return ui.get(id);};
     const document={querySelectorAll:()=>[]}; const catalog={scenario_points:[]};
     const observed={version:'recorded',roads:'recorded',mask:'support',errors:[]};
@@ -46,4 +47,17 @@ test('a stale layer failure cannot replace the current view with an error', asyn
   const h=harness();const old=h.changeMask('source');const next=h.choose('candidate');
   h.pending[1].resolve({id:'candidate'});await next;h.pending[0].reject(new Error('stale'));await old;
   assert.deepEqual(h.observed.errors,[]);
+});
+test('temporal selection loads its own roads and source layer cannot fetch recorded geometry',async()=>{
+  const h=harness();const chosen=h.choose('temporal');
+  assert.equal(h.pending[0].path,'data/temporal-roads.geo.json');
+  h.pending[0].resolve({id:'temporal'});await chosen;
+  await h.changeMask('source');
+  assert.equal(h.pending.length,1);assert.equal(h.observed.roads,'temporal');
+});
+test('a late temporal response cannot overwrite a newer recorded-map selection',async()=>{
+  const h=harness();const temporal=h.choose('temporal');const recorded=h.choose('recorded');
+  h.pending[1].resolve({id:'recorded'});await recorded;
+  h.pending[0].resolve({id:'temporal'});await temporal;
+  assert.equal(h.observed.version,'recorded');assert.equal(h.observed.roads,'recorded');
 });

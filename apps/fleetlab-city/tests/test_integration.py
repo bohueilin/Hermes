@@ -80,3 +80,23 @@ class IntegrationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "bootstrap contract"):
             self.prepare()
         self.assertFalse((self.base / "out").exists())
+
+    def test_temporal_viewer_rejects_missing_or_foreign_corresponding_database(self):
+        for identity in (None, "b" * 64):
+            with (
+                self.subTest(identity=identity),
+                self.assertRaisesRegex(ValueError, "temporal source offer"),
+            ):
+                integration.check_temporal_offer(
+                    {"temporal_candidate": {"candidate_bundle_digest": "a" * 64}},
+                    {"temporal_candidate_bundle_digest": identity},
+                    self.offer,
+                )
+
+    def test_temporal_source_offer_requires_actual_complete_archive(self):
+        with self.assertRaisesRegex(ValueError, "temporal source offer"):
+            integration.check_temporal_offer(
+                {"temporal_candidate": {"candidate_bundle_digest": "a" * 64}},
+                {"temporal_candidate_bundle_digest": "a" * 64},
+                self.offer,
+            )

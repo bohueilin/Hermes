@@ -445,3 +445,14 @@ body[data-view=welcome] .intro{padding-top:66px;padding-bottom:42px}body[data-vi
 @media(max-width:520px){.fleet-bin{grid-template-columns:65px minmax(0,1fr) 48px;gap:9px;font-size:13px}.fleet-insights .panel-heading{display:block}.fleet-insights .chip{margin-top:10px}.fleet-next button{width:100%;white-space:normal}}
 
 body[data-view=models] .intro{grid-template-columns:1fr}body[data-view=models] .question-card,body[data-view=models] .context-strip{display:none}
+
+/* Map identity stays beside the map, outside its positioned canvas. */
+.atlas-version-bar{padding:20px 24px;margin-bottom:20px;border:1px solid var(--line);border-radius:18px;background:#fffdf6}
+.atlas-version-bar .qualification-switch{margin:0 0 12px}.atlas-version-bar p{margin:0;max-width:88ch;line-height:1.6}
+#temporal-map[hidden]{display:none}.source-coverage-details{padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.source-coverage-details .table-wrap{margin-top:16px}#qualification-progress{margin-top:28px}
+#qualification-progress>.fidelity-grid{gap:18px;margin:24px 0}#qualification-progress>.fidelity-grid article{padding:22px;border:1px solid var(--line);border-radius:16px;background:#fbfcf7}
+#qualification-progress>.fidelity-grid article:nth-child(2){background:var(--lavender)}#qualification-progress>.fidelity-grid article:nth-child(3){background:var(--warm)}
+.temporal-learning{padding:20px 24px;background:var(--mint);border-radius:14px;margin:20px 0}.temporal-learning h4{margin:0 0 9px}.temporal-learning p{margin:0;line-height:1.7}
+#qualification-progress details{padding:15px 0;border-top:1px solid var(--line)}#qualification-progress summary{cursor:pointer;font-weight:650}#qualification-progress .small{overflow-wrap:anywhere}
+@media(max-width:760px){.atlas-version-bar{padding:16px}.atlas-version-bar .qualification-switch>button{flex:1 1 100%;text-align:left}.temporal-learning{padding:18px}#qualification-progress>.fidelity-grid article{padding:18px}}

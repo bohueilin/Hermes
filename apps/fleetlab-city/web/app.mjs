@@ -8,7 +8,7 @@ import { renderStoppedStudy } from './study-status.mjs';
 import { mountQualificationProgress } from './qualification-progress.mjs';
 import { formatMetric as fmt, safeDataPath, validateCatalog, comparisonRows, pairLesson, inspectRepeat, requestGate, violationLabel } from './view-model.mjs';
 const $ = id => document.getElementById(id);
-let catalog, roads, geometry, comparison, map, replay, mask = 'support', currentView = 'welcome', atlasVersion = 'recorded', candidateReport, studies;
+let catalog, roads, geometry, comparison, map, replay, mask = 'support', currentView = 'welcome', atlasVersion = 'recorded', studies;
 const notices = $('load-state');
 const atlasGate = requestGate();
 const modelTitle = ['Which constraint\nsets the pace?', 'Explore charging bottlenecks and direction choices in small, explicit teaching models. These are separate from the recorded SF fleet studies.'];
@@ -83,9 +83,9 @@ function displayComparison() {
 }
 async function changeMask(next) {
   const ticket = atlasGate.issue();
-  $('map-version-note').textContent = atlasVersion==='candidate'?'Viewing SF v2 candidate map only. Notebook and replay remain on SF v1.':'Viewing the recorded SF v1 map. Candidate changes are not applied to recorded results.';
+  $('map-version-note').textContent = atlasVersion==='temporal'?'Viewing the time-aware candidate. This atlas does not evaluate live access. Notebook and replay remain on SF v1.':atlasVersion==='candidate'?'Viewing SF v2 candidate map only. Notebook and replay remain on SF v1.':'Viewing the recorded SF v1 map. Candidate changes are not applied to recorded results.';
   try {
-    if (atlasVersion === 'candidate') { map.setMask(next); mask = next; for (const b of document.querySelectorAll('[data-mask]')) b.setAttribute('aria-pressed', String(b.dataset.mask === next)); return; }
+    if (atlasVersion !== 'recorded') { map.setMask(next); mask = next; for (const b of document.querySelectorAll('[data-mask]')) b.setAttribute('aria-pressed', String(b.dataset.mask === next)); return; }
     if (next === 'source' && !roads.fullSource) { const loaded = await readData('data/source-roads.geo.json'); if(!atlasGate.current(ticket))return; roads=loaded; roads.fullSource = true; map.setRoads(roads); }
     mask = next; map.setMask(next); map.setScenario(next === 'scenario' ? catalog.scenario_points : []);
     for (const b of document.querySelectorAll('[data-mask]')) b.setAttribute('aria-pressed', String(b.dataset.mask === next));
@@ -115,7 +115,7 @@ try {
   map.setSites(catalog.sites);
   replay = new Replay({catalog,roads,geometry,comparison,readData,notice,isVisible:()=>currentView==='replay'});
   studies = mountStudies({catalog,readData,replay,show,notice});
-  readData('data/sf-review-envelope.json').then(data=>mountQualificationProgress($('qualification-progress'),data)).catch(error=>{
+  if(!catalog.temporal_candidate)readData('data/sf-review-envelope.json').then(data=>mountQualificationProgress($('qualification-progress'),data)).catch(error=>{
     $('qualification-progress').textContent=`SF review status unavailable: ${error.message}`;
   });
   if(catalog.power_status_file)readData(catalog.power_status_file).then(data=>renderStoppedStudy($('stopped-study'),data)).catch(error=>{
@@ -124,22 +124,22 @@ try {
   readData('data/model-lessons.json').then(data=>mountModelLessons($('model-lessons'),data)).catch(error=>{
     $('model-lessons').replaceChildren(element('p',`Model lessons unavailable: ${error.message}`,'notice'));
   });
-  mountQualification({readData,notice,atlasGate,setVersion:(version,nextRoads)=>{
+  mountQualification({readData,notice,atlasGate,temporalSelection:catalog.temporal_candidate,setVersion:(version,nextRoads,coverage)=>{
     atlasVersion=version; if(version==='recorded')roads=nextRoads; map.setRoads(nextRoads); map.setMask('support'); mask='support';
     map.setRoutes({type:'FeatureCollection',features:[]}); map.setScenario([]);
-    map.setSites(version==='candidate'?[]:catalog.sites.filter(s=>$('atlas-arm').value==='candidate'||s.id==='A'));
-    $('atlas-arm').disabled=version==='candidate';
-    for(const b of document.querySelectorAll('[data-mask]')) {b.disabled=version==='candidate'&&b.dataset.mask==='scenario';b.setAttribute('aria-pressed',String(b.dataset.mask==='support'));}
-    $('atlas-pack-name').textContent=version==='candidate'?'CANDIDATE MAP / SF V2':'RECORDED CITY PACK / SF V1';
-    const c=version==='candidate'?candidateReport.after:catalog.coverage;
+    map.setSites(version!=='recorded'?[]:catalog.sites.filter(s=>$('atlas-arm').value==='candidate'||s.id==='A'));
+    $('atlas-arm').disabled=version!=='recorded';
+    for(const b of document.querySelectorAll('[data-mask]')) {b.disabled=version!=='recorded'&&b.dataset.mask==='scenario';b.setAttribute('aria-pressed',String(b.dataset.mask==='support'));}
+    $('atlas-pack-name').textContent=version==='temporal'?'TIME-AWARE CANDIDATE / SF V3':version==='candidate'?'CANDIDATE MAP / SF V2':'RECORDED CITY PACK / SF V1';
+    const c=coverage??catalog.coverage;
     factList($('coverage-list'),[['Supported',fmt(c.dispositions.included,0)],['Excluded, with reason',fmt(c.dispositions.excluded,0)],['Unsupported',fmt(c.dispositions.unsupported,0)],['Accounted for','100% of source IDs']]);
-    $('coverage-summary').textContent=version==='candidate'?`${fmt(c.unsupported_fraction*100,2)}% unsupported. Trunk and living-street classes still exceed 5%. District and semantic review remain open.`:`${fmt(c.unsupported_fraction*100,2)}% unsupported. Primary, trunk and living-street classes exceed 5%. District review remains open.`;
-    $('map-hint').textContent=version==='candidate'?'Candidate map only. Click a road to inspect its current classification.':'Recorded SF v1 map. Fictional depot markers reflect the selected configuration.';
+    $('coverage-summary').textContent=version==='temporal'?`${fmt(c.unsupported_fraction*100,2)}% unsupported. All road classes meet the 5% source budget. District scope and independent review remain open.`:version==='candidate'?`${fmt(c.unsupported_fraction*100,2)}% unsupported. Trunk and living-street classes still exceed 5%. District and semantic review remain open.`:`${fmt(c.unsupported_fraction*100,2)}% unsupported. Primary, trunk and living-street classes exceed 5%. District review remains open.`;
+    $('map-hint').textContent=version==='temporal'?'Time-aware source network. Click a road to inspect its source classification. Green does not mean access is permitted at every time.':version==='candidate'?'Candidate map only. Click a road to inspect its current classification.':'Recorded SF v1 map. Fictional depot markers reflect the selected configuration.';
   },showGap:gap=>{
     const lines=gap.geometry.type==='MultiLineString'?gap.geometry.coordinates:[gap.geometry.coordinates];
-    map.setRoutes({type:'FeatureCollection',features:lines.map(coordinates=>({type:'Feature',geometry:{type:'LineString',coordinates},properties:{purpose:'returning'}}))});map.fitRoute();$('map-hint').textContent=`Amber overlay: ${gap.name}, ${gap.gap_length_m.toFixed(1)} m outside the official district polygons. UNASSIGNED. Same source gap applies to both map versions.`;
+    map.setRoutes({type:'FeatureCollection',features:lines.map(coordinates=>({type:'Feature',geometry:{type:'LineString',coordinates},properties:{purpose:'returning'}}))});map.fitRoute();$('map-hint').textContent=`Amber overlay: ${gap.name}, ${gap.gap_length_m.toFixed(1)} m outside the official district polygons. UNASSIGNED. The same retained geography applies to all map versions.`;
     $('map').scrollIntoView({block:'center',behavior:'instant'});
-  }}).then(report=>{candidateReport=report;}).catch(e=>{$('candidate-intro').textContent='Candidate qualification data unavailable. Recorded experiment remains inspectable.';notice(e.message,true);});
+  }}).catch(e=>{$('candidate-intro').textContent='Candidate qualification data unavailable. Recorded experiment remains inspectable.';notice(e.message,true);});
   notice('Simulation study: source accounting is complete; routing and district qualification remain open. Results are diagnostic, with no city recommendation.');
   show(titles[location.hash.slice(1)]?location.hash.slice(1):'welcome', false);
 } catch (error) { notice(`${error.message}. This snapshot could not be loaded safely.`, true); $('map').replaceChildren(element('p', 'The selected city data is unavailable. No alternate city or snapshot has been substituted.', 'fatal')); }

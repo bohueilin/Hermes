@@ -66,7 +66,29 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def archive(out, paths, notice, license_bytes):
+PRIVATE_MARKERS = (b"/Users/", b"/private/tmp/", b"BEGIN PRIVATE KEY")
+
+
+def public_report_projection(path, expected_sha):
+    raw = path.read_bytes()
+    if sha(raw) != expected_sha:
+        raise ValueError("public report original identity mismatch")
+    report = json.loads(raw)
+    report.pop("traceback", None)
+    report["publication_projection"] = {
+        "schema": "fleetlab.public-diagnostic/1.0.0",
+        "original_sha256": expected_sha,
+        "omitted_json_pointers": ["/traceback"],
+        "reason": "Private workstation paths; original retained locally unchanged.",
+        "original_bytes_reproducible_from_projection": False,
+    }
+    data = (json.dumps(report, sort_keys=True, indent=2) + "\n").encode()
+    if any(marker in data for marker in PRIVATE_MARKERS):
+        raise ValueError("private material remains in public report")
+    return data
+
+
+def archive(out, paths, notice, license_bytes, projections=None):
     members = {}
     with (
         out.open("wb") as raw,
@@ -78,9 +100,9 @@ def archive(out, paths, notice, license_bytes):
                 raise ValueError("source offer refuses links or non-files")
             name = path.relative_to(ROOT).as_posix()
             data = path.read_bytes()
-            if any(
-                marker in data for marker in (b"/Users/", b"/private/tmp/", b"BEGIN PRIVATE KEY")
-            ):
+            if path in (projections or {}):
+                name, data = projections[path]
+            if any(marker in data for marker in PRIVATE_MARKERS):
                 raise ValueError(f"private path/material in public offer: {name}")
             members[name] = {"bytes": len(data), "sha256": sha(data)}
             info = tarfile.TarInfo(name)
@@ -96,7 +118,7 @@ def archive(out, paths, notice, license_bytes):
     return members
 
 
-def build(out):
+def build(out, temporal_candidate=False):
     if out.exists():
         raise ValueError("output must be new")
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -109,16 +131,99 @@ def build(out):
         + list((APP / "config").glob("*.json"))
         + [APP / "tools/city.py", APP / "requirements.lock.txt", ROOT / "LICENSE"],
     }
+    temporal_identity = None
+    projections = {}
+    notice, reproduction = NOTICE, REPRO
+    if temporal_candidate:
+        pack = ROOT / "build/fleetlab-city/packs/sf-temporal-v3-r2"
+        workspace = ROOT / "build/fleetlab-city/reviews/sf-temporal-v3-review-r2"
+        evidence = ROOT / "build/fleetlab-city/validation/sf-temporal-fleet-20260930-r6"
+        corrected = evidence.with_name(evidence.name + "-verifier-3.0.1")
+        temporal_manifest = json.loads((pack / "manifest.json").read_text())
+        temporal_identity = temporal_manifest["content_digest"]
+        if temporal_identity != "8a927cba063febeb9edaf99f4ab0e0c05f9a8fe349fd192da9afcbc46355f198":
+            raise ValueError("source offer requires the selected complete temporal candidate")
+        groups["sf-temporal-v3-complete.tar.gz"] = list(pack.glob("*.json"))
+        groups["sf-temporal-v3-review.tar.gz"] = list(workspace.iterdir())
+        groups["sf-temporal-recording.tar.gz"] = [evidence / n for n in ("run.json", "inputs.json")]
+        groups["sf-temporal-engineering-evidence.tar.gz"] = (
+            [
+                evidence / n
+                for n in (
+                    "freeze.json",
+                    "execute-report.json",
+                    "verify-report.json",
+                    "verification.json",
+                )
+            ]
+            + [corrected / n for n in ("freeze.json", "verify-report.json", "verification.json")]
+            + [ROOT / "build/fleetlab-city/validation/sf-temporal-20260930/r5/graph.json"]
+        )
+        groups["transformation-code.tar.gz"] += [APP / "tools/package-temporal-candidate.py"]
+        original_report = evidence / "verify-report.json"
+        projections[original_report] = (
+            original_report.with_name("verify-report.public.json").relative_to(ROOT).as_posix(),
+            public_report_projection(
+                original_report,
+                "e444d51809c598dda1e2bd60b73d6dd36e2e83b1b5b66dffa85a49e7104710dc",
+            ),
+        )
+        notice += """\n30 September temporal candidate addition:
+The complete sf-temporal-v3-r2 map is also offered under ODbL 1.0, with the
+same captured sources and geographic scope. Its qualification remains HOLD.
+The review workspace is candidate-specific and contains no human observations.
+The separate 100-vehicle, eight-hour recording is one synthetic engineering
+case, not a new depot comparison or an operator prediction. Its first invalid
+verification is supplied as an explicitly labeled public projection with only
+the private traceback omitted. The original SHA-256 is retained; its bytes are
+preserved locally, not downloadable. All findings and corrected verification
+of the same recording are included without alteration.
+The main notebook/replay continue to use the original sf-v1 experiment.
+"""
+        reproduction += """\n## Temporal candidate and engineering record
+
+The complete temporal database is supplied in sf-temporal-v3-complete.tar.gz.
+The source XML and previous map remain in their corresponding archives above.
+The unmodified original graph bytes used by the engineering recording are also
+included in sf-temporal-engineering-evidence.tar.gz to preserve its raw hashes.
+The large recording is separate in sf-temporal-recording.tar.gz. Extraction
+preserves all relative paths; no simulator execution is needed to inspect it.
+Exception: verify-report.public.json replaces the original failed report in
+this public offer. Its publication_projection records the original SHA-256 and
+the omitted /traceback field, which contained private workstation paths.
+The original failed report hash in the corrected freeze cannot be reproduced
+from this projection. All graph, input, recording and corrected-result bytes
+are exact, and the public projection never claims the original file identity.
+
+Use citylib.verify_temporal_v3.verify(run, inputs, graph) for independent
+read-only event verification of decoded JSON inputs. It does not run a simulator.
+The corrected verifier identity is 3.0.1. Resource measurements and limitations
+are in the retained reports; one successful case does not qualify a whole city.
+
+The generic immutable container format remains city-pack/1.0.0; its graph uses
+city-temporal-pack/3.0.0, with a distinct temporal-map-candidate/1.0.0 report.
+Static fleet consumers must not route this graph. The map does not enable a
+site-specific depot connector or establish physical maneuver feasibility.
+The stopped power study is separate and is not resumed by these tools.
+"""
     with tempfile.TemporaryDirectory(prefix="map-offer-", dir=out.parent) as temporary:
         target = Path(temporary) / "sources"
         target.mkdir()
         members = {
-            name: archive(target / name, files, NOTICE.encode(), licenses)
+            name: archive(target / name, files, notice.encode(), licenses, projections)
             for name, files in groups.items()
         }
+        if temporal_candidate:
+            archived = members["sf-temporal-v3-complete.tar.gz"]
+            prefix = pack.relative_to(ROOT).as_posix() + "/"
+            for name, expected in temporal_manifest["files"].items():
+                if archived.get(prefix + name) != expected:
+                    raise ValueError(
+                        "archived temporal database differs from its complete manifest"
+                    )
         (target / "ODbL-1.0.txt").write_bytes(licenses)
-        (target / "NOTICE.txt").write_text(NOTICE)
-        (target / "REPRODUCE.md").write_text(REPRO)
+        (target / "NOTICE.txt").write_text(notice)
+        (target / "REPRODUCE.md").write_text(reproduction)
         links = "".join(
             f'<li><a href="./{html.escape(name)}">{html.escape(name)}</a>'
             f"<span>{(target / name).stat().st_size / 1024 / 1024:.1f} MiB"
@@ -131,6 +236,7 @@ def build(out):
         manifest = {
             "schema": "fleetlab.map-source-offer/1.0.0",
             "database_license": "ODbL-1.0",
+            "temporal_candidate_bundle_digest": temporal_identity,
             "archive_members": members,
             "files": {
                 p.name: {"bytes": p.stat().st_size, "sha256": sha(p.read_bytes())}
@@ -148,4 +254,6 @@ def build(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", required=True, type=Path)
-    print(json.dumps(build(parser.parse_args().out), indent=2))
+    parser.add_argument("--temporal-candidate", action="store_true")
+    args = parser.parse_args()
+    print(json.dumps(build(args.out, args.temporal_candidate), indent=2))

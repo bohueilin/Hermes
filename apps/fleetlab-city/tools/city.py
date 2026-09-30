@@ -36,6 +36,11 @@ def main():
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--runs", type=Path)
     p.add_argument(
+        "--temporal-candidate",
+        action="store_true",
+        help="Include the separately validated SF temporal candidate and review package",
+    )
+    p.add_argument(
         "--power-status",
         type=Path,
         help="Fresh status of a stopped power study; no primary estimate",
@@ -151,7 +156,9 @@ def main():
     elif args.command == "build-viewer":
         from citylib.package import build_viewer
 
-        result = build_viewer(ROOT, args.out, args.runs, args.power_study, args.power_status)
+        result = build_viewer(
+            ROOT, args.out, args.runs, args.power_study, args.power_status, args.temporal_candidate
+        )
         code = 0 if result["pass"] else 1
     elif args.command == "check-dist":
         from citylib.package import check_dist
