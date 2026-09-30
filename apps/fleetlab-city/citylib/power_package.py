@@ -126,6 +126,8 @@ def export_power_study(root, frozen, destination):
                 "vehicle_files": traces,
             }
         )
+        del bundle, run
+    del graph, tapes
     # Re-capture all exact digests after projection, including non-replay arms.
     # The scientific verifier already evaluated these bytes above. Do not repeat
     # expensive analysis when bounded no-follow capture can establish equality.
@@ -133,7 +135,8 @@ def export_power_study(root, frozen, destination):
         captured = read_bundle(frozen / "evaluate" / f"{expected['seed']}-{expected['arm']}")
         if captured["manifest.json"]["content_digest"] != expected["bundle_digest"]:
             raise ValueError("power study changed during projection")
-    final_protocol, _, _ = capture_study(root, frozen)
+        del captured
+    final_protocol = capture_study(root, frozen)[0]
     if digest(final_protocol) != digest(protocol):
         raise ValueError("frozen study changed during projection")
     if source_identity(frozen) != before:

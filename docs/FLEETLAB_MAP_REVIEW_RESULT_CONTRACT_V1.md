@@ -1,5 +1,24 @@
 # SF map source-review result contract — design v1
 
+Implementation update, 29 September 2026: `citylib/map_review_v1.py` now validates
+bounded review histories; `tools/map-review.py` prepares and validates workspaces.
+The first frozen workspace is `build/fleetlab-city/reviews/sf-v2-review-r1/`.
+Its requirements digest is
+`b32ab2e295c67c22a820b65b4a9a8fab4b347a2ea3ed230e252b4fabc98d98d8`;
+the independently retained initial history checkpoint is
+`b1f184bdf132ebd64074333a6036ce747ac33816b5f310822c6b34f90b548ffb`.
+No actual human observations have been supplied. Qualification remains HOLD.
+
+The runtime embeds bounded UTF-8 captures in one JSON document instead of
+resolving external capture paths. Capture SHA-256 identities are checked. New
+records can only reference evidence already present in their first manifest.
+Human samples must match the frozen feature/OD roster and cannot be counted
+twice. Conflicting complete resolutions keep the obligation open. Resolver and
+reviewer identity declarations remain unauthenticated. See the current
+[completion record](FLEETLAB_SF_COMPLETION_STATUS_2026-09-29.md) for wider gates.
+
+The following is the original design record; its future-tense status is historical.
+
 29 September 2026. This specifies how actual review observations can be recorded without editing the frozen `sf-v2` checklist. No human observations are invented by this document, and no existing NOT_RUN gate changes.
 
 ## Why a separate result

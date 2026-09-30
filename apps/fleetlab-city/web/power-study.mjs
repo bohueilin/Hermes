@@ -41,7 +41,7 @@ export function renderPowerStudy(host,data,study,inspect){
  const question=section(host,'POWER HEADROOM / FROZEN SF V1','Does more charging power change the value of a second depot?');
  paragraph(question,'A second location can shorten return travel and split local queues. This study asks whether that location effect changes when total charging power rises from 200 to 400 kW.');
  const controls=el('div',undefined,'study-controls-grid');
- for(const [title,copy] of [['Fixed in every configuration','100 generic EVs · 1,200 created requests · 8 × 50 kW ports · 4 turnaround slots · 07:00–15:00 · 30 kWh initial energy · 48 kWh charging target'],['Changed deliberately','Depot layout A, A+B or B; total site power 200 or 400 kW. A+B splits ports, power and slots equally.'],['Paired across 24 seeds','7302001–7302024. Within each seed every configuration uses the same full input tape and the same immutable SF v1 graph.']]){
+ for(const [title,copy] of [['Fixed in every configuration','100 generic EVs · 1,200 created requests · 8 × 50 kW ports · 4 turnaround slots · 07:00–15:00 · 30 kWh initial energy · 48 kWh charging target'],['Changed deliberately','Depot layout A, A+B or B; total site power 200 or 400 kW. A+B splits ports, power and slots equally.'],[`Paired across ${study.seeds.length} seeds`,`${study.seeds[0]}–${study.seeds.at(-1)}. Within each seed every configuration uses the same full input tape and the same immutable SF v1 graph.`]]){
   const card=el('article');card.append(el('h4',title),el('p',copy));controls.append(card);
  }question.append(controls);
  const result=section(host,'PRIMARY RESULT / DESCRIPTIVE','The location effect, at two power levels.');
@@ -100,7 +100,7 @@ export function renderPowerStudy(host,data,study,inspect){
 export function mountStudies({catalog,readData,replay,show,notice}){
  const $=id=>document.getElementById(id);const selectors=[$('study-select'),$('replay-study-select')];
  const count=1+(catalog.studies?.length??0);
- $('study-help').textContent=count===1?'Only the original twelve-pair depot study is included in this package. No power-study evaluation is included. Notebook and Replay show that recorded study.':`${count} recorded studies are included, with separate frozen protocols. Selection changes the notebook and Replay together.`;
+ $('study-help').textContent=count===1?(catalog.power_status_file?'The menu includes the original twelve-pair study. The stopped power study is reported separately below, with no paired estimate.':'Only the original twelve-pair depot study is included in this package. No power-study evaluation is included. Notebook and Replay show that recorded study.'):`${count} recorded studies are included, with separate frozen protocols. Selection changes the notebook and Replay together.`;
  for(const select of selectors){select.replaceChildren();for(const entry of [{id:'legacy',label:'Original depot study · twelve pairs'},...(catalog.studies??[])]){const o=el('option',entry.label);o.value=entry.id;select.append(o);}}
  function controls(id,study){
   replay.pause();replay.gate.issue();replay.trace=null;replay.loading=false;replay.study=id;

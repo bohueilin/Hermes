@@ -180,13 +180,13 @@ def _statuses(result) -> dict[str, ComparisonStatus]:
     (
         (
             "phase1-nominal",
-            3_200,
-            "c9862ac647d3a2324b238cc6e7be017ddbecdc8fc067582d09c7ca666b6016c0",
+            3_110,
+            "ba2d054bb5c235d196bdf67bab12ea15c7358077746063b4de31ffcdf5899ee4",
         ),
         (
             "handoff-p4-fault",
-            3_314,
-            "037842ff2965584d897065be100e19ed5d4e10c3d9602922caedeb2d2515f1a4",
+            3_224,
+            "124698d75056f4e700f1cef5a5a2b7a5c000f978fb250fc6db47346f86a32d9f",
         ),
     ),
 )
@@ -200,7 +200,13 @@ def test_legacy_core_comparison_bytes_are_pinned(
     assert snapshot is not None
 
     comparison = compare_artifacts(snapshot, snapshot)
-    payload = canonical_json_bytes(comparison.model_dump(mode="json"))
+    document = comparison.model_dump(mode="json")
+    # Location is part of the API and must still be exact. Pin the scientific
+    # content under a stable logical root so a different checkout is not a change.
+    for field in ("baseline_path", "candidate_path"):
+        assert document[field] == str(repository_root / "artifacts" / run_id)
+        document[field] = f"/artifacts/{run_id}"
+    payload = canonical_json_bytes(document)
 
     assert type(comparison).__name__ == "ArtifactComparison"
     assert len(payload) == expected_size

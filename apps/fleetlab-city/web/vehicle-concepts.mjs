@@ -7,7 +7,7 @@ const references = {
     image: 'assets/vehicle-generic.svg',
     alt: 'Original side-view illustration of a generic electric car',
     provenance: 'MODEL ASSUMPTION',
-    intro: 'One homogeneous fleet makes the depot question easier to isolate. The recorded SF experiment uses 100 generic EVs with 30 kWh initial energy and a 48 kWh charging target. The 60 kWh nominal capacity field is unused metadata.',
+    intro: 'One homogeneous fleet makes the depot question easier to isolate. The recorded SF experiment uses 100 generic EVs with 30 kWh initial energy and a 48 kWh charging target. Nominal capacity is an energy bound checked by the verifier; it does not change the runner’s charging or dispatch policy.',
     cues: ['Same vehicle assumptions in both depot layouts', 'Graph travel, energy, charging and turnaround resources', 'No operator hardware, driving policy or vehicle dynamics'],
     question: 'With fleet and total resources held fixed, how does depot placement change service, empty travel and queues?',
     next: 'Keep this as the controlled baseline. A later vehicle-class comparison would need a frozen scenario, measured class inputs and separate validation.',

@@ -4,10 +4,12 @@ import contextlib
 import gzip
 import json
 import mimetypes
+import os
 import posixpath
 import re
 import shutil
 import subprocess
+import sys
 from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -16,8 +18,10 @@ from urllib.parse import unquote, urlsplit
 from .candidate_binding import validate_candidate
 from .compare import compare_pairs
 from .contracts import canonical, digest, load_json, read_bundle, read_bytes, save_json, sha
+from .model_lessons_v1 import build_model_lessons, verify_model_lessons
 from .power_package import energy_metadata, export_power_study
 from .presentation import feature_vehicles, vehicle_views
+from .readiness_package_v1 import export_readiness
 from .runner import scientific_spec
 from .verify import verify
 
@@ -49,10 +53,12 @@ def require_matching_report(stored, recomputed, label):
         raise ValueError(f"{label} differs from captured runs and fresh verification")
 
 
-def build_viewer(root, out, run_path=None, power_study=None):
+def build_viewer(root, out, run_path=None, power_study=None, power_status=None):
     root = Path(root)
     app = root / "apps/fleetlab-city"
     out = Path(out)
+    if power_study is not None and power_status is not None:
+        raise ValueError("select a complete study or a partial status, not both")
     if out.exists():
         raise FileExistsError(f"{out} exists; select a new output to preserve the earlier package")
     out.mkdir(parents=True)
@@ -91,11 +97,19 @@ def build_viewer(root, out, run_path=None, power_study=None):
         "vehicle-concepts.css",
         "qualification.mjs",
         "power-study.mjs",
+        "model-lessons.mjs",
+        "model-lessons.css",
+        "study-status.mjs",
+        "qualification-progress.mjs",
     ):
         shutil.copyfile(app / "web" / name, out / name)
     shutil.copytree(app / "web/assets", out / "assets")
+    lessons = build_model_lessons()
+    verify_model_lessons(lessons)
+    save_json(out / "data/model-lessons.json", lessons)
     candidate = read_bundle(root / "build/fleetlab-city/packs/sf-v2")
     validate_candidate(pack, candidate)
+    export_readiness(root, candidate, out)
     candidate_report = candidate["qualification-report.json"]
     if candidate_report["baseline_pack_digest"] != pack["manifest.json"]["content_digest"]:
         raise ValueError("map candidate compares a different baseline pack")
@@ -204,10 +218,9 @@ def build_viewer(root, out, run_path=None, power_study=None):
             entry["valid"] = entry["valid"] and v["valid"]
             entry["hard_violations"] += v["metrics"]["hard_violations"]
         sensitivities.append(entry)
-    power_metadata = None
-    if power_study is not None:
-        power_metadata, power_bytes = export_power_study(root, power_study, out / "data")
-        pair_bytes.update(power_bytes)
+    pack_schema = graph["schema"]
+    pack_digest = pack["manifest.json"]["content_digest"]
+    candidate_digest = candidate["manifest.json"]["content_digest"]
     catalog = {
         "schema": "fleetlab.city-view/1.0.0",
         "scope": "SIMULATION_ONLY",
@@ -225,8 +238,26 @@ def build_viewer(root, out, run_path=None, power_study=None):
         "scenario_points": [graph["nodes"][n] for n in spec["node_pool"]],
         "files": file_inventory(out / "data"),
     }
-    if power_metadata is not None:
+    # Keep only the small presentation projection before fresh power verification.
+    # The SF map bundles and last raw recordings otherwise double the working set.
+    del pack, graph, roads, candidate, captured, run, payload, view
+    if power_study is not None:
+        power_metadata, power_bytes = export_power_study(root, power_study, out / "data")
+        pair_bytes.update(power_bytes)
         catalog["studies"] = [power_metadata]
+        catalog["files"] = file_inventory(out / "data")
+    if power_status is not None:
+        # Fresh read-only verification has a separate process lifetime from the
+        # large legacy/candidate map projections. No simulation is run here.
+        status = subprocess.run(
+            [sys.executable, "-m", "citylib.power_status", str(root.absolute()),
+             str(Path(power_status).absolute())],
+            env={**os.environ, "PYTHONPATH": str(app.absolute())},
+            capture_output=True, text=True, check=True, timeout=600,
+        )
+        save_json(out / "data/power-status.json", json.loads(status.stdout))
+        catalog["power_status_file"] = "data/power-status.json"
+        catalog["files"] = file_inventory(out / "data")
     catalog["files"] = {"data/" + k: v for k, v in catalog["files"].items()}
     save_json(out / "data/catalog.json", catalog)
     headers = "/city-explorer/*\n" + "".join(f"  {k}: {v}\n" for k, v in HEADERS.items())
@@ -264,12 +295,12 @@ def build_viewer(root, out, run_path=None, power_study=None):
             "scope": "REVIEW_ONLY",
             "compatibility": {
                 "viewer": "1.1.0",
-                "pack": graph["schema"],
+                "pack": pack_schema,
                 "run": "fleetlab.city-run/1.0.0",
                 "metrics": "fleetlab.city-metrics/1.0.0",
             },
-            "pack_digest": pack["manifest.json"]["content_digest"],
-            "candidate_map_digest": candidate["manifest.json"]["content_digest"],
+            "pack_digest": pack_digest,
+            "candidate_map_digest": candidate_digest,
             "files": file_inventory(out),
             "pair_compressed_bytes": pair_bytes,
             "rollback_unit": "viewer + compatible manifest + city pack + run/metric schema",
@@ -415,6 +446,12 @@ def check_dist(root):
         "vehicle-concepts.css",
         "qualification.mjs",
         "power-study.mjs",
+        "model-lessons.mjs",
+        "model-lessons.css",
+        "data/model-lessons.json",
+        "study-status.mjs",
+        "qualification-progress.mjs",
+        "data/sf-review-envelope.json",
         "assets/vehicle-generic.svg",
         "assets/vehicle-ojai-concept.svg",
         "assets/vehicle-bidi-concept.svg",
@@ -432,6 +469,12 @@ def check_dist(root):
     ]
     # Optional UI generations are absent from older compatible releases.
     optional = {
+        "model-lessons.mjs",
+        "model-lessons.css",
+        "data/model-lessons.json",
+        "study-status.mjs",
+        "qualification-progress.mjs",
+        "data/sf-review-envelope.json",
         "fleet-insights.mjs",
         "power-study.mjs",
         "vehicle-concepts.mjs",

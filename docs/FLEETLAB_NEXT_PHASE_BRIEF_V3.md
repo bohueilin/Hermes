@@ -1,5 +1,18 @@
 # FleetLab — handoff for the next product and simulation brainstorm
 
+## Current continuation — SF completion and model readiness
+
+Read [the SF completion status](FLEETLAB_SF_COMPLETION_STATUS_2026-09-29.md) first.
+It supersedes older next-action statuses below. The memory amendment was accepted
+and implemented. Its 24 preflight arms passed, but the approved evaluation retry
+stopped after one of 144 arms at 4.0466 GB; no primary estimate is available.
+Standalone continuity/conditional modules, a checkpoint-bound review workflow,
+a frozen 200-feature/100-OD worksheet and anonymous Model lab lessons are now
+implemented. Fleet integration, SF map/human qualification, physical-device
+validation and measured vehicle inputs remain open. San Mateo is a prepared
+source probe; no new city pack or result is introduced. Publication verification
+is recorded in FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md.
+
 ## Latest handoff — San Francisco clarity and fleet insights, 29 September 2026
 
 City Explorer is now a separate tab in [FleetLab](https://fleetlab.pages.dev/),
@@ -23,8 +36,7 @@ illustrate different assignments and shared-resource experiences, not 100 vehicl
 classes or independent replications. All twelve seeds remain separate paired
 replicates. See the release record for publication and validation status.
 
-It does not include new power-study results. The separate memory/execution
-amendment still requires a decision; no main-evaluation outputs exist.
+It does not include new power-study results. That historical release preceded the accepted memory revision; see the current continuation above for the retained incomplete evaluation.
 
 Next ideation should preserve the additive architecture and prioritize SF map
 continuity/qualification, physical-device and independent participant evidence,
@@ -37,7 +49,7 @@ Prepared 29 September 2026. Read this together with `FLEETLAB_CITY_PRESENTER_GUI
 
 FleetLab has a public legacy teaching site at https://fleetlab.pages.dev/ with 59 lessons across several explicit model families. A separate City Explorer now provides sourced San Francisco road geometry, a recorded paired depot experiment, a vehicle replay studio, and a guided product entry. The explorer is integrated as an additional tab in the live FleetLab site; existing teaching sections remain available.
 
-The SF experiment uses 100 homogeneous generic EVs (30 kWh initial energy and a 48 kWh charging target; nominal 60 kWh capacity is unused metadata), 1,200 synthetic requests and an eight-hour shift, 07:00–15:00. It compares one fictional depot with two fictional depots at the same total charging and turnaround capacity. Twelve paired evaluation repeats use seeds 1001–1012; a seed fixes random inputs, rather than naming a distinct driving scenario. Five separate sensitivity cases retain adverse results. Geographic and operational qualification still limit the interpretation.
+The SF experiment uses 100 homogeneous generic EVs (30 kWh initial energy and a 48 kWh charging target; nominal 60 kWh capacity bounds verifier energy but does not control runner charging/dispatch), 1,200 synthetic requests and an eight-hour shift, 07:00–15:00. It compares one fictional depot with two fictional depots at the same total charging and turnaround capacity. Twelve paired evaluation repeats use seeds 1001–1012; a seed fixes random inputs, rather than naming a distinct driving scenario. Five separate sensitivity cases retain adverse results. Geographic and operational qualification still limit the interpretation.
 
 The replay explains full-shift trips, empty travel, depot queues, charging and turnaround. It offers four transparently selected vehicle stories plus the full list. Play loads the selected trace, and Replay restarts it at the end. Street names, zoom controls, red depot squares and traveled route geometry improve inspection. Operational events include the full horizon. Unsupported crash, remote-guidance and minimum-risk metrics remain unavailable. Revenue stays unavailable until a visitor enters all fare assumptions; it counts completed passenger service only and never claims an operator fare or profit estimate.
 

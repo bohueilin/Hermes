@@ -15,6 +15,15 @@ handoff; this acceptance statement is not an assertion that evaluation completed
 
 ## Original proposal
 
+Outcome update: all 24 r2 preflight arms and their analysis completed. A launcher
+that redundantly analyzed preflight stopped before evaluation; the owner then
+approved one fresh-process retry. That retry recorded one evaluation arm and hit
+4,046,569,472 bytes, above the unchanged 4,000,000,000 limit. The other 143 arms
+remain NOT_RUN; the primary is unavailable. No further retry is authorized.
+The website's partial-status projection is fresh read-only verification in its
+own process (observed peak 2,207,989,760 bytes), not a simulation retry. See the
+[current completion record](FLEETLAB_SF_COMPLETION_STATUS_2026-09-29.md).
+
 29 September 2026. Proposal only. Frozen v1 source, protocol, tapes and preflight evidence remain unchanged. No evaluation directory or arm was created.
 
 ## Observed failure and concrete correction

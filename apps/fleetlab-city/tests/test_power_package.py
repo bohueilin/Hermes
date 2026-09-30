@@ -34,6 +34,39 @@ class PowerPackageTests(unittest.TestCase):
         destination.mkdir(parents=True)
         return destination
 
+    def test_export_releases_graph_and_raw_runs_before_final_capture(self):
+        import weakref
+        from unittest.mock import patch
+
+        from citylib.power_study import capture_arm, capture_study
+
+        class Tracked(dict):
+            pass
+
+        export = self.exporter()
+        destination = self.prepare()
+        graphs, runs = [], []
+
+        def study(*args):
+            self.assertTrue(all(ref() is None for ref in graphs))
+            self.assertTrue(all(ref() is None for ref in runs))
+            protocol, tapes, graph = capture_study(*args)
+            graph = Tracked(graph)
+            graphs.append(weakref.ref(graph))
+            return protocol, tapes, graph
+
+        def arm(*args):
+            self.assertTrue(all(ref() is None for ref in runs))
+            bundle, verification = capture_arm(*args)
+            bundle = Tracked(bundle)
+            runs.append(weakref.ref(bundle))
+            return bundle, verification
+
+        with patch("citylib.power_package.capture_study", new=study), patch(
+            "citylib.power_package.capture_arm", new=arm
+        ):
+            export(self.root, self.out, destination)
+
     def test_export_all_summaries_but_only_first_seed_six_recordings(self):
         export = self.exporter()
         destination = self.prepare()

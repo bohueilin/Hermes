@@ -90,7 +90,7 @@ h2,h3,h4,p{margin-top:0}
 .source-mini{border-top:1px solid var(--line);margin-top:24px;padding-top:20px}
 .source-mini .eyebrow{font-size:11px;margin-bottom:9px}
 .source-mini p{font-size:14px;line-height:1.6;color:var(--muted)}
-.city-roadmap{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:22px;padding:32px 0;align-items:center}
+.city-roadmap{display:grid;grid-template-columns:1.2fr repeat(4,minmax(0,1fr));gap:22px;padding:32px 0;align-items:center}
 .city-roadmap h3{font-size:18px;font-weight:550;margin-bottom:0}
 .city-roadmap .eyebrow{font-size:11px;margin-bottom:7px}
 .future-city{padding:17px 19px;background:#edf1e7;border-radius:10px;display:grid;gap:7px}
@@ -443,3 +443,5 @@ body[data-view=welcome] .intro{padding-top:66px;padding-bottom:42px}body[data-vi
 .fleet-next button { flex-shrink:0; }
 @media(max-width:820px){.fleet-charts{grid-template-columns:1fr;gap:24px}.fleet-chart+.fleet-chart{border-top:1px solid var(--line);padding-top:24px}.fleet-next{align-items:flex-start;flex-direction:column;gap:16px}}
 @media(max-width:520px){.fleet-bin{grid-template-columns:65px minmax(0,1fr) 48px;gap:9px;font-size:13px}.fleet-insights .panel-heading{display:block}.fleet-insights .chip{margin-top:10px}.fleet-next button{width:100%;white-space:normal}}
+
+body[data-view=models] .intro{grid-template-columns:1fr}body[data-view=models] .question-card,body[data-view=models] .context-strip{display:none}

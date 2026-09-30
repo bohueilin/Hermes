@@ -3,13 +3,18 @@ import { Replay } from './replay.mjs';
 import { mountStudies } from './power-study.mjs';
 import { mountVehicleConcepts } from './vehicle-concepts.mjs';
 import { mountQualification } from './qualification.mjs';
+import { mountModelLessons } from './model-lessons.mjs';
+import { renderStoppedStudy } from './study-status.mjs';
+import { mountQualificationProgress } from './qualification-progress.mjs';
 import { formatMetric as fmt, safeDataPath, validateCatalog, comparisonRows, pairLesson, inspectRepeat, requestGate, violationLabel } from './view-model.mjs';
 const $ = id => document.getElementById(id);
 let catalog, roads, geometry, comparison, map, replay, mask = 'support', currentView = 'welcome', atlasVersion = 'recorded', candidateReport, studies;
 const notices = $('load-state');
 const atlasGate = requestGate();
+const modelTitle = ['Which constraint\nsets the pace?', 'Explore charging bottlenecks and direction choices in small, explicit teaching models. These are separate from the recorded SF fleet studies.'];
 const titles = { welcome: ['Better questions.\nBetter fleet decisions.', 'A simulation notebook for curious builders and operators.\nExplore San Francisco, test a depot decision, and follow the evidence.'], atlas: ['A city’s worth\nof possibilities.', 'Explore the roads. Change one fleet decision.\nFollow the result all the way to a single vehicle.'], compare: ['One question.\nEvery result.', 'Choose a recorded depot study and inspect its frozen results.\nKeep the trade-offs, uncertainty and gaps in view.'], replay: ['Every trip. Every wait.\nThe whole working day.', 'See how depot choices change a vehicle’s shift.\nFollow the service, the queues and the energy behind the result.'], limits: ['Context is part\nof the result.', 'Inspect the source, assumptions and qualification gaps.\nA clear boundary makes the experiment more useful.'] };
 function element(tag, text, className) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; }
+titles.models = modelTitle;
 function notice(text, error = false) { notices.textContent = text; notices.hidden = !text; notices.setAttribute('role', error ? 'alert' : 'status'); }
 function show(view, focus = true) {
   if (!titles[view]) return;
@@ -110,6 +115,15 @@ try {
   map.setSites(catalog.sites);
   replay = new Replay({catalog,roads,geometry,comparison,readData,notice,isVisible:()=>currentView==='replay'});
   studies = mountStudies({catalog,readData,replay,show,notice});
+  readData('data/sf-review-envelope.json').then(data=>mountQualificationProgress($('qualification-progress'),data)).catch(error=>{
+    $('qualification-progress').textContent=`SF review status unavailable: ${error.message}`;
+  });
+  if(catalog.power_status_file)readData(catalog.power_status_file).then(data=>renderStoppedStudy($('stopped-study'),data)).catch(error=>{
+    $('stopped-study').hidden=false;$('stopped-study').textContent=`Stopped-study status unavailable: ${error.message}`;
+  });
+  readData('data/model-lessons.json').then(data=>mountModelLessons($('model-lessons'),data)).catch(error=>{
+    $('model-lessons').replaceChildren(element('p',`Model lessons unavailable: ${error.message}`,'notice'));
+  });
   mountQualification({readData,notice,atlasGate,setVersion:(version,nextRoads)=>{
     atlasVersion=version; if(version==='recorded')roads=nextRoads; map.setRoads(nextRoads); map.setMask('support'); mask='support';
     map.setRoutes({type:'FeatureCollection',features:[]}); map.setScenario([]);

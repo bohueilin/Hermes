@@ -36,6 +36,11 @@ def main():
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--runs", type=Path)
     p.add_argument(
+        "--power-status",
+        type=Path,
+        help="Fresh status of a stopped power study; no primary estimate",
+    )
+    p.add_argument(
         "--power-study",
         type=Path,
         help="Explicit frozen power study directory; freshly verified before export",
@@ -146,7 +151,7 @@ def main():
     elif args.command == "build-viewer":
         from citylib.package import build_viewer
 
-        result = build_viewer(ROOT, args.out, args.runs, args.power_study)
+        result = build_viewer(ROOT, args.out, args.runs, args.power_study, args.power_status)
         code = 0 if result["pass"] else 1
     elif args.command == "check-dist":
         from citylib.package import check_dist

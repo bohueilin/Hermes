@@ -5,6 +5,7 @@
   <meta name="description" content="Explore sourced city roads and inspect a reproducible, synthetic fleet experiment. A FleetLab simulation study from Hermes.">
   <title>City explorer · FleetLab</title>
   <link rel="stylesheet" href="./vendor/maplibre-gl.css"><link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./vehicle-concepts.css">
+  <link rel="stylesheet" href="./model-lessons.css">
   <script type="module" src="./app.mjs"></script>
 </head>
 <body data-view="welcome">
@@ -16,6 +17,7 @@
     <button data-view="atlas"><span>01</span> City atlas</button>
     <button data-view="compare"><span>02</span> Decision notebook</button>
     <button data-view="replay"><span>03</span> Replay studio</button>
+    <button data-view="models"><span>04</span> Model lab</button>
   </nav>
   <button class="quiet" id="limits-button">Scope & sources <span aria-hidden="true">↗</span></button>
 </header>
@@ -38,7 +40,11 @@
     </div>
     <article class="learning-insight"><div><p class="eyebrow">THE TAKEAWAY TO INVESTIGATE</p><h2>Closer depots can shorten empty travel.<br>Local queues can still hold the fleet back.</h2><p>This recorded experiment splits the same charging and turnaround capacity across two fictional sites. Look at completed service, waiting and empty distance together before deciding what to test next.</p><button class="primary" data-view="compare">Read the recorded result →</button></div><div class="capacity-art" aria-label="One depot with 8 ports compared with two depots with 4 ports each"><div><b>A</b><span>8 ports · 200 kW</span></div><span class="capacity-equals">same total<br>resources</span><div class="capacity-pair"><div><b>A</b><span>4 ports<br>100 kW</span></div><div><b>B</b><span>4 ports<br>100 kW</span></div></div></div></article>
     <div id="vehicle-concepts"></div>
+    <p><button class="primary" data-view="models">Try the vehicle & depot model lab →</button></p>
     <div class="panel fidelity-panel"><p class="eyebrow">CHOOSE THE MODEL FOR THE QUESTION</p><h3>More realism should answer a specific question.</h3><div class="fidelity-grid"><article><h4>Fleet operations</h4><p>Use this resource model for trips, energy and depot queues. Calibrate demand and service times before operational predictions.</p><span class="chip">Available here</span></article><article><h4>Traffic & curb maneuvers</h4><p>Consider SUMO for interacting traffic, or MetaDrive for driving scenarios. Each needs a qualified map and a validated adapter.</p><span class="chip">Future validation track</span></article><article><h4>Physical interactions</h4><p>Consider MuJoCo for contact and actuators. A world-model scene can help explore a scenario; rendered realism alone cannot validate its outcome.</p><span class="chip">Separate research track</span></article></div></div>
+  </section>
+  <section id="models-view" class="view" hidden>
+    <div id="model-lessons"><p class="notice" role="status">Loading the anonymous model lessons…</p></div>
   </section>
   <section id="atlas-view" class="view" hidden>
     <div class="section-heading"><div><p class="eyebrow">01 / GET YOUR BEARINGS</p><h2>San Francisco, street by street.</h2></div><span class="muted" id="snapshot-date">Source snapshot loading</span></div>
@@ -63,11 +69,13 @@
       </aside>
     </div>
     <section id="map-qualification" class="panel qualification-panel" aria-labelledby="qualification-title"><div class="panel-heading"><div><p class="eyebrow">MAP IMPROVEMENT / SEPARATE FROM THE RECORDED EXPERIMENT</p><h3 id="qualification-title">Better routing. The remaining gaps, in view.</h3><p id="candidate-intro">Loading candidate qualification evidence…</p></div><span class="status-pill">Candidate map only</span></div><div class="qualification-switch" role="group" aria-label="Atlas map version"><button id="recorded-map" class="secondary" aria-pressed="true">Recorded map · SF v1</button><button id="candidate-map" class="secondary" aria-pressed="false" disabled>Candidate map · SF v2</button></div><p id="map-version-note" class="small">The notebook and replay always use the frozen SF v1 map. Changing this atlas does not change their results.</p><div id="candidate-metrics" class="metric-grid"></div><div class="table-wrap" tabindex="0" role="region" aria-label="Map qualification comparison"><table><thead><tr><th>Eligible road class</th><th>Recorded v1 unsupported</th><th>Candidate v2 unsupported</th><th>5% class threshold</th></tr></thead><tbody id="candidate-classes"></tbody></table></div><div class="two-panels qualification-next"><div><h4>Inspect a district gap</h4><p id="district-gap-description"></p><label class="gap-label">Road outside the official district layer<select id="district-gap" disabled></select></label><button id="inspect-gap" class="secondary" disabled>Show gap on the atlas ↑</button><p id="gap-detail" class="small" role="status"></p></div><div><h4>What would close qualification?</h4><ul class="qualification-actions"><li>Resolve the remaining conditional and ambiguous restriction records.</li><li>Reconcile district gaps with an official source or an explicit, versioned scope policy.</li><li>Inspect source semantics and verify restriction history across trip legs before new fleet runs.</li></ul><p class="small">Road access and legal maneuverability still require independent review. Improved coverage does not establish road readiness.</p></div></div><details><summary>Download the candidate evidence & review queue</summary><div id="qualification-downloads" class="download-row"></div><p class="small" id="candidate-identity"></p></details></section>
-    <div class="city-roadmap"><div><p class="eyebrow">ONE QUALIFIED PACK AT A TIME</p><h3>Learn in SF. Expand with evidence.</h3></div><div class="future-city"><b>Austin</b><span>Planned · reuse the pack contract</span></div><div class="future-city"><b>Tokyo</b><span>Planned · ward import probe</span></div><div class="future-city"><b>Las Vegas</b><span>Planned · pickup model first</span></div></div>
+    <section id="qualification-progress" class="panel" aria-label="San Francisco completion progress"><p>Loading SF review status…</p></section>
+    <div class="city-roadmap"><div><p class="eyebrow">ONE QUALIFIED PACK AT A TIME</p><h3>Learn in SF. Expand with evidence.</h3></div><div class="future-city"><b>San Mateo</b><span>Bounded source probe prepared · SF acceptance first</span></div><div class="future-city"><b>Austin</b><span>Planned · reuse the pack contract</span></div><div class="future-city"><b>Tokyo</b><span>Planned · ward import probe</span></div><div class="future-city"><b>Las Vegas</b><span>Planned · pickup model first</span></div></div>
   </section>
   <section id="compare-view" class="view" hidden>
     <div class="study-picker panel"><label for="study-select">Choose a recorded study</label><select id="study-select"><option value="legacy">Original depot study · twelve pairs</option></select><button id="export-spec" class="secondary">Export experiment spec ↓</button><p id="study-help">Loading the available recorded studies. Selection changes the notebook and Replay together.</p></div>
     <div id="power-study" hidden></div>
+    <aside id="stopped-study" class="panel" hidden aria-label="Incomplete power study"></aside>
     <div id="legacy-study">
     <div class="section-heading"><div><p class="eyebrow">02 / MAKE THE TRADE-OFF VISIBLE</p><h2>More locations. The same resources.</h2></div></div>
     <div class="comparison-cards"><article class="arm-card"><span class="eyebrow">BASELINE / ONE DEPOT</span><div class="depot-diagram"><span class="depot-block">A</span></div><h3>One place to return.</h3><p>8 charging ports · 200 kW · 4 turnaround slots</p></article><div class="versus">vs</div><article class="arm-card candidate"><span class="eyebrow">CANDIDATE / TWO DEPOTS</span><div class="depot-diagram"><span class="depot-block">A</span><span class="route-dash"></span><span class="depot-block">B</span></div><h3>Capacity shared across two sites.</h3><p>4 + 4 ports · 100 + 100 kW · 2 + 2 slots</p></article></div>
