@@ -330,8 +330,9 @@ identities, negative evidence, observations and remaining obligations.
 
 ## Remaining acceptance work
 
-Finish the explicit connector contract and
-versioned bundle/export integration. Resolve district scope and generate the new
+The explicit source-edge connector contract is implemented in separate model 4
+with twelve focused fleet/verifier fixtures; see `FLEETLAB_DEPOT_CONNECTOR_CONTRACT_V1.md`.
+No connector is enabled in this SF model 3 recording. Finish versioned bundle/export integration. Resolve district scope and generate the new
 candidate's review requirements. Obtain actual independent map observations,
 physical-device/accessibility checks and visitor-comprehension evidence. Preserve
 `recommendation_eligible: false`, `NOT_AUTHENTICATED`, `SIMULATION_ONLY` and

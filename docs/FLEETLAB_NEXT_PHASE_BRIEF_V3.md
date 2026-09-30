@@ -13,8 +13,10 @@ records its fixed 400-search SF diagnostic. A subsequent
 conditional import, actual traversal-time routing and independent fleet replay.
 Its local candidate reduces unsupported eligible length to 0.987% while retaining
 all source IDs and denominators. All road classes meet the unchanged 5% source
-threshold; map acceptance remains HOLD. Connectors,
-versioned public packaging, district scope, independent map/device/
+threshold; map acceptance remains HOLD. Explicit source-edge connectors now have
+a separate model 4 and twelve fleet/verifier fixtures, including an independently
+reviewed correction for a fabricated closed-loop bypass. No SF connector or
+physical maneuver claim is introduced. Versioned public packaging, district scope, independent map/device/
 visitor evidence and measured vehicle inputs remain open. Austin is next after SF acceptance. San Mateo
 remains a prepared California source probe; no new city result is introduced. The Model lab update is live at <https://fleetlab.pages.dev/city-explorer/#models>.
 Publication verification is recorded in [the release record](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md).

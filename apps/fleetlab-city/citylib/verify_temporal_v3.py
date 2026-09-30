@@ -19,9 +19,11 @@ MODEL = "fleetlab.graph-resource-temporal/3.0.0"
 SCHEMA = "fleetlab.city-temporal-run/3.0.0"
 
 
-def _verify_routing(run, inputs, pack):
+def _verify_routing(run, inputs, pack, *, schema=SCHEMA, model=MODEL, connector_declarations=False):
     graph = validated_graph(pack)
-    result = _verify_fleet_trace(run, inputs, pack, graph, SCHEMA, MODEL)
+    result = _verify_fleet_trace(
+        run, inputs, pack, graph, schema, model, allow_connector_declarations=connector_declarations
+    )
     try:
         spec = run["spec"]
         if (

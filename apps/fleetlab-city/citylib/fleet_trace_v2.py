@@ -75,12 +75,18 @@ def _same_position(actual, expected, edges):
     )
 
 
-def _verify_fleet_trace(run, inputs, pack, graph, schema, model):
+def _verify_fleet_trace(
+    run, inputs, pack, graph, schema, model, *, allow_connector_declarations=False
+):
     issues, entered_count = [], 0
     history_bound, retained_history_peak = None, 0
     try:
         validate_finite_json(run)
         validate_finite_json(inputs)
+        if not allow_connector_declarations and any(
+            key in run["spec"] for key in ("depot_connectors", "connector_reviews")
+        ):
+            raise ValueError("connector declarations require the explicit connector verifier")
         _, edge_snapshot, rules = _snapshot(graph)
         edges = {
             e["id"]: {**dict(edge_snapshot[e["id"]]), "length_m": e["length_m"]}

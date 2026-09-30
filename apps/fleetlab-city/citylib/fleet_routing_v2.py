@@ -64,6 +64,8 @@ def traversed_position(route, edge_map, elapsed):
 
 class FleetRouter(ContinuityRouter):
     def __init__(self, pack, spec):
+        if "depot_connectors" in spec or "connector_reviews" in spec:
+            raise ValueError("connector declarations require the explicit connector model")
         self.start = start_instant(spec.get("start_utc"))
         self.spec_digest = digest(spec)
         super().__init__(pack, scenario_digest=self.spec_digest, max_states=250000)

@@ -359,7 +359,7 @@ class TemporalRouter(FleetRouter):
         self._cached_edges += len(result.edges)
         return result
 
-    def route(self, start, destination, arrival, context, *, algorithm="astar"):
+    def route(self, start, destination, arrival, context, *, algorithm="astar", _budget=None):
         try:
             _check_context(context, self.pack_digest, self.scenario_digest)
             if (
@@ -369,6 +369,10 @@ class TemporalRouter(FleetRouter):
             ):
                 raise ValueError("unknown temporal route endpoint or algorithm")
             self._validate_arrival(start, arrival)
+            if _budget is not None and (
+                not isinstance(_budget, _Budget) or not 0 <= _budget.remaining <= self.max_checks
+            ):
+                raise ValueError("invalid shared restriction work budget")
             if (
                 not self.start
                 <= context.departure
@@ -383,7 +387,7 @@ class TemporalRouter(FleetRouter):
         if key in self._cache:
             self._cache.move_to_end(key)
             return self._cache[key]
-        budget = _Budget(self.max_checks)
+        budget = _Budget(self.max_checks) if _budget is None else _budget
         static_key = ("STATIC_RELAXATION", start, destination, arrival, algorithm, self.horizon_ms)
         lower_distances = None
         try:
