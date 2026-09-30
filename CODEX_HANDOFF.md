@@ -2,7 +2,7 @@
 
 ## City Explorer integration — 29 September 2026
 
-The owner approved additive City Explorer navigation and live website publication. The combined release preserves all established sections and offline bytes; only root boot/index/headers are intentionally changed. Current checked release and remaining publication steps: `docs/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md`. The power-study execution amendment and map/human qualification remain held. This website authorization does not authorize Hermes workbench or physical deployment.
+The owner approved additive City Explorer navigation and live website publication. The combined release preserves all established sections and offline bytes; only root boot/index/headers are intentionally changed. Live production `b592d5a8-c89c-4b42-99ca-e6d256bd2408` is verified: all 9,934 served payloads match; source implementation commit `3236065`. Current release and remaining scientific/device work: `docs/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md`. The power-study execution amendment and map/human qualification remain held. This website authorization does not authorize Hermes workbench or physical deployment.
 
 This is the current wave. Earlier sections are historical where they differ. The owner
 explicitly requested assessment of an external audit, implementation of supported changes,

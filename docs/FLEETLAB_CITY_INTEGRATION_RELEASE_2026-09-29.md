@@ -1,5 +1,9 @@
 # FleetLab City Explorer integration release
 
+**LIVE AND VERIFIED:** <https://fleetlab.pages.dev/> ·
+[San Francisco City Explorer](https://fleetlab.pages.dev/city-explorer/).
+All 9,934 served production payloads match the checked local package.
+
 29 September 2026 Pacific. Owner approved a new City Explorer tab, preservation of the established FleetLab site, validation and live publication. This record separates static website publication from scientific qualification and operational authority.
 
 ## Product and preservation
@@ -34,7 +38,7 @@ At 390 CSS px, the document scroll width is 375 px (scrollbar excluded), with no
 
 ## Package and publication
 
-Combined package: `build/fleetlab-city/launch-integration-v1/site`, 9,935 files, 1,521,993,264 bytes. City release SHA-256: `5f981b2f5ec0d9ddc4a5d9e691ad25b74e2bc27f6fe2a7b99dcf9d3a0fb684b1`. Prior City release: `920887f3fb0841b066f26a996d8c9c157fc47c1e9f2cff0b70837c069c80f0a2`. First-view gzip budget 1,867,147 B; largest individual file 22,272,149 B; largest replay pair gzip 9,869,801 B. All package checks pass. Hosted publication/readback is the next step and is not yet claimed. City `release.json` records its build's review scope; `review/integration-manifest.json` binds the intentional combined hosted inventory. The publication record below will identify the separate owner-authorized static website deployment.
+Combined package: `build/fleetlab-city/launch-integration-v1/site`, 9,935 files, 1,521,993,264 bytes. City release SHA-256: `5f981b2f5ec0d9ddc4a5d9e691ad25b74e2bc27f6fe2a7b99dcf9d3a0fb684b1`. Prior City release: `920887f3fb0841b066f26a996d8c9c157fc47c1e9f2cff0b70837c069c80f0a2`. First-view gzip budget 1,867,147 B; largest individual file 22,272,149 B; largest replay pair gzip 9,869,801 B. All package checks pass. Publication and final production readback are complete; see the recorded deployment below. City `release.json` records its build's review scope; `review/integration-manifest.json` binds the intentional combined hosted inventory. The publication record below will identify the separate owner-authorized static website deployment.
 
 ## Rollback
 
@@ -43,3 +47,49 @@ Prior production: `f4018c2a-3127-4807-af90-3a4ae0f33faa`, source `e90764a`, immu
 ## Decisions and limits
 
 The owner's latest instruction overrides the earlier preparation-only publication boundary for this static FleetLab website. It does not change Hermes workbench restrictions or confer physical deployment authority. Hosted-only additions avoid changing old engine/offline bytes. Separate review-phase artifacts remain immutable, even where their build-time publication field reads NOT_PERFORMED. The source archive offer is complete and checked; no independent legal opinion is claimed.
+
+## Upload transport diagnosis
+
+Two normal Wrangler 4.135.0 preview uploads failed with `write EPIPE` /
+connection resets while posting asset batches; the second reached 7,331 of
+9,934 uploadable files. Neither created a deployment or changed production.
+A task-local copy of the pinned tool reduces only its upload bucket from
+40 MiB to 8 MiB and concurrency from three to one. Individual files still
+respect the official 25 MiB ceiling. Authentication, API destinations, asset
+hashing, manifest creation and website bytes are unchanged. The original
+installed tool remains untouched. Exact before/after tool hashes and logs
+are retained under `validation/integration/deploy-transport-patch.json`.
+
+## Hosted preview observations
+
+Preview: <https://b0325c67.fleetlab.pages.dev/>. The serial upload completed
+9,934/9,934 files (9,838 newly uploaded; 96 reused) in 329.31 seconds, then
+Cloudflare created the deployment. The hosted Overview film advances; the SF
+card and City tab navigate correctly; Play advances 07:00 → 11:49; the
+configuration switch shows A versus A+B; fare estimates remain unavailable
+until supplied by the visitor; Back to FleetLab returns to the main site.
+
+Effective root/City CSP and security headers pass. Requests for a 64-byte
+range on replay JSON and the film return HTTP 200 with the complete correct
+body, not 206. The previous production film behaves identically. City replay
+uses whole-file reads and does not depend on ranges; the film also plays.
+The local build's Range capability record does not describe Cloudflare's
+observed behavior. No claim of hosted partial-content support is made.
+
+
+## Final production result
+
+- Production deployment: `b592d5a8-c89c-4b42-99ca-e6d256bd2408`.
+- Immutable URL: <https://b592d5a8.fleetlab.pages.dev/>.
+- Implementation source commit: `32360657e2e400663bb213848460ff895988662c`.
+- Standard Wrangler 4.135.0 uploaded zero new files: all 9,934 assets were reused from the verified preview. Root headers were submitted with the same checked bytes.
+- Full preview readback: 9,934/9,934 matching payloads; full production readback: 9,934/9,934 matching payloads. Effective root and City security headers pass.
+- Integration-manifest SHA-256: `e67dad5932831347265ac7074bda8d29886f5b66111463043a011d7b1033a0d4`.
+- Fresh production browser checks confirm the Overview film, City tab, welcome, loading of the selected trace, direct Play through 15:00 with the Replay end state, and Back to FleetLab. The prior compatible City viewer and full-site production rollback remain available.
+- Publication envelope: `build/fleetlab-city/launch-integration-v1/review/publication.json`; complete logs and byte readback are under `build/fleetlab-city/validation/integration/`.
+
+No further owner decision was required for this release. Next work remains SF
+map continuity and semantic qualification, physical Pixel/participant validation,
+and the separate power-study execution amendment. All 27 scientific/model/config
+source files compared against the reviewed checkpoint remain unchanged. No main
+power-study result or map qualification pass was implied by publication.

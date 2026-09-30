@@ -1,5 +1,39 @@
 # FleetLab: Cloudflare publishing and owner steps
 
+## Current production — City Explorer integration, 29 September 2026
+
+City Explorer is live as an additional FleetLab destination. Production is
+`b592d5a8-c89c-4b42-99ca-e6d256bd2408`, source commit
+`32360657e2e400663bb213848460ff895988662c`.
+Stable address: <https://fleetlab.pages.dev/>; City entry:
+<https://fleetlab.pages.dev/city-explorer/>.
+
+**The complete current publish directory is
+`build/fleetlab-city/launch-integration-v1/site`, not `dist/site`.**
+`dist/site` is the preserved 99-file established edition used as an integration
+input and full-site rollback artifact. Publishing it alone would omit City
+Explorer. Do not use the historical legacy-only recipe below for a new complete
+release.
+
+For new changes, build a fresh City viewer and source offer, then use
+`apps/fleetlab-city/tools/integrate-site.py` with the preserved established
+bundle, the new viewer, the previous compatible viewer, the source offer and
+an explicit new output directory. Its final `review/integration-manifest.json`
+is authoritative. Verify all declared original-file exceptions, offline
+preservation, scoped headers, browser routes, source downloads and the actual
+hosting readback before publishing that complete `site` subdirectory.
+
+The exact current package has 9,935 local files (9,934 served payloads), with
+v5 and prior v4 City viewers. The preview's 9,934 files matched byte-for-byte.
+Production reused all 9,934 uploaded assets. See
+[FleetLab City integration release](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md)
+for the final live checks, remaining scientific/device limits and rollback.
+Prior production is `f4018c2a-3127-4807-af90-3a4ae0f33faa`.
+
+The initial large preview upload needed serial 8 MiB batching after connection
+resets; the standard pinned Wrangler completed production using cached assets.
+No website byte, account permission or Pages size limit was changed to retry.
+
 ## What you need to do now
 
 **The audit-response update is live.** As of September 28, 2026, https://fleetlab.pages.dev/
@@ -34,7 +68,7 @@ N2 remains design-only.
 
 The owner requested the shorter address on September 25 Pacific / September 26 UTC, 2026. Cloudflare Pages cannot rename an existing `pages.dev` hostname, so a new `fleetlab` project initially served the checked application source `345b427`. Its initial Production was `f08b6b6f-c5d0-44f7-905b-5f16087fbc85`, immutable address https://f08b6b6f.fleetlab.pages.dev/. All 88 public payloads matched, response headers were verified, and a browser run reproduced 95/284 completed. The old `fleetlab-playground` project and https://fleetlab-playground.pages.dev/ are preserved for existing links; there is no automatic redirect. Use the new stable address for sharing. [Cloudflare hostname limitation](https://developers.cloudflare.com/pages/platform/known-issues/).
 
-## Repeat a deployment from a reviewed source commit
+## Historical legacy-only deployment recipe (superseded for complete releases)
 
 Run from your Hermes checkout on the intended release branch. Check `git status --short` first; commit reviewed source changes before publishing. These commands stop on any failure:
 

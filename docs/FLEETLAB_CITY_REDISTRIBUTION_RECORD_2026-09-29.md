@@ -31,3 +31,20 @@ Before a public switch, prepare an accessible source-offer location or archive c
 - Final release-bound inventory and visual attribution inspection: pending final package.
 - Public derived-database/source offer: not published; publication preparation remains open.
 - Public switch: not performed, consistent with the approved review-build scope.
+
+
+## Published source offer — integration release
+
+The owner authorized publication of the educational website on 29 September.
+The full offer is now part of the checked release at
+<https://fleetlab.pages.dev/city-explorer/sources/>: all seven sf-v1 files,
+all ten sf-v2 files, captured sources and transformation code/configuration,
+ODbL text and notices. All 58 archive members were verified against exact
+source bytes and the public member inventory. The source-offer manifest SHA-256
+is `2c53315a683ea5665d26920fd3132528e41c0b211d3106c3cdd367fc6a19b52e`.
+
+Readable OSM attribution and this download link appear on both maps and in
+Scope & sources. MapLibre's BSD license remains in each viewer. Publication
+and source availability do not resolve map qualification or constitute a legal
+opinion. The earlier pending items above describe the pre-integration state;
+the integration release record contains the current deployment and readback.

@@ -74,10 +74,10 @@
 
 **Files:** A narrowly scoped hosted navigation/homepage patch, City Explorer return link, integration tests and launch tooling. Preserve existing legacy offline payload and production bundle. Inspect current packager before choosing hosted-only injection versus source build flag.
 
-- [ ] If approved, place City Explorer after Fleet day in main navigation and add one SF homepage card. Same-tab `/city-explorer/`; mobile Explore menu includes it; current URL/model state semantics remain unchanged.
-- [ ] Keep City Explorer module/data loads scoped to its route. FleetLab brand returns to root; City Explorer home remains a clear separate action. No iframe, shared simulator state, operator endorsement or browser pop-up.
-- [ ] Record exact intended legacy hosted-file exceptions and root route-header exception; original 99-file baseline retained for rollback. Offline bundle unchanged. Current immutable stage tool must not silently bless modified legacy inventory.
-- [ ] Validate root/city routes, query/hash deep links, reload/Back, active navigation, keyboard/menu operation, unrelated legacy paths, package budgets and rollback. Prepare and validate a concrete combined stage before the authorized publication.
+- [x] If approved, place City Explorer after Fleet day in main navigation and add one SF homepage card. Same-tab `/city-explorer/`; mobile Explore menu includes it; current URL/model state semantics remain unchanged.
+- [x] Keep City Explorer module/data loads scoped to its route. FleetLab brand returns to root; City Explorer home remains a clear separate action. No iframe, shared simulator state, operator endorsement or browser pop-up.
+- [x] Record exact intended legacy hosted-file exceptions and root route-header exception; original 99-file baseline retained for rollback. Offline bundle unchanged. Current immutable stage tool must not silently bless modified legacy inventory.
+- [x] Validate root/city routes, query/hash deep links, reload/Back, active navigation, keyboard/menu operation, unrelated legacy paths, package budgets and rollback. Prepare and validate a concrete combined stage before the authorized publication.
 
 ## Task 5: Reproduction, controlled execution, QA and handoff
 
@@ -92,3 +92,13 @@
 ## Execution rulings
 
 Owner's explicit “proceed with building” approves the prior written proposal and its sequence; this plan makes that work concrete and does not require another general implementation permission. Only shared-site placement is pending. Use sequential implementer/reviewer tasks with isolated ownership; the parent may do independent read-only research, reproduction and documentation meanwhile. Existing source is untracked, so source snapshots and task diffs supplement HEAD-based review until reviewed checkpoints can be committed safely. No worker commits or stages unrelated work.
+
+
+## Additive website release outcome
+
+Task 4 and the authorized website publication are complete. Production
+`b592d5a8-c89c-4b42-99ca-e6d256bd2408`, source `3236065`, passed full9,934-file
+preview and production readback, scoped headers and browser smoke checks.
+The scientific main evaluation in Task 5 remains held independently; the owner
+has not approved its execution amendment. Pixel and participant checks remain
+explicitly NOT_RUN. See the integration release record for full evidence.

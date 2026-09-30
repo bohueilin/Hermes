@@ -1,5 +1,27 @@
 # FleetLab — handoff for the next product and simulation brainstorm
 
+## Latest handoff — additive website integration, 29 September 2026
+
+City Explorer is now a separate tab in [FleetLab](https://fleetlab.pages.dev/),
+starting with [San Francisco](https://fleetlab.pages.dev/city-explorer/).
+The existing Overview concept film, Fleet day, Street lab, Four-area experiments,
+Scale lab, 59 Learning catalog lessons, Product approach and guided walkthrough
+are preserved. The new homepage card and catalog entry lead into the recorded
+city study, with explicit return links. Complete map sources and notices are
+[downloadable](https://fleetlab.pages.dev/city-explorer/sources/).
+
+The initial public City release includes the existing twelve paired depot
+repeats, five stress cases, full eight-hour replay, configuration-specific
+red depot markers, vehicle story suggestions, trip/service/empty-mile summaries,
+viewer-entered fares, and explicitly unavailable unmodeled safety metrics.
+It does not include new power-study results. The separate memory/execution
+amendment still requires a decision; no main-evaluation outputs exist.
+
+Next ideation should preserve the additive architecture and prioritize SF map
+continuity/qualification, physical-device and independent participant evidence,
+and the controlled power study before claiming city conclusions or expanding.
+Use the release record and presenter guide for actual validation and limits.
+
 Prepared 29 September 2026. Read this together with `FLEETLAB_CITY_PRESENTER_GUIDE.md`, `FLEETLAB_SF_MAP_RESEARCH_V3.md`, `FLEETLAB_VEHICLE_CONCEPTS.md` and `FLEETLAB_CITY_LAUNCH_PREPARATION.md`. This is a project record and proposal input, not permission to publish or change experimental contracts.
 
 ## What exists now

@@ -1,10 +1,10 @@
 # FleetLab City Explorer — presentation and next-phase guide
 
-Prepared 2026-09-29. Scope: the local San Francisco City Explorer enhancement, within Hermes. This is an independent synthetic experiment, not a Waymo system or operator-performance forecast.
+Prepared 2026-09-29. Scope: San Francisco City Explorer as an additional experience in the FleetLab website. This is an independent synthetic experiment, not a Waymo system or operator-performance forecast.
 
-## Open the v3 presentation
+## Open the integrated presentation
 
-Start at `http://127.0.0.1:4173/#welcome`: “FleetLab helps us choose the next operational
+Start at [FleetLab Overview](https://fleetlab.pages.dev/). The concept film, Fleet day, Street lab, Scale lab and Learning catalog are retained. Explain: “FleetLab offers quick interactive teaching models and a deeper recorded city study.” Then choose **City Explorer**, or use the San Francisco card. Inside [City Explorer](https://fleetlab.pages.dev/city-explorer/#welcome): “FleetLab helps us choose the next operational
 experiment. First inspect the map, then compare a controlled change, then explain one vehicle's
 day.” The three cards lead into that sequence. The central comparison keeps the same 100 EVs
 and total resources while changing depot locations.
@@ -17,6 +17,8 @@ direction sketch illustrates orientation only. It does not demonstrate a bidirec
 In the atlas, distinguish **recorded SF v1** from **candidate SF v2**. The candidate improves
 restriction support and exposes district gaps for review. Replay and notebook results still
 come from v1. Do not introduce the candidate as a newly qualified simulation map.
+
+The FleetLab brand and **Back to FleetLab** return to Overview. **Start here** stays inside the City Explorer. The separate catalog entry clearly identifies the recorded city case rather than adding it to the 59 runnable lessons. On mobile or tablet, open **Explore** to find City Explorer.
 
 ## A two-minute demonstration
 
