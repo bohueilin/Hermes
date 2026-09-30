@@ -2,9 +2,11 @@
 
 ## September 29 enhancement — atlas layout, fleet insights and owner contact
 
-Current enhancement is staged at `build/fleetlab-city/launch-integration-v2/site`.
+Current enhancement is live as production `ed4b1d68-3130-4833-9f93-b170c8f3cbb9`,
+source `773f36b42b22eae032c4465d6f8af13ea1572c66`; complete package
+`build/fleetlab-city/launch-integration-v2/site`.
 35 City Node / 122 City Python / 66 focused combined Node tests pass; the clean
-viewer and local combined package pass. Review is clear. Publication and Pixel
+viewer and local combined package pass. Review is clear. Publication and device
 results are recorded in `docs/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md`.
 The updated next-phase brief `docs/FLEETLAB_NEXT_PHASE_BRIEF_V3.md` explains the
 100-vehicle population and lists SF acceptance evidence still required before

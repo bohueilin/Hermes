@@ -1,15 +1,15 @@
 # FleetLab: Cloudflare publishing and owner steps
 
-## Current production — City Explorer integration, 29 September 2026
+## Current production — atlas and fleet insights, 29 September 2026
 
 City Explorer is live as an additional FleetLab destination. Production is
-`b592d5a8-c89c-4b42-99ca-e6d256bd2408`, source commit
-`32360657e2e400663bb213848460ff895988662c`.
+`ed4b1d68-3130-4833-9f93-b170c8f3cbb9`, source commit
+`773f36b42b22eae032c4465d6f8af13ea1572c66`.
 Stable address: <https://fleetlab.pages.dev/>; City entry:
 <https://fleetlab.pages.dev/city-explorer/>.
 
 **The complete current publish directory is
-`build/fleetlab-city/launch-integration-v1/site`, not `dist/site`.**
+`build/fleetlab-city/launch-integration-v2/site`, not `dist/site`.**
 `dist/site` is the preserved 99-file established edition used as an integration
 input and full-site rollback artifact. Publishing it alone would omit City
 Explorer. Do not use the historical legacy-only recipe below for a new complete
@@ -23,12 +23,12 @@ is authoritative. Verify all declared original-file exceptions, offline
 preservation, scoped headers, browser routes, source downloads and the actual
 hosting readback before publishing that complete `site` subdirectory.
 
-The exact current package has 9,935 local files (9,934 served payloads), with
-v5 and prior v4 City viewers. The preview's 9,934 files matched byte-for-byte.
-Production reused all 9,934 uploaded assets. See
+The exact current package has 9,937 local files (9,936 served payloads), with
+v6 and prior v5 City viewers. The preview's 9,936 files matched byte-for-byte.
+Production reused all 9,936 uploaded assets. See
 [FleetLab City integration release](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md)
 for the final live checks, remaining scientific/device limits and rollback.
-Prior production is `f4018c2a-3127-4807-af90-3a4ae0f33faa`.
+Prior production is `b592d5a8-c89c-4b42-99ca-e6d256bd2408` (complete integration v1).
 
 The initial large preview upload needed serial 8 MiB batching after connection
 resets; the standard pinned Wrangler completed production using cached assets.

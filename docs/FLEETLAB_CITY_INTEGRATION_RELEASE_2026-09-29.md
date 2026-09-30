@@ -24,7 +24,7 @@ Independent review found and resolved a missing packaging import, future-study
 wording and a loader-fixture gap; final code review has no remaining findings.
 The initial incomplete build was stopped and was never packaged or published.
 
-Candidate combined stage: `build/fleetlab-city/launch-integration-v2/site`.
+Published combined stage: `build/fleetlab-city/launch-integration-v2/site`.
 City release SHA-256: `0ab37cf658f68f19196197dd97d690f31a0feb82b7fa9c681eeac136caf901cd`.
 9,937 staged files; 9,936 served files; 1,522,008,571 bytes. Initial compressed
 City transfer: 1,870,418 bytes. Previous compatible City release `5f981b2f5ec0d9dd`
@@ -34,13 +34,38 @@ manifest SHA-256 `17570ed71168c6876e565dbabef8916ab422642befbcd1dba0242cfde259e7
 
 Local packaged Pages headers and payload checks pass. Desktop and 390/1024 CSS-px
 checks show no overflow, label/control overlap or card blank space. Native email
-link, repeat/layout switching and direct Play work. Physical Pixel is connected;
-hosted preview, device and production results will be recorded below.
+link, repeat/layout switching and direct Play work. Physical Pixel is connected but locked; hosted preview, device and production
+results are recorded below.
 
 The user's website publication instruction supersedes the historical Phase 6
 local-only rule for these static teaching pages. It does not alter Hermes
 workbench boundaries, map qualification, study-execution approval or physical
 deployment authority. Next-phase handoff: [FLEETLAB_NEXT_PHASE_BRIEF_V3.md](FLEETLAB_NEXT_PHASE_BRIEF_V3.md).
+
+### Published enhancement — final record
+
+- Stable site: <https://fleetlab.pages.dev/>; replay: <https://fleetlab.pages.dev/city-explorer/#replay>.
+- Production: `ed4b1d68-3130-4833-9f93-b170c8f3cbb9`, immutable <https://ed4b1d68.fleetlab.pages.dev/>.
+- Preview: `1f37a27b-22b0-426b-878b-fb195e2594a8`, immutable <https://1f37a27b.fleetlab.pages.dev/>.
+- Source: `773f36b42b22eae032c4465d6f8af13ea1572c66`; source is committed locally. This enhancement did not push a Git branch or merge a PR.
+- Standard Wrangler 4.135.0 uploaded 17 changed assets to preview; production reused all 9,936 assets. No transport patch was required for this release.
+- Full readback: **9,936/9,936 exact matches on preview and production**. Effective root and City CSP/security headers pass. Range requests still return the complete correct HTTP 200 body; no hosted 206 claim.
+- All 4,870 data files (including compressed representations) match v5 byte-for-byte. Original 96 protected site files and the offline artifact are unchanged. No new simulation was run; package verification rechecked the existing arms.
+- Production smoke checks: owner mailto, Overview film playing with readyState 4, aggregate 627 versus 629 trips, direct Play from 07:00 to 09:22, one-versus-two depot markers and atlas overlay containment. The original 59 lessons remain.
+- Evidence: `build/fleetlab-city/validation/atlas-fleet-insights-v6/`; package publication record: `launch-integration-v2/review/publication.json`.
+
+**Physical-device limit:** Pixel 10 Pro XL / Android 17 is authorized and connected.
+A Chrome preview launch intent was delivered, but captures were black and Android
+reported `keyguard showing=true`. A wake request did not make the page observable.
+The owner was asked to unlock; no lock or credential bypass was attempted.
+Physical touch, landscape, enlarged-text and screen-reader checks therefore remain
+open, alongside independent participant comprehension. Browser viewport checks
+are recorded separately and do not substitute for these checks.
+
+**Rollback:** the immediately previous full production is `b592d5a8-c89c-4b42-99ca-e6d256bd2408`,
+with its complete package retained at `build/fleetlab-city/launch-integration-v1/site`.
+The new package also retains v5 City at `city-explorer/releases/5f981b2f5ec0d9dd/`.
+This update does not change scientific qualification or authorize a physical system.
 
 ---
 
