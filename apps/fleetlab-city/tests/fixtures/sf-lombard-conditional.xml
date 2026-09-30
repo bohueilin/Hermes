@@ -1,0 +1,1162 @@
+<osm version="0.6"><node id="65292777" lat="37.8003150" lon="-122.4327857">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="65319056" lat="37.8005245" lon="-122.4311406">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="65329133" lat="37.8009463" lon="-122.4278524">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="65336611" lat="37.7992680" lon="-122.4410093">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="65348274" lat="37.7996868" lon="-122.4377205">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="65351392" lat="37.8007335" lon="-122.4294995">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="65357242" lat="37.7994776" lon="-122.4393632">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="65364582" lat="37.7998962" lon="-122.4360753">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262078981" lat="37.8008550" lon="-122.4278342">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262078982" lat="37.8006396" lon="-122.4294805">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262078983" lat="37.8004306" lon="-122.4311216">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262078984" lat="37.8002210" lon="-122.4327666">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262078985" lat="37.8000116" lon="-122.4344121">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262078986" lat="37.7998022" lon="-122.4360562">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262078987" lat="37.7995927" lon="-122.4377013">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262078988" lat="37.7993835" lon="-122.4393441">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262078989" lat="37.7991739" lon="-122.4409903">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262263365" lat="37.7990558" lon="-122.4426765">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="262263366" lat="37.7989616" lon="-122.4426574">
+    <tag k="highway" v="traffic_signals" />
+    <tag k="traffic_signals" v="traffic_lights" />
+  </node>
+  <node id="621547505" lat="37.7996545" lon="-122.4372160" />
+  <node id="1221046215" lat="37.7989456" lon="-122.4427830">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="crossing:markings" v="zebra" />
+    <tag k="crossing:signals" v="yes" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046228" lat="37.7996052" lon="-122.4376031">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="lowered" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046237" lat="37.7993954" lon="-122.4392504">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="lowered" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046250" lat="37.8002081" lon="-122.4328686">
+    <tag k="button_operated" v="yes" />
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="lowered" />
+    <tag k="tactile_paving" v="yes" />
+    <tag k="traffic_signals:sound" v="yes" />
+  </node>
+  <node id="1221046257" lat="37.8007460" lon="-122.4294008">
+    <tag k="button_operated" v="no" />
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="lowered" />
+    <tag k="tactile_paving" v="yes" />
+    <tag k="traffic_signals:sound" v="no" />
+    <tag k="traffic_signals:vibration" v="no" />
+  </node>
+  <node id="1221046280" lat="37.8006284" lon="-122.4295684">
+    <tag k="button_operated" v="no" />
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="lowered" />
+    <tag k="tactile_paving" v="yes" />
+    <tag k="traffic_signals:sound" v="no" />
+  </node>
+  <node id="1221046282" lat="37.7993715" lon="-122.4394384">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046295" lat="37.8007222" lon="-122.4295882">
+    <tag k="button_operated" v="no" />
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="lowered" />
+    <tag k="tactile_paving" v="yes" />
+    <tag k="traffic_signals:sound" v="no" />
+  </node>
+  <node id="1221046323" lat="37.7996990" lon="-122.4376245">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046351" lat="37.8003277" lon="-122.4326864">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046358" lat="37.8009323" lon="-122.4279604">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="crossing:markings" v="zebra" />
+    <tag k="crossing:signals" v="yes" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="no" />
+  </node>
+  <node id="1221046361" lat="37.7995800" lon="-122.4378009">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="lowered" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046362" lat="37.7991606" lon="-122.4410940">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="flush" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046367" lat="37.8008411" lon="-122.4279410">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="crossing:markings" v="zebra" />
+    <tag k="crossing:signals" v="yes" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046379" lat="37.8004193" lon="-122.4312106">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+  </node>
+  <node id="1221046380" lat="37.7999078" lon="-122.4359839">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046386" lat="37.7992797" lon="-122.4409173">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="flush" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046388" lat="37.8009572" lon="-122.4277657">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="crossing:markings" v="zebra" />
+    <tag k="crossing:signals" v="yes" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046410" lat="37.7994655" lon="-122.4394579">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046423" lat="37.8002337" lon="-122.4326678">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046440" lat="37.7994896" lon="-122.4392692">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="lowered" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046455" lat="37.7997904" lon="-122.4361492">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046466" lat="37.7998843" lon="-122.4361689">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046477" lat="37.8005128" lon="-122.4312324">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+  </node>
+  <node id="1221046514" lat="37.8000244" lon="-122.4343116">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="flush" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046516" lat="37.8004426" lon="-122.4310275">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="kerb" v="flush" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="1221046518" lat="37.7990708" lon="-122.4425625">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="crossing:markings" v="zebra" />
+    <tag k="crossing:signals" v="yes" />
+    <tag k="highway" v="crossing" />
+  </node>
+  <node id="1221046521" lat="37.8005365" lon="-122.4310466">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="highway" v="crossing" />
+    <tag k="tactile_paving" v="yes" />
+  </node>
+  <node id="3379321527" lat="37.7997867" lon="-122.4369354" />
+  <node id="3379321528" lat="37.7998104" lon="-122.4367496" />
+  <node id="4012223321" lat="37.7989766" lon="-122.4425460">
+    <tag k="crossing" v="traffic_signals" />
+    <tag k="crossing:markings" v="zebra" />
+    <tag k="crossing:signals" v="yes" />
+    <tag k="highway" v="crossing" />
+  </node>
+  <node id="4917881742" lat="37.8000811" lon="-122.4338665" />
+  <node id="5026547798" lat="37.7993076" lon="-122.4399403" />
+  <node id="5026547799" lat="37.7995780" lon="-122.4385753" />
+  <node id="5426872907" lat="37.8005550" lon="-122.4301450" />
+  <node id="5426872910" lat="37.8005326" lon="-122.4303210" />
+  <node id="5426872913" lat="37.8006280" lon="-122.4303277" />
+  <node id="5426872914" lat="37.8005673" lon="-122.4308051" />
+  <node id="5426873431" lat="37.8000014" lon="-122.4352493" />
+  <node id="5426873439" lat="37.7994569" lon="-122.4387677" />
+  <node id="5426873443" lat="37.7994068" lon="-122.4391608" />
+  <node id="5428509931" lat="37.7989060" lon="-122.4430957" />
+  <node id="6886578056" lat="37.7997783" lon="-122.4362440">
+    <tag k="bus" v="yes" />
+    <tag k="name" v="Lombard Street &amp; Fillmore Street" />
+    <tag k="network" v="Muni;GGT" />
+    <tag k="operator" v="San Francisco Municipal Railway" />
+    <tag k="public_transport" v="stop_position" />
+  </node>
+  <node id="6886578057" lat="37.7999187" lon="-122.4358980">
+    <tag k="bus" v="yes" />
+    <tag k="name" v="Lombard Street &amp; Fillmore Street" />
+    <tag k="network" v="Muni;GGT" />
+    <tag k="operator" v="San Francisco Municipal Railway" />
+    <tag k="public_transport" v="stop_position" />
+  </node>
+  <node id="6903838266" lat="37.8008928" lon="-122.4282483">
+    <tag k="bus" v="yes" />
+    <tag k="name" v="Lombard Street &amp; Gough Street" />
+    <tag k="network" v="Muni" />
+    <tag k="operator" v="San Francisco Municipal Railway" />
+    <tag k="public_transport" v="stop_position" />
+  </node>
+  <node id="6903838267" lat="37.8005458" lon="-122.4309734">
+    <tag k="bus" v="yes" />
+    <tag k="name" v="Lombard Street &amp; Laguna Street" />
+    <tag k="network" v="Muni" />
+    <tag k="operator" v="San Francisco Municipal Railway" />
+    <tag k="public_transport" v="stop_position" />
+  </node>
+  <node id="6903838268" lat="37.8004069" lon="-122.4313081">
+    <tag k="bus" v="yes" />
+    <tag k="name" v="Lombard Street &amp; Laguna Street" />
+    <tag k="network" v="Muni" />
+    <tag k="operator" v="San Francisco Municipal Railway" />
+    <tag k="public_transport" v="stop_position" />
+  </node>
+  <node id="6903838269" lat="37.7994218" lon="-122.4390432">
+    <tag k="bus" v="yes" />
+    <tag k="name" v="Lombard Street &amp; Pierce Street" />
+    <tag k="network" v="Muni" />
+    <tag k="operator" v="San Francisco Municipal Railway" />
+    <tag k="public_transport" v="stop_position" />
+  </node>
+  <node id="6903838270" lat="37.7994384" lon="-122.4396707">
+    <tag k="bus" v="yes" />
+    <tag k="name" v="Lombard Street &amp; Pierce Street" />
+    <tag k="network" v="Muni" />
+    <tag k="operator" v="San Francisco Municipal Railway" />
+    <tag k="public_transport" v="stop_position" />
+  </node>
+  <node id="6903838271" lat="37.7989366" lon="-122.4428542">
+    <tag k="bus" v="yes" />
+    <tag k="name" v="Lombard Street &amp; Divisadero Street" />
+    <tag k="network" v="Muni" />
+    <tag k="operator" v="San Francisco Municipal Railway" />
+    <tag k="public_transport" v="stop_position" />
+  </node>
+  <node id="7226601604" lat="37.8008473" lon="-122.4286057" />
+  <node id="9737654705" lat="37.8010147" lon="-122.4273066" />
+  <node id="10248928639" lat="37.8007980" lon="-122.4282361" />
+  <node id="10259400149" lat="37.7990885" lon="-122.4424186" />
+  <node id="11965722174" lat="37.7994995" lon="-122.4391916" />
+  <node id="11965722175" lat="37.7993612" lon="-122.4395195" />
+  <way id="85562488">
+    <nd ref="65329133" />
+    <nd ref="262078981" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="highway" v="tertiary" />
+    <tag k="lane_markings" v="no" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Gough Street" />
+    <tag k="name:pronunciation" v="ˈɡɔːf ˈstɹiːt" />
+    <tag k="sidewalk:both" v="separate" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Gough" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562505">
+    <nd ref="65357242" />
+    <nd ref="1221046410" />
+    <nd ref="6903838270" />
+    <nd ref="1221046386" />
+    <nd ref="65336611" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="parking:left" v="no" />
+    <tag k="parking:right" v="lane" />
+    <tag k="parking:right:orientation" v="parallel" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25;A25:A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Lombard" />
+    <tag k="tiger:name_base_1" v="United States Highway 101" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562514">
+    <nd ref="65351392" />
+    <nd ref="1221046295" />
+    <nd ref="5426872913" />
+    <nd ref="5426872914" />
+    <nd ref="6903838267" />
+    <nd ref="1221046521" />
+    <nd ref="65319056" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25;A25:A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Lombard" />
+    <tag k="tiger:name_base_1" v="United States Highway 101" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562521">
+    <nd ref="65348274" />
+    <nd ref="262078987" />
+    <tag k="highway" v="residential" />
+    <tag k="lit" v="yes" />
+    <tag k="name" v="Steiner Street" />
+    <tag k="sidewalk" v="both" />
+    <tag k="tiger:cfcc" v="A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Steiner" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562526">
+    <nd ref="262078989" />
+    <nd ref="65336611" />
+    <tag k="highway" v="residential" />
+    <tag k="lane_markings" v="no" />
+    <tag k="lit" v="yes" />
+    <tag k="name" v="Scott Street" />
+    <tag k="name:etymology:wikidata" v="Q354759" />
+    <tag k="sidewalk" v="both" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Scott" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562528">
+    <nd ref="65319056" />
+    <nd ref="1221046477" />
+    <nd ref="1221046351" />
+    <nd ref="65292777" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="parking:left" v="no" />
+    <tag k="parking:right" v="lane" />
+    <tag k="parking:right:orientation" v="parallel" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25;A25:A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Lombard" />
+    <tag k="tiger:name_base_1" v="United States Highway 101" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562530">
+    <nd ref="262263365" />
+    <nd ref="262263366" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="secondary" />
+    <tag k="lane_markings" v="no" />
+    <tag k="lit" v="yes" />
+    <tag k="name" v="Divisadero Street" />
+    <tag k="sidewalk:both" v="separate" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Divisadero" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562541">
+    <nd ref="262078983" />
+    <nd ref="1221046516" />
+    <nd ref="5426872910" />
+    <nd ref="5426872907" />
+    <nd ref="1221046280" />
+    <nd ref="262078982" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="United States Highway 101;Lombard:United States Highway 101" />
+    <tag k="tiger:name_base_1" v="Lombard" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="tiger:name_type_1" v="St" />
+  </way>
+  <way id="85562543">
+    <nd ref="262078984" />
+    <nd ref="65292777" />
+    <tag k="highway" v="residential" />
+    <tag k="lane_markings" v="no" />
+    <tag k="lit" v="yes" />
+    <tag k="name" v="Buchanan Street" />
+    <tag k="name:etymology:wikidata" v="Q6224309" />
+    <tag k="sidewalk" v="both" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Buchanan" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562555">
+    <nd ref="262078982" />
+    <nd ref="65351392" />
+    <tag k="cycleway" v="shared_lane" />
+    <tag k="highway" v="residential" />
+    <tag k="lcn_ref" v="106" />
+    <tag k="lit" v="yes" />
+    <tag k="name" v="Octavia Street" />
+    <tag k="name:etymology" v="Octavia Gough" />
+    <tag k="sidewalk" v="both" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Octavia" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562560">
+    <nd ref="262078988" />
+    <nd ref="65357242" />
+    <tag k="highway" v="residential" />
+    <tag k="lane_markings" v="no" />
+    <tag k="lit" v="yes" />
+    <tag k="name" v="Pierce Street" />
+    <tag k="name:etymology:wikidata" v="Q12312" />
+    <tag k="sidewalk" v="both" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Pierce" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562568">
+    <nd ref="262078983" />
+    <nd ref="65319056" />
+    <tag k="highway" v="residential" />
+    <tag k="lane_markings" v="no" />
+    <tag k="lit" v="yes" />
+    <tag k="name" v="Laguna Street" />
+    <tag k="sidewalk" v="both" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Laguna" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562572">
+    <nd ref="262263366" />
+    <nd ref="4012223321" />
+    <nd ref="1221046362" />
+    <nd ref="262078989" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="United States Highway 101;Lombard:United States Highway 101" />
+    <tag k="tiger:name_base_1" v="Lombard" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="tiger:name_type_1" v="St" />
+  </way>
+  <way id="85562575">
+    <nd ref="65364582" />
+    <nd ref="262078986" />
+    <tag k="highway" v="tertiary" />
+    <tag k="lanes" v="2" />
+    <tag k="lit" v="yes" />
+    <tag k="name" v="Fillmore Street" />
+    <tag k="name:etymology:wikidata" v="Q12306" />
+    <tag k="sidewalk" v="both" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A45" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Fillmore" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="trolley_wire" v="yes" />
+  </way>
+  <way id="85562583">
+    <nd ref="262078987" />
+    <nd ref="1221046228" />
+    <nd ref="621547505" />
+    <nd ref="6886578056" />
+    <nd ref="1221046455" />
+    <nd ref="262078986" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="parking:left" v="no" />
+    <tag k="parking:right" v="lane" />
+    <tag k="parking:right:orientation" v="parallel" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="United States Highway 101;Lombard:United States Highway 101" />
+    <tag k="tiger:name_base_1" v="Lombard" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="tiger:name_type_1" v="St" />
+  </way>
+  <way id="85562585">
+    <nd ref="262078985" />
+    <nd ref="1221046514" />
+    <nd ref="4917881742" />
+    <nd ref="1221046250" />
+    <nd ref="262078984" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="parking:left" v="no" />
+    <tag k="parking:right" v="lane" />
+    <tag k="parking:right:orientation" v="parallel" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="sidewalk:right:surface" v="concrete" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="United States Highway 101;Lombard:United States Highway 101" />
+    <tag k="tiger:name_base_1" v="Lombard" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="tiger:name_type_1" v="St" />
+  </way>
+  <way id="85562588">
+    <nd ref="5426873431" />
+    <nd ref="6886578057" />
+    <nd ref="1221046380" />
+    <nd ref="65364582" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="parking:left" v="no" />
+    <tag k="parking:right" v="lane" />
+    <tag k="parking:right:orientation" v="parallel" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25;A25:A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Lombard" />
+    <tag k="tiger:name_base_1" v="United States Highway 101" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="turn:lanes" v="||right" />
+  </way>
+  <way id="85562592">
+    <nd ref="65329133" />
+    <nd ref="1221046358" />
+    <nd ref="6903838266" />
+    <nd ref="7226601604" />
+    <nd ref="1221046257" />
+    <nd ref="65351392" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25;A25:A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Lombard" />
+    <tag k="tiger:name_base_1" v="United States Highway 101" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="85562596">
+    <nd ref="262078988" />
+    <nd ref="1221046237" />
+    <nd ref="5426873443" />
+    <nd ref="6903838269" />
+    <nd ref="5426873439" />
+    <nd ref="1221046361" />
+    <nd ref="262078987" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="parking:left" v="no" />
+    <tag k="parking:right" v="lane" />
+    <tag k="parking:right:orientation" v="parallel" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="sidewalk:right:surface" v="concrete" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="United States Highway 101;Lombard:United States Highway 101" />
+    <tag k="tiger:name_base_1" v="Lombard" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="tiger:name_type_1" v="St" />
+  </way>
+  <way id="85562604">
+    <nd ref="262078984" />
+    <nd ref="1221046423" />
+    <nd ref="6903838268" />
+    <nd ref="1221046379" />
+    <nd ref="262078983" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="parking:left" v="no" />
+    <tag k="parking:right" v="lane" />
+    <tag k="parking:right:orientation" v="parallel" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="United States Highway 101;Lombard:United States Highway 101" />
+    <tag k="tiger:name_base_1" v="Lombard" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="tiger:name_type_1" v="St" />
+    <tag k="turn:lanes" v="||right" />
+  </way>
+  <way id="85562608">
+    <nd ref="65364582" />
+    <nd ref="1221046466" />
+    <nd ref="3379321528" />
+    <nd ref="3379321527" />
+    <nd ref="1221046323" />
+    <nd ref="65348274" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="parking:left" v="no" />
+    <tag k="parking:right" v="lane" />
+    <tag k="parking:right:orientation" v="parallel" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25;A25:A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Lombard" />
+    <tag k="tiger:name_base_1" v="United States Highway 101" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="514527342">
+    <nd ref="5026547798" />
+    <nd ref="11965722175" />
+    <nd ref="1221046282" />
+    <nd ref="262078988" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="parking:left" v="no" />
+    <tag k="parking:right" v="lane" />
+    <tag k="parking:right:orientation" v="parallel" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="United States Highway 101;Lombard:United States Highway 101" />
+    <tag k="tiger:name_base_1" v="Lombard" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="tiger:name_type_1" v="St" />
+  </way>
+  <way id="514527343">
+    <nd ref="5026547799" />
+    <nd ref="11965722174" />
+    <nd ref="1221046440" />
+    <nd ref="65357242" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="parking:left" v="no" />
+    <tag k="parking:right" v="lane" />
+    <tag k="parking:right:orientation" v="parallel" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="sidewalk:right:surface" v="concrete" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25;A25:A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Lombard" />
+    <tag k="tiger:name_base_1" v="United States Highway 101" />
+    <tag k="tiger:name_type" v="St" />
+  </way>
+  <way id="1059871311">
+    <nd ref="9737654705" />
+    <nd ref="1221046388" />
+    <nd ref="65329133" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="turn:lanes" v="||right" />
+  </way>
+  <way id="1120570314">
+    <nd ref="10248928639" />
+    <nd ref="1221046367" />
+    <nd ref="262078981" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="United States Highway 101;Lombard:United States Highway 101" />
+    <tag k="tiger:name_base_1" v="Lombard" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="tiger:name_type_1" v="St" />
+    <tag k="turn:lanes" v="||right" />
+  </way>
+  <way id="1121690295">
+    <nd ref="10259400149" />
+    <nd ref="1221046518" />
+    <nd ref="262263365" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk" v="right" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25;A25:A41" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="Lombard" />
+    <tag k="tiger:name_base_1" v="United States Highway 101" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="turn:lanes" v="none|none|right" />
+  </way>
+  <way id="1121693209">
+    <nd ref="5428509931" />
+    <nd ref="6903838271" />
+    <nd ref="1221046215" />
+    <nd ref="262263366" />
+    <tag k="NHS" v="STRAHNET" />
+    <tag k="bicycle" v="yes" />
+    <tag k="cycleway:both" v="no" />
+    <tag k="foot" v="yes" />
+    <tag k="hgv" v="designated" />
+    <tag k="highway" v="trunk" />
+    <tag k="lanes" v="3" />
+    <tag k="lit" v="yes" />
+    <tag k="maxspeed" v="25 mph" />
+    <tag k="name" v="Lombard Street" />
+    <tag k="name:etymology:wikidata" v="Q15242635" />
+    <tag k="old_ref" v="CA 480" />
+    <tag k="oneway" v="yes" />
+    <tag k="ref" v="US 101" />
+    <tag k="sidewalk:left" v="no" />
+    <tag k="sidewalk:right" v="separate" />
+    <tag k="source:hgv" v="https://sfplanninggis.org/TIM/?search=3591024#searchbox" />
+    <tag k="surface" v="asphalt" />
+    <tag k="tiger:cfcc" v="A25" />
+    <tag k="tiger:county" v="San Francisco, CA" />
+    <tag k="tiger:name_base" v="United States Highway 101;Lombard:United States Highway 101" />
+    <tag k="tiger:name_base_1" v="Lombard" />
+    <tag k="tiger:name_type" v="St" />
+    <tag k="tiger:name_type_1" v="St" />
+    <tag k="turn:lanes" v="none|none|right" />
+  </way>
+  <relation id="1274891">
+    <member type="way" ref="85562588" role="from" />
+    <member type="node" ref="65364582" role="via" />
+    <member type="way" ref="85562575" role="to" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274893">
+    <member type="way" ref="85562528" role="from" />
+    <member type="node" ref="65292777" role="via" />
+    <member type="way" ref="85562543" role="to" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274894">
+    <member type="way" ref="85562585" role="from" />
+    <member type="node" ref="262078984" role="via" />
+    <member type="way" ref="85562543" role="to" />
+    <tag k="name" v="No Left from Lombard Eastbound onto Buchanan during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274895">
+    <member type="way" ref="85562572" role="from" />
+    <member type="node" ref="262078989" role="via" />
+    <member type="way" ref="85562526" role="to" />
+    <tag k="name" v="No Left from Lombard Eastbound onto Scott during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274897">
+    <member type="way" ref="85562583" role="from" />
+    <member type="node" ref="262078986" role="via" />
+    <member type="way" ref="85562575" role="to" />
+    <tag k="name" v="No Left from Lombard Eastbound onto Fillmore during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274899">
+    <member type="way" ref="1059871311" role="from" />
+    <member type="node" ref="65329133" role="via" />
+    <member type="way" ref="85562488" role="to" />
+    <tag k="name" v="No Left from Lombard Westbound onto Gough during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274901">
+    <member type="node" ref="65336611" role="via" />
+    <member type="way" ref="85562526" role="to" />
+    <member type="way" ref="85562505" role="from" />
+    <tag k="name" v="No Left from Lombard Westbound onto Scott during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274902">
+    <member type="node" ref="65357242" role="via" />
+    <member type="way" ref="85562560" role="to" />
+    <member type="way" ref="514527343" role="from" />
+    <tag k="name" v="No Left from Lombard Westbound onto Pierce during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274903">
+    <member type="way" ref="85562604" role="from" />
+    <member type="node" ref="262078983" role="via" />
+    <member type="way" ref="85562568" role="to" />
+    <tag k="name" v="No Left from Lombard Eastbound onto Laguna during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274904">
+    <member type="way" ref="1120570314" role="from" />
+    <member type="node" ref="262078981" role="via" />
+    <member type="way" ref="85562488" role="to" />
+    <tag k="name" v="No Left from Lombard Eastbound onto Gough during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274909">
+    <member type="node" ref="262263365" role="via" />
+    <member type="way" ref="85562530" role="to" />
+    <member type="way" ref="1121690295" role="from" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274911">
+    <member type="way" ref="85562608" role="from" />
+    <member type="node" ref="65348274" role="via" />
+    <member type="way" ref="85562521" role="to" />
+    <tag k="name" v="No Left from Lombard Westbound onto Steiner during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274912">
+    <member type="way" ref="85562514" role="from" />
+    <member type="node" ref="65319056" role="via" />
+    <member type="way" ref="85562568" role="to" />
+    <tag k="name" v="No Left from Lombard Westbound onto Laguna during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274915">
+    <member type="node" ref="262078988" role="via" />
+    <member type="way" ref="85562560" role="to" />
+    <member type="way" ref="514527342" role="from" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274916">
+    <member type="way" ref="85562592" role="from" />
+    <member type="node" ref="65351392" role="via" />
+    <member type="way" ref="85562555" role="to" />
+    <tag k="name" v="No Left from Lombard Westbound onto Octavia during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274918">
+    <member type="way" ref="1121693209" role="from" />
+    <member type="node" ref="262263366" role="via" />
+    <member type="way" ref="85562530" role="to" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274919">
+    <member type="way" ref="85562541" role="from" />
+    <member type="node" ref="262078982" role="via" />
+    <member type="way" ref="85562555" role="to" />
+    <tag k="name" v="No Left from Lombard Eastbound onto Octavia during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  <relation id="1274920">
+    <member type="way" ref="85562596" role="from" />
+    <member type="node" ref="262078987" role="via" />
+    <member type="way" ref="85562521" role="to" />
+    <tag k="name" v="No Left from Lombard Eastbound onto Steiner during Rush Hour" />
+    <tag k="restriction:conditional" v="no_left_turn @ (Mo-Fr 07:00-10:00,15:00-19:00)" />
+    <tag k="type" v="restriction" />
+  </relation>
+  </osm>

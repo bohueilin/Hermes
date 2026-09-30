@@ -20,8 +20,18 @@ are now implemented locally: 29 new integration tests, 223 City Python passes,
 and 400 fixed SF route searches with retained return history. 380 found routes;
 20 reported no modeled continuation; both algorithms agreed. Routing peak memory
 was 1,535,672,320 bytes. This is not a new fleet study or a new deployment.
-All 12 frozen power-study source files remain unchanged. Austin is now the next
-requested city after SF acceptance; San Mateo preparation remains background.
+The subsequent [temporal integration checkpoint](FLEETLAB_TEMPORAL_INTEGRATION_V3.md)
+adds a source-bound importer, time-dependent routing, fleet execution and an
+independent temporal verifier. The local candidate accounts for all 69,027 source
+ways and reduces unsupported eligible length from 1.322% to 0.987%; all road-class
+fractions now meet the unchanged 5% threshold. It also newly blocks 141 ways whose
+access details were unsupported. District coverage and human review remain open.
+The latest broad routing check stopped at 248/300 OD contexts when one return
+exceeded its state budget; memory remained below 1.78 GB. That adverse result is
+retained. The 250-test City suite and small fleet smoke pass, but full temporal
+routing/resource qualification is incomplete. This candidate is not yet in the public viewer. All 12 frozen power-study source
+files remain unchanged. Austin is now the next requested city after SF acceptance;
+San Mateo preparation remains background.
 
 ## What this release adds
 
@@ -79,9 +89,9 @@ lifetimes at process boundaries; do not merely increase the memory threshold.
 
 | Work | Implemented / observed | Still required |
 |---|---|---|
-| Cross-leg continuity | Versioned fleet engine and independent verifier retain history through operating stops; fractional final-edge contract; 400 SF route searches; bounded history/cache/search | Full fleet performance/memory qualification, conditional integration and explicit reviewed connectors. Static diagnostic is not map acceptance. |
-| Conditional semantics | Exact daily, weekday and overnight predicates tested at aware traversal instants; unsupported grammar fails closed | Attach time/access semantics to a new importer and routing model. Existing sf-v1/sf-v2 are unchanged; parser tests do not restore roads. |
-| Priority source review | All 26 trunk/living-street ways reconciled automatically against captured source | Human source review and versioned model integration. 18 node-via conditional ways are the smallest useful next extension; missing-via and ambiguous ordering remain blocked. |
+| Cross-leg continuity | Versioned static and temporal fleet engines and independent verifiers retain history through stops and fractional final edges; bounded history/cache/search | Full fleet performance/memory qualification and explicit reviewed connectors. Diagnostic execution is not map acceptance. |
+| Conditional semantics | New local temporal importer/router evaluates exact daily, weekday and overnight conditions at actual edge and node passage times; original sf-v1/sf-v2 remain unchanged | Full SF resource qualification and compatible candidate bundle/export. Unsupported grammar stays blocked. |
+| Priority source review | All 26 priority ways reconciled automatically; captured Lombard fixtures and supported access windows integrated in the new candidate; all class fractions below 5% | Actual independent source review, new candidate requirements, district scope and unresolved malformed/missing source topology. No human observations supplied. |
 | District scope | Original 108 gaps / 13.161 km remain visible and UNASSIGNED | Official reconciliation or an explicit new scope/scenario policy. A mainland-only diagnostic still contains 49 gaps / 1.234 km and excludes 16 original pool nodes, so it is not a complete fix. |
 | Reviewer workflow | Runtime validator, frozen sample and downloadable worksheet | Actual 200-feature and 100-OD inspection, exception resolutions and independently recorded observations. Human observations supplied: zero. |
 | Power experiment | 24 preflight arms, complete preflight analysis; one evaluation arm retained | Resolve the new resource stop under an explicit amendment before completing the 24 six-arm blocks. No primary result available. |
@@ -92,12 +102,13 @@ lifetimes at process boundaries; do not merely increase the memory threshold.
 
 ## Source findings and data boundaries
 
-The captured conditional Lombard subset affects 18 ways. Resolving it correctly
-would reduce trunk unsupported length from 9.37257% to 2.89244%, with the denominator
-unchanged. This is an arithmetic estimate of a potential parser extension, not
-the qualification of an installed map. Two living streets require daily access
-windows. A shift-start-only interpretation would be wrong because the 07:00–15:00
-shift crosses restriction boundaries.
+The captured conditional Lombard subset affects 18 ways and is now covered by
+source fixtures in the local temporal candidate. Its actual trunk unsupported
+fraction is 3.10660%, including stricter access accounting across the full source;
+the earlier 2.89244% figure was a subset-only arithmetic estimate. Two living
+streets now have modeled daily access windows. The 07:00–15:00 shift crosses rule
+boundaries, so route evaluation uses actual traversal times, not shift start.
+The candidate still lacks district coverage and independent map qualification.
 
 [DataSF Curbs and Islands](https://data.sf.gov/api/views/emxt-b6yg.json) has PDDL
 metadata but is historical drawing-derived geometry that may differ from built
@@ -129,10 +140,12 @@ left-driving semantics and a local source contract.
 
 ## What is unfinished, and who can unblock it
 
-**Engineering work remains:** integrate conditional import and temporal/access
-semantics, complete connector contracts, qualify full SF fleet performance and
-memory, and resolve source/district scope. Static fleet continuity and the
-partial-edge contract are now implemented and tested locally. These implementation tasks remain with engineering. This release does not finish the entire SF checklist.
+**Engineering work remains:** complete connector contracts, qualify full SF fleet
+performance and memory, resolve source/district scope and integrate a versioned
+candidate bundle into the viewer. Temporal import/routing, static fleet continuity
+and partial-edge verification are implemented and tested locally. These remaining
+implementation tasks stay with engineering. This release does not finish the
+entire SF checklist.
 
 **Independent evidence remains:** the frozen map sample needs actual inspection
 and recorded findings; five visitors need to answer the comprehension worksheet,

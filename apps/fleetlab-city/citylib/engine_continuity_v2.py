@@ -36,9 +36,12 @@ def capacity_schedule(arrivals, duration, capacity):
 
 
 def run_arm(pack, inputs, spec, stop_at=None):
-    g = FleetRouter(pack, spec)
+    return _run_arm(pack, inputs, spec, FleetRouter(pack, spec), MODEL, SCHEMA, stop_at)
+
+
+def _run_arm(pack, inputs, spec, g, model, schema, stop_at=None):
     spec = copy.deepcopy(spec)
-    if spec.get("model") != MODEL:
+    if spec.get("model") != model:
         raise ValueError("unqualified engine/model")
     if spec.get("background_per_hour", 0) or inputs.get("background") or inputs.get("incidents"):
         raise ValueError("Traffic/background and incidents are not modeled by this graph runner")
@@ -400,8 +403,8 @@ def run_arm(pack, inputs, spec, stop_at=None):
     execution = "COMPLETE" if limit == spec["duration_s"] else "INCOMPLETE"
     emit(limit, "run_end", execution=execution, counters=counters)
     return {
-        "schema": SCHEMA,
-        "model": MODEL,
+        "schema": schema,
+        "model": model,
         "spec": spec,
         "input_digest": digest(inputs),
         "pack_digest": digest(pack),

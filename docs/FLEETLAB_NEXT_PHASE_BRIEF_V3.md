@@ -6,12 +6,16 @@ Read [the SF completion status](FLEETLAB_SF_COMPLETION_STATUS_2026-09-29.md) fir
 It supersedes older next-action statuses below. The memory amendment was accepted
 and implemented. Its 24 preflight arms passed, but the approved evaluation retry
 stopped after one of 144 arms at 4.0466 GB; no primary estimate is available.
-Static fleet continuity and fractional-edge verification are now integrated in a
-new model, with 223 City Python tests and a fixed 400-search SF routing diagnostic.
-[The 30 September checkpoint](FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md) records
-the evidence and limits. Conditional importer/temporal integration, connectors,
-full fleet resource qualification, independent map/device/visitor evidence and
-measured vehicle inputs remain open. Austin is next after SF acceptance. San Mateo
+Static fleet continuity and fractional-edge verification are integrated in a
+new model; [the static checkpoint](FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md)
+records its fixed 400-search SF diagnostic. A subsequent
+[temporal integration](FLEETLAB_TEMPORAL_INTEGRATION_V3.md) adds source-bound
+conditional import, actual traversal-time routing and independent fleet replay.
+Its local candidate reduces unsupported eligible length to 0.987% while retaining
+all source IDs and denominators. All road classes meet the unchanged 5% source
+threshold; map acceptance remains HOLD. Connectors, full fleet resource
+qualification, versioned public packaging, district scope, independent map/device/
+visitor evidence and measured vehicle inputs remain open. Austin is next after SF acceptance. San Mateo
 remains a prepared California source probe; no new city result is introduced. The Model lab update is live at <https://fleetlab.pages.dev/city-explorer/#models>.
 Publication verification is recorded in [the release record](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md).
 The entire SF checklist is not complete: remaining engineering tasks and external

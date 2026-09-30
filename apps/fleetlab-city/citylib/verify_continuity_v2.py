@@ -39,7 +39,10 @@ def check_ledger(run, inputs, pack):
     return check_legacy_ledger(projection, inputs, pack)
 
 
-def _verify_core(run, inputs, pack):
+def _verify_core(
+    run, inputs, pack, *, graph=None, schema=SCHEMA, routing_verifier=verify_fleet_trace
+):
+    graph = pack if graph is None else graph
     if not isinstance(run, dict) or not isinstance(inputs, dict):
         raise ValueError("run and inputs must be objects")
     for key in ("spec", "legs", "counters", "final"):
@@ -54,17 +57,17 @@ def _verify_core(run, inputs, pack):
     for key in ("requests", "initial"):
         if not isinstance(inputs.get(key), list):
             raise ValueError(f"input {key} must be an array")
-    routing_profile = validate_profile(pack)
+    routing_profile = validate_profile(graph)
     findings = []
 
     def fail(code, detail):
         findings.append({"code": code, "detail": str(detail)})
 
-    routing = verify_fleet_trace(run, inputs, pack)
+    routing = routing_verifier(run, inputs, pack)
     for issue in routing["issues"]:
         fail("routing_continuity", issue)
 
-    if run.get("schema") != SCHEMA:
+    if run.get("schema") != schema:
         fail("schema", "unsupported run schema")
     if run.get("input_digest") != digest(inputs):
         fail("inputs", "frozen input digest mismatch")
@@ -88,12 +91,12 @@ def _verify_core(run, inputs, pack):
     resources = defaultdict(set)
     sites = {s["id"]: s for s in spec["sites"]}
     leg_starts = defaultdict(list)
-    edge_map = {e["id"]: e for e in pack["edges"]}
+    edge_map = {e["id"]: e for e in graph["edges"]}
     profiles = {}
     violations = []
     power_peak = defaultdict(float)
     turn_index = defaultdict(list)
-    for rule in pack["turns"]:
+    for rule in graph["turns"]:
         if "edge_sequences" not in rule:
             turn_index[(rule["via"], rule["from"])].append(rule)
     open_legs = {}
@@ -104,7 +107,7 @@ def _verify_core(run, inputs, pack):
     stored = {vid: False for vid in initial}
     for lid, route in run["legs"].items():
         if routing_profile == PROFILE:
-            for issue in validate_path(pack, route["edges"]):
+            for issue in validate_path(graph, route["edges"]):
                 fail("route", issue)
         elapsed = [0.0]
         length = 0.0
@@ -348,7 +351,7 @@ def _verify_core(run, inputs, pack):
             if t != min(last_pose.get(vid, 0) + spec["sample_s"], horizon):
                 fail("poses", "missing sample or unexplained gap")
             last_pose[vid] = t
-            expected = pack["nodes"][initial[vid]["node"]]
+            expected = graph["nodes"][initial[vid]["node"]]
             k = bisect.bisect_left(starts.get(vid, []), t) - 1
             if k >= 0:
                 began, lid = leg_starts[vid][k]
@@ -357,11 +360,11 @@ def _verify_core(run, inputs, pack):
                 profile = profiles[lid]
                 edge_index = bisect.bisect_right(profile, elapsed) - 1
                 if edge_index >= len(route["edges"]):
-                    expected = pack["nodes"][route["nodes"][-1]]
+                    expected = graph["nodes"][route["nodes"][-1]]
                 else:
                     e = edge_map[route["edges"][edge_index]]
-                    a = pack["nodes"][e["u"]]
-                    b = pack["nodes"][e["v"]]
+                    a = graph["nodes"][e["u"]]
+                    b = graph["nodes"][e["v"]]
                     f = (elapsed - profile[edge_index]) / e["seconds"]
                     expected = [a[j] + (b[j] - a[j]) * f for j in range(2)]
             if distance(expected, [lon, lat]) > 0.10:
@@ -415,7 +418,7 @@ def _verify_core(run, inputs, pack):
     if "metrics" in run and digest(run["metrics"]) != digest(metrics):
         fail("metrics", "stored summary differs from recomputed metrics")
     try:
-        findings.extend(check_ledger(run, inputs, pack))
+        findings.extend(check_ledger(run, inputs, graph))
     except (KeyError, TypeError, ValueError, IndexError, ZeroDivisionError) as exc:
         fail("interval_ledger", f"Malformed ledger: {exc}")
     valid = not findings

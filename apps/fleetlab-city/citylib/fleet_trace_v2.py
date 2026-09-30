@@ -38,22 +38,26 @@ def validate_finite_json(value):
 
 
 def verify_fleet_trace(run, inputs, pack):
+    return _verify_fleet_trace(run, inputs, pack, pack, SCHEMA, MODEL)
+
+
+def _verify_fleet_trace(run, inputs, pack, graph, schema, model):
     issues, entered_count = [], 0
     history_bound, retained_history_peak = None, 0
     try:
         validate_finite_json(run)
         validate_finite_json(inputs)
-        _, edge_snapshot, rules = _snapshot(pack)
+        _, edge_snapshot, rules = _snapshot(graph)
         edges = {
             e["id"]: {**dict(edge_snapshot[e["id"]]), "length_m": e["length_m"]}
-            for e in pack["edges"]
+            for e in graph["edges"]
         }
         identity, scenario = digest(pack), digest(run["spec"])
         start = start_instant(run["spec"].get("start_utc"))
         if (
-            run.get("schema") != SCHEMA
-            or run.get("model") != MODEL
-            or run["spec"].get("model") != MODEL
+            run.get("schema") != schema
+            or run.get("model") != model
+            or run["spec"].get("model") != model
             or run.get("pack_digest") != identity
             or run.get("scenario_digest") != scenario
             or run.get("routing_profile") != PROFILE

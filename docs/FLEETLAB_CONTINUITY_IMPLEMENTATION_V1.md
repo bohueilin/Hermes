@@ -155,3 +155,13 @@ Measured static routing and integrated fleet test evidence is recorded in
 [FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md](FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md).
 This continuation supersedes the earlier standalone-only status, without changing
 the old module or study identity.
+
+## Temporal integration continuation — 30 September 2026
+
+[FLEETLAB_TEMPORAL_INTEGRATION_V3.md](FLEETLAB_TEMPORAL_INTEGRATION_V3.md) records
+the subsequent local temporal importer, routing, fleet adapter and independent
+verifier. Conditions use actual edge-entry/occupancy and node-passage times.
+The new candidate accounts for every captured source way and improves class
+coverage without changing old packs, runs or the frozen power-study sources.
+This supersedes the temporal-integration status above, not the outstanding
+connector, full-fleet resource, district or independent-evidence requirements.
