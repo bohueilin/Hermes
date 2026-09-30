@@ -2,11 +2,12 @@
 
 A separate static simulation application, integrated as the City Explorer tab in FleetLab: sourced SF roads, a synthetic one-versus-two-depot experiment, and recorded vehicle inspection. **Map qualification is incomplete; results are diagnostic and do not authorize operational decisions. The owner separately authorized publication of the educational website on 29 September 2026.**
 
-Current local continuation (30 September): temporal fleet integration and the
+Current publication (30 September): temporal fleet integration and the
 fixed full-fleet engineering resource check are complete; explicit source-edge
 connectors have a separate model 4 and verified fixtures. A complete temporal map
-bundle and candidate-specific inspection worksheet now validate locally. They
-are **not yet integrated into the public viewer**. Use the current
+bundle and candidate-specific inspection worksheet are now published as the
+third atlas choice, with complete corresponding source downloads. SF remains
+**HOLD** for district scope and independent observations. Use the current
 [`FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md`](../../docs/FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md)
 and SF completion status for exact versions, tests and remaining work. Historical
 setup/release notes below retain their original scope. The stopped power-study

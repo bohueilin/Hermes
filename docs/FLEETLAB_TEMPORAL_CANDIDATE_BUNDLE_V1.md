@@ -3,8 +3,8 @@
 30 September 2026. This implements the already approved versioned export work.
 It does not change the recorded experiment, source geography or SF acceptance.
 
-The public viewer will preserve the original recorded map and static candidate.
-A separately named temporal candidate will show source-support improvements,
+The publication build preserves the original recorded map and static candidate.
+A separately named temporal candidate shows source-support improvements,
 newly blocked roads, actual-time semantics and the remaining review obligations.
 Existing depot comparisons continue to use their original map and model.
 
@@ -56,7 +56,7 @@ stopped and is never executed by a packaging command.
 The immutable map is at `build/fleetlab-city/packs/sf-temporal-v3-r2/`.
 It includes the complete original temporal graph, projected roads, source
 inventory, unchanged geography, derived coverage, exact district gaps, source
-transitions and a new review checklist. It is not yet in the public viewer.
+transitions and a new review checklist. It is now available as a separate public atlas candidate; see the publication section below.
 
 | Artifact | Exact identity |
 |---|---|
@@ -119,8 +119,29 @@ build/fleetlab-city/venv/bin/python apps/fleetlab-city/tools/package-temporal-ca
 The CLI requires the independently selected full graph digest and records its
 source hashes, resource measurement and failures. The complete derived database
 must be included in the public source offer before the viewer uses its geometry.
-Next: export compatible temporal report/review data, add a clearly identified
-atlas view and current readiness presentation, update source downloads, then
-build and inspect the complete combined website and publish/read back it. Keep
-original recorded replay on v1. District adoption, actual human/device/visitor
+Viewer export, current-readiness presentation and complete source downloads
+are now implemented and published. The original recorded replay stays on v1. District adoption, actual human/device/visitor
 observations and any scientific-study amendment remain separate open work.
+
+## Viewer and source-offer implementation
+
+Commit `cce2d72` adds process-isolated export and a third atlas choice.
+The final viewer is `dist/city-explorer-v8-temporal-final`; source offer is
+`build/fleetlab-city/source-offer-v8-temporal-final`. Its initial gzip transfer
+is 1,905,643 bytes and every individual file fits the 25 MiB Pages limit.
+All 4,876 existing data files except the intentionally extended catalog remain
+byte-identical to the previous viewer. The recorded notebook/replay stay on v1.
+
+The full temporal database and exact engineering recording are downloadable.
+The original failed verifier report contains a private traceback: the public
+archive substitutes a clearly identified `verify-report.public.json`, preserving
+all other fields and the original SHA-256. Only `/traceback` is omitted. The
+original local report remains unchanged, and the public projection cannot
+reproduce that original byte hash in the correction freeze. Integration checks
+the actual complete database manifest and every member against the selected map.
+
+Tests: 293 City Python, 54 City JavaScript, 1,661 root Python passes / 56 skips;
+Ruff and whitespace checks pass. A versioned-URL regression closes the single
+independent review finding. Publication status and preview/production readbacks
+are tracked in [the temporal release record](FLEETLAB_TEMPORAL_PUBLICATION_2026-09-30.md).
+SF remains HOLD; publication cannot supply human observations or source policy.

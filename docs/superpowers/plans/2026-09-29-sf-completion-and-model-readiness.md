@@ -179,3 +179,20 @@ This continuation adds no simulation or new power-study execution. The original
 review workspace reproduces byte-for-byte. Pixel ADB still reports no connected
 device; actual human/source/device/visitor observations remain open. SF acceptance
 is still HOLD, and Austin remains subsequent to that decision.
+
+## 30 September temporal publication
+
+Implementation cce2d72 completes optional temporal viewer export, third-map
+selection, candidate-bound requirements and complete source/engineering offers.
+All 4,876 prior data files except catalog remain unchanged; 96 protected root
+files and offline artifact are preserved. Tests: 293 City Python, 54 Node,
+1,661 root Python passes/56 skips; Ruff and whitespace checks pass. Independent
+review found one relative source-link defect, reproduced RED and fixed GREEN.
+The old failed diagnostic retains its exact local bytes; public projection omits
+only the private traceback with explicit identity and reproducibility limits.
+
+Preview db37ee8b passed 10,001 exact file comparisons and effective headers;
+production e37b4a7b is live and also passed all 10,001 payload comparisons
+and headers, as recorded in the current publication record. No scientific retry occurred. Acceptance remains HOLD; physical-device
+and real human map/visitor evidence, district policy and calibration stay open.
+Austin remains next after acceptance, not silently marked complete.

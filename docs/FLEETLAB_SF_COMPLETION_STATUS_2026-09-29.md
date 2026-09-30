@@ -1,17 +1,15 @@
 # FleetLab — SF completion, model lessons and next-city handoff
 
-29 September 2026. San Francisco acceptance remains **HOLD**. This update adds
+Updated 30 September 2026. San Francisco acceptance remains **HOLD**. This update adds
 tested software and a concrete review workflow; it does not declare SF complete
 or unlock Austin and Las Vegas. Original FleetLab sections, recordings, lesson
 catalog and offline artifact are preserved.
 
-The static website update is published at [FleetLab](https://fleetlab.pages.dev/)
-with [Model lab](https://fleetlab.pages.dev/city-explorer/#models). Implementation
-commit: `d2227e07cb4e8078879fa90deda150b0f56f0c08`; production deployment:
-`a9f05880-a7c7-426f-b5ee-567a39cf0fce`. The [release record](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md)
-contains file readback, browser checks, tests and rollback details. This local
-handoff includes the post-publication record; the packaged notes retain their
-pre-publication bytes.
+The temporal atlas update is live at [FleetLab City Explorer](https://fleetlab.pages.dev/city-explorer/#atlas). Implementation commit: `cce2d723c225662b2808e57ef9ce8ced3b518c3a`; production deployment: `e37b4a7b-c60d-4a42-b705-ec6c0bf730e2`. See [the current publication record](FLEETLAB_TEMPORAL_PUBLICATION_2026-09-30.md) for validation and rollback. Packaged notes retain their pre-publication bytes; this local handoff records subsequent publication.
+
+The third atlas choice exposes the complete temporal candidate and its review worksheet. The original recorded map, earlier static candidate, notebook/replay, Model lab and all root FleetLab sections remain. The source offer includes complete databases and the unchanged engineering recording. The failed verifier report is publicly projected with only its private traceback omitted, explicit original hash and limitations; original local bytes are unchanged.
+
+Current software gates: 293 City Python, 54 City JavaScript and 1,661 root Python passes / 56 skips; Ruff and whitespace checks pass. Responsive checks cover 390, 1024 and 1280 CSS pixels. These do not satisfy physical-device or human acceptance. The Pixel remains absent from ADB.
 
 ## 30 September engineering continuation
 
@@ -38,7 +36,7 @@ peaked at 2.170 GB and independent verification at 2.061 GB, both within 30 minu
 The original invalid verifier report is preserved; two reproduced arithmetic
 defects were corrected and the same unchanged recording now verifies with zero
 findings. No further simulation was needed for that correction. This candidate
-is not yet in the public viewer. All 12 frozen power-study source
+is now selectable in the public atlas, without replacing recorded results. All 12 frozen power-study source
 files remain unchanged. Austin is now the next requested city after SF acceptance;
 San Mateo preparation remains background.
 
@@ -57,8 +55,8 @@ the completed engineering case. Final validation plus a fresh review workspace
 peaked at 3.256 GB and took 19.637 seconds. Its current 2,160 obligations include
 200 source-way and 100 OD samples; zero human observations are recorded. The old
 v2 review package still reproduces byte-for-byte. The new bundle and worksheet
-are local; source-offer and viewer integration remain next. Current software
-gates: 286 City Python tests, 1,661 root passes / 56 skips and 49 City Node tests.
+are now in the public viewer and complete source offer. The prior packaging
+checkpoint had 286 City Python tests, 1,661 root passes / 56 skips and 49 City Node tests.
 Independent review findings were reproduced and fixed before this checkpoint.
 
 [New district research](FLEETLAB_SF_DISTRICT_RECONCILIATION_2026-09-30.md) located the
@@ -68,7 +66,7 @@ pool nodes whose municipal membership would change. Source redistribution,
 explicit boundary policy and new review obligations must be resolved before
 adoption. No road or demand node has been silently reassigned or excluded.
 
-## What this release adds
+## Retained Model lab and review workflow from the preceding release
 
 City Explorer gains **Model lab**, alongside Start here, City atlas, Decision
 notebook and Replay studio. Twelve anonymous arithmetic cases compare 100, 200,
@@ -125,7 +123,7 @@ lifetimes at process boundaries; do not merely increase the memory threshold.
 | Work | Implemented / observed | Still required |
 |---|---|---|
 | Cross-leg continuity | Versioned engines retain history through stops and fractional final edges; the fixed full-fleet engineering case completes and independently verifies within resource limits | Connector model 4 now has explicit source-edge circulation and independent verification fixtures. No SF connector has been declared or qualified; one diagnostic case is not map acceptance or a complete scientific evaluation. |
-| Conditional semantics | Local temporal importer/router and independently verified full-fleet case evaluate daily, weekday and overnight conditions at actual traversal times; original sf-v1/sf-v2 remain unchanged | Complete local candidate bundle now validates; public source offer and viewer integration remain. Unsupported grammar stays blocked. |
+| Conditional semantics | Local temporal importer/router and independently verified full-fleet case evaluate daily, weekday and overnight conditions at actual traversal times; original sf-v1/sf-v2 remain unchanged | Complete candidate, viewer projection and corresponding source offer are now published. Unsupported grammar stays blocked; district and independent review remain open. |
 | Priority source review | All 26 priority ways reconciled automatically; captured Lombard fixtures and supported access windows integrated in the new candidate; all class fractions below 5% | Actual independent source review against the candidate-specific requirements, district scope and unresolved malformed/missing source topology. No human observations supplied. |
 | District scope | Original 108 gaps / 13.161 km remain visible and UNASSIGNED; the newly located full official source reduces the diagnostic remainder to 49 records / 441.926 m | Resolve full-source redistribution terms and remaining OSM/administrative boundary differences under an explicit policy; retain all affected-road/request accounting and new source identities. |
 | Reviewer workflow | Runtime validator and separate frozen sample/worksheet for each candidate; current temporal workspace is r2 | Actual 200-feature and 100-OD inspection, exception resolutions and independently recorded observations against the corresponding candidate. Human observations supplied: zero. |
@@ -175,11 +173,12 @@ left-driving semantics and a local source contract.
 
 ## What is unfinished, and who can unblock it
 
-**Engineering work remains:** resolve source/district scope and integrate the now-validated temporal
-candidate bundle into the viewer and source offer. The explicit connector contract and its fleet
-fixtures are implemented; site-specific SF connectors remain undeclared. Temporal import/routing, static fleet continuity
-and partial-edge verification are implemented and tested locally. These remaining
-implementation tasks stay with engineering. This release does not finish the
+**Engineering work remains:** resolve source/district scope and its versioned adoption policy.
+The temporal bundle, viewer and complete source offer are integrated and published.
+The explicit connector contract and fleet fixtures are implemented; site-specific
+SF connectors remain undeclared. Temporal import/routing, static fleet continuity
+and partial-edge verification are implemented and tested. Source policy, calibrated
+inputs and the separate stopped-study execution repair remain engineering work. This release does not finish the
 entire SF checklist.
 
 **Independent evidence remains:** the frozen map sample needs actual inspection
@@ -201,13 +200,13 @@ information is unavailable.
 
 ## Recommendation
 
-Use the original recorded SF study plus Model lab to explain how assumptions,
-constraints and evidence shape a decision. Finish export integration,
-district reconciliation and real review before claiming city acceptance.
+Use the original recorded SF study, new temporal atlas and Model lab to explain
+how assumptions, constraints and evidence shape a decision. Finish district
+reconciliation and real review before claiming city acceptance.
 
 ## Top risks + mitigations
 
-Do not relabel fixture-tested components as a migrated fleet engine. Keep stopped
+Do not treat one verified engineering case as a completed paired study or city acceptance. Keep stopped
 studies incomplete. Keep manufacturer facts separate from calibration, and
 source coverage separate from road permission. Preserve prior immutable maps,
 traces, failures and viewer bundles so every change stays reviewable.
@@ -216,8 +215,8 @@ traces, failures and viewer bundles so every change stays reviewable.
 
 1. Complete independent map and visitor sessions using the published worksheets;
    record actual observations against the frozen identities.
-2. Integrate the validated temporal bundle and its fresh review workspace into the viewer; qualify
-   the distinct scientific-study execution path before proposing a power amendment.
+2. Resolve district adoption and qualify the distinct scientific-study execution
+   path before proposing a power amendment; retain all existing results unchanged.
 3. Record the SF acceptance decision, then begin Austin with its own source,
    scope and experiment contracts; retain other California cities and Las Vegas
    as subsequent work.

@@ -1,6 +1,18 @@
 # FleetLab City Explorer integration release
 
-## Current release — SF review workflow and Model lab
+## Latest release — 30 September temporal atlas
+
+The time-aware SF candidate is now live alongside both previous map versions.
+Production: `e37b4a7b-c60d-4a42-b705-ec6c0bf730e2`; source: `cce2d72`.
+Preview and production each pass **10,001/10,001** exact payload comparisons;
+effective security headers pass.
+Read [the current temporal publication record](FLEETLAB_TEMPORAL_PUBLICATION_2026-09-30.md)
+for final checks, exact identities and remaining acceptance work. The release
+history below remains preserved. SF is still HOLD; static publication does not
+qualify the map or complete the stopped power evaluation.
+
+
+## Previous release — SF review workflow and Model lab
 
 29 September 2026 Pacific. Model lab adds twelve anonymous charging examples
 and three static direction/permission fixtures. City atlas offers the frozen

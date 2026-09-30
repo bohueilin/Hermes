@@ -11,21 +11,22 @@ new model; [the static checkpoint](FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.
 records its fixed 400-search SF diagnostic. A subsequent
 [temporal integration](FLEETLAB_TEMPORAL_INTEGRATION_V3.md) adds source-bound
 conditional import, actual traversal-time routing and independent fleet replay.
-Its local candidate reduces unsupported eligible length to 0.987% while retaining
+Its published atlas candidate reduces unsupported eligible length to 0.987% while retaining
 all source IDs and denominators. All road classes meet the unchanged 5% source
 threshold; map acceptance remains HOLD. Explicit source-edge connectors now have
 a separate model 4 and twelve fleet/verifier fixtures, including an independently
 reviewed correction for a fabricated closed-loop bypass. No SF connector or
-physical maneuver claim is introduced. The complete temporal map bundle and new review workspace now validate locally;
-public viewer/source-offer integration, district scope, independent map/device/
-visitor evidence and measured vehicle inputs remain open. Austin is next after SF acceptance. San Mateo
+physical maneuver claim is introduced. The complete temporal map bundle, new review workspace and engineering record
+are now published through the third atlas version and complete source offer.
+District scope, independent map/device/visitor evidence and measured vehicle
+inputs remain open. See [the temporal publication](FLEETLAB_TEMPORAL_PUBLICATION_2026-09-30.md). Austin is next after SF acceptance. San Mateo
 remains a prepared California source probe; no new city result is introduced. The Model lab update is live at <https://fleetlab.pages.dev/city-explorer/#models>.
 Publication verification is recorded in [the release record](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md).
 The entire SF checklist is not complete: remaining engineering tasks and external
 evidence requirements are separated in the current completion status.
 
 Latest engineering evidence: all 300 fixed temporal routing contexts complete
-with algorithm parity, and the current City Python suite has 286 passes. The bounded caches retain
+with algorithm parity, and the current City Python suite has 293 passes. The bounded caches retain
 actual-time permission checks. The full 100-vehicle, 1,200-request, eight-hour
 engineering case now completes and independently verifies within 4 GB / 30-minute
 phase limits. Two numerical verifier defects were reproduced and corrected;
