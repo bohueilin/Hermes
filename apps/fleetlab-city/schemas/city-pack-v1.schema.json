@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fleetlab:city-pack:1.0.0",
+  "title": "FleetLab city-pack 1.0.0",
+  "type": "object",
+  "required": [
+    "schema",
+    "nodes",
+    "edges",
+    "turns",
+    "inventory",
+    "candidate_ids",
+    "source_inventory_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "fleetlab.city-pack/1.0.0"
+    },
+    "nodes": {
+      "type": "object"
+    },
+    "edges": {
+      "type": "array"
+    },
+    "turns": {
+      "type": "array"
+    },
+    "inventory": {
+      "type": "array"
+    },
+    "candidate_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_inventory_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "drive_side": {
+      "enum": [
+        "left",
+        "right"
+      ]
+    },
+    "coordinates": {
+      "type": "object"
+    },
+    "source": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

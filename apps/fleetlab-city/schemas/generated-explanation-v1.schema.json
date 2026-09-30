@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fleetlab:generated-explanation:1.0.0",
+  "title": "FleetLab generated-explanation 1.0.0",
+  "type": "object",
+  "required": [
+    "schema",
+    "provider",
+    "status",
+    "decision_authority",
+    "source_digest",
+    "numeric_fields",
+    "text",
+    "hypotheses",
+    "references"
+  ],
+  "properties": {
+    "schema": {
+      "const": "fleetlab.generated-explanation/1.0.0"
+    },
+    "provider": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "decision_authority": {
+      "const": "NONE"
+    },
+    "source_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "numeric_fields": {
+      "type": "object"
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 3000
+    },
+    "hypotheses": {
+      "type": "array"
+    },
+    "references": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

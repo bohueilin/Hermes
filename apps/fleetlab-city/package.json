@@ -1,0 +1,12 @@
+{
+  "name": "fleetlab-city-explorer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22 <23" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:browser": "node tools/check-browser-evidence.mjs"
+  },
+  "dependencies": { "maplibre-gl": "6.11.2" }
+}

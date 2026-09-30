@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 250" role="img" aria-labelledby="title desc">
+  <title id="title">Rider-first shuttle concept illustration</title><desc id="desc">An original tall, rounded electric shuttle illustration. It does not depict specific Ojai hardware.</desc>
+  <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#e9e6d8"/><stop offset="1" stop-color="#f4f4e8"/></linearGradient><linearGradient id="body" x2="0" y2="1"><stop stop-color="#fbfbef"/><stop offset="1" stop-color="#dfe5d7"/></linearGradient></defs>
+  <path fill="url(#sky)" d="M0 0h600v250H0z"/><circle cx="470" cy="60" r="70" fill="#f4e8bf" opacity=".55"/><path d="M0 192h600" stroke="#c6d1bc" stroke-width="2"/><path d="M0 229h600" stroke="#d5dccd" stroke-width="2"/>
+  <path d="M40 190V103h58v87M105 190V65h56v125M168 190v-63h48v63M488 190V86h65v104" fill="#cdd8c3" opacity=".65"/><path d="M65 131h17m38-42h25m363 24h27" stroke="#f7f9ee" stroke-width="6" opacity=".8"/>
+  <ellipse cx="304" cy="207" rx="185" ry="12" fill="#55694b28"/>
+  <path d="M127 169v-68c0-37 28-62 67-62h212c45 0 72 28 72 72v79H126z" fill="url(#body)" stroke="#496853" stroke-width="4"/>
+  <path d="M151 111c0-26 16-44 43-44h206c34 0 49 17 52 48v16H151z" fill="#688979"/><path d="M231 68v63m103-63v64" stroke="#dcead9" stroke-width="5"/>
+  <path d="M266 135v52m72-52v52" stroke="#607b66" stroke-width="3"/><path d="M288 148v29m28-29v29" stroke="#92a996" stroke-width="4" stroke-linecap="round"/>
+  <path d="M133 157h14m317 0h14" stroke="#d6bb77" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="179" cy="190" r="20" fill="#354c3e"/><circle cx="179" cy="190" r="10" fill="#d6dfd0"/><circle cx="424" cy="190" r="20" fill="#354c3e"/><circle cx="424" cy="190" r="10" fill="#d6dfd0"/>
+  <path d="M268 204h69" stroke="#f7f9eb" stroke-width="4" stroke-linecap="round"/>
+</svg>

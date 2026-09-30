@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fleetlab:city-comparison:1.0.0",
+  "title": "FleetLab city-comparison 1.0.0",
+  "type": "object",
+  "required": [
+    "schema",
+    "decision_authority",
+    "scope",
+    "eligibility",
+    "outcome",
+    "reason",
+    "pairs",
+    "expected_seeds",
+    "pack_qualified"
+  ],
+  "properties": {
+    "schema": {
+      "const": "fleetlab.city-comparison/1.0.0"
+    },
+    "decision_authority": {
+      "const": "NONE"
+    },
+    "scope": {
+      "const": "SIMULATION_ONLY"
+    },
+    "eligibility": {
+      "enum": [
+        "ELIGIBLE",
+        "BLOCKED_MAP_QUALIFICATION",
+        "INVALID",
+        "INCOMPLETE",
+        "INCOMPATIBLE"
+      ]
+    },
+    "outcome": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "pairs": {
+      "type": "array"
+    },
+    "expected_seeds": {
+      "type": "array"
+    },
+    "pack_qualified": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": true
+}

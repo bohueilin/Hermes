@@ -1,5 +1,9 @@
 # FleetLab audit response, September 28, 2026
 
+## City Explorer integration — 29 September 2026
+
+The owner approved additive City Explorer navigation and live website publication. The combined release preserves all established sections and offline bytes; only root boot/index/headers are intentionally changed. Current checked release and remaining publication steps: `docs/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md`. The power-study execution amendment and map/human qualification remain held. This website authorization does not authorize Hermes workbench or physical deployment.
+
 This is the current wave. Earlier sections are historical where they differ. The owner
 explicitly requested assessment of an external audit, implementation of supported changes,
 build/test/validation, a repository push and live publication. The audit's own approval
@@ -1849,3 +1853,132 @@ ownership. Do not treat a future valid signature as authorization or deployment 
 ```bash
 hermes workbench --artifact-root artifacts --host 127.0.0.1 --port 8501 --no-browser
 ```
+
+
+## SF city explorer local review slice — September 29, 2026
+
+A separate implementation now lives in `apps/fleetlab-city/`; it preserves the legacy Python/node boundary under `playground/`. Read `docs/FLEETLAB_CITY_SF_VALIDATION.md` first, then the pack/run contracts and subsystem README. Baseline HEAD is `7e1da7cb72ca0e08fe46ead83db07adfce0e757e`; new work is uncommitted on `codex/fleetlab-city-sf`. The new source overlay and generated run/release manifests identify what was tested. The owner's unrelated note is untouched.
+
+All 34 recorded experiment arms pass strengthened event/interval verification; 100 OD checks and exact source/run reproduction pass. Map class/district/semantic gates remain incomplete, so there is no city recommendation, engineering-complete claim, or release approval. The reviewed local static package is `dist/city-explorer-reviewed/`. Browser screenshots, failures, command output and zero-spend ledger are in `build/fleetlab-city/validation/`. The validation document records actual commands, resource limits, all sensitivities, integrity findings/fixes and unperformed browser/human/provider checks. No push, PR or public deployment occurred.
+
+## 2026-09-29 — City Explorer UX v2 follow-up
+
+Owner's SF-first usability requests are implemented under `apps/fleetlab-city/`: deeper
+vector zoom and local street labels; larger text; repeat/seed explanations; deterministic
+vehicle stories plus all-ID access; active red depot markers; automatic trace loading and
+restart; complete operational history through 15:00; queue explanations; whole-shift trip,
+distance, depot and energy summaries; explicit visitor-entered gross-fare assumptions;
+unavailable safety metrics; and audience-specific review questions.
+
+The final generated package is `dist/city-explorer-v2-reviewed/`. Original runs and the
+previous reviewed package are retained. `dist/city-explorer-v2/` was a mutable visual-QA
+prototype and its initial release manifest is stale; do not use it as a release identity.
+The original loopback URL, http://127.0.0.1:4173/#replay, serves the final package. Port 4175
+serves the same bytes for the connected Pixel over ADB reverse. No commit, push or public
+deployment was performed; the owner's unrelated review file is preserved.
+
+Read `docs/FLEETLAB_CITY_UX_V2_VALIDATION.md` for exact validation results and residual gaps.
+Read `docs/FLEETLAB_CITY_PRESENTER_GUIDE.md` for answers to each visitor-comprehension question,
+EV-001's long charging wait, all twelve pair lessons, and the GeoLibre/future-fidelity decision.
+New evidence lives under `build/fleetlab-city/validation/ux-v2/`; previous evidence is historical.
+The pending Pixel automation issue is macOS Computer Use Accessibility/Screen Recording access,
+not USB authorization or machine sleep. No phone-interaction pass or formative-user-study pass
+may be inferred from the device connection or successful responsive desktop checks.
+
+UX v2 final gate addendum: 57 new-app Python tests and 11 Node tests pass; all 34 run arms
+were freshly verified; all 2,400 projected vehicle views conserve their verified fleet totals.
+The full unchanged serial legacy Node/performance suite is now green: **1,972 pass, zero
+failures, one existing TODO**, 279.94 seconds. Legacy Python 89/89, both existing distribution
+checks, whole-root Ruff and whitespace checks pass. Doctor remains 16 PASS / 2 WARN /
+1 optional NOT_AVAILABLE. This successful run does not erase prior timing failures or
+establish device, semantic-map, traffic-model or real-world-safety qualification.
+
+## 2026-09-29 — City Explorer v3 qualification and launch preparation
+
+This section supersedes the v2 entry-point and device-blocker notes above. The branch and
+base HEAD remain unchanged; implementation is a local, uncommitted source overlay.
+The owner's unrelated review note remains untouched. Read
+`docs/FLEETLAB_CITY_V3_VALIDATION.md` for the current validation record and
+`docs/FLEETLAB_NEXT_PHASE_BRIEF_V3.md` for the next product/simulation brainstorming handoff.
+
+The final viewer is `dist/city-explorer-v3-final/`, with release manifest SHA-256
+`7450c2aaf5e5ca90e2f5cbf6cf7d05cf6520f11b1f92267bbdf511c557ce2926`.
+Port 4173 serves this package. It adds a guided welcome/learning path, original vehicle
+concept illustrations, sourced Ojai/Zoox reference questions, and a separate candidate-map
+qualification view. The original 2,429 recorded data files remain identical to v2.
+
+The SF v2 candidate accounts for 2,490 restriction records and supports 431 bounded sequence
+rules. Unsupported eligible length falls from 1.936% to 1.322%; primary class support now
+passes. Trunk, living-street, district and semantic-review gates remain open. Exact district
+inspection exposes 108 gaps / 13.161 km; comparing three official layers did not resolve them.
+Candidate fleet execution is explicitly rejected pending a cross-leg history contract.
+Candidate reports and road display are bound to the captured graph, source and geometry.
+Frozen v1 pack products and the repeated seed-1001 baseline reproduce exactly.
+
+`build/fleetlab-city/launch-stage-v3/` contains a 9,897-file stage with all 99 legacy files
+unchanged, current/prior release directories, proposed header/navigation diffs and rollback.
+A separate local Pages rehearsal at port 4180 passed root/city CSP, deep-link and rollback
+checks. Hosted Pages Range and other hosted readback remain pending; see
+`docs/FLEETLAB_CITY_LAUNCH_PREPARATION.md`. Earlier approval of assessment section 7 makes
+this preparation only. No push, PR, public deployment or production switch occurred.
+
+The physical Pixel 10 Pro XL / Android 17 rendered the v2 replay and directly restarted its
+completed recording through keyboard control of scrcpy. The Mac then locked during the v3
+page check; Computer Use reported automatic unlock failure and the owner was asked to unlock.
+This is now the immediate device-control blocker. New v3 physical-device, touch, Safari,
+screen-reader and participant checks remain unclaimed. Desktop/tablet/narrow browser QA is
+recorded separately and does not substitute for physical or human validation.
+
+V3 final gates: 86 city Python tests; 15 browser-logic Node tests; 89 legacy Python parity/
+boundary tests; full serial legacy Node/performance suite 1,972 PASS / 0 FAIL / 1 existing TODO
+in 295.922 seconds. All 34 recorded arms were freshly verified. Both legacy distribution
+checkers, root Ruff and whitespace checks pass. Doctor remains 16 PASS / 2 WARN /
+1 optional NOT_AVAILABLE. A separate final review closed the road-display binding finding
+with five focused tests including eight rehashed negative cases. Evidence is under
+`build/fleetlab-city/validation/launch-v3/`, including a source-overlay inventory and browser
+observations. Generated artifacts and local Wrangler caches are not source deliverables.
+
+## 2026-09-29 — SF power-study build and corrected v4 viewer
+
+This section supersedes the current-viewer pointers above. Read
+`docs/FLEETLAB_SF_POWER_BUILD_VALIDATION_2026-09-29.md` for the full current record.
+The branch/base HEAD remain unchanged and source is uncommitted. No push, PR or public
+deployment occurred. The owner's unrelated note remains untouched.
+
+The current corrected review package is `dist/city-explorer-v4-final/`, served at
+`http://127.0.0.1:4182/`. Release SHA-256:
+`920887f3fb0841b066f26a996d8c9c157fc47c1e9f2cff0b70837c069c80f0a2`.
+It corrects violation/energy copy, validates study/replay identity and packaged dependencies,
+and fixes a browser-observed Play failure caused by navigation clicks binding to the body.
+Direct Play, restart from 15:00, configuration-specific depot markers, viewer fares,
+responsive layouts and flat-map fallback were observed passing after the fix. The earlier
+`v4-corrections` package/stage is retained as failed browser QA and must not be promoted.
+
+All 34 original scientific runs were reproduced exactly. The six-arm power-study software
+and exporter are implemented and reviewed, but **no SF evaluation arm exists**. Original
+frozen protocol `181da257329efec546b5df88d6b0ad7a666c0194b18e327546f82ea1961025fd`
+completed 24 valid preflight arms, then evaluation was refused before directory creation
+at the 4 GB memory gate. An unapplied, independently reviewed lifetime correction preserves
+checks and measured 3.153 GB through read-only analysis/capture/routing preparation. The
+owner decision on a named revision and 24 additional preflight runs is pending. Keep source,
+protocol and tapes frozen; never substitute preflight/toy results for the missing evaluation.
+See `docs/FLEETLAB_POWER_STUDY_MEMORY_AMENDMENT_PROPOSAL_2026-09-29.md` and the exact patch,
+reports and measurement harness under `.superpowers/sdd/2026-09-29-sf-power-and-integration/`.
+
+The integration plan recommends a same-tab top-level City Explorer and SF homepage card at
+`/city-explorer/`; the owner placement question is pending, so no shared navigation edit was
+made. `launch-stage-v4-final/` stages current/prior releases and all 99 legacy files unchanged
+(9,921 total). Header/nav proposals remain separate; this pair's hosted readback and rollback
+rehearsal are not performed. Publication remains a separate release decision.
+
+Two reviewed M1 documents specify cross-leg route history and immutable map-review results;
+the source-linked priority queue is complete. No runtime M2 implementation, map guard change,
+new human source review, current physical Pixel/touch, Safari or participant pass is claimed.
+
+Validation: 118 City Python tests, 29 Node tests, 89 Hermes parity/boundary tests, both legacy
+distribution checks, root Ruff and whitespace checks pass. Broad Hermes baseline is
+1,660 pass / 55 skipped / 2 fail: the two failures are exact absolute-checkout-path byte pins,
+independently diagnosed without changing assertions/core logic. Doctor remains 16 PASS /
+2 WARN / 1 optional NOT_AVAILABLE. Final serial legacy timing suite: 1,972 PASS, zero failures,
+one existing TODO, 281.224 seconds. Evidence lives in `build/fleetlab-city/validation/power-v1/`; generated artifacts,
+dependencies and caches are not source deliverables.

@@ -1,0 +1,60 @@
+.vehicle-concepts{color:#183e35;margin:38px 0 50px;padding:34px 32px 30px;border:1px solid #dce3d9;border-radius:20px;background:#fffdf7;box-shadow:0 16px 50px #183e3509}
+.vehicle-concepts *{box-sizing:border-box}
+.vehicle-concepts__mast{display:flex;align-items:end;justify-content:space-between;gap:36px;padding-bottom:24px;border-bottom:1px solid #dce3d9}
+.vehicle-concepts__mast .vehicle-concepts__heading{max-width:630px}
+.vehicle-concepts__eyebrow{margin:0 0 10px;color:#547266;font-size:11px;font-weight:750;letter-spacing:1.8px;line-height:1.5}
+.vehicle-concepts__mast h2{font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,3vw,41px);font-weight:400;line-height:1.12;letter-spacing:-1.2px;margin:0}
+.vehicle-concepts__mast>p{max-width:350px;color:#5f756b;font-size:15px;line-height:1.65;margin:0}
+.vehicle-concepts__gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:23px 0}
+.vehicle-concepts__card{min-width:0;display:flex;flex-direction:column;background:#f6f8f0;border:1px solid #dce3d9;border-radius:15px;overflow:hidden;transition:border-color .2s,box-shadow .2s,transform .2s}
+.vehicle-concepts__card:hover{transform:translateY(-3px);box-shadow:0 12px 24px #1d453217}
+.vehicle-concepts__card:has(button[aria-pressed="true"]){border-color:#2d6f5a;box-shadow:0 0 0 2px #2d6f5a24}
+.vehicle-concepts__card:nth-child(2){background:#f0f3e8}
+.vehicle-concepts__card:nth-child(3){background:#f1eff8}
+.vehicle-concepts__card-button{display:flex;flex:1;flex-direction:column;align-items:stretch;min-height:324px;width:100%;padding:0 20px 20px;background:transparent;text-align:left;color:inherit;border:0;cursor:pointer}
+.vehicle-concepts__card-button:focus-visible,.vehicle-concepts__direction-controls button:focus-visible,.vehicle-concepts__source:focus-visible{outline:3px solid #94672c;outline-offset:3px}
+.vehicle-concepts__art{display:block;width:calc(100% + 40px);margin:0 -20px 14px;overflow:hidden}
+.vehicle-concepts__art img{display:block;width:100%;height:auto;aspect-ratio:12/5;object-fit:cover}
+.vehicle-concepts__number{font-size:10px;letter-spacing:1.5px;line-height:1.5;font-weight:750;color:#62776c}
+.vehicle-concepts__card-title{font-family:Georgia,"Times New Roman",serif;font-size:27px;line-height:1.2;font-weight:400;letter-spacing:-.6px;margin:9px 0 5px}
+.vehicle-concepts__card-caption{font-size:14px;line-height:1.5;color:#597166}
+.vehicle-concepts__card-action{font-size:13px;font-weight:700;margin-top:auto;padding-top:18px;color:#166b59}
+.vehicle-concepts__card-button[aria-pressed="true"] .vehicle-concepts__card-action{color:#183e35}
+.vehicle-concepts__card-button[aria-pressed="true"] .vehicle-concepts__card-action::before{content:"● ";font-size:10px}
+.vehicle-concepts__source{display:block;min-height:40px;border-top:1px solid #dce3d9;padding:11px 20px;font-size:11px;line-height:1.5;color:#52695e;overflow-wrap:anywhere}
+.vehicle-concepts a.vehicle-concepts__source:hover{color:#145a4d;text-decoration-thickness:2px}
+.vehicle-concepts__detail{padding:28px 30px;background:#eaf1e8;border-radius:15px}
+.vehicle-concepts__detail-top{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 15px}
+.vehicle-concepts__detail-top .vehicle-concepts__eyebrow{width:100%;margin:0}
+.vehicle-concepts__detail h3{font-family:Georgia,"Times New Roman",serif;font-size:31px;font-weight:400;letter-spacing:-.8px;margin:0}
+.vehicle-concepts__badge{font-size:10px;font-weight:750;letter-spacing:1px;color:#3c6754;background:#fffdf7;border:1px solid #bbd0bc;border-radius:20px;padding:5px 9px}
+.vehicle-concepts__detail-intro{max-width:900px;margin:12px 0 21px;color:#49695b;font-size:15px;line-height:1.7}
+.vehicle-concepts__columns{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+.vehicle-concepts__columns>div{background:#fffdf7;border:1px solid #d6e4d5;padding:19px 21px;border-radius:11px}
+.vehicle-concepts__columns h4{margin:0 0 12px;font-size:13px;font-weight:750;letter-spacing:.2px}
+.vehicle-concepts__cues{margin:0;padding-left:19px;color:#557064;font-size:14px;line-height:1.55}
+.vehicle-concepts__cues li+li{margin-top:8px}
+.vehicle-concepts__question{background:#f0edf8!important;border-color:#dfd9ee!important}
+.vehicle-concepts__question p{font-family:Georgia,"Times New Roman",serif;font-size:20px;line-height:1.35;letter-spacing:-.2px;margin:0;color:#374e47}
+.vehicle-concepts__next{display:grid;grid-template-columns:220px 1fr;gap:20px;padding-top:18px;margin-top:18px;border-top:1px solid #cbdcc9;align-items:start}
+.vehicle-concepts__next span{font-size:10px;line-height:1.5;font-weight:750;letter-spacing:1.3px;color:#4e6e5c}
+.vehicle-concepts__next p{font-size:14px;color:#4b6759;line-height:1.6;margin:0}
+.vehicle-concepts__sketch{margin-top:17px;padding:21px 25px;border:1px solid #e0dcef;border-radius:14px;background:#f2f0f8}
+.vehicle-concepts__sketch[hidden]{display:none}
+.vehicle-concepts__sketch h4{font-family:Georgia,"Times New Roman",serif;font-size:22px;font-weight:400;margin:0 0 16px}
+.vehicle-concepts__stage{position:relative;display:grid;place-items:center;height:113px;max-width:550px;margin:0 auto;background:linear-gradient(0deg,#e3e8de 0 39%,#d5dfd6 39% 61%,#e3e8de 61%);border-radius:9px;overflow:hidden}
+.vehicle-concepts__stage:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:2px dashed #9bad9f;opacity:.7}
+.vehicle-concepts__sketch-vehicle{position:relative;z-index:1;width:168px;height:57px;border:3px solid #315e54;border-radius:20px;background:#fdfdf4;box-shadow:0 5px 0 #315e5420;display:flex;justify-content:space-between;align-items:center;padding:0 18px;font-size:12px;font-weight:700;color:#527869}
+.vehicle-concepts__sketch-vehicle:before{content:"";position:absolute;left:29px;right:29px;top:8px;bottom:8px;border-radius:9px;background:#bed7cb;z-index:-1}
+.vehicle-concepts__travel-arrow{position:absolute;z-index:2;color:#124c40;font-size:42px;font-weight:700;line-height:1;top:30px;right:15%;text-shadow:0 2px #e3e8de}
+.vehicle-concepts__stage[aria-label*="toward A"] .vehicle-concepts__travel-arrow{right:auto;left:15%}
+.vehicle-concepts__direction-controls{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+.vehicle-concepts__direction-controls button{min-height:44px;background:#fffdf7;border:1px solid #c9d9cc;border-radius:8px;padding:9px 15px;color:#244c40;font-size:14px;cursor:pointer}
+.vehicle-concepts__direction-controls button[aria-pressed="true"]{background:#244f42;color:#fff;border-color:#244f42}
+.vehicle-concepts__direction-state{text-align:center;font-size:13px;font-weight:650;color:#315448;margin:10px 0 4px}
+.vehicle-concepts__sketch-note{text-align:center;font-size:12px;line-height:1.6;color:#60736c;max-width:680px;margin:0 auto}
+.vehicle-concepts__boundary{border-top:1px solid #dce3d9;padding-top:18px;margin:21px 0 0;color:#60756a;font-size:13px;line-height:1.65}
+.vehicle-concepts__boundary strong{color:#274d3f}
+@media(max-width:850px){.vehicle-concepts{padding:26px 23px}.vehicle-concepts__mast{display:block}.vehicle-concepts__mast>p{max-width:650px;margin-top:13px}.vehicle-concepts__gallery{gap:9px}.vehicle-concepts__card-button{padding:0 13px 15px;min-height:285px}.vehicle-concepts__art{width:calc(100% + 26px);margin:0 -13px 13px}.vehicle-concepts__card-title{font-size:23px}.vehicle-concepts__source{padding:10px 13px}}
+@media(max-width:650px){.vehicle-concepts{padding:20px 16px;margin:27px 0 35px;border-radius:15px}.vehicle-concepts__mast h2{font-size:30px}.vehicle-concepts__gallery{grid-template-columns:1fr;gap:12px;margin:18px 0}.vehicle-concepts__card-button{min-height:0;padding:0 17px 16px}.vehicle-concepts__art{width:calc(100% + 34px);margin:0 -17px 12px}.vehicle-concepts__art img{max-height:170px}.vehicle-concepts__card-title{margin:5px 0 4px}.vehicle-concepts__card-action{padding-top:10px}.vehicle-concepts__source{min-height:0;padding:9px 17px}.vehicle-concepts__detail{padding:21px 17px}.vehicle-concepts__columns{grid-template-columns:1fr;gap:10px}.vehicle-concepts__columns>div{padding:15px}.vehicle-concepts__next{grid-template-columns:1fr;gap:7px}.vehicle-concepts__sketch{padding:18px 14px}.vehicle-concepts__travel-arrow{right:5%}.vehicle-concepts__stage[aria-label*="toward A"] .vehicle-concepts__travel-arrow{left:5%}}
+@media(prefers-reduced-motion:reduce){.vehicle-concepts__card{transition:none}.vehicle-concepts__card:hover{transform:none}}

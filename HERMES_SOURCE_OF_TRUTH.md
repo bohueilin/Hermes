@@ -1,5 +1,9 @@
 # Hermes — Source of Truth
 
+## City Explorer integration — 29 September 2026
+
+The owner approved additive City Explorer navigation and live website publication. The combined release preserves all established sections and offline bytes; only root boot/index/headers are intentionally changed. Current checked release and remaining publication steps: `docs/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md`. The power-study execution amendment and map/human qualification remain held. This website authorization does not authorize Hermes workbench or physical deployment.
+
 **This is the one file every conversation reads first and updates last.** It supersedes
 `PHASE8_STATUS.md`, `PHASE_ALIGNMENT.md`, `PHASE8_HANDOFF.md`, `HERMES_OVERVIEW.md` and
 `PHASE8_GETTING_STARTED.md`, all removed on 2026-08-22 (recoverable from git history). Do not
@@ -1763,3 +1767,56 @@ separate "Hermes Evidence Lab" artifact is the portfolio page, not a status docu
 
 *Simulation-only prototype. Illustrative thresholds. Not road-safety, certification, compliance,
 or deployment evidence.*
+
+
+## City explorer status — September 29, 2026
+
+The isolated `apps/fleetlab-city/` experiment is an **unqualified local review build**, not a Hermes evidence workbench extension or production service. It sources an accounted SF road snapshot and records a synthetic 100-vehicle depot experiment. Its graph/resource model has no endogenous traffic. All 12 evaluation pairs and five sensitivity pairs are retained; source-support and human qualification gaps block city recommendations. The six city contracts are separate from the canonical Hermes bundle contract. See `docs/FLEETLAB_CITY_SF_VALIDATION.md` for actual validation, limitations, Git identity and reproduction. Existing legacy behavior, public release and authority boundaries remain unchanged.
+
+### 2026-09-29 — SF visitor-experience enhancement
+
+The current City Explorer review package is `dist/city-explorer-v2-reviewed/`, served locally
+at port 4173 (and USB-forwarded port 4175 for Pixel review). The source remains an uncommitted
+overlay on `codex/fleetlab-city-sf`. Map/detail controls, replay comprehension and summaries
+were enhanced without changing the frozen simulator runs or recommendation gates.
+See `docs/FLEETLAB_CITY_UX_V2_VALIDATION.md` for current evidence and
+`docs/FLEETLAB_CITY_PRESENTER_GUIDE.md` for the demo narrative and twelve-pair interpretation.
+The previous SF validation record remains historical; no public City Explorer release or
+physical-device pass is implied by this update.
+
+### 2026-09-29 — SF qualification candidate and launch staging
+
+The current review package is now `dist/city-explorer-v3-final/` on port 4173. Its release
+manifest SHA-256 is `7450c2aaf5e5ca90e2f5cbf6cf7d05cf6520f11b1f92267bbdf511c557ce2926`.
+It introduces a guided welcome path, sourced vehicle-design learning gallery and separate
+SF v2 qualification candidate. Original v1 recorded experiment data remains unchanged.
+The v2 routing profile reduces unsupported eligible length to 1.322%, but remaining road
+classes, district coverage, human semantics and cross-leg history still block qualification
+and candidate fleet execution. Vehicle references are not calibrated operator models.
+
+A local Pages stage retains every legacy file and both compatible viewer releases; a separate
+rehearsal verified route headers and rollback. Nothing was published. The original assessment
+section 7 release boundary remains in effect. Physical Pixel v2 replay/restart was observed;
+the final v3 phone sweep was interrupted by Mac lock and remains pending. Use
+`docs/FLEETLAB_CITY_V3_VALIDATION.md` for current evidence and limits,
+`docs/FLEETLAB_CITY_LAUNCH_PREPARATION.md` for the concrete launch stage, and
+`docs/FLEETLAB_NEXT_PHASE_BRIEF_V3.md` for the next-phase product handoff.
+
+### 2026-09-29 — SF power experiment implementation and v4 corrections
+
+Current review viewer: `dist/city-explorer-v4-final/`, local port **4182**, release
+`920887f3fb0841b066f26a996d8c9c157fc47c1e9f2cff0b70837c069c80f0a2`.
+It fixes direct Play click bubbling, clarifies recorded energy/violations and adds reviewed
+study/export interfaces. Original scientific results remain unchanged. The local combined
+stage retains all 99 legacy files and compatible current/prior City releases; shared-site
+navigation and publication are unchanged.
+
+The new six-arm power experiment completed 24 preflight arms but **zero evaluation arms**:
+evaluation was refused at its initial memory check. A reviewed, unapplied fix and explicit
+replacement-study proposal await the owner's decision. No new power-study finding is
+available in the viewer. Map continuity and human-review contracts are reviewed design
+deliverables; map qualification is still open.
+
+Use `docs/FLEETLAB_SF_POWER_BUILD_VALIDATION_2026-09-29.md` for actual tests/browser evidence
+and limitations, `docs/FLEETLAB_WEBSITE_INTEGRATION_PLAN_2026-09-29.md` for placement, and
+`docs/FLEETLAB_POWER_STUDY_MEMORY_AMENDMENT_PROPOSAL_2026-09-29.md` for the pending revision.

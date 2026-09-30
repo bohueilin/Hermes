@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 250" role="img" aria-labelledby="title desc">
+  <title id="title">Generic electric car illustration</title><desc id="desc">An original simplified car shape against a pale mint city backdrop.</desc>
+  <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#e2f1e4"/><stop offset="1" stop-color="#f4f7e9"/></linearGradient><linearGradient id="body" x2="0" y2="1"><stop stop-color="#fbfdf6"/><stop offset="1" stop-color="#d4e5d9"/></linearGradient></defs>
+  <path fill="url(#sky)" d="M0 0h600v250H0z"/><path d="M0 166h600" stroke="#c7dbc9" stroke-width="2"/><path d="M44 164V68h52v96M101 164V91h49v73M453 164V84h62v80M520 164v-56h43v56" fill="#d6e6d9" opacity=".7"/>
+  <path d="M0 204h600" stroke="#b8cdb9" stroke-width="2"/><path d="M36 228h70m78 0h78m78 0h77m74 0h73" stroke="#c1d1c4" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="302" cy="204" rx="202" ry="14" fill="#426b5830"/>
+  <path d="M112 169l15-37 85-9 40-39h100l55 39 70 9 18 35v27H106v-17z" fill="url(#body)" stroke="#315a4e" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M226 122l34-30h86l44 31z" fill="#6f9a89" stroke="#315a4e" stroke-width="3"/><path d="M305 92v30" stroke="#d5ebe1" stroke-width="4"/><path d="M157 139h25m266 0h20" stroke="#dec88c" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="181" cy="190" r="26" fill="#25493f"/><circle cx="181" cy="190" r="13" fill="#d1ded3"/><circle cx="423" cy="190" r="26" fill="#25493f"/><circle cx="423" cy="190" r="13" fill="#d1ded3"/>
+  <path d="M72 64h46M86 49h72" stroke="#85b29a" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+</svg>

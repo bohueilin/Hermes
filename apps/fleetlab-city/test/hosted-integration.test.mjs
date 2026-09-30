@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {installFakeDom} from '../../../playground/fleetlab/test/helpers/fake-dom.mjs';
+import {mountStudio} from '../../../playground/fleetlab/src/ui/studio.js';
+import {createInitialState,createStore} from '../../../playground/fleetlab/src/ui/store.js';
+import {defaultScenario} from '../../../playground/fleetlab/src/model/schema.js';
+import {mountCityEntry} from '../hosted/integration.mjs';
+
+test('hosted entries preserve mounted lessons and film, and native links need no city runtime',()=>{
+ const restore=installFakeDom();
+ let studio;
+ try {
+  const root=document.createElement('div');document.body.appendChild(root);
+  studio=mountStudio({root,store:createStore(createInitialState({presetId:'bay_teaching_map',scenario:defaultScenario()})),playback:{pause(){}},present:{open(){},close(){}}});
+  const nav=document.getElementById('studio-navigation');
+  const originalLinks=[...nav.children];
+  const film=document.querySelector('.welcome-visual');
+  const filmContent=film.textContent;
+  const originalLessons=[...document.querySelectorAll('.catalog-card')];
+  assert.equal(originalLessons.length,59);
+  mountCityEntry();mountCityEntry();
+  assert.equal(nav.children.length,originalLinks.length+1);
+  assert.equal(nav.children[2].textContent,'City Explorer');
+  assert.equal(nav.children[2].getAttribute('href'),'/city-explorer/');
+  assert.equal(nav.children[2].getAttribute('target'),null);
+  assert.deepEqual([...nav.children].filter(node=>node.id!=='city-explorer-entry'),originalLinks);
+  assert.equal(document.querySelector('.welcome-visual'),film);
+  assert.equal(film.textContent,filmContent);
+  assert.deepEqual([...document.querySelectorAll('.catalog-card')],originalLessons);
+  assert.equal(document.querySelectorAll('.city-entry-feature').length,1);
+  assert.equal(document.querySelectorAll('.city-entry-catalog').length,1);
+  assert.ok(document.querySelector('.studio-overview .city-entry-feature'));
+  assert.ok(document.querySelector('.simulation-catalog .city-entry-catalog'));
+ } finally {studio?.destroy();restore();}
+});

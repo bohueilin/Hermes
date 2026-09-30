@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fleetlab:city-metrics:1.0.0",
+  "title": "FleetLab city-metrics 1.0.0",
+  "type": "object",
+  "required": [
+    "schema",
+    "created",
+    "completed",
+    "unserved",
+    "waiting",
+    "in_progress",
+    "assigned_not_boarded",
+    "boarded_count",
+    "hard_violations",
+    "completion_fraction",
+    "wait_p50_s",
+    "wait_p90_s",
+    "empty_km_per_completed",
+    "empty_km",
+    "queue_vehicle_minutes",
+    "charged_kwh",
+    "zones",
+    "site_peak_kw",
+    "unavailable"
+  ],
+  "properties": {
+    "schema": {
+      "const": "fleetlab.city-metrics/1.0.0"
+    },
+    "created": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "completed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unserved": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "waiting": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "in_progress": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "assigned_not_boarded": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "boarded_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "hard_violations": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "completion_fraction": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "wait_p50_s": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "wait_p90_s": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "empty_km_per_completed": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "empty_km": {
+      "type": "number"
+    },
+    "queue_vehicle_minutes": {
+      "type": "number"
+    },
+    "charged_kwh": {
+      "type": "number"
+    },
+    "zones": {
+      "type": "object"
+    },
+    "site_peak_kw": {
+      "type": "object"
+    },
+    "unavailable": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

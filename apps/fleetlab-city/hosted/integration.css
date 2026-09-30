@@ -1,0 +1,41 @@
+/* Hosted addition only: preserve the established film, lessons and offline styles. */
+.city-entry-feature { display:grid; grid-template-columns:1.15fr 1fr; gap:48px; margin:36px 0 48px; padding:44px; border:1px solid #ced9c5; border-radius:22px; background:#eaf0df; color:#183f36; overflow:hidden; }
+.city-entry-eyebrow { font-size:11px; font-weight:700; letter-spacing:.14em; line-height:1.7; margin:0 0 16px; }
+.city-entry-feature h2 { font-size:clamp(30px,3.2vw,46px); line-height:1.12; letter-spacing:-.035em; max-width:470px; margin:0 0 20px; font-weight:600; }
+.city-entry-lede { max-width:460px; font-size:17px; line-height:1.75; margin:0 0 24px; }
+.city-entry-action { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:12px 21px; box-sizing:border-box; border-radius:9px; color:#fffef5; background:#244f41; text-decoration:none; font-size:14px; font-weight:600; }
+.city-entry-action:hover { background:#173d31; }
+.city-entry-action:focus-visible { outline:3px solid #a66622; outline-offset:4px; }
+.city-entry-note { font-size:12px; line-height:1.8; margin:18px 0 0; color:#496254; max-width:380px; }
+.city-entry-journey { background:#244f41; color:#f6f6e8; border-radius:16px; padding:28px; align-self:center; box-shadow:0 12px 30px #1d483515; }
+.city-entry-place { display:grid; gap:10px; padding-bottom:22px; border-bottom:1px solid #ffffff28; }
+.city-entry-place span, .city-entry-shift { font-size:10px; letter-spacing:.11em; color:#d4e3bc; }
+.city-entry-place strong { font-size:19px; font-weight:500; }
+.city-entry-journey ol { list-style:none; padding:0; margin:22px 0; display:grid; gap:21px; }
+.city-entry-journey li { display:flex; gap:16px; align-items:center; }
+.city-entry-number { border:1px solid #ffffff48; border-radius:50%; width:36px; height:36px; display:grid; place-items:center; flex-shrink:0; font-size:11px; color:#efda9a; }
+.city-entry-journey strong { font-size:15px; font-weight:600; }
+.city-entry-journey p { font-size:13px; line-height:1.65; color:#d3dfd3; margin:5px 0 0; }
+.city-entry-shift { display:block; border-top:1px solid #ffffff28; padding-top:19px; }
+.city-entry-catalog { display:flex; align-items:center; justify-content:space-between; gap:28px; padding:28px; border:1px solid #ced9c5; border-radius:16px; background:#eaf0df; margin:0 0 28px; }
+.city-entry-catalog h2 { font-size:24px; margin:0 0 12px; letter-spacing:-.02em; }
+.city-entry-catalog p:not(.city-entry-eyebrow) { max-width:700px; font-size:15px; line-height:1.7; margin:0; }
+.city-entry-catalog .city-entry-action { flex-shrink:0; }
+/* An eighth destination uses the existing Explore control before the row crowds. */
+@media (max-width:1250px) {
+  .studio-header { flex-wrap:wrap; }
+  .studio-menu { display:inline-flex; align-items:center; margin-left:auto; }
+  .studio-header .studio-status { display:none; }
+  .studio-header nav { order:3; width:100%; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; overflow:visible; }
+  .studio-header nav a { font-size:13px; padding:12px; min-height:44px; }
+  .studio-header nav[data-expanded="false"] { display:none; }
+  .studio-header nav[data-expanded="true"] { border-top:1px solid var(--rule); padding-top:8px; }
+}
+@media (max-width:767.98px) {
+  .city-entry-feature { grid-template-columns:minmax(0,1fr); gap:28px; padding:26px 22px; margin:24px 0 36px; }
+  .city-entry-journey { padding:24px; }
+  .city-entry-feature h2 { font-size:34px; }
+  .city-entry-lede { font-size:16px; }
+  .city-entry-catalog { flex-direction:column; align-items:flex-start; padding:24px; }
+  .studio-header nav { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
