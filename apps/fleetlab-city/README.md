@@ -2,6 +2,16 @@
 
 A separate static simulation application, integrated as the City Explorer tab in FleetLab: sourced SF roads, a synthetic one-versus-two-depot experiment, and recorded vehicle inspection. **Map qualification is incomplete; results are diagnostic and do not authorize operational decisions. The owner separately authorized publication of the educational website on 29 September 2026.**
 
+Current local continuation (30 September): temporal fleet integration and the
+fixed full-fleet engineering resource check are complete; explicit source-edge
+connectors have a separate model 4 and verified fixtures. A complete temporal map
+bundle and candidate-specific inspection worksheet now validate locally. They
+are **not yet integrated into the public viewer**. Use the current
+[`FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md`](../../docs/FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md)
+and SF completion status for exact versions, tests and remaining work. Historical
+setup/release notes below retain their original scope. The stopped power-study
+retry was consumed; no further evaluation is authorized by these packaging tools.
+
 Start from the repository root. Python 3.11 and Node 22 are the tested targets; the wheel lock is specifically macOS arm64. Other platforms require their own resolved wheel hashes and validation, not removing `--require-hashes`.
 
 ```bash

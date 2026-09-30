@@ -16,7 +16,8 @@ all source IDs and denominators. All road classes meet the unchanged 5% source
 threshold; map acceptance remains HOLD. Explicit source-edge connectors now have
 a separate model 4 and twelve fleet/verifier fixtures, including an independently
 reviewed correction for a fabricated closed-loop bypass. No SF connector or
-physical maneuver claim is introduced. Versioned public packaging, district scope, independent map/device/
+physical maneuver claim is introduced. The complete temporal map bundle and new review workspace now validate locally;
+public viewer/source-offer integration, district scope, independent map/device/
 visitor evidence and measured vehicle inputs remain open. Austin is next after SF acceptance. San Mateo
 remains a prepared California source probe; no new city result is introduced. The Model lab update is live at <https://fleetlab.pages.dev/city-explorer/#models>.
 Publication verification is recorded in [the release record](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md).
@@ -24,7 +25,7 @@ The entire SF checklist is not complete: remaining engineering tasks and externa
 evidence requirements are separated in the current completion status.
 
 Latest engineering evidence: all 300 fixed temporal routing contexts complete
-with algorithm parity, and 262 City Python tests pass. The bounded caches retain
+with algorithm parity, and the current City Python suite has 286 passes. The bounded caches retain
 actual-time permission checks. The full 100-vehicle, 1,200-request, eight-hour
 engineering case now completes and independently verifies within 4 GB / 30-minute
 phase limits. Two numerical verifier defects were reproduced and corrected;
@@ -34,6 +35,14 @@ official district source includes water areas; the full-inventory diagnostic
 reduces unassigned geometry to 49 boundary differences / 441.926 m, without
 adopting or silently changing the map. See the linked current status for exact
 measurements, source-policy decisions and remaining external observations.
+
+The [temporal bundle handoff](FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md) records exact
+map/review identities, measured packaging memory and commands. Use temporal review
+workspace r2, with 2,160 obligations and zero observations; r1 is retained as
+superseded after an internal-ID projection defect was corrected. The original
+v2 workspace is unchanged. No new public release or scientific evaluation was
+performed in this continuation. Next implementation is the compatible source
+offer and additive temporal atlas/readiness view.
 
 ## Latest handoff — San Francisco clarity and fleet insights, 29 September 2026
 

@@ -108,6 +108,27 @@ def prepare_review(root, destination):
             "do not inflate independent checks"
         ),
     }
+    return freeze_workspace(
+        destination,
+        requirements,
+        {
+            "source_accounting": "PASS"
+            if candidate["coverage.json"]["accounting_complete"]
+            else "HOLD",
+            "class_budgets": "HOLD",
+            "district_scope": "HOLD",
+            "continuity": "NOT_RUN",
+        },
+    )
+
+
+def freeze_workspace(destination, requirements, gates):
+    """Write an empty review against exact caller-supplied requirements and gates."""
+    destination = Path(destination)
+    if destination.exists():
+        raise FileExistsError("review workspace exists; select a new immutable version")
+    identity = requirements["candidate"]
+    obligations, samples = requirements["obligations"], requirements["samples"]
     manifest = {"previous": None, "observations": [], "resolutions": [], "captures": []}
     history = {
         "schema": "fleetlab.map-review-history/1.0.0",
@@ -131,19 +152,7 @@ def prepare_review(root, destination):
             "status": "FROZEN_EMPTY_REVIEW; no human observations",
         },
     )
-    envelope = validate_review(
-        destination / "history.json",
-        requirements,
-        checkpoint,
-        {
-            "source_accounting": "PASS"
-            if candidate["coverage.json"]["accounting_complete"]
-            else "HOLD",
-            "class_budgets": "HOLD",
-            "district_scope": "HOLD",
-            "continuity": "NOT_RUN",
-        },
-    )
+    envelope = validate_review(destination / "history.json", requirements, checkpoint, gates)
     save_json(destination / "envelope.json", envelope)
     with (destination / "inspection-worksheet.csv").open("w", newline="") as stream:
         writer = csv.writer(stream)

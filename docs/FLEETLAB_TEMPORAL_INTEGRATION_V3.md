@@ -332,8 +332,9 @@ identities, negative evidence, observations and remaining obligations.
 
 The explicit source-edge connector contract is implemented in separate model 4
 with twelve focused fleet/verifier fixtures; see `FLEETLAB_DEPOT_CONNECTOR_CONTRACT_V1.md`.
-No connector is enabled in this SF model 3 recording. Finish versioned bundle/export integration. Resolve district scope and generate the new
-candidate's review requirements. Obtain actual independent map observations,
+No connector is enabled in this SF model 3 recording. The complete versioned bundle and candidate-specific review requirements now
+validate locally; see `FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md`. Finish public
+source-offer/viewer integration and resolve district scope. Obtain actual independent map observations,
 physical-device/accessibility checks and visitor-comprehension evidence. Preserve
 `recommendation_eligible: false`, `NOT_AUTHENTICATED`, `SIMULATION_ONLY` and
 deployment authority `NONE` for these engineering records.

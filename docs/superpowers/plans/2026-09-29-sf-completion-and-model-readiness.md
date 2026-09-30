@@ -157,3 +157,25 @@ closed-loop bypass. The latter failed before the fix and now rejects forged loop
 This closes the eight-fixture implementation item together with the existing
 continuity/fleet fixtures; it does not qualify a site-specific SF connector.
 Versioned candidate packaging contract: FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md.
+
+
+## Temporal candidate release continuation
+
+- [x] Package the unchanged full temporal graph and recomputed road/coverage/gap
+  projections in a distinct immutable candidate container; bind container trust
+  fields as well as complete graph and source identity.
+- [x] Freeze new candidate review requirements without inheriting observations;
+  merge synthetic access-block reasons into real source features. Current r2:
+  2,160 obligations, 200 source-way / 100 OD samples, zero human observations.
+- [x] Measure full-map packaging and independent verification below 4 GB. Final
+  validation + review: 3,255,451,648 bytes / 19.637 seconds. Full City suite286,
+  root1661/56skip, Node49, Ruff/diff checks; independent review fixes complete.
+- [ ] Export the new compatible report, roads and review artifacts to the viewer;
+  keep original experiment replay and static candidate explicitly identified.
+- [ ] Expand the complete corresponding source offer, build the combined site,
+  inspect browser behavior, publish preview and production with exact readback.
+
+This continuation adds no simulation or new power-study execution. The original
+review workspace reproduces byte-for-byte. Pixel ADB still reports no connected
+device; actual human/source/device/visitor observations remain open. SF acceptance
+is still HOLD, and Austin remains subsequent to that decision.

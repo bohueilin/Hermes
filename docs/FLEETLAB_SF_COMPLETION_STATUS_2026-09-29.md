@@ -51,6 +51,16 @@ check; the reproduced regression now rejects it. No SF connector was enabled and
 no private-yard geometry or maneuver feasibility is claimed. Frozen v1 remains
 unchanged; v2/v3 reject new connector declarations explicitly.
 
+[Versioned temporal packaging](FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md) is now
+implemented and measured. The complete map bundle preserves the exact graph from
+the completed engineering case. Final validation plus a fresh review workspace
+peaked at 3.256 GB and took 19.637 seconds. Its current 2,160 obligations include
+200 source-way and 100 OD samples; zero human observations are recorded. The old
+v2 review package still reproduces byte-for-byte. The new bundle and worksheet
+are local; source-offer and viewer integration remain next. Current software
+gates: 286 City Python tests, 1,661 root passes / 56 skips and 49 City Node tests.
+Independent review findings were reproduced and fixed before this checkpoint.
+
 [New district research](FLEETLAB_SF_DISTRICT_RECONCILIATION_2026-09-30.md) located the
 official final redistricting map before water-area trimming. Full-inventory
 comparison leaves 49 boundary differences / 441.926 m; it also identifies five
@@ -115,10 +125,10 @@ lifetimes at process boundaries; do not merely increase the memory threshold.
 | Work | Implemented / observed | Still required |
 |---|---|---|
 | Cross-leg continuity | Versioned engines retain history through stops and fractional final edges; the fixed full-fleet engineering case completes and independently verifies within resource limits | Connector model 4 now has explicit source-edge circulation and independent verification fixtures. No SF connector has been declared or qualified; one diagnostic case is not map acceptance or a complete scientific evaluation. |
-| Conditional semantics | Local temporal importer/router and independently verified full-fleet case evaluate daily, weekday and overnight conditions at actual traversal times; original sf-v1/sf-v2 remain unchanged | Compatible candidate bundle/export. Unsupported grammar stays blocked. |
-| Priority source review | All 26 priority ways reconciled automatically; captured Lombard fixtures and supported access windows integrated in the new candidate; all class fractions below 5% | Actual independent source review, new candidate requirements, district scope and unresolved malformed/missing source topology. No human observations supplied. |
+| Conditional semantics | Local temporal importer/router and independently verified full-fleet case evaluate daily, weekday and overnight conditions at actual traversal times; original sf-v1/sf-v2 remain unchanged | Complete local candidate bundle now validates; public source offer and viewer integration remain. Unsupported grammar stays blocked. |
+| Priority source review | All 26 priority ways reconciled automatically; captured Lombard fixtures and supported access windows integrated in the new candidate; all class fractions below 5% | Actual independent source review against the candidate-specific requirements, district scope and unresolved malformed/missing source topology. No human observations supplied. |
 | District scope | Original 108 gaps / 13.161 km remain visible and UNASSIGNED; the newly located full official source reduces the diagnostic remainder to 49 records / 441.926 m | Resolve full-source redistribution terms and remaining OSM/administrative boundary differences under an explicit policy; retain all affected-road/request accounting and new source identities. |
-| Reviewer workflow | Runtime validator, frozen sample and downloadable worksheet | Actual 200-feature and 100-OD inspection, exception resolutions and independently recorded observations. Human observations supplied: zero. |
+| Reviewer workflow | Runtime validator and separate frozen sample/worksheet for each candidate; current temporal workspace is r2 | Actual 200-feature and 100-OD inspection, exception resolutions and independently recorded observations against the corresponding candidate. Human observations supplied: zero. |
 | Power experiment | 24 preflight arms, complete preflight analysis; one evaluation arm retained | Resolve the new resource stop under an explicit amendment before completing the 24 six-arm blocks. No primary result available. |
 | Devices/accessibility | Desktop automated checks; Pixel authorization and unlocked state observed | Physical touch/zoom/playback, landscape, enlarged text and screen-reader session. Other phone apps regained foreground during attempted checks, and the final ADB listing contained no connected device; no physical pass claimed. |
 | Comprehension | Five-visitor worksheet and independent scoring rubric prepared | Five actual visitors' answers, second scoring and revisions based on observed confusion. AI reviews are not participants. |
@@ -165,8 +175,8 @@ left-driving semantics and a local source contract.
 
 ## What is unfinished, and who can unblock it
 
-**Engineering work remains:** resolve source/district scope and integrate a versioned
-candidate bundle into the viewer. The explicit connector contract and its fleet
+**Engineering work remains:** resolve source/district scope and integrate the now-validated temporal
+candidate bundle into the viewer and source offer. The explicit connector contract and its fleet
 fixtures are implemented; site-specific SF connectors remain undeclared. Temporal import/routing, static fleet continuity
 and partial-edge verification are implemented and tested locally. These remaining
 implementation tasks stay with engineering. This release does not finish the
@@ -206,7 +216,7 @@ traces, failures and viewer bundles so every change stays reviewable.
 
 1. Complete independent map and visitor sessions using the published worksheets;
    record actual observations against the frozen identities.
-2. Package the qualified temporal engineering case under its own identity; qualify
+2. Integrate the validated temporal bundle and its fresh review workspace into the viewer; qualify
    the distinct scientific-study execution path before proposing a power amendment.
 3. Record the SF acceptance decision, then begin Austin with its own source,
    scope and experiment contracts; retain other California cities and Las Vegas
