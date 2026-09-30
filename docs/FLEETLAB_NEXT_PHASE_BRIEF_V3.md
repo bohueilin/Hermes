@@ -41,9 +41,13 @@ The [temporal bundle handoff](FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md) records 
 map/review identities, measured packaging memory and commands. Use temporal review
 workspace r2, with 2,160 obligations and zero observations; r1 is retained as
 superseded after an internal-ID projection defect was corrected. The original
-v2 workspace is unchanged. No new public release or scientific evaluation was
-performed in this continuation. Next implementation is the compatible source
-offer and additive temporal atlas/readiness view.
+v2 workspace is unchanged. The compatible source offer and additive temporal
+atlas/readiness view were subsequently published as production `e37b4a7b`.
+The [administrative reporting implementation](FLEETLAB_SF_ADMINISTRATIVE_REPORT_2026-09-30.md)
+now supplies a separate immutable boundary/population proposal and 56 additional
+review obligations. It preserves the published graph and full recorded demand.
+Source terms, adoption and real observations remain open; no additional
+scientific evaluation was performed.
 
 ## Latest handoff — San Francisco clarity and fleet insights, 29 September 2026
 

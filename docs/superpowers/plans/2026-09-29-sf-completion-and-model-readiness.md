@@ -196,3 +196,25 @@ production e37b4a7b is live and also passed all 10,001 payload comparisons
 and headers, as recorded in the current publication record. No scientific retry occurred. Acceptance remains HOLD; physical-device
 and real human map/visitor evidence, district policy and calibration stay open.
 Austin remains next after acceptance, not silently marked complete.
+
+## 30 September administrative reporting continuation
+
+- [x] Implement the separate versioned source/scope reporting contract without
+  changing the complete temporal graph or the existing engineering input tape.
+- [x] Account for complete source IDs, exact exclusive/shared/outside geometry,
+  frozen denominators and every retained pool/request/initial-vehicle entry.
+- [x] Build and recompute the complete proposal in fresh processes below 4 GB;
+  preserve the initial version and measured corrected writer/validator reports.
+- [x] Fix independent review findings for path traversal, mutation detection and
+  atomic no-replace publication using failing-then-passing regressions.
+- [ ] Establish the full source's redistribution basis, resolve the 49 remaining
+  differences and record an explicit administrative adoption decision.
+- [ ] Supply actual independent map/device/visitor observations before city acceptance.
+
+The final proposal retains 69,027 source IDs, 220 pool nodes, 1,200 requests and
+100 initial vehicles. It identifies 49 road differences / 441.926 m and five
+changed pool memberships affecting 60 requests and four initial vehicles. Its
+56 additional obligations have zero observations. Final build/recompute peak
+memory is 1.61/1.66 GB. Tests: 312 City Python; 54 City Node; root1,661/56skips;
+Ruff/whitespace pass. No additional power execution, new public geometry or
+city qualification is implied. See FLEETLAB_SF_ADMINISTRATIVE_REPORT_2026-09-30.md.

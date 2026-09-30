@@ -5,6 +5,11 @@ The existing SF packs and their 108 gaps / 13.161 km remain unchanged. This note
 records a stronger source and the remaining reconciliation work without assigning
 roads to their nearest district or shrinking the service area to the mainland.
 
+The [versioned administrative report](FLEETLAB_SF_ADMINISTRATIVE_REPORT_2026-09-30.md)
+now implements full conserved accounting and exact frozen-population impacts,
+with a separate immutable proposal and fresh-process recomputation. Its 56
+administrative obligations have no human observations. Adoption remains open.
+
 ## Finding
 
 The [DataSF 2022 district metadata](https://data.sf.gov/api/views/f2zs-jevy)
@@ -13,6 +18,12 @@ linked final-map application retains the underlying redistricting map, including
 water areas. That difference explains most of the road gaps, including bridges.
 Selecting the current DataSF endpoint alone cannot fix this: its metadata says
 it currently uses the same 2022 geometry.
+Fresh downloads on 30 September verified that the actual current and 2022
+geometries have the same trimmed footprint. All 120 results from an official
+ArcGIS catalog search were inspected; explicitly licensed alternate layers
+identified in that search also referenced the trimmed source. The full-map
+item, app and web-map metadata did not establish a separate redistribution grant.
+Captures are under `build/fleetlab-city/research/district-source-followup-20260930/`.
 
 The reproducible source chain is:
 
