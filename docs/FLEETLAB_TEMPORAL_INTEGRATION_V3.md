@@ -6,6 +6,13 @@ Historical packs, fleet recordings and the stopped power protocol remain
 unchanged. This is an engineering checkpoint, not a deployment or an SF
 acceptance decision. SF acceptance remains **HOLD**.
 
+The subsequent performance work completes the fixed **300/300** SF routing
+contexts, with A*/Dijkstra parity and no unavailable searches. The latest
+completed check is `r13`, including the reviewed bounded potential cache and
+permanent-node proof. Full fleet
+resource qualification and public packaging remain separate work; see
+[the resource record](FLEETLAB_SF_TEMPORAL_RESOURCE_2026-09-30.md).
+
 ## Contract
 
 Use a separately identified temporal pack and fleet model. Preserve raw tags,
@@ -47,8 +54,9 @@ the relaxed lower bound and a feasible upper bound, proving optimality. It can
 then return directly. A failed temporal check continues into the full search.
 
 A further bounded preliminary search supplies only a feasible cost upper bound,
-never a public route or a proof of no route. A reverse shortest-path potential ignores
-restrictions, so it is an admissible lower bound for both algorithms. The exact
+never a public route or a proof of no route. A reverse shortest-path potential
+relaxes turns and scheduled rules while retaining permanent node-access denials,
+so it is an admissible lower bound for both algorithms. The exact
 search proves the minimum within those bounds. A* and Dijkstra share costs and
 admissibility; budgets remain 250,000 states and 2,000,000 work units per query.
 The preliminary searches share that work budget. Exhaustion means unavailable,
@@ -68,7 +76,7 @@ The complete temporal pack digest, not only that projection, binds the run.
 
 ## Implemented validation
 
-The 27 temporal tests cover all 18 captured Lombard records, named via nodes and
+The original 27 temporal tests cover all 18 captured Lombard records, named via nodes and
 directed edges, 07:00/10:00/15:00/19:00 boundaries, overnight access, specificity,
 closing mid-edge, final-node passage, malformed/duplicate source records,
 unsupported modes and ambiguous approaches. Literal route fixtures require a
@@ -89,7 +97,7 @@ finding was reproduced in a failing test and fixed. Subsequent node-access and
 routing-bound optimizations were validated by focused regression tests and the
 SF diagnostics below; they were not part of that review snapshot.
 
-Final local suite: **250 City Python tests passed**, including the 27 temporal
+Original integration checkpoint: **250 City Python tests passed**, including the 27 temporal
 tests. The shared accounting extraction also passed **1,661 root Python tests /
 56 skips** and **49 City Node tests**. Ruff and whitespace checks passed. Doctor
 reported 16 PASS, two environment/dirty-checkout warnings and one optional
@@ -156,14 +164,14 @@ static-optimum certificate now bypasses expansion only after all its actual
 traversal checks pass. A separate regression reproduced this failure before the
 change. The full sample is rechecked after each fix; neither failure was removed.
 
-## Latest full-SF routing check — still incomplete
+## Preserved r8 routing failure — subsequently resolved
 
-The final `r8/shift-routing.json` checks the same 100 fixed OD pairs at 09:59,
+The `r8/shift-routing.json` checks the same 100 fixed OD pairs at 09:59,
 10:59 and 14:59 local, with A*/Dijkstra outbound routes and retained-history
 returns after rounded arrival plus 30 seconds of dwell. The first two sets
 completed. The third stopped on its 48th context, leaving 52 contexts NOT_RUN.
 
-| Latest observed result | Value |
+| Observed r8 result | Value |
 |---|---:|
 | OD contexts attempted / planned | 248 / 300 |
 | Route searches performed | 976 |
@@ -173,7 +181,7 @@ completed. The third stopped on its 48th context, leaving 52 contexts NOT_RUN.
 | Peak resident bytes | 1,774,665,728 |
 | Elapsed seconds | 287.413 |
 
-The remaining failure is return `65391872 → 65314192`, departing at 15:15:31
+The r8 failure is return `65391872 → 65314192`, departing at 15:15:31
 local after its 14:59 outbound trip. Both algorithms exceeded the unchanged
 250,000-state search limit. Their matching failure is not proof of no route or
 a passing qualification result. No memory limit was exceeded. The report's
@@ -186,12 +194,92 @@ passages around 15:18:47, so the static-optimum certificate correctly declines i
 The only schedule change inside the feasible bound is 15:30. This narrows the
 next investigation; it does not prove that the change is irrelevant to all paths.
 
-The next optimization must prove which schedule changes can affect a feasible
-route through the current state. Merely raising caps, discarding later arrivals,
-coarsening time, allowing waiting or removing difficult OD pairs would change
-the model or hide the failure. Until resolved, full temporal routing and fleet
-resource qualification remain incomplete. The earlier morning-only 200-search
-pass and successful one-vehicle smoke do not override this adverse result.
+The feature-specific boundary proof below resolves that failure without raising
+caps, coarsening time, allowing waiting or removing difficult OD pairs. Earlier
+failed diagnostics stay preserved rather than being replaced by passing files.
+
+## Performance and correctness continuation
+
+A bounded forward potential and the reverse potential provide lower bounds on
+every feasible prefix and suffix. For each timed feature, these define its
+earliest possible entry and latest possible exit within a feasible complete
+journey. Only schedule boundaries intersecting that conservative interval need
+time labels. Turns and node passage use point intervals; way access includes
+the entire edge occupancy. Every traversal still applies the original permission
+checks. The extra work shares the existing query budget.
+
+The r8 return's 27 features changing at 15:30 all fall outside its feasible
+959.852-second journey. Removing these irrelevant boundaries permits static
+dominance without dropping possible journeys. Way, node and turn fixtures first
+failed their bounded search, then passed with this proof.
+
+Independent review found a necessary correction: the original numeric stable
+marker collided with the initial time-zero state. A real 65-second cycle could
+return to its initial incoming edge after a gate opened and be discarded. A
+distinct `None` marker fixes the collision; both algorithms now return the
+hand-checkable 155-second route. The regression failed before the fix. A reviewer
+also compared 1,220 queries over 70 small graphs against exhaustive time labels;
+all matched after the fix. That oracle shares unchanged permission predicates,
+so it checks search/dominance behavior, not independent source semantics.
+
+The static-history optimum can be retained across departures, but each use
+rechecks the entire candidate path at actual times. A static no-route proof is
+also independent of departure. Exact-time results and static proofs share one
+LRU under the unchanged **4,096-entry / 100,000-edge** total ceilings. Unsupported
+searches are never cached as no-route proofs.
+
+Unrestricted reverse potentials now have a separate LRU of at most **16 entries
+and 1,000,000 node-distance labels**. Its identity includes pack, destination and
+horizon; values are immutable. Partial/failed computations are never inserted.
+This is a bounded optimization of lower bounds, not a table of permitted routes.
+An actual 100-query profile fell from 16.852 to 0.607 seconds with identical
+statuses and costs; profiling overhead is included. These measurements are not
+full-fleet runtime predictions. The 4 GB process and 2 GB route-table limits remain.
+
+Dispatch also avoids pickup exploration for proven terminal passenger arrivals:
+no departure exists, or every departure reverses the only possible incoming
+neighbor. This applies only to nonempty trips away from depot nodes. Requests
+remain queued through their ordinary patience outcome. Complete recording-digest
+tests match the unoptimized dispatcher; depot and initial zero-trip controls
+remain serviceable. No connector or reversal permission is inferred.
+
+| Fixed routing check | OD contexts | Searches | ROUTE / no continuation | Peak bytes | Seconds |
+|---|---:|---:|---:|---:|---:|
+| r9: relevant boundaries | 300 / 300 | 1,182 | 1,098 / 84 | 1,720,320,000 | 259.092 |
+| r10: static-proof reuse | 300 / 300 | 1,182 | 1,098 / 84 | 1,714,323,456 | 298.290 |
+| r11: reviewed stable marker | 300 / 300 | 1,182 | 1,098 / 84 | 1,771,831,296 | 299.098 |
+| r12: bounded potential cache | 300 / 300 | 1,182 | 1,098 / 84 | 1,839,153,152 | 242.901 |
+| r13: permanent-node bound | 300 / 300 | 1,182 | 1,098 / 84 | 1,847,508,992 | 236.820 |
+
+All five runs retain the same departure sets, OD requirements, outgoing and
+return histories, algorithms, costs and search limits. Each captures unchanged
+source hashes. The 84 no-continuation results remain unavailable paths; passing
+the diagnostic does not mean every OD is reachable. Report SHA-256 values:
+
+- r9: `fe816198d956213aea62248cf59e1d8033013bc788689697f33c59cb35739a87`.
+- r10: `f13a11e0a7cefeb4933720c609499beb2afbb8470fa11437f5c5baaaa37c564d`.
+- r11: `5cc043005e4c5d33cff4405d64c50b9ffcf12a5f483a11bb20e811edf385fe7b`.
+- r12: `3cabdffb7355ee7e97b8d79d8ab2ef6f715347578a974e2486f0b2e975f82ab9`.
+- r13: `7323b5a6da796b586f179b5859bc1436aeb1d6df33c14c9b0a6e0451dd43da94`.
+
+The current software suite has **260 City Python passes**, including **35 temporal
+tests**. Review found no further important issues in proof-cache identity, LRU
+bounds or the structural terminal proof. The added reverse-potential cache was
+separately reviewed for admissibility, failed-computation handling and eviction.
+The final root suite has 1,661 passes / 56 skips; City Node has 49 passes.
+Ruff and whitespace checks pass. Doctor retains 16 PASS, two environment/dirty
+checkout warnings and one optional display NOT_AVAILABLE. No browser UI changed.
+
+A later full-fleet query exhausted its work budget for a destination behind two
+permanent motor-vehicle gates. The reverse topology now retains most-specific
+base node denials; supported conditionals only add denials and cannot reopen
+these nodes. A more-specific base grant still overrides a lower-priority denial.
+This stronger lower bound proves the inaccessible destination without expanding
+time labels. The exact SF counterexample now returns no continuation with both
+algorithms in under 0.1 milliseconds after construction. Its RED/GREEN fixture
+and eight reviewer access-precedence cases pass. This does not change map
+inventory, route permission or the work budget; the full-fleet failure remains
+preserved in the resource record.
 
 ## Actual fleet smoke check
 

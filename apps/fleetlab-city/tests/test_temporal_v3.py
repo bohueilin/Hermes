@@ -117,6 +117,126 @@ class TemporalTests(unittest.TestCase):
             self.assertEqual(route.status, "ROUTE", route.reason)
             self.assertEqual(route.edges[0] == "20:0:f", not forbidden, stamp)
 
+    def test_legal_cycle_after_boundary_preserves_later_initial_arrival(self):
+        # A 65-second cycle returns along the same retained incoming edge. It
+        # must survive dominance so the vehicle reaches an opening road after
+        # 07:03. The disconnected schedule must not affect route availability.
+        nodes = "".join(
+            f'<node id="{i}" lon="{-122.42 + i * 0.0001}" lat="37.77"/>' for i in range(7)
+        )
+        records = [
+            ("100", "0", "1", 10, None),
+            ("101", "1", "2", 15, None),
+            ("102", "2", "0", 40, None),
+            ("103", "1", "3", 40, None),
+            ("104", "3", "4", 40, "07:02-07:03"),
+            ("105", "5", "6", 10, "07:03-07:04"),
+        ]
+        ways = []
+        for way, u, v, _, condition in records:
+            tag = f'<tag k="vehicle:conditional" v="no @ ({condition})"/>' if condition else ""
+            ways.append(
+                f'<way id="{way}"><nd ref="{u}"/><nd ref="{v}"/>'
+                f'<tag k="highway" v="residential"/><tag k="oneway" v="yes"/>{tag}</way>'
+            )
+        pack = self.pack(("<osm>" + nodes + "".join(ways) + "</osm>").encode())
+        seconds_by_way = {way: seconds for way, _, _, seconds, _ in records}
+        for edge in pack["edges"]:
+            seconds = seconds_by_way[edge["way"]]
+            edge.update(seconds=seconds, source_seconds=seconds, duration_ms=seconds * 1000)
+        scenario = dict(spec(), route_horizon_s=180)
+        router = self.router(pack, scenario)
+        arrival = state_object(
+            router.actual_arrival({"arrival_before": router.initial_state("2")}, ["102:0:f"])
+        )
+        context = router.context(datetime.fromisoformat("2026-09-29T14:01:59+00:00"))
+        for algorithm in ("astar", "dijkstra"):
+            with self.subTest(algorithm=algorithm):
+                route = router.route("0", "4", arrival, context, algorithm=algorithm)
+                self.assertEqual(route.status, "ROUTE", route.reason)
+                self.assertEqual(route.seconds, 155)
+                self.assertEqual(
+                    route.edges,
+                    ("100:0:f", "101:0:f", "102:0:f", "100:0:f", "103:0:f", "104:0:f"),
+                )
+
+    def test_repeated_destination_reuses_bounded_static_potential(self):
+        nodes = "".join(
+            f'<node id="{i}" lon="{-122.42 + i * 0.0001}" lat="37.77"/>' for i in range(51)
+        )
+        refs = "".join(f'<nd ref="{i}"/>' for i in range(51))
+        pack = self.pack(
+            (
+                f'<osm>{nodes}<way id="10">{refs}<tag k="highway" v="residential"/>'
+                '<tag k="oneway" v="yes"/></way></osm>'
+            ).encode()
+        )
+        router = self.router(pack)
+        context = router.context(router.start)
+        self.assertEqual(router.route("0", "50", router.initial("0"), context).status, "ROUTE")
+        # A second origin needs a different route, but the same lower bound.
+        # Its budget covers the actual route search/checks, not rebuilding all
+        # 50 reverse labels. No exact route or static path certificate is reused.
+        router.max_checks = 120
+        result = router.route("1", "50", router.initial("1"), context)
+        self.assertEqual(result.status, "ROUTE", result.reason)
+        self.assertEqual(result.edges, tuple(f"10:{i}:f" for i in range(1, 50)))
+        cold = self.router(pack)
+        cold.max_checks = 120
+        self.assertEqual(
+            cold.route("1", "50", cold.initial("1"), cold.context(cold.start)).status,
+            "UNSUPPORTED_CONTEXT",
+        )
+
+    def test_permanently_closed_node_proves_unreachable_without_time_expansion(self):
+        def graph(override):
+            nodes = "".join(
+                f'<node id="{i}" lon="{-122.42 + i * 0.0001}" lat="37.77">'
+                + ('<tag k="motor_vehicle" v="no"/>' + override if i == 49 else "")
+                + "</node>"
+                for i in range(51)
+            )
+            refs = "".join(f'<nd ref="{i}"/>' for i in range(51))
+            return self.pack(
+                (
+                    f'<osm>{nodes}<way id="10">{refs}<tag k="highway" v="residential"/>'
+                    '<tag k="oneway" v="yes"/></way></osm>'
+                ).encode()
+            )
+
+        router = self.router(graph(""))
+        router.max_checks = 120
+        result = router.route("0", "50", router.initial("0"), router.context(router.start))
+        self.assertEqual(result.status, "NO_MODELED_CONTINUATION", result.reason)
+        # A more specific base grant defeats the lower-priority denial; the
+        # same graph must then remain connected in the relaxed potential.
+        allowed = self.router(graph('<tag k="motorcar" v="yes"/>'))
+        route = allowed.route("0", "50", allowed.initial("0"), allowed.context(allowed.start))
+        self.assertEqual(route.status, "ROUTE", route.reason)
+
+    def test_potential_cache_bounds_and_horizon_identity(self):
+        from citylib.continuity_v1 import _Budget
+
+        router = self.router()
+        self.assertTrue(hasattr(router, "_potential_cache"), "bounded potential cache required")
+        router._max_potential_entries = 2
+        router._max_potential_nodes = 5
+        for destination in ("3", "4", "2", "3"):
+            expected = self.router()._lower_distances(destination, _Budget(1000))
+            self.assertEqual(router._lower_distances(destination, _Budget(1000)), expected)
+            self.assertLessEqual(len(router._potential_cache), 2)
+            self.assertLessEqual(router._potential_nodes, 5)
+            self.assertEqual(
+                router._potential_nodes, sum(len(v) for v in router._potential_cache.values())
+            )
+        router.horizon_ms = 1
+        self.assertEqual(router._lower_distances("3", _Budget(1000)), {"3": 0})
+        uncached_router = self.router()
+        uncached_router._max_potential_nodes = 0
+        uncached = uncached_router._lower_distances("1", _Budget(1000))
+        self.assertEqual(uncached, {"1": 0})
+        self.assertEqual(len(uncached_router._potential_cache), 0)
+
     def test_route_crossing_boundary_evaluates_each_entry(self):
         router = self.router()
         dt = datetime(2026, 9, 29, 13, 59, 59, tzinfo=UTC)
@@ -612,6 +732,135 @@ class TemporalTests(unittest.TestCase):
             self.assertEqual(result.status, "ROUTE", result.reason)
             self.assertEqual(result.seconds, 131)
             self.assertNotIn("20:0:f", result.edges)
+
+    def test_unreachable_schedule_changes_do_not_expand_temporal_labels(self):
+        for kind in ["way", "node", "turn"]:
+            with self.subTest(kind=kind):
+                condition = '<tag k="vehicle:conditional" v="no @ (07:01-07:02)"/>'
+                extra = f"""
+                  <node id="99" lon="-122.43" lat="37.77">
+                    {condition if kind == "node" else ""}</node>
+                  <node id="100" lon="-122.431" lat="37.77"/>
+                  <way id="40"><nd ref="99"/><nd ref="100"/>
+                    <tag k="highway" v="residential"/><tag k="oneway" v="yes"/>
+                    {condition if kind == "way" else ""}</way>
+                  <way id="50"><nd ref="1"/><nd ref="99"/>
+                    <tag k="highway" v="residential"/><tag k="oneway" v="yes"/>
+                  </way>"""
+                if kind == "turn":
+                    extra += """<relation id="990"><member type="way" ref="50" role="from"/>
+                      <member type="node" ref="99" role="via"/>
+                      <member type="way" ref="40" role="to"/>
+                      <tag k="type" v="restriction"/>
+                      <tag k="restriction:conditional" v="no_left_turn @ (07:01-07:02)"/>
+                    </relation>"""
+                raw = raw_fixture("no_left_turn @ (07:00-08:00)")
+                raw = raw.replace(b"</osm>", extra.encode() + b"</osm>")
+                pack = self.branching_pack(self.imp.parse_temporal_osm(raw))
+                # Reachable, but too far away for any route within the known
+                # feasible 131-second journey. Its 07:02 change is irrelevant.
+                for eid, way, u, v, seconds in [
+                    ("50:0:f", "50", "1", "99", 500),
+                    ("40:0:f", "40", "99", "100", 1),
+                    ("exit:0:f", "exit", "100", "3", 1),
+                ]:
+                    pack["edges"].append(
+                        {
+                            "id": eid,
+                            "way": way,
+                            "u": u,
+                            "v": v,
+                            "length_m": 1,
+                            "source_seconds": seconds,
+                            "duration_ms": seconds * 1000,
+                            "seconds": seconds,
+                        }
+                    )
+                router = self.router(pack)
+                router.max_states = 150
+                for algorithm in ["astar", "dijkstra"]:
+                    result = router.route(
+                        "start",
+                        "3",
+                        router.initial("start"),
+                        router.context(datetime(2026, 9, 29, 14, tzinfo=UTC)),
+                        algorithm=algorithm,
+                    )
+                    self.assertEqual(result.status, "ROUTE", result.reason)
+                    self.assertEqual(result.seconds, 131)
+                    self.assertNotIn("20:0:f", result.edges)
+
+    def test_static_proof_reuse_checks_new_time_with_bounded_work(self):
+        router = self.router()
+        first = router.route(
+            "1",
+            "3",
+            router.initial("1"),
+            router.context(datetime(2026, 9, 29, 17, tzinfo=UTC)),
+        )
+        self.assertEqual(first.status, "ROUTE")
+        # Enough work to check this two-edge route at another departure, but
+        # not enough to repeat a graph search. This is a new temporal context.
+        router.max_checks = 4
+        second = router.route(
+            "1",
+            "3",
+            router.initial("1"),
+            router.context(datetime(2026, 9, 29, 17, 1, tzinfo=UTC)),
+        )
+        self.assertEqual(second.status, "ROUTE", second.reason)
+        self.assertEqual(second.edges, first.edges)
+        router.max_checks = 2_000_000
+        closed = router.route(
+            "1",
+            "3",
+            router.initial("1"),
+            router.context(datetime(2026, 9, 29, 22, tzinfo=UTC)),
+        )
+        self.assertEqual(closed.status, "ROUTE", closed.reason)
+        self.assertNotIn("20:0:f", closed.edges)
+
+    def test_static_no_route_proof_reused_across_departure_times(self):
+        raw = raw_fixture().replace(b'<tag k="oneway" v="yes"/>', b'<tag k="oneway" v="no"/>', 1)
+        router = self.router(self.pack(raw))
+        arrival = state_object(
+            router.actual_arrival({"arrival_before": router.initial_state("1")}, ["10:0:f"])
+        )
+        stamp = datetime(2026, 9, 29, 17, tzinfo=UTC)
+        first = router.route("2", "1", arrival, router.context(stamp))
+        self.assertEqual(first.status, "NO_MODELED_CONTINUATION")
+        router.max_checks = 1
+        stamp = stamp.replace(minute=1)
+        second = router.route("2", "1", arrival, router.context(stamp))
+        self.assertEqual(second.status, "NO_MODELED_CONTINUATION", second.reason)
+
+    def test_route_and_static_proofs_share_existing_cache_bounds(self):
+        router = self.router()
+        router.max_cache_entries = 3
+        router._max_cache_edges = 6
+        for minute in range(8):
+            result = router.route(
+                "1",
+                "3",
+                router.initial("1"),
+                router.context(datetime(2026, 9, 29, 17, minute, tzinfo=UTC)),
+            )
+            self.assertEqual(result.status, "ROUTE", result.reason)
+            self.assertLessEqual(len(router._cache), 3)
+            self.assertLessEqual(router._cached_edges, 6)
+            self.assertEqual(
+                router._cached_edges, sum(len(r.edges) for r in router._cache.values())
+            )
+        # The frequently used proof must remain useful after exact-time entries
+        # have churned, while sharing the same total storage ceiling.
+        router.max_checks = 4
+        result = router.route(
+            "1",
+            "3",
+            router.initial("1"),
+            router.context(datetime(2026, 9, 29, 17, 9, tzinfo=UTC)),
+        )
+        self.assertEqual(result.status, "ROUTE", result.reason)
 
 
 if __name__ == "__main__":

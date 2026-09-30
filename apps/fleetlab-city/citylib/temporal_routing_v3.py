@@ -3,8 +3,9 @@
 import heapq
 import itertools
 import math
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from datetime import timedelta
+from types import MappingProxyType
 from zoneinfo import ZoneInfo
 
 from .conditional_access_v1 import parse_condition
@@ -49,6 +50,11 @@ class TemporalRouter(FleetRouter):
             raise ValueError("temporal scenario/journey horizon bound")
         graph = validated_graph(pack)
         super().__init__(graph, spec)
+        self._cache = OrderedDict()
+        self._potential_cache = OrderedDict()
+        self._potential_nodes = 0
+        self._max_potential_entries = 16
+        self._max_potential_nodes = 1_000_000
         self.pack_digest = digest(pack)
         self.horizon_ms = horizon * 1000
         boarding = spec.get("boarding_s", 0)
@@ -57,12 +63,22 @@ class TemporalRouter(FleetRouter):
         self.max_departure_s = duration + 2 * horizon + boarding + 2
         self.end = self.start + timedelta(seconds=self.max_departure_s + horizon)
         self._duration_ms = {e["id"]: e["duration_ms"] for e in pack["edges"]}
+        self._node_access = {e["node"]: e["tags"] for e in pack["temporal"]["nodes"]}
+        # Supported conditionals only add denials. A denial in the most
+        # specific base mode therefore cannot become passable at any clock.
+        # Retaining it in the relaxed topology can otherwise expand time labels
+        # for an unreachable destination behind a permanent gate.
+        permanently_closed = {
+            node
+            for node, tags in self._node_access.items()
+            if next((tags[mode] not in ALLOW for mode in MODES if mode in tags), False)
+        }
         self._reverse = defaultdict(list)
         for edge in pack["edges"]:
-            self._reverse[edge["v"]].append((edge["u"], edge["duration_ms"]))
+            if edge["u"] not in permanently_closed and edge["v"] not in permanently_closed:
+                self._reverse[edge["v"]].append((edge["u"], edge["duration_ms"]))
         self._timed_turns, self._access = defaultdict(list), {}
         self._spans, self._boundaries = {}, set()
-        self._node_access = {e["node"]: e["tags"] for e in pack["temporal"]["nodes"]}
         for rule in pack["temporal"]["turns"]:
             self._register(rule["expression"])
             self._timed_turns[(rule["via"], rule["from"])].append(rule)
@@ -76,6 +92,20 @@ class TemporalRouter(FleetRouter):
                 if key.endswith(":conditional"):
                     self._register(value)
         self._boundaries = tuple(sorted(self._boundaries))
+        self._schedule_features = []
+        for (node, _), rules in self._timed_turns.items():
+            for rule in rules:
+                self._schedule_features.append((node, node, 0, rule["expression"]))
+        for node, tags in self._node_access.items():
+            for key, expression in tags.items():
+                if key.endswith(":conditional"):
+                    self._schedule_features.append((node, node, 0, expression))
+        for edge in self.edges.values():
+            for key, expression in self._access.get(edge["way"], {}).items():
+                if key.endswith(":conditional"):
+                    self._schedule_features.append(
+                        (edge["u"], edge["v"], self._duration_ms[edge["id"]], expression)
+                    )
 
     def _register(self, expression):
         if expression in self._spans:
@@ -143,11 +173,18 @@ class TemporalRouter(FleetRouter):
         return True
 
     def _lower_distances(self, destination, budget):
-        """One bounded reverse shortest-path potential, ignoring all restrictions.
+        """Reverse potential ignoring turn/scheduled rules, retaining permanent gates.
 
-        It underestimates every feasible time-dependent journey. No all-pairs
-        table or cache is retained; this query releases the potential on return.
+        It underestimates every feasible time-dependent journey. Completed
+        potentials share a separate bounded LRU (16 destinations / 1M labels),
+        never an all-pairs table. The graph is fixed for this router; horizon
+        remains in the key. Immutable values cannot become route permissions.
         """
+        budget.spend()
+        key = (self.pack_digest, destination, self.horizon_ms)
+        if key in self._potential_cache:
+            self._potential_cache.move_to_end(key)
+            return self._potential_cache[key]
         lower = {destination: 0}
         heap = [(0, destination)]
         while heap:
@@ -163,7 +200,17 @@ class TemporalRouter(FleetRouter):
                     raise ValueError("temporal reverse-potential state budget exceeded")
                 lower[previous] = score
                 heapq.heappush(heap, (score, previous))
-        return lower
+        frozen = MappingProxyType(lower)
+        if self._max_potential_entries > 0 and len(lower) <= self._max_potential_nodes:
+            while (
+                len(self._potential_cache) >= self._max_potential_entries
+                or self._potential_nodes + len(lower) > self._max_potential_nodes
+            ):
+                _, old = self._potential_cache.popitem(last=False)
+                self._potential_nodes -= len(old)
+            self._potential_cache[key] = frozen
+            self._potential_nodes += len(lower)
+        return frozen
 
     def _feasible_upper(self, start, destination, arrival, context, budget, lower_distances):
         """Find only a feasible cost bound; failure/earliest labels prove nothing.
@@ -201,6 +248,57 @@ class TemporalRouter(FleetRouter):
                     continue
                 heapq.heappush(heap, (score + lower, score, next(serial), nxt))
         return None
+
+    def _relevant_boundaries(self, start, context, bound, lower, budget):
+        """Conservative change instants on any complete journey within the bound.
+
+        Plain-graph forward/reverse distances ignore restrictions, so they bound
+        every feasible prefix and suffix from below. A feature can be occupied
+        only between its earliest possible entry and latest possible exit. A
+        schedule change outside that interval cannot distinguish two feasible
+        route labels. Node passage and turns use a zero-duration point; ways use
+        the whole edge interval, including changes during occupancy.
+        """
+        final = context.departure + timedelta(milliseconds=bound)
+        changes = {}
+        for expression, spans in self._spans.items():
+            budget.spend(len(spans) * 2)
+            values = {t for span in spans for t in span if context.departure < t <= final}
+            if values:
+                changes[expression] = values
+        if not changes:
+            return ()
+        forward = {start: 0}
+        heap = [(0, start)]
+        while heap:
+            cost, node = heapq.heappop(heap)
+            if cost != forward[node]:
+                continue
+            for eid in self._out.get(node, ()):
+                budget.spend()
+                edge = self.edges[eid]
+                score = cost + self._duration_ms[eid]
+                if score + lower.get(edge["v"], math.inf) > bound or score >= forward.get(
+                    edge["v"], math.inf
+                ):
+                    continue
+                if edge["v"] not in forward and len(forward) >= self.max_states:
+                    raise ValueError("temporal forward-potential state budget exceeded")
+                forward[edge["v"]] = score
+                heapq.heappush(heap, (score, edge["v"]))
+        relevant = set()
+        for u, v, duration, expression in self._schedule_features:
+            budget.spend()
+            first = forward.get(u, math.inf)
+            last = bound - lower.get(v, math.inf)
+            if first + duration > last:
+                continue
+            for boundary in changes.get(expression, ()):
+                budget.spend()
+                offset = boundary - context.departure
+                if timedelta(milliseconds=first) <= offset <= timedelta(milliseconds=last):
+                    relevant.add(boundary)
+        return tuple(sorted(relevant))
 
     def _static_optimum(self, start, destination, arrival, budget, lower, algorithm):
         """Exact lower bound with static history, relaxing only temporal rules.
@@ -245,12 +343,20 @@ class TemporalRouter(FleetRouter):
         return None
 
     def _remember(self, key, result):
-        if (
-            len(self._cache) < self.max_cache_entries
-            and self._cached_edges + len(result.edges) <= self._max_cache_edges
+        # Static proofs and exact-time results share the original total bounds.
+        # Eviction changes performance only; it never discards arrival history.
+        if self.max_cache_entries == 0 or len(result.edges) > self._max_cache_edges:
+            return result
+        if key in self._cache:
+            self._cached_edges -= len(self._cache.pop(key).edges)
+        while (
+            len(self._cache) >= self.max_cache_entries
+            or self._cached_edges + len(result.edges) > self._max_cache_edges
         ):
-            self._cache[key] = result
-            self._cached_edges += len(result.edges)
+            _, old = self._cache.popitem(last=False)
+            self._cached_edges -= len(old.edges)
+        self._cache[key] = result
+        self._cached_edges += len(result.edges)
         return result
 
     def route(self, start, destination, arrival, context, *, algorithm="astar"):
@@ -275,29 +381,45 @@ class TemporalRouter(FleetRouter):
             return RouteResult("ROUTE", seconds=0.0, arrival=arrival)
         key = (start, destination, arrival, context, algorithm, self.horizon_ms)
         if key in self._cache:
+            self._cache.move_to_end(key)
             return self._cache[key]
         budget = _Budget(self.max_checks)
+        static_key = ("STATIC_RELAXATION", start, destination, arrival, algorithm, self.horizon_ms)
+        lower_distances = None
         try:
-            lower_distances = self._lower_distances(destination, budget)
-            if start not in lower_distances:
-                return RouteResult(
-                    "NO_MODELED_CONTINUATION",
-                    reason="destination unreachable within horizon even without restrictions",
+            if static_key in self._cache:
+                self._cache.move_to_end(static_key)
+                static = self._cache[static_key]
+            else:
+                lower_distances = self._lower_distances(destination, budget)
+                relaxed = (
+                    self._static_optimum(
+                        start, destination, arrival, budget, lower_distances, algorithm
+                    )
+                    if start in lower_distances
+                    else None
                 )
-            relaxed = self._static_optimum(
-                start, destination, arrival, budget, lower_distances, algorithm
-            )
-            if relaxed is None:
-                return self._remember(
-                    key,
-                    RouteResult(
+                if relaxed is None:
+                    static = RouteResult(
                         "NO_MODELED_CONTINUATION",
                         reason="no static-history route within horizon even without temporal rules",
-                    ),
-                )
-            cost, path, state = relaxed
+                    )
+                else:
+                    cost, path, state = relaxed
+                    static = RouteResult(
+                        "ROUTE",
+                        path,
+                        cost / 1000,
+                        ArrivalState(destination, self.pack_digest, PROFILE, state[0], state[1]),
+                    )
+                self._remember(static_key, static)
+            # The relaxation has no clock-dependent permission. Its no-route
+            # proof remains valid across departures. A path is only a candidate
+            # until every actual-time traversal check below passes again.
+            if static.status == "NO_MODELED_CONTINUATION":
+                return self._remember(key, static)
             offset, incoming, valid = 0, arrival.incoming_edge, True
-            for eid in path:
+            for eid in static.edges:
                 budget.spend(
                     1
                     + len(
@@ -316,26 +438,22 @@ class TemporalRouter(FleetRouter):
                 offset += self._duration_ms[eid]
                 incoming = eid
             if valid:
-                return self._remember(
-                    key,
-                    RouteResult(
-                        "ROUTE",
-                        path,
-                        cost / 1000,
-                        ArrivalState(destination, self.pack_digest, PROFILE, state[0], state[1]),
-                    ),
-                )
+                return self._remember(key, static)
+            if lower_distances is None:
+                lower_distances = self._lower_distances(destination, budget)
             upper = self._feasible_upper(
                 start, destination, arrival, context, budget, lower_distances
             )
         except ValueError as exc:
             return RouteResult("UNSUPPORTED_CONTEXT", reason=str(exc))
         bound = self.horizon_ms if upper is None else upper
-        final = context.departure + timedelta(milliseconds=bound)
-        stable_from = max(
-            (t for t in self._boundaries if context.departure < t <= final),
-            default=context.departure,
-        )
+        try:
+            stable_from = max(
+                self._relevant_boundaries(start, context, bound, lower_distances, budget),
+                default=context.departure,
+            )
+        except ValueError as exc:
+            return RouteResult("UNSUPPORTED_CONTEXT", reason=str(exc))
         initial = (arrival.incoming_edge, arrival.restriction_prefix, 0)
         best, previous = {initial: 0}, {}
         serial = itertools.count()
@@ -384,7 +502,10 @@ class TemporalRouter(FleetRouter):
                 # instant, distinct times remain essential because waiting is
                 # forbidden. The boundary instant uses its new rule state.
                 after = at + timedelta(milliseconds=self._duration_ms[eid])
-                nxt = (*nxt, score if after < stable_from else 0)
+                # Keep the stable marker distinct from the initial time zero:
+                # a legal cycle may return to its incoming edge after a gate
+                # opens, when the pre-boundary initial label cannot dominate it.
+                nxt = (*nxt, score if after < stable_from else None)
                 if score >= best.get(nxt, math.inf):
                     continue
                 if nxt not in best and len(best) >= self.max_states:

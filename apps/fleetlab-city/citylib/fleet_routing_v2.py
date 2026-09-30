@@ -99,6 +99,23 @@ class FleetRouter(ContinuityRouter):
         self.max_speed = self._max_speed
         if not math.isfinite(self.max_speed) or self.max_speed <= 0:
             raise ValueError("positive graph speed required")
+        # Prove a narrow structural impossibility, independently of any clock or
+        # restriction prefix. If every outgoing edge returns to the sole possible
+        # incoming neighbor, every nonempty arrival would require an immediate
+        # reversal. Nodes with no outgoing edge are also terminal. Initial
+        # placement and zero-length trips are deliberately outside this proof.
+        single_exit = {}
+        for node, eids in self._out.items():
+            neighbor = self.edges[eids[0]]["v"]
+            if all(self.edges[eid]["v"] == neighbor for eid in eids):
+                single_exit[node] = neighbor
+        for edge in self.edges.values():
+            if edge["v"] in single_exit and edge["u"] != single_exit[edge["v"]]:
+                del single_exit[edge["v"]]
+        self._terminal_arrivals = frozenset(single_exit)
+
+    def is_terminal_arrival(self, node):
+        return node in self.nodes and (node not in self._out or node in self._terminal_arrivals)
 
     def _advance(self, incoming, prefix, eid, budget):
         """Same static rule decisions as the reference scan, with bounded indexes."""

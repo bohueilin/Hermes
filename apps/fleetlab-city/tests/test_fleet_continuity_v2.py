@@ -100,6 +100,77 @@ class FleetContinuityTests(unittest.TestCase):
         self.assertEqual(run["final"]["requests"][0]["state"], "waiting")
         self.assertTrue(self.verify(run)["valid"])
 
+    def test_proven_terminal_destination_avoids_search_but_preserves_entire_recording(self):
+        from citylib.fleet_routing_v2 import MODEL, SCHEMA, FleetRouter
+
+        class CountingRouter(FleetRouter):
+            calls = 0
+
+            def route(self, *args, **kwargs):
+                self.calls += 1
+                return super().route(*args, **kwargs)
+
+        class UnoptimizedRouter(CountingRouter):
+            def is_terminal_arrival(self, node):
+                return False
+
+        for reverse_only in [False, True]:
+            with self.subTest(reverse_only=reverse_only):
+                pack, inputs, spec = fleet_fixture()
+                pack["edges"] = [e for e in pack["edges"] if e["way"] not in {"return", "to"}]
+                if reverse_only:
+                    pack["edges"].append(
+                        {
+                            "id": "exit:0:r",
+                            "way": "exit",
+                            "u": "d",
+                            "v": "x",
+                            "seconds": 10.0,
+                            "length_m": 100.0,
+                            "speed_mps": 10.0,
+                        }
+                    )
+                inputs["initial"] = [{"id": f"v{i}", "node": "a", "energy": 30.0} for i in range(6)]
+                spec.update(fleet_size=6, patience_s=20)
+                reference = UnoptimizedRouter(pack, spec)
+                expected = self.engine._run_arm(pack, inputs, spec, reference, MODEL, SCHEMA)
+                router = CountingRouter(pack, spec)
+                actual = self.engine._run_arm(pack, inputs, spec, router, MODEL, SCHEMA)
+                self.assertEqual(digest(actual), digest(expected))
+                self.assertEqual(actual["final"]["requests"][0]["state"], "unserved")
+                self.assertLess(router.calls, reference.calls)
+                self.assertTrue(self.verifier.verify(actual, inputs, pack)["valid"])
+
+    def test_terminal_proof_never_discards_depot_destination_or_initial_zero_trip(self):
+        # Nonempty arrival can end at a depot without needing an outgoing edge.
+        self.pack["edges"] = [e for e in self.pack["edges"] if e["way"] != "return"]
+        self.spec["sites"][0]["node"] = "d"
+        run = self.run_fleet()
+        self.assertEqual(run["final"]["requests"][0]["state"], "completed")
+        self.assertTrue(self.verify(run)["valid"])
+        # Initial placement at a cul-de-sac may legally leave. No nonempty
+        # arrival took place, so the post-arrival proof is inapplicable.
+        self.pack, self.inputs, self.spec = fleet_fixture()
+        self.pack["edges"] = [e for e in self.pack["edges"] if e["way"] != "to"]
+        self.pack["edges"] = [e for e in self.pack["edges"] if e["way"] != "return"]
+        self.pack["edges"].append(
+            {
+                "id": "exit:0:r",
+                "way": "exit",
+                "u": "d",
+                "v": "x",
+                "seconds": 10.0,
+                "length_m": 100.0,
+                "speed_mps": 10.0,
+            }
+        )
+        self.inputs["initial"][0]["node"] = "d"
+        self.inputs["requests"][0].update(origin="d", destination="d")
+        self.spec["sites"][0]["node"] = "x"
+        run = self.run_fleet()
+        self.assertEqual(run["final"]["requests"][0]["state"], "completed")
+        self.assertTrue(self.verify(run)["valid"])
+
     def test_fractional_horizon_contains_only_executed_prefix(self):
         run = self.run_fleet(stop_at=15)
         final = run["final"]["vehicles"][0]

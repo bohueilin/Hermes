@@ -116,3 +116,22 @@ bounded parser/profile implementation item, not the district/human/resource
 qualification gates. See `docs/FLEETLAB_TEMPORAL_INTEGRATION_V3.md` for adverse
 diagnostics, exact measurements and remaining bundle/connector work. No additional
 power-study execution or website deployment occurred in this continuation.
+
+The subsequent routing performance increment resolves the fixed 300-context
+sample without changing its OD population or search limits. Relevant-boundary
+proofs, bounded static certificates and immutable reverse potentials pass the
+same A*/Dijkstra checks. A reviewer-discovered initial-label alias and a later
+permanently gated destination both have RED/GREEN regressions. Current City
+suite: 260 passes; root: 1,661 passes / 56 skips; City Node: 49 passes.
+
+Full-fleet engineering probes are separately frozen and preserve every deliberate
+interruption and work-budget failure. They reuse the historical 100-vehicle,
+1,200-request tape; they are not additional power-study evaluation arms. See
+`FLEETLAB_SF_TEMPORAL_RESOURCE_2026-09-30.md` for actual disposition.
+
+District research located the full official April 2022 map before water trimming.
+Its full-inventory diagnostic leaves 49 boundary differences / 441.926 m and
+changes administrative membership of five pool nodes. Adoption, redistribution
+terms and scenario implications remain explicit pending work; no inventory,
+denominator or demand population was silently changed. This does not close
+independent map review, connectors, public v3 packaging or city acceptance.

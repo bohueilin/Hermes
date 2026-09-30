@@ -46,6 +46,7 @@ def _run_arm(pack, inputs, spec, g, model, schema, stop_at=None):
     if spec.get("background_per_hour", 0) or inputs.get("background") or inputs.get("incidents"):
         raise ValueError("Traffic/background and incidents are not modeled by this graph runner")
     sites = {s["id"]: s for s in spec["sites"]}
+    site_nodes = {s["node"] for s in sites.values()}
     if any(s["ports"] < 1 or s["slots"] < 1 or s["power_kw"] <= 0 for s in sites.values()):
         raise ValueError("invalid depot resources")
     events = []
@@ -246,6 +247,15 @@ def _run_arm(pack, inputs, spec, g, model, schema, stop_at=None):
         if t % spec["dispatch_s"] == 0:
             for r in requests.values():
                 if r["state"] != "waiting":
+                    continue
+                if (
+                    r["origin"] != r["destination"]
+                    and r["destination"] not in site_nodes
+                    and g.is_terminal_arrival(r["destination"])
+                ):
+                    # Dispatch already requires a post-trip depot route. Keep
+                    # the request waiting for its normal patience outcome; avoid
+                    # recomputing pickups when every nonempty arrival is trapped.
                     continue
                 available = [v for v in vehicles.values() if v["state"] == "idle"]
                 if not available:

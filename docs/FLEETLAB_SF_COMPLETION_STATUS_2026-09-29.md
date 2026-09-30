@@ -26,12 +26,24 @@ independent temporal verifier. The local candidate accounts for all 69,027 sourc
 ways and reduces unsupported eligible length from 1.322% to 0.987%; all road-class
 fractions now meet the unchanged 5% threshold. It also newly blocks 141 ways whose
 access details were unsupported. District coverage and human review remain open.
-The latest broad routing check stopped at 248/300 OD contexts when one return
-exceeded its state budget; memory remained below 1.78 GB. That adverse result is
-retained. The 250-test City suite and small fleet smoke pass, but full temporal
-routing/resource qualification is incomplete. This candidate is not yet in the public viewer. All 12 frozen power-study source
+The fixed routing check now completes all 300 OD contexts with both algorithms
+and retained return history: 1,098 routes and 84 no-continuation results across
+1,182 searches, with no unsupported searches or cost/status disagreement.
+The earlier 248/300 state-budget failure remains preserved. Feature-specific
+time bounds and reviewed bounded caches improve search performance; a reviewed
+cycle regression prevents dropping a valid later arrival. The current City suite
+has 260 passes. [Full fleet resource qualification](FLEETLAB_SF_TEMPORAL_RESOURCE_2026-09-30.md)
+retains a later work-budget failure at a permanently gated destination; its
+targeted fix passes and the full case is being rechecked. This candidate is not yet in the public viewer. All 12 frozen power-study source
 files remain unchanged. Austin is now the next requested city after SF acceptance;
 San Mateo preparation remains background.
+
+[New district research](FLEETLAB_SF_DISTRICT_RECONCILIATION_2026-09-30.md) located the
+official final redistricting map before water-area trimming. Full-inventory
+comparison leaves 49 boundary differences / 441.926 m; it also identifies five
+pool nodes whose municipal membership would change. Source redistribution,
+explicit boundary policy and new review obligations must be resolved before
+adoption. No road or demand node has been silently reassigned or excluded.
 
 ## What this release adds
 
@@ -92,7 +104,7 @@ lifetimes at process boundaries; do not merely increase the memory threshold.
 | Cross-leg continuity | Versioned static and temporal fleet engines and independent verifiers retain history through stops and fractional final edges; bounded history/cache/search | Full fleet performance/memory qualification and explicit reviewed connectors. Diagnostic execution is not map acceptance. |
 | Conditional semantics | New local temporal importer/router evaluates exact daily, weekday and overnight conditions at actual edge and node passage times; original sf-v1/sf-v2 remain unchanged | Full SF resource qualification and compatible candidate bundle/export. Unsupported grammar stays blocked. |
 | Priority source review | All 26 priority ways reconciled automatically; captured Lombard fixtures and supported access windows integrated in the new candidate; all class fractions below 5% | Actual independent source review, new candidate requirements, district scope and unresolved malformed/missing source topology. No human observations supplied. |
-| District scope | Original 108 gaps / 13.161 km remain visible and UNASSIGNED | Official reconciliation or an explicit new scope/scenario policy. A mainland-only diagnostic still contains 49 gaps / 1.234 km and excludes 16 original pool nodes, so it is not a complete fix. |
+| District scope | Original 108 gaps / 13.161 km remain visible and UNASSIGNED; the newly located full official source reduces the diagnostic remainder to 49 records / 441.926 m | Resolve full-source redistribution terms and remaining OSM/administrative boundary differences under an explicit policy; retain all affected-road/request accounting and new source identities. |
 | Reviewer workflow | Runtime validator, frozen sample and downloadable worksheet | Actual 200-feature and 100-OD inspection, exception resolutions and independently recorded observations. Human observations supplied: zero. |
 | Power experiment | 24 preflight arms, complete preflight analysis; one evaluation arm retained | Resolve the new resource stop under an explicit amendment before completing the 24 six-arm blocks. No primary result available. |
 | Devices/accessibility | Desktop automated checks; Pixel authorization and unlocked state observed | Physical touch/zoom/playback, landscape, enlarged text and screen-reader session. Other phone apps regained foreground during attempted checks, and the final ADB listing contained no connected device; no physical pass claimed. |
@@ -167,8 +179,8 @@ information is unavailable.
 ## Recommendation
 
 Use the original recorded SF study plus Model lab to explain how assumptions,
-constraints and evidence shape a decision. Finish temporal/fleet integration,
-resource qualification and real review before claiming city acceptance.
+constraints and evidence shape a decision. Finish resource qualification,
+connector/export integration and real review before claiming city acceptance.
 
 ## Top risks + mitigations
 

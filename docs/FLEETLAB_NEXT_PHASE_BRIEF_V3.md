@@ -21,6 +21,15 @@ Publication verification is recorded in [the release record](FLEETLAB_CITY_INTEG
 The entire SF checklist is not complete: remaining engineering tasks and external
 evidence requirements are separated in the current completion status.
 
+Latest engineering evidence: all 300 fixed temporal routing contexts complete
+with algorithm parity, and 260 City Python tests pass. The bounded caches retain
+actual-time permission checks. The full 100-vehicle resource diagnostic remains
+separate from those checks and from the stopped power evaluation. A newly located
+official district source includes water areas; the full-inventory diagnostic
+reduces unassigned geometry to 49 boundary differences / 441.926 m, without
+adopting or silently changing the map. See the linked current status for exact
+measurements, source-policy decisions and remaining external observations.
+
 ## Latest handoff — San Francisco clarity and fleet insights, 29 September 2026
 
 City Explorer is now a separate tab in [FleetLab](https://fleetlab.pages.dev/),
