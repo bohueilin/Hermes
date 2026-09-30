@@ -13,13 +13,14 @@ from .engine import MODEL
 from .inputs import generate_inputs
 from .runner import scientific_spec
 
-STUDY_ID = "sf-power-headroom-v1"
+STUDY_ID = "sf-power-headroom-v1-r2"
+PREDECESSOR_PROTOCOL = "181da257329efec546b5df88d6b0ad7a666c0194b18e327546f82ea1961025fd"
 SPEC_PATH = "apps/fleetlab-city/experiments/sf-depots-v1.json"
 LEGACY_SPEC_DIGEST = "64f1be6c7442e988c619a97b687c85bac5f259519a62142c894a0d4dbf23c56e"
 LEGACY_PACK_MANIFEST = "5c604fa0c0af9355dd6851ec5f6f7cac16a00b3c296c08de318f468ac1d7e536"
 ARM_IDS = ("a-200", "ab-200", "b-200", "a-400", "ab-400", "b-400")
-PREFLIGHT_SEEDS = tuple(range(7301001, 7301005))
-EVALUATION_SEEDS = tuple(range(7302001, 7302025))
+PREFLIGHT_SEEDS = tuple(range(7303001, 7303005))
+EVALUATION_SEEDS = tuple(range(7304001, 7304025))
 SOURCE_FILES = (
     "contracts.py",
     "engine.py",
@@ -140,6 +141,18 @@ def make_protocol(root: Path) -> dict:
     return {
         "schema": "fleetlab.power-protocol/1.0.0",
         "id": STUDY_ID,
+        "revision": {
+            "id": "memory-lifetime-r2",
+            "predecessor_protocol_digest": PREDECESSOR_PROTOCOL,
+            "reason": (
+                "Release analysis captures before loading execution graph; "
+                "scientific controls unchanged"
+            ),
+            "predecessor_evaluation": "NOT_STARTED",
+            "predecessor_outputs": "RETAINED_SEPARATELY_NOT_POOLED",
+            "authorization": "Owner instruction to finish the SF checklist, 2026-09-29",
+            "total_campaign_arm_ceiling": 226,
+        },
         "root": str(root),
         "model": MODEL,
         "spec_digest": digest(spec),

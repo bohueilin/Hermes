@@ -204,6 +204,109 @@ if importlib.util.find_spec("citylib.power_study"):
             self.patcher.start()
             self.addCleanup(self.patcher.stop)
 
+        def test_failed_preflight_refuses_before_loading_execution_capture(self):
+            with (
+                patch(
+                    "citylib.power_analysis.analyze_study",
+                    return_value={"analysis_status": "INCOMPLETE"},
+                ),
+                patch(
+                    "citylib.power_study.capture_study",
+                    side_effect=AssertionError("execution pack captured before preflight gate"),
+                ),
+                self.assertRaisesRegex(ValueError, "complete valid preflight required"),
+            ):
+                execute_study(self.root, self.out, "evaluate")
+            self.assertFalse((self.out / "evaluate").exists())
+
+        def test_analysis_releases_raw_evidence_before_next_capture_without_output_change(self):
+            import weakref
+
+            import citylib.power_analysis as analysis
+
+            class ObservedDict(dict):
+                pass
+
+            freeze_study(self.root, self.out)
+            execute_study(self.root, self.out, "preflight")
+            baseline = analyze_study(self.root, self.out, "preflight")
+            real_capture, real_arm = analysis.capture_study, analysis.capture_arm
+            initial_refs, arm_refs = [], []
+            capture_calls = 0
+
+            def tracked_study(*args):
+                nonlocal capture_calls
+                capture_calls += 1
+                if capture_calls == 2:
+                    self.assertTrue(all(ref() is None for ref in initial_refs))
+                    self.assertTrue(all(ref() is None for ref in arm_refs))
+                protocol, tapes, pack = real_capture(*args)
+                if capture_calls == 1:
+                    tapes, pack = ObservedDict(tapes), ObservedDict(pack)
+                    initial_refs.extend([weakref.ref(tapes), weakref.ref(pack)])
+                return protocol, tapes, pack
+
+            def tracked_arm(*args):
+                self.assertTrue(all(ref() is None for ref in arm_refs))
+                bundle, verification = real_arm(*args)
+                bundle = ObservedDict(bundle)
+                bundle["run.json"] = ObservedDict(bundle["run.json"])
+                arm_refs.extend([weakref.ref(bundle), weakref.ref(bundle["run.json"])])
+                return bundle, verification
+
+            # Plain replacements avoid Mock call histories retaining captured graphs.
+            with (
+                patch.object(analysis, "capture_study", new=tracked_study),
+                patch.object(analysis, "capture_arm", new=tracked_arm),
+            ):
+                measured = analyze_study(self.root, self.out, "preflight")
+            self.assertEqual(capture_calls, 2)
+            baseline.pop("verification_and_analysis_s")
+            measured.pop("verification_and_analysis_s")
+            self.assertEqual(measured, baseline)
+
+        def test_analysis_final_recapture_still_rejects_tape_mutation(self):
+            import citylib.power_analysis as analysis
+
+            freeze_study(self.root, self.out)
+            execute_study(self.root, self.out, "preflight")
+            real_capture = analysis.capture_study
+            calls = 0
+
+            def mutate_before_final_capture(*args):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    save_json(self.out / "tapes/1-inputs.json", {"seed": 1})
+                return real_capture(*args)
+
+            with (
+                patch.object(analysis, "capture_study", new=mutate_before_final_capture),
+                self.assertRaisesRegex(ValueError, "input digest mismatch"),
+            ):
+                analyze_study(self.root, self.out, "preflight")
+
+        def test_analysis_final_stamp_still_rejects_arm_mutation(self):
+            import citylib.power_analysis as analysis
+
+            freeze_study(self.root, self.out)
+            execute_study(self.root, self.out, "preflight")
+            real_stamp = analysis.artifact_stamp
+            calls = {}
+
+            def mutate_before_final_stamp(path):
+                calls[path] = calls.get(path, 0) + 1
+                if calls[path] == 3:
+                    with (path / "run.json").open("ab") as stream:
+                        stream.write(b" ")
+                return real_stamp(path)
+
+            with (
+                patch.object(analysis, "artifact_stamp", new=mutate_before_final_stamp),
+                self.assertRaisesRegex(ValueError, "arm mutated during analysis"),
+            ):
+                analyze_study(self.root, self.out, "preflight")
+
         def test_all_tapes_frozen_before_execution_and_no_overwrite(self):
             freeze_study(self.root, self.out)
             protocol, tapes, _ = capture_study(self.root, self.out)

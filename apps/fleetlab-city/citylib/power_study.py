@@ -147,13 +147,13 @@ def execute_study(root: Path, frozen: Path, mode: str) -> dict:
         raise ValueError("mode must be preflight or evaluate")
     began = time.monotonic()
     root, frozen = Path(root).absolute(), Path(frozen).absolute()
-    protocol, tapes, pack = capture_study(root, frozen)
     if mode == "evaluate":
         from .power_analysis import analyze_study
 
         preflight = analyze_study(root, frozen, "preflight")
         if preflight["analysis_status"] != "COMPLETE":
             raise ValueError("complete valid preflight required before evaluation")
+    protocol, tapes, pack = capture_study(root, frozen)
     destination = frozen / mode
     destination.mkdir(exist_ok=False)
     write_new(

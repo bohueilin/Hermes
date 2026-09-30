@@ -434,6 +434,8 @@ def analyze_study(root: Path, frozen: Path, mode: str) -> dict:
                 except (ValueError, KeyError, TypeError, OSError) as exc:
                     row.update(verification="INVALID", error=str(exc))
             rows.append(row)
+            # Summaries own their values; release raw records before the next capture.
+            captured = run = None
     primary, invalid = primary_analysis(rows, seeds)
     reasons.extend(invalid)
     if reasons:
@@ -472,7 +474,9 @@ def analyze_study(root: Path, frozen: Path, mode: str) -> dict:
         if artifact_stamp(arm_path) != stamp:
             raise ValueError("arm mutated during analysis")
     # Re-capture frozen inputs/identity at the end to invalidate concurrent mutation.
-    after, _, _ = capture_study(root, frozen)
+    # These large inputs have no remaining consumers; retain only the fresh protocol.
+    del pack, tapes
+    after = capture_study(root, frozen)[0]
     if after != protocol:
         raise ValueError("study mutated during analysis")
     return {

@@ -1,5 +1,20 @@
 # SF power study: proposed memory amendment
 
+## Acceptance and implementation update
+
+The owner's subsequent instruction on 29 September 2026 to finish the SF checklist
+authorizes this documented revision. The original proposal and failure below are
+retained as history. The applied revision is `sf-power-headroom-v1-r2`, with a new
+protocol, the proposed fresh seed blocks and explicit predecessor digest. All
+scientific controls and resource limits remain unchanged. Before freezing, 126
+City Python tests and 35 City Node tests passed; the two new lifetime/order tests
+were first observed failing against the old implementation. Independent review
+found no core amendment blocker. Packaging memory is a separate validation path.
+Execution outcome is recorded in the new immutable study directory and release
+handoff; this acceptance statement is not an assertion that evaluation completed.
+
+## Original proposal
+
 29 September 2026. Proposal only. Frozen v1 source, protocol, tapes and preflight evidence remain unchanged. No evaluation directory or arm was created.
 
 ## Observed failure and concrete correction
