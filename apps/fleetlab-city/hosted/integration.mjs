@@ -46,4 +46,8 @@ export function mountCityEntry(doc = document) {
     ]), action('Open City Explorer  ↗'),
   ]);
   catalogIntro.parentNode.insertBefore(catalog, catalogIntro.nextSibling);
+  doc.querySelector('.studio-footer').appendChild(node('div', {class:'owner-contact'}, [
+    node('span', {}, 'Built by Bo-Huei Lin · Ideas, questions or collaboration?'),
+    node('a', {href:'mailto:bohueilin@gmail.com'}, 'bohueilin@gmail.com'),
+  ]));
 }

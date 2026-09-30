@@ -86,6 +86,7 @@ def build_viewer(root, out, run_path=None, power_study=None):
         "view-model.mjs",
         "city-map.mjs",
         "replay.mjs",
+        "fleet-insights.mjs",
         "vehicle-concepts.mjs",
         "vehicle-concepts.css",
         "qualification.mjs",
@@ -409,6 +410,7 @@ def check_dist(root):
         "view-model.mjs",
         "city-map.mjs",
         "replay.mjs",
+        "fleet-insights.mjs",
         "vehicle-concepts.mjs",
         "vehicle-concepts.css",
         "qualification.mjs",
@@ -430,6 +432,7 @@ def check_dist(root):
     ]
     # Optional UI generations are absent from older compatible releases.
     optional = {
+        "fleet-insights.mjs",
         "power-study.mjs",
         "vehicle-concepts.mjs",
         "vehicle-concepts.css",

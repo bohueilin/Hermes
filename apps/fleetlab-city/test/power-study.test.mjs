@@ -2,6 +2,8 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, existsSync} from 'node:fs';
 import * as vm from '../web/view-model.mjs';
+import {clearFleetInsights,renderFleetInsights} from '../web/fleet-insights.mjs';
+import {createFakeDom} from '../../../playground/fleetlab/test/helpers/fake-dom.mjs';
 const recording={study:'sf-power-headroom-v1',seed:7302001,arm:'b-400',configuration:'b-400',source_run_digest:'bound',layout:'B',total_power_kw:400,sites:[{id:'B',power_kw:400}],energy:{initial_kwh:30,target_kwh:48},fleet_file:'data/fleet-power.json',vehicle_files:{'ev-001':'data/run-power.json'}};
 const catalog={seeds:[1001],sites:[{id:'A'},{id:'B'}],studies:[{id:recording.study,seeds:[7302001,7302002],configurations:['b-400'],replay_seed:7302001,recordings:[recording]}]};
 test('recording selection binds study, seed, configuration and B-only resources',()=>{
@@ -19,11 +21,12 @@ test('code aware constraint labels never reinterpret reachability as reserve',()
 function replayHarness(){
  const source=readFileSync(new URL('../web/replay.mjs',import.meta.url),'utf8');
  const body=source.slice(source.indexOf('const $=' )).replace('export class Replay','class Replay');
- const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',replaceChildren(){},setAttribute(){},removeAttribute(){},addEventListener(){}});return nodes.get(id);};
+ const dom=createFakeDom();
+ const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,dom.document.createElement('div'));return nodes.get(id);};
  $('seed-select').value='1001';$('arm-select').value='baseline';$('vehicle-select').value='ev-001';
  const pending=[];const errors=[];
- const document={getElementById:$,addEventListener(){},hidden:false};
- const Replay=new Function('document','cancelAnimationFrame',...Object.keys(vm),`${body}; return Replay;`)(document,()=>{},...Object.values(vm));
+ const document={getElementById:$,createElement:tag=>dom.document.createElement(tag),addEventListener(){},hidden:false};
+ const Replay=new Function('document','cancelAnimationFrame','clearFleetInsights','renderFleetInsights',...Object.keys(vm),`${body}; return Replay;`)(document,()=>{},(message,busy)=>clearFleetInsights(message,busy,document),(fleet,roster,trace)=>renderFleetInsights(fleet,roster,trace,document),...Object.values(vm));
  const replay=new Replay({catalog,comparison:{pairs:[]},readData:path=>new Promise((resolve,reject)=>pending.push({path,resolve,reject})),notice:e=>errors.push(e),isVisible:()=>true});
  replay.summary=()=>{};replay.history=()=>{};replay.draw=()=>{};replay.featured=()=>{};
  const sites=[];replay.map={setSites:s=>sites.push(s),setCar(){},setRoutes(){},fitRoute(){}};
@@ -37,6 +40,26 @@ test('actual replay loader suppresses slow prior response after study switch',as
  h.pending[2].resolve(trace);h.pending[3].resolve(recording);await next;
  h.pending[0].resolve({...trace,study:undefined,seed:1001,arm:'baseline'});h.pending[1].resolve({seed:1001,arm:'baseline'});await old;
  assert.equal(h.replay.trace.study,recording.study);assert.deepEqual(h.sites.at(-1),[{id:'B',power_kw:400}]);assert.deepEqual(h.errors,[]);
+});
+
+test('actual replay loader keeps the latest fleet aggregate and clears it on current failure',async()=>{
+ for(const staleFailure of [false,true]){
+  const h=replayHarness();
+  h.replay.catalog={...catalog,seeds:[1001,1002],vehicles:[{id:'ev-001'}]};
+  const trace=seed=>({schema:'fleetlab.city-vehicle-view/1.1.0',seed,arm:'baseline',vehicle:'ev-001',samples:[[15]],elapsed_s:3600,verification:'INTERNALLY_CONSISTENT'});
+  const fleet=(seed,completed)=>({seed,arm:'baseline',vehicles:[{vehicle:'ev-001',completed,distance_m:100,empty_m:25,queue_s:900,final_state:'queue_charge'}]});
+  const old=h.replay.load();h.$('seed-select').value='1002';const current=h.replay.load();
+  h.pending[2].resolve(trace(1002));h.pending[3].resolve(fleet(1002,9));await current;
+  assert.equal(h.$('fleet-metrics').querySelector('strong').textContent,'9');
+  staleFailure?h.pending[0].reject(new Error('stale')):h.pending[0].resolve(trace(1001));h.pending[1].resolve(fleet(1001,4));await old;
+  assert.match(h.$('fleet-context').textContent,/seed 1002/);
+  assert.equal(h.$('fleet-metrics').querySelector('strong').textContent,'9');
+  h.$('seed-select').value='1001';const failed=h.replay.load();
+  assert.equal(h.$('fleet-metrics').textContent,'');
+  h.pending[4].reject(new Error('current network error'));h.pending[5].resolve(fleet(1001,4));await failed;
+  assert.equal(h.$('fleet-metrics').textContent,'');assert.equal(h.$('fleet-charts').textContent,'');
+  assert.match(h.$('fleet-context').textContent,/unavailable/);
+ }
 });
 test('actual replay loader rejects wrong configuration identity and unavailable seed',async()=>{
  const h=replayHarness();h.replay.study=recording.study;h.$('seed-select').value='7302001';h.$('arm-select').value='b-400';const next=h.replay.load();

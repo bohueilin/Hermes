@@ -148,3 +148,26 @@ Same 1,200 created requests per run. Wait is p90 among boarded passengers; empty
 | 10 (1010) | 598 → 599 | -0.459 | -23.2 | 1 more trip; shorter wait. Less empty travel per completion; inspect queue distribution and zone outcomes. |
 | 11 (1011) | 627 → 643 | -0.481 | +22.4 | 16 more trips; longer wait. Less empty travel per completion; inspect queue distribution and zone outcomes. |
 | 12 (1012) | 609 → 626 | -0.459 | -5.5 | 17 more trips; shorter wait. Less empty travel per completion; inspect queue distribution and zone outcomes. |
+
+## Fleet-wide reading before one vehicle — September 29 enhancement
+
+In Replay, begin with “100 vehicles. One shared system.” The ID identifies a
+vehicle in the same generic operational model, not a hardware type or a driving
+policy. The aggregate includes every vehicle, including any with zero completed
+trips. Changing a vehicle keeps the same whole-fleet totals; changing the repeat
+or configuration changes the population being summarized.
+
+For seed 1001: one depot completes 627 trips; two depots complete 629. Empty-mile
+share falls from 42.7% to 40.5%, while depot queues still consume about 49.3% of
+800 combined vehicle-hours. That is the prompt to investigate resource queues,
+not proof that a depot plan is right for San Francisco. The median can be 4.5
+because it averages the two middle trip counts in an even population. Inspect a
+queue-heavy vehicle to explain the fleet pattern, then use the full notebook's
+12 paired repeats and five separate sensitivities before generalizing.
+
+Do not call the non-queued time “productive time”: it includes charging,
+turnaround, empty driving, boarding and availability. Do not use 100 interacting
+vehicles as 100 independent experiment samples. Revenue remains unavailable
+until the visitor supplies all three fare assumptions. Owner contact appears in
+the hosted FleetLab footer as a native email link; no form or data collection is
+added.

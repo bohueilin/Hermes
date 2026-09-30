@@ -1,5 +1,16 @@
 # FleetLab audit response, September 28, 2026
 
+## September 29 enhancement — atlas layout, fleet insights and owner contact
+
+Current enhancement is staged at `build/fleetlab-city/launch-integration-v2/site`.
+35 City Node / 122 City Python / 66 focused combined Node tests pass; the clean
+viewer and local combined package pass. Review is clear. Publication and Pixel
+results are recorded in `docs/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md`.
+The updated next-phase brief `docs/FLEETLAB_NEXT_PHASE_BRIEF_V3.md` explains the
+100-vehicle population and lists SF acceptance evidence still required before
+new cities. Existing site, map/experiment records and offline bytes are preserved.
+
+
 ## City Explorer integration — 29 September 2026
 
 The owner approved additive City Explorer navigation and live website publication. The combined release preserves all established sections and offline bytes; only root boot/index/headers are intentionally changed. Live production `b592d5a8-c89c-4b42-99ca-e6d256bd2408` is verified: all 9,934 served payloads match; source implementation commit `3236065`. Current release and remaining scientific/device work: `docs/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md`. The power-study execution amendment and map/human qualification remain held. This website authorization does not authorize Hermes workbench or physical deployment.

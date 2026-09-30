@@ -1,5 +1,51 @@
 # FleetLab City Explorer integration release
 
+## Atlas, fleet insights and owner contact enhancement
+
+Owner requested these additions, final handoff updates and live publication.
+The screenshot defect came from an absolute label anchored to a grid-stretched
+map card. A dedicated map stage now contains the overlay, with controls and
+attribution in normal flow; the card no longer inherits the sidebar height.
+The hosted footer adds Bo-Huei Lin and `mailto:bohueilin@gmail.com`.
+
+Replay now starts with a complete-fleet summary before individual vehicle stories.
+It includes every vehicle, uses summed empty distance / summed distance, and
+expresses queue time over all vehicle-hours. A trip-count distribution, median,
+mean, range and charging-queue end count explain the spread. Missing/invalid
+measurements produce unavailable output. Selection races and failures clear old
+values. Generic vehicles are identities within one model, not different vehicle
+types or independent statistical repeats.
+
+Fresh checks: 35 City Node tests; 66 including established studio/routes;
+122 City Python tests; Ruff and whitespace checks pass. All 24 fleet projections
+agree with existing verified study metrics. The canonical clean build rechecks
+the 34 original arms and passes file integrity, dependency and payload budgets.
+Independent review found and resolved a missing packaging import, future-study
+wording and a loader-fixture gap; final code review has no remaining findings.
+The initial incomplete build was stopped and was never packaged or published.
+
+Candidate combined stage: `build/fleetlab-city/launch-integration-v2/site`.
+City release SHA-256: `0ab37cf658f68f19196197dd97d690f31a0feb82b7fa9c681eeac136caf901cd`.
+9,937 staged files; 9,936 served files; 1,522,008,571 bytes. Initial compressed
+City transfer: 1,870,418 bytes. Previous compatible City release `5f981b2f5ec0d9dd`
+is retained. Map/experiment data is unchanged. The source offer was regenerated
+for the packaging-code addition; all 58 archive members independently match,
+manifest SHA-256 `17570ed71168c6876e565dbabef8916ab422642befbcd1dba0242cfde259e7d9`.
+
+Local packaged Pages headers and payload checks pass. Desktop and 390/1024 CSS-px
+checks show no overflow, label/control overlap or card blank space. Native email
+link, repeat/layout switching and direct Play work. Physical Pixel is connected;
+hosted preview, device and production results will be recorded below.
+
+The user's website publication instruction supersedes the historical Phase 6
+local-only rule for these static teaching pages. It does not alter Hermes
+workbench boundaries, map qualification, study-execution approval or physical
+deployment authority. Next-phase handoff: [FLEETLAB_NEXT_PHASE_BRIEF_V3.md](FLEETLAB_NEXT_PHASE_BRIEF_V3.md).
+
+---
+
+## Previous integration release (superseded after enhancement publication)
+
 **LIVE AND VERIFIED:** <https://fleetlab.pages.dev/> ·
 [San Francisco City Explorer](https://fleetlab.pages.dev/city-explorer/).
 All 9,934 served production payloads match the checked local package.

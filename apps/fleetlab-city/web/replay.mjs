@@ -1,4 +1,5 @@
 import { CityMap } from './city-map.mjs';
+import {clearFleetInsights, renderFleetInsights} from './fleet-insights.mjs';
 import { formatMetric as fmt, clockLabel, durationLabel, sampleAt, resumeTime, estimateRevenue, eventDescription, stateLabels, pairLesson, requestGate, comparisonRows, METRES_PER_MILE, recordingSelection, validateRecording } from './view-model.mjs';
 const $=id=>document.getElementById(id);
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
@@ -19,6 +20,7 @@ export class Replay {
   pause(){this.playing=false;cancelAnimationFrame(this.frame);$('play').textContent=this.trace&&this.time>=this.trace.samples.at(-1)[0]?'Replay':'Play';}
   async load(){
     const ticket=this.gate.issue();this.pause();this.loading=true;this.trace=null;this.time=0;
+    clearFleetInsights();
     $('play').disabled=true;$('time').disabled=true;$('trip-summary').setAttribute('aria-busy','true');
     $('featured-vehicles').replaceChildren();$('selection-note').textContent='';$('trip-metrics').replaceChildren();$('depot-facts').replaceChildren();$('summary-context').textContent='Loading selected vehicle…';$('shift-bar').replaceChildren();$('shift-story').textContent='';$('activity-totals').replaceChildren();$('vehicle-events').replaceChildren();$('vehicle-facts').replaceChildren();$('fare-estimate').textContent='Unavailable · loading trace';$('state-explanation').textContent='Loading selected vehicle…';$('state-heading').textContent='Please wait';$('event-count').textContent='Full operational event history';$('event-scope').textContent='';$('vehicle-name').textContent='Loading…';$('replay-status').textContent='Loading recorded trace…';this.map?.setCar(null);this.map?.setRoutes({type:'FeatureCollection',features:[]});
     const seed=Number($('seed-select').value),arm=$('arm-select').value,vehicle=$('vehicle-select').value||'ev-001';
@@ -32,10 +34,11 @@ export class Replay {
       const [data,fleet]=await Promise.all([this.readData(record.vehicle_files[vehicle]),this.fleetCache.has(key)?this.fleetCache.get(key):this.readData(record.fleet_file)]);
       if(!this.gate.current(ticket))return;
       validateRecording(data,fleet,record,vehicle);
+      try{renderFleetInsights(fleet,this.catalog.vehicles,data);}catch{clearFleetInsights('Fleet summary unavailable · the complete inventory or required measurements could not be confirmed.',false);}
       this.fleetCache.set(key,fleet);this.trace=data;this.featured(fleet,vehicle);this.map?.setSites(data.sites);this.map?.setRoutes(data.routes);this.map?.fitRoute();
       $('vehicle-name').textContent=vehicle.toUpperCase();$('time').max=data.elapsed_s;$('play').disabled=false;$('time').disabled=false;$('trip-summary').removeAttribute('aria-busy');
       this.summary();this.history();this.draw(data.samples[0][0]);
-    }catch(e){if(!this.gate.current(ticket))return;$('replay-status').textContent='Trace unavailable';$('summary-context').textContent='No verified trace loaded.';$('trip-summary').removeAttribute('aria-busy');this.notice(`${e.message}. No substitute vehicle or run was loaded.`,true);}
+    }catch(e){if(!this.gate.current(ticket))return;clearFleetInsights('Fleet summary unavailable · no compatible recording loaded.',false);$('replay-status').textContent='Trace unavailable';$('summary-context').textContent='No verified trace loaded.';$('trip-summary').removeAttribute('aria-busy');this.notice(`${e.message}. No substitute vehicle or run was loaded.`,true);}
     finally{if(this.gate.current(ticket))this.loading=false;}
   }
   featured(fleet,vehicle){

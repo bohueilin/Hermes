@@ -31,5 +31,10 @@ test('hosted entries preserve mounted lessons and film, and native links need no
   assert.equal(document.querySelectorAll('.city-entry-catalog').length,1);
   assert.ok(document.querySelector('.studio-overview .city-entry-feature'));
   assert.ok(document.querySelector('.simulation-catalog .city-entry-catalog'));
+  const contact=document.querySelector('.studio-footer .owner-contact');
+  assert.ok(contact,'owner contact is discoverable at the bottom of Overview');
+  assert.equal(contact.querySelector('a').getAttribute('href'),'mailto:bohueilin@gmail.com');
+  assert.equal(contact.querySelector('a').textContent,'bohueilin@gmail.com');
+  assert.equal(document.querySelectorAll('.owner-contact').length,1);
  } finally {studio?.destroy();restore();}
 });

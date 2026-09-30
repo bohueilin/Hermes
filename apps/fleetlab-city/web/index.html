@@ -44,9 +44,11 @@
     <div class="section-heading"><div><p class="eyebrow">01 / GET YOUR BEARINGS</p><h2>San Francisco, street by street.</h2></div><span class="muted" id="snapshot-date">Source snapshot loading</span></div>
     <div class="explorer-grid">
       <div class="map-card">
+        <div class="atlas-map-stage">
         <div class="map-toolbar"><div class="segmented" role="group" aria-label="Map coverage layers"><button data-mask="support" aria-pressed="true">Routing support</button><button data-mask="source" aria-pressed="false">Source roads</button><button data-mask="scenario" aria-pressed="false">Scenario area</button></div><button class="icon-button" id="fit-map" aria-label="Fit San Francisco map">⌖</button></div>
         <div id="map" class="map-surface" role="region" aria-label="San Francisco road-network map"></div>
         <div class="map-overlay"><span class="map-city">SAN FRANCISCO</span><span>ROAD-NETWORK PACK · NO BUILDINGS OR TERRAIN</span></div>
+        </div>
         <div class="map-footer"><span><i class="legend-line teal"></i> Supported</span><span><i class="legend-line amber"></i> Unsupported</span><span><i class="legend-line gray"></i> Excluded</span><button id="flat-toggle" class="text-button">Use flat map</button></div>
         <div class="map-options"><label>Fictional depots <select id="atlas-arm"><option value="candidate">Two depots · A + B</option><option value="baseline">One depot · A</option></select></label><p id="map-hint">Zoom to street names with + / −, scroll or pinch. Click a road to inspect it.</p></div><div class="attribution">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a> · DataSF · <a href="/city-explorer/sources/">Map data &amp; licenses</a> · Synthetic operations; not for navigation</div>
       </div>
@@ -81,6 +83,13 @@
     <div class="study-picker panel"><label for="replay-study-select">Recorded study</label><select id="replay-study-select"><option value="legacy">Original depot study · twelve pairs</option></select><p id="replay-study-context">Each repeat fixes the full synthetic input tape; every configuration uses the same fleet and requests.</p><p class="small">A seed fixes arrivals and initial positions for reproducibility. The generic vehicles have the same operational model; assignments, queues and starting positions create different working days.</p></div>
     <div class="replay-controls"><label>Experiment repeat<select id="seed-select"></select></label><label>Depot configuration<select id="arm-select"><option value="baseline">One depot · A</option><option value="candidate">Two depots · A + B</option></select></label><button id="load-replay" class="secondary">Reload selected trace</button></div>
     <p id="pair-story" class="pair-story"></p>
+    <section id="fleet-insights" class="panel fleet-insights" aria-labelledby="fleet-insights-title" aria-busy="true">
+      <div class="panel-heading"><div><p class="eyebrow">COMPUTED / ALL VEHICLES IN THE SELECTED RECORDING</p><h3 id="fleet-insights-title">100 vehicles. One shared system.</h3><p>These are vehicle identities, all using the same generic EV model. Different starting positions, assignments and depot queues create different working days.</p></div><span class="chip">Start with the fleet</span></div>
+      <p id="fleet-context" class="small" role="status">Loading the complete fleet…</p>
+      <div id="fleet-metrics" class="trip-metrics"></div>
+      <div id="fleet-charts" class="fleet-charts"></div>
+      <div class="fleet-next"><p>Read the fleet pattern first, then use a vehicle below to trace how it happened. One repeat describes one synthetic day; compare the full study and its declared sensitivity checks before drawing a broader lesson.</p><button class="secondary" data-view="compare">Compare the full study →</button></div>
+    </section>
     <div class="vehicle-picker"><div class="panel-heading"><div><p class="eyebrow">CHOOSE A STORY TO INSPECT</p><h3>Start with a useful example.</h3></div><details class="all-vehicles"><summary>Browse all 100 EVs</summary><label>Vehicle ID<select id="vehicle-select" aria-label="Vehicle ID"></select></label><p class="small">Same selection rules in both configurations. Suggested vehicles can differ; keep an ID selected to compare that vehicle across layouts.</p></details></div><div id="featured-vehicles" class="featured-vehicles" role="group" aria-label="Suggested vehicle stories"></div><p id="selection-note" class="small muted"></p></div>
     <div class="replay-grid"><div class="panel replay-stage">
       <div class="replay-stage-head"><span class="eyebrow">RECORDED VEHICLE JOURNEY</span><span id="replay-status" class="status-pill" role="status">Loading selected trace…</span></div>

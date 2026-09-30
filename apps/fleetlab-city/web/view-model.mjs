@@ -42,6 +42,27 @@ export function requestGate() {
 }
 
 export const METRES_PER_MILE = 1609.344;
+// Descriptive totals of the hash-checked fleet projection; no gate or model logic.
+export function fleetInsights(fleet, roster, elapsedSeconds) {
+  if (!Number.isFinite(elapsedSeconds) || elapsedSeconds <= 0) throw new Error('Fleet duration unavailable');
+  const ids = new Set(roster.map(v => v.id)), rows = fleet.vehicles;
+  if (!ids.size || ids.size !== roster.length || !Array.isArray(rows) || rows.length !== ids.size || new Set(rows.map(v => v.vehicle)).size !== ids.size || rows.some(v => !ids.has(v.vehicle))) throw new Error('Incomplete fleet inventory');
+  for (const row of rows) {
+    if (['completed','distance_m','empty_m','queue_s'].some(k => !Number.isFinite(row[k]) || row[k] < 0) || !Number.isInteger(row.completed) || row.empty_m > row.distance_m || row.queue_s > elapsedSeconds || !Object.hasOwn(stateLabels,row.final_state)) throw new Error('Fleet measurement unavailable or invalid');
+  }
+  const sum = key => rows.reduce((total,v) => total + v[key], 0);
+  const trips = rows.map(v => v.completed).sort((a,b) => a-b), n = rows.length;
+  const distance = sum('distance_m'), queued = sum('queue_s'), completed = sum('completed');
+  return {
+    count:n, completed, servedVehicles:rows.filter(v=>v.completed>0).length,
+    meanTrips:completed/n, medianTrips:(trips[Math.floor((n-1)/2)]+trips[Math.floor(n/2)])/2,
+    minTrips:trips[0], maxTrips:trips.at(-1), distance, emptyDistance:sum('empty_m'),
+    emptyFraction:distance ? sum('empty_m')/distance : null,
+    vehicleHours:n*elapsedSeconds/3600, queueHours:queued/3600, queueFraction:queued/(n*elapsedSeconds),
+    waitingForCharge:rows.filter(v=>v.final_state==='queue_charge').length,
+    bins:[['0–3',0,3],['4–7',4,7],['8–11',8,11],['12+',12,Infinity]].map(([label,lo,hi])=>({label,count:trips.filter(t=>t>=lo&&t<=hi).length})),
+  };
+}
 export function durationLabel(seconds) {
   const mins = Math.floor(seconds / 60);
   return `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m`;

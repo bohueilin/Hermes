@@ -47,7 +47,8 @@ h2,h3,h4,p{margin-top:0}
 .section-heading .eyebrow{margin-bottom:7px}
 .muted{color:var(--muted);font-size:14px}
 .explorer-grid{display:grid;grid-template-columns:minmax(0,1fr) 294px;gap:20px}
-.map-card{position:relative;background:#edf1e8;border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}
+.atlas-map-stage{position:relative}
+.map-card{align-self:start;position:relative;background:#edf1e8;border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}
 .map-toolbar{position:absolute;z-index:2;left:16px;right:16px;top:16px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .segmented{display:flex;gap:2px;padding:4px;border:1px solid #d0dcd0;border-radius:10px;background:#fffdf7ee;box-shadow:0 3px 8px #243f3110}
 .segmented button{font-size:13px;padding:9px 11px;border-radius:7px;background:transparent}
@@ -55,7 +56,7 @@ h2,h3,h4,p{margin-top:0}
 .icon-button{width:36px;height:36px;font-size:22px;border-radius:9px;background:#fffdf7;box-shadow:0 3px 8px #243f3110}
 .map-surface{height:500px;width:100%;position:relative}
 .map-surface canvas{display:block;max-width:100%}
-.map-overlay{position:absolute;left:25px;bottom:85px;pointer-events:none;background:#f7f8f2bb;padding:10px 13px;border-radius:3px;display:grid;gap:5px;font-size:10px;letter-spacing:1.3px}
+.map-overlay{position:absolute;left:25px;bottom:18px;pointer-events:none;background:#f7f8f2bb;padding:10px 13px;border-radius:3px;display:grid;gap:5px;font-size:10px;letter-spacing:1.3px}
 .map-city{font-size:15px;letter-spacing:3px}
 .map-footer{min-height:44px;padding:11px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:9px 15px;background:#fffdf7;font-size:12px;border-top:1px solid var(--line)}
 .map-footer button{margin-left:auto;font-size:12px}
@@ -253,7 +254,7 @@ h1{font-size:44px;margin:14px 0 17px}
 .segmented{gap:0;padding:3px}
 .segmented button{font-size:11px;padding:8px}
 .icon-button{width:30px;height:30px;font-size:20px}
-.map-overlay{left:15px;bottom:100px;max-width:270px}
+.map-overlay{left:15px;max-width:270px}
 .map-overlay>span:last-child{font-size:9px}
 .map-footer{font-size:11px;gap:10px}
 .map-footer button{font-size:11px}
@@ -326,7 +327,7 @@ p{line-height:1.65}
 button,select,summary{min-height:44px}.text-button{display:inline-flex;align-items:center;font-size:14px}
 .eyebrow{font-size:11px;letter-spacing:1.4px}.notice{font-size:14px}
 .coverage-list{font-size:14px}.coverage-list>div{gap:16px}.coverage-list dd{max-width:65%;text-align:right;overflow-wrap:anywhere}
-.map-surface{height:560px}.map-toolbar{right:58px}.map-overlay{bottom:180px;max-width:260px}
+.map-surface{height:560px}.map-toolbar{right:58px}.map-overlay{max-width:260px}
 .map-options{padding:14px 18px;background:#f8faf2;border-top:1px solid var(--line);display:flex;gap:22px;align-items:center}
 .map-options label{font-size:13px;flex-shrink:0;display:grid;gap:6px}.map-options p{font-size:13px;line-height:1.5;margin:0;color:var(--muted)}
 .map-options select{font-size:14px}.map-card .maplibregl-ctrl-top-right{top:76px}
@@ -363,7 +364,7 @@ body[data-view=replay] h1{font-size:clamp(38px,4vw,56px)}
 .audience-panel{margin-top:35px;background:#edf2e5}.audience-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:25px;margin-top:24px}.audience-grid article{border-top:1px solid #ccd8c2;padding-top:19px}.audience-grid span{font-size:10px;letter-spacing:1.2px;font-weight:700;color:#54704d}.audience-grid h4{font-size:17px;font-weight:550;margin:12px 0}.audience-grid p{font-size:14px;margin:0}
 .flat-controls{position:absolute;right:10px;top:80px;display:grid;box-shadow:0 2px 10px #183e3533}.flat-controls button{width:44px;background:#fffdf7;font-size:24px;border-bottom:1px solid #ddd}.flat-canvas{touch-action:none;display:block;max-width:100%}
 @media(max-width:1100px){.replay-grid{grid-template-columns:minmax(0,1fr) 280px}.trip-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.map-toolbar .segmented button{font-size:12px}.journey-map{height:460px}.featured-vehicles{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:820px){.replay-grid{grid-template-columns:1fr}.vehicle-card{display:block}.vehicle-illustration{max-width:260px;float:right;width:42%;margin:0 0 15px 20px}.vehicle-card>.warm-note{clear:both;margin-top:20px}.replay-brief{gap:24px}.audience-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.safety-panel{grid-template-columns:1fr}.safety-panel>.small{grid-column:auto}.summary-detail{grid-template-columns:1fr}.fare-panel{border-left:0;border-top:1px solid var(--line);padding:24px 0 0}.map-toolbar{right:15px}.map-overlay{bottom:220px}.map-options{flex-wrap:wrap;gap:10px}.map-card .maplibregl-ctrl-top-right{top:78px}}
+@media(max-width:820px){.replay-grid{grid-template-columns:1fr}.vehicle-card{display:block}.vehicle-illustration{max-width:260px;float:right;width:42%;margin:0 0 15px 20px}.vehicle-card>.warm-note{clear:both;margin-top:20px}.replay-brief{gap:24px}.audience-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.safety-panel{grid-template-columns:1fr}.safety-panel>.small{grid-column:auto}.summary-detail{grid-template-columns:1fr}.fare-panel{border-left:0;border-top:1px solid var(--line);padding:24px 0 0}.map-toolbar{right:15px}.map-options{flex-wrap:wrap;gap:10px}.map-card .maplibregl-ctrl-top-right{top:78px}}
 @media(max-width:520px){.tabs button{font-size:12px;min-height:56px}.tabs button span{font-size:10px}.quiet{font-size:12px}.intro .eyebrow{font-size:11px}.lede{font-size:16px}.context-strip>span{font-size:12px}.context-strip{gap:10px 13px}.panel p,.question-card p,.inspector p,.arm-card p,.result-banner p{font-size:15px}.small{font-size:13px!important}.panel{padding:20px}.replay-stage{padding:13px}.section-heading>.chip,.section-heading>.muted{font-size:12px;white-space:normal}.replay-brief{grid-template-columns:1fr;padding:21px;gap:18px}.replay-controls{grid-template-columns:1fr;gap:16px}.replay-controls select{min-width:0;font-size:16px}.replay-controls .secondary{margin-left:0;font-size:14px}.pair-story{font-size:14px}.vehicle-picker .panel-heading{display:block}.all-vehicles{max-width:none}.featured-vehicles{gap:9px;margin-top:14px}.vehicle-choice{padding:14px;min-height:130px}.vehicle-choice[aria-pressed=true]{padding:13px}.vehicle-choice .eyebrow{font-size:10px;line-height:1.6}.vehicle-choice>span:last-child{font-size:12px}.replay-stage-head .eyebrow{font-size:10px;max-width:40%}.replay-stage-head .status-pill{font-size:11px;max-width:60%}.journey-map{height:405px}.journey-tools{left:8px;top:8px;gap:5px}.journey-tools .secondary{font-size:11px;padding:7px 9px;min-height:38px}.route-legend{font-size:11px;gap:9px 12px}.time-slider{font-size:12px}.timeline{gap:10px}.timeline .primary{min-width:62px;padding:10px;font-size:14px}.timeline output{font-size:17px}.playback-meta{display:block;font-size:13px}.playback-meta label{margin-top:12px;justify-content:space-between}.playback-meta select{font-size:14px;min-height:44px}.trip-metrics{gap:9px}.trip-metrics .metric-tile{padding:16px 12px}.trip-metrics .metric-tile strong{font-size:26px}.trip-metrics .metric-tile h4{font-size:13px;line-height:1.5;min-height:39px}.trip-metrics .metric-tile p{font-size:12px}.fare-inputs{gap:8px}.fare-inputs label{font-size:11px}.safety-panel{padding:18px}.safety-metrics div{font-size:13px}.safety-metrics dd{white-space:normal;text-align:right;max-width:40%}.audience-grid{grid-template-columns:1fr;gap:20px}.notice{font-size:13px}.map-toolbar{left:8px;right:8px}.map-toolbar .segmented{min-width:0}.map-toolbar .segmented button{font-size:11px;padding:7px}.icon-button{width:40px;height:44px;flex-shrink:0}.map-surface{height:455px}.map-overlay{display:none}.map-footer{font-size:12px}.map-footer button{font-size:12px}.map-options{padding:13px}.map-options select{font-size:16px}.attribution{font-size:10px}.map-options p{font-size:13px}.coverage-list{font-size:14px}.panel-heading .chip{white-space:normal;font-size:12px}.summary-detail h4 .chip{margin-top:9px}.text-button{font-size:14px}.future-city span{font-size:11px}.event-scroll td{font-size:13px}footer p{font-size:12px}}
 @media(max-width:520px){.vehicle-illustration{float:none;width:100%;max-width:220px;margin:0 auto 15px}.vehicle-card .coverage-list dd{max-width:62%}}
 /* A guided entry to the same recorded experiment. */
@@ -416,3 +417,29 @@ body[data-view=welcome] .intro{padding-top:66px;padding-bottom:42px}body[data-vi
 .site-return a{min-height:44px;display:inline-flex;align-items:center;text-underline-offset:4px;color:var(--ink)}
 .site-return span{margin-right:auto}
 @media(max-width:767px){.site-return{padding:10px 20px 0;gap:2px 20px}.site-return span{order:3;width:100%;font-size:12px}.site-return a:last-child{margin-left:auto}}
+
+/* Read the fleet before choosing an individual recording. */
+.fleet-insights { background:#f7f8ef; margin:24px 0 30px; }
+.fleet-insights .panel-heading p { max-width:780px; }
+.fleet-insights .trip-metrics { margin-top:22px; }
+.fleet-insights .metric-tile { background:#fffdf7; }
+.fleet-charts { display:grid; grid-template-columns:1fr 1fr; gap:34px; margin-top:30px; }
+.fleet-chart { min-width:0; }
+.fleet-chart h4 { font-size:18px; line-height:1.5; margin:0 0 20px; }
+.fleet-chart .eyebrow { font-size:11px; }
+.fleet-chart .small { color:var(--muted); font-size:14px; line-height:1.7; }
+.fleet-distribution { display:grid; gap:14px; margin:24px 0; }
+.fleet-bin { display:grid; grid-template-columns:75px minmax(0,1fr) 55px; align-items:center; gap:12px; font-size:14px; }
+.fleet-bin strong { text-align:right; font-weight:550; }
+.fleet-bar-track { height:20px; background:#e3e8dc; border-radius:4px; overflow:hidden; }
+.fleet-bar-track i { display:block; height:100%; background:#367561; border-radius:4px; }
+.fleet-time-budget { height:42px; border-radius:7px; background:#d9e4db; overflow:hidden; margin:24px 0 18px; }
+.fleet-queued { display:block; height:100%; background:repeating-linear-gradient(135deg,#a66a24 0px,#a66a24 5px,#b37e3a 5px,#b37e3a 7px); }
+.fleet-time-legend { display:grid; gap:10px; font-size:14px; margin-bottom:20px; }
+.fleet-time-legend span::before { content:''; display:inline-block; width:12px; height:12px; background:#d9e4db; border:1px solid #a9bcad; margin-right:8px; }
+.fleet-time-legend span:first-child::before { background:#a66a24; border-color:#a66a24; }
+.fleet-next { display:flex; align-items:center; gap:28px; border-top:1px solid var(--line); margin-top:22px; padding-top:20px; }
+.fleet-next p { margin:0; font-size:14px; line-height:1.7; }
+.fleet-next button { flex-shrink:0; }
+@media(max-width:820px){.fleet-charts{grid-template-columns:1fr;gap:24px}.fleet-chart+.fleet-chart{border-top:1px solid var(--line);padding-top:24px}.fleet-next{align-items:flex-start;flex-direction:column;gap:16px}}
+@media(max-width:520px){.fleet-bin{grid-template-columns:65px minmax(0,1fr) 48px;gap:9px;font-size:13px}.fleet-insights .panel-heading{display:block}.fleet-insights .chip{margin-top:10px}.fleet-next button{width:100%;white-space:normal}}
