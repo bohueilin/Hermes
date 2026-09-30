@@ -5,6 +5,14 @@ tested software and a concrete review workflow; it does not declare SF complete
 or unlock Austin and Las Vegas. Original FleetLab sections, recordings, lesson
 catalog and offline artifact are preserved.
 
+The static website update is published at [FleetLab](https://fleetlab.pages.dev/)
+with [Model lab](https://fleetlab.pages.dev/city-explorer/#models). Implementation
+commit: `d2227e07cb4e8078879fa90deda150b0f56f0c08`; production deployment:
+`a9f05880-a7c7-426f-b5ee-567a39cf0fce`. The [release record](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md)
+contains file readback, browser checks, tests and rollback details. This local
+handoff includes the post-publication record; the packaged notes retain their
+pre-publication bytes.
+
 ## What this release adds
 
 City Explorer gains **Model lab**, alongside Start here, City atlas, Decision
@@ -67,7 +75,7 @@ lifetimes at process boundaries; do not merely increase the memory threshold.
 | District scope | Original 108 gaps / 13.161 km remain visible and UNASSIGNED | Official reconciliation or an explicit new scope/scenario policy. A mainland-only diagnostic still contains 49 gaps / 1.234 km and excludes 16 original pool nodes, so it is not a complete fix. |
 | Reviewer workflow | Runtime validator, frozen sample and downloadable worksheet | Actual 200-feature and 100-OD inspection, exception resolutions and independently recorded observations. Human observations supplied: zero. |
 | Power experiment | 24 preflight arms, complete preflight analysis; one evaluation arm retained | Resolve the new resource stop under an explicit amendment before completing the 24 six-arm blocks. No primary result available. |
-| Devices/accessibility | Desktop automated checks; Pixel authorization and unlocked state observed | Physical touch/zoom/playback, landscape, enlarged text and screen-reader session. Other phone apps regained foreground during attempted checks; no physical pass claimed. |
+| Devices/accessibility | Desktop automated checks; Pixel authorization and unlocked state observed | Physical touch/zoom/playback, landscape, enlarged text and screen-reader session. Other phone apps regained foreground during attempted checks, and the final ADB listing contained no connected device; no physical pass claimed. |
 | Comprehension | Five-visitor worksheet and independent scoring rubric prepared | Five actual visitors' answers, second scoring and revisions based on observed confusion. AI reviews are not participants. |
 | Vehicle inputs | Anonymous energy/charge calculator; primary-source and rights register | Compatible measured usable energy, battery-side consumption, charge curves, accessibility/service dwell and dimensions before named classes. |
 | Curb/depot maneuvers | Static direction/permission teaching fixtures | Current site geometry, permitted maneuvers, motion primitives and independently checked swept paths before maneuver results. |
@@ -107,6 +115,30 @@ compare one depot decision under a new frozen geography/demand contract. Airport
 curbs and neighboring municipalities require separate scope. Austin and Las Vegas
 remain subsequent gated work. Japan likewise needs one bounded city/ward probe,
 left-driving semantics and a local source contract.
+
+## What is unfinished, and who can unblock it
+
+**Engineering work remains:** integrate the tested continuity and conditional
+components into a versioned fleet/importer/verifier path; complete partial-edge
+and connector contracts; qualify SF performance and memory; resolve source and
+district scope. These implementation tasks remain with engineering. This release does not finish the entire SF checklist.
+
+**Independent evidence remains:** the frozen map sample needs actual inspection
+and recorded findings; five visitors need to answer the comprehension worksheet,
+with a second scorer. The Pixel needs to be reconnected and stay on the browser
+long enough to observe touch, zoom, playback, landscape, enlarged text and
+screen-reader behavior. Browser viewport checks cannot fill these requirements.
+
+**The stopped study needs a concrete repair first:** preserve its existing arm,
+protocol, source identities and failure records. Qualify a process-isolated
+execution/verification design without silently resuming evaluation. Present the
+measured memory evidence and exact amendment before requesting any further
+scientific execution. The approved one-time retry has been consumed.
+
+Named Ojai/Zoox fleet parameters and real maneuver claims also require compatible
+measured inputs and appropriate validation. Public design references alone do
+not fill those fields. Anonymous teaching examples remain useful while that
+information is unavailable.
 
 ## Recommendation
 

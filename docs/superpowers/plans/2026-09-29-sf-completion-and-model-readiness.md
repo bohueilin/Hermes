@@ -34,34 +34,34 @@
 
 **Files:** `citylib/power_study.py`, `citylib/power_analysis.py`, `citylib/power_protocol.py`, `tests/test_power_study.py`; immutable output `build/fleetlab-city/studies/sf-power-headroom-v1-r2/`.
 
-- [ ] Apply only the four regression tests from the archived memory amendment; run them against current code and retain the expected ordering/lifetime failures.
-- [ ] Apply the archived production fix: analyze preflight before execution capture; release per-arm raw records; release map/tapes before final recapture. Preserve final stamps and full protocol checks.
-- [ ] Declare the proposed fresh seed constants and protocol revision/predecessor fields before freeze. Tests retain the historical controls and fixed population.
-- [ ] Run `python -m unittest discover -s apps/fleetlab-city/tests` and Node City tests; independently review the amendment, source inventory and controls before execution.
-- [ ] Freeze via `freeze_study(root, out)` with all 28 tapes; retain protocol digest and source commit/checkpoint. Run `execute_study(root, out, 'preflight')`; verify `analyze_study(..., 'preflight')` COMPLETE.
-- [ ] Run `execute_study(root, out, 'evaluate')` once; capture peak memory and every arm. If any stop condition occurs, preserve incomplete results and continue unaffected work without changing limits.
+- [x] Apply only the four regression tests from the archived memory amendment; run them against current code and retain the expected ordering/lifetime failures.
+- [x] Apply the archived production fix: analyze preflight before execution capture; release per-arm raw records; release map/tapes before final recapture. Preserve final stamps and full protocol checks.
+- [x] Declare the proposed fresh seed constants and protocol revision/predecessor fields before freeze. Tests retain the historical controls and fixed population.
+- [x] Run `python -m unittest discover -s apps/fleetlab-city/tests` and Node City tests; independently review the amendment, source inventory and controls before execution.
+- [x] Freeze via `freeze_study(root, out)` with all 28 tapes; retain protocol digest and source commit/checkpoint. Run `execute_study(root, out, 'preflight')`; verify `analyze_study(..., 'preflight')` COMPLETE.
+- [x] Run `execute_study(root, out, 'evaluate')` once; capture peak memory and every arm. If any stop condition occurs, preserve incomplete results and continue unaffected work without changing limits.
 - [ ] Verify and package actual results using the existing explicit `--power-study` interface; never substitute fixtures for results.
 
 ## Task 2: Source, district and continuity qualification
 
 **Files:** existing source-review and continuity design contracts; new independently testable versioned modules under `citylib/`, tests under `tests/`, and immutable source observations under `build/fleetlab-city/research/sf-completion-r3/`.
 
-- [ ] Inspect all 26 priority ways and exact blocking tags/relations, plus 108 district gaps. Record captured-source versus current-source differences and source-backed candidate fixes.
-- [ ] Implement the review-result validator from the existing contract: expected checkpoint, bounded observation/capture references, exact candidate identity, duplicate/stale/conflict rejection, requirement coverage and honest human/automated method distinctions.
-- [ ] Implement a strict continuity interface in a separate model/profile: retained incoming edge and restriction prefix, no implicit reversal, zero-length preservation, context-specific cache, explicit no-route and executed-prefix validation. Preserve old v1 bytes and results.
+- [x] Inspect all 26 priority ways and exact blocking tags/relations, plus 108 district gaps. Record captured-source versus current-source differences and source-backed candidate fixes.
+- [x] Implement the review-result validator from the existing contract: expected checkpoint, bounded observation/capture references, exact candidate identity, duplicate/stale/conflict rejection, requirement coverage and honest human/automated method distinctions.
+- [x] Implement a strict continuity interface in a separate model/profile: retained incoming edge and restriction prefix, no implicit reversal, zero-length preservation, context-specific cache, explicit no-route and executed-prefix validation. Preserve old v1 bytes and results.
 - [ ] Pin all eight hand-checkable fixtures listed in the continuity design, including independent verifier failure on a restriction split across a stop.
 - [ ] Apply only source-supported parser/profile corrections in a new candidate. Keep ambiguous conditions unsupported and all old packs immutable.
-- [ ] Produce a documented service-scope proposal with exact affected roads/requests; keep municipal boundary, source context and district assignment distinct. Do not assign gaps to the nearest district.
-- [ ] Produce an acceptance envelope listing all actual gate outcomes. Required independent human observations cannot be generated by an agent.
+- [x] Produce a documented service-scope proposal with exact affected roads/requests; keep municipal boundary, source context and district assignment distinct. Do not assign gaps to the nearest district.
+- [x] Produce an acceptance envelope listing all actual gate outcomes. Required independent human observations cannot be generated by an agent.
 
 ## Task 3: Vehicle and curb/depot readiness
 
 **Files:** source research under `build/fleetlab-city/research/vehicle-curb-r1/`, versioned parameter/scenario contracts and focused tests, updated vehicle-concept/learning UI only when backed by installed behavior.
 
-- [ ] Audit primary public sources for measured/claimed energy, charging, dimensions, dwell and SF loading-zone geometry; capture provenance and redistribution terms.
-- [ ] Separate manufacturer/reference facts from model-ready inputs. Missing battery-side curves, service times and maneuver permissions stay unavailable.
-- [ ] Implement bounded anonymous sensitivity or maneuver teaching models only where the question, input semantics and validation fixtures are defined; preserve explicit synthetic labels and distinct model identity.
-- [ ] Prepare the next California municipality/source contract with explicit boundary and experiment scope. Do not call a city qualified from data availability alone.
+- [x] Audit primary public sources for measured/claimed energy, charging, dimensions, dwell and SF loading-zone geometry; capture provenance and redistribution terms.
+- [x] Separate manufacturer/reference facts from model-ready inputs. Missing battery-side curves, service times and maneuver permissions stay unavailable.
+- [x] Implement bounded anonymous sensitivity or maneuver teaching models only where the question, input semantics and validation fixtures are defined; preserve explicit synthetic labels and distinct model identity.
+- [x] Prepare the next California municipality/source contract with explicit boundary and experiment scope. Do not call a city qualified from data availability alone.
 
 ## Task 4: Device and real-person validation
 
@@ -75,12 +75,24 @@
 
 **Files:** viewer projections/UI, `package.py`, combined-stage tool, source offer and canonical handoff/release documents.
 
-- [ ] Complete model/contract tests and immutable evidence checks; review all new modules and scientific claims.
-- [ ] Build fresh viewer with only compatible available studies and honest incomplete states; check size/file/dependency budgets.
-- [ ] Preserve root/offline baseline; retain preceding complete City viewer. Test browser routes, controls, diagrams, all original content and rollback.
-- [ ] Publish preview, compare every served payload and effective header to the local stage, then publish that same stage to production and repeat readback.
-- [ ] Update final handoff with completed evidence and specific remaining external requirements. Advance Austin/Las Vegas only if the SF acceptance gate is satisfied.
+- [x] Complete model/contract tests and immutable evidence checks; review all new modules and scientific claims.
+- [x] Build fresh viewer with only compatible available studies and honest incomplete states; check size/file/dependency budgets.
+- [x] Preserve root/offline baseline; retain preceding complete City viewer. Test browser routes, controls, diagrams, all original content and rollback.
+- [x] Publish preview, compare every served payload and effective header to the local stage, then publish that same stage to production and repeat readback.
+- [x] Update final handoff with completed evidence and specific remaining external requirements. Advance Austin/Las Vegas only if the SF acceptance gate is satisfied.
 
 ## Execution decisions
 
 The current user explicitly authorizes implementation, testing and static-site publication. This plan does not add another general approval checkpoint. The documented memory revision is accepted within that instruction; original evidence and limits are retained. Public/static-site authorization does not authorize physical systems or fabricated human/data validation. The existing linked feature worktree is already isolated; unrelated owner files remain untouched.
+
+## Execution outcome — 29 September 2026 Pacific
+
+Completed boxes record the specified implementation or execution attempt, not SF acceptance. The approved fresh-process evaluation retry stopped after 1/144 arms at 4,046,569,472 bytes. No complete result exists; read-only partial-status packaging shows 143 NOT_RUN and a null primary estimate. No further scientific retry was performed.
+
+Continuity and temporal predicates are standalone, fixture-tested components. The fractional final-edge adapter, positive connector-acceptance case, fleet/importer integration and SF resource qualification remain unfinished. The eight-fixture item and new-candidate parser item therefore remain open. No source-supported road was silently restored in the old pack.
+
+The frozen reviewer package is an acceptance envelope with HOLD and zero actual human observations. Anonymous energy and static direction lessons fulfill the bounded teaching-model item; named vehicle calibration and maneuver physics remain unavailable. San Mateo is a prepared source probe only.
+
+Fresh validation: 194 City Python tests; 49 City Node tests; 1,661 root Python passes/56 skips; 1,954 legacy Node passes/8 skips/1 TODO; Ruff and whitespace checks pass. Independent final code reviews closed all findings in the implemented scope. Physical Pixel and real visitor sessions remain open.
+
+Publication complete: preview 99f21db4 and production a9f05880; both 9,959/9,959 exact served payload matches, effective headers pass. The original FleetLab sections and 59 lessons remain; City Explorer adds Model lab. SF remains HOLD and later city execution is not advanced.

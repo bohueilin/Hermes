@@ -1,5 +1,80 @@
 # FleetLab City Explorer integration release
 
+## Current release — SF review workflow and Model lab
+
+29 September 2026 Pacific. Model lab adds twelve anonymous charging examples
+and three static direction/permission fixtures. City atlas offers the frozen
+1,129-obligation reviewer worksheet and the current HOLD disposition. Decision
+notebook records the stopped power evaluation: one recorded arm, 143 NOT_RUN,
+no primary estimate. These additions do not qualify SF or establish calibrated
+vehicle classes, maneuver physics or city-expansion readiness.
+
+- Implementation source: `d2227e07cb4e8078879fa90deda150b0f56f0c08`.
+- Viewer: `dist/city-explorer-v7-model-readiness-final`; SHA-256
+  `7d062d3e51fab0d2080e62090bd4930b04c19367560800962b58d04d4eaa7fc9`.
+- Combined stage: `build/fleetlab-city/launch-integration-v3/site`;
+  9,960 staged / 9,959 served files, 1,522,564,557 bytes.
+- Preview: `99f21db4-d593-48b2-a61d-e02dd2293040`,
+  <https://99f21db4.fleetlab.pages.dev/>.
+- Production: `a9f05880-a7c7-426f-b5ee-567a39cf0fce`,
+  <https://a9f05880.fleetlab.pages.dev/>; stable <https://fleetlab.pages.dev/>.
+- Source-offer manifest: `d2a0af18e67f18d01926c941283f4358beacfecf9e5ff942c09982cdfd0c8aa6`;
+  all 66 archive members independently match their declared bytes and hashes.
+- All 4,868 original study data files other than the intentionally extended
+  catalog and its compressed representation remain byte-identical. The 96
+  protected original site files and offline artifact are unchanged.
+
+Fresh automated validation: 194 City Python passes; 49 City Node passes;
+1,661 root Python passes / 56 skips; 1,954 legacy Node passes / 8 skips / 1 TODO;
+Ruff and whitespace checks pass. Two root comparison byte pins were made portable
+by first asserting exact returned absolute paths, then substituting a stable
+logical artifact root for canonical-byte assertions. Production comparison logic
+is unchanged. Final independent implementation reviews have no open findings
+within the implemented scope.
+
+Browser checks cover 390, 1024 and 1280 CSS-pixel layouts, keyboard focus, energy
+selectors, forbidden-exit unavailability, partial-study status, atlas review
+links and one/two-depot markers. Local and hosted widths have no document-level
+horizontal overflow. Production direct Play advanced 07:00 → 08:23; fare output
+remained unavailable without the visitor's three rates. Overview film played
+with readyState 4; owner contact and all navigation were retained; Learning
+catalog displayed 59 of 59 lessons.
+
+The first preview attempt uploaded its 38 changed assets but encountered
+`UND_ERR_SOCKET` before deployment creation. A read-only deployment listing
+confirmed no new deployment. The same pinned Wrangler 4.135.0 retry reused all
+9,959 assets and created the preview. Production reused that same complete
+bundle. This publication retry did not execute a scientific arm.
+
+Full readback: **9,959/9,959 exact payload matches on preview and production**.
+Effective root, City and source-offer security headers pass. Hosted Range requests
+return the complete correct HTTP 200 body; no 206 claim. Publication record:
+`build/fleetlab-city/launch-integration-v3/review/publication.json`.
+Integration-manifest SHA-256: `a32bde65ab345c749428ba7069489f6961ab7a802f1cdc6c92e9151ac7c7652f`.
+
+Rollback is the previous complete production
+`ed4b1d68-3130-4833-9f93-b170c8f3cbb9` and retained
+`launch-integration-v2/site`. The new bundle also includes the compatible prior
+City viewer `city-explorer/releases/0ab37cf658f68f19/`; its replay was exercised
+locally from 07:00 to 09:24. No production rollback was performed.
+
+**Remaining acceptance work:** fleet/importer integration of the standalone
+continuity and temporal components, district/source qualification, bounded-memory
+power-study repair under a separate amendment, actual independent map and visitor
+sessions, physical-device testing and calibrated vehicle/maneuver inputs. Pixel
+was authorized and briefly observable, but user apps regained foreground during
+checks and the final ADB listing has no connected device. No physical pass is
+claimed. Austin and Las Vegas are not started.
+
+Current handoff: [FLEETLAB_SF_COMPLETION_STATUS_2026-09-29.md](FLEETLAB_SF_COMPLETION_STATUS_2026-09-29.md).
+Evidence: `build/fleetlab-city/validation/sf-completion-r3/`.
+Local implementation is committed; this release does not push a Git branch or
+merge a PR. Static-site publication is explicitly owner-authorized and does not
+change scientific or physical deployment authority.
+
+---
+
+
 ## Atlas, fleet insights and owner contact enhancement
 
 Owner requested these additions, final handoff updates and live publication.

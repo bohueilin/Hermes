@@ -10,8 +10,10 @@ Standalone continuity/conditional modules, a checkpoint-bound review workflow,
 a frozen 200-feature/100-OD worksheet and anonymous Model lab lessons are now
 implemented. Fleet integration, SF map/human qualification, physical-device
 validation and measured vehicle inputs remain open. San Mateo is a prepared
-source probe; no new city pack or result is introduced. Publication verification
-is recorded in FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md.
+source probe; no new city pack or result is introduced. The Model lab update is live at <https://fleetlab.pages.dev/city-explorer/#models>.
+Publication verification is recorded in [the release record](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md).
+The entire SF checklist is not complete: remaining engineering tasks and external
+evidence requirements are separated in the current completion status.
 
 ## Latest handoff — San Francisco clarity and fleet insights, 29 September 2026
 
