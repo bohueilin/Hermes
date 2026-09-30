@@ -13,8 +13,8 @@ records its fixed 400-search SF diagnostic. A subsequent
 conditional import, actual traversal-time routing and independent fleet replay.
 Its local candidate reduces unsupported eligible length to 0.987% while retaining
 all source IDs and denominators. All road classes meet the unchanged 5% source
-threshold; map acceptance remains HOLD. Connectors, full fleet resource
-qualification, versioned public packaging, district scope, independent map/device/
+threshold; map acceptance remains HOLD. Connectors,
+versioned public packaging, district scope, independent map/device/
 visitor evidence and measured vehicle inputs remain open. Austin is next after SF acceptance. San Mateo
 remains a prepared California source probe; no new city result is introduced. The Model lab update is live at <https://fleetlab.pages.dev/city-explorer/#models>.
 Publication verification is recorded in [the release record](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md).
@@ -22,9 +22,12 @@ The entire SF checklist is not complete: remaining engineering tasks and externa
 evidence requirements are separated in the current completion status.
 
 Latest engineering evidence: all 300 fixed temporal routing contexts complete
-with algorithm parity, and 260 City Python tests pass. The bounded caches retain
-actual-time permission checks. The full 100-vehicle resource diagnostic remains
-separate from those checks and from the stopped power evaluation. A newly located
+with algorithm parity, and 262 City Python tests pass. The bounded caches retain
+actual-time permission checks. The full 100-vehicle, 1,200-request, eight-hour
+engineering case now completes and independently verifies within 4 GB / 30-minute
+phase limits. Two numerical verifier defects were reproduced and corrected;
+the original trace and invalid report remain intact. This resource result is
+separate from the stopped power evaluation and is not city acceptance. A newly located
 official district source includes water areas; the full-inventory diagnostic
 reduces unassigned geometry to 49 boundary differences / 441.926 m, without
 adopting or silently changing the map. See the linked current status for exact

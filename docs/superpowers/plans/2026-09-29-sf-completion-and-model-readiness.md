@@ -135,3 +135,16 @@ changes administrative membership of five pool nodes. Adoption, redistribution
 terms and scenario implications remain explicit pending work; no inventory,
 denominator or demand population was silently changed. This does not close
 independent map review, connectors, public v3 packaging or city acceptance.
+
+The fixed r6 full-fleet engineering execution has now completed: 519,579 route
+queries, 1,300.761 seconds, 2,169,552,896 peak bytes. Independent verification
+initially rejected twelve numerical reconstruction mismatches. Two small
+regressions reproduced them; integer millisecond ledger clocks and a strict
+one-nanosecond partial-position representation tolerance resolve the causes.
+Verifier 3.0.1 accepted the same immutable recording in a fresh process in
+107.093 seconds at 2,060,730,368 bytes. The original invalid report remains.
+No simulation or scientific evaluation was repeated for the verifier correction.
+Current gates: 262 City Python tests, 1,661 root passes / 56 skips, Ruff and
+whitespace checks; independent review found no important issues. All twelve
+frozen scientific files remain unchanged. Resource qualification of this case is
+complete; connector/export/district integration and real observations remain.

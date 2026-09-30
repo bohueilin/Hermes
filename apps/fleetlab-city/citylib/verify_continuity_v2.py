@@ -26,7 +26,7 @@ def quantile(values, p):
     return values[lo] + (values[hi] - values[lo]) * (i - lo)
 
 
-def check_ledger(run, inputs, pack):
+def check_ledger(run, inputs, pack, *, reducer=check_legacy_ledger):
     # Legacy accounting records an open leg's departure node, whereas v2 exposes
     # the last fully traversed edge endpoint. The independent fleet trace check
     # validates the latter. Adapt only that representation for the unchanged
@@ -36,11 +36,18 @@ def check_ledger(run, inputs, pack):
         for v in run["final"]["vehicles"]
     ]
     projection = {**run, "final": {**run["final"], "vehicles": vehicles}}
-    return check_legacy_ledger(projection, inputs, pack)
+    return reducer(projection, inputs, pack)
 
 
 def _verify_core(
-    run, inputs, pack, *, graph=None, schema=SCHEMA, routing_verifier=verify_fleet_trace
+    run,
+    inputs,
+    pack,
+    *,
+    graph=None,
+    schema=SCHEMA,
+    routing_verifier=verify_fleet_trace,
+    ledger_reducer=check_legacy_ledger,
 ):
     graph = pack if graph is None else graph
     if not isinstance(run, dict) or not isinstance(inputs, dict):
@@ -418,7 +425,7 @@ def _verify_core(
     if "metrics" in run and digest(run["metrics"]) != digest(metrics):
         fail("metrics", "stored summary differs from recomputed metrics")
     try:
-        findings.extend(check_ledger(run, inputs, graph))
+        findings.extend(check_ledger(run, inputs, graph, reducer=ledger_reducer))
     except (KeyError, TypeError, ValueError, IndexError, ZeroDivisionError) as exc:
         fail("interval_ledger", f"Malformed ledger: {exc}")
     valid = not findings

@@ -32,9 +32,13 @@ and retained return history: 1,098 routes and 84 no-continuation results across
 The earlier 248/300 state-budget failure remains preserved. Feature-specific
 time bounds and reviewed bounded caches improve search performance; a reviewed
 cycle regression prevents dropping a valid later arrival. The current City suite
-has 260 passes. [Full fleet resource qualification](FLEETLAB_SF_TEMPORAL_RESOURCE_2026-09-30.md)
-retains a later work-budget failure at a permanently gated destination; its
-targeted fix passes and the full case is being rechecked. This candidate is not yet in the public viewer. All 12 frozen power-study source
+has 262 passes. [Full fleet resource qualification](FLEETLAB_SF_TEMPORAL_RESOURCE_2026-09-30.md)
+now completes the fixed 100-vehicle, 1,200-request, eight-hour case: execution
+peaked at 2.170 GB and independent verification at 2.061 GB, both within 30 minutes.
+The original invalid verifier report is preserved; two reproduced arithmetic
+defects were corrected and the same unchanged recording now verifies with zero
+findings. No further simulation was needed for that correction. This candidate
+is not yet in the public viewer. All 12 frozen power-study source
 files remain unchanged. Austin is now the next requested city after SF acceptance;
 San Mateo preparation remains background.
 
@@ -101,8 +105,8 @@ lifetimes at process boundaries; do not merely increase the memory threshold.
 
 | Work | Implemented / observed | Still required |
 |---|---|---|
-| Cross-leg continuity | Versioned static and temporal fleet engines and independent verifiers retain history through stops and fractional final edges; bounded history/cache/search | Full fleet performance/memory qualification and explicit reviewed connectors. Diagnostic execution is not map acceptance. |
-| Conditional semantics | New local temporal importer/router evaluates exact daily, weekday and overnight conditions at actual edge and node passage times; original sf-v1/sf-v2 remain unchanged | Full SF resource qualification and compatible candidate bundle/export. Unsupported grammar stays blocked. |
+| Cross-leg continuity | Versioned engines retain history through stops and fractional final edges; the fixed full-fleet engineering case completes and independently verifies within resource limits | Explicit reviewed connectors. One diagnostic case is not map acceptance or a complete scientific evaluation. |
+| Conditional semantics | Local temporal importer/router and independently verified full-fleet case evaluate daily, weekday and overnight conditions at actual traversal times; original sf-v1/sf-v2 remain unchanged | Compatible candidate bundle/export. Unsupported grammar stays blocked. |
 | Priority source review | All 26 priority ways reconciled automatically; captured Lombard fixtures and supported access windows integrated in the new candidate; all class fractions below 5% | Actual independent source review, new candidate requirements, district scope and unresolved malformed/missing source topology. No human observations supplied. |
 | District scope | Original 108 gaps / 13.161 km remain visible and UNASSIGNED; the newly located full official source reduces the diagnostic remainder to 49 records / 441.926 m | Resolve full-source redistribution terms and remaining OSM/administrative boundary differences under an explicit policy; retain all affected-road/request accounting and new source identities. |
 | Reviewer workflow | Runtime validator, frozen sample and downloadable worksheet | Actual 200-feature and 100-OD inspection, exception resolutions and independently recorded observations. Human observations supplied: zero. |
@@ -152,8 +156,8 @@ left-driving semantics and a local source contract.
 
 ## What is unfinished, and who can unblock it
 
-**Engineering work remains:** complete connector contracts, qualify full SF fleet
-performance and memory, resolve source/district scope and integrate a versioned
+**Engineering work remains:** complete connector contracts, resolve source/district
+scope and integrate a versioned
 candidate bundle into the viewer. Temporal import/routing, static fleet continuity
 and partial-edge verification are implemented and tested locally. These remaining
 implementation tasks stay with engineering. This release does not finish the
@@ -179,8 +183,8 @@ information is unavailable.
 ## Recommendation
 
 Use the original recorded SF study plus Model lab to explain how assumptions,
-constraints and evidence shape a decision. Finish resource qualification,
-connector/export integration and real review before claiming city acceptance.
+constraints and evidence shape a decision. Finish connector/export integration,
+district reconciliation and real review before claiming city acceptance.
 
 ## Top risks + mitigations
 
@@ -193,8 +197,8 @@ traces, failures and viewer bundles so every change stays reviewable.
 
 1. Complete independent map and visitor sessions using the published worksheets;
    record actual observations against the frozen identities.
-2. Qualify a versioned temporal/fleet adapter and a complete bounded-memory study
-   execution path before proposing the next power-study amendment.
+2. Package the qualified temporal engineering case under its own identity; qualify
+   the distinct scientific-study execution path before proposing a power amendment.
 3. Record the SF acceptance decision, then begin Austin with its own source,
    scope and experiment contracts; retain other California cities and Las Vegas
    as subsequent work.

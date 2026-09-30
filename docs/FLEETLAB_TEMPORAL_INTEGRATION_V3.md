@@ -9,8 +9,8 @@ acceptance decision. SF acceptance remains **HOLD**.
 The subsequent performance work completes the fixed **300/300** SF routing
 contexts, with A*/Dijkstra parity and no unavailable searches. The latest
 completed check is `r13`, including the reviewed bounded potential cache and
-permanent-node proof. Full fleet
-resource qualification and public packaging remain separate work; see
+permanent-node proof. The fixed full-fleet engineering case also completes and
+independently verifies within the resource limits. Public packaging remains open; see
 [the resource record](FLEETLAB_SF_TEMPORAL_RESOURCE_2026-09-30.md).
 
 ## Contract
@@ -262,7 +262,7 @@ the diagnostic does not mean every OD is reachable. Report SHA-256 values:
 - r12: `3cabdffb7355ee7e97b8d79d8ab2ef6f715347578a974e2486f0b2e975f82ab9`.
 - r13: `7323b5a6da796b586f179b5859bc1436aeb1d6df33c14c9b0a6e0451dd43da94`.
 
-The current software suite has **260 City Python passes**, including **35 temporal
+The current software suite has **262 City Python passes**, including **37 temporal
 tests**. Review found no further important issues in proof-cache identity, LRU
 bounds or the structural terminal proof. The added reverse-potential cache was
 separately reviewed for admissibility, failed-computation handling and eviction.
@@ -309,9 +309,28 @@ Each phase captures all City library source hashes and checks they did not chang
 during execution. This establishes a small real-graph integration check, not
 100-vehicle/eight-hour qualification or a completed comparison study.
 
+## Full-fleet verification checkpoint
+
+The same 100-vehicle, 1,200-request, eight-hour engineering case completed in
+1,300.761 seconds at 2,169,552,896 peak resident bytes. It issued 519,579 route
+queries with no unsupported searches. Independent verifier 3.0.0 reported twelve
+findings; all were traced to numerical reconstruction defects, with literal
+regressions failing before correction. The temporal ledger now accumulates
+integer milliseconds, and partial-position comparison permits at most one
+nanosecond of representation error while retaining exact topology and strict
+numeric validation. Historical scientific modules remain unchanged.
+
+A fresh process using verifier 3.0.1 accepted the **same unchanged recording** in
+107.093 seconds at 2,060,730,368 bytes, with zero findings and all artifact/source
+hash checks passing. The old invalid result remains preserved. This completes
+resource qualification for this specific engineering case; it is not a scientific
+comparison, a source review or permission to run an additional power-study arm.
+See [the resource record](FLEETLAB_SF_TEMPORAL_RESOURCE_2026-09-30.md) for exact
+identities, negative evidence, observations and remaining obligations.
+
 ## Remaining acceptance work
 
-Finish full-fleet resource qualification, the explicit connector contract and
+Finish the explicit connector contract and
 versioned bundle/export integration. Resolve district scope and generate the new
 candidate's review requirements. Obtain actual independent map observations,
 physical-device/accessibility checks and visitor-comprehension evidence. Preserve

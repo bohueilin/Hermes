@@ -43,6 +43,38 @@ def spec():
     }
 
 
+def clock_boundary_fixture(first_ms=100):
+    from citylib.temporal_import_v3 import build_temporal_pack, parse_temporal_osm
+    from test_engine import tiny_spec
+
+    nodes = "".join(
+        f'<node id="{i}" lon="{-122.42 + min(i, 30) * 0.000001}" '
+        f'lat="{37.77 + (0.000001 if i == 31 else 0)}"/>'
+        for i in range(32)
+    )
+    refs = "".join(f'<nd ref="{i}"/>' for i in range(32))
+    raw = (
+        f'<osm>{nodes}<way id="10">{refs}<tag k="highway" v="residential"/>'
+        '<tag k="oneway" v="yes"/></way><way id="20"><nd ref="31"/><nd ref="0"/>'
+        '<tag k="highway" v="residential"/><tag k="oneway" v="yes"/></way></osm>'
+    ).encode()
+    pack = build_temporal_pack(parse_temporal_osm(raw))
+    for edge in pack["edges"]:
+        ms = first_ms if edge["id"] == "10:0:f" else 100
+        if edge["u"] in {"30", "31"}:
+            ms = 5000
+        edge.update(seconds=ms / 1000, source_seconds=ms / 1000, duration_ms=ms)
+    scenario = dict(tiny_spec(), **spec())
+    scenario.update(duration_s=20, sample_s=1, boarding_s=0, fleet_size=1, request_count=1)
+    scenario["sites"][0]["node"] = "0"
+    inputs = {
+        "seed": 501,
+        "initial": [{"id": "v1", "node": "0", "energy": 30.0}],
+        "requests": [{"id": "r1", "t": 0, "origin": "0", "destination": "31", "zone": "toy"}],
+    }
+    return pack, inputs, scenario
+
+
 class TemporalTests(unittest.TestCase):
     def setUp(self):
         self.assertIsNotNone(
@@ -61,6 +93,43 @@ class TemporalTests(unittest.TestCase):
 
     def router(self, pack=None, scenario=None):
         return self.routing.TemporalRouter(pack or self.pack(), scenario or spec())
+
+    def test_exact_millisecond_sample_boundary_uses_next_edge_heading(self):
+        from citylib.engine_temporal_v3 import run_arm
+        from citylib.verify_temporal_v3 import verify
+
+        pack, inputs, scenario = clock_boundary_fixture()
+        run = run_arm(pack, inputs, scenario)
+        pose = next(p for p in run["poses"] if p[0] == 4)
+        self.assertEqual(pose[4], 0.0)  # 30 x 100 ms, then the northbound edge.
+        report = verify(run, inputs, pack)
+        self.assertTrue(report["valid"], report["findings"])
+        for field, value in [(4, 1.0), (5, "idle"), (6, pose[6] + 0.01)]:
+            altered = copy.deepcopy(run)
+            next(p for p in altered["poses"] if p[0] == 4)[field] = value
+            with self.subTest(field=field):
+                self.assertFalse(verify(altered, inputs, pack)["valid"])
+
+    def test_fractional_position_allows_roundoff_but_rejects_changed_motion(self):
+        from citylib.engine_temporal_v3 import run_arm
+        from citylib.verify_temporal_v3 import verify
+
+        pack, inputs, scenario = clock_boundary_fixture(first_ms=101)
+        run = run_arm(pack, inputs, scenario, stop_at=2)
+        partial = run["final"]["vehicles"][0]["routing_position"]["partial_edge"]
+        self.assertAlmostEqual(partial["elapsed_s"], 0.099, places=12)
+        report = verify(run, inputs, pack)
+        self.assertTrue(report["valid"], report["findings"])
+        for field, value in [
+            ("elapsed_s", 0.09901),
+            ("fraction", 0.9901),
+            ("id", "10:10:f"),
+            ("elapsed_s", True),
+        ]:
+            altered = copy.deepcopy(run)
+            altered["final"]["vehicles"][0]["routing_position"]["partial_edge"][field] = value
+            with self.subTest(field=field, value=value):
+                self.assertFalse(verify(altered, inputs, pack)["valid"])
 
     def test_raw_members_tags_and_source_digest_survive_import(self):
         raw = raw_fixture()

@@ -11,6 +11,7 @@ from datetime import timedelta
 from .conditional_access_v1 import evaluate_condition, parse_condition
 from .fleet_routing_v2 import start_instant
 from .fleet_trace_v2 import _verify_fleet_trace
+from .ledger_temporal_v3 import check_ledger as check_temporal_ledger
 from .temporal_import_v3 import ALLOW, CONTEXT, MODES, validated_graph
 from .verify_continuity_v2 import _verify_core
 
@@ -119,8 +120,9 @@ def verify(run, inputs, pack):
             graph=validated_graph(pack),
             schema=SCHEMA,
             routing_verifier=_verify_routing,
+            ledger_reducer=check_temporal_ledger,
         )
-        report["verifier"] = "fleetlab.city-temporal-event-verifier/3.0.0"
+        report["verifier"] = "fleetlab.city-temporal-event-verifier/3.0.1"
         return report
     except (
         KeyError,
@@ -144,5 +146,5 @@ def verify(run, inputs, pack):
             "authenticity": "NOT_AUTHENTICATED",
             "scope": "SIMULATION_ONLY",
             "decision_authority": "NONE",
-            "verifier": "fleetlab.city-temporal-event-verifier/3.0.0",
+            "verifier": "fleetlab.city-temporal-event-verifier/3.0.1",
         }

@@ -41,6 +41,40 @@ def verify_fleet_trace(run, inputs, pack):
     return _verify_fleet_trace(run, inputs, pack, pack, SCHEMA, MODEL)
 
 
+def _same_position(actual, expected, edges):
+    """Exact topology; at most one nanosecond of numerical representation error.
+
+    Producer subtraction and verifier accumulation associate binary floats
+    differently. Compare fraction error in seconds too, so very short edges do
+    not receive an arbitrary distance/fraction allowance. No clock, edge, or
+    history is rounded, substituted, or written back into the evidence.
+    """
+    if expected is None:
+        return actual is None
+    if not isinstance(actual, dict) or set(actual) != {"completed_edges", "partial_edge"}:
+        return False
+    if actual["completed_edges"] != expected["completed_edges"]:
+        return False
+    observed, target = actual["partial_edge"], expected["partial_edge"]
+    if target is None:
+        return observed is None
+    if not isinstance(observed, dict) or set(observed) != {"id", "elapsed_s", "fraction"}:
+        return False
+    if observed["id"] != target["id"]:
+        return False
+    for field in ("elapsed_s", "fraction"):
+        value = observed[field]
+        if type(value) not in (int, float) or not math.isfinite(value):
+            return False
+    duration = edges[target["id"]]["seconds"]
+    return (
+        0 < observed["elapsed_s"] < duration
+        and 0 < observed["fraction"] < 1
+        and abs(observed["elapsed_s"] - target["elapsed_s"]) <= 1e-9
+        and abs(observed["fraction"] * duration - target["elapsed_s"]) <= 1e-9
+    )
+
+
 def _verify_fleet_trace(run, inputs, pack, graph, schema, model):
     issues, entered_count = [], 0
     history_bound, retained_history_peak = None, 0
@@ -252,7 +286,7 @@ def _verify_fleet_trace(run, inputs, pack, graph, schema, model):
                     raise ValueError("final open leg mismatch")
             elif observed.get("leg") is not None:
                 raise ValueError("final leg invented")
-            if observed.get("routing_position") != position:
+            if not _same_position(observed.get("routing_position"), position, edges):
                 raise ValueError(
                     "final partial-edge position differs from clock and source durations"
                 )
@@ -268,5 +302,5 @@ def _verify_fleet_trace(run, inputs, pack, graph, schema, model):
         "entered_edge_count": entered_count,
         "retained_history_peak_edges": retained_history_peak,
         "history_bound_edges": history_bound,
-        "verifier": "fleetlab.fleet-continuity-verifier/2.0.0",
+        "verifier": "fleetlab.fleet-continuity-verifier/2.0.1",
     }

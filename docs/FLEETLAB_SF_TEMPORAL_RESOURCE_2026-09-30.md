@@ -67,14 +67,73 @@ regression first failed the work limit, then returned explicit no continuation.
 A more-specific `motorcar=yes` control remains reachable. The source road inventory
 and actual permission checks are unchanged.
 
-Full-fleet resource qualification remains incomplete until the fixed case finishes
-execution, serialization and independent verification within the declared limits.
+## Completed r6 execution and corrected independent verification
 
 Revision r6 freezes that correction at
 `c8962670e723bf9e8b6960d82d3b954e58bca7b9922cc74d3fd74b1189b561be`.
 The input tape, generic fleet, depot, eight-hour horizon and all resource limits
-are unchanged. Execution is running; independent verification must follow in a
-fresh process only if a complete run is produced.
+are unchanged. **The fixed full-fleet case now completes execution, serialization
+and independent verification within both limits.** This is a bounded engineering
+qualification of this case and these source versions, not map or city acceptance.
+
+| Phase | Result | Seconds | Peak resident bytes |
+|---|---|---:|---:|
+| r6 execution and serialization | COMPLETE | 1,300.761 | 2,169,552,896 |
+| Original independent verifier 3.0.0 | INVALID; 12 findings preserved | 105.090 | 2,046,918,656 |
+| Same stored run, corrected verifier 3.0.1 | INTERNALLY_CONSISTENT; zero findings | 107.093 | 2,060,730,368 |
+
+Execution performed 519,579 route queries: 278,088 ROUTE and 241,491
+NO_MODELED_CONTINUATION, with zero UNSUPPORTED_CONTEXT. The recording contains
+58,374 events, 192,000 poses and 1,484 legs. Its immutable run digest is
+`14347ca06e6fd67ca507c6aaed221a26efbb2957a411bf5b26e23fd419f501e1`.
+
+The original verifier correctly withheld acceptance when its reconstruction
+disagreed. Investigation identified two numerical defects in verification:
+
+- Twenty-one partial final positions had matching edge IDs and completed paths,
+  but differently associated float subtraction/addition differed by roughly
+  10⁻¹² seconds. The verifier had required identical binary floats. The revised
+  check retains exact topology and field keys, and permits at most one nanosecond
+  of numerical error in elapsed time and in fraction expressed as time. It rejects
+  nonfinite, boolean, out-of-range and materially changed values.
+- All eleven pose findings occurred at exact millisecond edge boundaries. Float
+  accumulation placed the boundary just after the sample and chose the preceding
+  edge's heading. A separate temporal interval reducer now accumulates validated
+  integer milliseconds. Other accounting checks and tolerances remain unchanged.
+  The frozen historical reducer is untouched.
+
+Two hand-checkable regressions failed before the corrections and passed after.
+Forged heading, state, energy, edge and fractional-motion values still fail.
+An independent review found no important issues. All 262 City Python tests and
+1,661 root tests / 56 skips pass; Ruff and whitespace checks pass.
+
+**No simulation was repeated and no recording was repaired.** A fresh process
+read the original run under `fleetlab.city-temporal-event-verifier/3.0.1`, with
+`fleetlab.fleet-continuity-verifier/2.0.1`. It checked 426,081 entered edges and
+430,130 planned temporal edge entries, retaining at most ten history edges.
+The source and artifact hash checks passed. The initial invalid report remains
+in r6; the new result is in the separate directory
+`build/fleetlab-city/validation/sf-temporal-fleet-20260930-r6-verifier-3.0.1/`.
+
+| Record | SHA-256 |
+|---|---|
+| Original execution report | `7a9ea250b80ee431b5028498346aca795fa7de831b097297e93b37536be55abb` |
+| Original invalid verification phase report | `e444d51809c598dda1e2bd60b73d6dd36e2e83b1b5b66dffa85a49e7104710dc` |
+| Corrected verification freeze digest | `264332a44c4a11b8b62a340777679691f35d21a425b38e1ca7295f473925d46c` |
+| Corrected verification phase report | `e516bf4e0cd83669ed54652a002b3d9c901f65489706bef1370099cddf82e3e9` |
+| Corrected verifier result | `654bfb4d4a0345749f4ed199ff691f56b0fad025fefdfe4458f7a462c39c2bf0` |
+
+Descriptively, this engineering case records 634 completed requests, 506 unserved,
+13 in progress, six assigned and 41 waiting at the horizon; no simulator violation
+events were recorded. These are not paired estimates, operator predictions or
+real-world safety evidence. Neither the outcomes nor this one successful case
+authorize resuming the stopped scientific study.
+
+An optional no-static-exit fast path was investigated while execution ran. Its
+six-work-unit fixture and expected failure are retained as a proposed test patch
+under `temporal-performance-review-20260930/`, outside the installed test suite.
+The optimization was deferred once the full case met its actual resource limits;
+the qualified producer/router source was not changed for it.
 
 ## Scientific-study boundary
 
