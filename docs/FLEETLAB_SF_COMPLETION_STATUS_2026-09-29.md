@@ -13,6 +13,16 @@ contains file readback, browser checks, tests and rollback details. This local
 handoff includes the post-publication record; the packaged notes retain their
 pre-publication bytes.
 
+## 30 September engineering continuation
+
+[Static fleet integration and its measured validation](FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md)
+are now implemented locally: 29 new integration tests, 223 City Python passes,
+and 400 fixed SF route searches with retained return history. 380 found routes;
+20 reported no modeled continuation; both algorithms agreed. Routing peak memory
+was 1,535,672,320 bytes. This is not a new fleet study or a new deployment.
+All 12 frozen power-study source files remain unchanged. Austin is now the next
+requested city after SF acceptance; San Mateo preparation remains background.
+
 ## What this release adds
 
 City Explorer gains **Model lab**, alongside Start here, City atlas, Decision
@@ -69,7 +79,7 @@ lifetimes at process boundaries; do not merely increase the memory threshold.
 
 | Work | Implemented / observed | Still required |
 |---|---|---|
-| Cross-leg continuity | Separate immutable arrival/history router; A*/Dijkstra fixtures; independent executed-prefix verifier; bounded cache/search | Fleet-engine integration, fractional final-edge contract, SF performance/memory qualification. Explicit connectors remain unsupported; positive connector acceptance is deferred. |
+| Cross-leg continuity | Versioned fleet engine and independent verifier retain history through operating stops; fractional final-edge contract; 400 SF route searches; bounded history/cache/search | Full fleet performance/memory qualification, conditional integration and explicit reviewed connectors. Static diagnostic is not map acceptance. |
 | Conditional semantics | Exact daily, weekday and overnight predicates tested at aware traversal instants; unsupported grammar fails closed | Attach time/access semantics to a new importer and routing model. Existing sf-v1/sf-v2 are unchanged; parser tests do not restore roads. |
 | Priority source review | All 26 trunk/living-street ways reconciled automatically against captured source | Human source review and versioned model integration. 18 node-via conditional ways are the smallest useful next extension; missing-via and ambiguous ordering remain blocked. |
 | District scope | Original 108 gaps / 13.161 km remain visible and UNASSIGNED | Official reconciliation or an explicit new scope/scenario policy. A mainland-only diagnostic still contains 49 gaps / 1.234 km and excludes 16 original pool nodes, so it is not a complete fix. |
@@ -102,26 +112,27 @@ supports rider/accessibility design questions, not invented numeric parameters.
 The recorded SF capacity field does not control charging or dispatch dynamics;
 the verifier nevertheless uses it as an upper energy bound.
 
-## California expansion decision
+## Expansion decision — Austin next after SF
 
-Prepare **San Mateo municipality**, not San Mateo County or an operator service
-area, as the next bounded source/transfer probe after SF acceptance. The county
+The current goal selects **Austin** next after SF acceptance. Earlier research
+prepared **San Mateo municipality**, not San Mateo County or an operator service
+area, as a bounded source/transfer probe; it remains in the California backlog. The county
 municipal layer contains a distinct SAN MATEO incorporated feature (OBJECTID 24,
 UNINCORPORATED 0, EPSG:2227). Rights and current boundary version must be resolved
 before redistribution; no city geometry or fleet results are imported here.
 
 The first transferable question should preserve an explicit generic fleet and
 compare one depot decision under a new frozen geography/demand contract. Airport
-curbs and neighboring municipalities require separate scope. Austin and Las Vegas
-remain subsequent gated work. Japan likewise needs one bounded city/ward probe,
+curbs and neighboring municipalities require separate scope. Austin requires its own source, scope and experiment gates; Las Vegas follows
+as separately qualified work. Japan likewise needs one bounded city/ward probe,
 left-driving semantics and a local source contract.
 
 ## What is unfinished, and who can unblock it
 
-**Engineering work remains:** integrate the tested continuity and conditional
-components into a versioned fleet/importer/verifier path; complete partial-edge
-and connector contracts; qualify SF performance and memory; resolve source and
-district scope. These implementation tasks remain with engineering. This release does not finish the entire SF checklist.
+**Engineering work remains:** integrate conditional import and temporal/access
+semantics, complete connector contracts, qualify full SF fleet performance and
+memory, and resolve source/district scope. Static fleet continuity and the
+partial-edge contract are now implemented and tested locally. These implementation tasks remain with engineering. This release does not finish the entire SF checklist.
 
 **Independent evidence remains:** the frozen map sample needs actual inspection
 and recorded findings; five visitors need to answer the comprehension worksheet,
@@ -159,5 +170,6 @@ traces, failures and viewer bundles so every change stays reviewable.
    record actual observations against the frozen identities.
 2. Qualify a versioned temporal/fleet adapter and a complete bounded-memory study
    execution path before proposing the next power-study amendment.
-3. Record the SF acceptance decision, then begin the San Mateo source probe;
-   retain Austin and Las Vegas as later gates.
+3. Record the SF acceptance decision, then begin Austin with its own source,
+   scope and experiment contracts; retain other California cities and Las Vegas
+   as subsequent work.

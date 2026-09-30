@@ -40,7 +40,7 @@
 - [x] Run `python -m unittest discover -s apps/fleetlab-city/tests` and Node City tests; independently review the amendment, source inventory and controls before execution.
 - [x] Freeze via `freeze_study(root, out)` with all 28 tapes; retain protocol digest and source commit/checkpoint. Run `execute_study(root, out, 'preflight')`; verify `analyze_study(..., 'preflight')` COMPLETE.
 - [x] Run `execute_study(root, out, 'evaluate')` once; capture peak memory and every arm. If any stop condition occurs, preserve incomplete results and continue unaffected work without changing limits.
-- [ ] Verify and package actual results using the existing explicit `--power-study` interface; never substitute fixtures for results.
+- [x] Verify and package actual results using the existing explicit `--power-study` interface; never substitute fixtures for results. Published partial status retains one arm and 143 NOT_RUN.
 
 ## Task 2: Source, district and continuity qualification
 
@@ -96,3 +96,13 @@ The frozen reviewer package is an acceptance envelope with HOLD and zero actual 
 Fresh validation: 194 City Python tests; 49 City Node tests; 1,661 root Python passes/56 skips; 1,954 legacy Node passes/8 skips/1 TODO; Ruff and whitespace checks pass. Independent final code reviews closed all findings in the implemented scope. Physical Pixel and real visitor sessions remain open.
 
 Publication complete: preview 99f21db4 and production a9f05880; both 9,959/9,959 exact served payload matches, effective headers pass. The original FleetLab sections and 59 lessons remain; City Explorer adds Model lab. SF remains HOLD and later city execution is not advanced.
+
+## 30 September continuation
+
+Static fleet integration and fractional final-edge verification are installed under
+a new model/schema, with 29 new tests and 223 City Python passes. The fixed100OD
+plus retained-return diagnostic completed400 searches;380 ROUTE/20 unavailable,
+algorithm parity and directsourcechecks pass, peak1,535,672,320B. This does not
+complete the positiveconnector, temporalimport, fullfleetmemory or human gates.
+See `docs/FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md`. Austin supersedes the
+prior SanMateo-first order after SF acceptance. The stopped power study is unchanged.

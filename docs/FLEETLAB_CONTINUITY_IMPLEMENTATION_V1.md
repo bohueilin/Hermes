@@ -118,3 +118,40 @@ Use these modules as reviewed foundations for a separately versioned integration
 1. Independently review these new modules and fixtures without changing frozen scientific files.
 2. Specify and test temporal graph/access integration plus actual engine event recording under a new model/profile.
 3. Run the full source/class/district/human/continuity qualification process before any candidate fleet execution.
+
+## Fleet integration continuation — 30 September 2026
+
+The existing completion instruction authorizes the reviewed cross-leg design's
+implementation. The next installed model is
+`fleetlab.graph-resource-continuity/2.0.0`, with run schema
+`fleetlab.city-continuity-run/2.0.0`. It retains the original one-second resource,
+energy and request clock but changes every route/dispatch/depot lookup to consume
+the vehicle's actual incoming edge and restriction prefix. Forecast feasibility
+chains pickup arrival, boarding dwell, passenger arrival and depot return rather
+than granting each leg a new initial placement. Zero-length legs retain history.
+Search-budget or unsupported-context results stop execution explicitly.
+
+Each leg binds before/after arrival state and its departure instant to the exact
+pack and scenario digest. Actual arrival applies the planned final history only
+when the entire path completes. An unfinished horizon leg instead stores its
+completed edge prefix plus the next edge's elapsed seconds/fraction. Entering a
+fraction of an edge must obey the same turn rule as traversing the whole edge;
+the planned unentered suffix is never counted as distance or actual history.
+
+The versioned verifier retains the existing event/resource/energy ledger and
+adds a separate reconstruction of per-vehicle history, route ownership,
+departure/arrival times, recorded boundary states and partial-edge positions.
+Source node/sequence rules are evaluated from actual concatenated edge entries,
+not producer permission flags or the router transition function. Any old-model,
+source/scenario mismatch, lost history, missing leg boundary or fraction mismatch
+fails. Internal consistency remains distinct from map qualification.
+
+This stage integrates compiled static rules only. Conditional importer/temporal
+routing, explicit depot connectors, full SF fleet performance qualification and independent
+map observations remain required follow-on work; the original candidate runner
+is not unlocked. No stopped power-study evaluation is resumed by these tests.
+
+Measured static routing and integrated fleet test evidence is recorded in
+[FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md](FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md).
+This continuation supersedes the earlier standalone-only status, without changing
+the old module or study identity.

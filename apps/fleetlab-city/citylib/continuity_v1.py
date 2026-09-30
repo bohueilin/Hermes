@@ -94,7 +94,7 @@ def _snapshot(pack):
     validate_profile(pack)
     if any("conditional" in str(k) for k in pack):
         raise ValueError("conditional routing is not integrated")
-    if len(pack["nodes"]) > 250000 or len(pack["edges"]) > 500000 or len(pack["turns"]) > 10000:
+    if len(pack["nodes"]) > 300000 or len(pack["edges"]) > 500000 or len(pack["turns"]) > 10000:
         raise ValueError("graph exceeds standalone bounds")
     nodes = {}
     for node, coordinate in pack["nodes"].items():
@@ -133,10 +133,18 @@ def _snapshot(pack):
         seqs = tuple(tuple(s) for s in r.get("edge_sequences", []))
         if seqs:
             for seq in seqs:
-                if any(e not in edges for e in seq) or any(
-                    edges[a]["v"] != edges[b]["u"] for a, b in zip(seq, seq[1:], strict=False)
+                missing = any(e not in edges for e in seq)
+                # A prohibition requiring an absent edge cannot be traversed in
+                # this graph. Retain its source sequence; never restore that edge.
+                # An only-rule can constrain a reachable prefix even when its
+                # required continuation is absent, so it still fails closed here.
+                if missing and r["kind"].startswith("only_"):
+                    raise ValueError("required compiled restriction edge is absent")
+                if any(
+                    a in edges and b in edges and edges[a]["v"] != edges[b]["u"]
+                    for a, b in zip(seq, seq[1:], strict=False)
                 ):
-                    raise ValueError("compiled restriction is absent or disconnected")
+                    raise ValueError("compiled restriction is disconnected")
         elif r.get("via") not in nodes or r.get("via_way") or not r.get("from") or not r.get("to"):
             raise ValueError("invalid node restriction")
         rules.append(_Rule(r["id"], r["kind"], r["from"], r["to"], r.get("via"), seqs))
@@ -182,7 +190,7 @@ class ContinuityRouter:
             raise ValueError("scenario identity must be a SHA-256 digest")
         if (
             type(max_states) is not int
-            or not 1 <= max_states <= 100000
+            or not 1 <= max_states <= 300000
             or type(max_cache_entries) is not int
             or not 0 <= max_cache_entries <= 4096
             or type(max_cache_edges) is not int
@@ -192,6 +200,12 @@ class ContinuityRouter:
         _Budget(max_checks)
         self.max_checks = max_checks
         self._nodes, self._edges, self._rules = _snapshot(pack)
+        self.inactive_no_sequences = tuple(
+            (rule.id, seq)
+            for rule in self._rules
+            for seq in rule.sequences
+            if rule.kind.startswith("no_") and any(e not in self._edges for e in seq)
+        )
         self.pack_digest = digest(pack)
         self.scenario_digest = scenario_digest
         self.max_states = max_states
