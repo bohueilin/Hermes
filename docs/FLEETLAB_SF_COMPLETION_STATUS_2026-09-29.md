@@ -193,6 +193,20 @@ execution/verification design without silently resuming evaluation. Present the
 measured memory evidence and exact amendment before requesting any further
 scientific execution. The approved one-time retry has been consumed.
 
+That read-only resource probe is now complete: full frozen capture, all 48,400
+pool route pairs, and fresh verification/serialization of the stopped arm and
+largest retained preflight record peaked at 2,736,013,312 bytes, with all 167
+protected evidence files and twelve scientific source files unchanged. No engine
+ran. The [process-isolation proposal](FLEETLAB_POWER_PROCESS_ISOLATION_PROPOSAL_2026-09-30.md)
+specifies a new 24-preflight/144-evaluation revision with fresh seed blocks and
+an explicit campaign ceiling. Its design/budget decision is pending; the worker
+implementation, future execution memory and new results are not yet verified.
+
+For the separate map-source question, an
+[unsent clarification draft](FLEETLAB_SF_SOURCE_CLARIFICATION_DRAFT_2026-09-30.md)
+identifies the exact full-layer service, missing reuse terms and administrative
+source-version questions. No source owner has been contacted by this agent.
+
 Named Ojai/Zoox fleet parameters and real maneuver claims also require compatible
 measured inputs and appropriate validation. Public design references alone do
 not fill those fields. Anonymous teaching examples remain useful while that

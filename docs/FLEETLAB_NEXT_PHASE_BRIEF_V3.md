@@ -6,6 +6,12 @@ Read [the SF completion status](FLEETLAB_SF_COMPLETION_STATUS_2026-09-29.md) fir
 It supersedes older next-action statuses below. The memory amendment was accepted
 and implemented. Its 24 preflight arms passed, but the approved evaluation retry
 stopped after one of 144 arms at 4.0466 GB; no primary estimate is available.
+A subsequent read-only memory probe filled all 48,400 pool route pairs and
+verified the retained evaluation arm and largest preflight recording at
+2.736 GB peak, without running an engine. The
+[process-isolation revision proposal](FLEETLAB_POWER_PROCESS_ISOLATION_PROPOSAL_2026-09-30.md)
+specifies fresh workers, new seed blocks and a 24-preflight/144-evaluation budget.
+Its decision is pending; no new protocol has been frozen or executed.
 Static fleet continuity and fractional-edge verification are integrated in a
 new model; [the static checkpoint](FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md)
 records its fixed 400-search SF diagnostic. A subsequent
