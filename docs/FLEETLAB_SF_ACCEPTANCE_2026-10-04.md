@@ -1,6 +1,6 @@
 # FleetLab SF acceptance record — 4 October 2026
 
-**SF acceptance: HOLD. Austin: NOT_STARTED.** This is the canonical acceptance
+**Static site: LIVE AND VERIFIED. SF acceptance: HOLD. Austin: NOT_STARTED.** This is the canonical acceptance
 record for the October 4 milestone. Engineering completion and static website
 publication are separate from source qualification, human evidence and owner
 acceptance. See the [dated handoff](FLEETLAB_HANDOFF_2026-10-04.md) for the full
@@ -28,7 +28,7 @@ is authorized. No r3 freeze, 251-arm budget or Austin work is authorized.
 | Requirement | Status / evidence | Accountable role and availability | Next action / dependency |
 |---|---|---|---|
 | Presentation and regression readiness | PASS for the focused fixes; exact results in release record | Codex implementation and independent code review | Retain reproducible tests and immutable release; source/human gates remain separate |
-| Historical evidence and teaching-site preservation | Checked in release record; no new simulation | Codex release engineering | Compare every preserved payload, frozen science and offline digest before publication |
+| Historical evidence and teaching-site preservation | Checked in release record; no new full-SF arm | Codex release engineering | Compare every preserved payload, frozen science and offline digest before publication |
 | Full district source identity and redistribution | HOLD; `NOT_ESTABLISHED` / `PROPOSED` | Source steward plus source-rights reviewer; **unassigned** | Obtain dataset-specific evidence, using the unsent clarification draft; no full-geometry publication meanwhile |
 | Temporal map semantics | NOT_RUN; 2,160 obligations, zero human observations/resolutions | Capable independent source reviewer, then eligible independent resolver; **unassigned** | Inspect frozen 200-way / 100-OD sample and all exception reasons; preserve conflict history |
 | Administrative policy and residuals | HOLD; 56 obligations, zero observations | Source steward, GIS reviewer and scope decision owner; participation **pending** | Resolve rights/adoption, 49 residual ways, five membership changes; no silent reassignment |
