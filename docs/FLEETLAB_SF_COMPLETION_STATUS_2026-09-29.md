@@ -1,5 +1,7 @@
 # FleetLab — SF completion, model lessons and next-city handoff
 
+For a presentation, use the [SF executive walkthrough](FLEETLAB_SF_EXECUTIVE_WALKTHROUGH_2026-10-05.md): a ten-minute route through the original site, paired experiment, fleet summary, replay and evidence limits.
+
 **October 4 accepted scope:** [SF acceptance closure](FLEETLAB_SF_ACCEPTANCE_2026-10-04.md) is the current milestone. Static release and Git updates are authorized; Austin and new scientific execution are deferred. See the [current release record](FLEETLAB_SF_CLARITY_RELEASE_2026-10-04.md). Older proposal language below is historical, not approval.
 
 **Current handoff — October 4, 2026:** [complete project record and resource/runtime

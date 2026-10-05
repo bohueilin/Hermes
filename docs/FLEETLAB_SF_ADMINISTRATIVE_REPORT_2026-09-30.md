@@ -1,5 +1,7 @@
 # San Francisco administrative scope — implementation and handoff
 
+**Historical report.** The [October 4 acceptance record](FLEETLAB_SF_ACCEPTANCE_2026-10-04.md) controls current scope and the [clarity release record](FLEETLAB_SF_CLARITY_RELEASE_2026-10-04.md) records the later publication. The power study is deferred from SF educational acceptance; the older final action below is superseded. Fuller district geometry remains local; this document publishes findings and identities only.
+
 30 September 2026. **The reporting contract is implemented; SF acceptance remains HOLD.**
 The live FleetLab release remains production `e37b4a7b`, including the temporal
 atlas, original recordings, Overview animation and all original sections.

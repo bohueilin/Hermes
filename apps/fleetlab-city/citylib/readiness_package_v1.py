@@ -37,6 +37,15 @@ def export_readiness(root, candidate, out):
         "FLEETLAB_VEHICLE_CURB_READINESS_V1.md",
         "FLEETLAB_SF_VALIDATION_SESSION.md",
         "FLEETLAB_SF_COMPLETION_STATUS_2026-09-29.md",
+        "FLEETLAB_SF_ACCEPTANCE_2026-10-04.md",
+        "FLEETLAB_SF_CLARITY_RELEASE_2026-10-04.md",
+        "FLEETLAB_HANDOFF_2026-10-04.md",
+        "FLEETLAB_SF_DEVICE_ACCEPTANCE_2026-10-04.md",
+        "FLEETLAB_RESOURCE_SPIKE_PROPOSAL_2026-10-04.md",
+        "FLEETLAB_SF_SOURCE_CLARIFICATION_DRAFT_2026-09-30.md",
+        "FLEETLAB_SF_ADMINISTRATIVE_REPORT_2026-09-30.md",
+        "FLEETLAB_MAP_REVIEW_RESULT_CONTRACT_V1.md",
+        "FLEETLAB_SF_EXECUTIVE_WALKTHROUGH_2026-10-05.md",
     ):
         shutil.copyfile(root / "docs" / name, out / "notes" / name)
     return envelope
