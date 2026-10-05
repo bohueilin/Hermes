@@ -1,6 +1,8 @@
 # SF physical device and accessibility worksheet — 4 October 2026
 
-Status: **NOT_RUN**. `adb devices -l` on this date listed no device. Browser
+Historical October 4 worksheet. See the [October 5 connected-Pixel record](FLEETLAB_SF_DEVICE_ACCEPTANCE_2026-10-05.md) for newer observations.
+
+Status on October 4: **NOT_RUN**. `adb devices -l` on this date listed no device. Browser
 emulation, DOM inspection and code tests are recorded separately in the
 [release record](FLEETLAB_SF_CLARITY_RELEASE_2026-10-04.md). Prior permission to use
 the Pixel is valid; this worksheet does not establish a connection or result.

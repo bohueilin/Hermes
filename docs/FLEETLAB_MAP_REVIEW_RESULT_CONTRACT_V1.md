@@ -1,5 +1,15 @@
 # SF map source-review result contract — design v1
 
+October 5 current-context note: the active workspace is
+`build/fleetlab-city/reviews/sf-temporal-v3-review-r2/`, with 2,160 temporal
+obligations and zero human observations. The separate administrative proposal
+has 56 obligations. See the [canonical acceptance record](FLEETLAB_SF_ACCEPTANCE_2026-10-04.md)
+for exact identities and batches. `tools/map-review.py` remains bound to v2 and
+correctly rejects the v3 requirements as a candidate mismatch. The v3 export
+uses the shared installed history validator through `temporal_export_v1.py`;
+the CLI is not a general v3 ingestion command. The September design and v2
+counts below are historical, not the current review roster.
+
 Implementation update, 29 September 2026: `citylib/map_review_v1.py` now validates
 bounded review histories; `tools/map-review.py` prepares and validates workspaces.
 The first frozen workspace is `build/fleetlab-city/reviews/sf-v2-review-r1/`.

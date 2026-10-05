@@ -32,7 +32,7 @@ is authorized. No r3 freeze, 251-arm budget or Austin work is authorized.
 | Full district source identity and redistribution | HOLD; `NOT_ESTABLISHED` / `PROPOSED` | Source steward plus source-rights reviewer; **unassigned** | Obtain dataset-specific evidence, using the unsent clarification draft; no full-geometry publication meanwhile |
 | Temporal map semantics | NOT_RUN; 2,160 obligations, zero human observations/resolutions | Capable independent source reviewer, then eligible independent resolver; **unassigned** | Inspect frozen 200-way / 100-OD sample and all exception reasons; preserve conflict history |
 | Administrative policy and residuals | HOLD; 56 obligations, zero observations | Source steward, GIS reviewer and scope decision owner; participation **pending** | Resolve rights/adoption, 49 residual ways, five membership changes; no silent reassignment |
-| Physical device / accessibility | NOT_RUN; current ADB listing empty | Physical device tester and accessibility tester; **unassigned** | Use release-bound worksheet on Pixel and desktop; emulation is separate evidence |
+| Physical device / accessibility | PARTIAL on October 5; connected Pixel hardware checks and 200% reflow fixes recorded | Codex hardware automation; human accessibility tester **unassigned** | Complete actual pinch, TalkBack/desktop reader and human usability checks; see October 5 device record |
 | Visitor comprehension | NOT_RUN; no P1–P5 responses | Five independent visitors and two scorers; **unassigned** | Uncoached responses, independent rubric scores, visible disagreements and follow-up |
 | Educational SF acceptance | HOLD / decision not recorded | Product owner Bo-Huei; decision **pending** | Review the above evidence, remaining limitations and any revision; record an explicit decision |
 | Austin | NOT_STARTED | Future owner decision | Only after agreed SF acceptance; not part of this release |
@@ -178,9 +178,14 @@ policy, including population effects.
 
 Closure requires actual dated observations with captured supporting evidence,
 claim IDs, candidate/source identities, reviewer method/role, interpretation and
-residual uncertainty. Submit new append-only evidence through the installed
-`map-review.py` workflow; use the [result contract](FLEETLAB_MAP_REVIEW_RESULT_CONTRACT_V1.md)
-and runtime schema rather than editing frozen requirements. Use a new output
+residual uncertainty. Use the installed `citylib/map_review_v1.py` history contract and
+[review result contract](FLEETLAB_MAP_REVIEW_RESULT_CONTRACT_V1.md), rather than
+editing frozen requirements. The convenience `tools/map-review.py` CLI is
+currently bound to the historical v2 candidate and rejects the current temporal
+v3 workspace; do not use it to validate v3. Current v3 publication validation
+runs through `temporal_export_v1.py` during `build-viewer --temporal-candidate`.
+New human submissions need a separately recorded, append-only history and an
+explicitly retained new checkpoint before publication can consume them. Use a new output
 workspace and retain the expected history checkpoint. Contradictions remain open
 until an eligible independent resolver references the complete conflict set.
 Reviewer declarations remain `NOT_AUTHENTICATED`; the validator checks contract
@@ -194,8 +199,11 @@ temporal validator.
 Use the [release-bound device worksheet](FLEETLAB_SF_DEVICE_ACCEPTANCE_2026-10-04.md)
 and [five-visitor worksheet](FLEETLAB_SF_VALIDATION_SESSION.md). On October 4,
 `adb devices -l` returned no attached device. Earlier user permission persists,
-but actual Pixel availability was not established. Browser viewport checks are
-engineering evidence only. No physical or participant pass is inferred.
+but actual Pixel availability was not established. That October 4 result is historical. On October 5 the Pixel was connected;
+[the device record](FLEETLAB_SF_DEVICE_ACCEPTANCE_2026-10-05.md) reports actual
+hardware automation, failures, fixes and remaining human accessibility work.
+Browser viewport checks and physical automation remain distinct from participant
+or screen-reader evidence. No participant pass is inferred.
 
 Before acceptance, the owner reviews exact release identity, completed source/map
 requirements, actual device/accessibility findings, uncoached visitor responses,
