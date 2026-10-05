@@ -1,5 +1,12 @@
 # FleetLab — handoff for the next product and simulation brainstorm
 
+**October 4 accepted scope:** [SF acceptance closure](FLEETLAB_SF_ACCEPTANCE_2026-10-04.md) is the current milestone. Static release and Git updates are authorized; Austin and new scientific execution are deferred. See the [current release record](FLEETLAB_SF_CLARITY_RELEASE_2026-10-04.md). Older proposal language below is historical, not approval.
+
+**Read first — October 4, 2026:** [consolidated handoff and answers on memory,
+runtime and Austin dependencies](FLEETLAB_HANDOFF_2026-10-04.md). This is the current
+decision review; older phase/checklist statements below are historical where
+superseded. The proposed isolated study and 251-arm budget are not approved.
+
 ## Current continuation — SF completion and model readiness
 
 Read [the SF completion status](FLEETLAB_SF_COMPLETION_STATUS_2026-09-29.md) first.

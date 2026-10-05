@@ -1,5 +1,15 @@
 # SF power study — process isolation proposal
 
+**October 4 accepted scope:** [SF acceptance closure](FLEETLAB_SF_ACCEPTANCE_2026-10-04.md) is the current milestone. Static release and Git updates are authorized; Austin and new scientific execution are deferred. See the [current release record](FLEETLAB_SF_CLARITY_RELEASE_2026-10-04.md). Older proposal language below is historical, not approval.
+
+**October 4 decision review:** read [the October 4 handoff](FLEETLAB_HANDOFF_2026-10-04.md)
+before approving this historical proposal. The owner has requested alignment on
+resource purpose, runtime and SF/Austin dependencies. No production requirement
+for 4 GB was established; the categorical rejection of a disclosed larger-budget
+revision below is no longer the current recommendation. Per-arm isolation and
+the 251-arm ceiling remain unapproved. The handoff compares a larger-budget warm
+workflow with isolation; no new policy, implementation, freeze or run is implied.
+
 30 September 2026. **Proposed amendment; no new scientific execution authorized
 or performed.** The one-time fresh-process retry of `sf-power-headroom-v1-r2`
 has already been consumed. This proposal does not resume it or replace its

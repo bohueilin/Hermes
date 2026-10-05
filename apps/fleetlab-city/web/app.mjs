@@ -6,7 +6,7 @@ import { mountQualification } from './qualification.mjs';
 import { mountModelLessons } from './model-lessons.mjs';
 import { renderStoppedStudy } from './study-status.mjs';
 import { mountQualificationProgress } from './qualification-progress.mjs';
-import { formatMetric as fmt, safeDataPath, validateCatalog, comparisonRows, pairLesson, inspectRepeat, requestGate, violationLabel } from './view-model.mjs';
+import { formatMetric as fmt, safeDataPath, validateCatalog, completionContext, comparisonRows, pairLesson, inspectRepeat, requestGate, violationLabel } from './view-model.mjs';
 const $ = id => document.getElementById(id);
 let catalog, roads, geometry, comparison, map, replay, mask = 'support', currentView = 'welcome', atlasVersion = 'recorded', studies;
 const notices = $('load-state');
@@ -64,9 +64,10 @@ function displayComparison() {
   const statuses = { INCOMPLETE: 'City recommendation withheld', INVALID: 'Invalid run — inspect diagnostics', INCOMPATIBLE: 'These runs are incompatible', SUPPORTED_WITHIN_MODEL: 'Supported within this model', NO_SUPPORTED_IMPROVEMENT: 'No supported improvement', INCONCLUSIVE: 'The result is inconclusive', GUARDRAIL_HARMED: 'A guardrail shows harm', GUARDRAIL_INCONCLUSIVE: 'A guardrail is inconclusive', ZONE_HARM_VETO: 'A zone outcome blocks support', INSUFFICIENT_ZONE_DATA: 'More zone evidence is needed' };
   $('outcome').textContent = statuses[comparison.outcome] ?? comparison.outcome;
   $('outcome-reason').textContent = comparison.reason;
-  const metrics = [['Completion change', comparison.primary_pp, 'percentage points'], ['Empty distance / completed trip', comparison.empty_change_percent, '% relative change'], ['Boarded wait p90', comparison.wait_p90_delta_s, 'seconds']];
+  const practical = completionContext(comparison);
+  const metrics = [['Completion change', practical.primary, 'percentage points'], ['Empty distance / completed trip', comparison.empty_change_percent, '% relative change'], ['Boarded wait p90', comparison.wait_p90_delta_s, 'seconds']];
   $('result-metrics').replaceChildren();
-  for (const [label, value, unit] of metrics) { const card = element('article', undefined, 'metric-tile'); card.append(element('h4', label), element('strong', value ? `${value.mean > 0 ? '+' : ''}${fmt(value.mean, 2)}` : 'Not available'), element('p', unit), element('p', value ? `95% paired interval: ${fmt(value.low, 2)} to ${fmt(value.high, 2)}. Diagnostic; map qualification is incomplete.` : 'Population or comparison is unavailable.')); $('result-metrics').append(card); }
+  for (const [label, value, unit] of metrics) { const card = element('article', undefined, 'metric-tile'); card.append(element('h4', label), element('strong', value ? `${value.mean > 0 ? '+' : ''}${fmt(value.mean, 2)}` : 'Not available'), element('p', unit), element('p', value ? `95% paired interval: ${fmt(value.low, 2)} to ${fmt(value.high, 2)}. Diagnostic; map qualification is incomplete.` : 'Population or comparison is unavailable.')); if(label==='Completion change')card.append(element('p',practical.text,'practical-context')); $('result-metrics').append(card); }
   $('sensitivity-rows').replaceChildren();
   for (const c of catalog.sensitivities ?? []) {
     const row = element('tr');

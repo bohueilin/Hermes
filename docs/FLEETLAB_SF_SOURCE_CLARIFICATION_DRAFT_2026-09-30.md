@@ -1,6 +1,6 @@
 # SF boundary source — clarification draft
 
-30 September 2026. **Unsent draft.** No message has been sent to the City or
+Updated 4 October 2026; originally 30 September. **Unsent draft.** No message has been sent to the City or
 any source owner. This packages the exact unresolved source question so the
 owner can request a decision without reconstructing the research.
 
@@ -29,9 +29,11 @@ Could you clarify:
 1. Which reuse license applies to this exact full geometry? Does it permit
    redistribution of the downloaded GeoJSON and derived road-to-district
    reporting in a public educational website, and what attribution is required?
-2. Is this the authoritative adopted April 2022 district geometry, despite
-   “Proposed” in its internal service name? Is there a newer authoritative
-   untrimmed district dataset with explicit reuse terms?
+2. The City's [2021–2022 Redistricting Task Force final report](https://media.api.sf.gov/documents/2021-2022_San_Francisco_Redistricting_Task_Force_-_Final_Report.pdf)
+   records adoption on April 28, 2022. Does this exact feature service represent
+   that adopted geometry, despite “Proposed” in its internal service name?
+   Please identify its authoritative version and any subsequent revisions, or
+   a current authoritative untrimmed equivalent with explicit reuse terms.
 3. Should the full geometry be used for administrative reporting of bridge and
    border-road context, or is another authoritative source recommended?
 
@@ -43,6 +45,9 @@ Bo-Huei Lin
 
 ## Evidence accompanying the request
 
+- October 4 official-source review: the final report establishes the adoption
+  event and date (Introduction and Work of the Task Force). It does not bind the downloaded ArcGIS
+  bytes to that decision or supply a dataset-specific redistribution grant.
 - Captured full GeoJSON SHA-256:
   `085cde730a5bd725d6c87234a5326c1d22c4a0f20a9147c24c24c9b822fb3c26`.
 - Full inventory comparison: 49 remaining differences / 441.926 m; no roads or

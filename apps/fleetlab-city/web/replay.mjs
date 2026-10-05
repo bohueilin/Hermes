@@ -1,6 +1,6 @@
 import { CityMap } from './city-map.mjs';
 import {clearFleetInsights, renderFleetInsights} from './fleet-insights.mjs';
-import { formatMetric as fmt, clockLabel, durationLabel, sampleAt, resumeTime, estimateRevenue, eventDescription, stateLabels, pairLesson, requestGate, comparisonRows, METRES_PER_MILE, recordingSelection, validateRecording } from './view-model.mjs';
+import { formatMetric as fmt, clockLabel, durationLabel, replayMoment, clockStamp, resumeTime, estimateRevenue, eventDescription, stateLabels, pairLesson, requestGate, comparisonRows, METRES_PER_MILE, recordingSelection, validateRecording } from './view-model.mjs';
 const $=id=>document.getElementById(id);
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 const facts=(host,rows)=>{host.replaceChildren(...rows.map(([a,b])=>{const row=el('div');row.append(el('dt',a),el('dd',b));return row;}));};
@@ -36,7 +36,7 @@ export class Replay {
       validateRecording(data,fleet,record,vehicle);
       try{renderFleetInsights(fleet,this.catalog.vehicles,data);}catch{clearFleetInsights('Fleet summary unavailable · the complete inventory or required measurements could not be confirmed.',false);}
       this.fleetCache.set(key,fleet);this.trace=data;this.featured(fleet,vehicle);this.map?.setSites(data.sites);this.map?.setRoutes(data.routes);this.map?.fitRoute();
-      $('vehicle-name').textContent=vehicle.toUpperCase();$('time').max=data.elapsed_s;$('play').disabled=false;$('time').disabled=false;$('trip-summary').removeAttribute('aria-busy');
+      $('vehicle-name').textContent=vehicle.toUpperCase();$('time').max=data.elapsed_s;$('time').step='any';$('play').disabled=false;$('time').disabled=false;$('trip-summary').removeAttribute('aria-busy');
       this.summary();this.history();this.draw(data.samples[0][0]);
     }catch(e){if(!this.gate.current(ticket))return;clearFleetInsights('Fleet summary unavailable · no compatible recording loaded.',false);$('replay-status').textContent='Trace unavailable';$('summary-context').textContent='No verified trace loaded.';$('trip-summary').removeAttribute('aria-busy');this.notice(`${e.message}. No substitute vehicle or run was loaded.`,true);}
     finally{if(this.gate.current(ticket))this.loading=false;}
@@ -62,15 +62,15 @@ export class Replay {
   history(){const t=this.trace;$('event-count').textContent=`Full operational event history · ${t.events.length} events · ${clockLabel(0)}–${clockLabel(t.elapsed_s)}`;$('event-scope').textContent=t.event_scope+' The entire history stays visible, including events after the playback cursor.';
     $('vehicle-events').replaceChildren(...t.events.map(e=>{const r=el('tr');r.dataset.time=e.t;const seconds=String(Math.floor(e.t%60)).padStart(2,'0');r.append(el('td',`${clockLabel(e.t)}:${seconds}`),el('td',durationLabel(e.t)),el('td',eventDescription(e)));const td=el('td');const b=el('button','Seek');b.setAttribute('aria-label',`Seek ${clockLabel(e.t)}:${seconds}: ${eventDescription(e)}`);b.onclick=()=>{this.pause();this.draw(e.t);};td.append(b);r.append(td);return r;}));
   }
-  draw(time){if(!this.trace||time===null)return;this.time=time;const t=this.trace;$('time').value=time;$('time-label').textContent=clockLabel(time);$('elapsed-label').textContent=`${durationLabel(time)} elapsed / ${durationLabel(t.elapsed_s)} recorded`;
-    const pos=sampleAt(t.samples,time,t.interval_s),s=pos.sample;this.map?.setCar(s);
-    $('replay-status').textContent=pos.status==='recorded'?`${t.vehicle.toUpperCase()} · ${time>=t.elapsed_s?'Shift ended':stateLabels[s[4]]??s[4]}`:pos.status==='gap'?'Recording gap · paused':'Before first position sample (07:00:15)';
+  draw(time){if(!this.trace||time===null)return;this.time=time;const t=this.trace;$('time').value=time;$('time-label').textContent=clockStamp(time);$('elapsed-label').textContent=`${durationLabel(time)} elapsed / ${durationLabel(t.elapsed_s)} recorded`;
+    const moment=replayMoment(t,time),pos=moment.position,s=pos.sample;this.map?.setCar(s);
+    $('replay-status').textContent=pos.status==='recorded'?`${t.vehicle.toUpperCase()} · ${time>=t.elapsed_s?'Shift ended':stateLabels[moment.state]??'Operational state unavailable'}`:pos.status==='gap'?'Recording gap · paused':'Before first position sample (07:00:15)';
     if(!s){if(pos.status==='gap')this.pause();facts($('vehicle-facts'),[['Position','Not available at this time']]);$('state-heading').textContent='Position unavailable';$('state-explanation').textContent='Playback uses recorded samples only. The event history retains exact event times.';return;}
-    const interval=t.intervals.find(i=>i.start<=time&&i.end>time)??t.intervals.at(-1);
-    facts($('vehicle-facts'),[['Recorded state',stateLabels[s[4]]??s[4]],['Energy',`${fmt(s[5],2)} kWh`],['Charging target',`${fmt(t.energy?.target_kwh??48,0)} kWh · initial ${fmt(t.energy?.initial_kwh??30,0)} kWh`],['Position sample',`${clockLabel(s[0])}:${String(s[0]%60).padStart(2,'0')}`],['Run verification','Internally consistent']]);
-    $('state-heading').textContent=`${stateLabels[interval.state]??interval.state}${interval.site?' · depot '+interval.site:''}`;
+    if(!moment.state){facts($('vehicle-facts'),[['Operational state','Unavailable']]);$('state-heading').textContent='Operational state unavailable';$('state-explanation').textContent=moment.context;return;}
+    facts($('vehicle-facts'),[['Operational state at cursor',stateLabels[moment.state]??moment.state],['Cursor time',clockStamp(time)],['Energy at position sample',`${fmt(s[5],2)} kWh`],['Charging target',`${fmt(t.energy?.target_kwh??48,0)} kWh · initial ${fmt(t.energy?.initial_kwh??30,0)} kWh`],['Position sample time',clockStamp(s[0])],['State at position sample',stateLabels[s[4]]??s[4]],['Run verification','Internally consistent']]);
+    $('state-heading').textContent=`${stateLabels[moment.state]??moment.state}${moment.site?' · depot '+moment.site:''}`;
     const explanations={queue_charge:'Waiting for a charging port. It cannot serve a new passenger while queued; finite port capacity can make this a long wait.',charging:'Connected to a finite charging port. Site power is shared; the vehicle waits until the model’s energy target before returning to dispatch.',queue_turnaround:'Waiting for a generic turnaround slot after the required number of trips.',turnaround:'A six-minute generic turnaround service. This model does not distinguish cleaning, repairs or software work.',idle:'Available for a feasible request. Waiting here does not itself indicate a charging or service queue.',passenger:'A passenger is aboard. The blue lines show traveled passenger routes over the full shift.',pickup:'Traveling empty to an assigned pickup.',boarding:'The passenger is boarding during the modeled dwell time.',returning:'Traveling empty to the selected fictional depot for energy or scheduled turnaround.'};
-    $('state-explanation').textContent=`${explanations[interval.state]??'Inspect the event history for details.'} Interval: ${clockLabel(interval.start)}–${clockLabel(interval.end)} (${durationLabel(interval.end-interval.start)}).${time>=t.elapsed_s?' Recording ends here; later trips are not observed.':''}`;
+    $('state-explanation').textContent=`${explanations[moment.state]??'Inspect the event history for details.'} ${moment.context}`;
   }
   animate(now){if(!this.playing||!this.trace)return;if(this.tick===undefined)this.tick=now;const time=Math.min(this.trace.elapsed_s,this.time+(now-this.tick)/1000*Number($('playback-speed').value));this.tick=now;this.draw(time);if(time>=this.trace.elapsed_s)this.pause();if(this.playing)this.frame=requestAnimationFrame(n=>this.animate(n));}
 }

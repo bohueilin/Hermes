@@ -19,6 +19,40 @@ export function sampleAt(samples, time, interval = 15) {
   }
   return { status: 'recorded', sample };
 }
+// Operational intervals use exact event time; positions and energy remain held samples.
+export function replayMoment(trace, time) {
+  const terminal = time === trace.elapsed_s;
+  const interval = terminal ? null : trace.intervals.find(i => i.start <= time && time < i.end) ?? null;
+  const state = terminal ? trace.summary.final_state : interval?.state ?? null;
+  return {
+    interval,
+    state,
+    site: terminal ? (['charging','turnaround','queue_charge','queue_turnaround'].includes(state) ? trace.summary.final_site ?? null : null) : interval?.site ?? null,
+    context: terminal ? `State at recording end · ${clockStamp(time)}. Recording ends here; later trips are not observed.`
+      : interval ? `Activity interval: ${clockStamp(interval.start)}–${clockStamp(interval.end)} (${durationLabel(interval.end-interval.start)}).` : 'No recorded activity interval covers this cursor time.',
+    position: sampleAt(trace.samples, time, trace.interval_s),
+  };
+}
+export function clockStamp(seconds) {
+  return `${clockLabel(seconds)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+}
+export function completionContext(comparison) {
+  const primary = comparison?.primary_pp;
+  const unavailable = {primary:null, threshold:null, text:'Practical comparison unavailable · compatible result and threshold evidence are required.'};
+  if (comparison?.schema !== 'fleetlab.city-comparison/1.0.0'
+      || ['INVALID','INCOMPATIBLE'].includes(comparison.eligibility)
+      || ['INVALID','INCOMPATIBLE'].includes(comparison.outcome)
+      || !primary || !['mean','low','high'].every(k => Number.isFinite(primary[k]))
+      || primary.low > primary.mean || primary.mean > primary.high
+      || !Number.isInteger(primary.n) || primary.n < 1) return unavailable;
+  // Comparison v1 fixes this margin in citylib.compare.decide; its historical
+  // payload has no separate threshold field. Do not infer it for other schemas.
+  const threshold = 2;
+  const relation = primary.high < threshold ? 'The reported gain and its entire paired interval fall below this threshold.'
+    : primary.low > threshold ? 'The reported gain and its entire paired interval are above this threshold.'
+    : 'The paired interval includes or crosses this threshold.';
+  return {primary, threshold, text:`Practical threshold: +${threshold} percentage points. ${relation} Map qualification and the other study checks remain separate requirements.`};
+}
 export function validateCatalog(data) {
   if (data?.schema !== 'fleetlab.city-view/1.0.0') throw new Error('Unsupported city viewer schema');
   if (!Number.isInteger(data?.coverage?.candidate_count) || data.coverage.candidate_count < 0) throw new Error('Invalid source inventory');

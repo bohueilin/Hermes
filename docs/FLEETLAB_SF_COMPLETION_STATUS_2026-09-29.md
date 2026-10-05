@@ -1,5 +1,13 @@
 # FleetLab — SF completion, model lessons and next-city handoff
 
+**October 4 accepted scope:** [SF acceptance closure](FLEETLAB_SF_ACCEPTANCE_2026-10-04.md) is the current milestone. Static release and Git updates are authorized; Austin and new scientific execution are deferred. See the [current release record](FLEETLAB_SF_CLARITY_RELEASE_2026-10-04.md). Older proposal language below is historical, not approval.
+
+**Current handoff — October 4, 2026:** [complete project record and resource/runtime
+decision review](FLEETLAB_HANDOFF_2026-10-04.md). It supersedes older next-action
+recommendations, including treating 4 GB as immutable for every future revision.
+The site remains published; SF acceptance is HOLD; r3 and its budget are unapproved.
+The record below preserves the September 30 engineering and publication history.
+
 Updated 30 September 2026. San Francisco acceptance remains **HOLD**. This update adds
 tested software and a concrete review workflow; it does not declare SF complete
 or unlock Austin and Las Vegas. Original FleetLab sections, recordings, lesson
