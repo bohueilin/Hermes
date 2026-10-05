@@ -17,7 +17,8 @@ The original comparison displays its existing +2 pp practical threshold beside
 +1.11 pp and its interval, with missing/incompatible evidence unavailable. Scope
 and sources now exposes approved SF milestone deferrals. Other site sections,
 adverse sensitivities, the incomplete power study and source qualification limits
-remain visible.
+remain visible. The header now wraps navigation at intermediate widths; an
+observed 5-pixel overflow at 844×390 is fixed.
 
 ## Validation collected
 
@@ -32,6 +33,9 @@ Evidence directory: `build/fleetlab-city/validation/sf-acceptance-20261004/`.
 - Local QA initially served stale gzip mirrors after manual source overlay. This
   was diagnosed and both plain/compressed QA representations refreshed before
   validating the fix. This mutable QA copy is not a release or deployment input.
+- Responsive browser checks: atlas, replay and notebook at 390×844, 844×390,
+  768×1000 and 1440×900 all have no page overflow after the header fix (12 checks).
+  These are emulated viewports, not physical-device results.
 - Physical Pixel: `adb devices -l` returned an empty listing. Physical touch,
   screen-reader and participant checks remain NOT_RUN.
 

@@ -187,6 +187,7 @@ footer{margin-left:28px;margin-right:28px}
 .question-card{width:280px}
 .segmented button{padding:9px 8px;font-size:12px}
 }
+@media(max-width:1000px){.masthead{flex-wrap:wrap}.masthead .tabs{order:3;width:100%;justify-content:space-around}.masthead .quiet{white-space:nowrap}}
 @media(max-width:820px){.masthead{flex-wrap:wrap;min-height:115px}
 .brand{font-size:21px}
 .brand-mark{width:39px;height:39px;font-size:34px;line-height:39px}
