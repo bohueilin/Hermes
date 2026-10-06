@@ -41,7 +41,7 @@ test('hosted entries preserve mounted lessons and film, and native links need no
   assert.deepEqual([...guide.querySelectorAll('a')].map(a=>a.getAttribute('href')),['/#/fleet-day','/#/street-lab','/#/experiments','/#/scale-lab']);
   assert.equal(document.querySelectorAll('.lab-guide').length,1);
   const offline=document.querySelector('.offline-edition a');
-  assert.equal(offline.getAttribute('href'),'/downloads/fleetlab-offline.html');
+  assert.equal(offline.getAttribute('href'),'/downloads/fleetlab-offline');
   assert.equal(offline.getAttribute('download'),'fleetlab-offline.html');
  } finally {studio?.destroy();restore();}
 });

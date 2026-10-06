@@ -42,6 +42,8 @@ Changed surfaces are hosted integration/CSS, the offline packaging step, City co
 
 Meaningful regression checks exercise original-film/catalog preservation, idempotent mounting, chooser destinations, a real byte-identical offline copy and attachment header, and missing/invalid/zero/computed fare states. The focused tests were first observed failing for the absent features, then passing. Release validation includes the full existing suites, visual/functional browser checks, immutable package validation, source/review/science preservation, preview and production readback, and effective hosting headers. Final outcomes and deployment identities belong in the updated [October 5 handoff](FLEETLAB_HANDOFF_2026-10-05.md).
 
+The first deployed preview revealed a hosting contract issue: Cloudflare redirects named HTML URLs to an extensionless address, losing the attachment header scoped only to the original address. The final integration uses the canonical extensionless link, preserves the `.html` download filename, and declares the attachment header at both paths. The initial failed check is retained; final checks read the actual canonical response. The City viewer package did not change.
+
 ## Section 6B and remaining responsibility
 
 Section 6B is an optional **AI map/source claim-triage prompt**, not a mandatory next round. No additional Muse, Gemini or Fable review is needed to complete this implementation pass. If the owner chooses to use it later, send the current handoff for context and only the relevant frozen batch/source captures for obligation-level claims. Local paths in a handoff do not transfer those files. A fresh unaided design review should receive the URL before the explanatory handoff.

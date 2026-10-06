@@ -107,13 +107,18 @@ def integrate(legacy, viewer, previous, offer, out, offline, readback=None):
         for name in ("integration.mjs", "integration.css"):
             shutil.copyfile(ASSETS / name, site / name)
         offline_path = "downloads/fleetlab-offline.html"
+        offline_url = "/downloads/fleetlab-offline"
         (site / "downloads").mkdir(exist_ok=True)
         shutil.copyfile(offline, site / offline_path)
         if launch.sha_file(site / offline_path) != offline_before:
             raise ValueError("offline download copy integrity mismatch")
         with (site / "_headers").open("a") as headers:
+            # Pages redirects named .html files to an extensionless canonical URL.
+            # Apply the attachment contract to both the redirect and its destination.
             headers.write(
                 '\n/downloads/fleetlab-offline.html\n'
+                '  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'
+                '\n/downloads/fleetlab-offline\n'
                 '  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'
             )
         launch.safe_copy(offer, site / "city-explorer/sources", offer_files)
@@ -140,7 +145,7 @@ def integrate(legacy, viewer, previous, offer, out, offline, readback=None):
             },
             "removed_existing": [],
             "offline_sha256": offline_before,
-            "offline_download": {"path": offline_path, **final[offline_path]},
+            "offline_download": {"path": offline_path, "url": offline_url, **final[offline_path]},
             "source_offer_manifest_sha256": launch.sha_file(offer / "manifest.json"),
             "files": final,
             "file_count": len(final),
