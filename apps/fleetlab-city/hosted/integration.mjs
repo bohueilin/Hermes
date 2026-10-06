@@ -24,7 +24,7 @@ export function mountCityEntry(doc = document) {
       node('h2', {id:'city-entry-title'}, 'San Francisco, one working day.'),
       node('p', {class:'city-entry-lede'}, 'Explore a sourced city map, compare depot decisions, then follow one vehicle’s trips and queues.'),
       action('Explore San Francisco  ↗'),
-      node('p', {class:'city-entry-note'}, 'Recorded experiments · synthetic operations · map qualification in progress'),
+      node('p', {class:'city-entry-note'}, 'Browse precomputed SF experiments. These controls select recordings; they do not run a new city simulation. Synthetic operations · map qualification in progress.'),
     ]),
     node('div', {class:'city-entry-journey', 'aria-label':'Three ways to explore San Francisco'}, [
       node('div', {class:'city-entry-place'}, [node('span', {}, '37.77° N / 122.42° W'), node('strong', {}, 'A city. A fleet. A question.')]),
@@ -38,6 +38,20 @@ export function mountCityEntry(doc = document) {
   ]);
   const firstLesson = home.querySelector('.loop-section');
   home.insertBefore(feature, firstLesson);
+  const guide = node('section', {class:'lab-guide', 'aria-labelledby':'lab-guide-title'}, [
+    node('p', {class:'city-entry-eyebrow'}, 'PREFER TO CHANGE AN INPUT AND RUN A MODEL?'),
+    node('h2', {id:'lab-guide-title'}, 'Pick a question. Find your lab.'),
+    node('p', {}, 'These four teaching models run in your browser. Each has its own assumptions and vehicles; they do not share the San Francisco recordings.'),
+    node('div', {class:'lab-guide-grid'}, [
+      ['fleet-day','Fleet day','What keeps a fleet available?','Weather, energy and depot work across one day.'],
+      ['street-lab','Street lab','Where do local queues form?','Routing and block-level queues on a teaching grid.'],
+      ['experiments','Four-area experiments','Does a policy help across repeats?','Paired dispatch and recall experiments with guardrails.'],
+      ['scale-lab','Scale lab','What changes as a fleet grows?','Density, fleet intake and support-pool capacity.'],
+    ].map(([path,title,question,detail]) => node('a', {href:`/#/${path}`}, [
+      node('span', {class:'lab-guide-name'}, `${title} ↗`), node('h3', {}, question), node('p', {}, detail),
+    ]))),
+  ]);
+  home.insertBefore(guide, firstLesson);
   const catalog = node('section', {class:'city-entry-catalog', 'aria-labelledby':'city-catalog-title'}, [
     node('div', {}, [
       node('p', {class:'city-entry-eyebrow'}, 'RECORDED CITY CASE STUDY'),
@@ -46,6 +60,10 @@ export function mountCityEntry(doc = document) {
     ]), action('Open City Explorer  ↗'),
   ]);
   catalogIntro.parentNode.insertBefore(catalog, catalogIntro.nextSibling);
+  doc.querySelector('.studio-footer').appendChild(node('div', {class:'offline-edition'}, [
+    node('div', {}, [node('strong', {}, 'Take the teaching labs with you.'), node('p', {}, 'Save the single HTML file, then open it in a browser. Includes the core teaching labs and catalog. The SF map and recordings, hosted film and later City Explorer lessons are not included; there is no sync with the hosted site.')]),
+    node('a', {href:'/downloads/fleetlab-offline.html', download:'fleetlab-offline.html'}, 'Download offline edition · 2.4 MB ↓'),
+  ]));
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'owner-contact'}, [
     node('span', {}, 'Built by Bo-Huei Lin · Ideas, questions or collaboration?'),
     node('a', {href:'mailto:bohueilin@gmail.com'}, 'bohueilin@gmail.com'),

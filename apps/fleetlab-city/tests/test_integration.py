@@ -56,6 +56,15 @@ class IntegrationTest(unittest.TestCase):
         self.assertEqual(len(report["preserved_existing"]), 96)
         self.assertEqual(launch.inventory(self.legacy), before)
         self.assertEqual(self.offline.read_bytes(), offline)
+        download = site / "downloads/fleetlab-offline.html"
+        self.assertEqual(download.read_bytes(), offline)
+        self.assertEqual(report["offline_download"]["sha256"], launch.sha_file(download))
+        self.assertEqual(report["offline_download"]["path"], "downloads/fleetlab-offline.html")
+        headers = (site / "_headers").read_text()
+        self.assertIn(
+            '/downloads/fleetlab-offline.html\n'
+            '  Content-Disposition: attachment; filename="fleetlab-offline.html"', headers
+        )
         for name in report["preserved_existing"]:
             self.assertEqual((site / name).read_bytes(), (self.legacy / name).read_bytes())
         self.assertIn("mountCityEntry", (site / "boot.js").read_text())

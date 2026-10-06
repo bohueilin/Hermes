@@ -1,6 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { resumeTime, estimateRevenue, eventDescription, pairLesson } from '../web/view-model.mjs';
+import { resumeTime, estimateRevenue, fareEstimateState, eventDescription, pairLesson } from '../web/view-model.mjs';
+test('fare state separates missing inputs, invalid rates and missing recorded exposure from an explicit zero', () => {
+  const summary={completed:2,completed_passenger_m:1609.344,completed_passenger_s:600};
+  assert.deepEqual(fareEstimateState(summary,['','','']),{status:'NEEDS_RATES',value:null});
+  assert.equal(fareEstimateState(summary,['1','2','']).status,'NEEDS_RATES');
+  for(const rates of [['1','-2','0'],['Infinity','0','0'],['bad','0','0']]) assert.equal(fareEstimateState(summary,rates).status,'INVALID_RATES');
+  assert.deepEqual(fareEstimateState(summary,['0','0','0']),{status:'COMPUTED',value:0});
+  assert.deepEqual(fareEstimateState(summary,['1','2','0.5']),{status:'COMPUTED',value:9});
+  for(const s of [null,{}, {...summary,completed_passenger_s:NaN},{...summary,completed:-1}]) assert.equal(fareEstimateState(s,['0','0','0']).status,'UNAVAILABLE');
+});
 test('replay restarts at first sample at the end, otherwise resumes the selected time', () => {
   assert.equal(resumeTime(28800, [[15], [28800]]), 15);
   assert.equal(resumeTime(9300, [[15], [28800]]), 9300);

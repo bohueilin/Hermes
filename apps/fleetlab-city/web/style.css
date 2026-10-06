@@ -462,3 +462,9 @@ body[data-view=models] .intro{grid-template-columns:1fr}body[data-view=models] .
 
 /* Browser zoom can make a phone narrower than the usual mobile breakpoint. */
 @media(max-width:360px){h1,.fidelity-grid{overflow-wrap:anywhere}.fidelity-grid{grid-template-columns:minmax(0,1fr)}.learning-insight{grid-template-columns:minmax(0,1fr)}.capacity-art{flex-direction:column}.map-toolbar{align-items:flex-start}.map-toolbar .segmented{flex:1;flex-wrap:wrap}.map-toolbar .segmented button{width:100%;min-width:0}.map-options label{min-width:0;max-width:100%;width:100%}.map-options select{min-width:0;width:100%}}
+
+.recorded-notice { font-size:15px; line-height:1.65; margin:16px 0 24px; max-width:960px; color:var(--muted); }
+.recorded-notice strong { color:var(--ink); }
+body[data-view="models"] .recorded-notice { display:none; }
+.replay-limits { margin-top:24px; }
+.replay-limits .fidelity-grid { margin:20px 0; }

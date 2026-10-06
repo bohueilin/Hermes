@@ -106,10 +106,18 @@ export function resumeTime(time, samples) {
   return time >= samples.at(-1)[0] ? samples[0][0] : Math.max(time, samples[0][0]);
 }
 export function estimateRevenue(summary, fares) {
+  if (!summary || ['completed', 'completed_passenger_m', 'completed_passenger_s'].some(k => !Number.isFinite(summary[k]) || summary[k] < 0)) return null;
   if (fares.length !== 3 || fares.some(f => String(f).trim() === '' || !Number.isFinite(Number(f)) || Number(f) < 0)) return null;
   const [base, mile, minute] = fares.map(Number);
   const result = summary.completed * base + summary.completed_passenger_m / METRES_PER_MILE * mile + summary.completed_passenger_s / 60 * minute;
   return Number.isFinite(result) ? result : null;
+}
+export function fareEstimateState(summary, fares) {
+  if (!summary || ['completed', 'completed_passenger_m', 'completed_passenger_s'].some(k => !Number.isFinite(summary[k]) || summary[k] < 0)) return {status:'UNAVAILABLE', value:null};
+  if (fares.length !== 3 || fares.some(f => String(f).trim() === '')) return {status:'NEEDS_RATES', value:null};
+  if (fares.some(f => !Number.isFinite(Number(f)) || Number(f) < 0)) return {status:'INVALID_RATES', value:null};
+  const value = estimateRevenue(summary, fares);
+  return {status:value === null ? 'UNAVAILABLE' : 'COMPUTED', value};
 }
 export const stateLabels = { idle: 'Available', pickup: 'Driving to pickup', boarding: 'Passenger boarding', passenger: 'Passenger on board', returning: 'Returning to depot', queue_turnaround: 'Waiting for turnaround', turnaround: 'Generic turnaround', queue_charge: 'Waiting for a charging port', charging: 'Charging', stranded: 'Stranded' };
 export function eventDescription(e) {
