@@ -4,7 +4,35 @@
 
 **Scope:** improve and close the supported Claude design findings for San Francisco while preserving the complete FleetLab product. **Do not start Austin or another City Explorer city.** This file includes the entire October 5 handoff as a clearly marked historical appendix; no separate October 5 attachment is needed to understand the prior work.
 
-**Latest status:** the supported October 6 design fixes are implemented, tested, pushed and live. The non-human work for this accepted SF release is complete. Formal SF acceptance remains **HOLD** for the human/source requirements carried forward below. A polished, live educational site is not a qualified map, an operator recommendation, a safety assessment or permission to deploy a vehicle or policy.
+**Latest status:** the October 6 design fixes and subsequent supported security fixes are implemented, tested, pushed and live. The security publication below supersedes the earlier design-release identity in section 4. Formal SF acceptance remains **HOLD** for the human/source requirements carried forward below. A polished, live educational site is not a qualified map, an operator recommendation, a safety assessment or permission to deploy a vehicle or policy.
+
+## 0. Latest publication — October 6 security follow-up
+
+The current site is [FleetLab](https://fleetlab.pages.dev/), with immutable production [ddf5a035](https://ddf5a035.fleetlab.pages.dev). Published source is `dfc3c4913f0a984d24f23badbefd7da2cacbf787` on `codex/fleetlab-city-sf`; production deployment is `ddf5a035-c439-43d6-b097-553951a820ee`. The subsequent documentation commit records the observed publication and does not change served code.
+
+Changes: shared setup errors use bounded fixed messages; saved-file sharing omits local paths; City navigation accepts only known views. Both current and staged rollback packages contain reviewed public study guides and blank review worksheets. The site has a real 404, static introductory context, consistent independent-project attribution, and an offline download digest. The release tooling is pinned, rejects a dirty or mismatched source/stage, and provides an on-demand digest check. The original Overview/film, teaching labs, learning catalog, owner contact and SF recordings remain available.
+
+| Latest release evidence | Verified value |
+|---|---|
+| Current City release | `c56bda6b509105c5bee778980c01d13028401bc03fc8b49b4948f65c6f18f63f` |
+| Sanitized rollback release | `e3318a76588a740311c902ad305cfaa99381c052b5d1963cfd444fc08c177591` |
+| Preview deployment | `1bd2d74d-0ebe-4d3a-8f2e-85b788611413` |
+| Integration manifest | `c9fce74eaf1df10e50bccd3b8231a37b8d5506ec7427bb54a9506d22fe884f55` |
+| Package inventory | 10,015 files / 1,619,050,144 bytes; root `_headers` is configuration |
+| Preview and stable-production readback | **10,014 / 10,014** served files matched on each; seven header/body checks passed on each |
+| Production readback SHA-256 | `fc93999cd7869925616686329430a01ddc3c5d0e65245c8b5eea90603c852514` |
+| Offline SHA-256 | `c9453374c3bfea587658fe73573cce908d3db4cbfdccc6ef7f79687b7dde5ce5` |
+| Public release receipt | [Current digest record](releases/fleetlab-current.json) |
+
+Validation: **318 City Python tests**, **63 City JavaScript tests**, **1,662 Hermes tests / 55 skipped**, and **1,957 teaching-lab tests / 8 skipped / 1 TODO** passed. Focused setup tests passed 33/33; packed parity passed 4/4, and the opt-in packed Run test passed for every lab. Ruff and Git checks passed. Doctor on the clean code commit: **18 PASS / 1 optional NOT_AVAILABLE**. Dated MapLibre and locked deployment dependency audits returned zero known vulnerabilities; the deployment dependency signatures also verified. Optional timing/device categories are not promoted to completed qualification.
+
+All **4,886 non-catalogue recorded data files** and the source-offer identity remain unchanged. The catalogue changes only its measured export-memory value. No scientific result, threshold, map qualification or evaluation arm changed. The rollback selector was rehearsed on a separate local copy and rendered the sanitized prior viewer; no production rollback was performed. Browser checks covered desktop and 375 px reflow, malformed setup/hash handling, the real 404, current release selection and replay. Native saved-file launch and new physical-device/human qualification are not claimed.
+
+The first preview readback reached file comparison but failed to write its report under the Mac's older default Python. The complete unchanged package was then checked successfully with Python 3.11. Use the explicit project interpreter in the [publication runbook](FLEETLAB_CLOUDFLARE_DEPLOYMENT.md).
+
+Remaining owner actions: review account access/2FA and credential scope; choose historical-deployment/legacy-site retention; handle shared Hermes CI dependency policy separately. Old immutable deployments and cached removed URLs can remain reachable even though the current packages omit those files. Cloudflare documents [removed-asset retention of up to one week](https://developers.cloudflare.com/pages/configuration/serving-pages/#asset-retention); the existing browser cache duration is not a takedown guarantee. The supplied security audit and detailed finding decisions remain in private security storage, outside this public handoff and website.
+
+SF source/map observations, human accessibility/device tasks, five independent visitor sessions and recorded owner acceptance remain open. Authenticity remains **NOT_AUTHENTICATED** and operational deployment permission **NONE**. Austin and other City Explorer cities remain **NOT_STARTED**.
 
 ## 1. What changed on October 6
 
@@ -38,9 +66,9 @@ The remaining SF acceptance requirements are unchanged: source rights/version cl
 
 The stopped 200/400 kW power study, r3 proposal, calibrated vehicle classes and physical curb/depot maneuvers remain deferred under the accepted October 4 scope. They were not silently completed or restarted. No new SF evaluation arms ran. Austin and other City Explorer cities remain **NOT_STARTED**; the older Austin teaching example in the main site remains preserved content.
 
-## 4. October 6 validation and publication
+## 4. Earlier October 6 design-release validation and publication (historical)
 
-Publication is verified. The supported October 6 implementation is **tested, pushed and live**; SF acceptance remains HOLD.
+This earlier design publication was verified. Its identities and measurements below are historical; section 0 and the current digest record govern the latest security follow-up. SF acceptance remains HOLD.
 
 | Item | Verified value |
 |---|---|

@@ -1,0 +1,71 @@
+{
+  "schema": "fleetlab.publication-readback/1.0.0",
+  "scope": "EDUCATIONAL_WEBSITE",
+  "sf_qualification": "HOLD",
+  "authenticity": "NOT_AUTHENTICATED",
+  "operational_deployment_permission": "NONE",
+  "source_commit": "dfc3c4913f0a984d24f23badbefd7da2cacbf787",
+  "source_branch": "codex/fleetlab-city-sf",
+  "production_deployment_id": "ddf5a035-c439-43d6-b097-553951a820ee",
+  "preview_deployment_id": "1bd2d74d-0ebe-4d3a-8f2e-85b788611413",
+  "prior_production_deployment_id": "c722398b-e5d4-4414-9080-1d7f8b1b584d",
+  "stable_url": "https://fleetlab.pages.dev",
+  "immutable_url": "https://ddf5a035.fleetlab.pages.dev",
+  "current": {
+    "compatibility": {
+      "metrics": "fleetlab.city-metrics/1.0.0",
+      "pack": "fleetlab.city-pack/1.0.0",
+      "run": "fleetlab.city-run/1.0.0",
+      "viewer": "1.1.0"
+    },
+    "path": "city-explorer/releases/c56bda6b509105c5",
+    "release_sha256": "c56bda6b509105c5bee778980c01d13028401bc03fc8b49b4948f65c6f18f63f"
+  },
+  "rollback": "city-explorer/releases/e3318a76588a7403",
+  "integration_manifest_sha256": "c9fce74eaf1df10e50bccd3b8231a37b8d5506ec7427bb54a9506d22fe884f55",
+  "file_count": 10015,
+  "total_bytes": 1619050144,
+  "files": {
+    "index.html": {
+      "bytes": 2124,
+      "sha256": "497cc88343650ba158ffcaf504455b4bbe1849d97dde0cf3911ae413f5051e6c",
+      "status": 200
+    },
+    "boot.js": {
+      "bytes": 242,
+      "sha256": "5bf4eed656cf58f4dd0def651510b06ba9731e137ed684d61536618df2f8f364",
+      "status": 200
+    },
+    "city-explorer/releases/c56bda6b509105c5/index.html": {
+      "bytes": 34000,
+      "sha256": "5e973076e662bb673b35207bb51432730d7c8cb14b1efea020da17ae5f86ed37",
+      "status": 200
+    },
+    "city-explorer/releases/c56bda6b509105c5/data/catalog.json": {
+      "bytes": 341154,
+      "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1",
+      "status": 200
+    },
+    "downloads/fleetlab-offline.html": {
+      "bytes": 2425251,
+      "sha256": "c9453374c3bfea587658fe73573cce908d3db4cbfdccc6ef7f79687b7dde5ce5",
+      "status": 200
+    },
+    "publication.json": {
+      "bytes": 1560,
+      "sha256": "adb788ecda4071bea9a5c17fa0d73b323713c22e6f2d7e9e9810f92ec0ba5cfe",
+      "status": 200
+    }
+  },
+  "verified_at_utc": "2026-10-06T21:19:56.276064+00:00",
+  "verification": {
+    "served_files": 10014,
+    "matched_files": 10014,
+    "header_checks": 7,
+    "headers_pass": true,
+    "full_readback_sha256": "fc93999cd7869925616686329430a01ddc3c5d0e65245c8b5eea90603c852514",
+    "preview_matched_files": 10014,
+    "preview_full_readback_sha256": "40b1c53fb20eca94daa4d379989af19f7906d10736e896ad7d48767816d0fa99",
+    "meaning": "Byte consistency and observed hosting only; not independent authenticity or operational authority."
+  }
+}

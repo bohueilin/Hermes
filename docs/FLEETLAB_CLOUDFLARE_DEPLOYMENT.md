@@ -20,6 +20,9 @@ are separate decisions; no document can authorize them by itself.
 
 ## Build and verify
 
+Use the project's Python 3.11 environment for these tools. The Mac's default
+Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
+
 1. Run the City Python and Node suites, the teaching-lab Node suite and Hermes
    checks. Run the boundary suite with `FLEET_PLAYGROUND_BASE=bca4ccd`; do not
    count a missing-base skip as a completed release gate.
@@ -62,7 +65,7 @@ observations, not guarantees against unpublished vulnerabilities.
 Run the six-request, secret-free smoke check from repository root:
 
 ```sh
-python apps/fleetlab-city/tools/readback.py --record docs/releases/fleetlab-current.json --url https://fleetlab.pages.dev --output /tmp/fleetlab-smoke.json
+build/fleetlab-city/venv/bin/python apps/fleetlab-city/tools/readback.py --record docs/releases/fleetlab-current.json --url https://fleetlab.pages.dev --output /tmp/fleetlab-smoke.json
 ```
 
 A digest or status mismatch is a failed check, even if the page returns 200.
