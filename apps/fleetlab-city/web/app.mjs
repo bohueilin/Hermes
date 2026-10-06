@@ -24,7 +24,7 @@ function show(view, focus = true) {
   for (const b of document.querySelectorAll('.tabs button')) { if (b.dataset.view === view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }
   $('page-title').replaceChildren(...titles[view][0].split('\n').flatMap((line, i) => i ? [element('br'), document.createTextNode(line)] : [document.createTextNode(line)]));
   $('page-description').textContent = titles[view][1];
-  if (focus) $('page-title').focus({ preventScroll: true });
+  if (focus) { $('page-title').focus({ preventScroll: true }); $('page-title').scrollIntoView({block:'start',behavior:'instant'}); }
   if (view === 'atlas') map?.resize();
   if (view === 'replay') replay?.show();
   history.replaceState(null, '', `#${view}`);
@@ -67,7 +67,7 @@ function displayComparison() {
   const practical = completionContext(comparison);
   const metrics = [['Completion change', practical.primary, 'percentage points'], ['Empty distance / completed trip', comparison.empty_change_percent, '% relative change'], ['Boarded wait p90', comparison.wait_p90_delta_s, 'seconds']];
   $('result-metrics').replaceChildren();
-  for (const [label, value, unit] of metrics) { const card = element('article', undefined, 'metric-tile'); card.append(element('h4', label), element('strong', value ? `${value.mean > 0 ? '+' : ''}${fmt(value.mean, 2)}` : 'Not available'), element('p', unit), element('p', value ? `95% paired interval: ${fmt(value.low, 2)} to ${fmt(value.high, 2)}. Diagnostic; map qualification is incomplete.` : 'Population or comparison is unavailable.')); if(label==='Completion change')card.append(element('p',practical.text,'practical-context')); $('result-metrics').append(card); }
+  for (const [label, value, unit] of metrics) { const card = element('article', undefined, 'metric-tile'); card.append(element('h4', label), element('strong', value ? `${value.mean > 0 ? '+' : ''}${fmt(value.mean, 2)}` : 'Not available'), element('p', unit)); if(label==='Completion change')card.append(element('p',practical.headline,'practical-headline')); card.append(element('p', value ? `95% paired interval: ${fmt(value.low, 2)} to ${fmt(value.high, 2)}. Diagnostic; map qualification is incomplete.` : 'Population or comparison is unavailable.')); if(label==='Completion change')card.append(element('p',practical.text,'practical-context')); $('result-metrics').append(card); }
   $('sensitivity-rows').replaceChildren();
   for (const c of catalog.sensitivities ?? []) {
     const row = element('tr');
@@ -79,7 +79,7 @@ function displayComparison() {
     const row = element('tr'); const delta = 100 * (p.candidate.completion_fraction - p.baseline.completion_fraction);
     for (const value of [`${String(catalog.seeds.indexOf(p.seed)+1).padStart(2,'0')} / ${p.seed}`, `${p.baseline.completed} / ${p.baseline.created}`, `${p.candidate.completed} / ${p.candidate.created}`, `${delta >= 0 ? '+' : ''}${fmt(delta, 2)} pp`]) row.append(element('td', value));
     const lesson = element('td', pairLesson(p), 'pair-lesson'); row.append(lesson);
-    const cell = element('td'); const button = element('button', 'Inspect pair ↗'); button.addEventListener('click', () => { studies.choose('legacy'); inspectRepeat(p.seed, { select: seed => { $('seed-select').value = seed; }, load: () => replay.load(), show: () => show('replay') }); }); cell.append(button); row.append(cell); $('pair-rows').append(row);
+    const cell = element('td'); const button = element('button', 'Inspect pair ↗'); button.addEventListener('click', () => { studies.choose('legacy'); inspectRepeat(p.seed, { select: seed => { $('seed-select').value = seed; }, load: () => replay.load(), show: () => { show('replay', false); replay.revealSelection(); } }); }); cell.append(button); row.append(cell); $('pair-rows').append(row);
   }
 }
 async function changeMask(next) {
@@ -98,7 +98,7 @@ window.addEventListener('hashchange', () => {
   if (titles[view] && view !== currentView) show(view, false);
 });
 for (const button of document.querySelectorAll('button[data-view]')) button.addEventListener('click', () => show(button.dataset.view));
-$('limits-button').addEventListener('click', () => show('limits')); $('coverage-details').addEventListener('click', () => show('limits'));
+$('coverage-details').addEventListener('click', () => show('limits'));
 for (const b of document.querySelectorAll('[data-mask]')) b.addEventListener('click', () => changeMask(b.dataset.mask));
 $('fit-map').onclick=()=>map?.fit();
 $('flat-toggle').onclick=()=>{map?.useFlat();$('flat-toggle').textContent='Flat map active';};

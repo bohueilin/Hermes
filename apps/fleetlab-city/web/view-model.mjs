@@ -38,7 +38,7 @@ export function clockStamp(seconds) {
 }
 export function completionContext(comparison) {
   const primary = comparison?.primary_pp;
-  const unavailable = {primary:null, threshold:null, text:'Practical comparison unavailable · compatible result and threshold evidence are required.'};
+  const unavailable = {primary:null, threshold:null, headline:'Practical comparison unavailable', text:'Practical comparison unavailable · compatible result and threshold evidence are required.'};
   if (comparison?.schema !== 'fleetlab.city-comparison/1.0.0'
       || ['INVALID','INCOMPATIBLE'].includes(comparison.eligibility)
       || ['INVALID','INCOMPATIBLE'].includes(comparison.outcome)
@@ -51,7 +51,8 @@ export function completionContext(comparison) {
   const relation = primary.high < threshold ? 'The reported gain and its entire paired interval fall below this threshold.'
     : primary.low > threshold ? 'The reported gain and its entire paired interval are above this threshold.'
     : 'The paired interval includes or crosses this threshold.';
-  return {primary, threshold, text:`Practical threshold: +${threshold} percentage points. ${relation} Map qualification and the other study checks remain separate requirements.`};
+  const headline = primary.high < threshold ? 'Below the +2 pp practical margin' : primary.low > threshold ? 'Above the +2 pp practical margin' : 'Interval includes or crosses the +2 pp practical margin';
+  return {primary, threshold, headline, text:`Practical threshold: +${threshold} percentage points. ${relation} Map qualification and the other study checks remain separate requirements.`};
 }
 export function validateCatalog(data) {
   if (data?.schema !== 'fleetlab.city-view/1.0.0') throw new Error('Unsupported city viewer schema');

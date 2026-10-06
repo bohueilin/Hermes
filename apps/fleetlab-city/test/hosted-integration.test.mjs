@@ -40,6 +40,9 @@ test('hosted entries preserve mounted lessons and film, and native links need no
   assert.ok(guide);
   assert.deepEqual([...guide.querySelectorAll('a')].map(a=>a.getAttribute('href')),['/#/fleet-day','/#/street-lab','/#/experiments','/#/scale-lab']);
   assert.equal(document.querySelectorAll('.lab-guide').length,1);
+  const trust=document.querySelector('.welcome-boundary .hosted-trust-legend');
+  assert.ok(trust,'the plain-language trust legend is attached to the actual welcome boundary');
+  assert.equal(document.querySelectorAll('.hosted-trust-legend').length,1);
   const offline=document.querySelector('.offline-edition a');
   assert.equal(offline.getAttribute('href'),'/downloads/fleetlab-offline');
   assert.equal(offline.getAttribute('download'),'fleetlab-offline.html');

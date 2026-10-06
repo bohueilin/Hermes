@@ -51,12 +51,15 @@ test('practical context uses the existing v1 margin without turning it into a ma
   assert.equal(typeof model.completionContext,'function');
   const c=comparison(), before=JSON.stringify(c), result=model.completionContext(c);
   assert.equal(result.threshold,2); assert.equal(result.primary.mean,1.11);
+  assert.match(result.headline,/Below the \+2 pp practical margin/);
   assert.match(result.text,/entire paired interval.*below/i);
   assert.match(result.text,/map qualification.*separate/i);
   assert.equal(JSON.stringify(c),before);
   assert.match(model.completionContext(comparison(1.9,2,2.1)).text,/crosses|includes/i);
+  assert.match(model.completionContext(comparison(1.9,2,2.1)).headline,/includes or crosses/i);
   assert.match(model.completionContext(comparison(2,2.1,2.2)).text,/crosses|includes/i);
   assert.match(model.completionContext(comparison(2.01,2.1,2.2)).text,/above/i);
+  assert.match(model.completionContext(comparison(2.01,2.1,2.2)).headline,/Above/);
   assert.match(model.completionContext(comparison(-2,-1,-.5)).text,/below/i);
 });
 
@@ -65,5 +68,6 @@ test('missing, malformed, unknown-version or incompatible results cannot acquire
   for(const c of [null,{}, {...comparison(),schema:'other'}, {...comparison(),eligibility:'INCOMPATIBLE'}, {...comparison(),outcome:'INVALID'}, {...comparison(),primary_pp:null},comparison(null,1,2),comparison(2,1,0),comparison(1,Infinity,2)]) {
     const result=model.completionContext(c);
     assert.equal(result.primary,null); assert.equal(result.threshold,null); assert.match(result.text,/unavailable/i);
+    assert.match(result.headline,/unavailable/i);
   }
 });

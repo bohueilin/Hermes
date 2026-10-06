@@ -25,6 +25,7 @@ export function mountCityEntry(doc = document) {
       node('p', {class:'city-entry-lede'}, 'Explore a sourced city map, compare depot decisions, then follow one vehicle’s trips and queues.'),
       action('Explore San Francisco  ↗'),
       node('p', {class:'city-entry-note'}, 'Browse precomputed SF experiments. These controls select recordings; they do not run a new city simulation. Synthetic operations · map qualification in progress.'),
+      node('p', {class:'city-entry-note'}, ['Map qualification is open: the routing map still needs source and scope checks, including independent human review. ', action('Read the review status →', '#limits')]),
     ]),
     node('div', {class:'city-entry-journey', 'aria-label':'Three ways to explore San Francisco'}, [
       node('div', {class:'city-entry-place'}, [node('span', {}, '37.77° N / 122.42° W'), node('strong', {}, 'A city. A fleet. A question.')]),
@@ -36,6 +37,8 @@ export function mountCityEntry(doc = document) {
       node('span', {class:'city-entry-shift'}, 'SAN FRANCISCO  /  07:00 — 15:00'),
     ]),
   ]);
+  const boundary = home.querySelector('.welcome-boundary');
+  boundary?.appendChild(node('p', {class:'hosted-trust-legend'}, 'Synthetic teaching results · simulation only · not real-world safety evidence. Running a model does not authenticate its outputs, evaluate authorization, or grant permission to deploy a vehicle or policy.'));
   const firstLesson = home.querySelector('.loop-section');
   home.insertBefore(feature, firstLesson);
   const guide = node('section', {class:'lab-guide', 'aria-labelledby':'lab-guide-title'}, [
