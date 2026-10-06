@@ -4,6 +4,8 @@
 
 **Current scope:** finish the San Francisco educational experience and acceptance. Preserve the original FleetLab product. **Do not start Austin or another City Explorer city.** The site is live; formal SF acceptance is still **HOLD**. A deployed static educational website is not a qualified map, operator recommendation, safety assessment or permission to deploy a vehicle.
 
+**Latest outcome — SF non-human work: COMPLETE within the accepted October 4 scope.** The supported Muse/Gemini findings are implemented, tested, pushed and live. Formal SF acceptance remains **HOLD** for the human/source requirements below. Austin and other cities are **NOT_STARTED**. No further AI audit or handoff preparation is required for this release. Section 11 records the final publication; section 9 preserves the earlier v11 history.
+
 This handoff supersedes older next-action statements where they conflict with the accepted October 4 scope. Historical protocols, failed runs, adverse results and source snapshots remain unchanged. The [October 4 handoff](FLEETLAB_HANDOFF_2026-10-04.md) retains the detailed earlier history and resource analysis; the [canonical acceptance matrix](FLEETLAB_SF_ACCEPTANCE_2026-10-04.md) names every remaining gate.
 
 ## 1. Open the product and launch-readiness examples
@@ -120,7 +122,9 @@ For a clean first impression, send the prompt and site URL **without this handof
 >
 > Return at most ten prioritized findings with exact URL/tab, steps, observed text or screenshot, user misunderstanding, severity, a concrete proposed correction and a way to verify it. Separate observed behavior, inference and aesthetic preference. Recommend what to keep as well as what to change. Do not invent visitor quotes, device tests, inaccessible page contents or safety/operator claims. This is AI design feedback, not an independent human qualification or permission to modify the site.
 
-### B. AI reviewer: map/source claim triage
+### B. AI reviewer: map/source claim triage — optional, not a next-step requirement
+
+**October 5 clarification:** this prompt is available for a later map-specific AI critique; you do not need to send it to Muse or Gemini to close the current non-human work. Their supplied audits have been evaluated and the supported changes implemented. Fable can wait. If you use 6B later, include this handoff for context and the relevant frozen batch/captures for individual obligations. A local path in Markdown does not transfer files. No additional handoff preparation is required now.
 
 > Review City Explorer → City atlas and the map sections of the October 5 handoff. Act as a skeptical technical assistant preparing work for a human GIS/OSM reviewer. Separate visual map quality, source accounting, routing support, temporal semantics, administrative scope, provenance/reuse rights and real-world legality.
 >
@@ -171,7 +175,7 @@ Use the [visitor protocol](FLEETLAB_SF_VALIDATION_SESSION.md). Ask its open ques
 |---|---|---|
 | Temporal human source review | Capable OSM/routing reviewer and eligible independent resolver; unassigned | Actual observations for all frozen obligations, captured evidence, conflict resolution and valid append-only history; derived gate result |
 | Full district provenance/reuse/adoption | Source steward, rights reviewer, GIS reviewer and scope owner; pending | Dataset-specific version/terms evidence plus recorded policy decision; inspect residuals/membership effects. Until then keep full geometry local. |
-| Human device/accessibility | Owner or tester; Pixel connected | Complete remaining pinch/A+B/rotation/keyboard/TalkBack/desktop-reader rows, record actual announcements and fix/retest issues |
+| Human device/accessibility | Owner or tester; earlier Pixel observations plus a bounded production smoke check after reconnect | Complete remaining pinch/A+B/rotation/keyboard/TalkBack/desktop-reader rows, record actual announcements and fix/retest issues |
 | Visitor learning | Five independent visitors, two scorers; unassigned | Uncoached responses, both original score sets, disagreements and follow-up; not an automatic n=5 launch pass |
 | Educational SF acceptance | Bo-Huei | Explicit dated decision bound to release, evidence, limitations and residual-risk ownership |
 
@@ -187,7 +191,7 @@ Use the least expensive fidelity that answers a declared question. Current fleet
 
 After explicit SF educational acceptance, revisit city prioritization and data/license availability. **Austin, Las Vegas, other California cities, Japan and other Waymo locations are future scope; do not begin now.** Future service-area/operator claims must use then-current primary sources.
 
-## 9. Release, tests and reproducibility
+## 9. Earlier October 5 release, tests and reproducibility — v11 history
 
 **LIVE AND VERIFIED.** Final production readback at **2026-10-05 22:16:07 UTC** matched **10,037 / 10,037 served payloads** and effective headers. Preview also matched 10,037 / 10,037. Scoped root/viewer/rollback/source headers passed; range requests returned correct complete 200 responses, so no partial-range behavior is claimed. The live notebook, preserved Overview, launch rehearsal and Pixel atlas were inspected.
 
@@ -221,8 +225,82 @@ Commands used include City Python unit tests, Node tests, full Hermes pytest, Ru
 
 A website release does not change the SF HOLD, authenticate review authors or grant deployment authority for a physical system.
 
-**Recommendation:** use the finished educational experience for external design feedback now, while recruiting bounded human source and accessibility reviews; keep SF as the only City Explorer implementation scope.
+**Recommendation:** close the accepted non-human SF implementation pass after the verified audit-closure release below. No further AI audit is required; retain the explicit human/source acceptance gates.
 
 **Top risks + mitigations:** polished visuals mistaken for validated autonomy → explicit model/gate limits; AI reviews mistaken for independent humans → separate methods and identities; source drift or unresolved rights → frozen captures and official clarification; favorable averages hiding mixed outcomes → retain adverse cases and practical margin; scope expansion → honor the recorded deferrals.
 
-**Next 3 actions:** (1) send the design prompt and recruit the 25-way/10-OD human pilot; (2) complete the remaining accessibility rows and five visitor sessions; (3) review the resulting evidence and record the SF acceptance decision before considering another city.
+**Next 3 actions:** (1) keep this handoff and the verified live release; (2) complete source/map and remaining human sessions when ready; (3) record the SF acceptance decision before considering another city.
+
+## 10. Muse/Gemini audit closure — latest October 5 pass
+
+The supported feedback is implemented. Muse's entry-point, lab-navigation, replay-limit, offline-discovery and unset-fare findings led to five bounded improvements:
+
+1. SF entry now says the experiment results are recorded/precomputed; changing a selector does not launch a city run. The separate Model lab remains interactive.
+2. A four-card homepage chooser explains Fleet day, Street lab, Four-area experiments and Scale lab in plain questions, with direct links. Original Overview film and 59 lessons remain.
+3. The footer downloads the unchanged 2.4 MB offline teaching edition. It explicitly excludes the hosted film and City Explorer recordings; no cross-model synchronization is implied.
+4. A visible replay limits panel sits after the full event history and links to Scope & sources. It distinguishes exact operational events, held 15-second positions and unmodeled traffic/physics/sensors.
+5. Unset fares now invite the viewer to enter three rates. Invalid rates, unavailable recorded exposure and explicit zero are separate states. No invented fare defaults.
+
+Muse's suggested-vehicle explanation was already present. The purported “Same riders” glossary truncation was not reproduced: the full paragraph is visible at 390px with equal client/scroll heights and no clamp.
+
+Gemini's assertions about 100 chargers, 50/50 hubs, a 0.42–1.80 pp interval, interpolated positions, 10 Hz incident telemetry, road-congestion feedback, 98.4% lane qualification, AV-084 cross-model trace navigation and a synchronized v4.18.2 batch engine are unsupported or conflict with source and stored results. They were not implemented. The correct evidence remains eight ports / 4+4, 0.70–1.55 pp, held poses, generic resource queues and qualification HOLD. The nearby replay limits and offline scope address the useful comprehension goals without inventing telemetry. The existing practical-margin explanation remains; an extra interval graphic is optional, not an unresolved defect.
+
+A complete finding-by-finding rationale is in [the audit decision record](FLEETLAB_SF_AUDIT_CLOSURE_2026-10-05.md). This handoff is sufficient for the owner's next conversation; the longer record is optional supporting detail.
+
+**No further AI review or handoff round is required.** Section 6B is optional map/source claim triage. If used later, send this handoff plus the particular frozen batch and captures needed for its claims. Fable can be done later without holding up this release. AI outputs do not fill human observation rows.
+
+The new controls were checked in the browser at 240×844, 390×844, 844×390 and 1440×900. All five City views and the homepage reflowed without document overflow. Mobile Explore showed all eight destinations. All four new chooser links reached their intended models after route rendering. Fare checks covered blank, zero, negative, positive and cleared inputs, and the replay-limit button opened the scope view with its heading focused. Narrow viewport checks are not a fresh physical-phone 200% zoom test. `adb devices -l` initially returned no device. The Pixel later reconnected: Android 17, Chrome 154.0.8037.92, 1080×2404 and unchanged font scale 1.0. Automated hardware checks confirmed all eight menu destinations within the screen, all four readable guide cards, Street lab link navigation, the recorded-study notice at Replay entry, all three limits sections, and the limits button opening Scope & sources. That walkthrough exposed the guide’s imprecise “teaching grid” wording; the final copy says “sourced streets,” matching Street lab’s own model note. These observations are bound to the same immutable v12 City viewer; no physical zoom, human pinch, reader speech or independent visitor pass is inferred. No phone settings were changed. The earlier connected Pixel evidence also remains valid for its tested release and scope. New evidence: `build/fleetlab-city/validation/sf-review-closure-20261005/pixel-evidence.json`.
+
+Offline validation: the preserved HTML boots over local HTTP with its seven original teaching destinations. A direct saved-file launch was blocked by the browser tool’s `file://` URL policy; no workaround was attempted and no fresh saved-file launch pass is claimed. Package and production checks verify the exact preserved bytes and download headers.
+
+The initial corrected combined package was `build/fleetlab-city/launch-integration-v9/site`; its first preview stage v8 is retained as failed evidence for the missing canonical-download attachment header. The corrected preview at `https://58fed1cc.fleetlab.pages.dev` matched **10,039 / 10,039** served files and effective headers. The immutable City viewer is `f6ebc583cb5e08f237c0756f1387856eaf41358abb9103bdc2200c74328f6e80`; the download fix changed only hosted integration/header packaging, so this viewer did not need rebuilding.
+
+The first preview at `https://2faeb439.fleetlab.pages.dev` matched 10,038 / 10,039; its failed path was the named HTML URL returning a 308 redirect. Inspection showed that the extensionless 200 response lacked the attachment header. The corrected link uses `/downloads/fleetlab-offline`, saves as `fleetlab-offline.html`, and sets the attachment header on both forms. Final hosting verification compares the full 2,424,861-byte canonical response with the exact preserved file.
+
+Latest production identities and verified closure status follow.
+
+Audit input identities (the full supplied reports remain local; do not confuse their assertions with verified findings):
+
+- Muse: 8,951 bytes; SHA-256 `5afe0a41c15495e3d6d0d46f214aff2f461f2fb250f590c7e6f1e492fc028822`.
+- Gemini: 23,163 bytes; SHA-256 `2938fdc734dbe2436137130160cbdfa44f218373a7e06ab3741fe8107e8e3d31`.
+
+## 11. Final publication and non-human completion
+
+**LIVE AND VERIFIED. Accepted non-human SF implementation: COMPLETE. Formal SF acceptance: HOLD.** This is the final release for this audit pass, including the Pixel-discovered Street lab wording correction. Both final preview and stable production returned **10,039 / 10,039 matching served payloads**, with effective hosting and download headers verified. Final production readback completed at **2026-10-06T05:05:16.164256+00:00** (October 5 evening in America/Los_Angeles).
+
+| Identity | Final value |
+|---|---|
+| Stable site | [Open link](https://fleetlab.pages.dev/) |
+| Stable City Explorer | [Open link](https://fleetlab.pages.dev/city-explorer/) |
+| Immutable final site | [Open link](https://ecd93414.fleetlab.pages.dev) |
+| Immutable City viewer | [Open link](https://ecd93414.fleetlab.pages.dev/city-explorer/releases/f6ebc583cb5e08f2/) |
+| Viewer SHA-256 | `f6ebc583cb5e08f237c0756f1387856eaf41358abb9103bdc2200c74328f6e80` |
+| Final production deployment | `ecd93414-d845-4e98-8b55-7ae3494a0183` |
+| Final preview deployment | `8dca35cd-b72d-47cc-98b3-96bb3fd65ad6` |
+| Published code commit | `61a964cd28fda7ded15375fef7bb55b4284a6132 — pushed to github/codex/fleetlab-city-sf` |
+| Final combined stage | `build/fleetlab-city/launch-integration-v10/site` |
+| Staged inventory | `10,040 files / 1,619,307,926 bytes; _headers is host configuration` |
+| Integration manifest SHA-256 | `1e70b8555a5b1181136317c07530cc825f5bd2a90c491ec9bc8f6326b6315ad8` |
+| Final production readback SHA-256 | `489fd162daf7aaf535e7565c18cc2ad5c2ecb8722bab37984828f1849daff700` |
+| Publication record | `build/fleetlab-city/launch-integration-v10/review/publication-2026-10-05.json` |
+| Publication record SHA-256 | `793dc6aba3e33d830f9fde6db363f2788519c18e5fe5f4b6d5ac9a5cbb4545bc` |
+| Retained rollback viewer | `3fceee0e7246b9247df3d154b2c18b87e32bde700e3e26d59fde6afcf89a1cba; rollback not performed` |
+| Exact offline download SHA-256 | `169388571013337332b33aad79d7e4576e6490f07ec70322ced188dfd0c8c130` |
+
+Validation passed: **312 City Python tests**, **60 viewer/hosted Node tests**, **1,661 Hermes tests / 56 skipped**, Ruff, diff checks, immutable distribution checks, note links, preservation checks, browser QA, bounded connected-Pixel smoke checks, and final preview/production readback. The later download-header correction reran City and Node suites; the final one-line description correction reran Node. No Hermes core code changed after its full suite. Doctor reports 17 PASS, one working-tree WARN and one optional display NOT_AVAILABLE. No dependency was installed or upgraded for this pass.
+
+All **4,886 non-catalog data files**, **13 protected review inputs**, frozen scientific modules, comparison core, **96 protected original root assets** and offline bytes are unchanged. The final City viewer has 4,961 files including its manifest, 768,133,913 bytes; initial compressed view is 1,907,551 bytes. The catalog differs only in measured export peak RSS. `public_release_ready` remains false for qualified-map release; separately authorized educational website publication is complete. No new full-SF arm, evaluation tape, map observation or source-owner message was created.
+
+The initial failed preview header/readback is retained. The first corrected package (v9 / production `9f9f010d`) also passed a complete production readback. Final v10 differs from v9 only in `integration.mjs`, replacing “teaching grid” with “sourced streets”; final preview and production were nevertheless read back completely. The same v12 City viewer remained immutable throughout these hosted-only corrections.
+
+An already-open stable-origin browser retained the preceding guide wording in its asset cache. The stable site's HTTP module and the immutable production module both matched the final file; a fresh immutable-origin browser showed the corrected copy. Original root assets retain their existing 600-second cache policy. Use the immutable final-site link above if an open tab temporarily shows older wording. This did not affect the recorded-data identity.
+
+The saved-file launch limitation remains explicit: the tool blocks `file://` browsing. The unchanged standalone HTML was tested over local HTTP, its canonical hosted response and filename/header were checked, and its exact bytes matched in production. No fresh local-file launch pass, full accessibility certification, human finger usability, screen-reader speech or independent visitor result is claimed.
+
+The evidence directory is `build/fleetlab-city/validation/sf-review-closure-20261005/`. It retains initial failures, package checks, screenshots, Pixel XML observations, exact audit-input digests, frozen-input comparisons, test logs, deployment logs and readbacks. These generated artifacts and credentials are excluded from Git; the implementation, audit decision record and handoff are committed. Unrelated owner files are preserved. The temporary local QA server was stopped and the task's temporary device XML removed.
+
+**Recommendation:** consider the accepted non-human SF work closed. Use the live educational experience and this handoff; another AI review is optional.
+
+**Top risks + mitigations:** website publication mistaken for SF qualification → retain the separate HOLD; unsupported AI observations → retain verified finding dispositions; old tabs showing old wording → immutable deployment link and explicit release identity; incomplete human evidence → named remaining roles and frozen acceptance requirements.
+
+**Next 3 actions:** (1) keep/share this single updated handoff when convenient; (2) collect source/map, human accessibility and visitor evidence when ready; (3) record SF acceptance before authorizing Austin or another city. No further coding or AI handoff round is required for this release.

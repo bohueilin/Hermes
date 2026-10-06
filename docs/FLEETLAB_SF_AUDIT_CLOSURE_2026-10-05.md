@@ -12,7 +12,7 @@ The resulting changes clarify entry points, model boundaries and intentional emp
 
 | Finding | Decision | Evidence and action |
 |---|---|---|
-| F1: phone layout not tested | Validate within available tools | Browser phone-width and narrow reflow checks are required for this release. Earlier October 5 Pixel observations remain separately dated; ADB returned no attached device for this pass. Do not convert either AI's desktop inspection into a phone pass. |
+| F1: phone layout not tested | Validate within available tools | Browser phone-width and narrow reflow checks are required for this release. Earlier October 5 Pixel observations remain separately dated; ADB initially returned no device, then the Pixel reconnected for a bounded production smoke check; exact coverage is in the final handoff. Do not convert either AI's desktop inspection into a phone pass. |
 | F2: recorded nature too far from entry | Implement | Home SF CTA now says it browses precomputed experiments and does not launch a new city run. City introduction uses “compare recorded depot experiments”; a visible notice explains the selection controls and separate interactive Model lab. |
 | F3: offline edition not discoverable | Implement as download, not another tab | Footer exposes the preserved 2.4 MB standalone HTML. Packaging copies its exact bytes and sets an attachment filename. Scope text distinguishes core teaching labs/catalog from the hosted film and City Explorer. No synchronization promise. |
 | F4: lab names insufficient | Implement | A four-card homepage chooser gives each teaching model a question, scope and direct route. These independent models do not share SF vehicle recordings. Existing detailed explanations remain. |
