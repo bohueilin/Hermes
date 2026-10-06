@@ -44,7 +44,7 @@ export function mountCityEntry(doc = document) {
     node('p', {}, 'These four teaching models run in your browser. Each has its own assumptions and vehicles; they do not share the San Francisco recordings.'),
     node('div', {class:'lab-guide-grid'}, [
       ['fleet-day','Fleet day','What keeps a fleet available?','Weather, energy and depot work across one day.'],
-      ['street-lab','Street lab','Where do local queues form?','Routing and block-level queues on a teaching grid.'],
+      ['street-lab','Street lab','Where do local queues form?','Routing and block-level queues on sourced streets.'],
       ['experiments','Four-area experiments','Does a policy help across repeats?','Paired dispatch and recall experiments with guardrails.'],
       ['scale-lab','Scale lab','What changes as a fleet grows?','Density, fleet intake and support-pool capacity.'],
     ].map(([path,title,question,detail]) => node('a', {href:`/#/${path}`}, [
