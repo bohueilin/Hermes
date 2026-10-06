@@ -2,12 +2,12 @@
 
 import json
 import resource
-import shutil
 import sys
 from pathlib import Path
 
 from .contracts import decode, digest, load_json, read_bundle, read_bytes, save_json, sha
 from .map_review_v1 import validate_review
+from .public_notes import export_notes, export_worksheet
 from .review_workspace_v1 import candidate_identity
 from .temporal_candidate_v1 import validate
 
@@ -156,17 +156,10 @@ def export(root, out):
             raise FileExistsError("temporal viewer projection already exists")
     for name, value in values.items():
         save_json(out / "data" / name, value)
-    (out / "notes").mkdir(exist_ok=True)
-    shutil.copyfile(
+    export_notes(out)
+    export_worksheet(
         workspace / "inspection-worksheet.csv", out / "notes/sf-temporal-inspection-worksheet.csv"
     )
-    for name in (
-        "FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md",
-        "FLEETLAB_SF_TEMPORAL_RESOURCE_2026-09-30.md",
-        "FLEETLAB_DEPOT_CONNECTOR_CONTRACT_V1.md",
-        "FLEETLAB_SF_DISTRICT_RECONCILIATION_2026-09-30.md",
-    ):
-        shutil.copyfile(root / "docs" / name, out / "notes" / name)
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (
         1 if sys.platform == "darwin" else 1024
     )

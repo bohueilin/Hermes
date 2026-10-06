@@ -1,9 +1,8 @@
 """Bind the published open-obligation view to the frozen reviewer workspace."""
 
-import shutil
-
 from .contracts import digest, load_json, save_json
 from .map_review_v1 import validate_review
+from .public_notes import export_notes, export_worksheet
 from .review_workspace_v1 import candidate_identity
 
 REQUIREMENTS = "b32ab2e295c67c22a820b65b4a9a8fab4b347a2ea3ed230e252b4fabc98d98d8"
@@ -28,25 +27,8 @@ def export_readiness(root, candidate, out):
     envelope = validate_review(workspace / "history.json", requirements, CHECKPOINT, gates)
     save_json(out / "data/sf-review-envelope.json", envelope)
     save_json(out / "data/sf-review-requirements.json", requirements)
-    (out / "notes").mkdir(exist_ok=True)
-    shutil.copyfile(
+    export_notes(out)
+    export_worksheet(
         workspace / "inspection-worksheet.csv", out / "notes/sf-inspection-worksheet.csv"
     )
-    for name in (
-        "FLEETLAB_CONTINUITY_IMPLEMENTATION_V1.md",
-        "FLEETLAB_VEHICLE_CURB_READINESS_V1.md",
-        "FLEETLAB_SF_VALIDATION_SESSION.md",
-        "FLEETLAB_SF_COMPLETION_STATUS_2026-09-29.md",
-        "FLEETLAB_SF_ACCEPTANCE_2026-10-04.md",
-        "FLEETLAB_SF_CLARITY_RELEASE_2026-10-04.md",
-        "FLEETLAB_HANDOFF_2026-10-04.md",
-        "FLEETLAB_SF_DEVICE_ACCEPTANCE_2026-10-04.md",
-        "FLEETLAB_SF_DEVICE_ACCEPTANCE_2026-10-05.md",
-        "FLEETLAB_RESOURCE_SPIKE_PROPOSAL_2026-10-04.md",
-        "FLEETLAB_SF_SOURCE_CLARIFICATION_DRAFT_2026-09-30.md",
-        "FLEETLAB_SF_ADMINISTRATIVE_REPORT_2026-09-30.md",
-        "FLEETLAB_MAP_REVIEW_RESULT_CONTRACT_V1.md",
-        "FLEETLAB_SF_EXECUTIVE_WALKTHROUGH_2026-10-05.md",
-    ):
-        shutil.copyfile(root / "docs" / name, out / "notes" / name)
     return envelope

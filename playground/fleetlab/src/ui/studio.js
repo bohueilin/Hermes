@@ -161,6 +161,7 @@ export function mountStudio(app) {
   const errorText=el('p',{});
   const routeError=el('main',{class:'studio-route-error',hidden:true},[eyebrow('LINK COULD NOT BE LOADED'),el('h1',{},'This setup needs attention.'),errorText,el('p',{},'No simulation was run. Check the complete link and the FleetLab version that created it, or choose a view from the navigation.'),el('button',{type:'button',class:'studio-button','data-action':'recover-route',on:{click:()=>navigate('overview')}},'Open the overview')]);
   const footer=el('footer',{class:'studio-footer'},[
+    el('p',{},'An independent educational project by Bo-Huei Lin. Not affiliated with or endorsed by Waymo, Zoox, or their partners.'),
     el('div',{},[el('strong',{},'FleetLab / Hermes'),el('p',{},'FleetLab is part of Hermes, an independent simulation and evidence-review project. Built with AI assistance. Synthetic models, inspectable assumptions.')]),
     el('nav',{'aria-label':'Footer navigation'},[pageLink('Learning catalog','catalog',navigate),pageLink('Product approach','approach',navigate),pageLink('Guided walkthrough','tour',navigate)]),
     el('span',{},'Simulation for learning and exploration'),
@@ -270,7 +271,7 @@ export function mountStudio(app) {
     }catch(error){
       pause();current='error';if(store.getState().present.on)present.close();
       for(const node of [home,product,operations.element,streets.element,scale.element,catalog.element,workspaceMain,root])node.hidden=true;
-      film.setActive(false);root.setAttribute('inert','');routeError.hidden=false;errorText.textContent=error.message;container.setAttribute('data-page','error');
+      film.setActive(false);root.setAttribute('inert','');routeError.hidden=false;errorText.textContent=typeof error.message==='string'&&error.message.length<=160?error.message:'This link has an invalid setup. Check its format and model version.';container.setAttribute('data-page','error');
       for(const link of navLinks)link.removeAttribute('aria-current');
       focusMain(routeError,'Link could not be loaded');
     }finally{applying=false;}

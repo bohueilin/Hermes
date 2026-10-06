@@ -1,174 +1,113 @@
-# FleetLab: Cloudflare publishing and owner steps
+# FleetLab publication runbook
 
-## Current production — atlas and fleet insights, 29 September 2026
+Updated 6 October 2026. Applies to the static educational FleetLab website.
+Hermes operational deployment permission remains NONE. Historical deployment
+paragraphs and the old playground-only CI template are superseded; do not use them.
 
-City Explorer is live as an additional FleetLab destination. Production is
-`ed4b1d68-3130-4833-9f93-b170c8f3cbb9`, source commit
-`773f36b42b22eae032c4465d6f8af13ea1572c66`.
-Stable address: <https://fleetlab.pages.dev/>; City entry:
-<https://fleetlab.pages.dev/city-explorer/>.
+## Release identity and authority
 
-**The complete current publish directory is
-`build/fleetlab-city/launch-integration-v2/site`, not `dist/site`.**
-`dist/site` is the preserved 99-file established edition used as an integration
-input and full-site rollback artifact. Publishing it alone would omit City
-Explorer. Do not use the historical legacy-only recipe below for a new complete
-release.
+The stable site is https://fleetlab.pages.dev/. Use its `/publication.json`
+for the selected City release, compatible sanitized rollback, offline digest
+and exact source commit. That file records packaging intent, not proof of
+hosting. Compare it with the committed `docs/releases/fleetlab-current.json`
+and run the readback tool to establish which bytes are actually served.
 
-For new changes, build a fresh City viewer and source offer, then use
-`apps/fleetlab-city/tools/integrate-site.py` with the preserved established
-bundle, the new viewer, the previous compatible viewer, the source offer and
-an explicit new output directory. Its final `review/integration-manifest.json`
-is authoritative. Verify all declared original-file exceptions, offline
-preservation, scoped headers, browser routes, source downloads and the actual
-hosting readback before publishing that complete `site` subdirectory.
+The current task explicitly authorizes fixes, Git push and publication of this
+security release. An audit, handoff, successful verifier, Git branch label or
+this runbook never grants authority for a future release. Follow the user's
+actual instruction. Account/credential changes and destructive retention actions
+are separate decisions; no document can authorize them by itself.
 
-The exact current package has 9,937 local files (9,936 served payloads), with
-v6 and prior v5 City viewers. The preview's 9,936 files matched byte-for-byte.
-Production reused all 9,936 uploaded assets. See
-[FleetLab City integration release](FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md)
-for the final live checks, remaining scientific/device limits and rollback.
-Prior production is `b592d5a8-c89c-4b42-99ca-e6d256bd2408` (complete integration v1).
+## Build and verify
 
-The initial large preview upload needed serial 8 MiB batching after connection
-resets; the standard pinned Wrangler completed production using cached assets.
-No website byte, account permission or Pages size limit was changed to retry.
+1. Run the City Python and Node suites, the teaching-lab Node suite and Hermes
+   checks. Run the boundary suite with `FLEET_PLAYGROUND_BASE=bca4ccd`; do not
+   count a missing-base skip as a completed release gate.
+2. Build a new City viewer from the stored recordings. No new simulation arms
+   are needed for interface or publication fixes. Export only the allowlisted
+   public study guides and blank worksheets. Validate both current and rollback.
+3. Build the root teaching site and offline file with `playground/fleetlab/tools/pack.mjs`.
+   Use `integrate-site.py` with the preserved original root and readback, the new
+   City viewer, a sanitized prior viewer, the complete source offer, and new output.
+   The security client update declares exactly three replaced source modules:
+   setup codec, setup sharing and Studio. All other original payloads are preserved.
+4. Commit reviewed source before final integration. Set `--source-commit` to the
+   exact commit. Inspect `review/integration-manifest.json`; package only its `site/`.
+   Never upload the repository, a working directory, or a legacy-only build.
+5. Install the locked deployment tool in `apps/fleetlab-city/deploy` with
+   `npm ci --ignore-scripts`; run `npm audit --omit=dev` and `npm audit signatures`.
+   Also run `npm --prefix apps/fleetlab-city audit --omit=dev` for MapLibre.
+6. Use `node apps/fleetlab-city/deploy/wrangler.mjs pages deploy SITE
+   --project-name fleetlab --branch codex-city-explorer` for preview. The wrapper
+   requires a clean checkout and matching source commit. It verifies exact upstream
+   CLI bytes and generates a separate serial uploader (8 MiB buckets, one concurrent
+   Pages request), preserving upstream authentication and asset validation.
+7. Verify all preview bytes with `tools/readback.py --site SITE --url PREVIEW
+   --output PRIVATE_RESULT`. Verify root/City CSP, attachment headers, a real 404,
+   malformed links, normal navigation, map/replay and phone-width layout.
+8. For the currently authorized production release, use the same command and
+   stage with `--branch feat/fleetlab-playground`. That branch is Cloudflare's
+   production alias; it is not the actual Git source branch.
+9. Repeat full byte/header checks on production. Record deployment IDs, prior
+   production ID, manifest and source identity, tests and residuals privately.
+   Commit the small public digest record only after successful readback.
 
-## What you need to do now
+Wrangler is pinned to 4.148.0. Its image-processing dependency is overridden to
+sharp 0.35.5 for GHSA-wq5f-xc86-pv6w. Image processing is not a visitor feature.
+No unpinned `npx` resolution is part of this recipe. Dependency audits are dated
+observations, not guarantees against unpublished vulnerabilities.
 
-**The audit-response update is live.** As of September 28, 2026, https://fleetlab.pages.dev/
-serves source `e90764a99661a579de3dc976afedc45e7417f49a`, Production
-`f4018c2a-3127-4807-af90-3a4ae0f33faa`, immutable https://f4018c2a.fleetlab.pages.dev/.
-The committed-source export matches the checked package exactly: 99 files / 3,366,216 bytes.
-All 98 public payloads match by bytes and SHA-256 on both addresses, and all six configured
-response headers match. Offline: 2,424,861 bytes. Final full Node suite: 1,972 pass,
-zero fail, one existing TODO; Python parity/boundaries: 89 pass. Earlier timing failures,
-baseline comparison and all measured limitations remain in [CODEX_HANDOFF.md](../CODEX_HANDOFF.md).
+## Before a presentation
 
-The owner explicitly authorized pushing and publishing. Source was pushed without force
-from `codex/fleetlab-welcome-design` to `github/feat/fleetlab-playground`, advancing
-`756c269` to `e90764a` and including the prior welcome commits. No PR or main merge.
-Direct Upload used Wrangler 4.135.0 and production branch metadata `feat/fleetlab-playground`.
-The release-record follow-up changes no deployed input. Rollback target: Production
-`1e1202c9-4fa0-4b46-a5f7-22863b48aafb` (source `347bcfb`), https://1e1202c9.fleetlab.pages.dev/.
-All six Production deployments remain available. Q1 is partly complete; Q8 remains queued.
-N2 remains design-only.
+Run the six-request, secret-free smoke check from repository root:
 
-| Setting | Value |
-|---|---|
-| Repository | `bohueilin/Hermes` |
-| Current release source branch | `github/feat/fleetlab-playground` (built locally on `codex/fleetlab-welcome-design`) |
-| Pages project | `fleetlab` |
-| Upload mode | Direct Upload; no Git provider attached |
-| Current Pages production branch | `feat/fleetlab-playground` |
-| Build working directory | Repository root |
-| Public build folder | `dist/site` |
-| Build tooling | Node.js 22+; Wrangler pinned to `4.135.0` for this release |
-| Website runtime | Static HTML, CSS and JavaScript; no account or backend |
-
-The owner requested the shorter address on September 25 Pacific / September 26 UTC, 2026. Cloudflare Pages cannot rename an existing `pages.dev` hostname, so a new `fleetlab` project initially served the checked application source `345b427`. Its initial Production was `f08b6b6f-c5d0-44f7-905b-5f16087fbc85`, immutable address https://f08b6b6f.fleetlab.pages.dev/. All 88 public payloads matched, response headers were verified, and a browser run reproduced 95/284 completed. The old `fleetlab-playground` project and https://fleetlab-playground.pages.dev/ are preserved for existing links; there is no automatic redirect. Use the new stable address for sharing. [Cloudflare hostname limitation](https://developers.cloudflare.com/pages/platform/known-issues/).
-
-## Historical legacy-only deployment recipe (superseded for complete releases)
-
-Run from your Hermes checkout on the intended release branch. Check `git status --short` first; commit reviewed source changes before publishing. These commands stop on any failure:
-
-```bash
-set -e
-FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs
-node playground/fleetlab/tools/pack.mjs --site dist/site
-node playground/fleetlab/tools/check-dist.mjs --site dist/site
-node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-playground.html
-node playground/fleetlab/tools/check-dist.mjs dist/fleetlab-playground.html
-git diff --check
-npx --yes wrangler@4.135.0 whoami
-FLEETLAB_COMMIT=$(git rev-parse HEAD)
-npx --yes wrangler@4.135.0 pages deploy dist/site \
-  --project-name fleetlab \
-  --branch feat/fleetlab-playground \
-  --commit-hash "$FLEETLAB_COMMIT" \
-  --commit-dirty=false
+```sh
+python apps/fleetlab-city/tools/readback.py --record docs/releases/fleetlab-current.json --url https://fleetlab.pages.dev --output /tmp/fleetlab-smoke.json
 ```
 
-If authentication has expired, run `npx --yes wrangler@4.135.0 login` and complete Cloudflare's sign-in. No token belongs in this repository or in chat. Deploy **`dist/site`**, not `dist`, the source directory or the repository root. The offline HTML is a separate distributable.
+A digest or status mismatch is a failed check, even if the page returns 200.
+This is an on-demand tool; no recurring monitor or telemetry was enabled.
 
-After upload, open the stable address in a fresh browser tab. Check the title, Overview film playback and pause, Fleet day, **Run fleet day**, a selected vehicle's next activity, **Street lab → Largest queue → Compare route policies**, and Product approach. Leaving Overview must pause the film. Exercise the [depot lesson recipes](FLEETLAB_DEPOT_M2_M3.md) and [launch rehearsal](FLEETLAB_DEPOT_LAUNCH.md), including stale edits and one-seed labeling; run the separate regional comparison. Confirm the Pages deployment source hash matches the reviewed Git commit. Compare every public file against the local package; request `/` for `index.html`, since Pages redirects the explicit filename. Verify response security headers separately from the package's `_headers` file.
+## Privacy and account controls
 
-The offline HTML is a behavior-equivalent build with eligible full-line comments removed, not a byte-faithful concatenation of the source. Each rendered module must retain identical raw tokens and line terminators and compile before and after stripping; fixed-seed worker payload parity and packed-page initialization are tested. Inline comments, template contents and license/preservation/source-map directives remain intact. Native `--site` files retain their source bytes.
+The local common Git exclude file covers Wrangler caches and private notes.
+The publication guard checks staged additions and every outgoing commit for
+forbidden paths and credential/home-directory patterns. Local hooks are a backstop,
+not an authentication mechanism; do not bypass failures. Never print token values.
 
-The homepage film and poster are included automatically by the static packer. No video account, API key or Cloudflare Stream setup is needed. The packer enforces a 4 MiB movie limit, 200 KiB poster limit and separate 2.5 MiB application limit. The offline file embeds the poster and retains all simulation tools. Re-rendering is optional: the checked-in MP4 and WebP are the publication inputs; Blender is an authoring tool outside the website build.
+Owner follow-up: confirm Cloudflare/GitHub 2FA, audit logs and account membership;
+replace broad cached OAuth with an expiring, account-restricted Pages Edit token
+held outside the repository. Keep credentials out of agent context and rotate/revoke
+old grants after validating the replacement. These account settings were not changed
+or independently certified by this release. Shared Hermes CI/branch protections
+need a separate repository-policy change; no workflow deployment secret was added.
 
-Direct Upload supports Wrangler folder uploads. The existing project cannot be converted to native Git integration; a new project would be needed for that route. Keeping this project preserves its current address. [Cloudflare Direct Upload documentation](https://developers.cloudflare.com/pages/get-started/direct-upload/)
+For a lost or compromised workstation: use a trusted device to revoke Cloudflare
+OAuth/API grants, end affected sessions, revoke GitHub tokens/SSH access, review
+account audit logs, restore a verified package, and rerun readback. A timed owner
+rehearsal and a 30-minute response target remain unverified.
 
-## Optional: use your own domain
+## Rollback and retained content
 
-Only do this if you want a branded address; the Pages address already works.
+Use the sanitized compatible viewer named in the current integration manifest for
+City-only rollback, rehearsed on a separate local copy. For a whole-site rollback,
+Cloudflare's Deployments page can select a previous production deployment, but older
+packages may reintroduce the issues fixed here. Prefer redeploying a checked sanitized
+package; never silently substitute a legacy-only build. Record the selected source
+and compare all bytes and headers after any rollback.
 
-1. Choose an unused subdomain you own, such as `fleetlab.yourdomain.com`.
-2. Open **Cloudflare dashboard → Workers & Pages → fleetlab → Custom domains → Set up a domain**.
-3. Enter that exact subdomain and continue.
-4. If Cloudflare manages the domain, review and confirm its proposed DNS record. Otherwise, add a `CNAME` at your DNS provider: your chosen subdomain → `fleetlab.pages.dev`.
-5. Wait for the custom domain to show **Active**, then test its HTTPS address in a private browser.
+No historical deployment was deleted and the separate legacy project was not
+redirected in this release. Inventory and approve a specific retention set before
+those actions. Old immutable hosts remain independently reachable. Cloudflare's
+[asset retention documentation](https://developers.cloudflare.com/pages/configuration/serving-pages/#asset-retention)
+says removed assets can remain at an edge for up to one week. A 600-second browser
+cache directive does not provide a ten-minute takedown guarantee. Check both the
+current immutable host and stable alias when validating removed paths.
 
-Associate the domain inside Pages before adding external DNS. Avoid replacing a record already used by another site. An apex domain requires Cloudflare nameservers; an unused subdomain is the smaller change. [Cloudflare custom-domain instructions](https://developers.cloudflare.com/pages/configuration/custom-domains/)
+## Hosting trade-offs retained
 
-## Optional: automate future releases through GitHub
-
-This release uses an explicit local upload. Pushing GitHub alone does **not** update this Direct Upload project.
-
-1. In Cloudflare, open **API Tokens → Create Token → Custom Token**. Name it `Hermes FleetLab deploy`; grant **Account → Cloudflare Pages → Edit**, restricted to the account containing this project. Set an expiry appropriate to your release process.
-2. In `bohueilin/Hermes`, open **Settings → Secrets and variables → Actions**. Add `CLOUDFLARE_API_TOKEN` as a secret and `CLOUDFLARE_ACCOUNT_ID` as a variable, copied from your project account. Never commit the token.
-3. Add a dedicated FleetLab workflow after reviewing the repository boundary-contract change. Use the template below; keep the Python CI independent. No workflow or credential is created by this document.
-
-Cloudflare documents Pages token scope and GitHub secret setup in its [continuous-integration guide](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/).
-
-Suggested `.github/workflows/fleetlab-pages.yml` for a **future reviewed change**:
-
-```yaml
-name: FleetLab Pages
-on:
-  push:
-    branches: [feat/fleetlab-playground]
-    paths:
-      - 'playground/fleetlab/**'
-      - 'tests/fixtures/fleet_playground/**'
-      - '.github/workflows/fleetlab-pages.yml'
-permissions:
-  contents: read
-concurrency:
-  group: fleetlab-production
-  cancel-in-progress: false
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Test and build
-        run: |
-          node --test playground/fleetlab/test/*.test.mjs
-          node playground/fleetlab/tools/pack.mjs --site dist/site
-          node playground/fleetlab/tools/check-dist.mjs --site dist/site
-      - name: Publish checked static files
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-        run: >-
-          npx --yes wrangler@4.135.0 pages deploy dist/site
-          --project-name fleetlab
-          --branch feat/fleetlab-playground
-          --commit-hash "$GITHUB_SHA"
-          --commit-dirty=false
-```
-
-The current boundary suite freezes `.github` relative to the playground base. A future automation PR must explicitly allow only this isolated workflow and preserve the existing Python CI checks. After main integration, change the trigger and Pages production-branch mapping together. Do not enable deployment on untrusted pull-request code or expose deployment secrets to it.
-
-## Roll back a release
-
-As of September 28, 2026 the `fleetlab` project holds six Production deployments: `f4018c2a` (current, source `e90764a`), `1e1202c9` (source `347bcfb`, the rollback target), `77922688` (source `1aeaace`), `19e17ac6`, `dd4bfa44` and `f08b6b6f`. Historical deployments in `fleetlab-playground` belong to a different project and are not rollback targets here. To roll back, open **Workers & Pages → fleetlab → Deployments**, open the previous successful **Production** deployment's three-dot menu and choose **Rollback to this deployment**. Verify all public files and response headers on the stable address afterward. Preview deployments are not rollback targets. This changes the served version without rewriting Git history. [Cloudflare rollback documentation](https://developers.cloudflare.com/pages/configuration/rollbacks/)
-
-## Published scope
-
-The public bundle includes only the static playground, its attributed map extracts, and two original film/poster media files. Hermes evidence files, render frames, Blender source scenes, local server tools, credentials and the optional Google Maps traffic companion are outside the upload. The page has no analytics, persistence or external data requests. Google traffic requires separate billing/key configuration and an architecture review before any public integration; it is not active in this release.
+Public static CORS, the existing chart style policy and the .dev transport posture
+remain. No user accounts, runtime AI, API, remote simulation, analytics, cookies or
+visitor storage were added. Cloudflare receives hosting requests and may receive
+browser network-error reports. No automation or branch protection was enabled by
+copying the former CI template; that template has been removed.

@@ -6,7 +6,7 @@ import { mountQualification } from './qualification.mjs';
 import { mountModelLessons } from './model-lessons.mjs';
 import { renderStoppedStudy } from './study-status.mjs';
 import { mountQualificationProgress } from './qualification-progress.mjs';
-import { formatMetric as fmt, safeDataPath, validateCatalog, completionContext, comparisonRows, pairLesson, inspectRepeat, requestGate, violationLabel } from './view-model.mjs';
+import { cityView, formatMetric as fmt, safeDataPath, validateCatalog, completionContext, comparisonRows, pairLesson, inspectRepeat, requestGate, violationLabel } from './view-model.mjs';
 const $ = id => document.getElementById(id);
 let catalog, roads, geometry, comparison, map, replay, mask = 'support', currentView = 'welcome', atlasVersion = 'recorded', studies;
 const notices = $('load-state');
@@ -17,7 +17,7 @@ function element(tag, text, className) { const e = document.createElement(tag); 
 titles.models = modelTitle;
 function notice(text, error = false) { notices.textContent = text; notices.hidden = !text; notices.setAttribute('role', error ? 'alert' : 'status'); }
 function show(view, focus = true) {
-  if (!titles[view]) return;
+  view = cityView(view);
   currentView = view; replay?.pause();
   document.body.dataset.view = view;
   for (const e of document.querySelectorAll('.view')) e.hidden = e.id !== `${view}-view`;
@@ -94,8 +94,8 @@ async function changeMask(next) {
 }
 document.querySelector('.brand').addEventListener('click', () => show('welcome'));
 window.addEventListener('hashchange', () => {
-  const view = location.hash.slice(1);
-  if (titles[view] && view !== currentView) show(view, false);
+  const view = cityView(location.hash.slice(1));
+  if (view !== currentView) show(view, false);
 });
 for (const button of document.querySelectorAll('button[data-view]')) button.addEventListener('click', () => show(button.dataset.view));
 $('coverage-details').addEventListener('click', () => show('limits'));
@@ -105,7 +105,7 @@ $('flat-toggle').onclick=()=>{map?.useFlat();$('flat-toggle').textContent='Flat 
 $('atlas-arm').onchange=()=>map?.setSites(catalog.sites.filter(s=>$('atlas-arm').value==='candidate'||s.id==='A'));
 $('export-spec').addEventListener('click', async () => { try { const selected=catalog.studies?.find(s=>s.id===$('study-select').value); const data = await readData(selected?.protocol_file??'data/scenario.json'); const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })); const a = element('a'); a.href = url; a.download = 'fleetlab-sf-depots-v1.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch (e) { notice(e.message, true); } });
 mountVehicleConcepts($('vehicle-concepts'));
-show(titles[location.hash.slice(1)]?location.hash.slice(1):'welcome', false);
+show(cityView(location.hash.slice(1)), false);
 try {
   const response = await fetch('./data/catalog.json', { cache: 'no-cache' });
   if (!response.ok) throw new Error('City catalogue is unavailable');
@@ -142,5 +142,5 @@ try {
     $('map').scrollIntoView({block:'center',behavior:'instant'});
   }}).catch(e=>{$('candidate-intro').textContent='Candidate qualification data unavailable. Recorded experiment remains inspectable.';notice(e.message,true);});
   notice('Simulation study: source accounting is complete; routing and district qualification remain open. Results are diagnostic, with no city recommendation.');
-  show(titles[location.hash.slice(1)]?location.hash.slice(1):'welcome', false);
+  show(cityView(location.hash.slice(1)), false);
 } catch (error) { notice(`${error.message}. This snapshot could not be loaded safely.`, true); $('map').replaceChildren(element('p', 'The selected city data is unavailable. No alternate city or snapshot has been substituted.', 'fatal')); }

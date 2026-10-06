@@ -310,6 +310,10 @@ def build_viewer(
         "analytics": False,
         "accounts": False,
         "storage": False,
+        "hosting_disclosure": (
+            "The app has no analytics. Cloudflare receives hosting requests "
+            "and may receive browser network-error reports."
+        ),
         "range": "Single byte ranges; original representation, no gzip for Range",
         "data_integrity": (
             "SHA-256/size checked against catalogue; internal consistency, not authenticity"
@@ -334,6 +338,11 @@ def build_viewer(
             "pair_compressed_bytes": pair_bytes,
             "rollback_unit": "viewer + compatible manifest + city pack + run/metric schema",
             "public_deployment": "NOT_PERFORMED",
+            "publication_semantics": (
+                "Build-time state only. REVIEW_ONLY describes educational "
+                "evidence scope, not website visibility. See /publication.json "
+                "for the hosting selection; it grants no operational authority."
+            ),
         },
     )
     return check_dist(out)

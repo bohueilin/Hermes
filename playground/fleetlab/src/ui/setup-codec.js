@@ -69,6 +69,7 @@ function checkedCopy(value) {
     const descriptors = Object.getOwnPropertyDescriptors(item), out = array ? [] : {};
     for (const key of Reflect.ownKeys(descriptors)) {
       if (typeof key !== 'string' || DANGEROUS.has(key)) fail('Setup contains a dangerous object key.');
+      if (key.length > MAX_STRING) fail('Setup object key length exceeds the limit.');
       if (array && key === 'length') continue;
       const d = descriptors[key];
       if (!Object.hasOwn(d, 'value') || !d.enumerable) fail('Setup requires plain data properties; accessors are unsupported.');
@@ -83,7 +84,7 @@ function checkedCopy(value) {
 
 function keys(value, required, optional = [], path = 'setup') {
   if (!object(value)) fail(`${path} must be an object.`);
-  for (const key of Object.keys(value)) if (!required.includes(key) && !optional.includes(key)) fail(`Unknown ${path} field: ${key}.`);
+  for (const key of Object.keys(value)) if (!required.includes(key) && !optional.includes(key)) fail(`Unknown ${path} field.`);
   for (const key of required) if (!Object.hasOwn(value, key)) fail(`Missing ${path} field: ${key}.`);
 }
 
@@ -99,7 +100,9 @@ function shape(value, template, path) {
 }
 
 function producerIssues(errors) {
-  if (errors.length) fail(`Invalid setup: ${errors.map(e => typeof e === 'string' ? e : e.what).join(' ')}`);
+  // Producer diagnostics may include supplied field names or values. Keep those
+  // diagnostics local to model editing; shared links get a fixed public error.
+  if (errors.length) fail('Invalid setup values. Check the model configuration and supported fields.');
 }
 
 function launchPrivacy(value) {

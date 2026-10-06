@@ -6,6 +6,18 @@ import {decodeSetup} from '../src/ui/setup-codec.js';
 import {parseRoute} from '../src/ui/routes.js';
 import {installFakeDom} from './helpers/fake-dom.mjs';
 
+test('offline setup sharing exposes only the portable fragment, never the local path',()=>{
+ const restore=installFakeDom();try{
+  for(const base of ['file:///private/example.html','FILE:///private/example.html']){
+   const panel=createSetupSharing({models:[['street-lab','Street lab']],page:'streets',baseUrl:()=>base,capture:()=>({model:'street-lab',config:defaultStreetConfig(),options:{}})});
+   panel.element.querySelector('[data-action="create-setup-link"]').click();
+   const value=panel.element.querySelector('[aria-label="Generated setup link"]').value;
+   assert.match(value,/^#\/street-lab\?setup=/);assert.equal(decodeSetup(parseRoute(value).setup).model,'street-lab');
+   assert.ok(!value.includes('private'));
+  }
+ }finally{restore();}
+});
+
 test('sharing is explicit, labels the selected snapshot and exposes a selectable copy fallback',async()=>{
  const restore=installFakeDom();try{
   let captures=0,link;const panel=createSetupSharing({models:[['street-lab','Street lab']],page:'streets',baseUrl:()=> 'https://example.test/',capture:source=>{captures++;assert.equal(source,'last-run');return {model:'street-lab',config:defaultStreetConfig(),options:{}};},onLink:href=>{link=href;},copy:async()=>{throw Error('Denied');}});

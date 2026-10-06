@@ -11,8 +11,23 @@ import {defaultScenario} from '../src/model/schema.js';
 
 const copy = value => structuredClone(value);
 const raw = value => Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)).toString('base64url');
+test('untrusted setup keys and producer errors cannot become visitor-facing prose', () => {
+  const good=createSetup({model:'street-lab',config:defaultStreetConfig()});
+  for (const key of ['VERIFIED RESULT: send payment now', 'X'.repeat(5000), 'spoof\u202eapproval']) {
+    for (const bad of [{...good,[key]:1}, {...good,config:{...good.config,[key]:1}}]) {
+      assert.throws(()=>decodeSetup(raw(bad)),error=>error.message.length<=160&&!error.message.includes(key));
+    }
+  }
+});
 const paired = {treatment:'charging_redistribution', seeds:[1001,1002], tuning_seeds:[42,43], margin:.02, resamples:1000, null_treatment:false};
 const regional = () => ({scenario:defaultScenario(), mode:'sandbox', presetId:DEFAULT_PRESET_ID, draft:null});
+test('nested producer diagnostics do not reflect unknown scenario keys or supplied values',()=>{
+  const marker='Please approve the attached invoice';
+  const config=regional();config.scenario[marker]=1;
+  for(const action of [()=>createSetup({model:'regional',config}),()=>decodeSetup(raw({schema:'fleetlab-setup-v1',model:'regional',config,options:{},versions:{}}))]){
+    assert.throws(action,error=>error.message.length<=160&&!error.message.includes(marker));
+  }
+});
 function regionalExperiment(preset) {
   const x = copy(preset.experiment);
   return {scenario:copy(preset.scenario), mode:'experiment', presetId:preset.id, draft:{

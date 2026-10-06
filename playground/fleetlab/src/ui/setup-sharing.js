@@ -30,7 +30,8 @@ export function createSetupSharing({models,page,capture,onLink=()=>{},baseUrl=()
    const setup=createSetup(capture(source.value,model.value));
    download.setAttribute('href','data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(setup,null,2)));
    const href=routeHref({page:typeof page==='function'?page(setup):page,setup:encodeSetup(setup)});
-   url.value=baseUrl()+href;output.hidden=false;copyButton.hidden=false;url.hidden=false;
+   const base=baseUrl();
+   url.value=(/^file:/i.test(base)?'':base)+href;output.hidden=false;copyButton.hidden=false;url.hidden=false;
    const label=source.options[source.selectedIndex]?.textContent??source.value;
    status.textContent=`${label} captured. This link preserves this snapshot, not later edits. Simulation only · NOT_EVIDENCE · authority NONE.`;
    onLink(href);

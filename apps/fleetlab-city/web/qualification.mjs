@@ -53,7 +53,7 @@ export async function mountQualification({readData, setVersion, showGap, notice,
   }
   $('candidate-identity').textContent = `Candidate graph: ${report.candidate_graph_digest}. Original pack: ${report.baseline_pack_digest}. Official district variants researched: ${research.datasets.map(x=>x.dataset).join(', ')}. Hashes establish internal consistency, not authenticity.`;
   if(temporal) {
-    for(const [label,path] of [['Current temporal evidence','data/temporal-summary.json'],['Current source-review checklist','data/temporal-human-review.json'],['Full district-source research','notes/FLEETLAB_SF_DISTRICT_RECONCILIATION_2026-09-30.md']]) {
+    for(const [label,path] of [['Current temporal evidence','data/temporal-summary.json'],['Current source-review checklist','data/temporal-human-review.json'],['District-source methods','notes/SF-METHODS.md']]) {
       const link=node('a',label+' ↗');link.href=path;link.className='text-button';$('qualification-downloads').prepend(link);
     }
     $('candidate-identity').textContent=`Time-aware graph: ${temporal.candidate.graph}. Earlier static graph: ${report.candidate_graph_digest}. Original replay remains SF v1. Full temporal rules are included in its graph identity; hashes do not authenticate sources.`;

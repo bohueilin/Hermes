@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sampleAt, formatMetric, validateCatalog, safeDataPath, comparisonRows } from '../web/view-model.mjs';
+import { cityView } from '../web/view-model.mjs';
+test('city routes reject prototype keys, alternate encodings and unknown views',()=>{
+  for(const view of ['constructor','__proto__','toString','valueOf','hasOwnProperty','%63onstructor','%5F%5Fproto%5F%5F','','missing',null])assert.equal(cityView(view),'welcome');
+  for(const view of ['welcome','atlas','compare','replay','limits','models'])assert.equal(cityView(view),view);
+});
 test('missing evidence never formats as zero',()=>{
   assert.equal(formatMetric(null),'Not available');
   assert.equal(formatMetric(undefined),'Not available');

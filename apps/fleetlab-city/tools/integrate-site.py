@@ -17,6 +17,7 @@ launch = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(launch)
 ASSETS = Path(__file__).resolve().parents[1] / "hosted"
 EXCEPTIONS = frozenset(("index.html", "boot.js", "_headers"))
+CLIENT_FIXES = frozenset(("src/ui/setup-codec.js", "src/ui/setup-sharing.js", "src/ui/studio.js"))
 
 
 def check_temporal_offer(release, offered, offer):
@@ -59,19 +60,32 @@ def check_temporal_offer(release, offered, offer):
                 raise ValueError("temporal source offer constituent bytes mismatch")
 
 
-def check_preservation(before, after):
+def check_preservation(before, after, client_update=False):
     changed = {name for name, record in before.items() if after.get(name) != record}
-    if changed - EXCEPTIONS or any(name not in after for name in before):
+    allowed = EXCEPTIONS | (CLIENT_FIXES if client_update else frozenset())
+    if changed - allowed or any(name not in after for name in before):
         raise ValueError(f"unexpected established file changes: {sorted(changed)}")
     return sorted(changed)
 
 
-def integrate(legacy, viewer, previous, offer, out, offline, readback=None):
+def integrate(
+    legacy,
+    viewer,
+    previous,
+    offer,
+    out,
+    offline,
+    readback=None,
+    client_update=None,
+    source_commit=None,
+):
     legacy, viewer, previous, offer, out, offline = map(
         Path, (legacy, viewer, previous, offer, out, offline)
     )
     if out.exists():
         raise ValueError("output already exists")
+    if source_commit and not client_update:
+        raise ValueError("a source-identified release requires the reviewed security client update")
     offer_files = launch.inventory(offer)
     offer_manifest = json.loads((offer / "manifest.json").read_text())
     if offer_manifest.get("files") != {
@@ -100,11 +114,42 @@ def integrate(legacy, viewer, previous, offer, out, offline, readback=None):
         (site / "boot.js").write_text(
             'import { mountCityEntry } from "./integration.mjs";\n' + boot + "\nmountCityEntry();\n"
         )
-        (site / "index.html").write_text(
-            index.replace(marker, marker + '\n<link rel="stylesheet" href="./integration.css">')
+        intro = (
+            '<section aria-label="About FleetLab"><h1>FleetLab: test fleet '
+            "decisions in simulation</h1>"
+            "<p>Independent educational software by Bo-Huei Lin. Explore Fleet day, Street lab, "
+            'paired experiments and the <a href="/city-explorer/">San '
+            "Francisco City Explorer</a>.</p>"
+            "<p>Synthetic operations; map qualification remains open. Not affiliated with or "
+            "endorsed by Waymo, Zoox, or their partners. No operational authority.</p></section>"
         )
+        hosted_index = index.replace(
+            marker, marker + '\n<link rel="stylesheet" href="./integration.css">'
+        )
+        hosted_index = hosted_index.replace(
+            "</head>",
+            '<link rel="canonical" href="https://fleetlab.pages.dev/">'
+            '<meta property="og:url" content="https://fleetlab.pages.dev/">'
+            '<meta property="og:site_name" content="FleetLab"><meta '
+            'name="author" content="Bo-Huei Lin"></head>',
+        )
+        hosted_index = hosted_index.replace(
+            '<div id="fleetlab-teaching-strip"', intro + '<div id="fleetlab-teaching-strip"'
+        )
+        (site / "index.html").write_text(hosted_index)
+        if client_update:
+            updates = launch.inventory(Path(client_update))
+            for name in CLIENT_FIXES:
+                if name not in established or name not in updates:
+                    raise ValueError("security client update missing expected module")
+                reviewed = launch.ROOT / "playground/fleetlab" / name
+                if launch.sha_file(reviewed) != updates[name]["sha256"]:
+                    raise ValueError("security client update differs from reviewed source")
+                shutil.copyfile(Path(client_update) / name, site / name)
         shutil.copyfile(review / "_headers.candidate", site / "_headers")
         for name in ("integration.mjs", "integration.css"):
+            shutil.copyfile(ASSETS / name, site / name)
+        for name in ("404.html", "not-found.css"):
             shutil.copyfile(ASSETS / name, site / name)
         offline_path = "downloads/fleetlab-offline.html"
         offline_url = "/downloads/fleetlab-offline"
@@ -112,19 +157,51 @@ def integrate(legacy, viewer, previous, offer, out, offline, readback=None):
         shutil.copyfile(offline, site / offline_path)
         if launch.sha_file(site / offline_path) != offline_before:
             raise ValueError("offline download copy integrity mismatch")
+        (site / "downloads/fleetlab-offline.sha256").write_text(
+            f"{offline_before}  fleetlab-offline.html\n"
+        )
+        (site / "downloads/verify-offline.txt").write_text(
+            "FleetLab offline edition — download verification\n\n"
+            f"SHA-256: {offline_before}\n"
+            "macOS/Linux: shasum -a 256 fleetlab-offline.html\n"
+            "Windows PowerShell: Get-FileHash .\\fleetlab-offline.html -Algorithm SHA256\n\n"
+            "Compare the full digest before opening. This detects corruption "
+            "against this website's "
+            "published copy, not independent authenticity. The offline file "
+            "excludes City Explorer.\n"
+        )
         with (site / "_headers").open("a") as headers:
             # Pages redirects named .html files to an extensionless canonical URL.
             # Apply the attachment contract to both the redirect and its destination.
             headers.write(
-                '\n/downloads/fleetlab-offline.html\n'
+                "\n/downloads/fleetlab-offline.html\n"
                 '  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'
-                '\n/downloads/fleetlab-offline\n'
+                "\n/downloads/fleetlab-offline\n"
                 '  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'
             )
         launch.safe_copy(offer, site / "city-explorer/sources", offer_files)
+        launch.write_json(
+            site / "publication.json",
+            {
+                "schema": "fleetlab.publication-selection/1.0.0",
+                "source_commit": source_commit,
+                "current": report["current"],
+                "rollback": report["rollback"],
+                "offline_sha256": offline_before,
+                "scope": "EDUCATIONAL_WEBSITE",
+                "authenticity": "NOT_AUTHENTICATED",
+                "sf_qualification": "HOLD",
+                "operational_deployment_permission": "NONE",
+                "meaning": (
+                    "Packaging selection, not proof of successful hosting. "
+                    "release.json records build-time state. Verify served bytes with "
+                    "the release readback tool."
+                ),
+            },
+        )
         final = launch.inventory(site)
-        changed = check_preservation(established, final)
-        if set(changed) != EXCEPTIONS:
+        changed = check_preservation(established, final, bool(client_update))
+        if set(changed) != EXCEPTIONS | (CLIENT_FIXES if client_update else frozenset()):
             raise ValueError("declared integration changes incomplete")
         if launch.inventory(legacy) != established or launch.sha_file(offline) != offline_before:
             raise ValueError("input distribution changed during integration")
@@ -165,6 +242,14 @@ def main():
     for name in ("legacy", "viewer", "previous", "offer", "out", "offline"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--readback", type=Path)
+    parser.add_argument(
+        "--client-update",
+        type=Path,
+        help="Reviewed rebuilt teaching site; only the three declared security modules are copied",
+    )
+    parser.add_argument(
+        "--source-commit", help="Exact reviewed source commit for public build identification"
+    )
     args = parser.parse_args()
     report = integrate(**vars(args))
     print(

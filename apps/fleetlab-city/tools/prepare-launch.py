@@ -8,10 +8,14 @@ import json
 import os
 import shutil
 import stat
+import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from citylib.public_notes import verify_notes  # noqa: E402
+
 PAGES_FILE_LIMIT = 25 * 1024 * 1024
 PAGES_FREE_FILE_LIMIT = 20_000
 LEGACY_FILES = 99
@@ -91,6 +95,7 @@ def verify_legacy(root, readback=None):
 
 
 def verify_viewer(root, role):
+    verify_notes(root)
     files = inventory(root)
     if "release.json" not in files:
         raise ValueError(f"{role} release.json missing")

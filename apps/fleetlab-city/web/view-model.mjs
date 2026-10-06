@@ -175,3 +175,7 @@ export function validateRecording(data, fleet, record, vehicle) {
     if(JSON.stringify(data.sites)!==JSON.stringify(record.sites)||data.layout!==record.layout||data.total_power_kw!==record.total_power_kw||JSON.stringify(data.energy)!==JSON.stringify(record.energy))throw new Error('Selected configuration resources are incompatible');
   }
 }
+/** Hashes select only known views; Object prototype names are never routes. */
+export function cityView(value) {
+  return ['welcome', 'atlas', 'compare', 'replay', 'limits', 'models'].includes(value) ? value : 'welcome';
+}

@@ -66,6 +66,8 @@ export function mountCityEntry(doc = document) {
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'offline-edition'}, [
     node('div', {}, [node('strong', {}, 'Take the teaching labs with you.'), node('p', {}, 'Save the single HTML file, then open it in a browser. Includes the core teaching labs and catalog. The SF map and recordings, hosted film and later City Explorer lessons are not included; there is no sync with the hosted site.')]),
     node('a', {href:'/downloads/fleetlab-offline', download:'fleetlab-offline.html'}, 'Download offline edition · 2.4 MB ↓'),
+    node('a', {href:'/downloads/verify-offline.txt'}, 'Verify the download · SHA-256'),
+    node('p', {}, 'No app analytics. Cloudflare receives hosting requests and may receive browser network-error reports.'),
   ]));
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'owner-contact'}, [
     node('span', {}, 'Built by Bo-Huei Lin · Ideas, questions or collaboration?'),

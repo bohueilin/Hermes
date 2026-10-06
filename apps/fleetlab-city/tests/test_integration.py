@@ -63,12 +63,14 @@ class IntegrationTest(unittest.TestCase):
         self.assertEqual(report["offline_download"]["url"], "/downloads/fleetlab-offline")
         headers = (site / "_headers").read_text()
         self.assertIn(
-            '/downloads/fleetlab-offline.html\n'
-            '  Content-Disposition: attachment; filename="fleetlab-offline.html"', headers
+            "/downloads/fleetlab-offline.html\n"
+            '  Content-Disposition: attachment; filename="fleetlab-offline.html"',
+            headers,
         )
         self.assertIn(
-            '/downloads/fleetlab-offline\n'
-            '  Content-Disposition: attachment; filename="fleetlab-offline.html"', headers
+            "/downloads/fleetlab-offline\n"
+            '  Content-Disposition: attachment; filename="fleetlab-offline.html"',
+            headers,
         )
         for name in report["preserved_existing"]:
             self.assertEqual((site / name).read_bytes(), (self.legacy / name).read_bytes())
@@ -82,6 +84,19 @@ class IntegrationTest(unittest.TestCase):
         (self.legacy / "original-0.txt").write_text("unexpected replacement")
         with self.assertRaisesRegex(ValueError, "unexpected established"):
             integration.check_preservation(before, launch.inventory(self.legacy))
+
+    def test_source_identified_release_cannot_omit_client_security_update(self):
+        with self.assertRaisesRegex(ValueError, "security client update"):
+            integration.integrate(
+                self.legacy,
+                self.viewer,
+                self.prior,
+                self.offer,
+                self.base / "out",
+                self.offline,
+                source_commit="a" * 40,
+            )
+        self.assertFalse((self.base / "out").exists())
 
     def test_source_offer_tamper_is_rejected_without_partial_output(self):
         (self.offer / "database.tar.gz").write_text("changed")

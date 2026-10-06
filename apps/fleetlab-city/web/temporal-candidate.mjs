@@ -38,8 +38,8 @@ export function mountTemporalProgress(host, data) {
   for(const [label,path] of [
     ['Current inspection worksheet ↓','notes/sf-temporal-inspection-worksheet.csv'],
     ['Frozen requirements ↗','data/temporal-review-requirements.json'],
-    ['Engineering record ↗','notes/FLEETLAB_SF_TEMPORAL_RESOURCE_2026-09-30.md'],
-    ['Map package & handoff ↗','notes/FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md'],
+    ['Engineering record ↗','notes/SF-METHODS.md'],
+    ['Study context & review ↗','notes/SF-REVIEW.md'],
     ['Complete map sources ↗','/city-explorer/sources/'],
   ]) {const a=n('a',label,'text-button');a.href=path;if(path.endsWith('.csv'))a.download='sf-temporal-inspection-worksheet.csv';links.append(a);}host.append(links);
 }
