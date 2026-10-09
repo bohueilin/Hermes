@@ -23,24 +23,17 @@ const action = (text, fn, primary = false) => el("button", { type:"button",class
 const pageLink=(text,page,navigate,primary=false)=>el('a',{href:routeHref({page}),class:primary?'studio-button studio-button-primary':'studio-button',on:{click:event=>followLink(event,()=>navigate(page))}},text);
 const eyebrow = (text) => el("p",{class:"eyebrow"},text);
 
-function decisionCard({number,category,title,text,measure,cta,target},navigate) {
-  return el("article",{class:"decision-card"},[
-    el("div",{class:"card-top"},[eyebrow(category),el("span",{class:"card-number"},number)]),
-    el("h3",{},title),el("p",{},text),el("p",{class:"card-measure"},[el("span",{},"WATCH"),measure]),
-    pageLink(cta,target,navigate),
-  ]);
-}
-
-function overview(navigate, film) {
+function overview(navigate, visit, film) {
   film.element.appendChild(el("span",{class:"film-illustration-label"},"Concept illustration · not simulation output"));
+  const first={page:"flows",lesson:"two-vehicles"};
   return el("main",{class:"studio-overview",id:"studio-overview"},[
     el("section",{class:"studio-film-hero"},[
       el("div",{class:"film-copy"},[
-        eyebrow("AN INSPECTABLE FLEET SIMULATOR"),
-        el("h1",{},["Test fleet decisions.",el("span",{},"In simulation.")]),
-        el("p",{class:"film-lede"},"FleetLab is a browser-based teaching simulator for autonomous-vehicle fleet operations. Run a synthetic fleet day, change one constraint, and inspect the trade-offs."),
-        el("div",{class:"hero-actions"},[pageLink("Start with a fleet day  →","simulation",navigate,true),pageLink("Open the Scale lab  →","scale",navigate)]),
-        el("p",{class:"hero-duration"},"Start in three minutes · No account needed"),
+        eyebrow("INTERACTIVE FLEET SIMULATIONS"),
+        el("h1",{},"See what keeps a fleet moving."),
+        el("p",{class:"film-lede"},"Try small simulations of trips, charging and depot work. Change one decision, follow what happens, and see the trade-offs."),
+        el("div",{class:"hero-actions"},[el("a",{href:routeHref(first),class:"studio-button studio-button-primary",on:{click:event=>followLink(event,()=>visit(first))}},"Try a 3-minute experiment  →"),pageLink("Explore all lessons","catalog",navigate)]),
+        el("p",{class:"hero-duration"},"About three minutes · No account needed · Nothing runs until you press Run"),
         el("div",{class:"welcome-boundary"},[el("strong",{},"Synthetic teaching simulator"),el("span",{},"NOT_EVIDENCE · simulation only · decision authority NONE")]),
       ]),
       el("div",{class:"welcome-visual"},[
@@ -53,39 +46,14 @@ function overview(navigate, film) {
       el("p",{},[el("strong",{},"Original 3D concept film"),"Waterfront travel, a neighborhood and a charging depot connect the ride to fleet readiness. An illustration, not a simulation result."]),
       el("p",{class:"creator-credit"},"Independent exploration. Built with curiosity."),
     ]),
-    el("section",{class:"loop-section","aria-label":"Three-minute demo"},[
-      el("div",{class:"demo-heading"},[el("div",{},[eyebrow("HOW TO TRY IT"),el("h2",{},"Your first three minutes.")]),pageLink("Run a fleet day  →","simulation",navigate,true)]),
-      el("ol",{class:"decision-loop"},[
-        ["01 / RUN","Start with the default fleet.","Open Fleet day and run the default scenario. Watch trips and depot activity unfold across the Bay Area."],
-        ["02 / INSPECT","Follow one vehicle.","Pick an AV. Inspect its trips, battery and depot work, then connect its day to the fleet outcomes."],
-        ["03 / EXPLORE","Change one constraint.","Try a different fleet size or depot capacity and run again. Read completed trips alongside queues and energy."],
-      ].map(([n,title,text])=>el("li",{},[el("span",{class:"loop-number"},n),el("h3",{},title),el("p",{},text)]))),
+    el("section",{class:"start-points","aria-labelledby":"start-points-title"},[
+      el("h2",{id:"start-points-title"},"Choose another starting point."),
+      el("div",{class:"start-grid"},[
+        {label:"FLEET DAY · RUN A MODEL",title:"Can the fleet meet demand?",text:"Run a synthetic Bay Area day. Change the fleet or a depot, then read service, batteries and queues together.",cta:"Run a fleet day  →",page:"simulation"},
+        {label:"STREET LAB · RUN A MODEL",title:"Where do queues form?",text:"Directed San Francisco streets with block queues. Compare two route rules on the same riders.",cta:"Open the Street lab  →",page:"streets"},
+      ].map(({label,title,text,cta,page})=>el("article",{class:"start-card"},[eyebrow(label),el("h3",{},title),el("p",{},text),pageLink(cta,page,navigate)]))),
     ]),
-    el("section",{class:"depot-introduction"},[
-      el("div",{class:"section-heading"},[el("div",{},[eyebrow("BETWEEN EVERY RIDE"),el("h2",{},"Readiness is a connected cycle.")]),el("p",{},"Explore the depot stages, then run the model to see how finite resources shape vehicle availability.")]),
-      createDepotScene(),
-    ]),
-    el("section",{class:"studio-facts","aria-label":"Model scope"},[
-      el("div",{},[el("strong",{},"18 Bay Area locations"),el("span",{},"Real geography, simulated operations")]),
-      el("div",{},[el("strong",{},"Two vehicle profiles"),el("span",{},"Explicit energy and service assumptions")]),
-      el("div",{},[el("strong",{},"A connected operating cycle"),el("span",{},"Trips, energy and finite depot resources")]),
-      el("div",{},[el("strong",{},"Repeatable experiments"),el("span",{},"Declared inputs and inspectable trade-offs")]),
-    ]),
-    el("section",{class:"decisions-section"},[
-      el("div",{class:"section-heading"},[el("div",{},[eyebrow("WHY THIS EXISTS"),el("h2",{},"A local change can move the whole system.")]),el("p",{},"Explore the decisions behind rider service, vehicle readiness and limited capacity.")]),
-      el("div",{class:"decision-grid"},[
-        decisionCard({number:"01",category:"MARKET OPERATIONS",title:"Can supply keep up with the peak?",text:"Set fleet size and demand. Follow each AV through trips and depot work, then compare the capacity of different fleet and depot sizes.",measure:"Trips completed · Battery · Depot queues",cta:"Run a fleet day  →",target:"simulation"},navigate),
-        decisionCard({number:"02",category:"DEPOT OPTIMIZATION",title:"Would two more bays actually help?",text:"Use the four-area teaching model to compare four cleaning bays with six. Inspect depot delay alongside rider outcomes before drawing a conclusion.",measure:"Bay wait · Depot turnaround · Guardrails",cta:"Test depot capacity  →",target:"depots"},navigate),
-        decisionCard({number:"03",category:"STREET OPERATIONS",title:"Can one block tie up the fleet?",text:"Explore downtown SF, SFO and East Bay journeys on directed roads. Follow queues across blocks and compare routing decisions.",measure:"Spillback · Pickup wait · Empty distance",cta:"Open the Street lab  →",target:"streets"},navigate),
-        decisionCard({number:"04",category:"FLEET SCALING",title:"What changes as the fleet scales?",text:"Three labs on scaling a fleet: density and the depot limit at rungs of fleet and demand, the path from delivered vehicles to rider service, and a support pool under an area-wide event.",measure:"Governing ratio · Paired test · Guardrails",cta:"Open the Scale lab  →",target:"scale"},navigate),
-        decisionCard({number:"05",category:"DATA, ENERGY & READINESS",title:"Charged, but still not ready?",text:"Shared uploads, energy and required tasks shape departure readiness. Compare scheduling rules and follow the wait.",measure:"Upload contention · Readiness · Deadline tradeoffs",cta:"Open the Depot flow lab  →",target:"flows"},navigate),
-      ]),
-    ]),
-    el("section",{class:"scope-section"},[
-      el("div",{},[eyebrow("A CLEAR MODEL BOUNDARY"),el("h2",{},"Useful questions. Honest limits.")]),
-      el("div",{},[el("h3",{},"Find the right learning model"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Four-area experiments cover dispatch, recall and paired guardrails. Scale lab covers density at rungs, fleet intake and a support pool. Depot flow lab explains how uploads and charging combine to determine readiness. The catalog explains each model's scope.")]),
-      el("div",{},[el("h3",{},"Outside the model"),el("p",{},"Worker shifts, physical driving, calibrated demand and real vehicle operations. Demand, traffic and vehicle operating values are teaching assumptions. None of these models is a calibrated digital twin or permission to change a fleet.")]),
-    ]),
+    el("nav",{class:"home-browse","aria-label":"Browse"},[pageLink("Browse all topics  →","catalog",navigate),pageLink("Sources and limits  →","approach",navigate)]),
   ]);
 }
 
@@ -96,34 +64,47 @@ function approach(navigate) {
     ["Planning partner","Identify what must be true before expanding a depot.","Declared assumptions and a repeatable experiment; energy is simplified in Fleet day; a serial cleaning-worker extension is available; shifts and calibration remain future work."],
   ];
   return el("main",{class:"studio-approach",id:"studio-approach"},[
-    el("section",{class:"approach-intro"},[eyebrow("PRODUCT APPROACH"),el("h1",{},"Start with the operator.\nWork back to the model."),el("p",{class:"hero-lede"},"A map shows where things are. A useful tool helps someone decide what to do next."),el("p",{},"FleetLab is the browser learning playground in Hermes, an independent simulation and evidence-review project. It connects the market and the depot through one operating cycle. It makes the consequences of a change inspectable, then uses repeated experiments to challenge the first impression.")]),
-    el('p',{},NON_AFFILIATION),
-    el("section",{class:"approach-section"},[eyebrow("01 / PEOPLE & DECISIONS"),el("h2",{},"Different users. A shared operating picture."),el("div",{class:"people-grid"},rows.map(([role,job,tool])=>el("article",{},[el("h3",{},role),el("p",{class:"person-job"},job),el("p",{},tool)])))]),
+    el("section",{class:"approach-intro"},[eyebrow("ABOUT & LIMITS"),el("h1",{},"What FleetLab models, and what it does not."),el("p",{class:"hero-lede"},"FleetLab is the browser learning playground inside Hermes, an independent simulation and evidence-review project. Every model here is synthetic, inspectable and bounded."),el("p",{},NON_AFFILIATION)]),
+    el("section",{class:"approach-section"},[
+      eyebrow("01 / WHAT FLEETLAB MODELS"),el("h2",{},"Five small models, one operating cycle."),
+      el("div",{class:"approach-scope"},[
+        el("div",{},[el("h3",{},"Find the right learning model"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Four-area experiments cover dispatch, recall and paired guardrails. Scale lab covers density at rungs, fleet intake and a support pool. Depot flow lab explains how uploads and charging combine to determine readiness. Explore lists each model's lessons and scope.")]),
+        el("div",{},[el("h3",{},"Outside the model"),el("p",{},"Worker shifts, physical driving, calibrated demand and real vehicle operations. Demand, traffic and vehicle operating values are teaching assumptions. None of these models is a calibrated digital twin or permission to change a fleet.")]),
+      ]),
+      createDepotScene(),
+    ]),
+    el("section",{class:"approach-section"},[eyebrow("02 / PEOPLE & DECISIONS"),el("h2",{},"Different users. A shared operating picture."),el("div",{class:"people-grid"},rows.map(([role,job,tool])=>el("article",{},[el("h3",{},role),el("p",{class:"person-job"},job),el("p",{},tool)])))]),
     el("section",{class:"approach-case"},[
-      el("div",{},[eyebrow("02 / A WORKED PRODUCT HYPOTHESIS"),el("h2",{},"More cleaning capacity should reduce depot delay."),el("p",{},"That hypothesis needs a second question: do rider outcomes improve, stay similar, or get worse? A local capacity change can move the constraint to another part of the system."),pageLink("Open the capacity experiment  →","depots",navigate,true)]),
+      el("div",{},[eyebrow("03 / HOW RESULTS ARE PRODUCED AND CHECKED"),el("h2",{},"Run computes. Checks reconstruct. Nothing here is authority."),el("p",{},"A worked example: more cleaning capacity should reduce depot delay. The second question is whether rider outcomes improve, stay similar, or get worse, because a local capacity change can move the constraint to another part of the system."),pageLink("Open the capacity experiment  →","depots",navigate)]),
       el("ol",{class:"hypothesis-steps"},[
         el("li",{},[el("strong",{},"Change one thing"),"Compare 4 and 6 cleaning bays at SF-1, using the existing capacity preset."]),
         el("li",{},[el("strong",{},"Declare the test first"),"Freeze the primary metric, equivalence margin, guardrails and paired seeds before the result. Seeds vary travel on one fixed demand trace."]),
         el("li",{},[el("strong",{},"Keep the trade-offs visible"),"Review uncertainty, missing measurements and guardrails. An attractive replay is not an experiment conclusion."]),
         el("li",{},[el("strong",{},"Choose the next test"),"A simulation recommendation is a screening result. It does not authorize an operational change."]),
+        el("li",{},[el("strong",{},"Keep the record"),"Every lesson keeps its inputs, outcomes and named checks inspectable; NOT_EVIDENCE means a teaching run, not a qualified result."]),
       ]),
     ]),
     el("section",{class:"approach-section"},[
-      eyebrow("03 / MODEL FIDELITY & ROADMAP"),el("h2",{},"The next fidelity is operational."),
+      eyebrow("04 / ROADMAP"),el("h2",{},"The next fidelity is operational."),
       el("p",{class:"section-lede"},"This is not a calibrated digital twin. The next work should improve the decisions the model can support, with each extension tested separately."),
       el("div",{class:"roadmap"},[
         ["NOW","Test depot readiness","Serial staffing, two charging allocation treatments, delayed resource observations and synthetic airport preparation with paired guardrails."],
         ["NOW","Rehearse depot setup","Versioned region/site configuration, owned setup tasks, usable-resource checks and commissioning-delay rehearsals in Peninsula and fictional Region B."],
+        ["PLANNED","Depot flow lab, next lessons","Capacity decisions, competing data jobs, estimate error and custody are planned lessons, not available ones."],
         ["NEXT","Increase model fidelity","Charge taper, worker shifts, service-time distributions and a broader operational validation set."],
         ["THEN","Calibrate & validate","Use approved operational data, fit travel and service distributions, check held-out periods and publish the error envelope."],
         ["LATER","Study physical questions","Choose a specific movement or mechanical question before adding a higher-fidelity simulator. These browser models have no physical actuation."],
       ].map(([phase,title,text])=>el("article",{},[eyebrow(phase),el("h3",{},title),el("p",{},text)]))),
     ]),
-    el("section",{class:"approach-section"},[eyebrow("04 / HOW TO EVALUATE THE PRODUCT"),el("h2",{},"Test understanding, then usefulness."),el("div",{class:"people-grid"},[
+    el("section",{class:"approach-section"},[eyebrow("05 / HOW TO EVALUATE"),el("h2",{},"Test understanding, then usefulness."),el("div",{class:"people-grid"},[
       ["Comprehension","Can a first-time visitor explain the decision, name the constraint and distinguish one replay from repeated results?"],
       ["Decision quality","Can a reviewer find a regression or unavailable guardrail and choose a defensible next experiment?"],
       ["Workflow value","With operators, measure time to diagnosis, errors, task completion and whether the tool changes a planning decision."],
     ].map(([title,text])=>el("article",{},[el("h3",{},title),el("p",{},text)]))),el("p",{class:"study-note"},"These are proposed research questions. No operator study or adoption result is claimed.")]),
+    el("section",{class:"approach-section"},[eyebrow("06 / SOURCES, CONTEXT AND CONTACT"),el("h2",{},"Read each model on its own terms."),
+      el("p",{},"Fleet day also hosts separate contracts: staffing, charging, charger status, airport wave, launch rehearsal and the Austin power lab."),
+      el("p",{},"Each model has its own assumptions, so numbers from different models are not interchangeable."),
+    ]),
     el("section",{class:"approach-close"},[el("h2",{},"The model is a way to ask better questions."),pageLink("Take the guided walkthrough  →","tour",navigate,true)]),
   ]);
 }
@@ -134,22 +115,22 @@ export function mountStudio(app) {
   const browserWindow=globalThis.window;
   const container=el('div',{class:'fleet-studio','data-page':'overview'});
   root.parentNode.insertBefore(container,root);
-  const navItems=[['overview','Overview'],['simulation','Fleet day'],['streets','Street lab'],['depots','Four-area experiments'],['scale','Scale lab'],['flows','Depot flow lab'],['catalog','Learning catalog'],['approach','Product approach']];
-  const navLinks=navItems.map(([id,text])=>{
-    const link=pageLink(text,id,navigate);link.setAttribute('data-nav',id);return link;
-  });
-  const brand=pageLink('F','overview',navigate);brand.setAttribute('class','studio-monogram');brand.setAttribute('aria-label','FleetLab overview');
+  const navLink=([id,text])=>{const link=pageLink(text,id,navigate);link.setAttribute('data-nav',id);return link;};
+  const navLinks=[['overview','Home'],['catalog','Explore'],['approach','About & limits']].map(navLink);
+  const labLinkNodes=[['simulation','Fleet day'],['streets','Street lab'],['depots','Four-area experiments'],['scale','Scale lab'],['flows','Depot flow lab'],['tour','Guided walkthrough']].map(navLink);
+  const labLinks=el('nav',{class:'lab-links','aria-label':'Labs'},labLinkNodes);
+  const brand=pageLink('F','overview',navigate);brand.setAttribute('class','studio-monogram');brand.setAttribute('aria-label','FleetLab home');
   const skip=el('a',{href:'#studio-content',class:'studio-skip',on:{click:event=>{event.preventDefault();activeMain?.focus();}}},'Skip to main content');
   const navigation=el('nav',{id:'studio-navigation','aria-label':'Main navigation','data-expanded':'false'},navLinks);
-  const menu=el('button',{type:'button',class:'studio-menu','aria-controls':'studio-navigation','aria-expanded':'false',on:{click:()=>setMenu(menu.getAttribute('aria-expanded')!=='true')}},'Explore +');
-  function setMenu(open){menu.setAttribute('aria-expanded',String(open));navigation.setAttribute('data-expanded',String(open));menu.textContent=open?'Close ×':'Explore +';}
+  const menu=el('button',{type:'button',class:'studio-menu','aria-controls':'studio-navigation','aria-expanded':'false',on:{click:()=>setMenu(menu.getAttribute('aria-expanded')!=='true')}},'Menu');
+  function setMenu(open){menu.setAttribute('aria-expanded',String(open));navigation.setAttribute('data-expanded',String(open));menu.textContent=open?'Close':'Menu';}
   const header=el('header',{class:'studio-header'},[
     el('div',{class:'studio-brand'},[brand,el('div',{},[el('strong',{},'FleetLab'),el('span',{},'by Hermes')])]),
     menu,navigation,
   ]);
   const reducedMotion=()=>isReducedMotion(store.getState());
   const film=createHeroFilm({reducedMotion});
-  const home=overview(navigate,film),product=approach(navigate);
+  const home=overview(navigate,visit,film),product=approach(navigate);
   const operations=createOperationsLab({reducedMotion,onCatalog:()=>navigate('catalog')});
   const streets=createStreetLab({reducedMotion});
   const flows=createDepotFlowLab({reducedMotion});
@@ -158,15 +139,16 @@ export function mountStudio(app) {
   const records=simulationCatalog();
   const lessonPage=record=>record.target==='flows'?'flows':record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
   const catalog=createSimulationCatalog({hrefForLesson:record=>routeHref({page:lessonPage(record),lesson:record.id}),onLesson:record=>visit({page:lessonPage(record),lesson:record.id})});
+  const catalogIntro=catalog.element.querySelector('.catalog-intro');catalogIntro.parentNode.insertBefore(labLinks,catalogIntro.nextSibling);
   const workspaceIntro=el('section',{class:'workspace-intro',tabindex:'-1'});
   const workspaceIdentity=modelHeader('Four-area experiments','Schematic four-area Bay Area zones (San Francisco, Peninsula, San Jose, East Bay); not road geometry',MODEL_VERSION);
   const workspaceMain=el('main',{class:'studio-workspace'},[workspaceIntro,root]);
   const errorText=el('p',{});
-  const routeError=el('main',{class:'studio-route-error',hidden:true},[eyebrow('LINK COULD NOT BE LOADED'),el('h1',{},'This setup needs attention.'),errorText,el('p',{},'No simulation was run. Check the complete link and the FleetLab version that created it, or choose a view from the navigation.'),el('button',{type:'button',class:'studio-button','data-action':'recover-route',on:{click:()=>navigate('overview')}},'Open the overview')]);
+  const routeError=el('main',{class:'studio-route-error',hidden:true},[eyebrow('LINK COULD NOT BE LOADED'),el('h1',{},'This setup needs attention.'),errorText,el('p',{},'No simulation was run. Check the complete link and the FleetLab version that created it, or choose a view from the navigation.'),el('button',{type:'button',class:'studio-button','data-action':'recover-route',on:{click:()=>navigate('overview')}},'Go to Home')]);
   const footer=el('footer',{class:'studio-footer'},[
     el('p',{},'An independent educational project by Bo-Huei Lin. Not affiliated with or endorsed by Waymo, Zoox, or their partners.'),
     el('div',{},[el('strong',{},'FleetLab / Hermes'),el('p',{},'FleetLab is part of Hermes, an independent simulation and evidence-review project. Built with AI assistance. Synthetic models, inspectable assumptions.')]),
-    el('nav',{'aria-label':'Footer navigation'},[pageLink('Learning catalog','catalog',navigate),pageLink('Product approach','approach',navigate),pageLink('Guided walkthrough','tour',navigate)]),
+    el('nav',{'aria-label':'Footer navigation'},[pageLink('Explore','catalog',navigate),pageLink('About & limits','approach',navigate),pageLink('Guided walkthrough','tour',navigate)]),
     el('span',{},'Simulation for learning and exploration'),
   ]);
   let workspaceLesson=null,lessonSetup=null;
@@ -211,7 +193,7 @@ export function mountStudio(app) {
     workspaceIntro.hidden=!workspace;regionalShare.element.hidden=page==='tour';routeError.hidden=true;
     if(app.regions?.charts&&app.regions?.map&&app.regions?.inspector)root.insertBefore(app.regions.charts,page==='depots'?app.regions.map:app.regions.inspector);
     container.setAttribute('data-page',page);
-    for(const link of navLinks){if(link.getAttribute('data-nav')===page)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
+    for(const link of [...navLinks,...labLinkNodes]){if(link.getAttribute('data-nav')===page)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
     if(page==='operations'){
       store.dispatch({type:'mode/set',mode:'sandbox'});
       workspaceIntro.replaceChildren(eyebrow('WORKSPACE / REGIONAL OPERATIONS'),el('h1',{},'Follow the fleet through a day.'),el('p',{},'Set up a scenario, run the simulated day, then inspect an area or depot. Read rider wait and unserved demand together. This is the four-area teaching model.'));
@@ -277,7 +259,7 @@ export function mountStudio(app) {
       pause();current='error';if(store.getState().present.on)present.close();
       for(const node of [home,product,operations.element,streets.element,scale.element,flows.element,catalog.element,workspaceMain,root])node.hidden=true;
       film.setActive(false);root.setAttribute('inert','');routeError.hidden=false;errorText.textContent=typeof error.message==='string'&&error.message.length<=160?error.message:'This link has an invalid setup. Check its format and model version.';container.setAttribute('data-page','error');
-      for(const link of navLinks)link.removeAttribute('aria-current');
+      for(const link of [...navLinks,...labLinkNodes])link.removeAttribute('aria-current');
       focusMain(routeError,'Link could not be loaded');
     }finally{applying=false;}
   }
@@ -288,5 +270,5 @@ export function mountStudio(app) {
   let previousMotion=reducedMotion();
   let previousPresent=store.getState().present.on;
   const unsubscribe=store.subscribe(state=>{if(workspaceLesson&&!applying)renderLesson(state);updateWorkspaceIdentity(state);const motion=reducedMotion();if(motion!==previousMotion){previousMotion=motion;flows.motionChanged();film.setActive(current==='overview');}const was=previousPresent;previousPresent=state.present.on;if(was&&!state.present.on&&current==='tour'&&!applying)navigate('operations');});
-  return {navigate,applyRoute,operations,streets,scale,flows,element:container,destroy(){browserWindow?.removeEventListener('hashchange',addressChanged);film.destroy();operations.destroy();streets.destroy();scale.destroy();flows.destroy();unsubscribe();root.hidden=false;root.removeAttribute('inert');container.parentNode?.insertBefore(root,container);container.remove();}};
+  return {navigate,applyRoute,operations,streets,scale,flows,labLinks,element:container,destroy(){browserWindow?.removeEventListener('hashchange',addressChanged);film.destroy();operations.destroy();streets.destroy();scale.destroy();flows.destroy();unsubscribe();root.hidden=false;root.removeAttribute('inert');container.parentNode?.insertBefore(root,container);container.remove();}};
 }

@@ -1,11 +1,11 @@
 // Hash routes work in the hosted bundle and the single-file offline package.
 export const ROUTES=Object.freeze({
-  overview:{path:'overview',title:'Overview'},
+  overview:{path:'overview',title:'Home'},
   simulation:{path:'fleet-day',title:'Fleet day'},
   streets:{path:'street-lab',title:'Street lab'},
   depots:{path:'experiments',title:'Four-area experiments'},
-  catalog:{path:'catalog',title:'Learning catalog'},
-  approach:{path:'approach',title:'Product approach'},
+  catalog:{path:'catalog',title:'Explore'},
+  approach:{path:'approach',title:'About & limits'},
   operations:{path:'regional',title:'Four-area workspace'},
   tour:{path:'walkthrough',title:'Guided walkthrough'},
   scale:{path:'scale-lab',title:'Scale lab'},

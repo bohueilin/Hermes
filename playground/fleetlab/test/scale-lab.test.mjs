@@ -279,16 +279,16 @@ test('the route opens a lab without running it, refuses a lesson of another page
     studio.applyRoute('#/scale-lab');assert.equal(studio.element.getAttribute('data-page'),'scale');assert.equal(studio.scale.getState().lab,SCALE_LABS[0].id);
     assert.match(document.title,/^Scale lab · FleetLab/);
     for(const lab of SCALE_LABS){studio.applyRoute(`#/scale-lab?lesson=${lab.id}`);assert.equal(studio.scale.getState().lab,lab.id);assert.equal(studio.scale.getState().result,null);assert.equal(document.title,`${lab.title} · FleetLab by Hermes`);}
-    assert.equal(studio.element.querySelectorAll('.studio-header nav a').length,8);
+    assert.equal(studio.element.querySelectorAll('.studio-header nav a').length,3);
     studio.applyRoute('#/scale-lab?lesson=fleet-day');assert.equal(studio.element.getAttribute('data-page'),'error');assert.equal(studio.scale.element.hidden,true);
     studio.applyRoute('#/fleet-day?lesson=response-reserve');assert.equal(studio.element.getAttribute('data-page'),'error');
     for(const hash of ['#/scale-lab?lesson=missing','#/scale-lab?foo=1']){studio.applyRoute(hash);assert.equal(studio.element.getAttribute('data-page'),'error',hash);}
     studio.applyRoute('#/scale-lab?setup=abc');assert.equal(studio.element.getAttribute('data-page'),'error','a shared setup is refused on this route');
     studio.navigate('overview');studio.applyRoute('#/scale-lab?lesson=fleet-intake');assert.equal(document.activeElement,studio.scale.heading,'the heading keeps focus when the lesson replaces the frame');
-    for(const text of [studio.element.querySelector('.decision-grid').children[3].textContent,studio.operations.element.querySelector('.ops-intro').lastChild.textContent,studio.element.querySelector('.catalog-models').children[3].textContent])for(const re of [H3,H6,V,DIRECTION,HOUSE,LINKS,DASH])assert.doesNotMatch(text,re,text);
+    for(const text of [studio.element.querySelector('.lab-links [data-nav="scale"]').textContent,studio.operations.element.querySelector('.ops-intro').lastChild.textContent,studio.element.querySelector('.catalog-models').children[3].textContent])for(const re of [H3,H6,V,DIRECTION,HOUSE,LINKS,DASH])assert.doesNotMatch(text,re,text);
     studio.navigate('simulation');assert.equal(studio.scale.element.hidden,true);
     const link=[...studio.operations.element.querySelectorAll('.ops-intro a')].find(a=>a.getAttribute('href')==='#/scale-lab');assert.ok(link);assert.equal(link.getAttribute('class'),null,'an ordinary link, not a button');
-    assert.ok([...studio.element.querySelectorAll('.decision-card a')].some(a=>a.getAttribute('href')==='#/scale-lab'));
+    assert.ok(studio.element.querySelector('.lab-links a[href="#/scale-lab"]'));
     assert.ok([...studio.element.querySelectorAll('.catalog-start a')].some(a=>a.getAttribute('href')==='#/scale-lab?lesson=density-ladder'));
     studio.navigate('catalog');const filter=studio.element.querySelector('[aria-label="Simulation model"]');filter.value='Scale lab';filter.dispatchEvent(new Event('change'));
     assert.equal(studio.element.querySelectorAll('[data-simulation]').length,3);

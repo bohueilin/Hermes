@@ -1,22 +1,9 @@
 /* Hosted addition only: preserve the established film, lessons and offline styles. */
-.city-entry-feature { display:grid; grid-template-columns:1.15fr 1fr; gap:48px; margin:36px 0 48px; padding:44px; border:1px solid #ced9c5; border-radius:22px; background:#eaf0df; color:#183f36; overflow:hidden; }
 .city-entry-eyebrow { font-size:12px; font-weight:700; letter-spacing:.14em; line-height:1.7; margin:0 0 16px; }
-.city-entry-feature h2 { font-size:clamp(30px,3.2vw,46px); line-height:1.12; letter-spacing:-.035em; max-width:470px; margin:0 0 20px; font-weight:600; }
-.city-entry-lede { max-width:460px; font-size:17px; line-height:1.75; margin:0 0 24px; }
-.city-entry-action { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:12px 21px; box-sizing:border-box; border-radius:9px; color:#fffef5; background:#244f41; text-decoration:none; font-size:14px; font-weight:600; }
-.city-entry-action:hover { background:#173d31; }
-.city-entry-action:focus-visible { outline:3px solid #a66622; outline-offset:4px; }
-.city-entry-note { font-size:14px; line-height:1.8; margin:18px 0 0; color:#496254; max-width:380px; }
-.city-entry-journey { background:#244f41; color:#f6f6e8; border-radius:16px; padding:28px; align-self:center; box-shadow:0 12px 30px #1d483515; }
-.city-entry-place { display:grid; gap:10px; padding-bottom:22px; border-bottom:1px solid #ffffff28; }
-.city-entry-place span, .city-entry-shift { font-size:12px; letter-spacing:.11em; color:#d4e3bc; }
-.city-entry-place strong { font-size:19px; font-weight:500; }
-.city-entry-journey ol { list-style:none; padding:0; margin:22px 0; display:grid; gap:21px; }
-.city-entry-journey li { display:flex; gap:16px; align-items:center; }
-.city-entry-number { border:1px solid #ffffff48; border-radius:50%; width:36px; height:36px; display:grid; place-items:center; flex-shrink:0; font-size:12px; color:#efda9a; }
-.city-entry-journey strong { font-size:15px; font-weight:600; }
-.city-entry-journey p { font-size:13px; line-height:1.65; color:#d3dfd3; margin:5px 0 0; }
-.city-entry-shift { display:block; border-top:1px solid #ffffff28; padding-top:19px; }
+.city-entry-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; }
+.city-entry-action { display:inline-flex; align-items:center; min-height:44px; padding:10px 18px; box-sizing:border-box; border:1px solid var(--rule-strong); border-radius:26px; color:var(--ink); background:transparent; text-decoration:none; font-size:15px; font-weight:550; }
+.city-entry-action:hover { background:var(--panel-alt); border-color:var(--accent); }
+.city-entry-action:focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
 .city-entry-catalog { display:flex; align-items:center; justify-content:space-between; gap:28px; padding:28px; border:1px solid #ced9c5; border-radius:16px; background:#eaf0df; margin:0 0 28px; }
 .city-entry-catalog h2 { font-size:24px; margin:0 0 12px; letter-spacing:-.02em; }
 .city-entry-catalog p:not(.city-entry-eyebrow) { max-width:700px; font-size:15px; line-height:1.7; margin:0; }
@@ -25,46 +12,16 @@
 .studio-footer .owner-contact { flex-basis:100%; max-width:none; display:flex; align-items:center; flex-wrap:wrap; gap:12px 24px; border-top:1px solid var(--rule); padding-top:22px; margin-top:4px; font-size:14px; line-height:1.6; }
 .studio-footer .owner-contact a { display:inline-flex; align-items:center; min-height:44px; font-size:15px; font-weight:600; color:inherit; text-underline-offset:5px; overflow-wrap:anywhere; }
 .studio-footer .owner-contact a:focus-visible { outline:3px solid #a66622; outline-offset:4px; }
-/* Peer destinations use Explore before the row crowds. */
-@media (max-width:1279.98px) {
-  .studio-header { flex-wrap:wrap; }
-  .studio-menu { display:inline-flex; align-items:center; margin-left:auto; }
-  .studio-header .studio-status { display:none; }
-  .studio-header nav { order:3; width:100%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; overflow:visible; }
-  .studio-header nav a { font-size:13px; padding:12px; min-height:44px; }
-  .studio-header nav[data-expanded="false"] { display:none; }
-  .studio-header nav[data-expanded="true"] { border-top:1px solid var(--rule); padding-top:8px; }
-}
 @media (max-width:767.98px) {
-  .city-entry-feature { grid-template-columns:minmax(0,1fr); gap:28px; padding:26px 22px; margin:24px 0 36px; }
-  .city-entry-journey { padding:24px; }
-  .city-entry-feature h2 { font-size:34px; }
-  .city-entry-lede { font-size:16px; }
   .city-entry-catalog { flex-direction:column; align-items:flex-start; padding:24px; }
-  .studio-header nav { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 
-/* A short chooser explains the separate models before the longer learning tour. */
-.lab-guide { margin:0 0 48px; color:#183f36; }
-.lab-guide h2 { font-size:clamp(25px,3vw,34px); line-height:1.2; letter-spacing:-.025em; margin:0 0 16px; }
-.lab-guide > p:not(.city-entry-eyebrow) { max-width:760px; font-size:16px; line-height:1.7; margin:0 0 24px; }
-.lab-guide-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
-.lab-guide-grid a { padding:22px; border:1px solid #cbd5c6; border-radius:14px; color:inherit; background:#fbfaf3; text-decoration:none; min-width:0; }
-.lab-guide-grid a:nth-child(2) { background:#f1eee6; }
-.lab-guide-grid a:nth-child(3) { background:#efedf4; }
-.lab-guide-grid a:nth-child(4) { background:#edf1e8; }
-.lab-guide-grid a:hover { border-color:#244f41; }
-.lab-guide-grid a:focus-visible, .offline-edition a:focus-visible { outline:3px solid #a66622; outline-offset:4px; }
-.lab-guide-name { display:block; font-size:13px; font-weight:600; margin-bottom:18px; }
-.lab-guide-grid h3 { font-size:19px; line-height:1.3; font-weight:600; margin:0 0 12px; }
-.lab-guide-grid p { font-size:14px; line-height:1.65; margin:0; color:#496254; }
+.offline-edition a:focus-visible { outline:3px solid #a66622; outline-offset:4px; }
 .studio-footer .offline-edition { flex-basis:100%; max-width:none; display:flex; gap:20px; flex-wrap:wrap; align-items:center; border-top:1px solid var(--rule); padding-top:22px; }
 .offline-edition div { flex:1 1 380px; }
 .offline-edition strong { font-size:18px; font-weight:600; }
 .offline-edition p { font-size:14px; line-height:1.7; margin:10px 0 0; max-width:720px; }
 .offline-edition a { color:#244f41; font-size:15px; font-weight:600; min-height:44px; display:inline-flex; align-items:center; text-underline-offset:5px; }
-@media (max-width:1000px) { .lab-guide-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width:520px) { .lab-guide-grid { grid-template-columns:minmax(0,1fr); } }
 
 /* Hosted typography cascade, projected from the preserved legacy stylesheet.
    Retain media/order and larger type; small fixed captions have a 12 px floor. */
@@ -90,17 +47,12 @@ button, input, select, textarea{font: inherit}
 .studio-brand strong{font-size: 23px}
 .studio-brand span{font-size: 12px}
 .studio-monogram{font-size: 26px !important}
-.studio-header nav a{font-size: 13px}
 .studio-status{font-size: 12px}
 .studio-status > span{font-size: 14px}
 .studio-boundary{font-size: 12px}
 .studio-boundary strong{font-size: 12px}
-.hero-copy h1{font-size: clamp(42px, 4.8vw, 70px)}
 .creator-credit{font-size: 12px}
-.hero-lede{font-size: 21px}
-.hero-description{font-size: 15px}
 .studio-button{font-size: 13px !important}
-.hero-duration{font-size: 12px}
 .scene-heading .eyebrow{font-size: 12px}
 .quiet-badge{font-size: 12px}
 .scene-invitation{font-size: 18px}
@@ -110,26 +62,7 @@ button, input, select, textarea{font: inherit}
 .depot-detail > p:not(.eyebrow){font-size: 12px}
 .depot-detail .depot-question{font-size: 12px !important}
 .scene-note{font-size: 12px}
-.studio-facts strong{font-size: 13px}
-.studio-facts span{font-size: 12px}
-.section-heading h2, .loop-section h2, .scope-section h2{font-size: clamp(28px,3vw,40px)}
-.section-heading > p{font-size: 13px}
-.card-top .eyebrow{font-size: 12px}
-.card-number{font-size: 15px}
-.decision-card h3{font-size: 25px}
-.decision-card > p{font-size: 13px}
-.decision-card .card-measure{font-size: 12px}
-.card-measure > span{font-size: 12px}
-.loop-number{font-size: 12px}
-.decision-loop h3{font-size: 19px}
-.decision-loop p{font-size: 12px}
-.scope-section h2{font-size: 30px}
-.scope-section h3{font-size: 14px}
-.scope-section p{font-size: 12px}
-.studio-footer{font-size: 12px}
-.approach-intro h1{font-size: clamp(38px,4.5vw,60px)}
 .approach-intro > p:last-child{font-size: 14px}
-.approach-section h2, .approach-case h2{font-size: 31px}
 .people-grid h3{font-size: 16px}
 .people-grid p{font-size: 12px}
 .people-grid .person-job{font-size: 15px}
@@ -171,26 +104,12 @@ button, input, select, textarea{font: inherit}
 .fleet-studio .fl-ledger__value{font-size: 28px}
 .fleet-studio .fl-rail button{font-size: 12px}
 .fleet-studio .fl-iso__label--route .fl-iso__plate{font-size: 12px}
-@media (max-width: 1100px){.hero-copy h1{font-size: clamp(38px,4.5vw,51px)}}
-@media (max-width: 767.98px){.studio-header nav a{font-size: 12px}
+@media (max-width: 767.98px){
 .studio-boundary{font-size: 12px}
-.hero-copy h1{font-size: clamp(37px,8.2vw,56px)}
-.hero-lede{font-size: 19px}
-.hero-description{font-size: 14px}
 .quiet-badge{font-size: 12px}
-.studio-facts strong{font-size: 12px}
-.studio-facts span{font-size: 12px}
-.section-heading h2, .loop-section h2{font-size: 29px}
-.decision-card h3{font-size: 22px}
-.decision-card > p{font-size: 13px}
-.scope-section p{font-size: 12px}
-.studio-footer{font-size: 12px}
-.approach-intro h1{font-size: 40px}
-.approach-section h2, .approach-case h2{font-size: 28px}
 .workspace-intro h1{font-size: 29px}
 .workspace-intro > p:last-child{font-size: 12px}
 .fleet-studio .fl-map-assumptions{font-size: 12px}}
-@media print{.hero-copy h1{font-size: 35px}}
 .workspace-intro > .studio-button{font-size: 12px !important}
 .fleet-studio [data-role="setup"] header h2{font-size: 24px}
 .fleet-studio [data-role="setup"] header p{font-size: 12px}
@@ -350,19 +269,13 @@ button, input, select, textarea{font: inherit}
 .street-replay-heading h2{font-size:22px}
 .street-results h2,.street-learning h2{font-size:26px}
 .street-comparison{font-size:12px}}
-.film-copy h1{font-size: clamp(44px,4.3vw,62px)}
-.film-lede{font-size: 17px}
 .film-control{font: inherit}
 .film-status{font-size: 12px}
 .film-caption p{font-size: 12px}
-@media (max-width: 1000px){.film-copy h1{font-size: 42px}
-.film-lede{font-size: 16px}}
-@media (max-width: 650px){.film-copy h1{font-size: clamp(38px,9vw,52px)}}
 .ops-readiness-result pre,.ops-readiness-comparison pre{font-size:12px}
 .ops-advanced-result pre, .ops-advanced-comparison pre{font-size: .8rem}
 .ops-decision-guide h2{font-size:1.35rem}
 .ops-launch-rehearsal > summary{font-size:1.15rem}
-.studio-footer nav .studio-button{font-size: 12px !important}
 .film-illustration-label{font-size: 12px}
 .setup-sharing > summary{font-size: 13px}
 .setup-sharing p{font-size: 12px}
@@ -389,14 +302,8 @@ button, input, select, textarea{font: inherit}
 .studio-monogram{font-size: 25px !important}
 .studio-brand strong{font-size: 24px}
 .studio-brand span{font-size: 12px}
-.studio-header nav a{font-size: 12px}
 .studio-status{font-size: 12px}
 .film-copy .eyebrow{font-size: 12px}
-.film-copy h1{font-size: clamp(44px,4.5vw,65px)}
-.film-lede{font-size: 17px}
-.film-copy .hero-duration{font-size: 12px}
-.welcome-boundary{font-size: 12px}
-.welcome-boundary strong{font-size: 12px}
 .welcome-visual-heading{font-size: 12px}
 .welcome-visual-heading > span:last-child{font-size: 25px}
 .welcome-visual .film-control{font-size: 12px}
@@ -404,21 +311,9 @@ button, input, select, textarea{font: inherit}
 .welcome-cycle > span{font-size: 12px}
 .welcome-cycle small{font-size: 12px}
 .film-caption p{font-size: 12px}
-.section-heading h2, .loop-section h2{font-size: clamp(28px,3vw,40px)}
-.section-heading > p{font-size: 14px}
 .scene-invitation{font-size: 19px}
 .stage-tabs button{font-size: 12px}
 .depot-detail > p:not(.eyebrow){font-size: 13px}
-.studio-facts strong{font-size: 14px}
-.studio-facts span{font-size: 12px}
-.card-number{font-size: 12px}
-.decision-card h3{font-size: 27px}
-.decision-card > p{font-size: 14px}
-.decision-card .card-measure{font-size: 12px}
-.card-measure > span{font-size: 12px}
-.decision-card .studio-button{font-size: 14px !important}
-.decision-loop p{font-size: 14px}
-.scope-section p{font-size: 13px}
 .studio-footer strong{font-size: 16px}
 .people-grid p, .hypothesis-steps li, .roadmap p:not(.eyebrow), .section-lede{font-size: 14px}
 .teaching-chips span{font-size: 12px}
@@ -435,29 +330,17 @@ button, input, select, textarea{font: inherit}
 .catalog-models p{font-size: 13px}
 .catalog-card .teaching-title{font-size: 25px}
 .catalog-card .teaching-parts p{font-size: 13px}
-@media (max-width: 1100px){.film-copy h1{font-size: 48px}}
-@media (max-width: 767.98px){.studio-header nav a{font-size: 12px}
-.film-copy h1{font-size: clamp(40px,10.5vw,58px)}
-.film-lede{font-size: 16px}
-.film-copy .hero-actions > .studio-button{font-size: 12px !important}
-.section-heading > p{font-size: 14px}
-.decision-card h3{font-size: 25px}
-.studio-facts strong{font-size: 13px}
-.studio-facts span{font-size: 12px}
-.scope-section p{font-size: 13px}
+@media (max-width: 767.98px){
 .scale-chooser a{font-size: 12px}}
-.studio-menu{font-size: 12px}
 
 .fleet-studio{font-size:16px;line-height:1.6;--faint:#5e6c7d}
 .fleet-studio p:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.city-entry-lede):not(.flow-lede){font-size:16px;line-height:1.6}
 .welcome-boundary{flex-wrap:wrap}
 .welcome-boundary .hosted-trust-legend{flex-basis:100%;max-width:1000px;margin:0;text-align:left;font-size:14px;line-height:1.6}
-.city-entry-note .city-entry-action{display:inline;padding:0;background:none;color:inherit;text-decoration:underline;font-size:inherit}
 .street-map figcaption,.street-event-log time{color:#566579}
 .street-geography-tag,.street-replay-count,.street-map-meta,.street-metrics small,.street-destination-results span,.street-destination-results small,.street-hotspot-results small,.street-comparison caption{color:#566579}
 .street-field small{color:#566579}
 /* Keep the existing larger introductory hierarchy above the prose floor. */
-.fleet-studio p.film-lede,.fleet-studio p.city-entry-lede{font-size:17px}
 .fleet-studio p.scene-invitation{font-size:18px}
 @media(min-width:768px){.fleet-studio .street-intro p.hero-lede:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.city-entry-lede):not(.flow-lede){font-size:18px}}
 

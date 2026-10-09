@@ -133,7 +133,8 @@ test('workspace main, native navigation, page titles and skip focus follow the a
     }
     x.studio.element.querySelector('.studio-skip').click();assert.equal(document.activeElement,mains[0]);
   }
-  assert.equal(x.studio.element.querySelectorAll('.studio-header nav a').length,8);
+  assert.equal(x.studio.element.querySelectorAll('.studio-header nav a').length,3);
+  assert.deepEqual(x.studio.element.querySelectorAll('.studio-header nav a').map(a=>a.textContent),['Home','Explore','About & limits']);
  }finally{x.studio.destroy();x.restore();}
 });
 
@@ -155,19 +156,50 @@ test("a launch lesson reached from another Fleet day lesson does not keep that l
   }
 });
 
-test('welcome actions open the fleet and scale workspaces without producing a result',()=>{
+test('welcome actions open the first experiment and the start points without producing a result',()=>{
  const x=setup();try{
   const actions=x.studio.element.querySelector('.hero-actions');
-  const fleet=actions.querySelector('a[href="#/fleet-day"]');
-  const scale=actions.querySelector('a[href="#/scale-lab"]');
-  assert.ok(fleet,'the welcome has a fleet-day entry');
-  assert.ok(scale,'the welcome has a direct scale-lab entry');
+  const primary=actions.querySelector('a[href="#/depot-flow-lab?lesson=two-vehicles"]');
+  assert.ok(primary,'the welcome opens the first experiment');
+  assert.ok(primary.classList.contains('studio-button-primary'),'the first experiment is the one primary action');
+  assert.ok(actions.querySelector('a[href="#/catalog"]'),'the welcome links to Explore');
+  primary.click();assert.equal(x.studio.flows.element.hidden,false);
+  assert.equal(x.studio.flows.getState().result,null);
+  x.studio.navigate('overview');
+  const starts=x.studio.element.querySelector('.start-points');
+  const fleet=starts.querySelector('a[href="#/fleet-day"]');
+  assert.ok(fleet,'a start card opens Fleet day');
+  assert.ok(starts.querySelector('a[href="#/street-lab"]'),'a start card opens the Street lab');
   fleet.click();assert.equal(x.studio.operations.element.hidden,false);
   assert.equal(x.studio.operations.getState().result,null);
-  x.studio.navigate('overview');scale.click();
-  assert.equal(x.studio.scale.element.hidden,false);
-  assert.equal(x.studio.scale.getState().result,null);
   assert.equal(x.store.getState().experiment.verdict,null);
+ }finally{x.studio.destroy();x.restore();}
+});
+
+test('quick lab links carry data-nav ids and open their pages idle',()=>{
+ const x=setup();try{
+  const links=x.studio.element.querySelector('.lab-links');
+  assert.ok(links);
+  for(const id of ['simulation','streets','depots','scale','flows','tour'])assert.ok(links.querySelector(`[data-nav="${id}"]`),id);
+  const depots=links.querySelector('[data-nav="depots"]');
+  depots.click();
+  assert.equal(x.studio.element.getAttribute('data-page'),'depots');
+  assert.equal(depots.getAttribute('aria-current'),'page');
+  const main=x.studio.element.querySelectorAll('main').find(n=>!n.inHiddenOrInert());
+  assert.equal(main.querySelector('h1').textContent,depots.textContent);
+  assert.equal(document.title.split(' · ')[0],depots.textContent);
+  assert.equal(x.store.getState().experiment.verdict,null);
+ }finally{x.studio.destroy();x.restore();}
+});
+
+test('About & limits keeps the model boundary and the depot stages',()=>{
+ const x=setup();try{
+  x.studio.navigate('approach');
+  const about=x.studio.element.querySelector('.studio-approach');
+  assert.equal(about.hidden,false);
+  assert.match(about.textContent,/not.*digital twin/i);
+  assert.match(about.textContent,/Outside the model/);
+  assert.ok(about.querySelector('[data-stage="arrive"]'));
  }finally{x.studio.destroy();x.restore();}
 });
 
@@ -186,13 +218,16 @@ test('compact navigation exposes its state and closes after a destination is cho
   assert.ok(toggle,'compact navigation has an accessible toggle');
   const nav=x.studio.element.querySelector('#studio-navigation');
   assert.equal(toggle.getAttribute('aria-expanded'),'false');
+  assert.equal(toggle.textContent,'Menu');
   toggle.click();assert.equal(toggle.getAttribute('aria-expanded'),'true');
   assert.equal(nav.getAttribute('data-expanded'),'true');
-  const scale=nav.querySelector('[data-nav="scale"]');assert.ok(scale,'Scale lab is discoverable from the header');
-  scale.click();
-  assert.equal(x.studio.element.getAttribute('data-page'),'scale');
-  assert.equal(scale.getAttribute('aria-current'),'page');
-  assert.equal(x.studio.scale.getState().result,null,'navigation keeps the lab idle');
+  assert.equal(toggle.textContent,'Close');
+  const explore=nav.querySelector('[data-nav="catalog"]');assert.ok(explore,'Explore is discoverable from the header');
+  explore.click();
+  assert.equal(x.studio.element.getAttribute('data-page'),'catalog');
+  assert.equal(explore.getAttribute('aria-current'),'page');
+  assert.equal(x.studio.scale.getState().result,null,'navigation keeps the labs idle');
+  assert.equal(toggle.textContent,'Menu');
   assert.equal(toggle.getAttribute('aria-expanded'),'false');
   assert.equal(nav.getAttribute('data-expanded'),'false');
   assert.equal(x.store.getState().run.status,'idle');
