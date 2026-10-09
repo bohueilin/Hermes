@@ -26,11 +26,11 @@
 .studio-footer .owner-contact a { display:inline-flex; align-items:center; min-height:44px; font-size:15px; font-weight:600; color:inherit; text-underline-offset:5px; overflow-wrap:anywhere; }
 .studio-footer .owner-contact a:focus-visible { outline:3px solid #a66622; outline-offset:4px; }
 /* Peer destinations use Explore before the row crowds. */
-@media (max-width:1450px) {
+@media (max-width:1279.98px) {
   .studio-header { flex-wrap:wrap; }
   .studio-menu { display:inline-flex; align-items:center; margin-left:auto; }
   .studio-header .studio-status { display:none; }
-  .studio-header nav { order:3; width:100%; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; overflow:visible; }
+  .studio-header nav { order:3; width:100%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; overflow:visible; }
   .studio-header nav a { font-size:13px; padding:12px; min-height:44px; }
   .studio-header nav[data-expanded="false"] { display:none; }
   .studio-header nav[data-expanded="true"] { border-top:1px solid var(--rule); padding-top:8px; }
@@ -41,7 +41,7 @@
   .city-entry-feature h2 { font-size:34px; }
   .city-entry-lede { font-size:16px; }
   .city-entry-catalog { flex-direction:column; align-items:flex-start; padding:24px; }
-  .studio-header nav { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .studio-header nav { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 
 /* A short chooser explains the separate models before the longer learning tour. */
@@ -449,7 +449,7 @@ button, input, select, textarea{font: inherit}
 .studio-menu{font-size: 12px}
 
 .fleet-studio{font-size:16px;line-height:1.6;--faint:#5e6c7d}
-.fleet-studio p:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.city-entry-lede){font-size:16px;line-height:1.6}
+.fleet-studio p:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.city-entry-lede):not(.flow-lede){font-size:16px;line-height:1.6}
 .welcome-boundary{flex-wrap:wrap}
 .welcome-boundary .hosted-trust-legend{flex-basis:100%;max-width:1000px;margin:0;text-align:left;font-size:14px;line-height:1.6}
 .city-entry-note .city-entry-action{display:inline;padding:0;background:none;color:inherit;text-decoration:underline;font-size:inherit}
@@ -459,4 +459,6 @@ button, input, select, textarea{font: inherit}
 /* Keep the existing larger introductory hierarchy above the prose floor. */
 .fleet-studio p.film-lede,.fleet-studio p.city-entry-lede{font-size:17px}
 .fleet-studio p.scene-invitation{font-size:18px}
-@media(min-width:768px){.fleet-studio .street-intro p.hero-lede:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.city-entry-lede){font-size:18px}}
+@media(min-width:768px){.fleet-studio .street-intro p.hero-lede:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.city-entry-lede):not(.flow-lede){font-size:18px}}
+
+.fleet-studio .depot-flow-lab .flow-lede { font-size:20px;line-height:1.6; }

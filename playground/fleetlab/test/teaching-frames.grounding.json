@@ -694,5 +694,15 @@
     "seeds": "Read from the frozen test in the pins file",
     "numbers": [],
     "lane_file": "playground/fleetlab/test/scale-density.pins.json"
+  },
+  "crossed-priorities": {
+    "source": "constructed",
+    "command": "node --test playground/fleetlab/test/depot-cohort.test.mjs",
+    "config_or_patch": "Fixed four-visit cohort; sizes 60/7.5/45/15 GB, deadlines 10/15/22/6 minutes, 1 Gbps, two-minute local steps.",
+    "seeds": "No random draws",
+    "numbers": [
+      "FIFO ready 10/11/17/19; equal 19/6/17/9; deadline 12/13/19/4; shortest 19/3/11/5 minutes."
+    ],
+    "lane_file": "playground/fleetlab/test/depot-cohort.test.mjs"
   }
 }

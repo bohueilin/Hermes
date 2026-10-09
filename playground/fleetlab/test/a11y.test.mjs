@@ -340,7 +340,8 @@ describe("focus, targets, strip and narrow layout", () => {
     }
     // The isometric overlay's plates and texts are short labels positioned over a picture (an id, `H2 · 55 min`,
     // `×19`, `queue 21`, a car's name); a wrap would move a label off the point it names, so they keep one line too.
-    const oneLine = new Set([".fl-chip-replay", ".fl-chip-across", ".fl-verdict-chip", ".fl-sr-only", ".fl-iso__plate", ".fl-iso__text", ".fl-iso__numbers", ".fl-iso__count", ".fl-iso__pin"]);
+    // Desktop nav stays on one line; the collapsed menu explicitly restores wrapping.
+    const oneLine = new Set([".studio-header nav a",".fl-chip-replay", ".fl-chip-across", ".fl-verdict-chip", ".fl-sr-only", ".fl-iso__plate", ".fl-iso__text", ".fl-iso__numbers", ".fl-iso__count", ".fl-iso__pin"]);
     for (const rule of RULES.filter((r) => r.declarations.some((d) => d.name === "white-space" && d.value === "nowrap"))) {
       assert.ok(rule.selectors.every((s) => oneLine.has(s)), `white-space: nowrap only on short chips, not ${rule.prelude}`);
     }

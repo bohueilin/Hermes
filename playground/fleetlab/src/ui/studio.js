@@ -78,7 +78,7 @@ function overview(navigate, film) {
         decisionCard({number:"02",category:"DEPOT OPTIMIZATION",title:"Would two more bays actually help?",text:"Use the four-area teaching model to compare four cleaning bays with six. Inspect depot delay alongside rider outcomes before drawing a conclusion.",measure:"Bay wait · Depot turnaround · Guardrails",cta:"Test depot capacity  →",target:"depots"},navigate),
         decisionCard({number:"03",category:"STREET OPERATIONS",title:"Can one block tie up the fleet?",text:"Explore downtown SF, SFO and East Bay journeys on directed roads. Follow queues across blocks and compare routing decisions.",measure:"Spillback · Pickup wait · Empty distance",cta:"Open the Street lab  →",target:"streets"},navigate),
         decisionCard({number:"04",category:"FLEET SCALING",title:"What changes as the fleet scales?",text:"Three labs on scaling a fleet: density and the depot limit at rungs of fleet and demand, the path from delivered vehicles to rider service, and a support pool under an area-wide event.",measure:"Governing ratio · Paired test · Guardrails",cta:"Open the Scale lab  →",target:"scale"},navigate),
-        decisionCard({number:"05",category:"DATA, ENERGY & READINESS",title:"Charged, but still not ready?",text:"Two vehicles share one uplink. Compare three upload rules and trace the data, energy and task dependencies behind each departure.",measure:"Upload contention · Readiness · Deadline tradeoffs",cta:"Open the Depot flow lab  →",target:"flows"},navigate),
+        decisionCard({number:"05",category:"DATA, ENERGY & READINESS",title:"Charged, but still not ready?",text:"Shared uploads, energy and required tasks shape departure readiness. Compare scheduling rules and follow the wait.",measure:"Upload contention · Readiness · Deadline tradeoffs",cta:"Open the Depot flow lab  →",target:"flows"},navigate),
       ]),
     ]),
     el("section",{class:"scope-section"},[
@@ -145,14 +145,14 @@ export function mountStudio(app) {
   function setMenu(open){menu.setAttribute('aria-expanded',String(open));navigation.setAttribute('data-expanded',String(open));menu.textContent=open?'Close ×':'Explore +';}
   const header=el('header',{class:'studio-header'},[
     el('div',{class:'studio-brand'},[brand,el('div',{},[el('strong',{},'FleetLab'),el('span',{},'by Hermes')])]),
-    menu,navigation,el('span',{class:'studio-status'},[el('span',{'aria-hidden':'true'},'◉'),'SIMULATION LAB']),
+    menu,navigation,
   ]);
   const reducedMotion=()=>isReducedMotion(store.getState());
   const film=createHeroFilm({reducedMotion});
   const home=overview(navigate,film),product=approach(navigate);
   const operations=createOperationsLab({reducedMotion,onCatalog:()=>navigate('catalog')});
   const streets=createStreetLab({reducedMotion});
-  const flows=createDepotFlowLab();
+  const flows=createDepotFlowLab({reducedMotion});
   const scale=createScaleLab({onLab:id=>visit({page:'scale',lesson:id})});
   operations.element.querySelector('.ops-intro').appendChild(el('p',{class:'ops-status'},['Fleet day stops at 120 cars. For what changes as a fleet scales, ',el('a',{href:routeHref({page:'scale'}),on:{click:event=>followLink(event,()=>navigate('scale'))}},'open the Scale lab'),'.']));
   const records=simulationCatalog();
@@ -260,8 +260,9 @@ export function mountStudio(app) {
         const expected=setup.model==='street-lab'?'streets':setup.model==='regional'?(setup.config.mode==='experiment'?'depots':'operations'):'simulation';
         if(route.page!==expected)throw Error('The linked view and shared model do not match.');
       }
+      if(record?.target==='flows')applyLesson(record);
       renderPage(route.page);
-      if(record)applyLesson(record);
+      if(record&&record.target!=='flows')applyLesson(record);
       if(setup){
         if(setup.model==='street-lab')streets.loadSharedSetup(setup);
         else if(setup.model==='regional'){app.host?.cancel();loadRegionalSetup(store,setup);}
@@ -286,6 +287,6 @@ export function mountStudio(app) {
   function updateWorkspaceIdentity(state){workspaceIdentity.update(state.experiment.frozen?.spec.model_version??MODEL_VERSION,state.experiment.verdictStale||state.run.stale);}
   let previousMotion=reducedMotion();
   let previousPresent=store.getState().present.on;
-  const unsubscribe=store.subscribe(state=>{if(workspaceLesson&&!applying)renderLesson(state);updateWorkspaceIdentity(state);const motion=reducedMotion();if(motion!==previousMotion){previousMotion=motion;film.setActive(current==='overview');}const was=previousPresent;previousPresent=state.present.on;if(was&&!state.present.on&&current==='tour'&&!applying)navigate('operations');});
+  const unsubscribe=store.subscribe(state=>{if(workspaceLesson&&!applying)renderLesson(state);updateWorkspaceIdentity(state);const motion=reducedMotion();if(motion!==previousMotion){previousMotion=motion;flows.motionChanged();film.setActive(current==='overview');}const was=previousPresent;previousPresent=state.present.on;if(was&&!state.present.on&&current==='tour'&&!applying)navigate('operations');});
   return {navigate,applyRoute,operations,streets,scale,flows,element:container,destroy(){browserWindow?.removeEventListener('hashchange',addressChanged);film.destroy();operations.destroy();streets.destroy();scale.destroy();flows.destroy();unsubscribe();root.hidden=false;root.removeAttribute('inert');container.parentNode?.insertBefore(root,container);container.remove();}};
 }

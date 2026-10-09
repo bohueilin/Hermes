@@ -95,6 +95,8 @@ function responsive(build, options) {
     }
   });
   for (const frame of frames) observer.observe(frame.plotBox);
+  const dispose = handle.dispose;
+  handle.dispose = () => { observer.disconnect(); dispose?.(); };
   return handle;
 }
 
@@ -546,7 +548,7 @@ function tableNode(heads, rows) {
 }
 
 /** Assembles one chart figure and returns its handle. */
-function chartFrame({ chartId, title, chips, summary, limits, legend = [], axisUnit = null, extras = [], plot, heads, rows }) {
+function chartFrame({ chartId, title, chips, summary, limits, legend = [], axisUnit = null, extras = [], plot, heads, rows, onTableChange = null }) {
   const id = uid("chart");
   const titleId = `${id}-title`;
   const summaryId = `${id}-summary`;
@@ -566,7 +568,7 @@ function chartFrame({ chartId, title, chips, summary, limits, legend = [], axisU
   const node = el("figure", { class: "fl-chart", "data-chart": chartId, "aria-labelledby": titleId, style: "margin: 0" }, [
     header,
     el("p", { class: "fl-chart__summary", id: summaryId, "data-role": "summary", style: "margin: 4px 0" }, summary),
-    limitsChip(limits),
+    limits === null ? null : limitsChip(limits),
     extras,
     legend.length > 0 ? legendNode(legend) : null,
     axisUnit ? el("p", { class: "fl-small-label", "data-role": "axis-unit", style: "margin: 0" }, axisUnit) : null,
@@ -577,10 +579,13 @@ function chartFrame({ chartId, title, chips, summary, limits, legend = [], axisU
     tableBox.hidden = !on;
     plotBox.hidden = on;
     toggle.setAttribute("aria-pressed", on ? "true" : "false");
+    onTableChange?.(on);
   };
   toggle.addEventListener("click", () => showTable(tableBox.hidden));
   let current = plot;
   let cursorAt = null;
+  const controls = {};
+  const control = (name, value) => { controls[name] = value; return current[name]?.(value); };
   const setCursor = (t_s) => {
     cursorAt = t_s;
     return current.setCursor(t_s);
@@ -595,11 +600,15 @@ function chartFrame({ chartId, title, chips, summary, limits, legend = [], axisU
       plotBox.replaceChildren(fresh.plot.root);
       current = fresh.plot;
       frame.width = width;
+      for (const [name, value] of Object.entries(controls)) current[name]?.(value);
       if (cursorAt !== null) current.setCursor(cursorAt);
     },
   };
   if (building !== null) building.push(frame);
-  return { node, chartId, setCursor, showTable };
+  return { node, chartId, setCursor, showTable,
+    setReveal: on => control('setReveal', on), setRule: id => control('setRule', id),
+    setVehicle: id => control('setVehicle', id), dispose() {},
+  };
 }
 
 function group(kind, nodes, charts) {
@@ -1106,7 +1115,8 @@ function congestedEmptySeconds(intervals, scenario) {
 }
 
 /** A lanes plot: each lane `{name, blocks: [{t0, t1, family, attrs}]}` on the window's clock; lane names are the axis. */
-function lanesPlot(lanes, window) {
+function lanesPlot(lanes, window, options = {}) {
+  if (options.groups) return flowLanePlot(window, options);
   const laneHeight = 20;
   const gap = 8;
   const plotTop = MARGIN.top;
@@ -1136,6 +1146,128 @@ function intervalBlocks(intervals) {
     t0: iv.t0, t1: iv.t1, family: familyOf(iv.state),
     attrs: { "data-state": iv.state, style: "stroke: var(--panel); stroke-width: 1px" },
   }));
+}
+
+// Depot teaching lanes extend the shared lane/chart frame, with one scale and one presentation cursor.
+function flowLanePlot(window, {groups, moments = [], selectedRule = null, selectedVehicle = null}) {
+  const laneHeight=20, gap=8, band=24, between=12;
+  const groupHeight=g=>band+g.lanes.length*(laneHeight+gap)-gap;
+  const total=groups.reduce((sum,g)=>sum+groupHeight(g),0)+between*(groups.length-1);
+  const bottom=MARGIN.top+total;
+  const plot=createPlot({height:bottom+MARGIN.bottom,plotTop:MARGIN.top,plotBottom:bottom,timeDomain:[window.start_s,window.end_s],left:96});
+  const root=plot.root, x=plot.x, horizon=window.end_s-window.start_s, width=plot.right+MARGIN.right;
+  plot.measureAxis.setAttribute('data-scale','lanes');
+  const axis=root.querySelector('[data-axis="time"]');axis.replaceChildren();
+  axis.appendChild(svg('line',{x1:plot.left,x2:plot.right,y1:bottom,y2:bottom,class:'fl-chart__axis'}));
+  const step=[60,120,300,600].find(s=>(plot.right-plot.left)*s/horizon>=48)??600;
+  const ticks=[];for(let t=window.start_s;t<=window.end_s;t+=step)ticks.push(t);
+  if(ticks.at(-1)!==window.end_s){if((window.end_s-ticks.at(-1))*(plot.right-plot.left)/horizon<48)ticks.pop();ticks.push(window.end_s);}
+  for(const t of ticks){axis.appendChild(svg('line',{x1:x(t),x2:x(t),y1:bottom,y2:bottom+4,class:'fl-chart__axis'}));axis.appendChild(svgText(x(t),bottom+18,`${t/60}${t===window.end_s?' min':''}`,{'text-anchor':t===window.end_s?'end':'middle','data-value':t}));}
+  for(const m of moments)axis.appendChild(svg('line',{x1:x(m.time_s),x2:x(m.time_s),y1:bottom-6,y2:bottom,style:'stroke: var(--ink); stroke-width: 2px','data-role':'guided-tick'}));
+  const clipId=uid('flow-clip'),clip=svg('rect',{x:plot.left,y:0,width:plot.right-plot.left,height:bottom,'data-role':'flow-clip'});
+  const clipPath=svg('clipPath',{id:clipId,clipPathUnits:'userSpaceOnUse'});clipPath.appendChild(clip);root.querySelector('defs').appendChild(clipPath);
+  plot.marks.setAttribute('clip-path',`url(#${clipId})`);
+  const overlays=svg('g',{'data-role':'flow-marks'});root.appendChild(overlays);
+  root.querySelector('[data-role="cursor"]').remove();
+  const cursor=svg('g',{'data-role':'cursor','aria-hidden':'true',visibility:'hidden'});
+  const cursorLines=[svg('line',{x1:0,x2:0,y1:MARGIN.top,y2:bottom,style:'stroke: var(--panel); stroke-width: 4px'}),svg('line',{x1:0,x2:0,y1:MARGIN.top,y2:bottom,style:'stroke: var(--ink); stroke-width: 2px'})];
+  cursorLines.forEach(n=>cursor.appendChild(n));root.appendChild(cursor);
+  const ready=[],vehicleLabels=[],outlines=[],groupNodes=[];
+  let y=MARGIN.top,clock=null,revealing=false,rule=selectedRule,vehicle=selectedVehicle;
+  for(const group of groups){
+    const gy=y, layers=[plot.grid,plot.marks,plot.measureAxis,overlays].map(parent=>{const n=svg('g',{'data-flow-group':group.id});parent.appendChild(n);return n;});
+    const [grid,segments,labelsLayer,marks]=layers;
+    labelsLayer.appendChild(svgText(4,gy+16,group.label,{'data-role':'flow-group-title',style:'font-weight: 600; fill: var(--ink)'}));
+    group.lanes.forEach((lane,i)=>{
+      const top=gy+band+i*(laneHeight+gap),meta={'data-rule':group.id,'data-vehicle':lane.vehicle};
+      grid.appendChild(svg('line',{x1:plot.left,x2:plot.right,y1:top+laneHeight,y2:top+laneHeight,class:'fl-chart__grid'}));
+      const label=svgText(plot.left-6,top+14,lane.name,{'text-anchor':'end',...meta});labelsLayer.appendChild(label);vehicleLabels.push(label);
+      const outline=svg('rect',{x:plot.left-2,y:top-2,width:plot.right-plot.left+4,height:laneHeight+4,fill:'none',style:'stroke: var(--ink); stroke-width: 2px',visibility:'hidden','data-role':'vehicle-outline',...meta});marks.appendChild(outline);outlines.push(outline);
+      for(const block of lane.blocks){
+        const height=block.state==='receiving'||block.state==='charging'?laneHeight*block.fraction:laneHeight;
+        const style=block.state==='waiting'?'fill: var(--cond-bg); stroke: var(--cond); stroke-width: 2px; stroke-dasharray: 4 3':block.state==='post'?'fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1px':'fill: var(--accent)';
+        const n=svg('rect',{x:x(block.t0),y:top+(laneHeight-height)/2,width:round2(x(block.t1)-x(block.t0)),height:round2(height),style,...meta,'data-flow-state':block.state,'data-start':block.t0,'data-end':block.t1});
+        segments.appendChild(n);
+      }
+      const laneMarks=lane.marks.filter(m=>m.time_s>=window.start_s&&m.time_s<=window.end_s);
+      for(const mark of laneMarks){
+        const px=x(mark.time_s),isReady=mark.kind==='ready';
+        const node=svg('g',{...meta,'data-flow-mark':mark.kind,'data-time':mark.time_s,visibility:'visible'});
+        if(!isReady)node.appendChild(svg('line',{x1:px,x2:px,y1:top-2,y2:top+laneHeight+2,style:'stroke: var(--panel); stroke-width: 4px'}));
+        node.appendChild(svg('line',{x1:px,x2:px,y1:top-2,y2:top+laneHeight+2,style:`stroke: var(--ink); stroke-width: 2px${isReady?'':'; stroke-dasharray: 4 3'}`}));
+        const conflict=laneMarks.some(other=>other!==mark&&Math.abs(x(other.time_s)-px)<56);
+        // Labels are secondary to marks; keep the exact values in the table and readout when space is tight.
+        if(!conflict&&plot.right-plot.left>=112){
+          const text=`${isReady?'Ready':'Due'} ${format.number(mark.time_s/60,2)}`,width=text.length*6.5;
+          const left=Math.max(plot.left,Math.min(plot.right-width,px+4));
+          node.appendChild(svg('rect',{x:left-2,y:top+2,width:width+4,height:16,fill:'var(--panel)'}));
+          node.appendChild(svgText(left,top+14,text,{'data-role':'flow-time-label',style:'fill: var(--ink)'}));
+        }
+        marks.appendChild(node);if(isReady)ready.push({node,time:mark.time_s});
+      }
+    });
+    groupNodes.push({id:group.id,layers,y:gy,height:groupHeight(group)});y+=groupHeight(group)+between;
+  }
+  const reveal=()=>{
+    const p=revealing?(clock??window.start_s)-window.start_s:horizon;
+    clip.setAttribute('transform',`translate(${plot.left} 0) scale(${p/horizon} 1) translate(${-plot.left} 0)`);
+    for(const entry of ready){const visible=!revealing||entry.time<=(clock??window.start_s),value=visible?'visible':'hidden';if(entry.node.getAttribute('visibility')!==value)entry.node.setAttribute('visibility',value);}
+  };
+  plot.setCursor=t=>{if(!Number.isFinite(t)||t<window.start_s||t>window.end_s){cursor.setAttribute('visibility','hidden');return false;}clock=t;cursor.setAttribute('transform',`translate(${x(t)} 0)`);if(cursor.getAttribute('visibility')!=='visible')cursor.setAttribute('visibility','visible');if(revealing)reveal();return true;};
+  plot.setReveal=on=>{if(Boolean(on)===revealing)return;revealing=Boolean(on);reveal();};
+  plot.setVehicle=id=>{vehicle=id;for(const label of vehicleLabels)label.setAttribute('font-weight',label.getAttribute('data-vehicle')===vehicle?'700':'400');for(const n of outlines)n.setAttribute('visibility',n.getAttribute('data-vehicle')===vehicle?'visible':'hidden');};
+  plot.setRule=id=>{
+    if(id!==null&&!groups.some(g=>g.id===id&&g.id!=='charging'))throw new RangeError('Unknown chart rule.');rule=id;
+    let top=MARGIN.top;
+    for(const g of groupNodes){const shown=rule===null||g.id===rule||g.id==='charging';for(const n of g.layers){n.setAttribute('display',shown?'inline':'none');n.setAttribute('transform',`translate(0 ${top-g.y})`);}if(shown)top+=g.height+between;}
+    const end=top-between;root.setAttribute('viewBox',`0 0 ${width} ${end+MARGIN.bottom}`);axis.setAttribute('transform',`translate(0 ${end-bottom})`);cursorLines.forEach(n=>n.setAttribute('y2',end));clip.setAttribute('height',end);
+  };
+  plot.setRule(rule);plot.setVehicle(vehicle);reveal();return plot;
+}
+
+function buildFlowLanesCharts({result, rules = [], moments = [], selectedRule = null, selectedVehicle = null, onTableChange = null}) {
+  if(!result?.comparison_eligible||!result.arms?.length||result.arms.some(a=>!a.verification?.comparison_eligible||a.record?.execution_status!=='completed'))throw new RangeError('Flow lanes require a verified, comparison-eligible result.');
+  const {scenario,arms}=result,h=scenario.horizon_s,groups=[],rows=[];
+  const name=id=>rules.find(r=>r.id===id)?.name??({'nf_fifo':'First come, first served','nf_equal_uplink':'Equal uplink share','nf_departure_deadline':'Departure deadline first','nf_shortest_upload':'Shortest upload first'}[id.replace(/^cohort_/,'nf_')]??id);
+  const blocks=(record,v,task,done)=>{
+    const out=[];
+    for(const iv of record.intervals){if(done!==undefined&&iv.start_s>=done)continue;
+      const rate=iv[task]?.[v.id]??0,state=rate>0?(task==='charge'?'charging':'receiving'):'waiting';
+      const fraction=rate/(task==='charge'?scenario.charger_j_s:scenario.uplink_bytes_s)||0;
+      const t0=iv.start_s,t1=Math.min(iv.end_s,done??h);if(t1<=t0)continue;
+      const last=out.at(-1);if(last&&last.state===state&&last.fraction===fraction&&last.t1===t0)last.t1=t1;else out.push({t0,t1,state,fraction});
+    }return out;
+  };
+  const charging=scenario.vehicles.filter(v=>v.energy_j>0);
+  if(charging.length){
+    const a=arms[0];
+    groups.push({id:'charging',label:'Charging · same under every rule',lanes:charging.map(v=>{const done=a.verification.visits.find(x=>x.vehicle===v.id).tasks.charge;
+      if(arms.some(arm=>arm.verification.visits.find(x=>x.vehicle===v.id).tasks.charge!==done))throw new RangeError('Charging differs across rules; a common lane is unavailable.');
+      return {vehicle:v.id,name:`Vehicle ${v.id}`,blocks:blocks(a.record,v,'charge',done),marks:[]};})});
+  }
+  for(const {record,verification} of arms){
+    groups.push({id:record.rule,label:name(record.rule),lanes:scenario.vehicles.map(v=>{
+      const visit=verification.visits.find(x=>x.vehicle===v.id),upload=visit.tasks.upload,post=visit.tasks.post,laneBlocks=blocks(record,v,'upload',upload);
+      if(upload!==undefined&&upload<h&&(post??h)>upload)laneBlocks.push({t0:upload,t1:Math.min(post??h,h),state:'post'});
+      const marks=[{kind:'deadline',time_s:v.deadline_s}];if(visit.ready_s!==null&&visit.ready_s!==undefined)marks.unshift({kind:'ready',time_s:visit.ready_s});
+      return {vehicle:v.id,name:`${v.id} upload`,blocks:laneBlocks,marks};
+    })});
+    const allocationRows=[],lastByVehicle=new Map();
+    for(const iv of record.intervals)for(const v of scenario.vehicles){
+      const rate=iv.upload[v.id]??0,visit=verification.visits.find(x=>x.vehicle===v.id),holders=Object.entries(iv.upload).filter(([,n])=>n>0).map(([id])=>id).join(', ');
+      const state=rate?Object.values(iv.upload).filter(n=>n>0).length>1?'Active · sharing link':'Active · full link':visit.tasks.upload!==undefined&&iv.start_s>=visit.tasks.upload?'Upload finished':`Waiting for uplink · held by ${holders||'none; no capacity'}`;
+      const previous=lastByVehicle.get(v.id);
+      if(scenario.vehicles.length>2&&previous&&previous.end===iv.start_s&&previous.rate===rate&&previous.state===state){previous.end=iv.end_s;previous.last=iv.id;}
+      else{const row={start:iv.start_s,end:iv.end_s,vehicle:v.id,state,rate,first:iv.id,last:iv.id};allocationRows.push(row);lastByVehicle.set(v.id,row);}
+    }
+    for(const r of allocationRows)rows.push([name(record.rule),`${r.start/60} to ${r.end/60} min`,r.vehicle,r.state,`${r.rate} bytes/s`,r.first===r.last?`interval ${r.first}`:`intervals ${r.first} to ${r.last}`]);
+  }
+  const plot=lanesPlot([],{start_s:0,end_s:h},{groups,moments,selectedRule,selectedVehicle});
+  const handle=chartFrame({chartId:'depot_flow_lanes',title:charging.length?'Uploads and charging under all three rules':'Uploads under all four rules',chips:[],summary:`${result.run_id===undefined?'Synthetic teaching run':`Run ${result.run_id}`} · model consistency checked. ${scenario.vehicles.filter(v=>v.energy_j===0).map(v=>`Vehicle ${v.id} already at target.`).join(' ')}`,limits:null,plot,heads:['Rule','Interval','Vehicle','State / reason','Accepted rate','Ledger reference'],rows,onTableChange,
+    extras:[],axisUnit:null,
+  });
+  handle.node.appendChild(el('p',{class:'fl-chart__summary','data-role':'flow-legend'},'Solid service: receiving upload or charging; thickness shows accepted rate. Dashed amber: waiting. Pale fill: post-upload step. Solid tick: ready in this model. Dashed line: departure deadline.'));
+  handle.element=handle.node;return handle;
 }
 
 function intervalRows(intervals, window, prefix = []) {
@@ -1725,4 +1857,9 @@ export function verdictCharts(options) {
 /** A categorical ladder for models outside the metric registry; see buildLadderChart. */
 export function ladderChart(options) {
   return responsive(buildLadderChart, options);
+}
+
+/** Verified depot-flow lanes. Controls preserve the result and survive responsive redraws. */
+export function flowLanesCharts(options) {
+  return responsive(buildFlowLanesCharts, options);
 }

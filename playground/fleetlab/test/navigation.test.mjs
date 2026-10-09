@@ -11,7 +11,7 @@ test('all studio destinations have stable offline-compatible links',()=>{
   assert.deepEqual(parseRoute('#/street-lab'),{page:'streets'});
 });
 test('each catalog record is addressable without losing its stable identifier',()=>{
-  const rows=simulationCatalog(); assert.equal(rows.length,60);
+  const rows=simulationCatalog(); assert.equal(rows.length,61);
   for(const r of rows){
     const page=r.target==='flows'?'flows':r.target==='scale'?'scale':r.target==='operations'?'simulation':r.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(r.id)?'depots':'operations';
     assert.deepEqual(parseRoute(routeHref({page,lesson:r.id})),{page,lesson:r.id});

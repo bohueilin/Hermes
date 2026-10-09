@@ -7,7 +7,7 @@ import { installFakeDom } from './helpers/fake-dom.mjs';
 
 test('catalog includes every registered regional preset and every operational lesson once',()=>{
   const rows=simulationCatalog();
-  assert.equal(rows.length,PRESETS.length+OPERATIONAL_LESSONS.length+STREET_PRESETS.length+4);
+  assert.equal(rows.length,PRESETS.length+OPERATIONAL_LESSONS.length+STREET_PRESETS.length+5);
   assert.equal(new Set(rows.map(x=>x.id)).size,rows.length);
   assert.deepEqual(rows.filter(x=>x.model==='Four-area experiments').map(x=>x.id),PRESETS.map(x=>x.id));
   assert.deepEqual(rows.filter(x=>x.model==='Street lab').map(x=>x.hotspot),STREET_PRESETS.map(x=>x.id));

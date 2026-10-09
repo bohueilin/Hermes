@@ -19,12 +19,15 @@ ASSETS = Path(__file__).resolve().parents[1] / "hosted"
 EXCEPTIONS = frozenset(("index.html", "boot.js", "_headers"))
 CLIENT_FIXES = frozenset(("src/ui/setup-codec.js", "src/ui/setup-sharing.js", "src/ui/studio.js"))
 FLOW_CHANGED = frozenset((
-    "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js",
+    "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js", "src/ui/charts.js",
     "src/ui/simulation-catalog.js", "src/ui/operations-lab.js",
 ))
 FLOW_ADDED = frozenset((
     "src/model/depot-flow-contract.js", "src/model/depot-flow.js",
     "src/model/depot-flow-verify.js", "src/ui/depot-flow-lab.js",
+    "src/model/depot-cohort-contract.js", "src/model/depot-cohort.js",
+    "src/model/depot-cohort-verify.js", "src/ui/depot-flow-view.js",
+    "src/ui/depot-flow-reading.js", "src/ui/depot-flow-player.js",
 ))
 
 
@@ -154,7 +157,7 @@ def integrate(
             '<section aria-label="About FleetLab"><h1>FleetLab: test fleet '
             "decisions in simulation</h1>"
             "<p>Independent educational software by Bo-Huei Lin. Explore Fleet day, Street lab, "
-            'paired experiments and the <a href="/city-explorer/">San '
+            'paired experiments, Depot flow lab and the <a href="/city-explorer/">San '
             "Francisco City Explorer</a>.</p>"
             "<p>Synthetic operations; map qualification remains open. Not affiliated with or "
             "endorsed by Waymo, Zoox, or their partners. No operational authority.</p></section>"
@@ -267,7 +270,7 @@ def integrate(
             "file_count": len(final),
             "total_bytes": sum(r["bytes"] for r in final.values()),
             "publication": "NOT_PERFORMED",
-            "teaching_update": "depot-flow-nf01" if flow_update else None,
+            "teaching_update": "depot-flow-nf01-nf02" if flow_update else None,
             "scientific_eligibility": "BLOCKED_MAP_QUALIFICATION",
         }
         launch.write_json(review / "integration-manifest.json", result)

@@ -17,7 +17,7 @@ test('hosted entries preserve mounted lessons and film, and native links need no
   const film=document.querySelector('.welcome-visual');
   const filmContent=film.textContent;
   const originalLessons=[...document.querySelectorAll('.catalog-card')];
-  assert.equal(originalLessons.length,60);
+  assert.equal(originalLessons.length,61);
   mountCityEntry();mountCityEntry();
   assert.equal(nav.children.length,originalLinks.length+1);
   assert.equal(nav.children[2].textContent,'City Explorer');

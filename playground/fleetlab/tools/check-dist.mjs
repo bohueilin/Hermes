@@ -52,7 +52,8 @@ const CSS_REMOTE = [/(?:url\(|image-set\(|@import)\s*["']?\s*\/\//i, /image-set\
 const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledescription", "title", "alt", "placeholder"]);
 
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
-const COPY_MODULES = [
+export const COPY_MODULES = [
+  "src/ui/depot-flow-lab.js", "src/ui/depot-flow-view.js", "src/ui/depot-flow-reading.js", "src/ui/depot-flow-player.js", "src/model/depot-flow-contract.js", "src/model/depot-flow.js", "src/model/depot-flow-verify.js", "src/model/depot-cohort-contract.js", "src/model/depot-cohort.js", "src/model/depot-cohort-verify.js",
   "src/ui/teaching-frames.js", "src/model/street-simulation.js","src/ui/model-identity.js", "src/ui/labels.js", "src/ui/routes.js", "src/ui/setup-sharing.js", "src/ui/setup-codec.js", "src/ui/regional-setup.js", "src/ui/street-lab.js", "src/ui/studio.js", "src/ui/hero-film.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/readiness-view.js", "src/ui/advanced-operations-view.js", "src/ui/scenario-learning.js", "src/ui/launch-view.js", "src/ui/regional-power-view.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js", "src/ui/scale-lab.js", "src/ui/scale-labs.js", "src/model/scale-contract.js", "src/model/scale-response.js", "src/model/scale-response-engine.js", "src/model/scale-intake.js", "src/model/scale-intake-engine.js", "src/model/scale-density.js", "src/model/scale-density-engine.js"];
 
 const FORBIDDEN_TOKENS = [
@@ -356,11 +357,12 @@ function tokenProblems(text, where = null) {
 }
 
 /** Banned words and dashes in copy items `{where, text}`. */
-function copyProblems(copy) {
+export function copyProblems(copy) {
   const problems = [];
   for (const { where, text } of copy) {
     const word = where==='src/ui/advanced-operations-view.js string'&&SYNTHETIC_FORECAST_COPY.has(text)?null:BANNED_WORDS.exec(text);
     if (word) problems.push(`banned word: "${word[0]}" in ${where} ${JSON.stringify(text.slice(0, 80))}`);
+    if (/src\/(?:ui|model)\/depot-(?:flow|cohort)/.test(where) && /\b(?:waymo|zoox|careers|portfolio|hiring|job posting|i-pace|jaguar|ojai|zeekr)\b/i.test(text)) problems.push(`affiliation copy: ${where}`);
     if (DASHES.test(text)) problems.push(`dash: an em or en dash in ${where} ${JSON.stringify(text.slice(0, 80))}`);
   }
   return problems;
@@ -393,6 +395,7 @@ export function checkDist(html, { requiredLabels, byteLength = Buffer.byteLength
 
   const copy = visibleCopy(html);
   const modules = moduleCopy(html);
+  for (const m of html.matchAll(/\/\/ fleetlab-module: (src\/(?:ui|model)\/depot-(?:flow|cohort)[^\s]*)/g)) if(!COPY_MODULES.includes(m[1])) problems.push(`copy coverage: ${m[1]}`);
   if (!modules.has("src/ui/labels.js")) problems.push("labels: no src/ui/labels.js module found in the page script");
   for (const [name, texts] of modules) for (const text of texts) copy.push({ where: `${name} string`, text });
   problems.push(...copyProblems(copy));
@@ -455,6 +458,7 @@ export function checkSite(files, { requiredLabels }) {
     if (path.endsWith(".js")) {
       problems.push(...scriptProblems(source, path));
       problems.push(...tokenProblems(source, path));
+      if (/^src\/(?:ui|model)\/depot-(?:flow|cohort).*\.js$/.test(path)&&!COPY_MODULES.includes(path)) problems.push(`copy coverage: ${path}`);
       if (COPY_MODULES.includes(path)) for (const literal of literalsOf(source)) copy.push({ where: `${path} string`, text: literal });
     }
     if (path === "styles.css") problems.push(...tokenProblems(source, path));

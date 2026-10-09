@@ -48,7 +48,7 @@ export function mountCityEntry(doc = document) {
     node('div', {class:'lab-guide-grid'}, [
       ['fleet-day','Fleet day','What keeps a fleet available?','Weather, energy and depot work across one day.'],
       ['street-lab','Street lab','Where do local queues form?','Routing and block-level queues on sourced streets.'],
-      ['depot-flow-lab','Depot flow lab','Charged, but still not ready?','Trace uploads, energy and departure readiness under three rules.'],
+      ['depot-flow-lab','Depot flow lab','Charged, but still not ready?','Explore shared uploads, energy, urgency and departure readiness.'],
       ['experiments','Four-area experiments','Does a policy help across repeats?','Paired dispatch and recall experiments with guardrails.'],
       ['scale-lab','Scale lab','What changes as a fleet grows?','Density, fleet intake and support-pool capacity.'],
     ].map(([path,title,question,detail]) => node('a', {href:`/#/${path}`}, [

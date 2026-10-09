@@ -1,6 +1,6 @@
 # FleetLab publication runbook
 
-Updated 8 October 2026. Applies to the static educational FleetLab website.
+Updated 9 October 2026. Applies to the static educational FleetLab website.
 Hermes operational deployment permission remains NONE. Historical deployment
 paragraphs and the old playground-only CI template are superseded; do not use them.
 
@@ -12,8 +12,8 @@ and exact source commit. That file records packaging intent, not proof of
 hosting. Compare it with the committed `docs/releases/fleetlab-current.json`
 and run the readback tool to establish which bytes are actually served.
 
-The owner explicitly authorized Git push and publication of the October 8
-Depot flow lab release after its local build and validation. An audit, handoff,
+The owner explicitly authorized Git push and publication of the October 9
+Depot flow learning update, following the authorized October 8 release. An audit, handoff,
 successful verifier, Git branch label or this runbook never grants authority for
 a future release. Follow the user's
 actual instruction. Account/credential changes and destructive retention actions
@@ -36,9 +36,9 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    Use `integrate-site.py` with the preserved original root and readback, the selected
    City viewer, a sanitized prior viewer, the complete source offer, and new output.
    The security client update declares three replaced source modules: setup codec,
-   setup sharing and Studio. The October 8 `--flow-update` additionally declares
-   the NF-01 route, catalog, teaching frames, Fleet day links, stylesheet and four
-   new lesson modules. It rejects undeclared changes, compares copied payloads
+   setup sharing and Studio. The October 9 `--flow-update` additionally declares
+   the NF-01/NF-02 route, catalog, teaching frames, Fleet day links, stylesheet,
+   shared charts and ten depot model/presentation modules. It rejects undeclared changes, compares copied payloads
    with validated digests, and rechecks the client inventory before finalization.
    All City payloads and source offers are preserved by that update.
 4. Commit reviewed source before final integration. Set `--source-commit` to the
