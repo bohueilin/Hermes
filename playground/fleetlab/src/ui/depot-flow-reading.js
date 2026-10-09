@@ -7,6 +7,13 @@ export const ruleName=id=>[...FLOW_RULES,...COHORT_RULES].find(r=>r.id===id)?.na
 export const table=(caption,heads,rows,attrs={})=>el('div',{class:'flow-table',tabindex:0,role:'region','aria-label':caption,...attrs},el('table',{},[el('caption',{},caption),el('thead',{},el('tr',{},heads.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map((c,i)=>el(i===0?'th':'td',i===0?{scope:'row'}:{},c)))))]));
 export const detail=(title,children)=>el('details',{},[el('summary',{},title),...children]);
 export const button=(text,fn,attrs={})=>el('button',{type:'button',class:'studio-button',on:{click:fn},...attrs},text);
+const CHAIN_WORDS={done:'✓ done',active:'in progress',waiting:'waiting','not-applicable':'already at target'};
+/** One rule and vehicle at the inspected time, from an inspectState row: words carry each state, never color alone. */
+export function readinessChain(record,v){
+ const state=task=>task.state==='complete'?'done':task.state,atTarget=record.scenario.vehicles.find(x=>x.id===v.vehicle).energy_j===0;
+ const steps=[['Battery',atTarget?'not-applicable':state(v.tasks.charge)],['Upload',state(v.tasks.upload)],['Local step',state(v.tasks.post)],['Ready',v.ready?'done':'waiting']];
+ return el('div',{class:'flow-chain',role:'group','aria-label':'Readiness chain','data-rule':record.rule,'data-vehicle':v.vehicle},[el('strong',{},`${ruleName(record.rule)} · Vehicle ${v.vehicle}`),...steps.map(([label,s])=>el('span',{'data-state':s},`${label}: ${CHAIN_WORDS[s]}`))]);
+}
 export const FLOW_GLOSSARY=Object.freeze({
  uplink:'Uplink: the shared connection that carries uploaded bytes away from this depot.',
  useful:'Useful bytes: the data accepted toward an upload. This model has no protocol overhead or retries.',

@@ -46,3 +46,27 @@ test('control changes preserve keyboard focus and a named lesson restores its se
     lab.setLesson({id:'two-vehicles'});assert.equal(lab.getState().options.b_gb,7.5);lab.destroy();
   }finally{restore();}
 });
+test('result page names its place, offers one compare action and shows a readiness chain',async()=>{
+  const restore=installFakeDom();
+  try{const lab=ui.createDepotFlowLab({yieldPage:()=>Promise.resolve()});document.body.appendChild(lab.element);
+    const crumbs=lab.element.querySelector('nav.flow-breadcrumb[aria-label="Breadcrumb"]');assert.ok(crumbs);
+    assert.deepEqual(crumbs.querySelectorAll('a').map(a=>[a.textContent,a.getAttribute('href')]),[['Explore','#/catalog'],['Depot readiness & data','#/catalog']]);
+    assert.equal(crumbs.querySelector('span[aria-current="page"]').textContent,'Two vehicles, one uplink');
+    const runButton=lab.element.querySelector('[data-flow-run]');assert.equal(runButton.textContent,'Compare the three rules');
+    assert.equal(runButton.parentNode.nextSibling.getAttribute('class'),'flow-run-help');assert.equal(lab.element.querySelector('p.flow-run-help').textContent,'Runs the same workload under each rule.');
+    await lab.run();const before=JSON.stringify(lab.getState().result);
+    const slider=lab.element.querySelector('input[type="range"]');slider.value='180';slider.dispatchEvent(new Event('input'));
+    const readout=lab.element.querySelector('[data-cursor-state]');
+    assert.equal(readout.querySelectorAll('.flow-chain[aria-label="Readiness chain"]').length,6);
+    for(const chain of readout.querySelectorAll('.flow-chain')){const steps=chain.querySelectorAll('span');assert.deepEqual(steps.map(s=>s.textContent.split(':')[0]),['Battery','Upload','Local step','Ready']);for(const s of steps)assert.match(s.getAttribute('data-state'),/^(done|active|waiting|not-applicable)$/);}
+    const states=(rule,id)=>readout.querySelector(`.flow-chain[data-rule="${rule}"][data-vehicle="${id}"]`).querySelectorAll('span').map(s=>s.getAttribute('data-state'));
+    assert.deepEqual(states('nf_departure_deadline','B'),['not-applicable','done','done','done']);
+    assert.deepEqual(states('nf_fifo','B'),['not-applicable','waiting','waiting','waiting']);
+    assert.deepEqual(readout.querySelector('.flow-chain[data-rule="nf_fifo"][data-vehicle="B"]').querySelectorAll('span').map(s=>s.textContent),['Battery: already at target','Upload: waiting','Local step: waiting','Ready: waiting']);
+    assert.equal(readout.querySelector('.flow-chain[data-rule="nf_departure_deadline"][data-vehicle="B"] span[data-state="done"]').textContent,'Upload: ✓ done');
+    lab.element.querySelector('[data-next-event]').click();const live=lab.element.querySelector('[aria-live="polite"]');assert.notEqual(live.textContent,'');
+    lab.pause();assert.equal(live.textContent,'');assert.equal(JSON.stringify(lab.getState().result),before);
+    lab.setLesson({id:'crossed-priorities'});assert.equal(lab.element.querySelector('[data-flow-run]').textContent,'Compare the four rules');
+    assert.equal(lab.element.querySelector('nav.flow-breadcrumb span[aria-current="page"]').textContent,'Four visits, crossed priorities');lab.destroy();
+  }finally{restore();}
+});
