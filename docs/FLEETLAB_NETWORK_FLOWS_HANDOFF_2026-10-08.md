@@ -93,6 +93,7 @@ Additional implementation checks caught policy mislabeling and focus loss when i
 | Offline size | 2,470,731 bytes, below the existing 2.5 MiB cap |
 | Browser reflow | No document overflow in the new page at 320, 375, 412, 768, 1024, 1450 and 1600 px requested widths |
 | Browser behavior | Default and 45 GB outcomes, old-result labeling, phone Explore, Overview film/entry and retained City Explorer navigation observed |
+| Browser offline execution | The packed HTML ran the default lesson with matching results and no observed console errors |
 | Physical Pixel | `adb devices` returned no connected device during this turn; no fresh physical-device pass claimed |
 | Human/assistive technology qualification | Not performed. Real screen-reader speech, actual 200% browser zoom, visitor comprehension and SF map/source observations remain separate |
 | Hermes doctor | 16 PASS, 2 WARN (active environment identification and dirty working tree at check), 1 optional display NOT_AVAILABLE |
@@ -114,6 +115,19 @@ node playground/fleetlab/tools/check-dist.mjs dist/network-flows-20261008/fleetl
 node playground/fleetlab/tools/pack.mjs --site dist/network-flows-20261008/teaching-site
 node playground/fleetlab/tools/check-dist.mjs --site dist/network-flows-20261008/teaching-site
 ```
+
+## Final local package and Git record
+
+- Implementation commit: `76aea0970ee3a48bf63c12bf8a66ac007d692739` on `codex/fleetlab-city-sf`.
+- Integrated review: `build/fleetlab-city/network-flows-20261008/integrated-final/site/`.
+- Local preview: [Depot flow lab](http://127.0.0.1:8768/#/depot-flow-lab?lesson=two-vehicles).
+- The release-stage verifier read and matched **10,019 files / 1,619,140,830 bytes**.
+- **9,908 City Explorer files are byte-identical** to the latest served release package, including the source offer, current viewer and sanitized rollback. Nothing was removed. Thirteen existing teaching/publication files changed and four new lesson modules were added.
+- Integration manifest SHA-256: `cad9f2915ea6f247e2bfe5130cd0308a413a0828c5e1651805e9147c63eab0fb`.
+- Offline SHA-256: `612aac16af6ee5adbbf8a32523aa6b9ef3e79994916c927ee7348357ca7a32ac`.
+- Evidence directory: `build/fleetlab-city/validation/network-flows-20261008/`; includes final package identity, preservation report and preview screenshot.
+- The owner explicitly authorized GitHub push and live publication after inspecting the completed local build. Preview and production byte/header verification are required before changing the current release receipt. Publication results will be appended below.
+- Existing October 7/8 research and review drafts remain preserved locally. Exact paths were added to the common Git local excludes and private publication patterns; they are not uploaded. The reviewed implementation plan and this standalone handoff are tracked. The final source-identified package is rebuilt after the release-preparation commit.
 
 ## Research grounding and next study
 
