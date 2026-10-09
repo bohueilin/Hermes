@@ -2,9 +2,11 @@
 
 import importlib.util
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from test_launch import launch, write_release
 
@@ -84,6 +86,56 @@ class IntegrationTest(unittest.TestCase):
         (self.legacy / "original-0.txt").write_text("unexpected replacement")
         with self.assertRaisesRegex(ValueError, "unexpected established"):
             integration.check_preservation(before, launch.inventory(self.legacy))
+
+    def test_flow_update_preserves_undeclared_assets_and_all_city_records(self):
+        before = {
+            "src/ui/routes.js": {"sha256": "old"},
+            "city-explorer/trace.json": {"sha256": "same"},
+        }
+        after = {**before, "src/ui/routes.js": {"sha256": "new"}}
+        self.assertEqual(
+            integration.check_preservation(before, after, True, True), ["src/ui/routes.js"]
+        )
+        after["city-explorer/trace.json"] = {"sha256": "changed"}
+        with self.assertRaisesRegex(ValueError, "unexpected established"):
+            integration.check_preservation(before, after, True, True)
+
+    def test_flow_update_requires_a_reviewed_client_distribution(self):
+        with self.assertRaisesRegex(ValueError, "flow update requires"):
+            integration.integrate(
+                self.legacy, self.viewer, self.prior, self.offer, self.base / "out", self.offline,
+                flow_update=True,
+            )
+
+    def test_client_mutation_during_city_staging_is_rejected_without_output(self):
+        copied = integration.CLIENT_FIXES | integration.FLOW_CHANGED | integration.FLOW_ADDED
+        for index, name in enumerate(sorted(copied - integration.FLOW_ADDED)):
+            (self.legacy / f"original-{index}.txt").unlink()
+            target = self.legacy / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("old " + name)
+        client = self.base / "client"
+        shutil.copytree(self.legacy, client)
+        for name in copied:
+            target = client / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((launch.ROOT / "playground/fleetlab" / name).read_bytes())
+        original_prepare = integration.launch.prepare
+
+        def mutate_after_prepare(*args, **kwargs):
+            report = original_prepare(*args, **kwargs)
+            (client / "src/model/depot-flow.js").write_text("unreviewed changed code")
+            return report
+
+        with (
+            patch.object(integration.launch, "prepare", side_effect=mutate_after_prepare),
+            self.assertRaisesRegex(ValueError, "client.*(changed|integrity)"),
+        ):
+            integration.integrate(
+                self.legacy, self.viewer, self.prior, self.offer,
+                self.base / "out", self.offline, client_update=client, flow_update=True,
+            )
+        self.assertFalse((self.base / "out").exists())
 
     def test_source_identified_release_cannot_omit_client_security_update(self):
         with self.assertRaisesRegex(ValueError, "security client update"):

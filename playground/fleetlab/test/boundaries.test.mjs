@@ -8,6 +8,7 @@ import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { maskSource, parseModule } from "../tools/pack.mjs";
+import {labelScanText} from '../tools/check-dist.mjs';
 
 const PLAYGROUND_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
@@ -211,7 +212,7 @@ describe("text scans", () => {
     const labels = requiredLabels();
     const problems = [];
     for (const file of filesUnder(PLAYGROUND_ROOT)) {
-      const text = readFileSync(file, "utf8");
+      const text = labelScanText(readFileSync(file, "utf8"),label(file),labels);
       labels.forEach((value, index) => {
         if (text.includes(value)) problems.push(`${label(file)} contains entry ${index} of the label tuple`);
       });

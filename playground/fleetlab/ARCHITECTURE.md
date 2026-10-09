@@ -1411,3 +1411,18 @@ same engine, not a second map simulator. [Contracts and exact metric populations
 `apps/fleetlab-city/` is a sibling subsystem because this playground's protected boundary excludes Python and node_modules. No city runtime import or dependency enters the legacy app. The new direction is source snapshots → directed graph → frozen scenarios → single-owner graph/resource runner → stored-event verification → paired comparison → same-origin recorded viewer. Its pack/scenario/run/metric/comparison/explanation contracts are separately versioned. Geometry, numerical decisions and optional prose have different ownership.
 
 The city package is prepared independently under `dist/city-explorer-reviewed/`, with route-scoped proposed headers and an inventory for whole-bundle rollback. It has not been deployed. The old offline payload and hosted package remain separate. Source accounting is complete for the pinned snapshot, while routing/district and human semantic qualification fail or remain open. See `docs/FLEETLAB_CITY_PACK_V1.md`, `docs/FLEETLAB_CITY_RUN_V1.md` and `docs/FLEETLAB_CITY_SF_VALIDATION.md`.
+
+## 46. Depot flow lab, NF-01 (8 October 2026)
+
+The owner approved the first Network Flows lesson after the October 8 design and
+ChatGPT review. It adds a separate bounded integer event model, independent
+read-only reconstruction, three-rule comparison and a peer teaching page. See
+`docs/superpowers/plans/2026-10-08-depot-flow-lab.md` and the dated implementation handoff.
+Historical engine, instrument and summary semantics remain unchanged.
+
+Conflict resolution for the section 9/H-8 raw label ban: the new NF-01 contract
+records an explicit scope field required by the reviewed trust-state design.
+One scope literal is allowed in `src/model/depot-flow-contract.js` and that
+module's packed representation. Other labels, duplicated literals, legacy
+summaries and other modules remain subject to the original ban. This does not
+turn the teaching record into a Hermes decision record or confer authority.

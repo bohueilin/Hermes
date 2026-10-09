@@ -22,6 +22,20 @@ function setup() {
   return { restore, root, store, calls, studio };
 }
 
+test('Depot flow lab is additive, direct-linkable and catalog-routed without running',()=>{
+  const x=setup();try{
+    x.studio.applyRoute('#/depot-flow-lab?lesson=two-vehicles');
+    assert.equal(x.studio.element.getAttribute('data-page'),'flows');
+    assert.equal(x.studio.flows.getState().result,null);
+    assert.equal(x.studio.flows.element.hidden,false);
+    assert.ok(x.studio.element.querySelector('[data-nav="simulation"]'));
+    assert.ok(x.studio.element.querySelector('[data-nav="scale"]'));
+    assert.ok(x.studio.element.querySelector('[data-simulation="two-vehicles"] a[href="#/depot-flow-lab?lesson=two-vehicles"]'));
+    x.studio.navigate('overview');assert.equal(x.studio.flows.element.hidden,true);
+    x.studio.applyRoute('#/depot-flow-lab?lesson=unknown');assert.equal(x.studio.element.getAttribute('data-page'),'error');
+  }finally{x.studio.destroy();x.restore();}
+});
+
 test("overview does not execute a simulation and a depot stage explains its boundary", () => {
   const x = setup();
   try {
@@ -75,9 +89,9 @@ test('a catalog street case opens its named corridor before running',()=>{
 test('all lesson links restore the named setup without running either engine',()=>{
  const x=setup();try{
   const snapshots=new Map();
-  const capture=record=>record.target==='scale'?x.studio.scale.getState():record.target==='operations'?x.studio.operations.getSharedSetup('current',record.id==='region-launch'?'launch-rehearsal':'fleet-day'):record.target==='streets'?x.studio.streets.getSharedSetup():getRegionalSetup(x.store.getState());
+  const capture=record=>record.target==='flows'?x.studio.flows.getState():record.target==='scale'?x.studio.scale.getState():record.target==='operations'?x.studio.operations.getSharedSetup('current',record.id==='region-launch'?'launch-rehearsal':'fleet-day'):record.target==='streets'?x.studio.streets.getSharedSetup():getRegionalSetup(x.store.getState());
   for(const record of simulationCatalog()){
-   const page=record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
+   const page=record.target==='flows'?'flows':record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
    const href=routeHref({page,lesson:record.id});x.studio.applyRoute(href);
    assert.equal(x.studio.element.getAttribute('data-page'),page,record.id);
    assert.equal(x.store.getState().run.status,'idle',record.id);
@@ -88,7 +102,7 @@ test('all lesson links restore the named setup without running either engine',()
    snapshots.set(record.id,capture(record));
   }
   for(const record of simulationCatalog().reverse()){
-   const page=record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
+   const page=record.target==='flows'?'flows':record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
    x.studio.applyRoute(routeHref({page,lesson:record.id}));
    assert.deepEqual(capture(record),snapshots.get(record.id),`${record.id} restores complete lesson settings after other lessons`);
   }
@@ -119,7 +133,7 @@ test('workspace main, native navigation, page titles and skip focus follow the a
     }
     x.studio.element.querySelector('.studio-skip').click();assert.equal(document.activeElement,mains[0]);
   }
-  assert.equal(x.studio.element.querySelectorAll('.studio-header nav a').length,7);
+  assert.equal(x.studio.element.querySelectorAll('.studio-header nav a').length,8);
  }finally{x.studio.destroy();x.restore();}
 });
 

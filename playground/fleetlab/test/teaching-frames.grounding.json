@@ -1,4 +1,13 @@
 {
+  "two-vehicles": {
+    "source": "constructed teaching fixture",
+    "command": "node --test playground/fleetlab/test/depot-flow.test.mjs",
+    "config_or_patch": "nf01-two-vehicles/2, 1 Gbps, 60 kW, 75 and 7.5 GB, 6 and 0 kWh, deadlines 15 and 5 min",
+    "seeds": "No random draws",
+    "numbers": "Literal readiness checks in A/B minutes: FIFO 12/13, equal sharing 13/4, deadline first 13/3; 36 bounded runs and original fixture tested.",
+    "lane_file": "depot-flow.test.mjs",
+    "kind_reason": "Deterministic mechanism lesson; not fleet-level empirical evidence"
+  },
   "bay-area": {
     "source": "run",
     "command": "Historical grounding recorded by audit Appendix B: fleet-core probe.mjs, probe3.mjs; verify v2.mjs; this change reuses that accepted audit, not a new measurement.",

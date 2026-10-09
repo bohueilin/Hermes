@@ -17,7 +17,7 @@ test('hosted entries preserve mounted lessons and film, and native links need no
   const film=document.querySelector('.welcome-visual');
   const filmContent=film.textContent;
   const originalLessons=[...document.querySelectorAll('.catalog-card')];
-  assert.equal(originalLessons.length,59);
+  assert.equal(originalLessons.length,60);
   mountCityEntry();mountCityEntry();
   assert.equal(nav.children.length,originalLinks.length+1);
   assert.equal(nav.children[2].textContent,'City Explorer');
@@ -38,7 +38,7 @@ test('hosted entries preserve mounted lessons and film, and native links need no
   assert.equal(document.querySelectorAll('.owner-contact').length,1);
   const guide=document.querySelector('.lab-guide');
   assert.ok(guide);
-  assert.deepEqual([...guide.querySelectorAll('a')].map(a=>a.getAttribute('href')),['/#/fleet-day','/#/street-lab','/#/experiments','/#/scale-lab']);
+  assert.deepEqual([...guide.querySelectorAll('a')].map(a=>a.getAttribute('href')),['/#/fleet-day','/#/street-lab','/#/depot-flow-lab','/#/experiments','/#/scale-lab']);
   assert.equal(document.querySelectorAll('.lab-guide').length,1);
   const trust=document.querySelector('.welcome-boundary .hosted-trust-legend');
   assert.ok(trust,'the plain-language trust legend is attached to the actual welcome boundary');

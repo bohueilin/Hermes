@@ -1,10 +1,11 @@
 import {el} from './dom.js';
 import {SCALE_LABS} from './scale-labs.js';
 const families=["Roads and streets", "Fleet size and supply", "Demand, crowds and weather", "Reading a run and a result", "Depot work and capacity", "Energy and charging", "Launching a new area", "Recall, release and depot choice", "Scaling the fleet"];
-const models=["Fleet day", "Street lab", "Four-area experiments", "Scale lab"];
-const evidence=["replay", "one-seed", "paired"];
+const models=["Fleet day", "Street lab", "Four-area experiments", "Scale lab", "Depot flow lab"];
+const evidence=["replay", "one-seed", "paired", "deterministic"];
 const make=(id,a)=>Object.freeze({id,family:families[a[0]],model:models[a[1]],evidence:evidence[a[2]],what_why:a[3],how:a[4],look_for:a[5],ops_takeaway:a[6],limits:"Each model has its own assumptions, so numbers from different models are not interchangeable.",kind:a[7]??null});
 export const LESSON_FRAMES=Object.freeze(Object.fromEntries([...Object.entries({
+"two-vehicles":[4,4,3,"A charged vehicle may still be waiting for its upload. Which shared resource or required task holds up departure?","The same two invented visits run under first come, equal uplink sharing and departure deadline priority. Bytes, energy and task completion are independently checked.","Read readiness and missed deadlines beside late minutes and recorded waits.","An ops team would compare scheduling and added capacity on the same workload before choosing an intervention."],
 "bay-area":[0,0,0,"How far riders are from free cars sets how far cars drive empty. Before choosing a service zone, an operator needs to know how much car time goes to pickups.","Same fleet and demand rate; only the served places change. Trips follow frozen OSM major roads between 18 anchors, with no turn rules, one-way streets or local access. Run all 18, then SF and SFO only.","Read completed trips, empty pickup distance and charging queues as the served places change.","An ops team would check pickup distance and depot charging together in its own service area."],
 "vehicle-mix":[1,0,1,"Does a vehicle type change fleet output, and through which assumption? Planners compare energy use, depot work time and charge limits, not names.","Press Compare I-PACE, mixed, Ojai: the same requests replay with 0, 50 and 100% Ojai. Profiles differ in battery size, energy per km, charge limit, and cleaning and upload time. Ojai values are invented.","Compare completed trips, energy use and depot time across vehicle profiles.","An ops team would check which charging cap binds in its own operation before choosing a vehicle profile."],
 "fleet-day":[1,0,1,"Is this fleet short of cars or of depot capacity? Buying the wrong one leaves riders unserved and ties up scarce sites.","Run the day, then press Compare fleet & depot sizes: the same requests replay with 12, 24, 36 and 48 cars, then 1 to 6 depots. Only that count changes. Demand and sites are synthetic.","Compare how completed trips respond to cars and to depots, and note whether any tested depot count reaches the completion target.","An ops team would check how much car time goes to empty pickup driving before sizing a fleet or adding a site."],
@@ -136,7 +137,7 @@ const absent='not available: no recorded value';
 const num=(v,d=1)=>Number.isFinite(v)?(v!==0&&Number(v.toFixed(d))===0?String(v):v.toFixed(d)):absent;
 const sign=v=>Number.isFinite(v)?(v>0?'+':'')+num(v):absent;
 const upper=s=>s[0]?.toUpperCase()+s.slice(1);
-export function evidenceText(frame,n){return frame.evidence==='paired'?Number.isInteger(n)?`Paired test, ${n} seeds`:'Paired test, seed count not available':frame.evidence==='one-seed'?'One seed, same demand':'One replay';}
+export function evidenceText(frame,n){return frame.evidence==='deterministic'?'No random draws':frame.evidence==='paired'?Number.isInteger(n)?`Paired test, ${n} seeds`:'Paired test, seed count not available':frame.evidence==='one-seed'?'One seed, same demand':'One replay';}
 export function glossaryView(){return el('details',{class:'teaching-glossary'},[el('summary',{},'Words used here'),...Object.values(GLOSSARY).map(text=>el('p',{},text))]);}
 export function exactView(value,children=[]){return el('details',{class:'teaching-exact'},[el('summary',{},'Exact values'),...children,el('p',{},'Harm is signed so that a negative value means the candidate did better.'),el('pre',{},JSON.stringify(value,null,2))]);}
 let exactSerial=0;

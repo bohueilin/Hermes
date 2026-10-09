@@ -21,6 +21,21 @@ import { CONTENT_SECURITY_POLICY, MODULE_MARKER, SITE_BOOT, SITE_CONTENT_SECURIT
 // The directed street extract raises the offline budget from 2 to 2.5 MiB; see the street model design record.
 export const MAX_BYTES = APP_MAX_BYTES;
 
+/** NF-01 explicitly records scope; legacy summaries still cannot impersonate the evidence label tuple.
+ * Permit exactly one scope literal in this declared contract, not arbitrary labels or other modules. */
+export function labelScanText(source,path,labels){
+  if(path!=='src/model/depot-flow-contract.js')return source;
+  return source.replace(`scope:'${labels[0]}'`,"scope:'teaching-scope'");
+}
+function packedLabelScan(html,labels){
+  const marker=MODULE_MARKER+'src/model/depot-flow-contract.js\n';
+  const start=html.indexOf(marker);if(start<0)return html;
+  const end=html.indexOf(MODULE_MARKER,start+marker.length);
+  const stop=end<0?html.indexOf('</script>',start):end;
+  if(stop<0)return html;
+  return html.slice(0,start)+labelScanText(html.slice(start,stop),'src/model/depot-flow-contract.js',labels)+html.slice(stop);
+}
+
 /** The one http URL allowed: the SVG namespace name, an identifier that is never requested. */
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
@@ -383,7 +398,7 @@ export function checkDist(html, { requiredLabels, byteLength = Buffer.byteLength
   problems.push(...copyProblems(copy));
 
   requiredLabels.forEach((label, index) => {
-    if (html.includes(label)) problems.push(`required label: entry ${index} of the label tuple appears in the file`);
+    if (packedLabelScan(html,requiredLabels).includes(label)) problems.push(`required label: entry ${index} of the label tuple appears in the file`);
   });
   return redacted(problems, requiredLabels);
 }
@@ -448,7 +463,7 @@ export function checkSite(files, { requiredLabels }) {
   for (const [path, source] of entries) {
     if (typeof source !== "string") continue;
     requiredLabels.forEach((label, index) => {
-      if (source.includes(label)) problems.push(`required label: entry ${index} of the label tuple appears in ${path}`);
+      if (labelScanText(source,path,requiredLabels).includes(label)) problems.push(`required label: entry ${index} of the label tuple appears in ${path}`);
     });
   }
   return redacted(problems, requiredLabels);

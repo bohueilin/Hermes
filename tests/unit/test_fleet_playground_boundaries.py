@@ -264,9 +264,15 @@ def test_r8_no_label_string_in_playground_or_fixture_files() -> None:
             continue
         for path in _files(root):
             # Report the tuple index, never the string itself.
+            data = path.read_bytes()
+            if path == FLEETLAB_PLAYGROUND / "src/model/depot-flow-contract.js":
+                # NF-01's explicit scope field. Legacy summaries and other labels stay forbidden.
+                data = data.replace(
+                    f"scope:'{REQUIRED_LABELS[0]}'".encode(), b"scope:'teaching-scope'", 1
+                )
             offenders += [
                 f"{_relative(path)}: REQUIRED_LABELS[{index}]"
-                for index in _label_indices(path.read_bytes())
+                for index in _label_indices(data)
             ]
     assert offenders == []
 

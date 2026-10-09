@@ -42,6 +42,7 @@ const axisValue=value=>value&&typeof value==='object'?Object.entries(value).map(
 
 export function simulationCatalog(){
   return [
+    {id:'two-vehicles',title:'Two vehicles, one uplink',model:'Depot flow lab',target:'flows',limits:'Constructed visits and capacities; no packet loss, charge taper or operational authority. No random draws.'},
     ...OPERATIONAL_LESSONS.map(x=>({...x,model:'Fleet day',target:'operations'})),
     ...STREET_PRESETS.map(p=>({id:`street-${p.id}`,title:p.title,model:'Street lab',target:'streets',hotspot:p.id,limits:'Frozen OSM subset and supported turn rules; synthetic signals/capacity/demand; no lane changing, calibrated traffic, actual curb permission or depot energy model.'})),
     ...SCALE_LABS.map(l=>({id:l.id,title:l.title,model:'Scale lab',target:'scale',seeds:l.seeds.length,limits:l.limits})),
@@ -52,16 +53,17 @@ export function simulationCatalog(){
   ].map(r=>({...r,frame:LESSON_FRAMES[r.id]}));
 }
 
-export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},onStreets=()=>{},onLesson=null,hrefForLesson=r=>routeHref({page:r.target==='scale'?'scale':r.target==='operations'?'simulation':r.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(r.id)?'depots':'operations',lesson:r.id})}={}){
+export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},onStreets=()=>{},onLesson=null,hrefForLesson=r=>routeHref({page:r.target==='flows'?'flows':r.target==='scale'?'scale':r.target==='operations'?'simulation':r.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(r.id)?'depots':'operations',lesson:r.id})}={}){
   const records=simulationCatalog();const cards=el('div',{class:'catalog-grid'});const count=el('p',{class:'catalog-count',role:'status'});
   const search=el('input',{type:'search',placeholder:'Try charging, rain, depot, recall…','aria-label':'Search simulations',on:{input:()=>render()}});
-  const filter=el('select',{'aria-label':'Simulation model',on:{change:()=>render()}},['All simulations','Fleet day','Street lab','Four-area experiments','Scale lab'].map(x=>el('option',{value:x},x)));
+  const filter=el('select',{'aria-label':'Simulation model',on:{change:()=>render()}},['All simulations','Fleet day','Street lab','Four-area experiments','Scale lab','Depot flow lab'].map(x=>el('option',{value:x},x)));
   const family=el('select',{'aria-label':'Operations question family',on:{change:()=>render()}},['All questions',...new Set(Object.values(LESSON_FRAMES).map(f=>f.family))].map(x=>el('option',{value:x},x)));
   const element=el('main',{class:'simulation-catalog'},[
     el('section',{class:'catalog-intro'},[el('p',{class:'eyebrow'},'THE COMPLETE LEARNING CATALOG'),el('h1',{},'Which lesson answers my question?'),el('p',{class:'hero-lede'},'Every lesson answers one fleet operations question. Find yours by the decision you face, not by the model behind it.'),el('div',{class:'catalog-models'},[
       el('article',{},[el('h2',{},'Fleet day'),el('p',{},'Fleet day: a minute by minute synthetic Bay Area day with batteries, charging and depot work. One replay per setting; comparisons rerun the same demand.')]),
       el('article',{},[el('h2',{},'Street lab'),el('p',{},'Street lab: directed San Francisco streets with finite block queues in 5 second steps. It compares two route rules on one demand.')]),
       el('article',{},[el('h2',{},'Four-area experiments'),el('p',{},'Four-area experiments: four schematic zones over a day and a night, with no charging. Each lesson is a frozen paired test on 20 seeds.')]),
+      el('article',{},[el('h2',{},'Depot flow lab'),el('p',{},'Depot flow lab: two invented vehicles, one upload link, three allocation rules. Follow bytes, energy and dependencies to understand readiness and deadline tradeoffs.')]),
       el('article',{},[el('h2',{},'Scale lab'),el('p',{},'Scale lab: three labs on scaling a fleet. Two use counts with no map and one reruns the Fleet day engine at rungs. Each derives its setup from its governing ratios and ends in a paired test with guardrails.')]),
     ])]),
     el('section',{class:'catalog-start'},[el('h2',{},'Start here'),...['fleet-day','staffing-readiness','density-ladder'].map(id=>el('a',{href:hrefForLesson(records.find(r=>r.id===id))},records.find(r=>r.id===id).title)),el('a',{href:'#/walkthrough'},'Guided walkthrough'),el('p',{},['Next: ',...['L2a','L2b','UC-08a','UC-10','street-first'].filter(id=>records.some(r=>r.id===id)).map(id=>el('a',{href:hrefForLesson(records.find(r=>r.id===id))},id+' '))])]),el('div',{class:'catalog-search'},[family,filter,search]),count,cards,glossaryView(),

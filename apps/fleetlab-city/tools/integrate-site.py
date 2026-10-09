@@ -18,6 +18,14 @@ _spec.loader.exec_module(launch)
 ASSETS = Path(__file__).resolve().parents[1] / "hosted"
 EXCEPTIONS = frozenset(("index.html", "boot.js", "_headers"))
 CLIENT_FIXES = frozenset(("src/ui/setup-codec.js", "src/ui/setup-sharing.js", "src/ui/studio.js"))
+FLOW_CHANGED = frozenset((
+    "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js",
+    "src/ui/simulation-catalog.js", "src/ui/operations-lab.js",
+))
+FLOW_ADDED = frozenset((
+    "src/model/depot-flow-contract.js", "src/model/depot-flow.js",
+    "src/model/depot-flow-verify.js", "src/ui/depot-flow-lab.js",
+))
 
 
 def check_temporal_offer(release, offered, offer):
@@ -60,9 +68,11 @@ def check_temporal_offer(release, offered, offer):
                 raise ValueError("temporal source offer constituent bytes mismatch")
 
 
-def check_preservation(before, after, client_update=False):
+def check_preservation(before, after, client_update=False, flow_update=False):
     changed = {name for name, record in before.items() if after.get(name) != record}
-    allowed = EXCEPTIONS | (CLIENT_FIXES if client_update else frozenset())
+    allowed = EXCEPTIONS | (CLIENT_FIXES if client_update else frozenset()) | (
+        FLOW_CHANGED if flow_update else frozenset()
+    )
     if changed - allowed or any(name not in after for name in before):
         raise ValueError(f"unexpected established file changes: {sorted(changed)}")
     return sorted(changed)
@@ -78,12 +88,15 @@ def integrate(
     readback=None,
     client_update=None,
     source_commit=None,
+    flow_update=False,
 ):
     legacy, viewer, previous, offer, out, offline = map(
         Path, (legacy, viewer, previous, offer, out, offline)
     )
     if out.exists():
         raise ValueError("output already exists")
+    if flow_update and not client_update:
+        raise ValueError("flow update requires a reviewed client distribution")
     if source_commit and not client_update:
         raise ValueError("a source-identified release requires the reviewed security client update")
     offer_files = launch.inventory(offer)
@@ -99,6 +112,29 @@ def integrate(
     established = launch.verify_legacy(legacy, readback)
     boot = (legacy / "boot.js").read_text()
     index = (legacy / "index.html").read_text()
+    copied = CLIENT_FIXES | (FLOW_CHANGED | FLOW_ADDED if flow_update else frozenset())
+    if client_update:
+        updates = launch.inventory(Path(client_update))
+        if flow_update and set(updates) != set(established) | FLOW_ADDED:
+            raise ValueError("flow client inventory has missing or unexpected modules")
+        for name in copied:
+            if name not in updates or (name not in established and name not in FLOW_ADDED):
+                raise ValueError("client update missing expected module")
+            reviewed = launch.ROOT / "playground/fleetlab" / name
+            if launch.sha_file(reviewed) != updates[name]["sha256"]:
+                raise ValueError("client update differs from reviewed source")
+        if flow_update:
+            for name in set(established) - copied - {"index.html"}:
+                if updates[name] != established[name]:
+                    raise ValueError(f"undeclared teaching client change: {name}")
+            # The packer adds CSP/bootstrap markup. Permit only the reviewed metadata
+            # wording change against the already verified legacy shell.
+            expected_index = index.replace(
+                "Four teaching models with explicit limits", "Teaching models with explicit limits"
+            )
+            index = (Path(client_update) / "index.html").read_text()
+            if index != expected_index:
+                raise ValueError("undeclared teaching index change")
     marker = '<link rel="stylesheet" href="./styles.css">'
     if (
         boot.count("start({ studio: true") != 1
@@ -138,13 +174,8 @@ def integrate(
         )
         (site / "index.html").write_text(hosted_index)
         if client_update:
-            updates = launch.inventory(Path(client_update))
-            for name in CLIENT_FIXES:
-                if name not in established or name not in updates:
-                    raise ValueError("security client update missing expected module")
-                reviewed = launch.ROOT / "playground/fleetlab" / name
-                if launch.sha_file(reviewed) != updates[name]["sha256"]:
-                    raise ValueError("security client update differs from reviewed source")
+            for name in copied:
+                (site / name).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(Path(client_update) / name, site / name)
         shutil.copyfile(review / "_headers.candidate", site / "_headers")
         for name in ("integration.mjs", "integration.css"):
@@ -200,8 +231,16 @@ def integrate(
             },
         )
         final = launch.inventory(site)
-        changed = check_preservation(established, final, bool(client_update))
-        if set(changed) != EXCEPTIONS | (CLIENT_FIXES if client_update else frozenset()):
+        if client_update:
+            for name in copied:
+                if final.get(name) != updates[name]:
+                    raise ValueError("copied client integrity mismatch")
+            if launch.inventory(Path(client_update)) != updates:
+                raise ValueError("client distribution changed during integration")
+        changed = check_preservation(established, final, bool(client_update), flow_update)
+        if set(changed) != EXCEPTIONS | (CLIENT_FIXES if client_update else frozenset()) | (
+            FLOW_CHANGED if flow_update else frozenset()
+        ):
             raise ValueError("declared integration changes incomplete")
         if launch.inventory(legacy) != established or launch.sha_file(offline) != offline_before:
             raise ValueError("input distribution changed during integration")
@@ -228,6 +267,7 @@ def integrate(
             "file_count": len(final),
             "total_bytes": sum(r["bytes"] for r in final.values()),
             "publication": "NOT_PERFORMED",
+            "teaching_update": "depot-flow-nf01" if flow_update else None,
             "scientific_eligibility": "BLOCKED_MAP_QUALIFICATION",
         }
         launch.write_json(review / "integration-manifest.json", result)
@@ -249,6 +289,10 @@ def main():
     )
     parser.add_argument(
         "--source-commit", help="Exact reviewed source commit for public build identification"
+    )
+    parser.add_argument(
+        "--flow-update", action="store_true",
+        help="Apply the explicit NF-01 teaching module allowlist",
     )
     args = parser.parse_args()
     report = integrate(**vars(args))

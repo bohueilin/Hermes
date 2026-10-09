@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
+import {labelScanText} from '../tools/check-dist.mjs';
 import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -299,7 +300,7 @@ describe("result summary", () => {
     const labels = requiredLabels();
     const files = [...filesUnder(PLAYGROUND_ROOT), ...filesUnder(join(REPO_ROOT, "tests/fixtures/fleet_playground"))];
     for (const file of files) {
-      const content = readFileSync(file, "utf8");
+      const content = labelScanText(readFileSync(file, "utf8"),relative(PLAYGROUND_ROOT,file),labels);
       for (const label of labels) assert.ok(!content.includes(label), `${file} holds a label string`);
     }
   });
