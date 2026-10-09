@@ -1486,7 +1486,15 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 }
 @media (max-width: 767.98px) {
   .studio-overview, .studio-approach, .studio-footer { padding-inline: 20px; }
-  .studio-film-hero { padding: 32px 0 16px; gap: 32px; }
+  /* On a phone the film follows the starting points (proposal section 4): the hero section dissolves into
+     the page column so its two halves can be ordered around the start cards. */
+  .studio-overview { display: flex; flex-direction: column; }
+  .studio-film-hero { display: contents; }
+  .film-copy { padding-top: 32px; }
+  .start-points { order: 1; margin-top: 36px; }
+  .welcome-visual { order: 2; margin-top: 40px; }
+  .film-caption { order: 3; }
+  .home-browse { order: 4; }
   .film-copy .hero-actions { gap: 8px; margin-top: 22px; }
   .welcome-boundary { margin-top: 22px; }
   .welcome-visual { min-height: 345px; padding: 14px; }
