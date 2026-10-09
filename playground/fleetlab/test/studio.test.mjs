@@ -201,6 +201,9 @@ test('About & limits keeps the model boundary and the depot stages',()=>{
   assert.match(about.textContent,/not.*digital twin/i);
   assert.match(about.textContent,/Outside the model/);
   assert.ok(about.querySelector('[data-stage="arrive"]'));
+  assert.match(about.textContent,/Five labs, each with its own model and limits\./,'the labs are not described as one unified simulator');
+  assert.match(about.textContent,/06 \/ READING ACROSS MODELS/);assert.doesNotMatch(about.textContent,/SOURCES, CONTEXT AND CONTACT/);
+  assert.equal(x.studio.element.querySelector('.home-browse a[href="#/approach"]').textContent,'About & limits  →','Home names the destination as the header does');
  }finally{x.studio.destroy();x.restore();}
 });
 

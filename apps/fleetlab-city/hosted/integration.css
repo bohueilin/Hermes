@@ -4,19 +4,19 @@
 .city-entry-action { display:inline-flex; align-items:center; min-height:44px; padding:10px 18px; box-sizing:border-box; border:1px solid var(--rule-strong); border-radius:26px; color:var(--ink); background:transparent; text-decoration:none; font-size:15px; font-weight:550; }
 .city-entry-action:hover { background:var(--panel-alt); border-color:var(--accent); }
 .city-entry-action:focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
-.city-entry-catalog { display:flex; align-items:center; justify-content:space-between; gap:28px; padding:28px; border:1px solid #ced9c5; border-radius:16px; background:#eaf0df; margin:0 0 28px; }
+.city-entry-catalog { display:flex; align-items:center; justify-content:space-between; gap:28px; padding:28px; border:1px solid var(--rule); border-radius:18px; background:var(--panel-alt); margin:0 0 28px; }
 .city-entry-catalog h2 { font-size:24px; margin:0 0 12px; letter-spacing:-.02em; }
 .city-entry-catalog p:not(.city-entry-eyebrow) { max-width:700px; font-size:15px; line-height:1.7; margin:0; }
 .city-entry-catalog .city-entry-action { flex-shrink:0; }
 .studio-footer { flex-wrap:wrap; }
 .studio-footer .owner-contact { flex-basis:100%; max-width:none; display:flex; align-items:center; flex-wrap:wrap; gap:12px 24px; border-top:1px solid var(--rule); padding-top:22px; margin-top:4px; font-size:14px; line-height:1.6; }
 .studio-footer .owner-contact a { display:inline-flex; align-items:center; min-height:44px; font-size:15px; font-weight:600; color:inherit; text-underline-offset:5px; overflow-wrap:anywhere; }
-.studio-footer .owner-contact a:focus-visible { outline:3px solid #a66622; outline-offset:4px; }
+.studio-footer .owner-contact a:focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
 @media (max-width:767.98px) {
   .city-entry-catalog { flex-direction:column; align-items:flex-start; padding:24px; }
 }
 
-.offline-edition a:focus-visible { outline:3px solid #a66622; outline-offset:4px; }
+.offline-edition a:focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
 .studio-footer .offline-edition { flex-basis:100%; max-width:none; display:flex; gap:20px; flex-wrap:wrap; align-items:center; border-top:1px solid var(--rule); padding-top:22px; }
 .offline-edition div { flex:1 1 380px; }
 .offline-edition strong { font-size:18px; font-weight:600; }
@@ -47,10 +47,6 @@ button, input, select, textarea{font: inherit}
 .studio-brand strong{font-size: 23px}
 .studio-brand span{font-size: 12px}
 .studio-monogram{font-size: 26px !important}
-.studio-status{font-size: 12px}
-.studio-status > span{font-size: 14px}
-.studio-boundary{font-size: 12px}
-.studio-boundary strong{font-size: 12px}
 .creator-credit{font-size: 12px}
 .studio-button{font-size: 13px !important}
 .scene-heading .eyebrow{font-size: 12px}
@@ -63,14 +59,14 @@ button, input, select, textarea{font: inherit}
 .depot-detail .depot-question{font-size: 12px !important}
 .scene-note{font-size: 12px}
 .approach-intro > p:last-child{font-size: 14px}
-.people-grid h3{font-size: 16px}
+.people-grid h3{font-size: 18px}
 .people-grid p{font-size: 12px}
 .people-grid .person-job{font-size: 15px}
 .approach-case > div > p:not(.eyebrow){font-size: 13px}
 .hypothesis-steps li{font-size: 12px}
-.hypothesis-steps strong{font-size: 13px}
+.hypothesis-steps strong{font-size: 16px}
 .section-lede{font-size: 13px}
-.roadmap h3{font-size: 16px}
+.roadmap h3{font-size: 18px}
 .roadmap p:not(.eyebrow){font-size: 12px}
 .study-note{font-size: 12px}
 .approach-close h2{font-size: 28px}
@@ -105,7 +101,6 @@ button, input, select, textarea{font: inherit}
 .fleet-studio .fl-rail button{font-size: 12px}
 .fleet-studio .fl-iso__label--route .fl-iso__plate{font-size: 12px}
 @media (max-width: 767.98px){
-.studio-boundary{font-size: 12px}
 .quiet-badge{font-size: 12px}
 .workspace-intro h1{font-size: 29px}
 .workspace-intro > p:last-child{font-size: 12px}
@@ -291,20 +286,14 @@ button, input, select, textarea{font: inherit}
 .studio-monogram{font-size: 25px !important}
 .studio-brand strong{font-size: 24px}
 .studio-brand span{font-size: 12px}
-.studio-status{font-size: 12px}
 .film-copy .eyebrow{font-size: 12px}
 .welcome-visual-heading{font-size: 12px}
-.welcome-visual-heading > span:last-child{font-size: 25px}
-.welcome-visual .film-control{font-size: 12px}
 .welcome-visual .film-illustration-label{font-size: 12px}
-.welcome-cycle > span{font-size: 12px}
-.welcome-cycle small{font-size: 12px}
-.film-caption p{font-size: 12px}
 .scene-invitation{font-size: 19px}
 .stage-tabs button{font-size: 12px}
 .depot-detail > p:not(.eyebrow){font-size: 13px}
 .studio-footer strong{font-size: 16px}
-.people-grid p, .hypothesis-steps li, .roadmap p:not(.eyebrow), .section-lede{font-size: 14px}
+.people-grid p, .hypothesis-steps li, .roadmap p:not(.eyebrow), .section-lede{font-size: 16px}
 .teaching-chips span{font-size: 12px}
 .teaching-parts h3{font-size: 12px}
 .teaching-parts p{font-size: 13px}
@@ -321,7 +310,7 @@ button, input, select, textarea{font: inherit}
 .scale-chooser a{font-size: 12px}}
 
 .fleet-studio{font-size:16px;line-height:1.6;--faint:#5e6c7d}
-.fleet-studio p:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.city-entry-lede):not(.flow-lede):not(.catalog-meta):not(.catalog-labs):not(.catalog-count){font-size:16px;line-height:1.6}
+.fleet-studio p:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.flow-lede):not(.catalog-meta):not(.catalog-labs):not(.catalog-count){font-size:16px;line-height:1.6}
 .welcome-boundary{flex-wrap:wrap}
 .welcome-boundary .hosted-trust-legend{flex-basis:100%;max-width:1000px;margin:0;text-align:left;font-size:14px;line-height:1.6}
 .street-map figcaption,.street-event-log time{color:#566579}
@@ -329,6 +318,6 @@ button, input, select, textarea{font: inherit}
 .street-field small{color:#566579}
 /* Keep the existing larger introductory hierarchy above the prose floor. */
 .fleet-studio p.scene-invitation{font-size:18px}
-@media(min-width:768px){.fleet-studio .street-intro p.hero-lede:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.city-entry-lede):not(.flow-lede){font-size:18px}}
+@media(min-width:768px){.fleet-studio .street-intro p.hero-lede:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.flow-lede){font-size:18px}}
 
 .fleet-studio .depot-flow-lab .flow-lede { font-size:20px;line-height:1.6; }

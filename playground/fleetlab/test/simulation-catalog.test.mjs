@@ -81,3 +81,28 @@ test('Explore leads with search, three topics and compact cards',()=>{
     assert.equal(search.value,'');assert.equal(topic.value,'All topics');assert.equal(shown().length,records.length);
   }finally{restore();}
 });
+
+test('Explore keeps its labelled controls next to the results and keeps focus when filtering',()=>{
+  const restore=installFakeDom();
+  try{
+    const root=createSimulationCatalog().element;document.body.appendChild(root);
+    const order=root.children.map(n=>n.getAttribute('class')??n.localName);
+    assert.deepEqual(order.slice(0,3),['catalog-intro','catalog-search','catalog-collections']);
+    const grid=order.indexOf('catalog-grid');
+    assert.equal(order[grid-1],'catalog-count','the count sits directly above the cards it counts');
+    assert.equal(root.children[grid-2].textContent,'All lessons','the results have their own heading');
+    for(const [name,control] of [['Search lessons','input'],['Topic','select'],['Simulation model','select']]){
+      const field=root.querySelector(`.catalog-search [aria-label="${name}"]`);
+      assert.equal(field.localName,control);assert.equal(field.closest('label').querySelector('span').textContent,name,name);
+    }
+    for(const card of root.querySelectorAll('.catalog-card'))assert.equal(card.querySelector('h2'),null,'a lesson title never inverts the card outline');
+    const collections=root.querySelector('.catalog-collections'),topic=root.querySelector('[aria-label="Topic"]');
+    assert.equal(collections.hidden,false);
+    collections.querySelector('button').click();
+    assert.equal(collections.hidden,true,'topic cards step aside while a filter is active');
+    assert.equal(document.activeElement,topic,'focus moves to the filter that changed');
+    const search=root.querySelector('[aria-label="Search lessons"]');search.value='no such lesson';search.dispatchEvent(new Event('input'));
+    root.querySelector('.catalog-grid button').click();
+    assert.equal(collections.hidden,false);assert.notEqual(document.activeElement,document.body);
+  }finally{restore();}
+});

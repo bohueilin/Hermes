@@ -883,3 +883,32 @@ describe("a11y.js helpers", () => {
     }
   });
 });
+
+describe("studio presentation values", () => {
+  const rule = (selector) => RULES.filter((r) => r.context.length === 0 && r.selectors?.includes(selector));
+  const value = (selector, name) => rule(selector).flatMap((r) => r.declarations).filter((d) => d.name === name).at(-1)?.value;
+
+  test("one warm studio palette: the tool palette and the warm palette are the only light :root blocks", () => {
+    assert.equal(RULES.filter((r) => r.prelude === ":root" && r.context.length === 0).length, 2);
+    for (const bg of ["--ground", "--panel"]) assert.ok(tokenContrast("light", "--rule-control", bg) >= 3, `control edge on ${bg}`);
+    for (const selector of [".catalog-search input", ".catalog-search select", ".ops-controls input"]) assert.equal(value(selector, "border-color"), "var(--rule-control)", selector);
+  });
+
+  test("links, buttons and summaries share the 3 px accent ring without a shadow", () => {
+    for (const selector of [".fleet-studio a:focus-visible", ".fleet-studio button:focus-visible", ".fleet-studio summary:focus-visible"]) {
+      assert.equal(value(selector, "outline"), "3px solid var(--accent)", selector);
+      assert.equal(value(selector, "outline-offset"), "4px", selector);
+      assert.equal(value(selector, "box-shadow"), "none", selector);
+    }
+  });
+
+  test("actions and honesty labels are not the smallest text on the page", () => {
+    for (const scope of [".simulation-catalog", ".depot-flow-lab"]) assert.equal(value(`${scope} .studio-button`, "font-size"), "15px", scope);
+    for (const [selector, min] of [[".study-note", 16], [".scene-note", 14], [".quiet-badge", 12], [".stage-number", 12]]) {
+      for (const r of RULES.filter((x) => x.selectors?.includes(selector))) {
+        for (const d of r.declarations.filter((x) => x.name === "font-size")) assert.ok(Number.parseFloat(d.value) >= min, `${selector} ${d.value}`);
+      }
+    }
+    assert.equal(value(".fleet-studio", "font-size"), "16px");
+  });
+});

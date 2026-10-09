@@ -50,7 +50,10 @@ test('result page names its place, offers one compare action and shows a readine
   const restore=installFakeDom();
   try{const lab=ui.createDepotFlowLab({yieldPage:()=>Promise.resolve()});document.body.appendChild(lab.element);
     const crumbs=lab.element.querySelector('nav.flow-breadcrumb[aria-label="Breadcrumb"]');assert.ok(crumbs);
-    assert.deepEqual(crumbs.querySelectorAll('a').map(a=>[a.textContent,a.getAttribute('href')]),[['Explore','#/catalog'],['Depot readiness & data','#/catalog']]);
+    assert.deepEqual(crumbs.querySelectorAll('a').map(a=>[a.textContent,a.getAttribute('href')]),[['Explore','#/catalog']]);
+    const change=lab.element.querySelector('details.flow-change');assert.equal(change.querySelector('summary').textContent,'Change the setup');
+    assert.ok(change.querySelector('[aria-label="Uplink capacity"]'),'the setup inputs sit under Change the setup');
+    const kids=lab.element.querySelector('.flow-workbench').children;assert.ok(kids.indexOf(change)>kids.indexOf(lab.element.querySelector('[data-flow-run]').parentNode),'Run comes before the optional inputs');
     assert.equal(crumbs.querySelector('span[aria-current="page"]').textContent,'Two vehicles, one uplink');
     const runButton=lab.element.querySelector('[data-flow-run]');assert.equal(runButton.textContent,'Compare the three rules');
     assert.equal(runButton.parentNode.nextSibling.getAttribute('class'),'flow-run-help');assert.equal(lab.element.querySelector('p.flow-run-help').textContent,'Runs the same workload under each rule.');
@@ -66,8 +69,16 @@ test('result page names its place, offers one compare action and shows a readine
     assert.equal(readout.querySelector('.flow-chain[data-rule="nf_departure_deadline"][data-vehicle="B"] span[data-state="done"]').textContent,'Upload: ✓ done');
     lab.element.querySelector('[data-next-event]').click();const live=lab.element.querySelector('[aria-live="polite"]');assert.notEqual(live.textContent,'');
     lab.pause();assert.equal(live.textContent,'');assert.equal(JSON.stringify(lab.getState().result),before);
+    lab.element.querySelector('.flow-next button').click();assert.equal(change.open,true,'a suggested change shows the input it changed');
+    assert.equal(document.activeElement,lab.element.querySelector('[data-flow-guess]'));
     lab.setLesson({id:'crossed-priorities'});assert.equal(lab.element.querySelector('[data-flow-run]').textContent,'Compare the four rules');
-    assert.equal(lab.element.querySelector('nav.flow-breadcrumb span[aria-current="page"]').textContent,'Four visits, crossed priorities');lab.destroy();
+    assert.equal(lab.element.querySelector('nav.flow-breadcrumb span[aria-current="page"]').textContent,'Four visits, crossed priorities');
+    assert.equal(lab.element.querySelector('details.flow-change').hidden,true,'NF-02 has no setup inputs to change');
+    await lab.run();const nf02=lab.element.querySelector('[data-cursor-state]');
+    assert.equal(nf02.querySelectorAll('.flow-chain').length,4,'one selected rule, never sixteen chains');
+    const picker=lab.element.querySelectorAll('.flow-rule-picker button');picker[1].click();
+    const rule=lab.element.querySelector('[data-cursor-state]').querySelectorAll('.flow-chain').map(c=>c.getAttribute('data-rule'));
+    assert.equal(rule.length,4);assert.ok(rule.every(r=>r==='cohort_equal_uplink'),rule.join());lab.destroy();
   }finally{restore();}
 });
 test('confirmed at base, closed by the Task 3 pause clear: leaving the page clears lesson announcements, including the pause it causes',async()=>{
