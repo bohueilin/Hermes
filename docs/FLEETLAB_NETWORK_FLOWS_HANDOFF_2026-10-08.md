@@ -2,7 +2,9 @@
 
 **Date:** October 8th, 2026 (America/Los_Angeles). **Owner:** Bo-Huei Lin.
 
-**Status:** First Depot flow lab lesson implemented and validated locally. Public deployment has not occurred in this work. This document describes the educational website, not authority to deploy a vehicle, fleet policy or operational system.
+**Status:** First Depot flow lab lesson implemented, tested, pushed to GitHub and published to the live FleetLab site after explicit owner authorization. Preview and production each matched all 10,018 served files and passed seven header checks. This document describes the educational website, not authority to deploy a vehicle, fleet policy or operational system.
+
+**Open:** [Live Depot flow lab](https://fleetlab.pages.dev/#/depot-flow-lab?lesson=two-vehicles) · [Immutable production deployment](https://e141f612.fleetlab.pages.dev/#/depot-flow-lab?lesson=two-vehicles).
 
 ## What was built
 
@@ -116,18 +118,39 @@ node playground/fleetlab/tools/pack.mjs --site dist/network-flows-20261008/teach
 node playground/fleetlab/tools/check-dist.mjs --site dist/network-flows-20261008/teaching-site
 ```
 
-## Final local package and Git record
+## Final package and Git record
 
 - Implementation commit: `76aea0970ee3a48bf63c12bf8a66ac007d692739` on `codex/fleetlab-city-sf`.
-- Integrated review: `build/fleetlab-city/network-flows-20261008/integrated-final/site/`.
-- Local preview: [Depot flow lab](http://127.0.0.1:8768/#/depot-flow-lab?lesson=two-vehicles).
+- Published source commit: `658e90180e2f856a0d1d72c584d86795753cc7aa`, including the release-preparation documentation. Both source commits were pushed to GitHub before publication. The later receipt/handoff commit records observed hosting; it does not change deployed application bytes.
+- Published package: `build/fleetlab-city/network-flows-20261008/integrated-release/site/`. The earlier `integrated-final` folder was a local review package; it was not published.
 - The release-stage verifier read and matched **10,019 files / 1,619,140,830 bytes**.
 - **9,908 City Explorer files are byte-identical** to the latest served release package, including the source offer, current viewer and sanitized rollback. Nothing was removed. Thirteen existing teaching/publication files changed and four new lesson modules were added.
-- Integration manifest SHA-256: `cad9f2915ea6f247e2bfe5130cd0308a413a0828c5e1651805e9147c63eab0fb`.
+- Integration manifest SHA-256: `b474c724f5757d279d257f481748a619a0631afd3a4993fdd95e6f31b610ea0b`.
 - Offline SHA-256: `612aac16af6ee5adbbf8a32523aa6b9ef3e79994916c927ee7348357ca7a32ac`.
-- Evidence directory: `build/fleetlab-city/validation/network-flows-20261008/`; includes final package identity, preservation report and preview screenshot.
-- The owner explicitly authorized GitHub push and live publication after inspecting the completed local build. Preview and production byte/header verification are required before changing the current release receipt. Publication results will be appended below.
-- Existing October 7/8 research and review drafts remain preserved locally. Exact paths were added to the common Git local excludes and private publication patterns; they are not uploaded. The reviewed implementation plan and this standalone handoff are tracked. The final source-identified package is rebuilt after the release-preparation commit.
+- Evidence directory: `build/fleetlab-city/validation/network-flows-20261008/`; includes release package identity, preservation report, browser observations, screenshots, deployment logs and complete readbacks.
+- The owner explicitly authorized GitHub push and live publication after the completed local build was presented. Preview and production byte/header verification passed before the current release receipt was updated.
+- Existing October 7/8 research and review drafts remain preserved locally. Exact paths were added to the common Git local excludes and private publication patterns; they are not uploaded. The reviewed implementation plan and this standalone handoff are tracked. The final source-identified package was rebuilt after the release-preparation commit.
+
+### Publication receipt — October 8th, 2026
+
+| Check | Observed result |
+|---|---|
+| Preview | `44544676-089a-46b9-ba24-7a32395d1ed9` · [preview](https://44544676.fleetlab.pages.dev/) |
+| Production | `e141f612-2095-494d-8100-96e9f86ce5e7` · [stable site](https://fleetlab.pages.dev/) |
+| Previous production retained | `ddf5a035-c439-43d6-b097-553951a820ee`; no deployment deleted |
+| Complete preview readback | 10,018 / 10,018 matched |
+| Complete stable production readback | 10,018 / 10,018 matched; completed `2026-10-09T01:34:19.113432+00:00` (October 8 in California) |
+| Header checks | 7 / 7 on both preview and stable production: root/City CSP, other declared security headers, download attachment and real 404 |
+| Immutable production smoke | 6 / 6 matched; lesson ran with the expected default results in the browser |
+| Deployment dependencies | Locked install passed; audit found 0 known vulnerabilities; 38 registry signatures verified and 22 package attestations verified |
+| MapLibre dependency audit | 0 known vulnerabilities |
+| Public receipt | `docs/releases/fleetlab-current.json`; includes source, deployment IDs, manifest and complete-readback digests |
+
+The package contains 10,019 files. `_headers` is hosting configuration, so the full HTTP readback checks 10,018 served files, including the real 404 response. Seven additional checks verify header behavior. These observations establish byte consistency and observed hosting, not independent producer authenticity.
+
+The initial preview attempt uploaded changed assets but failed during deployment creation with a connection error. The deployment list showed no new deployment. One retry of the same package succeeded. Both logs remain in the local evidence directory. The first header-check script incorrectly expected the normal cache policy on a missing page; the server correctly returned `404` with `Cache-Control: no-store`. The corrected check requires that safer 404 behavior; all security-header expectations remained unchanged.
+
+Browser checks confirmed default and 45 GB results, previous-setup labeling, a 412 px phone layout and menu, the retained Overview film, SF atlas and recorded replay playback, and controlled handling of a malformed lesson link. No console errors were observed in those checks. A previously used browser session retained the old stable-host JavaScript immediately after release despite a normal reload; fresh HTTP readback and the immutable production host served the new release. The existing root cache policy permits ten minutes of caching. If an already-open tab still shows the old menu, use a cache-bypassing refresh or the immutable production link above. This is a recorded cache-transition limitation, not a new scientific or human-qualification result.
 
 ## Research grounding and next study
 
@@ -146,17 +169,17 @@ No optimality claim should precede a formulation. A future solver reference must
 
 ## Recommendation
 
-Review the integrated NF-01 preview as one complete mechanism lesson. Retain SF qualification HOLD and use NF-02/03 to study capacity value after the next workload/protocol review.
+Use the live NF-01 page as one complete mechanism lesson: battery readiness, data completion and scheduling interact. Retain SF qualification HOLD and use NF-02/03 to study capacity value after the next workload/protocol review.
 
 ## Top risks + mitigations
 
 - **Overgeneralizing two vehicles:** explicit synthetic boundaries, size/urgency caveat and no automatic winner.
 - **Mistaking internal consistency for authenticity or deployment authority:** distinct record fields and concise plain-language disclosure.
-- **Regressing existing content at publication:** strict update allowlist, complete City preservation comparison, integrated package only, preview/production readback before declaring it live.
+- **Regressing existing content at publication:** strict update allowlist, complete City preservation comparison, integrated package only, and successful complete preview/production readbacks. Existing tabs may retain cached prior assets during the cache window; the immutable production URL identifies this exact release.
 - **Unobserved human accessibility/usability:** keep those gates open; the browser and code checks are not participant observations.
 
 ## Next 3 actions
 
-1. Inspect the integrated local preview and the comparison/counterexample on a phone or desktop.
-2. Decide publication of this new Network Flows addition; if authorized, commit/push through the existing privacy guard, publish the integrated package, and verify all served bytes/headers. Never deploy the teaching-only folder over FleetLab.
+1. Present the live default example, then change B to 45 GB to expose the missed-departure versus total-lateness trade-off.
+2. Obtain the remaining independent SF map/source and human usability/accessibility observations when available. No automated or AI review closes those gates.
 3. Review the NF-02/03 workload and objective contract before launching that next study. No Austin or new city is included.

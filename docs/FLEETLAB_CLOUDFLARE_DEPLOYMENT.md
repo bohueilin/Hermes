@@ -1,6 +1,6 @@
 # FleetLab publication runbook
 
-Updated 6 October 2026. Applies to the static educational FleetLab website.
+Updated 8 October 2026. Applies to the static educational FleetLab website.
 Hermes operational deployment permission remains NONE. Historical deployment
 paragraphs and the old playground-only CI template are superseded; do not use them.
 
@@ -12,9 +12,10 @@ and exact source commit. That file records packaging intent, not proof of
 hosting. Compare it with the committed `docs/releases/fleetlab-current.json`
 and run the readback tool to establish which bytes are actually served.
 
-The current task explicitly authorizes fixes, Git push and publication of this
-security release. An audit, handoff, successful verifier, Git branch label or
-this runbook never grants authority for a future release. Follow the user's
+The owner explicitly authorized Git push and publication of the October 8
+Depot flow lab release after its local build and validation. An audit, handoff,
+successful verifier, Git branch label or this runbook never grants authority for
+a future release. Follow the user's
 actual instruction. Account/credential changes and destructive retention actions
 are separate decisions; no document can authorize them by itself.
 
@@ -26,14 +27,20 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
 1. Run the City Python and Node suites, the teaching-lab Node suite and Hermes
    checks. Run the boundary suite with `FLEET_PLAYGROUND_BASE=bca4ccd`; do not
    count a missing-base skip as a completed release gate.
-2. Build a new City viewer from the stored recordings. No new simulation arms
-   are needed for interface or publication fixes. Export only the allowlisted
-   public study guides and blank worksheets. Validate both current and rollback.
+2. If City content changes, build a new viewer from the stored recordings. No new
+   simulation arms are needed for interface or publication fixes. Export only the
+   allowlisted public study guides and blank worksheets. Validate current and rollback.
+   For a teaching-only addition, reuse the verified current City viewer, sanitized
+   rollback and source offer, and prove that every City payload remains unchanged.
 3. Build the root teaching site and offline file with `playground/fleetlab/tools/pack.mjs`.
-   Use `integrate-site.py` with the preserved original root and readback, the new
+   Use `integrate-site.py` with the preserved original root and readback, the selected
    City viewer, a sanitized prior viewer, the complete source offer, and new output.
-   The security client update declares exactly three replaced source modules:
-   setup codec, setup sharing and Studio. All other original payloads are preserved.
+   The security client update declares three replaced source modules: setup codec,
+   setup sharing and Studio. The October 8 `--flow-update` additionally declares
+   the NF-01 route, catalog, teaching frames, Fleet day links, stylesheet and four
+   new lesson modules. It rejects undeclared changes, compares copied payloads
+   with validated digests, and rechecks the client inventory before finalization.
+   All City payloads and source offers are preserved by that update.
 4. Commit reviewed source before final integration. Set `--source-commit` to the
    exact commit. Inspect `review/integration-manifest.json`; package only its `site/`.
    Never upload the repository, a working directory, or a legacy-only build.
@@ -47,7 +54,9 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    Pages request), preserving upstream authentication and asset validation.
 7. Verify all preview bytes with `tools/readback.py --site SITE --url PREVIEW
    --output PRIVATE_RESULT`. Verify root/City CSP, attachment headers, a real 404,
-   malformed links, normal navigation, map/replay and phone-width layout.
+   malformed links, normal navigation, map/replay and phone-width layout. The
+   readback tool verifies bytes/statuses; inspect response headers separately.
+   A missing page must return 404 with the security headers and `no-store` cache policy.
 8. For the currently authorized production release, use the same command and
    stage with `--branch feat/fleetlab-playground`. That branch is Cloudflare's
    production alias; it is not the actual Git source branch.
