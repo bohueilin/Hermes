@@ -20,7 +20,7 @@ EXCEPTIONS = frozenset(("index.html", "boot.js", "_headers"))
 CLIENT_FIXES = frozenset(("src/ui/setup-codec.js", "src/ui/setup-sharing.js", "src/ui/studio.js"))
 FLOW_CHANGED = frozenset((
     "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js", "src/ui/charts.js",
-    "src/ui/simulation-catalog.js", "src/ui/operations-lab.js",
+    "src/ui/simulation-catalog.js", "src/ui/operations-lab.js", "src/ui/street-lab.js",
 ))
 FLOW_ADDED = frozenset((
     "src/model/depot-flow-contract.js", "src/model/depot-flow.js",
@@ -270,7 +270,7 @@ def integrate(
             "file_count": len(final),
             "total_bytes": sum(r["bytes"] for r in final.values()),
             "publication": "NOT_PERFORMED",
-            "teaching_update": "depot-flow-nf01-nf02" if flow_update else None,
+            "teaching_update": "visitor-redesign-2026-10-09" if flow_update else None,
             "scientific_eligibility": "BLOCKED_MAP_QUALIFICATION",
         }
         launch.write_json(review / "integration-manifest.json", result)
