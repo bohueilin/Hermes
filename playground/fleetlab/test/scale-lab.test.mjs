@@ -285,11 +285,11 @@ test('the route opens a lab without running it, refuses a lesson of another page
     for(const hash of ['#/scale-lab?lesson=missing','#/scale-lab?foo=1']){studio.applyRoute(hash);assert.equal(studio.element.getAttribute('data-page'),'error',hash);}
     studio.applyRoute('#/scale-lab?setup=abc');assert.equal(studio.element.getAttribute('data-page'),'error','a shared setup is refused on this route');
     studio.navigate('overview');studio.applyRoute('#/scale-lab?lesson=fleet-intake');assert.equal(document.activeElement,studio.scale.heading,'the heading keeps focus when the lesson replaces the frame');
-    for(const text of [studio.element.querySelector('.lab-links [data-nav="scale"]').textContent,studio.operations.element.querySelector('.ops-intro').lastChild.textContent,studio.element.querySelector('.catalog-models').children[3].textContent])for(const re of [H3,H6,V,DIRECTION,HOUSE,LINKS,DASH])assert.doesNotMatch(text,re,text);
+    for(const text of [studio.element.querySelector('.lab-links [data-nav="scale"]').textContent,studio.operations.element.querySelector('.ops-intro').lastChild.textContent,studio.element.querySelector('.catalog-collections').children[0].textContent])for(const re of [H3,H6,V,DIRECTION,HOUSE,LINKS,DASH])assert.doesNotMatch(text,re,text);
     studio.navigate('simulation');assert.equal(studio.scale.element.hidden,true);
     const link=[...studio.operations.element.querySelectorAll('.ops-intro a')].find(a=>a.getAttribute('href')==='#/scale-lab');assert.ok(link);assert.equal(link.getAttribute('class'),null,'an ordinary link, not a button');
     assert.ok(studio.element.querySelector('.lab-links a[href="#/scale-lab"]'));
-    assert.ok([...studio.element.querySelectorAll('.catalog-start a')].some(a=>a.getAttribute('href')==='#/scale-lab?lesson=density-ladder'));
+    assert.ok(studio.element.querySelector('.catalog-card[data-simulation="density-ladder"] a[href="#/scale-lab?lesson=density-ladder"]'));
     studio.navigate('catalog');const filter=studio.element.querySelector('[aria-label="Simulation model"]');filter.value='Scale lab';filter.dispatchEvent(new Event('change'));
     assert.equal(studio.element.querySelectorAll('[data-simulation]').length,3);
   }finally{studio.destroy();restore();}

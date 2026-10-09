@@ -41,3 +41,43 @@ test('new decision lessons launch their versioned scenarios without mutating sha
     catalog.element.querySelector('[data-simulation="region-launch"]').querySelector('a').click();assert.equal(patch.launch_rehearsal,'region_b');
   }finally{restore();}
 });
+
+test('Explore leads with search, three topics and compact cards',()=>{
+  const restore=installFakeDom();
+  try{
+    const records=simulationCatalog(),root=createSimulationCatalog().element;
+    const shown=()=>root.querySelectorAll('.catalog-card').map(card=>card.getAttribute('data-simulation'));
+    const family=(...names)=>records.filter(r=>names.includes(r.frame.family)).map(r=>r.id);
+    assert.equal(root.querySelector('h1').textContent,'What would you like to understand?');
+    const topic=root.querySelector('[aria-label="Topic"]');
+    assert.deepEqual(topic.querySelectorAll('option').map(o=>o.textContent),['All topics','Depot readiness & data','Fleet service & capacity','Streets & cities']);
+    const pick=name=>{topic.value=name;topic.dispatchEvent(new Event('change'));};
+    pick('Streets & cities');
+    assert.deepEqual(shown(),family('Roads and streets'));
+    for(const r of records.filter(r=>r.id.startsWith('street-')))assert.ok(shown().includes(r.id),r.id);
+    pick('Depot readiness & data');
+    assert.deepEqual(shown(),family('Depot work and capacity','Energy and charging'));
+    pick('All topics');
+    assert.deepEqual(shown(),records.map(r=>r.id),'every lesson renders exactly once');
+    for(const card of root.querySelectorAll('.catalog-card')){
+      const record=records.find(r=>r.id===card.getAttribute('data-simulation'));
+      const parts=card.children.filter(n=>n.getAttribute('class')!=='catalog-card-id');
+      assert.deepEqual(parts.map(n=>[n.localName,n.getAttribute('class')].filter(Boolean).join('.')),['h3','p.catalog-outcome','p.catalog-meta','a.studio-button','details'],record.id);
+      assert.equal(parts[0].textContent,record.frame.what_why);
+      assert.equal(parts[1].textContent,record.frame.look_for);
+      assert.match(parts[2].textContent,/^Run a model · About \d+ min · /);
+      assert.equal(parts[3].textContent,'Open lesson  →');
+      assert.equal(card.querySelector('a'),parts[3],'the first link is the lesson link');
+      assert.equal(parts[4].querySelector('summary').textContent,'More about this lesson');
+    }
+    const collections=root.querySelector('.catalog-collections').children;
+    assert.deepEqual(collections.map(n=>n.localName),['article','article','article']);
+    assert.deepEqual(collections.map(n=>n.querySelector('h2').textContent),['Depot readiness & data','Fleet service & capacity','Streets & cities']);
+    collections[2].querySelector('button').click();
+    assert.equal(topic.value,'Streets & cities');assert.deepEqual(shown(),family('Roads and streets'));
+    const search=root.querySelector('[aria-label="Search lessons"]');search.value='no such lesson';search.dispatchEvent(new Event('input'));
+    assert.equal(shown().length,0);assert.match(root.querySelector('.catalog-grid').textContent,/^No lesson matches\./);
+    root.querySelector('.catalog-grid button').click();
+    assert.equal(search.value,'');assert.equal(topic.value,'All topics');assert.equal(shown().length,records.length);
+  }finally{restore();}
+});

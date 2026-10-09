@@ -138,8 +138,7 @@ export function mountStudio(app) {
   operations.element.querySelector('.ops-intro').appendChild(el('p',{class:'ops-status'},['Fleet day stops at 120 cars. For what changes as a fleet scales, ',el('a',{href:routeHref({page:'scale'}),on:{click:event=>followLink(event,()=>navigate('scale'))}},'open the Scale lab'),'.']));
   const records=simulationCatalog();
   const lessonPage=record=>record.target==='flows'?'flows':record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
-  const catalog=createSimulationCatalog({hrefForLesson:record=>routeHref({page:lessonPage(record),lesson:record.id}),onLesson:record=>visit({page:lessonPage(record),lesson:record.id})});
-  const catalogIntro=catalog.element.querySelector('.catalog-intro');catalogIntro.parentNode.insertBefore(labLinks,catalogIntro.nextSibling);
+  const catalog=createSimulationCatalog({labLinks,hrefForLesson:record=>routeHref({page:lessonPage(record),lesson:record.id}),onLesson:record=>visit({page:lessonPage(record),lesson:record.id})});
   const workspaceIntro=el('section',{class:'workspace-intro',tabindex:'-1'});
   const workspaceIdentity=modelHeader('Four-area experiments','Schematic four-area Bay Area zones (San Francisco, Peninsula, San Jose, East Bay); not road geometry',MODEL_VERSION);
   const workspaceMain=el('main',{class:'studio-workspace'},[workspaceIntro,root]);

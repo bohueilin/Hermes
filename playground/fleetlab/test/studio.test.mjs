@@ -178,7 +178,7 @@ test('welcome actions open the first experiment and the start points without pro
 
 test('quick lab links carry data-nav ids and open their pages idle',()=>{
  const x=setup();try{
-  const links=x.studio.element.querySelector('.lab-links');
+  const links=x.studio.element.querySelector('.simulation-catalog .lab-links');
   assert.ok(links);
   for(const id of ['simulation','streets','depots','scale','flows','tour'])assert.ok(links.querySelector(`[data-nav="${id}"]`),id);
   const depots=links.querySelector('[data-nav="depots"]');
