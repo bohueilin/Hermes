@@ -4,7 +4,7 @@
 
 This continues the October 8 NF-01 release and implements the first round of the October 9 design additions: Stages 0, 0.5a, 0.5b, 1 and 2. The owner explicitly authorized implementation, validation, Git push and educational website publication. This does not authorize any operational or physical deployment.
 
-**Release status at source freeze:** implemented and locally validated; publication receipt will be filled after preview and production readback. Do not infer publication from this source-freeze paragraph.
+**Release status: implemented, validated, pushed and published.** Preview and production each matched all 10,024 served files and passed all seven header checks. [Immutable production release](https://c98eb10c.fleetlab.pages.dev/#/depot-flow-lab?lesson=crossed-priorities).
 
 Open the two lessons under the existing **Depot flow lab** destination:
 
@@ -112,7 +112,25 @@ Browser checks: default and counterexample lessons, exact guided stop at minute 
 
 ## Release receipt
 
-Pending publication/readback at this source checkpoint. The canonical receipt is `docs/releases/fleetlab-current.json`; the final handoff update will record the actual immutable deployment and checked file count.
+The canonical machine-readable receipt is `docs/releases/fleetlab-current.json`.
+
+| Item | Observed value |
+|---|---|
+| Source commit | `a877ab1bc3817a0ebcf16557949b5d34ba8e661e` |
+| Git branch | `codex/fleetlab-city-sf` (pushed to the existing Hermes remote) |
+| Production | `c98eb10c-1726-4005-80c4-9bfea6e44be2` |
+| Preview | `d9492631-e89c-4e7a-bd7f-4610586a3540` |
+| Prior production retained | `e141f612-2095-494d-8100-96e9f86ce5e7` |
+| Immutable production | https://c98eb10c.fleetlab.pages.dev |
+| Package | 10,025 files, 1,619,287,301 bytes |
+| Preview / production served files | 10,024 / 10,024 matched; `_headers` is hosting configuration |
+| Header checks | 7 / 7 on each deployment |
+| City files | 9,908 unchanged |
+| Offline SHA-256 | `2536ecc9b9f22a4c76ccc1c79231fb4e0c4a701c81cb147b5488dfa81234b044` |
+| Integration manifest SHA-256 | `b79ed32c9227c01ee85917ad6fea0db37667a73a4b98ea660c086a6bcd769bb0` |
+| Stable-host readback completed | `2026-10-09T13:52:20.191590+00:00` |
+
+The release package was built from the committed source, checked on preview, and then published unchanged. Existing browser tabs may retain older assets during the established cache window; the immutable URL identifies this build. No hosting account, credential, retention or operational authority was changed. Documentation and receipt updates follow in a separate commit without changing the deployed application.
 
 ## Remaining work and SF boundary
 

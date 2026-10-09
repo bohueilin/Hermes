@@ -26,41 +26,43 @@
 
 Files: new `src/ui/depot-flow-view.js`, `test/depot-flow-view.test.mjs`, test-only oracle/fixtures. Own only these files.
 Interfaces: `inspectState(record,t_s)`, `guidedMoments(result)`, `eventSentence(result,t_s)`; communicate concrete shapes before UI integration.
-- [ ] Add failing literal minute-3/5/11 tests and whole/half-second independent integral/event-fold sweeps.
-- [ ] Implement pure projection, event sentences and result-derived moments; reject unverified/corrupt comparisons before captions.
-- [ ] Test default stops `[0,180,300,360,600,720,780]`, 45 GB and 20 kW; mutation and export invariance.
-- [ ] Run `node --test playground/fleetlab/test/depot-flow-view.test.mjs` and report exact API/results.
+- [x] Add failing literal minute-3/5/11 tests and whole/half-second independent integral/event-fold sweeps.
+- [x] Implement pure projection, event sentences and result-derived moments; reject unverified/corrupt comparisons before captions.
+- [x] Test default stops `[0,180,300,360,600,720,780]`, 45 GB and 20 kW; mutation and export invariance.
+- [x] Run `node --test playground/fleetlab/test/depot-flow-view.test.mjs` and report exact API/results.
 
 ### Task 2: Separate four-visit model and independent verifier
 
 Files: new `src/model/depot-cohort-contract.js`, `depot-cohort.js`, `depot-cohort-verify.js`, `test/depot-cohort.test.mjs`. No NF-01 edits.
 Interfaces: `cohortScenario({time_quantum_ms=1000})`, `simulateCohort(scenario,rule,runtime)`, `verifyCohort(record)`, `cohortComparisonSteps(options,runtime)`, `runCohortComparison(options,runtime)`; result arms match NF-01's verified UI shape where possible.
-- [ ] Write literal four-rule golden schedules at both quanta, completion equality/censoring and forged allocation tests.
-- [ ] Implement slot service with rotating eligible-ring remainders and bounded validation; separate verifier recomputes every accepted slot and policy.
-- [ ] Test lowest-ID/global-ring mutants, invalid keys/rates, zero work/capacity, cancel, no hidden drop, all 24 serial permutations and shared bound arithmetic.
-- [ ] Run `node --test playground/fleetlab/test/depot-cohort.test.mjs` and record runtime/size.
+- [x] Write literal four-rule golden schedules at both quanta, completion equality/censoring and forged allocation tests.
+- [x] Implement slot service with rotating eligible-ring remainders and bounded validation; separate verifier recomputes every accepted slot and policy.
+- [x] Test lowest-ID/global-ring mutants, invalid keys/rates, zero work/capacity, cancel, no hidden drop, all 24 serial permutations and shared bound arithmetic.
+- [x] Run `node --test playground/fleetlab/test/depot-cohort.test.mjs` and record runtime/size.
 
 ### Task 3: Shared chart and controlled presentation transport
 
 Files: `src/ui/charts.js`; new `src/ui/depot-flow-player.js`; dedicated chart/player tests. No lab or style edits.
 Interfaces: chart `flowLanesCharts(options)` exposes element, cursor/reveal control and cleanup; player receives event times/moments/horizon, injectable scheduler, reduced-motion callback, render/announce hooks.
-- [ ] Write failing cursor/ready/deadline geometry and fake-scheduler pause/seek/hidden/destroy tests.
-- [ ] Extend existing chart utilities without changing sibling outputs; token encodings, compact all-rule NF-01 chart and selectable NF-02 groups.
-- [ ] Implement linear explicit playback, one-second reduced-event mode, clamped gaps, exact guided stops and no auto-resume.
-- [ ] Verify zero rest frames, immutable outcomes/export and untouched chart regressions.
+- [x] Write failing cursor/ready/deadline geometry and fake-scheduler pause/seek/hidden/destroy tests.
+- [x] Extend existing chart utilities without changing sibling outputs; token encodings, compact all-rule NF-01 chart and selectable NF-02 groups.
+- [x] Implement linear explicit playback, one-second reduced-event mode, clamped gaps, exact guided stops and no auto-resume.
+- [x] Verify zero rest frames, immutable outcomes/export and untouched chart regressions.
 
 ### Task 4: Lesson experience and integration
 
 Files: `depot-flow-lab.js`, stylesheet, teaching frames, catalog, Studio, operations bridges, hosted integration, focused UI/copy tests and exact package allowlists.
-- [ ] Add failing focus/stale/guess export, phone semantic outcomes, copy coverage and second-lesson route tests.
-- [ ] Implement I01-I12 and A04/A05/A08, wire the pure projection/chart/player and NF-02 chooser/bound.
-- [ ] Add one-change next-test questions, previous-run comparison and result-derived explanations; keep controls stable and semantics named.
-- [ ] Update exact changed/added inventories, copy guards and size ratchet. Verify both editions and all preserved City payloads.
+- [x] Add failing focus/stale/guess export, phone semantic outcomes, copy coverage and second-lesson route tests.
+- [x] Implement I01-I12 and A04/A05/A08, wire the pure projection/chart/player and NF-02 chooser/bound.
+- [x] Add one-change next-test questions, previous-run comparison and result-derived explanations; keep controls stable and semantics named.
+- [x] Update exact changed/added inventories, copy guards and size ratchet. Verify both editions and all preserved City payloads.
 
 ### Task 5: Review, full gates and live release
 
-- [ ] Run teaching Node, City Node/Python, Hermes with `PYTHONPATH` and `FLEET_PLAYGROUND_BASE=bca4ccd`, Ruff, doctor and diff checks.
-- [ ] Inspect real browser desktop/phone, defaults, counterexamples, pause/reduced motion/keyboard, deep links, original pages and offline operation.
-- [ ] Fresh scoped review; fix important findings with regression tests; record unavailable human/device coverage.
-- [ ] Commit reviewed source; rebuild integrated package with exact commit; push; publish preview; compare every served file/header; publish production and repeat.
-- [ ] Write `docs/FLEETLAB_NETWORK_FLOWS_HANDOFF_2026-10-09.md`, decisions by I/A/C identifier, release receipt and remaining scoped phases. Push documentation.
+- [x] Run teaching Node, City Node/Python, Hermes with `PYTHONPATH` and `FLEET_PLAYGROUND_BASE=bca4ccd`, Ruff, doctor and diff checks.
+- [x] Inspect real browser desktop/phone, defaults, counterexamples, pause/reduced motion/keyboard, deep links, original pages and offline operation.
+- [x] Fresh scoped review; fix important findings with regression tests; record unavailable human/device coverage.
+- [x] Commit reviewed source; rebuild integrated package with exact commit; push; publish preview; compare every served file/header; publish production and repeat.
+- [x] Write `docs/FLEETLAB_NETWORK_FLOWS_HANDOFF_2026-10-09.md`, decisions by I/A/C identifier, release receipt and remaining scoped phases. Push documentation.
+
+Release execution completed October 9, 2026. See `docs/FLEETLAB_NETWORK_FLOWS_HANDOFF_2026-10-09.md` for measured outcomes, feedback decisions and explicit device/file-origin/human limitations.
