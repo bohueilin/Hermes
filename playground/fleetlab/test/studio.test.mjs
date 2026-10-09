@@ -10,6 +10,7 @@ import {routeHref} from '../src/ui/routes.js';
 import {createSetup,encodeSetup} from '../src/ui/setup-codec.js';
 import {defaultStreetConfig} from '../src/model/street-simulation.js';
 import {getRegionalSetup} from '../src/ui/regional-setup.js';
+import {presetById} from '../src/model/presets.js';
 
 function setup() {
   const restore = installFakeDom();
@@ -232,4 +233,24 @@ test('compact navigation exposes its state and closes after a destination is cho
   assert.equal(nav.getAttribute('data-expanded'),'false');
   assert.equal(x.store.getState().run.status,'idle');
  }finally{x.studio.destroy();x.restore();}
+});
+
+test('confirmed defect: walkthrough entry after Four-area experiments names the setup the map shows until Prepare',()=>{
+  const x=setup();try{
+    x.studio.navigate('depots');x.studio.navigate('tour');
+    assert.equal(x.store.getState().presetId,'UC-08a','entering the walkthrough keeps the depot setup');
+    const intro=x.studio.element.querySelector('.workspace-intro').textContent;
+    assert.match(intro,/OPS-01 asks/);assert.ok(intro.includes(presetById('UC-08a').title),'the intro names the loaded UC-08a setup');
+    x.studio.navigate('approach');x.studio.navigate('tour');assert.ok(x.studio.element.querySelector('.workspace-intro').textContent.includes(presetById('UC-08a').title));
+  }finally{x.studio.destroy();x.restore();}
+});
+test('confirmed at base, closed by the Task 3 pause clear: Depot flow lab announcements do not survive leaving the page',async()=>{
+  const x=setup();try{
+    x.studio.applyRoute('#/depot-flow-lab?lesson=two-vehicles');await x.studio.flows.run();
+    const live=x.studio.flows.element.querySelector('div.fl-sr-only[role="status"]'),result=JSON.stringify(x.studio.flows.getState().result);
+    x.studio.flows.element.querySelector('[data-next-event]').click();assert.match(live.textContent,/^Minute 1\. /);
+    x.studio.navigate('overview');assert.equal(live.textContent,'');
+    x.studio.navigate('flows');assert.equal(live.textContent,'','nothing is announced on return until a user action');
+    assert.equal(JSON.stringify(x.studio.flows.getState().result),result);
+  }finally{x.studio.destroy();x.restore();}
 });

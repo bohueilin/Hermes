@@ -8,7 +8,7 @@ import { describe, test } from "node:test";
 
 import { percentileFleetLab } from "../src/core/stats.js";
 import { armScenarios, experimentEnvelope } from "../src/model/experiment.js";
-import { seedSet } from "../src/model/presets.js";
+import { presetById, seedSet } from "../src/model/presets.js";
 import { sharedLambdaMaxPermille } from "../src/model/world.js";
 import { tabbables } from "../src/ui/a11y.js";
 import { REGION_IDS, ROW_CHARTS, SANDBOX_REPLICATIONS, start } from "../src/ui/app.js";
@@ -868,5 +868,31 @@ describe("honesty copy on the page (review: honesty-copy lens)", () => {
       assert.equal(rows.unserved, unserved);
       for (const value of Object.values(rows)) assert.ok(!value.includes(labels.acrossSame("").trim()), value);
       assert.match(rows.wait, /^\d+ min to \d+ min, from [0-9,.]+ to [0-9,.]+ completed rides$/);
+    }));
+});
+
+describe("walkthrough entry label (confirmed defect)", () => {
+  const agree = ({ app, root, store }) => {
+    assert.equal(store.getState().present.prepared, false);
+    const world = root.querySelector('[data-role="world-line"]').textContent;
+    const intro = app.studio.element.querySelector(".workspace-intro").textContent;
+    const shown = presetById(store.getState().run.log !== null ? store.getState().run.worldAtQueue.presetId : store.getState().presetId).title;
+    assert.ok(world.includes(shown), world);
+    assert.ok(world.includes("OPS-01") || intro.includes(shown), `intro names only OPS-01 while the map shows ${world}`);
+  };
+  test("after Four-area experiments, the intro and the map world line name the same setup before Prepare", () =>
+    withApp({ studio: true }, (ctx) => {
+      ctx.app.studio.navigate("depots");
+      ctx.app.studio.navigate("tour");
+      agree(ctx);
+    }));
+  test("after a Run window, then Four-area experiments, the intro names the run's world that the map shows", () =>
+    withApp({ studio: true }, async (ctx) => {
+      ctx.app.studio.navigate("operations");
+      await finishWindow(ctx);
+      ctx.app.studio.navigate("depots");
+      ctx.app.studio.navigate("tour");
+      assert.equal(ctx.store.getState().presetId, "UC-08a");
+      agree(ctx);
     }));
 });

@@ -118,7 +118,7 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   vehicleDetail.replaceChildren(el('h3',{},`${car.id} · ${car.vehicle_type==='ojai'?'Ojai':'I-PACE'}`),el('p',{class:'street-car-state'},stateName(car.state)+(car.waiting?car.pending_edge_id?' · waiting to enter the road':' · road queue':'')),
    el('p',{},car.request_id?`${car.request_id}: ${label(car.from)} → ${label(car.to)}`:`At ${label(car.anchor)} · ${car.completed} completed journeys`),
    el('p',{},edge?`${edge.name} · ${fmt(edge.length_m,0)} m block · ${fmt(car.progress*100,0)}% along`:'At a modeled off-road anchor'),
-   car.edge_id&&car.waiting?el('p',{},`${fmt(car.exit_wait_seconds/60)} min waiting after the uncongested exit time on this block. This is one part of the journey delay.`):null,
+   ...(car.edge_id&&car.waiting?[el('p',{},`${fmt(car.exit_wait_seconds/60)} min waiting after the uncongested exit time on this block. This is one part of the journey delay.`)]:[]),
    el('details',{},[el('summary',{},'Chosen road itinerary'),el('p',{},names.length?names.join(' → '):'No road leg in progress')]),
    el('ol',{class:'street-event-log'},events.map(e=>el('li',{},[el('time',{},clock(e.time,result.config.start_hour)),e.text]))));
   const top=[...f.roads].filter(e=>e.queued>0).sort((a,b)=>Number(b.spillback)-Number(a.spillback)||b.queued-a.queued).slice(0,5);

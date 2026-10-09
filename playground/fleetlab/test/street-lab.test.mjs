@@ -81,3 +81,16 @@ test('Street summary focus preserves the user scroll position after Run',async()
  lab=createStreetLab();lab.setConfig({duration_minutes:10,background_per_hour:0});const heading=lab.element.querySelector('.street-results h2'),focus=heading.focus.bind(heading);let options;
  heading.focus=value=>{options=value;focus(value);};await lab.run();assert.deepEqual(options,{preventScroll:true});
 }finally{lab?.destroy();restore();}});
+test('confirmed defect: the followed AV detail never prints null, undefined or NaN before, during or after a route comparison',async()=>{
+ const restore=installFakeDom();let lab;try{
+  lab=createStreetLab({reducedMotion:()=>true});document.body.appendChild(lab.element);
+  const texts=node=>node.childNodes.flatMap(kid=>kid.nodeType===3?[kid.textContent]:texts(kid));
+  const clean=when=>assert.deepEqual(texts(lab.element).filter(t=>/\bnull\b|undefined|NaN/.test(t)),[],when);
+  assert.equal(lab.element.querySelector('[aria-pressed="true"]').textContent,'Bridge rush');clean('before the comparison');
+  lab.element.querySelectorAll('button').find(b=>b.textContent==='Compare route policies').click();await new Promise(resolve=>setTimeout(resolve,0));while(lab.getState().busy)await new Promise(resolve=>setTimeout(resolve,10));
+  assert.equal(lab.element.querySelector('[aria-label="Inspect street AV"]').value,'AV-01');assert.equal(lab.getState().time,0);
+  assert.match(lab.element.querySelector('.street-vehicle-detail').textContent,/At Financial District · 0 completed journeys/);clean('minute 0 after the comparison');
+  lab.seek(600);clean('minute 10, passenger on board');lab.seek(0);clean('back at minute 0');
+  lab.element.querySelector('.street-replay-variant').querySelectorAll('button')[1].click();clean('queue-aware replay at minute 0');
+ }finally{lab?.destroy();restore();}
+});

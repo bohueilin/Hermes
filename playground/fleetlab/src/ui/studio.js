@@ -2,6 +2,7 @@ import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView} from './teaching-fr
 import {modelHeader,NON_AFFILIATION} from './model-identity.js';
 import {isReducedMotion} from './store.js';
 import {MODEL_VERSION} from '../model/experiment.js';
+import {presetById} from '../model/presets.js';
 // Product entry and navigation across explicit teaching models.
 import { el } from "./dom.js";
 import { createHeroFilm } from "./hero-film.js";
@@ -203,7 +204,8 @@ export function mountStudio(app) {
       workspaceIntro.replaceChildren(eyebrow('WORKSPACE / DEPOT CAPACITY'),el('h1',{},'Test a depot capacity decision.'),el('p',{},'The first example compares four and six cleaning bays at SF-1. Your current setup and results are kept when you navigate away. Review the assumptions below, then freeze and run.'),action('Reset to the 4 vs 6 bay example',()=>{startFromPreset(store.dispatch,'UC-08a');store.dispatch({type:'mode/set',mode:'experiment'});}));
     }
     if(page==='tour'){
-      workspaceIntro.replaceChildren(eyebrow('GUIDED WALKTHROUGH / ABOUT 6 MINUTES'),el('h1',{},'One question, one day, one verdict.'),el('p',{},'OPS-01 asks whether 52 San Francisco cars instead of 40 change evening rider wait. Watch the day, read the verdict, then see what it trades and what to test next.'));
+      const s=store.getState(),shown=s.run.log!==null&&s.run.worldAtQueue!==null?s.run.worldAtQueue.presetId:s.presetId;
+      workspaceIntro.replaceChildren(eyebrow('GUIDED WALKTHROUGH / ABOUT 6 MINUTES'),el('h1',{},'One question, one day, one verdict.'),el('p',{},'OPS-01 asks whether 52 San Francisco cars instead of 40 change evening rider wait. Watch the day, read the verdict, then see what it trades and what to test next.'),...(s.present.prepared||shown==='OPS-01'?[]:[el('p',{},`This walkthrough prepares OPS-01 when you press Prepare. Until then the map shows ${presetById(shown)?.title??shown}.`)]));
       if(!store.getState().present.on)present.open();
     }
     if(workspace){workspaceIntro.appendChild(el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));updateWorkspaceIdentity(store.getState());}

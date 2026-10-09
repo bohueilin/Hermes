@@ -70,3 +70,16 @@ test('result page names its place, offers one compare action and shows a readine
     assert.equal(lab.element.querySelector('nav.flow-breadcrumb span[aria-current="page"]').textContent,'Four visits, crossed priorities');lab.destroy();
   }finally{restore();}
 });
+test('confirmed at base, closed by the Task 3 pause clear: leaving the page clears lesson announcements, including the pause it causes',async()=>{
+  const restore=installFakeDom();
+  try{const lab=ui.createDepotFlowLab({yieldPage:()=>Promise.resolve()});document.body.appendChild(lab.element);
+    const live=lab.element.querySelector('div.fl-sr-only[role="status"]');
+    await lab.run();const result=JSON.stringify(lab.getState().result);
+    lab.element.querySelector('[data-next-event]').click();assert.match(live.textContent,/^Minute 1\. /);
+    lab.pause();assert.equal(live.textContent,'');
+    lab.element.querySelectorAll('button').find(b=>b.textContent==='Play').click();assert.match(live.textContent,/^Playing from minute 1 /);
+    lab.pause();assert.equal(live.textContent,'','a navigation pause leaves no "Paused at minute 1." behind');
+    lab.element.querySelector('[data-next-event]').click();assert.notEqual(live.textContent,'');
+    assert.equal(JSON.stringify(lab.getState().result),result);lab.destroy();
+  }finally{restore();}
+});
