@@ -1,17 +1,17 @@
 // NF-03 input contract only: frozen workload, rules and canonical digest text. No scheduling or verifier logic.
 import {FLOW_TRUST} from './depot-flow-contract.js';
-import {COHORT_RULES,cohortObject,cohortArray} from './depot-cohort-contract.js';
+import {cohortObject,cohortArray} from './depot-cohort-contract.js';
 import {sha256Hex} from '../core/sha256.js';
 export {FLOW_TRUST,cohortObject,cohortArray};
 
-const deepFreeze=x=>{if(x&&typeof x==='object'){Object.values(x).forEach(deepFreeze);Object.freeze(x);}return x;};
+export const deepFreeze=x=>{if(x&&typeof x==='object'){Object.values(x).forEach(deepFreeze);Object.freeze(x);}return x;};
 
 export const CAPACITY_VERSIONS=Object.freeze({study:'depot-capacity-study/1.0.0',model:'depot-capacity/1.0.0',policy:'depot-capacity-rules/1.0.0',metrics:'depot-capacity-metrics/1.0.0',record:'depot-capacity-record/1.0.0',verifier:'depot-capacity-verifier/1.0.0'});
 export const CAPACITY_RULES=deepFreeze([
-  {id:'capacity_fifo',name:COHORT_RULES[0].name,description:'One upload at a time in arrival then ID order. A started upload is not interrupted.'},
-  {id:'capacity_equal_uplink',name:COHORT_RULES[1].name,description:'Arrived uploads share each slot equally, with whole remainder bytes rotating over them in arrival then ID order.'},
-  {id:'capacity_departure_deadline',name:COHORT_RULES[2].name,description:'One upload at a time, earliest departure first among arrived visits. Arrival then ID break ties. No interruption.'},
-  {id:'capacity_shortest_upload',name:COHORT_RULES[3].name,description:'One upload at a time, smallest remaining known upload first among arrived visits. Arrival then ID break ties. No interruption.'},
+  {id:'capacity_fifo',name:'First come, first served',description:'One upload at a time in arrival then ID order. A started upload is not interrupted.'},
+  {id:'capacity_equal_uplink',name:'Equal uplink share',description:'Arrived uploads share each slot equally, with whole remainder bytes rotating over them in arrival then ID order.'},
+  {id:'capacity_departure_deadline',name:'Departure deadline first',description:'One upload at a time, earliest departure first among arrived visits. Arrival then ID break ties. No interruption.'},
+  {id:'capacity_shortest_upload',name:'Shortest upload first',description:'One upload at a time, smallest remaining known upload first among arrived visits. Arrival then ID break ties. No interruption.'},
 ]);
 export const CAPACITY_REGIMES=deepFreeze({
   data_heavy:{name:'Data-heavy',question:'Can more site power help when energy is already satisfied?',upload_bytes:{A:60e9,B:7.5e9,C:45e9,D:15e9},energy_j:{A:0,B:0,C:0,D:0}},
@@ -54,13 +54,20 @@ export function validateCapacityScenario(s){
   if(canonicalText(s)!==canonicalText(capacityScenario({regime:s.regime,treatment:s.treatment,time_quantum_ms:s.time_quantum_ms})))throw Error('Scenario differs from the frozen NF-03 workload for its regime, treatment and quantum.');
 }
 
-/** Sorted-key JSON text of plain data; anything a digest could render ambiguously is refused. */
+/** Sorted-key JSON text of plain data; anything a digest could render ambiguously, or that would run code, is refused. */
 export function canonicalText(value){
   if(value===null||typeof value==='boolean'||typeof value==='string')return JSON.stringify(value);
-  if(typeof value==='number'){if(!Number.isFinite(value))throw Error('Canonical text accepts finite numbers only.');return JSON.stringify(value);}
-  if(Array.isArray(value))return `[${Array.from(value,item=>canonicalText(item)).join(',')}]`;
-  if(value&&typeof value==='object'&&[Object.prototype,null].includes(Object.getPrototypeOf(value))&&Reflect.ownKeys(value).length===Object.keys(value).length){
-    return `{${Object.keys(value).sort().map(key=>`${JSON.stringify(key)}:${canonicalText(value[key])}`).join(',')}}`;
+  // JSON renders -0 as 0, so -0 is refused rather than silently equated with 0.
+  if(typeof value==='number'){if(!Number.isFinite(value)||Object.is(value,-0))throw Error('Canonical text accepts finite numbers other than -0 only.');return JSON.stringify(value);}
+  if(value&&typeof value==='object'){
+    // Exactly the indices plus length, or the enumerable keys, all data properties: an extra array key would be
+    // dropped silently and an accessor would run code while being read.
+    const array=Array.isArray(value),prototype=Object.getPrototypeOf(value);
+    const keys=array?[...Array.from({length:value.length},(_,n)=>String(n)),'length']:Object.keys(value),own=Reflect.ownKeys(value);
+    const plain=(array?prototype===Array.prototype:prototype===Object.prototype||prototype===null)
+      &&own.length===keys.length&&own.every((key,n)=>key===keys[n]&&Object.hasOwn(Object.getOwnPropertyDescriptor(value,key),'value'));
+    if(plain&&array)return `[${keys.slice(0,-1).map(key=>canonicalText(value[key])).join(',')}]`;
+    if(plain)return `{${keys.sort().map(key=>`${JSON.stringify(key)}:${canonicalText(value[key])}`).join(',')}}`;
   }
   throw Error('Canonical text accepts plain data only.');
 }

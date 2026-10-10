@@ -1,17 +1,13 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-// Missing implementation is reported as a contract assertion during the first red run.
-const contract=await import('../src/model/depot-capacity-contract.js').catch(()=>({}));
-const model=await import('../src/model/depot-capacity.js').catch(()=>({}));
-const verifier=await import('../src/model/depot-capacity-verify.js').catch(()=>({}));
-const flowContract=await import('../src/model/depot-flow-contract.js');
+import * as contract from '../src/model/depot-capacity-contract.js';
+import {capacityCellSteps,runCapacityCell,simulateCapacity} from '../src/model/depot-capacity.js';
+import {verifyCapacity} from '../src/model/depot-capacity-verify.js';
+import {FLOW_TRUST as NF01_TRUST} from '../src/model/depot-flow-contract.js';
 
 const REGIMES=['data_heavy','energy_heavy','mixed'],TREATMENTS=['base','more_bandwidth','more_power'];
 const RULES=['capacity_fifo','capacity_equal_uplink','capacity_departure_deadline','capacity_shortest_upload'];
 const IDS=['A1','B1','C1','D1','A2','B2','C2','D2','A3','B3','C3','D3'];
-const scenario=options=>{assert.equal(typeof contract.capacityScenario,'function','NF-03 contract is required');return contract.capacityScenario(options);};
-const run=(s,rule,runtime)=>{assert.equal(typeof model.simulateCapacity,'function','NF-03 engine is required');return model.simulateCapacity(s,rule,runtime);};
-const verify=r=>{assert.equal(typeof verifier.verifyCapacity,'function','Independent NF-03 verifier is required');return verifier.verifyCapacity(r);};
 const sum=values=>values.reduce((a,b)=>a+b,0);
 const visit=(verification,id)=>verification.visits.find(v=>v.vehicle===id);
 
@@ -19,7 +15,7 @@ const visit=(verification,id)=>verification.visits.find(v=>v.vehicle===id);
 const primary=new Map();
 function cell(regime,treatment,rule){
   const id=`${regime}/${treatment}/${rule}/1000`;
-  if(!primary.has(id)){const record=run(scenario({regime,treatment}),rule);primary.set(id,{id,record,verification:verify(record)});}
+  if(!primary.has(id)){const record=simulateCapacity(contract.capacityScenario({regime,treatment}),rule);primary.set(id,{id,record,verification:verifyCapacity(record)});}
   return primary.get(id);
 }
 const allCells=()=>REGIMES.flatMap(regime=>TREATMENTS.flatMap(treatment=>RULES.map(rule=>cell(regime,treatment,rule))));
@@ -38,12 +34,12 @@ test('contract exports frozen versions, rules, regimes, treatments and protocol'
     more_power:{name:'More power',uplink_bytes_s:125000000,site_power_j_s:120000,changed:'site_power_j_s'},
   });
   assert.deepEqual(contract.CAPACITY_PROTOCOL,{fixture:'nf03-twelve-visits/1',horizon_s:5400,waves:[0,600,1200],profiles:['A','B','C','D'],deadline_offset_s:{A:600,B:900,C:1320,D:360},post_s:120,charge_ports:2,port_cap_j_s:60000,vehicle_uplink_cap_bytes_s:250000000,quanta_ms:[1000,250]});
-  assert.deepEqual(contract.FLOW_TRUST,flowContract.FLOW_TRUST);
+  assert.deepEqual(contract.FLOW_TRUST,NF01_TRUST);
   for(const value of [contract.CAPACITY_VERSIONS,contract.CAPACITY_RULES,contract.CAPACITY_RULES[0],contract.CAPACITY_REGIMES.mixed.energy_j,contract.CAPACITY_TREATMENTS.base,contract.CAPACITY_PROTOCOL.deadline_offset_s,contract.CAPACITY_PROTOCOL.waves])assert.ok(Object.isFrozen(value));
 });
 
 test('the frozen twelve-visit workload is the only scenario each regime, treatment and quantum accepts',()=>{
-  const s=scenario({regime:'data_heavy',treatment:'base'});
+  const s=contract.capacityScenario({regime:'data_heavy',treatment:'base'});
   assert.equal(s.fixture,'nf03-twelve-visits/1');assert.equal(s.horizon_s,5400);assert.equal(s.time_quantum_ms,1000);
   assert.equal(s.uplink_bytes_s,125e6);assert.equal(s.vehicle_uplink_cap_bytes_s,250e6);assert.equal(s.charge_ports,2);assert.equal(s.port_cap_j_s,60000);assert.equal(s.site_power_j_s,60000);
   assert.deepEqual(s.dependencies,{upload:[],charge:[],post:['upload'],ready:['upload','charge','post']});
@@ -54,28 +50,35 @@ test('the frozen twelve-visit workload is the only scenario each regime, treatme
   assert.deepEqual(s.vehicles.map(v=>v.upload_bytes),[60e9,7.5e9,45e9,15e9,60e9,7.5e9,45e9,15e9,60e9,7.5e9,45e9,15e9]);
   assert.deepEqual(s.vehicles.map(v=>v.post_s),Array(12).fill(120));
   assert.deepEqual(Object.keys(s.vehicles[0]).sort(),['arrival_s','deadline_s','energy_j','id','post_s','upload_bytes','wave']);
-  const total=(regime,key)=>sum(scenario({regime,treatment:'base'}).vehicles.map(v=>v[key]));
+  const total=(regime,key)=>sum(contract.capacityScenario({regime,treatment:'base'}).vehicles.map(v=>v[key]));
   assert.equal(total('data_heavy','upload_bytes'),382.5e9);assert.equal(total('mixed','upload_bytes'),382.5e9);assert.equal(total('energy_heavy','upload_bytes'),38.25e9);
   assert.equal(total('energy_heavy','energy_j'),140400000);assert.equal(total('mixed','energy_j'),140400000);assert.equal(total('data_heavy','energy_j'),0);
   assert.equal(total('mixed','energy_j')/3.6e6,39);
-  for(const quantum of [1000,250])contract.validateCapacityScenario(scenario({regime:'mixed',treatment:'more_power',time_quantum_ms:quantum}));
-  for(const mutate of [
-    x=>x.vehicles[1].upload_bytes+=1,
-    x=>x.vehicles.push({...x.vehicles[11],id:'E3'}),
-    x=>x.vehicles[3].deadline_s=361,
-    x=>x.time_quantum_ms=500,
-    x=>x.regime='unknown',
-    x=>x.extra=1,
+  for(const quantum of [1000,250])contract.validateCapacityScenario(contract.capacityScenario({regime:'mixed',treatment:'more_power',time_quantum_ms:quantum}));
+  const frozen=/Scenario differs from the frozen NF-03 workload/,choose=/Choose a frozen NF-03 regime, treatment and quantum\./;
+  for(const [mutate,message] of [
+    [x=>x.vehicles[1].upload_bytes+=1,frozen],
+    [x=>x.vehicles.push({...x.vehicles[11],id:'E3'}),/bounded dense data array/],
+    [x=>x.vehicles[3].deadline_s=361,frozen],
+    [x=>x.time_quantum_ms=500,choose],
+    [x=>x.regime='unknown',choose],
+    [x=>x.extra=1,/own-property key/],
+    // Canonical text renders -0 as 0, so -0 must be refused wherever the frozen workload holds 0.
+    [x=>x.vehicles[0].arrival_s=-0,/other than -0/],
+    [x=>x.vehicles[0].energy_j=-0,/other than -0/],
   ]){
-    const changed=scenario({regime:'data_heavy',treatment:'base'});mutate(changed);
-    assert.throws(()=>contract.validateCapacityScenario(changed));
-    assert.throws(()=>run(changed,'capacity_fifo'));
+    const changed=contract.capacityScenario({regime:'data_heavy',treatment:'base'});mutate(changed);
+    assert.throws(()=>contract.validateCapacityScenario(changed),message);
+    assert.throws(()=>simulateCapacity(changed,'capacity_fifo'),message);
   }
-  assert.throws(()=>scenario({regime:'data_heavy',treatment:'base',time_quantum_ms:500}));
-  assert.throws(()=>scenario({regime:'unknown',treatment:'base'}));
-  assert.throws(()=>scenario({regime:'constructor',treatment:'base'}));
-  assert.throws(()=>scenario({regime:'data_heavy',treatment:'base',extra:1}));
-  assert.throws(()=>run(scenario({regime:'data_heavy',treatment:'base'}),'cohort_fifo'));
+  assert.throws(()=>contract.capacityScenario({regime:'data_heavy',treatment:'base',time_quantum_ms:500}),choose);
+  assert.throws(()=>contract.capacityScenario({regime:'unknown',treatment:'base'}),choose);
+  assert.throws(()=>contract.capacityScenario({regime:'constructor',treatment:'base'}),choose);
+  assert.throws(()=>contract.capacityScenario({regime:'data_heavy',treatment:'base',extra:1}),/own-property key/);
+});
+
+test('the engine refuses a rule outside the four NF-03 rules',()=>{
+  assert.throws(()=>simulateCapacity(contract.capacityScenario({regime:'data_heavy',treatment:'base'}),'cohort_fifo'),/Unknown NF-03 rule/);
 });
 
 test('data-heavy base reproduces the hand-derived wave-1 schedules for first come and departure deadline',()=>{
@@ -99,20 +102,46 @@ test('data-heavy base reproduces the hand-derived wave-1 schedules for first com
   assert.deepEqual(wave1(deadline,'lateness_s'),{A1:120,B1:0,C1:420,D1:0});
 });
 
+test('shortest upload: a wave-3 arrival at an upload release joins the choice at that boundary',()=>{
+  // Hand-derived at 125,000,000 bytes/s, where an A upload takes 480 s, B 60 s, C 360 s and D 120 s.
+  // Wave 1: B1 0 to 60, D1 60 to 180, C1 180 to 540, A1 540 to 1,020 (wave 2 arrives at 600; A1 is not interrupted).
+  // Wave 2: B2 1,020 to 1,080, D2 1,080 to 1,200. The 1,200 s boundary closes D2's upload and then registers wave 3,
+  // so the next holder comes from A2, C2, A3, B3, C3 and D3: B3 (7.5 GB), not C2 (45 GB). Then D3, C2 (ties C3 on
+  // bytes, arrived first), C3, A2 and A3. Energy is zero in this regime, so more site power changes nothing.
+  for(const treatment of ['base','more_power']){
+    const {record,verification}=cell('data_heavy',treatment,'capacity_shortest_upload');
+    assert.equal(verification.model_validity,'VALID',treatment);
+    const slot=k=>{const i=record.intervals[k];return [i.start_s,i.grant_bytes,i.upload,i.unused_bytes];};
+    assert.deepEqual(slot(1199),[1199,{D2:125000000},{D2:125000000},{}],treatment);
+    assert.deepEqual(slot(1200),[1200,{B3:125000000},{B3:125000000},{}],treatment);
+    // Boundary order at 1,200 s: completions (B2's local step, then D2's upload), arrivals with their zero-energy charge, readiness, deadlines.
+    assert.deepEqual(record.events.filter(e=>e.time_s===1200).map(e=>[e.type,e.vehicle,e.task]),[
+      ['complete','B2','post'],['complete','D2','upload'],
+      ['arrival','A3',null],['complete','A3','charge'],['arrival','B3',null],['complete','B3','charge'],
+      ['arrival','C3',null],['complete','C3','charge'],['arrival','D3',null],['complete','D3','charge'],
+      ['ready','B2',null],['deadline','A2',null],
+    ],treatment);
+    const uploads=Object.fromEntries(record.events.filter(e=>e.task==='upload').map(e=>[e.vehicle,e.time_s]));
+    assert.deepEqual(uploads,{B1:60,D1:180,C1:540,A1:1020,B2:1080,D2:1200,B3:1260,D3:1380,C2:1740,C3:2100,A2:2580,A3:3060},treatment);
+  }
+});
+
 test('two ports share the 60 kW site feed at 30 kW each and hand over at the release boundary',()=>{
   const {record,verification}=cell('energy_heavy','base','capacity_fifo');
   assert.equal(verification.model_validity,'VALID');
-  const slot=t=>{const i=record.intervals[t];assert.equal(i.start_s,t);return {ports:i.ports,charge:i.charge,power:i.power,power_unused:i.power_unused};};
-  const shared={charge:{A1:30000,B1:30000},power:{A1:30000,B1:30000},power_unused:{}};
+  const slot=t=>{const i=record.intervals[t];assert.equal(i.start_s,t);return {ports:i.ports,charge:i.charge,grant_j:i.grant_j,unused_j:i.unused_j};};
+  const shared={charge:{A1:30000,B1:30000},grant_j:{A1:30000,B1:30000},unused_j:{}};
   assert.deepEqual(slot(0),{ports:{A1:1,B1:2},...shared});
   assert.deepEqual(slot(239),{ports:{A1:1,B1:2},...shared});
   // B1 reaches 7,200,000 J at 240 s; C1 takes port 2 and A1 stays at 30 kW because two ports still share 60 kW.
-  assert.deepEqual(slot(240),{ports:{A1:1,C1:2},charge:{A1:30000,C1:30000},power:{A1:30000,C1:30000},power_unused:{}});
+  assert.deepEqual(slot(240),{ports:{A1:1,C1:2},charge:{A1:30000,C1:30000},grant_j:{A1:30000,C1:30000},unused_j:{}});
   assert.equal(visit(verification,'B1').tasks.charge,240);
   // A1 (21.6 MJ) and C1 (14.4 MJ from 240 s) both finish at 720 s; D1 then takes port 1 and A2 port 2.
   assert.deepEqual(slot(719).ports,{A1:1,C1:2});
   assert.deepEqual(slot(720).ports,{D1:1,A2:2});
   assert.deepEqual([visit(verification,'A1').tasks.charge,visit(verification,'C1').tasks.charge,visit(verification,'D1').tasks.charge],[720,720,840]);
+  // Every visit reaches its energy target: 12 visits, 140.4 MJ in total (39 kWh).
+  assert.equal(verification.metrics.utilization.site_j_served,140400000);
 });
 
 test('port admission at a release boundary follows arrival then ID among queued visits',()=>{
@@ -158,16 +187,26 @@ test('zero energy completes charge at arrival and never takes a port',()=>{
   for(const rule of RULES){
     const {record,verification}=cell('data_heavy','base',rule);
     for(const v of verification.visits)assert.equal(v.tasks.charge,v.arrival_s,`${rule} ${v.vehicle}`);
-    assert.ok(record.intervals.every(i=>Object.keys(i.ports).length===0&&Object.keys(i.charge).length===0&&Object.keys(i.power).length===0),rule);
+    assert.ok(record.intervals.every(i=>Object.keys(i.ports).length===0&&Object.keys(i.charge).length===0&&Object.keys(i.grant_j).length===0),rule);
     assert.equal(verification.metrics.utilization.port_slots_used,0);
   }
 });
+
+// Verified [on time, total lateness s] per regime and treatment, rules in RULES order. Data-heavy base first come and
+// departure deadline are derived by hand above; the rest pin this engine version so any change shows up as a diff.
+const OUTCOMES={
+  'data_heavy/base':[[3,6300],[3,7938],[3,4200],[8,3780]],'data_heavy/more_bandwidth':[[9,810],[9,90],[12,0],[9,90]],'data_heavy/more_power':[[3,6300],[3,7938],[3,4200],[8,3780]],
+  'energy_heavy/base':[[6,2700],[6,2700],[6,2700],[6,2700]],'energy_heavy/more_bandwidth':[[6,2700],[6,2700],[6,2700],[6,2700]],'energy_heavy/more_power':[[9,180],[9,180],[9,180],[9,180]],
+  'mixed/base':[[2,6420],[3,8556],[1,5760],[6,5280]],'mixed/more_bandwidth':[[6,2700],[6,2700],[6,2700],[6,2700]],'mixed/more_power':[[3,6300],[3,7938],[1,4320],[6,3900]],
+};
 
 test('all 36 primary cells conserve work and respect arrivals, dependencies, ports and capacity',()=>{
   for(const {id,record,verification} of allCells()){
     const s=record.scenario,q=s.time_quantum_ms/1000;
     assert.equal(verification.model_validity,'VALID',id);assert.equal(verification.comparison_eligible,true,id);
     assert.equal(record.execution_status,'completed',id);assert.equal(record.end_s,5400,id);assert.equal(record.intervals.length,5400,id);
+    // upload and charge are useful rates per second; grant_bytes, unused_bytes, grant_j and unused_j are amounts per slot.
+    assert.deepEqual(Object.keys(record.intervals[0]),['id','start_s','end_s','upload','grant_bytes','unused_bytes','charge','grant_j','unused_j','ports'],id);
     for(const [key,field] of [['upload_bytes','upload'],['energy_j','charge']]){
       for(const v of s.vehicles){
         assert.equal(record.totals[key][v.id],sum(record.intervals.map(i=>(i[field][v.id]??0)*q)),`${id} ${v.id} ${key}`);
@@ -176,12 +215,12 @@ test('all 36 primary cells conserve work and respect arrivals, dependencies, por
     }
     const arrival=Object.fromEntries(s.vehicles.map(v=>[v.id,v.arrival_s]));
     for(const i of record.intervals){
-      for(const field of ['grants','upload','ports','power'])for(const vehicle of Object.keys(i[field]))assert.ok(arrival[vehicle]<=i.start_s,`${id} ${field} to ${vehicle} before arrival at ${i.start_s}`);
+      for(const field of ['grant_bytes','upload','ports','grant_j'])for(const vehicle of Object.keys(i[field]))assert.ok(arrival[vehicle]<=i.start_s,`${id} ${field} to ${vehicle} before arrival at ${i.start_s}`);
       const ports=Object.values(i.ports);
       assert.ok(ports.length<=2&&new Set(ports).size===ports.length&&ports.every(p=>p===1||p===2),`${id} ports at ${i.start_s}`);
-      assert.ok(sum(Object.values(i.power))<=s.site_power_j_s*q&&sum(Object.values(i.charge))*q<=s.site_power_j_s*q,`${id} site feed at ${i.start_s}`);
-      assert.ok(Object.values(i.power).every(j=>j<=s.port_cap_j_s*q),`${id} port cap at ${i.start_s}`);
-      assert.ok(sum(Object.values(i.grants))<=s.uplink_bytes_s*q&&sum(Object.values(i.upload))*q<=s.uplink_bytes_s*q,`${id} uplink at ${i.start_s}`);
+      assert.ok(sum(Object.values(i.grant_j))<=s.site_power_j_s*q&&sum(Object.values(i.charge))*q<=s.site_power_j_s*q,`${id} site feed at ${i.start_s}`);
+      assert.ok(Object.values(i.grant_j).every(j=>j<=s.port_cap_j_s*q),`${id} port cap at ${i.start_s}`);
+      assert.ok(sum(Object.values(i.grant_bytes))<=s.uplink_bytes_s*q&&sum(Object.values(i.upload))*q<=s.uplink_bytes_s*q,`${id} uplink at ${i.start_s}`);
     }
     const done=Object.fromEntries(record.events.filter(e=>e.type==='complete').map(e=>[`${e.vehicle}/${e.task}`,e]));
     for(const ready of record.events.filter(e=>e.type==='ready')){
@@ -193,7 +232,7 @@ test('all 36 primary cells conserve work and respect arrivals, dependencies, por
     const m=verification.metrics;
     assert.equal(m.pending,0,id);assert.equal(m.unfinished_due,0,id);assert.equal(m.final_lateness,true,id);
     assert.equal(m.on_time+m.late,12,id);assert.equal(m.missed,m.late,id);
-    assert.equal(m.lateness_s,sum(verification.visits.map(v=>v.lateness_s)),id);assert.equal(m.lateness_s,m.lateness_lower_bound_s,id);
+    assert.deepEqual([m.on_time,m.lateness_s],OUTCOMES[`${s.regime}/${s.treatment}`][RULES.indexOf(record.rule)],id);assert.equal(m.lateness_s,m.lateness_lower_bound_s,id);
     const u=m.utilization;
     assert.equal(u.uplink_bytes_served,sum(Object.values(record.totals.upload_bytes)),id);assert.equal(u.uplink_bytes_available,s.uplink_bytes_s*5400,id);
     assert.equal(u.site_j_served,sum(Object.values(record.totals.energy_j)),id);assert.equal(u.site_j_available,s.site_power_j_s*5400,id);
@@ -203,8 +242,8 @@ test('all 36 primary cells conserve work and respect arrivals, dependencies, por
 
 test('policies see only arrived visits and their upload work; upload rules never read energy',()=>{
   const observations=[];
-  const s=scenario({regime:'mixed',treatment:'base'});
-  const r=run(s,'capacity_fifo',{propose:o=>{observations.push(o);return o.eligible.length?{[o.eligible[0].id]:o.slot_bytes}:{};}});
+  const s=contract.capacityScenario({regime:'mixed',treatment:'base'});
+  const r=simulateCapacity(s,'capacity_fifo',{propose:o=>{observations.push(o);return o.eligible.length?{[o.eligible[0].id]:o.slot_bytes}:{};}});
   assert.equal(r.execution_status,'completed');assert.equal(observations.length,5400);
   for(const o of observations){
     assert.ok(Object.isFrozen(o)&&Object.isFrozen(o.eligible)&&o.eligible.every(Object.isFrozen));
@@ -216,21 +255,35 @@ test('policies see only arrived visits and their upload work; upload rules never
   }
   assert.ok(observations.some(o=>o.eligible.some(e=>e.id==='A3')));
   // The first-eligible proposal is exactly first come, first served, so the record verifies as that rule.
-  assert.equal(verify(r).comparison_eligible,true);
+  assert.equal(verifyCapacity(r).comparison_eligible,true);
   for(const rule of RULES){
     const data=cell('data_heavy','base',rule).record,mixed=cell('mixed','base',rule).record;
     for(const [k,i] of data.intervals.entries()){
-      assert.deepEqual(mixed.intervals[k].grants,i.grants,`${rule} grants at ${k}`);
+      assert.deepEqual(mixed.intervals[k].grant_bytes,i.grant_bytes,`${rule} grants at ${k}`);
       assert.deepEqual(mixed.intervals[k].upload,i.upload,`${rule} upload at ${k}`);
     }
   }
 });
 
+test('a zero or -0 grant is recorded as no grant, so a policy that spells out zeros still verifies as its rule',()=>{
+  const propose=o=>{
+    const grants=Object.fromEntries(o.eligible.map(e=>[e.id,0]));
+    if(o.eligible.length>1)grants[o.eligible[1].id]=-0;
+    if(o.eligible.length)grants[o.eligible[0].id]=o.slot_bytes;
+    return grants;
+  };
+  const r=simulateCapacity(contract.capacityScenario({regime:'data_heavy',treatment:'base'}),'capacity_fifo',{propose});
+  assert.deepEqual(r.intervals[0].grant_bytes,{A1:125000000});
+  assert.ok(r.intervals.every(i=>Object.values(i.grant_bytes).every(n=>n>0)));
+  const v=verifyCapacity(r);assert.equal(v.model_validity,'VALID');assert.equal(v.comparison_eligible,true);
+  assert.equal(contract.recordDigest(r),contract.recordDigest(cell('data_heavy','base','capacity_fifo').record));
+});
+
 test('treatments change exactly the one declared capacity field',()=>{
   for(const regime of REGIMES){
-    const base=scenario({regime,treatment:'base'});
+    const base=contract.capacityScenario({regime,treatment:'base'});
     for(const treatment of ['more_bandwidth','more_power']){
-      const other=scenario({regime,treatment});
+      const other=contract.capacityScenario({regime,treatment});
       const changed=Object.keys(base).filter(key=>contract.canonicalText(base[key])!==contract.canonicalText(other[key]));
       assert.deepEqual(changed,['treatment',contract.CAPACITY_TREATMENTS[treatment].changed],`${regime} ${treatment}`);
     }
@@ -241,17 +294,17 @@ test('negative controls: site power cannot help data-heavy work and bandwidth ca
   for(const rule of RULES){
     const base=cell('data_heavy','base',rule).record,power=cell('data_heavy','more_power',rule).record;
     assert.deepEqual(power.events,base.events,rule);
-    for(const [k,i] of base.intervals.entries())for(const field of ['upload','grants','charge','ports'])assert.deepEqual(power.intervals[k][field],i[field],`${rule} ${field} at ${k}`);
+    for(const [k,i] of base.intervals.entries())for(const field of ['upload','grant_bytes','charge','ports'])assert.deepEqual(power.intervals[k][field],i[field],`${rule} ${field} at ${k}`);
     assert.deepEqual(Object.keys(base.scenario).filter(key=>base.scenario[key]!==power.scenario[key]&&typeof base.scenario[key]!=='object'),['treatment','site_power_j_s']);
     const energyBase=cell('energy_heavy','base',rule).record,bandwidth=cell('energy_heavy','more_bandwidth',rule).record;
-    for(const [k,i] of energyBase.intervals.entries())for(const field of ['charge','power','ports'])assert.deepEqual(bandwidth.intervals[k][field],i[field],`${rule} energy ${field} at ${k}`);
+    for(const [k,i] of energyBase.intervals.entries())for(const field of ['charge','grant_j','ports'])assert.deepEqual(bandwidth.intervals[k][field],i[field],`${rule} energy ${field} at ${k}`);
   }
 });
 
 test('250 ms refinement agrees with every 1,000 ms cell on ready times and outcomes',()=>{
   const disagreements=[];
   for(const {id,record,verification} of allCells()){
-    const {regime,treatment}=record.scenario,fine=run(scenario({regime,treatment,time_quantum_ms:250}),record.rule),check=verify(fine);
+    const {regime,treatment}=record.scenario,fine=simulateCapacity(contract.capacityScenario({regime,treatment,time_quantum_ms:250}),record.rule),check=verifyCapacity(fine);
     assert.equal(check.model_validity,'VALID',`${id} at 250 ms`);assert.equal(check.comparison_eligible,true,`${id} at 250 ms`);
     for(const v of verification.visits){
       const f=visit(check,v.vehicle);
@@ -262,14 +315,15 @@ test('250 ms refinement agrees with every 1,000 ms cell on ready times and outco
 });
 
 test('a final grant larger than the remaining upload records the unused bytes and never reuses them in the slot',()=>{
-  const r=run(scenario({regime:'data_heavy',treatment:'base'}),'capacity_fifo',{propose:o=>o.eligible.length?{[o.eligible[0].id]:7e7}:{}});
+  const r=simulateCapacity(contract.capacityScenario({regime:'data_heavy',treatment:'base'}),'capacity_fifo',{propose:o=>o.eligible.length?{[o.eligible[0].id]:7e7}:{}});
   // 60e9 bytes at 70,000,000 per slot: 857 full slots, then 10,000,000 useful bytes and 60,000,000 unused in slot 857.
   const i=r.intervals[857];
-  assert.deepEqual([i.grants,i.upload,i.unused],[{A1:7e7},{A1:1e7},{A1:6e7}]);
+  assert.deepEqual([i.grant_bytes,i.upload,i.unused_bytes],[{A1:7e7},{A1:1e7},{A1:6e7}]);
   assert.equal(r.events.find(e=>e.vehicle==='A1'&&e.task==='upload').time_s,858);
   assert.equal(r.totals.upload_bytes.A1,60e9);
   // Holding back part of every slot is not first come, first served, so the trace cannot claim that rule.
-  const v=verify(r);assert.equal(v.model_validity,'INVALID');assert.match(v.checks.at(-1).rule,/declared rule/);
+  const v=verifyCapacity(r);assert.equal(v.model_validity,'INVALID');
+  assert.match(v.checks.at(-1).rule,/^slot 0 grant_bytes: grants do not implement the declared rule; first difference at A1\.$/);
 });
 
 test('A1 and D1 cannot both be on time in any data-heavy or mixed base cell',()=>{
@@ -279,54 +333,59 @@ test('A1 and D1 cannot both be on time in any data-heavy or mixed base cell',()=
   }
 });
 
-test('the verifier rejects forged grants, ports, events, totals, workload, rule and power without mutation',()=>{
-  const data=cell('data_heavy','base','capacity_equal_uplink').record,energy=cell('energy_heavy','base','capacity_equal_uplink').record;
-  assert.equal(verify(data).model_validity,'VALID');assert.equal(verify(energy).model_validity,'VALID');
-  const offByOne=data.intervals.findIndex(i=>{const n=Object.values(i.grants);return Math.max(...n)-Math.min(...n)===1;});
-  assert.ok(offByOne>=0,'some slot rotates a remainder byte');
-  const swapRemainder=r=>{
-    const i=r.intervals[offByOne],ids=Object.keys(i.grants),high=ids.find(id=>i.grants[id]===Math.max(...Object.values(i.grants))),low=ids.find(id=>i.grants[id]===Math.min(...Object.values(i.grants)));
-    for(const field of ['grants','upload'])[i[field][high],i[field][low]]=[i[field][low],i[field][high]];
-  };
-  const portMutations=[
-    r=>{const i=r.intervals.find(x=>Object.keys(x.ports).length===2)??r.intervals[0];const [first]=Object.keys(i.ports);for(const id of ['A1','B1'])i.ports[id]=i.ports[first]??1;},
-    r=>{const i=r.intervals.find(x=>Object.keys(x.power).length)??r.intervals[0];const id=Object.keys(i.power)[0]??'A1';i.power[id]=r.scenario.port_cap_j_s+1;},
+test('the verifier rejects forged grants, ports, events, totals, workload, rule, power, zero entries and -0, naming where',()=>{
+  const fifo=cell('data_heavy','base','capacity_fifo').record,data=cell('data_heavy','base','capacity_equal_uplink').record,energy=cell('energy_heavy','base','capacity_equal_uplink').record;
+  for(const r of [fifo,data,energy])assert.equal(verifyCapacity(r).model_validity,'VALID');
+  // Equal share, slot 240: B1 has finished, so A1, C1 and D1 share 125,000,000 bytes; 240 mod 3 = 0, so the two
+  // remainder bytes go to A1 and C1 (41,666,667 each) and D1 gets 41,666,666. Swapping A1 and D1 breaks the rotation.
+  const swapRemainder=r=>{const i=r.intervals[240];for(const field of ['grant_bytes','upload'])[i[field].A1,i[field].D1]=[i[field].D1,i[field].A1];};
+  const probes=[
+    [fifo,r=>{r.intervals[0].grant_bytes.B1=0;},/^slot 0 grant_bytes: grants do not implement the declared rule; first difference at B1\.$/],
+    [fifo,r=>{r.intervals[0].grant_bytes.B1=-0;},/^slot 0 grant_bytes: grants do not implement the declared rule; first difference at B1\.$/],
+    [fifo,r=>{r.intervals[0].upload.B1=0;},/^slot 0 upload: useful upload differs from reconstruction; first difference at B1\.$/],
+    [data,r=>{r.intervals[0].grant_bytes.B1=r.scenario.uplink_bytes_s;},/^slot 0 grant_bytes: grants exceed the link or the per-vehicle cap\.$/],
+    [data,r=>{r.rule='capacity_fifo';},/^slot 0 grant_bytes: grants do not implement the declared rule; first difference at A1\.$/],
+    [data,swapRemainder,/^slot 240 grant_bytes: grants do not implement the declared rule; first difference at A1\.$/],
+    [data,r=>{r.intervals[0].unused_bytes.A1=0;},/^slot 0 unused_bytes: unused bytes differ from reconstruction; first difference at A1\.$/],
+    [data,r=>{r.intervals[0].unused_bytes.A1=-0;},/^slot 0 unused_bytes: unused bytes differ from reconstruction; first difference at A1\.$/],
+    [data,r=>{r.intervals[0].start_s=-0;},/^slot 0: noncontiguous slot boundary\.$/],
+    [data,r=>{r.events.find(e=>e.type==='complete'&&e.task==='post').time_s-=1;},/^events: inventory or order differs from reconstruction at seq \d+\.$/],
+    [data,r=>{r.events[0].time_s=-0;},/^events: inventory or order differs from reconstruction at seq 0\.$/],
+    [data,r=>{r.totals.upload_bytes.A1+=1;},/^totals: A1 differs from the integrated useful service\.$/],
+    [data,r=>{r.totals.energy_j.A1=-0;},/^totals: A1 differs from the integrated useful service\.$/],
+    [data,r=>{r.scenario.vehicles[0].upload_bytes=6e9;},/^record: Scenario differs from the frozen NF-03 workload/],
+    // Slot 0 of energy-heavy: A1 holds port 1 and B1 port 2, each at 30,000 J, all of it useful.
+    [energy,r=>{r.intervals[0].ports.B1=1;},/^slot 0 ports: a port serves two visits or does not exist\.$/],
+    [energy,r=>{r.intervals[0].grant_j.A1=r.scenario.port_cap_j_s+1;},/^slot 0 grant_j: power differs from min\(port cap, site feed \/ occupied ports\); first difference at A1\.$/],
+    [energy,r=>{r.intervals[0].unused_j.A1=0;},/^slot 0 unused_j: unused energy differs from reconstruction; first difference at A1\.$/],
+    [energy,r=>{r.intervals[240].charge.D1=-0;},/^slot 240 charge: useful charge differs from reconstruction; first difference at D1\.$/],
   ];
-  const dataMutations=[
-    r=>{const i=r.intervals[0];i.grants.B1=r.scenario.uplink_bytes_s;},
-    r=>{r.events.find(e=>e.type==='complete'&&e.task==='post').time_s-=1;},
-    r=>{r.totals.upload_bytes.A1+=1;},
-    r=>{r.scenario.vehicles[0].upload_bytes=6e9;},
-    r=>{r.rule='capacity_fifo';},
-    swapRemainder,
-    ...portMutations,
-  ];
-  for(const [original,mutations] of [[data,dataMutations],[energy,portMutations]]){
-    const before=JSON.stringify(original);
-    for(const [index,mutate] of mutations.entries()){
-      const forged=structuredClone(original);mutate(forged);const v=verify(forged);
-      assert.equal(v.model_validity,'INVALID',`mutation ${index} on ${original.scenario.regime}`);assert.equal(v.comparison_eligible,false);assert.equal(v.metrics,null);assert.equal(v.visits,null);
-      assert.equal(v.checks.at(-1).name,'Required evidence');assert.equal(v.checks.at(-1).status,'FAIL');
-    }
-    assert.equal(JSON.stringify(original),before);
+  const before=[fifo,data,energy].map(r=>JSON.stringify(r));
+  for(const [index,[original,mutate,message]] of probes.entries()){
+    const forged=structuredClone(original);mutate(forged);const v=verifyCapacity(forged);
+    assert.equal(v.model_validity,'INVALID',`probe ${index}`);assert.equal(v.comparison_eligible,false);assert.equal(v.metrics,null);assert.equal(v.visits,null);
+    assert.equal(v.checks.at(-1).name,'Required evidence');assert.equal(v.checks.at(-1).status,'FAIL');
+    assert.match(v.checks.at(-1).rule,message,`probe ${index}`);
   }
+  assert.deepEqual([fifo,data,energy].map(r=>JSON.stringify(r)),before);
 });
 
 test('invalid policy grants end the run at their boundary with one diagnostic and no comparison eligibility',()=>{
   const cases=[
-    ['base',()=>({A1:-1}),/./],
-    ['base',()=>({A2:1}),/./],
+    ['base',()=>({A1:-1}),/nonnegative integer bytes/],
+    ['base',()=>({A2:1}),/^A grant names A2, which has no arrived upload work\.$/],
     ['base',()=>({A1:62500001,B1:62500000}),/slot/i],
     ['more_bandwidth',()=>({A1:250000001}),/cap/i],
     ['base',()=>({}),/progress/i],
     ['base',()=>{throw Error('broken');},/broken/],
   ];
   for(const at of [0,3])for(const [treatment,bad,message] of cases){
-    const r=run(scenario({regime:'data_heavy',treatment}),'capacity_fifo',{propose:o=>o.time_s>=at?bad():{[o.eligible[0].id]:o.slot_bytes}}),v=verify(r);
+    const r=simulateCapacity(contract.capacityScenario({regime:'data_heavy',treatment}),'capacity_fifo',{propose:o=>o.time_s>=at?bad():{[o.eligible[0].id]:o.slot_bytes}}),v=verifyCapacity(r);
     assert.equal(r.policy_status,'policy_error');assert.equal(r.execution_status,'failed');assert.equal(r.end_s,at);assert.equal(r.intervals.length,at);
     assert.equal(r.diagnostics.length,1);assert.equal(r.diagnostics[0].code,'POLICY_ERROR');assert.equal(r.diagnostics[0].time_s,at);assert.match(r.diagnostics[0].message,message);
     assert.equal(v.model_validity,'VALID');assert.equal(v.comparison_eligible,false);
-    assert.equal(v.metrics.pending,12-r.events.filter(e=>e.type==='ready').length);
+    // Data-heavy uploads take at least 60 s, so no visit is ready by 3 s and no deadline has passed.
+    assert.equal(v.metrics.pending,12);
   }
 });
 
@@ -335,27 +394,40 @@ test('canonical text and record digest are deterministic and refuse non-data val
   assert.equal(contract.canonicalText(0.25),'0.25');
   assert.equal(contract.canonicalText([null,true,'x']),'[null,true,"x"]');
   class Box{constructor(){this.a=1;}}
-  for(const bad of [NaN,Infinity,-Infinity,undefined,{a:undefined},[undefined],()=>1,{f(){}},Symbol('s'),new Box(),new Map(),10n])assert.throws(()=>contract.canonicalText(bad),String(bad?.constructor?.name??typeof bad));
-  const s=scenario({regime:'data_heavy',treatment:'base'});
-  const first=contract.recordDigest(run(s,'capacity_fifo')),second=contract.recordDigest(run(s,'capacity_fifo'));
+  for(const bad of [NaN,Infinity,-Infinity,-0,{a:-0},undefined,{a:undefined},[undefined],[1,,3],()=>1,{f(){}},Symbol('s'),new Box(),new Map(),10n])assert.throws(()=>contract.canonicalText(bad),String(bad?.constructor?.name??typeof bad));
+  // An array's extra own property would be silently dropped, and an accessor would run code while being read.
+  let reads=0;const getter={enumerable:true,get(){reads++;return 1;}};
+  for(const bad of [Object.assign([1,2],{extra:3}),Object.defineProperty({},'a',getter),Object.defineProperty([0],'0',getter),Object.setPrototypeOf([1],Object.create(Array.prototype))]){
+    assert.throws(()=>contract.canonicalText(bad),/plain data/);
+  }
+  assert.equal(reads,0);
+  const s=contract.capacityScenario({regime:'data_heavy',treatment:'base'});
+  const first=contract.recordDigest(simulateCapacity(s,'capacity_fifo')),second=contract.recordDigest(simulateCapacity(s,'capacity_fifo'));
   assert.match(first,/^[0-9a-f]{64}$/);assert.equal(first,second);
-  assert.notEqual(contract.recordDigest(run(s,'capacity_shortest_upload')),first);
+  assert.notEqual(contract.recordDigest(simulateCapacity(s,'capacity_shortest_upload')),first);
 });
 
-test('cell runner verifies and digests one cell; cell steps yield per cell and stop on cancel',()=>{
-  assert.equal(typeof model.runCapacityCell,'function');
-  const result=model.runCapacityCell({regime:'mixed',treatment:'more_bandwidth',rule:'capacity_shortest_upload'});
+test('the cell runner simulates, verifies and digests one cell',()=>{
+  const result=runCapacityCell({regime:'mixed',treatment:'more_bandwidth',rule:'capacity_shortest_upload'});
+  assert.deepEqual(Object.keys(result),['scenario','record','verification','digest']);
   assert.equal(result.scenario.treatment,'more_bandwidth');assert.equal(result.record.scenario.treatment,'more_bandwidth');assert.equal(result.record.rule,'capacity_shortest_upload');
   assert.equal(result.verification.model_validity,'VALID');assert.equal(result.verification.comparison_eligible,true);
   assert.equal(result.digest,contract.recordDigest(result.record));
+});
+
+test('cell steps yield one verified cell at a time in order and stop between cells on cancel',()=>{
   const cells=[{regime:'data_heavy',treatment:'base',rule:'capacity_fifo'},{regime:'energy_heavy',treatment:'base',rule:'capacity_fifo'},{regime:'mixed',treatment:'base',rule:'capacity_fifo'}];
-  let cancelled=false;const steps=model.capacityCellSteps(cells,{shouldCancel:()=>cancelled});const yielded=[];let next;
-  while(!(next=steps.next()).done){yielded.push(next.value);cancelled=true;}
-  assert.equal(yielded.length,1);assert.equal(next.value.length,1);
+  let cancelled=false;const yielded=[];
+  for(const step of capacityCellSteps(cells,{shouldCancel:()=>cancelled})){yielded.push(step);cancelled=true;}
+  assert.equal(yielded.length,1);
   assert.deepEqual(Object.keys(yielded[0]).sort(),['cell','digest','index','record','scenario','verification']);
   assert.equal(yielded[0].index,0);assert.equal(yielded[0].cell,cells[0]);assert.equal(yielded[0].verification.comparison_eligible,true);
-  assert.deepEqual([...model.capacityCellSteps(cells.slice(0,2))].map(x=>[x.index,x.record.scenario.regime]),[[0,'data_heavy'],[1,'energy_heavy']]);
-  // A run cancelled inside a cell keeps its verified prefix and is never comparison eligible.
-  let calls=0;const r=run(scenario({regime:'mixed',treatment:'base'}),'capacity_fifo',{shouldCancel:()=>calls++===5});
-  const v=verify(r);assert.equal(r.execution_status,'cancelled');assert.equal(r.end_s,5);assert.equal(v.model_validity,'VALID');assert.equal(v.comparison_eligible,false);
+  assert.deepEqual([...capacityCellSteps(cells.slice(0,2))].map(x=>[x.index,x.record.scenario.regime]),[[0,'data_heavy'],[1,'energy_heavy']]);
+});
+
+test('a run cancelled inside a cell keeps its verified prefix and is never comparison eligible',()=>{
+  let calls=0;const r=simulateCapacity(contract.capacityScenario({regime:'mixed',treatment:'base'}),'capacity_fifo',{shouldCancel:()=>calls++===5});
+  const v=verifyCapacity(r);
+  assert.equal(r.execution_status,'cancelled');assert.equal(r.end_s,5);assert.equal(r.intervals.length,5);
+  assert.equal(v.model_validity,'VALID');assert.equal(v.comparison_eligible,false);
 });
