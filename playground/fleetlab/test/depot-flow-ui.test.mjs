@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
 import {installFakeDom} from './helpers/fake-dom.mjs';
+import {mediaBlockRules} from './helpers/css-rules.mjs';
 import {flowComparisonSteps} from '../src/model/depot-flow.js';
 import {inspectState} from '../src/ui/depot-flow-view.js';
 import * as reading from '../src/ui/depot-flow-reading.js';
@@ -65,13 +66,15 @@ test('result page names its place, offers one compare action and shows a readine
     assert.deepEqual(crumbs.querySelectorAll('a').map(a=>[a.textContent,a.getAttribute('href')]),[['Explore','#/catalog']]);
     const change=lab.element.querySelector('details.flow-change');assert.equal(change.querySelector('summary').textContent,'Change the setup');
     assert.ok(change.querySelector('[aria-label="Uplink capacity"]'),'the setup inputs sit under Change the setup');
-    const kids=lab.element.querySelector('section.flow-hero').children;assert.ok(kids.indexOf(change)>kids.indexOf(lab.element.querySelector('[data-flow-run]').parentNode),'Run comes before the optional inputs');
+    const kids=lab.element.querySelector('div.flow-setup-card').children;assert.ok(kids.indexOf(change)>kids.indexOf(lab.element.querySelector('[data-flow-run]').parentNode),'Run comes before the optional inputs');
     assert.equal(crumbs.querySelector('span[aria-current="page"]').textContent,'Two vehicles, one uplink');
     const runButton=lab.element.querySelector('[data-flow-run]');assert.equal(runButton.textContent,'Compare the three rules');
     assert.equal(runButton.parentNode.nextSibling.getAttribute('class'),'flow-run-help');assert.equal(lab.element.querySelector('p.flow-run-help').textContent,'Runs the same workload under each rule.');
     await lab.run();const before=JSON.stringify(lab.getState().result);
     const slider=lab.element.querySelector('input[type="range"]');slider.value='180';slider.dispatchEvent(new Event('input'));
     const readout=lab.element.querySelector('[data-cursor-state]');
+    assert.deepEqual(readout.querySelector('thead tr').children.map(c=>c.textContent),['Rule','Vehicle','Readiness','Upload','Energy','Local step']);
+    assert.equal(lab.element.querySelector('.flow-trace > p').textContent,'Upload, charging and the local step have distinct marks. Departure deadlines stay visible. Run computes the full outcomes above; Play or Next event reveals the recorded service without changing those outcomes.');
     assert.equal(readout.querySelectorAll('.flow-chain[aria-label="Readiness chain"]').length,6);
     for(const chain of readout.querySelectorAll('.flow-chain')){const steps=chain.querySelectorAll('span');assert.deepEqual(steps.map(s=>s.textContent.split(':')[0]),['Battery','Upload','Local step','Ready']);for(const s of steps)assert.match(s.getAttribute('data-state'),/^(done|active|waiting|not-applicable)$/);}
     const states=(rule,id)=>readout.querySelector(`.flow-chain[data-rule="${rule}"][data-vehicle="${id}"]`).querySelectorAll('span').map(s=>s.getAttribute('data-state'));
@@ -126,7 +129,9 @@ test('first screen puts the question, setup table and Compare before the explana
   const restore=installFakeDom();
   try{const lab=ui.createDepotFlowLab();document.body.appendChild(lab.element);
     const hero=lab.element.querySelector('section.flow-hero');
-    assert.deepEqual(shape(hero),['nav.flow-breadcrumb','p.eyebrow','nav.lab-chooser','h1','p.flow-lede','p.flow-definition','div.flow-table','div.flow-actions','p.flow-run-help','p.flow-status','details.flow-change']);
+    assert.deepEqual(shape(hero),['nav.flow-breadcrumb','p.eyebrow','nav.lab-chooser','div.flow-question','div.flow-setup-card']);
+    assert.deepEqual(shape(hero.querySelector('div.flow-question')),['h1','p.flow-lede','p.flow-definition']);
+    assert.deepEqual(shape(hero.querySelector('div.flow-setup-card')),['div.flow-table','div.flow-actions','p.flow-run-help','p.flow-status','details.flow-change']);
     assert.ok(hero.querySelector('div.flow-table > table.flow-setup-table'));
     assert.deepEqual(hero.querySelector('div.flow-actions').children.map(b=>b.textContent),['Compare the three rules','Cancel']);
     assert.deepEqual(shape(lab.element),['section.flow-hero','details.flow-rules','details.flow-guess-detail','div.teaching-chips','p.flow-boundary','section.flow-output','section.flow-method','div.fl-sr-only']);
@@ -217,6 +222,12 @@ test('a slow charger shows uploading, waiting and charging reasons for Vehicle A
       nf_departure_deadline:'Vehicle A is charging at 20 kW; the local step remains.'});lab.destroy();
   }finally{restore();}
 });
+test('the uploading sentence names the post-upload task the local step, from the projection\'s own words',()=>{
+  const steps=flowComparisonSteps({uplink_gbps:1,b_gb:7.5,charger_kw:20});let n;do{n=steps.next();}while(!n.done);
+  const arm=n.value.arms.find(a=>a.record.rule==='nf_fifo'),view=inspectState(arm.record,30),row=view.vehicles.find(v=>v.vehicle==='A');
+  const sentence=reading.waitReason(view,row,arm.record.scenario);
+  assert.match(sentence,/^Vehicle A is uploading at /);assert.match(sentence,/local step/);assert.doesNotMatch(sentence,/post-upload/);
+});
 test('wait reasons stay accurate for resource states the lessons never reach',()=>{
   assert.equal(typeof reading.waitReason,'function');
   const row=(upload,charge,post)=>({vehicle:'B',ready:false,ready_s:null,waiting_for:[],upload_rate_bytes_s:0,charge_rate_j_s:0,tasks:{upload:{state:upload},charge:{state:charge},post:{state:post}}});
@@ -249,6 +260,15 @@ test('under reduced motion Next event is the one stepping control and Play steps
     assert.equal(moving.element.querySelector('.flow-trace .flow-actions button').hidden,false,'with motion allowed Play is shown');moving.destroy();
   }finally{restore();}
 });
+test('under reduced motion Next event reveals the recorded service up to the cursor, as Play does',async()=>{
+  const restore=installFakeDom();
+  try{const lab=ui.createDepotFlowLab({yieldPage:()=>Promise.resolve(),reducedMotion:()=>true});await lab.run();
+    const hidden=()=>lab.element.querySelectorAll('.flow-trace [visibility="hidden"]').length,before=hidden();
+    lab.element.querySelector('[data-next-event]').click();
+    assert.match(lab.element.querySelector('.flow-clock').textContent,/^Minute 1 of 15/);
+    assert.ok(hidden()>before,`marks after the cursor are hidden: ${before} before the step, ${hidden()} after`);lab.destroy();
+  }finally{restore();}
+});
 test('method section points to the next lesson on the hosted site',()=>{
   const restore=installFakeDom();
   try{const lab=ui.createDepotFlowLab();const next='A recorded twelve-vehicle study, Scheduling or capacity?, continues these lessons on the hosted FleetLab site; the offline edition does not include it.';
@@ -256,10 +276,12 @@ test('method section points to the next lesson on the hosted site',()=>{
     lab.setLesson({id:'crossed-priorities'});assert.ok(lab.element.querySelector('section.flow-method').textContent.includes(next));lab.destroy();
   }finally{restore();}
 });
-test('on a desktop the lesson hero puts the question left and the setup and Compare right, by selector only',()=>{
-  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8'),start=css.indexOf('@media (min-width:1000px) {\n  .flow-hero'),block=css.slice(start,css.indexOf('\n}',start));
-  assert.match(block,/\.flow-hero \{ display:grid; grid-template-columns:minmax\(0,1\.05fr\) minmax\(0,\.95fr\); column-gap:40px; align-items:start;/);
-  const placed=Object.fromEntries([...block.matchAll(/([^{}]+)\{ grid-column:([^;]+); \}/g)].flatMap(([,selectors,column])=>selectors.split(',').map(x=>[x.trim().replace('.flow-hero > ',''),column])));
-  assert.deepEqual(placed,{'.flow-breadcrumb':'1/-1','.eyebrow':'1/-1','.lab-chooser':'1/-1',h1:'1','.flow-lede':'1','.flow-definition':'1','.flow-table':'2','.flow-actions':'2','.flow-run-help':'2','.flow-status':'2','.flow-change':'2'});
-  assert.doesNotMatch(block,/(^|[;\s])order\s*:/);
+test('on a desktop every lesson hero child has a placement in the desktop block, by selector only',()=>{
+  const restore=installFakeDom();
+  try{const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8'),rules=mediaBlockRules(css,1000,'.flow-hero');
+    for(const lesson of ['two-vehicles','crossed-priorities']){const lab=ui.createDepotFlowLab();lab.setLesson({id:lesson});
+      for(const child of lab.element.querySelector('section.flow-hero').children)assert.ok(rules.some(r=>/grid-(column|area)\s*:/.test(r.body)&&r.selectors.some(x=>child.matches(x))),`${lesson}: ${shape({children:[child]})[0]} has a desktop placement`);
+      lab.destroy();}
+    for(const r of rules)assert.doesNotMatch(r.body,/(^|[;\s])order\s*:|display\s*:\s*contents/,r.selectors.join());
+  }finally{restore();}
 });

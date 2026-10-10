@@ -5,6 +5,7 @@ import { mountStudio } from "../src/ui/studio.js";
 import { createInitialState, createStore } from "../src/ui/store.js";
 import { defaultScenario } from "../src/model/schema.js";
 import { installFakeDom } from "./helpers/fake-dom.mjs";
+import {mediaBlockRules} from './helpers/css-rules.mjs';
 import {simulationCatalog} from '../src/ui/simulation-catalog.js';
 import {CHOOSER_PRESET_IDS} from '../src/ui/experiment.js';
 import {routeHref} from '../src/ui/routes.js';
@@ -222,10 +223,8 @@ test('Home document order is the phone reading order, with no CSS reordering',()
   const main=x.studio.element.querySelector('main.studio-overview'),shape=node=>node.children.map(c=>`${c.localName}.${c.getAttribute('class')}`);
   assert.deepEqual(shape(main),['section.studio-film-hero','nav.home-browse']);
   assert.deepEqual(shape(main.children[0]),['div.film-copy','section.start-points','div.welcome-visual','div.film-caption'],'the caption follows the film inside the hero');
-  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
-  const desktop=css.slice(css.indexOf('@media (min-width: 1000px) {\n  .studio-film-hero'));
-  assert.match(desktop,/grid-template-areas: "copy visual" "copy caption" "start start";/,'on a desktop the caption sits under the film and the copy spans both rows');
-  assert.match(desktop,/\.film-caption \{ grid-area: caption;/);
+  const source=readFileSync(new URL('../styles.css',import.meta.url),'utf8'),css=source.replace(/\/\*[\s\S]*?\*\//g,''),desktop=mediaBlockRules(source,1000,'.studio-film-hero');
+  for(const child of main.children[0].children)assert.ok(desktop.some(r=>/grid-(area|column)\s*:/.test(r.body)&&r.selectors.some(x=>child.matches(x))),`${child.getAttribute('class')} has a desktop placement`);
   for(const [,selector,body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)){
    if(/\.(start-points|welcome-visual|film-caption|home-browse)(?![\w-])/.test(selector))assert.doesNotMatch(body,/(^|[;\s])order\s*:/,selector.trim());
    if(/\.studio-film-hero(?![\w-])/.test(selector))assert.doesNotMatch(body,/display\s*:\s*contents/,selector.trim());

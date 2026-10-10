@@ -54,7 +54,7 @@ export function simulationCatalog(){
   ].map(r=>({...r,frame:LESSON_FRAMES[r.id]}));
 }
 
-export const COLLECTIONS=Object.freeze([
+const COLLECTIONS=Object.freeze([
   {name:'Depot readiness & data',families:['Depot work and capacity','Energy and charging'],questions:'Why can a charged vehicle still wait? Which upload goes first? Would another bay or worker help?'},
   {name:'Fleet service & capacity',families:['Fleet size and supply','Demand, crowds and weather','Reading a run and a result','Launching a new area','Recall, release and depot choice','Scaling the fleet'],questions:'Can the fleet meet demand? What changes as a fleet grows? Does a policy help across repeats?'},
   {name:'Streets & cities',families:['Roads and streets'],questions:'Where do queues form? Can one block tie up the fleet?'},

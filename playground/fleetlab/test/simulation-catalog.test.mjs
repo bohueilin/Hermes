@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import { PRESETS } from '../src/model/presets.js';
 import { STREET_PRESETS } from '../src/model/street-simulation.js';
-import { simulationCatalog, createSimulationCatalog, OPERATIONAL_LESSONS, COLLECTIONS } from '../src/ui/simulation-catalog.js';
+import { simulationCatalog, createSimulationCatalog, OPERATIONAL_LESSONS } from '../src/ui/simulation-catalog.js';
 import { installFakeDom } from './helpers/fake-dom.mjs';
 
 test('catalog includes every registered regional preset and every operational lesson once',()=>{
@@ -57,17 +57,21 @@ test('Explore leads with search, compact topic buttons and compact cards',()=>{
     const pressed=()=>chips.filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.textContent);
     assert.ok(chips.every(b=>['true','false'].includes(b.getAttribute('aria-pressed'))));
     assert.deepEqual(pressed(),['All topics']);assert.equal(questions.hidden,true);
-    let total=0;
-    for(const collection of COLLECTIONS){
-      const ids=records.filter(r=>collection.families.includes(r.frame.family)).map(r=>r.id);total+=ids.length;
-      chips.find(b=>b.textContent===collection.name).click();
-      assert.equal(root.querySelector('p.catalog-count').textContent,`${ids.length} of 61 lessons`,collection.name);
-      assert.deepEqual(shown(),ids,collection.name);
-      assert.deepEqual(pressed(),[collection.name]);
-      assert.deepEqual(chips.filter(b=>b.classList.contains('is-selected')).map(b=>b.textContent),[collection.name],'the pressed topic is also marked for its ink fill');
-      assert.equal(questions.hidden,false);assert.equal(questions.textContent,collection.questions);
+    const topics=[
+      ['Depot readiness & data',21,'Why can a charged vehicle still wait? Which upload goes first? Would another bay or worker help?'],
+      ['Fleet service & capacity',31,'Can the fleet meet demand? What changes as a fleet grows? Does a policy help across repeats?'],
+      ['Streets & cities',9,'Where do queues form? Can one block tie up the fleet?'],
+    ];
+    const seen=[];
+    for(const [name,count,text] of topics){
+      chips.find(b=>b.textContent===name).click();
+      assert.equal(root.querySelector('p.catalog-count').textContent,`${count} of 61 lessons`,name);
+      assert.equal(shown().length,count,name);seen.push(...shown());
+      assert.deepEqual(pressed(),[name]);
+      assert.deepEqual(chips.filter(b=>b.classList.contains('is-selected')).map(b=>b.textContent),[name],'the pressed topic is also marked for its ink fill');
+      assert.equal(questions.hidden,false);assert.equal(questions.textContent,text);
     }
-    assert.equal(total,records.length,'every lesson belongs to exactly one topic');
+    assert.deepEqual(seen.slice().sort(),records.map(r=>r.id).sort(),'every lesson belongs to exactly one topic');
     for(const r of records.filter(r=>r.id.startsWith('street-'))){chips[3].click();assert.ok(shown().includes(r.id),r.id);}
     chips[0].click();
     assert.deepEqual(pressed(),['All topics']);assert.equal(questions.hidden,true);

@@ -42,10 +42,11 @@ test('reduced motion play steps to the next event without scheduling a frame',as
   }finally{h.close();}
 });
 
-test('reduced motion play at the horizon returns to minute 0 without scheduling a frame',async()=>{
+test('reduced motion play at the horizon returns to minute 0 with an announcement and without scheduling a frame',async()=>{
   const h=await harness();try{
     h.setReduced(true);h.player.seek(900);assert.equal(h.player.getState().label,'Play from minute 0');
     h.player.play();assert.equal(h.player.getState().time_s,0);assert.equal(h.frames.size,0);assert.equal(h.player.getState().label,'Next event');
+    assert.equal(h.spoken.at(-1),'Event at 0');
   }finally{h.close();}
 });
 

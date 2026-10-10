@@ -40,8 +40,14 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
   let s;try{s=scenario();}catch{}
   lede.textContent=s?ledeText(s):'Input outside this lesson.';
   // Every NF-02 visit arrives charged with the same local step, so the caption states those once instead of two repeated columns.
-  const shared=s&&cohort()?`all batteries at target · ${s.vehicles[0].post_s/60} min local step after upload · `:'';
-  const view=table(s?`Setup · ${shared}observe through minute ${s.horizon_s/60}`:'Setup · input outside this lesson',['Vehicle','Due','Upload',...(cohort()?[]:['Energy','After upload'])],(s?.vehicles??[]).map(v=>[v.id,`minute ${v.deadline_s/60}`,`${v.upload_bytes/1e9} GB`,...(cohort()?[]:[v.energy_j?`${v.energy_j/36e5} kWh`:'Already at target',`${v.post_s/60} min local step`])]));
+  const perVehicle=!cohort(),shared=s&&!perVehicle?`all batteries at target · ${s.vehicles[0].post_s/60} min local step after upload · `:'';
+  const heads=perVehicle?['Vehicle','Due','Upload','Energy','After upload']:['Vehicle','Due','Upload'];
+  const rows=(s?.vehicles??[]).map(v=>{
+   const row=[v.id,`minute ${v.deadline_s/60}`,`${v.upload_bytes/1e9} GB`];
+   if(perVehicle)row.push(v.energy_j?`${v.energy_j/36e5} kWh`:'Already at target',`${v.post_s/60} min local step`);
+   return row;
+  });
+  const view=table(s?`Setup · ${shared}observe through minute ${s.horizon_s/60}`:'Setup · input outside this lesson',heads,rows);
   view.firstChild.classList.add('flow-setup-table');setupTable=swap(setupTable,view);
   if(rebuild){controls.replaceChildren();if(!cohort())controls.append(...[
    ['uplink_gbps','Uplink capacity',[[1,'1 Gbps'],[.5,'0.5 Gbps']]],['b_gb','Vehicle B upload',[[7.5,'7.5 GB'],[15,'15 GB'],[45,'45 GB']]],['charger_kw','Charger power',[[60,'60 kW'],[20,'20 kW']]],
@@ -57,7 +63,14 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
   return `Two vehicles share a ${link} upload link. B is already charged and due sooner${sizes}. Both require two minutes of work after upload.`;
  }
  function buildLesson(){
-  hero.replaceChildren(el('nav',{class:'flow-breadcrumb','aria-label':'Breadcrumb'},[el('a',{href:'#/catalog'},'Explore'),el('span',{'aria-hidden':'true'},'/'),el('span',{},'Depot readiness & data'),el('span',{'aria-hidden':'true'},'/'),el('span',{'aria-current':'page'},lessons.find(l=>l[0]===lesson)[1])]),el('p',{class:'eyebrow'},'DEPOT FLOW LAB'),el('nav',{class:'lab-chooser','aria-label':'Depot flow lessons'},lessons.map(([id,title])=>el('a',{href:`#/depot-flow-lab?lesson=${id}`,'aria-current':id===lesson?'page':null},title))),el('h1',{},cohort()?'Who should upload next?':'Why can a charged vehicle still wait?'),lede,definition,setupTable,actions,runHelp,status,changeSetup);
+  // On a desktop the question sits left and the setup card with Compare right; on a phone they stack in this order.
+  hero.replaceChildren(
+   el('nav',{class:'flow-breadcrumb','aria-label':'Breadcrumb'},[el('a',{href:'#/catalog'},'Explore'),el('span',{'aria-hidden':'true'},'/'),el('span',{},'Depot readiness & data'),el('span',{'aria-hidden':'true'},'/'),el('span',{'aria-current':'page'},lessons.find(l=>l[0]===lesson)[1])]),
+   el('p',{class:'eyebrow'},'DEPOT FLOW LAB'),
+   el('nav',{class:'lab-chooser','aria-label':'Depot flow lessons'},lessons.map(([id,title])=>el('a',{href:`#/depot-flow-lab?lesson=${id}`,'aria-current':id===lesson?'page':null},title))),
+   el('div',{class:'flow-question'},[el('h1',{},cohort()?'Who should upload next?':'Why can a charged vehicle still wait?'),lede,definition]),
+   el('div',{class:'flow-setup-card'},[setupTable,actions,runHelp,status,changeSetup]),
+  );
   chips=swap(chips,chipsView(LESSON_FRAMES[lesson]));
   rulesDetail.replaceChildren(el('summary',{},`How the ${cohort()?'four':'three'} rules work`),el('p',{class:'flow-assumptions'},cohort()?'All arrive at minute 0 with batteries at target. The 1 Gbps link serves 127.5 GB in total; every visit has its own post-upload slot. One-second service steps. GB is decimal.':'Both arrive at minute 0. One charge port; one local-step slot per vehicle. Charging and upload can overlap. GB is decimal; Gbps is useful payload capacity.'),...rules().map(r=>el('article',{},[el('h2',{},r.name),el('p',{},r.description)])));
   if(cohort())rulesDetail.appendChild(table('Size and urgency are different',['Upload size','Earlier deadline','Later deadline'],[['Large','A','C'],['Small','D','B']].map(([size,...ids])=>[size,...ids.map(id=>{const v=scenario().vehicles.find(x=>x.id===id);return `${id} · ${v.upload_bytes/1e9} GB · due ${v.deadline_s/60} min`;})])));
@@ -94,10 +107,10 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
   const moments=guidedMoments(result),times=[...new Set([0,result.scenario.horizon_s,...result.arms.flatMap(a=>a.record.events.map(e=>e.time_s))])].sort((a,b)=>a-b);
   let selectedVehicle=null,selectedRule=null,lastText=-1;
   const phone=globalThis.matchMedia?.('(max-width: 767.98px)'),shownRule=()=>phone?.matches?selectedRule:null;
-  const trace=el('section',{class:'flow-trace','aria-label':'Recorded service timeline'},[el('h3',{},'Follow the work, one event at a time'),el('p',{},'Upload, charging and the local step have distinct marks. Departure deadlines stay visible. Run computes the full outcomes above; Play reveals the recorded service without changing those outcomes.')]),readout=el('div',{'data-cursor-state':''}),clock=el('p',{class:'flow-clock'}),caption=el('p',{class:'flow-caption'});
+  const trace=el('section',{class:'flow-trace','aria-label':'Recorded service timeline'},[el('h3',{},'Follow the work, one event at a time'),el('p',{},'Upload, charging and the local step have distinct marks. Departure deadlines stay visible. Run computes the full outcomes above; Play or Next event reveals the recorded service without changing those outcomes.')]),readout=el('div',{'data-cursor-state':''}),clock=el('p',{class:'flow-clock'}),caption=el('p',{class:'flow-caption'});
   // Under reduced motion Play is hidden: Previous event and Next event are the manual steps, and two controls named Next event would be ambiguous.
   const play=button('Play',()=>{const s=player.getState();s.playing?player.pause():player.play();});
-  const previousButton=button('Previous event',()=>{if(player.getState().time_s>0)player.previous();}),next=button('Next event',()=>{if(player.getState().time_s<result.scenario.horizon_s)player.next();},{'data-next-event':''});
+  const previousButton=button('Previous event',()=>{if(player.getState().time_s>0)player.previous();}),next=button('Next event',()=>{const s=player.getState();if(s.time_s<result.scenario.horizon_s)s.reduced?player.play():player.next();},{'data-next-event':''});
   const slider=el('input',{type:'range',min:0,max:result.scenario.horizon_s,step:1,value:0,'aria-label':'Inspect time across upload rules',on:{input:()=>player.seek(Number(slider.value)),change:()=>announce(eventSentence(result,player.getState().time_s)),keydown:event=>{if(event.ctrlKey||event.metaKey||event.altKey)return;const d={ArrowLeft:-60,ArrowDown:-60,ArrowRight:60,ArrowUp:60,PageDown:-300,PageUp:300}[event.key];if(d!==undefined){event.preventDefault();player.seek(player.getState().time_s+d);announce(eventSentence(result,player.getState().time_s));}}}});
   const speed=el('select',{'aria-label':'Playback speed',on:{change:()=>player.setSpeed(Number(speed.value))}},[10,20,40].map(n=>el('option',{value:n,selected:n===20},`${n}×`)));
   const guided=el('input',{type:'checkbox',checked:true,on:{change:()=>player.setGuided(guided.checked)}});
@@ -107,8 +120,26 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
   const follow=el('select',{'aria-label':'Vehicle to follow',on:{change:()=>{selectedVehicle=follow.value||null;chart.setVehicle(selectedVehicle);renderReadout(player.getState().time_s);}}},[['','All vehicles'],...result.scenario.vehicles.map(v=>[v.id,`Vehicle ${v.id}`])].map(([value,text])=>el('option',{value},text)));
   if(cohort()){selectedRule=rules()[0].id;const sync=()=>{chart?.setRule(shownRule());if(player)renderReadout(player.getState().time_s);};sync();ruleButtons[0].setAttribute('aria-pressed','true');trace.appendChild(el('div',{class:'flow-rule-picker fl-segmented','aria-label':'Timeline rule'},ruleButtons));phone?.addEventListener('change',sync);const oldDispose=chart.dispose;chart.dispose=()=>{phone?.removeEventListener('change',sync);oldDispose();};}
   trace.append(chart.element,el('div',{class:'flow-actions'},[play,button('Restart',()=>player.restart()),previousButton,next,speedLabel,guidedLabel,el('label',{},[el('span',{},'Vehicle to follow'),follow])]),clock,slider,caption,detail('Guided moments',moments.map(m=>button(m.label,()=>{player.seek(m.time_s);announce(m.caption);}))),readout);
-  function renderReadout(t){const chains=[],rows=[];for(const a of result.arms)for(const v of inspectState(a.record,t).vehicles.filter(v=>!selectedVehicle||v.vehicle===selectedVehicle)){if(!shownRule()||a.record.rule===shownRule())chains.push(readinessChain(a.record,v));rows.push([ruleName(a.record.rule),`Vehicle ${v.vehicle}`,v.text.readiness,v.text.upload,v.text.energy,v.text.post]);}readout.replaceChildren(resourceBoard(result,t,shownRule(),selectedVehicle),...chains,table(`Minute ${Number((t/60).toFixed(3))} · state after events at this time`,['Rule','Vehicle','Readiness','Upload','Energy','Post-upload step'],rows));}
-  player=createDepotFlowPlayer({horizon_s:result.scenario.horizon_s,eventTimes:times,moments,quantum_s:cohort()?result.scenario.time_quantum_ms/1000:1,reducedMotion,eventSentence:t=>eventSentence(result,t),announce,render:s=>{const held=s.reduced&&document.activeElement===play;speedLabel.hidden=guidedLabel.hidden=play.hidden=s.reduced;if(held)next.focus();chart.setReveal(s.revealing);chart.setCursor(s.time_s);play.textContent=s.label;slider.value=String(s.time_s);previousButton.setAttribute('aria-disabled',String(s.time_s===0));next.setAttribute('aria-disabled',String(s.time_s===result.scenario.horizon_s));if(s.textChanged||lastText<0){lastText=s.time_s;clock.textContent=`Minute ${Number((s.time_s/60).toFixed(3))} of ${result.scenario.horizon_s/60}${s.reduced?' · Reduced motion: step by event':''}`;slider.setAttribute('aria-valuetext',clock.textContent);caption.textContent=s.moment?.caption??eventSentence(result,s.time_s);renderReadout(s.time_s);}}});
+  function renderReadout(t){const chains=[],rows=[];for(const a of result.arms)for(const v of inspectState(a.record,t).vehicles.filter(v=>!selectedVehicle||v.vehicle===selectedVehicle)){if(!shownRule()||a.record.rule===shownRule())chains.push(readinessChain(a.record,v));rows.push([ruleName(a.record.rule),`Vehicle ${v.vehicle}`,v.text.readiness,v.text.upload,v.text.energy,v.text.post]);}readout.replaceChildren(resourceBoard(result,t,shownRule(),selectedVehicle),...chains,table(`Minute ${Number((t/60).toFixed(3))} · state after events at this time`,['Rule','Vehicle','Readiness','Upload','Energy','Local step'],rows));}
+  /** One player frame: chart, controls and slider on every frame; clock, caption and readout only when the text changes. */
+  function renderFrame(s){
+   chart.setReveal(s.revealing);
+   chart.setCursor(s.time_s);
+   const held=s.reduced&&document.activeElement===play;
+   speedLabel.hidden=guidedLabel.hidden=play.hidden=s.reduced;
+   play.textContent=s.label;
+   if(held)next.focus();
+   slider.value=String(s.time_s);
+   previousButton.setAttribute('aria-disabled',String(s.time_s===0));
+   next.setAttribute('aria-disabled',String(s.time_s===result.scenario.horizon_s));
+   if(!s.textChanged&&lastText>=0)return;
+   lastText=s.time_s;
+   clock.textContent=`Minute ${Number((s.time_s/60).toFixed(3))} of ${result.scenario.horizon_s/60}${s.reduced?' · Reduced motion: step by event':''}`;
+   slider.setAttribute('aria-valuetext',clock.textContent);
+   caption.textContent=s.moment?.caption??eventSentence(result,s.time_s);
+   renderReadout(s.time_s);
+  }
+  player=createDepotFlowPlayer({horizon_s:result.scenario.horizon_s,eventTimes:times,moments,quantum_s:cohort()?result.scenario.time_quantum_ms/1000:1,reducedMotion,eventSentence:t=>eventSentence(result,t),announce,render:renderFrame});
   player.seek(0);output.appendChild(trace);
  }
  function setLesson(record){if(!lessons.some(l=>l[0]===record?.id))throw new RangeError('Unknown depot flow lesson');cancel();stopPlayer();lesson=record.id;options=cohort()?{time_quantum_ms:1000}:defaults();result=null;resultOptions=null;attempt=null;previous=null;comparison=null;feedback=null;seen=[];suggestion=null;output.replaceChildren();buildLesson();}

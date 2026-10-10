@@ -19,13 +19,15 @@ const join=xs=>xs.length<3?xs.join(' and '):`${xs.slice(0,-1).join(', ')} and ${
 const vehicles=ids=>join(ids.map(id=>`Vehicle ${id}`));
 const gbps=rate=>`${Number((rate/125e6).toFixed(3))} Gbps`;
 const minuteOf=s=>Number((s/60).toFixed(3));
+/** The projection's name for the task after upload; the reading calls it the local step, as the readiness chain does. */
+const PROJECTION_POST_TASK='post-upload step';
 /** One sentence on what holds a vehicle back, from an inspectState state and one of its vehicle rows. */
 export function waitReason(state,row,scenario){
  const id=`Vehicle ${row.vehicle}`,{upload,charge,post}=row.tasks;
  if(row.ready)return `${id} is ready since minute ${minuteOf(row.ready_s)}.`;
  if(post.state==='active'&&charge.state==='complete')return `${id} is in its local step; ready at minute ${minuteOf(post.started_s+scenario.vehicles.find(v=>v.id===row.vehicle).post_s)}.`;
  if(upload.state==='waiting')return `${id} waits for the uplink${state.upload_holders.length?`, held by ${vehicles(state.upload_holders)} under ${ruleName(state.rule).toLowerCase()}`:'; no capacity is available'}.`;
- if(upload.state==='active'){const rest=row.waiting_for.filter(task=>task!=='upload').map(task=>task==='post-upload step'?'local step':task);return `${id} is uploading at ${gbps(row.upload_rate_bytes_s)}; ${join(rest)} ${rest.length===1?'remains':'remain'}.`;}
+ if(upload.state==='active'){const rest=row.waiting_for.filter(task=>task!=='upload').map(task=>task===PROJECTION_POST_TASK?'local step':task);return `${id} is uploading at ${gbps(row.upload_rate_bytes_s)}; ${join(rest)} ${rest.length===1?'remains':'remain'}.`;}
  if(charge.state==='waiting')return `${id} waits for the charger${state.charge_holders.length?`, held by ${vehicles(state.charge_holders)}`:'; no capacity is available'}.`;
  return `${id} is charging at ${row.charge_rate_j_s/1000} kW; ${post.state==='complete'?'nothing else remains':'the local step remains'}.`;
 }

@@ -51,7 +51,7 @@ export function createDepotFlowPlayer({horizon_s, eventTimes = [], moments = [],
   function play(){
     if(destroyed||playing||visibilityTarget?.hidden)return;
     reduced=Boolean(reducedMotion());
-    if(reduced){revealing=true;if(sampled>=horizon_s)seek(0);else next();return;}
+    if(reduced){revealing=true;if(sampled>=horizon_s)seek(0,{announce:true});else next();return;}
     if(sampled>=horizon_s)at(0);
     revealing=true;playing=true;moment=null;last=null;emit('play');
     announce(guided?`Playing from minute ${sampled/60} at ${speed} times speed. Stops at ${stops.filter(m=>m.time_s>sampled).length} guided moments.`:`Playing to minute ${horizon_s/60} without stopping.`);
