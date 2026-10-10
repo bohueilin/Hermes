@@ -49,6 +49,43 @@ class IntegrationTest(unittest.TestCase):
             self.legacy, self.viewer, self.prior, self.offer, self.base / "out", self.offline
         )
 
+    def stage_flow_client(self):
+        """Stage reviewed sources and a client holding every declared flow and capacity file."""
+        established = integration.CLIENT_FIXES | integration.FLOW_CHANGED
+        for index, name in enumerate(sorted(established)):
+            (self.legacy / f"original-{index}.txt").unlink()
+            target = self.legacy / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("old " + name)
+        client = self.base / "client"
+        shutil.copytree(self.legacy, client)
+        reviewed = self.base / "reviewed"
+        pages = {
+            "network-flows/capacity/boot.js": integration.CAPACITY_BOOT,
+            "network-flows/capacity/index.html": (
+                '<!doctype html><link rel="stylesheet" href="../../styles.css">'
+                '<div id="capacity-root"></div><script type="module" src="./boot.js"></script>'
+            ),
+        }
+        for name in established | integration.FLOW_ADDED | integration.CAPACITY_ADDED:
+            if name in integration.CAPACITY_ADDED:
+                data = pages.get(name, "// reviewed " + name).encode()
+            else:
+                data = (launch.ROOT / "playground/fleetlab" / name).read_bytes()
+            # The packer generates the capacity page, so it has no reviewed source file.
+            roots = [client] if name in pages else [client, reviewed / "playground/fleetlab"]
+            for root in roots:
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_bytes(data)
+        self.enterContext(patch.object(integration.launch, "ROOT", reviewed))
+        return client
+
+    def integrate_flow(self, client):
+        return integration.integrate(
+            self.legacy, self.viewer, self.prior, self.offer,
+            self.base / "out", self.offline, client_update=client, flow_update=True,
+        )
+
     def test_only_three_declared_root_files_change_and_offline_is_untouched(self):
         before = launch.inventory(self.legacy)
         offline = self.offline.read_bytes()
@@ -107,19 +144,39 @@ class IntegrationTest(unittest.TestCase):
                 flow_update=True,
             )
 
+    def test_flow_update_copies_the_capacity_entry_and_declares_it(self):
+        client = self.stage_flow_client()
+        report = self.integrate_flow(client)
+        site = self.base / "out/site"
+        for name in (
+            "network-flows/capacity/index.html",
+            "network-flows/capacity/boot.js",
+            "src/data/depot-capacity-study.js",
+        ):
+            self.assertEqual((site / name).read_bytes(), (client / name).read_bytes())
+        self.assertEqual(report["teaching_update"], "depot-capacity-nf03-2026-10-09")
+
+    def test_flow_update_rejects_a_missing_capacity_file(self):
+        client = self.stage_flow_client()
+        (client / "src/data/depot-capacity-study.js").unlink()
+        with self.assertRaisesRegex(ValueError, "missing or unexpected modules"):
+            self.integrate_flow(client)
+        self.assertFalse((self.base / "out").exists())
+
+    def test_flow_update_rejects_an_unreviewed_capacity_page(self):
+        client = self.stage_flow_client()
+        page = client / "network-flows/capacity"
+        tampers = (("boot.js", 'import "./other.js";\n'), ("index.html", "<script></script>"))
+        for name, extra in tampers:
+            original = (page / name).read_text()
+            (page / name).write_text(original + extra)
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "capacity page"):
+                self.integrate_flow(client)
+            (page / name).write_text(original)
+        self.assertFalse((self.base / "out").exists())
+
     def test_client_mutation_during_city_staging_is_rejected_without_output(self):
-        copied = integration.CLIENT_FIXES | integration.FLOW_CHANGED | integration.FLOW_ADDED
-        for index, name in enumerate(sorted(copied - integration.FLOW_ADDED)):
-            (self.legacy / f"original-{index}.txt").unlink()
-            target = self.legacy / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text("old " + name)
-        client = self.base / "client"
-        shutil.copytree(self.legacy, client)
-        for name in copied:
-            target = client / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes((launch.ROOT / "playground/fleetlab" / name).read_bytes())
+        client = self.stage_flow_client()
         original_prepare = integration.launch.prepare
 
         def mutate_after_prepare(*args, **kwargs):
@@ -131,10 +188,7 @@ class IntegrationTest(unittest.TestCase):
             patch.object(integration.launch, "prepare", side_effect=mutate_after_prepare),
             self.assertRaisesRegex(ValueError, "client.*(changed|integrity)"),
         ):
-            integration.integrate(
-                self.legacy, self.viewer, self.prior, self.offer,
-                self.base / "out", self.offline, client_update=client, flow_update=True,
-            )
+            self.integrate_flow(client)
         self.assertFalse((self.base / "out").exists())
 
     def test_source_identified_release_cannot_omit_client_security_update(self):

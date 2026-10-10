@@ -6,7 +6,8 @@ export function mountCityEntry(doc = document) {
   const home = doc.querySelector('.studio-overview');
   const startGrid = home?.querySelector('.start-grid');
   const catalogIntro = doc.querySelector('.simulation-catalog .catalog-intro');
-  if (!labLinks || !startGrid || !catalogIntro) throw new Error('FleetLab hosted entry contract changed');
+  const flowHero = doc.querySelector('.depot-flow-lab .flow-hero');
+  if (!labLinks || !startGrid || !catalogIntro || !flowHero?.querySelector('nav.lab-chooser')) throw new Error('FleetLab hosted entry contract changed');
   const node = (tag, attrs, children) => {
     const element = doc.createElement(tag);
     for (const [key, value] of Object.entries(attrs || {})) element.setAttribute(key, value);
@@ -34,6 +35,20 @@ export function mountCityEntry(doc = document) {
     ]), action('Open City Explorer  ↗'),
   ]);
   catalogIntro.parentNode.insertBefore(catalog, catalogIntro.nextSibling);
+  // The depot flow lab rebuilds its hero, chooser included, on every lesson change.
+  const linkCapacity = () => {
+    const chooser = flowHero.querySelector('nav.lab-chooser');
+    if (chooser && !doc.getElementById('capacity-entry')) chooser.appendChild(node('a', {id:'capacity-entry', class:'studio-button', href:'/network-flows/capacity/'}, 'Scheduling or capacity?'));
+  };
+  linkCapacity();
+  new MutationObserver(linkCapacity).observe(flowHero, {childList:true});
+  catalogIntro.parentNode.insertBefore(node('section', {class:'capacity-entry-catalog', 'aria-labelledby':'capacity-catalog-title'}, [
+    node('div', {}, [
+      node('p', {class:'city-entry-eyebrow'}, 'RECORDED CAPACITY STUDY'),
+      node('h2', {id:'capacity-catalog-title'}, 'Better scheduling, more bandwidth, or more charging power?'),
+      node('p', {}, 'Twelve invented depot visits share one upload link, two charging ports and one site feed. Four scheduling rules and two capacity changes serve the same work; compare who is ready on time.'),
+    ]), node('a', {class:'city-entry-action', href:'/network-flows/capacity/'}, 'Open the capacity study  ↗'),
+  ]), catalog.nextSibling);
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'offline-edition'}, [
     node('div', {}, [node('strong', {}, 'Take the teaching labs with you.'), node('p', {}, 'Save the single HTML file, then open it in a browser. Includes the core teaching labs and catalog. The SF map and recordings, hosted film and later City Explorer lessons are not included; there is no sync with the hosted site.')]),
     node('a', {href:'/downloads/fleetlab-offline', download:'fleetlab-offline.html'}, 'Download offline edition · 2.4 MB ↓'),
