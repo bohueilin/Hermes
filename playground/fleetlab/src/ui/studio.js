@@ -34,7 +34,7 @@ function overview(navigate, visit, film) {
         el("h1",{},"What keeps an autonomous fleet ready?"),
         el("p",{class:"film-lede"},"Explore small, reproducible experiments in charging, data movement and fleet operations. Change a constraint, watch the system respond, and inspect the trade-offs."),
         el("p",{class:"home-author"},["An independent learning project by ",el("strong",{},"Bo-Huei Lin"),"."]),
-        el("div",{class:"hero-actions"},[el("a",{href:routeHref(first),class:"studio-button studio-button-primary",on:{click:event=>followLink(event,()=>visit(first))}},"Explore Network Flows  →"),pageLink("Explore all lessons","catalog",navigate)]),
+        el("div",{class:"hero-actions"},[el("a",{href:routeHref(first),class:"studio-button studio-button-primary",on:{click:event=>followLink(event,()=>visit(first))}},"Explore depot operations  →"),pageLink("Browse all lessons","catalog",navigate)]),
         el("p",{class:"hero-duration"},"A small experiment. A visible trade-off. No account needed."),
         el("div",{class:"welcome-boundary"},[el("strong",{},"Synthetic teaching simulator"),el("span",{},"NOT_EVIDENCE · simulation only · decision authority NONE")]),
       ]),
@@ -68,7 +68,7 @@ function approach(navigate) {
   return el("main",{class:"studio-approach",id:"studio-approach"},[
     el("section",{class:"approach-intro"},[eyebrow("ABOUT & LIMITS"),el("h1",{},"What FleetLab models, and what it does not."),el("p",{class:"hero-lede"},"FleetLab is the browser learning playground inside Hermes, an independent simulation and evidence-review project. Every model here is synthetic, inspectable and bounded."),el("p",{},NON_AFFILIATION)]),
     el("section",{class:"approach-section"},[
-      eyebrow("01 / WHAT FLEETLAB MODELS"),el("h2",{},"Five labs, each with its own model and limits."),
+      eyebrow("01 / WHAT FLEETLAB MODELS"),el("h2",{},"Five teaching labs, with declared models and limits."),
       el("div",{class:"approach-scope"},[
         el("div",{},[el("h3",{},"Find the right learning model"),el("p",{},"Fleet day covers weather, energy and depot work. Street lab explores block-level queues and routing. Four-area experiments cover dispatch, recall and paired guardrails. Scale lab covers density at rungs, fleet intake and a support pool. Depot flow lab explains how uploads and charging combine to determine readiness. Explore lists each model's lessons and scope.")]),
         el("div",{},[el("h3",{},"Outside the model"),el("p",{},"Worker shifts, physical driving, calibrated demand and real vehicle operations. Demand, traffic and vehicle operating values are teaching assumptions. None of these models is a calibrated digital twin or permission to change a fleet.")]),
@@ -122,7 +122,7 @@ export function mountStudio(app) {
   const navItems=[['overview','Home'],['catalog','Explore'],['approach','About & limits']];
   const navLinks=navItems.map(navLink);
   const labLinkNodes=[['simulation','Fleet day'],['streets','Street lab'],['depots','Four-area experiments'],['scale','Scale lab'],['flows','Depot flow lab'],['tour','Guided walkthrough']].map(navLink);
-  const labLinks=el('nav',{class:'lab-links','aria-label':'Labs'},labLinkNodes);
+  const labLinks=el('nav',{class:'lab-links','aria-label':'Quick links'},labLinkNodes);
   const brand=pageLink('F','overview',navigate);brand.setAttribute('class','studio-monogram');brand.setAttribute('aria-label','FleetLab home');
   const skip=el('a',{href:'#studio-content',class:'studio-skip',on:{click:event=>{event.preventDefault();activeMain?.focus();}}},'Skip to main content');
   const navigation=el('nav',{id:'studio-navigation','aria-label':'Main navigation','data-expanded':'false'},navLinks);

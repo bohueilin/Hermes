@@ -3,7 +3,7 @@
 import {CAPACITY_RULES,CAPACITY_REGIMES,CAPACITY_TREATMENTS,canonicalText,cellId,deepFreeze,recordDigest} from '../model/depot-capacity-contract.js';
 import {verifyCapacity} from '../model/depot-capacity-verify.js';
 
-export const CAPACITY_PROJECTION_VERSION='depot-capacity-projection/1.1.0';
+export const CAPACITY_PROJECTION_VERSION='depot-capacity-projection/1.2.0';
 export const CAPACITY_PROJECTION=CAPACITY_PROJECTION_VERSION;
 const BASE_RULE='capacity_equal_uplink';
 export const ruleName=id=>CAPACITY_RULES.find(r=>r.id===id).name;
@@ -15,6 +15,7 @@ export const minute=s=>Number((s/60).toFixed(2));
 export const gbps=rate=>`${Number((rate/125e6).toFixed(3))} Gbps`;
 export const kw=rate=>`${Number((rate/1000).toFixed(3))} kW`;
 const metricsOf=(manifest,id)=>manifest.cells.find(c=>c.cell_id===id&&c.verification?.model_validity==='VALID'&&c.verification.comparison_eligible===true)?.metrics??null;
+const latenessText=m=>{const n=m.final_lateness?m.lateness_s:m.lateness_lower_bound_s;return Number.isFinite(n)?m.final_lateness?`${minute(n)} min`:`At least ${minute(n)} min; ${m.unfinished_due+m.pending} unfinished`:'Not available';};
 
 /** Base, one rule change and two capacity changes, all at the primary one-second quantum. */
 export function caseCells(regime,altRule){
@@ -36,7 +37,7 @@ export function cardsFor(manifest,regime,altRule){
     const m=metricsOf(manifest,cell_id),u=m?.utilization;
     if(!m)return {case:c,label,changed,cell_id,available:false,on_time:null,missed:null,late:null,unfinished_due:null,lateness_text:'Not in the accepted study',capacity_text:'Not in the accepted study'};
     return {case:c,label,changed,cell_id,available:true,on_time:m.on_time,missed:m.missed,late:m.late,unfinished_due:m.unfinished_due,
-      lateness_text:m.final_lateness?`${minute(m.lateness_s)} min`:`At least ${minute(m.lateness_lower_bound_s)} min; ${m.unfinished_due+m.pending} unfinished`,
+      lateness_text:latenessText(m),
       capacity_text:`Uplink ${percent(u.uplink_bytes_served,u.uplink_bytes_available)} · site feed ${energy&&u.site_j_available?percent(u.site_j_served,u.site_j_available):'not needed'}`};
   });
 }
@@ -123,11 +124,14 @@ export function capacityBenchProjection(comparison,contrast,time_s,vehicle){
       upload_rate_bytes_s:state.uplink.holders.find(h=>h.id===v.vehicle)?.rate_bytes_s??0,charge_rate_j_s:state.ports.find(p=>p.vehicle===v.vehicle)?.rate_j_s??0}));
     const selected=visits.find(v=>v.vehicle===vehicle)??visits[0],final=cells[key].verification.visits.find(v=>v.vehicle===selected.vehicle);
     return {case:key,label:names[key],time_s:state.time_s,visits,selected,ports:state.ports,
-      final:{on_time:cells[key].verification.metrics.on_time,total:visits.length,vehicle:selected.vehicle,ready_s:final.ready_s,outcome:final.outcome},
+      final:{on_time:cells[key].verification.metrics.on_time,lateness_text:latenessText(cells[key].verification.metrics),total:visits.length,vehicle:selected.vehicle,ready_s:final.ready_s,outcome:final.outcome},
       upload:{used,capacity:state.uplink.capacity_bytes_s,fraction:used/scales.upload_bytes_s},
       energy:{used:state.site.used_j_s,capacity:state.site.capacity_j_s,fraction:state.site.used_j_s/scales.energy_j_s}};
   });
-  return deepFreeze({available:true,time_s:arms[0].time_s,scales,arms});
+  const a=cells.base.record,b=cells[contrast].record,power=contrast==='power',field=power?'site_power_j_s':'uplink_bytes_s',format=power?kw:gbps;
+  const change=contrast==='rule'?`upload rule: ${lower(ruleName(a.rule))} to ${lower(ruleName(b.rule))}`:`${power?'site feed':'uplink'}: ${format(a.scenario[field])} to ${format(b.scenario[field])}`;
+  const context=`Same visits and targets. Change only ${change}.${power&&a.scenario.vehicles.every(v=>v.energy_j===0)?' No charging needed in this workload.':''}`;
+  return deepFreeze({available:true,time_s:arms[0].time_s,scales,arms,context});
 }
 
 /** Per visit: merged upload and charging spans (fraction of the link or of one port's cap), local step, ready and target. */

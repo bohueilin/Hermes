@@ -352,7 +352,11 @@ test('Watch starts accepted visible guided snapshots and preserves engine purity
     const accepted=p.getState().comparison,before=JSON.stringify(accepted);
     e.querySelector('[data-chapter="Trade-off"]').click();assert.equal(p.getState().guided.playing,false);assert.equal(p.getState().vehicle,'B2');assert.equal(p.getState().time_s,1080);
     assert.deepEqual(e.querySelectorAll('.capacity-board-case').map(a=>a.getAttribute('data-time')),['1080','1080']);
+    assert.match(text(e.querySelector('.capacity-pair-summary')),/Base: 3 of 12 on time.*132\.3 min.*Vehicle B2.*minute 18.*Different rule: 3 of 12 on time.*70 min.*Vehicle B2.*minute 30/);
+    assert.match(text(e.querySelector('.capacity-pair-summary')),/Lower total lateness need not help every vehicle/);
+    assert.match(text(e.querySelector('.capacity-pair-summary')),/Same visits and targets.*upload rule.*departure deadline first/);
     e.querySelector('[data-guide-next]').click();assert.equal(p.getState().contrast,'power');assert.match(e.querySelector('.capacity-guide-caption').textContent,/Negative control/);
+    assert.match(text(e.querySelector('.capacity-pair-summary')),/site feed.*60 kW.*120 kW.*No charging needed in this workload/);
     assert.equal(calls,1);assert.equal(JSON.stringify(accepted),before);assert.match(e.querySelector('.capacity-utilization').textContent,/675,000,000,000/);p.destroy();
   }finally{restore();}
 });
@@ -387,8 +391,16 @@ test('guided page visibility pauses and resumes the same accepted snapshot; setu
 
 test('resuming a guide stops full replay and restores its accepted checkpoint',async()=>{
   const restore=installFakeDom();try{const p=create(),e=p.element;e.querySelector('.capacity-focal').getBoundingClientRect=()=>({top:0,bottom:650,height:650,left:0,right:1000,width:1000});await p.watch();e.querySelector('[data-chapter="Trade-off"]').click();
+    change(e.querySelector('select[aria-label="Case to compare"]'),'bandwidth');change(e.querySelector('select[aria-label="Vehicle"]'),'C3');
+    assert.match(text(e.querySelector('.capacity-guide-caption')),/^Inspecting the accepted records/);
+    assert.match(text(e.querySelector('.capacity-pair-summary')),/Change only uplink: 1 Gbps to 2 Gbps/);
+    assert.match(text(e.querySelector('[data-summary="bandwidth"]')),/Total lateness: 1\.5 min/);
     const slider=e.querySelector('input[type="range"]');slider.value='2000';slider.dispatchEvent(new Event('input'));e.querySelector('[data-capacity-play]').click();assert.equal(restore.dom.frames.pending,1);
-    e.querySelector('[data-guide-play]').click();assert.equal(restore.dom.frames.pending,1,'guide and full replay cannot both own a clock');assert.equal(p.getState().time_s,1080);assert.equal(p.getState().guided.playing,true);p.destroy();
+    e.querySelector('[data-guide-play]').click();assert.equal(restore.dom.frames.pending,1,'guide and full replay cannot both own a clock');assert.equal(p.getState().time_s,1080);assert.equal(p.getState().guided.playing,true);
+    assert.equal(p.getState().contrast,'rule');assert.equal(p.getState().vehicle,'B2');
+    assert.match(text(e.querySelector('.capacity-guide-caption')),/Regressing example: Vehicle B2/);
+    assert.match(text(e.querySelector('.capacity-pair-summary')),/upload rule.*departure deadline first/);
+    assert.match(text(e.querySelector('[data-summary="rule"]')),/Total lateness: 70 min.*Vehicle B2.*minute 30/);p.destroy();
   }finally{restore();}
 });
 

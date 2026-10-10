@@ -152,11 +152,12 @@ to{left:100%}
 .capacity-chapters{margin-right:auto}
 .capacity-chapters [aria-pressed=true]{background:#234e3e;color:#fff;border-color:#234e3e}
 .capacity-guide-state{margin:7px 0 4px;font-size:14px;color:var(--muted)}
-.capacity-guide-caption{margin:4px 0 8px;font-size:16px;line-height:1.45;min-height:2.9em}
+.capacity-guide-caption{margin:4px 0 8px;font-size:16px;line-height:1.45;min-height:1.45em}
 .capacity-focal>.flow-clock{margin:4px 0 8px;font-size:17px;font-variant-numeric:tabular-nums}
 .capacity-page .capacity-board{gap:12px;margin-bottom:10px}
 .capacity-pair-summary{padding:9px 14px;gap:4px 16px}
 .capacity-pair-summary p{margin:2px 0 0}
+.capacity-pair-summary p,.capacity-page .capacity-guide-caption{max-width:none}
 .cap-arm-heading{padding:10px 14px}
 .capacity-page .cap-arm-heading h3{font-size:19px}
 .cap-selected{padding:12px 14px 6px;margin:0;border-top:0;border-bottom:1px solid var(--rule)}

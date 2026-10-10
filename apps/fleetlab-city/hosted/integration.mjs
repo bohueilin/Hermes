@@ -21,7 +21,7 @@ export function mountCityEntry(doc = document) {
   labLinks.appendChild(node('a', {id:'capacity-lab-entry', class:'studio-button', href:'/network-flows/capacity/'}, 'Scheduling or capacity?'));
   // Replace the offline entry, including its hash-navigation handler, with a native hosted link.
   const heroAction = home.querySelector('.hero-actions .studio-button-primary');
-  heroAction.parentNode.insertBefore(node('a', {class:'studio-button studio-button-primary',href:'/network-flows/capacity/'}, 'Explore Network Flows  →'),heroAction);
+  heroAction.parentNode.insertBefore(node('a', {class:'studio-button studio-button-primary',href:'/network-flows/capacity/'}, 'Explore depot operations  →'),heroAction);
   heroAction.remove();
   home.querySelector('.hero-actions').appendChild(node('a', {class:'home-city-link',href:'/city-explorer/'},'See the San Francisco case study  ↗'));
   const action = (text, hash = '') => node('a', {class:'city-entry-action', href:`/city-explorer/${hash}`}, text);

@@ -43,7 +43,7 @@ test('welcome connects independent authorship to an operating question without s
   const copy=x.studio.element.querySelector('.film-copy');
   assert.equal(copy.querySelector('h1').textContent,'What keeps an autonomous fleet ready?');
   assert.match(copy.querySelector('.home-author').textContent,/independent learning project by Bo-Huei Lin/i);
-  assert.match(copy.querySelector('.studio-button-primary').textContent,/Explore Network Flows/);
+  assert.match(copy.querySelector('.studio-button-primary').textContent,/Explore depot operations/);
   assert.equal(x.studio.flows.getState().result,null);
   assert.ok(x.studio.element.querySelector('.home-browse a[href="#/fleet-day"]'));
   assert.ok(x.studio.element.querySelector('.home-browse a[href="#/street-lab"]'));
@@ -228,7 +228,7 @@ test('About & limits keeps the model boundary and the depot stages',()=>{
   assert.match(about.textContent,/not.*digital twin/i);
   assert.match(about.textContent,/Outside the model/);
   assert.ok(about.querySelector('[data-stage="arrive"]'));
-  assert.match(about.textContent,/Five labs, each with its own model and limits\./,'the labs are not described as one unified simulator');
+  assert.match(about.textContent,/Five teaching labs, with declared models and limits\./,'the labs are not described as one unified simulator');
   assert.match(about.textContent,/06 \/ READING ACROSS MODELS/);assert.doesNotMatch(about.textContent,/SOURCES, CONTEXT AND CONTACT/);
   assert.equal(x.studio.element.querySelector('.home-browse a[href="#/approach"]').textContent,'About & limits  →','Home names the destination as the header does');
  }finally{x.studio.destroy();x.restore();}

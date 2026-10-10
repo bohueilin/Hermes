@@ -13,7 +13,7 @@ export function capacityGuideShots(comparison){
   const shot=(chapter,contrast,id,kind,duration_s,time_s)=>{
     const [a,b]=paired(contrast,id);
     return Object.freeze({chapter,contrast,vehicle:id,kind,duration_s,time_s:time_s??Math.min(a.ready_s??Infinity,b.ready_s??Infinity,base.record.end_s),
-      caption:`${kind==='negative-control'?'Negative control':kind==='regressing'?'Regressing example':kind==='improving'?'Improving example':kind==='unchanged'?'Unchanged example':'Shared constraint'}: Vehicle ${id}. Base ${ready(a)}; ${names[contrast]} ${ready(b)}.`,
+      caption:`${kind==='negative-control'?'Negative control':kind==='regressing'?'Regressing example':kind==='improving'?'Improving example':kind==='unchanged'?'Unchanged example':'Shared constraint'}: Vehicle ${id}. Base ${ready(a)}; ${names[contrast]} ${ready(b)}.${kind==='regressing'&&a.ready_s!==null&&b.ready_s!==null?` ${minute(b.ready_s-a.ready_s)} min later.`:''}`,
 });
   };
   const allocation=firstAllocationDifference(base.record,cells.rule.record),ruleId=pick('rule','improving')??pick('rule','unchanged')??fallback;

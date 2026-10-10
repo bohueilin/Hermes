@@ -17,6 +17,7 @@ test('chapters show accepted improving, regressing and negative-control snapshot
   for(const s of plan){assert.ok(['base',s.contrast].some(k=>data.cells[k].record.events.some(e=>e.time_s===s.time_s)),'cut is an accepted event boundary');const p=capacityBenchProjection(data,s.contrast,s.time_s,s.vehicle);assert.equal(p.available,true);assert.ok(p.arms.every(a=>a.time_s===s.time_s&&a.selected.vehicle===s.vehicle));}
   const improving=plan.find(s=>s.kind==='improving'&&s.contrast==='rule');assert.equal(improving.vehicle,'D1');assert.equal(improving.time_s,240);
   const regressing=plan.find(s=>s.kind==='regressing');assert.equal(regressing.vehicle,'B2');assert.equal(regressing.time_s,1080);
+  assert.match(regressing.caption,/12 min later/,'ready-time loss is not the five-minute deadline miss');
 });
 
 test('Energy-heavy chapters show power improvement and bandwidth as a negative control',()=>{

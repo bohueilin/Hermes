@@ -17,7 +17,7 @@ export function createCapacityPreview(scenario,label){
     el('div',{class:'cap-preview-channels'},[
       el('div',{class:'cap-preview-upload'},[el('strong',{},'Upload'),el('span',{},'Vehicles → shared uplink'),el('b',{},gbps(scenario.uplink_bytes_s))]),
       el('div',{class:'cap-preview-energy'},[el('strong',{},'Energy'),el('span',{},'Site feed → 2 charging ports'),el('b',{},kw(scenario.site_power_j_s))])]),
-    el('p',{class:'cap-preview-caption'},`${label} workload. Upload, battery target and a local step must finish before a vehicle is ready in this model.`),
+    el('p',{class:'cap-preview-caption'},`${label} workload. Ready in this model means upload, battery target and the local step (a fixed delay after upload) are complete.`),
   ]);
 }
 
@@ -56,7 +56,7 @@ function armView(arm,onSelect){
   const progress=el('dl',{class:'cap-selected-progress'}),exactValues=el('p',{class:'cap-exact-values'});
   const node=el('article',{class:'capacity-board-case','data-case':arm.case},[
     el('div',{class:'cap-arm-heading'},[el('h3',{},arm.label),time]),
-    el('section',{class:'cap-selected'},[el('div',{class:'cap-selected-heading'},[el('span',{class:'cap-selected-symbol','aria-hidden':'true'},car()),selectedTitle]),wait,selectedOutcome,el('details',{},[el('summary',{},'Task chain and quantities'),chain,progress,exactValues])]),
+    el('section',{class:'cap-selected'},[el('div',{class:'cap-selected-heading'},[el('span',{class:'cap-selected-symbol','aria-hidden':'true'},car()),selectedTitle]),wait,selectedOutcome,el('details',{},[el('summary',{},'Task chain and quantities'),el('p',{},'Local step: a fixed per-vehicle delay after upload; no shared resource. Charging can overlap.'),chain,progress,exactValues])]),
     el('div',{class:'cap-channels'},[upload.root,energy.root]),parking]);
   return {node,update(a,scales,playing){
     node.setAttribute('data-time',a.time_s);time.textContent=`Recorded minute ${minute(a.time_s)}`;
@@ -80,7 +80,7 @@ function armView(arm,onSelect){
 
 /** Updating the bench preserves its vehicle controls and focus. Motion is merely an active-link direction cue. */
 export function createCapacityBench({onSelect=()=>{}}={}){
-  const element=el('div',{class:'capacity-board','aria-label':'Shared-clock resource comparison'});let arms=new Map(),mobileSide='base',switches=[],summaries=new Map();
+  const context=el('p',{class:'cap-pair-label'}),element=el('div',{class:'capacity-board','aria-label':'Shared-clock resource comparison'});let arms=new Map(),mobileSide='base',switches=[],summaries=new Map();
   const showSide=side=>{
     mobileSide=side;
     for(const [key,arm] of arms)arm.node.setAttribute('data-mobile-visible',String((key==='base')===(side==='base')));
@@ -98,13 +98,15 @@ export function createCapacityBench({onSelect=()=>{}}={}){
       });
       const controls=el('div',{class:'capacity-mobile-arms',role:'group','aria-label':'Visible comparison arm'},switches.map(b=>b.node));
       summaries=new Map(projection.arms.map(a=>[a.case,el('div',{'data-summary':a.case})]));
-      const summary=el('div',{class:'capacity-pair-summary','aria-label':'End-of-run results for both cases'},[el('p',{class:'cap-pair-label'},'Whole-run outcomes · fixed while replay moves'),...summaries.values()]);
+      const summary=el('div',{class:'capacity-pair-summary','aria-label':'End-of-run results for both cases'},[el('p',{class:'cap-pair-label'},'Whole-run outcomes · fixed while replay moves. Lower total lateness need not help every vehicle.'),context,...summaries.values()]);
       element.replaceChildren(controls,summary,...[...arms.values()].map(a=>a.node));showSide(mobileSide);
     }
+    context.textContent=projection.context??'';
     for(const arm of projection.arms){
       arms.get(arm.case).update(arm,projection.scales,playing);
-      const f=arm.final,outcomes={on_time:'on time',late:'late',unfinished_due:'unfinished, target passed',pending:'unfinished, target ahead'};
+      const f=arm.final;
       summaries.get(arm.case).replaceChildren(el('strong',{},`${arm.label}: ${f?`${f.on_time} of ${f.total} on time`:'Not available'}`),
+        el('p',{},`Total lateness: ${f?.lateness_text??'Not available'}`),
         el('p',{},f?`Vehicle ${f.vehicle}: ${f.ready_s===null?'not ready':`ready at minute ${minute(f.ready_s)}`} · ${outcomes[f.outcome]}.`:'Selected outcome not available.'));
     }
   }};

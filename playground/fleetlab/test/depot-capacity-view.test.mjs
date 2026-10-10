@@ -9,7 +9,7 @@ const manifestCell=id=>CAPACITY_STUDY.cells.find(c=>c.cell_id===id);
 const visit=(state,id)=>state.visits.find(v=>v.vehicle===id);
 
 test('the four matched cases name their cells and the one field each changes',()=>{
-  assert.equal(view.CAPACITY_PROJECTION,'depot-capacity-projection/1.1.0');
+  assert.equal(view.CAPACITY_PROJECTION,'depot-capacity-projection/1.2.0');
   const cases=view.caseCells('data_heavy','capacity_departure_deadline');
   assert.deepEqual(cases.map(c=>[c.case,c.label,c.cell_id]),[
     ['base','Base','data_heavy/base/capacity_equal_uplink/1000'],
@@ -184,5 +184,38 @@ test('bench projection withholds unavailable or invalid accepted cells',()=>{
   for(const comparison of [null,{cells:{}},{cells:{base:{verification:{model_validity:'INVALID'}}}}]){
     const p=view.capacityBenchProjection(comparison,'rule',0,'A1');
     assert.equal(p.available,false);assert.equal(p.arms.length,0);assert.match(p.reason,/not available/i);
+  }
+});
+
+test('focal lateness follows every selected accepted workload and rule, independent of the cursor',()=>{
+  const expected={data_heavy:[132.3,105,70,63,1.5,132.3],energy_heavy:[45,45,45,45,45,3],mixed:[142.6,107,96,88,45,132.3]};
+  for(const [regime,values] of Object.entries(expected))for(const [i,rule] of ['capacity_fifo','capacity_departure_deadline','capacity_shortest_upload'].entries()){
+    const cells=Object.fromEntries(view.caseCells(regime,rule).map(c=>[c.case,view.verifiedCell({cell:c.cell,...run(regime,c.cell.treatment,c.cell.rule)},manifestCell(c.cell_id))]));
+    for(const [contrast,value] of [['rule',values[i+1]],['bandwidth',values[4]],['power',values[5]]])for(const time of [0,1080,5400]){
+      const p=view.capacityBenchProjection({cells},contrast,time,'B2');
+      assert.deepEqual(p.arms.map(a=>a.final.lateness_text),[`${values[0]} min`,`${value} min`],`${regime}/${rule}/${contrast} at ${time}`);
+    }
+  }
+});
+
+test('focal lateness distinguishes zero, unavailable and censored accepted metric fields',()=>{
+  const cells=Object.fromEntries(view.caseCells('data_heavy','capacity_fifo').map(c=>[c.case,{record:run(c.cell.regime,c.cell.treatment,c.cell.rule).record,verification:structuredClone(run(c.cell.regime,c.cell.treatment,c.cell.rule).verification)}]));
+  const m=cells.base.verification.metrics;
+  for(const [fields,expected] of [[{final_lateness:true,lateness_s:0},'0 min'],[{final_lateness:true,lateness_s:null},'Not available'],[{final_lateness:false,lateness_lower_bound_s:120,unfinished_due:1,pending:1},'At least 2 min; 2 unfinished']]){
+    const sample=structuredClone(cells);Object.assign(sample.base.verification.metrics,m,fields);
+    assert.equal(view.capacityBenchProjection({cells:sample},'rule',0,'A1').arms[0].final.lateness_text,expected);
+  }
+});
+
+test('pair context uses selected record capacities and restricts no-charge explanation to that workload',()=>{
+  for(const regime of ['data_heavy','energy_heavy','mixed']){
+    const cells=Object.fromEntries(view.caseCells(regime,'capacity_shortest_upload').map(c=>[c.case,run(regime,c.cell.treatment,c.cell.rule)]));
+    const context=c=>view.capacityBenchProjection({cells},c,0,'A1').context;
+    assert.match(context('rule'),/Same visits and targets.*only.*upload rule.*equal uplink share.*shortest upload first/i);
+    assert.match(context('bandwidth'),/Same visits and targets.*only.*uplink.*1 Gbps.*2 Gbps/i);
+    assert.match(context('power'),/Same visits and targets.*only.*site feed.*60 kW.*120 kW/i);
+    if(regime==='data_heavy')assert.match(context('power'),/No charging needed in this workload/);
+    else assert.doesNotMatch(context('power'),/No charging needed/);
+    assert.doesNotMatch(context('bandwidth'),/No charging needed/);
   }
 });

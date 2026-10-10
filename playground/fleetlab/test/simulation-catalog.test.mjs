@@ -13,7 +13,7 @@ test('featured Network Flows questions precede the complete searchable library',
   assert.equal(feature.querySelectorAll('a').length,2);
   feature.querySelector('a[href="#/depot-flow-lab?lesson=two-vehicles"]').click();assert.equal(opened,'two-vehicles');
   assert.equal(element.querySelectorAll('.catalog-card').length,61);
-  assert.match(feature.textContent,/Synthetic interactive models/);
+  assert.match(element.querySelector('.catalog-intro').textContent,/small synthetic model/);
  }finally{restore();}
 });
 

@@ -73,8 +73,8 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
   const element=el('main',{class:'simulation-catalog'},[
     el('section',{class:'catalog-intro'},[el('p',{class:'eyebrow'},'EXPLORE'),el('h1',{},'What would you like to understand?'),el('p',{class:'hero-lede'},'Every lesson answers one fleet question with a small synthetic model.')]),
     el('section',{class:'network-flows-feature','aria-labelledby':'network-flows-title'},[
-      el('p',{class:'eyebrow'},'START WITH NETWORK FLOWS'),el('h2',{id:'network-flows-title'},'A parked vehicle still has work to do.'),
-      el('p',{class:'network-feature-scope'},'Synthetic interactive models · trace the constraint, compare a decision, inspect who waits.'),
+      el('p',{class:'eyebrow'},'START WITH DEPOT OPERATIONS'),el('h2',{id:'network-flows-title'},'A parked vehicle still has work to do.'),
+      el('p',{class:'network-feature-scope'},'Explore how scheduling, shared resources and required work affect vehicle readiness.'),
       el('div',{class:'network-question-list'},[
         ['two-vehicles','Why is the vehicle still waiting?','A charged battery is only one prerequisite. Follow upload and local work.'],
         ['crossed-priorities','Whose work should go first?','Urgency and short jobs pull in different directions. See who benefits and who waits longer.'],
@@ -85,7 +85,7 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
     el('h2',{class:'catalog-library-title'},'The complete learning library'),
     el('div',{class:'catalog-search'},[['Search lessons',search],['Simulation model',filter]].map(([name,control])=>el('label',{},[el('span',{},name),control]))),
     el('div',{class:'catalog-topics',role:'group','aria-label':'Topic'},chips),questions,
-    labLinks&&[el('p',{class:'eyebrow catalog-jump'},'JUMP TO A LAB'),labLinks],
+    labLinks&&[el('p',{class:'eyebrow catalog-jump'},'QUICK LINKS'),labLinks],
     el('h2',{class:'fl-sr-only'},'All lessons'),el('div',{class:'catalog-count-row'},[count,clear]),cards,
     el('p',{},'Fleet day also hosts separate contracts: staffing, charging, charger status, airport wave, launch rehearsal and the Austin power lab.'),el('p',{},'Each model has its own assumptions, so numbers from different models are not interchangeable.'),el('section',{class:'catalog-outside'},[el('h2',{},'What is still outside this playground?'),el('p',{},'Physical autonomous driving, lane changes and collisions; calibrated demand; staff shifts; repair failures; electrical network dynamics; globally optimal fleet routing; real dispatch or vehicle commands. A computed recommendation never authorizes an operational change.')]),
   ]);
