@@ -50,9 +50,11 @@ const ALLOWED = {
   ui: ["core", "instrument", "model", "runtime", "ui"],
 };
 
-/** The one exception: model/experiment.js may import the instrument. */
+/** The named exceptions: model/experiment.js may import the instrument; two model modules and the NF-03 page entry may
+ * import data. The entry hands the committed study manifest to its page, which never imports data itself. */
 function allowedEdge(fromFolder, fromFile, toFolder) {
   if (ALLOWED[fromFolder].includes(toFolder)) return true;
+  if (fromFile === "src/ui/capacity-app.js" && toFolder === "data") return true;
   return fromFolder === "model" && ((fromFile === "src/model/experiment.js" && toFolder === "instrument") || (["src/model/bay-area.js", "src/model/street-network.js"].includes(fromFile) && toFolder === "data"));
 }
 
@@ -149,6 +151,8 @@ describe("R4 import graph", () => {
     assert.equal(allowedEdge("model", "src/model/engine.js", "data"), false);
     assert.equal(allowedEdge("data", "src/data/bay-area-map.js", "model"), false);
     assert.equal(allowedEdge("ui", "src/ui/app.js", "data"), false);
+    assert.equal(allowedEdge("ui", "src/ui/capacity-app.js", "data"), true);
+    assert.equal(allowedEdge("ui", "src/ui/depot-capacity-page.js", "data"), false);
     assert.equal(allowedEdge("core", "src/core/stats.js", "model"), false);
     assert.equal(allowedEdge("model", "src/model/engine.js", "instrument"), false);
     assert.equal(allowedEdge("model", "src/model/experiment.js", "instrument"), true);
