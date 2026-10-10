@@ -3,6 +3,8 @@
 // reaches the capacity modules.
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -10,6 +12,7 @@ import { fileURLToPath } from "node:url";
 
 import { checkSite, COPY_MODULES, labelsFromContracts } from "../tools/check-dist.mjs";
 import { APP_MAX_BYTES } from "../tools/media.mjs";
+import { releaseProblems } from "../tools/release-sidecar.mjs";
 import { buildHtml, buildSite, moduleGraph, MODULE_MARKER, SITE_CAPACITY_BOOT, SITE_CONTENT_SECURITY_POLICY } from "../tools/pack.mjs";
 
 const PLAYGROUND_ROOT = fileURLToPath(new URL("../", import.meta.url));
@@ -18,10 +21,11 @@ const labels = labelsFromContracts(REPO_ROOT);
 const CAPACITY_INDEX = "network-flows/capacity/index.html";
 const CAPACITY_BOOT = "network-flows/capacity/boot.js";
 const CAPACITY_MODULES = [
-  "src/ui/capacity-app.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-view.js", "src/data/depot-capacity-study.js",
+  "src/ui/capacity-app.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-view.js", "src/ui/depot-capacity-bench.js", "src/data/depot-capacity-study.js",
   "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js", "src/model/depot-capacity-verify.js",
 ];
 const STYLESHEET = '<link rel="stylesheet" href="../../styles.css">';
+const VISUAL_STYLESHEET = '<link rel="stylesheet" href="./visual.css">';
 const BOOT_SCRIPT = '<script type="module" src="./boot.js"></script>';
 const site = buildSite(PLAYGROUND_ROOT);
 const variant = (path, text) => {
@@ -39,9 +43,9 @@ test("the hosted site holds the capacity page, its boot module and every capacit
   const page = site.get(CAPACITY_INDEX);
   const head = /<head\b[^>]*>/i.exec(page);
   assert.ok(page.startsWith(`<meta http-equiv="Content-Security-Policy" content="${SITE_CONTENT_SECURITY_POLICY}">`, head.index + head[0].length), "the site policy is the first element in head");
-  assert.deepEqual(page.match(/<link\b[^>]*>/gi), [STYLESHEET]);
+  assert.deepEqual(page.match(/<link\b[^>]*>/gi), [STYLESHEET,VISUAL_STYLESHEET]);
   assert.deepEqual(page.match(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi), [BOOT_SCRIPT]);
-  assert.ok(page.includes(`${STYLESHEET}\n</head>`) && page.includes(`${BOOT_SCRIPT}\n</body>`));
+  assert.ok(page.includes(`${STYLESHEET}\n${VISUAL_STYLESHEET}\n</head>`) && page.includes(`${BOOT_SCRIPT}\n</body>`));
   assert.ok(!/import\s*\{|startCapacity/.test(page), "no inline script is left");
   assert.ok(page.includes('<div id="capacity-root" class="fl-app"></div>'));
   assert.ok(page.includes("<title>Scheduling or capacity? | FleetLab</title>"));
@@ -84,5 +88,74 @@ test("the offline single file never reaches the capacity viewer and stays within
   const html = buildHtml(PLAYGROUND_ROOT);
   assert.ok(!html.includes(`${MODULE_MARKER}src/ui/capacity-app.js`));
   assert.ok(!new RegExp(`^${MODULE_MARKER.replace(/[/]/g, "\\/")}\\S*depot-capacity`, "m").test(html), "no depot-capacity module marker");
-  assert.ok(Buffer.byteLength(html) <= APP_MAX_BYTES);
+  assert.ok(!html.includes(".fl-capacity-bench"), "hosted bench CSS is absent");
+  assert.ok(!html.includes("fleetlab.capacity-release/"), "release sidecar is absent");
+  assert.ok(Buffer.byteLength(html) <= APP_MAX_BYTES - 50_000, "the offline reserve remains available");
+});
+
+test("capacity packages route-local CSS with strict missing, changed and unexpected-file checks", () => {
+  const path = "network-flows/capacity/visual.css";
+  assert.ok(site.has(path), "hosted capacity stylesheet is packaged");
+  assert.equal(site.get(path), readFileSync(join(PLAYGROUND_ROOT, "capacity/visual.css"), "utf8"));
+  assert.ok(problemsOf(variant(path, null)).some(p => p.includes(path) && p.includes("missing")));
+  assert.ok(problemsOf(variant(path, site.get(path) + "\n.changed {}" )).some(p => p.startsWith("provenance:")));
+  assert.ok(problemsOf(variant("network-flows/capacity/extra.css", "body{}" )).some(p => p.includes("unexpected")));
+});
+
+test("release sidecar binds actual source, versions and accepted study records without changing the manifest", () => {
+  const path = "network-flows/capacity/release.json";
+  assert.ok(site.has(path), "a source-bound release sidecar is packaged");
+  const release = JSON.parse(site.get(path));
+  assert.equal(release.source_commit, execFileSync("git", ["rev-parse", "HEAD"], {cwd:REPO_ROOT,encoding:"utf8"}).trim());
+  assert.match(release.source_tree, /^[a-f0-9]{40}$/);
+  assert.match(release.versions.projection, /^depot-capacity-projection\//);
+  assert.equal(Object.keys(release.accepted_records).length, 72);
+  assert.equal(release.scientific_source_commit, null);
+  assert.equal(release.authenticity, "NOT_AUTHENTICATED");
+  assert.ok(!Object.hasOwn(release.emitted_files, path), "sidecar digest is non-self-referential");
+  assert.equal(release.emitted_files["src/data/depot-capacity-study.js"].sha256,
+    createHash("sha256").update(readFileSync(join(PLAYGROUND_ROOT,"src/data/depot-capacity-study.js"))).digest("hex"));
+  assert.ok(!site.get(path).includes(REPO_ROOT), "no machine paths are published");
+  assert.ok(problemsOf(variant(path, null)).some(p => p.includes("release.json") && p.includes("missing")));
+  release.accepted_records[Object.keys(release.accepted_records)[0]] = "0".repeat(64);
+  assert.ok(problemsOf(variant(path, JSON.stringify(release))).some(p => p.startsWith("provenance:")));
+});
+
+test("explicit release source rejects a fabricated commit or uncommitted source", () => {
+  assert.throws(() => buildSite(PLAYGROUND_ROOT,{sourceCommit:"0".repeat(40)}), /source commit/);
+});
+
+test("a recomputed sidecar checksum cannot conceal changed study identities or an undeclared field", () => {
+  const path="network-flows/capacity/release.json";
+  const sorted=value=>value&&typeof value==="object"&&!Array.isArray(value)
+    ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,sorted(value[key])]))
+    : Array.isArray(value)?value.map(sorted):value;
+  for(const alter of [
+    r=>{r.workload_digest="0".repeat(64);},
+    r=>{r.versions.projection="invented/1.0.0";},
+    r=>{r.accepted_records[Object.keys(r.accepted_records)[0]]="0".repeat(64);},
+    r=>{r.source_files["capacity/visual.css"].sha256="0".repeat(64);},
+    r=>{r.unreviewed_field="unexpected";},
+  ]) {
+    const release=JSON.parse(site.get(path));
+    delete release.release_digest;
+    alter(release);
+    release.release_digest=createHash("sha256").update(JSON.stringify(sorted(release))).digest("hex");
+    assert.ok(problemsOf(variant(path,JSON.stringify(release))).some(p=>p.startsWith("provenance:")));
+  }
+});
+
+test("resealing an altered capacity HTML body cannot disconnect it from reviewed source", () => {
+  const files=new Map(site),path=CAPACITY_INDEX,releasePath="network-flows/capacity/release.json";
+  const page=files.get(path).replace("</body>","<h1>Unreviewed result text</h1>\n</body>");
+  files.set(path,page);
+  const release=JSON.parse(files.get(releasePath));
+  release.emitted_files[path]={bytes:Buffer.byteLength(page),sha256:createHash("sha256").update(page).digest("hex")};
+  delete release.release_digest;
+  const canonical=value=>JSON.stringify(value,(_key,item)=>item&&typeof item==="object"&&!Array.isArray(item)
+    ?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
+  release.release_digest=createHash("sha256").update(canonical(release)).digest("hex");
+  files.set(releasePath,canonical(release));
+  assert.ok(releaseProblems(files,{playground:PLAYGROUND_ROOT}).some(p=>/capacity page/.test(p)));
+  assert.ok(problemsOf(files).some(p=>/capacity page/.test(p)));
 });

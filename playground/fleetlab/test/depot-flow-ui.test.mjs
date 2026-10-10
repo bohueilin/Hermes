@@ -124,6 +124,46 @@ test('confirmed at base, closed by the Task 3 pause clear: leaving the page clea
     assert.equal(JSON.stringify(lab.getState().result),result);lab.destroy();
   }finally{restore();}
 });
+test('switching from NF-01 to NF-02 clears the outgoing event before the new lesson runs',async()=>{
+  const restore=installFakeDom();const lab=ui.createDepotFlowLab({yieldPage:()=>Promise.resolve()});
+  try{document.body.appendChild(lab.element);await lab.run();
+    const live=lab.element.querySelector('[aria-live="polite"]');
+    lab.element.querySelector('[data-next-event]').click();assert.match(live.textContent,/^Minute 1\. /);
+    lab.setLesson({id:'crossed-priorities'});
+    assert.equal(live.textContent,'','NF-01 event text must not survive inside NF-02');
+    assert.equal(lab.element.querySelector('[data-flow-outcomes]'),null);assert.equal(lab.getState().result,null);
+    assert.match(lab.element.querySelector('.flow-status').textContent,/Nothing has run yet/);
+    await lab.run();assert.equal(live.textContent,'','computation does not replay the previous lesson event');
+    lab.element.querySelector('[data-next-event]').click();assert.notEqual(live.textContent,'','the new lesson can announce its own events');
+    lab.setLesson({id:'two-vehicles'});assert.equal(live.textContent,'','returning to NF-01 clears NF-02 text too');
+  }finally{lab.destroy();restore();}
+});
+test('lesson departure cancels playback and a late outgoing frame cannot announce into the new lesson',async()=>{
+  const frames=new Map();let nextFrame=0;
+  const restore=installFakeDom(globalThis,{requestAnimationFrame:fn=>{frames.set(++nextFrame,fn);return nextFrame;},cancelAnimationFrame:id=>frames.delete(id)});
+  const lab=ui.createDepotFlowLab({yieldPage:()=>Promise.resolve()});
+  try{await lab.run();const live=lab.element.querySelector('[aria-live="polite"]');
+    lab.element.querySelectorAll('button').find(b=>b.textContent==='Play').click();
+    const lateFrame=[...frames.values()][0];assert.equal(typeof lateFrame,'function');
+    lab.setLesson({id:'crossed-priorities'});assert.equal(frames.size,0);assert.equal(live.textContent,'');
+    lateFrame(1000);assert.equal(live.textContent,'');assert.equal(frames.size,0);assert.equal(lab.getState().result,null);
+    assert.match(lab.element.querySelector('h1').textContent,/Who should upload next/);
+  }finally{lab.destroy();restore();}
+});
+test('late computation after a route pause or lesson change cannot publish results or announcements',async()=>{
+  for(const departure of ['pause','lesson']){
+    const restore=installFakeDom();const queue=[];
+    const lab=ui.createDepotFlowLab({yieldPage:()=>new Promise(resolve=>queue.push(resolve))});
+    try{const pending=lab.run();assert.equal(queue.length,1);
+      if(departure==='pause')lab.pause();else lab.setLesson({id:'crossed-priorities'});
+      const afterDeparture=lab.getState();const text=lab.element.textContent;
+      queue.shift()();await pending;
+      assert.deepEqual(lab.getState(),afterDeparture);assert.equal(lab.element.textContent,text);
+      assert.equal(lab.element.querySelector('[aria-live="polite"]').textContent,'');
+      assert.equal(lab.getState().result,null);assert.equal(queue.length,0);
+    }finally{lab.destroy();restore();}
+  }
+});
 
 test('first screen puts the question, setup table and Compare before the explanations',()=>{
   const restore=installFakeDom();

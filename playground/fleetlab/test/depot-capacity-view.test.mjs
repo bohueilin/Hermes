@@ -9,7 +9,7 @@ const manifestCell=id=>CAPACITY_STUDY.cells.find(c=>c.cell_id===id);
 const visit=(state,id)=>state.visits.find(v=>v.vehicle===id);
 
 test('the four matched cases name their cells and the one field each changes',()=>{
-  assert.equal(view.CAPACITY_PROJECTION,'depot-capacity-projection/1.0.0');
+  assert.equal(view.CAPACITY_PROJECTION,'depot-capacity-projection/1.1.0');
   const cases=view.caseCells('data_heavy','capacity_departure_deadline');
   assert.deepEqual(cases.map(c=>[c.case,c.label,c.cell_id]),[
     ['base','Base','data_heavy/base/capacity_equal_uplink/1000'],
@@ -159,4 +159,30 @@ test('only a reconstructed cell that matches the accepted study is returned, fro
   const ineligible=fresh();ineligible.verification.comparison_eligible=false;
   assert.throws(()=>view.verifiedCell(ineligible,manifestCell(id)),/verification did not pass/);
   assert.throws(()=>view.verifiedCell(fresh(),undefined),/not in the accepted study/);
+});
+
+
+test('bench projection keeps common physical rate scales and exact quantities for compared arms',()=>{
+  assert.equal(typeof view.capacityBenchProjection,'function');
+  const cases=view.caseCells('energy_heavy','capacity_departure_deadline');
+  const cells=Object.fromEntries(cases.map(c=>[c.case,view.verifiedCell({cell:c.cell,...run(c.cell.regime,c.cell.treatment,c.cell.rule)},manifestCell(c.cell_id))]));
+  const comparison={cells};
+  const p=view.capacityBenchProjection(comparison,'power',0,'A1');
+  assert.equal(p.available,true);assert.equal(p.time_s,0);
+  assert.deepEqual(p.scales,{upload_bytes_s:250000000,energy_j_s:120000});
+  assert.deepEqual(p.arms.map(a=>[a.upload.used,a.upload.fraction,a.energy.used,a.energy.fraction]),[[125000000,.5,60000,.5],[125000000,.5,120000,1]]);
+  assert.deepEqual(p.arms.map(a=>a.selected.upload_rate_bytes_s),[31250000,31250000]);
+  assert.deepEqual(p.arms.map(a=>a.selected.charge_rate_j_s),[30000,60000]);
+  const blocked=view.capacityBenchProjection(comparison,'power',240,'D1').arms[0].selected;
+  assert.equal(blocked.wait_reason,'Vehicle D1 waits for a charging port; ports held by Vehicle A1 and Vehicle C1.');
+  assert.equal(blocked.upload_bytes,1500000000);assert.equal(blocked.energy_j,0);
+  assert.ok(Object.isFrozen(p.arms[0].selected));
+});
+
+test('bench projection withholds unavailable or invalid accepted cells',()=>{
+  assert.equal(typeof view.capacityBenchProjection,'function');
+  for(const comparison of [null,{cells:{}},{cells:{base:{verification:{model_validity:'INVALID'}}}}]){
+    const p=view.capacityBenchProjection(comparison,'rule',0,'A1');
+    assert.equal(p.available,false);assert.equal(p.arms.length,0);assert.match(p.reason,/not available/i);
+  }
 });

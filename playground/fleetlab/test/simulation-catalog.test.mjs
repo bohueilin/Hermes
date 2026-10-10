@@ -5,6 +5,18 @@ import { STREET_PRESETS } from '../src/model/street-simulation.js';
 import { simulationCatalog, createSimulationCatalog, OPERATIONAL_LESSONS } from '../src/ui/simulation-catalog.js';
 import { installFakeDom } from './helpers/fake-dom.mjs';
 
+test('featured Network Flows questions precede the complete searchable library',()=>{
+ const restore=installFakeDom();try{
+  let opened=null;const {element}=createSimulationCatalog({onLesson:r=>{opened=r.id;}});
+  const feature=element.querySelector('.network-flows-feature');assert.ok(feature);
+  assert.ok(element.children.indexOf(feature)<element.children.indexOf(element.querySelector('.catalog-search')));
+  assert.equal(feature.querySelectorAll('a').length,2);
+  feature.querySelector('a[href="#/depot-flow-lab?lesson=two-vehicles"]').click();assert.equal(opened,'two-vehicles');
+  assert.equal(element.querySelectorAll('.catalog-card').length,61);
+  assert.match(feature.textContent,/Synthetic interactive models/);
+ }finally{restore();}
+});
+
 test('catalog includes every registered regional preset and every operational lesson once',()=>{
   const rows=simulationCatalog();
   assert.equal(rows.length,PRESETS.length+OPERATIONAL_LESSONS.length+STREET_PRESETS.length+5);
@@ -91,16 +103,16 @@ test('Explore leads with search, compact topic buttons and compact cards',()=>{
   }finally{restore();}
 });
 
-test('Explore order: search, topics, lab links, then a count row with Clear filters above the cards',()=>{
+test('Explore order: featured questions, search, topics, lab links, then count and cards',()=>{
   const restore=installFakeDom();
   try{
     const shape=root=>root.children.map(n=>[n.localName,...(n.getAttribute('class')?.split(' ')??[])].join('.'));
     const tail=['h2.fl-sr-only','div.catalog-count-row','div.catalog-grid','p','p','section.catalog-outside'];
-    assert.deepEqual(shape(createSimulationCatalog().element),['section.catalog-intro','div.catalog-search','div.catalog-topics','p.catalog-topic-questions',...tail]);
+    assert.deepEqual(shape(createSimulationCatalog().element),['section.catalog-intro','section.network-flows-feature','h2.catalog-library-title','div.catalog-search','div.catalog-topics','p.catalog-topic-questions',...tail]);
     const labLinks=document.createElement('nav');labLinks.setAttribute('class','lab-links');
     const root=createSimulationCatalog({labLinks}).element;document.body.appendChild(root);
     assert.equal(root.tagName.toLowerCase(),'main');assert.ok(root.classList.contains('simulation-catalog'));
-    assert.deepEqual(shape(root),['section.catalog-intro','div.catalog-search','div.catalog-topics','p.catalog-topic-questions','p.eyebrow.catalog-jump','nav.lab-links',...tail]);
+    assert.deepEqual(shape(root),['section.catalog-intro','section.network-flows-feature','h2.catalog-library-title','div.catalog-search','div.catalog-topics','p.catalog-topic-questions','p.eyebrow.catalog-jump','nav.lab-links',...tail]);
     assert.equal(root.querySelector('h2.fl-sr-only').textContent,'All lessons','the results have their own heading');
     const fields=root.querySelector('.catalog-search');
     assert.deepEqual(shape(fields),['label','label'],'the search row holds only the search field and the model filter');

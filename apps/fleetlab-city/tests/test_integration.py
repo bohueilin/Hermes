@@ -1,9 +1,11 @@
 """Public packaging is additive; unexpected established-file edits fail closed."""
 
+import hashlib
 import importlib.util
 import json
 import re
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -65,13 +67,17 @@ class IntegrationTest(unittest.TestCase):
         pages = {
             "network-flows/capacity/boot.js": integration.CAPACITY_BOOT,
             "network-flows/capacity/index.html": (
-                '<!doctype html><link rel="stylesheet" href="../../styles.css">'
-                '<div id="capacity-root"></div><script type="module" src="./boot.js"></script>'
+                '<!doctype html><html><head></head><body>'
+                '<div id="capacity-root"></div></body></html>'
             ),
         }
         for name in established | integration.FLOW_ADDED | integration.CAPACITY_ADDED:
-            if name in integration.CAPACITY_ADDED:
-                data = pages.get(name, "// reviewed " + name).encode()
+            if name == "network-flows/capacity/release.json":
+                continue
+            if name in pages:
+                data = pages[name].encode()
+            elif name == "network-flows/capacity/visual.css":
+                data = b".fl-capacity-bench { display: grid; }\n"
             else:
                 data = (launch.ROOT / "playground/fleetlab" / name).read_bytes()
             # The packer generates the capacity page, so it has no reviewed source file.
@@ -79,6 +85,48 @@ class IntegrationTest(unittest.TestCase):
             for root in roots:
                 (root / name).parent.mkdir(parents=True, exist_ok=True)
                 (root / name).write_bytes(data)
+        # Sidecar generation uses the actual validator over this small preserved-client fixture.
+        source_root = reviewed / "playground/fleetlab"
+        for path in client.rglob("*"):
+            if not path.is_file():
+                continue
+            name = path.relative_to(client).as_posix()
+            if name in ("boot.js", "_headers", "network-flows/capacity/boot.js"):
+                continue
+            if name.startswith("network-flows/capacity/"):
+                name = name.replace("network-flows/capacity/", "capacity/")
+            target = source_root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(path.read_bytes())
+        for name in (
+            "pack.mjs", "check-dist.mjs", "release-sidecar.mjs", "site-shell.mjs",
+            "media.mjs", "comment-strip.mjs",
+        ):
+            target = source_root / "tools" / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(launch.ROOT / "playground/fleetlab/tools" / name, target)
+        script = """
+          import {createReleaseSidecar} from './playground/fleetlab/tools/release-sidecar.mjs';
+          import {renderSitePage} from './playground/fleetlab/tools/site-shell.mjs';
+          import {readFileSync,readdirSync,writeFileSync} from 'node:fs';
+          import {join} from 'node:path';
+          const [site,source]=process.argv.slice(1),files=new Map();
+          function walk(dir,prefix='') {for(const f of readdirSync(dir,{withFileTypes:true})) {
+            if(f.isDirectory())walk(join(dir,f.name),prefix+f.name+'/');
+            else files.set(prefix+f.name,readFileSync(join(dir,f.name),'utf8'));
+          }}
+          walk(site);
+          const page='network-flows/capacity/index.html';
+          const html=renderSitePage(
+            files.get(page),'capacity/index.html',['../../styles.css','./visual.css']);
+          files.set(page,html);
+          writeFileSync(join(site,page),html);
+          writeFileSync(join(site,'network-flows/capacity/release.json'),createReleaseSidecar(source,files));
+        """
+        subprocess.run(
+            ["node", "--input-type=module", "-e", script, str(client), str(source_root)],
+            cwd=launch.ROOT, check=True, capture_output=True, text=True,
+        )
         self.enterContext(patch.object(integration.launch, "ROOT", reviewed))
         return client
 
@@ -139,6 +187,16 @@ class IntegrationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unexpected established"):
             integration.check_preservation(before, after, True, True)
 
+    def test_visual_update_declares_reviewed_explicit_play_film_lifecycle(self):
+        before = {"src/ui/hero-film.js": {"sha256": "old"}}
+        after = {"src/ui/hero-film.js": {"sha256": "reviewed-explicit-play"}}
+        self.assertEqual(
+            integration.check_preservation(before, after, True, True),
+            ["src/ui/hero-film.js"],
+        )
+        with self.assertRaisesRegex(ValueError, "unexpected established"):
+            integration.check_preservation(before, after, True, False)
+
     def test_flow_update_requires_a_reviewed_client_distribution(self):
         with self.assertRaisesRegex(ValueError, "flow update requires"):
             integration.integrate(
@@ -153,6 +211,9 @@ class IntegrationTest(unittest.TestCase):
         for name in (
             "network-flows/capacity/index.html",
             "network-flows/capacity/boot.js",
+            "network-flows/capacity/visual.css",
+            "network-flows/capacity/release.json",
+            "src/ui/depot-capacity-bench.js",
             "src/data/depot-capacity-study.js",
         ):
             self.assertEqual((site / name).read_bytes(), (client / name).read_bytes())
@@ -162,6 +223,47 @@ class IntegrationTest(unittest.TestCase):
         client = self.stage_flow_client()
         (client / "src/data/depot-capacity-study.js").unlink()
         with self.assertRaisesRegex(ValueError, "missing or unexpected modules"):
+            self.integrate_flow(client)
+        self.assertFalse((self.base / "out").exists())
+
+    def test_capacity_visual_assets_and_release_sidecar_are_declared(self):
+        self.assertTrue({
+            "network-flows/capacity/visual.css", "network-flows/capacity/release.json",
+            "src/ui/depot-capacity-bench.js",
+        }.issubset(integration.CAPACITY_ADDED))
+
+    def test_capacity_visual_or_provenance_tamper_is_rejected(self):
+        client = self.stage_flow_client()
+        for name in ("visual.css", "release.json"):
+            path = client / "network-flows/capacity" / name
+            original = path.read_bytes()
+            path.write_bytes(original + b"tampered")
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "capacity|provenance"):
+                self.integrate_flow(client)
+            path.write_bytes(original)
+        self.assertFalse((self.base / "out").exists())
+
+    def test_capacity_undeclared_asset_is_rejected(self):
+        client = self.stage_flow_client()
+        (client / "network-flows/capacity/unreviewed.css").write_text("body {}")
+        with self.assertRaisesRegex(ValueError, "missing or unexpected"):
+            self.integrate_flow(client)
+
+    def test_resealed_capacity_html_cannot_claim_the_reviewed_page_source(self):
+        client = self.stage_flow_client()
+        name = "network-flows/capacity/index.html"
+        page = client / name
+        page.write_text(page.read_text().replace("</body>", "<h1>Unreviewed result</h1></body>"))
+        sidecar = client / "network-flows/capacity/release.json"
+        release = json.loads(sidecar.read_text())
+        release["emitted_files"][name] = launch.inventory(client)[name]
+        del release["release_digest"]
+        canonical = json.dumps(
+            release, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode()
+        release["release_digest"] = hashlib.sha256(canonical).hexdigest()
+        sidecar.write_text(json.dumps(release))
+        with self.assertRaisesRegex(ValueError, "capacity page differs"):
             self.integrate_flow(client)
         self.assertFalse((self.base / "out").exists())
 

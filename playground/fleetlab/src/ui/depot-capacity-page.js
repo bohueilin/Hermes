@@ -1,13 +1,14 @@
 // NF-03 recorded comparison viewer. The cards read the accepted study manifest; Load reconstructs four cells and
 // accepts each only when it matches the manifest. Nothing here runs a custom setup or changes a record.
 import {el} from './dom.js';
+import {createCapacityBench,createCapacityPreview} from './depot-capacity-bench.js';
 import {createDepotFlowPlayer} from './depot-flow-player.js';
 import {createLiveRegion} from './a11y.js';
 import {setBusy} from './display-text.js';
 import {modelHeader,NON_AFFILIATION} from './model-identity.js';
 import {capacityCellSteps} from '../model/depot-capacity.js';
 import {CAPACITY_PROTOCOL,CAPACITY_REGIMES,CAPACITY_RULES,CAPACITY_TREATMENTS,CAPACITY_VERSIONS,FLOW_TRUST,capacityScenario,studyStatus} from '../model/depot-capacity-contract.js';
-import {CAPACITY_PROJECTION,caseCells,cardsFor,readingSentence,withheldReason,inspectCapacity,allocationSpans,firstAllocationDifference,firstReadinessDifference,exampleVisits,verifiedCell,ruleName,join,minute,gbps,kw} from './depot-capacity-view.js';
+import {CAPACITY_PROJECTION,caseCells,cardsFor,readingSentence,withheldReason,capacityBenchProjection,allocationSpans,firstAllocationDifference,firstReadinessDifference,exampleVisits,verifiedCell,ruleName,join,minute,gbps,kw} from './depot-capacity-view.js';
 
 // Copied from depot-flow-reading.js, which another stream owns.
 const table=(caption,heads,rows,attrs={})=>el('div',{class:'flow-table',tabindex:0,role:'region','aria-label':caption,...attrs},el('table',{},[el('caption',{},caption),el('thead',{},el('tr',{},heads.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map((c,i)=>el(i===0?'th':'td',i===0?{scope:'row'}:{},c)))))]));
@@ -22,7 +23,6 @@ const caseLabel=c=>c==='base'?'Base':CASES.find(x=>x[0]===c)[1];
 const lower=text=>text.toLowerCase();
 const vehicles=ids=>join(ids.map(id=>`Vehicle ${id}`));
 const OUTCOME={on_time:'on time',late:'late',unfinished_due:'unfinished, target passed',pending:'unfinished, target ahead'};
-const CHAIN_WORDS={done:'✓ done',active:'in progress',waiting:'waiting','not-applicable':'already at target','not-arrived':'not arrived'};
 const EVENT_WORDS=[['arrival',null,'arrives','arrive'],['complete','upload','finishes uploading','finish uploading'],['complete','charge','reaches the battery target','reach the battery target'],['complete','post','finishes the local step','finish the local step'],['ready',null,'is ready','are ready'],['deadline',null,'reaches its departure target','reach their departure targets']];
 
 function header(){
@@ -56,22 +56,19 @@ function cardView(card,loaded){
   ]);
 }
 
-// Twelve lanes: upload as solid bars sized by link share, charging as thin bars sized by port share, the local step
-// pale, a ready tick and a dashed departure target. The cursor and the veil over unrevealed time move with playback.
-// A share bar is never drawn under MIN_BAR px, so a quarter of the uplink stays visible; larger shares scale above it.
-const MIN_BAR=4;
+// Twelve duration lanes. Constant heights distinguish work types; only horizontal length encodes duration.
 function timeline(label,record,regime){
   const s=record.scenario,W=960,L=56,R=16,LANE=28,TOP=8,x=t=>L+(W-L-R)*t/s.horizon_s,bottom=TOP+LANE*s.vehicles.length,H=bottom+34;
   const spans=allocationSpans(record),lanes=new Map();
   const ready=spans.map(v=>`${v.vehicle} ${v.ready_s===null?'not ready':minute(v.ready_s)}`).join(', ');
   const root=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:760,height:Math.round(760*H/W),role:'img','aria-label':`${label} timeline, ${CAPACITY_REGIMES[regime].name} workload: upload, charging and the local step for ${s.vehicles.length} visits over ${HORIZON_MIN} minutes. Ready at minute: ${ready}.`});
   spans.forEach((v,i)=>{
-    const y=TOP+i*LANE,bar=(t0,t1,attrs)=>root.appendChild(svg('rect',{x:x(t0),width:Math.max(.5,x(t1)-x(t0)),...attrs}));
+    const y=TOP+i*LANE,bar=(t0,t1,attrs)=>root.appendChild(svg('rect',{x:x(t0),width:x(t1)-x(t0),...attrs}));
     lanes.set(v.vehicle,root.appendChild(svg('rect',{x:0,y,width:W,height:LANE,class:'cap-lane'})));
     root.appendChild(svg('text',{x:8,y:y+18,class:'cap-label'},v.vehicle));
     if(v.post)bar(v.post.t0,v.post.t1,{y:y+4,height:14,class:'cap-post'});
-    for(const u of v.upload){const h=Math.max(MIN_BAR,14*u.fraction);bar(u.t0,u.t1,{y:y+18-h,height:h,class:'cap-upload'});}
-    for(const c of v.charge)bar(c.t0,c.t1,{y:y+20,height:Math.max(MIN_BAR,6*c.fraction),class:'cap-charge'});
+    for(const u of v.upload)bar(u.t0,u.t1,{y:y+7,height:10,class:'cap-upload'});
+    for(const c of v.charge)bar(c.t0,c.t1,{y:y+20,height:4,class:'cap-charge'});
     if(v.ready_s!==null)root.appendChild(svg('line',{x1:x(v.ready_s),x2:x(v.ready_s),y1:y+2,y2:y+26,class:'cap-ready'}));
     root.appendChild(svg('line',{x1:x(v.deadline_s),x2:x(v.deadline_s),y1:y+1,y2:y+27,class:'cap-deadline'}));
     root.appendChild(svg('line',{x1:L,x2:W-R,y1:y+LANE,y2:y+LANE,class:'cap-rule'}));
@@ -80,7 +77,7 @@ function timeline(label,record,regime){
   root.appendChild(svg('text',{x:8,y:bottom+20,class:'cap-label'},'Minute'));
   const veil=root.appendChild(svg('rect',{x:L,y:0,width:0,height:bottom,class:'cap-veil',visibility:'hidden'}));
   const cursor=root.appendChild(svg('line',{x1:L,x2:L,y1:0,y2:bottom,class:'cap-cursor'}));
-  const figure=el('figure',{class:'capacity-timeline'},[el('figcaption',{},[el('strong',{},`${label}. `),'Solid dark bars: upload, height shows the share of the uplink. Thin accent bars: charging, height shows the share of one port. Pale bars: the local step. Short solid tick: ready. Dashed line: departure target. Accent line: the inspected time.']),el('div',{class:'capacity-figure-scroll'},root)]);
+  const figure=el('figure',{class:'capacity-timeline'},[el('figcaption',{},[el('strong',{},`${label}. `),'Bar length shows duration, not rate. Dark: upload. Teal: charging. Pale: the local step. Exact average rates are in the service table. Short solid tick: ready. Dashed line: departure target. Accent line: the inspected time.']),el('div',{class:'capacity-figure-scroll'},root)]);
   return {figure,
     setCursor(t,revealing){cursor.setAttribute('x1',x(t));cursor.setAttribute('x2',x(t));veil.setAttribute('x',x(t));veil.setAttribute('width',W-R-x(t));veil.setAttribute('visibility',revealing?'visible':'hidden');},
     select(id){for(const [vehicle,lane] of lanes)lane.setAttribute('class',vehicle===id?'cap-lane cap-lane-selected':'cap-lane');}};
@@ -119,13 +116,16 @@ function studyTable(manifest){
 }
 
 export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=()=>new Promise(r=>setTimeout(r,0)),steps=capacityCellSteps}={}){
-  let regime='data_heavy',altRule='capacity_departure_deadline',comparison=null,contrast='rule',vehicle=null,examples=null,job=null,destroyed=false,player=null,timelines=[];
+  let regime='data_heavy',altRule='capacity_departure_deadline',comparison=null,contrast='rule',vehicle=null,examples=null,job=null,destroyed=false,player=null,timelines=[],difference=null;
   const complete=studyStatus(manifest);
+  const resultSetup=el('p',{class:'capacity-result-setup'}),preview=el('div',{class:'capacity-preview-slot'});
   const status=el('p',{class:'capacity-status',role:'status'}),question=el('p',{class:'capacity-question'}),fixedBody=el('div'),grid=el('div',{class:'capacity-grid'}),reading=el('p',{class:'capacity-reading'});
-  const chips=Object.entries(CAPACITY_REGIMES).map(([id,r])=>button(r.name,()=>{regime=id;refreshSelection();},{'aria-pressed':'false','data-regime':id}));
-  const ruleSelect=el('select',{'aria-label':'Different rule',on:{change:()=>{altRule=ruleSelect.value;refreshSelection();}}},ALT_RULES.map(r=>el('option',{value:r.id},r.name)));
+  const chips=Object.entries(CAPACITY_REGIMES).map(([id,r])=>button(r.name,()=>{regime=id;editSelection();},{'aria-pressed':'false','data-regime':id}));
+  const ruleSelect=el('select',{'aria-label':'Different rule',on:{change:()=>{altRule=ruleSelect.value;editSelection();}}},ALT_RULES.map(r=>el('option',{value:r.id},r.name)));
   ruleSelect.value=altRule;
-  const loadButton=button('Load comparison',()=>load(),{class:'studio-button studio-button-primary','data-capacity-load':''});
+  const loadButton=button('Load fixed comparison',()=>load(),{class:'studio-button studio-button-primary','data-capacity-load':''});
+  const cancelButton=button('Cancel load',()=>cancelLoad(true),{'data-capacity-cancel':'',hidden:true});
+  const viewComparison=el('a',{href:'#capacity-comparison',class:'studio-button capacity-view-comparison','data-view-comparison':'',hidden:true},'View comparison ↓');
   const inspectNote=el('p',{class:'capacity-inspect-note'}),firstDifference=el('p',{class:'capacity-first-difference'}),visitTable=el('div',{class:'capacity-visits'}),exampleNote=el('p',{class:'capacity-example-note'});
   const contrastSelect=el('select',{'aria-label':'Case to compare',on:{change:()=>{contrast=contrastSelect.value;showContrast();}}},CASES.map(([value,text])=>el('option',{value},text)));
   const vehicleSelect=el('select',{'aria-label':'Vehicle',on:{change:()=>selectVehicle(vehicleSelect.value)}},capacityScenario({regime:'data_heavy',treatment:'base'}).vehicles.map(v=>el('option',{value:v.id},`Vehicle ${v.id}`)));
@@ -133,33 +133,52 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
   const play=button('Play',()=>{player.getState().playing?player.pause():player.play();},{'data-capacity-play':''}),restart=button('Restart',()=>player.restart());
   // Under reduced motion the player's play() is the one-event step that also starts the reveal; Play itself is hidden.
   const previous=button('Previous event',()=>{if(player.getState().time_s>0)player.previous();}),next=button('Next event',()=>{const s=player.getState();if(s.time_s<P.horizon_s)s.reduced?player.play():player.next();},{'data-next-event':''});
-  const clock=el('p',{class:'flow-clock'}),caption=el('p',{class:'flow-caption'}),board=el('div',{class:'capacity-board'}),figures=el('div',{class:'capacity-timelines'}),spansBox=el('div');
+  const bench=createCapacityBench({onSelect:id=>selectVehicle(id)});
+  const speed=el('select',{'aria-label':'Playback speed',on:{change:()=>player.setSpeed(Number(speed.value))}},[10,20,40].map(n=>el('option',{value:n},`${n}×`)));speed.value='20';
+  const jumpAllocation=button('First allocation change',()=>jumpTo(difference?.allocation),{'data-jump-allocation':''});
+  const jumpReadiness=button('First readiness change',()=>jumpTo(difference?.readiness),{'data-jump-readiness':''});
+  const clock=el('p',{class:'flow-clock'}),caption=el('p',{class:'flow-caption'}),figures=el('div',{class:'capacity-timelines'}),spansBox=el('div');
   const slider=el('input',{type:'range',min:0,max:P.horizon_s,step:1,value:0,'aria-label':'Inspect time across the two cells',on:{input:()=>player.seek(Number(slider.value)),change:()=>announce(eventSentence(player.getState().time_s)),keydown:event=>{
     if(event.ctrlKey||event.metaKey||event.altKey)return;const d={ArrowLeft:-60,ArrowDown:-60,ArrowRight:60,ArrowUp:60,PageDown:-300,PageUp:300}[event.key];
     if(d!==undefined){event.preventDefault();player.seek(player.getState().time_s+d);announce(eventSentence(player.getState().time_s));}}}});
   const inspect=el('section',{class:'capacity-inspect','aria-label':'Which vehicles changed, and why?',hidden:true},[
-    el('h2',{},'Which vehicles changed, and why?'),inspectNote,el('label',{class:'capacity-picker'},[el('span',{},'Compare Base with'),contrastSelect]),
-    el('div',{class:'capacity-examples',role:'group','aria-label':'Example visits'},exampleButtons),exampleNote,el('label',{class:'capacity-picker'},[el('span',{},'Vehicle'),vehicleSelect]),
-    firstDifference,visitTable,el('div',{class:'flow-actions'},[play,restart,previous,next]),clock,slider,caption,board,figures,spansBox]);
+    el('h2',{id:'capacity-comparison',tabindex:-1},'Follow one vehicle through both cases'),inspectNote,
+    el('div',{class:'capacity-inspect-pickers'},[el('label',{class:'capacity-picker'},[el('span',{},'Compare Base with'),contrastSelect]),el('label',{class:'capacity-picker'},[el('span',{},'Selected vehicle'),vehicleSelect])]),
+    el('div',{class:'capacity-playback'},[el('div',{class:'flow-actions'},[play,restart,previous,next,el('label',{class:'cap-speed'},[el('span',{},'Speed'),speed])]),clock,slider]),
+    el('p',{class:'cap-motion-note'},'One recorded clock for both cases. Moving dots show transfer direction only, not packets or rate.'),
+    bench.element,caption,
+    el('div',{class:'capacity-difference-actions'},[jumpAllocation,jumpReadiness]),firstDifference,
+    el('div',{class:'capacity-examples',role:'group','aria-label':'Example visits'},exampleButtons),exampleNote,
+    detail('Every vehicle: outcomes and changes',[visitTable]),detail('Service timelines and exact average rates',[figures,spansBox])]);
   const loadedDetails=el('div',{class:'capacity-records'});
   const main=el('main',{class:'depot-capacity'},[
     el('nav',{class:'flow-breadcrumb','aria-label':'Breadcrumb'},[el('a',{href:'/#/catalog'},'Explore'),el('span',{'aria-hidden':'true'},'/'),el('span',{},'Depot readiness & data'),el('span',{'aria-hidden':'true'},'/'),el('span',{'aria-current':'page'},'Scheduling or capacity?')]),
-    el('p',{class:'eyebrow'},`RECORDED SYNTHETIC STUDY · ${VISITS} VEHICLES · ${HORIZON_MIN}-MINUTE OBSERVATION`),
-    el('h1',{},'Better scheduling, more bandwidth, or more charging power?'),
-    el('p',{class:'flow-lede'},'Twelve invented depot visits in three waves share one upload link, two charging ports and one site feed. Four scheduling rules and two capacity changes serve exactly the same work. Load a workload to compare them.'),
-    el('p',{class:'flow-boundary'},'Constructed teaching study: visits, workloads, capacities and deadlines are invented for this lesson, not measurements of a real depot. Loading selects accepted recorded cells; nothing here runs a custom setup.'),
-    el('section',{class:'capacity-controls','aria-label':'Choose a comparison'},[el('div',{class:'capacity-chips',role:'group','aria-label':'Workload'},chips),question,
-      el('label',{class:'capacity-picker'},[el('span',{},'Different rule'),ruleSelect]),el('div',{class:'flow-actions'},[loadButton]),
-      el('p',{class:'flow-run-help'},'Selects four accepted cells of the recorded study and reconstructs them for inspection.'),status,
-      el('details',{class:'capacity-fixed'},[el('summary',{},'What is held fixed?'),fixedBody])]),
-    el('section',{class:'capacity-cards','aria-label':'Matched comparison'},[el('h2',{},'Four matched cases'),grid,reading]),
-    inspect,depotMap(),
+    el('section',{class:'capacity-hero'},[
+      el('div',{class:'capacity-intro'},[
+        el('p',{class:'eyebrow'},`RECORDED SYNTHETIC STUDY · ${VISITS} VEHICLES · ${HORIZON_MIN}-MINUTE OBSERVATION`),
+        el('h1',{},'Better scheduling, more bandwidth, or more charging power?'),
+        el('p',{class:'flow-lede'},'Twelve invented visits share upload and charging. Change one constraint; follow what finishes.'),
+        el('p',{class:'flow-boundary'},'Synthetic fixed study · simulation only · no real depot measurements.'),
+        el('section',{class:'capacity-controls','aria-label':'Choose a comparison'},[
+          el('div',{class:'flow-actions'},[loadButton,cancelButton]),
+          el('p',{class:'flow-run-help'},'Reconstructs and verifies this fixed study'),status,viewComparison,
+          el('details',{class:'capacity-setup'},[el('summary',{},'Change workload or rule'),
+            el('div',{class:'capacity-chips',role:'group','aria-label':'Workload'},chips),question,
+            el('label',{class:'capacity-picker'},[el('span',{},'Different rule'),ruleSelect]),
+          ]),
+        ]),
+      ]),preview,
+    ]),
+    el('details',{class:'capacity-fixed'},[el('summary',{},'What is held fixed?'),fixedBody]),
+    el('section',{class:'capacity-cards','aria-label':'Matched comparison'},[el('h2',{},'Four matched cases'),resultSetup,grid,reading]),
+    inspect,detail('Where this model sits in a real depot',[depotMap()]),
     el('section',{class:'capacity-table','aria-labelledby':'capacity-table-title'},[el('h2',{id:'capacity-table-title'},'Full study'),
       el('p',{},'Every workload, capacity and rule at one-second slots. Each cell was repeated with quarter-second slots; the repeat agrees when every visit keeps its ready time and outcome.'),studyTable(manifest),loadedDetails]),
     el('section',{class:'capacity-limits','aria-labelledby':'capacity-limits-title'},[el('h2',{id:'capacity-limits-title'},'Model and limits'),modelHeader('Depot capacity model','Constructed depot visits',CAPACITY_VERSIONS.model).element,
       el('dl',{class:'flow-versions'},[...Object.entries(CAPACITY_VERSIONS).flatMap(([k,v])=>[el('dt',{},k[0].toUpperCase()+k.slice(1)),el('dd',{},v)]),el('dt',{},'Presentation projection'),el('dd',{},CAPACITY_PROJECTION)]),
       el('p',{},`Scope: ${FLOW_TRUST.scope}. Evidence status: ${FLOW_TRUST.evidence_status}. Authenticity: ${FLOW_TRUST.authenticity}. Authorization: ${FLOW_TRUST.authorization}. Decision authority: ${FLOW_TRUST.decision_authority}. Deployment permission: ${FLOW_TRUST.deployment_permission}.`),
       el('p',{},'No Wi-Fi contention, retries, cloud ingestion, charge taper, thermal limits, auxiliary load, software download, finite storage, failures, route motion, cleaning staffing or real control. Readiness is a necessary input to service planning; it does not measure trips, rider wait, revenue, driving quality or safety.'),
+      el('p',{},[el('a',{href:'./release.json'},'Release source and record fingerprints')]),
       el('p',{},NON_AFFILIATION)]),
     el('section',{class:'capacity-question','aria-labelledby':'capacity-question-title'},[el('h2',{id:'capacity-question-title'},'What would we have to measure at a real depot before using this result?'),
       el('ul',{},['Arrival and work-size distributions: when vehicles arrive, and how much each must upload and charge.','Target definitions: which ready time counts as on time for each departure.','Useful link rates: what each bay link and the site uplink carry after overhead and retries.','Vehicle power acceptance: how fast each vehicle takes energy across its charge.','Connection behavior: the delay between parking and being plugged in and linked.','Resource availability: how often ports, links and the site feed are out of service.'].map(t=>el('li',{},t)))]),
@@ -170,20 +189,35 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
 
   const regimeName=id=>CAPACITY_REGIMES[id].name;
   const loadedText=()=>`Comparison loaded: ${regimeName(comparison.regime)} workload. Four cells reconstructed and matched to the accepted study.`;
+  const previousSetup=()=>Boolean(comparison&&(comparison.regime!==regime||comparison.altRule!==altRule));
+  const setupText=()=>`${regimeName(comparison.regime)} workload, ${lower(ruleName(comparison.altRule))}`;
   function selectionStatus(){
     if(!complete.complete)return `Study incomplete: ${complete.accepted} of ${complete.planned} cells accepted.`;
     if(!comparison)return 'No comparison loaded.';
-    if(comparison.regime!==regime)return `Showing the ${regimeName(comparison.regime)} comparison; load to compare the ${regimeName(regime)} workload.`;
-    if(comparison.altRule!==altRule)return `Showing the ${regimeName(comparison.regime)} comparison with ${lower(ruleName(comparison.altRule))}; load to compare ${lower(ruleName(altRule))}.`;
+    if(previousSetup())return `Previous setup: ${setupText()}. Load to compare the pending setup.`;
     return loadedText();
+  }
+  function cancelLoad(speak=false){
+    if(job){job.cancelled=true;job=null;setBusy(loadButton,false);cancelButton.hidden=true;}
+    if(speak)status.textContent=`Load cancelled. ${comparison?selectionStatus():'No comparison loaded.'}`;
+  }
+  function editSelection(){
+    cancelLoad();player?.pause('setup');live.node.textContent='';refreshSelection();
   }
   function refreshSelection(){
     chips.forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-regime')===regime)));
     question.textContent=CAPACITY_REGIMES[regime].question;fixedBody.replaceChildren(...heldFixed(regime));
-    const matched=comparison?.regime===regime&&comparison.altRule===altRule;
-    grid.replaceChildren(...cardsFor(manifest,regime,altRule).map(card=>cardView(card,matched)));
-    reading.textContent=readingSentence(manifest,regime,altRule)??withheldReason(manifest,regime,altRule);
+    preview.replaceChildren(createCapacityPreview(capacityScenario({regime,treatment:'base'}),regimeName(regime)));
+    const shown=comparison??{regime,altRule};
+    grid.replaceChildren(...cardsFor(manifest,shown.regime,shown.altRule).map(card=>cardView(card,Boolean(comparison))));
+    reading.textContent=readingSentence(manifest,shown.regime,shown.altRule)??withheldReason(manifest,shown.regime,shown.altRule);
+    resultSetup.textContent=comparison?`${previousSetup()?'Previous setup':'Loaded setup'}: ${setupText()}.`:`Study preview: ${regimeName(regime)} workload. Load to inspect the records.`;
+    viewComparison.hidden=!comparison;viewComparison.textContent=previousSetup()?'View previous comparison ↓':'View comparison ↓';
+    if(comparison)inspectNote.textContent=`${previousSetup()?'Previous setup':'Loaded comparison'}: ${setupText()}.`;
     if(!job)status.textContent=selectionStatus();
+  }
+  function jumpTo(event){
+    if(!event||!player)return;selectVehicle(event.vehicle);player.seek(event.time_s);announce(eventSentence(event.time_s));
   }
 
   function eventWords(record,t){
@@ -196,34 +230,21 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
     if(a===b)return prefix+`Both cells: ${a}.`;
     return prefix+[['Base',a],[caseLabel(contrast),b]].filter(([,w])=>w).map(([n,w])=>`${n}: ${w}.`).join(' ');
   }
-  function chain(label,x){
-    const at=s=>x.present||s==='not-applicable'?s:'not-arrived',word=s=>at(s==='complete'?'done':s);
-    const steps=[['Battery',word(x.tasks.charge)],['Upload',word(x.tasks.upload)],['Local step',word(x.tasks.post)],['Ready',word(x.ready?'done':'waiting')]];
-    return el('div',{class:'flow-chain',role:'group','aria-label':'Readiness chain','data-vehicle':x.vehicle},[el('strong',{},`${label} · Vehicle ${x.vehicle}`),...steps.map(([n,s])=>el('span',{'data-state':s},`${n}: ${CHAIN_WORDS[s]}`))]);
-  }
-  function boardCase(c,state){
-    const x=state.visits.find(v=>v.vehicle===vehicle),h=state.uplink.holders,rates=[...new Set(h.map(v=>gbps(v.rate_bytes_s)))];
-    const uplink=!h.length?'Idle':rates.length===1?`${vehicles(h.map(v=>v.id))} · ${rates[0]}${h.length>1?' each':''}`:join(h.map(v=>`Vehicle ${v.id} ${gbps(v.rate_bytes_s)}`));
-    const port=p=>p.vehicle?`Vehicle ${p.vehicle} · ${kw(p.rate_j_s)}`:'Free';
-    return el('article',{class:'capacity-board-case','data-case':c},[el('h3',{},caseLabel(c)),
-      el('dl',{},[['Uplink',uplink],['Port 1',port(state.ports[0])],['Port 2',port(state.ports[1])],['Site feed',`${state.site.used_j_s/1000} of ${state.site.capacity_j_s/1000} kW`]].flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)])),
-      chain(caseLabel(c),x),el('p',{class:'flow-wait-reason'},x.wait_reason)]);
-  }
-  function renderMoment(t){
-    clock.textContent=`Minute ${minute(t)} of ${HORIZON_MIN}`;slider.setAttribute('aria-valuetext',clock.textContent);
-    const states=['base',contrast].map(c=>[c,inspectCapacity(comparison.cells[c].record,t)]);
-    board.replaceChildren(...states.map(([c,state])=>boardCase(c,state)));
-    caption.textContent=states.map(([c,state])=>`${caseLabel(c)}: ${state.visits.find(v=>v.vehicle===vehicle).wait_reason}`).join(' ');
+  function renderMoment(t,playing=false){
+    clock.textContent=`Minute ${minute(t)} of ${HORIZON_MIN}`;slider.setAttribute('aria-valuetext',`${clock.textContent}; ${t} recorded seconds`);
+    const projection=capacityBenchProjection(comparison,contrast,t,vehicle);
+    bench.update(projection,playing);
+    caption.textContent=projection.available?projection.arms.map(a=>`${a.label}: ${a.selected.wait_reason}`).join(' '):projection.reason;
   }
   function render(s){
     play.hidden=s.reduced;play.textContent=s.label;slider.value=String(s.time_s);
     previous.setAttribute('aria-disabled',String(s.time_s===0));next.setAttribute('aria-disabled',String(s.time_s===P.horizon_s));
     for(const line of timelines)line.setCursor(s.time_s,s.revealing);
-    if(s.textChanged)renderMoment(s.time_s);
+    renderMoment(s.time_s,s.playing&&!s.reduced);
   }
   function selectVehicle(id){
     vehicle=id;vehicleSelect.value=id;for(const line of timelines)line.select(id);
-    if(player)renderMoment(player.getState().time_s);
+    if(player){player.pause('selection');renderMoment(player.getState().time_s);}
   }
   function showContrast(){
     const time=player?.getState().time_s??0;player?.destroy();player=null;
@@ -234,6 +255,8 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
     const alloc=firstAllocationDifference(base.record,other.record),ready=firstReadinessDifference(base.verification,other.verification),at=s=>s===null?'not ready':`minute ${minute(s)}`;
     firstDifference.textContent=[alloc?`First allocation difference: minute ${minute(alloc.time_s)}, Vehicle ${alloc.vehicle}: Base ${alloc.base}; ${label} ${alloc.other}.`:'No allocation difference.',
       ready?`First readiness difference: Vehicle ${ready.vehicle}, Base ${at(ready.base_ready_s)}, ${label} ${at(ready.other_ready_s)}.`:'No readiness difference.'].join(' ');
+    difference={allocation:alloc?{time_s:alloc.time_s,vehicle:alloc.vehicle}:null,readiness:ready?{time_s:Math.min(ready.base_ready_s??Infinity,ready.other_ready_s??Infinity),vehicle:ready.vehicle}:null};
+    jumpAllocation.disabled=!difference.allocation;jumpReadiness.disabled=!difference.readiness;
     const readyText=v=>v.ready_s===null?'Not ready':`Minute ${minute(v.ready_s)} · ${OUTCOME[v.outcome]}`;
     visitTable.replaceChildren(table(`Base versus ${lower(label)} · every visit`,['Vehicle','Due',`Base ready`,`${label} ready`,'Change','Class'],base.verification.visits.map(a=>{
       const b=other.verification.visits.find(v=>v.vehicle===a.vehicle),d=b.ready_s-a.ready_s;
@@ -248,13 +271,11 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
       ...(v.post?[[`${name} · Vehicle ${v.vehicle}`,'Local step',`${minute(v.post.t0)} to ${minute(v.post.t1)} min`,'No shared resource']]:[])]));
     spansBox.replaceChildren(detail('Spans as a table',[table('Merged service spans for the two cells',['Cell and vehicle','Work','Minutes','Average rate'],spanRows)]));
     const eventTimes=[...new Set([base,other].flatMap(c=>c.record.events.map(e=>e.time_s)))];
-    selectVehicle(examples.selected??vehicle??base.verification.visits[0].vehicle);
+    selectVehicle(vehicle??examples.selected??base.verification.visits[0].vehicle);
     player=createDepotFlowPlayer({horizon_s:P.horizon_s,eventTimes,moments:[],quantum_s:1,reducedMotion,render,announce,eventSentence});
-    player.seek(time);
+    player.setGuided(false);player.setSpeed(Number(speed.value));player.seek(time);
   }
   function showComparison(){
-    const rule=lower(ruleName(comparison.altRule));
-    inspectNote.textContent=`Loaded comparison: ${regimeName(comparison.regime)} workload, with ${rule} as the different rule.`;
     inspect.hidden=false;showContrast();
     loadedDetails.replaceChildren(...['base','rule','bandwidth','power'].map(c=>{const cell=comparison.cells[c];return detail(`Exact record · ${cell.cell_id}`,[
       el('p',{},`Record digest: ${cell.digest}`),
@@ -264,30 +285,34 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
 
   async function load(){
     if(job||destroyed||!complete.complete)return;
-    const token={cancelled:false},chosen={regime,altRule},wanted=caseCells(regime,altRule),cells={};let failure=null;
-    job=token;setBusy(loadButton,true);
-    const iterator=steps(wanted.map(c=>c.cell),{shouldCancel:()=>token.cancelled});
+    player?.pause('load');
+    const token={cancelled:false},chosen={regime,altRule},wanted=caseCells(regime,altRule),cells={};let failure=null,iterator;
+    job=token;setBusy(loadButton,true);cancelButton.hidden=false;
     try{
+      iterator=steps(wanted.map(c=>c.cell),{shouldCancel:()=>token.cancelled});
       for(const [n,c] of wanted.entries()){
         status.textContent=`Reconstructing ${c.label}: cell ${n+1} of ${wanted.length}.`;
         await yieldPage();
-        if(destroyed||token.cancelled)return;
+        if(destroyed||token.cancelled||job!==token)return;
         try{const step=iterator.next();if(step.done)throw Error('no record was reconstructed');cells[c.case]=verifiedCell(step.value,manifest.cells.find(m=>m.cell_id===c.cell_id));}
         catch(error){failure=`Cell ${c.cell_id}: ${String(error?.message??error).replace(/\.$/,'')}.`;break;}
       }
-    }finally{iterator.return?.();if(job===token)job=null;if(!destroyed)setBusy(loadButton,false);}
+    }catch(error){failure=`Comparison unavailable: ${String(error?.message??error).replace(/\.$/,'')}.`;}
+    finally{iterator?.return?.();if(job===token){job=null;if(!destroyed){setBusy(loadButton,false);cancelButton.hidden=true;}}}
+    if(destroyed||token.cancelled)return;
     if(failure){status.textContent=`${failure} ${comparison?'Previous comparison retained.':'No comparison loaded.'}`;return;}
     comparison=Object.freeze({...chosen,cells:Object.freeze(cells)});
-    // The status line is itself a polite status region, so the result is spoken once.
     refreshSelection();showComparison();
   }
 
+  const departure=()=>{if(job)cancelLoad(true);player?.pause('route');live.node.textContent='';};
+  const windowTarget=document.defaultView;windowTarget?.addEventListener('pagehide',departure);
   refreshSelection();
   if(!complete.complete)setBusy(loadButton,false,true);
   return {element,load,
     getState:()=>({regime,altRule,contrast,vehicle,comparison,time_s:player?.getState().time_s??0,loading:job!==null,status:status.textContent}),
     pause(){player?.pause();live.node.textContent='';},
     motionChanged(){player?.motionChanged();},
-    destroy(){destroyed=true;if(job)job.cancelled=true;player?.destroy();player=null;live.node.textContent='';},
+    destroy(){destroyed=true;cancelLoad();windowTarget?.removeEventListener('pagehide',departure);player?.destroy();player=null;live.node.textContent='';},
   };
 }

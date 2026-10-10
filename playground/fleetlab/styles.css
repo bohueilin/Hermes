@@ -1445,6 +1445,8 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
   .start-points { grid-area: start; margin-top: 40px; }
 }
 .film-copy { min-width: 0; }
+.film-copy .home-author { margin:18px 0 0; color:var(--ink); font-size:16px; }
+.film-copy .home-author strong { font-weight:600; }
 .film-copy .eyebrow { color: var(--accent); }
 .film-copy h1, .approach-intro h1, .catalog-intro h1, .depot-flow-lab h1 { color: var(--ink); font-size: clamp(40px,5vw,64px); font-weight: 550; letter-spacing: -.045em; line-height: 1.05; margin: 20px 0 24px; max-width: 14ch; text-wrap: balance; }
 .approach-intro h1, .catalog-intro h1, .depot-flow-lab h1 { max-width: 18ch; }
@@ -1469,6 +1471,15 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .film-caption .creator-credit { text-align: left; max-width: none; }
 .start-points h2 { font-size: clamp(28px,3vw,40px); letter-spacing: -.03em; line-height: 1.15; margin: 0 0 28px; }
 .start-grid { display: grid; gap: 20px; }
+.network-flows-feature { margin:24px 0 40px; }
+.network-flows-feature h2 { margin:8px 0; font-size:clamp(26px,3vw,36px); line-height:1.2; letter-spacing:-.025em; }
+.network-feature-scope { color:var(--muted); max-width:65ch; }
+.network-question-list { display:grid; grid-template-columns:1fr; gap:16px; margin-top:24px; }
+.network-question { display:flex; flex-direction:column; align-items:flex-start; gap:12px; min-width:0; padding:24px; border:1px solid var(--rule); border-radius:16px; background:var(--panel); }
+.network-question h3 { margin:0; font-size:24px; line-height:1.25; letter-spacing:-.02em; }
+.network-question p { margin:0; }
+.network-question .studio-button { margin-top:auto; }
+.catalog-library-title { font-size:26px; line-height:1.25; margin:32px 0 20px; }
 @media (min-width: 768px) { .start-grid { grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); } }
 .start-card { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; min-width: 0; padding: 28px; background: var(--panel); border: 1px solid var(--rule); border-radius: 18px; }
 .start-card h3 { font-size: 24px; line-height: 1.25; font-weight: 550; letter-spacing: -.03em; margin: 4px 0 0; }
@@ -1690,3 +1701,6 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 @media (min-width:768px) { .capacity-figure-scroll svg { width:100%; } .capacity-board { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (min-width:1000px) { .capacity-cards .capacity-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
 @media (max-width:767.98px) { .depot-capacity { padding:28px 16px 48px; } .depot-capacity h1 { font-size:34px; } .capacity-controls { padding:20px; } }
+
+@media(min-width:768px){.network-question-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1100px){.network-question-list{grid-template-columns:repeat(3,minmax(0,1fr))}}

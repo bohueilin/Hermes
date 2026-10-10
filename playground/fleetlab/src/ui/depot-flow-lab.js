@@ -80,7 +80,9 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
  }
  function stopPlayer(){player?.destroy();chart?.dispose();player=null;chart=null;}
  function setOptions(patch){cancel();stopPlayer();options={...options,...patch};configureGuess(!result||JSON.stringify(options)===JSON.stringify(resultOptions)?null:suggestion&&JSON.stringify(options)===JSON.stringify(suggestion.options)?suggestion:{kind:'K1',rule:null,question:'Which rule will miss the fewest departures after this change?'});refreshInputs();renderOutput();}
- function cancel(){player?.pause();if(!job)return;job.cancelled=true;attempt={...attempt,status:'cancelled'};job=null;const held=document.activeElement===cancelButton;cancelButton.hidden=true;setBusy(runButton,false);if(held)runButton.focus();idleStatus();renderOutput();}
+ function cancel(reason='pause'){player?.pause(reason);if(!job)return;job.cancelled=true;attempt={...attempt,status:'cancelled'};job=null;const held=document.activeElement===cancelButton;cancelButton.hidden=true;setBusy(runButton,false);if(held)runButton.focus();idleStatus();renderOutput();}
+ // Lesson switches and route departures share a silent stop and own no outgoing announcement.
+ function pause(){cancel('route');live.node.textContent='';}
  async function run(){
   if(job||destroyed)return;stopPlayer();const token={id:++serial,cancelled:false};job=token;const used={...options},picked=guess.value?{...question,value:guess.value,label:question.choices.find(c=>c[0]===guess.value)?.[1]}:null;
   attempt={id:token.id,status:'running',options:used,partial:null};setBusy(runButton,true);cancelButton.hidden=false;status.textContent='Computing the rules. No completed comparison yet.';renderOutput();
@@ -142,7 +144,7 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
   player=createDepotFlowPlayer({horizon_s:result.scenario.horizon_s,eventTimes:times,moments,quantum_s:cohort()?result.scenario.time_quantum_ms/1000:1,reducedMotion,eventSentence:t=>eventSentence(result,t),announce,render:renderFrame});
   player.seek(0);output.appendChild(trace);
  }
- function setLesson(record){if(!lessons.some(l=>l[0]===record?.id))throw new RangeError('Unknown depot flow lesson');cancel();stopPlayer();lesson=record.id;options=cohort()?{time_quantum_ms:1000}:defaults();result=null;resultOptions=null;attempt=null;previous=null;comparison=null;feedback=null;seen=[];suggestion=null;output.replaceChildren();buildLesson();}
+ function setLesson(record){if(!lessons.some(l=>l[0]===record?.id))throw new RangeError('Unknown depot flow lesson');pause();stopPlayer();lesson=record.id;options=cohort()?{time_quantum_ms:1000}:defaults();result=null;resultOptions=null;attempt=null;previous=null;comparison=null;feedback=null;seen=[];suggestion=null;output.replaceChildren();buildLesson();}
  function exportJSON(){return JSON.stringify(result,null,2);}
- buildLesson();return {element,run,cancel,setOptions,exportJSON,setLesson,getState:()=>structuredClone({lesson,options,result,attempt}),pause(){player?.pause();cancel();live.node.textContent='';},motionChanged(){player?.motionChanged();},destroy(){cancel();stopPlayer();destroyed=true;}};
+ buildLesson();return {element,run,cancel,setOptions,exportJSON,setLesson,getState:()=>structuredClone({lesson,options,result,attempt}),pause,motionChanged(){player?.motionChanged();},destroy(){cancel();stopPlayer();destroyed=true;}};
 }

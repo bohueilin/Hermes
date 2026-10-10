@@ -1,3 +1,9 @@
+# FleetLab visual experience — October 10, 2026
+
+Current implementation and release status: [October 10 handoff](docs/FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-10.md). Next proposed Network Flows lesson: [NF-04 design specification](docs/FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-10.md). These dated records supersede older website navigation and publication status below; they do not clear SF qualification, Q1/Q8/N2 or physical deployment boundaries.
+
+---
+
 # FleetLab audit response, September 28, 2026
 
 ## September 29 enhancement — atlas layout, fleet insights and owner contact

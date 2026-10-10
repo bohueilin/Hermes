@@ -55,8 +55,8 @@ test('Load reconstructs four matched cells and opens the comparison at the selec
     assert.equal(visitRows(e).length,12);
     const boards=e.querySelectorAll('.capacity-board article.capacity-board-case');
     assert.deepEqual(boards.map(b=>b.getAttribute('data-case')),['base','rule']);
-    assert.match(text(boards[0]),/UplinkVehicle A1, Vehicle B1, Vehicle C1 and Vehicle D1 · 0.25 Gbps each/);
-    assert.match(text(boards[1]),/UplinkVehicle D1 · 1 Gbps/);
+    assert.match(text(boards[0]),/Uplink: Vehicle A1, Vehicle B1, Vehicle C1 and Vehicle D1 · 0.25 Gbps each/);
+    assert.match(text(boards[1]),/Uplink: Vehicle D1 · 1 Gbps/);
     assert.equal(boards[0].querySelectorAll('.flow-chain span').map(s=>s.textContent.split(':')[0]).join(),'Battery,Upload,Local step,Ready');
     assert.equal(text(e.querySelector('.flow-clock')),'Minute 0 of 90');
     e.querySelector('[data-next-event]').click();
@@ -69,28 +69,13 @@ test('Load reconstructs four matched cells and opens the comparison at the selec
   }finally{restore();}
 });
 
-test('timeline share bars keep a 4 px floor so a quarter share stays visible, and grow with the share above it',async()=>{
+test('timeline marks show duration, while exact rates remain inspectable',async()=>{
   const restore=installFakeDom();
-  try{const p=create(),e=p.element;
-    const bars=(cls,kind)=>{
-      const figure=e.querySelectorAll('figure.capacity-timeline')[0],spans=allocationSpans(p.getState().comparison.cells.base.record);
-      const heights=figure.querySelectorAll(`rect.${cls}`).map(r=>Number(r.getAttribute('height'))),shares=spans.flatMap(v=>v[kind]).map(s=>s.fraction);
-      assert.equal(heights.length,shares.length,cls);assert.ok(heights.length>0,cls);
-      assert.ok(heights.every(h=>h>=4),`${cls} heights ${heights}`);
-      const order=shares.map((f,i)=>[f,heights[i]]).sort((a,b)=>a[0]-b[0]);
-      for(let i=1;i<order.length;i+=1)assert.ok(order[i][1]>=order[i-1][1],`${cls} height follows the share`);
-      return {shares,heights};
-    };
-    await p.load();
-    const upload=bars('cap-upload','upload');
-    const quarter=upload.shares.findIndex(f=>Math.abs(f-.25)<1e-9),full=upload.shares.findIndex(f=>Math.abs(f-1)<1e-9);
-    assert.ok(quarter>=0&&full>=0,'the data-heavy base holds a quarter-share and a full-share upload span');
-    assert.ok(upload.heights[quarter]>=4,'a quarter share renders at least 4 px tall');
-    assert.ok(upload.heights[full]>upload.heights[quarter],'a full share is taller than a quarter share');
-    e.querySelectorAll('.capacity-chips button')[1].click();await p.load();
-    assert.equal(p.getState().comparison.regime,'energy_heavy');
-    const charge=bars('cap-charge','charge');
-    assert.ok(new Set(charge.shares).size>1&&new Set(charge.heights).size>1,'charging shares differ and so do their heights');
+  try{const p=create(),e=p.element;await p.load();
+    const figure=e.querySelector('figure.capacity-timeline'),bars=figure.querySelectorAll('rect.cap-upload');
+    assert.ok(bars.length>0);assert.equal(new Set(bars.map(b=>b.getAttribute('height'))).size,1);
+    assert.match(text(figure.querySelector('figcaption')),/duration.*not rate/i);
+    assert.match(text(e.querySelector('.capacity-inspect')),/Average rate/);
     p.destroy();
   }finally{restore();}
 });
@@ -105,7 +90,7 @@ test('switching the compared case rebuilds the table, boards and examples',async
   const restore=installFakeDom();
   try{const p=create(),e=p.element;await p.load();
     change(e.querySelector('select[aria-label="Case to compare"]'),'bandwidth');
-    assert.equal(p.getState().vehicle,'C1');
+    assert.equal(p.getState().vehicle,'D1','the selected visit remains the same across arms');
     assert.match(text(e.querySelector('.capacity-visits')),/More bandwidth ready/);
     assert.equal(visitRows(e).filter(r=>/Improving/.test(text(r))).length,12);
     assert.equal(text(e.querySelectorAll('.capacity-board article')[1].querySelector('h3')),'More bandwidth');
@@ -130,14 +115,15 @@ test('a changed selection after Load keeps the loaded comparison and says so',as
   const restore=installFakeDom();
   try{const p=create(),e=p.element;await p.load();const loaded=p.getState().comparison;
     e.querySelectorAll('.capacity-chips button')[1].click();
-    assert.equal(text(e.querySelector('.capacity-status')),'Showing the Data-heavy comparison; load to compare the Energy-heavy workload.');
+    assert.equal(text(e.querySelector('.capacity-status')),'Previous setup: Data-heavy workload, departure deadline first. Load to compare the pending setup.');
     assert.equal(e.querySelectorAll('.capacity-chips button')[1].getAttribute('aria-pressed'),'true');
     assert.equal(text(e.querySelector('.capacity-question')),'Does faster upload change readiness when energy work remains?');
-    assert.deepEqual(cards(e).map(c=>c.getAttribute('data-loaded')),['false','false','false','false']);
+    assert.deepEqual(cards(e).map(c=>c.getAttribute('data-loaded')),['true','true','true','true']);
+    assert.match(text(e.querySelector('.capacity-result-setup')),/Previous setup: Data-heavy/);
     assert.equal(p.getState().comparison,loaded);assert.equal(e.querySelector('.capacity-inspect').hidden,false);
     e.querySelectorAll('.capacity-chips button')[0].click();
     change(e.querySelector('select[aria-label="Different rule"]'),'capacity_fifo');
-    assert.equal(text(e.querySelector('.capacity-status')),'Showing the Data-heavy comparison with departure deadline first; load to compare first come, first served.');
+    assert.equal(text(e.querySelector('.capacity-status')),'Previous setup: Data-heavy workload, departure deadline first. Load to compare the pending setup.');
     change(e.querySelector('select[aria-label="Different rule"]'),'capacity_departure_deadline');
     assert.match(text(e.querySelector('.capacity-status')),/^Comparison loaded: Data-heavy/);
     p.destroy();
@@ -235,5 +221,125 @@ test('the per-cell refusal reason comes from an independent check, not the suppl
     const p=create({steps}),e=p.element;await p.load();
     assert.equal(text(e.querySelector('.capacity-status')),'Cell data_heavy/base/capacity_departure_deadline/1000: verification did not pass. No comparison loaded.');
     p.destroy();
+  }finally{restore();}
+});
+
+
+test('a setup edit pauses accepted replay and keeps all displayed results bound to the previous setup',async()=>{
+  const restore=installFakeDom();
+  try{const p=create(),e=p.element;await p.load();const accepted=p.getState().comparison;
+    e.querySelector('[data-capacity-play]').click();assert.equal(restore.dom.frames.pending,1);
+    e.querySelector('[data-regime="energy_heavy"]').click();
+    assert.equal(restore.dom.frames.pending,0,'editing must pause replay');
+    assert.equal(p.getState().comparison,accepted);
+    assert.match(text(e.querySelector('.capacity-inspect-note')),/Previous setup: Data-heavy/);
+    assert.match(text(e.querySelector('.capacity-reading')),/data-heavy workload/);
+    assert.match(text(e.querySelector('.capacity-result-setup')),/Previous setup/);
+    assert.match(text(e.querySelector('.capacity-preview')),/Energy-heavy/);
+    p.destroy();
+  }finally{restore();}
+});
+
+test('a superseded load cannot replace a newer accepted setup or clear its loading state',async()=>{
+  const restore=installFakeDom();
+  try{let hold=false,release;
+    const p=create({yieldPage:()=>hold?(hold=false,new Promise(resolve=>{release=resolve;})):Promise.resolve()}),e=p.element;
+    await p.load();hold=true;const stale=p.load();
+    e.querySelector('[data-regime="energy_heavy"]').click();
+    await p.load();const newest=p.getState().comparison;
+    assert.equal(newest.regime,'energy_heavy');
+    release();await stale;
+    assert.equal(p.getState().comparison,newest);assert.equal(p.getState().loading,false);
+    assert.match(text(e.querySelector('.capacity-status')),/Comparison loaded: Energy-heavy/);
+    p.destroy();
+  }finally{restore();}
+});
+
+test('playback, scrub, selected visit, resize and arm changes never reconstruct or mutate accepted cells',async()=>{
+  const restore=installFakeDom();
+  try{let calls=0;const p=create({steps:function*(cells,runtime){calls++;yield* capacityCellSteps(cells,runtime);}}),e=p.element;
+    await p.load();const accepted=p.getState().comparison,before=JSON.stringify(accepted);
+    const slider=e.querySelector('input[type="range"]');slider.value='240';slider.dispatchEvent(new Event('input'));
+    change(e.querySelector('select[aria-label="Vehicle"]'),'B1');
+    change(e.querySelector('select[aria-label="Case to compare"]'),'bandwidth');
+    assert.equal(p.getState().time_s,240);assert.equal(p.getState().vehicle,'B1');
+    window.dispatchEvent(new Event('resize'));
+    e.querySelector('[data-capacity-play]').click();restore.dom.frames.flush(0);restore.dom.frames.flush(250);p.pause();
+    assert.equal(calls,1);assert.equal(JSON.stringify(accepted),before);
+    assert.deepEqual(e.querySelectorAll('.capacity-board-case').map(b=>b.getAttribute('data-time')),['245','245']);
+    assert.ok(e.querySelectorAll('[data-link-moving="true"]').length===0);
+    p.destroy();
+  }finally{restore();}
+});
+
+test('hidden, reduced motion and route departure stop active bench links without automatic resume',async()=>{
+  const restore=installFakeDom();
+  try{let reduced=false;const p=create({reducedMotion:()=>reduced}),e=p.element;await p.load();
+    const play=e.querySelector('[data-capacity-play]');play.click();
+    assert.ok(e.querySelectorAll('[data-link-moving="true"]').length>0);
+    document.hidden=true;document.dispatchEvent(new Event('visibilitychange'));
+    assert.equal(e.querySelectorAll('[data-link-moving="true"]').length,0);assert.equal(restore.dom.frames.pending,0);
+    document.hidden=false;document.dispatchEvent(new Event('visibilitychange'));assert.equal(restore.dom.frames.pending,0);
+    play.click();reduced=true;p.motionChanged();assert.equal(restore.dom.frames.pending,0);
+    assert.equal(e.querySelectorAll('[data-link-moving="true"]').length,0);
+    reduced=false;p.motionChanged();assert.equal(restore.dom.frames.pending,0);
+    play.click();window.dispatchEvent(new Event('pagehide'));assert.equal(restore.dom.frames.pending,0);
+    p.destroy();
+  }finally{restore();}
+});
+
+test('mobile arm switching and resizing preserve the accepted clock, vehicle and paired final summaries',async()=>{
+  const restore=installFakeDom();
+  try{let calls=0;const p=create({steps:function*(cells,runtime){calls++;yield* capacityCellSteps(cells,runtime);}}),e=p.element;
+    const jump=e.querySelector('[data-view-comparison]');assert.ok(jump);assert.equal(jump.hidden,true);
+    await p.load();assert.equal(jump.hidden,false);assert.equal(jump.getAttribute('href'),'#capacity-comparison');assert.ok(e.querySelector('#capacity-comparison'));
+    const accepted=p.getState().comparison,before=JSON.stringify(accepted),slider=e.querySelector('input[type="range"]');
+    slider.value='240';slider.dispatchEvent(new Event('input'));change(e.querySelector('select[aria-label="Vehicle"]'),'B1');
+    const controls=e.querySelector('.capacity-mobile-arms'),buttons=controls.querySelectorAll('button');
+    assert.deepEqual(buttons.map(b=>b.getAttribute('aria-pressed')),['true','false']);
+    buttons[1].click();
+    assert.deepEqual(buttons.map(b=>b.getAttribute('aria-pressed')),['false','true']);
+    assert.deepEqual(e.querySelectorAll('.capacity-board-case').map(a=>a.getAttribute('data-mobile-visible')),['false','true']);
+    assert.equal(p.getState().time_s,240);assert.equal(p.getState().vehicle,'B1');
+    window.dispatchEvent(new Event('resize'));
+    assert.equal(p.getState().time_s,240);assert.equal(p.getState().vehicle,'B1');
+    assert.equal(e.querySelector('.capacity-board-case[data-case="rule"]').getAttribute('data-mobile-visible'),'true');
+    assert.match(text(e.querySelector('.capacity-pair-summary')),/Base.*3 of 12 on time.*Vehicle B1.*minute 6.*Different rule.*3 of 12 on time.*Vehicle B1.*minute 13/);
+    change(e.querySelector('select[aria-label="Case to compare"]'),'power');
+    assert.equal(e.querySelector('.capacity-board-case[data-case="power"]').getAttribute('data-mobile-visible'),'true','comparison selection follows the newly viewed treatment');
+    assert.equal(p.getState().time_s,240);assert.equal(p.getState().vehicle,'B1');
+    assert.equal(calls,1);assert.equal(JSON.stringify(accepted),before);p.destroy();
+  }finally{restore();}
+});
+
+test('mobile bench CSS shows one arm while the desktop default keeps both',()=>{
+  const css=readFileSync(new URL('../capacity/visual.css',import.meta.url),'utf8').replace(/\s+/g,' ');
+  const phone=css.slice(css.indexOf('@media (max-width:767.98px)'));
+  assert.match(phone,/\.capacity-page \.capacity-board-case\[data-mobile-visible=false\] ?\{ ?display:none;? ?\}/);
+  assert.match(css,/\.capacity-mobile-arms ?\{[^}]*display:none/);
+});
+
+test('leaving while a load waits clears its reconstruction status before a cached page can return',async()=>{
+  const restore=installFakeDom();
+  try{let release;const p=create({yieldPage:()=>new Promise(resolve=>{release=resolve;})}),e=p.element;
+    const loading=p.load();assert.match(text(e.querySelector('.capacity-status')),/^Reconstructing/);
+    window.dispatchEvent(new Event('pagehide'));
+    assert.equal(p.getState().loading,false);assert.match(text(e.querySelector('.capacity-status')),/^Load cancelled\. No comparison loaded\./);
+    release();await loading;
+    assert.equal(p.getState().comparison,null);assert.doesNotMatch(text(e.querySelector('.capacity-status')),/Reconstructing/);p.destroy();
+  }finally{restore();}
+});
+
+
+test('cached-page cancellation retains and identifies the previous accepted setup',async()=>{
+  const restore=installFakeDom();
+  try{let hold=false,release;const p=create({yieldPage:()=>hold?new Promise(resolve=>{release=resolve;}):Promise.resolve()}),e=p.element;
+    await p.load();const accepted=p.getState().comparison;e.querySelector('[data-regime="energy_heavy"]').click();hold=true;
+    const loading=p.load();window.dispatchEvent(new Event('pagehide'));
+    assert.equal(p.getState().loading,false);assert.equal(p.getState().comparison,accepted);
+    assert.match(text(e.querySelector('.capacity-status')),/^Load cancelled\. Previous setup: Data-heavy/);
+    assert.match(text(e.querySelector('.capacity-inspect-note')),/^Previous setup: Data-heavy/);
+    release();await loading;assert.equal(p.getState().comparison,accepted);
+    assert.doesNotMatch(text(e.querySelector('.capacity-status')),/Reconstructing/);p.destroy();
   }finally{restore();}
 });

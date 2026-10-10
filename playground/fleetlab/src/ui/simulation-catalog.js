@@ -72,6 +72,17 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
   const clear=el('button',{type:'button',class:'studio-button',on:{click:()=>{search.value='';filter.value='All labs';topic='All topics';render();search.focus();}}},'Clear filters');
   const element=el('main',{class:'simulation-catalog'},[
     el('section',{class:'catalog-intro'},[el('p',{class:'eyebrow'},'EXPLORE'),el('h1',{},'What would you like to understand?'),el('p',{class:'hero-lede'},'Every lesson answers one fleet question with a small synthetic model.')]),
+    el('section',{class:'network-flows-feature','aria-labelledby':'network-flows-title'},[
+      el('p',{class:'eyebrow'},'START WITH NETWORK FLOWS'),el('h2',{id:'network-flows-title'},'A parked vehicle still has work to do.'),
+      el('p',{class:'network-feature-scope'},'Synthetic interactive models · trace the constraint, compare a decision, inspect who waits.'),
+      el('div',{class:'network-question-list'},[
+        ['two-vehicles','Why is the vehicle still waiting?','A charged battery is only one prerequisite. Follow upload and local work.'],
+        ['crossed-priorities','Whose work should go first?','Urgency and short jobs pull in different directions. See who benefits and who waits longer.'],
+      ].map(([id,title,text])=>{const r=records.find(x=>x.id===id);return el('article',{class:'network-question'},[
+        el('p',{class:'eyebrow'},id==='two-vehicles'?'01 / READINESS':'02 / TRADE-OFFS'),el('h3',{},title),el('p',{class:'network-description'},text),
+        el('a',{href:hrefForLesson(r),class:'studio-button',on:{click:event=>{if(onLesson)followLink(event,()=>onLesson(r));}}},'Open experiment  →'),
+      ]);}))]),
+    el('h2',{class:'catalog-library-title'},'The complete learning library'),
     el('div',{class:'catalog-search'},[['Search lessons',search],['Simulation model',filter]].map(([name,control])=>el('label',{},[el('span',{},name),control]))),
     el('div',{class:'catalog-topics',role:'group','aria-label':'Topic'},chips),questions,
     labLinks&&[el('p',{class:'eyebrow catalog-jump'},'JUMP TO A LAB'),labLinks],

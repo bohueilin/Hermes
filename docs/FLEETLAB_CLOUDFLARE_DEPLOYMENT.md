@@ -1,6 +1,6 @@
 # FleetLab publication runbook
 
-Updated 9 October 2026. Applies to the static educational FleetLab website.
+Updated 10 October 2026. Applies to the static educational FleetLab website.
 Hermes operational deployment permission remains NONE. Historical deployment
 paragraphs and the old playground-only CI template are superseded; do not use them.
 
@@ -12,8 +12,8 @@ and exact source commit. That file records packaging intent, not proof of
 hosting. Compare it with the committed `docs/releases/fleetlab-current.json`
 and run the readback tool to establish which bytes are actually served.
 
-The owner explicitly authorized Git push and publication of the October 9
-Depot flow learning update, following the authorized October 8 release. An audit, handoff,
+The owner explicitly authorized Git push and publication of the October 10
+visual-experience update, following the authorized October 8 and 9 releases. An audit, handoff,
 successful verifier, Git branch label or this runbook never grants authority for
 a future release. Follow the user's
 actual instruction. Account/credential changes and destructive retention actions
@@ -38,11 +38,12 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    The security client update declares three replaced source modules: setup codec,
    setup sharing and Studio. The October 9 `--flow-update` additionally declares
    the NF-01/NF-02 route, catalog, teaching frames, Fleet day links, stylesheet,
-   shared charts and ten depot model/presentation modules. It rejects undeclared changes, compares copied payloads
+   shared charts, the explicit-play film lifecycle, depot model/presentation modules, and the hosted capacity bench/CSS/source sidecar. It rejects undeclared changes, compares copied payloads
    with validated digests, and rechecks the client inventory before finalization.
    All City payloads and source offers are preserved by that update.
-4. Commit reviewed source before final integration. Set `--source-commit` to the
-   exact commit. Inspect `review/integration-manifest.json`; package only its `site/`.
+4. Commit reviewed source before final integration. Build the teaching site with pack.mjs `--source-commit` set to the exact commit;
+   use that same `--source-commit` for integration. The capacity sidecar must bind
+   committed source/tool bytes and the deterministic page transform. Inspect `review/integration-manifest.json`; package only its `site/`.
    Never upload the repository, a working directory, or a legacy-only build.
 5. Install the locked deployment tool in `apps/fleetlab-city/deploy` with
    `npm ci --ignore-scripts`; run `npm audit --omit=dev` and `npm audit signatures`.

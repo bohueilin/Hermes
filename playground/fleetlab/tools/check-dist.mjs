@@ -17,6 +17,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { CONTENT_SECURITY_POLICY, MODULE_MARKER, SITE_BOOT, SITE_CAPACITY_BOOT, SITE_CONTENT_SECURITY_POLICY, SITE_HEADERS, findRepositoryRoot, maskSource } from "./pack.mjs";
+import { CAPACITY_RELEASE_PATH, CAPACITY_VISUAL_PATH, releaseProblems } from "./release-sidecar.mjs";
 
 /** Largest packed file accepted, in bytes. */
 // The directed street extract raises the offline budget from 2 to 2.5 MiB; see the street model design record.
@@ -55,7 +56,7 @@ const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledes
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
 export const COPY_MODULES = [
   "src/ui/depot-flow-lab.js", "src/ui/depot-flow-view.js", "src/ui/depot-flow-reading.js", "src/ui/depot-flow-player.js", "src/model/depot-flow-contract.js", "src/model/depot-flow.js", "src/model/depot-flow-verify.js", "src/model/depot-cohort-contract.js", "src/model/depot-cohort.js", "src/model/depot-cohort-verify.js",
-  "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js", "src/model/depot-capacity-verify.js", "src/ui/depot-capacity-view.js", "src/ui/depot-capacity-page.js", "src/ui/capacity-app.js",
+  "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js", "src/model/depot-capacity-verify.js", "src/ui/depot-capacity-view.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-bench.js", "src/ui/capacity-app.js",
   "src/ui/teaching-frames.js", "src/model/street-simulation.js","src/ui/model-identity.js", "src/ui/labels.js", "src/ui/routes.js", "src/ui/setup-sharing.js", "src/ui/setup-codec.js", "src/ui/regional-setup.js", "src/ui/street-lab.js", "src/ui/studio.js", "src/ui/hero-film.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/readiness-view.js", "src/ui/advanced-operations-view.js", "src/ui/scenario-learning.js", "src/ui/launch-view.js", "src/ui/regional-power-view.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js", "src/ui/scale-lab.js", "src/ui/scale-labs.js", "src/model/scale-contract.js", "src/model/scale-response.js", "src/model/scale-response-engine.js", "src/model/scale-intake.js", "src/model/scale-intake-engine.js", "src/model/scale-density.js", "src/model/scale-density-engine.js"];
 
 const FORBIDDEN_TOKENS = [
@@ -413,25 +414,25 @@ export function checkDist(html, { requiredLabels, byteLength = Buffer.byteLength
 
 const CAPACITY_INDEX = "network-flows/capacity/index.html";
 const CAPACITY_BOOT = "network-flows/capacity/boot.js";
-const SITE_FIXED_FILES = ["index.html", "boot.js", "styles.css", "_headers", CAPACITY_INDEX, CAPACITY_BOOT];
+const SITE_FIXED_FILES = ["index.html", "boot.js", "styles.css", "_headers", CAPACITY_INDEX, CAPACITY_BOOT, CAPACITY_VISUAL_PATH, CAPACITY_RELEASE_PATH];
 const SITE_MODULE_PATH = /^src\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.js$/;
 const SITE_STYLESHEET_LINK = '<link rel="stylesheet" href="./styles.css">';
 const SITE_BOOT_SCRIPT = '<script type="module" src="./boot.js"></script>';
 /** Each hosted page: its path, the one stylesheet link it may hold, and its boot module with the text pack.mjs writes. */
 const SITE_PAGES = [
-  { path: "index.html", link: SITE_STYLESHEET_LINK, boot: "boot.js", bootText: SITE_BOOT },
-  { path: CAPACITY_INDEX, link: '<link rel="stylesheet" href="../../styles.css">', boot: CAPACITY_BOOT, bootText: SITE_CAPACITY_BOOT },
+  { path: "index.html", links: [SITE_STYLESHEET_LINK], boot: "boot.js", bootText: SITE_BOOT },
+  { path: CAPACITY_INDEX, links: ['<link rel="stylesheet" href="../../styles.css">','<link rel="stylesheet" href="./visual.css">'], boot: CAPACITY_BOOT, bootText: SITE_CAPACITY_BOOT },
 ];
 
 /** One hosted page's shell rules: the site policy first in <head>, its one link and one script, then tokens and markup. */
-function sitePageProblems(html, { path, link }) {
+function sitePageProblems(html, { path, links: expectedLinks }) {
   const named = (problem) => (path === "index.html" ? problem : `${path}: ${problem}`);
   const problems = policyProblems(html, SITE_CONTENT_SECURITY_POLICY).map(named);
   const links = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]);
   const scripts = [...html.matchAll(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi)].map((m) => m[0]);
-  if (links.length !== 1 || links[0] !== link) problems.push(`${path}: expected exactly one stylesheet link, ${link}`);
+  if (JSON.stringify(links) !== JSON.stringify(expectedLinks)) problems.push(`${path}: expected exactly ${expectedLinks.length === 1 ? "one stylesheet link" : "the declared stylesheet links"}, ${expectedLinks.join(", ")}`);
   if (scripts.length !== 1 || scripts[0] !== SITE_BOOT_SCRIPT) problems.push(`${path}: expected exactly one module script, ${SITE_BOOT_SCRIPT}`);
-  const remainder = html.split(link).join("").split(SITE_BOOT_SCRIPT).join("");
+  const remainder = expectedLinks.reduce((text,link)=>text.split(link).join(""),html).split(SITE_BOOT_SCRIPT).join("");
   problems.push(...tokenProblems(remainder, path));
   problems.push(...markupProblems(html, tokensOf(markupOf(html)).tags, path));
   return problems;
@@ -449,6 +450,7 @@ export function checkSite(files, { requiredLabels }) {
   requireLabels(requiredLabels);
   const entries = files instanceof Map ? files : new Map(Object.entries(files));
   const problems = [];
+  problems.push(...releaseProblems(entries));
   let bytes = 0;
   for (const [path, text] of entries) {
     if (MEDIA_LIMITS.has(path)) { problems.push(...mediaProblems(path, text)); continue; }
@@ -486,7 +488,7 @@ export function checkSite(files, { requiredLabels }) {
       if (DEPOT_COPY_MODULE.test(path) && !COPY_MODULES.includes(path)) problems.push(`copy coverage: ${path}`);
       if (COPY_MODULES.includes(path)) for (const literal of literalsOf(source)) copy.push({ where: `${path} string`, text: literal });
     }
-    if (path === "styles.css") problems.push(...tokenProblems(source, path));
+    if (path === "styles.css" || path === CAPACITY_VISUAL_PATH) problems.push(...tokenProblems(source, path));
   }
   problems.push(...copyProblems(copy));
   for (const [path, source] of entries) {

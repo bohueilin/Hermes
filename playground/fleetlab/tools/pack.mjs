@@ -14,6 +14,9 @@ import vm from "node:vm";
 import { stripFullLineComments } from "./comment-strip.mjs";
 export { stripFullLineComments, assertSameTokens } from "./comment-strip.mjs";
 import {APP_MAX_BYTES,MEDIA_MODULE,MEDIA_LIMITS,mediaProblems} from "./media.mjs";
+import { CAPACITY_RELEASE_PATH, CAPACITY_VISUAL_PATH, createReleaseSidecar } from "./release-sidecar.mjs";
+import { renderSitePage, SITE_CONTENT_SECURITY_POLICY } from "./site-shell.mjs";
+export { SITE_CONTENT_SECURITY_POLICY } from "./site-shell.mjs";
 
 /** The design section 9.4 content security policy, verbatim. */
 export const CONTENT_SECURITY_POLICY =
@@ -28,10 +31,6 @@ export const MODULE_MARKER = "// fleetlab-module: ";
  * origin and nothing comes from anywhere else. Inline scripts are refused; style attributes on chart nodes need
  * `'unsafe-inline'` in style-src, as in the packed file.
  */
-export const SITE_CONTENT_SECURITY_POLICY =
-  "default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; " +
-  "connect-src 'none'; form-action 'none'; base-uri 'none'";
-
 /** Response headers a static host serves for the folder (the `_headers` format): the policy again, with frame-ancestors. */
 export const SITE_HEADERS = [
   "/*",
@@ -782,20 +781,13 @@ export function buildHtml(playgroundDir) {
  * A development page as a hosted page: its scripts and links removed, the site policy first in `<head>`, one
  * stylesheet link (`stylesheet`, relative to the page) and one module script for the `boot.js` beside it.
  */
-function sitePage(dir, name, stylesheet) {
+function sitePage(dir, name, stylesheets, capturedSources) {
   const path = join(dir, name);
   if (!existsSync(path)) throw new PackError(`${name} does not exist; the site serves it`);
-  let html = readFileSync(path, "utf8");
-  html = html.replace(/<script\b[\s\S]*?<\/script>\s*/gi, "").replace(/<link\b[^>]*>\s*/gi, "");
-  const head = /<head\b[^>]*>/i.exec(html);
-  if (!head || !/<\/head>/i.test(html) || !/<\/body>/i.test(html)) {
-    throw new PackError(`${name} needs <head>, </head> and </body>`);
-  }
-  if (/Content-Security-Policy/i.test(html)) throw new PackError(`${name} already declares a policy`);
-  const at = head.index + head[0].length;
-  html = html.slice(0, at) + `<meta http-equiv="Content-Security-Policy" content="${SITE_CONTENT_SECURITY_POLICY}">` + html.slice(at);
-  html = html.replace(/<\/head>/i, () => `<link rel="stylesheet" href="${stylesheet}">\n</head>`);
-  return html.replace(/<\/body>/i, () => '<script type="module" src="./boot.js"></script>\n</body>');
+  const html = readFileSync(path, "utf8");
+  capturedSources.set(name,html);
+  try { return renderSitePage(html,name,stylesheets); }
+  catch(error) { throw new PackError(error.message); }
 }
 
 /**
@@ -805,26 +797,32 @@ function sitePage(dir, name, stylesheet) {
  * `network-flows/capacity/index.html` and `boot.js` made the same way from `capacity/index.html`; and `_headers`.
  * Nothing else, so tests, tools and fixtures never reach a host.
  */
-export function buildSite(playgroundDir) {
+export function buildSite(playgroundDir, { sourceCommit = null } = {}) {
   const dir = resolve(playgroundDir);
   const workerEntry = join(dir, "src/runtime/worker.js");
   if (!existsSync(workerEntry)) throw new PackError("src/runtime/worker.js does not exist yet; the site cannot be built");
   const sourceRoot = join(dir, "src");
   const files = new Map();
+  const capturedSources = new Map();
   for (const entry of [join(dir, "src/ui/app.js"), workerEntry, join(dir, "src/ui/capacity-app.js")]) {
     for (const record of moduleGraph(entry, sourceRoot).order) files.set(record.label, record.src);
   }
   const cssPath = join(dir, "styles.css");
   if (!existsSync(cssPath)) throw new PackError("styles.css does not exist; the site links it");
   files.set("styles.css", readFileSync(cssPath, "utf8"));
-  files.set("index.html", sitePage(dir, "index.html", "./styles.css"));
+  files.set("index.html", sitePage(dir, "index.html", ["./styles.css"], capturedSources));
   files.set("boot.js", SITE_BOOT);
-  files.set(`${SITE_CAPACITY_DIR}/index.html`, sitePage(dir, "capacity/index.html", "../../styles.css"));
+  files.set(`${SITE_CAPACITY_DIR}/index.html`, sitePage(dir, "capacity/index.html", ["../../styles.css", "./visual.css"], capturedSources));
   files.set(`${SITE_CAPACITY_DIR}/boot.js`, SITE_CAPACITY_BOOT);
+  const visualPath=join(dir,"capacity/visual.css");
+  if (!existsSync(visualPath)) throw new PackError("capacity/visual.css does not exist; the site links it");
+  files.set(CAPACITY_VISUAL_PATH, readFileSync(visualPath,"utf8"));
   files.set("_headers", SITE_HEADERS);
-  const codeBytes = [...files.values()].reduce((sum, text) => sum + Buffer.byteLength(text), 0);
-  if (codeBytes > APP_MAX_BYTES) throw new PackError("app size exceeds source byte limit");
   if (files.has(MEDIA_MODULE)) for (const [path, data] of readMedia(dir)) files.set(path, data);
+  try { files.set(CAPACITY_RELEASE_PATH, createReleaseSidecar(dir,files,{sourceCommit,capturedSources})); }
+  catch (error) { throw new PackError(error.message); }
+  const codeBytes = [...files.values()].filter(text => typeof text === "string").reduce((sum, text) => sum + Buffer.byteLength(text), 0);
+  if (codeBytes > APP_MAX_BYTES) throw new PackError("app size exceeds source byte limit");
   return files;
 }
 
@@ -832,18 +830,20 @@ export function buildSite(playgroundDir) {
 export function main(argv, { cwd = process.cwd(), log = console.log, error = console.error } = {}) {
   let out = null;
   let site = null;
+  let sourceCommit = null;
   let playground = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--out") out = argv[++i] ?? null;
     else if (argv[i] === "--site") site = argv[++i] ?? null;
+    else if (argv[i] === "--source-commit") sourceCommit = argv[++i] ?? "";
     else if (argv[i] === "--playground") playground = resolve(cwd, argv[++i] ?? "");
     else {
       error(`pack: unknown argument ${argv[i]}`);
       return 2;
     }
   }
-  if (!out === !site) {
-    error("pack: usage: pack.mjs --out <file.html> | --site <folder> [--playground <dir>]");
+  if (!out === !site || (sourceCommit !== null && (!site || !/^[a-f0-9]{40}$/.test(sourceCommit)))) {
+    error("pack: usage: pack.mjs --out <file.html> | --site <folder> [--source-commit <full-id>] [--playground <dir>]");
     return 2;
   }
   const repoRoot = findRepositoryRoot(playground);
@@ -851,7 +851,7 @@ export function main(argv, { cwd = process.cwd(), log = console.log, error = con
     error(`pack: no repository root (.git) found above ${playground}`);
     return 2;
   }
-  if (site) return writeSite(resolve(cwd, site), { playground, repoRoot, log, error });
+  if (site) return writeSite(resolve(cwd, site), { playground, repoRoot, sourceCommit, log, error });
   const decision = checkOutputPath(resolve(cwd, out), repoRoot);
   if (!decision.ok) {
     error(`pack: ${decision.reason}`);
@@ -882,7 +882,7 @@ export function main(argv, { cwd = process.cwd(), log = console.log, error = con
 }
 
 /** `--site`: the place rule before building, the build, then the foreign-entry rule right before writing each file. */
-function writeSite(outDir, { playground, repoRoot, log, error }) {
+function writeSite(outDir, { playground, repoRoot, sourceCommit, log, error }) {
   const place = checkSitePath(outDir, repoRoot);
   if (!place.ok) {
     error(`pack: ${place.reason}`);
@@ -890,7 +890,7 @@ function writeSite(outDir, { playground, repoRoot, log, error }) {
   }
   let files;
   try {
-    files = buildSite(playground);
+    files = buildSite(playground,{sourceCommit});
   } catch (err) {
     if (!(err instanceof PackError)) throw err;
     error(`pack: ${err.message}`);

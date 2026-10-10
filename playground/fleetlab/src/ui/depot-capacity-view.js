@@ -3,7 +3,8 @@
 import {CAPACITY_RULES,CAPACITY_REGIMES,CAPACITY_TREATMENTS,canonicalText,cellId,deepFreeze,recordDigest} from '../model/depot-capacity-contract.js';
 import {verifyCapacity} from '../model/depot-capacity-verify.js';
 
-export const CAPACITY_PROJECTION='depot-capacity-projection/1.0.0';
+export const CAPACITY_PROJECTION_VERSION='depot-capacity-projection/1.1.0';
+export const CAPACITY_PROJECTION=CAPACITY_PROJECTION_VERSION;
 const BASE_RULE='capacity_equal_uplink';
 export const ruleName=id=>CAPACITY_RULES.find(r=>r.id===id).name;
 const lower=text=>text.toLowerCase();
@@ -107,6 +108,26 @@ export function inspectCapacity(record,t_s){
     return {...x,wait_reason:waitReason(x,v,upload,{holders,ports,rule:record.rule,current})};
   });
   return {time_s,uplink:{holders,capacity_bytes_s:s.uplink_bytes_s},ports,site:{used_j_s:ports.reduce((n,p)=>n+p.rate_j_s,0),capacity_j_s:s.site_power_j_s},visits};
+}
+
+/** Shared-clock bench values over already accepted cells. Scales remain fixed across all four study arms. */
+export function capacityBenchProjection(comparison,contrast,time_s,vehicle){
+  const cells=comparison?.cells,all=cells&&['base','rule','bandwidth','power'].map(key=>cells[key]);
+  if(!all||all.some(c=>!c?.record||c.verification?.model_validity!=='VALID'||c.verification.comparison_eligible!==true)||!cells[contrast])
+    return deepFreeze({available:false,reason:'Comparison not available: load and verify the fixed study.',arms:[]});
+  const scales={upload_bytes_s:Math.max(...all.map(c=>c.record.scenario.uplink_bytes_s)),energy_j_s:Math.max(...all.map(c=>c.record.scenario.site_power_j_s))};
+  const names={base:'Base',rule:'Different rule',bandwidth:'More bandwidth',power:'More power'};
+  const arms=['base',contrast].map(key=>{
+    const record=cells[key].record,state=inspectCapacity(record,time_s),used=state.uplink.holders.reduce((sum,h)=>sum+h.rate_bytes_s,0);
+    const visits=state.visits.map(v=>({...v,post_total_s:record.scenario.vehicles.find(x=>x.id===v.vehicle).post_s,
+      upload_rate_bytes_s:state.uplink.holders.find(h=>h.id===v.vehicle)?.rate_bytes_s??0,charge_rate_j_s:state.ports.find(p=>p.vehicle===v.vehicle)?.rate_j_s??0}));
+    const selected=visits.find(v=>v.vehicle===vehicle)??visits[0],final=cells[key].verification.visits.find(v=>v.vehicle===selected.vehicle);
+    return {case:key,label:names[key],time_s:state.time_s,visits,selected,ports:state.ports,
+      final:{on_time:cells[key].verification.metrics.on_time,total:visits.length,vehicle:selected.vehicle,ready_s:final.ready_s,outcome:final.outcome},
+      upload:{used,capacity:state.uplink.capacity_bytes_s,fraction:used/scales.upload_bytes_s},
+      energy:{used:state.site.used_j_s,capacity:state.site.capacity_j_s,fraction:state.site.used_j_s/scales.energy_j_s}};
+  });
+  return deepFreeze({available:true,time_s:arms[0].time_s,scales,arms});
 }
 
 /** Per visit: merged upload and charging spans (fraction of the link or of one port's cap), local step, ready and target. */

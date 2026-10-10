@@ -30,15 +30,16 @@ function overview(navigate, visit, film) {
   return el("main",{class:"studio-overview",id:"studio-overview"},[
     el("section",{class:"studio-film-hero"},[
       el("div",{class:"film-copy"},[
-        eyebrow("INTERACTIVE FLEET SIMULATIONS"),
-        el("h1",{},"See what keeps a fleet moving."),
-        el("p",{class:"film-lede"},"Try small simulations of trips, charging and depot work. Change one decision, follow what happens, and see the trade-offs."),
-        el("div",{class:"hero-actions"},[el("a",{href:routeHref(first),class:"studio-button studio-button-primary",on:{click:event=>followLink(event,()=>visit(first))}},"Try a 3-minute experiment  →"),pageLink("Explore all lessons","catalog",navigate)]),
-        el("p",{class:"hero-duration"},"About three minutes · No account needed · Nothing runs until you press Run"),
+        eyebrow("THE WORK BETWEEN RIDES"),
+        el("h1",{},"What keeps an autonomous fleet ready?"),
+        el("p",{class:"film-lede"},"Explore small, reproducible experiments in charging, data movement and fleet operations. Change a constraint, watch the system respond, and inspect the trade-offs."),
+        el("p",{class:"home-author"},["An independent learning project by ",el("strong",{},"Bo-Huei Lin"),"."]),
+        el("div",{class:"hero-actions"},[el("a",{href:routeHref(first),class:"studio-button studio-button-primary",on:{click:event=>followLink(event,()=>visit(first))}},"Explore Network Flows  →"),pageLink("Explore all lessons","catalog",navigate)]),
+        el("p",{class:"hero-duration"},"A small experiment. A visible trade-off. No account needed."),
         el("div",{class:"welcome-boundary"},[el("strong",{},"Synthetic teaching simulator"),el("span",{},"NOT_EVIDENCE · simulation only · decision authority NONE")]),
       ]),
       el("section",{class:"start-points","aria-labelledby":"start-points-title"},[
-        el("h2",{id:"start-points-title"},"Choose another starting point."),
+        el("h2",{id:"start-points-title"},"Keep exploring the work between rides."),
         el("div",{class:"start-grid"},[
           {label:"FLEET DAY · RUN A MODEL",title:"Can the fleet meet demand?",text:"Run a synthetic Bay Area day. Change the fleet or a depot, then read service, batteries and queues together.",cta:"Run a fleet day  →",page:"simulation"},
           {label:"STREET LAB · RUN A MODEL",title:"Where do queues form?",text:"Directed San Francisco streets with block queues. Compare two route rules on the same riders.",cta:"Open the Street lab  →",page:"streets"},
@@ -51,10 +52,10 @@ function overview(navigate, visit, film) {
       ]),
       el("div",{class:"film-caption"},[
         el("p",{},[el("strong",{},"Original 3D concept film"),"Waterfront travel, a neighborhood and a charging depot connect the ride to fleet readiness. An illustration, not a simulation result."]),
-        el("p",{class:"creator-credit"},"Independent exploration. Built with curiosity."),
+        el("p",{class:"creator-credit"},"I build FleetLab to make operational questions concrete: bounded models, visible trade-offs and reproducible evidence."),
       ]),
     ]),
-    el("nav",{class:"home-browse","aria-label":"Browse"},[pageLink("Browse all topics  →","catalog",navigate),pageLink("About & limits  →","approach",navigate)]),
+    el("nav",{class:"home-browse","aria-label":"Browse"},[pageLink("Fleet day","simulation",navigate),pageLink("Street lab","streets",navigate),pageLink("Browse all topics  →","catalog",navigate),pageLink("About & limits  →","approach",navigate)]),
   ]);
 }
 

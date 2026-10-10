@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import json
 import shutil
+import subprocess
 import tarfile
 import tempfile
 from pathlib import Path
@@ -21,6 +22,7 @@ CLIENT_FIXES = frozenset(("src/ui/setup-codec.js", "src/ui/setup-sharing.js", "s
 FLOW_CHANGED = frozenset((
     "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js", "src/ui/charts.js",
     "src/ui/simulation-catalog.js", "src/ui/operations-lab.js", "src/ui/street-lab.js",
+    "src/ui/hero-film.js",
 ))
 FLOW_ADDED = frozenset((
     "src/model/depot-flow-contract.js", "src/model/depot-flow.js",
@@ -31,11 +33,16 @@ FLOW_ADDED = frozenset((
 ))
 CAPACITY_ADDED = frozenset((
     "network-flows/capacity/index.html", "network-flows/capacity/boot.js",
+    "network-flows/capacity/visual.css", "network-flows/capacity/release.json",
+    "src/ui/depot-capacity-bench.js",
     "src/ui/capacity-app.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-view.js",
     "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js",
     "src/model/depot-capacity-verify.js", "src/data/depot-capacity-study.js",
 ))
 CAPACITY_BOOT = 'import { startCapacity } from "../../src/ui/capacity-app.js";\nstartCapacity();\n'
+PROVENANCE_TOOL = (
+    Path(__file__).resolve().parents[3] / "playground/fleetlab/tools/release-sidecar.mjs"
+)
 
 
 def check_temporal_offer(release, offered, offer):
@@ -145,11 +152,25 @@ def integrate(
             if (
                 (page / "boot.js").read_text() != CAPACITY_BOOT
                 or html.count("<script") != 1
-                or html.count("<link") != 1
+                or html.count("<link") != 2
                 or '<script type="module" src="./boot.js"></script>' not in html
                 or '<link rel="stylesheet" href="../../styles.css">' not in html
+                or '<link rel="stylesheet" href="./visual.css">' not in html
             ):
                 raise ValueError("undeclared capacity page change")
+            if launch.sha_file(page / "visual.css") != launch.sha_file(
+                launch.ROOT / "playground/fleetlab/capacity/visual.css"
+            ):
+                raise ValueError("capacity visual stylesheet differs from reviewed source")
+            command = [
+                "node", str(PROVENANCE_TOOL), "--check", str(client_update),
+                "--playground", str(launch.ROOT / "playground/fleetlab"),
+            ]
+            if source_commit:
+                command.extend(("--source-commit", source_commit))
+            checked = subprocess.run(command, capture_output=True, text=True, check=False)
+            if checked.returncode:
+                raise ValueError(f"capacity provenance rejected: {checked.stderr.strip()}")
             for name in set(established) - copied - {"index.html"}:
                 if updates[name] != established[name]:
                     raise ValueError(f"undeclared teaching client change: {name}")

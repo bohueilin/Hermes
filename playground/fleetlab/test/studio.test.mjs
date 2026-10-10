@@ -25,6 +25,18 @@ function setup() {
   return { restore, root, store, calls, studio };
 }
 
+test('welcome connects independent authorship to an operating question without starting a run',()=>{
+ const x=setup();try{
+  const copy=x.studio.element.querySelector('.film-copy');
+  assert.equal(copy.querySelector('h1').textContent,'What keeps an autonomous fleet ready?');
+  assert.match(copy.querySelector('.home-author').textContent,/independent learning project by Bo-Huei Lin/i);
+  assert.match(copy.querySelector('.studio-button-primary').textContent,/Explore Network Flows/);
+  assert.equal(x.studio.flows.getState().result,null);
+  assert.ok(x.studio.element.querySelector('.home-browse a[href="#/fleet-day"]'));
+  assert.ok(x.studio.element.querySelector('.home-browse a[href="#/street-lab"]'));
+ }finally{x.studio.destroy();x.restore();}
+});
+
 test('Depot flow lab is additive, direct-linkable and catalog-routed without running',()=>{
   const x=setup();try{
     x.studio.applyRoute('#/depot-flow-lab?lesson=two-vehicles');

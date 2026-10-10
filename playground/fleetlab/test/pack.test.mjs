@@ -2,6 +2,7 @@
 // its refusals, the worker source escaping, the output path rules, and check-dist on crafted files.
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -137,8 +138,13 @@ const GRAPH = {
   ].join("\n"),
   "src/ui/capacity-app.js": [
     'import { HONESTY } from "./labels.js";',
+    'import { CAPACITY_STUDY } from "../data/depot-capacity-study.js";',
+    'import { CAPACITY_PROJECTION_VERSION } from "./depot-capacity-view.js";',
     "export function startCapacity() { return HONESTY.strip; }",
   ].join("\n"),
+  "src/data/depot-capacity-study.js": readFileSync(join(PLAYGROUND_ROOT,"src/data/depot-capacity-study.js"),"utf8"),
+  "src/ui/depot-capacity-view.js": 'export const CAPACITY_PROJECTION_VERSION="depot-capacity-projection/1.1.0";\n',
+  "capacity/visual.css": ".fl-capacity-bench { display: grid; }\n",
   "src/runtime/worker.js": [
     'import { add } from "../core/a.js";',
     'const closing = "</script><!-- end";',
@@ -193,6 +199,9 @@ function fakeRepository(name, graph = GRAPH) {
   writeFileSync(join(root, "README.md"), "scratch\n");
   const playground = join(root, "playground/fleetlab");
   writeTree(playground, graph);
+  writeTree(playground,Object.fromEntries(["pack.mjs","check-dist.mjs","release-sidecar.mjs","site-shell.mjs","media.mjs","comment-strip.mjs"].map(name=>[
+    `tools/${name}`,readFileSync(join(PLAYGROUND_ROOT,"tools",name),"utf8")
+  ])));
   return { root, playground };
 }
 
@@ -578,7 +587,7 @@ describe("output path rules and R3", () => {
     const readOnly = ["existsSync", "readdirSync", "readFileSync"]; // reads only: check-dist walks a site folder, never writes
     // The study tool writes its manifest module, and records and a benchmark under the pack.mjs place rule.
     const studyWriter = ["lstatSync", "mkdirSync", "realpathSync", "writeFileSync"];
-    const namedFs = { "tools/check-dist.mjs": readOnly, "tools/capacity-study.mjs": studyWriter };
+    const namedFs = { "tools/check-dist.mjs": readOnly, "tools/release-sidecar.mjs": ["lstatSync", "readFileSync", "readdirSync"], "tools/capacity-study.mjs": studyWriter };
     // createRequire and process.getBuiltinModule reach fs without naming it in an import, so both are refused outright.
     const MODULE = "[\"'`](?:node:)?module[\"'`]";
     const loaderUses = new RegExp(`\\bfrom\\s*${MODULE}|\\bimport\\s*\\(?\\s*${MODULE}|\\brequire\\s*\\(\\s*${MODULE}|\\bcreateRequire\\b|\\bgetBuiltinModule\\b`, "g");
@@ -849,7 +858,7 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
   const labels = requiredLabels();
   const quiet = { log: () => {}, error: () => {} };
   const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const SITE_FILES = ["_headers", "boot.js", "index.html", "network-flows/capacity/boot.js", "network-flows/capacity/index.html", "src/core/a.js", "src/core/b.js", "src/core/c.js", "src/core/side.js", "src/runtime/worker.js", "src/ui/app.js", "src/ui/capacity-app.js", "src/ui/labels.js", "styles.css"];
+  const SITE_FILES = ["_headers", "boot.js", "index.html", "network-flows/capacity/boot.js", "network-flows/capacity/index.html", "network-flows/capacity/release.json", "network-flows/capacity/visual.css", "src/core/a.js", "src/core/b.js", "src/core/c.js", "src/core/side.js", "src/data/depot-capacity-study.js", "src/runtime/worker.js", "src/ui/app.js", "src/ui/capacity-app.js", "src/ui/depot-capacity-view.js", "src/ui/labels.js", "styles.css"];
   const CAPACITY_INDEX = "network-flows/capacity/index.html";
   const CAPACITY_BOOT = "network-flows/capacity/boot.js";
 
@@ -873,14 +882,28 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     assert.equal(files.get(CAPACITY_BOOT), SITE_CAPACITY_BOOT);
     const page = files.get(CAPACITY_INDEX);
     assert.match(page, new RegExp(`^<!doctype html>\\n<html lang="en">\\n<head><meta http-equiv="Content-Security-Policy" content="${escapeRegExp(SITE_CONTENT_SECURITY_POLICY)}">\\n<meta charset="utf-8">`));
-    assert.ok(page.includes('<link rel="stylesheet" href="../../styles.css">\n</head>'));
+    assert.ok(page.includes('<link rel="stylesheet" href="../../styles.css">\n<link rel="stylesheet" href="./visual.css">\n</head>'));
     assert.ok(page.includes('<script type="module" src="./boot.js"></script>\n</body>'));
     assert.equal((page.match(/<script\b/g) ?? []).length, 1, "the capacity page's inline module script is gone");
-    assert.deepEqual(page.match(/<link\b[^>]*>/g), ['<link rel="stylesheet" href="../../styles.css">']);
+    assert.deepEqual(page.match(/<link\b[^>]*>/g), ['<link rel="stylesheet" href="../../styles.css">','<link rel="stylesheet" href="./visual.css">']);
     assert.ok(!page.includes("import {") && !page.includes('href="../styles.css"'), "the development page's script and link are gone");
     assert.ok(page.includes('<div id="capacity-root"></div>'), "the capacity page body is kept");
     assert.equal(files.get("src/ui/labels.js"), graph["src/ui/labels.js"], "a module both pages reach is written once, unchanged");
     assert.deepEqual(checkSite(files, { requiredLabels: labels }), []);
+  });
+
+  test("explicit source binding accepts committed input and rejects a changed input without output", () => {
+    const {root,playground}=fakeRepository("source-binding");
+    const git=args=>execFileSync("git",args,{cwd:root,encoding:"utf8",stdio:["ignore","pipe","pipe"]}).trim();
+    git(["init"]);git(["add","."]);git(["-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","-m","fixture"]);
+    const sourceCommit=git(["rev-parse","HEAD"]);
+    const files=buildSite(playground,{sourceCommit});
+    assert.equal(JSON.parse(files.get("network-flows/capacity/release.json")).source_state,"BOUND_FILES_MATCH_COMMIT");
+    writeFileSync(join(playground,"capacity/visual.css"),".changed {}\n");
+    assert.throws(()=>buildSite(playground,{sourceCommit}),/bound source files differ/);
+    assert.equal(packMain(["--site","dist/release","--playground",playground,"--source-commit",sourceCommit],{cwd:root,...quiet}),1);
+    assert.equal(existsSync(join(root,"dist/release")),false);
+    assert.equal(JSON.parse(buildSite(playground).get("network-flows/capacity/release.json")).source_state,"MODIFIED_SOURCE");
   });
 
   test("buildSite refuses a playground without the capacity page or its entry module", () => {
@@ -912,7 +935,7 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     const before = snapshot(root);
     const logs = [];
     assert.equal(packMain(["--site", "dist/site", "--playground", playground], { cwd: root, log: (m) => logs.push(m), error: () => {} }), 0);
-    assert.match(logs.join("\n"), /^pack: wrote 14 files to .*dist\/site \(\d+ bytes\)$/m);
+    assert.match(logs.join("\n"), /^pack: wrote 18 files to .*dist\/site \(\d+ bytes\)$/m);
     const after = snapshot(root);
     assert.deepEqual([...after.keys()].filter((k) => !before.has(k)).sort(), SITE_FILES.map((p) => `dist/site/${p}`));
     for (const [path, text] of before) assert.equal(after.get(path), text, `${path} unchanged`);
@@ -1007,7 +1030,7 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     expectProblem(withFile(CAPACITY_BOOT, SITE_BOOT), /^boot: network-flows\/capacity\/boot\.js differs/);
     expectProblem(withFile(CAPACITY_INDEX, page.replace("</body>", '<script type="module" src="./boot.js"></script>\n</body>')), /^network-flows\/capacity\/index\.html: expected exactly one module script/);
     expectProblem(withFile(CAPACITY_INDEX, page.replace("</body>", "<script>alert(1)</script>\n</body>")), /^network-flows\/capacity\/index\.html: expected exactly one module script/);
-    expectProblem(withFile(CAPACITY_INDEX, page.replace("../../styles.css", "./styles.css")), /^network-flows\/capacity\/index\.html: expected exactly one stylesheet link/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("../../styles.css", "./styles.css")), /^network-flows\/capacity\/index\.html: expected exactly the declared stylesheet links/);
     expectProblem(withFile(CAPACITY_INDEX, page.replace("</head>", '<link rel="icon" href="./x.png">\n</head>')), /^forbidden token in network-flows\/capacity\/index\.html: <link/);
     expectProblem(withFile(CAPACITY_INDEX, page.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, "")), /^network-flows\/capacity\/index\.html: policy: no Content-Security-Policy meta element/);
     expectProblem(withFile(CAPACITY_INDEX, page.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")), /^network-flows\/capacity\/index\.html: policy: content differs from the design policy/);
@@ -1037,12 +1060,12 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     const errors = [];
     const io = { log: (m) => logs.push(m), error: (m) => errors.push(m) };
     assert.equal(checkDistMain(["--site", join(root, "dist/site")], { env, ...io }), 0);
-    assert.match(logs.join("\n"), /^check-dist: OK .*dist\/site \(14 files, \d+ bytes; policy, files, URLs, tokens, copy and labels checked\)$/m);
+    assert.match(logs.join("\n"), /^check-dist: OK .*dist\/site \(18 files, \d+ bytes; policy, files, URLs, tokens, copy and labels checked\)$/m);
     writeFileSync(join(root, "dist/site/notes.txt"), "stale\n");
     symlinkSync(join(root, "README.md"), join(root, "dist/site/src/link.js"));
     writeFileSync(join(root, "dist/site/src/core/c.js"), `${readFileSync(join(root, "dist/site/src/core/c.js"), "utf8")}const u = "http://example.org";\n`);
     assert.equal(checkDistMain(["--site", join(root, "dist/site")], { env, ...io }), 1);
-    for (const pattern of [/check-dist: file: unexpected notes\.txt/, /check-dist: file: src\/link\.js is a symbolic link/, /check-dist: external URL in src\/core\/c\.js/, /FAILED with 3 problem/]) {
+    for (const pattern of [/check-dist: file: unexpected notes\.txt/, /check-dist: file: src\/link\.js is a symbolic link/, /check-dist: external URL in src\/core\/c\.js/, /FAILED with 4 problem/]) {
       assert.match(errors.join("\n"), pattern);
     }
     assert.equal(checkDistMain(["--site", join(root, "dist/missing")], { env, ...io }), 2);
