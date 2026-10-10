@@ -232,6 +232,15 @@ class IntegrationTest(unittest.TestCase):
             "src/ui/depot-capacity-bench.js",
         }.issubset(integration.CAPACITY_ADDED))
 
+    def test_capacity_guide_is_declared_and_missing_payload_is_rejected(self):
+        name = "src/ui/depot-capacity-guided.js"
+        self.assertIn(name, integration.CAPACITY_ADDED)
+        client = self.stage_flow_client()
+        (client / name).unlink()
+        with self.assertRaisesRegex(ValueError, "missing or unexpected modules"):
+            self.integrate_flow(client)
+        self.assertFalse((self.base / "out").exists())
+
     def test_capacity_visual_or_provenance_tamper_is_rejected(self):
         client = self.stage_flow_client()
         for name in ("visual.css", "release.json"):

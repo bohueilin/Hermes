@@ -343,3 +343,64 @@ test('cached-page cancellation retains and identifies the previous accepted setu
     assert.doesNotMatch(text(e.querySelector('.capacity-status')),/Reconstructing/);p.destroy();
   }finally{restore();}
 });
+
+test('Watch starts accepted visible guided snapshots and preserves engine purity through chapters',async()=>{
+  const restore=installFakeDom();try{let calls=0;const p=create({steps:function*(cells,runtime){calls++;yield* capacityCellSteps(cells,runtime);}}),e=p.element;
+    assert.equal(typeof p.watch,'function','Watch owns accepted playback intent');
+    const focal=e.querySelector('.capacity-focal');focal.getBoundingClientRect=()=>({top:0,bottom:650,height:650,left:0,right:1000,width:1000});
+    await p.watch();assert.equal(p.getState().guided.playing,true);assert.equal(calls,1);
+    const accepted=p.getState().comparison,before=JSON.stringify(accepted);
+    e.querySelector('[data-chapter="Trade-off"]').click();assert.equal(p.getState().guided.playing,false);assert.equal(p.getState().vehicle,'B2');assert.equal(p.getState().time_s,1080);
+    assert.deepEqual(e.querySelectorAll('.capacity-board-case').map(a=>a.getAttribute('data-time')),['1080','1080']);
+    e.querySelector('[data-guide-next]').click();assert.equal(p.getState().contrast,'power');assert.match(e.querySelector('.capacity-guide-caption').textContent,/Negative control/);
+    assert.equal(calls,1);assert.equal(JSON.stringify(accepted),before);assert.match(e.querySelector('.capacity-utilization').textContent,/675,000,000,000/);p.destroy();
+  }finally{restore();}
+});
+
+test('pending Watch Pause survives acceptance, stale loads and route restoration',async()=>{
+  const restore=installFakeDom();try{let release,held=true;const p=create({yieldPage:()=>held?(held=false,new Promise(r=>{release=r;})):Promise.resolve()}),e=p.element;
+    assert.equal(typeof p.watch,'function');e.querySelector('.capacity-focal').getBoundingClientRect=()=>({top:0,bottom:650,height:650,left:0,right:1000,width:1000});
+    const pending=p.watch();e.querySelector('[data-guide-play]').click();release();await pending;assert.equal(p.getState().guided.playing,false);assert.equal(restore.dom.frames.pending,0);
+    e.querySelector('[data-guide-play]').click();assert.equal(p.getState().guided.playing,true);window.dispatchEvent(new Event('pagehide'));window.dispatchEvent(new Event('pageshow'));assert.equal(p.getState().guided.playing,false);p.destroy();
+  }finally{restore();}
+});
+
+test('Watch keeps reconstruction progress and Cancel at its visible destination',async()=>{
+  const restore=installFakeDom();try{let release;const p=create({yieldPage:()=>new Promise(r=>{release=r;})}),e=p.element;const pending=p.watch();
+    const cancel=e.querySelector('[data-guide-cancel]');assert.ok(cancel,'Cancel remains next to the focal loading state');assert.equal(cancel.hidden,false);assert.match(e.querySelector('.capacity-guide-loading').textContent,/cell 1 of 4/);cancel.click();release();await pending;assert.equal(p.getState().comparison,null);assert.equal(p.getState().guided.playing,false);p.destroy();
+  }finally{restore();}
+});
+
+test('cancelling a new Watch keeps the previous accepted chapters usable without automatic restart',async()=>{
+  const restore=installFakeDom();try{let hold=false,release;const p=create({yieldPage:()=>hold?(hold=false,new Promise(r=>{release=r;})):Promise.resolve()}),e=p.element;await p.load();hold=true;const pending=p.watch();e.querySelector('[data-guide-cancel]').click();
+    assert.equal(e.querySelector('[data-chapter="Trade-off"]').disabled,false);release();await pending;e.querySelector('[data-chapter="Trade-off"]').click();assert.equal(p.getState().vehicle,'B2');assert.equal(p.getState().guided.playing,false);p.destroy();
+  }finally{restore();}
+});
+
+test('guided page visibility pauses and resumes the same accepted snapshot; setup edits latch the pause',async()=>{
+  const restore=installFakeDom();try{const p=create(),e=p.element;let top=0;e.querySelector('.capacity-focal').getBoundingClientRect=()=>({top,bottom:top+650,height:650,left:0,right:1000,width:1000});await p.watch();restore.dom.frames.flush(0);restore.dom.frames.flush(250);
+    const at=p.getState().guided.elapsed_s;document.hidden=true;document.dispatchEvent(new Event('visibilitychange'));assert.equal(restore.dom.frames.pending,0);assert.equal(e.querySelectorAll('[data-link-moving="true"]').length,0);document.hidden=false;document.dispatchEvent(new Event('visibilitychange'));assert.equal(p.getState().guided.playing,true);restore.dom.frames.flush(100000);assert.equal(p.getState().guided.elapsed_s,at);
+    top=1000;window.dispatchEvent(new Event('scroll'));assert.equal(p.getState().guided.playing,false);top=0;window.dispatchEvent(new Event('scroll'));assert.equal(p.getState().guided.playing,true);
+    e.querySelector('[data-regime="energy_heavy"]').click();document.dispatchEvent(new Event('visibilitychange'));assert.equal(p.getState().guided.playing,false);assert.match(e.querySelector('.capacity-inspect-note').textContent,/Previous setup/);p.destroy();
+  }finally{restore();}
+});
+
+test('resuming a guide stops full replay and restores its accepted checkpoint',async()=>{
+  const restore=installFakeDom();try{const p=create(),e=p.element;e.querySelector('.capacity-focal').getBoundingClientRect=()=>({top:0,bottom:650,height:650,left:0,right:1000,width:1000});await p.watch();e.querySelector('[data-chapter="Trade-off"]').click();
+    const slider=e.querySelector('input[type="range"]');slider.value='2000';slider.dispatchEvent(new Event('input'));e.querySelector('[data-capacity-play]').click();assert.equal(restore.dom.frames.pending,1);
+    e.querySelector('[data-guide-play]').click();assert.equal(restore.dom.frames.pending,1,'guide and full replay cannot both own a clock');assert.equal(p.getState().time_s,1080);assert.equal(p.getState().guided.playing,true);p.destroy();
+  }finally{restore();}
+});
+
+test('unaccepted record controls stay disabled during Watch and after cancellation',async()=>{
+  const restore=installFakeDom();try{let release;const p=create({yieldPage:()=>new Promise(r=>{release=r;})}),e=p.element;const pending=p.watch();
+    for(const selector of ['[data-capacity-play]','[data-next-event]','select[aria-label="Case to compare"]','select[aria-label="Vehicle"]','input[type="range"]'])assert.equal(e.querySelector(selector).disabled,true,selector);
+    e.querySelector('[data-guide-cancel]').click();release();await pending;assert.equal(e.querySelector('[data-capacity-play]').disabled,true);assert.equal(p.getState().comparison,null);p.destroy();
+  }finally{restore();}
+});
+
+test('route restoration cannot reattach narration to a manually changed vehicle or case',async()=>{
+  const restore=installFakeDom();try{const p=create(),e=p.element;await p.watch();change(e.querySelector('select[aria-label="Vehicle"]'),'B3');change(e.querySelector('select[aria-label="Case to compare"]'),'power');const caption=e.querySelector('.capacity-guide-caption').textContent;
+    window.dispatchEvent(new Event('pagehide'));window.dispatchEvent(new Event('pageshow'));assert.equal(e.querySelector('.capacity-guide-caption').textContent,caption);assert.equal(p.getState().vehicle,'B3');assert.equal(p.getState().contrast,'power');p.destroy();
+  }finally{restore();}
+});

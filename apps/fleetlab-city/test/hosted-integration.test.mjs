@@ -14,6 +14,19 @@ const mount=()=>{
  return mountStudio({root,store:createStore(createInitialState({presetId:'bay_teaching_map',scenario:defaultScenario()})),playback:{pause(){}},present:{open(){},close(){}}});
 };
 
+test('hosted capacity is available consistently in roadmap and featured catalog while offline exclusions remain explicit',()=>{
+ const restore=installFakeDom();let studio;
+ try{
+  studio=mount();mountCityEntry();
+  const entry=document.querySelector('[data-roadmap-lesson="capacity"]');
+  assert.ok(entry);
+  assert.equal(entry.getAttribute('data-availability'),'available');
+  assert.equal(entry.querySelector('a').getAttribute('href'),document.querySelector('.capacity-entry-catalog a').getAttribute('href'));
+  assert.doesNotMatch(entry.textContent,/planned|not available/i);
+  assert.match(document.querySelector('.offline-edition').textContent,/capacity study.*not included/i);
+ }finally{studio?.destroy();restore();}
+});
+
 test('hosted entries preserve mounted lessons and film, and native links need no city runtime',()=>{
  const restore=installFakeDom();
  let studio;

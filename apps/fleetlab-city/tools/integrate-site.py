@@ -34,7 +34,7 @@ FLOW_ADDED = frozenset((
 CAPACITY_ADDED = frozenset((
     "network-flows/capacity/index.html", "network-flows/capacity/boot.js",
     "network-flows/capacity/visual.css", "network-flows/capacity/release.json",
-    "src/ui/depot-capacity-bench.js",
+    "src/ui/depot-capacity-bench.js", "src/ui/depot-capacity-guided.js",
     "src/ui/capacity-app.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-view.js",
     "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js",
     "src/model/depot-capacity-verify.js", "src/data/depot-capacity-study.js",

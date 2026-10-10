@@ -6,6 +6,7 @@ const svg=(tag,attrs={})=>{const n=document.createElementNS('http://www.w3.org/2
 const exact=n=>String(n);
 const car=()=>el('span',{class:'cap-car-symbol','aria-hidden':'true'},[el('i'),el('i')]);
 const stateOf=v=>!v.present?'Not arrived':v.ready?'Ready in model':v.tasks.upload==='active'?'Uploading':v.tasks.charge==='active'?'Charging':v.tasks.post==='active'?'Local step':'Waiting';
+const outcomes={on_time:'on time',late:'late',unfinished_due:'unfinished, target passed',pending:'unfinished, target ahead'};
 const words={complete:'✓ done',active:'in progress',waiting:'waiting','not-applicable':'already at target','not-arrived':'not arrived'};
 
 /** The unexecuted diagram describes inputs only. It never invents a current grant or a result. */
@@ -51,10 +52,12 @@ function armView(arm,onSelect){
   const upload=rateChannel('upload','Upload'),energy=rateChannel('energy','Energy');
   const wait=el('p',{class:'flow-wait-reason'}),selectedTitle=el('h4'),chain=el('div',{class:'flow-chain',role:'group','aria-label':'Readiness chain'});
   const taskNodes=[['Battery','charge'],['Upload','upload'],['Local step','post'],['Ready','ready']].map(([label,key])=>{const node=el('span');chain.appendChild(node);return {label,key,node};});
+  const selectedOutcome=el('p',{class:'cap-selected-outcome'});
   const progress=el('dl',{class:'cap-selected-progress'}),exactValues=el('p',{class:'cap-exact-values'});
   const node=el('article',{class:'capacity-board-case','data-case':arm.case},[
-    el('div',{class:'cap-arm-heading'},[el('h3',{},arm.label),time]),parking,el('div',{class:'cap-channels'},[upload.root,energy.root]),
-    el('section',{class:'cap-selected'},[selectedTitle,wait,chain,progress,el('details',{},[el('summary',{},'Exact selected quantities'),exactValues])])]);
+    el('div',{class:'cap-arm-heading'},[el('h3',{},arm.label),time]),
+    el('section',{class:'cap-selected'},[el('div',{class:'cap-selected-heading'},[el('span',{class:'cap-selected-symbol','aria-hidden':'true'},car()),selectedTitle]),wait,selectedOutcome,el('details',{},[el('summary',{},'Task chain and quantities'),chain,progress,exactValues])]),
+    el('div',{class:'cap-channels'},[upload.root,energy.root]),parking]);
   return {node,update(a,scales,playing){
     node.setAttribute('data-time',a.time_s);time.textContent=`Recorded minute ${minute(a.time_s)}`;
     for(const v of a.visits){const m=markers.get(v.vehicle),state=stateOf(v);m.state.textContent=state;m.node.setAttribute('aria-label',`Vehicle ${v.vehicle}: ${state}`);m.node.setAttribute('aria-pressed',String(v.vehicle===a.selected.vehicle));m.node.setAttribute('data-state',!v.present?'absent':v.ready?'ready':'present');}
@@ -62,6 +65,7 @@ function armView(arm,onSelect){
     const uplink=!active.length?'Uplink idle':rates.length===1?`Uplink: ${join(active.map(v=>`Vehicle ${v.vehicle}`))} · ${rates[0]}${active.length>1?' each':''}`:join(active.map(v=>`Vehicle ${v.vehicle}: ${gbps(v.upload_rate_bytes_s)}`));
     const ports=a.ports.map(p=>`Port ${p.port}: ${p.vehicle?`Vehicle ${p.vehicle} · ${kw(p.rate_j_s)}`:'free'}`).join(' · ');
     upload.update(a.upload,scales.upload_bytes_s,uplink,playing);energy.update(a.energy,scales.energy_j_s,ports,playing);
+    const f=a.final;selectedOutcome.textContent=f?`Whole-run outcome: ${f.ready_s===null?'not ready':`ready at minute ${minute(f.ready_s)}`} · ${outcomes[f.outcome]}.`:'Whole-run outcome not available.';
     const x=a.selected;selectedTitle.textContent=`Vehicle ${x.vehicle} · target minute ${minute(x.deadline_s)}`;wait.textContent=x.wait_reason;
     chain.setAttribute('data-vehicle',x.vehicle);
     for(const item of taskNodes){let state=item.key==='ready'?(x.ready?'complete':'waiting'):x.tasks[item.key];if(!x.present&&state!=='not-applicable')state='not-arrived';item.node.setAttribute('data-state',state==='complete'?'done':state);item.node.textContent=`${item.label}: ${words[state]}`;}
@@ -94,7 +98,7 @@ export function createCapacityBench({onSelect=()=>{}}={}){
       });
       const controls=el('div',{class:'capacity-mobile-arms',role:'group','aria-label':'Visible comparison arm'},switches.map(b=>b.node));
       summaries=new Map(projection.arms.map(a=>[a.case,el('div',{'data-summary':a.case})]));
-      const summary=el('div',{class:'capacity-pair-summary','aria-label':'End-of-run results for both cases'},[el('p',{class:'cap-pair-label'},'End-of-run results'),...summaries.values()]);
+      const summary=el('div',{class:'capacity-pair-summary','aria-label':'End-of-run results for both cases'},[el('p',{class:'cap-pair-label'},'Whole-run outcomes · fixed while replay moves'),...summaries.values()]);
       element.replaceChildren(controls,summary,...[...arms.values()].map(a=>a.node));showSide(mobileSide);
     }
     for(const arm of projection.arms){

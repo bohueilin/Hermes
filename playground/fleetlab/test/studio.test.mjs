@@ -25,6 +25,19 @@ function setup() {
   return { restore, root, store, calls, studio };
 }
 
+test('standalone roadmap distinguishes published hosted capacity from future lessons without a broken local link',()=>{
+ const x=setup();try{
+  x.studio.navigate('approach');
+  const capacity=x.studio.element.querySelector('[data-roadmap-lesson="capacity"]');
+  assert.ok(capacity,'the published capacity lesson has a current roadmap entry');
+  assert.equal(capacity.getAttribute('data-availability'),'hosted-only');
+  assert.equal(capacity.querySelector('a'),null,'offline does not offer a relative hosted route');
+  assert.match(capacity.textContent,/hosted/i);
+  assert.doesNotMatch(capacity.textContent,/planned|not available/i);
+  assert.match(x.studio.element.querySelector('.roadmap').textContent,/shared caching/i);
+ }finally{x.studio.destroy();x.restore();}
+});
+
 test('welcome connects independent authorship to an operating question without starting a run',()=>{
  const x=setup();try{
   const copy=x.studio.element.querySelector('.film-copy');

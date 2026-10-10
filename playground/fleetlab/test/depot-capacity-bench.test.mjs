@@ -40,3 +40,12 @@ test('quantitative rate widths have no minimum and direction motion only marks a
     assert.match(e.textContent,/not available/);
   }finally{restore();}
 });
+
+test('selected identity, immediate wait and fixed outcome stay together while inspection changes',()=>{
+  const restore=installFakeDom();try{const b=bench.createCapacityBench();const final={on_time:3,total:12,vehicle:'A1',ready_s:600,outcome:'on_time'};b.update({...projection,arms:[{...arm,final}]});
+    const selected=b.element.querySelector('.cap-selected');assert.ok(selected.querySelector('.cap-selected-symbol'),'selected vehicle has a focal identity');
+    assert.match(selected.querySelector('.cap-selected-outcome').textContent,/ready at minute 10.*on time/);
+    b.update({...projection,time_s:20,arms:[{...arm,time_s:20,final}]});assert.match(selected.querySelector('.cap-selected-outcome').textContent,/ready at minute 10.*on time/);
+    assert.match(b.element.querySelector('.cap-pair-label').textContent,/fixed while replay moves/);
+  }finally{restore();}
+});

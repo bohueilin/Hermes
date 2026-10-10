@@ -21,7 +21,7 @@ const labels = labelsFromContracts(REPO_ROOT);
 const CAPACITY_INDEX = "network-flows/capacity/index.html";
 const CAPACITY_BOOT = "network-flows/capacity/boot.js";
 const CAPACITY_MODULES = [
-  "src/ui/capacity-app.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-view.js", "src/ui/depot-capacity-bench.js", "src/data/depot-capacity-study.js",
+  "src/ui/capacity-app.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-view.js", "src/ui/depot-capacity-bench.js", "src/ui/depot-capacity-guided.js", "src/data/depot-capacity-study.js",
   "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js", "src/model/depot-capacity-verify.js",
 ];
 const STYLESHEET = '<link rel="stylesheet" href="../../styles.css">';

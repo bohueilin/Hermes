@@ -92,11 +92,12 @@ function approach(navigate) {
       el("div",{class:"roadmap"},[
         ["NOW","Test depot readiness","Serial staffing, two charging allocation treatments, delayed resource observations and synthetic airport preparation with paired guardrails."],
         ["NOW","Rehearse depot setup","Versioned region/site configuration, owned setup tasks, usable-resource checks and commissioning-delay rehearsals in Peninsula and fictional Region B."],
-        ["PLANNED","Depot flow lab, next lessons","Capacity decisions, competing data jobs, estimate error and custody are planned lessons, not available ones."],
+        ["HOSTED EDITION","Scheduling or capacity?","The published capacity study compares scheduling, bandwidth and charging power. It is hosted-only; the offline edition includes the two earlier Depot flow lessons.","capacity"],
+        ["PLANNED","Depot flow lab, next lessons","Shared caching, competing data jobs, estimate error and custody are proposed lessons."],
         ["NEXT","Increase model fidelity","Charge taper, worker shifts, service-time distributions and a broader operational validation set."],
         ["THEN","Calibrate & validate","Use approved operational data, fit travel and service distributions, check held-out periods and publish the error envelope."],
         ["LATER","Study physical questions","Choose a specific movement or mechanical question before adding a higher-fidelity simulator. These browser models have no physical actuation."],
-      ].map(([phase,title,text])=>el("article",{},[eyebrow(phase),el("h3",{},title),el("p",{},text)]))),
+      ].map(([phase,title,text,lesson])=>el("article",lesson?{'data-roadmap-lesson':lesson,'data-availability':'hosted-only'}:{},[eyebrow(phase),el("h3",{},title),el("p",{},text)]))),
     ]),
     el("section",{class:"approach-section"},[eyebrow("05 / HOW TO EVALUATE"),el("h2",{},"Test understanding, then usefulness."),el("div",{class:"people-grid"},[
       ["Comprehension","Can a first-time visitor explain the decision, name the constraint and distinguish one replay from repeated results?"],

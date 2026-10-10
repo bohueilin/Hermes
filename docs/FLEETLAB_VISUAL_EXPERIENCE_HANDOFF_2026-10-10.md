@@ -2,6 +2,64 @@
 
 October 10, 2026 · Educational website release
 
+## Revision 2 — controlled autoplay and the guided capacity comparison
+
+**Status: implementation and release validation in progress.** The earlier release below remains the published baseline until this section records a verified replacement. This revision follows the owner's explicit instruction to build, test, validate, push and publish the reviewed autoplay/copy/guided-NF-03 slice. It does not authorize or implement NF-04.
+
+Starting source: `0afd234`, branch `codex/fleetlab-city-sf`; previous application source `35c687e4bb96eb610bd4f8aa1d7f538876edb12d`. Existing untracked October 9 design notes were preserved. The existing checkout is already a linked worktree. The full teaching baseline was 2,150 passed, 0 failed, eight skips and one TODO.
+
+### Accepted audit decisions and implementation scope
+
+| Finding | Decision |
+|---|---|
+| D01 selected cause/outcome too far apart | Bring the accepted comparison forward and compact the focal bench; keep all vehicles inspectable. |
+| D02 welcome film needs automatic playback | Replace the prior deliberate explicit-play default with eligible, silent once-through playback. Keep controls and static fallback. |
+| D03 stale capacity roadmap | Correct both editions: hosted capacity is available; offline describes it as hosted-only and never creates a broken local link. |
+| D04 summary versus loaded record | Name the published summary separately from the accepted loaded comparison and fixed whole-run outcomes. |
+| D05 long full replay | Add a 40-second editorial guide with Constraint, Consequence and Trade-off chapters; keep the continuous timeline. |
+| D06 utilization ambiguity | Show the observation-window denominator and service-active interval; lower utilization is not automatically worse. |
+| D07/D08 catalog rewrite/new artwork | Defer. Reuse existing navigation, catalog and 16-second concept film; no new generated assets are needed. |
+| D09/D11 visual explanation | Apply progressively within NF-03; keep a short visible simulation boundary and inspectable records. |
+| D10 City navigation | Outside this presentation slice; retain existing City payloads. |
+| D12 device/accessibility acceptance | Record actual coverage separately from the remaining physical/native/human checks. |
+
+### Playback and evidence decisions
+
+- Homepage motion is controlled by an explicit visit/intent state. Automatic playback requires a visible frame, active Home/page and no applicable motion/data-saving veto. Manual Pause, cancellation and completion are not undone by scrolling, remounting or returning through history. Automatically hidden playback may resume its existing playhead, without elapsed-time catch-up. Rejected media requests retain a usable poster and control; no retry loop.
+- `FILM_AUTOPLAY` in `hero-film.js`, or the `autoplay:false` component option, restores explicit Play for a later rollback build. This is presentation configuration, not a scientific change. The media bytes remain unchanged. No cookies, visitor storage or telemetry are added.
+- The guide is editorial presentation over the accepted NF-03 pair. Its jumps must be labeled and its clock remains exact. A Watch intent is separate from model reconstruction and record acceptance. Cancelled, stale or rejected work cannot start a successful-looking guide. Full replay remains available.
+- Whole-run summaries and cursor-dependent snapshots are distinct. The guide retains improving, regressing and negative-control examples; it does not promise universal improvement.
+- NF-04 design revision 2 records proposed capped redistribution, fractional-only carry, rotating remainder priority, raw deadlines, per-request dependencies, prefetch windows, failed checks and independent-verifier fixtures. Those are reviewable candidates, not shipped engine behavior.
+
+### Validation and release receipt
+
+The review reproduced and corrected three release-blocking issues: the hosted source cap was exceeded; initial Watch exposed record controls before acceptance; and manual inspection could leave stale guide narration, including after a cached-page return. Regression tests cover each UI failure, explicit guide resume restores its actual snapshot and stops continuous playback, and CSS consolidation recovered package space without raising a cap. Failed intermediate runs remain in the private validation logs.
+
+| Gate | Revision 2 result |
+|---|---|
+| Teaching Node suite | 2,190 passed, 0 failed, eight existing skips and one TODO |
+| City Node / City Python | 67 / 331 passed |
+| Hermes regression suite | 1,662 passed, 55 existing skips |
+| Ruff / whitespace | Passed |
+| Independent review | All three findings fixed and rechecked; no remaining findings in the reviewed scope |
+| Dependencies | Deployment and map audits: zero reported vulnerabilities; 38 signatures and 22 attestations verified |
+| Offline package | 2,549,829 bytes; 71,611 below cap, retaining 21,611 beyond the required 50,000 reserve |
+| Presentation growth | 20,954 bytes across film, guide, page, bench and route CSS; below the 30 KiB combined allowance |
+| Autoplay growth | 3,917 bytes; below its 8 KiB allowance; existing media unchanged |
+| Hosted package | 122 files; final source-bound byte count recorded with publication below |
+
+Browser observations: visible Home film starts muted without a click, completes once, and manual Pause survives Home/Explore navigation. At phone width the offscreen film has no media source until eligible visibility. Watch starts the guide after all four fixed records are checked; progress and Cancel are visible while loading. At 1440×900 the guide, selected vehicle, wait, both resource channels, all 12 vehicle choices and both outcomes fit in the focal view. At 390 px, switching arms retained B2 at minute 18 with Base ready at 18 versus the rule case at 30. Widths 320, 390, 1024 and 1440 had no page overflow; inspected focal labels were at least 14 px. Keyboard End reached the exact 90-minute horizon; replay from the end and Pause worked. Positive-service intervals and full-window utilization denominators remain inspectable. No browser errors were observed in the checked comparison session.
+
+The desktop automation's locator click centers a control before clicking and can change the viewport; the focal-layout measurement was taken immediately after Watch acceptance before such recentering. An unavailable-label test click at the timeline end was corrected to the actual “Play from minute 0” control; it was not an application failure.
+
+ADB reported no connected Pixel. Phone-width checks are not physical-device evidence. Native screen-reader, Safari/Firefox, native 200% text zoom, system preference behavior and physical frame/heap budgets remain unmeasured here; automated lifecycle/preference fixtures do not replace those checks. The browser policy's previously blocked offline `file://` check was not retried through a workaround; offline content/CSP/size gates passed. Independent human comprehension and SF map/source qualification remain separate.
+
+Publication is pending at this source checkpoint. The final receipt will record exact source/deployment identities, clean-checkout doctor, preview/production byte and header checks, and the preserved City inventory before this revision is called released.
+
+## Earlier October 10 release — retained historical record
+
+Everything below describes the first visual release. Its test counts and deployment IDs are historical once revision 2 is published; use the latest receipt above and `docs/releases/fleetlab-current.json` for the current deployment.
+
 **Released:** implemented, validated, pushed to GitHub and published at [FleetLab](https://fleetlab.pages.dev/). [Open the capacity study](https://fleetlab.pages.dev/network-flows/capacity/). Preview and production each matched all 10,036 served files and all ten header checks. The original site content remains available.
 
 ## Scope and authority

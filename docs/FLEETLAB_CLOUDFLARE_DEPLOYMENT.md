@@ -13,7 +13,7 @@ hosting. Compare it with the committed `docs/releases/fleetlab-current.json`
 and run the readback tool to establish which bytes are actually served.
 
 The owner explicitly authorized Git push and publication of the October 10
-visual-experience update, following the authorized October 8 and 9 releases. An audit, handoff,
+visual-experience update and its controlled-autoplay/guided-NF-03 follow-up, following the authorized October 8 and 9 releases. An audit, handoff,
 successful verifier, Git branch label or this runbook never grants authority for
 a future release. Follow the user's
 actual instruction. Account/credential changes and destructive retention actions
@@ -38,7 +38,7 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    The security client update declares three replaced source modules: setup codec,
    setup sharing and Studio. The October 9 `--flow-update` additionally declares
    the NF-01/NF-02 route, catalog, teaching frames, Fleet day links, stylesheet,
-   shared charts, the explicit-play film lifecycle, depot model/presentation modules, and the hosted capacity bench/CSS/source sidecar. It rejects undeclared changes, compares copied payloads
+   shared charts, the film lifecycle, depot model/presentation modules, and the hosted capacity bench/guide/CSS/source sidecar. The October 10 follow-up adds only the named route-local guide module to that inventory. It rejects undeclared changes, compares copied payloads
    with validated digests, and rechecks the client inventory before finalization.
    All City payloads and source offers are preserved by that update.
 4. Commit reviewed source before final integration. Build the teaching site with pack.mjs `--source-commit` set to the exact commit;

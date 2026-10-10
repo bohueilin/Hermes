@@ -1,12 +1,25 @@
 # FleetLab next design specification: one update, four vehicles
 
-October 10, 2026 · Design for feedback · NF-04 is not implemented by this document.
+October 10, 2026 · Revision 2, after the autoplay/design audit · Design for feedback · NF-04 is not implemented by this document.
 
 ## Decision and continuity
 
 Build **NF-04: “One update. Four vehicles. Where is the wait?”** after the October 10 NF-03 visual release. Start with repeated download versus a cold shared cache; introduce preloading as a second question with its earlier work visible. Keep Home, Explore and About & limits, all existing lessons, the optional film, Fleet day, Street lab and City Explorer. Austin expansion remains paused.
 
-This specification incorporates the owner's October 10 visual brief and the inspected NF-03 implementation. The accompanying `FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-10.md` records what actually shipped. Nothing here converts an analytical calculation into an executed result or clears SF's qualification hold.
+This specification incorporates the owner's October 10 visual brief, the inspected NF-03 implementation and `FLEETLAB_DESIGN_AUDIT_AUTOPLAY_AND_MEDIA_PROMPTS_2026-10-10.md`. The accompanying `FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-10.md` records what actually shipped and its verification limits. The owner authorized autoplay, copy fixes and guided NF-03; this document is the separate NF-04 feedback artifact. Nothing here converts an analytical calculation into an executed result or clears SF's qualification hold.
+
+### Audit decisions carried into this revision
+
+| Recommendation | Decision and consequence |
+|---|---|
+| Finish existing lesson presentation before another engine | Accepted. NF-03 remains the visual pilot; no new global navigation or city. |
+| Watch once, then inspect | Accepted. A deliberate Watch action can load/check and begin the guide without another Play click. No experiment runs merely because a page opened. |
+| Constraint → Consequence → Trade-off | Accepted for the guide, with visible time skips, common clock, static chapter equivalent and full timeline. |
+| Generated depot imagery | Optional atmosphere only. Keep the quantitative mechanism in HTML/SVG. The existing film need not be replaced to deliver the lesson. |
+| Allocation, fractional carry, boundary and failure rules | Refined below as explicit candidate contract decisions. They require NF04-A review and fixtures before engine implementation. |
+| Genuine optimization | Deferred to a later lesson with a declared objective, constraints and feasibility checks. Do not call cache reuse a general optimizer. |
+
+The review should now focus on these concrete choices, rather than request another broad visual redesign. No NF-04 engine, accepted record or deployment is claimed.
 
 **Product promise:** visitors can see what work is required, which resource or prerequisite is holding a vehicle, what changes between two choices, and what the result does not establish.
 
@@ -48,7 +61,11 @@ Dependency lines show logical order. Rate bars encode quantities on the same phy
 
 On phones, show one selected arm with a Base/Comparison switch. Keep both final outcome summaries, the shared clock and the selected vehicle visible near the switch. Changing the visible arm, screen size or vehicle never runs a model or resets the clock. A text inspector always answers **“Why is this vehicle waiting?”** with the blocking task, remaining useful bytes or task time, current allocation and required next step.
 
-Playback begins only after an explicit action. Provide Play/Pause, Restart, previous/next event, speed and keyboard-operable time scrubbing. Pause when hidden, on navigation, after editing inputs, and when reduced motion is enabled. Reduced motion presents steps and exact tables; it does not hide the explanation. Do not automatically loop or announce every frame.
+**Watch comparison** expresses one playback intent: reconstruct both records, independently check them, then start the accepted guide when its bench is visible. Keep progress, Cancel and a way to pause pending playback. A rejected record, cancelled job, input edit, newer Watch or route exit invalidates that intent; a late response cannot revive it. Merely opening the lesson starts no simulation or animation. Distinguish published summary from the currently accepted loaded pair.
+
+Provide Pause/Resume, Replay, direct chapters and **Inspect full timeline** with previous/next event, speed and keyboard-operable scrubbing. A 35–45-second editorial guide may skip to accepted event snapshots and hold them for explanation; label those jumps and retain the exact simulated clock. Whole-run outcomes remain fixed while cursor quantities change. Do not imply that guided wall-clock pacing is proportional to model time.
+
+Manual Pause persists across visibility, resize and history restoration. An automatically hidden/offscreen pause may resume only the same accepted intent at the displayed playhead, without catching up elapsed wall time. Ended playback stays ended. Reduced motion or applicable data-saving preferences cancel automatic presentation; changing the preference back cannot silently restart it. Reduced motion presents chapter steps and exact tables with the same conclusions. Announce user-requested chapter changes and errors, not every frame. On a phone, arm switching must preserve time and vehicle.
 
 ## The first comparison and its storyboard
 
@@ -81,7 +98,7 @@ After verified implementation, a supported conclusion would be: “In this fixtu
 | Object size | 12,000,000,000 bytes; decimal GB |
 | WAN useful capacity | 1 Gbit/s = 125,000,000 bytes/s aggregate |
 | Local useful capacity | 2 Gbit/s = 250,000,000 bytes/s aggregate; same per-vehicle maximum |
-| Allocation | Equal share over eligible transfers, deterministic remainder order by transfer ID |
+| Allocation | Capped equal share with deterministic rotating integer remainder priority; cursor starts from canonical transfer-ID order and is recorded |
 | Transfer dependency | Complete-file store-and-forward; no local transfer before the relevant full receipt |
 | Transit storage | Repeated arm can hold 48 GB of non-reusable buffers; storage contention excluded |
 | Shared cache | One 12 GB artifact; no eviction optimization or multiple-object replacement policy |
@@ -89,11 +106,19 @@ After verified implementation, a supported conclusion would be: “In this fixtu
 | Target | Ready at or before 480 s counts as on time |
 | Horizon | 2,400 s |
 | Preload follow-on | Repository object available and fetch starts at −96 s; complete valid cache inventory at 0 |
-| Accounting windows | Main [0, 2,400 s]; prefetch-inclusive [−96, 2,400 s] |
+| Accounting windows | Main service slots [0, 2,400 s); prefetch slots [−96, 0); full service window [−96, 2,400 s). Completion at the ending boundary is still processed. |
 
 Freeze slot semantics before coding the engine. Proposed primary quantum is 1,000 ms; refinement is 250 ms. At each boundary: apply completions for the preceding slot, apply arrivals/inventory events, propagate zero-duration prerequisites, evaluate task eligibility, then allocate for the next half-open slot. Tasks becoming eligible at a boundary can receive the next slot's grant. There is no mid-slot reassignment. Work that finishes within a slot is recorded complete at its ending boundary. Readiness completion is processed before the inclusive deadline evaluation at the same boundary. The horizon permits completion events but starts no new service.
 
-Use integer useful-byte counters. Convert capacity per quantum with explicit fractional-capacity carry; never silently round away capacity at every slot. Divide each resource's integer budget among eligible transfers with a stable order and declared per-transfer caps. Redistribution within the allocation decision and unused grant after early completion must be explicitly represented and independently checked. The exact engine contract must resolve this policy before fixture acceptance; no convenient accounting shortcut may change workload size.
+Use integer useful-byte counters. Carry only the fractional-byte remainder used to represent capacity across slots. Discard unused whole-byte capacity each slot; idle periods cannot bank a later burst. At a boundary, compute useful grants for that slot using remaining-work and per-transfer caps, redistribute within the allocation decision, then record unused capacity. Eligibility is fixed for the slot: a downstream transfer does not receive service early merely because its predecessor has little work remaining.
+
+For indivisible bytes, use a rotating priority over canonically ordered eligible transfer IDs. Advance the cursor after each residual-byte award; preserve it in the resource record. Membership changes resume at the next eligible ID in canonical order. Input-array permutation must not change grants. Equal share is an allocation rule, not a claim of fairness across arbitrary workloads; a 1-byte budget across two continuously eligible uncapped flows for ten slots must give 5/5. NF04-A must freeze the exact cursor representation, cap redistribution and independent replay rule together.
+
+Off-boundary arrivals become service-eligible at the next boundary. Keep deadlines at their raw values; round positive modeled service durations upward to slots. Resolve zero-duration prerequisites to a bounded fixed point with cycle rejection. Require the horizon to align to the quantum in v1. Process completions at that horizon but allocate no new work there.
+
+Repeated downloads have per-request WAN dependencies, not a global barrier across vehicles. A staggered arrival must not prevent an earlier complete receipt from starting its own local delivery. At time zero a finished prefetch updates inventory once; its bytes remain solely in the earlier-window transfer ledger. Unknown pre-existing cache stock is declared inventory with unavailable transfer history, never invented measured WAN traffic.
+
+Evaluate a modeled check failure at the end of its complete declared check duration. A failed request never activates. If any required request fails, all-ready time is null, while the other vehicles' outcomes and complete accounting remain available. Record rejection is a different condition and withholds accepted playback.
 
 Both arms must receive identical exogenous inputs. Primary comparisons use one quantum per pair. Report refinement differences for off-boundary arrivals and non-divisible sizes, including maximum completion-time difference and changed outcomes. Equality in the convenient base fixture is not a convergence proof.
 
@@ -136,11 +161,30 @@ Modeled checks do not implement cryptographic signatures, anti-rollback, Uptane,
 
 Require independent conservation checks, aggregate/per-transfer capacity checks, no service before arrival, no local receipt before WAN prerequisites, no readiness before successful tasks, unique completion, deadline ordering, exact horizon censoring, deterministic tie handling and repeated-record identity. Mutate grants, byte totals, inventory, task order, version/digest identities and timestamps to prove rejection. Do not share engine allocation helpers with the verifier.
 
+Before accepting the six analytical cases above, review these discriminating fixtures:
+
+| Contract edge | Required expectation |
+|---|---|
+| Remaining work 1/99, budget 10, neither capped | Grants 1/9; no wasted whole bytes while eligible work can use them |
+| Same work, second flow capped at 4 | Grants 1/4; 5 unused, not carried as future burst capacity |
+| Long idle period before first arrival | Only current-slot capacity and fractional remainder available on arrival |
+| Two continuously eligible flows, one byte per slot for ten slots | 5/5, identical under input permutation |
+| Completion at 2,000 ms | Misses raw 1,999-ms target; meets inclusive 2,000-ms target |
+| Completion exactly at horizon | Completion and readiness evaluated; no new service at horizon |
+| Prefetch completes at zero | Inventory changes once; no duplicated transfer bytes in main window |
+| Fair 5/5 grant changed to 9/1 with unchanged total | Independent allocation-policy verification rejects it despite conservation |
+| Staggered arrivals | Per-request prerequisites; earlier receipt can use local link without waiting for every WAN transfer |
+| V4 fails its full check | Three may become ready; V4 never activates; all-ready remains null |
+
+The 666-second default story endpoint is not the 2,400-second simulation horizon. Failed and censored cases need a finite guide endpoint; never loop waiting for an impossible all-ready event.
+
 UI acceptance covers invalid-record refusal, valid modeled-failure playback, pending/previous-state labels, stale completion, pure playback/seek/select/resize, common-scale rate marks, keyboard and touch targets, reduced/hidden motion and all four vehicles' outcomes. Measure cold load and compare latency on the actual tested device. Keep automated phone viewport evidence separate from physical Pixel, Safari, screen-reader and novice comprehension reviews.
 
 ## Delivery, assets and cost of fidelity
 
 Reuse the small HTML/SVG bench approach from NF-03. The next route remains hosted-only; NF-01/NF-02 and all existing offline lessons are preserved. Offline maximum stays **2,621,440 bytes**, with **50,000 bytes reserved**. NF-04 route-local JS/CSS/fixtures target at most **350 KiB uncompressed**, excluding unchanged shared dependencies and media. Report both emitted size and measured transferred size; do not silently raise caps.
+
+The current hosted teaching build also enforces a **2,621,440-byte source limit** and has little remaining space after the guided NF-03 release. The 350 KiB route target is therefore a design envelope, not available package capacity. NF04-A must resolve packaging before engine work: measure the complete module graph, remove redundant presentation bytes, and evaluate independently source-bound route packages with explicit aggregate and per-route budgets. Preserve the existing offline cap, exact module inventory and mutation-rejection checks. Any revised hosted budget needs a separately documented design decision; NF-04 must not begin by weakening the current gate.
 
 Blender is optional for an original still or a short setting shot. It does not become the simulation engine, and photorealism is not evidence of model adequacy. Prefer a small compressed poster with descriptive alternative text and a precise vector overlay. No generated text, topology, rate values or operator logos in the quantitative diagram. A video cannot replace keyboard controls or the inspectable record. Measure the asset's contribution separately and keep it out of the offline graph.
 
@@ -162,7 +206,7 @@ Legacy queue reconciliation: **Q1** is broader painted-browser/device acceptance
 
 ## Feedback prompt for ChatGPT or Fable
 
-> Review this specification together with the October 10 implementation handoff and the current FleetLab capacity lesson. Distinguish what you actually opened from what the documents report. Judge whether a first-time visitor can explain the resource constraint and the difference between receipt and readiness. Review the two-arm default, mobile arm switch, wait inspector, pre-window accounting, slot semantics and failed-outcome handling. Find misleading visual encodings or unsupported operator claims. Separate must-fix correctness issues from optional visual refinements. For each finding, cite the screen, control or specification section; describe its visitor consequence; suggest the smallest effective change and an acceptance test. Do not propose additional cities, a large platform rewrite or physical driving simulation unless the question cannot be answered with this bounded model. No access to accounts or private operator data is required.
+> Review revision 2 of this specification together with the October 10 implementation handoff and its exact deployed capacity URL. NF-04 is not implemented: evaluate the candidate contract separately from the shipped NF-03 presentation. Distinguish what you actually opened from what the documents report. Judge whether a first-time visitor can explain the resource constraint and the difference between receipt and readiness. Review the two-arm default, mobile arm switch, wait inspector, pre-window accounting, capped redistribution, rotating remainder priority, raw deadline comparisons, horizon and failed-outcome handling. Try to falsify the analytical anchors with the discriminating fixtures. Evaluate whether the proposed guide and static chapters convey the same conclusion. Find misleading visual encodings or unsupported operator claims. Separate must-fix correctness issues from optional visual refinements. For each finding, cite the screen, control or specification section; describe its visitor consequence; suggest the smallest effective change and an acceptance test. Do not propose additional cities, a large platform rewrite or physical driving simulation unless the question cannot be answered with this bounded model. No access to accounts or private operator data is required.
 
 Feedback priorities: (1) is cold-cache versus repeated work a fair first comparison; (2) which first-screen words or visual elements can be removed; (3) can the phone view preserve a real comparison; (4) is the preload accounting comprehensible; (5) are any event/byte semantics still ambiguous; (6) does the AV relevance remain credible without implying proprietary knowledge?
 
@@ -180,5 +224,5 @@ Proceed with NF04-A after feedback, retaining a small deterministic implementati
 ## Next 3 actions
 
 1. Obtain one focused design review with the prompt above and prioritize findings by visitor consequence and correctness.
-2. Resolve the proposed allocation/remainder and boundary rules, then freeze the NF-04 fixtures and independent-verifier criteria.
+2. Review the concrete candidate allocation/remainder and boundary rules above, then freeze the NF-04 fixtures and independent-verifier criteria.
 3. Implement and validate the record pipeline before connecting playback; publish only after the source-bound release checks.

@@ -1,7 +1,7 @@
-// NF-03 recorded comparison viewer. The cards read the accepted study manifest; Load reconstructs four cells and
-// accepts each only when it matches the manifest. Nothing here runs a custom setup or changes a record.
+// NF-03: reconstruct fixed cells, independently check them, then present accepted records.
 import {el} from './dom.js';
 import {createCapacityBench,createCapacityPreview} from './depot-capacity-bench.js';
+import {capacityGuideShots,capacityActivity,createCapacityGuide} from './depot-capacity-guided.js';
 import {createDepotFlowPlayer} from './depot-flow-player.js';
 import {createLiveRegion} from './a11y.js';
 import {setBusy} from './display-text.js';
@@ -10,7 +10,6 @@ import {capacityCellSteps} from '../model/depot-capacity.js';
 import {CAPACITY_PROTOCOL,CAPACITY_REGIMES,CAPACITY_RULES,CAPACITY_TREATMENTS,CAPACITY_VERSIONS,FLOW_TRUST,capacityScenario,studyStatus} from '../model/depot-capacity-contract.js';
 import {CAPACITY_PROJECTION,caseCells,cardsFor,readingSentence,withheldReason,capacityBenchProjection,allocationSpans,firstAllocationDifference,firstReadinessDifference,exampleVisits,verifiedCell,ruleName,join,minute,gbps,kw} from './depot-capacity-view.js';
 
-// Copied from depot-flow-reading.js, which another stream owns.
 const table=(caption,heads,rows,attrs={})=>el('div',{class:'flow-table',tabindex:0,role:'region','aria-label':caption,...attrs},el('table',{},[el('caption',{},caption),el('thead',{},el('tr',{},heads.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map((c,i)=>el(i===0?'th':'td',i===0?{scope:'row'}:{},c)))))]));
 const detail=(title,children)=>el('details',{},[el('summary',{},title),...children]);
 const button=(text,fn,attrs={})=>el('button',{type:'button',class:'studio-button',on:{click:fn},...attrs},text);
@@ -49,14 +48,14 @@ function heldFixed(regime){
 function cardView(card,loaded){
   const value=text=>card.available?text:'Not available';
   return el('article',{class:'capacity-card','data-case':card.case,'data-loaded':String(loaded)},[
-    el('p',{class:'capacity-card-meta'},loaded?'Loaded and matched':'From the accepted study'),
+    el('p',{class:'capacity-card-meta'},loaded?'Loaded and matched':'Published study summary'),
     el('h3',{},card.label),el('p',{class:'capacity-changed'},card.changed),
     el('dl',{},[el('dt',{},'Ready on time'),el('dd',{},value(`${card.on_time} of ${VISITS}`)),el('dt',{},'Missed targets'),el('dd',{},value(`${card.missed} (late ${card.late}, unfinished ${card.unfinished_due})`)),
       el('dt',{},'Total lateness'),el('dd',{},card.lateness_text),el('dt',{},'Capacity used'),el('dd',{},card.capacity_text)]),
   ]);
 }
 
-// Twelve duration lanes. Constant heights distinguish work types; only horizontal length encodes duration.
+// Horizontal length encodes duration; lane heights only distinguish tasks.
 function timeline(label,record,regime){
   const s=record.scenario,W=960,L=56,R=16,LANE=28,TOP=8,x=t=>L+(W-L-R)*t/s.horizon_s,bottom=TOP+LANE*s.vehicles.length,H=bottom+34;
   const spans=allocationSpans(record),lanes=new Map();
@@ -115,38 +114,55 @@ function studyTable(manifest){
     primary.map(c=>[CAPACITY_REGIMES[c.regime].name,T[c.treatment].name,ruleName(c.rule),`${c.metrics.on_time} of ${VISITS}`,c.metrics.missed,lateness(c.metrics),repeat(c.cell_id),c.record_digest.slice(0,8)]));
 }
 
-export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=()=>new Promise(r=>setTimeout(r,0)),steps=capacityCellSteps}={}){
+export function createCapacityPage({manifest,autoGuide=true,reducedMotion=()=>false,yieldPage=()=>new Promise(r=>setTimeout(r,0)),steps=capacityCellSteps}={}){
   let regime='data_heavy',altRule='capacity_departure_deadline',comparison=null,contrast='rule',vehicle=null,examples=null,job=null,destroyed=false,player=null,timelines=[],difference=null;
+  let guide=null,guideToken=null,applyingShot=false,detached=false;
+  const connection=globalThis.navigator?.connection,dataPreference=document.defaultView?.matchMedia?.('(prefers-reduced-data: reduce)');
+  const dataSaving=()=>Boolean(connection?.saveData||dataPreference?.matches);
+  const stopGuide=reason=>{if(!applyingShot){detached=true;guide?.pause(reason);}};
   const complete=studyStatus(manifest);
   const resultSetup=el('p',{class:'capacity-result-setup'}),preview=el('div',{class:'capacity-preview-slot'});
   const status=el('p',{class:'capacity-status',role:'status'}),question=el('p',{class:'capacity-question'}),fixedBody=el('div'),grid=el('div',{class:'capacity-grid'}),reading=el('p',{class:'capacity-reading'});
   const chips=Object.entries(CAPACITY_REGIMES).map(([id,r])=>button(r.name,()=>{regime=id;editSelection();},{'aria-pressed':'false','data-regime':id}));
   const ruleSelect=el('select',{'aria-label':'Different rule',on:{change:()=>{altRule=ruleSelect.value;editSelection();}}},ALT_RULES.map(r=>el('option',{value:r.id},r.name)));
   ruleSelect.value=altRule;
-  const loadButton=button('Load fixed comparison',()=>load(),{class:'studio-button studio-button-primary','data-capacity-load':''});
+  const loadButton=button('Watch comparison',()=>watch(),{class:'studio-button studio-button-primary','data-capacity-load':''});
   const cancelButton=button('Cancel load',()=>cancelLoad(true),{'data-capacity-cancel':'',hidden:true});
   const viewComparison=el('a',{href:'#capacity-comparison',class:'studio-button capacity-view-comparison','data-view-comparison':'',hidden:true},'View comparison ↓');
   const inspectNote=el('p',{class:'capacity-inspect-note'}),firstDifference=el('p',{class:'capacity-first-difference'}),visitTable=el('div',{class:'capacity-visits'}),exampleNote=el('p',{class:'capacity-example-note'});
-  const contrastSelect=el('select',{'aria-label':'Case to compare',on:{change:()=>{contrast=contrastSelect.value;showContrast();}}},CASES.map(([value,text])=>el('option',{value},text)));
+  const contrastSelect=el('select',{'aria-label':'Case to compare',on:{change:()=>{stopGuide('selection');contrast=contrastSelect.value;showContrast();}}},CASES.map(([value,text])=>el('option',{value},text)));
   const vehicleSelect=el('select',{'aria-label':'Vehicle',on:{change:()=>selectVehicle(vehicleSelect.value)}},capacityScenario({regime:'data_heavy',treatment:'base'}).vehicles.map(v=>el('option',{value:v.id},`Vehicle ${v.id}`)));
   const exampleButtons=[['improving','Improving'],['regressing','Regressing'],['unchanged','Unchanged']].map(([key,word])=>button(`${word} example`,()=>{const ids=examples?.[key]??[];if(ids.length)selectVehicle(ids[(ids.indexOf(vehicle)+1)%ids.length]);},{'data-example':key}));
-  const play=button('Play',()=>{player.getState().playing?player.pause():player.play();},{'data-capacity-play':''}),restart=button('Restart',()=>player.restart());
-  // Under reduced motion the player's play() is the one-event step that also starts the reveal; Play itself is hidden.
-  const previous=button('Previous event',()=>{if(player.getState().time_s>0)player.previous();}),next=button('Next event',()=>{const s=player.getState();if(s.time_s<P.horizon_s)s.reduced?player.play():player.next();},{'data-next-event':''});
+  const play=button('Play',()=>{stopGuide('inspection');player.getState().playing?player.pause():player.play();},{'data-capacity-play':''}),restart=button('Restart',()=>{stopGuide('inspection');player.restart();});
+  // Reduced motion uses the existing single-event step.
+  const previous=button('Previous event',()=>{stopGuide('inspection');if(player.getState().time_s>0)player.previous();}),next=button('Next event',()=>{stopGuide('inspection');const s=player.getState();if(s.time_s<P.horizon_s)s.reduced?player.play():player.next();},{'data-next-event':''});
   const bench=createCapacityBench({onSelect:id=>selectVehicle(id)});
   const speed=el('select',{'aria-label':'Playback speed',on:{change:()=>player.setSpeed(Number(speed.value))}},[10,20,40].map(n=>el('option',{value:n},`${n}×`)));speed.value='20';
   const jumpAllocation=button('First allocation change',()=>jumpTo(difference?.allocation),{'data-jump-allocation':''});
   const jumpReadiness=button('First readiness change',()=>jumpTo(difference?.readiness),{'data-jump-readiness':''});
   const clock=el('p',{class:'flow-clock'}),caption=el('p',{class:'flow-caption'}),figures=el('div',{class:'capacity-timelines'}),spansBox=el('div');
-  const slider=el('input',{type:'range',min:0,max:P.horizon_s,step:1,value:0,'aria-label':'Inspect time across the two cells',on:{input:()=>player.seek(Number(slider.value)),change:()=>announce(eventSentence(player.getState().time_s)),keydown:event=>{
-    if(event.ctrlKey||event.metaKey||event.altKey)return;const d={ArrowLeft:-60,ArrowDown:-60,ArrowRight:60,ArrowUp:60,PageDown:-300,PageUp:300}[event.key];
+  const slider=el('input',{type:'range',min:0,max:P.horizon_s,step:1,value:0,'aria-label':'Inspect time across the two cells',on:{input:()=>{stopGuide('inspection');player.seek(Number(slider.value));},change:()=>announce(eventSentence(player.getState().time_s)),keydown:event=>{
+    if(event.ctrlKey||event.metaKey||event.altKey)return;stopGuide('inspection');const d={ArrowLeft:-60,ArrowDown:-60,ArrowRight:60,ArrowUp:60,PageDown:-300,PageUp:300}[event.key];
     if(d!==undefined){event.preventDefault();player.seek(player.getState().time_s+d);announce(eventSentence(player.getState().time_s));}}}});
+  const recordControls=[contrastSelect,vehicleSelect,play,restart,previous,next,speed,slider];
+  recordControls.forEach(c=>{c.disabled=true;});
+  const guideCancel=button('Cancel load',()=>cancelLoad(true),{'data-guide-cancel':'',hidden:true}),guideLoading=el('p',{class:'capacity-guide-loading',hidden:true});
+  const guideCaption=el('p',{class:'capacity-guide-caption'}),guideState=el('p',{class:'capacity-guide-state'});
+  const guidePlay=button('Watch guide',()=>{if(job){guide.pause();return;}if(!comparison)return;const s=guide.getState();if(s.playing||s.state==='visibilityPaused'){guide.pause();return;}if(!s.shot)prepareGuide();else guide.resume();},{'data-guide-play':''});
+  const chapterButtons=['Constraint','Consequence','Trade-off'].map(name=>button(name,()=>{if(!comparison||job)return;ensureGuide();guide.chapter(name);announce(`${name}. ${guide.getState().shot.caption}`);},{'data-chapter':name}));
+  const guideNext=button('Next snapshot',()=>{if(!comparison||job)return;ensureGuide();guide.next();announce(guide.getState().shot.caption);},{'data-guide-next':''});
+  const utilization=el('div',{class:'capacity-utilization'});
+  const focal=el('div',{class:'capacity-focal'},[
+    el('div',{class:'capacity-guide-controls'},[el('div',{class:'capacity-chapters',role:'group','aria-label':'Guided chapters'},chapterButtons),guidePlay,guideNext]),
+    guideLoading,guideCancel,guideState,guideCaption,clock,bench.element,
+  ]);
   const inspect=el('section',{class:'capacity-inspect','aria-label':'Which vehicles changed, and why?',hidden:true},[
     el('h2',{id:'capacity-comparison',tabindex:-1},'Follow one vehicle through both cases'),inspectNote,
     el('div',{class:'capacity-inspect-pickers'},[el('label',{class:'capacity-picker'},[el('span',{},'Compare Base with'),contrastSelect]),el('label',{class:'capacity-picker'},[el('span',{},'Selected vehicle'),vehicleSelect])]),
-    el('div',{class:'capacity-playback'},[el('div',{class:'flow-actions'},[play,restart,previous,next,el('label',{class:'cap-speed'},[el('span',{},'Speed'),speed])]),clock,slider]),
+    focal,
     el('p',{class:'cap-motion-note'},'One recorded clock for both cases. Moving dots show transfer direction only, not packets or rate.'),
-    bench.element,caption,
+    detail('Inspect full timeline',[el('div',{class:'capacity-playback'},[el('div',{class:'flow-actions'},[play,restart,previous,next,el('label',{class:'cap-speed'},[el('span',{},'Speed'),speed])]),slider]),caption]),
+    detail('Capacity used: denominator and active intervals',[utilization]),
     el('div',{class:'capacity-difference-actions'},[jumpAllocation,jumpReadiness]),firstDifference,
     el('div',{class:'capacity-examples',role:'group','aria-label':'Example visits'},exampleButtons),exampleNote,
     detail('Every vehicle: outcomes and changes',[visitTable]),detail('Service timelines and exact average rates',[figures,spansBox])]);
@@ -161,7 +177,7 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
         el('p',{class:'flow-boundary'},'Synthetic fixed study · simulation only · no real depot measurements.'),
         el('section',{class:'capacity-controls','aria-label':'Choose a comparison'},[
           el('div',{class:'flow-actions'},[loadButton,cancelButton]),
-          el('p',{class:'flow-run-help'},'Reconstructs and verifies this fixed study'),status,viewComparison,
+          el('p',{class:'flow-run-help'},'Reconstructs and checks the fixed study before playback.'),status,viewComparison,
           el('details',{class:'capacity-setup'},[el('summary',{},'Change workload or rule'),
             el('div',{class:'capacity-chips',role:'group','aria-label':'Workload'},chips),question,
             el('label',{class:'capacity-picker'},[el('span',{},'Different rule'),ruleSelect]),
@@ -169,9 +185,9 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
         ]),
       ]),preview,
     ]),
-    el('details',{class:'capacity-fixed'},[el('summary',{},'What is held fixed?'),fixedBody]),
-    el('section',{class:'capacity-cards','aria-label':'Matched comparison'},[el('h2',{},'Four matched cases'),resultSetup,grid,reading]),
-    inspect,detail('Where this model sits in a real depot',[depotMap()]),
+    inspect,el('details',{class:'capacity-fixed'},[el('summary',{},'What is held fixed?'),fixedBody]),
+    el('section',{class:'capacity-cards','aria-label':'Matched comparison'},[el('h2',{},'Published study summary'),resultSetup,grid,reading]),
+    detail('Where this model sits in a real depot',[depotMap()]),
     el('section',{class:'capacity-table','aria-labelledby':'capacity-table-title'},[el('h2',{id:'capacity-table-title'},'Full study'),
       el('p',{},'Every workload, capacity and rule at one-second slots. Each cell was repeated with quarter-second slots; the repeat agrees when every visit keeps its ready time and outcome.'),studyTable(manifest),loadedDetails]),
     el('section',{class:'capacity-limits','aria-labelledby':'capacity-limits-title'},[el('h2',{id:'capacity-limits-title'},'Model and limits'),modelHeader('Depot capacity model','Constructed depot visits',CAPACITY_VERSIONS.model).element,
@@ -187,6 +203,32 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
   const live=createLiveRegion(element);
   const announce=text=>{if(live.node.textContent!==text)live.announce(text);};
 
+  function benchVisible(){
+    if(document.hidden||inspect.hidden)return false;
+    const r=focal.getBoundingClientRect(),w=document.defaultView;
+    return r.width>0&&r.height>0&&Math.min(r.right,w.innerWidth)-Math.max(0,r.left)>0&&Math.min(r.bottom,w.innerHeight)-Math.max(0,r.top)>=Math.min(r.height,w.innerHeight)/2;
+  }
+  guide=createCapacityGuide({visible:benchVisible,reducedMotion,dataSaving,present(shot){
+    if(!comparison||destroyed)return;applyingShot=true;detached=false;
+    try{vehicle=shot.vehicle;vehicleSelect.value=vehicle;if(contrast!==shot.contrast){contrast=shot.contrast;contrastSelect.value=contrast;showContrast();}else selectVehicle(vehicle);player.seek(shot.time_s);}
+    finally{applyingShot=false;}
+  },render(s){
+    guidePlay.textContent=s.playing||s.state==='loading'||s.state==='visibilityPaused'?'Pause guide':s.state==='ended'?'Replay guide':s.shot?'Resume guide':'Watch guide';
+    guidePlay.hidden=s.restricted&&!job;guideNext.disabled=!comparison||Boolean(job);chapterButtons.forEach(b=>{b.disabled=!comparison||Boolean(job);b.setAttribute('aria-pressed',String(b.getAttribute('data-chapter')===s.shot?.chapter));});
+    const labels={loading:'Reconstructing and checking four cells. Pause cancels automatic playback',playing:'40-second guide',visibilityPaused:'Paused while the bench is out of view',ended:'Guide complete',preferencePaused:'Static storyboard: motion or data preference enabled; choose a chapter or the next snapshot',userPaused:'Guide paused',route:'Guide paused after leaving the page',setup:'Previous setup: guide paused',inspection:'Full timeline inspection',selection:'Selection changed: guide paused',cancelled:'Watch cancelled',rejected:'Comparison unavailable'};
+    guideState.textContent=`${labels[s.state]??'Choose a chapter or watch the guide'}. Editorial pacing: snapshots jump in recorded time.`;
+    if(detached)guideCaption.textContent='Inspecting the accepted records at the clock below. Resume the guide to return to its snapshot.';
+    else if(s.shot)guideCaption.textContent=`${s.shot.chapter} · ${s.shot.caption}`;
+    if(comparison&&player)renderMoment(player.getState().time_s,s.playing&&!s.reduced);
+  }});
+  function prepareGuide(){player?.pause('guide');guideToken=guide.request();guide.accept(capacityGuideShots(comparison),guideToken);}
+  function ensureGuide(){if(!guide.getState().shot){guideToken=guide.request();guide.pause();guide.accept(capacityGuideShots(comparison),guideToken);}}
+  function refreshGuide(){guide.refresh();}
+  connection?.addEventListener?.('change',refreshGuide);dataPreference?.addEventListener?.('change',refreshGuide);
+  const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(refreshGuide,{threshold:[0,.25,.5,.75,1]}):null;
+  observer?.observe(focal);document.addEventListener('visibilitychange',refreshGuide);
+  for(const event of ['scroll','resize','pageshow'])document.defaultView?.addEventListener(event,refreshGuide,{passive:true});
+
   const regimeName=id=>CAPACITY_REGIMES[id].name;
   const loadedText=()=>`Comparison loaded: ${regimeName(comparison.regime)} workload. Four cells reconstructed and matched to the accepted study.`;
   const previousSetup=()=>Boolean(comparison&&(comparison.regime!==regime||comparison.altRule!==altRule));
@@ -198,11 +240,13 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
     return loadedText();
   }
   function cancelLoad(speak=false){
-    if(job){job.cancelled=true;job=null;setBusy(loadButton,false);cancelButton.hidden=true;}
+    const cancelled=Boolean(job);
+    if(job){job.cancelled=true;job=null;setBusy(loadButton,false);cancelButton.hidden=true;guideCancel.hidden=true;guideLoading.hidden=true;focal.setAttribute('data-loading','false');}
+    if(cancelled)guide?.pause('cancelled');
     if(speak)status.textContent=`Load cancelled. ${comparison?selectionStatus():'No comparison loaded.'}`;
   }
   function editSelection(){
-    cancelLoad();player?.pause('setup');live.node.textContent='';refreshSelection();
+    cancelLoad();stopGuide('setup');player?.pause('setup');live.node.textContent='';refreshSelection();
   }
   function refreshSelection(){
     chips.forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-regime')===regime)));
@@ -211,13 +255,14 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
     const shown=comparison??{regime,altRule};
     grid.replaceChildren(...cardsFor(manifest,shown.regime,shown.altRule).map(card=>cardView(card,Boolean(comparison))));
     reading.textContent=readingSentence(manifest,shown.regime,shown.altRule)??withheldReason(manifest,shown.regime,shown.altRule);
-    resultSetup.textContent=comparison?`${previousSetup()?'Previous setup':'Loaded setup'}: ${setupText()}.`:`Study preview: ${regimeName(regime)} workload. Load to inspect the records.`;
+    resultSetup.textContent=comparison?`${previousSetup()?'Previous setup':'Loaded setup'}: ${setupText()}.`:`Published study summary: ${regimeName(regime)} workload. Watch to reconstruct the records.`;
+    element.querySelector('.capacity-cards h2').textContent=comparison?'Whole-run outcomes · fixed while replay moves':'Published study summary';
     viewComparison.hidden=!comparison;viewComparison.textContent=previousSetup()?'View previous comparison ↓':'View comparison ↓';
     if(comparison)inspectNote.textContent=`${previousSetup()?'Previous setup':'Loaded comparison'}: ${setupText()}.`;
     if(!job)status.textContent=selectionStatus();
   }
   function jumpTo(event){
-    if(!event||!player)return;selectVehicle(event.vehicle);player.seek(event.time_s);announce(eventSentence(event.time_s));
+    if(!event||!player)return;stopGuide('inspection');selectVehicle(event.vehicle);player.seek(event.time_s);announce(eventSentence(event.time_s));
   }
 
   function eventWords(record,t){
@@ -240,10 +285,10 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
     play.hidden=s.reduced;play.textContent=s.label;slider.value=String(s.time_s);
     previous.setAttribute('aria-disabled',String(s.time_s===0));next.setAttribute('aria-disabled',String(s.time_s===P.horizon_s));
     for(const line of timelines)line.setCursor(s.time_s,s.revealing);
-    renderMoment(s.time_s,s.playing&&!s.reduced);
+    renderMoment(s.time_s,(s.playing||guide?.getState().playing)&&!s.reduced);
   }
-  function selectVehicle(id){
-    vehicle=id;vehicleSelect.value=id;for(const line of timelines)line.select(id);
+  function selectVehicle(id,manual=true){
+    if(manual)stopGuide('selection');vehicle=id;vehicleSelect.value=id;for(const line of timelines)line.select(id);
     if(player){player.pause('selection');renderMoment(player.getState().time_s);}
   }
   function showContrast(){
@@ -271,48 +316,63 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
       ...(v.post?[[`${name} · Vehicle ${v.vehicle}`,'Local step',`${minute(v.post.t0)} to ${minute(v.post.t1)} min`,'No shared resource']]:[])]));
     spansBox.replaceChildren(detail('Spans as a table',[table('Merged service spans for the two cells',['Cell and vehicle','Work','Minutes','Average rate'],spanRows)]));
     const eventTimes=[...new Set([base,other].flatMap(c=>c.record.events.map(e=>e.time_s)))];
-    selectVehicle(vehicle??examples.selected??base.verification.visits[0].vehicle);
+    selectVehicle(vehicle??examples.selected??base.verification.visits[0].vehicle,false);
     player=createDepotFlowPlayer({horizon_s:P.horizon_s,eventTimes,moments:[],quantum_s:1,reducedMotion,render,announce,eventSentence});
     player.setGuided(false);player.setSpeed(Number(speed.value));player.seek(time);
   }
   function showComparison(){
-    inspect.hidden=false;showContrast();
+    recordControls.forEach(c=>{c.disabled=false;});inspect.hidden=false;showContrast();
+    utilization.replaceChildren(el('p',{},'Full-horizon utilization is useful work divided by capacity × the full 90-minute observation, including idle time. Doubling capacity can lower this fraction while reducing contention and improving readiness. Utilization is not the objective.'),
+      ...Object.entries(comparison.cells).map(([key,cell])=>el('section',{},[el('h3',{},caseLabel(key)),...['upload','charge'].map(kind=>{
+        const a=capacityActivity(cell.record,kind),unit=kind==='upload'?'bytes':'J',periods=a.intervals.map(i=>`${minute(i.start_s)} to ${minute(i.end_s)}`).join(', ');
+        return el('p',{},`${kind==='upload'?'Uplink':'Site feed'}: ${a.used.toLocaleString('en-US')} / ${a.available.toLocaleString('en-US')} ${unit}. Positive-service intervals: ${periods?`minutes ${periods}; ${minute(a.active_s)} active minutes`:'none; no service needed'}.`);
+      })])));
     loadedDetails.replaceChildren(...['base','rule','bandwidth','power'].map(c=>{const cell=comparison.cells[c];return detail(`Exact record · ${cell.cell_id}`,[
       el('p',{},`Record digest: ${cell.digest}`),
       button('Download this cell as JSON',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify({cell_id:cell.cell_id,digest:cell.digest,record:cell.record,verification:cell.verification},null,2)],{type:'application/json'}));const a=el('a',{href:url,download:`fleetlab-capacity-${cell.cell_id.replaceAll('/','-')}.json`});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}),
       el('pre',{class:'capacity-checks'},JSON.stringify(cell.verification.checks,null,2))]);}));
   }
 
-  async function load(){
+  async function watch(){
+    if(destroyed||!complete.complete)return;cancelLoad();player?.pause('watch');guideToken=guide.request();
+    inspect.hidden=false;focal.setAttribute('data-loading','true');guideCaption.textContent='The guide appears here after all four fixed records pass their checks.';
+    // Navigate only on Watch, never on asynchronous acceptance.
+    element.querySelector('#capacity-comparison').focus({preventScroll:true});
+    focal.scrollIntoView({block:'start',behavior:'instant'});
+    return load(guideToken);
+  }
+
+  async function load(watchToken=null){
     if(job||destroyed||!complete.complete)return;
-    player?.pause('load');
+    player?.pause('load');if(watchToken===null)stopGuide('inspection');
     const token={cancelled:false},chosen={regime,altRule},wanted=caseCells(regime,altRule),cells={};let failure=null,iterator;
-    job=token;setBusy(loadButton,true);cancelButton.hidden=false;
+    job=token;setBusy(loadButton,true);cancelButton.hidden=false;guideCancel.hidden=false;guideLoading.hidden=false;guidePlay.hidden=false;guideNext.disabled=true;chapterButtons.forEach(b=>{b.disabled=true;});
     try{
       iterator=steps(wanted.map(c=>c.cell),{shouldCancel:()=>token.cancelled});
       for(const [n,c] of wanted.entries()){
-        status.textContent=`Reconstructing ${c.label}: cell ${n+1} of ${wanted.length}.`;
+        status.textContent=`Reconstructing ${c.label}: cell ${n+1} of ${wanted.length}.`;guideLoading.textContent=status.textContent;
         await yieldPage();
         if(destroyed||token.cancelled||job!==token)return;
         try{const step=iterator.next();if(step.done)throw Error('no record was reconstructed');cells[c.case]=verifiedCell(step.value,manifest.cells.find(m=>m.cell_id===c.cell_id));}
         catch(error){failure=`Cell ${c.cell_id}: ${String(error?.message??error).replace(/\.$/,'')}.`;break;}
       }
     }catch(error){failure=`Comparison unavailable: ${String(error?.message??error).replace(/\.$/,'')}.`;}
-    finally{iterator?.return?.();if(job===token){job=null;if(!destroyed){setBusy(loadButton,false);cancelButton.hidden=true;}}}
+    finally{iterator?.return?.();if(job===token){job=null;if(!destroyed){setBusy(loadButton,false);cancelButton.hidden=true;guideCancel.hidden=true;guideLoading.hidden=true;focal.setAttribute('data-loading','false');guideNext.disabled=!comparison;chapterButtons.forEach(b=>{b.disabled=!comparison;});}}}
     if(destroyed||token.cancelled)return;
-    if(failure){status.textContent=`${failure} ${comparison?'Previous comparison retained.':'No comparison loaded.'}`;return;}
+    if(failure){guide.pause('rejected');guideCaption.textContent='Reconstruction did not pass. No new guided playback is available.';status.textContent=`${failure} ${comparison?'Previous comparison retained.':'No comparison loaded.'}`;return;}
     comparison=Object.freeze({...chosen,cells:Object.freeze(cells)});
     refreshSelection();showComparison();
+    if(watchToken!==null){if(!autoGuide)guide.pause();guide.accept(capacityGuideShots(comparison),watchToken);}
   }
 
-  const departure=()=>{if(job)cancelLoad(true);player?.pause('route');live.node.textContent='';};
+  const departure=()=>{guide.pause('route');if(job)cancelLoad(true);player?.pause('route');live.node.textContent='';};
   const windowTarget=document.defaultView;windowTarget?.addEventListener('pagehide',departure);
   refreshSelection();
   if(!complete.complete)setBusy(loadButton,false,true);
-  return {element,load,
-    getState:()=>({regime,altRule,contrast,vehicle,comparison,time_s:player?.getState().time_s??0,loading:job!==null,status:status.textContent}),
-    pause(){player?.pause();live.node.textContent='';},
-    motionChanged(){player?.motionChanged();},
-    destroy(){destroyed=true;cancelLoad();windowTarget?.removeEventListener('pagehide',departure);player?.destroy();player=null;live.node.textContent='';},
+  return {element,load,watch,
+    getState:()=>({regime,altRule,contrast,vehicle,comparison,time_s:player?.getState().time_s??0,loading:job!==null,status:status.textContent,guided:guide.getState()}),
+    pause(){guide.pause();player?.pause();live.node.textContent='';},
+    motionChanged(){guide.refresh();player?.motionChanged();},
+    destroy(){destroyed=true;cancelLoad();guide.destroy();observer?.disconnect();connection?.removeEventListener?.('change',refreshGuide);dataPreference?.removeEventListener?.('change',refreshGuide);document.removeEventListener('visibilitychange',refreshGuide);for(const event of ['scroll','resize','pageshow'])windowTarget?.removeEventListener(event,refreshGuide);windowTarget?.removeEventListener('pagehide',departure);player?.destroy();player=null;live.node.textContent='';},
   };
 }
