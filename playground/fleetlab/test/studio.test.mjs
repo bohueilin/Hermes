@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { mountStudio } from "../src/ui/studio.js";
 import { createInitialState, createStore } from "../src/ui/store.js";
@@ -213,6 +214,19 @@ test('welcome names the teaching boundary before a visitor enters a model',()=>{
   assert.match(welcome.textContent,/Synthetic teaching simulator/);
   assert.match(welcome.textContent,/NOT_EVIDENCE/);
   assert.match(welcome.textContent,/decision authority NONE/);
+ }finally{x.studio.destroy();x.restore();}
+});
+
+test('Home document order is the phone reading order, with no CSS reordering',()=>{
+ const x=setup();try{
+  const main=x.studio.element.querySelector('main.studio-overview'),shape=node=>node.children.map(c=>`${c.localName}.${c.getAttribute('class')}`);
+  assert.deepEqual(shape(main),['section.studio-film-hero','div.film-caption','nav.home-browse']);
+  assert.deepEqual(shape(main.children[0]),['div.film-copy','section.start-points','div.welcome-visual']);
+  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+  for(const [,selector,body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)){
+   if(/\.(start-points|welcome-visual|film-caption|home-browse)(?![\w-])/.test(selector))assert.doesNotMatch(body,/(^|[;\s])order\s*:/,selector.trim());
+   if(/\.studio-film-hero(?![\w-])/.test(selector))assert.doesNotMatch(body,/display\s*:\s*contents/,selector.trim());
+  }
  }finally{x.studio.destroy();x.restore();}
 });
 

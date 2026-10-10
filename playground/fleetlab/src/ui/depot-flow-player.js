@@ -15,11 +15,11 @@ export function createDepotFlowPlayer({horizon_s, eventTimes = [], moments = [],
   const stops = moments.slice().sort((a,b) => a.time_s-b.time_s);
   if (stops.some((m,i) => !Number.isFinite(m.time_s) || m.time_s < 0 || m.time_s > horizon_s || (i && m.time_s === stops[i-1].time_s))) throw new RangeError('Invalid guided moment.');
   let time=0, sampled=0, playing=false, revealing=false, speed=20, guided=true, reduced=Boolean(reducedMotion());
-  let frame=null, last=null, carry=0, destroyed=false, reason='initial', moment=null;
-  const label=()=>playing?'Pause':sampled===horizon_s?'Play from minute 0':reduced?(revealing&&sampled>0?'Continue by event':'Play by event'):(revealing&&sampled>0?'Continue':'Play');
+  let frame=null, last=null, destroyed=false, reason='initial', moment=null;
+  const label=()=>playing?'Pause':sampled===horizon_s?'Play from minute 0':reduced?'Next event':(revealing&&sampled>0?'Continue':'Play');
   const getState=()=>({time_s:sampled,playing,speed,guided,revealing,reduced,label:label(),reason,moment});
   const emit=(why,textChanged=true)=>{reason=why;render({...getState(),textChanged});};
-  const cancel=()=>{if(frame!==null)scheduler.cancel(frame);frame=null;last=null;carry=0;};
+  const cancel=()=>{if(frame!==null)scheduler.cancel(frame);frame=null;last=null;};
   const stop=()=>{playing=false;cancel();};
   const schedule=()=>{if(!destroyed&&playing&&frame===null)frame=scheduler.request(tick);};
   const at=t=>{time=t;sampled=Math.min(horizon_s,Math.floor((t+1e-9)/quantum_s)*quantum_s);};
@@ -36,37 +36,36 @@ export function createDepotFlowPlayer({horizon_s, eventTimes = [], moments = [],
     if(last===null){last=timestamp;schedule();return;}
     const delta=Math.max(0,timestamp-last);last=timestamp;
     const before=sampled;
-    let next;
-    if(reduced){carry+=delta;if(carry<1000){schedule();return;}carry=0;next=times.find(t=>t>sampled)??horizon_s;}
-    else next=time+Math.min(delta,250)*speed/1000;
     const nextMoment=guided?stops.find(m=>m.time_s>time):null;
     const limit=nextMoment?.time_s??horizon_s;
-    at(Math.min(next,limit,horizon_s));
+    at(Math.min(time+Math.min(delta,250)*speed/1000,limit,horizon_s));
     const end=time>=horizon_s,hit=nextMoment&&time===nextMoment.time_s;
     if(end||hit)stop();
     moment=hit?nextMoment:null;
-    if(sampled!==before||end||hit)emit(end?'end':hit?'guided':'frame',Boolean(end||hit||reduced||Math.floor(before/60)!==Math.floor(sampled/60)||times.some(t=>t>before&&t<=sampled)));
+    if(sampled!==before||end||hit)emit(end?'end':hit?'guided':'frame',Boolean(end||hit||Math.floor(before/60)!==Math.floor(sampled/60)||times.some(t=>t>before&&t<=sampled)));
     if(end)announce(`End of the recorded run at minute ${horizon_s/60}. Final results are in the End-of-run outcomes table.`);
     else if(hit)announce(`Guided moment ${stops.indexOf(nextMoment)+1} of ${stops.length}. ${nextMoment.caption}`);
-    else if(reduced)announce(eventSentence(sampled));
     schedule();
   }
+  /** Under reduced motion, Play steps once to the next event instead of starting a clock. */
   function play(){
     if(destroyed||playing||visibilityTarget?.hidden)return;
-    reduced=Boolean(reducedMotion());if(sampled>=horizon_s)at(0);
-    revealing=true;playing=true;moment=null;last=null;carry=0;emit('play');
-    announce(reduced?`Playing one event per second from minute ${sampled/60}.`:guided?`Playing from minute ${sampled/60} at ${speed} times speed. Stops at ${stops.filter(m=>m.time_s>sampled).length} guided moments.`:`Playing to minute ${horizon_s/60} without stopping.`);
+    reduced=Boolean(reducedMotion());
+    if(reduced){revealing=true;if(sampled>=horizon_s)seek(0);else next();return;}
+    if(sampled>=horizon_s)at(0);
+    revealing=true;playing=true;moment=null;last=null;emit('play');
+    announce(guided?`Playing from minute ${sampled/60} at ${speed} times speed. Stops at ${stops.filter(m=>m.time_s>sampled).length} guided moments.`:`Playing to minute ${horizon_s/60} without stopping.`);
     schedule();
   }
   function seek(t,{announce: speak=false}={}){
     if(destroyed)return;if(!Number.isFinite(t))throw new RangeError('Invalid playback time.');
     stop();at(Math.max(0,Math.min(horizon_s,t)));moment=stops.find(m=>m.time_s===sampled)??null;emit('seek');if(speak)announce(eventSentence(sampled));
   }
+  const next=()=>seek(times.find(t=>t>sampled)??horizon_s,{announce:true});
   const visibility=()=>{if(visibilityTarget?.hidden)pause('hidden');};
   visibilityTarget?.addEventListener('visibilitychange',visibility);
-  return {getState,play,pause,seek,motionChanged,
+  return {getState,play,pause,seek,motionChanged,next,
     previous(){seek([...times].reverse().find(t=>t<sampled)??0,{announce:true});},
-    next(){seek(times.find(t=>t>sampled)??horizon_s,{announce:true});},
     restart(){if(destroyed)return;revealing=true;seek(0);},
     setSpeed(value){if(!SPEEDS.includes(value))throw new RangeError('Playback speed must be 10, 20 or 40.');if(destroyed)return;speed=value;emit('speed',false);},
     setGuided(value){if(destroyed)return;guided=Boolean(value);emit('guided-mode',false);},

@@ -33,13 +33,33 @@ test('seeks are synchronous, resting frames stay zero, and reveal survives rever
   }finally{h.close();}
 });
 
-test('reduced motion steps by exact event every second, pauses on preference changes and never auto-resumes',async()=>{
+test('reduced motion play steps to the next event without scheduling a frame',async()=>{
   const h=await harness();try{
-    h.setReduced(true);h.player.play();assert.equal(h.player.getState().label,'Pause');h.tick(0);h.tick(999);
-    assert.equal(h.player.getState().time_s,0);h.tick(1000);assert.equal(h.player.getState().time_s,60);assert.equal(h.spoken.at(-1),'Event at 60');
-    h.tick(2000);assert.equal(h.player.getState().time_s,120);h.tick(3000);assert.equal(h.player.getState().time_s,180);assert.equal(h.frames.size,0);
-    h.setReduced(false);assert.equal(h.frames.size,0);h.player.play();h.tick(4000);h.tick(4100);const t=h.player.getState().time_s;
-    h.setReduced(true);assert.equal(h.player.getState().time_s,t);assert.equal(h.frames.size,0);assert.equal(h.player.getState().label,'Continue by event');
+    h.setReduced(true);h.player.play();
+    assert.equal(h.player.getState().time_s,60);assert.equal(h.frames.size,0);assert.equal(h.spoken.at(-1),'Event at 60');
+    assert.equal(h.player.getState().revealing,true);assert.equal(h.player.getState().label,'Next event');
+    h.player.play();assert.equal(h.player.getState().time_s,120);assert.equal(h.frames.size,0);
+  }finally{h.close();}
+});
+
+test('reduced motion play at the horizon returns to minute 0 without scheduling a frame',async()=>{
+  const h=await harness();try{
+    h.setReduced(true);h.player.seek(900);assert.equal(h.player.getState().label,'Play from minute 0');
+    h.player.play();assert.equal(h.player.getState().time_s,0);assert.equal(h.frames.size,0);assert.equal(h.player.getState().label,'Next event');
+  }finally{h.close();}
+});
+
+test('leaving reduced motion restores timed playback',async()=>{
+  const h=await harness();try{
+    h.setReduced(true);h.setReduced(false);h.player.play();assert.equal(h.frames.size,1);assert.equal(h.player.getState().playing,true);
+  }finally{h.close();}
+});
+
+test('turning on reduced motion while playing pauses on Next event',async()=>{
+  const h=await harness();try{
+    h.player.play();h.tick(0);h.tick(100);const t=h.player.getState().time_s;
+    h.setReduced(true);assert.equal(h.frames.size,0);assert.equal(h.player.getState().playing,false);
+    assert.equal(h.player.getState().time_s,t);assert.equal(h.player.getState().label,'Next event');
   }finally{h.close();}
 });
 

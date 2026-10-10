@@ -1441,7 +1441,12 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 @media (min-width: 768px) { .studio-header nav a { white-space: nowrap; } }
 .studio-overview .studio-button, .studio-approach .studio-button, .lab-links .studio-button, .simulation-catalog .studio-button, .depot-flow-lab .studio-button { font-size: 15px !important; }
 .studio-film-hero { display: grid; grid-template-columns: minmax(0,1fr); gap: 40px; padding: 56px 0 24px; }
-@media (min-width: 1000px) { .studio-film-hero { grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); align-items: center; gap: 56px; padding-top: 72px; } }
+@media (min-width: 1000px) {
+  .studio-film-hero { grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-areas: "copy visual" "start start"; align-items: center; gap: 56px; padding-top: 72px; }
+  .film-copy { grid-area: copy; }
+  .welcome-visual { grid-area: visual; }
+  .start-points { grid-area: start; }
+}
 .film-copy { min-width: 0; }
 .film-copy .eyebrow { color: var(--accent); }
 .film-copy h1, .approach-intro h1, .catalog-intro h1, .depot-flow-lab h1 { color: var(--ink); font-size: clamp(40px,5vw,64px); font-weight: 550; letter-spacing: -.045em; line-height: 1.05; margin: 20px 0 24px; max-width: 14ch; text-wrap: balance; }
@@ -1486,15 +1491,11 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 }
 @media (max-width: 767.98px) {
   .studio-overview, .studio-approach, .studio-footer { padding-inline: 20px; }
-  /* On a phone the film follows the starting points (proposal section 4): the hero section dissolves into
-     the page column so its two halves can be ordered around the start cards. */
   .studio-overview { display: flex; flex-direction: column; }
-  .studio-film-hero { display: contents; }
+  .studio-film-hero { padding: 0; gap: 0; }
   .film-copy { padding-top: 32px; }
-  .start-points { order: 1; margin-top: 36px; }
-  .welcome-visual { order: 2; margin-top: 40px; }
-  .film-caption { order: 3; }
-  .home-browse { order: 4; }
+  .start-points { margin-top: 36px; }
+  .welcome-visual { margin-top: 40px; }
   .film-copy .hero-actions { gap: 8px; margin-top: 22px; }
   .welcome-boundary { margin-top: 22px; }
   .welcome-visual { min-height: 345px; padding: 14px; }
