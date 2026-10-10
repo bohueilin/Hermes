@@ -51,6 +51,12 @@ export const SITE_BOOT = [
   "",
 ].join("\n");
 
+/** The capacity page's boot module (`network-flows/capacity/boot.js`), pinned byte for byte by the City release tool too. */
+export const SITE_CAPACITY_BOOT = 'import { startCapacity } from "../../src/ui/capacity-app.js";\nstartCapacity();\n';
+
+/** Where the hosted site serves the NF-03 capacity page, from `capacity/index.html` in the playground. */
+const SITE_CAPACITY_DIR = "network-flows/capacity";
+
 /** Throwable build error with a clear message. */
 export class PackError extends Error {
   constructor(message) {
@@ -773,10 +779,31 @@ export function buildHtml(playgroundDir) {
 }
 
 /**
- * The hosted folder as a map from relative path to text (`--site`): every module the page or the worker reaches,
- * unchanged, at its `src/` path; `styles.css`; `index.html` as the development shell with the site policy first in
- * `<head>`, the stylesheet link and one module script for `boot.js`; `boot.js`; and `_headers`. Nothing else, so
- * tests, tools and fixtures never reach a host.
+ * A development page as a hosted page: its scripts and links removed, the site policy first in `<head>`, one
+ * stylesheet link (`stylesheet`, relative to the page) and one module script for the `boot.js` beside it.
+ */
+function sitePage(dir, name, stylesheet) {
+  const path = join(dir, name);
+  if (!existsSync(path)) throw new PackError(`${name} does not exist; the site serves it`);
+  let html = readFileSync(path, "utf8");
+  html = html.replace(/<script\b[\s\S]*?<\/script>\s*/gi, "").replace(/<link\b[^>]*>\s*/gi, "");
+  const head = /<head\b[^>]*>/i.exec(html);
+  if (!head || !/<\/head>/i.test(html) || !/<\/body>/i.test(html)) {
+    throw new PackError(`${name} needs <head>, </head> and </body>`);
+  }
+  if (/Content-Security-Policy/i.test(html)) throw new PackError(`${name} already declares a policy`);
+  const at = head.index + head[0].length;
+  html = html.slice(0, at) + `<meta http-equiv="Content-Security-Policy" content="${SITE_CONTENT_SECURITY_POLICY}">` + html.slice(at);
+  html = html.replace(/<\/head>/i, () => `<link rel="stylesheet" href="${stylesheet}">\n</head>`);
+  return html.replace(/<\/body>/i, () => '<script type="module" src="./boot.js"></script>\n</body>');
+}
+
+/**
+ * The hosted folder as a map from relative path to text (`--site`): every module the page, the worker or the capacity
+ * page reaches, unchanged, at its `src/` path and written once; `styles.css`; `index.html` as the development shell
+ * with the site policy first in `<head>`, the stylesheet link and one module script for `boot.js`; `boot.js`;
+ * `network-flows/capacity/index.html` and `boot.js` made the same way from `capacity/index.html`; and `_headers`.
+ * Nothing else, so tests, tools and fixtures never reach a host.
  */
 export function buildSite(playgroundDir) {
   const dir = resolve(playgroundDir);
@@ -784,25 +811,16 @@ export function buildSite(playgroundDir) {
   if (!existsSync(workerEntry)) throw new PackError("src/runtime/worker.js does not exist yet; the site cannot be built");
   const sourceRoot = join(dir, "src");
   const files = new Map();
-  for (const entry of [join(dir, "src/ui/app.js"), workerEntry]) {
+  for (const entry of [join(dir, "src/ui/app.js"), workerEntry, join(dir, "src/ui/capacity-app.js")]) {
     for (const record of moduleGraph(entry, sourceRoot).order) files.set(record.label, record.src);
   }
   const cssPath = join(dir, "styles.css");
   if (!existsSync(cssPath)) throw new PackError("styles.css does not exist; the site links it");
   files.set("styles.css", readFileSync(cssPath, "utf8"));
-  let html = readFileSync(join(dir, "index.html"), "utf8");
-  html = html.replace(/<script\b[\s\S]*?<\/script>\s*/gi, "").replace(/<link\b[^>]*>\s*/gi, "");
-  const head = /<head\b[^>]*>/i.exec(html);
-  if (!head || !/<\/head>/i.test(html) || !/<\/body>/i.test(html)) {
-    throw new PackError("index.html needs <head>, </head> and </body>");
-  }
-  if (/Content-Security-Policy/i.test(html)) throw new PackError("index.html already declares a policy");
-  const at = head.index + head[0].length;
-  html = html.slice(0, at) + `<meta http-equiv="Content-Security-Policy" content="${SITE_CONTENT_SECURITY_POLICY}">` + html.slice(at);
-  html = html.replace(/<\/head>/i, () => '<link rel="stylesheet" href="./styles.css">\n</head>');
-  html = html.replace(/<\/body>/i, () => '<script type="module" src="./boot.js"></script>\n</body>');
-  files.set("index.html", html);
+  files.set("index.html", sitePage(dir, "index.html", "./styles.css"));
   files.set("boot.js", SITE_BOOT);
+  files.set(`${SITE_CAPACITY_DIR}/index.html`, sitePage(dir, "capacity/index.html", "../../styles.css"));
+  files.set(`${SITE_CAPACITY_DIR}/boot.js`, SITE_CAPACITY_BOOT);
   files.set("_headers", SITE_HEADERS);
   const codeBytes = [...files.values()].reduce((sum, text) => sum + Buffer.byteLength(text), 0);
   if (codeBytes > APP_MAX_BYTES) throw new PackError("app size exceeds source byte limit");

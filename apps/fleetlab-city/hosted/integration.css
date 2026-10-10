@@ -310,7 +310,7 @@ button, input, select, textarea{font: inherit}
 .scale-chooser a{font-size: 12px}}
 
 .fleet-studio{font-size:16px;line-height:1.6;--faint:#5e6c7d}
-.fleet-studio p:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.flow-lede):not(.catalog-meta):not(.catalog-labs):not(.catalog-count){font-size:16px;line-height:1.6}
+.fleet-studio p:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.flow-lede):not(.catalog-meta):not(.catalog-labs):not(.catalog-count):not(.flow-definition):not(.flow-run-help):not(.flow-status):not(.flow-wait-reason):not(.capacity-status):not(.capacity-question){font-size:16px;line-height:1.6}
 .welcome-boundary{flex-wrap:wrap}
 .welcome-boundary .hosted-trust-legend{flex-basis:100%;max-width:1000px;margin:0;text-align:left;font-size:14px;line-height:1.6}
 .street-map figcaption,.street-event-log time{color:#566579}
@@ -319,5 +319,3 @@ button, input, select, textarea{font: inherit}
 /* Keep the existing larger introductory hierarchy above the prose floor. */
 .fleet-studio p.scene-invitation{font-size:18px}
 @media(min-width:768px){.fleet-studio .street-intro p.hero-lede:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.flow-lede){font-size:18px}}
-
-.fleet-studio .depot-flow-lab .flow-lede { font-size:20px;line-height:1.6; }

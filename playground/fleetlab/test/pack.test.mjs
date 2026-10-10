@@ -33,6 +33,7 @@ import {
   PackError,
   parseModule,
   SITE_BOOT,
+  SITE_CAPACITY_BOOT,
   SITE_CONTENT_SECURITY_POLICY,
   SITE_HEADERS,
 } from "../tools/pack.mjs";
@@ -134,6 +135,10 @@ const GRAPH = {
     "export { later };",
     "export function start({ createWorker }) { return createWorker(); }",
   ].join("\n"),
+  "src/ui/capacity-app.js": [
+    'import { HONESTY } from "./labels.js";',
+    "export function startCapacity() { return HONESTY.strip; }",
+  ].join("\n"),
   "src/runtime/worker.js": [
     'import { add } from "../core/a.js";',
     'const closing = "</script><!-- end";',
@@ -154,6 +159,24 @@ const GRAPH = {
     '<script type="module">',
     'import { start } from "./src/ui/app.js";',
     'start({ studio: true, createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });',
+    "</script>",
+    "</body>",
+    "</html>",
+    "",
+  ].join("\n"),
+  "capacity/index.html": [
+    "<!doctype html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8">',
+    "<title>Scratch capacity page</title>",
+    '<link rel="stylesheet" href="../styles.css">',
+    "</head>",
+    "<body>",
+    '<div id="capacity-root"></div>',
+    '<script type="module">',
+    'import { startCapacity } from "../src/ui/capacity-app.js";',
+    "startCapacity();",
     "</script>",
     "</body>",
     "</html>",
@@ -826,7 +849,9 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
   const labels = requiredLabels();
   const quiet = { log: () => {}, error: () => {} };
   const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const SITE_FILES = ["_headers", "boot.js", "index.html", "src/core/a.js", "src/core/b.js", "src/core/c.js", "src/core/side.js", "src/runtime/worker.js", "src/ui/app.js", "src/ui/labels.js", "styles.css"];
+  const SITE_FILES = ["_headers", "boot.js", "index.html", "network-flows/capacity/boot.js", "network-flows/capacity/index.html", "src/core/a.js", "src/core/b.js", "src/core/c.js", "src/core/side.js", "src/runtime/worker.js", "src/ui/app.js", "src/ui/capacity-app.js", "src/ui/labels.js", "styles.css"];
+  const CAPACITY_INDEX = "network-flows/capacity/index.html";
+  const CAPACITY_BOOT = "network-flows/capacity/boot.js";
 
   test("buildSite holds the page shell, the boot module, the stylesheet, the headers and every reachable module unchanged, nothing else", () => {
     const graph = { ...GRAPH, "src/core/unreachable.js": "export const dead = 1;\n", "test/x.test.mjs": "// never shipped\n" };
@@ -845,7 +870,26 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     assert.equal((html.match(/<link\b/g) ?? []).length, 1);
     assert.ok(!html.includes("import {"));
     assert.ok(html.includes('<div id="fleetlab-root"></div>'), "the shell body is kept");
+    assert.equal(files.get(CAPACITY_BOOT), SITE_CAPACITY_BOOT);
+    const page = files.get(CAPACITY_INDEX);
+    assert.match(page, new RegExp(`^<!doctype html>\\n<html lang="en">\\n<head><meta http-equiv="Content-Security-Policy" content="${escapeRegExp(SITE_CONTENT_SECURITY_POLICY)}">\\n<meta charset="utf-8">`));
+    assert.ok(page.includes('<link rel="stylesheet" href="../../styles.css">\n</head>'));
+    assert.ok(page.includes('<script type="module" src="./boot.js"></script>\n</body>'));
+    assert.equal((page.match(/<script\b/g) ?? []).length, 1, "the capacity page's inline module script is gone");
+    assert.deepEqual(page.match(/<link\b[^>]*>/g), ['<link rel="stylesheet" href="../../styles.css">']);
+    assert.ok(!page.includes("import {") && !page.includes('href="../styles.css"'), "the development page's script and link are gone");
+    assert.ok(page.includes('<div id="capacity-root"></div>'), "the capacity page body is kept");
+    assert.equal(files.get("src/ui/labels.js"), graph["src/ui/labels.js"], "a module both pages reach is written once, unchanged");
     assert.deepEqual(checkSite(files, { requiredLabels: labels }), []);
+  });
+
+  test("buildSite refuses a playground without the capacity page or its entry module", () => {
+    const withoutPage = { ...GRAPH };
+    delete withoutPage["capacity/index.html"];
+    assert.throws(() => buildSite(fakeRepository("site-no-capacity-page", withoutPage).playground), (err) => err instanceof PackError && /capacity\/index\.html/.test(err.message));
+    const withoutEntry = { ...GRAPH };
+    delete withoutEntry["src/ui/capacity-app.js"];
+    assert.throws(() => buildSite(fakeRepository("site-no-capacity-entry", withoutEntry).playground), (err) => err instanceof PackError && /capacity-app\.js/.test(err.message));
   });
 
   test("the hosted policy takes scripts, the worker and the stylesheet from the site only, and the headers repeat it with frame-ancestors", () => {
@@ -860,6 +904,7 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     assert.ok(SITE_HEADERS.endsWith("\n"));
     assert.ok(/^\/\*\n(  [A-Za-z-]+: [^\n]+\n)+$/.test(SITE_HEADERS), "one path block of indented header lines");
     assert.equal(SITE_BOOT, 'import { start } from "./src/ui/app.js";\nstart({ studio: true, createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });\n');
+    assert.equal(SITE_CAPACITY_BOOT, 'import { startCapacity } from "../../src/ui/capacity-app.js";\nstartCapacity();\n');
   });
 
   test("--site writes exactly the manifest under dist/ or outside, twice over, and refuses other places", () => {
@@ -867,7 +912,7 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     const before = snapshot(root);
     const logs = [];
     assert.equal(packMain(["--site", "dist/site", "--playground", playground], { cwd: root, log: (m) => logs.push(m), error: () => {} }), 0);
-    assert.match(logs.join("\n"), /^pack: wrote 11 files to .*dist\/site \(\d+ bytes\)$/m);
+    assert.match(logs.join("\n"), /^pack: wrote 14 files to .*dist\/site \(\d+ bytes\)$/m);
     const after = snapshot(root);
     assert.deepEqual([...after.keys()].filter((k) => !before.has(k)).sort(), SITE_FILES.map((p) => `dist/site/${p}`));
     for (const [path, text] of before) assert.equal(after.get(path), text, `${path} unchanged`);
@@ -954,8 +999,30 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     expectProblem(withFile("index.html", clean.get("index.html").replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, "")), /^policy: no Content-Security-Policy meta element/);
     expectProblem(withFile("boot.js", `${SITE_BOOT}console.log("extra");\n`), /^boot: boot\.js differs from the module pack\.mjs writes/);
     expectProblem(withFile("_headers", SITE_HEADERS.replace("frame-ancestors 'none'", "frame-ancestors *")), /^headers: _headers differs from the text pack\.mjs writes/);
-    for (const name of ["index.html", "boot.js", "styles.css", "_headers"]) expectProblem(withFile(name, null), new RegExp(`^file: ${escapeRegExp(name)} is missing`));
-    for (const extra of ["notes.txt", ".DS_Store", "src/ui/app.js.map", "test/x.test.mjs", "src/ui/App.html"]) expectProblem(withFile(extra, "x"), new RegExp(`^file: unexpected ${escapeRegExp(extra)}`));
+    for (const name of ["index.html", "boot.js", "styles.css", "_headers", CAPACITY_INDEX, CAPACITY_BOOT]) expectProblem(withFile(name, null), new RegExp(`^file: ${escapeRegExp(name)} is missing`));
+    const page = clean.get(CAPACITY_INDEX);
+    expectProblem(withFile(CAPACITY_BOOT, SITE_CAPACITY_BOOT.replace("startCapacity();", "startCapacity( );")), /^boot: network-flows\/capacity\/boot\.js differs from the module pack\.mjs writes/);
+    expectProblem(withFile(CAPACITY_BOOT, `${SITE_CAPACITY_BOOT} `), /^boot: network-flows\/capacity\/boot\.js differs/);
+    expectProblem(withFile(CAPACITY_BOOT, SITE_CAPACITY_BOOT.replace("../../src/", "../../srx/")), /^boot: network-flows\/capacity\/boot\.js differs/);
+    expectProblem(withFile(CAPACITY_BOOT, SITE_BOOT), /^boot: network-flows\/capacity\/boot\.js differs/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("</body>", '<script type="module" src="./boot.js"></script>\n</body>')), /^network-flows\/capacity\/index\.html: expected exactly one module script/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("</body>", "<script>alert(1)</script>\n</body>")), /^network-flows\/capacity\/index\.html: expected exactly one module script/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("../../styles.css", "./styles.css")), /^network-flows\/capacity\/index\.html: expected exactly one stylesheet link/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("</head>", '<link rel="icon" href="./x.png">\n</head>')), /^forbidden token in network-flows\/capacity\/index\.html: <link/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, "")), /^network-flows\/capacity\/index\.html: policy: no Content-Security-Policy meta element/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")), /^network-flows\/capacity\/index\.html: policy: content differs from the design policy/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace(/(<meta http-equiv="Content-Security-Policy"[^>]*>)(\n<meta charset="utf-8">)/, "$2$1")), /^network-flows\/capacity\/index\.html: policy: the Content-Security-Policy meta element is not the first child of <head>/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("</body>", '<img src="//example.org/a.png">\n</body>')), /^external URL in network-flows\/capacity\/index\.html: a protocol-relative reference in src/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("</body>", '<a href="https://example.org/">x</a>\n</body>')), /^external URL in network-flows\/capacity\/index\.html: "https:/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("</head>", '<meta http-equiv="refresh" content="0">\n</head>')), /^forbidden element in network-flows\/capacity\/index\.html: a meta refresh/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("<title>Scratch capacity page</title>", `<title>Scratch ${EN_DASH} capacity</title>`)), /^dash: an em or en dash in network-flows\/capacity\/index\.html text/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("<title>Scratch capacity page</title>", "<title>Capacity monitoring</title>")), /^banned word: "monitoring" in network-flows\/capacity\/index\.html text/);
+    expectProblem(withFile(CAPACITY_INDEX, page.replace("</body>", `<p>${labels[2]}</p>\n</body>`)), /^required label: entry 2 of the label tuple appears in network-flows\/capacity\/index\.html/);
+    expectProblem(withFile("src/ui/capacity-app.js", `${clean.get("src/ui/capacity-app.js")}\nconst r = fetch("/study.json");\n`), /^forbidden token in src\/ui\/capacity-app\.js: fetch\(/);
+    expectProblem(withFile("src/ui/capacity-app.js", `${clean.get("src/ui/capacity-app.js")}\nconst m = import("./other.js");\n`), /^forbidden token in src\/ui\/capacity-app\.js: import\(/);
+    expectProblem(withFile("src/ui/depot-capacity-extra.js", 'export const words = "fine";\n'), /^copy coverage: src\/ui\/depot-capacity-extra\.js/);
+    expectProblem(withFile("src/ui/depot-capacity-view.js", 'export const words = "Live capacity";\n'), /^banned word: "Live" in src\/ui\/depot-capacity-view\.js string/);
+    for (const extra of ["notes.txt", ".DS_Store", "src/ui/app.js.map", "test/x.test.mjs", "src/ui/App.html", "network-flows/index.html", "network-flows/capacity/extra.js", "capacity/index.html"]) expectProblem(withFile(extra, "x"), new RegExp(`^file: unexpected ${escapeRegExp(extra)}`));
     expectProblem(withFile("src/core/c.js", `${clean.get("src/core/c.js")}const label = ${JSON.stringify(labels[1])};\n`), /^required label: entry 1 of the label tuple appears in src\/core\/c\.js/);
     assert.ok(checkSite(withFile("src/core/c.js", `${clean.get("src/core/c.js")}const label = ${JSON.stringify(labels[1])};\n`), { requiredLabels: labels }).every((p) => !p.includes(labels[1])), "messages never repeat the label");
     expectProblem(withFile("src/core/big.js", `export const big = "${"x".repeat(MAX_BYTES)}";\n`), new RegExp(`^size: \\d+ bytes is over the ${MAX_BYTES} byte limit`));
@@ -970,7 +1037,7 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     const errors = [];
     const io = { log: (m) => logs.push(m), error: (m) => errors.push(m) };
     assert.equal(checkDistMain(["--site", join(root, "dist/site")], { env, ...io }), 0);
-    assert.match(logs.join("\n"), /^check-dist: OK .*dist\/site \(11 files, \d+ bytes; policy, files, URLs, tokens, copy and labels checked\)$/m);
+    assert.match(logs.join("\n"), /^check-dist: OK .*dist\/site \(14 files, \d+ bytes; policy, files, URLs, tokens, copy and labels checked\)$/m);
     writeFileSync(join(root, "dist/site/notes.txt"), "stale\n");
     symlinkSync(join(root, "README.md"), join(root, "dist/site/src/link.js"));
     writeFileSync(join(root, "dist/site/src/core/c.js"), `${readFileSync(join(root, "dist/site/src/core/c.js"), "utf8")}const u = "http://example.org";\n`);

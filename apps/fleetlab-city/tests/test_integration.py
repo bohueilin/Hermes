@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import re
 import shutil
 import tempfile
 import unittest
@@ -14,6 +15,7 @@ TOOL = Path(__file__).resolve().parents[1] / "tools/integrate-site.py"
 spec = importlib.util.spec_from_file_location("integrate_site", TOOL)
 integration = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(integration)
+PACK = Path(__file__).resolve().parents[3] / "playground/fleetlab/tools/pack.mjs"
 
 
 class IntegrationTest(unittest.TestCase):
@@ -235,3 +237,15 @@ class IntegrationTest(unittest.TestCase):
                 {"temporal_candidate_bundle_digest": "a" * 64},
                 self.offer,
             )
+
+
+class PackerAgreementTest(unittest.TestCase):
+    def test_capacity_boot_is_the_module_the_packer_writes(self):
+        """The release tool pins the capacity boot byte for byte; it must be the packer's."""
+        match = re.search(
+            r"^export const SITE_CAPACITY_BOOT = '((?:[^'\\\n]|\\.)*)';$",
+            PACK.read_text(),
+            re.MULTILINE,
+        )
+        self.assertIsNotNone(match, "SITE_CAPACITY_BOOT is one single-quoted line in pack.mjs")
+        self.assertEqual(match.group(1).replace("\\n", "\n"), integration.CAPACITY_BOOT)

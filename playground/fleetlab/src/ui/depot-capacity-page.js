@@ -58,6 +58,8 @@ function cardView(card,loaded){
 
 // Twelve lanes: upload as solid bars sized by link share, charging as thin bars sized by port share, the local step
 // pale, a ready tick and a dashed departure target. The cursor and the veil over unrevealed time move with playback.
+// A share bar is never drawn under MIN_BAR px, so a quarter of the uplink stays visible; larger shares scale above it.
+const MIN_BAR=4;
 function timeline(label,record,regime){
   const s=record.scenario,W=960,L=56,R=16,LANE=28,TOP=8,x=t=>L+(W-L-R)*t/s.horizon_s,bottom=TOP+LANE*s.vehicles.length,H=bottom+34;
   const spans=allocationSpans(record),lanes=new Map();
@@ -68,8 +70,8 @@ function timeline(label,record,regime){
     lanes.set(v.vehicle,root.appendChild(svg('rect',{x:0,y,width:W,height:LANE,class:'cap-lane'})));
     root.appendChild(svg('text',{x:8,y:y+18,class:'cap-label'},v.vehicle));
     if(v.post)bar(v.post.t0,v.post.t1,{y:y+4,height:14,class:'cap-post'});
-    for(const u of v.upload)bar(u.t0,u.t1,{y:y+18-14*u.fraction,height:14*u.fraction,class:'cap-upload'});
-    for(const c of v.charge)bar(c.t0,c.t1,{y:y+20,height:6*c.fraction,class:'cap-charge'});
+    for(const u of v.upload){const h=Math.max(MIN_BAR,14*u.fraction);bar(u.t0,u.t1,{y:y+18-h,height:h,class:'cap-upload'});}
+    for(const c of v.charge)bar(c.t0,c.t1,{y:y+20,height:Math.max(MIN_BAR,6*c.fraction),class:'cap-charge'});
     if(v.ready_s!==null)root.appendChild(svg('line',{x1:x(v.ready_s),x2:x(v.ready_s),y1:y+2,y2:y+26,class:'cap-ready'}));
     root.appendChild(svg('line',{x1:x(v.deadline_s),x2:x(v.deadline_s),y1:y+1,y2:y+27,class:'cap-deadline'}));
     root.appendChild(svg('line',{x1:L,x2:W-R,y1:y+LANE,y2:y+LANE,class:'cap-rule'}));

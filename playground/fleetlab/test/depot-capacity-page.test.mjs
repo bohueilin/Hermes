@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {installFakeDom} from './helpers/fake-dom.mjs';
 import {capacityCellSteps,runCapacityCell} from '../src/model/depot-capacity.js';
 import {CAPACITY_STUDY} from '../src/data/depot-capacity-study.js';
-import {exampleVisits} from '../src/ui/depot-capacity-view.js';
+import {allocationSpans,exampleVisits} from '../src/ui/depot-capacity-view.js';
 import {copyProblems,literalsOf} from '../tools/check-dist.mjs';
 const page=await import('../src/ui/depot-capacity-page.js').catch(()=>({}));
 const app=await import('../src/ui/capacity-app.js').catch(()=>({}));
@@ -67,6 +67,38 @@ test('Load reconstructs four matched cells and opens the comparison at the selec
     assert.equal(e.querySelectorAll('.capacity-table details').length,4);
     clean(e);p.destroy();
   }finally{restore();}
+});
+
+test('timeline share bars keep a 4 px floor so a quarter share stays visible, and grow with the share above it',async()=>{
+  const restore=installFakeDom();
+  try{const p=create(),e=p.element;
+    const bars=(cls,kind)=>{
+      const figure=e.querySelectorAll('figure.capacity-timeline')[0],spans=allocationSpans(p.getState().comparison.cells.base.record);
+      const heights=figure.querySelectorAll(`rect.${cls}`).map(r=>Number(r.getAttribute('height'))),shares=spans.flatMap(v=>v[kind]).map(s=>s.fraction);
+      assert.equal(heights.length,shares.length,cls);assert.ok(heights.length>0,cls);
+      assert.ok(heights.every(h=>h>=4),`${cls} heights ${heights}`);
+      const order=shares.map((f,i)=>[f,heights[i]]).sort((a,b)=>a[0]-b[0]);
+      for(let i=1;i<order.length;i+=1)assert.ok(order[i][1]>=order[i-1][1],`${cls} height follows the share`);
+      return {shares,heights};
+    };
+    await p.load();
+    const upload=bars('cap-upload','upload');
+    const quarter=upload.shares.findIndex(f=>Math.abs(f-.25)<1e-9),full=upload.shares.findIndex(f=>Math.abs(f-1)<1e-9);
+    assert.ok(quarter>=0&&full>=0,'the data-heavy base holds a quarter-share and a full-share upload span');
+    assert.ok(upload.heights[quarter]>=4,'a quarter share renders at least 4 px tall');
+    assert.ok(upload.heights[full]>upload.heights[quarter],'a full share is taller than a quarter share');
+    e.querySelectorAll('.capacity-chips button')[1].click();await p.load();
+    assert.equal(p.getState().comparison.regime,'energy_heavy');
+    const charge=bars('cap-charge','charge');
+    assert.ok(new Set(charge.shares).size>1&&new Set(charge.heights).size>1,'charging shares differ and so do their heights');
+    p.destroy();
+  }finally{restore();}
+});
+
+test('on a phone the capacity title steps down to 34 px',()=>{
+  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8').replace(/\s+/g,' ');
+  const block=css.slice(css.indexOf('/* NF-03 capacity viewer'));
+  assert.match(block,/@media \(max-width:767\.98px\) \{[^@]*\.depot-capacity h1 ?\{ ?font-size:34px;? ?\}/);
 });
 
 test('switching the compared case rebuilds the table, boards and examples',async()=>{

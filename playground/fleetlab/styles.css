@@ -1673,4 +1673,4 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 @media (min-width:640px) { .capacity-cards .capacity-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (min-width:768px) { .capacity-figure-scroll svg { width:100%; } .capacity-board { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (min-width:1000px) { .capacity-cards .capacity-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
-@media (max-width:767.98px) { .depot-capacity { padding:28px 16px 48px; } .capacity-controls { padding:20px; } }
+@media (max-width:767.98px) { .depot-capacity { padding:28px 16px 48px; } .depot-capacity h1 { font-size:34px; } .capacity-controls { padding:20px; } }

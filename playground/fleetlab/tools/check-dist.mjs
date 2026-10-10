@@ -5,7 +5,8 @@
 // Usage: node playground/fleetlab/tools/check-dist.mjs <file.html> [--required-labels <file.json>]
 //        node playground/fleetlab/tools/check-dist.mjs --site <folder> [--required-labels <file.json>]
 // A folder is the hosted site pack.mjs --site writes: the same rules on every file, the site policy instead of the
-// packed one, exactly the files the packer writes and no other, and boot.js and _headers verbatim.
+// packed one, exactly the files the packer writes and no other (the capacity page included), and both boot modules
+// and _headers verbatim.
 // The label tuple comes from --required-labels (a JSON array), else the FLEETLAB_REQUIRED_LABELS environment
 // variable (a JSON array), else it is read from the repository's contracts module; it is never spelled here.
 // Exit 0 when clean, 1 with one line per problem, 2 on a usage error.
@@ -15,7 +16,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { CONTENT_SECURITY_POLICY, MODULE_MARKER, SITE_BOOT, SITE_CONTENT_SECURITY_POLICY, SITE_HEADERS, findRepositoryRoot, maskSource } from "./pack.mjs";
+import { CONTENT_SECURITY_POLICY, MODULE_MARKER, SITE_BOOT, SITE_CAPACITY_BOOT, SITE_CONTENT_SECURITY_POLICY, SITE_HEADERS, findRepositoryRoot, maskSource } from "./pack.mjs";
 
 /** Largest packed file accepted, in bytes. */
 // The directed street extract raises the offline budget from 2 to 2.5 MiB; see the street model design record.
@@ -54,6 +55,7 @@ const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledes
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
 export const COPY_MODULES = [
   "src/ui/depot-flow-lab.js", "src/ui/depot-flow-view.js", "src/ui/depot-flow-reading.js", "src/ui/depot-flow-player.js", "src/model/depot-flow-contract.js", "src/model/depot-flow.js", "src/model/depot-flow-verify.js", "src/model/depot-cohort-contract.js", "src/model/depot-cohort.js", "src/model/depot-cohort-verify.js",
+  "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js", "src/model/depot-capacity-verify.js", "src/ui/depot-capacity-view.js", "src/ui/depot-capacity-page.js", "src/ui/capacity-app.js",
   "src/ui/teaching-frames.js", "src/model/street-simulation.js","src/ui/model-identity.js", "src/ui/labels.js", "src/ui/routes.js", "src/ui/setup-sharing.js", "src/ui/setup-codec.js", "src/ui/regional-setup.js", "src/ui/street-lab.js", "src/ui/studio.js", "src/ui/hero-film.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/readiness-view.js", "src/ui/advanced-operations-view.js", "src/ui/scenario-learning.js", "src/ui/launch-view.js", "src/ui/regional-power-view.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js", "src/ui/scale-lab.js", "src/ui/scale-labs.js", "src/model/scale-contract.js", "src/model/scale-response.js", "src/model/scale-response-engine.js", "src/model/scale-intake.js", "src/model/scale-intake-engine.js", "src/model/scale-density.js", "src/model/scale-density-engine.js"];
 
 const FORBIDDEN_TOKENS = [
@@ -356,13 +358,16 @@ function tokenProblems(text, where = null) {
   return problems;
 }
 
+/** Depot lesson modules whose string literals must be scanned as copy: each one must be named in COPY_MODULES. */
+const DEPOT_COPY_MODULE = /^src\/(?:ui|model)\/depot-(?:flow|cohort|capacity).*\.js$/;
+
 /** Banned words and dashes in copy items `{where, text}`. */
 export function copyProblems(copy) {
   const problems = [];
   for (const { where, text } of copy) {
     const word = where==='src/ui/advanced-operations-view.js string'&&SYNTHETIC_FORECAST_COPY.has(text)?null:BANNED_WORDS.exec(text);
     if (word) problems.push(`banned word: "${word[0]}" in ${where} ${JSON.stringify(text.slice(0, 80))}`);
-    if (/src\/(?:ui|model)\/depot-(?:flow|cohort)/.test(where) && /\b(?:waymo|zoox|careers|portfolio|hiring|job posting|i-pace|jaguar|ojai|zeekr)\b/i.test(text)) problems.push(`affiliation copy: ${where}`);
+    if (/src\/(?:ui|model)\/depot-(?:flow|cohort|capacity)/.test(where) && /\b(?:waymo|zoox|careers|portfolio|hiring|job posting|i-pace|jaguar|ojai|zeekr)\b/i.test(text)) problems.push(`affiliation copy: ${where}`);
     if (DASHES.test(text)) problems.push(`dash: an em or en dash in ${where} ${JSON.stringify(text.slice(0, 80))}`);
   }
   return problems;
@@ -395,7 +400,7 @@ export function checkDist(html, { requiredLabels, byteLength = Buffer.byteLength
 
   const copy = visibleCopy(html);
   const modules = moduleCopy(html);
-  for (const m of html.matchAll(/\/\/ fleetlab-module: (src\/(?:ui|model)\/depot-(?:flow|cohort)[^\s]*)/g)) if(!COPY_MODULES.includes(m[1])) problems.push(`copy coverage: ${m[1]}`);
+  for (const m of html.matchAll(/\/\/ fleetlab-module: (\S+)/g)) if (DEPOT_COPY_MODULE.test(m[1]) && !COPY_MODULES.includes(m[1])) problems.push(`copy coverage: ${m[1]}`);
   if (!modules.has("src/ui/labels.js")) problems.push("labels: no src/ui/labels.js module found in the page script");
   for (const [name, texts] of modules) for (const text of texts) copy.push({ where: `${name} string`, text });
   problems.push(...copyProblems(copy));
@@ -406,16 +411,38 @@ export function checkDist(html, { requiredLabels, byteLength = Buffer.byteLength
   return redacted(problems, requiredLabels);
 }
 
-const SITE_FIXED_FILES = ["index.html", "boot.js", "styles.css", "_headers"];
+const CAPACITY_INDEX = "network-flows/capacity/index.html";
+const CAPACITY_BOOT = "network-flows/capacity/boot.js";
+const SITE_FIXED_FILES = ["index.html", "boot.js", "styles.css", "_headers", CAPACITY_INDEX, CAPACITY_BOOT];
 const SITE_MODULE_PATH = /^src\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.js$/;
 const SITE_STYLESHEET_LINK = '<link rel="stylesheet" href="./styles.css">';
 const SITE_BOOT_SCRIPT = '<script type="module" src="./boot.js"></script>';
+/** Each hosted page: its path, the one stylesheet link it may hold, and its boot module with the text pack.mjs writes. */
+const SITE_PAGES = [
+  { path: "index.html", link: SITE_STYLESHEET_LINK, boot: "boot.js", bootText: SITE_BOOT },
+  { path: CAPACITY_INDEX, link: '<link rel="stylesheet" href="../../styles.css">', boot: CAPACITY_BOOT, bootText: SITE_CAPACITY_BOOT },
+];
+
+/** One hosted page's shell rules: the site policy first in <head>, its one link and one script, then tokens and markup. */
+function sitePageProblems(html, { path, link }) {
+  const named = (problem) => (path === "index.html" ? problem : `${path}: ${problem}`);
+  const problems = policyProblems(html, SITE_CONTENT_SECURITY_POLICY).map(named);
+  const links = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]);
+  const scripts = [...html.matchAll(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi)].map((m) => m[0]);
+  if (links.length !== 1 || links[0] !== link) problems.push(`${path}: expected exactly one stylesheet link, ${link}`);
+  if (scripts.length !== 1 || scripts[0] !== SITE_BOOT_SCRIPT) problems.push(`${path}: expected exactly one module script, ${SITE_BOOT_SCRIPT}`);
+  const remainder = html.split(link).join("").split(SITE_BOOT_SCRIPT).join("");
+  problems.push(...tokenProblems(remainder, path));
+  problems.push(...markupProblems(html, tokensOf(markupOf(html)).tags, path));
+  return problems;
+}
 
 /**
  * Checks a hosted folder as a map (or plain object) from relative path to text, as pack.mjs --site writes it:
- * exactly index.html, boot.js, styles.css, _headers and `src/**.js` modules; boot.js and _headers verbatim; the site
- * policy first in <head>; one stylesheet link and one module script and no other script or link; and on every file
- * the packed file's rules (no external URL, no forbidden token, no banned word or dash in copy, no label string).
+ * exactly index.html, boot.js, styles.css, _headers, the capacity page's network-flows/capacity/index.html and boot.js,
+ * and `src/**.js` modules; both boot modules and _headers verbatim; on each page the site policy first in <head>, one
+ * stylesheet link and one module script and no other script or link; and on every file the packed file's rules (no
+ * external URL, no forbidden token, no banned word or dash in copy, no label string).
  * Returns an array of problem strings; empty means clean.
  */
 export function checkSite(files, { requiredLabels }) {
@@ -437,28 +464,26 @@ export function checkSite(files, { requiredLabels }) {
   for (const name of SITE_FIXED_FILES) if (!entries.has(name)) problems.push(`file: ${name} is missing`);
   if (!entries.has("src/ui/labels.js")) problems.push("labels: no src/ui/labels.js module in the site");
   const text = (path) => (typeof entries.get(path) === "string" ? entries.get(path) : null);
-  if (text("boot.js") !== null && text("boot.js") !== SITE_BOOT) problems.push("boot: boot.js differs from the module pack.mjs writes");
+  for (const { boot, bootText } of SITE_PAGES) {
+    if (text(boot) !== null && text(boot) !== bootText) problems.push(`boot: ${boot} differs from the module pack.mjs writes`);
+  }
   if (text("_headers") !== null && text("_headers") !== SITE_HEADERS) problems.push("headers: _headers differs from the text pack.mjs writes");
 
-  const html = text("index.html");
-  if (html !== null) {
-    problems.push(...policyProblems(html, SITE_CONTENT_SECURITY_POLICY));
-    const links = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]);
-    const scripts = [...html.matchAll(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi)].map((m) => m[0]);
-    if (links.length !== 1 || links[0] !== SITE_STYLESHEET_LINK) problems.push(`index.html: expected exactly one stylesheet link, ${SITE_STYLESHEET_LINK}`);
-    if (scripts.length !== 1 || scripts[0] !== SITE_BOOT_SCRIPT) problems.push(`index.html: expected exactly one module script, ${SITE_BOOT_SCRIPT}`);
-    const remainder = html.split(SITE_STYLESHEET_LINK).join("").split(SITE_BOOT_SCRIPT).join("");
-    problems.push(...tokenProblems(remainder, "index.html"));
-    problems.push(...markupProblems(html, tokensOf(markupOf(html)).tags, "index.html"));
+  const copy = [];
+  for (const page of SITE_PAGES) {
+    const html = text(page.path);
+    if (html === null) continue;
+    problems.push(...sitePageProblems(html, page));
+    // The root page's copy keeps its plain "text" and attribute places; another page's copy is named by its path.
+    for (const item of visibleCopy(html)) copy.push(page.path === "index.html" ? item : { ...item, where: `${page.path} ${item.where}` });
   }
-  const copy = html === null ? [] : visibleCopy(html);
   for (const [path, source] of entries) {
     if (typeof source !== "string" || path === "boot.js" || path === "_headers") continue;
     problems.push(...schemeProblems(source, path));
     if (path.endsWith(".js")) {
       problems.push(...scriptProblems(source, path));
       problems.push(...tokenProblems(source, path));
-      if (/^src\/(?:ui|model)\/depot-(?:flow|cohort).*\.js$/.test(path)&&!COPY_MODULES.includes(path)) problems.push(`copy coverage: ${path}`);
+      if (DEPOT_COPY_MODULE.test(path) && !COPY_MODULES.includes(path)) problems.push(`copy coverage: ${path}`);
       if (COPY_MODULES.includes(path)) for (const literal of literalsOf(source)) copy.push({ where: `${path} string`, text: literal });
     }
     if (path === "styles.css") problems.push(...tokenProblems(source, path));
