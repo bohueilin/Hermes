@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { mountStudio } from "../src/ui/studio.js";
 import { createInitialState, createStore } from "../src/ui/store.js";
 import { defaultScenario } from "../src/model/schema.js";
 import { installFakeDom } from "./helpers/fake-dom.mjs";
+import {mediaBlockRules} from './helpers/css-rules.mjs';
 import {simulationCatalog} from '../src/ui/simulation-catalog.js';
 import {CHOOSER_PRESET_IDS} from '../src/ui/experiment.js';
 import {routeHref} from '../src/ui/routes.js';
@@ -216,6 +218,20 @@ test('welcome names the teaching boundary before a visitor enters a model',()=>{
  }finally{x.studio.destroy();x.restore();}
 });
 
+test('Home document order is the phone reading order, with no CSS reordering',()=>{
+ const x=setup();try{
+  const main=x.studio.element.querySelector('main.studio-overview'),shape=node=>node.children.map(c=>`${c.localName}.${c.getAttribute('class')}`);
+  assert.deepEqual(shape(main),['section.studio-film-hero','nav.home-browse']);
+  assert.deepEqual(shape(main.children[0]),['div.film-copy','section.start-points','div.welcome-visual','div.film-caption'],'the caption follows the film inside the hero');
+  const source=readFileSync(new URL('../styles.css',import.meta.url),'utf8'),css=source.replace(/\/\*[\s\S]*?\*\//g,''),desktop=mediaBlockRules(source,1000,'.studio-film-hero');
+  for(const child of main.children[0].children)assert.ok(desktop.some(r=>/grid-(area|column)\s*:/.test(r.body)&&r.selectors.some(x=>child.matches(x))),`${child.getAttribute('class')} has a desktop placement`);
+  for(const [,selector,body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)){
+   if(/\.(start-points|welcome-visual|film-caption|home-browse)(?![\w-])/.test(selector))assert.doesNotMatch(body,/(^|[;\s])order\s*:/,selector.trim());
+   if(/\.studio-film-hero(?![\w-])/.test(selector))assert.doesNotMatch(body,/display\s*:\s*contents/,selector.trim());
+  }
+ }finally{x.studio.destroy();x.restore();}
+});
+
 test('compact navigation exposes its state and closes after a destination is chosen',()=>{
  const x=setup();try{
   const toggle=x.studio.element.querySelector('[aria-controls="studio-navigation"]');
@@ -255,5 +271,24 @@ test('confirmed at base, closed by the Task 3 pause clear: Depot flow lab announ
     x.studio.navigate('overview');assert.equal(live.textContent,'');
     x.studio.navigate('flows');assert.equal(live.textContent,'','nothing is announced on return until a user action');
     assert.equal(JSON.stringify(x.studio.flows.getState().result),result);
+  }finally{x.studio.destroy();x.restore();}
+});
+test('direct lesson routes in sequence: a played lesson leaves nothing behind in the next one',async()=>{
+  const x=setup();try{
+    const flows=x.studio.flows.element,live=flows.querySelector('div.fl-sr-only[role="status"]');
+    x.studio.applyRoute('#/depot-flow-lab?lesson=two-vehicles');await x.studio.flows.run();
+    flows.querySelector('[data-next-event]').click();assert.notEqual(live.textContent,'','stepping announces the event');
+    x.studio.applyRoute('#/depot-flow-lab?lesson=crossed-priorities');
+    assert.equal(flows.querySelector('h1').textContent,'Who should upload next?');
+    assert.equal(flows.querySelector('[data-flow-run]').textContent,'Compare the four rules');
+    assert.equal(flows.querySelector('[data-flow-outcomes]'),null,'no outcomes from the other lesson');
+    assert.equal(live.textContent,'','no announcement carries over');
+    // The UC-01 lesson copy says "A null check" on purpose; any other "null" would be a rendered missing value.
+    const stray=()=>document.body.textContent.replaceAll('A null check','');
+    x.studio.applyRoute('#/depot-flow-lab?lesson=two-vehicles');
+    assert.equal(x.studio.flows.getState().result,null);
+    assert.doesNotMatch(stray(),/null/);
+    x.studio.applyRoute('#/street-lab');
+    assert.doesNotMatch(stray(),/null/);
   }finally{x.studio.destroy();x.restore();}
 });

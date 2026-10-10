@@ -42,22 +42,40 @@ test('new decision lessons launch their versioned scenarios without mutating sha
   }finally{restore();}
 });
 
-test('Explore leads with search, three topics and compact cards',()=>{
+test('Explore leads with search, compact topic buttons and compact cards',()=>{
   const restore=installFakeDom();
   try{
     const records=simulationCatalog(),root=createSimulationCatalog().element;
     const shown=()=>root.querySelectorAll('.catalog-card').map(card=>card.getAttribute('data-simulation'));
-    const family=(...names)=>records.filter(r=>names.includes(r.frame.family)).map(r=>r.id);
     assert.equal(root.querySelector('h1').textContent,'What would you like to understand?');
-    const topic=root.querySelector('[aria-label="Topic"]');
-    assert.deepEqual(topic.querySelectorAll('option').map(o=>o.textContent),['All topics','Depot readiness & data','Fleet service & capacity','Streets & cities']);
-    const pick=name=>{topic.value=name;topic.dispatchEvent(new Event('change'));};
-    pick('Streets & cities');
-    assert.deepEqual(shown(),family('Roads and streets'));
-    for(const r of records.filter(r=>r.id.startsWith('street-')))assert.ok(shown().includes(r.id),r.id);
-    pick('Depot readiness & data');
-    assert.deepEqual(shown(),family('Depot work and capacity','Energy and charging'));
-    pick('All topics');
+    assert.equal(root.querySelector('.catalog-intro .hero-lede').textContent,'Every lesson answers one fleet question with a small synthetic model.');
+    assert.equal(root.querySelector('select[aria-label="Topic"]'),null,'topics are buttons, not a select');
+    assert.equal(root.querySelector('.catalog-collections'),null,'no separate topic cards');
+    const group=root.querySelector('div.catalog-topics[role="group"][aria-label="Topic"]');assert.ok(group,'a labelled topic group');
+    const chips=group.querySelectorAll('button.studio-button'),questions=root.querySelector('p.catalog-topic-questions');
+    assert.deepEqual(chips.map(b=>b.textContent),['All topics','Depot readiness & data','Fleet service & capacity','Streets & cities']);
+    const pressed=()=>chips.filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.textContent);
+    assert.ok(chips.every(b=>['true','false'].includes(b.getAttribute('aria-pressed'))));
+    assert.deepEqual(pressed(),['All topics']);assert.equal(questions.hidden,true);
+    const topics=[
+      ['Depot readiness & data',21,'Why can a charged vehicle still wait? Which upload goes first? Would another bay or worker help?'],
+      ['Fleet service & capacity',31,'Can the fleet meet demand? What changes as a fleet grows? Does a policy help across repeats?'],
+      ['Streets & cities',9,'Where do queues form? Can one block tie up the fleet?'],
+    ];
+    const seen=[];
+    for(const [name,count,text] of topics){
+      chips.find(b=>b.textContent===name).click();
+      assert.equal(root.querySelector('p.catalog-count').textContent,`${count} of 61 lessons`,name);
+      assert.equal(shown().length,count,name);seen.push(...shown());
+      assert.deepEqual(pressed(),[name]);
+      assert.deepEqual(chips.filter(b=>b.classList.contains('is-selected')).map(b=>b.textContent),[name],'the pressed topic is also marked for its ink fill');
+      assert.equal(questions.hidden,false);assert.equal(questions.textContent,text);
+    }
+    assert.deepEqual(seen.slice().sort(),records.map(r=>r.id).sort(),'every lesson belongs to exactly one topic');
+    for(const r of records.filter(r=>r.id.startsWith('street-'))){chips[3].click();assert.ok(shown().includes(r.id),r.id);}
+    chips[0].click();
+    assert.deepEqual(pressed(),['All topics']);assert.equal(questions.hidden,true);
+    assert.equal(root.querySelector('p.catalog-count').textContent,'61 of 61 lessons');
     assert.deepEqual(shown(),records.map(r=>r.id),'every lesson renders exactly once');
     for(const card of root.querySelectorAll('.catalog-card')){
       const record=records.find(r=>r.id===card.getAttribute('data-simulation'));
@@ -70,39 +88,43 @@ test('Explore leads with search, three topics and compact cards',()=>{
       assert.equal(card.querySelector('a'),parts[3],'the first link is the lesson link');
       assert.equal(parts[4].querySelector('summary').textContent,'More about this lesson');
     }
-    const collections=root.querySelector('.catalog-collections').children;
-    assert.deepEqual(collections.map(n=>n.localName),['article','article','article']);
-    assert.deepEqual(collections.map(n=>n.querySelector('h2').textContent),['Depot readiness & data','Fleet service & capacity','Streets & cities']);
-    collections[2].querySelector('button').click();
-    assert.equal(topic.value,'Streets & cities');assert.deepEqual(shown(),family('Roads and streets'));
-    const search=root.querySelector('[aria-label="Search lessons"]');search.value='no such lesson';search.dispatchEvent(new Event('input'));
-    assert.equal(shown().length,0);assert.match(root.querySelector('.catalog-grid').textContent,/^No lesson matches\./);
-    root.querySelector('.catalog-grid button').click();
-    assert.equal(search.value,'');assert.equal(topic.value,'All topics');assert.equal(shown().length,records.length);
   }finally{restore();}
 });
 
-test('Explore keeps its labelled controls next to the results and keeps focus when filtering',()=>{
+test('Explore order: search, topics, lab links, then a count row with Clear filters above the cards',()=>{
   const restore=installFakeDom();
   try{
-    const root=createSimulationCatalog().element;document.body.appendChild(root);
-    const order=root.children.map(n=>n.getAttribute('class')??n.localName);
-    assert.deepEqual(order.slice(0,3),['catalog-intro','catalog-search','catalog-collections']);
-    const grid=order.indexOf('catalog-grid');
-    assert.equal(order[grid-1],'catalog-count','the count sits directly above the cards it counts');
-    assert.equal(root.children[grid-2].textContent,'All lessons','the results have their own heading');
-    for(const [name,control] of [['Search lessons','input'],['Topic','select'],['Simulation model','select']]){
-      const field=root.querySelector(`.catalog-search [aria-label="${name}"]`);
-      assert.equal(field.localName,control);assert.equal(field.closest('label').querySelector('span').textContent,name,name);
+    const shape=root=>root.children.map(n=>[n.localName,...(n.getAttribute('class')?.split(' ')??[])].join('.'));
+    const tail=['h2.fl-sr-only','div.catalog-count-row','div.catalog-grid','p','p','section.catalog-outside'];
+    assert.deepEqual(shape(createSimulationCatalog().element),['section.catalog-intro','div.catalog-search','div.catalog-topics','p.catalog-topic-questions',...tail]);
+    const labLinks=document.createElement('nav');labLinks.setAttribute('class','lab-links');
+    const root=createSimulationCatalog({labLinks}).element;document.body.appendChild(root);
+    assert.equal(root.tagName.toLowerCase(),'main');assert.ok(root.classList.contains('simulation-catalog'));
+    assert.deepEqual(shape(root),['section.catalog-intro','div.catalog-search','div.catalog-topics','p.catalog-topic-questions','p.eyebrow.catalog-jump','nav.lab-links',...tail]);
+    assert.equal(root.querySelector('h2.fl-sr-only').textContent,'All lessons','the results have their own heading');
+    const fields=root.querySelector('.catalog-search');
+    assert.deepEqual(shape(fields),['label','label'],'the search row holds only the search field and the model filter');
+    for(const [name,selector] of [['Search lessons','input[type="search"]'],['Simulation model','select']]){
+      const field=fields.querySelector(`${selector}[aria-label="${name}"]`);
+      assert.ok(field,name);assert.equal(field.closest('label').querySelector('span').textContent,name,name);
     }
+    const row=root.querySelector('.catalog-count-row');
+    assert.deepEqual(shape(row),['p.catalog-count','button.studio-button']);assert.equal(row.children[1].textContent,'Clear filters');
     for(const card of root.querySelectorAll('.catalog-card'))assert.equal(card.querySelector('h2'),null,'a lesson title never inverts the card outline');
-    const collections=root.querySelector('.catalog-collections'),topic=root.querySelector('[aria-label="Topic"]');
-    assert.equal(collections.hidden,false);
-    collections.querySelector('button').click();
-    assert.equal(collections.hidden,true,'topic cards step aside while a filter is active');
-    assert.equal(document.activeElement,topic,'focus moves to the filter that changed');
-    const search=root.querySelector('[aria-label="Search lessons"]');search.value='no such lesson';search.dispatchEvent(new Event('input'));
-    root.querySelector('.catalog-grid button').click();
-    assert.equal(collections.hidden,false);assert.notEqual(document.activeElement,document.body);
+    const search=root.querySelector('[aria-label="Search lessons"]'),model=root.querySelector('[aria-label="Simulation model"]');
+    const chips=root.querySelectorAll('.catalog-topics button'),count=root.querySelector('p.catalog-count');
+    search.value='charging';search.dispatchEvent(new Event('input'));
+    chips[1].click();model.value='Fleet day';model.dispatchEvent(new Event('change'));
+    assert.notEqual(count.textContent,'61 of 61 lessons');
+    row.children[1].click();
+    assert.equal(count.textContent,'61 of 61 lessons');assert.equal(search.value,'');assert.equal(model.value,'All labs');
+    assert.deepEqual(chips.filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.textContent),['All topics']);
+    assert.equal(root.querySelector('.catalog-topic-questions').hidden,true);
+    assert.equal(document.activeElement,search,'Clear filters returns focus to the search field');
+    search.value='no such lesson';search.dispatchEvent(new Event('input'));
+    assert.equal(count.textContent,'0 of 61 lessons');
+    assert.match(root.querySelector('.catalog-grid').textContent,/^No lesson matches\./);
+    assert.equal(root.querySelector('.catalog-grid button'),null,'the count row Clear filters serves the empty state');
+    row.children[1].click();assert.equal(count.textContent,'61 of 61 lessons');
   }finally{restore();}
 });

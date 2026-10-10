@@ -37,22 +37,22 @@ function overview(navigate, visit, film) {
         el("p",{class:"hero-duration"},"About three minutes · No account needed · Nothing runs until you press Run"),
         el("div",{class:"welcome-boundary"},[el("strong",{},"Synthetic teaching simulator"),el("span",{},"NOT_EVIDENCE · simulation only · decision authority NONE")]),
       ]),
+      el("section",{class:"start-points","aria-labelledby":"start-points-title"},[
+        el("h2",{id:"start-points-title"},"Choose another starting point."),
+        el("div",{class:"start-grid"},[
+          {label:"FLEET DAY · RUN A MODEL",title:"Can the fleet meet demand?",text:"Run a synthetic Bay Area day. Change the fleet or a depot, then read service, batteries and queues together.",cta:"Run a fleet day  →",page:"simulation"},
+          {label:"STREET LAB · RUN A MODEL",title:"Where do queues form?",text:"Directed San Francisco streets with block queues. Compare two route rules on the same riders.",cta:"Open the Street lab  →",page:"streets"},
+        ].map(({label,title,text,cta,page})=>el("article",{class:"start-card"},[eyebrow(label),el("h3",{},title),el("p",{},text),pageLink(cta,page,navigate)]))),
+      ]),
       el("div",{class:"welcome-visual"},[
         el("div",{class:"welcome-visual-heading"},[el("span",{},"THE WORK BETWEEN RIDES"),el("span",{"aria-hidden":"true"},"↗")]),
         film.element,
         el("div",{class:"welcome-cycle","aria-label":"Illustrated fleet cycle"},["Ride","Recharge","Reset","Repeat"].map((word,i)=>el("span",{},[el("small",{},`0${i+1}`),word]))),
       ]),
-    ]),
-    el("div",{class:"film-caption"},[
-      el("p",{},[el("strong",{},"Original 3D concept film"),"Waterfront travel, a neighborhood and a charging depot connect the ride to fleet readiness. An illustration, not a simulation result."]),
-      el("p",{class:"creator-credit"},"Independent exploration. Built with curiosity."),
-    ]),
-    el("section",{class:"start-points","aria-labelledby":"start-points-title"},[
-      el("h2",{id:"start-points-title"},"Choose another starting point."),
-      el("div",{class:"start-grid"},[
-        {label:"FLEET DAY · RUN A MODEL",title:"Can the fleet meet demand?",text:"Run a synthetic Bay Area day. Change the fleet or a depot, then read service, batteries and queues together.",cta:"Run a fleet day  →",page:"simulation"},
-        {label:"STREET LAB · RUN A MODEL",title:"Where do queues form?",text:"Directed San Francisco streets with block queues. Compare two route rules on the same riders.",cta:"Open the Street lab  →",page:"streets"},
-      ].map(({label,title,text,cta,page})=>el("article",{class:"start-card"},[eyebrow(label),el("h3",{},title),el("p",{},text),pageLink(cta,page,navigate)]))),
+      el("div",{class:"film-caption"},[
+        el("p",{},[el("strong",{},"Original 3D concept film"),"Waterfront travel, a neighborhood and a charging depot connect the ride to fleet readiness. An illustration, not a simulation result."]),
+        el("p",{class:"creator-credit"},"Independent exploration. Built with curiosity."),
+      ]),
     ]),
     el("nav",{class:"home-browse","aria-label":"Browse"},[pageLink("Browse all topics  →","catalog",navigate),pageLink("About & limits  →","approach",navigate)]),
   ]);

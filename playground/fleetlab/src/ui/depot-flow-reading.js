@@ -1,6 +1,7 @@
 import {el} from './dom.js';
 import {FLOW_RULES} from '../model/depot-flow-contract.js';
 import {COHORT_RULES} from '../model/depot-cohort-contract.js';
+import {inspectState} from './depot-flow-view.js';
 export const minute=s=>s===null||s===undefined?'Not observed':`${Number((s/60).toFixed(4))} min`;
 export const outcomeLabel={on_time:'On time',late:'Late',unfinished_due:'Unfinished · deadline reached',pending:'Unfinished · deadline pending'};
 export const ruleName=id=>[...FLOW_RULES,...COHORT_RULES].find(r=>r.id===id)?.name??id;
@@ -13,6 +14,36 @@ export function readinessChain(record,v){
  const state=task=>task.state==='complete'?'done':task.state,atTarget=record.scenario.vehicles.find(x=>x.id===v.vehicle).energy_j===0;
  const steps=[['Battery',atTarget?'not-applicable':state(v.tasks.charge)],['Upload',state(v.tasks.upload)],['Local step',state(v.tasks.post)],['Ready',v.ready?'done':'waiting']];
  return el('div',{class:'flow-chain',role:'group','aria-label':'Readiness chain','data-rule':record.rule,'data-vehicle':v.vehicle},[el('strong',{},`${ruleName(record.rule)} · Vehicle ${v.vehicle}`),...steps.map(([label,s])=>el('span',{'data-state':s},`${label}: ${CHAIN_WORDS[s]}`))]);
+}
+const join=xs=>xs.length<3?xs.join(' and '):`${xs.slice(0,-1).join(', ')} and ${xs.at(-1)}`;
+const vehicles=ids=>join(ids.map(id=>`Vehicle ${id}`));
+const gbps=rate=>`${Number((rate/125e6).toFixed(3))} Gbps`;
+const minuteOf=s=>Number((s/60).toFixed(3));
+/** The projection's name for the task after upload; the reading calls it the local step, as the readiness chain does. */
+const PROJECTION_POST_TASK='post-upload step';
+/** One sentence on what holds a vehicle back, from an inspectState state and one of its vehicle rows. */
+export function waitReason(state,row,scenario){
+ const id=`Vehicle ${row.vehicle}`,{upload,charge,post}=row.tasks;
+ if(row.ready)return `${id} is ready since minute ${minuteOf(row.ready_s)}.`;
+ if(post.state==='active'&&charge.state==='complete')return `${id} is in its local step; ready at minute ${minuteOf(post.started_s+scenario.vehicles.find(v=>v.id===row.vehicle).post_s)}.`;
+ if(upload.state==='waiting')return `${id} waits for the uplink${state.upload_holders.length?`, held by ${vehicles(state.upload_holders)} under ${ruleName(state.rule).toLowerCase()}`:'; no capacity is available'}.`;
+ if(upload.state==='active'){const rest=row.waiting_for.filter(task=>task!=='upload').map(task=>task===PROJECTION_POST_TASK?'local step':task);return `${id} is uploading at ${gbps(row.upload_rate_bytes_s)}; ${join(rest)} ${rest.length===1?'remains':'remain'}.`;}
+ if(charge.state==='waiting')return `${id} waits for the charger${state.charge_holders.length?`, held by ${vehicles(state.charge_holders)}`:'; no capacity is available'}.`;
+ return `${id} is charging at ${row.charge_rate_j_s/1000} kW; ${post.state==='complete'?'nothing else remains':'the local step remains'}.`;
+}
+function uplinkText(state,capacity){
+ const held=state.vehicles.filter(v=>v.upload_rate_bytes_s>0),rates=[...new Set(held.map(v=>gbps(v.upload_rate_bytes_s)))];
+ if(!held.length)return 'Idle';
+ if(rates.length>1)return join(held.map(v=>`Vehicle ${v.vehicle} ${gbps(v.upload_rate_bytes_s)}`));
+ return `${vehicles(held.map(v=>v.vehicle))} · ${held.length>1?`${rates[0]} each`:held[0].upload_rate_bytes_s===capacity?'full link':rates[0]}`;
+}
+/** Who holds the uplink and the charger at time t, one article per rule (only the selected rule when one is set). */
+export function resourceBoard(result,t,selectedRule,selectedVehicle){
+ return el('div',{class:'flow-resource-board'},result.arms.filter(a=>!selectedRule||a.record.rule===selectedRule).map(a=>{
+  const state=inspectState(a.record,t),row=state.vehicles.find(v=>v.vehicle===selectedVehicle);
+  const charger=state.vehicles.filter(v=>v.charge_rate_j_s>0).map(v=>`Vehicle ${v.vehicle} · ${v.charge_rate_j_s/1000} kW`).join('; ')||'Idle';
+  return el('article',{'data-rule':a.record.rule},[el('h4',{},ruleName(a.record.rule)),el('dl',{},[el('dt',{},'Uplink'),el('dd',{},uplinkText(state,result.scenario.uplink_bytes_s)),el('dt',{},'Charger'),el('dd',{},charger)]),row?el('p',{class:'flow-wait-reason'},waitReason(state,row,result.scenario)):null]);
+ }));
 }
 export const FLOW_GLOSSARY=Object.freeze({
  uplink:'Uplink: the shared connection that carries uploaded bytes away from this depot.',
