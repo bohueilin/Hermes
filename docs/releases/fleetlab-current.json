@@ -4,13 +4,13 @@
   "sf_qualification": "HOLD",
   "authenticity": "NOT_AUTHENTICATED",
   "operational_deployment_permission": "NONE",
-  "source_commit": "a877ab1bc3817a0ebcf16557949b5d34ba8e661e",
+  "source_commit": "35c687e4bb96eb610bd4f8aa1d7f538876edb12d",
   "source_branch": "codex/fleetlab-city-sf",
-  "production_deployment_id": "c98eb10c-1726-4005-80c4-9bfea6e44be2",
-  "preview_deployment_id": "d9492631-e89c-4e7a-bd7f-4610586a3540",
-  "prior_production_deployment_id": "e141f612-2095-494d-8100-96e9f86ce5e7",
+  "production_deployment_id": "c40d90b5-65aa-40ce-828b-5c0b5d4328d9",
+  "preview_deployment_id": "be1826b2-98a5-45f6-a8e5-7360e6188514",
+  "prior_production_deployment_id": "c98eb10c-1726-4005-80c4-9bfea6e44be2",
   "stable_url": "https://fleetlab.pages.dev",
-  "immutable_url": "https://c98eb10c.fleetlab.pages.dev",
+  "immutable_url": "https://c40d90b5.fleetlab.pages.dev",
   "current": {
     "compatibility": {
       "metrics": "fleetlab.city-metrics/1.0.0",
@@ -22,9 +22,9 @@
     "release_sha256": "c56bda6b509105c5bee778980c01d13028401bc03fc8b49b4948f65c6f18f63f"
   },
   "rollback": "city-explorer/releases/e3318a76588a7403",
-  "integration_manifest_sha256": "b79ed32c9227c01ee85917ad6fea0db37667a73a4b98ea660c086a6bcd769bb0",
-  "file_count": 10025,
-  "total_bytes": 1619287301,
+  "integration_manifest_sha256": "c24278a845c19d1e66f2691c11ba26abf4447a60d357a34c77b23da66d559725",
+  "file_count": 10037,
+  "total_bytes": 1619508321,
   "files": {
     "index.html": {
       "bytes": 2135,
@@ -47,27 +47,49 @@
       "status": 200
     },
     "downloads/fleetlab-offline.html": {
-      "bytes": 2543663,
-      "sha256": "2536ecc9b9f22a4c76ccc1c79231fb4e0c4a701c81cb147b5488dfa81234b044",
+      "bytes": 2545778,
+      "sha256": "d941591e458196379cf238e46da37d4d4a6f4d9d1de734ad43c85ce8fd556827",
       "status": 200
     },
     "publication.json": {
       "bytes": 1560,
-      "sha256": "0ad0de0ffd58087e15349697d01f7dd63a8392076f74d8c71c38db97c68a5c5a",
+      "sha256": "f277813be3fe6df11a47c4ee8659529d35895de15a595ebc5ccc60c82b8d8476",
+      "status": 200
+    },
+    "network-flows/capacity/index.html": {
+      "bytes": 932,
+      "sha256": "1aeca1c2f9eaaee593d41594cfd5854a6f0d4c091909e5101ae173bb72036ff2",
+      "status": 200
+    },
+    "network-flows/capacity/visual.css": {
+      "bytes": 11930,
+      "sha256": "0862f5b79379d148ccf03e259c674d004e3a963cf54862957b107deb4deb3133",
+      "status": 200
+    },
+    "network-flows/capacity/release.json": {
+      "bytes": 38710,
+      "sha256": "2085f2985b9467a2d90e650054459f36c5b65c37920dfed814d6e1239d10386c",
+      "status": 200
+    },
+    "src/ui/depot-capacity-bench.js": {
+      "bytes": 10090,
+      "sha256": "e0c1e4ecd802dae08fb0087edbb06c41875f4298dfb378172478113bd5915d14",
       "status": 200
     }
   },
-  "verified_at_utc": "2026-10-09T13:52:20.191590+00:00",
+  "verified_at_utc": "2026-10-10T07:42:11.979790+00:00",
   "verification": {
-    "served_files": 10024,
-    "matched_files": 10024,
-    "header_checks": 7,
+    "served_files": 10036,
+    "matched_files": 10036,
+    "header_checks": 10,
     "headers_pass": true,
-    "full_readback_sha256": "6646825541249c8cb05fb96b41fc8fe3fcc0bf54de1a6d299b36920ce6af5ecc",
-    "preview_matched_files": 10024,
-    "preview_full_readback_sha256": "c700c2ee0ab166a70fe246840569615c1c16111142c932b0b065135e22b7c13b",
-    "production_headers_sha256": "d5f2351d152d06f988f5c3b9b71a19e9bfecfd06c23140cb4d6d3e7b16f593ad",
-    "preview_headers_sha256": "16e045db9651a90dd603d2e2b59af984294803bde0a1f41c6e317b37c80074b3",
+    "full_readback_sha256": "9026968181fa23dddbf8dd125f7331538f2fbe4d341435aa05a6d2de19e62ed8",
+    "preview_matched_files": 10036,
+    "preview_full_readback_sha256": "656bc9947b3ed193c79ab46d61cf28dc8700026bb29aeb1e3fb01f2b09e36c6a",
+    "production_headers_sha256": "0b8e3ee7b558fb5473306f07e68bc645bc72dd9a19ba97787d3c50b02a51617b",
+    "preview_headers_sha256": "2a4be81af9aa2bc7bb590655eee234528da5fbfa45fdb6f4f72b6873ce24a758",
     "meaning": "Byte consistency and observed hosting only; not independent authenticity or operational authority."
-  }
+  },
+  "capacity_release_sidecar_sha256": "2085f2985b9467a2d90e650054459f36c5b65c37920dfed814d6e1239d10386c",
+  "capacity_release_digest": "55a9eb4ee3cb83edb7be7ea38c6cbda68ea87ce1e012053f5e5c0c3b3df8e040"
 }

@@ -72,7 +72,7 @@ observations, not guarantees against unpublished vulnerabilities.
 
 ## Before a presentation
 
-Run the six-request, secret-free smoke check from repository root:
+Run the ten-request, secret-free smoke check from repository root:
 
 ```sh
 build/fleetlab-city/venv/bin/python apps/fleetlab-city/tools/readback.py --record docs/releases/fleetlab-current.json --url https://fleetlab.pages.dev --output /tmp/fleetlab-smoke.json

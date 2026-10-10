@@ -2,7 +2,7 @@
 
 October 10, 2026 · Educational website release
 
-**Source-freeze status:** implemented; final integrated browser and publication checks are in progress. The release receipt below must be completed after actual deployment/readback. This paragraph is not a publication claim.
+**Released:** implemented, validated, pushed to GitHub and published at [FleetLab](https://fleetlab.pages.dev/). [Open the capacity study](https://fleetlab.pages.dev/network-flows/capacity/). Preview and production each matched all 10,036 served files and all ten header checks. The original site content remains available.
 
 ## Scope and authority
 
@@ -41,7 +41,7 @@ The pre-edit integrated baseline passed **2,127 Node tests**, with zero failures
 
 Intermediate full-suite failures were recorded, not hidden: new responsive card CSS tripped the existing fixed-width guard, and media-test fixtures lacked the newly required hosted stylesheet. The CSS now uses explicit responsive columns; fixtures now supply the actual required package inputs without relaxing media checks. An initial local integration invocation selected the 98-file hosted readback payload rather than the original 99-file distribution containing `_headers`; the correct preserved distribution was selected and verified. The real integration also exposed the missing allowlist entry for Fable’s already-reviewed explicit-play film change; that one path was declared with a rejection-without-flow-update regression. A development package built before final source edits was correctly rejected for mismatched fingerprints and rebuilt. No scientific protocol retry was involved.
 
-Final measured results, browser observations and release identities are populated below after the remaining checks. Logs, screenshots, full inventories and generated packages stay in ignored local validation storage.
+Final measured results, browser observations and release identities are recorded below. Logs, screenshots, full inventories and generated packages stay in ignored local validation storage.
 
 ### Reproducible commands
 
@@ -76,18 +76,38 @@ git diff --check
 | City Python suite | 329 passed; subsequent focused integration suite 19 passed after one new allowlist test |
 | Hermes suite with boundary base | 1,662 passed; 55 skips |
 | Ruff / diff whitespace | Passed |
-| Doctor in activated environment | 17 PASS, 1 working-tree WARN, 1 optional NOT_AVAILABLE before source freeze; no FAIL |
+| Doctor in activated environment | Clean source checkout: 18 PASS, 1 optional NOT_AVAILABLE, no WARN or FAIL |
 | Deployment dependency audit | 0 reported vulnerabilities; 38 registry signatures and 22 attestations verified |
 | Map dependency audit | 0 reported vulnerabilities |
 | Offline | 2,545,778 B; 75,662 B under cap; 25,662 B beyond the reserved 50,000 B |
-| Hosted teaching package | 121 files, 3,711,325 B at local QA; source-frozen sidecar may change a few bytes |
+| Hosted teaching package | 121 files, 3,711,334 B from committed source |
 | New bench / route stylesheet | 10,090 B / 11,930 B; excluded from offline |
 | City preservation | All 9,908 City/source-offer files unchanged against prior published package |
 | Independent code review | Two findings fixed and rechecked; no open findings in the reviewed patch |
 
-Browser QA observed painted desktop and phone layouts, 1440×900, 1024×768, 375×812 and 320 px width, shared-time arm switching, keyboard scrubbing, explicit Play/Pause, improving/regressing inspection, catalog discovery, deep links, refresh/history and the NF-01/NF-02 announcement lifecycle. No page overflow was observed at the tested widths. The default phone Load button was visible in the first viewport. Initial Home video has no media src until explicit play. Unit tests cover reduced/hidden motion, invalid record rejection, cancellation and late callbacks. Native screen-reader, system reduced-motion and physical-phone performance measurements remain unperformed this turn. A browser zoom shortcut did not change the measured viewport or font size; native 200% enlargement is not claimed as tested.
+Browser QA observed painted desktop and phone layouts, 1440×900, 1024×768, 375×812 and 320 px width, shared-time arm switching, keyboard scrubbing, explicit Play/Pause, improving/regressing inspection, catalog discovery, deep links, refresh/history and the NF-01/NF-02 announcement lifecycle. No page overflow was observed at the tested widths. The default phone Load button was visible in the first viewport. Initial Home video has no media src until explicit play. Unit tests cover reduced/hidden motion, invalid record rejection, cancellation and late callbacks. The hosted preview also retained City Explorer and its atlas. Native screen-reader, system reduced-motion and physical-phone performance measurements remain unperformed this turn. A browser zoom shortcut did not change the measured viewport or font size; native browser 200% text enlargement is not claimed as tested. An isolated local CSS `zoom:2` fixture did load the comparison without page overflow at 1440 px; this is a rendered enlargement check, not a native-browser setting or a WCAG certification. The browser policy refused `file://` navigation, so offline file-origin behavior was not tested; no workaround was attempted. The package content/CSP/size checks passed.
 
-Publication identifiers and full byte/header checks are pending at this source-freeze checkpoint.
+### Publication receipt
+
+| Item | Observed value |
+|---|---|
+| Source commit | `35c687e4bb96eb610bd4f8aa1d7f538876edb12d` |
+| Source branch | `codex/fleetlab-city-sf`, pushed to the existing Hermes GitHub remote |
+| Production deployment | `c40d90b5-65aa-40ce-828b-5c0b5d4328d9` |
+| Preview deployment | `be1826b2-98a5-45f6-a8e5-7360e6188514` |
+| Prior production retained | `c98eb10c-1726-4005-80c4-9bfea6e44be2` |
+| Immutable production | https://c40d90b5.fleetlab.pages.dev/ |
+| Integrated package | 10,037 files, 1,619,508,321 bytes |
+| Served bytes checked | 10,036 / 10,036 matched on preview and stable production; `_headers` is hosting configuration |
+| Header checks | 10 / 10 matched on preview and production, including capacity, download and genuine 404 routes |
+| Immutable production smoke | 6 / 6 files matched, independently of stable-alias readback |
+| Production readback completed | `2026-10-10T07:42:11.979790+00:00` |
+| Offline SHA-256 | `d941591e458196379cf238e46da37d4d4a6f4d9d1de734ad43c85ce8fd556827` |
+| Integration manifest SHA-256 | `c24278a845c19d1e66f2691c11ba26abf4447a60d357a34c77b23da66d559725` |
+| Capacity sidecar release digest | `55a9eb4ee3cb83edb7be7ea38c6cbda68ea87ce1e012053f5e5c0c3b3df8e040` |
+| Source tree | `62c1eb126f40b9d5e55bfe0a3ed1f2ddf0c7d68c` |
+
+The same source-frozen artifact was deployed first to preview and then to production. The production upload reused all 10,036 assets already verified on preview. The committed `docs/releases/fleetlab-current.json` now supports a ten-file smoke check including the new capacity page, CSS, sidecar and bench module. Receipt and handoff edits follow in a separate documentation commit; they do not change deployed application bytes. No account, credential, hosting-retention or autonomy deployment authority was changed.
 
 ## What remains outside this release
 

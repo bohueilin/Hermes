@@ -54,8 +54,10 @@ Files: Studio/catalog/styles, hosted integration, pack/check tools and focused t
 
 ## Task 5 — Validate, review, publish, hand off
 
-- [ ] Run complete teaching/City/Hermes gates and locked dependency audits. Inspect desktop/phone/enlarged-text, keyboard, motion, direct links and failure behavior; separately report actual-device availability.
-- [ ] Obtain a fresh code review of the final integration and address material findings. Re-run affected checks after fixes.
-- [ ] Commit source, build/integrate from the exact commit, push the authorized existing branch, deploy preview, and verify its bytes/headers/UI.
-- [ ] Publish the unchanged preview-tested artifact; verify production/stable alias, record source/deployment/rollback identities and update release receipt.
-- [ ] Output October 10 implementation handoff and a separate corrected NF-04 next-step design spec for feedback. NF-04 results remain proposed until implemented and verified.
+- [x] Run complete teaching/City/Hermes gates and locked dependency audits. Inspect desktop/phone/enlarged-text, keyboard, motion, direct links and failure behavior; separately report actual-device availability.
+- [x] Obtain a fresh code review of the final integration and address material findings. Re-run affected checks after fixes.
+- [x] Commit source, build/integrate from the exact commit, push the authorized existing branch, deploy preview, and verify its bytes/headers/UI.
+- [x] Publish the unchanged preview-tested artifact; verify production/stable alias, record source/deployment/rollback identities and update release receipt.
+- [x] Output October 10 implementation handoff and a separate corrected NF-04 next-step design spec for feedback. NF-04 results remain proposed until implemented and verified.
+
+Completed October 10, 2026. Exact measured outcomes and declared browser/device limitations are in the dated implementation handoff; the enlarged-layout check used an isolated CSS 2x fixture, not native browser text scaling.
