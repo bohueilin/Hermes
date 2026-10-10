@@ -1,6 +1,8 @@
 # FleetLab NF-03 depot capacity study and P0 completion implementation plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task; every task follows superpowers:test-driven-development.
+>
+> **Status 2026-10-09: executed.** The built handoff is `docs/FLEETLAB_NETWORK_FLOWS_NF03_HANDOFF_2026-10-09.md`. Where the build departed from the text below (plain-literal manifest module without `trust`, refinement cells without metrics, unit-suffixed slot fields `grant_bytes`/`unused_bytes`/`grant_j`/`unused_j`, a next-lesson line instead of a third chooser link, Play hidden under reduced motion), the handoff's section 5 records the reason.
 
 **Goal:** Ship the next-phase design: a bounded P0 completion pass on the visitor redesign, and NF-03, a reproducible and independently checked twelve-visit depot capacity study ("Better scheduling, more bandwidth, or more charging power?") with a recorded comparison viewer, packaging and release tooling, tests, validation and a built report.
 
