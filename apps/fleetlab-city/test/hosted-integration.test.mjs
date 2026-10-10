@@ -54,27 +54,35 @@ test('hosted entries preserve mounted lessons and film, and native links need no
  } finally {studio?.destroy();restore();}
 });
 
-test('the capacity study joins the depot flow chooser and Explore once, and survives a lesson change',()=>{
+test('the capacity study joins the lab links, a next-lesson line under Compare and Explore once, and survives a lesson change',()=>{
  const restore=installFakeDom();
  let studio;
  try {
   studio=mount();
   const lessons=['#/depot-flow-lab?lesson=two-vehicles','#/depot-flow-lab?lesson=crossed-priorities'];
-  const assertChooser=()=>{
+  const assertNextLesson=()=>{
    const links=document.querySelectorAll('#capacity-entry');
    assert.equal(links.length,1);
+   const line=links[0].parentNode;
+   assert.equal(line.getAttribute('class'),'flow-next-lesson');
+   assert.equal(line.textContent,'Next lesson: Scheduling or capacity?');
+   assert.equal(line.previousSibling,document.querySelector('.flow-hero p.flow-run-help'),'the line sits right under the Compare help text, below the first-screen action');
    const chooser=document.querySelector('.flow-hero nav.lab-chooser[aria-label="Depot flow lessons"]');
-   assert.equal(links[0].parentNode,chooser);
-   assert.deepEqual(chooser.querySelectorAll('a').map(a=>a.getAttribute('href')),[...lessons,'/network-flows/capacity/'],'the two lessons stay first');
-   assert.equal(links[0].textContent,'Scheduling or capacity?');
-   assert.equal(links[0].getAttribute('class'),'studio-button');
+   assert.deepEqual(chooser.querySelectorAll('a').map(a=>a.getAttribute('href')),lessons,'the chooser keeps only the two offline lessons');
+   assert.equal(links[0].getAttribute('href'),'/network-flows/capacity/');
    assert.equal(links[0].getAttribute('target'),null);
   };
   mountCityEntry();mountCityEntry();
-  assertChooser();
+  assertNextLesson();
+  const labLink=document.querySelectorAll('.lab-links a[href="/network-flows/capacity/"]');
+  assert.equal(labLink.length,1);
+  assert.equal(labLink[0].textContent,'Scheduling or capacity?');
+  const grid=document.querySelector('.simulation-catalog .catalog-grid');
+  const city=document.querySelector('.city-entry-catalog');
+  assert.equal(grid.nextSibling,city,'hosted entries follow the lesson grid so the first lesson stays on the first screen');
   const catalogs=document.querySelectorAll('.capacity-entry-catalog');
   assert.equal(catalogs.length,1);
-  assert.equal(document.querySelector('.city-entry-catalog').nextSibling,catalogs[0]);
+  assert.equal(city.nextSibling,catalogs[0]);
   assert.equal(catalogs[0].getAttribute('aria-labelledby'),'capacity-catalog-title');
   assert.equal(catalogs[0].querySelector('p.city-entry-eyebrow').textContent,'RECORDED CAPACITY STUDY');
   assert.equal(catalogs[0].querySelector('h2#capacity-catalog-title').textContent,'Better scheduling, more bandwidth, or more charging power?');
@@ -84,10 +92,10 @@ test('the capacity study joins the depot flow chooser and Explore once, and surv
   const hero=document.querySelector('.flow-hero');
   const watching=observers.filter(o=>o.target===hero);
   assert.deepEqual(watching.map(o=>o.options),[{childList:true}]);
-  // Every lesson change rebuilds the hero, chooser included; the observer restores the hosted link.
+  // Every lesson change rebuilds the hero; the observer restores the hosted line.
   studio.applyRoute(lessons[1]);
   assert.equal(document.querySelectorAll('#capacity-entry').length,0);
   watching[0].callback([]);
-  assertChooser();
+  assertNextLesson();
  } finally {studio?.destroy();restore();}
 });

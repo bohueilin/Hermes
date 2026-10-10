@@ -130,8 +130,9 @@ export function createCapacityPage({manifest,reducedMotion=()=>false,yieldPage=(
   const contrastSelect=el('select',{'aria-label':'Case to compare',on:{change:()=>{contrast=contrastSelect.value;showContrast();}}},CASES.map(([value,text])=>el('option',{value},text)));
   const vehicleSelect=el('select',{'aria-label':'Vehicle',on:{change:()=>selectVehicle(vehicleSelect.value)}},capacityScenario({regime:'data_heavy',treatment:'base'}).vehicles.map(v=>el('option',{value:v.id},`Vehicle ${v.id}`)));
   const exampleButtons=[['improving','Improving'],['regressing','Regressing'],['unchanged','Unchanged']].map(([key,word])=>button(`${word} example`,()=>{const ids=examples?.[key]??[];if(ids.length)selectVehicle(ids[(ids.indexOf(vehicle)+1)%ids.length]);},{'data-example':key}));
-  const play=button('Play',()=>{player.getState().playing?player.pause():player.play();}),restart=button('Restart',()=>player.restart());
-  const previous=button('Previous event',()=>{if(player.getState().time_s>0)player.previous();}),next=button('Next event',()=>{if(player.getState().time_s<P.horizon_s)player.next();},{'data-next-event':''});
+  const play=button('Play',()=>{player.getState().playing?player.pause():player.play();},{'data-capacity-play':''}),restart=button('Restart',()=>player.restart());
+  // Under reduced motion the player's play() is the one-event step that also starts the reveal; Play itself is hidden.
+  const previous=button('Previous event',()=>{if(player.getState().time_s>0)player.previous();}),next=button('Next event',()=>{const s=player.getState();if(s.time_s<P.horizon_s)s.reduced?player.play():player.next();},{'data-next-event':''});
   const clock=el('p',{class:'flow-clock'}),caption=el('p',{class:'flow-caption'}),board=el('div',{class:'capacity-board'}),figures=el('div',{class:'capacity-timelines'}),spansBox=el('div');
   const slider=el('input',{type:'range',min:0,max:P.horizon_s,step:1,value:0,'aria-label':'Inspect time across the two cells',on:{input:()=>player.seek(Number(slider.value)),change:()=>announce(eventSentence(player.getState().time_s)),keydown:event=>{
     if(event.ctrlKey||event.metaKey||event.altKey)return;const d={ArrowLeft:-60,ArrowDown:-60,ArrowRight:60,ArrowUp:60,PageDown:-300,PageUp:300}[event.key];

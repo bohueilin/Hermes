@@ -8,6 +8,9 @@
 .city-entry-catalog h2, .capacity-entry-catalog h2 { font-size:24px; margin:0 0 12px; letter-spacing:-.02em; }
 .city-entry-catalog p:not(.city-entry-eyebrow), .capacity-entry-catalog p:not(.city-entry-eyebrow) { max-width:700px; font-size:15px; line-height:1.7; margin:0; }
 .city-entry-catalog .city-entry-action, .capacity-entry-catalog .city-entry-action { flex-shrink:0; }
+.flow-next-lesson { font-size:14px; color:var(--muted); margin:-8px 0 16px; }
+.flow-next-lesson a { display:inline-flex; align-items:center; min-height:44px; color:var(--ink); font-weight:600; text-underline-offset:4px; }
+.flow-next-lesson a:focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
 .studio-footer { flex-wrap:wrap; }
 .studio-footer .owner-contact { flex-basis:100%; max-width:none; display:flex; align-items:center; flex-wrap:wrap; gap:12px 24px; border-top:1px solid var(--rule); padding-top:22px; margin-top:4px; font-size:14px; line-height:1.6; }
 .studio-footer .owner-contact a { display:inline-flex; align-items:center; min-height:44px; font-size:15px; font-weight:600; color:inherit; text-underline-offset:5px; overflow-wrap:anywhere; }
@@ -310,7 +313,7 @@ button, input, select, textarea{font: inherit}
 .scale-chooser a{font-size: 12px}}
 
 .fleet-studio{font-size:16px;line-height:1.6;--faint:#5e6c7d}
-.fleet-studio p:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.flow-lede):not(.catalog-meta):not(.catalog-labs):not(.catalog-count):not(.flow-definition):not(.flow-run-help):not(.flow-status):not(.flow-wait-reason):not(.capacity-status):not(.capacity-question){font-size:16px;line-height:1.6}
+.fleet-studio p:not(.eyebrow):not(.studio-status):not(.hero-duration):not(.film-lede):not(.scene-invitation):not(.flow-lede):not(.catalog-meta):not(.catalog-labs):not(.catalog-count):not(.flow-definition):not(.flow-run-help):not(.flow-status):not(.flow-next-lesson):not(.flow-wait-reason):not(.capacity-status):not(.capacity-question){font-size:16px;line-height:1.6}
 .welcome-boundary{flex-wrap:wrap}
 .welcome-boundary .hosted-trust-legend{flex-basis:100%;max-width:1000px;margin:0;text-align:left;font-size:14px;line-height:1.6}
 .street-map figcaption,.street-event-log time{color:#566579}

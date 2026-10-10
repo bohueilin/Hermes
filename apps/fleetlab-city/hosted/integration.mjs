@@ -5,9 +5,9 @@ export function mountCityEntry(doc = document) {
   const labLinks = doc.querySelector('.lab-links');
   const home = doc.querySelector('.studio-overview');
   const startGrid = home?.querySelector('.start-grid');
-  const catalogIntro = doc.querySelector('.simulation-catalog .catalog-intro');
+  const catalogGrid = doc.querySelector('.simulation-catalog .catalog-grid');
   const flowHero = doc.querySelector('.depot-flow-lab .flow-hero');
-  if (!labLinks || !startGrid || !catalogIntro || !flowHero?.querySelector('nav.lab-chooser')) throw new Error('FleetLab hosted entry contract changed');
+  if (!labLinks || !startGrid || !catalogGrid || !flowHero?.querySelector('p.flow-run-help')) throw new Error('FleetLab hosted entry contract changed');
   const node = (tag, attrs, children) => {
     const element = doc.createElement(tag);
     for (const [key, value] of Object.entries(attrs || {})) element.setAttribute(key, value);
@@ -17,6 +17,7 @@ export function mountCityEntry(doc = document) {
     return element;
   };
   labLinks.appendChild(node('a', {id:'city-explorer-entry', class:'studio-button', href:'/city-explorer/'}, 'City Explorer'));
+  labLinks.appendChild(node('a', {id:'capacity-lab-entry', class:'studio-button', href:'/network-flows/capacity/'}, 'Scheduling or capacity?'));
   const action = (text, hash = '') => node('a', {class:'city-entry-action', href:`/city-explorer/${hash}`}, text);
   const card = node('article', {class:'start-card city-entry-feature'}, [
     node('p', {class:'eyebrow'}, 'SAN FRANCISCO · RECORDED STUDY · MAP QUALIFICATION OPEN'),
@@ -34,15 +35,17 @@ export function mountCityEntry(doc = document) {
       node('p', {}, 'Inspect a twelve-pair depot experiment on sourced roads. The notebook and replay explain a recorded study; the interactive lessons below let you run their own teaching models.'),
     ]), action('Open City Explorer  ↗'),
   ]);
-  catalogIntro.parentNode.insertBefore(catalog, catalogIntro.nextSibling);
-  // The depot flow lab rebuilds its hero, chooser included, on every lesson change.
+  // Recorded-study entries follow the lesson grid so the first lesson stays on the first phone screen.
+  catalogGrid.parentNode.insertBefore(catalog, catalogGrid.nextSibling);
+  // The depot flow lab rebuilds its hero on every lesson change; the next-lesson line sits under the
+  // Compare help text, below the first-screen action, and the observer restores it after a rebuild.
   const linkCapacity = () => {
-    const chooser = flowHero.querySelector('nav.lab-chooser');
-    if (chooser && !doc.getElementById('capacity-entry')) chooser.appendChild(node('a', {id:'capacity-entry', class:'studio-button', href:'/network-flows/capacity/'}, 'Scheduling or capacity?'));
+    const help = flowHero.querySelector('p.flow-run-help');
+    if (help && !doc.getElementById('capacity-entry')) help.parentNode.insertBefore(node('p', {class:'flow-next-lesson'}, ['Next lesson: ', node('a', {id:'capacity-entry', href:'/network-flows/capacity/'}, 'Scheduling or capacity?')]), help.nextSibling);
   };
   linkCapacity();
   new MutationObserver(linkCapacity).observe(flowHero, {childList:true});
-  catalogIntro.parentNode.insertBefore(node('section', {class:'capacity-entry-catalog', 'aria-labelledby':'capacity-catalog-title'}, [
+  catalogGrid.parentNode.insertBefore(node('section', {class:'capacity-entry-catalog', 'aria-labelledby':'capacity-catalog-title'}, [
     node('div', {}, [
       node('p', {class:'city-entry-eyebrow'}, 'RECORDED CAPACITY STUDY'),
       node('h2', {id:'capacity-catalog-title'}, 'Better scheduling, more bandwidth, or more charging power?'),

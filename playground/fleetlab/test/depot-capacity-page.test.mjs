@@ -177,9 +177,12 @@ test('an incomplete study makes Load unavailable',async()=>{
 test('reduced motion hides Play and steps by event; motion changes reach the page',async()=>{
   const restore=installFakeDom();
   try{let reduced=true;const p=create({reducedMotion:()=>reduced}),e=p.element;await p.load();
-    const play=e.querySelectorAll('.capacity-inspect .flow-actions button').find(b=>/^Play/.test(text(b)));
+    const play=e.querySelector('.capacity-inspect .flow-actions [data-capacity-play]');
     assert.equal(play.hidden,true);
+    assert.equal(e.querySelector('.cap-veil').getAttribute('visibility'),'hidden','nothing is revealed before the first step');
     e.querySelector('[data-next-event]').click();assert.equal(text(e.querySelector('.flow-clock')),'Minute 2 of 90');
+    assert.equal(e.querySelector('.cap-veil').getAttribute('visibility'),'visible','stepping by event reveals the timeline up to the cursor');
+    assert.equal(e.querySelectorAll('.capacity-inspect .flow-actions button').filter(b=>!b.hidden&&text(b)==='Next event').length,1,'one visible stepping control');
     reduced=false;p.motionChanged();assert.equal(play.hidden,false);
     p.destroy();
   }finally{restore();}
