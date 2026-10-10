@@ -54,10 +54,10 @@ export function simulationCatalog(){
   ].map(r=>({...r,frame:LESSON_FRAMES[r.id]}));
 }
 
-const COLLECTIONS=Object.freeze([
-  {name:'Depot readiness & data',families:['Depot work and capacity','Energy and charging'],questions:'Why can a charged vehicle still wait? Which upload goes first? Would another bay or worker help?',labs:'Depot flow lab · Fleet day depot and charging lessons'},
-  {name:'Fleet service & capacity',families:['Fleet size and supply','Demand, crowds and weather','Reading a run and a result','Launching a new area','Recall, release and depot choice','Scaling the fleet'],questions:'Can the fleet meet demand? What changes as a fleet grows? Does a policy help across repeats?',labs:'Fleet day · Four-area experiments · Scale lab'},
-  {name:'Streets & cities',families:['Roads and streets'],questions:'Where do queues form? Can one block tie up the fleet?',labs:'Street lab · San Francisco City Explorer (hosted)'},
+export const COLLECTIONS=Object.freeze([
+  {name:'Depot readiness & data',families:['Depot work and capacity','Energy and charging'],questions:'Why can a charged vehicle still wait? Which upload goes first? Would another bay or worker help?'},
+  {name:'Fleet service & capacity',families:['Fleet size and supply','Demand, crowds and weather','Reading a run and a result','Launching a new area','Recall, release and depot choice','Scaling the fleet'],questions:'Can the fleet meet demand? What changes as a fleet grows? Does a policy help across repeats?'},
+  {name:'Streets & cities',families:['Roads and streets'],questions:'Where do queues form? Can one block tie up the fleet?'},
 ]);
 const collectionOf=frame=>COLLECTIONS.find(c=>c.families.includes(frame.family)).name;
 const minutes=r=>r.frame.evidence==='paired'?5:3;
@@ -65,23 +65,25 @@ const minutes=r=>r.frame.evidence==='paired'?5:3;
 export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},onStreets=()=>{},onLesson=null,labLinks=null,hrefForLesson=r=>routeHref({page:r.target==='flows'?'flows':r.target==='scale'?'scale':r.target==='operations'?'simulation':r.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(r.id)?'depots':'operations',lesson:r.id})}={}){
   const records=simulationCatalog();const cards=el('div',{class:'catalog-grid'});const count=el('p',{class:'catalog-count',role:'status'});
   const search=el('input',{type:'search',placeholder:'Search questions, topics or lab names…','aria-label':'Search lessons',on:{input:()=>render()}});
-  const topic=el('select',{'aria-label':'Topic',on:{change:()=>render()}},['All topics',...COLLECTIONS.map(c=>c.name)].map(x=>el('option',{value:x},x)));
   const filter=el('select',{'aria-label':'Simulation model',on:{change:()=>render()}},['All labs','Fleet day','Street lab','Four-area experiments','Scale lab','Depot flow lab'].map(x=>el('option',{value:x},x)));
-  const showTopic=name=>{topic.value=name;render();topic.focus();};
-  const collections=el('section',{class:'catalog-collections','aria-label':'Topics'},COLLECTIONS.map(c=>el('article',{},[el('h2',{},c.name),el('p',{},c.questions),el('p',{class:'catalog-labs'},c.labs),el('button',{type:'button',class:'studio-button',on:{click:()=>showTopic(c.name)}},'Show these lessons')])));
+  let topic='All topics';
+  const chips=['All topics',...COLLECTIONS.map(c=>c.name)].map(name=>el('button',{type:'button',class:'studio-button',on:{click:()=>{topic=name;render();}}},name));
+  const questions=el('p',{class:'catalog-topic-questions'});
+  const clear=el('button',{type:'button',class:'studio-button',on:{click:()=>{search.value='';filter.value='All labs';topic='All topics';render();search.focus();}}},'Clear filters');
   const element=el('main',{class:'simulation-catalog'},[
-    el('section',{class:'catalog-intro'},[el('p',{class:'eyebrow'},'EXPLORE'),el('h1',{},'What would you like to understand?'),el('p',{class:'hero-lede'},'Every lesson answers one fleet question with a small synthetic model. Start from a question, a topic or a lab you already know.')]),
-    el('div',{class:'catalog-search'},[['Search lessons',search],['Topic',topic],['Simulation model',filter]].map(([name,control])=>el('label',{},[el('span',{},name),control]))),
-    collections,
+    el('section',{class:'catalog-intro'},[el('p',{class:'eyebrow'},'EXPLORE'),el('h1',{},'What would you like to understand?'),el('p',{class:'hero-lede'},'Every lesson answers one fleet question with a small synthetic model.')]),
+    el('div',{class:'catalog-search'},[['Search lessons',search],['Simulation model',filter]].map(([name,control])=>el('label',{},[el('span',{},name),control]))),
+    el('div',{class:'catalog-topics',role:'group','aria-label':'Topic'},chips),questions,
     labLinks&&[el('p',{class:'eyebrow catalog-jump'},'JUMP TO A LAB'),labLinks],
-    el('h2',{class:'fl-sr-only'},'All lessons'),count,cards,
+    el('h2',{class:'fl-sr-only'},'All lessons'),el('div',{class:'catalog-count-row'},[count,clear]),cards,
     el('p',{},'Fleet day also hosts separate contracts: staffing, charging, charger status, airport wave, launch rehearsal and the Austin power lab.'),el('p',{},'Each model has its own assumptions, so numbers from different models are not interchangeable.'),el('section',{class:'catalog-outside'},[el('h2',{},'What is still outside this playground?'),el('p',{},'Physical autonomous driving, lane changes and collisions; calibrated demand; staff shifts; repair failures; electrical network dynamics; globally optimal fleet routing; real dispatch or vehicle commands. A computed recommendation never authorizes an operational change.')]),
   ]);
   function render(){
     const query=search.value.toLowerCase().trim();
-    const shown=records.filter(r=>(filter.value==='All labs'||r.model===filter.value)&&(topic.value==='All topics'||collectionOf(r.frame)===topic.value)&&`${r.title} ${Object.values(r.frame).join(' ')} ${r.id} ${r.model}`.toLowerCase().includes(query));
+    const shown=records.filter(r=>(filter.value==='All labs'||r.model===filter.value)&&(topic==='All topics'||collectionOf(r.frame)===topic)&&`${r.title} ${Object.values(r.frame).join(' ')} ${r.id} ${r.model}`.toLowerCase().includes(query));
     count.textContent=`${shown.length} of ${records.length} lessons`;
-    collections.hidden=Boolean(query)||topic.value!=='All topics'||filter.value!=='All labs';
+    for(const chip of chips){const on=chip.textContent===topic;chip.setAttribute('aria-pressed',String(on));chip.classList.toggle('is-selected',on);}
+    const picked=COLLECTIONS.find(c=>c.name===topic);questions.hidden=!picked;questions.textContent=picked?.questions??'';
     cards.replaceChildren(...shown.map(r=>el('article',{class:'catalog-card','data-simulation':r.id},[
       el('span',{class:'catalog-card-id'},r.id),
       el('h3',{},r.frame.what_why),
@@ -90,7 +92,7 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
       el('a',{href:hrefForLesson(r),class:'studio-button',on:{click:event=>followLink(event,()=>onLesson?onLesson(r):r.target==='operations'?onOperations(typeof r.patch==='function'?r.patch():structuredClone(r.patch)):r.target==='streets'?onStreets(r.hotspot):onRegional(r.preset))}},'Open lesson  →'),
       el('details',{},[el('summary',{},'More about this lesson'),frameView(r.frame,{titleNode:el('p',{class:'teaching-title'},r.title),seeds:lessonSeeds(r),change:lessonChange(r),limits:r.limits})]),
     ])));
-    if(!shown.length)cards.append(el('p',{},'No lesson matches. Clear the filters or try a resource word such as charging or queue.'),el('button',{type:'button',class:'studio-button',on:{click:()=>{search.value='';filter.value='All labs';showTopic('All topics');}}},'Clear filters'));
+    if(!shown.length)cards.append(el('p',{},'No lesson matches. Clear the filters or try a resource word such as charging or queue.'));
   }
   render();return {element};
 }

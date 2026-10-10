@@ -271,3 +271,22 @@ test('confirmed at base, closed by the Task 3 pause clear: Depot flow lab announ
     assert.equal(JSON.stringify(x.studio.flows.getState().result),result);
   }finally{x.studio.destroy();x.restore();}
 });
+test('direct lesson routes in sequence: a played lesson leaves nothing behind in the next one',async()=>{
+  const x=setup();try{
+    const flows=x.studio.flows.element,live=flows.querySelector('div.fl-sr-only[role="status"]');
+    x.studio.applyRoute('#/depot-flow-lab?lesson=two-vehicles');await x.studio.flows.run();
+    flows.querySelector('[data-next-event]').click();assert.notEqual(live.textContent,'','stepping announces the event');
+    x.studio.applyRoute('#/depot-flow-lab?lesson=crossed-priorities');
+    assert.equal(flows.querySelector('h1').textContent,'Who should upload next?');
+    assert.equal(flows.querySelector('[data-flow-run]').textContent,'Compare the four rules');
+    assert.equal(flows.querySelector('[data-flow-outcomes]'),null,'no outcomes from the other lesson');
+    assert.equal(live.textContent,'','no announcement carries over');
+    // The UC-01 lesson copy says "A null check" on purpose; any other "null" would be a rendered missing value.
+    const stray=()=>document.body.textContent.replaceAll('A null check','');
+    x.studio.applyRoute('#/depot-flow-lab?lesson=two-vehicles');
+    assert.equal(x.studio.flows.getState().result,null);
+    assert.doesNotMatch(stray(),/null/);
+    x.studio.applyRoute('#/street-lab');
+    assert.doesNotMatch(stray(),/null/);
+  }finally{x.studio.destroy();x.restore();}
+});
