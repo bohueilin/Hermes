@@ -2,7 +2,116 @@
 
 October 10, 2026 · Educational website release
 
-## Revision 2 — controlled autoplay and the guided capacity comparison
+## Revision 3 — make the operational trade-off readable
+
+**Released and verified:** [FleetLab](https://fleetlab.pages.dev/) · [NF-03 comparison](https://fleetlab.pages.dev/network-flows/capacity/). This is the current release; earlier receipts below are historical.
+
+**Scope:** NF-03 presentation improvements and the NF04-A contract/package proposal. The owner explicitly selected this scope and authorized build, validation, Git push and educational-site publication. The external review is evidence and advice, not deployment authority. This user authorization overrides the generic AGENTS.md §19 publication prohibition for this static teaching site only.
+
+Started at `35845f07a18e09011d0f5b302119ed6dd402ca83` on `codex/fleetlab-city-sf`. Four existing untracked October 9 design notes are preserved and excluded from this change. The new NF-04 simulator, held experiments and new cities are outside this release.
+
+### Review decisions
+
+| Final-review item | Decision and implementation |
+|---|---|
+| R1 — aggregate versus individual outcome | Accept. Put accepted total late minutes beside both on-time counts and the selected vehicle's result. Read the improving fleet total together with B2's regression, without implying universal benefit. |
+| R2 — NF04-A semantics | Accept as design work. Specify deterministic capped allocation/cursor, representable rates, horizon closure, boundary rates and failure/censoring behavior in the linked proposal. No NF-04 engine is implemented. |
+| R3 — packaging | Accept as a prerequisite. Measure the existing complete module graph, compare consolidation against bounded source-bound route packages, and propose explicit accounting. No existing byte limit is raised for this release. |
+| R4 — device and human acceptance | Partially completed by the recorded automated/rendered checks below. Physical/native-browser, screen-reader, human comprehension and SF qualification remain separate, unclaimed checks. |
+| R5 — entry promise | Accept. Home uses **Explore depot operations**, with the same hosted NF-03 destination. Explore leads with **Start with depot operations** and names scheduling, shared resources and required work. **Browse all lessons** and the SF case study remain secondary paths. |
+| R6 — guide continuity | Accept. State the accepted pair's changed resource/rule and fixed workload close to its results. Explain already-satisfied energy targets only where the accepted workload supports that explanation. Keep manual inspection and authored narration separate. |
+| R7 — taxonomy | Accept. The mixed destination list is **Quick links**. About says **Five teaching labs, with declared models and limits**; no content or route is removed. |
+| R8 — local step | Accept the definition. Describe only the modeled prerequisite and selected duration. Keep exact time semantics; optional secondary minutes/seconds formatting is deferred. |
+| R9 — long catalog titles | Defer the broader title pass. Featured questions and this release's concrete entry label address the immediate path; stable lesson names, search terms and all 61 lessons are preserved. |
+
+The review's Muse reconciliation is retained: F01/F02/F03/F04/F05/F07 are partial agreements, F06/F09 are already addressed, F08 artwork is deferred, and F10 preservation is accepted. No unsupported adoption, fundraising, personal-history, industry-first or operator-architecture claim is introduced. The future optimization curriculum remains a proposed progression toward explicit objectives, variables, constraints and independently checked feasibility; NF-03 itself is not advertised as a fleet optimizer.
+
+### Canonical terms
+
+| Term | Meaning |
+|---|---|
+| Lab | A teaching area, possibly containing multiple bounded models and lessons. |
+| Model | Versioned mechanisms, assumptions and contracts. |
+| Lesson | One operational question, setup and explanation. |
+| Guide | A presentation format over a declared model or accepted record. |
+| Recorded study | Results produced or reconstructed under a declared protocol. |
+| City Explorer | A separately packaged case-study viewer with its own map/record qualification. |
+
+### NF-04 review package
+
+Read [the updated design specification](FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-10.md) with [the NF04-A contract and packaging proposal](FLEETLAB_NF04_A_CONTRACT_AND_PACKAGING_PROPOSAL_2026-10-10.md). The six-beat storyboard, analytical anchors and counterexamples remain design expectations, not executed NF-04 results. The proposal is ready for technical/design feedback; a later implementation decision must explicitly settle its contract and packaging gates.
+
+### Validation and publication receipt
+
+Application source `87733ad0b7dd73f65b1742aff4c9253c99e6f391` is committed and pushed to `github/codex/fleetlab-city-sf`. Final packaging uses that exact source in a clean managed worktree. The exact package passed preview readback before publication and stable production readback afterward. Production reused all uploaded assets; no rebuild occurred between the two deployments.
+
+| Gate | Fresh revision 3 result |
+|---|---|
+| Teaching Node suite | 2,193 passed; zero failed; eight existing skips and one TODO (2,202 total) |
+| City Node / City Python | 67 / 331 passed |
+| Hermes regression suite | 1,662 passed; 55 existing skips; boundary base supplied |
+| Ruff / whitespace / publication guard | Passed |
+| Clean-checkout doctor | 18 PASS; one optional NOT_AVAILABLE; no WARN or FAIL |
+| Independent code/design review | No unresolved findings; 85 focused tests passed; NF04-A zero-rate/cap wording corrected |
+| Dependency audits | Zero reported vulnerabilities for deployment and map dependencies; 38 registry signatures and 22 attestations verified |
+| Offline artifact | 2,549,837 B; 71,603 B below cap, retaining 21,603 B beyond the 50,000 B reserve |
+| Hosted teaching package | 122 files; 3,733,940 B including existing media; counted text/source 2,621,323 B, **117 B below the unchanged cap** |
+| Integrated package | 10,038 files; 1,619,535,612 B; 10,037 served files |
+| City preservation | All 9,908 City/source-offer files unchanged against revision 2 |
+
+The presentation projection is now `depot-capacity-projection/1.2.0`; model, verifier, workload, scientific study identities and recordings are unchanged. Source-to-emitted binding, invalid-record rejection and the existing source limits remain enforced. The NF04-A packaging proposal uses a separately labelled frozen revision-2 baseline; the table above is the actual new release budget.
+
+Browser checks exercised the guide, all three chapter interventions, manual inspection and Resume, keyboard End, native Home → NF-03 navigation, About and Explore. B2's 18→30-minute result and explicit 12-minute loss sit beside 132.3→70 total late minutes and unchanged 3/12 on-time counts. At the 90-minute horizon, all current rates are zero while the paired whole-run totals remain fixed. More power alone shows no charging needed for the data-heavy workload; switching intervention updates the nearby context.
+
+At 1440×900, both complete resource channel blocks end at approximately y=899.5 after the comparison link positions the focal view. Tested focal labels were at least 14 px. Widths 320, 390, 1024 and 1440 had no page overflow. At 390×844, switching to the rule arm retained B2, minute 18 and both final results. No browser errors were observed. These are rendered desktop-browser viewport observations, not physical-phone or native-browser acceptance.
+
+One early full-suite run correctly rejected a source capture while an agent was still editing; the final frozen-source rerun passed. A copy assertion was updated to check the retained synthetic boundary at its actual catalog introduction. The regressing-caption test first failed, then passed with the accepted 12-minute ready-time difference. No scientific rerun, protocol retry or cap bypass occurred.
+
+ADB reported no attached Pixel. Native reduced-motion/data-saving preferences, Safari/Firefox, screen readers, native 200% zoom and physical frame/heap budgets remain open. Existing automated preference/lifecycle fixtures pass but do not close those checks. Offline content/CSP/size checks passed; the previously policy-blocked offline file-origin browser check was not retried through a workaround.
+
+### Revision 3 publication receipt
+
+| Item | Verified value |
+|---|---|
+| Application source | `87733ad0b7dd73f65b1742aff4c9253c99e6f391`; pushed to `github/codex/fleetlab-city-sf` |
+| Production | `1b5e00d3-70c0-4182-83c4-9f19fcaba11e` · [immutable deployment](https://1b5e00d3.fleetlab.pages.dev/) |
+| Preview | `c1d08481-97c4-4c00-bc85-2535d3e5de79` |
+| Prior production retained | `27abffcd-005a-4800-be56-a3515f1d2f50` |
+| Full served-byte checks | **10,037 / 10,037 matched**, on both preview and stable production |
+| Header checks | **10 / 10 passed** on both, including real 404, downloads, City and capacity routes |
+| Immutable production smoke | **12 / 12 matched** |
+| Completed production readback | `2026-10-10T19:23:59.515667+00:00` |
+| Offline SHA-256 | `eeba4707891e98eb572ef4d58ff8ee92768f9ff9cf9cfe1996be72f3b695b522` |
+| Integration manifest SHA-256 | `dd300f8e463699794cb3384bb4d427b0528227012198ceebf52ea3a580b79a55` |
+| Capacity release digest | `fe1b1c41de13cb0ab086c13109eb1bedc2f07a07292654a312c2bb92ea239391` |
+| Source tree | `1121071e6829c7a76f6fe285773aca390b698d80` |
+
+The live Home → NF-03 journey and Trade-off chapter were exercised after production deployment; B2, paired lateness and 390-pixel arm switching agreed with local validation. No browser errors were observed. Current City `c56bda6b509105c5` and rollback `e3318a76588a7403` remain unchanged. All generated packages and private validation evidence were retained outside the clean release worktree before its archival; the temporary local QA server was stopped.
+
+Use the existing reproducible commands below with `dist/fleetlab-tradeoff-oct10` and the application source above. Integration used the verified revision-2 City/current/rollback/source offer, original legacy distribution and readback, plus `--flow-update`. `docs/releases/fleetlab-current.json` provides the current twelve-request smoke record. These receipt/design edits are a separate documentation commit and do not alter deployed application bytes.
+
+### Remaining review and learning checks
+
+SF remains **HOLD / BLOCKED_MAP_QUALIFICATION**. The publication of this educational interface does not clear independent map/source review, held power-study work, device acceptance or human comprehension. Austin expansion and NF-04 engine implementation were not started.
+
+Proposed formative tasks for five independent AV-adjacent readers (not conducted):
+
+| Task | Observable understanding sought |
+|---|---|
+| H1: Is the different rule better for everyone? | Same workload; total lateness 132.3→70 min; 3/12 on time in both; B2 ready 18→30, missing target 25. |
+| H2: Why does more power change nothing here? | Energy targets are already satisfied; uplink work still limits readiness. Lower average utilization can accompany improvement because the denominator is the full observation window. |
+| H3: Does preload eliminate work or grant driving permission? | Identify the earlier 12 GB/96-second fetch, unchanged 48 GB local work and remaining modeled tasks; infer no safety or deployment permission. Use the proposed NF-04 storyboard. |
+
+Aim for 4/5 readers to explain each mechanism without prompting; any authority misconception requires revision regardless of count. This is a formative threshold, not population validation or operator adoption evidence. Record where misunderstanding occurs.
+
+**Recommendation:** use the revised NF-03 as the public pilot and review the concrete NF04-A proposal before building its engine.
+
+**Top risks + mitigations:** nearly exhausted current source budget → preserve the cap and settle measured packaging first; aggregate improvement hiding an individual loss → keep both metrics visible; attractive simulation mistaken for operational evidence → retain qualification and authority boundaries.
+
+**Next 3 actions:** review/approve or amend NF04-A's numerical contract; explicitly decide and validate its packaging option; complete the independent human/native-device checks before claiming the next lesson is qualified. These follow-ups do not require another broad redesign or another city.
+
+
+## Earlier Revision 2 — controlled autoplay and the guided capacity comparison
 
 **Released and verified:** [FleetLab](https://fleetlab.pages.dev/) · [guided NF-03 comparison](https://fleetlab.pages.dev/network-flows/capacity/). This revision supersedes the earlier release retained below. This revision follows the owner's explicit instruction to build, test, validate, push and publish the reviewed autoplay/copy/guided-NF-03 slice. It does not authorize or implement NF-04.
 

@@ -2,7 +2,7 @@
 
 Current implementation and release status: [October 10 handoff](docs/FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-10.md). Next proposed Network Flows lesson: [NF-04 design specification](docs/FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-10.md). These dated records supersede older website navigation and publication status below; they do not clear SF qualification, Q1/Q8/N2 or physical deployment boundaries.
 
-Revision 2 covers controlled homepage autoplay, corrected edition/roadmap copy, and the guided NF-03 comparison. Its receipt is separate from the earlier October 10 release retained below. NF-04 remains a specification for feedback, with explicit byte accounting, allocation and package-budget decisions required before implementation.
+Revision 3 adds the visible NF-03 fleet/vehicle trade-off, chapter context and depot-operations entry copy, and a concrete [NF04-A contract and packaging proposal](docs/FLEETLAB_NF04_A_CONTRACT_AND_PACKAGING_PROPOSAL_2026-10-10.md). Use its latest receipt in the handoff for validation/publication status. Earlier revisions remain historical. The owner selected NF-03 fixes plus the NF04-A proposal; NF-04 engine implementation is not part of this release.
 
 ---
 

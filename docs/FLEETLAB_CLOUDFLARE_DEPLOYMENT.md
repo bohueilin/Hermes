@@ -13,7 +13,7 @@ hosting. Compare it with the committed `docs/releases/fleetlab-current.json`
 and run the readback tool to establish which bytes are actually served.
 
 The owner explicitly authorized Git push and publication of the October 10
-visual-experience update and its controlled-autoplay/guided-NF-03 follow-up, following the authorized October 8 and 9 releases. An audit, handoff,
+visual-experience update, controlled-autoplay/guided-NF-03 follow-up, and final-review NF-03 trade-off/copy improvements, following the authorized October 8 and 9 releases. An audit, handoff,
 successful verifier, Git branch label or this runbook never grants authority for
 a future release. Follow the user's
 actual instruction. Account/credential changes and destructive retention actions
