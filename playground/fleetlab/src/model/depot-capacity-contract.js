@@ -65,3 +65,25 @@ export function canonicalText(value){
   throw Error('Canonical text accepts plain data only.');
 }
 export const recordDigest=record=>sha256Hex(canonicalText(record));
+
+// The 72-cell study plan and the rule a study manifest must meet before a comparison may read it.
+export const STUDY_ID='nf03-schedule-versus-capacity/1';
+export const STUDY_SCHEMA='depot-capacity-study-manifest/1.0.0';
+export const cellId=({regime,treatment,rule,time_quantum_ms})=>`${regime}/${treatment}/${rule}/${time_quantum_ms}`;
+export const STUDY_CELLS=deepFreeze(Object.keys(CAPACITY_REGIMES).flatMap(regime=>Object.keys(CAPACITY_TREATMENTS).flatMap(treatment=>
+  CAPACITY_RULES.flatMap(({id:rule})=>CAPACITY_PROTOCOL.quanta_ms.map(time_quantum_ms=>({regime,treatment,rule,time_quantum_ms}))))));
+export const workloadDigest=()=>sha256Hex(canonicalText({protocol:CAPACITY_PROTOCOL,regimes:CAPACITY_REGIMES,treatments:CAPACITY_TREATMENTS,rules:CAPACITY_RULES.map(r=>r.id)}));
+
+/** A cell is accepted when it is planned, present once, labelled by its own fields, VALID and comparison eligible.
+ * A manifest written under another schema, study, version set or workload is never complete. */
+export function studyStatus(manifest){
+  const planned=STUDY_CELLS.map(cellId),cells=Array.isArray(manifest?.cells)?manifest.cells:[];
+  const ids=cells.map(c=>c?.cell_id),seen=id=>ids.filter(x=>x===id).length;
+  const good=c=>planned.includes(c?.cell_id)&&c.cell_id===cellId(c)&&c.verification?.model_validity==='VALID'&&c.verification?.comparison_eligible===true;
+  const missing=planned.filter(id=>!seen(id)),duplicated=planned.filter(id=>seen(id)>1);
+  const rejected=[...new Set(cells.filter(c=>!good(c)).map(c=>c?.cell_id))];
+  const accepted=planned.filter(id=>seen(id)===1&&!rejected.includes(id)).length;
+  let current=false;
+  try{current=manifest.schema===STUDY_SCHEMA&&manifest.study===STUDY_ID&&canonicalText(manifest.versions)===canonicalText(CAPACITY_VERSIONS)&&manifest.workload_digest===workloadDigest();}catch{/* A malformed manifest is simply not current. */}
+  return {planned:planned.length,accepted,complete:current&&accepted===planned.length&&!missing.length&&!duplicated.length&&!rejected.length,missing,duplicated,rejected};
+}
