@@ -1542,7 +1542,7 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .flow-hero .flow-setup-table caption { padding:8px 10px; }
 .flow-hero .flow-setup-table th,.flow-hero .flow-setup-table td { padding:6px 10px; font-size:15px; line-height:1.4; min-width:0; }
 .flow-hero .flow-actions { margin:0 0 12px; }
-.flow-rules h3 { font-size:18px; margin-bottom:8px; }
+.flow-rules h2 { font-size:18px; line-height:1.4; letter-spacing:normal; font-weight:700; margin-bottom:8px; }
 .flow-rules article { border-top:1px solid var(--rule); }
 .flow-outcomes-phone dl,.flow-versions { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px 16px; margin-bottom:0; }
 .flow-outcomes-phone dt { color:var(--muted); }
@@ -1600,7 +1600,16 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .flow-resource-board dd { margin:0; font-weight:600; }
 .flow-wait-reason { font-weight:600; margin:10px 0 0; }
 @media (min-width:768px) { .flow-resource-board { grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); } }
-@media (max-width:767.98px) { .flow-outcomes-wide { display:none; } .flow-outcomes-phone { display:grid; gap:16px; } .flow-bounds { grid-template-columns:1fr; } .flow-rule-picker { display:flex; flex-wrap:wrap; } .depot-flow-lab .flow-hero h1 { margin:8px 0 12px; } .flow-lede { font-size:18px; } .flow-definition { font-size:14px; margin-bottom:12px; } .flow-hero .flow-table { margin-bottom:12px; } .flow-hero .lab-chooser { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .flow-hero .lab-chooser a { padding:6px 12px; font-size:15px; line-height:1.35; } .flow-hero .flow-setup-table th,.flow-hero .flow-setup-table td { padding:6px; font-size:14px; line-height:1.35; } }
+@media (max-width:767.98px) { .flow-outcomes-wide { display:none; } .flow-outcomes-phone { display:grid; gap:16px; } .flow-bounds { grid-template-columns:1fr; } .flow-rule-picker { display:flex; flex-wrap:wrap; } .depot-flow-lab .flow-hero h1 { margin:8px 0 12px; } .flow-lede { font-size:18px; } .flow-definition { font-size:14px; margin-bottom:12px; } .flow-hero .flow-table { margin-bottom:12px; } .flow-hero .lab-chooser { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .flow-hero .lab-chooser a { padding:6px 12px; font-size:15px; line-height:1.35; } .flow-hero .flow-setup-table caption { padding:6px; line-height:1.4; } .flow-hero .flow-setup-table th,.flow-hero .flow-setup-table td { padding:5px 6px; font-size:14px; line-height:1.35; } }
+/* Desktop lesson hero: the question on the left, setup and Compare on the right. The table spans the three question rows
+   so the left column never opens a gap; dense placement starts it beside the heading. */
+@media (min-width:1000px) {
+  .flow-hero { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); column-gap:40px; align-items:start; grid-auto-flow:dense; }
+  .flow-hero > .flow-breadcrumb,.flow-hero > .eyebrow,.flow-hero > .lab-chooser { grid-column:1/-1; }
+  .flow-hero > h1,.flow-hero > .flow-lede,.flow-hero > .flow-definition { grid-column:1; }
+  .flow-hero > .flow-table,.flow-hero > .flow-actions,.flow-hero > .flow-run-help,.flow-hero > .flow-status,.flow-hero > .flow-change { grid-column:2; }
+  .flow-hero > .flow-table { grid-row:span 3; }
+}
 @media (max-width:650px) { .depot-flow-lab { padding:28px 18px 48px; } .flow-controls { grid-template-columns:minmax(0,1fr); } .flow-reading { padding-left:16px; } }
 
 .depot-flow-lab [data-chart=depot_flow_lanes] h3 { font-size:18px; }

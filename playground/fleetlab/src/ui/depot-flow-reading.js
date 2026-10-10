@@ -25,7 +25,7 @@ export function waitReason(state,row,scenario){
  if(row.ready)return `${id} is ready since minute ${minuteOf(row.ready_s)}.`;
  if(post.state==='active'&&charge.state==='complete')return `${id} is in its local step; ready at minute ${minuteOf(post.started_s+scenario.vehicles.find(v=>v.id===row.vehicle).post_s)}.`;
  if(upload.state==='waiting')return `${id} waits for the uplink${state.upload_holders.length?`, held by ${vehicles(state.upload_holders)} under ${ruleName(state.rule).toLowerCase()}`:'; no capacity is available'}.`;
- if(upload.state==='active'){const rest=row.waiting_for.filter(task=>task!=='upload');return `${id} is uploading at ${gbps(row.upload_rate_bytes_s)}; ${join(rest)} ${rest.length===1?'remains':'remain'}.`;}
+ if(upload.state==='active'){const rest=row.waiting_for.filter(task=>task!=='upload').map(task=>task==='post-upload step'?'local step':task);return `${id} is uploading at ${gbps(row.upload_rate_bytes_s)}; ${join(rest)} ${rest.length===1?'remains':'remain'}.`;}
  if(charge.state==='waiting')return `${id} waits for the charger${state.charge_holders.length?`, held by ${vehicles(state.charge_holders)}`:'; no capacity is available'}.`;
  return `${id} is charging at ${row.charge_rate_j_s/1000} kW; ${post.state==='complete'?'nothing else remains':'the local step remains'}.`;
 }
