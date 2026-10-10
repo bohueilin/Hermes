@@ -49,10 +49,10 @@ function overview(navigate, visit, film) {
         film.element,
         el("div",{class:"welcome-cycle","aria-label":"Illustrated fleet cycle"},["Ride","Recharge","Reset","Repeat"].map((word,i)=>el("span",{},[el("small",{},`0${i+1}`),word]))),
       ]),
-    ]),
-    el("div",{class:"film-caption"},[
-      el("p",{},[el("strong",{},"Original 3D concept film"),"Waterfront travel, a neighborhood and a charging depot connect the ride to fleet readiness. An illustration, not a simulation result."]),
-      el("p",{class:"creator-credit"},"Independent exploration. Built with curiosity."),
+      el("div",{class:"film-caption"},[
+        el("p",{},[el("strong",{},"Original 3D concept film"),"Waterfront travel, a neighborhood and a charging depot connect the ride to fleet readiness. An illustration, not a simulation result."]),
+        el("p",{class:"creator-credit"},"Independent exploration. Built with curiosity."),
+      ]),
     ]),
     el("nav",{class:"home-browse","aria-label":"Browse"},[pageLink("Browse all topics  →","catalog",navigate),pageLink("About & limits  →","approach",navigate)]),
   ]);

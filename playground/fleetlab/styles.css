@@ -1438,10 +1438,11 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .studio-overview .studio-button, .studio-approach .studio-button, .lab-links .studio-button, .simulation-catalog .studio-button, .depot-flow-lab .studio-button { font-size: 15px !important; }
 .studio-film-hero { display: grid; grid-template-columns: minmax(0,1fr); gap: 40px; padding: 56px 0 24px; }
 @media (min-width: 1000px) {
-  .studio-film-hero { grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-areas: "copy visual" "start start"; align-items: center; gap: 56px; padding-top: 72px; }
+  .studio-film-hero { grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-areas: "copy visual" "copy caption" "start start"; align-items: center; gap: 16px 56px; padding-top: 72px; }
   .film-copy { grid-area: copy; }
   .welcome-visual { grid-area: visual; }
-  .start-points { grid-area: start; }
+  .film-caption { grid-area: caption; }
+  .start-points { grid-area: start; margin-top: 40px; }
 }
 .film-copy { min-width: 0; }
 .film-copy .eyebrow { color: var(--accent); }
@@ -1465,6 +1466,11 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .film-caption p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0; max-width: 640px; }
 .film-caption strong { color: var(--ink); font-weight: 550; margin-right: 8px; }
 .film-caption .creator-credit { max-width: 200px; text-align: right; }
+/* On a desktop the caption sits in the column under the film, so it stacks and drops the full-width rule. */
+@media (min-width: 1000px) {
+  .film-caption { flex-direction: column; gap: 8px; align-self: start; margin: 0; padding: 0; border-bottom: 0; }
+  .film-caption .creator-credit { text-align: left; max-width: none; }
+}
 .start-points h2 { font-size: clamp(28px,3vw,40px); letter-spacing: -.03em; line-height: 1.15; margin: 0 0 28px; }
 .start-grid { display: grid; gap: 20px; }
 @media (min-width: 768px) { .start-grid { grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); } }

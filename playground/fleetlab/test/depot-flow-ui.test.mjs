@@ -233,6 +233,22 @@ test('reduced motion steps by event without speed or guided-pause controls',asyn
     assert.equal(lab.element.querySelector('.flow-clock').textContent,'Minute 0 of 15');lab.destroy();
   }finally{restore();}
 });
+test('under reduced motion Next event is the one stepping control and Play steps aside',async()=>{
+  const restore=installFakeDom();let reduced=true;
+  try{const lab=ui.createDepotFlowLab({yieldPage:()=>Promise.resolve(),reducedMotion:()=>reduced});document.body.appendChild(lab.element);await lab.run();
+    const actions=lab.element.querySelector('.flow-trace .flow-actions'),play=actions.querySelectorAll('button')[0],next=actions.querySelector('[data-next-event]');
+    const visible=()=>actions.querySelectorAll('button').filter(b=>!b.hidden).map(b=>b.textContent);
+    assert.equal(play.hidden,true,'Play is hidden under reduced motion');
+    assert.deepEqual(visible(),['Restart','Previous event','Next event'],'one control named Next event');
+    next.click();assert.match(lab.element.querySelector('.flow-clock').textContent,/^Minute 1 of 15/);
+    assert.equal(lab.element.querySelector('input[type="range"]').value,'60','Next event advances the cursor');
+    reduced=false;lab.motionChanged();assert.equal(play.hidden,false,'Play returns when motion is allowed');
+    play.focus();reduced=true;lab.motionChanged();
+    assert.equal(play.hidden,true);assert.equal(document.activeElement,next,'focus moves from the hidden Play to Next event');lab.destroy();
+    const moving=ui.createDepotFlowLab({yieldPage:()=>Promise.resolve()});await moving.run();
+    assert.equal(moving.element.querySelector('.flow-trace .flow-actions button').hidden,false,'with motion allowed Play is shown');moving.destroy();
+  }finally{restore();}
+});
 test('method section points to the next lesson on the hosted site',()=>{
   const restore=installFakeDom();
   try{const lab=ui.createDepotFlowLab();const next='A recorded twelve-vehicle study, Scheduling or capacity?, continues these lessons on the hosted FleetLab site; the offline edition does not include it.';
