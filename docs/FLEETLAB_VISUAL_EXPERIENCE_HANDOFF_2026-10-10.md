@@ -4,7 +4,7 @@ October 10, 2026 · Educational website release
 
 ## Revision 2 — controlled autoplay and the guided capacity comparison
 
-**Status: implementation and release validation in progress.** The earlier release below remains the published baseline until this section records a verified replacement. This revision follows the owner's explicit instruction to build, test, validate, push and publish the reviewed autoplay/copy/guided-NF-03 slice. It does not authorize or implement NF-04.
+**Released and verified:** [FleetLab](https://fleetlab.pages.dev/) · [guided NF-03 comparison](https://fleetlab.pages.dev/network-flows/capacity/). This revision supersedes the earlier release retained below. This revision follows the owner's explicit instruction to build, test, validate, push and publish the reviewed autoplay/copy/guided-NF-03 slice. It does not authorize or implement NF-04.
 
 Starting source: `0afd234`, branch `codex/fleetlab-city-sf`; previous application source `35c687e4bb96eb610bd4f8aa1d7f538876edb12d`. Existing untracked October 9 design notes were preserved. The existing checkout is already a linked worktree. The full teaching baseline was 2,150 passed, 0 failed, eight skips and one TODO.
 
@@ -46,15 +46,39 @@ The review reproduced and corrected three release-blocking issues: the hosted so
 | Offline package | 2,549,829 bytes; 71,611 below cap, retaining 21,611 beyond the required 50,000 reserve |
 | Presentation growth | 20,954 bytes across film, guide, page, bench and route CSS; below the 30 KiB combined allowance |
 | Autoplay growth | 3,917 bytes; below its 8 KiB allowance; existing media unchanged |
-| Hosted package | 122 files; final source-bound byte count recorded with publication below |
+| Hosted package | 122 files, 3,732,825 bytes; counted code/source 2,620,208 bytes, 1,232 below the unchanged cap |
 
-Browser observations: visible Home film starts muted without a click, completes once, and manual Pause survives Home/Explore navigation. At phone width the offscreen film has no media source until eligible visibility. Watch starts the guide after all four fixed records are checked; progress and Cancel are visible while loading. At 1440×900 the guide, selected vehicle, wait, both resource channels, all 12 vehicle choices and both outcomes fit in the focal view. At 390 px, switching arms retained B2 at minute 18 with Base ready at 18 versus the rule case at 30. Widths 320, 390, 1024 and 1440 had no page overflow; inspected focal labels were at least 14 px. Keyboard End reached the exact 90-minute horizon; replay from the end and Pause worked. Positive-service intervals and full-window utilization denominators remain inspectable. No browser errors were observed in the checked comparison session.
+Browser observations: visible Home film starts muted without a click, completes once, and manual Pause survives Home/Explore navigation. At phone width the offscreen film has no media source until eligible visibility. Watch starts the guide after all four fixed records are checked; progress and Cancel are visible while loading. At 1440×900 the guide, selected vehicle, wait, both resource channels and both outcomes fit in the focal view; all 12 vehicles remain selectable. At 390 px, switching arms retained B2 at minute 18 with Base ready at 18 versus the rule case at 30. Widths 320, 390, 1024 and 1440 had no page overflow; inspected focal labels were at least 14 px. Keyboard End reached the exact 90-minute horizon; replay from the end and Pause worked. Positive-service intervals and full-window utilization denominators remain inspectable. No browser errors were observed in the checked comparison session.
 
 The desktop automation's locator click centers a control before clicking and can change the viewport; the focal-layout measurement was taken immediately after Watch acceptance before such recentering. An unavailable-label test click at the timeline end was corrected to the actual “Play from minute 0” control; it was not an application failure.
 
 ADB reported no connected Pixel. Phone-width checks are not physical-device evidence. Native screen-reader, Safari/Firefox, native 200% text zoom, system preference behavior and physical frame/heap budgets remain unmeasured here; automated lifecycle/preference fixtures do not replace those checks. The browser policy's previously blocked offline `file://` check was not retried through a workaround; offline content/CSP/size gates passed. Independent human comprehension and SF map/source qualification remain separate.
 
-Publication is pending at this source checkpoint. The final receipt will record exact source/deployment identities, clean-checkout doctor, preview/production byte and header checks, and the preserved City inventory before this revision is called released.
+### Revision 2 publication receipt
+
+| Item | Verified value |
+|---|---|
+| Application source | `1141b12160018216c3baf6875278fe0890762b15`; pushed to `github/codex/fleetlab-city-sf` |
+| Production | `27abffcd-005a-4800-be56-a3515f1d2f50` · [immutable deployment](https://27abffcd.fleetlab.pages.dev/) |
+| Preview | `105a3c7e-9dc8-48ec-9c5e-027b8d0a1f36` |
+| Prior production retained | `c40d90b5-65aa-40ce-828b-5c0b5d4328d9` |
+| Package | 10,038 files, 1,619,534,486 bytes |
+| Full byte readback | 10,037 / 10,037 matched on both preview and stable production |
+| Header checks | 10 / 10 passed on both; includes genuine 404, download, City and capacity routes |
+| Immutable-production smoke | 12 / 12 matched, including guide and film modules |
+| Clean-checkout doctor | 18 PASS, one optional NOT_AVAILABLE; no WARN or FAIL |
+| City preservation | All 9,908 City/source-offer files unchanged; current and rollback identities retained |
+| Completed production readback | `2026-10-10T16:33:19.331927+00:00` |
+| Offline SHA-256 | `507803b4332b9c369551ddd72c9962d07a0448ec72653ea36b244ba3251bac4d` |
+| Integration manifest SHA-256 | `8dd70941ca1f21aebebe2ba9166f47820b360cc635616cebefdb5836f48f20d4` |
+| Capacity release digest | `fa14c37aac567e5bdb2358b144e4affda91bf86982bf8c96087de46bac299ef5` |
+| Source tree | `e13c12e065da625ed9478f299baf2615921486a7` |
+
+The same frozen package was uploaded to preview and production; production reused every asset. Live browser QA confirmed Watch → checked records → six-shot guide → Replay, including the unchanged-power example, and the hosted availability copy, Home film and SF atlas. The public `docs/releases/fleetlab-current.json` now supports a twelve-request smoke check. Final receipt edits are a separate documentation commit and do not alter the deployed application bytes. The reviewed source was built in a clean managed checkout; its generated outputs and private validation evidence were retained outside that checkout before cleanup.
+
+Use the reproducible commands below with `dist/fleetlab-guided-oct10` as the distribution directory and the application source above. Full logs, browser observations and screenshots are retained privately in the dated guided-experience validation directory. No asset, dependency or hosting limit was relaxed. The hosted source budget is nearly full; the NF-04 specification explicitly makes its packaging plan a review decision before implementation.
+
+**Next review:** share this revision and revision 2 of the NF-04 design specification together. NF-04 remains unimplemented. SF qualification remains HOLD / BLOCKED_MAP_QUALIFICATION; Austin and held experiments were not started.
 
 ## Earlier October 10 release — retained historical record
 

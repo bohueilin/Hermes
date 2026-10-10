@@ -4,6 +4,8 @@ October 10, 2026 · Revision 2, after the autoplay/design audit · Design for fe
 
 ## Decision and continuity
 
+Review the shipped NF-03 pilot at [FleetLab capacity study](https://fleetlab.pages.dev/network-flows/capacity/) or its [October 10 revision 2 snapshot](https://27abffcd.fleetlab.pages.dev/network-flows/capacity/), source `1141b12160018216c3baf6875278fe0890762b15`. These links show NF-03; this document proposes NF-04.
+
 Build **NF-04: “One update. Four vehicles. Where is the wait?”** after the October 10 NF-03 visual release. Start with repeated download versus a cold shared cache; introduce preloading as a second question with its earlier work visible. Keep Home, Explore and About & limits, all existing lessons, the optional film, Fleet day, Street lab and City Explorer. Austin expansion remains paused.
 
 This specification incorporates the owner's October 10 visual brief, the inspected NF-03 implementation and `FLEETLAB_DESIGN_AUDIT_AUTOPLAY_AND_MEDIA_PROMPTS_2026-10-10.md`. The accompanying `FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-10.md` records what actually shipped and its verification limits. The owner authorized autoplay, copy fixes and guided NF-03; this document is the separate NF-04 feedback artifact. Nothing here converts an analytical calculation into an executed result or clears SF's qualification hold.
