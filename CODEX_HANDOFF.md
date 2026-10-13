@@ -1,6 +1,6 @@
 # FleetLab NF04-B — October 13, 2026
 
-NF04-B is implemented; exact-source publication is in progress. See [October 13 implementation handoff](docs/FLEETLAB_NF04_B_IMPLEMENTATION_HANDOFF_2026-10-13.md), [contract amendment](docs/FLEETLAB_NF04_B_CONTRACT_2026-10-13.md) and [accepted brief](docs/FLEETLAB_NF04_B_ACCEPTED_BRIEF_2026-10-13.md). SF remains HOLD / BLOCKED_MAP_QUALIFICATION; physical-device and human-comprehension qualification remain open. All earlier status below is historical.
+NF04-B is live and pushed to GitHub: [software-delivery lesson](https://fleetlab.pages.dev/network-flows/software-delivery/). Source `f54496ed47f76b9378277f979318fc0f36a482f1`; production `38a98b78-2fae-4d16-87d5-3cfa37c11b24`; 10,053/10,053 served files and 16/16 headers match. See [October 13 implementation handoff](docs/FLEETLAB_NF04_B_IMPLEMENTATION_HANDOFF_2026-10-13.md), [contract amendment](docs/FLEETLAB_NF04_B_CONTRACT_2026-10-13.md) and [accepted brief](docs/FLEETLAB_NF04_B_ACCEPTED_BRIEF_2026-10-13.md). SF remains HOLD / BLOCKED_MAP_QUALIFICATION; physical-device and human-comprehension qualification remain open. All earlier status below is historical.
 
 ---
 

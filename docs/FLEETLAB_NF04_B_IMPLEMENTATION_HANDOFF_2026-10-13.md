@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-NF04-B is implemented as a bounded software-delivery teaching lesson. This prepublication checkpoint is not a hosting receipt; final release identity and readback are appended after publication. The owner explicitly authorized build, validation, repository push and live educational-site publication. That authorization overrides the historical local-only Git restriction for this website release only.
+NF04-B is implemented as a bounded software-delivery teaching lesson. It is live; the exact release identity and completed hosting readback appear below. The owner explicitly authorized build, validation, repository push and live educational-site publication. That authorization overrides the historical local-only Git restriction for this website release only.
 
 The lesson is **One update. Four vehicles. Where is the wait?**, at `/network-flows/software-delivery/`. Existing Overview, Fleet day, Street lab, Learning, City Explorer and NF01–NF03 remain. Hosted Explore, next-lesson and roadmap discovery lead to NF04; NF03 remains the first Network Flows destination. The offline edition has no dead NF04 control.
 
@@ -82,7 +82,7 @@ These items are open, not blockers to the specifically authorized educational ca
 
 ## Recommendation
 
-Publish the bounded lesson through the exact-source preview/production process and use it to review mechanism comprehension. Preserve open qualification labels. The next modeling discussion should define an objective, decisions, constraints and independent feasibility checks before building an optimizer.
+Use the published bounded lesson to review mechanism comprehension; its exact-source preview and production checks are complete. Preserve open qualification labels. The next modeling discussion should define an objective, decisions, constraints and independent feasibility checks before building an optimizer.
 
 ## Top risks + mitigations
 
@@ -92,6 +92,89 @@ Publish the bounded lesson through the exact-source preview/production process a
 
 ## Next 3 actions
 
-1. Finish exact-source publication/readback and append the release receipt below.
+1. Review the live default and its three counterexamples using the immutable release for reproducibility.
 2. Collect physical-device and independent comprehension observations using the scripts above.
 3. Review a separate constrained scheduling/optimization design; do not silently expand this equal-sharing lesson or start Austin.
+
+## Exact-source package checkpoint
+
+Released candidate source: `f54496ed47f76b9378277f979318fc0f36a482f1`, pushed to `github/codex/fleetlab-city-sf`. Built from a clean managed checkout. Source-bound package proof and upload guard pass. Clean doctor: **18 PASS, 1 optional NOT_AVAILABLE**. Locked deployment and MapLibre audits report zero known vulnerabilities; all 38 audited deployment packages have verified registry signatures and 22 have attestations. Tool versions remain pinned, including Wrangler 4.148.0.
+
+| Counter | Exact candidate bytes | Limit / meaning |
+|---|---:|---|
+| Legacy teaching text | 2,598,990 | 2,621,440 |
+| NF04 route-local | 116,378 | 327,680 working target |
+| NF04 complete closure after hosted headers | 131,653 | 524,288 |
+| NF03 complete closure after hosted headers | 468,398 | 524,288 |
+| Final emitted text including receipt/integration | 2,776,111 | 3,145,728 |
+| Integration text subset | 34,175 | Already inside final emitted union |
+| Teaching original source/tools | 2,896,622 | 3,145,728 |
+| Separate integration originals | 196,141 | 28 existing-owner files; all archived/commit-bound |
+| Combined net original-source growth | 138,103 | 307,200 working target |
+| Receipt metadata | 28,584 | 32,768 |
+| Source archive compressed | 881,219 | 4,194,304 |
+| Source archive extracted | 3,203,019 | 4,194,304 |
+| Offline HTML | 2,549,837 | 2,571,440 after existing reserve |
+| Complete non-City generation | 7,319,784 | 14,360,576 |
+
+The integration-original owner grew 7,280 B from its 188,861 B immutable baseline. No teaching source was reclassified outside the 3 MiB gate. Source archive schema 1.1.0 captures these originals separately. The public receipt describes the teaching input generation; the final integration inventory additionally counts transformed root/header bytes. The NF04 closure grows from 130,816 to 131,653 B with the final headers.
+
+All **9,908 City/source-offer files / 1,613,222,668 B** are byte-identical to the prior live generation. The complete 2,549,837 B offline edition is unchanged. No City scientific record was regenerated. Five pre-existing owner documents remain untracked and excluded.
+
+### Reproduction commands
+
+Use the exact source checkout and the existing deployment runbook; uppercase paths below are placeholders for private build outputs.
+
+```sh
+node --test playground/fleetlab/test/*.test.mjs
+node --test apps/fleetlab-city/test/*.test.mjs
+python -m unittest discover -s apps/fleetlab-city/tests
+PYTHONPATH=src FLEET_PLAYGROUND_BASE=bca4ccd python -m pytest -q
+python -m ruff check .
+PYTHONPATH=src conda run -n hermes-dev python -m hermes doctor
+node playground/fleetlab/tools/software-delivery-study.mjs --check
+node playground/fleetlab/tools/pack.mjs --out OFFLINE_FILE
+node playground/fleetlab/tools/pack.mjs --site PACKED_SITE --source-commit f54496ed47f76b9378277f979318fc0f36a482f1
+node playground/fleetlab/tools/check-dist.mjs OFFLINE_FILE
+node playground/fleetlab/tools/check-dist.mjs --site PACKED_SITE
+node playground/fleetlab/tools/package-proof.mjs --site PACKED_SITE --playground playground/fleetlab --offline OFFLINE_FILE --source-commit f54496ed47f76b9378277f979318fc0f36a482f1 --out PACKAGE_DIR
+node playground/fleetlab/tools/package-proof.mjs --check-integrated INTEGRATED_SITE --playground playground/fleetlab --source-commit f54496ed47f76b9378277f979318fc0f36a482f1
+python apps/fleetlab-city/tools/publication-guard.py --staged
+git diff --check
+```
+
+Publication uses the pinned wrapper, the complete integrated site, source/receipt guard, full byte readback and separate header checks described in [the runbook](FLEETLAB_CLOUDFLARE_DEPLOYMENT.md). The same artifact must pass preview before production.
+
+Preview interaction also confirmed the Explore card opens the exact new route, the worker reconstructs under deployed CSP, the 378 s chapter preserves phone arm/time on selection, and NF03 still reconstructs all four records. NF03 Trade-off selects B2 at minute 18 and exposes the explicit Equal uplink share / Departure deadline first arm controls while retaining the 132.3/70-minute whole-run values.
+
+## Final publication receipt — October 13, 2026
+
+**LIVE and pushed to GitHub.** The same source-bound artifact passed preview and production; no intervening build was substituted.
+
+| Identity / check | Result |
+|---|---|
+| Stable lesson | [Open software delivery](https://fleetlab.pages.dev/network-flows/software-delivery/) |
+| Immutable lesson | [Open this exact release](https://38a98b78.fleetlab.pages.dev/network-flows/software-delivery/) |
+| Source commit | `f54496ed47f76b9378277f979318fc0f36a482f1` |
+| Git branch | `codex/fleetlab-city-sf` |
+| Preview deployment | `b397050c-d6f2-415e-93f4-95a9820760d5` |
+| Production deployment | `38a98b78-2fae-4d16-87d5-3cfa37c11b24` |
+| Prior production retained | `3d23afce-4404-430b-a5d2-a543a45c6754` |
+| Final integration inventory SHA-256 | `d2735c99639c7c531a0f0eb8e01e9d9268012d704201a3c0764dc1d42e066a69` |
+| Physical generation | 10,054 files / 1,620,542,452 B |
+| Preview byte readback | 10,053 / 10,053 matched |
+| Stable production byte readback | 10,053 / 10,053 matched |
+| Preview / production headers | 16 / 16 each |
+| Immutable production smoke | 21 / 21 matched |
+| Prior immutable production smoke | 15 / 15 matched |
+| Production readback completed UTC | 2026-10-13T16:33:25.493115+00:00 |
+
+The unserved `_headers` configuration explains the one-file difference between physical and served counts. Production browser validation reconstructed the primary pair and checked the inclusive 480 s wording: repeated is “Target now; not ready”; cache is “Ready on time.” No horizontal overflow was observed at phone width. Earlier preview tests also covered the catalog entry and preserved NF03.
+
+[Live teaching receipt](https://fleetlab.pages.dev/downloads/teaching-package.json) and [immutable original-source archive](https://38a98b78.fleetlab.pages.dev/network-flows/sources/f61a5de05d57d71cdb20b8e27733f200ffb525055192c23339e7ba4273aa6614.json.gz) expose the reproduction package. The source archive SHA-256 is `f61a5de05d57d71cdb20b8e27733f200ffb525055192c23339e7ba4273aa6614`. [The committed publication receipt](releases/fleetlab-current.json) records the live identities and small smoke inventory. Documentation-only commits after the source commit do not change the deployed source identity.
+
+### Rollback and limitations
+
+Prior whole-generation production remains available at [the previous immutable site](https://3d23afce.fleetlab.pages.dev/), source `eef0180e160671efa1fd9202321096741dbd27f9`. Its 15-file smoke passed this release. The complete prior integrated stage is retained locally with its inventory; current and prior City payloads are also retained in the new artifact. To roll back this teaching release, restore the prior whole generation through the existing owner-authorized release process and repeat byte/header checks; do not mix its old receipt/sidecars with the new lesson. No production rollback was performed.
+
+Public educational publication is complete. Physical Pixel, native preferences/screen reader/200% zoom, browser peak heap and the independent participant study remain open exactly as described above. The SF map qualification hold and all operational authority boundaries are unchanged.

@@ -49,14 +49,14 @@ Files: `src/ui/software-delivery-view.js`, `software-delivery-page.js`, `softwar
 Files: `apps/fleetlab-city/hosted/integration.mjs`, integration transforms/guards and tests; targeted NF03 CSS/title only if confirmed.
 - [x] Add hosted catalog/next-lesson/roadmap discovery only for accepted same-generation route; no new top-level tab or dead offline action.
 - [x] Run full teaching/City/Hermes regression, Ruff, doctor and diff checks once integrated; resolve failures with focused reruns.
-- [ ] Observe 1440x900, 390x844, 320x568, keyboard/static/zoom; benchmark at least20 trials per claimed condition. Probe Pixel; leave unobserved human/device gates open.
+- [x] Observe desktop/390/320 layouts, keyboard controls and benchmark20 default browser trials. Record native static preferences/zoom, physical Pixel and human/device gates explicitly open as described in handoff.
 - [x] Obtain independent whole-change review, fix material findings and record validation.
 
 ### Task 5: Authorized publication and handoff
-- [ ] Stage only task files, run publication guard and review cached diff, commit and push github/codex/fleetlab-city-sf.
-- [ ] Build exact-commit package in clean managed release checkout; integrate unchanged City; verify complete final budget/ownership and source guard.
-- [ ] Deploy preview; verify bytes/headers/interactions. Publish the identical artifact to stable production and verify production bytes/headers/immutable URL.
-- [ ] Update Oct13 handoff, audit dispositions, latest release receipt and CODEX_HANDOFF with measured identities and remaining physical/human gates. Push documentation and provide reviewable links.
+- [x] Stage only task files, run publication guard and review cached diff, commit and push github/codex/fleetlab-city-sf.
+- [x] Build exact-commit package in clean managed release checkout; integrate unchanged City; verify complete final budget/ownership and source guard.
+- [x] Deploy preview; verify bytes/headers/interactions. Publish the identical artifact to stable production and verify production bytes/headers/immutable URL.
+- [x] Update Oct13 handoff, audit dispositions, latest release receipt and CODEX_HANDOFF with measured identities and remaining physical/human gates. Push documentation and provide reviewable links.
 
 ## Progress ledger
 
@@ -65,3 +65,5 @@ Files: `apps/fleetlab-city/hosted/integration.mjs`, integration transforms/guard
 - Implementation checkpoint: schema/engine, independent verifier, all16 primary/refinement identities, accepted-pair UI, worker termination, counterexamples and hosted discovery complete. Independent code review clear; extra400 runs verified. Broad City72/338 and Hermes1662/55skip, Ruff pass; three teaching regressions corrected without relaxing gates, final broad rerun running. Packaging focused72/72 and final integration28/28 pass. Browser1440/390/320, keyboard, public presets and20 default trials observed. Physical Pixel absent; native preferences/screen reader/zoom/human comprehension and browser peak heap stay open as specified in handoff. Native worker60 cancellations actually exited; no browser latency claim.
 
 - Final precommit gates: teaching2270 passed/8skip/1TODO, no failures; generated16-run manifest unchanged; Ruff, staged publication scan and whitespace pass after stripping three Markdown hard-break trailing spaces from the copied brief. Initial doctor16PASS/2WARN (base env reported plus dirty checkout)/1optional unavailable; clean correctly activated release-checkout doctor remains required.
+
+- Publication complete: source f54496e, preview b397050c, production 38a98b78; each 10053/10053 bytes and 16/16 header checks. Immutable 21/21 and prior 15/15 smoke. All 9908 City files and offline unchanged. Full final receipt and open qualification script are in the Oct13 handoff.
