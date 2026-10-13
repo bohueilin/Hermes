@@ -219,3 +219,16 @@ test('pair context uses selected record capacities and restricts no-charge expla
     assert.doesNotMatch(context('bandwidth'),/No charging needed/);
   }
 });
+
+test('mobile arm labels name accepted upload strategies and capacity treatments without changing headings',()=>{
+  for(const [rule,name]of [['capacity_departure_deadline','Departure deadline first'],['capacity_shortest_upload','Shortest upload first'],['capacity_fifo','First come, first served']]){
+    const cells=Object.fromEntries(view.caseCells('data_heavy',rule).map(c=>[c.case,run('data_heavy',c.cell.treatment,c.cell.rule)]));
+    const p=view.capacityBenchProjection({cells},'rule',0,'A1');
+    assert.deepEqual(p.arms.map(a=>a.arm_label),['Equal uplink share',name]);
+    assert.deepEqual(p.arms.map(a=>a.label),['Base','Different rule']);
+    for(const [contrast,label]of [['bandwidth','More bandwidth'],['power','More power']]){
+      const arms=view.capacityBenchProjection({cells},contrast,0,'A1').arms;
+      assert.deepEqual(arms.map(a=>a.arm_label),['Equal uplink share',label]);assert.deepEqual(arms.map(a=>a.label),['Base',label]);
+    }
+  }
+});

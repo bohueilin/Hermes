@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,symlinkSync,cpSync,realpathSync,readdirSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,symlinkSync,cpSync,existsSync,realpathSync,readdirSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {tmpdir} from 'node:os';
 import {join,dirname} from 'node:path';
@@ -51,10 +51,11 @@ function integratedShell(packed){
  const intro='<section aria-label="About FleetLab"><h1>FleetLab: test fleet decisions in simulation</h1>'+
   '<p>Independent educational software by Bo-Huei Lin. Explore Fleet day, Street lab, paired experiments, Depot flow lab and the <a href="/city-explorer/">San Francisco City Explorer</a>.</p>'+
   '<p>Synthetic operations; map qualification remains open. Not affiliated with or endorsed by Waymo, Zoox, or their partners. No operational authority.</p></section>';
- const html=packed.get('index.html').replace(marker,marker+'\n<link rel="stylesheet" href="./integration.css">')
+ let html=packed.get('index.html').replace(marker,marker+'\n<link rel="stylesheet" href="./integration.css">')
   .replace('</head>','<link rel="canonical" href="https://fleetlab.pages.dev/"><meta property="og:url" content="https://fleetlab.pages.dev/"><meta property="og:site_name" content="FleetLab"><meta name="author" content="Bo-Huei Lin"></head>')
   .replace('<div id="fleetlab-teaching-strip"',intro+'<div id="fleetlab-teaching-strip"')
   .replace('</head>','<meta name="fleetlab-teaching-package" content="/downloads/teaching-package.json"></head>');
+ if(packed.has('network-flows/software-delivery/release.json'))html=html.replace('</head>','<meta name="fleetlab-software-delivery" content="/network-flows/software-delivery/release.json"></head>');
  const headers=packed.get('_headers').replace(/\n+$/,'')+'\n\n/city-explorer/*\n  ! Content-Security-Policy\n'+
   "  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'\n"+
   '  Permissions-Policy: camera=(), microphone=(), geolocation=()\n'+
@@ -69,11 +70,17 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
  const root=realpathSync(mkdtempSync(join(tmpdir(),'fleetlab-bound-stage-test-')));
  try{
   const source=join(root,'source'),playground=join(source,'playground/fleetlab');
-  for(const path of ['src','tools','media','capacity','styles.css','index.html'])cpSync(join(repository,'playground/fleetlab',path),join(playground,path),{recursive:true});
+  for(const path of ['src','tools','media','capacity','software-delivery','styles.css','index.html'].filter(path=>existsSync(join(repository,'playground/fleetlab',path))))cpSync(join(repository,'playground/fleetlab',path),join(playground,path),{recursive:true});
   for(const path of ['LICENSE','src/hermes/fleet/contracts.py']){
    mkdirSync(dirname(join(source,path)),{recursive:true});cpSync(join(repository,path),join(source,path));
   }
-  cpSync(join(repository,'apps/fleetlab-city/hosted'),join(source,'apps/fleetlab-city/hosted'),{recursive:true});
+  for(const name of ['hosted','tools','deploy']){
+   const base=join(repository,'apps/fleetlab-city',name);
+   for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path))){
+    const target=join(source,'apps/fleetlab-city',name,path);mkdirSync(dirname(target),{recursive:true});cpSync(join(base,path),target);
+   }
+  }
+  const publicNotes=join(source,'apps/fleetlab-city/citylib/public_notes.py');mkdirSync(dirname(publicNotes),{recursive:true});cpSync(join(repository,'apps/fleetlab-city/citylib/public_notes.py'),publicNotes);
   const git=(...args)=>execFileSync('git',['-C',source,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
   git('init','-q');git('add','.');git('-c','user.name=Release test','-c','user.email=release@example.invalid','commit','-qm','bound source');
   const commit=git('rev-parse','HEAD'),site=join(root,'stage/site'),review=join(root,'stage/review');

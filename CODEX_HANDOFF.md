@@ -1,3 +1,9 @@
+# FleetLab NF04-B — October 13, 2026
+
+NF04-B is implemented; exact-source publication is in progress. See [October 13 implementation handoff](docs/FLEETLAB_NF04_B_IMPLEMENTATION_HANDOFF_2026-10-13.md), [contract amendment](docs/FLEETLAB_NF04_B_CONTRACT_2026-10-13.md) and [accepted brief](docs/FLEETLAB_NF04_B_ACCEPTED_BRIEF_2026-10-13.md). SF remains HOLD / BLOCKED_MAP_QUALIFICATION; physical-device and human-comprehension qualification remain open. All earlier status below is historical.
+
+---
+
 # FleetLab NF04-A — October 12, 2026
 
 The current educational-site release is live. See the [implementation handoff](docs/FLEETLAB_NF04_A_IMPLEMENTATION_HANDOFF_2026-10-12.md), [audit decisions](docs/FLEETLAB_REV3_AUDIT_DECISIONS_2026-10-12.md), [frozen numerical contract](docs/FLEETLAB_NF04_A_CONTRACT_AND_PACKAGING_PROPOSAL_2026-10-12.md) and [next experience specification](docs/FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-12.md). NF04-B is not built. SF qualification remains HOLD; new cities and the held power study remain paused. Earlier records below are historical.

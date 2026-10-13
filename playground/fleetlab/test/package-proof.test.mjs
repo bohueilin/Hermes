@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
+import { measureSiteOwnership } from "../tools/software-delivery-package.mjs";
 import { buildHtml, buildSite } from "../tools/pack.mjs";
 
 const source = fileURLToPath(new URL("../", import.meta.url));
@@ -77,8 +78,8 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   const result = tool.measurePackageProof({ site, playground: source, offline });
   const { receipt } = result;
   assert.equal(receipt.source.state, "DEVELOPMENT_MEASUREMENT_NOT_RELEASE_BOUND");
-  assert.equal(receipt.counts.legacy_text_bytes, [...files.values()].filter(v => typeof v === "string").reduce((sum, v) => sum + Buffer.byteLength(v), 0));
-  assert.equal(receipt.counts.emitted_text_bytes, receipt.counts.legacy_text_bytes + result.files.get(tool.RECEIPT_PATH).length);
+  assert.equal(receipt.counts.legacy_text_bytes,measureSiteOwnership(files).legacy_text_bytes);
+  assert.equal(receipt.counts.emitted_text_bytes, measureSiteOwnership(files).emitted_text_bytes + result.files.get(tool.RECEIPT_PATH).length);
   assert.ok(receipt.counts.raw_source_and_tools_bytes <= 3145728);
   assert.ok(receipt.counts.offline_bytes <= 2571440);
   assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 524288);
@@ -89,13 +90,15 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   const offer = JSON.parse(raw);
   assert.equal(raw.length, receipt.counts.source_offer_extracted_bytes);
   assert.equal(archive.length, receipt.counts.source_offer_compressed_bytes);
+  assert.equal(receipt.integration_source.baseline.bytes,188861);
+  assert.equal(offer.integration.files["apps/fleetlab-city/hosted/integration.mjs"],readFileSync(fileURLToPath(new URL("../../../apps/fleetlab-city/hosted/integration.mjs",import.meta.url)),"utf8"));
+  assert.equal(receipt.counts.net_original_source_growth_bytes,receipt.counts.raw_source_and_tools_bytes-2765799+receipt.integration_source.bytes-188861);
   assert.equal(offer.files["index.html"], readFileSync(join(source, "index.html"), "utf8"));
   assert.equal(offer.files["tools/package-proof.mjs"], readFileSync(join(source, "tools/package-proof.mjs"), "utf8"));
   assert.equal(offer.license.text, readFileSync(fileURLToPath(new URL("../../../LICENSE", import.meta.url)), "utf8"));
   assert.deepEqual(offer.media, receipt.media);
-  assert.ok(receipt.discovery_fixture.source_delta_bytes > 0);
-  assert.equal(receipt.discovery_fixture.published, false);
-  assert.equal(receipt.discovery_fixture.projected_legacy_bytes, receipt.counts.legacy_text_bytes + receipt.discovery_fixture.emitted_delta_bytes);
+  assert.equal(receipt.discovery.owner,"hosted-integration");
+  assert.equal(receipt.discovery.offline_action,false);
   const restored = join(scratch, "restored");
   writeMap(restored, new Map(Object.entries(offer.files)));
   for (const item of offer.media) {
@@ -104,7 +107,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   }
   assert.equal(buildHtml(restored), readFileSync(offline, "utf8"));
   const rebuilt = buildSite(restored);
-  for (const [path, data] of files) if (path !== "network-flows/capacity/release.json") assert.deepEqual(rebuilt.get(path), data, path);
+  for (const [path, data] of files) if (!["network-flows/capacity/release.json","network-flows/software-delivery/release.json"].includes(path)) assert.deepEqual(rebuilt.get(path), data, path);
   assert.equal(JSON.parse(rebuilt.get("network-flows/capacity/release.json")).source_state, "SOURCE_COMMIT_UNAVAILABLE");
   execFileSync("git", ["-C", restored, "init", "-q"]);
   execFileSync(process.execPath, [join(restored, "tools/pack.mjs"), "--out", join(scratch, "restored-cli.html"), "--playground", restored]);
@@ -142,12 +145,19 @@ test("release package binds every source and its executing proof tool to the exa
   assert.equal(typeof tool.buildPackageProof, "function", "release binding is not implemented");
   const root = join(scratch, "repository");
   const playground = join(root, "playground/fleetlab");
-  for (const path of ["src", "tools", "media", "capacity", "styles.css", "index.html"]) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for(const name of ["hosted","tools","deploy"]){
+    const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));
+    for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path))){
+      const target=join(root,"apps/fleetlab-city",name,path);mkdirSync(dirname(target),{recursive:true});cpSync(join(base,path),target);
+    }
+  }
+  const dependency=join(root,"apps/fleetlab-city/citylib/public_notes.py");mkdirSync(dirname(dependency),{recursive:true});cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/citylib/public_notes.py",import.meta.url)),dependency);
   mkdirSync(join(root, "src/hermes/fleet"), { recursive: true });
   cpSync(fileURLToPath(new URL("../../../src/hermes/fleet/contracts.py", import.meta.url)), join(root, "src/hermes/fleet/contracts.py"));
   cpSync(fileURLToPath(new URL("../../../LICENSE", import.meta.url)), join(root, "LICENSE"));
   const git = (...args) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-  git("init", "-q"); git("add", "playground", "src", "LICENSE");
+  git("init", "-q"); git("add", "playground", "src", "LICENSE", "apps");
   git("-c", "user.name=Package test", "-c", "user.email=package@example.invalid", "commit", "-qm", "source fixture");
   const sourceCommit = git("rev-parse", "HEAD");
   const site = join(scratch, "bound-site");
@@ -205,8 +215,15 @@ test("release package binds every source and its executing proof tool to the exa
 
 test("a source checkout cannot omit the executing package-proof tool from its binding", () => {
   const root = join(scratch, "omitted-tool"), playground = join(root, "playground/fleetlab");
-  for (const path of ["src", "tools", "media", "capacity", "styles.css", "index.html"]) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
   mkdirSync(join(root, ".git"));
+  for(const name of ["hosted","tools","deploy"]){
+    const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));
+    for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path))){
+      const target=join(root,"apps/fleetlab-city",name,path);mkdirSync(dirname(target),{recursive:true});cpSync(join(base,path),target);
+    }
+  }
+  const dependency=join(root,"apps/fleetlab-city/citylib/public_notes.py");mkdirSync(dirname(dependency),{recursive:true});cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/citylib/public_notes.py",import.meta.url)),dependency);
   mkdirSync(join(root, "src/hermes/fleet"), { recursive: true });
   cpSync(fileURLToPath(new URL("../../../src/hermes/fleet/contracts.py", import.meta.url)), join(root, "src/hermes/fleet/contracts.py"));
   cpSync(fileURLToPath(new URL("../../../LICENSE", import.meta.url)), join(root, "LICENSE"));

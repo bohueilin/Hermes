@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { checkSite, COPY_MODULES, labelsFromContracts } from "../tools/check-dist.mjs";
 import { APP_MAX_BYTES } from "../tools/media.mjs";
 import { releaseProblems } from "../tools/release-sidecar.mjs";
+import { measureSiteOwnership, OWNER_LIMITS } from "../tools/software-delivery-package.mjs";
 import { buildHtml, buildSite, moduleGraph, MODULE_MARKER, SITE_CAPACITY_BOOT, SITE_CONTENT_SECURITY_POLICY } from "../tools/pack.mjs";
 
 const PLAYGROUND_ROOT = fileURLToPath(new URL("../", import.meta.url));
@@ -55,10 +56,13 @@ test("the hosted site holds the capacity page, its boot module and every capacit
   }
 });
 
-test("check-dist accepts the real site, and the site code stays under the byte cap", () => {
+test("check-dist accepts the real site, and legacy ownership and aggregate stay under their byte caps", () => {
   assert.deepEqual(problemsOf(site), []);
   const codeBytes = [...site.values()].filter((v) => typeof v === "string").reduce((sum, text) => sum + Buffer.byteLength(text), 0);
-  assert.ok(codeBytes < APP_MAX_BYTES, `${codeBytes} bytes of site code`);
+  const ownership = measureSiteOwnership(site);
+  assert.ok(ownership.legacy_text_bytes <= APP_MAX_BYTES, `${ownership.legacy_text_bytes} bytes of legacy-owned text`);
+  assert.equal(codeBytes, ownership.emitted_text_bytes);
+  assert.ok(codeBytes <= OWNER_LIMITS.emitted_text_bytes, `${codeBytes} bytes of aggregate emitted text`);
 });
 
 test("check-dist refuses a changed capacity boot, a second script, a missing capacity file and a fetch in the entry", () => {

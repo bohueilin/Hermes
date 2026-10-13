@@ -21,6 +21,17 @@ PACK = Path(__file__).resolve().parents[3] / "playground/fleetlab/tools/pack.mjs
 
 
 class IntegrationTest(unittest.TestCase):
+    def test_final_route_closure_counts_transformed_headers(self):
+        self.assertTrue(callable(getattr(integration, "final_route_counts", None)))
+        routes = [{"id": "nf04", "paths": ["route.js", "_headers"], "bytes": 1}]
+        files = {"route.js": {"bytes": 524200}, "_headers": {"bytes": 88}}
+        self.assertEqual(
+            integration.final_route_counts(routes, files), {"nf04_closure_bytes": 524288}
+        )
+        files["_headers"]["bytes"] += 1
+        with self.assertRaisesRegex(ValueError, "nf04.*closure.*budget"):
+            integration.final_route_counts(routes, files)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -76,6 +87,15 @@ class IntegrationTest(unittest.TestCase):
                 continue
             if name in pages:
                 data = pages[name].encode()
+            elif name == "src/ui/capacity-app.js":
+                data = (
+                    b"import {CAPACITY_STUDY} from '../data/depot-capacity-study.js';\n"
+                    b"import {CAPACITY_PROJECTION_VERSION} from './depot-capacity-view.js';\n"
+                    b"export function startCapacity() {return "
+                    b"[CAPACITY_STUDY,CAPACITY_PROJECTION_VERSION];}\n"
+                )
+            elif name == "src/ui/depot-capacity-view.js":
+                data = b"export const CAPACITY_PROJECTION_VERSION = 'fixture-v1';\n"
             elif name == "network-flows/capacity/visual.css":
                 data = b".fl-capacity-bench { display: grid; }\n"
             else:
@@ -100,7 +120,7 @@ class IntegrationTest(unittest.TestCase):
             target.write_bytes(path.read_bytes())
         for name in (
             "pack.mjs", "check-dist.mjs", "release-sidecar.mjs", "site-shell.mjs",
-            "media.mjs", "comment-strip.mjs",
+            "media.mjs", "comment-strip.mjs", "software-delivery-package.mjs",
         ):
             target = source_root / "tools" / name
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -135,6 +155,50 @@ class IntegrationTest(unittest.TestCase):
             self.legacy, self.viewer, self.prior, self.offer,
             self.base / "out", self.offline, client_update=client, flow_update=True,
         )
+
+    def test_software_delivery_inventory_is_exact_and_optional(self):
+        self.assertTrue(callable(getattr(integration, "software_delivery_files", None)))
+        self.assertEqual(integration.software_delivery_files({"index.html": {}}), frozenset())
+        full = {name: {} for name in integration.DELIVERY_ADDED}
+        self.assertEqual(integration.software_delivery_files(full), integration.DELIVERY_ADDED)
+        del full["network-flows/software-delivery/release.json"]
+        with self.assertRaisesRegex(ValueError, "software.delivery.*inventory"):
+            integration.software_delivery_files(full)
+        full["network-flows/software-delivery/foreign.css"] = {}
+        with self.assertRaisesRegex(ValueError, "software.delivery.*inventory"):
+            integration.software_delivery_files(full)
+
+    def test_software_delivery_python_inventory_matches_packer_declaration(self):
+        script = (
+            "import {DELIVERY_FILES,DELIVERY_MODULES} from "
+            "'./playground/fleetlab/tools/software-delivery-package.mjs';"
+            "console.log(JSON.stringify([...DELIVERY_FILES,...DELIVERY_MODULES].sort()));"
+        )
+        result = subprocess.run(
+            ["node", "--input-type=module", "-e", script], cwd=launch.ROOT,
+            check=True, capture_output=True, text=True,
+        )
+        self.assertEqual(set(json.loads(result.stdout)), integration.DELIVERY_ADDED)
+
+    def test_software_delivery_cannot_be_copied_without_a_source_bound_package(self):
+        client = self.stage_flow_client()
+        for name in integration.DELIVERY_ADDED:
+            path = client / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("unaccepted route fixture")
+        with self.assertRaisesRegex(ValueError, "source.bound teaching package"):
+            self.integrate_flow(client)
+        self.assertFalse((self.base / "out").exists())
+
+    def test_discovery_marker_requires_accepted_software_delivery(self):
+        self.assertTrue(callable(getattr(integration, "software_delivery_marker", None)))
+        html = "<html><head></head><body></body></html>"
+        self.assertEqual(integration.software_delivery_marker(html, False), html)
+        accepted = integration.software_delivery_marker(html, True)
+        self.assertIn('name="fleetlab-software-delivery"', accepted)
+        self.assertIn('content="/network-flows/software-delivery/release.json"', accepted)
+        with self.assertRaisesRegex(ValueError, "marker"):
+            integration.software_delivery_marker(accepted, True)
 
     def test_only_three_declared_root_files_change_and_offline_is_untouched(self):
         before = launch.inventory(self.legacy)

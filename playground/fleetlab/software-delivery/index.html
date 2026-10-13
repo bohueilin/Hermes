@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One update. Where is the wait? | FleetLab</title>
+<meta name="description" content="A synthetic comparison of repeated downloads and a shared depot copy. Follow the work, inspect deadlines, and test when reuse helps or hurts.">
+<link rel="stylesheet" href="./visual.css">
+</head>
+<body>
+<noscript>This synthetic software-delivery lesson needs JavaScript. Readiness in this model does not establish driving safety or deployment permission.</noscript>
+<div id="delivery-root"></div>
+<script type="module">
+import {startSoftwareDelivery} from '../src/ui/software-delivery-app.js';
+startSoftwareDelivery({createWorker:()=>new Worker(new URL('../src/runtime/software-delivery-worker.js',import.meta.url),{type:'module'})});
+</script>
+</body>
+</html>

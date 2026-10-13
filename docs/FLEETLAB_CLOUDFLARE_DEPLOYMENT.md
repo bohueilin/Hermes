@@ -1,6 +1,6 @@
 # FleetLab publication runbook
 
-Updated 12 October 2026. Applies to the static educational FleetLab website.
+Updated 13 October 2026. Applies to the static educational FleetLab website.
 Hermes operational deployment permission remains NONE. Historical deployment
 paragraphs and the old playground-only CI template are superseded; do not use them.
 
@@ -12,7 +12,7 @@ and exact source commit. That file records packaging intent, not proof of
 hosting. Compare it with the committed `docs/releases/fleetlab-current.json`
 and run the readback tool to establish which bytes are actually served.
 
-The owner explicitly authorized October 12 NF04-A implementation, Git push and live publication, following the October 10
+The owner explicitly authorized October 13 NF04-B implementation and publication, following October 12 NF04-A implementation, Git push and live publication, following the October 10
 visual-experience update, controlled-autoplay/guided-NF-03 follow-up, and final-review NF-03 trade-off/copy improvements, following the authorized October 8 and 9 releases. An audit, handoff,
 successful verifier, Git branch label or this runbook never grants authority for
 a future release. Follow the user's
@@ -55,7 +55,7 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    source checkout, even if an integration manifest was resealed. Root HTML,
    boot, headers and hosted integration assets are independently reproduced
    from source by the upload guard. Deleting package markers cannot bypass it. A content digest
-   does not authenticate the producer. NF04-B remains separate.
+   does not authenticate the producer. NF04-B adds explicit owner-aware counters, a separately scoped software-delivery sidecar, integration-original source capture and final transformed route closures. Include the manifest as a declared route input; bootstrap injects it into the UI. All original hard caps remain.
 5. Install the locked deployment tool in `apps/fleetlab-city/deploy` with
    `npm ci --ignore-scripts`; run `npm audit --omit=dev` and `npm audit signatures`.
    Also run `npm --prefix apps/fleetlab-city audit --omit=dev` for MapLibre.
@@ -83,7 +83,7 @@ observations, not guarantees against unpublished vulnerabilities.
 
 ## Before a presentation
 
-Run the fifteen-request, secret-free smoke check from repository root:
+Run the receipt-driven, secret-free smoke check from repository root:
 
 ```sh
 build/fleetlab-city/venv/bin/python apps/fleetlab-city/tools/readback.py --record docs/releases/fleetlab-current.json --url https://fleetlab.pages.dev --output /tmp/fleetlab-smoke.json

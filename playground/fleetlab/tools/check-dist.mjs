@@ -17,6 +17,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { CONTENT_SECURITY_POLICY, MODULE_MARKER, SITE_BOOT, SITE_CAPACITY_BOOT, SITE_CONTENT_SECURITY_POLICY, SITE_HEADERS, findRepositoryRoot, maskSource } from "./pack.mjs";
+import { DELIVERY_DIR, DELIVERY_RELEASE, DELIVERY_FILES, DELIVERY_BOOT, DELIVERY_MODULES, measureSiteOwnership, softwareDeliveryProblems } from "./software-delivery-package.mjs";
 import { CAPACITY_RELEASE_PATH, CAPACITY_VISUAL_PATH, releaseProblems } from "./release-sidecar.mjs";
 
 /** Largest packed file accepted, in bytes. */
@@ -55,6 +56,7 @@ const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledes
 
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
 export const COPY_MODULES = [
+  ...DELIVERY_MODULES,
   "src/ui/depot-flow-lab.js", "src/ui/depot-flow-view.js", "src/ui/depot-flow-reading.js", "src/ui/depot-flow-player.js", "src/model/depot-flow-contract.js", "src/model/depot-flow.js", "src/model/depot-flow-verify.js", "src/model/depot-cohort-contract.js", "src/model/depot-cohort.js", "src/model/depot-cohort-verify.js",
   "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js", "src/model/depot-capacity-verify.js", "src/ui/depot-capacity-view.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-bench.js", "src/ui/depot-capacity-guided.js", "src/ui/capacity-app.js",
   "src/ui/teaching-frames.js", "src/model/street-simulation.js","src/ui/model-identity.js", "src/ui/labels.js", "src/ui/routes.js", "src/ui/setup-sharing.js", "src/ui/setup-codec.js", "src/ui/regional-setup.js", "src/ui/street-lab.js", "src/ui/studio.js", "src/ui/hero-film.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/readiness-view.js", "src/ui/advanced-operations-view.js", "src/ui/scenario-learning.js", "src/ui/launch-view.js", "src/ui/regional-power-view.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js", "src/ui/scale-lab.js", "src/ui/scale-labs.js", "src/model/scale-contract.js", "src/model/scale-response.js", "src/model/scale-response-engine.js", "src/model/scale-intake.js", "src/model/scale-intake-engine.js", "src/model/scale-density.js", "src/model/scale-density-engine.js"];
@@ -450,7 +452,11 @@ export function checkSite(files, { requiredLabels }) {
   requireLabels(requiredLabels);
   const entries = files instanceof Map ? files : new Map(Object.entries(files));
   const problems = [];
-  problems.push(...releaseProblems(entries));
+  problems.push(...releaseProblems(entries), ...softwareDeliveryProblems(entries));
+  try { measureSiteOwnership(entries); } catch(error) { problems.push(error.message); }
+  const delivery=entries.has(DELIVERY_RELEASE);
+  const fixedFiles=[...SITE_FIXED_FILES,...(delivery?DELIVERY_FILES:[])];
+  const pages=[...SITE_PAGES,...(delivery?[{path:`${DELIVERY_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${DELIVERY_DIR}/boot.js`,bootText:DELIVERY_BOOT}]:[])];
   let bytes = 0;
   for (const [path, text] of entries) {
     if (MEDIA_LIMITS.has(path)) { problems.push(...mediaProblems(path, text)); continue; }
@@ -459,20 +465,20 @@ export function checkSite(files, { requiredLabels }) {
       continue;
     }
     bytes += Buffer.byteLength(text);
-    if (!SITE_FIXED_FILES.includes(path) && !SITE_MODULE_PATH.test(path)) problems.push(`file: unexpected ${path}`);
+    if (!fixedFiles.includes(path) && !SITE_MODULE_PATH.test(path)) problems.push(`file: unexpected ${path}`);
   }
   if (entries.has(MEDIA_MODULE)) for (const path of MEDIA_LIMITS.keys()) if (!entries.has(path)) problems.push(`media: missing ${path}`);
-  if (bytes > MAX_BYTES) problems.push(`size: ${bytes} bytes is over the ${MAX_BYTES} byte limit`);
-  for (const name of SITE_FIXED_FILES) if (!entries.has(name)) problems.push(`file: ${name} is missing`);
+
+  for (const name of fixedFiles) if (!entries.has(name)) problems.push(`file: ${name} is missing`);
   if (!entries.has("src/ui/labels.js")) problems.push("labels: no src/ui/labels.js module in the site");
   const text = (path) => (typeof entries.get(path) === "string" ? entries.get(path) : null);
-  for (const { boot, bootText } of SITE_PAGES) {
+  for (const { boot, bootText } of pages) {
     if (text(boot) !== null && text(boot) !== bootText) problems.push(`boot: ${boot} differs from the module pack.mjs writes`);
   }
   if (text("_headers") !== null && text("_headers") !== SITE_HEADERS) problems.push("headers: _headers differs from the text pack.mjs writes");
 
   const copy = [];
-  for (const page of SITE_PAGES) {
+  for (const page of pages) {
     const html = text(page.path);
     if (html === null) continue;
     problems.push(...sitePageProblems(html, page));
@@ -480,7 +486,7 @@ export function checkSite(files, { requiredLabels }) {
     for (const item of visibleCopy(html)) copy.push(page.path === "index.html" ? item : { ...item, where: `${page.path} ${item.where}` });
   }
   for (const [path, source] of entries) {
-    if (typeof source !== "string" || path === "boot.js" || path === "_headers") continue;
+    if (typeof source !== "string" || path === "boot.js" || path === `${DELIVERY_DIR}/boot.js` || path === "_headers") continue;
     problems.push(...schemeProblems(source, path));
     if (path.endsWith(".js")) {
       problems.push(...scriptProblems(source, path));
@@ -488,7 +494,7 @@ export function checkSite(files, { requiredLabels }) {
       if (DEPOT_COPY_MODULE.test(path) && !COPY_MODULES.includes(path)) problems.push(`copy coverage: ${path}`);
       if (COPY_MODULES.includes(path)) for (const literal of literalsOf(source)) copy.push({ where: `${path} string`, text: literal });
     }
-    if (path === "styles.css" || path === CAPACITY_VISUAL_PATH) problems.push(...tokenProblems(source, path));
+    if (path === "styles.css" || path === CAPACITY_VISUAL_PATH || path === `${DELIVERY_DIR}/visual.css`) problems.push(...tokenProblems(source, path));
   }
   problems.push(...copyProblems(copy));
   for (const [path, source] of entries) {

@@ -49,3 +49,25 @@ test('selected identity, immediate wait and fixed outcome stay together while in
     assert.match(b.element.querySelector('.cap-pair-label').textContent,/fixed while replay moves/);
   }finally{restore();}
 });
+
+test('phone arm controls show projected treatment names and preserve the selected side across frames and comparisons',()=>{
+  const restore=installFakeDom();try{
+    const b=bench.createCapacityBench(),base={...arm,arm_label:'Equal uplink share'},pair={...projection,arms:[base,{...arm,case:'rule',label:'Different rule',arm_label:'Departure deadline first'}]};b.update(pair);
+    let controls=b.element.querySelector('.capacity-mobile-arms').querySelectorAll('button');
+    assert.deepEqual(controls.map(n=>n.textContent),['Equal uplink share','Departure deadline first']);
+    assert.equal(controls[1].getAttribute('aria-label'),'Show Departure deadline first');
+    controls[1].click();assert.equal(controls[1].getAttribute('aria-pressed'),'true');
+    assert.equal(b.element.querySelector('[data-case="base"]').getAttribute('data-mobile-visible'),'false');
+    const current=controls[1];b.update({...pair,time_s:20,arms:pair.arms.map(a=>({...a,time_s:20}))});
+    controls=b.element.querySelector('.capacity-mobile-arms').querySelectorAll('button');
+    assert.equal(controls[1],current);assert.equal(controls[1].getAttribute('aria-pressed'),'true');
+    assert.equal(b.element.querySelector('[data-case="rule"]').getAttribute('data-mobile-visible'),'true');
+    b.update({...pair,arms:[base,{...pair.arms[1],arm_label:'Shortest upload first'}]});
+    assert.equal(current.textContent,'Shortest upload first');assert.equal(current.getAttribute('aria-label'),'Show Shortest upload first');assert.equal(current.getAttribute('aria-pressed'),'true');
+    b.update({...projection,arms:[base,{...arm,case:'power',label:'More power',arm_label:'More power'}]});
+    controls=b.element.querySelector('.capacity-mobile-arms').querySelectorAll('button');
+    assert.deepEqual(controls.map(n=>n.textContent),['Equal uplink share','More power']);assert.equal(controls[1].getAttribute('aria-pressed'),'true');
+    assert.equal(b.element.querySelector('[data-case="power"]').getAttribute('data-mobile-visible'),'true');
+    assert.equal(b.element.querySelector('[data-rate="upload"]').getAttribute('aria-valuenow'),'1');
+  }finally{restore();}
+});

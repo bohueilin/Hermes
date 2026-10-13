@@ -123,7 +123,7 @@ export function capacityBenchProjection(comparison,contrast,time_s,vehicle){
     const visits=state.visits.map(v=>({...v,post_total_s:record.scenario.vehicles.find(x=>x.id===v.vehicle).post_s,
       upload_rate_bytes_s:state.uplink.holders.find(h=>h.id===v.vehicle)?.rate_bytes_s??0,charge_rate_j_s:state.ports.find(p=>p.vehicle===v.vehicle)?.rate_j_s??0}));
     const selected=visits.find(v=>v.vehicle===vehicle)??visits[0],final=cells[key].verification.visits.find(v=>v.vehicle===selected.vehicle);
-    return {case:key,label:names[key],time_s:state.time_s,visits,selected,ports:state.ports,
+    return {case:key,label:names[key],arm_label:key==='base'||key==='rule'?ruleName(record.rule):names[key],time_s:state.time_s,visits,selected,ports:state.ports,
       final:{on_time:cells[key].verification.metrics.on_time,lateness_text:latenessText(cells[key].verification.metrics),total:visits.length,vehicle:selected.vehicle,ready_s:final.ready_s,outcome:final.outcome},
       upload:{used,capacity:state.uplink.capacity_bytes_s,fraction:used/scales.upload_bytes_s},
       energy:{used:state.site.used_j_s,capacity:state.site.capacity_j_s,fraction:state.site.used_j_s/scales.energy_j_s}};

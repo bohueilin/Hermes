@@ -92,9 +92,9 @@ export function createCapacityBench({onSelect=()=>{}}={}){
     if(keys.join()!==[...arms.keys()].join()){
       arms=new Map(projection.arms.map(a=>[a.case,armView(a,onSelect)]));
       switches=projection.arms.map(a=>{
-        const side=a.case==='base'?'base':'comparison',id=`capacity-arm-${a.case}`;
+        const side=a.case==='base'?'base':'comparison',id=`capacity-arm-${a.case}`,label=a.arm_label??a.label;
         arms.get(a.case).node.setAttribute('id',id);
-        return {side,node:el('button',{type:'button',class:'studio-button','aria-controls':id,'aria-label':`Show ${a.label}`,on:{click:()=>showSide(side)}},side==='base'?'Base':'Comparison')};
+        return {side,node:el('button',{type:'button',class:'studio-button','aria-controls':id,'aria-label':`Show ${label}`,on:{click:()=>showSide(side)}},label)};
       });
       const controls=el('div',{class:'capacity-mobile-arms',role:'group','aria-label':'Visible comparison arm'},switches.map(b=>b.node));
       summaries=new Map(projection.arms.map(a=>[a.case,el('div',{'data-summary':a.case})]));
@@ -103,6 +103,8 @@ export function createCapacityBench({onSelect=()=>{}}={}){
     }
     context.textContent=projection.context??'';
     for(const arm of projection.arms){
+      const control=switches.find(b=>b.side===(arm.case==='base'?'base':'comparison')).node,label=arm.arm_label??arm.label;
+      control.textContent=label;control.setAttribute('aria-label',`Show ${label}`);
       arms.get(arm.case).update(arm,projection.scales,playing);
       const f=arm.final;
       summaries.get(arm.case).replaceChildren(el('strong',{},`${arm.label}: ${f?`${f.on_time} of ${f.total} on time`:'Not available'}`),

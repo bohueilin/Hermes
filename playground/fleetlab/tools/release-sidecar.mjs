@@ -5,15 +5,16 @@ import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { capacityScope, softwareDeliveryProblems, DELIVERY_RELEASE } from "./software-delivery-package.mjs";
 import { renderSitePage } from "./site-shell.mjs";
 
 export const CAPACITY_RELEASE_PATH = "network-flows/capacity/release.json";
 export const CAPACITY_VISUAL_PATH = "network-flows/capacity/visual.css";
 const STUDY = "src/data/depot-capacity-study.js";
 const PROJECTION = "src/ui/depot-capacity-view.js";
-const SCHEMA = "fleetlab.capacity-release/1.0.0";
-const PACK_VERSION = "fleetlab-site-pack/2.0.0";
-const BUILD_TOOLS = ["tools/pack.mjs","tools/check-dist.mjs","tools/release-sidecar.mjs","tools/site-shell.mjs","tools/media.mjs","tools/comment-strip.mjs"];
+const SCHEMA = "fleetlab.capacity-release/2.0.0";
+const PACK_VERSION = "fleetlab-site-pack/3.0.0";
+const BUILD_TOOLS = ["tools/pack.mjs","tools/check-dist.mjs","tools/release-sidecar.mjs","tools/site-shell.mjs","tools/media.mjs","tools/comment-strip.mjs","tools/software-delivery-package.mjs"];
 const SHA = /^[a-f0-9]{64}$/;
 const COMMIT = /^[a-f0-9]{40}$/;
 const INTEGRATION_OWNED = new Set(["index.html","boot.js","_headers"]);
@@ -77,7 +78,7 @@ function git(root,args) {
   return execFileSync("git",["-C",root,...args],{encoding:"utf8",stdio:["ignore","pipe","pipe"],maxBuffer:16*1024*1024}).trim();
 }
 
-function sourceIdentity(playground,inputs,sourceCommit) {
+export function sourceIdentity(playground,inputs,sourceCommit) {
   let root,head,tree;
   try {
     root=git(playground,["rev-parse","--show-toplevel"]);
@@ -102,6 +103,9 @@ function sourceIdentity(playground,inputs,sourceCommit) {
 }
 
 export function createReleaseSidecar(playground,files,{sourceCommit=null,capturedSources=new Map()}={}) {
+  const scopedPaths=capacityScope(files);
+  files=new Map([...files].filter(([path])=>scopedPaths.has(path)));
+  capturedSources=new Map([...capturedSources].filter(([path])=>path==="capacity/index.html"));
   const source_files=sourceFiles(playground,files);
   const capacity_page_source=regularRead(playground,"capacity/index.html").toString("utf8");
   if (!same(record(capacity_page_source),source_files["capacity/index.html"]) ||
@@ -113,7 +117,7 @@ export function createReleaseSidecar(playground,files,{sourceCommit=null,capture
   const release={schema:SCHEMA,...sourceIdentity(playground,source_files,sourceCommit),source_files,emitted_files,capacity_page_source,
     ...studyIdentity(files),build:{tool:PACK_VERSION,node:process.version},authenticity:"NOT_AUTHENTICATED",
     source_scope:"Listed source files only; no claim that the entire worktree is clean.",
-    emitted_scope:"Teaching payload; integration-owned root index.html, boot.js and _headers are excluded.",
+    emitted_scope:"NF03_CAPACITY_ROUTE_CLOSURE_V1",
     meaning:"Byte consistency with declared source and accepted study identities; not independent authenticity or operational authority."};
   // Capture must agree with the already emitted modules; reread source pages too before returning.
   for (const [path,data] of files) {
@@ -129,10 +133,12 @@ export function releaseProblems(files,{playground=null,sourceCommit=null}={}) {
   const problems=[];
   try {
     const raw=files.get(CAPACITY_RELEASE_PATH);
+    const scopedPaths=capacityScope(files);
+    files=new Map([...files].filter(([path])=>scopedPaths.has(path)));
     if (typeof raw !== "string") fail("release sidecar missing");
     const release=JSON.parse(raw),{release_digest,...payload}=release;
     if (!same(Object.keys(release).sort(),RELEASE_KEYS)) fail("release sidecar has missing or unexpected fields");
-    if (release.schema!==SCHEMA || !SHA.test(release_digest) || sha256(canonical(payload))!==release_digest) fail("release sidecar digest or schema mismatch");
+    if (release.emitted_scope!=="NF03_CAPACITY_ROUTE_CLOSURE_V1" || release.schema!==SCHEMA || !SHA.test(release_digest) || sha256(canonical(payload))!==release_digest) fail("release sidecar digest or schema mismatch");
     if (release.authenticity!=="NOT_AUTHENTICATED" || !same(Object.keys(release.build ?? {}).sort(),["node","tool"]) || release.build?.tool!==PACK_VERSION || !/^v\d+\.\d+\.\d+$/.test(release.build?.node)) fail("release tool or trust state mismatch");
     const state=release.source_state;
     if (state === "SOURCE_COMMIT_UNAVAILABLE" ? release.source_commit!==null || release.source_tree!==null
@@ -160,6 +166,20 @@ export function releaseProblems(files,{playground=null,sourceCommit=null}={}) {
   return problems;
 }
 
+/** NF04 source verification includes tool-only inputs that have no emitted counterpart. */
+export function deliverySourceProblems(files,{playground=null,sourceCommit=null}={}) {
+  const problems=softwareDeliveryProblems(files,{sourceCommit});
+  if(problems.length||!files.has(DELIVERY_RELEASE)||!playground)return problems;
+  try {
+    const release=JSON.parse(files.get(DELIVERY_RELEASE));
+    for(const [path,expected]of Object.entries(release.source_files))
+      if(!same(record(regularRead(playground,path)),expected))fail(`NF04 reviewed source fingerprint mismatch: ${path}`);
+    const identity=sourceIdentity(playground,release.source_files,sourceCommit);
+    if(sourceCommit&&!same(identity,release.source))fail("NF04 source commit mismatch");
+  } catch(error) { problems.push(error.message); }
+  return problems;
+}
+
 // The City integration tool uses the same validator, including no-follow reads and exact inventory checks.
 if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
   try {
@@ -179,7 +199,7 @@ if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
       }
     }
     walk(root);
-    const problems=releaseProblems(files,{playground:resolve(options["--playground"]),sourceCommit:options["--source-commit"]});
+    const problems=[...releaseProblems(files,{playground:resolve(options["--playground"]),sourceCommit:options["--source-commit"]}),...deliverySourceProblems(files,{playground:resolve(options["--playground"]),sourceCommit:options["--source-commit"]})];
     if(problems.length) fail(problems.join("; "));
     console.log("provenance: release sidecar, source fingerprints and emitted inventory agree");
   } catch(error) {console.error(error.message);process.exitCode=1;}

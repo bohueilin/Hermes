@@ -1,5 +1,7 @@
 # FleetLab Revision 3 audit decisions
 
+> **Historical Oct12 snapshot.** NF04-B is now authorized by the owner’s Oct13 build/publish request. The [Oct13 contract amendment](FLEETLAB_NF04_B_CONTRACT_2026-10-13.md) and [accepted brief](FLEETLAB_NF04_B_ACCEPTED_BRIEF_2026-10-13.md) supersede conflicting next-build instructions below; historical release results remain unchanged.
+
 **Execution update:** The bounded current-source B-lite proof and educational-site publication are complete; measured counters, negative tests, rollback and deployment identities are in the [completed October 12 implementation handoff](FLEETLAB_NF04_A_IMPLEMENTATION_HANDOFF_2026-10-12.md). The numerical examples below remain analytical. NF04-B remains unimplemented; future card/route budgets and device/human acceptance have not been closed by this release.
 
 October 12, 2026 · NF04-A contract freeze and authorized package-only release · NF04-B remains outside this task.

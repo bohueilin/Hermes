@@ -114,7 +114,7 @@ test('the capacity study joins the lab links, a next-lesson line under Compare a
   assert.equal(catalogs[0].parentNode.firstChild,catalogs[0],'the capacity question is the recommended hosted experiment');
   assert.equal(catalogs[0].getAttribute('aria-labelledby'),'capacity-catalog-title');
   assert.equal(catalogs[0].querySelector('p.city-entry-eyebrow').textContent,'RECORDED CAPACITY STUDY');
-  assert.equal(catalogs[0].querySelector('h3#capacity-catalog-title').textContent,'Change the schedule—or add capacity?');
+  assert.equal(catalogs[0].querySelector('h3#capacity-catalog-title').textContent,'Change the schedule or add capacity?');
   assert.match(catalogs[0].querySelector('p:not(.city-entry-eyebrow)').textContent,/Twelve invented visits/);
   const action=catalogs[0].querySelectorAll('a.city-entry-action');
   assert.deepEqual(action.map(a=>[a.getAttribute('href'),a.textContent]),[['/network-flows/capacity/','Open the capacity study  ↗']]);
@@ -131,4 +131,24 @@ test('the capacity study joins the lab links, a next-lesson line under Compare a
   watching[0].callback([]);
   assertNextLesson();
  } finally {studio?.destroy();restore();}
+});
+
+test('NF04 discovery needs the accepted generation marker and preserves NF03 as first destination',()=>{
+ const restore=installFakeDom();let studio;
+ try{
+  studio=mount();mountCityEntry();
+  assert.equal(document.querySelectorAll('a[href="/network-flows/software-delivery/"]').length,0);
+ }finally{studio?.destroy();restore();}
+ const restoreNext=installFakeDom();let next;
+ try{
+  next=mount();const marker=document.createElement('meta');marker.setAttribute('name','fleetlab-software-delivery');marker.setAttribute('content','/network-flows/software-delivery/release.json');document.body.appendChild(marker);
+  mountCityEntry();mountCityEntry();
+  assert.equal(document.querySelectorAll('.software-delivery-entry-catalog').length,1);
+  assert.equal(document.querySelector('.network-question-list').firstChild.getAttribute('class'),'network-question capacity-entry-catalog');
+  assert.equal(document.querySelector('.hero-actions .studio-button-primary').getAttribute('href'),'/network-flows/capacity/');
+  assert.equal(document.querySelectorAll('.flow-next-lesson a[href="/network-flows/software-delivery/"]').length,1);
+  const roadmap=document.querySelector('[data-roadmap-lesson="software"]');
+  assert.equal(roadmap.getAttribute('data-availability'),'available');
+  assert.match(roadmap.textContent,/shared.*copy/i);
+ }finally{next?.destroy();restoreNext();}
 });

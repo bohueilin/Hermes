@@ -9,6 +9,7 @@ export function mountCityEntry(doc = document) {
   const networkQuestions = doc.querySelector('.network-question-list');
   const flowHero = doc.querySelector('.depot-flow-lab .flow-hero');
   if (!labLinks || !startGrid || !catalogGrid || !networkQuestions || !flowHero?.querySelector('p.flow-run-help')) throw new Error('FleetLab hosted entry contract changed');
+  const deliveryAvailable = Boolean(doc.querySelector('meta[name="fleetlab-software-delivery"][content="/network-flows/software-delivery/release.json"]'));
   const node = (tag, attrs, children) => {
     const element = doc.createElement(tag);
     for (const [key, value] of Object.entries(attrs || {})) element.setAttribute(key, value);
@@ -49,11 +50,18 @@ export function mountCityEntry(doc = document) {
     const help = flowHero.querySelector('p.flow-run-help');
     if (help && !doc.getElementById('capacity-entry')) help.parentNode.insertBefore(node('p', {class:'flow-next-lesson'}, ['Next lesson: ', node('a', {id:'capacity-entry', href:'/network-flows/capacity/'}, 'Scheduling or capacity?')]), help.nextSibling);
   };
-  linkCapacity();
-  new MutationObserver(linkCapacity).observe(flowHero, {childList:true});
+  const originalLinkCapacity = linkCapacity;
+  // This subsequent lesson is present only in the verified hosted generation.
+  const linkDelivery = () => {
+    originalLinkCapacity();
+    const line=doc.querySelector('.flow-next-lesson');
+    if(deliveryAvailable && line && !doc.getElementById('software-delivery-next')) line.appendChild(node('span',{},[' Then: ',node('a',{id:'software-delivery-next',href:'/network-flows/software-delivery/'},'One update, four vehicles')]));
+  };
+  linkDelivery();
+  new MutationObserver(linkDelivery).observe(flowHero, {childList:true});
   networkQuestions.insertBefore(node('article', {class:'network-question capacity-entry-catalog', 'aria-labelledby':'capacity-catalog-title'}, [
       node('p', {class:'city-entry-eyebrow'}, 'RECORDED CAPACITY STUDY'),
-      node('h3', {id:'capacity-catalog-title'}, 'Change the schedule—or add capacity?'),
+      node('h3', {id:'capacity-catalog-title'}, 'Change the schedule or add capacity?'),
       node('p', {class:'network-description'}, 'Twelve invented visits share data and energy resources. Compare one change, follow a vehicle, and find the limiting resource.'),
       node('a', {class:'city-entry-action', href:'/network-flows/capacity/'}, 'Open the capacity study  ↗'),
   ]), networkQuestions.firstChild);
@@ -63,6 +71,25 @@ export function mountCityEntry(doc = document) {
   capacityRoadmap.querySelector('.eyebrow').textContent='AVAILABLE';
   capacityRoadmap.querySelector('p:not(.eyebrow)').textContent='Compare scheduling, bandwidth and charging power in the published synthetic study. Follow a vehicle and inspect the limiting resource.';
   capacityRoadmap.appendChild(node('a',{href:'/network-flows/capacity/',class:'city-entry-action'},'Open the capacity study  ↗'));
+  if(deliveryAvailable){
+    const href='/network-flows/software-delivery/';
+    const card=node('article',{class:'network-question software-delivery-entry-catalog','aria-labelledby':'software-delivery-catalog-title'},[
+      node('p',{class:'city-entry-eyebrow'},'INTERACTIVE SOFTWARE-DELIVERY MODEL'),
+      node('h3',{id:'software-delivery-catalog-title'},'One update. Four vehicles. Where is the wait?'),
+      node('p',{class:'network-description'},'Compare repeated downloads with a shared depot copy. Follow the bytes, inspect the readiness target, then find a case where reuse delays a vehicle.'),
+      node('a',{href,class:'city-entry-action'},'Explore software delivery  ↗'),
+    ]);
+    networkQuestions.insertBefore(card,networkQuestions.firstChild.nextSibling);
+    const roadmap=doc.querySelector('.roadmap');
+    const next=node('article',{'data-roadmap-lesson':'software','data-availability':'available'},[
+      node('p',{class:'eyebrow'},'AVAILABLE'),node('h3',{},'One update, four vehicles'),
+      node('p',{},'Repeated downloads or one shared depot copy: inspect upstream work, local contention and an individual deadline regression.'),
+      node('a',{href,class:'city-entry-action'},'Explore software delivery  ↗'),
+    ]);
+    roadmap.insertBefore(next,capacityRoadmap.nextSibling);
+    const later=[...roadmap.children].find(x=>x.querySelector('h3')?.textContent==='Depot flow lab, next lessons');
+    if(later)later.querySelector('p:not(.eyebrow)').textContent='Competing data jobs, estimate error and custody are proposed lessons.';
+  }
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'offline-edition'}, [
     node('div', {}, [node('strong', {}, 'Take the teaching labs with you.'), node('p', {}, 'Save the single HTML file, then open it in a browser. Includes the core teaching labs and catalog. The hosted capacity study, film, SF map and recordings are not included; there is no sync with the hosted site.')]),
     node('a', {href:'/downloads/fleetlab-offline', download:'fleetlab-offline.html'}, 'Download offline edition · 2.4 MB ↓'),

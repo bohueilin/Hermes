@@ -14,7 +14,9 @@ import vm from "node:vm";
 import { stripFullLineComments } from "./comment-strip.mjs";
 export { stripFullLineComments, assertSameTokens } from "./comment-strip.mjs";
 import {APP_MAX_BYTES,MEDIA_MODULE,MEDIA_LIMITS,mediaProblems} from "./media.mjs";
-import { CAPACITY_RELEASE_PATH, CAPACITY_VISUAL_PATH, createReleaseSidecar } from "./release-sidecar.mjs";
+import { CAPACITY_RELEASE_PATH, CAPACITY_VISUAL_PATH, createReleaseSidecar, sourceIdentity } from "./release-sidecar.mjs";
+import { DELIVERY_DIR, DELIVERY_RELEASE, DELIVERY_ENTRIES, DELIVERY_BOOT, measureSiteOwnership, createSoftwareDeliverySidecar } from "./software-delivery-package.mjs";
+import { createHash } from "node:crypto";
 import { renderSitePage, SITE_CONTENT_SECURITY_POLICY } from "./site-shell.mjs";
 export { SITE_CONTENT_SECURITY_POLICY } from "./site-shell.mjs";
 
@@ -819,10 +821,19 @@ export function buildSite(playgroundDir, { sourceCommit = null } = {}) {
   files.set(CAPACITY_VISUAL_PATH, readFileSync(visualPath,"utf8"));
   files.set("_headers", SITE_HEADERS);
   if (files.has(MEDIA_MODULE)) for (const [path, data] of readMedia(dir)) files.set(path, data);
+  if (existsSync(join(dir,"software-delivery/index.html"))) {
+    const originals=new Map();
+    for(const entry of DELIVERY_ENTRIES)for(const record of moduleGraph(join(dir,entry),sourceRoot).order){files.set(record.label,record.src);originals.set(record.label,record.src);}
+    files.set(`${DELIVERY_DIR}/index.html`,sitePage(dir,"software-delivery/index.html",["./visual.css"],new Map()));
+    files.set(`${DELIVERY_DIR}/boot.js`,DELIVERY_BOOT);
+    files.set(`${DELIVERY_DIR}/visual.css`,readFileSync(join(dir,"software-delivery/visual.css"),"utf8"));
+    for(const path of ["software-delivery/index.html","software-delivery/visual.css","tools/pack.mjs","tools/software-delivery-package.mjs","tools/release-sidecar.mjs","tools/site-shell.mjs","tools/check-dist.mjs","tools/media.mjs","tools/comment-strip.mjs"] )originals.set(path,readFileSync(join(dir,path),"utf8"));
+    const fingerprints=Object.fromEntries([...originals].map(([path,data])=>[path,{bytes:Buffer.byteLength(data),sha256:createHash("sha256").update(data).digest("hex")}]));
+    files.set(DELIVERY_RELEASE,createSoftwareDeliverySidecar(files,sourceIdentity(dir,fingerprints,sourceCommit),fingerprints,originals.get("software-delivery/index.html")));
+  }
   try { files.set(CAPACITY_RELEASE_PATH, createReleaseSidecar(dir,files,{sourceCommit,capturedSources})); }
   catch (error) { throw new PackError(error.message); }
-  const codeBytes = [...files.values()].filter(text => typeof text === "string").reduce((sum, text) => sum + Buffer.byteLength(text), 0);
-  if (codeBytes > APP_MAX_BYTES) throw new PackError("app size exceeds source byte limit");
+  try { measureSiteOwnership(files); } catch(error) { throw new PackError(error.message); }
   return files;
 }
 

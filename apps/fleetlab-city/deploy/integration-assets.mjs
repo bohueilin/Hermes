@@ -4,13 +4,16 @@
 import {readFileSync,lstatSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {resolve} from 'node:path';
+import {DELIVERY_RELEASE,softwareDeliveryProblems,INTEGRATION_TEXT_PATHS} from '../../../playground/fleetlab/tools/software-delivery-package.mjs';
 import {buildSite} from '../../../playground/fleetlab/tools/pack.mjs';
 
 const HOSTED_FILES=['integration.mjs','integration.css','404.html','not-found.css'];
 const CITY_CSP="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'";
 const fingerprint=data=>({bytes:Buffer.byteLength(data),sha256:createHash('sha256').update(data).digest('hex')});
 
-function rootFiles(teaching){
+export function integratedRootFiles(teaching){
+ const deliveryProblems=softwareDeliveryProblems(teaching);
+ if(deliveryProblems.length)throw Error(`Software delivery sidecar rejected: ${deliveryProblems.join('; ')}`);
  const marker='<link rel="stylesheet" href="./styles.css">';
  const intro='<section aria-label="About FleetLab"><h1>FleetLab: test fleet '+
   'decisions in simulation</h1>'+
@@ -30,6 +33,7 @@ function rootFiles(teaching){
    'name="author" content="Bo-Huei Lin"></head>')
   .replace('<div id="fleetlab-teaching-strip"',intro+'<div id="fleetlab-teaching-strip"')
   .replace('</head>','<meta name="fleetlab-teaching-package" content="/downloads/teaching-package.json"></head>');
+ if(teaching.has(DELIVERY_RELEASE))index=index.replace('</head>','<meta name="fleetlab-software-delivery" content="/network-flows/software-delivery/release.json"></head>');
  const old=teaching.get('_headers'),permission='camera=(), microphone=(), geolocation=()';
  const inherited=old.split(/\r?\n/).map(line=>line.trim()).filter(line=>line.toLowerCase().startsWith('permissions-policy:'))
   .map(line=>line.slice(line.indexOf(':')+1).trim());
@@ -57,7 +61,7 @@ function rootFiles(teaching){
 
 export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,selection){
  const teaching=buildSite(resolve(sourceRoot,'playground/fleetlab'),{sourceCommit:commit});
- const expected=rootFiles(teaching);
+ const expected=integratedRootFiles(teaching);
  for(const name of HOSTED_FILES){
   const path=resolve(sourceRoot,'apps/fleetlab-city/hosted',name),stat=lstatSync(path);
   if(stat.isSymbolicLink()||!stat.isFile())throw Error('Integration source asset is not regular.');
@@ -77,9 +81,13 @@ export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,sel
   'downloads/fleetlab-offline.html','publication.json']);
  const nonCity=Object.entries(files).filter(([path])=>!path.startsWith('city-explorer/'));
  if(nonCity.length!==allowed.size||nonCity.some(([path])=>!allowed.has(path)))throw Error('Integration teaching inventory has missing or unexpected files.');
+ const emittedText=nonCity.filter(([path])=>!path.startsWith('media/')&&!path.startsWith('network-flows/sources/')&&path!=='downloads/fleetlab-offline.html').reduce((sum,[,record])=>sum+record.bytes,0);
+ if(emittedText>3145728)throw Error('Integration emitted text byte budget exceeded.');
+ const integrationText=INTEGRATION_TEXT_PATHS.reduce((sum,path)=>sum+(files[path]?.bytes??0),0);
  if(nonCity.reduce((sum,[,record])=>sum+record.bytes,0)>14360576)throw Error('Integration teaching byte budget exceeded.');
  for(const [path,data] of expected){
   const bound=fingerprint(data);
   if(files[path]?.bytes!==bound.bytes||files[path]?.sha256!==bound.sha256)throw Error(`Integration source bytes differ: ${path}`);
  }
+ return {emitted_text_bytes:emittedText,integration_text_bytes:integrationText};
 }

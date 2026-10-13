@@ -199,7 +199,7 @@ function fakeRepository(name, graph = GRAPH) {
   writeFileSync(join(root, "README.md"), "scratch\n");
   const playground = join(root, "playground/fleetlab");
   writeTree(playground, graph);
-  writeTree(playground,Object.fromEntries(["pack.mjs","check-dist.mjs","release-sidecar.mjs","site-shell.mjs","media.mjs","comment-strip.mjs"].map(name=>[
+  writeTree(playground,Object.fromEntries(["pack.mjs","check-dist.mjs","release-sidecar.mjs","site-shell.mjs","media.mjs","comment-strip.mjs","software-delivery-package.mjs"].map(name=>[
     `tools/${name}`,readFileSync(join(PLAYGROUND_ROOT,"tools",name),"utf8")
   ])));
   return { root, playground };
@@ -589,7 +589,7 @@ describe("output path rules and R3", () => {
     const studyWriter = ["lstatSync", "mkdirSync", "realpathSync", "writeFileSync"];
     // The package proof uses bounded no-follow capture and writes only new output or temporary fixtures.
     const packageWriter = ["constants", "closeSync", "fstatSync", "lstatSync", "mkdirSync", "mkdtempSync", "openSync", "readSync", "readdirSync", "rmSync", "writeFileSync"];
-    const namedFs = { "tools/package-proof.mjs": packageWriter, "tools/check-dist.mjs": readOnly, "tools/release-sidecar.mjs": ["lstatSync", "readFileSync", "readdirSync"], "tools/capacity-study.mjs": studyWriter };
+    const namedFs = { "tools/software-delivery-study.mjs": ["constants", "closeSync", "lstatSync", "openSync", "readFileSync", "realpathSync", "writeFileSync"], "tools/package-proof.mjs": packageWriter, "tools/check-dist.mjs": readOnly, "tools/release-sidecar.mjs": ["lstatSync", "readFileSync", "readdirSync"], "tools/capacity-study.mjs": studyWriter };
     // createRequire and process.getBuiltinModule reach fs without naming it in an import, so both are refused outright.
     const MODULE = "[\"'`](?:node:)?module[\"'`]";
     const loaderUses = new RegExp(`\\bfrom\\s*${MODULE}|\\bimport\\s*\\(?\\s*${MODULE}|\\brequire\\s*\\(\\s*${MODULE}|\\bcreateRequire\\b|\\bgetBuiltinModule\\b`, "g");
@@ -658,14 +658,14 @@ describe("output path rules and R3", () => {
     assert.deepEqual(offenders, []);
   });
 
-  test("R3: only the packer, capacity study and bounded package proof can write files", () => {
+  test("R3: only the packer, declared studies and bounded package proof can write files", () => {
     const writers = /\b(writeFileSync|writeFile|appendFileSync|appendFile|createWriteStream|mkdirSync|mkdir|rmSync|rm|unlinkSync|unlink|renameSync|rename|copyFileSync|copyFile|cpSync|symlinkSync|truncateSync)\s*\(/;
     const offenders = [];
     const walk = (dir) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const path = join(dir, entry.name);
         if (entry.isDirectory()) walk(path);
-        else if (/\.(m?js)$/.test(entry.name) && !["tools/pack.mjs", "tools/capacity-study.mjs", "tools/package-proof.mjs"].some((tool) => path === join(PLAYGROUND_ROOT, tool)) && writers.test(readFileSync(path, "utf8"))) {
+        else if (/\.(m?js)$/.test(entry.name) && !["tools/pack.mjs", "tools/capacity-study.mjs", "tools/software-delivery-study.mjs", "tools/package-proof.mjs"].some((tool) => path === join(PLAYGROUND_ROOT, tool)) && writers.test(readFileSync(path, "utf8"))) {
           offenders.push(relative(PLAYGROUND_ROOT, path));
         }
       }
@@ -1053,7 +1053,7 @@ describe("site folder (pack.mjs --site and check-dist.mjs --site)", () => {
     for (const extra of ["notes.txt", ".DS_Store", "src/ui/app.js.map", "test/x.test.mjs", "src/ui/App.html", "network-flows/index.html", "network-flows/capacity/extra.js", "capacity/index.html"]) expectProblem(withFile(extra, "x"), new RegExp(`^file: unexpected ${escapeRegExp(extra)}`));
     expectProblem(withFile("src/core/c.js", `${clean.get("src/core/c.js")}const label = ${JSON.stringify(labels[1])};\n`), /^required label: entry 1 of the label tuple appears in src\/core\/c\.js/);
     assert.ok(checkSite(withFile("src/core/c.js", `${clean.get("src/core/c.js")}const label = ${JSON.stringify(labels[1])};\n`), { requiredLabels: labels }).every((p) => !p.includes(labels[1])), "messages never repeat the label");
-    expectProblem(withFile("src/core/big.js", `export const big = "${"x".repeat(MAX_BYTES)}";\n`), new RegExp(`^size: \\d+ bytes is over the ${MAX_BYTES} byte limit`));
+    expectProblem(withFile("styles.css", "x".repeat(MAX_BYTES)), /legacy_text_bytes budget exceeded/);
     assert.throws(() => checkSite(clean, { requiredLabels: [] }), TypeError);
   });
 
