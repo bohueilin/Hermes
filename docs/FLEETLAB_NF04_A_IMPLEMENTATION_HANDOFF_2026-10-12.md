@@ -34,6 +34,7 @@ The immutable Cloudflare deployment URL preserves a generation for reproduction.
 - Dependency observations: deployment and map audits report zero vulnerabilities; 38 registry signatures and 22 attestations verified.
 - Package proof: 7 focused tests passed, including archive restoration and deliberate provenance/inventory mutations.
 - Review found package-marker downgrade and resealed root-shell bypasses; both failed before fixes and passed afterward. The new packaging tool also required an exact filesystem/writer allowlist entry; two full-suite policy failures were corrected without broadening browser code permissions.
+- First preview header check caught Cloudflare concatenating the inherited 600-second and new archive one-year Cache-Control values. Publication was held; the new rule now explicitly removes the inherited header before setting immutable caching. The source-bound header test failed before the correction. Final hosting recheck is required. A private header helper initially used the system Python (without datetime.UTC); it was rerun with the project Python 3.11 environment.
 - Initial doctor: 17 PASS, 1 expected dirty-checkout WARN, 1 optional NOT_AVAILABLE. A clean release-checkout result is required before publication.
 - Current live NF-03 baseline: Watch reconstructs the comparison; Trade-off shows B2 at minute 18 and both whole-run outcomes; 390/320-pixel inspection shows no horizontal overflow and switching arms preserves B2/time.
 

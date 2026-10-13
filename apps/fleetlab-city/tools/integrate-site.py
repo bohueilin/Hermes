@@ -331,6 +331,7 @@ def integrate(
                     '  Content-Type: application/gzip\n'
                     '  Content-Disposition: attachment; '
                     'filename="fleetlab-teaching-source.json.gz"\n'
+                    '  ! Cache-Control\n'
                     '  Cache-Control: public, max-age=31536000, immutable\n'
                     '\n/downloads/teaching-package.json\n'
                     '  Content-Type: application/json\n'
