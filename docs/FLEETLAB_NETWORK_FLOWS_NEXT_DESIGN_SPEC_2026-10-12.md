@@ -1,5 +1,7 @@
 # FleetLab next design specification: one update, four vehicles
 
+**Execution update:** The bounded current-source B-lite proof and educational-site publication are complete; measured counters, negative tests, rollback and deployment identities are in the [completed October 12 implementation handoff](FLEETLAB_NF04_A_IMPLEMENTATION_HANDOFF_2026-10-12.md). The numerical examples below remain analytical. NF04-B remains unimplemented; future card/route budgets and device/human acceptance have not been closed by this release.
+
 October 12, 2026 · Audit-amended Revision 4 · **First-slice numerical contract frozen; package-only release authorized; NF-04 engine and experience remain unimplemented.**
 
 ## Decision and continuity
@@ -271,11 +273,11 @@ Use five independent formative participants if practical; record answers and ass
 
 ## Feedback prompt for ChatGPT or Fable
 
-> Review the October 12 frozen NF04-A numerical contract and this experience specification alongside the actual completed packaging handoff when available. NF-04 is unimplemented: distinguish analytical expectations, package proof, observed NF-03 UI and future acceptance. Check M1 selected versus shared traffic and zero-cap causes, M2 common preload time windows, M3 N×S/S provisions and M4 B-lite inventory/reproduction/retention under explicit gates. Try to falsify allocator/cursor, raw-deadline, horizon and discretization examples. Review phone arm switching, both fixed outcomes, exact shared clock, causal inspector and static six-beat guide. Cite the document section or actual screen/control, name the user consequence, and suggest the smallest effective change with an acceptance test. Do not propose a broad redesign, more cities or physical driving simulation for this bounded resource question.
+> Review the October 12 frozen NF04-A numerical contract and this experience specification alongside the completed October 12 packaging handoff. NF-04 is unimplemented: distinguish analytical expectations, package proof, observed NF-03 UI and future acceptance. Check M1 selected versus shared traffic and zero-cap causes, M2 common preload time windows, M3 N×S/S provisions and M4 B-lite inventory/reproduction/retention under explicit gates. Try to falsify allocator/cursor, raw-deadline, horizon and discretization examples. Review phone arm switching, both fixed outcomes, exact shared clock, causal inspector and static six-beat guide. Cite the document section or actual screen/control, name the user consequence, and suggest the smallest effective change with an acceptance test. Do not propose a broad redesign, more cities or physical driving simulation for this bounded resource question.
 
 ## Recommendation
 
-Complete and validate the authorized B-lite packaging release using the frozen numerical decisions. After its accepted proof, separately authorize one cold-cache versus repeated-delivery vertical slice with shared clock, phone comparison, static chapters and the six-beat guide. Keep preload UI as the next question.
+The current-source B-lite packaging release is complete. Use its measured limits to separately authorize one cold-cache versus repeated-delivery vertical slice with shared clock, phone comparison, static chapters and the six-beat guide. Keep preload UI as the next question.
 
 ## Top risks + mitigations
 
@@ -286,6 +288,6 @@ Complete and validate the authorized B-lite packaging release using the frozen n
 
 ## Next 3 actions
 
-1. Complete current-source packaging receipt, rejection tests, exact discovery fixture cost and preservation/rollback proof.
-2. Record actual publication/readback and remaining human/device limits; preserve Q1/Q8/N2, SF HOLD and Austin pause.
+1. Review the completed packaging receipt and its minimal-link limitation; size the full discovery card and route against their actual owner budgets.
+2. Carry forward the verified release baseline and remaining human/device limits; preserve Q1/Q8/N2, SF HOLD and Austin pause.
 3. Separately authorize and validate the first cold/repeated vertical slice before adding preload exploration.

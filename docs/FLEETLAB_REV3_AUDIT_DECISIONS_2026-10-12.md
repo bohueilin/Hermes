@@ -1,8 +1,10 @@
 # FleetLab Revision 3 audit decisions
 
+**Execution update:** The bounded current-source B-lite proof and educational-site publication are complete; measured counters, negative tests, rollback and deployment identities are in the [completed October 12 implementation handoff](FLEETLAB_NF04_A_IMPLEMENTATION_HANDOFF_2026-10-12.md). The numerical examples below remain analytical. NF04-B remains unimplemented; future card/route budgets and device/human acceptance have not been closed by this release.
+
 October 12, 2026 · NF04-A contract freeze and authorized package-only release · NF04-B remains outside this task.
 
-The October 10 Revision 3 audit supports the existing lesson and proposes four bounded amendments. This decision accepts those amendments, freezes the first cold/repeated numerical contract, specifies preload for a later UI extension, and selects B-lite for the authorized current-source packaging proof. It does not claim the proof, publication or an NF-04 execution has already passed.
+The October 10 Revision 3 audit supports the existing lesson and proposes four bounded amendments. This decision accepts those amendments, freezes the first cold/repeated numerical contract, specifies preload for a later UI extension, and selects B-lite for the authorized current-source packaging proof. This decision is separate from the completed package/publication evidence linked above; no NF-04 execution is claimed.
 
 ## Evidence and current authority
 
@@ -27,7 +29,7 @@ Preserve the four pre-existing untracked October 9 design files. Leave other val
 | **M1: selected request versus shared traffic** | Accept and freeze | A request checking/activating has no active transfer of its own. Shared WAN/local bars sum all accepted grants. The inspector uses prerequisites, remaining work, caps, capacity and allocation; zero grant alone does not prove congestion. | Wording resolved in both Oct12 documents. Staggered and zero-cap engine/projection fixtures remain future NF-04 tests. |
 | **M2: paired preload window** | Accept, specify now; preload UI later | Both arms share P and repository availability. Default P=available_at=−96 s; cold control idles earlier, preload may fetch; same exogenous digest and main/earlier/full windows. | Design ambiguity resolved. No preload engine or UI result claimed. First cold/repeated slice remains P=0. |
 | **M3: storage scales with input** | Accept and freeze | Sufficient repeated transit provision N×S, cache provision S after obsolete inventory retirement. These are distinct assumptions, not equal footprints, occupancy, cost or disk performance. | Design wording resolved; four 64 GB requests must declare 256/64 GB. No storage engine added. |
-| **M4: budget and topology** | Accept; select B-lite | Preserve deduplicated build/one atomic release. Add source offer and complete source/emitted/closure/physical ownership counters under explicit gates. Use immutable deployment host, without independent route deployment machinery. | Decision made; fresh measured proof, failure tests and rollback remain required. Do not mark engineering gate closed from prose. |
+| **M4: budget and topology** | Accept; select B-lite | Preserve deduplicated build/one atomic release. Add source offer and complete source/emitted/closure/physical ownership counters under explicit gates. Use immutable deployment host, without independent route deployment machinery. | Current-source proof, failure tests and local rollback completed; see the linked release handoff. Future card/route implementation and performance remain separate gates. |
 | **V1: mobile/static experience** | Preserve as release acceptance | Both fixed outcomes remain discoverable, with exact shared clock, vehicle and explicitly named arms; static chapters expose the same causal facts. | Open for future NF-04. Automated viewport, physical-device, accessibility and human evidence remain separate. |
 
 ### M1 discriminating values
@@ -60,7 +62,7 @@ The one-byte fixture intentionally changes deadline outcome: at WAN/local 4 B/s 
 
 ## M4: source identity, budgets and proof boundary
 
-Current application baseline is `87733ad0b7dd73f65b1742aff4c9253c99e6f391`; starting documentation checkout is `9d47e4cbc8be63897d4d459a8b8a507c5ae3e29a`. Historical `1141b12` measurements must remain explicitly historical. Revision 3's reported hosted text is 2,621,323 B, leaving only **117 B**, and offline is 2,549,837 B, leaving 21,603 B after reserve. Its raw-source/tools and NF-03 closure require fresh measurement.
+Pre-release application baseline is `87733ad0b7dd73f65b1742aff4c9253c99e6f391`; starting documentation checkout is `9d47e4cbc8be63897d4d459a8b8a507c5ae3e29a`. Historical `1141b12` measurements must remain explicitly historical. Revision 3's reported hosted text is 2,621,323 B, leaving only **117 B**, and offline is 2,549,837 B, leaving 21,603 B after reserve. Its raw-source/tools and NF-03 closure require fresh measurement.
 
 B-lite is selected because a budget increase does not require independently packaged/deployed routes. One immutable Cloudflare deployment host namespaces the complete generation for reviewer reproduction; the integration manifest binds exact route/shared/offline/source-offer bytes, and same-host relative imports remain inside that immutable deployment. This replaces the October 10 proposal's per-route digest-path/stable-pointer machinery. There is no independent pipeline or mutable `/shared/latest` namespace.
 
@@ -111,7 +113,7 @@ V1 acceptance requires 390×844 and 320 px arm switching to preserve clock/vehic
 
 ## Recommendation
 
-Proceed with the authorized B-lite package-only build, validation and educational-site publication under the named gates. Preserve the frozen first-slice numerical contract. Do not start NF04-B until the proof is accepted and its implementation is separately authorized.
+Accept the completed current-source B-lite package proof and publication receipt under the named gates. Preserve the frozen first-slice numerical contract. Do not start NF04-B until the proof is accepted and its implementation is separately authorized.
 
 ## Top risks + mitigations
 
@@ -122,6 +124,6 @@ Proceed with the authorized B-lite package-only build, validation and educationa
 
 ## Next 3 actions
 
-1. Complete the current-source receipt, exact discovery fixture and all source/mismatch/rollback checks.
-2. Record actual build/publication/readback evidence and remaining device/human checks in the release handoff.
+1. Review the completed receipt, exact minimal-link fixture and source/mismatch/rollback results in the handoff.
+2. Preserve the verified release baseline and explicitly carry forward the remaining device/human checks.
 3. Separately authorize the first cold/repeated vertical slice, preserving the later preload and historical queue boundaries.

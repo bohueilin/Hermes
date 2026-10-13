@@ -54,6 +54,6 @@
 ### Task 4: publish and handoff
 
 **Files:** Oct12 handoff, `docs/releases/fleetlab-current.json`, `CODEX_HANDOFF.md`.
-- [ ] Commit source, build from exact commit in clean managed release worktree, integrate unchanged City and offline, measure whole site.
-- [ ] Push authorized branch, preview publish, full byte/header/browser checks; reuse same artifact for production and repeat readback.
-- [ ] Record actual identities, counts, decisions and residuals; copy final Oct12 feedback documents to Downloads; commit/push receipt.
+- [x] Commit source, build from exact commit in clean managed release worktree, integrate unchanged City and offline, measure whole site.
+- [x] Push authorized branch, preview publish, full byte/header/browser checks; reuse same artifact for production and repeat readback.
+- [x] Record actual identities, counts, decisions and residuals; copy final Oct12 feedback documents to Downloads; commit/push receipt.

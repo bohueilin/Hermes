@@ -1,8 +1,10 @@
 # FleetLab NF04-A: frozen numerical contract and B-lite packaging decision
 
-October 12, 2026 · Audit-amended contract `nf04-a-contract/1.0.0` · **Cold/repeated numerical contract frozen; packaging proof authorized; NF04-B not started or authorized by this freeze.**
+**Execution update:** The bounded current-source B-lite proof and educational-site publication are complete; measured counters, negative tests, rollback and deployment identities are in the [completed October 12 implementation handoff](FLEETLAB_NF04_A_IMPLEMENTATION_HANDOFF_2026-10-12.md). The numerical examples below remain analytical. NF04-B remains unimplemented; future card/route budgets and device/human acceptance have not been closed by this release.
 
-The owner's current instruction authorizes the bounded NF04-A build, validation, Git push and educational-site publication. It does not authorize the NF04-B engine or a new scientific run. This revision resolves M1–M3 from the October 10 Revision 3 audit and selects M4's B-lite package-only proof. Analytical values remain calculations; this document does not assert that a package test, NF-04 execution or publication has passed.
+October 12, 2026 · Audit-amended contract `nf04-a-contract/1.0.0` · **Cold/repeated numerical contract frozen; current-source packaging proof completed; NF04-B not started or authorized by this freeze.**
+
+The owner's current instruction authorizes the bounded NF04-A build, validation, Git push and educational-site publication. It does not authorize the NF04-B engine or a new scientific run. This revision resolves M1–M3 from the October 10 Revision 3 audit and selects M4's B-lite package-only proof. Analytical values remain calculations; completed package and publication evidence is linked above, and no NF-04 execution is claimed.
 
 Read with the [October 12 experience specification](FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-12.md) and [audit decisions](FLEETLAB_REV3_AUDIT_DECISIONS_2026-10-12.md). The [October 10 proposal](FLEETLAB_NF04_A_CONTRACT_AND_PACKAGING_PROPOSAL_2026-10-10.md) and its complete historical inventory remain unchanged.
 
@@ -10,7 +12,7 @@ Read with the [October 12 experience specification](FLEETLAB_NETWORK_FLOWS_NEXT_
 
 | Item | Status / meaning |
 | --- | --- |
-| Current application baseline | `87733ad0b7dd73f65b1742aff4c9253c99e6f391`, Revision 3 NF-03. |
+| Pre-release application baseline | `87733ad0b7dd73f65b1742aff4c9253c99e6f391`, Revision 3 NF-03. |
 | Starting checkout | `9d47e4cbc8be63897d4d459a8b8a507c5ae3e29a`, branch `codex/fleetlab-city-sf`; changes since application baseline are documentation/receipts, not new teaching application code. |
 | Historical measurement only | `1141b12160018216c3baf6875278fe0890762b15`, Revision 2; never substitute its 1,232 B margin for the current 117 B margin. |
 | Numerical freeze | A1–A5 and bounds below govern the next cold-cache versus repeated-delivery slice. No production engine or accepted NF-04 record is created by prose. |
@@ -238,16 +240,16 @@ Quantization delay can accumulate across prerequisites. Neither quantum-invarian
 
 ### Current and historical counts stay separate
 
-The following counts are document-reported in the October 10 release handoff and historical proposal. The proof must remeasure the current source and its tools; raw-source growth cannot be inferred from emitted growth.
+The following counts are document-reported in the October 10 release handoff and historical proposal. They describe the pre-release baseline; raw-source growth cannot be inferred from emitted growth. Fresh Oct12 measurements are in the linked handoff: original source/tools/policy/license 2,765,799 B; NF-03 closure 489,894 B; complete integration 1,620,357,054 B.
 
-| Measure | Historical Revision 2, 1141b12 | Current Revision 3, 87733ad / starting 9d47e4c |
+| Measure | Historical Revision 2, 1141b12 | Pre-release Revision 3, 87733ad / starting 9d47e4c |
 | --- | ---: | ---: |
 | Counted hosted teaching text | 2,620,208 B | 2,621,323 B |
 | Margin under unchanged 2,621,440 B legacy cap | 1,232 B | **117 B** |
 | Offline HTML | 2,549,829 B | 2,549,837 B |
 | Offline margin after required 50,000 B reserve | 21,611 B | 21,603 B |
-| Raw source/build-tool text | 2,679,857 B | Fresh proof measurement required |
-| NF-03 complete route closure | 488,377 B | Fresh proof measurement required |
+| Raw source/build-tool text | 2,679,857 B | Not reported for this historical baseline |
+| NF-03 complete route closure | 488,377 B | Not reported for this historical baseline |
 | Integrated site | 1,619,534,486 B | 1,619,535,612 B |
 
 The old 112-module inventory is retained in the October 10 appendix as historical evidence. Neither its raw-source count nor its closure proves that the current build fits. Use current-source manifests for the package-only receipt.
@@ -270,7 +272,7 @@ There is no separate route deployment, new mutable `/shared/latest` namespace or
 
 ### Gates: existing limits retained; prospective allowances explicit
 
-The proof implements/checks these approved design ceilings. Passing them is a measured result still to be supplied, not a conclusion of this decision. Future NF-04 capacity is prospective; the new aggregate ceiling does not enlarge or relabel the existing legacy compatibility gate.
+The proof implements/checks these approved design ceilings. The completed handoff supplies measured passing results for the current-source proof; the ceilings alone are not evidence. Future NF-04 capacity is prospective; the new aggregate ceiling does not enlarge or relabel the existing legacy compatibility gate.
 
 | Accounting gate | Maximum / target | Counting rule |
 | --- | ---: | --- |
@@ -303,11 +305,11 @@ Every current, new, shared and retained file has an owner: the legacy teaching b
 5. **Immutable publication and rollback.** Build once from frozen source; validate preview bytes/headers before reusing the exact integration artifact for authorized production. Read back stable and immutable hosts and record the measurement time and session-binding limitation above. Restore a previously verified whole integration and its pinned shared/source files, without regenerating scientific records; validate rollback selection/readback.
 6. **Preservation.** Retain complete offline content and reserve, all City/current/rollback/source-offer bytes, SF HOLD and Austin pause. Keep Q1/Q8/N2 open as described in the experience specification.
 
-No fresh package receipt or mismatch/rollback test is asserted here. The release handoff must record actual commands, failures, measured counts and final outcome. A proof failure leaves the affected release/engine gate closed; it does not justify silently weakening a counter or changing topology.
+The completed release handoff linked above records the fresh package receipt, mismatch/rollback checks, actual commands, failures, measured counts and publication outcome. A proof failure leaves the affected release/engine gate closed; it does not justify silently weakening a counter or changing topology.
 
 ## Recommendation
 
-Use the frozen cold/repeated contract and selected B-lite design for the authorized package-only proof. Validate and publish only the bounded packaging release once its checks pass. NF04-B remains unstarted and needs a separate implementation decision after the proof is accepted.
+Accept the completed current-source B-lite proof and preserve its measured source, legacy/offline and closure gates in the next build. NF04-B remains unstarted and needs a separate implementation decision after the proof is accepted.
 
 ## Top risks + mitigations
 
@@ -318,6 +320,6 @@ Use the frozen cold/repeated contract and selected B-lite design for the authori
 
 ## Next 3 actions
 
-1. Complete current-source B-lite proof, exact discovery fixture accounting and deliberate rejection/rollback evidence.
-2. Record final source/package counts and authorized publication readback in the release handoff, preserving unperformed checks.
+1. Review the completed package proof and its 117 B legacy margin before sizing the full NF-04 discovery card and route.
+2. Use the recorded publication and preservation evidence as the next baseline; keep physical-device, human and SF qualification gaps explicit.
 3. Separately authorize the first cold/repeated vertical slice; implement and validate its independent verifier, shared-clock bench, static chapters and six-beat guide before preload UI.

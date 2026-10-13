@@ -1,3 +1,9 @@
+# FleetLab NF04-A — October 12, 2026
+
+The current educational-site release is live. See the [implementation handoff](docs/FLEETLAB_NF04_A_IMPLEMENTATION_HANDOFF_2026-10-12.md), [audit decisions](docs/FLEETLAB_REV3_AUDIT_DECISIONS_2026-10-12.md), [frozen numerical contract](docs/FLEETLAB_NF04_A_CONTRACT_AND_PACKAGING_PROPOSAL_2026-10-12.md) and [next experience specification](docs/FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-12.md). NF04-B is not built. SF qualification remains HOLD; new cities and the held power study remain paused. Earlier records below are historical.
+
+---
+
 # FleetLab visual experience — October 10, 2026
 
 Current implementation and release status: [October 10 handoff](docs/FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-10.md). Next proposed Network Flows lesson: [NF-04 design specification](docs/FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-10.md). These dated records supersede older website navigation and publication status below; they do not clear SF qualification, Q1/Q8/N2 or physical deployment boundaries.

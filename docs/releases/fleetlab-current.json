@@ -4,13 +4,13 @@
   "sf_qualification": "HOLD",
   "authenticity": "NOT_AUTHENTICATED",
   "operational_deployment_permission": "NONE",
-  "source_commit": "87733ad0b7dd73f65b1742aff4c9253c99e6f391",
+  "source_commit": "eef0180e160671efa1fd9202321096741dbd27f9",
   "source_branch": "codex/fleetlab-city-sf",
-  "production_deployment_id": "1b5e00d3-70c0-4182-83c4-9f19fcaba11e",
-  "preview_deployment_id": "c1d08481-97c4-4c00-bc85-2535d3e5de79",
-  "prior_production_deployment_id": "27abffcd-005a-4800-be56-a3515f1d2f50",
+  "production_deployment_id": "3d23afce-4404-430b-a5d2-a543a45c6754",
+  "preview_deployment_id": "5e1bbbab-ceee-4537-923c-162c73b4aa05",
+  "prior_production_deployment_id": "1b5e00d3-70c0-4182-83c4-9f19fcaba11e",
   "stable_url": "https://fleetlab.pages.dev",
-  "immutable_url": "https://1b5e00d3.fleetlab.pages.dev",
+  "immutable_url": "https://3d23afce.fleetlab.pages.dev",
   "current": {
     "compatibility": {
       "metrics": "fleetlab.city-metrics/1.0.0",
@@ -22,13 +22,13 @@
     "release_sha256": "c56bda6b509105c5bee778980c01d13028401bc03fc8b49b4948f65c6f18f63f"
   },
   "rollback": "city-explorer/releases/e3318a76588a7403",
-  "integration_manifest_sha256": "8dd70941ca1f21aebebe2ba9166f47820b360cc635616cebefdb5836f48f20d4",
-  "file_count": 10038,
-  "total_bytes": 1619534486,
+  "integration_manifest_sha256": "b6e946b3cab3c09a483c63ea15685db80b66ef01f427dbdc652269ecf73bfbf9",
+  "file_count": 10040,
+  "total_bytes": 1620357054,
   "files": {
     "index.html": {
-      "bytes": 2135,
-      "sha256": "37642e3e74a4b9fe3e56f21545fda8249b1024eaf9e230eb115bbb14fe8a29dc",
+      "bytes": 2217,
+      "sha256": "208c1688a35b291112750a2e8a5234699e6c441137f1293733558219a950f576",
       "status": 200
     },
     "boot.js": {
@@ -52,8 +52,8 @@
       "status": 200
     },
     "publication.json": {
-      "bytes": 1560,
-      "sha256": "cae160c13554d419bcb186daab59486679d579a02912cafed289909dc48f3304",
+      "bytes": 1737,
+      "sha256": "553b285298ffa8177cd86ef3ca9989468a0d745280d5037a2ebfabd576df6574",
       "status": 200
     },
     "network-flows/capacity/index.html": {
@@ -68,7 +68,7 @@
     },
     "network-flows/capacity/release.json": {
       "bytes": 38960,
-      "sha256": "dcec49070bbdcb866c3897e1e8190619edc60468d4b58bc41b5dd85fe8e5a767",
+      "sha256": "fcc0c5558cfff9c7fa95011d5ee00aca65ece98f1a6f7faad0e4d14acdd3bbae",
       "status": 200
     },
     "src/ui/depot-capacity-bench.js": {
@@ -85,22 +85,51 @@
       "bytes": 9750,
       "sha256": "4c5873143e83dedf4db19dca9f661e8e53767e176edccddcecfdb9817a465115",
       "status": 200
+    },
+    "integration.mjs": {
+      "bytes": 6816,
+      "sha256": "f92fccfb082daa2ea8a9114f94dc7051a32ca17cd012b3b26f4f820bcb539090",
+      "status": 200
+    },
+    "downloads/teaching-package.json": {
+      "bytes": 26342,
+      "sha256": "dcb38a190df639b837805e81539719af89d7b3051003a612bbc097a5c9db9f7d",
+      "status": 200
+    },
+    "network-flows/sources/b5821706919dd9efcc5093314a991651f74a605ced963ff4b93b12f92310dddd.json.gz": {
+      "bytes": 794409,
+      "sha256": "b5821706919dd9efcc5093314a991651f74a605ced963ff4b93b12f92310dddd",
+      "status": 200
     }
   },
-  "verified_at_utc": "2026-10-10T19:23:59.515667+00:00",
+  "verified_at_utc": "2026-10-13T05:46:18.464999+00:00",
   "verification": {
-    "served_files": 10037,
-    "matched_files": 10037,
-    "header_checks": 10,
+    "served_files": 10039,
+    "matched_files": 10039,
+    "header_checks": 12,
     "headers_pass": true,
-    "full_readback_sha256": "2acd82eebc061b9858165f2c5955b93e1d0f928f35128a646fe3d3f452ba9ac7",
-    "preview_matched_files": 10037,
-    "preview_full_readback_sha256": "b454f13e50ec3781df0268ff4a5779d7be0338e35b227ea2abe3f9fffa65d057",
-    "production_headers_sha256": "28e471e89760a5eda03c5ed35a3c61ae20f779f0dbb5e9bee174523851978a95",
-    "preview_headers_sha256": "99c837500fae850063f2db17e587e53f96121f2592fb5418657fae3b38af39e3",
-    "immutable_smoke_matched_files": 12,
-    "meaning": "Byte consistency and observed hosting only; not independent authenticity or operational authority."
+    "full_readback_sha256": "8f816eb484217792b6bd87da55671cd474d15a738a27d9d3e55866ebcaa36a2c",
+    "preview_matched_files": 10039,
+    "preview_full_readback_sha256": "b27d223f9fd7d7c9e0c09dbb6f7aa49de68c2c61843c7067d35e22ab3193f159",
+    "production_headers_sha256": "b03a9bbde6e2edcdb6a0169fae49c6b7da99e62e3862e73a27bd35169b027bf2",
+    "preview_headers_sha256": "777dc50035bd228cc2e0259680e3f974612325d53845141830c462d3a3b79cd5",
+    "immutable_smoke_matched_files": 15,
+    "meaning": "Byte consistency and observed hosting only; not independent authenticity, browser-session generation pinning or operational authority."
   },
-  "capacity_release_sidecar_sha256": "dcec49070bbdcb866c3897e1e8190619edc60468d4b58bc41b5dd85fe8e5a767",
-  "capacity_release_digest": "fe1b1c41de13cb0ab086c13109eb1bedc2f07a07292654a312c2bb92ea239391"
+  "capacity_release_sidecar_sha256": "fcc0c5558cfff9c7fa95011d5ee00aca65ece98f1a6f7faad0e4d14acdd3bbae",
+  "capacity_release_digest": "8f0667d571156561a78c7b43fc13039f1136c1a3e38dbb51604a8e1ff6b9cbc0",
+  "teaching_package": {
+    "bytes": 26342,
+    "path": "downloads/teaching-package.json",
+    "sha256": "dcb38a190df639b837805e81539719af89d7b3051003a612bbc097a5c9db9f7d"
+  },
+  "teaching_source_offer": {
+    "bytes": 794409,
+    "extracted_sha256": "f85f6b1dfd784a81680362b58a5cd9500defc410f8b4756bd72e3df26114e2c6",
+    "original_inventory_sha256": "d9c1929a22e263e5cc5348c26f342099df0ae973234e128cbcc0a00acd63b560",
+    "owner": "teaching-original-source-and-tools",
+    "path": "network-flows/sources/b5821706919dd9efcc5093314a991651f74a605ced963ff4b93b12f92310dddd.json.gz",
+    "sha256": "b5821706919dd9efcc5093314a991651f74a605ced963ff4b93b12f92310dddd"
+  },
+  "non_city_bytes": 7134386
 }
