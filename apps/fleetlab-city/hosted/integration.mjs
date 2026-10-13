@@ -67,6 +67,7 @@ export function mountCityEntry(doc = document) {
     node('div', {}, [node('strong', {}, 'Take the teaching labs with you.'), node('p', {}, 'Save the single HTML file, then open it in a browser. Includes the core teaching labs and catalog. The hosted capacity study, film, SF map and recordings are not included; there is no sync with the hosted site.')]),
     node('a', {href:'/downloads/fleetlab-offline', download:'fleetlab-offline.html'}, 'Download offline edition · 2.4 MB ↓'),
     node('a', {href:'/downloads/verify-offline.txt'}, 'Verify the download · SHA-256'),
+    doc.querySelector('meta[name="fleetlab-teaching-package"]') && node('a', {href:'/downloads/teaching-package.json'}, 'Teaching source & build receipt'),
     node('p', {}, 'No app analytics. Cloudflare receives hosting requests and may receive browser network-error reports.'),
   ]));
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'owner-contact'}, [

@@ -1,6 +1,8 @@
 import {readFileSync,readdirSync,lstatSync} from 'node:fs';
 import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
 import {resolve,relative,dirname} from 'node:path';
+import {verifyIntegrationAssets} from './integration-assets.mjs';
 
 export function releaseCommand(args){
   if(args.length===1&&args[0]==='--version')return 'version';
@@ -31,6 +33,27 @@ export function verifyStage(site,commit,sourceRoot){
   }
   const selection=JSON.parse(readFileSync(resolve(site,'publication.json'),'utf8'));
   if(selection.source_commit!==commit)throw Error('Stage source commit differs from the clean checkout.');
+  const receiptPath='downloads/teaching-package.json';
+  const sourcePaths=Object.keys(files).filter(name=>name.startsWith('network-flows/sources/'));
+  // The current source generation requires a package for upload. Optional integration
+  // remains useful for old fixtures, but deleting all markers cannot downgrade a release.
+  if(sourceRoot||manifest.teaching_package||selection.teaching_package||files[receiptPath]||sourcePaths.length){
+    if(!sourceRoot)throw Error('Teaching package verification requires the source checkout.');
+    const sameRecord=(a,b)=>a&&b&&a.bytes===b.bytes&&a.sha256===b.sha256;
+    const packageFiles=manifest.teaching_package;
+    if(!packageFiles||!selection.teaching_package||!files[receiptPath]||sourcePaths.length!==1||
+      !/^network-flows\/sources\/[a-f0-9]{64}\.json\.gz$/.test(sourcePaths[0])||
+      Object.keys(packageFiles).length!==2||
+      !sameRecord(packageFiles[receiptPath],files[receiptPath])||
+      !sameRecord(packageFiles[sourcePaths[0]],files[sourcePaths[0]])||
+      selection.teaching_package.path!==receiptPath||!sameRecord(selection.teaching_package,files[receiptPath])){
+      throw Error('Teaching package manifest, files and publication selection disagree or are missing.');
+    }
+    verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,selection);
+    execFileSync(process.execPath,[resolve(sourceRoot,'playground/fleetlab/tools/package-proof.mjs'),
+      '--check-integrated',site,'--playground',resolve(sourceRoot,'playground/fleetlab'),
+      '--source-commit',commit],{stdio:['ignore','pipe','pipe']});
+  }
   if(sourceRoot){
     for(const name of ['setup-codec.js','setup-sharing.js','studio.js']){
       const reviewed=readFileSync(resolve(sourceRoot,'playground/fleetlab/src/ui',name));

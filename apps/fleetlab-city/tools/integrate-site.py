@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import re
 import shutil
 import subprocess
 import tarfile
@@ -43,6 +44,32 @@ CAPACITY_BOOT = 'import { startCapacity } from "../../src/ui/capacity-app.js";\n
 PROVENANCE_TOOL = (
     Path(__file__).resolve().parents[3] / "playground/fleetlab/tools/release-sidecar.mjs"
 )
+PACKAGE_TOOL = PROVENANCE_TOOL.with_name("package-proof.mjs")
+
+
+def check_teaching_package(package, client, offline, source_commit):
+    """Reproduce the two owned files against the frozen teaching source before copying."""
+    files = launch.inventory(Path(package))
+    archives = [name for name in files if re.fullmatch(
+        r"network-flows/sources/[a-f0-9]{64}\.json\.gz", name
+    )]
+    if len(archives) != 1 or set(files) != {"downloads/teaching-package.json", *archives}:
+        raise ValueError("teaching package has missing or unexpected files")
+    if files[archives[0]]["bytes"] > 4 * 1024**2 or files[
+        "downloads/teaching-package.json"
+    ]["bytes"] > 32768:
+        raise ValueError("teaching package file budget exceeded")
+    command = [
+        "node", str(PACKAGE_TOOL), "--check", str(package), "--site", str(client),
+        "--playground", str(launch.ROOT / "playground/fleetlab"),
+        "--offline", str(offline), "--source-commit", source_commit,
+    ]
+    checked = subprocess.run(command, capture_output=True, text=True, check=False)
+    if checked.returncode:
+        raise ValueError(f"teaching package rejected: {checked.stderr.strip()}")
+    if launch.inventory(Path(package)) != files:
+        raise ValueError("teaching package changed during verification")
+    return files
 
 
 def check_temporal_offer(release, offered, offer):
@@ -106,12 +133,15 @@ def integrate(
     client_update=None,
     source_commit=None,
     flow_update=False,
+    teaching_package=None,
 ):
     legacy, viewer, previous, offer, out, offline = map(
         Path, (legacy, viewer, previous, offer, out, offline)
     )
     if out.exists():
         raise ValueError("output already exists")
+    if teaching_package and not (flow_update and client_update and source_commit):
+        raise ValueError("teaching package requires a frozen flow client and source commit")
     if flow_update and not client_update:
         raise ValueError("flow update requires a reviewed client distribution")
     if source_commit and not client_update:
@@ -183,6 +213,9 @@ def integrate(
             if index != expected_index:
                 raise ValueError("undeclared teaching index change")
     marker = '<link rel="stylesheet" href="./styles.css">'
+    package_files = check_teaching_package(
+        teaching_package, client_update, offline, source_commit
+    ) if teaching_package else None
     if (
         boot.count("start({ studio: true") != 1
         or boot.count("import { start }") != 1
@@ -219,6 +252,11 @@ def integrate(
         hosted_index = hosted_index.replace(
             '<div id="fleetlab-teaching-strip"', intro + '<div id="fleetlab-teaching-strip"'
         )
+        if package_files:
+            hosted_index = hosted_index.replace(
+                "</head>", '<meta name="fleetlab-teaching-package" '
+                'content="/downloads/teaching-package.json"></head>'
+            )
         (site / "index.html").write_text(hosted_index)
         if client_update:
             for name in copied:
@@ -270,6 +308,10 @@ def integrate(
                 "authenticity": "NOT_AUTHENTICATED",
                 "sf_qualification": "HOLD",
                 "operational_deployment_permission": "NONE",
+                **({"teaching_package": {
+                    "path": "downloads/teaching-package.json",
+                    **package_files["downloads/teaching-package.json"],
+                }} if package_files else {}),
                 "meaning": (
                     "Packaging selection, not proof of successful hosting. "
                     "release.json records build-time state. Verify served bytes with "
@@ -277,7 +319,28 @@ def integrate(
                 ),
             },
         )
+        if package_files:
+            if any((site / name).exists() for name in package_files):
+                raise ValueError("teaching package collides with an existing owned path")
+            for name in package_files:
+                (site / name).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(Path(teaching_package) / name, site / name)
+            with (site / "_headers").open("a") as headers:
+                headers.write(
+                    '\n/network-flows/sources/*\n'
+                    '  Content-Type: application/gzip\n'
+                    '  Content-Disposition: attachment; '
+                    'filename="fleetlab-teaching-source.json.gz"\n'
+                    '  Cache-Control: public, max-age=31536000, immutable\n'
+                    '\n/downloads/teaching-package.json\n'
+                    '  Content-Type: application/json\n'
+                )
         final = launch.inventory(site)
+        if package_files and (
+            launch.inventory(Path(teaching_package)) != package_files
+            or any(final.get(name) != record for name, record in package_files.items())
+        ):
+            raise ValueError("teaching package changed during integration")
         if client_update:
             for name in copied:
                 if final.get(name) != updates[name]:
@@ -296,6 +359,12 @@ def integrate(
             or max(r["bytes"] for r in final.values()) > launch.PAGES_FILE_LIMIT
         ):
             raise ValueError("Pages file budget exceeded")
+        non_city_bytes = sum(
+            record["bytes"] for name, record in final.items()
+            if not name.startswith("city-explorer/")
+        )
+        if package_files and non_city_bytes > 14360576:
+            raise ValueError("complete teaching and integration byte budget exceeded")
         result = {
             "schema": "fleetlab.hosted-integration/1.0.0",
             "current": report["current"],
@@ -316,6 +385,8 @@ def integrate(
             "publication": "NOT_PERFORMED",
             "teaching_update": "depot-capacity-nf03-2026-10-09" if flow_update else None,
             "scientific_eligibility": "BLOCKED_MAP_QUALIFICATION",
+            "teaching_package": package_files,
+            "non_city_bytes": non_city_bytes,
         }
         launch.write_json(review / "integration-manifest.json", result)
         # Historical prepare-stage reports describe the intermediate immutable copy.
@@ -329,6 +400,8 @@ def main():
     for name in ("legacy", "viewer", "previous", "offer", "out", "offline"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--readback", type=Path)
+    parser.add_argument("--teaching-package", type=Path,
+                        help="Verified NF04-A source package and byte-accounting receipt")
     parser.add_argument(
         "--client-update",
         type=Path,

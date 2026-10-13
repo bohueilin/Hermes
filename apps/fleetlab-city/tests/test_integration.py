@@ -317,6 +317,35 @@ class IntegrationTest(unittest.TestCase):
             )
         self.assertFalse((self.base / "out").exists())
 
+    def test_teaching_package_requires_frozen_flow_client(self):
+        for options in ({}, {"flow_update": True, "client_update": self.legacy}):
+            with self.subTest(options=options), self.assertRaisesRegex(
+                ValueError, "teaching package requires"
+            ):
+                integration.integrate(
+                    self.legacy, self.viewer, self.prior, self.offer,
+                    self.base / "out", self.offline,
+                    teaching_package=self.base / "package", **options,
+                )
+        self.assertFalse((self.base / "out").exists())
+
+    def test_teaching_package_refuses_unknown_paths_before_running_tools(self):
+        package = self.base / "package"
+        (package / "downloads").mkdir(parents=True)
+        (package / "downloads/teaching-package.json").write_text("{}")
+        (package / "unexpected.js").write_text("unreviewed")
+        with self.assertRaisesRegex(ValueError, "missing or unexpected"):
+            integration.check_teaching_package(package, self.legacy, self.offline, "a" * 40)
+
+    def test_teaching_package_bounds_receipt_before_parsing(self):
+        package = self.base / "package"
+        (package / "downloads").mkdir(parents=True)
+        (package / "network-flows/sources").mkdir(parents=True)
+        (package / "downloads/teaching-package.json").write_bytes(b" " * 32769)
+        (package / "network-flows/sources" / ("a" * 64 + ".json.gz")).write_bytes(b"tiny")
+        with self.assertRaisesRegex(ValueError, "budget exceeded"):
+            integration.check_teaching_package(package, self.legacy, self.offline, "a" * 40)
+
     def test_source_offer_tamper_is_rejected_without_partial_output(self):
         (self.offer / "database.tar.gz").write_text("changed")
         with self.assertRaisesRegex(ValueError, "source offer integrity"):

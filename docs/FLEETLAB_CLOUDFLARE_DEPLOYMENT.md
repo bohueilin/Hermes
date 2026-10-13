@@ -1,6 +1,6 @@
 # FleetLab publication runbook
 
-Updated 10 October 2026. Applies to the static educational FleetLab website.
+Updated 12 October 2026. Applies to the static educational FleetLab website.
 Hermes operational deployment permission remains NONE. Historical deployment
 paragraphs and the old playground-only CI template are superseded; do not use them.
 
@@ -12,7 +12,7 @@ and exact source commit. That file records packaging intent, not proof of
 hosting. Compare it with the committed `docs/releases/fleetlab-current.json`
 and run the readback tool to establish which bytes are actually served.
 
-The owner explicitly authorized Git push and publication of the October 10
+The owner explicitly authorized October 12 NF04-A implementation, Git push and live publication, following the October 10
 visual-experience update, controlled-autoplay/guided-NF-03 follow-up, and final-review NF-03 trade-off/copy improvements, following the authorized October 8 and 9 releases. An audit, handoff,
 successful verifier, Git branch label or this runbook never grants authority for
 a future release. Follow the user's
@@ -45,6 +45,17 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    use that same `--source-commit` for integration. The capacity sidecar must bind
    committed source/tool bytes and the deterministic page transform. Inspect `review/integration-manifest.json`; package only its `site/`.
    Never upload the repository, a working directory, or a legacy-only build.
+   For the October 12 source-package release, also run
+   `node playground/fleetlab/tools/package-proof.mjs --site PACKED_SITE --playground playground/fleetlab --offline OFFLINE_FILE --source-commit FULL_SHA --out PACKAGE_DIR`
+   and pass `--teaching-package PACKAGE_DIR` to integration. This adds exactly a
+   source archive at its SHA-256 path and `downloads/teaching-package.json`.
+   The proof reproduces the teaching build and checks original-source, emitted,
+   closure, compressed/extracted archive, media and offline budgets separately.
+   The deployment guard rechecks the package and teaching payload against the
+   source checkout, even if an integration manifest was resealed. Root HTML,
+   boot, headers and hosted integration assets are independently reproduced
+   from source by the upload guard. Deleting package markers cannot bypass it. A content digest
+   does not authenticate the producer. NF04-B remains separate.
 5. Install the locked deployment tool in `apps/fleetlab-city/deploy` with
    `npm ci --ignore-scripts`; run `npm audit --omit=dev` and `npm audit signatures`.
    Also run `npm --prefix apps/fleetlab-city audit --omit=dev` for MapLibre.

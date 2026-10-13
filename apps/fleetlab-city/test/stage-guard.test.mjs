@@ -1,15 +1,109 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,writeFileSync,rmSync,symlinkSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,symlinkSync,cpSync,realpathSync,readdirSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {verifyStage,releaseCommand} from '../deploy/stage-guard.mjs';
+import {buildSite,buildHtml} from '../../../playground/fleetlab/tools/pack.mjs';
+import {buildPackageProof} from '../../../playground/fleetlab/tools/package-proof.mjs';
 test('aliases and global options cannot redirect or bypass a guarded upload',()=>{
  const valid=['pages','deploy','build/site','--project-name','fleetlab','--branch','codex-city-explorer'];
  assert.equal(releaseCommand(valid),'deploy');
  for(const invalid of [ ['pages','publish',...valid.slice(2)], ['pages','deployment','create',...valid.slice(2)], ['--cwd','elsewhere',...valid], [...valid,'--cwd','elsewhere'], [...valid,'--config','other.toml'], [...valid,'--project-name','other'], [...valid.slice(0,6),'other'], ['pages','deploy'] ])assert.throws(()=>releaseCommand(invalid),/Unsupported/);
  assert.equal(releaseCommand(['--version']),'version');assert.equal(releaseCommand(['pages','deployment','list','--project-name','fleetlab','--json']),'list');
+});
+
+const repository=fileURLToPath(new URL('../../../',import.meta.url));
+const fingerprint=data=>({bytes:Buffer.byteLength(data),sha256:createHash('sha256').update(data).digest('hex')});
+function writeFiles(root,files){
+ for(const [path,data] of files){mkdirSync(dirname(join(root,path)),{recursive:true});writeFileSync(join(root,path),data);}
+}
+function inventory(root){
+ const files={};
+ function walk(dir,prefix=''){
+  for(const entry of readdirSync(dir,{withFileTypes:true})){
+   const path=join(dir,entry.name),name=prefix+entry.name;
+   if(entry.isDirectory())walk(path,name+'/');else files[name]=fingerprint(readFileSync(path));
+  }
+ }
+ walk(root);return files;
+}
+
+test('current source checkout cannot downgrade to a package-free release',()=>{
+ const root=mkdtempSync(join(tmpdir(),'fleetlab-downgrade-test-'));
+ try{
+  const site=join(root,'site');
+  writeFiles(site,[['publication.json',JSON.stringify({source_commit:'example'})],
+   ...['setup-codec.js','setup-sharing.js','studio.js'].map(name=>['src/ui/'+name,readFileSync(join(repository,'playground/fleetlab/src/ui',name))])]);
+  mkdirSync(join(root,'review'));
+  writeFileSync(join(root,'review/integration-manifest.json'),JSON.stringify({files:inventory(site)}));
+  assert.throws(()=>verifyStage(site,'example',repository),/teaching package/i);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+// An independently assembled fixture follows the Python integration contract.
+// Mutations below reseal the outer inventory, so only source-bound checks can reject them.
+function integratedShell(packed){
+ const marker='<link rel="stylesheet" href="./styles.css">';
+ const intro='<section aria-label="About FleetLab"><h1>FleetLab: test fleet decisions in simulation</h1>'+
+  '<p>Independent educational software by Bo-Huei Lin. Explore Fleet day, Street lab, paired experiments, Depot flow lab and the <a href="/city-explorer/">San Francisco City Explorer</a>.</p>'+
+  '<p>Synthetic operations; map qualification remains open. Not affiliated with or endorsed by Waymo, Zoox, or their partners. No operational authority.</p></section>';
+ const html=packed.get('index.html').replace(marker,marker+'\n<link rel="stylesheet" href="./integration.css">')
+  .replace('</head>','<link rel="canonical" href="https://fleetlab.pages.dev/"><meta property="og:url" content="https://fleetlab.pages.dev/"><meta property="og:site_name" content="FleetLab"><meta name="author" content="Bo-Huei Lin"></head>')
+  .replace('<div id="fleetlab-teaching-strip"',intro+'<div id="fleetlab-teaching-strip"')
+  .replace('</head>','<meta name="fleetlab-teaching-package" content="/downloads/teaching-package.json"></head>');
+ const headers=packed.get('_headers').replace(/\n+$/,'')+'\n\n/city-explorer/*\n  ! Content-Security-Policy\n'+
+  "  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'\n"+
+  '  Permissions-Policy: camera=(), microphone=(), geolocation=()\n'+
+  '\n/downloads/fleetlab-offline.html\n  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+
+  '\n/downloads/fleetlab-offline\n  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+
+  '\n/network-flows/sources/*\n  Content-Type: application/gzip\n  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n  Cache-Control: public, max-age=31536000, immutable\n'+
+  '\n/downloads/teaching-package.json\n  Content-Type: application/json\n';
+ return [['index.html',html],['boot.js','import { mountCityEntry } from "./integration.mjs";\n'+packed.get('boot.js')+'\nmountCityEntry();\n'],['_headers',headers]];
+}
+
+test('source-bound stage rejects resealed shell, owner assets, unexpected files and package downgrades',()=>{
+ const root=realpathSync(mkdtempSync(join(tmpdir(),'fleetlab-bound-stage-test-')));
+ try{
+  const source=join(root,'source'),playground=join(source,'playground/fleetlab');
+  for(const path of ['src','tools','media','capacity','styles.css','index.html'])cpSync(join(repository,'playground/fleetlab',path),join(playground,path),{recursive:true});
+  for(const path of ['LICENSE','src/hermes/fleet/contracts.py']){
+   mkdirSync(dirname(join(source,path)),{recursive:true});cpSync(join(repository,path),join(source,path));
+  }
+  cpSync(join(repository,'apps/fleetlab-city/hosted'),join(source,'apps/fleetlab-city/hosted'),{recursive:true});
+  const git=(...args)=>execFileSync('git',['-C',source,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+  git('init','-q');git('add','.');git('-c','user.name=Release test','-c','user.email=release@example.invalid','commit','-qm','bound source');
+  const commit=git('rev-parse','HEAD'),site=join(root,'stage/site'),review=join(root,'stage/review');
+  const packed=buildSite(playground,{sourceCommit:commit});writeFiles(site,packed);
+  const offline=join(root,'offline.html');writeFileSync(offline,buildHtml(playground));
+  const proof=buildPackageProof({site,playground,offline,sourceCommit:commit});
+  writeFiles(site,[...proof.files,...integratedShell(packed),['downloads/fleetlab-offline.html',readFileSync(offline)]]);
+  for(const path of ['integration.mjs','integration.css','404.html','not-found.css'])cpSync(join(source,'apps/fleetlab-city/hosted',path),join(site,path));
+  const offlineHash=fingerprint(readFileSync(offline)).sha256;
+  writeFiles(site,[['downloads/fleetlab-offline.sha256',offlineHash+'  fleetlab-offline.html\n'],['downloads/verify-offline.txt',
+   'FleetLab offline edition — download verification\n\nSHA-256: '+offlineHash+'\nmacOS/Linux: shasum -a 256 fleetlab-offline.html\nWindows PowerShell: Get-FileHash .\\fleetlab-offline.html -Algorithm SHA256\n\nCompare the full digest before opening. This detects corruption against this website\'s published copy, not independent authenticity. The offline file excludes City Explorer.\n']]);
+  const packageFiles=Object.fromEntries([...proof.files].map(([path,data])=>[path,fingerprint(data)]));
+  const selection={source_commit:commit,offline_sha256:offlineHash,teaching_package:{path:'downloads/teaching-package.json',...packageFiles['downloads/teaching-package.json']}};
+  writeFiles(site,[['publication.json',JSON.stringify(selection)]]);mkdirSync(review);
+  const seal=(overrides={})=>writeFileSync(join(review,'integration-manifest.json'),JSON.stringify({files:inventory(site),teaching_package:packageFiles,...overrides}));
+  seal();assert.ok(verifyStage(site,commit,source)>0);
+  for(const path of ['index.html','boot.js','_headers','integration.mjs','integration.css','404.html','not-found.css']){
+   const original=readFileSync(join(site,path));writeFileSync(join(site,path),Buffer.concat([original,Buffer.from('\nchanged after review')]));seal();
+   assert.throws(()=>verifyStage(site,commit,source),/integration.*(?:differ|mismatch)/i,path);
+   writeFileSync(join(site,path),original);
+  }
+  writeFiles(site,[['unreviewed.js','console.log("unreviewed")']]);seal();
+  assert.throws(()=>verifyStage(site,commit,source),/inventory|unexpected/i);rmSync(join(site,'unreviewed.js'));
+  for(const marker of [null,undefined]){seal({teaching_package:marker});assert.throws(()=>verifyStage(site,commit,source),/teaching package/i);}
+  seal({teaching_package:{...packageFiles,[proof.receipt.source_offer.path]:{bytes:1,sha256:'0'.repeat(64)}}});
+  assert.throws(()=>verifyStage(site,commit,source),/teaching package/i);
+  const missingPointer={...selection};delete missingPointer.teaching_package;
+  writeFiles(site,[['publication.json',JSON.stringify(missingPointer)]]);seal();
+  assert.throws(()=>verifyStage(site,commit,source),/teaching package/i);
+ }finally{rmSync(root,{recursive:true,force:true});}
 });
 test('release guard rejects byte changes, extra files, wrong commits and links',()=>{
  const root=mkdtempSync(join(tmpdir(),'fleetlab-release-test-'));
@@ -18,6 +112,11 @@ test('release guard rejects byte changes, extra files, wrong commits and links',
   const data=JSON.stringify({source_commit:'example'});writeFileSync(join(site,'publication.json'),data);
   writeFileSync(join(root,'review/integration-manifest.json'),JSON.stringify({files:{'publication.json':{bytes:Buffer.byteLength(data),sha256:createHash('sha256').update(data).digest('hex')}}}));
   assert.equal(verifyStage(site,'example'),1);assert.throws(()=>verifyStage(site,'other'),/commit/);
+  const manifestPath=join(root,'review/integration-manifest.json');
+  const originalManifest=JSON.parse(readFileSync(manifestPath,'utf8'));
+  writeFileSync(manifestPath,JSON.stringify({...originalManifest,teaching_package:{}}));
+  assert.throws(()=>verifyStage(site,'example'),/source checkout/);
+  writeFileSync(manifestPath,JSON.stringify(originalManifest));
   writeFileSync(join(site,'publication.json'),data+' ');assert.throws(()=>verifyStage(site,'example'),/bytes/);
   writeFileSync(join(site,'publication.json'),data);writeFileSync(join(site,'extra'),'unreviewed');assert.throws(()=>verifyStage(site,'example'),/inventory/);
   rmSync(join(site,'extra'));symlinkSync(join(site,'publication.json'),join(site,'linked'));assert.throws(()=>verifyStage(site,'example'),/Linked/);

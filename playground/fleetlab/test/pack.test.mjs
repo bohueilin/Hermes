@@ -580,14 +580,16 @@ describe("output path rules and R3", () => {
     assert.equal(existsSync(out2), false);
   });
 
-  test("R3: only tools/pack.mjs imports fs or loads modules through node:module or getBuiltinModule; check-dist.mjs imports existsSync, readdirSync and readFileSync by name only; capacity-study.mjs imports lstatSync, mkdirSync, realpathSync and writeFileSync by name only", () => {
+  test("R3: only the packer and explicitly named packaging tools can import fs; alternate loaders are refused", () => {
     const FS = "[\"'`](?:node:)?fs(?:/promises)?[\"'`]";
     const fsUses = new RegExp(`\\bfrom\\s*${FS}|\\bimport\\s*\\(?\\s*${FS}|\\brequire\\s*\\(\\s*${FS}`, "g");
     const namedImports = new RegExp(`\\bimport\\s*([^;]*?)\\s*from\\s*${FS}`, "g");
     const readOnly = ["existsSync", "readdirSync", "readFileSync"]; // reads only: check-dist walks a site folder, never writes
     // The study tool writes its manifest module, and records and a benchmark under the pack.mjs place rule.
     const studyWriter = ["lstatSync", "mkdirSync", "realpathSync", "writeFileSync"];
-    const namedFs = { "tools/check-dist.mjs": readOnly, "tools/release-sidecar.mjs": ["lstatSync", "readFileSync", "readdirSync"], "tools/capacity-study.mjs": studyWriter };
+    // The package proof uses bounded no-follow capture and writes only new output or temporary fixtures.
+    const packageWriter = ["constants", "closeSync", "fstatSync", "lstatSync", "mkdirSync", "mkdtempSync", "openSync", "readSync", "readdirSync", "rmSync", "writeFileSync"];
+    const namedFs = { "tools/package-proof.mjs": packageWriter, "tools/check-dist.mjs": readOnly, "tools/release-sidecar.mjs": ["lstatSync", "readFileSync", "readdirSync"], "tools/capacity-study.mjs": studyWriter };
     // createRequire and process.getBuiltinModule reach fs without naming it in an import, so both are refused outright.
     const MODULE = "[\"'`](?:node:)?module[\"'`]";
     const loaderUses = new RegExp(`\\bfrom\\s*${MODULE}|\\bimport\\s*\\(?\\s*${MODULE}|\\brequire\\s*\\(\\s*${MODULE}|\\bcreateRequire\\b|\\bgetBuiltinModule\\b`, "g");
@@ -635,6 +637,9 @@ describe("output path rules and R3", () => {
     assert.notDeepEqual(fsProblems('import { existsSync, readFileSync } from "node:fs";', false), []);
     assert.deepEqual(fsProblems('import { lstatSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";', true, studyWriter), []);
     assert.notDeepEqual(fsProblems('import { mkdirSync, rmSync, writeFileSync } from "node:fs";', true, studyWriter), []);
+    assert.deepEqual(fsProblems('import { openSync, readSync, closeSync } from "node:fs";', true, packageWriter), []);
+    assert.notDeepEqual(fsProblems('import { chmodSync } from "node:fs";', true, packageWriter), []);
+    assert.notDeepEqual(fsProblems('import { openSync as readSync } from "node:fs";', true, packageWriter), []);
     assert.deepEqual(fsProblems('import { join } from "node:path";\nconst note = "fsync";', false), []);
     assert.deepEqual(fsProblems('const worker = new Worker(url, { type: "module" });', false), []);
 
@@ -653,14 +658,14 @@ describe("output path rules and R3", () => {
     assert.deepEqual(offenders, []);
   });
 
-  test("R3: no playground code writes files except tools/pack.mjs and tools/capacity-study.mjs", () => {
+  test("R3: only the packer, capacity study and bounded package proof can write files", () => {
     const writers = /\b(writeFileSync|writeFile|appendFileSync|appendFile|createWriteStream|mkdirSync|mkdir|rmSync|rm|unlinkSync|unlink|renameSync|rename|copyFileSync|copyFile|cpSync|symlinkSync|truncateSync)\s*\(/;
     const offenders = [];
     const walk = (dir) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const path = join(dir, entry.name);
         if (entry.isDirectory()) walk(path);
-        else if (/\.(m?js)$/.test(entry.name) && !["tools/pack.mjs", "tools/capacity-study.mjs"].some((tool) => path === join(PLAYGROUND_ROOT, tool)) && writers.test(readFileSync(path, "utf8"))) {
+        else if (/\.(m?js)$/.test(entry.name) && !["tools/pack.mjs", "tools/capacity-study.mjs", "tools/package-proof.mjs"].some((tool) => path === join(PLAYGROUND_ROOT, tool)) && writers.test(readFileSync(path, "utf8"))) {
           offenders.push(relative(PLAYGROUND_ROOT, path));
         }
       }

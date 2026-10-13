@@ -14,6 +14,19 @@ const mount=()=>{
  return mountStudio({root,store:createStore(createInitialState({presetId:'bay_teaching_map',scenario:defaultScenario()})),playback:{pause(){}},present:{open(){},close(){}}});
 };
 
+test('source receipt is discoverable only when the integrated release declares a package',()=>{
+ const restore=installFakeDom();let studio;
+ try{
+  studio=mount();
+  const marker=document.createElement('meta');marker.setAttribute('name','fleetlab-teaching-package');
+  document.body.appendChild(marker);
+  mountCityEntry();mountCityEntry();
+  const links=document.querySelectorAll('.offline-edition a[href="/downloads/teaching-package.json"]');
+  assert.equal(links.length,1);
+  assert.match(links[0].textContent,/source.*receipt/i);
+ }finally{studio?.destroy();restore();}
+});
+
 test('hosted capacity is available consistently in roadmap and featured catalog while offline exclusions remain explicit',()=>{
  const restore=installFakeDom();let studio;
  try{
@@ -24,6 +37,7 @@ test('hosted capacity is available consistently in roadmap and featured catalog 
   assert.equal(entry.querySelector('a').getAttribute('href'),document.querySelector('.capacity-entry-catalog a').getAttribute('href'));
   assert.doesNotMatch(entry.textContent,/planned|not available/i);
   assert.match(document.querySelector('.offline-edition').textContent,/capacity study.*not included/i);
+  assert.equal(document.querySelectorAll('a[href="/downloads/teaching-package.json"]').length,0);
  }finally{studio?.destroy();restore();}
 });
 
