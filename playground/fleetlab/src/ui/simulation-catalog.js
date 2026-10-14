@@ -67,10 +67,10 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
   const records=simulationCatalog();const cards=el('div',{class:'catalog-grid'});const count=el('p',{class:'catalog-count',role:'status'});
   const search=el('input',{type:'search',placeholder:'Search questions, topics or lab names…','aria-label':'Search lessons',on:{input:()=>render()}});
   const filter=el('select',{'aria-label':'Simulation model',on:{change:()=>render()}},['All labs','Fleet day','Street lab','Four-area experiments','Scale lab','Depot flow lab'].map(x=>el('option',{value:x},x)));
-  let topic='All topics';
+  let topic='All topics',familyIds=null;
   const chips=['All topics',...COLLECTIONS.map(c=>c.name)].map(name=>el('button',{type:'button',class:'studio-button',on:{click:()=>{topic=name;render();}}},name));
   const questions=el('p',{class:'catalog-topic-questions'});
-  const clear=el('button',{type:'button',class:'studio-button',on:{click:()=>{search.value='';filter.value='All labs';topic='All topics';render();search.focus();}}},'Clear filters');
+  const clear=el('button',{type:'button',class:'studio-button',on:{click:()=>{search.value='';filter.value='All labs';topic='All topics';familyIds=null;render();element.dispatchEvent(new Event('fleetlab:catalog-cleared'));search.focus();}}},'Clear filters');
   const element=el('main',{class:'simulation-catalog'},[
     el('section',{class:'catalog-intro'},[el('p',{class:'eyebrow'},'EXPLORE'),el('h1',{},'What would you like to understand?'),el('p',{class:'hero-lede'},'Every lesson answers one fleet question with a small synthetic model.')]),
     el('section',{class:'network-flows-feature','aria-labelledby':'network-flows-title'},[
@@ -93,7 +93,7 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
   ]);
   function render(){
     const query=search.value.toLowerCase().trim();
-    const shown=records.filter(r=>(filter.value==='All labs'||r.model===filter.value)&&(topic==='All topics'||collectionOf(r.frame)===topic)&&`${r.title} ${Object.values(r.frame).join(' ')} ${r.id} ${r.model}`.toLowerCase().includes(query));
+    const shown=records.filter(r=>(familyIds===null||familyIds.includes(r.id))&&(filter.value==='All labs'||r.model===filter.value)&&(topic==='All topics'||collectionOf(r.frame)===topic)&&`${r.title} ${Object.values(r.frame).join(' ')} ${r.id} ${r.model}`.toLowerCase().includes(query));
     count.textContent=`${shown.length} of ${records.length} lessons`;
     for(const chip of chips){const on=chip.textContent===topic;chip.setAttribute('aria-pressed',String(on));chip.classList.toggle('is-selected',on);}
     const picked=COLLECTIONS.find(c=>c.name===topic);questions.hidden=!picked;questions.textContent=picked?.questions??'';
@@ -107,5 +107,10 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
     ])));
     if(!shown.length)cards.append(el('p',{},'No lesson matches. Clear the filters or try a resource word such as charging or queue.'));
   }
+  // Optional hosted navigation filter; the catalogue remains the single result/count owner.
+  element.addEventListener('fleetlab:catalog-filter',event=>{
+    const ids=event.detail;if(ids!==null&&(!Array.isArray(ids)||ids.some(id=>typeof id!=='string'||!records.some(r=>r.id===id))))return;
+    familyIds=ids===null?null:[...ids];topic='All topics';render();
+  });
   render();return {element};
 }

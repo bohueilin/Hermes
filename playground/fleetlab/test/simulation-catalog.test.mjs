@@ -5,6 +5,24 @@ import { STREET_PRESETS } from '../src/model/street-simulation.js';
 import { simulationCatalog, createSimulationCatalog, OPERATIONAL_LESSONS } from '../src/ui/simulation-catalog.js';
 import { installFakeDom } from './helpers/fake-dom.mjs';
 
+test('hosted question families intersect search and model filters and clear together',()=>{
+ const restore=installFakeDom();try{
+  const root=createSimulationCatalog().element;
+  const shown=()=>root.querySelectorAll('.catalog-card').map(c=>c.getAttribute('data-simulation'));
+  root.dispatchEvent(new CustomEvent('fleetlab:catalog-filter',{detail:['charging','shared-power']}));
+  assert.deepEqual(shown(),['charging','shared-power']);
+  const search=root.querySelector('input');search.value='Battery';search.dispatchEvent(new Event('input'));
+  assert.deepEqual(shown(),['charging']);assert.equal(root.querySelector('.catalog-count').textContent,'1 of 61 lessons');
+  const model=root.querySelector('select');model.value='Street lab';model.dispatchEvent(new Event('change'));
+  assert.equal(shown().length,0);assert.match(root.querySelector('.catalog-grid').textContent,/No lesson matches/);
+  let cleared=0;root.addEventListener('fleetlab:catalog-cleared',()=>cleared++);
+  root.querySelector('.catalog-count-row button').click();
+  assert.equal(shown().length,61);assert.equal(cleared,1);
+  root.dispatchEvent(new CustomEvent('fleetlab:catalog-filter',{detail:{bad:'input'}}));
+  assert.equal(shown().length,61,'malformed presentation event does not change the library');
+ }finally{restore();}
+});
+
 test('featured Network Flows questions precede the complete searchable library',()=>{
  const restore=installFakeDom();try{
   let opened=null;const {element}=createSimulationCatalog({onLesson:r=>{opened=r.id;}});

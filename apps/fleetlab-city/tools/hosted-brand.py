@@ -16,8 +16,11 @@ launch = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(launch)
 ROOT = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "apps/fleetlab-city/hosted"
-MEDIA = json.loads((ASSETS / "brand-assets.json").read_text())
-TEXT = ("brand.mjs", "brand.css")
+MEDIA = {
+    **json.loads((ASSETS / "brand-assets.json").read_text()),
+    **json.loads((ASSETS / "tile-assets.json").read_text()),
+}
+TEXT = ("brand.mjs", "brand.css", "visitor.mjs", "visitor-families.mjs", "visitor.css")
 
 
 def transform(value, mode="--render"):
@@ -32,12 +35,20 @@ def transform(value, mode="--render"):
 
 
 def asset_inventory():
-    actual = launch.inventory(ROOT / "apps/fleetlab-city/brand-media")
-    expected = {
-        Path(r["source"]).name: {k: r[k] for k in ("bytes", "sha256")} for r in MEDIA.values()
-    }
-    if actual != expected or sum(r["bytes"] for r in actual.values()) > 2 * 1024**2:
-        raise ValueError("hosted artwork inventory or 2 MiB asset budget differs")
+    for folder, count in (("brand-media", 3), ("tile-media", 19)):
+        source = f"apps/fleetlab-city/{folder}"
+        actual = launch.inventory(ROOT / source)
+        expected = {
+            Path(r["source"]).name: {k: r[k] for k in ("bytes", "sha256")}
+            for r in MEDIA.values()
+            if r["source"].startswith(source + "/")
+        }
+        if (
+            actual != expected
+            or len(actual) != count
+            or sum(r["bytes"] for r in actual.values()) > 2 * 1024**2
+        ):
+            raise ValueError(f"{folder} inventory or 2 MiB asset budget differs")
     return {
         **{
             name: {

@@ -153,6 +153,7 @@ test("release package binds every source and its executing proof tool to the exa
     }
   }
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/brand-media",import.meta.url)),join(root,"apps/fleetlab-city/brand-media"),{recursive:true});
+  cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/tile-media",import.meta.url)),join(root,"apps/fleetlab-city/tile-media"),{recursive:true});
   const dependency=join(root,"apps/fleetlab-city/citylib/public_notes.py");mkdirSync(dirname(dependency),{recursive:true});cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/citylib/public_notes.py",import.meta.url)),dependency);
   mkdirSync(join(root, "src/hermes/fleet"), { recursive: true });
   cpSync(fileURLToPath(new URL("../../../src/hermes/fleet/contracts.py", import.meta.url)), join(root, "src/hermes/fleet/contracts.py"));
@@ -230,6 +231,7 @@ test("a source checkout cannot omit the executing package-proof tool from its bi
     }
   }
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/brand-media",import.meta.url)),join(root,"apps/fleetlab-city/brand-media"),{recursive:true});
+  cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/tile-media",import.meta.url)),join(root,"apps/fleetlab-city/tile-media"),{recursive:true});
   const dependency=join(root,"apps/fleetlab-city/citylib/public_notes.py");mkdirSync(dirname(dependency),{recursive:true});cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/citylib/public_notes.py",import.meta.url)),dependency);
   mkdirSync(join(root, "src/hermes/fleet"), { recursive: true });
   cpSync(fileURLToPath(new URL("../../../src/hermes/fleet/contracts.py", import.meta.url)), join(root, "src/hermes/fleet/contracts.py"));

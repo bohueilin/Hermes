@@ -1,3 +1,4 @@
+import {decorateVisitors} from './visitor.mjs';
 // Hosted presentation. No simulation, result, map or playback logic is changed.
 const media='/site-media/';
 function node(doc,tag,attrs={},children=[]){const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);for(const c of [children].flat())if(c!=null)n.appendChild(typeof c==='string'?doc.createTextNode(c):c);return n;}
@@ -42,6 +43,7 @@ export function decorateDesign(doc=document){
    el('figure',{},[el('img',{src:media+'shared-delivery.jpg',alt:'Concept visual of four vehicles sharing one source and delivery link.',width:'1672',height:'941',loading:'lazy',decoding:'async'}),el('figcaption',{},'Illustration only. Use the checked model below to compare outcomes and individual delays.')]),
   ]);hero.appendChild(art);
  }
+ decorateVisitors(doc);
 }
 if(typeof document!=='undefined'){
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>decorateDesign(),{once:true});

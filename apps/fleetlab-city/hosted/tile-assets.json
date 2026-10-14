@@ -1,0 +1,97 @@
+{
+  "tiles/T-01-fleet-day.webp": {
+    "bytes": 81846,
+    "sha256": "d47665004fc66e1ee8dff2d91556520cdfcf520cde43916ee47e4939490f65f2",
+    "source": "apps/fleetlab-city/tile-media/T-01-fleet-day.webp"
+  },
+  "tiles/T-02-sf-study.webp": {
+    "bytes": 96240,
+    "sha256": "d3373cf22ce5ebce30e3f0acb7751f06ddbb806a01b869aac6b6f1f36a199e5c",
+    "source": "apps/fleetlab-city/tile-media/T-02-sf-study.webp"
+  },
+  "tiles/T-03-street-lab.webp": {
+    "bytes": 95316,
+    "sha256": "9da59bcfcf0676e3457151dbf3f5865bd1f6188b251caccfa6a1c82d8d4dcb22",
+    "source": "apps/fleetlab-city/tile-media/T-03-street-lab.webp"
+  },
+  "tiles/T-04-shared-resources.webp": {
+    "bytes": 85072,
+    "sha256": "d96048c33d982d53338449dc05a94141b47afca1721dd6e1e909dc631710fa7b",
+    "source": "apps/fleetlab-city/tile-media/T-04-shared-resources.webp"
+  },
+  "tiles/T-05-rider-service.webp": {
+    "bytes": 83452,
+    "sha256": "97a11d82cad39c076a757dcea9b81e6104c220797071c78d13bb057859a0cb93",
+    "source": "apps/fleetlab-city/tile-media/T-05-rider-service.webp"
+  },
+  "tiles/T-06-model-limits.webp": {
+    "bytes": 107240,
+    "sha256": "e78b0ba30610c1c3a870a465a6d8dc78e60f0369f9b74eb0667d81f4b37c8d12",
+    "source": "apps/fleetlab-city/tile-media/T-06-model-limits.webp"
+  },
+  "tiles/T-07-depot-ops.webp": {
+    "bytes": 100668,
+    "sha256": "72e0e4183df62599d9b8faf3466293e49bb0036b168dd28d2ef457ee543a17c1",
+    "source": "apps/fleetlab-city/tile-media/T-07-depot-ops.webp"
+  },
+  "tiles/T-08-charging-energy.webp": {
+    "bytes": 116318,
+    "sha256": "4433cb443457ccfa0905245938c96fee06a43bc4a46d1f4e4f98bcf51a5f5f4f",
+    "source": "apps/fleetlab-city/tile-media/T-08-charging-energy.webp"
+  },
+  "tiles/T-09-data-movement.webp": {
+    "bytes": 108836,
+    "sha256": "f80ff9a5dafbde9a225b353e25fc3da41cebe45a68ec688fcb7e2bb2f6159fed",
+    "source": "apps/fleetlab-city/tile-media/T-09-data-movement.webp"
+  },
+  "tiles/T-10-streets-queues.webp": {
+    "bytes": 130126,
+    "sha256": "b44edd21f3166fba66d576f6f749865925ce28241b891214f0e999cc57983c21",
+    "source": "apps/fleetlab-city/tile-media/T-10-streets-queues.webp"
+  },
+  "tiles/T-11-demand-weather.webp": {
+    "bytes": 103076,
+    "sha256": "567327a8b8b14148bcef8f35530e07d0e53e5e617c63be4c4f564491720671fa",
+    "source": "apps/fleetlab-city/tile-media/T-11-demand-weather.webp"
+  },
+  "tiles/T-12-fleet-scale.webp": {
+    "bytes": 126250,
+    "sha256": "c77c586d0dcd4c1d398afd286f59f8790d4e633f746db1d0fd12639fa97597a6",
+    "source": "apps/fleetlab-city/tile-media/T-12-fleet-scale.webp"
+  },
+  "tiles/T-13-paired-experiments.webp": {
+    "bytes": 108438,
+    "sha256": "8195c6e504abfee0d56743777516b8dfd7f77d92e1f0860f7e563e13bd4aa429",
+    "source": "apps/fleetlab-city/tile-media/T-13-paired-experiments.webp"
+  },
+  "tiles/T-14-reading-result.webp": {
+    "bytes": 76920,
+    "sha256": "66f453a9db0dbfe22f5557dcabe6fc35fa3d110b62e9e205fae80ab21da30552",
+    "source": "apps/fleetlab-city/tile-media/T-14-reading-result.webp"
+  },
+  "tiles/T-15-launch-recall.webp": {
+    "bytes": 99578,
+    "sha256": "26c2c4cf3d36732ee9c4bea613826e1f6f4cb70728be12abaa86f1b9f655eba5",
+    "source": "apps/fleetlab-city/tile-media/T-15-launch-recall.webp"
+  },
+  "tiles/T-16-city-atlas.webp": {
+    "bytes": 75312,
+    "sha256": "5ef7b26ba3f25b005d965900b0001ee7275c154d749018083ac0ca9b25648924",
+    "source": "apps/fleetlab-city/tile-media/T-16-city-atlas.webp"
+  },
+  "tiles/T-17-decision-notebook.webp": {
+    "bytes": 140270,
+    "sha256": "b4b2610c25b49c027054efe7f3a6e65193a5bcf469176455ddc24588bc50ea75",
+    "source": "apps/fleetlab-city/tile-media/T-17-decision-notebook.webp"
+  },
+  "tiles/T-18-replay-studio.webp": {
+    "bytes": 134756,
+    "sha256": "609a7365d3872bd8ec69d80ca98512e973d3775124d0f5422647ed8181643b21",
+    "source": "apps/fleetlab-city/tile-media/T-18-replay-studio.webp"
+  },
+  "tiles/T-19-model-lab.webp": {
+    "bytes": 120780,
+    "sha256": "e01cf440f6a0c8fd3c68683fba413182a799519e02ee765217e71d43995c9b4e",
+    "source": "apps/fleetlab-city/tile-media/T-19-model-lab.webp"
+  }
+}

@@ -1,4 +1,4 @@
-import {BRAND_MEDIA,BRAND_TEXT,renderPage} from '../../../apps/fleetlab-city/hosted/site-transform.mjs';
+import {BRAND_MEDIA,BRAND_TEXT,ARTWORK_GROUPS,renderPage} from '../../../apps/fleetlab-city/hosted/site-transform.mjs';
 import {ORDER_RELEASE,ORDER_FILES,ORDER_ENTRIES} from './delivery-order-package.mjs';
 // B-lite is one deduplicated teaching build and one atomic integration, not a new engine.
 // This proof binds bytes and source provenance; it does not authenticate their producer.
@@ -25,7 +25,7 @@ const TOOL_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const COMMIT = /^[a-f0-9]{40}$/;
 const CONTRACT = "src/hermes/fleet/contracts.py";
 const INTEGRATION_ROOTS=["apps/fleetlab-city/hosted","apps/fleetlab-city/tools","apps/fleetlab-city/deploy"];
-const BRAND_ROOT="apps/fleetlab-city/brand-media";
+const ARTWORK_ROOTS=ARTWORK_GROUPS.map(g=>g.root);
 const INTEGRATION_DEPENDENCY="apps/fleetlab-city/citylib/public_notes.py";
 export const SOURCE_BASELINE=Object.freeze({commit:"cf690bd7d974b8e057560a9a993374a83e4ec769",teaching_bytes:2765799,integration_bytes:188861,integration_inventory_sha256:"106b8113d1d17485423c9fbd2f2fef50a2fa317880c715925b7d30d7400d0e21"});
 function captureIntegration(repository){
@@ -174,7 +174,13 @@ function captureSource(playground) {
   const license = readRegular(repository, "LICENSE", LIMITS.raw_source_and_tools_bytes);
   const labels = labelsFromContracts(repository);
   if (!labels?.length) fail("validation label policy is unavailable");
-  const artwork=captureTree(join(repository,BRAND_ROOT),{maxBytes:2*1024*1024,maxFiles:3});
+  const artwork=new Map();
+  for(const group of ARTWORK_GROUPS){
+    const captured=captureTree(join(repository,group.root),group);
+    const expected=Object.values(BRAND_MEDIA).filter(r=>r.source.startsWith(group.root+"/"));
+    if(captured.size!==expected.length||[...captured.keys()].some(name=>!expected.some(r=>r.source===group.root+"/"+name)))fail("hosted media group inventory mismatch");
+    for(const [name,data] of captured){if(artwork.has(name))fail("duplicate hosted artwork name");artwork.set(name,data);}
+  }
   const expectedArtwork=new Map(Object.values(BRAND_MEDIA).map(r=>[r.source.split('/').at(-1),r]));
   if(canonical([...artwork.keys()].sort())!==canonical([...expectedArtwork.keys()].sort()))fail('hosted artwork inventory mismatch');
   for(const [name,data] of artwork){const r=expectedArtwork.get(name);if(bytes(data)!==r.bytes||digest(data)!==r.sha256)fail('hosted artwork fingerprint mismatch');}
@@ -191,12 +197,12 @@ function sourceIdentity(playground, captured, sourceCommit) {
   if (commit !== sourceCommit) fail("source commit identity mismatch");
   const inputs = new Map([...captured.inputs].map(([path, data]) => [relative(captured.repository, join(playground, path)).split(sep).join("/"), data]));
   for(const [path,data] of captured.integration)inputs.set(path,data);
-  for(const [name,data] of captured.artwork)inputs.set(`${BRAND_ROOT}/${name}`,data);
+  for(const [name,data] of captured.artwork)inputs.set(Object.values(BRAND_MEDIA).find(r=>r.source.endsWith("/"+name)).source,data);
   inputs.set(CONTRACT, captured.contracts);
   inputs.set("LICENSE", captured.license);
   const prefix = relative(captured.repository, playground).split(sep).join("/");
   const committedPaths = git(captured.repository, ["ls-tree", "-r", "-z", "--name-only", sourceCommit, "--",
-    ...["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "index.html", "styles.css"].map(path => `${prefix}/${path}`), CONTRACT, "LICENSE", ...INTEGRATION_ROOTS, INTEGRATION_DEPENDENCY, BRAND_ROOT])
+    ...["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "index.html", "styles.css"].map(path => `${prefix}/${path}`), CONTRACT, "LICENSE", ...INTEGRATION_ROOTS, INTEGRATION_DEPENDENCY, ...ARTWORK_ROOTS])
     .split("\0").filter(Boolean).sort();
   if (canonical(committedPaths) !== canonical([...inputs.keys()].sort())) fail("source commit input inventory mismatch");
   for (const [path, data] of inputs) {

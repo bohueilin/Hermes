@@ -40,8 +40,9 @@ export function renderPage(input,{analytics=false}={}){
  return html;
 }
 
-export const BRAND_MEDIA=JSON.parse(readFileSync(new URL('./brand-assets.json',import.meta.url),'utf8'));
-export const BRAND_TEXT=['brand.mjs','brand.css'];
+export const BRAND_MEDIA={...JSON.parse(readFileSync(new URL('./brand-assets.json',import.meta.url),'utf8')),...JSON.parse(readFileSync(new URL('./tile-assets.json',import.meta.url),'utf8'))};
+export const ARTWORK_GROUPS=[{root:'apps/fleetlab-city/brand-media',maxBytes:2*1024*1024,maxFiles:3},{root:'apps/fleetlab-city/tile-media',maxBytes:2*1024*1024,maxFiles:19}];
+export const BRAND_TEXT=['brand.mjs','brand.css','visitor.mjs','visitor-families.mjs','visitor.css'];
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const input=readFileSync(0,'utf8');
  if(process.argv[2]==='--render')process.stdout.write(renderPage(input,{analytics:true}));

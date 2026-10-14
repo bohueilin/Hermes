@@ -1,3 +1,4 @@
+@import url("./visitor.css");
 :root{--art-ink:#163d33;--art-cream:#f5f0e7;--art-edge:#dcded4}
 .design-brand{display:block!important;width:288px!important;height:88px!important;background:transparent!important;border:0;border-radius:0!important;padding:0!important;box-shadow:none;flex-shrink:0;text-decoration:none}
 .design-brand img{display:block;width:100%;height:100%;object-fit:contain;object-position:center}

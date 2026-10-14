@@ -83,6 +83,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
    }
   }
   cpSync(join(repository,'apps/fleetlab-city/brand-media'),join(source,'apps/fleetlab-city/brand-media'),{recursive:true});
+  cpSync(join(repository,'apps/fleetlab-city/tile-media'),join(source,'apps/fleetlab-city/tile-media'),{recursive:true});
   const publicNotes=join(source,'apps/fleetlab-city/citylib/public_notes.py');mkdirSync(dirname(publicNotes),{recursive:true});cpSync(join(repository,'apps/fleetlab-city/citylib/public_notes.py'),publicNotes);
   const git=(...args)=>execFileSync('git',['-C',source,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
   git('init','-q');git('add','.');git('-c','user.name=Release test','-c','user.email=release@example.invalid','commit','-qm','bound source');
