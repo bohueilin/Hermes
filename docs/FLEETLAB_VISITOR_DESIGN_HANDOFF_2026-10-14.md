@@ -2,18 +2,31 @@
 
 ## Status and purpose
 
-Local implementation of the owner's request to make FleetLab easier to understand as an independent learning and passion project. Input: Muse's `CODEX_IMPLEMENTATION_PROMPT.md`. This document supplements the earlier October 14 artwork release handoff; that published generation remains the live baseline. No remote push or publication is part of this local preview checkpoint.
+**Published and verified — October 14, 2026.** The owner reviewed the local preview and explicitly authorized GitHub push, live deployment, live validation and this handoff. The visitor design is live at [FleetLab Home](https://fleetlab.pages.dev/#/overview), [Explore](https://fleetlab.pages.dev/#/catalog) and [City Explorer](https://fleetlab.pages.dev/city-explorer/).
+
+This implements the owner's request to make FleetLab easier to understand as an independent learning and passion project. Input: Muse's `CODEX_IMPLEMENTATION_PROMPT.md`. This document supersedes the deployment identity in the earlier October 14 artwork release handoff, while preserving its open SF, device, human-review and account-control limitations.
 
 The intended first-visit understanding is: **FleetLab explores the operational work between autonomous rides. Pick a question, change one assumption, and inspect who benefits, who waits, and what the model does not establish.**
 
-## Preview and repository checkpoint
+## Release and repository checkpoint
 
 - Local preview: [Home](http://127.0.0.1:8778/#/overview), [Explore](http://127.0.0.1:8778/#/catalog), [City Explorer](http://127.0.0.1:8778/city-explorer/).
-- Implementation commit: `86f8a13f487ee2137ddaf400931048d3485b53ea` on `codex/fleetlab-city-sf` (local only).
+- Implementation commit: `86f8a13f487ee2137ddaf400931048d3485b53ea` on `codex/fleetlab-city-sf`, pushed to `bohueilin/Hermes` through remote `github`.
 - Verified candidate: `build/fleetlab-city/visitor-20261014/reviewed/integrated-release/site`.
-- Candidate City generation: `0650beefa2c93838`, derived from the retained original `c56bda6b509105c5`. The previous production generation remains `0c493355ecacbd36` in the unchanged live receipt.
+- Published City generation: `0650beefa2c93838`, derived from the retained original `c56bda6b509105c5`. Previous production City generation: `0c493355ecacbd36`.
 - Logs, readback evidence, build recipe and screenshots: `build/fleetlab-city/validation/visitor-design-20261014/` (private generated files, not committed).
 - Preview runs on port 8778 to avoid the earlier development preview's cached City switch page on port 8777. Use the links above.
+
+| Release identity | Observed value |
+|---|---|
+| Production deployment | `5924764c-7dc2-4336-a7d4-94fe3e39a991` |
+| Immutable production | https://5924764c.fleetlab.pages.dev |
+| Preview deployment | `4c5b4876-0ecd-40e1-aaa1-67b2a0c425b4` |
+| Immutable preview | https://4c5b4876.fleetlab.pages.dev |
+| Previous production deployment | `f6c88a3b-9ac5-4f8d-bb47-b5960968be6e` |
+| Production full readback completed, UTC | `2026-10-14T19:27:32.219980+00:00` |
+
+Preview and production used the same verified stage without rebuilding between uploads. A clean temporary release checkout at the application commit satisfied the deployment guard; the owner's untracked source images and notes were preserved. The publication receipt and this handoff are in a later documentation-only commit, not a different deployed application. Exact digests and sampled file identities are in [the updated release receipt](releases/fleetlab-current.json). Publication logs, byte/header checks and live screenshots are retained privately under `build/fleetlab-city/validation/visitor-deployment-20261014/`.
 
 ## What changed
 
@@ -65,7 +78,20 @@ Initial validation attempts caught a missing fake-DOM method (replaced with exis
 
 ## Final integrated validation
 
-Source-bound package verification and upload-time reproduction both pass for **10,098 served files**. The integrated manifest records **1,624,465,620 bytes**. The local HTTP readback matched all 22 media assets and seven runtime/receipt files. Film bytes are identical to the previous release. Relative to the original City viewer, only `index.html`, its gzip companion, `_headers` and `network.json` changed; all scientific payload files are identical.
+Source-bound package verification and upload-time reproduction both pass for **10,098 staged files**, of which **10,097 are served assets**; the remaining file is Cloudflare's `_headers` control file. The integrated manifest records **1,624,465,620 bytes**. The local HTTP readback matched all 22 media assets and seven runtime/receipt files. Film bytes are identical to the previous release. Relative to the original City viewer, only `index.html`, its gzip companion, `_headers` and `network.json` changed; all scientific payload files are identical.
+
+| Publication check | Result |
+|---|---|
+| Fresh release-checkout visitor/catalog smoke tests | 12 pass |
+| Locked deployment dependency audit | 0 known vulnerabilities; 38 signatures and 22 attestations verified |
+| MapLibre dependency audit | 0 known vulnerabilities |
+| Preview full byte/status readback | 10,097 / 10,097 match |
+| Stable production full byte/status readback | 10,097 / 10,097 match |
+| Preview and production response headers | 49 / 49 on each host |
+| Immutable production smoke | 62 / 62 match |
+| Previous immutable production smoke | 39 / 39 match |
+
+Live browser checks confirmed the plain-language Home, first-lesson navigation, nine-topic Explore, family/search/model intersection, empty-result recovery, Clear filters, City navigation, illustrated atlas entry, rendered road map and recorded replay playback. Home and Explore were checked at 390 CSS pixels without document overflow. The original film played with ready state 4 and the Pause control visible; Home contained one Google tag loader. No console errors or warnings were observed in the checked interactions. These are automated browser observations, not physical Pixel or human comprehension qualification.
 
 | Budget | Actual bytes | Existing limit |
 |---|---:|---:|
@@ -79,7 +105,9 @@ Source-bound package verification and upload-time reproduction both pass for **1
 | Delivery order final text closure | 170,552 | 524,288 |
 | Complete non-City generation | 11,230,620 | 14,360,576 |
 
-The package is prepared for release review, not published. Cloudflare response-header/range readback and rollback rehearsal belong to the later publication step. SF's independent map/source, physical-device and visitor review remain open; visual polish does not close them.
+The publication work is complete. SF's independent map/source, physical-device and visitor review remain open; visual polish does not close them. SF qualification stays **HOLD**, authenticity **NOT_AUTHENTICATED**, and operational deployment permission **NONE**.
+
+**Negative observation retained:** Range requests for the film and compressed candidate-road data returned HTTP 200 with complete, matching files instead of HTTP 206 partial bodies. The previous immutable production behaved identically. The strict partial-response probes therefore failed; byte integrity, ordinary full-file loading and observed playback passed. Partial-transfer support is not established. The retained City rollback was included in the full byte and header checks; a new switch-over rollback rehearsal was not performed. Google Analytics property receipt remains **NOT_OBSERVED**; code installation does not establish receipt inside the owner's account.
 
 Commands used:
 
@@ -96,18 +124,33 @@ zsh build/fleetlab-city/validation/visitor-design-20261014/build-release.sh
 
 The build recipe performs the site/offline build, check-dist, source-package reproduction, immutable City derivation, integrated package verification and final stage guard. A local commit attempt was blocked by the existing privacy hook because the design plan included a private absolute input path. The path was removed, the unchanged guard passed, and the commit succeeded; no bypass was used.
 
+Publication used the pinned wrapper from the clean release checkout:
+
+```sh
+git push github codex/fleetlab-city-sf
+npm ci --ignore-scripts
+npm audit --omit=dev
+npm audit signatures
+node apps/fleetlab-city/deploy/wrangler.mjs pages deploy VERIFIED_SITE --project-name fleetlab --branch codex-city-explorer
+node apps/fleetlab-city/deploy/wrangler.mjs pages deploy VERIFIED_SITE --project-name fleetlab --branch feat/fleetlab-playground
+build/fleetlab-city/venv/bin/python apps/fleetlab-city/tools/readback.py --site VERIFIED_SITE --url https://fleetlab.pages.dev --output PRIVATE_READBACK
+```
+
+The three npm commands ran inside `apps/fleetlab-city/deploy`; MapLibre received its separate audit. `VERIFIED_SITE` is the candidate directory named above. `feat/fleetlab-playground` is Cloudflare's production alias, not the Git source branch. No force push, credential change, historical deployment deletion or source-input cleanup occurred.
+
 ## Recommendation
 
-Review the local Home and Explore experience before publication. Judge whether a first-time visitor can explain the project's purpose and choose a useful first question without a verbal introduction.
+Use the live Home and Explore experience for the next presentation and design feedback. The requested release is complete; no further decision is needed for publication. For the next visitor review, test whether someone can explain the project's purpose and choose a useful first question without a verbal introduction.
 
 ## Top risks + mitigations
 
 1. Attractive illustration mistaken for evidence: keep concept labels and model boundaries; exact original scientific assets are verified during integration.
 2. A library category mistaken for a separate model: keep the original lesson's lab, assumptions and result behavior intact; the family is navigation only.
-3. Automated checks mistaken for comprehension testing: request a short first-visit read from a person; this preview does not close SF human/map/device prerequisites.
+3. Automated checks mistaken for comprehension testing: request a short first-visit read from a person; this release does not close SF human/map/device prerequisites.
+4. Tight packaging headroom: only 579 bytes remain in package metadata, 8,162 in offline output and 8,925 in legacy text. Define ownership and budget before a substantial new feature; do not hide payload from counters.
 
 ## Next 3 actions
 
-1. Open the local preview and review Home, Explore and the City welcome on desktop and phone.
-2. If this design is accepted, publish the source-bound integrated candidate using the existing deployment guard; preserve the current live receipt until deployment succeeds.
-3. Gather visitor feedback on purpose, first action and takeaway. Add video loops only after the actual files and their content have been reviewed.
+1. Present the live Home → first lesson → Explore path, with the existing film available alongside it.
+2. Gather visitor feedback on purpose, first action and takeaway; independently close SF map/source and physical-device review when evidence is available.
+3. Choose the next bounded Network Flows question and its packaging budget. The owner can check Analytics Realtime separately; additional video loops need actual reviewed assets.

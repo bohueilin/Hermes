@@ -49,6 +49,26 @@ inline-script authorization and finite Google origins; no script unsafe-inline/e
 Verify the tag and actual CSP on the preview and stable host. Browser byte/tag checks
 cannot establish receipt inside the owner's Google Analytics property.
 
+## October 14 visitor design follow-up
+
+After reviewing the local design, the owner explicitly authorized GitHub push,
+live deployment, live validation and the updated handoff. This follow-up uses
+the 19 supplied tiles and the existing concept film, as selected by the owner.
+See [the visitor design handoff](FLEETLAB_VISITOR_DESIGN_HANDOFF_2026-10-14.md).
+
+There are now two independent exact media owners: three brand files capped at
+2 MiB, plus 19 tile files capped at 2 MiB. Total hosted artwork is 3,705,425 bytes.
+All media bytes count toward generation storage. The visitor module, family
+mapping and stylesheet count toward captured integration source, emitted text
+and the final route closures. No existing hard cap was raised.
+
+The small catalogue filter interface is also included in the rebuilt offline
+edition; the illustrated presentation remains hosted-only. Offline analytics
+remain absent. Do not describe this follow-up's offline file as byte-identical
+to the preceding artwork release. The concept film and City scientific payloads
+are unchanged. Keep all publication identities in the committed readback receipt;
+source commits and documentation-only commits can differ.
+
 ## Build and verify
 
 The subsequent October 13 Argon visual refinement uses the same release workflow and adds the explicitly reviewed `src/ui/concept-primer.js` module to `FLOW_ADDED`. It updates the offline edition while preserving all City payload bytes. See [the visual implementation handoff](FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-13.md) for the current production readback and remaining qualification limits. Continue to reject any undeclared module; do not broaden the allowlist during packaging.

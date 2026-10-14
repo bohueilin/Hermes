@@ -15,7 +15,7 @@
 - Use one filtering implementation: search/model/family intersect; Clear filters resets all and synchronizes visual selection. No DOM-only filtering with misleading counts.
 - Keep the approved hero art and original concept film. The owner explicitly selected tiles and the existing film; no additional clips.
 - Prefer always-visible content over scroll reveals; pointer hover movement only, disabled for reduced motion.
-- This is a local implementation/preview request. Prior live release remains the production baseline until publication is explicitly requested.
+- Initial scope was local implementation/preview. After reviewing it, the owner explicitly authorized GitHub push, live publication, live validation and updated handoff notes.
 
 ## Review focus
 
@@ -48,4 +48,4 @@
 
 ## Completion ledger
 
-All three tasks completed. Local implementation commit `86f8a13`; source-bound integrated candidate and HTTP readback passed. Independent final review found no significant regressions. Full test counts, minor corrections, ownership decisions and unchanged live status are recorded in `docs/FLEETLAB_VISITOR_DESIGN_HANDOFF_2026-10-14.md`.
+All three tasks completed. Implementation commit `86f8a13` is pushed and live. Production deployment `5924764c-7dc2-4336-a7d4-94fe3e39a991` and preview used the same source-bound stage. Both full readbacks matched all 10,097 served files; both header checks matched 49/49. Independent final review found no significant regressions. Full test counts, minor corrections, ownership decisions, live browser observations and retained limitations are recorded in `docs/FLEETLAB_VISITOR_DESIGN_HANDOFF_2026-10-14.md`.
