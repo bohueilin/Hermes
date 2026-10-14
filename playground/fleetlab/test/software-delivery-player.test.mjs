@@ -16,8 +16,8 @@ test('visibility suppresses elapsed catch-up and preference changes never restar
  p.preference(true);p.preference(false);p.advance(10000);assert.equal(p.state().playing,false);
  p.historyRestore();assert.equal(p.state().playing,false);
 });
-test('full timeline is separate, finite, boundary floored and does not rewind a seek past endpoint',()=>{
+test('full timeline is separate, finite, boundary floored and replays explicitly from zero at or beyond endpoint',()=>{
  const p=create();p.inspect(0,'V1');p.timelinePlay();p.advance(22200);assert.equal(p.state().time_ms,666000);assert.equal(p.state().playing,false);
- p.inspect(1000100);p.timelinePlay();assert.equal(p.state().playing,false);assert.equal(p.state().time_ms,1000000);
+ p.inspect(1000100);p.timelinePlay();assert.equal(p.state().playing,true);assert.equal(p.state().time_ms,0);
  p.timelineReplay();assert.equal(p.state().time_ms,0);p.advance(1000);assert.equal(p.state().time_ms,30000);
 });

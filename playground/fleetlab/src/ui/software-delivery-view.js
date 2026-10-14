@@ -23,7 +23,7 @@ export function createDeliveryProjection(record){
  const events=[...record.tasks.map(e=>({...e,raw_ms:e.t_ms,label:`${e.request_id??'Depot copy'}: ${e.type.replaceAll('_',' ')}`})),
   {t_ms:Math.ceil(input.artifact.available_at_ms/q)*q,raw_ms:input.artifact.available_at_ms,label:'Source becomes available'},
   ...input.requests.flatMap(r=>[{t_ms:Math.ceil(r.arrival_ms/q)*q,raw_ms:r.arrival_ms,label:`${r.id}: arrival`},{t_ms:Math.ceil(r.deadline_ms/q)*q,raw_ms:r.deadline_ms,label:`${r.id}: raw target`}])]
-  .sort((a,b)=>a.t_ms-b.t_ms||a.label.localeCompare(b.label));
+  .sort((a,b)=>a.t_ms-b.t_ms);
  const at=(raw,id=ids[0])=>{
   const i=Math.max(0,Math.min(count-1,Math.floor(raw/q))),t=i*q,r=input.requests.find(x=>x.id===id),o=ordered.get(id);
   if(!r||!o)throw Error('Selected vehicle is not in this accepted record.');
@@ -58,8 +58,9 @@ export function createDeliveryProjection(record){
   const target=failed?'Modeled check failed; readiness blocked':ready?(o.ready_ms<=r.deadline_ms?'Ready on time':'Ready late'):t===input.H_ms?'Unfinished at observation end':t<r.deadline_ms?`Target at ${seconds(r.deadline_ms)}; ${seconds(r.deadline_ms-t)} remaining`:t===r.deadline_ms?'Target now; not ready':'Target passed; not ready';
   return {t_ms:t,id,state,headline,cause,target,stage,remaining_ms,deadline_ms:r.deadline_ms,ready_ms:ready?o.ready_ms:null,
    own,shared,wan_bytes:totals.wan[i],local_bytes:totals.local[i],artifact_bytes:input.artifact.size_bytes,
+   whole_copies:{complete:record.policy==='cold'?Number(done(cachedAt,t)):outcomes.filter(x=>done(x.wan_completed_ms,t)).length,total:record.policy==='cold'?1:ids.length},
    ready_count:outcomes.filter(x=>done(x.ready_ms,t)).length,total:ids.length,interval:t===input.H_ms?'Observation end; no next service interval':`Useful rates for [${seconds(t)}, ${seconds(t+q)})`,
-   chain:{receipt:received?'complete':arrived?'waiting':'not-arrived',check:failed?'failed':done(o.check_completed_ms,t)?'complete':state==='checking'?'active':'waiting',activation:ready?'complete':state==='activating'?'active':'waiting',readiness:ready?'complete':failed?'blocked':'waiting'},
+   chain:{receipt:received?'complete':state==='receiving'?'active':arrived?'waiting':'not-arrived',check:failed?'failed':done(o.check_completed_ms,t)?'complete':state==='checking'?'active':'waiting',activation:ready?'complete':state==='activating'?'active':'waiting',readiness:ready?'complete':failed?'blocked':'waiting'},
    tasks:{check_declared_ms:r.check_ms,check_quantized_ms:Math.ceil(r.check_ms/q)*q,activation_declared_ms:r.activation_ms,activation_quantized_ms:Math.ceil(r.activation_ms/q)*q},
    grants:{wan:rows.wan.eligible,local:rows.local.eligible},limits:input.resources,
   };
@@ -76,5 +77,6 @@ export function deliveryChapters(pair){
 }
 export function deliveryCaption(pair,chapter){
  const c=pair.projections.cold.at(chapter.t_ms,chapter.vehicle),r=pair.projections.repeated.at(chapter.t_ms,chapter.vehicle);
- return `At ${seconds(c.t_ms)}, cold cache has ${c.ready_count}/${c.total} ready and ${gb(c.local_bytes)} delivered locally. Repeated download has ${r.ready_count}/${r.total} ready, ${gb(r.wan_bytes)} across the WAN and ${gb(r.local_bytes)} delivered locally. ${r.headline}.`;
+ const cause=chapter.t_ms===96000?'A whole depot copy can release local work; partial separate copies cannot.':`${ARM_NAMES.repeated} ${r.id}: ${r.headline}. ${ARM_NAMES.cold} ${c.id}: ${c.headline}.`;
+ return `${cause} ${ARM_NAMES.repeated}: ${gb(r.wan_bytes)} WAN, ${r.whole_copies.complete}/${r.whole_copies.total} whole copies. ${ARM_NAMES.cold}: ${gb(c.wan_bytes)} WAN, ${c.whole_copies.complete}/${c.whole_copies.total} whole copies. Local delivery ${gb(r.local_bytes)} / ${gb(c.local_bytes)}; ready ${r.ready_count}/${r.total} / ${c.ready_count}/${c.total} (repeated / cache).`;
 }

@@ -17,7 +17,7 @@ export function createDeliveryPlayer({chapters=[],endpoint_ms,H_ms,quantum_ms=10
   visible(value){visible=Boolean(value);emit();},
   preference(value){restricted=Boolean(value);if(restricted)state.playing=false;emit();},
   historyRestore(){state.playing=false;emit();},
-  timelinePlay(){state.mode='timeline';elapsed=state.time_ms;if(state.time_ms>=endpoint_ms){state.playing=false;emit();return;}start();},
+  timelinePlay(){state.mode='timeline';elapsed=state.time_ms;if(state.time_ms>=endpoint_ms){state.time_ms=0;elapsed=0;}start();},
   timelineReplay(){state.time_ms=0;elapsed=0;state.mode='timeline';start();},
   advance(dt){
    if(!state.playing||!visible||restricted||!Number.isFinite(dt)||dt<=0)return;
