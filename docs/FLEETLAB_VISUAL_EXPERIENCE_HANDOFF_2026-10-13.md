@@ -1,5 +1,7 @@
 # FleetLab — visual experience implementation handoff
 
+> Deployment update: the approved artwork, transparent logo and Google tag were published on October 14. See [the October 14 handoff](FLEETLAB_ARTWORK_IMPLEMENTATION_HANDOFF_2026-10-14.md) for current release identity and validation; the qualifications and limits below remain historical context.
+
 Date: October 13, 2026 (America/Los_Angeles). Scope: public educational website.
 
 ## Outcome and recommendation

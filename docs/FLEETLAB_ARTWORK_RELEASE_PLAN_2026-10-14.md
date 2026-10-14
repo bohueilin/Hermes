@@ -24,3 +24,6 @@ No duplicate tags; exact head placement; local/preview collection disabled; no s
 - Negative coverage rejects duplicate foreign tags, altered artwork and a modified/resealed City recording. Initial fixture omissions and formatting failures were corrected; a development source-capture run caught a concurrent formatting edit, then the frozen full suite passed.
 - Doctor in the development checkout: 17 PASS, expected dirty-tree WARN, optional display NOT_AVAILABLE; clean release checkout check follows.
 - Hosted raster assets total 1,714,931 bytes. Home/Explore may use all three; NF03 and City use the 994,944-byte logo; NF04/Delivery order can use logo plus 318,541-byte shared-delivery artwork. These media bytes are separate from JS/CSS text closure limits and included in whole-generation storage.
+
+- Completed: independent review found no blocker; source commit `698f8272502c6211340f653408b0fa1ec1a6ea64` was pushed. Preview and production each passed 10,075/10,075 served-file checks and 27/27 header checks. The clean release doctor reports 18 PASS and one optional display NOT_AVAILABLE.
+- Production deployment: `f6c88a3b-9ac5-4f8d-bb47-b5960968be6e`. See [the implementation handoff](FLEETLAB_ARTWORK_IMPLEMENTATION_HANDOFF_2026-10-14.md) for final counts, provenance, browser observations and remaining limits.
