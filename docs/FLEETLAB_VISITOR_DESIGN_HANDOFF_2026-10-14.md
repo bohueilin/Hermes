@@ -6,6 +6,15 @@ Local implementation of the owner's request to make FleetLab easier to understan
 
 The intended first-visit understanding is: **FleetLab explores the operational work between autonomous rides. Pick a question, change one assumption, and inspect who benefits, who waits, and what the model does not establish.**
 
+## Preview and repository checkpoint
+
+- Local preview: [Home](http://127.0.0.1:8778/#/overview), [Explore](http://127.0.0.1:8778/#/catalog), [City Explorer](http://127.0.0.1:8778/city-explorer/).
+- Implementation commit: `86f8a13f487ee2137ddaf400931048d3485b53ea` on `codex/fleetlab-city-sf` (local only).
+- Verified candidate: `build/fleetlab-city/visitor-20261014/reviewed/integrated-release/site`.
+- Candidate City generation: `0650beefa2c93838`, derived from the retained original `c56bda6b509105c5`. The previous production generation remains `0c493355ecacbd36` in the unchanged live receipt.
+- Logs, readback evidence, build recipe and screenshots: `build/fleetlab-city/validation/visitor-design-20261014/` (private generated files, not committed).
+- Preview runs on port 8778 to avoid the earlier development preview's cached City switch page on port 8777. Use the links above.
+
 ## What changed
 
 - Home now introduces Bo-Huei's independent learning project, explains its motivation in ordinary language, and offers a three-minute first lesson above the large depot artwork.
@@ -53,6 +62,39 @@ Initial validation attempts caught a missing fake-DOM method (replaced with exis
 - The five hosted presentation text files are counted in integrated source and relevant final route closures. Tile manifests travel with the source offer. Binary pins bind the original bytes.
 - Google tag `G-04EZ8EZWQ2` remains configured once per current page with collection disabled outside `fleetlab.pages.dev`. No new analytics events or tracking scope.
 - No numerical model, evidence verifier, scenario, fleet experiment, map source, qualification decision or deployment authority changed. No Austin or new-city work.
+
+## Final integrated validation
+
+Source-bound package verification and upload-time reproduction both pass for **10,098 served files**. The integrated manifest records **1,624,465,620 bytes**. The local HTTP readback matched all 22 media assets and seven runtime/receipt files. Film bytes are identical to the previous release. Relative to the original City viewer, only `index.html`, its gzip companion, `_headers` and `network.json` changed; all scientific payload files are identical.
+
+| Budget | Actual bytes | Existing limit |
+|---|---:|---:|
+| Raw teaching source + tools | 3,011,946 | 3,145,728 |
+| Legacy emitted text | 2,612,515 | 2,621,440 |
+| Offline edition | 2,563,278 | 2,571,440 |
+| Package metadata | 32,189 | 32,768 |
+| Integrated emitted text | 2,920,976 | 3,145,728 |
+| NF03 final text closure | 503,725 | 524,288 |
+| NF04 final text closure | 166,628 | 524,288 |
+| Delivery order final text closure | 170,552 | 524,288 |
+| Complete non-City generation | 11,230,620 | 14,360,576 |
+
+The package is prepared for release review, not published. Cloudflare response-header/range readback and rollback rehearsal belong to the later publication step. SF's independent map/source, physical-device and visitor review remain open; visual polish does not close them.
+
+Commands used:
+
+```sh
+node --test playground/fleetlab/test/*.test.mjs
+node --test apps/fleetlab-city/test/*.test.mjs
+build/fleetlab-city/venv/bin/python -m unittest discover -s apps/fleetlab-city/tests
+PYTHONPATH=src FLEET_PLAYGROUND_BASE=bca4ccd conda run -n hermes-dev python -m pytest -q
+conda run -n hermes-dev python -m ruff check .
+PYTHONPATH=src conda run -n hermes-dev python -m hermes doctor
+git diff --check
+zsh build/fleetlab-city/validation/visitor-design-20261014/build-release.sh
+```
+
+The build recipe performs the site/offline build, check-dist, source-package reproduction, immutable City derivation, integrated package verification and final stage guard. A local commit attempt was blocked by the existing privacy hook because the design plan included a private absolute input path. The path was removed, the unchanged guard passed, and the commit succeeded; no bypass was used.
 
 ## Recommendation
 
