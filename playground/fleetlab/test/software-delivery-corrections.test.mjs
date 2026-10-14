@@ -26,7 +26,7 @@ test('accepted lifecycle suspension is status neutral; active cancellation stops
  p.suspend();p.historyRestore();assert.equal(p.element.querySelector('.delivery-status').textContent,status);
  p.selectPreset('default');assert.doesNotMatch(p.element.querySelector('.delivery-status').textContent,/Previous setup/);
  p.destroy();let finish,stops=0;p=create({runPair:()=>new Promise(r=>finish=r),cancelPair:()=>stops++});
- const load=p.load();p.suspend();finish(pair('default'));await load;assert.equal(p.getState().accepted,null);assert.ok(stops>=2);
+ const load=p.load();p.suspend();assert.match(p.element.querySelector('.delivery-status').textContent,/interrupted/i);finish(pair('default'));await load;assert.equal(p.getState().accepted,null);assert.ok(stops>=2);
  }finally{p?.destroy();restore();}
 });
 test('restricted playback presents working snapshots and stateful accessible controls',async()=>{

@@ -5,7 +5,7 @@ export function createOrderPlayer({onChange=()=>{}}={}){
  const chapter=i=>{if(!Number.isInteger(i)||!ORDER_CHAPTERS[i]&&i!==0)return;state={...state,time_ms:ORDER_CHAPTERS[i],chapter:i,playing:false,ended:false};elapsed=0;emit();};
  const start=()=>{state.playing=!restricted&&visible;state.ended=false;emit();};
  const replay=()=>{chapter(0);start();};
- return {state:()=>({...state}),chapter,watch:replay,replay,resume(){if(state.ended)replay();else start();},pause(){state.playing=false;emit();},
+ return {state:()=>({...state}),chapter,watch:replay,replay,resume(){if(state.ended)replay();else{state.time_ms=ORDER_CHAPTERS[state.chapter];start();}},pause(){state.playing=false;emit();},
   inspect(t,vehicle=state.vehicle){if(!Number.isFinite(t))return;state={...state,time_ms:Math.min(2400000,Math.max(0,Math.floor(t/1000)*1000)),vehicle,playing:false,ended:false};emit();},
   preference(value){restricted=Boolean(value);state.playing=false;emit();},visible(value){visible=Boolean(value);if(!visible)state.playing=false;emit();},historyRestore(){state.playing=false;emit();},
   advance(dt){if(!state.playing||restricted||!visible||!Number.isFinite(dt)||dt<=0)return;elapsed+=dt;const prior=state.chapter;

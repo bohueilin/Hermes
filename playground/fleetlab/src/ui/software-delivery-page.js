@@ -104,7 +104,7 @@ export function createDeliveryPage({manifest,createWorker,runPair=null,cancelPai
  }
  function selectPreset(id){if(!Object.hasOwn(CASE_NAMES,id))return;serial++;stop();loading=false;cancel.hidden=true;pendingPause.hidden=true;player?.pause();pending=id;renderPending();if(!accepted)renderSummary();status.textContent=accepted?(accepted.id===pending?`Loaded records checked: ${CASE_NAMES[accepted.id]}.`:`Previous setup: ${CASE_NAMES[accepted.id]}. The selected case is waiting for Compare this case.`):'Published study summary. This case has not been reconstructed in your browser.';}
  function hidePending(){if([cancel,pendingPause].includes(document.activeElement))watch.focus();cancel.hidden=true;pendingPause.hidden=true;}
- function suspend(){serial++;stop();loading=false;pauseIntent=true;hidePending();player?.historyRestore();}
+ function suspend(){if(loading)status.textContent=accepted?`Loaded records checked: ${CASE_NAMES[accepted.id]}. Playback paused.`:'Comparison interrupted. Watch to restart.';serial++;stop();loading=false;pauseIntent=true;hidePending();player?.historyRestore();}
  function cancelLoad(){if(!loading)return;serial++;stop();loading=false;pauseIntent=false;hidePending();status.textContent=accepted?`Computation cancelled. Loaded records checked: ${CASE_NAMES[accepted.id]}.`:'Computation cancelled. Published summary remains available.';}
  function sayMoment(){if(!player||!accepted)return;const s=player.state();announce.textContent=`${s.vehicle} at ${seconds(s.time_ms)}. ${Object.entries(accepted.projections).map(([k,p])=>`${ARM_NAMES[k]}: ${p.at(s.time_ms,s.vehicle).headline}.`).join(' ')}`;}
  function armView(policy){

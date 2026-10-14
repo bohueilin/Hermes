@@ -16,7 +16,7 @@ const narration=['Both orders download the same 12 GB copy. Arrivals are 0, 30, 
 export function createOrderPage({manifest,createWorker,runStudy=null,runEqualShare=null,cancelStudy=()=>{},reducedMotion=()=>false}={}){
  manifest=immutable(JSON.parse(orderCanonical(manifest)));
  if(manifest.schema!==ORDER_MANIFEST_SCHEMA||manifest.policy_version!==ORDER_POLICY_VERSION||manifest.verifier_version!==ORDER_STUDY_VERIFIER_VERSION||Object.keys(names).some(id=>!manifest.cases?.[id]||manifest.cases[id].input_digest!==orderDigest(normalizeOrderInput(manifest.cases[id].input))))throw Error('Published study unavailable or incompatible.');
- let pendingCase='default',accepted=null,viewed=[],viewName='Your order',loading=false,serial=0,destroyed=false,arm='baseline',guideBound=false,fullWindow=false,equalResult=null,visible=true,pendingGuideStart=false;
+ let pendingCase='default',accepted=null,viewed=[],viewName='Your order',loading=false,serial=0,destroyed=false,arm='baseline',guideBound=false,fullWindow=false,equalResult=null,visible=true,pendingGuideStart=false,loadTrigger=null;
  const saved=Object.fromEntries(Object.keys(names).map(id=>[id,manifest.cases[id].input.delivery.requests.map(r=>r.id)]));let pending=[...saved.default];
  const job=runStudy?null:createOrderJob({createWorker}),run=runStudy??(entry=>job.run(entry)),stop=()=>{job?.cancel();cancelStudy();};
  const element=el('div',{class:'order-shell'}),announcement=p('','sr-only');announcement.setAttribute('role','status');announcement.setAttribute('aria-atomic','true');
@@ -111,12 +111,12 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
   delay.textContent=`${s.vehicle}: ready at ${sec(a.ready_ms)} → ${sec(b.ready_ms)} (${delta(b.ready_ms-a.ready_ms)}). Compared target: ${b.late_ms?sec(b.late_ms)+' late':'on time'}.`;
   strips.replaceChildren(schedule(accepted.fcfs,'First come',s.time_ms),schedule(viewed,viewName,s.time_ms));bench.hidden=false;
  }
- function cancel(announce=true){pendingGuideStart=false;serial++;if(loading){stop();loading=false;if(announce)status.textContent='Check cancelled. Previous accepted outcomes are retained.';}player.pause();renderEditor();}
+ function cancel(announce=true){const returnFocus=document.activeElement===cancelButton;pendingGuideStart=false;serial++;if(loading){stop();loading=false;if(announce)status.textContent='Check cancelled. Previous accepted outcomes are retained.';if(equal.textContent.startsWith('Rebuilding'))equal.textContent='Equal-share check interrupted. Try again.';}player.pause();renderEditor();if(returnFocus)(loadTrigger??compare).focus();}
  function selectCase(id){if(!names[id])return;cancel(false);pauseGuide();pendingCase=id;pending=[...saved[id]];status.textContent=accepted?`Checked ${names[accepted.id]} retained. Compare to accept ${names[id]}.`:'Selected scenario is pending. Compare to check it.';renderEditor();}
  function move(id,direction){const index=pending.indexOf(id),to=index+direction;if(![-1,1].includes(direction)||index<0||to<0||to>=pending.length)return;cancel(false);pauseGuide();[pending[index],pending[to]]=[pending[to],pending[index]];renderEditor();}
  async function load(mode='user'){
   const id=pendingCase,entry=manifest.cases[id],desired=[...pending],token=++serial,trigger=document.activeElement;
-  stop();loading=true;status.textContent='Checking complete order coverage and published identities…';renderEditor();
+  loadTrigger=trigger?.tagName==='BUTTON'?trigger:compare;stop();loading=true;status.textContent='Checking complete order coverage and published identities…';renderEditor();
   try{
    let result;
    if(accepted?.study.input_digest===entry.input_digest&&accepted.study.study_digest===entry.study_digest&&accepted.study.policy_version===manifest.policy_version)result={study:accepted.study,verification:accepted.verification};
@@ -124,21 +124,21 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
    if(destroyed||token!==serial)return false;
    if(!result.verification?.ok||!result.verification.coverage.complete||result.verification.study_digest!==entry.study_digest||result.study.input_digest!==entry.input_digest)throw Error('Checked study identity unavailable.');
    const study=immutable(result.study);accepted={id,entry,study,verification:result.verification,projection:createOrderProjection(study),fcfs:entry.input.delivery.requests.slice().sort((a,b)=>a.arrival_ms-b.arrival_ms||(a.id<b.id?-1:1)).map(r=>r.id)};
-   if(mode==='user')saved[id]=[...desired];viewed=mode==='best'?[...study.representative_order]:desired;viewName=mode==='best'?'Best permitted order':'Your order';guideBound=false;equalResult=null;equal.textContent='Request a checked equal-share record for this accepted workload.';
-   loading=false;status.textContent=`Checked ${study.records.length} of ${study.records.length} permitted orders · ${names[id]}.`;renderOutcomes();player.chapter(0);renderEditor();
-   if(document.activeElement===trigger||document.activeElement===cancelButton)title.focus();announcement.textContent=`${names[id]} checked. ${viewName}: ${accepted.projection.outcome(viewed).metrics.on_time_count} of 4 on time.`;return true;
-  }catch(error){if(token!==serial||destroyed)return false;loading=false;status.textContent=`Unable to accept this comparison: ${error.message} Previous accepted outcomes are retained.`;renderEditor();return false;}
+   saved[id]=[...desired];viewed=mode==='best'?[...study.representative_order]:desired;viewName=mode==='best'?'Best permitted order':'Your order';guideBound=false;equalResult=null;equal.textContent='Request a checked equal-share record for this accepted workload.';
+   const moveFocus=document.activeElement===trigger||document.activeElement===cancelButton;loading=false;status.textContent=`Checked ${study.records.length} of ${study.records.length} permitted orders · ${names[id]}.`;renderOutcomes();player.chapter(0);renderEditor();
+   if(moveFocus)title.focus();announcement.textContent=`${names[id]} checked. ${viewName}: ${accepted.projection.outcome(viewed).metrics.on_time_count} of 4 on time.`;return true;
+  }catch(error){if(token!==serial||destroyed)return false;const returnFocus=document.activeElement===cancelButton;loading=false;status.textContent=`Unable to accept this comparison: ${error.message} Previous accepted outcomes are retained.`;renderEditor();if(returnFocus)loadTrigger.focus();return false;}
  }
  async function showBest(){return load('best');}
- function restoreOrder(){if(!accepted)return;pauseGuide();viewed=[...saved[accepted.id]];viewName='Your order';pendingCase=accepted.id;pending=[...saved[accepted.id]];renderOutcomes();renderEditor();renderClock();}
+ function restoreOrder(){if(!accepted)return;cancel(false);pauseGuide();status.textContent=`Checked ${names[accepted.id]} restored.`;viewed=[...saved[accepted.id]];viewName='Your order';pendingCase=accepted.id;pending=[...saved[accepted.id]];renderOutcomes();renderEditor();renderClock();}
  async function watchExample(){selectCase('default');if(await load('best')){guideBound=true;player.preference(reducedMotion());guideTitle.focus();if(visible)player.watch();else{pendingGuideStart=true;renderClock();}say();}}
  function setArm(value){if(!['baseline','comparison'].includes(value))return;arm=value;strips.setAttribute('data-arm',arm);arms.forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-arm-button')===arm)));}
  async function equalShare(){if(!accepted){equal.textContent='Compare an order first so the workload is checked.';return;}const token=++serial,identity=accepted.study.study_digest,entry=accepted.entry;stop();loading=true;renderEditor();equal.textContent='Rebuilding and independently checking the NF04 equal-share record…';
-  try{const result=await (runEqualShare?runEqualShare(entry):job.run(entry,'equal-share'));if(token!==serial||!accepted||identity!==accepted.study.study_digest)return;equalResult=result;const m=result.record.metrics;equal.textContent=`Checked equal share: ${m.on_time_count}/4 by target; ${sec(m.all_ready_ms)} all ready. ${result.record.outcomes.map(v=>`${v.id}: ${sec(v.ready_ms)}, ${sec(Math.max(0,v.ready_ms-entry.input.delivery.requests.find(r=>r.id===v.id).deadline_ms))} late`).join(' · ')}. Same 12 GB upstream and 48 GB local work. Separate policy class.`;
+  try{const result=await (runEqualShare?runEqualShare(entry):job.run(entry,'equal-share'));if(token!==serial||!accepted||identity!==accepted.study.study_digest)return;const {input_digest,record_digest,metrics,outcomes}=result.record;equalResult=immutable({input_digest,record_digest,metrics,outcomes});const m=metrics;equal.textContent=`Checked equal share: ${m.on_time_count}/4 by target; ${sec(m.all_ready_ms)} all ready. ${result.record.outcomes.map(v=>`${v.id}: ${sec(v.ready_ms)}, ${sec(Math.max(0,v.ready_ms-entry.input.delivery.requests.find(r=>r.id===v.id).deadline_ms))} late`).join(' · ')}. Same 12 GB upstream and 48 GB local work. Separate policy class.`;
   }catch(error){if(token===serial)equal.textContent=`Equal-share record unavailable: ${error.message}`;}finally{if(token===serial){loading=false;renderEditor();}}}
- function suspend(){cancel(false);player.historyRestore();if(accepted)status.textContent=`Checked ${accepted.study.records.length} orders retained · playback paused.`;}
+ function suspend(){cancel(false);player.historyRestore();status.textContent=accepted?`Checked ${accepted.study.records.length} orders retained · playback paused.`:'Check interrupted. Compare to restart.';}
  renderEditor();renderOutcomes();bench.hidden=true;
  return {element,bench,load,showBest,restoreOrder,watchExample,move,selectCase,setArm,cancel,suspend,
-  getState:()=>({pendingCase,pendingOrder:[...pending],acceptedCase:accepted?.id??null,acceptedInput:accepted?.study.input_digest??null,savedOrder:[...saved[accepted?.id??pendingCase]],viewedOrder:[...viewed],arm,player:player.state(),loading,equalChecked:Boolean(equalResult)}),
+  getState:()=>({pendingCase,pendingOrder:[...pending],acceptedCase:accepted?.id??null,acceptedInput:accepted?.study.input_digest??null,savedOrder:[...saved[accepted?.id??pendingCase]],viewedOrder:[...viewed],arm,player:player.state(),loading,equalChecked:Boolean(equalResult),equalSummary:equalResult}),
   advance:dt=>player.advance(dt),preferenceChanged(){player.preference(reducedMotion());},visibilityChanged(v){visible=Boolean(v);player.visible(v);if(v&&pendingGuideStart){pendingGuideStart=false;player.watch();}},historyRestore:()=>player.historyRestore(),destroy(){destroyed=true;serial++;stop();player.pause();}};
 }
