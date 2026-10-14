@@ -306,6 +306,16 @@ class IntegrationTest(unittest.TestCase):
             self.integrate_flow(client)
         self.assertFalse((self.base / "out").exists())
 
+    def test_flow_update_preserves_reviewed_concept_primer_bytes(self):
+        source = launch.ROOT / "playground/fleetlab/src/ui/concept-primer.js"
+        data = source.read_bytes()
+        client = self.stage_flow_client()
+        name = "src/ui/concept-primer.js"
+        for root in (client, self.base / "reviewed/playground/fleetlab"):
+            (root / name).write_bytes(data)
+        self.integrate_flow(client)
+        self.assertEqual((self.base / "out/site" / name).read_bytes(), data)
+
     def test_capacity_visual_assets_and_release_sidecar_are_declared(self):
         self.assertTrue({
             "network-flows/capacity/visual.css", "network-flows/capacity/release.json",
