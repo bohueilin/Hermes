@@ -6,6 +6,7 @@ import difflib
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 import sys
@@ -26,6 +27,9 @@ CITY_CSP = (
     "worker-src 'self' blob:; font-src 'self'; base-uri 'none'; "
     "object-src 'none'; frame-ancestors 'none'; form-action 'none'"
 )
+
+ANALYTICS_ORIGINS = ['self','https://www.googletagmanager.com',
+                     'https://*.google-analytics.com','https://*.google.com']
 
 
 def sha_file(path):
@@ -111,13 +115,22 @@ def verify_viewer(root, role):
         if required not in expected:
             raise ValueError(f"{role} release missing {required}")
     network = json.loads((root / "network.json").read_text())
+    presentation = release.get("hosted_presentation")
+    if presentation and (
+        presentation.get("schema") != "fleetlab.hosted-presentation/1.0.0"
+        or presentation.get("measurement_id") != "G-04EZ8EZWQ2"
+        or not re.fullmatch(r"[a-f0-9]{64}", presentation.get("base_release_sha256", ""))
+        or not re.fullmatch(r"[a-f0-9]{40}", presentation.get("source_commit", ""))
+        or not isinstance(presentation.get("external_assets"), dict)
+    ):
+        raise ValueError(f"{role} invalid hosted presentation contract")
     if (
-        network.get("origins") != ["self"]
+        network.get("origins") != (ANALYTICS_ORIGINS if presentation else ["self"])
         or network.get("accounts") is not False
-        or network.get("analytics") is not False
+        or network.get("analytics") is not bool(presentation)
         or network.get("provider_calls") is not False
     ):
-        raise ValueError(f"{role} network contract is not self-only")
+        raise ValueError(f"{role} network contract differs from declared presentation")
     if release.get("scope") != "REVIEW_ONLY" or release.get("public_deployment") != "NOT_PERFORMED":
         raise ValueError(f"{role} review-only release contract required")
     compatibility = release.get("compatibility")

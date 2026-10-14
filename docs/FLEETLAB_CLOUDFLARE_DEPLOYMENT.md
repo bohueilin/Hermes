@@ -1,6 +1,6 @@
 # FleetLab publication runbook
 
-Updated 13 October 2026. Applies to the static educational FleetLab website.
+Updated 14 October 2026. Applies to the static educational FleetLab website.
 Hermes operational deployment permission remains NONE. Historical deployment
 paragraphs and the old playground-only CI template are superseded; do not use them.
 
@@ -20,6 +20,34 @@ actual instruction. Account/credential changes and destructive retention actions
 are separate decisions; no document can authorize them by itself.
 
 The Delivery order route is `/network-flows/delivery-order/`. Its explicit route owner, source-capture entries, worker, study and release sidecar are included in the same atomic teaching/integration generation. Validate both it and NF04; do not deploy a standalone route over the integrated site. See [the implementation handoff](FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md) for the current release and retained rollback.
+
+## October 14 approved artwork and analytics
+
+The owner approved the reviewed depot and shared-delivery artwork, transparent logo,
+Google tag `G-04EZ8EZWQ2`, Git push and public-site publication. The existing film and
+all teaching/simulation behavior remain. This is the explicit website-only override
+of the historical no-telemetry/no-publication instruction.
+
+For this generation, first run `tools/hosted-brand.py` against the original current
+City viewer with `--source-commit FULL_SHA` and a new output directory. This derives
+presentation/network metadata only; the original input becomes the retained rollback.
+Use that new viewer with `integrate-site.py --brand-update`, alongside the usual
+`--flow-update`, exact source commit and teaching package. Do not mutate an old viewer.
+The upload guard independently reproduces the new City presentation from its retained
+base and rejects changes to scientific files, even after outer manifests are resealed.
+
+Hosted artwork is a separate, exact three-file inventory capped at 2 MiB. Its bytes
+count toward total generation storage; hosted JS/CSS count toward text and route
+closures. All previous hard caps remain. The source offer includes artwork paths,
+bytes and hashes, with binaries served at those pinned paths. The offline edition
+remains unchanged and analytics-free, as does the immutable historical City rollback.
+
+Every current public HTML document has one tag immediately after its head element.
+Collection is enabled only on `fleetlab.pages.dev`; preview/local collection is disabled.
+Hosted pages disclose Google Analytics and Cloudflare hosting. The CSP retains hashed
+inline-script authorization and finite Google origins; no script unsafe-inline/eval.
+Verify the tag and actual CSP on the preview and stable host. Browser byte/tag checks
+cannot establish receipt inside the owner's Google Analytics property.
 
 ## Build and verify
 
@@ -135,7 +163,8 @@ current immutable host and stable alias when validating removed paths.
 ## Hosting trade-offs retained
 
 Public static CORS, the existing chart style policy and the .dev transport posture
-remain. No user accounts, runtime AI, API, remote simulation, analytics, cookies or
-visitor storage were added. Cloudflare receives hosting requests and may receive
+remain. No user accounts, runtime AI, API or remote simulation were added. The October 14
+release adds the owner-requested Google Analytics tag on the public host; Google
+Analytics may use browser cookies. Cloudflare receives hosting requests and may receive
 browser network-error reports. No automation or branch protection was enabled by
 copying the former CI template; that template has been removed.

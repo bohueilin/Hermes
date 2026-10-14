@@ -1,3 +1,4 @@
+import {BRAND_MEDIA,BRAND_TEXT,renderPage,policyFor} from '../hosted/site-transform.mjs';
 import {ORDER_RELEASE,orderPackageProblems} from '../../../playground/fleetlab/tools/delivery-order-package.mjs';
 // Independent upload-time reproduction of the Python integrator's owned files.
 // Keep these transforms aligned with integrate-site.py and prepare-launch.py;
@@ -12,7 +13,7 @@ const HOSTED_FILES=['integration.mjs','integration.css','404.html','not-found.cs
 const CITY_CSP="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'";
 const fingerprint=data=>({bytes:Buffer.byteLength(data),sha256:createHash('sha256').update(data).digest('hex')});
 
-export function integratedRootFiles(teaching){
+export function integratedRootFiles(teaching,{branded=false,rollback}={}){
  const deliveryProblems=[...softwareDeliveryProblems(teaching),...orderPackageProblems(teaching)];
  if(deliveryProblems.length)throw Error(`Software delivery sidecar rejected: ${deliveryProblems.join('; ')}`);
  const marker='<link rel="stylesheet" href="./styles.css">';
@@ -56,18 +57,34 @@ export function integratedRootFiles(teaching){
   '  Cache-Control: public, max-age=31536000, immutable\n'+
   '\n/downloads/teaching-package.json\n'+
   '  Content-Type: application/json\n';
- return new Map([...lessonNavigation(teaching),['index.html',index],
+ const result=new Map([...lessonNavigation(teaching),['index.html',index],
   ['boot.js','import { mountCityEntry } from "./integration.mjs";\n'+teaching.get('boot.js')+'\nmountCityEntry();\n'],
   ['_headers',headers]]);
+ if(branded){
+  for(const [path,data] of teaching)if(path.endsWith('.html'))result.set(path,renderPage(String(result.get(path)??data),{analytics:true}));
+  const lines=headers.trimEnd().split('\n').map(line=>line.trim().startsWith('Content-Security-Policy:')?line.slice(0,line.indexOf(':'))+': '+policyFor(line.slice(line.indexOf(':')+1).trim(),true):line);
+  lines.push('',`/${rollback}/*`,'  ! Content-Security-Policy','  Content-Security-Policy: '+CITY_CSP);
+  result.set('_headers',lines.join('\n')+'\n');
+ }
+ return result;
 }
 
 export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,selection){
  const teaching=buildSite(resolve(sourceRoot,'playground/fleetlab'),{sourceCommit:commit});
- const expected=integratedRootFiles(teaching);
- for(const name of HOSTED_FILES){
+ const branded=selection.hosted_presentation==='fleetlab.hosted-presentation/1.0.0';
+ const expected=integratedRootFiles(teaching,{branded,rollback:selection.rollback?.path});
+ for(const name of [...HOSTED_FILES,...(branded?BRAND_TEXT:[])]){
   const path=resolve(sourceRoot,'apps/fleetlab-city/hosted',name),stat=lstatSync(path);
   if(stat.isSymbolicLink()||!stat.isFile())throw Error('Integration source asset is not regular.');
-  expected.set(name,readFileSync(path));
+  const raw=readFileSync(path);
+  expected.set(name,branded&&name.endsWith('.html')?renderPage(raw.toString(),{analytics:true}):raw);
+ }
+ if(branded)for(const [name,r] of Object.entries(BRAND_MEDIA)){
+  const path=resolve(sourceRoot,r.source),stat=lstatSync(path);
+  if(stat.isSymbolicLink()||!stat.isFile())throw Error('Artwork is not regular.');
+  const data=readFileSync(path),bound=fingerprint(data);
+  if(bound.bytes!==r.bytes||bound.sha256!==r.sha256)throw Error('Artwork source fingerprint differs.');
+  expected.set(name,data);
  }
  const offlineHash=files['downloads/fleetlab-offline.html']?.sha256;
  if(!offlineHash||selection.offline_sha256!==offlineHash)throw Error('Integration offline selection mismatch.');
@@ -83,7 +100,7 @@ export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,sel
   'downloads/fleetlab-offline.html','publication.json']);
  const nonCity=Object.entries(files).filter(([path])=>!path.startsWith('city-explorer/'));
  if(nonCity.length!==allowed.size||nonCity.some(([path])=>!allowed.has(path)))throw Error('Integration teaching inventory has missing or unexpected files.');
- const emittedText=nonCity.filter(([path])=>!path.startsWith('media/')&&!path.startsWith('network-flows/sources/')&&path!=='downloads/fleetlab-offline.html').reduce((sum,[,record])=>sum+record.bytes,0);
+ const emittedText=nonCity.filter(([path])=>!path.startsWith('media/')&&!Object.hasOwn(BRAND_MEDIA,path)&&!path.startsWith('network-flows/sources/')&&path!=='downloads/fleetlab-offline.html').reduce((sum,[,record])=>sum+record.bytes,0);
  if(emittedText>3145728)throw Error('Integration emitted text byte budget exceeded.');
  const integrationText=INTEGRATION_TEXT_PATHS.reduce((sum,path)=>sum+(files[path]?.bytes??0),0);
  if(nonCity.reduce((sum,[,record])=>sum+record.bytes,0)>14360576)throw Error('Integration teaching byte budget exceeded.');

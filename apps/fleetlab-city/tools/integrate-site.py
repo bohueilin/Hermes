@@ -18,6 +18,11 @@ _spec = importlib.util.spec_from_file_location(
 launch = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(launch)
 ASSETS = Path(__file__).resolve().parents[1] / "hosted"
+_brand_spec = importlib.util.spec_from_file_location(
+    "hosted_brand", Path(__file__).with_name("hosted-brand.py")
+)
+brand = importlib.util.module_from_spec(_brand_spec)
+_brand_spec.loader.exec_module(brand)
 EXCEPTIONS = frozenset(("index.html", "boot.js", "_headers"))
 CLIENT_FIXES = frozenset(("src/ui/setup-codec.js", "src/ui/setup-sharing.js", "src/ui/studio.js"))
 FLOW_CHANGED = frozenset((
@@ -113,7 +118,8 @@ def final_route_counts(routes, files):
     for route in routes:
         if route["id"] not in {"nf03", "nf04", "delivery_order"}:
             continue
-        size = sum(files[name]["bytes"] for name in route["paths"])
+        paths = set(route["paths"]) | {name for name in brand.TEXT if name in files}
+        size = sum(files[name]["bytes"] for name in paths)
         if size > 524288:
             raise ValueError(f'{route["id"]} final closure byte budget exceeded')
         counts[f'{route["id"]}_closure_bytes'] = size
@@ -214,12 +220,15 @@ def integrate(
     source_commit=None,
     flow_update=False,
     teaching_package=None,
+    brand_update=False,
 ):
     legacy, viewer, previous, offer, out, offline = map(
         Path, (legacy, viewer, previous, offer, out, offline)
     )
     if out.exists():
         raise ValueError("output already exists")
+    if brand_update and not (teaching_package and source_commit):
+        raise ValueError("hosted brand requires source-bound teaching package")
     if teaching_package and not (flow_update and client_update and source_commit):
         raise ValueError("teaching package requires a frozen flow client and source commit")
     if flow_update and not client_update:
@@ -412,6 +421,8 @@ def integrate(
             {
                 "schema": "fleetlab.publication-selection/1.0.0",
                 "source_commit": source_commit,
+                **({"hosted_presentation": "fleetlab.hosted-presentation/1.0.0"}
+                   if brand_update else {}),
                 "current": report["current"],
                 "rollback": report["rollback"],
                 "offline_sha256": offline_before,
@@ -447,6 +458,8 @@ def integrate(
                     '\n/downloads/teaching-package.json\n'
                     '  Content-Type: application/json\n'
                 )
+        branded = (brand.apply_site(site, report["current"]["path"], report["rollback"]["path"])
+                   if brand_update else {})
         final = launch.inventory(site)
         if package_files and (
             launch.inventory(Path(teaching_package)) != package_files
@@ -456,8 +469,8 @@ def integrate(
         if client_update:
             for name in copied:
                 expected = updates[name]
-                if name in onward:
-                    content = onward[name].encode()
+                if name in branded or name in onward:
+                    content = (branded.get(name) or onward[name]).encode()
                     expected = {
                         "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()
                     }
@@ -488,6 +501,8 @@ def integrate(
             expected_non_city = set(updates) | set(package_files) | INTEGRATION_TEXT | {
                 "downloads/fleetlab-offline.html",
             }
+            if brand_update:
+                expected_non_city |= set(brand.TEXT) | set(brand.MEDIA)
             non_city_paths = {name for name in final if not name.startswith("city-explorer/")}
             if non_city_paths != expected_non_city:
                 raise ValueError("final teaching integration inventory differs")
@@ -495,9 +510,14 @@ def integrate(
                 "downloads/fleetlab-offline.html", "media/fleet-film.mp4",
                 "media/fleet-film-poster.webp",
             } - {name for name in package_files if name.endswith(".json.gz")}
+            if brand_update:
+                text_names -= set(brand.MEDIA)
+            integration_names = INTEGRATION_TEXT | (set(brand.TEXT) if brand_update else set())
             integrated_text = {
                 "emitted_text_bytes": sum(final[name]["bytes"] for name in text_names),
-                "integration_text_bytes": sum(final[name]["bytes"] for name in INTEGRATION_TEXT),
+                "integration_text_bytes": sum(final[name]["bytes"] for name in integration_names),
+                "hosted_artwork_bytes": (sum(final[name]["bytes"] for name in brand.MEDIA)
+                                         if brand_update else 0),
             }
             if integrated_text["emitted_text_bytes"] > 3145728:
                 raise ValueError("final emitted text budget exceeded")
@@ -516,7 +536,9 @@ def integrate(
             "removed_existing": [],
             "offline_sha256": offline_before,
             "offline_download": {"path": offline_path, "url": offline_url, **final[offline_path]},
-            "source_offer_manifest_sha256": launch.sha_file(offer / "manifest.json"),
+            "source_offer_manifest_sha256": launch.sha_file(
+                site / "city-explorer/sources/manifest.json"
+            ),
             "files": final,
             "file_count": len(final),
             "total_bytes": sum(r["bytes"] for r in final.values()),
@@ -561,6 +583,8 @@ def main():
     for name in ("legacy", "viewer", "previous", "offer", "out", "offline"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--readback", type=Path)
+    parser.add_argument("--brand-update", action="store_true",
+                        help="Apply approved hosted artwork and Google tag")
     parser.add_argument("--teaching-package", type=Path,
                         help="Verified NF04-A source package and byte-accounting receipt")
     parser.add_argument(

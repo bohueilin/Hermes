@@ -1,3 +1,4 @@
+import {verifyBrandedCity} from './branded-city.mjs';
 import {readFileSync,readdirSync,lstatSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
@@ -49,7 +50,9 @@ export function verifyStage(site,commit,sourceRoot){
       selection.teaching_package.path!==receiptPath||!sameRecord(selection.teaching_package,files[receiptPath])){
       throw Error('Teaching package manifest, files and publication selection disagree or are missing.');
     }
+    if(selection.hosted_presentation!=='fleetlab.hosted-presentation/1.0.0')throw Error('Current release requires the approved hosted presentation.');
     verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,selection);
+    verifyBrandedCity(site,selection,files,commit);
     execFileSync(process.execPath,[resolve(sourceRoot,'playground/fleetlab/tools/package-proof.mjs'),
       '--check-integrated',site,'--playground',resolve(sourceRoot,'playground/fleetlab'),
       '--source-commit',commit],{stdio:['ignore','pipe','pipe']});

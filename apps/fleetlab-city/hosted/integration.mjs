@@ -103,7 +103,7 @@ export function mountCityEntry(doc = document) {
     node('a', {href:'/downloads/fleetlab-offline', download:'fleetlab-offline.html'}, 'Download offline edition · 2.4 MB ↓'),
     node('a', {href:'/downloads/verify-offline.txt'}, 'Verify the download · SHA-256'),
     doc.querySelector('meta[name="fleetlab-teaching-package"]') && node('a', {href:'/downloads/teaching-package.json'}, 'Teaching source & build receipt'),
-    node('p', {}, 'No app analytics. Cloudflare receives hosting requests and may receive browser network-error reports.'),
+    node('p', {}, 'The downloaded offline edition has no app analytics. No account is required.'),
   ]));
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'owner-contact'}, [
     node('span', {}, 'Built by Bo-Huei Lin · Ideas, questions or collaboration?'),

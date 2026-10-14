@@ -82,6 +82,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
     const target=join(source,'apps/fleetlab-city',name,path);mkdirSync(dirname(target),{recursive:true});cpSync(join(base,path),target);
    }
   }
+  cpSync(join(repository,'apps/fleetlab-city/brand-media'),join(source,'apps/fleetlab-city/brand-media'),{recursive:true});
   const publicNotes=join(source,'apps/fleetlab-city/citylib/public_notes.py');mkdirSync(dirname(publicNotes),{recursive:true});cpSync(join(repository,'apps/fleetlab-city/citylib/public_notes.py'),publicNotes);
   const git=(...args)=>execFileSync('git',['-C',source,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
   git('init','-q');git('add','.');git('-c','user.name=Release test','-c','user.email=release@example.invalid','commit','-qm','bound source');
@@ -96,14 +97,45 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
    'FleetLab offline edition — download verification\n\nSHA-256: '+offlineHash+'\nmacOS/Linux: shasum -a 256 fleetlab-offline.html\nWindows PowerShell: Get-FileHash .\\fleetlab-offline.html -Algorithm SHA256\n\nCompare the full digest before opening. This detects corruption against this website\'s published copy, not independent authenticity. The offline file excludes City Explorer.\n']]);
   const packageFiles=Object.fromEntries([...proof.files].map(([path,data])=>[path,fingerprint(data)]));
   const selection={source_commit:commit,offline_sha256:offlineHash,teaching_package:{path:'downloads/teaching-package.json',...packageFiles['downloads/teaching-package.json']}};
+  // Exercise the actual Python presentation builder against a small recorded viewer.
+  const base=join(root,'city-base'), branded=join(root,'city-branded');
+  writeFiles(base,[['index.html','<!doctype html><html><head></head><body>City</body></html>'],
+   ['app.mjs','export const recorded = true;'],['data/catalog.json','{"recorded":42}'],
+   ['style.css','body{color:#123}'],['_headers',"/city-explorer/*\n  Content-Security-Policy: script-src 'self'; connect-src 'self'\n"],
+   ['network.json',JSON.stringify({origins:['self'],accounts:false,analytics:false,provider_calls:false})]]);
+  writeFiles(base,[['release.json',JSON.stringify({schema:'fleetlab.city-release/1.0.0',scope:'REVIEW_ONLY',public_deployment:'NOT_PERFORMED',
+   compatibility:{viewer:'1.1.0',pack:'fleetlab.city-pack/1.0.0',run:'fleetlab.city-run/1.0.0',metrics:'fleetlab.city-metrics/1.0.0'},files:inventory(base)})]]);
+  const pythonTool=join(source,'apps/fleetlab-city/tools/hosted-brand.py');
+  execFileSync('python3',[pythonTool,'--viewer',base,'--out',branded,'--source-commit',commit]);
+  for(const [key,path] of [['current',branded],['rollback',base]]){
+   const digest=fingerprint(readFileSync(join(path,'release.json'))).sha256;
+   selection[key]={path:'city-explorer/releases/'+digest.slice(0,16),release_sha256:digest};
+   cpSync(path,join(site,selection[key].path),{recursive:true});
+  }
+  selection.hosted_presentation='fleetlab.hosted-presentation/1.0.0';
+  writeFiles(site,[['city-explorer/sources/index.html','<html><head></head><body>Sources</body></html>'],['city-explorer/sources/manifest.json','{"files":{}}']]);
+  execFileSync('python3',['-c',"import runpy,sys; runpy.run_path(sys.argv[1])['apply_site'](*sys.argv[2:])",pythonTool,site,selection.current.path,selection.rollback.path]);
   writeFiles(site,[['publication.json',JSON.stringify(selection)]]);mkdirSync(review);
   const seal=(overrides={})=>writeFileSync(join(review,'integration-manifest.json'),JSON.stringify({files:inventory(site),teaching_package:packageFiles,...overrides}));
   seal();assert.ok(verifyStage(site,commit,source)>0);
-  for(const path of ['network-flows/capacity/index.html','network-flows/software-delivery/index.html','index.html','boot.js','_headers','integration.mjs','integration.css','404.html','not-found.css']){
+  for(const path of ['network-flows/capacity/index.html','network-flows/software-delivery/index.html','index.html','boot.js','_headers','integration.mjs','integration.css','404.html','not-found.css','brand.mjs','brand.css','site-media/fleetlab-logo.png']){
    const original=readFileSync(join(site,path));writeFileSync(join(site,path),Buffer.concat([original,Buffer.from('\nchanged after review')]));seal();
    assert.throws(()=>verifyStage(site,commit,source),/integration.*(?:differ|mismatch)/i,path);
    writeFileSync(join(site,path),original);
   }
+  const recordedPath=join(site,selection.current.path,'data/catalog.json');
+  const recorded=readFileSync(recordedPath),releasePath=join(site,selection.current.path,'release.json'),releaseBytes=readFileSync(releasePath);
+  writeFileSync(recordedPath,'{"recorded":99}');
+  const changedRelease=JSON.parse(releaseBytes);changedRelease.files['data/catalog.json']=fingerprint(readFileSync(recordedPath));
+  writeFileSync(releasePath,JSON.stringify(changedRelease));
+  const oldCurrent={...selection.current},newHash=fingerprint(readFileSync(releasePath)).sha256;
+  selection.current={path:'city-explorer/releases/'+newHash.slice(0,16),release_sha256:newHash};
+  cpSync(join(site,oldCurrent.path),join(site,selection.current.path),{recursive:true});rmSync(join(site,oldCurrent.path),{recursive:true});
+  writeFiles(site,[['publication.json',JSON.stringify(selection)]]);seal();
+  assert.throws(()=>verifyStage(site,commit,source),/scientific files|presentation differs/i,'resealed recording must fail');
+  cpSync(join(site,selection.current.path),join(site,oldCurrent.path),{recursive:true});rmSync(join(site,selection.current.path),{recursive:true});
+  selection.current=oldCurrent;writeFileSync(recordedPath,recorded);writeFileSync(releasePath,releaseBytes);
+  writeFiles(site,[['publication.json',JSON.stringify(selection)]]);
   writeFiles(site,[['unreviewed.js','console.log("unreviewed")']]);seal();
   assert.throws(()=>verifyStage(site,commit,source),/inventory|unexpected/i);rmSync(join(site,'unreviewed.js'));
   for(const marker of [null,undefined]){seal({teaching_package:marker});assert.throws(()=>verifyStage(site,commit,source),/teaching package/i);}

@@ -1,3 +1,4 @@
+import {BRAND_MEDIA,BRAND_TEXT,renderPage} from '../../../apps/fleetlab-city/hosted/site-transform.mjs';
 import {ORDER_RELEASE,ORDER_FILES,ORDER_ENTRIES} from './delivery-order-package.mjs';
 // B-lite is one deduplicated teaching build and one atomic integration, not a new engine.
 // This proof binds bytes and source provenance; it does not authenticate their producer.
@@ -24,6 +25,7 @@ const TOOL_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const COMMIT = /^[a-f0-9]{40}$/;
 const CONTRACT = "src/hermes/fleet/contracts.py";
 const INTEGRATION_ROOTS=["apps/fleetlab-city/hosted","apps/fleetlab-city/tools","apps/fleetlab-city/deploy"];
+const BRAND_ROOT="apps/fleetlab-city/brand-media";
 const INTEGRATION_DEPENDENCY="apps/fleetlab-city/citylib/public_notes.py";
 export const SOURCE_BASELINE=Object.freeze({commit:"cf690bd7d974b8e057560a9a993374a83e4ec769",teaching_bytes:2765799,integration_bytes:188861,integration_inventory_sha256:"106b8113d1d17485423c9fbd2f2fef50a2fa317880c715925b7d30d7400d0e21"});
 function captureIntegration(repository){
@@ -172,7 +174,11 @@ function captureSource(playground) {
   const license = readRegular(repository, "LICENSE", LIMITS.raw_source_and_tools_bytes);
   const labels = labelsFromContracts(repository);
   if (!labels?.length) fail("validation label policy is unavailable");
-  return { inputs, repository, contracts, license, labels, integration:captureIntegration(repository) };
+  const artwork=captureTree(join(repository,BRAND_ROOT),{maxBytes:2*1024*1024,maxFiles:3});
+  const expectedArtwork=new Map(Object.values(BRAND_MEDIA).map(r=>[r.source.split('/').at(-1),r]));
+  if(canonical([...artwork.keys()].sort())!==canonical([...expectedArtwork.keys()].sort()))fail('hosted artwork inventory mismatch');
+  for(const [name,data] of artwork){const r=expectedArtwork.get(name);if(bytes(data)!==r.bytes||digest(data)!==r.sha256)fail('hosted artwork fingerprint mismatch');}
+  return { inputs, repository, contracts, license, labels, integration:captureIntegration(repository),artwork };
 }
 
 function sourceIdentity(playground, captured, sourceCommit) {
@@ -185,11 +191,12 @@ function sourceIdentity(playground, captured, sourceCommit) {
   if (commit !== sourceCommit) fail("source commit identity mismatch");
   const inputs = new Map([...captured.inputs].map(([path, data]) => [relative(captured.repository, join(playground, path)).split(sep).join("/"), data]));
   for(const [path,data] of captured.integration)inputs.set(path,data);
+  for(const [name,data] of captured.artwork)inputs.set(`${BRAND_ROOT}/${name}`,data);
   inputs.set(CONTRACT, captured.contracts);
   inputs.set("LICENSE", captured.license);
   const prefix = relative(captured.repository, playground).split(sep).join("/");
   const committedPaths = git(captured.repository, ["ls-tree", "-r", "-z", "--name-only", sourceCommit, "--",
-    ...["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "index.html", "styles.css"].map(path => `${prefix}/${path}`), CONTRACT, "LICENSE", ...INTEGRATION_ROOTS, INTEGRATION_DEPENDENCY])
+    ...["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "index.html", "styles.css"].map(path => `${prefix}/${path}`), CONTRACT, "LICENSE", ...INTEGRATION_ROOTS, INTEGRATION_DEPENDENCY, BRAND_ROOT])
     .split("\0").filter(Boolean).sort();
   if (canonical(committedPaths) !== canonical([...inputs.keys()].sort())) fail("source commit input inventory mismatch");
   for (const [path, data] of inputs) {
@@ -223,6 +230,7 @@ function prepare(playground, sourceCommit, development) {
   const current = captureSource(playground);
   assertEqual(current.inputs, captured.inputs, "source capture");
   assertEqual(current.integration,captured.integration,"integration source capture");
+  assertEqual(current.artwork,captured.artwork,"hosted artwork capture");
   if (!current.contracts.equals(captured.contracts)) fail("validation policy changed during capture");
   if (!current.license.equals(captured.license)) fail("license changed during capture");
   return { playground, captured, identity, site, offline };
@@ -246,7 +254,7 @@ function assemble({ playground, captured, identity, site, offline }) {
     return [path, text];
   }));
   const { raw: archiveRaw, archive } = createSourceArchive({ schema: "fleetlab.teaching-source/1.1.0", source: identity,
-    files: originalFiles, integration:{owner:"existing-hosted-integration-source",files:Object.fromEntries([...captured.integration].map(([path,data])=>[path,data.toString("utf8")])),reproduction:"Restore these repository-relative files at the source commit. integrate-site.py imports prepare-launch.py and citylib/public_notes.py. Other City source/data remain in the separately published City source offer; no teaching source was transferred to this owner."}, validation: { repository_path: CONTRACT, contracts_source: captured.contracts.toString("utf8"), required_labels: captured.labels }, media,
+    files: originalFiles, integration:{owner:"existing-hosted-integration-source",media:BRAND_MEDIA,files:Object.fromEntries([...captured.integration].map(([path,data])=>[path,data.toString("utf8")])),reproduction:"Restore these repository-relative files at the source commit. integrate-site.py imports prepare-launch.py and citylib/public_notes.py. Other City source/data remain in the separately published City source offer; no teaching source was transferred to this owner."}, validation: { repository_path: CONTRACT, contracts_source: captured.contracts.toString("utf8"), required_labels: captured.labels }, media,
     license: { repository_path: "LICENSE", text: captured.license.toString("utf8") },
     reproduction: { runtime: process.version,
       commands: ["git init <restored-source>", "node <restored-source>/tools/pack.mjs --site <output-directory> --playground <restored-source>", "node <restored-source>/tools/pack.mjs --out <offline.html> --playground <restored-source>"],
@@ -269,7 +277,7 @@ function assemble({ playground, captured, identity, site, offline }) {
   const receipt = { schema: "fleetlab.teaching-package/2.0.0", topology: "ONE_DEDUPLICATED_BUILD_ONE_ATOMIC_RELEASE", source: identity,
     authenticity: "NOT_AUTHENTICATED", scope: "SYNTHETIC_TEACHING_ONLY", deployment_permission: "NONE",
     capacity_release: { path: CAPACITY_RELEASE_PATH, ...fingerprint(site.get(CAPACITY_RELEASE_PATH)), release_digest: release.release_digest },
-    integration_source:{owner:"existing-hosted-integration-source",inside_teaching_3mib_gate:false,bytes:total(captured.integration),
+    integration_source:{owner:"existing-hosted-integration-source",hosted_artwork_bytes:total(captured.artwork),inside_teaching_3mib_gate:false,bytes:total(captured.integration),
       baseline:{source_commit:SOURCE_BASELINE.commit,bytes:SOURCE_BASELINE.integration_bytes,inventory_sha256:SOURCE_BASELINE.integration_inventory_sha256},
       delta_bytes:total(captured.integration)-SOURCE_BASELINE.integration_bytes,
       inventory_sha256:digest(canonical(Object.fromEntries([...captured.integration].map(([path,data])=>[path,fingerprint(data)])))),
@@ -334,7 +342,10 @@ export function checkPackageProof({ packageDir, ...options }) {
 /** Integration owns three root files; all other teaching bytes, the offline edition and source offer stay exact. */
 export function checkIntegratedPackage({ site, playground, sourceCommit }) {
   const prepared = prepare(playground, sourceCommit, false), expected = assemble(prepared);
+  const publication = JSON.parse(readRegular(site, "publication.json", LIMITS.package_metadata_bytes));
+  const branded=publication.hosted_presentation==='fleetlab.hosted-presentation/1.0.0';
   const onward=lessonNavigation(prepared.site);
+  if(branded)for(const [path,data] of prepared.site)if(path.endsWith('.html'))onward.set(path,renderPage(String(onward.get(path)??data),{analytics:true}));
   // The outer integration verifier inventories City and retained releases. Read only owned teaching paths here.
   for (const [path, data] of [...prepared.site, ...expected.files, ["downloads/fleetlab-offline.html", prepared.offline]]) {
     if (INTEGRATION_OWNED.has(path)) continue;
@@ -344,6 +355,10 @@ export function checkIntegratedPackage({ site, playground, sourceCommit }) {
     .map(([path, data]) => [`network-flows/sources/${path}`, data]));
   assertEqual(offers, new Map([[expected.receipt.source_offer.path, expected.files.get(expected.receipt.source_offer.path)]]), "integrated source offer");
   const integrated=new Map([...prepared.site,...onward]);
+  if(branded){
+    for(const path of BRAND_TEXT){const data=readRegular(site,path,LIMITS.emitted_text_bytes);if(!data.equals(prepared.captured.integration.get(`apps/fleetlab-city/hosted/${path}`)))fail('hosted brand source mismatch');integrated.set(path,data);}
+    for(const [path,r] of Object.entries(BRAND_MEDIA))if(!readRegular(site,path,r.bytes).equals(prepared.captured.artwork.get(r.source.split('/').at(-1))))fail('hosted artwork bytes differ');
+  }
   for(const path of ["index.html","boot.js","_headers","integration.mjs","integration.css","not-found.css","publication.json","404.html","downloads/fleetlab-offline.sha256","downloads/verify-offline.txt"]) {
     try { integrated.set(path,readRegular(site,path,LIMITS.emitted_text_bytes)); }
     catch(error) { if(error.code!=="ENOENT")throw error; }
@@ -351,7 +366,6 @@ export function checkIntegratedPackage({ site, playground, sourceCommit }) {
   integrated.set(RECEIPT_PATH,expected.files.get(RECEIPT_PATH));
   const finalTeaching=new Map([...prepared.site,[RECEIPT_PATH,expected.files.get(RECEIPT_PATH)]]);
   const integratedCounts=measureIntegratedText(finalTeaching,integrated);
-  const publication = JSON.parse(readRegular(site, "publication.json", LIMITS.package_metadata_bytes));
   const pointer = { path: RECEIPT_PATH, ...fingerprint(expected.files.get(RECEIPT_PATH)) };
   if (publication.source_commit !== sourceCommit || canonical(publication.teaching_package) !== canonical(pointer)) fail("publication teaching package pointer mismatch");
   return {...expected,integrated_counts:integratedCounts};

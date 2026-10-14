@@ -1,0 +1,49 @@
+// Hosted presentation. No simulation, result, map or playback logic is changed.
+const media='/site-media/';
+function node(doc,tag,attrs={},children=[]){const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);for(const c of [children].flat())if(c!=null)n.appendChild(typeof c==='string'?doc.createTextNode(c):c);return n;}
+export function decorateDesign(doc=document){
+ const el=(...args)=>node(doc,...args);
+ for(const brand of doc.querySelectorAll('header .studio-monogram,header .delivery-brand,header a.brand')){
+  if(brand.getAttribute('data-art-logo'))continue;
+  brand.setAttribute('data-art-logo','true');brand.classList.add('design-brand');brand.setAttribute('aria-label','FleetLab home');
+  brand.replaceChildren(el('img',{src:media+'fleetlab-logo.png',alt:'FleetLab — Autonomous Simulation Lab',width:'2172',height:'724',decoding:'async'}));
+ }
+ const home=doc.querySelector('.studio-overview');
+ if(home&&!doc.getElementById('design-readiness')){
+  const filmButton=el('button',{type:'button',class:'design-secondary'},'Watch the concept film ↓');
+  filmButton.addEventListener('click',()=>{
+   const film=home.querySelector('.welcome-visual');
+   film?.scrollIntoView({block:'center'});
+   const control=film?.querySelector('.film-control');
+   // Explicit visitor action delegates to the existing film controller, including replay.
+   if(/^(Play|Replay) concept film$/.test(control?.getAttribute('aria-label')||''))control.click();
+   control?.focus({preventScroll:true});
+  });
+  const feature=el('section',{id:'design-readiness',class:'design-readiness','aria-label':'Readiness, made visible'},[
+   el('img',{class:'design-readiness-image',src:media+'readiness.jpg',alt:'Readiness, made visible. Explore the decisions behind fleet availability. An illustrative depot with four autonomous vehicles under a green canopy.',width:'1672',height:'941',fetchpriority:'high',decoding:'async'}),
+   el('div',{class:'design-art-caption'},[
+    el('div',{},[el('p',{class:'design-eyebrow'},'A SMALL EXPERIMENT. A VISIBLE TRADE-OFF.'),el('p',{class:'design-art-description'},'Follow the energy, data and decisions that get a vehicle ready for its next ride.')]),
+    el('div',{class:'design-art-actions'},[el('a',{href:'/network-flows/capacity/',class:'design-primary'},'Explore depot operations ↗'),filmButton]),
+   ]),el('p',{class:'design-art-note'},'Independent simulation · Concept artwork, not a recorded depot or simulation result.'),
+  ]);
+  home.insertBefore(feature,home.firstChild);
+ }
+ const feature=doc.querySelector('.network-flows-feature');
+ if(feature&&!doc.getElementById('design-network')){
+  feature.insertBefore(el('figure',{id:'design-network',class:'design-network'},[
+   el('img',{src:media+'shared-delivery.jpg',alt:'Same work. Different order. A shared source sends data through one link to four concept vehicles. Make the trade-off visible.',width:'1672',height:'941',loading:'lazy',decoding:'async'}),
+   el('figcaption',{},'NETWORK FLOWS · Concept visual. Shared work does not guarantee a better outcome for every vehicle.'),
+  ]),feature.firstChild);
+ }
+ const hero=doc.querySelector('.delivery-hero')||doc.querySelector('#order-root .hero');
+ if(hero&&!doc.getElementById('design-network-lesson')){
+  const art=el('details',{id:'design-network-lesson',class:'design-network-lesson'},[
+   el('summary',{},'Same work. Different order. · View the concept artwork'),
+   el('figure',{},[el('img',{src:media+'shared-delivery.jpg',alt:'Concept visual of four vehicles sharing one source and delivery link.',width:'1672',height:'941',loading:'lazy',decoding:'async'}),el('figcaption',{},'Illustration only. Use the checked model below to compare outcomes and individual delays.')]),
+  ]);hero.appendChild(art);
+ }
+}
+if(typeof document!=='undefined'){
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>decorateDesign(),{once:true});
+ else decorateDesign();
+}

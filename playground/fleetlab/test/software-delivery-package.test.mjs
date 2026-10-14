@@ -46,6 +46,7 @@ test('300000-byte scratch NF04-only module has a valid emitted build path withou
     const base=join(repository,'apps/fleetlab-city',name);
     for(const file of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path)))write(scratch,`apps/fleetlab-city/${name}/${file}`,readFileSync(join(base,file)));
   }
+  cpSync(join(repository,'apps/fleetlab-city/brand-media'),join(scratch,'apps/fleetlab-city/brand-media'),{recursive:true});
   const before=buildSite(source), offline=buildHtml(source);
   const prefix='export function startSoftwareDelivery() {}\n';
   write(source,'src/ui/software-delivery-app.js',prefix+' '.repeat(300000-prefix.length));
