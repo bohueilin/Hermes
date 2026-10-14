@@ -246,7 +246,7 @@ test('welcome names the teaching boundary before a visitor enters a model',()=>{
 test('Home document order is the phone reading order, with no CSS reordering',()=>{
  const x=setup();try{
   const main=x.studio.element.querySelector('main.studio-overview'),shape=node=>node.children.map(c=>`${c.localName}.${c.getAttribute('class')}`);
-  assert.deepEqual(shape(main),['section.studio-film-hero','nav.home-browse']);
+  assert.deepEqual(shape(main),['section.studio-film-hero','section.home-learning-path','nav.home-browse']);
   assert.deepEqual(shape(main.children[0]),['div.film-copy','section.start-points','div.welcome-visual','div.film-caption'],'the caption follows the film inside the hero');
   const source=readFileSync(new URL('../styles.css',import.meta.url),'utf8'),css=source.replace(/\/\*[\s\S]*?\*\//g,''),desktop=mediaBlockRules(source,1000,'.studio-film-hero');
   for(const child of main.children[0].children)assert.ok(desktop.some(r=>/grid-(area|column)\s*:/.test(r.body)&&r.selectors.some(x=>child.matches(x))),`${child.getAttribute('class')} has a desktop placement`);
@@ -316,4 +316,15 @@ test('direct lesson routes in sequence: a played lesson leaves nothing behind in
     x.studio.applyRoute('#/street-lab');
     assert.doesNotMatch(stray(),/null/);
   }finally{x.studio.destroy();x.restore();}
+});
+
+test('home learning paths open the intended model without starting a run',()=>{
+ const x=setup();try{
+  const links=x.studio.element.querySelectorAll('.home-learning-path a');
+  assert.equal(links.length,3,'three direct, named learning paths');
+  links[0].click();assert.equal(x.studio.flows.getState().result,null);assert.equal(x.studio.flows.element.hidden,false);
+  x.studio.navigate('overview');links[1].click();assert.equal(x.studio.operations.getState().result,null);assert.equal(x.studio.operations.element.hidden,false);
+  x.studio.navigate('overview');links[2].click();assert.equal(x.studio.element.getAttribute('data-page'),'approach');
+  assert.equal(x.store.getState().run.status,'idle');
+ }finally{x.studio.destroy();x.restore();}
 });

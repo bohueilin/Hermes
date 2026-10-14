@@ -1,3 +1,4 @@
+import {conceptPrimer} from './concept-primer.js';
 import {el} from './dom.js';
 import {flowScenario,flowComparisonSteps,FLOW_RULES} from '../model/depot-flow.js';
 import {FLOW_VERSIONS,FLOW_TRUST} from '../model/depot-flow-contract.js';
@@ -30,7 +31,7 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
  const changeSetup=el('details',{class:'flow-change'},[el('summary',{},'Change the setup'),controls]);
  const guessDetail=el('details',{class:'flow-guess-detail'},[el('summary',{},'Optional guess'),el('label',{class:'flow-guess'},[guessLabel,guess])]);
  let setupTable=el('div'),chips=el('div');
- const element=el('main',{class:'depot-flow-lab'},[hero,rulesDetail,guessDetail,chips,el('p',{class:'flow-boundary'},'Constructed teaching example: vehicles, workloads, capacities and deadlines are invented for this lesson, not measurements of a real depot.'),output,method]);
+ const element=el('main',{class:'depot-flow-lab'},[hero,conceptPrimer('depot'),rulesDetail,guessDetail,chips,el('p',{class:'flow-boundary'},'Constructed teaching example: vehicles, workloads, capacities and deadlines are invented for this lesson, not measurements of a real depot.'),output,method]);
  const live=createLiveRegion(element);
  const announce=text=>{const line=`${isOld()?`Previous setup, run ${result.run_id}. `:''}${text}`;if(live.node.textContent!==line)live.announce(line);};
  const isOld=()=>result&&(JSON.stringify(options)!==JSON.stringify(resultOptions)||attempt?.id!==result.run_id);

@@ -1,3 +1,4 @@
+import {conceptPrimer} from './concept-primer.js';
 import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView} from './teaching-frames.js';
 import {teachingResult} from './teaching-projection.js';
 import {displayText,setBusy} from './display-text.js';
@@ -59,6 +60,7 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
  const results=el('section',{class:'street-results'},[eyebrow('3 / READ THE TRADE-OFF'),resultHeading,el('p',{},'Run a scenario to see completed and unfinished journeys together.')]);
  const element=el('main',{class:'street-lab',id:'street-lab'},[
   el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),lessonFrame,runButton,glossaryView(),el('details',{},[el('summary',{},'Exact values'),identity.element])]),
+  conceptPrimer('street'),
   presetRow,el('div',{class:'street-layout'},[settings,el('div',{class:'street-main'},[replay,inspect])]),results,
   el('section',{class:'street-learning'},[eyebrow('WHAT THIS MODEL HELPS YOU ASK'),el('h2',{},'Connect the street problem to an operating decision.'),el('div',{class:'street-learning-grid'},[
    ['Market lead','Is supply unavailable or simply stuck?','Read assigned, boarded and completed populations. Inspect time tied up in roads, pickup berths and turnaround before adding more AVs.'],

@@ -1,3 +1,4 @@
+import {conceptPrimer} from './concept-primer.js';
 import {LESSON_FRAMES,frameView} from './teaching-frames.js';
 import {routeHref,followLink} from './routes.js';
 import {CHOOSER_PRESET_IDS,differenceText} from './experiment.js';
@@ -75,6 +76,7 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
     el('section',{class:'network-flows-feature','aria-labelledby':'network-flows-title'},[
       el('p',{class:'eyebrow'},'START WITH DEPOT OPERATIONS'),el('h2',{id:'network-flows-title'},'A parked vehicle still has work to do.'),
       el('p',{class:'network-feature-scope'},'Explore how scheduling, shared resources and required work affect vehicle readiness.'),
+      conceptPrimer('depot'),
       el('div',{class:'network-question-list'},[
         ['two-vehicles','Why is the vehicle still waiting?','A charged battery is only one prerequisite. Follow upload and local work.'],
         ['crossed-priorities','Whose work should go first?','Urgency and short jobs pull in different directions. See who benefits and who waits longer.'],

@@ -174,7 +174,7 @@ test('first screen puts the question, setup table and Compare before the explana
     assert.deepEqual(shape(hero.querySelector('div.flow-setup-card')),['div.flow-table','div.flow-actions','p.flow-run-help','p.flow-status','details.flow-change']);
     assert.ok(hero.querySelector('div.flow-table > table.flow-setup-table'));
     assert.deepEqual(hero.querySelector('div.flow-actions').children.map(b=>b.textContent),['Compare the three rules','Cancel']);
-    assert.deepEqual(shape(lab.element),['section.flow-hero','details.flow-rules','details.flow-guess-detail','div.teaching-chips','p.flow-boundary','section.flow-output','section.flow-method','div.fl-sr-only']);
+    assert.deepEqual(shape(lab.element),['section.flow-hero','details.concept-primer','details.flow-rules','details.flow-guess-detail','div.teaching-chips','p.flow-boundary','section.flow-output','section.flow-method','div.fl-sr-only']);
     for(const old of ['.flow-setup','.flow-input-board','.flow-workbench'])assert.ok(!lab.element.querySelector(old),old);
     const rules=lab.element.querySelector('details.flow-rules');assert.equal(rules.querySelector('summary').textContent,'How the three rules work');
     assert.deepEqual(rules.querySelectorAll('article h2').map(h=>h.textContent),['First come, first served','Equal uplink share','Departure deadline first']);

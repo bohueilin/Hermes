@@ -1,3 +1,4 @@
+import {conceptPrimer,learningGlyph} from './concept-primer.js';
 import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView} from './teaching-frames.js';
 import {modelHeader,NON_AFFILIATION} from './model-identity.js';
 import {isReducedMotion} from './store.js';
@@ -55,6 +56,14 @@ function overview(navigate, visit, film) {
         el("p",{class:"creator-credit"},"I build FleetLab to make operational questions concrete: bounded models, visible trade-offs and reproducible evidence."),
       ]),
     ]),
+      el('section',{class:'home-learning-path','aria-labelledby':'learning-path-title'},[
+        el('div',{class:'learning-path-heading'},[eyebrow('THREE WAYS INTO THE SYSTEM'),el('h2',{id:'learning-path-title'},'Start with a question. Leave with a trade-off.')]),
+        el('div',{class:'learning-path-grid'},[
+          ['capacity','01 / SHARED RESOURCES','What is the vehicle waiting for?','Follow the work that must finish between rides. Find the constraint before adding capacity.','Start with depot readiness',{page:'flows',lesson:'two-vehicles'}],
+          ['service','02 / RIDER SERVICE','What changes across a fleet day?','Connect vehicles, demand and depot queues. See who is served, who waits and what changes.','Explore a fleet day',{page:'simulation'}],
+          ['evidence','03 / MODEL LIMITS','What does the result establish?','Read the assumptions and checks. Keep a useful teaching result separate from real-world authority.','Read the approach',{page:'approach'}],
+        ].map(([kind,label,title,text,cta,route])=>el('article',{},[learningGlyph(kind),eyebrow(label),el('h3',{},title),el('p',{},text),el('a',{href:routeHref(route),on:{click:event=>followLink(event,()=>visit(route))}},[cta,el('span',{'aria-hidden':'true'},' ↗')])]))),
+      ]),
     el("nav",{class:"home-browse","aria-label":"Browse"},[pageLink("Fleet day","simulation",navigate),pageLink("Street lab","streets",navigate),pageLink("Browse all topics  →","catalog",navigate),pageLink("About & limits  →","approach",navigate)]),
   ]);
 }
@@ -143,6 +152,7 @@ export function mountStudio(app) {
   const records=simulationCatalog();
   const lessonPage=record=>record.target==='flows'?'flows':record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
   const catalog=createSimulationCatalog({labLinks,hrefForLesson:record=>routeHref({page:lessonPage(record),lesson:record.id}),onLesson:record=>visit({page:lessonPage(record),lesson:record.id})});
+  const pairedPrimer=conceptPrimer('paired');
   const workspaceIntro=el('section',{class:'workspace-intro',tabindex:'-1'});
   const workspaceIdentity=modelHeader('Four-area experiments','Schematic four-area Bay Area zones (San Francisco, Peninsula, San Jose, East Bay); not road geometry',MODEL_VERSION);
   const workspaceMain=el('main',{class:'studio-workspace'},[workspaceIntro,root]);
@@ -156,7 +166,7 @@ export function mountStudio(app) {
   ]);
   let workspaceLesson=null,lessonSetup=null;
   const setupKey=state=>JSON.stringify([state.scenario,state.experiment.draft]);
-  function renderLesson(state){workspaceIntro.replaceChildren(frameView(LESSON_FRAMES[workspaceLesson.id],{title:workspaceLesson.title,heading:'h1',seeds:state.experiment.draft?.seedCount,edited:setupKey(state)!==lessonSetup}),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),glossaryView());}
+  function renderLesson(state){workspaceIntro.replaceChildren(frameView(LESSON_FRAMES[workspaceLesson.id],{title:workspaceLesson.title,heading:'h1',seeds:state.experiment.draft?.seedCount,edited:setupKey(state)!==lessonSetup}),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),glossaryView(),pairedPrimer);}
   let current='overview',initialized=false,capacityLoaded=false,activeMain=null,lastHandledHash=null,applying=false;
   const baseUrl=()=>browserWindow?.location?.href?.split('#')[0]??'';
   const shareLink=href=>{writeAddress(href,true);lastHandledHash=href;};
@@ -212,7 +222,7 @@ export function mountStudio(app) {
       if(!store.getState().present.on)present.open();
     }
     if(workspace){workspaceIntro.appendChild(el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));updateWorkspaceIdentity(store.getState());}
-    if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Four-area experiments';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));}
+    if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Four-area experiments';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),pairedPrimer);}
     if(page==='streets')streets.refresh();
     focusMain(workspace?workspaceMain:page==='approach'?product:page==='simulation'?operations.element:page==='streets'?streets.element:page==='scale'?scale.element:page==='flows'?flows.element:page==='catalog'?catalog.element:home,ROUTES[page].title);
   }
