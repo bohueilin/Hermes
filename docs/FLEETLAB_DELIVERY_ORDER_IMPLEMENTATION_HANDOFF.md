@@ -165,3 +165,7 @@ Use this bounded lesson to discuss objective selection, shared resources and ind
 1. Review the live worked example and Close targets, including V2 and the assignment matrix.
 2. Collect independent comprehension and physical-device observations using the script above.
 3. Before expanding the model, define measured workloads and the next objective/domain; resolve receipt headroom. No new city or broader optimizer is preapproved by this handoff.
+
+## Subsequent visual refinement release
+
+The later October 13 visual release preserves the Delivery order model and checked study identities. It updates shared Home/catalog styling, conceptual teaching diagrams and the offline edition. See [the visual implementation handoff](FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-13.md) for current production identities and validation. Earlier release facts above remain historical.

@@ -23,6 +23,8 @@ The Delivery order route is `/network-flows/delivery-order/`. Its explicit route
 
 ## Build and verify
 
+The subsequent October 13 Argon visual refinement uses the same release workflow and adds the explicitly reviewed `src/ui/concept-primer.js` module to `FLOW_ADDED`. It updates the offline edition while preserving all City payload bytes. See [the visual implementation handoff](FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-13.md) for the current production readback and remaining qualification limits. Continue to reject any undeclared module; do not broaden the allowlist during packaging.
+
 Use the project's Python 3.11 environment for these tools. The Mac's default
 Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
 
