@@ -4,6 +4,8 @@
 
 **Date:** October 13, 2026, America/Los_Angeles.
 
+**Implementation status:** Published from `f8b3b27` after independent review and final validation. See [the implementation and release handoff](../../FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md) for actual counts, target exceptions and remaining device/human observations. Original proposal language below is retained as design context; it is not a claim that this work is still pending.
+
 **Goal:** Make NF04's explanation dependable, then let a visitor choose a delivery order, compare individual consequences, and inspect an exact optimum within a small, explicitly bounded scheduling problem.
 
 **Architecture:** Preserve NF04's numerical engine, verifier and published studies. Add a separate compact interval model for serial local delivery after one cold fetch, an independent checker, and exhaustive evaluation of at most 24 orders. A worker supplies accepted records to a read-only visual projection; packaging retains one deduplicated teaching build and one atomic website generation.
@@ -411,7 +413,7 @@ All paths below are relative to `Hermes-fleetlab repository root`. Use an isolat
 
 **Interfaces:** Keep `createDeliveryProjection(record)`, `createDeliveryPlayer(options)`, `createDeliveryPage(options)` stable. Add `page.suspend()` for lifecycle cleanup; `page.cancel()` remains explicit user cancellation. Add projection `whole_copies:{complete,total}`. Page, static snapshots and concise announcements consume the same accepted projection.
 
-- [ ] Add a failing projection regression, then run it against current code:
+- [x] Add a failing projection regression, then run it against current code:
 
 ```js
 const p = createDeliveryProjection(runDelivery(deliveryInput(), 'cold'));
@@ -420,8 +422,8 @@ assert.equal(p.at(96000, 'V1').chain.receipt, 'active');
 assert.equal(p.at(288000, 'V1').chain.receipt, 'complete');
 ```
 
-- [ ] Add failing lifecycle assertions using existing `installFakeDom`/`createDeliveryPage` harness: accepted status survives `suspend()`; a loading suspension terminates pending work; resolving that old promise cannot replace accepted results. Reselecting the accepted preset does not label it Previous.
-- [ ] Implement receipt state from accepted selected-vehicle grants, stable task ordering, whole-copy facts and causal captions. Implement status-neutral suspension and intent-aware focus. Provide raw and grouped exact byte values in details.
+- [x] Add failing lifecycle assertions using existing `installFakeDom`/`createDeliveryPage` harness: accepted status survives `suspend()`; a loading suspension terminates pending work; resolving that old promise cannot replace accepted results. Reselecting the accepted preset does not label it Previous.
+- [x] Implement receipt state from accepted selected-vehicle grants, stable task ordering, whole-copy facts and causal captions. Implement status-neutral suspension and intent-aware focus. Provide raw and grouped exact byte values in details.
 
 ```js
 // Projection rule; no allocation is calculated here.
@@ -432,9 +434,11 @@ receipt = received ? 'complete'
 // Keep load-token invalidation even when no worker remains.
 ```
 
-- [ ] Add page tests for arm/vehicle/state names, seconds-based `aria-valuetext`, counterexample causal anchors plus outcome deltas, short committed announcements, 288/348 s event ordering, ended Replay and restricted static controls. Implement R3–R8 behavior without modifying the numerical modules.
-- [ ] Add readable static boot HTML; replace it after successful mounting. Test absent module, bad manifest and failed worker as separate paths. Complete measured typography/reflow/touch fixes.
-- [ ] Run `node --test playground/fleetlab/test/software-delivery-{view,page,player,app}.test.mjs` and `node playground/fleetlab/tools/software-delivery-study.mjs --check`. Expect all new assertions to pass and 16 existing study identities to remain exact. Validate actual focus/navigation/preferences in browser before marking R7 complete.
+- [x] Add page tests for arm/vehicle/state names, seconds-based `aria-valuetext`, counterexample causal anchors plus outcome deltas, short committed announcements, 288/348 s event ordering, ended Replay and restricted static controls. Implement R3–R8 behavior without modifying the numerical modules.
+- [x] Add readable static boot HTML; replace it after successful mounting. Bad-manifest boot and worker-failure paths are tested; typography/reflow/touch fixes were measured.
+- [x] Observe actual unavailable boot-module loads in a private Chromium fixture for both NF04 and Delivery order. Heading, scope and Home remain readable; no accepted-result claim appears. The intentionally missing module returns 404; the public stage is unchanged.
+- [x] Focused correction tests, full teaching suite and all 16 original NF04 study identities pass. Actual browser focus and navigation checked.
+- [ ] R7 native preference/accessibility qualification: OS reduced-motion/Save-Data, screen reader and actual 200% zoom remain open; passing automated preference tests do not close this item.
 
 ### Task 2 — Add scoped onward navigation and pin the corrected baseline
 
@@ -442,14 +446,14 @@ receipt = received ? 'complete'
 
 **Interfaces:** Destination discovery is generation-bound: NF04's sidecar/route must exist in the exact integrated inventory before adding its NF03 onward link. Python integration and JS reconstruction must produce identical transformed bytes.
 
-- [ ] Extend existing integration fixtures with assertions for NF03 footer → NF04 when present, no dead link when absent, and exact changed-path accounting. Add a deliberate unlisted NF03 byte mutation and confirm the existing guard rejects it.
-- [ ] Implement the narrow integration transform, not a rewrite of NF03 source or a generic unbounded exception. Count its final closure bytes and archive all changed integration originals.
-- [ ] Run `node --test apps/fleetlab-city/test/{hosted-integration,integration-assets}.test.mjs`, `python -m unittest discover -s apps/fleetlab-city/tests -p test_integration.py` and `node --test playground/fleetlab/test/{software-delivery-package,package-proof}.test.mjs`.
-- [ ] Complete the correction-wave browser/package gates, then record the corrected source commit, measured counters, protected module hashes and study digests. Any later Delivery order changes compare against this correction baseline. Commit only the reviewed correction scope after gates; do not include owner documents.
+- [x] Extend existing integration fixtures with assertions for NF03 footer → NF04 when present, no dead link when absent, and exact changed-path accounting. Add a deliberate unlisted NF03 byte mutation and confirm the existing guard rejects it.
+- [x] Implement the narrow integration transform, not a rewrite of NF03 source or a generic unbounded exception. Count its final closure bytes and archive all changed integration originals.
+- [x] Run `node --test apps/fleetlab-city/test/{hosted-integration,integration-assets}.test.mjs`, `python -m unittest discover -s apps/fleetlab-city/tests -p test_integration.py` and `node --test playground/fleetlab/test/{software-delivery-package,package-proof}.test.mjs`.
+- [x] Complete the correction-wave browser/package gates, then record the corrected source commit, measured counters, protected module hashes and study digests. Any later Delivery order changes compare against this correction baseline. Commit only the reviewed correction scope after gates; do not include owner documents.
 
 ### Task 3 — Freeze the bounded contract and build independent interval checking
 
-**Create:** `playground/fleetlab/src/model/delivery-order-contract.js`, `delivery-order.js`, `delivery-order-verify.js`; `playground/fleetlab/test/delivery-order-{contract,engine,verify,independence}.test.mjs`; `docs/FLEETLAB_DELIVERY_ORDER_CONTRACT.md`.
+**Create:** `playground/fleetlab/src/model/delivery-order-contract.js`, `delivery-order.js`, `delivery-order-verify.js`; `playground/fleetlab/test/delivery-order-{model,independence}.test.mjs`; `docs/FLEETLAB_DELIVERY_ORDER_CONTRACT.md`.
 
 **Interfaces:**
 
@@ -463,7 +467,7 @@ verifyOrderRecord(record) -> {
 
 Tests construct the three public inputs explicitly from `deliveryInput()` plus arrivals [0,30,60,90] seconds and their stated deadlines; no model-to-data import. The released NF04 default has all arrivals at zero, so copying it without those arrival edits would create a different input identity. Existing canonical/digest utilities and NF04 input normalization may be reused. The new contract performs all domain restrictions before producer or checker work.
 
-- [ ] Write the hand-calculated default test before implementation:
+- [x] Write the hand-calculated default test before implementation:
 
 ```js
 const delivery = deliveryInput();
@@ -480,10 +484,10 @@ assert.equal(r.metrics.late_ms_total, 0);
 assert.equal(verifyOrderRecord(r).ok, true);
 ```
 
-- [ ] Run the new tests and confirm missing implementation fails. Add domain rejection cases: fifth request, duplicate order ID, changed cap, arrival 96,001 ms, failure outcome, nonempty inventory, unsafe/accessor/sparse input. Add inclusive 282,000 versus 281,500 ms deadline tests.
-- [ ] Implement producer as serial interval accumulation: fetch completion 96,000; for each order member add 48,000 receipt, independently append 60,000 check and 30,000 activation; calculate integer metrics from outcomes. Keep record vehicles ID-sorted.
-- [ ] Implement checker independently using the fixed position equations and direct interval/capacity/precedence checks. Reject unknown fields and overlarge canonical records before traversal. Hash only after structural checks. Add mutations with recomputed digests to prove validation is not just hash comparison.
-- [ ] Add an import-closure test forbidding checker imports of producer, search, data or UI. Run `node --test playground/fleetlab/test/delivery-order-{contract,engine,verify,independence}.test.mjs`. Expect positive and negative fixtures to pass without altering NF04 hashes.
+- [x] Run the new tests and confirm missing implementation fails. Add domain rejection cases: fifth request, duplicate order ID, changed cap, arrival 96,001 ms, failure outcome, nonempty inventory, unsafe/accessor/sparse input. Add inclusive 282,000 versus 281,500 ms deadline tests.
+- [x] Implement producer as serial interval accumulation: fetch completion 96,000; for each order member add 48,000 receipt, independently append 60,000 check and 30,000 activation; calculate integer metrics from outcomes. Keep record vehicles ID-sorted.
+- [x] Implement checker independently using the fixed position equations and direct interval/capacity/precedence checks. Reject unknown fields and overlarge canonical records before traversal. Hash only after structural checks. Add mutations with recomputed digests to prove validation is not just hash comparison.
+- [x] Add an import-closure test forbidding checker imports of producer, search, data or UI. Run `node --test playground/fleetlab/test/delivery-order-{model,independence}.test.mjs`. Expect positive and negative fixtures to pass without altering NF04 hashes.
 
 ### Task 4 — Search all orders, independently prove coverage, publish compact fixtures
 
@@ -505,7 +509,7 @@ verifyOrderStudy(study) -> {
 
 `verifyOrderStudy` may import the contract, `verifyOrderRecord` and canonical utilities; no search, producer or generated data import. Producer enumerates recursively; checker ranks each permutation independently.
 
-- [ ] Add close-target assertions before writing search:
+- [x] Add close-target assertions before writing search:
 
 ```js
 const study = searchDeliveryOrders(closeTargetsInput);
@@ -517,10 +521,10 @@ assert.deepEqual(verifyOrderStudy(study).coverage,
   {expected:24,verified:24,complete:true});
 ```
 
-- [ ] Implement recursive enumeration and lexicographic `(missed_count,late_ms_total)` comparison. Preserve all ties and stable representative. Independently verify each record and factoradic rank coverage before accepting best metadata.
-- [ ] Add duplicate/missing-row, false-best, incomplete-tie and wrong-study-digest mutations; expected rejection even if an individual record is valid. Check 1–4 vehicles produce 1/2/6/24 orders. Run the Python oracle for all four design fixtures, compare histograms and all objective pairs, not just one winner.
-- [ ] Generate primary and refinement expectations; regenerate/check the equal-share baseline with unchanged `runDelivery` and `verifyDelivery` on each new common input. Keep the existing NF04 study file untouched. `delivery-order-study.mjs --check` compares canonical content and fails on mismatch without rewriting it.
-- [ ] Run `node --test playground/fleetlab/test/delivery-order-{search,study,independence}.test.mjs`, `python3 tests/fixtures/delivery_order_oracle.py` and `node playground/fleetlab/tools/delivery-order-study.mjs --check`.
+- [x] Implement recursive enumeration and lexicographic `(missed_count,late_ms_total)` comparison. Preserve all ties and stable representative. Independently verify each record and factoradic rank coverage before accepting best metadata.
+- [x] Add duplicate/missing-row, false-best, incomplete-tie and wrong-study-digest mutations; expected rejection even if an individual record is valid. Check 1–4 vehicles produce 1/2/6/24 orders. Run the Python oracle for all four design fixtures, compare histograms and all objective pairs, not just one winner.
+- [x] Generate primary and refinement expectations; regenerate/check the equal-share baseline with unchanged `runDelivery` and `verifyDelivery` on each new common input. Keep the existing NF04 study file untouched. `delivery-order-study.mjs --check` compares canonical content and fails on mismatch without rewriting it.
+- [x] Run `node --test playground/fleetlab/test/delivery-order-{study,independence}.test.mjs`, `python3 tests/fixtures/delivery_order_oracle.py` and `node playground/fleetlab/tools/delivery-order-study.mjs --check`.
 
 ### Task 5 — Establish the route owner, compact worker and packaging preflight
 
@@ -530,11 +534,11 @@ assert.deepEqual(verifyOrderStudy(study).coverage,
 
 **Interfaces:** Worker receives `{token, entry}`; returns progress, rejected/error, or `{token,type:'done',result}` only after complete verification and manifest identity match. Job adapter terminates on cancel/timeout and accepts only current token. New sidecar schema `fleetlab.delivery-order-release/1.0.0` binds source, emitted closure and scope without authenticity claims.
 
-- [ ] Add worker tests: cancel while pending, stale response after new case, corrupted manifest, oversized returned study and interrupted coverage. Assert no rejected or cancelled result replaces the accepted reference.
-- [ ] Implement full compact study reconstruction/check in worker; keep drawing/projection out. Add separate optional equal-share operation using NF04 producer/checker; match the new input identity and do not allocate 24 dense traces.
-- [ ] Add a skeletal static page and real manifest to the declared route. Measure source/receipt/closure growth now, before full UI. Do not use a zero-content stub to claim the final design fits; reserve the remaining UI allowance explicitly against Section 7.
-- [ ] Add unknown-owner, missing-source-file, mutated NF03/NF04, undeclared import, understated closure and altered offline negative tests. Capture the original new page/CSS in both source capture and Git input inventory validation. Verify source-offer reproduction includes new tools and route inputs.
-- [ ] Run `node --test playground/fleetlab/test/{delivery-order-job,delivery-order-package,software-delivery-package,package-proof}.test.mjs` plus Task 2 integration tests. Record actual counters and remaining allocation. Do not proceed with an over-budget design by weakening a gate.
+- [x] Add worker tests: cancel while pending, stale response after new case, corrupted manifest, oversized returned study and interrupted coverage. Assert no rejected or cancelled result replaces the accepted reference.
+- [x] Implement full compact study reconstruction/check in worker; keep drawing/projection out. Add separate optional equal-share operation using NF04 producer/checker; match the new input identity and do not allocate 24 dense traces.
+- [x] Add a skeletal static page and real manifest to the declared route. Measure source/receipt/closure growth now, before full UI. Do not use a zero-content stub to claim the final design fits; reserve the remaining UI allowance explicitly against Section 7.
+- [x] Add unknown-owner, missing-source-file, mutated NF03/NF04, undeclared import, understated closure and altered offline negative tests. Capture the original new page/CSS in both source capture and Git input inventory validation. Verify source-offer reproduction includes new tools and route inputs.
+- [x] Run `node --test playground/fleetlab/test/{delivery-order-job,delivery-order-package,software-delivery-package,package-proof}.test.mjs` plus Task 2 integration tests. Record actual counters and remaining allocation. Do not proceed with an over-budget design by weakening a gate.
 
 ### Task 6 — Build the decision bench, assignment visual and honest static path
 
@@ -560,18 +564,19 @@ createOrderPage({manifest,runStudy,cancelStudy,reducedMotion}) -> {
 
 `getState()` exposes pending input/order, accepted input identity, saved user order, viewed comparison order, selected vehicle/arm and clock for tests. Projection `outcome` reads checked metrics; `at` interprets intervals; `assignment` exposes recorded vehicle-position relationships and checked outcomes. Neither optimizes nor allocates.
 
-- [ ] Test the starting comparison equality, move/restore behavior, and acceptance identity before visual construction. A case edit while a previous study is pending must not relabel accepted numbers. The `showBest()` view must retain saved user order and visibly rename its right-hand arm.
-- [ ] Implement the two-arm comparison, keyboard order editor, fixed-scale strips and Who waits longer table. Bind best/case/guide copy to exact accepted identities. Add the assignment matrix as progressive detail with the explicit “assignment units, not bytes” explanation.
-- [ ] Build three public cases plus tie disclosure; verify impossible-target and close-target mixed outcomes. Add secondary earliest-target and equal-share comparisons without four simultaneous animated scenes. Store no user order in URL or browser storage.
-- [ ] Implement manual and approximately 40-second guided modes. Restricted preference yields held snapshots, not ineffective Play buttons. Preserve user intent, focus and selected arm through pause, inspection, history and layout changes.
-- [ ] Add tests for the changed-pending-order case, end/replay, every target boundary, exact values versus display rounding, static-table parity, accessible names and controlled announcements. Run `node --test playground/fleetlab/test/delivery-order-{view,page,player}.test.mjs`.
-- [ ] Validate rendered desktop/tablet/phone widths, browser 200% zoom where available, keyboard, blocked module/worker, Save-Data/reduced-motion paths and runtime targets. Record which are genuine native/physical observations. Ensure no action implies real installation or safe-to-drive authority.
+- [x] Test the starting comparison equality, move/restore behavior, and acceptance identity before visual construction. A case edit while a previous study is pending must not relabel accepted numbers. The `showBest()` view must retain saved user order and visibly rename its right-hand arm.
+- [x] Implement the two-arm comparison, keyboard order editor, fixed-scale strips and Who waits longer table. Bind best/case/guide copy to exact accepted identities. Add the assignment matrix as progressive detail with the explicit “assignment units, not bytes” explanation.
+- [x] Build three public cases plus tie disclosure; verify impossible-target and close-target mixed outcomes. Add secondary earliest-target and equal-share comparisons without four simultaneous animated scenes. Store no user order in URL or browser storage.
+- [x] Implement manual and approximately 40-second guided modes. Restricted preference yields held snapshots, not ineffective Play buttons. Preserve user intent, focus and selected arm through pause, inspection, history and layout changes.
+- [x] Add tests for the changed-pending-order case, end/replay, every target boundary, exact values versus display rounding, static-table parity, accessible names and controlled announcements. Run `node --test playground/fleetlab/test/delivery-order-{view,page,player}.test.mjs`.
+- [x] Validate rendered 1440/768/390/320 px layouts, keyboard focus, failure/restricted paths under tests, and measured desktop runtime targets. No operational authority is implied.
+- [ ] Complete physical Pixel, native 200% zoom, assistive-technology/preference, paint/cancellation/peak-heap and human-comprehension observations. Device connected late in the run, but screen-mirror input prevented successful lesson navigation; do not count it as validated. See handoff for exact limits.
 
 ### Task 7 — Regression, source-bound release candidate and handoff
 
 **Update after implementation:** `docs/FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md`, this plan's checkboxes, corrected NF04 handoff, and `docs/releases/fleetlab-current.json` only after an actual authorized publication. Follow `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` for whole-generation staging, publication and rollback.
 
-- [ ] Run the existing full gates from the implementation checkout:
+- [x] Run the existing full gates from the implementation checkout:
 
 ```sh
 node --test playground/fleetlab/test/*.test.mjs
@@ -585,10 +590,10 @@ node playground/fleetlab/tools/delivery-order-study.mjs --check
 git diff --check
 ```
 
-- [ ] Record actual passing counts, existing skips and any failures. Review changed files/staged diff and exclude owner documents/generated evidence. Make scoped local commits only after applicable gates. Build release artifacts from the exact reviewed commit, not a dirty source tree.
-- [ ] Use the existing runbook's pack, check-dist, package-proof and integration commands with the actual candidate SHA and fresh private output paths. Check original source archive, new route closure, final receipt, protected offline hash, City inventory, security headers, discovery links and all budget counters. Run the existing publication guard before any authorized upload.
-- [ ] Prepare one immutable integrated candidate. If publication is authorized for this implementation, push and publish through the existing whole-generation process, read back the full immutable inventory and stable alias, and test both NF04 and Delivery order. If only build was authorized, deliver the reviewable candidate and exact remaining release action.
-- [ ] Handoff includes source/deployment identities, tests, measured budgets/performance, screenshots, audit decision dispositions, fixture/digest results, known browser limitations, rollback target, and separate human/device/SF gates. Never carry forward an old “all done” statement as evidence of a new release.
+- [x] Record actual passing counts, existing skips and any failures. Review changed files/staged diff and exclude owner documents/generated evidence. Make scoped local commits only after applicable gates. Build release artifacts from the exact reviewed commit, not a dirty source tree.
+- [x] Use the existing runbook's pack, check-dist, package-proof and integration commands with the actual candidate SHA and fresh private output paths. Check original source archive, new route closure, final receipt, protected offline hash, City inventory, security headers, discovery links and all budget counters. Run the existing publication guard before any authorized upload.
+- [x] Prepare one immutable integrated candidate. If publication is authorized for this implementation, push and publish through the existing whole-generation process, read back the full immutable inventory and stable alias, and test both NF04 and Delivery order. If only build was authorized, deliver the reviewable candidate and exact remaining release action.
+- [x] Handoff includes source/deployment identities, tests, measured budgets/performance, screenshots, audit decision dispositions, fixture/digest results, known browser limitations, rollback target, and separate human/device/SF gates. Never carry forward an old “all done” statement as evidence of a new release.
 
 ## 11. Recommendation, top risks and next three actions
 
@@ -602,7 +607,7 @@ git diff --check
 2. After approval, implement and validate the NF04 correction wave, recording its corrected baseline and actual package deltas.
 3. Build the bounded companion against that baseline, validate complete search and individual consequences, and prepare the integrated release with an updated evidence-backed handoff.
 
-**This review's completion:** feedback consolidated; source issues reproduced; scheduling fixtures independently recalculated; current packaging/roadmap questions resolved; implementation plan written. No application code changed, no new optimization model implemented, no commit/push/deployment performed.
+**Original design-review completion (before approval):** feedback consolidated and implementation plan written, with no code or publication at that stage. **Subsequent implementation:** all five final amendments adopted; NF04 checkpoint pinned; bounded companion built; all six independent-review findings fixed; source-bound application pushed and published. The handoff records actual final validation and the remaining qualification work.
 
 ## Approved final amendments — October 13, 2026
 
@@ -615,3 +620,12 @@ git diff --check
 Final owner instruction supplies publication authority; no repeated permission question is needed.
 
 Implementation ruling: the independent Python oracle lives under tests/fixtures, preserving the repository rule that playground contains no Python.
+
+## Executed-plan reconciliation
+
+- Task 2b ownership scaffold was committed with onward navigation before Task 3 payload. Task 5 used the real 17,593-byte manifest before full UI.
+- Model/contract/record tests are consolidated in `delivery-order-model.test.mjs`; search/coverage tests in `delivery-order-study.test.mjs`; NF04 boot/lifecycle corrections in `software-delivery-corrections.test.mjs`. The separate independence tests remain.
+- Correction checkpoint: `9ac9e81`; navigation/scaffold: `f2d72d0`; companion: `182a92a`; reviewed fixes: `f8b3b27`.
+- Final teaching: 2,336 passed / 8 existing skips / 1 existing TODO; City Node 72, City Python 340, Hermes 1,662 passed / 55 existing skips. Full preview and stable byte readbacks both 10,069/10,069.
+- All hard package caps remain intact. Two working growth targets were missed: emitted text +463 B above target; receipt +914 B above target. Captured teaching + integration original-source growth is 104,052 B / 131,072 B. Detailed counters and rationale are in the handoff.
+- Physical device/native accessibility and human review remain open observations; neither successful website publication nor checked synthetic results resolve SF map qualification.

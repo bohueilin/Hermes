@@ -12,12 +12,14 @@ and exact source commit. That file records packaging intent, not proof of
 hosting. Compare it with the committed `docs/releases/fleetlab-current.json`
 and run the readback tool to establish which bytes are actually served.
 
-The owner explicitly authorized October 13 NF04-B implementation and publication, following October 12 NF04-A implementation, Git push and live publication, following the October 10
+The owner explicitly authorized the October 13 NF04 correction wave and bounded Delivery order companion, including all five final amendments, Git push and live publication, following October 13 NF04-B implementation and publication, following October 12 NF04-A implementation, Git push and live publication, following the October 10
 visual-experience update, controlled-autoplay/guided-NF-03 follow-up, and final-review NF-03 trade-off/copy improvements, following the authorized October 8 and 9 releases. An audit, handoff,
 successful verifier, Git branch label or this runbook never grants authority for
 a future release. Follow the user's
 actual instruction. Account/credential changes and destructive retention actions
 are separate decisions; no document can authorize them by itself.
+
+The Delivery order route is `/network-flows/delivery-order/`. Its explicit route owner, source-capture entries, worker, study and release sidecar are included in the same atomic teaching/integration generation. Validate both it and NF04; do not deploy a standalone route over the integrated site. See [the implementation handoff](FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md) for the current release and retained rollback.
 
 ## Build and verify
 
