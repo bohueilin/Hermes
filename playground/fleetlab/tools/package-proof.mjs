@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 import { buildHtml, buildSite, checkSitePath, findRepositoryRoot, moduleGraph } from "./pack.mjs";
 import { checkSite, labelsFromContracts } from "./check-dist.mjs";
-import { DELIVERY_RELEASE, DELIVERY_FILES, DELIVERY_ENTRIES, measureSiteOwnership, measureIntegratedText } from "./software-delivery-package.mjs";
+import { DELIVERY_RELEASE, DELIVERY_FILES, DELIVERY_ENTRIES, measureSiteOwnership, measureIntegratedText, lessonNavigation } from "./software-delivery-package.mjs";
 import { MEDIA_LIMITS } from "./media.mjs";
 import { CAPACITY_RELEASE_PATH, CAPACITY_VISUAL_PATH, releaseProblems } from "./release-sidecar.mjs";
 
@@ -156,6 +156,10 @@ function captureSource(playground) {
     regularDirectory(join(playground,"software-delivery"));
     for(const path of ["software-delivery/index.html","software-delivery/visual.css"])inputs.set(path,readRegular(playground,path,LIMITS.raw_source_and_tools_bytes));
   } catch(error) { if(error.code!=="ENOENT")throw error; }
+  try {
+    regularDirectory(join(playground,"delivery-order"));
+    for(const path of ["delivery-order/index.html","delivery-order/visual.css"])inputs.set(path,readRegular(playground,path,LIMITS.raw_source_and_tools_bytes));
+  } catch(error) { if(error.code!=="ENOENT")throw error; }
   const media = captureTree(join(playground, "media"), { maxBytes: 5 * 1024 * 1024 });
   for (const [path, data] of media) inputs.set(`media/${path}`, data);
   if (canonical([...media.keys()].map(path => `media/${path}`).sort()) !== canonical([...MEDIA_LIMITS.keys()].sort())) fail("media inventory mismatch");
@@ -184,7 +188,7 @@ function sourceIdentity(playground, captured, sourceCommit) {
   inputs.set("LICENSE", captured.license);
   const prefix = relative(captured.repository, playground).split(sep).join("/");
   const committedPaths = git(captured.repository, ["ls-tree", "-r", "-z", "--name-only", sourceCommit, "--",
-    ...["src", "tools", "media", "capacity", "software-delivery", "index.html", "styles.css"].map(path => `${prefix}/${path}`), CONTRACT, "LICENSE", ...INTEGRATION_ROOTS, INTEGRATION_DEPENDENCY])
+    ...["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "index.html", "styles.css"].map(path => `${prefix}/${path}`), CONTRACT, "LICENSE", ...INTEGRATION_ROOTS, INTEGRATION_DEPENDENCY])
     .split("\0").filter(Boolean).sort();
   if (canonical(committedPaths) !== canonical([...inputs.keys()].sort())) fail("source commit input inventory mismatch");
   for (const [path, data] of inputs) {
@@ -328,15 +332,16 @@ export function checkPackageProof({ packageDir, ...options }) {
 /** Integration owns three root files; all other teaching bytes, the offline edition and source offer stay exact. */
 export function checkIntegratedPackage({ site, playground, sourceCommit }) {
   const prepared = prepare(playground, sourceCommit, false), expected = assemble(prepared);
+  const onward=lessonNavigation(prepared.site);
   // The outer integration verifier inventories City and retained releases. Read only owned teaching paths here.
   for (const [path, data] of [...prepared.site, ...expected.files, ["downloads/fleetlab-offline.html", prepared.offline]]) {
     if (INTEGRATION_OWNED.has(path)) continue;
-    if (!readRegular(site, path, bytes(data)).equals(Buffer.from(data))) fail(`integrated package differs from reproduced bytes: ${path}`);
+    if (!readRegular(site, path, bytes(onward.get(path)??data)).equals(Buffer.from(onward.get(path)??data))) fail(`integrated package differs from reproduced bytes: ${path}`);
   }
   const offers = new Map([...captureTree(join(site, "network-flows/sources"), { maxBytes: LIMITS.source_offer_compressed_bytes, maxFiles: 2 })]
     .map(([path, data]) => [`network-flows/sources/${path}`, data]));
   assertEqual(offers, new Map([[expected.receipt.source_offer.path, expected.files.get(expected.receipt.source_offer.path)]]), "integrated source offer");
-  const integrated=new Map(prepared.site);
+  const integrated=new Map([...prepared.site,...onward]);
   for(const path of ["index.html","boot.js","_headers","integration.mjs","integration.css","not-found.css","publication.json","404.html","downloads/fleetlab-offline.sha256","downloads/verify-offline.txt"]) {
     try { integrated.set(path,readRegular(site,path,LIMITS.emitted_text_bytes)); }
     catch(error) { if(error.code!=="ENOENT")throw error; }

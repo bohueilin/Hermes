@@ -138,3 +138,15 @@ test('final transformed headers remain inside each complete route closure cap',(
   final.set('_headers',teaching.get('_headers')+' '.repeat(524289-nf04));
   assert.throws(()=>tool.measureIntegratedText(teaching,final),/closure.*budget/);
 });
+
+test('hosted onward navigation is conditional and preserves the original teaching pages',async()=>{
+ const {lessonNavigation}=await import('../tools/software-delivery-package.mjs');
+ assert.equal(typeof lessonNavigation,'function');
+ const teaching=new Map([['network-flows/capacity/index.html','<body>capacity</body>']]);
+ assert.equal(lessonNavigation(teaching).size,0);
+ teaching.set('network-flows/software-delivery/release.json','present');
+ const onward=lessonNavigation(teaching);
+ assert.match(onward.get('network-flows/capacity/index.html'),/Next lesson.*software-delivery/);
+ assert.equal(teaching.get('network-flows/capacity/index.html'),'<body>capacity</body>');
+ assert.equal(onward.size,1);
+});

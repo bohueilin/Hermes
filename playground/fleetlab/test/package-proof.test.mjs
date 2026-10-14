@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { after, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
-import { measureSiteOwnership } from "../tools/software-delivery-package.mjs";
+import { measureSiteOwnership, lessonNavigation } from "../tools/software-delivery-package.mjs";
 import { buildHtml, buildSite } from "../tools/pack.mjs";
 
 const source = fileURLToPath(new URL("../", import.meta.url));
@@ -145,7 +145,7 @@ test("release package binds every source and its executing proof tool to the exa
   assert.equal(typeof tool.buildPackageProof, "function", "release binding is not implemented");
   const root = join(scratch, "repository");
   const playground = join(root, "playground/fleetlab");
-  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
   for(const name of ["hosted","tools","deploy"]){
     const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));
     for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path))){
@@ -177,8 +177,13 @@ test("release package binds every source and its executing proof tool to the exa
   } };
   writeMap(integrated, new Map([...buildSite(playground, { sourceCommit }), ...result.files,
     ["downloads/fleetlab-offline.html", readFileSync(offline)], ["publication.json", JSON.stringify(publication)], ["city-explorer/unrelated", "City inventory is checked by the outer verifier"]]));
+  writeMap(integrated,lessonNavigation(buildSite(playground,{sourceCommit})));
   writeFileSync(join(integrated, "index.html"), "integration owns root HTML");
   assert.doesNotThrow(() => tool.checkIntegratedPackage({ site: integrated, playground, sourceCommit }));
+  const onwardPath=join(integrated,'network-flows/capacity/index.html'),onward=readFileSync(onwardPath);
+  writeFileSync(onwardPath,Buffer.concat([onward,Buffer.from('unlisted mutation')]));
+  assert.throws(()=>tool.checkIntegratedPackage({site:integrated,playground,sourceCommit}),/integrated package|exceeds|limit|size/);
+  writeFileSync(onwardPath,onward);
   publication.teaching_package.sha256 = "0".repeat(64);
   writeFileSync(join(integrated, "publication.json"), JSON.stringify(publication));
   assert.throws(() => tool.checkIntegratedPackage({ site: integrated, playground, sourceCommit }), /pointer|publication/i);
@@ -215,7 +220,7 @@ test("release package binds every source and its executing proof tool to the exa
 
 test("a source checkout cannot omit the executing package-proof tool from its binding", () => {
   const root = join(scratch, "omitted-tool"), playground = join(root, "playground/fleetlab");
-  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
   mkdirSync(join(root, ".git"));
   for(const name of ["hosted","tools","deploy"]){
     const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));

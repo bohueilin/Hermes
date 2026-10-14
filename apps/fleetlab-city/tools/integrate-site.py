@@ -323,6 +323,14 @@ def integrate(
             for name in copied:
                 (site / name).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(Path(client_update) / name, site / name)
+        onward = lesson_navigation({
+            name: (site / name).read_text()
+            for name in ("network-flows/capacity/index.html",
+                         "network-flows/software-delivery/release.json")
+            if (site / name).is_file()
+        })
+        for name, content in onward.items():
+            (site / name).write_text(content)
         shutil.copyfile(review / "_headers.candidate", site / "_headers")
         for name in ("integration.mjs", "integration.css"):
             shutil.copyfile(ASSETS / name, site / name)
@@ -405,7 +413,11 @@ def integrate(
             raise ValueError("teaching package changed during integration")
         if client_update:
             for name in copied:
-                if final.get(name) != updates[name]:
+                expected = updates[name]
+                if name in onward:
+                    content = onward[name].encode()
+                    expected = {"bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()}
+                if final.get(name) != expected:
                     raise ValueError("copied client integrity mismatch")
             if launch.inventory(Path(client_update)) != updates:
                 raise ValueError("client distribution changed during integration")
@@ -477,6 +489,21 @@ def integrate(
         # This final manifest alone describes the intentionally modified hosted tree.
         stage.rename(out)
         return {key: value for key, value in result.items() if key != "files"}
+
+
+def lesson_navigation(files):
+    """Exact hosted links, after source-package validation, never a skipped-byte exception."""
+    path = "network-flows/capacity/index.html"
+    if "network-flows/software-delivery/release.json" not in files:
+        return {}
+    source = files.get(path)
+    if not isinstance(source, str) or source.count("</body>") != 1:
+        raise ValueError("capacity navigation source missing or ambiguous")
+    return {path: source.replace(
+        "</body>", '<nav class="fl-app" aria-label="Next Network Flows lesson"><p>'
+        'Next lesson: <a href="/network-flows/software-delivery/">'
+        'One update, four vehicles</a></p></nav>\n</body>'
+    )}
 
 
 def main():

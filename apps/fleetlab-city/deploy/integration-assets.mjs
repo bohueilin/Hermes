@@ -4,7 +4,7 @@
 import {readFileSync,lstatSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {resolve} from 'node:path';
-import {DELIVERY_RELEASE,softwareDeliveryProblems,INTEGRATION_TEXT_PATHS} from '../../../playground/fleetlab/tools/software-delivery-package.mjs';
+import {DELIVERY_RELEASE,softwareDeliveryProblems,INTEGRATION_TEXT_PATHS,lessonNavigation} from '../../../playground/fleetlab/tools/software-delivery-package.mjs';
 import {buildSite} from '../../../playground/fleetlab/tools/pack.mjs';
 
 const HOSTED_FILES=['integration.mjs','integration.css','404.html','not-found.css'];
@@ -54,7 +54,7 @@ export function integratedRootFiles(teaching){
   '  Cache-Control: public, max-age=31536000, immutable\n'+
   '\n/downloads/teaching-package.json\n'+
   '  Content-Type: application/json\n';
- return new Map([['index.html',index],
+ return new Map([...lessonNavigation(teaching),['index.html',index],
   ['boot.js','import { mountCityEntry } from "./integration.mjs";\n'+teaching.get('boot.js')+'\nmountCityEntry();\n'],
   ['_headers',headers]]);
 }

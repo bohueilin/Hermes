@@ -1,4 +1,5 @@
 // Physical owners are explicit. Reachability adds obligations, never removes legacy ownership.
+import {ORDER_FILES,ORDER_ENTRIES,ORDER_MODULES} from './delivery-order-package.mjs';
 import {createHash} from 'node:crypto';
 import {posix} from 'node:path';
 import {MEDIA_LIMITS} from './media.mjs';
@@ -44,19 +45,26 @@ export function measureSiteOwnership(files){
   const legacyModules=routeModules(files,['src/ui/app.js','src/runtime/worker.js','src/ui/capacity-app.js']);
   const hasDelivery=[...files.keys()].some(path=>DELIVERY_FILES.includes(path)||DELIVERY_MODULES.has(path));
   const delivery=hasDelivery?routeModules(files,DELIVERY_ENTRIES):new Set();
+  const hasOrder=[...files.keys()].some(path=>ORDER_FILES.includes(path)||ORDER_MODULES.has(path));
+  const order=hasOrder?routeModules(files,ORDER_ENTRIES):new Set();
   const legacy=new Set([...legacyModules,...LEGACY_ASSETS].filter(path=>files.has(path)));
   // A dependency not in the newly declared NF04 inventory remains legacy-owned even when only NF04 imports it.
   for(const path of delivery)if(!DELIVERY_MODULES.has(path))legacy.add(path);
+  for(const path of order)if(!ORDER_MODULES.has(path)&&!DELIVERY_MODULES.has(path))legacy.add(path);
   const route=new Set(hasDelivery?[...delivery,...DELIVERY_FILES.filter(path=>files.has(path)),'_headers']:[]);
   const local=new Set([...route].filter(path=>!legacy.has(path)&&(DELIVERY_FILES.includes(path)||DELIVERY_MODULES.has(path))));
+  const orderRoute=new Set(hasOrder?[...order,...ORDER_FILES.filter(path=>files.has(path)),'_headers']:[]);
+  const orderLocal=new Set([...orderRoute].filter(path=>!legacy.has(path)&&!local.has(path)&&(ORDER_FILES.includes(path)||ORDER_MODULES.has(path))));
   const owners={};
   for(const path of files.keys()){
     if(MEDIA.has(path)){owners[path]='teaching-media';continue;}
     if(legacy.has(path))owners[path]=delivery.has(path)?'legacy-shared':'legacy';
     else if(local.has(path))owners[path]='nf04';
+    else if(orderLocal.has(path))owners[path]='delivery-order';
     else fail(`unknown emitted ownership: ${path}`);
   }
   const result={legacy_text_bytes:sum(files,legacy),nf04_route_local_bytes:sum(files,local),nf04_closure_bytes:sum(files,route),emitted_text_bytes:[...files].filter(([path])=>!MEDIA.has(path)).reduce((n,[,value])=>n+size(value),0),owners,nf04_paths:[...route].sort()};
+  if(hasOrder){result.delivery_order_route_local_bytes=sum(files,orderLocal);result.delivery_order_closure_bytes=sum(files,orderRoute);result.delivery_order_paths=[...orderRoute].sort();if(result.delivery_order_closure_bytes>524288)fail('delivery order closure budget exceeded');}
   for(const [key,limit]of Object.entries(OWNER_LIMITS))if(result[key]>limit)fail(`${key} budget exceeded: ${result[key]} > ${limit}`);
   return result;
 }
@@ -102,4 +110,15 @@ export function softwareDeliveryProblems(files,{sourceCommit=null}={}){
     if(sourceCommit&&(state.source_commit!==sourceCommit||state.source_state!=="BOUND_FILES_MATCH_COMMIT"))fail("NF04 source commit mismatch");
     return [];
   }catch(error){return [error.message];}
+}
+
+// Deterministic hosted-only links, applied after the generation's sidecars are checked.
+export function lessonNavigation(files){
+ const result=new Map(),path='network-flows/capacity/index.html';
+ if(files.has(DELIVERY_RELEASE)){
+  const source=files.get(path);
+  if(typeof source!=='string'||source.split('</body>').length!==2)fail('capacity navigation source missing or ambiguous');
+  result.set(path,source.replace('</body>','<nav class="fl-app" aria-label="Next Network Flows lesson"><p>Next lesson: <a href="/network-flows/software-delivery/">One update, four vehicles</a></p></nav>\n</body>'));
+ }
+ return result;
 }

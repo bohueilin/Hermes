@@ -32,6 +32,21 @@ class IntegrationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "nf04.*closure.*budget"):
             integration.final_route_counts(routes, files)
 
+    def test_onward_link_is_conditional_and_matches_javascript(self):
+        files = {"network-flows/capacity/index.html": "<body>capacity</body>"}
+        self.assertEqual(integration.lesson_navigation(files), {})
+        files["network-flows/software-delivery/release.json"] = "present"
+        actual = integration.lesson_navigation(files)
+        script = (
+            "import {lessonNavigation} from './playground/fleetlab/tools/software-delivery-package.mjs';"
+            "const files=new Map(Object.entries(JSON.parse(process.argv[1])));"
+            "process.stdout.write(JSON.stringify(Object.fromEntries(lessonNavigation(files))));"
+        )
+        result = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(files)],
+                                cwd=PACK.parents[3], capture_output=True, text=True, check=True)
+        self.assertEqual(actual, json.loads(result.stdout))
+        self.assertIn('Next lesson:', actual['network-flows/capacity/index.html'])
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
