@@ -71,6 +71,14 @@ export function mountCityEntry(doc = document) {
   capacityRoadmap.querySelector('.eyebrow').textContent='AVAILABLE';
   capacityRoadmap.querySelector('p:not(.eyebrow)').textContent='Compare scheduling, bandwidth and charging power in the published synthetic study. Follow a vehicle and inspect the limiting resource.';
   capacityRoadmap.appendChild(node('a',{href:'/network-flows/capacity/',class:'city-entry-action'},'Open the capacity study  ↗'));
+  if(doc.querySelector('meta[name="fleetlab-delivery-order"][content="/network-flows/delivery-order/release.json"]')){
+    networkQuestions.appendChild(node('article',{class:'network-question delivery-order-entry-catalog','aria-labelledby':'delivery-order-catalog-title'},[
+      node('p',{class:'city-entry-eyebrow'},'BOUNDED OPTIMIZATION · CHOOSE AN ORDER'),
+      node('h3',{id:'delivery-order-catalog-title'},'Who gets the depot link first?'),
+      node('p',{class:'network-description'},'Reorder four vehicles, compare all 24 possibilities, and see who waits longer. Same bytes; different target outcomes.'),
+      node('a',{href:'/network-flows/delivery-order/',class:'city-entry-action'},'Try delivery order  ↗'),
+    ]));
+  }
   if(deliveryAvailable){
     const href='/network-flows/software-delivery/';
     const card=node('article',{class:'network-question software-delivery-entry-catalog','aria-labelledby':'software-delivery-catalog-title'},[

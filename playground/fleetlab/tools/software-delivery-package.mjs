@@ -1,5 +1,5 @@
 // Physical owners are explicit. Reachability adds obligations, never removes legacy ownership.
-import {ORDER_FILES,ORDER_ENTRIES,ORDER_MODULES} from './delivery-order-package.mjs';
+import {ORDER_FILES,ORDER_ENTRIES,ORDER_MODULES,ORDER_RELEASE} from './delivery-order-package.mjs';
 import {createHash} from 'node:crypto';
 import {posix} from 'node:path';
 import {MEDIA_LIMITS} from './media.mjs';
@@ -76,6 +76,7 @@ export function measureIntegratedText(teaching,integrated){
   if(emitted_text_bytes>OWNER_LIMITS.emitted_text_bytes)fail(`aggregate emitted text budget exceeded: ${emitted_text_bytes} > ${OWNER_LIMITS.emitted_text_bytes}`);
   const result={emitted_text_bytes,integration_text_bytes};
   const closures=[
+    ...(teaching.has(ORDER_RELEASE)?[["delivery_order",new Set([...routeModules(teaching,ORDER_ENTRIES),...ORDER_FILES,"_headers"])]]:[]),
     ...(teaching.has(DELIVERY_RELEASE)?[['nf04',new Set([...routeModules(teaching,DELIVERY_ENTRIES),...DELIVERY_FILES,'_headers'])]]:[]),
     ...(teaching.has('src/ui/capacity-app.js')?[['nf03',new Set([...capacityScope(teaching),'network-flows/capacity/release.json','_headers'])]]:[]),
   ];
@@ -119,6 +120,11 @@ export function lessonNavigation(files){
   const source=files.get(path);
   if(typeof source!=='string'||source.split('</body>').length!==2)fail('capacity navigation source missing or ambiguous');
   result.set(path,source.replace('</body>','<nav class="fl-app" aria-label="Next Network Flows lesson"><p>Next lesson: <a href="/network-flows/software-delivery/">One update, four vehicles</a></p></nav>\n</body>'));
+ }
+ if(files.has(ORDER_RELEASE)){
+  const path=`${DELIVERY_DIR}/index.html`,source=files.get(path);
+  if(typeof source!=='string'||source.split('</body>').length!==2)fail('delivery navigation source missing or ambiguous');
+  result.set(path,source.replace('</body>','<nav class="delivery-shell" aria-label="Next Network Flows lesson"><p>Next lesson: <a href="/network-flows/delivery-order/">Who gets the depot link first?</a></p></nav>\n</body>'));
  }
  return result;
 }

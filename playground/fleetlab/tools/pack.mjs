@@ -1,3 +1,4 @@
+import {ORDER_DIR,ORDER_RELEASE,ORDER_ENTRIES,ORDER_BOOT,ORDER_SOURCE_ASSETS,createOrderSidecar} from './delivery-order-package.mjs';
 // Packs the playground into one offline HTML file (contract section 9, design section 9.4).
 // Two bundles come from one rewriter: the page bundle from src/ui/app.js and the worker bundle from
 // src/runtime/worker.js. Each module runs inside its own function scope, in topological order, with its
@@ -830,6 +831,16 @@ export function buildSite(playgroundDir, { sourceCommit = null } = {}) {
     for(const path of ["software-delivery/index.html","software-delivery/visual.css","tools/pack.mjs","tools/software-delivery-package.mjs","tools/release-sidecar.mjs","tools/site-shell.mjs","tools/check-dist.mjs","tools/media.mjs","tools/comment-strip.mjs"] )originals.set(path,readFileSync(join(dir,path),"utf8"));
     const fingerprints=Object.fromEntries([...originals].map(([path,data])=>[path,{bytes:Buffer.byteLength(data),sha256:createHash("sha256").update(data).digest("hex")}]));
     files.set(DELIVERY_RELEASE,createSoftwareDeliverySidecar(files,sourceIdentity(dir,fingerprints,sourceCommit),fingerprints,originals.get("software-delivery/index.html")));
+  }
+  if (existsSync(join(dir,"delivery-order/index.html"))) {
+    const originals=new Map();
+    for(const entry of ORDER_ENTRIES)for(const record of moduleGraph(join(dir,entry),sourceRoot).order){files.set(record.label,record.src);originals.set(record.label,record.src);}
+    files.set(`${ORDER_DIR}/index.html`,sitePage(dir,"delivery-order/index.html",["./visual.css"],new Map()));
+    files.set(`${ORDER_DIR}/boot.js`,ORDER_BOOT);
+    files.set(`${ORDER_DIR}/visual.css`,readFileSync(join(dir,"delivery-order/visual.css"),"utf8"));
+    for(const path of ORDER_SOURCE_ASSETS)originals.set(path,readFileSync(join(dir,path),"utf8"));
+    const fingerprints=Object.fromEntries([...originals].map(([path,data])=>[path,{bytes:Buffer.byteLength(data),sha256:createHash("sha256").update(data).digest("hex")}]));
+    files.set(ORDER_RELEASE,createOrderSidecar(files,sourceIdentity(dir,fingerprints,sourceCommit),fingerprints,originals.get("delivery-order/index.html")));
   }
   try { files.set(CAPACITY_RELEASE_PATH, createReleaseSidecar(dir,files,{sourceCommit,capturedSources})); }
   catch (error) { throw new PackError(error.message); }

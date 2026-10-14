@@ -1,3 +1,4 @@
+import {ORDER_DIR,ORDER_RELEASE,ORDER_FILES,ORDER_BOOT,ORDER_MODULES,orderPackageProblems} from './delivery-order-package.mjs';
 // Checks a packed playground file before anyone opens or shares it (contract section 9, design section 9.4).
 // Fails on an external URL, a missing or different content security policy, a forbidden token, a banned word
 // or an em or en dash in interface copy, a string from FleetLab's label tuple, or a size over 2 MB.
@@ -56,7 +57,7 @@ const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledes
 
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
 export const COPY_MODULES = [
-  ...DELIVERY_MODULES,
+  ...DELIVERY_MODULES, ...ORDER_MODULES,
   "src/ui/depot-flow-lab.js", "src/ui/depot-flow-view.js", "src/ui/depot-flow-reading.js", "src/ui/depot-flow-player.js", "src/model/depot-flow-contract.js", "src/model/depot-flow.js", "src/model/depot-flow-verify.js", "src/model/depot-cohort-contract.js", "src/model/depot-cohort.js", "src/model/depot-cohort-verify.js",
   "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js", "src/model/depot-capacity-verify.js", "src/ui/depot-capacity-view.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-bench.js", "src/ui/depot-capacity-guided.js", "src/ui/capacity-app.js",
   "src/ui/teaching-frames.js", "src/model/street-simulation.js","src/ui/model-identity.js", "src/ui/labels.js", "src/ui/routes.js", "src/ui/setup-sharing.js", "src/ui/setup-codec.js", "src/ui/regional-setup.js", "src/ui/street-lab.js", "src/ui/studio.js", "src/ui/hero-film.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/readiness-view.js", "src/ui/advanced-operations-view.js", "src/ui/scenario-learning.js", "src/ui/launch-view.js", "src/ui/regional-power-view.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js", "src/ui/scale-lab.js", "src/ui/scale-labs.js", "src/model/scale-contract.js", "src/model/scale-response.js", "src/model/scale-response-engine.js", "src/model/scale-intake.js", "src/model/scale-intake-engine.js", "src/model/scale-density.js", "src/model/scale-density-engine.js"];
@@ -452,11 +453,11 @@ export function checkSite(files, { requiredLabels }) {
   requireLabels(requiredLabels);
   const entries = files instanceof Map ? files : new Map(Object.entries(files));
   const problems = [];
-  problems.push(...releaseProblems(entries), ...softwareDeliveryProblems(entries));
+  problems.push(...releaseProblems(entries), ...softwareDeliveryProblems(entries), ...orderPackageProblems(entries));
   try { measureSiteOwnership(entries); } catch(error) { problems.push(error.message); }
-  const delivery=entries.has(DELIVERY_RELEASE);
-  const fixedFiles=[...SITE_FIXED_FILES,...(delivery?DELIVERY_FILES:[])];
-  const pages=[...SITE_PAGES,...(delivery?[{path:`${DELIVERY_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${DELIVERY_DIR}/boot.js`,bootText:DELIVERY_BOOT}]:[])];
+  const delivery=entries.has(DELIVERY_RELEASE),order=entries.has(ORDER_RELEASE);
+  const fixedFiles=[...SITE_FIXED_FILES,...(delivery?DELIVERY_FILES:[]),...(order?ORDER_FILES:[])];
+  const pages=[...SITE_PAGES,...(order?[{path:`${ORDER_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${ORDER_DIR}/boot.js`,bootText:ORDER_BOOT}]:[]),...(delivery?[{path:`${DELIVERY_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${DELIVERY_DIR}/boot.js`,bootText:DELIVERY_BOOT}]:[])];
   let bytes = 0;
   for (const [path, text] of entries) {
     if (MEDIA_LIMITS.has(path)) { problems.push(...mediaProblems(path, text)); continue; }
@@ -486,7 +487,7 @@ export function checkSite(files, { requiredLabels }) {
     for (const item of visibleCopy(html)) copy.push(page.path === "index.html" ? item : { ...item, where: `${page.path} ${item.where}` });
   }
   for (const [path, source] of entries) {
-    if (typeof source !== "string" || path === "boot.js" || path === `${DELIVERY_DIR}/boot.js` || path === "_headers") continue;
+    if (typeof source !== "string" || path === "boot.js" || path === `${DELIVERY_DIR}/boot.js` || path === `${ORDER_DIR}/boot.js` || path === "_headers") continue;
     problems.push(...schemeProblems(source, path));
     if (path.endsWith(".js")) {
       problems.push(...scriptProblems(source, path));
@@ -494,7 +495,7 @@ export function checkSite(files, { requiredLabels }) {
       if (DEPOT_COPY_MODULE.test(path) && !COPY_MODULES.includes(path)) problems.push(`copy coverage: ${path}`);
       if (COPY_MODULES.includes(path)) for (const literal of literalsOf(source)) copy.push({ where: `${path} string`, text: literal });
     }
-    if (path === "styles.css" || path === CAPACITY_VISUAL_PATH || path === `${DELIVERY_DIR}/visual.css`) problems.push(...tokenProblems(source, path));
+    if (path === "styles.css" || path === CAPACITY_VISUAL_PATH || path === `${DELIVERY_DIR}/visual.css` || path === `${ORDER_DIR}/visual.css`) problems.push(...tokenProblems(source, path));
   }
   problems.push(...copyProblems(copy));
   for (const [path, source] of entries) {

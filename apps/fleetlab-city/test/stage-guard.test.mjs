@@ -1,3 +1,4 @@
+import {lessonNavigation} from '../../../playground/fleetlab/tools/software-delivery-package.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,symlinkSync,cpSync,existsSync,realpathSync,readdirSync} from 'node:fs';
@@ -56,6 +57,7 @@ function integratedShell(packed){
   .replace('<div id="fleetlab-teaching-strip"',intro+'<div id="fleetlab-teaching-strip"')
   .replace('</head>','<meta name="fleetlab-teaching-package" content="/downloads/teaching-package.json"></head>');
  if(packed.has('network-flows/software-delivery/release.json'))html=html.replace('</head>','<meta name="fleetlab-software-delivery" content="/network-flows/software-delivery/release.json"></head>');
+ if(packed.has('network-flows/delivery-order/release.json'))html=html.replace('</head>','<meta name="fleetlab-delivery-order" content="/network-flows/delivery-order/release.json"></head>');
  const headers=packed.get('_headers').replace(/\n+$/,'')+'\n\n/city-explorer/*\n  ! Content-Security-Policy\n'+
   "  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'\n"+
   '  Permissions-Policy: camera=(), microphone=(), geolocation=()\n'+
@@ -63,14 +65,14 @@ function integratedShell(packed){
   '\n/downloads/fleetlab-offline\n  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+
   '\n/network-flows/sources/*\n  Content-Type: application/gzip\n  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable\n'+
   '\n/downloads/teaching-package.json\n  Content-Type: application/json\n';
- return [['index.html',html],['boot.js','import { mountCityEntry } from "./integration.mjs";\n'+packed.get('boot.js')+'\nmountCityEntry();\n'],['_headers',headers]];
+ return [...lessonNavigation(packed),['index.html',html],['boot.js','import { mountCityEntry } from "./integration.mjs";\n'+packed.get('boot.js')+'\nmountCityEntry();\n'],['_headers',headers]];
 }
 
 test('source-bound stage rejects resealed shell, owner assets, unexpected files and package downgrades',()=>{
  const root=realpathSync(mkdtempSync(join(tmpdir(),'fleetlab-bound-stage-test-')));
  try{
   const source=join(root,'source'),playground=join(source,'playground/fleetlab');
-  for(const path of ['src','tools','media','capacity','software-delivery','styles.css','index.html'].filter(path=>existsSync(join(repository,'playground/fleetlab',path))))cpSync(join(repository,'playground/fleetlab',path),join(playground,path),{recursive:true});
+  for(const path of ['src','tools','media','capacity','software-delivery','delivery-order','styles.css','index.html'].filter(path=>existsSync(join(repository,'playground/fleetlab',path))))cpSync(join(repository,'playground/fleetlab',path),join(playground,path),{recursive:true});
   for(const path of ['LICENSE','src/hermes/fleet/contracts.py']){
    mkdirSync(dirname(join(source,path)),{recursive:true});cpSync(join(repository,path),join(source,path));
   }
@@ -97,7 +99,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
   writeFiles(site,[['publication.json',JSON.stringify(selection)]]);mkdirSync(review);
   const seal=(overrides={})=>writeFileSync(join(review,'integration-manifest.json'),JSON.stringify({files:inventory(site),teaching_package:packageFiles,...overrides}));
   seal();assert.ok(verifyStage(site,commit,source)>0);
-  for(const path of ['index.html','boot.js','_headers','integration.mjs','integration.css','404.html','not-found.css']){
+  for(const path of ['network-flows/capacity/index.html','network-flows/software-delivery/index.html','index.html','boot.js','_headers','integration.mjs','integration.css','404.html','not-found.css']){
    const original=readFileSync(join(site,path));writeFileSync(join(site,path),Buffer.concat([original,Buffer.from('\nchanged after review')]));seal();
    assert.throws(()=>verifyStage(site,commit,source),/integration.*(?:differ|mismatch)/i,path);
    writeFileSync(join(site,path),original);

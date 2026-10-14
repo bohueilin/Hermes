@@ -1,3 +1,4 @@
+import {ORDER_MODULES} from '../tools/delivery-order-package.mjs';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {cpSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,writeFileSync} from 'node:fs';
@@ -35,7 +36,8 @@ test('historical 2621323-byte legacy generation plus 118 bytes fails without usi
 
 test('300000-byte scratch NF04-only module has a valid emitted build path without increasing legacy',()=>{
   const source=join(scratch,'source');cpSync(root,source,{recursive:true});
-  for(const path of tool.DELIVERY_MODULES)rmSync(join(source,path),{force:true});
+  for(const path of [...tool.DELIVERY_MODULES,...ORDER_MODULES])rmSync(join(source,path),{force:true});
+  rmSync(join(source,'delivery-order'),{recursive:true,force:true});
   rmSync(join(source,'software-delivery'),{recursive:true,force:true});
   // A scratch repository holds copied validation and integration originals, never modified production sources.
   mkdirSync(join(scratch,'.git'));
@@ -134,9 +136,11 @@ test('final transformed headers remain inside each complete route closure cap',(
   const bytes=[...closure].reduce((total,path)=>total+Buffer.byteLength(teaching.get(path)),0);
   final.set('_headers',final.get('_headers')+' '.repeat(524289-bytes));
   assert.throws(()=>tool.measureIntegratedText(teaching,final),/nf03.*closure.*budget/);
-  const nf04=tool.measureSiteOwnership(teaching).nf04_closure_bytes;
+  // Isolate the NF04 closure guard from the independently capped aggregate.
+  const nf04Only=new Map([...teaching].filter(([path])=>!ORDER_MODULES.has(path)&&!path.startsWith('network-flows/delivery-order/')));
+  const nf04=tool.measureSiteOwnership(nf04Only).nf04_closure_bytes;
   final.set('_headers',teaching.get('_headers')+' '.repeat(524289-nf04));
-  assert.throws(()=>tool.measureIntegratedText(teaching,final),/closure.*budget/);
+  assert.throws(()=>tool.measureIntegratedText(nf04Only,final),/closure.*budget/);
 });
 
 test('hosted onward navigation is conditional and preserves the original teaching pages',async()=>{

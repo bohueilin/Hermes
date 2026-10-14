@@ -107,7 +107,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   }
   assert.equal(buildHtml(restored), readFileSync(offline, "utf8"));
   const rebuilt = buildSite(restored);
-  for (const [path, data] of files) if (!["network-flows/capacity/release.json","network-flows/software-delivery/release.json"].includes(path)) assert.deepEqual(rebuilt.get(path), data, path);
+  for (const [path, data] of files) if (!["network-flows/capacity/release.json","network-flows/software-delivery/release.json","network-flows/delivery-order/release.json"].includes(path)) assert.deepEqual(rebuilt.get(path), data, path);
   assert.equal(JSON.parse(rebuilt.get("network-flows/capacity/release.json")).source_state, "SOURCE_COMMIT_UNAVAILABLE");
   execFileSync("git", ["-C", restored, "init", "-q"]);
   execFileSync(process.execPath, [join(restored, "tools/pack.mjs"), "--out", join(scratch, "restored-cli.html"), "--playground", restored]);

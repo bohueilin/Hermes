@@ -38,7 +38,8 @@ class IntegrationTest(unittest.TestCase):
         files["network-flows/software-delivery/release.json"] = "present"
         actual = integration.lesson_navigation(files)
         script = (
-            "import {lessonNavigation} from './playground/fleetlab/tools/software-delivery-package.mjs';"
+            "import {lessonNavigation} from "
+            "'./playground/fleetlab/tools/software-delivery-package.mjs';"
             "const files=new Map(Object.entries(JSON.parse(process.argv[1])));"
             "process.stdout.write(JSON.stringify(Object.fromEntries(lessonNavigation(files))));"
         )

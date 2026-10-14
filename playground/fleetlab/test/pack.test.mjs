@@ -590,6 +590,7 @@ describe("output path rules and R3", () => {
     // The package proof uses bounded no-follow capture and writes only new output or temporary fixtures.
     const packageWriter = ["constants", "closeSync", "fstatSync", "lstatSync", "mkdirSync", "mkdtempSync", "openSync", "readSync", "readdirSync", "rmSync", "writeFileSync"];
     const namedFs = { "tools/software-delivery-study.mjs": ["constants", "closeSync", "lstatSync", "openSync", "readFileSync", "realpathSync", "writeFileSync"], "tools/package-proof.mjs": packageWriter, "tools/check-dist.mjs": readOnly, "tools/release-sidecar.mjs": ["lstatSync", "readFileSync", "readdirSync"], "tools/capacity-study.mjs": studyWriter };
+    namedFs["tools/delivery-order-study.mjs"] = [...namedFs["tools/software-delivery-study.mjs"]];
     // createRequire and process.getBuiltinModule reach fs without naming it in an import, so both are refused outright.
     const MODULE = "[\"'`](?:node:)?module[\"'`]";
     const loaderUses = new RegExp(`\\bfrom\\s*${MODULE}|\\bimport\\s*\\(?\\s*${MODULE}|\\brequire\\s*\\(\\s*${MODULE}|\\bcreateRequire\\b|\\bgetBuiltinModule\\b`, "g");
@@ -665,7 +666,7 @@ describe("output path rules and R3", () => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const path = join(dir, entry.name);
         if (entry.isDirectory()) walk(path);
-        else if (/\.(m?js)$/.test(entry.name) && !["tools/pack.mjs", "tools/capacity-study.mjs", "tools/software-delivery-study.mjs", "tools/package-proof.mjs"].some((tool) => path === join(PLAYGROUND_ROOT, tool)) && writers.test(readFileSync(path, "utf8"))) {
+        else if (/\.(m?js)$/.test(entry.name) && !["tools/pack.mjs", "tools/capacity-study.mjs", "tools/software-delivery-study.mjs", "tools/delivery-order-study.mjs", "tools/package-proof.mjs"].some((tool) => path === join(PLAYGROUND_ROOT, tool)) && writers.test(readFileSync(path, "utf8"))) {
           offenders.push(relative(PLAYGROUND_ROOT, path));
         }
       }

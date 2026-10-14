@@ -1,3 +1,4 @@
+import {ORDER_RELEASE,ORDER_FILES,ORDER_ENTRIES} from './delivery-order-package.mjs';
 // B-lite is one deduplicated teaching build and one atomic integration, not a new engine.
 // This proof binds bytes and source provenance; it does not authenticate their producer.
 import { execFileSync } from "node:child_process";
@@ -258,6 +259,7 @@ function assemble({ playground, captured, identity, site, offline }) {
     { id: "legacy", route: "/", entries: ["src/ui/app.js", "src/runtime/worker.js"],
       supporting: ["index.html", "boot.js", "styles.css", "_headers", CAPACITY_RELEASE_PATH, ...MEDIA_LIMITS.keys()] },
     ...(site.has(DELIVERY_RELEASE)?[{id:"nf04",route:"/network-flows/software-delivery/",entries:DELIVERY_ENTRIES,supporting:[...DELIVERY_FILES,"_headers"]}]:[]),
+    ...(site.has(ORDER_RELEASE)?[{id:"delivery_order",route:"/network-flows/delivery-order/",entries:ORDER_ENTRIES,supporting:[...ORDER_FILES,"_headers"]}]:[]),
     { id: "nf03", route: "/network-flows/capacity/", entries: ["src/ui/capacity-app.js"],
       supporting: ["network-flows/capacity/index.html", "network-flows/capacity/boot.js", "styles.css", CAPACITY_VISUAL_PATH, "_headers", CAPACITY_RELEASE_PATH] },
   ]);
@@ -285,7 +287,7 @@ function assemble({ playground, captured, identity, site, offline }) {
       original_source_scope: "Every src/*.js module, every tools/*.mjs tool, original page/CSS inputs, validation policy and LICENSE; media pinned separately. Full original inventory and text are in the source offer.",
       generation_count_scope: "teaching_generation_bytes is the teaching-input-generation subtotal, before integration. Transformed root growth, integration scripts/styles/publication/404/headers and retained/City bytes are counted by the outer integration inventory and final teaching-generation gate." },
     discovery: {owner:"hosted-integration",offline_action:false,meaning:"Discovery is injected only into the complete accepted hosted generation; final transforms are counted by the integrated aggregate gate."},
-    counts: { legacy_text_bytes: owned.legacy_text_bytes, nf04_route_local_bytes:owned.nf04_route_local_bytes, nf04_closure_bytes:owned.nf04_closure_bytes, integration_text_bytes:0, raw_source_and_tools_bytes: total(sourceFiles) + captured.contracts.length + captured.license.length,
+    counts: { legacy_text_bytes: owned.legacy_text_bytes, nf04_route_local_bytes:owned.nf04_route_local_bytes, nf04_closure_bytes:owned.nf04_closure_bytes, ...(site.has(ORDER_RELEASE)?{delivery_order_route_local_bytes:owned.delivery_order_route_local_bytes,delivery_order_closure_bytes:owned.delivery_order_closure_bytes}:{}), integration_text_bytes:0, raw_source_and_tools_bytes: total(sourceFiles) + captured.contracts.length + captured.license.length,
       net_original_source_growth_bytes:total(sourceFiles)+captured.contracts.length+captured.license.length-SOURCE_BASELINE.teaching_bytes+total(captured.integration)-SOURCE_BASELINE.integration_bytes,
       raw_module_bytes: total(new Map([...sourceFiles].filter(([path]) => path.startsWith("src/")))),
       raw_tool_bytes: total(new Map([...sourceFiles].filter(([path]) => path.startsWith("tools/")))),

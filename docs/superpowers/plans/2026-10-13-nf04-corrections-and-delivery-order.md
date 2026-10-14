@@ -487,7 +487,7 @@ assert.equal(verifyOrderRecord(r).ok, true);
 
 ### Task 4 — Search all orders, independently prove coverage, publish compact fixtures
 
-**Create:** `playground/fleetlab/src/model/delivery-order-search.js`, `delivery-order-study-verify.js`; `playground/fleetlab/src/data/delivery-order-study.js`; `playground/fleetlab/tools/delivery-order-study.mjs`; `playground/fleetlab/test/delivery-order-{search,study}.test.mjs`; `playground/fleetlab/test/fixtures/delivery-order-oracle.py`.
+**Create:** `playground/fleetlab/src/model/delivery-order-search.js`, `delivery-order-study-verify.js`; `playground/fleetlab/src/data/delivery-order-study.js`; `playground/fleetlab/tools/delivery-order-study.mjs`; `playground/fleetlab/test/delivery-order-{search,study}.test.mjs`; `tests/fixtures/delivery_order_oracle.py`.
 
 **Interfaces:**
 
@@ -520,7 +520,7 @@ assert.deepEqual(verifyOrderStudy(study).coverage,
 - [ ] Implement recursive enumeration and lexicographic `(missed_count,late_ms_total)` comparison. Preserve all ties and stable representative. Independently verify each record and factoradic rank coverage before accepting best metadata.
 - [ ] Add duplicate/missing-row, false-best, incomplete-tie and wrong-study-digest mutations; expected rejection even if an individual record is valid. Check 1–4 vehicles produce 1/2/6/24 orders. Run the Python oracle for all four design fixtures, compare histograms and all objective pairs, not just one winner.
 - [ ] Generate primary and refinement expectations; regenerate/check the equal-share baseline with unchanged `runDelivery` and `verifyDelivery` on each new common input. Keep the existing NF04 study file untouched. `delivery-order-study.mjs --check` compares canonical content and fails on mismatch without rewriting it.
-- [ ] Run `node --test playground/fleetlab/test/delivery-order-{search,study,independence}.test.mjs`, `python3 playground/fleetlab/test/fixtures/delivery-order-oracle.py` and `node playground/fleetlab/tools/delivery-order-study.mjs --check`.
+- [ ] Run `node --test playground/fleetlab/test/delivery-order-{search,study,independence}.test.mjs`, `python3 tests/fixtures/delivery_order_oracle.py` and `node playground/fleetlab/tools/delivery-order-study.mjs --check`.
 
 ### Task 5 — Establish the route owner, compact worker and packaging preflight
 
@@ -613,3 +613,5 @@ git diff --check
 5. Name 128 KiB envelope captured teaching + integration original-source growth. Preserve existing counters; report test-tree and total repository growth separately. Add domain rejection tests for nonzero source availability and absence of an arrival at zero.
 
 Final owner instruction supplies publication authority; no repeated permission question is needed.
+
+Implementation ruling: the independent Python oracle lives under tests/fixtures, preserving the repository rule that playground contains no Python.
