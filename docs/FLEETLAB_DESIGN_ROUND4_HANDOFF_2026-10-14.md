@@ -24,17 +24,45 @@ The audit's review-only statement describes its author's activity. The owner's i
 ## Validation
 
 - Focused regression tests first failed for decimal type, missing card hint and missing shared component, then passed.
-- Full teaching suite: 2,412 passed, 8 skipped, 1 TODO, 0 failures (2,421 tests). Subsequent D05 presentation delta: 14 focused tests passed; the final hosted suite and package checks cover updated assets.
+- Full teaching suite: 2,412 passed, 8 skipped, 1 TODO, 0 failures (2,421 tests). D05 presentation delta: 14 focused tests passed; the exact release revision then passed the full teaching suite again (same totals) and all 96 hosted tests.
 - Initial full teaching run found seven dispatch test-fixture failures: the fixture extracted only ID-bearing elements, omitting the actual header/navigation. Repaired the fixture and added glossary-target checks; eight dispatch tests passed, then the full teaching suite passed.
 - City Python: 345 passed. Hermes: 1,661 passed, 56 skipped. Ruff passed. Doctor: 17 PASS, 1 expected dirty-checkout WARN, 1 optional NOT_AVAILABLE.
 - Fresh independent code review: no remaining findings after fixture repair; reviewer independently ran 75 relevant tests and checked runtime ownership. D05 was authorized afterward and validated separately with focused tests and actual browser chapter transitions.
 - Browser: all four focus pages at 390 px and 320 px show the same three navigation links, one glossary, identical footer trust copy and no horizontal document overflow. Desktop comparison still checks 24 orders and shows 2/4 versus 4/4, with 378 s all-ready in both. No autoplay introduced.
 - Native accessibility clean defaults: Rush-hour demand 1.6; smallest meaningful difference 0.02. Decimal edit precision and invalid-input rejection covered in tests.
-- D04/D05 visually inspected. D05 chapter transitions confirmed visible → hidden → visible. No physical Pixel or independent human validation claimed.
+- D04/D05 visually inspected. D05 chapter transitions confirmed visible → hidden → visible. No physical Pixel or independent human validation claimed. The first header-check invocation used an older system Python without datetime.UTC; it produced no final result. Rerunning with the project Python completed all 69 checks successfully.
 
 ## Packaging and release
 
-Final source-bound package and hosted readback results are appended after publication. No byte-budget ceiling increased. The expressly requested fourth diagram updates the inventory count from three to four; their combined 510,436 bytes remain inside the existing 512 KiB limit. All other media inventory limits remain unchanged.
+Final source-bound package verified for commit `5f3a3f1eb65b5a54d75fb66ee5b40d8a54416596`; 10,137 staged files. Final hosted Node suite: 96 passed. Live publication and all readback checks are complete. No byte-budget ceiling increased. The expressly requested fourth diagram updates the inventory count from three to four; their combined 510,436 bytes remain inside the existing 512 KiB limit. All other media inventory limits remain unchanged.
+
+| Measure | Actual bytes | Ceiling bytes |
+|---|---:|---:|
+| Original teaching source and tools | 3,153,469 | 3,153,920 |
+| Legacy emitted text | 2,618,052 | 2,621,440 |
+| Integrated emitted text | 3,095,336 | 3,145,728 |
+| Offline edition | 2,566,932 | 2,571,440 |
+| Package metadata | 37,471 | 40,960 |
+| Four concept diagrams | 510,436 | 524,288 |
+
+Relative to baseline 479f664, test-tree growth is reported separately: +4,857 bytes; the complete committed runtime/documentation patch at 5f3a3f1 is −57,602 bytes overall, largely from the smaller artwork. These are separate counters from captured teaching-source growth.
+
+Only 451 bytes of original-source headroom remain. No source was moved out of its true owner to evade a budget.
+
+Initial smoke-receipt preparation omitted the custom 404 page’s expected HTTP 404 status, so two early smoke checks reported 99/100 despite matching body bytes. The expectation was corrected to match the established release contract; the initial negative receipts are retained. This required no site change.
+
+## Verified publication
+
+- Live: https://fleetlab.pages.dev
+- Runtime source commit: `5f3a3f1eb65b5a54d75fb66ee5b40d8a54416596`, pushed to `github/codex/fleetlab-city-sf`.
+- Production deployment: `12e199f4-be92-4c67-80c9-282ac2d667dd` — https://12e199f4.fleetlab.pages.dev
+- Preview deployment: `f553a699-a05a-4926-b902-4afa3bf2ed61` — https://f553a699.fleetlab.pages.dev
+- Preview and stable-production readback: **10,136/10,136 served files matched each**. Staged total: 10,137 including the hosting header file.
+- Preview and stable-production headers: **69/69 each**. Immutable production smoke: **100/100**. Prior production smoke: **97/97** at https://94c48b5b.fleetlab.pages.dev.
+- Final live verification: `2026-10-15T05:39:26.818037+00:00` (October 14 Pacific). No stable-alias propagation mismatch occurred; the earlier smoke status-expectation error is documented above.
+- Live browser: clean 1.6 / 0.02 accessibility values; dispatch independently checked, D05 present in chapter one, COD anchor reached the definition; delivery-order initial published summary and checked 2/4 versus 4/4 results confirmed; no observed browser console errors.
+- Exact fingerprints, source archive and release identities: `docs/releases/fleetlab-current.json`. Local logs/screenshots: `build/fleetlab-city/validation/design-round4-20261014/`.
+- Documentation receipt commit follows the runtime commit; it does not change the deployed source identity.
 
 ## Remaining work
 
@@ -44,4 +72,4 @@ Recommendation: retain this bounded presentation release and evaluate P2 indepen
 
 Top risks + mitigations: source headroom is tight; keep enforced budgets and require review of future growth. Synthetic illustrations never stand in for counted simulation evidence.
 
-Next 3 actions: confirm final live readback; collect visitor comprehension feedback; agree the next P2 scope before implementation.
+Next 3 actions: collect visitor comprehension feedback; agree the next P2 scope; review package headroom before adding more teaching source.

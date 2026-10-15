@@ -4,13 +4,13 @@
   "sf_qualification": "HOLD",
   "authenticity": "NOT_AUTHENTICATED",
   "operational_deployment_permission": "NONE",
-  "source_commit": "c92dcd1f34f96342d9f0b8c424ad4f19a6c56a0a",
+  "source_commit": "5f3a3f1eb65b5a54d75fb66ee5b40d8a54416596",
   "source_branch": "codex/fleetlab-city-sf",
-  "production_deployment_id": "94c48b5b-0500-4805-a984-e551d2fa0bcb",
-  "preview_deployment_id": "627db2a4-3cbf-4b7d-91d1-a12f2463ee61",
-  "prior_production_deployment_id": "769ad332-b726-496a-bb4e-201ec44c8518",
+  "production_deployment_id": "12e199f4-be92-4c67-80c9-282ac2d667dd",
+  "preview_deployment_id": "f553a699-a05a-4926-b902-4afa3bf2ed61",
+  "prior_production_deployment_id": "94c48b5b-0500-4805-a984-e551d2fa0bcb",
   "stable_url": "https://fleetlab.pages.dev",
-  "immutable_url": "https://94c48b5b.fleetlab.pages.dev",
+  "immutable_url": "https://12e199f4.fleetlab.pages.dev",
   "current": {
     "compatibility": {
       "metrics": "fleetlab.city-metrics/1.0.0",
@@ -18,13 +18,13 @@
       "run": "fleetlab.city-run/1.0.0",
       "viewer": "1.1.0"
     },
-    "path": "city-explorer/releases/b665155a8f6d063b",
-    "release_sha256": "b665155a8f6d063b08fabbc25c4bf79d604edad4666148ea5faa3826f1194e9c"
+    "path": "city-explorer/releases/6da738f27abd0cf9",
+    "release_sha256": "6da738f27abd0cf98cb55e7628d10ee989b7b522f35826604bf533743c572eb1"
   },
   "rollback": "city-explorer/releases/c56bda6b509105c5",
-  "integration_manifest_sha256": "e2001fe2347a3b227515c35d3cc0cc44835b597841dc108598bc852a0e590175",
-  "file_count": 10134,
-  "total_bytes": 1626162771,
+  "integration_manifest_sha256": "ae22b7ee6139764388fcd03d1eb871df720faea296883c6238429d15847a446a",
+  "file_count": 10137,
+  "total_bytes": 1626093788,
   "files": {
     "404.html": {
       "bytes": 1609,
@@ -36,18 +36,18 @@
       "sha256": "5bf4eed656cf58f4dd0def651510b06ba9731e137ed684d61536618df2f8f364"
     },
     "brand.css": {
-      "bytes": 4803,
-      "sha256": "192d8bcf9f6b758dda74e61b9eccab4cecc5b88e60635cf23633d5e4eb7895f5"
+      "bytes": 5281,
+      "sha256": "96b1e812c13d473b53d7d62715dabc07d84939d8eca1ae82f4b528cd62a4801c"
     },
     "brand.mjs": {
-      "bytes": 4673,
-      "sha256": "b3cda5b97c3471852bb94c1aba306ffd09a323d83e783ca274b3de5e5ec1d505"
+      "bytes": 4597,
+      "sha256": "efebbba9d0b6a8cfa67c83f4a4bf8a99912585113064ecfeb956ff2714053f70"
     },
-    "city-explorer/releases/b665155a8f6d063b/data/catalog.json": {
+    "city-explorer/releases/6da738f27abd0cf9/data/catalog.json": {
       "bytes": 341154,
       "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1"
     },
-    "city-explorer/releases/b665155a8f6d063b/index.html": {
+    "city-explorer/releases/6da738f27abd0cf9/index.html": {
       "bytes": 34750,
       "sha256": "4324f98ae5672983e450d00db3d4d8087b364dd49d62cdd829e85859b41ba1cb"
     },
@@ -68,12 +68,12 @@
       "sha256": "b0746e18524fed0f19aba53006d447a3c3a9a7f42d9676f0d566da18da2e1a5e"
     },
     "downloads/fleetlab-offline.html": {
-      "bytes": 2566403,
-      "sha256": "09302de8cf0542d8e7c9c4993813c2e564d5a776a966b78179fd6d16e85f9100"
+      "bytes": 2566932,
+      "sha256": "09bda10d4fe6da288c74f089ac20f76d17f340378a0eba706e9872b9a70e9e2b"
     },
     "downloads/teaching-package.json": {
-      "bytes": 37008,
-      "sha256": "66c064a7ae40e3191f949c9d5e184cd75cc38c87c57304113795261bcf0fc38b"
+      "bytes": 37471,
+      "sha256": "159196d9e2e45cd0d61670af48a1294cedea8a0eaa56ba3be840d70bd7f412f5"
     },
     "index.html": {
       "bytes": 3634,
@@ -88,8 +88,8 @@
       "sha256": "039a3d7614724f42e31846386677a32147f1cdd4729a9774f9d983d45bc0e682"
     },
     "network-flows/capacity/release.json": {
-      "bytes": 16353,
-      "sha256": "2601d83f088e1ea3b7b6f8ebd318b8d3f427b1881a8421c052a318c4060a6a2b"
+      "bytes": 16589,
+      "sha256": "38ce5707b635a3ec820f5fc8c003f194eb4f929cddc34dadcb5462e6342a5f72"
     },
     "network-flows/capacity/visual.css": {
       "bytes": 14015,
@@ -104,24 +104,24 @@
       "sha256": "5377dc874f78b8d8bfdb7f8942c9bacf41987ea38a69415aca3a819b5b4ea0ca"
     },
     "network-flows/delivery-order/release.json": {
-      "bytes": 7525,
-      "sha256": "13784e6f568e6968bf73058915ca6ddc02ef4f70579d0456b16ddeedb379d159"
+      "bytes": 7975,
+      "sha256": "0bc643401275eef0387bbc445410b790965a96776b233bf483b398ab7b88408a"
     },
     "network-flows/delivery-order/visual.css": {
-      "bytes": 12248,
-      "sha256": "0b5ac85837c63c469c5d5b655f968bfa490186494576e7d009d1a2bd2ce46aef"
+      "bytes": 12209,
+      "sha256": "7a6f0948287e60fb6b8b3fc5d6e3a3a52933490f7a6e6a757edfa00f44a6d635"
     },
     "network-flows/dispatch/boot.js": {
       "bytes": 199,
       "sha256": "7a57e01b617ed8310df6296aca76b907192ccf51b05b04bdae18ea1414549563"
     },
     "network-flows/dispatch/index.html": {
-      "bytes": 9115,
-      "sha256": "ec3253360ee8dfbc5b2bebd188d94e2a18679ac08c31d12cc0d2980f42a69cc8"
+      "bytes": 8982,
+      "sha256": "3ddc5fb117d4ea9364bb496065f3b55ca5c7dc279fba5b95c568e95a7efe420e"
     },
     "network-flows/dispatch/release.json": {
-      "bytes": 12054,
-      "sha256": "921a384a2e61c0a8644e222c34af4ceaf3f9ac4bd0fff1d3559c5ea693599c68"
+      "bytes": 12371,
+      "sha256": "c873e02821692cd9fd4ddcbee8783d5105da75de22ef3814de5797d9a5aa58e6"
     },
     "network-flows/dispatch/visual.css": {
       "bytes": 5047,
@@ -137,7 +137,7 @@
     },
     "network-flows/rebalancing/release.json": {
       "bytes": 17389,
-      "sha256": "545ab6961b2c8d6588f98fa0657cc226516c53892d5d4430f26b7883746d372c"
+      "sha256": "c8d38ea10c2d7a7624966fab5f72c70472ebddafc1181cc518e43c0c23c16db4"
     },
     "network-flows/rebalancing/visual.css": {
       "bytes": 13732,
@@ -152,20 +152,20 @@
       "sha256": "1adc892e22a072cc61b4325110948c8d395b1a0fe8d1acc613d59ec349502348"
     },
     "network-flows/software-delivery/release.json": {
-      "bytes": 6407,
-      "sha256": "6ea7bde446a548d5267c2454c612199c6e575669adcfe8e27eb478149b3022f8"
+      "bytes": 6857,
+      "sha256": "22b32ad4ba2dd1eae53e6ec955981b9d68a2bb83da580f36c6cfb6d45e2ca0b7"
     },
     "network-flows/software-delivery/visual.css": {
       "bytes": 17914,
       "sha256": "7fbac547b5d1fa018b82a7fdbc4499097ea550a1edf4c76b67cd39b2f2efb73b"
     },
-    "network-flows/sources/1059ae85bd616d278d2798ebe3721c63d386a804b0217cb6767952aad7d72a07.json.gz": {
-      "bytes": 972122,
-      "sha256": "1059ae85bd616d278d2798ebe3721c63d386a804b0217cb6767952aad7d72a07"
+    "network-flows/sources/82b5571490fb0aa3e66ea22789126bba384bb718b59cd75c109a83d5e4319ca1.json.gz": {
+      "bytes": 973474,
+      "sha256": "82b5571490fb0aa3e66ea22789126bba384bb718b59cd75c109a83d5e4319ca1"
     },
     "publication.json": {
       "bytes": 1800,
-      "sha256": "87bd3f92d8d515c47cbb43f115f550df997b3f16f0ce3f34b37348b6bb0b9ccf"
+      "sha256": "a6fa2a6866ccc5b810786c2e525e27409f3050dbf0cda9acb335b44b20c17ccb"
     },
     "site-media/apple-touch-icon.png": {
       "bytes": 21051,
@@ -207,9 +207,9 @@
       "bytes": 401446,
       "sha256": "494f4499e7a9b2a3f2dd441d3f7f34418c33c41e124b46c73111a7e9de2ac110"
     },
-    "site-media/shared-delivery.jpg": {
-      "bytes": 318541,
-      "sha256": "aaf24773d0e0260e3c1da1533ba053be4f0981be484d61d6c678f601a80bc968"
+    "site-media/shared-delivery.webp": {
+      "bytes": 145670,
+      "sha256": "9139c4f68e6ef71557277fe40ea977176dfbb8fe26ed9d6331c6c7afcbd725ba"
     },
     "src/data/delivery-order-study.js": {
       "bytes": 17593,
@@ -284,8 +284,8 @@
       "sha256": "e5363eed46562369eb8a216f10ff41b338deed6b2fad80e9ffb02dffd8b9ae84"
     },
     "src/ui/delivery-order-page.js": {
-      "bytes": 29097,
-      "sha256": "e4fc670ac7f63767cd194dde11fc125c6dd855ce08eed0696b203b1312e651c1"
+      "bytes": 29298,
+      "sha256": "e217783def5a29549da7a6a64a64c8b0494ee804767edf322a915eb5685b5910"
     },
     "src/ui/depot-capacity-bench.js": {
       "bytes": 11079,
@@ -296,8 +296,8 @@
       "sha256": "9416c77697c09818c5a7b74e9db7ee201772d1721bc7bf90fd085b05b6af75ab"
     },
     "src/ui/dispatch-app.js": {
-      "bytes": 12235,
-      "sha256": "2be3ddf9cb48d0121afb22818a3c7407b5e8f46a603c94cc7aeac14d2e5930fb"
+      "bytes": 12478,
+      "sha256": "9c8243053b1e256d64cac2881c890090224b105d48d292e17b06d5d744842586"
     },
     "src/ui/hero-film.js": {
       "bytes": 9750,
@@ -408,76 +408,88 @@
       "sha256": "ed0525b08640af791d1ea3b89be926eda1ccbbe5af3c521f4034cd2cd5cc3af8"
     },
     "visitor.css": {
-      "bytes": 8629,
-      "sha256": "868d6cb45d428bb745870e868e76d173111db6fe4cee99627b77eb2382150b03"
+      "bytes": 8694,
+      "sha256": "c7aa08776b664ce80c74c4a43f532d6fc92d35f7b18cde2a6e6610dcb9164135"
     },
     "visitor.mjs": {
-      "bytes": 10965,
-      "sha256": "24fafdf7f1ee890c7d3baf2c44898d5ff2f3fadf9ef6b5132ed167f32fc65fb5"
+      "bytes": 11337,
+      "sha256": "92df33b301d6504cfc8f8f6e2f0a9f79ebe276a5ddc6d03c70e9afefc3b6c588"
+    },
+    "src/ui/network-chrome.js": {
+      "bytes": 1635,
+      "sha256": "a0cc2f4888f4c36197a81f75b69ca892784e3ad6efca72f2f0e471488bd21415"
+    },
+    "src/ui/decimal-input.js": {
+      "bytes": 197,
+      "sha256": "6f92ec81371b4f7dca19878d1b117fadfe3b1ed26c6c91ac6ce78480839884ee"
+    },
+    "diagrams/D-05-opportunity-cost.webp": {
+      "bytes": 96562,
+      "sha256": "353762295346a650a868f43580b379cdfd825676eec57c1b7fc4d4eec2444f8f"
     }
   },
-  "verified_at_utc": "2026-10-15T04:47:57.929349+00:00",
+  "verified_at_utc": "2026-10-15T05:39:26.818037+00:00",
   "verification": {
-    "served_files": 10133,
-    "matched_files": 10133,
-    "header_checks": 68,
+    "served_files": 10136,
+    "matched_files": 10136,
+    "header_checks": 69,
     "headers_pass": true,
-    "full_readback_sha256": "ca01918517aa590c7d4a9f74d35369419c64c55d60b5bc8d49d2cc40354daad0",
-    "preview_matched_files": 10133,
-    "preview_full_readback_sha256": "dfe4533239a9ddac16f32655b3a26e76eca48f5e1daa40a50b41189bc2caa31e",
-    "production_headers_sha256": "d49ee76506f622262bd4a9a846990b6ed7b8213d85ac5aa4979573b37f44ba95",
-    "preview_headers_sha256": "b0c88d24771776e9d7ebfd452f63e3b2cedac3f718286614aaaceb31b001a25a",
-    "immutable_smoke_matched_files": 97,
-    "immutable_smoke_sha256": "98cfc3cb045ceb0362cbbd1a667fc5150fbdbb08779f22a8eeb3102ad3d657e2",
-    "prior_production_smoke_matched_files": 94,
-    "prior_production_smoke_sha256": "0d1264d4d9bbb66f93ce38d3b72d671e9fb9455f42f06ecfaa2371179d9f49fd",
+    "full_readback_sha256": "52d5d5f3ea2ca94294f7df8450adc09622022c25595b0dd1065d2c9c5f592ea0",
+    "preview_matched_files": 10136,
+    "preview_full_readback_sha256": "e2be6dec720b387eb61e152f0c378949254b421dfebed87005aed007002248fb",
+    "production_headers_sha256": "7aee300f501b670c396a5888ab4ad568fa4a29b34f88a33a2f13de4d99ac80c4",
+    "preview_headers_sha256": "fcec8b8b9b1ed1c5c1e5321ac9728b510ca8eaee58df80bb38f9d1c3c8dbfb72",
+    "immutable_smoke_matched_files": 100,
+    "immutable_smoke_sha256": "2d67ad504692577a22a4f39010d6ba40b66319c127461168d9932045d27ccddb",
+    "prior_production_smoke_matched_files": 97,
+    "prior_production_smoke_sha256": "1d81135d9d0d04537b920f917f4a81de568d35366eb3000988a9af541524019f",
     "meaning": "Byte consistency and observed hosting only; not independent authenticity, browser-session generation pinning or operational authority."
   },
-  "capacity_release_sidecar_sha256": "2601d83f088e1ea3b7b6f8ebd318b8d3f427b1881a8421c052a318c4060a6a2b",
-  "capacity_release_digest": "e1b73b8b6ba50e963efb0c10eab768280da7df2c485f2b8605ee7ba99a5fd5af",
+  "capacity_release_sidecar_sha256": "38ce5707b635a3ec820f5fc8c003f194eb4f929cddc34dadcb5462e6342a5f72",
+  "capacity_release_digest": "acf5c19ae1652629a3af74d4547859b7226dbb0d725279b7c923a6699c2e87da",
   "teaching_package": {
-    "bytes": 37008,
+    "bytes": 37471,
     "path": "downloads/teaching-package.json",
-    "sha256": "66c064a7ae40e3191f949c9d5e184cd75cc38c87c57304113795261bcf0fc38b"
+    "sha256": "159196d9e2e45cd0d61670af48a1294cedea8a0eaa56ba3be840d70bd7f412f5"
   },
   "teaching_source_offer": {
-    "bytes": 972122,
-    "extracted_sha256": "d204de3c14221bdfefbda2edfb581d777e1a47e2e5331b7bcf93af2b52b5d9a6",
-    "original_inventory_sha256": "c2388088c038ffe80c76e9f78c449f78802d16c601487c1b92dedda39597f68c",
+    "bytes": 973474,
+    "extracted_sha256": "0142e72ba31a5242cd3b1d7786f4fdcc2bdabb58359a5638df361ecd3fdad84e",
+    "original_inventory_sha256": "a1a65852c7824a1620b6643d00388205e0cf4c62e5b7ddfca42d7366040d8eac",
     "owner": "teaching-original-source-and-tools",
-    "path": "network-flows/sources/1059ae85bd616d278d2798ebe3721c63d386a804b0217cb6767952aad7d72a07.json.gz",
-    "sha256": "1059ae85bd616d278d2798ebe3721c63d386a804b0217cb6767952aad7d72a07"
+    "path": "network-flows/sources/82b5571490fb0aa3e66ea22789126bba384bb718b59cd75c109a83d5e4319ca1.json.gz",
+    "sha256": "82b5571490fb0aa3e66ea22789126bba384bb718b59cd75c109a83d5e4319ca1"
   },
-  "non_city_bytes": 12925351,
-  "software_delivery_release_sidecar_sha256": "6ea7bde446a548d5267c2454c612199c6e575669adcfe8e27eb478149b3022f8",
-  "software_delivery_release_digest": "767df8fb3f2a154c0e671d2488f8d7e7b2f4019a596cb319bd74578770f2258e",
+  "non_city_bytes": 12856202,
+  "software_delivery_release_sidecar_sha256": "22b32ad4ba2dd1eae53e6ec955981b9d68a2bb83da580f36c6cfb6d45e2ca0b7",
+  "software_delivery_release_digest": "48c22c9218ec32b57e1aa7aaf2b994b93788f98e399ea5e11054005d83c86df1",
   "nf04_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
-  "delivery_order_release_sidecar_sha256": "13784e6f568e6968bf73058915ca6ddc02ef4f70579d0456b16ddeedb379d159",
-  "delivery_order_release_digest": "830e95b35816e132e03fe30ceb4b99a6194858e055e9a7d38a0aa15aabdeeec2",
+  "delivery_order_release_sidecar_sha256": "0bc643401275eef0387bbc445410b790965a96776b233bf483b398ab7b88408a",
+  "delivery_order_release_digest": "632a0292544e1664647b467ddd34610b9816308d17b7580d937e5d1793f0b8c3",
   "delivery_order_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
   "hosted_presentation": {
     "schema": "fleetlab.hosted-presentation/1.0.0",
     "measurement_id": "G-04EZ8EZWQ2",
     "collection_host": "fleetlab.pages.dev",
     "current_public_html_pages": 10,
-    "artwork_bytes": 5184152,
+    "artwork_bytes": 5107843,
     "brand_asset_count": 7,
     "tile_asset_count": 19,
     "rebalancing_concept_asset_count": 4,
-    "diagram_asset_count": 3,
+    "diagram_asset_count": 4,
     "offline_and_historical_city_analytics": false,
     "analytics_property_receipt": "NOT_OBSERVED"
   },
-  "rebalancing_release_sidecar_sha256": "545ab6961b2c8d6588f98fa0657cc226516c53892d5d4430f26b7883746d372c",
-  "rebalancing_release_digest": "ab291ab8b85285d4caaa3a1559bb1d87a0fcb1d3c314591808e89c5dec84bdfa",
+  "rebalancing_release_sidecar_sha256": "c8d38ea10c2d7a7624966fab5f72c70472ebddafc1181cc518e43c0c23c16db4",
+  "rebalancing_release_digest": "5ab7853133e6cbdb1164dbc5f6fd11d127854079f67b620e8f43f0135fc38811",
   "rebalancing_qualification": {
     "scope": "SYNTHETIC_TEACHING",
     "independent_record_reconstruction": true,
     "physical_device_qualification": "NOT_ESTABLISHED",
     "sf_qualification": "HOLD"
   },
-  "dispatch_release_sidecar_sha256": "921a384a2e61c0a8644e222c34af4ceaf3f9ac4bd0fff1d3559c5ea693599c68",
-  "dispatch_release_digest": "f2208965bcef3b5045d94d38f054e5100fff219f0c951f10a53bccef01ec7f61",
+  "dispatch_release_sidecar_sha256": "c873e02821692cd9fd4ddcbee8783d5105da75de22ef3814de5797d9a5aa58e6",
+  "dispatch_release_digest": "b90648bf5dbc78facbd476afc7486e8399b18263cdb45318c86b6e154ccab14e",
   "dispatch_qualification": {
     "scope": "SYNTHETIC_TEACHING",
     "independent_record_reconstruction": true,

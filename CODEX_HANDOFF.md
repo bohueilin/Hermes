@@ -1,6 +1,6 @@
 # Current update — FleetLab design Round 4, October 14, 2026
 
-See `docs/FLEETLAB_DESIGN_ROUND4_HANDOFF_2026-10-14.md` for the five P1 changes, owner-approved D05 addition, validation, audit decisions and publication status. Models and scientific fixtures remain unchanged; P2 otherwise deferred.
+See `docs/FLEETLAB_DESIGN_ROUND4_HANDOFF_2026-10-14.md` for the five P1 changes, owner-approved D05 addition, validation and audit decisions. Runtime `5f3a3f1` is live in deployment `12e199f4-be92-4c67-80c9-282ac2d667dd`; stable production and preview each matched 10,136 served files and 69 header checks. Models and scientific fixtures remain unchanged; P2 otherwise deferred.
 
 # FleetLab targeted design fixes, round 3 — October 14, 2026
 
