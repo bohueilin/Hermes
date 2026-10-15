@@ -1,41 +1,5 @@
-/*
-FleetLab Playground styles. Tokens, type and motion follow design section 8; layout follows design section 7.2.
-Interface modules use these classes (and write text only through textContent):
-
-Shell        .fl-app[data-phone-group="now|charts|across"][data-mode="learn|sandbox|experiment"]  .fl-strip
-             .fl-strip__full .fl-strip__short .fl-topbar .fl-modes .fl-clock .fl-knobs[data-open] .fl-knobs__run
-             .fl-knobs-toggle .fl-map .fl-map__stamp .fl-transport .fl-transport__strips .fl-side .fl-now .fl-now__row
-             .fl-across .fl-segmented .fl-charts .fl-charts__set .fl-charts__wide .fl-chart .fl-chart__summary
-             .fl-footer .fl-group (a row of related buttons) .fl-contents (a wrapper without its own box)
-Surfaces     .fl-panel .fl-panel-alt .fl-drawer[data-open] .fl-inspector .fl-popover[data-open] .fl-tooltip[data-open]
-Controls     .fl-button .fl-button--primary .fl-field .fl-field--changed .fl-field--invalid .fl-field__note
-Registers    .fl-chip-replay (filled) .fl-chip-across (outlined) .fl-limits-chip
-Verdict      .fl-verdict .fl-teaching-chip .fl-verdict__footer
-             .fl-verdict-chip[data-status="pass|cond|hold|invalid|neutral"] .fl-verdict-chip__glyph .fl-verdict-chip__word
-States       .fl-stale .fl-absent .fl-error .fl-error__slot .fl-unserved
-Scrollers    .fl-scroll (tables, the depot board and code scroll inside it) .fl-table .fl-board .fl-code
-Text         .fl-mono .fl-title .fl-muted .fl-small-label .fl-learn-text .fl-sr-only
-Map and SVG  .fl-yard .fl-route-highway__casing .fl-route-highway__centre .fl-route-local .fl-route--congested
-             .fl-chevron .fl-depot-tile .fl-rider-ring .fl-glyph-edge .fl-glyph-ring .fl-car (one mark per driving car)
-             .fl-fam-rider .fl-fam-empty .fl-fam-available .fl-fam-depot (set color; glyphs fill with currentColor)
-             .fl-pinned-car (the pinned glyph, clickable) .fl-hit (a transparent pointer target)
-             .fl-chart__grid .fl-chart__axis .fl-chart__line .fl-chart__band .fl-chart__cursor .fl-hatch-line
-             .fl-map-legend (swatch and word per state family)
-Isometric    .fl-iso (the canvas and its overlay) .fl-iso__canvas .fl-iso__overlay (HTML labels over the canvas: every word)
-             .fl-iso__label .fl-iso__label--area .fl-iso__label--depot .fl-iso__label--route .fl-iso__label--local
-             .fl-iso__plate .fl-iso__leader .fl-iso__text .fl-iso__numbers .fl-iso__count .fl-iso__pin .fl-iso__pick
-Walkthrough  .fl-ledger (what the beat shows, a tab stop because it scrolls) .fl-ledger__beat .fl-ledger__prepare
-             .fl-ledger__figures .fl-ledger__figure .fl-ledger__foot (the ticker, pinned to the ledger's bottom edge)
-             .fl-ledger__value (32 px mono) .fl-ledger__table .fl-ticker .fl-ticker__line .fl-rail (one row of controls)
-             .fl-reading-card  on .fl-app[data-present="true"] the knobs, the side column and the chart row are hidden
-             .fl-registry (the metric registry in two registers) .fl-hourly (two charts by hour, side by side)
-             .fl-readout (the verdict in gate order, on .fl-verdict) .fl-refusals (what this page is not)
-Lists        .fl-flow (ordered steps as an arrow flow, no number markers) .fl-flow__arrow (aria-hidden) .fl-list-plain .fl-situation__proxy
-Transport    .fl-scrubber .fl-scrubber__band (style --warmup: fraction) .fl-scrubber__input .fl-scrubber__ticks
-Scale lab    .scale-lab (the page) .scale-chooser (links to the three labs) .scale-run (Run, Cancel and status; sticks to the
-             screen bottom on a phone until its own place scrolls in) .scale-setup .scale-result .scale-chart
-Motion       :root[data-motion="reduce|full"] is the in-app override; without it the system setting applies.
-             A closed drawer, sheet or popover also gets the inert attribute from the interface.
+/* FleetLab UI class inventory:
+.fl-app .fl-strip .fl-strip__full .fl-strip__short .fl-topbar .fl-modes .fl-clock .fl-knobs .fl-knobs__run .fl-knobs-toggle .fl-map .fl-map__stamp .fl-transport .fl-transport__strips .fl-side .fl-now .fl-now__row .fl-across .fl-segmented .fl-charts .fl-charts__set .fl-charts__wide .fl-chart .fl-chart__summary .fl-footer .fl-group .fl-contents .fl-panel .fl-panel-alt .fl-drawer .fl-inspector .fl-popover .fl-tooltip .fl-button .fl-button--primary .fl-field .fl-field--changed .fl-field--invalid .fl-field__note .fl-chip-replay .fl-chip-across .fl-limits-chip .fl-verdict .fl-teaching-chip .fl-verdict__footer .fl-verdict-chip .fl-verdict-chip__glyph .fl-verdict-chip__word .fl-stale .fl-absent .fl-error .fl-error__slot .fl-unserved .fl-scroll .fl-table .fl-board .fl-code .fl-mono .fl-title .fl-muted .fl-small-label .fl-learn-text .fl-sr-only .fl-yard .fl-route-highway__casing .fl-route-highway__centre .fl-route-local .fl-route--congested .fl-chevron .fl-depot-tile .fl-rider-ring .fl-glyph-edge .fl-glyph-ring .fl-car .fl-fam-rider .fl-fam-empty .fl-fam-available .fl-fam-depot .fl-pinned-car .fl-hit .fl-chart__grid .fl-chart__axis .fl-chart__line .fl-chart__band .fl-chart__cursor .fl-hatch-line .fl-map-legend .fl-iso .fl-iso__canvas .fl-iso__overlay .fl-iso__label .fl-iso__label--area .fl-iso__label--depot .fl-iso__label--route .fl-iso__label--local .fl-iso__plate .fl-iso__leader .fl-iso__text .fl-iso__numbers .fl-iso__count .fl-iso__pin .fl-iso__pick .fl-ledger .fl-ledger__beat .fl-ledger__prepare .fl-ledger__figures .fl-ledger__figure .fl-ledger__foot .fl-ledger__value .fl-ledger__table .fl-ticker .fl-ticker__line .fl-rail .fl-reading-card .fl-registry .fl-hourly .fl-readout .fl-refusals .fl-flow .fl-flow__arrow .fl-list-plain .fl-situation__proxy .fl-scrubber .fl-scrubber__band .fl-scrubber__input .fl-scrubber__ticks .scale-lab .scale-chooser .scale-run .scale-setup .scale-result .scale-chart
 */
 
 :root {

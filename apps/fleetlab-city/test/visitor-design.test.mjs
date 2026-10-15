@@ -145,7 +145,8 @@ test('fleet-day field notes follow lesson replacement and disappear for unsuppor
   select('depot-count');decorateVisitors(document);decorateVisitors(document);
   assert.equal(intro.querySelectorAll('.visitor-field').length,1);assert.match(intro.querySelector('.visitor-field').textContent,/Lyft/);
   select('staffing-readiness');assert.equal(intro.querySelectorAll('.visitor-field').length,1);assert.match(intro.querySelector('.visitor-field').textContent,/Waymo/);assert.doesNotMatch(intro.querySelector('.visitor-field').textContent,/Lyft/);
-  for(const id of ['charging','region-launch','capacity','unavailable']){select(id);assert.equal(intro.querySelectorAll('.visitor-field').length,0);}
+  select('region-launch');assert.equal(intro.querySelectorAll('.visitor-field').length,1);assert.match(intro.querySelector('.visitor-field').textContent,/As of late September 2026/);assert.match(intro.querySelector('.visitor-field a').textContent,/Covington · October 1, 2026 ↗/);
+  for(const id of ['charging','capacity','unavailable']){select(id);assert.equal(intro.querySelectorAll('.visitor-field').length,0);}
   select('upload');assert.match(intro.querySelector('.visitor-field').textContent,/NTT/);assert.equal(teaching.querySelector('.visitor-field'),null);
  }finally{globalThis.MutationObserver=previous;restore();}
 });

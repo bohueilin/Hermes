@@ -13,13 +13,14 @@ const FIELD_NOTES={
  dispatch:['In three weeks of April 2026 checks in Austin, Reuters found Tesla Robotaxi wait times above 15 minutes about half the time and no cars available in 27% of checks.','Reuters · May 2026 (syndicated)','https://www.investing.com/news/stock-market-news/teslas-robotaxi-rollout-features-texassized-wait-times-4679470'],
  'depot-count':['Lyft announced an 80,000-square-foot Nashville depot for servicing, charging and maintaining autonomous vehicles.','Lyft · October 2026','https://www.lyft.com/blog/posts/flexdrive-nashville-av-depot'],
  'staffing-readiness':['In February 2026, Waymo reported about 70 remote-assistance agents on duty worldwide for a fleet of about 3,000 vehicles. Remote assistance is a different job from the depot cleaning work modeled here.','Waymo · February 2026','https://waymo.com/blog/shorts/advice-not-control-the-role-of-remote-assistance/'],
+ 'region-launch':["As of late September 2026, no operator had completed the UK's vehicle-registration stage or applied for a driverless permit; automated-passenger-service permits were yet to be granted.",'Covington · October 1, 2026','https://www.insideglobaltech.com/2026/10/01/overview-of-eu-and-uk-regulatory-developments-relating-to-autonomous-vehicles/'],
  upload:['NTT and NTT DOCOMO tested transmitting vehicle-camera video to a remote monitoring room in Japan. That live communication is different from the depot transfers modeled here.','NTT Technical Review · February 2025','https://www.ntt-review.jp/archive/ntttechnical.php?contents=ntr202502ra1.html'],
  'airport-preparation':['Harry Reid International Airport announced Zoox robotaxi service in September 2026.','Harry Reid International Airport · September 2026','https://www.harryreidairport.com/newsroom/news-articles/las-has-a-new-way-to-ride-with-zoox'],
  cleaning:['Cruise said its 2023 contractor cuts included people who cleaned, charged and maintained its vehicles.','CBS News · November 2023','https://www.cbsnews.com/sanfrancisco/news/cruise-contract-workers-laid-off-after-robotaxi-service-halted/'],
 };
 const fieldObservers=new WeakSet();
 function decorateFieldNotes(doc){
- const make=key=>{const [copy,source,href]=FIELD_NOTES[key];return node(doc,'aside',{class:'visitor-field','aria-label':'From the field · public reporting'},[
+ const make=key=>{const [copy,source,href]=FIELD_NOTES[key];return node(doc,'aside',{class:'visitor-field','aria-label':'From the field · public reporting · not FleetLab simulation evidence'},[
   node(doc,'h2',{},'From the field'),node(doc,'p',{class:'visitor-field-label'},'Public reporting · not FleetLab simulation evidence'),node(doc,'p',{},copy),node(doc,'a',{href},source+' ↗'),
  ]);};
  for(const [selector,key] of [['.r1-hero','rebalancing'],['#main > .hero','dispatch'],['.delivery-hero','upload']]){const hero=doc.querySelector(selector);if(hero&&!hero.querySelector('.visitor-field'))hero.appendChild(make(key));}
@@ -172,6 +173,21 @@ export function decorateVisitors(doc=document){
   el('p',{},"I'm Bo-Huei Lin. I spent the last 19+ years moving from software engineering into product leadership across Cisco, Amazon Alexa, Riot Games, and Meta, building across consumer devices, smart wearables, and large-scale platforms. The common thread in my work has always been operational reality at scale: designing systems that don't just work in the lab, but hold up when the edge cases hit simultaneously in production. Autonomous fleets take that software and hardware complexity into the physical world—where charging, turnaround, routing, and fleet-wide software updates directly dictate unit economics and passenger safety every single day."),
   el('p',{},"I built FleetLab to learn how that works — and to show my work. Every simulation here is synthetic and labeled as such, because I'd rather be honest about what I don't know than impressive about what I can't prove."),
  ]),about.nextSibling);
+ if(about&&!doc.getElementById('visitor-presenting'))about.parentNode.parentNode.insertBefore(el('section',{id:'visitor-presenting',class:'approach-case','aria-labelledby':'visitor-presenting-title'},[
+  el('div',{},[el('p',{class:'eyebrow'},'FIVE STOPS · ONE OPERATING QUESTION'),el('h2',{id:'visitor-presenting-title'},'Presenting FleetLab'),el('p',{},'Follow the work between the rides: readiness, demand, guardrails, depot time and dispatch. Before presenting, open the walkthrough and press Prepare; have Step 7 ready.'),el('p',{},'Read the results shown in the selected run. These are synthetic teaching examples, not operator performance.')]),
+  el('ol',{class:'hypothesis-steps'},[
+   ['Home · concept film','/#/home','Choose “Watch the concept film” for the visual introduction.'],
+   ['Fleet day · demand and capacity','/#/fleet-day','Press “Run fleet day”, then read the Result summary.'],
+   ['Walkthrough · the verdict','/#/walkthrough','Open Step 7. Read the primary outcome alongside the guardrails and recommendation.'],
+   ['City Explorer · a recorded shift','/city-explorer/#replay','Press Play in Replay studio. Inspect where the selected vehicle spent its time.'],
+   ['Dispatch · compare two policies','/network-flows/dispatch/','Choose the same workload for both policies. Use “Play snapshots”, then compare pickups and empty approach.'],
+  ].map(([title,href,copy])=>el('li',{},[el('strong',{},el('a',{href,class:'city-entry-action'},title+' →')),copy]))),
+ ]),about.parentNode.nextSibling);
+ const close=doc.querySelector('.approach-close');
+ if(close&&!doc.getElementById('visitor-contact'))close.parentNode.insertBefore(el('section',{id:'visitor-contact',class:'approach-case','aria-labelledby':'visitor-contact-title'},[
+  el('div',{},[el('h2',{id:'visitor-contact-title'},'Bo-Huei Lin'),el('p',{},'I build fleet-operations simulations and network-flow optimization engines to advance my work across Autonomous Vehicles and Physical AI.')]),
+  el('div',{},el('a',{href:'mailto:bohueilin@gmail.com',class:'studio-button'},'bohueilin@gmail.com')),
+ ]),close.nextSibling);
  decorateFieldNotes(doc);
 }
 
