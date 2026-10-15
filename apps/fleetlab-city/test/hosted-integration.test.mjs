@@ -117,7 +117,7 @@ test('the capacity study joins the lab links, a next-lesson line under Compare a
   assert.equal(catalogs[0].querySelector('h3#capacity-catalog-title').textContent,'Change the schedule or add capacity?');
   assert.match(catalogs[0].querySelector('p:not(.city-entry-eyebrow)').textContent,/Twelve invented visits/);
   const action=catalogs[0].querySelectorAll('a.city-entry-action');
-  assert.deepEqual(action.map(a=>[a.getAttribute('href'),a.textContent]),[['/network-flows/capacity/','Open the capacity study  ↗']]);
+  assert.deepEqual(action.map(a=>[a.getAttribute('href'),a.textContent]),[['/network-flows/capacity/','Open the capacity study  →']]);
   const primary=document.querySelector('.hero-actions .studio-button-primary');
   assert.equal(primary.getAttribute('href'),'/network-flows/capacity/');
   primary.click();assert.equal(studio.element.getAttribute('data-page'),'overview','hosted native action must not retain the old in-app NF-01 click handler');

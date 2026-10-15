@@ -10,7 +10,7 @@ export function decorateDesign(doc=document){
   brand.setAttribute('data-art-logo','true');brand.classList.add('design-brand');brand.setAttribute('aria-label','FleetLab home');
   brand.replaceChildren(mark(),el('strong',{},'FleetLab'));
  }
- for(const footer of doc.querySelectorAll('footer'))if(!footer.querySelector('.design-footer-mark'))footer.insertBefore(el('a',{href:'/#/overview',class:'design-footer-mark','aria-label':'FleetLab home'},[mark(),el('strong',{},'FleetLab')]),footer.firstChild);
+ for(const footer of doc.querySelectorAll('footer'))if(!footer.querySelector('.design-footer-mark'))footer.insertBefore(el('a',{href:'/#/home',class:'design-footer-mark','aria-label':'FleetLab home'},[mark(),el('strong',{},'FleetLab')]),footer.firstChild);
  for(const panel of doc.querySelectorAll('.offline-edition'))if(!panel.querySelector('.design-panel-mark'))panel.insertBefore(el('span',{class:'design-panel-mark'},[mark(),el('strong',{},'FleetLab')]),panel.firstChild);
  const home=doc.querySelector('.studio-overview');
  if(home&&!doc.getElementById('design-readiness')){
@@ -27,7 +27,7 @@ export function decorateDesign(doc=document){
    el('img',{class:'design-readiness-image',src:media+'readiness.jpg',alt:'Readiness, made visible. Explore the decisions behind fleet availability. An illustrative depot with four autonomous vehicles under a green canopy.',width:'1672',height:'941',fetchpriority:'high',decoding:'async'}),
    el('div',{class:'design-art-caption'},[
     el('div',{},[el('p',{class:'design-eyebrow'},'A SMALL EXPERIMENT. A VISIBLE TRADE-OFF.'),el('p',{class:'design-art-description'},'Follow the energy, data and decisions that get a vehicle ready for its next ride.')]),
-    el('div',{class:'design-art-actions'},[el('a',{href:'/network-flows/capacity/',class:'design-primary'},'Explore depot operations ↗'),filmButton]),
+    el('div',{class:'design-art-actions'},[el('a',{href:'/network-flows/capacity/',class:'design-primary'},'Explore depot operations →'),filmButton]),
    ]),el('p',{class:'design-art-note'},'Independent simulation · Concept artwork, not a recorded depot or simulation result.'),
   ]);
   home.insertBefore(feature,home.firstChild);

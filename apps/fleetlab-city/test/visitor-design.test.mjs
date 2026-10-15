@@ -36,11 +36,13 @@ test('illustrated navigation delegates filtering, remains idempotent and clears 
   const buttons=root.querySelectorAll('[data-family]');assert.equal(buttons.length,9);
   buttons[1].click();assert.equal(buttons[1].getAttribute('aria-pressed'),'true');
   assert.equal(root.querySelectorAll('.catalog-card').length,5);
+  assert.equal(root.querySelector('.catalog-library-title').textContent,'Charging & energy · lesson library');
   const search=root.querySelector('input');search.value='no such lesson';search.dispatchEvent(new Event('input'));
   assert.equal(root.querySelectorAll('.catalog-card').length,0);
   root.querySelector('.catalog-count-row button').click();
   assert.ok(buttons.every(b=>b.getAttribute('aria-pressed')==='false'));
   assert.equal(root.querySelectorAll('.catalog-card').length,61);
+  assert.equal(root.querySelector('.catalog-library-title').textContent,'The complete learning library');
   assert.equal(root.querySelector('#visitor-family-status').textContent,'All question families');
  }finally{restore();}
 });
@@ -65,7 +67,7 @@ test('Home has one purpose heading, a first lesson and the existing film retaine
   const video=document.createElement('video');video.setAttribute('src','original-film.mp4');home.appendChild(video);
   decorateVisitors(document);decorateVisitors(document);
   assert.equal(home.querySelectorAll('h1').length,1);
-  assert.equal(home.querySelector('.visitor-first-action').textContent,'Start with a 3-minute lesson ↗');
+  assert.equal(home.querySelector('.visitor-first-action').textContent,'Start with a 3-minute lesson →');
   assert.equal(link.getAttribute('href'),'/#/depot-flow-lab?lesson=two-vehicles');
   assert.equal(home.querySelector('video'),video);assert.equal(video.getAttribute('src'),'original-film.mp4');
  }finally{restore();}

@@ -331,3 +331,7 @@ test('home learning paths open the intended model without starting a run',()=>{
   assert.equal(x.store.getState().run.status,'idle');
  }finally{x.studio.destroy();x.restore();}
 });
+test('legacy overview replaces its address without adding a second Home page or running a model',()=>{
+ const x=setup(),previous=globalThis.history,addresses=[];globalThis.history={replaceState:(_state,_title,url)=>addresses.push(url)};
+ try{x.studio.applyRoute('#/overview');assert.deepEqual(addresses,['#/home']);assert.equal(x.studio.element.querySelectorAll('.studio-overview').length,1);assert.equal(x.studio.flows.getState().result,null);assert.equal(x.studio.operations.getState().result,null);}finally{globalThis.history=previous;x.studio.destroy();x.restore();}
+});

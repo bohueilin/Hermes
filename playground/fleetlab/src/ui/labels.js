@@ -1129,7 +1129,7 @@ export const MAP = frozen({
   // one car or carries a count; a cube is a tally, not a place), the two pictures a reader can switch between, why the
   // flat one may be all there is, and what a click on the canvas says back.
   isoName: "Isometric sketch of the four areas",
-  oneBodyOneCar: "One body is one car on a route, or carries a count. One cube is 5 cars standing in an area. Where a cube stands on its platform means nothing. A car inside an area is a cube, not a body.",
+  oneBodyOneCar: "A car symbol on a route represents one vehicle, unless it shows a count. Inside an area, each cube represents 5 vehicles. Cubes show totals, not street locations.",
   viewName: "Picture",
   viewIso: "Isometric",
   viewFlat: "Flat",

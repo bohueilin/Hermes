@@ -24,7 +24,7 @@ export function mountCityEntry(doc = document) {
   const heroAction = home.querySelector('.hero-actions .studio-button-primary');
   heroAction.parentNode.insertBefore(node('a', {class:'studio-button studio-button-primary',href:'/network-flows/capacity/'}, 'Explore depot operations  →'),heroAction);
   heroAction.remove();
-  home.querySelector('.hero-actions').appendChild(node('a', {class:'home-city-link',href:'/city-explorer/'},'See the San Francisco case study  ↗'));
+  home.querySelector('.hero-actions').appendChild(node('a', {class:'home-city-link',href:'/city-explorer/'},'See the San Francisco case study  →'));
   const action = (text, hash = '') => node('a', {class:'city-entry-action', href:`/city-explorer/${hash}`}, text);
   const card = node('article', {class:'start-card city-entry-feature'}, [
     node('p', {class:'eyebrow'}, 'SAN FRANCISCO · RECORDED STUDY'),
@@ -40,7 +40,7 @@ export function mountCityEntry(doc = document) {
       node('p', {class:'city-entry-eyebrow'}, 'RECORDED CITY CASE STUDY'),
       node('h2', {id:'city-catalog-title'}, 'Take the question into San Francisco.'),
       node('p', {}, 'Inspect a twelve-pair depot experiment on sourced roads. Follow a recorded journey, compare depots, and inspect the map qualification hold.'),
-    ]), action('Open City Explorer  ↗'),
+    ]), action('Open City Explorer  →'),
   ]);
   // Featured questions and the recorded case study are discoverable before the complete library.
   catalogGrid.parentNode.insertBefore(catalog, doc.querySelector('.catalog-library-title'));
@@ -63,20 +63,20 @@ export function mountCityEntry(doc = document) {
       node('p', {class:'city-entry-eyebrow'}, 'RECORDED CAPACITY STUDY'),
       node('h3', {id:'capacity-catalog-title'}, 'Change the schedule or add capacity?'),
       node('p', {class:'network-description'}, 'Twelve invented visits share data and energy resources. Compare one change, follow a vehicle, and find the limiting resource.'),
-      node('a', {class:'city-entry-action', href:'/network-flows/capacity/'}, 'Open the capacity study  ↗'),
+      node('a', {class:'city-entry-action', href:'/network-flows/capacity/'}, 'Open the capacity study  →'),
   ]), networkQuestions.firstChild);
   const capacityRoadmap=doc.querySelector('[data-roadmap-lesson="capacity"]');
   if (!capacityRoadmap) throw new Error('FleetLab capacity availability contract changed');
   capacityRoadmap.setAttribute('data-availability','available');
   capacityRoadmap.querySelector('.eyebrow').textContent='AVAILABLE';
   capacityRoadmap.querySelector('p:not(.eyebrow)').textContent='Compare scheduling, bandwidth and charging power in the published synthetic study. Follow a vehicle and inspect the limiting resource.';
-  capacityRoadmap.appendChild(node('a',{href:'/network-flows/capacity/',class:'city-entry-action'},'Open the capacity study  ↗'));
+  capacityRoadmap.appendChild(node('a',{href:'/network-flows/capacity/',class:'city-entry-action'},'Open the capacity study  →'));
   if(doc.querySelector('meta[name="fleetlab-delivery-order"][content="/network-flows/delivery-order/release.json"]')){
     networkQuestions.appendChild(node('article',{class:'network-question delivery-order-entry-catalog','aria-labelledby':'delivery-order-catalog-title'},[
       node('p',{class:'city-entry-eyebrow'},'BOUNDED OPTIMIZATION · CHOOSE AN ORDER'),
       node('h3',{id:'delivery-order-catalog-title'},'Who gets the depot link first?'),
       node('p',{class:'network-description'},'Reorder four vehicles, compare all 24 possibilities, and see who waits longer. Same bytes; different target outcomes.'),
-      node('a',{href:'/network-flows/delivery-order/',class:'city-entry-action'},'Try delivery order  ↗'),
+      node('a',{href:'/network-flows/delivery-order/',class:'city-entry-action'},'Try delivery order  →'),
     ]));
   }
   if(deliveryAvailable){
@@ -85,14 +85,14 @@ export function mountCityEntry(doc = document) {
       node('p',{class:'city-entry-eyebrow'},'INTERACTIVE SOFTWARE-DELIVERY MODEL'),
       node('h3',{id:'software-delivery-catalog-title'},'One update. Four vehicles. Where is the wait?'),
       node('p',{class:'network-description'},'Compare repeated downloads with a shared depot copy. Follow the bytes, inspect the readiness target, then find a case where reuse delays a vehicle.'),
-      node('a',{href,class:'city-entry-action'},'Explore software delivery  ↗'),
+      node('a',{href,class:'city-entry-action'},'Explore software delivery  →'),
     ]);
     networkQuestions.insertBefore(card,networkQuestions.firstChild.nextSibling);
     const roadmap=doc.querySelector('.roadmap');
     const next=node('article',{'data-roadmap-lesson':'software','data-availability':'available'},[
       node('p',{class:'eyebrow'},'AVAILABLE'),node('h3',{},'One update, four vehicles'),
       node('p',{},'Repeated downloads or one shared depot copy: inspect upstream work, local contention and an individual deadline regression.'),
-      node('a',{href,class:'city-entry-action'},'Explore software delivery  ↗'),
+      node('a',{href,class:'city-entry-action'},'Explore software delivery  →'),
     ]);
     roadmap.insertBefore(next,capacityRoadmap.nextSibling);
     const later=[...roadmap.children].find(x=>x.querySelector('h3')?.textContent==='Depot flow lab, next lessons');
@@ -104,10 +104,10 @@ export function mountCityEntry(doc = document) {
       node('p',{class:'city-entry-eyebrow'},'FLEET OPERATIONS · FOUR-ZONE STUDY'),
       node('h3',{id:'rebalancing-catalog-title'},'Where should the empty cars go?'),
       node('p',{class:'network-description'},'Compare two repositioning rules for 24 vehicles. Read coverage beside empty travel, follow one vehicle, then try your own moves.'),
-      node('a',{href,class:'city-entry-action'},'Explore rebalancing  ↗'),
+      node('a',{href,class:'city-entry-action'},'Explore rebalancing  →'),
     ]));
     doc.querySelector('.roadmap').appendChild(node('article',{'data-roadmap-lesson':'rebalancing','data-availability':'available'},[
-      node('p',{class:'eyebrow'},'AVAILABLE'),node('h3',{},'Where should the empty cars go?'),node('p',{},'A recorded synthetic study and a manual four-zone experiment.'),node('a',{href,class:'city-entry-action'},'Explore rebalancing  ↗'),
+      node('p',{class:'eyebrow'},'AVAILABLE'),node('h3',{},'Where should the empty cars go?'),node('p',{},'A recorded synthetic study and a manual four-zone experiment.'),node('a',{href,class:'city-entry-action'},'Explore rebalancing  →'),
     ]));
   }
   if(doc.querySelector('meta[name="fleetlab-dispatch"][content="/network-flows/dispatch/release.json"]')){
@@ -115,7 +115,7 @@ export function mountCityEntry(doc = document) {
       node('p',{class:'city-entry-eyebrow'},'FLEET OPERATIONS · CURRENT-REQUEST MATCHING'),
       node('h3',{},'Which car takes the next request?'),
       node('p',{class:'network-description'},'Compare greedy assignment with joint matching. Follow one car, then see why the best assignment now can lose later.'),
-      node('a',{href:'/network-flows/dispatch/',class:'city-entry-action'},'Explore dispatch  ↗'),
+      node('a',{href:'/network-flows/dispatch/',class:'city-entry-action'},'Explore dispatch  →'),
     ]));
   }
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'offline-edition'}, [

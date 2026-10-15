@@ -26,3 +26,9 @@ test('native modified-click and middle-click behavior remains available',()=>{
   }
   let called=false,prevented=false;followLink({button:0,preventDefault(){prevented=true;}},()=>{called=true;});assert.equal(called,true);assert.equal(prevented,true);
 });
+test('Home has one canonical URL and accepts the former overview address',()=>{
+ assert.equal(routeHref({page:'overview'}),'#/home');
+ assert.deepEqual(parseRoute('#/overview'),{page:'overview'});
+ assert.deepEqual(parseRoute('#/home'),{page:'overview'});
+ assert.throws(()=>parseRoute('#/overview?unexpected=x'));
+});

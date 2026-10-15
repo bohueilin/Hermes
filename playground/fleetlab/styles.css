@@ -76,7 +76,7 @@ Motion       :root[data-motion="reduce|full"] is the in-app override; without it
 
   --gutter: 16px;
   --target: 44px;
-  /* Phone strip height: the 44 px button, 8 px padding above and below, a 1 px rule. Overlays start below it. */
+
   --strip-block: 61px;
 }
 
@@ -109,7 +109,7 @@ Motion       :root[data-motion="reduce|full"] is the in-app override; without it
   }
 }
 
-/* Base */
+
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -148,19 +148,19 @@ button, input, select, textarea { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 
-/* Focus: a 2 px ring with a 2 px ground-coloured offset (design 7.7). */
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--ground);
 }
 
-/* Touch targets of at least 44 px. */
+
 .fl-button, .fl-segmented button, .fl-knobs-toggle, .fl-strip__short, input, select, summary {
   min-height: var(--target);
   min-width: var(--target);
 }
-/* A disclosure summary stays a list item so its marker shows; block padding centres one line in the 44 px target. */
+
 summary {
   display: list-item;
   padding-block: 12px;
@@ -168,7 +168,7 @@ summary {
   cursor: pointer;
 }
 
-/* Teaching-model strip (design H-1): no rule on this page may hide it, and it stacks above every overlay. */
+
 .fl-strip, .fl-strip[hidden] {
   display: block !important;
   visibility: visible !important;
@@ -182,7 +182,7 @@ summary {
   border-bottom: 1px solid var(--rule-strong);
 }
 
-/* Shell: phone first (below 768 px), one column. */
+
 
 .fl-app {
   display: grid;
@@ -204,21 +204,21 @@ summary {
 .fl-charts { grid-area: charts; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(220px, auto); }
 .fl-footer { grid-area: footer; color: var(--muted); display: grid; gap: 8px; }
 
-/* Top bar: product name, the three modes (the pressed one marked like the segmented control), the clock line. */
+
 .fl-topbar .fl-title { margin: 0; font-size: 16px; }
 .fl-modes { display: flex; flex-wrap: wrap; gap: 4px; }
 .fl-modes .fl-button[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
 
-/* A wrapper whose children lay out as children of its parent (the transport row). */
+
 .fl-contents { display: contents; }
-/* Demand and traffic strips sit under the scrubber: stacked on a phone, side by side from 768 px. */
+
 .fl-transport__strips { flex: 1 1 100%; min-width: 0; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
-/* Learn, Experiment, the fork and wide notices span the whole chart row. */
+
 .fl-charts__wide { grid-column: 1 / -1; min-width: 0; }
 .fl-now, .fl-across { display: grid; gap: 4px; align-content: start; }
 .fl-group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .fl-group .fl-button[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
-/* The Sandbox charts keep the chart row's columns inside one wrapper, so the out-of-date filter covers all of them. */
+
 .fl-charts__set { grid-column: 1 / -1; min-width: 0; display: grid; gap: 12px; grid-template-columns: inherit; grid-auto-rows: inherit; }
 .fl-charts__wide.fl-panel { padding: 12px; }
 .fl-topbar > *, .fl-now h2, .fl-now p, .fl-across h2, .fl-across p, .fl-group p, .fl-charts__wide > h2 { margin: 0; }
@@ -244,10 +244,10 @@ summary {
 .fl-segmented button[aria-pressed="true"]:focus-visible { box-shadow: 0 0 0 2px var(--ground), inset 0 -2px 0 var(--accent); }
 
 .fl-strip__full { display: none; }
-/* A block button keeps the phone strip exactly one target tall, which --strip-block assumes. */
+
 .fl-strip__short { display: block; }
 
-/* Knobs on a phone: a sheet from below the strip to the bottom, with a sticky Run window button. */
+
 .fl-knobs {
   position: fixed;
   inset: var(--strip-block) 0 0 0;
@@ -265,24 +265,24 @@ summary {
   .fl-app[data-phone-group="charts"] .fl-side,
   .fl-app[data-phone-group="across"] .fl-now,
   .fl-app:not([data-phone-group="across"]) .fl-across { display: none; }
-  /* Learn and Experiment live in the chart row, so it stays on screen in those modes. */
+
   .fl-app[data-mode="learn"] .fl-charts,
   .fl-app[data-mode="experiment"] .fl-charts { display: grid; }
 }
 
-/* Focusable map entities (roving focus, design 7.7): focus marks the shape in the accent, never in a status colour. */
+
 .fl-area, .fl-depot, .fl-route { cursor: pointer; }
 .fl-area:focus-visible .fl-yard, .fl-depot:focus-visible .fl-depot-tile { stroke: var(--accent); stroke-width: 2px; }
 .fl-route--highway:focus-visible .fl-route-highway__casing { stroke: var(--accent); }
 .fl-route--local:focus-visible .fl-route-local { stroke: var(--accent); }
 .fl-verdict-chip__word { letter-spacing: 0.02em; }
-/* The pinned car opens its inspector on click or tap; its transparent hit circle gives the small glyph a 44 px target. */
+
 .fl-pinned-car { cursor: pointer; }
 .fl-hit { fill: transparent; stroke: none; }
-/* Scrolling the fork into view leaves its heading below the sticky teaching strip. */
+
 .fl-charts__wide { scroll-margin-top: calc(var(--strip-block) + 8px); }
 
-/* Tablet, 768 to 1279 px: knobs become a left drawer, the column follows DOM and tab order, charts form a 2 by 2 grid. */
+
 @media (min-width: 768px) {
   .fl-app { grid-template-areas: "strip" "top" "map" "transport" "side" "charts" "footer"; }
   .fl-transport__strips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -293,7 +293,7 @@ summary {
   .fl-drawer.fl-inspector { width: 560px; }
 }
 
-/* Desktop, 1280 px and wider: 280 px knobs, a flexible map, a 260 px NOW panel, a 220 px chart row. */
+
 @media (min-width: 1280px) {
   .fl-app {
     grid-template-columns: 280px minmax(0, 1fr) 260px;
@@ -306,8 +306,7 @@ summary {
       "knobs charts charts"
       "knobs footer footer";
   }
-  /* A static column has nothing to animate. Without transition: none, a page that loads narrow and is then widened
-     runs the sheet's slide from below (translateY(100%)) inside the column, and a paused or hidden view keeps it there. */
+
   .fl-knobs {
     grid-area: knobs;
     position: static;
@@ -321,7 +320,7 @@ summary {
   .fl-charts { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(220px, auto); }
 }
 
-/* Drawers, popovers and tooltips */
+
 
 .fl-drawer {
   position: fixed;
@@ -347,7 +346,7 @@ summary {
 }
 .fl-popover[data-open="true"] { opacity: 1; transform: none; }
 
-/* A tooltip never gates a value: the same value is always in a table or label. */
+
 .fl-tooltip {
   position: absolute;
   z-index: 70;
@@ -362,7 +361,7 @@ summary {
 }
 .fl-tooltip[data-open="true"] { opacity: 1; transform: none; }
 
-/* Controls */
+
 
 .fl-button {
   padding: 8px 12px;
@@ -385,11 +384,11 @@ summary {
   border: 1px solid var(--rule-strong);
   border-radius: 4px;
 }
-/* An out-of-range value stays in the field, marked in ink with a written note: status colours are for verdicts. */
+
 .fl-field--invalid input, .fl-field--invalid select { border: 2px solid var(--ink); }
 .fl-field__note { color: var(--ink); }
 
-/* Registers (design 7.4) */
+
 
 .fl-chip-replay, .fl-chip-across, .fl-limits-chip, .fl-teaching-chip, .fl-verdict-chip {
   display: inline-flex;
@@ -401,15 +400,15 @@ summary {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
-/* Short register and verdict words stay on one line. */
+
 .fl-chip-replay, .fl-chip-across, .fl-verdict-chip { white-space: nowrap; }
-/* Model-limits and teaching-run chips hold sentences, so they wrap inside a 400 px screen. */
+
 .fl-limits-chip, .fl-teaching-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 .fl-chip-replay { background: var(--ink); color: var(--panel); border: 1px solid var(--ink); }
 .fl-chip-across { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
 .fl-limits-chip { background: var(--panel-alt); color: var(--ink); border: 1px solid var(--rule-strong); }
 
-/* Verdict (design 7.2, 8.1): the chips sit inside the card border so a cropped screenshot keeps them. */
+
 
 .fl-verdict { background: var(--panel); border: 1px solid var(--rule-strong); border-radius: 6px; padding: 12px; }
 .fl-teaching-chip { background: var(--panel-alt); color: var(--ink); border: 1px solid var(--rule-strong); }
@@ -421,10 +420,10 @@ summary {
 .fl-verdict-chip[data-status="cond"] { color: var(--cond); background: var(--cond-bg); }
 .fl-verdict-chip[data-status="hold"] { color: var(--hold); background: var(--hold-bg); }
 .fl-verdict-chip[data-status="invalid"] { color: var(--invalid); background: var(--invalid-bg); }
-/* UNCHANGED and NO_RECOMMENDATION: no status colour. */
+
 .fl-verdict-chip[data-status="neutral"] { color: var(--ink); background: var(--panel-alt); border-color: var(--rule-strong); }
 
-/* States */
+
 
 .fl-stale { filter: grayscale(1); }
 .fl-absent { color: var(--muted); }
@@ -432,9 +431,9 @@ summary {
 .fl-error { display: grid; gap: 4px; padding: 12px; background: var(--panel-alt); border: 1px solid var(--rule-strong); border-radius: 6px; }
 .fl-error__slot { color: var(--faint-text); font-family: var(--font-mono); font-size: 12px; }
 
-/* Wide content scrolls inside its own container, never the page. */
 
-/* The padding keeps the focus ring of an edge cell visible inside the scroller. */
+
+
 .fl-scroll { max-width: 100%; overflow-x: auto; padding: 4px; }
 .fl-table { border-collapse: collapse; }
 .fl-table th { background: var(--panel-alt); text-align: start; font-weight: 600; }
@@ -442,7 +441,7 @@ summary {
 .fl-table td { text-align: end; }
 .fl-code { margin: 0; padding: 12px; background: var(--panel-alt); font-family: var(--font-mono); white-space: pre; }
 
-/* Map and chart marks (SVG). Status colours never colour a series, a car or an area. */
+
 
 .fl-yard { fill: var(--panel-alt); stroke: var(--rule-strong); stroke-width: 1px; }
 .fl-route-highway__casing { fill: none; stroke: var(--rule-strong); stroke-width: 6px; }
@@ -457,11 +456,10 @@ summary {
 .fl-fam-empty { color: var(--car-empty); }
 .fl-fam-available { color: var(--car-available); }
 .fl-fam-depot { color: var(--car-depot); }
-/* Light Available and At a depot fall under 3:1, so their glyphs always carry this 1 px ink edge (design 8.2). */
+
 .fl-glyph-edge { fill: none; stroke: var(--ink); stroke-width: 1px; }
 .fl-glyph-ring { fill: none; stroke: var(--panel); stroke-width: 2px; }
-/* A car driving a route (design 7.3 as amended, 8.2): one mark per car, on the panel surface, in the route hues.
-   The pinned glyph keeps the only pointer target a car has, so a mark never takes a click away from the route under it. */
+
 .fl-car { pointer-events: none; }
 
 .fl-chart__grid { stroke: var(--rule); stroke-width: 1px; }
@@ -471,17 +469,15 @@ summary {
 .fl-chart__cursor { stroke: var(--ink); stroke-width: 1px; }
 .fl-hatch-line { stroke: var(--faint); stroke-width: 1px; }
 
-/* The map legend: one swatch and word per state family, in unit-bar row order (design 8.2: colour is never the only cue). */
+
 .fl-map-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 4px 0 0; padding: 0; list-style: none; }
 .fl-map-legend > li { display: inline-flex; align-items: center; gap: 4px; }
 
-/* The isometric world (design 7.3 as amended, decision 43): a canvas the page owns and HTML labels over it that carry
-   every word. No transition, animation or will-change here: a body moves because the clock moves, and a plate moves
-   by transform behind a same-string guard under contain: layout paint, so a frame never touches the page's layout. */
+
 .fl-iso { position: relative; }
 .fl-iso__canvas { display: block; width: 100%; height: auto; }
 .fl-iso__overlay { position: absolute; inset: 0; contain: layout paint; pointer-events: none; }
-/* A label is a 44 px transparent target centred on its anchor; the visible plate inside it is the words. */
+
 .fl-iso__label {
   position: absolute;
   display: inline-grid;
@@ -498,10 +494,9 @@ summary {
 }
 .fl-iso__plate { padding: 4px 6px; background: var(--panel); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 4px; font-size: 12px; line-height: 1.2; white-space: nowrap; }
 .fl-iso__label--area .fl-iso__plate { background: transparent; border-color: transparent; color: var(--faint-text); font-weight: 600; font-size: 14px; }
-/* Depot ids and route shields are the schematic's own names: monospace, as the flat picture writes them. */
+
 .fl-iso__label--depot .fl-iso__plate, .fl-iso__label--route .fl-iso__plate { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-/* A local route's words show on focus or hover, as the flat picture shows them; its 44 px target is always there,
-   and the hidden words are taken out of the button's flow so the target is 44 px and not the width of the words. */
+
 .fl-iso__label--local .fl-iso__plate { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); visibility: hidden; }
 .fl-iso__label--local:focus-visible .fl-iso__plate, .fl-iso__label--local:hover .fl-iso__plate { visibility: visible; }
 .fl-iso__leader { position: absolute; width: 1px; background: var(--rule-strong); transform-origin: 0 0; }
@@ -511,8 +506,7 @@ summary {
   display: grid;
   margin: 0;
   padding: 2px 4px;
-  /* The tag hangs from its bottom edge, so the blocked state's fifth line grows up into the gap under its own block
-     instead of down past the stage edge, where the overlay's contain: layout paint would clip it. */
+
   transform: translate(-50%, -100%);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -539,6 +533,7 @@ summary {
 .fl-iso__pin { border-color: var(--accent); pointer-events: auto; cursor: pointer; }
 .fl-iso__pick { display: block; margin: 4px 0 0; }
 
+
 /* The walkthrough layout; Round 7 reveals do not advance recorded time. */
 .fl-app[data-present="true"] { grid-template-areas: "strip" "top" "map" "ledger" "rail" "transport" "footer"; }
 .fl-ledger { grid-area: ledger; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
@@ -547,13 +542,10 @@ summary {
 .fl-ledger__prepare { display: grid; gap: 4px; justify-items: start; }
 .fl-ledger__figures { display: grid; gap: 12px; }
 .fl-ledger__figure { display: grid; gap: 2px; justify-items: start; }
-/* A figure is read across a room: 32 px, tabular, and never counted up to. */
+
 .fl-ledger__value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 32px; line-height: 1.1; }
 .fl-ledger__table td, .fl-ledger__table th { font-family: var(--font-mono); font-size: 14px; }
-/* What just happened, newest first: hairlines between lines, and no live region (the narration is the one voice).
-   The foot stays at the ledger's bottom edge while the rest of the beat scrolls under it: the ticker is where the
-   steps of the day are, and a beat taller than its box would otherwise push it out of sight. Sticky is a position,
-   not a motion: nothing here transitions. */
+
 .fl-ledger__foot { position: sticky; bottom: 0; display: grid; gap: 4px; background: var(--ground); padding-block-start: 4px; }
 .fl-ticker { display: grid; }
 .fl-ticker__line { display: flex; gap: 8px; margin: 0; padding: 4px 0; border-top: 1px solid var(--rule); }
@@ -563,7 +555,7 @@ summary {
 
 
 .fl-registry { display: grid; gap: 8px; justify-items: start; }
-/* The three parts of a row's name stack inside its cell; the cell stays a table cell so the columns stay aligned. */
+
 .fl-registry th > span { display: block; }
 .fl-hourly { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 .fl-readout { display: grid; gap: 8px; }
@@ -584,9 +576,7 @@ summary {
       "rail rail"
       "transport transport"
       "footer footer";
-    /* The ordinary layout's rows are the ordinary layout's: row 5 is a 220 px chart row there and the transport here,
-       and the transport is empty while presenting (its control row is hidden and inert, and the day bar is not built),
-       so inheriting that template stood 220 px of blank panel between the rail and the footer. */
+
     grid-template-rows: auto auto minmax(0, auto) auto auto auto;
 
     --present-chrome: 412px;
@@ -595,11 +585,11 @@ summary {
   .fl-app[data-present="true"] .fl-ledger { max-height: calc(100vh - var(--present-chrome)); }
 }
 
-/* Ordered steps drawn as an arrow flow, never with number markers (design 8.5); a vertical list on a phone. */
+
 .fl-flow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; padding: 0; list-style: none; }
 .fl-flow__arrow { margin-inline-start: 8px; color: var(--muted); }
 .fl-list-plain { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-/* The SITUATION block of a casebook preset (design 4.4): a proxy's three parts, without the browser's dd indent. */
+
 .fl-situation__proxy { display: grid; gap: 2px; margin: 0; }
 .fl-situation__proxy dd { margin: 0 0 6px; }
 @media (max-width: 767.98px) {
@@ -607,8 +597,7 @@ summary {
   .fl-flow__arrow { display: none; }
 }
 
-/* Scrubber (design 7.4): the warm-up is shaded inside the track, from the track start to where the thumb centre sits at
-   the warm-up end; the thumb has a fixed 16 px size so that position is known. Tick labels never wrap. */
+
 .fl-scrubber { position: relative; display: grid; align-items: center; min-height: var(--target); }
 .fl-scrubber__band {
   position: absolute;
@@ -631,7 +620,7 @@ summary {
   .fl-scrubber__ticks > [data-near-edge] { display: none; }
 }
 
-/* Reduced motion, element by element (design 7.4, 8.4). The in-app setting wins over the system setting. */
+
 
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion="full"]) .fl-knobs,
@@ -649,14 +638,14 @@ summary {
 :root[data-motion="reduce"] .fl-button { transition: none; }
 :root[data-motion="reduce"] .fl-button:active { transform: none; }
 
-/* Public FleetLab studio. Presentation never changes a simulation value. */
+
 body { margin: 0; background: var(--ground); }
 .fleet-studio { font-family: var(--font-ui); color: var(--ink); line-height: 1.55; }
 .fleet-studio * { box-sizing: border-box; }
 .fleet-studio [hidden] { display: none !important; }
 .fleet-studio button { font: inherit; cursor: pointer; }
 .fleet-studio a:focus-visible, .fleet-studio button:focus-visible, .fleet-studio summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; box-shadow: none; }
-.fleet-studio h1, .fleet-studio h2, .fleet-studio h3, .fleet-studio p { text-wrap: pretty; }
+.fleet-studio h1, .fleet-studio h2, .fleet-studio h3, .fleet-studio p:not(.fl-iso__numbers) { text-wrap: pretty; }
 .fleet-studio h1, .fleet-studio h2 { font-weight: 500; letter-spacing: -.045em; }
 .fleet-studio .eyebrow { margin: 0; font-size: 11px; letter-spacing: .12em; font-weight: 650; color: #506582; line-height: 1.5; }
 .studio-header { min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 18px max(40px, calc((100vw - 1320px)/2)); background: #ffffff; border-bottom: 1px solid #edf1f6; }
@@ -718,7 +707,7 @@ body { margin: 0; background: var(--ground); }
 .workspace-intro { max-width: 1500px; margin: auto; padding: 30px 30px 22px; }
 .workspace-intro h1 { font-size: 35px; line-height: 1.15; margin: 9px 0 12px; }
 .workspace-intro > p:last-child { font-size: 13px; color: #566579; max-width: 850px; margin: 0; }
-/* The working tool uses the same visual language as the overview. */
+
 .fleet-studio .fl-app { max-width: 1500px; margin: auto; padding: 0 30px 35px; gap: 15px; }
 .fleet-studio .fl-strip { margin: 0; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 4px; position: relative; top: auto; background: #f3f6fa; font-size: 11px; }
 .fleet-studio .fl-strip__full { margin: 0; font-size: 11px; }
@@ -765,7 +754,7 @@ body { margin: 0; background: var(--ground); }
 .fleet-studio .fl-app[data-present="true"] { grid-template-areas: "strip" "top" "rail" "map" "ledger" "transport" "footer"; }
 .fleet-studio .fl-rail button { font-size: 11px; }
 .fleet-studio .fl-iso__plate { background: #ffffff; box-shadow: 0 1px 4px #273d2420; }
-.fleet-studio .fl-iso__numbers { background: #f5f8fcdd; padding: 3px; border-radius: 3px; }
+.fleet-studio .fl-iso__numbers { background: #f5f8fcdd; padding: 2px 4px; border-radius: 3px; }
 .fleet-studio .fl-iso__label--route .fl-iso__plate { font-size: 10px; }
 @media (min-width: 1000px) {
   .fleet-studio .fl-app:not([data-present="true"]) { grid-template-columns: 220px minmax(0,1fr) 230px; }
@@ -853,7 +842,7 @@ body { margin: 0; background: var(--ground); }
   .fleet-studio[data-page="depots"] .fl-app:not([data-present="true"])[data-verdict-seed="false"] { grid-template-areas: "strip" "top" "charts" "map" "transport" "segmented" "side" "footer"; }
 }
 
-/* Fleet day: a readable operational simulation with explicit, finite resources. */
+
 .operations-lab,.simulation-catalog,.scale-lab{max-width:1500px;margin:0 auto;padding:42px 34px 60px;color:var(--ink);}
 .ops-intro{max-width:1000px;margin-bottom:30px;}
 .ops-intro h1,.catalog-intro h1{font-size:clamp(32px,3.7vw,52px);line-height:1.12;letter-spacing:-.045em;margin:13px 0 18px;}
@@ -1033,7 +1022,7 @@ body { margin: 0; background: var(--ground); }
 .ops-map-tools select{font:inherit;font-size:11px;min-height:var(--target);border:1px solid #b8c7d8;background:#ffffff;border-radius:5px;color:#2c4d78;padding:8px;}
 .ops-map-tools span{font-size:10px;color:#566579;}
 
-/* Bay Area scene: native 3D, sourced roads, and readable controls. */
+
 .bay-map{margin:0;min-width:0;}
 .bay-map-controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:12px 0;}
 .bay-map-controls select{min-height:var(--target);font:inherit;font-size:11px;padding:8px;border:1px solid #b8c7d8;border-radius:6px;background:#ffffff;max-width:100%;}
@@ -1090,7 +1079,7 @@ body { margin: 0; background: var(--ground); }
 .bay-profile-portraits figcaption{font-size:10px;color:#4d6a58;text-align:center;line-height:1.5;margin-top:7px;}
 .ops-service-breakdown summary{min-height:var(--target);padding:14px 0;font-size:12px;cursor:pointer;}
 
-/* Street lab: a quiet operating canvas with progressive disclosure. */
+
 .street-lab{padding:36px 20px 64px;color:#173348;background:#f7f9fc;}
 .street-lab[hidden]{display:none;}
 .street-intro{max-width:920px;margin:0 auto 32px;}
@@ -1212,7 +1201,7 @@ body { margin: 0; background: var(--ground); }
  .street-comparison th,.street-comparison td{padding:10px 6px;}
 }
 
-/* Concept film: poster, video and its controls. The Home layout is in the welcome block below. */
+
 .hero-film { position: absolute; inset: 0; background: #bdd9dc; }
 .film-poster, .film-video { width: 100%; height: 100%; object-fit: cover; object-position: center; position: absolute; inset: 0; }
 .film-video { opacity: 0; }
@@ -1221,14 +1210,14 @@ body { margin: 0; background: var(--ground); }
 .film-status { position: absolute; bottom: 78px; right: 24px; z-index: 3; color: #fff; background: #12373b; max-width: 230px; border-radius: 5px; font-size: 12px; }
 .film-status:not(:empty) { padding: 8px 12px; }
 
-/* Readiness disclosures stay usable without widening the page or hiding exact values. */
+
 .ops-readiness-result,.ops-readiness-comparison{min-width:0;overflow-wrap:anywhere;}
 .ops-readiness-result pre,.ops-readiness-comparison pre{max-height:28rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;padding:14px;background:#f3f6fa;}
 .ops-readiness-result details,.ops-readiness-comparison details{margin:16px 0;}
 .ops-readiness-result summary,.ops-readiness-comparison summary{cursor:pointer;padding:12px 0;}
 .ops-readiness-result p,.ops-readiness-comparison p,.ops-readiness-result li,.ops-readiness-comparison li{line-height:1.6;}
 
-/* Optional model inputs and exact recorded projections. */
+
 .ops-advanced-controls h3 { margin: 1rem 0 .5rem; }
 .ops-advanced-result pre, .ops-advanced-comparison pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28rem; overflow: auto; font-size: .8rem; }
 .ops-advanced-result section, .ops-airport-frame { margin-block: 1rem; }
@@ -1250,7 +1239,7 @@ body { margin: 0; background: var(--ground); }
 .ops-result-learning {border-left:3px solid #5c866c;padding:.4rem 1rem;margin:1rem 0;max-width:90ch;}
 @media(max-width:600px){.ops-decision-guide dl {grid-template-columns:1fr;gap:.25rem;}.ops-decision-guide dd {margin-bottom:.7rem;}.ops-launch-rehearsal,.ops-decision-guide {padding:.85rem;}}
 
-/* Addressable views and inspectable setup snapshots retain the existing visual system. */
+
 a.studio-button, .studio-header nav a { display: inline-flex; align-items: center; text-decoration: none; box-sizing: border-box; }
 .studio-header nav a { font-weight: 500; }
 .studio-skip { position: absolute; left: 12px; top: -100px; z-index: 79; background: white; color: #174fa7; padding: 14px 20px; border: 2px solid currentColor; }
@@ -1296,7 +1285,7 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
   .studio-footer nav { width: 100%; }
 }
 
-/* Purpose, mechanics, and reading stay together at each lesson entry. */
+
 .teaching-frame { margin: 1rem 0; min-width: 0; }
 .teaching-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1rem; }
 .teaching-title { margin: 0; }
@@ -1315,10 +1304,10 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .casebook-reading { margin-top: .8rem; }
 .teaching-change { font-size: .85rem; }
 
-/* The paired setup contains its own scenario editor; leave the replay editor to Explore a day. */
+
 .studio-workspace .fl-app[data-mode="experiment"] .fl-knobs { display: none; }
 
-/* Scale lab: one generic view for three labs. Nothing here moves, so no reduced-motion rule is needed. */
+
 .scale-chooser { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .scale-chooser a { display: inline-flex; align-items: center; min-height: var(--target); padding: 0 16px; border: 1px solid var(--rule-strong); border-radius: 26px; color: var(--ink); font-size: 13px; text-decoration: none; }
 .scale-chooser a[aria-current="page"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 650; }
@@ -1336,7 +1325,7 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
   .scale-lab .ops-intro a, .scale-lab .ops-intro summary { scroll-margin-bottom: 120px; }
 }
 
-/* Welcome edition: warm surfaces and a calm, shared reading hierarchy. */
+
 :root {
   --ground: #fafbf7; --panel: #ffffff; --panel-alt: #eef4ef;
   --ink: #183c37; --muted: #526762; --faint-text: #526762;
@@ -1420,7 +1409,7 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .ops-controls input, .ops-controls select, .catalog-search input, .catalog-search select { border-color: var(--rule-control); border-radius: 8px; }
 .fleet-studio .fl-button--primary { background: var(--ink); border-color: var(--ink); }
 .fleet-studio .fl-button { border-radius: 8px; }
-/* Home, header and About & limits: calm and exact. One primary action per view, tokens only, no shadows. */
+
 @media (min-width: 768px) { .studio-header nav a { white-space: nowrap; } }
 .studio-overview .studio-button, .studio-approach .studio-button, .lab-links .studio-button, .simulation-catalog .studio-button, .depot-flow-lab .studio-button { font-size: 15px !important; }
 .studio-film-hero { display: grid; grid-template-columns: minmax(0,1fr); gap: 40px; padding: 56px 0 24px; }
@@ -1451,7 +1440,7 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .welcome-cycle { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; padding: 18px 10px 4px; }
 .welcome-cycle > span { display: grid; gap: 4px; font-size: 14px; color: var(--ink); }
 .welcome-cycle small { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
-/* The caption sits directly under the film at every width, so it stacks and carries no rule or spacing of its own. */
+
 .film-caption { display: flex; flex-direction: column; gap: 8px; }
 .film-caption p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0; max-width: 640px; }
 .film-caption strong { color: var(--ink); font-weight: 550; margin-right: 8px; }
@@ -1506,13 +1495,13 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
   .scale-setup { padding-inline: 14px; }
   .scale-lab .fl-readout { padding: 14px; }
   .catalog-search label, .catalog-search select { width: 100%; min-width: 0; max-width: none; }
-  /* Explore on a phone: the first lesson card starts on the first screen. */
+
   .simulation-catalog { padding-top: 24px; }
   .catalog-intro h1 { font-size: 34px; margin: 12px 0 16px; }
   .catalog-search { margin: 16px 0 12px; }
   .catalog-topics .studio-button { padding: 10px; }
   .catalog-jump { margin-top: 16px; }
-  /* One scrolling row of lab links: unshrinking items keep their one-line width without nowrap, and the padding keeps the 3 px focus ring inside the scroll box. */
+
   .simulation-catalog .lab-links { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding: 8px; margin: 0 -8px 16px; scrollbar-width: thin; }
   .simulation-catalog .lab-links a { flex: 0 0 auto; }
   .people-grid article { padding: 22px; }
@@ -1528,8 +1517,8 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
   .studio-header nav a { white-space: normal; }
 }
 
-/* Depot flow lab: static, readable, dependency-first teaching. */
-/* Depot flow lessons: shared page width, tokens and mobile reading order. */
+
+
 .depot-flow-lab { max-width:1200px; margin:auto; padding:48px 32px 80px; color:var(--ink); font-size:16px; line-height:1.65; }
 .depot-flow-lab [hidden] { display:none !important; }
 .depot-flow-lab *, .depot-flow-lab *::before, .depot-flow-lab *::after { box-sizing:border-box; }
@@ -1605,7 +1594,7 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .flow-wait-reason { font-weight:600; margin:10px 0 0; }
 @media (min-width:768px) { .flow-resource-board { grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); } }
 @media (max-width:767.98px) { .flow-outcomes-wide { display:none; } .flow-outcomes-phone { display:grid; gap:16px; } .flow-bounds { grid-template-columns:1fr; } .flow-rule-picker { display:flex; flex-wrap:wrap; } .depot-flow-lab .flow-hero h1 { margin:8px 0 12px; } .depot-flow-lab .flow-lede { font-size:18px; } .flow-definition { font-size:14px; margin-bottom:12px; } .flow-hero .flow-table { margin-bottom:12px; } .flow-hero .lab-chooser { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .flow-hero .lab-chooser a { padding:6px 12px; font-size:15px; line-height:1.35; } .flow-hero .flow-setup-table caption { padding:6px; line-height:1.4; } .flow-hero .flow-setup-table th,.flow-hero .flow-setup-table td { padding:5px 6px; font-size:14px; line-height:1.35; } }
-/* Desktop lesson hero: the question on the left, the setup card with Compare on the right, in one row. */
+
 @media (min-width:1000px) {
   .flow-hero { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); column-gap:40px; align-items:start; }
   .flow-hero > nav,.flow-hero > .eyebrow { grid-column:1/-1; }
@@ -1618,6 +1607,7 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 .lab-chooser { display:flex; flex-wrap:wrap; gap:12px; margin:8px 0 16px; }
 .lab-chooser a { display:flex; align-items:center; min-height:48px; padding:10px 16px; border:1px solid var(--rule-control); border-radius:12px; color:var(--ink); text-decoration:none; line-height:1.5; }
 .lab-chooser a[aria-current=page] { background:var(--accent-soft); font-weight:600; }
+
 
 /* NF-03 capacity viewer: the depot flow lab's tokens, type and 44 px targets on a standalone page. */
 #capacity-root { display:block; padding:0; }
@@ -1692,7 +1682,7 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 @media(min-width:768px){.network-question-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(min-width:1100px){.network-question-list{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-/* Editorial learning layer: conceptual art never encodes a checked result. */
+
 .studio-overview { background:radial-gradient(ellipse at 85% 5%,#e8f0e9 0,transparent 40%); }
 .studio-header { border-bottom-color:#d9e2da; }
 .studio-monogram { box-shadow:inset 0 0 0 1px #ffffff24; }
@@ -1775,7 +1765,7 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
  .glyph-line,.glyph-car,.glyph-station { stroke:CanvasText; fill:Canvas; }
  .primer-node,.primer-arms { border-color:CanvasText; }
 }
-/* Round 6: static metadata, real request counts, and the map key. */
+
 .operations-lab .teaching-chips span{background:none;border:0;border-radius:0;padding:0;cursor:default}
 .operations-lab .teaching-chips span+span{border-left:1px solid #b7c5b9;padding-left:.6em}
 .request-outcomes dl{margin:0 0 12px}.request-outcomes dt{font-weight:700}.request-outcomes dd{margin:0 0 8px}

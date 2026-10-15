@@ -22,6 +22,8 @@ export function decorateVisitors(doc=document){
  if(staffing&&!staffing.querySelector('.visitor-diagram')){staffing.classList.add('visitor-staffing');const figure=diagram('D-03-staffing-queue.webp','Pods queued at service bays; one bay works, one waits for a worker.');figure.querySelector('img').setAttribute('loading','lazy');staffing.insertBefore(figure,staffing.firstChild.nextSibling);}
  const art=(file,alt='',className='visitor-tile-art')=>el('img',{src:'/tiles/'+file,alt,class:className,width:'1600',height:'1600',loading:'lazy',decoding:'async'});
  const text=(selector,value)=>{const n=doc.querySelector(selector);if(n)n.textContent=value;};
+ text('#limits-view a[href="/city-explorer/sources/"]','Visit the map sources page for databases, captured sources, code and licenses →');
+ const paired=doc.querySelector('#study-help');if(paired&&!doc.getElementById('visitor-paired'))paired.parentNode.appendChild(el('p',{id:'visitor-paired'},'A paired repeat compares configurations using the same seed, vehicle starting positions and rider requests.'));
  const home=doc.querySelector('.studio-overview');
  if(home&&!doc.getElementById('visitor-purpose')){
   const intro=el('section',{id:'visitor-purpose',class:'visitor-purpose','aria-labelledby':'visitor-purpose-title'},[
@@ -30,7 +32,7 @@ export function decorateVisitors(doc=document){
     el('h1',{id:'visitor-purpose-title'},'Explore the work between the rides.'),
     el('p',{class:'visitor-lede'},'An autonomous car needs more than a charged battery. It needs time, data and a place to get ready. FleetLab makes those hidden decisions visible through small, interactive simulations.'),
     el('p',{class:'visitor-byline'},'I’m building this project to learn how autonomous fleets work—and to share what each experiment teaches us.'),
-    el('a',{class:'design-primary visitor-first-action',href:'/#/depot-flow-lab?lesson=two-vehicles'},'Start with a 3-minute lesson ↗'),
+    el('a',{class:'design-primary visitor-first-action',href:'/#/depot-flow-lab?lesson=two-vehicles'},'Start with a 3-minute lesson →'),
    ]),
    el('ol',{class:'visitor-steps','aria-label':'How to learn with FleetLab'},[
     ['01','Choose a question','Why is a vehicle waiting? Would another charger help?'],
@@ -42,7 +44,7 @@ export function decorateVisitors(doc=document){
   const filmTitle=home.querySelector('.film-copy h1');
   if(filmTitle){const h=el('h2',{class:'visitor-film-title'},'First, picture the work between rides.');filmTitle.parentNode.insertBefore(h,filmTitle);filmTitle.remove();}
   text('.film-lede','Watch a concept film of the ride, the neighborhood and the depot. Then try a lesson to see how everyday operating choices affect the fleet.');
-  const first=home.querySelector('.design-readiness .design-primary');if(first){first.setAttribute('href','/#/depot-flow-lab?lesson=two-vehicles');first.textContent='Try your first experiment ↗';}
+  const first=home.querySelector('.design-readiness .design-primary');if(first){first.setAttribute('href','/#/depot-flow-lab?lesson=two-vehicles');first.textContent='Try your first experiment →';}
   text('.design-eyebrow','START SMALL · ABOUT 3 MINUTES');
   text('.design-art-description','Why is a fully charged vehicle still waiting? Follow the work that must finish before its next ride.');
   text('.start-points h2','Where would you like to explore next?');
@@ -76,7 +78,8 @@ export function decorateVisitors(doc=document){
   });
   function select(f){
    for(const b of buttons)b.setAttribute('aria-pressed',String(b.getAttribute('data-family')===f?.id));
-   status.textContent=f?`${f.title} · ${f.question}`:'All question families';
+   status.textContent=f?`${f.title} · ${f.question} `:'All question families. ';
+   if(resultTitle)resultTitle.textContent=f?`${f.title} · lesson library`:'The complete learning library';
    catalog.dispatchEvent(new CustomEvent('fleetlab:catalog-filter',{detail:f?.lessons??null}));
   }
   const all=el('button',{type:'button',class:'visitor-all'},'Browse all lessons →');
@@ -90,6 +93,7 @@ export function decorateVisitors(doc=document){
   catalog.insertBefore(families,feature);catalog.insertBefore(results,feature);
   catalog.addEventListener('fleetlab:catalog-cleared',()=>{
    for(const b of buttons)b.setAttribute('aria-pressed','false');status.textContent='All question families';
+   if(resultTitle)resultTitle.textContent='The complete learning library';
   });
   const sequence=catalog.querySelector('.network-question-list');
   for(const href of ['#/depot-flow-lab?lesson=two-vehicles','#/depot-flow-lab?lesson=crossed-priorities','/network-flows/capacity/','/network-flows/software-delivery/','/network-flows/delivery-order/']){
@@ -130,7 +134,7 @@ export function decorateVisitors(doc=document){
     ['replay','Replay studio','Where did one vehicle spend its day?','T-18-replay-studio.webp'],
     ['models','Model lab','What changes when I change an assumption?','T-19-model-lab.webp'],
    ].map(([view,title,question,file])=>{
-    const b=el('button',{type:'button',class:'visitor-city-card','data-city-section':view},[art(file),el('span',{class:'visitor-city-label'},title+' ↗'),el('span',{class:'visitor-city-question'},question)]);
+    const b=el('button',{type:'button',class:'visitor-city-card','data-city-section':view},[art(file),el('span',{class:'visitor-city-label'},title+' →'),el('span',{class:'visitor-city-question'},question)]);
     b.addEventListener('click',()=>doc.querySelector(`.tabs button[data-view="${view}"]`)?.click());return b;
    })),el('p',{class:'visitor-illustration-note'},'Concept illustrations · Recorded studies use synthetic operations and fictional depots. Map qualification remains open.'),
   ]);
@@ -171,6 +175,12 @@ function installVisualMotion(doc){
  const counts=doc.querySelector('.ops-outcome-visual');
  if(counts)new MutationObserver(()=>{for(const stop of stops)stop();stops.clear();const r=counts.querySelector('.request-outcomes');if(r)stops.add(animateOutcomeCounts(r,{request:fn=>win.requestAnimationFrame(fn),cancel:id=>win.cancelAnimationFrame(id),allowed,now:()=>win.performance.now()}));}).observe(counts,{childList:true});
  const ambient=[...doc.querySelectorAll('.visitor-family,.visitor-ambient-art,[data-concept="fleet"] .primer-track')];
- if(typeof win.IntersectionObserver==='function'){const observer=new win.IntersectionObserver(entries=>{for(const e of entries)e.target.setAttribute('data-motion-visible',String(e.isIntersecting));});for(const n of ambient)observer.observe(n);}
+ if(typeof win.IntersectionObserver==='function'){
+  const observer=new win.IntersectionObserver(entries=>{for(const e of entries)e.target.setAttribute('data-motion-visible',String(e.isIntersecting));});for(const n of ambient)observer.observe(n);
+  const ledger=doc.querySelector('.fl-ledger');let gate=null;
+  if(ledger)new MutationObserver(()=>{const next=ledger.querySelector('[data-beat="verdict"] [data-section="gates"]');if(next===gate)return;if(gate)observer.unobserve(gate);gate=next;if(gate)observer.observe(gate);}).observe(ledger,{childList:true,subtree:true});
+ }
+ const links=n=>{if(n.nodeType!==1)return;for(const a of [n,...n.querySelectorAll('a,button')]){const href=a.getAttribute('href');if(!['A','BUTTON'].includes(a.tagName)||href&&new URL(href,doc.baseURI).origin!==win.location.origin)continue;if(href?.endsWith('/#/overview'))a.setAttribute('href',href.replace('/#/overview','/#/home'));const walk=p=>{for(const c of p.childNodes)if(c.nodeType===3&&c.data.includes('↗'))c.data=c.data.replaceAll('↗','→');else if(c.nodeType===1)walk(c);};walk(a);}};
+ links(doc.body);new MutationObserver(rows=>{for(const row of rows)for(const n of row.addedNodes)links(n);}).observe(doc.body,{childList:true,subtree:true});
  motionControllers.set(doc,{control});
 }

@@ -47,7 +47,7 @@ function overview(navigate, visit, film) {
         ].map(({label,title,text,cta,page})=>el("article",{class:"start-card"},[eyebrow(label),el("h3",{},title),el("p",{},text),pageLink(cta,page,navigate)]))),
       ]),
       el("div",{class:"welcome-visual"},[
-        el("div",{class:"welcome-visual-heading"},[el("span",{},"THE WORK BETWEEN RIDES"),el("span",{"aria-hidden":"true"},"↗")]),
+        el("div",{class:"welcome-visual-heading"},[el("span",{},"THE WORK BETWEEN RIDES"),el("span",{"aria-hidden":"true"},"→")]),
         film.element,
         el("div",{class:"welcome-cycle","aria-label":"Illustrated fleet cycle"},["Ride","Recharge","Reset","Repeat"].map((word,i)=>el("span",{},[el("small",{},`0${i+1}`),word]))),
       ]),
@@ -62,7 +62,7 @@ function overview(navigate, visit, film) {
           ['capacity','01 / SHARED RESOURCES','What is the vehicle waiting for?','Follow the work that must finish between rides. Find the constraint before adding capacity.','Start with depot readiness',{page:'flows',lesson:'two-vehicles'}],
           ['service','02 / RIDER SERVICE','What changes across a fleet day?','Connect vehicles, demand and depot queues. See who is served, who waits and what changes.','Explore a fleet day',{page:'simulation'}],
           ['evidence','03 / MODEL LIMITS','What does the result establish?','Read the assumptions and checks. Keep a useful teaching result separate from real-world authority.','Read the approach',{page:'approach'}],
-        ].map(([kind,label,title,text,cta,route])=>el('article',{},[learningGlyph(kind),eyebrow(label),el('h3',{},title),el('p',{},text),el('a',{href:routeHref(route),on:{click:event=>followLink(event,()=>visit(route))}},[cta,el('span',{'aria-hidden':'true'},' ↗')])]))),
+        ].map(([kind,label,title,text,cta,route])=>el('article',{},[learningGlyph(kind),eyebrow(label),el('h3',{},title),el('p',{},text),el('a',{href:routeHref(route),on:{click:event=>followLink(event,()=>visit(route))}},[cta,el('span',{'aria-hidden':'true'},' →')])]))),
       ]),
     el("nav",{class:"home-browse","aria-label":"Browse"},[pageLink("Fleet day","simulation",navigate),pageLink("Street lab","streets",navigate),pageLink("Browse all topics  →","catalog",navigate),pageLink("About & limits  →","approach",navigate)]),
   ]);
@@ -222,7 +222,7 @@ export function mountStudio(app) {
       if(!store.getState().present.on)present.open();
     }
     if(workspace){workspaceIntro.appendChild(el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));updateWorkspaceIdentity(store.getState());}
-    if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Four-area experiments';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('p',{},'A depot change can help one area while leaving riders waiting elsewhere. Compare all four areas before judging the fleet-wide trade-off.'),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),pairedPrimer);}
+    if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Four-area experiments';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('p',{},page==='operations'?'Use this workspace to change settings and replay one simulated window; Four-area experiments compares a baseline and one change across paired seeds.':'Use Four-area experiments to compare a baseline and one change across paired seeds; the Four-area workspace lets you change settings and replay one simulated window.'),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),pairedPrimer);}
     if(page==='streets')streets.refresh();
     if(page==='simulation')operations.refresh();
     focusMain(workspace?workspaceMain:page==='approach'?product:page==='simulation'?operations.element:page==='streets'?streets.element:page==='scale'?scale.element:page==='flows'?flows.element:page==='catalog'?catalog.element:home,ROUTES[page].title);
@@ -250,6 +250,7 @@ export function mountStudio(app) {
     applying=true;lastHandledHash=hash;
     try{
       const route=parseRoute(hash);
+      if(route.page==='overview'&&!route.lesson&&!route.setup){const canonical=routeHref(route);globalThis.history?.replaceState(null,'',canonical);lastHandledHash=canonical;}
       if(route.page==='flows'&&!route.lesson&&!route.setup){route.lesson='two-vehicles';const canonical=routeHref(route);globalThis.history?.replaceState(null,'',canonical);lastHandledHash=canonical;}
       const record=route.lesson?records.find(r=>r.id===route.lesson):null;
       if(route.lesson&&(!record||lessonPage(record)!==route.page))throw Error('This lesson does not belong to the linked view.');
