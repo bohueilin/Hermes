@@ -14,7 +14,7 @@ import {minute,ruleName,table,detail,button,readinessChain,resourceBoard,FLOW_GL
 
 const defaults=()=>({uplink_gbps:1,b_gb:7.5,charger_kw:60});
 const lessons=[['two-vehicles','Two vehicles, one shared link'],['crossed-priorities','Four visits, crossed priorities']];
-const settingsText=o=>`${o.uplink_gbps} Gbps uplink · B ${o.b_gb} GB · ${o.charger_kw} kW charger`;
+const settingsText=o=>`${o.uplink_gbps} Gbps shared internet upload · B ${o.b_gb} GB · ${o.charger_kw} kW charger`;
 const yieldPage=()=>new Promise(resolve=>setTimeout(resolve,0));
 const swap=(old,next)=>{old.parentNode.insertBefore(next,old);old.remove();return next;};
 
@@ -44,7 +44,7 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
   const perVehicle=!cohort(),shared=s&&!perVehicle?`all batteries at target · ${s.vehicles[0].post_s/60} min local step after upload · `:'';
   const heads=perVehicle?['Vehicle','Due','Upload','Energy','After upload']:['Vehicle','Due','Upload'];
   const rows=(s?.vehicles??[]).map(v=>{
-   const row=[v.id,`minute ${v.deadline_s/60}`,`${v.upload_bytes/1e9} GB`];
+   const row=[v.id,`due at minute ${v.deadline_s/60}`,`${v.upload_bytes/1e9} GB`];
    if(perVehicle)row.push(v.energy_j?`${v.energy_j/36e5} kWh`:'Already at target',`${v.post_s/60} min local step`);
    return row;
   });
@@ -59,9 +59,9 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
  /** The lede names both upload sizes once B's upload differs from the starting setup. */
  function ledeText(s){
   const link=`${s.uplink_bytes_s/125e6} Gbps`;
-  if(cohort())return `Four visits arrive together, already charged, and share one ${link} shared internet link (gigabits per second). Two are urgent and two are large; size and urgency do not line up.`;
+  if(cohort())return `Four visits arrive together, already charged, and share one ${link} internet upload link (uplink; gigabits per second). Two are urgent and two are large; size and urgency do not line up.`;
   const [a,b]=s.vehicles,sizes=options.b_gb===defaults().b_gb?'; A needs charging and a larger upload':`, with a ${b.upload_bytes/1e9} GB upload; A needs charging and a ${a.upload_bytes/1e9} GB upload`;
-  return `Two vehicles share a ${link} shared internet link (gigabits per second). B is already charged and due sooner${sizes}. Both require two minutes of work after upload.`;
+  return `Two vehicles share a ${link} internet upload link (uplink; gigabits per second). B is already charged and due sooner${sizes}. Both require two minutes of work after upload.`;
  }
  function buildLesson(){
   // On a desktop the question sits left and the setup card with Compare right; on a phone they stack in this order.
@@ -74,7 +74,7 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
   );
   chips=swap(chips,chipsView(LESSON_FRAMES[lesson]));
   rulesDetail.replaceChildren(el('summary',{},`How the ${cohort()?'four':'three'} rules work`),el('p',{class:'flow-assumptions'},cohort()?'All arrive at minute 0 with batteries at target. The 1 Gbps link serves 127.5 GB in total; every visit has its own post-upload slot. One-second service steps. GB is decimal.':'Both arrive at minute 0. One charge port; one local-step slot per vehicle. Charging and upload can overlap. GB is decimal; Gbps is useful payload capacity.'),...rules().map(r=>el('article',{},[el('h2',{},r.name),el('p',{},r.description)])));
-  if(cohort())rulesDetail.appendChild(table('Size and urgency are different',['Upload size','Earlier deadline','Later deadline'],[['Large','A','C'],['Small','D','B']].map(([size,...ids])=>[size,...ids.map(id=>{const v=scenario().vehicles.find(x=>x.id===id);return `${id} · ${v.upload_bytes/1e9} GB · due ${v.deadline_s/60} min`;})])));
+  if(cohort())rulesDetail.appendChild(table('Size and urgency are different',['Upload size','Earlier deadline','Later deadline'],[['Large','A','C'],['Small','D','B']].map(([size,...ids])=>[size,...ids.map(id=>{const v=scenario().vehicles.find(x=>x.id===id);return `${id} · ${v.upload_bytes/1e9} GB · due at minute ${v.deadline_s/60}`;})])));
   runButton.textContent=cohort()?'Compare the four rules':'Compare the three rules';changeSetup.hidden=cohort();configureGuess();refreshInputs(true);
   const versions=cohort()?COHORT_VERSIONS:FLOW_VERSIONS;
   method.replaceChildren(detail('Model and version',[modelHeader(cohort()?'Depot cohort model':'Depot flow model','Constructed depot visits',versions.model).element,el('dl',{class:'flow-versions'},Object.entries(versions).flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)])),el('p',{},`Presentation projection: ${PROJECTION_VERSION}. This identity is separate from the model record.`),el('p',{},FLOW_GLOSSARY.authority),el('p',{},`Scope: ${FLOW_TRUST.scope}. Authenticity: ${FLOW_TRUST.authenticity}, no independent source authentication. Authorization: ${FLOW_TRUST.authorization}. Decision authority and deployment permission: ${FLOW_TRUST.decision_authority}.`)]),detail('Assumptions and limits',[el('p',{},'There are no random draws, packet losses, retries, protocol overhead, charge taper, auxiliary load or software authenticity checks. The local step is simulated work; passing checks does not approve software.'),el('p',{},cohort()?'Upload sizes are known exactly. Equal shares round whole bytes using a rotating eligible ring; unused service is counted. A quarter-second reference run tests these particular schedules, not general time-step adequacy.':'Vehicle B is both smaller and earlier due. This lesson cannot separate size priority from deadline priority. The four-visit lesson crosses those factors.'),el('p',{},'Capacity studies need a fixed horizon, backlog accounting, more visits and matched changes. A task finishing last does not establish which resource is worth expanding.')]),detail('Research behind the questions',[el('p',{},'Chowdhury, Zhong and Stoica, Efficient Coflow Scheduling with Varys (SIGCOMM 2014). DOI: 10.1145/2619239.2626315. Motivation: make the work-completion objective explicit. These depot tasks are a different network model.'),el('p',{},'Lee, Sharma, Johansson and Low, ACN-Sim (2020 preprint). arXiv: 2012.02809. A possible later charging model; workplace charging assumptions need review for depot use.'),el('p',{},'These references motivate questions. This lesson implements neither system and claims none of their measured performance or guarantees.')]),glossaryView(cohort()?{...FLOW_GLOSSARY,step:'Service step: work is accepted in fixed time slots. This lesson uses one second; verification also tests a quarter-second reference.',shared:'Shared capacity bound: the work due in one time window exceeds what the shared resource can serve in that window.'}:FLOW_GLOSSARY),el('p',{class:'flow-related'},'A recorded twelve-vehicle study, Scheduling or capacity?, continues these lessons on the hosted FleetLab site; the offline edition does not include it.'));

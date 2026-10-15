@@ -46,7 +46,7 @@ test('selected identity, immediate wait and fixed outcome stay together while in
     const selected=b.element.querySelector('.cap-selected');assert.ok(selected.querySelector('.cap-selected-symbol'),'selected vehicle has a focal identity');
     assert.match(selected.querySelector('.cap-selected-outcome').textContent,/ready at minute 10.*on time/);
     b.update({...projection,time_s:20,arms:[{...arm,time_s:20,final}]});assert.match(selected.querySelector('.cap-selected-outcome').textContent,/ready at minute 10.*on time/);
-    assert.match(b.element.querySelector('.cap-pair-label').textContent,/fixed while replay moves/);
+    assert.match(b.element.querySelector('.cap-pair-label').textContent,/Replaying a moment does not recalculate/);
   }finally{restore();}
 });
 

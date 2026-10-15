@@ -98,7 +98,7 @@ export function createCapacityBench({onSelect=()=>{}}={}){
       });
       const controls=el('div',{class:'capacity-mobile-arms',role:'group','aria-label':'Visible comparison arm'},switches.map(b=>b.node));
       summaries=new Map(projection.arms.map(a=>[a.case,el('div',{'data-summary':a.case})]));
-      const summary=el('div',{class:'capacity-pair-summary','aria-label':'End-of-run results for both cases'},[el('p',{class:'cap-pair-label'},'Whole-run outcomes · fixed while replay moves. Lower total lateness need not help every vehicle.'),context,...summaries.values()]);
+      const summary=el('div',{class:'capacity-pair-summary','aria-label':'End-of-run results for both cases'},[el('p',{class:'cap-pair-label'},'Final results for the entire run. Replaying a moment does not recalculate them. Lower total lateness need not help every vehicle.'),context,...summaries.values()]);
       element.replaceChildren(controls,summary,...[...arms.values()].map(a=>a.node));showSide(mobileSide);
     }
     context.textContent=projection.context??'';

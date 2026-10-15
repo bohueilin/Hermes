@@ -5,9 +5,8 @@ import {inspectState} from './depot-flow-view.js';
 export const minute=s=>s===null||s===undefined?'Not observed':`${Number((s/60).toFixed(4))} min`;
 export const outcomeLabel={on_time:'On time',late:'Late',unfinished_due:'Unfinished · deadline reached',pending:'Unfinished · deadline pending'};
 export const ruleName=id=>[...FLOW_RULES,...COHORT_RULES].find(r=>r.id===id)?.name??id;
-export const table=(caption,heads,rows,attrs={})=>el('div',{class:'flow-table',tabindex:0,role:'region','aria-label':caption,...attrs},el('table',{},[el('caption',{},caption),el('thead',{},el('tr',{},heads.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map((c,i)=>el(i===0?'th':'td',i===0?{scope:'row'}:{},c)))))]));
-export const detail=(title,children)=>el('details',{},[el('summary',{},title),...children]);
-export const button=(text,fn,attrs={})=>el('button',{type:'button',class:'studio-button',on:{click:fn},...attrs},text);
+export {flowTable as table,flowDetail as detail,flowButton as button} from './dom.js';
+import {flowTable as table,flowDetail as detail,flowButton as button} from './dom.js';
 const CHAIN_WORDS={done:'✓ done',active:'in progress',waiting:'waiting','not-applicable':'already at target'};
 /** One rule and vehicle at the inspected time, from an inspectState row: words carry each state, never color alone. */
 export function readinessChain(record,v){

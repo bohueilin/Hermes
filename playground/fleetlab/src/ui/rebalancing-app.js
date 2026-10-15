@@ -10,6 +10,7 @@ export function startRebalancing({createWorker}={}){
  const render=()=>{
   if(!current)return;const ready=!!current.study,manual=chapter===5;
   by('study-status').textContent=current.busy&&current.study?'Calculating and checking your moves. Previous results stay visible until they are ready.':current.study?'Recorded study reconstructed and independently checked. All values below are synthetic.':'Loading the recorded comparison and checking its results…';
+  by('study-progress').hidden=!current.busy;by('study-status').setAttribute('aria-busy',String(current.busy));
   if(current.error&&!current.study)by('study-status').textContent='Study unavailable: '+current.error;
   by('action-error').hidden=!current.error;by('action-error').textContent=current.error||'';
   by('watch').disabled=!ready;by('play').disabled=!ready;by('frame').disabled=!ready;
@@ -35,6 +36,6 @@ export function startRebalancing({createWorker}={}){
  by('apply-moves').addEventListener('click',()=>session.advance(pending));by('reset-manual').addEventListener('click',()=>{pending=[];pendingView();session.reset();});
  doc.addEventListener('visibilitychange',()=>{if(doc.hidden)stop();});window.addEventListener('pagehide',stop);motion.addEventListener('change',()=>{if(motion.matches)stop();});
  const disposeConcepts=mountConceptLoops(doc);
- try{session=createR1Session({worker:createWorker(),onChange:s=>{current=s;if(s.manual&&s.manual.digest!==lastManual){lastManual=s.manual.digest;pending=[];pendingView();}render();}});}catch(error){by('study-status').textContent='Study unavailable: '+error.message;}
+ try{session=createR1Session({worker:createWorker(),onChange:s=>{current=s;if(s.manual&&s.manual.digest!==lastManual){lastManual=s.manual.digest;pending=[];pendingView();}render();}});}catch(error){by('study-progress').hidden=true;by('study-status').textContent='Study unavailable: '+error.message;}
  return {getSession:()=>session,dispose:()=>{stop();disposeConcepts();session?.dispose();}};
 }

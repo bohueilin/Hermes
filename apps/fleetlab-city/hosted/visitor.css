@@ -19,7 +19,7 @@
 .visitor-section-heading .visitor-kicker{margin-bottom:8px!important}
 .visitor-all{color:#204f3f;background:transparent;border:1px solid #becaba;border-radius:24px;padding:12px 18px;min-height:46px;font-family:inherit;font-size:14px;line-height:1.4;font-weight:600;cursor:pointer;flex-shrink:0}
 .visitor-scroll-hint{font-size:13px!important;color:#5a6c5c;margin:16px 0 8px!important}
-.visitor-family-strip{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x proximity;scroll-padding:4px;padding:10px 4px 18px;scrollbar-color:#80997f #e7eadf;scrollbar-width:thin}
+.visitor-family-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:10px 4px 18px}.visitor-family{min-width:0;width:100%}
 .visitor-family{flex:0 0 176px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:stretch;text-align:left;gap:0;background:#f4f3ea;color:#183f33;border:1px solid #dce1d4;border-radius:20px;padding:8px 8px 15px;font-family:inherit;cursor:pointer;transition:transform 320ms cubic-bezier(.2,0,0,1),background-color 320ms;box-shadow:none}
 .visitor-family>.visitor-tile-art{border-radius:14px;aspect-ratio:1}
 .visitor-family-title{font-size:15px;line-height:1.3;font-weight:700;margin:13px 5px 7px}.visitor-family-question{font-size:13px;line-height:1.5;margin:0 5px 12px;color:#526553}.visitor-family-count{font-size:11px;letter-spacing:.04em;margin:auto 5px 0;color:#526553}
@@ -45,3 +45,5 @@
 .visitor-diagram{margin:16px 0;min-width:0}.visitor-diagram img{display:block;width:100%;height:auto;border:1px solid #dfdfd2;border-radius:16px}.visitor-diagram figcaption{font-size:13px;color:#53675d;margin-top:8px;line-height:1.4}.flow-hero .visitor-diagram{max-width:540px}.flow-hero .lab-chooser{gap:12px;margin:12px 0 24px}.flow-hero .lab-chooser a{border:2px solid #b3c4b8;background:#fffdf8;font-weight:650;box-shadow:0 3px 0 #e6e9df}.flow-hero .lab-chooser a[aria-current=page]{border-color:#276f5c;background:#dfede1}.visitor-staffing{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:0 28px;align-items:start}.visitor-staffing>.visitor-diagram{grid-column:2;grid-row:1/5}.visitor-staffing>.ops-readiness-comparison{grid-column:1/-1}[data-role="mode-help"]{flex-basis:100%;font-size:15px;line-height:1.5;margin:0;color:#53675d}@media(max-width:767px){.visitor-staffing{display:block}.flow-hero .lab-chooser a{padding:10px;font-size:15px}.visitor-staffing .visitor-diagram{max-width:540px}.flow-hero .visitor-diagram{max-width:440px}}
 
 #lesson:not([data-chapter="0"]) .dispatch-concept{display:none}
+
+@media(max-width:640px){.visitor-family-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}

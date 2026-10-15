@@ -744,7 +744,7 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
       if (runs.copyStatus !== null) children.push(el("p", { role: "status", "data-role": "copy-status" }, runs.copyStatus === "copied" ? labels.VERDICT.copied : labels.VERDICT.copyFailed));
       return [el("div", { class: "fl-error", "data-role": "invariant-failure" }, children)];
     }
-    if (warm.pending !== null) return [el("p", { class: "fl-muted", role: "status", "data-role": "preparing" }, labels.STATES.preparing)];
+    if (warm.pending !== null) return [el("p", { class: "fl-muted", role: "status", "data-role": "preparing" }, labels.STATES.preparing),el("progress",{"aria-label":"Preparing lookup tables"})];
     return [];
   }
 

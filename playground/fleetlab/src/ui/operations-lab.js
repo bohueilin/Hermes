@@ -120,7 +120,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   }
   const seedInput=el('input',{type:'number',min:1,max:2147483647,value:config.seed,'aria-label':'Demand seed',on:{change:()=>setConfig({seed:Number(seedInput.value)})}});inputs.set('seed',seedInput);
   controls.appendChild(el('details',{},[el('summary',{},'Repeatability & assumptions'),el('label',{class:'ops-field'},['Demand seed',seedInput]),el('p',{},'A seed recreates demand and trip variation. Fleet/depot comparisons reuse that demand. One-minute resolution. Sequential depot stages. No staff shifts, charge taper, road lanes or collisions.')]));
-  controls.appendChild(el('p',{class:'ops-settings-note'},'All values are editable teaching assumptions, not measurements from an operator.'));
+  controls.appendChild(el('p',{class:'ops-settings-note'},'M1 means staffing-aware serial depot work. Select it above to model workers and bays. Optional charging, resource-status and airport models have their own controls. All values are editable teaching assumptions, not operator measurements.'));
   const runSettingsButton=button('Run with these settings ▶',()=>run());controls.appendChild(runSettingsButton);
   const clock=el('strong',{class:'ops-clock'},operationsClock(config.start_hour*60));
   const weatherLabel=el('span',{class:'ops-weather-chip'},'☀ Clear · synthetic traffic');
@@ -150,10 +150,10 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     el('details',{class:'ops-vehicle-table'},[el('summary',{},'All vehicles as a table'),vehicleTable]),
   ]);
   const outcomeCards=el('div',{class:'ops-outcome-cards'});
-  const outcomesNote=el('p',{class:'ops-outcomes-note'},'Run a day to see outcomes.');
+  const outcomesNote=el('p',{class:'ops-outcomes-note'},'Run a day to see completed trips, waiting riders and unserved requests together. These results will describe your selected settings, not operator performance.');
   const serviceBreakdown=el('div',{class:'ops-service-breakdown'});
   const resultProvenance=el('div',{class:'ops-result-provenance'});
-  const outcomeSection=el('section',{class:'ops-results'},[eyebrow('3 / UNDERSTAND THE RESULT'),el('h2',{},'How much service did this fleet deliver?'),resultProvenance,outcomeCards,outcomesNote,serviceBreakdown]);
+  const outcomeSection=el('section',{class:'ops-results'},[eyebrow('3 / UNDERSTAND THE RESULT'),el('h2',{},'How much service did this fleet deliver?'),resultProvenance,outcomeCards,outcomesNote,button('Go to fleet-day settings',()=>{controls.scrollIntoView({block:'start'});runSettingsButton.focus({preventScroll:true});}),serviceBreakdown]);
   const readinessResult=el('div',{class:'ops-readiness-result'});
   outcomeSection.appendChild(readinessResult);
   const advancedResult=el('div',{class:'ops-advanced-result'});outcomeSection.appendChild(advancedResult);
@@ -165,7 +165,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   const staffingHelp=el('p',{id:'staffing-help',role:'status'}),policyHelp=el('p',{id:'policy-help',role:'status'});
   readinessButton.setAttribute('aria-describedby','staffing-help');experimentControls.button.setAttribute('aria-describedby','policy-help');experimentControls.element.appendChild(policyHelp);
   const readinessContent=el('div',{class:'ops-readiness-comparison'});
-  const readinessSection=el('section',{class:'ops-capacity'},[frameView(SURFACE_FRAMES.staffing,{title:'Staffing: workers versus bays'}),readinessButton,staffingHelp,glossaryView(),readinessContent]);
+  const readinessSection=el('section',{class:'ops-capacity'},[frameView(SURFACE_FRAMES.staffing,{title:'Staffing: workers versus bays'}),readinessButton,staffingHelp,button('Review staffing settings ↑',()=>{readinessMode.closest('details').open=true;readinessMode.scrollIntoView({block:'center'});readinessMode.focus({preventScroll:true});}),glossaryView(),readinessContent]);
   const capacityButton=button('Compare fleet & depot sizes',()=>compareCapacity());
   const capacityContent=el('div',{class:'ops-capacity-content'});
   const capacitySection=el('section',{class:'ops-capacity'},[eyebrow('4 / TEST THE CAPACITY QUESTION'),el('h2',{},'More cars, more depots, or a different constraint?'),el('p',{},'Run the same demand across a bounded set of fleet and depot sizes. The target is completing at least 95% of all requests by the end of the chosen day, including late arrivals in the denominator.'),capacityButton,capacityContent]);

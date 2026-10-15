@@ -25,7 +25,7 @@ test('before Load: header, place, manifest cards and a hidden inspector',()=>{
     assert.equal(crumbs.querySelector('a').getAttribute('href'),'/#/catalog');assert.equal(text(crumbs.querySelector('[aria-current="page"]')),'Scheduling or capacity?');
     assert.equal(text(e.querySelector('h1')),'Better scheduling, more bandwidth, or more charging power?');
     assert.equal(text(e.querySelector('p.eyebrow')),'RECORDED SYNTHETIC STUDY · 12 VEHICLES · 90-MINUTE OBSERVATION');
-    assert.equal(text(e.querySelector('.capacity-status')),'No comparison loaded.');
+    assert.match(text(e.querySelector('.capacity-status')),/Watch comparison.*published totals below/);
     assert.equal(e.querySelector('.capacity-inspect').hidden,true);
     assert.deepEqual(e.querySelectorAll('.capacity-chips button').map(b=>[text(b),b.getAttribute('aria-pressed')]),[['Data-heavy','true'],['Energy-heavy','false'],['Mixed','false']]);
     assert.equal(e.querySelector('select[aria-label="Different rule"]').value,'capacity_departure_deadline');

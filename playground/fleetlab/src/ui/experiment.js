@@ -1451,7 +1451,7 @@ export function mountExperiment(container, { store, host, copy = null, now = wal
     const ex = state.experiment;
     const children = [heading(2, labels.VERDICT.running), el("p", { class: "fl-teaching-chip" }, labels.HONESTY.verdictChip)];
     if (ex.progress !== null) {
-      children.push(el("p", { role: "status", "data-role": "progress" }, labels.experimentRunProgress(ex.progress.done, ex.progress.total)));
+      children.push(el("p", { role: "status", "data-role": "progress" }, labels.experimentRunProgress(ex.progress.done, ex.progress.total)),el("progress",{max:ex.progress.total,value:ex.progress.done,"aria-label":"Experiment runs finished"}));
     }
     children.push(el("button", {
       type: "button",

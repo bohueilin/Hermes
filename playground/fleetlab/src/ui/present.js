@@ -719,7 +719,8 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
   }, PRESENT.prepare);
   const prepareWhat = el("p", { class: "fl-muted", "data-role": "present-prepare-what" }, PRESENT.prepareWhat);
   const prepareStatus = el("p", { class: "fl-small-label", role: "status", "data-role": "present-prepare-status" });
-  const preparePanel = el("div", { class: "fl-ledger__prepare", "data-role": "present-prepare-panel" }, [prepareButton, prepareWhat, prepareStatus]);
+  const prepareProgress=el("progress",{hidden:true,"aria-label":"Walkthrough preparation"});
+  const preparePanel = el("div", { class: "fl-ledger__prepare", "data-role": "present-prepare-panel" }, [prepareButton, prepareWhat, prepareStatus,prepareProgress]);
   const figures = el("div", { class: "fl-ledger__figures", "data-role": "present-figures" });
   // Chapters 2 to 4 fill this from their own readouts; it carries the beat it belongs to so the next part can find it.
   const beatContent = el("div", { "data-role": "present-beat-content" });
@@ -1113,6 +1114,8 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
       node.toggleAttribute("inert", prepared);
     }
     prepareButton.disabled = preparing;
+    prepareProgress.hidden=!preparing;const p=state.experiment.status==="running"?state.experiment.progress:state.run.status==="running"?state.run.progress:null;
+    if(p?.total){prepareProgress.max=p.total;prepareProgress.value=p.done;}else prepareProgress.removeAttribute("value");
     setText(prepareStatus, prepareStatusText(state));
   }
 

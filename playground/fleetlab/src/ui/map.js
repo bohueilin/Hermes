@@ -924,6 +924,7 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
   let tableOpen = false;
   function setTableOpen(open) {
     tableOpen = open;
+    tableWrap.hidden=!lastModel?.hasLog&&!open;
     tableToggle.setAttribute("aria-pressed", open ? "true" : "false");
     tableWrap.setAttribute("class", open ? "fl-scroll" : "fl-sr-only");
   }
@@ -1373,6 +1374,8 @@ export function createMap({ onKey = () => false, onInspect = () => {}, onSelect 
   }
 
   function drawTable(model, seed) {
+    if(!model.hasLog){table.replaceChildren(el('caption',{},'What a finished row looks like · format example, not a result'),el('thead',{},el('tr',{},['Area','Waiting riders','Unserved in last hour'].map(t=>el('th',{scope:'col'},t)))),el('tbody',{},el('tr',{},['Area name','Count at the replay clock','Count in the preceding hour'].map(t=>el('td',{},t)))));tableWrap.hidden=!tableOpen;return;}
+    tableWrap.hidden=false;
     const cell = (tag, text, attrs = {}) => el(tag, attrs, text);
     const head = (cells) => el("tr", {}, cells);
     const areaHead = [

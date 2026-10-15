@@ -34,7 +34,7 @@ export function createDeliveryPage({manifest,createWorker,runPair=null,cancelPai
   para('Keep the comparison fair, then challenge the default lesson. Choosing a case waits for your next explicit comparison.'),text('div',{class:'delivery-presets'},presets),setupStatus,
  ]);
  const summaryHeading=text('h2',{},'Published study summary'),summaryCards=text('div',{class:'delivery-outcomes'}),ledgers=para('', 'delivery-ledgers'),provision=para('', 'delivery-fine');
- const summary=text('section',{class:'delivery-summary','aria-label':'Whole-run outcomes for both delivery policies'},[summaryHeading,para('Whole-run outcomes stay fixed while the clock moves.','delivery-fine'),summaryCards,ledgers,provision]);
+ const summary=text('section',{class:'delivery-summary','aria-label':'Whole-run outcomes for both delivery policies'},[summaryHeading,para('These are final results for the entire run; replay shows individual moments.','delivery-fine'),summaryCards,ledgers,provision]);
  const clock=text('strong',{class:'delivery-clock'},'0 s'),clockLabel=para('Exact simulated time','delivery-eyebrow');
  const clockGroup=text('div',{class:'delivery-clock-group'},[text('div',{},[clockLabel,clock]),text('span',{class:'delivery-window'},'Observation window: 2,400 s')]);
  const captionTitle=text('h2',{tabindex:'-1'},'Follow the work'),caption=para(''),jump=para('','delivery-jump');
@@ -61,7 +61,7 @@ export function createDeliveryPage({manifest,createWorker,runPair=null,cancelPai
  element.appendChild(text('header',{class:'delivery-header'},[text('a',{href:'/#/overview',class:'delivery-brand','aria-label':'FleetLab home'},[text('span',{class:'delivery-monogram'},'F'),text('strong',{},'FleetLab')]),text('nav',{'aria-label':'Main navigation'},[['Home','/#/overview'],['Explore','/#/catalog'],['About & limits','/#/approach']].map(([label,href])=>text('a',{href},label)))]));
  element.appendChild(text('main',{},[text('nav',{class:'delivery-breadcrumb','aria-label':'Breadcrumb'},[text('a',{href:'/#/catalog'},'Explore'),text('span',{},' / Network Flows / Software delivery')]),
   text('section',{class:'delivery-hero'},[para('04 / NETWORK FLOWS · SYNTHETIC RESOURCE MODEL','delivery-eyebrow'),h1,lead,
-   para('Same artifact, arrivals, useful link rates, checks and activation. Only delivery policy changes.','delivery-fixed'),
+   para('An artifact is the update file. WAN is the internet link into the depot. A cold shared cache starts empty, fetches one copy and shares it locally. A delta update sends only changed parts; this lesson sends the whole file.','delivery-fixed'),para('Same file, arrivals, useful link rates, checks and activation. Only delivery policy changes.','delivery-fixed'),
    text('div',{class:'delivery-actions'},[watch,cancel,pendingPause]),status,
    para('Synthetic model. Readiness here does not establish driving safety or permission to deploy.','delivery-scope'),setup]),bench,
   text('section',{class:'delivery-lessons'},[text('h2',{},'From a simple mechanism to a better question'),

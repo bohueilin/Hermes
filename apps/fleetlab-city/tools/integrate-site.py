@@ -26,6 +26,7 @@ _brand_spec.loader.exec_module(brand)
 EXCEPTIONS = frozenset(("index.html", "boot.js", "_headers"))
 CLIENT_FIXES = frozenset(("src/ui/setup-codec.js", "src/ui/setup-sharing.js", "src/ui/studio.js"))
 FLOW_CHANGED = frozenset((
+    "src/ui/dom.js", "src/ui/iso.js", "src/ui/map.js", "src/ui/present.js",
     "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js", "src/ui/charts.js",
     "src/ui/simulation-catalog.js", "src/ui/operations-lab.js", "src/ui/street-lab.js",
     "src/ui/hero-film.js", "src/ui/labels.js", "src/ui/advanced-operations-view.js",

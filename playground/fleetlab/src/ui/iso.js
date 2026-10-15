@@ -447,15 +447,6 @@ function placementScore(b, index, { view, placed, soft = [], polygons = [], line
 /** What two labels that overlap cost: refused before anything else is weighed, then by how much. */
 const collision = (overlap) => (overlap > 0 ? 1e6 + overlap * 1000 : 0);
 
-function bestPlacement(candidates, context) {
-  let best = null;
-  candidates.forEach((b, index) => {
-    const score = placementScore(b, index, context);
-    if (best === null || score < best.score) best = { box: b, score, index };
-  });
-  return best;
-}
-
 /** The screen polygon of a plan rectangle. */
 const planRect = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => project(x, y, 0));
 

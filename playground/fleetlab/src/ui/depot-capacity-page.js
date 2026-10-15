@@ -1,6 +1,6 @@
 import {networkChrome} from './network-chrome.js';
 // NF-03: reconstruct fixed cells, independently check them, then present accepted records.
-import {el} from './dom.js';
+import {el,flowTable as table,flowDetail as detail,flowButton as button} from './dom.js';
 import {createCapacityBench,createCapacityPreview} from './depot-capacity-bench.js';
 import {capacityGuideShots,capacityActivity,createCapacityGuide} from './depot-capacity-guided.js';
 import {createDepotFlowPlayer} from './depot-flow-player.js';
@@ -11,9 +11,6 @@ import {capacityCellSteps} from '../model/depot-capacity.js';
 import {CAPACITY_PROTOCOL,CAPACITY_REGIMES,CAPACITY_RULES,CAPACITY_TREATMENTS,CAPACITY_VERSIONS,FLOW_TRUST,capacityScenario,studyStatus} from '../model/depot-capacity-contract.js';
 import {CAPACITY_PROJECTION,caseCells,cardsFor,readingSentence,withheldReason,capacityBenchProjection,allocationSpans,firstAllocationDifference,firstReadinessDifference,exampleVisits,verifiedCell,ruleName,join,minute,gbps,kw} from './depot-capacity-view.js';
 
-const table=(caption,heads,rows,attrs={})=>el('div',{class:'flow-table',tabindex:0,role:'region','aria-label':caption,...attrs},el('table',{},[el('caption',{},caption),el('thead',{},el('tr',{},heads.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map((c,i)=>el(i===0?'th':'td',i===0?{scope:'row'}:{},c)))))]));
-const detail=(title,children)=>el('details',{},[el('summary',{},title),...children]);
-const button=(text,fn,attrs={})=>el('button',{type:'button',class:'studio-button',on:{click:fn},...attrs},text);
 const svg=(tag,attrs={},text)=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));if(text!==undefined)n.textContent=String(text);return n;};
 
 const P=CAPACITY_PROTOCOL,T=CAPACITY_TREATMENTS,VISITS=P.waves.length*P.profiles.length,HORIZON_MIN=minute(P.horizon_s);
@@ -38,8 +35,8 @@ function heldFixed(regime){
   return [
     table(`Twelve visits · ${CAPACITY_REGIMES[regime].name} workload`,['Vehicle','Wave','Arrives','Upload','Energy','Due'],s.vehicles.map(v=>[v.id,v.wave,`Minute ${minute(v.arrival_s)}`,gb(v.upload_bytes),kwh(v.energy_j),`Minute ${minute(v.deadline_s)}`])),
     table('Shared resources',['Resource','Value'],[
-      ['Uplink',`${gbps(T.base.uplink_bytes_s)} shared; ${gbps(T.more_bandwidth.uplink_bytes_s)} with more bandwidth`],['Charging ports',P.charge_ports],['Port cap',`${kw(P.port_cap_j_s)} per port`],
-      ['Site feed',`${kw(T.base.site_power_j_s)} shared by occupied ports; ${kw(T.more_power.site_power_j_s)} with more power`],['Per-vehicle upload cap',gbps(P.vehicle_uplink_cap_bytes_s)],
+      ['Uplink · shared internet upload',`${gbps(T.base.uplink_bytes_s)} shared; ${gbps(T.more_bandwidth.uplink_bytes_s)} with more bandwidth`],['Charging ports',P.charge_ports],['Port cap',`${kw(P.port_cap_j_s)} per port`],
+      ['Site feed · shared charging power',`${kw(T.base.site_power_j_s)} shared by occupied ports; ${kw(T.more_power.site_power_j_s)} with more power`],['Per-vehicle upload cap',gbps(P.vehicle_uplink_cap_bytes_s)],
       ['Local step',`${minute(P.post_s)} min after the upload, using no shared resource`],['Observation',`${HORIZON_MIN} min in one-second slots`]]),
     el('ul',{class:'capacity-rules'},CAPACITY_RULES.map(r=>el('li',{},[el('strong',{},r.name),`: ${r.description}`]))),
     el('p',{class:'flow-run-help'},'GB and kWh are decimal units. Every rule and capacity change serves exactly this work.'),
@@ -187,10 +184,10 @@ export function createCapacityPage({manifest,autoGuide=true,reducedMotion=()=>fa
       ]),preview,
     ]),
     inspect,el('details',{class:'capacity-fixed'},[el('summary',{},'What is held fixed?'),fixedBody]),
-    el('section',{class:'capacity-cards','aria-label':'Matched comparison'},[el('h2',{},'Published study summary'),resultSetup,grid,reading]),
+    el('details',{class:'capacity-cards','aria-label':'Matched comparison',open:true},[el('summary',{},el('h2',{},'Published study summary')),resultSetup,grid,reading]),
     detail('Where this model sits in a real depot',[depotMap()]),
     el('section',{class:'capacity-table','aria-labelledby':'capacity-table-title'},[el('h2',{id:'capacity-table-title'},'Full study'),
-      el('p',{},'Every workload, capacity and rule at one-second slots. Each cell was repeated with quarter-second slots; the repeat agrees when every visit keeps its ready time and outcome.'),studyTable(manifest),loadedDetails]),
+      el('p',{},'Uplink means the shared internet upload link; site feed means the charging power shared by the ports. Vehicle-to-vehicle (V2V) relay is not modeled here. Every workload, capacity and rule at one-second slots. Each cell was repeated with quarter-second slots; the repeat agrees when every visit keeps its ready time and outcome.'),studyTable(manifest),loadedDetails]),
     el('section',{class:'capacity-limits','aria-labelledby':'capacity-limits-title'},[el('h2',{id:'capacity-limits-title'},'Model and limits'),modelHeader('Depot capacity model','Constructed depot visits',CAPACITY_VERSIONS.model).element,
       el('dl',{class:'flow-versions'},[...Object.entries(CAPACITY_VERSIONS).flatMap(([k,v])=>[el('dt',{},k[0].toUpperCase()+k.slice(1)),el('dd',{},v)]),el('dt',{},'Presentation projection'),el('dd',{},CAPACITY_PROJECTION)]),
       el('p',{},`Scope: ${FLOW_TRUST.scope}. Evidence status: ${FLOW_TRUST.evidence_status}. Authenticity: ${FLOW_TRUST.authenticity}. Authorization: ${FLOW_TRUST.authorization}. Decision authority: ${FLOW_TRUST.decision_authority}. Deployment permission: ${FLOW_TRUST.deployment_permission}.`),
@@ -237,7 +234,7 @@ export function createCapacityPage({manifest,autoGuide=true,reducedMotion=()=>fa
   const setupText=()=>`${regimeName(comparison.regime)} workload, ${lower(ruleName(comparison.altRule))}`;
   function selectionStatus(){
     if(!complete.complete)return `Study incomplete: ${complete.accepted} of ${complete.planned} cells accepted.`;
-    if(!comparison)return 'No comparison loaded.';
+    if(!comparison)return 'Choose Watch comparison to check the records and follow one vehicle. The published totals below are available now.';
     if(previousSetup())return `Previous setup: ${setupText()}. Load to compare the pending setup.`;
     return loadedText();
   }
@@ -258,7 +255,8 @@ export function createCapacityPage({manifest,autoGuide=true,reducedMotion=()=>fa
     grid.replaceChildren(...cardsFor(manifest,shown.regime,shown.altRule).map(card=>cardView(card,Boolean(comparison))));
     reading.textContent=readingSentence(manifest,shown.regime,shown.altRule)??withheldReason(manifest,shown.regime,shown.altRule);
     resultSetup.textContent=comparison?`${previousSetup()?'Previous setup':'Loaded setup'}: ${setupText()}.`:`Published study summary: ${regimeName(regime)} workload. Watch to reconstruct the records.`;
-    element.querySelector('.capacity-cards h2').textContent=comparison?'Whole-run outcomes · fixed while replay moves':'Published study summary';
+    element.querySelector('.capacity-cards').open=!comparison;
+    element.querySelector('.capacity-cards h2').textContent=comparison?'Results for the entire run':'Published study summary';
     viewComparison.hidden=!comparison;viewComparison.textContent=previousSetup()?'View previous comparison ↓':'View comparison ↓';
     if(comparison)inspectNote.textContent=`${previousSetup()?'Previous setup':'Loaded comparison'}: ${setupText()}.`;
     if(!job)status.textContent=selectionStatus();

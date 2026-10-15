@@ -188,23 +188,23 @@ test('two-vehicle question, lede and setup table read the current scenario',()=>
   const restore=installFakeDom();
   try{const lab=ui.createDepotFlowLab();const text=s=>lab.element.querySelector(s).textContent;
     assert.equal(text('h1'),'Why can a charged vehicle still wait?');
-    assert.equal(text('p.flow-lede'),'Two vehicles share a 1 Gbps shared internet link (gigabits per second). B is already charged and due sooner; A needs charging and a larger upload. Both require two minutes of work after upload.');
+    assert.equal(text('p.flow-lede'),'Two vehicles share a 1 Gbps internet upload link (uplink; gigabits per second). B is already charged and due sooner; A needs charging and a larger upload. Both require two minutes of work after upload.');
     assert.equal(text('p.flow-definition'),'Ready means all three prerequisites are complete: battery at target, upload done, two-minute local step done. Invented workload; no real depot data.');
     const setup=lab.element.querySelector('table.flow-setup-table');assert.equal(setup.querySelector('caption').textContent,'Setup · observe through minute 15');
-    assert.deepEqual(rowsOf(setup),[['Vehicle','Due','Upload','Energy','After upload'],['A','minute 15','75 GB','6 kWh','2 min local step'],['B','minute 5','7.5 GB','Already at target','2 min local step']]);
+    assert.deepEqual(rowsOf(setup),[['Vehicle','Due','Upload','Energy','After upload'],['A','due at minute 15','75 GB','6 kWh','2 min local step'],['B','due at minute 5','7.5 GB','Already at target','2 min local step']]);
     lab.setOptions({b_gb:45});
-    assert.equal(text('p.flow-lede'),'Two vehicles share a 1 Gbps shared internet link (gigabits per second). B is already charged and due sooner, with a 45 GB upload; A needs charging and a 75 GB upload. Both require two minutes of work after upload.');
-    assert.deepEqual(rowsOf(lab.element.querySelector('table.flow-setup-table'))[2],['B','minute 5','45 GB','Already at target','2 min local step']);
-    lab.setOptions({b_gb:7.5,uplink_gbps:0.5});assert.match(text('p.flow-lede'),/^Two vehicles share a 0\.5 Gbps shared internet link \(gigabits per second\)\. /);lab.destroy();
+    assert.equal(text('p.flow-lede'),'Two vehicles share a 1 Gbps internet upload link (uplink; gigabits per second). B is already charged and due sooner, with a 45 GB upload; A needs charging and a 75 GB upload. Both require two minutes of work after upload.');
+    assert.deepEqual(rowsOf(lab.element.querySelector('table.flow-setup-table'))[2],['B','due at minute 5','45 GB','Already at target','2 min local step']);
+    lab.setOptions({b_gb:7.5,uplink_gbps:0.5});assert.match(text('p.flow-lede'),/^Two vehicles share a 0\.5 Gbps internet upload link \(uplink; gigabits per second\)\. /);lab.destroy();
   }finally{restore();}
 });
 test('four-visit question, lede and setup table read the cohort scenario',()=>{
   const restore=installFakeDom();
   try{const lab=ui.createDepotFlowLab();lab.setLesson({id:'crossed-priorities'});const text=s=>lab.element.querySelector(s).textContent;
     assert.equal(text('h1'),'Who should upload next?');
-    assert.equal(text('p.flow-lede'),'Four visits arrive together, already charged, and share one 1 Gbps shared internet link (gigabits per second). Two are urgent and two are large; size and urgency do not line up.');
+    assert.equal(text('p.flow-lede'),'Four visits arrive together, already charged, and share one 1 Gbps internet upload link (uplink; gigabits per second). Two are urgent and two are large; size and urgency do not line up.');
     const setup=lab.element.querySelector('table.flow-setup-table');assert.equal(setup.querySelector('caption').textContent,'Setup · all batteries at target · 2 min local step after upload · observe through minute 25');
-    assert.deepEqual(rowsOf(setup),[['Vehicle','Due','Upload'],['A','minute 10','60 GB'],['B','minute 15','7.5 GB'],['C','minute 22','45 GB'],['D','minute 6','15 GB']]);
+    assert.deepEqual(rowsOf(setup),[['Vehicle','Due','Upload'],['A','due at minute 10','60 GB'],['B','due at minute 15','7.5 GB'],['C','due at minute 22','45 GB'],['D','due at minute 6','15 GB']]);
     const rules=lab.element.querySelector('details.flow-rules');assert.equal(rules.querySelector('summary').textContent,'How the four rules work');
     assert.equal(rules.querySelectorAll('article').length,4);assert.equal(rules.querySelector('table caption').textContent,'Size and urgency are different');
     assert.equal(lab.element.querySelector('details.flow-change').hidden,true);lab.destroy();

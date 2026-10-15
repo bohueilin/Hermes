@@ -94,3 +94,8 @@ export function keyedList(parent, items, { key, create, update = () => {} }) {
   keyedNodes.set(parent, next);
   return parent;
 }
+
+// Shared depot presentation primitives; no model or verification logic.
+export const flowTable=(caption,heads,rows,attrs={})=>el('div',{class:'flow-table',tabindex:0,role:'region','aria-label':caption,...attrs},el('table',{},[el('caption',{},caption),el('thead',{},el('tr',{},heads.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map((c,i)=>el(i===0?'th':'td',i===0?{scope:'row'}:{},c)))))]));
+export const flowDetail=(title,children)=>el('details',{},[el('summary',{},title),...children]);
+export const flowButton=(text,fn,attrs={})=>el('button',{type:'button',class:'studio-button',on:{click:fn},...attrs},text);

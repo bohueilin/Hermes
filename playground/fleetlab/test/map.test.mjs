@@ -716,13 +716,14 @@ describe("the table twin", () => {
     assert.equal(map.element.querySelector(".fl-chip-replay").hidden, true);
     assert.equal(map.svg.querySelectorAll("g[data-route]").length, 12);
     assert.equal(map.svg.querySelectorAll('[data-role="unit-bars"] rect').length, 0);
-    const absent = `not available: ${labels.ABSENT_REASONS.notRunYet}`;
-    const sf = map.table.querySelector('tr[data-area="SF"]');
-    assert.deepEqual(sf.querySelectorAll("td").map(textOf), Array(6).fill(absent));
-    assert.deepEqual(map.table.querySelector('tr[data-depot="SJ-1"]').querySelectorAll("td").map(textOf), Array(4).fill(absent));
-    const h1 = map.table.querySelector('tr[data-route="H1"][data-dir="SF>PEN"]');
-    assert.equal(cellText(h1, '[data-col="planned"]'), "25 min");
-    assert.equal(cellText(h1, '[data-family="riderWork"]'), absent);
+    const wrap=map.element.querySelector('[data-role="table-twin"]');
+    assert.equal(wrap.hidden,true);
+    assert.match(map.table.textContent,/format example, not a result/);
+    assert.equal(map.table.querySelectorAll('tbody tr').length,1);
+    assert.doesNotMatch(map.table.textContent,/not available|\b0\b/);
+    map.element.querySelector('[aria-label="'+labels.MAP.tableToggle+'"]').click();
+    assert.equal(wrap.hidden,false);
+
   });
 
   test("stays current: at every clock it equals a twin drawn by a map built fresh on that frame", () => {

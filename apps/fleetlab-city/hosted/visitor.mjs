@@ -83,7 +83,7 @@ export function decorateVisitors(doc=document){
   all.addEventListener('click',()=>{results.open=true;catalog.querySelector('.catalog-count-row button')?.click();});
   const families=el('section',{id:'visitor-families','aria-labelledby':'visitor-family-heading'},[
    el('div',{class:'visitor-section-heading'},[el('div',{},[el('p',{class:'visitor-kicker'},'FOLLOW YOUR CURIOSITY'),el('h2',{id:'visitor-family-heading'},'Choose a place to start.')]),all]),
-   el('p',{class:'visitor-scroll-hint'},'Choose one of 9 topics · Scroll sideways for more →'),
+   el('p',{class:'visitor-scroll-hint'},'Choose one of 9 topics. Each opens its matching lessons below.'),
    el('div',{class:'visitor-family-strip',role:'group','aria-label':'Question family'},buttons),status,
   ]);
   const feature=catalog.querySelector('.network-flows-feature');
