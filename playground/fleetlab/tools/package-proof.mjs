@@ -1,3 +1,4 @@
+import {R3_RELEASE,R3_ENTRIES,R3_FILES} from './dispatch-package.mjs';
 import {R1_RELEASE,R1_ENTRIES,R1_FILES} from './rebalancing-package.mjs';
 import {BRAND_MEDIA,BRAND_TEXT,ARTWORK_GROUPS,renderPage} from '../../../apps/fleetlab-city/hosted/site-transform.mjs';
 import {ORDER_RELEASE,ORDER_FILES,ORDER_ENTRIES} from './delivery-order-package.mjs';
@@ -168,6 +169,10 @@ function captureSource(playground) {
     regularDirectory(join(playground,"rebalancing"));
     for(const path of ["rebalancing/index.html","rebalancing/visual.css"])inputs.set(path,readRegular(playground,path,LIMITS.raw_source_and_tools_bytes));
   } catch(error) { if(error.code!=="ENOENT")throw error; }
+  try {
+    regularDirectory(join(playground,"dispatch"));
+    for(const path of ["dispatch/index.html","dispatch/visual.css"])inputs.set(path,readRegular(playground,path,LIMITS.raw_source_and_tools_bytes));
+  } catch(error) { if(error.code!=="ENOENT")throw error; }
   const media = captureTree(join(playground, "media"), { maxBytes: 5 * 1024 * 1024 });
   for (const [path, data] of media) inputs.set(`media/${path}`, data);
   if (canonical([...media.keys()].map(path => `media/${path}`).sort()) !== canonical([...MEDIA_LIMITS.keys()].sort())) fail("media inventory mismatch");
@@ -207,7 +212,7 @@ function sourceIdentity(playground, captured, sourceCommit) {
   inputs.set("LICENSE", captured.license);
   const prefix = relative(captured.repository, playground).split(sep).join("/");
   const committedPaths = git(captured.repository, ["ls-tree", "-r", "-z", "--name-only", sourceCommit, "--",
-    ...["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "index.html", "styles.css"].map(path => `${prefix}/${path}`), CONTRACT, "LICENSE", ...INTEGRATION_ROOTS, INTEGRATION_DEPENDENCY, ...ARTWORK_ROOTS])
+    ...["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch", "index.html", "styles.css"].map(path => `${prefix}/${path}`), CONTRACT, "LICENSE", ...INTEGRATION_ROOTS, INTEGRATION_DEPENDENCY, ...ARTWORK_ROOTS])
     .split("\0").filter(Boolean).sort();
   if (canonical(committedPaths) !== canonical([...inputs.keys()].sort())) fail("source commit input inventory mismatch");
   for (const [path, data] of inputs) {
@@ -275,6 +280,7 @@ function assemble({ playground, captured, identity, site, offline }) {
       comparison: "All hosted payload files and offline HTML reproduce exactly. A source archive without Git does not reproduce commit-bound release.json provenance; verify payload separately, then use the original Git commit to reproduce the exact sidecar and package." } });
   const archivePath = `network-flows/sources/${digest(archive)}.json.gz`;
   const measured = measureRouteClosures(playground, site, [
+    ...(site.has(R3_RELEASE)?[{id:"r3",route:"/network-flows/dispatch/",entries:R3_ENTRIES,supporting:[...R3_FILES,"_headers"]}]:[]),
     ...(site.has(R1_RELEASE)?[{id:"r1",route:"/network-flows/rebalancing/",entries:R1_ENTRIES,supporting:[...R1_FILES,"_headers"]}]:[]),
     { id: "legacy", route: "/", entries: ["src/ui/app.js", "src/runtime/worker.js"],
       supporting: ["index.html", "boot.js", "styles.css", "_headers", CAPACITY_RELEASE_PATH, ...MEDIA_LIMITS.keys()] },
@@ -307,7 +313,7 @@ function assemble({ playground, captured, identity, site, offline }) {
       original_source_scope: "Every src/*.js module, every tools/*.mjs tool, original page/CSS inputs, validation policy and LICENSE; media pinned separately. Full original inventory and text are in the source offer.",
       generation_count_scope: "teaching_generation_bytes is the teaching-input-generation subtotal, before integration. Transformed root growth, integration scripts/styles/publication/404/headers and retained/City bytes are counted by the outer integration inventory and final teaching-generation gate." },
     discovery: {owner:"hosted-integration",offline_action:false,meaning:"Discovery is injected only into the complete accepted hosted generation; final transforms are counted by the integrated aggregate gate."},
-    counts: { ...(site.has(R1_RELEASE)?{r1_route_local_bytes:owned.r1_route_local_bytes,r1_closure_bytes:owned.r1_closure_bytes}:{}), legacy_text_bytes: owned.legacy_text_bytes, nf04_route_local_bytes:owned.nf04_route_local_bytes, nf04_closure_bytes:owned.nf04_closure_bytes, ...(site.has(ORDER_RELEASE)?{delivery_order_route_local_bytes:owned.delivery_order_route_local_bytes,delivery_order_closure_bytes:owned.delivery_order_closure_bytes}:{}), integration_text_bytes:0, raw_source_and_tools_bytes: total(sourceFiles) + captured.contracts.length + captured.license.length,
+    counts: { ...(site.has(R3_RELEASE)?{r3_route_local_bytes:owned.r3_route_local_bytes,r3_closure_bytes:owned.r3_closure_bytes}:{}), ...(site.has(R1_RELEASE)?{r1_route_local_bytes:owned.r1_route_local_bytes,r1_closure_bytes:owned.r1_closure_bytes}:{}), legacy_text_bytes: owned.legacy_text_bytes, nf04_route_local_bytes:owned.nf04_route_local_bytes, nf04_closure_bytes:owned.nf04_closure_bytes, ...(site.has(ORDER_RELEASE)?{delivery_order_route_local_bytes:owned.delivery_order_route_local_bytes,delivery_order_closure_bytes:owned.delivery_order_closure_bytes}:{}), integration_text_bytes:0, raw_source_and_tools_bytes: total(sourceFiles) + captured.contracts.length + captured.license.length,
       net_original_source_growth_bytes:total(sourceFiles)+captured.contracts.length+captured.license.length-SOURCE_BASELINE.teaching_bytes+total(captured.integration)-SOURCE_BASELINE.integration_bytes,
       raw_module_bytes: total(new Map([...sourceFiles].filter(([path]) => path.startsWith("src/")))),
       raw_tool_bytes: total(new Map([...sourceFiles].filter(([path]) => path.startsWith("tools/")))),

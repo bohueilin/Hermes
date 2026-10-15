@@ -110,6 +110,14 @@ export function mountCityEntry(doc = document) {
       node('p',{class:'eyebrow'},'AVAILABLE'),node('h3',{},'Where should the empty cars go?'),node('p',{},'A recorded synthetic study and a manual four-zone experiment.'),node('a',{href,class:'city-entry-action'},'Explore rebalancing  ↗'),
     ]));
   }
+  if(doc.querySelector('meta[name="fleetlab-dispatch"][content="/network-flows/dispatch/release.json"]')){
+    networkQuestions.appendChild(node('article',{class:'network-question dispatch-entry-catalog'},[
+      node('p',{class:'city-entry-eyebrow'},'FLEET OPERATIONS · CURRENT-REQUEST MATCHING'),
+      node('h3',{},'Which car takes the next request?'),
+      node('p',{class:'network-description'},'Compare greedy assignment with joint matching. Follow one car, then see why the best assignment now can lose later.'),
+      node('a',{href:'/network-flows/dispatch/',class:'city-entry-action'},'Explore dispatch  ↗'),
+    ]));
+  }
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'offline-edition'}, [
     node('div', {}, [node('strong', {}, 'Take the teaching labs with you.'), node('p', {}, 'Save the single HTML file, then open it in a browser. Includes the core teaching labs and catalog. The hosted capacity study, film, SF map and recordings are not included; there is no sync with the hosted site.')]),
     node('a', {href:'/downloads/fleetlab-offline', download:'fleetlab-offline.html'}, 'Download offline edition · 2.4 MB ↓'),

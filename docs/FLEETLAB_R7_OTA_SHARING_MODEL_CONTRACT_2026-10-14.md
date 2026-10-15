@@ -76,3 +76,16 @@ Approve the conditional takeaway, package-complete language and short-contact co
 1. Review encounter trace, seed controls, scheduling priorities and vocabulary correction.
 2. Build bounded model and independent verifier; inspect results before freezing story copy.
 3. Build responsive counted visuals, run release validation and publish after contract approval.
+
+
+## October 14 review amendments — proposal remains gated
+
+These rules supersede conflicting scheduling text above. Cloud selects first, ignoring future peer reservations; peers then exclude the cloud-reserved receiver/chunk. Cursor starts at ev-001 in the fixed circular universe ev-001…ev-040. Select the first eligible unfinished car starting at the cursor, wrapping once. On chunk completion, advance to the ID immediately after the recipient in that full universe. Idle ticks leave the cursor unchanged. Rescue changes eligibility only and never resets the cursor. Eligibility is evaluated from current inventory; IDs are not removed from the cursor universe.
+
+In v1 every useful transfer is one complete1MB chunk in one second. Five-second contacts transfer five complete chunks, not a partial-chunk-resumption demonstration. Remove partial states from the accepted v1 domain; nonconforming chunk/rate/time inputs are rejected. A future partial-transfer lesson needs an explicit new domain and tests.
+
+Record limits:2MiB UTF-8 canonical JSON,25,000transfer events,800chunk-completion events,40package-completion events,380expanded pair contacts,1,201time boundaries. Record sparse transfers and completions, not all per-car inventory cells every second; reconstruct inventory independently. Sort expanded contacts by start/end/lowID/highID; transfers by tick, cloud first then peer-pair order; complete events by tick/vehicle/chunk. Bind canonical full input and expanded trace, horizon, policy and all scheduler versions. The independent checker regenerates the exact trace and rejects missing, extra, overlapping or rehashed foreign contacts; verifies each tick including empty ticks and horizon coverage. Own digest is the only digest exclusion. These are proposed ceilings to measure before implementation, not verified performance claims.
+
+Analytical baseline: cloud-only completes800MB at1MB/s in800s; round-robin package completion is761–800s. Test before claiming executed results. Connected sharing adds up to20 simultaneous1MB/s peer links alongside the1MB/s cloud. It changes both cloud eligibility and available transport resources; it is not a fair scheduling-only comparison at equal aggregate capacity. Display both resource budgets.
+
+Default seeds span both separated groups, so partition alone need not produce an unseeded group. Add a specific seed-placement example ev-001…ev-004, short/separated trace, no rescue, to exhibit an unseeded second group. Cloud-work reduction, last-hop completion and end-to-end latency are distinct; no research speedup becomes a FleetLab target.

@@ -1,3 +1,4 @@
+import {R3_RELEASE,r3PackageProblems} from '../../../playground/fleetlab/tools/dispatch-package.mjs';
 import {R1_RELEASE,r1PackageProblems} from '../../../playground/fleetlab/tools/rebalancing-package.mjs';
 import {BRAND_MEDIA,BRAND_TEXT,renderPage,policyFor} from '../hosted/site-transform.mjs';
 import {ORDER_RELEASE,orderPackageProblems} from '../../../playground/fleetlab/tools/delivery-order-package.mjs';
@@ -15,7 +16,7 @@ const CITY_CSP="default-src 'none'; script-src 'self'; style-src 'self'; img-src
 const fingerprint=data=>({bytes:Buffer.byteLength(data),sha256:createHash('sha256').update(data).digest('hex')});
 
 export function integratedRootFiles(teaching,{branded=false,rollback}={}){
- const deliveryProblems=[...softwareDeliveryProblems(teaching),...orderPackageProblems(teaching),...r1PackageProblems(teaching)];
+ const deliveryProblems=[...softwareDeliveryProblems(teaching),...orderPackageProblems(teaching),...r1PackageProblems(teaching),...r3PackageProblems(teaching)];
  if(deliveryProblems.length)throw Error(`Software delivery sidecar rejected: ${deliveryProblems.join('; ')}`);
  const marker='<link rel="stylesheet" href="./styles.css">';
  const intro='<section aria-label="About FleetLab"><h1>FleetLab: test fleet '+
@@ -38,6 +39,7 @@ export function integratedRootFiles(teaching,{branded=false,rollback}={}){
   .replace('</head>','<meta name="fleetlab-teaching-package" content="/downloads/teaching-package.json"></head>');
  if(teaching.has(DELIVERY_RELEASE))index=index.replace('</head>','<meta name="fleetlab-software-delivery" content="/network-flows/software-delivery/release.json"></head>');
  if(teaching.has(R1_RELEASE))index=index.replace('</head>','<meta name="fleetlab-rebalancing" content="/network-flows/rebalancing/release.json"></head>');
+ if(teaching.has(R3_RELEASE))index=index.replace('</head>','<meta name="fleetlab-dispatch" content="/network-flows/dispatch/release.json"></head>');
  if(teaching.has(ORDER_RELEASE))index=index.replace('</head>','<meta name="fleetlab-delivery-order" content="/network-flows/delivery-order/release.json"></head>');
  const old=teaching.get('_headers'),permission='camera=(), microphone=(), geolocation=()';
  const inherited=old.split(/\r?\n/).map(line=>line.trim()).filter(line=>line.toLowerCase().startsWith('permissions-policy:'))

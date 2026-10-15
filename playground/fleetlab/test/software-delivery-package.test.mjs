@@ -1,3 +1,4 @@
+import {R3_MODULES} from '../tools/dispatch-package.mjs';
 import {R1_MODULES} from '../tools/rebalancing-package.mjs';
 import {ORDER_MODULES} from '../tools/delivery-order-package.mjs';
 import {createHash} from 'node:crypto';
@@ -37,8 +38,9 @@ test('historical 2621323-byte legacy generation plus 118 bytes fails without usi
 
 test('300000-byte scratch NF04-only module has a valid emitted build path without increasing legacy',()=>{
   const source=join(scratch,'source');cpSync(root,source,{recursive:true});
-  for(const path of [...tool.DELIVERY_MODULES,...ORDER_MODULES,...R1_MODULES])rmSync(join(source,path),{force:true});
+  for(const path of [...tool.DELIVERY_MODULES,...ORDER_MODULES,...R1_MODULES,...R3_MODULES])rmSync(join(source,path),{force:true});
   rmSync(join(source,'rebalancing'),{recursive:true,force:true});
+  rmSync(join(source,'dispatch'),{recursive:true,force:true});
   rmSync(join(source,'delivery-order'),{recursive:true,force:true});
   rmSync(join(source,'software-delivery'),{recursive:true,force:true});
   // A scratch repository holds copied validation and integration originals, never modified production sources.
@@ -142,7 +144,7 @@ test('final transformed headers remain inside each complete route closure cap',(
   final.set('_headers',final.get('_headers')+' '.repeat(524289-bytes));
   assert.throws(()=>tool.measureIntegratedText(teaching,final),/nf03.*closure.*budget/);
   // Isolate the NF04 closure guard from the independently capped aggregate.
-  const nf04Only=new Map([...teaching].filter(([path])=>!ORDER_MODULES.has(path)&&!path.startsWith('network-flows/delivery-order/')&&!R1_MODULES.has(path)&&!path.startsWith('network-flows/rebalancing/')));
+  const nf04Only=new Map([...teaching].filter(([path])=>!ORDER_MODULES.has(path)&&!path.startsWith('network-flows/delivery-order/')&&!R1_MODULES.has(path)&&!path.startsWith('network-flows/rebalancing/')&&!R3_MODULES.has(path)&&!path.startsWith('network-flows/dispatch/')));
   const nf04=tool.measureSiteOwnership(nf04Only).nf04_closure_bytes;
   final.set('_headers',teaching.get('_headers')+' '.repeat(524289-nf04));
   assert.throws(()=>tool.measureIntegratedText(nf04Only,final),/closure.*budget/);

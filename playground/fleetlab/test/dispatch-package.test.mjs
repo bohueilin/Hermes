@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {fileURLToPath} from 'node:url';
+import {buildSite,buildHtml} from '../tools/pack.mjs';import {R3_RELEASE,r3PackageProblems} from '../tools/dispatch-package.mjs';import {measureSiteOwnership,lessonNavigation} from '../tools/software-delivery-package.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url));
+test('dispatch owned closure and complete source inventory are required, offline unchanged',()=>{const files=buildSite(root);assert.ok(files.has(R3_RELEASE));assert.deepEqual(r3PackageProblems(files),[]);assert.equal(measureSiteOwnership(files).owners['src/model/dispatch.js'],'dispatch');assert.match(lessonNavigation(files).get('network-flows/rebalancing/index.html'),/network-flows\/dispatch/);assert.equal(buildHtml(root).includes('fleetlab.dispatch/'),false);});
+test('modified engine or missing checker fail source package',()=>{const files=buildSite(root);files.set('src/model/dispatch.js',files.get('src/model/dispatch.js')+'\n');assert.notDeepEqual(r3PackageProblems(files),[]);files.delete('src/model/dispatch-verify.js');assert.notDeepEqual(r3PackageProblems(files),[]);});

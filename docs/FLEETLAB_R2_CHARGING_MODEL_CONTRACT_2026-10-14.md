@@ -78,3 +78,12 @@ Approve or amend the two-step acceptance curve, instantaneous plug swapping and 
 1. Review workload, actions and curve.
 2. Implement tested model/verifier and inspect actual bottleneck evidence.
 3. Build responsive counted visuals, validate and release after contract approval.
+
+
+## October 14 review amendments — proposal remains gated
+
+Process off-grid arrivals, departures and tariff changes exactly inside a five-minute allocation interval without adding decisions; a departure at450s stops its charging at450s. For v1 manual plans start at time zero and bind the complete24-slot schedule; no continuation from a partially accepted state. At30kW FCFS commands30kW to the first car and zero to the second: zero means unplugged, so only one plug is occupied. Explain the allocation-rule contribution rather than calling this a pure physical-power effect.
+
+Energy-target completion stops actual draw immediately, but a previously allocated plug remains occupied until the next five-minute boundary (or departure). Label “energy target reached” separately from “released and dispatchable”; during that interval the car remains VOR for depot release. Ready / idle begins only when released and still present. This supersedes the earlier target-complete-is-ready wording. The checker must test command, actual draw, plug occupation and availability separately.
+
+Analytical bound, not heuristic output:90kWh required, but30kW×2h=60kWh available; the five smallest deficits total72kWh. At most four targets can be met at30kW. Construct and independently verify permitted schedules attaining four at30kW and six at60kW before using those witnesses in the lesson. Their exact schedules and actual heuristic results remain to be established during the separately authorized implementation. No claim that a heuristic attains either bound.

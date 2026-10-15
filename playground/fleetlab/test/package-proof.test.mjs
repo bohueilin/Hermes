@@ -107,7 +107,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   }
   assert.equal(buildHtml(restored), readFileSync(offline, "utf8"));
   const rebuilt = buildSite(restored);
-  for (const [path, data] of files) if (!["network-flows/capacity/release.json","network-flows/software-delivery/release.json","network-flows/delivery-order/release.json","network-flows/rebalancing/release.json"].includes(path)) assert.deepEqual(rebuilt.get(path), data, path);
+  for (const [path, data] of files) if (!["network-flows/capacity/release.json","network-flows/software-delivery/release.json","network-flows/delivery-order/release.json","network-flows/rebalancing/release.json","network-flows/dispatch/release.json"].includes(path)) assert.deepEqual(rebuilt.get(path), data, path);
   assert.equal(JSON.parse(rebuilt.get("network-flows/capacity/release.json")).source_state, "SOURCE_COMMIT_UNAVAILABLE");
   execFileSync("git", ["-C", restored, "init", "-q"]);
   execFileSync(process.execPath, [join(restored, "tools/pack.mjs"), "--out", join(scratch, "restored-cli.html"), "--playground", restored]);
@@ -145,7 +145,7 @@ test("release package binds every source and its executing proof tool to the exa
   assert.equal(typeof tool.buildPackageProof, "function", "release binding is not implemented");
   const root = join(scratch, "repository");
   const playground = join(root, "playground/fleetlab");
-  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
   for(const name of ["hosted","tools","deploy"]){
     const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));
     for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path))){
@@ -223,7 +223,7 @@ test("release package binds every source and its executing proof tool to the exa
 
 test("a source checkout cannot omit the executing package-proof tool from its binding", () => {
   const root = join(scratch, "omitted-tool"), playground = join(root, "playground/fleetlab");
-  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
   mkdirSync(join(root, ".git"));
   for(const name of ["hosted","tools","deploy"]){
     const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));

@@ -58,6 +58,7 @@ function integratedShell(packed){
   .replace('</head>','<meta name="fleetlab-teaching-package" content="/downloads/teaching-package.json"></head>');
  if(packed.has('network-flows/software-delivery/release.json'))html=html.replace('</head>','<meta name="fleetlab-software-delivery" content="/network-flows/software-delivery/release.json"></head>');
  if(packed.has('network-flows/rebalancing/release.json'))html=html.replace('</head>','<meta name="fleetlab-rebalancing" content="/network-flows/rebalancing/release.json"></head>');
+ if(packed.has('network-flows/dispatch/release.json'))html=html.replace('</head>','<meta name="fleetlab-dispatch" content="/network-flows/dispatch/release.json"></head>');
  if(packed.has('network-flows/delivery-order/release.json'))html=html.replace('</head>','<meta name="fleetlab-delivery-order" content="/network-flows/delivery-order/release.json"></head>');
  const headers=packed.get('_headers').replace(/\n+$/,'')+'\n\n/city-explorer/*\n  ! Content-Security-Policy\n'+
   "  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'\n"+
@@ -73,7 +74,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
  const root=realpathSync(mkdtempSync(join(tmpdir(),'fleetlab-bound-stage-test-')));
  try{
   const source=join(root,'source'),playground=join(source,'playground/fleetlab');
-  for(const path of ['src','tools','media','capacity','software-delivery','delivery-order','rebalancing','styles.css','index.html'].filter(path=>existsSync(join(repository,'playground/fleetlab',path))))cpSync(join(repository,'playground/fleetlab',path),join(playground,path),{recursive:true});
+  for(const path of ['src','tools','media','capacity','software-delivery','delivery-order','rebalancing','dispatch','styles.css','index.html'].filter(path=>existsSync(join(repository,'playground/fleetlab',path))))cpSync(join(repository,'playground/fleetlab',path),join(playground,path),{recursive:true});
   for(const path of ['LICENSE','src/hermes/fleet/contracts.py']){
    mkdirSync(dirname(join(source,path)),{recursive:true});cpSync(join(repository,path),join(source,path));
   }

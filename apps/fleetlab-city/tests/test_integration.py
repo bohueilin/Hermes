@@ -58,6 +58,23 @@ class IntegrationTest(unittest.TestCase):
                       actual['network-flows/software-delivery/index.html'])
 
 
+        files["network-flows/dispatch/release.json"] = "present"
+        files["network-flows/rebalancing/index.html"] = (
+            '<a href="/network-flows/delivery-order/">Who gets the depot link first? ↗</a>'
+            '<p>Keep the workload fixed. Change the order of work.</p>'
+        )
+        actual = integration.lesson_navigation(files)
+        result = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(files)],
+                                cwd=PACK.parents[3], capture_output=True, text=True, check=True)
+        self.assertEqual(actual, json.loads(result.stdout))
+        self.assertIn('/network-flows/dispatch/', actual['network-flows/rebalancing/index.html'])
+
+    def test_dispatch_inventory_must_be_complete(self):
+        self.assertEqual(integration.dispatch_files(integration.R3_ADDED), integration.R3_ADDED)
+        with self.assertRaisesRegex(ValueError, "R3 inventory"):
+            integration.dispatch_files(integration.R3_ADDED - {'src/model/dispatch-verify.js'})
+
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
