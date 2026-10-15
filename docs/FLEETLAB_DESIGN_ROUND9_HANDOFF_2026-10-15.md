@@ -42,7 +42,8 @@ Local evidence: `build/fleetlab-city/validation/design-round9-20261015/`.
 - About: one founder block, exact approved paragraphs, career sentence absent; desktop and phone screenshots saved.
 - These are viewport checks, not physical Pixel or human-comprehension qualification.
 - Teaching Node: 2,418 pass, 8 skipped, 1 TODO. Hosted Node: 102 pass. City Python: 345 pass. Hermes Python: 1,661 pass, 56 skipped. Total: 4,526 passing tests. Ruff and Git whitespace checks pass. Doctor: 17 PASS, 1 dirty-tree WARN, 1 optional display NOT_AVAILABLE.
-- Package, deployment and live-readback results will be recorded after completion.
+- After the frozen-source-page fix: all 102 hosted tests, 345 City tests and 7 package-proof tests were rerun and passed. The independent reviewer also checked the correction.
+- Package proof, integrated budgets and the independent source-bound upload guard pass for 10,139 staged files. Final preview and stable production readback: **10,138/10,138** on each. Headers: **71/71** on each. Immutable production and prior production smoke: **102/102** on each.
 
 Commands used include:
 
@@ -60,9 +61,42 @@ The first preview (`e89fe25d`) exposed a P0 publication-path issue: the source p
 
 The first City test invocation used pytest, which is not installed in that project's environment; it ran no tests. The existing unittest suite is the accepted check. Removed only the obsolete, reproducible Round 7 temporary release to create build headroom; retained its manifests/receipt, the current Round 8 release and canonical scientific inputs.
 
+## Package budgets
+
+| Measure | Bytes | Limit | Headroom |
+|---|---:|---:|---:|
+| Original teaching source + tools | 3,138,195 | 3,153,920 | 15,725 |
+| Offline edition | 2,562,044 | 2,571,440 | 9,396 |
+| Package metadata | 37,473 | 40,960 | 3,487 |
+| Integrated emitted text | 3,102,933 | 3,145,728 | 42,795 |
+| Integrated NF-03 dependency closure | 523,255 | 524,288 | 1,033 |
+
+Captured teaching + integration original-source growth increased by 5,683 bytes. Runtime teaching source, offline bytes and media bytes are unchanged. No budget was increased. The 1,033-byte shared-code headroom is a constraint for the next round; trim or explicitly review packaging before adding more shared components.
+
+## Publication observations
+
+The first stable-host readback began during the production-alias transition and matched 9,663/10,138 files; 475 paths were mismatched (including new city-generation paths still returning 404). The first header check matched 70/71. Both negative records are retained as `production-readback-initial-propagation.*` and `production-headers-initial-propagation.*`. Direct probes then matched the new presentation module, publication record and city entrypoint. A fresh **complete** readback then matched **10,138/10,138**, with **71/71** headers; no partial results were stitched together and no gate was weakened.
+
+The existing stable-host browser tab retained old shared presentation assets under the site's existing `max-age=600` policy, including after ordinary reload. Browser validation therefore also uses the immutable production URL, which shows the approved biography, Home copy, field note and source links. This is a cache/rollout limitation, not evidence that the old tab has updated. No cache-policy redesign is included in this content round. Open the immutable release link to inspect the exact new build immediately; an existing tab may need reloading after its cache expires.
+
 ## Release authority and remaining boundaries
 
 The user's prior explicit GitHub/live publication authorization persists for this FleetLab website work and overrides the historical Phase 6 local-only Git rule for this release. Website publication is not permission to deploy a vehicle, policy or operational system. SF map/source, physical-device and human-comprehension qualification remain separate and open. Synthetic study status is unchanged.
+
+## Final release
+
+- Live: https://fleetlab.pages.dev/#/home
+- Exact production build: https://37c0b185.fleetlab.pages.dev/#/approach
+- Source commit: `32952a5d3dd3a0b633ab5edf2fb6d4efb6a6374a`; pushed to `github/codex/fleetlab-city-sf`.
+- Production deployment: `37c0b185-b0da-439d-8079-2e1e420d64f0`.
+- Verified preview: `25559f7c-9997-4c1d-8c96-76d31232bf52`.
+- Prior production for rollback: `37ae8cf5-401b-4243-bb9a-f71fd045b83f`.
+- Current city presentation: `city-explorer/releases/9cb607fc240201bb`. Scientific base remains `c56bda6b509105c5`.
+- Served payload: 10,139 staged files, 1,626,097,385 bytes. `_headers` is hosting configuration, leaving 10,138 served files.
+- Stable-host complete readback accepted at `2026-10-15T21:09:06.254270+00:00`.
+- Receipt: `docs/releases/fleetlab-current.json`; records source identity, fingerprints, hosting checks and the complete-scan retry history.
+- Production browser evidence: `production-browser.json`, `about-production.png`, `sources-production.png`. Viewport layouts and source decisions are documented above. Existing stable-host browser cache behavior is explicitly recorded under Publication observations.
+- Owner's unrelated untracked assets/documents were preserved. The release checkout is temporary; no unrelated files were staged.
 
 ## Recommendation, top risks and next 3 actions
 

@@ -4,13 +4,13 @@
   "sf_qualification": "HOLD",
   "authenticity": "NOT_AUTHENTICATED",
   "operational_deployment_permission": "NONE",
-  "source_commit": "5c41e647804a46c42e35ee81521daf9579c713dd",
+  "source_commit": "32952a5d3dd3a0b633ab5edf2fb6d4efb6a6374a",
   "source_branch": "codex/fleetlab-city-sf",
-  "production_deployment_id": "37ae8cf5-401b-4243-bb9a-f71fd045b83f",
-  "preview_deployment_id": "f74c3e8b-3c15-49e1-9675-f9861657d057",
-  "prior_production_deployment_id": "9b401aed-b992-44be-aa43-f623267bef7c",
+  "production_deployment_id": "37c0b185-b0da-439d-8079-2e1e420d64f0",
+  "preview_deployment_id": "25559f7c-9997-4c1d-8c96-76d31232bf52",
+  "prior_production_deployment_id": "37ae8cf5-401b-4243-bb9a-f71fd045b83f",
   "stable_url": "https://fleetlab.pages.dev",
-  "immutable_url": "https://37ae8cf5.fleetlab.pages.dev",
+  "immutable_url": "https://37c0b185.fleetlab.pages.dev",
   "current": {
     "compatibility": {
       "metrics": "fleetlab.city-metrics/1.0.0",
@@ -18,13 +18,13 @@
       "run": "fleetlab.city-run/1.0.0",
       "viewer": "1.1.0"
     },
-    "path": "city-explorer/releases/c348707ba27a018c",
-    "release_sha256": "c348707ba27a018cc2bb95129d57e810fa50f9efdcedb62278a553aef903d4a5"
+    "path": "city-explorer/releases/9cb607fc240201bb",
+    "release_sha256": "9cb607fc240201bbe4f912e4e8c171bfb2a246bbde910e7bc0c08b38b6d59f61"
   },
   "rollback": "city-explorer/releases/c56bda6b509105c5",
-  "integration_manifest_sha256": "3a6f053f2a51aa94c6dd2e60e29830108877e2eca083b99a924887051ce7d40c",
+  "integration_manifest_sha256": "48e38a44375c7bf75bf6a264be4796462b89d910f0eff0d77e6757204468831b",
   "file_count": 10139,
-  "total_bytes": 1626090131,
+  "total_bytes": 1626097385,
   "files": {
     "404.html": {
       "bytes": 1609,
@@ -43,11 +43,11 @@
       "bytes": 4647,
       "sha256": "74ac3390b08252b3efd3ba1bb1f94294fa922107a1978d67a8edcfd1c940c154"
     },
-    "city-explorer/releases/c348707ba27a018c/data/catalog.json": {
+    "city-explorer/releases/9cb607fc240201bb/data/catalog.json": {
       "bytes": 341154,
       "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1"
     },
-    "city-explorer/releases/c348707ba27a018c/index.html": {
+    "city-explorer/releases/9cb607fc240201bb/index.html": {
       "bytes": 34750,
       "sha256": "4324f98ae5672983e450d00db3d4d8087b364dd49d62cdd829e85859b41ba1cb"
     },
@@ -81,7 +81,7 @@
     },
     "downloads/teaching-package.json": {
       "bytes": 37473,
-      "sha256": "15d3a1dcbb49a59dd4d0637a6c592cc0c7813a34052bf0f0a6580f146266ed4e"
+      "sha256": "cf8e6ea6f970a19e0f8e674ba13fc5fd5a0a056f1f11fbfcbd4a8f85bc67eb04"
     },
     "index.html": {
       "bytes": 3634,
@@ -97,7 +97,7 @@
     },
     "network-flows/capacity/release.json": {
       "bytes": 16589,
-      "sha256": "f002942d6830a11a2ca65da506cdeec9244405d2925fa2afa207c02d7b9afed7"
+      "sha256": "f5292a970e59efd4011778681d3b99728fa52bded597719b3d953fde8a8ffbcd"
     },
     "network-flows/capacity/visual.css": {
       "bytes": 14015,
@@ -113,7 +113,7 @@
     },
     "network-flows/delivery-order/release.json": {
       "bytes": 8099,
-      "sha256": "d97aec8d0977ad1b26895a03a05831ab355fa31953484e6e357aade9652a0ade"
+      "sha256": "eb9c9995981a4e24917f1c56c91c5aeeeafea1e8cbe6192669647acc625feb37"
     },
     "network-flows/delivery-order/visual.css": {
       "bytes": 12226,
@@ -129,7 +129,7 @@
     },
     "network-flows/dispatch/release.json": {
       "bytes": 12474,
-      "sha256": "e5ae88a70b0c4cf2c222625e8ae496f8e777a8f847bb5c48971a605057b0de68"
+      "sha256": "07312d3039c0e762a5c2570c2d124051c4746f39806311b0e7f44f25497229ad"
     },
     "network-flows/dispatch/visual.css": {
       "bytes": 5047,
@@ -149,7 +149,7 @@
     },
     "network-flows/rebalancing/release.json": {
       "bytes": 17513,
-      "sha256": "990ceb0b1543700d19c66797b248802fbb8a75a24ba860f86d1d2c5cff0c36d4"
+      "sha256": "615eb21e714252b9f61f490ed29a888422d8df54e7c7b9f6365100cdc22e9dde"
     },
     "network-flows/rebalancing/visual.css": {
       "bytes": 13732,
@@ -165,19 +165,19 @@
     },
     "network-flows/software-delivery/release.json": {
       "bytes": 6857,
-      "sha256": "2b22aa89cf9cf44d2015438bebd723ea3176decb57e70a63786bb1ba42ebff0b"
+      "sha256": "1fe36206f2e5d7a92f4b868ddfd93c8e86b892e66910a5037b1ddac44badd877"
     },
     "network-flows/software-delivery/visual.css": {
       "bytes": 18142,
       "sha256": "5fa47f81fe3ca386d4c33cd97ab48b5770c14c041119121575fb90fe1a1af7c7"
     },
-    "network-flows/sources/476412afadc5e408f93e86501455cba404d324a5c813f249cd0063019589254e.json.gz": {
-      "bytes": 972256,
-      "sha256": "476412afadc5e408f93e86501455cba404d324a5c813f249cd0063019589254e"
+    "network-flows/sources/eee8eedd7eb1b2ba10032b9a29c561e36451ee9adcea7ae4ebc9829d97df7531.json.gz": {
+      "bytes": 974267,
+      "sha256": "eee8eedd7eb1b2ba10032b9a29c561e36451ee9adcea7ae4ebc9829d97df7531"
     },
     "publication.json": {
       "bytes": 1800,
-      "sha256": "6297afc703c88cad206426bf10d845a82c71fb467e8fdae67566f13708c0577e"
+      "sha256": "cd0a72d00582cc8a2076c73343fa551a8599eb671afd1d8bcfba492d2b2c4674"
     },
     "site-media/apple-touch-icon.png": {
       "bytes": 21051,
@@ -428,52 +428,59 @@
       "sha256": "ed0525b08640af791d1ea3b89be926eda1ccbbe5af3c521f4034cd2cd5cc3af8"
     },
     "visitor.css": {
-      "bytes": 15109,
-      "sha256": "088bb7d67811b6fde5b0e03f2f024234db9fee6c661c9721a1e3fbeb3586ba37"
+      "bytes": 15939,
+      "sha256": "f6a8cea3e31d5dfac54b1e74132d7b84deff07762bcfa190e039e3f83f69417f"
     },
     "visitor.mjs": {
-      "bytes": 18630,
-      "sha256": "21a73ce86bb71edd2398b3aa52e2bf61fdcfaa5d37fda75c299d43997066e8c6"
+      "bytes": 22949,
+      "sha256": "7fadfc4525832615bcef629d98b7ff7eb34c6045bcb6f93a723cd185c3722434"
     }
   },
-  "verified_at_utc": "2026-10-15T20:21:49.161863+00:00",
+  "verified_at_utc": "2026-10-15T21:09:06.254270+00:00",
   "verification": {
     "served_files": 10138,
     "matched_files": 10138,
     "header_checks": 71,
     "headers_pass": true,
-    "full_readback_sha256": "6ceef9bcde51b4c9f2cdc3d36da8e6647d5b1496e62d77caeb3af8f2414caee9",
+    "full_readback_sha256": "ae0e06cc36ab97ce9fd4d00231d946f866d57ce4cab92588b315f8994af776ad",
     "preview_matched_files": 10138,
-    "preview_full_readback_sha256": "18285b3a13cc4ec522fbb60d74223edd477aaf0980ff1e28b56a8cf21ec820f0",
-    "production_headers_sha256": "93538377d351a029a8ab779e9c1cf9640bf481742d69e62e32bfa6306fb98d89",
-    "preview_headers_sha256": "55de69455934e560269b1bf4f4df48b880c0611a40a8eb157106273f5a04e4bb",
+    "preview_full_readback_sha256": "cba92b47256daf72172168204414678c042e3df88928a2215453ac58bc676eb8",
+    "production_headers_sha256": "85ef1cf583f5bbe031d009f7876505f580d8c0c66d40cffee22b09e3fd0f5c21",
+    "preview_headers_sha256": "8074cc175a8cfe4d2631ec8180b32957fc8bda8facfaedf5dca0f8dab7a57404",
     "immutable_smoke_matched_files": 102,
-    "immutable_smoke_sha256": "f765f0c14206717634df781c48e470f5f721e1f491cc52d7d63861c1ff38d65d",
+    "immutable_smoke_sha256": "83538dee152ef242078681722c1b9df296b022b8e7870cb68b6238db6ff97087",
     "prior_production_smoke_matched_files": 102,
-    "prior_production_smoke_sha256": "712d3f3f0404ca62aad18a00f899f23aac08fb4439c7ab6e8c235f9d6183ca20",
-    "meaning": "Byte consistency and observed hosting only; not independent authenticity, browser-session generation pinning or operational authority."
+    "prior_production_smoke_sha256": "ad2753601a75de8751132b0429337e04747ff5193ad4f5596b94a78d22b49222",
+    "meaning": "Byte consistency and observed hosting only; not independent authenticity, browser-session generation pinning or operational authority.",
+    "production_readback_mode": "fresh-complete-readback-after-alias-propagation",
+    "production_readback_retry": {
+      "reason": "Initial stable-host scan crossed production alias propagation; no partial result stitching.",
+      "initial_matched": 9663,
+      "initial_total": 10138,
+      "initial_readback_sha256": "1a0e5d9e068451cd378945a8387be8aa3ef3ae342c0b7af960dbc9d3a20018a9"
+    }
   },
-  "capacity_release_sidecar_sha256": "f002942d6830a11a2ca65da506cdeec9244405d2925fa2afa207c02d7b9afed7",
-  "capacity_release_digest": "081938c62a1fac7a8f41a2f8dbe5f07cea737e4bd05efba440b4ed8d1bd5f4ff",
+  "capacity_release_sidecar_sha256": "f5292a970e59efd4011778681d3b99728fa52bded597719b3d953fde8a8ffbcd",
+  "capacity_release_digest": "67b89bd57793607a56889090d0492dee485b706e8a2d2dba834a42108ee9cab7",
   "teaching_package": {
     "bytes": 37473,
     "path": "downloads/teaching-package.json",
-    "sha256": "15d3a1dcbb49a59dd4d0637a6c592cc0c7813a34052bf0f0a6580f146266ed4e"
+    "sha256": "cf8e6ea6f970a19e0f8e674ba13fc5fd5a0a056f1f11fbfcbd4a8f85bc67eb04"
   },
   "teaching_source_offer": {
-    "bytes": 972256,
-    "extracted_sha256": "182ca1135e8e6c1abdf1fda339601ed73d16907d2ae663a85d662b27dba67a8a",
+    "bytes": 974267,
+    "extracted_sha256": "146818bcf4287e4dbb13c8c0deafed8abdc1a5ff386790df13b8830035a49e53",
     "original_inventory_sha256": "279b42ca01f60d213cc99f79827cf6178011494125e5d6da3fb23296267df1cd",
     "owner": "teaching-original-source-and-tools",
-    "path": "network-flows/sources/476412afadc5e408f93e86501455cba404d324a5c813f249cd0063019589254e.json.gz",
-    "sha256": "476412afadc5e408f93e86501455cba404d324a5c813f249cd0063019589254e"
+    "path": "network-flows/sources/eee8eedd7eb1b2ba10032b9a29c561e36451ee9adcea7ae4ebc9829d97df7531.json.gz",
+    "sha256": "eee8eedd7eb1b2ba10032b9a29c561e36451ee9adcea7ae4ebc9829d97df7531"
   },
-  "non_city_bytes": 12852023,
-  "software_delivery_release_sidecar_sha256": "2b22aa89cf9cf44d2015438bebd723ea3176decb57e70a63786bb1ba42ebff0b",
-  "software_delivery_release_digest": "1427836cb0b82ed1746c2159d6f7c255374494e5697d7963c46bc6b1ccbc603d",
+  "non_city_bytes": 12859183,
+  "software_delivery_release_sidecar_sha256": "1fe36206f2e5d7a92f4b868ddfd93c8e86b892e66910a5037b1ddac44badd877",
+  "software_delivery_release_digest": "457f14654415776b8c3859d6c915faadbee9ff76c7e01781988be9e69e4583f5",
   "nf04_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
-  "delivery_order_release_sidecar_sha256": "d97aec8d0977ad1b26895a03a05831ab355fa31953484e6e357aade9652a0ade",
-  "delivery_order_release_digest": "2096fdefde4cc24f141db20530ad861ef1881479d940903f0e445fa7936db431",
+  "delivery_order_release_sidecar_sha256": "eb9c9995981a4e24917f1c56c91c5aeeeafea1e8cbe6192669647acc625feb37",
+  "delivery_order_release_digest": "150bc358717ae052982c44ef009b7925cd7f74cc5d88e85848f5f41369c434ce",
   "delivery_order_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
   "hosted_presentation": {
     "schema": "fleetlab.hosted-presentation/1.0.0",
@@ -488,16 +495,16 @@
     "offline_and_historical_city_analytics": false,
     "analytics_property_receipt": "NOT_OBSERVED"
   },
-  "rebalancing_release_sidecar_sha256": "990ceb0b1543700d19c66797b248802fbb8a75a24ba860f86d1d2c5cff0c36d4",
-  "rebalancing_release_digest": "e6989ced458814db4500677cf4d9ee2417422d1193229369b68168013d5f7f36",
+  "rebalancing_release_sidecar_sha256": "615eb21e714252b9f61f490ed29a888422d8df54e7c7b9f6365100cdc22e9dde",
+  "rebalancing_release_digest": "170223f1a2f7b95d4e9fe4d7022ea9b804b1e7b45dff5ec5820b8bd0742a29ce",
   "rebalancing_qualification": {
     "scope": "SYNTHETIC_TEACHING",
     "independent_record_reconstruction": true,
     "physical_device_qualification": "NOT_ESTABLISHED",
     "sf_qualification": "HOLD"
   },
-  "dispatch_release_sidecar_sha256": "e5ae88a70b0c4cf2c222625e8ae496f8e777a8f847bb5c48971a605057b0de68",
-  "dispatch_release_digest": "37d97c588813fa2d191064e9ee69269afc114fb84b247db90ba4d1ff83c3722f",
+  "dispatch_release_sidecar_sha256": "07312d3039c0e762a5c2570c2d124051c4746f39806311b0e7f44f25497229ad",
+  "dispatch_release_digest": "9603d45a6bfdb74b08fbcb76641decc06075b0d3d8fd69f10282fadbe627c077",
   "dispatch_qualification": {
     "scope": "SYNTHETIC_TEACHING",
     "independent_record_reconstruction": true,
