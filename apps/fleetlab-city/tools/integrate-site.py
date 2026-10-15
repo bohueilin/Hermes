@@ -414,7 +414,8 @@ def integrate(
             for name in ("network-flows/capacity/index.html",
                          "network-flows/software-delivery/release.json",
                          "network-flows/software-delivery/index.html",
-                         "network-flows/delivery-order/release.json")
+                         "network-flows/delivery-order/release.json",
+                         "network-flows/rebalancing/release.json")
             if (site / name).is_file()
         })
         for name, content in onward.items():
@@ -597,11 +598,16 @@ def integrate(
 def lesson_navigation(files):
     """Exact hosted links, after source-package validation, never a skipped-byte exception."""
     result = {}
+    next_route, next_title = (
+        ("rebalancing", "Where should the empty cars go?")
+        if "network-flows/rebalancing/release.json" in files
+        else ("delivery-order", "Who gets the depot link first?")
+    )
     for path, release, cls, href, label in (
         ("network-flows/capacity/index.html", "network-flows/software-delivery/release.json",
          "fl-app", "/network-flows/software-delivery/", "One update, four vehicles"),
-        ("network-flows/software-delivery/index.html", "network-flows/delivery-order/release.json",
-         "delivery-shell", "/network-flows/delivery-order/", "Who gets the depot link first?"),
+        ("network-flows/software-delivery/index.html", f"network-flows/{next_route}/release.json",
+         "delivery-shell", f"/network-flows/{next_route}/", next_title),
     ):
         if release not in files:
             continue

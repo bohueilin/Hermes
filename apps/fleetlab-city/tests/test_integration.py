@@ -47,6 +47,16 @@ class IntegrationTest(unittest.TestCase):
                                 cwd=PACK.parents[3], capture_output=True, text=True, check=True)
         self.assertEqual(actual, json.loads(result.stdout))
         self.assertIn('Next lesson:', actual['network-flows/capacity/index.html'])
+        files["network-flows/software-delivery/index.html"] = "<body>delivery</body>"
+        files["network-flows/delivery-order/release.json"] = "present"
+        files["network-flows/rebalancing/release.json"] = "present"
+        actual = integration.lesson_navigation(files)
+        result = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(files)],
+                                cwd=PACK.parents[3], capture_output=True, text=True, check=True)
+        self.assertEqual(actual, json.loads(result.stdout))
+        self.assertIn('/network-flows/rebalancing/',
+                      actual['network-flows/software-delivery/index.html'])
+
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
