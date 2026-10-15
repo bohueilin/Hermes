@@ -1,3 +1,13 @@
+# FleetLab targeted design fixes, round 3 — October 14, 2026
+
+The round-three presentation fixes are published from source `c92dcd1f34f96342d9f0b8c424ad4f19a6c56a0a`. Production `94c48b5b-0500-4805-a984-e551d2fa0bcb`; preview `627db2a4-3cbf-4b7d-91d1-a12f2463ee61`. Preview and final stable production each match 10,133/10,133 served files and 68/68 header checks. Immutable production smoke passes 97/97; prior production passes 94/94. See [section-by-section handoff](docs/FLEETLAB_DESIGN_ROUND3_HANDOFF_2026-10-14.md) and [publication receipt](docs/releases/fleetlab-current.json).
+
+Three supplied concept diagrams, clearer lesson entry/copy, disabled-control explanations, readable accessible settings, canonical depot lesson URL, accepted-ledger zone bars and honest walkthrough mode announcements are implemented. Both reported broken videos played during verification; no unproven repair is claimed. No numerical model/runtime or protected capacity/software-delivery implementation changed. Deferred dispatch animation and per-vehicle delivery wait bars remain deferred.
+
+Tests: teaching 2,408 pass / 8 skip / 1 todo; city Node 95 pass; city Python 345 pass; Hermes 1,661 pass / 56 skip; Ruff pass. The owner approved only +8 KiB original-source capacity: 3,150,945 / 3,153,920 bytes. Offline 2,566,403 / 2,571,440; metadata 37,008 / 40,960. Source headroom remains narrow. SF qualification is HOLD; physical-device and independent human review remain open. All earlier status below is historical.
+
+---
+
 # FleetLab R3 dispatch implementation — October 14, 2026
 
 R3 is live: [Which car takes the next request?](https://fleetlab.pages.dev/network-flows/dispatch/). Source `7c80f9e0ead07a7183b178b3e69c3237c049af68`; production `769ad332-b726-496a-bb4e-201ec44c8518`; preview `62ef3431-4c36-4e5f-bd31-b2635987b5f9`. Both preview and production match 10,130/10,130 served files and 65/65 header checks. See [R3 implementation and audit handoff](docs/FLEETLAB_R3_IMPLEMENTATION_HANDOFF_2026-10-14.md) and [publication receipt](docs/releases/fleetlab-current.json).

@@ -23,7 +23,7 @@
 - [x] 2. Implement §§1–8 in operations, depot flow, R1/R3, delivery-order and experiment UI. Keep numerical modules untouched.
 - [x] 3. Add §§2/3/9 diagrams through hosted artwork manifest and visitor decoration; responsive placement and prominent existing lesson links.
 - [x] 4. Run focused and full teaching tests, source/package gates, responsive browser checks, media and protected-lesson comparisons.
-- [ ] 5. Fresh whole-change review, address material findings, update section-by-section handoff and integrate using the existing release workflow if all gates pass.
+- [x] 5. Fresh whole-change review, address material findings, update section-by-section handoff and integrate using the existing release workflow if all gates pass.
 
 ## Decisions / evidence
 
@@ -33,4 +33,5 @@
 
 - Owner approved source-only 8 KiB amendment (3,153,920 bytes); other pre-existing limits unchanged.
 - Fresh review: inaccurate experiment preservation promise and stale accessible edit values reproduced and fixed; focused 47/47 pass.
-- Final local gates: teaching 2,408 pass / 8 skip / 1 todo, city Node 95 pass, city Python 344 pass, Hermes 1,661 pass / 56 skip; no protected implementation or numerical source diff.
+- Final local gates: teaching 2,408 pass / 8 skip / 1 todo, city Node 95 pass, city Python 345 pass, Hermes 1,661 pass / 56 skip; no protected implementation or numerical source diff.
+- Publication complete: source c92dcd1, preview 627db2a4, production 94c48b5b. Final stable readback 10,133/10,133 and headers 68/68; initial transient 404s and upload-finalization retry are documented.
