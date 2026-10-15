@@ -46,7 +46,7 @@ The diagrams total **413,874 bytes** in a separately enumerated, three-file host
 - A fresh read-only review found an inaccurate promise that walkthrough preparation preserves the current experiment, and accessibility values that lagged while typing. Both were reproduced with failing tests, corrected, and verified: **47/47** focused tests pass. Preparation behavior itself was not changed.
 - Reviewer found no critical issue; accepted-ledger null handling, diagram rebuild behavior and protected source boundaries were inspected. Reviewer did not establish media root cause, physical-device or human validation.
 - Local browser checks cover desktop 1280 px and phone widths 390/320 px: canonical navigation, diagram placement, comparison controls, accepted result bars, pending-order handling, dispatch scenario switching and walkthrough announcement. Zero page-level horizontal overflow in tested views.
-- City Python suite: **344 passed** using the project's city venv. An initial run used the Hermes environment and failed for absent city/scipy dependencies; that is preserved as a negative environment check, not a product regression.
+- City Python suite before final release-inventory amendment: **344 passed** using the project's city venv. An initial run used the Hermes environment and failed for absent city/scipy dependencies; that is preserved as a negative environment check, not a product regression.
 - Hermes Python: **1,661 passed, 56 skipped**. Ruff passed. Doctor: 17 PASS, one expected dirty-worktree WARN, one optional NOT_AVAILABLE. No simulator execution or physical-system access was added.
 - Full teaching JavaScript suite: **2,408 passed, 8 skipped, 1 todo (2,417 total), zero failures**. City JavaScript: **95/95 passed**. Approved source budget is enforced; the pre-approval overage failures remain recorded. Final source-bound/release counts follow below.
 
@@ -68,3 +68,7 @@ Use these changes to make the existing lessons easier to enter and explain. Keep
 1. Complete source-bound release checks and live readback for this approved scope.
 2. Ask a first-time visitor to explain shared-link waiting, dispatch opportunity cost and the zone-wait trade-off.
 3. Review deferred dispatch animation and delivery-order wait bars separately; do not silently include them in this release.
+
+## Release inventory follow-up
+
+The first immutable integration build correctly rejected four newly changed UI modules omitted from its historical allowlist: `labels.js`, `advanced-operations-view.js`, `experiment.js`, and `app.js`. Added exactly those four reviewed UI paths to the flow-update inventory. A failing regression preceded the amendment; it also asserts that non-flow updates and unrelated model changes remain rejected. No guard was bypassed or broadened to arbitrary files. Final integration and package checks must pass before publication.

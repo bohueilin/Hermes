@@ -28,7 +28,8 @@ CLIENT_FIXES = frozenset(("src/ui/setup-codec.js", "src/ui/setup-sharing.js", "s
 FLOW_CHANGED = frozenset((
     "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js", "src/ui/charts.js",
     "src/ui/simulation-catalog.js", "src/ui/operations-lab.js", "src/ui/street-lab.js",
-    "src/ui/hero-film.js",
+    "src/ui/hero-film.js", "src/ui/labels.js", "src/ui/advanced-operations-view.js",
+    "src/ui/experiment.js", "src/ui/app.js",
 ))
 FLOW_ADDED = frozenset((
     "src/model/depot-flow-contract.js", "src/model/depot-flow.js",

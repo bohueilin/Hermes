@@ -509,6 +509,21 @@ class IntegrationTest(unittest.TestCase):
             )
 
 
+class DesignRound3InventoryTests(unittest.TestCase):
+    def test_reviewed_copy_modules_require_flow_update_and_other_modules_stay_blocked(self):
+        paths = ["src/ui/labels.js", "src/ui/advanced-operations-view.js",
+                 "src/ui/experiment.js", "src/ui/app.js"]
+        before = {path: {"sha256": "old"} for path in paths}
+        after = {path: {"sha256": "new"} for path in paths}
+        self.assertEqual(integration.check_preservation(before, after, True, True), sorted(paths))
+        with self.assertRaises(ValueError):
+            integration.check_preservation(before, after, True, False)
+        before["src/model/world.js"] = {"sha256": "old"}
+        after["src/model/world.js"] = {"sha256": "new"}
+        with self.assertRaises(ValueError):
+            integration.check_preservation(before, after, True, True)
+
+
 class PackerAgreementTest(unittest.TestCase):
     def test_capacity_boot_is_the_module_the_packer_writes(self):
         """The release tool pins the capacity boot byte for byte; it must be the packer's."""
