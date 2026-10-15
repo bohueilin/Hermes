@@ -1,3 +1,11 @@
+# Current update — FleetLab design Round 5, October 15, 2026
+
+See [the itemized Round 5 handoff](docs/FLEETLAB_DESIGN_ROUND5_HANDOFF_2026-10-15.md) for audit decisions, source trimming, validation, initial negative readbacks and final release evidence. Runtime `8e4dbaf` is live in deployment `8dd48282-3c63-4347-bd31-a7159244ff2e`; fresh full preview and production checks each match 10,136 served files and 69 header checks. The exact receipt is `docs/releases/fleetlab-current.json`.
+
+P3 copy/layout/loading/accessibility improvements are complete within the documented audit interpretations. Gross source recovery is 3,806 bytes; net teaching-source reduction is 479 bytes, leaving 930 bytes under the unchanged ceiling. D-06 is deferred by the owner, existing diagrams retained, and all P2 visualizations remain deferred. Models/fixtures and SF qualification are unchanged; map, physical-device and human review remain open. Earlier status below is historical.
+
+---
+
 # Current update — FleetLab design Round 4, October 14, 2026
 
 See `docs/FLEETLAB_DESIGN_ROUND4_HANDOFF_2026-10-14.md` for the five P1 changes, owner-approved D05 addition, validation and audit decisions. Runtime `5f3a3f1` is live in deployment `12e199f4-be92-4c67-80c9-282ac2d667dd`; stable production and preview each matched 10,136 served files and 69 header checks. Models and scientific fixtures remain unchanged; P2 otherwise deferred.
