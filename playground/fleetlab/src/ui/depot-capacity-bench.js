@@ -1,8 +1,7 @@
+import {svgElement as svg,el} from './dom.js';
 // Hosted-only presentation. All live quantities and wait text arrive through the accepted bench projection.
-import {el} from './dom.js';
 import {gbps,kw,minute,join} from './depot-capacity-view.js';
 
-const svg=(tag,attrs={})=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));return n;};
 const exact=n=>String(n);
 const car=()=>el('span',{class:'cap-car-symbol','aria-hidden':'true'},[el('i'),el('i')]);
 const stateOf=v=>!v.present?'Not arrived':v.ready?'Ready in model':v.tasks.upload==='active'?'Uploading':v.tasks.charge==='active'?'Charging':v.tasks.post==='active'?'Local step':'Waiting';

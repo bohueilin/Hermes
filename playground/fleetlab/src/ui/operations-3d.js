@@ -1,11 +1,9 @@
-import {el} from './dom.js';
+import {flowButton as button,svgElement as svg,el} from './dom.js';
 import {createCarGlyph} from './car-glyph.js';
 import {ACTIVITY_COLORS} from './operations-map.js';
 import {cameraMatrix,projectPoint,fitCameraToPoints,orbitCamera,pointOnPath,buildCarMesh,buildRoadMesh,box,quad,transformMesh,createWebGLRenderer} from './scene-3d.js';
-const svg=(tag,attrs={})=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,String(v));return n;};
 const color=state=>state.startsWith('queued_')?'#bd9277':ACTIVITY_COLORS[state]??'#568676';
 const append=(target,source)=>{for(let i=0;i<source.length;i++)target.push(source[i]);};
-const button=(text,fn)=>el('button',{type:'button',class:'studio-button',on:{click:fn}},text);
 
 export function bayVehiclePosition(run,car,next,fraction){
   const route=run.routes?.[car.route_id];
@@ -34,8 +32,11 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
  const focusSelect=el('select',{'aria-label':'Focus map on a city',on:{change:()=>focus(focusSelect.value)}},[el('option',{value:'all'},'Entire Bay Area'),...places.map(p=>el('option',{value:p.id},p.label))]);
  const labelSelect=el('select',{'aria-label':'City label density',on:{change:()=>redraw()}},[el('option',{value:'key'},'Key place names'),el('option',{value:'all'},'All 18 names'),el('option',{value:'none'},'Roads & cars only')]);
  const controls=el('div',{class:'bay-map-controls'},[viewSelect,focusSelect,labelSelect,button('−',()=>changeCamera({zoom:1.25})),button('+',()=>changeCamera({zoom:.8})),button('Rotate ↶',()=>changeCamera({yaw:-.3})),button('Rotate ↷',()=>changeCamera({yaw:.3})),button('Tilt',()=>{camera.pitch=camera.pitch>1.1?.7:1.3;redraw();}),button('Follow selected car',()=>{following=true;overview=false;camera.distance=6;redraw();}),button('Reset view',()=>focus('all'))]);
+ let legendPinned=null,legendHover=null,legendFocus=null;
+ const legendColor=()=>legendHover??legendFocus??legendPinned;
+ const legendButton=(name,value)=>{const b=button(name,()=>{legendPinned=legendPinned===value?null:value;for(const n of element.querySelectorAll('[data-legend-color]'))n.setAttribute('aria-pressed',String(n.getAttribute('data-legend-color')===legendPinned));redraw();});b.setAttribute('data-legend-state',name.replaceAll(' ','_'));b.setAttribute('data-legend-color',value);b.setAttribute('aria-pressed','false');b.insertBefore(el('span',{'aria-hidden':'true',style:`background:${value}`,class:'legend-swatch'}),b.firstChild);for(const [event,fn] of Object.entries({pointerenter:()=>legendHover=value,pointerleave:()=>legendHover=null,focus:()=>legendFocus=value,blur:()=>legendFocus=null}))b.addEventListener(event,()=>{fn();redraw();});return b;};
  const element=el('figure',{class:'bay-map'},[controls,el('div',{class:'bay-map-caption-top'},[status,el('span',{},'Drag to orbit · scroll to zoom · choose a city to inspect')]),viewport,
-  el('ul',{class:'bay-map-legend','aria-label':'Map legend'},[...Object.entries(ACTIVITY_COLORS).filter(([key])=>key!=='ready').map(([key,value])=>[key.replaceAll('_',' '),value]),['waiting for a resource','#bd9277'],['boarding, staging or other activity','#568676'],['Hypothetical depot','#4c7666']].map(([name,value])=>el('li',{},[el('span',{'aria-hidden':'true',style:`background:${value}`,class:name==='Hypothetical depot'?'legend-swatch legend-depot':'legend-swatch'}),name]))),
+  el('ul',{class:'bay-map-legend','aria-label':'Map legend'},[...Object.entries(ACTIVITY_COLORS).filter(([key])=>key!=='ready').map(([key,value])=>[key.replaceAll('_',' '),value]),['waiting for a resource','#bd9277'],['boarding, staging or other activity','#568676'],['Hypothetical depot','#4c7666']].map(([name,value])=>el('li',{},name==='Hypothetical depot'?[el('span',{'aria-hidden':'true',class:'legend-swatch legend-depot',style:`background:${value}`}),name]:legendButton(name,value)))),
   el('figcaption',{},[el('a',{href:'https://www.openstreetmap.org/copyright',target:'_blank',rel:'noopener noreferrer'},'© OpenStreetMap contributors'),el('span',{},' · ODbL. Frozen September 2026 extract. Sparse major-road routes; one-way and access rules excluded. Cars and hypothetical depots are enlarged; stationary cars are spread into display slots around their recorded anchor. Grid spacing: 5 km. Coastlines are sourced outlines; no terrain or water polygons. Traffic and demand are simulated. This is not a commercial service-area map.')])]);
  if(onDownloadMap)element.appendChild(button('Download attributed map data',onDownloadMap));
  const xs=places.map(p=>p.x),ys=places.map(p=>p.y);
@@ -45,6 +46,7 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
  let current=null,selected=null,drag=null,destroyed=false,lastFlatKey=null,hitPoints=[],following=false,overview=true,contextLost=false;
  const labelNodes=new Map();for(const p of places){const label=button(p.label,()=>{focus(p.id);onFocus(p.id);});label.setAttribute('class',`bay-city-label${p.kind==='airport'?' is-airport':''}`);label.setAttribute('data-place-id',p.id);overlay.appendChild(label);labelNodes.set(p.id,label);}
  const meshes={ipace:buildCarMesh('ipace','#f3f5ec'),ojai:buildCarMesh('ojai','#d8e3f3')};
+ const dimMeshes=Object.fromEntries(Object.entries(meshes).map(([key,m])=>[key,m.map((v,i)=>i%6<3?v:.84)]));
  const land=[];
  quad(land,[bounds.minX-30,bounds.minY-30,-.06],[bounds.maxX+30,bounds.minY-30,-.06],[bounds.maxX+30,bounds.maxY+30,-.06],[bounds.minX-30,bounds.maxY+30,-.06],'#e5eadc');
  const coast=buildRoadMesh((mapData.coastlines??[]).map(points=>({points})),.05,'#7cb1b0',.002);
@@ -67,7 +69,7 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
    if(!pt.visible||pt.x<8||pt.x>width-8||pt.y<8||pt.y>height-8){n.hidden=true;continue;}
    const candidates=[];for(const dx of [18,-w-18,148,-w-148])for(const dy of [-22,-70,26,-118,74,-166,122,-214,170,218])candidates.push({x:pt.x+dx,y:pt.y+dy,w,h});
    candidates.sort((a,b)=>Math.hypot(a.x+w/2-pt.x,a.y+h/2-pt.y)-Math.hypot(b.x+w/2-pt.x,b.y+h/2-pt.y));
-   const spot=candidates.find(r=>r.x>5&&r.x+w<width-5&&r.y>5&&r.y+h<height-5&&!occupied.some(q=>r.x<q.x+q.w+5&&r.x+r.w+5>q.x&&r.y<q.y+q.h+4&&r.y+r.h+4>q.y));
+   const spot=candidates.find(r=>r.x>5&&r.x+w<width-5&&r.y>12&&r.y+h<height-12&&!places.some(a=>{const q=project(a);return q.visible&&q.x>r.x-10&&q.x<r.x+w+10&&q.y>r.y-10&&q.y<r.y+h+10;})&&!occupied.some(q=>r.x<q.x+q.w+5&&r.x+r.w+5>q.x&&r.y<q.y+q.h+4&&r.y+r.h+4>q.y));
    n.hidden=!spot;if(!spot)continue;occupied.push(spot);n.style.transform=`translate(${spot.x}px, ${spot.y}px)`;n.classList.toggle('is-focused',p.id===focusSelect.value);
    leaders.appendChild(svg('line',{x1:pt.x,y1:pt.y,x2:Math.max(spot.x,Math.min(spot.x+w,pt.x)),y2:Math.max(spot.y,Math.min(spot.y+h,pt.y)),stroke:'#829f8c','stroke-width':.8}));
    leaders.appendChild(svg('circle',{cx:pt.x,cy:pt.y,r:2.8,fill:p.kind==='airport'?'#687cac':'#487563'}));
@@ -81,7 +83,7 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
   if(key!==lastFlatKey){lastFlatKey=key;flatRoads.replaceChildren();for(const road of mapData.roads??[]){const points=road.points.map(p=>flatProjection(p,width,height));flatRoads.appendChild(svg('polyline',{points:points.map(p=>`${p.x},${p.y}`).join(' '),fill:'none',stroke:'#a8b8a5','stroke-width':1.6}));}}
   placeLabels(p=>flatProjection([p.x,p.y],width,height),width,height);
   const positions=run?layoutBayVehicles(run,frame,nextFrame,fraction,Math.max(.035,camera.distance*.017)):new Map();
-  const seen=new Set();for(const car of frame?.vehicles??[]){seen.add(car.id);let n=vehicleNodes.get(car.id);if(!n){n=svg('g',{'data-car-id':car.id,role:'button',tabindex:'-1'});n.addEventListener('click',()=>onSelect(car.id));flatCars.appendChild(n);vehicleNodes.set(car.id,n);}n.replaceChildren(createCarGlyph(color(car.state)));const pos=positions.get(car.id),p=flatProjection([pos.x,pos.y],width,height);n.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${-pos.heading*180/Math.PI}) scale(${selected===car.id?.8:.55})`);n.setAttribute('aria-label',`${car.id}: ${car.state.replaceAll('_',' ')}`);}
+  const seen=new Set();for(const car of frame?.vehicles??[]){seen.add(car.id);let n=vehicleNodes.get(car.id);if(!n){n=svg('g',{'data-car-id':car.id,role:'button',tabindex:'-1'});n.addEventListener('click',()=>onSelect(car.id));flatCars.appendChild(n);vehicleNodes.set(car.id,n);}n.setAttribute('opacity',legendColor()&&legendColor()!==color(car.state)?'0.22':'1');n.replaceChildren(createCarGlyph(color(car.state)));const pos=positions.get(car.id),p=flatProjection([pos.x,pos.y],width,height);n.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${-pos.heading*180/Math.PI}) scale(${selected===car.id?.8:.55})`);n.setAttribute('aria-label',`${car.id}: ${car.state.replaceAll('_',' ')}`);}
   for(const[id,n]of vehicleNodes)if(!seen.has(id)){n.remove();vehicleNodes.delete(id);}
  }
  function redraw(){
@@ -100,10 +102,10 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
    for(let i=0;i<Math.min(8,run.config?.chargers??0);i++)box(mesh,x+(i-1)*scale*.45,y-scale*.7,scale*.12,scale*.15,scale*.15,scale*.35,'#a6cfb9');
   }
   hitPoints=[];
-  for(const car of frame?.vehicles??[]){const pos=positions.get(car.id);const carMesh=meshes[car.vehicle_type]??meshes.ipace;
+  for(const car of frame?.vehicles??[]){const pos=positions.get(car.id);const dim=legendColor()&&legendColor()!==color(car.state),set=dim?dimMeshes:meshes,carMesh=set[car.vehicle_type]??set.ipace;
    const pt=projectPoint([pos.x,pos.y,scale*.5],matrix,width,height);if(pt.visible)hitPoints.push({...pt,id:car.id});
    append(mesh,transformMesh(carMesh,{x:pos.x,y:pos.y,z:.04,scale:scale*(selected===car.id?1.2:.85),heading:pos.heading}));
-   box(mesh,pos.x,pos.y,.03,scale*2.8,scale*1.4,scale*.03,color(car.state));
+   box(mesh,pos.x,pos.y,.03,scale*2.8,scale*1.4,scale*.03,dim?"#d5d9d0":color(car.state));
    if(car.id===selected&&run.routes?.[car.route_id])append(mesh,buildRoadMesh([run.routes[car.route_id]],Math.max(.03,camera.distance*.003),'#477f70',.045));
   }
   renderer.draw(mesh,matrix,Math.round(width),Math.round(height));canvas.setAttribute('data-renderer','webgl');drawLabels(matrix,width,height);

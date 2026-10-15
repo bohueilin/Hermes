@@ -111,7 +111,7 @@ export function renderRegistry({ summaries, seed, all = false, onToggleAll = () 
       el("th", { scope: "row" }, [
         el("span", { "data-role": "metric-name" }, row.words),
         el("span", { class: "fl-small-label", "data-role": "metric-facts" }, row.facts),
-        el("span", { class: "fl-muted", "data-role": "metric-population" }, row.population),
+        ["fleet.available_fraction","depot.turnaround_p90_s"].includes(row.metric)?el("div",{},[el("p",{},row.metric==="fleet.available_fraction"?"The share of car-time spent waiting for a rider in the area or ready at its depots, out of all car-time in this window.":"Time from arriving at a depot to being ready again. Nine in ten visits in scope are at or below this duration."),el("details",{},[el("summary",{},"Exact population"),el("span",{"data-role":"metric-population"},row.population)])]):el("span", { class: "fl-muted", "data-role": "metric-population" }, row.population),
       ]),
       valueCell("replay-value", row.replay),
       valueCell("across-value", row.across),

@@ -1,8 +1,6 @@
-import {el} from './dom.js';
+import {flowButton as button,svgElement as svg,el} from './dom.js';
 import {cameraMatrix,projectPoint,pointOnPath,buildCarMesh,buildRoadMesh,box,quad,transformMesh,createWebGLRenderer,fitCameraToPoints} from './scene-3d.js';
 import {createCarGlyph} from './car-glyph.js';
-const svg=(tag,attrs={})=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,String(v));return n;};
-const button=(text,fn)=>el('button',{type:'button',class:'studio-button',on:{click:fn}},text);
 const append=(a,b)=>{for(const v of b)a.push(v);};
 const stateColor=car=>car.waiting?'#cf723b':car.state==='occupied'?'#268170':car.state==='pickup'?'#2865ce':'#819798';
 

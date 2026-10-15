@@ -1,3 +1,4 @@
+import {flowButton as button,el} from './dom.js';
 import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView} from './teaching-frames.js';
 import {teachingResult} from './teaching-projection.js';
 import {displayText,setBusy} from './display-text.js';
@@ -5,14 +6,12 @@ import {nonzero} from './format.js';
 import {modelHeader} from './model-identity.js';
 import {LAUNCH_VERSION} from '../model/launch-contract.js';
 /** Configuration-driven rehearsal UI; validation and simulation stay in the model. */
-import {el} from './dom.js';
 import {createLaunchConfig,validateLaunchConfig,compareCommissioning} from '../model/launch-rehearsal.js';
 import {decisionForConfig,decisionView} from './scenario-learning.js';
 
 const value=v=>v===null||v===undefined?'Not available':typeof v==='number'?nonzero(v,Number.isInteger(v)?0:2):typeof v==='object'?JSON.stringify(v):displayText(v);
 const table=(title,head,rows)=>el('div',{class:'ops-table-wrap',tabindex:0,'aria-label':title},el('table',{},[
  el('caption',{},title),el('thead',{},el('tr',{},head.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map(v=>el('td',{},value(v))))))]));
-const button=(title,fn)=>el('button',{type:'button',class:'studio-button',on:{click:fn}},title);
 const metrics=[['All requests','requests'],['Pickups within target','pickup_within_target'],['Late pickups','pickup_late'],['Missed pickups','pickup_missed'],['Pickup outcome pending','pickup_pending'],['Within-target fraction, all requests','pickup_within_target_fraction'],['Completed trips','completed_trips'],['Completion fraction, all requests','completion_fraction'],['Unfinished depot visits','unfinished_visits'],['Unfinished required tasks','unfinished_tasks'],['All-visit queue (task-min)','queue_observed_min'],['All-visit active (task-min)','active_observed_min'],['Terminal energy (kWh)','terminal_energy_kwh']];
 
 export function launchComparisonView(r){

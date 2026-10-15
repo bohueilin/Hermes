@@ -1,3 +1,4 @@
+import {flowButton as button,el} from './dom.js';
 import {decimalValue} from './decimal-input.js';
 import {conceptPrimer} from './concept-primer.js';
 import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView,exactView} from './teaching-frames.js';
@@ -16,11 +17,9 @@ import {createOperations3D} from './operations-3d.js';
 import {createVehiclePortrait} from './vehicle-portrait.js';
 import {defaultReadiness} from '../model/depot-readiness.js';
 import {readinessResultView,readinessComparisonView,blockerText} from './readiness-view.js';
-import { el } from './dom.js';
 import { ACTIVITY_COLORS } from './operations-map.js';
 import { createCarGlyph } from './car-glyph.js';
 
-const button=(text,fn,primary=false)=>el('button',{type:'button',class:primary?'studio-button studio-button-primary':'studio-button',on:{click:fn}},text);
 const eyebrow=text=>el('p',{class:'eyebrow'},text);
 const fmt=(value,digits=1)=>value===null||value===undefined?'Not available':Number(value).toLocaleString('en-US',{maximumFractionDigits:digits});
 export const operationsClock=minutes=>`${minutes>=1440?'Day '+String(Math.floor(minutes/1440)+1)+' · ':''}${String(Math.floor(minutes/60)%24).padStart(2,'0')}:${String(Math.floor(minutes)%60).padStart(2,'0')}`;
@@ -61,12 +60,12 @@ const requestKinds=[
  ['pending_requests','Waiting','Still awaiting assignment at the end of the run.','#c48c42'],
  ['in_progress_trips','In progress','Assigned: pickup, boarding or the trip is still underway.','#498fa9'],
 ];
-export function requestOutcomes(metrics,stale=false){
+export function requestOutcomes(metrics,stale=false,{definitions=true,showCounts=true}={}){
  const counts=requestKinds.map(([key])=>metrics?.[key]),total=metrics?.total_requests;
  const valid=Number.isSafeInteger(total)&&total>=0&&counts.every(n=>Number.isSafeInteger(n)&&n>=0)&&counts.reduce((a,b)=>a+b,0)===total;
- return el('section',{class:'request-outcomes','aria-label':'Every ride request at observation end'},[
-  el('dl',{},requestKinds.map(([,name,meaning])=>el('div',{},[el('dt',{},name),el('dd',{},meaning)]))),
-  el('p',{},stale?'Result from previous settings. Run again to update.':!metrics?'Run the day to see the four counts.':!valid?'Outcome counts unavailable: the recorded partition is incomplete.':total===0?'No requests in this run.':`${total} ride requests at observation end`),
+ return el('section',{class:'request-outcomes','data-stale':String(stale),'aria-label':'Every ride request at observation end'},[
+  definitions?el('dl',{},requestKinds.map(([,name,meaning])=>el('div',{},[el('dt',{},name),el('dd',{},meaning)]))):null,
+  showCounts?el('p',{},stale?'Result from previous settings. Run again to update.':!metrics?'Run the day to see the four counts.':!valid?'Outcome counts unavailable: the recorded partition is incomplete.':total===0?'No requests in this run.':`${total} ride requests at observation end`):null,
   valid&&total>0?el('div',{class:'request-bar','aria-hidden':'true'},requestKinds.map(([,name,,color],i)=>el('span',{style:`width:${counts[i]/total*100}%;background:${color}`,title:`${name}: ${counts[i]}`}))):null,
   valid?el('ul',{},requestKinds.map(([,name,,color],i)=>el('li',{'data-request-count':counts[i]},[el('span',{class:'request-swatch','aria-hidden':'true',style:`background:${color}`}),`${name}: ${counts[i]}`]))):null,
  ]);
@@ -80,12 +79,12 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   let lesson=null,lessonEdited=false;
   const activeFrame=()=>lesson?LESSON_FRAMES[lesson.id]:SURFACE_FRAMES['preset:'+preset.value]??decisionForConfig(config);
   const learningContent=el('div',{class:'ops-teaching'});
-  function renderTeaching(){element.querySelector('.ops-learning-mode').textContent=lesson?.id==='cleaning'?'FLEET SIMULATION / BUNDLED STRESS CASE':'FLEET SIMULATION / LEARN BY CHANGING ONE THING';runButton.textContent=lesson?.id==='region-launch'?'Open launch rehearsal ↓':'Run fleet day  ▶';learningContent.replaceChildren(frameView(activeFrame(),{title:lesson?.title??'Fleet day',heading:'h1',lookForIntro:lesson?.id==='region-launch'?null:requestOutcomes(result?.metrics,result&&JSON.stringify(config)!==JSON.stringify(result.config)),limits:lesson?.limits,edited:lessonEdited,seeds:experimentControls?.options().seeds.length}));advancedFrame.replaceChildren(frameView(SURFACE_FRAMES[({airport_forecast:'airport',resource_freshness:'resources',charging_deadlines:'deadlines'})[experimentControls.options().treatment]??'charging'],{title:'Compare one operating policy: '+displayText(experimentControls.options().treatment),seeds:experimentControls.options().seeds.length}));}
+  function renderTeaching(){element.querySelector('.ops-learning-mode').textContent=lesson?.id==='cleaning'?'FLEET SIMULATION / BUNDLED STRESS CASE':'FLEET SIMULATION / LEARN BY CHANGING ONE THING';runButton.textContent=lesson?.id==='region-launch'?'Open launch rehearsal ↓':'Run fleet day  ▶';learningContent.replaceChildren(frameView(activeFrame(),{title:lesson?.title??'Fleet day',heading:'h1',lookForIntro:lesson?.id==='region-launch'?null:requestOutcomes(null,false,{showCounts:false}),limits:lesson?.limits,edited:lessonEdited,seeds:experimentControls?.options().seeds.length}));advancedFrame.replaceChildren(frameView(SURFACE_FRAMES[({airport_forecast:'airport',resource_freshness:'resources',charging_deadlines:'deadlines'})[experimentControls.options().treatment]??'charging'],{title:'Compare one operating policy: '+displayText(experimentControls.options().treatment),seeds:experimentControls.options().seeds.length}));}
   const learning=glossaryView();
   const identity=modelHeader('Fleet day','OpenStreetMap Bay Area roads, 18 places',bayModelVersion(config));
   const summaryHeading=el('h2',{tabindex:-1},'Result summary'),shareSlot=el('div'),partition=el('p',{},'The default day has more requests than 24 cars can serve, so the limits show. Read all four counts together.');
-  const runReading=el('div');
-  const resultSummary=el('section',{class:'ops-result-summary'},[summaryHeading,partition,runReading,shareSlot]);
+  const runReading=el('div'),outcomeVisual=el('div',{class:'ops-outcome-visual'});
+  const resultSummary=el('section',{class:'ops-result-summary'},[summaryHeading,partition,outcomeVisual,runReading,shareSlot]);
   const launchPanel=createLaunchPanel(),regionalPanel=createRegionalPowerPanel();
   const status=el('p',{class:'ops-status',role:'status'},'Choose your fleet and press Run fleet day.');
   const error=el('p',{class:'ops-error',role:'alert',hidden:true});
@@ -154,7 +153,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   const trail=el('ol',{class:'ops-car-trail'});
   const selectedPanel=el('section',{class:'ops-follow'},[el('div',{class:'ops-follow-heading'},[el('h3',{},'Follow one AV'),vehicleSelect]),vehicleDetail,el('details',{},[el('summary',{},'Its latest activities'),trail])]);
   const stageStates=[['available','Ready for a rider'],['pickup','Pickup'],['boarding','Boarding'],['passenger_trip','Passenger trip'],['drive_to_depot','Return to depot'],['software','Software'],['cleaning','Clean'],['charging','Charge'],['upload','Upload'],['airport_reposition','Airport staging']];
-  const lifecycle=el('div',{class:'ops-lifecycle'},stageStates.map(([state,label])=>button(label,()=>jumpToStage(state))));
+  const lifecycle=el('div',{class:'ops-lifecycle'},stageStates.map(([state,label])=>{const b=button(label,()=>jumpToStage(state));b.setAttribute('data-cycle-state',state);return b;}));
   const stageNote=el('p',{class:'ops-stage-note'},'Tap a stage to find it in this day. Software runs only on scheduled visits; queues hold cars until a resource is free.');
   const vehicleTable=el('div',{class:'ops-table-wrap'});
   const depotStatus=el('div',{class:'ops-depot-status'});
@@ -167,10 +166,11 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     el('details',{class:'ops-vehicle-table'},[el('summary',{},'All vehicles as a table'),vehicleTable]),
   ]);
   const outcomeCards=el('div',{class:'ops-outcome-cards'});
-  const outcomesNote=el('p',{class:'ops-outcomes-note'},'Run a day to see completed trips, waiting riders and unserved requests together. These results will describe your selected settings, not operator performance.');
+  const outcomesNote=el('p',{class:'ops-outcomes-note'},'Run a day to see completed trips, unserved requests, waiting riders and trips in progress together. These results will describe your selected settings, not operator performance.');
+  const emptyOutcomes=el('div',{class:'ops-outcome-empty'},[el('p',{},'Run a day to see completed trips, unserved requests, waiting riders and trips in progress together.'),el('div',{class:'request-ghost','aria-hidden':'true'},Array.from({length:4},()=>el('span'))),button('Run a day to see all four counts ▶',()=>run())]);
   const serviceBreakdown=el('div',{class:'ops-service-breakdown'});
   const resultProvenance=el('div',{class:'ops-result-provenance'});
-  const outcomeSection=el('section',{class:'ops-results'},[eyebrow('3 / UNDERSTAND THE RESULT'),el('h2',{},'How much service did this fleet deliver?'),resultProvenance,outcomeCards,outcomesNote,button('Go to fleet-day settings',()=>{controls.scrollIntoView({block:'start'});runSettingsButton.focus({preventScroll:true});}),serviceBreakdown]);
+  const outcomeSection=el('section',{class:'ops-results'},[eyebrow('3 / UNDERSTAND THE RESULT'),el('h2',{},'How much service did this fleet deliver?'),resultProvenance,outcomeCards,outcomesNote,emptyOutcomes,button('Go to fleet-day settings',()=>{controls.scrollIntoView({block:'start'});runSettingsButton.focus({preventScroll:true});}),serviceBreakdown]);
   const readinessResult=el('div',{class:'ops-readiness-result'});
   outcomeSection.appendChild(readinessResult);
   const advancedResult=el('div',{class:'ops-advanced-result'});outcomeSection.appendChild(advancedResult);
@@ -198,7 +198,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   const modelBoundary=el('p',{class:'ops-model-boundary'},`Operational teaching model ${OPERATIONS_VERSION}. Real OpenStreetMap geography with synthetic demand and vehicle assumptions. This is a capacity experiment, not a calibrated digital twin or operational authorization. Four-area experiments use a separate model.`);element.appendChild(el('details',{},[el('summary',{},'Exact values'),modelBoundary]));element.appendChild(learning);element.appendChild(el('section',{class:'ops-other-experiments'},[el('h2',{},'Other experiments on this page'),regionalPanel.element,launchPanel.element]));
 
   function loadScenario(patch){requestVersion++;setConfig({...defaultOperationsConfig(),...patch},{replace:true});experimentControls.setOptions();experimentControls.setTreatment(config.airport?'airport_forecast':config.resources?'resource_freshness':config.charging?.policy==='deadline'?'charging_deadlines':'charging_redistribution');}
-  function setConfig(patch,{replace=false}={}){config=structuredClone(replace?patch:{...config,...patch});preset.value=lesson?'lesson':'custom';lessonEdited=!!lesson;renderTeaching();for(const key of ['readiness','charging','resources','airport'])if(config[key]===undefined)delete config[key];comparisonVersion++;advancedComparison=null;advancedContent.replaceChildren(el('p',{},'Settings changed. Run fleet day and compare again.'));advancedControls.sync();syncReadinessControls();syncVehicleControls();for(const [key,input]of inputs){input.value=String(config[key]);input.setAttribute('aria-valuetext',input.value);}weather.value=config.weather;weatherLabel.textContent=(config.weather==='rain'?'Rain':config.weather==='heat'?'Hot day':'Clear')+' · synthetic traffic';pause();stale=!!result&&JSON.stringify(config)!==JSON.stringify(result.config);readinessComparison=null;readinessContent.replaceChildren(el('p',{},hasExtensions()?'M1 comparison unavailable with optional charging, resources or airport models.':'Settings changed. Compare again with the current settings.'));capacity=null;capacityContent.replaceChildren();mixContent.replaceChildren();error.hidden=true;renderStatus();if(!result)clock.textContent=operationsClock(config.start_hour*60);}
+  function setConfig(patch,{replace=false}={}){config=structuredClone(replace?patch:{...config,...patch});preset.value=lesson?'lesson':'custom';lessonEdited=!!lesson;renderTeaching();for(const key of ['readiness','charging','resources','airport'])if(config[key]===undefined)delete config[key];comparisonVersion++;advancedComparison=null;advancedContent.replaceChildren(el('p',{},'Settings changed. Run fleet day and compare again.'));advancedControls.sync();syncReadinessControls();syncVehicleControls();for(const [key,input]of inputs){input.value=String(config[key]);input.setAttribute('aria-valuetext',input.value);}weather.value=config.weather;weatherLabel.textContent=(config.weather==='rain'?'Rain':config.weather==='heat'?'Hot day':'Clear')+' · synthetic traffic';pause();stale=!!result&&JSON.stringify(config)!==JSON.stringify(result.config);if(result)outcomeVisual.replaceChildren(requestOutcomes(result.metrics,stale,{definitions:false}));readinessComparison=null;readinessContent.replaceChildren(el('p',{},hasExtensions()?'M1 comparison unavailable with optional charging, resources or airport models.':'Settings changed. Compare again with the current settings.'));capacity=null;capacityContent.replaceChildren();mixContent.replaceChildren();error.hidden=true;renderStatus();if(!result)clock.textContent=operationsClock(config.start_hour*60);}
   /** Return complete inputs in native model units; sharing never executes a model. */
   function getSharedSetup(source='current',model='fleet-day'){
     if(model==='regional-power')return regionalPanel.getSharedSetup(source);
@@ -274,7 +274,9 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     ];
     counters.replaceChildren(...counts.map(([label,state,predicate])=>el('span',{},[el('i',{style:`background:${ACTIVITY_COLORS[state]??'#a87560'}`}),el('strong',{},String(frame.vehicles.filter(predicate).length)),label])));
     airportStatus.replaceChildren(...(frame.airport?[airportFrameView(frame.airport)]:[]));
-    const car=frame.vehicles.find(c=>c.id===selected);if(car){
+    const car=frame.vehicles.find(c=>c.id===selected);
+    for(const b of lifecycle.children){const active=b.getAttribute("data-cycle-state")===(car?.state==="ready"?"available":car?.state);b.setAttribute("aria-current",active?"step":"false");b.style.borderColor=active?ACTIVITY_COLORS[car.state]??"#568676":"";}
+    if(car){
       const battery=Math.max(0,Math.min(100,car.soc_kwh/car.battery_kwh*100));
       vehicleDetail.replaceChildren(el('strong',{},`${VEHICLE_PROFILES[car.vehicle_type]?.label??car.vehicle_type} · ${stateName(car.state)}`),el('span',{},`${fmt(battery,0)}% battery · ${fmt(car.soc_kwh)} kWh`),el('meter',{min:0,max:car.battery_kwh,value:car.soc_kwh,'aria-label':`${car.id} battery energy`}),el('p',{},car.from&&car.to?`${result.locations.find(p=>p.id===car.from)?.label??car.from} → ${result.locations.find(p=>p.id===car.to)?.label??car.to} · ${fmt(result.routes?.[car.route_id]?.distance_km)} km${car.request_id?' · '+car.request_id:''}`:car.depot_id?`At ${result.locations.find(p=>p.id===car.depot_id)?.label??car.depot_id}`:`${result.locations.find(p=>p.id===car.node)?.label??'Road anchor'} · ${car.request_id??'Ready for assignment'}`));
       if(result.extensions)vehicleDetail.appendChild(el('p',{},`Recorded charging power: ${fmt(car.power_kw)} kW; port: ${car.port_id??'Not available'}; resource blocker: ${car.resource_blocked??'None recorded'}.`));
@@ -291,7 +293,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     ])));
   }
   function metricCard(label,value,note){return el('article',{},[el('span',{},label),el('strong',{},value),el('small',{},note)]);}
-  function renderOutcomes(){if(!result)return;renderTeaching();const m=result.metrics;partition.textContent=`${m.completed_trips} completed · ${m.unserved_requests} unserved · ${m.pending_requests} waiting · ${m.in_progress_trips} in progress = ${m.total_requests} requests`;
+  function renderOutcomes(){if(!result)return;renderTeaching();emptyOutcomes.hidden=true;const m=result.metrics;outcomeVisual.replaceChildren(requestOutcomes(m,stale,{definitions:false}));partition.textContent=`${m.completed_trips} completed · ${m.unserved_requests} unserved · ${m.pending_requests} waiting · ${m.in_progress_trips} in progress = ${m.total_requests} requests`;
     outcomeCards.replaceChildren(
       metricCard('Trips completed',`${fmt(m.completed_trips,0)} / ${fmt(m.total_requests,0)}`,'All requests created during this day'),
       metricCard('Trips per AV',fmt(m.trips_per_vehicle),'Completed trips ÷ starting fleet'),
@@ -364,7 +366,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   for(const selector of ['.ops-vehicle-table','.ops-depot-detail'])element.querySelector(selector).addEventListener('toggle',()=>renderFrame());
   advancedControls.sync();syncReadinessControls();syncVehicleControls();renderFrame();renderStatus();
 
-  function setLesson(record){element.querySelector('.flow-related')?.remove();if(['upload','software','charging','deadline-charging'].includes(record?.id))element.querySelector('.ops-intro').appendChild(el('p',{class:'flow-related'},[{upload:'Fleet day treats upload as one fixed-time step after charging. To see uploads share one link while charging can overlap, ',charging:'Fleet day shares site power across charge ports, then uploads. To inspect parallel charging and uploads on one link, ',software:'Fleet day models an occupied update station. To inspect upload, charging and a local post-upload step, ','deadline-charging':'This lesson prioritizes charging deadlines. To inspect deadline priority for uploads while charging stays first come, ' }[record.id],el('a',{href:'#/depot-flow-lab?lesson=two-vehicles'},'try Two vehicles, one uplink in the Depot flow lab'),'.']));lesson=record;lessonEdited=false;if(record){result=null;stale=false;capacity=null;readinessComparison=null;advancedComparison=null;runReading.replaceChildren();partition.textContent='Run this lesson to read its request partition.';preset.querySelector('[value="lesson"]')?.remove();preset.appendChild(el('option',{value:'lesson'},'Lesson: '+record.title));preset.value='lesson';element.querySelector('h1').textContent=record.title;for(const node of [capacityContent,mixContent,readinessContent,advancedContent,resultProvenance,outcomeCards,outcomesNote,readinessResult,advancedResult,serviceBreakdown,counters,vehicleTable,depotStatus,airportStatus])node.replaceChildren();minute=0;lastDetailKey=null;map.render(null,null,null);renderFrame();}renderTeaching();renderStatus();}
+  function setLesson(record){element.querySelector('.flow-related')?.remove();if(['upload','software','charging','deadline-charging'].includes(record?.id))element.querySelector('.ops-intro').appendChild(el('p',{class:'flow-related'},[{upload:'Fleet day treats upload as one fixed-time step after charging. To see uploads share one link while charging can overlap, ',charging:'Fleet day shares site power across charge ports, then uploads. To inspect parallel charging and uploads on one link, ',software:'Fleet day models an occupied update station. To inspect upload, charging and a local post-upload step, ','deadline-charging':'This lesson prioritizes charging deadlines. To inspect deadline priority for uploads while charging stays first come, ' }[record.id],el('a',{href:'#/depot-flow-lab?lesson=two-vehicles'},'try Two vehicles, one uplink in the Depot flow lab'),'.']));lesson=record;lessonEdited=false;if(record){result=null;stale=false;outcomeVisual.replaceChildren();emptyOutcomes.hidden=false;capacity=null;readinessComparison=null;advancedComparison=null;runReading.replaceChildren();partition.textContent='Run this lesson to read its request partition.';preset.querySelector('[value="lesson"]')?.remove();preset.appendChild(el('option',{value:'lesson'},'Lesson: '+record.title));preset.value='lesson';element.querySelector('h1').textContent=record.title;for(const node of [capacityContent,mixContent,readinessContent,advancedContent,resultProvenance,outcomeCards,outcomesNote,readinessResult,advancedResult,serviceBreakdown,counters,vehicleTable,depotStatus,airportStatus])node.replaceChildren();minute=0;lastDetailKey=null;map.render(null,null,null);renderFrame();}renderTeaching();renderStatus();}
   renderTeaching();
   return {refresh:map.refresh,setLesson,element,summaryHeading,shareSlot,launchPanel,regionalPanel,run,pause,seek,nextActivity,setConfig,loadScenario,getSharedSetup,loadSharedSetup,compareCapacity,compareReadiness,compareAdvanced,chooseLaunchTemplate:name=>launchPanel.chooseTemplate(name),getState:()=>({config:structuredClone(config),result,capacity,readinessComparison,advancedComparison,minute,playing,stale}),destroy(){comparisonVersion++;requestVersion++;pause();destroyed=true;launchPanel.destroy();regionalPanel.destroy();map.destroy();portraits.forEach(p=>p.destroy());}};
 }

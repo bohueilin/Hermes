@@ -637,6 +637,7 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
     store,
     playback,
     ledger: regions.ledger,
+    onSpotlight: target => {for(const n of mapHost.querySelectorAll(".fl-iso__label,.fl-area,.fl-depot"))n.classList.toggle("fl-story-spotlight",!!target&&(target.depot?n.getAttribute("data-depot")===target.depot:n.getAttribute("data-area")===target.area));},
     rail: regions.rail,
     modelOf,
     frameOf,

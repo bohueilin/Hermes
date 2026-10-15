@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {installFakeDom} from '../../../playground/fleetlab/test/helpers/fake-dom.mjs';
 import {simulationCatalog,createSimulationCatalog} from '../../../playground/fleetlab/src/ui/simulation-catalog.js';
 import {QUESTION_FAMILIES} from '../hosted/visitor-families.mjs';
-import {decorateVisitors} from '../hosted/visitor.mjs';
+import {decorateVisitors,animateOutcomeCounts} from '../hosted/visitor.mjs';
 import {createDepotFlowLab} from '../../../playground/fleetlab/src/ui/depot-flow-lab.js';
 
 test('concept diagrams follow the active lesson without duplicates or changing results',()=>{
@@ -77,5 +77,43 @@ test('dispatch opportunity-cost art has the supplied alt, concept caption and no
   const art=bench.querySelector('.dispatch-concept');assert.ok(art);assert.equal(bench.querySelectorAll('.dispatch-concept').length,1);
   assert.equal(art.querySelector('img').getAttribute('alt'),'Dispatching the car now strands the next rider.');
   assert.equal(art.querySelector('figcaption').textContent,'Concept illustration · not simulation output');
+ }finally{restore();}
+});
+
+test('replay ribbon moves before the scrubber without cloning intervals or losing seek listeners',()=>{
+ const restore=installFakeDom();try{
+  const panel=document.createElement('section');document.body.appendChild(panel);
+  const timeline=document.createElement('div');timeline.className='timeline';const time=document.createElement('input');time.id='time';timeline.appendChild(time);panel.appendChild(timeline);
+  const bar=document.createElement('div');bar.id='shift-bar';const interval=document.createElement('button');bar.appendChild(interval);panel.appendChild(bar);let sought=0;interval.addEventListener('click',()=>sought++);
+  const axis=document.createElement('div');axis.className='shift-axis';panel.appendChild(axis);
+  decorateVisitors(document);decorateVisitors(document);
+  assert.equal(document.querySelectorAll('#shift-bar').length,1);assert.equal(panel.querySelector('.visitor-shift-preview').querySelector('#shift-bar'),bar);
+  assert.ok(panel.children.indexOf(panel.querySelector('.visitor-shift-preview'))<panel.children.indexOf(timeline));interval.click();assert.equal(sought,1);
+  assert.match(document.querySelector('.visitor-hold-key').textContent,/15-second/);assert.match(document.querySelector('.visitor-hold-key').textContent,/No interpolation/);
+ }finally{restore();}
+});
+
+test('count-up reads accepted counts, names each displayed value, and restores exact counts on reduction or cancellation',()=>{
+ const restore=installFakeDom();try{
+  const root=document.createElement('section');document.body.appendChild(root);root.setAttribute('data-stale','false');
+  const row=document.createElement('li');row.setAttribute('data-request-count','177');row.textContent='Completed: 177';root.appendChild(row);
+  let frame,canAnimate=true,cancelled=0;
+  const stop=animateOutcomeCounts(root,{request:fn=>(frame=fn,1),cancel:()=>cancelled++,allowed:()=>canAnimate,now:()=>0});
+  frame(350);assert.equal(row.textContent,'Completed: 88');assert.equal(row.getAttribute('aria-label'),row.textContent);
+  canAnimate=false;frame(400);assert.equal(row.textContent,'Completed: 177');assert.equal(row.getAttribute('aria-label'),row.textContent);assert.ok(cancelled);
+  stop();assert.equal(row.getAttribute('data-request-count'),'177');
+  root.setAttribute('data-stale','true');let requested=0;animateOutcomeCounts(root,{request:()=>requested++,allowed:()=>true});assert.equal(requested,0);
+  root.setAttribute('data-stale','false');animateOutcomeCounts(root,{request:()=>requested++,allowed:()=>false});assert.equal(requested,0);
+ }finally{restore();}
+});
+
+test('approved hero treatment adds concept artwork without numeric overlays or replay controls',()=>{
+ const restore=installFakeDom();try{
+  const main=document.createElement('main');main.id='main';document.body.appendChild(main);
+  const hero=document.createElement('section');hero.className='hero';main.appendChild(hero);
+  const control=document.createElement('button');control.textContent='Run comparison';let runs=0;control.addEventListener('click',()=>runs++);hero.appendChild(control);
+  decorateVisitors(document);decorateVisitors(document);
+  assert.equal(hero.querySelectorAll('.visitor-ambient-art').length,1);assert.match(hero.textContent,/Concept illustration · not simulation output/);
+  assert.equal(hero.querySelectorAll('button').length,1);assert.equal(runs,0);assert.doesNotMatch(hero.textContent,/48.hours|V12|65 min|countdown/);
  }finally{restore();}
 });

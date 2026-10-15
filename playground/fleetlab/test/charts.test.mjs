@@ -774,9 +774,9 @@ describe("source rules", () => {
     assert.ok(parsed.exports.length > 5);
     assert.ok(!/[\u2013\u2014]/.test(source));
     assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML|localStorage|sessionStorage|fetch\(|eval\(/.test(source));
-    const svgNamespace = source.match(/http:\/\/www\.w3\.org\/2000\/svg/g) ?? [];
-    assert.equal(svgNamespace.length, 1);
-    assert.ok(source.includes('createElementNS("http://www.w3.org/2000/svg"'));
+    assert.ok(source.includes('svgElement(tag,attrs,text,1)'));
+    const shared = readFileSync(new URL('../src/ui/dom.js', import.meta.url),'utf8');
+    assert.equal((shared.match(/http:\/\/www\.w3\.org\/2000\/svg/g)??[]).length,1);
   });
 });
 

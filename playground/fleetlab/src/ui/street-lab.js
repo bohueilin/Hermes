@@ -1,13 +1,12 @@
+import {flowButton as button,el} from './dom.js';
 import {conceptPrimer} from './concept-primer.js';
 import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView} from './teaching-frames.js';
 import {teachingResult} from './teaching-projection.js';
 import {displayText,setBusy} from './display-text.js';
-import {el} from './dom.js';
 import {STREET_NETWORK,streetMapDownload} from '../model/street-network.js';
 import {defaultStreetConfig,simulateStreets,compareStreetPolicies,STREET_PRESETS} from '../model/street-simulation.js';
 import {createStreetScene} from './street-scene.js';
 import {modelHeader} from './model-identity.js';
-const button=(text,fn,primary=false)=>el('button',{type:'button',class:primary?'studio-button studio-button-primary':'studio-button',on:{click:fn}},text);
 const eyebrow=text=>el('p',{class:'eyebrow'},text);
 const fmt=(v,d=1)=>v===null||v===undefined?'Not available':Number(v).toLocaleString('en-US',{maximumFractionDigits:d});
 const stateName=id=>({available:'Available',pickup:'Driving to pickup',curb_queue:'Waiting for a pickup berth',boarding:'Boarding',occupied:'Passenger on board',turnaround:'Off-road turnaround'})[id]??id;

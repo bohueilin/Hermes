@@ -469,6 +469,10 @@ def integrate(
         shutil.copyfile(
             ASSETS / "fleet-day-redirect.html", site / "network-flows/fleet-day/index.html"
         )
+        (site / "city-explorer/releases").mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(
+            ASSETS / "city-releases-redirect.html", site / "city-explorer/releases/index.html"
+        )
         offline_path = "downloads/fleetlab-offline.html"
         offline_url = "/downloads/fleetlab-offline"
         (site / "downloads").mkdir(exist_ok=True)
@@ -594,7 +598,11 @@ def integrate(
             } - {name for name in package_files if name.endswith(".json.gz")}
             if brand_update:
                 text_names -= set(brand.MEDIA)
-            integration_names = INTEGRATION_TEXT | (set(brand.TEXT) if brand_update else set())
+            text_names.add("city-explorer/releases/index.html")
+            integration_names = (
+                INTEGRATION_TEXT | (set(brand.TEXT) if brand_update else set())
+                | {"city-explorer/releases/index.html"}
+            )
             integrated_text = {
                 "emitted_text_bytes": sum(final[name]["bytes"] for name in text_names),
                 "integration_text_bytes": sum(final[name]["bytes"] for name in integration_names),

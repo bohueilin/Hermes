@@ -1,3 +1,4 @@
+import {svgElement,el, keyedList, setText} from './dom.js';
 // The schematic map (design §7.3, §8.2, §8.3, §7.7). Four area yards at fixed positions, a highway and a local route per
 // area pair drawn as parallel paths, congestion as static chevrons and a neutral casing step (never a hue, never dashed),
 // depot tiles with a three-part micro-bar over a lot fill, unit bars per yard, a flow band per route, the pinned car,
@@ -16,7 +17,6 @@
 // direction while its current segment is a route segment, and otherwise in the area of that segment (a trip or pickup
 // inside an area, depot access, pull-out). A car whose leg has ended before the next snapshot counts at its leg's end.
 
-import { el, keyedList, setText } from "./dom.js";
 import * as format from "./format.js";
 import {
   ABSENT_REASONS,
@@ -669,14 +669,7 @@ export function releaseFrameModel() {
 // Drawing.
 
 /** An SVG element with attributes set through setAttribute. */
-function svg(tag, attrs = {}) {
-  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  for (const [name, value] of Object.entries(attrs)) {
-    if (value === null || value === undefined || value === false) continue;
-    node.setAttribute(name, String(value));
-  }
-  return node;
-}
+const svg=(tag,attrs)=>svgElement(tag,attrs,undefined,2);
 
 /** SVG text holding `text` through textContent, filled with a token colour. */
 function svgText(text, attrs, colour = "var(--ink)") {

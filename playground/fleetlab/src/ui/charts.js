@@ -1,3 +1,4 @@
+import {svgElement,el} from './dom.js';
 // Charts of design §7.5 with the encodings of §8.3, built as SVG with createElementNS from real engine payloads
 // (contract section 7: run_window, run_pair and run_experiment). No motion, no tooltips. The only layout input is the
 // width a ResizeObserver reports for each plot box: the plot is redrawn at that width in real pixels, so 12 px text,
@@ -23,7 +24,6 @@
 
 import { meanFleetLab, percentileFleetLab } from "../core/stats.js";
 import { computeMetric, metricRow, STATE_FAMILIES } from "../model/metrics.js";
-import { el } from "./dom.js";
 import * as format from "./format.js";
 import * as labels from "./labels.js";
 
@@ -367,14 +367,7 @@ function areaName(id) {
 // ---------------------------------------------------------------------------------------------------------------
 // SVG and chart furniture.
 
-function svg(tag, attrs = {}, text = undefined) {
-  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  for (const [name, value] of Object.entries(attrs)) {
-    if (value !== null && value !== undefined) node.setAttribute(name, String(value));
-  }
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+const svg=(tag,attrs,text)=>svgElement(tag,attrs,text,1);
 
 function svgText(x, y, text, attrs = {}) {
   return svg("text", { x, y, class: "fl-small-label", fill: "currentColor", ...attrs }, text);

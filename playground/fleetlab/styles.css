@@ -539,9 +539,7 @@ summary {
 .fl-iso__pin { border-color: var(--accent); pointer-events: auto; cursor: pointer; }
 .fl-iso__pick { display: block; margin: 4px 0 0; }
 
-/* The walkthrough (demo plan section 4.5, ARCHITECTURE decision 44): a stage, a ledger and a rail on one screen. The
-   layer only rearranges what the page already has, so there is no transition, animation or will-change here: a beat
-   change is instant (a tween across a jump would pass through seconds the model never produced). */
+/* The walkthrough layout; Round 7 reveals do not advance recorded time. */
 .fl-app[data-present="true"] { grid-template-areas: "strip" "top" "map" "ledger" "rail" "transport" "footer"; }
 .fl-ledger { grid-area: ledger; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
 .fl-ledger p, .fl-ledger h2 { margin: 0; }
@@ -563,9 +561,7 @@ summary {
 .fl-rail .fl-button[aria-current="step"] { background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
 .fl-reading-card { display: grid; gap: 8px; padding: 12px; }
 
-/* What chapters 2 to 4 put in the ledger (demo plan beats 2.1, 2.2 and 4.2): the registry in two registers, the two
-   charts by hour, the readout composed from the verdict card, and the refusals. No transition, animation or
-   will-change here either: these are what a beat shows, and a beat change is instant. */
+
 .fl-registry { display: grid; gap: 8px; justify-items: start; }
 /* The three parts of a row's name stack inside its cell; the cell stays a table cell so the columns stay aligned. */
 .fl-registry th > span { display: block; }
@@ -577,11 +573,7 @@ summary {
   .fl-hourly { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* Presenting from 1280 px: the stage beside the ledger, the rail under both. This block sits after the presenting
-   rules above because it overrides them at the same specificity, and the later rule is the one that applies.
-   The stage is capped by the viewport height at the picture's own 640 by 500 ratio, so the stage, the ledger and the
-   rail hold one screen. --present-chrome is everything above and below the picture: the strip, the top bar, the rail,
-   the gaps, and the map panel's own header, captions and legend under the picture. */
+
 @media (min-width: 1280px) {
   .fl-app[data-present="true"] {
     grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
@@ -596,12 +588,7 @@ summary {
        and the transport is empty while presenting (its control row is hidden and inert, and the day bar is not built),
        so inheriting that template stood 220 px of blank panel between the rail and the footer. */
     grid-template-rows: auto auto minmax(0, auto) auto auto auto;
-    /* Measured in the browser on this source at 1512 x 982 and 1280 x 800 (document.hidden was true, so these are
-       layout numbers, never frame numbers): the strip, the top bar, the rail and the gaps take 161 px, and the map
-       panel spends another 57 above the picture (its padding and its header row) and 171 to 188 below it (the honesty
-       captions, the legend and the pick output, which wrap further in the narrower column). 412 leaves the rail's foot
-       at 958 of 982 at 1512 and at 794 of 800 at 1280, and the canvas at 730 x 570 and 497 x 388. The captions are what the picture owes a reader and they stay;
-       what the picture gives up beyond them bought nothing, so it is given back. */
+
     --present-chrome: 412px;
   }
   .fl-app[data-present="true"] .fl-iso { width: min(100%, calc((100vh - var(--present-chrome)) * 1.28)); margin-inline: auto; }
@@ -1803,3 +1790,10 @@ a.studio-button, .studio-header nav a { display: inline-flex; align-items: cente
 @media(max-width:767px){.request-outcomes dl{grid-template-columns:repeat(2,minmax(0,1fr))}.ops-teaching:has(.request-outcomes) .teaching-parts{grid-template-columns:1fr}}
 
 .request-outcomes li{display:flex;align-items:center;gap:6px}.request-swatch{width:12px;height:12px;border-radius:2px}
+
+.fl-story-progress{display:flex;gap:3px;flex-wrap:wrap;flex-basis:100%}.fl-story-progress button{min-width:40px;min-height:44px;padding:7px;border-radius:50%;font-size:12px}.fl-story-progress [aria-current="step"]{background:#276b57;color:#fff;border-color:#276b57}.fl-story-spotlight{outline:3px solid #bd873d;outline-offset:4px;filter:drop-shadow(0 0 5px #ddb471)}
+.ops-lifecycle [aria-current="step"]{background:#e4f2e9;box-shadow:inset 0 -3px #3b8b6d}.bay-map-legend button{font:inherit;border:1px solid transparent;border-radius:8px;background:transparent;min-height:44px;padding:7px;display:inline-flex;gap:7px;align-items:center;color:inherit}.bay-map-legend button[aria-pressed="true"],.bay-map-legend button:focus-visible{border-color:#2b7c61;background:#e6f1e8}
+.request-ghost{display:flex;gap:5px;height:22px;margin:12px 0}.request-ghost span{flex:1;background:#dce4dc;border-radius:4px}.request-ghost span:nth-child(2){flex:2}.ops-outcome-empty{padding:16px;border:1px dashed #adbeaf;border-radius:12px}.ops-outcome-visual .request-outcomes>ul{display:flex;gap:16px;flex-wrap:wrap}.ops-outcome-visual .request-bar{height:26px}
+@media(max-width:767px){.fl-story-progress button{min-width:32px;padding:4px}.fl-story-progress{gap:1px}}
+
+.fl-story-card,.fl-story-finale{padding:16px;background:#edf5ee;border-radius:16px}

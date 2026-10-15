@@ -1,9 +1,5 @@
+import {svgElement as svg} from './dom.js';
 // A recognisable vehicle, drawn as vector geometry. Its color comes from the recorded activity.
-const svg = (tag,attrs={}) => {
-  const node=document.createElementNS('http://www.w3.org/2000/svg',tag);
-  for(const [key,value] of Object.entries(attrs)) node.setAttribute(key,String(value));
-  return node;
-};
 export function createCarGlyph(color='#3c8365') {
   const g=svg('g',{'aria-hidden':'true'});
   g.appendChild(svg('ellipse',{cx:0,cy:2,rx:17,ry:10,fill:'#18392c',opacity:.13}));

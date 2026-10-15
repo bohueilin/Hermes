@@ -1,6 +1,6 @@
+import {svgElement as svg,el,flowTable as table,flowDetail as detail,flowButton as button} from './dom.js';
 import {networkChrome} from './network-chrome.js';
 // NF-03: reconstruct fixed cells, independently check them, then present accepted records.
-import {el,flowTable as table,flowDetail as detail,flowButton as button} from './dom.js';
 import {createCapacityBench,createCapacityPreview} from './depot-capacity-bench.js';
 import {capacityGuideShots,capacityActivity,createCapacityGuide} from './depot-capacity-guided.js';
 import {createDepotFlowPlayer} from './depot-flow-player.js';
@@ -11,7 +11,6 @@ import {capacityCellSteps} from '../model/depot-capacity.js';
 import {CAPACITY_PROTOCOL,CAPACITY_REGIMES,CAPACITY_RULES,CAPACITY_TREATMENTS,CAPACITY_VERSIONS,FLOW_TRUST,capacityScenario,studyStatus} from '../model/depot-capacity-contract.js';
 import {CAPACITY_PROJECTION,caseCells,cardsFor,readingSentence,withheldReason,capacityBenchProjection,allocationSpans,firstAllocationDifference,firstReadinessDifference,exampleVisits,verifiedCell,ruleName,join,minute,gbps,kw} from './depot-capacity-view.js';
 
-const svg=(tag,attrs={},text)=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));if(text!==undefined)n.textContent=String(text);return n;};
 
 const P=CAPACITY_PROTOCOL,T=CAPACITY_TREATMENTS,VISITS=P.waves.length*P.profiles.length,HORIZON_MIN=minute(P.horizon_s);
 const ALT_RULES=CAPACITY_RULES.filter(r=>r.id!=='capacity_equal_uplink');

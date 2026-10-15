@@ -98,4 +98,6 @@ export function keyedList(parent, items, { key, create, update = () => {} }) {
 // Shared depot presentation primitives; no model or verification logic.
 export const flowTable=(caption,heads,rows,attrs={})=>el('div',{class:'flow-table',tabindex:0,role:'region','aria-label':caption,...attrs},el('table',{},[el('caption',{},caption),el('thead',{},el('tr',{},heads.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map((c,i)=>el(i===0?'th':'td',i===0?{scope:'row'}:{},c)))))]));
 export const flowDetail=(title,children)=>el('details',{},[el('summary',{},title),...children]);
-export const flowButton=(text,fn,attrs={})=>el('button',{type:'button',class:'studio-button',on:{click:fn},...attrs},text);
+export const flowButton=(text,fn,attrs={})=>el('button',{type:'button',class:attrs===true?'studio-button studio-button-primary':'studio-button',on:{click:fn},...attrs},text);
+
+export function svgElement(tag,attrs={},text,skip=0){const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs)){if(skip&&(v==null||skip===2&&v===false))continue;n.setAttribute(k,String(v));}if(text!==undefined)n.textContent=String(text);return n;}

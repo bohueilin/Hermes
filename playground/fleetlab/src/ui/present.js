@@ -1,23 +1,5 @@
-// The walkthrough (demo plan sections 1.1, 4.1, 4.4 and 4.7; ARCHITECTURE decision 44). A layer over the three modes,
-// never a fourth one: `Present` turns the page into a stage, a ledger and a rail, and one `Next` button walks four
-// chapters of scripted beats over a single replay of the operations casebook's OPS-01.
-//
-// What a beat is allowed to do. `Prepare` runs the window once and the experiment once; after that every beat is a
-// seek, a pin and a projection. A beat never runs the model, never stores a number and never carries a number this
-// file typed: every figure, every table cell and every narration line is read from the frame model (map.js), the
-// interval log, the summaries or the verdict through the same formatters the rest of the page uses. Before those runs
-// land, every figure reads `not available: nothing has run yet` and `Next` is off (H-5, H-6: never a zero for an
-// absence, never a score).
-//
-// Beat clocks are derived from the scenario's own declared knobs (`peaks`, `recall_s`, `release_s`), never searched and
-// never typed, so moving a knob moves the beat with it. Narration is generated from the run in the second person and
-// states no direction the pins do not carry (H-9); test/present.test.mjs scans every string in PRESENT for a direction
-// word and holds each narration line to the run it was generated from.
-//
-// Motion: a beat change is instant, and a beat lands on its own second and stays there. Nothing here tweens, counts up,
-// transitions or starts the clock: the presenter (or a reader) presses Play, the beat runs the ordinary playback clock
-// at 300x, and a store subscriber pauses it at the second the beat declared. Every beat teaches from its still frame,
-// which is the frame the script was written around.
+// Walkthrough: user-started preparation; beats only seek, pin and project accepted runs.
+// Visual reveals never advance clocks, alter verdicts or supply absent values.
 
 import { CHECK_IDS } from "../model/invariants.js";
 import { computeMetric } from "../model/metrics.js";
@@ -68,9 +50,6 @@ const CASEBOOK_COUNT = PRESETS.filter((preset) => preset.kind === "ops").length;
 /** The evening peak's own start, from the scenario's declared peak windows. */
 const eveningPeak = (scenario) => scenario.peaks[scenario.peaks.length - 1];
 
-// ---------------------------------------------------------------------------------------------------------------
-// Reading the run. Every function here is a projection: it takes what the engine already computed and returns a
-// number, a clock or null. None of them runs the model and none of them rounds before a formatter does.
 
 /** Cars of one state family, wherever they stand: the areas' tallies plus the cars drawn on a route. */
 function familyTotal(model, family) {
@@ -163,8 +142,6 @@ export function queueClearedAt(log, depotId, after_s) {
   while (i < marks.length) {
     const t = marks[i][0];
     const before = held;
-    // Every mark at this second is applied before the queue is read, so a car leaving and another joining at the same
-    // second never reads as an empty queue.
     while (i < marks.length && marks[i][0] === t) {
       held += marks[i][1];
       i += 1;
@@ -262,7 +239,6 @@ export function tickerLines(log, scenario, t_s, limit = TICKER_LINES) {
       out.push({ ord: event.ord, clock, text: PRESENT.tickerRelease });
     } else if (event.kind === "SERVICE_STARTED") {
       const visit = openVisit(log, event.car, event.t);
-      // Only the task that ended the car's wait: a second task in the same visit began when a bay was already its own.
       if (visit === null || visit.first_task_s !== event.t || visit.intake_end_s === null) continue;
       out.push({ ord: event.ord, clock, text: labels.tickerBay({ car: event.car, after: format.minutes(visit.first_task_s - visit.intake_end_s) }) });
     } else if (event.kind === "INTAKE_COMPLETED") {
@@ -274,10 +250,6 @@ export function tickerLines(log, scenario, t_s, limit = TICKER_LINES) {
   return out;
 }
 
-// ---------------------------------------------------------------------------------------------------------------
-// The chapters. Every beat is data: where the clock goes, what it pins, what it opens, which figures it projects, the
-// model rule it shows and the caveat that rule owes. Chapters 2 to 4 carry their titles, clocks, pins and narration
-// here; their figures are a mount point the next part fills.
 
 const replayChip = (ctx) => (ctx.seed === null ? labels.REGISTERS.thisReplay : labels.thisReplayChip(ctx.seed));
 
@@ -390,8 +362,6 @@ const OPERATIONS = [
       const release = release_s === null ? null : format.clock(release_s);
       const lines = [labels.narrationRelease({ clock: ctx.clock, home: carsInState(ctx.frame, "REPOSITIONING"), ready: views.reduce((n, v) => n + v.ready, 0) })];
       const waited = longestBayWait(ctx.log, ctx.depot, ctx.at_s);
-      // The comparing word is read off the two clocks this replay produced; nothing here writes a direction into the
-      // sentence, and test/captions.test.mjs pins both lines on OPS-01 at seed 1001 (H-9).
       if (waited !== null && waited.ready_s !== null) {
         lines.push(labels.narrationPinnedBay({
           car: waited.car,
@@ -425,8 +395,6 @@ function registryRow(ctx, metric) {
  * which says what was asked for and not what the frame holds (demo plan graft 2).
  */
 const frameLineOf = (ctx) => labels.frameLine({
-  // Both clocks carry their seconds: the two are usually inside one minute, and a line that printed the same clock
-  // twice beside the word "interpolated" would hide the very thing the beat exists to show.
   snapshot: format.clockSeconds(ctx.frame.snapshot_t),
   drawn: format.clockSeconds(ctx.frame.at_s),
   interpolated: ctx.frame.at_s !== ctx.frame.snapshot_t,
@@ -460,7 +428,6 @@ const ANALYTICS = [
     key: "registers",
     limits: ["seedsVaryTravel", "waitCountsCompleted"],
     figures: (ctx) => {
-      // One row, both registers: the same metric under two chips, which is what the beat is about (H-10).
       const wait = registryRow(ctx, "wait.p90_s");
       return [
         replayFigure("waitReplay", labels.NOW_PANEL.waitP90, wait.replay),
@@ -477,7 +444,6 @@ const ANALYTICS = [
     key: "verdict",
     limits: ["intervalIsSimulationOnly"],
     figures: (ctx) => {
-      // The verdict's own register is its paired seeds, not the replications the window ran, so the chip carries them.
       if (ctx.verdict === null || ctx.frozen === null || ctx.verdict.validity !== "VALID") {
         return [{ key: "meanDelta", label: MEAN_DELTA, value: labels.absentValue(labels.ABSENT_REASONS.notRunYet), register: "across", count: ctx.spec?.seeds.length }];
       }
@@ -527,21 +493,16 @@ const SIMULATION = [
         el("p", { class: "fl-small-label", "data-role": "present-validation" }, labels.validationLine({ invariants: CHECK_IDS.length, cases: CASEBOOK_COUNT })),
       ];
     },
-    // The frame line moves with the clock, so it is written in place rather than rebuilt: a beat's content holds a
-    // table and two charts, and rebuilding those on every frame would cost more than the picture does.
     update: (ctx, root) => {
       const line = root.querySelector('[data-role="present-frame-line"]');
       if (line !== null) setText(line, frameLineOf(ctx));
     },
-    // Both clocks carry their seconds, for the reason the frame line carries them: the snapshot and the drawn second
-    // are usually inside one minute, and a sentence that printed the same clock twice would hide what the beat shows.
     narration: (ctx) => [labels.narrationFrame({ snapshot: format.clockSeconds(ctx.frame.snapshot_t), drawn: format.clockSeconds(ctx.frame.at_s) })],
   },
   {
     key: "arms",
     clock: (s) => s.policies.recall_s + 5400,
     limits: ["seedsVaryTravel"],
-    // Phase B watches the seed in the fork the page already has; the map region steps aside for it and says why.
     watchSeed: (ctx) => (ctx.frozen === null || ctx.verdictSeed === null ? null : ctx.verdictSeed),
     content: (ctx) => {
       if (ctx.spec === null || ctx.verdictSeed === null) return [];
@@ -549,8 +510,6 @@ const SIMULATION = [
       if (index < 0) return [];
       return [
         el("p", { "data-role": "present-now-watching" }, labels.nowWatching({ seed: ctx.verdictSeed, index: index + 1, total: ctx.spec.seeds.length })),
-        // The picture steps aside for this beat, so the two arms owe the ledger their own numbers: the depot the frozen
-        // spec watches, read from each arm's log at the one second both are standing at.
         ...armRows(ctx),
         el("p", { class: "fl-muted", "data-role": "present-fork-note" }, labels.FORK.verdictSeedNote),
         el("p", { class: "fl-muted", "data-role": "present-fork-caption" }, labels.HONESTY.forkCaption),
@@ -570,8 +529,6 @@ const PRODUCT = [
     key: "standsFor",
     limits: ["noStaff"],
     content: (ctx) => {
-      // Prepare loaded this record's own declared experiment, so the block is the record's copy, verbatim, exactly as
-      // the setup sheet shows it (decision 41): no paraphrase, and no verdict inside it.
       const nodes = [...situationBlock(presetById(PRESENT_PRESET_ID), true)];
       const sentence = tradeOffSentence({ verdict: ctx.verdict, frozen: ctx.frozen });
       if (ctx.verdict === null || sentence !== null) {
@@ -591,7 +548,6 @@ const PRODUCT = [
         el("ul", { class: "fl-refusals", "data-role": "present-refusals" }, PRESENT.refusals.map((row) => el("li", {}, row))),
       ];
       const next = nextCasebookPreset();
-      // A title and a situation, never a verdict and never a direction for a case this page has not run (H-9).
       if (next !== null) {
         nodes.push(el("h3", { class: "fl-title" }, PRESENT.nextHeading));
         nodes.push(el("p", { class: "fl-mono", "data-role": "present-next-title" }, labels.presetOption({ id: next.id, title: next.title })));
@@ -669,8 +625,6 @@ export function beatTitle(beat, scenario) {
   return beat.title;
 }
 
-// ---------------------------------------------------------------------------------------------------------------
-// The mounted walkthrough.
 
 const smallLabel = (role, text = "") => el("p", { class: "fl-small-label", "data-role": role }, text);
 
@@ -682,7 +636,7 @@ const smallLabel = (role, text = "") => el("p", { class: "fl-small-label", "data
  * `onGoToKnobs()` is where the reading card's first button sends a reader who would rather set the knobs.
  * Returns `{card, open, close, destroy}`.
  */
-export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, scenarioOf, prepare, times = () => null, onGoToKnobs = () => {}, onWatchSeed = () => {} }) {
+export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, scenarioOf, prepare, times = () => null, onGoToKnobs = () => {}, onWatchSeed = () => {}, onSpotlight = () => {} }) {
   const dispatch = (action) => store.dispatch(action);
   let preparing = false;
   let applying = 0;
@@ -703,13 +657,12 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     onOpenNext: (id) => openNext(id),
   };
 
-  // ---- the ledger --------------------------------------------------------------------------------------------------
 
   const chapterTitle = smallLabel("present-chapter");
+  chapterTitle.classList.add("fl-story-card");
+  const finale = el("section", {class:"fl-story-finale", "data-role":"present-finale", hidden:true}, [el("h3",{},"What you saw → where to next"),el("p",{},"You followed a fleet day, compared repeated runs, inspected the verdict and named what this model cannot establish."),el("a",{href:"#/catalog"},"Choose your next question →")]);
   const beatTitleNode = el("h2", { class: "fl-title fl-ledger__beat", "data-role": "present-beat" });
   const beatClockText = el("p", { class: "fl-clock", "data-role": "present-clock" });
-  // A beat that has somewhere to run to says so: nothing starts the clock on its own, so the reader is told whose hand
-  // it is in.
   const playHint = smallLabel("present-play-hint");
   const prepareButton = el("button", {
     type: "button",
@@ -722,7 +675,6 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
   const prepareProgress=el("progress",{hidden:true,"aria-label":"Walkthrough preparation"});
   const preparePanel = el("div", { class: "fl-ledger__prepare", "data-role": "present-prepare-panel" }, [prepareButton, prepareWhat, prepareStatus,prepareProgress]);
   const figures = el("div", { class: "fl-ledger__figures", "data-role": "present-figures" });
-  // Chapters 2 to 4 fill this from their own readouts; it carries the beat it belongs to so the next part can find it.
   const beatContent = el("div", { "data-role": "present-beat-content" });
   const depotTable = el("div", { class: "fl-scroll", "data-role": "present-depot-table" });
   const narration = el("div", { class: "fl-learn-text", "data-role": "present-narration", "aria-live": "polite" });
@@ -730,13 +682,8 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
   const caveat = el("p", { class: "fl-limits-chip", "data-role": "present-caveat" });
   const tickerHeading = smallLabel("present-ticker-heading", PRESENT.ticker);
   const tickerLinesNode = el("div", { class: "fl-ticker", "data-role": "present-ticker" });
-  // What just happened stands at the ledger's foot and stays there: a beat whose figures, table and narration are
-  // taller than the box would otherwise push the ticker below the fold, which is where the steps of the day live.
   const tickerFoot = el("div", { class: "fl-ledger__foot", "data-role": "present-ticker-foot" }, [tickerHeading, tickerLinesNode]);
   ledger.setAttribute("aria-label", PRESENT.ledgerName);
-  // The ledger scrolls, so it is a tab stop: a beat with no control inside it would otherwise put its overflow out of
-  // every keyboard's reach (WCAG 2.1.1). The rail's keys are bound to the rail, so Home, End and the arrows keep their
-  // ordinary scrolling behaviour here.
   ledger.setAttribute("tabindex", "0");
   ledger.replaceChildren(
     chapterTitle,
@@ -750,10 +697,10 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     narration,
     ruleLine,
     caveat,
+    finale,
     tickerFoot,
   );
 
-  // ---- the rail ----------------------------------------------------------------------------------------------------
 
   const railButton = (text, role, onClick, attrs = {}) =>
     el("button", { type: "button", class: "fl-button", "data-role": role, ...attrs, on: { click: onClick } }, text);
@@ -769,6 +716,7 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
   }, PRESENT.next);
   const chapterButtons = CHAPTERS.map((chapter, index) =>
     railButton(chapter.title, "present-chapter-button", () => goto(index, 0), { "data-chapter": chapter.key }));
+  const dots = BEAT_ORDER.map((p,i)=>railButton(String(i+1),"present-story-step",()=>goto(p.chapter,p.beat),{"data-story-step":i,"aria-label":`${i+1}. ${beatAt(p.chapter,p.beat).title}`}));
   const stepText = el("span", { class: "fl-mono fl-small-label", "data-role": "present-step" });
   const speedText = el("span", { class: "fl-mono fl-small-label", "data-role": "present-speed" }, labels.speedText(PRESENT_SPEED));
   const leaveButton = railButton(PRESENT.leave, "present-leave", () => close());
@@ -783,13 +731,13 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     backButton,
     nextButton,
     el("div", { class: "fl-group", role: "group", "aria-label": PRESENT.chaptersName }, chapterButtons),
+    el("div",{class:"fl-story-progress",role:"group","aria-label":"Walkthrough story progress"},dots),
     stepText,
     speedText,
-    leaveButton,
+    el("span",{class:"fl-small-label"},[leaveButton,"Reopening starts at the first beat."]),
     shortcuts,
   );
 
-  // The walkthrough's keys act inside the rail and nowhere else, so nothing here changes what the page does elsewhere.
   const unbindKeys = bindShortcuts(rail, {
     ArrowRight: () => move(1),
     ArrowLeft: () => move(-1),
@@ -800,15 +748,11 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     "?": () => shortcuts.toggleAttribute("open"),
     ...Object.fromEntries(CHAPTERS.map((_, index) => [String(index + 1), () => goto(index, 0)])),
   });
-  // Space activates a focused button on keyup; the keydown handler above already played or paused, so keyup is
-  // swallowed. Without this, Space on the rail's own Play button toggles twice and does nothing (playback.js does the
-  // same for the transport, and says so there).
   const onRailKeyup = (event) => {
     if ((event.key === " " || event.key === "Spacebar") && typeof event.preventDefault === "function") event.preventDefault();
   };
   rail.addEventListener("keyup", onRailKeyup);
 
-  // ---- the reading card --------------------------------------------------------------------------------------------
 
   const card = el("section", { class: "fl-reading-card fl-panel", "data-role": "reading-card", "aria-label": PRESENT.card.lead }, [
     el("p", {}, PRESENT.card.lead),
@@ -837,7 +781,6 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     ]),
   ]);
 
-  // ---- moving between beats ----------------------------------------------------------------------------------------
 
   /**
    * Runs the dispatches of one beat change as a single move, and renders once when they have all landed. A beat change
@@ -883,7 +826,6 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
       const scenario = scenarioOf(state);
       const current = beatAt(chapter, beat);
       const clock = beatClock(current, scenario);
-      // An untagged clock/set is a scrub, which the announcer stays silent for: the narration is the beat's one voice.
       if (clock !== null) playback.seek(clock);
       const after = store.getState();
       const ctx = contextOf(after);
@@ -891,16 +833,11 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
       const open = current.open === null || ctx === null ? null : current.open(ctx);
       if (open !== null) dispatch({ type: "inspector/open", target: open });
       else if (after.inspector !== null) dispatch({ type: "inspector/close" });
-      // One THIS REPLAY seed on screen (design §7.4, H-10): the beat that watches a verdict seed opens the page's own
-      // fork on it, and every other beat closes that fork again, so the picture is the world the walk is playing.
       const watching = current.watchSeed === null || ctx === null ? null : current.watchSeed(ctx);
       if (watching !== null) onWatchSeed(watching);
       else if (store.getState().fork.status !== "closed") dispatch({ type: "fork/close" });
       const stop = current.play === null ? null : current.play(scenario);
       dispatch({ type: "present/stop", stop_s: stop });
-      // A beat lands on the second it declared and stays there. The script reads its still frame first and the
-      // presenter starts the motion with Play or Space; autoplaying on arrival would leave the declared second within
-      // one frame and replace every number the beat was written around before it could be read.
       if (store.getState().playing) playback.pause();
     });
   }
@@ -909,7 +846,6 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     const state = store.getState();
     if (!state.present.on) return;
     settle(() => {
-      // The position first: it clears the stop clock, which the beat about to be applied then sets for itself.
       dispatch({ type: "present/goto", chapter, beat });
       if (state.present.prepared) applyBeat(chapter, beat);
     });
@@ -936,8 +872,6 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
       const state = store.getState();
       if (state.present.prepared) applyBeat(state.present.chapter, state.present.beat);
       render(store.getState());
-      // Prepare hides the button that was pressed, and a browser drops focus to the body when the focused control
-      // goes. The walk is about to begin, so the hands go to the control that walks it.
       const active = doc.activeElement;
       if (store.getState().present.prepared && (active === null || active === doc.body)) nextButton.focus();
     }
@@ -965,7 +899,6 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     startFromPreset(dispatch, id);
   }
 
-  // ---- rendering ---------------------------------------------------------------------------------------------------
 
   /** Everything a beat's figures and narration may read, or null before a run has produced a log. */
   function contextOf(state) {
@@ -995,10 +928,7 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
       replications: state.run.summaries.length,
       depot: focusDepot(state),
       area: focusArea(state),
-      // The seed the walk watches in the fork: the verdict's own median-delta seed once a verdict exists, and until
-      // then the replay already on screen, which is the frozen spec's first seed.
       verdictSeed: state.experiment.selectedSeed ?? state.run.selectedSeed,
-      // Both arms of the watched seed, once the page's own fork has run them; null until then.
       pair: state.fork.pair,
       next: nextCasebookQuestion(),
     };
@@ -1027,13 +957,8 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
   function renderFigures(beat, ctx) {
     const missing = labels.absentValue(labels.ABSENT_REASONS.notRunYet);
     const rows = ctx === null ? [] : beat.figures(ctx);
-    // Before the runs land the beat still names what it will show, with its absence reason in place of every value.
     const shown = ctx === null
-      // A figure with no value still names the register it will be read in, because a chip with nothing in it would
-      // render the word its own absence produced rather than a register (H-10).
       ? PLACEHOLDERS[beat.key]?.map((label, i) => ({ key: `absent-${String(i)}`, label, value: missing, register: "replay", chip: labels.REGISTERS.thisReplay })) ?? []
-      // A figure across replications names its own count: a verdict's register is its paired seeds, not the
-      // replications the window ran, and the two must never be read as one (H-10).
       : rows.map((row) => ({ ...row, chip: row.register === "replay" ? replayChip(ctx) : labels.acrossReplicationsChip(row.count ?? ctx.replications) }));
     keyedList(figures, shown, { key: (row) => row.key, create: figureNode, update: updateFigure });
   }
@@ -1087,7 +1012,6 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     tickerFoot.hidden = false;
     const lines = tickerLines(ctx.log, ctx.scenario, ctx.at_s);
     const newest = lines.length === 0 ? null : lines[0].ord;
-    // The ticker is a list of what has already happened, so it is redrawn only when a new event has joined it.
     if (newest === lastTickerOrd) return;
     lastTickerOrd = newest;
     tickerLinesNode.replaceChildren(
@@ -1137,6 +1061,8 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
   function renderRail(state) {
     const position = beatPosition(state.present.chapter, state.present.beat);
     const chapter = CHAPTERS[Math.min(state.present.chapter, CHAPTERS.length - 1)];
+    dots.forEach((b,i)=>{b.disabled=!state.present.prepared;b.setAttribute("aria-current",i===position?"step":"false");});
+    finale.hidden=!state.present.prepared||position!==BEAT_ORDER.length-1;
     setText(playButton, state.playing ? PRESENT.pause : PRESENT.play);
     playButton.setAttribute("aria-pressed", state.playing ? "true" : "false");
     playButton.disabled = !state.present.prepared;
@@ -1154,7 +1080,7 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     const on = state.present.on;
     card.hidden = on || cardClosed || state.run.log !== null;
     if (!on) {
-      // Nothing of the walkthrough speaks or takes a tab stop while it is closed.
+      onSpotlight(null);
       if (narration.children.length > 0) writeNarration([]);
       if (beatContent.children.length > 0) beatContent.replaceChildren();
       rendered = null;
@@ -1162,18 +1088,16 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
       return;
     }
     const beat = beatAt(state.present.chapter, state.present.beat);
-    // While Prepare's runs are still arriving the beat has nothing to project, so every figure reads its absence
-    // rather than a number from a half-filled store.
     const ctx = state.present.prepared && !preparing ? contextOf(state) : null;
     const chapter = CHAPTERS[Math.min(state.present.chapter, CHAPTERS.length - 1)];
-    setText(chapterTitle, chapter.title);
+    setText(chapterTitle, `${state.present.chapter+1} / ${CHAPTERS.length} · ${chapter.title.replace(/^\d+\s*/,"")}`);
+    const target=ctx&&beat.open?beat.open(ctx):null;
+    onSpotlight(ctx?{area:target?.area??focusArea(state),depot:target?.depot??null}:null);
     setText(beatTitleNode, beatTitle(beat, scenarioOf(state)));
     const clock = beatClock(beat, scenarioOf(state));
     beatClockText.hidden = clock === null;
     if (clock !== null) setText(beatClockText, format.clock(state.clock_s));
     const stop = beat.play === null ? null : beat.play(scenarioOf(state));
-    // Only while there is somewhere left to run to: once the beat has reached its stop clock the line would be an
-    // instruction to watch a second the page is already standing on.
     playHint.hidden = stop === null || !state.present.prepared || state.playing || state.clock_s >= stop;
     if (!playHint.hidden) setText(playHint, labels.playToWatch(format.clock(stop)));
     beatContent.setAttribute("data-beat", beat.key);
@@ -1184,20 +1108,11 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     renderFigures(beat, ctx);
     renderDepotTable(beat, ctx);
     renderTicker(ctx);
-    // The narration is written when the beat changes and again when the clock comes to rest, never on every frame.
-    // Resting is part of what there is to say: the figures beside the narration are the second the picture is drawing,
-    // so a sentence left standing from the second the beat arrived at would put two seconds of one replay in one panel
-    // with nothing to tell them apart. Writing behind setText keeps the polite region to the words that changed.
-    // Whether there was a run to read is part of the beat's identity too: the same beat with its figures absent and
-    // with them filled in are two different things to say, and Prepare turns the first into the second.
     const key = `${String(state.present.chapter)}:${String(state.present.beat)}:${String(ctx !== null)}:${String(state.playing)}`;
     if (applying === 0 && key !== rendered) {
       rendered = key;
       writeNarration(ctx === null ? [] : beat.narration(ctx).slice(0, 3));
     }
-    // A chapter's own content is built when the beat, the run behind it, the fork it watches or a reader's choice
-    // inside it changes, and never on a frame: it holds a table and two charts, and what moves with the clock is
-    // written in place by `update`.
     const contentKey = `${key}:${String(ui.registryAll)}:${String(state.fork.id)}:${state.fork.status}`;
     if (applying === 0 && contentKey !== renderedContent) {
       renderedContent = contentKey;

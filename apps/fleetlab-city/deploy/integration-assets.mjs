@@ -93,6 +93,9 @@ export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,sel
  const redirect=resolve(sourceRoot,'apps/fleetlab-city/hosted/fleet-day-redirect.html');
  if(lstatSync(redirect).isSymbolicLink()||!lstatSync(redirect).isFile())throw Error('Redirect source is not regular.');
  expected.set('network-flows/fleet-day/index.html',branded?renderPage(readFileSync(redirect,'utf8'),{analytics:true}):readFileSync(redirect));
+ const cityRedirect=resolve(sourceRoot,'apps/fleetlab-city/hosted/city-releases-redirect.html');
+ if(lstatSync(cityRedirect).isSymbolicLink()||!lstatSync(cityRedirect).isFile())throw Error('City redirect source is not regular.');
+ expected.set('city-explorer/releases/index.html',readFileSync(cityRedirect));
  const offlineHash=files['downloads/fleetlab-offline.html']?.sha256;
  if(!offlineHash||selection.offline_sha256!==offlineHash)throw Error('Integration offline selection mismatch.');
  expected.set('downloads/fleetlab-offline.sha256',`${offlineHash}  fleetlab-offline.html\n`);
@@ -103,11 +106,11 @@ export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,sel
   'Windows PowerShell: Get-FileHash .\\fleetlab-offline.html -Algorithm SHA256\n\n'+
   'Compare the full digest before opening. This detects corruption against this website\'s '+
   'published copy, not independent authenticity. The offline file excludes City Explorer.\n');
- const allowed=new Set([...teaching.keys(),...expected.keys(),...Object.keys(packageFiles),
+ const allowed=new Set([...teaching.keys(),...[...expected.keys()].filter(p=>!p.startsWith('city-explorer/')),...Object.keys(packageFiles),
   'downloads/fleetlab-offline.html','publication.json']);
  const nonCity=Object.entries(files).filter(([path])=>!path.startsWith('city-explorer/'));
  if(nonCity.length!==allowed.size||nonCity.some(([path])=>!allowed.has(path)))throw Error('Integration teaching inventory has missing or unexpected files.');
- const emittedText=nonCity.filter(([path])=>!path.startsWith('media/')&&!Object.hasOwn(BRAND_MEDIA,path)&&!path.startsWith('network-flows/sources/')&&path!=='downloads/fleetlab-offline.html').reduce((sum,[,record])=>sum+record.bytes,0);
+ const emittedText=nonCity.filter(([path])=>!path.startsWith('media/')&&!Object.hasOwn(BRAND_MEDIA,path)&&!path.startsWith('network-flows/sources/')&&path!=='downloads/fleetlab-offline.html').reduce((sum,[,record])=>sum+record.bytes,0)+(files['city-explorer/releases/index.html']?.bytes??0);
  if(emittedText>3145728)throw Error('Integration emitted text byte budget exceeded.');
  const integrationText=INTEGRATION_TEXT_PATHS.reduce((sum,path)=>sum+(files[path]?.bytes??0),0);
  if(nonCity.reduce((sum,[,record])=>sum+record.bytes,0)>14360576)throw Error('Integration teaching byte budget exceeded.');

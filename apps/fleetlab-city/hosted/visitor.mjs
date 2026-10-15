@@ -98,6 +98,27 @@ export function decorateVisitors(doc=document){
   text('#network-flows-title','Start with one parked vehicle. Follow the whole system.');
   text('.network-feature-scope','These guided lessons build on one another: first readiness, then shared resources, then the order of work. Start with the first question or jump to the one that interests you.');
  }
+ const shift=doc.getElementById('shift-bar'),timeline=doc.getElementById('time')?.closest('.timeline');
+ if(shift&&timeline&&!doc.querySelector('.visitor-shift-preview')){
+  const axis=shift.nextElementSibling?.classList.contains('shift-axis')?shift.nextElementSibling:doc.querySelector('.shift-axis');
+  const preview=el('section',{class:'visitor-shift-preview','aria-label':'Shape of this recorded shift'},[el('p',{class:'visitor-kicker'},'THE SHIFT AT A GLANCE · SELECT AN ACTIVITY TO SEEK'),shift]);
+  if(axis)preview.appendChild(axis);
+  preview.appendChild(el('p',{class:'visitor-hold-key'},[el('span',{'aria-hidden':'true',class:'visitor-held-dot'},'● ━━━ ●'), 'Each dot is a recorded position. The map holds it until the next 15-second sample. No interpolation; gaps stop playback.']));
+  timeline.parentNode.insertBefore(preview,timeline);
+ }
+ // User-approved correction: concept artwork motion only, with no fabricated results or replay.
+ for(const [selector,kind,file,alt] of [
+  ['#main > .hero','dispatch','D-05-opportunity-cost.webp','Dispatching the car now strands the next rider.'],
+  ['.r1-hero','rebalancing'],['.delivery-hero','delivery'],['#order-root .hero','order'],
+  ['.capacity-hero','capacity','D-01-depot-scenario.webp','Two autonomous pods sharing one network link, each with a deadline.'],
+ ]){
+  const hero=doc.querySelector(selector);if(!hero||hero.hasAttribute('data-ambient-ready'))continue;
+  const figure=hero.querySelector('figure')||(file?diagram(file,alt):null);if(!figure)continue;
+  if(!hero.contains(figure))hero.appendChild(figure);
+  figure.classList.add('visitor-ambient-art');figure.setAttribute('data-ambient-kind',kind);
+  const caption=figure.querySelector('figcaption');if(caption&&!caption.textContent.includes('not simulation output'))caption.textContent='Concept illustration · not simulation output. Use the checked model below to compare outcomes and individual delays.';
+  hero.setAttribute('data-ambient-ready','');
+ }
  const welcome=doc.getElementById('welcome-view');
  if(welcome&&!doc.getElementById('visitor-city-path')){
   const ribbon=el('section',{id:'visitor-city-path','aria-labelledby':'visitor-city-title'},[
@@ -116,5 +137,40 @@ export function decorateVisitors(doc=document){
   const comparison=welcome.querySelector('.learning-insight');
   welcome.insertBefore(ribbon,comparison?.nextSibling??null);
  }
+ if(doc.defaultView?.requestAnimationFrame&&typeof doc.defaultView.MutationObserver==='function')installVisualMotion(doc);
  text('.approach-intro .hero-lede','FleetLab is my independent learning project about autonomous fleet operations. I build small simulations to ask better questions about charging, depot work, data and rider service. Each lesson lets you change an assumption, see a trade-off and inspect the limits.');
+}
+
+// Only presentation is animated. No callback can run a model, accept an order or advance replay.
+const motionControllers=new WeakMap();
+export function animateOutcomeCounts(root,{request,cancel,allowed,now=()=>performance.now()}={}){
+ if(!allowed()||root.getAttribute('data-stale')==='true')return ()=>{};
+ const rows=[...root.querySelectorAll('[data-request-count]')],jobs=[];
+ for(const row of rows){
+  const final=Number(row.getAttribute('data-request-count'));
+  if(!Number.isSafeInteger(final)||final<0)continue;
+  const exact=row.textContent;row.setAttribute('aria-label',exact);
+  const display=row.ownerDocument.createElement('span');display.setAttribute('aria-hidden','true');
+  const label=exact.slice(0,exact.lastIndexOf(':')+1);display.textContent=exact;
+  const swatch=row.querySelector('.request-swatch');row.replaceChildren(...(swatch?[swatch]:[]),display);jobs.push({display,label,final});
+ }
+ let id=null,stopped=false;const start=now();
+ const finish=()=>{stopped=true;if(id!==null)cancel(id);for(const j of jobs){j.display.textContent=`${j.label} ${j.final}`;j.display.parentNode.setAttribute('aria-label',j.display.textContent);}root.classList.remove('visitor-count-reveal');};
+ const step=t=>{if(stopped)return;if(!root.isConnected||!allowed()){finish();return;}const p=Math.min(1,Math.max(0,(t-start)/700));for(const j of jobs){j.display.textContent=`${j.label} ${Math.floor(j.final*p)}`;j.display.parentNode.setAttribute('aria-label',j.display.textContent);}if(p<1)id=request(step);else finish();};
+ root.classList.add('visitor-count-reveal');id=request(step);return finish;
+}
+function installVisualMotion(doc){
+ if(motionControllers.has(doc))return;
+ const win=doc.defaultView,system=win.matchMedia('(prefers-reduced-motion: reduce)'),root=doc.documentElement;
+ let paused=false;const stops=new Set();
+ const allowed=()=>!paused&&!system.matches&&root.getAttribute('data-motion')!=='reduce'&&!doc.hidden;
+ const control=node(doc,'button',{type:'button',class:'visitor-motion-control','aria-pressed':'false'},'Pause visual motion');
+ const sync=()=>{const enabled=allowed();root.setAttribute('data-visitor-motion',enabled?'running':'paused');control.textContent=system.matches||root.getAttribute('data-motion')==='reduce'?'Visual motion: reduced':paused?'Resume visual motion':'Pause visual motion';control.disabled=system.matches||root.getAttribute('data-motion')==='reduce';control.setAttribute('aria-pressed',String(paused));if(!enabled){for(const stop of stops)stop();stops.clear();}};
+ control.addEventListener('click',()=>{paused=!paused;sync();});doc.body.appendChild(control);system.addEventListener('change',sync);doc.addEventListener('visibilitychange',sync);
+ new MutationObserver(sync).observe(root,{attributes:true,attributeFilter:['data-motion']});sync();
+ const counts=doc.querySelector('.ops-outcome-visual');
+ if(counts)new MutationObserver(()=>{for(const stop of stops)stop();stops.clear();const r=counts.querySelector('.request-outcomes');if(r)stops.add(animateOutcomeCounts(r,{request:fn=>win.requestAnimationFrame(fn),cancel:id=>win.cancelAnimationFrame(id),allowed,now:()=>win.performance.now()}));}).observe(counts,{childList:true});
+ const ambient=[...doc.querySelectorAll('.visitor-family,.visitor-ambient-art,[data-concept="fleet"] .primer-track')];
+ if(typeof win.IntersectionObserver==='function'){const observer=new win.IntersectionObserver(entries=>{for(const e of entries)e.target.setAttribute('data-motion-visible',String(e.isIntersecting));});for(const n of ambient)observer.observe(n);}
+ motionControllers.set(doc,{control});
 }

@@ -35,6 +35,9 @@ test('a pending run preserves its submitted settings and cannot resume after nav
     assert.equal(lab.getState().config.fleet_size,12);
     assert.equal(lab.getState().stale,true);
     assert.equal(lab.getState().playing,false);
+    const visual=lab.element.querySelector('.ops-outcome-visual .request-outcomes');
+    assert.equal(visual.getAttribute('data-stale'),'true');
+    assert.match(visual.textContent,/previous settings/i);
     lab.destroy();
   }finally{restore();}
 });

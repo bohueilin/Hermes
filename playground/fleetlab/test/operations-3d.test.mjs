@@ -48,3 +48,18 @@ test('label placement uses rendered dimensions and keeps anchor leaders attached
   check();view.element.querySelectorAll('button').find(b=>b.textContent==='Rotate ↷').click();check();view.destroy();
  }finally{restore();}
 });
+
+test('legend selection emphasizes matching recorded cars, keyboard focus previews, click persists and toggles off',()=>{
+ const restore=installFakeDom();try{
+  const view=createOperations3D({places,createRenderer:()=>null});
+  const frame={vehicles:[{id:'one',node:'a',state:'available'},{id:'two',node:'b',state:'charging'}]};
+  const frozen=JSON.stringify(frame);view.render(run,frame);
+  const key=view.element.querySelector('[data-legend-state="charging"]');assert.ok(key);
+  key.dispatchEvent(new Event('focus'));
+  assert.equal(view.element.querySelector('[data-car-id="one"]').getAttribute('opacity'),'0.22');
+  assert.equal(view.element.querySelector('[data-car-id="two"]').getAttribute('opacity'),'1');
+  key.click();key.dispatchEvent(new Event('blur'));assert.equal(key.getAttribute('aria-pressed'),'true');
+  key.click();key.dispatchEvent(new Event('blur'));assert.equal(view.element.querySelector('[data-car-id="one"]').getAttribute('opacity'),'1');
+  assert.equal(JSON.stringify(frame),frozen);view.destroy();
+ }finally{restore();}
+});

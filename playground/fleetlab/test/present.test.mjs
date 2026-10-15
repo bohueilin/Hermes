@@ -1034,3 +1034,13 @@ describe("copy and classes", () => {
     assert.doesNotMatch(SOURCE, /textContent\s*=\s*"/);
   });
 });
+
+test('story progress stays disabled before preparation and navigates the same eleven beats without playing',async()=>{
+ const m=mount();try{
+  m.present.open();const dots=m.rail.querySelectorAll('[data-story-step]');assert.equal(dots.length,BEAT_ORDER.length);assert.ok(dots.every(n=>n.disabled));
+  await m.present.prepare();dots[5].click();assert.equal(m.position(),5);assert.equal(m.store.getState().playing,false);assert.equal(dots[5].getAttribute('aria-current'),'step');
+  assert.match(m.find('present-chapter').textContent,/2.*4/);
+  dots.at(-1).click();assert.equal(m.find('present-finale').hidden,false);assert.match(m.find('present-finale').textContent,/What you saw/);
+  assert.equal(m.find('present-finale').querySelector('a').getAttribute('href'),'#/catalog');
+ }finally{m.cleanup();}
+});

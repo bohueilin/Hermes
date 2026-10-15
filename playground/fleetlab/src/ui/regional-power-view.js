@@ -1,8 +1,8 @@
+import {flowButton as button,el} from './dom.js';
 import {SURFACE_FRAMES,frameView,glossaryView} from './teaching-frames.js';
 import {teachingResult,pairedProjection} from './teaching-projection.js';
 import {displayText,setBusy} from './display-text.js';
 /** Opt-in regional teaching view. Existing engine and paired instrument own every numerical result. */
-import {el} from './dom.js';
 import {AUSTIN_REGION} from '../model/region-package.js';
 import {POWER_CONDITIONS,regionalPowerDemoConfig,regionalPowerProfile} from '../model/regional-power.js';
 import {simulateBayAreaOperations} from '../model/bay-operations.js';
@@ -12,7 +12,6 @@ import {number,nonzero} from './format.js';
 import {modelHeader} from './model-identity.js';
 
 const value=v=>v===null||v===undefined?'Not available':typeof v==='number'?number(v,2):typeof v==='object'?JSON.stringify(v):displayText(v);
-const button=(label,click)=>el('button',{type:'button',class:'studio-button',on:{click}},label);
 const table=(caption,head,rows)=>el('div',{class:'ops-table-wrap',tabindex:0,'aria-label':caption},el('table',{},[
   el('caption',{},caption),el('thead',{},el('tr',{},head.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map(v=>el('td',{},value(v))))))]));
 const exact=(label,record)=>el('details',{},[el('summary',{},'Exact values'),el('p',{},label),el('pre',{},JSON.stringify(record,null,2))]);
