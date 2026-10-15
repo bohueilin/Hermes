@@ -1,5 +1,7 @@
+import {networkChrome} from './network-chrome.js';
 import {createDispatchSession} from '../runtime/dispatch-session.js';
 export function startDispatch({createWorker}){
+ networkChrome(document.body);
  const doc=document,by=id=>doc.getElementById(id),motion=window.matchMedia('(prefers-reduced-motion: reduce)');
  const el=(tag,attrs={},children=[])=>{const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);for(const c of [].concat(children))n.appendChild(c&&typeof c==='object'?c:doc.createTextNode(String(c)));return n;};
  const svg=(tag,attrs,text='')=>{const n=doc.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);n.textContent=text;return n;};
@@ -11,7 +13,7 @@ export function startDispatch({createWorker}){
  const stop=()=>{if(timer!==null)clearInterval(timer);timer=null;by('play').textContent=frame===40?'Replay snapshots':'Play snapshots';};
  const pendingView=()=>by('pending').replaceChildren(...pending.map((p,i)=>{const b=el('button',{'data-remove':i,'aria-label':`Remove pair ${i+1}`},'Remove');b.disabled=!!state?.busy;b.addEventListener('click',()=>{if(state.busy)return;pending.splice(i,1);pendingView();});return el('li',{},[`${p[0]} → ${p[1]} `,b]);}));
  const render=()=>{
-  if(!state)return;const ready=!!state.study,manual=chapter===5;
+  if(!state)return;by('lesson').setAttribute('data-chapter',chapter);const ready=!!state.study,manual=chapter===5;
   by('status').textContent=state.busy?'Calculating and checking this comparison. Previous results stay visible until it is ready.':ready?'Both policies checked independently. Synthetic results.':'Comparison unavailable.';
   by('error').hidden=!state.error;by('error').textContent=state.error||'';by('retry').hidden=!state.error;
   for(const id of ['watch','arm','view','clock','play'])by(id).disabled=!ready||state.busy;
@@ -26,7 +28,7 @@ export function startDispatch({createWorker}){
   if(state.fixture==='default'){const q=state.study[1].final.requests.find(q=>q.id==='r-002');by('takeaway').textContent+=` Closest-first misses r-002's 60s deadline; planned-together assigns ${q.vehicle} and finishes pickup at ${q.pickup}s.`;}
   const r=manual?state.manual:state.study.find(r=>r.policy===arm),s=manual?r.final:(view==='pre'?r.preDecision[frame]:r.ledger[frame])??r.final;
   by('time-label').textContent=`${s.t} s / ${r.input.horizon} s`;by('phase-label').textContent=s.phase;
-  by('balance').textContent=`${s.vehicles.length} vehicles accounted for: ${s.vehicles.filter(v=>v.mode==='idle').length} Ready / idle; ${s.vehicles.filter(v=>v.mode!=='idle').length} COD; 0 VOR.`;
+  by('balance').replaceChildren(`${s.vehicles.length} vehicles accounted for: `,...[['ready',s.vehicles.filter(v=>v.mode==='idle').length,'Ready / idle'],['cod',s.vehicles.filter(v=>v.mode!=='idle').length,'COD'],['vor',0,'VOR']].flatMap(([id,n,label])=>[`${n} `,el('a',{href:'#glossary-'+id},label),'; ']));
   const m=r.metrics;by('manual-result').textContent=`Accepted through ${r.end} s. ${m.served}/${m.admitted} pickups, ${m.completed} completed, ${m.expired} expired; ${m.emptyMeters/1000} empty km. Phase: ${r.phase}. ${state.error??''}`;
   const grid=by('grid'),nodes=[],xy=p=>p.map(n=>60+n/10);
   for(let n=0;n<=4;n++){const p=60+n*100;nodes.push(svg('line',{x1:p,y1:60,x2:p,y2:460,class:'road'}),svg('line',{x1:60,y1:p,x2:460,y2:p,class:'road'}),svg('text',{x:p,y:493,'text-anchor':'middle'},`${n} km`),svg('text',{x:32,y:p+4,'text-anchor':'middle'},n));}

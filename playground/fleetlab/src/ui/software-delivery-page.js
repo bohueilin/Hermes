@@ -1,3 +1,4 @@
+import {networkChrome} from './network-chrome.js';
 import {FLOW_TRUST} from '../model/depot-flow-contract.js';
 import {DELIVERY_MANIFEST_SCHEMA,deliveryInput,deliveryDigest} from '../model/software-delivery-contract.js';
 import {createDeliveryJob} from '../runtime/software-delivery-job.js';
@@ -77,6 +78,7 @@ export function createDeliveryPage({manifest,createWorker,runPair=null,cancelPai
    para('Loaded records checked means consistency with this declared model under a separate tested verifier. It does not establish independent authenticity, calibration, operator endorsement or real-world safety. Human comprehension and physical-device qualification are separate open checks.'),
   ]),evidence,announce]));
  element.appendChild(text('footer',{class:'delivery-footer'},[text('a',{href:'/network-flows/capacity/'},'Previous lesson: Scheduling or capacity?'),text('a',{href:'/downloads/teaching-package.json'},'Teaching source & build receipt'),text('a',{href:'mailto:bohueilin@gmail.com'},'Bo-Huei Lin · bohueilin@gmail.com')]));
+ networkChrome(element);
 
  function renderedCase(){return accepted?.id??pending;}
  function renderSummary(){

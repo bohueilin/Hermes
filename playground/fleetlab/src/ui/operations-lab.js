@@ -1,3 +1,4 @@
+import {decimalValue} from './decimal-input.js';
 import {conceptPrimer} from './concept-primer.js';
 import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView,exactView} from './teaching-frames.js';
 import {teachingResult} from './teaching-projection.js';
@@ -100,7 +101,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   const profileInputs=new Map();
   const profileFields=[['battery_kwh','modeled battery','kWh',10,200,1],['charge_limit_kw','vehicle charge limit','kW',1,350,1],['energy_kwh_per_km','driving energy','kWh/km',.05,1,.01],['boarding_minutes','boarding time','min',.1,20,.1],['cleaning_multiplier','cleaning time factor','× base',.1,5,.1],['software_multiplier','software time factor','× base',.1,5,.1],['upload_multiplier','upload time factor','× base',.1,5,.1]];
   controls.appendChild(el('details',{class:'bay-profile-editor'},[el('summary',{},'Vehicle assumptions · editable'),el('p',{},'Jaguar I-PACE and Ojai are real vehicle names. Energy, charging and service values below are editable, synthetic teaching assumptions, not validated fleet measurements. Both profiles allow up to four riders. Ojai numerical defaults are illustrative, not published vehicle specifications.'),...['ipace','ojai'].map(type=>el('section',{},[el('h3',{},VEHICLE_PROFILES[type].label),...profileFields.map(([key,label,unit,min,max,step])=>{
-    const input=el('input',{type:'number',value:config.vehicle_profiles[type][key],min,max,step,'aria-label':`${VEHICLE_PROFILES[type].label} ${label}`,on:{input:()=>input.setAttribute('aria-valuetext',input.value),change:()=>setConfig({vehicle_profiles:{...config.vehicle_profiles,[type]:{...config.vehicle_profiles[type],[key]:input.value===''?NaN:Number(input.value)}}})}});profileInputs.set(`${type}.${key}`,input);
+    const input=el('input',{type:step<1?'text':'number',inputmode:step<1?'decimal':null,value:config.vehicle_profiles[type][key],min,max,step,'aria-label':`${VEHICLE_PROFILES[type].label} ${label}`,on:{input:()=>input.setAttribute('aria-valuetext',input.value),change:()=>setConfig({vehicle_profiles:{...config.vehicle_profiles,[type]:{...config.vehicle_profiles[type],[key]:decimalValue(input.value)}}})}});profileInputs.set(`${type}.${key}`,input);
     return el('label',{class:'ops-field'},[el('span',{},label),el('span',{class:'ops-input-unit'},[input,el('small',{},unit)])]);
   })])),el('p',{},'Retail I-PACE nominal battery: 90 kWh. The modeled usable capacity here is an assumption. Both types use the same road-speed rules; profile names never add a speed advantage.')]));
   function syncVehicleControls(){
@@ -112,7 +113,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     const detail=el('details',{open:index===0},[el('summary',{},title)]);
     const grid=el('div',{class:'ops-fields'});
     for(const [key,label,unit,min,max,step] of fields){
-      const input=el('input',{type:'number',min,max,step,value:config[key],'aria-label':label,on:{input:()=>input.setAttribute('aria-valuetext',input.value),change:()=>setConfig({[key]:input.value===''?NaN:Number(input.value)})}});
+      const input=el('input',{type:step<1?'text':'number',inputmode:step<1?'decimal':null,min,max,step,value:config[key],'aria-label':label,on:{input:()=>input.setAttribute('aria-valuetext',input.value),change:()=>setConfig({[key]:decimalValue(input.value)})}});
       input.setAttribute('aria-valuetext',String(config[key]));inputs.set(key,input);grid.appendChild(el('label',{class:'ops-field'},[el('span',{},label),el('span',{class:'ops-input-unit'},[input,el('small',{},unit)])]));
     }
     detail.appendChild(grid);controls.appendChild(detail);

@@ -1,3 +1,4 @@
+import {networkChrome} from './network-chrome.js';
 import {FLOW_TRUST} from '../model/depot-flow-contract.js';
 import {ORDER_MANIFEST_SCHEMA,ORDER_POLICY_VERSION,orderCanonical,orderDigest,normalizeOrderInput} from '../model/delivery-order-contract.js';
 import {ORDER_STUDY_VERIFIER_VERSION} from '../model/delivery-order-study-verify.js';
@@ -49,7 +50,7 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
    el('div',{class:'fixed-work'},[el('span',{},'12 GB fetched once'),el('span',{},'48 GB delivered locally'),el('span',{},'Only order changes')]),
    p('A synthetic teaching model. An exact answer within this model gives no real vehicle deployment permission.','scope')]),
   el('section',{class:'decision-panel','aria-label':'Choose a delivery order'},[el('div',{class:'section-heading'},[el('div',{},[p('01 / MAKE A CHOICE','eyebrow'),el('h2',{},'Who goes first?')]),cases]),p('All requests are known at 96 s. Move a vehicle, then compare. The target is when receipt, check and activation must all finish.','explain'),editor,editStatus,
-   el('div',{class:'controls actions'},[compare,watch,cancelButton]),status,el('div',{class:'controls alternatives'},[btn('Reset pending order',()=>{pauseGuide();pending=manifest.cases[pendingCase].input.delivery.requests.map(r=>r.id);renderEditor();}),earliest,best,restore])]),
+   el('div',{class:'controls actions'},[compare,watch,cancelButton]),status,el('div',{class:'controls alternatives'},[btn('Reset pending order',()=>{pauseGuide();pending=manifest.cases[pendingCase].input.delivery.requests.map(r=>r.id);renderEditor();}),earliest,best,restore]),p('Best of 24 checks all permutations of the four vehicles: 4 × 3 × 2 × 1 = 24 orders.','fine')]),
   el('section',{class:'result-panel','aria-label':'Whole-run comparison'},[resultCase,title,cards,outcomeNote,delay]),bench,
   el('section',{class:'individual-panel'},[p('02 / LOOK PAST THE FLEET TOTAL','eyebrow'),el('h2',{},'Who waits longer?'),p('Every vehicle counts. A better fleet result can move the delay onto someone else.'),table]),
   detail('Why this order? Vehicle × service-position assignments',[p('Each vehicle gets one service position; each position gets one vehicle. Cells show missed target / late seconds. These are assignment units, not bytes. The selected cells explain the compared order.'),matrix,p('This is a tiny assignment network: source → vehicle → service position → sink, capacity one per edge. Minimize misses first, then total lateness. We enumerate every allowed assignment rather than installing a general solver.','fine')]),
@@ -61,7 +62,8 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
    el('article',{},[el('h3',{},'Fleet operations'),p('Subtract checks and activation from the ready target to find the useful receipt deadline. Urgent-first can spend an early slot on a target already lost.')]),
    el('article',{},[el('h3',{},'Depot planning'),p('Measure useful throughput, receiver caps, artifact sizes, arrivals and real task durations before applying this mechanism to a facility.')])])]),
   detail('Assumptions, exclusions and trust states',[p('One empty-cache depot, one 12 GB artifact, 125 MB/s upstream and 250 MB/s local capacity, full-rate receivers, equal-sized receipts, no idle gaps, passing 60 s checks and 30 s activation. All arrivals occur by 96 s. Observation window: 2,400 s. No failures, retries, changing rates, partial files, uncertain arrivals, charging, driving or real software installation.'),p('Best means the lexicographic minimum of missed vehicles, then total late milliseconds, among these serial orders. Maximum individual lateness is reported separately. No weighted safety or business score is implied.'),p(`Scope: ${FLOW_TRUST.scope} · Evidence: NOT_EVIDENCE · Authenticity: NOT_AUTHENTICATED · Authorization: NOT_EVALUATED · Decision authority: NONE · Deployment permission: NONE.`)]),
-  el('footer',{},[el('a',{href:'/network-flows/software-delivery/'},'← Back to software delivery'),p('Independent educational software by Bo-Huei Lin. Not affiliated with or endorsed by Waymo or Zoox.'),el('a',{href:'/downloads/teaching-package.json'},'Teaching source & build receipt'),el('a',{href:'mailto:bohueilin@gmail.com'},'Contact the creator')])]),announcement);
+  el('footer',{},[el('a',{href:'/network-flows/software-delivery/'},'← Back to software delivery'),el('a',{href:'/downloads/teaching-package.json'},'Teaching source & build receipt'),el('a',{href:'mailto:bohueilin@gmail.com'},'Contact the creator')])]),announcement);
+ networkChrome(element);
  function say(){if(!accepted)return;announcement.textContent=`${sec(player.state().time_ms)}. ${caption.textContent}`;}
  function pauseGuide(){pendingGuideStart=false;guideBound=false;player.pause();}
  function renderEditor(){
@@ -73,7 +75,7 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
   cases.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-case')===pendingCase)));
   cancelButton.hidden=!loading;compare.disabled=loading;
  }
- function metricCard(label,m){return el('article',{},[p(label,'eyebrow'),el('strong',{class:'big-count'},`${m.on_time_count}/${m.request_count}`),p('ready by target'),el('dl',{},[['Total late time',sec(m.late_ms_total)],['Worst late time',sec(m.max_late_ms)],['All ready',sec(m.all_ready_ms)]].flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]))]);}
+ function metricCard(label,m){return el('article',{},[p(label,'eyebrow'),!accepted&&label==='Your order'?p('Default First come summary. Choose Compare my order to check your pending edits.','fine'):null,el('strong',{class:'big-count'},`${m.on_time_count}/${m.request_count}`),p('ready by target'),el('dl',{},[['Total late time',sec(m.late_ms_total)],['Worst late time',sec(m.max_late_ms)],['All ready',sec(m.all_ready_ms)]].flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]))]);}
  function renderOutcomes(){
   const entry=accepted?.entry??manifest.cases.default,base=accepted?.projection.outcome(accepted.fcfs),comp=accepted?.projection.outcome(viewed),a=base?.metrics??entry.fcfs_metrics,b=comp?.metrics??entry.fcfs_metrics;
   resultCase.textContent=`${accepted?names[accepted.id]:names.default} · ${accepted?'checked complete study':'published summary'}`;

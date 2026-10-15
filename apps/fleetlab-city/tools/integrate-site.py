@@ -37,7 +37,7 @@ FLOW_ADDED = frozenset((
     "src/model/depot-cohort-contract.js", "src/model/depot-cohort.js",
     "src/model/depot-cohort-verify.js", "src/ui/depot-flow-view.js",
     "src/ui/depot-flow-reading.js", "src/ui/depot-flow-player.js",
-    "src/ui/concept-primer.js",
+    "src/ui/concept-primer.js", "src/ui/network-chrome.js", "src/ui/decimal-input.js",
 ))
 CAPACITY_ADDED = frozenset((
     "network-flows/capacity/index.html", "network-flows/capacity/boot.js",

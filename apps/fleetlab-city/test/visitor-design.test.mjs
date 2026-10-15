@@ -70,3 +70,12 @@ test('Home has one purpose heading, a first lesson and the existing film retaine
   assert.equal(home.querySelector('video'),video);assert.equal(video.getAttribute('src'),'original-film.mp4');
  }finally{restore();}
 });
+test('dispatch opportunity-cost art has the supplied alt, concept caption and no duplicate insertion',()=>{
+ const restore=installFakeDom();try{
+  const bench=document.createElement('div'),copy=document.createElement('p');copy.id='chapter-copy';bench.appendChild(copy);document.body.appendChild(bench);
+  decorateVisitors(document);decorateVisitors(document);
+  const art=bench.querySelector('.dispatch-concept');assert.ok(art);assert.equal(bench.querySelectorAll('.dispatch-concept').length,1);
+  assert.equal(art.querySelector('img').getAttribute('alt'),'Dispatching the car now strands the next rider.');
+  assert.equal(art.querySelector('figcaption').textContent,'Concept illustration · not simulation output');
+ }finally{restore();}
+});

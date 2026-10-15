@@ -1,3 +1,4 @@
+import {decimalValue} from './decimal-input.js';
 import {teachingResult,pairedProjection} from './teaching-projection.js';
 import {exactView,exactDisclosure} from './teaching-frames.js';
 import {displayText,setBusy} from './display-text.js';
@@ -27,8 +28,8 @@ export function createAdvancedControls(getConfig,setConfig){
    if(['version','airport_id','access_rule'].includes(name))continue;
    const caption=name==='policy'?`${key==='resources'?'Resource':key==='airport'?'Airport':'Charging'} policy`:label(name);
    const unit=name.endsWith('_min')?'minutes':name==='ride_conversion'?'fraction (0 to 1)':name.includes('ports')?'ports':name==='staging_capacity'?'vehicles':name==='passengers'?'people':name==='forecast_count'?'requests':'';
-   const change=()=>setConfig({[key]:{...getConfig()[key],[name]:name==='policy'?input.value:input.value===''?NaN:Number(input.value)}});
-   const input=name==='policy'?el('select',{'aria-label':caption,on:{change}},policies.map(p=>el('option',{value:p},p==='overcommit'?'Counterexample: overcommit power':label(p)))):el('input',{type:'number',min:0,max:name==='ride_conversion'?1:name==='staging_capacity'?120:name.includes('ports')?12:name==='passengers'||name==='forecast_count'?1000:1440,step:name==='ride_conversion'?.01:1,value,'aria-label':`${title}: ${caption}`,on:{change}});
+   const change=()=>setConfig({[key]:{...getConfig()[key],[name]:name==='policy'?input.value:decimalValue(input.value)}});
+   const input=name==='policy'?el('select',{'aria-label':caption,on:{change}},policies.map(p=>el('option',{value:p},p==='overcommit'?'Counterexample: overcommit power':label(p)))):el('input',{type:name==='ride_conversion'?'text':'number',inputmode:name==='ride_conversion'?'decimal':null,min:0,max:name==='ride_conversion'?1:name==='staging_capacity'?120:name.includes('ports')?12:name==='passengers'||name==='forecast_count'?1000:1440,step:name==='ride_conversion'?.01:1,value,'aria-label':`${title}: ${caption}`,on:{change}});
    entries.push([name,input]);fields.appendChild(el('label',{class:'ops-field'},[el('span',{},caption),el('span',{class:'ops-input-unit'},[input,el('small',{},unit)])]));
   }
   fields.appendChild(el('p',{},key==='airport'?'SFO anchor; fictional access rule synthetic-access-2026-09-22. The wave estimate is separately published synthetic input, no external airport feed.':key==='charging'?'Power is battery-side kW with unit efficiency. Queue, occupied time and delivered energy are separate. Counterexample proposals are checked before execution.':'Installed, commissioned, observed and reserved capacity are separate. Missing observations stay unknown; stale observations remain inferred.'));
@@ -84,11 +85,11 @@ export const DEFAULT_EVALUATION_SEEDS=Object.freeze(Array.from({length:12},(_,i)
 export function createAdvancedExperimentControls(compare,invalidate){
  const input=(name,value,type='text')=>el('input',{type,value,'aria-label':name,on:{change:invalidate}});
  const treatment=el('select',{'aria-label':'Paired treatment',on:{change:invalidate}},['charging_redistribution','charging_deadlines','resource_freshness','airport_forecast'].map(t=>el('option',{value:t},label(t))));
- const seeds=input('Evaluation seeds',DEFAULT_EVALUATION_SEEDS.join(',')),tuning=input('Tuning seeds','42,43,44'),margin=input('Smallest meaningful difference',.02,'number'),resamples=input('Bootstrap resamples',2000,'number'),nullTreatment=input('Null treatment control',false,'checkbox');
+ const seeds=input('Evaluation seeds',DEFAULT_EVALUATION_SEEDS.join(',')),tuning=input('Tuning seeds','42,43,44'),margin=input('Smallest meaningful difference',.02),resamples=input('Bootstrap resamples',2000,'number'),nullTreatment=input('Null treatment control',false,'checkbox');
  margin.setAttribute('aria-valuetext',margin.value);margin.addEventListener('input',()=>margin.setAttribute('aria-valuetext',margin.value));
- margin.setAttribute('min','0');margin.setAttribute('max','1');margin.setAttribute('step','0.01');resamples.setAttribute('min','1000');resamples.setAttribute('max','10000');resamples.setAttribute('step','1');
+ margin.setAttribute('inputmode','decimal');margin.setAttribute('min','0');margin.setAttribute('max','1');margin.setAttribute('step','0.01');resamples.setAttribute('min','1000');resamples.setAttribute('max','10000');resamples.setAttribute('step','1');
  const parse=s=>s.trim()===''?[]:s.split(',').map(x=>x.trim()===''?NaN:Number(x));
- const options=()=>({treatment:treatment.value,seeds:parse(seeds.value),tuning_seeds:parse(tuning.value),margin:Number(margin.value),resamples:Number(resamples.value),null_treatment:nullTreatment.checked});
+ const options=()=>({treatment:treatment.value,seeds:parse(seeds.value),tuning_seeds:parse(tuning.value),margin:decimalValue(margin.value),resamples:Number(resamples.value),null_treatment:nullTreatment.checked});
  const button=el('button',{type:'button',class:'studio-button studio-button-primary',on:{click:()=>compare(options())}},'Run paired policy experiment');
  const element=el('div',{class:'ops-experiment-settings'},[...[[treatment,'Treatment (requires matching extension)'],[seeds,'Evaluation seeds (comma separated, 1 to 40)'],[tuning,'Separate tuning seeds'],[margin,'Smallest meaningful difference (fraction; 0.02 = 2 percentage points)'],[resamples,'Bootstrap resamples'],[nullTreatment,'Null control: baseline policy in both arms']].map(([control,caption])=>el('label',{class:'ops-field'},[caption,control])),button]);
  function setTreatment(name){if(!['charging_redistribution','charging_deadlines','resource_freshness','airport_forecast'].includes(name))throw new RangeError('Unsupported treatment.');treatment.value=name;}

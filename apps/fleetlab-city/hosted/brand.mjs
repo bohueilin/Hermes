@@ -35,7 +35,7 @@ export function decorateDesign(doc=document){
  const feature=doc.querySelector('.network-flows-feature');
  if(feature&&!doc.getElementById('design-network')){
   feature.insertBefore(el('figure',{id:'design-network',class:'design-network'},[
-   el('img',{src:media+'shared-delivery.jpg',alt:'Same work. Different order. A shared source sends data through one link to four concept vehicles. Make the trade-off visible.',width:'1672',height:'941',loading:'lazy',decoding:'async'}),
+   el('img',{src:media+'shared-delivery.webp',alt:'Two concept vehicles connected to one shared data source.',width:'2048',height:'1152',loading:'lazy',decoding:'async'}),
    el('figcaption',{},'NETWORK FLOWS · Concept visual. Shared work does not guarantee a better outcome for every vehicle.'),
   ]),feature.firstChild);
  }
@@ -43,7 +43,7 @@ export function decorateDesign(doc=document){
  if(hero&&!doc.getElementById('design-network-lesson')){
   const art=el('details',{id:'design-network-lesson',class:'design-network-lesson'},[
    el('summary',{},'Same work. Different order. · View the concept artwork'),
-   el('figure',{},[el('img',{src:media+'shared-delivery.jpg',alt:'Concept visual of four vehicles sharing one source and delivery link.',width:'1672',height:'941',loading:'lazy',decoding:'async'}),el('figcaption',{},'Illustration only. Use the checked model below to compare outcomes and individual delays.')]),
+   el('figure',{},[el('img',{src:media+'shared-delivery.webp',alt:'Two concept vehicles connected to one shared data source.',width:'2048',height:'1152',loading:'lazy',decoding:'async'}),el('figcaption',{},'Illustration only. Use the checked model below to compare outcomes and individual delays.')]),
   ]);hero.appendChild(art);
  }
  decorateVisitors(doc);

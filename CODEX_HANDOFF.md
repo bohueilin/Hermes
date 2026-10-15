@@ -1,3 +1,7 @@
+# Current update — FleetLab design Round 4, October 14, 2026
+
+See `docs/FLEETLAB_DESIGN_ROUND4_HANDOFF_2026-10-14.md` for the five P1 changes, owner-approved D05 addition, validation, audit decisions and publication status. Models and scientific fixtures remain unchanged; P2 otherwise deferred.
+
 # FleetLab targeted design fixes, round 3 — October 14, 2026
 
 The round-three presentation fixes are published from source `c92dcd1f34f96342d9f0b8c424ad4f19a6c56a0a`. Production `94c48b5b-0500-4805-a984-e551d2fa0bcb`; preview `627db2a4-3cbf-4b7d-91d1-a12f2463ee61`. Preview and final stable production each match 10,133/10,133 served files and 68/68 header checks. Immutable production smoke passes 97/97; prior production passes 94/94. See [section-by-section handoff](docs/FLEETLAB_DESIGN_ROUND3_HANDOFF_2026-10-14.md) and [publication receipt](docs/releases/fleetlab-current.json).

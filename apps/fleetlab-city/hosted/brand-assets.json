@@ -9,11 +9,6 @@
     "sha256": "494f4499e7a9b2a3f2dd441d3f7f34418c33c41e124b46c73111a7e9de2ac110",
     "source": "apps/fleetlab-city/brand-media/readiness.jpg"
   },
-  "site-media/shared-delivery.jpg": {
-    "bytes": 318541,
-    "sha256": "aaf24773d0e0260e3c1da1533ba053be4f0981be484d61d6c678f601a80bc968",
-    "source": "apps/fleetlab-city/brand-media/shared-delivery.jpg"
-  },
   "site-media/fleetlab-logo-64.png": {
     "bytes": 3368,
     "sha256": "d72f2d2b1fa81e07b63cbbf0048e945d55ccbe73ff7ee117684880317fe4747f",
@@ -33,5 +28,10 @@
     "bytes": 21051,
     "sha256": "654edab6ec1fcd21b3c0faace8a211b4dc1dca14de9503cb2b96802e11e7c3df",
     "source": "apps/fleetlab-city/brand-media/apple-touch-icon.png"
+  },
+  "site-media/shared-delivery.webp": {
+    "bytes": 145670,
+    "sha256": "9139c4f68e6ef71557277fe40ea977176dfbb8fe26ed9d6331c6c7afcbd725ba",
+    "source": "apps/fleetlab-city/brand-media/shared-delivery.webp"
   }
 }

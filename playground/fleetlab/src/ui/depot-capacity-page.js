@@ -1,3 +1,4 @@
+import {networkChrome} from './network-chrome.js';
 // NF-03: reconstruct fixed cells, independently check them, then present accepted records.
 import {el} from './dom.js';
 import {createCapacityBench,createCapacityPreview} from './depot-capacity-bench.js';
@@ -200,6 +201,7 @@ export function createCapacityPage({manifest,autoGuide=true,reducedMotion=()=>fa
       el('ul',{},['Arrival and work-size distributions: when vehicles arrive, and how much each must upload and charge.','Target definitions: which ready time counts as on time for each departure.','Useful link rates: what each bay link and the site uplink carry after overhead and retries.','Vehicle power acceptance: how fast each vehicle takes energy across its charge.','Connection behavior: the delay between parking and being plugged in and linked.','Resource availability: how often ports, links and the site feed are out of service.'].map(t=>el('li',{},t)))]),
   ]);
   const element=el('div',{class:'fleet-studio capacity-page','data-page':'capacity'},[header(),main]);
+  networkChrome(element);
   const live=createLiveRegion(element);
   const announce=text=>{if(live.node.textContent!==text)live.announce(text);};
 

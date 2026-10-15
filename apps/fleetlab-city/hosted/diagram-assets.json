@@ -13,5 +13,10 @@
     "bytes": 157628,
     "sha256": "b0746e18524fed0f19aba53006d447a3c3a9a7f42d9676f0d566da18da2e1a5e",
     "source": "apps/fleetlab-city/diagram-media/D-03-staffing-queue.webp"
+  },
+  "diagrams/D-05-opportunity-cost.webp": {
+    "bytes": 96562,
+    "sha256": "353762295346a650a868f43580b379cdfd825676eec57c1b7fc4d4eec2444f8f",
+    "source": "apps/fleetlab-city/diagram-media/D-05-opportunity-cost.webp"
   }
 }
