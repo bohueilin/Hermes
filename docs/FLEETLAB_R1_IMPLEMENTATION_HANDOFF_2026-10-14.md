@@ -78,7 +78,7 @@ Commands actually executed in this workspace (logs under `build/fleetlab-city/va
 | Focused R1 model/verifier/session/UI/package tests |34 passed after review fixes|
 | Concept-loop player tests |8 passed, including actual-error explicit retry|
 | City Node suite |93 passed; additional discovery test suite6 passed|
-| City Python unittest discovery |342 passed|
+| City Python unittest discovery |343 passed (includes40KiB Python boundary regression)|
 | Hermes pytest with `PYTHONPATH=src FLEET_PLAYGROUND_BASE=bca4ccd` |1,662 passed,55 skipped|
 | Ruff |passed|
 | Hermes Doctor |17 PASS,1 WARN (working tree edits),1 optional NOT_AVAILABLE|
@@ -96,3 +96,5 @@ conda run -n hermes-dev python -m ruff check .
 PYTHONPATH=src conda run -n hermes-dev python -m hermes doctor
 git diff --cached --check
 ```
+
+The first immutable integration stopped before upload because the Python integrator retained the old32KiB receipt cap. Its mirrored cap is now40KiB; a regression test verifies40,960bytes reach source verification and40,961bytes are rejected. No other limit changed.

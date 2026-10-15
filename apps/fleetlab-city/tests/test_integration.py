@@ -431,9 +431,22 @@ class IntegrationTest(unittest.TestCase):
         package = self.base / "package"
         (package / "downloads").mkdir(parents=True)
         (package / "network-flows/sources").mkdir(parents=True)
-        (package / "downloads/teaching-package.json").write_bytes(b" " * 32769)
+        (package / "downloads/teaching-package.json").write_bytes(b" " * 40961)
         (package / "network-flows/sources" / ("a" * 64 + ".json.gz")).write_bytes(b"tiny")
         with self.assertRaisesRegex(ValueError, "budget exceeded"):
+            integration.check_teaching_package(package, self.legacy, self.offline, "a" * 40)
+
+    def test_approved_40k_receipt_reaches_source_verification(self):
+        package = self.base / "package"
+        (package / "downloads").mkdir(parents=True)
+        (package / "network-flows/sources").mkdir(parents=True)
+        (package / "downloads/teaching-package.json").write_bytes(b" " * 40960)
+        (package / "network-flows/sources" / ("a" * 64 + ".json.gz")).write_bytes(b"tiny")
+        rejected = subprocess.CompletedProcess([], 1, "", "source-verifier-reached")
+        with (
+            patch.object(integration.subprocess, "run", return_value=rejected),
+            self.assertRaisesRegex(ValueError, "source-verifier-reached"),
+        ):
             integration.check_teaching_package(package, self.legacy, self.offline, "a" * 40)
 
     def test_source_offer_tamper_is_rejected_without_partial_output(self):

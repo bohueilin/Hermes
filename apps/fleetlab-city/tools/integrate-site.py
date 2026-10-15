@@ -169,7 +169,7 @@ def check_teaching_package(package, client, offline, source_commit):
         raise ValueError("teaching package has missing or unexpected files")
     if files[archives[0]]["bytes"] > 4 * 1024**2 or files[
         "downloads/teaching-package.json"
-    ]["bytes"] > 32768:
+    ]["bytes"] > 40960:
         raise ValueError("teaching package file budget exceeded")
     command = [
         "node", str(PACKAGE_TOOL), "--check", str(package), "--site", str(client),
