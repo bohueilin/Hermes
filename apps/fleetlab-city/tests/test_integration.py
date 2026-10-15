@@ -512,7 +512,8 @@ class IntegrationTest(unittest.TestCase):
 class DesignRound3InventoryTests(unittest.TestCase):
     def test_reviewed_copy_modules_require_flow_update_and_other_modules_stay_blocked(self):
         paths = ["src/ui/labels.js", "src/ui/advanced-operations-view.js",
-                 "src/ui/experiment.js", "src/ui/app.js"]
+                 "src/ui/experiment.js", "src/ui/app.js", "src/ui/analytics.js",
+                 "src/ui/car-glyph.js", "src/ui/launch-view.js", "src/ui/street-scene.js"]
         before = {path: {"sha256": "old"} for path in paths}
         after = {path: {"sha256": "new"} for path in paths}
         self.assertEqual(integration.check_preservation(before, after, True, True), sorted(paths))

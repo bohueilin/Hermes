@@ -28,7 +28,7 @@ One independent final read-only reviewer found two material issues: a pending ru
 
 Full teaching suite: 2,416 passed, 8 skipped, 1 TODO, 0 failures (2,425 total). City Python: 345 tests passed using the established city virtual environment and unittest. Hermes: 1,661 passed, 56 skipped. Hosted Node: 99 passed. Ruff passes. Doctor: 17 PASS, one expected dirty-checkout WARN, one optional display NOT_AVAILABLE. Phone checks use a 390×844 browser viewport, not physical Pixel qualification. The existing SF qualification remains HOLD.
 
-Negative checks are preserved in the validation folder: initial missing selectors/fixtures, an initial NF03 closure budget rejection, a source-capture test run overlapping an edit, a misplaced regression selector, city pytest attempts in environments lacking pytest/pyproj, and two Python style violations. Fixed causes are distinguished from environment/setup failures; no test expectation was relaxed to accept unbound source or over-budget output.
+Negative checks are preserved in the validation folder: initial missing selectors/fixtures, an initial NF03 closure budget rejection, a source-capture test run overlapping an edit, a misplaced regression selector, city pytest attempts in environments lacking pytest/pyproj, two Python style violations, a private local path caught by the commit guard (removed from the public plan), and the integration builder rejecting four reviewed presentation files missing from its explicit allowlist. The allowlist was updated for those files with preservation tests; unrelated model files remain blocked. Fixed causes are distinguished from environment/setup failures; no test expectation was relaxed to accept unbound source or over-budget output.
 
 ## Source trim and limits
 

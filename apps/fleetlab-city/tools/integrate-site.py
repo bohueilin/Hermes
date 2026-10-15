@@ -32,6 +32,8 @@ FLOW_CHANGED = frozenset((
     "src/ui/hero-film.js", "src/ui/labels.js", "src/ui/advanced-operations-view.js",
     "src/ui/experiment.js", "src/ui/app.js", "src/ui/operations-3d.js",
     "src/ui/operations-map.js", "src/ui/regional-power-view.js",
+    "src/ui/analytics.js", "src/ui/car-glyph.js", "src/ui/launch-view.js",
+    "src/ui/street-scene.js",
 ))
 FLOW_ADDED = frozenset((
     "src/model/depot-flow-contract.js", "src/model/depot-flow.js",
