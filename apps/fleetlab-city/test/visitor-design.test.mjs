@@ -119,3 +119,33 @@ test('approved hero treatment adds concept artwork without numeric overlays or r
   assert.equal(hero.querySelectorAll('button').length,1);assert.equal(runs,0);assert.doesNotMatch(hero.textContent,/48.hours|V12|65 min|countdown/);
  }finally{restore();}
 });
+
+test('public reporting is sourced, labeled and separate from model results without starting a run',()=>{
+ const restore=installFakeDom();try{
+  const hero=document.createElement('section');hero.className='r1-hero';document.body.appendChild(hero);
+  const art=document.createElement('figure');hero.appendChild(art);
+  const results=document.createElement('section');results.id='results';document.body.appendChild(results);
+  let runs=0;const run=document.createElement('button');run.addEventListener('click',()=>runs++);document.body.appendChild(run);
+  decorateVisitors(document);decorateVisitors(document);
+  const note=hero.querySelector('.visitor-field');assert.ok(note);
+  assert.equal(hero.querySelectorAll('.visitor-field').length,1);
+  assert.match(note.textContent,/Public reporting · not FleetLab simulation evidence/);
+  const citation=note.querySelector('a');assert.equal(new URL(citation.getAttribute('href')).protocol,'https:');assert.match(citation.textContent,/↗$/);
+  assert.ok(hero.children.indexOf(note)>hero.children.indexOf(art));assert.equal(results.textContent,'');assert.equal(runs,0);
+ }finally{restore();}
+});
+
+test('fleet-day field notes follow lesson replacement and disappear for unsupported or generic frames',()=>{
+ const restore=installFakeDom(),previous=globalThis.MutationObserver,callbacks=new Map();
+ globalThis.MutationObserver=class{constructor(fn){this.fn=fn;}observe(target){callbacks.set(target,this.fn);}};
+ try{
+  const intro=document.createElement('div');document.body.appendChild(intro);
+  const teaching=document.createElement('div');teaching.className='ops-teaching';intro.appendChild(teaching);
+  const select=id=>{const frame=document.createElement('section');frame.className='teaching-frame';frame.setAttribute('data-frame',id);teaching.replaceChildren(frame);callbacks.get(teaching)?.();};
+  select('depot-count');decorateVisitors(document);decorateVisitors(document);
+  assert.equal(intro.querySelectorAll('.visitor-field').length,1);assert.match(intro.querySelector('.visitor-field').textContent,/Lyft/);
+  select('staffing-readiness');assert.equal(intro.querySelectorAll('.visitor-field').length,1);assert.match(intro.querySelector('.visitor-field').textContent,/Waymo/);assert.doesNotMatch(intro.querySelector('.visitor-field').textContent,/Lyft/);
+  for(const id of ['charging','region-launch','capacity','unavailable']){select(id);assert.equal(intro.querySelectorAll('.visitor-field').length,0);}
+  select('upload');assert.match(intro.querySelector('.visitor-field').textContent,/NTT/);assert.equal(teaching.querySelector('.visitor-field'),null);
+ }finally{globalThis.MutationObserver=previous;restore();}
+});

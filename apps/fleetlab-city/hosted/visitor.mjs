@@ -7,6 +7,29 @@ function node(doc,tag,attrs={},children=[]){
  for(const child of [children].flat())if(child!=null)n.appendChild(typeof child==='string'?doc.createTextNode(child):child);
  return n;
 }
+// Editorial context only; these records never enter model inputs, results or verifiers.
+const FIELD_NOTES={
+ rebalancing:['An MIT study of Waymo’s California filings found that 43–45% of miles were driven without passengers from mid-2025 through December 2025. This includes travel to pickups as well as repositioning.','MIT researcher · Findings, May 2026','https://doi.org/10.32866/001c.161870'],
+ dispatch:['In three weeks of April 2026 checks in Austin, Reuters found Tesla Robotaxi wait times above 15 minutes about half the time and no cars available in 27% of checks.','Reuters · May 2026 (syndicated)','https://www.investing.com/news/stock-market-news/teslas-robotaxi-rollout-features-texassized-wait-times-4679470'],
+ 'depot-count':['Lyft announced an 80,000-square-foot Nashville depot for servicing, charging and maintaining autonomous vehicles.','Lyft · October 2026','https://www.lyft.com/blog/posts/flexdrive-nashville-av-depot'],
+ 'staffing-readiness':['In February 2026, Waymo reported about 70 remote-assistance agents on duty worldwide for a fleet of about 3,000 vehicles. Remote assistance is a different job from the depot cleaning work modeled here.','Waymo · February 2026','https://waymo.com/blog/shorts/advice-not-control-the-role-of-remote-assistance/'],
+ upload:['NTT and NTT DOCOMO tested transmitting vehicle-camera video to a remote monitoring room in Japan. That live communication is different from the depot transfers modeled here.','NTT Technical Review · February 2025','https://www.ntt-review.jp/archive/ntttechnical.php?contents=ntr202502ra1.html'],
+ 'airport-preparation':['Harry Reid International Airport announced Zoox robotaxi service in September 2026.','Harry Reid International Airport · September 2026','https://www.harryreidairport.com/newsroom/news-articles/las-has-a-new-way-to-ride-with-zoox'],
+ cleaning:['Cruise said its 2023 contractor cuts included people who cleaned, charged and maintained its vehicles.','CBS News · November 2023','https://www.cbsnews.com/sanfrancisco/news/cruise-contract-workers-laid-off-after-robotaxi-service-halted/'],
+};
+const fieldObservers=new WeakSet();
+function decorateFieldNotes(doc){
+ const make=key=>{const [copy,source,href]=FIELD_NOTES[key];return node(doc,'aside',{class:'visitor-field','aria-label':'From the field · public reporting'},[
+  node(doc,'h2',{},'From the field'),node(doc,'p',{class:'visitor-field-label'},'Public reporting · not FleetLab simulation evidence'),node(doc,'p',{},copy),node(doc,'a',{href},source+' ↗'),
+ ]);};
+ for(const [selector,key] of [['.r1-hero','rebalancing'],['#main > .hero','dispatch'],['.delivery-hero','upload']]){const hero=doc.querySelector(selector);if(hero&&!hero.querySelector('.visitor-field'))hero.appendChild(make(key));}
+ const teaching=doc.querySelector('.ops-teaching');
+ if(teaching&&!fieldObservers.has(teaching)){
+  let note=null,key=null;
+  const sync=()=>{const next=teaching.querySelector('.teaching-frame')?.getAttribute('data-frame');if(next===key)return;key=next;note?.remove();note=FIELD_NOTES[key]?make(key):null;if(note)teaching.parentNode.insertBefore(note,teaching.nextSibling);};
+  sync();new MutationObserver(sync).observe(teaching,{childList:true});fieldObservers.add(teaching);
+ }
+}
 export function decorateVisitors(doc=document){
  const el=(...args)=>node(doc,...args);
  const diagram=(file,alt)=>el('figure',{class:'visitor-diagram'},[el('img',{src:'/diagrams/'+file,alt,width:'2048',height:'1152',decoding:'async'}),el('figcaption',{},'Concept illustration · not simulation output')]);
@@ -30,7 +53,7 @@ export function decorateVisitors(doc=document){
    el('div',{},[
     el('p',{class:'visitor-kicker'},'BO-HUEI LIN’S INDEPENDENT LEARNING PROJECT'),
     el('h1',{id:'visitor-purpose-title'},'Explore the work between the rides.'),
-    el('p',{class:'visitor-lede'},'An autonomous car needs more than a charged battery. It needs time, data and a place to get ready. FleetLab makes those hidden decisions visible through small, interactive simulations.'),
+    el('p',{class:'visitor-lede'},'An autonomous car needs more than a charged battery. It needs time, data and a place to get ready. FleetLab makes those hidden decisions visible through small, interactive simulations — the same tradeoffs Waymo, Tesla and Zoox wrestle with at fleet scale.'),
     el('p',{class:'visitor-byline'},'I’m building this project to learn how autonomous fleets work—and to share what each experiment teaches us.'),
     el('a',{class:'design-primary visitor-first-action',href:'/#/depot-flow-lab?lesson=two-vehicles'},'Start with a 3-minute lesson →'),
    ]),
@@ -143,6 +166,13 @@ export function decorateVisitors(doc=document){
  }
  if(doc.defaultView?.requestAnimationFrame&&typeof doc.defaultView.MutationObserver==='function')installVisualMotion(doc);
  text('.approach-intro .hero-lede','FleetLab is my independent learning project about autonomous fleet operations. I build small simulations to ask better questions about charging, depot work, data and rider service. Each lesson lets you change an assumption, see a trade-off and inspect the limits.');
+ const about=doc.querySelector('.approach-intro .hero-lede');
+ if(about&&!doc.getElementById('visitor-founder'))about.parentNode.insertBefore(el('section',{id:'visitor-founder','aria-labelledby':'visitor-founder-title'},[
+  el('h2',{id:'visitor-founder-title'},'Why I built this'),
+  el('p',{},"I'm Bo-Huei Lin. I spent six years in product at Meta working on identity, privacy, and measurement — systems where the interesting problems were always operational: what happens at scale, at 2am, when the edge cases arrive all at once. Autonomous fleets are that problem in physical form: thousands of vehicles that need charging, cleaning, dispatching, and updating, every day, with real riders waiting."),
+  el('p',{},"I built FleetLab to learn how that works — and to show my work. Every simulation here is synthetic and labeled as such, because I'd rather be honest about what I don't know than impressive about what I can't prove."),
+ ]),about.nextSibling);
+ decorateFieldNotes(doc);
 }
 
 // Only presentation is animated. No callback can run a model, accept an order or advance replay.
