@@ -1,3 +1,4 @@
+import {R1_FILES,R1_ENTRIES,R1_MODULES,R1_RELEASE} from './rebalancing-package.mjs';
 // Physical owners are explicit. Reachability adds obligations, never removes legacy ownership.
 import {ORDER_FILES,ORDER_ENTRIES,ORDER_MODULES,ORDER_RELEASE} from './delivery-order-package.mjs';
 import {createHash} from 'node:crypto';
@@ -47,24 +48,29 @@ export function measureSiteOwnership(files){
   const delivery=hasDelivery?routeModules(files,DELIVERY_ENTRIES):new Set();
   const hasOrder=[...files.keys()].some(path=>ORDER_FILES.includes(path)||ORDER_MODULES.has(path));
   const order=hasOrder?routeModules(files,ORDER_ENTRIES):new Set();
+  const hasR1=files.has(R1_RELEASE),r1=hasR1?routeModules(files,R1_ENTRIES):new Set();
   const legacy=new Set([...legacyModules,...LEGACY_ASSETS].filter(path=>files.has(path)));
   // A dependency not in the newly declared NF04 inventory remains legacy-owned even when only NF04 imports it.
   for(const path of delivery)if(!DELIVERY_MODULES.has(path))legacy.add(path);
   for(const path of order)if(!ORDER_MODULES.has(path)&&!DELIVERY_MODULES.has(path))legacy.add(path);
+  for(const path of r1)if(!R1_MODULES.has(path)&&!ORDER_MODULES.has(path)&&!DELIVERY_MODULES.has(path))legacy.add(path);
   const route=new Set(hasDelivery?[...delivery,...DELIVERY_FILES.filter(path=>files.has(path)),'_headers']:[]);
   const local=new Set([...route].filter(path=>!legacy.has(path)&&(DELIVERY_FILES.includes(path)||DELIVERY_MODULES.has(path))));
   const orderRoute=new Set(hasOrder?[...order,...ORDER_FILES.filter(path=>files.has(path)),'_headers']:[]);
   const orderLocal=new Set([...orderRoute].filter(path=>!legacy.has(path)&&!local.has(path)&&(ORDER_FILES.includes(path)||ORDER_MODULES.has(path))));
+  const r1Route=new Set(hasR1?[...r1,...R1_FILES,'_headers']:[]),r1Local=new Set([...r1Route].filter(p=>!legacy.has(p)&&!local.has(p)&&!orderLocal.has(p)&&(R1_FILES.includes(p)||R1_MODULES.has(p))));
   const owners={};
   for(const path of files.keys()){
     if(MEDIA.has(path)){owners[path]='teaching-media';continue;}
     if(legacy.has(path))owners[path]=delivery.has(path)?'legacy-shared':'legacy';
     else if(local.has(path))owners[path]='nf04';
     else if(orderLocal.has(path))owners[path]='delivery-order';
+    else if(r1Local.has(path))owners[path]='rebalancing';
     else fail(`unknown emitted ownership: ${path}`);
   }
   const result={legacy_text_bytes:sum(files,legacy),nf04_route_local_bytes:sum(files,local),nf04_closure_bytes:sum(files,route),emitted_text_bytes:[...files].filter(([path])=>!MEDIA.has(path)).reduce((n,[,value])=>n+size(value),0),owners,nf04_paths:[...route].sort()};
   if(hasOrder){result.delivery_order_route_local_bytes=sum(files,orderLocal);result.delivery_order_closure_bytes=sum(files,orderRoute);result.delivery_order_paths=[...orderRoute].sort();if(result.delivery_order_closure_bytes>524288)fail('delivery order closure budget exceeded');}
+  if(hasR1){result.r1_route_local_bytes=sum(files,r1Local);result.r1_closure_bytes=sum(files,r1Route);if(result.r1_closure_bytes>524288)fail('R1 closure budget exceeded');}
   for(const [key,limit]of Object.entries(OWNER_LIMITS))if(result[key]>limit)fail(`${key} budget exceeded: ${result[key]} > ${limit}`);
   return result;
 }
@@ -76,6 +82,7 @@ export function measureIntegratedText(teaching,integrated){
   if(emitted_text_bytes>OWNER_LIMITS.emitted_text_bytes)fail(`aggregate emitted text budget exceeded: ${emitted_text_bytes} > ${OWNER_LIMITS.emitted_text_bytes}`);
   const result={emitted_text_bytes,integration_text_bytes};
   const closures=[
+    ...(teaching.has(R1_RELEASE)?[['r1',new Set([...routeModules(teaching,R1_ENTRIES),...R1_FILES,'_headers'])]]:[]),
     ...(teaching.has(ORDER_RELEASE)?[["delivery_order",new Set([...routeModules(teaching,ORDER_ENTRIES),...ORDER_FILES,"_headers"])]]:[]),
     ...(teaching.has(DELIVERY_RELEASE)?[['nf04',new Set([...routeModules(teaching,DELIVERY_ENTRIES),...DELIVERY_FILES,'_headers'])]]:[]),
     ...(teaching.has('src/ui/capacity-app.js')?[['nf03',new Set([...capacityScope(teaching),'network-flows/capacity/release.json','_headers'])]]:[]),
@@ -125,7 +132,8 @@ export function lessonNavigation(files){
  if(files.has(ORDER_RELEASE)){
   const path=`${DELIVERY_DIR}/index.html`,source=files.get(path);
   if(typeof source!=='string'||source.split('</body>').length!==2)fail('delivery navigation source missing or ambiguous');
-  result.set(path,source.replace('</body>','<nav class="delivery-shell" aria-label="Next Network Flows lesson"><p>Next lesson: <a href="/network-flows/delivery-order/">Who gets the depot link first?</a></p></nav>\n</body>'));
+  const next=files.has(R1_RELEASE)?'<a href="/network-flows/rebalancing/">Where should the empty cars go?</a>':'<a href="/network-flows/delivery-order/">Who gets the depot link first?</a>';
+  result.set(path,source.replace('</body>','<nav class="delivery-shell" aria-label="Next Network Flows lesson"><p>Next lesson: '+next+'</p></nav>\n</body>'));
  }
  return result;
 }

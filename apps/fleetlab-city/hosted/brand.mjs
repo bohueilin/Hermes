@@ -4,11 +4,14 @@ const media='/site-media/';
 function node(doc,tag,attrs={},children=[]){const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);for(const c of [children].flat())if(c!=null)n.appendChild(typeof c==='string'?doc.createTextNode(c):c);return n;}
 export function decorateDesign(doc=document){
  const el=(...args)=>node(doc,...args);
+ const mark=()=>el('img',{src:media+'fleetlab-logo.png',srcset:media+'fleetlab-logo-64.png 64w, '+media+'fleetlab-logo-128.png 128w, '+media+'fleetlab-logo.png 256w',sizes:'(max-width:767px) 48px, 64px',alt:'',width:'64',height:'64',decoding:'async'});
  for(const brand of doc.querySelectorAll('header .studio-monogram,header .delivery-brand,header a.brand')){
   if(brand.getAttribute('data-art-logo'))continue;
   brand.setAttribute('data-art-logo','true');brand.classList.add('design-brand');brand.setAttribute('aria-label','FleetLab home');
-  brand.replaceChildren(el('img',{src:media+'fleetlab-logo.png',alt:'FleetLab — Autonomous Simulation Lab',width:'2172',height:'724',decoding:'async'}));
+  brand.replaceChildren(mark(),el('strong',{},'FleetLab'));
  }
+ for(const footer of doc.querySelectorAll('footer'))if(!footer.querySelector('.design-footer-mark'))footer.insertBefore(el('a',{href:'/#/overview',class:'design-footer-mark','aria-label':'FleetLab home'},[mark(),el('strong',{},'FleetLab')]),footer.firstChild);
+ for(const panel of doc.querySelectorAll('.offline-edition'))if(!panel.querySelector('.design-panel-mark'))panel.insertBefore(el('span',{class:'design-panel-mark'},[mark(),el('strong',{},'FleetLab')]),panel.firstChild);
  const home=doc.querySelector('.studio-overview');
  if(home&&!doc.getElementById('design-readiness')){
   const filmButton=el('button',{type:'button',class:'design-secondary'},'Watch the concept film ↓');

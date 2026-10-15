@@ -1,0 +1,39 @@
+import {createR1Session} from '../runtime/rebalancing-session.js';
+import {mountConceptLoops} from './rebalancing-concept.js';
+import {renderHeadlines,renderRecord,element,amount} from './rebalancing-view.js';
+export function startRebalancing({createWorker}={}){
+ const doc=document,el=(...a)=>element(doc,...a),by=id=>doc.getElementById(id),motion=window.matchMedia('(prefers-reduced-motion: reduce)');
+ let current=null,session=null,chapter=0,frame=0,arm='reactive',selected='ev-001',pending=[],timer=null,lastManual=null,renderedStudy=false;
+ const headings=['Four zones. One fleet. Uneven demand.','Empty kilometers have a purpose and a cost.','Wait for the shortfall. Then move.','Prepare for a wave before it arrives.','Read the trade-off. Trace it to the ledger.','Your move. Make the coverage trade-off.'];
+ const copy=['A vehicle can be available and still be in the wrong zone. Compare its location with the next wave of requests.','Empty distance includes pickup approach and interzone repositioning. Better coverage can require more empty travel. Read all outcomes together.','This rule moves after requests expire. Its target is each zone’s expirations in the preceding ten minutes, including the current boundary once.','This rule uses perfect next-interval request counts. It is a favorable information assumption, not a trained forecast. Current in-transit vehicles are not credited to ready supply.','No single score names a winner. Look for fewer unserved requests, additional empty travel and any zone whose waits got worse.','Allocate only Ready / idle vehicles. Add moves to a pending batch, then apply the whole batch and advance. Dispatch has priority; an invalid batch leaves the accepted run unchanged.'];
+ const stop=()=>{if(timer!==null)clearInterval(timer);timer=null;by('play').textContent=frame===12?'Replay snapshots':'Play snapshots';};
+ const render=()=>{
+  if(!current)return;const ready=!!current.study,manual=chapter===5;
+  by('study-status').textContent=current.study?'Recorded study reconstructed and independently checked. All values below are synthetic.':'Reconstructing and checking the recorded study…';
+  if(current.error&&!current.study)by('study-status').textContent='Study unavailable: '+current.error;
+  by('action-error').hidden=!current.error;by('action-error').textContent=current.error||'';
+  by('watch').disabled=!ready;by('play').disabled=!ready;by('frame').disabled=!ready;
+  by('apply-moves').disabled=!ready||current.busy||current.manual.end>=7200;by('reset-manual').disabled=!ready||current.busy;by('add-move').disabled=!ready||current.busy||current.manual.end>=7200;
+  by('manual-panel').hidden=!manual;by('recorded-controls').hidden=manual;by('verdict-film').hidden=chapter!==4;by('verdict').hidden=chapter!==4;
+  doc.querySelectorAll('[data-remove]').forEach(b=>{b.disabled=current.busy;});
+  if(!ready)return;
+  if(!renderedStudy){renderHeadlines(doc,current.study);by('vehicle').replaceChildren(...current.study[0].input.vehicles.map(v=>el('option',{value:v.id},v.id)));renderedStudy=true;}
+  const record=manual?current.manual:current.study.find(r=>r.policy.id===arm),snapshot=manual?record.boundaries.at(-1):record.decisionSnapshots[frame]??record.boundaries.at(-1);
+  by('frame').value=frame;by('frame-label').textContent=`${frame*10} min`;by('policy-arm').value=arm;by('vehicle').value=selected;
+  renderRecord(doc,{record,snapshot,selected,manual});
+  const a=current.study.find(r=>r.policy.id==='reactive').metrics,b=current.study.find(r=>r.policy.id==='forecast').metrics;
+  by('verdict').textContent=`Forecast left ${a.expired-b.expired} fewer requests unserved and used ${((amount(b.empty_m)-amount(a.empty_m))/1000).toFixed(1)} more empty kilometers. Zone B p95 pickup wait rose from ${a.wait.B.p95} to ${b.wait.B.p95} seconds. More coverage did not improve every outcome.`;
+ };
+ const pendingView=()=>{by('pending-moves').replaceChildren(...pending.map((m,i)=>el('li',{},[`${m.count} vehicle${m.count===1?'':'s'}: ${m.from} → ${m.to} `,el('button',{type:'button','data-remove':i,'aria-label':`Remove move ${i+1}`},'Remove')])));let warning='';try{warning=(session?.preview(pending)||[]).filter(x=>x.moving&&x.remaining===0).map(x=>`${x.zone} will have 0 ready vehicles. New local pickups must wait for a vehicle to arrive.`).join(' ');}catch{warning='This pending batch exceeds supply or has an invalid move. Apply will reject it without changing your run.';}by('pending-warning').textContent=warning;by('pending-warning').hidden=!warning;};
+ const choose=n=>{stop();chapter=Math.max(0,Math.min(5,n));if(chapter===2)arm='reactive';if(chapter===3)arm='forecast';doc.querySelectorAll('[data-chapter]').forEach(b=>{if(Number(b.dataset.chapter)===chapter)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');});by('chapter-kicker').textContent=`0${chapter+1} / ${['THE MAP','THE PRICE OF COVERAGE','REACTIVE','FORECAST','THE VERDICT','TRY IT'][chapter]}`;by('chapter-title').textContent=headings[chapter];by('chapter-copy').textContent=copy[chapter];by('chapter-position').textContent=`Chapter ${chapter+1} of 6`;by('previous').disabled=chapter===0;by('next').disabled=chapter===5;render();by('chapter-title').focus({preventScroll:true});by('lesson').scrollIntoView({block:'start',behavior:motion.matches?'instant':'smooth'});};
+ const play=()=>{if(timer!==null){stop();return;}if(frame===12)frame=0;by('play').textContent='Pause snapshots';render();timer=setInterval(()=>{frame++;render();if(frame>=12)stop();},1400);};
+ doc.querySelectorAll('[data-chapter]').forEach(b=>b.addEventListener('click',()=>choose(Number(b.dataset.chapter))));by('previous').addEventListener('click',()=>choose(chapter-1));by('next').addEventListener('click',()=>choose(chapter+1));by('watch').addEventListener('click',()=>{choose(0);play();});by('play').addEventListener('click',play);by('frame').addEventListener('input',()=>{frame=Number(by('frame').value);stop();render();});by('policy-arm').addEventListener('change',()=>{arm=by('policy-arm').value;render();});by('vehicle').addEventListener('change',()=>{selected=by('vehicle').value;render();});
+ for(const id of ['zone-grid','transit-vehicles'])by(id).addEventListener('click',e=>{const b=e.target.closest('[data-vehicle]');if(b){selected=b.dataset.vehicle;render();}});
+ by('add-move').addEventListener('click',()=>{const count=Number(by('move-count').value);if(by('move-count').value===''||!Number.isSafeInteger(count)||count<0||count>24||pending.length>=48){by('action-error').hidden=false;by('action-error').textContent='Enter a whole vehicle count from 0 to 24; at most 48 pending rows.';return;}pending.push({from:by('move-from').value,to:by('move-to').value,count});pendingView();});
+ by('pending-moves').addEventListener('click',e=>{if(current?.busy)return;const b=e.target.closest('[data-remove]');if(b){pending.splice(Number(b.dataset.remove),1);pendingView();}});
+ by('apply-moves').addEventListener('click',()=>session.advance(pending));by('reset-manual').addEventListener('click',()=>{pending=[];pendingView();session.reset();});
+ doc.addEventListener('visibilitychange',()=>{if(doc.hidden)stop();});window.addEventListener('pagehide',stop);motion.addEventListener('change',()=>{if(motion.matches)stop();});
+ const disposeConcepts=mountConceptLoops(doc);
+ try{session=createR1Session({worker:createWorker(),onChange:s=>{current=s;if(s.manual&&s.manual.digest!==lastManual){lastManual=s.manual.digest;pending=[];pendingView();}render();}});}catch(error){by('study-status').textContent='Study unavailable: '+error.message;}
+ return {getSession:()=>session,dispose:()=>{stop();disposeConcepts();session?.dispose();}};
+}

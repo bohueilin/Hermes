@@ -107,7 +107,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   }
   assert.equal(buildHtml(restored), readFileSync(offline, "utf8"));
   const rebuilt = buildSite(restored);
-  for (const [path, data] of files) if (!["network-flows/capacity/release.json","network-flows/software-delivery/release.json","network-flows/delivery-order/release.json"].includes(path)) assert.deepEqual(rebuilt.get(path), data, path);
+  for (const [path, data] of files) if (!["network-flows/capacity/release.json","network-flows/software-delivery/release.json","network-flows/delivery-order/release.json","network-flows/rebalancing/release.json"].includes(path)) assert.deepEqual(rebuilt.get(path), data, path);
   assert.equal(JSON.parse(rebuilt.get("network-flows/capacity/release.json")).source_state, "SOURCE_COMMIT_UNAVAILABLE");
   execFileSync("git", ["-C", restored, "init", "-q"]);
   execFileSync(process.execPath, [join(restored, "tools/pack.mjs"), "--out", join(scratch, "restored-cli.html"), "--playground", restored]);
@@ -145,7 +145,7 @@ test("release package binds every source and its executing proof tool to the exa
   assert.equal(typeof tool.buildPackageProof, "function", "release binding is not implemented");
   const root = join(scratch, "repository");
   const playground = join(root, "playground/fleetlab");
-  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
   for(const name of ["hosted","tools","deploy"]){
     const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));
     for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path))){
@@ -154,6 +154,7 @@ test("release package binds every source and its executing proof tool to the exa
   }
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/brand-media",import.meta.url)),join(root,"apps/fleetlab-city/brand-media"),{recursive:true});
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/tile-media",import.meta.url)),join(root,"apps/fleetlab-city/tile-media"),{recursive:true});
+  cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/rebalancing-media",import.meta.url)),join(root,"apps/fleetlab-city/rebalancing-media"),{recursive:true});
   const dependency=join(root,"apps/fleetlab-city/citylib/public_notes.py");mkdirSync(dirname(dependency),{recursive:true});cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/citylib/public_notes.py",import.meta.url)),dependency);
   mkdirSync(join(root, "src/hermes/fleet"), { recursive: true });
   cpSync(fileURLToPath(new URL("../../../src/hermes/fleet/contracts.py", import.meta.url)), join(root, "src/hermes/fleet/contracts.py"));
@@ -222,7 +223,7 @@ test("release package binds every source and its executing proof tool to the exa
 
 test("a source checkout cannot omit the executing package-proof tool from its binding", () => {
   const root = join(scratch, "omitted-tool"), playground = join(root, "playground/fleetlab");
-  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
   mkdirSync(join(root, ".git"));
   for(const name of ["hosted","tools","deploy"]){
     const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));
@@ -232,6 +233,7 @@ test("a source checkout cannot omit the executing package-proof tool from its bi
   }
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/brand-media",import.meta.url)),join(root,"apps/fleetlab-city/brand-media"),{recursive:true});
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/tile-media",import.meta.url)),join(root,"apps/fleetlab-city/tile-media"),{recursive:true});
+  cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/rebalancing-media",import.meta.url)),join(root,"apps/fleetlab-city/rebalancing-media"),{recursive:true});
   const dependency=join(root,"apps/fleetlab-city/citylib/public_notes.py");mkdirSync(dirname(dependency),{recursive:true});cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/citylib/public_notes.py",import.meta.url)),dependency);
   mkdirSync(join(root, "src/hermes/fleet"), { recursive: true });
   cpSync(fileURLToPath(new URL("../../../src/hermes/fleet/contracts.py", import.meta.url)), join(root, "src/hermes/fleet/contracts.py"));

@@ -1,3 +1,11 @@
+# FleetLab R1 implementation — October 14, 2026
+
+Owner approved the R1 model and publication, and subsequently requested R3/R2/R7 model contracts for review before their numerical implementation. R1 is implemented with an independent verifier, full ledger, manual controls, NF05/NF06 concept films and the chosen logo. See [R1 implementation handoff](docs/FLEETLAB_R1_IMPLEMENTATION_HANDOFF_2026-10-14.md) for the current release state and evidence. Publication identities will be filled after immutable build/readback. The prior public release is `86f8a13f487ee2137ddaf400931048d3485b53ea` / `5924764c-7dc2-4336-a7d4-94fe3e39a991`.
+
+Follow-on review order: [R3 dispatch](docs/FLEETLAB_R3_DISPATCH_MODEL_CONTRACT_2026-10-14.md) → [R2 charging](docs/FLEETLAB_R2_CHARGING_MODEL_CONTRACT_2026-10-14.md) → [R7 sharing](docs/FLEETLAB_R7_OTA_SHARING_MODEL_CONTRACT_2026-10-14.md). SF map, physical-device and human qualification remain open; no new city work. Earlier status below is historical.
+
+---
+
 # FleetLab NF04-B — October 13, 2026
 
 NF04-B is live and pushed to GitHub: [software-delivery lesson](https://fleetlab.pages.dev/network-flows/software-delivery/). Source `f54496ed47f76b9378277f979318fc0f36a482f1`; production `38a98b78-2fae-4d16-87d5-3cfa37c11b24`; 10,053/10,053 served files and 16/16 headers match. See [October 13 implementation handoff](docs/FLEETLAB_NF04_B_IMPLEMENTATION_HANDOFF_2026-10-13.md), [contract amendment](docs/FLEETLAB_NF04_B_CONTRACT_2026-10-13.md) and [accepted brief](docs/FLEETLAB_NF04_B_ACCEPTED_BRIEF_2026-10-13.md). SF remains HOLD / BLOCKED_MAP_QUALIFICATION; physical-device and human-comprehension qualification remain open. All earlier status below is historical.

@@ -231,6 +231,18 @@ def test_r6_protected_paths_unchanged_since_base_commit() -> None:
     untracked = _git("ls-files", "--others", "--exclude-standard", "--", *_PROTECTED_PATHS)
     assert untracked.returncode == 0, untracked.stderr
     changed = sorted(set(diff.stdout.split()) | set(untracked.stdout.split()))
+    # Owner-authorized R1 derivatives only; all prior ignore rules stay byte-identical.
+    if ".gitignore" in changed:
+        original = _git("show", f"{base}:.gitignore")
+        assert original.returncode == 0, original.stderr
+        addition = (
+            "\n# Reviewed R1 teaching concept derivatives; "
+            "original full-size inputs remain ignored.\n"
+            "!apps/fleetlab-city/rebalancing-media/r1-nf05.mp4\n"
+            "!apps/fleetlab-city/rebalancing-media/r1-nf06.mp4\n"
+        )
+        assert (REPOSITORY_ROOT / ".gitignore").read_text() == original.stdout + addition
+        changed.remove(".gitignore")
     assert changed == []
 
 

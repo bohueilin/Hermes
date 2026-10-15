@@ -152,3 +152,7 @@ test('NF04 discovery needs the accepted generation marker and preserves NF03 as 
   assert.match(roadmap.textContent,/shared.*copy/i);
  }finally{next?.destroy();restoreNext();}
 });
+
+test('R1 discovery requires the complete-generation marker and remains idempotent',()=>{
+ for(const enabled of [false,true]){const restore=installFakeDom();let studio;try{studio=mount();if(enabled){const marker=document.createElement('meta');marker.setAttribute('name','fleetlab-rebalancing');marker.setAttribute('content','/network-flows/rebalancing/release.json');document.body.appendChild(marker);}mountCityEntry();mountCityEntry();assert.equal(document.querySelectorAll('.rebalancing-entry-catalog').length,enabled?1:0);assert.equal(document.querySelectorAll('[data-roadmap-lesson="rebalancing"]').length,enabled?1:0);if(enabled)assert.equal(document.querySelector('.rebalancing-entry-catalog a').getAttribute('href'),'/network-flows/rebalancing/');}finally{studio?.destroy();restore();}}
+});

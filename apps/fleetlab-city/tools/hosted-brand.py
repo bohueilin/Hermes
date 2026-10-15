@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "apps/fleetlab-city/hosted"
 MEDIA = {
     **json.loads((ASSETS / "brand-assets.json").read_text()),
+    **json.loads((ASSETS / "rebalancing-assets.json").read_text()),
     **json.loads((ASSETS / "tile-assets.json").read_text()),
 }
 TEXT = ("brand.mjs", "brand.css", "visitor.mjs", "visitor-families.mjs", "visitor.css")
@@ -35,7 +36,7 @@ def transform(value, mode="--render"):
 
 
 def asset_inventory():
-    for folder, count in (("brand-media", 3), ("tile-media", 19)):
+    for folder, count in (("brand-media", 7), ("tile-media", 19), ("rebalancing-media", 4)):
         source = f"apps/fleetlab-city/{folder}"
         actual = launch.inventory(ROOT / source)
         expected = {

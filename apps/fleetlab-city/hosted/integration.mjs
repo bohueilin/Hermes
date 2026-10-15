@@ -98,6 +98,18 @@ export function mountCityEntry(doc = document) {
     const later=[...roadmap.children].find(x=>x.querySelector('h3')?.textContent==='Depot flow lab, next lessons');
     if(later)later.querySelector('p:not(.eyebrow)').textContent='Competing data jobs, estimate error and custody are proposed lessons.';
   }
+  if(doc.querySelector('meta[name="fleetlab-rebalancing"][content="/network-flows/rebalancing/release.json"]')){
+    const href='/network-flows/rebalancing/';
+    networkQuestions.appendChild(node('article',{class:'network-question rebalancing-entry-catalog','aria-labelledby':'rebalancing-catalog-title'},[
+      node('p',{class:'city-entry-eyebrow'},'FLEET OPERATIONS · FOUR-ZONE STUDY'),
+      node('h3',{id:'rebalancing-catalog-title'},'Where should the empty cars go?'),
+      node('p',{class:'network-description'},'Compare two repositioning rules for 24 vehicles. Read coverage beside empty travel, follow one vehicle, then try your own moves.'),
+      node('a',{href,class:'city-entry-action'},'Explore rebalancing  ↗'),
+    ]));
+    doc.querySelector('.roadmap').appendChild(node('article',{'data-roadmap-lesson':'rebalancing','data-availability':'available'},[
+      node('p',{class:'eyebrow'},'AVAILABLE'),node('h3',{},'Where should the empty cars go?'),node('p',{},'A recorded synthetic study and a manual four-zone experiment.'),node('a',{href,class:'city-entry-action'},'Explore rebalancing  ↗'),
+    ]));
+  }
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'offline-edition'}, [
     node('div', {}, [node('strong', {}, 'Take the teaching labs with you.'), node('p', {}, 'Save the single HTML file, then open it in a browser. Includes the core teaching labs and catalog. The hosted capacity study, film, SF map and recordings are not included; there is no sync with the hosted site.')]),
     node('a', {href:'/downloads/fleetlab-offline', download:'fleetlab-offline.html'}, 'Download offline edition · 2.4 MB ↓'),

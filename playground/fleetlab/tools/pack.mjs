@@ -1,3 +1,4 @@
+import {R1_DIR,R1_RELEASE,R1_ENTRIES,R1_BOOT,R1_SOURCE_ASSETS,createR1Sidecar} from './rebalancing-package.mjs';
 import {ORDER_DIR,ORDER_RELEASE,ORDER_ENTRIES,ORDER_BOOT,ORDER_SOURCE_ASSETS,createOrderSidecar} from './delivery-order-package.mjs';
 // Packs the playground into one offline HTML file (contract section 9, design section 9.4).
 // Two bundles come from one rewriter: the page bundle from src/ui/app.js and the worker bundle from
@@ -841,6 +842,16 @@ export function buildSite(playgroundDir, { sourceCommit = null } = {}) {
     for(const path of ORDER_SOURCE_ASSETS)originals.set(path,readFileSync(join(dir,path),"utf8"));
     const fingerprints=Object.fromEntries([...originals].map(([path,data])=>[path,{bytes:Buffer.byteLength(data),sha256:createHash("sha256").update(data).digest("hex")}]));
     files.set(ORDER_RELEASE,createOrderSidecar(files,sourceIdentity(dir,fingerprints,sourceCommit),fingerprints,originals.get("delivery-order/index.html")));
+  }
+  if (existsSync(join(dir,"rebalancing/index.html"))) {
+    const originals=new Map();
+    for(const entry of R1_ENTRIES)for(const record of moduleGraph(join(dir,entry),sourceRoot).order){files.set(record.label,record.src);originals.set(record.label,record.src);}
+    files.set(`${R1_DIR}/index.html`,sitePage(dir,"rebalancing/index.html",["./visual.css"],new Map()));
+    files.set(`${R1_DIR}/boot.js`,R1_BOOT);
+    files.set(`${R1_DIR}/visual.css`,readFileSync(join(dir,"rebalancing/visual.css"),"utf8"));
+    for(const path of R1_SOURCE_ASSETS)originals.set(path,readFileSync(join(dir,path),"utf8"));
+    const fingerprints=Object.fromEntries([...originals].map(([path,data])=>[path,{bytes:Buffer.byteLength(data),sha256:createHash("sha256").update(data).digest("hex")}]));
+    files.set(R1_RELEASE,createR1Sidecar(files,sourceIdentity(dir,fingerprints,sourceCommit),fingerprints,originals.get("rebalancing/index.html")));
   }
   try { files.set(CAPACITY_RELEASE_PATH, createReleaseSidecar(dir,files,{sourceCommit,capturedSources})); }
   catch (error) { throw new PackError(error.message); }
