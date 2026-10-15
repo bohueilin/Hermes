@@ -36,17 +36,17 @@ No ceiling raised. Removed 9,608 bytes of redundant walkthrough implementation c
 
 ## Release results
 
-Runtime source commit: `95b123a` (presentation implementation `bcf3d24`, followed by the integration inventory correction). Source-bound build and independent upload guard passed for **10,139 files**. Additional integration preservation tests: **33 passed**. GitHub runtime push completed. Preview/publication and final public readback are in progress; the committed current-publication receipt remains the previous release until those pass.
+Runtime source commit: `8318e1d` (presentation implementation `bcf3d24`, inventory correction `95b123a`, then the selected-step contrast correction). Source-bound build and independent upload guard passed for **10,139 files**. Additional integration preservation tests: **33 passed**. GitHub runtime push completed. Final preview: `fafea3d4-fb01-4170-b005-19c8ee1d368c`. Final production: `9b401aed-b992-44be-aa43-f623267bef7c`, immutable URL https://9b401aed.fleetlab.pages.dev. Final preview readback: 10,138/10,138 files; preview and production headers: 71/71 each; immutable and stable smoke checks: 102/102 each. Final stable verification: **10,138/10,138 served files matched**, consisting of 10,137 first-pass matches plus one successful targeted retry of an HTTP 502 on an unchanged historical recording. The original scan and retry are preserved separately; the reconciled report records both hashes. This is per-file byte consistency, not an atomic browser-session guarantee.
 
 | Final measured envelope | Bytes | Unchanged ceiling | Headroom |
 |---|---:|---:|---:|
-| Original teaching source and tools | 3,145,597 | 3,153,920 | 8,323 |
-| Offline edition | 2,569,446 | 2,571,440 | 1,994 |
+| Original teaching source and tools | 3,145,606 | 3,153,920 | 8,314 |
+| Offline edition | 2,569,455 | 2,571,440 | 1,985 |
 | Package metadata | 37,472 | 40,960 | 3,488 |
-| Integrated emitted text | 3,103,211 | 3,145,728 | 42,517 |
-| Integrated NF03 dependency closure | 523,959 | 524,288 | 329 |
+| Integrated emitted text | 3,103,220 | 3,145,728 | 42,508 |
+| Integrated NF03 dependency closure | 523,968 | 524,288 | 320 |
 
-Original teaching source is **7,099 bytes smaller** than Round 6 after the enhancements. Captured teaching-plus-integration growth is **+5,979 bytes** because integration source also grows. Offline output grows **2,244 bytes**. Test trees grow **5,943 bytes**; all tracked repository files through runtime commit grow **23,269 bytes**, including documentation. New media bytes: **0**. These are distinct counters, not interchangeable savings claims.
+Original teaching source is **7,090 bytes smaller** than Round 6 after the enhancements. Captured teaching-plus-integration growth is **+5,988 bytes** because integration source also grows. Offline output grows **2,253 bytes**. Test trees grow **5,943 bytes**; all tracked repository files through the first runtime commit (`95b123a`) grew **23,269 bytes**, including documentation. New media bytes: **0**. These are distinct counters, not interchangeable savings claims.
 
 NF03 closure and offline headroom remain narrow: future presentation work needs trimming or a separate owner-approved budget decision. This release does not silently consume a larger ceiling.
 
@@ -56,4 +56,10 @@ Recommendation: ship this bounded presentation round after the release gates bel
 
 Next three actions: verify the published release; gather focused human feedback on story/legend clarity; obtain a separate P2 design decision before building the deferred data visualizations. No Austin work or new scientific study is authorized by this round.
 
-Final browser correction: the selected story step inherited a pale background from an older, more-specific selector. Increased the new selected-step selector specificity; fresh-browser computed colors now read white on `#276b57`. Focused accessibility/story suite: 95 passed, 1 existing TODO. Initial production readback saw 46 transient 404s for newly published city-generation paths; all 46 matched on subsequent targeted readback. A fresh complete readback is required for the final contrast-corrected release.
+Final browser correction: the selected story step inherited a pale background from an older, more-specific selector. Increased the new selected-step selector specificity; fresh-browser computed colors now read white on `#276b57`. Focused accessibility/story suite: 95 passed, 1 existing TODO. Initial production readback saw 46 transient 404s for newly published city-generation paths; all 46 matched on subsequent targeted readback. The final contrast-corrected release passed per-file verification as detailed above.
+
+Browser-cache limitation: the existing public `max-age=600` policy can keep old shared CSS in an already-open browser for up to ten minutes. Server-side stable byte readback and a fresh immutable production origin distinguish the deployed version from cached presentation. This round does not add generation-pinned browser sessions or change caching policy. Use a hard refresh or the immutable production URL for an immediate review.
+
+Final offline artifact: **2,569,455 bytes**, SHA-256 `811877a4392f1c3d0010a4119bef353554622e03179fe944c85872afcf7e3218`; a direct stable-URL GET matched the published digest and final release selection. Final current city presentation: `city-explorer/releases/e2b7b57abc64902e`. Prior verified Round 6 immutable deployment remains available and passed 101/101 smoke checks. The intermediate Round 7 production deployment is explicitly recorded as superseded by the contrast correction.
+
+Final evidence: `docs/releases/fleetlab-current.json`; local validation under `build/fleetlab-city/validation/design-round7-20261015/`, including full preview readback, initial stable scan, targeted retry, reconciled stable verification, 71-header checks, independent review disposition, budget measurements and browser screenshots. Physical Pixel qualification, independent map review and human comprehension remain unestablished by this release. No model files or numerical studies changed.
