@@ -36,3 +36,15 @@ test('stationary cars receive distinct display slots while moving paths and reco
  assert.equal(new Set(frame.vehicles.slice(0,12).map(c=>`${layout.get(c.id).x},${layout.get(c.id).y}`)).size,12);
  assert.deepEqual(layout.get('moving'),bayVehiclePosition(run,frame.vehicles.at(-1),null,0));assert.equal(JSON.stringify(frame),before);
 });
+
+test('label placement uses rendered dimensions and keeps anchor leaders attached after orbit',()=>{
+ const restore=installFakeDom();try{
+  const view=createOperations3D({places:[{id:'san-francisco',label:'San Francisco',x:0,y:0}],createRenderer:()=>({draw(){},destroy(){}})});
+  const label=view.element.querySelector('[data-place-id]');
+  label.getBoundingClientRect=()=>({width:180,height:60});
+  view.refresh();
+  assert.equal(label.hidden,false);assert.ok(!label.style.width,'content determines width');
+  const check=()=>{const [x,y]=label.style.transform.match(/-?[\d.]+/g).map(Number);assert.ok(x>=5&&x+180<895&&y>=5&&y+60<575);const line=view.element.querySelector('line');const ex=Number(line.getAttribute('x2')),ey=Number(line.getAttribute('y2'));assert.ok(ex>=x&&ex<=x+180&&ey>=y&&ey<=y+60,'leader ends on measured box');};
+  check();view.element.querySelectorAll('button').find(b=>b.textContent==='Rotate ↷').click();check();view.destroy();
+ }finally{restore();}
+});

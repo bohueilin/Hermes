@@ -1,3 +1,4 @@
+import {MODEL_CONSISTENCY} from './labels.js';
 import {conceptPrimer} from './concept-primer.js';
 import {el} from './dom.js';
 import {flowScenario,flowComparisonSteps,FLOW_RULES} from '../model/depot-flow.js';
@@ -36,7 +37,7 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
  const announce=text=>{const line=`${isOld()?`Previous setup, run ${result.run_id}. `:''}${text}`;if(live.node.textContent!==line)live.announce(line);};
  const isOld=()=>result&&(JSON.stringify(options)!==JSON.stringify(resultOptions)||attempt?.id!==result.run_id);
  function configureGuess(next=null){question=guessQuestion(next,cohort());guessLabel.textContent=question.question;guess.replaceChildren(...[['','No guess'],...question.choices].map(([value,text])=>el('option',{value},text)));guess.value='';}
- function idleStatus(){if(job)return;let valid=true;try{scenario();}catch{valid=false;}setBusy(runButton,false,!valid);status.textContent=!valid?'Input outside this lesson. Choose one of the available settings.':isOld()?'Result from previous setup. Run the current setup to compare it.':result?'Rules complete. Results verified (model consistency only). Results are ready to inspect.':attempt?.status==='cancelled'?'Cancelled. No new comparison.':'Nothing has run yet. Explore the inputs, then run the rules.';}
+ function idleStatus(){if(job)return;let valid=true;try{scenario();}catch{valid=false;}setBusy(runButton,false,!valid);status.textContent=!valid?'Input outside this lesson. Choose one of the available settings.':isOld()?'Result from previous setup. Run the current setup to compare it.':result?MODEL_CONSISTENCY:attempt?.status==='cancelled'?'Cancelled. No new comparison.':'Nothing has run yet. Explore the inputs, then run the rules.';}
  function refreshInputs(rebuild=false){
   let s;try{s=scenario();}catch{}
   lede.textContent=s?ledeText(s):'Input outside this lesson.';
@@ -95,10 +96,11 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
   stopPlayer();output.replaceChildren();if(attempt&&attempt.status!=='complete')output.appendChild(detail(`Latest attempt ${attempt.id}: ${attempt.status} · no new comparison`,[el('p',{},'No new comparison. Partial model records remain available in page state. Later checks may not have run.'),el('p',{},attempt.error??(attempt.status==='running'?'Computation in progress.':attempt.status==='cancelled'?'This attempt was cancelled.':'A model or policy check did not pass.'))]));
   if(!result)return;const old=isOld();output.appendChild(el('h2',{tabindex:-1,'data-flow-heading':''},old?'Result from previous setup':outcomeHeadline(result)));
   if(old)output.appendChild(el('p',{class:'flow-stale'},cohort()?'This is the prior completed run; the latest attempt has no new comparison.':`Run ${result.run_id} used ${settingsText(resultOptions)}. Current inputs: ${settingsText(options)}. Changes: ${Object.keys(options).filter(k=>options[k]!==resultOptions[k]).map(k=>`${resultOptions[k]} ${k==='b_gb'?'GB':k==='charger_kw'?'kW':'Gbps'} to ${options[k]} ${k==='b_gb'?'GB':k==='charger_kw'?'kW':'Gbps'}`).join('; ')||'same inputs; latest attempt has no new comparison'}.`));
-  output.appendChild(el('p',{class:'flow-result-note'},`Run ${result.run_id} · ${cohort()?'Depot cohort':'Depot flow'} model ${result.versions.model} · ${lessons.find(l=>l[0]===lesson)[1]}. Results verified (model consistency only). NOT_EVIDENCE; simulation-only; decision authority NONE.`));
+  output.appendChild(el('p',{class:'flow-result-note'},`Run ${result.run_id} · ${cohort()?'Depot cohort':'Depot flow'} model ${result.versions.model} · ${lessons.find(l=>l[0]===lesson)[1]}. ${MODEL_CONSISTENCY} NOT_EVIDENCE; simulation-only; decision authority NONE.`));
   const change=!old?comparison:null;
   if(change)output.appendChild(el('section',{class:'flow-reading'},[el('h3',{},'What changed from the previous run?'),...change.sentences.map(s=>el('p',{},s))]));
   output.appendChild(el('section',{class:'flow-reading'},[el('h3',{},'Who became ready earlier or later?'),...tradeoffText(result).map(s=>el('p',{},s)),!cohort()&&resultOptions.uplink_gbps===1&&resultOptions.charger_kw===20?el('p',{},'Vehicle A is ready at minute 18 under every rule. Charging finishes at minute 18 whichever rule runs the uplink, so no upload rule can make it ready sooner.'):null,feedback&&!old?el('p',{class:'flow-guess-feedback'},feedback):null,el('h4',{},'Ops takeaway to test'),el('p',{},LESSON_FRAMES[lesson].ops_takeaway)]));
+  if(cohort()&&result.arms.find(a=>a.record.rule==='cohort_shortest_upload').verification.metrics.on_time===Math.max(...result.arms.map(a=>a.verification.metrics.on_time)))output.appendChild(el('p',{},"In this lesson, shortest-upload-first gets the most visits done on time. That's a result about this scenario — not advice for real operations."));
   output.appendChild(outcomesView(result,change));
   renderTrace();
   if(!cohort()&&!old){suggestion=nextSuggestion(resultOptions,seen);output.appendChild(el('section',{class:'flow-next'},[el('h3',{},'Next test to try'),el('p',{},suggestion.question),button(suggestion.button,()=>{const next=suggestion;setOptions({[next.key]:next.value});configureGuess(next);changeSetup.open=true;guessDetail.open=true;guess.focus();})]));}

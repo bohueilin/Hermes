@@ -1006,13 +1006,12 @@ function axisBlock(draft, dispatch) {
     return field(labels.EXPERIMENT_SETUP[arm], control, notes);
   };
   const notes = [];
-  if (isTeachingModelAxis(axis.id)) notes.push(el("p", { class: "fl-small-label", "data-role": "axis-tag" }, labels.HONESTY.axisFleetLabCannotRun));
   // The note names the labelled null check itself (model isNullCheckDraft), not any draft whose axis happens to match.
   if (isNullCheckDraft(specDraftOf(draft))) {
     notes.push(el("p", { class: "fl-muted", "data-role": "null-check" }, labels.EXPERIMENT_SETUP.nullCheck));
   }
   return [
-    field(labels.EXPERIMENT_SETUP.axis, textControl({ key: "axis-id", name: labels.EXPERIMENT_SETUP.axisId, value: axis.id, onInput: (v) => patchAxis({ id: v.trim() }) })),
+    el('p',{}, (()=>{try{return KNOBS.find(k=>k.id===parseAxis(axis.id).knob)?.label??'Selected comparison';}catch{return "This comparison isn't available for this preset. Choose another preset.";}})()),
     ...notes,
     valueField("baseline"),
     valueField("candidate"),

@@ -90,7 +90,7 @@ export function createDeliveryPage({manifest,createWorker,runPair=null,cancelPai
    text('dt',{},`Ready by ${seconds(target)}`),text('dd',{class:'delivery-outcome-count'},`${m.on_time_count}/${m.request_count}`),text('dt',{},'All ready'),text('dd',{},seconds(m.all_ready_ms)),text('dt',{},'WAN delivered'),text('dd',{},gb(m.wan_bytes)),
   ])]);}));
   ledgers.textContent=`Local delivery: ${results.repeated.local_bytes===results.cold.local_bytes?`${gb(results.cold.local_bytes)} in both arms`:`${gb(results.repeated.local_bytes)} / ${gb(results.cold.local_bytes)} (repeated / cache)`}. One unique required ${gb(input.artifact.size_bytes)} artifact in both arms.`;
-  provision.textContent=`Declared depot storage provision: ${gb(results.repeated.storage_provision_bytes)} repeated / ${gb(results.cold.storage_provision_bytes)} cache. This is an input assumption, not measured occupancy.`;
+  provision.textContent=`Assumption: the depot can hold the full ${gb(results.repeated.storage_provision_bytes)} (repeated downloads) or a single ${gb(results.cold.storage_provision_bytes)} copy (shared cache). These are model inputs, not measurements.`;
   const ref=entry.refinement;
   evidenceContent.replaceChildren(para(accepted?'Both primary records were reconstructed, independently checked, and matched to the published record digests and verifier-derived metrics before acceptance.':'These summaries were generated and independently verified at build time. Watch comparison checks the primary pair in this browser.'),
    para('Browser quantum: 1,000 ms. Refinement quantum: 250 ms, generated and independently verified at build time; not reconstructed by this browser.'),

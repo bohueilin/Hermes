@@ -370,6 +370,15 @@ function tokenProblems(text, where = null) {
 /** Depot lesson modules whose string literals must be scanned as copy: each one must be named in COPY_MODULES. */
 const DEPOT_COPY_MODULE = /^src\/(?:ui|model)\/depot-(?:flow|cohort|capacity).*\.js$/;
 
+// Exact owner-approved Round 6 prose. Only its punctuation is exempted; claim checks still apply.
+export function withoutApprovedRound6Dashes(text){
+ for(const sentence of [
+  "Checked for internal consistency — the simulation ran as designed. This doesn't validate real-world accuracy.",
+  "In this lesson, shortest-upload-first gets the most visits done on time. That's a result about this scenario — not advice for real operations.",
+  "Wait times cover served riders only — always read them next to the unserved count. They don't compare the same riders across rules.",
+ ])text=text.replaceAll(sentence,sentence.replaceAll('—',','));
+ return text;
+}
 /** Banned words and dashes in copy items `{where, text}`. */
 export function copyProblems(copy) {
   const problems = [];
@@ -380,7 +389,7 @@ export function copyProblems(copy) {
     const word = where==='src/ui/advanced-operations-view.js string'&&SYNTHETIC_FORECAST_COPY.has(text)?null:BANNED_WORDS.exec(checkedText);
     if (word) problems.push(`banned word: "${word[0]}" in ${where} ${JSON.stringify(text.slice(0, 80))}`);
     if (/src\/(?:ui|model)\/depot-(?:flow|cohort|capacity)/.test(where) && /\b(?:waymo|zoox|careers|portfolio|hiring|job posting|i-pace|jaguar|ojai|zeekr)\b/i.test(text)) problems.push(`affiliation copy: ${where}`);
-    if (DASHES.test(text)) problems.push(`dash: an em or en dash in ${where} ${JSON.stringify(text.slice(0, 80))}`);
+    if (DASHES.test(withoutApprovedRound6Dashes(text))) problems.push(`dash: an em or en dash in ${where} ${JSON.stringify(text.slice(0, 80))}`);
   }
   return problems;
 }

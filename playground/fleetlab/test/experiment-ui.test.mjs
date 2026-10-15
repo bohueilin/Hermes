@@ -231,13 +231,16 @@ describe("setup sheet and checks (design §7.2)", () => {
     });
   });
 
-  test("the axis tag appears only for an axis FleetLab cannot run, and the null check is labelled", async () => {
+  test("supported teaching comparisons do not show an unavailable tag or raw axis editor; null check stays labelled", async () => {
     assert.equal(experiment.isTeachingModelAxis("policy:depot_assignment"), true);
     assert.equal(experiment.isTeachingModelAxis("parameter:SUP-1.SJ"), true);
     assert.equal(experiment.isTeachingModelAxis("parameter:DEP-7"), false);
     await withDom({}, async () => {
       const tagOf = (presetId) => mount(presetStore(presetId)).container.querySelector('[data-role="axis-tag"]');
-      assert.equal(tagOf("L3").textContent, labels.HONESTY.axisFleetLabCannotRun);
+      assert.equal(tagOf("L3"), null);
+      const setup=mount(presetStore("L3")).container;
+      assert.equal(setup.querySelector('[data-focus-key="axis-id"]'),null);
+      assert.equal(setup.querySelector('[data-role="freeze"]').disabled,false);
       assert.equal(tagOf("UC-03"), null);
       const uc01 = mount(presetStore("UC-01")).container;
       assert.equal(uc01.querySelector('[data-role="axis-tag"]'), null);

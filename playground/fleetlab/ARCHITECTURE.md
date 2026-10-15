@@ -102,8 +102,7 @@ The current extension is specified in `docs/plans/2026-09-19-fleetlab-operations
 instrument math, runtime, golden fixtures and evidence boundaries remain unchanged. Capacity comparisons in the new
 model are same-demand scenario sweeps, with no instrument verdict, optimizer or operational authority.
 
-`operations-lab.js` projects frames, events, service breakdowns and capacity trials; `operations-map.js` and
-`car-glyph.js` render every recorded vehicle. Interpolation explains movement between minute snapshots and does not
+`operations-lab.js` projects frames, events, service breakdowns and capacity trials; `operations-map.js` supplies shared activity colors; `operations-3d.js` and `car-glyph.js` render every recorded vehicle. Interpolation explains movement between minute snapshots and does not
 simulate lanes or collisions. `simulation-catalog.js` derives all regional entries from PRESETS and adds ten explicit
 operational lessons. Both models remain distinguishable in navigation, catalog and scope text.
 

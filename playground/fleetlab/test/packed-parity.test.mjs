@@ -55,7 +55,9 @@ test("packed offline worker matches native fixed-seed event digest, world digest
 });
 
 test("the actual stripped offline page initializes its studio on the fake DOM", async () => {
-  const context = vm.createContext({ console, performance, setTimeout, clearTimeout, URL, URLSearchParams, Blob });
+  const context = vm.createContext({ console, performance, setTimeout, clearTimeout, URL, URLSearchParams, Blob, TextEncoder, TextDecoder, btoa, atob });
+  // Keep cloned JSON in the VM realm, as the real browser does.
+  context.structuredClone = new vm.Script("value => JSON.parse(JSON.stringify(value))").runInContext(context);
   const uninstall = installFakeDom(context);
   const document = uninstall.dom.document;
   const shell = document.createElement("div");

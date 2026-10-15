@@ -377,10 +377,11 @@ export function checkIntegratedPackage({ site, playground, sourceCommit }) {
     for(const path of BRAND_TEXT){const data=readRegular(site,path,LIMITS.emitted_text_bytes);if(!data.equals(prepared.captured.integration.get(`apps/fleetlab-city/hosted/${path}`)))fail('hosted brand source mismatch');integrated.set(path,data);}
     for(const [path,r] of Object.entries(BRAND_MEDIA))if(!readRegular(site,path,r.bytes).equals(prepared.captured.artwork.get(r.source.split('/').at(-1))))fail('hosted artwork bytes differ');
   }
-  for(const path of ["index.html","boot.js","_headers","integration.mjs","integration.css","not-found.css","publication.json","404.html","downloads/fleetlab-offline.sha256","downloads/verify-offline.txt"]) {
+  for(const path of ["index.html","boot.js","_headers","integration.mjs","integration.css","not-found.css","publication.json","404.html","network-flows/fleet-day/index.html","downloads/fleetlab-offline.sha256","downloads/verify-offline.txt"]) {
     try { integrated.set(path,readRegular(site,path,LIMITS.emitted_text_bytes)); }
     catch(error) { if(error.code!=="ENOENT")throw error; }
   }
+  if(!integrated.get("network-flows/fleet-day/index.html")?.equals(Buffer.from(branded?renderPage(prepared.captured.integration.get("apps/fleetlab-city/hosted/fleet-day-redirect.html").toString(),{analytics:true}):prepared.captured.integration.get("apps/fleetlab-city/hosted/fleet-day-redirect.html"))))fail("fleet-day redirect source mismatch");
   integrated.set(RECEIPT_PATH,expected.files.get(RECEIPT_PATH));
   const finalTeaching=new Map([...prepared.site,[RECEIPT_PATH,expected.files.get(RECEIPT_PATH)]]);
   const integratedCounts=measureIntegratedText(finalTeaching,integrated);

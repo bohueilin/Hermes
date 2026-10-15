@@ -29,7 +29,6 @@ export const HONESTY = frozen({
     "This is a teaching model. The map is a simplified sketch that uses Bay Area place names, and every number (demand, traffic, depot times) is invented to show how fleets and depots behave. It is not calibrated to any real operation, it says nothing about what will happen, and nothing here can approve a change to a real fleet.",
   verdictChip: "Teaching run, not a decision record",
   verdictFooter: "The rules match FleetLab's instrument; the world does not.",
-  axisFleetLabCannotRun: "Teaching-model axis: FleetLab cannot run this",
   fleet005Panel: "Measured in FleetLab: FLEET-005, a committed decision record. Quoted here, not run here.",
   twoZoneProbePanel:
     "Exploratory FleetLab run, not a committed decision record. Its spec is in the design document, Appendix A.9.",
@@ -613,7 +612,7 @@ export const EXPERIMENT_SETUP = frozen({
     scopesValid: "scopes valid",
   },
   freezeAndRun: "Run the paired comparison",
-  freezeDisabled: "Open Review or change this paired test and resolve the failed checks before running.",
+  freezeDisabled: "This comparison isn't available for this preset. Review the setup checks above.",
   nullCheck: "Null check: both arms use the same value on purpose.",
   testItProperly: "Test it properly",
   otherChecks: {
@@ -2108,3 +2107,5 @@ export function narrationSituation(id) {
 export function narrationNext(name) {
   return `The next question in the casebook is ${name}, by its title alone.`;
 }
+
+export const MODEL_CONSISTENCY = "Checked for internal consistency — the simulation ran as designed. This doesn't validate real-world accuracy.";

@@ -27,14 +27,14 @@ export function mountCityEntry(doc = document) {
   home.querySelector('.hero-actions').appendChild(node('a', {class:'home-city-link',href:'/city-explorer/'},'See the San Francisco case study  ↗'));
   const action = (text, hash = '') => node('a', {class:'city-entry-action', href:`/city-explorer/${hash}`}, text);
   const card = node('article', {class:'start-card city-entry-feature'}, [
-    node('p', {class:'eyebrow'}, 'SAN FRANCISCO · RECORDED STUDY · MAP QUALIFICATION OPEN'),
+    node('p', {class:'eyebrow'}, 'SAN FRANCISCO · RECORDED STUDY'),
     node('h3', {}, 'Would a second depot help?'),
     node('p', {}, 'A recorded synthetic study on sourced streets. Compare depots, follow one vehicle, then read the map and its limits.'),
     node('div', {class:'city-entry-actions'}, [action('Compare depots', '#compare'), action('Follow a vehicle', '#replay'), action('Map & limits', '#limits')]),
   ]);
   startGrid.insertBefore(card, startGrid.children[1] ?? null);
   const boundary = home.querySelector('.welcome-boundary');
-  boundary?.appendChild(node('p', {class:'hosted-trust-legend'}, 'Synthetic teaching results · simulation only · not real-world safety evidence. Running a model does not authenticate its outputs, evaluate authorization, or grant permission to deploy a vehicle or policy.'));
+  boundary?.appendChild(node('p', {class:'hosted-trust-legend'}, 'Simplified simulations for learning — not evidence about real-world safety. Nothing here approves deploying a vehicle or policy.'));
   const catalog = node('section', {class:'city-entry-catalog', 'aria-labelledby':'city-catalog-title'}, [
     node('div', {}, [
       node('p', {class:'city-entry-eyebrow'}, 'RECORDED CITY CASE STUDY'),

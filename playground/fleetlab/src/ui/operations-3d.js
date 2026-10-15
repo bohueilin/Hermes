@@ -35,6 +35,7 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
  const labelSelect=el('select',{'aria-label':'City label density',on:{change:()=>redraw()}},[el('option',{value:'key'},'Key place names'),el('option',{value:'all'},'All 18 names'),el('option',{value:'none'},'Roads & cars only')]);
  const controls=el('div',{class:'bay-map-controls'},[viewSelect,focusSelect,labelSelect,button('−',()=>changeCamera({zoom:1.25})),button('+',()=>changeCamera({zoom:.8})),button('Rotate ↶',()=>changeCamera({yaw:-.3})),button('Rotate ↷',()=>changeCamera({yaw:.3})),button('Tilt',()=>{camera.pitch=camera.pitch>1.1?.7:1.3;redraw();}),button('Follow selected car',()=>{following=true;overview=false;camera.distance=6;redraw();}),button('Reset view',()=>focus('all'))]);
  const element=el('figure',{class:'bay-map'},[controls,el('div',{class:'bay-map-caption-top'},[status,el('span',{},'Drag to orbit · scroll to zoom · choose a city to inspect')]),viewport,
+  el('ul',{class:'bay-map-legend','aria-label':'Map legend'},[...Object.entries(ACTIVITY_COLORS).filter(([key])=>key!=='ready').map(([key,value])=>[key.replaceAll('_',' '),value]),['waiting for a resource','#bd9277'],['boarding, staging or other activity','#568676'],['Hypothetical depot','#4c7666']].map(([name,value])=>el('li',{},[el('span',{'aria-hidden':'true',style:`background:${value}`,class:name==='Hypothetical depot'?'legend-swatch legend-depot':'legend-swatch'}),name]))),
   el('figcaption',{},[el('a',{href:'https://www.openstreetmap.org/copyright',target:'_blank',rel:'noopener noreferrer'},'© OpenStreetMap contributors'),el('span',{},' · ODbL. Frozen September 2026 extract. Sparse major-road routes; one-way and access rules excluded. Cars and hypothetical depots are enlarged; stationary cars are spread into display slots around their recorded anchor. Grid spacing: 5 km. Coastlines are sourced outlines; no terrain or water polygons. Traffic and demand are simulated. This is not a commercial service-area map.')])]);
  if(onDownloadMap)element.appendChild(button('Download attributed map data',onDownloadMap));
  const xs=places.map(p=>p.x),ys=places.map(p=>p.y);
@@ -61,12 +62,13 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
   for(const p of ordered){
    const n=labelNodes.get(p.id),pt=project(p);
    if(p.id!==focusSelect.value&&(labelSelect.value==='none'||(labelSelect.value!=='all'&&!['san-francisco','sfo','san-mateo','palo-alto','san-jose','sjc'].includes(p.id)))){n.hidden=true;if(pt.visible)leaders.appendChild(svg('circle',{cx:pt.x,cy:pt.y,r:2.5,fill:'#76947e'}));continue;}
-   const w=Math.min(width<400?105:130,Math.max(82,p.label.length*5.7+22)),h=44;
+   n.hidden=false;n.classList.toggle('is-focused',p.id===focusSelect.value);
+   const {width:w,height:h}=n.getBoundingClientRect();
    if(!pt.visible||pt.x<8||pt.x>width-8||pt.y<8||pt.y>height-8){n.hidden=true;continue;}
    const candidates=[];for(const dx of [18,-w-18,148,-w-148])for(const dy of [-22,-70,26,-118,74,-166,122,-214,170,218])candidates.push({x:pt.x+dx,y:pt.y+dy,w,h});
    candidates.sort((a,b)=>Math.hypot(a.x+w/2-pt.x,a.y+h/2-pt.y)-Math.hypot(b.x+w/2-pt.x,b.y+h/2-pt.y));
    const spot=candidates.find(r=>r.x>5&&r.x+w<width-5&&r.y>5&&r.y+h<height-5&&!occupied.some(q=>r.x<q.x+q.w+5&&r.x+r.w+5>q.x&&r.y<q.y+q.h+4&&r.y+r.h+4>q.y));
-   n.hidden=!spot;if(!spot)continue;occupied.push(spot);n.style.width=`${w}px`;n.style.transform=`translate(${spot.x}px, ${spot.y}px)`;n.classList.toggle('is-focused',p.id===focusSelect.value);
+   n.hidden=!spot;if(!spot)continue;occupied.push(spot);n.style.transform=`translate(${spot.x}px, ${spot.y}px)`;n.classList.toggle('is-focused',p.id===focusSelect.value);
    leaders.appendChild(svg('line',{x1:pt.x,y1:pt.y,x2:Math.max(spot.x,Math.min(spot.x+w,pt.x)),y2:Math.max(spot.y,Math.min(spot.y+h,pt.y)),stroke:'#829f8c','stroke-width':.8}));
    leaders.appendChild(svg('circle',{cx:pt.x,cy:pt.y,r:2.8,fill:p.kind==='airport'?'#687cac':'#487563'}));
   }

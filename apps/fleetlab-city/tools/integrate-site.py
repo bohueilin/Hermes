@@ -30,7 +30,8 @@ FLOW_CHANGED = frozenset((
     "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js", "src/ui/charts.js",
     "src/ui/simulation-catalog.js", "src/ui/operations-lab.js", "src/ui/street-lab.js",
     "src/ui/hero-film.js", "src/ui/labels.js", "src/ui/advanced-operations-view.js",
-    "src/ui/experiment.js", "src/ui/app.js",
+    "src/ui/experiment.js", "src/ui/app.js", "src/ui/operations-3d.js",
+    "src/ui/operations-map.js", "src/ui/regional-power-view.js",
 ))
 FLOW_ADDED = frozenset((
     "src/model/depot-flow-contract.js", "src/model/depot-flow.js",
@@ -106,7 +107,8 @@ R3_ADDED = frozenset((
 ))
 INTEGRATION_TEXT = frozenset((
     "index.html", "boot.js", "_headers", "integration.mjs", "integration.css",
-    "404.html", "not-found.css", "publication.json", "downloads/fleetlab-offline.sha256",
+    "404.html", "network-flows/fleet-day/index.html", "not-found.css", "publication.json",
+    "downloads/fleetlab-offline.sha256",
     "downloads/verify-offline.txt",
 ))
 
@@ -463,6 +465,10 @@ def integrate(
             shutil.copyfile(ASSETS / name, site / name)
         for name in ("404.html", "not-found.css"):
             shutil.copyfile(ASSETS / name, site / name)
+        (site / "network-flows/fleet-day").mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(
+            ASSETS / "fleet-day-redirect.html", site / "network-flows/fleet-day/index.html"
+        )
         offline_path = "downloads/fleetlab-offline.html"
         offline_url = "/downloads/fleetlab-offline"
         (site / "downloads").mkdir(exist_ok=True)

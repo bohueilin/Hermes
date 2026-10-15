@@ -216,7 +216,7 @@ test('after a comparison the reading leads, the trace follows and reference mate
     let out=output();
     assert.deepEqual(shape(lab.element.querySelector('section.flow-output')),['h2','p.flow-result-note','section.flow-reading','section','section.flow-trace','section.flow-next','details','details','details','details']);
     assert.ok(out[0].hasAttribute('data-flow-heading'));assert.equal(out[2].querySelector('h3').textContent,'Who became ready earlier or later?');assert.ok(out[3].hasAttribute('data-flow-outcomes'));
-    assert.deepEqual(out.slice(6).map(d=>d.querySelector('summary').textContent),['Capacity bound','Vehicle task histories','Named checks · independently reconstructed','Exact event ledger and export']);
+    assert.deepEqual(out.slice(6).map(d=>d.querySelector('summary').textContent),['Capacity bound','Vehicle task histories','How this was checked','Exact event ledger and export']);
     lab.setOptions({b_gb:15});out=output();assert.deepEqual(shape(lab.element.querySelector('section.flow-output')).slice(0,3),['h2','p.flow-stale','p.flow-result-note']);
     await lab.run();out=output();assert.deepEqual(out.slice(2,4).map(s=>s.querySelector('h3').textContent),['What changed from the previous run?','Who became ready earlier or later?']);lab.destroy();
   }finally{restore();}

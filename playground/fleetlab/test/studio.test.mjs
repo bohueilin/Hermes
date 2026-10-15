@@ -171,13 +171,16 @@ test("a launch lesson reached from another Fleet day lesson does not keep that l
   try {
     const heading = () => [...x.studio.operations.element.querySelectorAll("h1")].map((h) => h.textContent);
     x.studio.applyRoute(routeHref({ page: "simulation", lesson: "region-launch" }));
-    assert.deepEqual(heading(), ["Fleet day"], "a fresh arrival names the page");
+    assert.deepEqual(heading(), ["Rehearse commissioning in Region B"], "a fresh arrival names the selected lesson");
     for (const before of ["airport-preparation", "cleaning"]) {
       x.studio.applyRoute(routeHref({ page: "simulation", lesson: before }));
       assert.equal(heading()[0], simulationCatalog().find((r) => r.id === before).title);
       x.studio.applyRoute(routeHref({ page: "simulation", lesson: "region-launch" }));
       assert.equal(document.title.split(" · ")[0], "Rehearse commissioning in Region B");
-      assert.deepEqual(heading(), ["Fleet day"], `after ${before} the page heading names the page, not ${before}`);
+      assert.deepEqual(heading(), ["Rehearse commissioning in Region B"], `after ${before} the page names the launch lesson`);
+      x.studio.applyRoute("#/fleet-day");
+      assert.deepEqual(heading(), ["Fleet day"], "unqualified route clears launch lesson identity");
+      assert.ok(x.studio.operations.element.querySelectorAll("button").some(b=>b.textContent.startsWith("Run fleet day")));
     }
   } finally {
     x.restore();

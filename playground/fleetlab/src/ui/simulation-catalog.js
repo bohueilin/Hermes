@@ -1,3 +1,6 @@
+import {createSetup,encodeSetup} from './setup-codec.js';
+import {defaultOptions} from './regional-power-view.js';
+import {regionalPowerDemoConfig} from '../model/regional-power.js';
 import {conceptPrimer} from './concept-primer.js';
 import {LESSON_FRAMES,frameView} from './teaching-frames.js';
 import {routeHref,followLink} from './routes.js';
@@ -89,7 +92,7 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
     el('div',{class:'catalog-topics',role:'group','aria-label':'Topic'},chips),questions,
     labLinks&&[el('p',{class:'eyebrow catalog-jump'},'QUICK LINKS'),labLinks],
     el('h2',{class:'fl-sr-only'},'All lessons'),el('div',{class:'catalog-count-row'},[count,clear]),cards,
-    el('p',{},'Fleet day also hosts separate contracts: staffing, charging, charger status, airport wave, launch rehearsal and the Austin power lab.'),el('p',{},'Each model has its own assumptions, so numbers from different models are not interchangeable.'),el('section',{class:'catalog-outside'},[el('h2',{},'What is still outside this playground?'),el('p',{},'Physical autonomous driving, lane changes and collisions; calibrated demand; staff shifts; repair failures; electrical network dynamics; globally optimal fleet routing; real dispatch or vehicle commands. A computed recommendation never authorizes an operational change.')]),
+    fleetModelLinks(),el('p',{},'Each model has its own assumptions, so numbers from different models are not interchangeable.'),el('section',{class:'catalog-outside'},[el('h2',{},'What is still outside this playground?'),el('p',{},'Physical autonomous driving, lane changes and collisions; calibrated demand; staff shifts; repair failures; electrical network dynamics; globally optimal fleet routing; real dispatch or vehicle commands. A computed recommendation never authorizes an operational change.')]),
   ]);
   function render(){
     const query=search.value.toLowerCase().trim();
@@ -114,3 +117,7 @@ export function createSimulationCatalog({onOperations=()=>{},onRegional=()=>{},o
   });
   render();return {element};
 }
+
+export function fleetModelLinks(){return el('p',{},['Fleet day also hosts separate teaching models: ',...[
+ ['staffing','staffing-readiness'],['charging','power-redistribution'],['charger status','resource-freshness'],['airport wave','airport-preparation'],['launch rehearsal','region-launch'],['Austin power lab',null],
+].flatMap(([name,lesson],i)=>[i?', ':'',el('a',{href:routeHref(lesson?{page:'simulation',lesson}:{page:'simulation',setup:encodeSetup(createSetup({model:'regional-power',config:regionalPowerDemoConfig(),options:defaultOptions()}))})},name)]),'.']);}

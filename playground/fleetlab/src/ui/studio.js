@@ -11,7 +11,7 @@ import { createDepotScene } from "./depot-scene.js";
 import { startFromPreset, CHOOSER_PRESET_IDS } from "./experiment.js";
 import { openLearnCase } from "./learn.js";
 import { createOperationsLab } from "./operations-lab.js";
-import { createSimulationCatalog, simulationCatalog } from "./simulation-catalog.js";
+import { createSimulationCatalog, simulationCatalog, fleetModelLinks } from "./simulation-catalog.js";
 import { createStreetLab } from "./street-lab.js";
 import {createScaleLab} from './scale-lab.js';
 import {createDepotFlowLab} from './depot-flow-lab.js';
@@ -114,7 +114,7 @@ function approach(navigate) {
       ["Workflow value","With operators, measure time to diagnosis, errors, task completion and whether the tool changes a planning decision."],
     ].map(([title,text])=>el("article",{},[el("h3",{},title),el("p",{},text)]))),el("p",{class:"study-note"},"These are proposed research questions. No operator study or adoption result is claimed.")]),
     el("section",{class:"approach-section"},[eyebrow("06 / READING ACROSS MODELS"),el("h2",{},"Read each model on its own terms."),
-      el("p",{},"Fleet day also hosts separate contracts: staffing, charging, charger status, airport wave, launch rehearsal and the Austin power lab."),
+      fleetModelLinks(),
       el("p",{},"Each model has its own assumptions, so numbers from different models are not interchangeable."),
     ]),
     el("section",{class:"approach-close"},[el("h2",{},"The model is a way to ask better questions."),pageLink("Take the guided walkthrough  →","tour",navigate,true)]),
@@ -224,6 +224,7 @@ export function mountStudio(app) {
     if(workspace){workspaceIntro.appendChild(el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));updateWorkspaceIdentity(store.getState());}
     if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Four-area experiments';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('p',{},'A depot change can help one area while leaving riders waiting elsewhere. Compare all four areas before judging the fleet-wide trade-off.'),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),pairedPrimer);}
     if(page==='streets')streets.refresh();
+    if(page==='simulation')operations.refresh();
     focusMain(workspace?workspaceMain:page==='approach'?product:page==='simulation'?operations.element:page==='streets'?streets.element:page==='scale'?scale.element:page==='flows'?flows.element:page==='catalog'?catalog.element:home,ROUTES[page].title);
   }
   function applyLesson(record){
@@ -231,7 +232,7 @@ export function mountStudio(app) {
     else if(record.target==='scale')scale.setLesson(record);
     else if(record.target==='operations'){
       const patch=typeof record.patch==='function'?record.patch():structuredClone(record.patch);
-      if(patch.launch_rehearsal){operations.setLesson(null);operations.chooseLaunchTemplate(patch.launch_rehearsal);operations.launchPanel.setLesson(record);}
+      if(patch.launch_rehearsal){operations.setLesson(record);operations.chooseLaunchTemplate(patch.launch_rehearsal);operations.launchPanel.setLesson(record);}
       else{operations.loadScenario(patch);operations.setLesson(record);}
     }else if(record.target==='streets'){streets.loadSharedSetup({model:'street-lab',config:{...defaultStreetConfig(),hotspot:record.hotspot},options:{}});streets.setLesson(record);}
     else{
@@ -258,6 +259,7 @@ export function mountStudio(app) {
         if(route.page!==expected)throw Error('The linked view and shared model do not match.');
       }
       if(record?.target==='flows'&&flows.getState().lesson!==record.id)applyLesson(record);
+      if(route.page==='simulation'&&!record)operations.setLesson(null);
       renderPage(route.page);
       if(record&&record.target!=='flows')applyLesson(record);
       if(setup){
@@ -266,7 +268,6 @@ export function mountStudio(app) {
         else operations.loadSharedSetup(setup);
         pause();
       }
-      if(record?.id==='region-launch'){const h=operations.launchPanel.heading;h.focus();h.scrollIntoView?.({block:'start'});}
       if(record)document.title=`${record.title} · FleetLab by Hermes`;
       for(const share of [fleetShare,launchShare,austinShare,streetShare,regionalShare])share.clear();
       if(setup){const shared={'fleet-day':fleetShare,'launch-rehearsal':launchShare,'regional-power':austinShare,'street-lab':streetShare,regional:regionalShare};shared[setup.model].loaded();const target=setup.model==='launch-rehearsal'?operations.launchPanel.heading:setup.model==='regional-power'?operations.regionalPanel.heading:setup.model==='fleet-day'?operations.summaryHeading:setup.model==='street-lab'?streets.element.querySelector('h1'):workspaceIntro.querySelector('h1');target.setAttribute('tabindex','-1');target.focus();}

@@ -180,7 +180,7 @@ test("release package binds every source and its executing proof tool to the exa
     sha256: createHash("sha256").update(result.files.get(tool.RECEIPT_PATH)).digest("hex"),
   } };
   writeMap(integrated, new Map([...buildSite(playground, { sourceCommit }), ...result.files,
-    ["downloads/fleetlab-offline.html", readFileSync(offline)], ["publication.json", JSON.stringify(publication)], ["city-explorer/unrelated", "City inventory is checked by the outer verifier"]]));
+    ["network-flows/fleet-day/index.html", readFileSync(join(root,"apps/fleetlab-city/hosted/fleet-day-redirect.html"))], ["downloads/fleetlab-offline.html", readFileSync(offline)], ["publication.json", JSON.stringify(publication)], ["city-explorer/unrelated", "City inventory is checked by the outer verifier"]]));
   writeMap(integrated,lessonNavigation(buildSite(playground,{sourceCommit})));
   writeFileSync(join(integrated, "index.html"), "integration owns root HTML");
   assert.doesNotThrow(() => tool.checkIntegratedPackage({ site: integrated, playground, sourceCommit }));

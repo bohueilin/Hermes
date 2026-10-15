@@ -1,3 +1,4 @@
+import {withoutApprovedRound6Dashes} from '../tools/check-dist.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {installFakeDom} from './helpers/fake-dom.mjs';
@@ -6,7 +7,7 @@ import {createStreetLab} from '../src/ui/street-lab.js';
 const H3=/\b(predict(?:s|ed|ing|ion|ions|ive)?|forecast(?:s|ed|ing|er|ers)?|expected\s+traffic|live|real[\s-]?time|monitoring)\b/i;
 const H6=/\b(wins?|winners?|beats|scores?|scoring|gauges?|grades?|leaderboards?|revenue|costs?)\b|better option|best configuration/i;
 export function humanCopy(node){if(node.localName==='pre'&&node.parentElement?.localName==='details'&&node.parentElement.querySelector('summary')?.textContent==='Exact values'&&!node.parentElement.hasAttribute('open'))return '';return node.children?.length?[...node.childNodes].map(n=>n.nodeType===3?n.textContent:humanCopy(n)).join(' '):node.textContent;}
-function check(node){const text=humanCopy(node);for(const re of [H3,H6,/[\u2013\u2014]/]){const match=re.exec(text);assert.ok(!match,match?text.slice(Math.max(0,match.index-80),match.index+120):'');}}
+function check(node){const text=withoutApprovedRound6Dashes(humanCopy(node));for(const re of [H3,H6,/[\u2013\u2014]/]){const match=re.exec(text);assert.ok(!match,match?text.slice(Math.max(0,match.index-80),match.index+120):'');}}
 test('Fleet day and Street readable UI exclude forbidden claims including runtime policy names',()=>{const restore=installFakeDom();const ops=createOperationsLab(),street=createStreetLab();try{check(ops.element);check(street.element);}finally{ops.destroy();street.destroy();restore();}});
 import {mountStudio} from '../src/ui/studio.js';
 import {createStore,createInitialState} from '../src/ui/store.js';

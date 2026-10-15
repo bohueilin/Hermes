@@ -90,6 +90,9 @@ export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,sel
   if(bound.bytes!==r.bytes||bound.sha256!==r.sha256)throw Error('Artwork source fingerprint differs.');
   expected.set(name,data);
  }
+ const redirect=resolve(sourceRoot,'apps/fleetlab-city/hosted/fleet-day-redirect.html');
+ if(lstatSync(redirect).isSymbolicLink()||!lstatSync(redirect).isFile())throw Error('Redirect source is not regular.');
+ expected.set('network-flows/fleet-day/index.html',branded?renderPage(readFileSync(redirect,'utf8'),{analytics:true}):readFileSync(redirect));
  const offlineHash=files['downloads/fleetlab-offline.html']?.sha256;
  if(!offlineHash||selection.offline_sha256!==offlineHash)throw Error('Integration offline selection mismatch.');
  expected.set('downloads/fleetlab-offline.sha256',`${offlineHash}  fleetlab-offline.html\n`);

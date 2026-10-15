@@ -1,3 +1,4 @@
+import {withoutApprovedRound6Dashes} from '../tools/check-dist.mjs';
 // Boundary rules R4 and R5 (design section 9.2, contract section 2), plus the label-tuple and dash scans.
 // Every rule scans whatever files exist, so modules added later are covered without editing this file.
 
@@ -254,7 +255,7 @@ describe("text scans", () => {
     if (!existsSync(file)) return; // scanned as soon as the file exists
     const text = readFileSync(file, "utf8");
     const problems = [];
-    text.split("\n").forEach((line, index) => {
+    withoutApprovedRound6Dashes(text).split("\n").forEach((line, index) => {
       if (/[\u2013\u2014]|\\u201[34]|\\u\{201[34]\}|&[mn]dash;/i.test(line)) problems.push(`src/ui/labels.js:${index + 1}`);
     });
     assert.deepEqual(problems, []);

@@ -16,7 +16,7 @@ const button=(label,click)=>el('button',{type:'button',class:'studio-button',on:
 const table=(caption,head,rows)=>el('div',{class:'ops-table-wrap',tabindex:0,'aria-label':caption},el('table',{},[
   el('caption',{},caption),el('thead',{},el('tr',{},head.map(h=>el('th',{scope:'col'},h)))),el('tbody',{},rows.map(row=>el('tr',{},row.map(v=>el('td',{},value(v))))))]));
 const exact=(label,record)=>el('details',{},[el('summary',{},'Exact values'),el('p',{},label),el('pre',{},JSON.stringify(record,null,2))]);
-const defaultOptions=()=>({treatment:'charging_deadlines',seeds:Array.from({length:12},(_,i)=>1001+i),tuning_seeds:[42,43,44],margin:.02,resamples:2000,null_treatment:false});
+export const defaultOptions=()=>({treatment:'charging_deadlines',seeds:Array.from({length:12},(_,i)=>1001+i),tuning_seeds:[42,43,44],margin:.02,resamples:2000,null_treatment:false});
 const yieldPage=()=>new Promise(resolve=>setTimeout(resolve,0));
 function download(label,name,record){
   const link=el('a',{download:name,class:'studio-button'},label);
