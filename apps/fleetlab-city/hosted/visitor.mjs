@@ -169,7 +169,7 @@ export function decorateVisitors(doc=document){
  const about=doc.querySelector('.approach-intro .hero-lede');
  if(about&&!doc.getElementById('visitor-founder'))about.parentNode.insertBefore(el('section',{id:'visitor-founder','aria-labelledby':'visitor-founder-title'},[
   el('h2',{id:'visitor-founder-title'},'Why I built this'),
-  el('p',{},"I'm Bo-Huei Lin. I spent six years in product at Meta working on identity, privacy, and measurement — systems where the interesting problems were always operational: what happens at scale, at 2am, when the edge cases arrive all at once. Autonomous fleets are that problem in physical form: thousands of vehicles that need charging, cleaning, dispatching, and updating, every day, with real riders waiting."),
+  el('p',{},"I'm Bo-Huei Lin. I spent the last 19+ years moving from software engineering into product leadership across Cisco, Amazon Alexa, Riot Games, and Meta, building across consumer devices, smart wearables, and large-scale platforms. The common thread in my work has always been operational reality at scale: designing systems that don't just work in the lab, but hold up when the edge cases hit simultaneously in production. Autonomous fleets take that software and hardware complexity into the physical world—where charging, turnaround, routing, and fleet-wide software updates directly dictate unit economics and passenger safety every single day."),
   el('p',{},"I built FleetLab to learn how that works — and to show my work. Every simulation here is synthetic and labeled as such, because I'd rather be honest about what I don't know than impressive about what I can't prove."),
  ]),about.nextSibling);
  decorateFieldNotes(doc);
