@@ -4,6 +4,15 @@ import vm from 'node:vm';
 import {renderPage,googleTag,policyFor} from '../hosted/site-transform.mjs';
 
 const shell='<html><head><meta charset="utf-8"><title>FleetLab</title></head><body><video src="./film.mp4" controls></video><script type="module" src="./boot.js"></script></body></html>';
+test('frozen source-offer HTML gains citation arrows while keeping its local license and downloads',()=>{
+ const input='<html><head><title>Map data &amp; licenses · FleetLab</title></head><body><a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a><a href="./ODbL-1.0.txt">ODbL 1.0</a><ul><li><a href="./captured-sources.tar.gz">Captured sources</a></li></ul></body></html>';
+ const html=renderPage(input,{analytics:true});
+ assert.ok(html.includes('>OpenStreetMap contributors ↗</a>'));
+ assert.ok(html.includes('href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0 ↗</a>'));
+ assert.ok(html.includes('href="./ODbL-1.0.txt">local license copy ↓</a>'));
+ assert.ok(html.includes('<ul><li><a href="./captured-sources.tar.gz">Captured sources</a></li></ul>'));
+ assert.equal(renderPage(html,{analytics:true}),html);
+});
 test('preview preserves the film and page boot but cannot load or execute Google analytics',()=>{
  const html=renderPage(shell);
  assert.ok(html.includes('<video src="./film.mp4" controls></video>'));

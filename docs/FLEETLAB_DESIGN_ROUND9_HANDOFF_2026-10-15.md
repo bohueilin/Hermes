@@ -32,7 +32,7 @@ Invented industry facts, numerical inputs and results: **none**. Supported notes
 
 ## Implementation and validation
 
-Presentation changes: `apps/fleetlab-city/hosted/visitor.mjs`, `visitor.css`, `map-sources.html`. Behavioral regression coverage: `apps/fleetlab-city/test/visitor-design.test.mjs`.
+Presentation changes: `apps/fleetlab-city/hosted/visitor.mjs`, `visitor.css`, `map-sources.html`, `site-transform.mjs`. Behavioral regression coverage: `apps/fleetlab-city/test/visitor-design.test.mjs` and `hosted-brand.test.mjs`.
 
 New tests first failed for the absent component, then passed: sourced evidence separation/idempotency/no run, and lesson transitions/removal for unsupported or generic frames. Independent code review found no actionable findings; that review did not independently revalidate sources or visual layout.
 
@@ -41,7 +41,7 @@ Local evidence: `build/fleetlab-city/validation/design-round9-20261015/`.
 - Browser: all eight note placements checked at 1280×900 and 390×900; one note per placement, no horizontal overflow, 16 px body text. Real preset selection removed the previous lesson's note and retained the initial no-run state.
 - About: one founder block, exact approved paragraphs, career sentence absent; desktop and phone screenshots saved.
 - These are viewport checks, not physical Pixel or human-comprehension qualification.
-- Teaching Node: 2,418 pass, 8 skipped, 1 TODO. Hosted Node: 101 pass. City Python: 345 pass. Hermes Python: 1,661 pass, 56 skipped. Total: 4,525 passing tests. Ruff and Git whitespace checks pass. Doctor: 17 PASS, 1 dirty-tree WARN, 1 optional display NOT_AVAILABLE.
+- Teaching Node: 2,418 pass, 8 skipped, 1 TODO. Hosted Node: 102 pass. City Python: 345 pass. Hermes Python: 1,661 pass, 56 skipped. Total: 4,526 passing tests. Ruff and Git whitespace checks pass. Doctor: 17 PASS, 1 dirty-tree WARN, 1 optional display NOT_AVAILABLE.
 - Package, deployment and live-readback results will be recorded after completion.
 
 Commands used include:
@@ -55,6 +55,8 @@ conda run -n hermes-dev python -m ruff check .
 PYTHONPATH="$PWD/src" conda run -n hermes-dev python -m hermes doctor
 git diff --check
 ```
+
+The first preview (`e89fe25d`) exposed a P0 publication-path issue: the source page is copied from a frozen source offer, so changing the current template alone did not update it. Added a failing frozen-HTML test, then applied the citation-only correction in the source-bound hosted transform. Downloads and scientific data stay unchanged. This first preview was not promoted to production; the corrected candidate is rebuilt and checked separately.
 
 The first City test invocation used pytest, which is not installed in that project's environment; it ran no tests. The existing unittest suite is the accepted check. Removed only the obsolete, reproducible Round 7 temporary release to create build headroom; retained its manifests/receipt, the current Round 8 release and canonical scientific inputs.
 

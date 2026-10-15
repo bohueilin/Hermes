@@ -33,6 +33,10 @@ export function renderPage(input,{analytics=false}={}){
   .replace(/<script type="module" src="\/brand\.mjs"><\/script>/g,'');
  if(/googletagmanager\.com\/gtag\/js|gtag\(['"]config/.test(html))throw Error('Page already contains an unowned Google tag');
  if((html.match(/<head\b[^>]*>/gi)||[]).length!==1||!/<\/body>/i.test(html))throw Error('Expected one complete HTML page');
+ // Source offers retain frozen data/downloads; refresh only their presentation citations.
+ if(html.includes('<title>Map data &amp; licenses · FleetLab</title>'))html=html
+  .replace('>OpenStreetMap contributors</a>','>OpenStreetMap contributors ↗</a>')
+  .replace('<a href="./ODbL-1.0.txt">ODbL 1.0</a>','<a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0 ↗</a> (<a href="./ODbL-1.0.txt">local license copy ↓</a>)');
  html=html.replace(/(<meta[^>]+http-equiv="Content-Security-Policy"[^>]+content=")([^"]+)(")/i,(_,a,p,b)=>a+policyFor(p,analytics)+b);
  html=html.replace(/(<head\b[^>]*>)/i,'$1'+googleTag(analytics));
  html=html.replace(/<\/head>/i,'<link data-fleetlab-icon rel="icon" href="/site-media/favicon.png" sizes="32x32" type="image/png"><link data-fleetlab-icon rel="apple-touch-icon" href="/site-media/apple-touch-icon.png" sizes="180x180"><link data-fleetlab-design rel="stylesheet" href="/brand.css"></head>');
