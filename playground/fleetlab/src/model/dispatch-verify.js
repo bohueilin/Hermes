@@ -7,6 +7,15 @@ const length=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]);
 const along=(a,b,n)=>{const dx=Math.min(n,Math.abs(b[0]-a[0]));return [a[0]+Math.sign(b[0]-a[0])*dx,a[1]+Math.sign(b[1]-a[1])*Math.max(0,n-dx)];};
 export function verifyDispatch(record){
  try{
+  let nodes=0;
+  const json=(v,depth=0)=>{
+   if(++nodes>65536||depth>20)fail('JSON bounds exceeded');
+   if(v===null||typeof v==='string'||typeof v==='boolean'||typeof v==='number'&&Number.isFinite(v))return;
+   if(!v||typeof v!=='object'||Object.getOwnPropertySymbols(v).length)fail('Unsupported JSON value');
+   if(Array.isArray(v)){if(Object.keys(v).length!==v.length)fail('Sparse or extended array');}
+   else if(Object.getPrototypeOf(v)!==Object.prototype&&Object.getPrototypeOf(v)!==null)fail('Non-JSON object');
+   for(const x of Object.values(v))json(x,depth+1);
+  };json(record);
   if(!record||typeof record!=='object'||new TextEncoder().encode(canonical(record)).length>262144)fail('Record size or structure invalid');
   if(!Array.isArray(record.events)||record.events.length>256||!Array.isArray(record.ledger)||record.ledger.length>41||!Array.isArray(record.decisions)||record.decisions.length>40||!Array.isArray(record.preDecision)||record.preDecision.length>40)fail('Record arrays exceed domain');
   const input=normalize(record.input),{horizon}=input,end=record.end,policy=record.policy;

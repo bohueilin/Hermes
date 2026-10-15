@@ -12,3 +12,4 @@ const error='Batch contains duplicate or infeasible assignment';
 // setup exposes the transport for faithful failure delivery.
 x.fail(error);assert.match(x.by('manual-result').textContent,/infeasible/);assert.match(x.by('manual-result').textContent,/0 s/);
 }finally{x.close();}});
+test('neutral chapter does not claim a rider has fewer options',()=>{const x=setup();try{x.by('neutral').click();x.reply();document.querySelector('[data-chapter="1"]').click();assert.doesNotMatch(x.by('chapter-title').textContent,/One rider has fewer/);assert.doesNotMatch(x.by('chapter-copy').textContent,/r-002 has a short deadline/);}finally{x.close();}});

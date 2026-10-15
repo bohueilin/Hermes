@@ -18,3 +18,7 @@ test('all small grid workloads independently reconstruct, including clipped runs
 test('rehashed pre-decision feasibility and terminal identity alterations are rejected',()=>{
  const source=runDispatch(fixture(),'joint');for(const mutate of [r=>r.preDecision[0].edges.pop(),r=>r.preDecision[0].edges[0].pickupAt++,r=>r.preDecision[0].phase='POST_BOUNDARY',r=>r.end=1170,r=>r.quantum=60,r=>r.final.pairs.push(['r-001','ev-001'])]){const r=copy(source);mutate(r);assert.equal(verifyDispatch(rehash(r)).ok,false);}
 });
+test('nonfinite and unsupported JSON values cannot masquerade as unavailable evidence',()=>{
+ for(const bad of [NaN,Infinity,-Infinity,undefined]){const r=runDispatch(fixture(),'manual',{end:0});r.metrics.medianWait=bad;assert.equal(verifyDispatch(r).ok,false);}
+ for(const mutate of [r=>r.final.requests[0].pickup=NaN,r=>r.extra=undefined,r=>r.final.vehicles[0].until={toJSON:()=>null},r=>r.events.extra=1,r=>delete r.events[0],r=>r.extra=r]){const r=runDispatch(fixture(),'manual',{end:0});mutate(r);assert.equal(verifyDispatch(r).ok,false);}
+});
