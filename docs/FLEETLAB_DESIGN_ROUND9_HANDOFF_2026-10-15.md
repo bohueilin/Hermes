@@ -10,7 +10,7 @@ The supplied audit is a design brief, not evidence of its industry claims. Its �
 |---|---|---|
 | P0-1 external citation arrows | Done | OpenStreetMap and the official ODbL page use ↗. The original ODbL file was a local download, so it remains separately available as “local license copy ↓”. |
 | P1-1 From the field | Could not implement all ten as written; component and seven supported topics implemented | Eight placements: rebalancing, dispatch, software delivery, plus Fleet day depot-count, staffing-readiness, upload, airport-preparation and cleaning. Every note has the explicit public-reporting label, a dated ↗ source and at most two body sentences. Three unsupported topics are held below. |
-| P1-2 founder story | Done | Owner answered “Approve verbatim without the career sentence.” The two approved paragraphs appear directly below the About introduction, before section 01. No career sentence or biography additions. |
+| P1-2 founder story | Done; first paragraph updated by owner on October 15 | Owner initially approved the two-paragraph block without the career sentence, then supplied replacement wording for paragraph one. The owner-provided replacement appears directly below the About introduction, before section 01. Paragraph two and the absence of the career sentence are unchanged. |
 | P1-3 Home value proposition | Done | Added the exact specified clause naming Waymo, Tesla and Zoox. Existing headline, animation, film and learning paths retained. |
 
 Invented industry facts, numerical inputs and results: **none**. Supported notes are deliberately narrower paraphrases, not verbatim publication of unsupported audit text. On Fleet day, the note follows the active lesson introduction before controls; lessons do not each have a dedicated concept image. Notes update when the lesson changes and disappear for generic presets or unsupported topics. This uses the existing hosted presentation layer; offline teaching models remain unchanged.
@@ -97,6 +97,18 @@ The user's prior explicit GitHub/live publication authorization persists for thi
 - Receipt: `docs/releases/fleetlab-current.json`; records source identity, fingerprints, hosting checks and the complete-scan retry history.
 - Production browser evidence: `production-browser.json`, `about-production.png`, `sources-production.png`. Viewport layouts and source decisions are documented above. Existing stable-host browser cache behavior is explicitly recorded under Publication observations.
 - Owner's unrelated untracked assets/documents were preserved. The release checkout is temporary; no unrelated files were staged.
+
+## Owner's founder-copy update — October 15, 2026
+
+The owner replaced the first “Why I built this” paragraph verbatim with the 19+ year Cisco, Amazon Alexa, Riot Games and Meta narrative in `apps/fleetlab-city/hosted/visitor.mjs`. The second paragraph remains unchanged. This copy update changes no model, numerical result, lesson, asset or budget ceiling.
+
+- Source commit: `adf19b102b8736b24c03af43f43a7031cb9d39d9`; pushed to `github/codex/fleetlab-city-sf`.
+- Live About page: https://fleetlab.pages.dev/#/approach; exact production build: https://1e821956.fleetlab.pages.dev/#/approach.
+- Production deployment: `1e821956-9836-44a5-88aa-5ee7f5171682`; verified preview: `f0726fbe-b0ac-4dd7-8913-dcc732032072`. The prior production deployment `37c0b185-b0da-439d-8079-2e1e420d64f0` remains the rollback point.
+- The focused hosted design test passed 11/11. The source-bound package and upload guard passed with 10,139 staged files. Preview and stable production each matched 10,138/10,138 served files; hosting headers matched 71/71 on each. Immutable production and prior production smoke each matched 102/102.
+- The first preview readback had one transient transport failure on an unchanged archived file; the direct hash check and fresh full scan passed. The first stable-host scan began during alias propagation and saw 114 temporary 404s in the newly generated City Explorer release; a fresh full scan passed. Both failed scans remain in `build/fleetlab-city/validation/founder-copy-20261015/`.
+- Browser checks on desktop and 390 px phone width show the complete paragraph with no clipped text or horizontal overflow. Browser screenshots are in the same validation directory.
+- The current publication receipt is `docs/releases/fleetlab-current.json`. The earlier Round 9 release data above remains a historical record, not the current production identity.
 
 ## Recommendation, top risks and next 3 actions
 
