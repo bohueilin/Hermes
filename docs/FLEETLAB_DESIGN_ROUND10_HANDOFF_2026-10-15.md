@@ -37,14 +37,51 @@ The stylesheet's 3,868-byte opening catalogue was compacted into a 1,954-byte cl
 
 An initial attempt removed the whole catalogue and failed four existing inventory checks. That attempt was corrected by retaining the inventory; no test was weakened. The corrected focused suite passed 143 tests, with one skip and one TODO. The new hosted content adds 2,516 bytes before final packaging. No ceiling was raised.
 
+| Final measure | Bytes | Unchanged limit | Headroom |
+|---|---:|---:|---:|
+| Original teaching source + tools | 3,136,281 | 3,153,920 | 17,639 |
+| Offline edition | 2,560,130 | 2,571,440 | 11,310 |
+| Package metadata | 37,475 | 40,960 | 3,485 |
+| Integrated emitted text | 3,103,777 | 3,145,728 | 41,951 |
+| Integrated NF-03 dependency closure | 524,097 | 524,288 | **191** |
+
+The final source-bound package proof and independent upload guard pass. The 191-byte NF-03 margin is a concrete constraint on future shared content, not permission to raise the ceiling.
+
 ## Validation and release
 
-Validation evidence is under `build/fleetlab-city/validation/design-round10-20261015/`. Final package measurements and deployment identities are recorded below after the release checks finish.
+Validation evidence is under `build/fleetlab-city/validation/design-round10-20261015/`.
 
 - Browser: all five guide links reach the intended existing pages. Returning to About preserves one guide and one contact card. The UK note appears only for its selected lesson. Desktop and 390 px phone layouts have no horizontal overflow; guide links are at least 46 px high. Screenshots cover the guide, contact card and reporting note.
 - Source review and independent code review were completed. No actionable code-review findings remained.
 - Tests: teaching Node 2,418 pass / 8 skipped / 1 TODO; hosted Node 102 pass; City Python 345 pass; Hermes Python 1,661 pass / 56 skipped. **4,526 passing tests.** After the final link-class change, the focused hosted suite passed 11/11. Ruff and Git whitespace checks pass. Doctor reports 17 PASS, one expected dirty-tree WARN and one optional display NOT_AVAILABLE.
 - The owner’s standing FleetLab GitHub/live-publication authorization continues to apply. Website publication has no bearing on real-vehicle operation or deployment authority. SF source/map, physical-device and human qualification remain separate.
+
+### Release identity
+
+- Runtime/source commit: `d233e1baf6387a296e8a6f8690ece270cbf9b87e`, pushed to `github/codex/fleetlab-city-sf`.
+- Public site: [FleetLab](https://fleetlab.pages.dev/#/approach).
+- Immutable production: [9ffe72c5](https://9ffe72c5.fleetlab.pages.dev/#/approach); deployment `9ffe72c5-945e-4f6f-b451-3bc44c3d3266`.
+- Preview: [ae392522](https://ae392522.fleetlab.pages.dev/#/approach); deployment `ae392522-034b-4954-a6d0-43fbd517fa9e`.
+- Previous production retained: [1e821956](https://1e821956.fleetlab.pages.dev).
+- Current City Explorer path: `city-explorer/releases/34258fef3cb4af33`; scientific baseline remains `c56bda6b509105c5`.
+- Packaged teaching source: `network-flows/sources/a086b9311c10664da56d3f732c97f363b68262e6358a4278e872021b482b1097.json.gz` (974,425 bytes).
+- Preview full readback: 10,138 / 10,138 served files match. Preview and production headers: 71 / 71 each. Immutable production and previous-production smoke checks: 102 / 102 each. Stable production full readback: **10,138 / 10,138 match**, captured 2026-10-15T22:36:24.908049+00:00. The package contains 10,139 staged files; the host-served inventory contains 10,138.
+- Production browser confirms the exact approved contact sentence and the five-stop guide. Proof images: `presenting-production.png` and `contact-production.png` in the validation directory. Phone checks used a browser viewport, not a new physical-Pixel qualification.
+
+The inherited publication receipt contained `files` as a readback-results list instead of the path-to-expectation mapping required by `readback.py --record`. The prior receipt was preserved, its expected inventory normalized for the rollback check, and this release keeps `candidate-smoke.json` separate from result files. The final receipt retains the mapping and passed a fresh `--record` check: **102 / 102 match**. This repairs release bookkeeping without changing runtime or simulation behavior.
+
+### Reproduction entry points
+
+```sh
+node --test playground/fleetlab/test/*.test.mjs
+node --test apps/fleetlab-city/test/*.test.mjs
+bash build/fleetlab-city/validation/design-round10-20261015/build-release.sh
+build/fleetlab-city/venv/bin/python apps/fleetlab-city/tools/readback.py --url https://fleetlab.pages.dev --site /private/tmp/fleetlab-design-round10-20261015-release/integrated-release/site --output build/fleetlab-city/validation/design-round10-20261015/production-readback.json
+build/fleetlab-city/venv/bin/python apps/fleetlab-city/tools/readback.py --url https://9ffe72c5.fleetlab.pages.dev --record docs/releases/fleetlab-current.json --output build/fleetlab-city/validation/design-round10-20261015/final-receipt-smoke.json
+git diff --check
+```
+
+Build, test and deployment logs retain both the first inventory-test failure and the corrected passing run. Generated artifacts and unrelated owner assets are not staged. The release receipt and this handoff are committed separately from the already deployed source commit. The temporary deployment worktree was archived after publication; the main checkout and unrelated owner files were preserved.
 
 ## Recommendation and next actions
 

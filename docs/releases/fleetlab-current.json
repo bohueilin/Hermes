@@ -4,13 +4,13 @@
   "sf_qualification": "HOLD",
   "authenticity": "NOT_AUTHENTICATED",
   "operational_deployment_permission": "NONE",
-  "source_commit": "adf19b102b8736b24c03af43f43a7031cb9d39d9",
+  "source_commit": "d233e1baf6387a296e8a6f8690ece270cbf9b87e",
   "source_branch": "codex/fleetlab-city-sf",
-  "production_deployment_id": "1e821956-9836-44a5-88aa-5ee7f5171682",
-  "preview_deployment_id": "f0726fbe-b0ac-4dd7-8913-dcc732032072",
-  "prior_production_deployment_id": "37c0b185-b0da-439d-8079-2e1e420d64f0",
+  "production_deployment_id": "9ffe72c5-945e-4f6f-b451-3bc44c3d3266",
+  "preview_deployment_id": "ae392522-034b-4954-a6d0-43fbd517fa9e",
+  "prior_production_deployment_id": "1e821956-9836-44a5-88aa-5ee7f5171682",
   "stable_url": "https://fleetlab.pages.dev",
-  "immutable_url": "https://1e821956.fleetlab.pages.dev",
+  "immutable_url": "https://9ffe72c5.fleetlab.pages.dev",
   "current": {
     "compatibility": {
       "metrics": "fleetlab.city-metrics/1.0.0",
@@ -18,869 +18,462 @@
       "run": "fleetlab.city-run/1.0.0",
       "viewer": "1.1.0"
     },
-    "path": "city-explorer/releases/03d23edf72c08725",
-    "release_sha256": "03d23edf72c08725a41bb4e500a951114e1eebbbb71f43400e4468d2900e0fbc"
+    "path": "city-explorer/releases/34258fef3cb4af33",
+    "release_sha256": "34258fef3cb4af3301161ca38a57d1e393c43634ee8cd35d881d164629a36228"
   },
   "rollback": "city-explorer/releases/c56bda6b509105c5",
-  "integration_manifest_sha256": "bbb2908e379cbf5c5a3ce5dd893c9019752f722ef4b59d63c6d28d38dd5c48f4",
+  "integration_manifest_sha256": "5e3a260358f62fbb7dd0445ff6717a7496fd58b734258ea5ef5623f7a708ec67",
   "file_count": 10139,
-  "total_bytes": 1626097753,
-  "files": [
-    {
-      "path": "404.html",
-      "status": "404",
+  "total_bytes": 1626096473,
+  "files": {
+    "404.html": {
       "bytes": 1609,
       "sha256": "4349ecd993535e24ea003d3fe73685e642cd373ef1db057fa83e5fd0dd2a53de",
-      "transport_ok": true,
-      "matches": true
+      "status": 404
     },
-    {
-      "path": "boot.js",
-      "status": "200",
+    "boot.js": {
       "bytes": 242,
-      "sha256": "5bf4eed656cf58f4dd0def651510b06ba9731e137ed684d61536618df2f8f364",
-      "transport_ok": true,
-      "matches": true
+      "sha256": "5bf4eed656cf58f4dd0def651510b06ba9731e137ed684d61536618df2f8f364"
     },
-    {
-      "path": "brand.css",
-      "status": "200",
+    "brand.css": {
       "bytes": 5281,
-      "sha256": "96b1e812c13d473b53d7d62715dabc07d84939d8eca1ae82f4b528cd62a4801c",
-      "transport_ok": true,
-      "matches": true
+      "sha256": "96b1e812c13d473b53d7d62715dabc07d84939d8eca1ae82f4b528cd62a4801c"
     },
-    {
-      "path": "brand.mjs",
-      "status": "200",
+    "brand.mjs": {
       "bytes": 4647,
-      "sha256": "74ac3390b08252b3efd3ba1bb1f94294fa922107a1978d67a8edcfd1c940c154",
-      "transport_ok": true,
-      "matches": true
+      "sha256": "74ac3390b08252b3efd3ba1bb1f94294fa922107a1978d67a8edcfd1c940c154"
     },
-    {
-      "path": "city-explorer/releases/c56bda6b509105c5/index.html",
-      "status": "200",
-      "bytes": 34000,
-      "sha256": "5e973076e662bb673b35207bb51432730d7c8cb14b1efea020da17ae5f86ed37",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "city-explorer/releases/index.html",
-      "status": "200",
-      "bytes": 521,
-      "sha256": "d42f640307de57c96377db64bb7496c18b03f65eb858d7971c09267cfd96cf7e",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "diagrams/D-01-depot-scenario.webp",
-      "status": "200",
-      "bytes": 123536,
-      "sha256": "68e56d20449020fb575ab5df562f2a500c73e0b71513e42abc94f0b08bf83ca7",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "diagrams/D-02-crossed-priorities.webp",
-      "status": "200",
-      "bytes": 132710,
-      "sha256": "4af8121f01e85657d627d0b33e753b41165f7f27534b0b401412920f9e2e6320",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "diagrams/D-03-staffing-queue.webp",
-      "status": "200",
-      "bytes": 157628,
-      "sha256": "b0746e18524fed0f19aba53006d447a3c3a9a7f42d9676f0d566da18da2e1a5e",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "diagrams/D-05-opportunity-cost.webp",
-      "status": "200",
-      "bytes": 96562,
-      "sha256": "353762295346a650a868f43580b379cdfd825676eec57c1b7fc4d4eec2444f8f",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "downloads/fleetlab-offline.html",
-      "status": "200",
-      "bytes": 2562044,
-      "sha256": "1c6f8819eebc73768abf8da854b62880b68ad238073702e0666193378c540eaa",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "downloads/teaching-package.json",
-      "status": "200",
-      "bytes": 37473,
-      "sha256": "d1f3596fd54fa36916ca348dea20521ee6379c79267055b40d9162214579f641",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "index.html",
-      "status": "200",
-      "bytes": 3634,
-      "sha256": "9b05d5c1e0b8af8f56e558f8b6512a0511412b3b213b2ba8e37ab9a2997e8926",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "integration.mjs",
-      "status": "200",
-      "bytes": 11474,
-      "sha256": "8790f1df16d43641828b9994f11a9265d0f0a23bbb63bbd4052c5d695f28a7f4",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/capacity/index.html",
-      "status": "200",
-      "bytes": 2160,
-      "sha256": "039a3d7614724f42e31846386677a32147f1cdd4729a9774f9d983d45bc0e682",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/capacity/release.json",
-      "status": "200",
-      "bytes": 16589,
-      "sha256": "de6f09020e8406ccde6505240e626ebb1aeb68158f51a2ec73c074326c97655c",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/capacity/visual.css",
-      "status": "200",
-      "bytes": 14015,
-      "sha256": "0fad6a812eebbda1de3da19766e557cd2d396bc50f5ad47c7f28c9e36a6ec1a7",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/delivery-order/boot.js",
-      "status": "200",
-      "bytes": 314,
-      "sha256": "bae21b09b47eb32988eea6bc02932d0a6acadff8d486feb7d29a2a82ed8d6b68",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/delivery-order/index.html",
-      "status": "200",
-      "bytes": 2133,
-      "sha256": "5377dc874f78b8d8bfdb7f8942c9bacf41987ea38a69415aca3a819b5b4ea0ca",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/delivery-order/release.json",
-      "status": "200",
-      "bytes": 8099,
-      "sha256": "d3817d4035ecd1b55f7c62a4227fa33410dd98541d863d57367fbd7513ca956e",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/delivery-order/visual.css",
-      "status": "200",
-      "bytes": 12226,
-      "sha256": "14aca0693d6daa7d82894194c84f95933863dc10e84b0868b09ba0f6e6476d04",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/dispatch/boot.js",
-      "status": "200",
-      "bytes": 199,
-      "sha256": "7a57e01b617ed8310df6296aca76b907192ccf51b05b04bdae18ea1414549563",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/dispatch/index.html",
-      "status": "200",
-      "bytes": 9081,
-      "sha256": "df9badf1de3957ca540d6fbe18bf26748111c8c7fe123dd663a686013ddbe435",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/dispatch/release.json",
-      "status": "200",
-      "bytes": 12474,
-      "sha256": "a001c967ea7518440b9972d90f278f506c7656dbe4317fd3db4131394ee48168",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/dispatch/visual.css",
-      "status": "200",
-      "bytes": 5047,
-      "sha256": "46c2a66305ec13715d959667e07c5932b0c80733e73b867baac73356ce1f6009",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/fleet-day/index.html",
-      "status": "200",
-      "bytes": 1231,
-      "sha256": "e3e0a1d18906a82c20d1a44c1e20d554d8ba2e0e5b7cfb3cc8b6e1e5f4efb17e",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/rebalancing/boot.js",
-      "status": "200",
-      "bytes": 211,
-      "sha256": "6fc7dd0c0ae7833010b700c96a37a2b303a8e9de2a6f6b226da7a6c869c37742",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/rebalancing/index.html",
-      "status": "200",
-      "bytes": 13656,
-      "sha256": "5798602b6f46163c07735b9033f1c9be0de823204c279e5c865d12f29a65cd08",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/rebalancing/release.json",
-      "status": "200",
-      "bytes": 17513,
-      "sha256": "0a81e137ea8bd28f952b439bcfd6569255710be1c067c9c030b182d68a3b7be5",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/rebalancing/visual.css",
-      "status": "200",
-      "bytes": 13732,
-      "sha256": "755434cb084e4fa84bf3edc1ea8f05f7362dbc5f9e1e60e6a6f6ea9e1818e54e",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/software-delivery/boot.js",
-      "status": "200",
-      "bytes": 335,
-      "sha256": "e2aec3268b65db8c519d80ce4f80355fb807b4d2c1b9ca04fff34f88343c9fa2",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/software-delivery/index.html",
-      "status": "200",
-      "bytes": 2387,
-      "sha256": "1adc892e22a072cc61b4325110948c8d395b1a0fe8d1acc613d59ec349502348",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/software-delivery/release.json",
-      "status": "200",
-      "bytes": 6857,
-      "sha256": "d22c27f0813908011b9a9f4e96507bc8108f9c2b7d2171234a115df67b768cc0",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "network-flows/software-delivery/visual.css",
-      "status": "200",
-      "bytes": 18142,
-      "sha256": "5fa47f81fe3ca386d4c33cd97ab48b5770c14c041119121575fb90fe1a1af7c7",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "publication.json",
-      "status": "200",
-      "bytes": 1800,
-      "sha256": "1647753eb3cedfbcf701aad534a4445821e4ac1e95690f3374e8e6f081b55aa9",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/apple-touch-icon.png",
-      "status": "200",
-      "bytes": 21051,
-      "sha256": "654edab6ec1fcd21b3c0faace8a211b4dc1dca14de9503cb2b96802e11e7c3df",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/favicon.png",
-      "status": "200",
-      "bytes": 1614,
-      "sha256": "a7edee10ea0de90df27fd7084011401ddd7f57246baaee048bcc45e74997a325",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/fleetlab-logo-128.png",
-      "status": "200",
-      "bytes": 10347,
-      "sha256": "0953baf3272679f9482980d567dd3f18d9a3f67196eec20b18990046ecfc350f",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/fleetlab-logo-64.png",
-      "status": "200",
-      "bytes": 3368,
-      "sha256": "d72f2d2b1fa81e07b63cbbf0048e945d55ccbe73ff7ee117684880317fe4747f",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/fleetlab-logo.png",
-      "status": "200",
-      "bytes": 39618,
-      "sha256": "bfa70ffa4d0375e5299332c79533a12977d41a97f6f4752cd17fade9c5ea6f5d",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/r1-nf05.mp4",
-      "status": "200",
-      "bytes": 992600,
-      "sha256": "27cdf1bc2fa71a24d6e19afc29cf130744e9d6cb7aa8d0b4d9a500cb278b0306",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/r1-nf05.webp",
-      "status": "200",
-      "bytes": 58200,
-      "sha256": "7e08ea1f0465b8640be0393f23687b4b4ae952f36e5e9c8cd2b25cde870c9b48",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/r1-nf06.mp4",
-      "status": "200",
-      "bytes": 850111,
-      "sha256": "fb72e529a3122c30e2410aba1f1111145f4141d76d760cd40c32eec8a88e425c",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/r1-nf06.webp",
-      "status": "200",
-      "bytes": 82888,
-      "sha256": "60dd26033cff6aeaef0f985909827ddb83192ce6f990f99a81bfbf90abd22318",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/readiness.jpg",
-      "status": "200",
-      "bytes": 401446,
-      "sha256": "494f4499e7a9b2a3f2dd441d3f7f34418c33c41e124b46c73111a7e9de2ac110",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "site-media/shared-delivery.webp",
-      "status": "200",
-      "bytes": 145670,
-      "sha256": "9139c4f68e6ef71557277fe40ea977176dfbb8fe26ed9d6331c6c7afcbd725ba",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/data/delivery-order-study.js",
-      "status": "200",
-      "bytes": 17593,
-      "sha256": "62226748fb187fde4cf1848d8a4bf7ac254ffcc8d500d2efcd7cdb808738cdf7",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/data/software-delivery-study.js",
-      "status": "200",
-      "bytes": 12164,
-      "sha256": "5cf2cbc308c8e0c59c637403ec917488d796aa4056dbc0f42dc89a8b5d3b88b1",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/model/dispatch-contract.js",
-      "status": "200",
-      "bytes": 3516,
-      "sha256": "bf6cef37516e1c6bd8b7fcd161ab64d1f1984c14cca2a1ac597d22ef03569acc",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/model/dispatch-verify.js",
-      "status": "200",
-      "bytes": 8418,
-      "sha256": "6240743f7574442f4f0a6fb4c55c7cfff544100e3566c4037afe3f17de88cfc1",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/model/dispatch.js",
-      "status": "200",
-      "bytes": 5869,
-      "sha256": "7b167a71f9314f5f3a7aab0f9a15bf70cc430655fd5a08665345568ee2daf7f2",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/model/rebalancing-contract.js",
-      "status": "200",
-      "bytes": 5336,
-      "sha256": "d2f88e9376417a7af75fa59fdbb69d081a276d5a39f8c4132f01bb2fe2f95326",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/model/rebalancing-study.js",
-      "status": "200",
-      "bytes": 3244,
-      "sha256": "f0211cd94a1612e4e836535c6dc20a812ecf40f1a1dc5c2efdd1ab258d5ddaa0",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/model/rebalancing-verify.js",
-      "status": "200",
-      "bytes": 9768,
-      "sha256": "753e7fd9f94ee5cb252a49446d996e965c655361deaf086e9a7768a210fee610",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/model/rebalancing.js",
-      "status": "200",
-      "bytes": 7057,
-      "sha256": "a74013f725c9e3d6e8e29eb16481523ad4c05cc5fafbbd059ee28ece4e96c299",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/runtime/delivery-order-worker.js",
-      "status": "200",
-      "bytes": 2738,
-      "sha256": "5fe5f0951ce9523dc53120305b6168c31d1f7963c61ba57e0846b24e50c78d02",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/runtime/dispatch-job.js",
-      "status": "200",
-      "bytes": 884,
-      "sha256": "c5739a1b01efb5a7e4dfe3e918c38d9fe9ca3cba6afcb75267b526c841919fb1",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/runtime/dispatch-session.js",
-      "status": "200",
-      "bytes": 2291,
-      "sha256": "25d462122827fdd1d17854c705205174f2d3c2e91ba2fd765c85c7d94f4bd365",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/runtime/dispatch-worker.js",
-      "status": "200",
-      "bytes": 243,
-      "sha256": "37de80aa9f22022d2f6552a7d6ebfd612e9b00685602d878752c51fe3d6a2d90",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/runtime/rebalancing-job.js",
-      "status": "200",
-      "bytes": 1483,
-      "sha256": "378b1cf035898f244377f805a4fa69444e548b37ee4193cd9e607e3cff83c391",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/runtime/rebalancing-session.js",
-      "status": "200",
-      "bytes": 2932,
-      "sha256": "fb6653d6eea6d89e7c6db6d695e6598e94ce47d7160a6e921d50c714e0f7d6c2",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/runtime/rebalancing-worker.js",
-      "status": "200",
-      "bytes": 234,
-      "sha256": "1b40fddd4e289f55b3f021895ae05828b7d83bf1714527ab34eea36b43c1351a",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/runtime/software-delivery-worker.js",
-      "status": "200",
-      "bytes": 1818,
-      "sha256": "9900d5e2914b63546aad5b1c03bc91bb5e3b2b57e5110a30d58711409e2a6710",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/concept-primer.js",
-      "status": "200",
-      "bytes": 5177,
-      "sha256": "00f6bea2922e6f726f272b630efa7a99a56cdb1b9ca8ac88064e6349d78d5f17",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/decimal-input.js",
-      "status": "200",
-      "bytes": 197,
-      "sha256": "6f92ec81371b4f7dca19878d1b117fadfe3b1ed26c6c91ac6ce78480839884ee",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/delivery-order-page.js",
-      "status": "200",
-      "bytes": 29435,
-      "sha256": "d55218d344daa92f9a23034b552fa1460f7bbef48abd1ce14b58947a85657a69",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/depot-capacity-bench.js",
-      "status": "200",
-      "bytes": 10954,
-      "sha256": "b73c50117d12588885f64fd3a7db8ca1c935788f43022635a996cb4248910ce4",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/depot-capacity-guided.js",
-      "status": "200",
-      "bytes": 6690,
-      "sha256": "9416c77697c09818c5a7b74e9db7ee201772d1721bc7bf90fd085b05b6af75ab",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/dispatch-app.js",
-      "status": "200",
-      "bytes": 12779,
-      "sha256": "7a5d7a4518cc174ad1d3b8e65612010fcaebcdbbaff426a27556d0a894133cbe",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/hero-film.js",
-      "status": "200",
-      "bytes": 9750,
-      "sha256": "4c5873143e83dedf4db19dca9f661e8e53767e176edccddcecfdb9817a465115",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/network-chrome.js",
-      "status": "200",
-      "bytes": 1635,
-      "sha256": "a0cc2f4888f4c36197a81f75b69ca892784e3ad6efca72f2f0e471488bd21415",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/rebalancing-app.js",
-      "status": "200",
-      "bytes": 8260,
-      "sha256": "11a88cde9875ee58f72b8d1c5cc1bc965d577ddc197549f69be5948e5bd23ec8",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/rebalancing-concept.js",
-      "status": "200",
-      "bytes": 3503,
-      "sha256": "82a574e6ffa2e9381a95df4d64e87fc2e01f171635a9512f5f7cb55eae1d905b",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/rebalancing-view.js",
-      "status": "200",
-      "bytes": 7941,
-      "sha256": "9e62aa3f8c3f8043446f3cfa1b47c1ba8284d45de5e0f33bbefbbab314ba8f3e",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/simulation-catalog.js",
-      "status": "200",
-      "bytes": 13422,
-      "sha256": "049b264ffa9e0705348da8cf2fe053c15a105f31f1b7f716a87e07236b10adc4",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "src/ui/studio.js",
-      "status": "200",
-      "bytes": 30598,
-      "sha256": "53a959b02abef4fe99d68c338cc7f94b5efd807801ab16a3930203a718b97da7",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "styles.css",
-      "status": "200",
-      "bytes": 116426,
-      "sha256": "adfc24086cc7fc4089807bf8863de2cc7ad4535ece046450a07730c6ae6c4cb6",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-01-fleet-day.webp",
-      "status": "200",
-      "bytes": 81846,
-      "sha256": "d47665004fc66e1ee8dff2d91556520cdfcf520cde43916ee47e4939490f65f2",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-02-sf-study.webp",
-      "status": "200",
-      "bytes": 96240,
-      "sha256": "d3373cf22ce5ebce30e3f0acb7751f06ddbb806a01b869aac6b6f1f36a199e5c",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-03-street-lab.webp",
-      "status": "200",
-      "bytes": 95316,
-      "sha256": "9da59bcfcf0676e3457151dbf3f5865bd1f6188b251caccfa6a1c82d8d4dcb22",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-04-shared-resources.webp",
-      "status": "200",
-      "bytes": 85072,
-      "sha256": "d96048c33d982d53338449dc05a94141b47afca1721dd6e1e909dc631710fa7b",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-05-rider-service.webp",
-      "status": "200",
-      "bytes": 83452,
-      "sha256": "97a11d82cad39c076a757dcea9b81e6104c220797071c78d13bb057859a0cb93",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-06-model-limits.webp",
-      "status": "200",
-      "bytes": 107240,
-      "sha256": "e78b0ba30610c1c3a870a465a6d8dc78e60f0369f9b74eb0667d81f4b37c8d12",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-07-depot-ops.webp",
-      "status": "200",
-      "bytes": 100668,
-      "sha256": "72e0e4183df62599d9b8faf3466293e49bb0036b168dd28d2ef457ee543a17c1",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-08-charging-energy.webp",
-      "status": "200",
-      "bytes": 116318,
-      "sha256": "4433cb443457ccfa0905245938c96fee06a43bc4a46d1f4e4f98bcf51a5f5f4f",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-09-data-movement.webp",
-      "status": "200",
-      "bytes": 108836,
-      "sha256": "f80ff9a5dafbde9a225b353e25fc3da41cebe45a68ec688fcb7e2bb2f6159fed",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-10-streets-queues.webp",
-      "status": "200",
-      "bytes": 130126,
-      "sha256": "b44edd21f3166fba66d576f6f749865925ce28241b891214f0e999cc57983c21",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-11-demand-weather.webp",
-      "status": "200",
-      "bytes": 103076,
-      "sha256": "567327a8b8b14148bcef8f35530e07d0e53e5e617c63be4c4f564491720671fa",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-12-fleet-scale.webp",
-      "status": "200",
-      "bytes": 126250,
-      "sha256": "c77c586d0dcd4c1d398afd286f59f8790d4e633f746db1d0fd12639fa97597a6",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-13-paired-experiments.webp",
-      "status": "200",
-      "bytes": 108438,
-      "sha256": "8195c6e504abfee0d56743777516b8dfd7f77d92e1f0860f7e563e13bd4aa429",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-14-reading-result.webp",
-      "status": "200",
-      "bytes": 76920,
-      "sha256": "66f453a9db0dbfe22f5557dcabe6fc35fa3d110b62e9e205fae80ab21da30552",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-15-launch-recall.webp",
-      "status": "200",
-      "bytes": 99578,
-      "sha256": "26c2c4cf3d36732ee9c4bea613826e1f6f4cb70728be12abaa86f1b9f655eba5",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-16-city-atlas.webp",
-      "status": "200",
-      "bytes": 75312,
-      "sha256": "5ef7b26ba3f25b005d965900b0001ee7275c154d749018083ac0ca9b25648924",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-17-decision-notebook.webp",
-      "status": "200",
-      "bytes": 140270,
-      "sha256": "b4b2610c25b49c027054efe7f3a6e65193a5bcf469176455ddc24588bc50ea75",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-18-replay-studio.webp",
-      "status": "200",
-      "bytes": 134756,
-      "sha256": "609a7365d3872bd8ec69d80ca98512e973d3775124d0f5422647ed8181643b21",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "tiles/T-19-model-lab.webp",
-      "status": "200",
-      "bytes": 120780,
-      "sha256": "e01cf440f6a0c8fd3c68683fba413182a799519e02ee765217e71d43995c9b4e",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "visitor-families.mjs",
-      "status": "200",
-      "bytes": 2173,
-      "sha256": "ed0525b08640af791d1ea3b89be926eda1ccbbe5af3c521f4034cd2cd5cc3af8",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "visitor.css",
-      "status": "200",
-      "bytes": 15939,
-      "sha256": "f6a8cea3e31d5dfac54b1e74132d7b84deff07762bcfa190e039e3f83f69417f",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "visitor.mjs",
-      "status": "200",
-      "bytes": 23189,
-      "sha256": "17b47375f1c862801e80a3269c9a7d27c21bd8023cd34da331590caa4aab4b72",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "city-explorer/releases/03d23edf72c08725/index.html",
-      "status": "200",
-      "bytes": 34750,
-      "sha256": "4324f98ae5672983e450d00db3d4d8087b364dd49d62cdd829e85859b41ba1cb",
-      "transport_ok": true,
-      "matches": true
-    },
-    {
-      "path": "city-explorer/releases/03d23edf72c08725/data/catalog.json",
-      "status": "200",
+    "city-explorer/releases/34258fef3cb4af33/data/catalog.json": {
       "bytes": 341154,
-      "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1",
-      "transport_ok": true,
-      "matches": true
+      "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1"
     },
-    {
-      "path": "city-explorer/releases/03d23edf72c08725/data/model-lessons.json",
-      "status": "200",
+    "city-explorer/releases/34258fef3cb4af33/data/model-lessons.json": {
       "bytes": 31982,
-      "sha256": "1552e6f4099a3f459f7d1671b280b98d8c1bff0ad997a87fad40134e5f77171b",
-      "transport_ok": true,
-      "matches": true
+      "sha256": "1552e6f4099a3f459f7d1671b280b98d8c1bff0ad997a87fad40134e5f77171b"
+    },
+    "city-explorer/releases/34258fef3cb4af33/index.html": {
+      "bytes": 34750,
+      "sha256": "4324f98ae5672983e450d00db3d4d8087b364dd49d62cdd829e85859b41ba1cb"
+    },
+    "city-explorer/releases/c56bda6b509105c5/index.html": {
+      "bytes": 34000,
+      "sha256": "5e973076e662bb673b35207bb51432730d7c8cb14b1efea020da17ae5f86ed37"
+    },
+    "city-explorer/releases/index.html": {
+      "bytes": 521,
+      "sha256": "d42f640307de57c96377db64bb7496c18b03f65eb858d7971c09267cfd96cf7e"
+    },
+    "diagrams/D-01-depot-scenario.webp": {
+      "bytes": 123536,
+      "sha256": "68e56d20449020fb575ab5df562f2a500c73e0b71513e42abc94f0b08bf83ca7"
+    },
+    "diagrams/D-02-crossed-priorities.webp": {
+      "bytes": 132710,
+      "sha256": "4af8121f01e85657d627d0b33e753b41165f7f27534b0b401412920f9e2e6320"
+    },
+    "diagrams/D-03-staffing-queue.webp": {
+      "bytes": 157628,
+      "sha256": "b0746e18524fed0f19aba53006d447a3c3a9a7f42d9676f0d566da18da2e1a5e"
+    },
+    "diagrams/D-05-opportunity-cost.webp": {
+      "bytes": 96562,
+      "sha256": "353762295346a650a868f43580b379cdfd825676eec57c1b7fc4d4eec2444f8f"
+    },
+    "downloads/fleetlab-offline.html": {
+      "bytes": 2560130,
+      "sha256": "db10f8109b9e1c91b410e77bd1e8863b1a59fb55334b7bd65686759f54ee671b"
+    },
+    "downloads/teaching-package.json": {
+      "bytes": 37475,
+      "sha256": "de6ffb32b337005fbe38b182d2c7ab731f4cb1011326fcf9265ee61993492eee"
+    },
+    "index.html": {
+      "bytes": 3634,
+      "sha256": "9b05d5c1e0b8af8f56e558f8b6512a0511412b3b213b2ba8e37ab9a2997e8926"
+    },
+    "integration.mjs": {
+      "bytes": 11474,
+      "sha256": "8790f1df16d43641828b9994f11a9265d0f0a23bbb63bbd4052c5d695f28a7f4"
+    },
+    "network-flows/capacity/index.html": {
+      "bytes": 2160,
+      "sha256": "039a3d7614724f42e31846386677a32147f1cdd4729a9774f9d983d45bc0e682"
+    },
+    "network-flows/capacity/release.json": {
+      "bytes": 16589,
+      "sha256": "4097820a14b16eddedccfff35066e41a10ab7ca9b1508466b10d06ec6abb586d"
+    },
+    "network-flows/capacity/visual.css": {
+      "bytes": 14015,
+      "sha256": "0fad6a812eebbda1de3da19766e557cd2d396bc50f5ad47c7f28c9e36a6ec1a7"
+    },
+    "network-flows/delivery-order/boot.js": {
+      "bytes": 314,
+      "sha256": "bae21b09b47eb32988eea6bc02932d0a6acadff8d486feb7d29a2a82ed8d6b68"
+    },
+    "network-flows/delivery-order/index.html": {
+      "bytes": 2133,
+      "sha256": "5377dc874f78b8d8bfdb7f8942c9bacf41987ea38a69415aca3a819b5b4ea0ca"
+    },
+    "network-flows/delivery-order/release.json": {
+      "bytes": 8099,
+      "sha256": "936e13d2aff9755fed1057c1e9cec29bc70e589a3820333a61d752ee6c3fbd2b"
+    },
+    "network-flows/delivery-order/visual.css": {
+      "bytes": 12226,
+      "sha256": "14aca0693d6daa7d82894194c84f95933863dc10e84b0868b09ba0f6e6476d04"
+    },
+    "network-flows/dispatch/boot.js": {
+      "bytes": 199,
+      "sha256": "7a57e01b617ed8310df6296aca76b907192ccf51b05b04bdae18ea1414549563"
+    },
+    "network-flows/dispatch/index.html": {
+      "bytes": 9081,
+      "sha256": "df9badf1de3957ca540d6fbe18bf26748111c8c7fe123dd663a686013ddbe435"
+    },
+    "network-flows/dispatch/release.json": {
+      "bytes": 12474,
+      "sha256": "365ca07f64c452dc8afcb0d29159e6eb812bbe7e029059d4bbc52989cd9e9010"
+    },
+    "network-flows/dispatch/visual.css": {
+      "bytes": 5047,
+      "sha256": "46c2a66305ec13715d959667e07c5932b0c80733e73b867baac73356ce1f6009"
+    },
+    "network-flows/fleet-day/index.html": {
+      "bytes": 1231,
+      "sha256": "e3e0a1d18906a82c20d1a44c1e20d554d8ba2e0e5b7cfb3cc8b6e1e5f4efb17e"
+    },
+    "network-flows/rebalancing/boot.js": {
+      "bytes": 211,
+      "sha256": "6fc7dd0c0ae7833010b700c96a37a2b303a8e9de2a6f6b226da7a6c869c37742"
+    },
+    "network-flows/rebalancing/index.html": {
+      "bytes": 13656,
+      "sha256": "5798602b6f46163c07735b9033f1c9be0de823204c279e5c865d12f29a65cd08"
+    },
+    "network-flows/rebalancing/release.json": {
+      "bytes": 17513,
+      "sha256": "7781ff06336d016766ea087815119dfff40892187f2d852d409a70d5cdd9231e"
+    },
+    "network-flows/rebalancing/visual.css": {
+      "bytes": 13732,
+      "sha256": "755434cb084e4fa84bf3edc1ea8f05f7362dbc5f9e1e60e6a6f6ea9e1818e54e"
+    },
+    "network-flows/software-delivery/boot.js": {
+      "bytes": 335,
+      "sha256": "e2aec3268b65db8c519d80ce4f80355fb807b4d2c1b9ca04fff34f88343c9fa2"
+    },
+    "network-flows/software-delivery/index.html": {
+      "bytes": 2387,
+      "sha256": "1adc892e22a072cc61b4325110948c8d395b1a0fe8d1acc613d59ec349502348"
+    },
+    "network-flows/software-delivery/release.json": {
+      "bytes": 6857,
+      "sha256": "1181c7d45c9b49133a66e54fcbde1474229bad1147f207bad5c238716d328960"
+    },
+    "network-flows/software-delivery/visual.css": {
+      "bytes": 18142,
+      "sha256": "5fa47f81fe3ca386d4c33cd97ab48b5770c14c041119121575fb90fe1a1af7c7"
+    },
+    "publication.json": {
+      "bytes": 1800,
+      "sha256": "045ef1abdecb5a879ef8f33bbdb1de8d8b91e9569ea944509a41ab513556eeae"
+    },
+    "site-media/apple-touch-icon.png": {
+      "bytes": 21051,
+      "sha256": "654edab6ec1fcd21b3c0faace8a211b4dc1dca14de9503cb2b96802e11e7c3df"
+    },
+    "site-media/favicon.png": {
+      "bytes": 1614,
+      "sha256": "a7edee10ea0de90df27fd7084011401ddd7f57246baaee048bcc45e74997a325"
+    },
+    "site-media/fleetlab-logo-128.png": {
+      "bytes": 10347,
+      "sha256": "0953baf3272679f9482980d567dd3f18d9a3f67196eec20b18990046ecfc350f"
+    },
+    "site-media/fleetlab-logo-64.png": {
+      "bytes": 3368,
+      "sha256": "d72f2d2b1fa81e07b63cbbf0048e945d55ccbe73ff7ee117684880317fe4747f"
+    },
+    "site-media/fleetlab-logo.png": {
+      "bytes": 39618,
+      "sha256": "bfa70ffa4d0375e5299332c79533a12977d41a97f6f4752cd17fade9c5ea6f5d"
+    },
+    "site-media/r1-nf05.mp4": {
+      "bytes": 992600,
+      "sha256": "27cdf1bc2fa71a24d6e19afc29cf130744e9d6cb7aa8d0b4d9a500cb278b0306"
+    },
+    "site-media/r1-nf05.webp": {
+      "bytes": 58200,
+      "sha256": "7e08ea1f0465b8640be0393f23687b4b4ae952f36e5e9c8cd2b25cde870c9b48"
+    },
+    "site-media/r1-nf06.mp4": {
+      "bytes": 850111,
+      "sha256": "fb72e529a3122c30e2410aba1f1111145f4141d76d760cd40c32eec8a88e425c"
+    },
+    "site-media/r1-nf06.webp": {
+      "bytes": 82888,
+      "sha256": "60dd26033cff6aeaef0f985909827ddb83192ce6f990f99a81bfbf90abd22318"
+    },
+    "site-media/readiness.jpg": {
+      "bytes": 401446,
+      "sha256": "494f4499e7a9b2a3f2dd441d3f7f34418c33c41e124b46c73111a7e9de2ac110"
+    },
+    "site-media/shared-delivery.webp": {
+      "bytes": 145670,
+      "sha256": "9139c4f68e6ef71557277fe40ea977176dfbb8fe26ed9d6331c6c7afcbd725ba"
+    },
+    "src/data/delivery-order-study.js": {
+      "bytes": 17593,
+      "sha256": "62226748fb187fde4cf1848d8a4bf7ac254ffcc8d500d2efcd7cdb808738cdf7"
+    },
+    "src/data/software-delivery-study.js": {
+      "bytes": 12164,
+      "sha256": "5cf2cbc308c8e0c59c637403ec917488d796aa4056dbc0f42dc89a8b5d3b88b1"
+    },
+    "src/model/dispatch-contract.js": {
+      "bytes": 3516,
+      "sha256": "bf6cef37516e1c6bd8b7fcd161ab64d1f1984c14cca2a1ac597d22ef03569acc"
+    },
+    "src/model/dispatch-verify.js": {
+      "bytes": 8418,
+      "sha256": "6240743f7574442f4f0a6fb4c55c7cfff544100e3566c4037afe3f17de88cfc1"
+    },
+    "src/model/dispatch.js": {
+      "bytes": 5869,
+      "sha256": "7b167a71f9314f5f3a7aab0f9a15bf70cc430655fd5a08665345568ee2daf7f2"
+    },
+    "src/model/rebalancing-contract.js": {
+      "bytes": 5336,
+      "sha256": "d2f88e9376417a7af75fa59fdbb69d081a276d5a39f8c4132f01bb2fe2f95326"
+    },
+    "src/model/rebalancing-study.js": {
+      "bytes": 3244,
+      "sha256": "f0211cd94a1612e4e836535c6dc20a812ecf40f1a1dc5c2efdd1ab258d5ddaa0"
+    },
+    "src/model/rebalancing-verify.js": {
+      "bytes": 9768,
+      "sha256": "753e7fd9f94ee5cb252a49446d996e965c655361deaf086e9a7768a210fee610"
+    },
+    "src/model/rebalancing.js": {
+      "bytes": 7057,
+      "sha256": "a74013f725c9e3d6e8e29eb16481523ad4c05cc5fafbbd059ee28ece4e96c299"
+    },
+    "src/runtime/delivery-order-worker.js": {
+      "bytes": 2738,
+      "sha256": "5fe5f0951ce9523dc53120305b6168c31d1f7963c61ba57e0846b24e50c78d02"
+    },
+    "src/runtime/dispatch-job.js": {
+      "bytes": 884,
+      "sha256": "c5739a1b01efb5a7e4dfe3e918c38d9fe9ca3cba6afcb75267b526c841919fb1"
+    },
+    "src/runtime/dispatch-session.js": {
+      "bytes": 2291,
+      "sha256": "25d462122827fdd1d17854c705205174f2d3c2e91ba2fd765c85c7d94f4bd365"
+    },
+    "src/runtime/dispatch-worker.js": {
+      "bytes": 243,
+      "sha256": "37de80aa9f22022d2f6552a7d6ebfd612e9b00685602d878752c51fe3d6a2d90"
+    },
+    "src/runtime/rebalancing-job.js": {
+      "bytes": 1483,
+      "sha256": "378b1cf035898f244377f805a4fa69444e548b37ee4193cd9e607e3cff83c391"
+    },
+    "src/runtime/rebalancing-session.js": {
+      "bytes": 2932,
+      "sha256": "fb6653d6eea6d89e7c6db6d695e6598e94ce47d7160a6e921d50c714e0f7d6c2"
+    },
+    "src/runtime/rebalancing-worker.js": {
+      "bytes": 234,
+      "sha256": "1b40fddd4e289f55b3f021895ae05828b7d83bf1714527ab34eea36b43c1351a"
+    },
+    "src/runtime/software-delivery-worker.js": {
+      "bytes": 1818,
+      "sha256": "9900d5e2914b63546aad5b1c03bc91bb5e3b2b57e5110a30d58711409e2a6710"
+    },
+    "src/ui/concept-primer.js": {
+      "bytes": 5177,
+      "sha256": "00f6bea2922e6f726f272b630efa7a99a56cdb1b9ca8ac88064e6349d78d5f17"
+    },
+    "src/ui/decimal-input.js": {
+      "bytes": 197,
+      "sha256": "6f92ec81371b4f7dca19878d1b117fadfe3b1ed26c6c91ac6ce78480839884ee"
+    },
+    "src/ui/delivery-order-page.js": {
+      "bytes": 29435,
+      "sha256": "d55218d344daa92f9a23034b552fa1460f7bbef48abd1ce14b58947a85657a69"
+    },
+    "src/ui/depot-capacity-bench.js": {
+      "bytes": 10954,
+      "sha256": "b73c50117d12588885f64fd3a7db8ca1c935788f43022635a996cb4248910ce4"
+    },
+    "src/ui/depot-capacity-guided.js": {
+      "bytes": 6690,
+      "sha256": "9416c77697c09818c5a7b74e9db7ee201772d1721bc7bf90fd085b05b6af75ab"
+    },
+    "src/ui/dispatch-app.js": {
+      "bytes": 12779,
+      "sha256": "7a5d7a4518cc174ad1d3b8e65612010fcaebcdbbaff426a27556d0a894133cbe"
+    },
+    "src/ui/hero-film.js": {
+      "bytes": 9750,
+      "sha256": "4c5873143e83dedf4db19dca9f661e8e53767e176edccddcecfdb9817a465115"
+    },
+    "src/ui/network-chrome.js": {
+      "bytes": 1635,
+      "sha256": "a0cc2f4888f4c36197a81f75b69ca892784e3ad6efca72f2f0e471488bd21415"
+    },
+    "src/ui/rebalancing-app.js": {
+      "bytes": 8260,
+      "sha256": "11a88cde9875ee58f72b8d1c5cc1bc965d577ddc197549f69be5948e5bd23ec8"
+    },
+    "src/ui/rebalancing-concept.js": {
+      "bytes": 3503,
+      "sha256": "82a574e6ffa2e9381a95df4d64e87fc2e01f171635a9512f5f7cb55eae1d905b"
+    },
+    "src/ui/rebalancing-view.js": {
+      "bytes": 7941,
+      "sha256": "9e62aa3f8c3f8043446f3cfa1b47c1ba8284d45de5e0f33bbefbbab314ba8f3e"
+    },
+    "src/ui/simulation-catalog.js": {
+      "bytes": 13422,
+      "sha256": "049b264ffa9e0705348da8cf2fe053c15a105f31f1b7f716a87e07236b10adc4"
+    },
+    "src/ui/studio.js": {
+      "bytes": 30598,
+      "sha256": "53a959b02abef4fe99d68c338cc7f94b5efd807801ab16a3930203a718b97da7"
+    },
+    "styles.css": {
+      "bytes": 114512,
+      "sha256": "71bb7388dce607e38cefbcb31b777cf53cb12e7395f78469b1ebd313abf59540"
+    },
+    "tiles/T-01-fleet-day.webp": {
+      "bytes": 81846,
+      "sha256": "d47665004fc66e1ee8dff2d91556520cdfcf520cde43916ee47e4939490f65f2"
+    },
+    "tiles/T-02-sf-study.webp": {
+      "bytes": 96240,
+      "sha256": "d3373cf22ce5ebce30e3f0acb7751f06ddbb806a01b869aac6b6f1f36a199e5c"
+    },
+    "tiles/T-03-street-lab.webp": {
+      "bytes": 95316,
+      "sha256": "9da59bcfcf0676e3457151dbf3f5865bd1f6188b251caccfa6a1c82d8d4dcb22"
+    },
+    "tiles/T-04-shared-resources.webp": {
+      "bytes": 85072,
+      "sha256": "d96048c33d982d53338449dc05a94141b47afca1721dd6e1e909dc631710fa7b"
+    },
+    "tiles/T-05-rider-service.webp": {
+      "bytes": 83452,
+      "sha256": "97a11d82cad39c076a757dcea9b81e6104c220797071c78d13bb057859a0cb93"
+    },
+    "tiles/T-06-model-limits.webp": {
+      "bytes": 107240,
+      "sha256": "e78b0ba30610c1c3a870a465a6d8dc78e60f0369f9b74eb0667d81f4b37c8d12"
+    },
+    "tiles/T-07-depot-ops.webp": {
+      "bytes": 100668,
+      "sha256": "72e0e4183df62599d9b8faf3466293e49bb0036b168dd28d2ef457ee543a17c1"
+    },
+    "tiles/T-08-charging-energy.webp": {
+      "bytes": 116318,
+      "sha256": "4433cb443457ccfa0905245938c96fee06a43bc4a46d1f4e4f98bcf51a5f5f4f"
+    },
+    "tiles/T-09-data-movement.webp": {
+      "bytes": 108836,
+      "sha256": "f80ff9a5dafbde9a225b353e25fc3da41cebe45a68ec688fcb7e2bb2f6159fed"
+    },
+    "tiles/T-10-streets-queues.webp": {
+      "bytes": 130126,
+      "sha256": "b44edd21f3166fba66d576f6f749865925ce28241b891214f0e999cc57983c21"
+    },
+    "tiles/T-11-demand-weather.webp": {
+      "bytes": 103076,
+      "sha256": "567327a8b8b14148bcef8f35530e07d0e53e5e617c63be4c4f564491720671fa"
+    },
+    "tiles/T-12-fleet-scale.webp": {
+      "bytes": 126250,
+      "sha256": "c77c586d0dcd4c1d398afd286f59f8790d4e633f746db1d0fd12639fa97597a6"
+    },
+    "tiles/T-13-paired-experiments.webp": {
+      "bytes": 108438,
+      "sha256": "8195c6e504abfee0d56743777516b8dfd7f77d92e1f0860f7e563e13bd4aa429"
+    },
+    "tiles/T-14-reading-result.webp": {
+      "bytes": 76920,
+      "sha256": "66f453a9db0dbfe22f5557dcabe6fc35fa3d110b62e9e205fae80ab21da30552"
+    },
+    "tiles/T-15-launch-recall.webp": {
+      "bytes": 99578,
+      "sha256": "26c2c4cf3d36732ee9c4bea613826e1f6f4cb70728be12abaa86f1b9f655eba5"
+    },
+    "tiles/T-16-city-atlas.webp": {
+      "bytes": 75312,
+      "sha256": "5ef7b26ba3f25b005d965900b0001ee7275c154d749018083ac0ca9b25648924"
+    },
+    "tiles/T-17-decision-notebook.webp": {
+      "bytes": 140270,
+      "sha256": "b4b2610c25b49c027054efe7f3a6e65193a5bcf469176455ddc24588bc50ea75"
+    },
+    "tiles/T-18-replay-studio.webp": {
+      "bytes": 134756,
+      "sha256": "609a7365d3872bd8ec69d80ca98512e973d3775124d0f5422647ed8181643b21"
+    },
+    "tiles/T-19-model-lab.webp": {
+      "bytes": 120780,
+      "sha256": "e01cf440f6a0c8fd3c68683fba413182a799519e02ee765217e71d43995c9b4e"
+    },
+    "visitor-families.mjs": {
+      "bytes": 2173,
+      "sha256": "ed0525b08640af791d1ea3b89be926eda1ccbbe5af3c521f4034cd2cd5cc3af8"
+    },
+    "visitor.css": {
+      "bytes": 15939,
+      "sha256": "f6a8cea3e31d5dfac54b1e74132d7b84deff07762bcfa190e039e3f83f69417f"
+    },
+    "visitor.mjs": {
+      "bytes": 25705,
+      "sha256": "ac6d26b21d8e05e0ffb710cfdfa83f9fbdcf8bb3a4b0b44c16cc0790ae6b8c30"
     }
-  ],
-  "verified_at_utc": "2026-10-15T21:58:15.014815+00:00",
+  },
+  "verified_at_utc": "2026-10-15T22:36:24.908049+00:00",
   "verification": {
     "served_files": 10138,
     "matched_files": 10138,
     "header_checks": 71,
     "headers_pass": true,
-    "full_readback_sha256": "dc8ef5283a918c408a6f3222988c6627c86e7748f42de7afe048ffab1c230862",
+    "full_readback_sha256": "6fcb76356285066c797822ab6f5916d1db3471421e9c846720156da9ed324d16",
     "preview_matched_files": 10138,
-    "preview_full_readback_sha256": "7e8b401f55de4ab71af08e2629b41c69ce3ef392e1896f3b5c4233dfd890a10f",
-    "production_headers_sha256": "60ef20e6d349605e9f53de57cb003f1002abd31ee4d5e675cfc7d048e1d46e6f",
-    "preview_headers_sha256": "89fb38eecc111c7494315567b24debb1ffc2db5b174754e5dd1e63af17be8627",
+    "preview_full_readback_sha256": "41ac4d7938e5a49c0be998104924a2d465ecd554a4b81b2b8421d1679cae1272",
+    "production_headers_sha256": "3badb022f5d47cebb565c83c7dac82248fa7cb37575bb4763fb354279f23deda",
+    "preview_headers_sha256": "b196618ba91a0b29ae27374ff1ed5f7dbb51cedeeb48974d1a9e2e7fe9948009",
     "immutable_smoke_matched_files": 102,
-    "immutable_smoke_sha256": "f379b5e169eadfde1cb51e256fc7fb98fc130dba6d5f78ae22e025bd1f0421f7",
+    "immutable_smoke_sha256": "f8996a5bff1934ee7a85e8c4bfab425d98e0effcaf3fb5b60eab8fb9aa76f792",
     "prior_production_smoke_matched_files": 102,
-    "prior_production_smoke_sha256": "5ea78e9e2d97320fe95468fc4ac9d25554bf78a0029a64a071e124b4c37a1576",
+    "prior_production_smoke_sha256": "4be3272049df5cfdef2175b2f98020535f6dd6e601926fdc2b2948510209e959",
     "meaning": "Byte consistency and observed hosting only; not independent authenticity, browser-session generation pinning or operational authority."
   },
-  "capacity_release_sidecar_sha256": "de6f09020e8406ccde6505240e626ebb1aeb68158f51a2ec73c074326c97655c",
-  "capacity_release_digest": "1fe25feb1e46ab34622242aa81daf17fd5c0b4ce438b4c7e02b58030125274ac",
+  "capacity_release_sidecar_sha256": "4097820a14b16eddedccfff35066e41a10ab7ca9b1508466b10d06ec6abb586d",
+  "capacity_release_digest": "fa83443867351051f3c58dab110cc4f20f0dfa7966dde4ad820693996cbd2e2c",
   "teaching_package": {
-    "bytes": 37473,
+    "bytes": 37475,
     "path": "downloads/teaching-package.json",
-    "sha256": "d1f3596fd54fa36916ca348dea20521ee6379c79267055b40d9162214579f641"
+    "sha256": "de6ffb32b337005fbe38b182d2c7ab731f4cb1011326fcf9265ee61993492eee"
   },
   "teaching_source_offer": {
-    "bytes": 974395,
-    "extracted_sha256": "197c27c1bee52478ca4211ac902fb8422c51ab5db08dfb688890c380c7cf9ff8",
-    "original_inventory_sha256": "279b42ca01f60d213cc99f79827cf6178011494125e5d6da3fb23296267df1cd",
+    "bytes": 974425,
+    "extracted_sha256": "3d9fb0d45639919fd4ffaa722fe84af535e28840361371c0e51f3fe680cb9955",
+    "original_inventory_sha256": "2fcd6e47688f35ab5d86fc0b299de90e795dc85bab31f9c7ba7cc6fadd3401ae",
     "owner": "teaching-original-source-and-tools",
-    "path": "network-flows/sources/eca705cea5f3e63bb8a9189034f060417149a3c1e3774e3f5705af83a6a3eaa1.json.gz",
-    "sha256": "eca705cea5f3e63bb8a9189034f060417149a3c1e3774e3f5705af83a6a3eaa1"
+    "path": "network-flows/sources/a086b9311c10664da56d3f732c97f363b68262e6358a4278e872021b482b1097.json.gz",
+    "sha256": "a086b9311c10664da56d3f732c97f363b68262e6358a4278e872021b482b1097"
   },
-  "non_city_bytes": 12859551,
-  "software_delivery_release_sidecar_sha256": "d22c27f0813908011b9a9f4e96507bc8108f9c2b7d2171234a115df67b768cc0",
-  "software_delivery_release_digest": "b1eb635dd5cbdf707f9f9b4d27e6d6f2420bbfb78e8f44e60f4e8d796c2f84ca",
+  "non_city_bytes": 12858271,
+  "software_delivery_release_sidecar_sha256": "1181c7d45c9b49133a66e54fcbde1474229bad1147f207bad5c238716d328960",
+  "software_delivery_release_digest": "8488dcfcd4708b65657bf281ee613bf6288aa07279c5bbf48b442b1261454d5b",
   "nf04_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
-  "delivery_order_release_sidecar_sha256": "d3817d4035ecd1b55f7c62a4227fa33410dd98541d863d57367fbd7513ca956e",
-  "delivery_order_release_digest": "1fdff64dfdf89934ae518b6da9d4868161de048869a8dcf5c3a3a6f9344d9d36",
+  "delivery_order_release_sidecar_sha256": "936e13d2aff9755fed1057c1e9cec29bc70e589a3820333a61d752ee6c3fbd2b",
+  "delivery_order_release_digest": "2d6cbcd08927b68eb95d20303a136a7aa564bc15653397333e10dc895dac6876",
   "delivery_order_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
   "hosted_presentation": {
     "schema": "fleetlab.hosted-presentation/1.0.0",
@@ -895,16 +488,16 @@
     "offline_and_historical_city_analytics": false,
     "analytics_property_receipt": "NOT_OBSERVED"
   },
-  "rebalancing_release_sidecar_sha256": "0a81e137ea8bd28f952b439bcfd6569255710be1c067c9c030b182d68a3b7be5",
-  "rebalancing_release_digest": "d9bf44b18e001a65a66761bf053eacb60d2fed33da6a4ecfaa4ce9f6e2e944d1",
+  "rebalancing_release_sidecar_sha256": "7781ff06336d016766ea087815119dfff40892187f2d852d409a70d5cdd9231e",
+  "rebalancing_release_digest": "c506c87154b6d84577914988af64ea833999cad3f2c84843ad45e31720a0916c",
   "rebalancing_qualification": {
     "scope": "SYNTHETIC_TEACHING",
     "independent_record_reconstruction": true,
     "physical_device_qualification": "NOT_ESTABLISHED",
     "sf_qualification": "HOLD"
   },
-  "dispatch_release_sidecar_sha256": "a001c967ea7518440b9972d90f278f506c7656dbe4317fd3db4131394ee48168",
-  "dispatch_release_digest": "60bc1f9a31f7658b8a10eef5380ece1317a7993b9cbf58118a255c8047235712",
+  "dispatch_release_sidecar_sha256": "365ca07f64c452dc8afcb0d29159e6eb812bbe7e029059d4bbc52989cd9e9010",
+  "dispatch_release_digest": "08cfe8eef3d57565dba09417b3881bb266b3d359bbea6d2fd4069bec86802eca",
   "dispatch_qualification": {
     "scope": "SYNTHETIC_TEACHING",
     "independent_record_reconstruction": true,
