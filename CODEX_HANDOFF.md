@@ -1,3 +1,13 @@
+# FleetLab R3 dispatch implementation — October 14, 2026
+
+R3 is live: [Which car takes the next request?](https://fleetlab.pages.dev/network-flows/dispatch/). Source `7c80f9e0ead07a7183b178b3e69c3237c049af68`; production `769ad332-b726-496a-bb4e-201ec44c8518`; preview `62ef3431-4c36-4e5f-bd31-b2635987b5f9`. Both preview and production match 10,130/10,130 served files and 65/65 header checks. See [R3 implementation and audit handoff](docs/FLEETLAB_R3_IMPLEMENTATION_HANDOFF_2026-10-14.md) and [publication receipt](docs/releases/fleetlab-current.json).
+
+The default executes greedy 6/8 versus joint 8/8 pickups; the counterexample reverses that to 3/4 versus 2/4; the neutral example ties 4/4. Both policies use current requests only. Independent reconstruction, explicit PRE/POST/END states, manual accepted batches, counted graphics and disclosed traces protect the teaching claims. R1 copy now qualifies reserve rules and shows matched request r-04-B-05 wait 60→258 seconds. No R1 model or SF scientific evidence changed.
+
+R2 charging and R7 sharing contracts were amended, not implemented. Original source is 3,145,617/3,145,728 bytes, leaving 111 bytes; agree on packaging before another lesson. Offline 2,563,278 bytes and its SHA-256 remain identical. SF map, physical-device and human-comprehension qualification remain open; no new cities. All earlier release status below is historical.
+
+---
+
 # FleetLab R1 implementation — October 14, 2026
 
 Owner approved the R1 model and publication, and subsequently requested R3/R2/R7 model contracts for review before their numerical implementation. R1 is implemented with an independent verifier, full ledger, manual controls, NF05/NF06 concept films and the chosen logo. See [R1 implementation handoff](docs/FLEETLAB_R1_IMPLEMENTATION_HANDOFF_2026-10-14.md) for the current release state and evidence. R1 is live at https://fleetlab.pages.dev/network-flows/rebalancing/. Source `5ffe7c1dc33ba7b055c907ef55fb378b2d247610`; production `186cb2a5-23b8-419f-8aaa-4cf95cf44567`. Preview and stable production each match 10,119/10,119 served files and 61/61 header checks. The final receipt is `docs/releases/fleetlab-current.json`. The prior immutable production `5924764c-7dc2-4336-a7d4-94fe3e39a991` remains reachable.

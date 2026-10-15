@@ -4,13 +4,13 @@
   "sf_qualification": "HOLD",
   "authenticity": "NOT_AUTHENTICATED",
   "operational_deployment_permission": "NONE",
-  "source_commit": "5ffe7c1dc33ba7b055c907ef55fb378b2d247610",
+  "source_commit": "7c80f9e0ead07a7183b178b3e69c3237c049af68",
   "source_branch": "codex/fleetlab-city-sf",
-  "production_deployment_id": "186cb2a5-23b8-419f-8aaa-4cf95cf44567",
-  "preview_deployment_id": "43a2f25b-5de8-470a-a007-16d7eada5261",
-  "prior_production_deployment_id": "5924764c-7dc2-4336-a7d4-94fe3e39a991",
+  "production_deployment_id": "769ad332-b726-496a-bb4e-201ec44c8518",
+  "preview_deployment_id": "62ef3431-4c36-4e5f-bd31-b2635987b5f9",
+  "prior_production_deployment_id": "186cb2a5-23b8-419f-8aaa-4cf95cf44567",
   "stable_url": "https://fleetlab.pages.dev",
-  "immutable_url": "https://186cb2a5.fleetlab.pages.dev",
+  "immutable_url": "https://769ad332.fleetlab.pages.dev",
   "current": {
     "compatibility": {
       "metrics": "fleetlab.city-metrics/1.0.0",
@@ -18,13 +18,13 @@
       "run": "fleetlab.city-run/1.0.0",
       "viewer": "1.1.0"
     },
-    "path": "city-explorer/releases/fde5c033bb02929e",
-    "release_sha256": "fde5c033bb02929e6c984ee494d9743fb6a72fdc70108d476d54adc7c86689d7"
+    "path": "city-explorer/releases/d379487eb0ffe727",
+    "release_sha256": "d379487eb0ffe727d98e7fe1171e48307d6b3c7735c0faa46a4615990097674d"
   },
   "rollback": "city-explorer/releases/c56bda6b509105c5",
-  "integration_manifest_sha256": "acc3b07c8da4aa6dbc5d8ac513846d57a3c08cbc6b47522435acb1f893acb940",
-  "file_count": 10120,
-  "total_bytes": 1625656953,
+  "integration_manifest_sha256": "22c10f5322a4d56b110ce61c3dc2247558450284ad63cb6851241057149eff86",
+  "file_count": 10131,
+  "total_bytes": 1625734122,
   "files": {
     "404.html": {
       "bytes": 1609,
@@ -47,11 +47,11 @@
       "bytes": 34000,
       "sha256": "5e973076e662bb673b35207bb51432730d7c8cb14b1efea020da17ae5f86ed37"
     },
-    "city-explorer/releases/fde5c033bb02929e/data/catalog.json": {
+    "city-explorer/releases/d379487eb0ffe727/data/catalog.json": {
       "bytes": 341154,
       "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1"
     },
-    "city-explorer/releases/fde5c033bb02929e/index.html": {
+    "city-explorer/releases/d379487eb0ffe727/index.html": {
       "bytes": 34750,
       "sha256": "4324f98ae5672983e450d00db3d4d8087b364dd49d62cdd829e85859b41ba1cb"
     },
@@ -60,16 +60,16 @@
       "sha256": "532986f1a67923735d9692ca106337697e7e50885d254ca23e6597ee6a524f8a"
     },
     "downloads/teaching-package.json": {
-      "bytes": 34892,
-      "sha256": "006a1b0eba4ff125852a97e3a495fb5e62aecf88ebdd2d9e32307b1925a1ee26"
+      "bytes": 36964,
+      "sha256": "1aaecaf4cf51e3c3c8b150ba745de30da1b8f1c7d59db68b1c32b0c45e4213d4"
     },
     "index.html": {
-      "bytes": 3556,
-      "sha256": "d8507bb9bdf00b1e3e5704ae7117e0f83695330a970b7a42dd6a053e42bffb29"
+      "bytes": 3634,
+      "sha256": "9b05d5c1e0b8af8f56e558f8b6512a0511412b3b213b2ba8e37ab9a2997e8926"
     },
     "integration.mjs": {
-      "bytes": 10863,
-      "sha256": "e9850bb6118237607053ce210c5af038da6b5dd58ad5102b108f811659b306c8"
+      "bytes": 11499,
+      "sha256": "bd7613dad41a4a5343c303813d3ae3b1dfd634922c1b1ca54b921f16093abe30"
     },
     "network-flows/capacity/index.html": {
       "bytes": 2160,
@@ -77,7 +77,7 @@
     },
     "network-flows/capacity/release.json": {
       "bytes": 16353,
-      "sha256": "40b72c48d88e1557048467614732ace1abbd63f898f65bebb2b92b9aed94deda"
+      "sha256": "453d23d000461b7a1b6c1b25fef8be352d9d1a6bd54112a99377cc3cb8cec177"
     },
     "network-flows/capacity/visual.css": {
       "bytes": 14015,
@@ -93,23 +93,39 @@
     },
     "network-flows/delivery-order/release.json": {
       "bytes": 7525,
-      "sha256": "2d7353a931ae961619ff3b0b5ad9e9a4153c48ef0ebe4c7673265a739ab78b8c"
+      "sha256": "285f005851289a8c1bc24a5907d1e34d348286cf4bc58beb42d62c2fb45c1336"
     },
     "network-flows/delivery-order/visual.css": {
       "bytes": 12248,
       "sha256": "0b5ac85837c63c469c5d5b655f968bfa490186494576e7d009d1a2bd2ce46aef"
+    },
+    "network-flows/dispatch/boot.js": {
+      "bytes": 199,
+      "sha256": "7a57e01b617ed8310df6296aca76b907192ccf51b05b04bdae18ea1414549563"
+    },
+    "network-flows/dispatch/index.html": {
+      "bytes": 8948,
+      "sha256": "ed6fb8a0cbfe8d0f5d2936a1da4cb4d2885dc7c1bf3511fc1f6bb1ee4840a696"
+    },
+    "network-flows/dispatch/release.json": {
+      "bytes": 11887,
+      "sha256": "8236c11f9ef745822f8ba72ff4b4e9d24354aed8c54939b8eadca44defec1da6"
+    },
+    "network-flows/dispatch/visual.css": {
+      "bytes": 5047,
+      "sha256": "46c2a66305ec13715d959667e07c5932b0c80733e73b867baac73356ce1f6009"
     },
     "network-flows/rebalancing/boot.js": {
       "bytes": 211,
       "sha256": "6fc7dd0c0ae7833010b700c96a37a2b303a8e9de2a6f6b226da7a6c869c37742"
     },
     "network-flows/rebalancing/index.html": {
-      "bytes": 13468,
-      "sha256": "877f545b2a8e5dff3e3b0d8d5bb34b43f68caccb88cbca3d585f3a675feb8c60"
+      "bytes": 13536,
+      "sha256": "5309e0508186c6ebb451eddca21012bbd1a2b4fa039a0e5c01ef32891e0abc5f"
     },
     "network-flows/rebalancing/release.json": {
-      "bytes": 17199,
-      "sha256": "970d92a95ba374ae0edaeef2e2940e1eb2a85c54991f4216aac19e8a236bc006"
+      "bytes": 17389,
+      "sha256": "ad7e5f84345ebfa4aeb38a1c932485f80b551c36e3cacbe966e69d1ef24e8d9e"
     },
     "network-flows/rebalancing/visual.css": {
       "bytes": 12687,
@@ -125,15 +141,19 @@
     },
     "network-flows/software-delivery/release.json": {
       "bytes": 6407,
-      "sha256": "289999727d504b3cbafb4c1b7e7dd4cce28cea9ad627dce06515bc56e815c809"
+      "sha256": "1574d4d2e0f9f78a953d40aff95600e77640f08f466e4ecdcf916d3f7b0bf128"
     },
     "network-flows/software-delivery/visual.css": {
       "bytes": 17914,
       "sha256": "7fbac547b5d1fa018b82a7fdbc4499097ea550a1edf4c76b67cd39b2f2efb73b"
     },
+    "network-flows/sources/77895520abc398b27df54e5353b76d12f4418934fcd0cd26c4a6e54320b42a3c.json.gz": {
+      "bytes": 969108,
+      "sha256": "77895520abc398b27df54e5353b76d12f4418934fcd0cd26c4a6e54320b42a3c"
+    },
     "publication.json": {
       "bytes": 1800,
-      "sha256": "b21f07983c0d8bcea067cc1c5ba9227a99047b12510c82407f26751cf50ee6b6"
+      "sha256": "d8793dafb2ba3446651962dce09bfff225cb175e7d13e344dbeb1e4b31dcd89c"
     },
     "site-media/apple-touch-icon.png": {
       "bytes": 21051,
@@ -187,6 +207,18 @@
       "bytes": 12164,
       "sha256": "5cf2cbc308c8e0c59c637403ec917488d796aa4056dbc0f42dc89a8b5d3b88b1"
     },
+    "src/model/dispatch-contract.js": {
+      "bytes": 3516,
+      "sha256": "bf6cef37516e1c6bd8b7fcd161ab64d1f1984c14cca2a1ac597d22ef03569acc"
+    },
+    "src/model/dispatch-verify.js": {
+      "bytes": 8418,
+      "sha256": "6240743f7574442f4f0a6fb4c55c7cfff544100e3566c4037afe3f17de88cfc1"
+    },
+    "src/model/dispatch.js": {
+      "bytes": 5869,
+      "sha256": "7b167a71f9314f5f3a7aab0f9a15bf70cc430655fd5a08665345568ee2daf7f2"
+    },
     "src/model/rebalancing-contract.js": {
       "bytes": 5336,
       "sha256": "d2f88e9376417a7af75fa59fdbb69d081a276d5a39f8c4132f01bb2fe2f95326"
@@ -206,6 +238,18 @@
     "src/runtime/delivery-order-worker.js": {
       "bytes": 2738,
       "sha256": "5fe5f0951ce9523dc53120305b6168c31d1f7963c61ba57e0846b24e50c78d02"
+    },
+    "src/runtime/dispatch-job.js": {
+      "bytes": 884,
+      "sha256": "c5739a1b01efb5a7e4dfe3e918c38d9fe9ca3cba6afcb75267b526c841919fb1"
+    },
+    "src/runtime/dispatch-session.js": {
+      "bytes": 2291,
+      "sha256": "25d462122827fdd1d17854c705205174f2d3c2e91ba2fd765c85c7d94f4bd365"
+    },
+    "src/runtime/dispatch-worker.js": {
+      "bytes": 243,
+      "sha256": "37de80aa9f22022d2f6552a7d6ebfd612e9b00685602d878752c51fe3d6a2d90"
     },
     "src/runtime/rebalancing-job.js": {
       "bytes": 1483,
@@ -239,13 +283,17 @@
       "bytes": 6690,
       "sha256": "9416c77697c09818c5a7b74e9db7ee201772d1721bc7bf90fd085b05b6af75ab"
     },
+    "src/ui/dispatch-app.js": {
+      "bytes": 12164,
+      "sha256": "9a56c39813d0b376d605c27a0906cf97f594b07b2f4471759532a9f1b17d143e"
+    },
     "src/ui/hero-film.js": {
       "bytes": 9750,
       "sha256": "4c5873143e83dedf4db19dca9f661e8e53767e176edccddcecfdb9817a465115"
     },
     "src/ui/rebalancing-app.js": {
-      "bytes": 7666,
-      "sha256": "2ba41d92f18fa32761f3bf5c13b6a9d0505a479faa1f2ebf55605b5bd9ba8f1c"
+      "bytes": 7987,
+      "sha256": "3f14b8249b9d2e53de1c392574fa8639f4b6b3696b67307c9929e7c9a44bf1e0"
     },
     "src/ui/rebalancing-concept.js": {
       "bytes": 3503,
@@ -356,50 +404,50 @@
       "sha256": "69a9c6ec3bb88255086961cf9eb21ab41323129fd28ddc0f4bb4b03a35768a92"
     }
   },
-  "verified_at_utc": "2026-10-15T01:50:48.009762+00:00",
+  "verified_at_utc": "2026-10-15T03:07:44.855710+00:00",
   "verification": {
-    "served_files": 10119,
-    "matched_files": 10119,
-    "header_checks": 61,
+    "served_files": 10130,
+    "matched_files": 10130,
+    "header_checks": 65,
     "headers_pass": true,
-    "full_readback_sha256": "ec6e961dc4fa8db7bc5892d0e96e7a20a5c4f474754c6363727de8978fa05aa1",
-    "preview_matched_files": 10119,
-    "preview_full_readback_sha256": "8796d99747bb16b124557a4884fc2516df66f367590be47970506a6204498864",
-    "production_headers_sha256": "4c8bc9e4c6afbe10f0b7fec5e37978962d609836461aa247f4e0cf1f8a824bcb",
-    "preview_headers_sha256": "65d91d820a0b66599ae536bc8924a23f2aad5bfffc2f6d02163b13823159370b",
-    "immutable_smoke_matched_files": 82,
-    "immutable_smoke_sha256": "348eee423e6b863290e62034a5769f04af09326e138bd6db291ee8a3be042ff2",
-    "prior_production_smoke_matched_files": 62,
-    "prior_production_smoke_sha256": "4cd402fee2ac9b519bfe6426857d25f3dea24fd86672c55cba6a6f4540d14e13",
+    "full_readback_sha256": "9c01f09b91e5b5d5d57e625f4c8f094bdf1d6751c111131a7034522d1d560e8b",
+    "preview_matched_files": 10130,
+    "preview_full_readback_sha256": "649f6977f7c6ebffa229702b0caff4f9c11eb222ceee63d84467814c567d0dc5",
+    "production_headers_sha256": "b2f03225a45f39222ada6b4211f1b9bec8bf3a91ddc44cdc370c3fb5807b2a4c",
+    "preview_headers_sha256": "01eec03085abd7650e5ec35763515d82ab8c9bedaf8d7d8c09d91c657e7e546d",
+    "immutable_smoke_matched_files": 94,
+    "immutable_smoke_sha256": "ab340a8ec41fedf6a29679b94b423564b3971db7a6c46456d283822f1b7c7682",
+    "prior_production_smoke_matched_files": 82,
+    "prior_production_smoke_sha256": "11bf5daafaa0e13881db32dff63676530ae742fbeb871b08df71c9dc81296ab9",
     "meaning": "Byte consistency and observed hosting only; not independent authenticity, browser-session generation pinning or operational authority."
   },
-  "capacity_release_sidecar_sha256": "40b72c48d88e1557048467614732ace1abbd63f898f65bebb2b92b9aed94deda",
-  "capacity_release_digest": "4e371f6cfea98fea10c00fb34ff35c719fe3fcdeeca4564ff78d87067e7fa1cd",
+  "capacity_release_sidecar_sha256": "453d23d000461b7a1b6c1b25fef8be352d9d1a6bd54112a99377cc3cb8cec177",
+  "capacity_release_digest": "2897a85221a6981bf26dbf223e81881ea4f4938250ad4f7a983eeeea1965c54f",
   "teaching_package": {
-    "bytes": 34892,
+    "bytes": 36964,
     "path": "downloads/teaching-package.json",
-    "sha256": "006a1b0eba4ff125852a97e3a495fb5e62aecf88ebdd2d9e32307b1925a1ee26"
+    "sha256": "1aaecaf4cf51e3c3c8b150ba745de30da1b8f1c7d59db68b1c32b0c45e4213d4"
   },
   "teaching_source_offer": {
-    "bytes": 954770,
-    "extracted_sha256": "6a5804b7fa399c74e6a1d3bd056e8c382fe4e61772280d7656e72ae724aed054",
-    "original_inventory_sha256": "e4c1c6696d79ef8899b3c9139b07c73167630c541799e137256852b54602f1c5",
+    "bytes": 969108,
+    "extracted_sha256": "591436373485c2206c7e9ef0f1f238ebccd2b54706fc7886c317b34d3d8d9c93",
+    "original_inventory_sha256": "981469901e3bd11cbc9851f22aece964fd02dfd40e08dfcf2aaaf200a1d059ee",
     "owner": "teaching-original-source-and-tools",
-    "path": "network-flows/sources/0447ab05ecd7f9d7e080cb631625cfe114b63d047544552f9881e8ebfb648e63.json.gz",
-    "sha256": "0447ab05ecd7f9d7e080cb631625cfe114b63d047544552f9881e8ebfb648e63"
+    "path": "network-flows/sources/77895520abc398b27df54e5353b76d12f4418934fcd0cd26c4a6e54320b42a3c.json.gz",
+    "sha256": "77895520abc398b27df54e5353b76d12f4418934fcd0cd26c4a6e54320b42a3c"
   },
-  "non_city_bytes": 12420030,
-  "software_delivery_release_sidecar_sha256": "289999727d504b3cbafb4c1b7e7dd4cce28cea9ad627dce06515bc56e815c809",
-  "software_delivery_release_digest": "475f05adb4f9aca5e8ee552137881a685cb588ff56ed31f9b6163cbe40c15073",
+  "non_city_bytes": 12497199,
+  "software_delivery_release_sidecar_sha256": "1574d4d2e0f9f78a953d40aff95600e77640f08f466e4ecdcf916d3f7b0bf128",
+  "software_delivery_release_digest": "1b879359bcdc393a9007ce0639f28052d5b4e7bce9a6bc38fb364eb27e8704a5",
   "nf04_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
-  "delivery_order_release_sidecar_sha256": "2d7353a931ae961619ff3b0b5ad9e9a4153c48ef0ebe4c7673265a739ab78b8c",
-  "delivery_order_release_digest": "e06cce008c7b2c0e385a13dd8f944ce7bd6439dfe7d651cbbe76951ec7f32f2f",
+  "delivery_order_release_sidecar_sha256": "285f005851289a8c1bc24a5907d1e34d348286cf4bc58beb42d62c2fb45c1336",
+  "delivery_order_release_digest": "89cbd3e8bee6ed8186aed8b9fe1d9a9318a439c331f06870a8434dc3f5905479",
   "delivery_order_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
   "hosted_presentation": {
     "schema": "fleetlab.hosted-presentation/1.0.0",
     "measurement_id": "G-04EZ8EZWQ2",
     "collection_host": "fleetlab.pages.dev",
-    "current_public_html_pages": 9,
+    "current_public_html_pages": 10,
     "artwork_bytes": 4770278,
     "brand_asset_count": 7,
     "tile_asset_count": 19,
@@ -407,11 +455,24 @@
     "offline_and_historical_city_analytics": false,
     "analytics_property_receipt": "NOT_OBSERVED"
   },
-  "rebalancing_release_sidecar_sha256": "970d92a95ba374ae0edaeef2e2940e1eb2a85c54991f4216aac19e8a236bc006",
-  "rebalancing_release_digest": "7a1c5369bbcd8549f49793429ebf554741a5f72702d6992eaf9e799816c3f6d3",
+  "rebalancing_release_sidecar_sha256": "ad7e5f84345ebfa4aeb38a1c932485f80b551c36e3cacbe966e69d1ef24e8d9e",
+  "rebalancing_release_digest": "9e0bf08a0a795a4f1b85c12679d7ce6d6c1c7eec6a2f16a3e395bf88b504a87f",
   "rebalancing_qualification": {
     "scope": "SYNTHETIC_TEACHING",
     "independent_record_reconstruction": true,
+    "physical_device_qualification": "NOT_ESTABLISHED",
+    "sf_qualification": "HOLD"
+  },
+  "dispatch_release_sidecar_sha256": "8236c11f9ef745822f8ba72ff4b4e9d24354aed8c54939b8eadca44defec1da6",
+  "dispatch_release_digest": "1e1636ceb0242288ad4f6a240cc26f6309830160607ae214c9ab4fff129d35b2",
+  "dispatch_qualification": {
+    "scope": "SYNTHETIC_TEACHING",
+    "independent_record_reconstruction": true,
+    "fixtures": [
+      "default",
+      "counterexample",
+      "neutral"
+    ],
     "physical_device_qualification": "NOT_ESTABLISHED",
     "sf_qualification": "HOLD"
   }
