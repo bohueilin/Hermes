@@ -4,17 +4,17 @@
 
 Round 11 “The Craft Round,” §7 P0/P1 only: Fleet day result-summary motion, shared feedback tokens, and native-control styling. The source brief is `FLEETLAB_DESIGN_ROUND11_CRAFT_2026-10-15.md`. No new lessons, models, fixtures, numerical studies, or budget ceilings. P2 remains deferred.
 
-**Implementation and the JavaScript suites are complete; final runtime identity, build/package proof, remaining validation, and publication checks are PENDING.** This draft does not certify a release. The implementing agent must replace the pending entries with the actual final evidence.
+**P0 and all three P1 items are implemented, validated, pushed to GitHub and published live.** The release evidence and scope boundaries are recorded below.
 
-Draft repository snapshot: branch `codex/fleetlab-city-sf`, HEAD `81fa3d919a945bc1704ed11920ccdd4fe592913b`, with the Round 11 changes uncommitted at the time of drafting. Unrelated owner assets and documents remain outside this change.
+Baseline repository snapshot: branch `codex/fleetlab-city-sf`, HEAD `81fa3d919a945bc1704ed11920ccdd4fe592913b`. Unrelated owner assets and documents remain outside this change.
 
 ## Item-by-item outcome
 
 | Item | Status | Implementation / boundary |
 |---|---|---|
-| P0-1, Fleet day result summary | Done in source; final release validation pending | A newly accepted, current, complete request partition receives a single approximately 1,200 ms easeOutCubic reveal. The four displayed counts and the request bar share the same progress. Stored counts, simulation results, replay position, and model behavior do not change. |
-| P1-1, micro-feedback | Done in source; final release validation pending | Shared 180 ms hover/press feedback, catalog card/filter-result entrances, rotating disclosure indicators, and disclosure-content entrances. Hover lift is 2 px; pressed controls scale to .96. Pause and reduced motion suppress the new effects. |
-| P1-2, native form controls | Done in source; final release validation pending | Fleet day and dispatch selects, numeric/text inputs, checkboxes where present, and sliders use the existing cream/forest visual language. Native elements and keyboard behavior remain; visible focus, disabled states, and forced-colors fallbacks are provided. |
+| P0-1, Fleet day result summary | Done | A newly accepted, current, complete request partition receives a single approximately 1,200 ms easeOutCubic reveal. The four displayed counts and the request bar share the same progress. Stored counts, simulation results, replay position, and model behavior do not change. |
+| P1-1, micro-feedback | Done | Shared 180 ms hover/press feedback, catalog card/filter-result entrances, rotating disclosure indicators, and disclosure-content entrances. Hover lift is 2 px; pressed controls scale to .96. Pause and reduced motion suppress the new effects. |
+| P1-2, native form controls | Done | Fleet day and dispatch selects, numeric/text inputs, checkboxes where present, and sliders use the existing cream/forest visual language. Native elements and keyboard behavior remain; visible focus, disabled states, and forced-colors fallbacks are provided. |
 | P1-3, motion tokens and reference | Done | CSS custom properties and reusable utility classes are in the hosted presentation stylesheet. The existing ordered walkthrough verdict is the reference for staged information; its order remains validity → guardrails → outcome → recommendation. Details below. |
 
 Could not implement as written: **none within the authorized P0/P1 scope**. Invented facts, numerical values, models, or results: **none**. The intermediate count-up text is a decorative interpolation of an accepted result, not a new observation or simulation output.
@@ -73,15 +73,15 @@ Receipts: `build/fleetlab-city/validation/design-round11-20261015/trim-candidate
 | `styles.css` | `71bb7388dce607e38cefbcb31b777cf53cb12e7395f78469b1ebd313abf59540` | `1c66ea83def37d88d54b15db8bc72448c1af2914e374bbdc591901ed0401265e` |
 | `labels.js` | `97c6777c1e6fe984adf7a46365cf1d2c119b4fca8092d3a35684042df3434e1e` | `bd3c48561e966ee96c2c30a693e0251794bf4f40564ec1958a68dcd39ac5c878` |
 
-`trim-current-closure.json` records a **source-based projection**, not a final build: NF-03 closure 522,303 / 524,288 bytes, projected headroom 1,985 bytes. The final freshly packaged measurements must replace the pending values below; the projection is not a package or publication proof.
+`trim-current-closure.json` records a **source-based projection**, not a final build: NF-03 closure 522,303 / 524,288 bytes, projected headroom 1,985 bytes. The fresh source-bound build confirmed that projection; all final measurements below pass their unchanged ceilings.
 
 | Final measure | Bytes | Unchanged limit | Headroom |
 |---|---:|---:|---:|
-| Original teaching source + tools | PENDING | 3,153,920 | PENDING |
-| Offline edition | PENDING | 2,571,440 | PENDING |
-| Package metadata | PENDING | 40,960 | PENDING |
-| Integrated emitted text | PENDING | 3,145,728 | PENDING |
-| Integrated NF-03 dependency closure | PENDING | 524,288 | PENDING |
+| Original teaching source + tools | 3,128,242 | 3,153,920 | 25,678 |
+| Offline edition | 2,552,091 | 2,571,440 | 19,349 |
+| Package metadata | 37,475 | 40,960 | 3,485 |
+| Integrated emitted text | 3,102,107 | 3,145,728 | 43,621 |
+| Integrated NF-03 dependency closure | 522,303 | 524,288 | 1,985 |
 
 ## Validation evidence
 
@@ -97,34 +97,49 @@ Local evidence directory: `build/fleetlab-city/validation/design-round11-2026101
 | City Python suite | `python -m unittest discover -s apps/fleetlab-city/tests`: 345 pass; `city-tests.log` | Passed |
 | Hermes Python suite | `PYTHONPATH="$PWD/src" conda run -n hermes-dev python -m pytest -q`: 1,661 pass / 56 skipped; `hermes-tests.log` | Passed |
 | Ruff / doctor / Git whitespace checks | Ruff and `git diff --check` pass; doctor: 17 PASS, expected dirty-tree WARN, optional display NOT_AVAILABLE | Passed with disclosed environment states |
-| Fresh package proof, budgets and independent upload guard | PENDING actual frozen-source build and logs | PENDING |
+| Fresh package proof, budgets and independent upload guard | `build-release.log`: package proof agrees; 10,139 files verified against runtime source | Passed |
 
 The independent review did not edit production code, operate the browser, or rerun full suites. It verified the stored trim receipts and semantic equality separately. Local browser observations are not physical-device or human-comprehension qualification. No new such qualification is claimed.
 
 Browser checks also covered 390 px phone layouts (no horizontal overflow), keyboard slider input, native select and checkbox interactions, pause, and the existing in-app reduced-motion override. Reduced motion rendered the accepted final counts immediately. OS media preference behavior is covered by regression tests; no separate physical-Pixel or OS-preference browser qualification is claimed.
 
+The header checker was initially invoked with system Python 3.9 and failed when serializing `datetime.UTC`; it was rerun unchanged using the project’s Python 3.11. The older 69-route header inventory was then expanded to retain the current 71-route coverage. No runtime fix or check relaxation was involved.
+
 The first hosted-suite execution during parallel edits hit the tight NF-03 budget before the trims were applied; `hosted-intermediate.log` preserves that failure. The final full hosted suite and budget fixture passed without a ceiling increase. The prior reproducible founder-copy temporary build was removed for disk headroom after retaining its manifests; the current Round 10 build remains available for rollback.
 
-JavaScript reproduction entry points:
+There are **4,533 passing tests** across the four full suites, with 64 skips and one TODO. These are regression and consistency checks, not human comprehension or operational safety qualification.
+
+Reproduction entry points:
 
 ```sh
 node --test playground/fleetlab/test/*.test.mjs
 node --test apps/fleetlab-city/test/*.test.mjs
+build/fleetlab-city/venv/bin/python -m unittest discover -s apps/fleetlab-city/tests
+PYTHONPATH="$PWD/src" conda run -n hermes-dev python -m pytest -q
+conda run -n hermes-dev python -m ruff check .
+PYTHONPATH="$PWD/src" conda run -n hermes-dev python -m hermes doctor
+zsh build/fleetlab-city/validation/design-round11-20261015/build-release.sh
 git diff --check
 ```
 
-## Release identity and final checks — PENDING
+## Release identity and final checks
 
-- Runtime/source commit: **PENDING**.
-- Final Git state, staged-file review and commit evidence: **PENDING**.
-- Fresh build command, source-bound package identity and staged inventory: **PENDING**.
-- Preview deployment identity, full readback, headers and browser checks: **PENDING**.
-- Production deployment identity and immutable URL: **PENDING**.
-- Stable production full readback and headers: **PENDING**.
-- Prior-production rollback smoke check and retained deployment: **PENDING**.
-- Release receipt update and final receipt readback: **PENDING**.
+- Runtime/source commit: `84ebba53ec0c131c32ed9683c548d67eed4c918f`, pushed to `github/codex/fleetlab-city-sf`.
+- Runtime commit contains only the eight reviewed source/test/handoff files. Staged whitespace and diff-stat checks passed. The final handoff and publication receipt are committed separately after readback; unrelated owner assets remain unstaged.
+- Fresh build: `zsh build/fleetlab-city/validation/design-round11-20261015/build-release.sh`; 10,139 staged files. Final source-bound package proof and independent upload guard pass.
+- Preview: [d74945d0](https://d74945d0.fleetlab.pages.dev/#/fleet-day), deployment `d74945d0-9f1b-4320-b861-2e1517c4bba4`. Full readback: **10,138 / 10,138**; security headers: **71 / 71**. Browser checks confirm the tokens and accepted final counts.
+- Live: [FleetLab](https://fleetlab.pages.dev/#/fleet-day). Immutable production: [185e946f](https://185e946f.fleetlab.pages.dev/#/fleet-day), deployment `185e946f-8bb0-4082-a1b8-a91d75d913f6`.
+- Stable production inventory: **10,138 / 10,138 matched** after one bounded retry; security headers: **71 / 71**. The first pass returned 14 transient 404s for City Explorer data paths. All 14 matched on the targeted recheck. The original pass, retry and composed result are retained; this is not an atomic browser-session generation snapshot. Final capture: `2026-10-15T23:41:41.487971+00:00`.
+- Immutable production smoke: **102 / 102**. Prior production [9ffe72c5](https://9ffe72c5.fleetlab.pages.dev) remains available and passed **102 / 102** rollback smoke checks.
+- Release receipt: `docs/releases/fleetlab-current.json`, with its path-to-expectation mapping preserved. Final receipt readback: **102 / 102 matched**.
 
-This draft records no completed Round 11 publication. Release actions and final evidence remain the implementing agent's responsibility under the user's applicable authorization. Website publication does not authorize vehicle operation or deployment to a physical or production safety-critical system.
+- Current City Explorer presentation: `city-explorer/releases/26a06c53571b7dfe`. Its scientific baseline remains `c56bda6b509105c5`; scientific data/model files are preserved.
+- Teaching source offer: `network-flows/sources/3c942b855f03893d020de728062eaaa30302fe810b9e7a2af63732603cf966c6.json.gz`.
+- Production browser proof: `production-results.png` and `production-result-reveal.mp4`. The live default accepted partition is 95 completed, 176 unserved, 4 waiting and 9 in progress, totaling 284; these are observed run results, not hard-coded presentation values.
+
+The temporary release worktree was archived after publication; the current source checkout and owner assets are preserved. The local preview server was stopped after verification.
+
+The user's standing FleetLab push and publication authorization applies to this release. Website publication does not authorize vehicle operation or deployment to a physical or production safety-critical system.
 
 ## Deferred work and unchanged owner direction
 
@@ -134,16 +149,16 @@ The Round 10 contact card and founder story remain unchanged. **Standing owner d
 
 ## Recommendation
 
-Proceed to the remaining final validation and packaging checks. Treat the P0/P1 implementation as complete in source, with release acceptance pending the recorded final evidence above. Keep P2 deferred.
+Use the live P0/P1 refinement for the existing demo path. Keep P2 deferred and preserve the accepted-results-only motion boundary.
 
 ## Top risks + mitigations
 
 - **Animation could imply authority for stale or unavailable values.** Mitigation: simulator-owned acceptance marker, validated complete partition, one-use presentation lifecycle, and exact accessible values.
 - **Shared-source budget margin is small.** Mitigation: verified formatting-only recovery, unchanged ceilings, and a required fresh source-bound package/budget check before release.
-- **Local observations could be mistaken for a deployed or device-qualified result.** Mitigation: explicit pending release fields and separate local-browser, immutable-release, readback, and physical-device evidence boundaries.
+- **Local observations could be mistaken for a deployed or device-qualified result.** Mitigation: separate local-browser, immutable-release, readback, and physical-device evidence boundaries, with the initial readback failures retained.
 
 ## Next 3 actions
 
-1. Finish remaining validation and replace every pending test/browser entry with actual results and evidence paths.
-2. Record the runtime commit and fresh source-bound build, package proof, guard results, and exact budget measurements.
-3. Complete the authorized release checks, full readbacks and receipt update, then finalize this handoff without expanding into P2.
+1. Review the live Fleet day payoff and the accompanying motion recordings.
+2. Obtain separate design approval before taking on the queued P2 visualizations or typography/pause-pill changes.
+3. If the paired dot plot is authorized later, bind every dot and delta to the actual recorded runs; never publish prototype mock values.
