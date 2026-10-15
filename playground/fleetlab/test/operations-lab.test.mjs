@@ -48,6 +48,18 @@ test('the day clock identifies a midnight crossing',()=>{
   assert.equal(operationsClock(1505),'Day 2 · 01:05');
 });
 
+test('only a fresh current run marks its summary accepted; edit and restore do not grant another reveal',async()=>{
+ const restore=installFakeDom();try{
+  const lab=createOperationsLab({reducedMotion:()=>true});lab.setConfig({fleet_size:8,requests_per_hour:8,duration_hours:2});
+  assert.equal(lab.element.querySelector('.ops-outcome-visual .request-outcomes'),null);
+  await lab.run();const first=lab.element.querySelector('.ops-outcome-visual .request-outcomes');assert.equal(first.getAttribute('data-result-accepted'),'true');
+  lab.setConfig({fleet_size:10});let visual=lab.element.querySelector('.ops-outcome-visual .request-outcomes');assert.equal(visual.getAttribute('data-stale'),'true');assert.equal(visual.hasAttribute('data-result-accepted'),false);
+  lab.setConfig({fleet_size:8});visual=lab.element.querySelector('.ops-outcome-visual .request-outcomes');assert.equal(visual.getAttribute('data-stale'),'false');assert.equal(visual.hasAttribute('data-result-accepted'),false);
+  await lab.run();visual=lab.element.querySelector('.ops-outcome-visual .request-outcomes');assert.notEqual(visual,first);assert.equal(visual.getAttribute('data-result-accepted'),'true');
+  const pending=lab.run();lab.setConfig({fleet_size:10});await pending;visual=lab.element.querySelector('.ops-outcome-visual .request-outcomes');assert.equal(visual.getAttribute('data-stale'),'true');assert.equal(visual.hasAttribute('data-result-accepted'),false);lab.destroy();
+ }finally{restore();}
+});
+
 test('fleet counters account for every vehicle including queues and depot work',async()=>{
   const restore=installFakeDom();
   try{

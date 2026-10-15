@@ -5,6 +5,7 @@ import {simulationCatalog,createSimulationCatalog} from '../../../playground/fle
 import {QUESTION_FAMILIES} from '../hosted/visitor-families.mjs';
 import {decorateVisitors,animateOutcomeCounts} from '../hosted/visitor.mjs';
 import {createDepotFlowLab} from '../../../playground/fleetlab/src/ui/depot-flow-lab.js';
+import {requestOutcomes} from '../../../playground/fleetlab/src/ui/operations-lab.js';
 
 test('concept diagrams follow the active lesson without duplicates or changing results',()=>{
  const restore=installFakeDom(),previous=globalThis.MutationObserver;let redraw;
@@ -95,18 +96,88 @@ test('replay ribbon moves before the scrubber without cloning intervals or losin
  }finally{restore();}
 });
 
-test('count-up reads accepted counts, names each displayed value, and restores exact counts on reduction or cancellation',()=>{
+test('accepted count-up eases for 1200 ms while accessible counts remain exact, and runs once per result',()=>{
  const restore=installFakeDom();try{
-  const root=document.createElement('section');document.body.appendChild(root);root.setAttribute('data-stale','false');
+  const root=document.createElement('section');document.body.appendChild(root);root.setAttribute('data-stale','false');root.setAttribute('data-result-accepted','true');
   const row=document.createElement('li');row.setAttribute('data-request-count','177');row.textContent='Completed: 177';root.appendChild(row);
-  let frame,canAnimate=true,cancelled=0;
-  const stop=animateOutcomeCounts(root,{request:fn=>(frame=fn,1),cancel:()=>cancelled++,allowed:()=>canAnimate,now:()=>0});
-  frame(350);assert.equal(row.textContent,'Completed: 88');assert.equal(row.getAttribute('aria-label'),row.textContent);
-  canAnimate=false;frame(400);assert.equal(row.textContent,'Completed: 177');assert.equal(row.getAttribute('aria-label'),row.textContent);assert.ok(cancelled);
-  stop();assert.equal(row.getAttribute('data-request-count'),'177');
-  root.setAttribute('data-stale','true');let requested=0;animateOutcomeCounts(root,{request:()=>requested++,allowed:()=>true});assert.equal(requested,0);
-  root.setAttribute('data-stale','false');animateOutcomeCounts(root,{request:()=>requested++,allowed:()=>false});assert.equal(requested,0);
+  let frame,requested=0;
+  const options={request:fn=>(frame=fn,++requested),cancel:()=>{},allowed:()=>true,now:()=>0};
+  const stop=animateOutcomeCounts(root,options);
+  frame(600);assert.equal(row.textContent,'Completed: 154');assert.equal(row.getAttribute('aria-label'),'Completed: 177');assert.equal(row.querySelector('span').getAttribute('aria-hidden'),'true');
+  assert.equal(root.style.getPropertyValue('--count-progress'),'0.875');
+  frame(1200);assert.equal(row.textContent,'Completed: 177');assert.equal(row.getAttribute('aria-label'),'Completed: 177');
+  assert.equal(root.classList.contains('visitor-count-reveal'),false);stop();assert.equal(row.getAttribute('data-request-count'),'177');
+  const before=requested;animateOutcomeCounts(root,options);assert.equal(requested,before);
  }finally{restore();}
+});
+
+const outcomeMetrics={completed_trips:80,unserved_requests:12,pending_requests:5,in_progress_trips:3,total_requests:100};
+test('unaccepted, stale, incomplete and initially restricted summaries remain exact without count-up',()=>{
+ const restore=installFakeDom();try{
+  for(const [metrics,stale,accepted,allowed] of [[outcomeMetrics,false,false,true],[outcomeMetrics,true,true,true],[null,false,true,true],[outcomeMetrics,false,true,false]]){
+   const root=requestOutcomes(metrics,stale,{accepted});document.body.appendChild(root);const exact=root.textContent;let requested=0;
+   const options={request:()=>requested++,cancel:()=>{},allowed:()=>allowed,now:()=>0};animateOutcomeCounts(root,options);assert.equal(requested,0);assert.equal(root.textContent,exact);assert.equal(root.classList.contains('visitor-count-reveal'),false);
+   if(accepted&&!stale&&metrics&&!allowed){animateOutcomeCounts(root,{...options,allowed:()=>true});assert.equal(requested,0,'lifting a restriction does not restart acceptance motion');}
+  }
+ }finally{restore();}
+});
+
+test('restriction, staleness, detachment and cancellation restore final counts and never restart',()=>{
+ const restore=installFakeDom();try{
+  for(const kind of ['restriction','stale','detach','cancel']){
+   const root=requestOutcomes(outcomeMetrics,false,{accepted:true});document.body.appendChild(root);const row=root.querySelector('[data-request-count]');let frame,allowed=true,requested=0;
+   const options={request:fn=>(frame=fn,++requested),cancel:()=>{},allowed:()=>allowed,now:()=>0};const stop=animateOutcomeCounts(root,options);frame(600);assert.equal(row.textContent,'Completed: 70');assert.equal(row.getAttribute('aria-label'),'Completed: 80');
+   if(kind==='restriction')allowed=false;else if(kind==='stale')root.setAttribute('data-stale','true');else if(kind==='detach')root.remove();else stop();frame(700);
+   assert.equal(row.textContent,'Completed: 80');assert.equal(row.getAttribute('aria-label'),'Completed: 80');assert.equal(root.classList.contains('visitor-count-reveal'),false);
+   allowed=true;root.setAttribute('data-stale','false');document.body.appendChild(root);const before=requested;animateOutcomeCounts(root,options);assert.equal(requested,before);
+  }
+ }finally{restore();}
+});
+
+function visualMotionHarness({duration='1200ms'}={}){
+ const restore=installFakeDom(),previous=globalThis.MutationObserver,mutations=[],intersections=[];
+ class MutationObserver{constructor(fn){this.fn=fn;mutations.push(this);}observe(target,options){this.target=target;this.options=options;}}
+ class IntersectionObserver{constructor(fn){this.fn=fn;this.targets=new Set();intersections.push(this);}observe(target){this.targets.add(target);}unobserve(target){this.targets.delete(target);}}
+ globalThis.MutationObserver=MutationObserver;Object.assign(window,{MutationObserver,IntersectionObserver,performance:{now:()=>0},getComputedStyle:()=>({getPropertyValue:()=>duration})});
+ const container=document.createElement('div');container.className='ops-outcome-visual';document.body.appendChild(container);decorateVisitors(document);
+ return {container,restore,replace(root){container.replaceChildren(root);mutations.find(o=>o.target===container&&o.options.childList).fn();},attributes(target){for(const observer of mutations)if(observer.target===target&&observer.options.attributes)observer.fn();},show(root,visible=true){for(const observer of intersections)if(observer.targets.has(root))observer.fn([{target:root,isIntersecting:visible}]);},close(){globalThis.MutationObserver=previous;restore();}};
+}
+test('accepted summary waits until visible, uses the CSS count duration and ignores arbitrary rerenders',()=>{
+ const x=visualMotionHarness({duration:'2s'});try{
+  const root=requestOutcomes(outcomeMetrics,false,{accepted:true}),row=root.querySelector('[data-request-count]');x.replace(root);
+  assert.equal(x.restore.dom.frames.pending,0);assert.equal(row.textContent,'Completed: 80');x.show(root,false);assert.equal(x.restore.dom.frames.pending,0);
+  x.show(root);x.restore.dom.frames.flush(1000);assert.equal(row.textContent,'Completed: 70');assert.equal(row.getAttribute('aria-label'),'Completed: 80');
+  x.replace(root);x.restore.dom.frames.flush(1500);assert.equal(row.textContent,'Completed: 78','same accepted node keeps its original start time');x.restore.dom.frames.flush(2000);assert.equal(row.textContent,'Completed: 80');
+  x.replace(root);x.show(root);assert.equal(x.restore.dom.frames.pending,0);
+  const restored=requestOutcomes(outcomeMetrics,false);x.replace(restored);x.show(restored);assert.equal(x.restore.dom.frames.pending,0);
+ }finally{x.close();}
+});
+test('pause, hidden tab or page and reduced motion consume pending or active acceptance without resuming it',()=>{
+ for(const kind of ['pause','hidden','page','system','override'])for(const active of [false,true]){
+  const x=visualMotionHarness();try{
+   const root=requestOutcomes(outcomeMetrics,false,{accepted:true}),row=root.querySelector('[data-request-count]');x.replace(root);if(active){x.show(root);x.restore.dom.frames.flush(600);assert.equal(row.textContent,'Completed: 70');}
+   const control=document.querySelector('.visitor-motion-control');
+   if(kind==='pause')control.click();else if(kind==='hidden'){document.hidden=true;document.dispatchEvent(new Event('visibilitychange'));}else if(kind==='page'){x.container.hidden=true;x.attributes(x.container);}else if(kind==='system')x.restore.dom.media.set('(prefers-reduced-motion: reduce)',true);else{document.documentElement.setAttribute('data-motion','reduce');x.attributes(document.documentElement);}
+   assert.equal(row.textContent,'Completed: 80');assert.equal(x.restore.dom.frames.pending,0);
+   if(kind==='pause')control.click();else if(kind==='system')x.restore.dom.media.set('(prefers-reduced-motion: reduce)',false);else if(kind==='page'){x.container.hidden=false;x.attributes(x.container);}else if(kind==='override'){document.documentElement.removeAttribute('data-motion');x.attributes(document.documentElement);}else{document.hidden=false;document.dispatchEvent(new Event('visibilitychange'));}
+   x.show(root);x.replace(root);assert.equal(x.restore.dom.frames.pending,0);assert.equal(row.textContent,'Completed: 80');
+  }finally{x.close();}
+ }
+});
+
+test('replacing a summary finishes the old count-up and never revives it when reinserted',()=>{
+ const x=visualMotionHarness();try{
+  const first=requestOutcomes(outcomeMetrics,false,{accepted:true}),row=first.querySelector('[data-request-count]');x.replace(first);x.show(first);x.restore.dom.frames.flush(600);assert.equal(row.textContent,'Completed: 70');
+  const second=requestOutcomes(outcomeMetrics,false,{accepted:true});x.replace(second);assert.equal(row.textContent,'Completed: 80');assert.equal(x.restore.dom.frames.pending,0);
+  x.replace(first);x.show(second);x.show(first);assert.equal(x.restore.dom.frames.pending,0);assert.equal(row.textContent,'Completed: 80');
+ }finally{x.close();}
+});
+
+test('detaching a pending summary consumes its reveal before the same page is reattached',()=>{
+ const x=visualMotionHarness();try{
+  const root=requestOutcomes(outcomeMetrics,false,{accepted:true});x.replace(root);x.container.remove();x.show(root,false);
+  document.body.appendChild(x.container);x.show(root);assert.equal(x.restore.dom.frames.pending,0);assert.equal(root.querySelector('[data-request-count]').textContent,'Completed: 80');
+ }finally{x.close();}
 });
 
 test('approved hero treatment adds concept artwork without numeric overlays or replay controls',()=>{

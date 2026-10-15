@@ -192,9 +192,11 @@ export function decorateVisitors(doc=document){
 }
 
 // Only presentation is animated. No callback can run a model, accept an order or advance replay.
-const motionControllers=new WeakMap();
+const motionControllers=new WeakMap(),animatedOutcomes=new WeakSet();
 export function animateOutcomeCounts(root,{request,cancel,allowed,now=()=>performance.now()}={}){
- if(!allowed()||root.getAttribute('data-stale')==='true')return ()=>{};
+ if(animatedOutcomes.has(root)||root.getAttribute('data-result-accepted')!=='true'||root.getAttribute('data-stale')==='true')return ()=>{};
+ animatedOutcomes.add(root);
+ if(!allowed()||!root.isConnected||root.closest('[hidden]'))return ()=>{};
  const rows=[...root.querySelectorAll('[data-request-count]')],jobs=[];
  for(const row of rows){
   const final=Number(row.getAttribute('data-request-count'));
@@ -204,10 +206,12 @@ export function animateOutcomeCounts(root,{request,cancel,allowed,now=()=>perfor
   const label=exact.slice(0,exact.lastIndexOf(':')+1);display.textContent=exact;
   const swatch=row.querySelector('.request-swatch');row.replaceChildren(...(swatch?[swatch]:[]),display);jobs.push({display,label,final});
  }
+ if(!jobs.length)return ()=>{};
+ const token=root.ownerDocument.defaultView?.getComputedStyle?.(root).getPropertyValue('--motion-count').trim(),match=token?.match(/^(\d+(?:\.\d+)?)(ms|s)$/),duration=match&&Number(match[1])>0?Number(match[1])*(match[2]==='s'?1000:1):1200;
  let id=null,stopped=false;const start=now();
- const finish=()=>{stopped=true;if(id!==null)cancel(id);for(const j of jobs){j.display.textContent=`${j.label} ${j.final}`;j.display.parentNode.setAttribute('aria-label',j.display.textContent);}root.classList.remove('visitor-count-reveal');};
- const step=t=>{if(stopped)return;if(!root.isConnected||!allowed()){finish();return;}const p=Math.min(1,Math.max(0,(t-start)/700));for(const j of jobs){j.display.textContent=`${j.label} ${Math.floor(j.final*p)}`;j.display.parentNode.setAttribute('aria-label',j.display.textContent);}if(p<1)id=request(step);else finish();};
- root.classList.add('visitor-count-reveal');id=request(step);return finish;
+ const finish=()=>{stopped=true;if(id!==null)cancel(id);for(const j of jobs)j.display.textContent=`${j.label} ${j.final}`;root.classList.remove('visitor-count-reveal');root.style.removeProperty('--count-progress');};
+ const step=t=>{if(stopped)return;if(!root.isConnected||root.closest('[hidden]')||root.getAttribute('data-stale')==='true'||!allowed()){finish();return;}const p=Math.min(1,Math.max(0,(t-start)/duration)),eased=1-(1-p)**3;root.style.setProperty('--count-progress',String(eased));for(const j of jobs)j.display.textContent=`${j.label} ${Math.floor(j.final*eased)}`;if(p<1)id=request(step);else finish();};
+ root.classList.add('visitor-count-reveal');root.style.setProperty('--count-progress','0');for(const j of jobs)j.display.textContent=`${j.label} 0`;id=request(step);return finish;
 }
 function installVisualMotion(doc){
  if(motionControllers.has(doc))return;
@@ -219,7 +223,15 @@ function installVisualMotion(doc){
  control.addEventListener('click',()=>{paused=!paused;sync();});doc.body.appendChild(control);system.addEventListener('change',sync);doc.addEventListener('visibilitychange',sync);
  new MutationObserver(sync).observe(root,{attributes:true,attributeFilter:['data-motion']});sync();
  const counts=doc.querySelector('.ops-outcome-visual');
- if(counts)new MutationObserver(()=>{for(const stop of stops)stop();stops.clear();const r=counts.querySelector('.request-outcomes');if(r)stops.add(animateOutcomeCounts(r,{request:fn=>win.requestAnimationFrame(fn),cancel:id=>win.cancelAnimationFrame(id),allowed,now:()=>win.performance.now()}));}).observe(counts,{childList:true});
+ if(counts){
+  let current=null,pending=null,stop=()=>{};const seen=new WeakSet();
+  const visibility=typeof win.IntersectionObserver==='function'?new win.IntersectionObserver(entries=>{for(const e of entries)if(e.target===pending){if(!pending.isConnected)finish();else if(e.isIntersecting)start();}}):null;
+  const finish=()=>{if(pending)visibility?.unobserve(pending);pending=null;stop();stop=()=>{};stops.delete(finish);};
+  const start=()=>{const r=pending;if(!r)return;visibility?.unobserve(r);pending=null;stop=animateOutcomeCounts(r,{request:fn=>win.requestAnimationFrame(fn),cancel:id=>win.cancelAnimationFrame(id),allowed,now:()=>win.performance.now()});};
+  const accept=()=>{const r=counts.querySelector('.request-outcomes');if(r===current)return;finish();current=r;if(!r||seen.has(r)||r.getAttribute('data-result-accepted')!=='true'||r.getAttribute('data-stale')==='true')return;seen.add(r);if(!allowed()||r.closest('[hidden]'))return;pending=r;stops.add(finish);if(visibility)visibility.observe(r);else start();};
+  new MutationObserver(accept).observe(counts,{childList:true});accept();
+  const owner=counts.closest('.operations-lab')??counts;new MutationObserver(()=>{if(owner.hidden)finish();}).observe(owner,{attributes:true,attributeFilter:['hidden']});
+ }
  const ambient=[...doc.querySelectorAll('.visitor-family,.visitor-ambient-art,[data-concept="fleet"] .primer-track')];
  if(typeof win.IntersectionObserver==='function'){
   const observer=new win.IntersectionObserver(entries=>{for(const e of entries)e.target.setAttribute('data-motion-visible',String(e.isIntersecting));});for(const n of ambient)observer.observe(n);

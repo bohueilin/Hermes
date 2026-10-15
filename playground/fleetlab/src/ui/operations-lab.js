@@ -60,10 +60,10 @@ const requestKinds=[
  ['pending_requests','Waiting','Still awaiting assignment at the end of the run.','#c48c42'],
  ['in_progress_trips','In progress','Assigned: pickup, boarding or the trip is still underway.','#498fa9'],
 ];
-export function requestOutcomes(metrics,stale=false,{definitions=true,showCounts=true}={}){
+export function requestOutcomes(metrics,stale=false,{definitions=true,showCounts=true,accepted=false}={}){
  const counts=requestKinds.map(([key])=>metrics?.[key]),total=metrics?.total_requests;
  const valid=Number.isSafeInteger(total)&&total>=0&&counts.every(n=>Number.isSafeInteger(n)&&n>=0)&&counts.reduce((a,b)=>a+b,0)===total;
- return el('section',{class:'request-outcomes','data-stale':String(stale),'aria-label':'Every ride request at observation end'},[
+ return el('section',{class:'request-outcomes','data-stale':String(stale),...(accepted&&!stale&&valid?{'data-result-accepted':'true'}:{}),'aria-label':'Every ride request at observation end'},[
   definitions?el('dl',{},requestKinds.map(([,name,meaning])=>el('div',{},[el('dt',{},name),el('dd',{},meaning)]))):null,
   showCounts?el('p',{},stale?'Result from previous settings. Run again to update.':!metrics?'Run the day to see the four counts.':!valid?'Outcome counts unavailable: the recorded partition is incomplete.':total===0?'No requests in this run.':`${total} ride requests at observation end`):null,
   valid&&total>0?el('div',{class:'request-bar','aria-hidden':'true'},requestKinds.map(([,name,,color],i)=>el('span',{style:`width:${counts[i]/total*100}%;background:${color}`,title:`${name}: ${counts[i]}`}))):null,
@@ -247,7 +247,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
       resultProvenance.replaceChildren(el('p',{},`Fleet day model ${result.version}. Demand seed ${result.config.seed}. NOT_EVIDENCE; simulation-only; decision authority NONE.`),el('details',{class:'ops-result-details'},[el('summary',{},'Exact values'),el('pre',{},JSON.stringify({model_version:result.version,config:result.config,metrics:result.metrics,evidence_status:'NOT_EVIDENCE',decision_authority:'NONE'},null,2))]));
       selected=(lesson?.id==='full-cycle'?result.events?.find(e=>e.kind==='ready')?.vehicle_id:null)??result.frames[0].vehicles[0]?.id??null;
       vehicleSelect.replaceChildren(...result.frames[0].vehicles.map(c=>el('option',{value:c.id},`${c.id} · ${VEHICLE_PROFILES[c.vehicle_type]?.label??''}`)));
-      vehicleSelect.value=selected;slider.max=String(result.frames.length-1);renderOutcomes();renderMeasuredStages();renderFrame();
+      vehicleSelect.value=selected;slider.max=String(result.frames.length-1);renderOutcomes({accepted:!stale});renderMeasuredStages();renderFrame();
       assumptions.replaceChildren(...result.assumptions.map(text=>el('li',{},displayText(text))));
     }catch(e){error.hidden=false;error.textContent=`The day could not run: ${displayText(e.message)}`;}
     finally{busy=false;renderStatus();}
@@ -293,7 +293,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     ])));
   }
   function metricCard(label,value,note){return el('article',{},[el('span',{},label),el('strong',{},value),el('small',{},note)]);}
-  function renderOutcomes(){if(!result)return;renderTeaching();emptyOutcomes.hidden=true;const m=result.metrics;outcomeVisual.replaceChildren(requestOutcomes(m,stale,{definitions:false}));partition.textContent=`${m.completed_trips} completed · ${m.unserved_requests} unserved · ${m.pending_requests} waiting · ${m.in_progress_trips} in progress = ${m.total_requests} requests`;
+  function renderOutcomes({accepted=false}={}){if(!result)return;renderTeaching();emptyOutcomes.hidden=true;const m=result.metrics;outcomeVisual.replaceChildren(requestOutcomes(m,stale,{definitions:false,accepted}));partition.textContent=`${m.completed_trips} completed · ${m.unserved_requests} unserved · ${m.pending_requests} waiting · ${m.in_progress_trips} in progress = ${m.total_requests} requests`;
     outcomeCards.replaceChildren(
       metricCard('Trips completed',`${fmt(m.completed_trips,0)} / ${fmt(m.total_requests,0)}`,'All requests created during this day'),
       metricCard('Trips per AV',fmt(m.trips_per_vehicle),'Completed trips ÷ starting fleet'),
