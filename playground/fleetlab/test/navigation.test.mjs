@@ -5,7 +5,7 @@ import {simulationCatalog} from '../src/ui/simulation-catalog.js';
 import {CHOOSER_PRESET_IDS} from '../src/ui/experiment.js';
 
 test('all studio destinations have stable offline-compatible links',()=>{
-  for(const page of Object.keys(ROUTES)) assert.deepEqual(parseRoute(routeHref({page})),{page});
+  for(const page of Object.keys(ROUTES)) assert.deepEqual(parseRoute(routeHref({page})),page==='flows'?{page,lesson:'two-vehicles'}:{page});
   assert.equal(routeHref({page:'simulation'}),'#/fleet-day');
   assert.deepEqual(parseRoute(''),{page:'overview'});
   assert.deepEqual(parseRoute('#/street-lab'),{page:'streets'});

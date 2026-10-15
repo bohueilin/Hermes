@@ -17,6 +17,7 @@ _spec.loader.exec_module(launch)
 ROOT = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "apps/fleetlab-city/hosted"
 MEDIA = {
+    **json.loads((ASSETS / "diagram-assets.json").read_text()),
     **json.loads((ASSETS / "brand-assets.json").read_text()),
     **json.loads((ASSETS / "rebalancing-assets.json").read_text()),
     **json.loads((ASSETS / "tile-assets.json").read_text()),

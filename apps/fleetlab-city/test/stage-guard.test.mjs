@@ -85,6 +85,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
    }
   }
   cpSync(join(repository,'apps/fleetlab-city/rebalancing-media'),join(source,'apps/fleetlab-city/rebalancing-media'),{recursive:true});
+  cpSync(join(repository,'apps/fleetlab-city/diagram-media'),join(source,'apps/fleetlab-city/diagram-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/brand-media'),join(source,'apps/fleetlab-city/brand-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/tile-media'),join(source,'apps/fleetlab-city/tile-media'),{recursive:true});
   const publicNotes=join(source,'apps/fleetlab-city/citylib/public_notes.py');mkdirSync(dirname(publicNotes),{recursive:true});cpSync(join(repository,'apps/fleetlab-city/citylib/public_notes.py'),publicNotes);

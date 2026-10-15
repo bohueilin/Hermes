@@ -1,0 +1,17 @@
+{
+  "diagrams/D-01-depot-scenario.webp": {
+    "bytes": 123536,
+    "sha256": "68e56d20449020fb575ab5df562f2a500c73e0b71513e42abc94f0b08bf83ca7",
+    "source": "apps/fleetlab-city/diagram-media/D-01-depot-scenario.webp"
+  },
+  "diagrams/D-02-crossed-priorities.webp": {
+    "bytes": 132710,
+    "sha256": "4af8121f01e85657d627d0b33e753b41165f7f27534b0b401412920f9e2e6320",
+    "source": "apps/fleetlab-city/diagram-media/D-02-crossed-priorities.webp"
+  },
+  "diagrams/D-03-staffing-queue.webp": {
+    "bytes": 157628,
+    "sha256": "b0746e18524fed0f19aba53006d447a3c3a9a7f42d9676f0d566da18da2e1a5e",
+    "source": "apps/fleetlab-city/diagram-media/D-03-staffing-queue.webp"
+  }
+}

@@ -37,6 +37,7 @@ export function parseRoute(hash=''){
 
 export function routeHref({page,lesson,setup}){
   if(!ROUTES[page])throw RangeError('Unknown studio page');
+  if(page==='flows'&&lesson===undefined&&setup===undefined)lesson='two-vehicles';
   const params=new URLSearchParams();
   if(lesson!==undefined)params.set('lesson',lesson);
   if(setup!==undefined)params.set('setup',setup);

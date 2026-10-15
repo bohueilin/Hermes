@@ -92,7 +92,7 @@ test('the capacity study joins the lab links, a next-lesson line under Compare a
    assert.equal(links.length,1);
    const line=links[0].parentNode;
    assert.equal(line.getAttribute('class'),'flow-next-lesson');
-   assert.equal(line.textContent,'Next lesson: Scheduling or capacity?');
+   assert.equal(line.textContent,'Next: test whether scheduling or extra capacity helps. Scheduling or capacity?');
    assert.equal(line.previousSibling,document.querySelector('.flow-hero p.flow-run-help'),'the line sits right under the Compare help text, below the first-screen action');
    const chooser=document.querySelector('.flow-hero nav.lab-chooser[aria-label="Depot flow lessons"]');
    assert.deepEqual(chooser.querySelectorAll('a').map(a=>a.getAttribute('href')),lessons,'the chooser keeps only the two offline lessons');

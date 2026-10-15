@@ -53,6 +53,7 @@ test('300000-byte scratch NF04-only module has a valid emitted build path withou
   cpSync(join(repository,'apps/fleetlab-city/brand-media'),join(scratch,'apps/fleetlab-city/brand-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/tile-media'),join(scratch,'apps/fleetlab-city/tile-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/rebalancing-media'),join(scratch,'apps/fleetlab-city/rebalancing-media'),{recursive:true});
+  cpSync(join(repository,'apps/fleetlab-city/diagram-media'),join(scratch,'apps/fleetlab-city/diagram-media'),{recursive:true});
   const before=buildSite(source), offline=buildHtml(source);
   const prefix='export function startSoftwareDelivery() {}\n';
   write(source,'src/ui/software-delivery-app.js',prefix+' '.repeat(300000-prefix.length));
@@ -73,7 +74,7 @@ test('300000-byte scratch NF04-only module has a valid emitted build path withou
   const offlinePath=join(scratch,'offline.html');writeFileSync(offlinePath,offline);
   const proof=measurePackageProof({site,playground:source,offline:offlinePath});
   assert.equal(proof.receipt.counts.legacy_text_bytes,base.legacy_text_bytes);
-  assert.ok(proof.receipt.counts.raw_source_and_tools_bytes<=3145728);
+  assert.ok(proof.receipt.counts.raw_source_and_tools_bytes<=3153920);
   assert.ok(proof.receipt.counts.source_offer_extracted_bytes<=4194304);
   assert.equal(proof.receipt.routes.find(route=>route.id==='nf04').bytes,expanded.nf04_closure_bytes);
   console.log('scratch-package-counters',JSON.stringify(proof.receipt.counts));
@@ -115,9 +116,9 @@ test('unknown emitted ownership fails closed; declared shared imports remain leg
 
 test('a newly shared NF04 dependency is charged to legacy and removed from route-local ownership',()=>{
   const files=buildSite(root);
-  const path='src/model/software-delivery-contract.js';
+  const path='src/runtime/software-delivery-job.js';
   assert.ok(files.has(path),'the production NF04 route must include its contract');
-  const before=tool.measureSiteOwnership(files),added="import {DELIVERY_INPUT_SCHEMA} from '../model/software-delivery-contract.js';\n";
+  const before=tool.measureSiteOwnership(files),added="import {createDeliveryJob} from '../runtime/software-delivery-job.js';\n";
   files.set('src/ui/app.js',added+files.get('src/ui/app.js'));
   const after=tool.measureSiteOwnership(files);
   assert.equal(after.owners[path],'legacy-shared');

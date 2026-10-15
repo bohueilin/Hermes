@@ -1263,10 +1263,10 @@ function buildFlowLanesCharts({result, rules = [], moments = [], selectedRule = 
     for(const r of allocationRows)rows.push([name(record.rule),`${r.start/60} to ${r.end/60} min`,r.vehicle,r.state,`${r.rate} bytes/s`,r.first===r.last?`interval ${r.first}`:`intervals ${r.first} to ${r.last}`]);
   }
   const plot=lanesPlot([],{start_s:0,end_s:h},{groups,moments,selectedRule,selectedVehicle});
-  const handle=chartFrame({chartId:'depot_flow_lanes',title:charging.length?'Uploads and charging under all three rules':'Uploads under all four rules',chips:[],summary:`${result.run_id===undefined?'Synthetic teaching run':`Run ${result.run_id}`} · model consistency checked. ${scenario.vehicles.filter(v=>v.energy_j===0).map(v=>`Vehicle ${v.id} already at target.`).join(' ')}`,limits:null,plot,heads:['Rule','Interval','Vehicle','State / reason','Accepted rate','Ledger reference'],rows,onTableChange,
+  const handle=chartFrame({chartId:'depot_flow_lanes',title:charging.length?'Uploads and charging under all three rules':'Uploads under all four rules',chips:[],summary:`${result.run_id===undefined?'Synthetic teaching run':`Run ${result.run_id}`} · Results verified (model consistency only). ${scenario.vehicles.filter(v=>v.energy_j===0).map(v=>`Vehicle ${v.id} already at target.`).join(' ')}`,limits:null,plot,heads:['Rule','Interval','Vehicle','State / reason','Accepted rate','Ledger reference'],rows,onTableChange,
     extras:[],axisUnit:null,
   });
-  handle.node.appendChild(el('p',{class:'fl-chart__summary','data-role':'flow-legend'},'Solid service: receiving upload or charging; thickness shows accepted rate. Dashed amber: waiting. Pale fill: post-upload step. Solid tick: ready in this model. Dashed line: departure deadline.'));
+  handle.node.appendChild(el('p',{class:'fl-chart__summary','data-role':'flow-legend'},'Solid = work in progress; thicker = faster. Dashed amber = waiting. Pale fill = local step. Tick = ready. Vertical dashed line = deadline.'));
   handle.element=handle.node;return handle;
 }
 

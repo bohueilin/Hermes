@@ -78,7 +78,7 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
   const entry=accepted?.entry??manifest.cases.default,base=accepted?.projection.outcome(accepted.fcfs),comp=accepted?.projection.outcome(viewed),a=base?.metrics??entry.fcfs_metrics,b=comp?.metrics??entry.fcfs_metrics;
   resultCase.textContent=`${accepted?names[accepted.id]:names.default} · ${accepted?'checked complete study':'published summary'}`;
   cards.replaceChildren(metricCard('First come',a),metricCard(viewName,b),el('article',{class:'objective-card'},[p('HELD FIXED','eyebrow'),el('strong',{},'12 / 48 GB'),p('Upstream / local work in both orders'),p('Objective: fewest missed targets, then least total lateness.','fine')]));
-  outcomeNote.textContent=accepted?`${same(viewed,accepted.study.representative_order)?lessons[accepted.id]:same(viewed,accepted.fcfs)?'Both orders match. Every vehicle has the same ready time in both arms.':`${viewName} meets ${b.on_time_count} of ${b.request_count} targets; First come meets ${a.on_time_count}. Inspect the individual delays below.`} ${accepted.study.best_orders.length} tied best ${accepted.study.best_orders.length===1?'order':'orders'} of ${accepted.study.records.length} permitted.`:'Your starting order matches First come. Compare to reconstruct and independently check every order.';
+  outcomeNote.textContent=accepted?`${same(viewed,accepted.study.representative_order)?lessons[accepted.id]:same(viewed,accepted.fcfs)?'Both orders match. Every vehicle has the same ready time in both arms.':`${viewName} meets ${b.on_time_count} of ${b.request_count} targets; First come meets ${a.on_time_count}. Inspect the individual delays below.`} ${accepted.study.best_orders.length} tied best ${accepted.study.best_orders.length===1?'order':'orders'} of ${accepted.study.records.length} permitted.`:'The default order is First come. Your edits are pending; compare to see their results.';
   delay.textContent='Selected vehicle V1: 0 s difference between matching orders.';
   table.replaceChildren();matrix.replaceChildren();allOrders.replaceChildren();evidence.replaceChildren();
   if(!accepted){table.append(p('Compare an order to inspect each vehicle’s checked outcome.'));return;}
@@ -116,7 +116,7 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
  function move(id,direction){const index=pending.indexOf(id),to=index+direction;if(![-1,1].includes(direction)||index<0||to<0||to>=pending.length)return;cancel(false);pauseGuide();[pending[index],pending[to]]=[pending[to],pending[index]];renderEditor();}
  async function load(mode='user'){
   const id=pendingCase,entry=manifest.cases[id],desired=[...pending],token=++serial,trigger=document.activeElement;
-  loadTrigger=trigger?.tagName==='BUTTON'?trigger:compare;stop();loading=true;status.textContent='Checking complete order coverage and published identities…';renderEditor();
+  loadTrigger=trigger?.tagName==='BUTTON'?trigger:compare;stop();loading=true;status.textContent='Comparing all 24 orders and checking the results…';renderEditor();
   try{
    let result;
    if(accepted?.study.input_digest===entry.input_digest&&accepted.study.study_digest===entry.study_digest&&accepted.study.policy_version===manifest.policy_version)result={study:accepted.study,verification:accepted.verification};

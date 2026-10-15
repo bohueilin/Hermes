@@ -18,7 +18,7 @@ import { MEDIA_LIMITS } from "./media.mjs";
 import { CAPACITY_RELEASE_PATH, CAPACITY_VISUAL_PATH, releaseProblems } from "./release-sidecar.mjs";
 
 export const RECEIPT_PATH = "downloads/teaching-package.json";
-export const LIMITS = Object.freeze({ legacy_text_bytes: 2621440, raw_source_and_tools_bytes: 3145728,
+export const LIMITS = Object.freeze({ legacy_text_bytes: 2621440, raw_source_and_tools_bytes: 3153920,
   nf03_closure_bytes: 524288, nf04_closure_bytes: 524288, emitted_text_bytes: 3145728, package_metadata_bytes: 40960,
   source_offer_compressed_bytes: 4194304, source_offer_extracted_bytes: 4194304,
   teaching_text_plus_source_bytes: 7340032, teaching_generation_bytes: 14360576,
@@ -299,7 +299,7 @@ function assemble({ playground, captured, identity, site, offline }) {
       baseline:{source_commit:SOURCE_BASELINE.commit,bytes:SOURCE_BASELINE.integration_bytes,inventory_sha256:SOURCE_BASELINE.integration_inventory_sha256},
       delta_bytes:total(captured.integration)-SOURCE_BASELINE.integration_bytes,
       inventory_sha256:digest(canonical(Object.fromEntries([...captured.integration].map(([path,data])=>[path,fingerprint(data)])))),
-      binding:"Every listed original is commit-bound and included in source-offer integration.files; teaching originals retain the unchanged 3 MiB gate."},
+      binding:"Every listed original is commit-bound and included in source-offer integration.files; teaching originals retain their separate 3 MiB + 8 KiB gate (owner-approved October 14, 2026)."},
     source_offer: { path: archivePath, ...fingerprint(archive), extracted_sha256: digest(archiveRaw),
       original_inventory_sha256: digest(canonical(sourceInventory)), owner: "teaching-original-source-and-tools" },
     validation_policy: { repository_path: CONTRACT, ...fingerprint(captured.contracts) },

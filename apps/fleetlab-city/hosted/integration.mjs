@@ -48,14 +48,14 @@ export function mountCityEntry(doc = document) {
   // Compare help text, below the first-screen action, and the observer restores it after a rebuild.
   const linkCapacity = () => {
     const help = flowHero.querySelector('p.flow-run-help');
-    if (help && !doc.getElementById('capacity-entry')) help.parentNode.insertBefore(node('p', {class:'flow-next-lesson'}, ['Next lesson: ', node('a', {id:'capacity-entry', href:'/network-flows/capacity/'}, 'Scheduling or capacity?')]), help.nextSibling);
+    if (help && !doc.getElementById('capacity-entry')) help.parentNode.insertBefore(node('p', {class:'flow-next-lesson'}, ['Next: test whether scheduling or extra capacity helps. ', node('a', {id:'capacity-entry', href:'/network-flows/capacity/'}, 'Scheduling or capacity?')]), help.nextSibling);
   };
   const originalLinkCapacity = linkCapacity;
   // This subsequent lesson is present only in the verified hosted generation.
   const linkDelivery = () => {
     originalLinkCapacity();
     const line=doc.querySelector('.flow-next-lesson');
-    if(deliveryAvailable && line && !doc.getElementById('software-delivery-next')) line.appendChild(node('span',{},[' Then: ',node('a',{id:'software-delivery-next',href:'/network-flows/software-delivery/'},'One update, four vehicles')]));
+    if(deliveryAvailable && line && !doc.getElementById('software-delivery-next')) line.appendChild(node('span',{},[' After that: share one software download. ',node('a',{id:'software-delivery-next',href:'/network-flows/software-delivery/'},'One update, four vehicles')]));
   };
   linkDelivery();
   new MutationObserver(linkDelivery).observe(flowHero, {childList:true});

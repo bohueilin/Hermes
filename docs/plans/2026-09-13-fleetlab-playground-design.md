@@ -1,3 +1,5 @@
+> October 14, 2026 approved round-3 wording amendment: the action previously called “Freeze and run” is now **Run the paired comparison**. Freezing the submitted setup before execution remains unchanged.
+
 # FleetLab Playground: design for audit
 
 **Status:** audited (approve with required changes; every required change is applied); build authorized on 2026-09-13. **Date:** 2026-09-13.

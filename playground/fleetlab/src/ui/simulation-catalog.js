@@ -43,7 +43,7 @@ const axisValue=value=>value&&typeof value==='object'?Object.entries(value).map(
 
 export function simulationCatalog(){
   return [
-    {id:'two-vehicles',title:'Two vehicles, one uplink',model:'Depot flow lab',target:'flows',limits:'Constructed visits and capacities; no packet loss, charge taper or operational authority. No random draws.'},
+    {id:'two-vehicles',title:'Two vehicles, one shared link',model:'Depot flow lab',target:'flows',limits:'Constructed visits and capacities; no packet loss, charge taper or operational authority. No random draws.'},
     {id:'crossed-priorities',title:'Four visits, crossed priorities',model:'Depot flow lab',target:'flows',limits:'Constructed visits on one shared link; known upload sizes and constant capacity. No random draws.'},
     ...OPERATIONAL_LESSONS.map(x=>({...x,model:'Fleet day',target:'operations'})),
     ...STREET_PRESETS.map(p=>({id:`street-${p.id}`,title:p.title,model:'Street lab',target:'streets',hotspot:p.id,limits:'Frozen OSM subset and supported turn rules; synthetic signals/capacity/demand; no lane changing, calibrated traffic, actual curb permission or depot energy model.'})),

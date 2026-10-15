@@ -214,7 +214,7 @@ export function mountStudio(app) {
     if(page==='depots'){
       if(!capacityLoaded){startFromPreset(store.dispatch,'UC-08a');capacityLoaded=true;}
       store.dispatch({type:'mode/set',mode:'experiment'});
-      workspaceIntro.replaceChildren(eyebrow('WORKSPACE / DEPOT CAPACITY'),el('h1',{},'Test a depot capacity decision.'),el('p',{},'The first example compares four and six cleaning bays at SF-1. Your current setup and results are kept when you navigate away. Review the assumptions below, then freeze and run.'),action('Reset to the 4 vs 6 bay example',()=>{startFromPreset(store.dispatch,'UC-08a');store.dispatch({type:'mode/set',mode:'experiment'});}));
+      workspaceIntro.replaceChildren(eyebrow('WORKSPACE / DEPOT CAPACITY'),el('h1',{},'Test a depot capacity decision.'),el('p',{},'The first example compares four and six cleaning bays at SF-1. Your current setup and results are kept when you navigate away. Review the assumptions below, then run the paired comparison.'),action('Reset to the 4 vs 6 bay example',()=>{startFromPreset(store.dispatch,'UC-08a');store.dispatch({type:'mode/set',mode:'experiment'});}));
     }
     if(page==='tour'){
       const s=store.getState(),shown=s.run.log!==null&&s.run.worldAtQueue!==null?s.run.worldAtQueue.presetId:s.presetId;
@@ -222,7 +222,7 @@ export function mountStudio(app) {
       if(!store.getState().present.on)present.open();
     }
     if(workspace){workspaceIntro.appendChild(el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));updateWorkspaceIdentity(store.getState());}
-    if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Four-area experiments';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),pairedPrimer);}
+    if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Four-area experiments';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('p',{},'A depot change can help one area while leaving riders waiting elsewhere. Compare all four areas before judging the fleet-wide trade-off.'),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),pairedPrimer);}
     if(page==='streets')streets.refresh();
     focusMain(workspace?workspaceMain:page==='approach'?product:page==='simulation'?operations.element:page==='streets'?streets.element:page==='scale'?scale.element:page==='flows'?flows.element:page==='catalog'?catalog.element:home,ROUTES[page].title);
   }
@@ -249,6 +249,7 @@ export function mountStudio(app) {
     applying=true;lastHandledHash=hash;
     try{
       const route=parseRoute(hash);
+      if(route.page==='flows'&&!route.lesson&&!route.setup){route.lesson='two-vehicles';const canonical=routeHref(route);globalThis.history?.replaceState(null,'',canonical);lastHandledHash=canonical;}
       const record=route.lesson?records.find(r=>r.id===route.lesson):null;
       if(route.lesson&&(!record||lessonPage(record)!==route.page))throw Error('This lesson does not belong to the linked view.');
       const setup=route.setup?decodeSetup(route.setup):null;
@@ -256,7 +257,7 @@ export function mountStudio(app) {
         const expected=setup.model==='street-lab'?'streets':setup.model==='regional'?(setup.config.mode==='experiment'?'depots':'operations'):'simulation';
         if(route.page!==expected)throw Error('The linked view and shared model do not match.');
       }
-      if(record?.target==='flows')applyLesson(record);
+      if(record?.target==='flows'&&flows.getState().lesson!==record.id)applyLesson(record);
       renderPage(route.page);
       if(record&&record.target!=='flows')applyLesson(record);
       if(setup){

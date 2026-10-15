@@ -274,8 +274,8 @@ export function freezeNotice({ frozenAt, changedKnobs }) {
 
 /** Freeze rule strings. */
 export const FREEZE = frozen({
-  verdictStale: "Out of date: the setup changed after this verdict. Freeze and run again to test the new setup.",
-  nothingRerunsSilently: "Nothing runs again until you choose Freeze and run.",
+  verdictStale: "Out of date: the setup changed after this verdict. Run the paired comparison again to test the new setup.",
+  nothingRerunsSilently: "Nothing runs again until you choose Run the paired comparison.",
   specFrozen: "spec frozen",
 });
 
@@ -612,8 +612,8 @@ export const EXPERIMENT_SETUP = frozen({
     rangesValid: "ranges valid",
     scopesValid: "scopes valid",
   },
-  freezeAndRun: "Freeze and run",
-  freezeDisabled: "Freeze and run stays off until every check passes.",
+  freezeAndRun: "Run the paired comparison",
+  freezeDisabled: "Open Review or change this paired test and resolve the failed checks before running.",
   nullCheck: "Null check: both arms use the same value on purpose.",
   testItProperly: "Test it properly",
   otherChecks: {
@@ -1888,7 +1888,7 @@ export const PRESENT = frozen({
   card: {
     lead: "A teaching model of a stylized Bay Area fleet. Every number is invented; the verdict rules are FleetLab's.",
     sandbox: "Set the knobs and Run window.",
-    walk: "Walk through one day (about 6 minutes)",
+    walk: "Start here: walk through one day (about 6 minutes)",
     close: "Close this card",
   },
   /** What this page was not built to be, each with the reason (demo plan section 4.6, design 1.4). */

@@ -211,3 +211,7 @@ Review the frozen workload, event ordering and policy definitions together. Appr
 ## October 14 implementation amendment — approved
 
 Owner explicitly approved raising only `package_metadata_bytes` from 32 KiB (32,768 bytes) to 40 KiB (40,960 bytes), after the first complete route inventory measured 34,469 bytes. All other runtime, source, media and offline ceilings remain unchanged. The final source-bound measurement supersedes the preliminary byte count. Owner also authorized R3, R2 and R7 contract drafts for review; their numerical implementation is not yet approved.
+
+## October 14 design-round-3 source amendment — approved
+
+The owner explicitly approved an 8 KiB increase only to `raw_source_and_tools_bytes`, from 3,145,728 to 3,153,920 bytes, after reviewing the measured design-fix overage. Runtime/emitted text, offline, package metadata, source archive and route limits retain their previous values. The prior metadata-only approval above is historical; this narrowly supersedes its source-ceiling restriction. Supplied hosted concept diagrams remain outside offline teaching payloads, with an explicit three-file 512 KiB artwork inventory. No source is moved between owners to evade a counter.

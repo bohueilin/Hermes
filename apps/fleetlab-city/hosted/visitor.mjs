@@ -9,6 +9,15 @@ function node(doc,tag,attrs={},children=[]){
 }
 export function decorateVisitors(doc=document){
  const el=(...args)=>node(doc,...args);
+ const diagram=(file,alt)=>el('figure',{class:'visitor-diagram'},[el('img',{src:'/diagrams/'+file,alt,width:'2048',height:'1152',decoding:'async'}),el('figcaption',{},'Concept illustration · not simulation output')]);
+ const flow=doc.querySelector('.flow-hero');
+ if(flow&&!flow.hasAttribute('data-diagram-observed')){
+  flow.setAttribute('data-diagram-observed','');
+  const draw=()=>{const question=flow.querySelector('.flow-question');if(!question||question.querySelector('.visitor-diagram'))return;const crossed=flow.querySelector('.lab-chooser a[aria-current="page"]')?.getAttribute('href')?.includes('crossed-priorities');question.insertBefore(diagram(crossed?'D-02-crossed-priorities.webp':'D-01-depot-scenario.webp',crossed?'Four pods with mismatched upload sizes and deadlines sharing one link.':'Two autonomous pods sharing one network link, each with a deadline.'),question.querySelector(crossed?'.flow-definition':'.flow-lede'));};
+  draw();new MutationObserver(draw).observe(flow,{childList:true});
+ }
+ const staffing=doc.querySelector('#staffing-help')?.parentNode;
+ if(staffing&&!staffing.querySelector('.visitor-diagram')){staffing.classList.add('visitor-staffing');const figure=diagram('D-03-staffing-queue.webp','Pods queued at service bays; one bay works, one waits for a worker.');figure.querySelector('img').setAttribute('loading','lazy');staffing.insertBefore(figure,staffing.firstChild.nextSibling);}
  const art=(file,alt='',className='visitor-tile-art')=>el('img',{src:'/tiles/'+file,alt,class:className,width:'1600',height:'1600',loading:'lazy',decoding:'async'});
  const text=(selector,value)=>{const n=doc.querySelector(selector);if(n)n.textContent=value;};
  const home=doc.querySelector('.studio-overview');

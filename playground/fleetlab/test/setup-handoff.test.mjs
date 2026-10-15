@@ -21,7 +21,7 @@ test('fleet handoff replaces every effective input and synchronizes nested contr
   const setup={model:'fleet-day',config,options:pairedOptions()};lab.loadSharedSetup(setup);
   assert.deepEqual(lab.getSharedSetup(),setup);
   assert.equal(field(lab.element,'Start with a situation').value,'custom');
-  for(const [name,value]of [['AV cars','4'],['Weather','rain'],['Demand seed','92'],['Ojai share of fleet','75'],['Ojai modeled battery','111'],['Qualified cleaning workers / depot','3'],['Charging policy','deadline'],['Paired treatment','charging_deadlines'],['Evaluation seeds','2101'],['Tuning seeds','51,52'],['Practical margin (fraction)','0.04'],['Bootstrap resamples','1100']])assert.equal(field(lab.element,name).value,value,name);
+  for(const [name,value]of [['AV cars','4'],['Weather','rain'],['Demand seed','92'],['Ojai share of fleet','75'],['Ojai modeled battery','111'],['Qualified cleaning workers / depot','3'],['Charging policy','deadline'],['Paired treatment','charging_deadlines'],['Evaluation seeds','2101'],['Tuning seeds','51,52'],['Smallest meaningful difference','0.04'],['Bootstrap resamples','1100']])assert.equal(field(lab.element,name).value,value,name);
   assert.equal(field(lab.element,'Null treatment control').checked,true);
   assert.equal(field(lab.element,'Include San Francisco').checked,true);assert.equal(field(lab.element,'Include Palo Alto').checked,false);
   assert.equal(lab.getState().result,null);assert.equal(lab.getState().playing,false);

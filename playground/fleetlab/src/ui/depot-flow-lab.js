@@ -13,7 +13,7 @@ import {LESSON_FRAMES,chipsView,glossaryView} from './teaching-frames.js';
 import {minute,ruleName,table,detail,button,readinessChain,resourceBoard,FLOW_GLOSSARY,outcomesView,boundView,checksView,eventLedger,tradeoffText,guessQuestion,guessFeedback} from './depot-flow-reading.js';
 
 const defaults=()=>({uplink_gbps:1,b_gb:7.5,charger_kw:60});
-const lessons=[['two-vehicles','Two vehicles, one uplink'],['crossed-priorities','Four visits, crossed priorities']];
+const lessons=[['two-vehicles','Two vehicles, one shared link'],['crossed-priorities','Four visits, crossed priorities']];
 const settingsText=o=>`${o.uplink_gbps} Gbps uplink · B ${o.b_gb} GB · ${o.charger_kw} kW charger`;
 const yieldPage=()=>new Promise(resolve=>setTimeout(resolve,0));
 const swap=(old,next)=>{old.parentNode.insertBefore(next,old);old.remove();return next;};
@@ -36,7 +36,7 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
  const announce=text=>{const line=`${isOld()?`Previous setup, run ${result.run_id}. `:''}${text}`;if(live.node.textContent!==line)live.announce(line);};
  const isOld=()=>result&&(JSON.stringify(options)!==JSON.stringify(resultOptions)||attempt?.id!==result.run_id);
  function configureGuess(next=null){question=guessQuestion(next,cohort());guessLabel.textContent=question.question;guess.replaceChildren(...[['','No guess'],...question.choices].map(([value,text])=>el('option',{value},text)));guess.value='';}
- function idleStatus(){if(job)return;let valid=true;try{scenario();}catch{valid=false;}setBusy(runButton,false,!valid);status.textContent=!valid?'Input outside this lesson. Choose one of the available settings.':isOld()?'Result from previous setup. Run the current setup to compare it.':result?'Rules complete. Model consistency checked. Results are ready to inspect.':attempt?.status==='cancelled'?'Cancelled. No new comparison.':'Nothing has run yet. Explore the inputs, then run the rules.';}
+ function idleStatus(){if(job)return;let valid=true;try{scenario();}catch{valid=false;}setBusy(runButton,false,!valid);status.textContent=!valid?'Input outside this lesson. Choose one of the available settings.':isOld()?'Result from previous setup. Run the current setup to compare it.':result?'Rules complete. Results verified (model consistency only). Results are ready to inspect.':attempt?.status==='cancelled'?'Cancelled. No new comparison.':'Nothing has run yet. Explore the inputs, then run the rules.';}
  function refreshInputs(rebuild=false){
   let s;try{s=scenario();}catch{}
   lede.textContent=s?ledeText(s):'Input outside this lesson.';
@@ -51,17 +51,17 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
   const view=table(s?`Setup · ${shared}observe through minute ${s.horizon_s/60}`:'Setup · input outside this lesson',heads,rows);
   view.firstChild.classList.add('flow-setup-table');setupTable=swap(setupTable,view);
   if(rebuild){controls.replaceChildren();if(!cohort())controls.append(...[
-   ['uplink_gbps','Uplink capacity',[[1,'1 Gbps'],[.5,'0.5 Gbps']]],['b_gb','Vehicle B upload',[[7.5,'7.5 GB'],[15,'15 GB'],[45,'45 GB']]],['charger_kw','Charger power',[[60,'60 kW'],[20,'20 kW']]],
+   ['uplink_gbps','Shared internet link capacity',[[1,'1 Gbps'],[.5,'0.5 Gbps']]],['b_gb','Vehicle B upload',[[7.5,'7.5 GB'],[15,'15 GB'],[45,'45 GB']]],['charger_kw','Charger power',[[60,'60 kW'],[20,'20 kW']]],
   ].map(([key,title,choices])=>{const select=el('select',{'aria-label':title,on:{change:()=>setOptions({[key]:Number(select.value)})}},choices.map(([value,text])=>el('option',{value},text)));return el('label',{},[el('span',{},title),select]);}));}
-  if(!cohort())for(const [key,title] of [['uplink_gbps','Uplink capacity'],['b_gb','Vehicle B upload'],['charger_kw','Charger power']]){const select=controls.querySelector(`[aria-label="${title}"]`);if(select)select.value=String(options[key]);}
+  if(!cohort())for(const [key,title] of [['uplink_gbps','Shared internet link capacity'],['b_gb','Vehicle B upload'],['charger_kw','Charger power']]){const select=controls.querySelector(`[aria-label="${title}"]`);if(select)select.value=String(options[key]);}
   idleStatus();
  }
  /** The lede names both upload sizes once B's upload differs from the starting setup. */
  function ledeText(s){
   const link=`${s.uplink_bytes_s/125e6} Gbps`;
-  if(cohort())return `Four visits arrive together, already charged, and share one ${link} link. Two are urgent and two are large; size and urgency do not line up.`;
+  if(cohort())return `Four visits arrive together, already charged, and share one ${link} shared internet link (gigabits per second). Two are urgent and two are large; size and urgency do not line up.`;
   const [a,b]=s.vehicles,sizes=options.b_gb===defaults().b_gb?'; A needs charging and a larger upload':`, with a ${b.upload_bytes/1e9} GB upload; A needs charging and a ${a.upload_bytes/1e9} GB upload`;
-  return `Two vehicles share a ${link} upload link. B is already charged and due sooner${sizes}. Both require two minutes of work after upload.`;
+  return `Two vehicles share a ${link} shared internet link (gigabits per second). B is already charged and due sooner${sizes}. Both require two minutes of work after upload.`;
  }
  function buildLesson(){
   // On a desktop the question sits left and the setup card with Compare right; on a phone they stack in this order.
@@ -95,7 +95,7 @@ export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowC
   stopPlayer();output.replaceChildren();if(attempt&&attempt.status!=='complete')output.appendChild(detail(`Latest attempt ${attempt.id}: ${attempt.status} · no new comparison`,[el('p',{},'No new comparison. Partial model records remain available in page state. Later checks may not have run.'),el('p',{},attempt.error??(attempt.status==='running'?'Computation in progress.':attempt.status==='cancelled'?'This attempt was cancelled.':'A model or policy check did not pass.'))]));
   if(!result)return;const old=isOld();output.appendChild(el('h2',{tabindex:-1,'data-flow-heading':''},old?'Result from previous setup':outcomeHeadline(result)));
   if(old)output.appendChild(el('p',{class:'flow-stale'},cohort()?'This is the prior completed run; the latest attempt has no new comparison.':`Run ${result.run_id} used ${settingsText(resultOptions)}. Current inputs: ${settingsText(options)}. Changes: ${Object.keys(options).filter(k=>options[k]!==resultOptions[k]).map(k=>`${resultOptions[k]} ${k==='b_gb'?'GB':k==='charger_kw'?'kW':'Gbps'} to ${options[k]} ${k==='b_gb'?'GB':k==='charger_kw'?'kW':'Gbps'}`).join('; ')||'same inputs; latest attempt has no new comparison'}.`));
-  output.appendChild(el('p',{class:'flow-result-note'},`Run ${result.run_id} · ${cohort()?'Depot cohort':'Depot flow'} model ${result.versions.model} · ${lessons.find(l=>l[0]===lesson)[1]}. Model consistency checked. NOT_EVIDENCE; simulation-only; decision authority NONE.`));
+  output.appendChild(el('p',{class:'flow-result-note'},`Run ${result.run_id} · ${cohort()?'Depot cohort':'Depot flow'} model ${result.versions.model} · ${lessons.find(l=>l[0]===lesson)[1]}. Results verified (model consistency only). NOT_EVIDENCE; simulation-only; decision authority NONE.`));
   const change=!old?comparison:null;
   if(change)output.appendChild(el('section',{class:'flow-reading'},[el('h3',{},'What changed from the previous run?'),...change.sentences.map(s=>el('p',{},s))]));
   output.appendChild(el('section',{class:'flow-reading'},[el('h3',{},'Who became ready earlier or later?'),...tradeoffText(result).map(s=>el('p',{},s)),!cohort()&&resultOptions.uplink_gbps===1&&resultOptions.charger_kw===20?el('p',{},'Vehicle A is ready at minute 18 under every rule. Charging finishes at minute 18 whichever rule runs the uplink, so no upload rule can make it ready sooner.'):null,feedback&&!old?el('p',{class:'flow-guess-feedback'},feedback):null,el('h4',{},'Ops takeaway to test'),el('p',{},LESSON_FRAMES[lesson].ops_takeaway)]));

@@ -554,15 +554,17 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
   const controls = mountControls({ store, region: regions.knobs, onRunWindow: () => runWindow() });
 
   const modeButtons = MODES.map((mode) =>
-    el("button", { type: "button", class: "fl-button", "data-mode": mode, "aria-pressed": "false", on: { click: () => store.dispatch({ type: "mode/set", mode }) } }, labels.MODES[mode].name),
+    el("button", { type: "button", class: "fl-button", "data-mode": mode, title: labels.MODES[mode].job, "aria-pressed": "false", on: { click: () => store.dispatch({ type: "mode/set", mode }) } }, labels.MODES[mode].name),
   );
+  const modeHelp=el('p',{class:'fl-muted','data-role':'mode-help',role:'status'});
   const topStatus = el("p", { class: "fl-clock", "data-role": "top-status" });
   // Present is a layer over whichever mode is showing, so it sits after the modes and is pressed, never selected.
-  const presentButton = button(labels.PRESENT.open, () => togglePresent(), "present-toggle", { "aria-pressed": "false" });
+  const presentButton = button(labels.PRESENT.open, () => togglePresent(), "present-toggle", { "aria-pressed": "false", title:"Present: tell the story in a guided walkthrough." });
   regions.topbar.replaceChildren(
     el(studio ? "p" : "h1", { class: "fl-title" }, labels.TOP_BAR.product),
     el("div", { class: "fl-modes", role: "group", "aria-label": labels.TOP_BAR.modesName }, modeButtons),
     presentButton,
+    modeHelp,
     controls.toggle,
     topStatus,
   );
@@ -711,6 +713,7 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
 
   function renderTopBar(state) {
     root.setAttribute("data-mode", state.mode);
+    setText(modeHelp,state.present.on?`Present: guided walkthrough. Current mode: ${labels.MODES[state.mode].name}. Prepare replaces the current experiment with the walkthrough example and switches to Sandbox.`:({learn:'Learn: follow a question through annotated examples.',sandbox:'Sandbox: change settings and inspect a simulated day.',experiment:'Experiment: compare one change across the same paired scenarios.'})[state.mode]);
     for (const b of modeButtons) b.setAttribute("aria-pressed", b.getAttribute("data-mode") === state.mode ? "true" : "false");
     const run = state.run;
     const seed = run.log !== null ? run.selectedSeed : null;

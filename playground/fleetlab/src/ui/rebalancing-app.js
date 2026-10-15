@@ -9,7 +9,7 @@ export function startRebalancing({createWorker}={}){
  const stop=()=>{if(timer!==null)clearInterval(timer);timer=null;by('play').textContent=frame===12?'Replay snapshots':'Play snapshots';};
  const render=()=>{
   if(!current)return;const ready=!!current.study,manual=chapter===5;
-  by('study-status').textContent=current.study?'Recorded study reconstructed and independently checked. All values below are synthetic.':'Reconstructing and checking the recorded study…';
+  by('study-status').textContent=current.busy&&current.study?'Calculating and checking your moves. Previous results stay visible until they are ready.':current.study?'Recorded study reconstructed and independently checked. All values below are synthetic.':'Loading the recorded comparison and checking its results…';
   if(current.error&&!current.study)by('study-status').textContent='Study unavailable: '+current.error;
   by('action-error').hidden=!current.error;by('action-error').textContent=current.error||'';
   by('watch').disabled=!ready;by('play').disabled=!ready;by('frame').disabled=!ready;

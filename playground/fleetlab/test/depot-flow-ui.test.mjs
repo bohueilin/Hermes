@@ -65,9 +65,9 @@ test('result page names its place, offers one compare action and shows a readine
     const crumbs=lab.element.querySelector('nav.flow-breadcrumb[aria-label="Breadcrumb"]');assert.ok(crumbs);
     assert.deepEqual(crumbs.querySelectorAll('a').map(a=>[a.textContent,a.getAttribute('href')]),[['Explore','#/catalog']]);
     const change=lab.element.querySelector('details.flow-change');assert.equal(change.querySelector('summary').textContent,'Change the setup');
-    assert.ok(change.querySelector('[aria-label="Uplink capacity"]'),'the setup inputs sit under Change the setup');
+    assert.ok(change.querySelector('[aria-label="Shared internet link capacity"]'),'the setup inputs sit under Change the setup');
     const kids=lab.element.querySelector('div.flow-setup-card').children;assert.ok(kids.indexOf(change)>kids.indexOf(lab.element.querySelector('[data-flow-run]').parentNode),'Run comes before the optional inputs');
-    assert.equal(crumbs.querySelector('span[aria-current="page"]').textContent,'Two vehicles, one uplink');
+    assert.equal(crumbs.querySelector('span[aria-current="page"]').textContent,'Two vehicles, one shared link');
     const runButton=lab.element.querySelector('[data-flow-run]');assert.equal(runButton.textContent,'Compare the three rules');
     assert.equal(runButton.parentNode.nextSibling.getAttribute('class'),'flow-run-help');assert.equal(lab.element.querySelector('p.flow-run-help').textContent,'Runs the same workload under each rule.');
     await lab.run();const before=JSON.stringify(lab.getState().result);
@@ -188,21 +188,21 @@ test('two-vehicle question, lede and setup table read the current scenario',()=>
   const restore=installFakeDom();
   try{const lab=ui.createDepotFlowLab();const text=s=>lab.element.querySelector(s).textContent;
     assert.equal(text('h1'),'Why can a charged vehicle still wait?');
-    assert.equal(text('p.flow-lede'),'Two vehicles share a 1 Gbps upload link. B is already charged and due sooner; A needs charging and a larger upload. Both require two minutes of work after upload.');
+    assert.equal(text('p.flow-lede'),'Two vehicles share a 1 Gbps shared internet link (gigabits per second). B is already charged and due sooner; A needs charging and a larger upload. Both require two minutes of work after upload.');
     assert.equal(text('p.flow-definition'),'Ready means all three prerequisites are complete: battery at target, upload done, two-minute local step done. Invented workload; no real depot data.');
     const setup=lab.element.querySelector('table.flow-setup-table');assert.equal(setup.querySelector('caption').textContent,'Setup · observe through minute 15');
     assert.deepEqual(rowsOf(setup),[['Vehicle','Due','Upload','Energy','After upload'],['A','minute 15','75 GB','6 kWh','2 min local step'],['B','minute 5','7.5 GB','Already at target','2 min local step']]);
     lab.setOptions({b_gb:45});
-    assert.equal(text('p.flow-lede'),'Two vehicles share a 1 Gbps upload link. B is already charged and due sooner, with a 45 GB upload; A needs charging and a 75 GB upload. Both require two minutes of work after upload.');
+    assert.equal(text('p.flow-lede'),'Two vehicles share a 1 Gbps shared internet link (gigabits per second). B is already charged and due sooner, with a 45 GB upload; A needs charging and a 75 GB upload. Both require two minutes of work after upload.');
     assert.deepEqual(rowsOf(lab.element.querySelector('table.flow-setup-table'))[2],['B','minute 5','45 GB','Already at target','2 min local step']);
-    lab.setOptions({b_gb:7.5,uplink_gbps:0.5});assert.match(text('p.flow-lede'),/^Two vehicles share a 0\.5 Gbps upload link\. /);lab.destroy();
+    lab.setOptions({b_gb:7.5,uplink_gbps:0.5});assert.match(text('p.flow-lede'),/^Two vehicles share a 0\.5 Gbps shared internet link \(gigabits per second\)\. /);lab.destroy();
   }finally{restore();}
 });
 test('four-visit question, lede and setup table read the cohort scenario',()=>{
   const restore=installFakeDom();
   try{const lab=ui.createDepotFlowLab();lab.setLesson({id:'crossed-priorities'});const text=s=>lab.element.querySelector(s).textContent;
     assert.equal(text('h1'),'Who should upload next?');
-    assert.equal(text('p.flow-lede'),'Four visits arrive together, already charged, and share one 1 Gbps link. Two are urgent and two are large; size and urgency do not line up.');
+    assert.equal(text('p.flow-lede'),'Four visits arrive together, already charged, and share one 1 Gbps shared internet link (gigabits per second). Two are urgent and two are large; size and urgency do not line up.');
     const setup=lab.element.querySelector('table.flow-setup-table');assert.equal(setup.querySelector('caption').textContent,'Setup · all batteries at target · 2 min local step after upload · observe through minute 25');
     assert.deepEqual(rowsOf(setup),[['Vehicle','Due','Upload'],['A','minute 10','60 GB'],['B','minute 15','7.5 GB'],['C','minute 22','45 GB'],['D','minute 6','15 GB']]);
     const rules=lab.element.querySelector('details.flow-rules');assert.equal(rules.querySelector('summary').textContent,'How the four rules work');

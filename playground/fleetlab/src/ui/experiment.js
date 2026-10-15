@@ -1241,7 +1241,7 @@ export function renderSetup(state, { dispatch, ui, rerender, onFreeze, phone = f
   return el("section", { class: "fl-panel", "data-role": "setup", "aria-label": labels.EXPERIMENT_SETUP.heading }, [
     el("details", {class:"teaching-configuration",open:!!ui.configurationOpen,on:{toggle:event=>{ui.configurationOpen=event.target.hasAttribute("open");}}}, [el("summary", {}, "Review or change this paired test"),el("header", {}, [heading(2, labels.EXPERIMENT_SETUP.heading), el("p", { class: "fl-teaching-chip" }, labels.HONESTY.verdictChip)]),presetChooser(state, dispatch),...sections,el("section", { "data-role": "checks-section" }, [heading(3, labels.EXPERIMENT_SETUP.checksHeading), checkList, checkErrors(errors)])]),
     freeze,
-    ok ? null : el("p", { class: "fl-muted", "data-role": "freeze-disabled" }, labels.EXPERIMENT_SETUP.freezeDisabled),
+    ok&&!running ? null : el("p", { class: "fl-muted", "data-role": "freeze-disabled",role:"status" }, running?"A comparison is running. Wait for it to finish or cancel it.":labels.EXPERIMENT_SETUP.freezeDisabled),
   ]);
 }
 

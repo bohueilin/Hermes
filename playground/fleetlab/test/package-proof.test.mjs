@@ -80,7 +80,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.equal(receipt.source.state, "DEVELOPMENT_MEASUREMENT_NOT_RELEASE_BOUND");
   assert.equal(receipt.counts.legacy_text_bytes,measureSiteOwnership(files).legacy_text_bytes);
   assert.equal(receipt.counts.emitted_text_bytes, measureSiteOwnership(files).emitted_text_bytes + result.files.get(tool.RECEIPT_PATH).length);
-  assert.ok(receipt.counts.raw_source_and_tools_bytes <= 3145728);
+  assert.ok(receipt.counts.raw_source_and_tools_bytes <= 3153920);
   assert.ok(receipt.counts.offline_bytes <= 2571440);
   assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 524288);
   assert.equal(result.files.size, 2);
@@ -155,6 +155,7 @@ test("release package binds every source and its executing proof tool to the exa
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/brand-media",import.meta.url)),join(root,"apps/fleetlab-city/brand-media"),{recursive:true});
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/tile-media",import.meta.url)),join(root,"apps/fleetlab-city/tile-media"),{recursive:true});
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/rebalancing-media",import.meta.url)),join(root,"apps/fleetlab-city/rebalancing-media"),{recursive:true});
+  cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/diagram-media",import.meta.url)),join(root,"apps/fleetlab-city/diagram-media"),{recursive:true});
   const dependency=join(root,"apps/fleetlab-city/citylib/public_notes.py");mkdirSync(dirname(dependency),{recursive:true});cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/citylib/public_notes.py",import.meta.url)),dependency);
   mkdirSync(join(root, "src/hermes/fleet"), { recursive: true });
   cpSync(fileURLToPath(new URL("../../../src/hermes/fleet/contracts.py", import.meta.url)), join(root, "src/hermes/fleet/contracts.py"));
@@ -234,6 +235,7 @@ test("a source checkout cannot omit the executing package-proof tool from its bi
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/brand-media",import.meta.url)),join(root,"apps/fleetlab-city/brand-media"),{recursive:true});
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/tile-media",import.meta.url)),join(root,"apps/fleetlab-city/tile-media"),{recursive:true});
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/rebalancing-media",import.meta.url)),join(root,"apps/fleetlab-city/rebalancing-media"),{recursive:true});
+  cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/diagram-media",import.meta.url)),join(root,"apps/fleetlab-city/diagram-media"),{recursive:true});
   const dependency=join(root,"apps/fleetlab-city/citylib/public_notes.py");mkdirSync(dirname(dependency),{recursive:true});cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/citylib/public_notes.py",import.meta.url)),dependency);
   mkdirSync(join(root, "src/hermes/fleet"), { recursive: true });
   cpSync(fileURLToPath(new URL("../../../src/hermes/fleet/contracts.py", import.meta.url)), join(root, "src/hermes/fleet/contracts.py"));

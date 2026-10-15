@@ -4,6 +4,23 @@ import {installFakeDom} from '../../../playground/fleetlab/test/helpers/fake-dom
 import {simulationCatalog,createSimulationCatalog} from '../../../playground/fleetlab/src/ui/simulation-catalog.js';
 import {QUESTION_FAMILIES} from '../hosted/visitor-families.mjs';
 import {decorateVisitors} from '../hosted/visitor.mjs';
+import {createDepotFlowLab} from '../../../playground/fleetlab/src/ui/depot-flow-lab.js';
+
+test('concept diagrams follow the active lesson without duplicates or changing results',()=>{
+ const restore=installFakeDom(),previous=globalThis.MutationObserver;let redraw;
+ globalThis.MutationObserver=class{constructor(fn){redraw=fn;}observe(){}};
+ const lab=createDepotFlowLab();document.body.appendChild(lab.element);
+ try{
+  decorateVisitors(document);decorateVisitors(document);
+  assert.equal(lab.element.querySelectorAll('.visitor-diagram').length,1);
+  assert.equal(lab.element.querySelector('.visitor-diagram img').getAttribute('alt'),'Two autonomous pods sharing one network link, each with a deadline.');
+  lab.setLesson({id:'crossed-priorities'});redraw();
+  assert.equal(lab.element.querySelectorAll('.visitor-diagram').length,1);
+  assert.equal(lab.element.querySelector('.visitor-diagram img').getAttribute('alt'),'Four pods with mismatched upload sizes and deadlines sharing one link.');
+  assert.equal(lab.element.querySelector('.visitor-diagram figcaption').textContent,'Concept illustration · not simulation output');
+  assert.equal(lab.getState().result,null);
+ }finally{lab.destroy();globalThis.MutationObserver=previous;restore();}
+});
 
 test('nine curated question families cover all catalogue lessons exactly once',()=>{
  const ids=QUESTION_FAMILIES.flatMap(f=>f.lessons);

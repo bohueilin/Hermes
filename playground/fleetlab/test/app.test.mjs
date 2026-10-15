@@ -731,11 +731,16 @@ describe("the walkthrough layer (demo plan section 4.1)", () => {
   test("Prepare starts the casebook situation, runs the window at 5 seeds with the log of seed 1001, then freezes and runs the experiment", () =>
     withApp({}, async (ctx) => {
       const { app, host, store, find } = ctx;
+      store.dispatch({ type: "mode/set", mode: "experiment" });
       find('[data-role="present-toggle"]').click();
+      assert.match(find('[data-role="mode-help"]').textContent, /Current mode: Experiment/);
+      assert.match(find('[data-role="mode-help"]').textContent, /Prepare replaces the current experiment/);
       const prepared = app.present.prepare();
       const windowCall = host.last("run_window");
       assert.equal(store.getState().presetId, "OPS-01");
       assert.equal(store.getState().mode, "sandbox", "the situation is set up in Sandbox, where the walk watches it");
+      assert.match(find('[data-role="mode-help"]').textContent, /Current mode: Sandbox/);
+      assert.doesNotMatch(find('[data-role="mode-help"]').textContent, /remains saved/);
       assert.deepEqual(windowCall.args.seeds, seedSet(1, SANDBOX_REPLICATIONS));
       assert.equal(windowCall.args.logSeed, 1001);
       assert.deepEqual(windowCall.args.scenario, store.getState().scenario);
