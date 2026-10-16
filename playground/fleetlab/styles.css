@@ -1759,4 +1759,4 @@ color-scheme:light;--faint:#7a899b;
 /* End methodology explainers. */
 
 /* Display type. */
-h1:not(.fl-title),.visitor-film-title,.catalog-library-title,[data-role="present-beat"],#chapter-title,.methodology-explainer h3,:is(.visitor-founder,.visitor-contact,.start-points,.learning-path-heading,.network-flows-feature,.visitor-section-heading,.approach-section,.approach-case,.approach-close,.delivery-guide,.delivery-lessons,.learning-panel,.why) h2{font-family:var(--font-display)}
+h1:not(.fl-title),.visitor-film-title,.catalog-library-title,[data-role="present-beat"],#chapter-title,.methodology-explainer h3,:is(#visitor-founder,#visitor-contact,.start-points,.learning-path-heading,.network-flows-feature,.visitor-section-heading,.approach-section,.approach-case,.approach-close,.delivery-guide,.delivery-lessons,.learning-panel,.why) h2{font-family:var(--font-display)}
