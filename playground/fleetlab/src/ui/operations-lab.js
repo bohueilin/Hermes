@@ -1,3 +1,4 @@
+import {createMethodologyExplainer} from './methodology-explainer.js';
 import {flowButton as button,el} from './dom.js';
 import {decimalValue} from './decimal-input.js';
 import {conceptPrimer} from './concept-primer.js';
@@ -194,6 +195,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
   traffic.appendChild(assumptions);
   element.appendChild(el('section',{class:'ops-intro'},[el('p',{class:'eyebrow ops-learning-mode'}),learningContent,el('details',{},[el('summary',{},'Exact values'),identity.element]),el('div',{class:'ops-run-line'},[runButton,status]),error]));
   element.appendChild(conceptPrimer('fleet'));
+  element.appendChild(createMethodologyExplainer('guardrails'));
   element.appendChild(resultSummary);element.appendChild(el('div',{class:'ops-workspace'},[controls,stage]));element.appendChild(outcomeSection);element.appendChild(readinessSection);element.appendChild(advancedSection);element.appendChild(capacitySection);element.appendChild(mixSection);element.appendChild(traffic);
   const modelBoundary=el('p',{class:'ops-model-boundary'},`Operational teaching model ${OPERATIONS_VERSION}. Real OpenStreetMap geography with synthetic demand and vehicle assumptions. This is a capacity experiment, not a calibrated digital twin or operational authorization. Four-area experiments use a separate model.`);element.appendChild(el('details',{},[el('summary',{},'Exact values'),modelBoundary]));element.appendChild(learning);element.appendChild(el('section',{class:'ops-other-experiments'},[el('h2',{},'Other experiments on this page'),regionalPanel.element,launchPanel.element]));
 

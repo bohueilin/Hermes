@@ -1,3 +1,4 @@
+import {createMethodologyExplainer} from './methodology-explainer.js';
 import {createR1Session} from '../runtime/rebalancing-session.js';
 import {mountConceptLoops} from './rebalancing-concept.js';
 import {renderHeadlines,renderRecord,element,amount} from './rebalancing-view.js';
@@ -35,6 +36,7 @@ export function startRebalancing({createWorker}={}){
  by('pending-moves').addEventListener('click',e=>{if(current?.busy)return;const b=e.target.closest('[data-remove]');if(b){pending.splice(Number(b.dataset.remove),1);pendingView();}});
  by('apply-moves').addEventListener('click',()=>session.advance(pending));by('reset-manual').addEventListener('click',()=>{pending=[];pendingView();session.reset();});
  doc.addEventListener('visibilitychange',()=>{if(doc.hidden)stop();});window.addEventListener('pagehide',stop);motion.addEventListener('change',()=>{if(motion.matches)stop();});
+ doc.querySelector('.r1-hero')?.appendChild(createMethodologyExplainer('deadhead',doc));
  const disposeConcepts=mountConceptLoops(doc);
  try{session=createR1Session({worker:createWorker(),onChange:s=>{current=s;if(s.manual&&s.manual.digest!==lastManual){lastManual=s.manual.digest;pending=[];pendingView();}render();}});}catch(error){by('study-progress').hidden=true;by('study-status').textContent='Study unavailable: '+error.message;}
  return {getSession:()=>session,dispose:()=>{stop();disposeConcepts();session?.dispose();}};

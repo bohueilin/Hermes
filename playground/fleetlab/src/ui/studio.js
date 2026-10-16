@@ -1,3 +1,4 @@
+import {createMethodologyExplainer} from './methodology-explainer.js';
 import {conceptPrimer,learningGlyph} from './concept-primer.js';
 import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView} from './teaching-frames.js';
 import {modelHeader,NON_AFFILIATION} from './model-identity.js';
@@ -153,6 +154,7 @@ export function mountStudio(app) {
   const lessonPage=record=>record.target==='flows'?'flows':record.target==='scale'?'scale':record.target==='operations'?'simulation':record.target==='streets'?'streets':CHOOSER_PRESET_IDS.includes(record.id)?'depots':'operations';
   const catalog=createSimulationCatalog({labLinks,hrefForLesson:record=>routeHref({page:lessonPage(record),lesson:record.id}),onLesson:record=>visit({page:lessonPage(record),lesson:record.id})});
   const pairedPrimer=conceptPrimer('paired');
+  const pairedExplainer=createMethodologyExplainer('paired');
   const workspaceIntro=el('section',{class:'workspace-intro',tabindex:'-1'});
   const workspaceIdentity=modelHeader('Four-area experiments','Schematic four-area Bay Area zones (San Francisco, Peninsula, San Jose, East Bay); not road geometry',MODEL_VERSION);
   const workspaceMain=el('main',{class:'studio-workspace'},[workspaceIntro,root]);
@@ -166,7 +168,7 @@ export function mountStudio(app) {
   ]);
   let workspaceLesson=null,lessonSetup=null;
   const setupKey=state=>JSON.stringify([state.scenario,state.experiment.draft]);
-  function renderLesson(state){workspaceIntro.replaceChildren(frameView(LESSON_FRAMES[workspaceLesson.id],{title:workspaceLesson.title,heading:'h1',seeds:state.experiment.draft?.seedCount,edited:setupKey(state)!==lessonSetup}),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),glossaryView(),pairedPrimer);}
+  function renderLesson(state){workspaceIntro.replaceChildren(frameView(LESSON_FRAMES[workspaceLesson.id],{title:workspaceLesson.title,heading:'h1',seeds:state.experiment.draft?.seedCount,edited:setupKey(state)!==lessonSetup}),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),glossaryView(),pairedPrimer,...(current==='depots'?[pairedExplainer]:[]));}
   let current='overview',initialized=false,capacityLoaded=false,activeMain=null,lastHandledHash=null,applying=false;
   const baseUrl=()=>browserWindow?.location?.href?.split('#')[0]??'';
   const shareLink=href=>{writeAddress(href,true);lastHandledHash=href;};
@@ -222,7 +224,7 @@ export function mountStudio(app) {
       if(!store.getState().present.on)present.open();
     }
     if(workspace){workspaceIntro.appendChild(el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));updateWorkspaceIdentity(store.getState());}
-    if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Four-area experiments';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('p',{},page==='operations'?'Use this workspace to change settings and replay one simulated window; Four-area experiments compares a baseline and one change across paired seeds.':'Use Four-area experiments to compare a baseline and one change across paired seeds; the Four-area workspace lets you change settings and replay one simulated window.'),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),pairedPrimer);}
+    if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Four-area experiments';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('p',{},page==='operations'?'Use this workspace to change settings and replay one simulated window; Four-area experiments compares a baseline and one change across paired seeds.':'Use Four-area experiments to compare a baseline and one change across paired seeds; the Four-area workspace lets you change settings and replay one simulated window.'),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),pairedPrimer,...(page==='depots'?[pairedExplainer]:[]));}
     if(page==='streets')streets.refresh();
     if(page==='simulation')operations.refresh();
     focusMain(workspace?workspaceMain:page==='approach'?product:page==='simulation'?operations.element:page==='streets'?streets.element:page==='scale'?scale.element:page==='flows'?flows.element:page==='catalog'?catalog.element:home,ROUTES[page].title);

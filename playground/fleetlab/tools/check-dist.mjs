@@ -59,6 +59,7 @@ const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledes
 
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
 export const COPY_MODULES = [
+  "src/ui/methodology-explainer.js",
   ...DELIVERY_MODULES, ...ORDER_MODULES, ...R1_MODULES, ...R3_MODULES,
   "src/ui/depot-flow-lab.js", "src/ui/depot-flow-view.js", "src/ui/depot-flow-reading.js", "src/ui/depot-flow-player.js", "src/model/depot-flow-contract.js", "src/model/depot-flow.js", "src/model/depot-flow-verify.js", "src/model/depot-cohort-contract.js", "src/model/depot-cohort.js", "src/model/depot-cohort-verify.js",
   "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js", "src/model/depot-capacity-verify.js", "src/ui/depot-capacity-view.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-bench.js", "src/ui/depot-capacity-guided.js", "src/ui/capacity-app.js",
@@ -370,9 +371,10 @@ function tokenProblems(text, where = null) {
 /** Depot lesson modules whose string literals must be scanned as copy: each one must be named in COPY_MODULES. */
 const DEPOT_COPY_MODULE = /^src\/(?:ui|model)\/depot-(?:flow|cohort|capacity).*\.js$/;
 
-// Exact owner-approved Round 6 prose. Only its punctuation is exempted; claim checks still apply.
+// Exact approved Round 6/12 prose. Only punctuation is exempted; claim checks still apply.
 export function withoutApprovedRound6Dashes(text){
  for(const sentence of [
+  "The difference is the change — everything else was identical.",
   "Checked for internal consistency — the simulation ran as designed. This doesn't validate real-world accuracy.",
   "In this lesson, shortest-upload-first gets the most visits done on time. That's a result about this scenario — not advice for real operations.",
   "Wait times cover served riders only — always read them next to the unserved count. They don't compare the same riders across rules.",

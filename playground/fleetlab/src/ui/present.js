@@ -1,3 +1,4 @@
+import {createMethodologyExplainer} from './methodology-explainer.js';
 // Walkthrough: user-started preparation; beats only seek, pin and project accepted runs.
 // Visual reveals never advance clocks, alter verdicts or supply absent values.
 
@@ -461,6 +462,7 @@ const ANALYTICS = [
       return [
         el("p", { class: "fl-small-label", "data-role": "present-spec" }, specInWords(ctx.frozen.spec)),
         renderReadout({ verdict: ctx.verdict, frozen: ctx.frozen }),
+        createMethodologyExplainer("guardrails"),
       ];
     },
     narration: (ctx) => (ctx.spec === null ? [] : [labels.narrationVerdict({ seeds: ctx.spec.seeds.length, resamples: ctx.spec.resamples })]),
@@ -511,6 +513,7 @@ const SIMULATION = [
       return [
         el("p", { "data-role": "present-now-watching" }, labels.nowWatching({ seed: ctx.verdictSeed, index: index + 1, total: ctx.spec.seeds.length })),
         ...armRows(ctx),
+        createMethodologyExplainer("paired"),
         el("p", { class: "fl-muted", "data-role": "present-fork-note" }, labels.FORK.verdictSeedNote),
         el("p", { class: "fl-muted", "data-role": "present-fork-caption" }, labels.HONESTY.forkCaption),
       ];
