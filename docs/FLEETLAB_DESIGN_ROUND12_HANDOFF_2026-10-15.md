@@ -13,9 +13,9 @@ Baseline: branch `codex/fleetlab-city-sf`, repository HEAD `5d4136b`; live runti
 | P1-1 / E1 paired seeds | Implemented, release validation in progress | Same-seed chip feeds two matching lanes; San Francisco supply changes 40→52 and +12 appears. Walkthrough chapter 3, “One world, two arms,” and Four-area experiments, including deep-linked lessons. |
 | P1-1 / E2 guardrails | Implemented, release validation in progress | Primary bar grows; 39 min crosses a 30 min rail, turns red, and HOLD enters with a wash. Walkthrough verdict and Fleet-day teaching section, outside accepted-result readouts. |
 | P1-1 / E3 deadhead | Implemented, release validation in progress | Ten equal-distance circuits, first four and half of the fifth empty; counters settle at 45/100 = 45%. Rebalancing hero, next to the separate public-reporting note. |
-| P1-2 / typography | Pending owner choice | Asked whether to unify display headlines on serif, or retain/document the split. No answer received yet. Existing fonts remain unchanged; no intentional-split claim has been published. |
+| P1-2 / typography | Implemented, release validation in progress | Owner chose serif display headlines. Georgia / Times New Roman is the shared display family; body, controls, data, and HTML wordmark retain sans-serif. |
 
-Could not implement as written: P1-2 awaits the explicitly required owner decision. The prototype HTML files were not provided in the repository; the written §2 choreography governs and was rebuilt as SVG/JS, without importing prototype code.
+Could not implement as written: none after the owner supplied the typography decision. The prototype HTML files were not provided in the repository; the written §2 choreography governs and was rebuilt as SVG/JS, without importing prototype code.
 
 Invented model inputs, observations, scientific results, or owner claims: none. The permitted illustration uses a declared ten-unit scale per circuit, fixed presentation geometry, and animation timing; these are visual conventions, not simulated trips or new evidence.
 
@@ -51,7 +51,16 @@ Formatting-only trims preserve exact lexical tokens, automatic-semicolon-inserti
 
 The exact requested E1 sentence receives a narrow punctuation exception beside existing approved rewrite exceptions. All claim checks remain active. An unnecessary explicit `aria-live` attribute initially triggered the string-based copy scanner; removing it retains the implicit polite announcement of `role="status"` without a broad scanner exemption.
 
-Final source-bound build measurements and deployment receipt will be recorded below after verification.
+| Initial explainer-only preview measurement (before typography) | Bytes | Unchanged ceiling | Headroom |
+|---|---:|---:|---:|
+| Original teaching source + tools | 3,140,470 | 3,153,920 | 13,450 |
+| Offline edition | 2,563,607 | 2,571,440 | 7,833 |
+| Package metadata | 37,684 | 40,960 | 3,276 |
+| Integrated emitted text | 3,114,695 | 3,145,728 | 31,033 |
+| Integrated NF-03 dependency closure | 522,919 | 524,288 | **1,369** |
+
+The initial explainer-only build passes all source, offline, metadata, ownership, and closure gates. Typography requires a new source-bound build before publication. The source-bound upload guard verifies **10,140 files**. `final-budget.json` contains the complete counters; no byte ceiling changed. The format-only trim offset source growth before adding the shared CSS. The two new test files are outside the original-source budget and remain separately reviewable.
+
 
 ## Validation
 
@@ -65,18 +74,18 @@ Local evidence: `build/fleetlab-city/validation/design-round12-20261015/`.
 - New behavior coverage: paired progression, guardrail crossing, distance accounting, no autoplay, local/global pause, mid-flight reduced motion, hidden/detached/navigation cleanup; five placements; experiment deep links; invalid-result separation; no Replay-triggered compute; source ownership and matching styles.
 - Desktop and 390×844 phone visual inspection of all three diagrams. Walkthrough Prepare, arms placement, verdict placement, and existing reduced-motion On control checked in the browser. Illustrations do not affect current-run values.
 - Timestamped CUA screen captures encoded as video: `paired-full-local.mp4`, `guardrails-full-wash-local.mp4`, `deadhead-full-local.mp4`. Earlier local takes were cropped and are not used as full-layout evidence. Final immutable-release captures will supplement these.
-- Initial negative results are retained in `teaching-tests-first.log`, `hosted-tests-first.log`, and `ruff-first.log`. Failures were the redundant accessibility attribute copy-scan conflict and one long Python inventory line; both corrected. No model changes resulted.
+- Initial negative results are retained in `teaching-tests-first.log`, `hosted-tests-first.log`, and `ruff-first.log`. Failures were the redundant accessibility attribute copy-scan conflict and one long Python inventory line; both corrected. A subsequent typography regression check rejected a third light `:root` block; the display token was moved into the existing palette roots and the focused accessibility/integration tests pass. The negative run is retained as `teaching-tests-typography-first.log`. No model changes resulted.
 
-## Remaining decision and queued work
+## Typography decision and queued work
 
-Typography has no single shared display token today. Main teaching and standalone labs use sans; City Explorer headings use Georgia. If serif unification is chosen, introduce a display token and target display headings across those surfaces, preserving body, controls, data, and HTML wordmark typography. If the split is chosen, document the actual observed system accurately. Do not infer either choice from silence.
+The owner explicitly chose “Unify display headlines on the existing serif; keep body text and data sans-serif.” Before this change, there was no shared display token: teaching/standalone lab headlines used sans and City Explorer used Georgia. The release introduces `--font-display` with Georgia, Times New Roman, serif in teaching and hosted presentation styles. It applies to page h1s, introductory/editorial section headlines, methodology panel titles, and rebalancing/dispatch chapter titles. Data-panel/table headings, body prose, SVG labels, controls, numerals, and the HTML wordmark retain their sans families. No font download or dependency is added. This was more than flipping a pre-existing token, so the cross-surface selectors are explicit and bounded.
 
 P2 remains deferred: paired dot plot, pause-pill restyle, world strip, founder video, replay preview, mobile control collapse, sources audit, atlas overlay, limits strip, model-lab arrow, and D-06. No public copy describes the owner as seeking a role.
 
 ## Recommendation, risks, and next actions
 
-Recommendation: release the validated explainers independently; retain the typography item as pending until the owner chooses.
+Recommendation: release the validated explainers and the approved serif display treatment together.
 
 Top risks and mitigations: illustrative figures mistaken for evidence (visible labels, adjacent static qualifications, separate regions); motion left running (gesture-only start and lifecycle tests); package growth (explicit ownership, whitespace trim, unchanged gates); stale-alias review (immutable release URL and full readback).
 
-Next 3 actions: verify the source-bound release and immutable deployment; record the final receipt; implement the owner’s typography decision once supplied. Do not start P2.
+Next 3 actions: verify the final immutable release; record the publication receipt; collect design feedback against that immutable URL. Do not start P2.

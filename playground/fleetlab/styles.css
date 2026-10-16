@@ -2,7 +2,7 @@
 .fl-app .fl-strip .fl-strip__full .fl-strip__short .fl-topbar .fl-modes .fl-clock .fl-knobs .fl-knobs__run .fl-knobs-toggle .fl-map .fl-map__stamp .fl-transport .fl-transport__strips .fl-side .fl-now .fl-now__row .fl-across .fl-segmented .fl-charts .fl-charts__set .fl-charts__wide .fl-chart .fl-chart__summary .fl-footer .fl-group .fl-contents .fl-panel .fl-panel-alt .fl-drawer .fl-inspector .fl-popover .fl-tooltip .fl-button .fl-button--primary .fl-field .fl-field--changed .fl-field--invalid .fl-field__note .fl-chip-replay .fl-chip-across .fl-limits-chip .fl-verdict .fl-teaching-chip .fl-verdict__footer .fl-verdict-chip .fl-verdict-chip__glyph .fl-verdict-chip__word .fl-stale .fl-absent .fl-error .fl-error__slot .fl-unserved .fl-scroll .fl-table .fl-board .fl-code .fl-mono .fl-title .fl-muted .fl-small-label .fl-learn-text .fl-sr-only .fl-yard .fl-route-highway__casing .fl-route-highway__centre .fl-route-local .fl-route--congested .fl-chevron .fl-depot-tile .fl-rider-ring .fl-glyph-edge .fl-glyph-ring .fl-car .fl-fam-rider .fl-fam-empty .fl-fam-available .fl-fam-depot .fl-pinned-car .fl-hit .fl-chart__grid .fl-chart__axis .fl-chart__line .fl-chart__band .fl-chart__cursor .fl-hatch-line .fl-map-legend .fl-iso .fl-iso__canvas .fl-iso__overlay .fl-iso__label .fl-iso__label--area .fl-iso__label--depot .fl-iso__label--route .fl-iso__label--local .fl-iso__plate .fl-iso__leader .fl-iso__text .fl-iso__numbers .fl-iso__count .fl-iso__pin .fl-iso__pick .fl-ledger .fl-ledger__beat .fl-ledger__prepare .fl-ledger__figures .fl-ledger__figure .fl-ledger__foot .fl-ledger__value .fl-ledger__table .fl-ticker .fl-ticker__line .fl-rail .fl-reading-card .fl-registry .fl-hourly .fl-readout .fl-refusals .fl-flow .fl-flow__arrow .fl-list-plain .fl-situation__proxy .fl-scrubber .fl-scrubber__band .fl-scrubber__input .fl-scrubber__ticks .scale-lab .scale-chooser .scale-run .scale-setup .scale-result .scale-chart
 */
 
-:root {
+:root {--font-display:Georgia,"Times New Roman",serif;
 color-scheme:light dark;
 
 --ground:#F7F8FA;
@@ -1757,3 +1757,6 @@ color-scheme:light;--faint:#7a899b;
 .explainer-connector{stroke:#80a697;stroke-width:3}.explainer-limit{stroke:#b5473e;stroke-width:3}.explainer-block{fill:#e7eee3;stroke:#91ac9d;stroke-width:3}.explainer-empty,.explainer-car{fill:#fffdf6;stroke:#25816e;stroke-width:3}[data-empty="false"] .explainer-car{fill:#25816e}.explainer-wheel{fill:#173d34}.explainer-stage .explainer-verdict{fill:#fffdf6;font-size:28px;font-weight:750}
 .explainer-wash{fill:#f5dfd4}
 /* End methodology explainers. */
+
+/* Display type. */
+h1:not(.fl-title),.visitor-film-title,.catalog-library-title,[data-role="present-beat"],#chapter-title,.methodology-explainer h3,:is(.visitor-founder,.visitor-contact,.start-points,.learning-path-heading,.network-flows-feature,.visitor-section-heading,.approach-section,.approach-case,.approach-close,.delivery-guide,.delivery-lessons,.learning-panel,.why) h2{font-family:var(--font-display)}
