@@ -145,6 +145,7 @@ def apply_site(site, current, rollback):
         for line in lines
     ]
     # Immutable historical HTML remains analytics-free and keeps its original restrictive policy.
+    # Like every path rule, it cannot be relied on: an encoded spelling of the path gets only /*.
     lines.extend(
         [
             "",

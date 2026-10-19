@@ -119,8 +119,12 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
 7. Verify all preview bytes with `tools/readback.py --site SITE --url PREVIEW
    --output PRIVATE_RESULT`. Verify root/City CSP, attachment headers, a real 404,
    malformed links, normal navigation, map/replay and phone-width layout. The
-   readback tool verifies bytes/statuses; inspect response headers separately.
+   readback tool verifies bytes/statuses; check response headers with
+   `tools/check-headers.py SITE PREVIEW PRIVATE_RESULT`, which also requests
+   percent-encoded spellings that only the `/*` rule matches.
    A missing page must return 404 with the security headers and `no-store` cache policy.
+   Header rule: `/*` is the only security baseline. Path-specific `_headers` rules may
+   relax or annotate it but must never be relied on to restrict.
 8. For the currently authorized production release, use the same command and
    stage with `--branch feat/fleetlab-playground`. That branch is Cloudflare's
    production alias; it is not the actual Git source branch.

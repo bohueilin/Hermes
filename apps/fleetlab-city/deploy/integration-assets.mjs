@@ -49,6 +49,8 @@ export function integratedRootFiles(teaching,{branded=false,rollback}={}){
   if(inherited.length)addition+='  ! Permissions-Policy\n';
   addition+=`  Permissions-Policy: ${permission}\n`;
  }
+ // Path rules may relax or annotate the /* baseline but must never be relied on to restrict: Pages matches them
+ // against the raw path, so a percent-encoded spelling gets only /* (tools/check-headers.py checks such spellings).
  const headers=old.replace(/\n+$/,'')+'\n'+addition+
   '\n/downloads/fleetlab-offline.html\n'+
   '  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+

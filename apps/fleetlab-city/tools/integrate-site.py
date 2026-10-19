@@ -496,6 +496,8 @@ def integrate(
             "excludes City Explorer.\n"
         )
         with (site / "_headers").open("a") as headers:
+            # Path rules may relax or annotate the /* baseline, never restrict it: a percent-encoded
+            # spelling of the path matches only /* (tools/check-headers.py).
             # Pages redirects named .html files to an extensionless canonical URL.
             # Apply the attachment contract to both the redirect and its destination.
             headers.write(
