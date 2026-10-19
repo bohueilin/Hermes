@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {spawnSync} from 'node:child_process';
-import {mkdirSync,mkdtempSync,readFileSync,realpathSync,rmSync,symlinkSync,writeFileSync} from 'node:fs';
+import {mkdirSync,mkdtempSync,readdirSync,readFileSync,realpathSync,rmSync,symlinkSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {wranglerSpawnOptions,deployPreflight,checkWranglerLog} from '../deploy/stage-guard.mjs';
 
 // Inputs that could redirect Wrangler's API host, token refresh, credentials, account or code.
@@ -38,6 +39,62 @@ test('the release wrapper spawns Wrangler only through those options',()=>{
  assert.match(source,/'--commit-message'/);
  assert.ok(source.indexOf('deployPreflight(args[2]')<source.indexOf('verifyStage(args[2]'));
  assert.match(source,/if\(command!=='version'\)checkWranglerLog\(log\);/);
+});
+
+const WRAPPER=fileURLToPath(new URL('../deploy/wrangler.mjs',import.meta.url));
+const TOOL_FILES=['.npmrc','package-lock.json','package.json'];
+// Runs the wrapper with a stand-in npm that records what it was given and writes a CLI with the
+// wrong bytes, so the wrapper stops at the hash check: no network, and Wrangler never runs.
+function runWithFakeNpm(t,exitCode){
+ const source=readFileSync(WRAPPER,'utf8');
+ // The only way to reach a real cli.js would be the release-tool folder's own node_modules.
+ assert.doesNotMatch(source,/new URL\('\.\/node_modules/);
+ const root=realpathSync(mkdtempSync(join(tmpdir(),'fleetlab-install-test-')));
+ t.after(()=>rmSync(root,{recursive:true,force:true}));
+ const record=join(root,'npm.json');
+ mkdirSync(join(root,'bin'));
+ writeFileSync(join(root,'bin/npm'),`#!${process.execPath}
+const fs=require('fs');
+fs.writeFileSync(${JSON.stringify(record)},JSON.stringify({cwd:process.cwd(),argv:process.argv.slice(2),env:Object.keys(process.env),
+ files:Object.fromEntries(fs.readdirSync('.').sort().map(name=>[name,fs.readFileSync(name,'utf8')]))}));
+fs.mkdirSync('node_modules/wrangler/wrangler-dist',{recursive:true});
+fs.writeFileSync('node_modules/wrangler/wrangler-dist/cli.js','not the pinned CLI');
+process.exit(${exitCode});
+`,{mode:0o755});
+ // NODE_OPTIONS must stay harmless here: it also reaches the wrapper's own Node process.
+ const env={...process.env,...CANARY,NODE_OPTIONS:'--no-deprecation',PATH:`${join(root,'bin')}:${process.env.PATH}`,TMPDIR:root};
+ const child=spawnSync(process.execPath,[WRAPPER,'--version'],{env,encoding:'utf8'});
+ return {root,child,npm:JSON.parse(readFileSync(record,'utf8'))};
+}
+
+test('the release wrapper installs the tools fresh from the committed lock without scripts',t=>{
+ const {root,child,npm}=runWithFakeNpm(t,0);
+ assert.equal(child.status,1);
+ assert.match(child.stderr,/Unexpected Wrangler CLI bytes; run npm ci --ignore-scripts from the committed lock\./);
+ assert.deepEqual(npm.argv,['ci','--ignore-scripts']);
+ assert.ok(npm.cwd.startsWith(root),npm.cwd);
+ assert.match(npm.cwd.slice(root.length),/^\/fleetlab-wrangler-[^/]+\/tools$/);
+ assert.deepEqual(Object.keys(npm.files),TOOL_FILES);
+ for(const name of TOOL_FILES)assert.equal(npm.files[name],readFileSync(new URL(`../deploy/${name}`,import.meta.url),'utf8'),name);
+ assert.match(npm.files['.npmrc'],/^ignore-scripts=true$/m);
+ for(const name of Object.keys(CANARY))assert.equal(npm.env.includes(name),false,name);
+ // The run directory, the tools in it included, is gone once nothing ran.
+ assert.deepEqual(readdirSync(root).sort(),['bin','npm.json']);
+});
+
+test('the release wrapper stops when the fresh install fails',t=>{
+ const {root,child}=runWithFakeNpm(t,1);
+ assert.equal(child.status,1);
+ assert.match(child.stderr,/npm ci --ignore-scripts failed; the release tools were not installed\./);
+ assert.doesNotMatch(child.stderr,/Unexpected Wrangler CLI bytes/);
+ assert.deepEqual(readdirSync(root).sort(),['bin','npm.json']);
+});
+
+test('the release wrapper writes its patched CLI copy only as a new file in the run directory',()=>{
+ const source=readFileSync(WRAPPER,'utf8');
+ assert.match(source,/const dist=join\(tools,'node_modules\/wrangler\/wrangler-dist'\);/);
+ assert.match(source,/writeFileSync\(patched,source,\{mode:0o600,flag:'wx'\}\);/);
+ assert.ok(source.indexOf('result=spawnSync(process.execPath')<source.indexOf('rmSync(tools,'));
 });
 
 const write=(path,data='x')=>{mkdirSync(dirname(path),{recursive:true});writeFileSync(path,data);};

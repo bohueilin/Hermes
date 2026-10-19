@@ -108,14 +108,20 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    boot, headers and hosted integration assets are independently reproduced
    from source by the upload guard. Deleting package markers cannot bypass it. A content digest
    does not authenticate the producer. NF04-B adds explicit owner-aware counters, a separately scoped software-delivery sidecar, integration-original source capture and final transformed route closures. Include the manifest as a declared route input; bootstrap injects it into the UI. All original hard caps remain.
-5. Install the locked deployment tool in `apps/fleetlab-city/deploy` with
-   `npm ci --ignore-scripts`; run `npm audit --omit=dev` and `npm audit signatures`.
+5. For the audits, install the locked deployment tool in `apps/fleetlab-city/deploy` with
+   `npm ci --ignore-scripts` (the folder's `.npmrc` also sets `ignore-scripts`); run
+   `npm audit --omit=dev` and `npm audit signatures`.
    Also run `npm --prefix apps/fleetlab-city audit --omit=dev` for MapLibre.
+   The release wrapper never loads this install (step 6).
 6. Use `node apps/fleetlab-city/deploy/wrangler.mjs pages deploy SITE
    --project-name fleetlab --branch codex-city-explorer` for preview. The wrapper
-   requires a clean checkout and matching source commit. It verifies exact upstream
-   CLI bytes and generates a separate serial uploader (8 MiB buckets, one concurrent
-   Pages request), preserving upstream authentication and asset validation.
+   requires a clean checkout and matching source commit. For every command it installs
+   the tool fresh from the committed `package-lock.json` with `npm ci --ignore-scripts`
+   into a new temporary directory it owns (npm checks every package against the lock's
+   integrity hash), so the git-ignored `node_modules` tree is never loaded. It verifies
+   exact upstream CLI bytes and writes a separate serial uploader there as a new file
+   (8 MiB buckets, one concurrent Pages request), preserving upstream authentication and
+   asset validation. The tools and that copy are deleted when Wrangler exits.
    Wrangler runs in an empty temporary directory with only PATH, HOME, user, shell,
    temp, locale and terminal variables, so `.env` files, `functions/`, Wrangler configs,
    a shared account cache and caller variables (an API token included) are not used.

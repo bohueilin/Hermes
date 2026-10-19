@@ -7,11 +7,11 @@ import {verifyIntegrationAssets} from './integration-assets.mjs';
 
 // Wrangler reads .env files, functions/, Wrangler configs and its account cache from its working
 // directory, and API hosts or credentials from the environment: it receives neither from the caller.
-// Its run log goes to a file the wrapper checks afterwards.
-const WRANGLER_ENV=['PATH','HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','LC_ALL','TERM','NO_COLOR'];
+// Its run log goes to a file the wrapper checks afterwards. npm gets the same short environment.
+const TOOL_ENV=['PATH','HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','LC_ALL','TERM','NO_COLOR'];
+export const toolEnvironment=environment=>Object.fromEntries(TOOL_ENV.filter(name=>environment[name]!==undefined).map(name=>[name,environment[name]]));
 export function wranglerSpawnOptions(environment,cwd,log){
-  const env=Object.fromEntries(WRANGLER_ENV.filter(name=>environment[name]!==undefined).map(name=>[name,environment[name]]));
-  return {stdio:'inherit',cwd,env:{...env,WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_PATH:log}};
+  return {stdio:'inherit',cwd,env:{...toolEnvironment(environment),WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_PATH:log}};
 }
 
 // Wrangler logs these when it bundles or routes server code or follows a config redirect, and logs
