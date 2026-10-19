@@ -52,7 +52,7 @@ export function freezeBayExperiment(config,options={}){
   if(config?.launch)throw new RangeError('M4 launch contracts are unsupported by the M2/M3 experimental adapter; use the descriptive launch rehearsal.');
   const {treatment,seeds=Array.from({length:12},(_,i)=>1001+i),tuning_seeds=[42,43,44],margin=.02,resamples=2000,null_treatment=false}=options;
   if(Object.keys(options).some(k=>!['treatment','seeds','tuning_seeds','margin','resamples','null_treatment'].includes(k)))throw new RangeError('Unknown experiment option.');
-  const definition=treatments[treatment];if(!definition)throw new RangeError('Select a supported single treatment.');
+  const definition=Object.hasOwn(treatments,treatment)&&treatments[treatment];if(!definition)throw new RangeError('Select a supported single treatment.');
   const [group,baselinePolicy,candidatePolicy]=definition;
   if(!config?.[group])throw new RangeError(`Enable the ${group} extension before this comparison.`);
   const issues=validateBayAreaConfig(config);if(issues.length)throw new RangeError(issues.join(' '));

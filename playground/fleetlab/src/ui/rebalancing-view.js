@@ -2,7 +2,8 @@
 const ZONES=['A','B','C','D'];
 export const amount=r=>r.n/r.d;
 export const km=r=>(amount(r)/1000).toFixed(1);
-export const pretty=s=>({idle:'Ready / idle',pickup:'COD · pickup',passenger_trip:'COD · passenger trip',rebalancing:'COD · empty repositioning',unavailable:'VOR'}[s]||s);
+const STATES={idle:'Ready / idle',pickup:'COD · pickup',passenger_trip:'COD · passenger trip',rebalancing:'COD · empty repositioning',unavailable:'VOR'};
+export const pretty=s=>Object.hasOwn(STATES,s)?STATES[s]:s;
 export function element(doc,tag,attrs={},children=[]){const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,String(v));for(const c of [children].flat())if(c!==null&&c!==undefined)n.appendChild(typeof c==='object'?c:doc.createTextNode(String(c)));return n;}
 export function renderHeadlines(doc,records){
  const el=(...a)=>element(doc,...a),maxEmpty=Math.max(...records.map(r=>amount(r.metrics.empty_m))),maxLost=Math.max(1,...records.map(r=>r.metrics.expired));

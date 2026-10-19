@@ -111,7 +111,10 @@ export function createLaunchPanel(){
   const next=structuredClone(envelope),report=validateLaunchConfig(next.config);
   if(!report.ok)throw new RangeError(report.checks.filter(check=>check.status==='FAIL').map(check=>displayText(check.detail)).join(' '));
   if(!Number.isInteger(next.options?.delay)||next.options.delay<0||next.options.delay>1440)throw new RangeError('Commissioning delay must be an integer from 0 to 1440 minutes.');
-  invalidate();config=next.config;delay=next.options.delay;select.value=config.launch.region.id;renderSettings();element.open=true;
+  // Commit only a setup that renders; otherwise keep the previous one on screen and in state.
+  const previous=[config,delay];invalidate();config=next.config;delay=next.options.delay;
+  try{renderSettings();}catch(error){[config,delay]=previous;renderSettings();throw error;}
+  select.value=config.launch.region.id;element.open=true;
   return getSharedSetup();
  }
  function validate(){const report=validateLaunchConfig(config);checks.replaceChildren(

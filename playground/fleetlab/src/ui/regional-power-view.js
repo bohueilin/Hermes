@@ -59,9 +59,11 @@ function verdict(r){
   return root;
 }
 function discloseProvenance(root){const rows=[...root.children].filter(n=>n.classList.contains('result-provenance')||n.textContent.startsWith('Submitted condition '));root.appendChild(el('details',{},[el('summary',{},'Exact values'),...rows]));}
+const CONDITIONS={moderate:'60% power condition',full:'Full power condition',severe:'20% power condition',outage:'Power outage'};
+const conditionName=id=>{const k=id.replace(/^tx-aus-|(?:-v1)$/g,'');return Object.hasOwn(CONDITIONS,k)?CONDITIONS[k]:'Custom power condition';};
 function runView(r){
   const m=r.metrics,x=r.extensions,c=x.charging,root=el('section',{},[
-    teachingResult('regional-power',{type:'austin',metrics:m,zeroPower:c.zero_power_vehicle_min,condition:({moderate:'60% power condition',full:'Full power condition',severe:'20% power condition',outage:'Power outage'})[r.config.site_power_profile.condition_id.replace(/^tx-aus-|(?:-v1)$/g,'')]??'Custom power condition',seed:r.config.seed}),el('h3',{},'Recorded Austin shift'),el('p',{class:'result-provenance'},`Seed ${r.config.seed} · ${r.version} · ${x.validity} · Simulation only · NOT_EVIDENCE · deployment permission NONE.`),
+    teachingResult('regional-power',{type:'austin',metrics:m,zeroPower:c.zero_power_vehicle_min,condition:conditionName(r.config.site_power_profile.condition_id),seed:r.config.seed}),el('h3',{},'Recorded Austin shift'),el('p',{class:'result-provenance'},`Seed ${r.config.seed} · ${r.version} · ${x.validity} · Simulation only · NOT_EVIDENCE · deployment permission NONE.`),
     el('p',{},`Submitted condition ${r.config.site_power_profile.condition_id} at ${r.config.site_power_profile.site_id}; ${r.config.duration_hours} hours, ${r.config.fleet_size} vehicles, nominal ${r.config.site_power_kw} kW per site.`),
     resources(r.config),
     table('Every request at the horizon',['All requests','Completed','Unserved','Waiting','Assigned / boarding / trip'],[[m.total_requests,m.completed_trips,m.unserved_requests,m.pending_requests,m.in_progress_trips]]),
