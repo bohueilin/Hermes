@@ -11,7 +11,6 @@ import {capacityCellSteps} from '../model/depot-capacity.js';
 import {CAPACITY_PROTOCOL,CAPACITY_REGIMES,CAPACITY_RULES,CAPACITY_TREATMENTS,CAPACITY_VERSIONS,FLOW_TRUST,capacityScenario,studyStatus} from '../model/depot-capacity-contract.js';
 import {CAPACITY_PROJECTION,caseCells,cardsFor,readingSentence,withheldReason,capacityBenchProjection,allocationSpans,firstAllocationDifference,firstReadinessDifference,exampleVisits,verifiedCell,ruleName,join,minute,gbps,kw} from './depot-capacity-view.js';
 
-
 const P=CAPACITY_PROTOCOL,T=CAPACITY_TREATMENTS,VISITS=P.waves.length*P.profiles.length,HORIZON_MIN=minute(P.horizon_s);
 const ALT_RULES=CAPACITY_RULES.filter(r=>r.id!=='capacity_equal_uplink');
 const CASES=[['rule','Different rule'],['bandwidth','More bandwidth'],['power','More power']];
