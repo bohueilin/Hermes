@@ -5,7 +5,7 @@ import {mkdirSync,mkdtempSync,readdirSync,readFileSync,realpathSync,rmSync,symli
 import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {wranglerSpawnOptions,deployPreflight,checkWranglerLog} from '../deploy/stage-guard.mjs';
+import {wranglerSpawnOptions,deployPreflight,checkWranglerLog,checkPagesCache} from '../deploy/stage-guard.mjs';
 
 // Inputs that could redirect Wrangler's API host, token refresh, credentials, account or code.
 const CANARY={CLOUDFLARE_API_BASE_URL:'http://127.0.0.1:9/client/v4',CF_API_BASE_URL:'http://127.0.0.1:9/client/v4',
@@ -15,9 +15,11 @@ const CANARY={CLOUDFLARE_API_BASE_URL:'http://127.0.0.1:9/client/v4',CF_API_BASE
 test('Wrangler runs in a fresh empty directory with only an allowlisted environment',()=>{
  const cwd=mkdtempSync(join(tmpdir(),'fleetlab-wrangler-test-'));
  try{
-  const options=wranglerSpawnOptions({...process.env,...CANARY},cwd,join(cwd,'..','wrangler.log'));
+  const options=wranglerSpawnOptions({...process.env,...CANARY},cwd,join(cwd,'..','wrangler.log'),join(cwd,'..','cache'));
   assert.equal(options.cwd,cwd);
   assert.equal(options.env.WRANGLER_LOG_PATH,join(cwd,'..','wrangler.log'));
+  // Pinned, so Wrangler never falls back to a node_modules/.cache/wrangler above its directory.
+  assert.equal(options.env.WRANGLER_CACHE_DIR,join(cwd,'..','cache'));
   for(const name of Object.keys(CANARY))assert.equal(name in options.env,false,name);
   assert.equal(options.env.WRANGLER_SEND_METRICS,'false');
   assert.equal(options.env.HOME,process.env.HOME);
@@ -33,12 +35,13 @@ test('Wrangler runs in a fresh empty directory with only an allowlisted environm
 test('the release wrapper spawns Wrangler only through those options',()=>{
  const source=readFileSync(new URL('../deploy/wrangler.mjs',import.meta.url),'utf8');
  assert.match(source,/mkdtempSync\(join\(tmpdir\(\)/);
- assert.match(source,/wranglerSpawnOptions\(process\.env,cwd,log\)/);
+ assert.match(source,/cache=join\(run,'cache'\)/);
+ assert.match(source,/wranglerSpawnOptions\(process\.env,cwd,log,cache\)/);
  assert.doesNotMatch(source,/process\.env\}|\.\.\.process\.env/);
  // Outside a Git checkout Wrangler cannot detect the message it used to read from git.
  assert.match(source,/'--commit-message'/);
  assert.ok(source.indexOf('deployPreflight(args[2]')<source.indexOf('verifyStage(args[2]'));
- assert.match(source,/if\(command!=='version'\)checkWranglerLog\(log\);/);
+ assert.match(source,/if\(command!=='version'\)checkWranglerLog\(log\);\ncheckPagesCache\(cache\);/);
 });
 
 const WRAPPER=fileURLToPath(new URL('../deploy/wrangler.mjs',import.meta.url));
@@ -182,3 +185,25 @@ for(const [entry,refusal] of FORBIDDEN){
   assert.throws(()=>checkWranglerLog(logFile(t,[...CLEAN_LOG,entry])),refusal);
  });
 }
+
+function pagesCache(t,text){
+ const cache=mkdtempSync(join(tmpdir(),'fleetlab-cache-test-'));
+ t.after(()=>rmSync(cache,{recursive:true,force:true}));
+ if(text!==undefined)writeFileSync(join(cache,'pages.json'),text);
+ return cache;
+}
+
+test('the cache check passes an empty cache and the shapes Wrangler writes for fleetlab',t=>{
+ assert.doesNotThrow(()=>checkPagesCache(pagesCache(t)));
+ assert.doesNotThrow(()=>checkPagesCache(join(tmpdir(),'fleetlab-no-such-cache')));
+ // pages deployment list saves the account only; pages deploy saves the account and project.
+ assert.doesNotThrow(()=>checkPagesCache(pagesCache(t,JSON.stringify({account_id:'0000'}))));
+ assert.doesNotThrow(()=>checkPagesCache(pagesCache(t,JSON.stringify({account_id:'0000',project_name:'fleetlab'},null,2))));
+});
+
+test('the cache check refuses another project and an unreadable cache',t=>{
+ assert.throws(()=>checkPagesCache(pagesCache(t,JSON.stringify({account_id:'0000',project_name:'fleetlab-preview'}))),/Pages project "fleetlab-preview", not fleetlab/);
+ assert.throws(()=>checkPagesCache(pagesCache(t,JSON.stringify({project_name:''}))),/Pages project "", not fleetlab/);
+ assert.throws(()=>checkPagesCache(pagesCache(t,'{"project_name":')),SyntaxError);
+ assert.throws(()=>checkPagesCache(pagesCache(t,'null')),TypeError);
+});

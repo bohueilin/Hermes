@@ -6,12 +6,13 @@ import {resolve,relative,dirname,join} from 'node:path';
 import {verifyIntegrationAssets} from './integration-assets.mjs';
 
 // Wrangler reads .env files, functions/, Wrangler configs and its account cache from its working
-// directory, and API hosts or credentials from the environment: it receives neither from the caller.
-// Its run log goes to a file the wrapper checks afterwards. npm gets the same short environment.
+// directory or the nearest node_modules above it, and API hosts or credentials from the environment:
+// it receives neither from the caller. Its run log and cache go where the wrapper checks them
+// afterwards. npm gets the same short environment.
 const TOOL_ENV=['PATH','HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','LC_ALL','TERM','NO_COLOR'];
 export const toolEnvironment=environment=>Object.fromEntries(TOOL_ENV.filter(name=>environment[name]!==undefined).map(name=>[name,environment[name]]));
-export function wranglerSpawnOptions(environment,cwd,log){
-  return {stdio:'inherit',cwd,env:{...toolEnvironment(environment),WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_PATH:log}};
+export function wranglerSpawnOptions(environment,cwd,log,cache){
+  return {stdio:'inherit',cwd,env:{...toolEnvironment(environment),WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_PATH:log,WRANGLER_CACHE_DIR:cache}};
 }
 
 // Wrangler logs these when it bundles or routes server code or follows a config redirect, and logs
@@ -26,6 +27,15 @@ export function checkWranglerLog(log){
     const url=URL.canParse(address)?new URL(address):null;
     if(!url||url.protocol!=='https:'||url.port||!API_HOSTS.includes(url.hostname))throw Error(`Wrangler contacted ${address}, not a Cloudflare API or token host; review ${log}.`);
   }
+}
+
+// A Pages command takes its account from the cached pages.json and records the account and project
+// it used there. The cache starts empty for every run, so afterwards it may name only fleetlab.
+export function checkPagesCache(cache){
+  const path=join(cache,'pages.json');
+  if(!present(path))return;
+  const project=JSON.parse(readFileSync(path,'utf8')).project_name;
+  if(project!==undefined&&project!=='fleetlab')throw Error(`Wrangler cached the Pages project ${JSON.stringify(project)}, not fleetlab; review ${path}.`);
 }
 
 // Pages also deploys server code and settings from outside the reviewed file list: a stage

@@ -7,7 +7,7 @@ import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {verifyStage,releaseCommand,toolEnvironment,wranglerSpawnOptions,deployPreflight,checkWranglerLog} from './stage-guard.mjs';
+import {verifyStage,releaseCommand,toolEnvironment,wranglerSpawnOptions,deployPreflight,checkWranglerLog,checkPagesCache} from './stage-guard.mjs';
 
 const args=process.argv.slice(2), command=releaseCommand(args), deployDir=fileURLToPath(new URL('./',import.meta.url));
 if(command==='deploy'){
@@ -23,9 +23,10 @@ if(command==='deploy'){
   args.push('--commit-hash',head,'--commit-dirty=false','--commit-message',message);
 }
 // One temporary directory per run holds the tools, an empty working directory (no caller file can
-// add config, server code or credentials) and Wrangler's log, which is kept unless the run and the
-// check pass. The tools, with the patched CLI copy, are deleted as soon as Wrangler exits.
-const run=mkdtempSync(join(tmpdir(),'fleetlab-wrangler-')),tools=join(run,'tools'),cwd=join(run,'cwd'),log=join(run,'wrangler.log');
+// add config, server code or credentials), Wrangler's own account cache and its log; the cache and
+// log are kept unless the run and the checks pass. The tools, with the patched CLI copy, are
+// deleted as soon as Wrangler exits.
+const run=mkdtempSync(join(tmpdir(),'fleetlab-wrangler-')),tools=join(run,'tools'),cwd=join(run,'cwd'),cache=join(run,'cache'),log=join(run,'wrangler.log');
 let result;
 try{
   mkdirSync(tools);
@@ -42,7 +43,7 @@ try{
   const patched=join(dist,'cli.fleetlab.cjs');
   writeFileSync(patched,source,{mode:0o600,flag:'wx'});
   mkdirSync(cwd);
-  result=spawnSync(process.execPath,['--no-warnings',patched,...args],wranglerSpawnOptions(process.env,cwd,log));
+  result=spawnSync(process.execPath,['--no-warnings',patched,...args],wranglerSpawnOptions(process.env,cwd,log,cache));
 }finally{
   rmSync(tools,{recursive:true,force:true});
   rmSync(cwd,{recursive:true,force:true});
@@ -50,6 +51,8 @@ try{
 }
 if(result.error)throw result.error;
 // --version makes no request; the other commands must show no server code and only Cloudflare hosts.
+// No command may leave another Pages project in the cache.
 if(command!=='version')checkWranglerLog(log);
+checkPagesCache(cache);
 if(result.status===0)rmSync(run,{recursive:true,force:true});
 process.exit(result.status??1);

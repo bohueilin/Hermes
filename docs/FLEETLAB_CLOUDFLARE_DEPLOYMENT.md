@@ -125,6 +125,9 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    Wrangler runs in an empty temporary directory with only PATH, HOME, user, shell,
    temp, locale and terminal variables, so `.env` files, `functions/`, Wrangler configs,
    a shared account cache and caller variables (an API token included) are not used.
+   `WRANGLER_CACHE_DIR` points at an empty cache inside that run directory, so Wrangler
+   never falls back to a `node_modules/.cache/wrangler` above it; with several accounts
+   on the login, Wrangler may ask which one to use each time.
    Before uploading it refuses a stage with `_worker.js`, `_routes.json`, `functions/`
    or any `.DS_Store`, `node_modules`, `.git` or `.wrangler` entry; a `functions/` in
    the checkout root or `apps/fleetlab-city/deploy/`; and any Wrangler config or
@@ -132,7 +135,8 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    Afterwards it fails a deployment list or upload whose Wrangler log shows a compiled
    Worker, a Functions, Worker or `_routes.json` upload, a redirected Wrangler config,
    or an API or token host other than `api.cloudflare.com` and `dash.cloudflare.com`;
-   the log is then kept in the temporary directory the error names.
+   the log is then kept in the temporary directory the error names. Any command also
+   fails when the cached `pages.json` names a Pages project other than `fleetlab`.
 7. Verify all preview bytes with `tools/readback.py --site SITE --url PREVIEW
    --output PRIVATE_RESULT`. Verify root/City CSP, attachment headers, a real 404,
    malformed links, normal navigation, map/replay and phone-width layout. The
