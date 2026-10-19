@@ -5,6 +5,14 @@ import {execFileSync} from 'node:child_process';
 import {resolve,relative,dirname} from 'node:path';
 import {verifyIntegrationAssets} from './integration-assets.mjs';
 
+// Wrangler reads .env files, functions/, Wrangler configs and its account cache from its working
+// directory, and API hosts or credentials from the environment: it receives neither from the caller.
+const WRANGLER_ENV=['PATH','HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','LC_ALL','TERM','NO_COLOR'];
+export function wranglerSpawnOptions(environment,cwd){
+  const env=Object.fromEntries(WRANGLER_ENV.filter(name=>environment[name]!==undefined).map(name=>[name,environment[name]]));
+  return {stdio:'inherit',cwd,env:{...env,WRANGLER_SEND_METRICS:'false'}};
+}
+
 export function releaseCommand(args){
   if(args.length===1&&args[0]==='--version')return 'version';
   if(JSON.stringify(args)===JSON.stringify(['pages','deployment','list','--project-name','fleetlab','--json']))return 'list';

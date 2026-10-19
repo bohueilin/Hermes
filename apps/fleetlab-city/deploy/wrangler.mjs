@@ -1,11 +1,12 @@
 // Exact upstream CLI plus the previously used serial Pages upload settings.
 // Never modifies the installed upstream file; regenerates a local sibling copy.
-import {readFileSync,writeFileSync} from 'node:fs';
+import {mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {resolve} from 'node:path';
-import {verifyStage,releaseCommand} from './stage-guard.mjs';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
+import {verifyStage,releaseCommand,wranglerSpawnOptions} from './stage-guard.mjs';
 
 const args=process.argv.slice(2), deploy=releaseCommand(args)==='deploy';
 if(deploy){
@@ -15,7 +16,8 @@ if(deploy){
   const head=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
   args[2]=resolve(args[2]);
   verifyStage(args[2],head,repository);
-  args.push('--commit-hash',head,'--commit-dirty=false');
+  const message=execFileSync('git',['show','-s','--format=%B',head],{encoding:'utf8'}).trim();
+  args.push('--commit-hash',head,'--commit-dirty=false','--commit-message',message);
 }
 const original=new URL('./node_modules/wrangler/wrangler-dist/cli.js',import.meta.url);
 let source=readFileSync(original,'utf8');
@@ -26,6 +28,10 @@ for(const [from,to] of [['MAX_BUCKET_SIZE = 40 * 1024 * 1024;','MAX_BUCKET_SIZE 
 }
 const patched=new URL('./node_modules/wrangler/wrangler-dist/cli.fleetlab.cjs',import.meta.url);
 writeFileSync(patched,source,{mode:0o600});
-const result=spawnSync(process.execPath,['--no-warnings',fileURLToPath(patched),...args],{stdio:'inherit',env:{...process.env,WRANGLER_SEND_METRICS:'false',CLOUDFLARE_CF_FETCH_ENABLED:'false'}});
+// An empty temporary working directory: no caller file can add config, server code or credentials.
+const cwd=mkdtempSync(join(tmpdir(),'fleetlab-wrangler-'));
+let result;
+try{result=spawnSync(process.execPath,['--no-warnings',fileURLToPath(patched),...args],wranglerSpawnOptions(process.env,cwd));}
+finally{rmSync(cwd,{recursive:true,force:true});}
 if(result.error)throw result.error;
 process.exit(result.status??1);

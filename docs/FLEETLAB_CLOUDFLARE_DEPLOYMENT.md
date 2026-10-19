@@ -116,6 +116,9 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    requires a clean checkout and matching source commit. It verifies exact upstream
    CLI bytes and generates a separate serial uploader (8 MiB buckets, one concurrent
    Pages request), preserving upstream authentication and asset validation.
+   Wrangler runs in an empty temporary directory with only PATH, HOME, user, shell,
+   temp, locale and terminal variables, so `.env` files, `functions/`, Wrangler configs,
+   a shared account cache and caller variables (an API token included) are not used.
 7. Verify all preview bytes with `tools/readback.py --site SITE --url PREVIEW
    --output PRIVATE_RESULT`. Verify root/City CSP, attachment headers, a real 404,
    malformed links, normal navigation, map/replay and phone-width layout. The
