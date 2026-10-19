@@ -1,10 +1,11 @@
+import {setAttr} from './dom.js';
 // Presentation consumes only records already accepted by the runtime facade.
 const ZONES=['A','B','C','D'];
 export const amount=r=>r.n/r.d;
 export const km=r=>(amount(r)/1000).toFixed(1);
 const STATES={idle:'Ready / idle',pickup:'COD · pickup',passenger_trip:'COD · passenger trip',rebalancing:'COD · empty repositioning',unavailable:'VOR'};
 export const pretty=s=>Object.hasOwn(STATES,s)?STATES[s]:s;
-export function element(doc,tag,attrs={},children=[]){const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,String(v));for(const c of [children].flat())if(c!==null&&c!==undefined)n.appendChild(typeof c==='object'?c:doc.createTextNode(String(c)));return n;}
+export function element(doc,tag,attrs={},children=[]){const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))setAttr(n,k,v);for(const c of [children].flat())if(c!==null&&c!==undefined)n.appendChild(typeof c==='object'?c:doc.createTextNode(String(c)));return n;}
 export function renderHeadlines(doc,records){
  const el=(...a)=>element(doc,...a),maxEmpty=Math.max(...records.map(r=>amount(r.metrics.empty_m))),maxLost=Math.max(1,...records.map(r=>r.metrics.expired));
  doc.getElementById('headline').replaceChildren(...records.map(r=>{const m=r.metrics,title=r.policy.id==='reactive'?'Reactive':'Forecast';const bar=(label,value,max,text)=>el('div',{class:'metric-bar'},[el('p',{},[el('span',{},label),el('strong',{},text)]),el('div',{class:'bar-track','aria-hidden':'true'},el('span',{style:`width:${max?value/max*100:0}%`}))]);return el('article',{class:`outcome ${r.policy.id}`},[el('p',{class:'eyebrow'},title),el('p',{class:'served'},[el('strong',{},m.served),` / ${m.admitted} requests picked up`]),bar('Empty distance',amount(m.empty_m),maxEmpty,`${km(m.empty_m)} km`),bar('Unserved requests',m.expired,maxLost,m.expired),el('p',{class:'note'},`${km(m.pickup_m)} km pickup approach + ${km(m.rebalancing_m)} km repositioning. ${m.completed} trips completed; ${m.picked_up} picked up but unfinished at 120 min. ${m.pending+m.assigned} still awaiting pickup.`)]);}));

@@ -1,4 +1,4 @@
-import {flowButton as button,el} from './dom.js';
+import {flowButton as button,el,setAttr} from './dom.js';
 import {SURFACE_FRAMES,frameView,glossaryView} from './teaching-frames.js';
 import {teachingResult,pairedProjection} from './teaching-projection.js';
 import {displayText,setBusy} from './display-text.js';
@@ -23,7 +23,7 @@ function download(label,name,record){
   return link;
 }
 function schematic(){
-  const svg=(tag,attrs,text)=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));if(text)n.textContent=text;return n;};
+  const svg=(tag,attrs,text)=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))setAttr(n,k,v);if(text)n.textContent=text;return n;};
   const graph=svg('svg',{viewBox:'0 0 660 320',role:'img','aria-label':'Synthetic Austin schematic: Site A at North neighborhood, Site B at East neighborhood. No real roads.'});
   const point=p=>[100+p.x*.05,270-p.y*.022],byId=new Map(AUSTIN_REGION.geometry.nodes.map(p=>[p.id,p]));
   for(const [a,b] of AUSTIN_REGION.geometry.edges){const pa=point(byId.get(a)),pb=point(byId.get(b));graph.appendChild(svg('line',{x1:pa[0],y1:pa[1],x2:pb[0],y2:pb[1],stroke:'#9bab9c','stroke-width':5}));}

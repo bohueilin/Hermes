@@ -1,4 +1,5 @@
 import {networkChrome} from './network-chrome.js';
+import {setAttr} from './dom.js';
 import {FLOW_TRUST} from '../model/depot-flow-contract.js';
 import {DELIVERY_MANIFEST_SCHEMA,deliveryInput,deliveryDigest} from '../model/software-delivery-contract.js';
 import {createDeliveryJob} from '../runtime/software-delivery-job.js';
@@ -6,7 +7,7 @@ import {createDeliveryPlayer} from './software-delivery-player.js';
 import {createDeliveryProjection,deliveryChapters,deliveryCaption,ARM_NAMES,CASE_NAMES,seconds,gb,rate} from './software-delivery-view.js';
 
 const text=(tag,attrs={},children=[])=>{
- const n=document.createElement(tag);for(const [k,v]of Object.entries(attrs)){if(k==='on'){for(const [event,fn]of Object.entries(v))n.addEventListener(event,fn);}else if(v!==null)n.setAttribute(k,String(v));}
+ const n=document.createElement(tag);for(const [k,v]of Object.entries(attrs)){if(k==='on'){for(const [event,fn]of Object.entries(v))n.addEventListener(event,fn);}else if(v!==null)setAttr(n,k,v);}
  for(const child of [children].flat().filter(x=>x!==null&&x!==undefined))n.appendChild(typeof child==='string'?document.createTextNode(child):child);return n;
 };
 const button=(label,fn,attrs={})=>text('button',{type:'button',...attrs,on:{click:fn}},label);

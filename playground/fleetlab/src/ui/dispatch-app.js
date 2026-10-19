@@ -1,10 +1,11 @@
 import {networkChrome} from './network-chrome.js';
+import {setAttr} from './dom.js';
 import {createDispatchSession} from '../runtime/dispatch-session.js';
 export function startDispatch({createWorker}){
  networkChrome(document.body);
  const doc=document,by=id=>doc.getElementById(id),motion=window.matchMedia('(prefers-reduced-motion: reduce)');
- const el=(tag,attrs={},children=[])=>{const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);for(const c of [].concat(children))n.appendChild(c&&typeof c==='object'?c:doc.createTextNode(String(c)));return n;};
- const svg=(tag,attrs,text='')=>{const n=doc.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);n.textContent=text;return n;};
+ const el=(tag,attrs={},children=[])=>{const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))setAttr(n,k,v);for(const c of [].concat(children))n.appendChild(c&&typeof c==='object'?c:doc.createTextNode(String(c)));return n;};
+ const svg=(tag,attrs,text='')=>{const n=doc.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs))setAttr(n,k,v);n.textContent=text;return n;};
  const table=(headers,rows)=>el('table',{},[el('thead',{},el('tr',{},headers.map(x=>el('th',{scope:'col'},x)))),el('tbody',{},rows.map(row=>el('tr',{},row.map(x=>el('td',{},x??'Unavailable')))))]);
  const labels={greedy:'Closest-first',joint:'Planned together: current requests'},pretty={idle:'Ready / idle',approach:'COD · approach',pickup:'COD · pickup service',trip:'COD · passenger trip'};
  const titles=['A car has an opportunity cost.','Which riders have fewer options?','Choose the closest car, one rider at a time.','Consider current assignments together.','Best now can leave a gap later.','Your assignment. Your next boundary.'];

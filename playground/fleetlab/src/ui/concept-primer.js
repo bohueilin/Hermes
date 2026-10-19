@@ -1,4 +1,4 @@
-import {el} from './dom.js';
+import {el,setAttr} from './dom.js';
 
 // Static teaching diagrams, deliberately independent of records, clocks and model execution.
 const node=(name,detail,tone='')=>el('div',{class:`primer-node ${tone}`},[el('strong',{},name),el('span',{},detail)]);
@@ -24,8 +24,8 @@ export function conceptPrimer(kind){
 /** Decorative line art; all meaning also appears in adjacent visible HTML. */
 export function learningGlyph(kind){
  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
- for(const [k,v]of Object.entries({viewBox:'0 0 200 90',class:'learning-glyph','aria-hidden':'true',focusable:'false'}))svg.setAttribute(k,v);
- const add=(tag,attrs)=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);svg.appendChild(n);};
+ for(const [k,v]of Object.entries({viewBox:'0 0 200 90',class:'learning-glyph','aria-hidden':'true',focusable:'false'}))setAttr(svg,k,v);
+ const add=(tag,attrs)=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs))setAttr(n,k,v);svg.appendChild(n);};
  const line=d=>add('path',{d,class:'glyph-line'});
  if(kind==='capacity'){
   line('M12 25H58Q73 25 73 45T90 65H182 M12 65H182');

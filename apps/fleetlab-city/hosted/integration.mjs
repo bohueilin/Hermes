@@ -1,5 +1,17 @@
 // Hosted FleetLab entry points. The standalone teaching/offline build is unchanged.
 // No City renderer, recordings or map data load until the visitor follows a link.
+/** Builds hosted page nodes; refuses on* handlers and javascript: or data: links, like dom.js setAttr. */
+export function hostedNode(doc, tag, attrs, children) {
+  const element = doc.createElement(tag);
+  for (const [key, value] of Object.entries(attrs || {})) {
+    if (/^on/i.test(key) || /^(href|src)$/i.test(key) && /^(javascript|data):/i.test(String(value).replace(/[\0- ]/g, ''))) throw new Error(`unsafe attribute ${key}`);
+    element.setAttribute(key, value);
+  }
+  for (const child of [children].flat().filter(value => value != null)) {
+    element.appendChild(typeof child === 'string' ? doc.createTextNode(child) : child);
+  }
+  return element;
+}
 export function mountCityEntry(doc = document) {
   if (doc.getElementById('city-explorer-entry')) return;
   const labLinks = doc.querySelector('.lab-links');
@@ -10,14 +22,7 @@ export function mountCityEntry(doc = document) {
   const flowHero = doc.querySelector('.depot-flow-lab .flow-hero');
   if (!labLinks || !startGrid || !catalogGrid || !networkQuestions || !flowHero?.querySelector('p.flow-run-help')) throw new Error('FleetLab hosted entry contract changed');
   const deliveryAvailable = Boolean(doc.querySelector('meta[name="fleetlab-software-delivery"][content="/network-flows/software-delivery/release.json"]'));
-  const node = (tag, attrs, children) => {
-    const element = doc.createElement(tag);
-    for (const [key, value] of Object.entries(attrs || {})) element.setAttribute(key, value);
-    for (const child of [children].flat().filter(value => value != null)) {
-      element.appendChild(typeof child === 'string' ? doc.createTextNode(child) : child);
-    }
-    return element;
-  };
+  const node = (tag, attrs, children) => hostedNode(doc, tag, attrs, children);
   labLinks.appendChild(node('a', {id:'city-explorer-entry', class:'studio-button', href:'/city-explorer/'}, 'City Explorer'));
   labLinks.appendChild(node('a', {id:'capacity-lab-entry', class:'studio-button', href:'/network-flows/capacity/'}, 'Scheduling or capacity?'));
   // Replace the offline entry, including its hash-navigation handler, with a native hosted link.

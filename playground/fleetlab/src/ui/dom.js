@@ -16,6 +16,14 @@ function appendChildren(node, children) {
   }
 }
 
+/** setAttribute refusing on* handlers and javascript: or data: URLs (JSON and raster images aside), read as browsers do. */
+export function setAttr(node, name, value) {
+  if (/^on/i.test(name)) throw new Error(`inline event attribute ${name} is not allowed; use attrs.on`);
+  const url = /^(href|src|xlink:href)$/i.test(name) && String(value).replace(/[\0- ]/g, "");
+  if (url && /^(javascript|data):/i.test(url) && !/^data:(application\/json|image\/(png|jpeg|webp))[;,]/i.test(url)) throw new Error(`unsafe ${name} URL`);
+  node.setAttribute(name, String(value));
+}
+
 /**
  * Create an element. `attrs` values go through setAttribute (true gives an empty attribute; null, undefined and false
  * are skipped); `attrs.on` maps event names to listeners. `children` is a string or number (set as textContent), a
@@ -28,9 +36,8 @@ export function el(tag, attrs = {}, children = []) {
       for (const [type, listener] of Object.entries(value)) node.addEventListener(type, listener);
       continue;
     }
-    if (/^on/i.test(name)) throw new Error(`inline event attribute ${name} is not allowed; use attrs.on`);
     if (value === null || value === undefined || value === false) continue;
-    node.setAttribute(name, value === true ? "" : String(value));
+    setAttr(node, name, value === true ? "" : value);
   }
   if (typeof children === "string" || typeof children === "number") {
     node.textContent = String(children);
@@ -100,4 +107,4 @@ export const flowTable=(caption,heads,rows,attrs={})=>el('div',{class:'flow-tabl
 export const flowDetail=(title,children)=>el('details',{},[el('summary',{},title),...children]);
 export const flowButton=(text,fn,attrs={})=>el('button',{type:'button',class:attrs===true?'studio-button studio-button-primary':'studio-button',on:{click:fn},...attrs},text);
 
-export function svgElement(tag,attrs={},text,skip=0){const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs)){if(skip&&(v==null||skip===2&&v===false))continue;n.setAttribute(k,String(v));}if(text!==undefined)n.textContent=String(text);return n;}
+export function svgElement(tag,attrs={},text,skip=0){const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs)){if(skip&&(v==null||skip===2&&v===false))continue;setAttr(n,k,v);}if(text!==undefined)n.textContent=String(text);return n;}
