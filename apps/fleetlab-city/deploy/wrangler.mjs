@@ -1,15 +1,15 @@
 // Exact upstream CLI plus the previously used serial Pages upload settings.
 // Never modifies the installed upstream file; regenerates a local sibling copy.
-import {mkdtempSync,readFileSync,realpathSync,rmSync,writeFileSync} from 'node:fs';
+import {mkdirSync,mkdtempSync,readFileSync,realpathSync,rmSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {verifyStage,releaseCommand,wranglerSpawnOptions,deployPreflight} from './stage-guard.mjs';
+import {verifyStage,releaseCommand,wranglerSpawnOptions,deployPreflight,checkWranglerLog} from './stage-guard.mjs';
 
-const args=process.argv.slice(2), deploy=releaseCommand(args)==='deploy';
-if(deploy){
+const args=process.argv.slice(2), command=releaseCommand(args);
+if(command==='deploy'){
   const repository=fileURLToPath(new URL('../../../',import.meta.url));
   if(resolve(execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim())!==resolve(repository))throw Error('Run the release tool from its own source checkout.');
   if(execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim())throw Error('Commit reviewed changes before publishing.');
@@ -31,9 +31,13 @@ for(const [from,to] of [['MAX_BUCKET_SIZE = 40 * 1024 * 1024;','MAX_BUCKET_SIZE 
 const patched=new URL('./node_modules/wrangler/wrangler-dist/cli.fleetlab.cjs',import.meta.url);
 writeFileSync(patched,source,{mode:0o600});
 // An empty temporary working directory: no caller file can add config, server code or credentials.
-const cwd=mkdtempSync(join(tmpdir(),'fleetlab-wrangler-'));
-let result;
-try{result=spawnSync(process.execPath,['--no-warnings',fileURLToPath(patched),...args],wranglerSpawnOptions(process.env,cwd));}
-finally{rmSync(cwd,{recursive:true,force:true});}
+// Wrangler's log for this run sits beside it and is kept unless the run and the check pass.
+const run=mkdtempSync(join(tmpdir(),'fleetlab-wrangler-')),cwd=join(run,'cwd'),log=join(run,'wrangler.log');
+mkdirSync(cwd);
+const result=spawnSync(process.execPath,['--no-warnings',fileURLToPath(patched),...args],wranglerSpawnOptions(process.env,cwd,log));
+rmSync(cwd,{recursive:true,force:true});
 if(result.error)throw result.error;
+// --version makes no request; the other commands must show no server code and only Cloudflare hosts.
+if(command!=='version')checkWranglerLog(log);
+if(result.status===0)rmSync(run,{recursive:true,force:true});
 process.exit(result.status??1);

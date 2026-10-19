@@ -1,5 +1,5 @@
 import {verifyBrandedCity} from './branded-city.mjs';
-import {readFileSync,readdirSync,lstatSync} from 'node:fs';
+import {existsSync,readFileSync,readdirSync,lstatSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {resolve,relative,dirname,join} from 'node:path';
@@ -7,10 +7,25 @@ import {verifyIntegrationAssets} from './integration-assets.mjs';
 
 // Wrangler reads .env files, functions/, Wrangler configs and its account cache from its working
 // directory, and API hosts or credentials from the environment: it receives neither from the caller.
+// Its run log goes to a file the wrapper checks afterwards.
 const WRANGLER_ENV=['PATH','HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','LC_ALL','TERM','NO_COLOR'];
-export function wranglerSpawnOptions(environment,cwd){
+export function wranglerSpawnOptions(environment,cwd,log){
   const env=Object.fromEntries(WRANGLER_ENV.filter(name=>environment[name]!==undefined).map(name=>[name,environment[name]]));
-  return {stdio:'inherit',cwd,env:{...env,WRANGLER_SEND_METRICS:'false'}};
+  return {stdio:'inherit',cwd,env:{...env,WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_PATH:log}};
+}
+
+// Wrangler logs these when it bundles or routes server code or follows a config redirect, and logs
+// every API request and token refresh with its full URL.
+const SERVER_OUTPUT=['Compiled Worker','Uploading Functions bundle','Uploading Worker bundle','Uploading _routes.json','Using redirected Wrangler configuration'];
+const API_HOSTS=['api.cloudflare.com','dash.cloudflare.com'];
+export function checkWranglerLog(log){
+  if(!existsSync(log))throw Error(`Wrangler wrote no log at ${log}, so its output and API hosts are unchecked.`);
+  const text=readFileSync(log,'utf8');
+  for(const marker of SERVER_OUTPUT)if(text.includes(marker))throw Error(`Wrangler logged "${marker}"; review the release and ${log}.`);
+  for(const [,address] of text.matchAll(/(?:-- START CF API REQUEST: (?:[A-Z]+ )?|Fetching auth token from )(\S+)/g)){
+    const url=URL.canParse(address)?new URL(address):null;
+    if(!url||url.protocol!=='https:'||url.port||!API_HOSTS.includes(url.hostname))throw Error(`Wrangler contacted ${address}, not a Cloudflare API or token host; review ${log}.`);
+  }
 }
 
 // Pages also deploys server code and settings from outside the reviewed file list: a stage
