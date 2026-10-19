@@ -1165,7 +1165,7 @@ function draftMatchesPreset(draft, preset, ok) {
 /**
  * The SITUATION block of a casebook preset (design section 4.4): the lead, the situation, the proxy, what lies outside the
  * model and what to watch. All of it is the preset's copy; nothing here names a verdict. Under an edited draft only the
- * lead and the situation stay, with one line saying the setup no longer matches the case.
+ * lead and the situation stay; renderSetup says above the collapsed sheet that the setup no longer matches the case.
  */
 export function situationBlock(preset, matches) {
   const s = labels.SITUATION;
@@ -1173,7 +1173,7 @@ export function situationBlock(preset, matches) {
     el("p", { class: "fl-muted", "data-role": "situation-lead" }, s.lead),
     el("p", { "data-role": "situation" }, preset.situation),
   ];
-  if (!matches) return [...head, el("p", { class: "fl-muted", "data-role": "situation-edited" }, labels.situationEdited({ id: preset.id }))];
+  if (!matches) return head;
   return [
     ...head,
     heading(3, s.proxyHeading),
@@ -1194,9 +1194,10 @@ export function renderSetup(state, { dispatch, ui, rerender, onFreeze, phone = f
   const { ok, checks, errors } = setupChecks(draft);
   const running = state.experiment.status === "running";
   const situation = situationPreset(state);
+  const matches = situation !== null && draftMatchesPreset(draft, situation, ok);
   // The SITUATION block exists only for a casebook preset (absent, not hidden, for every other one).
   const blocks = [
-    situation === null ? null : ["situation", () => situationBlock(situation, draftMatchesPreset(draft, situation, ok))],
+    situation === null ? null : ["situation", () => situationBlock(situation, matches)],
     ["question", () => questionBlock(draft, dispatch)],
     ["scenario", () => scenarioBlock(state, ui, rerender)],
     ["oneChange", () => axisBlock(draft, dispatch)],
@@ -1238,6 +1239,7 @@ export function renderSetup(state, { dispatch, ui, rerender, onFreeze, phone = f
     on: { click: () => onFreeze() },
   }, labels.EXPERIMENT_SETUP.freezeAndRun);
   return el("section", { class: "fl-panel", "data-role": "setup", "aria-label": labels.EXPERIMENT_SETUP.heading }, [
+    situation === null || matches ? null : el("p", { class: "fl-muted", "data-role": "situation-edited" }, labels.situationEdited({ id: situation.id })),
     el("details", {class:"teaching-configuration",open:!!ui.configurationOpen,on:{toggle:event=>{ui.configurationOpen=event.target.hasAttribute("open");}}}, [el("summary", {}, "Review or change this paired test"),el("header", {}, [heading(2, labels.EXPERIMENT_SETUP.heading), el("p", { class: "fl-teaching-chip" }, labels.HONESTY.verdictChip)]),presetChooser(state, dispatch),...sections,el("section", { "data-role": "checks-section" }, [heading(3, labels.EXPERIMENT_SETUP.checksHeading), checkList, checkErrors(errors)])]),
     freeze,
     ok&&!running ? null : el("p", { class: "fl-muted", "data-role": "freeze-disabled",role:"status" }, running?"A comparison is running. Wait for it to finish or cancel it.":labels.EXPERIMENT_SETUP.freezeDisabled),
@@ -1477,7 +1479,10 @@ export function mountExperiment(container, { store, host, copy = null, now = wal
     const view = verdictView(payload, ex.frozen);
     const strip = view.validity === "VALID" && typeof primaryStrip === "function" ? primaryStrip({ view, verdict: ex.verdict, spec: ex.frozen.spec }) : null;
     const rails = view.validity === "VALID" && typeof guardrailRows === "function" ? (guardrailRows({ view, verdict: ex.verdict, spec: ex.frozen.spec }) ?? []) : [];
-    const card = renderVerdictCard(view, { ui, rerender: render, strip, rails, notices: freezeNotices(state), actions: verdictActions(state, view) });
+    // The header names the change actually tested, because a preset's title stays on screen over an edited axis.
+    const axis = ex.frozen.spec.axis, knob = axis.id.startsWith("policy:") ? parseAxis(axis.id).knob : axis.id.slice("parameter:".length);
+    const tested = el("p", { "data-role": "change-tested" }, `Change tested: ${differenceText({ knob, from: axis.baseline, to: axis.candidate })}`);
+    const card = renderVerdictCard(view, { ui, rerender: render, strip, rails, notices: [tested, ...freezeNotices(state)], actions: verdictActions(state, view) });
     if (ex.verdictStale) card.setAttribute("class", "fl-verdict fl-stale");
     return card;
   }
