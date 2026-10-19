@@ -30,6 +30,8 @@ CITY_CSP = (
 
 ANALYTICS_ORIGINS = ['self','https://www.googletagmanager.com',
                      'https://*.google-analytics.com','https://*.google.com']
+# The page's Google tag sets cookies, so a hosted presentation never declares storage false.
+ANALYTICS_STORAGE = "Google Analytics first-party cookies on fleetlab.pages.dev"
 
 
 def sha_file(path):
@@ -129,6 +131,7 @@ def verify_viewer(root, role):
         or network.get("accounts") is not False
         or network.get("analytics") is not bool(presentation)
         or network.get("provider_calls") is not False
+        or (presentation and network.get("storage") != ANALYTICS_STORAGE)
     ):
         raise ValueError(f"{role} network contract differs from declared presentation")
     if release.get("scope") != "REVIEW_ONLY" or release.get("public_deployment") != "NOT_PERFORMED":

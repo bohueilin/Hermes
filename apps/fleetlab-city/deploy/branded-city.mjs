@@ -9,6 +9,8 @@ const ordered=value=>value&&typeof value==='object'&&!Array.isArray(value)?Objec
 const json=value=>JSON.stringify(ordered(value),null,2)+'\n';
 const same=(a,b)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const fingerprint=data=>({bytes:Buffer.byteLength(data),sha256:createHash('sha256').update(data).digest('hex')});
+// Same fields as tools/hosted-brand.py; the Google tag's cookies make storage a description, not false.
+export const hostedNetwork=network=>({...network,schema:'fleetlab.city-network/1.1.0',origins:['self','https://www.googletagmanager.com','https://*.google-analytics.com','https://*.google.com'],analytics:true,storage:'Google Analytics first-party cookies on fleetlab.pages.dev',hosting_disclosure:'Google Analytics measures visits on fleetlab.pages.dev. Preview collection is disabled. Cloudflare receives hosting requests.'});
 export function verifyBrandedCity(site,selection,files,commit){
  const current=selection.current,prior=selection.rollback;
  for(const item of [current,prior])if(!/^city-explorer\/releases\/[a-f0-9]{16}$/.test(item?.path??''))throw Error('Invalid City generation path.');
@@ -21,8 +23,7 @@ export function verifyBrandedCity(site,selection,files,commit){
   if(!same(actual,manifest.files)||hash!==item.release_sha256||!item.path.endsWith(hash.slice(0,16)))throw Error('City manifest or generation identity differs.');
  }
  const html=renderPage(readFileSync(join(site,prior.path,'index.html'),'utf8'),{analytics:true});
- const network=JSON.parse(readFileSync(join(site,prior.path,'network.json'),'utf8'));
- Object.assign(network,{schema:'fleetlab.city-network/1.1.0',origins:['self','https://www.googletagmanager.com','https://*.google-analytics.com','https://*.google.com'],analytics:true,hosting_disclosure:'Google Analytics measures visits on fleetlab.pages.dev. Preview collection is disabled. Cloudflare receives hosting requests.'});
+ const network=hostedNetwork(JSON.parse(readFileSync(join(site,prior.path,'network.json'),'utf8')));
  const changes={'index.html':html,'network.json':json(network),'_headers':'/city-explorer/*\n  Content-Security-Policy: '+policyFor(CSP,true)+'\n'};
  if(base.files['index.html.gz'])changes['index.html.gz']=gzipSync(html,{level:9});
  const expectedFiles={...base.files,...Object.fromEntries(Object.entries(changes).map(([p,data])=>[p,fingerprint(data)]))};

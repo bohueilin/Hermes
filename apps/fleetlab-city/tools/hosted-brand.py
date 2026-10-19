@@ -89,6 +89,7 @@ def derive_viewer(viewer, out, source_commit):
         schema="fleetlab.city-network/1.1.0",
         origins=launch.ANALYTICS_ORIGINS,
         analytics=True,
+        storage=launch.ANALYTICS_STORAGE,
         hosting_disclosure=(
             "Google Analytics measures visits on fleetlab.pages.dev. "
             "Preview collection is disabled. Cloudflare receives hosting requests."
