@@ -119,6 +119,10 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    Wrangler runs in an empty temporary directory with only PATH, HOME, user, shell,
    temp, locale and terminal variables, so `.env` files, `functions/`, Wrangler configs,
    a shared account cache and caller variables (an API token included) are not used.
+   Before uploading it refuses a stage with `_worker.js`, `_routes.json`, `functions/`
+   or any `.DS_Store`, `node_modules`, `.git` or `.wrangler` entry; a `functions/` in
+   the checkout root or `apps/fleetlab-city/deploy/`; and any Wrangler config or
+   `.env` file in the checkout root, the temporary directory or any of their parents.
 7. Verify all preview bytes with `tools/readback.py --site SITE --url PREVIEW
    --output PRIVATE_RESULT`. Verify root/City CSP, attachment headers, a real 404,
    malformed links, normal navigation, map/replay and phone-width layout. The

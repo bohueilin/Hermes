@@ -2,7 +2,7 @@ import {verifyBrandedCity} from './branded-city.mjs';
 import {readFileSync,readdirSync,lstatSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
-import {resolve,relative,dirname} from 'node:path';
+import {resolve,relative,dirname,join} from 'node:path';
 import {verifyIntegrationAssets} from './integration-assets.mjs';
 
 // Wrangler reads .env files, functions/, Wrangler configs and its account cache from its working
@@ -11,6 +11,32 @@ const WRANGLER_ENV=['PATH','HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','LC_A
 export function wranglerSpawnOptions(environment,cwd){
   const env=Object.fromEntries(WRANGLER_ENV.filter(name=>environment[name]!==undefined).map(name=>[name,environment[name]]));
   return {stdio:'inherit',cwd,env:{...env,WRANGLER_SEND_METRICS:'false'}};
+}
+
+// Pages also deploys server code and settings from outside the reviewed file list: a stage
+// _worker.js, _routes.json or functions/, a functions/ beside the tools, and Wrangler configs or
+// .env files in Wrangler's directory or any parent. It silently skips the stray names.
+const SERVER_CODE=['_worker.js','_routes.json','functions'],STRAY=['.DS_Store','node_modules','.git','.wrangler'];
+const SETTINGS=['wrangler.toml','wrangler.json','wrangler.jsonc','.wrangler/deploy/config.json','.env','.env.local'];
+function present(path){
+  try{lstatSync(path);return true;}
+  catch(error){if(error.code==='ENOENT'||error.code==='ENOTDIR')return false;throw error;}
+}
+const ancestors=dir=>dir===dirname(dir)?[dir]:[dir,...ancestors(dirname(dir))];
+export function deployPreflight(site,repository,deployDir,wranglerParent){
+  site=resolve(site);
+  for(const name of SERVER_CODE)if(present(join(site,name)))throw Error(`Stage has server-side ${name}; Pages would run it.`);
+  const walk=dir=>{
+    for(const entry of readdirSync(dir,{withFileTypes:true})){
+      if(STRAY.includes(entry.name))throw Error(`Stage has ${relative(site,join(dir,entry.name))}; Pages would skip it.`);
+      if(entry.isDirectory())walk(join(dir,entry.name));
+    }
+  };
+  walk(site);
+  for(const dir of [repository,deployDir])if(present(join(dir,'functions')))throw Error(`${join(dir,'functions')} would add Functions to the site.`);
+  for(const dir of [...ancestors(resolve(repository)),...ancestors(resolve(wranglerParent))]){
+    for(const name of SETTINGS)if(present(join(dir,name)))throw Error(`${join(dir,name)} could change the release's settings, code or credentials.`);
+  }
 }
 
 export function releaseCommand(args){

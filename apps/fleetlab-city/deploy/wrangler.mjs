@@ -1,12 +1,12 @@
 // Exact upstream CLI plus the previously used serial Pages upload settings.
 // Never modifies the installed upstream file; regenerates a local sibling copy.
-import {mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
+import {mkdtempSync,readFileSync,realpathSync,rmSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {verifyStage,releaseCommand,wranglerSpawnOptions} from './stage-guard.mjs';
+import {verifyStage,releaseCommand,wranglerSpawnOptions,deployPreflight} from './stage-guard.mjs';
 
 const args=process.argv.slice(2), deploy=releaseCommand(args)==='deploy';
 if(deploy){
@@ -15,6 +15,8 @@ if(deploy){
   if(execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim())throw Error('Commit reviewed changes before publishing.');
   const head=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
   args[2]=resolve(args[2]);
+  // Wrangler runs in a fresh directory under tmpdir(), so its config search starts there.
+  deployPreflight(args[2],repository,fileURLToPath(new URL('./',import.meta.url)),realpathSync(tmpdir()));
   verifyStage(args[2],head,repository);
   const message=execFileSync('git',['show','-s','--format=%B',head],{encoding:'utf8'}).trim();
   args.push('--commit-hash',head,'--commit-dirty=false','--commit-message',message);
