@@ -1,6 +1,7 @@
 """A public presentation release must not rewrite its source or scientific data."""
 
 import importlib.util
+import gzip
 import json
 import subprocess
 import tempfile
@@ -25,6 +26,27 @@ def write_base(base):
 
 
 class HostedBrandTest(unittest.TestCase):
+    def test_hosted_gzip_matches_the_independent_node_guard_runtime(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            raw, base, out = Path(tmp) / "raw", Path(tmp) / "base", Path(tmp) / "new"
+            write_base(raw)
+            (raw / "index.html.gz").write_bytes(gzip.compress((raw / "index.html").read_bytes(), mtime=0))
+            release = json.loads((raw / "release.json").read_text())
+            release["files"] = {k: v for k, v in launch.inventory(raw).items() if k != "release.json"}
+            launch.write_json(raw / "release.json", release)
+            original_gzip = (raw / "index.html.gz").read_bytes()
+            brand.project_hosted_base(raw, base)
+            brand.derive_viewer(base, out, "a" * 40)
+            expected = subprocess.run(
+                ["node", "--input-type=module", "-e",
+                 "import {gzipSync} from 'node:zlib'; import {readFileSync} from 'node:fs'; "
+                 "process.stdout.write(gzipSync(readFileSync(0),{level:9}));"],
+                input=(out / "index.html").read_bytes(), capture_output=True, check=True,
+            ).stdout
+            self.assertEqual((out / "index.html.gz").read_bytes(), expected)
+            self.assertEqual((base / "index.html.gz").read_bytes(), original_gzip)
+            self.assertEqual((raw / "index.html.gz").read_bytes(), original_gzip)
+
     def test_hosted_projection_omits_only_inert_headers_without_mutating_input(self):
         self.assertTrue(callable(getattr(brand, "project_hosted_base", None)))
         with tempfile.TemporaryDirectory() as tmp:

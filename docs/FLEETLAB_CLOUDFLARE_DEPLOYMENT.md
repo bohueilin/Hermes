@@ -28,13 +28,14 @@ Google tag `G-04EZ8EZWQ2`, Git push and public-site publication. The existing fi
 all teaching/simulation behavior remain. This is the explicit website-only override
 of the historical no-telemetry/no-publication instruction.
 
-For this generation, first run `tools/hosted-brand.py` against the original current
-City viewer with `--source-commit FULL_SHA` and a new output directory. This derives
-presentation/network metadata only; the original input becomes the retained rollback.
-Use that new viewer with `integrate-site.py --brand-update`, alongside the usual
-`--flow-update`, exact source commit and teaching package. Do not mutate an old viewer.
-The upload guard independently reproduces the new City presentation from its retained
-base and rejects changes to scientific files, even after outer manifests are resealed.
+For a new generation, use the tracked local recipe below. It first runs
+`tools/hosted-brand.py --project-base` against the approved original City viewer,
+creating a new rollback generation that omits its inert nested `_headers` file.
+The original input remains unchanged. The presentation derives from that projected
+base with `--source-commit FULL_SHA`; both generations use the effective root headers.
+Integration receives the original manifest through `--city-base-manifest` and retains
+its exact bytes as review evidence. The guard reproduces both transformations from
+the independently pinned original and rejects resealed changes to scientific files.
 
 Hosted artwork is a separate, exact three-file inventory capped at 2 MiB. Its bytes
 count toward total generation storage; hosted JS/CSS count toward text and route
@@ -75,6 +76,34 @@ The subsequent October 13 Argon visual refinement uses the same release workflow
 
 Use the project's Python 3.11 environment for these tools. The Mac's default
 Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
+
+The tracked recipe reconstructs a verified local package from explicit inputs:
+
+```sh
+PYTHON_EXECUTABLE -B apps/fleetlab-city/deploy/build-release.py \
+  --commit FULL_SHA \
+  --legacy PRESERVED_LEGACY_DIR \
+  --legacy-readback LEGACY_READBACK_JSON \
+  --city-base ORIGINAL_CITY_DIR \
+  --city-source-offer ORIGINAL_SOURCE_OFFER_DIR \
+  --out NEW_OUTPUT_DIR
+```
+
+Replace `PYTHON_EXECUTABLE` with the selected Python interpreter. Run from the
+clean source checkout at `FULL_SHA`; the output parent must exist and the output
+must be new, outside the checkout or under its ignored `dist/`, and separate from
+every input. City input digests must match `deploy/approved-inputs.json`.
+The recipe builds and checks hosted/offline teaching files, verifies the source
+package, derives both City generations, integrates them, and independently verifies
+the complete stage. It neither installs dependencies nor accesses hosting services.
+
+Only a complete verified result is moved to `NEW_OUTPUT_DIR`. Its `stage/site/`
+is the served tree, `stage/review/` holds supporting evidence, and
+`local-release.json` records `server_side: none` for the verified local stage only.
+`build-inputs.json` records source/input digests and runtime versions without machine
+paths. Publication and hosted readback remain `NOT_PERFORMED`; the production receipt
+is unchanged. Preserve the original inputs for reconstruction. The steps below cover
+additional release checks and separately authorized publication.
 
 1. Run the City Python and Node suites, the teaching-lab Node suite and Hermes
    checks. Run the boundary suite with `FLEET_PLAYGROUND_BASE=bca4ccd`; do not

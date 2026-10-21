@@ -1,7 +1,6 @@
 """Source-owned public presentation; input generations are never edited."""
 
 import argparse
-import gzip
 import hashlib
 import importlib.util
 import json
@@ -121,8 +120,14 @@ def derive_viewer(viewer, out, source_commit):
     shutil.copytree(viewer, out)
     (out / "index.html").write_text(transform((viewer / "index.html").read_text()))
     if (out / "index.html.gz").exists():
+        # Use the verifier's Node runtime: Python gzip headers/zlib versions differ.
         (out / "index.html.gz").write_bytes(
-            gzip.compress((out / "index.html").read_bytes(), mtime=0)
+            subprocess.run(
+                ["node", "--input-type=module", "-e",
+                 "import {gzipSync} from 'node:zlib'; import {readFileSync} from 'node:fs'; "
+                 "process.stdout.write(gzipSync(readFileSync(0),{level:9}));"],
+                input=(out / "index.html").read_bytes(), capture_output=True, check=True,
+            ).stdout
         )
     network = json.loads((out / "network.json").read_text())
     network.update(

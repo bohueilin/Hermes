@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import {gzipSync} from 'node:zlib';
 import {lessonNavigation} from '../../../playground/fleetlab/tools/software-delivery-package.mjs';
 import {buildSite,buildHtml} from '../../../playground/fleetlab/tools/pack.mjs';
 import {buildPackageProof} from '../../../playground/fleetlab/tools/package-proof.mjs';
@@ -48,7 +49,7 @@ function integratedShell(packed,source){
  return [...lessonNavigation(packed),['index.html',html],['boot.js','import { mountCityEntry } from "./integration.mjs";\n'+packed.get('boot.js')+'\nmountCityEntry();\n'],['_headers',headers]];
 }
 
-export function stageFixture(){
+export function stageFixture({gzipCity=false}={}){
  const root=realpathSync(mkdtempSync(join(tmpdir(),'fleetlab-bound-stage-test-')));
  try{
   const source=join(root,'source'),playground=join(source,'playground/fleetlab');
@@ -72,6 +73,7 @@ export function stageFixture(){
    ['app.mjs','export const recorded = true;'],['data/catalog.json','{"recorded":42}'],
    ['style.css','body{color:#123}'],['_headers',"/city-explorer/*\n  Content-Security-Policy: script-src 'self'; connect-src 'self'\n"],
    ['network.json',JSON.stringify({origins:['self'],accounts:false,analytics:false,provider_calls:false})]]);
+  if(gzipCity)writeFiles(raw,[['index.html.gz',gzipSync(readFileSync(join(raw,'index.html')),{level:9})]]);
   writeFiles(raw,[['release.json',JSON.stringify({schema:'fleetlab.city-release/1.0.0',scope:'REVIEW_ONLY',public_deployment:'NOT_PERFORMED',
    compatibility:{viewer:'1.1.0',pack:'fleetlab.city-pack/1.0.0',run:'fleetlab.city-run/1.0.0',metrics:'fleetlab.city-metrics/1.0.0'},files:inventory(raw)})]]);
   const offer=join(root,'city-offer');
