@@ -7,13 +7,100 @@ import {resolve,relative,dirname,join} from 'node:path';
 import {verifyIntegrationAssets} from './integration-assets.mjs';
 
 // Wrangler reads .env files, functions/, Wrangler configs and its account cache from its working
-// directory or the nearest node_modules above it, and API hosts or credentials from the environment:
-// it receives neither from the caller. Its run log and cache go where the wrapper checks them
-// afterwards. npm gets the same short environment.
+// directory or the nearest node_modules above it, and API hosts or credentials from the environment.
+// Only the explicitly supplied release token may reach Wrangler; npm gets the short allowlist.
+// Wrangler's home/config, log and cache belong to this run, never the owner's ambient login.
 const TOOL_ENV=['PATH','HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','LC_ALL','TERM','NO_COLOR'];
 export const toolEnvironment=environment=>Object.fromEntries(TOOL_ENV.filter(name=>environment[name]!==undefined).map(name=>[name,environment[name]]));
-export function wranglerSpawnOptions(environment,cwd,log,cache){
-  return {stdio:'inherit',cwd,env:{...toolEnvironment(environment),WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_PATH:log,WRANGLER_CACHE_DIR:cache}};
+export function wranglerSpawnOptions(environment,cwd,log,cache,token){
+  const home=join(cwd,'..','home');
+  return {stdio:['ignore','inherit','inherit'],cwd,env:{...toolEnvironment(environment),HOME:home,XDG_CONFIG_HOME:join(home,'.config'),
+    ...(token===undefined?{}:{CLOUDFLARE_API_TOKEN:token}),
+    CLOUDFLARE_AUTH_USE_KEYRING:'false',WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_SANITIZE:'true',WRANGLER_LOG_PATH:log,WRANGLER_CACHE_DIR:cache}};
+}
+
+// This is non-secret provenance metadata, not a Keychain reader or a scope/expiry verifier.
+// The owner injects the value for this invocation; carry it opaquely without parsing or logging it.
+export function requireReleaseToken(environment,command){
+  if(command==='version')return;
+  if(!['deploy','list'].includes(command))throw Error('Unsupported token-bearing release command.');
+  const reference=environment.FLEETLAB_DEPLOY_TOKEN_REF;
+  if(typeof reference!=='string'||/^keychain:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.exec(reference)?.[0]!==reference)throw Error('Missing or malformed FleetLab token reference.');
+  const token=environment.CLOUDFLARE_API_TOKEN;
+  if(typeof token!=='string'||token==='')throw Error('An owner-injected FleetLab token is required for remote commands.');
+  return token;
+}
+
+// The pinned CLI otherwise includes malformed header values in validation errors. Sanitize at
+// that boundary without inspecting the token here. A changed or duplicated anchor is a refusal.
+export function sanitizeWranglerAuth(source){
+  const before='      const authorizationHeader = `Bearer ${auth2.apiToken}`;\n'+
+    '      validateAuthorizationHeaderValue(authorizationHeader);\n'+
+    '      headers.set("Authorization", authorizationHeader);';
+  const after='      const authorizationHeader = `Bearer ${auth2.apiToken}`;\n'+
+    '      try {\n'+
+    '        validateAuthorizationHeaderValue(authorizationHeader);\n'+
+    '        headers.set("Authorization", authorizationHeader);\n'+
+    '      } catch {\n'+
+    '        throw new UserError("Cloudflare API token could not be used for authentication.", {\n'+
+    '          telemetryMessage: "cfetch auth invalid authorization header"\n'+
+    '        });\n'+
+    '      }';
+  if(source.split(before).length!==2)throw Error('Wrangler authentication error contract changed.');
+  return source.replace(before,after);
+}
+
+// The wrapper already supplies all commit metadata. Avoid a redundant shell/Git child inheriting
+// the token from Wrangler. Noninteractive stdin also disables its missing-project creation path.
+export function disableWranglerGitDiscovery(source){
+  const before='        logger2.debug("pages deploy: Detecting git repository information...");\n'+
+    '        let isGitDir = true;\n'+
+    '        try {\n'+
+    '          childProcess.execSync(`git rev-parse --is-inside-work-tree`, {\n'+
+    '            stdio: "ignore"\n'+
+    '          });\n'+
+    '          logger2.debug("pages deploy: Git repository detected");\n'+
+    '        } catch (err) {\n'+
+    '          isGitDir = false;\n'+
+    '          logger2.debug(\n'+
+    '            `pages deploy: Not a git repository or git not available: ${err instanceof Error ? err.message : String(err)}`\n'+
+    '          );\n'+
+    '        }';
+  if(source.split(before).length!==2)throw Error('Wrangler Git discovery contract changed.');
+  return source.replace(before,'        const isGitDir = false;');
+}
+
+// The allowlisted production branch needs a fresh interactive acknowledgement of the verified
+// source commit. Preview, listing and local version checks do not consume terminal input.
+export async function confirmProduction(args,head,input=process.stdin,output=process.stderr){
+  if(releaseCommand(args)!=='deploy'||args[6]!=='feat/fleetlab-playground')return;
+  if(typeof head!=='string'||!/^[a-f0-9]{40}$/.test(head)||head.length!==40)throw Error('Production confirmation requires a full source commit.');
+  if(!input.isTTY||!output.isTTY)throw Error('Production confirmation requires an interactive terminal.');
+  const prefix=head.slice(0,12);
+  await new Promise((accept,reject)=>{
+    let answer='';
+    const failure=()=>finish(false);
+    function finish(confirmed){
+      input.removeListener('data',read);
+      for(const event of ['end','close','error'])input.removeListener(event,failure);
+      // Stop the parent consuming stdin before a later child inherits the same terminal.
+      input.pause();
+      if(confirmed)accept();else reject(Error('Production confirmation failed; no release was started.'));
+    }
+    function read(chunk){
+      // Bound the first line and require Enter; EOF after the right prefix is still refusal.
+      answer+=chunk.toString().slice(0,14);
+      const newline=answer.indexOf('\n');
+      if(newline!==-1){
+        const line=answer.slice(0,newline);
+        finish(line===prefix||line===prefix+'\r');
+      }else if(answer.length>13)failure();
+    }
+    input.on('data',read);
+    for(const event of ['end','close','error'])input.once(event,failure);
+    output.write(`Production: fleetlab / feat/fleetlab-playground\nSource commit: ${head}\nType ${prefix} to confirm: `);
+    if(input.readableEnded||input.destroyed)failure();else input.resume();
+  });
 }
 
 // Wrangler logs these when it bundles or routes server code or follows a config redirect, and logs

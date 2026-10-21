@@ -7,15 +7,23 @@ import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {verifyStage,releaseCommand,toolEnvironment,wranglerSpawnOptions,deployPreflight,checkWranglerLog,checkPagesCache} from './stage-guard.mjs';
+import {verifyStage,releaseCommand,toolEnvironment,wranglerSpawnOptions,deployPreflight,checkWranglerLog,checkPagesCache,confirmProduction,requireReleaseToken,sanitizeWranglerAuth,disableWranglerGitDiscovery} from './stage-guard.mjs';
 
 const args=process.argv.slice(2), command=releaseCommand(args), deployDir=fileURLToPath(new URL('./',import.meta.url));
+const token=requireReleaseToken(process.env,command);
+// Git, verification builders and npm must not inherit the injected credential or its reference.
+delete process.env.CLOUDFLARE_API_TOKEN;
+delete process.env.FLEETLAB_DEPLOY_TOKEN_REF;
 if(command==='deploy'){
   const repository=fileURLToPath(new URL('../../../',import.meta.url));
   if(resolve(execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim())!==resolve(repository))throw Error('Run the release tool from its own source checkout.');
   if(execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim())throw Error('Commit reviewed changes before publishing.');
   const head=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
   args[2]=resolve(args[2]);
+  await confirmProduction(args,head);
+  // User input may take time. Verify the source and stage after that pause, before any tools run.
+  if(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()!==head||
+    execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim())throw Error('Source changed during release confirmation; start again.');
   // Wrangler runs in a fresh directory under tmpdir(), so its config search starts there.
   deployPreflight(args[2],repository,deployDir,realpathSync(tmpdir()));
   verifyStage(args[2],head,repository);
@@ -26,7 +34,7 @@ if(command==='deploy'){
 // add config, server code or credentials), Wrangler's own account cache and its log; the cache and
 // log are kept unless the run and the checks pass. The tools, with the patched CLI copy, are
 // deleted as soon as Wrangler exits.
-const run=mkdtempSync(join(tmpdir(),'fleetlab-wrangler-')),tools=join(run,'tools'),cwd=join(run,'cwd'),cache=join(run,'cache'),log=join(run,'wrangler.log');
+const run=mkdtempSync(join(tmpdir(),'fleetlab-wrangler-')),tools=join(run,'tools'),cwd=join(run,'cwd'),cache=join(run,'cache'),log=join(run,'wrangler.log'),home=join(run,'home');
 let result;
 try{
   mkdirSync(tools);
@@ -40,13 +48,17 @@ try{
     if(source.split(from).length!==2)throw Error('Upload constant contract changed.');
     source=source.replace(from,to);
   }
+  source=sanitizeWranglerAuth(source);
+  source=disableWranglerGitDiscovery(source);
   const patched=join(dist,'cli.fleetlab.cjs');
   writeFileSync(patched,source,{mode:0o600,flag:'wx'});
   mkdirSync(cwd);
-  result=spawnSync(process.execPath,['--no-warnings',patched,...args],wranglerSpawnOptions(process.env,cwd,log,cache));
+  mkdirSync(join(home,'.config'),{recursive:true,mode:0o700});
+  result=spawnSync(process.execPath,['--no-warnings',patched,...args],wranglerSpawnOptions(process.env,cwd,log,cache,token));
 }finally{
   rmSync(tools,{recursive:true,force:true});
   rmSync(cwd,{recursive:true,force:true});
+  rmSync(home,{recursive:true,force:true});
   if(!result)rmSync(run,{recursive:true,force:true});
 }
 if(result.error)throw result.error;

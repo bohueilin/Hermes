@@ -20,9 +20,11 @@ test('Wrangler runs in a fresh empty directory with only an allowlisted environm
   assert.equal(options.env.WRANGLER_LOG_PATH,join(cwd,'..','wrangler.log'));
   // Pinned, so Wrangler never falls back to a node_modules/.cache/wrangler above its directory.
   assert.equal(options.env.WRANGLER_CACHE_DIR,join(cwd,'..','cache'));
-  for(const name of Object.keys(CANARY))assert.equal(name in options.env,false,name);
+  for(const name of Object.keys(CANARY).filter(name=>name!=='XDG_CONFIG_HOME'))assert.equal(name in options.env,false,name);
   assert.equal(options.env.WRANGLER_SEND_METRICS,'false');
-  assert.equal(options.env.HOME,process.env.HOME);
+  assert.equal(options.env.HOME,join(cwd,'..','home'));
+  assert.equal(options.env.XDG_CONFIG_HOME,join(cwd,'..','home/.config'));
+  assert.equal(options.env.WRANGLER_LOG_SANITIZE,'true');
   const probe='console.log(JSON.stringify({cwd:process.cwd(),files:require("fs").readdirSync("."),env:Object.keys(process.env).sort()}))';
   const seen=JSON.parse(spawnSync(process.execPath,['-e',probe],{...options,stdio:'pipe',encoding:'utf8'}).stdout);
   assert.equal(realpathSync(seen.cwd),realpathSync(cwd));
@@ -36,7 +38,7 @@ test('the release wrapper spawns Wrangler only through those options',()=>{
  const source=readFileSync(new URL('../deploy/wrangler.mjs',import.meta.url),'utf8');
  assert.match(source,/mkdtempSync\(join\(tmpdir\(\)/);
  assert.match(source,/cache=join\(run,'cache'\)/);
- assert.match(source,/wranglerSpawnOptions\(process\.env,cwd,log,cache\)/);
+ assert.match(source,/wranglerSpawnOptions\(process\.env,cwd,log,cache,token\)/);
  assert.doesNotMatch(source,/process\.env\}|\.\.\.process\.env/);
  // Outside a Git checkout Wrangler cannot detect the message it used to read from git.
  assert.match(source,/'--commit-message'/);
@@ -48,7 +50,7 @@ const WRAPPER=fileURLToPath(new URL('../deploy/wrangler.mjs',import.meta.url));
 const TOOL_FILES=['.npmrc','package-lock.json','package.json'];
 // Runs the wrapper with a stand-in npm that records what it was given and writes a CLI with the
 // wrong bytes, so the wrapper stops at the hash check: no network, and Wrangler never runs.
-function runWithFakeNpm(t,exitCode){
+function runWithFakeNpm(t,exitCode,args=['--version']){
  const source=readFileSync(WRAPPER,'utf8');
  // The only way to reach a real cli.js would be the release-tool folder's own node_modules.
  assert.doesNotMatch(source,/new URL\('\.\/node_modules/);
@@ -65,8 +67,8 @@ fs.writeFileSync('node_modules/wrangler/wrangler-dist/cli.js','not the pinned CL
 process.exit(${exitCode});
 `,{mode:0o755});
  // NODE_OPTIONS must stay harmless here: it also reaches the wrapper's own Node process.
- const env={...process.env,...CANARY,NODE_OPTIONS:'--no-deprecation',PATH:`${join(root,'bin')}:${process.env.PATH}`,TMPDIR:root};
- const child=spawnSync(process.execPath,[WRAPPER,'--version'],{env,encoding:'utf8'});
+ const env={...process.env,...CANARY,FLEETLAB_DEPLOY_TOKEN_REF:'keychain:synthetic-fixture',NODE_OPTIONS:'--no-deprecation',PATH:`${join(root,'bin')}:${process.env.PATH}`,TMPDIR:root};
+ const child=spawnSync(process.execPath,[WRAPPER,...args],{env,encoding:'utf8'});
  return {root,child,npm:JSON.parse(readFileSync(record,'utf8'))};
 }
 
@@ -91,6 +93,14 @@ test('the release wrapper stops when the fresh install fails',t=>{
  assert.match(child.stderr,/npm ci --ignore-scripts failed; the release tools were not installed\./);
  assert.doesNotMatch(child.stderr,/Unexpected Wrangler CLI bytes/);
  assert.deepEqual(readdirSync(root).sort(),['bin','npm.json']);
+});
+
+test('remote listing never passes the injected token or its reference to npm',t=>{
+ const {child,npm}=runWithFakeNpm(t,0,['pages','deployment','list','--project-name','fleetlab','--json']);
+ assert.equal(child.status,1);
+ assert.match(child.stderr,/Unexpected Wrangler CLI bytes/);
+ for(const name of [...Object.keys(CANARY),'FLEETLAB_DEPLOY_TOKEN_REF'])assert.equal(npm.env.includes(name),false,name);
+ assert.doesNotMatch(child.stdout+child.stderr,/canary|synthetic-fixture/);
 });
 
 test('the release wrapper writes its patched CLI copy only as a new file in the run directory',()=>{
