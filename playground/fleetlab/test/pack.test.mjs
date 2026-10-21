@@ -3,6 +3,7 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -28,7 +29,6 @@ import {
   bundle,
   checkOutputPath,
   checkSitePath,
-  CONTENT_SECURITY_POLICY,
   findRepositoryRoot,
   main as packMain,
   PackError,
@@ -41,6 +41,19 @@ import {
 
 const PLAYGROUND_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const REPO_ROOT = realpathSync(fileURLToPath(new URL("../../../", import.meta.url)));
+
+function packedPolicyMeta(html) {
+  const meta = /<meta http-equiv="Content-Security-Policy" content="[^"]*">/.exec(html);
+  assert.ok(meta, "the packed file declares its policy");
+  return meta[0];
+}
+
+// Explicitly reseal only fixtures exercising checks other than script integrity.
+function resealPackedScript(html) {
+  const body = /<script>([\s\S]*?)<\/script>/.exec(html)[1];
+  const digest = createHash("sha256").update(body, "utf8").digest("base64");
+  return html.replace(/script-src [^;]+/, `script-src 'sha256-${digest}'`);
+}
 
 /** FleetLab's label tuple, read from its source so this test never spells the strings (design H-8). */
 function requiredLabels() {
@@ -394,21 +407,44 @@ describe("module rewriter", () => {
 });
 
 describe("packed HTML", () => {
-  test("the policy constant is the design section 9.4 text, read from the design, not from pack.mjs", () => {
-    const design = readFileSync(join(REPO_ROOT, "docs/plans/2026-09-13-fleetlab-playground-design.md"), "utf8");
-    const match = design.match(/content security policy of `([^`]+)`/);
-    assert.ok(match, "the design names the content security policy in backticks");
-    assert.equal(CONTENT_SECURITY_POLICY, match[1].replace(/\s+/g, " "));
-    // The no-network directives stay named here too, so the design line and the constant cannot both lose one.
-    for (const directive of ["default-src 'none'", "connect-src 'none'", "form-action 'none'", "base-uri 'none'", "worker-src blob:"]) {
-      assert.ok(CONTENT_SECURITY_POLICY.split("; ").includes(directive), directive);
-    }
+  test("the offline policy authorizes only the exact UTF-8 script body, including its boundary newlines", () => {
+    const { playground } = fakeRepository("script-hash");
+    const html = buildHtml(playground);
+    const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+    assert.equal(scripts.length, 1);
+    const body = scripts[0][1];
+    assert.ok(body.startsWith("\n") && body.endsWith("\n"));
+    const digest = createHash("sha256").update(body, "utf8").digest("base64");
+    assert.equal(/script-src ([^;]+)/.exec(html)[1], `'sha256-${digest}'`);
+    assert.doesNotMatch(html, /script-src[^;]*unsafe-inline/);
+    assert.notEqual(digest, createHash("sha256").update(body.trim(), "utf8").digest("base64"));
+  });
+
+  test("offline script hashing preserves Unicode and normalizes HTML parser line endings before emission", () => {
+    const { playground } = fakeRepository("script-line-endings");
+    writeFileSync(join(playground, "src/ui/labels.js"), 'const unicode = "café 🧪";\r\nexport const HONESTY = { strip: "Teaching model" };\r');
+    const html = buildHtml(playground);
+    const body = /<script>([\s\S]*?)<\/script>/.exec(html)[1];
+    assert.ok(body.includes("café 🧪"));
+    assert.ok(!body.includes("\r"), "the emitted body must match the browser-normalized bytes");
+    const digest = createHash("sha256").update(body, "utf8").digest("base64");
+    assert.equal(/script-src ([^;]+)/.exec(html)[1], `'sha256-${digest}'`);
+    assert.deepEqual(checkDist(html, { requiredLabels: requiredLabels() }), []);
+  });
+
+  test("the offline policy retains the Blob worker, inline styles and no-network restrictions", () => {
+    const { playground } = fakeRepository("policy-directives");
+    const policy = /content="([^"]*)"/.exec(packedPolicyMeta(buildHtml(playground)))[1];
+    assert.deepEqual(policy.split("; ").filter(directive => !directive.startsWith("script-src ")), [
+      "default-src 'none'", "worker-src blob:", "style-src 'unsafe-inline'", "img-src data:",
+      "connect-src 'none'", "form-action 'none'", "base-uri 'none'",
+    ]);
   });
 
   test("policy first in head, styles inlined, worker source escaped, start call with the Blob factory", () => {
     const { playground } = fakeRepository("html");
     const html = buildHtml(playground);
-    assert.ok(html.includes(`<head><meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">`));
+    assert.ok(html.includes(`<head>${packedPolicyMeta(html)}`));
     assert.ok(html.includes("<style>\n:root { --ink: #14181F; }\n\n</style>"));
     assert.ok(!/<link\b/i.test(html));
     assert.ok(!html.includes("import.meta"));
@@ -681,12 +717,46 @@ describe("check-dist", () => {
   const { playground } = fakeRepository("check");
   const valid = buildHtml(playground);
   const withBody = (extra) => valid.replace("</body>", `${extra}\n</body>`);
-  const withLabels = (text) => valid.replace('strip: "Teaching model"', `strip: ${JSON.stringify(text)}`);
+  const withScript = (extra) => resealPackedScript(valid.replace("</script>", `${extra}\n</script>`));
+  const withLabels = (text) => resealPackedScript(valid.replace('strip: "Teaching model"', `strip: ${JSON.stringify(text)}`));
 
   const expectProblem = (html, pattern) => {
     const problems = checkDist(html, { requiredLabels: labels });
     assert.ok(problems.some((p) => pattern.test(p)), `expected ${pattern} in ${JSON.stringify(problems)}`);
   };
+
+  test("offline policy rejects the legacy unsafe-inline script permission", () => {
+    expectProblem(valid.replace(/script-src [^;]+/, "script-src 'unsafe-inline'"), /^policy: content differs/);
+  });
+
+  test("offline policy rejects changed page bootstrap bytes without a new digest", () => {
+    expectProblem(valid.replace("FleetLabPage.start(", "globalThis.changed = true; FleetLabPage.start("), /^policy: content differs/);
+  });
+
+  test("offline policy rejects changed embedded worker bytes without a new digest", () => {
+    expectProblem(valid.replace('FLEETLAB_WORKER_SOURCE = "', 'FLEETLAB_WORKER_SOURCE = "void 0; '), /^policy: content differs/);
+  });
+
+  test("offline policy rejects an incorrect script digest", () => {
+    const wrong = Buffer.alloc(32).toString("base64");
+    expectProblem(valid.replace(/script-src [^;]+/, `script-src 'sha256-${wrong}'`), /^policy: content differs/);
+  });
+
+  test("offline policy rejects an added script even when its bytes duplicate the authorized script", () => {
+    expectProblem(withBody(/<script>[\s\S]*?<\/script>/.exec(valid)[0]), /^script: expected exactly one plain/);
+    expectProblem(withBody("<script>"), /^script: expected exactly one plain/);
+  });
+
+  test("offline policy rejects altered script attributes and a missing script", () => {
+    for (const opening of ['<script type="module">', '<script nonce="fixture">']) {
+      expectProblem(valid.replace("<script>", opening), /^script: expected exactly one plain/);
+    }
+    expectProblem(valid.replace(/<script>[\s\S]*?<\/script>/, ""), /^script: expected exactly one plain/);
+  });
+
+  test("offline verification hashes the browser-normalized body when the artifact uses CRLF", () => {
+    assert.deepEqual(checkDist(valid.replace(/\n/g, "\r\n"), { requiredLabels: labels }), []);
+  });
 
   test("a clean packed file passes, and the SVG namespace name is not a URL", () => {
     assert.deepEqual(checkDist(valid, { requiredLabels: labels }), []);
@@ -694,12 +764,13 @@ describe("check-dist", () => {
     // Script text is not markup, a data URL may hold "//", createElementNS may name the namespace, and an
     // out-of-range character reference is not a crash.
     const clean = [
-      "<script>const data = compute(); // note\nimg.src = url; // set it</script>",
       '<img srcset="data:image/png;base64,//8AAA 1x" alt="">',
-      '<script>document.createElementNS("http://www.w3.org/2000/svg", "svg");</script>',
       '<p title="a &#x110000; b">c &#0; d</p>',
     ];
     for (const extra of clean) assert.deepEqual(checkDist(withBody(extra), { requiredLabels: labels }), [], extra);
+    for (const code of ['const data = compute(); // note\nimg.src = url; // set it', 'document.createElementNS("http://www.w3.org/2000/svg", "svg");']) {
+      assert.deepEqual(checkDist(withScript(code), { requiredLabels: labels }), [], code);
+    }
   });
 
   test("OSM attribution and source metadata are allowed, external loads remain blocked", () => {
@@ -746,10 +817,10 @@ describe("check-dist", () => {
     expectProblem(valid.replace('const FLEETLAB_WORKER_SOURCE = "', 'const FLEETLAB_WORKER_SOURCE = "img.src = \\"//example.org/a.png\\"; '), inScript);
     expectProblem(withBody('<script>const s = "unterminated;</script>'), /^script: a script element that cannot be scanned/);
     const clean = [
-      '<script>// see //example.org\n/* and //example.org */ const note = "// a note", root = "/", pair = "//";</script>',
-      "<script>const pattern = /\\/\\/example\\.org/;</script>",
+      '// see //example.org\n/* and //example.org */ const note = "// a note", root = "/", pair = "//";',
+      "const pattern = /\\/\\/example\\.org/;",
     ];
-    for (const extra of clean) assert.deepEqual(checkDist(withBody(extra), { requiredLabels: labels }), [], extra);
+    for (const code of clean) assert.deepEqual(checkDist(withScript(code), { requiredLabels: labels }), [], code);
   });
 
   test("a meta refresh, whatever its spelling or content", () => {
@@ -775,7 +846,7 @@ describe("check-dist", () => {
   });
 
   test("a missing, different, duplicated or misplaced policy", () => {
-    const meta = `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">`;
+    const meta = packedPolicyMeta(valid);
     expectProblem(valid.replace(meta, ""), /^policy: no Content-Security-Policy/);
     expectProblem(valid.replace("connect-src 'none'", "connect-src *"), /^policy: content differs/);
     expectProblem(valid.replace("</head>", `${meta}</head>`), /^policy: 2 Content-Security-Policy/);
@@ -817,7 +888,7 @@ describe("check-dist", () => {
   });
 
   test("M3 allows only reviewed synthetic forecast literals in its own view", () => {
-    const moduleText=(name,copy)=>withBody('<script>\n// fleetlab-module: '+name+'\nconst copy = '+JSON.stringify(copy)+';\nreturn __fleetlab_m999;\n</script>');
+    const moduleText=(name,copy)=>withScript('\n// fleetlab-module: '+name+'\nconst copy = '+JSON.stringify(copy)+';\nreturn __fleetlab_m999;\n');
     assert.deepEqual(checkDist(moduleText('src/ui/advanced-operations-view.js','Current time-valid synthetic forecast'),{requiredLabels:labels}),[]);
     expectProblem(moduleText('src/ui/advanced-operations-view.js','Accurate production forecast'),/^banned word:/);
     expectProblem(moduleText('src/ui/advanced-operations-view.js','Live forecast'),/^banned word:/);

@@ -23,10 +23,12 @@ import { createHash } from "node:crypto";
 import { renderSitePage, SITE_CONTENT_SECURITY_POLICY } from "./site-shell.mjs";
 export { SITE_CONTENT_SECURITY_POLICY } from "./site-shell.mjs";
 
-/** The design section 9.4 content security policy, verbatim. */
-export const CONTENT_SECURITY_POLICY =
-  "default-src 'none'; script-src 'unsafe-inline'; worker-src blob:; style-src 'unsafe-inline'; img-src data:; " +
-  "connect-src 'none'; form-action 'none'; base-uri 'none'";
+/** Authorize the one packed script, including its surrounding whitespace. */
+function offlinePolicy(scriptBody) {
+  const digest = createHash("sha256").update(scriptBody, "utf8").digest("base64");
+  return `default-src 'none'; script-src 'sha256-${digest}'; worker-src blob:; style-src 'unsafe-inline'; img-src data:; ` +
+    "connect-src 'none'; form-action 'none'; base-uri 'none'";
+}
 
 /** Marker comment written before every module in a bundle; check-dist reads it to find module text. */
 export const MODULE_MARKER = "// fleetlab-module: ";
@@ -765,15 +767,16 @@ export function buildHtml(playgroundDir) {
     throw new PackError("index.html needs <head>, </head> and </body>");
   }
   if (/Content-Security-Policy/i.test(html)) throw new PackError("index.html already declares a policy");
-  const meta = `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">`;
   const workerLiteral = JSON.stringify(workerBundle).replace(/</g, "\\u003c");
-  const script = [
-    "<script>",
+  const scriptBody = [
+    "",
     `const FLEETLAB_WORKER_SOURCE = ${workerLiteral};`,
     pageBundle,
     'FleetLabPage.start({studio: true, createWorker: () => new Worker(URL.createObjectURL(new Blob([FLEETLAB_WORKER_SOURCE], {type: "text/javascript"})))});',
-    "</script>",
-  ].join("\n");
+    "",
+  ].join("\n").replace(/\r\n?/g, "\n"); // Match HTML's line-ending normalization before hashing and emitting.
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${offlinePolicy(scriptBody)}">`;
+  const script = `<script>${scriptBody}</script>`;
   const at = head.index + head[0].length;
   html = html.slice(0, at) + meta + html.slice(at);
   html = html.replace(/<\/head>/i, () => `<style>\n${css}\n</style>\n</head>`);

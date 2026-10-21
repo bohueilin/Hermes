@@ -15,11 +15,12 @@ import {ORDER_DIR,ORDER_RELEASE,ORDER_FILES,ORDER_BOOT,ORDER_MODULES,orderPackag
 // Exit 0 when clean, 1 with one line per problem, 2 on a usage error.
 
 import {APP_MAX_BYTES,MEDIA_LIMITS,MEDIA_MODULE,mediaProblems} from "./media.mjs";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { CONTENT_SECURITY_POLICY, MODULE_MARKER, SITE_BOOT, SITE_CAPACITY_BOOT, SITE_CONTENT_SECURITY_POLICY, SITE_HEADERS, findRepositoryRoot, maskSource } from "./pack.mjs";
+import { MODULE_MARKER, SITE_BOOT, SITE_CAPACITY_BOOT, SITE_CONTENT_SECURITY_POLICY, SITE_HEADERS, findRepositoryRoot, maskSource } from "./pack.mjs";
 import { DELIVERY_DIR, DELIVERY_RELEASE, DELIVERY_FILES, DELIVERY_BOOT, DELIVERY_MODULES, measureSiteOwnership, softwareDeliveryProblems } from "./software-delivery-package.mjs";
 import { CAPACITY_RELEASE_PATH, CAPACITY_VISUAL_PATH, releaseProblems } from "./release-sidecar.mjs";
 
@@ -417,8 +418,17 @@ export function checkDist(html, { requiredLabels, byteLength = Buffer.byteLength
   // Attributes are read from markup only, so script text such as `const data = x; // note` is never taken for one.
   const { tags } = tokensOf(markupOf(html));
   problems.push(...markupProblems(html, tags));
-  for (const script of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)) problems.push(...scriptProblems(script[1]));
-  problems.push(...policyProblems(html, CONTENT_SECURITY_POLICY));
+  const scripts = [...html.matchAll(/(<script\b[^>]*>)([\s\S]*?)(<\/script\s*>)/gi)];
+  for (const script of scripts) problems.push(...scriptProblems(script[2]));
+  if (scripts.length !== 1 || scripts[0][1] !== "<script>" || scripts[0][3] !== "</script>" || tags.filter(tag => tag.name === "script").length !== 1) {
+    problems.push("script: expected exactly one plain <script> element");
+  }
+  // Recompute from the artifact independently of the packer's policy generator.
+  const body = (scripts[0]?.[2] ?? "").replace(/\r\n?/g, "\n");
+  const digest = createHash("sha256").update(body, "utf8").digest("base64");
+  const expectedPolicy = `default-src 'none'; script-src 'sha256-${digest}'; worker-src blob:; style-src 'unsafe-inline'; img-src data:; ` +
+    "connect-src 'none'; form-action 'none'; base-uri 'none'";
+  problems.push(...policyProblems(html, expectedPolicy));
   problems.push(...tokenProblems(html));
 
   const copy = visibleCopy(html);
