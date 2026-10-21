@@ -21,6 +21,52 @@ PACK = Path(__file__).resolve().parents[3] / "playground/fleetlab/tools/pack.mjs
 
 
 class IntegrationTest(unittest.TestCase):
+    def test_current_client_changes_are_declared_against_approved_production_input(self):
+        # The older synthetic build fixture derives its baseline from CLIENT_FIXES.
+        # This fixed production inventory must stay independent of those declarations.
+        baseline = json.loads((Path(__file__).parent / "fixtures/approved-legacy-client.json").read_text())
+        self.assertEqual(len(baseline["files"]), 99)
+        for name, text in baseline["shell"].items():
+            data = text.encode()
+            self.assertEqual(baseline["files"][name], {
+                "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+            })
+            (self.legacy / name).write_bytes(data)
+        # Like a release, this regression requires committed teaching sources;
+        # dirty bound sources fail provenance before the declaration comparison.
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=launch.ROOT, text=True,
+        ).strip()
+        client = self.base / "actual-client"
+        subprocess.run([
+            "node", str(PACK), "--site", str(client), "--source-commit", commit,
+        ], cwd=launch.ROOT, capture_output=True, text=True, check=True)
+
+        class ClientComparisonPassed(Exception):
+            """Stop before unrelated package/City materialization, after the real guard."""
+
+        def compare_client():
+            integration.integrate(
+                self.legacy, self.viewer, self.prior, self.offer, self.base / "out", self.offline,
+                client_update=client, flow_update=True,
+                teaching_package=self.base / "package", source_commit=commit,
+            )
+
+        # Only the 3.4 MiB historical payload is represented by its frozen inventory.
+        # Current bytes, route sets, source/provenance checks and comparisons are real.
+        with patch.object(integration.launch, "verify_legacy", return_value=baseline["files"]), \
+                patch.object(integration, "check_teaching_package", side_effect=ClientComparisonPassed):
+            with self.assertRaises(ClientComparisonPassed):
+                compare_client()
+        # A difference outside the traced set must still be rejected by that guard.
+        drifted = {**baseline["files"], "src/model/world.js": {
+            **baseline["files"]["src/model/world.js"], "sha256": "0" * 64,
+        }}
+        with patch.object(integration.launch, "verify_legacy", return_value=drifted), \
+                patch.object(integration, "check_teaching_package", side_effect=ClientComparisonPassed):
+            with self.assertRaisesRegex(ValueError, r"^undeclared teaching client change: src/model/world\.js$"):
+                compare_client()
+
     def test_city_input_pins_are_strict_and_checked_before_integration(self):
         self.assertTrue(callable(getattr(integration, "check_city_inputs", None)))
         base = b'{"original":"base"}'

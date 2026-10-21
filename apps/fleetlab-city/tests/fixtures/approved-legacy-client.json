@@ -1,0 +1,412 @@
+{
+  "schema": "fleetlab.approved-legacy-client-fixture/1.0.0",
+  "provenance": {
+    "input": "delivery-order-20261013/preserved-legacy",
+    "readback": "validation/integration/baseline-readback.json",
+    "readback_sha256": "708659b40227369973cca941c69c098cb059c1dd2cc375d0d0203d56cd903d99",
+    "production_source_commit": "4c375a8b96595a82b82169234b968d7da38ea990",
+    "purpose": "Fixed approved production-input inventory; never regenerate from the declared-change sets or current packed output."
+  },
+  "files": {
+    "_headers": {
+      "bytes": 410,
+      "sha256": "c3a7c78abb90501711efc25ec6201ebfc6ad7be1bc2f722770ad1eb68712c35a"
+    },
+    "boot.js": {
+      "bytes": 171,
+      "sha256": "cf5f8b387d949f02c74d4c75a6ba97863d71beb1e204709654ac3eb16640f9ce"
+    },
+    "index.html": {
+      "bytes": 1440,
+      "sha256": "9cdac71802eec7ce9d31845d3892db331f7db8e04ad2832e4d98b0bc810e0f10"
+    },
+    "media/fleet-film-poster.webp": {
+      "bytes": 32678,
+      "sha256": "fce22fa9f19eb10e85bfed2fcdf53864b4be57dfa6b3423407baf2497241538c"
+    },
+    "media/fleet-film.mp4": {
+      "bytes": 1079939,
+      "sha256": "47e5edef395327fb32f2744ce73020542071f28f8b653d9bf7d10150995ca862"
+    },
+    "src/core/canon.js": {
+      "bytes": 2334,
+      "sha256": "fed741b4ebad33a2ac8796f394e577a187ae57eacdf90ca88cfd8735cdc4fe0b"
+    },
+    "src/core/keyed.js": {
+      "bytes": 2430,
+      "sha256": "ad8c327962f3d7e5a6f32f10aa57d3647435285abe1b010f8afcb457a030a8e2"
+    },
+    "src/core/sha256.js": {
+      "bytes": 8647,
+      "sha256": "cdd59bbeacadb2bbf7a1fdd99552add7ed81a2bd1a2284f5d4d555f48313d0a1"
+    },
+    "src/core/stats.js": {
+      "bytes": 3303,
+      "sha256": "383a1f0c49bcac40d83d489c3b13c088e52a9a94404ce9e7da47e9addc9c389a"
+    },
+    "src/core/tables.js": {
+      "bytes": 10510,
+      "sha256": "08ff2f3bd58cefcbfe3743983e7bbe20151adcbff1a2bfed3adf42d423984153"
+    },
+    "src/data/bay-area-map.js": {
+      "bytes": 176375,
+      "sha256": "19fce9dabb761048f2f5f5db66b3c7e12d10eff9152603d28ceae09da1b003dd"
+    },
+    "src/data/sf-streets.js": {
+      "bytes": 328545,
+      "sha256": "ad3beda588b8a1c3145d52b558c228d9e0c07816ca33a8ddf2cda95bb5876399"
+    },
+    "src/instrument/bootstrap.js": {
+      "bytes": 2484,
+      "sha256": "ca4173e559dd29622c75b67b0685f5e7495cb212cde3e5266b6aa20a9c3c1d00"
+    },
+    "src/instrument/guardrails.js": {
+      "bytes": 1852,
+      "sha256": "130bad2efbccfe542772a11266a9e92c50e12b8b8e76d3b1fa14ed5ae348f24e"
+    },
+    "src/instrument/outcome.js": {
+      "bytes": 1336,
+      "sha256": "cd04241357ec6e7e0b4c1015940c9c2429b00c8b21218321ce32ee1d22131aa9"
+    },
+    "src/instrument/paired.js": {
+      "bytes": 5526,
+      "sha256": "7f075dd1cb699a2e5e845294c3b24d4f8e469995b51d0c49e002fdf329cf934b"
+    },
+    "src/instrument/recommendation.js": {
+      "bytes": 1253,
+      "sha256": "3c89fe9f1e0d4ab1977721cf036d78d2fbad588eb6e954457fa29fabec2388a5"
+    },
+    "src/instrument/summary.js": {
+      "bytes": 9698,
+      "sha256": "691205f783b4715c10bbc7ba70bd1f4ee3631f930022c17ffaad0cc1785d7de5"
+    },
+    "src/model/airport-demand.js": {
+      "bytes": 4177,
+      "sha256": "cfd2df0284cf4cbb725d949e9396ac7a4ffad8868fe4020bf72994185ab812c1"
+    },
+    "src/model/bay-area.js": {
+      "bytes": 4835,
+      "sha256": "1deaed4f6e589f5db8f320beb1b12eaf88828ea9bb0510375bb6613aec54ea8f"
+    },
+    "src/model/bay-experiment-contract.js": {
+      "bytes": 14220,
+      "sha256": "350e64f821e70326f0c91a769039460de2bc2d55cba4fe289fe2d8efb9275fdf"
+    },
+    "src/model/bay-operations.js": {
+      "bytes": 35359,
+      "sha256": "a256c091b1c369f559d43a8907a13b7b1bb010e49d437e77ca6f89b6a67afd30"
+    },
+    "src/model/bay-systems.js": {
+      "bytes": 8597,
+      "sha256": "c39e2064721e6363876fd9970265cee9ed3d048d3c5b06d533369bfc3246df43"
+    },
+    "src/model/charging-allocation.js": {
+      "bytes": 3249,
+      "sha256": "ce107f4714727e6b7e7388e2081be10a98e107b5995d53fb8d423120977d14e5"
+    },
+    "src/model/depot-readiness.js": {
+      "bytes": 13692,
+      "sha256": "58d3920a74e0a6090cde6f2774730c1f8f392665ddd6b37ef7229088998129e6"
+    },
+    "src/model/engine.js": {
+      "bytes": 40956,
+      "sha256": "c205b1a0775eef12ae37f7be5a9451da44411e784503bc5444578490a0653e39"
+    },
+    "src/model/experiment.js": {
+      "bytes": 31167,
+      "sha256": "878fb0e1753b4738e1d6ff7e69de1c4cb0066ea668b3f75a0d3172aedbdffe25"
+    },
+    "src/model/invariants.js": {
+      "bytes": 34082,
+      "sha256": "f9fd4c58c3791e1c46b876749a0e9262c1bb00255076f120490d5a3727f1793f"
+    },
+    "src/model/launch-contract.js": {
+      "bytes": 14850,
+      "sha256": "430880d7c96eb5622cb84b20cb0d8185a62cc22b1ec1c0f7268b2e2f0f69258b"
+    },
+    "src/model/launch-rehearsal.js": {
+      "bytes": 13723,
+      "sha256": "fa34449c1f82b5ed8a942b1373cc8e0d1329d3fb219066daa84123b939c67eb2"
+    },
+    "src/model/metrics.js": {
+      "bytes": 26028,
+      "sha256": "dd0b030d926838fb73ea8029a1650cfceaee65891bc594a2f82965db1fca766e"
+    },
+    "src/model/operations.js": {
+      "bytes": 21194,
+      "sha256": "c138edd75aa28fa6fe354c56bcd703b8fb76b27cbec7b5e7faa9a3524e59d160"
+    },
+    "src/model/ops-cases.js": {
+      "bytes": 71982,
+      "sha256": "111524513151b9817789cab62930e0a66e3d754bde7d011e11d003c7152ee0c1"
+    },
+    "src/model/policies.js": {
+      "bytes": 6439,
+      "sha256": "bb5d1246ba5e777ad07a4bafe33fcc343b0294ca57a18585abb58203c89a0aaa"
+    },
+    "src/model/presets.js": {
+      "bytes": 15682,
+      "sha256": "f01036ad15e7e3a2b622616a38e4319b93f61b34d415429c874cde81a1250ce6"
+    },
+    "src/model/reference-panels.js": {
+      "bytes": 4088,
+      "sha256": "76c91ba8dead4dab6ba35143087b4ad4d7c368692d24d3b36948876a8df4f380"
+    },
+    "src/model/region-package.js": {
+      "bytes": 4899,
+      "sha256": "89f1de23ce24a8786a0fd6267a31550a97ca20c79ad79bb9cac2a789cec61a16"
+    },
+    "src/model/regional-power.js": {
+      "bytes": 2120,
+      "sha256": "84ce22fa1d4a29b4afd1fd135249b5cffa8c6f3db8346f711b9d0c8b682896d6"
+    },
+    "src/model/resource-observations.js": {
+      "bytes": 6993,
+      "sha256": "fb3296632bfd305bb83c17015ae217b5f6bbef4da9e86819245add5962638a2b"
+    },
+    "src/model/routes.js": {
+      "bytes": 8468,
+      "sha256": "3283d3d269297454c015f3415312efa14c8a2e100f735dee06eef2c63177cc2b"
+    },
+    "src/model/scale-contract.js": {
+      "bytes": 5228,
+      "sha256": "096b5b16457c92e1c80c15869afba1bb809d615f9712046ee0ff1c267a4e9ff1"
+    },
+    "src/model/scale-density.js": {
+      "bytes": 19796,
+      "sha256": "d888d85dcc8944a753b763e6797eb3b74b62ba8b47284c8bc50867b037ca3f79"
+    },
+    "src/model/scale-intake.js": {
+      "bytes": 22282,
+      "sha256": "1ce7ae1a2a2d13110b7f03d90fa0fb6ce049beb78089cbae9597fd688cce4492"
+    },
+    "src/model/scale-response.js": {
+      "bytes": 24612,
+      "sha256": "9a0003748a15c7ef17d9528c0c8fb97da636f0fec4ec9acabdb6daa7a46b9998"
+    },
+    "src/model/schema.js": {
+      "bytes": 53728,
+      "sha256": "1e8d403ab1cd42b5c3d95daa40a314b3b0c59c62f27ffd8003040299f43b2d05"
+    },
+    "src/model/site-power.js": {
+      "bytes": 2240,
+      "sha256": "3ac052c63886618639658e8ab1628cdc7b9b9d87fa43434fb8b599d13ba36e65"
+    },
+    "src/model/street-network.js": {
+      "bytes": 5879,
+      "sha256": "b4b5065f824643c1c71c1f46d0aa1e2712ad9598bb7ffb6b24531d973e289892"
+    },
+    "src/model/street-queue.js": {
+      "bytes": 4561,
+      "sha256": "f29ac180a98fbf254082353e0fad418795077645021cd237bc89c463c14b500f"
+    },
+    "src/model/street-simulation.js": {
+      "bytes": 13920,
+      "sha256": "e8aacf2f4447de17172e3df15f7c5dbd69bdcae8fedd83139bf8dc68c799e49d"
+    },
+    "src/model/vehicle-profiles.js": {
+      "bytes": 1750,
+      "sha256": "4cfc970485e3bb1fb41c79bb8b9117e7cdbdb7bd04d10d94b7e5d4f473bc964f"
+    },
+    "src/model/world.js": {
+      "bytes": 15176,
+      "sha256": "5650814eb651d2f0a6fca99cf4cf47303854ef62f08018a7a3b74603ff57826f"
+    },
+    "src/runtime/host.js": {
+      "bytes": 909,
+      "sha256": "0a7e1cf9c3342d488c58f7688f0b61a0f76a6a468f25f2ded720256538b50de2"
+    },
+    "src/runtime/protocol.js": {
+      "bytes": 15483,
+      "sha256": "5d11ab42b38279d53b5083e75442ef4ae8692f40aee21a9b58780463236bff34"
+    },
+    "src/runtime/worker.js": {
+      "bytes": 1074,
+      "sha256": "4bd65004d59c9815bbb1acb99e2c181dc3a96e847278f4b700f4d3b88e22a1e7"
+    },
+    "src/ui/a11y.js": {
+      "bytes": 8005,
+      "sha256": "17a26d5ad55e2ccb1232cdcd34cf921a04c5093f2f2f46eba2341ad7bb399760"
+    },
+    "src/ui/advanced-operations-view.js": {
+      "bytes": 12375,
+      "sha256": "e8b9242dfc0bffe068c45a953a3ce8d067ffaf7e4058b034484fa1a0289f1fb4"
+    },
+    "src/ui/analytics.js": {
+      "bytes": 8545,
+      "sha256": "9bdf1e4fcc09bfde940195a19c2b21471c86c71a721f1032cd90914b0e863057"
+    },
+    "src/ui/app.js": {
+      "bytes": 52294,
+      "sha256": "dce21ffe7a9156feb93741803e3ad3439e491a4fc02664372f7b2ba28cc93318"
+    },
+    "src/ui/car-glyph.js": {
+      "bytes": 1311,
+      "sha256": "59d4143868d2a98afa1bf87ac2518bf3c7cf943621a6dd449453b3b596373c54"
+    },
+    "src/ui/charts.js": {
+      "bytes": 90323,
+      "sha256": "3176340b8f2fa675247ef04e31e7d39f82c20cbe5babccb07771c22588a9a5be"
+    },
+    "src/ui/controls.js": {
+      "bytes": 24384,
+      "sha256": "267ff499962739ad19ed1c2ca071d5c38bea548c8eccf1295c28ca9e70aaa795"
+    },
+    "src/ui/depot-scene.js": {
+      "bytes": 7561,
+      "sha256": "8bb120460fa4c127f8fe1c4ccbb4f9574b72ef8c5ccf845ab98655ec06be9808"
+    },
+    "src/ui/display-text.js": {
+      "bytes": 1345,
+      "sha256": "d890dbe5cb547e81390e484db3deeac4a33be42549627b58a75aec54471b18cc"
+    },
+    "src/ui/dom.js": {
+      "bytes": 3853,
+      "sha256": "77eb1dfae065d4ffa803a01bb83846a88a7f6dcc71a4d86b5ea565da56b99397"
+    },
+    "src/ui/experiment.js": {
+      "bytes": 82758,
+      "sha256": "251accaae3a040030086105c7543265128add34d13c829c8c59d538691273050"
+    },
+    "src/ui/format.js": {
+      "bytes": 9496,
+      "sha256": "e3290436aa04faa1fa9e4819aeb6142ceb6add317aae9aa7a52177a386d0bc14"
+    },
+    "src/ui/hero-film.js": {
+      "bytes": 6102,
+      "sha256": "02164f5cf103aee82e7212c920b4c856766366790efd0eae4d3ea0d35b396e4e"
+    },
+    "src/ui/hero-media.js": {
+      "bytes": 189,
+      "sha256": "da17ef993606f1a9a61e5ec19a4e9ab9e06efa6ca8314ce452bf3e6cf61b760d"
+    },
+    "src/ui/inspector.js": {
+      "bytes": 15208,
+      "sha256": "c87027e035c3be79c976c7098d5cc506ea2fe8ed6701e1ef7676b8718cba497f"
+    },
+    "src/ui/iso.js": {
+      "bytes": 70601,
+      "sha256": "df815964940ea826f21268f3442e5ca5fc165d43aa4c34e306dc1b4afdc2d8bc"
+    },
+    "src/ui/labels.js": {
+      "bytes": 95887,
+      "sha256": "99dcf41cc89566223ce23a5783ba16841c297d69b289cfcd82959e3a4b8f0315"
+    },
+    "src/ui/launch-view.js": {
+      "bytes": 15990,
+      "sha256": "1cc3d48cb3a24af63d3d6842714eb6e4ba4959989527b46bda4f4c4c7814d94d"
+    },
+    "src/ui/learn.js": {
+      "bytes": 11014,
+      "sha256": "5662752142b7b50629c1ae86fcaa2ccc915bc94be1327cd46960c2461d32d9d0"
+    },
+    "src/ui/map.js": {
+      "bytes": 91336,
+      "sha256": "6c6e3a0eeb6bb1b10fe6bc4276f11edce6f66e214ff782a3e6de963bf8b5ae3a"
+    },
+    "src/ui/model-identity.js": {
+      "bytes": 524,
+      "sha256": "8f50c9c4ca5c4568154cecc08c47529b1142e3a65a903642b2de340ea3e3604e"
+    },
+    "src/ui/operations-3d.js": {
+      "bytes": 14495,
+      "sha256": "8703212ca69d8122e05adcb8c9b2af8a862789bd9b2dd08215ea40e6ffda8a83"
+    },
+    "src/ui/operations-lab.js": {
+      "bytes": 50887,
+      "sha256": "89c787a6dae17a493db66564aa62af2a2613a683aae776a7e683523b7a67299e"
+    },
+    "src/ui/operations-map.js": {
+      "bytes": 6821,
+      "sha256": "924a79ac6c2ba98fe7ba9ace7c5c75a0a177b68006a536019a846c6fc5e3734f"
+    },
+    "src/ui/playback.js": {
+      "bytes": 20933,
+      "sha256": "13096e7717638ecfbc249a5774a4423e9e3167bb75ecb548d61b15978a7f3c26"
+    },
+    "src/ui/present.js": {
+      "bytes": 60356,
+      "sha256": "d8079e9f284c2d9f99a87d57e61277d01c605ac7b6d71bf9704e23420ce503fe"
+    },
+    "src/ui/readiness-view.js": {
+      "bytes": 6883,
+      "sha256": "77fc49f40a348a4dda4a23c262c83252a7061d9196a20b1377394fa76bd5e246"
+    },
+    "src/ui/regional-power-view.js": {
+      "bytes": 21780,
+      "sha256": "9d173db13270dd40deb029eb86eb0bbaa7076ce371376d62c87c2fd85156dc6f"
+    },
+    "src/ui/regional-setup.js": {
+      "bytes": 4396,
+      "sha256": "29ce57475c7e9f830449df447261a78ead8c1c16383db816f99f0d14c73a63ac"
+    },
+    "src/ui/routes.js": {
+      "bytes": 2467,
+      "sha256": "70d8b52d4ccae060af0b55452223f4dca4bf30f0abaf4383954074c8b5ca7364"
+    },
+    "src/ui/scale-lab.js": {
+      "bytes": 14564,
+      "sha256": "73a2d025634a5d011cfb62bf8e64eb0b2199808479b32ae5bfee68db129c15f6"
+    },
+    "src/ui/scale-labs.js": {
+      "bytes": 476,
+      "sha256": "fd27e672a1dffdfb44020c4391b65deebfb165a364637e644cb3d86b4b7ed2e0"
+    },
+    "src/ui/scenario-learning.js": {
+      "bytes": 532,
+      "sha256": "159df11aed47d732bcdcf485a0374d3fd611cf27af4ede2aa78772787d74b0aa"
+    },
+    "src/ui/scene-3d.js": {
+      "bytes": 7536,
+      "sha256": "60779ba5ed4c0dc6549bd19cf79586e3e5f0ef2b0f0b9479a172fe0ad1483228"
+    },
+    "src/ui/setup-codec.js": {
+      "bytes": 17273,
+      "sha256": "34454abb4df440d6ccd125df27d798a89e4cf69021ffd8388f99017fff5b6965"
+    },
+    "src/ui/setup-sharing.js": {
+      "bytes": 4269,
+      "sha256": "eadcf37fb84d45b7029be91804ddd61f16e77ad2c7865681c2cbbdeb75ee8852"
+    },
+    "src/ui/simulation-catalog.js": {
+      "bytes": 10048,
+      "sha256": "4fd1a0c1cf03ebf7fb95e2bbeb5e6fd6c2d852c957cd66f2c71e8d9553393e43"
+    },
+    "src/ui/store.js": {
+      "bytes": 31111,
+      "sha256": "a7bebe5ce56a070313a4d6cbc2a14c826dbab63f668ce60fc8aa6acbaa5b8629"
+    },
+    "src/ui/street-lab.js": {
+      "bytes": 26282,
+      "sha256": "1676b7bf41fa05dc150261530e93b9b092f3ed87219376433ceec3505d968c8a"
+    },
+    "src/ui/street-scene.js": {
+      "bytes": 11820,
+      "sha256": "63b53c89928b9dd63ae88204f247b9b90e88a5f84c88a96f949f220071fd7667"
+    },
+    "src/ui/studio.js": {
+      "bytes": 28876,
+      "sha256": "cfdb22fa6c39eb36233927db77422bee8699d74a62673ce9c737bf8b1e5cf828"
+    },
+    "src/ui/teaching-frames.js": {
+      "bytes": 58133,
+      "sha256": "16342b6d8bdcae3034474b5df155926ef761f9972949ce7f713506c13b1fbd08"
+    },
+    "src/ui/teaching-projection.js": {
+      "bytes": 1104,
+      "sha256": "0849939c7a52e672b583b44242e4346e745abc32742ab8f39b977fe1244b354b"
+    },
+    "src/ui/vehicle-portrait.js": {
+      "bytes": 1168,
+      "sha256": "8a857e5ec22f6c733f4455af47964898f13b3336940bb358990bbe535402314b"
+    },
+    "styles.css": {
+      "bytes": 112536,
+      "sha256": "59d799e27c925fa98664021ad4f7c9d76d013b4220d4edb08bfa07d5a8f386b1"
+    }
+  },
+  "shell": {
+    "index.html": "<!doctype html>\n<html lang=\"en\">\n<head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'\">\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>FleetLab | Test fleet decisions in simulation</title>\n<meta name=\"description\" content=\"A browser-based teaching simulator for autonomous-vehicle fleet operations. Run a synthetic fleet day, change one constraint, and inspect the trade-offs. Simulation only.\">\n<meta property=\"og:type\" content=\"website\">\n<meta property=\"og:title\" content=\"FleetLab | Test fleet decisions in simulation\">\n<meta property=\"og:description\" content=\"Run a synthetic fleet day, change one constraint, and inspect the trade-offs. Four teaching models with explicit limits; no operational authority.\">\n<meta name=\"twitter:card\" content=\"summary\">\n<link rel=\"stylesheet\" href=\"./styles.css\">\n</head>\n<body>\n<noscript>FleetLab needs JavaScript to explore its synthetic teaching models. It runs in your browser with no account. Simulation only; NOT_EVIDENCE; decision authority NONE.</noscript>\n<div id=\"fleetlab-root\" class=\"fl-app\" data-phone-group=\"now\">\n<div id=\"fleetlab-teaching-strip\" class=\"fl-strip\"></div>\n</div>\n<script type=\"module\" src=\"./boot.js\"></script>\n</body>\n</html>\n",
+    "boot.js": "import { start } from \"./src/ui/app.js\";\nstart({ studio: true, createWorker: () => new Worker(new URL(\"./src/runtime/worker.js\", import.meta.url), { type: \"module\" }) });\n"
+  }
+}

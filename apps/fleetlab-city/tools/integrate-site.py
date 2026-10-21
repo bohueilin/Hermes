@@ -24,7 +24,13 @@ _brand_spec = importlib.util.spec_from_file_location(
 brand = importlib.util.module_from_spec(_brand_spec)
 _brand_spec.loader.exec_module(brand)
 EXCEPTIONS = frozenset(("index.html", "boot.js", "_headers"))
-CLIENT_FIXES = frozenset(("src/ui/setup-codec.js", "src/ui/setup-sharing.js", "src/ui/studio.js"))
+CLIENT_FIXES = frozenset((
+    "src/ui/setup-codec.js", "src/ui/setup-sharing.js", "src/ui/studio.js",
+    "src/model/bay-experiment-contract.js",  # FL-SEC-13: 49420b866ff5cab7c21408dd37eef83c981fe914
+    "src/model/metrics.js",  # FL-SEC-13: 49420b866ff5cab7c21408dd37eef83c981fe914
+    "src/ui/display-text.js",  # FL-SEC-13: 49420b866ff5cab7c21408dd37eef83c981fe914
+    "src/ui/depot-scene.js",  # FL-SEC-27: cd40179f397625de23cfa7568bed017996c5c1cd
+))
 FLOW_CHANGED = frozenset((
     "src/ui/dom.js", "src/ui/iso.js", "src/ui/map.js", "src/ui/present.js",
     "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js", "src/ui/charts.js",
