@@ -61,7 +61,7 @@ def rows(site):
         (f"/{current}/data/catalog.json", city), ("/city-explorer/sources/", city),
         ("/city-explorer/releases/", city), (f"/{rollback}/", {**city, **blocks[f"/{rollback}/*"]}),
         ("/downloads/fleetlab-offline", {**root, **blocks["/downloads/fleetlab-offline"]}),
-        (f"/{source}", {**root, **blocks["/network-flows/sources/*"]}),
+        (f"/{source}", {**root, **blocks[f"/{source}"]}),
         ("/downloads/teaching-package.json",
          {**root, **blocks["/downloads/teaching-package.json"]}),
         ("/network-flows/capacity/visual.css", root),
@@ -79,6 +79,10 @@ def rows(site):
     checks += [(f"/{name}", root) for name in manifest["files"] if name.startswith("tiles/")]
     result = [(path, expected, 200) for path, expected in checks]
     result.append(("/__fleetlab_missing_page__", {**root, "cache-control": "no-store"}, 404))
+    missing_source = "network-flows/sources/" + ("0" if not source.endswith("0" * 64 + ".json.gz") else "1") * 64 + ".json.gz"
+    for path in ("/network-flows/sources/", "/" + missing_source):
+        result.append((path, {**root, "cache-control": "no-store", "content-type": "text/html",
+                              "content-disposition": None}, 404))
     # Crafted spellings must still receive the root baseline; nothing stricter can be assumed.
     baseline = {name: root[name] for name in BASELINE}
     crafted = ["/city-explorer/", f"/{rollback}/", "/downloads/fleetlab-offline", f"/{source}"]
@@ -105,7 +109,9 @@ def check(base, checks, head=curl_head):
         transport_ok, actual_status, actual = head(base.rstrip("/") + path)
         mismatches = {
             key: {"expected": value, "actual": actual.get(key)}
-            for key, value in expected.items() if actual.get(key) != value
+            for key, value in expected.items()
+            if (actual.get(key, "").split(";", 1)[0].strip().lower()
+                if key == "content-type" and value is not None else actual.get(key)) != value
         }
         report.append({
             "path": path, "status": actual_status, "transport_ok": transport_ok,

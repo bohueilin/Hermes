@@ -29,7 +29,8 @@ PATH_RULES = (
     "  Content-Disposition: attachment; filename=\"fleetlab-offline.html\"\n\n"
     "/downloads/fleetlab-offline\n"
     "  Content-Disposition: attachment; filename=\"fleetlab-offline.html\"\n\n"
-    "/network-flows/sources/*\n  Content-Type: application/gzip\n  ! Cache-Control\n"
+    f"/{SOURCE}\n  Content-Type: application/gzip\n  ! Cache-Control\n"
+    '  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n'
     "  Cache-Control: public, max-age=31536000, immutable\n\n"
     "/downloads/teaching-package.json\n  Content-Type: application/json\n\n"
     f"/{ROLLBACK}/*\n  ! Content-Security-Policy\n  Content-Security-Policy: default-src 'none'"
@@ -44,6 +45,17 @@ CRAFTED = [
 
 
 class HeaderGateTests(unittest.TestCase):
+    def test_missing_source_urls_are_html_without_download_headers(self):
+        rows = gate.rows(self.site)
+        missing = [row for row in rows if row[0].startswith("/network-flows/sources/") and row[2] == 404]
+        self.assertEqual(len(missing), 2)
+        self.assertIn("/network-flows/sources/", [row[0] for row in missing])
+        for row in missing:
+            served = {**gate.fields(ROOT), "content-type": "text/html; charset=utf-8", "cache-control": "no-store"}
+            self.assertTrue(gate.check("https://example.test", [row], head=lambda _: (True, "404", served))[0]["matches"])
+            for extra in ({"content-type": "application/gzip"}, {"content-disposition": "attachment"}):
+                self.assertFalse(gate.check("https://example.test", [row], head=lambda _: (True, "404", {**served, **extra}))[0]["matches"])
+
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)

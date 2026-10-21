@@ -21,6 +21,19 @@ PACK = Path(__file__).resolve().parents[3] / "playground/fleetlab/tools/pack.mjs
 
 
 class IntegrationTest(unittest.TestCase):
+    def test_download_headers_match_only_the_verified_source_archive(self):
+        self.assertTrue(callable(getattr(integration, "source_headers", None)))
+        source = "network-flows/sources/" + "a" * 64 + ".json.gz"
+        headers = integration.source_headers(source)
+        self.assertTrue(headers.startswith(f"\n/{source}\n"))
+        self.assertIn("  Content-Type: application/gzip\n", headers)
+        self.assertIn('  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n', headers)
+        self.assertIn("  Cache-Control: public, max-age=31536000, immutable\n", headers)
+        self.assertNotIn("*", headers)
+        for invalid in ("network-flows/sources/*", source + "\n/*", "../" + source):
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(ValueError, "source.*path"):
+                integration.source_headers(invalid)
+
     def test_final_route_closure_counts_transformed_headers(self):
         self.assertTrue(callable(getattr(integration, "final_route_counts", None)))
         routes = [{"id": "nf04", "paths": ["route.js", "_headers"], "bytes": 1}]
@@ -260,12 +273,12 @@ class IntegrationTest(unittest.TestCase):
         headers = (site / "_headers").read_text()
         self.assertIn(
             "/downloads/fleetlab-offline.html\n"
-            '  Content-Disposition: attachment; filename="fleetlab-offline.html"',
+            '\tContent-Disposition: attachment; filename="fleetlab-offline.html"',
             headers,
         )
         self.assertIn(
             "/downloads/fleetlab-offline\n"
-            '  Content-Disposition: attachment; filename="fleetlab-offline.html"',
+            '\tContent-Disposition: attachment; filename="fleetlab-offline.html"',
             headers,
         )
         for name in report["preserved_existing"]:

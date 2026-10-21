@@ -264,6 +264,18 @@ def check_preservation(before, after, client_update=False, flow_update=False):
     return sorted(changed)
 
 
+def source_headers(source):
+    if not re.fullmatch(r"network-flows/sources/[a-f0-9]{64}\.json\.gz", source):
+        raise ValueError("invalid teaching source path")
+    return (
+        f"\n/{source}\n"
+        "  Content-Type: application/gzip\n"
+        '  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n'
+        "  ! Cache-Control\n"
+        "  Cache-Control: public, max-age=31536000, immutable\n"
+    )
+
+
 def integrate(
     legacy,
     viewer,
@@ -540,17 +552,16 @@ def integrate(
                 shutil.copyfile(Path(teaching_package) / name, site / name)
             with (site / "_headers").open("a") as headers:
                 headers.write(
-                    '\n/network-flows/sources/*\n'
-                    '  Content-Type: application/gzip\n'
-                    '  Content-Disposition: attachment; '
-                    'filename="fleetlab-teaching-source.json.gz"\n'
-                    '  ! Cache-Control\n'
-                    '  Cache-Control: public, max-age=31536000, immutable\n'
+                    source_headers(next(name for name in package_files
+                                        if name.startswith("network-flows/sources/"))) +
                     '\n/downloads/teaching-package.json\n'
                     '  Content-Type: application/json\n'
                 )
         branded = (brand.apply_site(site, report["current"]["path"], report["rollback"]["path"])
                    if brand_update else {})
+        # Compact indentation preserves header semantics within the route byte budgets.
+        headers = site / "_headers"
+        headers.write_text(re.sub(r"^  ", "\t", headers.read_text(), flags=re.M))
         final = launch.inventory(site)
         if package_files and (
             launch.inventory(Path(teaching_package)) != package_files

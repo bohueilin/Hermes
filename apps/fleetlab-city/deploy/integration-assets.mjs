@@ -26,7 +26,8 @@ function rootPermissions(text){
  return lines.join('\n').replace(/\n+$/,'')+'\n';
 }
 
-export function integratedRootFiles(teaching,{branded=false,rollback}={}){
+export function integratedRootFiles(teaching,{branded=false,rollback,source}={}){
+ if(source!==undefined&&!/^network-flows\/sources\/[a-f0-9]{64}\.json\.gz$/.test(source))throw Error('Invalid teaching source path.');
  const deliveryProblems=[...softwareDeliveryProblems(teaching),...orderPackageProblems(teaching),...r1PackageProblems(teaching),...r3PackageProblems(teaching)];
  if(deliveryProblems.length)throw Error(`Software delivery sidecar rejected: ${deliveryProblems.join('; ')}`);
  const marker='<link rel="stylesheet" href="./styles.css">';
@@ -61,11 +62,11 @@ export function integratedRootFiles(teaching,{branded=false,rollback}={}){
   '  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+
   '\n/downloads/fleetlab-offline\n'+
   '  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+
-  '\n/network-flows/sources/*\n'+
+  (source?'\n/'+source+'\n'+
   '  Content-Type: application/gzip\n'+
   '  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n'+
   '  ! Cache-Control\n'+
-  '  Cache-Control: public, max-age=31536000, immutable\n'+
+  '  Cache-Control: public, max-age=31536000, immutable\n':'')+
   '\n/downloads/teaching-package.json\n'+
   '  Content-Type: application/json\n';
  const result=new Map([...lessonNavigation(teaching),['index.html',index],
@@ -77,13 +78,16 @@ export function integratedRootFiles(teaching,{branded=false,rollback}={}){
   lines.push('',`/${rollback}/*`,'  ! Content-Security-Policy','  Content-Security-Policy: '+CITY_CSP);
   result.set('_headers',lines.join('\n')+'\n');
  }
+ // Tabs are valid header indentation and keep exact archive paths within route budgets.
+ result.set('_headers',result.get('_headers').replace(/^  /gm,'\t'));
  return result;
 }
 
 export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,selection){
  const teaching=buildSite(resolve(sourceRoot,'playground/fleetlab'),{sourceCommit:commit});
  const branded=selection.hosted_presentation==='fleetlab.hosted-presentation/1.0.0';
- const expected=integratedRootFiles(teaching,{branded,rollback:selection.rollback?.path});
+ const source=Object.keys(packageFiles).find(path=>path.startsWith('network-flows/sources/'));
+ const expected=integratedRootFiles(teaching,{branded,rollback:selection.rollback?.path,source});
  for(const name of [...HOSTED_FILES,...(branded?BRAND_TEXT:[])]){
   const path=resolve(sourceRoot,'apps/fleetlab-city/hosted',name),stat=lstatSync(path);
   if(stat.isSymbolicLink()||!stat.isFile())throw Error('Integration source asset is not regular.');

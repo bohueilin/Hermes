@@ -47,7 +47,7 @@ test('current source checkout cannot downgrade to a package-free release',()=>{
 
 // An independently assembled fixture follows the Python integration contract.
 // Mutations below reseal the outer inventory, so only source-bound checks can reject them.
-function integratedShell(packed){
+function integratedShell(packed,source){
  const marker='<link rel="stylesheet" href="./styles.css">';
  const intro='<section aria-label="About FleetLab"><h1>FleetLab: test fleet decisions in simulation</h1>'+
   '<p>Independent educational software by Bo-Huei Lin. Explore Fleet day, Street lab, paired experiments, Depot flow lab and the <a href="/city-explorer/">San Francisco City Explorer</a>.</p>'+
@@ -64,7 +64,7 @@ function integratedShell(packed){
   "  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'\n"+
   '\n/downloads/fleetlab-offline.html\n  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+
   '\n/downloads/fleetlab-offline\n  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+
-  '\n/network-flows/sources/*\n  Content-Type: application/gzip\n  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable\n'+
+  `\n/${source}\n  Content-Type: application/gzip\n  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable\n`+
   '\n/downloads/teaching-package.json\n  Content-Type: application/json\n';
  return [...lessonNavigation(packed),['index.html',html],['boot.js','import { mountCityEntry } from "./integration.mjs";\n'+packed.get('boot.js')+'\nmountCityEntry();\n'],['_headers',headers]];
 }
@@ -94,7 +94,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
   const packed=buildSite(playground,{sourceCommit:commit});writeFiles(site,packed);
   const offline=join(root,'offline.html');writeFileSync(offline,buildHtml(playground));
   const proof=buildPackageProof({site,playground,offline,sourceCommit:commit});
-  writeFiles(site,[...proof.files,...integratedShell(packed),['downloads/fleetlab-offline.html',readFileSync(offline)]]);
+  writeFiles(site,[...proof.files,...integratedShell(packed,proof.receipt.source_offer.path),['downloads/fleetlab-offline.html',readFileSync(offline)]]);
   for(const path of ['integration.mjs','integration.css','404.html','not-found.css'])cpSync(join(source,'apps/fleetlab-city/hosted',path),join(site,path));
   writeFiles(site,[['city-explorer/releases/index.html',readFileSync(join(source,'apps/fleetlab-city/hosted/city-releases-redirect.html'))],['network-flows/fleet-day/index.html',readFileSync(join(source,'apps/fleetlab-city/hosted/fleet-day-redirect.html'))]]);
   const offlineHash=fingerprint(readFileSync(offline)).sha256;
@@ -120,6 +120,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
   selection.hosted_presentation='fleetlab.hosted-presentation/1.0.0';
   writeFiles(site,[['city-explorer/sources/index.html','<html><head></head><body>Sources</body></html>'],['city-explorer/sources/manifest.json','{"files":{}}']]);
   execFileSync('python3',['-c',"import runpy,sys; runpy.run_path(sys.argv[1])['apply_site'](*sys.argv[2:])",pythonTool,site,selection.current.path,selection.rollback.path]);
+  writeFileSync(join(site,'_headers'),readFileSync(join(site,'_headers'),'utf8').replace(/^  /gm,'\t'));
   writeFiles(site,[['publication.json',JSON.stringify(selection)]]);mkdirSync(review);
   const seal=(overrides={})=>writeFileSync(join(review,'integration-manifest.json'),JSON.stringify({files:inventory(site),teaching_package:packageFiles,...overrides}));
   seal();assert.ok(verifyStage(site,commit,source)>0);
