@@ -289,6 +289,7 @@ def integrate(
     flow_update=False,
     teaching_package=None,
     brand_update=False,
+    city_base_manifest=None,
 ):
     legacy, viewer, previous, offer, out, offline = map(
         Path, (legacy, viewer, previous, offer, out, offline)
@@ -297,6 +298,19 @@ def integrate(
         raise ValueError("output already exists")
     if brand_update and not (teaching_package and source_commit):
         raise ValueError("hosted brand requires source-bound teaching package")
+    original_base = None
+    if brand_update:
+        if city_base_manifest is None:
+            raise ValueError("hosted brand requires the original City base manifest")
+        original_base = Path(city_base_manifest).read_bytes()
+        base_release, base_files = brand.verify_projected_base(previous, original_base)
+        current_release, _ = launch.verify_viewer(viewer, "hosted current")
+        if (current_release.get("hosting_projection") != base_release["hosting_projection"]
+                or current_release.get("hosted_presentation", {}).get("base_release_sha256")
+                != base_files["release.json"]["sha256"]):
+            raise ValueError("hosted current must derive from the projected rollback")
+    elif city_base_manifest is not None:
+        raise ValueError("original City base manifest requires a hosted brand update")
     if teaching_package and not (flow_update and client_update and source_commit):
         raise ValueError("teaching package requires a frozen flow client and source commit")
     if flow_update and not client_update:
@@ -409,6 +423,9 @@ def integrate(
         stage = Path(temporary) / "stage"
         report = launch.prepare(legacy, viewer, stage, previous, readback)
         site, review = stage / "site", stage / "review"
+        if original_base is not None:
+            (review / "inputs").mkdir()
+            (review / "inputs/city-base-release.json").write_bytes(original_base)
         (site / "boot.js").write_text(
             'import { mountCityEntry } from "./integration.mjs";\n' + boot + "\nmountCityEntry();\n"
         )
@@ -706,6 +723,8 @@ def main():
     parser.add_argument("--readback", type=Path)
     parser.add_argument("--brand-update", action="store_true",
                         help="Apply approved hosted artwork and Google tag")
+    parser.add_argument("--city-base-manifest", type=Path,
+                        help="Original City release.json retained as hosting-projection evidence")
     parser.add_argument("--teaching-package", type=Path,
                         help="Verified NF04-A source package and byte-accounting receipt")
     parser.add_argument(

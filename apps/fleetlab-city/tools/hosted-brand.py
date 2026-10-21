@@ -2,6 +2,7 @@
 
 import argparse
 import gzip
+import hashlib
 import importlib.util
 import json
 import re
@@ -63,6 +64,48 @@ def asset_inventory():
     }
 
 
+def projected_manifest(original, original_sha256):
+    if (original.get("schema") != launch.RELEASE_SCHEMA
+            or "hosting_projection" in original or "hosted_presentation" in original
+            or "_headers" not in original.get("files", {})):
+        raise ValueError("original unprojected review manifest required")
+    return {**original,
+            "files": {k: v for k, v in original["files"].items() if k != "_headers"},
+            "hosting_projection": {
+                "schema": "fleetlab.city-hosting-projection/1.0.0",
+                "original_release_sha256": original_sha256,
+                "omitted_paths": ["_headers"], "header_source": "ROOT_HEADERS",
+            }}
+
+
+def project_hosted_base(viewer, out):
+    """Derive a new header-free generation; preserve the original input identity."""
+    viewer, out = Path(viewer), Path(out)
+    if out.exists():
+        raise ValueError("new viewer output already exists")
+    if viewer.resolve() in out.resolve().parents:
+        raise ValueError("projection output must be separate from its input")
+    original, before = launch.verify_viewer(viewer, "original")
+    if "hosting_projection" in original or "hosted_presentation" in original:
+        raise ValueError("select an original review viewer, not an already projected generation")
+    projected = projected_manifest(original, before["release.json"]["sha256"])
+    shutil.copytree(viewer, out)
+    (out / "_headers").unlink()
+    launch.write_json(out / "release.json", projected)
+    launch.verify_viewer(out, "projected")
+    if launch.inventory(viewer) != before:
+        raise ValueError("original viewer mutated")
+    return projected
+
+
+def verify_projected_base(viewer, original_bytes):
+    release, files = launch.verify_viewer(Path(viewer), "projected base")
+    expected = projected_manifest(json.loads(original_bytes), hashlib.sha256(original_bytes).hexdigest())
+    if release != expected:
+        raise ValueError("City base differs from original hosting projection")
+    return release, files
+
+
 def derive_viewer(viewer, out, source_commit):
     viewer, out = Path(viewer), Path(out)
     if out.exists():
@@ -72,6 +115,8 @@ def derive_viewer(viewer, out, source_commit):
     release, before = launch.verify_viewer(viewer, "base")
     if release.get("hosted_presentation"):
         raise ValueError("select the original review viewer, not an already branded generation")
+    if not release.get("hosting_projection"):
+        raise ValueError("hosted presentation requires a projected base without nested headers")
     assets = asset_inventory()
     shutil.copytree(viewer, out)
     (out / "index.html").write_text(transform((viewer / "index.html").read_text()))
@@ -79,11 +124,6 @@ def derive_viewer(viewer, out, source_commit):
         (out / "index.html.gz").write_bytes(
             gzip.compress((out / "index.html").read_bytes(), mtime=0)
         )
-    (out / "_headers").write_text(
-        "/city-explorer/*\n  Content-Security-Policy: "
-        + transform(launch.CITY_CSP, "--policy")
-        + "\n"
-    )
     network = json.loads((out / "network.json").read_text())
     network.update(
         schema="fleetlab.city-network/1.1.0",
@@ -105,7 +145,7 @@ def derive_viewer(viewer, out, source_commit):
     }
     release["files"] = {k: v for k, v in launch.inventory(out).items() if k != "release.json"}
     changed = {k for k, v in release["files"].items() if before.get(k) != v}
-    if changed - {"index.html", "index.html.gz", "network.json", "_headers"}:
+    if changed - {"index.html", "index.html.gz", "network.json"}:
         raise ValueError("unexpected City scientific or source change")
     launch.write_json(out / "release.json", release)
     launch.verify_viewer(out, "new presentation")
@@ -166,7 +206,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--viewer", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--source-commit", required=True)
+    parser.add_argument("--source-commit")
+    parser.add_argument("--project-base", action="store_true",
+                        help="Create a new header-free base generation for root policy hosting")
     args = parser.parse_args()
-    derive_viewer(args.viewer, args.out, args.source_commit)
-    print("New City presentation generation verified; scientific files and base preserved.")
+    if args.project_base:
+        if args.source_commit:
+            parser.error("--project-base does not accept --source-commit")
+        project_hosted_base(args.viewer, args.out)
+        print("New City hosting projection verified; original input preserved.")
+    else:
+        if not args.source_commit:
+            parser.error("--source-commit is required for a presentation")
+        derive_viewer(args.viewer, args.out, args.source_commit)
+        print("New City presentation generation verified; scientific files and base preserved.")

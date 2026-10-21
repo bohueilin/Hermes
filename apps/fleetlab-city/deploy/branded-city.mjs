@@ -2,9 +2,8 @@
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
-import {join} from 'node:path';
-import {BRAND_MEDIA,BRAND_TEXT,renderPage,policyFor} from '../hosted/site-transform.mjs';
-const CSP="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'";
+import {dirname,join} from 'node:path';
+import {BRAND_MEDIA,BRAND_TEXT,renderPage} from '../hosted/site-transform.mjs';
 const ordered=value=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(k=>[k,ordered(value[k])])):Array.isArray(value)?value.map(ordered):value;
 const json=value=>JSON.stringify(ordered(value),null,2)+'\n';
 const same=(a,b)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
@@ -17,6 +16,12 @@ export function verifyBrandedCity(site,selection,files,commit){
  const base=JSON.parse(readFileSync(join(site,prior.path,'release.json'),'utf8'));
  const release=JSON.parse(readFileSync(join(site,current.path,'release.json'),'utf8'));
  if(base.hosted_presentation)throw Error('Expected original review viewer as presentation baseline.');
+ const originalBytes=readFileSync(join(dirname(site),'review/inputs/city-base-release.json'));
+ const original=JSON.parse(originalBytes);
+ if(original.schema!=='fleetlab.city-release/1.0.0'||original.hosting_projection||original.hosted_presentation||!original.files?._headers)throw Error('Original City manifest required for hosting projection.');
+ const projected={...original,files:Object.fromEntries(Object.entries(original.files).filter(([name])=>name!=='_headers')),
+  hosting_projection:{schema:'fleetlab.city-hosting-projection/1.0.0',original_release_sha256:fingerprint(originalBytes).sha256,omitted_paths:['_headers'],header_source:'ROOT_HEADERS'}};
+ if(!same(base,projected))throw Error('City base differs from original hosting projection.');
  for(const [item,manifest] of [[current,release],[prior,base]]){
   const actual=Object.fromEntries(Object.entries(files).filter(([p])=>p.startsWith(item.path+'/')&&p!==item.path+'/release.json').map(([p,r])=>[p.slice(item.path.length+1),r]));
   const hash=files[item.path+'/release.json']?.sha256;
@@ -24,7 +29,7 @@ export function verifyBrandedCity(site,selection,files,commit){
  }
  const html=renderPage(readFileSync(join(site,prior.path,'index.html'),'utf8'),{analytics:true});
  const network=hostedNetwork(JSON.parse(readFileSync(join(site,prior.path,'network.json'),'utf8')));
- const changes={'index.html':html,'network.json':json(network),'_headers':'/city-explorer/*\n  Content-Security-Policy: '+policyFor(CSP,true)+'\n'};
+ const changes={'index.html':html,'network.json':json(network)};
  if(base.files['index.html.gz'])changes['index.html.gz']=gzipSync(html,{level:9});
  const expectedFiles={...base.files,...Object.fromEntries(Object.entries(changes).map(([p,data])=>[p,fingerprint(data)]))};
  const external_assets=Object.fromEntries([...BRAND_TEXT,...Object.keys(BRAND_MEDIA)].map(p=>[p,files[p]]));

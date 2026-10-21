@@ -113,7 +113,19 @@ def verify_viewer(root, role):
         k: v for k, v in files.items() if k != "release.json"
     }:
         raise ValueError(f"{role} release integrity mismatch")
-    for required in ("index.html", "app.mjs", "style.css", "network.json", "_headers"):
+    projection = release.get("hosting_projection")
+    if "hosting_projection" in release and (
+        not isinstance(projection, dict)
+        or set(projection) != {"schema", "original_release_sha256", "omitted_paths", "header_source"}
+        or projection.get("schema") != "fleetlab.city-hosting-projection/1.0.0"
+        or not isinstance(projection.get("original_release_sha256"), str)
+        or not re.fullmatch(r"[a-f0-9]{64}", projection["original_release_sha256"])
+        or projection.get("omitted_paths") != ["_headers"]
+        or projection.get("header_source") != "ROOT_HEADERS"
+        or "_headers" in expected
+    ):
+        raise ValueError(f"{role} invalid hosting projection")
+    for required in ("index.html", "app.mjs", "style.css", "network.json") + (() if projection else ("_headers",)):
         if required not in expected:
             raise ValueError(f"{role} release missing {required}")
     network = json.loads((root / "network.json").read_text())

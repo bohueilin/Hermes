@@ -8,6 +8,7 @@ import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {verifyStage,releaseCommand} from '../deploy/stage-guard.mjs';
+import {verifyBrandedCity} from '../deploy/branded-city.mjs';
 import {buildSite,buildHtml} from '../../../playground/fleetlab/tools/pack.mjs';
 import {buildPackageProof} from '../../../playground/fleetlab/tools/package-proof.mjs';
 test('aliases and global options cannot redirect or bypass a guarded upload',()=>{
@@ -103,27 +104,47 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
   const packageFiles=Object.fromEntries([...proof.files].map(([path,data])=>[path,fingerprint(data)]));
   const selection={source_commit:commit,offline_sha256:offlineHash,teaching_package:{path:'downloads/teaching-package.json',...packageFiles['downloads/teaching-package.json']}};
   // Exercise the actual Python presentation builder against a small recorded viewer.
-  const base=join(root,'city-base'), branded=join(root,'city-branded');
-  writeFiles(base,[['index.html','<!doctype html><html><head></head><body>City</body></html>'],
+  const raw=join(root,'city-original'),base=join(root,'city-base'), branded=join(root,'city-branded');
+  writeFiles(raw,[['index.html','<!doctype html><html><head></head><body>City</body></html>'],
    ['app.mjs','export const recorded = true;'],['data/catalog.json','{"recorded":42}'],
    ['style.css','body{color:#123}'],['_headers',"/city-explorer/*\n  Content-Security-Policy: script-src 'self'; connect-src 'self'\n"],
    ['network.json',JSON.stringify({origins:['self'],accounts:false,analytics:false,provider_calls:false})]]);
-  writeFiles(base,[['release.json',JSON.stringify({schema:'fleetlab.city-release/1.0.0',scope:'REVIEW_ONLY',public_deployment:'NOT_PERFORMED',
-   compatibility:{viewer:'1.1.0',pack:'fleetlab.city-pack/1.0.0',run:'fleetlab.city-run/1.0.0',metrics:'fleetlab.city-metrics/1.0.0'},files:inventory(base)})]]);
+  writeFiles(raw,[['release.json',JSON.stringify({schema:'fleetlab.city-release/1.0.0',scope:'REVIEW_ONLY',public_deployment:'NOT_PERFORMED',
+   compatibility:{viewer:'1.1.0',pack:'fleetlab.city-pack/1.0.0',run:'fleetlab.city-run/1.0.0',metrics:'fleetlab.city-metrics/1.0.0'},files:inventory(raw)})]]);
   const pythonTool=join(source,'apps/fleetlab-city/tools/hosted-brand.py');
+  execFileSync('python3',[pythonTool,'--viewer',raw,'--out',base,'--project-base']);
   execFileSync('python3',[pythonTool,'--viewer',base,'--out',branded,'--source-commit',commit]);
   for(const [key,path] of [['current',branded],['rollback',base]]){
    const digest=fingerprint(readFileSync(join(path,'release.json'))).sha256;
    selection[key]={path:'city-explorer/releases/'+digest.slice(0,16),release_sha256:digest};
    cpSync(path,join(site,selection[key].path),{recursive:true});
+   assert.equal(existsSync(join(site,selection[key].path,'_headers')),false);
   }
   selection.hosted_presentation='fleetlab.hosted-presentation/1.0.0';
   writeFiles(site,[['city-explorer/sources/index.html','<html><head></head><body>Sources</body></html>'],['city-explorer/sources/manifest.json','{"files":{}}']]);
   execFileSync('python3',['-c',"import runpy,sys; runpy.run_path(sys.argv[1])['apply_site'](*sys.argv[2:])",pythonTool,site,selection.current.path,selection.rollback.path]);
   writeFileSync(join(site,'_headers'),readFileSync(join(site,'_headers'),'utf8').replace(/^  /gm,'\t'));
-  writeFiles(site,[['publication.json',JSON.stringify(selection)]]);mkdirSync(review);
+  writeFiles(site,[['publication.json',JSON.stringify(selection)]]);
+  const originalManifest=readFileSync(join(raw,'release.json'));
+  writeFiles(review,[['inputs/city-base-release.json',originalManifest]]);
   const seal=(overrides={})=>writeFileSync(join(review,'integration-manifest.json'),JSON.stringify({files:inventory(site),teaching_package:packageFiles,...overrides}));
   seal();assert.ok(verifyStage(site,commit,source)>0);
+  const changedOriginal=JSON.parse(originalManifest);changedOriginal.files['app.mjs']=fingerprint('changed original');
+  writeFiles(review,[['inputs/city-base-release.json',JSON.stringify(changedOriginal)]]);
+  assert.throws(()=>verifyStage(site,commit,source),/hosting projection/i,'rollback must match the retained original manifest');
+  writeFiles(review,[['inputs/city-base-release.json',originalManifest]]);
+  for(const [key,input] of [['current',branded],['rollback',base]]){
+   const old={...selection[key]},manifest=JSON.parse(readFileSync(join(input,'release.json')));
+   const header='/*\n  Content-Security-Policy: default-src *\n';
+   manifest.files._headers=fingerprint(header);
+   const bytes=JSON.stringify(manifest),digest=fingerprint(bytes).sha256;
+   selection[key]={path:'city-explorer/releases/'+digest.slice(0,16),release_sha256:digest};
+   cpSync(input,join(site,selection[key].path),{recursive:true});
+   writeFiles(site,[[selection[key].path+'/_headers',header],[selection[key].path+'/release.json',bytes]]);
+   rmSync(join(site,old.path),{recursive:true});
+   assert.throws(()=>verifyBrandedCity(site,selection,inventory(site),commit),/hosting projection|presentation differs/i,'resealed nested '+key+' policy must fail');
+   rmSync(join(site,selection[key].path),{recursive:true});cpSync(input,join(site,old.path),{recursive:true});selection[key]=old;
+  }
   for(const path of ['city-explorer/releases/index.html','network-flows/capacity/index.html','network-flows/software-delivery/index.html','network-flows/fleet-day/index.html','index.html','boot.js','_headers','integration.mjs','integration.css','404.html','not-found.css','brand.mjs','brand.css','site-media/fleetlab-logo.png']){
    const original=readFileSync(join(site,path));writeFileSync(join(site,path),Buffer.concat([original,Buffer.from('\nchanged after review')]));seal();
    assert.throws(()=>verifyStage(site,commit,source),/integration.*(?:differ|mismatch)/i,path);

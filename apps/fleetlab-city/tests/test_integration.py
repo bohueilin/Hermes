@@ -21,6 +21,14 @@ PACK = Path(__file__).resolve().parents[3] / "playground/fleetlab/tools/pack.mjs
 
 
 class IntegrationTest(unittest.TestCase):
+    def test_hosted_integration_requires_original_base_evidence(self):
+        with self.assertRaisesRegex(ValueError, "original City base manifest"):
+            integration.integrate(
+                self.legacy, self.viewer, self.prior, self.offer, self.base / "out", self.offline,
+                client_update=self.base / "client", flow_update=True,
+                teaching_package=self.base / "package", source_commit="a" * 40, brand_update=True,
+            )
+
     def test_download_headers_match_only_the_verified_source_archive(self):
         self.assertTrue(callable(getattr(integration, "source_headers", None)))
         source = "network-flows/sources/" + "a" * 64 + ".json.gz"
