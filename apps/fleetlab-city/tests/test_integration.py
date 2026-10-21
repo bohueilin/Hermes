@@ -21,6 +21,27 @@ PACK = Path(__file__).resolve().parents[3] / "playground/fleetlab/tools/pack.mjs
 
 
 class IntegrationTest(unittest.TestCase):
+    def test_city_input_pins_are_strict_and_checked_before_integration(self):
+        self.assertTrue(callable(getattr(integration, "check_city_inputs", None)))
+        base = b'{"original":"base"}'
+        offer = b'{"original":"offer"}'
+        approved = {"schema": "fleetlab.approved-city-inputs/1.0.0",
+                    "base_release": {"sha256": hashlib.sha256(base).hexdigest(), "provenance": "docs/fixture.md"},
+                    "source_offer_manifest": {"sha256": hashlib.sha256(offer).hexdigest(), "provenance": "docs/fixture.md"}}
+        path = self.base / "apps/fleetlab-city/deploy/approved-inputs.json"
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps(approved))
+        with patch.object(integration.launch, "ROOT", self.base):
+            integration.check_city_inputs(base, offer)
+            for first, second in ((base + b" ", offer), (base, offer + b" ")):
+                with self.assertRaisesRegex(ValueError, "approved City"):
+                    integration.check_city_inputs(first, second)
+            for changed in ({**approved, "extra": True}, {**approved, "schema": "other"},
+                            {**approved, "base_release": {**approved["base_release"], "path": "elsewhere"}}):
+                path.write_text(json.dumps(changed))
+                with self.assertRaisesRegex(ValueError, "City.*pin"):
+                    integration.check_city_inputs(base, offer)
+
     def test_hosted_integration_requires_original_base_evidence(self):
         with self.assertRaisesRegex(ValueError, "original City base manifest"):
             integration.integrate(

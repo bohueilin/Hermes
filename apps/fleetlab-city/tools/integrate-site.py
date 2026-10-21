@@ -276,6 +276,27 @@ def source_headers(source):
     )
 
 
+def check_city_inputs(original_base, original_offer):
+    """Only source-owned historical pins can approve the unmodified input manifests."""
+    path = launch.ROOT / "apps/fleetlab-city/deploy/approved-inputs.json"
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 4096:
+        raise ValueError("City input pins must be a regular bounded file")
+    pins = json.loads(path.read_bytes())
+    if (not isinstance(pins, dict)
+            or set(pins) != {"schema", "base_release", "source_offer_manifest"}
+            or pins["schema"] != "fleetlab.approved-city-inputs/1.0.0"):
+        raise ValueError("invalid City input pin schema")
+    for key, data in (("base_release", original_base), ("source_offer_manifest", original_offer)):
+        record = pins[key]
+        if (not isinstance(record, dict) or set(record) != {"sha256", "provenance"}
+                or not re.fullmatch(r"[a-f0-9]{64}", str(record["sha256"]))
+                or not re.fullmatch(r"docs/[A-Za-z0-9_./-]+\.md", str(record["provenance"]))
+                or any(part in {".", ".."} for part in record["provenance"].split("/"))):
+            raise ValueError("invalid City input pin record")
+        if hashlib.sha256(data).hexdigest() != record["sha256"]:
+            raise ValueError(f"approved City {key} input differs")
+
+
 def integrate(
     legacy,
     viewer,
@@ -298,11 +319,20 @@ def integrate(
         raise ValueError("output already exists")
     if brand_update and not (teaching_package and source_commit):
         raise ValueError("hosted brand requires source-bound teaching package")
-    original_base = None
+    original_base = original_offer = original_offer_index = None
     if brand_update:
         if city_base_manifest is None:
             raise ValueError("hosted brand requires the original City base manifest")
+        if Path(city_base_manifest).is_symlink() or not Path(city_base_manifest).is_file():
+            raise ValueError("original City base manifest must be regular")
+        if Path(city_base_manifest).stat().st_size > 4 * 1024**2:
+            raise ValueError("original City base manifest exceeds evidence byte limit")
         original_base = Path(city_base_manifest).read_bytes()
+        if ((offer / "manifest.json").is_symlink() or not (offer / "manifest.json").is_file()
+                or (offer / "manifest.json").stat().st_size > 4 * 1024**2):
+            raise ValueError("original City source manifest must be regular and bounded")
+        original_offer = (offer / "manifest.json").read_bytes()
+        check_city_inputs(original_base, original_offer)
         base_release, base_files = brand.verify_projected_base(previous, original_base)
         current_release, _ = launch.verify_viewer(viewer, "hosted current")
         if (current_release.get("hosting_projection") != base_release["hosting_projection"]
@@ -319,6 +349,11 @@ def integrate(
         raise ValueError("a source-identified release requires the reviewed security client update")
     offer_files = launch.inventory(offer)
     offer_manifest = json.loads((offer / "manifest.json").read_text())
+    if original_offer is not None:
+        original_offer_index = (offer / "index.html").read_bytes()
+        for name, data in (("manifest.json", original_offer), ("index.html", original_offer_index)):
+            if offer_files.get(name) != {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}:
+                raise ValueError("City source input changed during capture")
     if offer_manifest.get("files") != {
         k: v for k, v in offer_files.items() if k != "manifest.json"
     }:
@@ -426,6 +461,8 @@ def integrate(
         if original_base is not None:
             (review / "inputs").mkdir()
             (review / "inputs/city-base-release.json").write_bytes(original_base)
+            (review / "inputs/city-source-offer-manifest.json").write_bytes(original_offer)
+            (review / "inputs/city-source-offer-index.html").write_bytes(original_offer_index)
         (site / "boot.js").write_text(
             'import { mountCityEntry } from "./integration.mjs";\n' + boot + "\nmountCityEntry();\n"
         )

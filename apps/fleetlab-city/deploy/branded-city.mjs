@@ -2,7 +2,8 @@
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
-import {dirname,join} from 'node:path';
+import {join} from 'node:path';
+import {readCityInput} from './city-evidence.mjs';
 import {BRAND_MEDIA,BRAND_TEXT,renderPage} from '../hosted/site-transform.mjs';
 const ordered=value=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(k=>[k,ordered(value[k])])):Array.isArray(value)?value.map(ordered):value;
 const json=value=>JSON.stringify(ordered(value),null,2)+'\n';
@@ -10,13 +11,12 @@ const same=(a,b)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const fingerprint=data=>({bytes:Buffer.byteLength(data),sha256:createHash('sha256').update(data).digest('hex')});
 // Same fields as tools/hosted-brand.py; the Google tag's cookies make storage a description, not false.
 export const hostedNetwork=network=>({...network,schema:'fleetlab.city-network/1.1.0',origins:['self','https://www.googletagmanager.com','https://*.google-analytics.com','https://*.google.com'],analytics:true,storage:'Google Analytics first-party cookies on fleetlab.pages.dev',hosting_disclosure:'Google Analytics measures visits on fleetlab.pages.dev. Preview collection is disabled. Cloudflare receives hosting requests.'});
-export function verifyBrandedCity(site,selection,files,commit){
+export function verifyBrandedCity(site,selection,files,commit,originalBytes=readCityInput(site,'city-base-release.json')){
  const current=selection.current,prior=selection.rollback;
  for(const item of [current,prior])if(!/^city-explorer\/releases\/[a-f0-9]{16}$/.test(item?.path??''))throw Error('Invalid City generation path.');
  const base=JSON.parse(readFileSync(join(site,prior.path,'release.json'),'utf8'));
  const release=JSON.parse(readFileSync(join(site,current.path,'release.json'),'utf8'));
  if(base.hosted_presentation)throw Error('Expected original review viewer as presentation baseline.');
- const originalBytes=readFileSync(join(dirname(site),'review/inputs/city-base-release.json'));
  const original=JSON.parse(originalBytes);
  if(original.schema!=='fleetlab.city-release/1.0.0'||original.hosting_projection||original.hosted_presentation||!original.files?._headers)throw Error('Original City manifest required for hosting projection.');
  const projected={...original,files:Object.fromEntries(Object.entries(original.files).filter(([name])=>name!=='_headers')),

@@ -1,4 +1,5 @@
 import {verifyBrandedCity} from './branded-city.mjs';
+import {verifyCityEvidence} from './city-evidence.mjs';
 import {existsSync,readFileSync,readdirSync,lstatSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
@@ -111,7 +112,8 @@ export function verifyStage(site,commit,sourceRoot){
     }
     if(selection.hosted_presentation!=='fleetlab.hosted-presentation/1.0.0')throw Error('Current release requires the approved hosted presentation.');
     verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,selection);
-    verifyBrandedCity(site,selection,files,commit);
+    const originalCityBase=verifyCityEvidence(site,sourceRoot,selection,files);
+    verifyBrandedCity(site,selection,files,commit,originalCityBase);
     execFileSync(process.execPath,[resolve(sourceRoot,'playground/fleetlab/tools/package-proof.mjs'),
       '--check-integrated',site,'--playground',resolve(sourceRoot,'playground/fleetlab'),
       '--source-commit',commit],{stdio:['ignore','pipe','pipe']});
