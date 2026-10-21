@@ -107,7 +107,8 @@ export async function confirmProduction(args,head,input=process.stdin,output=pro
 // every API request and token refresh with its full URL.
 const SERVER_OUTPUT=['Compiled Worker','Uploading Functions bundle','Uploading Worker bundle','Uploading _routes.json','Using redirected Wrangler configuration'];
 const API_HOSTS=['api.cloudflare.com','dash.cloudflare.com'];
-export function checkWranglerLog(log){
+export function checkWranglerLog(log,command='deploy'){
+  if(!['deploy','list'].includes(command))throw Error('Unsupported Wrangler log command.');
   if(!existsSync(log))throw Error(`Wrangler wrote no log at ${log}, so its output and API hosts are unchecked.`);
   const text=readFileSync(log,'utf8');
   for(const marker of SERVER_OUTPUT)if(text.includes(marker))throw Error(`Wrangler logged "${marker}"; review the release and ${log}.`);
@@ -115,6 +116,23 @@ export function checkWranglerLog(log){
     const url=URL.canParse(address)?new URL(address):null;
     if(!url||url.protocol!=='https:'||url.port||!API_HOSTS.includes(url.hostname))throw Error(`Wrangler contacted ${address}, not a Cloudflare API or token host; review ${log}.`);
   }
+  // Recognize complete records emitted by the hash-pinned CLI, not arbitrary success-looking
+  // text. This is post-run log evidence, not independent proof of remote deployment state.
+  const records=[...text.matchAll(/(?:^|\n)--- \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z (debug|info|log|warn|error)\n([\s\S]*?)\n---(?=\n|$)/g)]
+    .map(([,level,body])=>({level,body}));
+  const requestPattern=command==='deploy'
+    ? /^-- START CF API REQUEST: [A-Z]+ https:\/\/api\.cloudflare\.com\/client\/v4\/accounts\/[^/\s]+\/pages\/projects\/fleetlab(?:[/?][^\s]*)?$/
+    : /^-- START CF API REQUEST: GET https:\/\/api\.cloudflare\.com\/client\/v4\/accounts\/[^/\s]+\/pages\/projects\/fleetlab\/deployments$/;
+  const request=records.findIndex(record=>record.level==='debug'&&requestPattern.test(record.body));
+  const recognized=request!==-1&&records.slice(request+1).some(record=>{
+    if(record.level!=='log')return false;
+    if(command==='deploy')return /^✨ Deployment complete! Take a peek over at https:\/\/[a-z0-9-]+\.fleetlab\.pages\.dev\/?(?:\n✨ Deployment alias URL: https:\/\/(?:[a-z0-9-]+\.)?fleetlab\.pages\.dev\/?)?$/.exec(record.body)?.[0]===record.body;
+    try{
+      const rows=JSON.parse(record.body);
+      return Array.isArray(rows)&&rows.every(row=>row&&['Id','Environment','Branch','Source','Deployment','Status','Build'].every(key=>typeof row[key]==='string'));
+    }catch{return false;}
+  });
+  if(!recognized)throw Error(`Wrangler log has no recognizable ${command} record; review ${log}.`);
 }
 
 // A Pages command takes its account from the cached pages.json and records the account and project

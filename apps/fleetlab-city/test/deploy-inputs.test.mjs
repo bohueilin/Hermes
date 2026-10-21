@@ -43,7 +43,7 @@ test('the release wrapper spawns Wrangler only through those options',()=>{
  // Outside a Git checkout Wrangler cannot detect the message it used to read from git.
  assert.match(source,/'--commit-message'/);
  assert.ok(source.indexOf('deployPreflight(args[2]')<source.indexOf('verifyStage(args[2]'));
- assert.match(source,/if\(command!=='version'\)checkWranglerLog\(log\);\ncheckPagesCache\(cache\);/);
+ assert.match(source,/if\(command!=='version'\)checkWranglerLog\(log,command\);\ncheckPagesCache\(cache\);/);
 });
 
 const WRAPPER=fileURLToPath(new URL('../deploy/wrangler.mjs',import.meta.url));
@@ -175,6 +175,72 @@ test('the log check passes a clean upload log and refuses a missing log',t=>{
  assert.throws(()=>checkWranglerLog(join(tmpdir(),'fleetlab-no-such-dir','wrangler.log')),/wrote no log/);
 });
 
+const UNRECOGNIZED_LOGS=[
+ ['an empty file',[]],
+ ['unrecognized text',['not a Wrangler record']],
+ ['startup output only',['log\nwrangler 4.148.0']],
+ ['OAuth refresh only',['debug\nFetching auth token from https://dash.cloudflare.com/oauth2/token']],
+ ['an unrelated Cloudflare API request',['debug\n-- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/accounts']],
+ ['asset upload without deployment completion',CLEAN_LOG.slice(0,-1)],
+ ['completion without a project API record',[CLEAN_LOG.at(-1)]],
+ ['unknown final deployment status',[...CLEAN_LOG.slice(0,-1),"log\n✨ Deployment complete! However, we couldn't ascertain the final status of your deployment."]],
+ ['a different project completion',CLEAN_LOG.map(entry=>entry.replace('https://0123abcd.fleetlab.pages.dev','https://0123abcd.other-project.pages.dev'))],
+];
+for(const [label,entries] of UNRECOGNIZED_LOGS){
+ test(`the deploy log check refuses ${label}`,t=>{
+  assert.throws(()=>checkWranglerLog(logFile(t,entries)),/recognizable.*deploy/i);
+ });
+}
+
+test('the deploy log check rejects unframed and truncated success text',t=>{
+ const log=logFile(t,[]);
+ for(const text of [CLEAN_LOG.join('\n'),`\n--- 2026-10-16T01:51:42.000Z ${CLEAN_LOG.at(-1)}\n`,' \n\t']){
+  writeFileSync(log,text);
+  assert.throws(()=>checkWranglerLog(log),/recognizable.*deploy/i);
+ }
+});
+
+test('a truncated success record cannot borrow a later record delimiter or hide extra text',t=>{
+ const log=logFile(t,[CLEAN_LOG[0]]),request=readFileSync(log,'utf8');
+ const later=readFileSync(logFile(t,['debug\nunrelated later record']),'utf8');
+ const unterminated=`\n--- 2026-10-16T01:51:42.000Z ${CLEAN_LOG.at(-1)}\n`;
+ writeFileSync(log,request+unterminated+later);
+ assert.throws(()=>checkWranglerLog(log),/recognizable.*deploy/i);
+ for(const suffix of ['\nunrecognized trailing text','\n--- broken nested record header','\n✨ Deployment alias URL: https://other-project.pages.dev']){
+  assert.throws(()=>checkWranglerLog(logFile(t,[...CLEAN_LOG.slice(0,-1),CLEAN_LOG.at(-1)+suffix])),/recognizable.*deploy/i);
+ }
+});
+
+test('the deploy log check accepts the pinned success message with an optional alias line',t=>{
+ const entries=[...CLEAN_LOG.slice(0,-1),CLEAN_LOG.at(-1)+'\n✨ Deployment alias URL: https://preview.fleetlab.pages.dev'];
+ assert.doesNotThrow(()=>checkWranglerLog(logFile(t,entries),'deploy'));
+});
+
+// Recorded output shapes from the pinned CLI, with synthetic IDs, URLs and times only.
+const LIST_REQUEST='debug\n-- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/accounts/0000/pages/projects/fleetlab/deployments';
+const LIST_ROWS=[{Id:'synthetic-id',Environment:'Preview',Branch:'codex-city-explorer',Source:'0123456',
+ Deployment:'https://0123abcd.fleetlab.pages.dev',Status:'1 minute ago',Build:'https://dash.cloudflare.com/0000/pages/view/fleetlab/synthetic-id'}];
+const LIST_LOG=[LIST_REQUEST,'log\n'+JSON.stringify(LIST_ROWS,null,2)];
+
+test('listing accepts a framed fleetlab deployments request followed by populated or empty results',t=>{
+ assert.doesNotThrow(()=>checkWranglerLog(logFile(t,LIST_LOG),'list'));
+ assert.doesNotThrow(()=>checkWranglerLog(logFile(t,[LIST_REQUEST,'log\n[]']),'list'));
+});
+
+test('listing rejects empty, unrelated, incomplete, reversed or malformed evidence',t=>{
+ for(const entries of [[],['log\nhello'],[LIST_REQUEST],['log\n[]'],['log\n[]',LIST_REQUEST],
+  [LIST_REQUEST.replace('/fleetlab/','/other-project/'),'log\n[]'],
+  [LIST_REQUEST.replace('GET ','POST '),'log\n[]'],[LIST_REQUEST,'log\n{}'],[LIST_REQUEST,'log\n[{}]'],[LIST_REQUEST,'log\n[']]){
+  assert.throws(()=>checkWranglerLog(logFile(t,entries),'list'),/recognizable.*list/i);
+ }
+});
+
+test('deploy and listing evidence cannot substitute for each other or an unknown command',t=>{
+ assert.throws(()=>checkWranglerLog(logFile(t,LIST_LOG),'deploy'),/recognizable.*deploy/i);
+ assert.throws(()=>checkWranglerLog(logFile(t,CLEAN_LOG),'list'),/recognizable.*list/i);
+ assert.throws(()=>checkWranglerLog(logFile(t,CLEAN_LOG),'unknown'),/Unsupported.*log/i);
+});
+
 const FORBIDDEN=[
  ['log\n✨ Compiled Worker successfully',/Compiled Worker/],
  ['log\n✨ Uploading Functions bundle',/Uploading Functions bundle/],
@@ -193,6 +259,7 @@ const FORBIDDEN=[
 for(const [entry,refusal] of FORBIDDEN){
  test(`the log check refuses ${entry.split('\n')[1]}`,t=>{
   assert.throws(()=>checkWranglerLog(logFile(t,[...CLEAN_LOG,entry])),refusal);
+  assert.throws(()=>checkWranglerLog(logFile(t,[...LIST_LOG,entry]),'list'),refusal);
  });
 }
 

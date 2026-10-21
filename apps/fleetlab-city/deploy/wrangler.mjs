@@ -64,7 +64,7 @@ try{
 if(result.error)throw result.error;
 // --version makes no request; the other commands must show no server code and only Cloudflare hosts.
 // No command may leave another Pages project in the cache.
-if(command!=='version')checkWranglerLog(log);
+if(command!=='version')checkWranglerLog(log,command);
 checkPagesCache(cache);
 if(result.status===0)rmSync(run,{recursive:true,force:true});
 process.exit(result.status??1);
