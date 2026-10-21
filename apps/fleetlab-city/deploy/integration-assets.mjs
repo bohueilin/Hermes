@@ -15,6 +15,17 @@ const HOSTED_FILES=['integration.mjs','integration.css','404.html','not-found.cs
 const CITY_CSP="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'";
 const fingerprint=data=>({bytes:Buffer.byteLength(data),sha256:createHash('sha256').update(data).digest('hex')});
 
+function rootPermissions(text){
+ const lines=text.replace(/\n+$/,'').split(/\r?\n/),start=lines.indexOf('/*');
+ if(start<0)throw Error('Missing root header rule.');
+ let end=start+1;
+ while(end<lines.length&&(!lines[end]||/^\s|^#/.test(lines[end])))end++;
+ const root=lines.slice(start+1,end).filter(line=>!/^permissions-policy:/i.test(line.trim())&&!/^! permissions-policy$/i.test(line.trim()));
+ while(root.length&&!root.at(-1).trim())root.pop();
+ lines.splice(start+1,end-start-1,...root,'  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()','');
+ return lines.join('\n').replace(/\n+$/,'')+'\n';
+}
+
 export function integratedRootFiles(teaching,{branded=false,rollback}={}){
  const deliveryProblems=[...softwareDeliveryProblems(teaching),...orderPackageProblems(teaching),...r1PackageProblems(teaching),...r3PackageProblems(teaching)];
  if(deliveryProblems.length)throw Error(`Software delivery sidecar rejected: ${deliveryProblems.join('; ')}`);
@@ -41,14 +52,8 @@ export function integratedRootFiles(teaching,{branded=false,rollback}={}){
  if(teaching.has(R1_RELEASE))index=index.replace('</head>','<meta name="fleetlab-rebalancing" content="/network-flows/rebalancing/release.json"></head>');
  if(teaching.has(R3_RELEASE))index=index.replace('</head>','<meta name="fleetlab-dispatch" content="/network-flows/dispatch/release.json"></head>');
  if(teaching.has(ORDER_RELEASE))index=index.replace('</head>','<meta name="fleetlab-delivery-order" content="/network-flows/delivery-order/release.json"></head>');
- const old=teaching.get('_headers'),permission='camera=(), microphone=(), geolocation=()';
- const inherited=old.split(/\r?\n/).map(line=>line.trim()).filter(line=>line.toLowerCase().startsWith('permissions-policy:'))
-  .map(line=>line.slice(line.indexOf(':')+1).trim());
- let addition=`\n/city-explorer/*\n  ! Content-Security-Policy\n  Content-Security-Policy: ${CITY_CSP}\n`;
- if(inherited.length!==1||inherited[0]!==permission){
-  if(inherited.length)addition+='  ! Permissions-Policy\n';
-  addition+=`  Permissions-Policy: ${permission}\n`;
- }
+ const old=rootPermissions(teaching.get('_headers'));
+ const addition=`\n/city-explorer/*\n  ! Content-Security-Policy\n  Content-Security-Policy: ${CITY_CSP}\n`;
  // Path rules may relax or annotate the /* baseline but must never be relied on to restrict: Pages matches them
  // against the raw path, so a percent-encoded spelling gets only /* (tools/check-headers.py checks such spellings).
  const headers=old.replace(/\n+$/,'')+'\n'+addition+

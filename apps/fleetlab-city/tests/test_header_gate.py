@@ -14,15 +14,17 @@ spec.loader.exec_module(gate)
 
 ROLLBACK = "city-explorer/releases/aaaaaaaaaaaaaaaa"
 SOURCE = "network-flows/sources/" + "e" * 64 + ".json.gz"
+PERMISSION = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 ROOT = (
     "/*\n  Content-Security-Policy: default-src 'none'; script-src 'self'\n"
     "  X-Frame-Options: DENY\n  X-Content-Type-Options: nosniff\n"
+    f"  Permissions-Policy: {PERMISSION}\n"
     "  Referrer-Policy: no-referrer\n  Cache-Control: public, max-age=600"
 )
 PATH_RULES = (
     "/city-explorer/*\n  ! Content-Security-Policy\n"
     "  Content-Security-Policy: default-src 'none'; connect-src 'self'\n"
-    "  Permissions-Policy: camera=(), microphone=(), geolocation=()\n\n"
+    "\n"
     "/downloads/fleetlab-offline.html\n"
     "  Content-Disposition: attachment; filename=\"fleetlab-offline.html\"\n\n"
     "/downloads/fleetlab-offline\n"
@@ -66,6 +68,7 @@ class HeaderGateTests(unittest.TestCase):
             "content-security-policy": "default-src 'none'; script-src 'self'",
             "x-frame-options": "DENY",
             "x-content-type-options": "nosniff",
+            "permissions-policy": PERMISSION,
         }
         for path in CRAFTED:
             self.assertEqual(rows[path], (baseline, 200), path)
@@ -73,11 +76,23 @@ class HeaderGateTests(unittest.TestCase):
         self.assertIn("content-disposition", rows["/downloads/fleetlab-offline"][0])
 
     def test_a_root_rule_without_the_baseline_fails_closed(self):
-        for line in ("  X-Frame-Options: DENY\n", "  X-Content-Type-Options: nosniff\n"):
+        for line in ("  X-Frame-Options: DENY\n", "  X-Content-Type-Options: nosniff\n",
+                     f"  Permissions-Policy: {PERMISSION}\n"):
             with self.subTest(line=line.strip()):
                 self.write_headers(ROOT.replace(line, ""))
                 with self.assertRaisesRegex(ValueError, "security baseline"):
                     gate.rows(self.site)
+
+    def test_missing_permissions_on_root_lesson_or_404_is_reported(self):
+        rows = gate.rows(self.site)
+        for path in ("/", "/network-flows/capacity/", "/__fleetlab_missing_page__"):
+            with self.subTest(path=path):
+                row = next(row for row in rows if row[0] == path)
+                served = {key: value for key, value in row[1].items() if key != "permissions-policy"}
+                result = gate.check("https://example.test", [row],
+                                    head=lambda _: (True, str(row[2]), served))
+                self.assertFalse(result[0]["matches"])
+                self.assertIn("permissions-policy", result[0]["mismatches"])
 
     def test_a_crafted_spelling_served_without_nosniff_is_reported(self):
         rows = gate.rows(self.site)

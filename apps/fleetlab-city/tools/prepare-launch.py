@@ -186,22 +186,29 @@ def make_entry(city_dir, prefix):
     )
 
 
+def root_permissions(text):
+    """Cap powerful features in the root rule, including preserved legacy inputs."""
+    lines = text.rstrip("\n").splitlines()
+    start = lines.index("/*")
+    end = next((i for i in range(start + 1, len(lines))
+                if lines[i] and not lines[i][0].isspace() and not lines[i].startswith("#")), len(lines))
+    root = [line for line in lines[start + 1:end]
+            if not line.strip().lower().startswith("permissions-policy:")
+            and line.strip().lower() != "! permissions-policy"]
+    while root and not root[-1].strip():
+        root.pop()
+    lines[start + 1:end] = root + [
+        "  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()", ""
+    ]
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
 def make_candidate_headers(original, review):
     old = original.decode("utf-8")
-    permission_value = "camera=(), microphone=(), geolocation=()"
-    inherited_permissions = [
-        line.strip().split(":", 1)[1].strip()
-        for line in old.splitlines()
-        if line.strip().lower().startswith("permissions-policy:")
-    ]
     addition = (
         f"\n/city-explorer/*\n  ! Content-Security-Policy\n  Content-Security-Policy: {CITY_CSP}\n"
     )
-    if inherited_permissions != [permission_value]:
-        if inherited_permissions:
-            addition += "  ! Permissions-Policy\n"
-        addition += f"  Permissions-Policy: {permission_value}\n"
-    proposed = old.rstrip("\n") + "\n" + addition
+    proposed = root_permissions(old).rstrip("\n") + "\n" + addition
     (review / "_headers.candidate").write_text(proposed)
     (review / "_headers.diff").write_text(
         "".join(

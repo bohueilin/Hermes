@@ -60,9 +60,8 @@ function integratedShell(packed){
  if(packed.has('network-flows/rebalancing/release.json'))html=html.replace('</head>','<meta name="fleetlab-rebalancing" content="/network-flows/rebalancing/release.json"></head>');
  if(packed.has('network-flows/dispatch/release.json'))html=html.replace('</head>','<meta name="fleetlab-dispatch" content="/network-flows/dispatch/release.json"></head>');
  if(packed.has('network-flows/delivery-order/release.json'))html=html.replace('</head>','<meta name="fleetlab-delivery-order" content="/network-flows/delivery-order/release.json"></head>');
- const headers=packed.get('_headers').replace(/\n+$/,'')+'\n\n/city-explorer/*\n  ! Content-Security-Policy\n'+
+ const headers=packed.get('_headers').replace(/\n+$/,'')+'\n  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()\n\n/city-explorer/*\n  ! Content-Security-Policy\n'+
   "  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'\n"+
-  '  Permissions-Policy: camera=(), microphone=(), geolocation=()\n'+
   '\n/downloads/fleetlab-offline.html\n  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+
   '\n/downloads/fleetlab-offline\n  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+
   '\n/network-flows/sources/*\n  Content-Type: application/gzip\n  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable\n'+

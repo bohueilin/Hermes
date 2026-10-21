@@ -14,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-BASELINE = ("content-security-policy", "x-frame-options", "x-content-type-options")
+BASELINE = ("content-security-policy", "x-frame-options", "x-content-type-options", "permissions-policy")
 ROUTES = ("capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch")
 BRAND = ("brand.mjs", "brand.css", "visitor.mjs", "visitor-families.mjs", "visitor.css")
 MEDIA = (

@@ -146,21 +146,22 @@ class LaunchPreparationTest(unittest.TestCase):
             launch.prepare(self.legacy, self.viewer, self.out, self.base / "other", self.readback)
         self.assertFalse(self.out.exists())
 
-    def test_candidate_does_not_duplicate_inherited_permissions(self):
+    def test_candidate_root_caps_features_and_city_inherits_once(self):
         review = self.base / "review"
         review.mkdir()
-        launch.make_candidate_headers(
-            b"/*\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n",
-            review,
-        )
-        candidate = (review / "_headers.candidate").read_text()
-        self.assertEqual(candidate.count("Permissions-Policy:"), 1)
-        launch.make_candidate_headers(
-            b"/*\n  Permissions-Policy: geolocation=()\n",
-            review,
-        )
-        candidate = (review / "_headers.candidate").read_text()
-        self.assertIn("! Permissions-Policy", candidate)
+        expected = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+        for previous in ("", "  Permissions-Policy: geolocation=()\n",
+                         "  Permissions-Policy: camera=(), microphone=(), geolocation=()\n",
+                         f"  Permissions-Policy: {expected}\n"):
+            with self.subTest(previous=previous):
+                original = f"/*\n  X-Frame-Options: DENY\n{previous}".encode()
+                launch.make_candidate_headers(original, review)
+                candidate = (review / "_headers.candidate").read_text()
+                root, city = candidate.split("\n/city-explorer/*", 1)
+                self.assertIn(f"  Permissions-Policy: {expected}\n", root)
+                self.assertEqual(candidate.count("Permissions-Policy:"), 1)
+                self.assertNotIn("Permissions-Policy", city)
+                self.assertIn("X-Frame-Options: DENY", root)
 
 
 if __name__ == "__main__":
