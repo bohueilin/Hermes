@@ -12,6 +12,7 @@ build/
 dist/
 
 # Local secrets and operating-system files
+.wrangler/
 .env
 .env.*
 !.env.example
