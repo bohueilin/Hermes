@@ -30,6 +30,8 @@ CITY_CSP = (
 
 ANALYTICS_ORIGINS = ['self','https://www.googletagmanager.com',
                      'https://*.google-analytics.com','https://*.google.com']
+# The page's Google tag sets cookies, so a hosted presentation never declares storage false.
+ANALYTICS_STORAGE = "Google Analytics first-party cookies on fleetlab.pages.dev"
 
 
 def sha_file(path):
@@ -111,7 +113,24 @@ def verify_viewer(root, role):
         k: v for k, v in files.items() if k != "release.json"
     }:
         raise ValueError(f"{role} release integrity mismatch")
-    for required in ("index.html", "app.mjs", "style.css", "network.json", "_headers"):
+    projection = release.get("hosting_projection")
+    if "hosting_projection" in release and (
+        not isinstance(projection, dict)
+        or set(projection) != {
+            "schema", "original_release_sha256", "omitted_paths", "header_source"
+        }
+        or projection.get("schema") != "fleetlab.city-hosting-projection/1.0.0"
+        or not isinstance(projection.get("original_release_sha256"), str)
+        or not re.fullmatch(r"[a-f0-9]{64}", projection["original_release_sha256"])
+        or projection.get("omitted_paths") != ["_headers"]
+        or projection.get("header_source") != "ROOT_HEADERS"
+        or "_headers" in expected
+    ):
+        raise ValueError(f"{role} invalid hosting projection")
+    for required in (
+        ("index.html", "app.mjs", "style.css", "network.json")
+        + (() if projection else ("_headers",))
+    ):
         if required not in expected:
             raise ValueError(f"{role} release missing {required}")
     network = json.loads((root / "network.json").read_text())
@@ -129,6 +148,7 @@ def verify_viewer(root, role):
         or network.get("accounts") is not False
         or network.get("analytics") is not bool(presentation)
         or network.get("provider_calls") is not False
+        or (presentation and network.get("storage") != ANALYTICS_STORAGE)
     ):
         raise ValueError(f"{role} network contract differs from declared presentation")
     if release.get("scope") != "REVIEW_ONLY" or release.get("public_deployment") != "NOT_PERFORMED":
@@ -183,22 +203,31 @@ def make_entry(city_dir, prefix):
     )
 
 
+def root_permissions(text):
+    """Cap powerful features in the root rule, including preserved legacy inputs."""
+    lines = text.rstrip("\n").splitlines()
+    start = lines.index("/*")
+    end = next(
+        (i for i in range(start + 1, len(lines))
+         if lines[i] and not lines[i][0].isspace() and not lines[i].startswith("#")), len(lines)
+    )
+    root = [line for line in lines[start + 1:end]
+            if not line.strip().lower().startswith("permissions-policy:")
+            and line.strip().lower() != "! permissions-policy"]
+    while root and not root[-1].strip():
+        root.pop()
+    lines[start + 1:end] = root + [
+        "  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()", ""
+    ]
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
 def make_candidate_headers(original, review):
     old = original.decode("utf-8")
-    permission_value = "camera=(), microphone=(), geolocation=()"
-    inherited_permissions = [
-        line.strip().split(":", 1)[1].strip()
-        for line in old.splitlines()
-        if line.strip().lower().startswith("permissions-policy:")
-    ]
     addition = (
         f"\n/city-explorer/*\n  ! Content-Security-Policy\n  Content-Security-Policy: {CITY_CSP}\n"
     )
-    if inherited_permissions != [permission_value]:
-        if inherited_permissions:
-            addition += "  ! Permissions-Policy\n"
-        addition += f"  Permissions-Policy: {permission_value}\n"
-    proposed = old.rstrip("\n") + "\n" + addition
+    proposed = root_permissions(old).rstrip("\n") + "\n" + addition
     (review / "_headers.candidate").write_text(proposed)
     (review / "_headers.diff").write_text(
         "".join(

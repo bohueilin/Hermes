@@ -70,6 +70,13 @@ test('all registered regional experiment setups fit and preserve the exact decla
   }
 });
 
+test('a regional experiment link carries only its own preset question', () => {
+  const own=regionalExperiment(PRESETS.find(p=>p.id==='OPS-01')),other=PRESETS.find(p=>p.id==='OPS-18');
+  const tampered={...createSetup({model:'regional',config:own}),config:{...own,draft:{...own.draft,question:other.experiment.question}}};
+  for(const action of [()=>createSetup({model:'regional',config:tampered.config}),()=>decodeSetup(raw(tampered))])
+    assert.throws(action,{name:'RangeError',message:"A shared experiment question must be the selected preset's own question."});
+});
+
 test('shared finite Bay replay reproduces the recorded demand and metrics without changing the input', () => {
   const config={...defaultBayAreaConfig(),fleet_size:3,duration_hours:.25,requests_per_hour:20};
   const original=simulateBayAreaOperations(config), restored=decodeSetup(encodeSetup(createSetup({model:'fleet-day',config})));

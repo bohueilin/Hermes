@@ -37,7 +37,7 @@ function captureIntegration(repository){
     for(const name of readdirSync(join(repository,root)).sort()){
       if(["node_modules","__pycache__"].includes(name))continue;
       const path=`${root}/${name}`;
-      if(!/\.(?:mjs|py|json|css|html|md)$/.test(name))fail(`unknown integration source ownership: ${path}`);
+      if(!/\.(?:mjs|py|json|css|html|md)$/.test(name)&&path!=="apps/fleetlab-city/deploy/.npmrc")fail(`unknown integration source ownership: ${path}`);
       files.set(path,readRegular(repository,path,LIMITS.source_offer_extracted_bytes));
     }
   }

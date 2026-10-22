@@ -1,5 +1,5 @@
 // Conceptual service-flow illustration. Geometry is explanatory, never a simulated vehicle or depot state.
-import { el } from "./dom.js";
+import { el, setAttr } from "./dom.js";
 
 const STAGES = [
   { id: "arrive", name: "Arrive", label: "01 / ARRIVAL", title: "A parking space is a resource.", text: "Returning vehicles need a place to wait. A full lot can redirect a vehicle to another depot, adding an empty drive before service even begins.", question: "Where should a returning vehicle go?", color: "#a8b9b3" },
@@ -10,7 +10,7 @@ const STAGES = [
 
 function svg(tag, attrs = {}, children = []) {
   const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+  for (const [key, value] of Object.entries(attrs)) setAttr(node, key, value);
   for (const child of children) node.appendChild(child);
   return node;
 }

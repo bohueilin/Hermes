@@ -1995,8 +1995,8 @@ tools/fleet_playground/regenerate_fixtures.py   the explicitly invoked fixture r
 
 ### 9.4 Security and privacy
 
-- **No network.** The packed file carries a content security policy of `default-src 'none'; script-src 'unsafe-inline'; worker-src blob:; style-src 'unsafe-inline'; img-src data:;
-  connect-src 'none'; form-action 'none'; base-uri 'none'`. A `check-dist` script fails on any external URL. The packed file
+- **No network.** The packed file carries a content security policy of `default-src 'none'; script-src 'sha256-<script-digest>'; worker-src blob:; style-src 'unsafe-inline'; img-src data:;
+  connect-src 'none'; form-action 'none'; base-uri 'none'`. The digest is base64 SHA-256 of the single script's exact UTF-8 body, including surrounding newlines; CRLF and CR are normalized to LF before hashing and emission. `check-dist` independently verifies that digest, rejects additional scripts and fails on external load URLs. The packed file
   inlines the engine worker's source as a string and starts it with
   `new Worker(URL.createObjectURL(new Blob([source], {type: "text/javascript"})))`, which is all `worker-src blob:` allows.
   When construction throws, or the worker sends no `ready` message within 1 s, the engine runs time-sliced on the main

@@ -90,7 +90,7 @@ test('Round 12 explainer source is captured by root and R1 graphs but does not e
  assert.ok(paths('src/ui/rebalancing-app.js').has(modulePath));
  assert.equal(paths('src/ui/capacity-app.js').has(modulePath),false);
  const source=read(modulePath),parsed=parseModule(source,modulePath);
- assert.equal(parsed.imports.length,0,'presentation has no model, runtime or evidence imports');
+ assert.deepEqual(parsed.imports.map(x=>x.specifier),['./dom.js'],'presentation has no model, runtime or evidence imports');
  assert.doesNotMatch(source,/\b(?:new\s+Worker|fetch\s*\(|simulate\w*\s*\(|runRebalancing\s*\()/);
  assert.ok(COPY_MODULES.includes(modulePath));
  assert.deepEqual(copyProblems(literalsOf(source).map(text=>({where:modulePath+' string',text}))),[]);

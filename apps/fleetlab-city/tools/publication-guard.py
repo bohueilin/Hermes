@@ -10,8 +10,15 @@ from pathlib import Path
 
 SECRET = re.compile(
     r"gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|"
-    r"BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY|/+(?:Users|home)/[^\s/]+/"
+    r"BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY|/+(?:Users|home)/[^\s/]+/|"
+    # Tool state (a dot-directory or Library/) under ~ or $HOME, not ordinary home paths.
+    r"(?:~|\$HOME|\$\{HOME\})/(?:\.[\w-]|Library/)|"
+    # Unprefixed tokens such as Cloudflare's, and sk- API keys.
+    r"[A-Z0-9_]*(?:TOKEN|SECRET|API_KEY)=['\"]?[\w-]{32,}|\bsk-[\w-]{32,}"
 )
+# Key names of a Cloudflare request-geolocation record (cf.json), under any file name. The
+# literals are split so this file does not match itself.
+GEOLOCATION = (b'"as' b'Organization"', b'"postal' b'Code"', b'"tls' b'Client')
 
 
 def git(*args, cwd=None):
@@ -65,11 +72,23 @@ def check(staged=False, revision=None, cwd=None):
     patch = git(*args, "--no-ext-diff", "--unified=0", "-p", cwd=cwd)
     paths = [p for p in paths if p]
     blocked_paths, blocked_lines = inspect_diff(paths, patch, private)
+    # No tracked file is ignored, so an ignored path (.gitignore or info/exclude) was force-added.
+    ignored = subprocess.run(
+        ["git", "check-ignore", "--no-index", "--stdin", "-z"], input="\0".join(paths),
+        capture_output=True, text=True, cwd=cwd,
+    )
+    if ignored.returncode not in (0, 1):
+        raise RuntimeError("git check-ignore failed")
+    ignored = set(ignored.stdout.split("\0"))
+    blocked_paths += sum(p in ignored and not forbidden_path(p, private) for p in paths)
+    if revision:
+        blocked_lines += bool(SECRET.search(git("log", "-1", "--format=%B", revision, cwd=cwd)))
     # Git omits binary hunks, including UTF-16. Inspect those blobs without
     # printing them; zero-byte interleaving must not hide an ASCII secret marker.
     for path in paths:
         reference = f":{path}" if staged else f"{revision}:{path}"
         raw = subprocess.check_output(["git", "show", reference], cwd=cwd)
+        blocked_paths += all(key in raw for key in GEOLOCATION)
         if b"\0" in raw:
             text = raw.replace(b"\0", b"").decode("utf-8", errors="replace")
             blocked_lines += bool(SECRET.search(text))
@@ -89,9 +108,11 @@ def main():
             _, local, _, remote = line.split()
             if set(local) == {"0"}:
                 continue
-            # New remote branches inspect the entire outgoing history, fail closed.
-            selection = local if set(remote) == {"0"} else f"{remote}..{local}"
-            for revision in git("rev-list", selection).splitlines():
+            # A new remote branch sends only commits no remote-tracking ref has; history that
+            # is already public cannot be withdrawn by refusing the push.
+            new = set(remote) == {"0"}
+            selection = [local, "--not", "--remotes"] if new else [f"{remote}..{local}"]
+            for revision in git("rev-list", *selection).splitlines():
                 failures.append(check(revision=revision))
     else:
         parser.error("select --staged or --pre-push")

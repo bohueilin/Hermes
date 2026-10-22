@@ -1,0 +1,78 @@
+{
+  "schema": "fleetlab.dependency-audit/1.0.0",
+  "started_at_utc": "2026-10-21T04:53:55.021997+00:00",
+  "scope": "EXACT_RELEASE_LOCKFILES",
+  "release_source_commit": "4c375a8b96595a82b82169234b968d7da38ea990",
+  "node": "v22.22.0",
+  "npm": "10.9.4",
+  "registry": "https://registry.npmjs.org/",
+  "command": "npm audit --json --package-lock-only --ignore-scripts --prefix <isolated-project> --userconfig <empty-user-config> --globalconfig <empty-global-config> --cache <isolated-cache> --registry=https://registry.npmjs.org/ --workspaces=false --include=dev --include=optional --include=peer --audit-level=low --update-notifier=false --fund=false --progress=false --logs-max=0",
+  "execution": "Copied package/lock files only; isolated configuration/cache; no installation, lifecycle scripts, credentials or repository settings.",
+  "packages": [
+    {
+      "path": "apps/fleetlab-city",
+      "started_at_utc": "2026-10-21T04:53:55.047360+00:00",
+      "completed_at_utc": "2026-10-21T04:53:55.439665+00:00",
+      "package_sha256": "585d2806295346fbab22d1d9ab78cd388fd95400d2e0a5bdbd7a6f68274f75cf",
+      "lockfile_sha256": "d4fbb467a1d752c896bcd22240f04ca6de41daa0a6612c645cf537278e2f55b4",
+      "lock_matches_release_commit": true,
+      "exit_code": 0,
+      "stdout": {
+        "auditReportVersion": 2,
+        "vulnerabilities": {},
+        "metadata": {
+          "vulnerabilities": {
+            "info": 0,
+            "low": 0,
+            "moderate": 0,
+            "high": 0,
+            "critical": 0,
+            "total": 0
+          },
+          "dependencies": {
+            "prod": 26,
+            "dev": 0,
+            "optional": 0,
+            "peer": 0,
+            "peerOptional": 0,
+            "total": 25
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "path": "apps/fleetlab-city/deploy",
+      "started_at_utc": "2026-10-21T04:53:55.450686+00:00",
+      "completed_at_utc": "2026-10-21T04:53:55.771169+00:00",
+      "package_sha256": "732e32a8266badb58b3b9d65ce267f979d406d4e078304b2c454be413a8a3975",
+      "lockfile_sha256": "9c525624cc273ab5b89bc1eec759556e460ca10380b0f483bb2e8e5d996b2e48",
+      "lock_matches_release_commit": true,
+      "exit_code": 0,
+      "stdout": {
+        "auditReportVersion": 2,
+        "vulnerabilities": {},
+        "metadata": {
+          "vulnerabilities": {
+            "info": 0,
+            "low": 0,
+            "moderate": 0,
+            "high": 0,
+            "critical": 0,
+            "total": 0
+          },
+          "dependencies": {
+            "prod": 32,
+            "dev": 0,
+            "optional": 60,
+            "peer": 0,
+            "peerOptional": 0,
+            "total": 91
+          }
+        }
+      },
+      "stderr": ""
+    }
+  ],
+  "completed_at_utc": "2026-10-21T04:53:55.771511+00:00"
+}

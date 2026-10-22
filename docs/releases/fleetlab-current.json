@@ -512,5 +512,13 @@
     ],
     "physical_device_qualification": "NOT_ESTABLISHED",
     "sf_qualification": "HOLD"
+  },
+  "dependency_audit": {
+    "path": "docs/releases/fleetlab-dependency-audit-2026-10-21.json",
+    "sha256": "3db44717970cefc5a537e0411b631b251b044a583fd435acc00b4bcaa415da0e",
+    "completed_at_utc": "2026-10-21T04:53:55.771511+00:00",
+    "release_lockfiles_match": true,
+    "reported_vulnerabilities": 0,
+    "meaning": "Registry advisory assessment of the exact recorded dependency locks at this date; not a new publication or proof of absence of vulnerabilities."
   }
 }

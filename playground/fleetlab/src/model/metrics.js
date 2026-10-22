@@ -134,7 +134,7 @@ export function metricKey(ref) {
   const parts = [];
   for (const key of SCOPE_KEYS) {
     if (!Object.prototype.hasOwnProperty.call(scope, key)) continue;
-    parts.push(key === "window" ? `window=${scope.window.start_s}-${scope.window.end_s}` : `${key}=${scope[key]}`);
+    parts.push(key === "window" ? `window=${scope.window?.start_s}-${scope.window?.end_s}` : `${key}=${scope[key]}`);
   }
   return parts.length === 0 ? ref.metric : `${ref.metric}{${parts.join(",")}}`;
 }
