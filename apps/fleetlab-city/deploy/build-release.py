@@ -57,7 +57,8 @@ def build(commit, legacy, legacy_readback, city_base, city_source_offer, out):
     if any(out == path.resolve() or path.resolve() in out.parents or out in path.resolve().parents
            for path in inputs):
         raise ValueError("output must be separate from every input; overlapping paths refused")
-    if out == ROOT or out in ROOT.parents or (ROOT in out.parents and ROOT / "dist" not in out.parents):
+    if (out == ROOT or out in ROOT.parents
+            or (ROOT in out.parents and ROOT / "dist" not in out.parents)):
         raise ValueError("output must be outside source or under its ignored dist directory")
     if not out.parent.is_dir():
         raise ValueError("output parent directory must already exist")
@@ -72,20 +73,25 @@ def build(commit, legacy, legacy_readback, city_base, city_source_offer, out):
               "city_base": launch.verify_viewer(city_base, "original")[1],
               "city_source_offer": launch.inventory(city_source_offer)}
     offered = json.loads(original_offer)
-    if offered.get("files") != {k: v for k, v in before["city_source_offer"].items() if k != "manifest.json"}:
+    if offered.get("files") != {
+        k: v for k, v in before["city_source_offer"].items() if k != "manifest.json"
+    }:
         raise ValueError("original City source offer integrity mismatch")
     tools = ROOT / "playground/fleetlab/tools"
     city = ROOT / "apps/fleetlab-city"
     with tempfile.TemporaryDirectory(prefix=".fleetlab-build-", dir=out.parent) as temporary:
         work = Path(temporary)
-        result, teaching, offline, package = work / "result", work / "teaching", work / "offline.html", work / "package"
+        result, teaching, offline, package = (
+            work / "result", work / "teaching", work / "offline.html", work / "package"
+        )
         result.mkdir()
         command("node", tools / "pack.mjs", "--site", teaching, "--source-commit", commit)
         command("node", tools / "pack.mjs", "--out", offline)
         command("node", tools / "check-dist.mjs", "--site", teaching)
         command("node", tools / "check-dist.mjs", offline)
         proof = ["node", tools / "package-proof.mjs", "--site", teaching,
-                 "--playground", ROOT / "playground/fleetlab", "--offline", offline, "--source-commit", commit]
+                 "--playground", ROOT / "playground/fleetlab", "--offline", offline,
+                 "--source-commit", commit]
         command(*proof, "--out", package)
         command(*proof, "--check", package)
         base, current, stage = work / "city-base", work / "city-current", result / "stage"
@@ -114,9 +120,12 @@ def build(commit, legacy, legacy_readback, city_base, city_source_offer, out):
             "schema": "fleetlab.local-release-build/1.0.0", "source_commit": commit,
             "recipe": "apps/fleetlab-city/deploy/build-release.py",
             "publication": "NOT_PERFORMED", "readback": "NOT_PERFORMED",
-            "inputs": {name: {"inventory_sha256": fingerprint_inventory(files), "file_count": len(files)}
-                       for name, files in before.items()},
-            "legacy_readback_sha256": digest(readback), "city_base_release_sha256": digest(original_base),
+            "inputs": {
+                name: {"inventory_sha256": fingerprint_inventory(files), "file_count": len(files)}
+                for name, files in before.items()
+            },
+            "legacy_readback_sha256": digest(readback),
+            "city_base_release_sha256": digest(original_base),
             "city_source_offer_manifest_sha256": digest(original_offer),
             "runtime": {"python": platform.python_version(), "node": command("node", "--version")},
         })
@@ -135,7 +144,9 @@ def main():
         build(**vars(parser.parse_args()))
         print("Local release verified; publication and hosted readback NOT_PERFORMED.")
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
-        detail = error.stderr.strip() if isinstance(error, subprocess.CalledProcessError) else str(error)
+        detail = (
+            error.stderr.strip() if isinstance(error, subprocess.CalledProcessError) else str(error)
+        )
         print("Release build failed: " + detail, file=sys.stderr)
         return 1
     return 0

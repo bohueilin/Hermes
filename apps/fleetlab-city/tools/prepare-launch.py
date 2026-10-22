@@ -116,7 +116,9 @@ def verify_viewer(root, role):
     projection = release.get("hosting_projection")
     if "hosting_projection" in release and (
         not isinstance(projection, dict)
-        or set(projection) != {"schema", "original_release_sha256", "omitted_paths", "header_source"}
+        or set(projection) != {
+            "schema", "original_release_sha256", "omitted_paths", "header_source"
+        }
         or projection.get("schema") != "fleetlab.city-hosting-projection/1.0.0"
         or not isinstance(projection.get("original_release_sha256"), str)
         or not re.fullmatch(r"[a-f0-9]{64}", projection["original_release_sha256"])
@@ -125,7 +127,10 @@ def verify_viewer(root, role):
         or "_headers" in expected
     ):
         raise ValueError(f"{role} invalid hosting projection")
-    for required in ("index.html", "app.mjs", "style.css", "network.json") + (() if projection else ("_headers",)):
+    for required in (
+        ("index.html", "app.mjs", "style.css", "network.json")
+        + (() if projection else ("_headers",))
+    ):
         if required not in expected:
             raise ValueError(f"{role} release missing {required}")
     network = json.loads((root / "network.json").read_text())
@@ -202,8 +207,10 @@ def root_permissions(text):
     """Cap powerful features in the root rule, including preserved legacy inputs."""
     lines = text.rstrip("\n").splitlines()
     start = lines.index("/*")
-    end = next((i for i in range(start + 1, len(lines))
-                if lines[i] and not lines[i][0].isspace() and not lines[i].startswith("#")), len(lines))
+    end = next(
+        (i for i in range(start + 1, len(lines))
+         if lines[i] and not lines[i][0].isspace() and not lines[i].startswith("#")), len(lines)
+    )
     root = [line for line in lines[start + 1:end]
             if not line.strip().lower().startswith("permissions-policy:")
             and line.strip().lower() != "! permissions-policy"]

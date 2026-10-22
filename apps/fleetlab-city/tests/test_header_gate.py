@@ -47,14 +47,26 @@ CRAFTED = [
 class HeaderGateTests(unittest.TestCase):
     def test_missing_source_urls_are_html_without_download_headers(self):
         rows = gate.rows(self.site)
-        missing = [row for row in rows if row[0].startswith("/network-flows/sources/") and row[2] == 404]
+        missing = [
+            row for row in rows if row[0].startswith("/network-flows/sources/") and row[2] == 404
+        ]
         self.assertEqual(len(missing), 2)
         self.assertIn("/network-flows/sources/", [row[0] for row in missing])
         for row in missing:
-            served = {**gate.fields(ROOT), "content-type": "text/html; charset=utf-8", "cache-control": "no-store"}
-            self.assertTrue(gate.check("https://example.test", [row], head=lambda _: (True, "404", served))[0]["matches"])
-            for extra in ({"content-type": "application/gzip"}, {"content-disposition": "attachment"}):
-                self.assertFalse(gate.check("https://example.test", [row], head=lambda _: (True, "404", {**served, **extra}))[0]["matches"])
+            served = {
+                **gate.fields(ROOT), "content-type": "text/html; charset=utf-8",
+                "cache-control": "no-store",
+            }
+            self.assertTrue(gate.check(
+                "https://example.test", [row], head=lambda _, served=served: (True, "404", served),
+            )[0]["matches"])
+            for extra in (
+                {"content-type": "application/gzip"}, {"content-disposition": "attachment"},
+            ):
+                self.assertFalse(gate.check(
+                    "https://example.test", [row],
+                    head=lambda _, served=served, extra=extra: (True, "404", {**served, **extra}),
+                )[0]["matches"])
 
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
@@ -100,9 +112,13 @@ class HeaderGateTests(unittest.TestCase):
         for path in ("/", "/network-flows/capacity/", "/__fleetlab_missing_page__"):
             with self.subTest(path=path):
                 row = next(row for row in rows if row[0] == path)
-                served = {key: value for key, value in row[1].items() if key != "permissions-policy"}
-                result = gate.check("https://example.test", [row],
-                                    head=lambda _: (True, str(row[2]), served))
+                served = {
+                    key: value for key, value in row[1].items() if key != "permissions-policy"
+                }
+                result = gate.check(
+                    "https://example.test", [row],
+                    head=lambda _, row=row, served=served: (True, str(row[2]), served),
+                )
                 self.assertFalse(result[0]["matches"])
                 self.assertIn("permissions-policy", result[0]["mismatches"])
 

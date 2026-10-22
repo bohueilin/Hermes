@@ -99,7 +99,9 @@ def project_hosted_base(viewer, out):
 
 def verify_projected_base(viewer, original_bytes):
     release, files = launch.verify_viewer(Path(viewer), "projected base")
-    expected = projected_manifest(json.loads(original_bytes), hashlib.sha256(original_bytes).hexdigest())
+    expected = projected_manifest(
+        json.loads(original_bytes), hashlib.sha256(original_bytes).hexdigest()
+    )
     if release != expected:
         raise ValueError("City base differs from original hosting projection")
     return release, files

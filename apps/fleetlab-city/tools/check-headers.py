@@ -14,7 +14,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-BASELINE = ("content-security-policy", "x-frame-options", "x-content-type-options", "permissions-policy")
+BASELINE = (
+    "content-security-policy", "x-frame-options", "x-content-type-options", "permissions-policy",
+)
 ROUTES = ("capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch")
 BRAND = ("brand.mjs", "brand.css", "visitor.mjs", "visitor-families.mjs", "visitor.css")
 MEDIA = (
@@ -79,7 +81,10 @@ def rows(site):
     checks += [(f"/{name}", root) for name in manifest["files"] if name.startswith("tiles/")]
     result = [(path, expected, 200) for path, expected in checks]
     result.append(("/__fleetlab_missing_page__", {**root, "cache-control": "no-store"}, 404))
-    missing_source = "network-flows/sources/" + ("0" if not source.endswith("0" * 64 + ".json.gz") else "1") * 64 + ".json.gz"
+    missing_source = (
+        "network-flows/sources/"
+        + ("0" if not source.endswith("0" * 64 + ".json.gz") else "1") * 64 + ".json.gz"
+    )
     for path in ("/network-flows/sources/", "/" + missing_source):
         result.append((path, {**root, "cache-control": "no-store", "content-type": "text/html",
                               "content-disposition": None}, 404))

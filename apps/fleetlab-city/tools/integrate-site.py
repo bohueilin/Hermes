@@ -358,7 +358,9 @@ def integrate(
     if original_offer is not None:
         original_offer_index = (offer / "index.html").read_bytes()
         for name, data in (("manifest.json", original_offer), ("index.html", original_offer_index)):
-            if offer_files.get(name) != {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}:
+            if offer_files.get(name) != {
+                "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()
+            }:
                 raise ValueError("City source input changed during capture")
     if offer_manifest.get("files") != {
         k: v for k, v in offer_files.items() if k != "manifest.json"

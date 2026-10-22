@@ -1,7 +1,7 @@
 """A public presentation release must not rewrite its source or scientific data."""
 
-import importlib.util
 import gzip
+import importlib.util
 import json
 import subprocess
 import tempfile
@@ -30,9 +30,13 @@ class HostedBrandTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             raw, base, out = Path(tmp) / "raw", Path(tmp) / "base", Path(tmp) / "new"
             write_base(raw)
-            (raw / "index.html.gz").write_bytes(gzip.compress((raw / "index.html").read_bytes(), mtime=0))
+            (raw / "index.html.gz").write_bytes(
+                gzip.compress((raw / "index.html").read_bytes(), mtime=0)
+            )
             release = json.loads((raw / "release.json").read_text())
-            release["files"] = {k: v for k, v in launch.inventory(raw).items() if k != "release.json"}
+            release["files"] = {
+                k: v for k, v in launch.inventory(raw).items() if k != "release.json"
+            }
             launch.write_json(raw / "release.json", release)
             original_gzip = (raw / "index.html.gz").read_bytes()
             brand.project_hosted_base(raw, base)
@@ -80,12 +84,16 @@ class HostedBrandTest(unittest.TestCase):
             manifest = json.loads((base / "release.json").read_text())
             for change in ({"omitted_paths": ["_headers", "app.mjs"]},
                            {"header_source": "nested"}, {"extra": True}):
-                bad = {**manifest, "hosting_projection": {**manifest["hosting_projection"], **change}}
+                bad = {
+                    **manifest, "hosting_projection": {**manifest["hosting_projection"], **change}
+                }
                 launch.write_json(base / "release.json", bad)
                 with self.assertRaisesRegex(ValueError, "hosting projection"):
                     launch.verify_viewer(base, "projected")
             (base / "_headers").write_text("/*\n  Content-Security-Policy: default-src *\n")
-            manifest["files"] = {k: v for k, v in launch.inventory(base).items() if k != "release.json"}
+            manifest["files"] = {
+                k: v for k, v in launch.inventory(base).items() if k != "release.json"
+            }
             launch.write_json(base / "release.json", manifest)
             with self.assertRaisesRegex(ValueError, "hosting projection"):
                 launch.verify_viewer(base, "projected")
@@ -124,7 +132,10 @@ class HostedBrandTest(unittest.TestCase):
             )
             new, files = launch.verify_viewer(out, "branded")
             self.assertNotIn("_headers", files)
-            self.assertEqual(new["hosting_projection"], json.loads((base / "release.json").read_text())["hosting_projection"])
+            self.assertEqual(
+                new["hosting_projection"],
+                json.loads((base / "release.json").read_text())["hosting_projection"],
+            )
             self.assertEqual(files["app.mjs"], before["app.mjs"])
             self.assertEqual(
                 new["hosted_presentation"]["base_release_sha256"], before["release.json"]["sha256"]

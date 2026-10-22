@@ -24,7 +24,9 @@ class IntegrationTest(unittest.TestCase):
     def test_current_client_changes_are_declared_against_approved_production_input(self):
         # The older synthetic build fixture derives its baseline from CLIENT_FIXES.
         # This fixed production inventory must stay independent of those declarations.
-        baseline = json.loads((Path(__file__).parent / "fixtures/approved-legacy-client.json").read_text())
+        baseline = json.loads(
+            (Path(__file__).parent / "fixtures/approved-legacy-client.json").read_text()
+        )
         self.assertEqual(len(baseline["files"]), 99)
         for name, text in baseline["shell"].items():
             data = text.encode()
@@ -54,26 +56,38 @@ class IntegrationTest(unittest.TestCase):
 
         # Only the 3.4 MiB historical payload is represented by its frozen inventory.
         # Current bytes, route sets, source/provenance checks and comparisons are real.
-        with patch.object(integration.launch, "verify_legacy", return_value=baseline["files"]), \
-                patch.object(integration, "check_teaching_package", side_effect=ClientComparisonPassed):
-            with self.assertRaises(ClientComparisonPassed):
-                compare_client()
+        with (
+            patch.object(integration.launch, "verify_legacy", return_value=baseline["files"]),
+            patch.object(integration, "check_teaching_package", side_effect=ClientComparisonPassed),
+            self.assertRaises(ClientComparisonPassed),
+        ):
+            compare_client()
         # A difference outside the traced set must still be rejected by that guard.
         drifted = {**baseline["files"], "src/model/world.js": {
             **baseline["files"]["src/model/world.js"], "sha256": "0" * 64,
         }}
-        with patch.object(integration.launch, "verify_legacy", return_value=drifted), \
-                patch.object(integration, "check_teaching_package", side_effect=ClientComparisonPassed):
-            with self.assertRaisesRegex(ValueError, r"^undeclared teaching client change: src/model/world\.js$"):
-                compare_client()
+        with (
+            patch.object(integration.launch, "verify_legacy", return_value=drifted),
+            patch.object(integration, "check_teaching_package", side_effect=ClientComparisonPassed),
+            self.assertRaisesRegex(
+                ValueError, r"^undeclared teaching client change: src/model/world\.js$"
+            ),
+        ):
+            compare_client()
 
     def test_city_input_pins_are_strict_and_checked_before_integration(self):
         self.assertTrue(callable(getattr(integration, "check_city_inputs", None)))
         base = b'{"original":"base"}'
         offer = b'{"original":"offer"}'
-        approved = {"schema": "fleetlab.approved-city-inputs/1.0.0",
-                    "base_release": {"sha256": hashlib.sha256(base).hexdigest(), "provenance": "docs/fixture.md"},
-                    "source_offer_manifest": {"sha256": hashlib.sha256(offer).hexdigest(), "provenance": "docs/fixture.md"}}
+        approved = {
+            "schema": "fleetlab.approved-city-inputs/1.0.0",
+            "base_release": {
+                "sha256": hashlib.sha256(base).hexdigest(), "provenance": "docs/fixture.md",
+            },
+            "source_offer_manifest": {
+                "sha256": hashlib.sha256(offer).hexdigest(), "provenance": "docs/fixture.md",
+            },
+        }
         path = self.base / "apps/fleetlab-city/deploy/approved-inputs.json"
         path.parent.mkdir(parents=True)
         path.write_text(json.dumps(approved))
@@ -82,8 +96,10 @@ class IntegrationTest(unittest.TestCase):
             for first, second in ((base + b" ", offer), (base, offer + b" ")):
                 with self.assertRaisesRegex(ValueError, "approved City"):
                     integration.check_city_inputs(first, second)
-            for changed in ({**approved, "extra": True}, {**approved, "schema": "other"},
-                            {**approved, "base_release": {**approved["base_release"], "path": "elsewhere"}}):
+            for changed in (
+                {**approved, "extra": True}, {**approved, "schema": "other"},
+                {**approved, "base_release": {**approved["base_release"], "path": "elsewhere"}},
+            ):
                 path.write_text(json.dumps(changed))
                 with self.assertRaisesRegex(ValueError, "City.*pin"):
                     integration.check_city_inputs(base, offer)
@@ -102,7 +118,10 @@ class IntegrationTest(unittest.TestCase):
         headers = integration.source_headers(source)
         self.assertTrue(headers.startswith(f"\n/{source}\n"))
         self.assertIn("  Content-Type: application/gzip\n", headers)
-        self.assertIn('  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n', headers)
+        self.assertIn(
+            '  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n',
+            headers,
+        )
         self.assertIn("  Cache-Control: public, max-age=31536000, immutable\n", headers)
         self.assertNotIn("*", headers)
         for invalid in ("network-flows/sources/*", source + "\n/*", "../" + source):
