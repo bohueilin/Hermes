@@ -36,3 +36,9 @@ publication-readback record establishes consistency with supplied observations,
 not independent authenticity, a deployment identifier, browser acceptance, or
 operational authority. Replacement is explicit and atomic. Retain the full
 observation files with the private release evidence; the record binds their hashes.
+
+The committed copy is smaller than the writer's output. Its `files` map is a smoke
+subset (`files_scope`) that `tools/readback.py --record` can check quickly. It also
+adds deployment identities, the whole-site rollback target (`site_rollback`) and
+per-lesson digests. Every value comes from the writer's full receipt, the verified
+stage, or a recorded public read.
