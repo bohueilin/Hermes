@@ -8,6 +8,14 @@ Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
 
 Hermes is designed to make an autonomy experiment reproducible and reviewable: it preserves the scenario, versions, candidate action, executed action, findings, metrics, release verdict, and evidence-integrity checks in one bundle.
 
+## Try FleetLab in your browser
+
+**[Open the interactive FleetLab playground](https://fleetlab-playground.pages.dev/)** · [Source and quick start](playground/fleetlab/README.md) · [Project review and next-phase brief](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) · [Cloudflare publishing guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md)
+
+An independent product exploration by **Bo-Huei Lin**: follow a fleet through a simulated day, inspect its depot bottlenecks, and compare capacity decisions. The 3D Bay Area experience includes 18 city and airport locations, editable Jaguar I-PACE and Ojai vehicle profiles, and weather and demand scenarios. The new **Street lab** adds six downtown San Francisco bottlenecks, directed routes to SFO and the East Bay, block queues and same-demand routing comparisons. The catalog contains 59 cases and lessons across four teaching model families, including the newer depot readiness, charging, resource-observation, airport-preparation and launch-rehearsal extensions and the three Scale lab lessons on what changes as a fleet scales. Start with **Run a fleet day** or **Street lab**, then visit **Product approach** for the user needs, hypotheses and validation roadmap. See the [Street lab model and demonstration](docs/FLEETLAB_STREET_LAB.md).
+
+Real OpenStreetMap geography supports the replay; demand, traffic and vehicle operating values are illustrative. This is a browser-based teaching experience, separate from the Python evidence engine and its decision records. It is not affiliated with a fleet operator. See the [repository integration recommendation](docs/FLEETLAB_REPOSITORY_RECOMMENDATION.md) for ownership and release boundaries.
+
 ## Phase 9 — FleetLab: fleet operations simulation and experimentation
 
 FleetLab asks a different question from the rest of Hermes: **not "how does the vehicle behave?"
@@ -96,6 +104,55 @@ a static loopback-only operator view of one finished synthetic run.
 **Not built:** five of the six flagship scenarios, the charging model, the policy SDK, the
 experiment registry, `experiment compare`, monitoring, a time axis, and the Studio front end.
 Nineteen of the twenty P0 acceptance criteria remain open.
+
+### Regional experiments: the original playground model
+
+The **Experiments** workspace in `playground/fleetlab/` retains the original four-area regional model, alongside the
+new Bay Area **Simulation** workspace described above. In Regional experiments, you set cars per area, depots with parking, cleaning and service bays, peak and off-peak demand, highway and
+local routes with hourly congestion, and the depot rules; watch a simulated evening and the next morning; and run a
+preregistered paired A/B. The Regional experiments verdict uses FleetLab's rules value for value, proven by vectors
+FleetLab's own functions generate. This parity claim applies to that instrument, not to the newer Fleet day or Street lab models. All three are teaching models, so a playground run is never a decision record.
+
+The Experiment preset chooser also holds an operations casebook: twenty situations in five themes (San Francisco core
+operations, launching a new service area, rain, busy areas with many people, police activity and emergency response).
+The model has none of those things, so each case is a proxy built from the knobs that says on the page what it stands
+for, how it is set and what it misses; its measured verdict is pinned in the tests, and its lesson is in the design
+document, never on the page. Beside the single offline file, `pack.mjs --site` writes a folder for a static host and
+`check-dist.mjs --site` checks it; putting either online stays an owner action.
+
+The Regional experiments map draws its four areas as an isometric schematic on a 2D canvas, generated at run time from the interval
+log with no asset, no dependency and no WebGL: flat platforms at the areas' own centres, ribbons for roads, one shaded
+box per car driving a route, cubes of five for cars standing in an area, and a depot block whose bay cells fill as their
+tasks run. The canvas draws no word, because every label and number is HTML over it; nothing is lit and no camera moves,
+and the caption says it is a sketch of invented geometry. The flat SVG schematic is one toggle away and is what a
+browser without a 2D canvas gets. `Present` is a layer over the three modes that turns the page into a stage, a ledger
+and a rail and walks four chapters over one replay of the casebook's first situation, with one `Prepare` that runs the
+window and the experiment in your own browser and eleven beats that only seek and read what the run already produced.
+
+```bash
+python3 -m http.server 8765 --bind 127.0.0.1 --directory playground/fleetlab
+```
+
+```bash
+node playground/fleetlab/tools/pack.mjs --out dist/fleetlab-playground.html
+```
+
+```bash
+node playground/fleetlab/tools/pack.mjs --site dist/site
+```
+
+```bash
+node playground/fleetlab/tools/check-dist.mjs --site dist/site
+```
+
+```bash
+node --test "playground/fleetlab/test/*.test.mjs"
+```
+
+| Document | What it is |
+|---|---|
+| [docs/plans/2026-09-13-fleetlab-playground-design.md](docs/plans/2026-09-13-fleetlab-playground-design.md) | The audited design: knobs, depot visit, use cases and the operations casebook with measured verdicts, model, verdict parity, interface, and the FleetLab defects found while designing it |
+| [playground/fleetlab/README.md](playground/fleetlab/README.md) | How to open, pack and test the playground |
 
 
 ## Phase 8 — ADAS development and agentic workflow lab

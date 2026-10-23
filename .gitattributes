@@ -1,0 +1,2 @@
+# Preserve the upstream ODbL text byte-for-byte, including its whitespace.
+apps/fleetlab-city/licenses/ODbL-1.0.txt -whitespace

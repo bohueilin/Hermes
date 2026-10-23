@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 250" role="img" aria-labelledby="title desc">
+  <title id="title">Symmetric bidirectional shuttle concept illustration</title><desc id="desc">An original symmetric shuttle illustration. It does not depict specific Zoox hardware.</desc>
+  <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#e7e2f4"/><stop offset="1" stop-color="#f6f3f8"/></linearGradient><linearGradient id="body" x2="0" y2="1"><stop stop-color="#fbfafb"/><stop offset="1" stop-color="#dcdce8"/></linearGradient></defs>
+  <path fill="url(#sky)" d="M0 0h600v250H0z"/><circle cx="300" cy="112" r="114" fill="none" stroke="#d5ccec" stroke-width="2"/><circle cx="300" cy="112" r="88" fill="none" stroke="#ddd5ee" stroke-width="2"/>
+  <path d="M0 204h600" stroke="#cbc7db" stroke-width="2"/><path d="M40 225h76m75 0h80m75 0h75m76 0h65" stroke="#cfcadc" stroke-width="2"/>
+  <ellipse cx="300" cy="203" rx="193" ry="13" fill="#514c7240"/>
+  <path d="M131 103c0-32 25-52 56-52h226c31 0 56 20 56 52v73c0 13-10 23-23 23H154c-13 0-23-10-23-23z" fill="url(#body)" stroke="#5b5c78" stroke-width="4"/>
+  <path d="M149 111c0-26 15-41 40-41h223c25 0 40 15 40 41v21H149z" fill="#7d8799"/><path d="M233 70v62m134-62v62" stroke="#e9e8f2" stroke-width="5"/>
+  <path d="M274 137v54m52-54v54" stroke="#64677c" stroke-width="3"/><path d="M288 150v26m24-26v26" stroke="#aeb1c4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M138 156h17m290 0h17" stroke="#cdb28c" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="185" cy="196" r="18" fill="#454c61"/><circle cx="185" cy="196" r="9" fill="#d7d6e3"/><circle cx="415" cy="196" r="18" fill="#454c61"/><circle cx="415" cy="196" r="9" fill="#d7d6e3"/>
+  <path d="M78 118h30m384 0h30" stroke="#a696c8" stroke-width="3" stroke-linecap="round"/><path d="M97 112l11 6-11 6m406-12l-11 6 11 6" fill="none" stroke="#a696c8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

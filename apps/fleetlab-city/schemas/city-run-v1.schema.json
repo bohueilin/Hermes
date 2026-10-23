@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fleetlab:city-run:1.0.0",
+  "title": "FleetLab city-run 1.0.0",
+  "type": "object",
+  "required": [
+    "schema",
+    "model",
+    "input_digest",
+    "pack_digest",
+    "spec",
+    "execution",
+    "elapsed_s",
+    "events",
+    "poses",
+    "legs",
+    "counters",
+    "final",
+    "pose_contract",
+    "limits"
+  ],
+  "properties": {
+    "schema": {
+      "const": "fleetlab.city-run/1.0.0"
+    },
+    "model": {
+      "const": "fleetlab.graph-resource/1.0.0"
+    },
+    "input_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "pack_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "spec": {
+      "type": "object"
+    },
+    "execution": {
+      "enum": [
+        "COMPLETE",
+        "INCOMPLETE"
+      ]
+    },
+    "elapsed_s": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "events": {
+      "type": "array"
+    },
+    "poses": {
+      "type": "array"
+    },
+    "legs": {
+      "type": "object"
+    },
+    "counters": {
+      "type": "object"
+    },
+    "final": {
+      "type": "object",
+      "required": [
+        "vehicles",
+        "requests"
+      ],
+      "properties": {
+        "vehicles": {
+          "type": "array"
+        },
+        "requests": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": true
+    },
+    "pose_contract": {
+      "type": "object"
+    },
+    "limits": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

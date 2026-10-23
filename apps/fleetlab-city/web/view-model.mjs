@@ -1,0 +1,181 @@
+export function formatMetric(value, digits = 1) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(value)
+    : 'Not available';
+}
+export function safeDataPath(path) {
+  if (typeof path !== 'string' || !/^data\/[a-zA-Z0-9_-]+(?:\.geo)?\.json$/.test(path)) {
+    throw new Error('Unsupported data path');
+  }
+  return path;
+}
+export function sampleAt(samples, time, interval = 15) {
+  let lo = 0, hi = samples.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (samples[mid][0] <= time) lo = mid + 1; else hi = mid; }
+  const sample = samples[lo - 1];
+  if (!sample) return { status: 'unavailable', sample: null };
+  if (time - sample[0] > interval || (samples[lo] && samples[lo][0] - sample[0] > interval && time > sample[0])) {
+    return { status: 'gap', sample: null };
+  }
+  return { status: 'recorded', sample };
+}
+// Operational intervals use exact event time; positions and energy remain held samples.
+export function replayMoment(trace, time) {
+  const terminal = time === trace.elapsed_s;
+  const interval = terminal ? null : trace.intervals.find(i => i.start <= time && time < i.end) ?? null;
+  const state = terminal ? trace.summary.final_state : interval?.state ?? null;
+  return {
+    interval,
+    state,
+    site: terminal ? (['charging','turnaround','queue_charge','queue_turnaround'].includes(state) ? trace.summary.final_site ?? null : null) : interval?.site ?? null,
+    context: terminal ? `State at recording end · ${clockStamp(time)}. Recording ends here; later trips are not observed.`
+      : interval ? `Activity interval: ${clockStamp(interval.start)}–${clockStamp(interval.end)} (${durationLabel(interval.end-interval.start)}).` : 'No recorded activity interval covers this cursor time.',
+    position: sampleAt(trace.samples, time, trace.interval_s),
+  };
+}
+export function clockStamp(seconds) {
+  return `${clockLabel(seconds)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+}
+export function completionContext(comparison) {
+  const primary = comparison?.primary_pp;
+  const unavailable = {primary:null, threshold:null, headline:'Practical comparison unavailable', text:'Practical comparison unavailable · compatible result and threshold evidence are required.'};
+  if (comparison?.schema !== 'fleetlab.city-comparison/1.0.0'
+      || ['INVALID','INCOMPATIBLE'].includes(comparison.eligibility)
+      || ['INVALID','INCOMPATIBLE'].includes(comparison.outcome)
+      || !primary || !['mean','low','high'].every(k => Number.isFinite(primary[k]))
+      || primary.low > primary.mean || primary.mean > primary.high
+      || !Number.isInteger(primary.n) || primary.n < 1) return unavailable;
+  // Comparison v1 fixes this margin in citylib.compare.decide; its historical
+  // payload has no separate threshold field. Do not infer it for other schemas.
+  const threshold = 2;
+  const relation = primary.high < threshold ? 'The reported gain and its entire paired interval fall below this threshold.'
+    : primary.low > threshold ? 'The reported gain and its entire paired interval are above this threshold.'
+    : 'The paired interval includes or crosses this threshold.';
+  const headline = primary.high < threshold ? 'Below the +2 pp practical margin' : primary.low > threshold ? 'Above the +2 pp practical margin' : 'Interval includes or crosses the +2 pp practical margin';
+  return {primary, threshold, headline, text:`Practical threshold: +${threshold} percentage points. ${relation} Map qualification and the other study checks remain separate requirements.`};
+}
+export function validateCatalog(data) {
+  if (data?.schema !== 'fleetlab.city-view/1.0.0') throw new Error('Unsupported city viewer schema');
+  if (!Number.isInteger(data?.coverage?.candidate_count) || data.coverage.candidate_count < 0) throw new Error('Invalid source inventory');
+  if (data.scope !== 'SIMULATION_ONLY' || data.decision_authority !== 'NONE') throw new Error('Unsupported authority declaration');
+  if (!Array.isArray(data.vehicles) || !Array.isArray(data.sites) || !data.files) throw new Error('Incomplete city catalogue');
+  for (const path of Object.keys(data.files)) safeDataPath(path);
+  return data;
+}
+export function comparisonRows(comparison) {
+  if (['INCOMPATIBLE', 'INVALID'].includes(comparison?.eligibility)) return [];
+  return comparison?.pairs ?? [];
+}
+export function clockLabel(seconds) {
+  const minute = Math.floor(seconds / 60) + 7 * 60;
+  return `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
+}
+
+export function requestGate() {
+  let revision = 0;
+  return { issue: () => ++revision, current: (ticket) => ticket === revision };
+}
+
+export const METRES_PER_MILE = 1609.344;
+// Descriptive totals of the hash-checked fleet projection; no gate or model logic.
+export function fleetInsights(fleet, roster, elapsedSeconds) {
+  if (!Number.isFinite(elapsedSeconds) || elapsedSeconds <= 0) throw new Error('Fleet duration unavailable');
+  const ids = new Set(roster.map(v => v.id)), rows = fleet.vehicles;
+  if (!ids.size || ids.size !== roster.length || !Array.isArray(rows) || rows.length !== ids.size || new Set(rows.map(v => v.vehicle)).size !== ids.size || rows.some(v => !ids.has(v.vehicle))) throw new Error('Incomplete fleet inventory');
+  for (const row of rows) {
+    if (['completed','distance_m','empty_m','queue_s'].some(k => !Number.isFinite(row[k]) || row[k] < 0) || !Number.isInteger(row.completed) || row.empty_m > row.distance_m || row.queue_s > elapsedSeconds || !Object.hasOwn(stateLabels,row.final_state)) throw new Error('Fleet measurement unavailable or invalid');
+  }
+  const sum = key => rows.reduce((total,v) => total + v[key], 0);
+  const trips = rows.map(v => v.completed).sort((a,b) => a-b), n = rows.length;
+  const distance = sum('distance_m'), queued = sum('queue_s'), completed = sum('completed');
+  return {
+    count:n, completed, servedVehicles:rows.filter(v=>v.completed>0).length,
+    meanTrips:completed/n, medianTrips:(trips[Math.floor((n-1)/2)]+trips[Math.floor(n/2)])/2,
+    minTrips:trips[0], maxTrips:trips.at(-1), distance, emptyDistance:sum('empty_m'),
+    emptyFraction:distance ? sum('empty_m')/distance : null,
+    vehicleHours:n*elapsedSeconds/3600, queueHours:queued/3600, queueFraction:queued/(n*elapsedSeconds),
+    waitingForCharge:rows.filter(v=>v.final_state==='queue_charge').length,
+    bins:[['0–3',0,3],['4–7',4,7],['8–11',8,11],['12+',12,Infinity]].map(([label,lo,hi])=>({label,count:trips.filter(t=>t>=lo&&t<=hi).length})),
+  };
+}
+export function durationLabel(seconds) {
+  const mins = Math.floor(seconds / 60);
+  return `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m`;
+}
+export function resumeTime(time, samples) {
+  if (!samples.length) return null;
+  return time >= samples.at(-1)[0] ? samples[0][0] : Math.max(time, samples[0][0]);
+}
+export function estimateRevenue(summary, fares) {
+  if (!summary || ['completed', 'completed_passenger_m', 'completed_passenger_s'].some(k => !Number.isFinite(summary[k]) || summary[k] < 0)) return null;
+  if (fares.length !== 3 || fares.some(f => String(f).trim() === '' || !Number.isFinite(Number(f)) || Number(f) < 0)) return null;
+  const [base, mile, minute] = fares.map(Number);
+  const result = summary.completed * base + summary.completed_passenger_m / METRES_PER_MILE * mile + summary.completed_passenger_s / 60 * minute;
+  return Number.isFinite(result) ? result : null;
+}
+export function fareEstimateState(summary, fares) {
+  if (!summary || ['completed', 'completed_passenger_m', 'completed_passenger_s'].some(k => !Number.isFinite(summary[k]) || summary[k] < 0)) return {status:'UNAVAILABLE', value:null};
+  if (fares.length !== 3 || fares.some(f => String(f).trim() === '')) return {status:'NEEDS_RATES', value:null};
+  if (fares.some(f => !Number.isFinite(Number(f)) || Number(f) < 0)) return {status:'INVALID_RATES', value:null};
+  const value = estimateRevenue(summary, fares);
+  return {status:value === null ? 'UNAVAILABLE' : 'COMPUTED', value};
+}
+export const stateLabels = { idle: 'Available', pickup: 'Driving to pickup', boarding: 'Passenger boarding', passenger: 'Passenger on board', returning: 'Returning to depot', queue_turnaround: 'Waiting for turnaround', turnaround: 'Generic turnaround', queue_charge: 'Waiting for a charging port', charging: 'Charging', stranded: 'Stranded' };
+export function eventDescription(e) {
+  const site = e.site ? ` · depot ${e.site}` : '';
+  if (e.kind === 'state') return (stateLabels[e.after] ?? e.after) + site;
+  const names = { initial: 'Shift begins', assigned: 'Pickup assigned', boarded: 'Passenger picked up', completed: 'Passenger dropped off · trip completed', leg_start: `Route started · ${stateLabels[e.purpose] ?? e.purpose}`, leg_end: 'Route arrived', turnaround_start: 'Turnaround starts', turnaround_end: 'Turnaround ends', charge_start: 'Charging starts', charge_end: 'Charging ends', run_end: e.execution === 'INCOMPLETE' ? 'Recording stopped early' : 'Shift ended · no later operation recorded' };
+  return (names[e.kind] ?? e.kind.replaceAll('_', ' ')) + site + (e.request ? ` · ${e.request}` : '');
+}
+export function pairLesson(p) {
+  const b = p.baseline, c = p.candidate, trips = c.completed - b.completed;
+  const empty = c.empty_km_per_completed - b.empty_km_per_completed;
+  const wait = c.wait_p90_s - b.wait_p90_s;
+  return `Two depots completed ${Math.abs(trips)} ${trips < 0 ? 'fewer' : trips > 0 ? 'more' : 'additional'} trips, with ${formatMetric(Math.abs(empty) / METRES_PER_MILE * 1000, 2)} ${empty > 0 ? 'more' : 'less'} empty miles per completed trip and a ${formatMetric(Math.abs(wait), 1)}-second ${wait > 0 ? 'longer' : 'shorter'} p90 boarded wait. This is one repeat; use all twelve and the stress cases for the broader trade-off.`;
+}
+
+// Issue a new selection even if an older replay is still loading. Navigation alone
+// is insufficient because the replay view intentionally avoids duplicate loads.
+export function inspectRepeat(seed, { select, load, show }) {
+  select(seed);
+  load();
+  show();
+}
+
+export function violationLabel(row) {
+  const codes = Object.entries(row.violation_codes ?? {});
+  return codes.length ? codes.map(([code,n])=>`${code}: ${n}`).join(' · ') : row.hard_violations ? `${row.hard_violations} hard violations · codes unavailable in this older catalogue` : 'No recorded hard violation';
+}
+export function recordingSelection(catalog, study, seed, arm, vehicle) {
+  if (!study || study === 'legacy') {
+    if(!catalog.seeds.includes(seed)||!['baseline','candidate'].includes(arm)) throw new Error('Unknown legacy seed or configuration');
+    return {study:'legacy',seed,arm,layout:arm==='baseline'?'A':'AB',sites:catalog.sites.filter(s=>arm==='candidate'||s.id==='A'),fleet_file:`data/fleet-${seed}-${arm}.json`,vehicle_files:{[vehicle]:`data/run-${seed}-${arm}-${vehicle}.json`}};
+  }
+  const studies=catalog.studies?.filter(s=>s.id===study)??[];
+  if(studies.length!==1)throw new Error('Unknown or duplicate selected study identity');
+  const selected=studies[0];
+  if(!selected.seeds.includes(seed)||!selected.configurations.includes(arm))throw new Error('Unknown study, seed or configuration');
+  if(!Number.isInteger(selected.replay_seed)||selected.replay_seed!==selected.seeds[0])throw new Error('Incompatible predetermined replay scope');
+  const identities=new Set();
+  for(const entry of selected.recordings){
+    const identity=`${entry.seed}/${entry.configuration}`;
+    if(entry.study!==study||entry.seed!==selected.replay_seed||entry.arm!==entry.configuration||!selected.configurations.includes(entry.configuration))throw new Error('Catalogue recording is incompatible with selected study, configuration or replay scope');
+    if(identities.has(identity))throw new Error('Duplicate catalogue recording identity');
+    identities.add(identity);
+  }
+  const record=selected.recordings.find(r=>r.seed===seed&&r.configuration===arm);
+  if(seed!==selected.replay_seed||!record||!record.vehicle_files[vehicle])throw new Error(`Replay not exported for seed ${seed}, configuration ${arm}. Summaries remain available; only the predetermined first evaluation seed has replay`);
+  return record;
+}
+export function validateRecording(data, fleet, record, vehicle) {
+  if(data.schema!=='fleetlab.city-vehicle-view/1.1.0'||data.seed!==record.seed||data.arm!==record.arm||data.vehicle!==vehicle||data.verification!=='INTERNALLY_CONSISTENT'||!Array.isArray(data.samples)||!data.samples.length||data.samples.length>4000)throw new Error('Selected trace is incompatible or unverified');
+  if(fleet.seed!==record.seed||fleet.arm!==record.arm)throw new Error('Selected vehicle inventory is incompatible');
+  if(record.study!=='legacy'){
+    for(const item of [data,fleet])if(item.study!==record.study||item.configuration!==record.configuration||item.source_run_digest!==record.source_run_digest)throw new Error('Selected study recording identity is incompatible');
+    if(JSON.stringify(data.sites)!==JSON.stringify(record.sites)||data.layout!==record.layout||data.total_power_kw!==record.total_power_kw||JSON.stringify(data.energy)!==JSON.stringify(record.energy))throw new Error('Selected configuration resources are incompatible');
+  }
+}
+/** Hashes select only known views; Object prototype names are never routes. */
+export function cityView(value) {
+  return ['welcome', 'atlas', 'compare', 'replay', 'limits', 'models'].includes(value) ? value : 'welcome';
+}

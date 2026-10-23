@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fleetlab:city-scenario:1.0.0",
+  "title": "FleetLab city-scenario 1.0.0",
+  "type": "object",
+  "required": [
+    "schema",
+    "seed",
+    "initial",
+    "requests",
+    "background",
+    "incidents",
+    "node_pool",
+    "zones",
+    "seed_namespaces",
+    "generation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "fleetlab.city-scenario/1.0.0"
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "initial": {
+      "type": "array"
+    },
+    "requests": {
+      "type": "array"
+    },
+    "background": {
+      "type": "array"
+    },
+    "incidents": {
+      "type": "array"
+    },
+    "node_pool": {
+      "type": "array"
+    },
+    "zones": {
+      "type": "object"
+    },
+    "seed_namespaces": {
+      "type": "object"
+    },
+    "generation": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,158 @@
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {installFakeDom} from '../../../playground/fleetlab/test/helpers/fake-dom.mjs';
+import {mountStudio} from '../../../playground/fleetlab/src/ui/studio.js';
+import {createInitialState,createStore} from '../../../playground/fleetlab/src/ui/store.js';
+import {defaultScenario} from '../../../playground/fleetlab/src/model/schema.js';
+import {mountCityEntry} from '../hosted/integration.mjs';
+
+// The fake DOM has no MutationObserver; record each observer so a test can deliver a rebuild by hand.
+const observers=[];
+globalThis.MutationObserver=class{constructor(callback){this.callback=callback;}observe(target,options){observers.push({target,options,callback:this.callback});}};
+const mount=()=>{
+ const root=document.createElement('div');document.body.appendChild(root);
+ return mountStudio({root,store:createStore(createInitialState({presetId:'bay_teaching_map',scenario:defaultScenario()})),playback:{pause(){}},present:{open(){},close(){}}});
+};
+
+test('source receipt is discoverable only when the integrated release declares a package',()=>{
+ const restore=installFakeDom();let studio;
+ try{
+  studio=mount();
+  const marker=document.createElement('meta');marker.setAttribute('name','fleetlab-teaching-package');
+  document.body.appendChild(marker);
+  mountCityEntry();mountCityEntry();
+  const links=document.querySelectorAll('.offline-edition a[href="/downloads/teaching-package.json"]');
+  assert.equal(links.length,1);
+  assert.match(links[0].textContent,/source.*receipt/i);
+ }finally{studio?.destroy();restore();}
+});
+
+test('hosted capacity is available consistently in roadmap and featured catalog while offline exclusions remain explicit',()=>{
+ const restore=installFakeDom();let studio;
+ try{
+  studio=mount();mountCityEntry();
+  const entry=document.querySelector('[data-roadmap-lesson="capacity"]');
+  assert.ok(entry);
+  assert.equal(entry.getAttribute('data-availability'),'available');
+  assert.equal(entry.querySelector('a').getAttribute('href'),document.querySelector('.capacity-entry-catalog a').getAttribute('href'));
+  assert.doesNotMatch(entry.textContent,/planned|not available/i);
+  assert.match(document.querySelector('.offline-edition').textContent,/capacity study.*not included/i);
+  assert.equal(document.querySelectorAll('a[href="/downloads/teaching-package.json"]').length,0);
+ }finally{studio?.destroy();restore();}
+});
+
+test('hosted entries preserve mounted lessons and film, and native links need no city runtime',()=>{
+ const restore=installFakeDom();
+ let studio;
+ try {
+  studio=mount();
+  const nav=document.getElementById('studio-navigation');
+  const originalLinks=[...nav.children];
+  const film=document.querySelector('.welcome-visual');
+  const filmContent=film.textContent;
+  const originalLessons=[...document.querySelectorAll('.catalog-card')];
+  assert.equal(originalLessons.length,61);
+  mountCityEntry();mountCityEntry();
+  assert.deepEqual([...nav.children],originalLinks,'the header keeps its three destinations');
+  const city=document.querySelectorAll('.lab-links a[href="/city-explorer/"]');
+  assert.equal(city.length,1);
+  assert.equal(city[0].textContent,'City Explorer');
+  assert.equal(city[0].getAttribute('target'),null);
+  assert.equal(document.querySelector('.welcome-visual'),film);
+  assert.equal(film.textContent,filmContent);
+  assert.deepEqual([...document.querySelectorAll('.catalog-card')],originalLessons);
+  assert.equal(document.querySelectorAll('.city-entry-feature').length,1);
+  assert.equal(document.querySelectorAll('.city-entry-catalog').length,1);
+  const feature=document.querySelector('.studio-overview .city-entry-feature');
+  assert.ok(feature);
+  assert.deepEqual(feature.querySelectorAll('a.city-entry-action').map(a=>a.getAttribute('href')),['/city-explorer/#compare','/city-explorer/#replay','/city-explorer/#limits']);
+  assert.ok(document.querySelector('.simulation-catalog .city-entry-catalog'));
+  const contact=document.querySelector('.studio-footer .owner-contact');
+  assert.ok(contact,'owner contact is discoverable at the bottom of Overview');
+  assert.equal(contact.querySelector('a').getAttribute('href'),'mailto:bohueilin@gmail.com');
+  assert.equal(contact.querySelector('a').textContent,'bohueilin@gmail.com');
+  assert.equal(document.querySelectorAll('.owner-contact').length,1);
+  const trust=document.querySelector('.welcome-boundary .hosted-trust-legend');
+  assert.ok(trust,'the plain-language trust legend is attached to the actual welcome boundary');
+  assert.equal(document.querySelectorAll('.hosted-trust-legend').length,1);
+  const offline=document.querySelector('.offline-edition a');
+  assert.equal(offline.getAttribute('href'),'/downloads/fleetlab-offline');
+  assert.equal(offline.getAttribute('download'),'fleetlab-offline.html');
+ } finally {studio?.destroy();restore();}
+});
+
+test('the capacity study joins the lab links, a next-lesson line under Compare and Explore once, and survives a lesson change',()=>{
+ const restore=installFakeDom();
+ let studio;
+ try {
+  studio=mount();
+  const lessons=['#/depot-flow-lab?lesson=two-vehicles','#/depot-flow-lab?lesson=crossed-priorities'];
+  const assertNextLesson=()=>{
+   const links=document.querySelectorAll('#capacity-entry');
+   assert.equal(links.length,1);
+   const line=links[0].parentNode;
+   assert.equal(line.getAttribute('class'),'flow-next-lesson');
+   assert.equal(line.textContent,'Next: test whether scheduling or extra capacity helps. Scheduling or capacity?');
+   assert.equal(line.previousSibling,document.querySelector('.flow-hero p.flow-run-help'),'the line sits right under the Compare help text, below the first-screen action');
+   const chooser=document.querySelector('.flow-hero nav.lab-chooser[aria-label="Depot flow lessons"]');
+   assert.deepEqual(chooser.querySelectorAll('a').map(a=>a.getAttribute('href')),lessons,'the chooser keeps only the two offline lessons');
+   assert.equal(links[0].getAttribute('href'),'/network-flows/capacity/');
+   assert.equal(links[0].getAttribute('target'),null);
+  };
+  mountCityEntry();mountCityEntry();
+  assertNextLesson();
+  const labLink=document.querySelectorAll('.lab-links a[href="/network-flows/capacity/"]');
+  assert.equal(labLink.length,1);
+  assert.equal(labLink[0].textContent,'Scheduling or capacity?');
+  const grid=document.querySelector('.simulation-catalog .catalog-grid');
+  const city=document.querySelector('.city-entry-catalog');
+  const catalogMain=document.querySelector('.simulation-catalog');
+  assert.ok(catalogMain.children.indexOf(city)<catalogMain.children.indexOf(grid),'the recorded SF entry precedes the full learning library');
+  const catalogs=document.querySelectorAll('.capacity-entry-catalog');
+  assert.equal(catalogs.length,1);
+  assert.equal(catalogs[0].parentNode,document.querySelector('.network-question-list'),'NF-03 is featured with the other Network Flows questions');
+  assert.equal(catalogs[0].parentNode.firstChild,catalogs[0],'the capacity question is the recommended hosted experiment');
+  assert.equal(catalogs[0].getAttribute('aria-labelledby'),'capacity-catalog-title');
+  assert.equal(catalogs[0].querySelector('p.city-entry-eyebrow').textContent,'RECORDED CAPACITY STUDY');
+  assert.equal(catalogs[0].querySelector('h3#capacity-catalog-title').textContent,'Change the schedule or add capacity?');
+  assert.match(catalogs[0].querySelector('p:not(.city-entry-eyebrow)').textContent,/Twelve invented visits/);
+  const action=catalogs[0].querySelectorAll('a.city-entry-action');
+  assert.deepEqual(action.map(a=>[a.getAttribute('href'),a.textContent]),[['/network-flows/capacity/','Open the capacity study  →']]);
+  const primary=document.querySelector('.hero-actions .studio-button-primary');
+  assert.equal(primary.getAttribute('href'),'/network-flows/capacity/');
+  primary.click();assert.equal(studio.element.getAttribute('data-page'),'overview','hosted native action must not retain the old in-app NF-01 click handler');
+  assert.equal(document.querySelector('.hero-actions .home-city-link').getAttribute('href'),'/city-explorer/');
+  const hero=document.querySelector('.flow-hero');
+  const watching=observers.filter(o=>o.target===hero);
+  assert.deepEqual(watching.map(o=>o.options),[{childList:true}]);
+  // Every lesson change rebuilds the hero; the observer restores the hosted line.
+  studio.applyRoute(lessons[1]);
+  assert.equal(document.querySelectorAll('#capacity-entry').length,0);
+  watching[0].callback([]);
+  assertNextLesson();
+ } finally {studio?.destroy();restore();}
+});
+
+test('NF04 discovery needs the accepted generation marker and preserves NF03 as first destination',()=>{
+ const restore=installFakeDom();let studio;
+ try{
+  studio=mount();mountCityEntry();
+  assert.equal(document.querySelectorAll('a[href="/network-flows/software-delivery/"]').length,0);
+ }finally{studio?.destroy();restore();}
+ const restoreNext=installFakeDom();let next;
+ try{
+  next=mount();const marker=document.createElement('meta');marker.setAttribute('name','fleetlab-software-delivery');marker.setAttribute('content','/network-flows/software-delivery/release.json');document.body.appendChild(marker);
+  mountCityEntry();mountCityEntry();
+  assert.equal(document.querySelectorAll('.software-delivery-entry-catalog').length,1);
+  assert.equal(document.querySelector('.network-question-list').firstChild.getAttribute('class'),'network-question capacity-entry-catalog');
+  assert.equal(document.querySelector('.hero-actions .studio-button-primary').getAttribute('href'),'/network-flows/capacity/');
+  assert.equal(document.querySelectorAll('.flow-next-lesson a[href="/network-flows/software-delivery/"]').length,1);
+  const roadmap=document.querySelector('[data-roadmap-lesson="software"]');
+  assert.equal(roadmap.getAttribute('data-availability'),'available');
+  assert.match(roadmap.textContent,/shared.*copy/i);
+ }finally{next?.destroy();restoreNext();}
+});
+
+test('R1 discovery requires the complete-generation marker and remains idempotent',()=>{
+ for(const enabled of [false,true]){const restore=installFakeDom();let studio;try{studio=mount();if(enabled){const marker=document.createElement('meta');marker.setAttribute('name','fleetlab-rebalancing');marker.setAttribute('content','/network-flows/rebalancing/release.json');document.body.appendChild(marker);}mountCityEntry();mountCityEntry();assert.equal(document.querySelectorAll('.rebalancing-entry-catalog').length,enabled?1:0);assert.equal(document.querySelectorAll('[data-roadmap-lesson="rebalancing"]').length,enabled?1:0);if(enabled)assert.equal(document.querySelector('.rebalancing-entry-catalog a').getAttribute('href'),'/network-flows/rebalancing/');}finally{studio?.destroy();restore();}}
+});

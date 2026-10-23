@@ -1,0 +1,1 @@
+[out:json][timeout:60];way["natural"="coastline"](37.25,-122.55,37.84,-121.80);out skel geom(37.25,-122.55,37.84,-121.80);

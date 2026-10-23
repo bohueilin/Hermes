@@ -1,0 +1,1021 @@
+import {teachingResult} from './teaching-projection.js';
+// Interface entry (contract section 8, design §7): builds the shell of design §7.2 and wires every region to one store
+// and to the engine host. The region modules render the knobs, map, transport, inspector, Learn and Experiment; this
+// file renders the top bar, the NOW panel, the panel across replications, the chart row, the fork section, the run
+// states of design §7.7 and the footer, and it runs the engine for Run window, the fork and a verdict seed.
+//
+// Decisions this module makes where the design is silent (reported with the build):
+// - Run window runs 5 replications of seed set 1 (the §7.2 wireframe reads "replay 1 of 5") and animates the first.
+// - Learn and Experiment render inside the chart row, the only region wide enough, ahead of the charts. The root
+//   carries `data-mode`, so the phone layout keeps that row on screen in those modes.
+// - The fork (D-10) runs on the watched replay's seed. In a Learn case lane A is the preset's axis baseline and lane B
+//   its candidate; in Sandbox lane A undoes the last knob change and lane B keeps it; from a verdict, lanes A and B are
+//   the frozen spec's arms on the spec's shared envelope.
+// - The demand and traffic strips sit under the scrubber for the selected area (San Francisco when nothing is
+//   selected); the traffic strip reads the highway toward that area.
+// - While the fork shows a verdict seed, the map, the NOW panel, the panel across replications and the strips (which
+//   replay the Sandbox world) are hidden and the top bar names the verdict seed, so only one THIS REPLAY seed is on
+//   screen (design §7.4, H-10). Closing the fork shows them again.
+// - The wait p90 values of the panel across replications and of the wait chart summary carry their completed rides.
+// - Before any run the NOW panel and the panel across replications each show one state line and no rows, so absence is
+//   said once and never reads as a value.
+// - Open the fork closes the inspector, scrolls the fork into view, focuses its heading and announces it politely.
+// - In an idle step after start (and after a traffic spread change), the host builds the lookup tables for the
+//   scenario's sigma, with a preparing line under the map, so the first run does not pay for them.
+
+import { armScenarios, experimentEnvelope } from "../model/experiment.js";
+import { violationId } from "../model/invariants.js";
+import { metricKey } from "../model/metrics.js";
+import { DEFAULT_PRESET_ID, PRESET_SEED_SET, presetById, seedSet } from "../model/presets.js";
+import { AREA_IDS, applyAxis, cloneScenario } from "../model/schema.js";
+import { sharedLambdaMaxPermille } from "../model/world.js";
+import { createEngineHost } from "../runtime/host.js";
+import { createAnnouncer, createLiveRegion, createShortcutHelp, watchReducedMotion } from "./a11y.js";
+import { armComparisonCharts, carForkCharts, demandStrip, fleetStateChart, metricByHourChart, setCursorAll, trafficStrip } from "./charts.js";
+import { mountControls } from "./controls.js";
+import { el, keyedList, setText } from "./dom.js";
+import { mountExperiment, startFromPreset } from "./experiment.js";
+import * as format from "./format.js";
+import { mountInspector } from "./inspector.js";
+import { createIsoView } from "./iso.js";
+import * as labels from "./labels.js";
+import { LEARN_FORK_DEPOTS, learnCase, mountLearn } from "./learn.js";
+import { frameModel, mountMap } from "./map.js";
+import { createPlayback, renderTransport } from "./playback.js";
+import { mountPresent, PRESENT_PRESET_ID } from "./present.js";
+import { mountStudio } from "./studio.js";
+import { createInitialState, createStore, ENGINE_PATHS, lastChange, MODES } from "./store.js";
+
+/** Shell regions in document order, which is the design section 7.7 tab order; `now` and `across` sit in `side`. */
+export const REGION_IDS = Object.freeze([
+  "topbar",
+  "knobs",
+  "map",
+  "transport",
+  "segmented",
+  "now",
+  "across",
+  "charts",
+  "inspector",
+  "footer",
+]);
+
+/** Phone groups of the segmented control (design section 7.2), as `data-phone-group` values on `.fl-app`. */
+export const PHONE_GROUPS = Object.freeze(["now", "charts", "across"]);
+
+/** Replications Run window computes (design §7.2 wireframe: replay 1 of 5). */
+export const SANDBOX_REPLICATIONS = 5;
+
+/** Charts of the Sandbox chart row after Fleet state (design §7.2 wireframe), by computeSeries id. */
+export const ROW_CHARTS = Object.freeze(["wait_p90_by_hour", "bay_wait_by_depot", "available_by_area"]);
+
+const PHONE_GROUP_LABEL_PATHS = { now: "CHARTS.phoneSegments.now", charts: "CHARTS.phoneSegments.charts", across: "CHARTS.phoneSegments.all" };
+
+/** Reads a required string from labels.js by dotted path, with a clear error when it is missing. */
+function label(path) {
+  let value = labels;
+  for (const key of path.split(".")) value = value == null ? undefined : value[key];
+  if (typeof value !== "string" || value === "") {
+    throw new Error(`src/ui/labels.js must provide a non-empty string at ${path}`);
+  }
+  return value;
+}
+
+/** Fills the strip: the full sentence, and a phone button that opens the popover. It has no dismiss control. */
+function buildTeachingStrip(strip) {
+  strip.setAttribute("role", "note");
+  strip.setAttribute("aria-label", label("HONESTY.stripPhone"));
+  const full = el("p", { class: "fl-strip__full" }, label("HONESTY.strip"));
+  const popover = el("p", { id: "fleetlab-teaching-popover", class: "fl-popover", "data-open": "false" }, label("HONESTY.popover"));
+  popover.hidden = true;
+  const toggle = el(
+    "button",
+    {
+      type: "button",
+      class: "fl-strip__short",
+      "aria-expanded": "false",
+      "aria-controls": "fleetlab-teaching-popover",
+      "aria-label": label("HONESTY.stripPhoneHint"),
+      on: {
+        click: () => {
+          const open = popover.hidden;
+          popover.hidden = !open;
+          popover.setAttribute("data-open", open ? "true" : "false");
+          toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        },
+      },
+    },
+    label("HONESTY.stripPhone"),
+  );
+  strip.replaceChildren(full, toggle, popover);
+}
+
+/** Builds the phone segmented control; each button shows one group by setting `data-phone-group` on the root. */
+function buildSegmented(root) {
+  const buttons = PHONE_GROUPS.map((group) =>
+    el(
+      "button",
+      {
+        type: "button",
+        "data-group": group,
+        "aria-pressed": group === root.getAttribute("data-phone-group") ? "true" : "false",
+        on: { click: () => showPhoneGroup(root, buttons, group) },
+      },
+      label(PHONE_GROUP_LABEL_PATHS[group]),
+    ),
+  );
+  return el("div", { id: "fleetlab-region-segmented", class: "fl-segmented", role: "group" }, buttons);
+}
+
+function showPhoneGroup(root, buttons, group) {
+  root.setAttribute("data-phone-group", group);
+  for (const button of buttons) {
+    button.setAttribute("aria-pressed", button.getAttribute("data-group") === group ? "true" : "false");
+  }
+}
+
+function region(tag, id, className, labelPath) {
+  return el(tag, { id: `fleetlab-region-${id}`, class: className, "aria-label": labelPath ? label(labelPath) : null });
+}
+
+/**
+ * Builds the empty shell of design §7.2 in the page document, which must hold `#fleetlab-root` with
+ * `#fleetlab-teaching-strip` inside it: the strip, then one container per region with the classes styles.css defines.
+ * Returns `{root, strip, regions}`; `start` mounts the interface into it.
+ */
+export function buildShell() {
+  const doc = globalThis.document;
+  const root = doc.getElementById("fleetlab-root");
+  const strip = doc.getElementById("fleetlab-teaching-strip");
+  if (!root || !strip || strip.parentNode !== root) {
+    throw new Error('start needs an element with id "fleetlab-teaching-strip" inside one with id "fleetlab-root"');
+  }
+  root.setAttribute("class", "fl-app");
+  strip.setAttribute("class", "fl-strip");
+  if (!PHONE_GROUPS.includes(root.getAttribute("data-phone-group"))) root.setAttribute("data-phone-group", "now");
+  buildTeachingStrip(strip);
+
+  const regions = {
+    topbar: region("header", "topbar", "fl-topbar", "TOP_BAR.product"),
+    knobs: region("aside", "knobs", "fl-knobs", "KNOB_PANEL.heading"),
+    map: region("section", "map", "fl-map", "MAP.name"),
+    transport: region("section", "transport", "fl-transport", "PLAYBACK.transportName"),
+    segmented: buildSegmented(root),
+    now: region("section", "now", "fl-now", "REGISTERS.nowThisReplay"),
+    across: region("section", "across", "fl-across", "CHARTS.phoneSegments.all"),
+    charts: region("section", "charts", "fl-charts", "CHARTS.phoneSegments.charts"),
+    // The walkthrough's two containers (demo plan section 4.1). They are shell regions so the presenting grid can place
+    // them by area and the DOM order tests can read them, and they stay hidden and inert until Present opens.
+    ledger: region("section", "ledger", "fl-ledger", "PRESENT.ledgerName"),
+    rail: region("section", "rail", "fl-rail", "PRESENT.name"),
+    inspector: region("aside", "inspector", "fl-drawer fl-inspector", "MODES.inspect.name"),
+    footer: region("footer", "footer", "fl-footer"),
+  };
+  // The NOW panel is a tab stop of its own in the design §7.7 order (map, transport, NOW panel, charts).
+  regions.now.setAttribute("tabindex", "0");
+  regions.inspector.hidden = true;
+  regions.inspector.setAttribute("inert", "");
+  regions.inspector.setAttribute("data-open", "false");
+  for (const id of ["ledger", "rail"]) {
+    regions[id].hidden = true;
+    regions[id].setAttribute("inert", "");
+  }
+  const side = el("div", { class: "fl-side" }, [regions.now, regions.across]);
+
+  // The walkthrough reads stage, ledger, rail in that order, which is this DOM order: the presenting grid never moves
+  // a region past another, so what a reader tabs through is what a reader sees (design 7.7).
+  root.replaceChildren(
+    strip,
+    regions.topbar,
+    regions.knobs,
+    regions.map,
+    regions.ledger,
+    regions.rail,
+    regions.transport,
+    regions.segmented,
+    side,
+    regions.charts,
+    regions.inspector,
+    regions.footer,
+  );
+  return { root, strip, regions, side };
+}
+
+/**
+ * Starts the interface. `createWorker` is the engine worker factory (contract section 9). Options for tests and
+ * embedding: `engineHost` replaces the host built from `createWorker` (an object with `path`, `ready`, `runWindow`,
+ * `runPair`, `runExperiment` and `cancel`), and `copyText(text)` replaces the clipboard (null disables copying).
+ * Returns `{root, strip, regions, createWorker, store, host, playback, runWindow, openFork, watchVerdictSeed, destroy}`.
+ */
+export function start({ createWorker, engineHost = null, copyText = clipboardWriter(), studio = false } = {}) {
+  if (typeof createWorker !== "function") throw new TypeError("start needs a createWorker factory");
+  const shell = buildShell();
+  const app = mountInterface(shell, { createWorker, engineHost, copyText, studio });
+  const handle = { ...shell, createWorker, ...app };
+  if (studio) {
+    const experience = mountStudio(handle);
+    const destroy = handle.destroy;
+    handle.studio = experience;
+    handle.destroy = () => { experience.destroy(); destroy(); };
+  }
+  return handle;
+}
+
+/** The page clipboard's writeText, or null where the page has none. */
+function clipboardWriter() {
+  const clipboard = globalThis.navigator?.clipboard;
+  return clipboard && typeof clipboard.writeText === "function" ? (text) => clipboard.writeText(text) : null;
+}
+
+/** The message text of a rejected run. */
+function messageOf(error) {
+  return error && typeof error.message === "string" ? error.message : String(error);
+}
+
+/** True when two key arrays hold the same values by identity. */
+function sameKey(a, b) {
+  return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((value, i) => value === b[i]);
+}
+
+/**
+ * A store view whose listeners run only when `select(state)` changes (compared by identity, item by item), so a module
+ * that rebuilds its whole view is not rebuilt on every playback frame.
+ */
+function gatedStore(store, select) {
+  return {
+    getState: store.getState,
+    dispatch: store.dispatch,
+    subscribe(listener) {
+      let last = select(store.getState());
+      return store.subscribe((state, action) => {
+        const next = select(state);
+        if (sameKey(next, last)) return;
+        last = next;
+        listener(state, action);
+      });
+    },
+  };
+}
+
+/** A copy of `scenario` with `value` at `path` (keys and indices). */
+function withValueAt(scenario, path, value) {
+  const copy = cloneScenario(scenario);
+  let node = copy;
+  for (const key of path.slice(0, -1)) node = node[key];
+  node[path[path.length - 1]] = value !== null && typeof value === "object" ? structuredClone(value) : value;
+  return copy;
+}
+
+/** The scenario the shown run was computed on (the store keeps it, so a later knob change cannot relabel a replay). */
+function scenarioOfRun(state) {
+  return state.run.scenarioAtQueue ?? state.scenario;
+}
+
+/** The area the strips describe: the selected depot's or car's area, else San Francisco. */
+function focusArea(state) {
+  const id = state.selection?.depot ?? state.selection?.car ?? null;
+  const area = id === null ? null : id.split("-")[0];
+  return AREA_IDS.includes(area) ? area : "SF";
+}
+
+/** Numbers of a metric key across replications, or the absent text that stands for them. */
+function acrossNumbers(summaries, key) {
+  if (summaries.length === 0) return labels.absentValue(labels.ABSENT_REASONS.notRunYet);
+  const values = summaries.map((s) => s.metrics[key]);
+  if (values.some((v) => v === undefined || "absent" in v)) return labels.absentValue(labels.ABSENT_REASONS.metricAbsentInSomeReplication);
+  return values.map((v) => v.value);
+}
+
+/** Across-replications text for a metric key: the 10th to 90th percentile, one value in every replication, or why not. */
+function acrossText(summaries, key, formatter) {
+  const numbers = acrossNumbers(summaries, key);
+  return typeof numbers === "string" ? numbers : format.acrossText(numbers, formatter);
+}
+
+/** A count across replications as text: whole numbers plain, a percentile between two counts to one decimal. */
+function countText(v) {
+  return format.number(v, Number.isInteger(v) ? 0 : 1);
+}
+
+/** The wait p90 range across replications with the completed rides it counts beside it (design §5.8). */
+function acrossWaitText(summaries, formatter) {
+  const wait = acrossText(summaries, "wait.p90_s", formatter);
+  if (wait.startsWith(labels.ABSENT_PREFIX)) return wait;
+  const numbers = acrossNumbers(summaries, "wait.population_n");
+  if (typeof numbers === "string") return labels.withWaitPopulation({ value: wait, population: numbers });
+  // The count sits inside "from ... completed rides", so a count every replication shares reads as that one count.
+  const ends = format.acrossEnds(numbers, countText);
+  const counts = ends === null ? countText(numbers[0]) : labels.acrossRange(ends);
+  return labels.withWaitPopulation({ value: wait, population: labels.waitPopulation(counts) });
+}
+
+/** One replay's wait p90 with its completed rides, for the table across replications. */
+function seedWaitText(summary, formatter) {
+  const m = summary.metrics["wait.p90_s"];
+  if (m === undefined) return labels.absentValue(labels.ABSENT_REASONS.notComputed);
+  if ("absent" in m) return format.valueText(m, formatter);
+  const n = summary.metrics["wait.population_n"];
+  const population = n === undefined ? labels.absentValue(labels.ABSENT_REASONS.notComputed) : "absent" in n ? format.valueText(n, format.count) : labels.waitPopulation(format.count(n.value));
+  return labels.withWaitPopulation({ value: formatter(m.value), population });
+}
+
+const ACROSS_ROWS = Object.freeze([
+  ["wait", "wait.p90_s", format.minutes],
+  ["unserved", "unserved.fraction", (v) => format.percent(v, 1)],
+]);
+
+const button = (text, onClick, role, attrs = {}) => el("button", { type: "button", class: "fl-button", "data-role": role, ...attrs, on: { click: onClick } }, text);
+
+/** A text row of the NOW panel or the panel across replications. */
+function textRow([key, name, value]) {
+  const node = el("p", { class: "fl-now__row", "data-row": key }, [el("span", {}, name), el("span", { "data-role": "value" }, value)]);
+  updateTextRow(node, [key, name, value]);
+  return node;
+}
+
+function updateTextRow(node, [, name, value]) {
+  const [nameNode, valueNode] = node.children;
+  setText(nameNode, name);
+  setText(valueNode, value);
+  valueNode.classList.toggle("fl-absent", value.startsWith(labels.ABSENT_PREFIX));
+}
+
+/** Mounts every region into the shell and wires the store to the engine host. */
+function mountInterface({ root, regions, side }, { createWorker, engineHost, copyText, studio }) {
+  const doc = globalThis.document;
+  const preset = presetById(DEFAULT_PRESET_ID);
+  const store = createStore(createInitialState({ presetId: preset.id, scenario: cloneScenario(preset.scenario) }));
+  const host = engineHost ?? createEngineHost({ createWorker });
+  const cleanups = [];
+  let destroyed = false;
+  let autoplayVersion = 0;
+  const runs = { window: null, fork: null, forkArgs: null, forkMeta: null, forkNotice: false, copyStatus: null, prepareTimes: null };
+  // Lookup tables built ahead of the first run: sigmas done (or failed, so they are not retried), the pending build, the idle handle.
+  const warm = { done: new Set(), pending: null, idle: null };
+  const memo = { chartHandles: [], stripHandles: [], forkHandles: [], cursor: null, frameKey: null, frame: null };
+  let wasPresenting = false;
+
+  // ---- engine ------------------------------------------------------------------------------------------------------
+
+  /** Records the engine path in the store, which copies it into every session log entry (design §9.4). */
+  function reportPath() {
+    if (destroyed) return;
+    const path = host.path;
+    if (ENGINE_PATHS.includes(path) && store.getState().engine.path !== path) store.dispatch({ type: "engine/path", path });
+  }
+
+  /** Run window (design §7.4): computes the whole log of the first replication and the metrics of every one. */
+  function runWindow() {
+    const scenario = store.getState().scenario;
+    const requestedAutoplayVersion = autoplayVersion;
+    const requestedMode = store.getState().mode;
+    if (runs.window !== null) host.cancel(runs.window.id);
+    const seeds = seedSet(PRESET_SEED_SET, SANDBOX_REPLICATIONS);
+    let id = null;
+    const promise = host.runWindow({ scenario, seeds, logSeed: seeds[0] }, {
+      onProgress: (p) => {
+        if (!destroyed) store.dispatch({ type: "run/progress", id, done: p.done, total: p.total, label: p.label });
+      },
+    });
+    id = promise.id;
+    runs.window = promise;
+    runs.copyStatus = null;
+    store.dispatch({ type: "run/queued", id, total: seeds.length });
+    return promise
+      .then(
+        (payload) => {
+          if (destroyed) return;
+          reportPath();
+          store.dispatch({ type: "run/done", id, payload });
+          const state = store.getState();
+          if (studio && requestedAutoplayVersion === autoplayVersion && runs.window === promise
+              && !root.hidden && !state.present.on && !state.run.stale && state.run.id === id
+              && state.scenario === scenario && state.mode === requestedMode && state.mode !== "experiment") {
+            playback.seek(scenario.window.start_s);
+            playback.autoplay();
+          }
+        },
+        (error) => {
+          if (destroyed) return;
+          store.dispatch(error && error.name === "AbortError" ? { type: "run/cancelled", id } : { type: "run/error", id, message: messageOf(error) });
+        },
+      )
+      .finally(() => {
+        if (runs.window === promise) runs.window = null;
+      });
+  }
+
+  /** Runs both arms of a fork on one world (contract section 7 run_pair) and shows them in the fork section. */
+  function startPair(args) {
+    if (runs.fork !== null) host.cancel(runs.fork.id);
+    const { baseline, candidate, seed, lambdaMaxPermille, car, source = "sandbox", depots = [], verdictSeed = null } = args;
+    runs.forkNotice = false;
+    runs.forkArgs = args;
+    const promise = host.runPair({ baseline, candidate, seed, lambdaMaxPermille });
+    const id = promise.id;
+    runs.fork = promise;
+    runs.forkMeta = { id, baselineScenario: baseline, candidateScenario: candidate, seed, car, source, depots, verdictSeed };
+    store.dispatch({ type: "fork/open", id, car });
+    return promise
+      .then(
+        (pair) => {
+          if (destroyed) return;
+          reportPath();
+          store.dispatch({ type: "fork/result", id, pair });
+        },
+        (error) => {
+          if (destroyed) return;
+          if (error && error.name === "AbortError") {
+            if (store.getState().fork.id === id) store.dispatch({ type: "fork/close" });
+          } else {
+            store.dispatch({ type: "fork/error", id, message: messageOf(error) });
+          }
+        },
+      )
+      .finally(() => {
+        if (runs.fork === promise) runs.fork = null;
+      });
+  }
+
+  /** The two arms of a fork opened from Learn or Sandbox, or null when Sandbox has no change to fork on. */
+  function forkArms(state) {
+    if (state.mode === "learn" && state.learn.case !== null) {
+      const axis = presetById(learnCase(state.learn.case).presetId).experiment.axis;
+      return { baseline: applyAxis(state.scenario, axis.id, axis.baseline), candidate: applyAxis(state.scenario, axis.id, axis.candidate) };
+    }
+    const change = lastChange(state);
+    if (change === null) return null;
+    return { baseline: withValueAt(state.scenario, change.path, change.from), candidate: state.scenario };
+  }
+
+  /**
+   * Opens the fork for `car` (the inspector's Open the fork). Returns the run's promise, or null with a notice. Either way
+   * the inspector closes and the fork section is revealed: scrolled into view, its heading focused, and announced.
+   */
+  function openFork(car) {
+    const state = store.getState();
+    const arms = forkArms(state);
+    if (state.inspector !== null) store.dispatch({ type: "inspector/close" });
+    if (arms === null) {
+      runs.forkNotice = true;
+      render(store.getState());
+      revealFork(labels.FORK.needsChange);
+      return null;
+    }
+    const seed = state.run.selectedSeed ?? seedSet(PRESET_SEED_SET, 1)[0];
+    const learning = state.mode === "learn" && state.learn.case !== null;
+    const depots = learning ? [...(LEARN_FORK_DEPOTS[state.learn.case] ?? [])] : [];
+    const promise = startPair({ ...arms, seed, lambdaMaxPermille: sharedLambdaMaxPermille([arms.baseline, arms.candidate]), car, source: learning ? "learn" : "sandbox", depots });
+    revealFork(labels.forkOpened(car));
+    return promise;
+  }
+
+  /**
+   * Moves the reader to the fork section: on a phone the Charts group (which holds the fork) is shown first, then the
+   * heading takes focus, the section scrolls to the top and the live region speaks.
+   */
+  function revealFork(announcement) {
+    if (destroyed || forkHost.hidden) return;
+    showPhoneGroup(root, regions.segmented.querySelectorAll("button"), "charts");
+    forkHeading.focus({ preventScroll: true });
+    if (typeof forkHost.scrollIntoView === "function") forkHost.scrollIntoView({ block: "start" });
+    live.announce(announcement);
+  }
+
+  /** Schedules the lookup-table build for the scenario's sigma in an idle step, once per sigma, when the host offers it. */
+  function scheduleWarm() {
+    if (destroyed || typeof host.warmTables !== "function" || warm.pending !== null || warm.idle !== null) return;
+    if (warm.done.has(store.getState().scenario.sigma_permille)) return;
+    const idle = globalThis.requestIdleCallback;
+    const step = () => {
+      warm.idle = null;
+      warmTables();
+    };
+    warm.idle = typeof idle === "function"
+      ? { cancel: (id) => globalThis.cancelIdleCallback(id), id: idle(step, { timeout: 1000 }) }
+      : { cancel: (id) => clearTimeout(id), id: setTimeout(step, 0) };
+  }
+
+  function warmTables() {
+    const sigma = store.getState().scenario.sigma_permille;
+    if (destroyed || warm.done.has(sigma)) return;
+    const promise = host.warmTables({ sigmaPermille: sigma });
+    warm.pending = promise;
+    render(store.getState());
+    promise.then(() => {}, () => {}).finally(() => {
+      warm.done.add(sigma);
+      if (warm.pending === promise) warm.pending = null;
+      if (destroyed) return;
+      render(store.getState());
+      scheduleWarm();
+    });
+  }
+
+  /** From a verdict: opens `seed`'s world in both arms of the frozen spec (design §7.1). */
+  function watchVerdictSeed(seed) {
+    const state = store.getState();
+    const frozen = state.experiment.frozen;
+    if (frozen === null) return null;
+    const { baseline, candidate } = armScenarios(frozen.spec);
+    const car = state.fork.pinnedCar ?? state.selection?.car ?? null;
+    const seeds = frozen.spec.seeds;
+    // The inspector reads the Sandbox replay, which is hidden while a verdict seed is shown.
+    if (state.inspector !== null) store.dispatch({ type: "inspector/close" });
+    const verdictSeed = { seed, index: seeds.indexOf(seed) + 1, total: seeds.length };
+    return startPair({ baseline, candidate, seed, lambdaMaxPermille: experimentEnvelope(frozen.spec), car, source: "verdict", verdictSeed });
+  }
+
+  /** The verdict seed the fork shows (`{seed, index, total}`), or null when the fork is closed or came from elsewhere. */
+  function shownVerdictSeed(state) {
+    const meta = runs.forkMeta;
+    if (state.fork.status === "closed" || meta === null || meta.id !== state.fork.id || meta.source !== "verdict") return null;
+    return meta.verdictSeed;
+  }
+
+  function closeFork() {
+    if (runs.fork !== null) host.cancel(runs.fork.id);
+    runs.forkNotice = false;
+    store.dispatch({ type: "fork/close" });
+    render(store.getState());
+  }
+
+  async function copyDetails(text) {
+    try {
+      await copyText(text);
+      runs.copyStatus = "copied";
+    } catch {
+      runs.copyStatus = "failed";
+    }
+    if (!destroyed) render(store.getState());
+  }
+
+  // ---- regions -----------------------------------------------------------------------------------------------------
+
+  const controls = mountControls({ store, region: regions.knobs, onRunWindow: () => runWindow() });
+
+  const modeButtons = MODES.map((mode) =>
+    el("button", { type: "button", class: "fl-button", "data-mode": mode, title: labels.MODES[mode].job, "aria-pressed": "false", on: { click: () => store.dispatch({ type: "mode/set", mode }) } }, labels.MODES[mode].name),
+  );
+  const modeHelp=el('p',{class:'fl-muted','data-role':'mode-help',role:'status'});
+  const topStatus = el("p", { class: "fl-clock", "data-role": "top-status" });
+  // Present is a layer over whichever mode is showing, so it sits after the modes and is pressed, never selected.
+  const presentButton = button(labels.PRESENT.open, () => togglePresent(), "present-toggle", { "aria-pressed": "false", title:"Present: tell the story in a guided walkthrough." });
+  regions.topbar.replaceChildren(
+    el(studio ? "p" : "h1", { class: "fl-title" }, labels.TOP_BAR.product),
+    el("div", { class: "fl-modes", role: "group", "aria-label": labels.TOP_BAR.modesName }, modeButtons),
+    presentButton,
+    modeHelp,
+    controls.toggle,
+    topStatus,
+  );
+
+  const runStatus = el("div", { "data-role": "run-status" });
+  const mapHost = el("div", {});
+  regions.map.replaceChildren(runStatus, mapHost);
+  const help = createShortcutHelp(regions.map);
+  const playback = createPlayback({ store });
+  for (const method of ["pause", "seek", "step", "jump", "play"]) {
+    const action = playback[method];
+    playback[method] = (...args) => { autoplayVersion++; return action(...args); };
+  }
+  cleanups.push(store.subscribe((state, action) => {
+    if (action.type === "mode/set" || action.type === "present/open") autoplayVersion++;
+  }));
+  // The isometric picture is the page's (design §7.3 as amended); the flat schematic stays behind its toggle and
+  // is what a browser without a 2D canvas gets, with the reason written.
+  const map = mountMap(mapHost, { store, playback, onShortcuts: () => help.toggle(), frame: () => frameOf(store.getState()), isoView: createIsoView });
+
+  const transportHost = el("div", { class: "fl-contents" });
+  const strips = el("div", { class: "fl-transport__strips", "data-role": "strips" });
+  regions.transport.replaceChildren(transportHost, strips);
+  const transport = renderTransport(transportHost, { store, playback });
+
+  const nowChip = el("span", { class: "fl-chip-replay", "data-role": "now-chip" });
+  const nowState = el("p", { class: "fl-absent", "data-role": "now-state" });
+  const nowRows = el("div", { "data-role": "now-rows" });
+  regions.now.replaceChildren(el("div", { class: "fl-now__row" }, [el("h2", { class: "fl-small-label" }, labels.REGISTERS.nowThisReplay), nowChip]), nowState, nowRows);
+
+  const acrossChip = el("h2", { class: "fl-chip-across", "data-role": "across-chip" });
+  const acrossRows = el("div", { "data-role": "across-rows" });
+  const acrossTable = el("div", { class: "fl-scroll", "data-role": "across-table" });
+  acrossTable.hidden = true;
+  const acrossToggle = button(labels.CHARTS.table, () => {
+    acrossTable.hidden = !acrossTable.hidden;
+    acrossToggle.setAttribute("aria-pressed", acrossTable.hidden ? "false" : "true");
+  }, "across-table-toggle", { "aria-pressed": "false" });
+  const acrossState = el("p", { class: "fl-absent", "data-role": "across-state" });
+  regions.across.replaceChildren(acrossChip, acrossState, acrossRows, acrossToggle, acrossTable);
+
+  const learnHost = el("div", { class: "fl-charts__wide", "data-role": "learn" });
+  const experimentHost = el("div", { class: "fl-charts__wide", "data-role": "experiment" });
+  const forkHost = el("section", { class: "fl-charts__wide fl-panel", "data-role": "fork", "aria-label": labels.FORK.heading });
+  // The heading stays in place across fork renders, so focus moved to it by Open the fork is never dropped.
+  const forkHeading = el("h2", { class: "fl-title", tabindex: "-1", "data-role": "fork-heading" }, labels.FORK.heading);
+  const forkBody = el("div", { "data-role": "fork-body" });
+  forkHost.replaceChildren(forkHeading, forkBody);
+  forkHost.hidden = true;
+  const armHost = el("div", { class: "fl-charts__wide", "data-role": "arm-comparison" });
+  const chartSet = el("div", { class: "fl-charts__set", "data-role": "sandbox-charts" });
+  regions.charts.replaceChildren(learnHost, experimentHost, forkHost, armHost, chartSet);
+
+  const learn = mountLearn(learnHost, { store: gatedStore(store, (s) => [s.mode === "learn", s.learn, s.reference, s.presetId, s.scenario]) });
+  const experiment = mountExperiment(experimentHost, {
+    store: gatedStore(store, (s) => [s.mode === "experiment", s.experiment, s.reference, s.scenario, s.changes, s.presetId, s.engine]),
+    host,
+    copy: copyText,
+    onWatchSeed: (seed) => watchVerdictSeed(seed),
+  });
+  const inspector = mountInspector({ store, region: regions.inspector, onOpenFork: (car) => openFork(car) });
+  // The `Isometric | Flat` group belongs to the map header outside the walkthrough (owner answer 3): while presenting,
+  // the rail is the only row of controls and the picture is not a thing to choose between.
+  const viewGroup = regions.map.querySelector('[data-role="view-group"]');
+
+  /** The one model the whole page draws this frame, so the walkthrough takes map.js's model and never a second one. */
+  const modelOf = (state) => frameModel({ scenario: scenarioOfRun(state), log: state.run.log, frame: frameOf(state), clock_s: state.clock_s });
+
+  const present = mountPresent({
+    store,
+    playback,
+    ledger: regions.ledger,
+    onSpotlight: target => {for(const n of mapHost.querySelectorAll(".fl-iso__label,.fl-area,.fl-depot"))n.classList.toggle("fl-story-spotlight",!!target&&(target.depot?n.getAttribute("data-depot")===target.depot:n.getAttribute("data-area")===target.area));},
+    rail: regions.rail,
+    modelOf,
+    frameOf,
+    scenarioOf: scenarioOfRun,
+    prepare: () => preparePresent(),
+    times: () => runs.prepareTimes,
+    // The beat that shows both arms of one verdict seed opens the fork the page already has (demo plan Phase B); the
+    // map region steps aside for it exactly as it does when a reader opens it from the verdict card.
+    onWatchSeed: (seed) => watchVerdictSeed(seed),
+    onGoToKnobs: () => {
+      const run = [...regions.knobs.querySelectorAll("button")].find((b) => b.textContent === labels.KNOB_PANEL.runWindow);
+      run?.focus();
+    },
+  });
+  // The reading card stands above the picture, where a lone visitor meets the page before anything has run.
+  regions.map.insertBefore(present.card, mapHost);
+
+  function togglePresent() {
+    if (store.getState().present.on) present.close();
+    else present.open();
+  }
+
+  /**
+   * Prepare (demo plan section 4.4): the casebook situation in Sandbox, the window at 5 seeds, then the frozen spec at
+   * its 20 paired seeds. Both runs are the runtime's ordinary public calls, so what the walkthrough shows is what this
+   * visitor's browser computed; the two wall times are measured here and shown as this visitor's own clock. Nothing is
+   * cached and nothing is shipped, and `prepared` is set only when both runs actually landed.
+   */
+  async function preparePresent() {
+    if (destroyed) return null;
+    const windowStart = performance.now();
+    startFromPreset(store.dispatch, PRESENT_PRESET_ID);
+    store.dispatch({ type: "mode/set", mode: "sandbox" });
+    await runWindow();
+    const windowMs = performance.now() - windowStart;
+    if (destroyed) return null;
+    const experimentStart = performance.now();
+    await experiment.freezeAndRun();
+    const experimentMs = performance.now() - experimentStart;
+    if (destroyed) return null;
+    const state = store.getState();
+    if (state.run.log === null || state.experiment.verdict === null) return null;
+    runs.prepareTimes = { windowMs, experimentMs };
+    store.dispatch({ type: "present/prepared" });
+    return runs.prepareTimes;
+  }
+
+  const engineText = el("p", { "data-role": "engine-path" });
+  const motionChoices = [[null, labels.STATES.reducedMotionSystem], [true, labels.STATES.reducedMotionOn], [false, labels.STATES.reducedMotionOff]];
+  const motionButtons = motionChoices.map(([value, text]) =>
+    button(text, () => store.dispatch({ type: "motion/override", value }), "motion", { "aria-pressed": "false" }),
+  );
+  regions.footer.replaceChildren(
+    el("p", {}, labels.HONESTY.illustrative),
+    engineText,
+    el("div", { class: "fl-group", role: "group", "aria-label": labels.STATES.reducedMotion }, [el("span", {}, labels.STATES.reducedMotion), ...motionButtons]),
+  );
+  const live = createLiveRegion(regions.footer);
+
+  // ---- rendering ---------------------------------------------------------------------------------------------------
+
+  /**
+   * The one frame the page draws at `state`. `playback.frame()` rebuilds a car view of the whole fleet, and the map,
+   * the NOW panel and the announcer all draw the same second, so they take one frame between them. Handing them the
+   * same frame object is also what lets `frameModel` give them one model: it keys on the frame's identity.
+   */
+  function frameOf(state) {
+    const key = [state.run.log, state.clock_s, state.reducedMotion, playback.simplified];
+    if (sameKey(key, memo.frameKey)) return memo.frame;
+    memo.frameKey = key;
+    memo.frame = state.run.log === null ? null : playback.frame();
+    return memo.frame;
+  }
+
+  function renderTopBar(state) {
+    root.setAttribute("data-mode", state.mode);
+    setText(modeHelp,state.present.on?`Present: guided walkthrough. Current mode: ${labels.MODES[state.mode].name}. Prepare replaces the current experiment with the walkthrough example and switches to Sandbox.`:({learn:'Learn: follow a question through annotated examples.',sandbox:'Sandbox: change settings and inspect a simulated day.',experiment:'Experiment: compare one change across the same paired scenarios.'})[state.mode]);
+    for (const b of modeButtons) b.setAttribute("aria-pressed", b.getAttribute("data-mode") === state.mode ? "true" : "false");
+    const run = state.run;
+    const seed = run.log !== null ? run.selectedSeed : null;
+    const clock = format.clock(state.clock_s);
+    const verdictSeed = shownVerdictSeed(state);
+    if (verdictSeed !== null) setText(topStatus, labels.verdictSeedStatus({ clock, ...verdictSeed }));
+    else setText(topStatus, seed === null ? clock : labels.topBarStatus({ clock, replay: run.summaries.findIndex((s) => s.seed === seed) + 1, replays: run.summaries.length, seed }));
+  }
+
+  function runStatusNodes(state) {
+    const run = state.run;
+    if (run.status === "queued" || run.status === "running") {
+      const p = run.progress;
+      const text = run.status === "queued" || p === null || p.total === 0 ? labels.STATES.queued : labels.replicationProgress(Math.min(p.done + 1, p.total), p.total);
+      return [el("div", { class: "fl-group" }, [el("p", { role: "status", "data-role": "progress" }, text), button(labels.STATES.cancel, () => host.cancel(run.id), "cancel")])];
+    }
+    if (run.status === "cancelled") return [el("p", { class: "fl-muted", role: "status", "data-role": "cancelled" }, labels.STATES.cancelled)];
+    if (run.status === "error") {
+      return [el("div", { class: "fl-error", "data-role": "engine-stopped" }, [el("p", {}, labels.STATES.engineStopped), button(labels.STATES.retry, () => runWindow(), "retry")])];
+    }
+    if (run.status === "void") {
+      const id = violationId(run.violation);
+      const rule = labels.INVARIANT_RULES[id] ?? labels.STATES.unknownRule;
+      const children = [
+        el("p", {}, labels.invariantFailure({ rule, id })),
+        button(labels.STATES.copyDetails, () => copyDetails(run.violation), "copy-details", { disabled: typeof copyText !== "function" }),
+      ];
+      if (runs.copyStatus !== null) children.push(el("p", { role: "status", "data-role": "copy-status" }, runs.copyStatus === "copied" ? labels.VERDICT.copied : labels.VERDICT.copyFailed));
+      return [el("div", { class: "fl-error", "data-role": "invariant-failure" }, children)];
+    }
+    if (warm.pending !== null) return [el("p", { class: "fl-muted", role: "status", "data-role": "preparing" }, labels.STATES.preparing),el("progress",{"aria-label":"Preparing lookup tables"})];
+    return [];
+  }
+
+  function renderRunStatus(state) {
+    const run = state.run;
+    const key = [run.status, run.id, run.progress?.done, run.progress?.total, run.violation, runs.copyStatus, warm.pending];
+    if (sameKey(key, memo.status)) return;
+    memo.status = key;
+    runStatus.replaceChildren(...runStatusNodes(state));
+  }
+
+  function renderNow(state) {
+    const run = state.run;
+    const key = [run.log, run.status, state.clock_s, state.reducedMotion, playback.simplified, run.selectedSeed, scenarioOfRun(state)];
+    if (sameKey(key, memo.now)) return;
+    memo.now = key;
+    const scenario = scenarioOfRun(state);
+    const model = frameModel({ scenario, log: run.log, frame: frameOf(state), clock_s: state.clock_s });
+    const missing = labels.absentValue(run.status === "void" ? labels.ABSENT_REASONS.voidRun : labels.ABSENT_REASONS.notRunYet);
+    const total = (values) => (values.includes(null) ? null : values.reduce((a, b) => a + b, 0));
+    const text = (value) => (value === null ? missing : format.count(value));
+    const areas = Object.values(model.areas);
+    const highway = model.routes.filter((r) => r.cls === "HIGHWAY").flatMap((r) => r.directions.flatMap((d) => [d.riderWork, d.emptyDrive]));
+    // Depot rows follow the scenario's depot list (area order), whatever order the run log keeps.
+    const place = new Map(scenario.depots.map((d, i) => [d.id, i]));
+    const depots = model.depots.slice().sort((a, b) => (place.get(a.id) ?? place.size) - (place.get(b.id) ?? place.size));
+    const rows = [
+      ["waiting", labels.MAP.tableHeads.waitingRiders, text(total(areas.map((a) => a.waiting)))],
+      ["unserved", labels.MAP.tableHeads.unservedLastHour, text(total(areas.map((a) => a.unservedLastHour)))],
+      ...depots.map((d) => [`lot:${d.id}`, labels.nowLot(d.id), d.held === null ? missing : labels.lotFill(d.held, d.parking)]),
+      ["highways", labels.NOW_PANEL.carsOnHighways, text(total(highway))],
+    ];
+    setText(nowChip, run.log !== null && run.selectedSeed !== null ? labels.thisReplayChip(run.selectedSeed) : labels.REGISTERS.thisReplay);
+    // Before any run one state line stands for every row (the values stay absent, never zero).
+    const before = run.log === null && run.status !== "void";
+    nowState.hidden = !before;
+    setText(nowState, before ? missing : "");
+    keyedList(nowRows, before ? [] : rows, { key: (row) => row[0], create: textRow, update: updateTextRow });
+  }
+
+  function renderAcross(state) {
+    const summaries = state.run.summaries;
+    if (memo.across === summaries && memo.acrossStatus === state.run.status) return;
+    memo.across = summaries;
+    memo.acrossStatus = state.run.status;
+    // The register chip names a count, so it waits for replications that exist.
+    acrossChip.hidden = summaries.length === 0;
+    setText(acrossChip, labels.acrossReplicationsChip(summaries.length));
+    const rows = ACROSS_ROWS.map(([key, metric, formatter]) => [
+      key,
+      key === "wait" ? labels.NOW_PANEL.waitP90 : labels.NOW_PANEL.unservedShare,
+      key === "wait" ? acrossWaitText(summaries, formatter) : acrossText(summaries, metric, formatter),
+    ]);
+    if (summaries.length === 0 && state.run.status === "void") {
+      for (const row of rows) row[2] = labels.absentValue(labels.ABSENT_REASONS.voidRun);
+    }
+    const before = summaries.length === 0 && state.run.status !== "void";
+    acrossState.hidden = !before;
+    setText(acrossState, before ? labels.absentValue(labels.ABSENT_REASONS.notRunYet) : "");
+    keyedList(acrossRows, before ? [] : rows, { key: (row) => row[0], create: textRow, update: updateTextRow });
+    const heads = [labels.CHART_TEXT.heads.seed, labels.NOW_PANEL.waitP90, labels.NOW_PANEL.unservedShare];
+    const cells = summaries.map((s) => [
+      String(s.seed),
+      ...ACROSS_ROWS.map(([key, metric, formatter]) => {
+        if (key === "wait") return seedWaitText(s, formatter);
+        const m = s.metrics[metric];
+        return m === undefined ? labels.absentValue(labels.ABSENT_REASONS.notComputed) : format.valueText("absent" in m ? m : m.value, formatter);
+      }),
+    ]);
+    acrossToggle.disabled = summaries.length === 0;
+    acrossTable.replaceChildren(
+      el("table", { class: "fl-table" }, [
+        el("thead", {}, el("tr", {}, heads.map((h) => el("th", { scope: "col" }, h)))),
+        el("tbody", {}, cells.map((row) => el("tr", {}, row.map((cell) => el("td", { class: cell.startsWith(labels.ABSENT_PREFIX) ? "fl-absent" : null }, cell))))),
+      ]),
+    );
+  }
+
+  function renderCharts(state) {
+    const run = state.run;
+    const key = [run.summaries, run.selectedSeed, run.status === "void"];
+    if (sameKey(key, memo.charts)) return;
+    memo.charts = key;
+    memo.cursor = null;
+    const replay = run.summaries.find((s) => s.seed === run.selectedSeed);
+    if (replay === undefined) {
+      memo.chartHandles = [];
+      if (run.status === "void") chartSet.replaceChildren();
+      else chartSet.replaceChildren(el("p", { class: "fl-absent fl-charts__wide", "data-role": "charts-absent" }, labels.absentValue(labels.ABSENT_REASONS.notRunYet)));
+      return;
+    }
+    const window = scenarioOfRun(state).window;
+    const seed = replay.seed;
+    memo.chartHandles = [
+      fleetStateChart({ series: replay.series, window, seed }),
+      ...ROW_CHARTS.map((chart) => metricByHourChart({ chart, runs: run.summaries, seed, window, population: run.log !== null && run.log.seed === seed ? { log: run.log, scenario: scenarioOfRun(state) } : null })),
+    ];
+    chartSet.replaceChildren(teachingResult('four-area',{type:'text',line:`Seed ${seed}: rider wait p90 ${Number.isFinite(replay.metrics['wait.p90_s']?.value)?format.minutes(replay.metrics['wait.p90_s'].value):'not available'}; unserved share ${Number.isFinite(replay.metrics['unserved.fraction']?.value)?format.percent(replay.metrics['unserved.fraction'].value,1):'not available'}. One replay; no paired interval.`}),...memo.chartHandles.map((handle) => handle.node));
+  }
+
+  function renderStrips(state) {
+    const run = state.run;
+    const area = focusArea(state);
+    const key = [run.summaries, run.selectedSeed, area];
+    if (sameKey(key, memo.strips)) return;
+    memo.strips = key;
+    memo.cursor = null;
+    const replay = run.summaries.find((s) => s.seed === run.selectedSeed);
+    if (replay === undefined) {
+      memo.stripHandles = [];
+      strips.replaceChildren();
+      return;
+    }
+    const scenario = scenarioOfRun(state);
+    const route = scenario.routes.find((r) => r.cls === "HIGHWAY" && (r.a === area || r.b === area));
+    const traffic = route === undefined
+      ? { roadClass: "IN_AREA" }
+      : { roadClass: "HIGHWAY", direction: `${route.a === area ? route.b : route.a}>${area}` };
+    memo.stripHandles = [
+      demandStrip({ series: replay.series, area, seed: replay.seed, window: scenario.window }),
+      trafficStrip({ series: replay.series, ...traffic, seed: replay.seed, window: scenario.window }),
+    ];
+    strips.replaceChildren(...memo.stripHandles.map((handle) => handle.node));
+  }
+
+  function renderFork(state) {
+    const fork = state.fork;
+    const key = [fork.status, fork.id, fork.pair, fork.stale, fork.error, fork.pinnedCar, runs.forkNotice, runs.forkMeta];
+    if (sameKey(key, memo.fork)) return;
+    memo.fork = key;
+    memo.cursor = null;
+    memo.forkHandles = [];
+    if (fork.status === "closed" && !runs.forkNotice) {
+      forkHost.hidden = true;
+      forkBody.replaceChildren();
+      return;
+    }
+    forkHost.hidden = false;
+    forkHost.classList.toggle("fl-stale", fork.stale === true);
+    // The §1.3 caption belongs to the two drawn runs, so carForkCharts places it once, above them.
+    const children = [];
+    if (shownVerdictSeed(state) !== null) children.push(el("p", { class: "fl-muted", "data-role": "verdict-seed-note" }, labels.FORK.verdictSeedNote));
+    if (fork.status === "closed") {
+      children.push(el("p", { "data-role": "fork-needs-change" }, labels.FORK.needsChange));
+    } else if (fork.status === "running") {
+      children.push(el("div", { class: "fl-group" }, [el("p", { role: "status", "data-role": "fork-running" }, labels.FORK.running), button(labels.STATES.cancel, () => closeFork(), "fork-cancel")]));
+    } else if (fork.status === "error") {
+      children.push(el("div", { class: "fl-error", "data-role": "fork-error" }, [el("p", {}, labels.STATES.engineStopped), button(labels.STATES.retry, () => startPair(runs.forkArgs), "fork-retry")]));
+    } else if (fork.pair !== null && runs.forkMeta !== null && runs.forkMeta.id === fork.id) {
+      const meta = runs.forkMeta;
+      const inBoth = (car) => typeof car === "string" && fork.pair.baseline.log.intervals[car] !== undefined && fork.pair.candidate.log.intervals[car] !== undefined;
+      const car = [fork.pinnedCar, meta.car].find(inBoth) ?? fork.pair.baseline.log.cars[0].id;
+      const group = carForkCharts({ pair: fork.pair, baselineScenario: meta.baselineScenario, candidateScenario: meta.candidateScenario, car, seed: meta.seed, depots: meta.depots });
+      memo.forkHandles = [group];
+      children.push(group.node);
+    }
+    children.push(button(labels.FORK.close, () => closeFork(), "fork-close"));
+    forkBody.replaceChildren(...children);
+  }
+
+  function renderArms(state) {
+    const ex = state.experiment;
+    const key = [ex.verdict, ex.perSeed, ex.frozen];
+    if (sameKey(key, memo.arms)) return;
+    memo.arms = key;
+    if (ex.verdict === null || ex.frozen === null || ex.verdict.validity !== "VALID" || ex.perSeed.length === 0) {
+      armHost.replaceChildren();
+      return;
+    }
+    const spec = ex.frozen.spec;
+    const measured = new Set(Object.keys(ex.perSeed[0].baseline_metrics));
+    const metrics = [spec.primary, ...spec.guardrails]
+      .map((ref) => metricKey({ metric: ref.metric, scope: ref.scope }))
+      .filter((k, i, all) => measured.has(k) && all.indexOf(k) === i);
+    if (metrics.length === 0) {
+      armHost.replaceChildren();
+      return;
+    }
+    armHost.replaceChildren(el("h2", { class: "fl-title" }, labels.CHARTS.titles.arm_comparison), armComparisonCharts({ perSeed: ex.perSeed, metrics }).node);
+  }
+
+  function renderFooter(state) {
+    const path = state.engine.path;
+    setText(engineText, path === null ? `engine: ${labels.absentValue(labels.ABSENT_REASONS.enginePathNotReported)}` : labels.enginePath(path));
+    motionButtons.forEach((b, i) => b.setAttribute("aria-pressed", motionChoices[i][0] === state.reducedMotion.override ? "true" : "false"));
+  }
+
+  function render(state) {
+    if (destroyed) return;
+    const computing = state.run.status === "queued" || state.run.status === "running";
+    const stale = state.run.stale || (computing && state.run.summaries.length > 0);
+    learnHost.hidden = state.mode !== "learn";
+    experimentHost.hidden = state.mode !== "experiment";
+    armHost.hidden = state.mode !== "experiment";
+    chartSet.hidden = state.mode === "experiment";
+    // One THIS REPLAY seed on screen (design §7.4, H-10): the Sandbox replay's regions step aside for a verdict seed.
+    const sandboxAside = shownVerdictSeed(state) !== null;
+    for (const node of [regions.map, regions.now, regions.across, strips]) node.hidden = sandboxAside;
+    root.setAttribute("data-verdict-seed", sandboxAside ? "true" : "false");
+    // Presenting (demo plan section 4.1): the stage and the ledger take the screen. The knobs, the side column, the
+    // chart row and the transport's control row are hidden and inert while presenting, because their numbers are the
+    // ledger's numbers; the strips container stays, with its strips hidden, because it is where the day bar mounts.
+    const presenting = state.present.on;
+    root.setAttribute("data-present", presenting ? "true" : "false");
+    presentButton.setAttribute("aria-pressed", presenting ? "true" : "false");
+    // The knob sheet owns its own inert (it is inert only while it is off screen), so presenting only hides it.
+    for (const node of [regions.knobs, controls.toggle]) node.hidden = presenting;
+    for (const node of [side, regions.charts, regions.segmented, transportHost, ...strips.children]) {
+      node.hidden = presenting;
+      node.toggleAttribute("inert", presenting);
+    }
+    for (const id of ["ledger", "rail"]) {
+      regions[id].hidden = !presenting;
+      regions[id].toggleAttribute("inert", !presenting);
+    }
+    if (viewGroup !== null) {
+      viewGroup.hidden = presenting;
+      viewGroup.toggleAttribute("inert", presenting);
+    }
+    // Leaving puts the reader back on the control that opened the walkthrough.
+    if (wasPresenting && !presenting) presentButton.focus();
+    wasPresenting = presenting;
+    for (const node of [regions.now, regions.across, chartSet, strips]) node.classList.toggle("fl-stale", stale);
+    renderTopBar(state);
+    renderRunStatus(state);
+    renderNow(state);
+    renderAcross(state);
+    renderCharts(state);
+    renderStrips(state);
+    renderFork(state);
+    renderArms(state);
+    renderFooter(state);
+    if (memo.cursor !== state.clock_s) {
+      memo.cursor = state.clock_s;
+      setCursorAll([...memo.chartHandles, ...memo.stripHandles, ...memo.forkHandles], state.clock_s);
+    }
+  }
+
+  /** The polite announcement (design §7.7): the clock, and this replay's waiting and unserved riders once a run exists. */
+  function announcement(state) {
+    const clock = format.clock(state.clock_s);
+    if (state.run.log === null) return clock;
+    const model = frameModel({ scenario: scenarioOfRun(state), log: state.run.log, frame: frameOf(state), clock_s: state.clock_s });
+    const areas = Object.values(model.areas);
+    return labels.mapAnnouncement({
+      clock,
+      waiting: areas.reduce((n, a) => n + a.waiting, 0),
+      unservedLastHour: areas.reduce((n, a) => n + a.unservedLastHour, 0),
+    });
+  }
+
+  cleanups.push(store.subscribe((state) => render(state)));
+  cleanups.push(playback.onChange(() => render(store.getState())));
+  cleanups.push(store.subscribe(createAnnouncer(live, announcement)));
+  cleanups.push(watchReducedMotion(store, doc.documentElement));
+  cleanups.push(store.subscribe(() => scheduleWarm()));
+  if (ENGINE_PATHS.includes(host.path)) reportPath();
+  else Promise.resolve(host.ready).then(reportPath, () => {});
+  render(store.getState());
+  scheduleWarm();
+
+  function destroy() {
+    if (destroyed) return;
+    if (warm.idle !== null) warm.idle.cancel(warm.idle.id);
+    warm.idle = null;
+    host.cancel();
+    destroyed = true;
+    for (const stop of cleanups.splice(0)) stop();
+    for (const part of [controls, inspector, map, transport, playback, learn, experiment, present]) part.destroy();
+  }
+
+  return { store, host, playback, runWindow, openFork, watchVerdictSeed, present, destroy };
+}

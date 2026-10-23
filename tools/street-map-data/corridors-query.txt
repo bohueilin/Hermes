@@ -1,0 +1,1 @@
+[out:json][timeout:90][date:"2026-09-19T05:56:34Z"];way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link)$"](37.604,-122.475,37.837,-122.267)->.roads;.roads out body geom;node(w.roads)["highway"="traffic_signals"];out body;rel(bw.roads)["type"="restriction"];out body;

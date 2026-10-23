@@ -1,5 +1,22 @@
 # Hermes — Source of Truth
 
+## September 29 enhancement — atlas layout, fleet insights and owner contact
+
+Current enhancement is live as production `ed4b1d68-3130-4833-9f93-b170c8f3cbb9`,
+source `773f36b42b22eae032c4465d6f8af13ea1572c66`; complete package
+`build/fleetlab-city/launch-integration-v2/site`.
+35 City Node / 122 City Python / 66 focused combined Node tests pass; the clean
+viewer and local combined package pass. Review is clear. Publication and device
+results are recorded in `docs/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md`.
+The updated next-phase brief `docs/FLEETLAB_NEXT_PHASE_BRIEF_V3.md` explains the
+100-vehicle population and lists SF acceptance evidence still required before
+new cities. Existing site, map/experiment records and offline bytes are preserved.
+
+
+## City Explorer integration — 29 September 2026
+
+The owner approved additive City Explorer navigation and live website publication. The combined release preserves all established sections and offline bytes; only root boot/index/headers are intentionally changed. Live production `b592d5a8-c89c-4b42-99ca-e6d256bd2408` is verified: all 9,934 served payloads match; source implementation commit `3236065`. Current release and remaining scientific/device work: `docs/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md`. The power-study execution amendment and map/human qualification remain held. This website authorization does not authorize Hermes workbench or physical deployment.
+
 **This is the one file every conversation reads first and updates last.** It supersedes
 `PHASE8_STATUS.md`, `PHASE_ALIGNMENT.md`, `PHASE8_HANDOFF.md`, `HERMES_OVERVIEW.md` and
 `PHASE8_GETTING_STARTED.md`, all removed on 2026-08-22 (recoverable from git history). Do not
@@ -7,15 +24,17 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkouts** | main checkout `…/Hermes` on `main` — **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale — §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `feat/phase9-metric-contract` · ADAS worktree `…/Hermes-adas` on **`feat/phase8-metrics-v3`** since 2026-08-25 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) |
-| **Remote** | `github` = `https://github.com/bohueilin/Hermes.git` — the only remote; this branch is pushed and in sync |
+| **Checkouts** | main checkout `…/Hermes` on `main`, **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale, see §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `codex/fleetlab-welcome-design`, release source `e90764a` plus its records follow-up (audit-response update live as `f4018c2a`; pushed to `github/feat/fleetlab-playground`) · ADAS worktree `…/Hermes-adas` on `feat/phase8-lead-decelerates` at `579ca12` as read on 2026-09-27 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, previously observed clean at `6b376fb`; the remote advanced again in this release, and this worktree was not moved; fast-forward it before anyone works there) · Depot extension worktree `…/Hermes-depot-m1` on `codex/fleetlab-m2-m3` · **Scale lab worktree `…/Hermes-scale` on `claude/fleetlab-scale-lab`** (cut from the T1 head `c79eccf`; Scale lab source `c08f60d`, deployed 2026-09-27 as `19e17ac6`; `1aeaace`, the Fleet day heading fix, deployed 2026-09-28 as `77922688`; then the documents commit `44569f8`, the privacy commit `0bc2f25` and the records commit of 2026-09-28, which change no site input; branch head pushed on 2026-09-28 as `github/feat/fleetlab-playground`) |
+| **Remote** | `github`, the public GitHub repository of this project; website lineage tracks `github/feat/fleetlab-playground`. On the owner’s request of 2026-09-28, the audit-response wave fast-forwarded that branch from `756c269` to release source `e90764a`, including the two prior welcome commits; the records-only follow-up is on the same branch. No force push, PR or main merge. A push does not deploy; the separate verified Pages publication is recorded in §7.5. Other checkouts retain their previously observed state. |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
 | **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 registry provenance/static operator view built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline `3a7f595`; Task 8 static view `4b2e8b8`; forward-only repairs `18b47db`, `e42ed2c`) — Gate G: **96 passed**; replayable decision record; spec-file authoring, metric-contract CLI, and one loopback-only finished synthetic-run view; **lane merged onto `main` 2026-09-06 (`61a7145`) and pushed**. The PRD has been tracked since `aa04786` |
+| **Playground** | **Audit-response update live 2026-09-28** at **https://fleetlab.pages.dev/**, source **`e90764a99661a579de3dc976afedc45e7417f49a`**, Production **`f4018c2a-3127-4807-af90-3a4ae0f33faa`**, immutable https://f4018c2a.fleetlab.pages.dev/. Clear simulation-first welcome, seven header links including Scale lab, consistent Four-area naming, earlier first-run guidance and larger captions; ivory/teal design retained. Protected model/runtime/data and numerical pins unchanged. **Final Node suite: 1,972 pass, zero fail, one existing TODO; 89 Python parity/boundary tests pass.** Earlier timing failures and the controlled comparison remain recorded in the handoff. Both packages and Ruff pass. Hosted 99 files / 3,366,216 bytes; offline 2,424,861 bytes (+101). Committed-source reconstruction matches both packages; **98/98 public files and all six configured response headers match on both addresses**. Painted local viewport checks and hosted representative interactions pass; Q1 remains partial and Q8 queued. Source and release records pushed to `github/feat/fleetlab-playground`. Rollback `1e1202c9` (`347bcfb`). Current record: [CODEX_HANDOFF.md](CODEX_HANDOFF.md), top section. |
 | **MuJoCo** | sandbox exploration only (`sandbox/mujoco/`, gitignored, never committed, labelled NOT EVIDENCE) |
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
-| **Published copy** | https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — republish this file path from any conversation with that `url` to update it in place; never publish a second copy |
-| **Last updated** | 2026-09-06 |
+| **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
+| **Design review and next phase** | [N2 design v2.1](docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md) is the current N2 design; it supersedes the [v2 draft](docs/plans/2026-09-26-fleetlab-n2-design-v2.md), which superseded immutable v1. It holds 19 fixture groups; OD-1 to OD-6 and OD-19 are decided and the other N2 decisions are pending; **G2 OPEN pending S1**; no N2 implementation approval. The [design audit](docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md) holds the next tasks. The [Scale lab design](docs/plans/2026-09-27-fleetlab-scale-lab-design.md) holds 25 owner decisions, taken at the lead's recommendation and ratified by the owner on 2026-09-28 with its package decisions D1 to D11. The FleetLab next plan, open owner decisions and build queue are the top section of [CODEX_HANDOFF.md](CODEX_HANDOFF.md). The earlier review packet and independent packet review remain historical rationale. No external dataset work; S1, X1, P2 remainder, P0 study and R0 lessons remain separate future work. |
+| **Last updated** | 2026-09-28: supported audit changes published as `f4018c2a` from `e90764a`, full public-file/header readback and hosted interaction checks completed; release source and records pushed. Other tracks retain recorded dates. |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
@@ -407,6 +426,10 @@ renders envelopes; its read-only property is enforced by AST tests.
 | 7 | Evaluation-adequacy assessor, evaluation plans, provenance; 1,245 tests claimed | **codex worktree only** — `codex/phase7-…` @ `9d5c0ba`, 56 commits, **not merged** |
 | 8 | ADAS (FCW/AEB) + oracle + seeded defects + agent layer + regression flywheel; 965 tests; then calibration (merged `6b2f375`), Phase 3 (merged `a78287e`), and **evidence schema 3.0 / `RunMetricsV3`** (complete, unmerged) | trunk `feat/phase8-adas-lab` @ `e6e2c8c`; metrics V3 on `feat/phase8-metrics-v3` @ `2dda024` (15 commits from `a78287e`, pushed, unmerged) |
 | 9 | Fleet simulation — **FLEET-005 spike built**: contracts, world tape, minimal DES, paired loop, decision record; 33 tests incl. a hand-computed analytical fixture, clean-clone green | `feat/phase9-fleetlab` @ `00b2a48`; PRD stays local |
+| 9P | FleetLab Playground: verdict core with FleetLab-generated vectors; legacy port with event-log parity; teaching model (tables, routes, world, engine, metrics, invariants, experiments); interface with Experiment and Learn; offline packer; the recall acts once and the default fleet was calibrated after a browser run exposed depot gridlock | `feat/fleetlab-playground`; pushed as a branch (first on 2026-09-18, fast-forwarded on 2026-09-28), not merged to `main` |
+| 9Q | FleetLab Playground, operations casebook and hosted folder (2026-09-14 and 2026-09-15): twenty preregistered situations in five themes as Experiment presets of kind `ops`, proxies built from the knobs, slugs frozen with their measured verdicts, every seed set 1 verdict pinned and sets 2 and 3 behind a flag, lessons in design §4.4 and never on the page; `pack.mjs --site` writes a folder for a static host and `check-dist.mjs --site` checks it | `feat/fleetlab-playground`; committed later and pushed with the branch, not merged to `main` |
+| 9R | FleetLab Playground, map motion phases 1 and 2 (2026-09-15): one map model and one playback frame per drawn frame shared by the map, the NOW panel and the announcer, and a table twin watched value by value instead of by a stringified model; then a cars layer drawing every car on a route as its own mark, with a measured route fallback that keeps a flow band where a corridor is too short and writes the reason, the map's first model-limits chip and a second legend line. No CSS transition, animation, keyframe or `will-change` anywhere; reduced motion uses the existing `interpolate: false` path. Phases 3 (bay cells in the depot tile) and 4 (a day-long bar under the scrubber) are approved but not built | `feat/fleetlab-playground`; committed later and pushed with the branch, not merged to `main` |
+| 9S | FleetLab Playground, the isometric world and the Present walkthrough (2026-09-16, the demo plan's phases A and B): a Canvas 2D isometric schematic of the four areas generated at run time from the interval log, with flat platforms, ribbons, one shaded box per car on a route, cubes of five for cars that stand, depot blocks with bay cells (where the motion plan's phase 3 landed), lot fills and written coincidence counts grouped in model space, an HTML overlay carrying every word and the map's twenty roving stops, and the flat SVG schematic kept as the test default, the header toggle and the no-context fallback; then `Present`, a layer over the three modes with its own store key, walking four chapters and eleven beats over one replay of the casebook's OPS-01 behind one `Prepare` and one `Next`, with the depot table taken from the drawer's own reading and the verdict readout composed from the verdict card's own builders. Phases C (the candidate arm drawn in the world with an `A | B` toggle, the day bar, a second seed set beat) and D (the phone polish and the `Try it` handoffs) are approved and deliberately not built, with no scaffolding left for them | `feat/fleetlab-playground`; committed later and pushed with the branch, not merged to `main` |
 
 Design decisions from early phases that still constrain everything: MetaDrive stays external and
 unmodified; every event hashes scenario/gate/component digests; hard invariants cannot be
@@ -741,6 +764,559 @@ must not: the number as a default edit (§10 rule 3).
 
 ---
 
+### 7.5 FleetLab Playground (teaching model, not evidence)
+
+**Audit response, 2026-09-28 (current, published and pushed):** Source `e90764a99661a579de3dc976afedc45e7417f49a`, Production `f4018c2a-3127-4807-af90-3a4ae0f33faa`, https://fleetlab.pages.dev/ and https://f4018c2a.fleetlab.pages.dev/. The owner authorized evaluation, supported implementation, validation, push and publication; the external audit’s instructions and business assumptions were treated as review material. Clear simulation-first welcome, Scale lab in seven-link navigation, consistent Four-area experiments naming, first-run guidance moved earlier, project-level provenance and selected 11px captions. Float artifacts were not reproduced; reduced motion and progress/cancel already work. No model, runtime, data, numerical pin or dependency change. Final performance-enabled serial suite: 1,973 tests, 1,972 pass, zero failures, one existing TODO, 284.799 s. Earlier full-run and isolated timing failures, plus the passing baseline/candidate comparison, are retained in the handoff. Python parity/boundaries: 89 pass; Ruff and whitespace pass. Hosted 99 files / 3,366,216 bytes; offline 2,424,861 bytes (+101); both checks pass and committed-source reconstruction matches. All 98 public files and six configured headers match on both addresses. Painted viewport checks span 375, 390, 768, 1101 and 1440px locally. Production checks reproduce intake `scale-spec:1aa8c833` and Fleet day 95/284, with correct navigation, naming and focus. Source pushed without force from local `codex/fleetlab-welcome-design` to `github/feat/fleetlab-playground`, advancing `756c269` to `e90764a`; release-record follow-up changes no site input. No PR or main merge. Rollback `1e1202c9` (source `347bcfb`). Q1 partial, Q8 queued, N2 design-only. Full assessment, commands, negative results and limits: [CODEX_HANDOFF.md](CODEX_HANDOFF.md), current top section.
+
+**Welcome redesign, 2026-09-28 (historical):** Source `347bcfbd3dc20b830f1a59eeda3fc80403d894d0`, Production `1e1202c9-4fa0-4b46-a5f7-22863b48aafb`, https://fleetlab.pages.dev/ and https://1e1202c9.fleetlab.pages.dev/. The current request authorized visual enhancement, validation and deployment of the existing static site. Ivory/teal surfaces, welcome/film composition, compact phone navigation and keyboard-accessible result regions; six destinations and 59 lessons remain. Protected model/instrument/runtime/data code and pins unchanged. Final performance-enabled serial run: 1,973 tests, 1,972 pass, zero failures, one existing TODO, 280.65 s. Python parity/boundaries: 89 pass; Ruff and whitespace pass. Hosted 99 files / 3,366,116 bytes; offline 2,424,760 bytes, growth 16,410. Both distribution checks pass. Rebuild from committed export equals both packages; 98/98 public files and all configured response headers match on both deployment addresses. Painted checks at 1440x900, 375x812, 768x1000 and 900x1000; all three Scale defaults, held intake, Fleet day, Street comparison, four-area comparison, catalog and film controls exercised. Independent review's tablet issue fixed and re-reviewed. Q1 remains partial; no CPU-throttled phone, physical phone, Safari/Firefox, screen-reader or full painted lesson-sweep claim. Q8 remains queued. Local branch `codex/fleetlab-welcome-design`; no push, PR, backend or dependency. Rollback `77922688` from `1aeaace`. Detailed commands, digests and limitations: current top section of [CODEX_HANDOFF.md](CODEX_HANDOFF.md). The records-only follow-up does not change site input.
+
+The following dated entries are historical where they differ from the current audit-response release.
+
+**Owner's answers, heading fix release and push, 2026-09-28 (deployed, pushed):** The owner answered the four questions of section 7.0 of the FleetLab handoff (top section of [CODEX_HANDOFF.md](CODEX_HANDOFF.md)) with "A yes, B yes, C accept all, D Q1 then Q8". **A, push:** yes, given after privacy row P1 of the handoff was raised. **B, deploy `1aeaace`:** yes. **C:** the 25 Scale lab design decisions (design section 12), the package decisions D1 to D11 and the T1 exceptions T-E1 to T-E5 are ratified by the owner on 2026-09-28, as recommended. Decision 3 therefore grants the 7,548 bytes over the lead's target. Decision 22 is ratified as recommended (author names may be cited); the design still cites by title, venue and year, which the ruling permits, and no change is made. Not covered by C and still open, with their recommended defaults holding until the related work starts: O7 (merge to `main` and CI), O8 (custom domain, automation), O9 (each N2 step and T2 item), O10 (licence), O11 (Austin lesson ids) and every pending N2 decision (OD-7 to OD-18, OD-20 to OD-26, C-32, G2). **D:** the next builds are Q1 (acceptance in a visible browser, design gates 5 and 6, 0 bytes) then Q8 (an operating view of one simulated period, about 20,000 bytes); Q0, Q2 and Q4 are done. The next builder is Codex, and each item starts with its acceptance criteria written first. **Privacy commit `0bc2f25`:** removed personal framing from both READMEs, the deployment guide's rollback heading and seven older FleetLab records; the byline stays. **Release:** the lead built the site from a `git archive` export of `1aeaacecb25e17853f852d7bbd7141ff75d9cb69` (the site inputs of the branch head equal it) and deployed it with Wrangler 4.135.0 to Pages project `fleetlab`: Production `77922688-6d87-4d15-94bf-442beab31712`, immutable https://77922688.fleetlab.pages.dev/, stable https://fleetlab.pages.dev/, source `1aeaace`, Pages branch label `feat/fleetlab-playground`. The upload held 98 files and `_headers`: 1 file new to the host (`src/ui/studio.js`) and 97 files already held. Hosted package 99 files / 3,349,629 bytes, inventory SHA-256 `dd3c2f2a659b18a0caacf5df639238916719f8a5294e653c2566ac39328e94b5`; offline file 2,408,350 bytes, SHA-256 `ccd3f7a01a3ddd03dd8a58336c52da32a50ec1c7b0b27a297b5e82496877325a`; both package checks OK, run with the repository's tools, which are identical at `1aeaace`. Readback: 98 of 98 public files match by SHA-256 and size on both addresses; response headers unchanged and verified. Hosted checks in the in-app browser with the pane hidden, so no frame was painted: after airport-preparation, and after cleaning, the region-launch lesson shows the main heading "Fleet day" and the document title "Rehearse commissioning in Region B", so the fix works; the three labs record `scale-spec:b4c7f5da`, `scale-spec:1aa8c833` and `scale-spec:443de567`; Fleet day default seed 42 on a fresh load reads 95 completed, 176 unserved, 4 waiting and 9 in progress of 284 requests (the cleaning lesson setup reads 82 of 284 requests, which is that lesson, not a regression); press times 4,725 ms, 1,058 ms and 2,660 ms against 4,790 ms, 1,103 ms and 2,656 ms on the previous deployment `19e17ac6` in the same session and conditions, so no regression, and both sets are slower than the readings of 2026-09-27 because of the state of the pane; a same-origin fetch that the tester attempted was refused by the page's own policy `connect-src 'none'`, as intended; no application console error. Tests at `1aeaace` as already recorded: two full serial runs, each 1,969 tests, 1,967 pass, one existing TODO and one timing failure (9.34 ms and 11.34 ms against 8 ms) that passed its one isolated rerun; Python parity/boundaries 89 pass; `ruff` passes. **Rollback target:** `19e17ac6-d617-4789-9260-ca259c53e076` (source `c08f60d`). The `fleetlab` project holds four Production deployments: `77922688`, `19e17ac6`, `dd4bfa44` and `f08b6b6f`. The launch lesson heading defect is fixed on the live site, and no site input is undeployed. **Push:** right after the records commit of 2026-09-28, which holds this entry, the lead pushed the branch head to github as a fast-forward of `feat/fleetlab-playground` from `790573e`. It published 20 commits: the N2 documents (`4ba5626`, `62547a8`, `82df3b5`), the packer `8e04b49`, the T1 wave (`caaf8f2`, `0497b9b`, `45efd43`, `c79eccf`), the eight Scale lab commits (`2caeac6` to `c08f60d`), `1aeaace`, the documents commits `44569f8` and `0bc2f25`, and the records commit. No remote branch `claude/fleetlab-scale-lab` was created. A push does not deploy. The local branch `feat/fleetlab-playground` in the `Hermes-playground` worktree stays behind its upstream and needs a fast-forward before anyone works there. **Not done:** the owner's look in a visible browser (O1, still first for the owner), Q1, Q8, a zero-failure full run at `1aeaace`, a screen reader, Safari, Firefox, a security scan, the broad Python suite, the lesson snapshot for 59 lessons. Records: [next-builder handoff](CODEX_HANDOFF.md) (top section), [Scale lab handoff](docs/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md), [deployment guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md).
+
+**Scale lab, 2026-09-27 (deployed; pushed on 2026-09-28):** Branch `claude/fleetlab-scale-lab` in worktree `Hermes-scale`, cut from the T1 head `c79eccf`. Eight commits: `2caeac6` (shell: route `#/scale-lab`, one generic view, shared paired contract, ladder chart), `05113ab`, `953ebce`, `9fdb160` (three amendments), `27f6014` (response reserve lab), `1a81ae8` (fleet intake lab), `319b4a9` (density ladder lab), `c08f60d` (fixes of the independent review). Two labs are count models with no map; one reruns the Fleet day engine at 24 to 120 cars through its public function. No existing file under `src/core`, `src/model`, `src/instrument`, `src/legacy`, `src/runtime` or `src/data` was edited; four new page-only model files were added. Lessons 56 to 59, glossary 18 to 20, header navigation unchanged at 6 links. Gates on the final tree, Node v22.22.0: `FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs` gives 1,968 tests / 1,967 pass / zero fail, cancelled or skipped / one existing TODO (281.9 s); the four Scale test files give 92 of 92 with the flag; Python parity/boundaries 89 pass; `ruff check .` passes; `git diff --check` clean. Packages: hosted 99 files / 3,349,602 bytes; offline 2,408,323 bytes; both `check-dist` runs OK. Bytes: growth 89,468 over the 2,318,855 baseline, which is 7,548 over the lead's target of 81,920 and 2,692 under the lead's hard stop of 92,160; 77,213 bytes remain unassigned after the reserved 135,904 (166,681 before). Independent review after the build: seven lenses, 13 findings confirmed by two verifiers each, none refuted, nine distinct defects, none moving a verdict number, all fixed test-first in `c08f60d` (readout sentence against a strip that is not drawn, sideways scroll on a phone after a press, bars drawn over lines, two chart lines drawn alike, fleet intake depot induction accounting, floating point residue, a caption about rounded sums, missing map credit, and side-preserving numbers that had reached only some surfaces of the four-area card). Side-preserving and short numbers are now opt-in and only the Scale lab opts in, so **no page that existed before this wave prints different text**; `test/scale-lab.legacy-text.pins.json` holds that. Deployment on the owner's instruction of 2026-09-27: Wrangler 4.135.0, project `fleetlab`, Production `19e17ac6-d617-4789-9260-ca259c53e076`, immutable https://19e17ac6.fleetlab.pages.dev/, stable https://fleetlab.pages.dev/; 98 of 98 public files match by SHA-256 on both addresses; response headers verified; hosted presses of all three labs and Fleet day 95/284 reproduced. The deployment also published the T1 teaching frames, which had been local only. Rollback target at that release: `dd4bfa44-7226-4502-9d66-01bb1790f2b6` (since 2026-09-28 it is `19e17ac6`, entry above). **After the deployment:** two sweeps of the lesson links ran. The lead opened all 59 lesson links and the 9 page routes on the stable address in the in-app browser (Chromium engine) with the pane hidden, so no frame was painted, by changing the address hash with no reload: 0 error pages, 59 lessons by page (Fleet day 18, Street lab 6, Four-area experiments 29, Four-area workspace 3, Scale lab 3), 6 header links, no console error. An inventory stage visited the modules downloaded from the live site on the fake DOM: 10 route visits, 59 lesson visits and 4 deliberately bad links, 0 error pages from a good link, 0 network attempts, 0 engine run calls, 0 storage accesses. Both found one defect older than this wave: after another Fleet day lesson, `#/fleet-day?lesson=region-launch` kept the previous lesson's main heading. The lead confirmed it on the live site after a reload and from three starting pages and reproduced it on the fake DOM at `c79eccf` and `c08f60d`; D1 (`dd4bfa44`) sets no heading per lesson, so the defect came in with the T1 teaching frames and became public with this deployment. Commit `1aeaace` fixes it behind a new test in `test/studio.test.mjs` that failed first; on 2026-09-27 it was not deployed and not pushed, and both followed on 2026-09-28 (entry above). Full serial runs with the performance flag at `1aeaace`, twice: each 1,969 tests, 1,967 pass, one existing TODO and one timing failure. Run 1 (machine loaded, 342.8 s): the response reserve timing test, 9.34 ms against 8 ms. Run 2 (machine otherwise idle, 292.9 s): the four-area runtime test "run_window and run_pair gaps on the reference preset", which this wave did not change, 11.34 ms against 8 ms. Each passed its one isolated rerun (the second at 5.73 ms and 5.52 ms). No zero-failure full run at `1aeaace` is recorded. Also at `1aeaace`: Python parity/boundaries 89 pass, `ruff` passes, `git diff --check` clean, both package checks OK (hosted 99 files / 3,349,629 bytes, offline 2,408,350 bytes). **Documents commit:** the records of this wave are committed in one documents commit on top of `1aeaace`, which changes no site input; the deployment guide status paragraph then named `19e17ac6` as current and `dd4bfa44` as the rollback target (corrected again on 2026-09-28). **Decision states:** every design decision was taken at the lead's recommendation; the owner had ratified none on 2026-09-27 and ratified all of them on 2026-09-28 (entry above); the list is section 7 of the handoff. **Not done on 2026-09-27:** push, pull request, a look by a person with a visible pane (no painted frame of any page of this release has been seen), 1440 by 900 px, a throttled or physical phone, a screen reader, Safari, Firefox, a security scan, the broad Python suite, a zero-failure full run at `1aeaace`, a deployment of `1aeaace` (the push and that deployment followed on 2026-09-28, entry above). Records: [next-builder handoff](CODEX_HANDOFF.md) (top section), [release](docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md), [handoff](docs/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md), [design](docs/plans/2026-09-27-fleetlab-scale-lab-design.md), [build record](docs/plans/2026-09-27-fleetlab-scale-lab-plan.md), [model notes](docs/FLEETLAB_SCALE_LAB.md).
+
+**T1 teaching frames, 2026-09-26 (local only):** Implementation `caaf8f2d8f02b3df9e68a5a675fa488f99161d6d` adds three-part teaching frames for all 56 unchanged lessons, generated result readings, gated casebook readings and accessible exact-value disclosures. Final serial Node gate: 1,876 tests / 1,875 pass / one existing TODO / zero failures; Python parity/boundaries: 89 pass. Independent scope verification preserves all 47 core/model/instrument files, every resolved lesson setup and existing tests except three authorized copy-assertion rewrites. Browser fold/overflow/focus/contrast checks pass, with the explicit OD-T7 walkthrough exception: 146 fresh visible words before Prepare (153 with inherited context), above 130; structure is deferred. Two review findings about threshold rounding and edited lesson context were fixed and independently approved. Final offline size 2,318,855 bytes, growth 60,902: 538 below the hard stop and 7,654 over the target. Native site: 93 files / 3,249,227 bytes; both distribution checks pass. No push, deploy, new data or N2 engine implementation. The prior public D1 release remains current. Full evidence, exceptions, scope decisions and T2 queue: [T1 release record](docs/FLEETLAB_T1_RELEASE_2026-09-26.md).
+
+**Offline packer route A, 2026-09-26 (local only):** The offline build removes only complete
+comments whose first and last lines contain no code tokens. Every one of 107 module renders
+must preserve exact lexical tokens and line terminators and compile before and after removal.
+Templates, mixed-boundary comments, directives and protected license/preservation/source-map
+comments remain intact; the 84-module inventory found no protected comments. Native site
+output is byte-identical (90 files / 3,189,179 bytes; inventory SHA-256
+`cf355b9b5544354866e81681a82b8173cf4590bb7dccd86b42a6098cb7ff1603`). Offline size is
+**2,257,953 bytes**, down **293,925**, leaving **363,487 bytes** below the unchanged 2,621,440
+limit. The exact line terminators and template contents are retained, so the result differs from
+the audit scratch estimate. All 86 source files remain unchanged. Fixed-seed packed-worker
+parity reproduces all 10,153 events, world digest, metrics and series; the stripped page initializes
+on the fake DOM. Both distribution checks pass. Full serial performance-enabled Node suite:
+**1,859 tests, 1,858 pass, one existing TODO, zero fail/cancel/skip** (32 new tests). No performance
+rerun was needed. The small lexer rejects unsupported Unicode-set regex mode; per-module
+compilation supplements token checks. No dependency, source, threshold, push or deployment
+change; current public D1 remains unchanged.
+
+**N2 design v2.1, 2026-09-26:** The [standalone v2.1 draft](docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md)
+(SHA-256 `8bb68d09da0b6738b02cdf179a8993dfda4b00aa2cdce5cde23fef7fa33d75de`; 901 lines)
+restates all 19 fixture groups, all 26 owner-decision entries and the 50-correction conformance
+map. OD-1/3/4/5/6/19 remain DECIDED; this launch additionally decides OD-2 using the audit’s
+§4.6 budgets, including package T stop 61,440 bytes / target 53,248. The launch records
+OD-T1/2/4/5/6/7=Yes for the separate teaching task. All other numbered N2 decisions remain
+PENDING; the unnumbered C-32 record merge is also pending. S1 recommendations are not
+operative contract. G2 is OPEN. No N2 implementation or registration is authorized by the draft.
+The new ignored v2.1 probe re-derives changed type, selection, travel, energy and instrument
+values through fixture-specific calculations and shipped helpers; retained hand traces are
+explicitly distinguished from executed calculations. Documentary structure, separators, privacy,
+table consistency and immutable hashes passed. V1, v2 and all three original S0 probe files are
+unchanged. Read-only baseline checks reconfirm 1,827 Node tests (1,826 pass, one existing TODO),
+offline 2,551,878 bytes and site 90 files / 3,189,179 bytes, with clean distribution checks.
+Only this record and v2.1 change in the documentation commit; no application, packer, test,
+Python, owner note, remote, deployment or publication changes belong to this task.
+
+**Design audit and next implementation steps, 2026-09-26:** The read-only
+[design audit](docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md) reviews the N2 v2 contract (§0-§10) and the
+live site's teaching clarity (§11), and explains every simulation and all 56 lessons in three parts:
+What & why, How we simulate, and What you learn plus an ops takeaway to test (§12, Appendix B).
+All of it is grounded in model runs, test pins or recorded artifacts, and labelled NOT_EVIDENCE.
+Owner decisions recorded: OD-1 (packer route A: offline-only removal of full-line comments,
+measured -300,476 bytes), OD-3 (G3 fix B, depot-major type order), OD-4 (integer share
+arithmetic), OD-5 (nearest-eligible preparation), OD-6 (checker split into runtime invariants and
+test-time policy checks) and OD-19 (S1a before X1; S1b before any forecast-arm run; S5 after S4).
+Next tasks, in order (§13): Task 1, N2 design v2.1 (docs only); Task 2, the packer route A change;
+Task 3, the T1 teaching frame (presentation only, stop budget 61,440 B). Task 3 needs OD-2 and
+OD-T1 to OD-T7 first. No application code, deployment or remote branch changed with this entry.
+
+**D1 published, 2026-09-26:** Source `b99ab046ee0ee233c1e9d0db32dfa850c08cad8a`,
+Production `dd4bfa44-7226-4502-9d66-01bb1790f2b6`, immutable
+https://dd4bfa44.fleetlab.pages.dev/, stable https://fleetlab.pages.dev/.
+The [release record](docs/FLEETLAB_D1_RELEASE_2026-09-26.md) documents result-first Fleet day,
+model identities, explicit/reduced replay, separate setup controls, Four-area labels,
+non-affiliation and readable Austin decisions. Protected model/instrument/core/runtime
+source is unchanged. All56 lessons and5 setup models retained; baseline payload fingerprints
+match. Final Node:1,827 tests,1,826 pass,0 fail/skip/cancel,1 existing TODO (baseline1,791 pass).
+Python89 pass; Ruff clean; static90 files/3,189,179 bytes; offline2,551,878 (+8,223≤11,264).
+Native/packed desktop and mobile-sized keyboard checks, offline HTTP, hosted default Bay
+and Austin run/comparison passed;89/89 public hashes and response security headers match.
+No system-media emulation was available: browser motion checks used the real in-app override,
+with automated system/override precedence tests. No other-device/AT/full-Python claim.
+
+These publication records intentionally follow the source commit and deployment because
+its ID exists only afterwards; the owner brief explicitly authorizes this exception to
+the same-commit rule. Records precede normal pushes to the D1 branch and the website branch,
+with no force and an explicit fast-forward check. The preserved owner note remains untracked.
+Rollback target is `f08b6b6f-c5d0-44f7-905b-5f16087fbc85`. N2 remains design-only.
+
+**N2 S0 / WP0 v2 contract addendum, 2026-09-26:** The owner-authorized
+[v2 draft](docs/plans/2026-09-26-fleetlab-n2-design-v2.md) is a complete design-only
+replacement for implementation planning, with owner decisions, lifecycle/ownership,
+metric populations/nulls, capture-independent accounting, version contracts and exact
+fixtures. Independent review corrected the F2 holder population and G3 observation
+window. G2 cell tapes remain **OPEN pending S1**; patience, inherited values, seeds,
+controls and dispositions are unregistered. V1 SHA-256 remains
+`c574b8df41d0378363e18f75452f09e15a2cf62581e8fb01f6f365229d7e25bf`.
+No N2 implementation, campaign, data acquisition or execution-seam work is authorized
+by this draft. D1 release verification is separate and will be recorded after publication.
+
+**Packet review and next brief, 2026-09-26:** An independent read-only review of the
+2026-09-25 packet ([review](docs/FLEETLAB_PACKET_REVIEW_2026-09-26.md)) upholds N2 findings
+F1–F5 with corrected, paste-ready contract texts and discriminating fixtures, adds six
+verified gaps (G1–G6), flags that the proposed completion primary may be uninformative
+(ceiling or abandonment-driven in analogs) and that seeds 2001–2012/3001–3012 coincide with
+the four-area teaching model's seed sets, and recommends no Waymo Open Dataset work now.
+Packet corrections in `bff69d7`: L424 no longer carries an absolute local path; L385 warns
+that the PyPI name `waymax` is an unrelated third-party package (FleetLab does not use
+Waymax). The [Codex brief](docs/plans/2026-09-26-fleetlab-d1-and-n2-s0-codex-brief.md)
+scopes Part A (N2 S0 v2 design, docs only) and release D1 (presentation only; no
+`src/model`/`src/instrument`/`src/core`/`src/runtime` edits; ≤11,264 offline bytes; model
+parity 95/284 and Austin 77/480 as gates). No application code or deployment changed here.
+
+**Current address and review follow-up, 2026-09-25 Pacific / 09-26 UTC:** At the owner's
+request, the new `fleetlab` Cloudflare Pages project serves **https://fleetlab.pages.dev/**,
+Production **`f08b6b6f-c5d0-44f7-905b-5f16087fbc85`**, immutable
+https://f08b6b6f.fleetlab.pages.dev/. Application source remains **`345b427`**. Both existing
+packages passed their checks; all **88 public payloads** match; response security headers and
+new-host browser runs (Bay **95/284**, Austin 60% **77/480 completed**) passed. The former project/address remains
+available with no redirect. No product code changed for the move. This new project starts
+with one release; rollback history in the old project is not transferable.
+
+The [requested Claude packet](docs/FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md) contains
+the complete project context, live design observations, an editorial learning-studio proposal,
+a step-by-step local Waymo Motion pilot and the independent N2 audit with the unchanged draft.
+Current product source uses OSM, public vehicle references and synthetic assumptions, **not
+Waymo Open Dataset data**. No acquisition, license acceptance or data-runtime installation
+occurred. The N2 audit recommends resolving four P1 contracts and one P2 wait-label issue
+before implementation; focused tests passed **24/24**. N2, redesign and data integration remain
+proposals. Full release validation below remains applicable to unchanged application bytes;
+no new repository-wide green claim is made. Hosting commands and limits are in
+`CODEX_HANDOFF.md` and the [publishing runbook](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md).
+
+**Local regional N0 + N1 build checkpoint, 2026-09-25 UTC:** The owner's “read and
+build, go” request implemented the first slice of the regional brief on
+`codex/fleetlab-regional-power`, starting from the actual released website lineage at
+`4b7a276` (application `96fde5b`). The entry worktree was at `9daacef` with no website;
+its untracked owner review file was preserved. Other worktrees and main were untouched.
+
+Fleet day now includes an opt-in Austin-inspired schematic, two fictional depots, versioned
+site-power intervals, exact per-minute cap/delivery records, required-work/resource inspection,
+strict setup sharing and existing redistribution/deadline paired evaluation. Historical Bay
+numerical defaults and all 56 lesson contracts remain supported. The original regional model,
+Street model, launch rehearsal and Python evidence contracts remain separate.
+[Mechanics and reproduction](docs/FLEETLAB_REGIONAL_POWER.md).
+
+Observed four-condition rehearsal (12 fixed evaluation seeds 1001–1012, separate development
+seed 42/tuning declarations 42–44, completion margin 0.02, 2,000 bootstrap resamples):
+
+| Power at Site A during minutes 90–179 | Mean completion baseline → candidate | Primary | Existing recommendation | Binding guardrail |
+|---|---|---|---|---|
+| Full | 0.163888889 → 0.168923611 | UNCHANGED | NO_RECOMMENDATION | None regressed |
+| 60% | 0.160243056 → 0.162152778 | UNCHANGED | HOLD | Mean unfinished visits +0.333333333; allowed 0 |
+| 20% | 0.150694444 → 0.157638889 | UNCHANGED | NO_RECOMMENDATION | None regressed |
+| Outage | 0.147395833 → 0.153298611 | UNCHANGED | HOLD | Mean terminal-energy harm 5.392090652 kWh; allowed 5 |
+
+These are synthetic model results, not an operating recommendation. All-request within-target
+pickup remains unavailable in this experiment; completion is its registered primary. Exact
+machine values, frozen inputs, digests and source provenance are in ignored
+`artifacts/fleetlab-regional-power/demo/`. The sweep includes 96 primary arms and 16 repeatability
+probe arms. No search for favorable evaluation seeds or new winner score occurred.
+
+Validation: standard Node suite **1,779 passed, zero failures, two opt-in performance suites
+skipped, one existing browser TODO**; all 13 new regional tests passed. Python website
+parity/boundaries **89 passed**, Ruff and static/offline checks passed. Full Python remains
+**1,433 passed, 186 failed, 42 errors, 56 skipped**, reproducing the retained-fixture limitation;
+no fixture fabrication or regeneration. Doctor: 16 PASS, two WARN (ambient Conda-base label
+and dirty worktree), one optional display NOT_AVAILABLE. Tests used a local Python 3.11 venv
+with explicit checkout `PYTHONPATH`, without repointing the shared editable environment.
+
+The all-suite optional timing run hit the existing original-regional 8 ms yield budget
+(12.76 ms under concurrent tests; 8.58 ms with sequential files). Its isolated performance
+suite passed **9/9**; timing sensitivity remains disclosed rather than weakening a check.
+Independent code review found two P2 defects and one minor: shared-horizon condition changes,
+missing paired-export regional provenance, and order-sensitive preset recognition. All three
+were reproduced with failing tests and fixed. No critical findings were reported.
+
+Actual Chromium 152 inspection at 1280×720: default Bay run returned in 34.1 ms, busy-depot
+Bay in 27.6 ms, default Austin in 48.4 ms, 12-seed Austin comparison in 603.7 ms; no recorded
+long tasks over 50 ms in those samples. A 120-vehicle comparison produced 62–83 ms tasks;
+cancel worked between arms (0.3 ms from received cancel click to status change, excluding
+any waiting to dispatch the click). This is one local measurement, not an accessibility or
+performance certification. At 400 px, the regional setup and result caused no page overflow;
+wide data tables scroll inside their containers. Native, static and offline-over-HTTP boot/run,
+last-run setup restoration without execution, stale labels and comparison cancellation were
+checked. Direct file URLs, physical phones, screen readers and other browsers were not tested.
+
+Offline file: **2,543,655 bytes**, within the unchanged 2,621,440-byte limit. Static folder:
+**89 files, 3,181,153 bytes**. No new network capability or dependency. Work remains local and
+uncommitted because wider gates are not green; nothing was pushed, merged or published.
+The previously verified public release below remained unchanged at that local handoff.
+
+**Publication follow-up, 2026-09-25 Pacific / 09-26 UTC:** The owner subsequently requested deployment and GitHub
+push, superseding the earlier local-only scope for this website release. Fresh sequential Node
+validation with `FLEET_PLAYGROUND_PERF=1` passed **1,791 tests, zero failed/skipped/cancelled,
+one existing TODO**; Python website checks passed **89/89**, with Ruff and both rebuilt
+packages passing. The broader Python retained-fixture limitation remains separate and
+unchanged. Publication uses the existing website branch and Pages project; main stays separate.
+Published application source **`345b427cdddeb6e8946542c66786d3acbaacaa5c`** was pushed
+atomically without force to `feat/fleetlab-playground` and `codex/fleetlab-regional-power`.
+Cloudflare Production deployment **`6265159a-a13e-4ca7-9f9c-4acde9bcf6e7`** serves
+**https://fleetlab-playground.pages.dev/**; immutable address
+**https://6265159a.fleetlab-playground.pages.dev/**. All **88 public payloads** matched the
+local static package; `_headers` is the 89th deployment file and its security policies were
+checked on actual responses. Both remote branches resolved to the release commit; main stayed
+at `bca4ccd4d881e58904e59bb1b1ff594442099654`. No PR or main merge occurred.
+
+Hosted browser checks reproduced the moderate seed-42 shift: 480 requests, 77 completed,
+391 unserved, 11 waiting and one in progress. The 12-seed comparison reported UNCHANGED/HOLD
+with unfinished-visits mean harm 0.3333333333333333. A generated last-experiment setup restored
+without execution; the original Bay default still produced 95/284. No console errors were
+reported during those actions. Source/static/offline local QA from the build remains applicable;
+no new cross-browser, assistive-technology or real-world validity claim is made.
+
+Wrangler warned that the worktree contained the owner's unrelated untracked review; committed
+application paths were clean and the deployment package was rebuilt from those paths. The
+draft/owner note and all generated artifacts were excluded from the public package. An initial
+Python HTTP readback received 403; normal public requests with curl succeeded and matched every
+payload. No authentication, credential or access-policy change was made to obtain readback.
+
+[N2 draft](docs/plans/2026-09-25-fleetlab-n2-design.md) recommends a bounded event/curb question,
+with arrival versus boarding semantics and deterministic responsive execution before expansion.
+It adds no N2 product code and preserves the completion primary. The previous deployment
+`e72ae87d-6b96-47a0-950d-4d4a87b8bb95` remains the rollback target; rollback changes served
+content through Cloudflare, not Git history. Exact commands and hashes are in `CODEX_HANDOFF.md`.
+
+
+**Previous design release, published September 25, 2026 UTC.** Explicit owner authorization
+superseded the local-only design handoff. Source `96fde5b862119c9bbcd7a2ae76450f8dee616f93`
+was pushed normally to the website branch and deployed as Production
+`e72ae87d-6b96-47a0-950d-4d4a87b8bb95`; main and unrelated worktrees remain unchanged.
+All 84 public payloads match the checked build. Native routes and all 56 lesson links,
+complete validated setup snapshots, accessible structure, exact result context and selective
+copy improvements are live. No model-engine changes, backend, accounts or telemetry were added.
+
+Fresh release validation: 1,778 Node pass, no fail/skip/cancel, one existing TODO; 89 Python
+playground pass; Ruff and static/offline checks pass. Static package 85 files / 3,149,404 bytes;
+offline HTML 2,510,896 bytes. Hosted sharing restores 24 versus 48 AV inputs without autorun;
+explicit runs reproduce 95/284 versus 197/284. Direct Lombard lesson reproduces 39/71.
+Malformed links recover explicitly; history, visible landmarks and security headers verified.
+The broader Python fixture gate remains non-green (1,433 pass, 186 fail, 42 errors, 56 skip);
+this scoped publication does not establish main-integration readiness. A cosmetic literal-null
+text node in an existing Street vehicle panel is recorded for follow-up. No new exhaustive
+security scan or unsupported AT/cross-browser/page-load measurement is claimed.
+
+[Full project review, release evidence, limitations and proposed next phases](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md).
+The following M1–M4 release narrative is a historical September 24 checkpoint.
+
+
+**M1–M4 and scenario learning, validated and published 2026-09-24.** The active user
+goal extends the prior M2/M3 instruction through M4 and authorizes conditional repository
+update and existing-site deployment. Main and unrelated worktrees remain untouched.
+`depot-launch-1.0.0` adds versioned RegionConfig/DepotConfig, owned setup tasks and dependency
+checks, per-site calendars/resources, mock commissioning actions and a second fictional
+region through the existing Bay lifecycle. Its result adapter checks producer/model/metric/
+rule compatibility, nested populations, unchanged external demand and recorded action/capacity
+consistency. Broken actions are rejected separately from invalid simulator state.
+
+The in-app template → configure → validate → rehearse workflow displays actual treatment,
+all-request pickup/completion, unfinished work, queue/active time, energy and recorded state.
+It invalidates stale results/exports on edits. The catalog now has **56 lessons** (18 Fleet day,
+six Street lab, 32 regional), with explicit decision questions, controls, outcomes and limits.
+No new engine, framework, backend or runtime dependency. All browser results remain
+`NOT_EVIDENCE`, simulation-only, deployment permission `NONE`; Python evidence is separate.
+[Exact local commands, demo, model/metric versions and limits](docs/FLEETLAB_DEPOT_LAUNCH.md).
+
+Fresh settled-tree release gates: `FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1
+playground/fleetlab/test/*.test.mjs`: **1,715 total, 1,714 pass, zero failure/cancel/skip,
+one existing browser-only layout TODO, 245 suites, 144.226 seconds**. Relevant Python parity/
+boundary **89 pass (9.29 seconds)**; Ruff and `git diff --check` pass. Static package **81 files,
+3,105,220 bytes including media**; offline HTML **2,466,050 bytes**, both within unchanged
+budgets and passing package checks. An earlier concurrent run saw a test/module edit race and
+one 28.79-ms wall/3.43-ms CPU timing outlier; the settled serialized run passed all unchanged
+performance limits. No test was deleted or weakened. Independent review found and fixed three
+comparison-boundary defects and three UI issues; regressions cover their failure modes.
+
+Local browser acceptance: Region B seed42/delay120 shows completed trips34→29 but on-time
+pickups24→26, with unfinished tasks42→49; Peninsula delay0 gives identical outcomes. Recorded
+port tables distinguish unreserved from usable. Keyboard owner removal invalidates output
+before validation, then `TASK_OWNER` blocks. Deadline catalog loading selects the proper axis;
+12 evaluation seeds return the recorded UNCHANGED/NO_RECOMMENDATION. At400px viewport,
+content385px has no page overflow. Offline direct-file browser execution remains blocked;
+package and worker parity pass. No full unrelated Python/MetaDrive suite is claimed.
+
+The final security scan `1d70bf64-6294-45d9-bb71-29588f1fbfa8` covers immutable range
+`f85a28f..7874c7e`: all 20 changed source files and supporting controls reviewed, complete
+scoped coverage, zero reportable findings and no deferred candidates. This is not proof of
+zero risk or a cloud-account audit. Two older packaging descriptions were corrected in the
+final documentation, without changing app bytes. The earlier M1–M3 scan
+`c37f68ed-0c6b-44c8-a4fb-f99e6e260580` remains sealed with zero findings and its stale
+partial-coverage marker; it was not replaced or rewritten.
+
+Publication is verified: source **`7874c7ed1453b97123946b43b153f80a7228088c`**, deployment
+**`40858080-b229-44f1-8169-4f8b4faf5c86`**, stable address
+**https://fleetlab-playground.pages.dev/**. Source was pushed without force to the website
+branch, then only checked `dist/site` was uploaded through Wrangler 4.135.0. All **80 public
+files** match local SHA-256 values; CSP/response headers retain no application network calls,
+same-origin scripts/workers/media, anti-framing and nosniff. Cloudflare adds its own network
+error reporting headers. Hosted acceptance covered default Fleet day, Region B's exact mixed
+outcome, owner-edit invalidation/`TASK_OWNER`, catalog treatment selection, 12-seed deadline
+UNCHANGED/NO_RECOMMENDATION, one-seed airport descriptive labeling, Street lab route comparison
+and the separate regional worker's 20-pair UNCHANGED result. Offline direct-file UI remains
+untested as noted above. Main stays `bca4ccd`; no PR or main merge; other worktrees untouched.
+The final docs-only commit records publication, so website branch HEAD can differ from the
+deployed app source. [Release commands, digests, review, browser acceptance and rollback](docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md).
+Environment doctor before that documentation commit: 16 PASS, two WARN (active shell names
+Conda base; documentation edits dirty), one optional display NOT_AVAILABLE, no FAIL; the
+checks used the explicit Python 3.11.15 executable in `hermes-dev`.
+
+**Historical M2/M3 validation checkpoint (superseded by M4 above):**
+
+
+**M2/M3 implementation and release gate, 2026-09-22.** The current user explicitly
+superseded the M1-only/no-publication scope: proceed with M2 and M3, test, update the
+repository and deploy the existing site if validation/security gates pass. The older
+Phase 6 design-stop/read-only and branch instructions do not govern this authorized
+browser extension. Main, Python evidence and unrelated worktrees remain untouched.
+M1 is retained at local commit `7e0389d`; current work is isolated on
+`codex/fleetlab-m2-m3` in `Hermes-depot-m1`.
+
+Implemented **B2 in two separate treatments**: equal-share versus capped redistribution,
+then redistribution versus deadline/aged-job priority. **B3** adds fictional port identity,
+commissioning/health truth, sequenced delayed observations, unknown/stale knowledge,
+exclusive idempotent leases, current feasibility checks, outage and recovery. **Minimum
+B4** adds keyed passenger realization, independently published/expiring forecasts,
+finite inbound/staging slots, reserve-constrained preparation and explicit intake/SLA
+censoring. Each is an optional version `1.0.0`; `bay-systems-metrics-1.0.0` and paired
+format `fleetlab-bay-paired-experiment` version 1 are separate from regional/Python
+contracts. The UI projects records, displays actual policy changes and per-seed outcomes,
+and cancels/stales comparisons on edits. No framework, backend or runtime dependency.
+
+Paired experiments validate producer/version/configuration/population/demand, replay the
+first pair, require all declared metrics, and then reuse existing numeric instrument
+math through `model/experiment.js`. One seed remains descriptive. Default evaluation
+1001–1012 is disjoint from declared tuning 42–44; margin 0.02 fraction units, 2,000
+bootstrap resamples. Model recommendations remain `NOT_EVIDENCE`, simulation-only,
+`deployment_permission: NONE`. Positive service differences cannot compensate for
+regressed guardrails. [Runbook, definitions and reproducible recipes](docs/FLEETLAB_DEPOT_M2_M3.md).
+
+Observed validation at this checkpoint: Node 22.22.0, performance-enabled full suite
+**1,690 total, 1,689 pass, zero fail/skip, one existing browser-only TODO, 245 suites**;
+Python 3.11 parity/boundary **89 pass**; Ruff and diff check pass. Static package **77
+files / 3,048,314 bytes including existing media** and offline HTML **2,407,765 bytes**
+pass existing checks/budgets. No historical test was deleted or weakened. A worker import
+that duplicated Bay map bytes was removed; a narrow-screen layout and accidental Python
+evidence-label copy were corrected. Independent spec/code review found no critical or
+important issue. Direct offline file-URL browser execution remains blocked by browser
+policy; offline worker parity and package checks pass. Full unrelated Python/MetaDrive
+suite is not represented by these browser release gates.
+
+Local browser acceptance exercised charging and airport paired comparisons, UNKNOWN and
+INFERRED_STALE resource tables against current truth, six-slot forecast preparation,
+stale-result invalidation and disabled comparison after edits. Mobile viewport showed
+no page overflow (375 CSS-pixel content width); visual inspection confirmed readable
+forecast/staging and selected-vehicle panels. Airport comparison retained its HOLD for
+unfinished-visit/terminal-energy guardrail regressions despite improved airport pickup.
+
+At this historical checkpoint, release security scan and served-build acceptance were pending
+and the public build was `f85a28f` / `ccb82b11`; the completed M1–M4 release above supersedes
+that state. Remote `github/feat/fleetlab-playground` was observed at `6b376fb` before this work.
+A push alone does not deploy this Direct Upload Pages project. No PR or main merge was requested.
+
+**Historical M1 delivery checkpoint (superseded by M2/M3 above):**
+
+**Current browser status, verified 2026-09-22.** This paragraph supersedes the older
+Playground-only scope/count/release statements below; Python and ADAS history is unchanged.
+The active task started in clean `Hermes-fleetlab` at `9daacef` on
+`feat/phase9-metric-contract`, which has no browser app. The clean website worktree
+`Hermes-playground` was at `6b376fb`, whose differences from recorded published source
+`f85a28f` are documentation only. M1 is isolated in `Hermes-depot-m1` on
+`codex/fleetlab-depot-readiness-m1`, based on `6b376fb`. Both pre-existing worktrees
+remain clean; no push, merge, PR, remote modification or deployment occurred.
+
+**M1 completed locally:** opt-in `readiness.version = depot-readiness-1.0.0`, producing
+`fleetlab-bay-operations-1.0.0+depot-readiness-1.0.0` and
+`depot-readiness-metrics-1.0.0`. Every visit records mandatory cleaning, charging and
+upload plus scheduled software; a cleaning task acquires a bay and qualified worker
+atomically. Completion/release, exclusive blocking, queue/active time, unfinished
+work, deadlines at observation end, terminal ownership and rejected policy actions
+are recorded. The existing replay and new operator tables project those records.
+The historical default remains unchanged; two complete Bay outputs match published
+`f85a28f` byte for byte and are pinned in tests. No Python code, historical fixture,
+regional statistical instrument, Street lab, map or charging implementation changed.
+
+**Reproduce:** [Fleet day M1 runbook and metric contract](docs/FLEETLAB_DEPOT_READINESS.md).
+In Fleet day select **Staffing: an empty bay needs a worker**, **Run fleet day**, then
+**Compare staffing and bays**. The comparison needs a fresh submitted replay. Seed 42,
+240 minutes, 16 vehicles, one fictional site, the same 179 exogenous requests and the
+same required-work rule produced these observations on Node 22.22.0:
+
+| Observed measure | Baseline: 1 worker, 3 bays | Worker treatment: 2 workers, 3 bays | Bay control: 1 worker, 4 bays |
+|---|---:|---:|---:|
+| Completed / all requests | 26 / 179 | 36 / 179 | 26 / 179 |
+| Unserved / waiting / assigned-in-progress | 146 / 7 / 0 | 135 / 7 / 1 | 146 / 7 / 0 |
+| Ready by end / started depot visits | 11 / 26 | 22 / 36 | 11 / 26 |
+| Unfinished visits / mandatory tasks | 15 / 45 | 14 / 42 | 15 / 45 |
+| All-visit queue task-min / active task-min | 3,208 / 260 | 2,857 / 519 | 3,208 / 260 |
+| Oldest unfinished task age, min | 220 | 139 | 220 |
+| Maximum observed task queue, min | 215 | 135 | 215 |
+
+These are descriptive one-seed results, not hard-coded UI outcomes or statistical
+confidence. **All three fail the illustrative 60-minute maximum-wait check** despite
+valid simulator state. The extra worker changes service but does not establish an
+acceptable staffing plan; the extra bay does not improve this worker-constrained
+scenario. Counts of visits/work may change through dispatch consequences. Mean depot
+times remain explicitly completed-only; all-visit queue/active totals and unfinished
+work accompany them. Browser outputs remain `NOT_EVIDENCE`, simulation-only and
+decision authority `NONE`; no deployment authority is added.
+
+**Validation actually run in this worktree:**
+
+- Baseline Node: 1,629 total, 1,626 passed, zero failed, 2 skipped, 1 browser-only TODO.
+  Final `node --test playground/fleetlab/test/*.test.mjs`: **1,646 total, 1,643 passed,
+  zero failed, 2 skipped, 1 browser-only TODO**, 245 suites. Historical tests retained.
+- `FLEET_PLAYGROUND_BASE=bca4ccd PYTHONPATH="$PWD/src" PYTHONDONTWRITEBYTECODE=1`
+  with `hermes-dev` Python 3.11 on the two `test_fleet_playground_*` modules:
+  **89 passed**, baseline and after changes. Python distribution remains `0.1.0`.
+  `python -m ruff check .` passes. Full Python/MetaDrive suite was not rerun for this
+  browser-only change; this worktree has only `artifacts/.gitkeep`, no evidence fleet.
+- `pack.mjs --site dist/site` and `check-dist.mjs --site dist/site`: **71 files,
+  2,992,206 bytes total** (including existing film/poster); unchanged separate budgets.
+  Offline `pack.mjs --out dist/fleetlab-playground.html` and checker: **2,349,012 bytes**,
+  under the existing 2.5 MiB cap. Baseline sizes were 69 files / 2,963,232 bytes and
+  2,319,114 bytes respectively. No budget increase or runtime dependency.
+- Local packaged-site browser checks: staffing preset, run, stage jump, selected car,
+  worker/bay resource detail, measured comparison, keyboard-driven stale warnings,
+  rejected skip policy and named checks; phone viewport/table and expanded exact-JSON
+  disclosure without page overflow; no console errors observed in those flows.
+  Direct offline `file://` execution was **not browser-tested** because the browser
+  URL security policy blocked opening it. Its build and offline security checker pass.
+- Independent read-only review found and resolved two P2s: unobserved queues now
+  remain unavailable/null; a +1 treatment beyond the maximum is unavailable without
+  hiding the other valid trial. Reviewer recheck: 24 focused tests passed; no new
+  reporting errors. `git diff --check` passes.
+
+**Published versus local:** read-only served-asset checks matched `f85a28f` for the
+Bay engine, operations UI, studio UI, paired instrument and stylesheet. These sample
+hashes do not authenticate the deployment ID. `ccb82b11` remains the recorded release;
+M1 is **not deployed and has no hosted acceptance result**. No credentials or account
+APIs were used. The failed direct-file browser action was not bypassed.
+
+**Limits and deferred work:** only one qualified cleaning pool per site and serial
+work; no optional-task execution, successful mandatory cancellation, worker shifts,
+parallel scheduler, optimized charging/taper, stale-resource feeds, airport forecasts,
+region bring-up or physics. No usability study or production calibration. Four
+systems stay separate: Fleet day, Street lab, regional experiments and Python evidence.
+The current user's M1 authorization supersedes the older Phase 6 workflow for this
+browser extension; the decision and exact metric contracts are in the linked runbook.
+
+**Recommendation:** review the local M1 artifact as a mechanism demonstration; do
+not treat the service gain as a guardrail pass. **Top risks + mitigations:** synthetic
+assumptions → keep scope/versions visible; censored work → retain full cohorts;
+missing measurements → null/Not available; cross-model confusion → strict producer
+compatibility and no statistical/evidence reuse. **Next 3 actions:** review the local
+comparison, rehearse one binding/nonbinding resource example, and select any next
+milestone explicitly. Publishing remains a separate owner-authorized action.
+
+**Historical regional-model description (preceding M1):**
+
+`playground/fleetlab/` is a static page and one offline HTML file for building intuition about fleet and depot
+operations. It sits outside `src/hermes/` by design: nothing in `src/hermes/` imports or mentions it, and boundary tests
+enforce the design's placement rules R1 to R9.
+
+- **What it teaches.** Cars per area, depots with parking, cleaning and service bays, peak and off-peak demand, highway
+  and local routes with hourly congestion, depot assignment, the end-of-service recall and the morning release, from day 1
+  05:00 to day 2 10:00. Three Learn cases and seven Experiment presets follow design §4, each with its measured verdict.
+- **What it shares with FleetLab.** The verdict rules, proven by `tests/fixtures/fleet_playground/instrument_vectors.json`,
+  which FleetLab's own functions generate and both `pytest` and `node --test` check; FleetLab's own world, reproduced by
+  the legacy profile against exported worlds (FLEET-005 seed 101 in both arms, collision, precheck, horizon crash, seeded
+  defects); and the quoted FLEET-005 and two-zone probe reference panels.
+- **What it never is.** A decision record. A playground run is a teaching run; its result summary carries `NOT_EVIDENCE`
+  and fails `DecisionRecord` and `ExperimentSpec` validation (R9).
+- **Changed during the build, on evidence.** The audited default (90 cars, a recall pending all night) gave 23% unserved and
+  depot gridlock in a real run. The recall now acts once (design D-12), and the default is 120 cars, calibrated by a sweep
+  with two accepted exceptions (design §2.2). At that default the model does not show two audited lessons: the nearest
+  depot reads IMPROVED in the worked example (UC-07), and no depot resource binds while riders need cars (UC-08). The design
+  records both, and no Learn caption states an unasserted direction.
+- **FleetLab defects found while designing it** (design §14, none fixed here): FL-1 demand and horizon axes never reach the
+  world (a silent false UNCHANGED); FL-2 utilization unclipped (clipping moves the pinned FLEET-005 digest); FL-3 an
+  unavailable guardrail is skipped silently; FL-4 and FL-5 invariants that cannot fail or check only some events; FL-11 a
+  horizon axis shortened below the declared horizon crashes `run_experiment` with an uncaught `ValueError`.
+- **Operations casebook (design §4.4, added 2026-09-15).** Twenty situations an operations lead meets, in five themes of
+  four: San Francisco core operations, launching a new service area, rain, busy areas with many people, police activity
+  and emergency response. The model has none of those things, so each case is a proxy built from the knobs that says on
+  the page what it stands for, how it is set and what it misses, with an "Outside this model" list. Each is an Experiment
+  preset of kind `ops`, grouped by theme in the chooser, with a SITUATION block on the setup sheet. A record's slug is its
+  scenario name and the scenario name keys the demand trace, so every number belongs to its slug; `test/ops-cases.test.mjs`
+  pins every spec verbatim and every seed set 1 verdict to `test/ops-cases.pins.json` (sets 2 and 3 behind
+  `FLEET_PLAYGROUND_PERF=1`; all three agree on every case). The page never names a verdict or a direction (H-9); the
+  measured tables and lessons are in design §4.4, where six cases that did not show (INCONCLUSIVE or UNCHANGED) are read
+  as lessons about margins, windows and guardrails, and a list names the model limits the casebook leans on.
+- **Map motion, phases 1 and 2 (added 2026-09-15).** A survey of the built page found the map nearly still: over 600
+  consecutive frames at 900x, unit bars changed on 10.8% of area-frames and depot bars on 4 of 2,400 depot-frames, and
+  the pinned car was the only thing moving continuously. Phase 1 changed nothing on screen and bought the budget: one
+  map model and one playback frame per drawn frame, shared by the map, the NOW panel and the announcer, and a table
+  twin kept current by one watched number per drawn value. Phase 2 draws every car driving a route as its own mark, at
+  the progress the interval log gives it and pointing along its direction, moved by one composed `transform` written
+  only when its rounded place changes. The honesty line is where it stops: a car standing in an area stays a unit bar
+  and a car at a depot stays part of the depot tile, because the model gives neither a place inside it. A route
+  direction whose corridor is too short for its own busiest snapshot keeps its flow band and writes a visible reason,
+  decided once per run and geometry so nothing flips mid-playback. The map also carries its first model-limits chip
+  (traffic changes on the hour; areas are points) and a second legend line, because it now draws two encodings of one
+  quantity at once. No CSS transition, animation, keyframe or `will-change` was added anywhere, and reduced motion
+  steps cars on the 5-minute snapshot grid through the `interpolate: false` path that already existed, so the map needs
+  no reduced-motion code path of its own. Recorded rather than fixed: a shield is an opaque plate and cars paint below
+  it, so a mark's centre sits under a plate on 18.4% of car-frames wide and 37.2% on the phone; and a mark near a route
+  end overhangs a yard on 8.33% and 11.95%, where its hues measure 3.90 and 2.82 and its surface ring 1.13:1. Phase 3
+  (bay cells) landed on 2026-09-16 as the isometric depot block; phase 4 (a day-long bar under the scrubber) is approved
+  and not built.
+- **The isometric world (added 2026-09-16, the demo plan's phase A).** The owner asked for 3D as a requirement rather
+  than a means. A spike measured three renderers on the built page at 150 cars: WebGL at 0.05 / 0.1 ms of JavaScript a
+  frame, Canvas 2D at 0.15 / 0.3, the shipped SVG at 0.13 / 0.3, all far inside design §5.9's 8 ms. Canvas 2D ships,
+  because the saving WebGL buys is 0.1 ms of an 8 ms budget against a second renderer and a context-loss path during a
+  screen share, and because the 1 px ink edge and the hollow states are native strokes there. The picture is a 2:1
+  dimetric projection of the flat schematic's own area centres, generated from the interval log: flat platforms with no
+  texture, shoreline, street or building; ribbons at the class offsets with the same chevron congestion encoding; one
+  shaded box per car whose place is a route, at `placeCar`'s own fraction and pointing along its ribbon; a cube per five
+  cars standing in an area, because the model gives an area no inside geography; a white depot block whose lot fill
+  climbs its side faces and whose bay cells fill by elapsed over the task time you set. What keeps it honest: the
+  geometry is invented and the caption says so before a run as well as during one; nothing is lit, no camera moves and
+  there is no day-and-night tint, because the model has no daylight; exact coincidence is grouped in model space by
+  `(route, direction, fraction)` and then by family, so a count is a fact of the log and not of the screen (pinned: on
+  the default preset at the recall second five stacks of 22, 18, 9, 9 and 9 carry 67 of the 85 cars on routes, and a key
+  rounded to a twentieth of a leg would invent a sixth); the canvas never draws a letter, so every word is HTML over it
+  where the copy scans and a screen reader can reach it; the overlay carries the map's twenty roving stops and the map
+  is still exactly one tab stop; and no hue is spelled in JavaScript, so all twenty-four face ratios are computed from
+  the stylesheet's tokens and pinned in `test/a11y.test.mjs`, with 3:1 held on both route hues in both themes. A
+  rendered city, vehicle models, a moving camera, lighting, WebGL, a language model in the loop and an imported traffic
+  simulator are each refused in design §1.4 with a reason, and the walkthrough's last beat now puts five of the
+  refusals on the page, each with its reason, in the second person.
+- **Present, the walkthrough (added 2026-09-16, the demo plan's phase B).** A layer over the three modes, never a
+  fourth mode, with its own store key and pure reducers. `Prepare` runs the window once at five seeds and the frozen
+  experiment once at twenty paired seeds, in the visitor's own browser through the runtime's ordinary public calls, and
+  reports what each took on the visitor's own clock; until both land, `Next` is off and every figure reads
+  `not available: nothing has run yet`. After that the model never runs again: each of the eleven beats is a silent
+  seek, a pin, an open and a projection. The four chapters are Operations (the evening peak, the hour riders gave up in,
+  the recall, a depot ninety minutes later, the release), Analytics (the metric registry under both registers with two
+  charts by hour, then the frozen spec in words and the verdict readout), Simulation (which snapshot the frame came
+  from, whether its positions are interpolated, read from the frame and not from the option passed in, and then both
+  arms of the verdict's own watched seed) and Product sense (the casebook record's situation block verbatim, what the
+  run trades as lower one thing and higher another, five refusals with their reasons, and the next casebook question by
+  title alone). What keeps it honest: beat clocks are derived from the scenario's declared knobs and never searched, so
+  a moved knob moves the beat and a scenario with the release off retitles that beat; no beat starts the clock, so every
+  beat teaches from the still frame the script was written around and `Play` stays in the presenter's hands; every
+  figure carries exactly one register chip and a verdict figure's chip counts paired seeds, never the window's
+  replications; the depot table is the depot drawer's own `depotView` and the readout is the verdict card's own
+  builders, so no surface can restate another in different words; and the narration is generated from the run, capped at
+  three lines, scanned for direction words over every string, with its four comparing lines pinned on OPS-01 at seed
+  1001. A reading card offers a lone visitor the same walk before anything has run.
+- **What the demo build did not do.** Phases C and D of the plan are approved and deliberately unbuilt, with no
+  scaffolding left behind. Phase C holds the candidate arm drawn in the world with an `A baseline | B candidate` toggle
+  at one second (so the arms beat still hides the map region and carries both arms as two lines of numbers), the
+  day-long bar under the scrubber with the recall and the release ruled on it, a beat that runs a second seed set, and a
+  place for the `Flat` toggle inside `Present`. Phase D holds the phone polish of the presenting layout and the `Try it`
+  handoffs into Sandbox and Experiment. Two consequences to say out loud rather than let a viewer notice: the day has no
+  strip, so the walk reads clocks; and the change under test is never drawn, only read.
+- **Hosted folder.** `pack.mjs --site <folder>` writes a folder for a static host beside the packed file: the modules
+  unchanged, `index.html` with a stricter policy (no inline script, everything from the site's own origin), `boot.js` and
+  `_headers`; `check-dist.mjs --site` applies the packed file's rules to every file and requires exactly the files the
+  packer writes. Putting it online stays an owner action (design §9.4).
+
 ## 8. What is not claimed
 
 - **Not a safety case.** No ISO 26262, ASIL, HARA, regulation, assessor or vehicle. The gate
@@ -1013,6 +1589,12 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
    deliberate digest re-baseline, and the static operator view is the second registry consumer.
    The decision-record Comparison page remains open.
 9. **Stage 3:** put dispatch behind a decision-time-only policy seam before adding a candidate.
+10. **Playground merge is an owner decision.** The branch is local. Before merging, run the node suite and the parity and
+    boundary pytest with `FLEET_PLAYGROUND_BASE=bca4ccd`, and decide on the CI step for `node --test`. Review design D-12
+    (the recall acts once) and the use cases whose lessons the calibrated default does not show (UC-07, UC-08).
+11. **Evidence-path follow-ups from the playground design** (§14 there): reject world-feeding axes in `apply_axis` (FL-1,
+    FL-11); a registry bump for clipped utilization with a recorded re-baseline (FL-2); record not-evaluable guardrails
+    instead of skipping them (FL-3); transition-level invariants (FL-4, FL-5).
 
 ### 11.3 MuJoCo — before graduation
 
@@ -1039,6 +1621,11 @@ spike with its refusal paths ✓; clean-clone gate ✓. Next, in order:
 ---
 
 ## 12. Landmines
+
+- **Playground R6 runs only with its base.** `tests/unit/test_fleet_playground_boundaries.py` checks that the playground
+  branch never changed `src/hermes/`, `pyproject.toml`, `.gitignore`, `Makefile` or `.github/` only when
+  `FLEET_PLAYGROUND_BASE` names the base commit; a plain full-suite run skips that check. The playground parity vectors
+  also assert Python 3.11: widening the pin moves FleetLab's means and digests.
 
 1. **Any new model field can invalidate stored evidence.** `scenario_digest` and
    `gate_config_digest` hash `model_dump()` and are re-derived in verification. Every version-only
@@ -1178,6 +1765,8 @@ separate "Hermes Evidence Lab" artifact is the portfolio page, not a status docu
 | [PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md](PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md) | Phase 7 design (implementation in the codex worktree) |
 | `HERMES_PHASE7_ADAS_AGENTIC_WORKFLOW_PRD.md` | Phase 8 PRD — local, gitignored; §0-A normative |
 | [HERMES_PHASE9_FLEET_SIMULATION_PRD.md](HERMES_PHASE9_FLEET_SIMULATION_PRD.md) | Phase 9 PRD — tracked since `aa04786` |
+| [docs/plans/2026-09-13-fleetlab-playground-design.md](docs/plans/2026-09-13-fleetlab-playground-design.md) | FleetLab Playground design, audited, with D-12, the measured use cases and the operations casebook (§4.4); §14 lists FleetLab defects found |
+| [playground/fleetlab/README.md](playground/fleetlab/README.md), [playground/fleetlab/ARCHITECTURE.md](playground/fleetlab/ARCHITECTURE.md) | How to open, pack (one file or a hosted folder) and test the playground; its build contract |
 | `sandbox/mujoco/{NOTES,SIMULATION_DESIGN_PACKAGE}.md` | MuJoCo sandbox — local, gitignored, NOT EVIDENCE |
 
 **Historical (Phase 5–6 era; superseded as entry points, kept for the record):**
@@ -1191,3 +1780,56 @@ separate "Hermes Evidence Lab" artifact is the portfolio page, not a status docu
 
 *Simulation-only prototype. Illustrative thresholds. Not road-safety, certification, compliance,
 or deployment evidence.*
+
+
+## City explorer status — September 29, 2026
+
+The isolated `apps/fleetlab-city/` experiment is an **unqualified local review build**, not a Hermes evidence workbench extension or production service. It sources an accounted SF road snapshot and records a synthetic 100-vehicle depot experiment. Its graph/resource model has no endogenous traffic. All 12 evaluation pairs and five sensitivity pairs are retained; source-support and human qualification gaps block city recommendations. The six city contracts are separate from the canonical Hermes bundle contract. See `docs/FLEETLAB_CITY_SF_VALIDATION.md` for actual validation, limitations, Git identity and reproduction. Existing legacy behavior, public release and authority boundaries remain unchanged.
+
+### 2026-09-29 — SF visitor-experience enhancement
+
+The current City Explorer review package is `dist/city-explorer-v2-reviewed/`, served locally
+at port 4173 (and USB-forwarded port 4175 for Pixel review). The source remains an uncommitted
+overlay on `codex/fleetlab-city-sf`. Map/detail controls, replay comprehension and summaries
+were enhanced without changing the frozen simulator runs or recommendation gates.
+See `docs/FLEETLAB_CITY_UX_V2_VALIDATION.md` for current evidence and
+`docs/FLEETLAB_CITY_PRESENTER_GUIDE.md` for the demo narrative and twelve-pair interpretation.
+The previous SF validation record remains historical; no public City Explorer release or
+physical-device pass is implied by this update.
+
+### 2026-09-29 — SF qualification candidate and launch staging
+
+The current review package is now `dist/city-explorer-v3-final/` on port 4173. Its release
+manifest SHA-256 is `7450c2aaf5e5ca90e2f5cbf6cf7d05cf6520f11b1f92267bbdf511c557ce2926`.
+It introduces a guided welcome path, sourced vehicle-design learning gallery and separate
+SF v2 qualification candidate. Original v1 recorded experiment data remains unchanged.
+The v2 routing profile reduces unsupported eligible length to 1.322%, but remaining road
+classes, district coverage, human semantics and cross-leg history still block qualification
+and candidate fleet execution. Vehicle references are not calibrated operator models.
+
+A local Pages stage retains every legacy file and both compatible viewer releases; a separate
+rehearsal verified route headers and rollback. Nothing was published. The original assessment
+section 7 release boundary remains in effect. Physical Pixel v2 replay/restart was observed;
+the final v3 phone sweep was interrupted by Mac lock and remains pending. Use
+`docs/FLEETLAB_CITY_V3_VALIDATION.md` for current evidence and limits,
+`docs/FLEETLAB_CITY_LAUNCH_PREPARATION.md` for the concrete launch stage, and
+`docs/FLEETLAB_NEXT_PHASE_BRIEF_V3.md` for the next-phase product handoff.
+
+### 2026-09-29 — SF power experiment implementation and v4 corrections
+
+Current review viewer: `dist/city-explorer-v4-final/`, local port **4182**, release
+`920887f3fb0841b066f26a996d8c9c157fc47c1e9f2cff0b70837c069c80f0a2`.
+It fixes direct Play click bubbling, clarifies recorded energy/violations and adds reviewed
+study/export interfaces. Original scientific results remain unchanged. The local combined
+stage retains all 99 legacy files and compatible current/prior City releases; shared-site
+navigation and publication are unchanged.
+
+The new six-arm power experiment completed 24 preflight arms but **zero evaluation arms**:
+evaluation was refused at its initial memory check. A reviewed, unapplied fix and explicit
+replacement-study proposal await the owner's decision. No new power-study finding is
+available in the viewer. Map continuity and human-review contracts are reviewed design
+deliverables; map qualification is still open.
+
+Use `docs/FLEETLAB_SF_POWER_BUILD_VALIDATION_2026-09-29.md` for actual tests/browser evidence
+and limitations, `docs/FLEETLAB_WEBSITE_INTEGRATION_PLAN_2026-09-29.md` for placement, and
+`docs/FLEETLAB_POWER_STUDY_MEMORY_AMENDMENT_PROPOSAL_2026-09-29.md` for the pending revision.

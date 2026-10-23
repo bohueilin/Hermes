@@ -1,0 +1,1 @@
+[out:json][timeout:45];(node["place"]["name"~"^(San Francisco|Daly City|Colma|Broadmoor|Brisbane|South San Francisco|San Bruno|Millbrae|Burlingame|San Mateo|Menlo Park|Palo Alto|Los Altos|Mountain View|Sunnyvale|San Jose)$"](37.2,-122.6,37.9,-121.7);nwr["aeroway"="aerodrome"]["iata"~"^(SFO|SJC)$"](37.2,-122.6,37.9,-121.7););out center;

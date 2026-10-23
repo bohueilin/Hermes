@@ -1,0 +1,153 @@
+import {MODEL_CONSISTENCY} from './labels.js';
+import {conceptPrimer} from './concept-primer.js';
+import {el} from './dom.js';
+import {flowScenario,flowComparisonSteps,FLOW_RULES} from '../model/depot-flow.js';
+import {FLOW_VERSIONS,FLOW_TRUST} from '../model/depot-flow-contract.js';
+import {cohortScenario,cohortComparisonSteps,COHORT_RULES,COHORT_VERSIONS} from '../model/depot-cohort.js';
+import {inspectState,guidedMoments,eventSentence,outcomeHeadline,comparePrevious,nextSuggestion,PROJECTION_VERSION} from './depot-flow-view.js';
+import {flowLanesCharts} from './charts.js';
+import {createDepotFlowPlayer} from './depot-flow-player.js';
+import {createLiveRegion} from './a11y.js';
+import {setBusy} from './display-text.js';
+import {modelHeader} from './model-identity.js';
+import {LESSON_FRAMES,chipsView,glossaryView} from './teaching-frames.js';
+import {minute,ruleName,table,detail,button,readinessChain,resourceBoard,FLOW_GLOSSARY,outcomesView,boundView,checksView,eventLedger,tradeoffText,guessQuestion,guessFeedback} from './depot-flow-reading.js';
+
+const defaults=()=>({uplink_gbps:1,b_gb:7.5,charger_kw:60});
+const lessons=[['two-vehicles','Two vehicles, one shared link'],['crossed-priorities','Four visits, crossed priorities']];
+const settingsText=o=>`${o.uplink_gbps} Gbps shared internet upload · B ${o.b_gb} GB · ${o.charger_kw} kW charger`;
+const yieldPage=()=>new Promise(resolve=>setTimeout(resolve,0));
+const swap=(old,next)=>{old.parentNode.insertBefore(next,old);old.remove();return next;};
+
+/** Page state only. Scientific records never contain guesses or playback state. */
+export function createDepotFlowLab({yieldPage:yieldControl=yieldPage,steps=flowComparisonSteps,reducedMotion=()=>false}={}){
+ let lesson='two-vehicles',options=defaults(),result=null,resultOptions=null,attempt=null,serial=0,job=null,destroyed=false,player=null,chart=null,previous=null,comparison=null,feedback=null,question=guessQuestion(),seen=[],suggestion=null;
+ const cohort=()=>lesson==='crossed-priorities',rules=()=>cohort()?COHORT_RULES:FLOW_RULES,scenario=()=>cohort()?cohortScenario(options):flowScenario(options);
+ const hero=el('section',{class:'flow-hero'}),controls=el('div',{class:'flow-controls'}),rulesDetail=el('details',{class:'flow-rules'}),output=el('section',{class:'flow-output'}),method=el('section',{class:'flow-method'});
+ const status=el('p',{role:'status',class:'flow-status'});
+ const guess=el('select',{'data-flow-guess':''}),guessLabel=el('span');
+ const runButton=button('Compare the three rules',()=>run(),{class:'studio-button studio-button-primary','data-flow-run':''}),cancelButton=button('Cancel',()=>cancel(),{hidden:true});
+ const lede=el('p',{class:'flow-lede'}),definition=el('p',{class:'flow-definition'},'Ready means all three prerequisites are complete: battery at target, upload done, two-minute local step done. Invented workload; no real depot data.');
+ const actions=el('div',{class:'flow-actions'},[runButton,cancelButton]),runHelp=el('p',{class:'flow-run-help'},'Runs the same workload under each rule.');
+ const changeSetup=el('details',{class:'flow-change'},[el('summary',{},'Change the setup'),controls]);
+ const guessDetail=el('details',{class:'flow-guess-detail'},[el('summary',{},'Optional guess'),el('label',{class:'flow-guess'},[guessLabel,guess])]);
+ let setupTable=el('div'),chips=el('div');
+ const element=el('main',{class:'depot-flow-lab'},[hero,conceptPrimer('depot'),rulesDetail,guessDetail,chips,el('p',{class:'flow-boundary'},'Constructed teaching example: vehicles, workloads, capacities and deadlines are invented for this lesson, not measurements of a real depot.'),output,method]);
+ const live=createLiveRegion(element);
+ const announce=text=>{const line=`${isOld()?`Previous setup, run ${result.run_id}. `:''}${text}`;if(live.node.textContent!==line)live.announce(line);};
+ const isOld=()=>result&&(JSON.stringify(options)!==JSON.stringify(resultOptions)||attempt?.id!==result.run_id);
+ function configureGuess(next=null){question=guessQuestion(next,cohort());guessLabel.textContent=question.question;guess.replaceChildren(...[['','No guess'],...question.choices].map(([value,text])=>el('option',{value},text)));guess.value='';}
+ function idleStatus(){if(job)return;let valid=true;try{scenario();}catch{valid=false;}setBusy(runButton,false,!valid);status.textContent=!valid?'Input outside this lesson. Choose one of the available settings.':isOld()?'Result from previous setup. Run the current setup to compare it.':result?MODEL_CONSISTENCY:attempt?.status==='cancelled'?'Cancelled. No new comparison.':'Nothing has run yet. Explore the inputs, then run the rules.';}
+ function refreshInputs(rebuild=false){
+  let s;try{s=scenario();}catch{}
+  lede.textContent=s?ledeText(s):'Input outside this lesson.';
+  // Every NF-02 visit arrives charged with the same local step, so the caption states those once instead of two repeated columns.
+  const perVehicle=!cohort(),shared=s&&!perVehicle?`all batteries at target · ${s.vehicles[0].post_s/60} min local step after upload · `:'';
+  const heads=perVehicle?['Vehicle','Due','Upload','Energy','After upload']:['Vehicle','Due','Upload'];
+  const rows=(s?.vehicles??[]).map(v=>{
+   const row=[v.id,`due at minute ${v.deadline_s/60}`,`${v.upload_bytes/1e9} GB`];
+   if(perVehicle)row.push(v.energy_j?`${v.energy_j/36e5} kWh`:'Already at target',`${v.post_s/60} min local step`);
+   return row;
+  });
+  const view=table(s?`Setup · ${shared}observe through minute ${s.horizon_s/60}`:'Setup · input outside this lesson',heads,rows);
+  view.firstChild.classList.add('flow-setup-table');setupTable=swap(setupTable,view);
+  if(rebuild){controls.replaceChildren();if(!cohort())controls.append(...[
+   ['uplink_gbps','Shared internet link capacity',[[1,'1 Gbps'],[.5,'0.5 Gbps']]],['b_gb','Vehicle B upload',[[7.5,'7.5 GB'],[15,'15 GB'],[45,'45 GB']]],['charger_kw','Charger power',[[60,'60 kW'],[20,'20 kW']]],
+  ].map(([key,title,choices])=>{const select=el('select',{'aria-label':title,on:{change:()=>setOptions({[key]:Number(select.value)})}},choices.map(([value,text])=>el('option',{value},text)));return el('label',{},[el('span',{},title),select]);}));}
+  if(!cohort())for(const [key,title] of [['uplink_gbps','Shared internet link capacity'],['b_gb','Vehicle B upload'],['charger_kw','Charger power']]){const select=controls.querySelector(`[aria-label="${title}"]`);if(select)select.value=String(options[key]);}
+  idleStatus();
+ }
+ /** The lede names both upload sizes once B's upload differs from the starting setup. */
+ function ledeText(s){
+  const link=`${s.uplink_bytes_s/125e6} Gbps`;
+  if(cohort())return `Four visits arrive together, already charged, and share one ${link} internet upload link (uplink; gigabits per second). Two are urgent and two are large; size and urgency do not line up.`;
+  const [a,b]=s.vehicles,sizes=options.b_gb===defaults().b_gb?'; A needs charging and a larger upload':`, with a ${b.upload_bytes/1e9} GB upload; A needs charging and a ${a.upload_bytes/1e9} GB upload`;
+  return `Two vehicles share a ${link} internet upload link (uplink; gigabits per second). B is already charged and due sooner${sizes}. Both require two minutes of work after upload.`;
+ }
+ function buildLesson(){
+  // On a desktop the question sits left and the setup card with Compare right; on a phone they stack in this order.
+  hero.replaceChildren(
+   el('nav',{class:'flow-breadcrumb','aria-label':'Breadcrumb'},[el('a',{href:'#/catalog'},'Explore'),el('span',{'aria-hidden':'true'},'/'),el('span',{},'Depot readiness & data'),el('span',{'aria-hidden':'true'},'/'),el('span',{'aria-current':'page'},lessons.find(l=>l[0]===lesson)[1])]),
+   el('p',{class:'eyebrow'},'DEPOT FLOW LAB'),
+   el('nav',{class:'lab-chooser','aria-label':'Depot flow lessons'},lessons.map(([id,title])=>el('a',{href:`#/depot-flow-lab?lesson=${id}`,'aria-current':id===lesson?'page':null},title))),
+   el('div',{class:'flow-question'},[el('h1',{},cohort()?'Who should upload next?':'Why can a charged vehicle still wait?'),lede,definition]),
+   el('div',{class:'flow-setup-card'},[setupTable,actions,runHelp,status,changeSetup]),
+  );
+  chips=swap(chips,chipsView(LESSON_FRAMES[lesson]));
+  rulesDetail.replaceChildren(el('summary',{},`How the ${cohort()?'four':'three'} rules work`),el('p',{class:'flow-assumptions'},cohort()?'All arrive at minute 0 with batteries at target. The 1 Gbps link serves 127.5 GB in total; every visit has its own post-upload slot. One-second service steps. GB is decimal.':'Both arrive at minute 0. One charge port; one local-step slot per vehicle. Charging and upload can overlap. GB is decimal; Gbps is useful payload capacity.'),...rules().map(r=>el('article',{},[el('h2',{},r.name),el('p',{},r.description)])));
+  if(cohort())rulesDetail.appendChild(table('Size and urgency are different',['Upload size','Earlier deadline','Later deadline'],[['Large','A','C'],['Small','D','B']].map(([size,...ids])=>[size,...ids.map(id=>{const v=scenario().vehicles.find(x=>x.id===id);return `${id} · ${v.upload_bytes/1e9} GB · due at minute ${v.deadline_s/60}`;})])));
+  runButton.textContent=cohort()?'Compare the four rules':'Compare the three rules';changeSetup.hidden=cohort();configureGuess();refreshInputs(true);
+  const versions=cohort()?COHORT_VERSIONS:FLOW_VERSIONS;
+  method.replaceChildren(detail('Model and version',[modelHeader(cohort()?'Depot cohort model':'Depot flow model','Constructed depot visits',versions.model).element,el('dl',{class:'flow-versions'},Object.entries(versions).flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)])),el('p',{},`Presentation projection: ${PROJECTION_VERSION}. This identity is separate from the model record.`),el('p',{},FLOW_GLOSSARY.authority),el('p',{},`Scope: ${FLOW_TRUST.scope}. Authenticity: ${FLOW_TRUST.authenticity}, no independent source authentication. Authorization: ${FLOW_TRUST.authorization}. Decision authority and deployment permission: ${FLOW_TRUST.decision_authority}.`)]),detail('Assumptions and limits',[el('p',{},'There are no random draws, packet losses, retries, protocol overhead, charge taper, auxiliary load or software authenticity checks. The local step is simulated work; passing checks does not approve software.'),el('p',{},cohort()?'Upload sizes are known exactly. Equal shares round whole bytes using a rotating eligible ring; unused service is counted. A quarter-second reference run tests these particular schedules, not general time-step adequacy.':'Vehicle B is both smaller and earlier due. This lesson cannot separate size priority from deadline priority. The four-visit lesson crosses those factors.'),el('p',{},'Capacity studies need a fixed horizon, backlog accounting, more visits and matched changes. A task finishing last does not establish which resource is worth expanding.')]),detail('Research behind the questions',[el('p',{},'Chowdhury, Zhong and Stoica, Efficient Coflow Scheduling with Varys (SIGCOMM 2014). DOI: 10.1145/2619239.2626315. Motivation: make the work-completion objective explicit. These depot tasks are a different network model.'),el('p',{},'Lee, Sharma, Johansson and Low, ACN-Sim (2020 preprint). arXiv: 2012.02809. A possible later charging model; workplace charging assumptions need review for depot use.'),el('p',{},'These references motivate questions. This lesson implements neither system and claims none of their measured performance or guarantees.')]),glossaryView(cohort()?{...FLOW_GLOSSARY,step:'Service step: work is accepted in fixed time slots. This lesson uses one second; verification also tests a quarter-second reference.',shared:'Shared capacity bound: the work due in one time window exceeds what the shared resource can serve in that window.'}:FLOW_GLOSSARY),el('p',{class:'flow-related'},'A recorded twelve-vehicle study, Scheduling or capacity?, continues these lessons on the hosted FleetLab site; the offline edition does not include it.'));
+ }
+ function stopPlayer(){player?.destroy();chart?.dispose();player=null;chart=null;}
+ function setOptions(patch){cancel();stopPlayer();options={...options,...patch};configureGuess(!result||JSON.stringify(options)===JSON.stringify(resultOptions)?null:suggestion&&JSON.stringify(options)===JSON.stringify(suggestion.options)?suggestion:{kind:'K1',rule:null,question:'Which rule will miss the fewest departures after this change?'});refreshInputs();renderOutput();}
+ function cancel(reason='pause'){player?.pause(reason);if(!job)return;job.cancelled=true;attempt={...attempt,status:'cancelled'};job=null;const held=document.activeElement===cancelButton;cancelButton.hidden=true;setBusy(runButton,false);if(held)runButton.focus();idleStatus();renderOutput();}
+ // Lesson switches and route departures share a silent stop and own no outgoing announcement.
+ function pause(){cancel('route');live.node.textContent='';}
+ async function run(){
+  if(job||destroyed)return;stopPlayer();const token={id:++serial,cancelled:false};job=token;const used={...options},picked=guess.value?{...question,value:guess.value,label:question.choices.find(c=>c[0]===guess.value)?.[1]}:null;
+  attempt={id:token.id,status:'running',options:used,partial:null};setBusy(runButton,true);cancelButton.hidden=false;status.textContent='Computing the rules. No completed comparison yet.';renderOutput();
+  try{scenario();const iterator=(cohort()?cohortComparisonSteps:steps)(used,{shouldCancel:()=>token.cancelled});for(;;){await yieldControl();if(destroyed||job!==token||token.cancelled){iterator.return?.();return;}const n=iterator.next();if(!n.done){attempt.partial=n.value;continue;}const value=n.value;attempt={...attempt,status:value.comparison_eligible?'complete':'invalid',partial:value};if(value.comparison_eligible){const accepted=structuredClone({...value,run_id:token.id});guidedMoments(accepted);previous=result;result=accepted;resultOptions=used;comparison=cohort()?null:comparePrevious(previous,result);feedback=guessFeedback(picked,result,comparison);seen.push(used);configureGuess();}break;}}
+  catch(error){if(job!==token)return;attempt={...attempt,status:'invalid',error:String(error.message??error)};}
+  if(job!==token)return;const takeFocus=attempt.status==='complete'&&[runButton,cancelButton,document.body].includes(document.activeElement);job=null;cancelButton.hidden=true;idleStatus();if(attempt.status==='invalid')status.textContent='Comparison withheld. Inspect failed or unavailable checks in the diagnostic record.';renderOutput();if(takeFocus){const h=output.querySelector('[data-flow-heading]');h?.focus({preventScroll:true});h?.scrollIntoView?.({behavior:'instant',block:'start'});}
+ }
+ function renderOutput(){
+  stopPlayer();output.replaceChildren();if(attempt&&attempt.status!=='complete')output.appendChild(detail(`Latest attempt ${attempt.id}: ${attempt.status} · no new comparison`,[el('p',{},'No new comparison. Partial model records remain available in page state. Later checks may not have run.'),el('p',{},attempt.error??(attempt.status==='running'?'Computation in progress.':attempt.status==='cancelled'?'This attempt was cancelled.':'A model or policy check did not pass.'))]));
+  if(!result)return;const old=isOld();output.appendChild(el('h2',{tabindex:-1,'data-flow-heading':''},old?'Result from previous setup':outcomeHeadline(result)));
+  if(old)output.appendChild(el('p',{class:'flow-stale'},cohort()?'This is the prior completed run; the latest attempt has no new comparison.':`Run ${result.run_id} used ${settingsText(resultOptions)}. Current inputs: ${settingsText(options)}. Changes: ${Object.keys(options).filter(k=>options[k]!==resultOptions[k]).map(k=>`${resultOptions[k]} ${k==='b_gb'?'GB':k==='charger_kw'?'kW':'Gbps'} to ${options[k]} ${k==='b_gb'?'GB':k==='charger_kw'?'kW':'Gbps'}`).join('; ')||'same inputs; latest attempt has no new comparison'}.`));
+  output.appendChild(el('p',{class:'flow-result-note'},`Run ${result.run_id} · ${cohort()?'Depot cohort':'Depot flow'} model ${result.versions.model} · ${lessons.find(l=>l[0]===lesson)[1]}. ${MODEL_CONSISTENCY} NOT_EVIDENCE; simulation-only; decision authority NONE.`));
+  const change=!old?comparison:null;
+  if(change)output.appendChild(el('section',{class:'flow-reading'},[el('h3',{},'What changed from the previous run?'),...change.sentences.map(s=>el('p',{},s))]));
+  output.appendChild(el('section',{class:'flow-reading'},[el('h3',{},'Who became ready earlier or later?'),...tradeoffText(result).map(s=>el('p',{},s)),!cohort()&&resultOptions.uplink_gbps===1&&resultOptions.charger_kw===20?el('p',{},'Vehicle A is ready at minute 18 under every rule. Charging finishes at minute 18 whichever rule runs the uplink, so no upload rule can make it ready sooner.'):null,feedback&&!old?el('p',{class:'flow-guess-feedback'},feedback):null,el('h4',{},'Ops takeaway to test'),el('p',{},LESSON_FRAMES[lesson].ops_takeaway)]));
+  if(cohort()&&result.arms.find(a=>a.record.rule==='cohort_shortest_upload').verification.metrics.on_time===Math.max(...result.arms.map(a=>a.verification.metrics.on_time)))output.appendChild(el('p',{},"In this lesson, shortest-upload-first gets the most visits done on time. That's a result about this scenario — not advice for real operations."));
+  output.appendChild(outcomesView(result,change));
+  renderTrace();
+  if(!cohort()&&!old){suggestion=nextSuggestion(resultOptions,seen);output.appendChild(el('section',{class:'flow-next'},[el('h3',{},'Next test to try'),el('p',{},suggestion.question),button(suggestion.button,()=>{const next=suggestion;setOptions({[next.key]:next.value});configureGuess(next);changeSetup.open=true;guessDetail.open=true;guess.focus();})]));}
+  output.appendChild(detail('Capacity bound',[boundView(result)]));
+  output.appendChild(detail('Vehicle task histories',[table('Task completion times across rules',['Rule and vehicle','Upload finished','Battery target','Local step finished','Ready'],result.arms.flatMap(a=>a.verification.visits.map(v=>[`${ruleName(a.record.rule)} · Vehicle ${v.vehicle}`,minute(v.tasks.upload),minute(v.tasks.charge),minute(v.tasks.post),minute(v.ready_s)]))),el('p',{},'The last prerequisite completed sets readiness: compare the battery target with the local step. The local step can start only after upload; charging is independent. Missing completion stays unavailable.')]));
+  output.appendChild(checksView(result));output.appendChild(detail('Exact event ledger and export',[eventLedger(result),button('Download this run as JSON',()=>{const url=URL.createObjectURL(new Blob([exportJSON()],{type:'application/json'}));const a=el('a',{href:url,download:`fleetlab-depot-flow-run-${result.run_id}.json`});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);})]));
+ }
+ function renderTrace(){
+  const moments=guidedMoments(result),times=[...new Set([0,result.scenario.horizon_s,...result.arms.flatMap(a=>a.record.events.map(e=>e.time_s))])].sort((a,b)=>a-b);
+  let selectedVehicle=null,selectedRule=null,lastText=-1;
+  const phone=globalThis.matchMedia?.('(max-width: 767.98px)'),shownRule=()=>phone?.matches?selectedRule:null;
+  const trace=el('section',{class:'flow-trace','aria-label':'Recorded service timeline'},[el('h3',{},'Follow the work, one event at a time'),el('p',{},'Upload, charging and the local step have distinct marks. Departure deadlines stay visible. Run computes the full outcomes above; Play or Next event reveals the recorded service without changing those outcomes.')]),readout=el('div',{'data-cursor-state':''}),clock=el('p',{class:'flow-clock'}),caption=el('p',{class:'flow-caption'});
+  // Under reduced motion Play is hidden: Previous event and Next event are the manual steps, and two controls named Next event would be ambiguous.
+  const play=button('Play',()=>{const s=player.getState();s.playing?player.pause():player.play();});
+  const previousButton=button('Previous event',()=>{if(player.getState().time_s>0)player.previous();}),next=button('Next event',()=>{const s=player.getState();if(s.time_s<result.scenario.horizon_s)s.reduced?player.play():player.next();},{'data-next-event':''});
+  const slider=el('input',{type:'range',min:0,max:result.scenario.horizon_s,step:1,value:0,'aria-label':'Inspect time across upload rules',on:{input:()=>player.seek(Number(slider.value)),change:()=>announce(eventSentence(result,player.getState().time_s)),keydown:event=>{if(event.ctrlKey||event.metaKey||event.altKey)return;const d={ArrowLeft:-60,ArrowDown:-60,ArrowRight:60,ArrowUp:60,PageDown:-300,PageUp:300}[event.key];if(d!==undefined){event.preventDefault();player.seek(player.getState().time_s+d);announce(eventSentence(result,player.getState().time_s));}}}});
+  const speed=el('select',{'aria-label':'Playback speed',on:{change:()=>player.setSpeed(Number(speed.value))}},[10,20,40].map(n=>el('option',{value:n,selected:n===20},`${n}×`)));
+  const guided=el('input',{type:'checkbox',checked:true,on:{change:()=>player.setGuided(guided.checked)}});
+  const speedLabel=el('label',{},[el('span',{},'Speed'),speed]),guidedLabel=el('label',{class:'flow-guided'},[guided,el('span',{},'Pause at guided moments')]);
+  chart=flowLanesCharts({result,rules:rules(),moments,onTableChange:()=>player?.pause()});
+  const ruleButtons=rules().map(r=>button(r.name,()=>{selectedRule=r.id;chart.setRule(r.id);ruleButtons.forEach((b,i)=>b.setAttribute('aria-pressed',String(rules()[i].id===r.id)));renderReadout(player.getState().time_s);},{'aria-pressed':'false'}));
+  const follow=el('select',{'aria-label':'Vehicle to follow',on:{change:()=>{selectedVehicle=follow.value||null;chart.setVehicle(selectedVehicle);renderReadout(player.getState().time_s);}}},[['','All vehicles'],...result.scenario.vehicles.map(v=>[v.id,`Vehicle ${v.id}`])].map(([value,text])=>el('option',{value},text)));
+  if(cohort()){selectedRule=rules()[0].id;const sync=()=>{chart?.setRule(shownRule());if(player)renderReadout(player.getState().time_s);};sync();ruleButtons[0].setAttribute('aria-pressed','true');trace.appendChild(el('div',{class:'flow-rule-picker fl-segmented','aria-label':'Timeline rule'},ruleButtons));phone?.addEventListener('change',sync);const oldDispose=chart.dispose;chart.dispose=()=>{phone?.removeEventListener('change',sync);oldDispose();};}
+  trace.append(chart.element,el('div',{class:'flow-actions'},[play,button('Restart',()=>player.restart()),previousButton,next,speedLabel,guidedLabel,el('label',{},[el('span',{},'Vehicle to follow'),follow])]),clock,slider,caption,detail('Guided moments',moments.map(m=>button(m.label,()=>{player.seek(m.time_s);announce(m.caption);}))),readout);
+  function renderReadout(t){const chains=[],rows=[];for(const a of result.arms)for(const v of inspectState(a.record,t).vehicles.filter(v=>!selectedVehicle||v.vehicle===selectedVehicle)){if(!shownRule()||a.record.rule===shownRule())chains.push(readinessChain(a.record,v));rows.push([ruleName(a.record.rule),`Vehicle ${v.vehicle}`,v.text.readiness,v.text.upload,v.text.energy,v.text.post]);}readout.replaceChildren(resourceBoard(result,t,shownRule(),selectedVehicle),...chains,table(`Minute ${Number((t/60).toFixed(3))} · state after events at this time`,['Rule','Vehicle','Readiness','Upload','Energy','Local step'],rows));}
+  /** One player frame: chart, controls and slider on every frame; clock, caption and readout only when the text changes. */
+  function renderFrame(s){
+   chart.setReveal(s.revealing);
+   chart.setCursor(s.time_s);
+   const held=s.reduced&&document.activeElement===play;
+   speedLabel.hidden=guidedLabel.hidden=play.hidden=s.reduced;
+   play.textContent=s.label;
+   if(held)next.focus();
+   slider.value=String(s.time_s);
+   previousButton.setAttribute('aria-disabled',String(s.time_s===0));
+   next.setAttribute('aria-disabled',String(s.time_s===result.scenario.horizon_s));
+   if(!s.textChanged&&lastText>=0)return;
+   lastText=s.time_s;
+   clock.textContent=`Minute ${Number((s.time_s/60).toFixed(3))} of ${result.scenario.horizon_s/60}${s.reduced?' · Reduced motion: step by event':''}`;
+   slider.setAttribute('aria-valuetext',clock.textContent);
+   caption.textContent=s.moment?.caption??eventSentence(result,s.time_s);
+   renderReadout(s.time_s);
+  }
+  player=createDepotFlowPlayer({horizon_s:result.scenario.horizon_s,eventTimes:times,moments,quantum_s:cohort()?result.scenario.time_quantum_ms/1000:1,reducedMotion,eventSentence:t=>eventSentence(result,t),announce,render:renderFrame});
+  player.seek(0);output.appendChild(trace);
+ }
+ function setLesson(record){if(!lessons.some(l=>l[0]===record?.id))throw new RangeError('Unknown depot flow lesson');pause();stopPlayer();lesson=record.id;options=cohort()?{time_quantum_ms:1000}:defaults();result=null;resultOptions=null;attempt=null;previous=null;comparison=null;feedback=null;seen=[];suggestion=null;output.replaceChildren();buildLesson();}
+ function exportJSON(){return JSON.stringify(result,null,2);}
+ buildLesson();return {element,run,cancel,setOptions,exportJSON,setLesson,getState:()=>structuredClone({lesson,options,result,attempt}),pause,motionChanged(){player?.motionChanged();},destroy(){cancel();stopPlayer();destroyed=true;}};
+}

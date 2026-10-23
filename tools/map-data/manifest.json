@@ -1,0 +1,41 @@
+{
+  "endpoint": "https://overpass-api.de/api/interpreter",
+  "osm_base": "2026-09-19T02:37:34Z",
+  "source_ways": 51408,
+  "source_graph_nodes": 209324,
+  "largest_connected_component": 209245,
+  "component_count": 2,
+  "route_pairs": 153,
+  "retained_nodes": 918,
+  "retained_chains": 174,
+  "retained_ways": 3678,
+  "coastline_fragments": 282,
+  "data_bytes": 176375,
+  "data_sha256": "19fce9dabb761048f2f5f5db66b3c7e12d10eff9152603d28ceae09da1b003dd",
+  "source_sha256": {
+    "places": "3e5115a7f58509564969715f11c3cf1540a769c54990e7fe086a868c71622ba6",
+    "roads": "a2f6f4c2289ed119587393d70af8d15f2f90b50da3189dd218193899b8db0f5c",
+    "coast": "93cccbed48ab056bcbec4a204bc49f18e3d8543e2bc44554848cb4639d665c07",
+    "labels": "7ec71963af816d69dd1270af26482533f131e68d5ed984c92b53a3760d7d3449"
+  },
+  "anchor_offsets_km": {
+    "san-francisco": 0.051918,
+    "sfo": 0.68344,
+    "daly-city": 0.145898,
+    "colma": 0.00888,
+    "broadmoor": 0.781148,
+    "brisbane": 0.013218,
+    "south-san-francisco": 0.017174,
+    "san-bruno": 0.043889,
+    "millbrae": 0.611833,
+    "burlingame": 0.249265,
+    "san-mateo": 0.034673,
+    "menlo-park": 0.08731,
+    "palo-alto": 0.304121,
+    "los-altos": 0.20057,
+    "mountain-view": 0.120707,
+    "sunnyvale": 0.020243,
+    "san-jose": 0.001838,
+    "sjc": 0.413165
+  }
+}

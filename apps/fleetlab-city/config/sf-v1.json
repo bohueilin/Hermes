@@ -1,0 +1,22 @@
+{
+  "schema": "fleetlab.city-import-config/1.0.0",
+  "source_dir": "build/fleetlab-city/sources",
+  "output": "build/fleetlab-city/packs/sf-v1",
+  "osm_sha256": "8744a2e1fc36719f0ba0b9040664bd62b4d9df2719e65c2d14007c214e6a31e7",
+  "districts_sha256": "086ad7af9684db480f15e6e8f19f52bac792cb8ec9e39c92ead2b3e835b41276",
+  "routing_buffer_bbox": [
+    -122.54,
+    37.695,
+    -122.33,
+    37.845
+  ],
+  "boundary": "OSM relation 111968; full municipality including maritime/island areas; roads are source features",
+  "profile": "passenger car; conservatively blocked conditional/via-way restrictions; no immediate U-turn",
+  "source_urls": {
+    "osm": "https://overpass-api.de/api/interpreter",
+    "districts": "https://data.sfgov.org/resource/f2zs-jevy.geojson?$limit=100",
+    "districts_metadata": "https://data.sfgov.org/api/views/f2zs-jevy"
+  },
+  "query": "[out:xml][timeout:180];\narea(3600111968)->.sf;\n(way(area.sf)[\"highway\"];way(37.695,-122.54,37.845,-122.33)[\"highway\"];)->.roads;\n(.roads;rel(bw.roads)[\"type\"=\"restriction\"];rel(111968););\n(._;>>;);out body;\n",
+  "frozen_before_evaluation": true
+}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>FleetLab · optional traffic estimate</title><link rel="stylesheet" href="/styles.css"><script type="module" src="/app.js"></script></head>
+<body><main>
+<p class="eyebrow">Hermes FleetLab · separate online companion</p>
+<h1>A travel-time estimate for one real route.</h1>
+<p>Compare Google Maps traffic-aware travel time with its estimate without traffic, for a departure you choose. This result does not change FleetLab’s synthetic simulation.</p>
+<section class="status-box" aria-labelledby="connection-title"><h2 id="connection-title">Connection</h2><p id="status" role="status">Checking local configuration…</p><p>No request to Google Maps runs on page load. An estimate may incur a charge on the configured account.</p></section>
+<form id="estimate-form" autocomplete="off">
+<fieldset id="inputs"><legend>Choose the route</legend>
+<p>Example coordinates are San Francisco to San Jose. Enter latitude and longitude in decimal degrees.</p>
+<div class="grid"><label>Origin latitude<input name="originLatitude" type="number" step="any" min="-90" max="90" value="37.7749" required></label><label>Origin longitude<input name="originLongitude" type="number" step="any" min="-180" max="180" value="-122.4194" required></label><label>Destination latitude<input name="destinationLatitude" type="number" step="any" min="-90" max="90" value="37.3382" required></label><label>Destination longitude<input name="destinationLongitude" type="number" step="any" min="-180" max="180" value="-121.8863" required></label></div>
+<label>Departure in your browser’s local time<input name="departure" type="datetime-local" required></label><p id="timezone" class="hint"></p>
+<label>Traffic model<select name="trafficModel"><option value="BEST_GUESS">Best guess</option><option value="PESSIMISTIC">Pessimistic</option><option value="OPTIMISTIC">Optimistic</option></select></label>
+<p class="hint">Choose a future time within seven days. These estimates are not confidence bounds; best guess can fall outside optimistic and pessimistic estimates. Traffic models are currently an experimental Google feature.</p>
+</fieldset>
+<p>Submitting sends these coordinates, departure time and model to Google Maps. <a href="/privacy">Privacy &amp; data handling</a> · <a href="/terms">Terms of use</a></p>
+<button id="submit" type="submit" disabled>Request one estimate</button>
+<p class="hint">Limits: one request at a time, six per minute, thirty per server session. No automatic refresh or retry.</p>
+</form>
+<section id="result" class="provider-result" aria-label="Google Maps estimate" hidden>
+<div class="attribution"><img src="/google-maps-logo.svg" alt="Google Maps" height="18"></div>
+<h2>Google Maps route estimate</h2><p id="route-context"></p><div class="grid metrics"><div><h3>With traffic</h3><p id="traffic-duration"></p></div><div><h3>Without traffic</h3><p id="static-duration"></p></div></div><p id="estimate-context"></p>
+<details><summary>Exact returned values</summary><pre id="exact-values"></pre></details>
+<p>One route estimate, not a fleet forecast, actual traffic observation, or safety assessment. The without-traffic value refers to the same returned route. Results can change with each request.</p><button id="clear" type="button">Clear estimate</button>
+</section>
+<footer><p>Simulation and planning exploration only. Google Maps is used solely in this optional panel.</p><p><a href="https://www.google.com/help/terms_maps/">Google Maps terms</a> · <a href="https://policies.google.com/privacy">Google privacy policy</a> · <a href="https://developers.google.com/maps/documentation/routes/policies">Attribution and usage policy</a></p></footer>
+</main></body></html>

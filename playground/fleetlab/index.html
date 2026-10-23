@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FleetLab | Test fleet decisions in simulation</title>
+<meta name="description" content="A browser-based teaching simulator for autonomous-vehicle fleet operations. Run a synthetic fleet day, change one constraint, and inspect the trade-offs. Simulation only.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="FleetLab | Test fleet decisions in simulation">
+<meta property="og:description" content="Run a synthetic fleet day, change one constraint, and inspect the trade-offs. Teaching models with explicit limits; no operational authority.">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<noscript>FleetLab needs JavaScript to explore its synthetic teaching models. It runs in your browser with no account. Simulation only; NOT_EVIDENCE; decision authority NONE.</noscript>
+<div id="fleetlab-root" class="fl-app" data-phone-group="now">
+<div id="fleetlab-teaching-strip" class="fl-strip"></div>
+</div>
+<script type="module">
+import { start } from "./src/ui/app.js";
+start({ studio: true, createWorker: () => new Worker(new URL("./src/runtime/worker.js", import.meta.url), { type: "module" }) });
+</script>
+</body>
+</html>

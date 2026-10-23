@@ -1,0 +1,13 @@
+# Round 5 targeted presentation fixes
+
+Baseline: `ff85e9d`. Scope: the owner's Round 5 audit §2 P3 batch and §4 source trim. No model, fixture, numerical study, budget ceiling, or P2 visualization changes. D-06 is deferred by the owner's explicit follow-up; retain D-01/02/03/05.
+
+1. **Source trim.** Reuse the existing hosted-route packaging implementation for delivery-order; remove confirmed unused UI code; consolidate identical presentation helpers where their semantics agree. Retain parity-only legacy modules, map data and all captured ownership. Record exact gross savings, additions and net changes separately from media/tests. Verify package source capture and tamper rejection.
+2. **Network lessons.** Fix dispatch chapter event targeting; explain phase labels and balance counts; add truthful loading indicators to dispatch/rebalancing. Clarify capacity initialization and terminology without automatic extra computation. Explain software delivery vocabulary before use, reveal its existing concept artwork and fix grid overflow. Explain order ties/positions and preserve initial values and accepted state.
+3. **Existing playground UX.** Add a visible staffing setup path and model legend; clarify empty result/capacity sections without fabricated samples. Remove any reproduced optional-guess glitch and standardize deadline phrasing. Collapse unused experiment rows, show an annotated nonnumeric row, and show real run progress or indeterminate preparation. Make all catalog topics discoverable.
+4. **Validation.** Focused behavioral regressions; desktop/mobile and accessibility inspection; full teaching/city/Python gates; budget and captured-source checks. Review the complete patch with one fresh-context reviewer. Record unreproduced findings rather than claiming fixes.
+5. **Delivery.** Update item-by-item handoff, source-trim accounting and remaining P2 queue. Continue the previously authorized repository/live release workflow only after gates pass. Preserve original supplied assets and unrelated untracked files.
+
+Review focus: chapter event bubbling; loading/error transitions; model/result identity preservation; no invented progress or measurements; default and edited order outcomes; keyboard/mobile overflow; unchanged budget ceilings and full source capture; no accidental loss of existing artwork.
+
+Explicit rulings: capacity hero and fleet-day result/sweep illustrations remain excluded P2 work. Existing persistent delivery-order tables are inspected rather than replaced by excluded bars. Missing notebook references must be verified against actual code; no nonexistent destination is invented. Gross source savings cannot be inferred from prior media savings.

@@ -1,0 +1,37 @@
+{
+  "site-media/fleetlab-logo.png": {
+    "bytes": 39618,
+    "sha256": "bfa70ffa4d0375e5299332c79533a12977d41a97f6f4752cd17fade9c5ea6f5d",
+    "source": "apps/fleetlab-city/brand-media/fleetlab-logo.png"
+  },
+  "site-media/readiness.jpg": {
+    "bytes": 401446,
+    "sha256": "494f4499e7a9b2a3f2dd441d3f7f34418c33c41e124b46c73111a7e9de2ac110",
+    "source": "apps/fleetlab-city/brand-media/readiness.jpg"
+  },
+  "site-media/fleetlab-logo-64.png": {
+    "bytes": 3368,
+    "sha256": "d72f2d2b1fa81e07b63cbbf0048e945d55ccbe73ff7ee117684880317fe4747f",
+    "source": "apps/fleetlab-city/brand-media/fleetlab-logo-64.png"
+  },
+  "site-media/fleetlab-logo-128.png": {
+    "bytes": 10347,
+    "sha256": "0953baf3272679f9482980d567dd3f18d9a3f67196eec20b18990046ecfc350f",
+    "source": "apps/fleetlab-city/brand-media/fleetlab-logo-128.png"
+  },
+  "site-media/favicon.png": {
+    "bytes": 1614,
+    "sha256": "a7edee10ea0de90df27fd7084011401ddd7f57246baaee048bcc45e74997a325",
+    "source": "apps/fleetlab-city/brand-media/favicon.png"
+  },
+  "site-media/apple-touch-icon.png": {
+    "bytes": 21051,
+    "sha256": "654edab6ec1fcd21b3c0faace8a211b4dc1dca14de9503cb2b96802e11e7c3df",
+    "source": "apps/fleetlab-city/brand-media/apple-touch-icon.png"
+  },
+  "site-media/shared-delivery.webp": {
+    "bytes": 145670,
+    "sha256": "9139c4f68e6ef71557277fe40ea977176dfbb8fe26ed9d6331c6c7afcbd725ba",
+    "source": "apps/fleetlab-city/brand-media/shared-delivery.webp"
+  }
+}

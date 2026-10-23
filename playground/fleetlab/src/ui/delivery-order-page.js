@@ -1,0 +1,147 @@
+import {networkChrome} from './network-chrome.js';
+import {setAttr} from './dom.js';
+import {FLOW_TRUST} from '../model/depot-flow-contract.js';
+import {ORDER_MANIFEST_SCHEMA,ORDER_POLICY_VERSION,orderCanonical,orderDigest,normalizeOrderInput} from '../model/delivery-order-contract.js';
+import {ORDER_STUDY_VERIFIER_VERSION} from '../model/delivery-order-study-verify.js';
+import {createOrderJob} from '../runtime/delivery-order-job.js';
+import {createOrderProjection,ORDER_CHAPTERS,orderSeconds as sec} from './delivery-order-view.js';
+import {createOrderPlayer} from './delivery-order-player.js';
+const el=(tag,attrs={},children=[])=>{const n=document.createElement(tag);for(const [k,v]of Object.entries(attrs))if(v!==null)setAttr(n,k,v);for(const c of [children].flat())if(c!==null&&c!==undefined)n.appendChild(typeof c==='string'?document.createTextNode(c):c);return n;};
+const p=(t,cls='')=>el('p',{class:cls},t),btn=(t,fn,a={})=>{const b=el('button',{type:'button',...a},t);b.addEventListener('click',fn);return b;};
+const detail=(name,content)=>el('details',{},[el('summary',{},name),...content]);
+const immutable=v=>{if(v&&typeof v==='object'){Object.values(v).forEach(immutable);Object.freeze(v);}return v;};
+const same=(a,b)=>a?.join(',')===b?.join(',');
+const delta=n=>`${n>0?'+':''}${sec(n)}`;
+const names={default:'Different targets',impossible:'One impossible target',close:'Close targets',tie:'Equal targets'};
+const lessons={default:'A better fleet count can make an individual vehicle later. Best serves V4 first; V1 waits 144 seconds longer and still meets its target.',impossible:'V1 cannot meet 220 s: receipt must end by 130 s, but only 8.5 of 12 GB can arrive by then. Best saves three targets; earliest-target-first saves none. Its lower total lateness (134 s versus 158 s) is a different trade-off.',close:'Earliest-target-first misses two targets by 2 s each. Best misses one by 50 s. More vehicles on time comes at a real cost to V2.',tie:'Every order ties: all four vehicles meet their targets with zero lateness. Optimization offers no objective improvement, although individual ready times change.'};
+const narration=['Both orders download the same 12 GB copy. Arrivals are 0, 30, 60 and 90 s; all inputs are known when the copy completes.', 'At 96 s, the depot copy is complete. First come serves V1; Best serves V4. Only local receipt order changes.', 'At 144 s, the first receipt ends. Its 60-second check begins while the next vehicle receives. The local link does not wait for checks.', 'At 234 s, Best’s V4 is ready before its 240-second target. First come’s V1 is also ready, with more target slack.', 'At 330 s, First come’s V3 is 40 seconds late. Best’s V2 is ready before 340 seconds. The order changed who received scarce early service.', 'Both fleets finish at 378 s with identical byte totals. Best meets 4 of 4 targets versus 2 of 4. V1 becomes ready 144 seconds later, still on time.'];
+export function createOrderPage({manifest,createWorker,runStudy=null,runEqualShare=null,cancelStudy=()=>{},reducedMotion=()=>false}={}){
+ manifest=immutable(JSON.parse(orderCanonical(manifest)));
+ if(manifest.schema!==ORDER_MANIFEST_SCHEMA||manifest.policy_version!==ORDER_POLICY_VERSION||manifest.verifier_version!==ORDER_STUDY_VERIFIER_VERSION||Object.keys(names).some(id=>!manifest.cases?.[id]||manifest.cases[id].input_digest!==orderDigest(normalizeOrderInput(manifest.cases[id].input))))throw Error('Published study unavailable or incompatible.');
+ let pendingCase='default',accepted=null,viewed=[],viewName='Your order',loading=false,serial=0,destroyed=false,arm='baseline',guideBound=false,fullWindow=false,equalResult=null,visible=true,pendingGuideStart=false,loadTrigger=null;
+ const saved=Object.fromEntries(Object.keys(names).map(id=>[id,manifest.cases[id].input.delivery.requests.map(r=>r.id)]));let pending=[...saved.default];
+ const job=runStudy?null:createOrderJob({createWorker}),run=runStudy??(entry=>job.run(entry)),stop=()=>{job?.cancel();cancelStudy();};
+ const element=el('div',{class:'order-shell'}),announcement=p('','sr-only');announcement.setAttribute('role','status');announcement.setAttribute('aria-atomic','true');
+ const status=p('Published summary · no calculation has started.','status');status.setAttribute('data-status','');
+ const resultCase=p('Different targets · published summary','eyebrow');resultCase.setAttribute('data-result-case','');
+ const compare=btn('Compare my order',()=>load(),{class:'primary'}),cancelButton=btn('Cancel check',()=>cancel()),watch=btn('Watch worked example',()=>watchExample(),{class:'secondary'});
+ const cases=el('div',{class:'case-buttons','aria-label':'Scenario'},Object.keys(names).filter(id=>id!=='tie').map(id=>btn(names[id],()=>selectCase(id),{'data-case':id,'aria-pressed':id===pendingCase})));
+ const editStatus=p('','edit-status'),editor=el('ol',{class:'order-editor','aria-label':'Pending service order'});
+ const cards=el('div',{class:'outcome-grid'}),outcomeNote=p('','outcome-note'),delay=p('','delay-callout');delay.setAttribute('data-outcome-delta','');
+ const title=el('h2',{tabindex:'-1'},'Same work. Different consequences.');
+ const best=btn('Show best of 24',()=>showBest()),restore=btn('Restore my order',()=>restoreOrder()),earliest=btn('Try earliest target',()=>{pauseGuide();pending=manifest.cases[pendingCase].input.delivery.requests.slice().sort((a,b)=>a.deadline_ms-b.deadline_ms||(a.id<b.id?-1:1)).map(r=>r.id);renderEditor();});
+ const strips=el('div',{class:'schedule-grid','data-arm':'baseline'}),bench=el('section',{class:'timeline-bench'});
+ const clock=el('strong',{class:'clock'},'0 s'),caption=p('','caption'),guideTitle=el('h3',{tabindex:'-1'},'Inspect the checked schedule');
+ const play=btn('Start guide',()=>{if(!guideBound)return;const s=player.state();if(s.playing)player.pause();else player.resume();},{'data-guide-play':''});
+ const previous=btn('Previous',()=>{player.chapter(Math.max(0,player.state().chapter-1));say();}),next=btn('Next',()=>{player.chapter(Math.min(5,player.state().chapter+1));say();});
+ const chapters=el('div',{class:'chapters'},ORDER_CHAPTERS.map((t,i)=>btn(`${sec(t)}`,()=>{player.chapter(i);say();},{'aria-label':`Snapshot ${i+1}: ${sec(t)}`})));
+ const range=el('input',{type:'range',min:'0',max:'480000',step:'1000',value:'0','aria-label':'Inspect simulated time'});range.addEventListener('input',()=>player.inspect(Number(range.value)));range.addEventListener('change',()=>say());
+ const vehicle=el('select',{'aria-label':'Selected vehicle'},['V1','V2','V3','V4'].map(id=>el('option',{value:id},id)));vehicle.addEventListener('change',()=>{player.inspect(player.state().time_ms,vehicle.value);say();});
+ const arms=['baseline','comparison'].map(id=>btn(id==='baseline'?'First come':'Compared order',()=>setArm(id),{'data-arm-button':id,'aria-pressed':id===arm}));
+ const table=el('div',{class:'vehicle-table'}),matrix=el('div',{class:'matrix-wrap'}),allOrders=el('div',{class:'all-orders'}),evidence=el('div',{class:'evidence'}),equal=p('Run this separate allocation policy only when you request it.');
+ const equalButton=btn('Compare equal sharing',()=>equalShare());
+ const player=createOrderPlayer({onChange:()=>renderClock()});player.preference(reducedMotion());
+ const top=el('header',{},[el('a',{class:'brand',href:'/#/overview'},[el('span',{class:'brand-icon'},'F'),el('strong',{},'FleetLab')]),el('nav',{'aria-label':'Main'},[el('a',{href:'/#/catalog'},'Explore'),el('a',{href:'/network-flows/software-delivery/'},'Software delivery'),el('a',{href:'/#/approach'},'About & limits')])]);
+ bench.append(el('div',{class:'bench-heading'},[el('div',{},[p('RECORDED MODEL TIME','eyebrow'),clock]),el('div',{class:'arm-switch','aria-label':'Visible arm on phone'},arms)]),
+  el('div',{class:'guide'},[guideTitle,caption,el('div',{class:'controls'},[play,btn('First snapshot',()=>{player.chapter(0);say();}),previous,next]),chapters]),
+  el('div',{class:'legend'},[p('▰ Receipt · 48 s','receipt-key'),p('▧ Check · 60 s','check-key'),p('▤ Activate · 30 s','activation-key'),p('│ Raw target · ┆ Receive by · ◇ Ready')]),strips,
+  el('div',{class:'controls'},[el('label',{},['Follow vehicle ',vehicle]),btn('Show full 2,400 s window',event=>{fullWindow=!fullWindow;event.currentTarget.textContent=fullWindow?'Show 480 s overview':'Show full 2,400 s window';range.setAttribute('max',fullWindow?'2400000':'480000');if(!fullWindow&&player.state().time_ms>480000)player.inspect(480000);renderClock();})]),range,p('Full schedules come from checked intervals; the cursor marks the inspected time. Ready targets are synthetic and inclusive. Whole-run outcomes stay fixed while you inspect time.','fine'));
+ element.append(top,el('main',{},[el('nav',{class:'breadcrumb','aria-label':'Breadcrumb'},[el('a',{href:'/#/catalog'},'Explore'),document.createTextNode(' / Network Flows / Delivery order')]),
+  el('section',{class:'hero'},[p('NETWORK FLOWS / A BOUNDED OPTIMIZATION LESSON','eyebrow'),el('h1',{},['Who gets the depot',el('br'),' link first?']),p('Four vehicles. One shared copy. Choose who receives it first, and see who has to wait.','lead'),
+   el('div',{class:'fixed-work'},[el('span',{},'12 GB fetched once'),el('span',{},'48 GB delivered locally'),el('span',{},'Only order changes')]),
+   p('A synthetic teaching model. An exact answer within this model gives no real vehicle deployment permission.','scope')]),
+  el('section',{class:'decision-panel','aria-label':'Choose a delivery order'},[el('div',{class:'section-heading'},[el('div',{},[p('01 / MAKE A CHOICE','eyebrow'),el('h2',{},'Who goes first?')]),cases]),p('All requests are known at 96 s. Move a vehicle, then compare. The target is when receipt, check and activation must all finish.','explain'),editor,editStatus,
+   el('div',{class:'controls actions'},[compare,watch,cancelButton]),status,el('div',{class:'controls alternatives'},[btn('Reset pending order',()=>{pauseGuide();pending=manifest.cases[pendingCase].input.delivery.requests.map(r=>r.id);renderEditor();}),earliest,best,restore]),p('Best of 24 checks all permutations of the four vehicles: 4 × 3 × 2 × 1 = 24 orders.','fine')]),
+  el('section',{class:'result-panel','aria-label':'Whole-run comparison'},[resultCase,title,cards,outcomeNote,delay]),bench,
+  el('section',{class:'individual-panel'},[p('02 / LOOK PAST THE FLEET TOTAL','eyebrow'),el('h2',{},'Who waits longer?'),p('Every vehicle counts. A better fleet result can move the delay onto someone else.'),table]),
+  detail('Why this order? Which vehicle gets each place in the queue?',[p('Each vehicle gets one service position; each position gets one vehicle. Cells show missed target / late seconds. These are assignment units, not bytes. The selected cells explain the compared order.'),matrix,p('This is a tiny assignment network: source → vehicle → service position → sink, capacity one per edge. Minimize misses first, then total lateness. We enumerate every allowed assignment rather than installing a general solver.','fine')]),
+  detail('Compare equal sharing: a different policy class',[p('NF04 shares the local link among eligible vehicles. It is checked on this same workload but is outside the 24 serial orders. It cannot invalidate the narrower “best permitted order” statement.'),equalButton,equal]),
+  detail('When optimization offers no benefit',[p('With all four targets at 480 s, every permitted order meets every target. All 24 tie on the objective, although each vehicle can become ready at a different time.'),btn('Inspect all 24 tied orders',async()=>{selectCase('tie');await load();})]),
+  detail('All permitted orders and exact identities',[allOrders,evidence]),
+  el('section',{class:'learning-panel'},[p('03 / CONNECT THE LESSON','eyebrow'),el('h2',{},'An operational question, not a universal answer.'),el('div',{class:'learning-grid'},[
+   el('article',{},[el('h3',{},'Network Flows'),p('Separate reusable work from scarce service slots. Which assignment meets the objective, and who absorbs the delay?')]),
+   el('article',{},[el('h3',{},'Fleet operations'),p('Subtract checks and activation from the ready target to find the useful receipt deadline. Urgent-first can spend an early slot on a target already lost.')]),
+   el('article',{},[el('h3',{},'Depot planning'),p('Measure useful throughput, receiver caps, artifact sizes, arrivals and real task durations before applying this mechanism to a facility.')])])]),
+  detail('Assumptions, exclusions and trust states',[p('One empty-cache depot, one 12 GB artifact, 125 MB/s upstream and 250 MB/s local capacity, full-rate receivers, equal-sized receipts, no idle gaps, passing 60 s checks and 30 s activation. All arrivals occur by 96 s. Observation window: 2,400 s. No failures, retries, changing rates, partial files, uncertain arrivals, charging, driving or real software installation.'),p('Best means the lexicographic minimum of missed vehicles, then total late milliseconds, among these serial orders. Maximum individual lateness is reported separately. No weighted safety or business score is implied.'),p(`Scope: ${FLOW_TRUST.scope} · Evidence: NOT_EVIDENCE · Authenticity: NOT_AUTHENTICATED · Authorization: NOT_EVALUATED · Decision authority: NONE · Deployment permission: NONE.`)]),
+  el('footer',{},[el('a',{href:'/network-flows/software-delivery/'},'← Back to software delivery'),el('a',{href:'/downloads/teaching-package.json'},'Teaching source & build receipt'),el('a',{href:'mailto:bohueilin@gmail.com'},'Contact the creator')])]),announcement);
+ networkChrome(element);
+ function say(){if(!accepted)return;announcement.textContent=`${sec(player.state().time_ms)}. ${caption.textContent}`;}
+ function pauseGuide(){pendingGuideStart=false;guideBound=false;player.pause();}
+ function renderEditor(){
+  const entry=manifest.cases[pendingCase],focused=document.activeElement,focusId=focused?.getAttribute?.('data-move');
+  editor.replaceChildren(...pending.map((id,i)=>{const req=entry.input.delivery.requests.find(r=>r.id===id);return el('li',{},[el('span',{class:'position'},String(i+1)),el('div',{class:'vehicle-label'},[el('strong',{},id),el('span',{},`Target ${sec(req.deadline_ms)}`),el('small',{},`Arrival ${sec(req.arrival_ms)}`)]),el('div',{class:'move-controls'},[btn('↑',()=>move(id,-1),{'aria-label':`Move ${id} earlier`,'data-move':`${id}:-1`,disabled:i===0?'':null}),btn('↓',()=>move(id,1),{'aria-label':`Move ${id} later`,'data-move':`${id}:1`,disabled:i===pending.length-1?'':null})])]);}));
+  if(focusId){const replacement=editor.querySelector(`[data-move="${focusId}"]`);if(replacement&&!replacement.disabled)replacement.focus();else{const other=editor.querySelector(`[data-move="${focusId.split(':')[0]}:${focusId.endsWith(':-1')?1:-1}"]`);other?.focus();}}
+  const dirty=!accepted||accepted.id!==pendingCase||!same(pending,viewed);
+  editStatus.textContent=`Selected: ${names[pendingCase]}. ${dirty?'Pending order; displayed outcomes change only after Compare.':'Displayed order matches this choice.'}`;
+  cases.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-case')===pendingCase)));
+  cancelButton.hidden=!loading;compare.disabled=loading;
+ }
+ function metricCard(label,m){return el('article',{},[p(label,'eyebrow'),!accepted&&label==='Your order'?p('Default First come summary. Choose Compare my order to check your pending edits.','fine'):null,el('strong',{class:'big-count'},`${m.on_time_count}/${m.request_count}`),p('ready by target'),el('dl',{},[['Total late time',sec(m.late_ms_total)],['Worst late time',sec(m.max_late_ms)],['All ready',sec(m.all_ready_ms)]].flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]))]);}
+ function renderOutcomes(){
+  const entry=accepted?.entry??manifest.cases.default,base=accepted?.projection.outcome(accepted.fcfs),comp=accepted?.projection.outcome(viewed),a=base?.metrics??entry.fcfs_metrics,b=comp?.metrics??entry.fcfs_metrics;
+  resultCase.textContent=`${accepted?names[accepted.id]:names.default} · ${accepted?'checked complete study':'published summary'}`;
+  cards.replaceChildren(metricCard('First come',a),metricCard(viewName,b),el('article',{class:'objective-card'},[p('HELD FIXED','eyebrow'),el('strong',{},'12 / 48 GB'),p('Upstream / local work in both orders'),p('Goal: miss as few deadlines as possible. Among orders that tie, pick the one with the least total lateness.','fine')]));
+  outcomeNote.textContent=accepted?`${same(viewed,accepted.study.representative_order)?lessons[accepted.id]:same(viewed,accepted.fcfs)?'Both orders match. Every vehicle has the same ready time in both arms.':`${viewName} meets ${b.on_time_count} of ${b.request_count} targets; First come meets ${a.on_time_count}. Inspect the individual delays below.`} ${accepted.study.best_orders.length===1?'One best order':`${accepted.study.best_orders.length} orders share the best score`} among ${accepted.study.records.length} permitted. See every order and its score in the disclosure below.`:'The default order is First come. Your edits are pending; compare to see their results.';
+  delay.textContent='Selected vehicle V1: 0 s difference between matching orders.';
+  table.replaceChildren();matrix.replaceChildren();allOrders.replaceChildren();evidence.replaceChildren();
+  if(!accepted){table.append(p('Compare an order to inspect each vehicle’s checked outcome.'));return;}
+  const header=el('div',{class:'vehicle-row table-head'},['Vehicle / target','First come','Compared order','Ready-time change'].map(x=>el('strong',{},x)));
+  table.append(header,...base.vehicles.map(v=>{const c=comp.vehicles.find(x=>x.id===v.id),late=Math.max(0,c.ready_ms-c.deadline_ms);return el('div',{class:'vehicle-row'},[el('div',{},[el('strong',{},v.id),p(`Target ${sec(v.deadline_ms)}`),p(`Receive by ${sec(v.deadline_ms-90000)}`,'fine')]),el('div',{},[el('small',{},'First come'),p(sec(v.ready_ms)),p(v.ready_ms<=v.deadline_ms?'On time':`${sec(v.ready_ms-v.deadline_ms)} late`,'fine')]),el('div',{},[el('small',{},viewName),p(sec(c.ready_ms)),p(late?`${sec(late)} late`:'On time','fine')]),el('strong',{class:c.ready_ms>v.ready_ms?'later':''},delta(c.ready_ms-v.ready_ms))]);}));
+  const assignment=accepted.projection.assignment(viewed),mt=el('table',{},[el('caption',{},'Miss indicator / late seconds; ✓ marks the compared assignment'),el('thead',{},el('tr',{},[el('th',{scope:'col'},'Vehicle'),...assignment[0].cells.map(c=>el('th',{scope:'col'},`${c.position} · ${sec(c.ready_ms)}`))])),el('tbody',{},assignment.map(row=>el('tr',{},[el('th',{scope:'row'},row.id),...row.cells.map(c=>el('td',{class:c.selected?'assigned':''},`${c.selected?'✓ ':''}${c.miss?1:0} / ${sec(c.late_ms)}`))])))]);matrix.append(mt);
+  allOrders.append(p(`Complete coverage: ${accepted.study.records.length}/${accepted.study.records.length}. All inputs known at 96 s. Exact optimum only within serial, nonpreemptive, no-idle delivery.`),el('ol',{},accepted.study.records.map(r=>el('li',{},`${r.order.join(' → ')} · ${r.metrics.on_time_count}/4 on time · ${sec(r.metrics.late_ms_total)} total late${accepted.study.best_orders.some(o=>same(o,r.order))?' · shares best score':''}`))));
+  evidence.append(...comp.vehicles.map(v=>p(`${v.id} exact milliseconds: receipt ${v.receive_start_ms.toLocaleString('en-US')} to ${v.receive_end_ms.toLocaleString('en-US')}; check ends ${v.check_end_ms.toLocaleString('en-US')}; ready ${v.ready_ms.toLocaleString('en-US')}; raw target ${v.deadline_ms.toLocaleString('en-US')}. Received ${v.received_bytes.toLocaleString('en-US')} bytes.`)),p(`Input: ${accepted.study.input_digest}`),p(`Study: ${accepted.study.study_digest}`),p(`Policy: ${accepted.study.policy_version}; domain: ${accepted.study.domain}; quantum: ${accepted.study.quantum_ms} ms. Build-time 250 ms refinement reproduces objective and ready times. Its input and study identities are distinct.`),p(`Refined study: ${entry.refinement.study_digest}`));
+ }
+ function schedule(order,label,t){
+  const projection=accepted.projection,record=projection.outcome(order),end=fullWindow?2400000:480000;
+  const svg=(tag,attrs={},text='')=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v]of Object.entries(attrs))setAttr(n,k,v);if(text)n.textContent=text;return n;};
+  const chart=svg('svg',{viewBox:'0 0 480 252',role:'img','aria-label':`${label}: ${order.join(', ')}. At ${sec(t)}. Exact interval details follow.`}),x=ms=>64+ms/end*398;
+  chart.append(svg('title',{},`${label} checked schedule`));
+  for(let i=0;i<=4;i++){const at=end*i/4;chart.append(svg('line',{x1:x(at),x2:x(at),y1:26,y2:228,class:'grid-line'}),svg('text',{x:x(at),y:15,'text-anchor':i===4?'end':'middle',class:'axis-label'},String(at/1000)+' s'));}
+  record.vehicles.forEach((v,i)=>{const y=46+i*48,state=projection.at(order,t,v.id);chart.append(svg('text',{x:4,y:y+13,class:'row-label'},v.id));
+   for(const [start,finish,cls,letter]of [[v.receive_start_ms,v.receive_end_ms,'receipt','R'],[v.check_start_ms,v.check_end_ms,'check','C'],[v.activation_start_ms,v.ready_ms,'activation','A']]){chart.append(svg('rect',{x:x(start),y,width:(finish-start)/end*398,height:22,rx:4,class:cls}));if(!fullWindow)chart.append(svg('text',{x:(x(start)+x(finish))/2,y:y+15,'text-anchor':'middle',class:'task-letter'},letter));}
+   chart.append(svg('line',{x1:x(v.deadline_ms-90000),x2:x(v.deadline_ms-90000),y1:y-5,y2:y+27,class:'receive-by'}));
+   chart.append(svg('line',{x1:x(v.deadline_ms),x2:x(v.deadline_ms),y1:y-5,y2:y+27,class:'target'}),svg('path',{d:`M ${x(v.ready_ms)} ${y-7} l 4 4 l -4 4 l -4 -4 Z`,class:'ready-mark'}),svg('text',{x:64,y:y+38,class:'state-label'},`${state.state} · ready ${sec(v.ready_ms)} · ${state.late_ms?sec(state.late_ms)+' late':'on time'}`));});
+  chart.append(svg('line',{x1:x(Math.min(t,end)),x2:x(Math.min(t,end)),y1:22,y2:233,class:'clock-line'}));
+  return el('article',{class:'schedule-card'},[el('h3',{},label),p(order.join(' → '),'order-line'),chart]);
+ }
+ function renderClock(){
+  if(!accepted||destroyed)return;const s=player.state();clock.textContent=sec(s.time_ms);range.value=String(s.time_ms);range.setAttribute('aria-valuetext',`${s.time_ms/1000} seconds of ${fullWindow?2400:480} seconds`);vehicle.value=s.vehicle;
+  play.hidden=!guideBound||reducedMotion();play.textContent=s.playing?'Pause guide':s.ended?'Replay guide':s.time_ms===0?'Start guide':'Resume guide';
+  previous.disabled=s.chapter===0;next.disabled=s.chapter===5;chapters.querySelectorAll('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(ORDER_CHAPTERS[i]===s.time_ms)));
+  guideTitle.textContent=guideBound?(reducedMotion()?'Six held snapshots':'Worked example · six snapshots'):'Inspect the checked schedule';
+  const a=accepted.projection.at(accepted.fcfs,s.time_ms,s.vehicle),b=accepted.projection.at(viewed,s.time_ms,s.vehicle);
+  caption.textContent=guideBound&&ORDER_CHAPTERS[s.chapter]===s.time_ms?narration[s.chapter]:`${s.vehicle}: First come is ${a.state.toLowerCase()}; ${viewName.toLowerCase()} is ${b.state.toLowerCase()}. Receipt, check and activation are separate tasks.`;
+  delay.textContent=`${s.vehicle}: ready at ${sec(a.ready_ms)} → ${sec(b.ready_ms)} (${delta(b.ready_ms-a.ready_ms)}). Compared target: ${b.late_ms?sec(b.late_ms)+' late':'on time'}.`;
+  strips.replaceChildren(schedule(accepted.fcfs,'First come',s.time_ms),schedule(viewed,viewName,s.time_ms));bench.hidden=false;
+ }
+ function cancel(announce=true){const returnFocus=document.activeElement===cancelButton;pendingGuideStart=false;serial++;if(loading){stop();loading=false;if(announce)status.textContent='Check cancelled. Previous accepted outcomes are retained.';if(equal.textContent.startsWith('Rebuilding'))equal.textContent='Equal-share check interrupted. Try again.';}player.pause();renderEditor();if(returnFocus)(loadTrigger??compare).focus();}
+ function selectCase(id){if(!names[id])return;cancel(false);pauseGuide();pendingCase=id;pending=[...saved[id]];status.textContent=accepted?`Checked ${names[accepted.id]} retained. Compare to accept ${names[id]}.`:'Selected scenario is pending. Compare to check it.';renderEditor();}
+ function move(id,direction){const index=pending.indexOf(id),to=index+direction;if(![-1,1].includes(direction)||index<0||to<0||to>=pending.length)return;cancel(false);pauseGuide();[pending[index],pending[to]]=[pending[to],pending[index]];renderEditor();}
+ async function load(mode='user'){
+  const id=pendingCase,entry=manifest.cases[id],desired=[...pending],token=++serial,trigger=document.activeElement;
+  loadTrigger=trigger?.tagName==='BUTTON'?trigger:compare;stop();loading=true;status.textContent='Comparing all 24 orders and checking the results…';renderEditor();
+  try{
+   let result;
+   if(accepted?.study.input_digest===entry.input_digest&&accepted.study.study_digest===entry.study_digest&&accepted.study.policy_version===manifest.policy_version)result={study:accepted.study,verification:accepted.verification};
+   else result=await run(entry);
+   if(destroyed||token!==serial)return false;
+   if(!result.verification?.ok||!result.verification.coverage.complete||result.verification.study_digest!==entry.study_digest||result.study.input_digest!==entry.input_digest)throw Error('Checked study identity unavailable.');
+   const study=immutable(result.study);accepted={id,entry,study,verification:result.verification,projection:createOrderProjection(study),fcfs:entry.input.delivery.requests.slice().sort((a,b)=>a.arrival_ms-b.arrival_ms||(a.id<b.id?-1:1)).map(r=>r.id)};
+   saved[id]=[...desired];viewed=mode==='best'?[...study.representative_order]:desired;viewName=mode==='best'?'Best permitted order':'Your order';guideBound=false;equalResult=null;equal.textContent='Request a checked equal-share record for this accepted workload.';
+   const moveFocus=document.activeElement===trigger||document.activeElement===cancelButton;loading=false;status.textContent=`Checked ${study.records.length} of ${study.records.length} permitted orders · ${names[id]}.`;renderOutcomes();player.chapter(0);renderEditor();
+   if(moveFocus)title.focus();announcement.textContent=`${names[id]} checked. ${viewName}: ${accepted.projection.outcome(viewed).metrics.on_time_count} of 4 on time.`;return true;
+  }catch(error){if(token!==serial||destroyed)return false;const returnFocus=document.activeElement===cancelButton;loading=false;status.textContent=`Unable to accept this comparison: ${error.message} Previous accepted outcomes are retained.`;renderEditor();if(returnFocus)loadTrigger.focus();return false;}
+ }
+ async function showBest(){return load('best');}
+ function restoreOrder(){if(!accepted)return;cancel(false);pauseGuide();status.textContent=`Checked ${names[accepted.id]} restored.`;viewed=[...saved[accepted.id]];viewName='Your order';pendingCase=accepted.id;pending=[...saved[accepted.id]];renderOutcomes();renderEditor();renderClock();}
+ async function watchExample(){selectCase('default');if(await load('best')){guideBound=true;player.preference(reducedMotion());guideTitle.focus();if(visible)player.watch();else{pendingGuideStart=true;renderClock();}say();}}
+ function setArm(value){if(!['baseline','comparison'].includes(value))return;arm=value;strips.setAttribute('data-arm',arm);arms.forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-arm-button')===arm)));}
+ async function equalShare(){if(!accepted){equal.textContent='Compare an order first so the workload is checked.';return;}const token=++serial,identity=accepted.study.study_digest,entry=accepted.entry;stop();loading=true;renderEditor();equal.textContent='Rebuilding and independently checking the NF04 equal-share record…';
+  try{const result=await (runEqualShare?runEqualShare(entry):job.run(entry,'equal-share'));if(token!==serial||!accepted||identity!==accepted.study.study_digest)return;const {input_digest,record_digest,metrics,outcomes}=result.record;equalResult=immutable({input_digest,record_digest,metrics,outcomes});const m=metrics;equal.textContent=`Checked equal share: ${m.on_time_count}/4 by target; ${sec(m.all_ready_ms)} all ready. ${result.record.outcomes.map(v=>`${v.id}: ${sec(v.ready_ms)}, ${sec(Math.max(0,v.ready_ms-entry.input.delivery.requests.find(r=>r.id===v.id).deadline_ms))} late`).join(' · ')}. Same 12 GB upstream and 48 GB local work. Separate policy class.`;
+  }catch(error){if(token===serial)equal.textContent=`Equal-share record unavailable: ${error.message}`;}finally{if(token===serial){loading=false;renderEditor();}}}
+ function suspend(){cancel(false);player.historyRestore();status.textContent=accepted?`Checked ${accepted.study.records.length} orders retained · playback paused.`:'Check interrupted. Compare to restart.';}
+ renderEditor();renderOutcomes();bench.hidden=true;
+ return {element,bench,load,showBest,restoreOrder,watchExample,move,selectCase,setArm,cancel,suspend,
+  getState:()=>({pendingCase,pendingOrder:[...pending],acceptedCase:accepted?.id??null,acceptedInput:accepted?.study.input_digest??null,savedOrder:[...saved[accepted?.id??pendingCase]],viewedOrder:[...viewed],arm,player:player.state(),loading,equalChecked:Boolean(equalResult),equalSummary:equalResult}),
+  advance:dt=>player.advance(dt),preferenceChanged(){player.preference(reducedMotion());},visibilityChanged(v){visible=Boolean(v);player.visible(v);if(v&&pendingGuideStart){pendingGuideStart=false;player.watch();}},historyRestore:()=>player.historyRestore(),destroy(){destroyed=true;serial++;stop();player.pause();}};
+}

@@ -1,0 +1,22 @@
+{
+  "site-media/r1-nf05.webp": {
+    "bytes": 58200,
+    "sha256": "7e08ea1f0465b8640be0393f23687b4b4ae952f36e5e9c8cd2b25cde870c9b48",
+    "source": "apps/fleetlab-city/rebalancing-media/r1-nf05.webp"
+  },
+  "site-media/r1-nf06.mp4": {
+    "bytes": 850111,
+    "sha256": "fb72e529a3122c30e2410aba1f1111145f4141d76d760cd40c32eec8a88e425c",
+    "source": "apps/fleetlab-city/rebalancing-media/r1-nf06.mp4"
+  },
+  "site-media/r1-nf05.mp4": {
+    "bytes": 992600,
+    "sha256": "27cdf1bc2fa71a24d6e19afc29cf130744e9d6cb7aa8d0b4d9a500cb278b0306",
+    "source": "apps/fleetlab-city/rebalancing-media/r1-nf05.mp4"
+  },
+  "site-media/r1-nf06.webp": {
+    "bytes": 82888,
+    "sha256": "60dd26033cff6aeaef0f985909827ddb83192ce6f990f99a81bfbf90abd22318",
+    "source": "apps/fleetlab-city/rebalancing-media/r1-nf06.webp"
+  }
+}

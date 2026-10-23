@@ -12,6 +12,7 @@ build/
 dist/
 
 # Local secrets and operating-system files
+.wrangler/
 .env
 .env.*
 !.env.example
@@ -59,3 +60,7 @@ Hermes_Starter_Pack/
 # Additional local-only paths are listed in .git/info/exclude, which is never
 # committed. Personal material is excluded there rather than here on purpose:
 # this file is public, so naming such a file would itself disclose it.
+
+# Reviewed R1 teaching concept derivatives; original full-size inputs remain ignored.
+!apps/fleetlab-city/rebalancing-media/r1-nf05.mp4
+!apps/fleetlab-city/rebalancing-media/r1-nf06.mp4

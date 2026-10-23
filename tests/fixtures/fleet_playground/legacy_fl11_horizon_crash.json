@@ -1,0 +1,550 @@
+{
+ "format": "fleet-playground-legacy-worlds",
+ "format_version": 1,
+ "worlds": {
+  "crash": {
+   "name": "crash",
+   "origin": "arm horizon_s 1800 over build_tape(declared scenario, horizon_s 3600, 101)",
+   "scenario": {
+    "schema_version": "0.1",
+    "name": "fleet_005_longer_turnaround",
+    "label": "synthetic_fleet_scenario_not_calibrated_to_any_real_operation",
+    "horizon_s": 1800,
+    "zones": [
+     "downtown",
+     "airport",
+     "residential"
+    ],
+    "travel_time_s": {
+     "downtown->airport": 900,
+     "airport->downtown": 900,
+     "downtown->residential": 480,
+     "residential->downtown": 480,
+     "airport->residential": 720,
+     "residential->airport": 720
+    },
+    "vehicle_count": 40,
+    "demand_per_zone_per_hour": 24,
+    "max_wait_s": 1200,
+    "trips_between_service": 6,
+    "service_bays": 6,
+    "service_duration_s": 1800,
+    "in_zone_pickup_s": 240,
+    "travel_sigma": 0.25
+   },
+   "tape": {
+    "seed": 101,
+    "demand": [
+     [
+      "r-0-0",
+      42,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-1-0",
+      89,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-0-1",
+      141,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-1-1",
+      141,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-0-2",
+      295,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-0-3",
+      299,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-2-0",
+      380,
+      "residential",
+      "downtown"
+     ],
+     [
+      "r-0-4",
+      410,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-0-5",
+      473,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-1-2",
+      580,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-1-3",
+      634,
+      "airport",
+      "residential"
+     ],
+     [
+      "r-0-6",
+      690,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-1-4",
+      746,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-0-7",
+      752,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-1-5",
+      757,
+      "airport",
+      "residential"
+     ],
+     [
+      "r-1-6",
+      792,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-0-8",
+      864,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-2-1",
+      894,
+      "residential",
+      "airport"
+     ],
+     [
+      "r-0-9",
+      896,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-0-10",
+      1035,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-1-7",
+      1155,
+      "airport",
+      "residential"
+     ],
+     [
+      "r-2-2",
+      1179,
+      "residential",
+      "downtown"
+     ],
+     [
+      "r-0-11",
+      1220,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-1-8",
+      1243,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-1-9",
+      1258,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-0-12",
+      1419,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-0-13",
+      1445,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-2-3",
+      1454,
+      "residential",
+      "downtown"
+     ],
+     [
+      "r-1-10",
+      1520,
+      "airport",
+      "residential"
+     ],
+     [
+      "r-0-14",
+      1555,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-1-11",
+      1585,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-0-15",
+      1645,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-0-16",
+      1802,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-0-17",
+      1829,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-1-12",
+      1973,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-0-18",
+      2081,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-1-13",
+      2144,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-2-4",
+      2153,
+      "residential",
+      "airport"
+     ],
+     [
+      "r-1-14",
+      2166,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-2-5",
+      2169,
+      "residential",
+      "airport"
+     ],
+     [
+      "r-2-6",
+      2170,
+      "residential",
+      "airport"
+     ],
+     [
+      "r-2-7",
+      2255,
+      "residential",
+      "airport"
+     ],
+     [
+      "r-1-15",
+      2282,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-2-8",
+      2309,
+      "residential",
+      "airport"
+     ],
+     [
+      "r-1-16",
+      2345,
+      "airport",
+      "residential"
+     ],
+     [
+      "r-1-17",
+      2410,
+      "airport",
+      "residential"
+     ],
+     [
+      "r-1-18",
+      2411,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-2-9",
+      2423,
+      "residential",
+      "downtown"
+     ],
+     [
+      "r-2-10",
+      2431,
+      "residential",
+      "airport"
+     ],
+     [
+      "r-1-19",
+      2477,
+      "airport",
+      "residential"
+     ],
+     [
+      "r-1-20",
+      2551,
+      "airport",
+      "residential"
+     ],
+     [
+      "r-2-11",
+      2587,
+      "residential",
+      "airport"
+     ],
+     [
+      "r-0-19",
+      2645,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-2-12",
+      2781,
+      "residential",
+      "downtown"
+     ],
+     [
+      "r-0-20",
+      2808,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-2-13",
+      2817,
+      "residential",
+      "downtown"
+     ],
+     [
+      "r-0-21",
+      2861,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-1-21",
+      2869,
+      "airport",
+      "residential"
+     ],
+     [
+      "r-2-14",
+      2996,
+      "residential",
+      "airport"
+     ],
+     [
+      "r-0-22",
+      3010,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-0-23",
+      3086,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-1-22",
+      3152,
+      "airport",
+      "downtown"
+     ],
+     [
+      "r-1-23",
+      3221,
+      "airport",
+      "residential"
+     ],
+     [
+      "r-0-24",
+      3241,
+      "downtown",
+      "airport"
+     ],
+     [
+      "r-0-25",
+      3365,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-0-26",
+      3400,
+      "downtown",
+      "residential"
+     ],
+     [
+      "r-2-15",
+      3405,
+      "residential",
+      "downtown"
+     ],
+     [
+      "r-2-16",
+      3466,
+      "residential",
+      "downtown"
+     ],
+     [
+      "r-2-17",
+      3515,
+      "residential",
+      "downtown"
+     ],
+     [
+      "r-2-18",
+      3569,
+      "residential",
+      "airport"
+     ],
+     [
+      "r-2-19",
+      3596,
+      "residential",
+      "downtown"
+     ]
+    ],
+    "travel_multiplier": {
+     "r-0-0": 1.3233088777871516,
+     "r-1-0": 0.9831925142783404,
+     "r-0-1": 1.2416225920145658,
+     "r-1-1": 1.5530088703847327,
+     "r-0-2": 1.4415261588635995,
+     "r-0-3": 1.0132064389532813,
+     "r-2-0": 0.8416701278475838,
+     "r-0-4": 1.0836463831036696,
+     "r-0-5": 1.3109010338318128,
+     "r-1-2": 0.9777504614485972,
+     "r-1-3": 1.0738035616061394,
+     "r-0-6": 1.5923466225181966,
+     "r-1-4": 1.1540049280348663,
+     "r-0-7": 1.7743547475483596,
+     "r-1-5": 0.7167262554191378,
+     "r-1-6": 0.7850660254025306,
+     "r-0-8": 1.0234008933152936,
+     "r-2-1": 1.9180187010003993,
+     "r-0-9": 1.1547382848251222,
+     "r-0-10": 1.3315297150217642,
+     "r-1-7": 0.8312845582984963,
+     "r-2-2": 0.8333794167423153,
+     "r-0-11": 1.2556003322269045,
+     "r-1-8": 1.0391542745040754,
+     "r-1-9": 1.3690334914058024,
+     "r-0-12": 0.7931195588852534,
+     "r-0-13": 1.539439956497278,
+     "r-2-3": 1.0278923168974463,
+     "r-1-10": 1.1214740247596409,
+     "r-0-14": 1.2459368052445285,
+     "r-1-11": 0.7111580388158236,
+     "r-0-15": 0.8238351643761939,
+     "r-0-16": 0.6258289451046597,
+     "r-0-17": 1.193399824068779,
+     "r-1-12": 0.8334498452718674,
+     "r-0-18": 1.3354546361946893,
+     "r-1-13": 0.9178805860435582,
+     "r-2-4": 0.7376094499315756,
+     "r-1-14": 1.2305677453415491,
+     "r-2-5": 1.6543635934568737,
+     "r-2-6": 1.630789288024403,
+     "r-2-7": 0.8873293352829356,
+     "r-1-15": 0.8867402366029158,
+     "r-2-8": 0.6134583906046397,
+     "r-1-16": 1.0999810729552701,
+     "r-1-17": 1.3446345904187746,
+     "r-1-18": 0.9685735613780126,
+     "r-2-9": 0.9083764685857945,
+     "r-2-10": 1.2522268806458883,
+     "r-1-19": 0.9828716164814403,
+     "r-1-20": 0.9147895747036042,
+     "r-2-11": 1.2141156526002652,
+     "r-0-19": 1.2097749637381028,
+     "r-2-12": 0.8777276094644275,
+     "r-0-20": 1.0252015341451133,
+     "r-2-13": 1.0351091865047402,
+     "r-0-21": 1.0166568657471602,
+     "r-1-21": 1.138120905863199,
+     "r-2-14": 0.9879274971458833,
+     "r-0-22": 1.0614492108089868,
+     "r-0-23": 0.7452246211747054,
+     "r-1-22": 1.1671446035036748,
+     "r-1-23": 1.2707153757621645,
+     "r-0-24": 0.9897167829571775,
+     "r-0-25": 0.7826116148782055,
+     "r-0-26": 0.8356967656858572,
+     "r-2-15": 1.15147609876251,
+     "r-2-16": 0.8021013817737954,
+     "r-2-17": 0.8366725963615802,
+     "r-2-18": 1.1335115323339182,
+     "r-2-19": 0.6912877752754857
+    }
+   },
+   "dispatch_mode": "nearest",
+   "expected": {
+    "error": "ValueError",
+    "events": null,
+    "events_digest": null,
+    "event_counts": null,
+    "metrics": null,
+    "invariant_violations": null
+   }
+  }
+ }
+}

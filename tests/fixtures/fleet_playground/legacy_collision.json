@@ -1,0 +1,404 @@
+{
+ "format": "fleet-playground-legacy-worlds",
+ "format_version": 1,
+ "worlds": {
+  "collision": {
+   "name": "collision",
+   "origin": "hand-written tape: twelve cars in two zones, one service bay, string-ordered ids",
+   "scenario": {
+    "schema_version": "0.1",
+    "name": "parity_collision_probe",
+    "label": "synthetic_fleet_scenario_not_calibrated_to_any_real_operation",
+    "horizon_s": 7200,
+    "zones": [
+     "a",
+     "b"
+    ],
+    "travel_time_s": {
+     "a->b": 600,
+     "b->a": 600
+    },
+    "vehicle_count": 12,
+    "demand_per_zone_per_hour": 1,
+    "max_wait_s": 3600,
+    "trips_between_service": 1,
+    "service_bays": 1,
+    "service_duration_s": 300,
+    "in_zone_pickup_s": 60,
+    "travel_sigma": 0.0
+   },
+   "tape": {
+    "seed": 0,
+    "demand": [
+     [
+      "r-00",
+      0,
+      "a",
+      "b"
+     ],
+     [
+      "r-01",
+      0,
+      "b",
+      "a"
+     ],
+     [
+      "r-02",
+      0,
+      "a",
+      "b"
+     ],
+     [
+      "r-03",
+      0,
+      "b",
+      "a"
+     ],
+     [
+      "r-04",
+      0,
+      "a",
+      "b"
+     ],
+     [
+      "r-05",
+      0,
+      "b",
+      "a"
+     ],
+     [
+      "r-06",
+      1500,
+      "a",
+      "b"
+     ],
+     [
+      "r-07",
+      1500,
+      "b",
+      "a"
+     ]
+    ],
+    "travel_multiplier": {
+     "r-00": 1.0,
+     "r-01": 1.0,
+     "r-02": 1.5,
+     "r-03": 1.5,
+     "r-04": 1.0,
+     "r-05": 1.0,
+     "r-06": 1.0,
+     "r-07": 1.25
+    }
+   },
+   "dispatch_mode": "nearest",
+   "expected": {
+    "error": null,
+    "events": [
+     [
+      0,
+      "REQUEST_CREATED",
+      "r-00"
+     ],
+     [
+      0,
+      "REQUEST_ASSIGNED",
+      "r-00"
+     ],
+     [
+      0,
+      "REQUEST_CREATED",
+      "r-01"
+     ],
+     [
+      0,
+      "REQUEST_ASSIGNED",
+      "r-01"
+     ],
+     [
+      0,
+      "REQUEST_CREATED",
+      "r-02"
+     ],
+     [
+      0,
+      "REQUEST_ASSIGNED",
+      "r-02"
+     ],
+     [
+      0,
+      "REQUEST_CREATED",
+      "r-03"
+     ],
+     [
+      0,
+      "REQUEST_ASSIGNED",
+      "r-03"
+     ],
+     [
+      0,
+      "REQUEST_CREATED",
+      "r-04"
+     ],
+     [
+      0,
+      "REQUEST_ASSIGNED",
+      "r-04"
+     ],
+     [
+      0,
+      "REQUEST_CREATED",
+      "r-05"
+     ],
+     [
+      0,
+      "REQUEST_ASSIGNED",
+      "r-05"
+     ],
+     [
+      60,
+      "PICKUP_COMPLETED",
+      "r-00"
+     ],
+     [
+      60,
+      "PICKUP_COMPLETED",
+      "r-01"
+     ],
+     [
+      60,
+      "PICKUP_COMPLETED",
+      "r-04"
+     ],
+     [
+      60,
+      "PICKUP_COMPLETED",
+      "r-05"
+     ],
+     [
+      90,
+      "PICKUP_COMPLETED",
+      "r-02"
+     ],
+     [
+      90,
+      "PICKUP_COMPLETED",
+      "r-03"
+     ],
+     [
+      660,
+      "TRIP_COMPLETED",
+      "r-00"
+     ],
+     [
+      660,
+      "SERVICE_QUEUE_ENTERED",
+      "v-0"
+     ],
+     [
+      660,
+      "TRIP_COMPLETED",
+      "r-01"
+     ],
+     [
+      660,
+      "SERVICE_QUEUE_ENTERED",
+      "v-1"
+     ],
+     [
+      660,
+      "TRIP_COMPLETED",
+      "r-04"
+     ],
+     [
+      660,
+      "SERVICE_QUEUE_ENTERED",
+      "v-2"
+     ],
+     [
+      660,
+      "TRIP_COMPLETED",
+      "r-05"
+     ],
+     [
+      660,
+      "SERVICE_QUEUE_ENTERED",
+      "v-3"
+     ],
+     [
+      660,
+      "SERVICE_STARTED",
+      "v-0"
+     ],
+     [
+      960,
+      "SERVICE_COMPLETED",
+      "v-0"
+     ],
+     [
+      960,
+      "SERVICE_STARTED",
+      "v-1"
+     ],
+     [
+      990,
+      "TRIP_COMPLETED",
+      "r-02"
+     ],
+     [
+      990,
+      "SERVICE_QUEUE_ENTERED",
+      "v-10"
+     ],
+     [
+      990,
+      "TRIP_COMPLETED",
+      "r-03"
+     ],
+     [
+      990,
+      "SERVICE_QUEUE_ENTERED",
+      "v-11"
+     ],
+     [
+      1260,
+      "SERVICE_COMPLETED",
+      "v-1"
+     ],
+     [
+      1260,
+      "SERVICE_STARTED",
+      "v-10"
+     ],
+     [
+      1500,
+      "REQUEST_CREATED",
+      "r-06"
+     ],
+     [
+      1500,
+      "REQUEST_ASSIGNED",
+      "r-06"
+     ],
+     [
+      1500,
+      "REQUEST_CREATED",
+      "r-07"
+     ],
+     [
+      1500,
+      "REQUEST_ASSIGNED",
+      "r-07"
+     ],
+     [
+      1560,
+      "SERVICE_COMPLETED",
+      "v-10"
+     ],
+     [
+      1560,
+      "PICKUP_COMPLETED",
+      "r-06"
+     ],
+     [
+      1560,
+      "SERVICE_STARTED",
+      "v-11"
+     ],
+     [
+      1575,
+      "PICKUP_COMPLETED",
+      "r-07"
+     ],
+     [
+      1860,
+      "SERVICE_COMPLETED",
+      "v-11"
+     ],
+     [
+      1860,
+      "SERVICE_STARTED",
+      "v-2"
+     ],
+     [
+      2160,
+      "TRIP_COMPLETED",
+      "r-06"
+     ],
+     [
+      2160,
+      "SERVICE_QUEUE_ENTERED",
+      "v-1"
+     ],
+     [
+      2160,
+      "SERVICE_COMPLETED",
+      "v-2"
+     ],
+     [
+      2160,
+      "SERVICE_STARTED",
+      "v-1"
+     ],
+     [
+      2325,
+      "TRIP_COMPLETED",
+      "r-07"
+     ],
+     [
+      2325,
+      "SERVICE_QUEUE_ENTERED",
+      "v-0"
+     ],
+     [
+      2460,
+      "SERVICE_COMPLETED",
+      "v-1"
+     ],
+     [
+      2460,
+      "SERVICE_STARTED",
+      "v-0"
+     ],
+     [
+      2760,
+      "SERVICE_COMPLETED",
+      "v-0"
+     ],
+     [
+      2760,
+      "SERVICE_STARTED",
+      "v-3"
+     ],
+     [
+      3060,
+      "SERVICE_COMPLETED",
+      "v-3"
+     ]
+    ],
+    "events_digest": "436bc1c899eb9f2e363b9859d811192813d58d0cbccbed5e7018c107716cac61",
+    "event_counts": {
+     "PICKUP_COMPLETED": 8,
+     "REQUEST_ASSIGNED": 8,
+     "REQUEST_CREATED": 8,
+     "SERVICE_COMPLETED": 8,
+     "SERVICE_QUEUE_ENTERED": 8,
+     "SERVICE_STARTED": 8,
+     "TRIP_COMPLETED": 8
+    },
+    "metrics": {
+     "requests.total": 8.0,
+     "requests.served": 8.0,
+     "requests.unserved": 0.0,
+     "unserved.fraction": 0.0,
+     "fleet.utilization_fraction": 0.07065972222222222,
+     "business_proxy.served_trips": 8.0,
+     "business_proxy.unserved_demand": 0.0,
+     "wait.p50_s": 60.0,
+     "wait.p90_s": 90.0,
+     "depot.queue_p90_s": 1469.9999999999998
+    },
+    "invariant_violations": []
+   }
+  }
+ }
+}

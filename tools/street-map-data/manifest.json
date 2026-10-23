@@ -1,0 +1,28 @@
+{
+  "source_sha256": {
+    "downtown": "f3de112024c0d7575b31a57e0014ae4fc978c80722f7d948ceab2ed365f14f0f",
+    "corridors": "bd60a4377388810eea4bab510627fd3887fff57037d922c8b794af102d08e9a8"
+  },
+  "osm_base": {
+    "downtown": "2026-09-19T05:55:49Z",
+    "corridors": "2026-09-19T05:56:34Z"
+  },
+  "data_bytes": 328545,
+  "data_sha256": "ad3beda588b8a1c3145d52b558c228d9e0c07816ca33a8ddf2cda95bb5876399",
+  "nodes": 1646,
+  "ways": 1605,
+  "segments": 1863,
+  "edges": 2343,
+  "turn_pairs": 154,
+  "restriction_exclusions": {
+    "outside_access_filtered_graph": 624,
+    "conditional_or_unsupported_kind": 144,
+    "via_way_or_missing_via": 562,
+    "motorcar_excepted": 1,
+    "malformed_members": 9
+  },
+  "way_exclusions": {
+    "access_or_conditional": 216,
+    "market_scope": 58
+  }
+}
