@@ -12,11 +12,23 @@ import {verifyIntegrationAssets} from './integration-assets.mjs';
 // Wrangler's home/config, log and cache belong to this run, never the owner's ambient login.
 const TOOL_ENV=['PATH','HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','LC_ALL','TERM','NO_COLOR'];
 export const toolEnvironment=environment=>Object.fromEntries(TOOL_ENV.filter(name=>environment[name]!==undefined).map(name=>[name,environment[name]]));
-export function wranglerSpawnOptions(environment,cwd,log,cache,token){
+export function wranglerSpawnOptions(environment,cwd,log,cache,token,accountId){
   const home=join(cwd,'..','home');
   return {stdio:['ignore','inherit','inherit'],cwd,env:{...toolEnvironment(environment),HOME:home,XDG_CONFIG_HOME:join(home,'.config'),
     ...(token===undefined?{}:{CLOUDFLARE_API_TOKEN:token}),
+    ...(accountId===undefined?{}:{CLOUDFLARE_ACCOUNT_ID:accountId}),
     CLOUDFLARE_AUTH_USE_KEYRING:'false',WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_SANITIZE:'true',WRANGLER_LOG_PATH:log,WRANGLER_CACHE_DIR:cache}};
+}
+
+// Pages-scoped tokens can access a project while account discovery returns no accounts.
+// This selects the owner's account explicitly; Cloudflare still authorizes every request.
+export function releaseAccountId(environment,command){
+  if(command==='version')return;
+  if(!['deploy','list'].includes(command))throw Error('Unsupported account-bearing release command.');
+  const accountId=environment.CLOUDFLARE_ACCOUNT_ID;
+  if(accountId===undefined)return;
+  if(typeof accountId!=='string'||/^[A-Fa-f0-9]{32}$/.exec(accountId)?.[0]!==accountId)throw Error('Malformed Cloudflare account ID; expected exactly 32 hexadecimal characters.');
+  return accountId;
 }
 
 // This is non-secret provenance metadata, not a Keychain reader or a scope/expiry verifier.

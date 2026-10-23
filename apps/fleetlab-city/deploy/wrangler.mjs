@@ -7,11 +7,13 @@ import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {verifyStage,releaseCommand,toolEnvironment,wranglerSpawnOptions,deployPreflight,checkWranglerLog,checkPagesCache,confirmProduction,requireReleaseToken,sanitizeWranglerAuth,disableWranglerGitDiscovery} from './stage-guard.mjs';
+import {verifyStage,releaseCommand,toolEnvironment,wranglerSpawnOptions,deployPreflight,checkWranglerLog,checkPagesCache,confirmProduction,requireReleaseToken,releaseAccountId,sanitizeWranglerAuth,disableWranglerGitDiscovery} from './stage-guard.mjs';
 
 const args=process.argv.slice(2), command=releaseCommand(args), deployDir=fileURLToPath(new URL('./',import.meta.url));
+const accountId=releaseAccountId(process.env,command);
 const token=requireReleaseToken(process.env,command);
-// Git, verification builders and npm must not inherit the injected credential or its reference.
+// Git, verification builders and npm must not inherit release account or credential inputs.
+delete process.env.CLOUDFLARE_ACCOUNT_ID;
 delete process.env.CLOUDFLARE_API_TOKEN;
 delete process.env.FLEETLAB_DEPLOY_TOKEN_REF;
 if(command==='deploy'){
@@ -54,7 +56,7 @@ try{
   writeFileSync(patched,source,{mode:0o600,flag:'wx'});
   mkdirSync(cwd);
   mkdirSync(join(home,'.config'),{recursive:true,mode:0o700});
-  result=spawnSync(process.execPath,['--no-warnings',patched,...args],wranglerSpawnOptions(process.env,cwd,log,cache,token));
+  result=spawnSync(process.execPath,['--no-warnings',patched,...args],wranglerSpawnOptions(process.env,cwd,log,cache,token,accountId));
 }finally{
   rmSync(tools,{recursive:true,force:true});
   rmSync(cwd,{recursive:true,force:true});
