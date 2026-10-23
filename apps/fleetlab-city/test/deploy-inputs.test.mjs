@@ -9,7 +9,7 @@ import {wranglerSpawnOptions,deployPreflight,checkWranglerLog,checkPagesCache} f
 
 // Inputs that could redirect Wrangler's API host, token refresh, credentials, account or code.
 const CANARY={CLOUDFLARE_API_BASE_URL:'http://127.0.0.1:9/client/v4',CF_API_BASE_URL:'http://127.0.0.1:9/client/v4',
- WRANGLER_TOKEN_URL:'http://127.0.0.1:9/token',CLOUDFLARE_API_TOKEN:'canary',CLOUDFLARE_ACCOUNT_ID:'canary',
+ WRANGLER_TOKEN_URL:'http://127.0.0.1:9/token',CLOUDFLARE_API_TOKEN:'canary',CLOUDFLARE_ACCOUNT_ID:'0123456789abcdef0123456789abcdef',
  XDG_CONFIG_HOME:'/nonexistent/config',NODE_OPTIONS:'--require=/nonexistent/hook.js'};
 
 test('Wrangler runs in a fresh empty directory with only an allowlisted environment',()=>{
@@ -38,7 +38,7 @@ test('the release wrapper spawns Wrangler only through those options',()=>{
  const source=readFileSync(new URL('../deploy/wrangler.mjs',import.meta.url),'utf8');
  assert.match(source,/mkdtempSync\(join\(tmpdir\(\)/);
  assert.match(source,/cache=join\(run,'cache'\)/);
- assert.match(source,/wranglerSpawnOptions\(process\.env,cwd,log,cache,token\)/);
+ assert.match(source,/wranglerSpawnOptions\(process\.env,cwd,log,cache,token,accountId\)/);
  assert.doesNotMatch(source,/process\.env\}|\.\.\.process\.env/);
  // Outside a Git checkout Wrangler cannot detect the message it used to read from git.
  assert.match(source,/'--commit-message'/);
@@ -95,7 +95,7 @@ test('the release wrapper stops when the fresh install fails',t=>{
  assert.deepEqual(readdirSync(root).sort(),['bin','npm.json']);
 });
 
-test('remote listing never passes the injected token or its reference to npm',t=>{
+test('remote listing never passes account selection, the injected token or its reference to npm',t=>{
  const {child,npm}=runWithFakeNpm(t,0,['pages','deployment','list','--project-name','fleetlab','--json']);
  assert.equal(child.status,1);
  assert.match(child.stderr,/Unexpected Wrangler CLI bytes/);
