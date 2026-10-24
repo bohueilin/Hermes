@@ -22,7 +22,7 @@ BASELINE = (
 ROUTES = ("capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch")
 BRAND = (
     "brand.mjs", "brand.css", "visitor.mjs", "visitor-families.mjs", "visitor.css",
-    "enhancement-media.mjs", "enhancement-motion.mjs", "enhancement-media.css", "network-hub.css",
+    "enhancement-media.mjs", "enhancement-motion.mjs", "enhancement-media.css",
 )
 MEDIA = (
     "fleetlab-logo.png", "readiness.jpg", "shared-delivery.webp", "favicon.png",
@@ -75,6 +75,7 @@ def rows(site):
         ("/network-flows/rebalancing/visual.css", root),
         ("/network-flows/fleet-day/", root), ("/src/ui/methodology-explainer.js", root),
         ("/network-flows/", root), ("/network-flows/ota-sharing/", root), ("/sitemap.xml", root),
+        ("/network-flows/hub.css", root),
     ]
     for route in ROUTES:
         for name in ("", "boot.js", "release.json"):

@@ -92,10 +92,11 @@ class HeaderGateTests(unittest.TestCase):
         for path in (
             "/network-flows/", "/network-flows/ota-sharing/", "/sitemap.xml",
             "/enhancement-media.mjs", "/enhancement-motion.mjs", "/enhancement-media.css",
-            "/network-hub.css", "/enhancement-media/FL-A2-one-fleet-day-panorama.webp",
+            "/network-flows/hub.css", "/enhancement-media/FL-A2-one-fleet-day-panorama.webp",
             "/enhancement-media/FL-V2-deadhead-explainer.mp4",
         ):
             self.assertEqual(rows.get(path), (gate.fields(ROOT), 200), path)
+        self.assertNotIn("/network-hub.css", rows)
 
     def test_crafted_spellings_expect_only_the_root_baseline(self):
         rows = {path: (expected, status) for path, expected, status in gate.rows(self.site)}
