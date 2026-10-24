@@ -114,6 +114,25 @@ R3_ADDED = frozenset((
     'src/runtime/dispatch-session.js',
     'src/ui/dispatch-app.js',
 ))
+DEPOT_ADDED = frozenset((
+    "depot-readiness/index.html", "depot-readiness/boot.js",
+    "depot-readiness/visual.css", "depot-readiness/release.json",
+    *(f"src/model/depot-lab/{name}.js" for name in (
+        "allocation", "canonical", "compare", "engine", "identity", "ledger", "policy", "presets",
+        "profiles", "rational", "registry", "schema", "state", "task-graph", "units",
+    )),
+    *(f"src/model/depot-lab-verify/{name}.js" for name in (
+        "allocation-check", "blockage", "metrics", "policy-check", "reconstruct", "verify",
+    )),
+    "src/runtime/depot-lab-job.js", "src/runtime/depot-lab-session.js",
+    "src/runtime/depot-lab-worker.js",
+    *(f"src/ui/depot-lab-{name}.js" for name in (
+        "app", "controls", "evidence", "format", "inspector", "share", "view",
+    )),
+))
+# Emitted from playground/fleetlab/depot-lab/ (engineering note BD-16); page and boot are generated.
+DEPOT_SOURCE = {"depot-readiness/visual.css": "depot-lab/visual.css"}
+DEPOT_PAGE = "depot-readiness/index.html"
 INTEGRATION_TEXT = frozenset((
     "index.html", "boot.js", "_headers", "integration.mjs", "integration.css",
     "404.html", "network-flows/fleet-day/index.html", "not-found.css", "publication.json",
@@ -171,6 +190,35 @@ def dispatch_files(files):
     return paths
 
 
+def depot_files(files):
+    """The nested depot lab family only; older depot-readiness/depot-flow modules never match."""
+    paths = frozenset(name for name in files if (
+        name.startswith("depot-readiness/")
+        or re.fullmatch(
+            r"src/(?:model|ui|runtime|data)/depot-lab(?:-[a-z0-9-]+)?(?:/[a-z0-9-]+)?\.js", name
+        )
+    ))
+    if paths and paths != DEPOT_ADDED:
+        raise ValueError("depot lab inventory is incomplete or unexpected")
+    return paths
+
+
+QUIET_RENDER = (
+    "import {readFileSync} from 'node:fs';"
+    "const {renderPage}=await import(process.argv[1]);"
+    "process.stdout.write(renderPage(readFileSync(0,'utf8'),{tagFree:true}));"
+)
+
+
+def render_without_analytics(value):
+    """The shared hosted transform without the site-wide analytics tag (owner: no telemetry)."""
+    return subprocess.run(
+        ["node", "--input-type=module", "-e", QUIET_RENDER,
+         (ASSETS / "site-transform.mjs").as_uri()],
+        input=value, capture_output=True, text=True, check=True,
+    ).stdout
+
+
 def software_delivery_marker(html, accepted):
     if not accepted:
         return html
@@ -182,17 +230,27 @@ def software_delivery_marker(html, accepted):
     )
 
 
-def final_route_counts(routes, files):
+CLOSURE_LIMITS = {"nf03": 557056, "depot": 786432}
+
+
+def final_route_counts(routes, files, owners=None):
     """Recount verified route inventories after the hosted header transform."""
     counts = {}
     for route in routes:
-        if route["id"] not in {"nf03", "nf04", "delivery_order", "r1", "r3"}:
+        if route["id"] not in {"nf03", "nf04", "delivery_order", "r1", "r3", "depot"}:
             continue
         paths = set(route["paths"]) | {name for name in brand.TEXT if name in files}
         size = sum(files[name]["bytes"] for name in paths)
-        if size > (557056 if route["id"] == "nf03" else 524288):
+        if size > CLOSURE_LIMITS.get(route["id"], 524288):
             raise ValueError(f'{route["id"]} final closure byte budget exceeded')
         counts[f'{route["id"]}_closure_bytes'] = size
+        if route["id"] == "depot":
+            if owners is None:
+                raise ValueError("depot final count requires the receipt owners")
+            local = sum(files[name]["bytes"] for name in paths if owners.get(name) == "depot-lab")
+            if local > 524288:
+                raise ValueError("depot final route-local byte budget exceeded")
+            counts["depot_route_local_bytes"] = local
     return counts
 
 
@@ -213,7 +271,7 @@ def check_teaching_package(package, client, offline, source_commit):
         raise ValueError("teaching package has missing or unexpected files")
     if files[archives[0]]["bytes"] > 4 * 1024**2 or files[
         "downloads/teaching-package.json"
-    ]["bytes"] > 40960:
+    ]["bytes"] > 57344:
         raise ValueError("teaching package file budget exceeded")
     command = [
         "node", str(PACKAGE_TOOL), "--check", str(package), "--site", str(client),
@@ -388,12 +446,16 @@ def integrate(
     order_files = frozenset()
     r1_files = frozenset()
     r3_files = frozenset()
+    lab_files = frozenset()
     if client_update:
         updates = launch.inventory(Path(client_update))
         delivery_files = software_delivery_files(updates)
         order_files = delivery_order_files(updates)
         r1_files = rebalancing_files(updates)
         r3_files = dispatch_files(updates)
+        lab_files = depot_files(updates)
+        if lab_files and not (flow_update and teaching_package and source_commit):
+            raise ValueError("depot lab requires a source-bound teaching package")
         if r3_files and not (r1_files and teaching_package and source_commit):
             raise ValueError("R3 requires a source-bound package and rebalancing")
         if r1_files and not (delivery_files and teaching_package and source_commit):
@@ -402,10 +464,10 @@ def integrate(
             raise ValueError("delivery order requires software delivery")
         if delivery_files and not (flow_update and teaching_package and source_commit):
             raise ValueError("software delivery requires a source-bound teaching package")
-        copied |= delivery_files | order_files | r1_files | r3_files
+        copied |= delivery_files | order_files | r1_files | r3_files | lab_files
         if flow_update and set(updates) != (
             set(established) | FLOW_ADDED | CAPACITY_ADDED
-            | delivery_files | order_files | r1_files | r3_files
+            | delivery_files | order_files | r1_files | r3_files | lab_files
         ):
             raise ValueError("flow client inventory has missing or unexpected modules")
         for name in copied:
@@ -413,6 +475,7 @@ def integrate(
                 name not in established
                 and name not in (
                     FLOW_ADDED | CAPACITY_ADDED | delivery_files | order_files | r1_files | r3_files
+                    | lab_files
                 )
             ):
                 raise ValueError("client update missing expected module")
@@ -420,7 +483,9 @@ def integrate(
                                 "network-flows/delivery-order/", "network-flows/rebalancing/",
                                 "network-flows/dispatch/")):
                 continue  # generated by the packer, so there is no source file; pinned below
-            reviewed = launch.ROOT / "playground/fleetlab" / name
+            if name.startswith("depot-readiness/") and name not in DEPOT_SOURCE:
+                continue  # packer output; bound by its sidecar and the package proof
+            reviewed = launch.ROOT / "playground/fleetlab" / DEPOT_SOURCE.get(name, name)
             if launch.sha_file(reviewed) != updates[name]["sha256"]:
                 raise ValueError("client update differs from reviewed source")
         if flow_update:
@@ -632,6 +697,12 @@ def integrate(
                 )
         branded = (brand.apply_site(site, report["current"]["path"], report["rollback"]["path"])
                    if brand_update else {})
+        if brand_update and lab_files:
+            # The depot page is served without the site-wide analytics tag (engineering note BD-17).
+            branded[DEPOT_PAGE] = render_without_analytics(
+                (Path(client_update) / DEPOT_PAGE).read_text()
+            )
+            (site / DEPOT_PAGE).write_text(branded[DEPOT_PAGE])
         # Compact indentation preserves header semantics within the route byte budgets.
         headers = site / "_headers"
         headers.write_text(re.sub(r"^  ", "\t", headers.read_text(), flags=re.M))
@@ -698,10 +769,13 @@ def integrate(
                 "hosted_artwork_bytes": (sum(final[name]["bytes"] for name in brand.MEDIA)
                                          if brand_update else 0),
             }
-            if integrated_text["emitted_text_bytes"] > 3145728:
+            if integrated_text["emitted_text_bytes"] > 3801088:
                 raise ValueError("final emitted text budget exceeded")
             receipt = json.loads((site / "downloads/teaching-package.json").read_text())
-            integrated_text.update(final_route_counts(receipt["routes"], final))
+            integrated_text.update(final_route_counts(
+                receipt["routes"], final,
+                {name: record["owner"] for name, record in receipt["emitted_files"].items()},
+            ))
         result = {
             "schema": "fleetlab.hosted-integration/1.0.0",
             "current": report["current"],

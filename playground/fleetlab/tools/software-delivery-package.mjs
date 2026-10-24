@@ -2,6 +2,7 @@ import {R3_FILES,R3_ENTRIES,R3_MODULES,R3_RELEASE} from './dispatch-package.mjs'
 import {R1_FILES,R1_ENTRIES,R1_MODULES,R1_RELEASE} from './rebalancing-package.mjs';
 // Physical owners are explicit. Reachability adds obligations, never removes legacy ownership.
 import {ORDER_FILES,ORDER_ENTRIES,ORDER_MODULES,ORDER_RELEASE} from './delivery-order-package.mjs';
+import {DEPOT_FILES,DEPOT_ENTRIES,DEPOT_MODULES,DEPOT_RELEASE} from './depot-lab-package.mjs';
 import {createHash} from 'node:crypto';
 import {posix} from 'node:path';
 import {MEDIA_LIMITS} from './media.mjs';
@@ -14,7 +15,10 @@ export const DELIVERY_ENTRIES=['src/ui/software-delivery-app.js','src/runtime/so
 export const DELIVERY_MODULES=new Set([...DELIVERY_ENTRIES,'src/runtime/software-delivery-job.js','src/model/software-delivery-contract.js','src/model/software-delivery.js','src/model/software-delivery-verify.js','src/data/software-delivery-study.js','src/ui/software-delivery-view.js','src/ui/software-delivery-page.js','src/ui/software-delivery-player.js']);
 export const DELIVERY_BOOT='import { startSoftwareDelivery } from "../../src/ui/software-delivery-app.js";\nimport { DELIVERY_STUDY } from "../../src/data/software-delivery-study.js";\nstartSoftwareDelivery({ manifest: DELIVERY_STUDY, createWorker: () => new Worker(new URL("../../src/runtime/software-delivery-worker.js", import.meta.url), { type: "module" }) });\n';
 export const INTEGRATION_TEXT_PATHS=['city-explorer/releases/index.html','brand.mjs','brand.css','visitor.mjs','visitor-families.mjs','visitor.css','enhancement-motion.mjs','enhancement-media.mjs','enhancement-media.css','index.html','boot.js','_headers','integration.mjs','integration.css','publication.json','404.html','network-flows/fleet-day/index.html','network-flows/index.html','network-flows/hub.css','network-flows/ota-sharing/index.html','sitemap.xml','not-found.css','downloads/fleetlab-offline.sha256','downloads/verify-offline.txt'];
-export const OWNER_LIMITS=Object.freeze({legacy_text_bytes:2621440,emitted_text_bytes:3145728,nf04_closure_bytes:524288});
+// Q6: the integrated text ceiling rises to 3,801,088 and the depot gets its own branch; every other cap is unchanged.
+export const OWNER_LIMITS=Object.freeze({legacy_text_bytes:2621440,emitted_text_bytes:3801088,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432});
+const CLOSURE_LIMITS={nf03:557056,depot:OWNER_LIMITS.depot_closure_bytes};
+const LEGACY_ENTRIES=['src/ui/app.js','src/runtime/worker.js','src/ui/capacity-app.js'];
 const LEGACY_ASSETS=['index.html','boot.js','styles.css','_headers','network-flows/capacity/index.html','network-flows/capacity/boot.js','network-flows/capacity/visual.css','network-flows/capacity/release.json'];
 const NF03_ASSETS=['styles.css','network-flows/capacity/index.html','network-flows/capacity/boot.js','network-flows/capacity/visual.css'];
 const MEDIA=new Set(MEDIA_LIMITS.keys());
@@ -44,25 +48,29 @@ export function routeModules(files,entries){
 }
 export function capacityScope(files){return new Set([...routeModules(files,['src/ui/capacity-app.js']),...NF03_ASSETS]);}
 export function measureSiteOwnership(files){
-  const legacyModules=routeModules(files,['src/ui/app.js','src/runtime/worker.js','src/ui/capacity-app.js']);
+  const legacyModules=routeModules(files,LEGACY_ENTRIES);
   const hasDelivery=[...files.keys()].some(path=>DELIVERY_FILES.includes(path)||DELIVERY_MODULES.has(path));
   const delivery=hasDelivery?routeModules(files,DELIVERY_ENTRIES):new Set();
   const hasOrder=[...files.keys()].some(path=>ORDER_FILES.includes(path)||ORDER_MODULES.has(path));
   const order=hasOrder?routeModules(files,ORDER_ENTRIES):new Set();
   const hasR1=files.has(R1_RELEASE),r1=hasR1?routeModules(files,R1_ENTRIES):new Set();
   const hasR3=files.has(R3_RELEASE),r3=hasR3?routeModules(files,R3_ENTRIES):new Set();
+  const hasDepot=files.has(DEPOT_RELEASE),depot=hasDepot?routeModules(files,DEPOT_ENTRIES):new Set();
   const legacy=new Set([...legacyModules,...LEGACY_ASSETS].filter(path=>files.has(path)));
   // A dependency not in the newly declared NF04 inventory remains legacy-owned even when only NF04 imports it.
   for(const path of delivery)if(!DELIVERY_MODULES.has(path))legacy.add(path);
   for(const path of order)if(!ORDER_MODULES.has(path)&&!DELIVERY_MODULES.has(path))legacy.add(path);
   for(const path of r1)if(!R1_MODULES.has(path)&&!ORDER_MODULES.has(path)&&!DELIVERY_MODULES.has(path))legacy.add(path);
   for(const path of r3)if(!R3_MODULES.has(path)&&!R1_MODULES.has(path)&&!ORDER_MODULES.has(path)&&!DELIVERY_MODULES.has(path))legacy.add(path);
+  // Depot dependencies are declared or already owned (shared leaves stay legacy); nothing falls through to legacy.
+  for(const path of depot)if(!DEPOT_MODULES.has(path)&&!legacy.has(path)&&![DELIVERY_MODULES,ORDER_MODULES,R1_MODULES,R3_MODULES].some(set=>set.has(path)))fail(`undeclared depot dependency: ${path}`);
   const route=new Set(hasDelivery?[...delivery,...DELIVERY_FILES.filter(path=>files.has(path)),'_headers']:[]);
   const local=new Set([...route].filter(path=>!legacy.has(path)&&(DELIVERY_FILES.includes(path)||DELIVERY_MODULES.has(path))));
   const orderRoute=new Set(hasOrder?[...order,...ORDER_FILES.filter(path=>files.has(path)),'_headers']:[]);
   const orderLocal=new Set([...orderRoute].filter(path=>!legacy.has(path)&&!local.has(path)&&(ORDER_FILES.includes(path)||ORDER_MODULES.has(path))));
   const r1Route=new Set(hasR1?[...r1,...R1_FILES,'_headers']:[]),r1Local=new Set([...r1Route].filter(p=>!legacy.has(p)&&!local.has(p)&&!orderLocal.has(p)&&(R1_FILES.includes(p)||R1_MODULES.has(p))));
   const r3Route=new Set(hasR3?[...r3,...R3_FILES,'_headers']:[]),r3Local=new Set([...r3Route].filter(p=>!legacy.has(p)&&!local.has(p)&&!orderLocal.has(p)&&!r1Local.has(p)&&(R3_FILES.includes(p)||R3_MODULES.has(p))));
+  const depotRoute=new Set(hasDepot?[...depot,...DEPOT_FILES,'_headers']:[]),depotLocal=new Set([...depotRoute].filter(p=>!legacy.has(p)&&(DEPOT_FILES.includes(p)||DEPOT_MODULES.has(p))));
   const owners={};
   for(const path of files.keys()){
     if(MEDIA.has(path)){owners[path]='teaching-media';continue;}
@@ -71,12 +79,14 @@ export function measureSiteOwnership(files){
     else if(orderLocal.has(path))owners[path]='delivery-order';
     else if(r1Local.has(path))owners[path]='rebalancing';
     else if(r3Local.has(path))owners[path]='dispatch';
+    else if(depotLocal.has(path))owners[path]='depot-lab';
     else fail(`unknown emitted ownership: ${path}`);
   }
   const result={legacy_text_bytes:sum(files,legacy),nf04_route_local_bytes:sum(files,local),nf04_closure_bytes:sum(files,route),emitted_text_bytes:[...files].filter(([path])=>!MEDIA.has(path)).reduce((n,[,value])=>n+size(value),0),owners,nf04_paths:[...route].sort()};
   if(hasOrder){result.delivery_order_route_local_bytes=sum(files,orderLocal);result.delivery_order_closure_bytes=sum(files,orderRoute);result.delivery_order_paths=[...orderRoute].sort();if(result.delivery_order_closure_bytes>524288)fail('delivery order closure budget exceeded');}
   if(hasR1){result.r1_route_local_bytes=sum(files,r1Local);result.r1_closure_bytes=sum(files,r1Route);if(result.r1_closure_bytes>524288)fail('R1 closure budget exceeded');}
   if(hasR3){result.r3_route_local_bytes=sum(files,r3Local);result.r3_closure_bytes=sum(files,r3Route);if(result.r3_closure_bytes>524288)fail('R3 closure budget exceeded');}
+  if(hasDepot){result.depot_route_local_bytes=sum(files,depotLocal);result.depot_closure_bytes=sum(files,depotRoute);result.depot_paths=[...depotRoute].sort();}
   for(const [key,limit]of Object.entries(OWNER_LIMITS))if(result[key]>limit)fail(`${key} budget exceeded: ${result[key]} > ${limit}`);
   return result;
 }
@@ -93,12 +103,20 @@ export function measureIntegratedText(teaching,integrated){
     ...(teaching.has(ORDER_RELEASE)?[["delivery_order",new Set([...routeModules(teaching,ORDER_ENTRIES),...ORDER_FILES,"_headers"])]]:[]),
     ...(teaching.has(DELIVERY_RELEASE)?[['nf04',new Set([...routeModules(teaching,DELIVERY_ENTRIES),...DELIVERY_FILES,'_headers'])]]:[]),
     ...(teaching.has('src/ui/capacity-app.js')?[['nf03',new Set([...capacityScope(teaching),'network-flows/capacity/release.json','_headers'])]]:[]),
+    ...(teaching.has(DEPOT_RELEASE)?[['depot',new Set([...routeModules(teaching,DEPOT_ENTRIES),...DEPOT_FILES,'_headers'])]]:[]),
   ];
   for(const [id,closure]of closures){
     for(const path of ["brand.mjs","brand.css","visitor.mjs","visitor-families.mjs","visitor.css","enhancement-motion.mjs","enhancement-media.mjs","enhancement-media.css"])if(integrated.has(path))closure.add(path);
     const count=sum(integrated,closure);result[`${id}_closure_bytes`]=count;
-    const limit=id==='nf03'?557056:524288;
+    const limit=CLOSURE_LIMITS[id]??524288;
     if(count>limit)fail(`${id} final closure byte budget exceeded: ${count} > ${limit}`);
+    if(id==='depot'){
+      // Depot-owned text after hosted transforms (the page gains the shell); shared leaves keep their legacy owner.
+      const legacy=routeModules(teaching,LEGACY_ENTRIES.filter(path=>teaching.has(path)));
+      const local=sum(integrated,[...closure].filter(path=>!legacy.has(path)&&(DEPOT_FILES.includes(path)||DEPOT_MODULES.has(path))));
+      result.depot_route_local_bytes=local;
+      if(local>OWNER_LIMITS.depot_route_local_bytes)fail(`depot final route-local byte budget exceeded: ${local} > ${OWNER_LIMITS.depot_route_local_bytes}`);
+    }
   }
   return result;
 }

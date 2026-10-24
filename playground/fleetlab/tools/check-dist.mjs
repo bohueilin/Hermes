@@ -1,6 +1,7 @@
 import {R3_DIR,R3_RELEASE,R3_FILES,R3_BOOT,R3_MODULES,r3PackageProblems} from './dispatch-package.mjs';
 import {R1_DIR,R1_RELEASE,R1_FILES,R1_BOOT,R1_MODULES,r1PackageProblems} from './rebalancing-package.mjs';
 import {ORDER_DIR,ORDER_RELEASE,ORDER_FILES,ORDER_BOOT,ORDER_MODULES,orderPackageProblems} from './delivery-order-package.mjs';
+import {DEPOT_DIR,DEPOT_PAGE,DEPOT_RELEASE,DEPOT_FILES,DEPOT_BOOT,DEPOT_MODULES,DEPOT_MODULE_PATH,depotPackageProblems} from './depot-lab-package.mjs';
 // Checks a packed playground file before anyone opens or shares it (contract section 9, design section 9.4).
 // Fails on an external URL, a missing or different content security policy, a forbidden token, a banned word
 // or an em or en dash in interface copy, a string from FleetLab's label tuple, or a size over 2 MB.
@@ -61,7 +62,7 @@ const COPY_ATTRIBUTES = new Set(["aria-label", "aria-description", "aria-roledes
 /** Modules whose string literals are interface copy or export-format copy (contract sections 4 and 8). */
 export const COPY_MODULES = [
   "src/ui/methodology-explainer.js",
-  ...DELIVERY_MODULES, ...ORDER_MODULES, ...R1_MODULES, ...R3_MODULES,
+  ...DELIVERY_MODULES, ...ORDER_MODULES, ...R1_MODULES, ...R3_MODULES, ...DEPOT_MODULES,
   "src/ui/depot-flow-lab.js", "src/ui/depot-flow-view.js", "src/ui/depot-flow-reading.js", "src/ui/depot-flow-player.js", "src/model/depot-flow-contract.js", "src/model/depot-flow.js", "src/model/depot-flow-verify.js", "src/model/depot-cohort-contract.js", "src/model/depot-cohort.js", "src/model/depot-cohort-verify.js",
   "src/model/depot-capacity-contract.js", "src/model/depot-capacity.js", "src/model/depot-capacity-verify.js", "src/ui/depot-capacity-view.js", "src/ui/depot-capacity-page.js", "src/ui/depot-capacity-bench.js", "src/ui/depot-capacity-guided.js", "src/ui/capacity-app.js",
   "src/ui/teaching-frames.js", "src/model/street-simulation.js","src/ui/model-identity.js", "src/ui/labels.js", "src/ui/routes.js", "src/ui/setup-sharing.js", "src/ui/setup-codec.js", "src/ui/regional-setup.js", "src/ui/street-lab.js", "src/ui/studio.js", "src/ui/hero-film.js", "src/ui/depot-scene.js", "src/ui/operations-lab.js", "src/ui/readiness-view.js", "src/ui/advanced-operations-view.js", "src/ui/scenario-learning.js", "src/ui/launch-view.js", "src/ui/regional-power-view.js", "src/ui/operations-map.js", "src/ui/operations-3d.js", "src/ui/vehicle-portrait.js", "src/ui/simulation-catalog.js", "src/instrument/summary.js", "src/model/presets.js", "src/model/ops-cases.js", "src/ui/scale-lab.js", "src/ui/scale-labs.js", "src/model/scale-contract.js", "src/model/scale-response.js", "src/model/scale-response-engine.js", "src/model/scale-intake.js", "src/model/scale-intake-engine.js", "src/model/scale-density.js", "src/model/scale-density-engine.js"];
@@ -371,6 +372,14 @@ function tokenProblems(text, where = null) {
 
 /** Depot lesson modules whose string literals must be scanned as copy: each one must be named in COPY_MODULES. */
 const DEPOT_COPY_MODULE = /^src\/(?:ui|model)\/depot-(?:flow|cohort|capacity).*\.js$/;
+const copyCovered=path=>!(DEPOT_COPY_MODULE.test(path)||DEPOT_MODULE_PATH.test(path))||COPY_MODULES.includes(path);
+
+// BD-17: the first annex D1-11 honesty sentence keeps its em dash only in depot lab module literals and the depot page.
+export const DEPOT_HONESTY_SENTENCE='Simplified simulations for learning \u2014 not evidence about real-world safety. Nothing here approves deploying a vehicle or policy.';
+const DEPOT_COPY_SCOPE=/^(?:src\/(?:model\/depot-lab(?:-verify)?\/[a-z0-9-]+|runtime\/depot-lab-[a-z0-9-]+|ui\/depot-lab-[a-z0-9-]+)\.js string$|depot-readiness\/index\.html )/;
+export function withoutDepotHonestyDash(text,where){
+ return DEPOT_COPY_SCOPE.test(where)?text.replaceAll(DEPOT_HONESTY_SENTENCE,DEPOT_HONESTY_SENTENCE.replace('\u2014',',')):text;
+}
 
 // Exact approved Round 6/12 prose. Only punctuation is exempted; claim checks still apply.
 export function withoutApprovedRound6Dashes(text){
@@ -392,7 +401,7 @@ export function copyProblems(copy) {
     const word = where==='src/ui/advanced-operations-view.js string'&&SYNTHETIC_FORECAST_COPY.has(text)?null:BANNED_WORDS.exec(checkedText);
     if (word) problems.push(`banned word: "${word[0]}" in ${where} ${JSON.stringify(text.slice(0, 80))}`);
     if (/src\/(?:ui|model)\/depot-(?:flow|cohort|capacity)/.test(where) && /\b(?:waymo|zoox|careers|portfolio|hiring|job posting|i-pace|jaguar|ojai|zeekr)\b/i.test(text)) problems.push(`affiliation copy: ${where}`);
-    if (DASHES.test(withoutApprovedRound6Dashes(text))) problems.push(`dash: an em or en dash in ${where} ${JSON.stringify(text.slice(0, 80))}`);
+    if (DASHES.test(withoutApprovedRound6Dashes(withoutDepotHonestyDash(text,where)))) problems.push(`dash: an em or en dash in ${where} ${JSON.stringify(text.slice(0, 80))}`);
   }
   return problems;
 }
@@ -433,7 +442,7 @@ export function checkDist(html, { requiredLabels, byteLength = Buffer.byteLength
 
   const copy = visibleCopy(html);
   const modules = moduleCopy(html);
-  for (const m of html.matchAll(/\/\/ fleetlab-module: (\S+)/g)) if (DEPOT_COPY_MODULE.test(m[1]) && !COPY_MODULES.includes(m[1])) problems.push(`copy coverage: ${m[1]}`);
+  for (const m of html.matchAll(/\/\/ fleetlab-module: (\S+)/g)) if (!copyCovered(m[1])) problems.push(`copy coverage: ${m[1]}`);
   if (!modules.has("src/ui/labels.js")) problems.push("labels: no src/ui/labels.js module found in the page script");
   for (const [name, texts] of modules) for (const text of texts) copy.push({ where: `${name} string`, text });
   problems.push(...copyProblems(copy));
@@ -482,11 +491,11 @@ export function checkSite(files, { requiredLabels }) {
   requireLabels(requiredLabels);
   const entries = files instanceof Map ? files : new Map(Object.entries(files));
   const problems = [];
-  problems.push(...releaseProblems(entries), ...softwareDeliveryProblems(entries), ...orderPackageProblems(entries), ...r1PackageProblems(entries), ...r3PackageProblems(entries));
+  problems.push(...releaseProblems(entries), ...softwareDeliveryProblems(entries), ...orderPackageProblems(entries), ...r1PackageProblems(entries), ...r3PackageProblems(entries), ...depotPackageProblems(entries));
   try { measureSiteOwnership(entries); } catch(error) { problems.push(error.message); }
-  const delivery=entries.has(DELIVERY_RELEASE),order=entries.has(ORDER_RELEASE),r1=entries.has(R1_RELEASE),r3=entries.has(R3_RELEASE);
-  const fixedFiles=[...SITE_FIXED_FILES,...(delivery?DELIVERY_FILES:[]),...(order?ORDER_FILES:[]),...(r1?R1_FILES:[]),...(r3?R3_FILES:[])];
-  const pages=[...SITE_PAGES,...(r3?[{path:`${R3_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${R3_DIR}/boot.js`,bootText:R3_BOOT}]:[]),...(r1?[{path:`${R1_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${R1_DIR}/boot.js`,bootText:R1_BOOT}]:[]),...(order?[{path:`${ORDER_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${ORDER_DIR}/boot.js`,bootText:ORDER_BOOT}]:[]),...(delivery?[{path:`${DELIVERY_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${DELIVERY_DIR}/boot.js`,bootText:DELIVERY_BOOT}]:[])];
+  const delivery=entries.has(DELIVERY_RELEASE),order=entries.has(ORDER_RELEASE),r1=entries.has(R1_RELEASE),r3=entries.has(R3_RELEASE),depot=entries.has(DEPOT_RELEASE);
+  const fixedFiles=[...SITE_FIXED_FILES,...(delivery?DELIVERY_FILES:[]),...(order?ORDER_FILES:[]),...(r1?R1_FILES:[]),...(r3?R3_FILES:[]),...(depot?DEPOT_FILES:[])];
+  const pages=[...SITE_PAGES,...(r3?[{path:`${R3_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${R3_DIR}/boot.js`,bootText:R3_BOOT}]:[]),...(r1?[{path:`${R1_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${R1_DIR}/boot.js`,bootText:R1_BOOT}]:[]),...(order?[{path:`${ORDER_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${ORDER_DIR}/boot.js`,bootText:ORDER_BOOT}]:[]),...(delivery?[{path:`${DELIVERY_DIR}/index.html`,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${DELIVERY_DIR}/boot.js`,bootText:DELIVERY_BOOT}]:[]),...(depot?[{path:DEPOT_PAGE,links:['<link rel="stylesheet" href="./visual.css">'],boot:`${DEPOT_DIR}/boot.js`,bootText:DEPOT_BOOT}]:[])];
   let bytes = 0;
   for (const [path, text] of entries) {
     if (MEDIA_LIMITS.has(path)) { problems.push(...mediaProblems(path, text)); continue; }
@@ -516,15 +525,15 @@ export function checkSite(files, { requiredLabels }) {
     for (const item of visibleCopy(html)) copy.push(page.path === "index.html" ? item : { ...item, where: `${page.path} ${item.where}` });
   }
   for (const [path, source] of entries) {
-    if (typeof source !== "string" || path === "boot.js" || path === `${DELIVERY_DIR}/boot.js` || path === `${ORDER_DIR}/boot.js` || path === `${R3_DIR}/boot.js` || path === `${R1_DIR}/boot.js` || path === "_headers") continue;
+    if (typeof source !== "string" || path === "boot.js" || path === `${DELIVERY_DIR}/boot.js` || path === `${ORDER_DIR}/boot.js` || path === `${R3_DIR}/boot.js` || path === `${R1_DIR}/boot.js` || path === `${DEPOT_DIR}/boot.js` || path === "_headers") continue;
     problems.push(...schemeProblems(source, path));
     if (path.endsWith(".js")) {
       problems.push(...scriptProblems(source, path));
       problems.push(...tokenProblems(source, path));
-      if (DEPOT_COPY_MODULE.test(path) && !COPY_MODULES.includes(path)) problems.push(`copy coverage: ${path}`);
+      if (!copyCovered(path)) problems.push(`copy coverage: ${path}`);
       if (COPY_MODULES.includes(path)) for (const literal of literalsOf(source)) copy.push({ where: `${path} string`, text: literal });
     }
-    if (path === "styles.css" || path === CAPACITY_VISUAL_PATH || path === `${DELIVERY_DIR}/visual.css` || path === `${ORDER_DIR}/visual.css` || path === `${R3_DIR}/visual.css` || path === `${R1_DIR}/visual.css`) problems.push(...tokenProblems(source, path));
+    if (path === "styles.css" || path === CAPACITY_VISUAL_PATH || path === `${DELIVERY_DIR}/visual.css` || path === `${ORDER_DIR}/visual.css` || path === `${R3_DIR}/visual.css` || path === `${R1_DIR}/visual.css` || path === `${DEPOT_DIR}/visual.css`) problems.push(...tokenProblems(source, path));
   }
   problems.push(...copyProblems(copy));
   for (const [path, source] of entries) {

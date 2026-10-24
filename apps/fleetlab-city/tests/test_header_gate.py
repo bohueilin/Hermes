@@ -98,6 +98,15 @@ class HeaderGateTests(unittest.TestCase):
             self.assertEqual(rows.get(path), (gate.fields(ROOT), 200), path)
         self.assertNotIn("/network-hub.css", rows)
 
+    def test_depot_lab_route_files_and_worker_receive_the_root_baseline(self):
+        rows = {path: (expected, status) for path, expected, status in gate.rows(self.site)}
+        for path in (
+            "/depot-readiness/", "/depot-readiness/boot.js", "/depot-readiness/release.json",
+            "/depot-readiness/visual.css", "/src/runtime/depot-lab-worker.js",
+        ):
+            self.assertEqual(rows.get(path), (gate.fields(ROOT), 200), path)
+        self.assertNotIn("/network-flows/depot-readiness/", rows)
+
     def test_crafted_spellings_expect_only_the_root_baseline(self):
         rows = {path: (expected, status) for path, expected, status in gate.rows(self.site)}
         baseline = {

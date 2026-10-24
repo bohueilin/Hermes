@@ -46,7 +46,9 @@ function shareMetadata(html){
  }
  return html;
 }
-export function renderPage(input,{analytics=false}={}){
+// tagFree: a page served without any analytics tag (the depot lab, engineering note BD-17) gets no tag placeholder
+// and a privacy line that names only the hosting provider.
+export function renderPage(input,{analytics=false,tagFree=false}={}){
  let html=input.replace(/<p class="hosted-privacy">[^<]*<\/p>/g,'').replace(/<!-- Google tag(?: \(gtag\.js\)| prepared: disabled in local design preview) -->[\s\S]*?<!-- fleetlab-google-end -->/g,'')
   .replace(/<link data-fleetlab-design[^>]*>\s*/g,'')
   .replace(/<link data-fleetlab-icon[^>]*>/g,'')
@@ -59,10 +61,10 @@ export function renderPage(input,{analytics=false}={}){
   .replace('>OpenStreetMap contributors</a>','>OpenStreetMap contributors ↗</a>')
   .replace('<a href="./ODbL-1.0.txt">ODbL 1.0</a>','<a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0 ↗</a> (<a href="./ODbL-1.0.txt">local license copy ↓</a>)');
  html=html.replace(/(<meta[^>]+http-equiv="Content-Security-Policy"[^>]+content=")([^"]+)(")/i,(_,a,p,b)=>a+policyFor(p,analytics)+b);
- html=html.replace(/(<head\b[^>]*>)/i,'$1'+googleTag(analytics));
+ html=html.replace(/(<head\b[^>]*>)/i,'$1'+(tagFree?'':googleTag(analytics)));
  html=html.replace(/<\/head>/i,'<link data-fleetlab-icon rel="icon" href="/site-media/favicon.png" sizes="32x32" type="image/png"><link data-fleetlab-icon rel="apple-touch-icon" href="/site-media/apple-touch-icon.png" sizes="180x180"><link data-fleetlab-design rel="stylesheet" href="/brand.css"></head>');
  html=html.replace('No app analytics or accounts. Cloudflare receives hosting requests and may receive browser network-error reports.','No account is required.');
- html=html.replace(/<\/body>/i,'<p class="hosted-privacy">Google Analytics measures visits on the public site. Cloudflare receives hosting requests. No account is required.</p><script type="module" src="/brand.mjs"></script></body>');
+ html=html.replace(/<\/body>/i,'<p class="hosted-privacy">'+(tagFree?'':'Google Analytics measures visits on the public site. ')+'Cloudflare receives hosting requests. No account is required.</p><script type="module" src="/brand.mjs"></script></body>');
  return html;
 }
 

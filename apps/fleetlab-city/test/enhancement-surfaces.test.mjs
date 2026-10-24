@@ -30,6 +30,12 @@ test('network hub is a five-question path into existing lessons with no model ru
  assert.match(html,/Synthetic scenario · not operational data/);
  assert.match(html,/NOT_EVIDENCE · simulation only · decision authority NONE/);
  assert.doesNotMatch(html,/<script|FL-A4|<video|<canvas/);
+ // One bounded, non-numbered deeper experiment outside the five-question strip; no sixth lesson.
+ const [strip,after]=html.split('</ol>');
+ assert.equal((html.match(/href="\/depot-readiness\/"/g)??[]).length,1);
+ assert.doesNotMatch(strip,/depot-readiness/);
+ assert.match(after,/<p class="hub-deeper">Deeper experiment, outside the five questions: <a href="\/depot-readiness\/">/);
+ assert.match(readFileSync(new URL('../hosted/network-hub.css',import.meta.url),'utf8'),/\.hub-deeper\{/);
 });
 
 test('retired lesson reaches software delivery and sitemap lists only durable physical routes',()=>{
@@ -37,7 +43,7 @@ test('retired lesson reaches software delivery and sitemap lists only durable ph
  assert.match(redirect,/content="0;url=\/network-flows\/software-delivery\/"/);
  assert.match(redirect,/href="\/network-flows\/software-delivery\/"/);
  const sitemap=readFileSync(new URL('../hosted/sitemap.xml',import.meta.url),'utf8');
- for(const route of ['','city-explorer/','network-flows/','network-flows/fleet-day/','network-flows/capacity/','network-flows/software-delivery/','network-flows/delivery-order/','network-flows/rebalancing/','network-flows/dispatch/'])assert.ok(sitemap.includes(`<loc>https://fleetlab.pages.dev/${route}</loc>`));
+ for(const route of ['','city-explorer/','network-flows/','network-flows/fleet-day/','network-flows/capacity/','network-flows/software-delivery/','network-flows/delivery-order/','network-flows/rebalancing/','network-flows/dispatch/','depot-readiness/'])assert.ok(sitemap.includes(`<loc>https://fleetlab.pages.dev/${route}</loc>`));
  assert.doesNotMatch(sitemap,/#|ota-sharing|releases\//);
  for(const path of ['network-flows/index.html','network-flows/hub.css','network-flows/ota-sharing/index.html','sitemap.xml'])assert.ok(INTEGRATION_TEXT_PATHS.includes(path),`${path} must be counted as integration text`);
 });

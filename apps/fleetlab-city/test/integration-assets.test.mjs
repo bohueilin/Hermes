@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as integration from '../deploy/integration-assets.mjs';
+import {buildSite} from '../../../playground/fleetlab/tools/pack.mjs';
+import {fileURLToPath} from 'node:url';
+import {DEPOT_PAGE} from '../../../playground/fleetlab/tools/depot-lab-package.mjs';
 
 test('only the verified source archive receives download headers',()=>{
  const source='network-flows/sources/'+'a'.repeat(64)+'.json.gz';
@@ -35,4 +38,18 @@ test('hosted root discovery stays absent without a verified route and rejects a 
   assert.doesNotMatch(integration.integratedRootFiles(files).get('index.html'),/fleetlab-software-delivery/);
   files.set('network-flows/software-delivery/release.json','{}');
   assert.throws(()=>integration.integratedRootFiles(files),/software.delivery|NF04|sidecar/);
+});
+
+test('the hosted depot page carries no Google tag while every other teaching page keeps it',()=>{
+ const teaching=buildSite(fileURLToPath(new URL('../../../playground/fleetlab/',import.meta.url)));
+ assert.ok(teaching.has(DEPOT_PAGE));
+ const result=integration.integratedRootFiles(teaching,{branded:true,rollback:'city-explorer/releases/0000000000000000'});
+ const tag=/googletagmanager\.com|gtag\(|dataLayer/;
+ const depot=result.get(DEPOT_PAGE);
+ assert.doesNotMatch(depot,tag);
+ assert.match(depot,/<script type="module" src="\/brand\.mjs"><\/script>/);
+ assert.doesNotMatch(depot.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)[1],/google/);
+ const others=[...teaching.keys()].filter(path=>path.endsWith('.html')&&path!==DEPOT_PAGE);
+ assert.ok(others.length>=6);
+ for(const path of others)assert.match(result.get(path),/googletagmanager\.com\/gtag\/js\?id=G-04EZ8EZWQ2/,path);
 });

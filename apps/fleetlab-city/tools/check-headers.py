@@ -82,6 +82,11 @@ def rows(site):
             checks.append((f"/network-flows/{route}/{name}", root))
         if route != "capacity":
             checks.append((f"/src/runtime/{route}-worker.js", root))
+    # The depot lab is a top-level hosted route with its own boot, sidecar and worker.
+    checks += [(path, root) for path in (
+        "/depot-readiness/", "/depot-readiness/boot.js", "/depot-readiness/release.json",
+        "/depot-readiness/visual.css", "/src/runtime/depot-lab-worker.js",
+    )]
     checks += [(f"/{name}", root) for name in BRAND]
     checks += [(f"/site-media/{name}", root) for name in MEDIA]
     checks += [(f"/diagrams/{name}", root) for name in DIAGRAMS]

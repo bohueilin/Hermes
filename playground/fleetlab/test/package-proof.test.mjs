@@ -33,7 +33,8 @@ test("a highly compressed offer cannot hide an excessive extracted JSON size", (
   const first = tool.createSourceArchive(sample), second = tool.createSourceArchive(sample);
   assert.deepEqual(first.archive, second.archive);
   assert.deepEqual(gunzipSync(first.archive), first.raw);
-  assert.throws(() => tool.createSourceArchive({ source: "\\".repeat(2200000) }), /extracted.*budget/i);
+  // Each backslash doubles in JSON text, so this crosses the extracted ceiling whatever its value.
+  assert.throws(() => tool.createSourceArchive({ source: "\\".repeat(Math.ceil(tool.LIMITS.source_offer_extracted_bytes / 2) + 1) }), /extracted.*budget/i);
 });
 
 test("shared dependencies count in every closure and duplicate physical paths count separately", () => {
@@ -80,7 +81,15 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.equal(receipt.source.state, "DEVELOPMENT_MEASUREMENT_NOT_RELEASE_BOUND");
   assert.equal(receipt.counts.legacy_text_bytes,measureSiteOwnership(files).legacy_text_bytes);
   assert.equal(receipt.counts.emitted_text_bytes, measureSiteOwnership(files).emitted_text_bytes + result.files.get(tool.RECEIPT_PATH).length);
-  assert.ok(receipt.counts.raw_source_and_tools_bytes <= 3153920);
+  assert.ok(receipt.counts.raw_source_and_tools_bytes <= tool.LIMITS.raw_source_and_tools_bytes);
+  assert.equal(tool.LIMITS.raw_source_and_tools_bytes, 3940352);
+  for (const key of Object.keys(tool.LIMITS)) assert.ok(Number.isSafeInteger(receipt.counts[key]) && Number.isSafeInteger(receipt.remaining[key]), `${key} is counted`);
+  const depot = receipt.routes.find(route => route.id === "depot");
+  assert.equal(depot.route, "/depot-readiness/");
+  assert.equal(depot.bytes, receipt.counts.depot_closure_bytes);
+  assert.equal(receipt.counts.depot_route_local_bytes, measureSiteOwnership(files).depot_route_local_bytes);
+  assert.ok(receipt.counts.depot_closure_bytes <= 786432 && receipt.counts.depot_route_local_bytes <= 524288);
+  assert.ok(receipt.counts.package_metadata_bytes <= 57344 && receipt.counts.source_offer_extracted_bytes <= 5242880);
   assert.ok(receipt.counts.offline_bytes <= 2571440);
   assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 557056);
   assert.equal(result.files.size, 2);
@@ -94,6 +103,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.equal(offer.integration.files["apps/fleetlab-city/hosted/integration.mjs"],readFileSync(fileURLToPath(new URL("../../../apps/fleetlab-city/hosted/integration.mjs",import.meta.url)),"utf8"));
   assert.equal(receipt.counts.net_original_source_growth_bytes,receipt.counts.raw_source_and_tools_bytes-2765799+receipt.integration_source.bytes-188861);
   assert.equal(offer.files["index.html"], readFileSync(join(source, "index.html"), "utf8"));
+  for (const path of ["depot-lab/index.html", "depot-lab/visual.css"]) assert.equal(offer.files[path], readFileSync(join(source, path), "utf8"), path);
   assert.equal(offer.files["tools/package-proof.mjs"], readFileSync(join(source, "tools/package-proof.mjs"), "utf8"));
   assert.equal(offer.license.text, readFileSync(fileURLToPath(new URL("../../../LICENSE", import.meta.url)), "utf8"));
   assert.deepEqual(offer.media, receipt.media);
@@ -107,12 +117,19 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   }
   assert.equal(buildHtml(restored), readFileSync(offline, "utf8"));
   const rebuilt = buildSite(restored);
-  for (const [path, data] of files) if (!["network-flows/capacity/release.json","network-flows/software-delivery/release.json","network-flows/delivery-order/release.json","network-flows/rebalancing/release.json","network-flows/dispatch/release.json"].includes(path)) assert.deepEqual(rebuilt.get(path), data, path);
+  for (const [path, data] of files) if (!["network-flows/capacity/release.json","network-flows/software-delivery/release.json","network-flows/delivery-order/release.json","network-flows/rebalancing/release.json","network-flows/dispatch/release.json","depot-readiness/release.json"].includes(path)) assert.deepEqual(rebuilt.get(path), data, path);
   assert.equal(JSON.parse(rebuilt.get("network-flows/capacity/release.json")).source_state, "SOURCE_COMMIT_UNAVAILABLE");
   execFileSync("git", ["-C", restored, "init", "-q"]);
   execFileSync(process.execPath, [join(restored, "tools/pack.mjs"), "--out", join(scratch, "restored-cli.html"), "--playground", restored]);
   assert.equal(readFileSync(join(scratch, "restored-cli.html"), "utf8"), readFileSync(offline, "utf8"));
   assert.deepEqual(tool.measurePackageProof({ site, playground: source, offline }).files, result.files);
+});
+
+test("the offline edition still reproduces the preserved release bytes exactly", () => {
+  // Reconciliation 7.1 and 11.6: the hosted-only depot lab leaves the offline payload byte-identical.
+  const html = buildHtml(source);
+  assert.equal(Buffer.byteLength(html), 2565111);
+  assert.equal(hash(html), "313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1");
 });
 
 test("development measurement rejects altered site, offline bytes, extras and resealed root HTML", () => {
@@ -145,7 +162,7 @@ test("release package binds every source and its executing proof tool to the exa
   assert.equal(typeof tool.buildPackageProof, "function", "release binding is not implemented");
   const root = join(scratch, "repository");
   const playground = join(root, "playground/fleetlab");
-  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch", "depot-lab", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
   for(const name of ["hosted","tools","deploy"]){
     const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));
     for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|xml|md)$/.test(path))){
@@ -231,7 +248,7 @@ test("release package binds every source and its executing proof tool to the exa
 
 test("a source checkout cannot omit the executing package-proof tool from its binding", () => {
   const root = join(scratch, "omitted-tool"), playground = join(root, "playground/fleetlab");
-  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
+  for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch", "depot-lab", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
   mkdirSync(join(root, ".git"));
   for(const name of ["hosted","tools","deploy"]){
     const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));
