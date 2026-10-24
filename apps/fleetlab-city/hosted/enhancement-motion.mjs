@@ -44,7 +44,7 @@ export function installConceptVideos(doc=document){
    if(!r){
     r={video,figure,visible:false,allowed:false,playing:false,pending:false,failed:false,generation:0};known.set(video,r);
     video.autoplay=false;video.removeAttribute('autoplay');video.muted=true;video.defaultMuted=true;video.loop=true;video.playsInline=true;
-    for(const attr of ['muted','loop','playsinline'])video.setAttribute(attr,'');video.setAttribute('preload','none');
+    video.setAttribute('muted','');video.setAttribute('loop','');video.setAttribute('playsinline','');video.setAttribute('preload','none');
     video.addEventListener('error',()=>{r.failed=true;poster(r);});
    }
    r.figure=figure;r.frame=figure.querySelector('.enhancement-visual')??figure;active.set(video,r);poster(r);intersection?.observe(r.frame);

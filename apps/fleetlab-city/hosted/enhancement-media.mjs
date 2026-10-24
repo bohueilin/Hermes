@@ -1,11 +1,12 @@
 import {installConceptVideos} from './enhancement-motion.mjs';
+import {hostedNode} from './integration.mjs';
 
 // Concept artwork only. No model, result, or evidence inputs are read or changed.
 const observers=new WeakMap(),base='/enhancement-media/';
 const peopleAlt='Clay illustration of four depot workers — a lead with a tablet, a technician, a cleaner resetting a cabin, and a remote operator — around a row of white autonomous pods.';
 const fence='Concept illustration · not simulation output';
 export function decorateConceptMedia(doc=document){
- const el=(tag,attrs={},children=[])=>{const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);for(const c of [children].flat())n.appendChild(typeof c==='string'?doc.createTextNode(c):c);return n;};
+ const el=(tag,attrs={},children=[])=>hostedNode(doc,tag,attrs,children);
  const figure=(id,file,alt,caption='',qualification=fence,film=null)=>{
   const [width,height]=file.includes('FL-A2')?[2352,1008]:file.includes('FL-A3')?[2240,1120]:file.includes('FL-V2')?[1280,720]:[2048,1152];
   const img=el('img',{src:base+file,alt,width:String(width),height:String(height),loading:'lazy',decoding:'async'});
