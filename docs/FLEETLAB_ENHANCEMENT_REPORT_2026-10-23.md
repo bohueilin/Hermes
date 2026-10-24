@@ -1,12 +1,14 @@
 # FleetLab enhancement round — October 23, 2026
 
+**Muse / Fable handoff: A2 approved; V1 held for rerender. Publication authorized, upload pending the owner-operated release step.**
+
 The presentation enhancements, six approved media assets, scoped share images and D-1–D-8 are implemented or verified locally. The owner explicitly approved the proposed media allocation, then chose **“Use A2; hold V1 for a rerender.”** Fleet day therefore uses FL-A2 as its still hero. FL-V1 remains outside the product build.
 
-All three supplied videos were compressed below 1,200,000 bytes and stripped of audio. V2/V3 are installed with poster-first, lazy, viewport/global/reduced-motion handling. Their full ten-second sequences retain visible loop joins; seamless trimming could not be established as written. No publication occurred.
+All three supplied videos were compressed below 1,200,000 bytes and stripped of audio. V2/V3 are installed with poster-first, lazy, viewport/global/reduced-motion handling. Their full ten-second sequences retain visible loop joins; seamless trimming could not be established as written. A source-bound release candidate has passed local package verification. The owner authorized publication, but the Cloudflare upload has not run: the current release policy requires owner-side credential injection and an interactive production confirmation. No token is available to this agent.
 
 ## 1. Per-item report
 
-“Done” below means implemented and verified in the local development build, not published. “Could not implement as written” identifies a specific remaining constraint. The approved scope is the enhancement spec; the earlier defect-only scope was superseded.
+“Done” below means implemented and verified locally, including a source-bound release candidate; it does not mean published. “Could not implement as written” identifies a specific remaining constraint. The approved scope is the enhancement spec; the earlier defect-only scope was superseded.
 
 | Item | Status | Result |
 |---|---|---|
@@ -58,21 +60,21 @@ The seven installed files are A1–A4, V2, V3 and the derived V2 poster. V1 is e
 
 | Additional constrained surface | Ceiling before → approved | Used before → after | Free before → after |
 |---|---:|---:|---:|
-| Raw teaching source/tools | 3,153,920 unchanged | 3,140,931 → 3,141,737 | 12,989 → 12,183 |
-| Legacy teaching text | 2,621,440 unchanged | 2,603,650 → 2,603,672 | 17,790 → 17,768 |
-| Offline edition | 2,571,440 unchanged | 2,564,068 → 2,564,099 | 7,372 → 7,341 |
-| Package metadata | 40,960 unchanged | 37,684 → 37,626 | 3,276 → 3,334 |
-| Integrated emitted text | 3,145,728 unchanged | 3,115,617 → 3,141,489 | 30,111 → **4,239** |
-| Capacity dependency closure (NF-03) | 524,288 → **557,056** | 523,841 → 537,301 | 447 → **19,755** |
-| Aggregate non-City generation | 14,360,576 → **17,825,792** | 12,879,001 → 15,600,377 | 1,481,575 → **2,225,415** |
+| Raw teaching source/tools | 3,153,920 unchanged | 3,140,931 → 3,144,246 | 12,989 → 9,674 |
+| Legacy teaching text | 2,621,440 unchanged | 2,603,650 → 2,605,087 | 17,790 → 16,353 |
+| Offline edition | 2,571,440 unchanged | 2,564,068 → 2,565,111 | 7,372 → 6,329 |
+| Package metadata | 40,960 unchanged | 37,684 → 37,702 | 3,276 → 3,258 |
+| Integrated emitted text | 3,145,728 unchanged | 3,115,617 → 3,144,138 | 30,111 → **1,590** |
+| Capacity dependency closure (NF-03) | 524,288 → **557,056** | 523,841 → 537,633 | 447 → **19,423** |
+| Aggregate non-City generation | 14,360,576 → **17,825,792** | 12,879,001 → 15,624,675 | 1,481,575 → **2,201,117** |
 
 The before column uses original limits; after uses only the explicitly approved changes. Under the new ceilings, pre-placement NF-03 headroom was 33,215 bytes and aggregate headroom was 4,946,791 bytes. This distinguishes added capacity from media consumption.
 
-Before measurements combine current-source raw/legacy/offline checks with the retained verified integration baseline; pre-existing runtime/deployment edits were already present. After measurements use production accounting/transform APIs with explicit **DEVELOPMENT_MEASUREMENT_NOT_RELEASE_BOUND** metadata. This is a development projection, not an exact-commit release receipt. Rebuild and remeasure an authorized source-bound release before publication. No release guard was weakened.
+Before measurements combine initial raw/legacy/offline checks with the retained verified integration baseline. The after column is the exact-source final-code measurement candidate **`4b31ecc`**, with **BOUND_FILES_MATCH_COMMIT** ownership, and includes both the enhancement work and the newer live security baseline merged before release. The tracked build recipe and complete local stage verifier passed. All seven media hashes and sizes match their source and staged manifests. No release guard was weakened; no additional ceiling was raised. Publication/readback remain **NOT_PERFORMED** until the owner-operated upload and hosted verification finish. A documentation-only checkpoint changes source identity and may change compressed archive/metadata byte counts; the final package is reverified against every unchanged ceiling, and its generated manifests hold those final exact counts.
 
 An early, pre-approval implementation exceeded the former capacity closure by 26 bytes. Leading-indentation removal in two shared modules recovered room without changing JavaScript tokens, line boundaries or comments; equivalence checks passed. The later explicit approval supersedes that old limit only where recorded above.
 
-Evidence: `baseline-budget.json`, `approved-budget-comparison.json`, `media-development-budget.json` and `whitespace-check.json` under `build/fleetlab-city/validation/enhancement-20261023/`. The approved media group is included in package source ownership, hash validation, route closures and aggregate accounting.
+Evidence: `baseline-budget.json`, `approved-budget-comparison.json`, `media-development-budget.json` and `whitespace-check.json` under `build/fleetlab-city/validation/enhancement-20261023/`. Media binaries are source-bound, hash-checked and counted in media/aggregate budgets; their hosted JS/CSS count in emitted text and route closures. Final counters are also bound in the candidate’s `stage/review/integration-manifest.json` and `stage/site/downloads/teaching-package.json`.
 
 ## 3. Compression and motion
 
@@ -100,9 +102,11 @@ The local server was corrected to support byte-range requests before the screens
 - Screenshots: `screenshots/fl-v1-transition-desktop.png` and `screenshots/fl-v1-endpoint-desktop.png` under the validation directory.
 - Budget approval is recorded, but the owner explicitly rejected this V1 version for product placement. A rerender should remove the transition ghosts/doubled moon and dark endpoint, retain a usable loop, and undergo the same compression and in-situ review. No rerender has been generated in this task. The review overlay cannot be uploaded as a release.
 
-## 5. Live local verification and mobile checks
+## 5. Verification URLs and mobile checks
 
-These URLs serve the current development preview on this computer. The public site was not changed. The source-bound packaging guard intentionally rejects uncommitted source; it was not bypassed to produce an upload-ready bundle. The preview reuses the frozen City evidence and verifies scientific files remain byte-identical; no studies were regenerated.
+The original media review URLs below remain available on this computer. The merged release candidate was additionally served at `http://127.0.0.1:4193/` and rechecked at **390 × 844** on Home, Fleet day and the new hub: each measured width 390 / document scroll width 375, with no horizontal overflow. A2 loaded successfully, its exact caption remained readable, and no V1 element was present. The hub loaded its actual `/network-flows/hub.css` stylesheet and all five question links. Screenshots and DOM observations are retained under `build/fleetlab-city/validation/enhancement-release-20261023/screenshots/`. The candidate preserves frozen City evidence: 4,941 unchanged payload files / 767,231,105 bytes per City release match original/current/rollback manifest records. The City source offer retains 12 files / 77,214,340 bytes unchanged; only presentation files differ. No studies were regenerated.
+
+**Public URLs, pending this release:** [Home](https://fleetlab.pages.dev/#/home), [Fleet day](https://fleetlab.pages.dev/#/fleet-day), [network hub](https://fleetlab.pages.dev/network-flows/), [City notebook](https://fleetlab.pages.dev/city-explorer/#compare). These are the intended stable destinations, not evidence that the enhancements are live. Fresh pre-release readback matched all 103 recorded production smoke paths at source `2d01b25`; the unchanged immutable deployment is [4fd751ea](https://4fd751ea.fleetlab.pages.dev).
 
 | Surface | Live local URL | Result |
 |---|---|---|
@@ -121,39 +125,71 @@ These URLs serve the current development preview on this computer. The public si
 
 Home, Fleet day, hub, About, notebook, capacity and rebalancing each measured `innerWidth=390`, `scrollWidth=375` (the remaining width is the browser scrollbar), with no page-level horizontal overflow. Notebook tables intentionally retain local horizontal scrolling. Fourteen new HTTP readbacks passed; all seven installed media hashes match the manifest and requested social-image tags are present. Browser console inspection returned no warnings/errors. New screenshots and seven DOM observations are in `screenshots/media-*`; prior defect/alias evidence is retained alongside them.
 
-## 6. Validation, source ownership and handoff
+## 6. Validation, source ownership and release handoff
 
 | Command/check | Result |
 |---|---|
 | `python -m pip install -e ".[dev,workbench]"` in hermes-dev | Pass |
-| `python -m pytest -q` in hermes-dev | **1,661 passed, 56 skipped** |
-| `node --test apps/fleetlab-city/test/*.test.mjs` | **139 passed**, 0 failed |
-| `node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs` | **2,433 passed**, 0 failed, 8 skipped, 1 existing TODO |
-| City Python integration tests | **35 passed** |
-| Focused capacity-site tests | **10 passed** |
+| `FLEET_PLAYGROUND_BASE=bca4ccd python -m pytest -q` in hermes-dev | **1,664 passed, 55 skipped** |
+| `node --test apps/fleetlab-city/test/*.test.mjs` with qualified Node and City Python on PATH | **232 passed**, 0 failed |
+| `node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs` | **2,453 passed**, 0 failed, 8 skipped, 1 existing TODO |
+| `python -m unittest discover -s apps/fleetlab-city/tests` in the locked City venv | **370 passed** |
+| Focused guarded builder / media / motion / branding | **27 passed** |
+| Header-gate regression tests | **7 passed**; all 95 staged header-check paths resolve locally |
 | `python -m ruff check .` | Pass |
-| Activated hermes-dev `python -m hermes doctor` | **17 PASS, 1 WARN** (dirty tree), **1 optional NOT_AVAILABLE** |
+| Activated hermes-dev `python -m hermes doctor` | **18 PASS, 1 optional NOT_AVAILABLE**, no WARN or FAIL |
 | `git diff --check` | Pass |
-| Independent change review | Replay narrative grammar finding fixed in the first wave; media-wave review found no actionable defects. 20 focused media/motion/packaging tests passed; browser validation followed |
+| Pinned uploader `wrangler.mjs --version` | **4.148.0**, fresh isolated install and CLI hash checks passed; no Cloudflare request |
+| Named-base boundary/parity checks | **91 passed**, 0 skipped |
+| Independent change review | Header URL corrected; media creation uses the guarded visitor builder with no additional route dependency. Reported findings are resolved; final regression and browser checks follow the final code. |
 
-Regression tests cover delayed/remounted branding, founder/tour copy, aliases, singular grammar on both frozen-viewer surfaces, metadata, hub/redirect/sitemap inclusion, exact-caption placements, lazy/global/reduced motion, source ownership, and the three explicitly approved budget changes. The new static files are explicitly included in integration, source offers, ownership verification, and aggregate accounting. This is not an uncounted side directory.
+All final merged regression gates ran on `4b31ecc8400b322334592eeb74232ff0b3913928`; 776 source/test input hashes remained unchanged and the source tree was clean. The editable installation was completed in the initial wave; the final merged regression uses the existing qualified environments. Regression tests cover delayed/remounted branding, founder/tour copy, aliases, singular grammar on both frozen-viewer surfaces, metadata, hub/redirect/sitemap inclusion, exact-caption placements, lazy/global/reduced motion, source ownership, and the three explicitly approved budget changes. The new static files are explicitly included in integration, source offers, ownership verification, and aggregate accounting. This is not an uncounted side directory.
 
-Negative results retained: six new placement tests and new packaging/motion tests failed before implementation and passed afterward; the expected new presentation tests failed before implementation; the replay regression reproduced the missed second surface before its fix. The first full Hermes run had 1,660 pass / 1 fail / 56 skip because the required editable install generated ignored `src/hermes_autonomy.egg-info/PKG-INFO`, whose copied README violated the source-boundary scan. That generated directory was preserved in ignored validation scratch; focused boundary tests and the final full run passed. No source-boundary rule was weakened. Initial unactivated doctor warnings were resolved by invoking the activated environment; the dirty-tree warning remains expected.
+Negative results retained: six new placement tests and new packaging/motion tests failed before implementation and passed afterward; the expected new presentation tests failed before implementation; the replay regression reproduced the missed second surface before its fix. During the original implementation wave, the first full Hermes run had 1,660 pass / 1 fail / 56 skip because the required editable install generated ignored `src/hermes_autonomy.egg-info/PKG-INFO`, whose copied README violated the source-boundary scan. That generated directory was preserved in ignored validation scratch; focused boundary tests and the final full run passed. No source-boundary rule was weakened. During release reconciliation, a parallel package-proof process was killed; its isolated serial rerun passed all seven tests. The first merged hosted run used the system Python without certifi; selecting the existing qualified City Python on PATH produced 232 passing tests. Neither environmental failure was concealed or fixed by weakening the checks. Initial unactivated doctor warnings were resolved by invoking the activated environment; the final clean-source doctor has no dirty-tree warning.
 
-Git remains on `codex/fleetlab-city-sf`, HEAD `6c1e3900dbc30426eb3e5a70cc42599849075f69`, with uncommitted edits. Existing TLS/runtime/deployment changes, owner specs and supplied assets were preserved. No staging, commit, push, PR, remote modification, merge, deployment, or publication. The historical Phase 6 instructions do not expand this explicit FleetLab scope; no review envelope, gate, verifier, evidence bundle, safety permission, or simulator adapter changed.
+The implementation is committed on `codex/fleetlab-city-sf`: `e015a1d` records the approved media, `c8768b5` merges the actual live security baseline `2d01b25`, `3f18319` corrects the header check to use `/network-flows/hub.css`, and `4b31ecc` connects media creation to the existing guarded builder without adding a route dependency. The first exact-source package passed the tracked reconstruction recipe and complete local stage verifier. The final-code measurement candidate has City presentation `ed72e5ef6f57a45c`; the compatible staged City rollback is `0bdffbfcff0e1bf9`. Presentation release IDs and archive metadata bind the exact source commit and are resolved from the final package receipt after the documentation checkpoint. Neither is a whole-site rollback receipt. The previous live production receipt remains unchanged until actual publication/readback. No Git push or PR was performed.
+
+Independent release review found the wrong stylesheet URL in the header checker; a failing regression reproduced it and all seven header tests pass after correction. The first full merged regression then detected a new media helper outside the established guarded attribute-setter rule. The media builder now delegates to the existing guarded visitor builder, passed in by its sole caller; motion uses three literal boolean attributes. Twenty-seven focused guard/placement/motion/branding tests pass without widening the guard allowlist. The failed merged run is preserved; final merged results below supersede it. The final package is retained under ignored `dist/fleetlab-enhancement-20261023/`; its exact release identity is recorded in `local-release.json`, not inferred from a documentation commit.
+
+### Owner-operated publication step
+
+Publication is already authorized. The remaining dependency is the existing credential interface, not a request to approve the design again. [TOKEN_INPUT.md](../apps/fleetlab-city/deploy/TOKEN_INPUT.md) requires an “owner-controlled, ephemeral injector outside the agent session” for each remote invocation. The owner must use that interface; do not paste a token into chat, a command argument or an env file. Production also requires the exact first 12 source-commit characters plus Enter in an interactive terminal.
+
+From the repository root, select the verified Node runtime:
+
+```sh
+export PATH="$PWD/build/fleetlab-city/toolchain/node-v22.23.4-darwin-arm64/bin:$PWD/build/fleetlab-city/venv/bin:$PATH"
+```
+
+After the existing owner-controlled injector supplies the documented inputs, upload the prepared candidate to preview:
+
+```sh
+node apps/fleetlab-city/deploy/wrangler.mjs pages deploy "$PWD/dist/fleetlab-enhancement-20261023/stage/site" --project-name fleetlab --branch codex-city-explorer
+```
+
+Return the non-secret immutable preview URL for full byte readback, header checks and browser verification. Only after those checks pass, publish the same unchanged source and package through the owner-operated production command:
+
+```sh
+node apps/fleetlab-city/deploy/wrangler.mjs pages deploy "$PWD/dist/fleetlab-enhancement-20261023/stage/site" --project-name fleetlab --branch feat/fleetlab-playground
+```
+
+The wrapper prints the full source commit for the terminal confirmation. Do not edit source or the staged package between preview and production. After upload, repeat full production readback/header checks, check the public 390px layouts, then update the committed receipt and this status. Local validation does not substitute for those hosted checks.
+
+**Dated tool-only dependency residual:** the pinned Wrangler 4.148.0 uploader bundles Undici 7.29.1; the October 23 audit reports three dependency vulnerabilities (one high, two moderate). A malicious HTTPS API response with excessive content encodings can terminate the upload client. The known fix is Undici 7.30.1; merely overriding the separately installed dependency does not repair Wrangler’s bundled copy. The inspected alternative Wrangler also retained the affected dependency, so no unreviewed CLI patch or downgrade was substituted. This affects the uploader, not visitor JavaScript. [Upstream advisory](https://github.com/nodejs/undici/security/advisories/GHSA-xjj6-f33q-929c), [7.30.1 release](https://github.com/nodejs/undici/releases/tag/v7.30.1). The app dependency audit is clean; package signatures were verified. Record this residual before owner invocation.
 
 ## Recommendation
 
-Keep A2 as Fleet day's hero and V1 held for a rerender, as selected by the owner. Review the installed six media assets and presentation changes in the local preview. No additional media-placement decision is pending.
+Publish the verified candidate through the existing owner-operated release interface, keeping **A2 as the Fleet day hero**. **V1 is held for rerender**; no further media choice is pending. Muse/Fable should treat the installed presentation as approved and the V1 animation as the only rerender request.
 
 ## Top risks + mitigations
 
-- **Tight integrated text headroom:** 4,239 bytes remain under the unchanged ceiling. Rebuild and remeasure from the final authorized commit before a release.
-- **Visible loop joins:** V2/V3 keep complete ten-second teaching sequences; do not describe them as seamless. V1 remains excluded until a corrected version is reviewed.
-- **Preview is not a release:** source-binding and staging guards remain in place; publication requires the normal separately authorized workflow.
+- **Tight text headroom:** use the final exact-source budget figures above; no additional ceiling was raised. Rebuild if any source changes before publication.
+- **V1 source defects:** rerender the doubled moon/transition ghosts and dark endpoint; preserve the concept fence, A2 fallback, audio-free compression and motion controls. Review the new loop in situ before any replacement.
+- **V2/V3 loop joins:** complete ten-second sequences are retained and must not be described as seamless.
+- **Publication pending:** keep the live receipt intact until hosted bytes, headers and mobile layouts pass. Use the owner-operated credential interface; retain the uploader advisory as a disclosed tool residual.
 
 ## Next 3 actions
 
-1. Review the local A2 hero, People band, notebook, capacity and rebalancing placements.
-2. Rerender V1 when desired, then inspect its transitions and loop before replacing the still.
-3. Separately authorize a source-bound release and publication workflow when ready.
+1. Owner runs the prepared preview upload through the existing token injector and supplies its non-secret URL.
+2. Verify preview, publish the same package with interactive source confirmation, then verify production and record the live receipt.
+3. Share this report with Muse/Fable; rerender V1 separately and keep A2 until the replacement passes review.

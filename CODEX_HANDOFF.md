@@ -1,81 +1,117 @@
-# Current update — FleetLab enhancement round, October 23, 2026
+# Current update — FleetLab approved release preparation, October 23, 2026
 
-The controlling request is `FLEETLAB_ENHANCEMENT_ROUND_2026-10-23.md`, including
-D-1–D-8 from its companion audit. The final per-item report is
+Owner explicitly authorized deployment after approving the media allocation and
+selecting **A2 as the Fleet day hero; V1 HOLD for rerender**. No further media
+placement decision is pending. Shareable detailed report:
 [`docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md`](docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md).
 
-**Superseding owner decisions:** media room approved exactly as proposed:
-new 8-file / 4 MiB enhancement-media group, 17 MiB aggregate non-City ceiling,
-544 KiB NF-03 capacity closure; all other ceilings unchanged. Owner explicitly
-selected **“Use A2; hold V1 for a rerender.”** No placement decision is pending.
+## Status and remaining dependency
 
-Installed locally: A1/V3 Home People band after the existing film and before
-destination cards; A1 beside About users; A2 Fleet day hero; A3 notebook head
-with mandatory caption; A4 capacity hero; V2 beside the existing empty-distance
-figure. Exact supplied copy, captions, alt text and concept fences remain in
-HTML. A2 supplies Home/Fleet day social images; A3 supplies City social images.
-Shared motion controller is poster-first, lazy, viewport/global/reduced-motion
-governed, with hidden/detached-route and play-race handling. Existing qualifiers
-are preserved. No lesson, model, fixture or numerical study was added.
+Presentation/media implementation and local release verification are complete.
+**Publication and hosted candidate readback: NOT_PERFORMED.** The existing live
+release policy requires owner-operated credential injection outside the agent
+session, then an interactive production source-commit confirmation. No token is
+available to the agent. Follow `apps/fleetlab-city/deploy/TOKEN_INPUT.md`; never
+retrieve a secret into chat, put it in an argument or use an ambient OAuth bypass.
+The report includes the exact preview and production wrapper invocations.
 
-Previously completed presentation/defect work remains: founder-first Home with
-unchanged thesis; exact three-stop tour on Home/About; asynchronous pod-logo
-lifecycle; five-question network hub; retired ota-sharing redirect; scale alias;
-duplicate eyebrow removal; singular grammar in paired table and replay;
-scoped descriptions and nine-route sitemap. D-4 was already correct and verified.
+The source-bound final package is retained under ignored
+`dist/fleetlab-enhancement-20261023/`. Its `local-release.json` records the exact
+source commit, manifest hash and complete local inventory. Its `build-inputs.json`
+binds the original frozen inputs. The release is for an educational website;
+SF qualification HOLD, authenticity NOT_AUTHENTICATED, operational deployment
+permission NONE remain separate. Local validation is not hosted readback.
 
-Compressed V1/V2/V3 are 766,594 / 577,249 / 502,747 bytes, 24 fps and audio-free.
-The full ten-second sequences are retained, not certified seamless. V1 remains
-only in excluded review scratch: actual 4.00 s and 9.958 s captures show transition
-ghosting/doubled moon and a dark endpoint. It must be rerendered/reviewed before
-product placement. V2/V3 are installed with their visible loop-join limitation
-explicitly recorded. The derived V2 poster is a full frame, counted and hashed.
+## Source and preservation
 
-Local preview: `http://127.0.0.1:4190/`; Fleet day: `/#/fleet-day`;
-hub: `/network-flows/`; V1 review gallery:
-`http://127.0.0.1:4191/__review__/media-proposal.html#fleet`.
-Preview source: `/private/tmp/fleetlab-enhancement-20261023-media/site`.
-Home, Fleet day, hub, About, notebook, capacity and rebalancing were checked at
-390 × 844 with no page overflow. V2/V3 had no source before entering view,
-played while visible, and returned to posters under global Pause; all present
-rebalancing videos paused. OS-level reduced-motion browser emulation was not
-available; focused controller tests cover it. Desktop screenshots include A2
-and the side-by-side V2/schematic layout.
+Implementation checkpoint `e015a1d`; merge checkpoint `c8768b5`; header-check
+correction `3f18319`; final guarded media builder `4b31ecc`. Branch: `codex/fleetlab-city-sf`. The live baseline was
+newer than the initial worktree: production source `2d01b25`, receipt from
+`02621fe`, immutable URL `https://4fd751ea.fleetlab.pages.dev`. A fresh 103-path
+readback against that current receipt passed. The obsolete local receipt
+mismatched 19 paths and was not treated as the current source of truth.
+The existing live security implementation was merged before preparing release;
+its token isolation, attribute guards, source binding, approved input digests,
+header security and provenance checks remain. No Git push or PR occurred.
 
-Evidence in ignored `build/fleetlab-city/validation/enhancement-20261023/`:
-`approved-budget-comparison.json`, `media-development-budget.json`, compression
-and installed stream probes, 14 HTTP checks, exact source/build/served hashes,
-screenshots/DOM observations, test logs and excluded preview/review harnesses.
-All seven installed files are source-owned and hash-bound. Media allocation:
-2,685,422 / 4,194,304 bytes, 7 / 8 files (1,508,882 bytes and one slot remain).
-Aggregate non-City: 15,600,377 / 17,825,792 (2,225,415 free); NF-03 closure:
-537,301 / 557,056 (19,755 free); unchanged integrated-text ceiling has 4,239 free.
-Measurements are **DEVELOPMENT_MEASUREMENT_NOT_RELEASE_BOUND**. Rebuild and
-remeasure an authorized exact-commit release; no guard was weakened. Frozen
-scientific City files remain byte-identical.
+A1–A4 and V2/V3 plus a derived V2 poster are present: seven source-owned files,
+2,685,422 bytes, all hashes/lengths verified; 1,508,882 bytes and one slot remain
+in the owner-approved 8-file / 4 MiB group. V1 is absent from the product and
+release inventory. Its 766,594-byte review copy shows doubled moon/ghosting at
+4.00 s and a dark endpoint at 9.958 s. V2/V3 are 577,249 / 502,747 bytes. All
+compressed videos are audio-free and below 1,200,000 bytes. Full ten-second
+loops have visible joins; no claim of seamless motion is made.
 
-Final commands/results: required editable `[dev,workbench]` install passed in
-initial wave; `python -m pytest -q`: 1,661 pass, 56 skip;
-`node --test apps/fleetlab-city/test/*.test.mjs`: 139 pass;
-`node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs`: 2,433 pass,
-8 skip, 1 existing TODO; City integration 35 pass; hosted-brand Python 2 pass;
-focused capacity-site 10 pass. Ruff and `git diff --check` pass. Activated doctor:
-17 PASS, dirty-tree WARN, optional display NOT_AVAILABLE. New placement/motion/
-packaging tests were red before implementation and green afterward. Independent
-media review found no actionable defect. Initial editable-install metadata
-caused a source-boundary failure; its generated directory was preserved outside
-`src`, followed by focused/full green runs. No source-boundary rule changed.
+All exact captions, alt text and honesty framing remain in HTML. Placements,
+founder/tour/logo work, five-question hub, metadata/sitemap and D-1–D-8 remain
+as documented. No new lesson, model or numerical study was created. The frozen
+City evidence retains 4,941 unchanged payload files / 767,231,105 bytes per
+release across original/current/rollback manifests. The original source offer
+retains 12 files / 77,214,340 bytes; only presentation files differ.
 
-Git branch/HEAD remain `codex/fleetlab-city-sf` /
-`6c1e3900dbc30426eb3e5a70cc42599849075f69`; edits are uncommitted. Prior TLS/runtime/
-deployment work below and owner assets/specs are preserved. No staging, commit,
-push, PR, remote edit, deployment or publication occurred. Hermes review
-envelopes/artifact digests do not apply to this presentation round; no verifier,
-gate, evidence contract or deployment authority changed.
+Only three explicit budget changes were authorized: new 8-file / 4 MiB media
+group; 544 KiB NF-03 closure; 17 MiB aggregate non-City. All other caps remain.
+The 4b31ecc source-bound candidate has 1,590 bytes integrated-text headroom,
+9,674 raw source/tools, 6,329 offline, 19,423 NF-03, and 2,201,117 aggregate.
+Final counters are in the final package manifests; rebuild if source changes.
 
-Next: review installed media; rerender V1 when desired; separately authorize an
-exact-commit release/publication when ready. Do not upload the development
-preview or review overlay.
+## Validation and limitations
+
+All final merged regression gates passed on clean
+`4b31ecc8400b322334592eeb74232ff0b3913928`; all 776 captured input hashes stayed
+unchanged throughout. With qualified Node 22.23.4 and City Python on PATH:
+`node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs`:
+2,453 pass, 8 skip, 1 existing TODO; hosted Node: 232 pass; City Python unittest:
+370 pass. Hermes pytest with `FLEET_PLAYGROUND_BASE=bca4ccd`: 1,664 pass / 55 skip;
+named-base boundary/parity: 91 pass / 0 skip. Ruff and diff-check pass;
+activated doctor: 18 PASS, 1 optional display NOT_AVAILABLE, no WARN/FAIL.
+Uploader local version: 4.148.0, fresh isolated lock install and CLI hash pass;
+no Cloudflare request. Commands, hashes and prior negative runs are retained in
+`merged-gate-summary.json` and its referenced logs.
+
+Negative results resolved: merged attribute-guard regression detected the media
+helper's computed attribute setter; media now receives the existing guarded
+visitor builder, and motion uses literal attribute names. A first reuse approach
+would have added an uncounted route dependency; it was replaced with dependency
+injection before final qualification. Twenty-seven focused guard/media/motion/
+branding tests pass, followed by the full green suites. Header gate now checks
+`/network-flows/hub.css`; its red/green regression and seven tests pass, and all
+95 staged check paths resolve. An earlier parallel package-proof process was
+killed; the isolated serial rerun passed. Hosted tests initially inherited system
+Python without certifi; existing City Python on PATH resolved that environmental
+failure. No guard allowlist or ceiling was weakened.
+
+The tracked `build-release.py` recipe reconstructs from approved immutable
+legacy, City base and source-offer inputs; package proof and the complete local
+stage verifier passed. Original City manifest:
+`c56bda6b509105c5bee778980c01d13028401bc03fc8b49b4948f65c6f18f63f`.
+Final-code measurement candidate `ed72e5ef6f57a45c`; staged compatible City rollback
+`0bdffbfcff0e1bf9`. A whole-site rollback to prior production is a different action
+and was not rehearsed. Preserve the current production receipt until new public
+bytes/headers are verified.
+
+Fresh browser checks at 390 × 844 on source-bound Home, Fleet day and hub show
+no page overflow (width 390 / scrollWidth 375). A2 loaded with its exact caption;
+V1 absent. Hub question links and `/network-flows/hub.css` loaded correctly.
+The prior seven-page media pass and lazy/global-motion checks remain applicable;
+OS reduced-motion behavior is covered by controller tests, not an OS screenshot.
+New evidence: `build/fleetlab-city/validation/enhancement-release-20261023/`.
+Original media/spec files and prior evidence remain preserved locally.
+
+Tool-only residual: pinned Wrangler 4.148.0 bundles Undici 7.29.1; October 23 audit
+reports three dependency vulnerabilities (one high/two moderate). A malicious HTTPS API response with
+excessive content encodings can terminate the uploader. Overriding the separate
+installed dependency would not fix the bundled copy. Do not patch/downgrade the
+hash-pinned CLI ad hoc. App audit is clean; signatures verified. Detail and
+upstream links are in the shareable report and deployment runbook.
+
+## Next 3 actions
+
+1. Owner uses the existing injector to run the documented preview upload; return
+   its non-secret immutable URL. Do not change source or package between uploads.
+2. Perform full preview readback/header/mobile checks; then owner runs production
+   with its interactive source prefix. Repeat production checks and update receipt.
+3. Share the report with Muse/Fable. Rerender and review V1 separately; keep A2.
 
 ---
 

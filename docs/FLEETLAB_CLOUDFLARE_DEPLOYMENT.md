@@ -315,3 +315,14 @@ release adds the owner-requested Google Analytics tag on the public host; Google
 Analytics may use browser cookies. Cloudflare receives hosting requests and may receive
 browser network-error reports. No automation or branch protection was enabled by
 copying the former CI template; that template has been removed.
+
+### Prepared enhancement candidate — October 23
+
+Final implementation `4b31ecc` retains the actual live `2d01b25` security baseline,
+uses A2 as the Fleet day hero, and excludes V1 pending rerender. Full merged
+regression gates pass; the final package is retained under ignored
+`dist/fleetlab-enhancement-20261023/` with its exact source identity in
+`local-release.json`. See `docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` for
+budgets, residuals and owner-operated commands. The local version path confirms
+the fresh hash-pinned uploader starts as 4.148.0. No authenticated upload has run;
+preview/production readback and the production receipt remain pending.
