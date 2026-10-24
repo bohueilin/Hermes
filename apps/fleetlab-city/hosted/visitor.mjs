@@ -191,7 +191,7 @@ for(const pairs of doc.querySelectorAll('#pair-rows,#pair-story'))if(!pairObserv
  fix();new MutationObserver(fix).observe(pairs,{childList:true,subtree:true});pairObservers.add(pairs);
 }
 decorateFieldNotes(doc);
-decorateConceptMedia(doc);
+decorateConceptMedia(doc,node);
 }
 
 // Only presentation is animated. No callback can run a model, accept an order or advance replay.

@@ -1,12 +1,11 @@
 import {installConceptVideos} from './enhancement-motion.mjs';
-import {hostedNode} from './integration.mjs';
 
 // Concept artwork only. No model, result, or evidence inputs are read or changed.
 const observers=new WeakMap(),base='/enhancement-media/';
 const peopleAlt='Clay illustration of four depot workers — a lead with a tablet, a technician, a cleaner resetting a cabin, and a remote operator — around a row of white autonomous pods.';
 const fence='Concept illustration · not simulation output';
-export function decorateConceptMedia(doc=document){
- const el=(tag,attrs={},children=[])=>hostedNode(doc,tag,attrs,children);
+export function decorateConceptMedia(doc,createNode){
+ const el=(tag,attrs={},children=[])=>createNode(doc,tag,attrs,children);
  const figure=(id,file,alt,caption='',qualification=fence,film=null)=>{
   const [width,height]=file.includes('FL-A2')?[2352,1008]:file.includes('FL-A3')?[2240,1120]:file.includes('FL-V2')?[1280,720]:[2048,1152];
   const img=el('img',{src:base+file,alt,width:String(width),height:String(height),loading:'lazy',decoding:'async'});
@@ -56,7 +55,7 @@ export function decorateConceptMedia(doc=document){
  const Observer=doc.defaultView?.MutationObserver??globalThis.MutationObserver;
  if(Observer&&!observers.has(doc)){
   const selector='.studio-overview,.people-grid,.teaching-frame,#legacy-study,.capacity-hero,[data-explainer-kind="deadhead"]';
-  const observer=new Observer(rows=>{if(rows.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches(selector)||n.querySelector(selector)))))decorateConceptMedia(doc);});
+  const observer=new Observer(rows=>{if(rows.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches(selector)||n.querySelector(selector)))))decorateConceptMedia(doc,createNode);});
   observer.observe(doc.body,{childList:true,subtree:true});observers.set(doc,observer);
  }
 }
