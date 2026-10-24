@@ -82,7 +82,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.equal(receipt.counts.emitted_text_bytes, measureSiteOwnership(files).emitted_text_bytes + result.files.get(tool.RECEIPT_PATH).length);
   assert.ok(receipt.counts.raw_source_and_tools_bytes <= 3153920);
   assert.ok(receipt.counts.offline_bytes <= 2571440);
-  assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 524288);
+  assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 557056);
   assert.equal(result.files.size, 2);
   const archive = result.files.get(receipt.source_offer.path);
   assert.equal(createHash("sha256").update(archive).digest("hex"), receipt.source_offer.sha256);
@@ -148,7 +148,7 @@ test("release package binds every source and its executing proof tool to the exa
   for (const path of ["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch", "styles.css", "index.html"].filter(path=>existsSync(join(source,path)))) cpSync(join(source, path), join(playground, path), { recursive: true });
   for(const name of ["hosted","tools","deploy"]){
     const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));
-    for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path))){
+    for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|xml|md)$/.test(path))){
       const target=join(root,"apps/fleetlab-city",name,path);mkdirSync(dirname(target),{recursive:true});cpSync(join(base,path),target);
     }
   }
@@ -156,6 +156,7 @@ test("release package binds every source and its executing proof tool to the exa
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/tile-media",import.meta.url)),join(root,"apps/fleetlab-city/tile-media"),{recursive:true});
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/rebalancing-media",import.meta.url)),join(root,"apps/fleetlab-city/rebalancing-media"),{recursive:true});
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/diagram-media",import.meta.url)),join(root,"apps/fleetlab-city/diagram-media"),{recursive:true});
+  cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/enhancement-media",import.meta.url)),join(root,"apps/fleetlab-city/enhancement-media"),{recursive:true});
   const dependency=join(root,"apps/fleetlab-city/citylib/public_notes.py");mkdirSync(dirname(dependency),{recursive:true});cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/citylib/public_notes.py",import.meta.url)),dependency);
   mkdirSync(join(root, "src/hermes/fleet"), { recursive: true });
   cpSync(fileURLToPath(new URL("../../../src/hermes/fleet/contracts.py", import.meta.url)), join(root, "src/hermes/fleet/contracts.py"));
@@ -181,9 +182,15 @@ test("release package binds every source and its executing proof tool to the exa
   } };
   writeMap(integrated, new Map([...buildSite(playground, { sourceCommit }), ...result.files,
     ["city-explorer/releases/index.html", readFileSync(join(root,"apps/fleetlab-city/hosted/city-releases-redirect.html"))], ["network-flows/fleet-day/index.html", readFileSync(join(root,"apps/fleetlab-city/hosted/fleet-day-redirect.html"))], ["downloads/fleetlab-offline.html", readFileSync(offline)], ["publication.json", JSON.stringify(publication)], ["city-explorer/unrelated", "City inventory is checked by the outer verifier"]]));
+  const staticFiles={'network-flows/index.html':'network-hub.html','network-flows/hub.css':'network-hub.css','network-flows/ota-sharing/index.html':'ota-sharing-redirect.html','sitemap.xml':'sitemap.xml'};
+  writeMap(integrated,new Map(Object.entries(staticFiles).map(([path,name])=>[path,readFileSync(join(root,'apps/fleetlab-city/hosted',name))])));
   writeMap(integrated,lessonNavigation(buildSite(playground,{sourceCommit})));
   writeFileSync(join(integrated, "index.html"), "integration owns root HTML");
   assert.doesNotThrow(() => tool.checkIntegratedPackage({ site: integrated, playground, sourceCommit }));
+  const hub=join(integrated,'network-flows/index.html'),originalHub=readFileSync(hub);
+  writeFileSync(hub,Buffer.concat([originalHub,Buffer.from('unlisted mutation')]));
+  assert.throws(()=>tool.checkIntegratedPackage({site:integrated,playground,sourceCommit}),/static integration source mismatch/);
+  writeFileSync(hub,originalHub);
   const onwardPath=join(integrated,'network-flows/capacity/index.html'),onward=readFileSync(onwardPath);
   writeFileSync(onwardPath,Buffer.concat([onward,Buffer.from('unlisted mutation')]));
   assert.throws(()=>tool.checkIntegratedPackage({site:integrated,playground,sourceCommit}),/integrated package|exceeds|limit|size/);
@@ -228,7 +235,7 @@ test("a source checkout cannot omit the executing package-proof tool from its bi
   mkdirSync(join(root, ".git"));
   for(const name of ["hosted","tools","deploy"]){
     const base=fileURLToPath(new URL(`../../../apps/fleetlab-city/${name}`,import.meta.url));
-    for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path))){
+    for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md|xml)$/.test(path))){
       const target=join(root,"apps/fleetlab-city",name,path);mkdirSync(dirname(target),{recursive:true});cpSync(join(base,path),target);
     }
   }
@@ -236,6 +243,7 @@ test("a source checkout cannot omit the executing package-proof tool from its bi
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/tile-media",import.meta.url)),join(root,"apps/fleetlab-city/tile-media"),{recursive:true});
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/rebalancing-media",import.meta.url)),join(root,"apps/fleetlab-city/rebalancing-media"),{recursive:true});
   cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/diagram-media",import.meta.url)),join(root,"apps/fleetlab-city/diagram-media"),{recursive:true});
+  cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/enhancement-media",import.meta.url)),join(root,"apps/fleetlab-city/enhancement-media"),{recursive:true});
   const dependency=join(root,"apps/fleetlab-city/citylib/public_notes.py");mkdirSync(dirname(dependency),{recursive:true});cpSync(fileURLToPath(new URL("../../../apps/fleetlab-city/citylib/public_notes.py",import.meta.url)),dependency);
   mkdirSync(join(root, "src/hermes/fleet"), { recursive: true });
   cpSync(fileURLToPath(new URL("../../../src/hermes/fleet/contracts.py", import.meta.url)), join(root, "src/hermes/fleet/contracts.py"));

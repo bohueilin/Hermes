@@ -1,3 +1,4 @@
+@import url("./enhancement-media.css");
 /* Visitor navigation. Tonal surfaces; all content is visible without animation. */
 .visitor-purpose{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.8fr);gap:72px;align-items:center;margin:0 0 40px;padding:12px 0 8px;color:#173d33}
 .visitor-kicker{font-size:11px!important;line-height:1.6!important;font-weight:700;letter-spacing:.13em;color:#496456;margin:0 0 16px!important}
@@ -98,3 +99,5 @@ html[data-visitor-motion=paused] :is(button,.studio-button,.design-primary,.cata
 html[data-visitor-motion=paused] summary::before{transition:none!important}
 @media(prefers-reduced-motion:reduce){summary::before{transition:none!important}:is(button,.studio-button,.design-primary,.catalog-card,.visitor-start-card,.visitor-city-card,.visitor-family,.motion-feedback){transition:none!important;transform:none!important}.catalog-grid>.catalog-card,details[open]>:not(summary),.motion-enter,.motion-staged,.motion-ambient{animation:none!important}}
 @media(forced-colors:active){:is(.operations-lab,.fixture-control,.bench) :is(select,input){appearance:auto;background-image:none;forced-color-adjust:auto}}
+
+.visitor-tour{margin:24px 0}.visitor-tour h2{font:600 24px/1.2 var(--font-display);margin:0 0 12px}.visitor-tour ol{display:flex;flex-wrap:wrap;gap:12px 28px;padding-left:20px}.visitor-tour a{color:#204f3f;text-underline-offset:4px}.visitor-purpose .visitor-byline{font-size:19px!important;margin-bottom:17px!important;color:#254c3e}

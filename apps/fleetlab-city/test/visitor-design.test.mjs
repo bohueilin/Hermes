@@ -8,14 +8,14 @@ import {createDepotFlowLab} from '../../../playground/fleetlab/src/ui/depot-flow
 import {requestOutcomes} from '../../../playground/fleetlab/src/ui/operations-lab.js';
 
 test('concept diagrams follow the active lesson without duplicates or changing results',()=>{
- const restore=installFakeDom(),previous=globalThis.MutationObserver;let redraw;
- globalThis.MutationObserver=class{constructor(fn){redraw=fn;}observe(){}};
+ const restore=installFakeDom(),previous=globalThis.MutationObserver,callbacks=new Map();
+ globalThis.MutationObserver=class{constructor(fn){this.fn=fn;}observe(target){callbacks.set(target,this.fn);}};
  const lab=createDepotFlowLab();document.body.appendChild(lab.element);
  try{
   decorateVisitors(document);decorateVisitors(document);
   assert.equal(lab.element.querySelectorAll('.visitor-diagram').length,1);
   assert.equal(lab.element.querySelector('.visitor-diagram img').getAttribute('alt'),'Two autonomous pods sharing one network link, each with a deadline.');
-  lab.setLesson({id:'crossed-priorities'});redraw();
+  lab.setLesson({id:'crossed-priorities'});callbacks.get(lab.element.querySelector('.flow-hero'))([]);
   assert.equal(lab.element.querySelectorAll('.visitor-diagram').length,1);
   assert.equal(lab.element.querySelector('.visitor-diagram img').getAttribute('alt'),'Four pods with mismatched upload sizes and deadlines sharing one link.');
   assert.equal(lab.element.querySelector('.visitor-diagram figcaption').textContent,'Concept illustration · not simulation output');

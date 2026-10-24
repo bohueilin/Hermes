@@ -13,7 +13,14 @@ and SF completion status for exact versions, tests and remaining work. Historica
 setup/release notes below retain their original scope. The stopped power-study
 retry was consumed; no further evaluation is authorized by these packaging tools.
 
-Start from the repository root. Python 3.11 and Node 22 are the tested targets; the wheel lock is specifically macOS arm64. Other platforms require their own resolved wheel hashes and validation, not removing `--require-hashes`.
+Start from the repository root. Python 3.11 and Node 22.23.4 or newer within Node 22 are the tested targets; the wheel lock is specifically macOS arm64. Other platforms require their own resolved wheel hashes and validation, not removing `--require-hashes`.
+
+The October 2026 eMudhra trust-store update requires the patched Node runtime,
+`certifi` from the current wheel lock, and a patched Python/system CA store.
+Updating standalone `certifi` does not update pip's independently bundled store;
+use pip 26.2.2 or newer and verify the actual TLS clients used for downloads.
+See the [deployment runbook](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md#october-22-tls-toolchain-update)
+for the local runtime and verification procedure. The static website has no PHP runtime.
 
 ```bash
 python3.11 -m venv build/fleetlab-city/venv

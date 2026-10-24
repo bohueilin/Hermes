@@ -1,6 +1,6 @@
 # FleetLab publication runbook
 
-Updated 14 October 2026. Applies to the static educational FleetLab website.
+Updated 22 October 2026. Applies to the static educational FleetLab website.
 Hermes operational deployment permission remains NONE. Historical deployment
 paragraphs and the old playground-only CI template are superseded; do not use them.
 
@@ -70,6 +70,54 @@ are unchanged. Keep all publication identities in the committed readback receipt
 source commits and documentation-only commits can differ.
 
 ## Build and verify
+
+### October 22 TLS toolchain update
+
+FleetLab serves static HTML, JavaScript and data through Cloudflare Pages. There
+is no PHP application runtime, Composer dependency or PHP-serving upstream in
+the reviewed release. PHP2Shell (CVE-2026-109618 and CVE-2026-109619) therefore
+does not require a PHP upgrade or a website redeployment for this architecture.
+
+The separate eMudhra incident affects local HTTPS tools. Require Node **22.23.4
+or newer within Node 22**; both manifests and lockfiles record this floor, and
+the release wrapper rejects older runtimes before loading Wrangler or accessing
+credentials. `apps/fleetlab-city/.node-version` selects 22.23.4 for compatible
+version managers. The local Apple Silicon runtime is installed at:
+
+```sh
+export PATH="$PWD/build/fleetlab-city/toolchain/node-v22.23.4-darwin-arm64/bin:$PATH"
+node --version
+```
+
+This session-only PATH selection leaves other projects' Homebrew Node unchanged.
+On a new machine, install the appropriate official Node 22 security release and
+verify its published checksum; the ignored local runtime is not committed.
+Use this PATH for all subsequent `node` and `npm` commands in this runbook.
+
+The Python wheel lock now pins `certifi==2026.10.19` with its wheel SHA-256.
+Install with `--require-hashes` as documented. Also update the active Python
+environment's CA package and pip (26.2.2 or newer): neither the default Python
+SSL store nor pip's vendored bundle is repaired by changing standalone certifi.
+The local `hermes-dev` environment uses `ca-certificates=2026.10.20` and
+`openssl=3.5.9`; both it and the FleetLab venv use pip 26.2.2. The readback tool
+explicitly supplies the locked certifi bundle to curl with `--cacert`; system
+curl's default trust store is independent and remains outside this project fix.
+Bootstrap downloads must use
+a trusted client and independently checked official package hashes, never
+`--insecure` or disabled TLS verification.
+
+Verify both `dv-g3b-emudhra.we-have-a-problem.com` and
+`dv-g3b-aaa-emudhra.we-have-a-problem.com` with each actual client/trust store.
+Require a certificate-validation rejection and a successful normal HTTPS
+control. Timeouts, DNS failures and unrelated connection failures are
+inconclusive. A passing check covers only that client and tested chains, not
+all OS applications, visitors, or evidence of past compromise.
+
+Sources: [PHP advisory](https://www.php.net/archive/2026.php#2026-10-21-5),
+[Node security release](https://nodejs.org/en/blog/release/v22.23.4),
+[incident and package matrix](https://emudhra.we-have-a-problem.com/).
+
+### Release procedure
 
 The subsequent October 13 Argon visual refinement uses the same release workflow and adds the explicitly reviewed `src/ui/concept-primer.js` module to `FLOW_ADDED`. It updates the offline edition while preserving all City payload bytes. See [the visual implementation handoff](FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-13.md) for the current production readback and remaining qualification limits. Continue to reject any undeclared module; do not broaden the allowlist during packaging.
 

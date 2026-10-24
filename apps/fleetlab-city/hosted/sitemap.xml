@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://fleetlab.pages.dev/</loc></url>
+  <url><loc>https://fleetlab.pages.dev/city-explorer/</loc></url>
+  <url><loc>https://fleetlab.pages.dev/network-flows/</loc></url>
+  <url><loc>https://fleetlab.pages.dev/network-flows/fleet-day/</loc></url>
+  <url><loc>https://fleetlab.pages.dev/network-flows/capacity/</loc></url>
+  <url><loc>https://fleetlab.pages.dev/network-flows/software-delivery/</loc></url>
+  <url><loc>https://fleetlab.pages.dev/network-flows/delivery-order/</loc></url>
+  <url><loc>https://fleetlab.pages.dev/network-flows/rebalancing/</loc></url>
+  <url><loc>https://fleetlab.pages.dev/network-flows/dispatch/</loc></url>
+</urlset>

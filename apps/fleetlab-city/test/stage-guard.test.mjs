@@ -10,6 +10,7 @@ import {createHash} from 'node:crypto';
 import {verifyStage,releaseCommand} from '../deploy/stage-guard.mjs';
 import {buildSite,buildHtml} from '../../../playground/fleetlab/tools/pack.mjs';
 import {buildPackageProof} from '../../../playground/fleetlab/tools/package-proof.mjs';
+import {STATIC_INTEGRATION_FILES} from '../hosted/site-transform.mjs';
 test('aliases and global options cannot redirect or bypass a guarded upload',()=>{
  const valid=['pages','deploy','build/site','--project-name','fleetlab','--branch','codex-city-explorer'];
  assert.equal(releaseCommand(valid),'deploy');
@@ -80,7 +81,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
   }
   for(const name of ['hosted','tools','deploy']){
    const base=join(repository,'apps/fleetlab-city',name);
-   for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path))){
+   for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|xml|md)$/.test(path))){
     const target=join(source,'apps/fleetlab-city',name,path);mkdirSync(dirname(target),{recursive:true});cpSync(join(base,path),target);
    }
   }
@@ -88,6 +89,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
   cpSync(join(repository,'apps/fleetlab-city/diagram-media'),join(source,'apps/fleetlab-city/diagram-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/brand-media'),join(source,'apps/fleetlab-city/brand-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/tile-media'),join(source,'apps/fleetlab-city/tile-media'),{recursive:true});
+  cpSync(join(repository,'apps/fleetlab-city/enhancement-media'),join(source,'apps/fleetlab-city/enhancement-media'),{recursive:true});
   const publicNotes=join(source,'apps/fleetlab-city/citylib/public_notes.py');mkdirSync(dirname(publicNotes),{recursive:true});cpSync(join(repository,'apps/fleetlab-city/citylib/public_notes.py'),publicNotes);
   const git=(...args)=>execFileSync('git',['-C',source,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
   git('init','-q');git('add','.');git('-c','user.name=Release test','-c','user.email=release@example.invalid','commit','-qm','bound source');
@@ -98,6 +100,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
   writeFiles(site,[...proof.files,...integratedShell(packed),['downloads/fleetlab-offline.html',readFileSync(offline)]]);
   for(const path of ['integration.mjs','integration.css','404.html','not-found.css'])cpSync(join(source,'apps/fleetlab-city/hosted',path),join(site,path));
   writeFiles(site,[['city-explorer/releases/index.html',readFileSync(join(source,'apps/fleetlab-city/hosted/city-releases-redirect.html'))],['network-flows/fleet-day/index.html',readFileSync(join(source,'apps/fleetlab-city/hosted/fleet-day-redirect.html'))]]);
+  writeFiles(site,Object.entries(STATIC_INTEGRATION_FILES).map(([path,name])=>[path,readFileSync(join(source,'apps/fleetlab-city/hosted',name))]));
   const offlineHash=fingerprint(readFileSync(offline)).sha256;
   writeFiles(site,[['downloads/fleetlab-offline.sha256',offlineHash+'  fleetlab-offline.html\n'],['downloads/verify-offline.txt',
    'FleetLab offline edition — download verification\n\nSHA-256: '+offlineHash+'\nmacOS/Linux: shasum -a 256 fleetlab-offline.html\nWindows PowerShell: Get-FileHash .\\fleetlab-offline.html -Algorithm SHA256\n\nCompare the full digest before opening. This detects corruption against this website\'s published copy, not independent authenticity. The offline file excludes City Explorer.\n']]);
@@ -124,7 +127,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
   writeFiles(site,[['publication.json',JSON.stringify(selection)]]);mkdirSync(review);
   const seal=(overrides={})=>writeFileSync(join(review,'integration-manifest.json'),JSON.stringify({files:inventory(site),teaching_package:packageFiles,...overrides}));
   seal();assert.ok(verifyStage(site,commit,source)>0);
-  for(const path of ['city-explorer/releases/index.html','network-flows/capacity/index.html','network-flows/software-delivery/index.html','network-flows/fleet-day/index.html','index.html','boot.js','_headers','integration.mjs','integration.css','404.html','not-found.css','brand.mjs','brand.css','site-media/fleetlab-logo.png']){
+  for(const path of ['city-explorer/releases/index.html','network-flows/capacity/index.html','network-flows/software-delivery/index.html','network-flows/fleet-day/index.html','index.html','boot.js','_headers','integration.mjs','integration.css','404.html','not-found.css','brand.mjs','brand.css','site-media/fleetlab-logo.png','enhancement-motion.mjs','enhancement-media/FL-A2-one-fleet-day-panorama.webp','enhancement-media/FL-V2-deadhead-explainer.mp4']){
    const original=readFileSync(join(site,path));writeFileSync(join(site,path),Buffer.concat([original,Buffer.from('\nchanged after review')]));seal();
    assert.throws(()=>verifyStage(site,commit,source),/integration.*(?:differ|mismatch)/i,path);
    writeFileSync(join(site,path),original);

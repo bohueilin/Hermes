@@ -21,6 +21,17 @@ PACK = Path(__file__).resolve().parents[3] / "playground/fleetlab/tools/pack.mjs
 
 
 class IntegrationTest(unittest.TestCase):
+    def test_static_presentation_paths_match_independent_guard_and_are_counted(self):
+        script = (
+            "import {STATIC_INTEGRATION_FILES} from "
+            "'./apps/fleetlab-city/hosted/site-transform.mjs';"
+            "process.stdout.write(JSON.stringify(STATIC_INTEGRATION_FILES));"
+        )
+        result = subprocess.run(["node", "--input-type=module", "-e", script],
+                                cwd=PACK.parents[3], capture_output=True, text=True, check=True)
+        self.assertEqual(integration.STATIC_INTEGRATION_FILES, json.loads(result.stdout))
+        self.assertTrue(set(integration.STATIC_INTEGRATION_FILES) <= integration.INTEGRATION_TEXT)
+
     def test_final_route_closure_counts_transformed_headers(self):
         self.assertTrue(callable(getattr(integration, "final_route_counts", None)))
         routes = [{"id": "nf04", "paths": ["route.js", "_headers"], "bytes": 1}]
@@ -29,6 +40,27 @@ class IntegrationTest(unittest.TestCase):
             integration.final_route_counts(routes, files), {"nf04_closure_bytes": 524288}
         )
         files["_headers"]["bytes"] += 1
+        with self.assertRaisesRegex(ValueError, "nf04.*closure.*budget"):
+            integration.final_route_counts(routes, files)
+
+    def test_only_capacity_gets_the_approved_closure_increase(self):
+        routes = [{"id": "nf03", "paths": ["route.js", "_headers"]}]
+        shared = ("enhancement-motion.mjs", "enhancement-media.mjs", "enhancement-media.css")
+        self.assertTrue(set(shared) <= set(integration.brand.TEXT))
+        files = {"route.js": {"bytes": 557053}, "_headers": {"bytes": 0},
+                 **{name: {"bytes": 1} for name in shared}}
+        self.assertEqual(integration.final_route_counts(routes, files),
+                         {"nf03_closure_bytes": 557056})
+        files["enhancement-motion.mjs"]["bytes"] += 1
+        with self.assertRaisesRegex(ValueError, "nf03.*closure.*budget"):
+            integration.final_route_counts(routes, files)
+        files["route.js"]["bytes"] = 524285
+        for name in shared:
+            files[name]["bytes"] = 1
+        routes[0]["id"] = "nf04"
+        self.assertEqual(integration.final_route_counts(routes, files),
+                         {"nf04_closure_bytes": 524288})
+        files["enhancement-motion.mjs"]["bytes"] += 1
         with self.assertRaisesRegex(ValueError, "nf04.*closure.*budget"):
             integration.final_route_counts(routes, files)
 

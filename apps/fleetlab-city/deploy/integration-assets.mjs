@@ -1,6 +1,6 @@
 import {R3_RELEASE,r3PackageProblems} from '../../../playground/fleetlab/tools/dispatch-package.mjs';
 import {R1_RELEASE,r1PackageProblems} from '../../../playground/fleetlab/tools/rebalancing-package.mjs';
-import {BRAND_MEDIA,BRAND_TEXT,renderPage,policyFor} from '../hosted/site-transform.mjs';
+import {BRAND_MEDIA,BRAND_TEXT,STATIC_INTEGRATION_FILES,renderPage,policyFor} from '../hosted/site-transform.mjs';
 import {ORDER_RELEASE,orderPackageProblems} from '../../../playground/fleetlab/tools/delivery-order-package.mjs';
 // Independent upload-time reproduction of the Python integrator's owned files.
 // Keep these transforms aligned with integrate-site.py and prepare-launch.py;
@@ -93,6 +93,12 @@ export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,sel
  const redirect=resolve(sourceRoot,'apps/fleetlab-city/hosted/fleet-day-redirect.html');
  if(lstatSync(redirect).isSymbolicLink()||!lstatSync(redirect).isFile())throw Error('Redirect source is not regular.');
  expected.set('network-flows/fleet-day/index.html',branded?renderPage(readFileSync(redirect,'utf8'),{analytics:true}):readFileSync(redirect));
+ for(const [target,name] of Object.entries(STATIC_INTEGRATION_FILES)){
+  const path=resolve(sourceRoot,'apps/fleetlab-city/hosted',name),stat=lstatSync(path);
+  if(stat.isSymbolicLink()||!stat.isFile())throw Error('Static integration source is not regular.');
+  const raw=readFileSync(path);
+  expected.set(target,branded&&target.endsWith('.html')?renderPage(raw.toString(),{analytics:true}):raw);
+ }
  const cityRedirect=resolve(sourceRoot,'apps/fleetlab-city/hosted/city-releases-redirect.html');
  if(lstatSync(cityRedirect).isSymbolicLink()||!lstatSync(cityRedirect).isFile())throw Error('City redirect source is not regular.');
  expected.set('city-explorer/releases/index.html',readFileSync(cityRedirect));
@@ -113,7 +119,7 @@ export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,sel
  const emittedText=nonCity.filter(([path])=>!path.startsWith('media/')&&!Object.hasOwn(BRAND_MEDIA,path)&&!path.startsWith('network-flows/sources/')&&path!=='downloads/fleetlab-offline.html').reduce((sum,[,record])=>sum+record.bytes,0)+(files['city-explorer/releases/index.html']?.bytes??0);
  if(emittedText>3145728)throw Error('Integration emitted text byte budget exceeded.');
  const integrationText=INTEGRATION_TEXT_PATHS.reduce((sum,path)=>sum+(files[path]?.bytes??0),0);
- if(nonCity.reduce((sum,[,record])=>sum+record.bytes,0)>14360576)throw Error('Integration teaching byte budget exceeded.');
+ if(nonCity.reduce((sum,[,record])=>sum+record.bytes,0)>17825792)throw Error('Integration teaching byte budget exceeded.');
  for(const [path,data] of expected){
   const bound=fingerprint(data);
   if(files[path]?.bytes!==bound.bytes||files[path]?.sha256!==bound.sha256)throw Error(`Integration source bytes differ: ${path}`);

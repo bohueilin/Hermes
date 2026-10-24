@@ -48,12 +48,13 @@ test('300000-byte scratch NF04-only module has a valid emitted build path withou
   for(const path of ['src/hermes/fleet/contracts.py','LICENSE','apps/fleetlab-city/citylib/public_notes.py'])write(scratch,path,readFileSync(join(repository,path)));
   for(const name of ['hosted','tools','deploy']){
     const base=join(repository,'apps/fleetlab-city',name);
-    for(const file of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path)))write(scratch,`apps/fleetlab-city/${name}/${file}`,readFileSync(join(base,file)));
+    for(const file of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md|xml)$/.test(path)))write(scratch,`apps/fleetlab-city/${name}/${file}`,readFileSync(join(base,file)));
   }
   cpSync(join(repository,'apps/fleetlab-city/brand-media'),join(scratch,'apps/fleetlab-city/brand-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/tile-media'),join(scratch,'apps/fleetlab-city/tile-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/rebalancing-media'),join(scratch,'apps/fleetlab-city/rebalancing-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/diagram-media'),join(scratch,'apps/fleetlab-city/diagram-media'),{recursive:true});
+  cpSync(join(repository,'apps/fleetlab-city/enhancement-media'),join(scratch,'apps/fleetlab-city/enhancement-media'),{recursive:true});
   const before=buildSite(source), offline=buildHtml(source);
   const prefix='export function startSoftwareDelivery() {}\n';
   write(source,'src/ui/software-delivery-app.js',prefix+' '.repeat(300000-prefix.length));
@@ -142,7 +143,7 @@ test('final transformed headers remain inside each complete route closure cap',(
   const teaching=buildSite(root),final=new Map(teaching);
   const closure=new Set([...tool.capacityScope(teaching),'network-flows/capacity/release.json','_headers']);
   const bytes=[...closure].reduce((total,path)=>total+Buffer.byteLength(teaching.get(path)),0);
-  final.set('_headers',final.get('_headers')+' '.repeat(524289-bytes));
+  final.set('_headers',final.get('_headers')+' '.repeat(557057-bytes));
   assert.throws(()=>tool.measureIntegratedText(teaching,final),/nf03.*closure.*budget/);
   // Isolate the NF04 closure guard from the independently capped aggregate.
   const nf04Only=new Map([...teaching].filter(([path])=>!ORDER_MODULES.has(path)&&!path.startsWith('network-flows/delivery-order/')&&!R1_MODULES.has(path)&&!path.startsWith('network-flows/rebalancing/')&&!R3_MODULES.has(path)&&!path.startsWith('network-flows/dispatch/')));

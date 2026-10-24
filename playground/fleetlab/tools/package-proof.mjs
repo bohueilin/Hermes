@@ -1,6 +1,6 @@
 import {R3_RELEASE,R3_ENTRIES,R3_FILES} from './dispatch-package.mjs';
 import {R1_RELEASE,R1_ENTRIES,R1_FILES} from './rebalancing-package.mjs';
-import {BRAND_MEDIA,BRAND_TEXT,ARTWORK_GROUPS,renderPage} from '../../../apps/fleetlab-city/hosted/site-transform.mjs';
+import {BRAND_MEDIA,BRAND_TEXT,ARTWORK_GROUPS,STATIC_INTEGRATION_FILES,renderPage} from '../../../apps/fleetlab-city/hosted/site-transform.mjs';
 import {ORDER_RELEASE,ORDER_FILES,ORDER_ENTRIES} from './delivery-order-package.mjs';
 // B-lite is one deduplicated teaching build and one atomic integration, not a new engine.
 // This proof binds bytes and source provenance; it does not authenticate their producer.
@@ -19,9 +19,9 @@ import { CAPACITY_RELEASE_PATH, CAPACITY_VISUAL_PATH, releaseProblems } from "./
 
 export const RECEIPT_PATH = "downloads/teaching-package.json";
 export const LIMITS = Object.freeze({ legacy_text_bytes: 2621440, raw_source_and_tools_bytes: 3153920,
-  nf03_closure_bytes: 524288, nf04_closure_bytes: 524288, emitted_text_bytes: 3145728, package_metadata_bytes: 40960,
+  nf03_closure_bytes: 557056, nf04_closure_bytes: 524288, emitted_text_bytes: 3145728, package_metadata_bytes: 40960,
   source_offer_compressed_bytes: 4194304, source_offer_extracted_bytes: 4194304,
-  teaching_text_plus_source_bytes: 7340032, teaching_generation_bytes: 14360576,
+  teaching_text_plus_source_bytes: 7340032, teaching_generation_bytes: 17825792,
   offline_bytes: 2571440 });
 const TOOL_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const COMMIT = /^[a-f0-9]{40}$/;
@@ -37,7 +37,7 @@ function captureIntegration(repository){
     for(const name of readdirSync(join(repository,root)).sort()){
       if(["node_modules","__pycache__"].includes(name))continue;
       const path=`${root}/${name}`;
-      if(!/\.(?:mjs|py|json|css|html|md)$/.test(name))fail(`unknown integration source ownership: ${path}`);
+      if(!/\.(?:mjs|py|json|css|html|xml|md)$/.test(name))fail(`unknown integration source ownership: ${path}`);
       files.set(path,readRegular(repository,path,LIMITS.source_offer_extracted_bytes));
     }
   }
@@ -373,6 +373,13 @@ export function checkIntegratedPackage({ site, playground, sourceCommit }) {
     .map(([path, data]) => [`network-flows/sources/${path}`, data]));
   assertEqual(offers, new Map([[expected.receipt.source_offer.path, expected.files.get(expected.receipt.source_offer.path)]]), "integrated source offer");
   const integrated=new Map([...prepared.site,...onward]);
+  for(const [path,name] of Object.entries(STATIC_INTEGRATION_FILES)){
+    const raw=prepared.captured.integration.get(`apps/fleetlab-city/hosted/${name}`);
+    const expected=Buffer.from(branded&&path.endsWith('.html')?renderPage(raw.toString(),{analytics:true}):raw);
+    const data=readRegular(site,path,LIMITS.emitted_text_bytes);
+    if(!data.equals(expected))fail(`static integration source mismatch: ${path}`);
+    integrated.set(path,data);
+  }
   if(branded){
     for(const path of BRAND_TEXT){const data=readRegular(site,path,LIMITS.emitted_text_bytes);if(!data.equals(prepared.captured.integration.get(`apps/fleetlab-city/hosted/${path}`)))fail('hosted brand source mismatch');integrated.set(path,data);}
     for(const [path,r] of Object.entries(BRAND_MEDIA))if(!readRegular(site,path,r.bytes).equals(prepared.captured.artwork.get(r.source.split('/').at(-1))))fail('hosted artwork bytes differ');

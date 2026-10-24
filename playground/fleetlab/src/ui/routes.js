@@ -18,7 +18,7 @@ export function parseRoute(hash=''){
   if(typeof hash!=='string'||hash.length>MAX_ROUTE_LENGTH)throw Error('This link is too large. Open a view link or use an exported setup.');
   const match=/^#\/([a-z-]+)(?:\?(.+))?$/.exec(hash);
   if(!match)throw Error('This FleetLab link has an invalid address.');
-  const page=Object.keys(ROUTES).find(key=>ROUTES[key].path===(match[1]==='overview'?'home':match[1]));
+  const page=Object.keys(ROUTES).find(key=>ROUTES[key].path===(match[1]==='overview'?'home':match[1]==='scale'?'scale-lab':match[1]));
   if(!page)throw Error('This FleetLab view is not available.');
   const route={page};
   if(match[2]){

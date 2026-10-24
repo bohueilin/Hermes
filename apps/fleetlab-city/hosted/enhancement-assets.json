@@ -1,0 +1,37 @@
+{
+  "enhancement-media/FL-A1-people-between-rides.webp": {
+    "bytes": 354148,
+    "sha256": "df54ac4440dad7a76294432646ef3fef3b554f7c964a011bff964e2610350abe",
+    "source": "apps/fleetlab-city/enhancement-media/FL-A1-people-between-rides.webp"
+  },
+  "enhancement-media/FL-A2-one-fleet-day-panorama.webp": {
+    "bytes": 431948,
+    "sha256": "e5299c6fd31c5521b2f36d1a519c5f67abc1c3bae64b66fe5d6a4267f96a7522",
+    "source": "apps/fleetlab-city/enhancement-media/FL-A2-one-fleet-day-panorama.webp"
+  },
+  "enhancement-media/FL-A3-second-depot-diptych.webp": {
+    "bytes": 456982,
+    "sha256": "edb580f26abe65962f892dedd974df292bc4fdc4e932091a4ad2b2d6cfc91c17",
+    "source": "apps/fleetlab-city/enhancement-media/FL-A3-second-depot-diptych.webp"
+  },
+  "enhancement-media/FL-A4-capacity-hero.webp": {
+    "bytes": 244204,
+    "sha256": "6c2869ce67f473ba67e770b7fb73dbc47f55c171554821d84c5490e82850cc7f",
+    "source": "apps/fleetlab-city/enhancement-media/FL-A4-capacity-hero.webp"
+  },
+  "enhancement-media/FL-V2-deadhead-explainer.mp4": {
+    "bytes": 577249,
+    "sha256": "2f954056b144f1d2232f46b74c2101dbc5f036d393d4b8068a91471499d3033f",
+    "source": "apps/fleetlab-city/enhancement-media/FL-V2-deadhead-explainer.mp4"
+  },
+  "enhancement-media/FL-V3-people-between-rides-loop.mp4": {
+    "bytes": 502747,
+    "sha256": "17197347ba9de7bb1cfab2f2b91820fe3791c014f590bfada449c289c4b6c08e",
+    "source": "apps/fleetlab-city/enhancement-media/FL-V3-people-between-rides-loop.mp4"
+  },
+  "enhancement-media/FL-V2-deadhead-explainer-poster.jpg": {
+    "bytes": 118144,
+    "sha256": "922a43646d15002fecf7248f0329279aadc7a40fd5c95e7ce528019975ce4516",
+    "source": "apps/fleetlab-city/enhancement-media/FL-V2-deadhead-explainer-poster.jpg"
+  }
+}

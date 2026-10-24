@@ -5,8 +5,9 @@ import {createHash} from 'node:crypto';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
-import {verifyStage,releaseCommand} from './stage-guard.mjs';
+import {verifyStage,releaseCommand,verifyReleaseRuntime} from './stage-guard.mjs';
 
+verifyReleaseRuntime();
 const args=process.argv.slice(2), deploy=releaseCommand(args)==='deploy';
 if(deploy){
   const repository=fileURLToPath(new URL('../../../',import.meta.url));

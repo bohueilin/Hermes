@@ -113,7 +113,15 @@ INTEGRATION_TEXT = frozenset((
     "404.html", "network-flows/fleet-day/index.html", "not-found.css", "publication.json",
     "downloads/fleetlab-offline.sha256",
     "downloads/verify-offline.txt",
+    "network-flows/index.html", "network-flows/hub.css",
+    "network-flows/ota-sharing/index.html", "sitemap.xml",
 ))
+STATIC_INTEGRATION_FILES = {
+    "network-flows/index.html": "network-hub.html",
+    "network-flows/hub.css": "network-hub.css",
+    "network-flows/ota-sharing/index.html": "ota-sharing-redirect.html",
+    "sitemap.xml": "sitemap.xml",
+}
 
 
 def software_delivery_files(files):
@@ -176,7 +184,7 @@ def final_route_counts(routes, files):
             continue
         paths = set(route["paths"]) | {name for name in brand.TEXT if name in files}
         size = sum(files[name]["bytes"] for name in paths)
-        if size > 524288:
+        if size > (557056 if route["id"] == "nf03" else 524288):
             raise ValueError(f'{route["id"]} final closure byte budget exceeded')
         counts[f'{route["id"]}_closure_bytes'] = size
     return counts
@@ -472,6 +480,9 @@ def integrate(
         shutil.copyfile(
             ASSETS / "fleet-day-redirect.html", site / "network-flows/fleet-day/index.html"
         )
+        for target, source in STATIC_INTEGRATION_FILES.items():
+            (site / target).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ASSETS / source, site / target)
         (site / "city-explorer/releases").mkdir(parents=True, exist_ok=True)
         shutil.copyfile(
             ASSETS / "city-releases-redirect.html", site / "city-explorer/releases/index.html"
@@ -583,7 +594,7 @@ def integrate(
             record["bytes"] for name, record in final.items()
             if not name.startswith("city-explorer/")
         )
-        if package_files and non_city_bytes > 14360576:
+        if package_files and non_city_bytes > 17825792:
             raise ValueError("complete teaching and integration byte budget exceeded")
         integrated_text = {}
         if package_files:

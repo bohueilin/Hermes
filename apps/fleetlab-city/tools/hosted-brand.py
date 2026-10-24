@@ -17,12 +17,14 @@ _spec.loader.exec_module(launch)
 ROOT = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "apps/fleetlab-city/hosted"
 MEDIA = {
+    **json.loads((ASSETS / "enhancement-assets.json").read_text()),
     **json.loads((ASSETS / "diagram-assets.json").read_text()),
     **json.loads((ASSETS / "brand-assets.json").read_text()),
     **json.loads((ASSETS / "rebalancing-assets.json").read_text()),
     **json.loads((ASSETS / "tile-assets.json").read_text()),
 }
-TEXT = ("brand.mjs", "brand.css", "visitor.mjs", "visitor-families.mjs", "visitor.css")
+TEXT = ("brand.mjs", "brand.css", "visitor.mjs", "visitor-families.mjs", "visitor.css",
+        "enhancement-motion.mjs", "enhancement-media.mjs", "enhancement-media.css")
 
 
 def transform(value, mode="--render"):
@@ -37,7 +39,10 @@ def transform(value, mode="--render"):
 
 
 def asset_inventory():
-    for folder, count in (("brand-media", 7), ("tile-media", 19), ("rebalancing-media", 4)):
+    for folder, count, limit in (("brand-media", 7, 2 * 1024**2),
+                                 ("tile-media", 19, 2 * 1024**2),
+                                 ("rebalancing-media", 4, 2 * 1024**2),
+                                 ("enhancement-media", 8, 4 * 1024**2)):
         source = f"apps/fleetlab-city/{folder}"
         actual = launch.inventory(ROOT / source)
         expected = {
@@ -47,10 +52,10 @@ def asset_inventory():
         }
         if (
             actual != expected
-            or len(actual) != count
-            or sum(r["bytes"] for r in actual.values()) > 2 * 1024**2
+            or (len(actual) > count if folder == "enhancement-media" else len(actual) != count)
+            or sum(r["bytes"] for r in actual.values()) > limit
         ):
-            raise ValueError(f"{folder} inventory or 2 MiB asset budget differs")
+            raise ValueError(f"{folder} inventory or {limit} byte asset budget differs")
     return {
         **{
             name: {

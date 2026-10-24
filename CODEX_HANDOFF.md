@@ -1,4 +1,175 @@
-# Current update — FleetLab design Round 5, October 15, 2026
+# Current update — FleetLab enhancement round, October 23, 2026
+
+The controlling request is `FLEETLAB_ENHANCEMENT_ROUND_2026-10-23.md`, including
+D-1–D-8 from its companion audit. The final per-item report is
+[`docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md`](docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md).
+
+**Superseding owner decisions:** media room approved exactly as proposed:
+new 8-file / 4 MiB enhancement-media group, 17 MiB aggregate non-City ceiling,
+544 KiB NF-03 capacity closure; all other ceilings unchanged. Owner explicitly
+selected **“Use A2; hold V1 for a rerender.”** No placement decision is pending.
+
+Installed locally: A1/V3 Home People band after the existing film and before
+destination cards; A1 beside About users; A2 Fleet day hero; A3 notebook head
+with mandatory caption; A4 capacity hero; V2 beside the existing empty-distance
+figure. Exact supplied copy, captions, alt text and concept fences remain in
+HTML. A2 supplies Home/Fleet day social images; A3 supplies City social images.
+Shared motion controller is poster-first, lazy, viewport/global/reduced-motion
+governed, with hidden/detached-route and play-race handling. Existing qualifiers
+are preserved. No lesson, model, fixture or numerical study was added.
+
+Previously completed presentation/defect work remains: founder-first Home with
+unchanged thesis; exact three-stop tour on Home/About; asynchronous pod-logo
+lifecycle; five-question network hub; retired ota-sharing redirect; scale alias;
+duplicate eyebrow removal; singular grammar in paired table and replay;
+scoped descriptions and nine-route sitemap. D-4 was already correct and verified.
+
+Compressed V1/V2/V3 are 766,594 / 577,249 / 502,747 bytes, 24 fps and audio-free.
+The full ten-second sequences are retained, not certified seamless. V1 remains
+only in excluded review scratch: actual 4.00 s and 9.958 s captures show transition
+ghosting/doubled moon and a dark endpoint. It must be rerendered/reviewed before
+product placement. V2/V3 are installed with their visible loop-join limitation
+explicitly recorded. The derived V2 poster is a full frame, counted and hashed.
+
+Local preview: `http://127.0.0.1:4190/`; Fleet day: `/#/fleet-day`;
+hub: `/network-flows/`; V1 review gallery:
+`http://127.0.0.1:4191/__review__/media-proposal.html#fleet`.
+Preview source: `/private/tmp/fleetlab-enhancement-20261023-media/site`.
+Home, Fleet day, hub, About, notebook, capacity and rebalancing were checked at
+390 × 844 with no page overflow. V2/V3 had no source before entering view,
+played while visible, and returned to posters under global Pause; all present
+rebalancing videos paused. OS-level reduced-motion browser emulation was not
+available; focused controller tests cover it. Desktop screenshots include A2
+and the side-by-side V2/schematic layout.
+
+Evidence in ignored `build/fleetlab-city/validation/enhancement-20261023/`:
+`approved-budget-comparison.json`, `media-development-budget.json`, compression
+and installed stream probes, 14 HTTP checks, exact source/build/served hashes,
+screenshots/DOM observations, test logs and excluded preview/review harnesses.
+All seven installed files are source-owned and hash-bound. Media allocation:
+2,685,422 / 4,194,304 bytes, 7 / 8 files (1,508,882 bytes and one slot remain).
+Aggregate non-City: 15,600,377 / 17,825,792 (2,225,415 free); NF-03 closure:
+537,301 / 557,056 (19,755 free); unchanged integrated-text ceiling has 4,239 free.
+Measurements are **DEVELOPMENT_MEASUREMENT_NOT_RELEASE_BOUND**. Rebuild and
+remeasure an authorized exact-commit release; no guard was weakened. Frozen
+scientific City files remain byte-identical.
+
+Final commands/results: required editable `[dev,workbench]` install passed in
+initial wave; `python -m pytest -q`: 1,661 pass, 56 skip;
+`node --test apps/fleetlab-city/test/*.test.mjs`: 139 pass;
+`node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs`: 2,433 pass,
+8 skip, 1 existing TODO; City integration 35 pass; hosted-brand Python 2 pass;
+focused capacity-site 10 pass. Ruff and `git diff --check` pass. Activated doctor:
+17 PASS, dirty-tree WARN, optional display NOT_AVAILABLE. New placement/motion/
+packaging tests were red before implementation and green afterward. Independent
+media review found no actionable defect. Initial editable-install metadata
+caused a source-boundary failure; its generated directory was preserved outside
+`src`, followed by focused/full green runs. No source-boundary rule changed.
+
+Git branch/HEAD remain `codex/fleetlab-city-sf` /
+`6c1e3900dbc30426eb3e5a70cc42599849075f69`; edits are uncommitted. Prior TLS/runtime/
+deployment work below and owner assets/specs are preserved. No staging, commit,
+push, PR, remote edit, deployment or publication occurred. Hermes review
+envelopes/artifact digests do not apply to this presentation round; no verifier,
+gate, evidence contract or deployment authority changed.
+
+Next: review installed media; rerender V1 when desired; separately authorize an
+exact-commit release/publication when ready. Do not upload the development
+preview or review overlay.
+
+---
+
+# Previous update — FleetLab PHP/eMudhra review, October 22, 2026
+
+## Executive summary and Git state
+
+PHP2Shell does not apply to the reviewed static FleetLab release: no PHP runtime,
+Composer dependency, Pages Function or PHP-serving upstream was found in its
+source/deployment inventory. The separate eMudhra issue was reproduced in local
+Node, Python CA bundles and system curl. The supported project workflows are
+patched and verified. This is a local tooling fix, not a new website release.
+
+Branch: `codex/fleetlab-city-sf`. Starting and ending HEAD:
+`6c1e3900dbc30426eb3e5a70cc42599849075f69`. Changes remain uncommitted; existing
+owner assets/documents are preserved. No Git push, PR, deployment or credential
+rotation occurred. Public GET/TLS checks and dependency downloads were performed.
+
+## Scope, dependencies and implementation
+
+- Node: official hash-verified 22.23.4 installed under ignored
+  `build/fleetlab-city/toolchain/node-v22.23.4-darwin-arm64/`. Both package
+  manifests/lockfiles now require `>=22.23.4 <23`; `.node-version` records 22.23.4.
+- Release launcher: rejects older/unsupported Node before processing arguments,
+  writing the Wrangler copy, or loading its authenticated client. The spawned
+  Wrangler uses the same Node executable.
+- Python: wheel lock and local venv use certifi 2026.10.19; pip is 26.2.2 in both
+  the venv and `hermes-dev`. Conda installed ca-certificates 2026.10.20 and its
+  resolved OpenSSL 3.5.9 update in `hermes-dev`.
+- Readback: passes the patched certifi bundle explicitly to curl using
+  `--cacert`, avoiding the separate vulnerable default curl store.
+- Tests: three runtime/launcher regression cases. Current setup/deployment
+  documentation records runtime selection and separate trust stores.
+
+The source patch is limited to `apps/fleetlab-city` manifests, locks, runtime
+guard, readback, tests and documentation, plus this handoff and the deployment
+runbook. No simulation model, artifact contract, review envelope, gate or
+operational permission changed. Scope remains simulation/education only.
+
+## Verification and negative results
+
+Commands ran from repository root with the project Node on PATH; Hermes commands
+used `hermes-dev` Python and City Python commands used its documented venv.
+
+| Check | Actual result |
+|---|---|
+| `python -m pip install -e ".[dev,workbench]"` | Pass |
+| `FLEET_PLAYGROUND_BASE=bca4ccd python -m pytest -q` | 1,662 pass, 55 skip |
+| `node --test apps/fleetlab-city/test/*.test.mjs` | 111 pass |
+| `node --test playground/fleetlab/test/*.test.mjs` | 2,433 pass, 8 skip, 1 TODO |
+| `build/fleetlab-city/venv/bin/python -m unittest discover -s apps/fleetlab-city/tests -q` | 345 pass |
+| `python -m ruff check .`; `git diff --check`; venv `pip check` | Pass |
+| Activated `hermes-dev`: `python -m hermes doctor` | 17 PASS, dirty-tree WARN, optional display NOT_AVAILABLE |
+| Readback with `--record docs/releases/fleetlab-current.json --url https://fleetlab.pages.dev` | 103/103 match at 2026-10-22 16:56:14 UTC |
+
+Before patching, Node accepted both public eMudhra canaries; certifi/default
+Python accepted the eMudhra-root canary; system curl accepted both. Afterward,
+Node reports `CERT_REVOKED` for both, updated Python/standalone certifi/pip's
+bundle reject both, pip's actual download path reports certificate revocation,
+and readback's curl rejects both with exit 60. Normal FleetLab/PyPI HTTPS controls
+succeed. Node 22.22.0 is rejected without rewriting the Wrangler launcher.
+
+The initial Hermes test run failed the source-boundary test because the required
+editable installation generated `src/hermes_autonomy.egg-info/PKG-INFO`. That
+ignored generated directory was preserved outside `src`; the full rerun passes.
+The independent review found the separate curl path; the final readback change
+and canary/normal-site checks address it. Initial helper tests failed before
+implementation and pass afterward.
+
+## Live identity and limits
+
+Runtime source remains `4c375a8b96595a82b82169234b968d7da38ea990`, production
+`2fe5a724-6818-4d9f-afa3-b787ef140c21`. Live `publication.json` SHA-256:
+`ccc1c0146e72c27d5ce769c54e92dba42201155a977ba159d516c22fb0f2d277`.
+The observed site certificate issuer is Let's Encrypt YE2. This is not a claim
+that unpatched clients cannot be impersonated or that past interception did not
+occur. Cloudflare account configuration and audit logs were not inspected.
+
+Recommendation: no PHP installation/upgrade or static-site redeployment is
+needed for these PHP CVEs. Use the patched project toolchain.
+
+Top risks + mitigations: global Homebrew Node and default system curl remain
+unpatched; select the project Node and use the guarded launcher/readback. This
+fix does not cover other applications, custom CA overrides, other machines or
+historical downloadable source archives. Update their actual clients separately.
+
+Next 3 actions: review this local patch; use the runtime selection in the
+[deployment runbook](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md#october-22-tls-toolchain-update);
+update remaining system-wide TLS clients and review deployment-account activity
+before deciding whether credential rotation is warranted.
+
+---
+
+# Historical update — FleetLab design Round 5, October 15, 2026
 
 See [the itemized Round 5 handoff](docs/FLEETLAB_DESIGN_ROUND5_HANDOFF_2026-10-15.md) for audit decisions, source trimming, validation, initial negative readbacks and final release evidence. Runtime `8e4dbaf` is live in deployment `8dd48282-3c63-4347-bd31-a7159244ff2e`; fresh full preview and production checks each match 10,136 served files and 69 header checks. The exact receipt is `docs/releases/fleetlab-current.json`.
 

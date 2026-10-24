@@ -5,6 +5,14 @@ import {execFileSync} from 'node:child_process';
 import {resolve,relative,dirname} from 'node:path';
 import {verifyIntegrationAssets} from './integration-assets.mjs';
 
+export function verifyReleaseRuntime(version=process.versions.node){
+  const parts=/^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+  const [major,minor,patch]=parts?parts.slice(1).map(Number):[];
+  if(major!==22||minor<23||(minor===23&&patch<4)){
+    throw Error('FleetLab release tools require Node 22.23.4 or later within Node 22 for the eMudhra TLS fix.');
+  }
+}
+
 export function releaseCommand(args){
   if(args.length===1&&args[0]==='--version')return 'version';
   if(JSON.stringify(args)===JSON.stringify(['pages','deployment','list','--project-name','fleetlab','--json']))return 'list';

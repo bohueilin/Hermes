@@ -10,6 +10,8 @@ import subprocess
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
+import certifi
+
 
 def request(base, name):
     path = "/__fleetlab_missing_page__" if name == "404.html" else "/" + name
@@ -21,6 +23,8 @@ def request(base, name):
     result = subprocess.run(
         [
             "curl",
+            "--cacert",
+            certifi.where(),
             "--silent",
             "--show-error",
             "--location",

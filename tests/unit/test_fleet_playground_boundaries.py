@@ -231,7 +231,7 @@ def test_r6_protected_paths_unchanged_since_base_commit() -> None:
     untracked = _git("ls-files", "--others", "--exclude-standard", "--", *_PROTECTED_PATHS)
     assert untracked.returncode == 0, untracked.stderr
     changed = sorted(set(diff.stdout.split()) | set(untracked.stdout.split()))
-    # Owner-authorized R1 derivatives only; all prior ignore rules stay byte-identical.
+    # Exact owner-authorized R1 and enhancement derivatives; other rules stay unchanged.
     if ".gitignore" in changed:
         original = _git("show", f"{base}:.gitignore")
         assert original.returncode == 0, original.stderr
@@ -241,7 +241,14 @@ def test_r6_protected_paths_unchanged_since_base_commit() -> None:
             "!apps/fleetlab-city/rebalancing-media/r1-nf05.mp4\n"
             "!apps/fleetlab-city/rebalancing-media/r1-nf06.mp4\n"
         )
-        assert (REPOSITORY_ROOT / ".gitignore").read_text() == original.stdout + addition
+        expected = (original.stdout + addition).replace(
+            "*.mp4\n",
+            "*.mp4\n"
+            "!/apps/fleetlab-city/enhancement-media/FL-V2-deadhead-explainer.mp4\n"
+            "!/apps/fleetlab-city/enhancement-media/FL-V3-people-between-rides-loop.mp4\n",
+            1,
+        )
+        assert (REPOSITORY_ROOT / ".gitignore").read_text() == expected
         changed.remove(".gitignore")
     assert changed == []
 
