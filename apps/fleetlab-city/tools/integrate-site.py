@@ -24,7 +24,13 @@ _brand_spec = importlib.util.spec_from_file_location(
 brand = importlib.util.module_from_spec(_brand_spec)
 _brand_spec.loader.exec_module(brand)
 EXCEPTIONS = frozenset(("index.html", "boot.js", "_headers"))
-CLIENT_FIXES = frozenset(("src/ui/setup-codec.js", "src/ui/setup-sharing.js", "src/ui/studio.js"))
+CLIENT_FIXES = frozenset((
+    "src/ui/setup-codec.js", "src/ui/setup-sharing.js", "src/ui/studio.js",
+    "src/model/bay-experiment-contract.js",  # FL-SEC-13: 49420b866ff5cab7c21408dd37eef83c981fe914
+    "src/model/metrics.js",  # FL-SEC-13: 49420b866ff5cab7c21408dd37eef83c981fe914
+    "src/ui/display-text.js",  # FL-SEC-13: 49420b866ff5cab7c21408dd37eef83c981fe914
+    "src/ui/depot-scene.js",  # FL-SEC-27: cd40179f397625de23cfa7568bed017996c5c1cd
+))
 FLOW_CHANGED = frozenset((
     "src/ui/dom.js", "src/ui/iso.js", "src/ui/map.js", "src/ui/present.js",
     "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js", "src/ui/charts.js",
@@ -272,6 +278,39 @@ def check_preservation(before, after, client_update=False, flow_update=False):
     return sorted(changed)
 
 
+def source_headers(source):
+    if not re.fullmatch(r"network-flows/sources/[a-f0-9]{64}\.json\.gz", source):
+        raise ValueError("invalid teaching source path")
+    return (
+        f"\n/{source}\n"
+        "  Content-Type: application/gzip\n"
+        '  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n'
+        "  ! Cache-Control\n"
+        "  Cache-Control: public, max-age=31536000, immutable\n"
+    )
+
+
+def check_city_inputs(original_base, original_offer):
+    """Only source-owned historical pins can approve the unmodified input manifests."""
+    path = launch.ROOT / "apps/fleetlab-city/deploy/approved-inputs.json"
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 4096:
+        raise ValueError("City input pins must be a regular bounded file")
+    pins = json.loads(path.read_bytes())
+    if (not isinstance(pins, dict)
+            or set(pins) != {"schema", "base_release", "source_offer_manifest"}
+            or pins["schema"] != "fleetlab.approved-city-inputs/1.0.0"):
+        raise ValueError("invalid City input pin schema")
+    for key, data in (("base_release", original_base), ("source_offer_manifest", original_offer)):
+        record = pins[key]
+        if (not isinstance(record, dict) or set(record) != {"sha256", "provenance"}
+                or not re.fullmatch(r"[a-f0-9]{64}", str(record["sha256"]))
+                or not re.fullmatch(r"docs/[A-Za-z0-9_./-]+\.md", str(record["provenance"]))
+                or any(part in {".", ".."} for part in record["provenance"].split("/"))):
+            raise ValueError("invalid City input pin record")
+        if hashlib.sha256(data).hexdigest() != record["sha256"]:
+            raise ValueError(f"approved City {key} input differs")
+
+
 def integrate(
     legacy,
     viewer,
@@ -285,6 +324,7 @@ def integrate(
     flow_update=False,
     teaching_package=None,
     brand_update=False,
+    city_base_manifest=None,
 ):
     legacy, viewer, previous, offer, out, offline = map(
         Path, (legacy, viewer, previous, offer, out, offline)
@@ -293,6 +333,28 @@ def integrate(
         raise ValueError("output already exists")
     if brand_update and not (teaching_package and source_commit):
         raise ValueError("hosted brand requires source-bound teaching package")
+    original_base = original_offer = original_offer_index = None
+    if brand_update:
+        if city_base_manifest is None:
+            raise ValueError("hosted brand requires the original City base manifest")
+        if Path(city_base_manifest).is_symlink() or not Path(city_base_manifest).is_file():
+            raise ValueError("original City base manifest must be regular")
+        if Path(city_base_manifest).stat().st_size > 4 * 1024**2:
+            raise ValueError("original City base manifest exceeds evidence byte limit")
+        original_base = Path(city_base_manifest).read_bytes()
+        if ((offer / "manifest.json").is_symlink() or not (offer / "manifest.json").is_file()
+                or (offer / "manifest.json").stat().st_size > 4 * 1024**2):
+            raise ValueError("original City source manifest must be regular and bounded")
+        original_offer = (offer / "manifest.json").read_bytes()
+        check_city_inputs(original_base, original_offer)
+        base_release, base_files = brand.verify_projected_base(previous, original_base)
+        current_release, _ = launch.verify_viewer(viewer, "hosted current")
+        if (current_release.get("hosting_projection") != base_release["hosting_projection"]
+                or current_release.get("hosted_presentation", {}).get("base_release_sha256")
+                != base_files["release.json"]["sha256"]):
+            raise ValueError("hosted current must derive from the projected rollback")
+    elif city_base_manifest is not None:
+        raise ValueError("original City base manifest requires a hosted brand update")
     if teaching_package and not (flow_update and client_update and source_commit):
         raise ValueError("teaching package requires a frozen flow client and source commit")
     if flow_update and not client_update:
@@ -301,6 +363,13 @@ def integrate(
         raise ValueError("a source-identified release requires the reviewed security client update")
     offer_files = launch.inventory(offer)
     offer_manifest = json.loads((offer / "manifest.json").read_text())
+    if original_offer is not None:
+        original_offer_index = (offer / "index.html").read_bytes()
+        for name, data in (("manifest.json", original_offer), ("index.html", original_offer_index)):
+            if offer_files.get(name) != {
+                "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()
+            }:
+                raise ValueError("City source input changed during capture")
     if offer_manifest.get("files") != {
         k: v for k, v in offer_files.items() if k != "manifest.json"
     }:
@@ -405,6 +474,11 @@ def integrate(
         stage = Path(temporary) / "stage"
         report = launch.prepare(legacy, viewer, stage, previous, readback)
         site, review = stage / "site", stage / "review"
+        if original_base is not None:
+            (review / "inputs").mkdir()
+            (review / "inputs/city-base-release.json").write_bytes(original_base)
+            (review / "inputs/city-source-offer-manifest.json").write_bytes(original_offer)
+            (review / "inputs/city-source-offer-index.html").write_bytes(original_offer_index)
         (site / "boot.js").write_text(
             'import { mountCityEntry } from "./integration.mjs";\n' + boot + "\nmountCityEntry();\n"
         )
@@ -507,6 +581,8 @@ def integrate(
             "excludes City Explorer.\n"
         )
         with (site / "_headers").open("a") as headers:
+            # Path rules may relax or annotate the /* baseline, never restrict it: a percent-encoded
+            # spelling of the path matches only /* (tools/check-headers.py).
             # Pages redirects named .html files to an extensionless canonical URL.
             # Apply the attachment contract to both the redirect and its destination.
             headers.write(
@@ -549,17 +625,16 @@ def integrate(
                 shutil.copyfile(Path(teaching_package) / name, site / name)
             with (site / "_headers").open("a") as headers:
                 headers.write(
-                    '\n/network-flows/sources/*\n'
-                    '  Content-Type: application/gzip\n'
-                    '  Content-Disposition: attachment; '
-                    'filename="fleetlab-teaching-source.json.gz"\n'
-                    '  ! Cache-Control\n'
-                    '  Cache-Control: public, max-age=31536000, immutable\n'
+                    source_headers(next(name for name in package_files
+                                        if name.startswith("network-flows/sources/"))) +
                     '\n/downloads/teaching-package.json\n'
                     '  Content-Type: application/json\n'
                 )
         branded = (brand.apply_site(site, report["current"]["path"], report["rollback"]["path"])
                    if brand_update else {})
+        # Compact indentation preserves header semantics within the route byte budgets.
+        headers = site / "_headers"
+        headers.write_text(re.sub(r"^  ", "\t", headers.read_text(), flags=re.M))
         final = launch.inventory(site)
         if package_files and (
             launch.inventory(Path(teaching_package)) != package_files
@@ -704,6 +779,8 @@ def main():
     parser.add_argument("--readback", type=Path)
     parser.add_argument("--brand-update", action="store_true",
                         help="Apply approved hosted artwork and Google tag")
+    parser.add_argument("--city-base-manifest", type=Path,
+                        help="Original City release.json retained as hosting-projection evidence")
     parser.add_argument("--teaching-package", type=Path,
                         help="Verified NF04-A source package and byte-accounting receipt")
     parser.add_argument(

@@ -16,7 +16,7 @@ import { computeAll, computeSeries } from "../src/model/metrics.js";
 import { DEFAULT_PRESET_ID, presetById } from "../src/model/presets.js";
 import { cloneScenario } from "../src/model/schema.js";
 import { buildWorld, worldDigest } from "../src/model/world.js";
-import { CONTENT_SECURITY_POLICY, main as packMain } from "../tools/pack.mjs";
+import { main as packMain } from "../tools/pack.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const OUT = join(REPO_ROOT, "dist/fleetlab-playground.html");
@@ -53,7 +53,10 @@ test("the packed worker gives the in-process event-log digest and metrics for th
   const status = packMain(["--out", OUT], { log: (line) => output.push(line), error: (line) => output.push(line) });
   assert.equal(status, 0, output.join("\n"));
   const html = readFileSync(OUT, "utf8");
-  assert.ok(html.includes(`<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">`));
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  assert.equal(scripts.length, 1);
+  const scriptDigest = createHash("sha256").update(scripts[0][1], "utf8").digest("base64");
+  assert.equal(/script-src ([^;]+)/.exec(html)[1], `'sha256-${scriptDigest}'`);
 
   const literal = html.match(/^const FLEETLAB_WORKER_SOURCE = (".*");$/m);
   assert.ok(literal, "the packed file defines the worker source as one string literal");

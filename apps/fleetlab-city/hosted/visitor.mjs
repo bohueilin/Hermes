@@ -2,11 +2,12 @@ import {QUESTION_FAMILIES} from './visitor-families.mjs';
 import {decorateConceptMedia} from './enhancement-media.mjs';
 
 // Presentation and navigation only. Existing lessons own their controls, results and playback.
-function node(doc,tag,attrs={},children=[]){
-const n=doc.createElement(tag);
-for(const [key,value] of Object.entries(attrs))n.setAttribute(key,value);
-for(const child of [children].flat())if(child!=null)n.appendChild(typeof child==='string'?doc.createTextNode(child):child);
-return n;
+// Same refusals as src/ui/dom.js setAttr.
+export function node(doc,tag,attrs={},children=[]){
+ const n=doc.createElement(tag);
+ for(const [key,value] of Object.entries(attrs)){if(/^on/i.test(key)||/^(href|src)$/i.test(key)&&/^(javascript|data):/i.test(String(value).replace(/[\0- ]/g,'')))throw Error(`unsafe attribute ${key}`);n.setAttribute(key,value);}
+ for(const child of [children].flat())if(child!=null)n.appendChild(typeof child==='string'?doc.createTextNode(child):child);
+ return n;
 }
 // Editorial context only; these records never enter model inputs, results or verifiers.
 const FIELD_NOTES={

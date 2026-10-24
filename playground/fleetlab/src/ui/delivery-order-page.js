@@ -1,11 +1,12 @@
 import {networkChrome} from './network-chrome.js';
+import {setAttr} from './dom.js';
 import {FLOW_TRUST} from '../model/depot-flow-contract.js';
 import {ORDER_MANIFEST_SCHEMA,ORDER_POLICY_VERSION,orderCanonical,orderDigest,normalizeOrderInput} from '../model/delivery-order-contract.js';
 import {ORDER_STUDY_VERIFIER_VERSION} from '../model/delivery-order-study-verify.js';
 import {createOrderJob} from '../runtime/delivery-order-job.js';
 import {createOrderProjection,ORDER_CHAPTERS,orderSeconds as sec} from './delivery-order-view.js';
 import {createOrderPlayer} from './delivery-order-player.js';
-const el=(tag,attrs={},children=[])=>{const n=document.createElement(tag);for(const [k,v]of Object.entries(attrs))if(v!==null)n.setAttribute(k,String(v));for(const c of [children].flat())if(c!==null&&c!==undefined)n.appendChild(typeof c==='string'?document.createTextNode(c):c);return n;};
+const el=(tag,attrs={},children=[])=>{const n=document.createElement(tag);for(const [k,v]of Object.entries(attrs))if(v!==null)setAttr(n,k,v);for(const c of [children].flat())if(c!==null&&c!==undefined)n.appendChild(typeof c==='string'?document.createTextNode(c):c);return n;};
 const p=(t,cls='')=>el('p',{class:cls},t),btn=(t,fn,a={})=>{const b=el('button',{type:'button',...a},t);b.addEventListener('click',fn);return b;};
 const detail=(name,content)=>el('details',{},[el('summary',{},name),...content]);
 const immutable=v=>{if(v&&typeof v==='object'){Object.values(v).forEach(immutable);Object.freeze(v);}return v;};
@@ -92,7 +93,7 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
  }
  function schedule(order,label,t){
   const projection=accepted.projection,record=projection.outcome(order),end=fullWindow?2400000:480000;
-  const svg=(tag,attrs={},text='')=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,String(v));if(text)n.textContent=text;return n;};
+  const svg=(tag,attrs={},text='')=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v]of Object.entries(attrs))setAttr(n,k,v);if(text)n.textContent=text;return n;};
   const chart=svg('svg',{viewBox:'0 0 480 252',role:'img','aria-label':`${label}: ${order.join(', ')}. At ${sec(t)}. Exact interval details follow.`}),x=ms=>64+ms/end*398;
   chart.append(svg('title',{},`${label} checked schedule`));
   for(let i=0;i<=4;i++){const at=end*i/4;chart.append(svg('line',{x1:x(at),x2:x(at),y1:26,y2:228,class:'grid-line'}),svg('text',{x:x(at),y:15,'text-anchor':i===4?'end':'middle',class:'axis-label'},String(at/1000)+' s'));}

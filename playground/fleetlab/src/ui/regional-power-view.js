@@ -1,4 +1,4 @@
-import {flowButton as button,el} from './dom.js';
+import {flowButton as button,el,setAttr} from './dom.js';
 import {SURFACE_FRAMES,frameView,glossaryView} from './teaching-frames.js';
 import {teachingResult,pairedProjection} from './teaching-projection.js';
 import {displayText,setBusy} from './display-text.js';
@@ -23,7 +23,7 @@ function download(label,name,record){
   return link;
 }
 function schematic(){
-  const svg=(tag,attrs,text)=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));if(text)n.textContent=text;return n;};
+  const svg=(tag,attrs,text)=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))setAttr(n,k,v);if(text)n.textContent=text;return n;};
   const graph=svg('svg',{viewBox:'0 0 660 320',role:'img','aria-label':'Synthetic Austin schematic: Site A at North neighborhood, Site B at East neighborhood. No real roads.'});
   const point=p=>[100+p.x*.05,270-p.y*.022],byId=new Map(AUSTIN_REGION.geometry.nodes.map(p=>[p.id,p]));
   for(const [a,b] of AUSTIN_REGION.geometry.edges){const pa=point(byId.get(a)),pb=point(byId.get(b));graph.appendChild(svg('line',{x1:pa[0],y1:pa[1],x2:pb[0],y2:pb[1],stroke:'#9bab9c','stroke-width':5}));}
@@ -59,9 +59,11 @@ function verdict(r){
   return root;
 }
 function discloseProvenance(root){const rows=[...root.children].filter(n=>n.classList.contains('result-provenance')||n.textContent.startsWith('Submitted condition '));root.appendChild(el('details',{},[el('summary',{},'Exact values'),...rows]));}
+const CONDITIONS={moderate:'60% power condition',full:'Full power condition',severe:'20% power condition',outage:'Power outage'};
+const conditionName=id=>{const k=id.replace(/^tx-aus-|(?:-v1)$/g,'');return Object.hasOwn(CONDITIONS,k)?CONDITIONS[k]:'Custom power condition';};
 function runView(r){
   const m=r.metrics,x=r.extensions,c=x.charging,root=el('section',{},[
-    teachingResult('regional-power',{type:'austin',metrics:m,zeroPower:c.zero_power_vehicle_min,condition:({moderate:'60% power condition',full:'Full power condition',severe:'20% power condition',outage:'Power outage'})[r.config.site_power_profile.condition_id.replace(/^tx-aus-|(?:-v1)$/g,'')]??'Custom power condition',seed:r.config.seed}),el('h3',{},'Recorded Austin shift'),el('p',{class:'result-provenance'},`Seed ${r.config.seed} · ${r.version} · ${x.validity} · Simulation only · NOT_EVIDENCE · deployment permission NONE.`),
+    teachingResult('regional-power',{type:'austin',metrics:m,zeroPower:c.zero_power_vehicle_min,condition:conditionName(r.config.site_power_profile.condition_id),seed:r.config.seed}),el('h3',{},'Recorded Austin shift'),el('p',{class:'result-provenance'},`Seed ${r.config.seed} · ${r.version} · ${x.validity} · Simulation only · NOT_EVIDENCE · deployment permission NONE.`),
     el('p',{},`Submitted condition ${r.config.site_power_profile.condition_id} at ${r.config.site_power_profile.site_id}; ${r.config.duration_hours} hours, ${r.config.fleet_size} vehicles, nominal ${r.config.site_power_kw} kW per site.`),
     resources(r.config),
     table('Every request at the horizon',['All requests','Completed','Unserved','Waiting','Assigned / boarding / trip'],[[m.total_requests,m.completed_trips,m.unserved_requests,m.pending_requests,m.in_progress_trips]]),

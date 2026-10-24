@@ -1,6 +1,6 @@
 # FleetLab publication runbook
 
-Updated 22 October 2026. Applies to the static educational FleetLab website.
+Updated 23 October 2026. Applies to the static educational FleetLab website.
 Hermes operational deployment permission remains NONE. Historical deployment
 paragraphs and the old playground-only CI template are superseded; do not use them.
 
@@ -21,6 +21,31 @@ are separate decisions; no document can authorize them by itself.
 
 The Delivery order route is `/network-flows/delivery-order/`. Its explicit route owner, source-capture entries, worker, study and release sidecar are included in the same atomic teaching/integration generation. Validate both it and NF04; do not deploy a standalone route over the integrated site. See [the implementation handoff](FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md) for the current release and retained rollback.
 
+## October 23 enhancement publication
+
+The owner approved the reviewed enhancement round and explicitly requested live
+publication with FL-A2 as the Fleet day hero and FL-V1 held for a rerender.
+The live security baseline is source `2d01b25e3df2df2c250fc64caaed14fb9c376c3c`;
+preserve its isolated token input, production confirmation, static-only upload,
+City evidence binding and header checks when integrating the enhancements.
+Local source commits, preview and production publication are authorized for this
+round; no GitHub push or PR is needed. Do not retrieve credentials into chat.
+Follow `deploy/TOKEN_INPUT.md` for owner-side ephemeral token injection.
+
+Only these media-related ceilings were explicitly changed: a new exact
+8-file / 4 MiB enhancement group, a 17 MiB non-City aggregate, and a 544 KiB
+NF-03 capacity closure. All other ceilings remain. Seven files are installed:
+A1–A4, V2/V3 and the V2 poster. V1 is excluded from the package. Rebuild and
+measure the combined release; earlier development measurements are not a release
+receipt. See `FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` for final status.
+
+The October 23 dependency audit reports Undici advisories in the pinned local
+Wrangler/Miniflare toolchain, including the bundled Pages fetch implementation.
+These dependencies are not served to visitors. A malicious HTTPS API response
+could terminate the uploader; do not describe the audit as clean or apply an
+installed-only override as if it repaired the bundled copy. Preserve this dated
+residual in the release handoff until a complete tool update is reviewed.
+
 ## October 14 approved artwork and analytics
 
 The owner approved the reviewed depot and shared-delivery artwork, transparent logo,
@@ -28,13 +53,14 @@ Google tag `G-04EZ8EZWQ2`, Git push and public-site publication. The existing fi
 all teaching/simulation behavior remain. This is the explicit website-only override
 of the historical no-telemetry/no-publication instruction.
 
-For this generation, first run `tools/hosted-brand.py` against the original current
-City viewer with `--source-commit FULL_SHA` and a new output directory. This derives
-presentation/network metadata only; the original input becomes the retained rollback.
-Use that new viewer with `integrate-site.py --brand-update`, alongside the usual
-`--flow-update`, exact source commit and teaching package. Do not mutate an old viewer.
-The upload guard independently reproduces the new City presentation from its retained
-base and rejects changes to scientific files, even after outer manifests are resealed.
+For a new generation, use the tracked local recipe below. It first runs
+`tools/hosted-brand.py --project-base` against the approved original City viewer,
+creating a new rollback generation that omits its inert nested `_headers` file.
+The original input remains unchanged. The presentation derives from that projected
+base with `--source-commit FULL_SHA`; both generations use the effective root headers.
+Integration receives the original manifest through `--city-base-manifest` and retains
+its exact bytes as review evidence. The guard reproduces both transformations from
+the independently pinned original and rejects resealed changes to scientific files.
 
 Hosted artwork is a separate, exact three-file inventory capped at 2 MiB. Its bytes
 count toward total generation storage; hosted JS/CSS count toward text and route
@@ -124,6 +150,34 @@ The subsequent October 13 Argon visual refinement uses the same release workflow
 Use the project's Python 3.11 environment for these tools. The Mac's default
 Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
 
+The tracked recipe reconstructs a verified local package from explicit inputs:
+
+```sh
+PYTHON_EXECUTABLE -B apps/fleetlab-city/deploy/build-release.py \
+  --commit FULL_SHA \
+  --legacy PRESERVED_LEGACY_DIR \
+  --legacy-readback LEGACY_READBACK_JSON \
+  --city-base ORIGINAL_CITY_DIR \
+  --city-source-offer ORIGINAL_SOURCE_OFFER_DIR \
+  --out NEW_OUTPUT_DIR
+```
+
+Replace `PYTHON_EXECUTABLE` with the selected Python interpreter. Run from the
+clean source checkout at `FULL_SHA`; the output parent must exist and the output
+must be new, outside the checkout or under its ignored `dist/`, and separate from
+every input. City input digests must match `deploy/approved-inputs.json`.
+The recipe builds and checks hosted/offline teaching files, verifies the source
+package, derives both City generations, integrates them, and independently verifies
+the complete stage. It neither installs dependencies nor accesses hosting services.
+
+Only a complete verified result is moved to `NEW_OUTPUT_DIR`. Its `stage/site/`
+is the served tree, `stage/review/` holds supporting evidence, and
+`local-release.json` records `server_side: none` for the verified local stage only.
+`build-inputs.json` records source/input digests and runtime versions without machine
+paths. Publication and hosted readback remain `NOT_PERFORMED`; the production receipt
+is unchanged. Preserve the original inputs for reconstruction. The steps below cover
+additional release checks and separately authorized publication.
+
 1. Run the City Python and Node suites, the teaching-lab Node suite and Hermes
    checks. Run the boundary suite with `FLEET_PLAYGROUND_BASE=bca4ccd`; do not
    count a missing-base skip as a completed release gate.
@@ -156,19 +210,44 @@ Python may be older; use `build/fleetlab-city/venv/bin/python` explicitly.
    boot, headers and hosted integration assets are independently reproduced
    from source by the upload guard. Deleting package markers cannot bypass it. A content digest
    does not authenticate the producer. NF04-B adds explicit owner-aware counters, a separately scoped software-delivery sidecar, integration-original source capture and final transformed route closures. Include the manifest as a declared route input; bootstrap injects it into the UI. All original hard caps remain.
-5. Install the locked deployment tool in `apps/fleetlab-city/deploy` with
-   `npm ci --ignore-scripts`; run `npm audit --omit=dev` and `npm audit signatures`.
+5. For the audits, install the locked deployment tool in `apps/fleetlab-city/deploy` with
+   `npm ci --ignore-scripts` (the folder's `.npmrc` also sets `ignore-scripts`); run
+   `npm audit --omit=dev` and `npm audit signatures`.
    Also run `npm --prefix apps/fleetlab-city audit --omit=dev` for MapLibre.
+   The release wrapper never loads this install (step 6).
 6. Use `node apps/fleetlab-city/deploy/wrangler.mjs pages deploy SITE
    --project-name fleetlab --branch codex-city-explorer` for preview. The wrapper
-   requires a clean checkout and matching source commit. It verifies exact upstream
-   CLI bytes and generates a separate serial uploader (8 MiB buckets, one concurrent
-   Pages request), preserving upstream authentication and asset validation.
+   requires a clean checkout and matching source commit. For every command it installs
+   the tool fresh from the committed `package-lock.json` with `npm ci --ignore-scripts`
+   into a new temporary directory it owns (npm checks every package against the lock's
+   integrity hash), so the git-ignored `node_modules` tree is never loaded. It verifies
+   exact upstream CLI bytes and writes a separate serial uploader there as a new file
+   (8 MiB buckets, one concurrent Pages request), preserving upstream authentication and
+   asset validation. The tools and that copy are deleted when Wrangler exits.
+   Wrangler runs in an empty temporary directory with only PATH, HOME, user, shell,
+   temp, locale and terminal variables, so `.env` files, `functions/`, Wrangler configs,
+   a shared account cache and caller variables (an API token included) are not used.
+   `WRANGLER_CACHE_DIR` points at an empty cache inside that run directory, so Wrangler
+   never falls back to a `node_modules/.cache/wrangler` above it; with several accounts
+   on the login, Wrangler may ask which one to use each time.
+   Before uploading it refuses a stage with `_worker.js`, `_routes.json`, `functions/`
+   or any `.DS_Store`, `node_modules`, `.git` or `.wrangler` entry; a `functions/` in
+   the checkout root or `apps/fleetlab-city/deploy/`; and any Wrangler config or
+   `.env` file in the checkout root, the temporary directory or any of their parents.
+   Afterwards it fails a deployment list or upload whose Wrangler log shows a compiled
+   Worker, a Functions, Worker or `_routes.json` upload, a redirected Wrangler config,
+   or an API or token host other than `api.cloudflare.com` and `dash.cloudflare.com`;
+   the log is then kept in the temporary directory the error names. Any command also
+   fails when the cached `pages.json` names a Pages project other than `fleetlab`.
 7. Verify all preview bytes with `tools/readback.py --site SITE --url PREVIEW
    --output PRIVATE_RESULT`. Verify root/City CSP, attachment headers, a real 404,
    malformed links, normal navigation, map/replay and phone-width layout. The
-   readback tool verifies bytes/statuses; inspect response headers separately.
+   readback tool verifies bytes/statuses; check response headers with
+   `tools/check-headers.py SITE PREVIEW PRIVATE_RESULT`, which also requests
+   percent-encoded spellings that only the `/*` rule matches.
    A missing page must return 404 with the security headers and `no-store` cache policy.
+   Header rule: `/*` is the only security baseline. Path-specific `_headers` rules may
+   relax or annotate it but must never be relied on to restrict.
 8. For the currently authorized production release, use the same command and
    stage with `--branch feat/fleetlab-playground`. That branch is Cloudflare's
    production alias; it is not the actual Git source branch.

@@ -1,7 +1,6 @@
-import {decorateVisitors} from './visitor.mjs';
+import {decorateVisitors,node} from './visitor.mjs';
 // Hosted presentation. No simulation, result, map or playback logic is changed.
 const media='/site-media/';
-function node(doc,tag,attrs={},children=[]){const n=doc.createElement(tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);for(const c of [children].flat())if(c!=null)n.appendChild(typeof c==='string'?doc.createTextNode(c):c);return n;}
 export function decorateDesign(doc=document){
 const el=(...args)=>node(doc,...args);
 const mark=()=>el('img',{src:media+'fleetlab-logo.png',srcset:media+'fleetlab-logo-64.png 64w, '+media+'fleetlab-logo-128.png 128w, '+media+'fleetlab-logo.png 256w',sizes:'(max-width:767px) 48px, 64px',alt:'',width:'64',height:'64',decoding:'async'});

@@ -103,6 +103,82 @@ class PublicationSecurityTests(unittest.TestCase):
         subprocess.run(["git", "add", "sample.bin"], cwd=self.root, check=True)
         self.assertEqual(guard.check(staged=True, cwd=self.root)[1], 1)
 
+    def git(self, *args, cwd=None):
+        identity = ["-c", "user.name=Test", "-c", "user.email=test@example.invalid"]
+        return subprocess.run(
+            ["git", *identity, *args], cwd=cwd or self.root, check=True,
+            capture_output=True, text=True,
+        ).stdout.strip()
+
+    def commit(self, name, text, message="synthetic commit"):
+        (self.root / name).write_text(text)
+        self.git("add", name)
+        self.git("commit", "-qm", message)
+        return self.git("rev-parse", "HEAD")
+
+    def pre_push(self, local):
+        line = f"refs/heads/feature {local} refs/heads/feature {'0' * 40}\n"
+        return subprocess.run(
+            [sys.executable, str(TOOL), "--pre-push"], input=line, cwd=self.root,
+            capture_output=True, text=True,
+        ).returncode
+
+    def test_a_new_branch_push_checks_only_commits_no_remote_has(self):
+        home = "/" + "Users" + "/sample/private"
+        self.git("init", "-q", "-b", "main", str(self.root))
+        self.commit("history.md", home + "\n")
+        remote = tempfile.TemporaryDirectory()
+        self.addCleanup(remote.cleanup)
+        bare = Path(remote.name) / "remote.git"
+        self.git("init", "-q", "--bare", str(bare))
+        self.git("remote", "add", "github", str(bare))
+        self.git("push", "-q", "github", "main")
+        self.git("fetch", "-q", "github")
+        self.git("switch", "-q", "-c", "feature")
+        self.assertEqual(self.pre_push(self.commit("clean.md", "public text\n")), 0)
+        self.assertEqual(self.pre_push(self.commit("leak.md", home + "\n")), 1)
+
+    def test_guard_rejects_tool_state_home_paths_and_unprefixed_keys(self):
+        hunk = "@@ -0,0 +1 @@\n+"
+        for line in (
+            "~" + "/.wrangler/config/default.toml",
+            "$" + "HOME/.wrangler/logs",
+            "${" + "HOME}/Library/Preferences/.wrangler",
+            "CLOUDFLARE_API_" + "TOKEN=" + "a" * 40,
+            "export OPENAI_" + "API_KEY='" + "b" * 40 + "'",
+            "sk-" + "proj-" + "c" * 40,
+        ):
+            with self.subTest(line=line[:12]):
+                self.assertEqual(guard.inspect_diff(["notes.md"], hunk + line), (0, 1))
+        for line in ("~" + "/experiments/probe.json", "TOKEN=" + "short", "sha256 " + "d" * 64):
+            with self.subTest(line=line[:12]):
+                self.assertEqual(guard.inspect_diff(["notes.md"], hunk + line), (0, 0))
+
+    def test_guard_rejects_ignored_paths_and_geolocation_shaped_files(self):
+        self.git("init", "-q", str(self.root))
+        (self.root / ".git/info/exclude").write_text("private-draft.md\n/review/\n")
+        for name in ("private-draft.md", "review/note.md"):
+            (self.root / name).parent.mkdir(exist_ok=True)
+            (self.root / name).write_text("ordinary\n")
+            self.git("add", "-f", name)
+            self.assertEqual(guard.check(staged=True, cwd=self.root), (1, 0), name)
+            self.git("rm", "-q", "--cached", name)
+        keys = ['"as' + 'Organization"', '"postal' + 'Code"', '"tls' + 'ClientRandom"']
+        (self.root / "notes").mkdir()
+        (self.root / "notes/geo.json").write_text("{" + ": 1, ".join(keys) + ": 1}\n")
+        self.git("add", "notes/geo.json")
+        self.assertEqual(guard.check(staged=True, cwd=self.root), (1, 0))
+        self.git("rm", "-q", "--cached", "notes/geo.json")
+        (self.root / "map.json").write_text('{"latitude":37.77,"postalCode":"94103"}\n')
+        self.git("add", "map.json")
+        self.assertEqual(guard.check(staged=True, cwd=self.root), (0, 0))
+
+    def test_commit_messages_are_checked(self):
+        self.git("init", "-q", str(self.root))
+        home = "/" + "Users" + "/sample/private"
+        self.commit("clean.md", "public text\n", message="notes from " + home)
+        self.assertEqual(guard.check(revision="HEAD", cwd=self.root), (0, 1))
+
 
 if __name__ == "__main__":
     unittest.main()

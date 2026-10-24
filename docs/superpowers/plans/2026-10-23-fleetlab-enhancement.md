@@ -73,3 +73,5 @@ Owner explicitly requested: deploy these updates to the live site, retaining A2 
 - [ ] Commit reviewed source, build exact-source package, and pass all existing upload guards and approved budgets.
 - [ ] Verify Cloudflare preview, publish same package to stable site, verify live bytes/headers and 390px layouts.
 - [ ] Update shared report and committed release receipt with production identity, URLs, checks and residual limitations.
+
+Release reconciliation: live `/publication.json` names source `2d01b25`, which was not an ancestor of the initial enhancement branch. A fresh 103-file readback against the current receipt at `02621fe` passed. Merge the existing live security implementation before publication; do not regress it. Its token interface requires owner-side injection outside the agent session and interactive production confirmation. The October 23 npm audit is not clean: the pinned uploader bundles affected Undici 7.29.1; retain this tool-only residual, with no unreviewed CLI patch or downgrade.

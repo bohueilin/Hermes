@@ -32,6 +32,113 @@ class IntegrationTest(unittest.TestCase):
         self.assertEqual(integration.STATIC_INTEGRATION_FILES, json.loads(result.stdout))
         self.assertTrue(set(integration.STATIC_INTEGRATION_FILES) <= integration.INTEGRATION_TEXT)
 
+    def test_current_client_changes_are_declared_against_approved_production_input(self):
+        # The older synthetic build fixture derives its baseline from CLIENT_FIXES.
+        # This fixed production inventory must stay independent of those declarations.
+        baseline = json.loads(
+            (Path(__file__).parent / "fixtures/approved-legacy-client.json").read_text()
+        )
+        self.assertEqual(len(baseline["files"]), 99)
+        for name, text in baseline["shell"].items():
+            data = text.encode()
+            self.assertEqual(baseline["files"][name], {
+                "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+            })
+            (self.legacy / name).write_bytes(data)
+        # Like a release, this regression requires committed teaching sources;
+        # dirty bound sources fail provenance before the declaration comparison.
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=launch.ROOT, text=True,
+        ).strip()
+        client = self.base / "actual-client"
+        subprocess.run([
+            "node", str(PACK), "--site", str(client), "--source-commit", commit,
+        ], cwd=launch.ROOT, capture_output=True, text=True, check=True)
+
+        class ClientComparisonPassed(Exception):
+            """Stop before unrelated package/City materialization, after the real guard."""
+
+        def compare_client():
+            integration.integrate(
+                self.legacy, self.viewer, self.prior, self.offer, self.base / "out", self.offline,
+                client_update=client, flow_update=True,
+                teaching_package=self.base / "package", source_commit=commit,
+            )
+
+        # Only the 3.4 MiB historical payload is represented by its frozen inventory.
+        # Current bytes, route sets, source/provenance checks and comparisons are real.
+        with (
+            patch.object(integration.launch, "verify_legacy", return_value=baseline["files"]),
+            patch.object(integration, "check_teaching_package", side_effect=ClientComparisonPassed),
+            self.assertRaises(ClientComparisonPassed),
+        ):
+            compare_client()
+        # A difference outside the traced set must still be rejected by that guard.
+        drifted = {**baseline["files"], "src/model/world.js": {
+            **baseline["files"]["src/model/world.js"], "sha256": "0" * 64,
+        }}
+        with (
+            patch.object(integration.launch, "verify_legacy", return_value=drifted),
+            patch.object(integration, "check_teaching_package", side_effect=ClientComparisonPassed),
+            self.assertRaisesRegex(
+                ValueError, r"^undeclared teaching client change: src/model/world\.js$"
+            ),
+        ):
+            compare_client()
+
+    def test_city_input_pins_are_strict_and_checked_before_integration(self):
+        self.assertTrue(callable(getattr(integration, "check_city_inputs", None)))
+        base = b'{"original":"base"}'
+        offer = b'{"original":"offer"}'
+        approved = {
+            "schema": "fleetlab.approved-city-inputs/1.0.0",
+            "base_release": {
+                "sha256": hashlib.sha256(base).hexdigest(), "provenance": "docs/fixture.md",
+            },
+            "source_offer_manifest": {
+                "sha256": hashlib.sha256(offer).hexdigest(), "provenance": "docs/fixture.md",
+            },
+        }
+        path = self.base / "apps/fleetlab-city/deploy/approved-inputs.json"
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps(approved))
+        with patch.object(integration.launch, "ROOT", self.base):
+            integration.check_city_inputs(base, offer)
+            for first, second in ((base + b" ", offer), (base, offer + b" ")):
+                with self.assertRaisesRegex(ValueError, "approved City"):
+                    integration.check_city_inputs(first, second)
+            for changed in (
+                {**approved, "extra": True}, {**approved, "schema": "other"},
+                {**approved, "base_release": {**approved["base_release"], "path": "elsewhere"}},
+            ):
+                path.write_text(json.dumps(changed))
+                with self.assertRaisesRegex(ValueError, "City.*pin"):
+                    integration.check_city_inputs(base, offer)
+
+    def test_hosted_integration_requires_original_base_evidence(self):
+        with self.assertRaisesRegex(ValueError, "original City base manifest"):
+            integration.integrate(
+                self.legacy, self.viewer, self.prior, self.offer, self.base / "out", self.offline,
+                client_update=self.base / "client", flow_update=True,
+                teaching_package=self.base / "package", source_commit="a" * 40, brand_update=True,
+            )
+
+    def test_download_headers_match_only_the_verified_source_archive(self):
+        self.assertTrue(callable(getattr(integration, "source_headers", None)))
+        source = "network-flows/sources/" + "a" * 64 + ".json.gz"
+        headers = integration.source_headers(source)
+        self.assertTrue(headers.startswith(f"\n/{source}\n"))
+        self.assertIn("  Content-Type: application/gzip\n", headers)
+        self.assertIn(
+            '  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n',
+            headers,
+        )
+        self.assertIn("  Cache-Control: public, max-age=31536000, immutable\n", headers)
+        self.assertNotIn("*", headers)
+        for invalid in ("network-flows/sources/*", source + "\n/*", "../" + source):
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(ValueError, "source.*path"):
+                integration.source_headers(invalid)
+
     def test_final_route_closure_counts_transformed_headers(self):
         self.assertTrue(callable(getattr(integration, "final_route_counts", None)))
         routes = [{"id": "nf04", "paths": ["route.js", "_headers"], "bytes": 1}]
@@ -292,12 +399,12 @@ class IntegrationTest(unittest.TestCase):
         headers = (site / "_headers").read_text()
         self.assertIn(
             "/downloads/fleetlab-offline.html\n"
-            '  Content-Disposition: attachment; filename="fleetlab-offline.html"',
+            '\tContent-Disposition: attachment; filename="fleetlab-offline.html"',
             headers,
         )
         self.assertIn(
             "/downloads/fleetlab-offline\n"
-            '  Content-Disposition: attachment; filename="fleetlab-offline.html"',
+            '\tContent-Disposition: attachment; filename="fleetlab-offline.html"',
             headers,
         )
         for name in report["preserved_existing"]:

@@ -1,3 +1,4 @@
+import {setAttr} from './dom.js';
 const COPY={
  paired:['One world, two arms','The difference is the change — everything else was identical.','Matching workload and travel draws; only San Francisco supply changes from 40 to 52 cars in this illustration. Pairing reduces noise; it does not remove uncertainty.'],
  guardrails:['A better average can still mean HOLD','Averages don’t govern; guardrails do.','Illustrative, rounded example: mean change in wait p90 −26 min; a 39 min guardrail value exceeds a 30 min limit, so HOLD. Check evidence validity first; a better primary result cannot override a breached, predeclared guardrail.'],
@@ -6,7 +7,7 @@ const COPY={
 const clamp=n=>Math.max(0,Math.min(1,n));
 export function createMethodologyExplainer(kind,doc=document){
  if(!Object.hasOwn(COPY,kind))throw new Error('Unknown explainer');
- const make=(tag,attrs={},text='',svg=false)=>{const n=svg?doc.createElementNS('http://www.w3.org/2000/svg',tag):doc.createElement(tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text)n.textContent=text;return n;};
+ const make=(tag,attrs={},text='',svg=false)=>{const n=svg?doc.createElementNS('http://www.w3.org/2000/svg',tag):doc.createElement(tag);for(const [k,v]of Object.entries(attrs))setAttr(n,k,v);if(text)n.textContent=text;return n;};
  const root=make('section',{class:'methodology-explainer','data-explainer-kind':kind,'aria-label':COPY[kind][0]}),svg=make('svg',{class:'explainer-stage',viewBox:'0 0 600 240','aria-hidden':'true',focusable:'false'},'',true);
  const shape=(tag,attrs,text='')=>{const n=make(tag,attrs,text,true);svg.append(n);return n;};
  const rect=(x,y,width,height,cls,extra={})=>shape('rect',{x,y,width,height,rx:6,class:cls,...extra});

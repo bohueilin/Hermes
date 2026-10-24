@@ -159,7 +159,8 @@ function validateRegional(config) {
   const d = config.draft;
   if (d === null) return;
   keys(d, ['question','baselineScenario','baselineSource','axis','axisSource','primary','guardrails','seedCount','seedSet','resamples'], [], 'draft');
-  if (!PRESETS.some(p => p.experiment?.question === d.question)) fail('Custom experiment question text cannot be shared in a link; use a supplied question.');
+  // A preset's title is shown over the run, so the question must be that preset's own (custom text is never shared).
+  if (d.question !== preset.experiment?.question) fail("A shared experiment question must be the selected preset's own question.");
   scenario(d.baselineScenario);
   if (d.baselineSource !== null) {
     keys(d.baselineSource, ['presetId'], [], 'baselineSource');

@@ -103,6 +103,12 @@ const valueOf = (root, field) => {
 
 const same = (actual, expected, what) => assert.ok(actual === expected, `${what}: ${String(actual)} is not ${String(expected)}`);
 
+/** Whether a closed details element holds `node`, so a reader sees it only after expanding that section. */
+const hidden = (node) => {
+  for (let n = node.parentNode; n; n = n.parentNode) if (n.tagName?.toLowerCase() === "details" && !n.hasAttribute("open")) return true;
+  return false;
+};
+
 const checksOf = (container) =>
   Object.fromEntries(container.querySelectorAll('[data-role="checks"] li').map((li) => [li.getAttribute("data-check"), li.getAttribute("data-passes") === "true"]));
 
@@ -1301,21 +1307,24 @@ describe("Experiment flow across modes, presets and seed sets (review: experimen
       choose(container, "OPS-01");
       const preset = presetById("OPS-01");
       const block = () => container.querySelector('[data-block="situation"]');
+      const edited = () => container.querySelector('[data-role="situation-edited"]');
       assert.ok(block().querySelector('[data-role="proxy"]'), "the proxy shows while the draft is the case");
-      assert.equal(block().querySelector('[data-role="situation-edited"]'), null);
+      assert.equal(edited(), null);
 
       // Rephrasing the question keeps the lines: the proxy and watch do not depend on it.
       store.dispatch({ type: "experiment/draft", patch: { question: "A question in the reader's words?" } });
       assert.ok(block().querySelector('[data-role="proxy"]'));
       assert.equal(block().querySelector('[data-role="watch"]').textContent, preset.watch);
 
-      // Another axis is another setup: the block keeps the lead and the situation and says so in place of the rest, so
-      // the sheet never shows the case's proxy beside a ONE CHANGE block that names a different knob.
+      // Another axis is another setup: the block keeps the lead and the situation and drops the rest, so the sheet never
+      // shows the case's proxy beside a ONE CHANGE block that names a different knob; one line above the sheet says so.
       store.dispatch({ type: "experiment/draft", patch: { axis: { id: "parameter:DEP-4", baseline: 1200, candidate: 1800 } } });
       assert.notEqual(freezeSpec(experiment.specDraftOf(store.getState().experiment.draft)).digest, freezeSpec(preset.experiment).digest);
       assert.equal(block().querySelector('[data-role="situation-lead"]').textContent, labels.SITUATION.lead);
       assert.equal(block().querySelector('[data-role="situation"]').textContent, preset.situation);
-      assert.equal(block().querySelector('[data-role="situation-edited"]').textContent, labels.situationEdited({ id: "OPS-01" }));
+      assert.equal(edited().textContent, labels.situationEdited({ id: "OPS-01" }));
+      assert.equal(hidden(edited()), false, "the edited line is visible without opening the setup sheet");
+      assert.equal(block().contains(edited()), false);
       for (const role of ["proxy", "outside-model", "watch"]) assert.equal(block().querySelector(`[data-role="${role}"]`), null, `${role} is absent, not hidden`);
       assert.deepEqual(block().querySelectorAll("h3"), []);
       assert.ok(!container.textContent.includes(preset.watch));
@@ -1323,14 +1332,30 @@ describe("Experiment flow across modes, presets and seed sets (review: experimen
 
       // Back on the case's axis, the lines return.
       store.dispatch({ type: "experiment/draft", patch: { axis: preset.experiment.axis } });
-      assert.equal(block().querySelector('[data-role="situation-edited"]'), null);
+      assert.equal(edited(), null);
       assert.equal(block().querySelector('[data-role="watch"]').textContent, preset.watch);
 
       // An invalid draft is an edited one too, and the sheet renders without freezing it.
       store.dispatch({ type: "experiment/draft", patch: { axis: { id: "parameter:DEP-4", baseline: 1200, candidate: 999999 } } });
       assert.equal(container.querySelector('[data-role="freeze"]').disabled, true);
-      assert.ok(block().querySelector('[data-role="situation-edited"]'));
+      assert.ok(edited());
       assert.equal(block().querySelector('[data-role="proxy"]'), null);
+    });
+  });
+
+  test("a verdict names the change it tested in its header, outside every collapsed section", async () => {
+    await withDom({}, async () => {
+      // A setup that keeps OPS-01's title and question but tests fewer San Francisco cars.
+      const draft = experimentDraft({ presetId: "OPS-01" });
+      draft.axis = { id: "parameter:SUP-1.SF", baseline: 40, candidate: 34 };
+      const { payload } = await runThroughWorkerHandler({ type: "run_experiment", spec: draft });
+      const host = fakeHost({ payloadFor: () => payload });
+      const { container } = mount(presetStore("OPS-01", { draft }), { host });
+      await freezeByClick(container, host);
+      const line = container.querySelector('.fl-verdict [data-role="change-tested"]');
+      assert.equal(line.textContent, "Change tested: Cars per area at start, SF: 40 cars to 34 cars");
+      assert.equal(hidden(line), false, "the tested change is visible without expanding any details");
+      assert.equal(hidden(container.querySelector('[data-role="situation-edited"]')), false);
     });
   });
 

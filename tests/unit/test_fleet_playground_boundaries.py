@@ -220,6 +220,101 @@ def _git(*arguments: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _matches_reviewed_protected_change(
+    relative_path: str, original: bytes, current: bytes
+) -> bool:
+    """Accept only the exact reviewed media ignores and security transformations."""
+    expected = original
+    if relative_path == ".gitignore":
+        marker = b"# Local secrets and operating-system files\n"
+        if original.count(marker) != 1:
+            return False
+        expected = original.replace(marker, marker + b".wrangler/\n", 1) + (
+            b"\n# Reviewed R1 teaching concept derivatives; "
+            b"original full-size inputs remain ignored.\n"
+            b"!apps/fleetlab-city/rebalancing-media/r1-nf05.mp4\n"
+            b"!apps/fleetlab-city/rebalancing-media/r1-nf06.mp4\n"
+        )
+        if expected.count(b"*.mp4\n") != 1:
+            return False
+        expected = expected.replace(
+            b"*.mp4\n",
+            b"*.mp4\n"
+            b"!/apps/fleetlab-city/enhancement-media/FL-V2-deadhead-explainer.mp4\n"
+            b"!/apps/fleetlab-city/enhancement-media/FL-V3-people-between-rides-loop.mp4\n",
+            1,
+        )
+    elif relative_path == ".github/workflows/ci.yml":
+        for prior, pinned in (
+            (
+                b"        uses: actions/checkout@v4\n",
+                b"        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+                b" # v4, verified 2026-10-21\n",
+            ),
+            (
+                b"        uses: actions/setup-python@v5\n",
+                b"        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
+                b" # v5.6.0\n",
+            ),
+        ):
+            if expected.count(prior) != 1:
+                return False
+            expected = expected.replace(prior, pinned, 1)
+    else:
+        return False
+    return current == expected
+
+
+def test_r6_reviewed_ignore_change_rejects_unrelated_edits() -> None:
+    original = b"# Local secrets and operating-system files\n.env\n*.mp4\n"
+    reviewed = (
+        b"# Local secrets and operating-system files\n.wrangler/\n.env\n*.mp4\n"
+        b"!/apps/fleetlab-city/enhancement-media/FL-V2-deadhead-explainer.mp4\n"
+        b"!/apps/fleetlab-city/enhancement-media/FL-V3-people-between-rides-loop.mp4\n"
+        b"\n# Reviewed R1 teaching concept derivatives; "
+        b"original full-size inputs remain ignored.\n"
+        b"!apps/fleetlab-city/rebalancing-media/r1-nf05.mp4\n"
+        b"!apps/fleetlab-city/rebalancing-media/r1-nf06.mp4\n"
+    )
+    assert _matches_reviewed_protected_change(".gitignore", original, reviewed)
+    for changed in (
+        reviewed + b"!private-notes.md\n",
+        reviewed + b"!/apps/fleetlab-city/enhancement-media/FL-V1-one-fleet-day-film.mp4\n",
+        reviewed + b"!/apps/fleetlab-city/enhancement-media/*.mp4\n",
+        reviewed.replace(b".env\n", b"!.env\n"),
+        reviewed.replace(b".wrangler/\n", b".wrangler*\n"),
+        reviewed.replace(b"\n", b"\r\n"),
+    ):
+        assert not _matches_reviewed_protected_change(".gitignore", original, changed)
+
+
+def test_r6_reviewed_ci_pins_reject_unrelated_edits() -> None:
+    original = (
+        b"name: CI\n"
+        b"        uses: actions/checkout@v4\n"
+        b"        uses: actions/setup-python@v5\n"
+    )
+    reviewed = (
+        b"name: CI\n"
+        b"        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+        b" # v4, verified 2026-10-21\n"
+        b"        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
+        b" # v5.6.0\n"
+    )
+    path = ".github/workflows/ci.yml"
+    assert _matches_reviewed_protected_change(path, original, reviewed)
+    for changed in (
+        reviewed + b"permissions: write-all\n",
+        reviewed.replace(b"checkout@11d5960", b"checkout@0000000"),
+        reviewed.replace(b"setup-python@a26af69", b"setup-python@0000000"),
+        reviewed.replace(b"name: CI", b"name: Unreviewed"),
+    ):
+        assert not _matches_reviewed_protected_change(path, original, changed)
+    assert not _matches_reviewed_protected_change(
+        ".github/workflows/other.yml", original, reviewed
+    )
+
+
 def test_r6_protected_paths_unchanged_since_base_commit() -> None:
     base = os.environ.get("FLEET_PLAYGROUND_BASE", "").strip()
     if not base:
@@ -231,25 +326,18 @@ def test_r6_protected_paths_unchanged_since_base_commit() -> None:
     untracked = _git("ls-files", "--others", "--exclude-standard", "--", *_PROTECTED_PATHS)
     assert untracked.returncode == 0, untracked.stderr
     changed = sorted(set(diff.stdout.split()) | set(untracked.stdout.split()))
-    # Exact owner-authorized R1 and enhancement derivatives; other rules stay unchanged.
-    if ".gitignore" in changed:
-        original = _git("show", f"{base}:.gitignore")
+    # Reviewed R1/enhancement derivatives, Wrangler-state ignore and exact CI pins only.
+    # Every other byte in these files, and every other protected path, stays unchanged.
+    for relative_path in (".gitignore", ".github/workflows/ci.yml"):
+        if relative_path not in changed:
+            continue
+        original = _git("show", f"{base}:{relative_path}")
         assert original.returncode == 0, original.stderr
-        addition = (
-            "\n# Reviewed R1 teaching concept derivatives; "
-            "original full-size inputs remain ignored.\n"
-            "!apps/fleetlab-city/rebalancing-media/r1-nf05.mp4\n"
-            "!apps/fleetlab-city/rebalancing-media/r1-nf06.mp4\n"
+        assert _matches_reviewed_protected_change(
+            relative_path, original.stdout.encode("utf-8"),
+            (REPOSITORY_ROOT / relative_path).read_bytes(),
         )
-        expected = (original.stdout + addition).replace(
-            "*.mp4\n",
-            "*.mp4\n"
-            "!/apps/fleetlab-city/enhancement-media/FL-V2-deadhead-explainer.mp4\n"
-            "!/apps/fleetlab-city/enhancement-media/FL-V3-people-between-rides-loop.mp4\n",
-            1,
-        )
-        assert (REPOSITORY_ROOT / ".gitignore").read_text() == expected
-        changed.remove(".gitignore")
+        changed.remove(relative_path)
     assert changed == []
 
 
