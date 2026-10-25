@@ -1,4 +1,63 @@
-# Current update — FleetLab published and verified, October 23, 2026
+# Current update — FleetLab Depot Readiness lab published, October 24, 2026
+
+The Depot Readiness learning lab is live at
+[fleetlab.pages.dev/depot-readiness/](https://fleetlab.pages.dev/depot-readiness/).
+The five-question Network flows hub links to it as a deeper experiment. The owner
+asked to publish without the separate release review, so that Muse can audit the
+live site. Built, reviewed and verified as recorded in
+[`docs/FLEETLAB_DEPOT_LAB_IMPLEMENTATION_HANDOFF_2026-10-24.md`](docs/FLEETLAB_DEPOT_LAB_IMPLEMENTATION_HANDOFF_2026-10-24.md);
+publication details are in its §10. Build decisions are in
+[`docs/FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md`](docs/FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md)
+(§§19 to 22 binding).
+
+## Publication and verification
+
+- **Source.** `a1b79cd137aa802c2bff1459843f550a5d70da83` on `codex/fleetlab-depot-lab`,
+  built from base `d0df87f`. Not pushed; no PR.
+- **Uploads.** The owner ran both through `apps/fleetlab-city/deploy/wrangler.mjs`, using an owner-side
+  Keychain injector, and typed the production confirmation. No credential passed
+  through the agent session.
+- **Preview `241a9eec`.** Full readback 10,186/10,186 served files; 100/100 header
+  checks. Under the hosted CSP, a B-pair comparison ran and verified at desktop
+  width (713 ms). At 390 px the page was loaded without running, with no overflow.
+- **Production `72e45e9f`** at `https://fleetlab.pages.dev`. Full readback
+  10,186/10,186; 100/100 headers on the stable host and on the immutable host; 6/6
+  immutable smoke. Live `publication.json` names `a1b79cd`.
+- **Records.** The compact record is `docs/releases/fleetlab-current.json`. Its
+  128-path smoke subset matched the live site 128/128. The full receipt is in the
+  ignored `dist/` of the `a1b79cd` worktree.
+- **Preserved.** The offline edition (`313fa3f1…`), all 43 media files, the City
+  payloads (current release re-bound to `7542098a7b06ac1b`) and `_headers` are
+  unchanged, apart from the per-release archive path. A2 stays the Fleet day hero
+  and V1 stays held.
+
+## Rollback
+
+The whole-site rollback is the prior production `85b02be2` (source `d0df87f`, the
+October 23 enhancement release). It is owner-operated from Cloudflare's Deployments
+page. The City-only rollback `0bdffbfcff0e1bf9` remains staged. Neither was
+rehearsed.
+
+## Open items
+
+- **For the owner, Muse and Codex.** These are the handoff §9 items, now about the live site:
+  - the depot page's analytics exclusion: tag-free, while the `/*` CSP still lists Google (BD-17);
+  - pair links refused over the 32,768-character limit;
+  - 976 bytes left in the registry allocation;
+  - guard claims checked for consistency only;
+  - no screen-reader, OS reduced-motion or physical-device pass;
+  - the two ARITH-05 decisions against annex C2.1.
+- **Reviews.** Muse audits the live site and Codex reviews the implementation. The
+  prompts are in a local, untracked brief, `docs/FLEETLAB_DEPOT_LAB_REVIEW_BRIEF_2026-10-24.md`.
+- **Next release.**
+  - Use Node 22.23.4 or later within 22.x. The pinned runtime is in the ignored
+    `build/fleetlab-city/toolchain` of the main `Hermes-fleetlab` checkout; call it by
+    absolute path from a release worktree. The wrapper refuses older Node.
+  - Supply `CLOUDFLARE_ACCOUNT_ID`, because the Pages-scoped token cannot read `/memberships`.
+  - The uploader's npm install still reports three tool-only advisories (2 moderate,
+    1 high), the same counts as the October 23 audit.
+
+# Previous update — FleetLab published and verified, October 23, 2026
 
 The approved enhancement release is live at [FleetLab](https://fleetlab.pages.dev).
 The owner published source `d0df87fff64889282e06fa3f4048b020b22bf8b5` through the
@@ -18,7 +77,8 @@ round. Shareable report:
 - Package: **10,152 files / 1,629,000,684 bytes**. Root `_headers` is configuration,
   explaining the one-file difference from the served inventory.
 - Production receipt completed `2026-10-24T05:15:17.339Z` (October 23 Pacific).
-  The compact tracked receipt is `docs/releases/fleetlab-current.json`; its 118
+  The compact tracked receipt was `docs/releases/fleetlab-current.json` as committed in
+  `4e7c1be`; the file now holds the October 24 record. Its 118
   observed paths and SHA-256 bindings point to the full generated receipt,
   complete readback, headers, preview and production browser observations.
 - Fresh production browser checks at 390 × 844 on Home, Fleet day and the hub:
@@ -130,7 +190,7 @@ the published release; these post-publication documentation edits are local.
 
 ---
 
-# Previous update — FleetLab PHP/eMudhra review, October 22, 2026
+# Historical update — FleetLab PHP/eMudhra review, October 22, 2026
 
 ## Executive summary and Git state
 
@@ -228,7 +288,7 @@ P3 copy/layout/loading/accessibility improvements are complete within the docume
 
 ---
 
-# Current update — FleetLab design Round 4, October 14, 2026
+# Historical update — FleetLab design Round 4, October 14, 2026
 
 See `docs/FLEETLAB_DESIGN_ROUND4_HANDOFF_2026-10-14.md` for the five P1 changes, owner-approved D05 addition, validation and audit decisions. Runtime `5f3a3f1` is live in deployment `12e199f4-be92-4c67-80c9-282ac2d667dd`; stable production and preview each matched 10,136 served files and 69 header checks. Models and scientific fixtures remain unchanged; P2 otherwise deferred.
 

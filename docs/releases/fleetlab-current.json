@@ -4,7 +4,7 @@
   "sf_qualification": "HOLD",
   "authenticity": "NOT_AUTHENTICATED",
   "operational_deployment_permission": "NONE",
-  "source_commit": "d0df87fff64889282e06fa3f4048b020b22bf8b5",
+  "source_commit": "a1b79cd137aa802c2bff1459843f550a5d70da83",
   "current": {
     "compatibility": {
       "metrics": "fleetlab.city-metrics/1.0.0",
@@ -12,8 +12,8 @@
       "run": "fleetlab.city-run/1.0.0",
       "viewer": "1.1.0"
     },
-    "path": "city-explorer/releases/40dcf835e0dc635b",
-    "release_sha256": "40dcf835e0dc635b49387c8f2781b75bfb62de6c75708b51b1937c7867659db4"
+    "path": "city-explorer/releases/7542098a7b06ac1b",
+    "release_sha256": "7542098a7b06ac1b462999c02c96db93dbb0f59045b06d4f0becdeb6e2f209a5"
   },
   "rollback": {
     "compatibility": {
@@ -33,80 +33,70 @@
   "server_side": "none",
   "server_side_scope": "VERIFIED_LOCAL_STAGE_ONLY",
   "publication": "PUBLIC_BYTES_OBSERVED",
-  "integration_manifest_sha256": "324614e86928d896c6195008ae2aa19ee62f4b59b47fb5bcdc231b2c400a13d8",
-  "file_count": 10152,
-  "total_bytes": 1629000684,
-  "verified_at_utc": "2026-10-24T05:15:17.339Z",
+  "integration_manifest_sha256": "69a5467a41f89d05e2e7de446e2a64763dbbab0d8d2daeec0156abe6649b6461",
+  "file_count": 10187,
+  "total_bytes": 1629563452,
+  "verified_at_utc": "2026-10-25T05:04:10.818Z",
   "verification": {
-    "served_files": 10151,
-    "matched_files": 10151,
-    "header_checks": 95,
+    "served_files": 10186,
+    "matched_files": 10186,
+    "header_checks": 100,
     "headers_pass": true,
-    "captured_at_utc": "2026-10-24T05:14:40.799460+00:00",
-    "headers_captured_at_utc": "2026-10-24T05:13:57.669384+00:00",
-    "full_readback_sha256": "3193a363aa22d4160f33892a40c03d7faa8088ba063d1bdc5162eb98766fadf2",
-    "production_headers_sha256": "f6bb1925cf813ba7394844591f652dc34556bd429f8244d5f6c7d4b3faf4e855",
-    "full_generated_receipt_sha256": "7809809e03dbce980f828a7a96e95a8dbfe155b3fa581b792e0084563778c5e1",
-    "preview_matched_files": 10151,
-    "preview_total_files": 10151,
-    "preview_captured_at_utc": "2026-10-24T03:48:16.929278+00:00",
-    "preview_full_readback_sha256": "c30481060f7b79cfb937f3b1150b26019b844f01064782cba9dbdacf47e0e052",
+    "captured_at_utc": "2026-10-25T05:03:50.409726+00:00",
+    "headers_captured_at_utc": "2026-10-25T05:01:53.809375+00:00",
+    "full_readback_sha256": "6f6f2710ee70b291ae6e0acc2b51362fd4afbc04b9645bff2921375e9451bd53",
+    "production_headers_sha256": "c2017c728d0a1692fee83769475938a654e34b289aef6e8a729311b5e375dd13",
+    "full_generated_receipt_sha256": "05c586fe6ab660b372dfffae39d500bb6c83858092d23330471cd4d872ea1352",
+    "preview_matched_files": 10186,
+    "preview_total_files": 10186,
+    "preview_captured_at_utc": "2026-10-25T04:59:33.562712+00:00",
+    "preview_full_readback_sha256": "e23c747cb5d0f1ef006dfc5336e797db7e61ac42ed6aa53ed6269d7cd7712663",
+    "preview_headers_sha256": "28c0b4422002fcabe11e288b0a7897a08e6c0552f0bc16736e2716a074e3d63a",
+    "preview_header_checks": 100,
     "immutable_smoke_matched_files": 6,
     "immutable_smoke_total_files": 6,
-    "immutable_smoke_captured_at_utc": "2026-10-24T05:13:54.131870+00:00",
-    "immutable_smoke_sha256": "5e086b5aa8eb424357f07db1ae6aa748a6fbe705fb158504c419a0fff875b6f8",
-    "preview_headers_sha256": "6a262d99f365968219c108433aab9d081dd7b6f669db68305b87149119fb4138",
-    "preview_header_checks": 95,
-    "immutable_scope": "SIX_PATH_SMOKE_ONLY; no full immutable production readback or immutable production header check performed for this release.",
+    "immutable_smoke_captured_at_utc": "2026-10-25T05:08:54.330492+00:00",
+    "immutable_smoke_sha256": "0d1219b4fbfe5ba998ffb16df54e2b5ea0fa3d867862eca818da35c133b76c38",
+    "immutable_header_checks": 100,
+    "immutable_headers_matched": 100,
+    "immutable_headers_sha256": "3799a90f2a926ddff8689eb79454878eca68116eec03a3de59cf2b7684fb5dec",
+    "immutable_scope": "SIX_PATH_SMOKE_AND_FULL_HEADER_CHECK; no full immutable production byte readback performed for this release.",
     "production_browser_check": {
-      "scope": "390 x 844 browser viewport; not physical-device or human qualification",
+      "scope": "The depot page was observed in the Claude desktop Chromium pane (not physical-device or human qualification); the hub link, publication.json source commit, sitemap count and offline digest are served-content checks",
       "pages": [
-        "Home",
-        "Fleet day",
-        "Network flows hub"
+        "Depot readiness lab",
+        "Network flows hub (served HTML)",
+        "publication.json",
+        "sitemap.xml"
       ],
-      "width": 390,
-      "document_scroll_width": 375,
-      "a2_complete": true,
-      "a2_natural_width": 2352,
-      "v1_elements": 0,
-      "v3_after_entering_view": {
-        "playing": true,
-        "muted": true,
-        "loop": true
-      },
-      "console_errors": 0,
-      "console_warnings": 0,
-      "observations_sha256": "458411a4ad3f48977df501d97adeac5a8913d8f8d0095ebe68b4f606caf1acf4",
-      "screenshots": {
-        "fleet-day-390.png": "992bea8c7b11c9368d02932b6d306398b96cbabe17302561d852f4a4623693d2",
-        "home-390.png": "8c3d16f93711570d2977705d227dd8efd01e60fe77f1c872a1b3a9611b3e3c74",
-        "home-people-390.png": "7c9653e36fad34fa6bd95acb928854f6a9b0a40e07c98db9a9e036251195c0b7",
-        "network-hub-390.png": "7dce782af6e1ba2c6e28c68033a22860fdd9696b7e1728634a232de6a4fd9062"
-      }
+      "depot_run_comparison_B": "Internally consistent",
+      "depot_console_errors": 0,
+      "depot_requests_outside_origin": 0,
+      "depot_analytics_tag": false,
+      "observations_sha256": "f986027ebea652a3d2ad7f417c11cdd7ac7170f11142adbe12e20284e0b702a3"
     },
-    "preview_browser_check": "390 x 844 Home, Fleet day, hub, About, City notebook, capacity and rebalancing; A2/A3 metadata, lazy media and global pause observed. Not physical-device or human qualification.",
-    "preview_browser_observations_sha256": "78c0239aabd7323cef1ebf266c48b40ace55c8b4002c9eb3cc60927fc3083b11"
+    "preview_browser_check": "Depot readiness lab at desktop width (B pair verified in 713 ms, no console errors, no outside requests, no analytics tag) and at 390 px width (no overflow; draft not run), Network flows hub (five stops plus the depot link), Fleet day at 390 px width (A2 present, V1 absent). Not physical-device or human qualification.",
+    "preview_browser_observations_sha256": "e2f206be2e4441315711ceb080b007e210ff4e7397ce32701a106c2ee04a21b2"
   },
   "meaning": "Byte consistency and supplied hosting observations; not independent authenticity, provider configuration, operational authority or permission to deploy.",
   "stable_url": "https://fleetlab.pages.dev",
-  "source_tree": "2d36fea21de303acc543cd89022f504c0bba8c57",
-  "source_branch": "codex/fleetlab-city-sf",
-  "production_deployment_id_prefix": "85b02be2",
-  "preview_deployment_id_prefix": "4464c33b",
-  "prior_production_deployment_id_prefix": "4fd751ea",
+  "source_tree": "5d890e38d3376b8870a8bcaa026bd0e61908f2da",
+  "source_branch": "codex/fleetlab-depot-lab",
+  "production_deployment_id_prefix": "72e45e9f",
+  "preview_deployment_id_prefix": "241a9eec",
+  "prior_production_deployment_id_prefix": "85b02be2",
   "deployment_id_note": "Only immutable URL prefixes were observed for these releases; no full deployment UUID is asserted.",
-  "immutable_url": "https://85b02be2.fleetlab.pages.dev",
-  "preview_url": "https://4464c33b.fleetlab.pages.dev",
+  "immutable_url": "https://72e45e9f.fleetlab.pages.dev",
+  "preview_url": "https://241a9eec.fleetlab.pages.dev",
   "site_rollback": {
-    "deployment_id_prefix": "4fd751ea",
-    "immutable_url": "https://4fd751ea.fleetlab.pages.dev",
-    "source_commit": "2d01b25e3df2df2c250fc64caaed14fb9c376c3c",
-    "method": "Owner-operated Cloudflare Pages rollback to the previous production deployment; restores the whole pre-enhancement website, including the 2d01b25 security baseline.",
+    "deployment_id_prefix": "85b02be2",
+    "immutable_url": "https://85b02be2.fleetlab.pages.dev",
+    "source_commit": "d0df87fff64889282e06fa3f4048b020b22bf8b5",
+    "method": "Owner-operated Cloudflare Pages rollback to the previous production deployment; restores the whole October 23 enhancement website without the Depot Readiness lab.",
     "rehearsal": "NOT_RUN"
   },
   "rollback_note": "rollback is the compatible staged City viewer generation inside this package. Whole-site rollback is site_rollback; neither rollback was rehearsed.",
-  "files_scope": "SMOKE_SUBSET: 118 selected observed paths, with prior City release paths mapped to the current release and current source-offer/enhancement paths added. The complete 10,151-path stable-site observation is bound by verification.full_readback_sha256. This subset is not the six-path immutable smoke.",
+  "files_scope": "SMOKE_SUBSET: 128 selected observed paths: the October 23 subset with the City release and source-offer paths mapped to this release, plus ten Depot Readiness route and module paths. The complete 10,186-path stable-site observation is bound by verification.full_readback_sha256. This subset is not the six-path immutable smoke.",
   "files": {
     "404.html": {
       "bytes": 1609,
@@ -129,21 +119,37 @@
       "bytes": 34000,
       "sha256": "5e973076e662bb673b35207bb51432730d7c8cb14b1efea020da17ae5f86ed37"
     },
-    "city-explorer/releases/40dcf835e0dc635b/data/catalog.json": {
+    "city-explorer/releases/7542098a7b06ac1b/data/catalog.json": {
       "bytes": 341154,
       "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1"
     },
-    "city-explorer/releases/40dcf835e0dc635b/data/model-lessons.json": {
+    "city-explorer/releases/7542098a7b06ac1b/data/model-lessons.json": {
       "bytes": 31982,
       "sha256": "1552e6f4099a3f459f7d1671b280b98d8c1bff0ad997a87fad40134e5f77171b"
     },
-    "city-explorer/releases/40dcf835e0dc635b/index.html": {
+    "city-explorer/releases/7542098a7b06ac1b/index.html": {
       "bytes": 36082,
       "sha256": "f7bba516b67ec165a23f451b7f71f68c8c4f213c6704870f19d9ceac0462b749"
     },
     "city-explorer/releases/index.html": {
       "bytes": 521,
       "sha256": "d42f640307de57c96377db64bb7496c18b03f65eb858d7971c09267cfd96cf7e"
+    },
+    "depot-readiness/boot.js": {
+      "bytes": 195,
+      "sha256": "f64a363323de338456837e3ceea13f284a89ad62f176da5f0a981373297256ed"
+    },
+    "depot-readiness/index.html": {
+      "bytes": 5461,
+      "sha256": "8dca1aff468b0f725d248fa41a71c7a64d8c1361913ee2ad23924b67adb3478f"
+    },
+    "depot-readiness/release.json": {
+      "bytes": 15830,
+      "sha256": "906561243d3fc8c9cc29dfad9bc2ef1372f76dc1ac6d69f516f9de94f1d3fdd5"
+    },
+    "depot-readiness/visual.css": {
+      "bytes": 8172,
+      "sha256": "745b6eb175916b8f499776bc47eea501bee23d865cf58fd333a4073e47ec0b28"
     },
     "diagrams/D-01-depot-scenario.webp": {
       "bytes": 123536,
@@ -166,8 +172,8 @@
       "sha256": "313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1"
     },
     "downloads/teaching-package.json": {
-      "bytes": 37702,
-      "sha256": "2a6e30f245e4b4d41ddd147da9e007ff3d546eaa5a8fa15e8f28905fe9f98efd"
+      "bytes": 44361,
+      "sha256": "2343b43deb49af878082c275c413738fc4069a16fe5c1c937aa75e5aa9b437ea"
     },
     "enhancement-media.css": {
       "bytes": 3057,
@@ -223,7 +229,7 @@
     },
     "network-flows/capacity/release.json": {
       "bytes": 16589,
-      "sha256": "a1ee1ceebc09f33169f1f9604aa4b583cae0f37c2b220d76a4d5e4304efba32e"
+      "sha256": "38c875fced97cbb915e6c8daf065b0d65776fdbeaaf547a9bdeae37fa8cdc54a"
     },
     "network-flows/capacity/visual.css": {
       "bytes": 14015,
@@ -239,7 +245,7 @@
     },
     "network-flows/delivery-order/release.json": {
       "bytes": 8099,
-      "sha256": "98b1241fb1319d7f287421c75cceaccc27f4302a83440fff856e191ac8b35597"
+      "sha256": "4ac61bd59522c6c1844e747fb021dd9ede647b62277187783451cbc01c7a29d0"
     },
     "network-flows/delivery-order/visual.css": {
       "bytes": 12226,
@@ -255,7 +261,7 @@
     },
     "network-flows/dispatch/release.json": {
       "bytes": 12474,
-      "sha256": "69191443b087502efe245b8cb6bee18755c5d83153f1e85f3a6e147b84b79a9f"
+      "sha256": "db8a64e503c1bac6188f6bfa43bd9052e6b01687433c8feed6ad757a7b74de48"
     },
     "network-flows/dispatch/visual.css": {
       "bytes": 5047,
@@ -266,12 +272,12 @@
       "sha256": "5df2890c8e611283af6878107b4fa67398f4b6cdc73be1cb671c1bbccec69e00"
     },
     "network-flows/hub.css": {
-      "bytes": 3348,
-      "sha256": "88b9f9b541a1a8be44cc57e834ab47508c1536310789435bd17b9f0279c59bff"
+      "bytes": 3437,
+      "sha256": "a1a2aa3767024e6b2eb47e60fbcf3a4f5d1993e3d9828496a2fc7f9c1a58a4f0"
     },
     "network-flows/index.html": {
-      "bytes": 5177,
-      "sha256": "29371a9c8a0c160c0fa4fe6c8e49b333c1cb062851649c821c745dfe8679a4d2"
+      "bytes": 5349,
+      "sha256": "bc8474e0a4a9e95a7133a234982dacb6186af7f26ba4c741181034a208457c7d"
     },
     "network-flows/ota-sharing/index.html": {
       "bytes": 1367,
@@ -287,7 +293,7 @@
     },
     "network-flows/rebalancing/release.json": {
       "bytes": 17977,
-      "sha256": "bcd494ffdc83c831c56b2f486b0bfe8319bb50280bebf63c49e59ea4b31e8c67"
+      "sha256": "67f6aadc5ad3c622ad09ddc97ad2257d78c5b45866e7e386f57942bf45110a54"
     },
     "network-flows/rebalancing/visual.css": {
       "bytes": 15932,
@@ -303,19 +309,19 @@
     },
     "network-flows/software-delivery/release.json": {
       "bytes": 6857,
-      "sha256": "035336f437baeeca75768936099a28b171d880ceec87dff6e668fa26f5157e98"
+      "sha256": "4af4c74b9ef4951da5f6d3ff66fd0073d376681733e8e45bd527a57038c1be71"
     },
     "network-flows/software-delivery/visual.css": {
       "bytes": 18142,
       "sha256": "5fa47f81fe3ca386d4c33cd97ab48b5770c14c041119121575fb90fe1a1af7c7"
     },
-    "network-flows/sources/a09527cf0dce5eadddbd7c2fc287ec1e3c5c03e17534fcdc9e0362f572929e16.json.gz": {
-      "bytes": 1010066,
-      "sha256": "a09527cf0dce5eadddbd7c2fc287ec1e3c5c03e17534fcdc9e0362f572929e16"
+    "network-flows/sources/026891364a1bc1615c544bdf22317b4d0e953f38b5d74c3d27672a6d1d69e472.json.gz": {
+      "bytes": 1147687,
+      "sha256": "026891364a1bc1615c544bdf22317b4d0e953f38b5d74c3d27672a6d1d69e472"
     },
     "publication.json": {
       "bytes": 1800,
-      "sha256": "daf8f9295d274eeefba0f493b1a591f0f68675440b6a68c45c74fa76c42847e9"
+      "sha256": "366c573469540495c657545276412f58674da8a96096fd7a94052530d3ec3788"
     },
     "site-media/apple-touch-icon.png": {
       "bytes": 21051,
@@ -362,8 +368,8 @@
       "sha256": "9139c4f68e6ef71557277fe40ea977176dfbb8fe26ed9d6331c6c7afcbd725ba"
     },
     "sitemap.xml": {
-      "bytes": 763,
-      "sha256": "57afe4dc98d4ef67ed95526c57598fbf16dc0293db76530e859faf9c417eee5c"
+      "bytes": 831,
+      "sha256": "6c548122fa26f8c519c82d3a5dd0ce460a67c00918432bd398715be10d78f7c0"
     },
     "src/data/delivery-order-study.js": {
       "bytes": 17593,
@@ -372,6 +378,18 @@
     "src/data/software-delivery-study.js": {
       "bytes": 12164,
       "sha256": "5cf2cbc308c8e0c59c637403ec917488d796aa4056dbc0f42dc89a8b5d3b88b1"
+    },
+    "src/model/depot-lab-verify/verify.js": {
+      "bytes": 21623,
+      "sha256": "85caf7e66e119c73972aa0ae286d9d4d981c5fcb717c7391ca8a10ea7c59bc9d"
+    },
+    "src/model/depot-lab/engine.js": {
+      "bytes": 19341,
+      "sha256": "9a0c1a405752121796358f328ea7b19e12338ed4e70976b9fe42f9c626a787e9"
+    },
+    "src/model/depot-lab/registry.js": {
+      "bytes": 47229,
+      "sha256": "7d1bb9c7b28a5823aa3b9ca4a907aa164ee11daf8b61c8080ec8ada01c952253"
     },
     "src/model/dispatch-contract.js": {
       "bytes": 3516,
@@ -404,6 +422,14 @@
     "src/runtime/delivery-order-worker.js": {
       "bytes": 2738,
       "sha256": "5fe5f0951ce9523dc53120305b6168c31d1f7963c61ba57e0846b24e50c78d02"
+    },
+    "src/runtime/depot-lab-job.js": {
+      "bytes": 4693,
+      "sha256": "b07dfa5b235d9760952597790b5814b7dcf4fba736299c5ddfcf04824cd841b8"
+    },
+    "src/runtime/depot-lab-worker.js": {
+      "bytes": 976,
+      "sha256": "442a6b4a11bc865a0cfd0936d63fcca6153269aa16c890260ba6d4877bd876cb"
     },
     "src/runtime/dispatch-job.js": {
       "bytes": 884,
@@ -452,6 +478,10 @@
     "src/ui/depot-capacity-guided.js": {
       "bytes": 6690,
       "sha256": "9416c77697c09818c5a7b74e9db7ee201772d1721bc7bf90fd085b05b6af75ab"
+    },
+    "src/ui/depot-lab-app.js": {
+      "bytes": 9466,
+      "sha256": "4393ceb49461833cd7954e31b306bf4fd735ec59849ccc0e3b28f1618aae5de0"
     },
     "src/ui/dispatch-app.js": {
       "bytes": 12803,
@@ -582,16 +612,18 @@
       "sha256": "46fb92daa36baeb2fc2fa060d9228bbd1982f97c14e026d95be344a744f336e0"
     }
   },
-  "capacity_release_sidecar_sha256": "a1ee1ceebc09f33169f1f9604aa4b583cae0f37c2b220d76a4d5e4304efba32e",
-  "capacity_release_digest": "b3780f5c828bdb98d3d66914777668897c0c47e08405950e8a4e03f3827b5579",
-  "software_delivery_release_sidecar_sha256": "035336f437baeeca75768936099a28b171d880ceec87dff6e668fa26f5157e98",
-  "software_delivery_release_digest": "2c4a223cddc65820a685837da8f3700bf87878f4d62f32491f6b418edba6325c",
-  "delivery_order_release_sidecar_sha256": "98b1241fb1319d7f287421c75cceaccc27f4302a83440fff856e191ac8b35597",
-  "delivery_order_release_digest": "e0e72661a8c3dfb9718c982113fedaa94bda37e5d3ce823950a8e57ecae01703",
-  "rebalancing_release_sidecar_sha256": "bcd494ffdc83c831c56b2f486b0bfe8319bb50280bebf63c49e59ea4b31e8c67",
-  "rebalancing_release_digest": "613fb341374e295e74524632e3ba9f20780cfae0b625fb84d8e408421e382970",
-  "dispatch_release_sidecar_sha256": "69191443b087502efe245b8cb6bee18755c5d83153f1e85f3a6e147b84b79a9f",
-  "dispatch_release_digest": "6d3950ac72a4d4a68ddf07d51557d361955c87eb6b76cf4037c013d5088517c0",
+  "capacity_release_sidecar_sha256": "38c875fced97cbb915e6c8daf065b0d65776fdbeaaf547a9bdeae37fa8cdc54a",
+  "capacity_release_digest": "cf4774eca0d671f5915946b11a4c6eb45f3e3c3f7bce2ce8d23d9e1b9f300111",
+  "software_delivery_release_sidecar_sha256": "4af4c74b9ef4951da5f6d3ff66fd0073d376681733e8e45bd527a57038c1be71",
+  "software_delivery_release_digest": "65dcbeba2291cec4ea45d333e60d59cda38132036d10c7a91310d749a470465b",
+  "delivery_order_release_sidecar_sha256": "4ac61bd59522c6c1844e747fb021dd9ede647b62277187783451cbc01c7a29d0",
+  "delivery_order_release_digest": "a875f771bb35b2504d080c2b06ce3f45482cbe4c273978cfc5785166458703d2",
+  "rebalancing_release_sidecar_sha256": "67f6aadc5ad3c622ad09ddc97ad2257d78c5b45866e7e386f57942bf45110a54",
+  "rebalancing_release_digest": "59f6d848d24c7c751585cff13a95aa4a070df1afaf22d5f757ddf43df1778ade",
+  "dispatch_release_sidecar_sha256": "db8a64e503c1bac6188f6bfa43bd9052e6b01687433c8feed6ad757a7b74de48",
+  "dispatch_release_digest": "212fc8c2c338607cfb437196899d91ab2dc8f982f9fc93bb5dabb82ea19fb455",
+  "depot_lab_release_sidecar_sha256": "906561243d3fc8c9cc29dfad9bc2ef1372f76dc1ac6d69f516f9de94f1d3fdd5",
+  "depot_lab_release_digest": "f18f67dac5f1bf0ad495e5262654e2cd4338006579aa4def995cf998accb6148",
   "nf04_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
   "delivery_order_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
   "rebalancing_qualification": {
@@ -611,25 +643,35 @@
     "physical_device_qualification": "NOT_ESTABLISHED",
     "sf_qualification": "HOLD"
   },
+  "depot_lab_qualification": {
+    "scope": "SYNTHETIC_TEACHING",
+    "independent_verification": true,
+    "physical_device_qualification": "NOT_ESTABLISHED",
+    "screen_reader_qualification": "NOT_ESTABLISHED",
+    "sf_qualification": "HOLD",
+    "release_review": "Published at the owner's instruction without a separate release review; open items are listed in docs/FLEETLAB_DEPOT_LAB_IMPLEMENTATION_HANDOFF_2026-10-24.md section 9."
+  },
   "teaching_package": {
-    "bytes": 37702,
+    "bytes": 44361,
     "path": "downloads/teaching-package.json",
-    "sha256": "2a6e30f245e4b4d41ddd147da9e007ff3d546eaa5a8fa15e8f28905fe9f98efd"
+    "sha256": "2343b43deb49af878082c275c413738fc4069a16fe5c1c937aa75e5aa9b437ea"
   },
   "teaching_source_offer": {
-    "bytes": 1010066,
-    "extracted_sha256": "a15c3df7de7566ba7642ca675da1dc83c3f87f7d4a5460507527fb5e7073797f",
-    "original_inventory_sha256": "5d465becedda9eaa9010fe5f69ce4169a85085079ad7a4484dc3e5de7aa107b9",
+    "bytes": 1147687,
+    "extracted_sha256": "1720690a0ba086bb0666d81e977c7e3e97a473656d57156135beacd19f3d97f1",
+    "original_inventory_sha256": "0c19361cba553340217ce5cfeebff41fd97b9c3701e6757e14921e0b684bda3e",
     "owner": "teaching-original-source-and-tools",
-    "path": "network-flows/sources/a09527cf0dce5eadddbd7c2fc287ec1e3c5c03e17534fcdc9e0362f572929e16.json.gz",
-    "sha256": "a09527cf0dce5eadddbd7c2fc287ec1e3c5c03e17534fcdc9e0362f572929e16"
+    "path": "network-flows/sources/026891364a1bc1615c544bdf22317b4d0e953f38b5d74c3d27672a6d1d69e472.json.gz",
+    "sha256": "026891364a1bc1615c544bdf22317b4d0e953f38b5d74c3d27672a6d1d69e472"
   },
-  "non_city_bytes": 15624676,
+  "non_city_bytes": 16187444,
   "integrated_text": {
     "delivery_order_closure_bytes": 225063,
-    "emitted_text_bytes": 3144138,
+    "depot_closure_bytes": 513471,
+    "depot_route_local_bytes": 418159,
+    "emitted_text_bytes": 3569285,
     "hosted_artwork_bytes": 7793265,
-    "integration_text_bytes": 128727,
+    "integration_text_bytes": 129056,
     "nf03_closure_bytes": 537633,
     "nf04_closure_bytes": 221334,
     "r1_closure_bytes": 196347,
@@ -639,7 +681,7 @@
     "schema": "fleetlab.hosted-presentation/1.0.0",
     "measurement_id": "G-04EZ8EZWQ2",
     "collection_host": "fleetlab.pages.dev",
-    "current_public_html_pages": 13,
+    "current_public_html_pages": 14,
     "artwork_bytes": 7793265,
     "brand_asset_count": 7,
     "tile_asset_count": 19,
@@ -647,7 +689,12 @@
     "diagram_asset_count": 4,
     "enhancement_asset_count": 7,
     "offline_and_historical_city_analytics": false,
-    "analytics_property_receipt": "NOT_OBSERVED"
+    "analytics_property_receipt": "NOT_OBSERVED",
+    "analytics_tagged_public_html_pages": 13,
+    "analytics_untagged_public_html_pages": [
+      "depot-readiness/index.html"
+    ],
+    "depot_analytics_note": "The depot page is rendered tag-free (hosted transform tagFree); the site-wide /* CSP still lists Google origins. Release-review item BD-17."
   },
   "dependency_audit": {
     "assessment_date": "2026-10-23",
@@ -662,6 +709,7 @@
     "audit_log_sha256": "a27a585b3dc5f66120b0e103210e3c9347e3ba1afd9bed52277ae6b4e75613f4",
     "app_audit_log_sha256": "6d8c5c8f3d7684adb070417bd608d01ae90aa3dc26a65af03ffda4955f38d9a3",
     "app_reported_vulnerabilities": 0,
-    "meaning": "Dated registry audit and inspected bundled dependency residual; no current zero-vulnerability assertion for the uploader. See enhancement report for limitations and upstream references."
+    "meaning": "Dated registry audit and inspected bundled dependency residual; no current zero-vulnerability assertion for the uploader. See enhancement report for limitations and upstream references.",
+    "reconfirmed_2026_10_24": "The wrapper npm ci output on 2026-10-24 reported 3 vulnerabilities (2 moderate, 1 high), the same counts as the October 23 audit. The individual advisories were not re-identified and no new registry audit log was recorded."
   }
 }

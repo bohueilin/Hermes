@@ -1,6 +1,6 @@
 # FleetLab publication runbook
 
-Updated 23 October 2026. Applies to the static educational FleetLab website.
+Updated 24 October 2026. Applies to the static educational FleetLab website.
 Hermes operational deployment permission remains NONE. Historical deployment
 paragraphs and the old playground-only CI template are superseded; do not use them.
 
@@ -20,6 +20,39 @@ actual instruction. Account/credential changes and destructive retention actions
 are separate decisions; no document can authorize them by itself.
 
 The Delivery order route is `/network-flows/delivery-order/`. Its explicit route owner, source-capture entries, worker, study and release sidecar are included in the same atomic teaching/integration generation. Validate both it and NF04; do not deploy a standalone route over the integrated site. See [the implementation handoff](FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md) for the current release and retained rollback.
+
+## October 24 Depot Readiness publication
+
+After the local build and independent review, the owner explicitly asked on 24 October for live publication of the Depot Readiness lab at `/depot-readiness/`. The separate release review was skipped by owner choice, so that Muse can audit the live site. Local commits, preview and production publication were authorized; no GitHub push or PR was made. The published source is `a1b79cd137aa802c2bff1459843f550a5d70da83` on `codex/fleetlab-depot-lab`.
+
+- Production is `https://72e45e9f.fleetlab.pages.dev`, served at `https://fleetlab.pages.dev`.
+- Preview `241a9eec` and stable production each passed a full readback of 10,186/10,186 served files and 100/100 header checks.
+- The immutable production host passed 100/100 header checks and a 6/6 smoke check.
+- The whole-site rollback target is the prior production `85b02be2` (source `d0df87f`).
+- Details are in [the depot implementation handoff](FLEETLAB_DEPOT_LAB_IMPLEMENTATION_HANDOFF_2026-10-24.md) §10.
+
+Owner decision Q6 changed these ceilings:
+
+| Ceiling | New value (bytes) |
+|---|---:|
+| Raw teaching source and tools | 3,940,352 |
+| Final integrated emitted text | 3,801,088 |
+| Package metadata | 57,344 |
+| Extracted source offer | 5,242,880 |
+| New depot owner cap | 524,288 |
+| New depot closure cap | 786,432 |
+| Depot runtime raw source (1:1 with depot-owned emitted text) | 524,288 |
+
+All other ceilings, the offline edition and the media set are unchanged; no media was added.
+
+- **`_headers`.** It carries no edits; only the per-release source-archive path line differs.
+- **Analytics.** The depot page renders tag-free (hosted transform `tagFree`), while the `/*` CSP still lists Google origins. That exclusion awaits owner confirmation (BD-17).
+
+Operational notes for the next release:
+
+- The wrapper refuses Node older than 22.23.4. The pinned runtime lives in the ignored `build/fleetlab-city/toolchain` of the main `Hermes-fleetlab` checkout, not in a fresh release worktree, so call it by absolute path (or install a verified Node 22.23.4 or later within 22.x).
+- A Pages-scoped token cannot read `/memberships`, so supply `CLOUDFLARE_ACCOUNT_ID`.
+- Run from a clean worktree at the exact source commit.
 
 ## October 23 enhancement publication
 
@@ -44,7 +77,7 @@ A1–A4, V2/V3 and the V2 poster. V1 is excluded from the package. Final aggrega
 non-City size is 15,624,676 / 17,825,792 bytes; 2,201,116 remain. The final
 integrated-text headroom is 1,590 bytes. See
 `FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` and `releases/fleetlab-current.json`
-for the completed publication evidence; no upload action remains for this round.
+for the completed publication evidence (the October 23 record as committed in `4e7c1be`); no upload action remains for this round.
 
 The October 23 dependency audit reports Undici advisories in the pinned local
 Wrangler/Miniflare toolchain, including the bundled Pages fetch implementation.
@@ -324,6 +357,14 @@ Analytics may use browser cookies. Cloudflare receives hosting requests and may 
 browser network-error reports. No automation or branch protection was enabled by
 copying the former CI template; that template has been removed.
 
+### Verified depot production — October 24
+
+Published source `a1b79cd` binds 10,187 files / 1,629,563,452 bytes, with the current City presentation at `7542098a7b06ac1b`. Its City payload is byte-identical to `40dcf835e0dc635b` except the `release.json` binding.
+
+- **Checks:** stable production passed full byte and header checks, and immutable production `72e45e9f` passed full header checks and a six-path smoke. The compact record's 128-path smoke subset matched the live site.
+- **Rollback:** the whole-site target is prior production `85b02be2` / source `d0df87f`. The compatible City-only rollback `0bdffbfcff0e1bf9` remains staged. Neither rollback was rehearsed.
+- **Open items:** the release-review list is in the depot implementation handoff §9.
+
 ### Verified enhancement production — October 23
 
 Final implementation `4b31ecc` retains the prior `2d01b25` security baseline,
@@ -338,5 +379,6 @@ production `85b02be2` has six-path smoke coverage only. See
 The whole-site rollback target is prior production `4fd751ea` / source `2d01b25`;
 compatible City-only rollback `0bdffbfcff0e1bf9` is staged within this package.
 Neither rollback was rehearsed. Wrangler 4.148.0's dated three-vulnerability
-tool-only residual remains disclosed. Next depot work is design-only in
-`docs/FLEETLAB_DEPOT_READINESS_DESIGN_2026-10-23.md`; implementation awaits approval.
+tool-only residual remains disclosed. Next depot work was then design-only in
+`docs/FLEETLAB_DEPOT_READINESS_DESIGN_2026-10-23.md`; superseded: the lab was implemented and published on
+24 October (see the October 24 sections).

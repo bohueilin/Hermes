@@ -4,7 +4,7 @@
 
 This implements the frozen depot readiness design, [`FLEETLAB_DEPOT_READINESS_FREEZE_CANDIDATE_2026-10-24.md`](FLEETLAB_DEPOT_READINESS_FREEZE_CANDIDATE_2026-10-24.md) (annex D1-01 to D1-13, D12-01 to D12-05, C1 to C4), under [`FLEETLAB_DEPOT_READINESS_RECONCILIATION_2026-10-24.md`](FLEETLAB_DEPOT_READINESS_RECONCILIATION_2026-10-24.md) (§7 budget, §8 decisions, §11 plan). The owner's build authorization (reconciliation §11.8) covered implementation, executable schemas, fixtures, tests, local previews, package accounting and local review artifacts. Build decisions are recorded in [`FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md`](FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md); §§19 to 22 are binding.
 
-**Status: built, independently reviewed, fixed and validated locally, in three local checkpoint commits plus this handoff on `codex/fleetlab-depot-lab`.** Nothing was pushed, and there was no pull request, deployment, Cloudflare command, credential use or live-site change. The stage in §7 is a local, source-bound review build; publication and hosted readback were not performed. It is ready for a separate release review.
+**Status: published on 2026-10-24 at <https://fleetlab.pages.dev/depot-readiness/> (production `72e45e9f`, source `a1b79cd`).** It was built, independently reviewed, fixed and validated locally in three checkpoint commits on `codex/fleetlab-depot-lab`. The owner then asked to publish without the separate release review, so that Muse can audit the live site. The owner ran both uploads with their own credential injector, and both were read back in full (§10). Nothing was pushed to GitHub and no pull request was opened. Sections 1 to 8 describe the build as reviewed. The release-records bullet in §1, the readiness line and item 7 in §9, and §10 reflect the publication.
 
 ## 1. Scope delivered and what is not done
 
@@ -33,7 +33,7 @@ Not done or limited:
 - **Analytics.** The depot page renders tag-free: no analytics tag, and a privacy line that names only the hosting provider, through the new `tagFree` option of the hosted transform. The site-wide `/*` CSP header still allows Google origins for every page. The release review must confirm the analytics exclusion (BD-17).
 - **Not tested:** screen-reader software, the OS reduced-motion toggle (the CSS media query is covered by fake-DOM tests), a physical phone, and browsers other than the Claude desktop app's Chromium pane.
 - **A32 and A34** are later search and reference requirements under D1-13, not first scope.
-- **Release records.** `docs/releases/fleetlab-current.json` and the deployment guide were not updated; they change only after an authorized release.
+- **Release records.** Updated after publication: `docs/releases/fleetlab-current.json`, the deployment runbook and `CODEX_HANDOFF.md` (§10).
 
 ## 2. Branch, revisions and changed files
 
@@ -349,9 +349,7 @@ The browser pass ran on the `8e48be6` stage, on port 4193. `a1b79cd` differs fro
 
 ## 9. Remaining risks and readiness
 
-Readiness: **ready for a separate release review.** Every ceiling has headroom, every gate in §3 passes on the committed tree, and every confirmed review finding is fixed or explicitly dispositioned. Nothing is published.
-
-For the release reviewer:
+Readiness: **published without the separate release review, at the owner's instruction (§10).** Every ceiling has headroom, every gate in §3 passes on the committed tree, and every confirmed review finding is fixed or explicitly dispositioned. The items below were written for a release reviewer; they now apply to the live site and remain open for the owner, Muse's live audit and Codex's review.
 
 1. **Analytics exclusion.** Confirm the depot page's analytics exclusion (BD-17). Any narrowing of the CSP header for `/depot-readiness/` would have to change the `/*` baseline policy, under release authority. A restricting path-specific `_headers` block is not an option: the codebase forbids relying on path rules to restrict, because Pages matches raw paths. Reconciliation Task 10 also keeps `_headers` unchanged.
 2. **Pair links.** Decide whether refusing pair links is acceptable for launch, or whether the 32,768-character transport limit should change later.
@@ -361,4 +359,22 @@ For the release reviewer:
 6. **ARITH-05 decisions.** Confirm the two recorded decisions against the literal annex C2.1 wording:
    - an unchanged flow keeps its anchor through unrelated events, with no record;
    - the sub-quantum guard is checked when an interval opens.
-7. **Release records.** After an authorized release, update `docs/releases/fleetlab-current.json` (header-check rows, page list, and the sitemap count, now ten entries) and the deployment guide. This build left them as they were.
+7. **Release records.** Done after publication (§10).
+
+## 10. Publication, 2026-10-24
+
+On 2026-10-24 the owner said "just deploy live", so that Muse can audit the live site. The owner ran both uploads in their own Terminal through `apps/fleetlab-city/deploy/wrangler.mjs`. The token came from an owner-side Keychain injector, and the owner typed the production confirmation. No credential passed through the agent session. No GitHub push or pull request was made.
+
+| Step | Result |
+|---|---|
+| Release candidate | Source `a1b79cd137aa802c2bff1459843f550a5d70da83`, from the clean detached worktree at that commit. The wrapper's stage check and preflight passed; the package holds 10,187 files and 1,629,563,452 bytes |
+| Preview `241a9eec` (branch `codex-city-explorer`) | Full byte readback 10,186 / 10,186 served files; 100 / 100 header checks. Browser checks: the lab ran and verified under the real CSP (B pair, 713 ms), with no console errors, no outside requests and no analytics tag. At 390 px, no overflow. The hub has five stops plus the link. Fleet day shows A2 and no V1 |
+| Production `72e45e9f` at <https://fleetlab.pages.dev> | Full byte readback 10,186 / 10,186; 100 / 100 header checks on the stable host and again on the immutable host; immutable six-path smoke 6 / 6. Live `publication.json` names source `a1b79cd`. The live lab verifies the B pair (445 ms) with no console errors or outside requests |
+| Records | Full receipt `production-receipt.json` (SHA-256 `05c586fe…`) in the ignored `dist/` of the `a1b79cd` worktree. The compact record `docs/releases/fleetlab-current.json` carries a 128-path smoke subset, which matched the live site 128 / 128 |
+| Rollback | Whole site: the previous production `85b02be2` (source `d0df87f`, the October 23 enhancement release), owner-operated from Cloudflare's Deployments page. City only: `0bdffbfcff0e1bf9`, staged in the package. Neither was rehearsed |
+
+Notes for the next release:
+
+- **Node version.** The wrapper refuses Node older than 22.23.4, and the machine's default `node` was 22.22.0. The pinned runtime is in the ignored `build/fleetlab-city/toolchain` of the main `Hermes-fleetlab` checkout, so call it by absolute path from a release worktree.
+- **Account ID.** A Pages-scoped token cannot read `/memberships` (Cloudflare answered 403), so Wrangler cannot discover the account. Supply `CLOUDFLARE_ACCOUNT_ID`, which is not secret.
+- **Uploader audit.** The uploader's install reported three vulnerabilities (2 moderate, 1 high), the same counts as the October 23 audit. No new audit log was taken, so it is not established that they are the same advisories. They affect the local upload tool, not visitor code.
