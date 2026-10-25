@@ -25,9 +25,14 @@ The Delivery order route is `/network-flows/delivery-order/`. Its explicit route
 
 The owner approved the reviewed enhancement round and explicitly requested live
 publication with FL-A2 as the Fleet day hero and FL-V1 held for a rerender.
-The live security baseline is source `2d01b25e3df2df2c250fc64caaed14fb9c376c3c`;
-preserve its isolated token input, production confirmation, static-only upload,
-City evidence binding and header checks when integrating the enhancements.
+The published source is `d0df87fff64889282e06fa3f4048b020b22bf8b5`, incorporating
+security baseline `2d01b25e3df2df2c250fc64caaed14fb9c376c3c`. Production is
+`https://85b02be2.fleetlab.pages.dev`, served at `https://fleetlab.pages.dev`.
+Full stable-site readback matched 10,151/10,151 served files and 95/95 header checks;
+the immutable production URL separately passed a 6/6 smoke check. Preview
+`4464c33b` passed full readback/header checks before publication. Preserve isolated
+token input, production confirmation, static-only upload, City evidence binding
+and header checks for any separately authorized future release.
 Local source commits, preview and production publication are authorized for this
 round; no GitHub push or PR is needed. Do not retrieve credentials into chat.
 Follow `deploy/TOKEN_INPUT.md` for owner-side ephemeral token injection.
@@ -35,9 +40,11 @@ Follow `deploy/TOKEN_INPUT.md` for owner-side ephemeral token injection.
 Only these media-related ceilings were explicitly changed: a new exact
 8-file / 4 MiB enhancement group, a 17 MiB non-City aggregate, and a 544 KiB
 NF-03 capacity closure. All other ceilings remain. Seven files are installed:
-A1–A4, V2/V3 and the V2 poster. V1 is excluded from the package. Rebuild and
-measure the combined release; earlier development measurements are not a release
-receipt. See `FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` for final status.
+A1–A4, V2/V3 and the V2 poster. V1 is excluded from the package. Final aggregate
+non-City size is 15,624,676 / 17,825,792 bytes; 2,201,116 remain. The final
+integrated-text headroom is 1,590 bytes. See
+`FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` and `releases/fleetlab-current.json`
+for the completed publication evidence; no upload action remains for this round.
 
 The October 23 dependency audit reports Undici advisories in the pinned local
 Wrangler/Miniflare toolchain, including the bundled Pages fetch implementation.
@@ -174,8 +181,9 @@ Only a complete verified result is moved to `NEW_OUTPUT_DIR`. Its `stage/site/`
 is the served tree, `stage/review/` holds supporting evidence, and
 `local-release.json` records `server_side: none` for the verified local stage only.
 `build-inputs.json` records source/input digests and runtime versions without machine
-paths. Publication and hosted readback remain `NOT_PERFORMED`; the production receipt
-is unchanged. Preserve the original inputs for reconstruction. The steps below cover
+paths. At this local-build stage, publication and hosted readback are recorded as
+`NOT_PERFORMED`; building alone does not update the production receipt. Preserve the
+original inputs for reconstruction. The steps below cover
 additional release checks and separately authorized publication.
 
 1. Run the City Python and Node suites, the teaching-lab Node suite and Hermes
@@ -316,13 +324,19 @@ Analytics may use browser cookies. Cloudflare receives hosting requests and may 
 browser network-error reports. No automation or branch protection was enabled by
 copying the former CI template; that template has been removed.
 
-### Prepared enhancement candidate — October 23
+### Verified enhancement production — October 23
 
-Final implementation `4b31ecc` retains the actual live `2d01b25` security baseline,
+Final implementation `4b31ecc` retains the prior `2d01b25` security baseline,
 uses A2 as the Fleet day hero, and excludes V1 pending rerender. Full merged
 regression gates pass; the final package is retained under ignored
 `dist/fleetlab-enhancement-20261023/` with its exact source identity in
-`local-release.json`. See `docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` for
-budgets, residuals and owner-operated commands. The local version path confirms
-the fresh hash-pinned uploader starts as 4.148.0. No authenticated upload has run;
-preview/production readback and the production receipt remain pending.
+`local-release.json`. Published source `d0df87f` binds 10,152 files / 1,629,000,684
+bytes and current City presentation `40dcf835e0dc635b`. Stable production full
+byte/header checks and 390px Home/Fleet day/hub browser checks passed; immutable
+production `85b02be2` has six-path smoke coverage only. See
+`docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` for budgets, residuals and scope.
+The whole-site rollback target is prior production `4fd751ea` / source `2d01b25`;
+compatible City-only rollback `0bdffbfcff0e1bf9` is staged within this package.
+Neither rollback was rehearsed. Wrangler 4.148.0's dated three-vulnerability
+tool-only residual remains disclosed. Next depot work is design-only in
+`docs/FLEETLAB_DEPOT_READINESS_DESIGN_2026-10-23.md`; implementation awaits approval.

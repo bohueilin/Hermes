@@ -4,24 +4,7 @@
   "sf_qualification": "HOLD",
   "authenticity": "NOT_AUTHENTICATED",
   "operational_deployment_permission": "NONE",
-  "source_commit": "2d01b25e3df2df2c250fc64caaed14fb9c376c3c",
-  "source_tree": "8ef8d6186507ca0e13b980961ea08e81a4f25cf5",
-  "source_branch": "codex/fleetlab-city-sf",
-  "main_merge_commit": "b38f415c4fce0ca10d01bf3615c668186d7233f4",
-  "production_deployment_id_prefix": "4fd751ea",
-  "preview_deployment_id_prefix": "973bdaf9",
-  "prior_production_deployment_id": "2fe5a724-6818-4d9f-afa3-b787ef140c21",
-  "deployment_id_note": "The release helper records immutable URLs, not full deployment UUIDs; the 8-hex prefix is the immutable subdomain.",
-  "stable_url": "https://fleetlab.pages.dev",
-  "immutable_url": "https://4fd751ea.fleetlab.pages.dev",
-  "preview_url": "https://973bdaf9.fleetlab.pages.dev",
-  "site_rollback": {
-    "deployment_id": "2fe5a724-6818-4d9f-afa3-b787ef140c21",
-    "immutable_url": "https://2fe5a724.fleetlab.pages.dev",
-    "source_commit": "4c375a8b96595a82b82169234b968d7da38ea990",
-    "method": "Owner-operated Cloudflare Pages rollback to this production deployment. It restores the whole prior site, including the pre-2d01b25 client and header hardening, so use it only for a functional break and then fix forward.",
-    "rehearsal": "NOT_RUN"
-  },
+  "source_commit": "d0df87fff64889282e06fa3f4048b020b22bf8b5",
   "current": {
     "compatibility": {
       "metrics": "fleetlab.city-metrics/1.0.0",
@@ -29,8 +12,8 @@
       "run": "fleetlab.city-run/1.0.0",
       "viewer": "1.1.0"
     },
-    "path": "city-explorer/releases/74277ec8a6bb04a9",
-    "release_sha256": "74277ec8a6bb04a9be19506059d56388399832e70e9ee461d51f3674e4a4eedb"
+    "path": "city-explorer/releases/40dcf835e0dc635b",
+    "release_sha256": "40dcf835e0dc635b49387c8f2781b75bfb62de6c75708b51b1937c7867659db4"
   },
   "rollback": {
     "compatibility": {
@@ -47,14 +30,83 @@
     "status": "COMPATIBLE_STAGED",
     "unit": "viewer + compatible manifest + city pack + run/metric schema"
   },
-  "rollback_note": "rollback names the staged City viewer generation inside this package; it is not the City page that was live before this release. Whole-site rollback is site_rollback.",
   "server_side": "none",
   "server_side_scope": "VERIFIED_LOCAL_STAGE_ONLY",
   "publication": "PUBLIC_BYTES_OBSERVED",
-  "integration_manifest_sha256": "aa4d307e89bfaa5f5921193a34012c69fa03e19d712ab67c22c3d7870f346f81",
-  "file_count": 10138,
-  "total_bytes": 1626274180,
-  "files_scope": "SMOKE_SUBSET: the previous record's paths with retired City release IDs mapped forward. The complete 10,137-path observation is bound by verification.full_readback_sha256.",
+  "integration_manifest_sha256": "324614e86928d896c6195008ae2aa19ee62f4b59b47fb5bcdc231b2c400a13d8",
+  "file_count": 10152,
+  "total_bytes": 1629000684,
+  "verified_at_utc": "2026-10-24T05:15:17.339Z",
+  "verification": {
+    "served_files": 10151,
+    "matched_files": 10151,
+    "header_checks": 95,
+    "headers_pass": true,
+    "captured_at_utc": "2026-10-24T05:14:40.799460+00:00",
+    "headers_captured_at_utc": "2026-10-24T05:13:57.669384+00:00",
+    "full_readback_sha256": "3193a363aa22d4160f33892a40c03d7faa8088ba063d1bdc5162eb98766fadf2",
+    "production_headers_sha256": "f6bb1925cf813ba7394844591f652dc34556bd429f8244d5f6c7d4b3faf4e855",
+    "full_generated_receipt_sha256": "7809809e03dbce980f828a7a96e95a8dbfe155b3fa581b792e0084563778c5e1",
+    "preview_matched_files": 10151,
+    "preview_total_files": 10151,
+    "preview_captured_at_utc": "2026-10-24T03:48:16.929278+00:00",
+    "preview_full_readback_sha256": "c30481060f7b79cfb937f3b1150b26019b844f01064782cba9dbdacf47e0e052",
+    "immutable_smoke_matched_files": 6,
+    "immutable_smoke_total_files": 6,
+    "immutable_smoke_captured_at_utc": "2026-10-24T05:13:54.131870+00:00",
+    "immutable_smoke_sha256": "5e086b5aa8eb424357f07db1ae6aa748a6fbe705fb158504c419a0fff875b6f8",
+    "preview_headers_sha256": "6a262d99f365968219c108433aab9d081dd7b6f669db68305b87149119fb4138",
+    "preview_header_checks": 95,
+    "immutable_scope": "SIX_PATH_SMOKE_ONLY; no full immutable production readback or immutable production header check performed for this release.",
+    "production_browser_check": {
+      "scope": "390 x 844 browser viewport; not physical-device or human qualification",
+      "pages": [
+        "Home",
+        "Fleet day",
+        "Network flows hub"
+      ],
+      "width": 390,
+      "document_scroll_width": 375,
+      "a2_complete": true,
+      "a2_natural_width": 2352,
+      "v1_elements": 0,
+      "v3_after_entering_view": {
+        "playing": true,
+        "muted": true,
+        "loop": true
+      },
+      "console_errors": 0,
+      "console_warnings": 0,
+      "observations_sha256": "458411a4ad3f48977df501d97adeac5a8913d8f8d0095ebe68b4f606caf1acf4",
+      "screenshots": {
+        "fleet-day-390.png": "992bea8c7b11c9368d02932b6d306398b96cbabe17302561d852f4a4623693d2",
+        "home-390.png": "8c3d16f93711570d2977705d227dd8efd01e60fe77f1c872a1b3a9611b3e3c74",
+        "home-people-390.png": "7c9653e36fad34fa6bd95acb928854f6a9b0a40e07c98db9a9e036251195c0b7",
+        "network-hub-390.png": "7dce782af6e1ba2c6e28c68033a22860fdd9696b7e1728634a232de6a4fd9062"
+      }
+    },
+    "preview_browser_check": "390 x 844 Home, Fleet day, hub, About, City notebook, capacity and rebalancing; A2/A3 metadata, lazy media and global pause observed. Not physical-device or human qualification.",
+    "preview_browser_observations_sha256": "78c0239aabd7323cef1ebf266c48b40ace55c8b4002c9eb3cc60927fc3083b11"
+  },
+  "meaning": "Byte consistency and supplied hosting observations; not independent authenticity, provider configuration, operational authority or permission to deploy.",
+  "stable_url": "https://fleetlab.pages.dev",
+  "source_tree": "2d36fea21de303acc543cd89022f504c0bba8c57",
+  "source_branch": "codex/fleetlab-city-sf",
+  "production_deployment_id_prefix": "85b02be2",
+  "preview_deployment_id_prefix": "4464c33b",
+  "prior_production_deployment_id_prefix": "4fd751ea",
+  "deployment_id_note": "Only immutable URL prefixes were observed for these releases; no full deployment UUID is asserted.",
+  "immutable_url": "https://85b02be2.fleetlab.pages.dev",
+  "preview_url": "https://4464c33b.fleetlab.pages.dev",
+  "site_rollback": {
+    "deployment_id_prefix": "4fd751ea",
+    "immutable_url": "https://4fd751ea.fleetlab.pages.dev",
+    "source_commit": "2d01b25e3df2df2c250fc64caaed14fb9c376c3c",
+    "method": "Owner-operated Cloudflare Pages rollback to the previous production deployment; restores the whole pre-enhancement website, including the 2d01b25 security baseline.",
+    "rehearsal": "NOT_RUN"
+  },
+  "rollback_note": "rollback is the compatible staged City viewer generation inside this package. Whole-site rollback is site_rollback; neither rollback was rehearsed.",
+  "files_scope": "SMOKE_SUBSET: 118 selected observed paths, with prior City release paths mapped to the current release and current source-offer/enhancement paths added. The complete 10,151-path stable-site observation is bound by verification.full_readback_sha256. This subset is not the six-path immutable smoke.",
   "files": {
     "404.html": {
       "bytes": 1609,
@@ -70,24 +122,24 @@
       "sha256": "6bcf2e207955de53b4d80f2e0976e63db9e7a570a971fad957ee1bc8d78cbd9c"
     },
     "brand.mjs": {
-      "bytes": 4404,
-      "sha256": "8be2ff976094d1218088645b8031e1542c2fbee2d62c5b8c84c9e2591fd2a1b1"
-    },
-    "city-explorer/releases/74277ec8a6bb04a9/data/catalog.json": {
-      "bytes": 341154,
-      "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1"
-    },
-    "city-explorer/releases/74277ec8a6bb04a9/data/model-lessons.json": {
-      "bytes": 31982,
-      "sha256": "1552e6f4099a3f459f7d1671b280b98d8c1bff0ad997a87fad40134e5f77171b"
-    },
-    "city-explorer/releases/74277ec8a6bb04a9/index.html": {
-      "bytes": 34750,
-      "sha256": "4324f98ae5672983e450d00db3d4d8087b364dd49d62cdd829e85859b41ba1cb"
+      "bytes": 4804,
+      "sha256": "89620fd1ed8f78962427789c4c9ce14dfd5790bd1d57124b974a26ea189ebb37"
     },
     "city-explorer/releases/0bdffbfcff0e1bf9/index.html": {
       "bytes": 34000,
       "sha256": "5e973076e662bb673b35207bb51432730d7c8cb14b1efea020da17ae5f86ed37"
+    },
+    "city-explorer/releases/40dcf835e0dc635b/data/catalog.json": {
+      "bytes": 341154,
+      "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1"
+    },
+    "city-explorer/releases/40dcf835e0dc635b/data/model-lessons.json": {
+      "bytes": 31982,
+      "sha256": "1552e6f4099a3f459f7d1671b280b98d8c1bff0ad997a87fad40134e5f77171b"
+    },
+    "city-explorer/releases/40dcf835e0dc635b/index.html": {
+      "bytes": 36082,
+      "sha256": "f7bba516b67ec165a23f451b7f71f68c8c4f213c6704870f19d9ceac0462b749"
     },
     "city-explorer/releases/index.html": {
       "bytes": 521,
@@ -110,16 +162,56 @@
       "sha256": "353762295346a650a868f43580b379cdfd825676eec57c1b7fc4d4eec2444f8f"
     },
     "downloads/fleetlab-offline.html": {
-      "bytes": 2565080,
-      "sha256": "343db084723c10af45dca8e6294824fcddad56917f701f959196d1b5380e8deb"
+      "bytes": 2565111,
+      "sha256": "313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1"
     },
     "downloads/teaching-package.json": {
       "bytes": 37702,
-      "sha256": "6590649e995603a62a0bfdc368e44cb9860e74ab634d76adae1fef1697b10af8"
+      "sha256": "2a6e30f245e4b4d41ddd147da9e007ff3d546eaa5a8fa15e8f28905fe9f98efd"
+    },
+    "enhancement-media.css": {
+      "bytes": 3057,
+      "sha256": "9e5c35ae84eca53c2210e6a2841412dfe98e3dfaaf4bf01dde1f3c987434c1b4"
+    },
+    "enhancement-media.mjs": {
+      "bytes": 6169,
+      "sha256": "be60cc6a0066969a802be9b0613fe11f9465aded07964ed46db648f00ad6aaf4"
+    },
+    "enhancement-media/FL-A1-people-between-rides.webp": {
+      "bytes": 354148,
+      "sha256": "df54ac4440dad7a76294432646ef3fef3b554f7c964a011bff964e2610350abe"
+    },
+    "enhancement-media/FL-A2-one-fleet-day-panorama.webp": {
+      "bytes": 431948,
+      "sha256": "e5299c6fd31c5521b2f36d1a519c5f67abc1c3bae64b66fe5d6a4267f96a7522"
+    },
+    "enhancement-media/FL-A3-second-depot-diptych.webp": {
+      "bytes": 456982,
+      "sha256": "edb580f26abe65962f892dedd974df292bc4fdc4e932091a4ad2b2d6cfc91c17"
+    },
+    "enhancement-media/FL-A4-capacity-hero.webp": {
+      "bytes": 244204,
+      "sha256": "6c2869ce67f473ba67e770b7fb73dbc47f55c171554821d84c5490e82850cc7f"
+    },
+    "enhancement-media/FL-V2-deadhead-explainer-poster.jpg": {
+      "bytes": 118144,
+      "sha256": "922a43646d15002fecf7248f0329279aadc7a40fd5c95e7ce528019975ce4516"
+    },
+    "enhancement-media/FL-V2-deadhead-explainer.mp4": {
+      "bytes": 577249,
+      "sha256": "2f954056b144f1d2232f46b74c2101dbc5f036d393d4b8068a91471499d3033f"
+    },
+    "enhancement-media/FL-V3-people-between-rides-loop.mp4": {
+      "bytes": 502747,
+      "sha256": "17197347ba9de7bb1cfab2f2b91820fe3791c014f590bfada449c289c4b6c08e"
+    },
+    "enhancement-motion.mjs": {
+      "bytes": 3745,
+      "sha256": "65c78ff3d1ade9e64ca6963eba86a2cd6fc686c223a39493b7d9f53755028548"
     },
     "index.html": {
-      "bytes": 3634,
-      "sha256": "9b05d5c1e0b8af8f56e558f8b6512a0511412b3b213b2ba8e37ab9a2997e8926"
+      "bytes": 4474,
+      "sha256": "111e9de42e9446f1c514e5953d0cf1c901ae9e3191a1bb05652ac27d41f9522f"
     },
     "integration.mjs": {
       "bytes": 11837,
@@ -131,7 +223,7 @@
     },
     "network-flows/capacity/release.json": {
       "bytes": 16589,
-      "sha256": "fdb8b9d37a85b3907d5b6227d3344d533a9f8dc9c4dca43fae1121834cd991b4"
+      "sha256": "a1ee1ceebc09f33169f1f9604aa4b583cae0f37c2b220d76a4d5e4304efba32e"
     },
     "network-flows/capacity/visual.css": {
       "bytes": 14015,
@@ -147,7 +239,7 @@
     },
     "network-flows/delivery-order/release.json": {
       "bytes": 8099,
-      "sha256": "8faa5b36317c076364a54a9da41d35e11edec674afb358c301bbe2ce184035b0"
+      "sha256": "98b1241fb1319d7f287421c75cceaccc27f4302a83440fff856e191ac8b35597"
     },
     "network-flows/delivery-order/visual.css": {
       "bytes": 12226,
@@ -163,15 +255,27 @@
     },
     "network-flows/dispatch/release.json": {
       "bytes": 12474,
-      "sha256": "01f6ee0949cf4727ddcb1ba8c214776aa00dfc6d686f3aab3f0b59eee996e0fa"
+      "sha256": "69191443b087502efe245b8cb6bee18755c5d83153f1e85f3a6e147b84b79a9f"
     },
     "network-flows/dispatch/visual.css": {
       "bytes": 5047,
       "sha256": "46c2a66305ec13715d959667e07c5932b0c80733e73b867baac73356ce1f6009"
     },
     "network-flows/fleet-day/index.html": {
-      "bytes": 1231,
-      "sha256": "e3e0a1d18906a82c20d1a44c1e20d554d8ba2e0e5b7cfb3cc8b6e1e5f4efb17e"
+      "bytes": 2722,
+      "sha256": "5df2890c8e611283af6878107b4fa67398f4b6cdc73be1cb671c1bbccec69e00"
+    },
+    "network-flows/hub.css": {
+      "bytes": 3348,
+      "sha256": "88b9f9b541a1a8be44cc57e834ab47508c1536310789435bd17b9f0279c59bff"
+    },
+    "network-flows/index.html": {
+      "bytes": 5177,
+      "sha256": "29371a9c8a0c160c0fa4fe6c8e49b333c1cb062851649c821c745dfe8679a4d2"
+    },
+    "network-flows/ota-sharing/index.html": {
+      "bytes": 1367,
+      "sha256": "e21598f4cc3f79d94f0257b549bda43bbaa1d5da6e036c4a68829ee5dd138fe3"
     },
     "network-flows/rebalancing/boot.js": {
       "bytes": 211,
@@ -183,7 +287,7 @@
     },
     "network-flows/rebalancing/release.json": {
       "bytes": 17977,
-      "sha256": "66e987366c0f97cb192635cf0ff5cc4c9ffa79244db54e5b5987b93cb76c5a7b"
+      "sha256": "bcd494ffdc83c831c56b2f486b0bfe8319bb50280bebf63c49e59ea4b31e8c67"
     },
     "network-flows/rebalancing/visual.css": {
       "bytes": 15932,
@@ -199,15 +303,19 @@
     },
     "network-flows/software-delivery/release.json": {
       "bytes": 6857,
-      "sha256": "2bfb1148a4129fd40bf18847dec383adf67b9a3fccfe0d5c2a9e28d2098ae11c"
+      "sha256": "035336f437baeeca75768936099a28b171d880ceec87dff6e668fa26f5157e98"
     },
     "network-flows/software-delivery/visual.css": {
       "bytes": 18142,
       "sha256": "5fa47f81fe3ca386d4c33cd97ab48b5770c14c041119121575fb90fe1a1af7c7"
     },
+    "network-flows/sources/a09527cf0dce5eadddbd7c2fc287ec1e3c5c03e17534fcdc9e0362f572929e16.json.gz": {
+      "bytes": 1010066,
+      "sha256": "a09527cf0dce5eadddbd7c2fc287ec1e3c5c03e17534fcdc9e0362f572929e16"
+    },
     "publication.json": {
       "bytes": 1800,
-      "sha256": "4e9caba7132d1716d1a97ee88197f1107c2a10c37d06825f4e8648b512e4b85c"
+      "sha256": "daf8f9295d274eeefba0f493b1a591f0f68675440b6a68c45c74fa76c42847e9"
     },
     "site-media/apple-touch-icon.png": {
       "bytes": 21051,
@@ -252,6 +360,10 @@
     "site-media/shared-delivery.webp": {
       "bytes": 145670,
       "sha256": "9139c4f68e6ef71557277fe40ea977176dfbb8fe26ed9d6331c6c7afcbd725ba"
+    },
+    "sitemap.xml": {
+      "bytes": 763,
+      "sha256": "57afe4dc98d4ef67ed95526c57598fbf16dc0293db76530e859faf9c417eee5c"
     },
     "src/data/delivery-order-study.js": {
       "bytes": 17593,
@@ -348,6 +460,10 @@
     "src/ui/hero-film.js": {
       "bytes": 9750,
       "sha256": "4c5873143e83dedf4db19dca9f661e8e53767e176edccddcecfdb9817a465115"
+    },
+    "src/ui/methodology-explainer.js": {
+      "bytes": 8659,
+      "sha256": "261c5b526b95b9b0dea4f987498a4842b0d1c293ac39dd14593931938c09aad6"
     },
     "src/ui/network-chrome.js": {
       "bytes": 1635,
@@ -458,86 +574,32 @@
       "sha256": "ed0525b08640af791d1ea3b89be926eda1ccbbe5af3c521f4034cd2cd5cc3af8"
     },
     "visitor.css": {
-      "bytes": 20732,
-      "sha256": "17e1b4f63b32f3ea3280221417978d8fb3cb32c18e28c36625db45371097ef30"
+      "bytes": 21107,
+      "sha256": "4203633026b00300bb240524a21464ba16acc99852cd4dc102d595d203176f44"
     },
     "visitor.mjs": {
-      "bytes": 27485,
-      "sha256": "5248fab2ef5ce26df11d7d4bc8d4d16a07ce2cebf65eb2e180327c4429f0c516"
-    },
-    "src/ui/methodology-explainer.js": {
-      "bytes": 8659,
-      "sha256": "261c5b526b95b9b0dea4f987498a4842b0d1c293ac39dd14593931938c09aad6"
+      "bytes": 27092,
+      "sha256": "46fb92daa36baeb2fc2fa060d9228bbd1982f97c14e026d95be344a744f336e0"
     }
   },
-  "verified_at_utc": "2026-10-23T16:43:27.858Z",
-  "verification": {
-    "served_files": 10137,
-    "matched_files": 10137,
-    "header_checks": 81,
-    "headers_pass": true,
-    "captured_at_utc": "2026-10-23T16:43:11.188894+00:00",
-    "headers_captured_at_utc": "2026-10-23T16:43:20.793304+00:00",
-    "full_readback_sha256": "7fd6194bfad3a960e6d12f5858a480e6c234bee5a9596d3962f22e6aa75e5900",
-    "production_headers_sha256": "57f3ff2e9ffebb5818d1f7145c135c467bda2182dea9aa8d206614999fd14122",
-    "preview_matched_files": 10137,
-    "preview_full_readback_sha256": "41179275eb47b08ea13de121b58e8fad6a5fcc5c7e63f40a5b2c8c5215d51e93",
-    "preview_headers_sha256": "76f8d944c77eb9968df41f36bb72e29a596812dd7e4e1282839361845702f857",
-    "immutable_matched_files": 10137,
-    "immutable_full_readback_sha256": "8e152801db82a0b45b4cf343e23c905e116865bfb62f9ef0e4ac387c82dedd6f",
-    "immutable_headers_sha256": "6020cd8e1739b20ca4acfe120da1cc63acd3f9cfdca60de73b4cebfd4dd3d422",
-    "preview_browser_check": "Desktop and 375 px: home, four-area experiment run (Change tested line), City Explorer and atlas, four Network Flows lessons and Street lab loaded without console errors; offline download bytes and inline-script CSP hash matched.",
-    "stable_smoke_matched_files": 103,
-    "stable_smoke_sha256": "5e372c30e51f59ac249898607423c88824af479216d7c2d1a75d8a33b58cbf94",
-    "immutable_smoke_matched_files": 103,
-    "immutable_smoke_sha256": "776f903a3495b77285c2b80b8c14f06654819d1cf8dee5928dbbc0b124f14364"
-  },
-  "meaning": "Byte consistency and supplied hosting observations; not independent authenticity, provider configuration, operational authority or permission to deploy.",
-  "capacity_release_sidecar_sha256": "fdb8b9d37a85b3907d5b6227d3344d533a9f8dc9c4dca43fae1121834cd991b4",
-  "capacity_release_digest": "52fdeeb60b166a2fb02239e6bbe1b04cbbb7c796136e438890c912484d2d0da5",
-  "teaching_package": {
-    "bytes": 37702,
-    "path": "downloads/teaching-package.json",
-    "sha256": "6590649e995603a62a0bfdc368e44cb9860e74ab634d76adae1fef1697b10af8"
-  },
-  "teaching_source_offer": {
-    "bytes": 1000090,
-    "extracted_sha256": "9baad9c9203757bd48278afbe772df0d5fe4a27587ea2d2e7dced79b6bdac7dc",
-    "original_inventory_sha256": "e0ac83b652c62e1f70a57aaf89b104aa089ad5f699a127be769ed6d29e140fa2",
-    "owner": "teaching-original-source-and-tools",
-    "path": "network-flows/sources/a680b2b006206b3fb919e517a6727b96b5f9169af383610379e4d6f802d7a821.json.gz",
-    "sha256": "a680b2b006206b3fb919e517a6727b96b5f9169af383610379e4d6f802d7a821"
-  },
-  "non_city_bytes": 12902877,
-  "software_delivery_release_sidecar_sha256": "2bfb1148a4129fd40bf18847dec383adf67b9a3fccfe0d5c2a9e28d2098ae11c",
-  "software_delivery_release_digest": "cd00bdb083030c774dd60f18fa000e91c08f7d5148f883b9838d77074a525854",
+  "capacity_release_sidecar_sha256": "a1ee1ceebc09f33169f1f9604aa4b583cae0f37c2b220d76a4d5e4304efba32e",
+  "capacity_release_digest": "b3780f5c828bdb98d3d66914777668897c0c47e08405950e8a4e03f3827b5579",
+  "software_delivery_release_sidecar_sha256": "035336f437baeeca75768936099a28b171d880ceec87dff6e668fa26f5157e98",
+  "software_delivery_release_digest": "2c4a223cddc65820a685837da8f3700bf87878f4d62f32491f6b418edba6325c",
+  "delivery_order_release_sidecar_sha256": "98b1241fb1319d7f287421c75cceaccc27f4302a83440fff856e191ac8b35597",
+  "delivery_order_release_digest": "e0e72661a8c3dfb9718c982113fedaa94bda37e5d3ce823950a8e57ecae01703",
+  "rebalancing_release_sidecar_sha256": "bcd494ffdc83c831c56b2f486b0bfe8319bb50280bebf63c49e59ea4b31e8c67",
+  "rebalancing_release_digest": "613fb341374e295e74524632e3ba9f20780cfae0b625fb84d8e408421e382970",
+  "dispatch_release_sidecar_sha256": "69191443b087502efe245b8cb6bee18755c5d83153f1e85f3a6e147b84b79a9f",
+  "dispatch_release_digest": "6d3950ac72a4d4a68ddf07d51557d361955c87eb6b76cf4037c013d5088517c0",
   "nf04_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
-  "delivery_order_release_sidecar_sha256": "8faa5b36317c076364a54a9da41d35e11edec674afb358c301bbe2ce184035b0",
-  "delivery_order_release_digest": "06f033f6f2d1e90051191ca189f40745c98dbfa14fde6ac08cc3c9504e0a3a55",
   "delivery_order_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
-  "hosted_presentation": {
-    "schema": "fleetlab.hosted-presentation/1.0.0",
-    "measurement_id": "G-04EZ8EZWQ2",
-    "collection_host": "fleetlab.pages.dev",
-    "current_public_html_pages": 12,
-    "artwork_bytes": 5107843,
-    "brand_asset_count": 7,
-    "tile_asset_count": 19,
-    "rebalancing_concept_asset_count": 4,
-    "diagram_asset_count": 4,
-    "offline_and_historical_city_analytics": false,
-    "analytics_property_receipt": "NOT_OBSERVED"
-  },
-  "rebalancing_release_sidecar_sha256": "66e987366c0f97cb192635cf0ff5cc4c9ffa79244db54e5b5987b93cb76c5a7b",
-  "rebalancing_release_digest": "af7fc7270134c3491a651602a3d0e92ee38db88adcd84649eec210f92efc3141",
   "rebalancing_qualification": {
     "scope": "SYNTHETIC_TEACHING",
     "independent_record_reconstruction": true,
     "physical_device_qualification": "NOT_ESTABLISHED",
     "sf_qualification": "HOLD"
   },
-  "dispatch_release_sidecar_sha256": "01f6ee0949cf4727ddcb1ba8c214776aa00dfc6d686f3aab3f0b59eee996e0fa",
-  "dispatch_release_digest": "cdc2f2dce1b9852204be7c44a8b76728e11ecbfd9ef2a6737328d3ad6a5446f5",
   "dispatch_qualification": {
     "scope": "SYNTHETIC_TEACHING",
     "independent_record_reconstruction": true,
@@ -549,12 +611,57 @@
     "physical_device_qualification": "NOT_ESTABLISHED",
     "sf_qualification": "HOLD"
   },
+  "teaching_package": {
+    "bytes": 37702,
+    "path": "downloads/teaching-package.json",
+    "sha256": "2a6e30f245e4b4d41ddd147da9e007ff3d546eaa5a8fa15e8f28905fe9f98efd"
+  },
+  "teaching_source_offer": {
+    "bytes": 1010066,
+    "extracted_sha256": "a15c3df7de7566ba7642ca675da1dc83c3f87f7d4a5460507527fb5e7073797f",
+    "original_inventory_sha256": "5d465becedda9eaa9010fe5f69ce4169a85085079ad7a4484dc3e5de7aa107b9",
+    "owner": "teaching-original-source-and-tools",
+    "path": "network-flows/sources/a09527cf0dce5eadddbd7c2fc287ec1e3c5c03e17534fcdc9e0362f572929e16.json.gz",
+    "sha256": "a09527cf0dce5eadddbd7c2fc287ec1e3c5c03e17534fcdc9e0362f572929e16"
+  },
+  "non_city_bytes": 15624676,
+  "integrated_text": {
+    "delivery_order_closure_bytes": 225063,
+    "emitted_text_bytes": 3144138,
+    "hosted_artwork_bytes": 7793265,
+    "integration_text_bytes": 128727,
+    "nf03_closure_bytes": 537633,
+    "nf04_closure_bytes": 221334,
+    "r1_closure_bytes": 196347,
+    "r3_closure_bytes": 152391
+  },
+  "hosted_presentation": {
+    "schema": "fleetlab.hosted-presentation/1.0.0",
+    "measurement_id": "G-04EZ8EZWQ2",
+    "collection_host": "fleetlab.pages.dev",
+    "current_public_html_pages": 13,
+    "artwork_bytes": 7793265,
+    "brand_asset_count": 7,
+    "tile_asset_count": 19,
+    "rebalancing_concept_asset_count": 4,
+    "diagram_asset_count": 4,
+    "enhancement_asset_count": 7,
+    "offline_and_historical_city_analytics": false,
+    "analytics_property_receipt": "NOT_OBSERVED"
+  },
   "dependency_audit": {
-    "path": "docs/releases/fleetlab-dependency-audit-2026-10-21.json",
-    "sha256": "3db44717970cefc5a537e0411b631b251b044a583fd435acc00b4bcaa415da0e",
-    "completed_at_utc": "2026-10-21T04:53:55.771511+00:00",
-    "release_lockfiles_match": true,
-    "reported_vulnerabilities": 0,
-    "meaning": "Registry advisory assessment of the exact recorded dependency locks at this date; not a new publication or proof of absence of vulnerabilities."
+    "assessment_date": "2026-10-23",
+    "scope": "LOCAL_UPLOADER_TOOLCHAIN; not visitor JavaScript",
+    "uploader": "wrangler 4.148.0",
+    "bundled_undici": "7.29.1",
+    "reported_vulnerabilities": {
+      "total": 3,
+      "moderate": 2,
+      "high": 1
+    },
+    "audit_log_sha256": "a27a585b3dc5f66120b0e103210e3c9347e3ba1afd9bed52277ae6b4e75613f4",
+    "app_audit_log_sha256": "6d8c5c8f3d7684adb070417bd608d01ae90aa3dc26a65af03ffda4955f38d9a3",
+    "app_reported_vulnerabilities": 0,
+    "meaning": "Dated registry audit and inspected bundled dependency residual; no current zero-vulnerability assertion for the uploader. See enhancement report for limitations and upstream references."
   }
 }

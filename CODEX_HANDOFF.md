@@ -1,117 +1,132 @@
-# Current update — FleetLab approved release preparation, October 23, 2026
+# Current update — FleetLab published and verified, October 23, 2026
 
-Owner explicitly authorized deployment after approving the media allocation and
-selecting **A2 as the Fleet day hero; V1 HOLD for rerender**. No further media
-placement decision is pending. Shareable detailed report:
+The approved enhancement release is live at [FleetLab](https://fleetlab.pages.dev).
+The owner published source `d0df87fff64889282e06fa3f4048b020b22bf8b5` through the
+existing credential and production-confirmation interface. **A2 is the Fleet day
+hero; V1 remains held for a separate rerender.** No upload step remains for this
+round. Shareable report:
 [`docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md`](docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md).
 
-## Status and remaining dependency
+## Publication and verification
 
-Presentation/media implementation and local release verification are complete.
-**Publication and hosted candidate readback: NOT_PERFORMED.** The existing live
-release policy requires owner-operated credential injection outside the agent
-session, then an interactive production source-commit confirmation. No token is
-available to the agent. Follow `apps/fleetlab-city/deploy/TOKEN_INPUT.md`; never
-retrieve a secret into chat, put it in an argument or use an ambient OAuth bypass.
-The report includes the exact preview and production wrapper invocations.
+- Stable production: `https://fleetlab.pages.dev`; full **10,151/10,151** served
+  files matched exact bytes/status, with **95/95** header checks.
+- Immutable production: `https://85b02be2.fleetlab.pages.dev`; **6/6 smoke paths**
+  matched. This is not full immutable readback or an immutable header check.
+- Preview: `https://4464c33b.fleetlab.pages.dev`; full **10,151/10,151** file
+  readback and **95/95** header checks passed before production.
+- Package: **10,152 files / 1,629,000,684 bytes**. Root `_headers` is configuration,
+  explaining the one-file difference from the served inventory.
+- Production receipt completed `2026-10-24T05:15:17.339Z` (October 23 Pacific).
+  The compact tracked receipt is `docs/releases/fleetlab-current.json`; its 118
+  observed paths and SHA-256 bindings point to the full generated receipt,
+  complete readback, headers, preview and production browser observations.
+- Fresh production browser checks at 390 × 844 on Home, Fleet day and the hub:
+  width 390 / scrollWidth 375, no overflow, A2 complete at natural width 2352,
+  V1 absent, V3 playing muted/looping after entering view, console clear.
+  These are browser viewport observations, not physical-device/human qualification.
 
-The source-bound final package is retained under ignored
-`dist/fleetlab-enhancement-20261023/`. Its `local-release.json` records the exact
-source commit, manifest hash and complete local inventory. Its `build-inputs.json`
-binds the original frozen inputs. The release is for an educational website;
-SF qualification HOLD, authenticity NOT_AUTHENTICATED, operational deployment
-permission NONE remain separate. Local validation is not hosted readback.
+The exact package remains under ignored `dist/fleetlab-enhancement-20261023/`.
+Detailed production evidence is in
+`build/fleetlab-city/validation/enhancement-release-20261023/`, including
+`production-85b02be2-full-receipt.json` and the production screenshot directory.
+Build-time manifests retain packaging-intent status; hosted observations live in
+the publication receipt. No full deployment UUID is asserted from an 8-hex URL.
 
-## Source and preservation
+## Source, rollback and preservation
 
-Implementation checkpoint `e015a1d`; merge checkpoint `c8768b5`; header-check
-correction `3f18319`; final guarded media builder `4b31ecc`. Branch: `codex/fleetlab-city-sf`. The live baseline was
-newer than the initial worktree: production source `2d01b25`, receipt from
-`02621fe`, immutable URL `https://4fd751ea.fleetlab.pages.dev`. A fresh 103-path
-readback against that current receipt passed. The obsolete local receipt
-mismatched 19 paths and was not treated as the current source of truth.
-The existing live security implementation was merged before preparing release;
-its token isolation, attribute guards, source binding, approved input digests,
-header security and provenance checks remain. No Git push or PR occurred.
+Branch: `codex/fleetlab-city-sf`. Implementation checkpoints: approved media
+`e015a1d`, security-baseline merge `c8768b5`, header URL correction `3f18319`,
+guarded media builder `4b31ecc`; published documentation checkpoint `d0df87f`.
+No Git push or PR occurred in this release task.
 
-A1–A4 and V2/V3 plus a derived V2 poster are present: seven source-owned files,
-2,685,422 bytes, all hashes/lengths verified; 1,508,882 bytes and one slot remain
-in the owner-approved 8-file / 4 MiB group. V1 is absent from the product and
-release inventory. Its 766,594-byte review copy shows doubled moon/ghosting at
-4.00 s and a dark endpoint at 9.958 s. V2/V3 are 577,249 / 502,747 bytes. All
-compressed videos are audio-free and below 1,200,000 bytes. Full ten-second
-loops have visible joins; no claim of seamless motion is made.
+Current City presentation: **`40dcf835e0dc635b`**. Compatible City-only rollback:
+**`0bdffbfcff0e1bf9`**, retained within the package. Whole-site rollback is the
+prior production **`4fd751ea`**, source
+`2d01b25e3df2df2c250fc64caaed14fb9c376c3c`; it restores the whole pre-enhancement
+site with its security baseline. Neither rollback was rehearsed. The earlier
+`ed72e5ef6f57a45c` measurement candidate is not the published City presentation.
 
-All exact captions, alt text and honesty framing remain in HTML. Placements,
-founder/tour/logo work, five-question hub, metadata/sitemap and D-1–D-8 remain
-as documented. No new lesson, model or numerical study was created. The frozen
-City evidence retains 4,941 unchanged payload files / 767,231,105 bytes per
+Frozen City evidence retains 4,941 unchanged payload files / 767,231,105 bytes per
 release across original/current/rollback manifests. The original source offer
-retains 12 files / 77,214,340 bytes; only presentation files differ.
+retains 12 files / 77,214,340 bytes; only presentation files differ. No numerical
+studies were regenerated. SF qualification remains **HOLD / BLOCKED_MAP_QUALIFICATION**,
+authenticity **NOT_AUTHENTICATED**, operational deployment permission **NONE**.
+Website publication does not change those states.
 
-Only three explicit budget changes were authorized: new 8-file / 4 MiB media
-group; 544 KiB NF-03 closure; 17 MiB aggregate non-City. All other caps remain.
-The 4b31ecc source-bound candidate has 1,590 bytes integrated-text headroom,
-9,674 raw source/tools, 6,329 offline, 19,423 NF-03, and 2,201,117 aggregate.
-Final counters are in the final package manifests; rebuild if source changes.
+A1–A4, V2/V3 and the derived V2 poster are seven source-owned installed files,
+2,685,422 bytes. The approved 8-file / 4 MiB media group has 1,508,882 bytes and
+one slot free. V1 is excluded: its 766,594-byte review copy has doubled-moon/
+ghosting at 4.00 s and a dark endpoint at 9.958 s. V2/V3 are 577,249 / 502,747 bytes,
+audio-free and under 1,200,000 bytes each. The complete ten-second loops retain
+visible joins; no seamless claim is made. Exact captions, alt text and concept
+fences remain in HTML; founder/tour/logo/hub/metadata/D-1–D-8 are as reported.
 
-## Validation and limitations
+Only three ceilings changed with explicit approval: new 8-file / 4 MiB enhancement
+media group; 544 KiB NF03 closure; 17 MiB aggregate non-City. All others remain.
+Published exact-source headroom: integrated text 1,590 bytes; raw source/tools 9,674;
+offline 6,329; NF03 19,423; aggregate 2,201,116. Final aggregate is 15,624,676 bytes,
+one byte above the earlier 4b31ecc measurement because compressed metadata changed.
+Future model work needs a reviewed packaging/budget decision.
 
-All final merged regression gates passed on clean
+## Regression and limitations
+
+Full merged regression gates passed on clean
 `4b31ecc8400b322334592eeb74232ff0b3913928`; all 776 captured input hashes stayed
-unchanged throughout. With qualified Node 22.23.4 and City Python on PATH:
-`node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs`:
-2,453 pass, 8 skip, 1 existing TODO; hosted Node: 232 pass; City Python unittest:
-370 pass. Hermes pytest with `FLEET_PLAYGROUND_BASE=bca4ccd`: 1,664 pass / 55 skip;
-named-base boundary/parity: 91 pass / 0 skip. Ruff and diff-check pass;
-activated doctor: 18 PASS, 1 optional display NOT_AVAILABLE, no WARN/FAIL.
-Uploader local version: 4.148.0, fresh isolated lock install and CLI hash pass;
-no Cloudflare request. Commands, hashes and prior negative runs are retained in
-`merged-gate-summary.json` and its referenced logs.
+unchanged. Qualified Node 22.23.4 / City Python: teaching Node 2,453 pass,
+8 skip / 1 existing TODO; hosted Node 232 pass; City Python 370 pass. Hermes pytest with
+`FLEET_PLAYGROUND_BASE=bca4ccd`: 1,664 pass / 55 skip; named-base boundary/parity 91 pass.
+Ruff/diff pass; activated doctor 18 PASS / 1 optional display NOT_AVAILABLE, no WARN/FAIL.
+The published documentation checkpoint retained those application inputs and
+passed exact-source packaging/complete stage verification. This post-publication
+update changes documentation only; focused receipt/doc/diff checks apply.
 
-Negative results resolved: merged attribute-guard regression detected the media
-helper's computed attribute setter; media now receives the existing guarded
-visitor builder, and motion uses literal attribute names. A first reuse approach
-would have added an uncounted route dependency; it was replaced with dependency
-injection before final qualification. Twenty-seven focused guard/media/motion/
-branding tests pass, followed by the full green suites. Header gate now checks
-`/network-flows/hub.css`; its red/green regression and seven tests pass, and all
-95 staged check paths resolve. An earlier parallel package-proof process was
-killed; the isolated serial rerun passed. Hosted tests initially inherited system
-Python without certifi; existing City Python on PATH resolved that environmental
-failure. No guard allowlist or ceiling was weakened.
+Resolved negative results remain recorded in the detailed report: corrected hub
+stylesheet URL, guarded media creation without an uncounted route dependency,
+serial package-proof rerun after a killed parallel process, and qualified City
+Python after system-Python certificate failure. No guard allowlist was weakened.
 
-The tracked `build-release.py` recipe reconstructs from approved immutable
-legacy, City base and source-offer inputs; package proof and the complete local
-stage verifier passed. Original City manifest:
-`c56bda6b509105c5bee778980c01d13028401bc03fc8b49b4948f65c6f18f63f`.
-Final-code measurement candidate `ed72e5ef6f57a45c`; staged compatible City rollback
-`0bdffbfcff0e1bf9`. A whole-site rollback to prior production is a different action
-and was not rehearsed. Preserve the current production receipt until new public
-bytes/headers are verified.
+Uploader residual: Wrangler 4.148.0 bundles Undici 7.29.1; the October 23 audit reports
+three vulnerabilities (two moderate, one high). A malicious HTTPS API response
+can terminate the upload client. An installed-only override would not fix the
+bundled copy; do not patch/downgrade the pinned tool ad hoc. App audit is clean;
+signatures verified. The current receipt records the dated residual and removes
+the obsolete zero-vulnerability uploader assertion. Controller tests cover OS
+reduced-motion behavior; no OS-level screenshot, physical device or human study
+is claimed.
 
-Fresh browser checks at 390 × 844 on source-bound Home, Fleet day and hub show
-no page overflow (width 390 / scrollWidth 375). A2 loaded with its exact caption;
-V1 absent. Hub question links and `/network-flows/hub.css` loaded correctly.
-The prior seven-page media pass and lazy/global-motion checks remain applicable;
-OS reduced-motion behavior is covered by controller tests, not an OS screenshot.
-New evidence: `build/fleetlab-city/validation/enhancement-release-20261023/`.
-Original media/spec files and prior evidence remain preserved locally.
+## Recommendation
 
-Tool-only residual: pinned Wrangler 4.148.0 bundles Undici 7.29.1; October 23 audit
-reports three dependency vulnerabilities (one high/two moderate). A malicious HTTPS API response with
-excessive content encodings can terminate the uploader. Overriding the separate
-installed dependency would not fix the bundled copy. Do not patch/downgrade the
-hash-pinned CLI ad hoc. App audit is clean; signatures verified. Detail and
-upstream links are in the shareable report and deployment runbook.
+Use the verified public release for review. Keep A2 and hold V1 for a separate
+rerender. The next task is the
+[configurable depot readiness design](docs/FLEETLAB_DEPOT_READINESS_DESIGN_2026-10-23.md),
+including synchronized Overview/Technical reading levels over the same run.
+**Design only: implementation and studies await user feedback and approval.**
+
+The design packet is now written: the specification above, its
+[30-source research ledger](docs/FLEETLAB_DEPOT_READINESS_RESEARCH_2026-10-23.md),
+and [Fable → Muse review brief](docs/FLEETLAB_DEPOT_READINESS_REVIEW_BRIEF_2026-10-23.md).
+It defines Decision/System/Mechanism/Evidence language layers and all seven
+requested configurable-depot control families. Fresh builder/consistency reviews
+raised six consequential ambiguities; all were revised and rechecked. Exact
+schema/workload, measured performance limits and packaging remain the next
+contract-freeze decisions after feedback. No runtime or model was implemented,
+and no new fixture/study was generated. The current source commit still names
+the published release; these post-publication documentation edits are local.
+
+
+## Top risks + mitigations
+
+- Preserve distinct model contracts and trust/qualification states; do not infer
+  operator fidelity from the published visual presentation.
+- Review packaging before adding functionality: final text has 1,590 bytes free.
+- Keep whole-site and City-only rollback separate and retain the uploader residual.
 
 ## Next 3 actions
 
-1. Owner uses the existing injector to run the documented preview upload; return
-   its non-secret immutable URL. Do not change source or package between uploads.
-2. Perform full preview readback/header/mobile checks; then owner runs production
-   with its interactive source prefix. Repeat production checks and update receipt.
-3. Share the report with Muse/Fable. Rerender and review V1 separately; keep A2.
+1. Share the release report and proposed depot design with Fable, then Muse.
+2. Incorporate design feedback and obtain the implementation decision.
+3. Rerender/review V1 separately; retain A2 until a replacement passes release checks.
 
 ---
 
