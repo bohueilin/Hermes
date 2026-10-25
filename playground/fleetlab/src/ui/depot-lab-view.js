@@ -4,7 +4,7 @@
 import {el} from './dom.js';
 import {term,TERMS} from '../model/depot-lab/registry.js';
 import {FLOW_TRUST} from '../model/depot-flow-contract.js';
-import {numberText,secondsText,minutesText,hoursText,kwhText,gbText,signedText} from './depot-lab-format.js';
+import {numberText,secondsText,minutesText,hoursText,kwhText,gbText,signedText,componentKind as KIND} from './depot-lab-format.js';
 export const NOT_AVAILABLE='Not available';
 const ARMS=['baseline','candidate'],ARM={baseline:'Baseline',candidate:'Candidate'};
 const STAGE={checking_setup:'checking setup',running_baseline:'running baseline',running_candidate:'running candidate',checking_results:'checking results'};
@@ -31,7 +31,9 @@ export function trustRows(s){
  return [['trust.scope',FLOW_TRUST.scope],...['authenticity','authorization','decision_authority','deployment_permission','evidence'].map(k=>[`trust.${k}`,term(`trust.${k}`).value]),['trust.consistency',consistency(s)]];
 }
 export const trustNodes=s=>trustRows(s).map(([id,v])=>el('div',{'data-term':id},[el('dt',{},plain(id)),el('dd',{},v)]));
-const guardName=g=>typeof g==='string'?g:typeof g?.guard==='string'?g.guard:NOT_AVAILABLE;
+// The guard named by the envelope (engine or verifier stop); Not available only when the envelope names none.
+export const guardName=g=>typeof g==='string'?g:typeof g?.guard==='string'?g.guard:NOT_AVAILABLE;
+export const guardDetail=e=>`${e.ledger.guard?.detail!==undefined?`guard detail ${JSON.stringify(e.ledger.guard.detail)}; `:''}prefix digest ${e.digests?.prefix??NOT_AVAILABLE}`;
 function detail(s){
  const r=current(s),list=f=>r?arms(r).map(a=>f(r.envelopes[a],a)).filter(Boolean).join('; '):'';
  if(s.status==='invalid')return `Violation code: ${list((e,a)=>e.status==='INVALID'&&`${e.primary_violation?.code??NOT_AVAILABLE} (${a})`)}.`;
@@ -60,24 +62,22 @@ function card(s){
  if(r)for(const a of arms(r)){
   const e=r.envelopes[a],v=e.primary_violation;
   if(e.status==='INVALID')lines.push(el('p',{},[`${ARM[a]}: violation ${v?.code??NOT_AVAILABLE}. Results are withheld.`,tech(` Record ${v?.seq??NOT_AVAILABLE}, tick ${v?.tick??NOT_AVAILABLE}.`)]));
-  else if(e.status==='INCOMPLETE_RESOURCE_LIMIT')lines.push(el('p',{},`${ARM[a]}: stopped by guard ${guardName(e.ledger.guard)}. The prefix is not a result.`));
+  else if(e.status==='INCOMPLETE_RESOURCE_LIMIT')lines.push(el('p',{},[`${ARM[a]}: stopped by guard ${guardName(e.ledger.guard)}. The prefix is not a result.`,tech(` ${guardDetail(e)}; ${e.ledger.records} records; ${e.ledger.bytes} bytes.`)]));
   else if(e.status==='CANCELLED')lines.push(el('p',{},`${ARM[a]}: cancelled.`));
  }
  if(s.status==='could_not_reproduce'&&s.result)for(const a of ARMS){const want=s.result.expected?.[`${a}_run_digest`];if(want)lines.push(tech(`${ARM[a]}: shared run digest ${want}; rerun digest ${s.result.observed?.[`${a}_run_digest`]??NOT_AVAILABLE}.`,'p'));}
  return el('div',{class:'state-card','data-state':CARD[s.status]??s.status},[el('h3',{},t?t.label_plain:s.status),el('p',{},t?stateText(s,t):NOT_AVAILABLE),...lines]);
 }
-// A censored lower bound reads "at least"; under a minute it keeps exact seconds, never "0 min".
-const least=(v,m)=>{const x=minutesText(v);return censored(m)?`at least ${x[0]==='<'?secondsText(v):x}`:x;};
+// A censored lower bound reads "at least"; under a minute it keeps exact seconds, never "0 min" or "at least < 1 min".
+const least=(v,m,f=minutesText)=>{const x=f(v);return censored(m)?`at least ${x[0]==='<'?secondsText(v):x}`:x;};
 // Headline tiles (registry C1.6 rows): main display text, optional companion text and the exact machine values.
 const TILES=[
  ['release.on_time_count',m=>{const [a,d,u]=['on_time_count','due_count','unfinished_due_count'].map(k=>at(m,`release.${k}`));if([a,d,u].includes(undefined))return null;return d===0?['Not applicable','no visit is due by the end of the run','release.due_count 0']:[`${numberText(a)} of ${numberText(d)} due by end`,`${visits(u)} due and not released`,`release.on_time_count ${a}; release.due_count ${d}; release.unfinished_due_count ${u}`];}],
  ['visit.overdue_s',m=>{const v=at(m,'visit.overdue_s');return v===undefined?null:[least(v,m),censored(m)?'(more may follow)':null,`${v} s`];}],
- ['visit.turnaround_observed_s',m=>{const v=at(m,'visit.turnaround_observed_s'),c=censored(m);return v===undefined?null:[`${c?'at least ':''}${hoursText(v)}`,c?'(more may follow)':null,`${v} s`];}],
+ ['visit.turnaround_observed_s',m=>{const v=at(m,'visit.turnaround_observed_s'),c=censored(m);return v===undefined?null:[least(v,m,hoursText),c?'(more may follow)':null,`${v} s`];}],
  ['release.unreleased_count',m=>{const v=at(m,'release.unreleased_count');return v===undefined?null:[visits(v),null,`${v} visits`];}],
 ];
 const tiles=r=>el('div',{class:'tiles'},TILES.map(([id,f])=>el('article',{'data-term':id},[el('h3',{},plain(id)),tech(id,'p'),...arms(r).map(a=>{const x=f(metricsOf(r,a));return el('p',{'data-arm':a},x?[`${ARM[a]}: `,el('strong',{},x[0]),x[1]&&` ${x[1]}`,tech(` ${x[2]}`)]:`${ARM[a]}: ${NOT_AVAILABLE}`);})])));
-// Display format and exact unit per vector component (note 18); time components stay in exact seconds.
-const KIND=id=>id==='remaining_required_kWh'?[kwhText,'mJ']:id==='remaining_required_bytes'?[gbText,'bytes']:id==='on_time_count'||id==='unreleased_count'?[numberText,'visits']:[secondsText,'s'];
 const LOWER=new Set(['overdue_seconds','observed_visit_seconds']);
 const cell=(v,fmt,unit,pre='')=>el('td',{class:'num'},v===null||v===undefined?NOT_AVAILABLE:[pre+fmt(v),tech(` ${v} ${unit}`)]);
 function classification(r,pair){
@@ -128,8 +128,8 @@ function treatment(r){
 function narrative(r){
  const c=r.comparison,n=c.components.length,by=rel=>c.components.filter(x=>x.relation===rel),names=xs=>xs.map(x=>`${plain(x.id)} ${signedText(x.delta,KIND(x.id)[0])}`).join('; ');
  const better=by('better'),worse=by('worse'),equal=by('equal'),act=arms(r).reduce((k,a)=>k+proj(r,a).visits.reduce((j,v)=>j+v.active_at_h.length,0),0);
- const list=[(better.length||worse.length)&&'Each difference changed this outcome in this model under this declared paired workload.',equal.length&&`${equal.length} of ${n} components ${equal.length===1?'is':'are'} exactly equal.`,
-  arms(r).some(a=>censored(metricsOf(r,a)))&&'Late seconds and observed visit seconds are lower bounds while visits stay unfinished.',act&&`${plural(act,'started task')} could not finish by end of run; their remaining work is counted, not finished.`,bundled(c.treatment)&&BUNDLED,term('deferred.statistics').definition];
+ const b=bundled(c.treatment),list=[(better.length||worse.length)&&`The candidate's ${b?'declared changes, taken together,':'one declared change'} changed these outcomes in this model under this declared paired workload.`,b&&BUNDLED,equal.length&&`${equal.length} of ${n} components ${equal.length===1?'is':'are'} exactly equal.`,
+  arms(r).some(a=>censored(metricsOf(r,a)))&&'Late seconds and observed visit seconds are lower bounds while visits stay unfinished.',act&&`${plural(act,'started task')} could not finish by end of run; their remaining work is counted, not finished.`,term('deferred.statistics').definition];
  return [el('h3',{},'What changed'),el('p',{},better.length?`Better in the candidate, ${better.length} of ${n}: ${names(better)}.`:'No component is better in the candidate.'),
   el('h3',{},'What got worse'),el('p',{},worse.length?`Worse in the candidate, ${worse.length} of ${n}: ${names(worse)}.`:'No component is worse in the candidate.'),
   el('h3',{},'What remains uncertain'),el('ul',{},list.filter(Boolean).map(x=>el('li',{},x)))];

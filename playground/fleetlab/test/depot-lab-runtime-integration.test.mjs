@@ -29,7 +29,8 @@ function boundEnvelope(env,text,scenario){
 let B_PAIR=null;
 test('job: the real B pair gives two VERIFIED envelopes bound to their ledgers and a digest-bound comparison',()=>{
  const p=preset('B'),{reply,progress}=job(request('it-b',p.baseline,p.candidate));
- assert.equal(reply.type,'result');assert.deepEqual(Object.keys(reply),['type','id','generation','scenario_digests','envelopes','comparison','ledger_texts']);
+ assert.equal(reply.type,'result');assert.deepEqual(Object.keys(reply),['type','id','generation','scenario_digests','envelopes','comparison','ledger_texts','ledger_guards']);
+ assert.deepEqual(reply.ledger_guards,{baseline:null,candidate:null},'complete runs stop at no guard');
  assert.deepEqual(stagesOf(progress),JOB_STAGES);
  assert.ok(progress.every(m=>m.id==='it-b'&&m.generation===1&&Number.isSafeInteger(m.done)&&m.done>=0&&m.done<=m.total));
  for(const arm of ['baseline','candidate']){const s=valid(p[arm]);assert.equal(reply.scenario_digests[arm],scenarioDigest(s));boundEnvelope(reply.envelopes[arm],reply.ledger_texts[arm],s);}

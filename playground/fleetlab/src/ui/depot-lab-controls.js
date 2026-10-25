@@ -5,6 +5,7 @@ import {LIMITS} from '../model/depot-lab/schema.js';
 import {term,TERMS} from '../model/depot-lab/registry.js';
 import {requiredChargeMj,socEnergy,bandAt} from '../model/depot-lab/units.js';
 import {numberText,kwhText} from './depot-lab-format.js';
+import {errorText} from './depot-lab-view.js';
 const T=id=>term(id)?.label_plain??id,DEF=id=>term(id)?.definition??'';
 const J=v=>v===undefined||v===null?'none':typeof v==='object'?JSON.stringify(v):String(v);
 const clone=v=>JSON.parse(JSON.stringify(v)),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
@@ -42,7 +43,10 @@ function regen(a,n,sp,all){
 const tapeCheck=(a,n,sp,all)=>{const x=clone(a);regen(x,n,sp,all);const last=Math.max(...x.visits.map(v=>v.arrival_tick));return x.arrival_window_tick>x.horizon_tick?`The last arrival would be at ${numberText(last)} s, not before the end of the run at ${numberText(x.horizon_tick)} s. Shorten the arrival spacing or lengthen the run.`:null;};
 export function mountSetup({doc,session}){
  const by=id=>doc.getElementById(id),cat=presetCatalog(),ups=[],rows=new WeakMap(),scope={};
- let n=0,mark={preset:undefined,gen:0,own:false},issues=[],memo=900;
+ // Named-setup digests recorded when each preset was loaded or opened (a kept preset id means its exact inputs), and
+ // Build your own mode, which ends on any draft change made outside these controls (an import or an opened link).
+ let n=0,own=false,mine=false,seen=0,issues=[],memo=900;const known=new Map();
+ const local=f=>{mine=true;try{return f();}finally{mine=false;}};
  const now=()=>session.get(),shown=s=>s.draft.candidate??s.draft.baseline,uid=()=>`dlc-${++n}`,refresh=()=>render(now());
  const itext=i=>`${i.arm==='baseline'?'Baseline':'Candidate'} setup check: ${i.code} at ${i.path||'/'}${i.bound!=null?`, allowed ${J(i.bound)}`:''}.`;
  const spacing=a=>{const v=a.visits;return v.length>1?Math.floor((v[v.length-1].arrival_tick-v[0].arrival_tick)/(v.length-1)):memo;};
@@ -52,14 +56,15 @@ export function mountSetup({doc,session}){
   const sc=card?scope[card]:'both',d=now().draft,list=(sc==='both'?[d.baseline,d.candidate]:[d.candidate??d.baseline]).filter(Boolean);
   let diff=false;
   for(const a of list){const m=check?.(a);if(m)return m;const x=clone(a);apply(x);diff||=!same(x,a);}
-  if(diff)session.edit(a=>{apply(a);},{scope:sc});
+  if(diff)local(()=>session.edit(a=>{apply(a);},{scope:sc}));
   return null;
  }
  // A labelled control over get(arm)/apply(arm,v). A refusal keeps the typed text with its message attached, as do issues at path.
  function control(o,input,read,write){
   const id=uid(),mid=`${id}-m`,base=el('span',{class:'note'}),tx=tech(),msg=el('p',{id:mid,class:'issue',hidden:true}),typed=input.getAttribute('type')==='number';
   let bad=null,gen=0;input.setAttribute('id',id);
-  input.addEventListener('change',()=>{const v=read();gen=now().generation;bad=v===undefined?o.err:change(o.card,a=>o.apply(a,v),o.check&&(a=>o.check(a,v)));refresh();});
+  // A re-entry ending with no refusal and no edit takes this control's own refusal back out of the page alert.
+  input.addEventListener('change',()=>{const v=read(),was=bad,t=`${o.label??T(o.tid)}: `;gen=now().generation;bad=v===undefined?o.err:change(o.card,a=>o.apply(a,v),o.check&&(a=>o.check(a,v)));if(bad)say(t+bad);else if(was)unsay(t+was);refresh();});
   const up=s=>{
    if(bad&&s.generation!==gen)bad=null;
    const a=shown(s),v=o.get(a),b=o.get(s.draft.baseline),u=o.tid&&term(o.tid)?.unit;
@@ -78,7 +83,13 @@ export function mountSetup({doc,session}){
  const add=c=>{ups.push(c.up);return c.node;};
  const dyn=(f,tag='p',cls='note')=>{const p=el(tag,{class:cls});return {node:p,up:s=>setText(p,f(s,shown(s)))};},info=(f,cls)=>add(dyn(f,'p',cls));
  const btn=(t,f,attrs={})=>el('button',{type:'button',...attrs,on:{click:()=>{f();refresh();}}},t);
- const flash=()=>{const p=el('p',{class:'issue'});let g=-1;ups.push(s=>{if(s.generation!==g)setText(p,'');});return {node:p,set:m=>{g=now().generation;setText(p,m??'');}};};
+ // Refusals reach the page's static role=alert node (#error; this module builds no announcement region) and stay attached to the
+ // pressed control through aria-describedby until the next edit.
+ const say=m=>{const a=by('error');if(a){a.hidden=false;setText(a,m);}};
+ // Only while the alert still holds message m: the session's own error text (a run refusal still in effect) or nothing.
+ const unsay=m=>{const a=by('error');if(a&&a.textContent===m){const e=errorText(now());a.hidden=!e;setText(a,e??'');}};
+ const flash=what=>{const id=uid(),p=el('p',{class:'issue',id});let g=-1,on=null;const tie=b=>{on?.removeAttribute('aria-describedby');on=b;b?.setAttribute('aria-describedby',id);};
+  ups.push(s=>{if(s.generation!==g){setText(p,'');tie(null);}});return {node:p,set:(m,b)=>{g=now().generation;setText(p,m??'');tie(m?b:null);if(m)say(`${what}: ${m}`);}};};
  const row=parts=>{const ps=parts.filter(Boolean);return {node:el('li',{},ps.map(p=>p.node??p)),up:s=>ps.forEach(p=>p.up?.(s))};};
  // Keyed rows keep their nodes, and so focus, across renders.
  const list=(items,key,create)=>{const ul=el('ul',{class:'rows'});ups.push(s=>{keyedList(ul,items(shown(s)),{key,create:x=>{const r=create(x);rows.set(r.node,r.up);return r.node;}});for(const c of ul.children)rows.get(c)?.(s);});return ul;};
@@ -89,12 +100,12 @@ export function mountSetup({doc,session}){
  };
  const shared=()=>[el('p',{class:'scope'},'Applies to: both setups'),note('Shared requirement: every change updates both setups together.')];
  const card=(key,title,kids)=>{const ul=el('ul',{class:'issues'});ups.push(()=>ul.replaceChildren(...issues.filter(i=>i.card===key).map(i=>el('li',{class:'issue'},itext(i)))));return el('section',{class:'card','aria-labelledby':`dlc-${key}`},[el('h3',{id:`dlc-${key}`},title),...kids,ul]);};
- const load=id=>{session.selectPreset(id);mark={preset:id,gen:now().generation,own:false};refresh();};
- const own=()=>{session.selectPreset(cat[0].id);const b=now().draft.baseline;session.edit(()=>clone(b),{scope:'candidate'});mark={preset:cat[0].id,gen:now().generation,own:true};refresh();};
+ const load=id=>{local(()=>session.selectPreset(id));own=false;refresh();};
+ const ownSetup=()=>{local(()=>{session.selectPreset(cat[0].id);const b=now().draft.baseline;session.edit(()=>clone(b),{scope:'candidate'});});own=true;refresh();};
  const qBtn=id=>{const p=cat.find(x=>x.id===id),rid=uid();return el('li',{},[el('button',{type:'button','aria-describedby':rid,on:{click:()=>load(id)}},p.title),el('p',{id:rid,class:'note'},`Declared regime: ${p.regime}`),tech(`preset ${id}`)]);};
  const qCard=(i,q,kids)=>el('section',{class:'card'},[el('p',{class:'note'},`Learning question ${i}`),el('h3',{},q),...kids]);
  by('questions').replaceChildren(...QUESTIONS.map(([q,ids],i)=>qCard(i+1,q,[el('ul',{class:'rows'},ids.map(qBtn))])),
-  el('section',{class:'card'},[el('p',{class:'note'},'Free-form'),el('h3',{},'Build your own'),el('p',{},`Start from the ${cat[0].title} with an identical candidate, then change any family below. Nothing runs until you press Run.`),btn('Build your own setup',own,{class:'primary'})]),
+  el('section',{class:'card'},[el('p',{class:'note'},'Free-form'),el('h3',{},'Build your own'),el('p',{},`Start from the ${cat[0].title} with an identical candidate, then change any family below. Nothing runs until you press Run.`),btn('Build your own setup',ownSetup,{class:'primary'})]),
   qCard(4,'How does a local depot decision affect riders, empty travel and the rest of the fleet?',[el('p',{},'Not available in this version: no fleet model is included.')]),
   qCard(5,'What trade-off did a scheduling policy make, and how strong is the evidence for it?',[el('p',{},`A later stage. This version uses one fixed rule, ${now().draft.baseline.policy_id}, and compares setups, not policies.`)]));
  const sel=by('preset');
@@ -113,9 +124,9 @@ export function mountSetup({doc,session}){
   setText(sum,t?`Every changed value (${t.leaves.length})${t.fields.length?`: ${t.fields.map(f=>FIELD.get(f)??f).join('; ')}`:''}`:`Why these setups are not comparable (${c?.issues.length??0})`);
   leaves.replaceChildren(...(t?t.leaves.map(leaf):(c?.issues??[]).map(i=>el('li',{},`${i.code} at ${i.path}`))));
  });
- const ports=a=>a.site.ports,posSel=el('select',{'aria-label':'Charging position for a new port'}),portMsg=flash(),staffMsg=flash();
+ const ports=a=>a.site.ports,posSel=el('select',{'aria-label':'Charging position for a new port'}),portMsg=flash('AC/DC charging'),staffMsg=flash('Staffing');
  let opts='';ups.push(s=>{const f=freeCharging(shown(s)),v=posSel.value;if(J(f)!==opts){opts=J(f);posSel.replaceChildren(...f.map(id=>el('option',{value:id},id)));if(f.includes(v))posSel.value=v;}});
- const addPort=kind=>{const pos=posSel.value;portMsg.set(pos?change('energy',a=>{ports(a).push(newPort(nextId(ports(a),kind),pos,kind));ports(a).sort(byId);},a=>ports(a).length>=LIMITS.ports?`At most ${LIMITS.ports} ports.`:freeCharging(a).includes(pos)?null:`${pos} is not a free charging position in every setup this edit applies to.`):'Every charging position already has a port. Add a charging position in Space first.');};
+ const addPort=(kind,b)=>{const pos=posSel.value;portMsg.set(pos?change('energy',a=>{ports(a).push(newPort(nextId(ports(a),kind),pos,kind));ports(a).sort(byId);},a=>ports(a).length>=LIMITS.ports?`At most ${LIMITS.ports} ports.`:freeCharging(a).includes(pos)?null:`${pos} is not a free charging position in every setup this edit applies to.`):'Every charging position already has a port. Add a charging position in Space first.',b);};
  const tgt=a=>a.requirements.energy.target_soc_pct,setT=v=>a=>{a.requirements.energy.target_soc_pct=v;};
  const need=a=>{const e=a.visits.map(x=>requiredChargeMj(x.initial_soc_pct,tgt(a)));return {t:e.reduce((x,y)=>x+y,0n),lo:e.reduce((x,y)=>y<x?y:x),hi:e.reduce((x,y)=>y>x?y:x)};};
  const quick=[60,80,90,100].map(v=>{const b=btn(`${v}%`,()=>change(null,setT(v)));ups.push(s=>b.setAttribute('aria-pressed',String(tgt(s.draft.baseline)===v)));return b;});
@@ -128,7 +139,7 @@ export function mountSetup({doc,session}){
    dyn((s,a)=>{const r=g(a);return r?`${T('worker.solo_duration_ticks')}: ${numberText(r.solo_duration_ticks)} s${r.may_supervise?'; may supervise':''}.`:'';})];
   ctl.push(...parts);return el('fieldset',{},[el('legend',{},CLASSES[c]),...parts.map(p=>p.node)]);});
   return {node:el('li',{},el('details',{},[el('summary',{},`${w.id}: qualification and proficiency per task`),...fs])),up:s=>ctl.forEach(p=>p.up(s))};};
- const addStaff=Object.entries(ROLES).map(([r,pre])=>btn(`Add ${r}`,()=>staffMsg.set(change('staff',a=>{a.workers.push(roleWorker(nextId(a.workers,pre),r,{},a.horizon_tick));a.workers.sort(byId);},a=>a.workers.length>=LIMITS.workers?`At most ${LIMITS.workers} workers.`:null))));
+ const addStaff=Object.entries(ROLES).map(([r,pre])=>{const b=btn(`Add ${r}`,()=>staffMsg.set(change('staff',a=>{a.workers.push(roleWorker(nextId(a.workers,pre),r,{},a.horizon_tick));a.workers.sort(byId);},a=>a.workers.length>=LIMITS.workers?`At most ${LIMITS.workers} workers.`:null),b));return b;});
  const fixedRow=(id,f)=>el('div',{},[el('dt',{},T(id)),el('dd',{},[add(dyn((s,a)=>f(a),'span','mono')),tech(` ${DEF(id)}`)])]);
  by('setup').replaceChildren(
   card('space','Space',[...armUI('space'),
@@ -140,7 +151,7 @@ export function mountSetup({doc,session}){
    list(ports,p=>`${p.id}:${p.kind}:${p.position_id}`,p=>{const g=a=>ports(a).find(x=>x.id===p.id),ap=f=>(a,v)=>{const x=g(a);if(x)f(x,v);};
     return row([`${p.id}: ${p.kind} port on ${p.position_id}`,num({card:'energy',label:`${p.id} rating`,tid:'site.ports',tech:`site.ports ${p.id} rating_w (W)`,unit:'kW',scale:1000,min:0,max:LIMITS.watts/1000,get:a=>g(a)?.rating_w,apply:ap((x,v)=>{x.rating_w=v;})}),
      tick({card:'energy',label:`${p.id} enabled`,tid:'site.ports',tech:`site.ports ${p.id} enabled`,get:a=>g(a)?.enabled,apply:ap((x,v)=>{x.enabled=v;})}),btn(`Remove ${p.id}`,()=>{posSel.focus();change('energy',a=>{a.site.ports=ports(a).filter(x=>x.id!==p.id);});})]);}),
-   el('div',{class:'field-row'},[posSel,btn('Add DC port',()=>addPort('DC')),btn('Add AC port',()=>addPort('AC'))]),portMsg.node,note(`${T('site.ports')}: ${DEF('site.ports')}`),
+   el('div',{class:'field-row'},[posSel,...['DC','AC'].map(k=>{const b=btn(`Add ${k} port`,()=>addPort(k,b));return b;})]),portMsg.node,note(`${T('site.ports')}: ${DEF('site.ports')}`),
    add(num({card:'energy',diag:1,tid:'site.supply_w',unit:'kW',scale:1000,min:0,max:LIMITS.watts/1000,get:a=>a.site.supply_w,apply:(a,v)=>{a.site.supply_w=v;},path:()=>'/site/supply_w'})),
    info((s,a)=>`${T('site.background_w')}: ${numberText(a.site.background_w)} W, a fixed shared assumption.`),
    el('h4',{},'Target battery SOC, a shared requirement'),...shared(),
@@ -152,7 +163,7 @@ export function mountSetup({doc,session}){
    note(DEF('requirement.shared_across_arms'))]),
   card('garage','Garage',[...armUI('garage'),
    add(pick({card:'garage',tid:'site.garage_level',options:[['none','None'],['basic','Basic'],['specialist','Specialist']],get:a=>a.site.garage_level,apply:(a,v)=>{a.site.garage_level=v;},path:()=>'/site/garage_level'})),
-   note('“None” removes on-site repair capability. It does not remove faults from the work.'),note('Specialist adds zero eligible tasks in these tapes: no visit has a specialist fault.'),
+   note('“None” removes on-site repair capability. It does not remove faults from the work.'),info((s,a)=>{const n=a.visits.filter(v=>v.fault==='specialist_electrical').length;return n?`${pl(n,'visit')} in this setup ${n===1?'has':'have'} a specialist fault, repaired on site only at Specialist; Basic and None route ${n===1?'it':'them'} to the vendor.`:'Specialist adds zero eligible tasks in this setup: no visit has a specialist fault.';}),
    info((s,a)=>{const v=a.vendor;return `Fixed shared assumptions: ${T('vendor.enabled')} ${v.enabled?'on':'off'}; ${T('vendor.bay_count')} ${v.bay_count}; ${T('vendor.worker_count')} ${v.worker_count}; ${T('vendor.times')}: ${numberText(v.outbound_ticks)} s out, ${numberText(v.service_ticks)} s service, ${numberText(v.return_ticks)} s back.`;})]),
   card('services','Services',[...armUI('services'),...['maps','software','uploads'].map(k=>el('fieldset',{},[el('legend',{},T(`services.${k}`)),svc(k,'service_reachable','service.reachable',[['reachable','Yes'],['unreachable','No']]),svc(k,'entitlement','service.entitlement',[['valid','Valid'],['denied','Denied'],['unknown','Unknown']])])),
    note('Reachable and permission are two different answers. Both are simulated: no real service is contacted.')]),
@@ -187,9 +198,10 @@ export function mountSetup({doc,session}){
  function render(s){
   issues=['baseline','candidate'].flatMap(arm=>(s.checks?.[arm]?.issues??[]).map(i=>({...i,arm,card:OWNER.find(([,re])=>re.test(i.path??''))?.[0]??'work'})));
   const a=shown(s);if(a.visits.length>1)memo=spacing(a);
-  if(s.preset!==mark.preset)mark={preset:s.preset,gen:s.generation,own:false};
-  const p=cat.find(x=>x.id===s.preset);sel.value=mark.own?'':s.preset??'';
-  setText(by('preset-regime'),mark.own?`Your own setup, started from the ${cat[0].title} in both setups. The counters list every difference.`:p?`Declared regime, configuration reasoning only and not a result: ${p.regime}${s.generation>mark.gen?' Edited since loading, so this regime may no longer describe the setup.':''}`:'No named setup is loaded; this is your own setup.');
+  if(s.generation!==seen&&!mine)own=false;seen=s.generation;
+  const p=cat.find(x=>x.id===s.preset),d=s.digests;if(p&&!known.has(p.id))known.set(p.id,d);
+  const k=known.get(s.preset),exact=!!k&&d.baseline===k.baseline&&d.candidate===k.candidate;sel.value=own?'':s.preset??'';
+  setText(by('preset-regime'),own?`Your own setup, started from the ${cat[0].title} in both setups. The counters list every difference.`:p?`Declared regime, configuration reasoning only and not a result: ${p.regime}${exact?'':' Edited since loading, so this regime may no longer describe the setup.'}`:'No named setup is loaded; this is your own setup.');
   for(const u of ups)u(s);
  }
  render(now());

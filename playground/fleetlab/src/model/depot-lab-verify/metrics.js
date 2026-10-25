@@ -118,8 +118,17 @@ export function createRecorder(M){
    visits.push(out);
   }
   const part=(u,list)=>{const o=Object.fromEntries(list.map(c=>[c,0]));for(const [f,to,c]of close(segs.get(u)??[]))o[c]+=to-f;return o;};
-  const ports=[...M.ports.values()].map(p=>({id:p.ref,kind:p.kind,position:p.pos,rating_w:p.rating,enabled:p.enabled,partition:part(p.ref,PORT_CLASSES),owned_ticks:owned(p.ref)}));
-  const positions=[...M.positions.values()].map(P=>{const port=[...M.ports.values()].find(p=>p.pos===P.ref);return {id:P.ref,zone:P.zone,enabled:P.enabled,partition:part(P.ref,POSITION_CLASSES),port_released_position_held_s:port?ports.find(x=>x.id===port.ref).partition.unconnected_position_blocked:0,owned_ticks:owned(P.ref)};});
+  // resource.owned_fraction (C1.6) per unit: owned or reserved ticks over its enabled window, null when it has none.
+  // It stays on the resource rows, never in metrics: A26 requires metrics identical under any id renaming.
+  const share=x=>{const d=H-x.partition.unavailable;x.owned_fraction=d>0?fmt(Q(BigInt(x.owned_ticks),BigInt(d))):null;return x;};
+  const ports=[...M.ports.values()].map(p=>share({id:p.ref,kind:p.kind,position:p.pos,rating_w:p.rating,enabled:p.enabled,partition:part(p.ref,PORT_CLASSES),owned_ticks:owned(p.ref)}));
+  const positions=[...M.positions.values()].map(P=>{const port=[...M.ports.values()].find(p=>p.pos===P.ref);return share({id:P.ref,zone:P.zone,enabled:P.enabled,partition:part(P.ref,POSITION_CLASSES),port_released_position_held_s:port?ports.find(x=>x.id===port.ref).partition.unconnected_position_blocked:0,owned_ticks:owned(P.ref)});});
+  // resources.owned_summary (C1.6 installed, enabled and eligible denominators, ARITH-07) over [0, H): installed is
+  // units x H, enabled counts units whose own flag is on, eligible is H minus static unavailability (a port on an
+  // out-of-service position is not eligible); owned sums owned or reserved ticks.
+  const total=(xs,f)=>xs.reduce((n,x)=>n+f(x),0),over=(a,b)=>b>0?fmt(Q(BigInt(a),BigInt(b))):null;
+  const summary=xs=>{const o={installed_unit_ticks:xs.length*H,enabled_unit_ticks:total(xs,x=>x.enabled?H:0),eligible_unit_ticks:total(xs,x=>H-x.partition.unavailable),owned_unit_ticks:total(xs,x=>Math.min(x.owned_ticks,H))};
+   o.fraction={installed:over(o.owned_unit_ticks,o.installed_unit_ticks),enabled:over(o.owned_unit_ticks,o.enabled_unit_ticks),eligible:over(o.owned_unit_ticks,o.eligible_unit_ticks)};return o;};
   let avail=0,busy=0;
   const workers=M.workerList.map(w=>{const a=w.unions.reduce((n,[x,y])=>n+Math.min(y,H)-Math.min(x,H),0),b=owned(w.ref);avail+=a;busy+=b;return {id:w.ref,available_s:a,busy_s:b,attention:a?fmt(Q(BigInt(b),BigInt(a))):null};});
   const intervals={positions:[],ports:[]};
@@ -136,7 +145,7 @@ export function createRecorder(M){
   const vector={classes:cls,components:[{id:'on_time_count',direction:'up',value:on},{id:'overdue_seconds',direction:'down',value:metrics['visit.overdue_s']},{id:'observed_visit_seconds',direction:'down',value:metrics['visit.turnaround_observed_s']},{id:'unreleased_count',direction:'down',value:unrel},
    ...cls.map(c=>({id:`remaining_reference_seconds:${c}`,direction:'down',value:refFmt[c]})),{id:'remaining_required_kWh',direction:'down',value:num(energyLeft)},{id:'remaining_required_bytes',direction:'down',value:num(bytesLeft)}]};
   return {version:PROJECTION_VERSION,horizon_tick:H,arrival_window_tick:M.s.arrival_window_tick,target_soc_pct:M.s.requirements.energy.target_soc_pct,visits,
-   resources:{ports,positions,workers,lanes:M.lanes.map(l=>({id:l,busy_s:owned(l)})),vendor:{bay_busy_s:M.vendor.bay?owned('vendor:bay:01'):0,worker_busy_s:M.vendor.worker?owned('vendor:worker:01'):0},
+   resources:{ports,positions,owned_summary:{ports:summary(ports),positions:summary(positions)},workers,lanes:M.lanes.map(l=>({id:l,busy_s:owned(l)})),vendor:{bay_busy_s:M.vendor.bay?owned('vendor:bay:01'):0,worker_busy_s:M.vendor.worker?owned('vendor:worker:01'):0},
     site:{supply_w:M.s.site.supply_w,peak_draw_w:metrics['charge.peak_site_draw_w'],energy_credited_mj:metrics['charge.energy_credited_mj'],tight_s:tight.site},
     network:{useful_bytes_down:metrics['network.useful_bytes_down'],useful_bytes_up:metrics['network.useful_bytes_up'],tight_s:Object.fromEntries([...tight.net].filter(([,x])=>x>0).sort((a,b)=>a[0]<b[0]?-1:1))}},
    intervals,events:S.events,metrics,vector,blockage:S.blockage.map(b=>({classification:b.classification,member_visit_ids:b.member_visit_ids,held_resource_ids:b.held_resource_ids,terminal_holder_id:b.terminal_holder_id}))};

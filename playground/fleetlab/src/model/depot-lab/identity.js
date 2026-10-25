@@ -5,13 +5,16 @@ import {sha256} from '../../core/sha256.js';
 import {POLICY_BODY,REFERENCE_EFFORT,REFERENCE_EFFORT_VERSION} from './profiles.js';
 const encoder=new TextEncoder();
 const hex=b=>{let s='';for(const x of b)s+=(x<16?'0':'')+x.toString(16);return s;};
-export function frame(domain,value){
- const d=encoder.encode(domain),j=encoder.encode(jcs(value)),out=new Uint8Array(d.length+9+j.length);
+// Frames text that is already canonical (JCS), so a caller holding jcs(value) hashes it without a second pass.
+export function frameText(domain,text){
+ const d=encoder.encode(domain),j=encoder.encode(text),out=new Uint8Array(d.length+9+j.length);
  out.set(d,0);out[d.length]=0;let len=j.length;
  for(let k=7;k>=0;k--){out[d.length+1+k]=len%256;len=Math.floor(len/256);}
  out.set(j,d.length+9);return out;
 }
+export const frame=(domain,value)=>frameText(domain,jcs(value));
 export const H=(domain,value)=>hex(sha256(frame(domain,value)));
+export const Htext=(domain,text)=>hex(sha256(frameText(domain,text)));
 export const DIGEST=/^[0-9a-f]{64}$/;
 export const workloadProjection=s=>({horizon_tick:s.horizon_tick,arrival_window_tick:s.arrival_window_tick,requirements:s.requirements,task_windows:s.task_windows,vehicle_profile:s.vehicle_profile,content_objects:s.content_objects,visits:s.visits});
 export const workloadDigest=s=>H('fleetlab.depot.workload.v1',workloadProjection(s));

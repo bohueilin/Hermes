@@ -28,8 +28,9 @@ function mountShare({doc,session,io}){
  const link=button('Share setup link',()=>{
   const r=session.shareFragment();
   if(r.ok)return copy(base()+r.fragment,'Setup link copied. Opening it loads this setup and runs nothing.','setup link');
-  say(r.offer==='export'?`No link: this setup needs ${numberText(r.issues[0]?.value??0)} characters and links hold at most ${numberText(MAX_SHARE_CHARS)}. Export the configuration as a file instead.`:`No link was made: ${r.code}. Export the configuration as a file instead.`);
-  exporter.focus();
+  // Only the transport limit leaves the file route open; every other refusal is one the export gates repeat.
+  if(r.offer==='export'){say(`No link: this setup needs ${numberText(r.issues[0]?.value??0)} characters and links hold at most ${numberText(MAX_SHARE_CHARS)}. Export the configuration as a file instead.`);return exporter.focus();}
+  say(`No link was made: ${r.code}. ${r.code==='INCOMPLETE_RESOURCE_LIMIT'?`This setup needs ${numberText(r.issues[0]?.value??0)} bytes and a configuration holds at most ${numberText(MAX_ENVELOPE_BYTES)}`:'The configuration file applies the same checks'}, so it cannot be exported either. Change the setup first.`);
  });
  // Byte cap before parsing: text longer than the cap in UTF-16 units is already over it in UTF-8 bytes.
  const take=(text,bytes)=>{if(bytes>MAX_ENVELOPE_BYTES)return say(`Refused before parsing: larger than ${numberText(MAX_ENVELOPE_BYTES)} bytes. Nothing changed and nothing ran.`);const r=session.importText(text);say(r.ok?`Imported the configuration. ${OPENED}`:`Import refused: ${r.code}. The current setup is unchanged and nothing ran.`);};
@@ -37,10 +38,13 @@ function mountShare({doc,session,io}){
  file.addEventListener('change',read);
  doc.getElementById('share').replaceChildren(el('div',{class:'share-actions'},[link,exporter,summary,button('Copy summary',()=>copy(buildResultSummary(session.get()),'Summary copied with the three honesty statements.','summary'))]),out,
   el('div',{class:'import'},[el('label',{for:'import-text'},'Paste a configuration to import'),paste,button('Import setup',()=>{const t=paste.value;take(t,t.length>MAX_ENVELOPE_BYTES?t.length:new TextEncoder().encode(t).length);}),el('label',{},['Or import a configuration file',file])]));
+ let opened=null;
  return {
   render(s){summary.setAttribute('aria-disabled',String(s.status!=='verified'));},
-  // A #share= fragment in the page address opens the setup and never runs it.
-  open(){const h=io.location?.hash;if(typeof h!=='string'||!h.startsWith(SHARE_KEY))return;const r=session.openFragment(h);say(r.ok?`Opened a shared setup. ${OPENED}`:`The shared link was refused: ${r.code}. Nothing ran; a configuration file can be imported instead.`);},
+  // A #share= fragment in the page address opens the setup and never runs it, at page load and on a same-tab navigation
+  // to a different one (hashchange). Returning to the fragment this page last opened, such as Back after the skip link,
+  // keeps the visitor's draft and result; any other fragment is ignored. The address keeps the fragment for a reload.
+  open(){const h=io.location?.hash;if(typeof h!=='string'||!h.startsWith(SHARE_KEY)||h===opened)return;const r=session.openFragment(h);if(r.ok)opened=h;say(r.ok?`Opened a shared setup. ${OPENED}`:`The shared link was refused: ${r.code}. Nothing ran; a configuration file can be imported instead.`);},
  };
 }
 // Views: setup controls (questions, presets, counters, families), evidence, share and the depot schematic/inspector all
@@ -82,6 +86,7 @@ export function startDepotLab({createWorker,root=document,mounts=[],io={}}={}){
    else if(e.key==='Enter'||e.key===' '){e.preventDefault();activate(t);}
   });
  }
- render(session.get());share.open();
- return {session,dispose:()=>{depot.dispose?.();session.dispose();}};
+ const win=root.defaultView??g,hash=()=>share.open();
+ render(session.get());share.open();win.addEventListener?.('hashchange',hash);
+ return {session,dispose:()=>{win.removeEventListener?.('hashchange',hash);depot.dispose?.();session.dispose();}};
 }

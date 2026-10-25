@@ -91,10 +91,12 @@ test('A39: a 1 GB cold cache waits throughout; the 2 GB companion releases at 1,
 });
 test('incomplete and cancelled ledgers return their status with no projection',()=>{
  const s=validateScenario(preset('B').baseline,{origin:'editor'}).scenario;
- const inc=h.run(s,{guardOverrides:{maxRecords:50}}),e=verifyDepotRun(s,inc.ledger);
+ // The engine's guard travels beside the ledger; a lowered bound is accepted only when the caller allows it (tests).
+ const inc=h.run(s,{guardOverrides:{maxRecords:50}}),e=verifyDepotRun(s,inc.ledger,{claimedGuard:inc.guard,allowLoweredGuards:true});
  assert.equal(e.status,'INCOMPLETE_RESOURCE_LIMIT');assert.equal(e.consistency,'NOT_AVAILABLE');assert.equal(e.projection,null);assert.equal(e.digests.run,null);
+ assert.deepEqual(e.ledger.guard,inc.guard);assert.match(e.digests.prefix,/^[0-9a-f]{64}$/);
  const R=createDepotRun(s);stepDepotRun(R,{maxTicks:3});cancelDepotRun(R);const c=verifyDepotRun(s,stepDepotRun(R).ledger);
- assert.deepEqual([c.status,c.projection,c.primary_violation],['CANCELLED',null,null]);
+ assert.deepEqual([c.status,c.projection,c.primary_violation,c.ledger.guard],['CANCELLED',null,null,null]);assert.match(c.digests.prefix,/^[0-9a-f]{64}$/);
 });
 test('a harness ledger never verifies as a public run (BD-02)',()=>{
  const c=h.a35(),r=h.run(c.s,{harness:c.harness}),e=verifyDepotRun(c.s,r.ledger);

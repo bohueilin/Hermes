@@ -48,6 +48,8 @@ export const gbText=(bytes,digits=3)=>{const r=exactValue(bytes);return `${numbe
 export const kwText=(watts,digits=3)=>{const r=exactValue(watts);return `${numberText(Q(r.n,r.d*1000n),digits)} kW`;};
 export const percentText=(fraction,digits=1)=>{const r=exactValue(fraction);return `${numberText(Q(r.n*100n,r.d),digits)}%`;};
 export const rationalText=(v,digits=3)=>numberText(v,digits);
+// Display format and exact unit per vector component (note 18), shared by the page and every summary; time stays in seconds.
+export const componentKind=id=>id==='remaining_required_kWh'?[kwhText,'mJ']:id==='remaining_required_bytes'?[gbText,'bytes']:id==='on_time_count'||id==='unreleased_count'?[numberText,'visits']:[secondsText,'s'];
 // A signed change: "+" or "-" before the magnitude formatted by `format`; zero has no sign.
 export function signedText(v,format=secondsText){
  const r=exactValue(v);

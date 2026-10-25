@@ -139,7 +139,7 @@ test('garage, services and Wi-Fi edits reach their own paths in the candidate on
  const base=J(x.draft().baseline),c=()=>x.draft().candidate;
  x.commit('On-site repair capability','none',x.card('garage'));assert.equal(c().site.garage_level,'none');
  assert.ok(x.card('garage').textContent.includes('It does not remove faults from the work.'));
- assert.match(x.card('garage').textContent,/Specialist adds zero eligible tasks/);
+ assert.match(x.card('garage').textContent,/Specialist adds zero eligible tasks in this setup: no visit has a specialist fault\./);
  const maps=x.card('services').querySelectorAll('fieldset').find(f=>f.querySelector('legend').textContent==='Simulated map service access');
  x.commit('Service reachable','unreachable',maps);
  assert.deepEqual(c().services.maps,{service_reachable:'unreachable',entitlement:'valid'});
@@ -204,6 +204,32 @@ test('edits keep each control node and its focus; removing a row moves focus to 
  assert.equal(x.draft().candidate.site.ports.find(p=>p.id==='DC01').rating_w,100000);assert.equal(document.activeElement,rating);assert.equal(x.control('DC01 rating, in kW',en),rating);
  x.press('Remove DC03',en);
  assert.equal(x.draft().candidate.site.ports.some(p=>p.id==='DC03'),false);assert.equal(document.activeElement.getAttribute('aria-label'),'Charging position for a new port');
+}));
+
+// A11Y-01: a refused button press keeps its message attached to the pressed control and reaches the page's static
+// role=alert node (built here as the page has it); the next edit clears both.
+test('port, staff and typed refusals are associated with the pressed control and announced through the static alert',()=>run('B',x=>{
+ const alert=document.createElement('p');alert.setAttribute('id','error');alert.setAttribute('role','alert');alert.hidden=true;document.body.appendChild(alert);
+ const en=x.card('energy'),dc=x.press('Add DC port',en),said='Every charging position already has a port. Add a charging position in Space first.';
+ assert.equal(x.message(dc),said);assert.equal(x.by(dc.getAttribute('aria-describedby')).getAttribute('class'),'issue');
+ assert.equal(alert.hidden,false);assert.equal(alert.textContent,`AC/DC charging: ${said}`);
+ const ac=x.press('Add AC port',en);assert.equal(x.message(ac),said);assert.equal(dc.getAttribute('aria-describedby'),null,'only the pressed control carries the message');
+ let add;for(let i=0;i<20;i++)add=x.press('Add cleaner',x.card('staff'));
+ assert.equal(x.draft().candidate.workers.length,20);assert.equal(x.message(add),'At most 20 workers.');assert.equal(alert.textContent,'Staffing: At most 20 workers.');
+ const soc=x.commit('Target battery SOC for depot release (default 80%)',19);
+ assert.equal(alert.textContent,'Target battery SOC for depot release (default 80%): Enter a whole number from 20 to 100.');assert.equal(soc.getAttribute('aria-invalid'),'true');
+ x.press(`Remove ${x.draft().candidate.workers.at(-1).id}`,x.card('staff'));assert.equal(add.getAttribute('aria-describedby'),null);assert.equal(ac.getAttribute('aria-describedby'),null);
+ assert.ok(!document.querySelectorAll('[aria-live]').length,'the controls build no announcement region');
+}));
+
+// COPY-02: the Garage card states the specialist null only when no visit of the shown setup has a specialist fault.
+test('the Garage specialist statement follows the faults in the shown setup',()=>run('GN',x=>{
+ const g=()=>x.card('garage').textContent;
+ assert.match(g(),/Specialist adds zero eligible tasks in this setup: no visit has a specialist fault\./);
+ x.session.edit(a=>{a.visits[0].fault='specialist_electrical';},{scope:'both'});
+ assert.doesNotMatch(g(),/no visit has a specialist fault/);
+ assert.match(g(),/1 visit in this setup has a specialist fault, repaired on site only at Specialist; Basic and None route it to the vendor\./);
+ x.session.edit(a=>{a.visits[1].fault='specialist_electrical';},{scope:'both'});assert.match(g(),/2 visits in this setup have a specialist fault/);
 }));
 
 test('the controls module source passes the visitor-copy scan',()=>{

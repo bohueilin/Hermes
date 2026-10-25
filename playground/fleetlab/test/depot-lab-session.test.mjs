@@ -174,3 +174,14 @@ test('job: shape-checks the request first, reports engine failure and a stalled 
  assert.equal(ok.type,'result');assert.equal(jcs(seen),ok.ledger_texts.baseline);assert.ok(!Object.isFrozen(seen));
  assert.equal(runDepotJob(req,{...fakeModel(),stepDepotRun:()=>({done:true,ledger:{x:0.5}})}).type,'failed');
 });
+
+// SS-NEW-04: an import keeps a preset name by comparing the codec's scenario digests with that preset's memoized
+// digests; it no longer revalidates and serializes the preset on every open.
+test('SS-NEW-04: the preset label follows the codec scenario digests, with the arms digested only when none are given',()=>{
+ const make=c=>createDepotSession({workerFactory:()=>({postMessage(){},terminate(){}}),codec:c});
+ const src=make(codec);src.selectPreset('S200');const text=src.exportText().text;
+ const via=f=>{const s=make({...codec,decodeShareText:t=>f(codec.decodeShareText(t))});s.importText(text);return [s.get().preset,s.get().presentation.preset];};
+ assert.deepEqual(via(r=>r),['S200','S200']);
+ assert.deepEqual(via(r=>({...r,digests:{baseline:'0'.repeat(64),candidate:null}})),[null,null],'the label uses the digests the codec computed');
+ assert.deepEqual(via(r=>{const {digests,...rest}=r;return rest;}),['S200','S200'],'without codec digests the arms are digested');
+});

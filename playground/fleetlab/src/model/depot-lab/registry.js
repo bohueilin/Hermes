@@ -249,7 +249,7 @@ g({...RUN,o:'flow',tm:'per allocation interval',s:'C2.1',e:['ALLOCATION_DELTA','
  ['undrawn_final_tick','Final-tick undrawn allocation','Allocated but undrawn at a target or band edge; not a loss.',{t:'rational'}],
 ]);
 g({...RUN,t:'integer',u:'s',tm:'[0, H)',s:'C1.6; note 13'},'',[
- ['resource.owned_fraction','Owned or reserved share of time','Held unit-ticks over installed available unit-ticks; enabled and eligible denominators shown separately; zero is Not applicable.',{t:'rational',u:null,o:'resource',den:'installed available unit-ticks',e:[PR+'ports[].owned_ticks',PR+'positions[].owned_ticks'],n:['efficiency']}],
+ ['resource.owned_fraction','Owned or reserved share of time','Owned or reserved unit-ticks over three denominators: installed (units times the run), enabled (units switched on) and eligible (time a unit could be used; a port on an out-of-service position is not eligible). Each unit uses its eligible time. A zero denominator is Not applicable.',{t:'rational',u:null,o:'resource',den:'installed, enabled and eligible unit-ticks',e:[PR+'ports[].owned_fraction',PR+'positions[].owned_fraction',PR+'owned_summary'],n:['efficiency']}],
  ['resource.occupancy_now','Occupied at the cursor','Units held at the selected tick, separate from windowed shares.',{t:'state',u:null,o:'resource',tm:'cursor tick',e:['projection.intervals']}],
  ['worker.available_s','Worker available time','Availability in [0, H).',{o:'worker',e:[PR+'workers[].available_s']}],
  ['worker.busy_s','Worker busy time','Holding attended work; a pair counts for both.',{o:'worker',e:[PR+'workers[].busy_s']}],

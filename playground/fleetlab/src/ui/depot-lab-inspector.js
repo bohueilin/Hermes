@@ -1,9 +1,10 @@
 // Depot view at one shared cursor tick (note 13, 16): cursor, schematic, lists, inspector and events read the verified projection only.
 import {el,setAttr,setText,svgElement} from './dom.js';
 import {term} from '../model/depot-lab/registry.js';
-import {numberText,secondsText,hoursText,kwhText,gbText,kwText} from './depot-lab-format.js';
+import {numberText,secondsText,hoursText,kwhText,gbText,kwText,percentText} from './depot-lab-format.js';
 export const PAGE_ROWS=20,ZONE_LIMIT=48,TRAIL_DEPTH=4,REPLAY_MS=900,STEP_TICKS=900,REDUCED='(prefers-reduced-motion: reduce)';
 const ZONES=['waiting','garage','cleaning','charging'],ARMS=['baseline','candidate'];
+const DENOM=[['installed','Installed: every configured unit for the whole run'],['enabled','Enabled: units switched on'],['eligible','Eligible: time a unit could actually be used']];
 const ACCOUNTING='Shown first for time accounting only; a display convention, not a causal share.';
 const BLOCKED='Replay is off while reduced motion is requested, visual motion is paused or the page is hidden. Step with Next event instead.';
 const EMPTY='The depot view appears after a verified run of the current setup.';
@@ -30,6 +31,10 @@ const when=(t,H)=>t===0?'start of run':t===H?'end of run':`${hoursText(t)} into 
 const at=(t,H)=>[t===H?'End of run':hoursText(t),tech(` ${t} s`)];
 const place=l=>l.startsWith('position:')?`Position ${short(l)}`:lab(`visit.location.${l}`,l);
 const holders=v=>[...new Set(v.frontier_at_h.reasons.flatMap(r=>r.holder_visit_ids))].sort();
+// A lower bound under a minute keeps exact seconds, never "at least < 1 min".
+const least=x=>`at least ${x>0&&x<60?secondsText(x):hoursText(x)}`;
+// Release-by status from the verified on_time, due_status and overdue_s (exact tick comparisons made by the verifier).
+const dueStatus=v=>{const o=v.overdue_s,r=v.released_at;return v.due_tick===null?'No release-by time':v.on_time?'On time':v.due_status==='not_yet_due'?(r===null?'Not released by end of run; due after end of run, so not late yet':'Released before its release-by time, which falls after the end of run'):r===null?`Not released by end of run; ${o?`late by ${least(o)}`:'not on time'}`:`Late by ${hoursText(o)} (${secondsText(o)})`;};
 const amount=r=>[r.unit==='mJ'?kwhText(r.value):r.unit==='bytes'?gbText(r.value):hoursText(r.value),tech(` ${r.value} ${r.unit}`)];
 // Largest total of the verified per-reason waiting seconds; ties go to the lowest visit id; null when nobody waited.
 export function longestWaiting(visits){
@@ -130,17 +135,20 @@ export function mountDepot({doc,session}){
  };
  const vehicle=v=>{
   const H=X.H,w=find(v.waits,t,H),loc=find(v.location,t,H),f=v.frontier_at_h,rem=v.remaining,refs=Object.entries(rem.reference),waits=Object.entries(v.wait_seconds),until=x=>x===null?'not by end of run':when(x,H);
+  // A30: exact seconds always follow the release-by and release times, in both reading levels.
+  const d=v.due_tick,r=v.released_at,ex=x=>x===null?'':` (${secondsText(x)})`;
   return [el('h3',{},veh(v.id)),
    why===v.id&&X.longest?.id===v.id&&el('p',{class:'note'},`${veh(v.id)} is selected because it has the longest total waiting time.`),
-   el('p',{},[`State at end of run: ${lab('visit.state.'+v.state_at_h)}. Arrived: ${when(v.arrival_tick,H)}. Release-by time: ${v.due_tick===null?'none':when(v.due_tick,H)}.`,tech(` state_at_h ${v.state_at_h}; route ${v.route}; terminal_zone ${v.terminal_zone}; arrival_tick ${v.arrival_tick}; due_tick ${v.due_tick}`)]),
-   el('ol',{class:'release-chain'},[el('li',{},`Required work done: ${until(v.work_complete_at)}`),el('li',{},`Released from depot work: ${until(v.released_at)}`),el('li',{},'Eligible for a ride: not modeled in this version')]),
+   el('p',{},[`State at end of run: ${lab('visit.state.'+v.state_at_h)}. Arrived: ${when(v.arrival_tick,H)}. Release-by time: ${d===null?'none':when(d,H)+ex(d)}.`,tech(` state_at_h ${v.state_at_h}; route ${v.route}; terminal_zone ${v.terminal_zone}; arrival_tick ${v.arrival_tick}; due_tick ${d}`)]),
+   el('ol',{class:'release-chain'},[el('li',{},`Required work done: ${until(v.work_complete_at)}`),el('li',{},[`Released from depot work: ${until(r)}${ex(r)}`,tech(` released_at ${r}`)]),el('li',{},'Eligible for a ride: not modeled in this version')]),
+   el('p',{'data-due':v.due_status},['Release-by status: ',el('strong',{},dueStatus(v)),'.',tech(` due_status ${v.due_status}; on_time ${v.on_time}; overdue_s ${v.overdue_s}`)]),
    el('h4',{},'At the cursor'),el('p',{},`Where: ${loc?place(loc[2]):'not yet arrived'}.`),
    w?el('p',{'data-wait':w[2]},['Waiting: ',el('strong',{},lab('reason.'+w[2])),` from ${when(w[0],H)} to ${when(w[1],H)}. `,el('span',{class:'note'},ACCOUNTING),tech(` ${w[2]} [${w[0]}, ${w[1]})`)])
     :el('p',{},t<v.arrival_tick?'Not waiting: not yet arrived.':v.released_at!==null&&t>=v.released_at?'Not waiting: released from depot work.':'Not waiting: required work is progressing.'),
    t===H?el('div',{class:'frontier'},[el('p',{},f.task?`Frontier step at end of run: ${taskName(f.task)}. Full reason set:`:'No frontier step at end of run.'),f.reasons.length?el('ul',{},f.reasons.map(r=>el('li',{'data-reason':r.code},[el('strong',{},lab('reason.'+r.code)),r.resource_ids.length?`; units: ${r.resource_ids.map(short).join(', ')}`:'',r.holder_visit_ids.length?`; held by ${r.holder_visit_ids.map(veh).join(', ')}`:'',tech(` ${r.code}`)]))):null])
     :el('p',{class:'note'},['The full reason set and its holders are recorded at the end of the run. ',btn('Show end of run',()=>goto(H),{'data-key':'to-h'})]),
    holders(v).length?trailNode(v):null,
-   v.active_at_h.length?table('Started but could not finish by end of run',['Step','Class','Started','Remaining','Status',lab('active_at_h.minimum_duration_exceeded_time_left_at_start')],v.active_at_h.map(a=>{const m=a.minimum_duration_exceeded_time_left_at_start;return [step(a.template),a.cls,at(a.start,H),amount(a.remaining),'Started but could not finish by end of run',[m===null?'Not available':`${m?'Yes':'No'}; at least ${hoursText(a.lower_bound_ticks)} needed`,tech(` minimum_duration_exceeded_time_left_at_start ${m}; lower_bound_ticks ${a.lower_bound_ticks}`)]];}),[2,3]):null,
+   v.active_at_h.length?table('Started but could not finish by end of run',['Step','Class','Started','Remaining','Status',lab('active_at_h.minimum_duration_exceeded_time_left_at_start')],v.active_at_h.map(a=>{const m=a.minimum_duration_exceeded_time_left_at_start;return [step(a.template),a.cls,at(a.start,H),amount(a.remaining),'Started but could not finish by end of run',[m===null?'Not available':`${m?'Yes':'No'}; ${least(a.lower_bound_ticks)} needed`,tech(` minimum_duration_exceeded_time_left_at_start ${m}; lower_bound_ticks ${a.lower_bound_ticks}`)]];}),[2,3]):null,
    el('h4',{},'Remaining required work at end of run'),
    refs.length||rem.energy_mj||rem.bytes?el('ul',{},[...refs.map(([c,q])=>el('li',{},[`${lab('remaining_reference_seconds:'+c,c)}: ${secondsText(q)} of reference work`,tech(` ${c} ${q}`)])),rem.energy_mj?el('li',{},[`${lab('remaining_required_kWh')}: ${kwhText(rem.energy_mj)}`,tech(` ${rem.energy_mj} mJ`)]):null,rem.bytes?el('li',{},[`${lab('remaining_required_bytes')}: ${gbText(rem.bytes)}`,tech(` ${rem.bytes} bytes`)]):null]):el('p',{},'None.'),
    waits.length?el('div',{},[el('h4',{},lab('wait.reason_seconds')),el('p',{class:'note'},ACCOUNTING),el('ul',{},waits.map(([c,s])=>el('li',{},[`${lab('reason.'+c)}: ${hoursText(s)}`,tech(` ${c} ${s} s`)])))]):null,
@@ -149,15 +157,27 @@ export function mountDepot({doc,session}){
    el('p',{},[`Energy: ${kwhText(v.energy.initial_mj)} at arrival, ${kwhText(v.energy.target_mj)} target, ${kwhText(v.energy.credited_mj)} delivered.`,tech(` initial_mj ${v.energy.initial_mj}; target_mj ${v.energy.target_mj}; credited_mj ${v.energy.credited_mj}`)]),
    v.data.length?table(`Data for ${veh(v.id)}`,['Object','Direction','Required','Size','Received','State at end of run'],v.data.map(d=>[d.object.startsWith('logs:')?'Log backlog':short(d.object),d.direction==='down'?'Download':'Upload',d.mandatory?'Required':'Optional',gbText(d.bytes),[gbText(d.credited),tech(` ${d.credited} bytes`)],d.state?lab('data.state.'+d.state):'No bytes yet']),[3,4]):null];
  };
+ const share=f=>{try{return percentText(f);}catch{return String(f);}};
+ // Class totals over [0, H) from the verifier (C1.6): one share per named denominator; a zero denominator is not applicable.
+ const totals=kind=>{
+  const S=P.resources.owned_summary?.[`${kind}s`],all=`all ${kind}s`;
+  if(!S)return [el('p',{},`Owned or reserved share across ${all}: Not available.`)];
+  return [el('p',{},[`Across ${all} in this setup: owned or reserved for ${hoursText(S.owned_unit_ticks)} of unit time over the run.`,tech(` owned_unit_ticks ${S.owned_unit_ticks}`)]),
+   table(`Owned or reserved share across ${all}, by denominator`,['Denominator','Unit time','Share'],DENOM.map(([k,name])=>{const f=S.fraction[k];return [name,[hoursText(S[`${k}_unit_ticks`]),tech(` ${k}_unit_ticks ${S[`${k}_unit_ticks`]}`)],[f===null?'Not applicable':share(f),tech(` fraction.${k} ${f}`)]];}),[1,2])];
+ };
  const resName=id=>X.ports.has(id)?`Port ${short(id)}`:`Position ${short(id)}`;
  const resource=id=>{
   const port=X.ports.get(id)??null,r=port??X.pos.get(id),kind=port?'port':'position',pp=port?null:X.portAt.get(id),o=find((port?X.ivPort:X.ivPos).get(id),t,X.H);
+  // Out of service comes from the verified partition (unavailable for all of H, so owned_fraction is null), never from
+  // the unit's own flag alone: a port is also out of service while its position is.
+  const oos=r.partition.unavailable===X.H||r.owned_fraction===null,why=oos?port&&r.enabled?`; out of service because position ${short(port.position)} is out of service`:'; out of service':'';
   return [el('h3',{},resName(id)),
-   el('p',{},port?`${port.kind} port rated ${kwText(port.rating_w)} at position ${short(port.position)}${r.enabled?'':'; out of service'}.`:`${cap(r.zone)} position${pp?` with port ${short(pp.id)}`:''}${r.enabled?'':'; out of service'}.`),
+   el('p',{},port?`${port.kind} port rated ${kwText(port.rating_w)} at position ${short(port.position)}${why}.`:`${cap(r.zone)} position${pp?` with port ${short(pp.id)}`:''}${why}.`),
    el('p',{},[`${lab('resource.occupancy_now')}: ${o?.[2]?veh(o[2]):'nobody'}; ${o?lab(`${kind}.partition.${o[3]}`):'Not available'}.`,o&&tech(` ${o[3]} [${o[0]}, ${o[1]})`)]),
    table(`Time by class over the whole run, out of ${hoursText(X.H)} for this ${kind}`,['Class','Time'],Object.entries(r.partition).sort((a,b)=>(ORDER.indexOf(a[0])>>>0)-(ORDER.indexOf(b[0])>>>0)).map(([c,s])=>[[lab(`${kind}.partition.${c}`),tech(` ${c}`)],[`${hoursText(s)} of ${hoursText(X.H)}`,tech(` ${s} of ${X.H} s`)]]),[1]),
    !port&&el('p',{},[`${lab('position.port_released_position_held_s')}: ${hoursText(r.port_released_position_held_s)}.`,tech(` port_released_position_held_s ${r.port_released_position_held_s}`)]),
-   el('p',{},[`Owned or reserved: ${hoursText(r.owned_ticks)} of ${hoursText(X.H)}.`,tech(` owned_ticks ${r.owned_ticks}`)])];
+   // The share is the verifier's owned_fraction; an out-of-service unit has no available time, so it is not applicable.
+   el('p',{},[`${lab('resource.owned_fraction')}: ${oos?'Not applicable, out of service':r.owned_fraction===undefined?'Not available':share(r.owned_fraction)}${oos?'':`; held ${hoursText(r.owned_ticks)}`}.`,tech(` owned_fraction ${r.owned_fraction??null}; owned_ticks ${r.owned_ticks}`)]),...totals(kind)];
  };
  const inspect=()=>!sel?[el('p',{class:'empty'},'Choose a vehicle from the list, or a position or port on the schematic, to inspect it.')]:X.visits.has(sel)?vehicle(X.visits.get(sel)):X.pos.has(sel)||X.ports.has(sel)?resource(sel):[el('p',{class:'empty'},`${short(sel)} is not part of the ${arm} setup.`)];
  // Events filtered by the selection, split around the cursor; each part pages PAGE_ROWS rows, earlier events open on their last page.

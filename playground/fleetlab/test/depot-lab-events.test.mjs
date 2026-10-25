@@ -8,6 +8,7 @@ import {jcs,utf8Length} from '../src/model/depot-lab/canonical.js';
 import {H as digest} from '../src/model/depot-lab/identity.js';
 import {preset} from '../src/model/depot-lab/presets.js';
 import {validateScenario} from '../src/model/depot-lab/schema.js';
+import {verifyDepotRun} from '../src/model/depot-lab-verify/verify.js';
 const presetArm=(id,arm='baseline')=>validateScenario(preset(id)[arm],{origin:'editor'}).scenario;
 const B=presetArm('B'),FULL_B=h.run(B);
 const PHASE_KINDS=[['PROGRESS','TASK_TRANSITION','RESOURCE_DELTA','CONTENT_TRANSITION'],['SHIFT_CHANGE','ARRIVAL'],['WINDOW_OPEN','TASK_TRANSITION','CONTENT_TRANSITION'],['OBSERVATION'],['POLICY_DECISION','TASK_TRANSITION','RESOURCE_DELTA','CONTENT_TRANSITION'],['PROGRESS','ALLOCATION_DELTA'],['PROGRESS','CONTENT_TRANSITION','BLOCKAGE','HORIZON']];
@@ -97,6 +98,8 @@ test('record-count and ledger-byte guards keep only the last complete prefix',()
 test('record-size and chunk guards: smaller chunks still complete; an oversized single record refuses',()=>{
  const r2=h.run(B,{guardOverrides:{maxChunkEntries:2}});
  assert.equal(r2.terminal_status,'COMPLETE');checkStructure(r2.ledger);
+ // By design (note 19, AF-01): only contract-bound chunking verifies, so a test ledger chunked at 2 entries does not.
+ assert.equal(verifyDepotRun(B,r2.ledger).primary_violation?.code,'CHUNK_GROUP_INVALID');
  assert.ok(r2.ledger.records.filter(r=>['OBSERVATION','PROGRESS','ALLOCATION_DELTA'].includes(r.kind)).every(r=>(r.payload.facts??r.payload.changes).length<=2));
  const facts=l=>l.records.filter(r=>r.kind==='OBSERVATION').flatMap(r=>r.payload.facts);assert.deepEqual(facts(r2.ledger),facts(FULL_B.ledger));
  const r=h.run(B,{guardOverrides:{maxRecordBytes:500}});

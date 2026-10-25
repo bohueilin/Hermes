@@ -149,3 +149,16 @@ test('every export and summary carries the three honesty strings verbatim; only 
  assert.doesNotMatch(buildResultSummary({status:'stale',result:null}),/Exact metrics/);
  assert.doesNotMatch(summary.replace(HONESTY[0],''),/[\u2013\u2014]/);
 });
+
+// TRUST-01 and ARITH-03: the status line keeps its registry qualifier beside separate trust axes, and every comparison
+// component names its exact unit (an exact mJ value is labelled mJ with its kWh beside it; bytes with GB beside them).
+test('the result summary qualifies its status, keeps the trust axes apart and labels component units exactly',()=>{
+ const a=harness({preset:'B'}),st=a.runAndFinish('pair'),text=buildResultSummary(st);
+ assert.match(text,/^FleetLab depot lab run summary\nStatus: Internally consistent \(run state verified\)\. The independent verifier found the run internally consistent; not authenticated or authorized\.\nTrust: /);
+ for(const s of ['NOT_AUTHENTICATED','NOT_EVALUATED','Deployment permission NONE','Evidence status NOT_EVIDENCE','Internal consistency, baseline: INTERNALLY_CONSISTENT from the independent verifier','Internal consistency, candidate: INTERNALLY_CONSISTENT from the independent verifier'])assert.ok(text.includes(s),s);
+ for(const s of ['draft','verified','stale','invalid','could_not_reproduce'])assert.doesNotMatch(buildResultSummary({status:s,result:s==='verified'?st.result:null}),new RegExp(`^Status: ${s}$`,'m'),s);
+ const components=[{id:'remaining_required_kWh',direction:'down',baseline:129600000000,candidate:0,delta:-129600000000,relation:'better'},{id:'remaining_required_bytes',direction:'down',baseline:2000000000,candidate:2001000000,delta:1000000,relation:'worse'},{id:'overdue_seconds',direction:'down',baseline:6,candidate:0,delta:-6,relation:'better'}];
+ const lines=buildResultSummary({...st,result:{...st.result,comparison:{...st.result.comparison,components}}}).split('\n');
+ for(const l of ['  remaining_required_kWh (down): baseline 129600000000 mJ (36 kWh); candidate 0 mJ (0 kWh); change -129600000000 mJ (-36 kWh); better','  remaining_required_bytes (down): baseline 2000000000 bytes (2 GB); candidate 2001000000 bytes (2.001 GB); change 1000000 bytes (+0.001 GB); worse','  overdue_seconds (down): baseline 6 s; candidate 0 s; change -6 s; better'])assert.ok(lines.includes(l),l);
+ assert.ok(!lines.some(l=>/remaining_required_kWh .*baseline 129600000000;/.test(l)),'no exact mJ value sits unlabelled under the kWh id');
+});

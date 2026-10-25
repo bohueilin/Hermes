@@ -5,7 +5,7 @@ import {compileScenario,harnessInitialState} from '../depot-lab/task-graph.js';
 import {refs,H as digestOf} from '../depot-lab/identity.js';
 import {jcs} from '../depot-lab/canonical.js';
 import {Q,eq,formatRational} from '../depot-lab/rational.js';
-import {socEnergy,bandAt,nextBandEdge} from '../depot-lab/units.js';
+import {socEnergy,bandAt,nextBandEdge,PACK_MJ} from '../depot-lab/units.js';
 import {evaluate,checkClaim,codeKey,byWorklist} from './policy-check.js';
 import {maxMin,characterize,creditAt,slackAt,undrawnAt,closeTick} from './allocation-check.js';
 import {horizonRecords,checkHorizonAccounting} from './blockage.js';
@@ -46,13 +46,21 @@ const stepOf=T=>STEP[T.template.slice(T.template.lastIndexOf('_')+1)]??null;
 const isContent=T=>T.kind==='data'&&T.data.direction==='down'||T.kind==='timed'&&!!T.object;
 // Violation precedence for findings deferred to the end of a tick (note 10.2): lifecycle before information.
 const LATE={MISSING_COMPLETION:0,OBSERVATION_REFERENCE_INVALID:1,OBSERVATION_MISMATCH:2};
-export function replay(M,groups,rec){
+// partial: false for COMPLETE, else the prefix's status. A CANCELLED prefix is whole event ticks (the engine cancels
+// between steps). An INCOMPLETE_RESOURCE_LIMIT prefix ends where its confirmed guard refused the next step (cut):
+// 'event', the first read past the last record at its tick; 'quantum', phase 5 of the last tick, whose sub-quantum
+// interval the replay derives (S.cut); 'horizon', the BLOCKAGE record at H that the replay expects next (S.cut).
+export function replay(M,groups,rec,{partial=false,cut=null}={}){
+ const CUT={},end=groups.length?groups[groups.length-1].tick:-1,cutTick=cut==='event'?end:null;
  const S={ts:new Map(),vs:new Map(),own:new Map(),flows:new Map(),storage:new Map(),cacheUsed:0n,facts:new Map(),pub:new Map(),dirty:new Set(),obs:{seq:null,digest:null,any:false},
   queue:new Set(),running:new Set(),cand:new Set(),events:[],busy:new Map(),since:new Map(),closing:[],dirtyDom:{charge:false,data:false},horizon:null,blockage:[],credit:{charge:0n,down:0n,up:0n}};
  const H=M.H,s=M.s;let gi=0,t=-1,late=null;
  const fail=(code,detail,g=groups[gi])=>{throw new Violation(code,detail,g??{seq:groups[gi-1]?.last??null,tick:t});};
  const defer=(code,detail,g)=>{if(!late||LATE[code]<LATE[late.code])late={code,detail,g};};
- const peek=ph=>{const g=groups[gi];return g&&g.tick===t&&(ph===undefined||g.phase===ph)?g:null;};
+ const peekIn=ph=>{const g=groups[gi];return g&&g.tick===t&&(ph===undefined||g.phase===ph)?g:null;};
+ // A read for the first record of a new engine event (each event is committed whole); past the last record at the cut
+ // tick it is the refused step. Reads inside one event, and trailing checks, use peekIn.
+ const peek=ph=>{if(gi>=groups.length&&t===cutTick)throw CUT;return peekIn(ph);};
  const T_=id=>M.tasks.get(id),V_=T=>T.visit?S.vs.get(T.visit):null;
  // ----- facts (depot_observation_v1, BD-12) -----
  const fact=(e,f,v)=>{const k=`${e}|${f}`,o=S.facts.get(k);if(o&&o[2]===v)return;S.facts.set(k,[e,f,v]);S.dirty.add(k);};
@@ -72,10 +80,10 @@ export function replay(M,groups,rec){
  const applyChanges=cs=>{for(const c of cs){if(c.change==='RELEASE')drop(c.resource_id);else take(c.resource_id,c.owner_task_id,c.change==='RESERVE'?'R':'A',t);}};
  const event=(T,tr)=>S.events.push([t,T.visit?`visit:${T.visit}`:null,T.template,tr]);
  // ----- initial state -----
- for(const T of M.tasks.values())S.ts.set(T.id,{st:'UNREADY',ready:null,first:null,start:null,end:null,endAt:null,action:null,firstAction:null,workers:[],lane:null,dest:null,port:null,pos:null,origin:null,mem:null,credited:0n,pend:T.prereqs.length,atTarget:false,cs:null});
+ for(const T of M.tasks.values())S.ts.set(T.id,{st:'UNREADY',ready:null,first:null,start:null,end:null,endAt:null,action:null,firstAction:null,workers:[],lane:null,dest:null,port:null,pos:null,origin:null,mem:null,credited:0n,pend:T.prereqs.length,cs:null});
  for(const p of M.plans){
   const v=p.visit;let res=BigInt(v.initial_log_bytes);for(const o of v.installed_object_ids)res+=BigInt(M.objects.get(o).size_bytes);
-  S.vs.set(p.id,{ref:p.ref,plan:p,arrived:false,loc:null,locSeg:[],energy:socEnergy(v.initial_soc_pct),portRef:null,connected:false,running:new Set(),pos:new Map(),workDone:null,released:null,hpos:null});
+  S.vs.set(p.id,{ref:p.ref,plan:p,arrived:false,loc:null,locSeg:[],energy:socEnergy(v.initial_soc_pct),e0:socEnergy(v.initial_soc_pct),portRef:null,connected:false,running:new Set(),pos:new Map(),workDone:null,released:null,hpos:null});
   S.storage.set(p.id,{res,rsv:0n});
  }
  const life=new Map();
@@ -147,8 +155,10 @@ export function replay(M,groups,rec){
   F.close=Infinity;S.dirtyDom[F.dom]=true;
  }
  function credit(F,amount){
-  const ts=S.ts.get(F.T.id);ts.credited+=amount;
-  if(F.dom==='charge'){V_(F.T).energy+=amount;S.credit.charge+=amount;}else S.credit[F.T.data.direction==='up'?'up':'down']+=amount;
+  const T=F.T,ts=S.ts.get(T.id),vs=V_(T);ts.credited+=amount;
+  if(F.dom==='charge'){vs.energy+=amount;S.credit.charge+=amount;}else S.credit[T.data.direction==='up'?'up':'down']+=amount;
+  // Replay invariants (D1-04): credit never exceeds the task remainder; energy never exceeds max(initial, target) or the pack.
+  if(amount<0n||(F.dom==='charge'?vs.energy>(M.target>vs.e0?M.target:vs.e0)||vs.energy>PACK_MJ:ts.credited>BigInt(T.data.bytes)))fail('PROGRESS_MISMATCH',`${F.id} credited beyond its remainder`,groups[gi-1]);
  }
  const item=(F,after,slack,undrawn,to)=>({allocation_anchor_tick:F.anchor,anchor_credited_after:Number(after),anchor_credited_before:Number(F.before),credited:Number(after-F.before),flow_id:F.id,from_tick:F.from,quantization_slack:slack,to_tick:to,undrawn_final_tick:undrawn});
  function matchProgress(g,items){
@@ -157,29 +167,34 @@ export function replay(M,groups,rec){
  }
  // ----- phase 0: closures and completions -----
  function phase0(){
-  const closing=[...S.flows.values()].filter(F=>F.close===t).sort((a,b)=>text(a.id,b.id));
+  const closing=[...S.flows.values()].filter(F=>F.close===t).sort((a,b)=>text(a.id,b.id)),due=[];
   let g=peek(0);
   if(closing.length){
    if(!g||g.kind!=='PROGRESS')fail('PROGRESS_MISMATCH','missing closure credit',g);
    matchProgress(g,closing.map(F=>item(F,F.R,'0/1',formatRational(undrawnAt(F.rate,F.anchor,t,F.R)),t)));gi++;
+   // A closed interval is never credited again. A flow at its target leaves both allocation domains and its task must
+   // complete in this phase (note 8.3 phase 0); a band edge reopens at once, except at H, where no H item exists (F4).
    for(const F of closing){
-    credit(F,F.R-F.before);
-    if(F.toTarget){F.close=Infinity;S.ts.get(F.T.id).atTarget=true;}else open(F);
+    credit(F,F.R-F.before);F.before=F.R;F.from=t;F.close=Infinity;
+    if(F.toTarget){S.flows.delete(F.id);S.dirtyDom[F.dom]=true;S.ts.get(F.T.id).end=t;due.push(F.T.id);}else if(t<H)open(F);else F.anchor=null;
    }
   }else if(g&&g.kind==='PROGRESS')fail('PROGRESS_MISMATCH','unexpected closure credit',g);
-  let prev='';
+  let prev='';S.p0={due,prev:'',done:false};
   while((g=peek(0))){
-   if(g.kind==='TASK_TRANSITION'&&g.p.transition==='COMPLETE'){complete(g,prev);prev=g.p.task_id;continue;}
+   if(g.kind==='TASK_TRANSITION'&&g.p.transition==='COMPLETE'){complete(g,prev);prev=g.p.task_id;S.p0.prev=prev;continue;}
    if(g.kind==='CONTENT_TRANSITION')fail(contentCode(g.p),`${g.p.transition} for ${g.p.object_id} without its completion`,g);
    if(g.kind==='RESOURCE_DELTA'){ownCheck(g,null);fail('RESOURCE_BUNDLE_MISMATCH','delta without completion',g);}
    if(g.kind==='PROGRESS')fail('PROGRESS_MISMATCH','credit after completions',g);
    fail('TASK_STATE_INVALID',`${g.p.transition??g.kind} in completion phase`,g);
   }
+  // Deferred to the end of the tick (note 10.2): a later same-tick lifecycle violation reports first.
+  S.p0.done=true;
+  for(const id of due)if(S.ts.get(id).st!=='COMPLETE')defer('MISSING_COMPLETION',`${id} reached its target at ${t}`,groups[gi-1]);
  }
  const contentCode=p=>p.owner_id==='cache:depot'&&(p.transition==='RECLAIMED'||p.transition==='RECEIVED_PROVISIONAL')?'UNAUTHORIZED_CACHE_EVICTION_OR_BYPASS':'UNSATISFIED_CONTENT_LIFECYCLE_PREREQUISITE';
  const content=(owner,object,transition,bytes)=>({bytes:Number(bytes),object_id:object,owner_id:owner,transition});
  function expectContent(c){
-  const g=peek();
+  const g=peekIn();
   if(!g||g.kind!=='CONTENT_TRANSITION'||g.phase!==groups[gi-1].phase)fail('UNSATISFIED_CONTENT_LIFECYCLE_PREREQUISITE',`missing ${c.transition} for ${c.object_id}`,g);
   if(jcs(g.p)!==jcs(c))fail(contentCode(g.p),`${g.p.transition} for ${g.p.object_id}`,g);
   gi++;life.set(`${c.owner_id}|${c.object_id}`,c.transition);
@@ -189,7 +204,7 @@ export function replay(M,groups,rec){
   const ts=S.ts.get(id),vs=V_(T);
   if(ts.st==='COMPLETE')fail('DUPLICATE_COMPLETION',id,g);
   if(ts.st!=='RUNNING')fail('TASK_STATE_INVALID',`${id} completes from ${ts.st}`,g);
-  if(ts.end!==t&&!ts.atTarget)fail('COMPLETION_TIME_MISMATCH',`${id} due at ${ts.end}`,g);
+  if(ts.end!==t)fail('COMPLETION_TIME_MISMATCH',`${id} due at ${ts.end}`,g);
   if(id<=prev)fail('RECORD_ORDER_INVALID','completions out of task order',g);
   if(g.p.action_id!==ts.firstAction)fail('UNKNOWN_REFERENCE',`${id} completes ${g.p.action_id}`,g);
   if(g.p.observation_seq!==null)fail('OBSERVATION_REFERENCE_INVALID',id,g);
@@ -201,7 +216,7 @@ export function replay(M,groups,rec){
   if(T.template==='unplug')rel(vs.portRef);
   if(T.kind==='vendor')ch.push(change('RELEASE','vendor:bay:01',id),change('RELEASE','vendor:worker:01',id));
   ch.sort((a,b)=>text(a.resource_id,b.resource_id));
-  const d=peek(0);
+  const d=peekIn(0);
   if(ch.length){if(!d||d.kind!=='RESOURCE_DELTA'||d.p.action_id!==ts.firstAction)fail('RESOURCE_BUNDLE_MISMATCH',`${id} completion without its release`,d);delta(d,ch,null);gi++;applyChanges(ch);}
   else if(d&&d.kind==='RESOURCE_DELTA'&&d.p.action_id===ts.firstAction){ownCheck(d,null);fail('RESOURCE_BUNDLE_MISMATCH',`${id} completion changes no unit`,d);}
   const own=vs?vs.ref:'cache:depot';
@@ -225,7 +240,7 @@ export function replay(M,groups,rec){
   if(T.template==='inspection')vs.workDone=t;
   if(T.template==='egress')for(const U of vs.plan.tasks){
    const us=S.ts.get(U.id);if(U.template!=='upload'||U.mandatory||us.st==='COMPLETE'||us.st==='CANCELLED'||us.st==='UNREADY')continue;
-   const c=peek(0);
+   const c=peekIn(0);
    if(!c||c.kind!=='TASK_TRANSITION'||c.p.transition!=='CANCEL'||c.p.task_id!==U.id||c.p.action_id!==ts.firstAction||c.p.observation_seq!==null)fail('TASK_STATE_INVALID',`optional ${U.id} not cancelled at release`,c);
    gi++;setState(U,'CANCELLED');us.endAt=t;S.queue.delete(U.id);S.running.delete(U.id);vs.running.delete(U.id);S.flows.delete(flowId(U));event(U,'CANCEL');
    if(us.credited>0n){expectContent(content(vs.ref,refs.logs(T.visit),'RECEIVED_PROVISIONAL',us.credited));setCs(U,'received_provisional');}
@@ -242,7 +257,7 @@ export function replay(M,groups,rec){
    for(const T of vs.plan.tasks){taskFacts(T);if(S.ts.get(T.id).st==='UNREADY'&&S.ts.get(T.id).pend===0)S.cand.add(T.id);}
    const intake=`task:${vs.plan.id}:intake`;for(const T of M.compiled.cacheTasks)if(!shown.has(T.id)&&T.anyPrereqs.includes(intake)){shown.add(T.id);taskFacts(T);}
   }
-  const g=peek(1);if(g)fail(g.kind==='ARRIVAL'?'LOCATION_VIOLATION':'SHIFT_VIOLATION',`unexpected ${g.kind}`,g);
+  const g=peekIn(1);if(g)fail(g.kind==='ARRIVAL'?'LOCATION_VIOLATION':'SHIFT_VIOLATION',`unexpected ${g.kind}`,g);
  }
  // ----- phase 2: window boundaries, readiness and zero-duration acknowledgments -----
  function phase2(){
@@ -250,14 +265,14 @@ export function replay(M,groups,rec){
    const T=T_(id),st=S.ts.get(id).st;if(!visible(T)||st==='COMPLETE'||st==='CANCELLED')continue;
    const g=peek(2);if(!g||g.kind!=='WINDOW_OPEN'||g.p.task_id!==id)fail('WINDOW_VIOLATION',`window of ${id} at ${t}`,g);gi++;
   }
-  if(peek(2)?.kind==='WINDOW_OPEN')fail('WINDOW_VIOLATION','unexpected window',peek(2));
+  if(peekIn(2)?.kind==='WINDOW_OPEN')fail('WINDOW_VIOLATION','unexpected window',peekIn(2));
   const acks=[];
   for(const id of [...S.cand]){S.cand.delete(id);const T=T_(id);if(ready(T)&&T.kind==='zero')acks.push(id);}
   for(const id of acks.sort()){
    const T=T_(id),ts=S.ts.get(id),vs=V_(T),a=peek(2);
    if(!a||a.kind!=='TASK_TRANSITION'||a.p.transition!=='START'||a.p.task_id!==id)fail('TASK_STATE_INVALID',`${id} not closed at ${t}`,a);
    const action=refs.action(t,1,a.ord);if(a.p.action_id!==action)fail('UNKNOWN_REFERENCE',`${id} action`,a);if(a.p.observation_seq!==null)fail('OBSERVATION_REFERENCE_INVALID',id,a);gi++;
-   const c=peek(2);if(!c||c.kind!=='TASK_TRANSITION'||c.p.transition!=='COMPLETE'||c.p.task_id!==id||c.p.action_id!==action||c.p.observation_seq!==null)fail('TASK_STATE_INVALID',`${id} closure`,c);gi++;
+   const c=peekIn(2);if(!c||c.kind!=='TASK_TRANSITION'||c.p.transition!=='COMPLETE'||c.p.task_id!==id||c.p.action_id!==action||c.p.observation_seq!==null)fail('TASK_STATE_INVALID',`${id} closure`,c);gi++;
    const logs=refs.logs(T.visit),n=BigInt(vs.plan.visit.initial_log_bytes);
    if(life.get(`${vs.ref}|${logs}`)!=='OBJECT_COMPLETE')fail('UNSATISFIED_CONTENT_LIFECYCLE_PREREQUISITE',`${logs} acknowledged before complete`,a);
    expectContent(content(vs.ref,logs,'DURABLE_ACKNOWLEDGED',n));expectContent(content(vs.ref,logs,'RECLAIMED',n));
@@ -265,7 +280,7 @@ export function replay(M,groups,rec){
    S.storage.get(T.visit).res-=n;setCs(T_(refs.task(T.visit,'upload')),'reclaimed');
   }
   for(const id of [...S.cand]){S.cand.delete(id);ready(T_(id));}
-  const g=peek(2);if(g)fail(g.kind==='CONTENT_TRANSITION'?contentCode(g.p):'TASK_STATE_INVALID',`unexpected ${g.kind} at ${t}`,g);
+  const g=peekIn(2);if(g)fail(g.kind==='CONTENT_TRANSITION'?contentCode(g.p):'TASK_STATE_INVALID',`unexpected ${g.kind} at ${t}`,g);
  }
  // ----- phase 3: observation group, net deltas and the state digest chain (BD-12, BD-13) -----
  function phase3(){
@@ -285,7 +300,7 @@ export function replay(M,groups,rec){
   S.obs.digest=d;S.obs.any=true;for(const k of keys)S.pub.set(k,S.facts.get(k)[2]);S.dirty.clear();
  }
  // ----- phase 4: the fixed policy worklist (note 8.4, BD-08) -----
- function readGroup(g){const out=[g];gi++;let r;while((r=peek(4))&&r.kind!=='POLICY_DECISION'){out.push(r);gi++;if(r.kind==='TASK_TRANSITION'&&(r.p.transition==='START'||r.p.transition==='RESUME'))break;}return out;}
+ function readGroup(g){const out=[g];gi++;let r;while((r=peekIn(4))&&r.kind!=='POLICY_DECISION'){out.push(r);gi++;if(r.kind==='TASK_TRANSITION'&&(r.p.transition==='START'||r.p.transition==='RESUME'))break;}return out;}
  function header(d){
   if(d.p.action_id!==refs.action(t,1,d.ord))fail('UNKNOWN_REFERENCE',`decision action ${d.p.action_id}`,d);
   if(d.p.observation_seq!==S.obs.seq)fail('OBSERVATION_REFERENCE_INVALID',`decision references ${d.p.observation_seq}`,d);
@@ -303,12 +318,13 @@ export function replay(M,groups,rec){
    if(r.kind!=='CONTENT_TRANSITION'&&r.p.action_id!==d.p.action_id)fail('UNKNOWN_REFERENCE',`action ${r.p.action_id}`,r);
    if(r.kind==='TASK_TRANSITION'&&r.p.observation_seq!==d.p.observation_seq)fail('OBSERVATION_REFERENCE_INVALID',r.p.task_id,r);
    if(r===last)break;
-   if(r.kind==='TASK_TRANSITION'&&r.p.transition==='PAUSE'&&!stage)parts.pauses.push(r.p.task_id);
+   if(r.kind==='TASK_TRANSITION'&&r.p.transition==='PAUSE'&&!stage){if(r.p.task_id<=(parts.pauses.at(-1)??''))fail('RECORD_ORDER_INVALID','pauses not in ascending task order',r);parts.pauses.push(r.p.task_id);}
    else if(r.kind==='RESOURCE_DELTA'&&stage<1){stage=1;parts.delta=r;}
    else if(r.kind==='CONTENT_TRANSITION'&&stage<2){stage=2;parts.content=r;}
    else fail('TASK_STATE_INVALID',`action group order at ${r.kind}`,r);
   }
-  for(const id of parts.pauses){const P=T_(id);if(!P||P.visit!==T.visit||S.ts.get(id).st!=='RUNNING'||P.kind!=='data')fail('OVERLAP_VIOLATION',`pause of ${id}`,grp[1]);}
+  // A paused transfer still has its flow; one closed at its target this tick cannot be paused (FD-01).
+  for(const id of parts.pauses){const P=T_(id);if(!P||P.visit!==T.visit||S.ts.get(id).st!=='RUNNING'||P.kind!=='data'||!S.flows.has(flowId(P)))fail('OVERLAP_VIOLATION',`pause of ${id}`,grp[1]);}
   const ch=parts.delta?.p.changes??[];
   if(parts.delta){ownCheck(parts.delta,T.id);locCheck(parts.delta);}
   // bundle shape
@@ -365,7 +381,7 @@ export function replay(M,groups,rec){
   accepted(readGroup(g),'stray',null);
  }
  // ----- phase 5: both allocation domains, closures by reallocation or pause, changed flows (C2.1, BD-11) -----
- function phase5(){
+ function allocate(){
   const act=[...S.flows.values()],alloc=new Map();
   for(const F of act)if(F.anchor===null)open(F);
   for(const dom of ['charge','data'])if(S.dirtyDom[dom]){const fl=act.filter(F=>F.dom===dom);for(const [k,v]of maxMin(fl,M.caps))alloc.set(k,v);}
@@ -377,9 +393,25 @@ export function replay(M,groups,rec){
    if(F.anchor!==null&&F.anchor<t&&F.rc)closes.push(F);
   }
   want.sort((a,b)=>text(a.id,b.id));closes.sort((a,b)=>text(a.id,b.id));
+  return {act,want,closes};
+ }
+ const credits=closes=>closes.map(F=>item(F,creditAt(F.rate,F.anchor,t,F.R),formatRational(slackAt(F.rate,F.anchor,t)),'0/1',t));
+ const reopen=closes=>{for(const F of closes){credit(F,creditAt(F.rate,F.anchor,t,F.R)-F.before);if(S.flows.has(F.id))open(F);}};
+ // The engine's phase 5 up to its sub-quantum refusal, which precedes every phase-5 record (C2.1, note 19): the first
+ // interval opened at t, charge then data by id, whose positive share cannot credit by H; null when there is none.
+ function subQuantum(){
+  const {act,closes}=allocate();reopen(closes);
+  for(const dom of ['charge','data'])for(const F of act.filter(F=>F.dom===dom).sort((a,b)=>text(a.id,b.id)))
+   if(F.anchor===t&&F.next.rate.n>0n&&F.R>0n&&creditAt(F.next.rate,t,H,F.R)===0n)return {anchor_tick:t,flow_id:F.id,horizon_tick:H,rate:formatRational(F.next.rate),remainder:F.R.toString()};
+  return null;
+ }
+ function phase5(){
+  const {act,want,closes}=allocate();
   let gp=peek(5);if(gp&&gp.kind==='PROGRESS')gi++;else gp=null;
+  // PROGRESS and ALLOCATION_DELTA are separate commits: a cut between them still checks the credit.
+  if(gp&&gi>=groups.length&&t===cutTick){matchProgress(gp,credits(closes));reopen(closes);throw CUT;}
   let ga=peek(5);if(ga&&ga.kind==='ALLOCATION_DELTA')gi++;else ga=null;
-  if(peek(5))fail('RECORD_ORDER_INVALID',`unexpected ${peek(5).kind}`,peek(5));
+  if(peekIn(5))fail('RECORD_ORDER_INVALID',`unexpected ${peekIn(5).kind}`,peekIn(5));
   const listed=ga?.p.changes??[],by=new Map();let prev='';
   for(const c of listed){
    const F=S.flows.get(c.flow_id);if(!F)fail('UNKNOWN_REFERENCE',`allocation for inactive ${c.flow_id}`,ga);
@@ -391,9 +423,9 @@ export function replay(M,groups,rec){
   const rates=new Map(act.map(F=>[F.id,by.has(F.id)?Q(...ratio(by.get(F.id).rate)):F.rate]));
   for(const dom of ['charge','data']){const fl=act.filter(F=>F.dom===dom);if(fl.length){const c=characterize(fl,rates,M.caps);if(c)fail(c,`${dom} allocation at ${t}`,ga);}}
   for(const [id,c]of by){const F=S.flows.get(id);if(!eq(rates.get(id),F.next.rate)||c.tight_resource_ids.join()!==F.next.tight.join())fail('ALLOCATION_NOT_MAX_MIN',`bottleneck witness of ${id}`,ga);if(!want.includes(F))fail('ALLOCATION_DELTA_INCOMPLETE',`${id} listed without a change`,ga);}
-  const items=closes.map(F=>{const after=creditAt(F.rate,F.anchor,t,F.R);return item(F,after,formatRational(slackAt(F.rate,F.anchor,t)),'0/1',t);});
+  const items=credits(closes);
   if(items.length){if(!gp)fail('PROGRESS_MISMATCH','missing reallocation credit',ga??groups[gi]);matchProgress(gp,items);}else if(gp)fail('PROGRESS_MISMATCH','unexpected reallocation credit',gp);
-  for(const F of closes){credit(F,creditAt(F.rate,F.anchor,t,F.R)-F.before);if(S.flows.has(F.id))open(F);}
+  reopen(closes);
   for(const F of act){
    F.rate=F.next.rate;F.tight=F.next.tight;F.isNew=false;
    if(F.anchor===t){
@@ -407,8 +439,8 @@ export function replay(M,groups,rec){
  const ratio=r=>{const [p,q]=r.split('/');return [BigInt(p),BigInt(q)];};
  // ----- phase 6 at H: horizon reports, provisional bytes, blockage and all-arrivals accounting -----
  function phase6(){
-  let g=peek();if(g&&(g.phase===4||g.phase===5))fail('START_AT_HORIZON',`${g.kind} at H`,g);
-  const act=[...S.flows.values()].sort((a,b)=>text(a.id,b.id));
+  let g=peekIn();if(g&&(g.phase===4||g.phase===5))fail('START_AT_HORIZON',`${g.kind} at H`,g);
+  const act=[...S.flows.values()].filter(F=>F.anchor!==null).sort((a,b)=>text(a.id,b.id));
   g=peek(6);
   if(act.length){
    if(!g||g.kind!=='PROGRESS')fail('PROGRESS_MISMATCH','missing horizon report',g);
@@ -419,14 +451,19 @@ export function replay(M,groups,rec){
   for(const T of M.tasks.values()){const ts=S.ts.get(T.id);if(T.kind==='data'&&(ts.st==='RUNNING'||ts.st==='PAUSED')&&ts.credited>0n)prov.push([T,content(T.visit?`visit:${T.visit}`:'cache:depot',T.data.direction==='up'?refs.logs(T.visit):`object:${T.data.object}`,'RECEIVED_PROVISIONAL',ts.credited)]);}
   prov.sort((a,b)=>text(a[1].owner_id,b[1].owner_id)||text(a[1].object_id,b[1].object_id));
   for(const [T,c]of prov){const x=peek(6);if(!x||x.kind!=='CONTENT_TRANSITION'||jcs(x.p)!==jcs(c))fail(x?.kind==='CONTENT_TRANSITION'?contentCode(x.p):'UNSATISFIED_CONTENT_LIFECYCLE_PREREQUISITE',`provisional bytes of ${T.id}`,x);gi++;life.set(`${c.owner_id}|${c.object_id}`,c.transition);setCs(T,'received_provisional');}
-  if(peek(6)?.kind==='CONTENT_TRANSITION')fail(contentCode(peek(6).p),'unexpected content at H',peek(6));
+  if(peekIn(6)?.kind==='CONTENT_TRANSITION')fail(contentCode(peekIn(6).p),'unexpected content at H',peekIn(6));
   const want=horizonRecords(M,S,H);
-  for(const e of want){const x=peek(6);if(!x||x.kind!=='BLOCKAGE'||jcs(x.p)!==jcs(e))fail(x?.kind==='BLOCKAGE'&&x.p.classification==='DEADLOCK_DECLARED'&&e.classification!=='DEADLOCK_DECLARED'?'UNPROVEN_DEADLOCK':'BLOCKAGE_MISMATCH',`blockage of ${e.member_visit_ids[0]}`,x);gi++;}
-  if(peek(6)?.kind==='BLOCKAGE'){const x=peek(6);fail(x.p.classification==='DEADLOCK_DECLARED'?'UNPROVEN_DEADLOCK':'BLOCKAGE_MISMATCH','unsupported blockage record',x);}
+  // A VECTOR_LIMIT or BLOCKAGE RECORD_BYTES prefix ends exactly before the record the replay expects next.
+  for(const e of want){const x=peek(6);if(!x&&cut==='horizon'&&gi>=groups.length){S.cut=e;throw CUT;}if(!x||x.kind!=='BLOCKAGE'||jcs(x.p)!==jcs(e))fail(x?.kind==='BLOCKAGE'&&x.p.classification==='DEADLOCK_DECLARED'&&e.classification!=='DEADLOCK_DECLARED'?'UNPROVEN_DEADLOCK':'BLOCKAGE_MISMATCH',`blockage of ${e.member_visit_ids[0]}`,x);gi++;}
+  if(peekIn(6)?.kind==='BLOCKAGE'){const x=peekIn(6);fail(x.p.classification==='DEADLOCK_DECLARED'?'UNPROVEN_DEADLOCK':'BLOCKAGE_MISMATCH','unsupported blockage record',x);}
+  if(cut==='horizon')fail('TERMINAL_STATUS_MISMATCH','the replay reaches the horizon accounting with no refused blockage record',peekIn(6));
   S.blockage=want;
   const h=peek(6);
   const acc=checkHorizonAccounting({horizon_tick:H,visits:M.plans.map(p=>({id:p.ref,arrival_tick:p.visit.arrival_tick,released_at:S.vs.get(p.id).released})),claim:h&&h.kind==='HORIZON'?{tick:h.tick,...h.p}:null});
   if(!acc.ok)fail(acc.code,acc.detail,h);
+  // The derived digest restates the observation chain; a completion owed at H reports first (note 10.2).
+  for(const id of S.running){const e=S.ts.get(id).end;if(e!==null&&e<=t)defer('MISSING_COMPLETION',`${id} due at ${e}`,groups[gi-1]);}
+  if(late?.code==='MISSING_COMPLETION')throw new Violation(late.code,late.detail,late.g??null);
   if(h.p.derived_state_digest!==digestOf('fleetlab.depot.horizon-state.v1',{observation:S.obs.digest,released:acc.released,unreleased:acc.unreleased}))fail('INCOMPLETE_HORIZON_ACCOUNTING','derived state digest',h);
   gi++;S.horizon=acc;
  }
@@ -451,20 +488,42 @@ export function replay(M,groups,rec){
   see(nextAfter(M.ticks.shift,a));see(nextAfter(M.ticks.arrival,a));see(nextAfter(M.ticks.opens,a));see(nextAfter(dues,a));
   return a<0?0:e;
  }
- while(gi<groups.length&&!S.horizon){
-  const gt=groups[gi].tick,e=eventAfter(t),extra=gt<e?groups[gi]:null;
-  // Records at a tick that is not an event tick are replayed first, so a fabricated record reports its own
-  // semantic violation (A38/A39); if they are otherwise consistent, the extra tick itself fails below.
-  const nt=extra?gt:e;skipped(t,nt);t=nt;late=null;
-  phase0();phase1();phase2();phase3();
-  if(t<H){phase4();phase5();}else phase6();
-  const g=peek();if(g)fail({HORIZON:'INCOMPLETE_HORIZON_ACCOUNTING',BLOCKAGE:'BLOCKAGE_MISMATCH'}[g.kind]??'RECORD_ORDER_INVALID',`unexpected ${g.kind} in phase ${g.phase} at ${t}`,g);
+ const lateChecks=()=>{
   for(const id of S.running){const e=S.ts.get(id).end;if(e!==null&&e<=t)defer('MISSING_COMPLETION',`${id} due at ${e}`,groups[gi-1]);}
   for(const F of S.flows.values())if(F.close<=t)defer('MISSING_COMPLETION',`${F.id} due at ${F.close}`,groups[gi-1]);
   if(late)throw new Violation(late.code,late.detail,late.g??null);
-  if(extra)fail('RECORD_ORDER_INVALID',`records at ${t} where no event tick falls`,extra);
+ };
+ const offTick=x=>fail('RECORD_ORDER_INVALID',`records at ${t} where no event tick falls`,x);
+ // A horizon cut replays the silent event ticks after the last record up to H.
+ while((gi<groups.length||cut==='horizon'&&t<H)&&!S.horizon){
+  const gt=gi<groups.length?groups[gi].tick:Infinity,e=eventAfter(t),extra=gt<e?groups[gi]:null;
+  // Records at a tick that is not an event tick are replayed first, so a fabricated record reports its own
+  // semantic violation (A38/A39); if they are otherwise consistent, the extra tick itself fails below.
+  const nt=extra?gt:e;
+  skipped(t,nt);t=nt;late=null;
+  try{
+   phase0();phase1();phase2();phase3();
+   if(t<H){
+    phase4();
+    if(cut==='quantum'&&t===end){const g=peekIn();if(g)fail('TERMINAL_STATUS_MISMATCH',`${g.kind} after a sub-quantum stop`,g);lateChecks();if(extra)offTick(extra);S.cut=subQuantum();return S;}
+    phase5();
+   }else phase6();
+   const g=peekIn();if(g)fail({HORIZON:'INCOMPLETE_HORIZON_ACCOUNTING',BLOCKAGE:'BLOCKAGE_MISMATCH'}[g.kind]??'RECORD_ORDER_INVALID',`unexpected ${g.kind} in phase ${g.phase} at ${t}`,g);
+   lateChecks();
+  }catch(x){
+   // The refused step: findings deferred on present records stand; the end-of-tick checks are not owed.
+   if(x!==CUT)throw x;
+   // Phase 0 completes in ascending task id in one pass: an owed completion below the last recorded one (or any, once
+   // phase 0 is over) was not refused.
+   if(S.p0)for(const id of [...S.running,...S.p0.due]){const ts=S.ts.get(id);if(ts.st!=='COMPLETE'&&ts.end===t&&(S.p0.done||id<S.p0.prev))defer('MISSING_COMPLETION',`${id} due at ${t}`,groups[gi-1]);}
+   if(late)throw new Violation(late.code,late.detail,late.g??null);
+   if(extra)offTick(extra);
+   return S;
+  }
+  if(extra)offTick(extra);
   if(rec)rec.sample(S,t);
  }
+ if(partial)return S;
  if(!S.horizon)fail('INCOMPLETE_HORIZON_ACCOUNTING','the ledger ends before H',groups[groups.length-1]);
  if(gi<groups.length)fail('RECORD_ORDER_INVALID','records after the horizon accounting',groups[gi]);
  S.life=life;return S;

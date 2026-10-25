@@ -10,7 +10,7 @@ import {createDepotRun,stepDepotRun} from '../src/model/depot-lab/engine.js';
 import {compareDepotRuns} from '../src/model/depot-lab/compare.js';
 import {verifyDepotRun} from '../src/model/depot-lab-verify/verify.js';
 import {term} from '../src/model/depot-lab/registry.js';
-import {hoursText} from '../src/ui/depot-lab-format.js';
+import {hoursText,secondsText,percentText} from '../src/ui/depot-lab-format.js';
 import {copyProblems,literalsOf} from '../tools/check-dist.mjs';
 const MODEL={createDepotRun,stepDepotRun,verifyDepotRun,compareDepotRuns},REPLIES=new Map(),REGIONS=['cursor','schematic','inspector','vehicles','events'];
 const SRC=readFileSync(new URL('../src/ui/depot-lab-inspector.js',import.meta.url),'utf8');
@@ -25,7 +25,7 @@ function setup(preset='B',{mode='pair',observer=null}={}){
  view=mountDepot({doc:document,session});view.render(session.get());
  const by=id=>document.getElementById(id);
  const run=()=>{session.run(mode);const w=workers.at(-1),k=JSON.stringify(w.posted[0]);if(!REPLIES.has(k))REPLIES.set(k,runDepotJob(w.posted[0],MODEL));w.onmessage({data:REPLIES.get(k)});assert.equal(session.get().status,'verified');return session.get();};
- return {session,workers,media,by,run,P:(a='baseline')=>session.get().result.envelopes[a].projection,cursor:()=>session.get().presentation.cursor,sel:()=>session.get().presentation.selection,close(){view.dispose();session.dispose();restore();}};
+ return {session,workers,media,by,run,render:s=>view.render(s),P:(a='baseline')=>session.get().result.envelopes[a].projection,cursor:()=>session.get().presentation.cursor,sel:()=>session.get().presentation.selection,close(){view.dispose();session.dispose();restore();}};
 }
 const buttons=root=>root.querySelectorAll('button');
 const button=(root,text)=>{const b=buttons(root).find(n=>n.textContent===text);assert.ok(b,`button ${text}`);return b;};
@@ -35,6 +35,9 @@ const input=(node,value)=>{node.value=String(value);node.dispatchEvent(new Event
 const key=(node,k)=>node.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true}));
 const pos=g=>g.getAttribute('transform').match(/-?\d+/g).map(Number);
 const vehicleButtons=x=>x.by('vehicles').querySelectorAll('ul button');
+const isTech=n=>n.nodeType===1&&(n.getAttribute('class')??'').split(' ').includes('technical-only');
+// Text a visitor reads in Overview: the page stylesheet hides `.technical-only` there.
+const overview=n=>n.nodeType===3?n.textContent:isTech(n)?'':n.childNodes.map(overview).join('');
 const unchanged=(x,before)=>{const s=x.session.get();assert.equal(x.workers.length,1,'no further worker');assert.equal(s.generation,before.generation);assert.equal(s.result,before.result);assert.equal(s.status,'verified');};
 
 test('before a verified run every region shows only the empty note and nothing starts',()=>{
@@ -131,7 +134,9 @@ test('vehicle list: aria-pressed selection, search by ID, Enter picks a match an
   assert.deepEqual(vehicleButtons(x).filter(n=>n.getAttribute('aria-pressed')==='true').map(n=>n.textContent),['05']);
   const insp=x.by('inspector'),v=P.visits.find(u=>u.id==='visit:05');
   assert.equal(insp.querySelector('h3').textContent,'Vehicle 05');
-  assert.deepEqual(insp.querySelectorAll('.release-chain li').map(l=>l.textContent),[`Required work done: ${hoursText(v.work_complete_at)} into the run`,`Released from depot work: ${hoursText(v.released_at)} into the run`,'Eligible for a ride: not modeled in this version']);
+  assert.deepEqual(insp.querySelectorAll('.release-chain li').map(l=>l.textContent),[`Required work done: ${hoursText(v.work_complete_at)} into the run`,`Released from depot work: ${hoursText(v.released_at)} into the run (${secondsText(v.released_at)}) released_at ${v.released_at}`,'Eligible for a ride: not modeled in this version']);
+  assert.equal(insp.querySelector('[data-due]').textContent,`Release-by status: On time. due_status ${v.due_status}; on_time true; overdue_s 0`);
+  assert.ok(overview(insp).includes(`Release-by time: ${hoursText(v.due_tick)} into the run (${secondsText(v.due_tick)}).`),'exact release-by seconds in Overview');
   const tables=insp.querySelectorAll('table');
   assert.equal(tables[0].querySelector('caption').textContent,'Task timeline for Vehicle 05, times from the start of the run');assert.equal(tables[0].querySelectorAll('tbody tr').length,v.tasks.length);
   assert.equal(tables[1].querySelectorAll('tbody tr').length,v.location.length);
@@ -230,8 +235,9 @@ test('events: filtered by selection with counts, split around the cursor and pag
   // Rows follow the D1-08 port partition order of the contract.
   const ORDER=['unavailable','free','unconnected_position_blocked','reserved_inbound_connect','connected_drawing','connected_zero_draw','at_target_lifecycle_running','at_target_waiting','inspection','unplug_handling'];
   assert.deepEqual(Object.keys(port.partition).sort(),[...ORDER].sort());
-  assert.deepEqual(insp.querySelectorAll('tbody tr').map(r=>r.querySelector('th').textContent),ORDER.map(c=>`${term(`port.partition.${c}`).label_plain} ${c}`));
-  assert.deepEqual(insp.querySelectorAll('tbody tr').map(r=>r.querySelector('td .technical-only').textContent),ORDER.map(c=>` ${port.partition[c]} of ${P.horizon_tick} s`));
+  const classRows=insp.querySelectorAll('table').find(t=>t.querySelector('caption').textContent===`Time by class over the whole run, out of ${hoursText(P.horizon_tick)} for this port`).querySelectorAll('tbody tr');
+  assert.deepEqual(classRows.map(r=>r.querySelector('th').textContent),ORDER.map(c=>`${term(`port.partition.${c}`).label_plain} ${c}`));
+  assert.deepEqual(classRows.map(r=>r.querySelector('td .technical-only').textContent),ORDER.map(c=>` ${port.partition[c]} of ${P.horizon_tick} s`));
   unchanged(x,s0);
  }finally{x.close();}
 });
@@ -263,6 +269,115 @@ test('inspector at the end of run: active-at-H rows, remaining work, the full re
   const block=C.blockage.find(b=>b.member_visit_ids.includes('visit:07'));
   assert.ok(insp.querySelector('.trail').textContent.includes(`${term('blockage.'+block.classification).label_plain}: Vehicle 07 waiting on ${block.held_resource_ids.map(r=>r.slice(r.indexOf(':')+1)).join(', ')}; terminal holder Vehicle ${block.terminal_holder_id.slice(6)}.`));
   button(insp,`Inspect Vehicle ${holdersOf('visit:07')[0]}`).click();assert.equal(x.sel(),`visit:${holdersOf('visit:07')[0]}`);assert.equal(level().length,1,'a new selection starts at depth 1');
+  unchanged(x,s0);
+ }finally{x.close();}
+});
+
+// A30 per vehicle (COPY-03, CA-NEW-02): release vehicle 23 of B at 42,908 s against release-by times 1 s later, equal,
+// 1 s earlier and further away; release P vehicle 13 at 25,439 s against 25,440, 25,439 and 25,438 (the A30 1,199,
+// 1,200 and 1,201 against 1,200 pattern); P vehicle 24 stays unreleased past due. The status comes from the verified
+// on_time, due_status and overdue_s; exact seconds always follow the release-by and release times, and a late release
+// carries its exact lateness, in both reading levels.
+test('release-by status per vehicle in both reading levels, with exact seconds beside every release-by and release time',()=>{
+ const cases=[['B','visit:23',23107,'Late by < 1 min (1 s)'],['B','visit:23',23108,'On time'],['B','visit:23',23109,'On time'],['B','visit:23',23200,'On time'],['B','visit:23',null,'Late by 25 min (1,508 s)'],
+  ['B','visit:23',23500,'Released before its release-by time, which falls after the end of run'],['P','visit:24',null,'Not released by end of run; late by at least 6 h'],['P','visit:24',41790,'Not released by end of run; late by at least 30 s'],
+  ['P','visit:13',24720,'On time'],['P','visit:13',24719,'On time'],['P','visit:13',24718,'Late by < 1 min (1 s)']];
+ for(const [id,visit,off,status] of cases){
+  const x=setup(id,{mode:'baseline'});
+  try{
+   if(off!==null)x.session.edit(a=>{for(const v of a.visits)v.due_tick=v.arrival_tick+off;},{scope:'both'});
+   const s0=x.run(),v=x.P().visits.find(u=>u.id===visit),H=x.P().horizon_tick;
+   if(id==='B'&&visit==='visit:23')assert.equal(v.released_at,42908,'the release does not depend on the release-by time');
+   if(visit==='visit:13')assert.deepEqual([v.released_at,v.due_tick],[25439,720+off],'A30 primary pattern');
+   x.session.setPresentation({selection:visit});
+   const insp=x.by('inspector'),line=insp.querySelector('[data-due]'),seen=overview(insp);
+   for(let n=line;n;n=n.parentNode)assert.ok(!isTech(n),'the status is in the normal flow of both reading levels');
+   assert.equal(overview(line),`Release-by status: ${status}.`,`${id} ${off}`);
+   assert.match(line.textContent,new RegExp(` due_status ${v.due_status}; on_time ${v.on_time}; overdue_s ${v.overdue_s}$`));
+   const at=k=>`${k===H?'end of run':`${hoursText(k)} into the run`} (${secondsText(k)})`;
+   assert.ok(seen.includes(`Release-by time: ${at(v.due_tick)}.`),`${id} ${off} exact release-by ${v.due_tick}`);
+   if(v.released_at!==null)assert.ok(seen.includes(`Released from depot work: ${at(v.released_at)}`),`${id} ${off} exact release ${v.released_at}`);
+   x.session.setPresentation({reading_level:'technical'});assert.equal(overview(insp.querySelector('[data-due]')),`Release-by status: ${status}.`);assert.equal(overview(insp),seen,'the same text in both reading levels');
+   unchanged(x,s0);
+  }finally{x.close();}
+ }
+});
+
+// ARITH-07 (UI part): the ownership share is the verifier's owned_fraction; an out-of-service unit shows Not applicable,
+// never "0 min of 12 h".
+test('resource ownership uses the projection share and shows an out-of-service port as not applicable',()=>{
+ const x=setup('B',{mode:'baseline'});
+ try{
+  x.session.edit(a=>{a.site.ports.find(p=>p.id==='AC01').enabled=false;},{scope:'both'});
+  const s0=x.run(),P=x.P(),insp=x.by('inspector'),label=term('resource.owned_fraction').label_plain;
+  const owned=()=>insp.querySelectorAll('p').find(p=>p.textContent.startsWith(label));
+  x.session.setPresentation({selection:'port:AC01'});
+  assert.equal(overview(owned()),`${label}: Not applicable, out of service.`);assert.doesNotMatch(insp.textContent,/Owned or reserved: .* of /);
+  for(const q of P.resources.ports.filter(p=>p.enabled)){
+   x.session.setPresentation({selection:q.id});
+   const share=!Object.hasOwn(q,'owned_fraction')?'Not available':q.owned_fraction===null?'Not applicable':percentText(q.owned_fraction);
+   assert.equal(overview(owned()),`${label}: ${share}; held ${hoursText(q.owned_ticks)}.`,q.id);
+   assert.ok(owned().textContent.endsWith(` owned_fraction ${q.owned_fraction??null}; owned_ticks ${q.owned_ticks}`),q.id);
+  }
+  unchanged(x,s0);
+ }finally{x.close();}
+});
+
+// ARITH-07-N1: out of service is read from the verified partition, so a port that is itself enabled but stands on a
+// disabled position reads out of service, with the reason, in its header and in its share line.
+test('a port on an out-of-service position reads out of service with the reason, never a bare Not applicable',()=>{
+ const x=setup('B',{mode:'baseline'});
+ try{
+  x.session.edit(a=>{a.site.positions.find(p=>p.id==='P020').enabled=false;},{scope:'both'});
+  const s0=x.run(),P=x.P(),insp=x.by('inspector'),label=term('resource.owned_fraction').label_plain;
+  const ac=P.resources.ports.find(p=>p.id==='port:AC01');assert.deepEqual([ac.position,ac.enabled,ac.owned_fraction,ac.partition.unavailable],['position:P020',true,null,P.horizon_tick]);
+  const owned=()=>overview(insp.querySelectorAll('p').find(p=>p.textContent.startsWith(label)));
+  x.session.setPresentation({selection:'port:AC01'});
+  assert.equal(insp.querySelectorAll('p')[0].textContent,'AC port rated 11 kW at position P020; out of service because position P020 is out of service.');
+  assert.equal(owned(),`${label}: Not applicable, out of service.`);
+  x.session.setPresentation({selection:'position:P020'});
+  assert.match(insp.querySelectorAll('p')[0].textContent,/^Charging position with port AC01; out of service\.$/);assert.equal(owned(),`${label}: Not applicable, out of service.`);
+  x.session.setPresentation({selection:'port:DC01'});assert.doesNotMatch(insp.querySelectorAll('p')[0].textContent,/out of service/);
+  unchanged(x,s0);
+ }finally{x.close();}
+});
+
+// ARITH-07 residual (C1.6): the per-class ownership summary names the installed, enabled and eligible denominators;
+// Overview shows a truncated percentage, Technical inspection the exact p/q; a zero denominator is Not applicable and
+// a projection without the summary says Not available. The summary numbers below are hand-built test fixtures.
+test('the per-class ownership summary shows each denominator, exact on inspection, and Not available when absent',()=>{
+ const x=setup('B',{mode:'baseline'});
+ try{
+  const s0=x.run(),P=x.P(),e=s0.result.envelopes.baseline;
+  const S={ports:{installed_unit_ticks:172800,enabled_unit_ticks:129600,eligible_unit_ticks:129600,owned_unit_ticks:64801,fraction:{installed:'64801/172800',enabled:'64801/129600',eligible:'64801/129600'}},
+   positions:{installed_unit_ticks:86400,enabled_unit_ticks:0,eligible_unit_ticks:0,owned_unit_ticks:0,fraction:{installed:'0/1',enabled:null,eligible:null}}};
+  const {owned_summary:_,...bare}=P.resources,state=resources=>({...x.session.get(),result:{...s0.result,envelopes:{...s0.result.envelopes,baseline:{...e,projection:{...P,resources}}}}});
+  const insp=x.by('inspector'),table=kind=>insp.querySelectorAll('table').find(t=>t.querySelector('caption').textContent===`Owned or reserved share across all ${kind}s, by denominator`);
+  x.session.setPresentation({selection:'port:DC01'});x.render(state({...bare,owned_summary:S}));
+  const rows=table('port').querySelectorAll('tbody tr');
+  assert.deepEqual(rows.map(r=>r.childNodes.map(c=>overview(c))),[['Installed: every configured unit for the whole run','48 h','37.5…%'],['Enabled: units switched on','36 h','50.0…%'],['Eligible: time a unit could actually be used','36 h','50.0…%']]);
+  assert.deepEqual(rows.map(r=>r.querySelectorAll('.technical-only').map(n=>n.textContent)),[[' installed_unit_ticks 172800',' fraction.installed 64801/172800'],[' enabled_unit_ticks 129600',' fraction.enabled 64801/129600'],[' eligible_unit_ticks 129600',' fraction.eligible 64801/129600']]);
+  const held=insp.querySelectorAll('p').find(p=>p.textContent.startsWith('Across all ports'));
+  assert.equal(overview(held),'Across all ports in this setup: owned or reserved for 18 h of unit time over the run.');assert.ok(held.textContent.endsWith(' owned_unit_ticks 64801'));
+  x.session.setPresentation({selection:'position:P001'});x.render(state({...bare,owned_summary:S}));
+  assert.deepEqual(table('position').querySelectorAll('tbody tr').map(r=>overview(r.childNodes[2])),['0%','Not applicable','Not applicable']);
+  x.render(state(bare));
+  assert.equal(table('position'),undefined);assert.ok(insp.querySelectorAll('p').some(p=>p.textContent==='Owned or reserved share across all positions: Not available.'));
+  assert.equal(x.workers.length,1);assert.equal(x.session.get().result,s0.result);
+ }finally{x.close();}
+});
+
+// COPY-05: M re-spaced to 950 s with the run ending 10 s after vehicle 24's downloads start leaves a 40-tick lower bound.
+test('a lower bound under a minute reads in exact seconds, never "at least < 1 min"',()=>{
+ const x=setup('M',{mode:'baseline'});
+ try{
+  x.session.edit(a=>{const t0=a.visits[0].arrival_tick;a.visits.forEach((v,i)=>{const at=t0+i*950;if(v.due_tick!==null)v.due_tick+=at-v.arrival_tick;v.arrival_tick=at;});a.arrival_window_tick=Math.max(a.arrival_window_tick,...a.visits.map(v=>v.arrival_tick+1));
+   const fit=l=>l.forEach(i=>{if(i.end_tick===a.horizon_tick)i.end_tick=22252;});a.workers.forEach(w=>fit(w.availability));fit(a.vendor.availability);a.horizon_tick=22252;},{scope:'both'});
+  const s0=x.run(),v=x.P().visits.find(u=>u.id==='visit:24');assert.equal(v.active_at_h.find(a=>a.template==='map_download').lower_bound_ticks,40);
+  x.session.setPresentation({selection:'visit:24'});
+  const rows=x.by('inspector').querySelectorAll('table').find(t=>t.querySelector('caption').textContent==='Started but could not finish by end of run').querySelectorAll('tbody tr');
+  assert.deepEqual(rows.map(r=>overview(r.querySelectorAll('td')[4])),v.active_at_h.map(a=>`Yes; at least ${a.lower_bound_ticks<60?`${a.lower_bound_ticks} s`:hoursText(a.lower_bound_ticks)} needed`));
+  assert.ok(rows.some(r=>overview(r).includes('at least 40 s needed')));assert.doesNotMatch(x.by('inspector').textContent,/at least < 1 min/);
   unchanged(x,s0);
  }finally{x.close();}
 });

@@ -6,7 +6,12 @@ import {scenarioDigest} from '../model/depot-lab/identity.js';
 import {validateScenario} from '../model/depot-lab/schema.js';
 import {checkPairCompatibility} from '../model/depot-lab/compare.js';
 export const JOB_STAGES=Object.freeze(['checking_setup','running_baseline','running_candidate','checking_results']);
-export const RUN_ID=/^[A-Za-z0-9:_-]{1,64}$/,DEFAULT_MAX_TICKS=4096,MAX_REPLY_ISSUES=200;
+export const RUN_ID=/^[A-Za-z0-9:_-]{1,64}$/,DEFAULT_MAX_TICKS=4096,MAX_REPLY_ISSUES=200,MAX_GUARD_CHARS=1024;
+// The engine's {guard, detail} travels beside its ledger text as bounded canonical data (C2.3 item 4); anything else is null.
+export function guardCopy(g){
+ if(g===null||g===undefined)return null;
+ try{const t=jcs({detail:g.detail??null,guard:typeof g.guard==='string'?g.guard.slice(0,64):null});return t.length<=MAX_GUARD_CHARS?JSON.parse(t):null;}catch{return null;}
+}
 const plain=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)&&[Object.prototype,null].includes(Object.getPrototypeOf(v));
 export const closedObject=(v,keys)=>plain(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));
 // Shape check before any field is read; returns an issue code or null.
@@ -32,7 +37,7 @@ export function runDepotJob(request,{createDepotRun,stepDepotRun,verifyDepotRun,
   if(pair){const c=checkPairCompatibility(scenarios.baseline,scenarios.candidate);if(!c.compatible)return refuse('incompatible',c.issues);treatment=c.treatment;}
   progress(stage,total,total);
   const scenario_digests={baseline:scenarioDigest(scenarios.baseline),candidate:pair?scenarioDigest(scenarios.candidate):null};
-  const ledger_texts={baseline:null,candidate:null},envelopes={baseline:null,candidate:null};
+  const ledger_texts={baseline:null,candidate:null},ledger_guards={baseline:null,candidate:null},envelopes={baseline:null,candidate:null};
   for(const arm of arms){
    const s=`running_${arm}`,H=scenarios[arm].horizon_tick,cursor=createDepotRun(scenarios[arm]);
    progress(s,0,H);
@@ -40,15 +45,16 @@ export function runDepotJob(request,{createDepotRun,stepDepotRun,verifyDepotRun,
    for(let steps=0;;steps++){
     if(steps>H+1)throw new Error('the engine stopped advancing');
     const r=stepDepotRun(cursor,{maxTicks});
-    if(r.done){ledger_texts[arm]=jcs(r.ledger);break;}
+    if(r.done){ledger_texts[arm]=jcs(r.ledger);ledger_guards[arm]=guardCopy(r.guard);break;}
     progress(s,Math.min(Math.max(0,Number.isSafeInteger(r.tick)?r.tick:0),H),H);
    }
    progress(s,H,H);
   }
-  // The verifier reads a fresh parse of the retained canonical text, never the engine's own objects.
-  for(const [k,arm] of arms.entries()){progress('checking_results',k,total);envelopes[arm]=verifyDepotRun(scenarios[arm],JSON.parse(ledger_texts[arm]));}
+  // The verifier reads a fresh parse of the retained canonical text, never the engine's own objects, and confirms the
+  // claimed guard against that prefix.
+  for(const [k,arm] of arms.entries()){progress('checking_results',k,total);envelopes[arm]=verifyDepotRun(scenarios[arm],JSON.parse(ledger_texts[arm]),{claimedGuard:ledger_guards[arm]});}
   progress('checking_results',total,total);
   const comparison=pair?compareDepotRuns(envelopes.baseline,envelopes.candidate,treatment):null;
-  return {type:'result',id,generation,scenario_digests,envelopes,comparison,ledger_texts};
+  return {type:'result',id,generation,scenario_digests,envelopes,comparison,ledger_texts,ledger_guards};
  }catch(error){return {type:'failed',id,generation,stage,message:String(error?.message??error).slice(0,200)};}
 }

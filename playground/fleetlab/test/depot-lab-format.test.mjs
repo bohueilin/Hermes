@@ -1,6 +1,6 @@
 // Exact display helpers: A30 threshold display, truncation that never rounds up, and BigInt-only unit conversion.
 import test from 'node:test';import assert from 'node:assert/strict';
-import {exactValue,numberText,secondsText,minutesText,hoursText,overdueText,kwhText,gbText,kwText,percentText,rationalText,signedText,groupDigits} from '../src/ui/depot-lab-format.js';
+import {exactValue,numberText,secondsText,minutesText,hoursText,overdueText,kwhText,gbText,kwText,percentText,rationalText,signedText,groupDigits,componentKind} from '../src/ui/depot-lab-format.js';
 
 test('A30: a positive overdue under one minute prints "< 1 min", never "0 min"; exact seconds stay available',()=>{
  for(const s of [1,6,59])assert.equal(overdueText(s),'< 1 min');
@@ -52,4 +52,9 @@ test('rational strings format without float division; signed changes keep their 
 test('only exact representations are accepted',()=>{
  for(const bad of [0.5,Number.NaN,2**60,'6/8','1.5','abc',null,undefined,{}])assert.throws(()=>exactValue(bad),TypeError);
  assert.deepEqual(exactValue('-2/4'.replace('2/4','1/2')),{n:-1n,d:2n});
+});
+
+test('one unit map per vector component serves the page and every summary (ARITH-03)',()=>{
+ assert.deepEqual(['on_time_count','overdue_seconds','observed_visit_seconds','unreleased_count','remaining_reference_seconds:inspection','remaining_required_kWh','remaining_required_bytes'].map(id=>componentKind(id)[1]),['visits','s','s','visits','s','mJ','bytes']);
+ assert.equal(componentKind('remaining_required_kWh')[0](129600000000),'36 kWh');assert.equal(componentKind('remaining_required_bytes')[0](2000000000),'2 GB');assert.equal(componentKind('overdue_seconds')[0](6),'6 s');
 });

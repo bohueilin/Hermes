@@ -2,9 +2,9 @@
 // groups, then an independent semantic replay. Only VERIFIED carries the immutable projection; INVALID quarantines it.
 // Verification establishes internal consistency only, never authenticity, authorization or deployment permission.
 import {jcs,utf8Length,deepFreeze} from '../depot-lab/canonical.js';
-import {computeIdentities,runDigest,refs} from '../depot-lab/identity.js';
+import {computeIdentities,runDigest,refs,Htext} from '../depot-lab/identity.js';
 import {validateScenario} from '../depot-lab/schema.js';
-import {parseRational} from '../depot-lab/rational.js';
+import {parseRational,MAX_BITS,MAX_DIGITS} from '../depot-lab/rational.js';
 import {ENGINE_VERSION,VERIFIER_VERSION,PROJECTION_VERSION,METRIC_VERSION,LEDGER_SCHEMA,REASON_CODES} from '../depot-lab/profiles.js';
 import {buildModel,replay,Violation} from './reconstruct.js';
 import {createRecorder} from './metrics.js';
@@ -39,6 +39,22 @@ const shape=r=>obj(r,RECORD)&&int(r.seq,0,99999)&&tick(r.tick)&&int(r.microstep,
 const PHASE_KINDS=[['PROGRESS','TASK_TRANSITION','RESOURCE_DELTA','CONTENT_TRANSITION'],['SHIFT_CHANGE','ARRIVAL'],['WINDOW_OPEN','TASK_TRANSITION','CONTENT_TRANSITION'],['OBSERVATION'],['POLICY_DECISION','TASK_TRANSITION','RESOURCE_DELTA','CONTENT_TRANSITION'],['PROGRESS','ALLOCATION_DELTA'],['PROGRESS','CONTENT_TRANSITION','BLOCKAGE','HORIZON']];
 const CHUNKED=new Set(['OBSERVATION','PROGRESS','ALLOCATION_DELTA','POLICY_DECISION','BLOCKAGE','HORIZON']);
 const same=(a,b,keys)=>keys.every(k=>a[k]===b[k]);
+// Vector fields of each chunked kind (BD-E12); scalars repeat in every chunk.
+const VECTORS={OBSERVATION:p=>[p.facts],PROGRESS:p=>[p.changes],ALLOCATION_DELTA:p=>[p.changes],HORIZON:p=>[p.arrived_visit_ids,p.released_visit_ids,p.unreleased_visit_ids],
+ POLICY_DECISION:p=>p.reasons.flatMap(r=>[r.resource_ids,r.holder_visit_ids]),BLOCKAGE:p=>[p.member_visit_ids,p.held_resource_ids,...p.unmet_alternatives.flatMap(a=>[a.all_required_resources,a.blocking_holder_visit_ids])]};
+// The writer's chunking is the only canonical one (note 19): chunk k carries the same [s, e) slice of every vector, no
+// chunk is empty, and a chunk closes before 64 entries only when the next entry would cross the record-byte bound
+// (measured with chunk_count 100000 and chunk_index/seq 99999).
+function canonicalChunks(g,maxBytes){
+ const all=VECTORS[g.kind](g.p),len=all.map(a=>a.length);let s=0;
+ for(let k=0;k<g.recs.length;k++){
+  const v=VECTORS[g.kind](g.recs[k].payload),r=Math.max(0,...v.map(a=>a.length));
+  if(!r||v.some((a,i)=>a.length!==Math.max(0,Math.min(s+r,len[i])-s)))return false;
+  s+=r;
+  if(k<g.recs.length-1&&r<LEDGER_LIMITS.entries){let n=utf8Length(jcs({...g.recs[k],chunk_count:100000,chunk_index:99999,seq:99999}));for(let i=0;i<all.length;i++)if(s<len[i])n+=utf8Length(jcs(all[i][s]))+1;if(n<=maxBytes)return false;}
+ }
+ return true;
+}
 // Parallel-slice reassembly (BD-E12): vector slices concatenate in chunk order, scalars and parallel entries repeat.
 function merge(kind,a,b){
  if(kind==='OBSERVATION'){if(!same(a,b,['base_observation_seq','state_digest']))return false;a.facts.push(...b.facts);}
@@ -48,8 +64,8 @@ function merge(kind,a,b){
  else{if(!same(a,b,['classification','enabling_event_seq','enabling_event_key','next_tick','terminal_holder_id'])||a.unmet_alternatives.length!==b.unmet_alternatives.length)return false;a.member_visit_ids.push(...b.member_visit_ids);a.held_resource_ids.push(...b.held_resource_ids);for(let i=0;i<a.unmet_alternatives.length;i++){const x=a.unmet_alternatives[i],y=b.unmet_alternatives[i];if(!same(x,y,['visit_id','task_id']))return false;x.all_required_resources.push(...y.all_required_resources);x.blocking_holder_visit_ids.push(...y.blocking_holder_visit_ids);}}
  return true;
 }
-// Per record, in order: shape, seq, key order, chunk group, size, canonical rationals (note 10.2).
-function structure(records){
+// Per record, in order: shape, seq, key order, chunk group, size, measured chunk size, canonical rationals (note 10.2).
+function structure(records,chunkBytes){
  const groups=[],lastOrd=new Map();let prev=null,cur=null;
  const fail=(code,detail,r)=>{throw new Violation(code,detail,{seq:Number.isSafeInteger(r?.seq)?r.seq:null,tick:Number.isSafeInteger(r?.tick)?r.tick:null});};
  records.forEach((r,i)=>{
@@ -66,20 +82,62 @@ function structure(records){
    if(cur)fail('CHUNK_GROUP_INVALID',`group ${cur.id} is missing chunks`,r);
    if(ord!==(lastOrd.has(tm)?lastOrd.get(tm)+1:0))fail('RECORD_ORDER_INVALID',`group ordinal of record ${i}`,r);
    if(r.chunk_count>1&&!CHUNKED.has(r.kind))fail('CHUNK_GROUP_INVALID',`${r.kind} cannot be chunked`,r);
-   lastOrd.set(tm,ord);cur={id:r.group_id,kind:r.kind,tick:r.tick,ms:r.microstep,phase:r.phase,ord,seq:i,last:i,n:r.chunk_count,p:JSON.parse(JSON.stringify(r.payload))};
+   lastOrd.set(tm,ord);cur={id:r.group_id,kind:r.kind,tick:r.tick,ms:r.microstep,phase:r.phase,ord,seq:i,last:i,n:r.chunk_count,p:JSON.parse(JSON.stringify(r.payload)),recs:[r]};
   }else if(!cur||cur.id!==r.group_id||cur.kind!==r.kind||cur.n!==r.chunk_count||r.chunk_index!==i-cur.seq||!merge(r.kind,cur.p,r.payload))fail('CHUNK_GROUP_INVALID',`chunk ${r.chunk_index} of ${r.group_id}`,r);
-  if(utf8Length(jcs(r))>LEDGER_LIMITS.recordBytes)fail('RECORD_SIZE_LIMIT',`record ${i} exceeds 16,384 bytes`,r);
+  else cur.recs.push(r);
+  const bytes=utf8Length(jcs(r));if(bytes>LEDGER_LIMITS.recordBytes)fail('RECORD_SIZE_LIMIT',`record ${i} exceeds 16,384 bytes`,r);
+  // The writer measures every vector chunk with an entry at 100000/99999/99999 (16 digits); JCS integers are exact.
+  if(CHUNKED.has(r.kind)&&VECTORS[r.kind](r.payload).some(a=>a.length)&&bytes+16-`${r.chunk_count}${r.chunk_index}${r.seq}`.length>chunkBytes)fail('CHUNK_GROUP_INVALID',`chunk ${r.chunk_index} of ${r.group_id} exceeds the measured record bound`,r);
   const rats=r.kind==='ALLOCATION_DELTA'?r.payload.changes.map(c=>c.rate):r.kind==='PROGRESS'?r.payload.changes.flatMap(c=>[c.quantization_slack,c.undrawn_final_tick]):[];
   if(rats.some(x=>parseRational(x)===null))fail('NONCANONICAL_RATIONAL',`record ${i}`,r);
-  cur.last=i;if(r.chunk_index===r.chunk_count-1){groups.push(cur);cur=null;}
+  cur.last=i;if(r.chunk_index===r.chunk_count-1){if(cur.n>1&&!canonicalChunks(cur,chunkBytes))fail('CHUNK_GROUP_INVALID',`non-canonical chunks of ${cur.id}`,r);delete cur.recs;groups.push(cur);cur=null;}
  });
  if(cur)fail('CHUNK_GROUP_INVALID',`group ${cur.id} is missing chunks`,records[records.length-1]);
  return groups;
 }
-// verifyDepotRun(scenario, ledger, {harness}) -> VerificationEnvelope (note 10.5). The harness binds a separate digest.
-export function verifyDepotRun(scenario,ledger,{harness=null}={}){
+export const GUARD_NAMES=Object.freeze(['RECORD_COUNT','RECORD_BYTES','LEDGER_BYTES','VECTOR_LIMIT','SUB_QUANTUM_POSITIVE_SHARE','RATIONAL_GUARD','MICROSTEP_LIMIT']);
+// The five messages rational.js raises; the refused step itself is not in the ledger (note 10.1).
+const RATIONAL=[...['product','numerator','denominator'].map(w=>`${w} exceeds ${MAX_BITS} bits`),'product operand bits',`serialized component exceeds ${MAX_DIGITS} digits`];
+// C2.3 item 4, note 8.9: an INCOMPLETE_RESOURCE_LIMIT prefix names the engine guard it stopped at, carried beside the
+// ledger. A count or byte claim must name the contract bound (lowered only in tests), the prefix must fit within it and
+// the refused step must cross it. Under the contract bound only a BLOCKAGE record (64 alternatives with long ids) can
+// exceed 16,384 bytes. The engine never raises MICROSTEP_LIMIT (note 8.2). Returns a copy or null.
+function confirmGuard(c,records,bytes,H,lowered){
+ let d;try{if(!obj(c,['guard','detail'])||!GUARD_NAMES.includes(c.guard)||utf8Length(jcs(c))>1024)return null;d=JSON.parse(jcs(c.detail));}catch{return null;}
+ const n=records.length,num=v=>Number.isSafeInteger(v)&&v>=0,bound=k=>num(d.bound)&&(lowered?d.bound>=1&&d.bound<=LEDGER_LIMITS[k]:d.bound===LEDGER_LIMITS[k]);
+ const ok={
+  RECORD_COUNT:()=>obj(d,['records','bound'])&&bound('records')&&num(d.records)&&n<=d.bound&&d.bound<d.records,
+  LEDGER_BYTES:()=>obj(d,['bytes','bound'])&&bound('ledgerBytes')&&num(d.bytes)&&bytes<=d.bound&&d.bound<d.bytes,
+  RECORD_BYTES:()=>obj(d,['kind','bytes','bound'])&&Object.hasOwn(PAYLOAD,d.kind)&&bound('recordBytes')&&num(d.bytes)&&d.bound<d.bytes&&(d.bound===LEDGER_LIMITS.recordBytes?d.kind==='BLOCKAGE':records.every(r=>utf8Length(jcs(r))<=d.bound)),
+  VECTOR_LIMIT:()=>obj(d,['field','entries','bound'])&&d.field==='unmet_alternatives'&&d.bound===64&&num(d.entries)&&d.entries>64,
+  SUB_QUANTUM_POSITIVE_SHARE:()=>{const q=obj(d,['flow_id','rate','anchor_tick','horizon_tick','remainder'])&&id(d.flow_id)&&parseRational(d.rate);return !!q&&q.n>0n&&d.horizon_tick===H&&n>0&&d.anchor_tick===records[n-1]?.tick&&int(d.anchor_tick,0,H-1)&&/^[1-9][0-9]{0,30}$/.test(d.remainder)&&q.n*BigInt(H-d.anchor_tick)<q.d;},
+  RATIONAL_GUARD:()=>RATIONAL.includes(d),
+  MICROSTEP_LIMIT:()=>false,
+ }[c.guard];
+ return ok()?{guard:c.guard,detail:d}:null;
+}
+// Where the replay must find the refused step (reconstruct.js replay): sub-quantum in phase 5 of the last tick, a
+// vector or BLOCKAGE byte refusal at H, any other guard at the first read past the last record.
+const cutOf=c=>c.guard==='SUB_QUANTUM_POSITIVE_SHARE'?'quantum':c.guard==='VECTOR_LIMIT'||c.guard==='RECORD_BYTES'&&c.detail.kind==='BLOCKAGE'?'horizon':'event';
+// The writer's measure of the first chunk of BLOCKAGE record x that cannot hold one entry (ledger chunking, note 19).
+function blockageBytes(x,H,bound){
+ const all=VECTORS.BLOCKAGE(x),n=Math.max(0,...all.map(a=>a.length)),p={...x,member_visit_ids:[],held_resource_ids:[],unmet_alternatives:x.unmet_alternatives.map(a=>({...a,all_required_resources:[],blocking_holder_visit_ids:[]}))};
+ const base=utf8Length(jcs({chunk_count:100000,chunk_index:99999,class_rank:0,group_id:refs.group(H,1,0),kind:'BLOCKAGE',microstep:1,payload:p,phase:6,seq:99999,stable_key:refs.stableKey(0,'BLOCKAGE',0,0),tick:H}));
+ for(let s=0;s<n;){let e=s,size=base;for(;e<n&&e-s<LEDGER_LIMITS.entries;e++){let more=0;for(const a of all)if(e<a.length)more+=utf8Length(jcs(a[e]))+(e>s?1:0);if(size+more>bound){if(e===s)return size+more;break;}size+=more;}s=e;}
+ return null;
+}
+// The replay's own refused step must be the claimed one: the same sub-quantum interval, or the next BLOCKAGE at H with
+// more than 64 alternatives (VECTOR_LIMIT) or with a first unfit chunk of the claimed size (RECORD_BYTES).
+function reached({guard,detail:d},x,H){
+ if(guard==='SUB_QUANTUM_POSITIVE_SHARE')return jcs(x??null)===jcs(d);
+ const k=x?x.unmet_alternatives.length:-1;
+ return guard==='VECTOR_LIMIT'?k===d.entries:k>=0&&k<=LEDGER_LIMITS.entries&&blockageBytes(x,H,d.bound)===d.bytes;
+}
+// verifyDepotRun(scenario, ledger, {harness, claimedGuard, allowLoweredGuards}) -> VerificationEnvelope (note 10.5). The
+// harness binds a separate digest; claimedGuard is the engine's {guard, detail}; lowered guard bounds are test-only.
+export function verifyDepotRun(scenario,ledger,{harness=null,claimedGuard=null,allowLoweredGuards=false}={}){
  const versions={engine:ENGINE_VERSION,verifier:VERIFIER_VERSION,projection:PROJECTION_VERSION,metric:METRIC_VERSION};
- const digests={scenario:null,workload:null,policy:null,run:null},info={records:null,bytes:null,terminal_status:null,guard:null};
+ const digests={scenario:null,workload:null,policy:null,run:null,prefix:null},info={records:null,bytes:null,terminal_status:null,guard:null};
  const env=(status,primary_violation=null,projection=null)=>deepFreeze({schema:VERIFICATION_SCHEMA,status,consistency:status==='VERIFIED'?'INTERNALLY_CONSISTENT':status==='INVALID'?'INVALID_EVIDENCE':'NOT_AVAILABLE',primary_violation,digests,versions,
   trust:{authenticity:'NOT_AUTHENTICATED',authorization:'NOT_EVALUATED',deployment_permission:'NONE',evidence:'NOT_EVIDENCE'},ledger:info,projection});
  const invalid=(code,detail,at=null)=>env('INVALID',{code,seq:at?.seq??null,tick:at?.tick??null,detail:String(detail).slice(0,240)});
@@ -93,9 +151,20 @@ export function verifyDepotRun(scenario,ledger,{harness=null}={}){
  if(info.records>LEDGER_LIMITS.records||info.bytes>LEDGER_LIMITS.ledgerBytes)return invalid('RECORD_SIZE_LIMIT','ledger exceeds its record or byte guard');
  if(ledger.scenario_digest!==ids.scenario_digest||ledger.workload_digest!==ids.workload_digest||ledger.policy_digest!==ids.policy_digest)return invalid('BINDING_MISMATCH','header digests do not bind this scenario');
  if(ledger.engine_version!==ENGINE_VERSION||ledger.verifier_version!==VERIFIER_VERSION)return invalid('VERSION_MISMATCH','engine or verifier version');
+ const status=ledger.terminal_status,limit=status==='INCOMPLETE_RESOURCE_LIMIT',claim=limit?confirmGuard(claimedGuard,ledger.records,info.bytes,M.H,allowLoweredGuards):null;
+ if(limit?!claim:claimedGuard!==null)return invalid('TERMINAL_STATUS_MISMATCH',limit?'no named guard consistent with the prefix':`a guard is claimed for a ${status} ledger`);
  try{
-  const groups=structure(ledger.records);
-  if(ledger.terminal_status!=='COMPLETE')return groups.some(g=>g.kind==='HORIZON')?invalid('TERMINAL_STATUS_MISMATCH','an incomplete ledger carries horizon accounting'):env(ledger.terminal_status);
+  const groups=structure(ledger.records,claim?.guard==='RECORD_BYTES'?claim.detail.bound:LEDGER_LIMITS.recordBytes);
+  // A prefix is replayed with the same semantic checks up to its refused step (BYP-04, NP-1); only a clean prefix keeps
+  // its status.
+  if(status!=='COMPLETE'){
+   if(groups.some(g=>g.kind==='HORIZON'))return invalid('TERMINAL_STATUS_MISMATCH','an incomplete ledger carries horizon accounting');
+   // The engine cancels only between whole steps and completes in the step that processes H (note 12).
+   if(!limit&&groups.some(g=>g.tick>=M.H))return invalid('TERMINAL_STATUS_MISMATCH','a cancelled ledger carries records at H');
+   const cut=limit?cutOf(claim):null,P=replay(M,groups,null,{partial:status,cut});
+   if(cut&&cut!=='event'&&!reached(claim,P.cut,M.H))return invalid('TERMINAL_STATUS_MISMATCH',`the replay does not reach the claimed ${claim.guard} stop`);
+   info.guard=claim;digests.prefix=Htext('fleetlab.depot.ledger-prefix.v1',text);return env(status);
+  }
   const rec=createRecorder(M),S=replay(M,groups,rec);
   digests.run=runDigest({scenario_digest:ids.scenario_digest,engine_version:ENGINE_VERSION,verifier_version:VERIFIER_VERSION,ledger});
   return env('VERIFIED',null,rec.project(S));

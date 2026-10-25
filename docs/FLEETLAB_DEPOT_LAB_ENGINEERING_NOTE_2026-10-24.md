@@ -81,7 +81,10 @@ exact-edge rule "at an exact edge use the higher-SOC band"), `nextBandEdge(energ
 `H(domain, value)` = lowercase hex SHA-256 via `src/core/sha256.js` `sha256(bytes)`.
 Five digests exactly as C1.2: `workloadDigest(S)`, `policyDigest()` (over the frozen P of §6),
 `scenarioDigest(S)`, `runDigest({scenario_digest, engine_version, verifier_version, ledger})`,
-`comparisonDigest({...})`.
+`comparisonDigest({...})`. **Amended (§22):** `frameText(domain, text)` frames text that is already JCS and
+`Htext(domain, text)` hashes it, byte-identical to `H(domain, value)` when `text === jcs(value)`. A sixth domain,
+`fleetlab.depot.ledger-prefix.v1`, identifies a clean INCOMPLETE or CANCELLED prefix (C2.3 item 4, "last complete
+prefix identity"); it is a builder decision outside C1.2 and never enters a run or comparison digest.
 
 **BD-02 harness binding.** Internal analytical/checkpoint runs (§9) bind
 `scenario_digest = H("fleetlab.depot.harness-scenario.v1", {public_scenario_digest, harness})` so a harness
@@ -420,7 +423,9 @@ Writer checks before appending each atomic group: records ≤ 100,000; each reco
 envelope (header with the longest terminal status, brackets, commas) ≤ 33,554,432 bytes; ≤ 64 entries per
 vector chunk. Microstep > 64 → `MICROSTEP_LIMIT`. Rational guard → `RATIONAL_GUARD`. Overflow ends the run
 with `terminal_status = INCOMPLETE_RESOURCE_LIMIT`, the last complete prefix and `{guard, detail}`. Cancel →
-`CANCELLED`. Only `COMPLETE` ledgers may verify as `VERIFIED`.
+`CANCELLED`. Only `COMPLETE` ledgers may verify as `VERIFIED`. **Amended (§22):** the engine has no
+`MICROSTEP_LIMIT` raise site (microstep is 0 or 1, §8.2), so the verifier refuses that claim; the other guard
+claims are checked against the prefix as §22 states.
 
 ## 9. Internal harness (tests only, BD-15)
 `harness = {vehicle_profile?: {...C1.3 shape...}, initial: {<visit id>: {position, completed: [template],
@@ -434,6 +439,10 @@ is not part of `fleetlab.depot.scenario.v1`, is refused by import/share and bind
 
 ### 10.1 Interface
 `verifyDepotRun(scenario, ledger, {harness}?)` → `VerificationEnvelope` (§10.5). It never runs the engine.
+**Amended (§22):** `verifyDepotRun(scenario, ledger, {harness, claimedGuard, allowLoweredGuards}?)`.
+`claimedGuard` is the engine's `{guard, detail}`, carried beside the ledger text; it is required exactly when
+`terminal_status` is `INCOMPLETE_RESOURCE_LIMIT` and must be null otherwise (`TERMINAL_STATUS_MISMATCH`).
+`allowLoweredGuards` is for tests only: it accepts `guardOverrides` bounds at or below the contract limits.
 
 ### 10.2 Checks, in record order, fail-fast with precedence
 Envelope/binding (header digests, versions, terminal status) → per record: shape (C1.5 schema), `seq`,
@@ -441,7 +450,10 @@ strictly increasing key, chunk-group completeness/consistency, record and runnin
 rationals → semantic replay. At one action, the order is input/order integrity → duplicate/exclusive
 ownership → lifecycle/prerequisite → allocation/policy → terminal metrics. Missing expected completions are
 checked at the end of each tick (after all of the tick's records), so a later same-tick record that already
-violates lifecycle reports that more specific violation first.
+violates lifecycle reports that more specific violation first. **Amended (§22):** this includes a completion
+owed by a phase-0 target closure; a CANCELLED ledger is whole event ticks before H and replays every tick in full;
+an INCOMPLETE_RESOURCE_LIMIT prefix replays in phase order up to its refused step and skips only that tick's
+end-of-tick checks.
 
 ### 10.3 Violation codes
 `ENVELOPE_INVALID, BINDING_MISMATCH, VERSION_MISMATCH, RECORD_SCHEMA_INVALID, SEQ_INVALID, RECORD_ORDER_INVALID,
@@ -496,6 +508,10 @@ detail}|null, digests:{scenario, workload, policy, run|null}, versions:{engine, 
 trust:{authenticity:'NOT_AUTHENTICATED', authorization:'NOT_EVALUATED', deployment_permission:'NONE',
 evidence:'NOT_EVIDENCE'}, ledger:{records, bytes, terminal_status, guard|null}, projection|null}`.
 `projection` exists only for `VERIFIED`; INVALID quarantines every metric, narration and chart.
+**Amended (§22):** `digests:{scenario, workload, policy, run|null, prefix|null}`, where `prefix =
+H("fleetlab.depot.ledger-prefix.v1", ledger)` for an INCOMPLETE_RESOURCE_LIMIT or CANCELLED prefix that replays
+cleanly and null otherwise; `ledger.guard` holds the checked claim (or the verifier's own `RATIONAL_GUARD`).
+Schema and version ids stay `v1`: the additions are optional-null fields that every v1 reader already tolerates.
 
 ## 11. Comparison — `compare.js`
 `checkPairCompatibility(baselineScenario, candidateScenario)` (both already validated) → `{compatible,
@@ -566,6 +582,15 @@ projection = {
 `ComparisonEnvelope` (§11) adds per-component `{id, direction, baseline, candidate, delta, relation:
 'better'|'worse'|'equal'}` and the treatment `{intervention_count, fields, leaves}`.
 
+**Amended (§22, C1.6).** Port and position rows also carry `owned_fraction: "p/q"|null` = owned_ticks over the
+unit's own enabled available window `H − partition.unavailable`, null when that window is empty.
+`resources.owned_summary = {ports: S, positions: S}` with `S = {installed_unit_ticks, enabled_unit_ticks,
+eligible_unit_ticks, owned_unit_ticks, fraction: {installed, enabled, eligible}}` over `[0, H)`: installed =
+configured units × H; enabled = H for each unit whose own enabled flag is true; eligible = Σ(H −
+partition.unavailable), so a port is not eligible while its own position is out of service; each fraction is
+owned over that denominator, null when it is 0. Both stay out of `metrics`, which A26 requires to be invariant
+under renaming.
+
 ## 14. Runtime: job, worker, session (Task 7)
 
 * **Job** (`depot-lab-job.js`, pure, runs in the worker or in tests): `runDepotJob(request, {onProgress, maxTicks})`
@@ -573,6 +598,9 @@ projection = {
   run**, runs baseline then candidate with `stepDepotRun`, verifies each with `verifyDepotRun`, compares with
   `compareDepotRuns`, and returns `{type:'result', id, generation, scenario_digests, envelopes, comparison,
   ledger_texts}`. Refusals return `{type:'refused', id, generation, reason, issues}` with zero model starts.
+  **Amended (§22):** the result also carries `ledger_guards: {baseline, candidate}`, each the engine's bounded
+  `{guard, detail}` (at most 1,024 characters) or null, passed to the verifier as `claimedGuard`; the session's
+  strict reply check accepts exactly this closed field and a prefix digest only on INCOMPLETE or CANCELLED.
 * **Worker** (`depot-lab-worker.js`): binds `self.onmessage` only under a `WorkerGlobalScope` guard; messages
   `{type:'run', id, generation, arms:{baseline, candidate|null}}`; posts `progress {id, generation, stage:
   'checking_setup'|'running_baseline'|'running_candidate'|'checking_results', done, total}` and the job reply.
@@ -770,3 +798,86 @@ a silent event tick (so a missing time-dependent rejection fails `REASON_MISMATC
 other tick first (so a fabricated record still reports its own semantic code, as A38/A39 require) and then refuses
 the extra tick with `RECORD_ORDER_INVALID`. The site-wide hosted transform gains `tagFree`, used only for the depot
 page: no analytics tag or placeholder, and a privacy line that names only the hosting provider.
+
+## 22. Independent-review fixes (binding; amends §§4, 8.9, 10, 13 to 16 and 19)
+
+An independent implementation review (six lenses, each finding adversarially checked) confirmed 23 findings and
+refuted 16. Two further verification rounds checked every fix against its finding and hunted regressions; the
+residuals they confirmed were fixed too. The
+dispositions are listed in the implementation handoff. The rules below are binding for the verifier, runtime
+and UI.
+
+**Verifier.**
+
+* **Target closure obliges completion (BYP-01, BYP-02, FD-01).** A flow reaching its target in phase 0 leaves
+  both allocation domains at once (max-min and the phase-6 horizon report). Its COMPLETE is due in that same
+  tick and is checked at the end of the tick with §10.2 precedence, so a missing or deferred COMPLETE is
+  `MISSING_COMPLETION` unless a later same-tick record already violates lifecycle. At H a completion owed at H
+  reports before the HORIZON `derived_state_digest`, which only restates the observation chain (FDR2-02). A
+  same-tick PAUSE of a transfer at its target is `OVERLAP_VIOLATION`. A closed interval is never credited again. Replay asserts that
+  per-task data credit stays at or below its remainder, and that vehicle energy stays at or below max(initial,
+  target) and the pack capacity (`PROGRESS_MISMATCH`).
+* **Band edge at H (ARITH-01).** The verifier does not reopen a band-edge interval at H; phase 6 expects items
+  only for open intervals, as §20 F4 states for the engine.
+* **Guard claims (BND-02, ARITH-02, BYP-04, BYP-05, ARITH-06, DL-RT-01, FD-02).** `INCOMPLETE_RESOURCE_LIMIT`
+  needs a named guard claim consistent with the prefix. On the public path only the contract bounds (100,000
+  records, 33,554,432 ledger bytes, 16,384 record bytes, 64 vector entries) are accepted. Counts and bytes need
+  prefix ≤ bound < claim. `MICROSTEP_LIMIT` is refused, since the engine has no raise site.
+  `SUB_QUANTUM_POSITIVE_SHARE` needs its anchor at the last record's tick, phases 0 to 4 of that tick whole, and
+  the identical interval from the verifier's own phase 5. `VECTOR_LIMIT` (field `unmet_alternatives`) and a
+  contract-bound `RECORD_BYTES` (kind BLOCKAGE only) need the replay to reach H, with the next expected
+  BLOCKAGE matching the claimed count or the claimed first unfit chunk size. `RATIONAL_GUARD` needs one of the
+  messages `rational.js` raises. COMPLETE and CANCELLED ledgers claim no guard.
+* **Prefix replay (NP-1).** A CANCELLED ledger is whole event ticks before H and replays every tick in full;
+  records at H are `TERMINAL_STATUS_MISMATCH`. An INCOMPLETE_RESOURCE_LIMIT prefix replays in phase order up to
+  its refused step. For a count, ledger-byte, rational or non-BLOCKAGE byte guard, that step is the first new
+  event after the last record, at that record's tick. Phase 0 completes in ascending task id in one pass, so a
+  completion owed at the cut tick whose id is below the last recorded completion, or any owed completion once a
+  later phase has records, is `MISSING_COMPLETION`. Otherwise only that tick's end-of-tick checks are skipped. A
+  clean prefix gets `digests.prefix` (§4, §10.5); projection and run digest stay null. A malformed last record
+  under any claim returns an envelope, never an exception (FDR2-01).
+* **Canonical chunking (BYP-06, BYP-06-R1, BYP-07).** Only the writer's chunking verifies: parallel `[s, e)`
+  slices, no empty chunk in a multi-chunk group, every non-final chunk greedy, and every vector record with an
+  entry (single-chunk groups included) within the bound when measured with chunk_count 100000 and
+  chunk_index/seq 99999. A ledger written with a lowered `maxChunkEntries` or `maxRecordBytes` is an engine test
+  fixture: it verifies only as a confirmed RECORD_BYTES prefix and is otherwise `CHUNK_GROUP_INVALID` by design.
+  PAUSE records inside an accepted action group are in strictly ascending task id.
+* **Documented residuals.** The refused step is never in the ledger (C1.5). So a count, byte or rational claim
+  on a relabelled honest prefix is checked for consistency, not reproduced. It can only withhold results, never
+  produce a projection. Beyond the phase-0 rule above, the verifier cannot tell whether an INCOMPLETE cut tick
+  was complete, so that tick's remaining end-of-tick checks are skipped. Prefix verification is the cost of these checks. The worst measured case is
+  S200 with pool and client at 300 Mbps, a 33.5 MB LEDGER_BYTES prefix, verified in about 1.4 s on an M4 Pro.
+
+**Runtime and session.**
+
+* The job carries `ledger_guards` (§14). The session's strict reply check accepts that closed field. An opened
+  share link or imported file keeps `presentation.preset` only when the codec's scenario digests equal that
+  preset's memoized validated digests; otherwise it is null and no declared regime is shown (BND-03, COPY-01,
+  DL-RT-02, SS-NEW-04).
+
+**UI.**
+
+* **Inspector (COPY-03, CA-NEW-02, COPY-05, ARITH-07, ARITH-07-N1).** The per-vehicle inspector states the
+  release-by status in both reading levels from the verified `on_time`, `due_status` and `overdue_s`. Exact
+  seconds always follow the release-by and release times in both levels (A30). A late release reads "Late by
+  <minutes> (<N> s)", and lower bounds under a minute read in exact seconds. A port or position is out of
+  service when its verified partition is unavailable for all of H. An enabled port on a disabled position
+  reads "out of service because position <id> is out of service", and its share reads "Not applicable, out of
+  service". Below the per-unit share, the inspector shows `owned_summary` for the unit's class, over installed,
+  enabled and eligible unit time. Overview shows a truncated percentage and Technical the exact p/q; a null
+  fraction is Not applicable.
+* **Setup (COPY-02, A11Y-01, CA-NEW-01, SS-NEW-01, SS-NEW-02).** The Garage statement is derived from the shown
+  setup's visits. Setup-edit refusals are written to the static `#error` role=alert node, prefixed with the
+  card name, and linked to the pressed control by aria-describedby until the next edit. A re-entry that ends
+  with neither a refusal nor an edit removes that control's own refusal from `#error`. It then restores the
+  session's error text, or hides the node. "Edited since loading" appears only when the draft digests differ
+  from those recorded when that named setup was first loaded or opened. Build your own mode ends on any draft
+  change the setup controls did not make; a refused import keeps it.
+* **Results and sharing (COPY-04, TRUST-01, ARITH-03, DL-RT-06, DL-RT-07, SS-NEW-03).** The comparison
+  narrative says the candidate's declared changes, taken together, changed these outcomes in this model under
+  this declared paired workload. The bundled caveat follows directly. Copied and exported summaries use the
+  registry label and definition for the run state and keep the trust axes separate. Every component carries
+  its exact unit: energy in mJ with kWh, data in bytes with GB. A link refused for size or validity offers
+  export only when export would be accepted. A same-document navigation to a different `#share=` fragment
+  opens it like a page load and never runs it. A return to the fragment this page last opened, such as Back
+  after the skip link, keeps the draft and the result. The address keeps the fragment for reloads.

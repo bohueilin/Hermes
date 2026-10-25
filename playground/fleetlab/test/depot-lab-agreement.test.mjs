@@ -107,7 +107,7 @@ function generateCase(seed){
 function runAndVerify(scenario,options={}){
  const cursor=createDepotRun(scenario,options);let r;do r=stepDepotRun(cursor,{maxTicks:4096});while(!r.done);
  const text=jcs(r.ledger);
- return {run:r,text,envelope:verifyDepotRun(scenario,JSON.parse(text),{harness:options.harness??null})};
+ return {run:r,text,envelope:verifyDepotRun(scenario,JSON.parse(text),{harness:options.harness??null,claimedGuard:r.guard??null})};
 }
 // A COMPLETE ledger must verify VERIFIED. A named D1-07 guard refusal is not a disagreement: the verifier must then
 // report the same INCOMPLETE_RESOURCE_LIMIT status with no projection, and the case is reported as a refusal.

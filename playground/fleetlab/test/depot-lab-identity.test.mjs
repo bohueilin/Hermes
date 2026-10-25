@@ -3,10 +3,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {frame,H,DIGEST,workloadDigest,policyDigest,scenarioDigest,runDigest,comparisonDigest,harnessScenarioDigest,computeIdentities,refs,SYNTHETIC,rawId} from '../src/model/depot-lab/identity.js';
+import {frame,frameText,H,Htext,DIGEST,workloadDigest,policyDigest,scenarioDigest,runDigest,comparisonDigest,harnessScenarioDigest,computeIdentities,refs,SYNTHETIC,rawId} from '../src/model/depot-lab/identity.js';
 import {POLICY_BODY,REFERENCE_EFFORT,ENGINE_VERSION,VERIFIER_VERSION,PROJECTION_VERSION,METRIC_VERSION,OBSERVATION_VERSION} from '../src/model/depot-lab/profiles.js';
 import {validateScenario} from '../src/model/depot-lab/schema.js';
 import {defaultScenario} from '../src/model/depot-lab/presets.js';
+import {jcs} from '../src/model/depot-lab/canonical.js';
 
 // Independent RFC 8785 text for the restricted domain and an independent frame/digest built from the C1.2 formula.
 const esc=s=>{let o='"';for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);o+=c===0x22?'\\"':c===0x5c?'\\\\':c===8?'\\b':c===9?'\\t':c===10?'\\n':c===12?'\\f':c===13?'\\r':c<0x20?'\\u'+c.toString(16).padStart(4,'0'):s[i];}return o+'"';};
@@ -29,6 +30,11 @@ test('H is lowercase hex SHA-256 of the frame; domain and length framing both ch
  assert.notEqual(H('fleetlab.depot.run.v1',{a:1}),H('fleetlab.depot.run.v2',{a:1}));
  assert.notEqual(H('a',{}),createHash('sha256').update('a{}').digest('hex'));// no unframed concatenation
  assert.ok(DIGEST.test('0'.repeat(64)));assert.equal(DIGEST.test('A'.repeat(64)),false);assert.equal(DIGEST.test('0'.repeat(63)),false);
+});
+test('Htext frames text that is already JCS: byte-identical to H over the value (NP-4, AF-02)',()=>{
+ const L={records:[{a:'\u{1F600}',b:[1,2]}],z:null,y:'x'.repeat(70000)};
+ for(const v of [null,[],{b:1,a:'é'},L]){const t=jcs(v);assert.equal(t,J(v));assert.deepEqual([...frameText('fleetlab.depot.ledger-prefix.v1',t)],[...frame('fleetlab.depot.ledger-prefix.v1',v)]);assert.equal(Htext('fleetlab.depot.ledger-prefix.v1',t),H('fleetlab.depot.ledger-prefix.v1',v));}
+ assert.equal(Htext('d','{}'),myH('d',{}));
 });
 test('the five digests use the fixed C1.2 domains and compositions',()=>{
  const s=valid(defaultScenario());

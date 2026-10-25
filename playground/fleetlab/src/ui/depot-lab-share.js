@@ -6,7 +6,8 @@ import {DIGEST,scenarioDigest} from '../model/depot-lab/identity.js';
 import {validateScenario,LIMITS} from '../model/depot-lab/schema.js';
 import {checkPairCompatibility} from '../model/depot-lab/compare.js';
 import {PRESET_IDS} from '../model/depot-lab/presets.js';
-import {HONESTY} from '../model/depot-lab/registry.js';
+import {HONESTY,term} from '../model/depot-lab/registry.js';
+import {componentKind,signedText} from './depot-lab-format.js';
 export const SHARE_SCHEMA='fleetlab.depot.share.v1',SHARE_KEY='#share=',MAX_SHARE_CHARS=32768,MAX_ENVELOPE_BYTES=524288;
 export const EXPORT_FILENAME='fleetlab-depot-configuration.json',READING_LEVELS=Object.freeze(['overview','technical']);
 // The three D1-11 strings come from the registry, the single copy that holds the route's one permitted dash.
@@ -108,15 +109,18 @@ export function buildConfigurationExport(parts){
 }
 const shown=v=>{if(v===null||v===undefined)return 'not available';if(typeof v!=='object')return String(v);try{return jcs(v);}catch{return 'not available';}};
 const plural=(n,word)=>`${n} ${word}${n===1?'':'s'}`;
-// Plain-text summary of a session state. Only a verified result contributes metrics; every summary ends with the
-// three honesty strings.
+// Exact value with its unit; energy and data add their kWh or GB display (note 18, C1.6).
+const unitText=(id,v,sign)=>{const [f,u]=componentKind(id);return v===null||v===undefined?'not available':`${shown(v)} ${u}${u==='mJ'||u==='bytes'?` (${sign?signedText(v,f):f(v)})`:''}`;};
+// Plain-text summary of a session state. The status carries its registry qualifier and the trust axes stay separate
+// (D1-11, reconciliation 11.2); only a verified result contributes metrics; every summary ends with the honesty strings.
 export function buildResultSummary(state){
- const status=typeof state?.status==='string'?state.status:'draft',r=plain(state?.result)?state.result:null,lines=['FleetLab depot lab run summary',`Status: ${status}`];
+ const status=typeof state?.status==='string'?state.status:'draft',r=plain(state?.result)?state.result:null,q=term(`run.state.${status}`);
+ const lines=['FleetLab depot lab run summary',`Status: ${q?`${q.label_plain} (run state ${status}). ${q.definition}`:status}`,`Trust: ${['authenticity','authorization','deployment_permission','evidence','scope'].map(k=>`${term(`trust.${k}`).label_plain} ${term(`trust.${k}`).value}`).join('; ')}`];
  for(const arm of ['baseline','candidate'])if(typeof r?.scenario_digests?.[arm]==='string')lines.push(`Scenario digest, ${arm}: ${r.scenario_digests[arm]}`);
  if(status==='verified'&&r?.envelopes){
   for(const arm of ['baseline','candidate']){
    const e=r.envelopes[arm];if(!e)continue;
-   lines.push(`Run digest, ${arm}: ${e.digests.run}`,`Versions, ${arm}: engine ${e.versions.engine}; verifier ${e.versions.verifier}; projection ${e.versions.projection}; metrics ${e.versions.metric}`,`Exact metrics, ${arm}:`);
+   lines.push(`Internal consistency, ${arm}: ${e.consistency} from the independent verifier; ${Object.entries(e.trust??{}).map(([k,x])=>`${k} ${x}`).join('; ')}`,`Run digest, ${arm}: ${e.digests.run}`,`Versions, ${arm}: engine ${e.versions.engine}; verifier ${e.versions.verifier}; projection ${e.versions.projection}; metrics ${e.versions.metric}`,`Exact metrics, ${arm}:`);
    for(const k of Object.keys(e.projection?.metrics??{}).sort())lines.push(`  ${k}: ${shown(e.projection.metrics[k])}`);
   }
   const c=r.comparison;
@@ -125,7 +129,7 @@ export function buildResultSummary(state){
    if(t){lines.push(`Treatment: ${plural(t.intervention_count,'intervention')} · ${plural(t.fields.length,'authoritative field')}`);for(const l of t.leaves)lines.push(`  ${l.pointer}: ${shown(l.old)} to ${shown(l.new)}`);}
    lines.push(`Comparison: ${c.classification} (component by component; no single winner)`);
    if(c.digest)lines.push(`Comparison digest: ${c.digest}`);
-   for(const x of c.components)lines.push(`  ${x.id} (${x.direction}): baseline ${shown(x.baseline)}; candidate ${shown(x.candidate)}; change ${shown(x.delta)}; ${x.relation??'not available'}`);
+   for(const x of c.components)lines.push(`  ${x.id} (${x.direction}): baseline ${unitText(x.id,x.baseline)}; candidate ${unitText(x.id,x.candidate)}; change ${unitText(x.id,x.delta,1)}; ${x.relation??'not available'}`);
   }
  }else{
   if(status==='could_not_reproduce'){

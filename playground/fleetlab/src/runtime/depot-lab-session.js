@@ -6,8 +6,14 @@ import {jcs,deepFreeze,utf8Length} from '../model/depot-lab/canonical.js';
 import {scenarioDigest,DIGEST} from '../model/depot-lab/identity.js';
 import {checkPairCompatibility,COMPARISON_SCHEMA,VERIFICATION_SCHEMA} from '../model/depot-lab/compare.js';
 import {preset as presetConfig,defaultScenario} from '../model/depot-lab/presets.js';
-import {JOB_STAGES,MAX_REPLY_ISSUES,closedObject as closed} from './depot-lab-job.js';
+import {JOB_STAGES,MAX_REPLY_ISSUES,MAX_GUARD_CHARS,closedObject as closed} from './depot-lab-job.js';
 export const MAX_REPLY_BYTES=33554432,HISTORY_LIMIT=4,READING_LEVELS=Object.freeze(['overview','technical']);
+// Each preset's validated scenario digests, computed once per id (SS-NEW-04); null for a missing arm.
+const PRESET_DIGESTS=new Map();
+function presetDigests(id){
+ if(!PRESET_DIGESTS.has(id)){const p=presetConfig(id),d=x=>x===null?null:scenarioDigest(validateScenario(x,{origin:'import'}).scenario);PRESET_DIGESTS.set(id,{baseline:d(p.baseline),candidate:d(p.candidate)});}
+ return PRESET_DIGESTS.get(id);
+}
 const STATUS=['VERIFIED','INVALID','INCOMPLETE_RESOURCE_LIMIT','CANCELLED'],CONSISTENCY=['INTERNALLY_CONSISTENT','INVALID_EVIDENCE','NOT_AVAILABLE'];
 const TRUST={authenticity:'NOT_AUTHENTICATED',authorization:'NOT_EVALUATED',deployment_permission:'NONE',evidence:'NOT_EVIDENCE'};
 const CLASSIFICATION=['improvement','worse','tie','mixed','NOT_AVAILABLE'],SELECTION=/^[A-Za-z0-9:_-]{1,96}$/;
@@ -20,12 +26,15 @@ const ledgerText=t=>typeof t==='string'&&t.length<=MAX_REPLY_BYTES&&utf8Length(t
 function envelopeOk(e,digest){
  if(!closed(e,['schema','status','consistency','primary_violation','digests','versions','trust','ledger','projection'])||e.schema!==VERIFICATION_SCHEMA)return false;
  if(!STATUS.includes(e.status)||!CONSISTENCY.includes(e.consistency))return false;
- const d=e.digests,verified=e.status==='VERIFIED';
- if(!closed(d,['scenario','workload','policy','run'])||d.scenario!==digest||!digestText(d.workload)||!digestText(d.policy)||!(d.run===null?!verified:digestText(d.run)))return false;
+ const d=e.digests,verified=e.status==='VERIFIED',prefix=plain(d)&&Object.hasOwn(d,'prefix');
+ if(!closed(d,['scenario','workload','policy','run',...(prefix?['prefix']:[])])||d.scenario!==digest||!digestText(d.workload)||!digestText(d.policy)||!(d.run===null?!verified:digestText(d.run)))return false;
+ // A prefix digest identifies an INCOMPLETE_RESOURCE_LIMIT or CANCELLED prefix only.
+ if(prefix&&d.prefix!==null&&(verified||e.status==='INVALID'||!digestText(d.prefix)))return false;
  if(!closed(e.trust,Object.keys(TRUST))||Object.keys(TRUST).some(k=>e.trust[k]!==TRUST[k]))return false;
  if(!closed(e.versions,['engine','verifier','projection','metric'])||!Object.values(e.versions).every(x=>typeof x==='string')||!plain(e.ledger))return false;
  return verified?e.consistency==='INTERNALLY_CONSISTENT'&&e.primary_violation===null&&plain(e.projection):e.projection===null;
 }
+const guardOk=g=>g===null||closed(g,['detail','guard'])&&typeof g.guard==='string'&&g.guard.length<=64;
 const comparisonOk=c=>plain(c)&&c.schema===COMPARISON_SCHEMA&&CLASSIFICATION.includes(c.classification)&&Array.isArray(c.components)&&(c.digest===null||digestText(c.digest));
 // Inbound worker messages: closed shapes, bound to the pending request, size-bounded; anything else is null.
 function checkReply(m,p){
@@ -35,14 +44,15 @@ function checkReply(m,p){
   return {kind:'progress',value:{stage:m.stage,done:m.done,total:m.total}};
  }
  if(m.type==='result'){
-  if(!closed(m,['type','id','generation','scenario_digests','envelopes','comparison','ledger_texts']))return null;
-  const pair=p.mode==='pair',d=m.scenario_digests,t=m.ledger_texts;
+  if(!closed(m,['type','id','generation','scenario_digests','envelopes','comparison','ledger_texts','ledger_guards']))return null;
+  const pair=p.mode==='pair',d=m.scenario_digests,t=m.ledger_texts,g=bounded(m.ledger_guards,2*MAX_GUARD_CHARS+64);
+  if(!closed(g,['baseline','candidate'])||!guardOk(g.baseline)||!(pair?guardOk(g.candidate):g.candidate===null))return null;
   if(!closed(d,['baseline','candidate'])||d.baseline!==p.digests.baseline||d.candidate!==p.digests.candidate)return null;
   if(!closed(t,['baseline','candidate'])||!ledgerText(t.baseline)||!(pair?ledgerText(t.candidate):t.candidate===null))return null;
   const body=bounded({envelopes:m.envelopes,comparison:m.comparison},MAX_REPLY_BYTES);
   if(!body||!closed(body.envelopes,['baseline','candidate'])||!envelopeOk(body.envelopes.baseline,d.baseline))return null;
   if(pair?!envelopeOk(body.envelopes.candidate,d.candidate)||!comparisonOk(body.comparison):body.envelopes.candidate!==null||body.comparison!==null)return null;
-  return {kind:'result',value:{scenario_digests:{...d},envelopes:body.envelopes,comparison:body.comparison,ledger_texts:{baseline:t.baseline,candidate:t.candidate}}};
+  return {kind:'result',value:{scenario_digests:{...d},envelopes:body.envelopes,comparison:body.comparison,ledger_texts:{baseline:t.baseline,candidate:t.candidate},ledger_guards:g}};
  }
  if(m.type==='refused'){
   if(!closed(m,['type','id','generation','reason','issues'])||typeof m.reason!=='string'||m.reason.length>64||!Array.isArray(m.issues)||m.issues.length>MAX_REPLY_ISSUES)return null;
@@ -119,11 +129,18 @@ export function createDepotSession({workerFactory,onChange=()=>{},codec=null,pre
   const expected=ok?{baseline_run_digest:r.envelopes.baseline.digests.run,candidate_run_digest:r.envelopes.candidate?.digests.run??null}:{};
   return {ok:true,value:{arms:{baseline:c.baseline.scenario,candidate:c.candidate?.scenario??null},presentation:state.presentation,expected}};
  };
+ // A shared preset name, and with it the preset's declared regime, stays only on that preset's exact validated inputs
+ // (D1-03: never trusted narration); any other configuration opens as the visitor's own setup.
+ // The codec's scenario digests cover every authoritative field (identity.js), so equal digests mean equal arms.
+ const named=(id,arms,digests)=>{
+  if(id===null)return null;
+  try{const p=presetDigests(id),d=digests??{baseline:scenarioDigest(arms.baseline),candidate:arms.candidate&&scenarioDigest(arms.candidate)};return d.baseline===p.baseline&&(d.candidate??null)===p.candidate?id:null;}catch{return null;}
+ };
  const open=(r,source)=>{
   if(disposed)return r;
   if(!r?.ok){set({refusal:{source,gate:r?.gate??'codec',code:r?.code??'REFUSED',issues:r?.issues??[]}});return r;}
-  const claim=r.expected.baseline_run_digest!==null||r.expected.candidate_run_digest!==null;
-  replaceDraft({baseline:editable(r.arms.baseline),candidate:editable(r.arms.candidate)},{preset:r.presentation.preset,presentation:{...r.presentation},expected:claim?{...r.expected}:null});
+  const claim=r.expected.baseline_run_digest!==null||r.expected.candidate_run_digest!==null,preset=named(r.presentation.preset,r.arms,r.digests);
+  replaceDraft({baseline:editable(r.arms.baseline),candidate:editable(r.arms.candidate)},{preset,presentation:{...r.presentation,preset},expected:claim?{...r.expected}:null});
   return r;
  };
  return {

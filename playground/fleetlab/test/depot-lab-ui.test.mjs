@@ -4,12 +4,14 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {installFakeDom,serialize} from './helpers/fake-dom.mjs';
 import {startDepotLab} from '../src/ui/depot-lab-app.js';
+import {outcomeNodes} from '../src/ui/depot-lab-view.js';
+import {mountEvidence} from '../src/ui/depot-lab-evidence.js';
 import {runDepotJob} from '../src/runtime/depot-lab-job.js';
 import {createDepotRun,stepDepotRun} from '../src/model/depot-lab/engine.js';
 import {compareDepotRuns,VERIFICATION_SCHEMA} from '../src/model/depot-lab/compare.js';
 import {scenarioDigest,workloadDigest,policyDigest,H} from '../src/model/depot-lab/identity.js';
 import {jcs} from '../src/model/depot-lab/canonical.js';
-import {ENGINE_VERSION,VERIFIER_VERSION,PROJECTION_VERSION,METRIC_VERSION} from '../src/model/depot-lab/profiles.js';
+import {ENGINE_VERSION,VERIFIER_VERSION,PROJECTION_VERSION,METRIC_VERSION,TEMPLATES} from '../src/model/depot-lab/profiles.js';
 import {presetCatalog,preset} from '../src/model/depot-lab/presets.js';
 import {validateScenario} from '../src/model/depot-lab/schema.js';
 import {HONESTY,term} from '../src/model/depot-lab/registry.js';
@@ -37,7 +39,7 @@ const FIX=[
  {on:20,unfinished:1,unreleased:1,over:6,observed:400000,insp:'300/1',mj:2160000000,bytes:500000000},
  {on:21,unfinished:0,unreleased:0,over:0,observed:401000,insp:'0/1',mj:0,bytes:0},
 ];
-function fixtureVerify({invalid=null,incomplete=null}={}){
+function fixtureVerify({invalid=null,incomplete=null,guard={guard:'RECORD_COUNT',detail:{bound:1}}}={}){
  return (s,ledger)=>{
   const d=scenarioDigest(s),arm=s.site.ports.length===5?'candidate':'baseline',f=FIX[arm==='candidate'?1:0];
   const base={schema:VERIFICATION_SCHEMA,digests:{scenario:d,workload:workloadDigest(s),policy:policyDigest(),run:H('fleetlab.test.run.v1',{scenario:d,records:ledger.records.length})},
@@ -45,7 +47,7 @@ function fixtureVerify({invalid=null,incomplete=null}={}){
    trust:{authenticity:'NOT_AUTHENTICATED',authorization:'NOT_EVALUATED',deployment_permission:'NONE',evidence:'NOT_EVIDENCE'},
    ledger:{records:ledger.records.length,bytes:jcs(ledger).length,terminal_status:'COMPLETE',guard:null}};
   if(invalid===arm)return {...base,status:'INVALID',consistency:'INVALID_EVIDENCE',primary_violation:{code:'PROGRESS_MISMATCH',seq:41,tick:900,detail:'fixture'},digests:{...base.digests,run:null},projection:null};
-  if(incomplete===arm)return {...base,status:'INCOMPLETE_RESOURCE_LIMIT',consistency:'NOT_AVAILABLE',primary_violation:null,digests:{...base.digests,run:null},ledger:{...base.ledger,terminal_status:'INCOMPLETE_RESOURCE_LIMIT',guard:{guard:'RECORD_COUNT',detail:{bound:1}}},projection:null};
+  if(incomplete===arm)return {...base,status:'INCOMPLETE_RESOURCE_LIMIT',consistency:'NOT_AVAILABLE',primary_violation:null,digests:{...base.digests,run:null},ledger:{...base.ledger,terminal_status:'INCOMPLETE_RESOURCE_LIMIT',guard},projection:null};
   const metrics={'requirement.energy.target_soc_pct':s.requirements.energy.target_soc_pct,'release.on_time_count':f.on,'release.due_count':24,'release.unfinished_due_count':f.unfinished,'release.released_count':24-f.unreleased,'release.unreleased_count':f.unreleased,
    'visit.work_complete_count':24,'visit.censored_count':f.unreleased,'visit.overdue_s':f.over,'visit.turnaround_observed_s':f.observed,'work.remaining_reference_seconds':{inspection:f.insp},'energy.remaining_required_mj':f.mj,
    'data.remaining_required_bytes':f.bytes,'data.optional_unfinished_bytes':0,'charge.energy_credited_mj':0,'charge.peak_site_draw_w':'0/1','network.useful_bytes_down':0,'network.useful_bytes_up':0,'resource.attention_fraction':null,'wait.reason_seconds':{}};
@@ -91,6 +93,8 @@ const termRow=(t,id)=>cells(t.querySelector(`tr[data-term="${id}"]`)).slice(1);
 const after=(x,h)=>{const hs=x.by('outcome').querySelectorAll('h3'),i=hs.findIndex(n=>n.textContent===h);return hs[i].nextSibling;};
 const runPreset=(x,id)=>{change(x.by('preset'),id);x.by('run-pair').click();x.finish();const st=x.s.get();assert.equal(st.status,'verified',x.by('status').textContent);return st;};
 const OLD='A run for an older draft is still finishing; its result will be kept as old.';
+// Commits a setup control by its visible label, as a visitor typing a value and leaving the field.
+const commit=(x,text,value)=>{const n=x.by(x.by('setup').querySelectorAll('label').find(l=>l.textContent===text).getAttribute('for'));n.value=String(value);n.dispatchEvent(new Event('change'));return n;};
 
 test('page entry: trust states, verbatim honesty strings, the hosted-only line, an idle draft and no worker',()=>{
  const x=setup();
@@ -323,12 +327,12 @@ test('copy summary: clipboard text and the selectable fallback both end with the
  let x=setup();
  try{
   x.btn('Copy summary').click();await flush();
-  assert.equal(x.fx.copied.length,1);assert.ok(x.fx.copied[0].endsWith(HONESTY.join('\n')));assert.match(x.fx.copied[0],/Status: draft/);
+  assert.equal(x.fx.copied.length,1);assert.ok(x.fx.copied[0].endsWith(HONESTY.join('\n')));assert.match(x.fx.copied[0],/\nStatus: Draft, not run \(run state draft\)\. /);
   assert.equal(x.by('share-status').textContent,'Summary copied with the three honesty statements.');
   x.btn('Export result summary').click();assert.equal(x.fx.blobs.length,0);
   x.by('run-pair').click();x.finish();assert.equal(x.s.get().status,'verified');assert.equal(x.btn('Export result summary').getAttribute('aria-disabled'),'false');
   x.btn('Export result summary').click();
-  const [b]=x.fx.blobs;assert.equal(b.type,'text/plain');assert.match(b.text,/^FleetLab depot lab run summary\nStatus: verified\n/);assert.ok(b.text.endsWith(HONESTY.join('\n')));
+  const [b]=x.fx.blobs;assert.equal(b.type,'text/plain');assert.match(b.text,/^FleetLab depot lab run summary\nStatus: Internally consistent \(run state verified\)\. The independent verifier found the run internally consistent; not authenticated or authorized\.\n/);assert.ok(b.text.endsWith(HONESTY.join('\n')));
   assert.equal(x.anchors.at(-1).getAttribute('download'),'fleetlab-depot-result-summary.txt');assert.equal(x.anchors.at(-1).clicked,true);
   assert.equal(x.by('share-status').textContent,'Saved fleetlab-depot-result-summary.txt.');
  }finally{x.close();}
@@ -338,7 +342,7 @@ test('copy summary: clipboard text and the selectable fallback both end with the
   x.btn('Copy summary').click();await flush();
   const box=x.by('share').querySelector('textarea[readonly]');
   assert.equal(box.hidden,false);assert.equal(document.activeElement,box);assert.equal(box.getAttribute('aria-label'),'The summary to copy');
-  assert.match(box.value,/Status: verified/);for(const h of HONESTY)assert.ok(box.value.includes(h));assert.ok(box.value.endsWith(HONESTY.join('\n')));
+  assert.match(box.value,/\nStatus: Internally consistent \(run state verified\)\. /);for(const h of HONESTY)assert.ok(box.value.includes(h));assert.ok(box.value.endsWith(HONESTY.join('\n')));
   assert.equal(x.by('share-status').textContent,'Select and copy the summary below. Automatic clipboard access is unavailable.');
  }finally{x.close();}
 });
@@ -384,6 +388,160 @@ test('a #share= address opens the setup on page load and never runs; a refused l
  }finally{x.close();}
 });
 
+// TRUST-01 and ARITH-03: the copied and exported summaries say what "verified" means, keep each trust axis apart and
+// label every comparison component with its exact unit (mJ with kWh beside it, bytes with GB beside it).
+test('result summaries carry the internal-consistency qualifier, separate trust axes and exact component units',async()=>{
+ const x=setup();
+ try{
+  x.by('run-pair').click();x.finish();assert.equal(x.s.get().status,'verified');
+  x.btn('Copy summary').click();await flush();x.btn('Export result summary').click();
+  for(const text of [x.fx.copied[0],x.fx.blobs[0].text]){
+   assert.doesNotMatch(text,/^Status: verified$/m);
+   assert.ok(text.includes('\nStatus: Internally consistent (run state verified). The independent verifier found the run internally consistent; not authenticated or authorized.\n'));
+   assert.ok(text.includes(`\nTrust: ${label('trust.authenticity')} NOT_AUTHENTICATED; ${label('trust.authorization')} NOT_EVALUATED; ${label('trust.deployment_permission')} NONE; ${label('trust.evidence')} NOT_EVIDENCE; ${label('trust.scope')} ${FLOW_TRUST.scope}\n`));
+   for(const a of ['baseline','candidate'])assert.ok(text.includes(`\nInternal consistency, ${a}: INTERNALLY_CONSISTENT from the independent verifier; authenticity NOT_AUTHENTICATED; authorization NOT_EVALUATED; deployment_permission NONE; evidence NOT_EVIDENCE\n`),a);
+   for(const line of ['  overdue_seconds (down): baseline 6 s; candidate 0 s; change -6 s; better','  remaining_reference_seconds:inspection (down): baseline 300/1 s; candidate 0/1 s; change -300/1 s; better',
+    '  remaining_required_kWh (down): baseline 2160000000 mJ (0.6 kWh); candidate 0 mJ (0 kWh); change -2160000000 mJ (-0.6 kWh); better','  remaining_required_bytes (down): baseline 500000000 bytes (0.5 GB); candidate 0 bytes (0 GB); change -500000000 bytes (-0.5 GB); better',
+    '  on_time_count (up): baseline 20 visits; candidate 21 visits; change 1 visits; better'])assert.ok(text.includes(`\n${line}\n`),line);
+   assert.ok(text.endsWith(HONESTY.join('\n')));
+  }
+ }finally{x.close();}
+});
+
+// Guard display (BYP-05, ARITH-02 UI part): the envelope's guard name, its detail and the prefix digest when present;
+// "Not available" only when the envelope names no guard.
+test('an incomplete run names the envelope guard with its detail and prefix digest, and says Not available only when absent',()=>{
+ const prefix='ab'.repeat(32),detail={flow_id:'flow:V1:map_download',rate:'1/2',anchor_tick:240};
+ let x=setup(fixtureVerify({incomplete:'baseline',guard:{guard:'SUB_QUANTUM_POSITIVE_SHARE',detail}}));
+ const ev=()=>Object.fromEntries(x.by('technical-evidence').querySelectorAll('dl div').map(d=>[d.querySelector('dt').textContent,d.querySelector('dd').textContent]));
+ try{
+  x.by('run-baseline').click();x.finish();const st=x.s.get();assert.equal(st.status,'incomplete');
+  assert.match(x.by('status').textContent,/ Guard: SUB_QUANTUM_POSITIVE_SHARE \(baseline\)\.$/);
+  const card=x.by('outcome').querySelector('.state-card');assert.match(overview(card),/Baseline: stopped by guard SUB_QUANTUM_POSITIVE_SHARE\. The prefix is not a result\./);
+  assert.ok(card.querySelector('.technical-only').textContent.includes(` guard detail ${jcs(detail)}; prefix digest Not available; `));
+  assert.match(ev()['Baseline ledger'],/; INCOMPLETE_RESOURCE_LIMIT; guard SUB_QUANTUM_POSITIVE_SHARE; guard detail .*; prefix digest Not available$/);
+  // The prefix digest the runtime fixer adds to the envelope (digests.prefix) is shown once present, by the same views.
+  const e=st.result.envelopes.baseline,withPrefix={...st,result:{...st.result,envelopes:{baseline:{...e,digests:{...e.digests,prefix}},candidate:null}}};
+  assert.ok(outcomeNodes(withPrefix)[0].querySelector('.technical-only').textContent.includes(`prefix digest ${prefix}; `));
+  mountEvidence({doc:document}).render(withPrefix);assert.match(ev()['Baseline ledger'],new RegExp(`; guard SUB_QUANTUM_POSITIVE_SHARE; guard detail .*; prefix digest ${prefix}$`));
+ }finally{x.close();}
+ x=setup(fixtureVerify({incomplete:'baseline',guard:null}));
+ try{
+  x.by('run-baseline').click();x.finish();
+  assert.match(overview(x.by('outcome')),/Baseline: stopped by guard Not available\./);assert.match(x.by('status').textContent,/Guard: Not available \(baseline\)\.$/);
+  assert.match(ev()['Baseline ledger'],/; INCOMPLETE_RESOURCE_LIMIT; guard Not available; prefix digest Not available$/);
+ }finally{x.close();}
+ x=setup();
+ try{x.by('run-pair').click();x.finish();assert.doesNotMatch(ev()['Baseline ledger'],/guard|prefix/,'a complete ledger names no guard');}finally{x.close();}
+});
+
+// DL-RT-06: a refusal that the export gates repeat never advises an export.
+test('a link refused for the whole-envelope size or an invalid setup does not offer an export that would be refused',async()=>{
+ const x=setup();
+ try{
+  const s=validateScenario(preset('S200').baseline,{origin:'editor'}).scenario,big={...s,visits:s.visits.map(v=>({...v,task_windows:TEMPLATES.map(t=>({task_template:t,earliest_start_tick:0}))}))};
+  const one=buildConfigurationExport({arms:{baseline:validateScenario(big,{origin:'import'}).scenario,candidate:null}});assert.ok(one.ok);
+  assert.ok(x.s.importText(one.text).ok);x.s.edit(a=>{a.site.lane_count=19;},{scope:'candidate'});
+  const r=x.s.shareFragment();assert.deepEqual([r.ok,r.code,r.offer],[false,'INCOMPLETE_RESOURCE_LIMIT',undefined]);
+  x.btn('Share setup link').focus();x.btn('Share setup link').click();await flush();
+  assert.equal(x.by('share-status').textContent,`No link was made: INCOMPLETE_RESOURCE_LIMIT. This setup needs ${numberText(r.issues[0].value)} bytes and a configuration holds at most 524,288, so it cannot be exported either. Change the setup first.`);
+  assert.equal(document.activeElement,x.btn('Share setup link'),'focus is not sent to an export that would be refused');
+  x.btn('Export configuration').click();assert.equal(x.fx.blobs.length,0);assert.match(x.by('share-status').textContent,/^Export refused: INCOMPLETE_RESOURCE_LIMIT\./);
+  x.s.edit(a=>{a.site.lane_count=999;},{scope:'both'});x.btn('Share setup link').click();await flush();
+  assert.equal(x.by('share-status').textContent,'No link was made: INVALID_SETUP. The configuration file applies the same checks, so it cannot be exported either. Change the setup first.');
+  assert.equal(x.workers.length,0);assert.deepEqual(x.fx.copied,[]);
+ }finally{x.close();}
+});
+
+// DL-RT-07: a same-tab navigation to a #share= fragment fires hashchange without a reload; it opens like a page load.
+test('a #share= fragment opened in the same tab after page start opens the setup and never runs it',()=>{
+ const base=validateScenario(preset('B').baseline,{origin:'editor'}).scenario,other={...base,requirements:{...base.requirements,energy:{...base.requirements.energy,target_soc_pct:90}}};
+ const enc=encodeShare({arms:{baseline:other,candidate:null}});assert.ok(enc.ok);
+ const location={href:'/depot-readiness/',hash:''},x=setup(fixtureVerify(),{location});
+ try{
+  const go=h=>{location.hash=h;location.href=`/depot-readiness/${h}`;window.dispatchEvent(new Event('hashchange'));};
+  const g=x.s.get().generation;go('#main');assert.equal(x.s.get().generation,g,'a non-share fragment changes nothing');
+  go(enc.fragment);const st=x.s.get();
+  assert.equal(st.digests.baseline,scenarioDigest(other));assert.equal(st.draft.candidate,null);assert.equal(st.status,'draft');
+  assert.equal(x.by('share-status').textContent,'Opened a shared setup. Nothing has run. Press Run to rerun and verify this setup here.');
+  go('#share='+'A'.repeat(40000));assert.equal(x.s.get().digests.baseline,scenarioDigest(other),'a refused link keeps the setup');
+  assert.equal(x.by('share-status').textContent,'The shared link was refused: TRANSPORT_LIMIT. Nothing ran; a configuration file can be imported instead.');
+  assert.equal(x.workers.length,0);
+ }finally{x.close();}
+});
+
+// A11Y-01 on the page: the refusal reaches the page's static role=alert node and the pressed button describes it.
+test('a refused setup edit is announced through the static alert node and described by the pressed button',()=>{
+ const x=setup();
+ try{
+  const dc=x.by('setup').querySelectorAll('button').find(b=>b.textContent==='Add DC port');dc.click();
+  const said='Every charging position already has a port. Add a charging position in Space first.';
+  assert.equal(x.by('error').getAttribute('role'),'alert');assert.equal(x.by('error').hidden,false);assert.equal(x.by('error').textContent,`AC/DC charging: ${said}`);
+  assert.equal(x.by(dc.getAttribute('aria-describedby')).textContent,said);
+  x.s.edit(s=>{s.requirements.energy.target_soc_pct=90;},{scope:'both'});
+  assert.equal(x.by('error').hidden,true);assert.equal(dc.getAttribute('aria-describedby'),null);assert.equal(x.workers.length,0);
+ }finally{x.close();}
+});
+
+// CA-NEW-01: re-entering the value the draft already holds clears that control's own refusal from the static alert; a
+// run refusal still in effect is put back instead.
+test('a refusal corrected by re-entering the current value clears the alert, or restores the run refusal still in effect',()=>{
+ const x=setup(),SOC='Target battery SOC for depot release (default 80%)',now=()=>x.s.get().draft.baseline.requirements.energy.target_soc_pct;
+ try{
+  const soc=commit(x,SOC,15);assert.equal(x.by('error').hidden,false);assert.equal(x.by('error').textContent,`${SOC}: Enter a whole number from 20 to 100.`);
+  const g=x.s.get().generation;commit(x,SOC,now());assert.equal(x.s.get().generation,g,'re-entering the current value is no edit');
+  assert.deepEqual([x.by('error').hidden,x.by('error').textContent,soc.getAttribute('aria-invalid')],[true,'',null]);
+  change(x.by('preset'),'S200');x.by('run-pair').click();const said=x.by('error').textContent;assert.match(said,/This setup has no candidate/);
+  commit(x,SOC,15);assert.match(x.by('error').textContent,/^Target battery SOC/);commit(x,SOC,now());
+  assert.deepEqual([x.by('error').hidden,x.by('error').textContent,x.s.get().refusal.code],[false,said,'NO_CANDIDATE'],'the run refusal still in effect is restored');
+  commit(x,SOC,15);commit(x,SOC,90);assert.equal(x.by('error').hidden,true,'a real edit clears the alert through the session');
+  assert.equal(x.workers.length,0);
+ }finally{x.close();}
+});
+
+// SS-NEW-01, SS-NEW-02: the "Edited since loading" caveat compares the draft digests with those recorded when the named
+// setup was loaded or opened; an import or an opened link ends Build your own mode, and a refused import keeps it.
+test('the edited caveat follows the setup content, and an import ends Build your own mode while a refused one keeps it',()=>{
+ const x=setup(),cat=presetCatalog(),regime=()=>x.by('preset-regime').textContent,EDITED=/Edited since loading/;
+ const paste=t=>{x.by('import-text').value=t;x.btn('Import setup').click();};
+ try{
+  const B=x.s.exportText().text;
+  paste(B);assert.deepEqual([x.s.get().preset,x.s.get().generation],['B',2]);
+  assert.ok(regime().includes(cat[0].regime));assert.doesNotMatch(regime(),EDITED,'exact B imported into a fresh page');
+  paste(B);assert.doesNotMatch(regime(),EDITED,'exact B imported twice');
+  change(x.by('preset'),'P');const P=x.s.exportText().text,p=cat.find(c=>c.id==='P');
+  commit(x,'Site charging supply, in kW (diagnostic field)',250);assert.match(regime(),EDITED,'an edit shows the caveat');
+  paste(P);assert.equal(x.s.get().preset,'P');assert.ok(regime().includes(p.regime));assert.doesNotMatch(regime(),EDITED,'exact P imported after P was edited');
+  x.by('questions').querySelectorAll('button').find(b=>b.textContent==='Build your own setup').click();
+  assert.equal(x.by('preset').value,'');assert.match(regime(),/^Your own setup/);
+  paste('{"a":1,"a":2}');assert.match(x.by('share-status').textContent,/^Import refused/);
+  assert.equal(x.by('preset').value,'');assert.match(regime(),/^Your own setup/,'a refused import keeps Build your own mode');
+  paste(B);assert.equal(x.by('preset').value,'B');assert.ok(regime().startsWith('Declared regime')&&regime().includes(cat[0].regime));assert.doesNotMatch(regime(),EDITED);
+  assert.equal(x.workers.length,0);
+ }finally{x.close();}
+});
+
+// SS-NEW-03, FD-03: Back after the skip link returns to the #share= fragment this page already opened, which keeps the
+// visitor's draft and result; a different #share= fragment still opens, and no navigation runs anything.
+test('returning to the #share= fragment already opened keeps the draft and the result; a different one still opens',()=>{
+ const base=validateScenario(preset('B').baseline,{origin:'editor'}).scenario,at=v=>({...base,requirements:{...base.requirements,energy:{...base.requirements.energy,target_soc_pct:v}}});
+ const A=encodeShare({arms:{baseline:at(80),candidate:null}}),C=encodeShare({arms:{baseline:at(60),candidate:null}});assert.ok(A.ok&&C.ok);
+ const location={href:`/depot-readiness/${A.fragment}`,hash:A.fragment},x=setup(fixtureVerify(),{location});
+ const go=h=>{location.hash=h;location.href=`/depot-readiness/${h}`;window.dispatchEvent(new Event('hashchange'));};
+ try{
+  assert.equal(x.s.get().digests.baseline,scenarioDigest(at(80)));
+  x.s.edit(a=>{a.requirements.energy.target_soc_pct=90;},{scope:'both'});const g=x.s.get().generation,d=x.s.get().digests.baseline;
+  go('#main');go(A.fragment);
+  assert.deepEqual([x.s.get().generation,x.s.get().digests.baseline,x.s.get().status],[g,d,'draft'],'Back to the opened fragment keeps the edit');
+  x.by('run-baseline').click();x.finish();const st=x.s.get();assert.equal(st.status,'verified');
+  go('#main');go(A.fragment);assert.equal(x.s.get(),st,'Back to it again keeps the verified result');assert.equal(st.history.length,0);
+  go(C.fragment);assert.deepEqual([x.s.get().digests.baseline,x.s.get().status,x.s.get().history.length],[scenarioDigest(at(60)),'stale',1]);
+  assert.equal(x.by('share-status').textContent,'Opened a shared setup. Nothing has run. Press Run to rerun and verify this setup here.');
+  go(A.fragment);assert.equal(x.s.get().digests.baseline,scenarioDigest(at(80)),'navigating to another shared setup opens it');
+  assert.equal(x.workers.length,1,'no navigation ran anything');
+ }finally{x.close();}
+});
+
 test('copy and boundary rules for the page modules',()=>{
  const allowed=new Set(['../runtime/depot-lab-session.js','./depot-lab-share.js','../model/depot-lab/presets.js','./dom.js','./depot-lab-view.js','./depot-lab-evidence.js','../model/depot-lab/registry.js','../model/depot-flow-contract.js','./depot-lab-format.js','./depot-lab-controls.js','./depot-lab-inspector.js']);
  for(const p of SOURCES){
@@ -404,6 +562,9 @@ test('with the independent verifier: the B pair discloses its bundled treatment 
   assert.deepEqual(x.by('outcome').querySelectorAll('ul.leaves li').map(li=>overview(li)),['Charging ports, DC03: none to {"enabled":true,"id":"DC03","kind":"DC","position_id":"P017","rating_w":150000}','Work positions by zone, P017 zone: waiting to charging']);
   const text=overview(x.by('outcome')),bundled="A bundled intervention cannot identify a single component's effect.";
   assert.equal(text.split(bundled).length-1,2,'beside the treatment and under what remains uncertain');
+  // COPY-04: the whole declared bundle is the subject, and the bundle caveat follows it at once.
+  assert.deepEqual(after(x,'What remains uncertain').querySelectorAll('li').map(overview).slice(0,2),["The candidate's declared changes, taken together, changed these outcomes in this model under this declared paired workload.",bundled]);
+  assert.doesNotMatch(text,/Each difference changed/);
   assert.doesNotMatch(text,/at least|lower bounds/,'no visit is unreleased in either arm');
   for(const k of ['offsite','moving','servicing','work_complete_not_released','queued_outside','blocked_waiting'])assert.deepEqual(termRow(caption(x,'Unfinished visits at end of run, by primary state'),`visit.state.${k}`),['0','0'],k);
   const t=serialize(x.by('outcome'));x.by('tab-technical').click();assert.equal(serialize(x.by('outcome')),t);
@@ -428,6 +589,9 @@ test('with the independent verifier: P keeps one unfinished visit per arm, so la
   assert.deepEqual(termRow(work,'energy.remaining_required_mj'),[kwhText(m('baseline')['energy.remaining_required_mj']),'0 kWh']);
   assert.match(serialize(work),new RegExp(` ${m('baseline')['energy.remaining_required_mj']} mJ`));
   assert.match(overview(after(x,'What remains uncertain')),/Late seconds and observed visit seconds are lower bounds while visits stay unfinished\./);
+  // ARITH-03: the exported summary labels the exact energy value mJ and shows its kWh beside it.
+  x.btn('Export result summary').click();const e=m('baseline')['energy.remaining_required_mj'];
+  assert.ok(x.fx.blobs.at(-1).text.includes(`  remaining_required_kWh (down): baseline ${e} mJ (${kwhText(e)}); candidate 0 mJ (0 kWh); change -${e} mJ (-${kwhText(e)}); better`));
  }finally{x.close();}
 });
 
@@ -446,7 +610,7 @@ test('with the independent verifier: M is worse, with active-at-end rows; G is m
   assert.equal(overview(after(x,'What changed')),'No component is better in the candidate.');
   assert.ok(overview(after(x,'What got worse')).startsWith(`Worse in the candidate, ${worse.length} of ${c.components.length}: On-time releases ${signedText(worse[0].delta,numberText)}; `));
   const unsure=after(x,'What remains uncertain').querySelectorAll('li').map(overview);
-  assert.deepEqual(unsure.slice(0,4),['Each difference changed this outcome in this model under this declared paired workload.',`${equal.length} of ${c.components.length} components ${equal.length===1?'is':'are'} exactly equal.`,'Late seconds and observed visit seconds are lower bounds while visits stay unfinished.','2 started tasks could not finish by end of run; their remaining work is counted, not finished.']);
+  assert.deepEqual(unsure.slice(0,4),["The candidate's one declared change changed these outcomes in this model under this declared paired workload.",`${equal.length} of ${c.components.length} components ${equal.length===1?'is':'are'} exactly equal.`,'Late seconds and observed visit seconds are lower bounds while visits stay unfinished.','2 started tasks could not finish by end of run; their remaining work is counted, not finished.']);
   assert.equal(unsure.at(-1),term('deferred.statistics').definition);assert.ok(!unsure.some(u=>/bundled/.test(u)),'one field and one leaf is not a bundle');
   st=runPreset(x,'G');c=st.result.comparison;assert.equal(c.classification,'mixed');
   const text=overview(x.by('outcome'));

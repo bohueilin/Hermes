@@ -3,7 +3,7 @@
 import {el} from './dom.js';
 import {termsByCategory,SOURCES} from '../model/depot-lab/registry.js';
 import {numberText} from './depot-lab-format.js';
-import {NOT_AVAILABLE,current,table} from './depot-lab-view.js';
+import {NOT_AVAILABLE,current,table,guardName,guardDetail} from './depot-lab-view.js';
 const ARMS=['baseline','candidate'],ARM={baseline:'Baseline',candidate:'Candidate'};
 const tech=t=>el('span',{class:'technical-only mono'},t);
 // Pointer lookup into one draft arm; `*` spans every member of an array or object.
@@ -29,9 +29,9 @@ function evidence(s){
  const r=current(s),rows=ARMS.filter(a=>s.digests?.[a]).map(a=>[`${ARM[a]} draft scenario digest`,s.digests[a]]);
  if(r)for(const a of ARMS){
   const e=r.envelopes[a];if(!e)continue;
-  const d=e.digests,v=e.versions,l=e.ledger,p=e.primary_violation,g=l.guard?.guard??l.guard;
+  const d=e.digests,v=e.versions,l=e.ledger,p=e.primary_violation,g=e.status==='INCOMPLETE_RESOURCE_LIMIT'||l.guard?`; guard ${guardName(l.guard)}; ${guardDetail(e)}`:'';
   rows.push(...[['verification status',`${e.status}; ${e.consistency}`],['primary violation',p?`${p.code} at record ${p.seq}, tick ${p.tick}`:'none'],['scenario digest',d.scenario],['workload digest',d.workload],['policy digest',d.policy],['run digest',d.run??NOT_AVAILABLE],
-   ['versions',`${v.engine}; ${v.verifier}; ${v.projection}; ${v.metric}`],['ledger',`${l.records} records; ${l.bytes} bytes; ${l.terminal_status}${g?`; guard ${g}`:''}`],['trust',Object.entries(e.trust).map(([k,x])=>`${k} ${x}`).join('; ')]].map(([k,x])=>[`${ARM[a]} ${k}`,x]));
+   ['versions',`${v.engine}; ${v.verifier}; ${v.projection}; ${v.metric}`],['ledger',`${l.records} records; ${l.bytes} bytes; ${l.terminal_status}${g}`],['trust',Object.entries(e.trust).map(([k,x])=>`${k} ${x}`).join('; ')]].map(([k,x])=>[`${ARM[a]} ${k}`,x]));
  }
  rows.push(r?.comparison?['Comparison',`${r.comparison.classification}; digest ${r.comparison.digest??NOT_AVAILABLE}`]:['Current result',r?'baseline only':NOT_AVAILABLE]);
  return [el('h3',{},'Technical evidence'),el('dl',{class:'trust','aria-label':'Digests, versions, record counts and verification status'},rows.map(([k,x])=>el('div',{},[el('dt',{},k),el('dd',{},String(x))]))),
