@@ -267,7 +267,8 @@ test('inspector at the end of run: active-at-H rows, remaining work, the full re
   if(second.every(h=>holdersOf(`visit:${h}`).length===0)){assert.equal(buttons(insp).filter(b=>b.textContent==='Show the next holder level').length,0);assert.match(insp.querySelector('.trail').textContent,/terminal holder or a repeated vehicle/);}
   assert.ok(level().length<=TRAIL_DEPTH);
   const block=C.blockage.find(b=>b.member_visit_ids.includes('visit:07'));
-  assert.ok(insp.querySelector('.trail').textContent.includes(`${term('blockage.'+block.classification).label_plain}: Vehicle 07 waiting on ${block.held_resource_ids.map(r=>r.slice(r.indexOf(':')+1)).join(', ')}; terminal holder Vehicle ${block.terminal_holder_id.slice(6)}.`));
+  assert.ok(insp.querySelector('.trail').textContent.includes(`${term('blockage.'+block.classification).label_plain}: Vehicle 07 waiting on ${block.held_resource_ids.map(r=>r.slice(r.indexOf(':')+1)).join(', ')}; lowest direct holder Vehicle ${block.terminal_holder_id.slice(6)}, which may itself be waiting.`));
+  assert.ok(!/; terminal holder Vehicle/.test(insp.querySelector('.trail').textContent),'the record names its lowest direct holder, not the end of the trail (BND-06 note)');
   button(insp,`Inspect Vehicle ${holdersOf('visit:07')[0]}`).click();assert.equal(x.sel(),`visit:${holdersOf('visit:07')[0]}`);assert.equal(level().length,1,'a new selection starts at depth 1');
   unchanged(x,s0);
  }finally{x.close();}

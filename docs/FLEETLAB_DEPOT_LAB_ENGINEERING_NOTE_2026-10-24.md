@@ -865,7 +865,9 @@ and UI.
   reads "out of service because position <id> is out of service", and its share reads "Not applicable, out of
   service". Below the per-unit share, the inspector shows `owned_summary` for the unit's class, over installed,
   enabled and eligible unit time. Overview shows a truncated percentage and Technical the exact p/q; a null
-  fraction is Not applicable.
+  fraction is Not applicable. A TERMINAL_BLOCKAGE_BEFORE_H record's `terminal_holder_id` (the lowest direct
+  holder, C3 step 6) reads "lowest direct holder <vehicle>, which may itself be waiting". The trail's "terminal
+  holder" stays reserved for a vehicle that waits on no other vehicle at H (D1-12; BND-06 review note).
 * **Setup (COPY-02, A11Y-01, CA-NEW-01, SS-NEW-01, SS-NEW-02).** The Garage statement is derived from the shown
   setup's visits. Setup-edit refusals are written to the static `#error` role=alert node, prefixed with the
   card name, and linked to the pressed control by aria-describedby until the next edit. A re-entry that ends

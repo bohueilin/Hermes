@@ -131,7 +131,7 @@ export function mountDepot({doc,session}){
   return el('div',{class:'trail'},[el('h4',{},'Holder trail at end of run'),
    el('ol',{},shown.map((L,i)=>el('li',{},[el('span',{},`Level ${numberText(i+1)}`),el('ul',{},L.map(u=>el('li',{},[el('span',{},line(u,i+1)),' ',btn(`Inspect ${veh(u.id)}`,()=>choose(u.id),{'data-key':`tr:${u.id}`})])))]))),
    more?btn('Show the next holder level',()=>{trail={id:v.id,n:depth+1};bump();},{'data-key':'deeper'}):el('p',{class:'note'},all.length>TRAIL_DEPTH&&depth===TRAIL_DEPTH?`The trail stops at the declared depth of ${numberText(TRAIL_DEPTH)} levels.`:'The trail ends at a terminal holder or a repeated vehicle.'),
-   ...P.blockage.filter(b=>b.member_visit_ids.includes(v.id)).map(b=>el('p',{},[`${lab('blockage.'+b.classification)}: ${b.member_visit_ids.map(veh).join(', ')} waiting on ${b.held_resource_ids.map(short).join(', ')}${b.terminal_holder_id?`; terminal holder ${veh(b.terminal_holder_id)}`:''}.`,tech(` ${b.classification}`)]))]);
+   ...P.blockage.filter(b=>b.member_visit_ids.includes(v.id)).map(b=>el('p',{},[`${lab('blockage.'+b.classification)}: ${b.member_visit_ids.map(veh).join(', ')} waiting on ${b.held_resource_ids.map(short).join(', ')}${b.terminal_holder_id?`; lowest direct holder ${veh(b.terminal_holder_id)}, which may itself be waiting`:''}.`,tech(` ${b.classification}`)]))]);
  };
  const vehicle=v=>{
   const H=X.H,w=find(v.waits,t,H),loc=find(v.location,t,H),f=v.frontier_at_h,rem=v.remaining,refs=Object.entries(rem.reference),waits=Object.entries(v.wait_seconds),until=x=>x===null?'not by end of run':when(x,H);
