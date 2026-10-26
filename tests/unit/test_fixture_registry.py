@@ -139,6 +139,14 @@ def _sha256(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def test_registered_fixture_recipes_are_pinned(repository_root: Path) -> None:
+    """The recipe pin needs no stored fixture, so it also runs where the fixtures are absent."""
+    registry_path = repository_root / REGISTRY_RELATIVE
+
+    assert _sha256(registry_path.read_bytes()) == _REGISTRY_SHA256
+    assert _registry(repository_root).run_ids == tuple(_REGISTERED_FIXTURE_IDENTITIES)
+
+
 def test_registered_fixture_recipe_and_stored_identities_are_immutable(
     repository_root: Path,
 ) -> None:
