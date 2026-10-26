@@ -254,12 +254,20 @@ _REVIEWED_CI_INSTALL = (
     b'        run: python -m pip install -e ".[dev]"\n',
     b'        run: python -m pip install -e ".[dev,workbench]"\n',
 )
+#: The pins were recorded on Apple-silicon macOS and differ in low-order bits on Linux x86-64.
+_REVIEWED_CI_RUNNER = (
+    b"    runs-on: ubuntu-latest\n",
+    b"    # The numerical pins were recorded on Apple-silicon macOS and differ in low-order bits\n"
+    b"    # on Linux x86-64; only same-host reproduction is claimed,"
+    b" so CI runs on that platform.\n"
+    b"    runs-on: macos-26\n",
+)
 _REVIEWED_CI_LAST_STEP = b'        run: python -m pytest -q -m "not metadrive"\n'
 _REVIEWED_CI_NODE_JOB = (
     b"\n"
     b"  fleetlab-node:\n"
     b"    name: FleetLab Node 22.23.4\n"
-    b"    runs-on: ubuntu-latest\n"
+    b"    runs-on: macos-26\n"
     b"    timeout-minutes: 45\n"
     b"\n"
     b"    steps:\n"
@@ -335,6 +343,7 @@ def _matches_reviewed_protected_change(
                 b" # v5.6.0\n",
             ),
             _REVIEWED_CI_INSTALL,
+            _REVIEWED_CI_RUNNER,
         ):
             if expected.count(prior) != 1:
                 return False
@@ -379,14 +388,16 @@ def test_r6_reviewed_ignore_change_rejects_unrelated_edits() -> None:
 def test_r6_reviewed_ci_pins_reject_unrelated_edits() -> None:
     original = (
         b"name: CI\n"
-        b"        uses: actions/checkout@v4\n"
+        + _REVIEWED_CI_RUNNER[0]
+        + b"        uses: actions/checkout@v4\n"
         b"        uses: actions/setup-python@v5\n"
         + _REVIEWED_CI_INSTALL[0]
         + _REVIEWED_CI_LAST_STEP
     )
     reviewed = (
         b"name: CI\n"
-        b"        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+        + _REVIEWED_CI_RUNNER[1]
+        + b"        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
         b" # v4, verified 2026-10-21\n"
         b"        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
         b" # v5.6.0\n"
@@ -403,6 +414,8 @@ def test_r6_reviewed_ci_pins_reject_unrelated_edits() -> None:
         reviewed.replace(b"setup-python@a26af69", b"setup-python@0000000"),
         reviewed.replace(b"setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38", b"setup-node@v6"),
         reviewed.replace(b'node-version: "22.23.4"', b'node-version: "22"'),
+        reviewed.replace(b"runs-on: macos-26", b"runs-on: macos-latest"),
+        reviewed.replace(b"runs-on: macos-26", b"runs-on: ubuntu-latest", 1),
         reviewed.replace(b'".[dev,workbench]"', b'".[dev,workbench,mujoco-cal]"'),
         reviewed.replace(b"name: CI", b"name: Unreviewed"),
         reviewed.replace(b"\n", b"\r\n"),
@@ -415,11 +428,12 @@ def test_r6_reviewed_ci_pins_reject_unrelated_edits() -> None:
 
 
 def test_r6_reviewed_ci_wiring_refuses_a_base_without_exactly_one_anchor() -> None:
-    pins = (
+    runner, reviewed_runner = _REVIEWED_CI_RUNNER
+    pins = runner + (
         b"        uses: actions/checkout@v4\n"
         b"        uses: actions/setup-python@v5\n"
     )
-    reviewed_pins = (
+    reviewed_pins = reviewed_runner + (
         b"        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
         b" # v4, verified 2026-10-21\n"
         b"        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
@@ -438,6 +452,11 @@ def test_r6_reviewed_ci_wiring_refuses_a_base_without_exactly_one_anchor() -> No
             pins + install + _REVIEWED_CI_LAST_STEP + b"      - name: Later step\n",
             reviewed_pins + reviewed_install + _REVIEWED_CI_LAST_STEP
             + b"      - name: Later step\n" + _REVIEWED_CI_NODE_JOB,
+        ),
+        (
+            pins + runner + install + _REVIEWED_CI_LAST_STEP,
+            reviewed_pins + runner + reviewed_install + _REVIEWED_CI_LAST_STEP
+            + _REVIEWED_CI_NODE_JOB,
         ),
     ):
         assert not _matches_reviewed_protected_change(path, original, current)

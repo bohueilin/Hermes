@@ -12,7 +12,9 @@ permissions:
 jobs:
   test:
     name: Python 3.11
-    runs-on: ubuntu-latest
+    # The numerical pins were recorded on Apple-silicon macOS and differ in low-order bits
+    # on Linux x86-64; only same-host reproduction is claimed, so CI runs on that platform.
+    runs-on: macos-26
     timeout-minutes: 15
 
     steps:
@@ -36,7 +38,7 @@ jobs:
 
   fleetlab-node:
     name: FleetLab Node 22.23.4
-    runs-on: ubuntu-latest
+    runs-on: macos-26
     timeout-minutes: 45
 
     steps:
