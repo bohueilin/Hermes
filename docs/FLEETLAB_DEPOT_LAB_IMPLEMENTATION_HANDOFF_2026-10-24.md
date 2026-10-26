@@ -4,7 +4,7 @@
 
 This implements the frozen depot readiness design, [`FLEETLAB_DEPOT_READINESS_FREEZE_CANDIDATE_2026-10-24.md`](FLEETLAB_DEPOT_READINESS_FREEZE_CANDIDATE_2026-10-24.md) (annex D1-01 to D1-13, D12-01 to D12-05, C1 to C4), under [`FLEETLAB_DEPOT_READINESS_RECONCILIATION_2026-10-24.md`](FLEETLAB_DEPOT_READINESS_RECONCILIATION_2026-10-24.md) (§7 budget, §8 decisions, §11 plan). The owner's build authorization (reconciliation §11.8) covered implementation, executable schemas, fixtures, tests, local previews, package accounting and local review artifacts. Build decisions are recorded in [`FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md`](FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md); §§19 to 22 are binding.
 
-**Status: published on 2026-10-24 at <https://fleetlab.pages.dev/depot-readiness/> (production `72e45e9f`, source `a1b79cd`).** It was built, independently reviewed, fixed and validated locally in three checkpoint commits on `codex/fleetlab-depot-lab`. The owner then asked to publish without the separate release review, so that Muse can audit the live site. The owner ran both uploads with their own credential injector, and both were read back in full (§10). Nothing was pushed to GitHub and no pull request was opened. Sections 1 to 8 describe the build as reviewed. The release-records bullet in §1, the readiness line and item 7 in §9, and §10 reflect the publication.
+**Status: published on 2026-10-24 at <https://fleetlab.pages.dev/depot-readiness/> (production `72e45e9f`, source `a1b79cd`).** It was built, independently reviewed, fixed and validated locally in three checkpoint commits on `codex/fleetlab-depot-lab`. The owner then asked to publish without the separate release review, so that Muse can audit the live site. The owner ran both uploads with their own credential injector, and both were read back in full (§10). Nothing was pushed to GitHub and no pull request was opened. (Added 2026-10-25: the branch was pushed on 2026-10-24 at `f1d130e`, and the reconcile pull request from `codex/fleetlab-main-reconcile` brings it to `main`.) Sections 1 to 8 describe the build as reviewed. The release-records bullet in §1, the readiness line and item 7 in §9, and §10 reflect the publication.
 
 ## 1. Scope delivered and what is not done
 
@@ -363,7 +363,7 @@ Readiness: **published without the separate release review, at the owner's instr
 
 ## 10. Publication, 2026-10-24
 
-On 2026-10-24 the owner said "just deploy live", so that Muse can audit the live site. The owner ran both uploads in their own Terminal through `apps/fleetlab-city/deploy/wrangler.mjs`. The token came from an owner-side Keychain injector, and the owner typed the production confirmation. No credential passed through the agent session. No GitHub push or pull request was made.
+On 2026-10-24 the owner said "just deploy live", so that Muse can audit the live site. The owner ran both uploads in their own Terminal through `apps/fleetlab-city/deploy/wrangler.mjs`. The token came from an owner-side Keychain injector, and the owner typed the production confirmation. No credential passed through the agent session. No GitHub push or pull request was made. (Added 2026-10-25: the branch was pushed on 2026-10-24 at `f1d130e`, and the reconcile pull request from `codex/fleetlab-main-reconcile` brings it to `main`.)
 
 | Step | Result |
 |---|---|

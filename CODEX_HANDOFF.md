@@ -13,7 +13,9 @@ publication details are in its §10. Build decisions are in
 ## Publication and verification
 
 - **Source.** `a1b79cd137aa802c2bff1459843f550a5d70da83` on `codex/fleetlab-depot-lab`,
-  built from base `d0df87f`. Not pushed; no PR.
+  built from base `d0df87f`. Not pushed; no PR. (Added 2026-10-25: the branch was
+  pushed on 2026-10-24 at `f1d130e`, and the reconcile pull request from
+  `codex/fleetlab-main-reconcile` brings it to `main`.)
 - **Uploads.** The owner ran both through `apps/fleetlab-city/deploy/wrangler.mjs`, using an owner-side
   Keychain injector, and typed the production confirmation. No credential passed
   through the agent session.

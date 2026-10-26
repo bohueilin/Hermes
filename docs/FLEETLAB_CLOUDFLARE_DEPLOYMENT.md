@@ -23,7 +23,7 @@ The Delivery order route is `/network-flows/delivery-order/`. Its explicit route
 
 ## October 24 Depot Readiness publication
 
-After the local build and independent review, the owner explicitly asked on 24 October for live publication of the Depot Readiness lab at `/depot-readiness/`. The separate release review was skipped by owner choice, so that Muse can audit the live site. Local commits, preview and production publication were authorized; no GitHub push or PR was made. The published source is `a1b79cd137aa802c2bff1459843f550a5d70da83` on `codex/fleetlab-depot-lab`.
+After the local build and independent review, the owner explicitly asked on 24 October for live publication of the Depot Readiness lab at `/depot-readiness/`. The separate release review was skipped by owner choice, so that Muse can audit the live site. Local commits, preview and production publication were authorized; no GitHub push or PR was made. (Added 2026-10-25: the branch was pushed on 2026-10-24 at `f1d130e`, and the reconcile pull request from `codex/fleetlab-main-reconcile` brings it to `main`.) The published source is `a1b79cd137aa802c2bff1459843f550a5d70da83` on `codex/fleetlab-depot-lab`.
 
 - Production is `https://72e45e9f.fleetlab.pages.dev`, served at `https://fleetlab.pages.dev`.
 - Preview `241a9eec` and stable production each passed a full readback of 10,186/10,186 served files and 100/100 header checks.
