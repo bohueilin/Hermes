@@ -251,7 +251,21 @@ def _git(*arguments: str) -> subprocess.CompletedProcess[str]:
 
 
 _REVIEWED_CI_INSTALL = (
+    b"      - name: Install Hermes and development dependencies\n"
     b'        run: python -m pip install -e ".[dev]"\n',
+    b"      # setup-python has no macOS build of 3.11 after 3.11.9, whose ipaddress predates the\n"
+    b"      # IPv4-mapped loopback fix; run the reference interpreter, CPython 3.11.15, instead.\n"
+    b"      - name: Install CPython 3.11.15 with uv\n"
+    b"        run: |\n"
+    b'          python -m pip install "uv==0.12.24"\n'
+    b"          uv python install --python-preference only-managed 3.11.15\n"
+    b"          uv venv --seed --python-preference only-managed --python 3.11.15"
+    b' "$RUNNER_TEMP/python-3.11.15"\n'
+    b'          "$RUNNER_TEMP/python-3.11.15/bin/python" -c'
+    b' "import sys; assert sys.version_info[:3] == (3, 11, 15), sys.version"\n'
+    b'          echo "$RUNNER_TEMP/python-3.11.15/bin" >> "$GITHUB_PATH"\n'
+    b"\n"
+    b"      - name: Install Hermes and development dependencies\n"
     b'        run: python -m pip install -e ".[dev,workbench]"\n',
 )
 #: The pins were recorded on Apple-silicon macOS and differ in low-order bits on Linux x86-64.
@@ -414,6 +428,9 @@ def test_r6_reviewed_ci_pins_reject_unrelated_edits() -> None:
         reviewed.replace(b"setup-python@a26af69", b"setup-python@0000000"),
         reviewed.replace(b"setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38", b"setup-node@v6"),
         reviewed.replace(b'node-version: "22.23.4"', b'node-version: "22"'),
+        reviewed.replace(b'"uv==0.12.24"', b'"uv"'),
+        reviewed.replace(b"--python 3.11.15", b"--python 3.11"),
+        reviewed.replace(b"(3, 11, 15)", b"(3, 11)"),
         reviewed.replace(b"runs-on: macos-26", b"runs-on: macos-latest"),
         reviewed.replace(b"runs-on: macos-26", b"runs-on: ubuntu-latest", 1),
         reviewed.replace(b'".[dev,workbench]"', b'".[dev,workbench,mujoco-cal]"'),

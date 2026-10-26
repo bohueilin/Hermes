@@ -27,6 +27,16 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      # setup-python has no macOS build of 3.11 after 3.11.9, whose ipaddress predates the
+      # IPv4-mapped loopback fix; run the reference interpreter, CPython 3.11.15, instead.
+      - name: Install CPython 3.11.15 with uv
+        run: |
+          python -m pip install "uv==0.12.24"
+          uv python install --python-preference only-managed 3.11.15
+          uv venv --seed --python-preference only-managed --python 3.11.15 "$RUNNER_TEMP/python-3.11.15"
+          "$RUNNER_TEMP/python-3.11.15/bin/python" -c "import sys; assert sys.version_info[:3] == (3, 11, 15), sys.version"
+          echo "$RUNNER_TEMP/python-3.11.15/bin" >> "$GITHUB_PATH"
+
       - name: Install Hermes and development dependencies
         run: python -m pip install -e ".[dev,workbench]"
 
