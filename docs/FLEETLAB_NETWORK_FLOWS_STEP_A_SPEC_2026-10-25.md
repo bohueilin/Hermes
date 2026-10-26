@@ -76,6 +76,12 @@ These were measured at the base on 2026-10-25 with the official Node 22.23.4 bui
 
 **Artwork groups** (count / bytes): diagram 4 / 510,436; rebalancing 4 / 1,983,799; brand 7 / 623,114; tile 19 / 1,990,494; enhancement 7 / 2,685,422.
 
+**As implemented** (`stepa-byte-bounds.test.mjs`, `stepa-baselines.test.mjs`), each check is at least as strict as the table:
+- **Bites controls.** Every upper bound has an in-memory control. Growing the route's own file to exactly the bound passes, and one byte more fails.
+- **Integration oracle.** `verifyIntegrationAssets` must reproduce all 12 integration files and agree with the unit sums.
+- **Artwork digest.** A record-set SHA-256 over the artwork (`bcd79b15…`) catches a same-size re-encode with an updated record.
+- **Release structure.** The Playground file checks it on a clean tree at `HEAD`, which is always the case on CI: the release receipt and the gunzipped release offer are each exactly 59 B longer than the development ones. On a dirty local tree it skips with a visible reason.
+
 **Shared headroom.** Every brand byte is added to all six closures (`software-delivery-package.mjs:109`). The brand-sum headroom (2,048 B) therefore also consumes every closure's headroom.
 
 **Budget note for the owner, measured.** JSON escaping inside the extracted offer averages **2.84%** for teaching text and **4.23%** for integration text, not the 1.5% assumed earlier. If raw source used its full +16,384 B allowance and the integration source its full +8,192 B, the extracted offer would grow by about 25,400 B. That exceeds its +24,576 B allowance (inferred from the averages). The extracted-offer bound, not raw source, is then the binding one.
@@ -102,14 +108,14 @@ These were measured at the base on 2026-10-25 with the official Node 22.23.4 bui
 - **Mode `after`.** It applies the bounds in section 3.
 - **Self-test.** `stage-check.test.mjs` runs the runner's logic on synthetic records, so CI checks the runner without the inputs.
 
-**BEFORE run at the base (2026-10-25).** The build succeeded in 50 s, under Node v22.23.4 and Python 3.11.15. All four input digests match. Integrated text and the offline edition are identical to the retained `a1b79cd` stage. Non-City is 16,187,445 B, explained in section 2.3.
+**BEFORE run at the base (2026-10-25).** The build succeeded in 50 s, under Node v22.23.4 and Python 3.11.15. All four input digests match. Integrated text and the offline edition are identical to the retained `a1b79cd` stage. Non-City is 16,187,445 B, explained in section 2.3. The runner passes all 32 checks on that stage in `before` mode, and in `after` mode.
 
 ## 5. A2 golden
 
 New file `apps/fleetlab-city/test/a2-golden.test.mjs`, using the fixture of `enhancement-media.test.mjs:6-14` and `:37-40`. It asserts:
 - the serialized Fleet day figure is 602 B, SHA-256 `aa3a9cd27182bc1a5d68c63cb5061280864502febd6c74c1a7cc141e289029ea`. The full string is also asserted, so a failure shows a readable diff.
-- the figure is the next sibling after the `h1`;
-- a second decorate leaves the frame unchanged, with exactly one `#enhancement-fleet-day`;
+- the figure is the next sibling after the `h1`, and the whole teaching frame serializes to the `h1`, the figure and the frame's paragraph, with no `video` anywhere in it;
+- a second decorate leaves the frame unchanged, with exactly one `#enhancement-fleet-day`, and keeps the same figure and image nodes (a rebuilt node would restart the lazy load);
 - the figure contains no `video`;
 - `enhancement-media.css` is 3,057 B, `9e5c35ae84eca53c2210e6a2841412dfe98e3dfaaf4bf01dde1f3c987434c1b4`, pinned whole;
 - the FL-A2 record and file are 431,948 B, `e5299c6fd31c5521b2f36d1a519c5f67abc1c3bae64b66fe5d6a4267f96a7522`.
@@ -133,14 +139,23 @@ A readdir check makes the scanned stylesheet list deep-equal what is on disk, so
 **Detector.** Colour literals (hex, `rgb()`, `rgba()`, `hsl()`, `hsla()` and named colours) are parsed in:
 - CSS declaration values, with comments blanked, recursing into at-rules;
 - markup `style` attributes and `<style>` blocks;
-- SVG paint attributes;
-- JavaScript string literals.
+- SVG paint attributes, with quoted or unquoted values. Every other markup attribute gets the hex and colour-function detectors, and inline `on*` handlers are scanned as JavaScript;
+- JavaScript string literals. A colour name counts there only when the literal reads as a CSS value, or follows a paint property; prose such as "the orange route" is exempt. A URL-encoded `%23` hex, as in an SVG data URI, is decoded to `#`.
+
+The scan covers 14 stylesheets, 13 pages and 195 scripts at the base, and 1,027 colour literals.
 
 A literal counts as **warm** when its alpha is above 0, its chroma (max − min)/255 is at least 0.06, and its hue is in [12°, 60°). `color-mix()`, `oklch()`, `lab()`, `hwb()` and `color()` are unclassified and fail the test, so they are never silently allowed. Custom properties whose value is warm are warm tokens, and every `var()` use of one is tracked.
 
-**Baseline.** At the base there are 91 warm literal hits (72 distinct) in 17 files, plus 10 warm-token uses. Keys carry no position: file, at-rule chain, selector list, property and literal. Positions appear only in failure messages.
+**Baseline.** At the base there are 91 warm literal hits (72 distinct) in 17 files, plus 10 warm-token uses. Keys carry no position: file, at-rule chain, selector list (with whitespace around commas and combinators dropped), property and literal. Positions appear only in failure messages.
 
 **Assertion.** No addition is allowed: the current multiset minus the baseline must be empty. Removals are logged and allowed, so a later restyle does not churn the snapshot. Extending an existing warm rule's selector, for example adding a new state, changes its key and fails as an addition.
+
+**Known limits.**
+- **No identifier tracking in scripts.** A script key is only `file | literal`, and identifiers are not followed, so a new state that reuses an existing warm constant adds no literal and passes. A count freed by a removal can be reused in the same file. Because the owner's rule is to fail only on additions, script keys do not ratchet.
+- **HTML character references.** A `#` written as `&#35;` is not decoded.
+- **Named colours in non-paint markup attributes** are not detected.
+
+None of these occurs at the base.
 
 **Controls in the same file:**
 - a new warm focus ring fails;
@@ -157,7 +172,7 @@ The allowlist has exactly two entries:
 1. **The em dash** in the live boundary sentence, kept verbatim: "Simplified simulations for learning — not evidence about real-world safety. Nothing here approves deploying a vehicle or policy." Exactly one use is allowed.
 2. **The word "forecast"**, allowed at most once, and only inside hub card 04 (the Rebalancing list item). There are zero uses at the base; the redesign may add one. Its exact wording is not pinned, because it is not approved copy yet.
 
-Everything else must pass `copyProblems` unchanged. Negative controls:
+Everything else must pass `copyProblems` unchanged. `copyProblems` exempts four approved dash sentences on any path. So the hub test also counts every en and em dash across all hub copy items, and requires exactly one: the boundary sentence's. Negative controls:
 - a second dash fails;
 - "forecast" in any other card fails.
 
@@ -171,7 +186,10 @@ Neither file is in the repository, and no media is added. The test asserts that 
 
 ## 9. Viewport geometry tooling
 
-New file `apps/fleetlab-city/test/viewport.test.mjs`. Its helpers are `cdp-browser.mjs` (a dependency-free DevTools-protocol client over Node's built-in WebSocket) and `hosted-site-fixture.mjs` (the in-memory hosted site, served from `127.0.0.1` with the site's own `_headers` CSP).
+New file `apps/fleetlab-city/test/viewport.test.mjs`. Its helpers are:
+- `cdp-browser.mjs`, a dependency-free DevTools-protocol client over Node's built-in WebSocket, with signal-safe cleanup;
+- `hosted-site-fixture.mjs`, the in-memory hosted site, served from `127.0.0.1` with the site's own `_headers` CSP;
+- `viewport-measure.mjs`, holding the expected titles, the settle rule and the overflow measurement, which it shares with the section 10 runner.
 
 **Pages and widths.** It covers 8 pages at 4 widths each: `/`, `/network-flows/`, the five lessons and `/depot-readiness/`, at 320, 390, 768 and 1280 px.
 
@@ -188,8 +206,15 @@ New file `apps/fleetlab-city/test/viewport.test.mjs`. Its helpers are `cdp-brows
 - each failure lists the elements that overflow.
 
 **Before-baseline.**
-- The depot experiment overflows at 320 px: scroll width 355, caused by the 322 px "Depot content cache (diagnostic field)" select.
-- It is recorded as a known baseline exception. The test fails if any other cell overflows, and also when this one stops overflowing, so the list is pruned deliberately.
+- The depot experiment overflows at 320 px: scroll width 355, caused by the 322 px "Depot content cache (diagnostic field)" select and its field.
+- Two more recorded sources overflow in the same cell: the import and share block (`#share`), at 329 px on its own, and the fixed motion control, which sits at the right edge of the widened page.
+- Repeated local runs on one Chrome build read 351 to 355 px.
+- It is recorded as a known baseline exception. The test fails in any of these cases:
+  - any other cell overflows;
+  - this cell stops overflowing, or no longer overflows from that select;
+  - its scroll width exceeds 355 by more than 8 px, an engine tolerance for font and rounding differences between Chrome builds;
+  - an overflowing element lies outside the select's field, `#share` or the motion control.
+- The list is pruned deliberately.
 - Step A cannot fix it (zero product change).
 - The other 31 cells do not overflow.
 
@@ -205,10 +230,11 @@ New file `apps/fleetlab-city/test/viewport.test.mjs`. Its helpers are `cdp-brows
 - `browser`;
 - `server` (`headers_applied: false`);
 - `scope`;
-- `notRun`.
+- `notRun`, which always lists `physical-phone`, and lists `hosted-headers` while `headers_applied` is false.
 
 **Pages.** The hub, the five lessons and the depot experiment, at 320×700, 390×844, 768×1000 and 1280×900. For each page and size it records:
 - the method;
+- the title, the document status and the visibility state. Validation requires the expected title, status 200, visibility `visible`, and `clientWidth` equal to the width;
 - `innerWidth`, `clientWidth`, `scrollWidth` and `pageOverflow`;
 - the overflowing elements;
 - console errors;
@@ -222,6 +248,8 @@ New file `apps/fleetlab-city/test/viewport.test.mjs`. Its helpers are `cdp-brows
 - whether the D-01 decoy was requested;
 - the D-05 request count.
 
+Dedicated workers are auto-attached, so the worker script's response and the worker's own requests are recorded. Each network cell records `quietReached` and `quietWaitMs`: the wait ends after 500 ms with no request in flight, capped at 10 s.
+
 **Pause control.**
 - r1-nf05 is at least 25% visible and confirmed playing;
 - the control is pressed, then 1 s waited;
@@ -234,6 +262,16 @@ New file `apps/fleetlab-city/test/viewport.test.mjs`. Its helpers are `cdp-brows
 **Runs.**
 - The runner is run once at the base (BEFORE) and again on the Step B candidate (AFTER).
 - The physical-phone check runs on the release candidate only.
+
+**BEFORE record at the base** (2026-10-25, Chrome 156.0.8078.47, the BEFORE stage served locally):
+- **Overflow.** Of the 28 page-and-size cells, only the depot experiment at 320 px overflows (scroll width 355).
+- **Errors and hosts.** Console errors: 0. The only external host attempted is `www.googletagmanager.com`, and it was blocked.
+- **Capacity.**
+  - FL-A4 is `loading="lazy"` with no priority. At 1280 px it is in the first viewport (top 282 px) and is the LCP element; at 390 px it sits below the fold (top 924 px).
+  - The D-01 decoy is requested at both widths.
+- **Dispatch.** D-05 is requested once at each width.
+- **Pause control.** Pressing "Pause visual motion" pauses FL-V2, which returns to its poster. It does **not** pause r1-nf05: 1.007 s of playback passed in the 1 s wait.
+- **Fleet day at 390 px.** A2 is present and loaded, and there are no V1 elements or requests.
 
 ## 11. Delivery Order truth table, confirmed against source
 
