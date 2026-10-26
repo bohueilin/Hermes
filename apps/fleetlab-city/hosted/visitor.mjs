@@ -140,13 +140,11 @@ if(shift&&timeline&&!doc.querySelector('.visitor-shift-preview')){
  timeline.parentNode.insertBefore(preview,timeline);
 }
 // User-approved correction: concept artwork motion only, with no fabricated results or replay.
-for(const [selector,kind,file,alt] of [
+for(const [selector,kind] of [
  ['.r1-hero','rebalancing'],['.delivery-hero','delivery'],['#order-root .hero','order'],
- ['.capacity-hero','capacity','D-01-depot-scenario.webp','Two autonomous pods sharing one network link, each with a deadline.'],
 ]){
  const hero=doc.querySelector(selector);if(!hero||hero.hasAttribute('data-ambient-ready'))continue;
- const figure=hero.querySelector('figure')||(file?diagram(file,alt):null);if(!figure)continue;
- if(!hero.contains(figure))hero.appendChild(figure);
+ const figure=hero.querySelector('figure');if(!figure)continue;
  figure.classList.add('visitor-ambient-art');figure.setAttribute('data-ambient-kind',kind);
  const caption=figure.querySelector('figcaption');if(caption&&!caption.textContent.includes('not simulation output'))caption.textContent='Concept illustration · not simulation output. Use the checked model below to compare outcomes and individual delays.';
  hero.setAttribute('data-ambient-ready','');

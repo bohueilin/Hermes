@@ -40,8 +40,10 @@ export function decorateConceptMedia(doc,createNode){
  if(notebook&&!doc.getElementById('enhancement-notebook'))notebook.parentNode.insertBefore(figure('enhancement-notebook','FL-A3-second-depot-diptych.webp','Clay diptych of the same city twice: with one depot and long looping routes, and with two depots and shorter local routes.','Same city, same streets. Left: one depot, long empty loops. Right: a second depot — the cars stay closer to the riders. The table below is what the model actually found.',"Concept illustration · the study's streets are real; this picture is not the study"),notebook.nextSibling);
  const capacity=doc.querySelector('.capacity-hero');
  if(capacity&&!doc.getElementById('enhancement-capacity')){
-  const fallback=capacity.querySelector('img[src="/diagrams/D-01-depot-scenario.webp"]')?.closest('figure');fallback?.remove();
-  capacity.insertBefore(figure('enhancement-capacity','FL-A4-capacity-hero.webp','Clay illustration of twelve white autonomous pods moving through three depot service bays while technicians work.','Twelve visits, three shared lanes. Whether the wait is a scheduling problem or a capacity problem is the lesson.'),capacity.querySelector('.capacity-preview-slot'));
+  const art=figure('enhancement-capacity','FL-A4-capacity-hero.webp','Clay illustration of twelve white autonomous pods moving through three depot service bays while technicians work.','Twelve visits, three shared lanes. Whether the wait is a scheduling problem or a capacity problem is the lesson.'),img=art.querySelector('img');
+  // Above the fold only in the two-column layout (capacity/visual.css stacks it below 768 px).
+  if(doc.defaultView?.matchMedia?.('(min-width:768px)').matches){img.setAttribute('loading','eager');img.setAttribute('fetchpriority','high');}
+  capacity.insertBefore(art,capacity.querySelector('.capacity-preview-slot'));
  }
  const deadhead=doc.querySelector('[data-explainer-kind="deadhead"]');
  if(deadhead&&!doc.getElementById('enhancement-deadhead')){
