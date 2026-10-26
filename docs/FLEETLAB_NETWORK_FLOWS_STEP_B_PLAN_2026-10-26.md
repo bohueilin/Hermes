@@ -82,7 +82,7 @@ Every commit stages named paths only. Bytes are measured after each commit, on a
 
 **Changes:**
 - **No D-01 decoy.** The D-01 decoy is never built or fetched on Capacity, and the dead fallback removal goes.
-- **Above-the-fold priority.** FL-A4 is `loading="eager"` with `fetchpriority="high"` only when `(min-width:768px)` matches at insertion, the layout in which it sits above the fold. Below 768 px it stays lazy.
+- **Width-only priority.** FL-A4 is `loading="eager"` with `fetchpriority="high"` only when `(min-width:768px)` matches at insertion, the two-column layout in which it sits beside the intro. Below 768 px it stacks under the intro and stays lazy. That does not always keep it out of the first viewport: a tall narrow viewport such as 767×1000 shows its top (at 737 px). Priority is deliberately width-only, per the owner ruling.
 - **Reserved, tinted space.** A tinted placeholder (`#f1ebe2`) reserves the 16:9 art space before injection, through a `::after` hidden once `#enhancement-capacity` exists. The specificity is strictly above the hosted `.enhancement-visual` rule.
 - **No shimmer** on the hero art.
 
@@ -279,3 +279,26 @@ A result that fails any of the three is not ready to go live.
 - defect (c) is deferred (D6);
 - the depot-page eyebrow is deferred (D1);
 - forced-colours styling for the focused `aria-disabled` Capacity primary is deferred.
+
+**Residuals found by the design verdict and not fixed by V1 to V3:**
+- the Software Delivery concept art is titled "Same work. Different order." (the Delivery Order premise, set in the hosted `brand.mjs`), so lessons 02 and 03 show the same label in a row;
+- the Delivery Order figures badge sits over card 1 and reads as its heading; in Your order mode it repeats card 2's label;
+- Delivery Order "Unavailable" reasons can show raw verifier codes, such as "Returned record rejected: candidate-rejected:0:record-metrics", with no full stop;
+- "Show best of 24" clears a "Your edited order is pending" whose order was never compared, and "Watch worked example" drops a pending edit without saying so;
+- the Rebalancing lesson Play waits silently under the global pause: it stays "Play", with no status, until Resume;
+- the hosted "Pause visual motion" pill covers text: the last line of hub card 05 at 1280×900, and Capacity's help line and the Delivery Order scenario buttons at 390;
+- "LESSON n OF 5" stacks with a second eyebrow (a third on Rebalancing) and renders in four type styles across the five lessons;
+- the hub Compare lines float in flow instead of sitting at the card bottom (82 px ragged at 1280);
+- end-of-lesson navigation is not unified (Next sits after the lesson footer on Capacity, Software Delivery and Delivery Order; Delivery Order's footer links run together at 390), and lesson titles differ across surfaces (lesson 1 has four names);
+- the Delivery Order move buttons and alternatives row stay enabled during a check, and pressing one cancels or replaces it;
+- "All ready" is never defined beside "ready by target";
+- Dispatch failure states use the calm green status box of success above a grandfathered amber-bordered alert, and "Retry comparison" (which reloads the scenario on screen, not the one that failed) sits beside the alert's "Reload to reconstruct the comparison";
+- the Dispatch "From the field" Reuters statistic was not re-verified (no network access); it is fenced as public reporting and now sits in the first viewport;
+- before any calculation, "Selected vehicle V1: 0 s difference between matching orders." still sits under "Published summary · no calculation has started." (the pinned first-paint state; V2 hides it only after an edit);
+- Delivery Order card 2 keeps the First come figures under "Your order" after an edit, its four-button alternatives row competes with the primary, and the pre-run wording is not one phrase across the lessons;
+- the "cannot run" visuals differ by lesson: Rebalancing's button and status line, Dispatch's status band, alert and Retry, and Delivery Order's left-ruled badge;
+- the Chrome-default blue progress bar shows on Dispatch while busy, a broken-image icon and alt text sit over the Capacity tint if FL-A4 fails, the Delivery Order result heading takes the browser focus ring, and the Dispatch H1 orphans "takes" at 320;
+- Scope 2 template work: the Software Delivery, Delivery Order and Dispatch heroes leave the right half empty at 1280, the Software Delivery primary is teal, and focus-ring colours vary by lesson;
+- the comment in `capacity-hero-browser.test.mjs` still states the premise corrected in C3;
+- found in the V1 check: Capacity's in-lesson link "Release source and record fingerprints" renders in the browser-default blue;
+- not exercised by the verdict: the hosted `_headers` and CSP, and the physical-phone check (an owner action); its FCP and LCP figures are single loopback runs.
