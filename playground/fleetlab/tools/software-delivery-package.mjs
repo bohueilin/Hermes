@@ -147,24 +147,18 @@ export function softwareDeliveryProblems(files,{sourceCommit=null}={}){
   }catch(error){return [error.message];}
 }
 
-// Deterministic hosted-only links, applied after the generation's sidecars are checked.
+// One lesson sequence in hub order, 01 to 05: [route, link text]. integrate-site.py reads this line as JSON.
+export const LESSON_SEQUENCE=[["capacity","Better scheduling, more bandwidth, or more charging power?"],["software-delivery","One update, four vehicles"],["delivery-order","Who gets the depot link first?"],["rebalancing","Where should the empty cars go?"],["dispatch","Which car takes the next request?"]];
+// Deterministic hosted-only Next links, applied after the generation's sidecars are checked. Lessons 01 to 04 link to
+// the next lesson only when both releases exist; lesson 05's final navigation is page source (dispatch/index.html).
 export function lessonNavigation(files){
- const result=new Map(),path='network-flows/capacity/index.html';
- if(files.has(DELIVERY_RELEASE)){
-  const source=files.get(path);
-  if(typeof source!=='string'||source.split('</body>').length!==2)fail('capacity navigation source missing or ambiguous');
-  result.set(path,source.replace('</body>','<nav class="fl-app" aria-label="Next Network Flows lesson"><p>Next lesson: <a href="/network-flows/software-delivery/">One update, four vehicles</a></p></nav>\n</body>'));
- }
- if(files.has(ORDER_RELEASE)){
-  const path=`${DELIVERY_DIR}/index.html`,source=files.get(path);
-  if(typeof source!=='string'||source.split('</body>').length!==2)fail('delivery navigation source missing or ambiguous');
-  const next=files.has(R1_RELEASE)?'<a href="/network-flows/rebalancing/">Where should the empty cars go?</a>':'<a href="/network-flows/delivery-order/">Who gets the depot link first?</a>';
-  result.set(path,source.replace('</body>','<nav class="delivery-shell" aria-label="Next Network Flows lesson"><p>Next lesson: '+next+'</p></nav>\n</body>'));
- }
- if(files.has(R3_RELEASE)){
-  const path='network-flows/rebalancing/index.html',source=files.get(path),old='<a href="/network-flows/delivery-order/">Who gets the depot link first? ↗</a>';
-  if(typeof source!=='string'||source.split(old).length!==2)fail('rebalancing onward link missing or ambiguous');
-  result.set(path,source.replace(old,'<a href="/network-flows/dispatch/">Which car takes the next request? ↗</a>').replace('Keep the workload fixed. Change the order of work.','Inspect the next request and the car that can reach it.'));
+ const result=new Map();
+ for(let i=0;i<4;i++){
+  const [route]=LESSON_SEQUENCE[i],[next,label]=LESSON_SEQUENCE[i+1],path=`network-flows/${route}/index.html`,end=i<3?'</body>':'</main>',source=files.get(path);
+  if(!files.has(`network-flows/${next}/release.json`)||i&&!files.has(`network-flows/${route}/release.json`))continue;
+  if(typeof source!=='string'||source.split(end).length!==2)fail(`${route} navigation source missing or ambiguous`);
+  const link=`<a href="/network-flows/${next}/">${label}`;
+  result.set(path,source.replace(end,()=>(i<3?`<nav class="${['fl-app','delivery-shell','order-shell'][i]}" aria-label="Next Network Flows lesson"><p>Next lesson: ${link}</a></p></nav>\n`:`<nav class="lesson-next" aria-label="Next Network Flows lesson"><span>CONTINUE THE QUESTION</span>${link} ↗</a><p>Inspect the next request and the car that can reach it.</p></nav>`)+end));
  }
  return result;
 }

@@ -164,9 +164,10 @@ el('div',{class:'capacity-examples',role:'group','aria-label':'Example visits'},
 detail('Every vehicle: outcomes and changes',[visitTable]),detail('Service timelines and exact average rates',[figures,spansBox])]);
 const loadedDetails=el('div',{class:'capacity-records'});
 const main=el('main',{class:'depot-capacity'},[
-el('nav',{class:'flow-breadcrumb','aria-label':'Breadcrumb'},[el('a',{href:'/#/catalog'},'Explore'),el('span',{'aria-hidden':'true'},'/'),el('span',{},'Depot readiness & data'),el('span',{'aria-hidden':'true'},'/'),el('span',{'aria-current':'page'},'Scheduling or capacity?')]),
+el('nav',{class:'flow-breadcrumb','aria-label':'Breadcrumb'},[el('a',{href:'/#/catalog'},'Explore'),el('span',{'aria-hidden':'true'},'/'),el('span',{},'Network Flows'),el('span',{'aria-hidden':'true'},'/'),el('span',{'aria-current':'page'},'Scheduling or capacity?')]),
 el('section',{class:'capacity-hero'},[
 el('div',{class:'capacity-intro'},[
+el('div',{class:'eyebrow'},'LESSON 1 OF 5'),
 el('p',{class:'eyebrow'},`RECORDED SYNTHETIC STUDY · ${VISITS} VEHICLES · ${HORIZON_MIN}-MINUTE OBSERVATION`),
 el('h1',{},'Better scheduling, more bandwidth, or more charging power?'),
 el('p',{class:'flow-lede'},'Twelve invented visits share upload and charging. Change one constraint; follow what finishes.'),

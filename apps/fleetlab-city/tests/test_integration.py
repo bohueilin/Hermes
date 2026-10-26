@@ -172,41 +172,52 @@ class IntegrationTest(unittest.TestCase):
             integration.final_route_counts(routes, files)
 
     def test_onward_link_is_conditional_and_matches_javascript(self):
-        files = {"network-flows/capacity/index.html": "<body>capacity</body>"}
-        self.assertEqual(integration.lesson_navigation(files), {})
-        files["network-flows/software-delivery/release.json"] = "present"
-        actual = integration.lesson_navigation(files)
         script = (
             "import {lessonNavigation} from "
             "'./playground/fleetlab/tools/software-delivery-package.mjs';"
             "const files=new Map(Object.entries(JSON.parse(process.argv[1])));"
             "process.stdout.write(JSON.stringify(Object.fromEntries(lessonNavigation(files))));"
         )
-        result = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(files)],
-                                cwd=PACK.parents[3], capture_output=True, text=True, check=True)
-        self.assertEqual(actual, json.loads(result.stdout))
+
+        def both(files):
+            actual = integration.lesson_navigation(files)
+            result = subprocess.run(
+                ["node", "--input-type=module", "-e", script, json.dumps(files)],
+                cwd=PACK.parents[3], capture_output=True, text=True, check=True)
+            self.assertEqual(actual, json.loads(result.stdout))
+            return actual
+
+        files = {"network-flows/capacity/index.html": "<body>capacity</body>"}
+        self.assertEqual(both(files), {})
+        files["network-flows/software-delivery/release.json"] = "present"
+        actual = both(files)
         self.assertIn('Next lesson:', actual['network-flows/capacity/index.html'])
         files["network-flows/software-delivery/index.html"] = "<body>delivery</body>"
-        files["network-flows/delivery-order/release.json"] = "present"
         files["network-flows/rebalancing/release.json"] = "present"
-        actual = integration.lesson_navigation(files)
-        result = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(files)],
-                                cwd=PACK.parents[3], capture_output=True, text=True, check=True)
-        self.assertEqual(actual, json.loads(result.stdout))
-        self.assertIn('/network-flows/rebalancing/',
+        # Rebalancing without Delivery Order: neither generator skips lesson 03.
+        self.assertEqual(list(both(files)), ['network-flows/capacity/index.html'])
+        files["network-flows/delivery-order/release.json"] = "present"
+        files["network-flows/delivery-order/index.html"] = "<body>order</body>"
+        actual = both(files)
+        self.assertIn('/network-flows/delivery-order/',
                       actual['network-flows/software-delivery/index.html'])
-
-
+        self.assertIn('/network-flows/rebalancing/',
+                      actual['network-flows/delivery-order/index.html'])
         files["network-flows/dispatch/release.json"] = "present"
+        files["network-flows/dispatch/index.html"] = "<main>dispatch</main>"
         files["network-flows/rebalancing/index.html"] = (
-            '<a href="/network-flows/delivery-order/">Who gets the depot link first? ↗</a>'
-            '<p>Keep the workload fixed. Change the order of work.</p>'
+            '<main><nav aria-label="Previous Network Flows lesson"><p>Previous lesson: '
+            '<a href="/network-flows/delivery-order/">Who gets the depot link first?</a></p></nav>'
+            '</main>'
         )
-        actual = integration.lesson_navigation(files)
-        result = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(files)],
-                                cwd=PACK.parents[3], capture_output=True, text=True, check=True)
-        self.assertEqual(actual, json.loads(result.stdout))
-        self.assertIn('/network-flows/dispatch/', actual['network-flows/rebalancing/index.html'])
+        actual = both(files)
+        rebalancing = actual['network-flows/rebalancing/index.html']
+        self.assertIn('/network-flows/dispatch/', rebalancing)
+        self.assertIn('Previous lesson: <a href="/network-flows/delivery-order/">', rebalancing)
+        self.assertNotIn('network-flows/dispatch/index.html', actual)
+        files["network-flows/rebalancing/index.html"] += "</main>"
+        with self.assertRaisesRegex(ValueError, "rebalancing navigation source missing"):
+            integration.lesson_navigation(files)
 
     def test_depot_closure_has_its_own_q6_branch_and_counts_depot_owned_text(self):
         owners = {"lab.js": "depot-lab", "_headers": "legacy"}

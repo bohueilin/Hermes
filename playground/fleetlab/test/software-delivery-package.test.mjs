@@ -158,8 +158,9 @@ test('final transformed headers remain inside each complete route closure cap',(
 });
 
 test('hosted onward navigation is conditional and preserves the original teaching pages',async()=>{
- const {lessonNavigation}=await import('../tools/software-delivery-package.mjs');
+ const {lessonNavigation,LESSON_SEQUENCE}=await import('../tools/software-delivery-package.mjs');
  assert.equal(typeof lessonNavigation,'function');
+ assert.deepEqual(LESSON_SEQUENCE.map(([route])=>route),['capacity','software-delivery','delivery-order','rebalancing','dispatch']);
  const teaching=new Map([['network-flows/capacity/index.html','<body>capacity</body>']]);
  assert.equal(lessonNavigation(teaching).size,0);
  teaching.set('network-flows/software-delivery/release.json','present');
@@ -167,4 +168,13 @@ test('hosted onward navigation is conditional and preserves the original teachin
  assert.match(onward.get('network-flows/capacity/index.html'),/Next lesson.*software-delivery/);
  assert.equal(teaching.get('network-flows/capacity/index.html'),'<body>capacity</body>');
  assert.equal(onward.size,1);
+ // 01 to 05 without skipping 03; lesson 05's page is source and never rewritten.
+ for(const [path,data]of [['network-flows/software-delivery/index.html','<body>sd</body>'],['network-flows/delivery-order/release.json','present'],['network-flows/delivery-order/index.html','<body>do</body>'],['network-flows/rebalancing/release.json','present'],['network-flows/rebalancing/index.html','<main>r1</main>'],['network-flows/dispatch/release.json','present'],['network-flows/dispatch/index.html','<main>r3</main>']])teaching.set(path,data);
+ const all=lessonNavigation(teaching);
+ assert.deepEqual([...all.keys()],LESSON_SEQUENCE.slice(0,4).map(([route])=>`network-flows/${route}/index.html`));
+ for(const [i,[route]]of LESSON_SEQUENCE.slice(0,4).entries())assert.ok(all.get(`network-flows/${route}/index.html`).includes(`href="/network-flows/${LESSON_SEQUENCE[i+1][0]}/">${LESSON_SEQUENCE[i+1][1]}`),route);
+ teaching.delete('network-flows/delivery-order/release.json');
+ assert.deepEqual([...lessonNavigation(teaching).keys()],['network-flows/capacity/index.html','network-flows/rebalancing/index.html']);
+ teaching.set('network-flows/rebalancing/index.html','<main>r1</main></main>');
+ assert.throws(()=>lessonNavigation(teaching),/rebalancing navigation source missing or ambiguous/);
 });
