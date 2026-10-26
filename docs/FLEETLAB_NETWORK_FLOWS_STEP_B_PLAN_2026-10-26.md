@@ -1,0 +1,276 @@
+# FleetLab network flows, Step B: the five priority fixes
+
+**Date:** 2026-10-26. **Base:** `main` at `f043995e39b4e9f9208ee80bdc5b573d98e046ea` (Step A merged). The site inputs at this base equal the live release `a1b79cd`.
+**Branch:** `codex/fleetlab-network-flows-step-b`.
+**Status:** written before any product edit. Each commit below names its allowed files.
+
+Step B is the first product change of the network-flows redesign. It makes five priority fixes, plus the decided riders, inside the bounds recorded by Step A ([Step A spec](FLEETLAB_NETWORK_FLOWS_STEP_A_SPEC_2026-10-25.md)).
+
+**What Step B never does:**
+- raise a byte ceiling, or move headroom between closures;
+- add media, or use the reserved eighth enhancement slot;
+- touch A2 or the held Fleet day film;
+- change the offline edition, which stays pinned at 2,565,111 B, `313fa3f1…`;
+- paraphrase boundary copy.
+
+Publication stays an owner action, after re-inspection and the design verdict.
+
+## 1. Owner decisions (2026-10-26)
+
+| | Decision |
+|---|---|
+| D1 | **Depot-page "Deeper experiment" eyebrow: deferred to Scope 2.** It would break the Step A depot route-local pin (+82 B measured, and the pin allows none). The hub sentence and the new Dispatch nav already label the experiment "Deeper experiment, outside the five questions". |
+| D2 | **Hub meta lines adopted.** The five corrected lines from the v3.2 review mockup: "Compare: Base vs one change: different rule, more bandwidth, or more power"; "Compare: Repeated download vs cold shared cache (one depot copy)"; "Compare: First come vs your order (or best of 24)"; "Compare: Reactive vs forecast repositioning"; "Compare: Closest-first vs planned together". Card 04's line carries the one allowed "forecast". |
+| D3 | **One "cannot run" language.** "Comparison unavailable" inside the Rebalancing and Dispatch primary buttons; "Unavailable: <reason>" as the Delivery Order badge; the Dispatch busy label "Checking the dispatch comparison…". |
+| D4 | **End-of-run reason.** "Observation complete" inside the Rebalancing "Apply moves" and Dispatch "Apply" buttons once the run has ended. The idle labels return when not ended. |
+| D5 | **Delivery Order copy and behaviour:**<br>• **Copy.** "Reset to First come"; the card-2 fine line "Your order starts as First come. Move a vehicle, then choose Compare my order."; the failure and cancel tail "Published summary remains available."; the editor label "Your service order".<br>• **No false "edited".** "Your edited order is pending" shows only after a real edit, never after an unedited scenario switch.<br>• **Worked-example failure.** If it fails after an earlier check, the earlier scenario is restored, so the editor and the cards agree.<br>• **Screen readers.** Failures and cancels are announced. |
+| D6 | **Defect (c) deferred to Scope 2.** It covers Rebalancing's static pre-run text and Dispatch's empty takeaway box. It is named in the design verdict. |
+
+**Settled by earlier owner rulings or by engineering judgement:**
+- uppercase "LESSON n OF 5" eyebrow lines;
+- the plain "Network Flows" breadcrumb on Capacity;
+- "Back to hub";
+- the Capacity art tint `#f1ebe2`, which is not warm under the colour lock;
+- FL-A4 eager with high priority only at 768 px and wider;
+- no shimmer on the Capacity and Dispatch heroes;
+- the pause fix through the Rebalancing lesson module;
+- one sequence source inside `software-delivery-package.mjs`.
+
+## 2. Commits, in order, with their allowed files
+
+Every commit stages named paths only. Bytes are measured after each commit, on a clean tree, with the Step A gates; a dirty tree reads 9 B low per sidecar. Any overrun stops that item with an itemised owner request. The route sidecars regenerate on every build, so no manual re-fingerprint step exists.
+
+### C1. Text-only Dispatch hero
+
+**Allowed:**
+- `apps/fleetlab-city/hosted/visitor.mjs` (the Dispatch hero entry; the chapter-copy lookup);
+- `apps/fleetlab-city/hosted/visitor.css` (the dead `#main>.hero>.visitor-ambient-art` rules only);
+- `apps/fleetlab-city/test/visitor-design.test.mjs`.
+
+**Changes:**
+- Remove the hero copy and its dead art rules.
+- Scope the body lookup to `.bench>#chapter-copy`. `#lesson #chapter-copy` would also match Rebalancing.
+- Net −252 B per closure.
+
+**Tests:**
+- Move the ambient-art assertion off Capacity.
+- Add `class="bench"` and a Rebalancing negative case.
+- Add a failure-state test: one D-05 node in every state, including navigation during failure; Next and the chapter tabs stay enabled on failure; another chapter hides the body copy.
+
+**Accepted residual:** D-05 shows only in chapter 0.
+
+### C2. Explore catalog order and card 05
+
+**Allowed:**
+- `apps/fleetlab-city/hosted/visitor.mjs` (the catalog re-append list);
+- `apps/fleetlab-city/hosted/network-hub.html` (card 05 body);
+- `apps/fleetlab-city/hosted/integration.mjs` (the catalog card 05 sentence);
+- a new order test.
+
+**Changes:**
+- Delete the three lesson links from the re-append list (−96 B per closure), giving the order 01→05.
+- In both places, the card 05 sentence becomes "Compare closest-first assignment with planned-together matching." The live remainder of the hub sentence is kept.
+
+### C3. Capacity hero
+
+**Allowed:**
+- `apps/fleetlab-city/hosted/visitor.mjs` (remove the Capacity hero-loop entry, then tidy the loop now that both Capacity and Dispatch are gone);
+- `apps/fleetlab-city/hosted/enhancement-media.mjs` (the Capacity block only; `figure()` and the A2 call stay byte-identical);
+- `apps/fleetlab-city/hosted/visitor.css` (the dead `.capacity-hero>.visitor-ambient-art` rules only);
+- `playground/fleetlab/capacity/visual.css`;
+- new `apps/fleetlab-city/test/capacity-hero.test.mjs` and `capacity-hero-browser.test.mjs`.
+
+**Changes:**
+- **No D-01 decoy.** The D-01 decoy is never built or fetched on Capacity, and the dead fallback removal goes.
+- **Above-the-fold priority.** FL-A4 is `loading="eager"` with `fetchpriority="high"` only when `(min-width:768px)` matches at insertion, the layout in which it sits above the fold. Below 768 px it stays lazy.
+- **Reserved, tinted space.** A tinted placeholder (`#f1ebe2`) reserves the 16:9 art space before injection, through a `::after` hidden once `#enhancement-capacity` exists. The specificity is strictly above the hosted `.enhancement-visual` rule.
+- **No shimmer** on the hero art.
+
+**Never edited:** `enhancement-media.css`. The A2 golden pins it whole.
+
+### C4. Global pause reaches the Rebalancing lesson video
+
+**Allowed:**
+- `playground/fleetlab/src/ui/rebalancing-concept.js`;
+- `apps/fleetlab-city/hosted/visitor.mjs` (a user-pause-only signal);
+- tests in `apps/fleetlab-city/test/r1-concept-loop.test.mjs` and `visitor-design.test.mjs`.
+
+**Changes:**
+- The lesson module honours the visitor's global "Pause visual motion" choice. A lesson Play request made while the pause holds starts on Resume.
+- The hosted signal marks a pause the visitor chose, and clears while reduced motion disables the global control, so reduced-motion Play keeps working.
+- Measured cost: +279 B on Rebalancing, and +75 B in each closure for the signal.
+- **Evidence bar:** in the AFTER browser record, r1-nf05 is paused within 1 s of pressing the control (paused, with at most 0.1 s of playback). BEFORE: still playing, with 1.007 s of playback in the 1 s wait.
+
+### C5. One lesson sequence and its navigation (atomic)
+
+**Allowed:**
+- `playground/fleetlab/tools/software-delivery-package.mjs` (exported `LESSON_SEQUENCE` and the JS generator);
+- `apps/fleetlab-city/tools/integrate-site.py` (reads the same sequence as text; the generator; the caller list, adding `network-flows/delivery-order/index.html` and `network-flows/dispatch/index.html`);
+- `apps/fleetlab-city/tests/test_integration.py`;
+- `playground/fleetlab/rebalancing/index.html`;
+- `playground/fleetlab/dispatch/index.html`;
+- `playground/fleetlab/src/ui/depot-capacity-page.js`;
+- `playground/fleetlab/src/ui/software-delivery-page.js`;
+- `playground/fleetlab/src/ui/delivery-order-page.js` (the label only);
+- `apps/fleetlab-city/hosted/network-hub.html` (the D2 meta lines);
+- test updates (`rebalancing-package.test.mjs`, `software-delivery-package.test.mjs`);
+- a new `apps/fleetlab-city/test/lesson-sequence.test.mjs` with a JS/Python generator parity check.
+
+**Changes:**
+- **Sequence.** One sequence, 01 Capacity → 02 Software Delivery → 03 Delivery Order → 04 Rebalancing → 05 Dispatch. The depot experiment stays outside it.
+- **Labels.** "LESSON n OF 5" on each lesson. On Capacity the label is its own element, so the pinned eyebrow stays first. Software Delivery's "04" is removed.
+- **Navigation:**
+  - Rebalancing gets Previous;
+  - Delivery Order gets Next;
+  - Dispatch's final nav is a source edit with Previous, "Back to hub", and the depot link labelled outside the five, reusing the live hub wording;
+  - the Capacity breadcrumb becomes "Network Flows".
+- **Hub.** The five meta lines are added.
+- **Anchor.** The exact-match anchor changes in all four places together.
+
+The City Python suite runs locally; it is outside CI.
+
+### C6. One disabled and loading language
+
+**Allowed:**
+- the five lesson `visual.css` files;
+- `playground/fleetlab/rebalancing/index.html` and `dispatch/index.html`;
+- `playground/fleetlab/src/ui/rebalancing-app.js`, `dispatch-app.js` and `depot-capacity-page.js`;
+- new `apps/fleetlab-city/test/css-cascade.mjs` and `disabled-state-parity.test.mjs`.
+
+**Never edited:** `styles.css` and `display-text.js`, both in the offline edition.
+
+The rules are set by the component spec in section 3.
+
+### C7. Delivery Order states
+
+**Allowed:**
+- `playground/fleetlab/src/ui/delivery-order-page.js`;
+- `playground/fleetlab/delivery-order/visual.css`;
+- new `playground/fleetlab/test/delivery-order-states.test.mjs`.
+
+The states are set by section 4.
+
+### Final steps, after C7
+
+1. The stage check in `after` mode on the committed candidate.
+2. The browser-evidence runner, AFTER.
+3. The viewport check.
+4. Re-inspection at 1280, 768, 390 and 320 px, with the network panel on Capacity and Dispatch.
+5. The design verdict (section 5).
+6. The deploy-ready proof package.
+
+The physical-phone check runs on the release candidate and is an owner action.
+
+## 3. Component spec: lesson control states v1
+
+**Scope.** Capacity, Software Delivery, Delivery Order, Rebalancing and Dispatch. Excluded: the depot experiment (its route-local bound stays unchanged, and it is outside the five) and the hosted chrome (`.visitor-motion-control`).
+
+**States.**
+
+1. **Default primary.** Unchanged: forest-green fill, white label.
+2. **Hover and active while enabled.** Unchanged.
+3. **Focus.** The lesson focus rings are unchanged and visible in every state, including a focused `aria-disabled` button.
+4. **Disabled.** Any `button` or `select` under the lesson root that matches `:disabled` or `[aria-disabled=true]` gets:
+   - opacity 1, never an opacity mute;
+   - fill and border `#dce2d7`;
+   - label `#465d52` (5.39:1 on that opaque fill);
+   - `cursor: not-allowed`;
+   - `transform: none` in every pointer state;
+   - no hover change.
+
+   A disabled range input has no text, so it gets opacity .55 and `cursor: not-allowed`.
+5. **Loading.** Disabled, plus the reason, plus the existing progress cue (the trailing "…", the existing progress bar, or Capacity's "cell n of 4"). No new progress element.
+6. **Reason.**
+   - A primary disabled by busy or unavailable work says why, either inside its own label or in the text element right after its action row.
+   - That text must reach at least 4.5:1 over its real surface.
+   - Reason text inside a button exists only while the button is disabled; the exact idle label returns when it is enabled.
+   - Dependent controls share the disabled look and the lesson's single status line.
+   - Chapter-boundary nav buttons use the disabled look with no reason line.
+
+**Per lesson.**
+
+| Lesson | Reason placement and labels |
+|---|---|
+| Rebalancing | Reason inside `#watch`: "Loading the recorded comparison…" while loading, "Comparison unavailable" on failure. "Observation complete" on "Apply moves" once ended. |
+| Dispatch | Reason inside `#watch`: "Checking the dispatch comparison…" while busy, "Comparison unavailable" on failure. "Observation complete" on "Apply" once ended. |
+| Capacity | The status line moves to directly after the action row. |
+| Delivery Order | The status line is already directly after the action row. |
+| Software Delivery | The primary never disables; only boundary nav takes the disabled look. |
+
+**Cascade rule.** Each lesson's `visual.css` loads before `/brand.css`, which imports `visitor.css`, which imports `enhancement-media.css`. Equal specificity therefore loses silently. Every disabled rule is scoped by the lesson root id: `#main`, `#order-root`, `#delivery-root` or `#capacity-root`. That gives specificity (1,1,1), strictly above:
+- the hosted hover lift and active scale (0,3,1);
+- the hosted input skin (0,3,1);
+- the .55 input mute (0,2,1);
+- the Capacity `aria-disabled` rule (0,2,0);
+- the studio hover (0,2,0);
+- the Delivery Order primary hover (0,2,1).
+
+No `!important`.
+
+**Measured contrast:**
+
+| Control | Before | After |
+|---|---|---|
+| Rebalancing primary | 12.51:1, and looked enabled | 5.39:1 for every disabled text-bearing control |
+| Dispatch primary | 2.94 | |
+| Delivery Order primary | 2.26 | |
+| Capacity primary | 3.69 | |
+| Dispatch hosted selects | 2.86–2.95 | |
+
+After, the reason and status lines read 10.52 (Rebalancing), 10.19 (Dispatch), 6.26 (Delivery Order) and 11.61 (Capacity).
+
+**Parity test.** It parses `styles.css`, each lesson's `visual.css` and the hosted `visitor.css` together. It applies cascade order and specificity, resolves `var()`, and composites opacity over the real surface. It covers `aria-disabled`, and checks that reason text inside a button disappears when not busy.
+
+## 4. Delivery Order states
+
+The figures are the truth table confirmed against source in Step A. Badges are separate elements in the small-caps label style, never a pinned card label and never a button look.
+
+**Cards.** Card 1 is always "First come". Card 2 is "Your order", or "Best permitted order" in best mode.
+
+**States:**
+
+| State | Figures | Labels and status |
+|---|---|---|
+| First paint, every scenario | The published first-come summary. | Labelled "Published order", with no "pending" language. The card-2 fine line keeps "Compare my order". |
+| Pre-run scenario switch (nothing accepted) | That scenario's own published first-come figures. | Status: "Published summary · no calculation has started." |
+| Edit, nothing accepted | Published figures stay. | The editor carries "Your edited order is pending". |
+| Edit after an accepted check | The accepted figures stay. They are current, checked results and are never labelled "previous". | The editor badge shows only when the order differs from the last compared order for that scenario. An unedited scenario switch shows no "edited" badge. |
+| Success | | Status "Checked 24 of 24 permitted orders · <name>". The result is "<name> · checked complete study". The figures label is "Your order", "Worked example" or "Best of 24". A new mode variable tells Worked example from Best of 24. |
+| Failure | Previous or published figures are kept and labelled. | Badge "Unavailable: <reason>", using the reasons from source. Status "Unable to accept this comparison." with the tail "Published summary remains available." when nothing was ever accepted. No "retained" claim unless something was accepted. A Worked example failure after an acceptance restores the earlier scenario. Failures and cancels are announced. |
+| Cancel | | A Cancel row exists before and after acceptance. The suspend states stay as pinned. |
+
+**Tests:**
+- Pinned tests kept: `design-round4` :25, :26 and :27; `delivery-order-page` :6, :8–:12 and :16–:18.
+- A real re-render test replaces the captured-node check.
+- The truth-table test from Step A stays green.
+
+## 5. Gates and the design verdict
+
+**Gates, on the committed candidate:**
+- every Step A bound;
+- the colour lock (no warm additions);
+- the hub-copy test, now with one "forecast" in card 04;
+- the A2 golden;
+- the offline pin;
+- the viewport check, where the depot 320 px exception stays the only overflow;
+- the three Node suites, pytest and ruff;
+- the City Python suite, run locally.
+
+**Design verdict.** It is reported beside the byte report, and rates three things plainly:
+- **Craft:** does it look world-class?
+- **Comprehension:** does a visitor get each lesson's choice in one pass?
+- **Honesty in words:** does every caption, badge and figure say only what the evidence supports?
+
+A result that fails any of the three is not ready to go live.
+
+**Residuals named in advance:**
+- the Rebalancing, Delivery Order and Delivery Order panel heroes keep the motion-respecting shimmer until the Scope 2 hero template;
+- D-05 shows only in chapter 0;
+- the depot experiment keeps its own disabled style, and its 320 px overflow;
+- the offline depot-flow eyebrows still compete;
+- the Capacity breadcrumb differs from the Explore collection name;
+- only Dispatch links back to the hub;
+- Software Delivery has no Previous link;
+- defect (c) is deferred (D6);
+- the depot-page eyebrow is deferred (D1);
+- forced-colours styling for the focused `aria-disabled` Capacity primary is deferred.
