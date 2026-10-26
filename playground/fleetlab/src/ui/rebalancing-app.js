@@ -14,8 +14,8 @@ export function startRebalancing({createWorker}={}){
   by('study-progress').hidden=!current.busy;by('study-status').setAttribute('aria-busy',String(current.busy));
   if(current.error&&!current.study)by('study-status').textContent='Study unavailable: '+current.error;
   by('action-error').hidden=!current.error;by('action-error').textContent=current.error||'';
-  by('watch').disabled=!ready;by('play').disabled=!ready;by('frame').disabled=!ready;
-  by('apply-moves').disabled=!ready||current.busy||current.manual.end>=7200;by('reset-manual').disabled=!ready||current.busy;by('add-move').disabled=!ready||current.busy||current.manual.end>=7200;
+  by('watch').disabled=!ready;by('watch').textContent=ready?'Watch the comparison ↓':current.error?'Comparison unavailable':'Loading the recorded comparison…';by('play').disabled=!ready;by('frame').disabled=!ready;
+  by('apply-moves').disabled=!ready||current.busy||current.manual.end>=7200;by('apply-moves').textContent=ready&&current.manual.end>=7200?'Observation complete':'Apply moves & advance 10 min';by('reset-manual').disabled=!ready||current.busy;by('add-move').disabled=!ready||current.busy||current.manual.end>=7200;
   by('manual-panel').hidden=!manual;by('recorded-controls').hidden=manual;by('verdict-film').hidden=chapter!==4;by('verdict').hidden=chapter!==4;
   doc.querySelectorAll('[data-remove]').forEach(b=>{b.disabled=current.busy;});
   if(!ready)return;
@@ -38,6 +38,6 @@ export function startRebalancing({createWorker}={}){
  doc.addEventListener('visibilitychange',()=>{if(doc.hidden)stop();});window.addEventListener('pagehide',stop);motion.addEventListener('change',()=>{if(motion.matches)stop();});
  doc.querySelector('.r1-hero')?.appendChild(createMethodologyExplainer('deadhead',doc));
  const disposeConcepts=mountConceptLoops(doc);
- try{session=createR1Session({worker:createWorker(),onChange:s=>{current=s;if(s.manual&&s.manual.digest!==lastManual){lastManual=s.manual.digest;pending=[];pendingView();}render();}});}catch(error){by('study-progress').hidden=true;by('study-status').textContent='Study unavailable: '+error.message;}
+ try{session=createR1Session({worker:createWorker(),onChange:s=>{current=s;if(s.manual&&s.manual.digest!==lastManual){lastManual=s.manual.digest;pending=[];pendingView();}render();}});}catch(error){by('study-progress').hidden=true;by('study-status').textContent='Study unavailable: '+error.message;by('watch').textContent='Comparison unavailable';}
  return {getSession:()=>session,dispose:()=>{stop();disposeConcepts();session?.dispose();}};
 }

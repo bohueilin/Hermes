@@ -18,9 +18,9 @@ export function startDispatch({createWorker}){
   by('status').textContent=state.busy?'Calculating and checking this comparison. Previous results stay visible until it is ready.':ready?'Both policies checked independently. Synthetic results.':'Comparison unavailable.';
   by('study-progress').hidden=!state.busy;by('status').setAttribute('aria-busy',String(state.busy));
   by('error').hidden=!state.error;by('error').textContent=state.error||'';by('retry').hidden=!state.error;
-  for(const id of ['watch','arm','view','clock','play'])by(id).disabled=!ready||state.busy;
+  for(const id of ['watch','arm','view','clock','play'])by(id).disabled=!ready||state.busy;by('watch').textContent=state.busy?'Checking the dispatch comparison…':ready?'Follow the first assignment ↓':'Comparison unavailable';
   by('fixture').disabled=state.busy;by('later').disabled=state.busy;by('neutral').disabled=state.busy;by('later').hidden=chapter!==4;by('manual').hidden=!manual;by('recorded-controls').hidden=manual;
-  for(const id of ['add','apply','reset','request','car'])by(id).disabled=!ready||state.busy||(id!=='reset'&&state.manual?.end>=1200);
+  for(const id of ['add','apply','reset','request','car'])by(id).disabled=!ready||state.busy||(id!=='reset'&&state.manual?.end>=1200);by('apply').textContent=state.manual?.end>=1200?'Observation complete':'Apply & advance 30 s';
   pendingView();if(!ready)return;
   by('fixture').value=state.fixture;by('arm').value=arm;by('view').value=view;by('clock').value=frame;by('clock').setAttribute('aria-valuetext',`${frame*30} seconds`);
   by('fixture-context').textContent=state.fixture==='neutral'?'Accepted: 4 co-located cars and riders.':state.fixture==='default'?'Accepted: 4 cars and 8 requests, in two arrival waves.':'Accepted: 2 cars and 4 requests. Later arrivals are hidden from both policies until they occur.';
@@ -58,6 +58,6 @@ export function startDispatch({createWorker}){
  doc.querySelectorAll('button[data-chapter]').forEach(b=>b.addEventListener('click',()=>choose(+b.dataset.chapter)));by('previous').addEventListener('click',()=>choose(chapter-1));by('next').addEventListener('click',()=>choose(chapter+1));by('watch').addEventListener('click',()=>{frame=0;view='pre';choose(1);});
  by('add').addEventListener('click',()=>{if(state.busy||pending.length>=4)return;pending.push([by('request').value,by('car').value]);pendingView();});by('apply').addEventListener('click',()=>session.advance(pending));by('reset').addEventListener('click',()=>{pending=[];pendingView();session.reset();});
  doc.addEventListener('visibilitychange',()=>{if(doc.hidden)stop();});window.addEventListener('pagehide',stop);motion.addEventListener('change',()=>{if(motion.matches)stop();});
- try{session=createDispatchSession({worker:createWorker(),onChange:s=>{state=s;if(s.study&&s.fixture!==studyKey){studyKey=s.fixture;frame=0;selected='ev-001';pending=[];}if(s.manual&&s.manual.digest!==manualDigest){manualDigest=s.manual.digest;pending=[];}render();}});}catch(error){by('study-progress').hidden=true;by('status').textContent='Comparison unavailable: '+error.message;}
+ try{session=createDispatchSession({worker:createWorker(),onChange:s=>{state=s;if(s.study&&s.fixture!==studyKey){studyKey=s.fixture;frame=0;selected='ev-001';pending=[];}if(s.manual&&s.manual.digest!==manualDigest){manualDigest=s.manual.digest;pending=[];}render();}});}catch(error){by('study-progress').hidden=true;by('status').textContent='Comparison unavailable: '+error.message;by('watch').textContent='Comparison unavailable';}
  by('chapter-copy').textContent=copy[0];stop();return {getSession:()=>session,dispose:()=>{stop();session?.dispose();}};
 }
