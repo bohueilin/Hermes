@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {installFakeDom} from './helpers/fake-dom.mjs';import {ORDER_STUDY} from '../src/data/delivery-order-study.js';
-import {reconstructOrderStudy} from '../src/runtime/delivery-order-worker.js';import {createOrderPage} from '../src/ui/delivery-order-page.js';
+import {reconstructOrderStudy,reconstructOrderEqualShare} from '../src/runtime/delivery-order-worker.js';import {createOrderPage} from '../src/ui/delivery-order-page.js';
 // Step B C7: the Delivery Order states (docs/FLEETLAB_NETWORK_FLOWS_STEP_B_PLAN_2026-10-26.md section 4, owner decision D5).
 // Badges are separate elements: [data-figures] labels the outcome cards, [data-pending] the editor, [data-unavailable] a failed check.
 const FIGS={default:'2/4 · 178 s · 138 s · 378 s',impossible:'1/4 · 192 s · 138 s · 378 s',close:'2/4 · 4 s · 2 s · 378 s',best:'4/4 · 0 s · 0 s · 378 s',closeBest:'3/4 · 50 s · 50 s · 378 s'};
@@ -192,4 +192,58 @@ test('badges are small-caps labels, not pills or buttons, at 4.5:1 or better; Un
  // The decision panel and the page paper are the two surfaces the badges sit on.
  const panel=rule('.decision-panel').match(/background:(#[0-9a-f]{6})/)[1],paper=hex('var(--paper)');
  for(const ink of [b.match(/color:(#[0-9a-f]{6}|var\([^)]*\))/)[1],u.match(/color:(#[0-9a-f]{6}|var\([^)]*\))/)[1]].map(hex))for(const bg of [panel,paper])assert.ok(ratio(ink,bg)>=4.5,`badge ${ink} on ${bg}: ${ratio(ink,bg).toFixed(2)}`);
+});
+// Step B V2. The callout under the cards describes the order the cards show: before any check, the published order. A real
+// edit hides it until the editor matches the published order again; after a check it follows the checked order.
+const DELAY='Selected vehicle V1: 0 s difference between matching orders.',CHECKED=name=>`Checked 24 of 24 permitted orders · ${name}.`;
+const callout=p=>{const d=one(p,'[data-outcome-delta]');return d.hidden?null:d.textContent;};
+test('the selected-vehicle callout hides while an unchecked edit differs from the published order the cards show',async t=>{
+ const p=setup(t);assert.equal(callout(p),DELAY);
+ p.move('V4',-1);assert.equal(badge(p,'pending'),PENDING);assert.equal(callout(p),null,'the edited order is not the order the callout describes');
+ assert.deepEqual(cards(p).map(shown),[FIGS.default,FIGS.default]);
+ p.move('V4',1);assert.equal(badge(p,'pending'),null);assert.equal(callout(p),DELAY,'the editor matches the published order again');
+ p.selectCase('impossible');button(p,'Try earliest target').click();assert.equal(callout(p),null);
+ button(p,'Reset to First come').click();assert.equal(callout(p),DELAY);
+ p.move('V2',1);p.selectCase('close');assert.equal(callout(p),DELAY,'a scenario switch returns the editor to the published order');
+ p.selectCase('default');assert.equal(await p.load(),true);assert.match(callout(p),/^V1: ready at /);
+ p.move('V4',-1);assert.equal(badge(p,'pending'),PENDING);assert.match(callout(p),/^V1: ready at /,'after a check it describes the checked order the cards show');
+});
+test('a failed check of an edit keeps the published figures, so the callout stays hidden',async t=>{
+ const p=setup(t,{runStudy:failing('Computation timed out.')});p.move('V4',-1);assert.equal(await p.load(),false);
+ assert.equal(badge(p,'figures'),'Published order');assert.equal(callout(p),null);
+ button(p,'Reset to First come').click();assert.equal(callout(p),DELAY);
+});
+test('while the equal-share check runs the status line says so, then returns to the checked status',async t=>{
+ let finish=null,fail=null;const p=setup(t,{runEqualShare:()=>new Promise((r,j)=>{finish=r;fail=j;})});
+ const settle=async()=>{for(let k=0;k<5;k++)await Promise.resolve();};
+ assert.equal(await p.load(),true);assert.equal(status(p),CHECKED(NAMES.default));
+ for(const [end,after]of [[()=>finish(reconstructOrderEqualShare(ORDER_STUDY.cases.default)),'Checked equal share'],[()=>fail(Error('Computation timed out.')),'Equal-share record unavailable']]){
+  button(p,'Compare equal sharing').click();
+  assert.equal(status(p),'Rebuilding and independently checking the NF04 equal-share record…');assert.equal(one(p,'button.primary').disabled,true);
+  end();await settle();assert.equal(status(p),CHECKED(NAMES.default),after);assert.equal(one(p,'button.primary').disabled,false);
+ }
+});
+test('after a failed check in another scenario, the equal-share check returns the status to the retained line without the old reason',async t=>{
+ const p=setup(t,{runStudy:async e=>{if(e.input_digest===ORDER_STUDY.cases.close.input_digest)throw Error('Computation timed out.');return reconstructOrderStudy(e);},runEqualShare:async e=>reconstructOrderEqualShare(e)});
+ assert.equal(await p.load(),true);p.selectCase('close');assert.equal(await p.load(),false);assert.equal(badge(p,'unavailable'),'Unavailable: Computation timed out.');
+ button(p,'Compare equal sharing').click();assert.equal(status(p),'Rebuilding and independently checking the NF04 equal-share record…');assert.equal(badge(p,'unavailable'),null);
+ for(let k=0;k<5;k++)await Promise.resolve();
+ assert.equal(status(p),'Checked Different targets retained. Compare to accept Close targets.');assert.equal(badge(p,'unavailable'),null);assert.equal(p.getState().equalChecked,true);
+});
+test('returning to the accepted scenario with its accepted order shows the checked status, not a retained line',async t=>{
+ const p=setup(t);assert.equal(await p.load(),true);
+ p.selectCase('close');assert.equal(status(p),'Checked Different targets retained. Compare to accept Close targets.');
+ p.selectCase('default');assert.equal(status(p),CHECKED(NAMES.default));assert.equal(badge(p,'pending'),null);assert.deepEqual(p.getState().pendingOrder,p.getState().savedOrder);
+ p.selectCase('close');p.move('V3',-1);assert.equal(await p.showBest(),true);p.selectCase('impossible');p.move('V4',-1);
+ p.selectCase('close');assert.equal(status(p),CHECKED(NAMES.close));assert.equal(badge(p,'figures'),'Best of 24');assert.equal(badge(p,'pending'),null);
+ assert.equal(resultCase(p),'Close targets · checked complete study');
+});
+const restoreButton=p=>button(p,'Restore my order');
+test('Restore my order is disabled until a check is accepted, and a failed first check accepts nothing',async t=>{
+ let fail=true,finish=null;const p=setup(t,{runStudy:e=>fail?Promise.reject(Error('Computation timed out.')):new Promise(r=>{finish=()=>r(reconstructOrderStudy(e));})});
+ assert.equal(restoreButton(p).disabled,true);p.move('V4',-1);assert.equal(restoreButton(p).disabled,true);
+ assert.equal(await p.load(),false);assert.equal(restoreButton(p).disabled,true,'a failed first check');
+ fail=false;const first=p.load();assert.equal(restoreButton(p).disabled,true,'while the first check runs');finish();assert.equal(await first,true);assert.equal(restoreButton(p).disabled,false);
+ p.selectCase('close');p.move('V4',-1);assert.equal(restoreButton(p).disabled,false);restoreButton(p).click();
+ assert.equal(p.getState().pendingCase,'default');assert.equal(status(p),'Checked Different targets restored.');assert.equal(restoreButton(p).disabled,false);
 });

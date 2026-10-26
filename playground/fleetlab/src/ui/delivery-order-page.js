@@ -25,7 +25,7 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
  const idle='Published summary · no calculation has started.',status=p(idle,'status');status.setAttribute('data-status','');
  const resultCase=p('Different targets · published summary','eyebrow');resultCase.setAttribute('data-result-case','');
  const badge=a=>el('span',{class:'badge',hidden:'',...a}),figures=badge({'data-figures':''}),unavailable=badge({'data-unavailable':''}),editBadge=badge({'data-pending':''}),mark=(b,t)=>{b.textContent=t;b.hidden=!t;};
- const setStatus=(t,why='',tell)=>{status.textContent=t;mark(unavailable,why&&'Unavailable: ');if(why)unavailable.append(el('span',{},why));if(tell)announcement.textContent=`${t} ${unavailable.textContent}`.trim();},kept=()=>accepted?' Previous accepted outcomes are retained.':' Published summary remains available.';
+ const setStatus=(t,why='',tell)=>{status.textContent=t;mark(unavailable,why&&'Unavailable: ');if(why)unavailable.append(el('span',{},why));if(tell)announcement.textContent=`${t} ${unavailable.textContent}`.trim();},kept=()=>accepted?' Previous accepted outcomes are retained.':' Published summary remains available.',checked=(n=accepted.study.records.length)=>`Checked ${n} of ${n} permitted orders · ${names[accepted.id]}.`,rest=()=>accepted?pendingCase===accepted.id?checked():`Checked ${names[accepted.id]} retained. Compare to accept ${names[pendingCase]}.`:idle;
  const compare=btn('Compare my order',()=>load(),{class:'primary'}),cancelButton=btn('Cancel check',()=>cancel()),watch=btn('Watch worked example',()=>watchExample(),{class:'secondary'});
  const cases=el('div',{class:'case-buttons','aria-label':'Scenario'},Object.keys(names).filter(id=>id!=='tie').map(id=>btn(names[id],()=>selectCase(id),{'data-case':id,'aria-pressed':id===pendingCase})));
  const editStatus=p('','edit-status'),editor=el('ol',{class:'order-editor','aria-label':'Your service order'});
@@ -75,7 +75,7 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
   if(focusId){const replacement=editor.querySelector(`[data-move="${focusId}"]`);if(replacement&&!replacement.disabled)replacement.focus();else{const other=editor.querySelector(`[data-move="${focusId.split(':')[0]}:${focusId.endsWith(':-1')?1:-1}"]`);other?.focus();}}
   editStatus.replaceChildren(`Selected: ${names[pendingCase]}. `,editBadge);mark(editBadge,same(pending,saved[pendingCase])?'':'Your edited order is pending');
   cases.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-case')===pendingCase)));
-  cancelButton.hidden=!loading;compare.disabled=loading;
+  cancelButton.hidden=!loading;compare.disabled=loading;restore.disabled=!accepted;delay.hidden=!accepted&&!same(pending,saved[pendingCase]);
  }
  function metricCard(label,m){return el('article',{},[p(label,'eyebrow'),!accepted&&label==='Your order'?p('Your order starts as First come. Move a vehicle, then choose Compare my order.','fine'):null,el('strong',{class:'big-count'},`${m.on_time_count}/${m.request_count}`),p('ready by target'),el('dl',{},[['Total late time',sec(m.late_ms_total)],['Worst late time',sec(m.max_late_ms)],['All ready',sec(m.all_ready_ms)]].flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]))]);}
  function renderOutcomes(){
@@ -117,7 +117,7 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
  }
  function back(){if(loading&&example===serial&&accepted){pendingCase=accepted.id;pending=[...saved[pendingCase]];}}
  function cancel(announce=true,restore=announce){const returnFocus=document.activeElement===cancelButton;pendingGuideStart=false;if(restore)back();serial++;if(loading){stop();loading=false;if(announce)setStatus(`Check cancelled.${kept()}`,'',1);if(equal.textContent.startsWith('Rebuilding'))equal.textContent='Equal-share check interrupted. Try again.';}player.pause();renderEditor();if(returnFocus)(loadTrigger??compare).focus();}
- function selectCase(id){if(!names[id])return;cancel(false);pauseGuide();pendingCase=id;pending=[...saved[id]];setStatus(accepted?`Checked ${names[accepted.id]} retained. Compare to accept ${names[id]}.`:idle);if(!accepted)renderOutcomes();renderEditor();}
+ function selectCase(id){if(!names[id])return;cancel(false);pauseGuide();pendingCase=id;pending=[...saved[id]];setStatus(rest());if(!accepted)renderOutcomes();renderEditor();}
  function move(id,direction){const index=pending.indexOf(id),to=index+direction;if(![-1,1].includes(direction)||index<0||to<0||to>=pending.length)return;cancel(true,false);pauseGuide();[pending[index],pending[to]]=[pending[to],pending[index]];renderEditor();}
  async function load(mode='user'){
   const id=pendingCase,entry=manifest.cases[id],desired=[...pending],token=++serial,trigger=document.activeElement;
@@ -130,7 +130,7 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
    if(!result.verification?.ok||!result.verification.coverage.complete||result.verification.study_digest!==entry.study_digest||result.study.input_digest!==entry.input_digest)throw Error('Checked study identity unavailable.');
    const study=immutable(result.study);accepted={id,entry,study,verification:result.verification,projection:createOrderProjection(study),fcfs:entry.input.delivery.requests.slice().sort((a,b)=>a.arrival_ms-b.arrival_ms||(a.id<b.id?-1:1)).map(r=>r.id)};
    saved[id]=[...desired];shown=mode;viewed=mode==='user'?desired:[...study.representative_order];viewName=mode==='user'?'Your order':'Best permitted order';guideBound=false;equalResult=null;equal.textContent='Request a checked equal-share record for this accepted workload.';
-   const moveFocus=document.activeElement===trigger||document.activeElement===cancelButton;loading=false;setStatus(`Checked ${study.records.length} of ${study.records.length} permitted orders · ${names[id]}.`);renderOutcomes();player.chapter(0);renderEditor();
+   const moveFocus=document.activeElement===trigger||document.activeElement===cancelButton;loading=false;setStatus(checked());renderOutcomes();player.chapter(0);renderEditor();
    if(moveFocus)title.focus();announcement.textContent=`${names[id]} checked. ${viewName}: ${accepted.projection.outcome(viewed).metrics.on_time_count} of 4 on time.`;return true;
   }catch(error){if(token!==serial||destroyed)return false;const returnFocus=document.activeElement===cancelButton;back();loading=false;setStatus(`Unable to accept this comparison.${kept()}`,error.message,1);renderEditor();if(returnFocus)loadTrigger.focus();return false;}
  }
@@ -138,9 +138,9 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
  function restoreOrder(){if(!accepted)return;cancel(false);pauseGuide();setStatus(`Checked ${names[accepted.id]} restored.`);shown='user';viewed=[...saved[accepted.id]];viewName='Your order';pendingCase=accepted.id;pending=[...saved[accepted.id]];renderOutcomes();renderEditor();renderClock();}
  async function watchExample(){selectCase('default');if(await load('example')){guideBound=true;player.preference(reducedMotion());guideTitle.focus();if(visible)player.watch();else{pendingGuideStart=true;renderClock();}say();}}
  function setArm(value){if(!['baseline','comparison'].includes(value))return;arm=value;strips.setAttribute('data-arm',arm);arms.forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-arm-button')===arm)));}
- async function equalShare(){if(!accepted){equal.textContent='Compare an order first so the workload is checked.';return;}const token=++serial,identity=accepted.study.study_digest,entry=accepted.entry;stop();loading=true;renderEditor();equal.textContent='Rebuilding and independently checking the NF04 equal-share record…';
+ async function equalShare(){if(!accepted){equal.textContent='Compare an order first so the workload is checked.';return;}const token=++serial,identity=accepted.study.study_digest,entry=accepted.entry;stop();loading=true;renderEditor();setStatus(equal.textContent='Rebuilding and independently checking the NF04 equal-share record…');
   try{const result=await (runEqualShare?runEqualShare(entry):job.run(entry,'equal-share'));if(token!==serial||!accepted||identity!==accepted.study.study_digest)return;const {input_digest,record_digest,metrics,outcomes}=result.record;equalResult=immutable({input_digest,record_digest,metrics,outcomes});const m=metrics;equal.textContent=`Checked equal share: ${m.on_time_count}/4 by target; ${sec(m.all_ready_ms)} all ready. ${result.record.outcomes.map(v=>`${v.id}: ${sec(v.ready_ms)}, ${sec(Math.max(0,v.ready_ms-entry.input.delivery.requests.find(r=>r.id===v.id).deadline_ms))} late`).join(' · ')}. Same 12 GB upstream and 48 GB local work. Separate policy class.`;
-  }catch(error){if(token===serial)equal.textContent=`Equal-share record unavailable: ${error.message}`;}finally{if(token===serial){loading=false;renderEditor();}}}
+  }catch(error){if(token===serial)equal.textContent=`Equal-share record unavailable: ${error.message}`;}finally{if(token===serial){loading=false;setStatus(rest());renderEditor();}}}
  function suspend(){back();cancel(false);player.historyRestore();setStatus(accepted?`Checked ${accepted.study.records.length} orders retained · playback paused.`:'Check interrupted. Compare to restart.');}
  renderEditor();renderOutcomes();bench.hidden=true;
  return {element,bench,load,showBest,restoreOrder,watchExample,move,selectCase,setArm,cancel,suspend,
