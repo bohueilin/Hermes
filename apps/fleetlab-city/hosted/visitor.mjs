@@ -125,7 +125,7 @@ if(catalog&&!doc.getElementById('visitor-families')){
   if(resultTitle)resultTitle.textContent='The complete learning library';
  });
  const sequence=catalog.querySelector('.network-question-list');
- for(const href of ['#/depot-flow-lab?lesson=two-vehicles','#/depot-flow-lab?lesson=crossed-priorities','/network-flows/capacity/','/network-flows/software-delivery/','/network-flows/delivery-order/']){
+ for(const href of ['#/depot-flow-lab?lesson=two-vehicles','#/depot-flow-lab?lesson=crossed-priorities']){
   const card=sequence?.querySelector(`a[href="${href}"]`)?.closest('article');if(card)sequence.appendChild(card);
  }
  text('#network-flows-title','Start with one parked vehicle. Follow the whole system.');
