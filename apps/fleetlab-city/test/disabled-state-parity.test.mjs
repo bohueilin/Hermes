@@ -202,3 +202,42 @@ test('removing a lesson block brings back a failing treatment (the audit bites)'
    assert.ok(bare.some(p=>/^rebalancing input#move-count .*: background-color #[0-9a-f]{6} \(spec #dce2d7\)$/.test(p)),`${hostedLayer?'hosted':'teaching'}:\n${bare.join('\n')}`);}
  }finally{y.close();}
 });
+
+// Step B V3. A Worker that cannot be constructed leaves no session, so no control that needs one may stay enabled.
+test('when the Worker constructor throws, every control that needs the comparison is disabled and takes the disabled look',()=>{
+ for(const [name,open,panel,ids]of [['rebalancing',rebalancing,'manual-panel',['watch','play','frame','add-move','move-from','move-to','move-count','apply-moves','reset-manual']],
+  ['dispatch',dispatch,'manual',['watch','play','clock','arm','view','fixture','neutral','add','apply','reset','request','car']]]){
+  const x=open('throw');try{
+   assert.equal(x.by('watch').textContent,'Comparison unavailable');assert.deepEqual(ids.filter(id=>!x.by(id).disabled),[],name);
+   // The manual panel stays hidden without a comparison; shown, its controls keep the one disabled look in both cascades.
+   x.by(panel).removeAttribute('hidden');
+   for(const hostedLayer of [false,true]){const {problems,seen}=audit(name,x.by('main'),cascade(name,{hostedLayer}));assert.deepEqual(problems,[],name);assert.ok(seen.length>=ids.length-2,name);}
+  }finally{x.close();}
+ }
+});
+
+test('a Dispatch scenario switch that fails after a success says so, keeps its reason off the manual line, and shows the scenario on screen',()=>{
+ const x=dispatch('ok'),checked='Both policies checked independently. Synthetic results.';try{
+  x.reply();assert.equal(x.by('status').textContent,checked);
+  const f=x.by('fixture');f.value='counterexample';f.dispatchEvent(new Event('change'));
+  assert.equal(f.value,'default','while the switch runs, the select names the comparison still on screen');
+  x.fail('fixture unavailable');
+  assert.equal(x.by('status').textContent,'Comparison unavailable.');assert.equal(x.by('error').textContent,'fixture unavailable');assert.equal(x.by('retry').hidden,false);
+  assert.equal(f.value,'default');assert.match(x.by('fixture-context').textContent,/4 cars and 8 requests/);assert.match(x.by('results').textContent,/6 \/ 8/);
+  assert.doesNotMatch(x.by('manual-result').textContent,/unavailable/);assert.match(x.by('manual-result').textContent,/^Accepted through .* Phase: [A-Z_]+\. $/);
+  // A failed manual step is still reported on the manual line, and the comparison status stays checked.
+  x.by('retry').click();x.reply();assert.equal(x.by('status').textContent,checked);
+  document.querySelector('[data-chapter="5"]').click();x.by('apply').click();x.fail('batch rejected');
+  assert.match(x.by('manual-result').textContent,/ batch rejected$/);assert.equal(x.by('status').textContent,checked);
+ }finally{x.close();}
+});
+
+test('Dispatch says previous results stay visible only while there are previous results',()=>{
+ const busy='Calculating and checking this comparison.',kept=`${busy} Previous results stay visible until it is ready.`;
+ let x=dispatch('ok');try{
+  assert.equal(x.by('status').textContent,busy,'first load');x.reply();
+  const f=x.by('fixture');f.value='counterexample';f.dispatchEvent(new Event('change'));assert.equal(x.by('status').textContent,kept,'scenario switch');x.reply();
+  document.querySelector('[data-chapter="5"]').click();x.by('apply').click();assert.equal(x.by('status').textContent,kept,'manual step');
+ }finally{x.close();}
+ x=dispatch('ok');try{x.fail('fixture');x.by('retry').click();assert.equal(x.by('status').textContent,busy,'retry after a failed first load');}finally{x.close();}
+});

@@ -7,6 +7,7 @@ export function startRebalancing({createWorker}={}){
  let current=null,session=null,chapter=0,frame=0,arm='reactive',selected='ev-001',pending=[],timer=null,lastManual=null,renderedStudy=false;
  const headings=['Four zones. One fleet. Uneven demand.','Empty kilometers have a purpose and a cost.','Wait for the shortfall. Then move.','Prepare for a wave before it arrives.','Read the trade-off. Trace it to the ledger.','Your move. Make the coverage trade-off.'];
  const copy=['A vehicle can be available and still be in the wrong zone. Compare its location with the next wave of requests.','Empty distance includes pickup approach and interzone repositioning. Better coverage can require more empty travel. Read all outcomes together.','This rule moves after requests expire. Its target is each zone’s expirations in the preceding ten minutes, including the current boundary once.','This rule uses perfect next-interval request counts. It is a favorable information assumption, not a trained forecast. Current in-transit vehicles are not credited to ready supply.','No single score names a winner. Look for fewer unserved requests, additional empty travel and any zone whose waits got worse.','Allocate only Ready / idle vehicles. Add moves to a pending batch, then apply the whole batch and advance. Dispatch has priority; an invalid batch leaves the accepted run unchanged.'];
+ const dependents=['apply-moves','add-move','move-from','move-to','move-count'];
  const stop=()=>{if(timer!==null)clearInterval(timer);timer=null;by('play').textContent=frame===12?'Replay snapshots':'Play snapshots';};
  const render=()=>{
   if(!current)return;const ready=!!current.study,manual=chapter===5;
@@ -15,7 +16,7 @@ export function startRebalancing({createWorker}={}){
   if(current.error&&!current.study)by('study-status').textContent='Study unavailable: '+current.error;
   by('action-error').hidden=!current.error;by('action-error').textContent=current.error||'';
   by('watch').disabled=!ready;by('watch').textContent=ready?'Watch the comparison ↓':current.error?'Comparison unavailable':'Loading the recorded comparison…';by('play').disabled=!ready;by('frame').disabled=!ready;
-  for(const id of ['apply-moves','add-move','move-from','move-to','move-count'])by(id).disabled=!ready||current.busy||current.manual.end>=7200;by('apply-moves').textContent=ready&&current.manual.end>=7200?'Observation complete':'Apply moves & advance 10 min';by('reset-manual').disabled=!ready||current.busy;
+  for(const id of dependents)by(id).disabled=!ready||current.busy||current.manual.end>=7200;by('apply-moves').textContent=ready&&current.manual.end>=7200?'Observation complete':'Apply moves & advance 10 min';by('reset-manual').disabled=!ready||current.busy;
   by('manual-panel').hidden=!manual;by('recorded-controls').hidden=manual;by('verdict-film').hidden=chapter!==4;by('verdict').hidden=chapter!==4;
   doc.querySelectorAll('[data-remove]').forEach(b=>{b.disabled=current.busy;});
   if(!ready)return;
@@ -38,6 +39,6 @@ export function startRebalancing({createWorker}={}){
  doc.addEventListener('visibilitychange',()=>{if(doc.hidden)stop();});window.addEventListener('pagehide',stop);motion.addEventListener('change',()=>{if(motion.matches)stop();});
  doc.querySelector('.r1-hero')?.appendChild(createMethodologyExplainer('deadhead',doc));
  const disposeConcepts=mountConceptLoops(doc);
- try{session=createR1Session({worker:createWorker(),onChange:s=>{current=s;if(s.manual&&s.manual.digest!==lastManual){lastManual=s.manual.digest;pending=[];pendingView();}render();}});}catch(error){by('study-progress').hidden=true;by('study-status').textContent='Study unavailable: '+error.message;by('watch').textContent='Comparison unavailable';}
+ try{session=createR1Session({worker:createWorker(),onChange:s=>{current=s;if(s.manual&&s.manual.digest!==lastManual){lastManual=s.manual.digest;pending=[];pendingView();}render();}});}catch(error){by('study-progress').hidden=true;by('study-status').textContent='Study unavailable: '+error.message;by('watch').textContent='Comparison unavailable';for(const id of dependents)by(id).disabled=true;}
  return {getSession:()=>session,dispose:()=>{stop();disposeConcepts();session?.dispose();}};
 }
