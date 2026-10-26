@@ -13,7 +13,7 @@ test('local release recipe reproduces the complete stage and rejects unsafe inpu
  try{
   const recipe=join(f.source,'apps/fleetlab-city/deploy/build-release.py'),legacy=join(f.root,'legacy'),readback=join(f.root,'legacy-readback.json');
   const sets=JSON.parse(execFileSync('python3',['-B','-c',
-   "import json,runpy,sys; m=runpy.run_path(sys.argv[1]); print(json.dumps({'added':sorted(set().union(*(m[k] for k in ['FLOW_ADDED','CAPACITY_ADDED','DELIVERY_ADDED','ORDER_ADDED','R1_ADDED','R3_ADDED']))),'changed':sorted(m['CLIENT_FIXES']|m['FLOW_CHANGED'])}))",
+   "import json,runpy,sys; m=runpy.run_path(sys.argv[1]); print(json.dumps({'added':sorted(set().union(*(m[k] for k in ['FLOW_ADDED','CAPACITY_ADDED','DELIVERY_ADDED','ORDER_ADDED','R1_ADDED','R3_ADDED','DEPOT_ADDED']))),'changed':sorted(m['CLIENT_FIXES']|m['FLOW_CHANGED'])}))",
    join(f.source,'apps/fleetlab-city/tools/integrate-site.py')],{encoding:'utf8'}));
   const packed=buildSite(f.playground,{sourceCommit:f.commit}),added=new Set(sets.added),changed=new Set(sets.changed);
   // Synthetic historical bytes exercise the exact declared replacement set. All other

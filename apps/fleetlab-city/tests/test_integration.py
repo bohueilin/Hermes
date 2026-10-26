@@ -21,6 +21,17 @@ PACK = Path(__file__).resolve().parents[3] / "playground/fleetlab/tools/pack.mjs
 
 
 class IntegrationTest(unittest.TestCase):
+    def test_static_presentation_paths_match_independent_guard_and_are_counted(self):
+        script = (
+            "import {STATIC_INTEGRATION_FILES} from "
+            "'./apps/fleetlab-city/hosted/site-transform.mjs';"
+            "process.stdout.write(JSON.stringify(STATIC_INTEGRATION_FILES));"
+        )
+        result = subprocess.run(["node", "--input-type=module", "-e", script],
+                                cwd=PACK.parents[3], capture_output=True, text=True, check=True)
+        self.assertEqual(integration.STATIC_INTEGRATION_FILES, json.loads(result.stdout))
+        self.assertTrue(set(integration.STATIC_INTEGRATION_FILES) <= integration.INTEGRATION_TEXT)
+
     def test_current_client_changes_are_declared_against_approved_production_input(self):
         # The older synthetic build fixture derives its baseline from CLIENT_FIXES.
         # This fixed production inventory must stay independent of those declarations.
@@ -139,6 +150,27 @@ class IntegrationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "nf04.*closure.*budget"):
             integration.final_route_counts(routes, files)
 
+    def test_only_capacity_gets_the_approved_closure_increase(self):
+        routes = [{"id": "nf03", "paths": ["route.js", "_headers"]}]
+        shared = ("enhancement-motion.mjs", "enhancement-media.mjs", "enhancement-media.css")
+        self.assertTrue(set(shared) <= set(integration.brand.TEXT))
+        files = {"route.js": {"bytes": 557053}, "_headers": {"bytes": 0},
+                 **{name: {"bytes": 1} for name in shared}}
+        self.assertEqual(integration.final_route_counts(routes, files),
+                         {"nf03_closure_bytes": 557056})
+        files["enhancement-motion.mjs"]["bytes"] += 1
+        with self.assertRaisesRegex(ValueError, "nf03.*closure.*budget"):
+            integration.final_route_counts(routes, files)
+        files["route.js"]["bytes"] = 524285
+        for name in shared:
+            files[name]["bytes"] = 1
+        routes[0]["id"] = "nf04"
+        self.assertEqual(integration.final_route_counts(routes, files),
+                         {"nf04_closure_bytes": 524288})
+        files["enhancement-motion.mjs"]["bytes"] += 1
+        with self.assertRaisesRegex(ValueError, "nf04.*closure.*budget"):
+            integration.final_route_counts(routes, files)
+
     def test_onward_link_is_conditional_and_matches_javascript(self):
         files = {"network-flows/capacity/index.html": "<body>capacity</body>"}
         self.assertEqual(integration.lesson_navigation(files), {})
@@ -175,6 +207,70 @@ class IntegrationTest(unittest.TestCase):
                                 cwd=PACK.parents[3], capture_output=True, text=True, check=True)
         self.assertEqual(actual, json.loads(result.stdout))
         self.assertIn('/network-flows/dispatch/', actual['network-flows/rebalancing/index.html'])
+
+    def test_depot_closure_has_its_own_q6_branch_and_counts_depot_owned_text(self):
+        owners = {"lab.js": "depot-lab", "_headers": "legacy"}
+        routes = [{"id": "depot", "paths": ["lab.js", "_headers"]}]
+        files = {"lab.js": {"bytes": 524288}, "_headers": {"bytes": 262144}}
+        self.assertEqual(integration.final_route_counts(routes, files, owners), {
+            "depot_closure_bytes": 786432, "depot_route_local_bytes": 524288,
+        })
+        files["_headers"]["bytes"] += 1
+        with self.assertRaisesRegex(ValueError, "depot.*closure.*budget"):
+            integration.final_route_counts(routes, files, owners)
+        files = {"lab.js": {"bytes": 524289}, "_headers": {"bytes": 0}}
+        with self.assertRaisesRegex(ValueError, "depot.*route-local.*budget"):
+            integration.final_route_counts(routes, files, owners)
+        with self.assertRaisesRegex(ValueError, "owners"):
+            integration.final_route_counts(
+                routes, {"lab.js": {"bytes": 1}, "_headers": {"bytes": 1}}
+            )
+        # The generic non-NF03 branch keeps 524,288 for every other route.
+        for route in ("nf04", "delivery_order", "r1", "r3"):
+            with self.assertRaisesRegex(ValueError, f"{route}.*closure.*budget"):
+                integration.final_route_counts(
+                    [{"id": route, "paths": ["lab.js"]}], {"lab.js": {"bytes": 524289}}
+                )
+
+    def test_depot_inventory_is_exact_and_never_claims_older_depot_modules(self):
+        full = {name: {} for name in integration.DEPOT_ADDED}
+        self.assertEqual(integration.depot_files(full), integration.DEPOT_ADDED)
+        self.assertEqual(integration.depot_files({"index.html": {}}), frozenset())
+        older = ("src/model/depot-readiness.js", "src/model/depot-flow.js",
+                 "src/model/depot-cohort.js", "src/ui/depot-capacity-view.js",
+                 "src/ui/readiness-view.js", "src/model/depot-flow-contract.js")
+        self.assertEqual(integration.depot_files({name: {} for name in older}), frozenset())
+        self.assertFalse(set(older) & integration.DEPOT_ADDED)
+        for missing in ("src/model/depot-lab-verify/verify.js", "depot-readiness/release.json"):
+            with self.assertRaisesRegex(ValueError, "depot lab inventory"):
+                integration.depot_files({name: {} for name in integration.DEPOT_ADDED - {missing}})
+        for extra in ("src/model/depot-lab/extra.js", "src/ui/depot-lab-extra.js",
+                      "depot-readiness/extra.css", "src/model/depot-lab.js"):
+            with self.assertRaisesRegex(ValueError, "depot lab inventory"):
+                integration.depot_files({**full, extra: {}})
+
+    def test_depot_python_inventory_matches_packer_declaration(self):
+        script = (
+            "import {DEPOT_FILES,DEPOT_MODULES} from "
+            "'./playground/fleetlab/tools/depot-lab-package.mjs';"
+            "console.log(JSON.stringify([...DEPOT_FILES,...DEPOT_MODULES].sort()));"
+        )
+        result = subprocess.run(
+            ["node", "--input-type=module", "-e", script], cwd=launch.ROOT,
+            check=True, capture_output=True, text=True,
+        )
+        self.assertEqual(set(json.loads(result.stdout)), integration.DEPOT_ADDED)
+
+    def test_depot_page_renders_without_the_site_analytics_tag(self):
+        page = (
+            '<!doctype html><html><head><meta http-equiv="Content-Security-Policy" '
+            "content=\"default-src 'none'; script-src 'self'\"></head><body>Lab</body></html>"
+        )
+        html = integration.render_without_analytics(page)
+        self.assertNotIn("googletagmanager", html)
+        self.assertIn("content=\"default-src 'none'; script-src 'self'\"", html)
+        self.assertIn('<script type="module" src="/brand.mjs"></script>', html)
+        self.assertIn("googletagmanager", integration.brand.transform(page))
 
     def test_dispatch_inventory_must_be_complete(self):
         self.assertEqual(integration.dispatch_files(integration.R3_ADDED), integration.R3_ADDED)
@@ -565,16 +661,16 @@ class IntegrationTest(unittest.TestCase):
         package = self.base / "package"
         (package / "downloads").mkdir(parents=True)
         (package / "network-flows/sources").mkdir(parents=True)
-        (package / "downloads/teaching-package.json").write_bytes(b" " * 40961)
+        (package / "downloads/teaching-package.json").write_bytes(b" " * 57345)
         (package / "network-flows/sources" / ("a" * 64 + ".json.gz")).write_bytes(b"tiny")
         with self.assertRaisesRegex(ValueError, "budget exceeded"):
             integration.check_teaching_package(package, self.legacy, self.offline, "a" * 40)
 
-    def test_approved_40k_receipt_reaches_source_verification(self):
+    def test_approved_q6_receipt_reaches_source_verification(self):
         package = self.base / "package"
         (package / "downloads").mkdir(parents=True)
         (package / "network-flows/sources").mkdir(parents=True)
-        (package / "downloads/teaching-package.json").write_bytes(b" " * 40960)
+        (package / "downloads/teaching-package.json").write_bytes(b" " * 57344)
         (package / "network-flows/sources" / ("a" * 64 + ".json.gz")).write_bytes(b"tiny")
         rejected = subprocess.CompletedProcess([], 1, "", "source-verifier-reached")
         with (

@@ -79,12 +79,33 @@ class HeaderGateTests(unittest.TestCase):
         (self.site / "publication.json").write_text(json.dumps(selection))
         package = {"source_offer": {"path": SOURCE}}
         (self.site / "downloads/teaching-package.json").write_text(json.dumps(package))
-        manifest = {"files": ["tiles/a.webp"]}
+        manifest = {"files": ["tiles/a.webp", "enhancement-media/FL-A2-one-fleet-day-panorama.webp",
+                              "enhancement-media/FL-V2-deadhead-explainer.mp4"]}
         (self.site.parent / "review/integration-manifest.json").write_text(json.dumps(manifest))
         self.write_headers(ROOT)
 
     def write_headers(self, root):
         (self.site / "_headers").write_text(root + "\n\n" + PATH_RULES + "\n")
+
+    def test_enhancement_surfaces_and_owned_media_receive_header_checks(self):
+        rows = {path: (expected, status) for path, expected, status in gate.rows(self.site)}
+        for path in (
+            "/network-flows/", "/network-flows/ota-sharing/", "/sitemap.xml",
+            "/enhancement-media.mjs", "/enhancement-motion.mjs", "/enhancement-media.css",
+            "/network-flows/hub.css", "/enhancement-media/FL-A2-one-fleet-day-panorama.webp",
+            "/enhancement-media/FL-V2-deadhead-explainer.mp4",
+        ):
+            self.assertEqual(rows.get(path), (gate.fields(ROOT), 200), path)
+        self.assertNotIn("/network-hub.css", rows)
+
+    def test_depot_lab_route_files_and_worker_receive_the_root_baseline(self):
+        rows = {path: (expected, status) for path, expected, status in gate.rows(self.site)}
+        for path in (
+            "/depot-readiness/", "/depot-readiness/boot.js", "/depot-readiness/release.json",
+            "/depot-readiness/visual.css", "/src/runtime/depot-lab-worker.js",
+        ):
+            self.assertEqual(rows.get(path), (gate.fields(ROOT), 200), path)
+        self.assertNotIn("/network-flows/depot-readiness/", rows)
 
     def test_crafted_spellings_expect_only_the_root_baseline(self):
         rows = {path: (expected, status) for path, expected, status in gate.rows(self.site)}
@@ -148,6 +169,8 @@ class HeaderGateTests(unittest.TestCase):
         self.assertEqual(result, (True, "200", {"x-frame-options": "DENY"}))
         args = run.call_args.args[0]
         self.assertIn("--path-as-is", args)
+        self.assertIn("--cacert", args)
+        self.assertEqual(args[args.index("--cacert") + 1], gate.certifi.where())
         self.assertEqual(args[-1], "https://example.test/%63ity-explorer/")
 
 

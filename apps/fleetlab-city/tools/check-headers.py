@@ -14,11 +14,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+import certifi
+
 BASELINE = (
     "content-security-policy", "x-frame-options", "x-content-type-options", "permissions-policy",
 )
 ROUTES = ("capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch")
-BRAND = ("brand.mjs", "brand.css", "visitor.mjs", "visitor-families.mjs", "visitor.css")
+BRAND = (
+    "brand.mjs", "brand.css", "visitor.mjs", "visitor-families.mjs", "visitor.css",
+    "enhancement-media.mjs", "enhancement-motion.mjs", "enhancement-media.css",
+)
 MEDIA = (
     "fleetlab-logo.png", "readiness.jpg", "shared-delivery.webp", "favicon.png",
     "apple-touch-icon.png", "fleetlab-logo-64.png", "fleetlab-logo-128.png",
@@ -69,16 +74,25 @@ def rows(site):
         ("/network-flows/capacity/visual.css", root),
         ("/network-flows/rebalancing/visual.css", root),
         ("/network-flows/fleet-day/", root), ("/src/ui/methodology-explainer.js", root),
+        ("/network-flows/", root), ("/network-flows/ota-sharing/", root), ("/sitemap.xml", root),
+        ("/network-flows/hub.css", root),
     ]
     for route in ROUTES:
         for name in ("", "boot.js", "release.json"):
             checks.append((f"/network-flows/{route}/{name}", root))
         if route != "capacity":
             checks.append((f"/src/runtime/{route}-worker.js", root))
+    # The depot lab is a top-level hosted route with its own boot, sidecar and worker.
+    checks += [(path, root) for path in (
+        "/depot-readiness/", "/depot-readiness/boot.js", "/depot-readiness/release.json",
+        "/depot-readiness/visual.css", "/src/runtime/depot-lab-worker.js",
+    )]
     checks += [(f"/{name}", root) for name in BRAND]
     checks += [(f"/site-media/{name}", root) for name in MEDIA]
     checks += [(f"/diagrams/{name}", root) for name in DIAGRAMS]
     checks += [(f"/{name}", root) for name in manifest["files"] if name.startswith("tiles/")]
+    checks += [(f"/{name}", root) for name in manifest["files"]
+               if name.startswith("enhancement-media/")]
     result = [(path, expected, 200) for path, expected in checks]
     result.append(("/__fleetlab_missing_page__", {**root, "cache-control": "no-store"}, 404))
     missing_source = (
@@ -99,7 +113,8 @@ def rows(site):
 def curl_head(url):
     """(transport ok, status, final response headers); --path-as-is keeps the spelling sent."""
     response = subprocess.run(
-        ["curl", "--silent", "--show-error", "--head", "--path-as-is", "--location",
+        ["curl", "--cacert", certifi.where(), "--silent", "--show-error", "--head",
+         "--path-as-is", "--location",
          "--max-redirs", "3", "--max-time", "60", "-w", "\n%{http_code}", url],
         capture_output=True, text=True,
     )

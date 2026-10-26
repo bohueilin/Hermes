@@ -1,7 +1,8 @@
 import {R3_RELEASE,r3PackageProblems} from '../../../playground/fleetlab/tools/dispatch-package.mjs';
 import {R1_RELEASE,r1PackageProblems} from '../../../playground/fleetlab/tools/rebalancing-package.mjs';
-import {BRAND_MEDIA,BRAND_TEXT,renderPage,policyFor} from '../hosted/site-transform.mjs';
+import {BRAND_MEDIA,BRAND_TEXT,STATIC_INTEGRATION_FILES,renderPage,policyFor} from '../hosted/site-transform.mjs';
 import {ORDER_RELEASE,orderPackageProblems} from '../../../playground/fleetlab/tools/delivery-order-package.mjs';
+import {DEPOT_PAGE,depotPackageProblems} from '../../../playground/fleetlab/tools/depot-lab-package.mjs';
 // Independent upload-time reproduction of the Python integrator's owned files.
 // Keep these transforms aligned with integrate-site.py and prepare-launch.py;
 // changed output fails closed until both implementations are reviewed together.
@@ -28,7 +29,7 @@ function rootPermissions(text){
 
 export function integratedRootFiles(teaching,{branded=false,rollback,source}={}){
  if(source!==undefined&&!/^network-flows\/sources\/[a-f0-9]{64}\.json\.gz$/.test(source))throw Error('Invalid teaching source path.');
- const deliveryProblems=[...softwareDeliveryProblems(teaching),...orderPackageProblems(teaching),...r1PackageProblems(teaching),...r3PackageProblems(teaching)];
+ const deliveryProblems=[...softwareDeliveryProblems(teaching),...orderPackageProblems(teaching),...r1PackageProblems(teaching),...r3PackageProblems(teaching),...depotPackageProblems(teaching)];
  if(deliveryProblems.length)throw Error(`Software delivery sidecar rejected: ${deliveryProblems.join('; ')}`);
  const marker='<link rel="stylesheet" href="./styles.css">';
  const intro='<section aria-label="About FleetLab"><h1>FleetLab: test fleet '+
@@ -73,7 +74,8 @@ export function integratedRootFiles(teaching,{branded=false,rollback,source}={})
   ['boot.js','import { mountCityEntry } from "./integration.mjs";\n'+teaching.get('boot.js')+'\nmountCityEntry();\n'],
   ['_headers',headers]]);
  if(branded){
-  for(const [path,data] of teaching)if(path.endsWith('.html'))result.set(path,renderPage(String(result.get(path)??data),{analytics:true}));
+  // The depot page is served without the site-wide analytics tag (engineering note BD-17); every other page keeps it.
+  for(const [path,data] of teaching)if(path.endsWith('.html'))result.set(path,renderPage(String(result.get(path)??data),path===DEPOT_PAGE?{tagFree:true}:{analytics:true}));
   const lines=headers.trimEnd().split('\n').map(line=>line.trim().startsWith('Content-Security-Policy:')?line.slice(0,line.indexOf(':'))+': '+policyFor(line.slice(line.indexOf(':')+1).trim(),true):line);
   lines.push('',`/${rollback}/*`,'  ! Content-Security-Policy','  Content-Security-Policy: '+CITY_CSP);
   result.set('_headers',lines.join('\n')+'\n');
@@ -104,6 +106,12 @@ export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,sel
  const redirect=resolve(sourceRoot,'apps/fleetlab-city/hosted/fleet-day-redirect.html');
  if(lstatSync(redirect).isSymbolicLink()||!lstatSync(redirect).isFile())throw Error('Redirect source is not regular.');
  expected.set('network-flows/fleet-day/index.html',branded?renderPage(readFileSync(redirect,'utf8'),{analytics:true}):readFileSync(redirect));
+ for(const [target,name] of Object.entries(STATIC_INTEGRATION_FILES)){
+  const path=resolve(sourceRoot,'apps/fleetlab-city/hosted',name),stat=lstatSync(path);
+  if(stat.isSymbolicLink()||!stat.isFile())throw Error('Static integration source is not regular.');
+  const raw=readFileSync(path);
+  expected.set(target,branded&&target.endsWith('.html')?renderPage(raw.toString(),{analytics:true}):raw);
+ }
  const cityRedirect=resolve(sourceRoot,'apps/fleetlab-city/hosted/city-releases-redirect.html');
  if(lstatSync(cityRedirect).isSymbolicLink()||!lstatSync(cityRedirect).isFile())throw Error('City redirect source is not regular.');
  expected.set('city-explorer/releases/index.html',readFileSync(cityRedirect));
@@ -122,9 +130,9 @@ export function verifyIntegrationAssets(sourceRoot,commit,files,packageFiles,sel
  const nonCity=Object.entries(files).filter(([path])=>!path.startsWith('city-explorer/'));
  if(nonCity.length!==allowed.size||nonCity.some(([path])=>!allowed.has(path)))throw Error('Integration teaching inventory has missing or unexpected files.');
  const emittedText=nonCity.filter(([path])=>!path.startsWith('media/')&&!Object.hasOwn(BRAND_MEDIA,path)&&!path.startsWith('network-flows/sources/')&&path!=='downloads/fleetlab-offline.html').reduce((sum,[,record])=>sum+record.bytes,0)+(files['city-explorer/releases/index.html']?.bytes??0);
- if(emittedText>3145728)throw Error('Integration emitted text byte budget exceeded.');
+ if(emittedText>3801088)throw Error('Integration emitted text byte budget exceeded.');
  const integrationText=INTEGRATION_TEXT_PATHS.reduce((sum,path)=>sum+(files[path]?.bytes??0),0);
- if(nonCity.reduce((sum,[,record])=>sum+record.bytes,0)>14360576)throw Error('Integration teaching byte budget exceeded.');
+ if(nonCity.reduce((sum,[,record])=>sum+record.bytes,0)>17825792)throw Error('Integration teaching byte budget exceeded.');
  for(const [path,data] of expected){
   const bound=fingerprint(data);
   if(files[path]?.bytes!==bound.bytes||files[path]?.sha256!==bound.sha256)throw Error(`Integration source bytes differ: ${path}`);

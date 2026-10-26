@@ -9,6 +9,8 @@ import {gzipSync} from 'node:zlib';
 import {lessonNavigation} from '../../../playground/fleetlab/tools/software-delivery-package.mjs';
 import {buildSite,buildHtml} from '../../../playground/fleetlab/tools/pack.mjs';
 import {buildPackageProof} from '../../../playground/fleetlab/tools/package-proof.mjs';
+import {STATIC_INTEGRATION_FILES,renderPage} from '../hosted/site-transform.mjs';
+import {DEPOT_PAGE} from '../../../playground/fleetlab/tools/depot-lab-package.mjs';
 const repository=fileURLToPath(new URL('../../../',import.meta.url));
 export const fingerprint=data=>({bytes:Buffer.byteLength(data),sha256:createHash('sha256').update(data).digest('hex')});
 export function writeFiles(root,files){
@@ -53,13 +55,13 @@ export function stageFixture({gzipCity=false}={}){
  const root=realpathSync(mkdtempSync(join(tmpdir(),'fleetlab-bound-stage-test-')));
  try{
   const source=join(root,'source'),playground=join(source,'playground/fleetlab');
-  for(const path of ['src','tools','media','capacity','software-delivery','delivery-order','rebalancing','dispatch','styles.css','index.html'].filter(path=>existsSync(join(repository,'playground/fleetlab',path))))cpSync(join(repository,'playground/fleetlab',path),join(playground,path),{recursive:true});
+  for(const path of ['src','tools','media','capacity','software-delivery','delivery-order','rebalancing','dispatch','depot-lab','styles.css','index.html'].filter(path=>existsSync(join(repository,'playground/fleetlab',path))))cpSync(join(repository,'playground/fleetlab',path),join(playground,path),{recursive:true});
   for(const path of ['LICENSE','src/hermes/fleet/contracts.py']){
    mkdirSync(dirname(join(source,path)),{recursive:true});cpSync(join(repository,path),join(source,path));
   }
   for(const name of ['hosted','tools','deploy']){
    const base=join(repository,'apps/fleetlab-city',name);
-   for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path))){
+   for(const path of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|xml|md)$/.test(path)||(name==='deploy'&&path==='.npmrc'))){
     const target=join(source,'apps/fleetlab-city',name,path);mkdirSync(dirname(target),{recursive:true});cpSync(join(base,path),target);
    }
   }
@@ -67,6 +69,7 @@ export function stageFixture({gzipCity=false}={}){
   cpSync(join(repository,'apps/fleetlab-city/diagram-media'),join(source,'apps/fleetlab-city/diagram-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/brand-media'),join(source,'apps/fleetlab-city/brand-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/tile-media'),join(source,'apps/fleetlab-city/tile-media'),{recursive:true});
+  cpSync(join(repository,'apps/fleetlab-city/enhancement-media'),join(source,'apps/fleetlab-city/enhancement-media'),{recursive:true});
   const publicNotes=join(source,'apps/fleetlab-city/citylib/public_notes.py');mkdirSync(dirname(publicNotes),{recursive:true});cpSync(join(repository,'apps/fleetlab-city/citylib/public_notes.py'),publicNotes);
   const raw=join(root,'city-original'),base=join(root,'city-base'), branded=join(root,'city-branded');
   writeFiles(raw,[['index.html','<!doctype html><html><head></head><body>City</body></html>'],
@@ -91,6 +94,7 @@ export function stageFixture({gzipCity=false}={}){
   writeFiles(site,[...proof.files,...integratedShell(packed,proof.receipt.source_offer.path),['downloads/fleetlab-offline.html',readFileSync(offline)]]);
   for(const path of ['integration.mjs','integration.css','404.html','not-found.css'])cpSync(join(source,'apps/fleetlab-city/hosted',path),join(site,path));
   writeFiles(site,[['city-explorer/releases/index.html',readFileSync(join(source,'apps/fleetlab-city/hosted/city-releases-redirect.html'))],['network-flows/fleet-day/index.html',readFileSync(join(source,'apps/fleetlab-city/hosted/fleet-day-redirect.html'))]]);
+  writeFiles(site,Object.entries(STATIC_INTEGRATION_FILES).map(([path,name])=>[path,readFileSync(join(source,'apps/fleetlab-city/hosted',name))]));
   const offlineHash=fingerprint(readFileSync(offline)).sha256;
   writeFiles(site,[['downloads/fleetlab-offline.sha256',offlineHash+'  fleetlab-offline.html\n'],['downloads/verify-offline.txt',
    'FleetLab offline edition — download verification\n\nSHA-256: '+offlineHash+'\nmacOS/Linux: shasum -a 256 fleetlab-offline.html\nWindows PowerShell: Get-FileHash .\\fleetlab-offline.html -Algorithm SHA256\n\nCompare the full digest before opening. This detects corruption against this website\'s published copy, not independent authenticity. The offline file excludes City Explorer.\n']]);
@@ -110,6 +114,8 @@ export function stageFixture({gzipCity=false}={}){
   cpSync(offer,join(site,'city-explorer/sources'),{recursive:true});
   execFileSync('python3',['-B','-c',"import runpy,sys; from pathlib import Path; runpy.run_path(sys.argv[1])['make_entry'](Path(sys.argv[2]),sys.argv[3])",join(source,'apps/fleetlab-city/tools/prepare-launch.py'),join(site,'city-explorer'),selection.current.path.split('/').at(-1)]);
   execFileSync('python3',['-B','-c',"import runpy,sys; runpy.run_path(sys.argv[1])['apply_site'](*sys.argv[2:])",pythonTool,site,selection.current.path,selection.rollback.path]);
+  // As integrate-site.py does: the depot page is served without the site-wide analytics tag.
+  if(packed.has(DEPOT_PAGE))writeFileSync(join(site,DEPOT_PAGE),renderPage(packed.get(DEPOT_PAGE),{tagFree:true}));
   writeFileSync(join(site,'_headers'),readFileSync(join(site,'_headers'),'utf8').replace(/^  /gm,'\t'));
   writeFiles(site,[['publication.json',JSON.stringify(selection)]]);
   const originalManifest=readFileSync(join(raw,'release.json'));

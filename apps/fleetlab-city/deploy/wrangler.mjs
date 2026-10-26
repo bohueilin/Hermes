@@ -7,8 +7,9 @@ import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {verifyStage,releaseCommand,toolEnvironment,wranglerSpawnOptions,deployPreflight,checkWranglerLog,checkPagesCache,confirmProduction,requireReleaseToken,releaseAccountId,sanitizeWranglerAuth,disableWranglerGitDiscovery} from './stage-guard.mjs';
+import {verifyStage,releaseCommand,verifyReleaseRuntime,toolEnvironment,wranglerSpawnOptions,deployPreflight,checkWranglerLog,checkPagesCache,confirmProduction,requireReleaseToken,releaseAccountId,sanitizeWranglerAuth,disableWranglerGitDiscovery} from './stage-guard.mjs';
 
+verifyReleaseRuntime();
 const args=process.argv.slice(2), command=releaseCommand(args), deployDir=fileURLToPath(new URL('./',import.meta.url));
 const accountId=releaseAccountId(process.env,command);
 const token=requireReleaseToken(process.env,command);

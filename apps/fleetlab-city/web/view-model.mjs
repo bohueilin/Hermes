@@ -131,7 +131,7 @@ export function pairLesson(p) {
   const b = p.baseline, c = p.candidate, trips = c.completed - b.completed;
   const empty = c.empty_km_per_completed - b.empty_km_per_completed;
   const wait = c.wait_p90_s - b.wait_p90_s;
-  return `Two depots completed ${Math.abs(trips)} ${trips < 0 ? 'fewer' : trips > 0 ? 'more' : 'additional'} trips, with ${formatMetric(Math.abs(empty) / METRES_PER_MILE * 1000, 2)} ${empty > 0 ? 'more' : 'less'} empty miles per completed trip and a ${formatMetric(Math.abs(wait), 1)}-second ${wait > 0 ? 'longer' : 'shorter'} p90 boarded wait. This is one repeat; use all twelve and the stress cases for the broader trade-off.`;
+  return `Two depots completed ${Math.abs(trips)} ${trips < 0 ? 'fewer' : trips > 0 ? 'more' : 'additional'} ${Math.abs(trips)===1?'trip':'trips'}, with ${formatMetric(Math.abs(empty) / METRES_PER_MILE * 1000, 2)} ${empty > 0 ? 'more' : 'less'} empty miles per completed trip and a ${formatMetric(Math.abs(wait), 1)}-second ${wait > 0 ? 'longer' : 'shorter'} p90 boarded wait. This is one repeat; use all twelve and the stress cases for the broader trade-off.`;
 }
 
 // Issue a new selection even if an older replay is still loading. Navigation alone

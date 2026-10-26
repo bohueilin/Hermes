@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from test_launch import launch, write_release
 
@@ -26,6 +27,26 @@ def write_base(base):
 
 
 class HostedBrandTest(unittest.TestCase):
+    def test_enhancement_inventory_rejects_unlisted_media_and_changed_hashes(self):
+        inventory = brand.launch.inventory
+        folder = brand.ROOT / "apps/fleetlab-city/enhancement-media"
+        def added(path):
+            records = inventory(path)
+            if path == folder:
+                records["FL-V1-unapproved.mp4"] = {"bytes": 1, "sha256": "0" * 64}
+            return records
+        with patch.object(brand, "TEXT", ()):
+            self.assertEqual(len([p for p in brand.asset_inventory()
+                                  if p.startswith("enhancement-media/")]), 7)
+            with patch.object(brand.launch, "inventory", side_effect=added), \
+                    self.assertRaisesRegex(ValueError, "enhancement-media.*inventory"):
+                brand.asset_inventory()
+            media = {k: dict(v) for k, v in brand.MEDIA.items()}
+            media["enhancement-media/FL-A1-people-between-rides.webp"]["sha256"] = "0" * 64
+            with patch.object(brand, "MEDIA", media), \
+                    self.assertRaisesRegex(ValueError, "enhancement-media.*inventory"):
+                brand.asset_inventory()
+
     def test_hosted_gzip_matches_the_independent_node_guard_runtime(self):
         with tempfile.TemporaryDirectory() as tmp:
             raw, base, out = Path(tmp) / "raw", Path(tmp) / "base", Path(tmp) / "new"

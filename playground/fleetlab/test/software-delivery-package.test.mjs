@@ -1,6 +1,7 @@
 import {R3_MODULES} from '../tools/dispatch-package.mjs';
 import {R1_MODULES} from '../tools/rebalancing-package.mjs';
 import {ORDER_MODULES} from '../tools/delivery-order-package.mjs';
+import {DEPOT_MODULE_PATH} from '../tools/depot-lab-package.mjs';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {cpSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,writeFileSync} from 'node:fs';
@@ -10,7 +11,7 @@ import {fileURLToPath} from 'node:url';
 import {after,test} from 'node:test';
 import {buildSite,buildHtml} from '../tools/pack.mjs';
 import {checkSite,labelsFromContracts} from '../tools/check-dist.mjs';
-import {measurePackageProof} from '../tools/package-proof.mjs';
+import {measurePackageProof,LIMITS} from '../tools/package-proof.mjs';
 import {releaseProblems} from '../tools/release-sidecar.mjs';
 import * as provenance from '../tools/release-sidecar.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url)), repository=fileURLToPath(new URL('../../../',import.meta.url));
@@ -43,17 +44,21 @@ test('300000-byte scratch NF04-only module has a valid emitted build path withou
   rmSync(join(source,'dispatch'),{recursive:true,force:true});
   rmSync(join(source,'delivery-order'),{recursive:true,force:true});
   rmSync(join(source,'software-delivery'),{recursive:true,force:true});
+  // The depot lab family and its source page leave too, so this scenario stays NF04-only.
+  for(const path of ['depot-lab','src/model/depot-lab','src/model/depot-lab-verify'])rmSync(join(source,path),{recursive:true,force:true});
+  for(const dir of ['src/runtime','src/ui'])for(const name of readdirSync(join(source,dir)))if(DEPOT_MODULE_PATH.test(`${dir}/${name}`))rmSync(join(source,dir,name));
   // A scratch repository holds copied validation and integration originals, never modified production sources.
   mkdirSync(join(scratch,'.git'));
   for(const path of ['src/hermes/fleet/contracts.py','LICENSE','apps/fleetlab-city/citylib/public_notes.py'])write(scratch,path,readFileSync(join(repository,path)));
   for(const name of ['hosted','tools','deploy']){
     const base=join(repository,'apps/fleetlab-city',name);
-    for(const file of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md)$/.test(path)))write(scratch,`apps/fleetlab-city/${name}/${file}`,readFileSync(join(base,file)));
+    for(const file of readdirSync(base).filter(path=>/\.(?:mjs|py|json|css|html|md|xml)$/.test(path)))write(scratch,`apps/fleetlab-city/${name}/${file}`,readFileSync(join(base,file)));
   }
   cpSync(join(repository,'apps/fleetlab-city/brand-media'),join(scratch,'apps/fleetlab-city/brand-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/tile-media'),join(scratch,'apps/fleetlab-city/tile-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/rebalancing-media'),join(scratch,'apps/fleetlab-city/rebalancing-media'),{recursive:true});
   cpSync(join(repository,'apps/fleetlab-city/diagram-media'),join(scratch,'apps/fleetlab-city/diagram-media'),{recursive:true});
+  cpSync(join(repository,'apps/fleetlab-city/enhancement-media'),join(scratch,'apps/fleetlab-city/enhancement-media'),{recursive:true});
   const before=buildSite(source), offline=buildHtml(source);
   const prefix='export function startSoftwareDelivery() {}\n';
   write(source,'src/ui/software-delivery-app.js',prefix+' '.repeat(300000-prefix.length));
@@ -74,8 +79,9 @@ test('300000-byte scratch NF04-only module has a valid emitted build path withou
   const offlinePath=join(scratch,'offline.html');writeFileSync(offlinePath,offline);
   const proof=measurePackageProof({site,playground:source,offline:offlinePath});
   assert.equal(proof.receipt.counts.legacy_text_bytes,base.legacy_text_bytes);
-  assert.ok(proof.receipt.counts.raw_source_and_tools_bytes<=3153920);
-  assert.ok(proof.receipt.counts.source_offer_extracted_bytes<=4194304);
+  assert.ok(proof.receipt.counts.raw_source_and_tools_bytes<=LIMITS.raw_source_and_tools_bytes);
+  assert.ok(proof.receipt.counts.source_offer_extracted_bytes<=LIMITS.source_offer_extracted_bytes);
+  assert.equal(proof.receipt.counts.depot_closure_bytes,0);assert.ok(!proof.receipt.routes.some(route=>route.id==='depot'));
   assert.equal(proof.receipt.routes.find(route=>route.id==='nf04').bytes,expanded.nf04_closure_bytes);
   console.log('scratch-package-counters',JSON.stringify(proof.receipt.counts));
   const integrationSource=join(scratch,'apps/fleetlab-city/hosted/integration.mjs'),originalIntegration=readFileSync(integrationSource);
@@ -134,7 +140,7 @@ test('integration text remains a subset of capped final aggregate',()=>{
   const measured=tool.measureIntegratedText(teaching,final);
   assert.equal(measured.integration_text_bytes,24);
   assert.equal(measured.emitted_text_bytes,27);
-  final.set('integration.mjs',' '.repeat(3145728));
+  final.set('integration.mjs',' '.repeat(tool.OWNER_LIMITS.emitted_text_bytes));
   assert.throws(()=>tool.measureIntegratedText(teaching,final),/aggregate|emitted.*budget/);
 });
 
@@ -142,10 +148,10 @@ test('final transformed headers remain inside each complete route closure cap',(
   const teaching=buildSite(root),final=new Map(teaching);
   const closure=new Set([...tool.capacityScope(teaching),'network-flows/capacity/release.json','_headers']);
   const bytes=[...closure].reduce((total,path)=>total+Buffer.byteLength(teaching.get(path)),0);
-  final.set('_headers',final.get('_headers')+' '.repeat(524289-bytes));
+  final.set('_headers',final.get('_headers')+' '.repeat(557057-bytes));
   assert.throws(()=>tool.measureIntegratedText(teaching,final),/nf03.*closure.*budget/);
   // Isolate the NF04 closure guard from the independently capped aggregate.
-  const nf04Only=new Map([...teaching].filter(([path])=>!ORDER_MODULES.has(path)&&!path.startsWith('network-flows/delivery-order/')&&!R1_MODULES.has(path)&&!path.startsWith('network-flows/rebalancing/')&&!R3_MODULES.has(path)&&!path.startsWith('network-flows/dispatch/')));
+  const nf04Only=new Map([...teaching].filter(([path])=>!ORDER_MODULES.has(path)&&!path.startsWith('network-flows/delivery-order/')&&!R1_MODULES.has(path)&&!path.startsWith('network-flows/rebalancing/')&&!R3_MODULES.has(path)&&!path.startsWith('network-flows/dispatch/')&&!DEPOT_MODULE_PATH.test(path)&&!path.startsWith('depot-readiness/')));
   const nf04=tool.measureSiteOwnership(nf04Only).nf04_closure_bytes;
   final.set('_headers',teaching.get('_headers')+' '.repeat(524289-nf04));
   assert.throws(()=>tool.measureIntegratedText(nf04Only,final),/closure.*budget/);

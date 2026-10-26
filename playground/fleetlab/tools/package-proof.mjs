@@ -1,7 +1,8 @@
 import {R3_RELEASE,R3_ENTRIES,R3_FILES} from './dispatch-package.mjs';
 import {R1_RELEASE,R1_ENTRIES,R1_FILES} from './rebalancing-package.mjs';
-import {BRAND_MEDIA,BRAND_TEXT,ARTWORK_GROUPS,renderPage} from '../../../apps/fleetlab-city/hosted/site-transform.mjs';
+import {BRAND_MEDIA,BRAND_TEXT,ARTWORK_GROUPS,STATIC_INTEGRATION_FILES,renderPage} from '../../../apps/fleetlab-city/hosted/site-transform.mjs';
 import {ORDER_RELEASE,ORDER_FILES,ORDER_ENTRIES} from './delivery-order-package.mjs';
+import {DEPOT_RELEASE,DEPOT_FILES,DEPOT_ENTRIES,DEPOT_PAGE} from './depot-lab-package.mjs';
 // B-lite is one deduplicated teaching build and one atomic integration, not a new engine.
 // This proof binds bytes and source provenance; it does not authenticate their producer.
 import { execFileSync } from "node:child_process";
@@ -18,11 +19,15 @@ import { MEDIA_LIMITS } from "./media.mjs";
 import { CAPACITY_RELEASE_PATH, CAPACITY_VISUAL_PATH, releaseProblems } from "./release-sidecar.mjs";
 
 export const RECEIPT_PATH = "downloads/teaching-package.json";
-export const LIMITS = Object.freeze({ legacy_text_bytes: 2621440, raw_source_and_tools_bytes: 3153920,
-  nf03_closure_bytes: 524288, nf04_closure_bytes: 524288, emitted_text_bytes: 3145728, package_metadata_bytes: 40960,
-  source_offer_compressed_bytes: 4194304, source_offer_extracted_bytes: 4194304,
-  teaching_text_plus_source_bytes: 7340032, teaching_generation_bytes: 14360576,
+// Q6 (reconciliation 7.2): raw, emitted, metadata and extracted ceilings rise and the depot gets explicit counters.
+export const LIMITS = Object.freeze({ legacy_text_bytes: 2621440, raw_source_and_tools_bytes: 3940352,
+  nf03_closure_bytes: 557056, nf04_closure_bytes: 524288, depot_route_local_bytes: 524288, depot_closure_bytes: 786432,
+  emitted_text_bytes: 3801088, package_metadata_bytes: 57344,
+  source_offer_compressed_bytes: 4194304, source_offer_extracted_bytes: 5242880,
+  teaching_text_plus_source_bytes: 7340032, teaching_generation_bytes: 17825792,
   offline_bytes: 2571440 });
+// Per-file read caps stay at their pre-Q6 values; only the src/tools tree totals follow the raw ceiling.
+const FILE_CAPTURE_BYTES = 4194304, INTEGRATED_READ_BYTES = 3145728, PUBLICATION_READ_BYTES = 40960;
 const TOOL_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const COMMIT = /^[a-f0-9]{40}$/;
 const CONTRACT = "src/hermes/fleet/contracts.py";
@@ -37,11 +42,11 @@ function captureIntegration(repository){
     for(const name of readdirSync(join(repository,root)).sort()){
       if(["node_modules","__pycache__"].includes(name))continue;
       const path=`${root}/${name}`;
-      if(!/\.(?:mjs|py|json|css|html|md)$/.test(name)&&path!=="apps/fleetlab-city/deploy/.npmrc")fail(`unknown integration source ownership: ${path}`);
-      files.set(path,readRegular(repository,path,LIMITS.source_offer_extracted_bytes));
+      if(!/\.(?:mjs|py|json|css|html|xml|md)$/.test(name)&&path!=="apps/fleetlab-city/deploy/.npmrc")fail(`unknown integration source ownership: ${path}`);
+      files.set(path,readRegular(repository,path,FILE_CAPTURE_BYTES));
     }
   }
-  files.set(INTEGRATION_DEPENDENCY,readRegular(repository,INTEGRATION_DEPENDENCY,LIMITS.source_offer_extracted_bytes));
+  files.set(INTEGRATION_DEPENDENCY,readRegular(repository,INTEGRATION_DEPENDENCY,FILE_CAPTURE_BYTES));
   for(const [path,data] of files)if(!Buffer.from(data.toString("utf8")).equals(data))fail(`integration source is not valid UTF-8: ${path}`);
   return files;
 }
@@ -93,7 +98,7 @@ function readRegular(root, path, maxBytes) {
 
 /** Closed inventories include empty/foreign directories and symlinks as errors, never ignored entries. */
 export function captureTree(root, { maxBytes = LIMITS.teaching_generation_bytes, maxFiles = 1024,
-  maxFileBytes = LIMITS.source_offer_extracted_bytes, maxDepth = 12 } = {}) {
+  maxFileBytes = FILE_CAPTURE_BYTES, maxDepth = 12 } = {}) {
   const files = new Map();
   let used = 0, entries = 0;
   const walk = (directory, prefix = "", depth = 0) => {
@@ -173,6 +178,10 @@ function captureSource(playground) {
     regularDirectory(join(playground,"dispatch"));
     for(const path of ["dispatch/index.html","dispatch/visual.css"])inputs.set(path,readRegular(playground,path,LIMITS.raw_source_and_tools_bytes));
   } catch(error) { if(error.code!=="ENOENT")throw error; }
+  try {
+    regularDirectory(join(playground,"depot-lab"));
+    for(const path of ["depot-lab/index.html","depot-lab/visual.css"])inputs.set(path,readRegular(playground,path,LIMITS.raw_source_and_tools_bytes));
+  } catch(error) { if(error.code!=="ENOENT")throw error; }
   const media = captureTree(join(playground, "media"), { maxBytes: 5 * 1024 * 1024 });
   for (const [path, data] of media) inputs.set(`media/${path}`, data);
   if (canonical([...media.keys()].map(path => `media/${path}`).sort()) !== canonical([...MEDIA_LIMITS.keys()].sort())) fail("media inventory mismatch");
@@ -212,7 +221,7 @@ function sourceIdentity(playground, captured, sourceCommit) {
   inputs.set("LICENSE", captured.license);
   const prefix = relative(captured.repository, playground).split(sep).join("/");
   const committedPaths = git(captured.repository, ["ls-tree", "-r", "-z", "--name-only", sourceCommit, "--",
-    ...["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch", "index.html", "styles.css"].map(path => `${prefix}/${path}`), CONTRACT, "LICENSE", ...INTEGRATION_ROOTS, INTEGRATION_DEPENDENCY, ...ARTWORK_ROOTS])
+    ...["src", "tools", "media", "capacity", "software-delivery", "delivery-order", "rebalancing", "dispatch", "depot-lab", "index.html", "styles.css"].map(path => `${prefix}/${path}`), CONTRACT, "LICENSE", ...INTEGRATION_ROOTS, INTEGRATION_DEPENDENCY, ...ARTWORK_ROOTS])
     .split("\0").filter(Boolean).sort();
   if (canonical(committedPaths) !== canonical([...inputs.keys()].sort())) fail("source commit input inventory mismatch");
   for (const [path, data] of inputs) {
@@ -288,6 +297,7 @@ function assemble({ playground, captured, identity, site, offline }) {
     ...(site.has(ORDER_RELEASE)?[{id:"delivery_order",route:"/network-flows/delivery-order/",entries:ORDER_ENTRIES,supporting:[...ORDER_FILES,"_headers"]}]:[]),
     { id: "nf03", route: "/network-flows/capacity/", entries: ["src/ui/capacity-app.js"],
       supporting: ["network-flows/capacity/index.html", "network-flows/capacity/boot.js", "styles.css", CAPACITY_VISUAL_PATH, "_headers", CAPACITY_RELEASE_PATH] },
+    ...(site.has(DEPOT_RELEASE)?[{id:"depot",route:"/depot-readiness/",entries:DEPOT_ENTRIES,supporting:[...DEPOT_FILES,"_headers"]}]:[]),
   ]);
   const owned=measureSiteOwnership(site);
   const release = JSON.parse(site.get(CAPACITY_RELEASE_PATH));
@@ -299,7 +309,7 @@ function assemble({ playground, captured, identity, site, offline }) {
       baseline:{source_commit:SOURCE_BASELINE.commit,bytes:SOURCE_BASELINE.integration_bytes,inventory_sha256:SOURCE_BASELINE.integration_inventory_sha256},
       delta_bytes:total(captured.integration)-SOURCE_BASELINE.integration_bytes,
       inventory_sha256:digest(canonical(Object.fromEntries([...captured.integration].map(([path,data])=>[path,fingerprint(data)])))),
-      binding:"Every listed original is commit-bound and included in source-offer integration.files; teaching originals retain their separate 3 MiB + 8 KiB gate (owner-approved October 14, 2026)."},
+      binding:"Every listed original is commit-bound and included in source-offer integration.files; teaching originals retain their separate raw source gate (owner-approved October 14, 2026; raised to 3,940,352 bytes by Q6 on October 24, 2026)."},
     source_offer: { path: archivePath, ...fingerprint(archive), extracted_sha256: digest(archiveRaw),
       original_inventory_sha256: digest(canonical(sourceInventory)), owner: "teaching-original-source-and-tools" },
     validation_policy: { repository_path: CONTRACT, ...fingerprint(captured.contracts) },
@@ -313,7 +323,7 @@ function assemble({ playground, captured, identity, site, offline }) {
       original_source_scope: "Every src/*.js module, every tools/*.mjs tool, original page/CSS inputs, validation policy and LICENSE; media pinned separately. Full original inventory and text are in the source offer.",
       generation_count_scope: "teaching_generation_bytes is the teaching-input-generation subtotal, before integration. Transformed root growth, integration scripts/styles/publication/404/headers and retained/City bytes are counted by the outer integration inventory and final teaching-generation gate." },
     discovery: {owner:"hosted-integration",offline_action:false,meaning:"Discovery is injected only into the complete accepted hosted generation; final transforms are counted by the integrated aggregate gate."},
-    counts: { ...(site.has(R3_RELEASE)?{r3_route_local_bytes:owned.r3_route_local_bytes,r3_closure_bytes:owned.r3_closure_bytes}:{}), ...(site.has(R1_RELEASE)?{r1_route_local_bytes:owned.r1_route_local_bytes,r1_closure_bytes:owned.r1_closure_bytes}:{}), legacy_text_bytes: owned.legacy_text_bytes, nf04_route_local_bytes:owned.nf04_route_local_bytes, nf04_closure_bytes:owned.nf04_closure_bytes, ...(site.has(ORDER_RELEASE)?{delivery_order_route_local_bytes:owned.delivery_order_route_local_bytes,delivery_order_closure_bytes:owned.delivery_order_closure_bytes}:{}), integration_text_bytes:0, raw_source_and_tools_bytes: total(sourceFiles) + captured.contracts.length + captured.license.length,
+    counts: { ...(site.has(R3_RELEASE)?{r3_route_local_bytes:owned.r3_route_local_bytes,r3_closure_bytes:owned.r3_closure_bytes}:{}), ...(site.has(R1_RELEASE)?{r1_route_local_bytes:owned.r1_route_local_bytes,r1_closure_bytes:owned.r1_closure_bytes}:{}), legacy_text_bytes: owned.legacy_text_bytes, nf04_route_local_bytes:owned.nf04_route_local_bytes, nf04_closure_bytes:owned.nf04_closure_bytes, ...(site.has(ORDER_RELEASE)?{delivery_order_route_local_bytes:owned.delivery_order_route_local_bytes,delivery_order_closure_bytes:owned.delivery_order_closure_bytes}:{}), depot_route_local_bytes:owned.depot_route_local_bytes??0, depot_closure_bytes:owned.depot_closure_bytes??0, integration_text_bytes:0, raw_source_and_tools_bytes: total(sourceFiles) + captured.contracts.length + captured.license.length,
       net_original_source_growth_bytes:total(sourceFiles)+captured.contracts.length+captured.license.length-SOURCE_BASELINE.teaching_bytes+total(captured.integration)-SOURCE_BASELINE.integration_bytes,
       raw_module_bytes: total(new Map([...sourceFiles].filter(([path]) => path.startsWith("src/")))),
       raw_tool_bytes: total(new Map([...sourceFiles].filter(([path]) => path.startsWith("tools/")))),
@@ -360,10 +370,11 @@ export function checkPackageProof({ packageDir, ...options }) {
 /** Integration owns three root files; all other teaching bytes, the offline edition and source offer stay exact. */
 export function checkIntegratedPackage({ site, playground, sourceCommit }) {
   const prepared = prepare(playground, sourceCommit, false), expected = assemble(prepared);
-  const publication = JSON.parse(readRegular(site, "publication.json", LIMITS.package_metadata_bytes));
+  const publication = JSON.parse(readRegular(site, "publication.json", PUBLICATION_READ_BYTES));
   const branded=publication.hosted_presentation==='fleetlab.hosted-presentation/1.0.0';
   const onward=lessonNavigation(prepared.site);
-  if(branded)for(const [path,data] of prepared.site)if(path.endsWith('.html'))onward.set(path,renderPage(String(onward.get(path)??data),{analytics:true}));
+  // The depot page is served without the site-wide analytics tag (engineering note BD-17).
+  if(branded)for(const [path,data] of prepared.site)if(path.endsWith('.html'))onward.set(path,renderPage(String(onward.get(path)??data),path===DEPOT_PAGE?{tagFree:true}:{analytics:true}));
   // The outer integration verifier inventories City and retained releases. Read only owned teaching paths here.
   for (const [path, data] of [...prepared.site, ...expected.files, ["downloads/fleetlab-offline.html", prepared.offline]]) {
     if (INTEGRATION_OWNED.has(path)) continue;
@@ -373,12 +384,19 @@ export function checkIntegratedPackage({ site, playground, sourceCommit }) {
     .map(([path, data]) => [`network-flows/sources/${path}`, data]));
   assertEqual(offers, new Map([[expected.receipt.source_offer.path, expected.files.get(expected.receipt.source_offer.path)]]), "integrated source offer");
   const integrated=new Map([...prepared.site,...onward]);
+  for(const [path,name] of Object.entries(STATIC_INTEGRATION_FILES)){
+    const raw=prepared.captured.integration.get(`apps/fleetlab-city/hosted/${name}`);
+    const expected=Buffer.from(branded&&path.endsWith('.html')?renderPage(raw.toString(),{analytics:true}):raw);
+    const data=readRegular(site,path,INTEGRATED_READ_BYTES);
+    if(!data.equals(expected))fail(`static integration source mismatch: ${path}`);
+    integrated.set(path,data);
+  }
   if(branded){
-    for(const path of BRAND_TEXT){const data=readRegular(site,path,LIMITS.emitted_text_bytes);if(!data.equals(prepared.captured.integration.get(`apps/fleetlab-city/hosted/${path}`)))fail('hosted brand source mismatch');integrated.set(path,data);}
+    for(const path of BRAND_TEXT){const data=readRegular(site,path,INTEGRATED_READ_BYTES);if(!data.equals(prepared.captured.integration.get(`apps/fleetlab-city/hosted/${path}`)))fail('hosted brand source mismatch');integrated.set(path,data);}
     for(const [path,r] of Object.entries(BRAND_MEDIA))if(!readRegular(site,path,r.bytes).equals(prepared.captured.artwork.get(r.source.split('/').at(-1))))fail('hosted artwork bytes differ');
   }
   for(const path of ["city-explorer/releases/index.html","index.html","boot.js","_headers","integration.mjs","integration.css","not-found.css","publication.json","404.html","network-flows/fleet-day/index.html","downloads/fleetlab-offline.sha256","downloads/verify-offline.txt"]) {
-    try { integrated.set(path,readRegular(site,path,LIMITS.emitted_text_bytes)); }
+    try { integrated.set(path,readRegular(site,path,INTEGRATED_READ_BYTES)); }
     catch(error) { if(error.code!=="ENOENT")throw error; }
   }
   if(!integrated.get("network-flows/fleet-day/index.html")?.equals(Buffer.from(branded?renderPage(prepared.captured.integration.get("apps/fleetlab-city/hosted/fleet-day-redirect.html").toString(),{analytics:true}):prepared.captured.integration.get("apps/fleetlab-city/hosted/fleet-day-redirect.html"))))fail("fleet-day redirect source mismatch");

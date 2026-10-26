@@ -31,6 +31,8 @@ artifacts/*
 # Generated media and datasets
 *.gif
 *.mp4
+!/apps/fleetlab-city/enhancement-media/FL-V2-deadhead-explainer.mp4
+!/apps/fleetlab-city/enhancement-media/FL-V3-people-between-rides-loop.mp4
 *.mov
 *.parquet
 

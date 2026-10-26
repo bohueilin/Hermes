@@ -51,7 +51,7 @@ test('source-bound stage rejects resealed shell, owner assets, unexpected files 
    assert.throws(()=>verifyBrandedCity(site,selection,inventory(site),commit),/hosting projection|presentation differs/i,'resealed nested '+key+' policy must fail');
    rmSync(join(site,selection[key].path),{recursive:true});cpSync(input,join(site,old.path),{recursive:true});selection[key]=old;
   }
-  for(const path of ['city-explorer/releases/index.html','network-flows/capacity/index.html','network-flows/software-delivery/index.html','network-flows/fleet-day/index.html','index.html','boot.js','_headers','integration.mjs','integration.css','404.html','not-found.css','brand.mjs','brand.css','site-media/fleetlab-logo.png']){
+  for(const path of ['city-explorer/releases/index.html','network-flows/capacity/index.html','network-flows/software-delivery/index.html','network-flows/fleet-day/index.html','index.html','boot.js','_headers','integration.mjs','integration.css','404.html','not-found.css','brand.mjs','brand.css','site-media/fleetlab-logo.png','enhancement-motion.mjs','enhancement-media/FL-A2-one-fleet-day-panorama.webp','enhancement-media/FL-V2-deadhead-explainer.mp4']){
    const original=readFileSync(join(site,path));writeFileSync(join(site,path),Buffer.concat([original,Buffer.from('\nchanged after review')]));seal();
    assert.throws(()=>verifyStage(site,commit,source),/integration.*(?:differ|mismatch)/i,path);
    writeFileSync(join(site,path),original);

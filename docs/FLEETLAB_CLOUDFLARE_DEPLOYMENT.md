@@ -1,6 +1,6 @@
 # FleetLab publication runbook
 
-Updated 14 October 2026. Applies to the static educational FleetLab website.
+Updated 24 October 2026. Applies to the static educational FleetLab website.
 Hermes operational deployment permission remains NONE. Historical deployment
 paragraphs and the old playground-only CI template are superseded; do not use them.
 
@@ -20,6 +20,71 @@ actual instruction. Account/credential changes and destructive retention actions
 are separate decisions; no document can authorize them by itself.
 
 The Delivery order route is `/network-flows/delivery-order/`. Its explicit route owner, source-capture entries, worker, study and release sidecar are included in the same atomic teaching/integration generation. Validate both it and NF04; do not deploy a standalone route over the integrated site. See [the implementation handoff](FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md) for the current release and retained rollback.
+
+## October 24 Depot Readiness publication
+
+After the local build and independent review, the owner explicitly asked on 24 October for live publication of the Depot Readiness lab at `/depot-readiness/`. The separate release review was skipped by owner choice, so that Muse can audit the live site. Local commits, preview and production publication were authorized; no GitHub push or PR was made. (Added 2026-10-25: the branch was pushed on 2026-10-24 at `f1d130e`, and the reconcile pull request from `codex/fleetlab-main-reconcile` brings it to `main`.) The published source is `a1b79cd137aa802c2bff1459843f550a5d70da83` on `codex/fleetlab-depot-lab`.
+
+- Production is `https://72e45e9f.fleetlab.pages.dev`, served at `https://fleetlab.pages.dev`.
+- Preview `241a9eec` and stable production each passed a full readback of 10,186/10,186 served files and 100/100 header checks.
+- The immutable production host passed 100/100 header checks and a 6/6 smoke check.
+- The whole-site rollback target is the prior production `85b02be2` (source `d0df87f`).
+- Details are in [the depot implementation handoff](FLEETLAB_DEPOT_LAB_IMPLEMENTATION_HANDOFF_2026-10-24.md) §10.
+
+Owner decision Q6 changed these ceilings:
+
+| Ceiling | New value (bytes) |
+|---|---:|
+| Raw teaching source and tools | 3,940,352 |
+| Final integrated emitted text | 3,801,088 |
+| Package metadata | 57,344 |
+| Extracted source offer | 5,242,880 |
+| New depot owner cap | 524,288 |
+| New depot closure cap | 786,432 |
+| Depot runtime raw source (1:1 with depot-owned emitted text) | 524,288 |
+
+All other ceilings, the offline edition and the media set are unchanged; no media was added.
+
+- **`_headers`.** It carries no edits; only the per-release source-archive path line differs.
+- **Analytics.** The depot page renders tag-free (hosted transform `tagFree`), while the `/*` CSP still lists Google origins. That exclusion awaits owner confirmation (BD-17).
+
+Operational notes for the next release:
+
+- The wrapper refuses Node older than 22.23.4. The pinned runtime lives in the ignored `build/fleetlab-city/toolchain` of the main `Hermes-fleetlab` checkout, not in a fresh release worktree, so call it by absolute path (or install a verified Node 22.23.4 or later within 22.x).
+- A Pages-scoped token cannot read `/memberships`, so supply `CLOUDFLARE_ACCOUNT_ID`.
+- Run from a clean worktree at the exact source commit.
+
+## October 23 enhancement publication
+
+The owner approved the reviewed enhancement round and explicitly requested live
+publication with FL-A2 as the Fleet day hero and FL-V1 held for a rerender.
+The published source is `d0df87fff64889282e06fa3f4048b020b22bf8b5`, incorporating
+security baseline `2d01b25e3df2df2c250fc64caaed14fb9c376c3c`. Production is
+`https://85b02be2.fleetlab.pages.dev`, served at `https://fleetlab.pages.dev`.
+Full stable-site readback matched 10,151/10,151 served files and 95/95 header checks;
+the immutable production URL separately passed a 6/6 smoke check. Preview
+`4464c33b` passed full readback/header checks before publication. Preserve isolated
+token input, production confirmation, static-only upload, City evidence binding
+and header checks for any separately authorized future release.
+Local source commits, preview and production publication are authorized for this
+round; no GitHub push or PR is needed. Do not retrieve credentials into chat.
+Follow `deploy/TOKEN_INPUT.md` for owner-side ephemeral token injection.
+
+Only these media-related ceilings were explicitly changed: a new exact
+8-file / 4 MiB enhancement group, a 17 MiB non-City aggregate, and a 544 KiB
+NF-03 capacity closure. All other ceilings remain. Seven files are installed:
+A1–A4, V2/V3 and the V2 poster. V1 is excluded from the package. Final aggregate
+non-City size is 15,624,676 / 17,825,792 bytes; 2,201,116 remain. The final
+integrated-text headroom is 1,590 bytes. See
+`FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` and `releases/fleetlab-current.json`
+for the completed publication evidence (the October 23 record as committed in `4e7c1be`); no upload action remains for this round.
+
+The October 23 dependency audit reports Undici advisories in the pinned local
+Wrangler/Miniflare toolchain, including the bundled Pages fetch implementation.
+These dependencies are not served to visitors. A malicious HTTPS API response
+could terminate the uploader; do not describe the audit as clean or apply an
+installed-only override as if it repaired the bundled copy. Preserve this dated
+residual in the release handoff until a complete tool update is reviewed.
 
 ## October 14 approved artwork and analytics
 
@@ -72,6 +137,54 @@ source commits and documentation-only commits can differ.
 
 ## Build and verify
 
+### October 22 TLS toolchain update
+
+FleetLab serves static HTML, JavaScript and data through Cloudflare Pages. There
+is no PHP application runtime, Composer dependency or PHP-serving upstream in
+the reviewed release. PHP2Shell (CVE-2026-109618 and CVE-2026-109619) therefore
+does not require a PHP upgrade or a website redeployment for this architecture.
+
+The separate eMudhra incident affects local HTTPS tools. Require Node **22.23.4
+or newer within Node 22**; both manifests and lockfiles record this floor, and
+the release wrapper rejects older runtimes before loading Wrangler or accessing
+credentials. `apps/fleetlab-city/.node-version` selects 22.23.4 for compatible
+version managers. The local Apple Silicon runtime is installed at:
+
+```sh
+export PATH="$PWD/build/fleetlab-city/toolchain/node-v22.23.4-darwin-arm64/bin:$PATH"
+node --version
+```
+
+This session-only PATH selection leaves other projects' Homebrew Node unchanged.
+On a new machine, install the appropriate official Node 22 security release and
+verify its published checksum; the ignored local runtime is not committed.
+Use this PATH for all subsequent `node` and `npm` commands in this runbook.
+
+The Python wheel lock now pins `certifi==2026.10.19` with its wheel SHA-256.
+Install with `--require-hashes` as documented. Also update the active Python
+environment's CA package and pip (26.2.2 or newer): neither the default Python
+SSL store nor pip's vendored bundle is repaired by changing standalone certifi.
+The local `hermes-dev` environment uses `ca-certificates=2026.10.20` and
+`openssl=3.5.9`; both it and the FleetLab venv use pip 26.2.2. The readback tool
+explicitly supplies the locked certifi bundle to curl with `--cacert`; system
+curl's default trust store is independent and remains outside this project fix.
+Bootstrap downloads must use
+a trusted client and independently checked official package hashes, never
+`--insecure` or disabled TLS verification.
+
+Verify both `dv-g3b-emudhra.we-have-a-problem.com` and
+`dv-g3b-aaa-emudhra.we-have-a-problem.com` with each actual client/trust store.
+Require a certificate-validation rejection and a successful normal HTTPS
+control. Timeouts, DNS failures and unrelated connection failures are
+inconclusive. A passing check covers only that client and tested chains, not
+all OS applications, visitors, or evidence of past compromise.
+
+Sources: [PHP advisory](https://www.php.net/archive/2026.php#2026-10-21-5),
+[Node security release](https://nodejs.org/en/blog/release/v22.23.4),
+[incident and package matrix](https://emudhra.we-have-a-problem.com/).
+
+### Release procedure
+
 The subsequent October 13 Argon visual refinement uses the same release workflow and adds the explicitly reviewed `src/ui/concept-primer.js` module to `FLOW_ADDED`. It updates the offline edition while preserving all City payload bytes. See [the visual implementation handoff](FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-13.md) for the current production readback and remaining qualification limits. Continue to reject any undeclared module; do not broaden the allowlist during packaging.
 
 Use the project's Python 3.11 environment for these tools. The Mac's default
@@ -101,8 +214,9 @@ Only a complete verified result is moved to `NEW_OUTPUT_DIR`. Its `stage/site/`
 is the served tree, `stage/review/` holds supporting evidence, and
 `local-release.json` records `server_side: none` for the verified local stage only.
 `build-inputs.json` records source/input digests and runtime versions without machine
-paths. Publication and hosted readback remain `NOT_PERFORMED`; the production receipt
-is unchanged. Preserve the original inputs for reconstruction. The steps below cover
+paths. At this local-build stage, publication and hosted readback are recorded as
+`NOT_PERFORMED`; building alone does not update the production receipt. Preserve the
+original inputs for reconstruction. The steps below cover
 additional release checks and separately authorized publication.
 
 1. Run the City Python and Node suites, the teaching-lab Node suite and Hermes
@@ -242,3 +356,29 @@ release adds the owner-requested Google Analytics tag on the public host; Google
 Analytics may use browser cookies. Cloudflare receives hosting requests and may receive
 browser network-error reports. No automation or branch protection was enabled by
 copying the former CI template; that template has been removed.
+
+### Verified depot production — October 24
+
+Published source `a1b79cd` binds 10,187 files / 1,629,563,452 bytes, with the current City presentation at `7542098a7b06ac1b`. Its City payload is byte-identical to `40dcf835e0dc635b` except the `release.json` binding.
+
+- **Checks:** stable production passed full byte and header checks, and immutable production `72e45e9f` passed full header checks and a six-path smoke. The compact record's 128-path smoke subset matched the live site.
+- **Rollback:** the whole-site target is prior production `85b02be2` / source `d0df87f`. The compatible City-only rollback `0bdffbfcff0e1bf9` remains staged. Neither rollback was rehearsed.
+- **Open items:** the release-review list is in the depot implementation handoff §9.
+
+### Verified enhancement production — October 23
+
+Final implementation `4b31ecc` retains the prior `2d01b25` security baseline,
+uses A2 as the Fleet day hero, and excludes V1 pending rerender. Full merged
+regression gates pass; the final package is retained under ignored
+`dist/fleetlab-enhancement-20261023/` with its exact source identity in
+`local-release.json`. Published source `d0df87f` binds 10,152 files / 1,629,000,684
+bytes and current City presentation `40dcf835e0dc635b`. Stable production full
+byte/header checks and 390px Home/Fleet day/hub browser checks passed; immutable
+production `85b02be2` has six-path smoke coverage only. See
+`docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` for budgets, residuals and scope.
+The whole-site rollback target is prior production `4fd751ea` / source `2d01b25`;
+compatible City-only rollback `0bdffbfcff0e1bf9` is staged within this package.
+Neither rollback was rehearsed. Wrangler 4.148.0's dated three-vulnerability
+tool-only residual remains disclosed. Next depot work was then design-only in
+`docs/FLEETLAB_DEPOT_READINESS_DESIGN_2026-10-23.md`; superseded: the lab was implemented and published on
+24 October (see the October 24 sections).

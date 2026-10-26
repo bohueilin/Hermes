@@ -1,6 +1,7 @@
 import {R3_DIR,R3_RELEASE,R3_ENTRIES,R3_BOOT,R3_SOURCE_ASSETS,createR3Sidecar} from './dispatch-package.mjs';
 import {R1_DIR,R1_RELEASE,R1_ENTRIES,R1_BOOT,R1_SOURCE_ASSETS,createR1Sidecar} from './rebalancing-package.mjs';
 import {ORDER_DIR,ORDER_RELEASE,ORDER_ENTRIES,ORDER_BOOT,ORDER_SOURCE_ASSETS,createOrderSidecar} from './delivery-order-package.mjs';
+import {DEPOT_DIR,DEPOT_PAGE,DEPOT_RELEASE,DEPOT_ENTRIES,DEPOT_BOOT,DEPOT_SOURCE_ASSETS,createDepotSidecar} from './depot-lab-package.mjs';
 // Packs the playground into one offline HTML file (contract section 9, design section 9.4).
 // Two bundles come from one rewriter: the page bundle from src/ui/app.js and the worker bundle from
 // src/runtime/worker.js. Each module runs inside its own function scope, in topological order, with its
@@ -866,6 +867,17 @@ export function buildSite(playgroundDir, { sourceCommit = null } = {}) {
     for(const path of R3_SOURCE_ASSETS)originals.set(path,readFileSync(join(dir,path),"utf8"));
     const fingerprints=Object.fromEntries([...originals].map(([path,data])=>[path,{bytes:Buffer.byteLength(data),sha256:createHash("sha256").update(data).digest("hex")}]));
     files.set(R3_RELEASE,createR3Sidecar(files,sourceIdentity(dir,fingerprints,sourceCommit),fingerprints,originals.get("dispatch/index.html")));
+  }
+  // BD-16: the source page lives in depot-lab/ and is emitted at the hosted depot-readiness/ route.
+  if (existsSync(join(dir,"depot-lab/index.html"))) {
+    const originals=new Map();
+    for(const entry of DEPOT_ENTRIES)for(const record of moduleGraph(join(dir,entry),sourceRoot).order){files.set(record.label,record.src);originals.set(record.label,record.src);}
+    files.set(DEPOT_PAGE,sitePage(dir,"depot-lab/index.html",["./visual.css"],new Map()));
+    files.set(`${DEPOT_DIR}/boot.js`,DEPOT_BOOT);
+    files.set(`${DEPOT_DIR}/visual.css`,readFileSync(join(dir,"depot-lab/visual.css"),"utf8"));
+    for(const path of DEPOT_SOURCE_ASSETS)originals.set(path,readFileSync(join(dir,path),"utf8"));
+    const fingerprints=Object.fromEntries([...originals].map(([path,data])=>[path,{bytes:Buffer.byteLength(data),sha256:createHash("sha256").update(data).digest("hex")}]));
+    files.set(DEPOT_RELEASE,createDepotSidecar(files,sourceIdentity(dir,fingerprints,sourceCommit),fingerprints,originals.get("depot-lab/index.html")));
   }
   try { files.set(CAPACITY_RELEASE_PATH, createReleaseSidecar(dir,files,{sourceCommit,capturedSources})); }
   catch (error) { throw new PackError(error.message); }
