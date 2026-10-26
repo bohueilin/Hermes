@@ -219,7 +219,7 @@ const win=doc.defaultView,system=win.matchMedia('(prefers-reduced-motion: reduce
 let paused=false;const stops=new Set();
 const allowed=()=>!paused&&!system.matches&&root.getAttribute('data-motion')!=='reduce'&&!doc.hidden;
 const control=node(doc,'button',{type:'button',class:'visitor-motion-control','aria-pressed':'false'},'Pause visual motion');
-const sync=()=>{const enabled=allowed();root.setAttribute('data-visitor-motion',enabled?'running':'paused');control.textContent=system.matches||root.getAttribute('data-motion')==='reduce'?'Visual motion: reduced':paused?'Resume visual motion':'Pause visual motion';control.disabled=system.matches||root.getAttribute('data-motion')==='reduce';control.setAttribute('aria-pressed',String(paused));if(!enabled){for(const stop of stops)stop();stops.clear();}};
+const sync=()=>{const enabled=allowed();root.setAttribute('data-visitor-motion',enabled?'running':'paused');control.textContent=system.matches||root.getAttribute('data-motion')==='reduce'?'Visual motion: reduced':paused?'Resume visual motion':'Pause visual motion';control.disabled=system.matches||root.getAttribute('data-motion')==='reduce';control.setAttribute('aria-pressed',String(paused));root.toggleAttribute('data-visitor-user-paused',paused&&!control.disabled);if(!enabled){for(const stop of stops)stop();stops.clear();}};
 control.addEventListener('click',()=>{paused=!paused;sync();});doc.body.appendChild(control);system.addEventListener('change',sync);doc.addEventListener('visibilitychange',sync);
 new MutationObserver(sync).observe(root,{attributes:true,attributeFilter:['data-motion']});sync();
 const counts=doc.querySelector('.ops-outcome-visual');
