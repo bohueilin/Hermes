@@ -170,12 +170,13 @@ The physical-phone check runs on the release candidate and is an owner action.
 1. **Default primary.** Unchanged: forest-green fill, white label.
 2. **Hover and active while enabled.** Unchanged.
 3. **Focus.** The lesson focus rings are unchanged and visible in every state, including a focused `aria-disabled` button.
-4. **Disabled.** Any `button` or `select` under the lesson root that matches `:disabled` or `[aria-disabled=true]` gets:
+4. **Disabled.** Any `button`, `select` or text-bearing input (`input` of type number or text) under the lesson root that matches `:disabled` or `[aria-disabled=true]` gets:
    - opacity 1, never an opacity mute;
    - fill and border `#dce2d7`;
    - label `#465d52` (5.39:1 on that opaque fill);
    - `cursor: not-allowed`;
    - `transform: none` in every pointer state;
+   - `transition: none`, so the fill and the label change together;
    - no hover change.
 
    A disabled range input has no text, so it gets opacity .55 and `cursor: not-allowed`.
@@ -205,6 +206,8 @@ The physical-phone check runs on the release candidate and is an owner action.
 - the studio hover (0,2,0);
 - the Delivery Order primary hover (0,2,1).
 
+Text-bearing inputs join the same rule as `input:where([type=number],[type=text])`. `:where()` adds no specificity, so the rule stays (1,1,1). Rebalancing's Vehicles count is the only such input in the five lessons, so only Rebalancing's rule lists it.
+
 No `!important`.
 
 **Measured contrast:**
@@ -219,7 +222,7 @@ No `!important`.
 
 After, the reason and status lines read 10.52 (Rebalancing), 10.19 (Dispatch), 6.26 (Delivery Order) and 11.61 (Capacity).
 
-**Parity test.** It parses `styles.css`, each lesson's `visual.css` and the hosted `visitor.css` together. It applies cascade order and specificity, resolves `var()`, and composites opacity over the real surface. It covers `aria-disabled`, and checks that reason text inside a button disappears when not busy.
+**Parity test.** It parses `styles.css`, each lesson's `visual.css` and the hosted `visitor.css` together. It applies cascade order and specificity, resolves `var()`, and composites opacity over the real surface. It covers `aria-disabled` and every disabled non-range input, which fails unless it takes the full disabled look in both cascades. It checks that reason text inside a button disappears when not busy.
 
 ## 4. Delivery Order states
 
@@ -267,10 +270,12 @@ A result that fails any of the three is not ready to go live.
 - the Rebalancing, Delivery Order and Delivery Order panel heroes keep the motion-respecting shimmer until the Scope 2 hero template;
 - D-05 shows only in chapter 0;
 - the depot experiment keeps its own disabled style, and its 320 px overflow;
+- the re-enable direction still runs the hosted 180 ms background fade (hosted `visitor.css`, Scope 2);
+- Rebalancing's status line says "Study unavailable: <error>" while its button says "Comparison unavailable";
 - the offline depot-flow eyebrows still compete;
 - the Capacity breadcrumb differs from the Explore collection name;
 - only Dispatch links back to the hub;
-- Software Delivery has no Previous link;
+- Previous wording and placement are not unified across lessons;
 - defect (c) is deferred (D6);
 - the depot-page eyebrow is deferred (D1);
 - forced-colours styling for the focused `aria-disabled` Capacity primary is deferred.

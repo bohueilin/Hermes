@@ -32,6 +32,9 @@ const SPEC={opacity:1,'background-color':'#dce2d7','border-color':'#dce2d7',colo
 const RANGE={opacity:.55,cursor:'not-allowed'};
 const FLOOR=4.5;
 const LESSONS={capacity:'#capacity-root','software-delivery':'#delivery-root','delivery-order':'#order-root',rebalancing:'#main',dispatch:'#main'};
+// Text-bearing inputs join the rule through :where(), so it stays at (1,1,1). Rebalancing's vehicle count is the only one.
+const TEXT_INPUT='input:where([type=number],[type=text])';
+const DISABLED=lesson=>`${LESSONS[lesson]} :is(button,select${lesson==='rebalancing'?','+TEXT_INPUT:''}):is(:disabled,[aria-disabled=true])`;
 const ENVS=[{label:'1280 fine pointer',width:1280,hover:'hover',pointer:'fine',reducedMotion:'no-preference'},{label:'390 touch',width:390,hover:'none',pointer:'coarse',reducedMotion:'no-preference'}];
 const IDLE={r1:'Watch the comparison ↓',r3:'Follow the first assignment ↓',r1Apply:'Apply moves & advance 10 min',r3Apply:'Apply & advance 30 s'};
 
@@ -45,7 +48,8 @@ function cascade(lesson,{hostedLayer,edit=null}){
 }
 const visible=e=>{for(let a=e;a;a=a.parentElement)if(a.hasAttribute('hidden'))return false;return true;};
 const isOff=e=>e.hasAttribute('disabled')||e.getAttribute('aria-disabled')==='true';
-// Violations of the spec for every visible disabled control under a lesson root.
+// Violations of the spec for every visible disabled control under a lesson root. A range input has no text, so it takes
+// RANGE; every other input carries text and takes the full spec.
 function audit(lesson,rootEl,rules){
  const problems=[],seen=[];
  for(const env of ENVS)for(const e of rootEl.querySelectorAll('button, select, input')){
@@ -56,7 +60,6 @@ function audit(lesson,rootEl,rules){
   if(e.localName==='input'&&e.getAttribute('type')==='range'){
    if(Math.abs(p.opacity-RANGE.opacity)>1e-9)problems.push(`${name}: opacity ${p.opacity}`);
    if(computed(rules,e,'cursor',env,st)!==RANGE.cursor)problems.push(`${name}: cursor`);continue;}
-  if(e.localName==='input')continue;
   const got={opacity:p.opacity,...Object.fromEntries(['background-color','border-color','color','cursor','transform','transition'].map(k=>[k,computed(rules,e,k,env,st)]))};
   for(const [k,v]of Object.entries(SPEC))if(String(got[k]).toLowerCase()!==String(v))problems.push(`${name}: ${k} ${got[k]} (spec ${v})`);
   for(const k of ['transform','background-color','color','border-color']){const h=computed(rules,e,k,env,hov);if(h!==got[k])problems.push(`${name}: hover/active ${k} ${h} (resting ${got[k]})`);}
@@ -95,8 +98,7 @@ test('the overrides win by strictly higher specificity, and an equal-specificity
  assert.deepEqual(specificity(sel(':is(.operations-lab,.fixture-control,.bench) :is(input,select):disabled').ast),[0,2,1]);
  assert.deepEqual(specificity(sel('.depot-capacity [aria-disabled=true]').ast),[0,2,0]);
  assert.deepEqual(specificity(sel('.studio-button:hover').ast),[0,2,0]);
- for(const id of new Set(Object.values(LESSONS)))assert.deepEqual(specificity(parseComplex(`${id} :is(button,select):is(:disabled,[aria-disabled=true])`)),[1,1,1]);
- for(const [lesson,id] of Object.entries(LESSONS))assert.ok(read(`${pg}${lesson}/visual.css`).includes(`${id} :is(button,select):is(:disabled,[aria-disabled=true]){`),lesson);
+ for(const lesson of Object.keys(LESSONS)){assert.deepEqual(specificity(parseComplex(DISABLED(lesson))),[1,1,1],lesson);assert.ok(read(`${pg}${lesson}/visual.css`).includes(`${DISABLED(lesson)}{`),lesson);}
  // Probe: a lesson rule at (0,3,1) loses the hover lift to visitor.css, because brand.css loads later.
  const restore=page('capacity');try{
   const b=document.createElement('button');b.setAttribute('aria-disabled','true');const hero=document.createElement('section');hero.setAttribute('class','capacity-hero');hero.appendChild(b);document.getElementById('capacity-root').appendChild(hero);
@@ -159,7 +161,7 @@ test('Rebalancing manual dependents disable with Add pending move, while busy an
   x.by('apply-moves').click();off(true);x.reply();off(false);
   endRun(x,'apply-moves',11);assert.equal(x.app.getSession().get().manual.end,7200);off(true);
   for(const hostedLayer of [false,true]){const {problems,seen}=audit('rebalancing',x.by('manual-panel'),cascade('rebalancing',{hostedLayer}));
-   assert.deepEqual(problems,[]);assert.equal(seen.length,4*ENVS.length,'both zone selects share the disabled look of Add pending move and Apply moves');}
+   assert.deepEqual(problems,[]);assert.equal(seen.length,5*ENVS.length,'both zone selects and the vehicle count share the disabled look of Add pending move and Apply moves');}
   x.by('reset-manual').click();off(true);x.reply();off(false);
  }finally{x.close();}
 });
@@ -194,4 +196,9 @@ test('removing a lesson block brings back a failing treatment (the audit bites)'
   const old=audit('dispatch',x.by('main'),cascade('dispatch',{hostedLayer:true,edit:t=>strip(t).replace(/#main input\[type=range\]:disabled\{[^}]*\}/,'button:disabled{opacity:.5;cursor:default}')})).problems;
   assert.ok(old.some(p=>/#watch .*label contrast 2\.9\d < 4\.5/.test(p)),old.join('\n'));
  }finally{x.close();}
+ // Without its text-input arm, Rebalancing's disabled vehicle count fails the spec in either cascade.
+ const y=rebalancing('ok');try{y.reply();endRun(y,'apply-moves',12);assert.equal(y.by('move-count').disabled,true);
+  for(const hostedLayer of [false,true]){const bare=audit('rebalancing',y.by('main'),cascade('rebalancing',{hostedLayer,edit:t=>t.replace(`,${TEXT_INPUT})`,')')})).problems;
+   assert.ok(bare.some(p=>/^rebalancing input#move-count .*: background-color #[0-9a-f]{6} \(spec #dce2d7\)$/.test(p)),`${hostedLayer?'hosted':'teaching'}:\n${bare.join('\n')}`);}
+ }finally{y.close();}
 });
