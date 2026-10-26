@@ -116,9 +116,9 @@ export function createOrderPage({manifest,createWorker,runStudy=null,runEqualSha
   strips.replaceChildren(schedule(accepted.fcfs,'First come',s.time_ms),schedule(viewed,viewName,s.time_ms));bench.hidden=false;
  }
  function back(){if(loading&&example===serial&&accepted){pendingCase=accepted.id;pending=[...saved[pendingCase]];}}
- function cancel(announce=true){const returnFocus=document.activeElement===cancelButton;pendingGuideStart=false;if(announce)back();serial++;if(loading){stop();loading=false;if(announce)setStatus(`Check cancelled.${kept()}`,'',1);if(equal.textContent.startsWith('Rebuilding'))equal.textContent='Equal-share check interrupted. Try again.';}player.pause();renderEditor();if(returnFocus)(loadTrigger??compare).focus();}
+ function cancel(announce=true,restore=announce){const returnFocus=document.activeElement===cancelButton;pendingGuideStart=false;if(restore)back();serial++;if(loading){stop();loading=false;if(announce)setStatus(`Check cancelled.${kept()}`,'',1);if(equal.textContent.startsWith('Rebuilding'))equal.textContent='Equal-share check interrupted. Try again.';}player.pause();renderEditor();if(returnFocus)(loadTrigger??compare).focus();}
  function selectCase(id){if(!names[id])return;cancel(false);pauseGuide();pendingCase=id;pending=[...saved[id]];setStatus(accepted?`Checked ${names[accepted.id]} retained. Compare to accept ${names[id]}.`:idle);if(!accepted)renderOutcomes();renderEditor();}
- function move(id,direction){const index=pending.indexOf(id),to=index+direction;if(![-1,1].includes(direction)||index<0||to<0||to>=pending.length)return;cancel(false);pauseGuide();[pending[index],pending[to]]=[pending[to],pending[index]];renderEditor();}
+ function move(id,direction){const index=pending.indexOf(id),to=index+direction;if(![-1,1].includes(direction)||index<0||to<0||to>=pending.length)return;cancel(true,false);pauseGuide();[pending[index],pending[to]]=[pending[to],pending[index]];renderEditor();}
  async function load(mode='user'){
   const id=pendingCase,entry=manifest.cases[id],desired=[...pending],token=++serial,trigger=document.activeElement;
   loadTrigger=trigger?.tagName==='BUTTON'?trigger:compare;example=mode==='example'&&token;stop();loading=true;setStatus('Comparing all 24 orders and checking the results…');renderEditor();

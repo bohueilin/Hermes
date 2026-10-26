@@ -153,6 +153,30 @@ test('a worked example cancelled before any check stays on the Different targets
  assert.equal(p.getState().pendingCase,'default');assert.equal(resultCase(p),'Different targets · published summary');assert.deepEqual(cards(p).map(shown),[FIGS.default,FIGS.default]);
  assert.equal(status(p),'Check cancelled. Published summary remains available.');
 });
+// Moving a vehicle while a check runs cancels it. The page is left exactly as Cancel leaves it in the same situation,
+// except that the editor keeps the scenario being edited and shows the moved order, badged by that scenario's own rule.
+const left=p=>({status:status(p),said:said(p),figures:badge(p,'figures'),unavailable:badge(p,'unavailable'),resultCase:resultCase(p),cards:cards(p).map(shown),mode:p.getState().mode,loading:p.getState().loading,cancelRow:!button(p,'Cancel check').hidden,compare:!one(p,'button.primary').disabled});
+const RETAINED='Check cancelled. Previous accepted outcomes are retained.',PUBLISHED='Check cancelled. Published summary remains available.';
+for(const [during,prep,start,[id,dir],line,pending]of [
+ ['a Compare before any check',()=>{},p=>p.load(),['V4',-1],PUBLISHED,PENDING],
+ // The move returns Close targets to its published order, which is not an edit.
+ ['a Compare after an accepted check',async p=>{await p.showBest();p.selectCase('close');p.move('V4',-1);},p=>p.load(),['V4',1],RETAINED,null],
+ ['a worked example before any check',p=>p.selectCase('close'),p=>p.watchExample(),['V1',1],PUBLISHED,PENDING],
+ // Cancel would return the editor to Close targets; the move stays on the Different targets being edited.
+ ['a worked example after an accepted check',async p=>{p.selectCase('close');p.move('V3',-1);await p.showBest();},p=>p.watchExample(),['V4',-1],RETAINED,PENDING]])
+test(`moving a vehicle during ${during} leaves the page as Cancel does and keeps the moved order in its own scenario`,async t=>{
+ const held=async(t,act)=>{let reject=null,hold=false;const p=setup(t,{runStudy:e=>hold?new Promise((r,j)=>{reject=j;}):Promise.resolve(reconstructOrderStudy(e))});
+  await prep(p);hold=true;const flight=start(p),before=p.getState();assert.equal(before.loading,true);
+  act(p);reject(Error('Computation cancelled.'));assert.ok(!await flight);return {p,before};};
+ let cancelled;await t.test('Cancel',async t=>{cancelled=left((await held(t,p=>p.cancel())).p);});
+ await t.test('move',async t=>{const {p,before}=await held(t,p=>p.move(id,dir));
+  assert.deepEqual(left(p),cancelled);assert.equal(status(p),line);assert.equal(said(p),line);assert.equal(cancelled.cancelRow,false);
+  const order=[...before.pendingOrder],i=order.indexOf(id);[order[i],order[i+dir]]=[order[i+dir],order[i]];
+  assert.equal(p.getState().pendingCase,before.pendingCase,'no other scenario is restored');assert.deepEqual(p.getState().pendingOrder,order);
+  assert.equal(one(p,'.edit-status').textContent,`Selected: ${NAMES[before.pendingCase]}. ${pending??''}`);assert.equal(badge(p,'pending'),pending);
+  assert.equal(p.getState().acceptedCase,before.acceptedCase);
+ });
+});
 test('suspend keeps its pinned wording and clears an earlier reason',async t=>{
  const p=setup(t,{runStudy:failing('Computation timed out.')});await p.load();assert.ok(badge(p,'unavailable'));
  p.suspend();assert.equal(status(p),'Check interrupted. Compare to restart.');assert.equal(badge(p,'unavailable'),null);
