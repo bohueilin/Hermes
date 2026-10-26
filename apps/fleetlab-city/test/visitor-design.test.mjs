@@ -121,10 +121,10 @@ test('Dispatch keeps one D-05 beside chapter 1 copy through failure and navigati
    one();assert.ok(lesson.contains(art));assert.equal(by('watch').disabled,true);assert.equal(by('takeaway').textContent,'');assert.match(by('status').textContent,/unavailable/i);
    if(mode==='worker error'){assert.equal(lesson.getAttribute('data-chapter'),'0');assert.equal(art.matches(HIDE),false);assert.equal(by('error').hidden,false);}
    else{assert.equal(lesson.hasAttribute('data-chapter'),false);assert.equal(art.matches(HIDE),true,'accepted residual: a constructor throw never shows D-05');}
-   assert.equal(by('next').disabled,false);for(const b of document.querySelectorAll('button[data-chapter]'))assert.equal(b.disabled,false);
-   by('next').click();one();assert.equal(by('chapter-position').textContent,'2 / 6');assert.equal(art.matches(HIDE),true);
-   document.querySelector('button[data-chapter="3"]').click();one();assert.equal(art.matches(HIDE),true);
-   document.querySelector('button[data-chapter="0"]').click();one();assert.equal(art.matches(HIDE),mode==='startup throw');
+   const live=()=>{assert.equal(by('next').disabled,false,mode);for(const b of document.querySelectorAll('button[data-chapter]'))assert.equal(b.disabled,false,mode);};
+   live();by('next').click();one();live();assert.equal(by('chapter-position').textContent,'2 / 6');assert.equal(art.matches(HIDE),true);
+   document.querySelector('button[data-chapter="3"]').click();one();live();assert.equal(art.matches(HIDE),true);
+   document.querySelector('button[data-chapter="0"]').click();one();live();assert.equal(art.matches(HIDE),mode==='startup throw');
    if(mode==='worker error'){by('retry').click();worker.onmessage({data:performDispatchJob(sent.at(-1))});one();assert.equal(by('watch').disabled,false);by('watch').click();one();assert.equal(art.matches(HIDE),true);}
    decorateVisitors(document);one();app.dispose();
   }finally{restore();}

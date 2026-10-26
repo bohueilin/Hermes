@@ -51,9 +51,9 @@ test('the Capacity tint lives only in capacity/visual.css, above the hosted .enh
  const visual=readFileSync(new URL('../../../playground/fleetlab/capacity/visual.css',import.meta.url),'utf8');
  const media=readFileSync(new URL('../hosted/enhancement-media.css',import.meta.url),'utf8');
  assert.equal(visual.split('\n').filter(l=>l.startsWith('.capacity-hero .enhancement-visual{')).length,1);
- const tint=visual.match(/^\.capacity-hero \.enhancement-visual\{background:(#[0-9a-f]{6})\}$/m)?.[1];assert.ok(tint);
+ const tint=visual.match(/^\.capacity-hero \.enhancement-visual\{background:(#[0-9a-f]{6})\}$/m)?.[1];assert.equal(tint,'#f1ebe2','the decided tint');
  // The pre-injection placeholder reserves the same 16:9 box in the same tint, and gives way once FL-A4 is in the hero.
- assert.ok(visual.includes(`\n.capacity-hero::after{content:"";grid-area:1/2;aspect-ratio:16/9;border-radius:18px;background:${tint}}\n`));
+ assert.ok(visual.includes('\n.capacity-hero::after{content:"";grid-area:1/2;aspect-ratio:16/9;border-radius:18px;background:#f1ebe2}\n'));
  assert.ok(visual.includes('\n.capacity-hero:has(>#enhancement-capacity)::after{content:none}\n'));
  assert.ok(media.includes('.enhancement-visual{position:relative;overflow:hidden;border-radius:18px;background:#e9e8dc}'));
  assert.doesNotMatch(media,/capacity-hero \.enhancement-visual|#enhancement-capacity/);

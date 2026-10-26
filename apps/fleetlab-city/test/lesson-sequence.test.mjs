@@ -61,7 +61,7 @@ test('integrate-site.py reads the same sequence line, receives both new pages an
  const caller=read('apps/fleetlab-city/tools/integrate-site.py').match(/onward = lesson_navigation\(\{[\s\S]*?\}\)/)[0];
  assert.deepEqual([...caller.matchAll(/"(network-flows\/[^"]+)"/g)].map(m=>m[1]),CALLER);
  const files=Object.fromEntries(CALLER.map(path=>[path,String(built().get(path))]));
- const [sequence,pages]=JSON.parse(execFileSync('python3',['-B','-c',"import json,runpy,sys; ns=runpy.run_path(sys.argv[1]); files=json.load(sys.stdin); print(json.dumps([ns['lesson_sequence'](),ns['lesson_navigation'](files)]))",tool],{input:JSON.stringify(files),encoding:'utf8',maxBuffer:8*1024*1024}));
+ const [sequence,pages]=JSON.parse(execFileSync('python3',['-B','-c',"import json,runpy,sys; ns=runpy.run_path(sys.argv[1]); files=json.load(sys.stdin); print(json.dumps([ns['lesson_sequence'](),ns['lesson_navigation'](files)]))",tool],{input:JSON.stringify(files),encoding:'utf8',maxBuffer:8*1024*1024,timeout:60000}));
  assert.deepEqual(sequence,LESSON_SEQUENCE);
  assert.deepEqual(pages,Object.fromEntries(lessonNavigation(new Map(Object.entries(files)))));
 });
