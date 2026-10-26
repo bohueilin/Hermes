@@ -26,8 +26,9 @@ import {reconstructDeliveryPair} from '../../../playground/fleetlab/src/runtime/
 const repo=fileURLToPath(new URL('../../../',import.meta.url)),read=path=>readFileSync(repo+path,'utf8');
 const pg='playground/fleetlab/',hosted='apps/fleetlab-city/hosted/';
 
-// The component spec: every lesson resolves every disabled control to these values.
-const SPEC={opacity:1,'background-color':'#dce2d7','border-color':'#dce2d7',color:'#465d52',cursor:'not-allowed',transform:'none'};
+// The component spec: every lesson resolves every disabled control to these values. No transition, so the fill and the
+// label change together instead of the hosted 180 ms fill fade running under an instant label change.
+const SPEC={opacity:1,'background-color':'#dce2d7','border-color':'#dce2d7',color:'#465d52',cursor:'not-allowed',transform:'none',transition:'none'};
 const RANGE={opacity:.55,cursor:'not-allowed'};
 const FLOOR=4.5;
 const LESSONS={capacity:'#capacity-root','software-delivery':'#delivery-root','delivery-order':'#order-root',rebalancing:'#main',dispatch:'#main'};
@@ -56,7 +57,7 @@ function audit(lesson,rootEl,rules){
    if(Math.abs(p.opacity-RANGE.opacity)>1e-9)problems.push(`${name}: opacity ${p.opacity}`);
    if(computed(rules,e,'cursor',env,st)!==RANGE.cursor)problems.push(`${name}: cursor`);continue;}
   if(e.localName==='input')continue;
-  const got={opacity:p.opacity,...Object.fromEntries(['background-color','border-color','color','cursor','transform'].map(k=>[k,computed(rules,e,k,env,st)]))};
+  const got={opacity:p.opacity,...Object.fromEntries(['background-color','border-color','color','cursor','transform','transition'].map(k=>[k,computed(rules,e,k,env,st)]))};
   for(const [k,v]of Object.entries(SPEC))if(String(got[k]).toLowerCase()!==String(v))problems.push(`${name}: ${k} ${got[k]} (spec ${v})`);
   for(const k of ['transform','background-color','color','border-color']){const h=computed(rules,e,k,env,hov);if(h!==got[k])problems.push(`${name}: hover/active ${k} ${h} (resting ${got[k]})`);}
   if(p.ratio<FLOOR)problems.push(`${name}: label contrast ${p.ratio.toFixed(2)} < ${FLOOR}`);
@@ -151,6 +152,18 @@ test('the manual primaries read "Observation complete" once the run has ended, a
  }finally{x.close();}}
 });
 
+test('Rebalancing manual dependents disable with Add pending move, while busy and once the run has ended',()=>{
+ const deps=['add-move','move-from','move-to','move-count'],x=rebalancing('ok');try{
+  const off=v=>assert.deepEqual(deps.map(id=>x.by(id).disabled),deps.map(()=>v));
+  x.reply();document.querySelector('[data-chapter="5"]').click();off(false);
+  x.by('apply-moves').click();off(true);x.reply();off(false);
+  endRun(x,'apply-moves',11);assert.equal(x.app.getSession().get().manual.end,7200);off(true);
+  for(const hostedLayer of [false,true]){const {problems,seen}=audit('rebalancing',x.by('manual-panel'),cascade('rebalancing',{hostedLayer}));
+   assert.deepEqual(problems,[]);assert.equal(seen.length,4*ENVS.length,'both zone selects share the disabled look of Add pending move and Apply moves');}
+  x.by('reset-manual').click();off(true);x.reply();off(false);
+ }finally{x.close();}
+});
+
 test('Delivery Order and Capacity keep their reason line directly after the action row, at full contrast',()=>{
  const env=ENVS[1],st={hover:null,active:null,focus:null};
  {const restore=page('delivery-order');try{
@@ -177,6 +190,7 @@ test('removing a lesson block brings back a failing treatment (the audit bites)'
  const x=dispatch('ok');try{
   const gone=audit('dispatch',x.by('main'),cascade('dispatch',{hostedLayer:true,edit:strip})).problems;
   assert.ok(gone.some(p=>/#watch .*background-color #0b3b2e/.test(p)),gone.join('\n'));
+  assert.ok(gone.some(p=>/#watch .*: transition transform .*background-color .* \(spec none\)$/.test(p)),gone.join('\n'));
   const old=audit('dispatch',x.by('main'),cascade('dispatch',{hostedLayer:true,edit:t=>strip(t).replace(/#main input\[type=range\]:disabled\{[^}]*\}/,'button:disabled{opacity:.5;cursor:default}')})).problems;
   assert.ok(old.some(p=>/#watch .*label contrast 2\.9\d < 4\.5/.test(p)),old.join('\n'));
  }finally{x.close();}

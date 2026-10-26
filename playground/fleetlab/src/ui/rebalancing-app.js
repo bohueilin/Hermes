@@ -15,7 +15,7 @@ export function startRebalancing({createWorker}={}){
   if(current.error&&!current.study)by('study-status').textContent='Study unavailable: '+current.error;
   by('action-error').hidden=!current.error;by('action-error').textContent=current.error||'';
   by('watch').disabled=!ready;by('watch').textContent=ready?'Watch the comparison ↓':current.error?'Comparison unavailable':'Loading the recorded comparison…';by('play').disabled=!ready;by('frame').disabled=!ready;
-  by('apply-moves').disabled=!ready||current.busy||current.manual.end>=7200;by('apply-moves').textContent=ready&&current.manual.end>=7200?'Observation complete':'Apply moves & advance 10 min';by('reset-manual').disabled=!ready||current.busy;by('add-move').disabled=!ready||current.busy||current.manual.end>=7200;
+  for(const id of ['apply-moves','add-move','move-from','move-to','move-count'])by(id).disabled=!ready||current.busy||current.manual.end>=7200;by('apply-moves').textContent=ready&&current.manual.end>=7200?'Observation complete':'Apply moves & advance 10 min';by('reset-manual').disabled=!ready||current.busy;
   by('manual-panel').hidden=!manual;by('recorded-controls').hidden=manual;by('verdict-film').hidden=chapter!==4;by('verdict').hidden=chapter!==4;
   doc.querySelectorAll('[data-remove]').forEach(b=>{b.disabled=current.busy;});
   if(!ready)return;

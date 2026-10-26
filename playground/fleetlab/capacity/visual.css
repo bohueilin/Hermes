@@ -214,4 +214,4 @@ to{left:100%}
 .capacity-focal{scroll-margin-top:16px}
 .capacity-focal[data-loading=true]{min-height:650px}
 .capacity-guide-loading{font-size:15px}
-#capacity-root :is(button,select):is(:disabled,[aria-disabled=true]){opacity:1;background-color:#dce2d7;border-color:#dce2d7;color:#465d52;cursor:not-allowed;transform:none}#capacity-root input[type=range]:disabled{opacity:.55;cursor:not-allowed}
+#capacity-root :is(button,select):is(:disabled,[aria-disabled=true]){opacity:1;background-color:#dce2d7;border-color:#dce2d7;color:#465d52;cursor:not-allowed;transform:none;transition:none}#capacity-root input[type=range]:disabled{opacity:.55;cursor:not-allowed}
