@@ -91,6 +91,8 @@ test('a first-run failure names the reason, keeps the published figures, never c
   const line='Unable to accept this comparison. Published summary remains available.';
   assert.equal(status(p),line);assert.doesNotMatch(status(p),/retained/);assert.equal(said(p),`${line} Unavailable: ${reason}`);
   assert.equal(badge(p,'unavailable'),`Unavailable: ${reason}`);assert.equal(badge(p,'figures'),'Published order');
+  // The label keeps the small-caps style; the reason sits in its own span, set in sentence case.
+  const u=one(p,'[data-unavailable]');assert.deepEqual(u.childNodes.map(n=>n.nodeType===3?n.textContent:n.localName),['Unavailable: ','span']);assert.equal(u.children[0].textContent,reason);
   assert.deepEqual(cards(p).map(shown),[FIGS.impossible,FIGS.impossible]);assert.equal(resultCase(p),'One impossible target · published summary');
   assert.equal(p.getState().acceptedCase,null);assert.equal(p.getState().mode,null);
   p.selectCase('close');assert.equal(badge(p,'unavailable'),null,'a new choice clears the reason');assert.equal(status(p),IDLE);
@@ -131,6 +133,26 @@ test('Cancel before and after acceptance is announced; a cancelled computation i
  assert.equal(status(p),'Check cancelled. Previous accepted outcomes are retained.');assert.equal(said(p),'Check cancelled. Previous accepted outcomes are retained.');
  assert.equal(badge(p,'unavailable'),null);assert.equal(badge(p,'figures'),'Your order');assert.equal(resultCase(p),'Different targets · checked complete study');
 });
+// A worked example switches the editor to Different targets; cancelling or suspending it after a check returns the
+// editor to the checked scenario and its last compared order, as a failure does, so the editor and the cards agree.
+for(const [stop,line]of [['cancel','Check cancelled. Previous accepted outcomes are retained.'],['suspend','Checked 24 orders retained · playback paused.']])
+test(`${stop} during a worked example after an earlier check restores that scenario, so the editor and the cards agree`,async t=>{
+ let reject=null,hold=false;const p=setup(t,{runStudy:e=>hold?new Promise((r,j)=>{reject=j;}):Promise.resolve(reconstructOrderStudy(e))});
+ p.selectCase('close');p.move('V3',-1);assert.equal(await p.showBest(),true);const compared=p.getState().savedOrder;
+ hold=true;const example=p.watchExample();assert.equal(p.getState().pendingCase,'default');assert.equal(p.getState().loading,true);
+ p[stop]();reject(Error('Computation cancelled.'));assert.equal(await example,undefined);const s=p.getState();
+ assert.equal(s.loading,false);assert.equal(s.acceptedCase,'close');assert.equal(s.pendingCase,'close');assert.deepEqual(s.pendingOrder,compared);assert.equal(s.mode,'best');
+ assert.equal(one(p,'.edit-status').textContent,'Selected: Close targets. ');assert.equal(badge(p,'pending'),null);
+ assert.equal(one(p,'[data-case="close"]').getAttribute('aria-pressed'),'true');assert.equal(one(p,'[data-case="default"]').getAttribute('aria-pressed'),'false');
+ assert.equal(resultCase(p),'Close targets · checked complete study');assert.deepEqual(cards(p).map(shown),[FIGS.close,FIGS.closeBest]);assert.equal(badge(p,'figures'),'Best of 24');
+ assert.equal(status(p),line);assert.equal(badge(p,'unavailable'),null);
+});
+test('a worked example cancelled before any check stays on the Different targets it switched to',async t=>{
+ let reject=null;const p=setup(t,{runStudy:()=>new Promise((r,j)=>{reject=j;})});p.selectCase('close');
+ const example=p.watchExample();p.cancel();reject(Error('Computation cancelled.'));assert.equal(await example,undefined);
+ assert.equal(p.getState().pendingCase,'default');assert.equal(resultCase(p),'Different targets · published summary');assert.deepEqual(cards(p).map(shown),[FIGS.default,FIGS.default]);
+ assert.equal(status(p),'Check cancelled. Published summary remains available.');
+});
 test('suspend keeps its pinned wording and clears an earlier reason',async t=>{
  const p=setup(t,{runStudy:failing('Computation timed out.')});await p.load();assert.ok(badge(p,'unavailable'));
  p.suspend();assert.equal(status(p),'Check interrupted. Compare to restart.');assert.equal(badge(p,'unavailable'),null);
@@ -140,6 +162,7 @@ test('badges are small-caps labels, not pills or buttons, at 4.5:1 or better; Un
  const root=rule(':root'),hex=v=>v.startsWith('var(')?root.match(new RegExp(`${v.slice(4,-1)}:(#[0-9a-f]{6})`))[1]:v;
  const b=rule('.badge'),u=rule('[data-unavailable]');
  assert.match(b,/text-transform:uppercase/);assert.match(b,/letter-spacing:/);assert.doesNotMatch(b+u,/background|border-radius/);assert.match(u,/border-left:3px solid/);
+ assert.match(rule('[data-unavailable] span'),/text-transform:none;letter-spacing:0/,'the reason is set in sentence case');
  const lum=h=>{const c=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return .2126*c[0]+.7152*c[1]+.0722*c[2];};
  const ratio=(a,c)=>{const [x,y]=[lum(a),lum(c)].sort((m,n)=>n-m);return (x+.05)/(y+.05);};
  // The decision panel and the page paper are the two surfaces the badges sit on.
