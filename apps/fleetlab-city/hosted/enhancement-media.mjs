@@ -41,7 +41,6 @@ export function decorateConceptMedia(doc,createNode){
  const capacity=doc.querySelector('.capacity-hero');
  if(capacity&&!doc.getElementById('enhancement-capacity')){
   const art=figure('enhancement-capacity','FL-A4-capacity-hero.webp','Clay illustration of twelve white autonomous pods moving through three depot service bays while technicians work.','Twelve visits, three shared lanes. Whether the wait is a scheduling problem or a capacity problem is the lesson.'),img=art.querySelector('img');
-  // Above the fold only in the two-column layout (capacity/visual.css stacks it below 768 px).
   if(doc.defaultView?.matchMedia?.('(min-width:768px)').matches){img.setAttribute('loading','eager');img.setAttribute('fetchpriority','high');}
   capacity.insertBefore(art,capacity.querySelector('.capacity-preview-slot'));
  }
