@@ -42,21 +42,37 @@ test('the end-of-lesson Next link is one line in the lesson ink, and Capacity\'s
 });
 
 // Every link the hub and its five lessons render takes a colour from the system, never the browser's unvisited blue or
-// visited purple. The sweep waits until the page stops adding links, and Capacity must include its release-source link.
-test('no link on the Network Flows hub or its five lessons keeps the browser default colour',{skip:chrome.skip,timeout:180000},async t=>{
+// visited purple, and reads at 4.5:1 or better against its effective background. The sweep waits until the page stops
+// adding links, and Capacity must include its release-source link. The effective background composites each ancestor's
+// background-color, innermost on top, down to the first opaque one, over a white canvas. A link with a background-image
+// on that walk sits over artwork whose colour is not known here, so it is skipped and counted; there is none today.
+// getComputedStyle reports the unvisited style only, so the visited half rests on the default-colour check.
+const CONTRAST=`(()=>{const rgba=s=>{const m=/^rgba?\\(([^)]*)\\)$/.exec(s),p=m?m[1].split(/[\\s,\\/]+/).filter(Boolean).map(Number):[];return p.length>=3&&!p.some(Number.isNaN)?[p[0],p[1],p[2],p[3]??1]:null;};
+ const over=(top,bottom)=>{const a=top[3]+bottom[3]*(1-top[3]);return [...[0,1,2].map(i=>(top[i]*top[3]+bottom[i]*bottom[3]*(1-top[3]))/a),a];};
+ const lum=c=>{const [r,g,b]=c.slice(0,3).map(v=>v/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return .2126*r+.7152*g+.0722*b;};
+ return a=>{const layers=[];for(let e=a;e;e=e.parentElement){const s=getComputedStyle(e);if(s.backgroundImage!=='none')return {image:true};const c=rgba(s.backgroundColor);
+   if(!c)return {unparsed:s.backgroundColor};if(c[3]>0){layers.push(c);if(c[3]>=1)break;}}
+  const bg=layers.reverse().reduce((b,c)=>over(c,b),[255,255,255,1]),ink=rgba(getComputedStyle(a).color);if(!ink)return {unparsed:getComputedStyle(a).color};
+  const [x,y]=[lum(over(ink,bg)),lum(bg)].sort((m,n)=>n-m);return {ratio:(x+.05)/(y+.05),background:'rgb('+bg.slice(0,3).map(Math.round).join(', ')+')'};};})()`;
+test('no link on the Network Flows hub or its five lessons keeps the browser default colour or reads under 4.5:1',{skip:chrome.skip,timeout:180000},async t=>{
  const browser=await launchChrome(chrome.path);t.after(()=>browser.close());
  const server=await serveSite(hostedSite());t.after(()=>server.close());
+ let skipped=0;
  for(const path of ['','capacity/','software-delivery/','delivery-order/','rebalancing/','dispatch/'])for(const [width,height] of [[1280,900],[390,844]]){
   const page=await browser.newPage(),cell=`/network-flows/${path} ${width}x${height}`;
   await page.emulate({width,height,mobile:width<500});
   await page.navigate(server.origin+'/network-flows/'+path);
-  const links=await page.evaluate(`new Promise(done=>{let last=-1,stable=0;const tick=()=>{const all=[...document.querySelectorAll('a')];stable=all.length===last?stable+1:0;last=all.length;
-   if(stable<3)return setTimeout(tick,200);done(all.map(a=>({href:a.getAttribute('href'),text:a.textContent.trim().slice(0,60),color:getComputedStyle(a).color})));};setTimeout(tick,300);})`);
+  const links=await page.evaluate(`new Promise(done=>{const contrast=${CONTRAST};let last=-1,stable=0;const tick=()=>{const all=[...document.querySelectorAll('a')];stable=all.length===last?stable+1:0;last=all.length;
+   if(stable<3)return setTimeout(tick,200);done(all.map(a=>({href:a.getAttribute('href'),text:a.textContent.trim().slice(0,60),color:getComputedStyle(a).color,...contrast(a)})));};setTimeout(tick,300);})`);
   assert.ok(links.length>0,`${cell}: no links rendered`);
   if(path==='capacity/')assert.ok(links.some(l=>l.href==='./release.json'),`${cell}: the release-source link was not rendered`);
   assert.deepEqual(links.filter(l=>UA_LINKS.includes(l.color)),[],cell);
+  assert.deepEqual(links.filter(l=>l.unparsed),[],`${cell}: colours the contrast check cannot read`);
+  skipped+=links.filter(l=>l.image).length;
+  assert.deepEqual(links.filter(l=>l.ratio<4.5).map(l=>`${l.href} "${l.text}" ${l.color} on ${l.background}: ${l.ratio.toFixed(2)}:1`),[],`${cell}: links under 4.5:1`);
   await page.close();
  }
+ t.diagnostic(`links over a background-image, skipped: ${skipped}`);
 });
 
 // capacity/visual.css loads after styles.css, so a rule of equal specificity would win here by order alone and lose
