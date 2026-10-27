@@ -205,7 +205,7 @@ test('removing a lesson block brings back a failing treatment (the audit bites)'
 
 // Step B V3. A Worker that cannot be constructed leaves no session, so no control that needs one may stay enabled.
 test('when the Worker constructor throws, every control that needs the comparison is disabled and takes the disabled look',()=>{
- for(const [name,open,panel,ids]of [['rebalancing',rebalancing,'manual-panel',['watch','play','frame','add-move','move-from','move-to','move-count','apply-moves','reset-manual']],
+ for(const [name,open,panel,ids]of [['rebalancing',rebalancing,'manual-panel',['watch','play','frame','policy-arm','vehicle','add-move','move-from','move-to','move-count','apply-moves','reset-manual']],
   ['dispatch',dispatch,'manual',['watch','play','clock','arm','view','fixture','neutral','add','apply','reset','request','car']]]){
   const x=open('throw');try{
    assert.equal(x.by('watch').textContent,'Comparison unavailable');assert.deepEqual(ids.filter(id=>!x.by(id).disabled),[],name);

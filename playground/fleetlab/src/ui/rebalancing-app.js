@@ -39,6 +39,6 @@ export function startRebalancing({createWorker}={}){
  doc.addEventListener('visibilitychange',()=>{if(doc.hidden)stop();});window.addEventListener('pagehide',stop);motion.addEventListener('change',()=>{if(motion.matches)stop();});
  doc.querySelector('.r1-hero')?.appendChild(createMethodologyExplainer('deadhead',doc));
  const disposeConcepts=mountConceptLoops(doc);
- try{session=createR1Session({worker:createWorker(),onChange:s=>{current=s;if(s.manual&&s.manual.digest!==lastManual){lastManual=s.manual.digest;pending=[];pendingView();}render();}});}catch(error){by('study-progress').hidden=true;by('study-status').textContent='Study unavailable: '+error.message;by('watch').textContent='Comparison unavailable';for(const id of dependents)by(id).disabled=true;}
+ try{session=createR1Session({worker:createWorker(),onChange:s=>{current=s;if(s.manual&&s.manual.digest!==lastManual){lastManual=s.manual.digest;pending=[];pendingView();}render();}});}catch(error){by('study-progress').hidden=true;by('study-status').textContent='Study unavailable: '+error.message;by('watch').textContent='Comparison unavailable';for(const id of [...dependents,'policy-arm','vehicle'])by(id).disabled=true;}
  return {getSession:()=>session,dispose:()=>{stop();disposeConcepts();session?.dispose();}};
 }

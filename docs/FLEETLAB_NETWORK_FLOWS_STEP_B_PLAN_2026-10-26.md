@@ -280,7 +280,9 @@ A result that fails any of the three is not ready to go live.
 - the depot-page eyebrow is deferred (D1);
 - forced-colours styling for the focused `aria-disabled` Capacity primary is deferred.
 
-**Residuals found by the design verdict and not fixed by V1 to V3:**
+**Fixed after the re-judge (W1):** Capacity takes the house link rule the other lessons use (`a{color:inherit;text-underline-offset:4px}`), so its "Release source and record fingerprints" link no longer renders in the browser-default blue, and a sweep pins that no link on the hub or the five lessons keeps the browser default; Rebalancing disables its recorded-playback selects when the Worker cannot start, as Dispatch does; the Next-nav test measures the border box and pins zero block padding and margins; the `capacity-hero-browser.test.mjs` comment states the corrected C3 premise.
+
+**Residuals found by the design verdict and not fixed by V1 to V3 or W1:**
 - the Software Delivery concept art is titled "Same work. Different order." (the Delivery Order premise, set in the hosted `brand.mjs`), so lessons 02 and 03 show the same label in a row;
 - the Delivery Order figures badge sits over card 1 and reads as its heading; in Your order mode it repeats card 2's label;
 - Delivery Order "Unavailable" reasons can show raw verifier codes, such as "Returned record rejected: candidate-rejected:0:record-metrics", with no full stop;
@@ -299,6 +301,10 @@ A result that fails any of the three is not ready to go live.
 - the "cannot run" visuals differ by lesson: Rebalancing's button and status line, Dispatch's status band, alert and Retry, and Delivery Order's left-ruled badge;
 - the Chrome-default blue progress bar shows on Dispatch while busy, a broken-image icon and alt text sit over the Capacity tint if FL-A4 fails, the Delivery Order result heading takes the browser focus ring, and the Dispatch H1 orphans "takes" at 320;
 - Scope 2 template work: the Software Delivery, Delivery Order and Dispatch heroes leave the right half empty at 1280, the Software Delivery primary is teal, and focus-ring colours vary by lesson;
-- the comment in `capacity-hero-browser.test.mjs` still states the premise corrected in C3;
-- found in the V1 check: Capacity's in-lesson link "Release source and record fingerprints" renders in the browser-default blue;
+- after a failed Dispatch scenario switch, "Comparison unavailable." sits above the earlier comparison, which stays shown and usable; the page never names the scenario that failed or says the shown results are still the checked ones (it understates; saying so needs new words);
+- the Delivery Order equal-share result, success or failure, never reaches the `role=status` live region, so a failure is silent to screen readers;
+- "Restore my order" stays enabled after the first accepted check even when that order is already on screen (kept so focus never lands on a button that disables itself), and while disabled it carries no reason (a secondary control; §3.6 does not require one);
+- the Delivery Order disabled primary fill `#dce2d7` sits close to the enabled sage secondary, told apart mainly by label colour and cursor; at 390 the scenario buttons sit flush against the paragraph above;
+- the equal-share status reuses the existing "Rebuilding and independently checking the NF04 equal-share record…", including the internal code "NF04";
+- Rebalancing's "Recorded policy" and "Follow vehicle" selects stay enabled while the comparison loads (they are disabled when the Worker cannot start); Dispatch's hidden Later and Retry controls are not disabled then, and visitors cannot reach them;
 - not exercised by the verdict: the hosted `_headers` and CSP, and the physical-phone check (an owner action); its FCP and LCP figures are single loopback runs.

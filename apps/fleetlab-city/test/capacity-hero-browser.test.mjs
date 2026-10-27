@@ -8,7 +8,8 @@ const FLA4='/enhancement-media/FL-A4-capacity-hero.webp',D01='/diagrams/D-01-dep
 // The tint is whatever capacity/visual.css declares for the Capacity art box, read back as the computed rgb().
 const hex=readFileSync(new URL('../../../playground/fleetlab/capacity/visual.css',import.meta.url),'utf8').match(/^\.capacity-hero \.enhancement-visual\{background:#([0-9a-f]{6})\}$/m)?.[1];
 const tint=hex&&`rgb(${[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)).join(', ')})`;
-// 767 and 768 straddle the stacking breakpoint in capacity/visual.css; only the two-column layout puts FL-A4 above the fold.
+// 767 and 768 straddle the stacking breakpoint in capacity/visual.css. Priority follows width alone: at 767x1000 the stacked
+// FL-A4 still shows its top in the first viewport, yet stays lazy.
 const CELLS=[[390,844,false],[767,1000,false],[768,1000,true],[1280,900,true]];
 const chrome=chromePolicy();
 test('Capacity fetches no D-01 decoy, prioritises FL-A4 only in the two-column hero, and tints its box without shimmer',{skip:chrome.skip,timeout:120000},async t=>{
