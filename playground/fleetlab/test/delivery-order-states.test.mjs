@@ -247,3 +247,27 @@ test('Restore my order is disabled until a check is accepted, and a failed first
  p.selectCase('close');p.move('V4',-1);assert.equal(restoreButton(p).disabled,false);restoreButton(p).click();
  assert.equal(p.getState().pendingCase,'default');assert.equal(status(p),'Checked Different targets restored.');assert.equal(restoreButton(p).disabled,false);
 });
+// Step B W4. The screen-reader status never keeps a failure the page no longer shows. Every way back to a checked,
+// restored or resting state clears it, or replaces it with that state's own existing line: Restore says its status, a
+// successful compare says its result, and the other paths leave it empty. Failures and cancels are still announced (D5).
+const UNANNOUNCED=/Unable to accept|Unavailable/;
+test('after a failed check, every way back to a checked, restored or resting state stops announcing the failure',async t=>{
+ const settle=async()=>{for(let k=0;k<5;k++)await Promise.resolve();};
+ for(const [path,act,line,announced]of [
+  ['back on the accepted scenario',p=>p.selectCase('default'),CHECKED(NAMES.default),''],
+  ['an equal-share success',async p=>{button(p,'Compare equal sharing').click();await settle();assert.equal(p.getState().equalChecked,true);},'Checked Different targets retained. Compare to accept Close targets.',''],
+  ['Restore my order',p=>restoreButton(p).click(),'Checked Different targets restored.','Checked Different targets restored.'],
+  ['a successful compare in another scenario',async p=>{p.selectCase('impossible');assert.equal(await p.load(),true);},CHECKED(NAMES.impossible),'One impossible target checked. Your order: 1 of 4 on time.'],
+  ['a suspended page',p=>p.suspend(),'Checked 24 orders retained · playback paused.','']])
+ await t.test(path,async t=>{
+  const p=setup(t,{runStudy:async e=>{if(e.input_digest===ORDER_STUDY.cases.close.input_digest)throw Error('Computation timed out.');return reconstructOrderStudy(e);},runEqualShare:async e=>reconstructOrderEqualShare(e)});
+  assert.equal(await p.load(),true);p.selectCase('close');assert.equal(await p.load(),false);
+  assert.equal(said(p),'Unable to accept this comparison. Previous accepted outcomes are retained. Unavailable: Computation timed out.');
+  await act(p);
+  assert.equal(status(p),line);assert.equal(badge(p,'unavailable'),null);assert.doesNotMatch(said(p),UNANNOUNCED);assert.equal(said(p),announced);
+ });
+ await t.test('a scenario switch after a failed first check',async t=>{
+  const p=setup(t,{runStudy:failing('Computation timed out.')});assert.equal(await p.load(),false);assert.match(said(p),UNANNOUNCED);
+  p.selectCase('close');assert.equal(status(p),IDLE);assert.equal(badge(p,'unavailable'),null);assert.equal(said(p),'');
+ });
+});
