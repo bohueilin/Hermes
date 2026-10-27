@@ -228,6 +228,18 @@ test('the recorded-playback selects are disabled while the comparison loads or a
  }
 });
 
+// Step B W5. Before the lesson module runs, the page markup itself disables every recorded-playback control, the selects
+// included. A choice made before the module loads therefore cannot be reset silently at ready. Pinned in the source page
+// and in the page the build emits.
+test('the recorded-playback controls start disabled in the page markup, before the lesson module runs',()=>{
+ for(const [name,ids]of [['rebalancing',['watch','play','frame','policy-arm','vehicle']],['dispatch',['watch','play','clock','arm','view']]])
+  for(const [where,html]of [['source',read(`${pg}${name}/index.html`)],['built',String(site.get(`network-flows/${name}/index.html`))]]){
+   const restore=installFakeDom();
+   try{buildDocument(document,html);assert.deepEqual(ids.filter(id=>!document.getElementById(id)?.hasAttribute('disabled')),[],`${name} ${where} markup`);}
+   finally{restore();}
+  }
+});
+
 test('a Dispatch scenario switch that fails after a success says so, keeps its reason off the manual line, and shows the scenario on screen',()=>{
  const x=dispatch('ok'),checked='Both policies checked independently. Synthetic results.';try{
   x.reply();assert.equal(x.by('status').textContent,checked);
