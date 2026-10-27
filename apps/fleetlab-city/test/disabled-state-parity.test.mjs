@@ -216,6 +216,18 @@ test('when the Worker constructor throws, every control that needs the compariso
  }
 });
 
+// The recorded-playback selects follow the comparison as Dispatch's arm and view selects do: disabled while it loads and
+// when it fails after the Worker started, enabled once it is ready.
+test('the recorded-playback selects are disabled while the comparison loads or after it fails, and enabled once it is ready',()=>{
+ for(const [name,open,ids]of [['rebalancing',rebalancing,['play','frame','policy-arm','vehicle']],['dispatch',dispatch,['play','arm','view']]])for(const end of ['reply','fail']){
+  const x=open('ok');try{
+   assert.deepEqual(ids.filter(id=>!x.by(id).disabled),[],`${name} while loading`);
+   if(end==='reply'){x.reply();assert.deepEqual(ids.filter(id=>x.by(id).disabled),[],`${name} once ready`);}
+   else{x.fail('worker stopped');assert.equal(x.by('watch').textContent,'Comparison unavailable',name);assert.deepEqual(ids.filter(id=>!x.by(id).disabled),[],`${name} after a failed load`);}
+  }finally{x.close();}
+ }
+});
+
 test('a Dispatch scenario switch that fails after a success says so, keeps its reason off the manual line, and shows the scenario on screen',()=>{
  const x=dispatch('ok'),checked='Both policies checked independently. Synthetic results.';try{
   x.reply();assert.equal(x.by('status').textContent,checked);
