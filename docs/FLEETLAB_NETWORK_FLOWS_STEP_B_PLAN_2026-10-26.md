@@ -267,7 +267,7 @@ The figures are the truth table confirmed against source in Step A. Badges are s
 A result that fails any of the three is not ready to go live.
 
 **Residuals named in advance:**
-- the Rebalancing, Delivery Order and Delivery Order panel heroes keep the motion-respecting shimmer until the Scope 2 hero template;
+- the Rebalancing, Software Delivery and Delivery Order heroes (`.r1-hero`, `.delivery-hero`, `#order-root .hero`) keep the motion-respecting shimmer until the Scope 2 hero template;
 - D-05 shows only in chapter 0;
 - the depot experiment keeps its own disabled style, and its 320 px overflow;
 - the re-enable direction still runs the hosted 180 ms background fade (hosted `visitor.css`, Scope 2);
@@ -280,7 +280,7 @@ A result that fails any of the three is not ready to go live.
 - the depot-page eyebrow is deferred (D1);
 - forced-colours styling for the focused `aria-disabled` Capacity primary is deferred.
 
-**Fixed after the re-judge (W1):** Capacity takes the house link rule the other lessons use (`a{color:inherit;text-underline-offset:4px}`), so its "Release source and record fingerprints" link no longer renders in the browser-default blue, and a sweep pins that no link on the hub or the five lessons keeps the browser default; Rebalancing disables its recorded-playback selects when the Worker cannot start, as Dispatch does; the Next-nav test measures the border box and pins zero block padding and margins; the `capacity-hero-browser.test.mjs` comment states the corrected C3 premise.
+**Fixed after the re-judge (W1, W2):** Capacity takes the house link rule Software Delivery, Rebalancing and Dispatch use (`a{color:inherit;text-underline-offset:4px}`; Delivery Order colours its links `var(--teal)`), so its "Release source and record fingerprints" link no longer renders in the browser-default blue, and a sweep pins that no link on the hub or the five lessons keeps the browser default; Rebalancing's recorded-playback selects follow the comparison as Dispatch's arm and view selects do: disabled while it loads, when it fails and when the Worker cannot start (W2); the Next-nav test measures the border box and pins zero block padding and margins; the `capacity-hero-browser.test.mjs` comment states the corrected C3 premise.
 
 **Residuals found by the design verdict and not fixed by V1 to V3 or W1:**
 - the Software Delivery concept art is titled "Same work. Different order." (the Delivery Order premise, set in the hosted `brand.mjs`), so lessons 02 and 03 show the same label in a row;
@@ -288,7 +288,7 @@ A result that fails any of the three is not ready to go live.
 - Delivery Order "Unavailable" reasons can show raw verifier codes, such as "Returned record rejected: candidate-rejected:0:record-metrics", with no full stop;
 - "Show best of 24" clears a "Your edited order is pending" whose order was never compared, and "Watch worked example" drops a pending edit without saying so;
 - the Rebalancing lesson Play waits silently under the global pause: it stays "Play", with no status, until Resume;
-- the hosted "Pause visual motion" pill covers text: the last line of hub card 05 at 1280×900, and Capacity's help line and the Delivery Order scenario buttons at 390;
+- the hosted "Pause visual motion" pill covers text: the last line of hub card 05 at 1280×900 (introduced by C2, whose longer card 05 sentence wraps one more line; BEFORE it cleared the pill), and Capacity's help line and the Delivery Order scenario buttons at 390;
 - "LESSON n OF 5" stacks with a second eyebrow (a third on Rebalancing) and renders in four type styles across the five lessons;
 - the hub Compare lines float in flow instead of sitting at the card bottom (82 px ragged at 1280);
 - end-of-lesson navigation is not unified (Next sits after the lesson footer on Capacity, Software Delivery and Delivery Order; Delivery Order's footer links run together at 390), and lesson titles differ across surfaces (lesson 1 has four names);
@@ -306,5 +306,9 @@ A result that fails any of the three is not ready to go live.
 - "Restore my order" stays enabled after the first accepted check even when that order is already on screen (kept so focus never lands on a button that disables itself), and while disabled it carries no reason (a secondary control; §3.6 does not require one);
 - the Delivery Order disabled primary fill `#dce2d7` sits close to the enabled sage secondary, told apart mainly by label colour and cursor; at 390 the scenario buttons sit flush against the paragraph above;
 - the equal-share status reuses the existing "Rebuilding and independently checking the NF04 equal-share record…", including the internal code "NF04";
-- Rebalancing's "Recorded policy" and "Follow vehicle" selects stay enabled while the comparison loads (they are disabled when the Worker cannot start); Dispatch's hidden Later and Retry controls are not disabled then, and visitors cannot reach them;
+- Dispatch's hidden Later and Retry controls are not disabled when the Worker cannot start; visitors cannot reach them;
+- the Capacity placeholder reserves the 16:9 image box but not the caption: at 390 px the preview slot moves 108 px down when FL-A4 lands, at 1280 px the tinted box sits 42 px lower than the art that replaces it, and at 450 px and below its 18 px radius differs from the art's 12 px (Scope 2 hero template);
+- width-only priority leaves FL-A4 lazy at Low on tall narrow viewports where it is the LCP element (767×1000: top at 737 px), unchanged from BEFORE;
+- Delivery Order's focus ring is amber `#907025`, so a warm colour marks interactive state; it is grandfathered by the colour lock but breaks "amber = human demand only" (Scope 2);
+- the FL-A4 caption "Twelve visits, three shared lanes." sits directly above the preview heading "One depot. Two shared resources.", a three-versus-two count a first-time visitor has to reconcile, and at 1280 the Capacity eyebrow breaks inside "90-" / "MINUTE OBSERVATION" (both pre-existing; FL-A4 is now the LCP element from 768 px, so the caption is read first);
 - not exercised by the verdict: the hosted `_headers` and CSP, and the physical-phone check (an owner action); its FCP and LCP figures are single loopback runs.
