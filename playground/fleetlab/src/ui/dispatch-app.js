@@ -10,17 +10,18 @@ export function startDispatch({createWorker}){
  const labels={greedy:'Closest-first',joint:'Planned together: current requests'},pretty={idle:'Ready / idle',approach:'COD · approach',pickup:'COD · pickup service',trip:'COD · passenger trip'};
  const titles=['A car has an opportunity cost.','Which riders have fewer options?','Choose the closest car, one rider at a time.','Consider current assignments together.','Best now can leave a gap later.','Your assignment. Your next boundary.'];
  const copy=['A car committed to one trip cannot take another request. Compare two rules on the same workload.','Compare the dashed feasible-pickup edges. A short deadline can leave a rider with fewer options.','Consider requests by arrival, then ID. Choose the closest feasible ready car; car ID breaks ties.','Maximize current assignments, minimize approach distance, then break ties by ID. Future requests remain hidden.','Choose the later-riders workload. Closest-first leaves ev-002 available for arrivals at 30s and 120s; planning together commits it earlier.','Add pairs and accept one batch, or wait with an empty batch. The next state is before dispatch and expiry.'];
- let state=null,session=null,chapter=0,frame=0,arm='greedy',view='pre',selected='ev-001',pending=[],timer=null,manualDigest=null,studyKey=null;
+ let state=null,session=null,chapter=0,frame=0,arm='greedy',view='pre',selected='ev-001',pending=[],timer=null,manualDigest=null,studyKey=null,asked=true;
+ const manualIds=['add','apply','reset','request','car'],load=id=>{asked=true;session.load(id);};
  const stop=()=>{if(timer!==null)clearInterval(timer);timer=null;by('play').textContent=frame===40?'Replay snapshots':'Play snapshots';};
  const pendingView=()=>by('pending').replaceChildren(...pending.map((p,i)=>{const b=el('button',{'data-remove':i,'aria-label':`Remove pair ${i+1}`},'Remove');b.disabled=!!state?.busy;b.addEventListener('click',()=>{if(state.busy)return;pending.splice(i,1);pendingView();});return el('li',{},[`${p[0]} → ${p[1]} `,b]);}));
  const render=()=>{
-  if(!state)return;by('lesson').setAttribute('data-chapter',chapter);const ready=!!state.study,manual=chapter===5;
-  by('status').textContent=state.busy?'Calculating and checking this comparison. Previous results stay visible until it is ready.':ready?'Both policies checked independently. Synthetic results.':'Comparison unavailable.';
+  if(!state)return;by('lesson').setAttribute('data-chapter',chapter);const ready=!!state.study,manual=chapter===5,failed=state.error&&asked;
+  by('status').textContent=state.busy?`Calculating and checking this comparison.${ready?' Previous results stay visible until it is ready.':''}`:ready&&!failed?'Both policies checked independently. Synthetic results.':'Comparison unavailable.';
   by('study-progress').hidden=!state.busy;by('status').setAttribute('aria-busy',String(state.busy));
   by('error').hidden=!state.error;by('error').textContent=state.error||'';by('retry').hidden=!state.error;
-  for(const id of ['watch','arm','view','clock','play'])by(id).disabled=!ready||state.busy;
+  for(const id of ['watch','arm','view','clock','play'])by(id).disabled=!ready||state.busy;by('watch').textContent=state.busy?'Checking the dispatch comparison…':ready?'Follow the first assignment ↓':'Comparison unavailable';
   by('fixture').disabled=state.busy;by('later').disabled=state.busy;by('neutral').disabled=state.busy;by('later').hidden=chapter!==4;by('manual').hidden=!manual;by('recorded-controls').hidden=manual;
-  for(const id of ['add','apply','reset','request','car'])by(id).disabled=!ready||state.busy||(id!=='reset'&&state.manual?.end>=1200);
+  for(const id of manualIds)by(id).disabled=!ready||state.busy||(id!=='reset'&&state.manual?.end>=1200);by('apply').textContent=state.manual?.end>=1200?'Observation complete':'Apply & advance 30 s';
   pendingView();if(!ready)return;
   by('fixture').value=state.fixture;by('arm').value=arm;by('view').value=view;by('clock').value=frame;by('clock').setAttribute('aria-valuetext',`${frame*30} seconds`);
   by('fixture-context').textContent=state.fixture==='neutral'?'Accepted: 4 co-located cars and riders.':state.fixture==='default'?'Accepted: 4 cars and 8 requests, in two arrival waves.':'Accepted: 2 cars and 4 requests. Later arrivals are hidden from both policies until they occur.';
@@ -31,7 +32,7 @@ export function startDispatch({createWorker}){
   const r=manual?state.manual:state.study.find(r=>r.policy===arm),s=manual?r.final:(view==='pre'?r.preDecision[frame]:r.ledger[frame])??r.final;
   by('time-label').textContent=`${s.t} s / ${r.input.horizon} s`;by('phase-label').textContent=({PRE_DISPATCH:'Before dispatch and expiry',POST_BOUNDARY:'After dispatch and expiry',OBSERVATION_END:'Observation ended; no new dispatch'})[s.phase]+' · '+s.phase;
   by('balance').replaceChildren(`${s.vehicles.length} vehicles accounted for: `,...[['ready',s.vehicles.filter(v=>v.mode==='idle').length,'Ready / idle'],['cod',s.vehicles.filter(v=>v.mode!=='idle').length,'COD'],['vor',0,'VOR']].flatMap(([id,n,label])=>[el('a',{href:'#glossary-'+id},label),`: ${n}; `]));
-  const m=r.metrics;by('manual-result').textContent=`Accepted through ${r.end} s. ${m.served}/${m.admitted} pickups, ${m.completed} completed, ${m.expired} expired; ${m.emptyMeters/1000} empty km. Phase: ${r.phase}. ${state.error??''}`;
+  const m=r.metrics;by('manual-result').textContent=`Accepted through ${r.end} s. ${m.served}/${m.admitted} pickups, ${m.completed} completed, ${m.expired} expired; ${m.emptyMeters/1000} empty km. Phase: ${r.phase}. ${failed?'':state.error??''}`;
   const grid=by('grid'),nodes=[],xy=p=>p.map(n=>60+n/10);
   for(let n=0;n<=4;n++){const p=60+n*100;nodes.push(svg('line',{x1:p,y1:60,x2:p,y2:460,class:'road'}),svg('line',{x1:60,y1:p,x2:460,y2:p,class:'road'}),svg('text',{x:p,y:493,'text-anchor':'middle'},`${n} km`),svg('text',{x:32,y:p+4,'text-anchor':'middle'},n));}
   for(const e of s.edges){const v=s.vehicles.find(v=>v.id===e.vehicle),rq=s.requests.find(r=>r.id===e.request),a=xy(v.at),b=xy(rq.origin.map(n=>n*1000));nodes.push(svg('path',{d:`M${a} H${b[0]} V${b[1]}`,class:'edge'}));}
@@ -52,12 +53,12 @@ export function startDispatch({createWorker}){
  for(const id of ['arm','view'])by(id).addEventListener('change',()=>{stop();arm=by('arm').value;view=by('view').value;render();});
  by('clock').addEventListener('input',()=>{frame=+by('clock').value;stop();render();});
  by('play').addEventListener('click',()=>{if(timer!==null){stop();return;}if(frame===40)frame=0;by('play').textContent='Pause snapshots';timer=setInterval(()=>{frame++;render();if(frame===40)stop();},900);});
- by('neutral').addEventListener('click',()=>{stop();session.load('neutral');});
- by('later').addEventListener('click',()=>{stop();session.load('counterexample');});
- by('fixture').addEventListener('change',()=>{stop();session.load(by('fixture').value);});by('retry').addEventListener('click',()=>session.load(state.fixture??'default'));
+ by('neutral').addEventListener('click',()=>{stop();load('neutral');});
+ by('later').addEventListener('click',()=>{stop();load('counterexample');});
+ by('fixture').addEventListener('change',()=>{stop();load(by('fixture').value);});by('retry').addEventListener('click',()=>load(state.fixture??'default'));
  doc.querySelectorAll('button[data-chapter]').forEach(b=>b.addEventListener('click',()=>choose(+b.dataset.chapter)));by('previous').addEventListener('click',()=>choose(chapter-1));by('next').addEventListener('click',()=>choose(chapter+1));by('watch').addEventListener('click',()=>{frame=0;view='pre';choose(1);});
- by('add').addEventListener('click',()=>{if(state.busy||pending.length>=4)return;pending.push([by('request').value,by('car').value]);pendingView();});by('apply').addEventListener('click',()=>session.advance(pending));by('reset').addEventListener('click',()=>{pending=[];pendingView();session.reset();});
+ by('add').addEventListener('click',()=>{if(state.busy||pending.length>=4)return;pending.push([by('request').value,by('car').value]);pendingView();});by('apply').addEventListener('click',()=>{asked=false;session.advance(pending);});by('reset').addEventListener('click',()=>{pending=[];pendingView();asked=false;session.reset();});
  doc.addEventListener('visibilitychange',()=>{if(doc.hidden)stop();});window.addEventListener('pagehide',stop);motion.addEventListener('change',()=>{if(motion.matches)stop();});
- try{session=createDispatchSession({worker:createWorker(),onChange:s=>{state=s;if(s.study&&s.fixture!==studyKey){studyKey=s.fixture;frame=0;selected='ev-001';pending=[];}if(s.manual&&s.manual.digest!==manualDigest){manualDigest=s.manual.digest;pending=[];}render();}});}catch(error){by('study-progress').hidden=true;by('status').textContent='Comparison unavailable: '+error.message;}
+ try{session=createDispatchSession({worker:createWorker(),onChange:s=>{state=s;if(s.study&&s.fixture!==studyKey){studyKey=s.fixture;frame=0;selected='ev-001';pending=[];}if(s.manual&&s.manual.digest!==manualDigest){manualDigest=s.manual.digest;pending=[];}render();}});}catch(error){by('study-progress').hidden=true;by('status').textContent='Comparison unavailable: '+error.message;by('watch').textContent='Comparison unavailable';for(const id of [...manualIds,'arm','view','fixture','neutral'])by(id).disabled=true;}
  by('chapter-copy').textContent=copy[0];stop();return {getSession:()=>session,dispose:()=>{stop();session?.dispose();}};
 }

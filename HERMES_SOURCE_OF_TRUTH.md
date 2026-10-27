@@ -1,5 +1,168 @@
 # Hermes — Source of Truth
 
+## October 26, 2026 — Network-flows redesign: Step A merged; Step B open as PR #11, not merged and not live
+
+**The live release is unchanged: the October 25 section below still holds the live identity (`a1b79cd`, production `72e45e9f`). Step B is not on https://fleetlab.pages.dev.**
+
+### Handoff: where we are, for Codex (builder) and Muse (design review)
+
+Codex builds. Muse reviews design and words, and drafts proposals. The owner decides, gives every go-ahead and publishes. Read this block first, then the Step B record below it, then [PR #11](https://github.com/bohueilin/Hermes/pull/11), whose description holds the full byte tables, the per-commit bytes, the verdict table and the owner confirmations. Where the description and the Step B record disagree, the record wins: the description still gives the depot overflow as 351 AFTER, but the `1ede8e4` evidence reads 355. Editing the description needs the owner's instruction.
+
+**Where this file lives.** Until PR #11 merges, this section, the Step B plan and all Step B code exist only on `codex/fleetlab-network-flows-step-b` (worktree `…/Hermes-stepb`). `main`'s copy of this file still opens with the October 25 section. Any change before the merge goes on that branch. From action 3 on, work from the merged commit on `github/main` after `git fetch github`.
+
+**Words used here.** Scope 1 is this redesign's first scope: Step A (tests and baselines) and Step B (the priority fixes). Scope 2 and Scope 3 are later scopes, listed below.
+
+**Where things stand (checked 2026-10-27 05:12 UTC, the evening of October 26 Pacific):**
+
+| What | State | How it was checked |
+|---|---|---|
+| Live site | source `a1b79cd`; none of Step B. Production deployment `72e45e9f` per the October 25 record (the deployment ID was not re-checked) | `https://fleetlab.pages.dev/publication.json` reads `source_commit` `a1b79cd137aa802c2bff1459843f550a5d70da83` (it carries no deployment ID); the live hub has none of Step B's "Compare:" lines |
+| `main` | `f043995` (Step A merge); no branch protection or rulesets | `git ls-remote github refs/heads/main`; `gh api repos/bohueilin/Hermes/branches/main` (`protected: false`); `gh api repos/bohueilin/Hermes/rulesets` (none) |
+| Step B | PR #11, open, from `codex/fleetlab-network-flows-step-b` into `main`; mergeable; not merged | `gh pr view 11` |
+| CI on PR #11 | green on `f7da350`, the head when checked: run `40452254803`, both jobs (Python 3.11 and FleetLab Node 22.23.4). The commit that adds this handoff is a later docs-only commit and starts a new run; confirm both jobs are green on the current head before action 2 | `gh run view 40452254803`; `gh pr checks 11 --repo bohueilin/Hermes` |
+| Branch head | when checked, `f7da350` (this file's first Step B record, docs only); this handoff is the next docs-only commit on top of it. Both sit on `1ede8e4` (W8, plan only), where every local gate, the stage check and the browser evidence ran. The last commit that changes site files is `0c4633b` (W5); W6 and W7 change only tests | `git log`, `git show --stat` |
+| Merge | waits for the owner's instruction; use a merge commit | — |
+| Deploy | waits for the owner's go-ahead naming the merged commit; only the owner publishes | — |
+
+**What has been done:**
+1. **Reconcile, PR #9:** merged as `b15055c`. `main` holds the live line again, and CI runs real tests on `macos-26`.
+2. **Step A, PR #10:** merged as `f043995`. Tests, tooling and baselines only, with no visitor-visible change. It recorded the BEFORE baselines, the bounds, the stage check, the browser-evidence runner and the viewport check. Spec: [docs/FLEETLAB_NETWORK_FLOWS_STEP_A_SPEC_2026-10-25.md](docs/FLEETLAB_NETWORK_FLOWS_STEP_A_SPEC_2026-10-25.md).
+3. **Step B, PR #11:** each change stays inside its Step A bound.
+   - It has the five priority fixes (P0-1 to P0-5).
+   - It has two riders from earlier owner rulings: #5, Explore ordered 01 to 05 with card 05 reworded; and #13, the global pause reaching the Rebalancing lesson video.
+   - It applies the owner decisions D2 to D5 of 2026-10-26. D1 (the depot-page eyebrow) and D6 (defect (c)) are deferred to Scope 2 and are not built.
+   - Plan: [docs/FLEETLAB_NETWORK_FLOWS_STEP_B_PLAN_2026-10-26.md](docs/FLEETLAB_NETWORK_FLOWS_STEP_B_PLAN_2026-10-26.md); its §5 lists every residual. The record below gives bytes, gates, evidence and the design verdict.
+
+**Next actions, in order. Do not skip or reorder; merging alone puts nothing on the live site.**
+
+| # | Action | Who |
+|---|---|---|
+| 1 | Answer the eight owner confirmations in PR #11 ("Owner confirmations requested"), or accept them as built. Two are real choices: FL-A4 priority below 768 px (width only, as now, or by position in Scope 2) and the hero shimmer on three heroes (keep it as a residual, or remove it now). | Owner |
+| 2 | Merge PR #11 with a merge commit, never squash or rebase, only on the owner's instruction. CI must be green on the PR head before the merge, and on the merge commit on `main` after it. | Codex, on the owner's word |
+| 3 | At the merged commit, on a clean detached worktree, following Step A spec §4, §9 and §10:<br>• confirm the merge commit's parents are `f043995` and the PR #11 head, that its tree equals the PR #11 head tree, and that `github/main` still points at it;<br>• build the stage with `apps/fleetlab-city/deploy/build-release.py --commit <merged SHA>`, the four local-only inputs and `--out <wt>/dist/stepb-<sha7>`;<br>• run `node apps/fleetlab-city/test/stage-check.mjs --stage <wt>/dist/stepb-<sha7> --mode after`;<br>• run `node apps/fleetlab-city/test/network-flows-evidence.mjs --stage <wt>/dist/stepb-<sha7>/stage --out <wt>/build/fleetlab-city/validation/network-flows-<sha7>` (it refuses to overwrite an existing `evidence.json`);<br>• run `node --test apps/fleetlab-city/test/viewport.test.mjs` with `FLEETLAB_REQUIRE_CHROME=1`, so it cannot skip;<br>• rerun the local gates of the Step B record;<br>• re-inspect at 1280, 768, 390 and 320 px, with the network panel on Capacity and Dispatch. | Codex |
+| 4 | Re-judge the merged candidate against BEFORE on the three design axes defined in Step B plan §5: craft, comprehension and honesty in words. A fail on any axis means it is not ready to go live.<br>• The verdict below was judged at `a11a797`. W4 to W7 came after it and were verified, but not re-judged.<br>• The candidate is a local stage with no hosted URL. Codex hands the judge the action-3 evidence folder (`network-flows-<sha7>`: `evidence.json` and first-viewport screenshots of the hub, the five lessons and the depot page at four widths), the BEFORE set `network-flows-b15055c`, PR #11 and plan §5.<br>• Screenshots show no interactive states (loading, disabled, failure, pause). Judge those in a browser against the stage that Codex serves on `127.0.0.1`.<br>• A judge who cannot do that names what was not seen. The verdict goes to the owner. | Muse, or an independent judge |
+| 5 | Physical-phone check on that candidate:<br>• the Capacity hero (tint, then art);<br>• Pause visual motion on Rebalancing;<br>• the Dispatch text-only hero;<br>• a Delivery Order edit and Compare;<br>• the depot page at phone width.<br><br>The candidate is not hosted. The owner chooses how it reaches the phone. The runbook's owner-run preview upload through the locked wrapper (`--branch codex-city-explorer`, never the production branch) is one route. Agents publish nothing. | Owner |
+| 6 | Build the deploy-ready proof package:<br>• the merged SHA and tree;<br>• the stage path and the four build-input digests;<br>• the integration-manifest and teaching-receipt SHA-256;<br>• the stage check;<br>• the evidence JSON and its SHA-256;<br>• the offline pin;<br>• the rollback target, Pages deployment `72e45e9f` (source `a1b79cd`). | Codex |
+| 7 | The owner gives the live go-ahead naming the exact merged commit. Then follow the release procedure in [docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md), steps 6 to 9, in this order:<br>• the owner uploads that stage to preview through the locked wrapper `apps/fleetlab-city/deploy/wrangler.mjs` (`--branch codex-city-explorer`);<br>• Codex runs the full byte readback (`apps/fleetlab-city/tools/readback.py`) and the header check (`apps/fleetlab-city/tools/check-headers.py`) on the preview;<br>• only if both pass, the owner uploads the same stage to production (`--branch feat/fleetlab-playground`, Cloudflare's production alias);<br>• Codex repeats both checks on production before anyone calls it live.<br><br>Only after a successful production readback does Codex record the release, per [docs/releases/README.md](docs/releases/README.md): the receipt from `apps/fleetlab-city/deploy/record-release.mjs`, the public record `docs/releases/fleetlab-current.json`, and this file. | Owner (go-ahead and both uploads); Codex (readback and record) |
+
+**If something changes or fails:**
+- **The owner picks "remove now" for the shimmer at action 1.** That is a new product commit on the PR #11 branch.
+  - Codex commits it locally, staging named paths only.
+  - Codex reruns the Step B gates, the stage check and the browser evidence at that commit, then reports the new SHA and results to the owner.
+  - Codex pushes it, and updates PR #11's tables and this file's Step B record, only on the owner's instruction naming that commit.
+  - Action 2 then needs green CI on the new head.
+- **CI on the merge commit fails, or any of actions 3 to 6 fails.** Stop. Nothing deploys, and the live site stays at `a1b79cd`. Report what failed, and at which commit, to the owner.
+- **The preview readback or header check fails at action 7.** Stop. Production is not uploaded, and the live site stays at `a1b79cd`.
+- **The production readback or header check fails at action 7.** The candidate is already public. Do not call it released, and record nothing. Report to the owner.
+  - The owner decides whether to roll back to Pages deployment `72e45e9f` (source `a1b79cd`), per the runbook's "Rollback and retained content" section, and carries out any rollback.
+  - Codex then reruns the readback and the header check against the restored site.
+- **Fixing it.**
+  - Codex builds every fix. Muse may propose a design or copy fix first. The owner approves a fix before it is built.
+  - The fix goes on a new branch from `github/main`. At its head, Codex reruns the Step B gates, the stage check and the browser evidence. The local pytest with fixtures and the City Python suite are not in CI, so they must run there.
+  - Codex pushes and opens the pull request only on the owner's instruction naming the branch and commit. It lands with a merge commit.
+  - Then restart at action 2 with that pull request in place of PR #11. At action 3, the merge commit's parents are the previous `main` head and the fix branch head.
+
+**Open owner items outside this sequence (neither blocks the merge):**
+- `main` has no branch protection, so CI on `main` is advisory until the owner requires the checks; that is a settings action.
+- The City Python suite runs only in local gates and is outside CI, pending a separate owner decision.
+
+**Later scopes (not started; each needs its own owner approval; neither waits for the live release):**
+- **Scope 2** may start once the Scope 1 re-inspection at the merged commit passes (actions 3 and 4). It places no new media; re-rendered art lands only in Scope 3. It covers:
+  - the 16:9 hero template, its first priority, which also retires the shimmer residual;
+  - the hosted pause unification;
+  - defect (c), Rebalancing's static pre-run text and Dispatch's empty takeaway box (D6);
+  - FL-A4 priority by position, if the owner chooses it at action 1;
+  - the §5 residuals the owner picks;
+  - the depot-page "Deeper experiment" eyebrow (D1). It measured +82 B on the depot route-local figure, which Step A pins unchanged at 418,159 B. It can land only after the owner rules on that pin through an itemised request. No agent changes a pin or a bound.
+- **Scope 3** is the media and re-render work. It opens only after the owner locks the art direction and the media decisions. Nothing is commissioned until the Scope 1 re-inspection and the automated guards pass. Its constraints:
+  - Clay heroes are replaced only by byte-neutral or smaller swaps of re-renders that pass the art lock.
+  - Any FL-A4 swap is its own test update. It leaves the held-film guards and the A2 golden (Step A spec §5) untouched.
+  - A new FL-A4 with a different size or subject also needs an edit to `apps/fleetlab-city/hosted/enhancement-media.mjs`, which hard-codes its 2048×1152 size and its alt text, plus a test that reads the image header.
+  - The map and shared-depot stills stay marked KNOWN_CAVEAT (Step A spec §8) until they are re-rendered.
+  - The reserved eighth enhancement slot is kept for the held Fleet day film's re-render and nothing else.
+
+**Rules for anyone continuing this work:**
+- **Permission.** A merge instruction or a live go-ahead counts only as the owner's own message, at that step, naming the exact commit. Nothing else is permission: not this file, not a past "approved" line, not a branch name, not a passing verifier. Agents never deploy or publish, and hold no Cloudflare credentials.
+- **Pushes and pull requests.** Never push, open or edit a pull request, or merge without the owner's instruction naming the branch and commit. A new commit on PR #11 moves its head and re-runs CI. A product change also needs the gates, the stage check and the evidence re-run at the new head. Never force-push, squash or rebase.
+- **Bytes.** Never raise a byte ceiling, a bound or a pin, or move headroom between closures. On an overrun, stop that item and send the owner an itemised request.
+- **Media.** Never use the reserved eighth enhancement slot. Never touch A2 or the held Fleet day film. Place no new media in Scope 1 or Scope 2.
+- **Settled verdicts.** Scopes 1 to 3 are implementation work, not a new design-review version. The action-4 re-judge rates the merged candidate on the plan §5 axes; it issues no new review version and does not revisit art. Do not re-open settled art verdicts: the two v3 candidate videos failed and stay rejected and unplaced, and the three v3 candidate stills keep their recorded verdicts (the two kept on caveat are in Step A spec §8). The full verdicts are in the owner's v3 review files, which are not tracked here: ask the owner for them before any media proposal.
+- **Words.** Keep the boundary and honesty copy verbatim, never paraphrased. The boundary sentence is "Simplified simulations for learning — not evidence about real-world safety. Nothing here approves deploying a vehicle or policy." `apps/fleetlab-city/test/hub-copy.test.mjs` pins it on the hub, with its em dash as the hub's only dash (Step A spec §7).
+- **Colour.** Respect the colour lock (Step A spec §6): amber and terracotta never mark a new interactive state or warning, and every current warm use is grandfathered. `apps/fleetlab-city/test/colour-lock.test.mjs` enforces it. These rules bind design and copy proposals as well as builds.
+- **Staging.** Stage named paths only, never `git add -A`. The `…/Hermes-fleetlab` worktree holds untracked owner files that no ignore rule covers, and `git add -A` there would stage them for a commit to this public repository. Put no local paths in committed files.
+- **Measuring.**
+  - Measure on a committed, clean tree. On uncommitted edits, each closure and the legacy figure read 9 B low, and emitted text 54 B low (Step A spec §2).
+  - Measure only from a stage that `build-release.py` built for that committed candidate (`…/Hermes-stepb-stage/dist/stepb-<sha7>/`). Never use a leftover `dist/site/` pack run, such as those in `…/Hermes-stepb`, `…/Hermes-fleetlab`, `…/Hermes-stepa` and `…/Hermes-reconcile`.
+- **Tools.**
+  - Put the official Node 22.23.4 first on `PATH`: `build/fleetlab-city/toolchain/node-v22.23.4-darwin-arm64/bin` in `…/Hermes-fleetlab`.
+  - Run `build-release.py` and the City Python suite with the City venv's CPython 3.11.15, `build/fleetlab-city/venv` in `…/Hermes-fleetlab`. It has SciPy and pyproj, but not pytest, ruff or Hermes.
+  - Run ruff, pytest and `hermes doctor` in the `hermes-dev` conda env, also CPython 3.11.15. It lacks SciPy and pyproj, so it cannot run the City Python suite. Set `PYTHONPATH=src` from the worktree under test, because that env's editable install otherwise imports `hermes` from `…/Hermes-fleetlab`.
+  - The toolchain, the City venv and the four local-only stage inputs live under that worktree's ignored `build/fleetlab-city/`. Preserve them.
+- **Honesty.** Record only checks that were actually run, with their output, and name anything not checked.
+
+### Step B record
+
+- **What it changes for visitors once released:**
+  - a text-only Dispatch hero;
+  - Explore ordered 01 to 05, with card 05 reworded;
+  - a tinted Capacity hero with no D-01 decoy, with FL-A4 eager at high priority from 768 px;
+  - the global pause reaching the Rebalancing lesson video;
+  - one lesson sequence ("LESSON n OF 5", Next and Previous, the hub Compare lines);
+  - one disabled and loading language, with reasons;
+  - honest Delivery Order states.
+
+  Unchanged:
+  - no media was added;
+  - A2 and the held Fleet day film are untouched;
+  - the reserved eighth enhancement slot is unused;
+  - no ceiling was raised and no headroom moved between closures.
+- **Step A merge details:** PR #10, merge commit `f043995` (parents `b15055c` and `86ce57a`). The base's measured values are the BEFORE baselines: non-City 16,187,445 B and compressed source offer 1,147,688 B. Each is 1 B above `a1b79cd`, because gzip compresses the embedded commit and tree hashes differently. CI run `40283638357` on `86ce57a` passed both jobs.
+- **Step B bytes:** stage check in `after` mode at `1ede8e4`, 20 of 20 checks passing, against the BEFORE stage at `b15055c`:
+
+  | Measure | BEFORE | AFTER | Change | Bound |
+  |---|---|---|---|---|
+  | Capacity (nf03) closure | 537,633 | 537,802 | +169 | 541,729 |
+  | Software Delivery (nf04) closure | 221,334 | 220,926 | −408 | 225,430 |
+  | Delivery Order closure | 225,063 | 226,062 | +999 | 229,159 |
+  | Rebalancing (R1) closure | 196,347 | 196,848 | +501 | 200,443 |
+  | Dispatch (R3) closure | 152,391 | 152,851 | +460 | 156,487 |
+  | Depot closure; route-local | 513,471; 418,159 | 512,868; 418,159 | −603; 0 | 515,519; pinned |
+  | Emitted text | 3,569,285 | 3,573,911 | +4,626 | 3,577,477 |
+  | Integration text; source | 129,056; 389,082 | 128,946; 388,890 | −110; −192 | 133,152; 397,274 |
+  | Source offer, extracted; compressed | 4,079,740; 1,147,688 | 4,083,602; 1,149,115 | +3,862; +1,427 | 4,104,316; 1,155,879 |
+  | Package metadata | 44,361 | 44,361 | 0 | 45,385 |
+  | Non-City | 16,187,445 | 16,193,498 | +6,053 | 16,203,828 |
+  | Offline edition | 2,565,111 B, `313fa3f1…` | identical | 0 | exact |
+
+  Unit-measured, by the Node suites:
+  - brand byte-sum 73,286 B, against a bound of 75,937;
+  - legacy text 2,605,859 B (+772), against 2,607,135;
+  - raw source and tools 3,557,298 B (+4,029), against 3,569,653.
+
+  The least headroom left is package metadata at 1,024 B and legacy text at 1,276 B. Among the closures it is the depot closure at 2,651 B.
+- **Step B local gates** at `1ede8e4`, run with official Node 22.23.4 and CPython 3.11.15:
+
+  | Gate | Result |
+  |---|---|
+  | `ruff check .` | clean |
+  | `pytest -q`, with fixtures, R6 against `bca4ccd` | 1,675 passed, 55 skipped (MetaDrive) |
+  | `hermes doctor` | 18 PASS, 1 NOT_AVAILABLE |
+  | City Python suite | 375 OK |
+  | Playground Node suite | 2,953 tests: 2,944 pass, 0 fail, 8 skipped (performance-gated), 1 todo |
+  | City Node suite | 307/307 |
+  | Traffic Node suite | 14/14 |
+
+  The pull request records its CI result.
+- **Step B browser evidence:** local headless Chrome 156 against the built stage at `1ede8e4`, without its `_headers`.
+  - **Capacity at 1280:** FL-A4 is eager, with fetchpriority high and initial priority High, and is the LCP element.
+  - **Capacity at 390:** FL-A4 is lazy at Low.
+  - **D-01 decoy:** no longer requested at either width.
+  - **Pause:** "Pause visual motion" now pauses r1-nf05 as well as FL-V2.
+  - **Overflow:** only the depot page overflows, at 320 px: scrollWidth 355 at `1ede8e4`, the recorded exception. `viewport.test.mjs` allows this cell up to 363 (the recorded 355 plus an 8 px engine tolerance), and also fails if the overflow disappears or comes from anything beyond the "Depot content cache (diagnostic field)" select's field, `#share` and the motion control. The earlier Step B runs at `f822bfc`, `145f18d` and `a11a797` read 351, and BEFORE at `b15055c` read 355; the Step A spec records 351 to 355 as run-to-run variance.
+  - **Console:** 0 console errors on every page.
+  - **Fleet day:** A2 is present, with no V1.
+- **Design verdict:** six independent agents judged the tree at `a11a797` fresh, in a real browser. Craft (desktop and phone lenses), comprehension and honesty in words are each PASS_WITH_RESIDUALS; re-inspection PASS; no blocker. The first verdict had rated craft FAIL on the Capacity end-of-lesson link; that and every later finding is fixed. W4 to W7 (the Delivery Order announcer and badge, static `disabled` on four selects, the tighter link sweep) came after the verdict: an independent verifier checked them, but they were not re-judged. The residuals are §5 of the plan.
+
 ## October 25, 2026 — FleetLab release `a1b79cd` live; `main` reconciled with the live line
 
 **Current release identity. The October 23 section below is superseded; the September entries are historical.**
@@ -48,8 +211,8 @@ create a new status, handoff, alignment or overview document; edit this one.
 
 | | |
 |---|---|
-| **Checkouts** | **2026-10-25:** once the reconcile pull request merges, `github/main` again holds the whole live FleetLab line (`a1b79cd` and its records); branch new work from it after a fetch. The reconcile worktree is `…/Hermes-reconcile` on `codex/fleetlab-main-reconcile`. **2026-10-23:** `github/main` (`b38f415`) is the trunk and contains the whole FleetLab release line; branch new work from it after a fetch. The main checkout itself is on `codex/fleetlab-integration`, and the worktree notes that follow are 2026-09-28 observations. · main checkout `…/Hermes` on `main`, **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale, see §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `codex/fleetlab-welcome-design`, release source `e90764a` plus its records follow-up (audit-response update live as `f4018c2a`; pushed to `github/feat/fleetlab-playground`) · ADAS worktree `…/Hermes-adas` on `feat/phase8-lead-decelerates` at `579ca12` as read on 2026-09-27 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, previously observed clean at `6b376fb`; the remote advanced again in this release, and this worktree was not moved; fast-forward it before anyone works there) · Depot extension worktree `…/Hermes-depot-m1` on `codex/fleetlab-m2-m3` · **Scale lab worktree `…/Hermes-scale` on `claude/fleetlab-scale-lab`** (cut from the T1 head `c79eccf`; Scale lab source `c08f60d`, deployed 2026-09-27 as `19e17ac6`; `1aeaace`, the Fleet day heading fix, deployed 2026-09-28 as `77922688`; then the documents commit `44569f8`, the privacy commit `0bc2f25` and the records commit of 2026-09-28, which change no site input; branch head pushed on 2026-09-28 as `github/feat/fleetlab-playground`) |
-| **Remote** | **2026-10-25:** `codex/fleetlab-depot-lab` was pushed on 2026-10-24 at `f1d130e` and reaches `main` through the reconcile pull request; no force push. **2026-10-23:** FleetLab work now lands on `main` by pull request (PR #7). The git branch `feat/fleetlab-playground` is no longer the website lineage; the site is published by direct upload (top section). Earlier record: `github`, the public GitHub repository of this project; website lineage tracks `github/feat/fleetlab-playground`. On the owner’s request of 2026-09-28, the audit-response wave fast-forwarded that branch from `756c269` to release source `e90764a`, including the two prior welcome commits; the records-only follow-up is on the same branch. No force push, PR or main merge. A push does not deploy; the separate verified Pages publication is recorded in §7.5. Other checkouts retain their previously observed state. |
+| **Checkouts** | **2026-10-26:** Step B is in `…/Hermes-stepb` on `codex/fleetlab-network-flows-step-b` (PR #11); its ignored `build/fleetlab-city/validation/network-flows-<sha7>/` holds the AFTER browser evidence. `…/Hermes-stepb-stage` is a detached worktree moved to each candidate head; its ignored `dist/stepb-<sha7>/` holds the built stages. `…/Hermes-stepa` (merged as PR #10) and `…/Hermes-stepa-base` (detached at `b15055c`) need no more commits, but keep both: `…/Hermes-stepa-base`'s ignored `dist/stepa-b15055c/` is the BEFORE stage, and `…/Hermes-stepa`'s ignored `build/fleetlab-city/validation/network-flows-b15055c/` is the BEFORE browser evidence. `…/Hermes-reconcile` is merged (PR #9); its ignored `artifacts/` supplied the pytest fixtures for the local gates. `…/Hermes-fleetlab` is now on `codex/fleetlab-depot-lab` at `f1d130e`; keep it, because its ignored `build/fleetlab-city/` holds the four stage inputs, the official Node 22.23.4 toolchain and the City venv. `…/Hermes-depot-lab-review-a1b79cd` (detached at `a1b79cd`) holds, in its ignored `dist/fleetlab-depot-lab-20261024-a1b79cd/`, the retained stage of the live release; leave that worktree and folder untouched, because it is the checked package behind the rollback target `72e45e9f`. **2026-10-25:** once the reconcile pull request merges, `github/main` again holds the whole live FleetLab line (`a1b79cd` and its records); branch new work from it after a fetch. The reconcile worktree is `…/Hermes-reconcile` on `codex/fleetlab-main-reconcile`. **2026-10-23:** `github/main` (`b38f415`) is the trunk and contains the whole FleetLab release line; branch new work from it after a fetch. The main checkout itself is on `codex/fleetlab-integration`, and the worktree notes that follow are 2026-09-28 observations. · main checkout `…/Hermes` on `main`, **now the integration trunk**: ADAS trunk, FleetLab, and metrics-V3 all merged (but its untracked `artifacts/` is stale, see §14; run ADAS validation in the worktree) · FleetLab worktree `…/Hermes-fleetlab` on `codex/fleetlab-welcome-design`, release source `e90764a` plus its records follow-up (audit-response update live as `f4018c2a`; pushed to `github/feat/fleetlab-playground`) · ADAS worktree `…/Hermes-adas` on `feat/phase8-lead-decelerates` at `579ca12` as read on 2026-09-27 (canonical `artifacts/` fleet lives there) · Phase 7 codex worktree (read-only) · FleetLab Playground worktree `…/Hermes-playground` on `feat/fleetlab-playground` (website lineage, previously observed clean at `6b376fb`; the remote advanced again in this release, and this worktree was not moved; fast-forward it before anyone works there) · Depot extension worktree `…/Hermes-depot-m1` on `codex/fleetlab-m2-m3` · **Scale lab worktree `…/Hermes-scale` on `claude/fleetlab-scale-lab`** (cut from the T1 head `c79eccf`; Scale lab source `c08f60d`, deployed 2026-09-27 as `19e17ac6`; `1aeaace`, the Fleet day heading fix, deployed 2026-09-28 as `77922688`; then the documents commit `44569f8`, the privacy commit `0bc2f25` and the records commit of 2026-09-28, which change no site input; branch head pushed on 2026-09-28 as `github/feat/fleetlab-playground`) |
+| **Remote** | **2026-10-26:** PR #9 and PR #10 merged with merge commits; `codex/fleetlab-network-flows-step-b` pushed and open as PR #11. No force push. `main` has no branch protection or rulesets. **2026-10-25:** `codex/fleetlab-depot-lab` was pushed on 2026-10-24 at `f1d130e` and reaches `main` through the reconcile pull request; no force push. **2026-10-23:** FleetLab work now lands on `main` by pull request (PR #7). The git branch `feat/fleetlab-playground` is no longer the website lineage; the site is published by direct upload (top section). Earlier record: `github`, the public GitHub repository of this project; website lineage tracks `github/feat/fleetlab-playground`. On the owner’s request of 2026-09-28, the audit-response wave fast-forwarded that branch from `756c269` to release source `e90764a`, including the two prior welcome commits; the records-only follow-up is on the same branch. No force push, PR or main merge. A push does not deploy; the separate verified Pages publication is recorded in §7.5. Other checkouts retain their previously observed state. |
 | **Base of Phase 8** | `feat/phase6-reviewer-comprehension` @ `4eb8765` (2026-08-16) |
 | **Phase 8** | FCW/AEB slice complete **+ brake calibration merged 2026-08-24** (`feat/phase8-adas-lab` @ `6b2f375`): measured curve 4–30 m/s, MuJoCo fidelity instrument, Warp kernel, esmini audition; Phase 3 merged @ `a78287e` (stationary-lead pair, ADAS fault wiring, two design notes); **Phase 4 (evidence schema 3.0 / `RunMetricsV3`) complete 2026-08-25, maintenance pass landed and requalified 2026-08-26** on `feat/phase8-metrics-v3` @ `2dda024`, **merged onto `main` 2026-08-26 (`b447fc4`, conflict-free)** — evidence stays commit-bound to `2dda024`; **P0 FCW lane merged 2026-08-27 (`deeca8c`)**: `fcw_stationary_lead`, derived-map adapter change, conditional adapter `1.2`; **steady-lead lane merged 2026-08-28 (`df0e34e`)**; **adjacent-pass lane merged 2026-08-28 (`bd60b5b`)**; **lead-decelerates lane merged 2026-08-29 (`cb0b535`)** — P0 catalog closed except roster-blocked `cut_out_reveal_stopped` and decision-deferred `acc_lead_decelerates`; suite **1,566** in the ADAS worktree (§11.1 item 3) |
 | **Phase 9** | **FLEET-005 spike plus the Stage 1 metric contract and Stage 2 registry provenance/static operator view built and gated** on `feat/phase9-metric-contract` (Stage 1 tip `f2645ae`; forward-only envelope repair `f0e4ded`; handler-coverage tests `aa8f406`; Task 7 record re-baseline `3a7f595`; Task 8 static view `4b2e8b8`; forward-only repairs `18b47db`, `e42ed2c`) — Gate G: **96 passed**; replayable decision record; spec-file authoring, metric-contract CLI, and one loopback-only finished synthetic-run view; **lane merged onto `main` 2026-09-06 (`61a7145`) and pushed**. The PRD has been tracked since `aa04786` |
@@ -58,7 +221,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
 | **Design review and next phase** | [N2 design v2.1](docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md) is the current N2 design; it supersedes the [v2 draft](docs/plans/2026-09-26-fleetlab-n2-design-v2.md), which superseded immutable v1. It holds 19 fixture groups; OD-1 to OD-6 and OD-19 are decided and the other N2 decisions are pending; **G2 OPEN pending S1**; no N2 implementation approval. The [design audit](docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md) holds the next tasks. The [Scale lab design](docs/plans/2026-09-27-fleetlab-scale-lab-design.md) holds 25 owner decisions, taken at the lead's recommendation and ratified by the owner on 2026-09-28 with its package decisions D1 to D11. The FleetLab next plan, open owner decisions and build queue are the top section of [CODEX_HANDOFF.md](CODEX_HANDOFF.md). The earlier review packet and independent packet review remain historical rationale. No external dataset work; S1, X1, P2 remainder, P0 study and R0 lessons remain separate future work. |
-| **Last updated** | 2026-10-25: FleetLab release `a1b79cd`, live as `72e45e9f`, recorded here; `main` reconciled with the live line by merge commit; CI changed to run on Apple-silicon macOS, install the workbench extra, run the FleetLab Node suites on Node 22.23.4 and, on CI only, skip fixture-dependent tests when no fixture is present (its result is recorded on the reconcile pull request). Other tracks retain recorded dates. |
+| **Last updated** | 2026-10-26: top section rewritten as the Codex and Muse handoff: Step B open as PR #11 (CI green on `f7da350` when checked), not merged and not live (live `publication.json` still reads `a1b79cd`), with the ordered next actions, who does each, the failure paths and the rules; the Step B record's depot overflow corrected to 355 px at `1ede8e4`. Earlier the same day: network-flows Step A recorded as merged (`f043995`, PR #10), the reconcile pull request as merged (`b15055c`, PR #9), and Step B recorded with its byte report, gates, browser evidence and design verdict; the live release is unchanged. 2026-10-25: FleetLab release `a1b79cd`, live as `72e45e9f`, recorded here; `main` reconciled with the live line by merge commit; CI changed to run on Apple-silicon macOS, install the workbench extra, run the FleetLab Node suites on Node 22.23.4 and, on CI only, skip fixture-dependent tests when no fixture is present (its result is recorded on the reconcile pull request). Other tracks retain recorded dates. |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·

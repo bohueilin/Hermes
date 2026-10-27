@@ -42,7 +42,7 @@ if(flow&&!flow.hasAttribute('data-diagram-observed')){
  const draw=()=>{const question=flow.querySelector('.flow-question');if(!question||question.querySelector('.visitor-diagram'))return;const crossed=flow.querySelector('.lab-chooser a[aria-current="page"]')?.getAttribute('href')?.includes('crossed-priorities');question.insertBefore(diagram(crossed?'D-02-crossed-priorities.webp':'D-01-depot-scenario.webp',crossed?'Four pods with mismatched upload sizes and deadlines sharing one link.':'Two autonomous pods sharing one network link, each with a deadline.'),question.querySelector(crossed?'.flow-definition':'.flow-lede'));};
  draw();new MutationObserver(draw).observe(flow,{childList:true});
 }
-const dispatch=doc.getElementById('chapter-copy');
+const dispatch=doc.querySelector('.bench>#chapter-copy');
 if(dispatch&&!doc.querySelector('.dispatch-concept')){const figure=diagram('D-05-opportunity-cost.webp','Dispatching the car now strands the next rider.');figure.classList.add('dispatch-concept');figure.querySelector('img').setAttribute('loading','lazy');dispatch.parentNode.insertBefore(figure,dispatch.nextSibling);}
 const staffing=doc.querySelector('#staffing-help')?.parentNode;
 if(staffing&&!staffing.querySelector('.visitor-diagram')){staffing.classList.add('visitor-staffing');const figure=diagram('D-03-staffing-queue.webp','Pods queued at service bays; one bay works, one waits for a worker.');figure.querySelector('img').setAttribute('loading','lazy');staffing.insertBefore(figure,staffing.firstChild.nextSibling);}
@@ -125,7 +125,7 @@ if(catalog&&!doc.getElementById('visitor-families')){
   if(resultTitle)resultTitle.textContent='The complete learning library';
  });
  const sequence=catalog.querySelector('.network-question-list');
- for(const href of ['#/depot-flow-lab?lesson=two-vehicles','#/depot-flow-lab?lesson=crossed-priorities','/network-flows/capacity/','/network-flows/software-delivery/','/network-flows/delivery-order/']){
+ for(const href of ['#/depot-flow-lab?lesson=two-vehicles','#/depot-flow-lab?lesson=crossed-priorities']){
   const card=sequence?.querySelector(`a[href="${href}"]`)?.closest('article');if(card)sequence.appendChild(card);
  }
  text('#network-flows-title','Start with one parked vehicle. Follow the whole system.');
@@ -140,14 +140,11 @@ if(shift&&timeline&&!doc.querySelector('.visitor-shift-preview')){
  timeline.parentNode.insertBefore(preview,timeline);
 }
 // User-approved correction: concept artwork motion only, with no fabricated results or replay.
-for(const [selector,kind,file,alt] of [
- ['#main > .hero','dispatch','D-05-opportunity-cost.webp','Dispatching the car now strands the next rider.'],
+for(const [selector,kind] of [
  ['.r1-hero','rebalancing'],['.delivery-hero','delivery'],['#order-root .hero','order'],
- ['.capacity-hero','capacity','D-01-depot-scenario.webp','Two autonomous pods sharing one network link, each with a deadline.'],
 ]){
  const hero=doc.querySelector(selector);if(!hero||hero.hasAttribute('data-ambient-ready'))continue;
- const figure=hero.querySelector('figure')||(file?diagram(file,alt):null);if(!figure)continue;
- if(!hero.contains(figure))hero.appendChild(figure);
+ const figure=hero.querySelector('figure');if(!figure)continue;
  figure.classList.add('visitor-ambient-art');figure.setAttribute('data-ambient-kind',kind);
  const caption=figure.querySelector('figcaption');if(caption&&!caption.textContent.includes('not simulation output'))caption.textContent='Concept illustration · not simulation output. Use the checked model below to compare outcomes and individual delays.';
  hero.setAttribute('data-ambient-ready','');
@@ -222,7 +219,7 @@ const win=doc.defaultView,system=win.matchMedia('(prefers-reduced-motion: reduce
 let paused=false;const stops=new Set();
 const allowed=()=>!paused&&!system.matches&&root.getAttribute('data-motion')!=='reduce'&&!doc.hidden;
 const control=node(doc,'button',{type:'button',class:'visitor-motion-control','aria-pressed':'false'},'Pause visual motion');
-const sync=()=>{const enabled=allowed();root.setAttribute('data-visitor-motion',enabled?'running':'paused');control.textContent=system.matches||root.getAttribute('data-motion')==='reduce'?'Visual motion: reduced':paused?'Resume visual motion':'Pause visual motion';control.disabled=system.matches||root.getAttribute('data-motion')==='reduce';control.setAttribute('aria-pressed',String(paused));if(!enabled){for(const stop of stops)stop();stops.clear();}};
+const sync=()=>{const enabled=allowed();root.setAttribute('data-visitor-motion',enabled?'running':'paused');control.textContent=system.matches||root.getAttribute('data-motion')==='reduce'?'Visual motion: reduced':paused?'Resume visual motion':'Pause visual motion';control.disabled=system.matches||root.getAttribute('data-motion')==='reduce';control.setAttribute('aria-pressed',String(paused));root.toggleAttribute('data-visitor-user-paused',paused&&!control.disabled);if(!enabled){for(const stop of stops)stop();stops.clear();}};
 control.addEventListener('click',()=>{paused=!paused;sync();});doc.body.appendChild(control);system.addEventListener('change',sync);doc.addEventListener('visibilitychange',sync);
 new MutationObserver(sync).observe(root,{attributes:true,attributeFilter:['data-motion']});sync();
 const counts=doc.querySelector('.ops-outcome-visual');

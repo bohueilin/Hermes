@@ -603,9 +603,11 @@ def integrate(
                          "network-flows/software-delivery/release.json",
                          "network-flows/software-delivery/index.html",
                          "network-flows/delivery-order/release.json",
+                         "network-flows/delivery-order/index.html",
                          "network-flows/rebalancing/release.json",
                          "network-flows/rebalancing/index.html",
-                         "network-flows/dispatch/release.json")
+                         "network-flows/dispatch/release.json",
+                         "network-flows/dispatch/index.html")
             if (site / name).is_file()
         })
         for name, content in onward.items():
@@ -810,38 +812,36 @@ def integrate(
         return {key: value for key, value in result.items() if key != "files"}
 
 
+def lesson_sequence():
+    """The one lesson sequence, 01 to 05, read as JSON from the JavaScript generator line."""
+    source = launch.ROOT / "playground/fleetlab/tools/software-delivery-package.mjs"
+    found = re.findall(r"^export const LESSON_SEQUENCE=(\[.*\]);$", source.read_text(), re.M)
+    if len(found) != 1:
+        raise ValueError("lesson sequence missing or ambiguous")
+    return json.loads(found[0])
+
+
 def lesson_navigation(files):
-    """Exact hosted links, after source-package validation, never a skipped-byte exception."""
-    result = {}
-    next_route, next_title = (
-        ("rebalancing", "Where should the empty cars go?")
-        if "network-flows/rebalancing/release.json" in files
-        else ("delivery-order", "Who gets the depot link first?")
-    )
-    for path, release, cls, href, label in (
-        ("network-flows/capacity/index.html", "network-flows/software-delivery/release.json",
-         "fl-app", "/network-flows/software-delivery/", "One update, four vehicles"),
-        ("network-flows/software-delivery/index.html", f"network-flows/{next_route}/release.json",
-         "delivery-shell", f"/network-flows/{next_route}/", next_title),
-    ):
-        if release not in files:
+    """Exact hosted Next links from the one sequence, never a skipped-byte exception."""
+    sequence, result = lesson_sequence(), {}
+    for i in range(4):
+        route, (nxt, label) = sequence[i][0], sequence[i + 1]
+        if f"network-flows/{nxt}/release.json" not in files or (
+            i and f"network-flows/{route}/release.json" not in files
+        ):
             continue
+        path, end = f"network-flows/{route}/index.html", "</body>" if i < 3 else "</main>"
         source = files.get(path)
-        if not isinstance(source, str) or source.count("</body>") != 1:
-            raise ValueError("lesson navigation source missing or ambiguous")
-        result[path] = source.replace("</body>",
-            f'<nav class="{cls}" aria-label="Next Network Flows lesson"><p>'
-            f'Next lesson: <a href="{href}">{label}</a></p></nav>\n</body>')
-    if "network-flows/dispatch/release.json" in files:
-        path = "network-flows/rebalancing/index.html"
-        source = files.get(path)
-        old = '<a href="/network-flows/delivery-order/">Who gets the depot link first? ↗</a>'
-        if not isinstance(source, str) or source.count(old) != 1:
-            raise ValueError("rebalancing onward link missing or ambiguous")
-        result[path] = source.replace(old,
-            '<a href="/network-flows/dispatch/">Which car takes the next request? ↗</a>').replace(
-            'Keep the workload fixed. Change the order of work.',
-            'Inspect the next request and the car that can reach it.')
+        if not isinstance(source, str) or source.count(end) != 1:
+            raise ValueError(f"{route} navigation source missing or ambiguous")
+        link = f'<a href="/network-flows/{nxt}/">{label}'
+        nav = (f'<nav class="{("fl-app", "delivery-shell", "order-shell")[i]}" '
+               f'aria-label="Next Network Flows lesson"><p>Next lesson: {link}</a></p></nav>\n'
+               if i < 3 else
+               '<nav class="lesson-next" aria-label="Next Network Flows lesson"><span>CONTINUE THE '
+               f'QUESTION</span>{link} ↗</a><p>Inspect the next request and the car that can reach '
+               'it.</p></nav>')
+        result[path] = source.replace(end, nav + end)
     return result
 
 

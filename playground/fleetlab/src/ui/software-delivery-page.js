@@ -61,7 +61,7 @@ export function createDeliveryPage({manifest,createWorker,runPair=null,cancelPai
  const bench=text('section',{class:'delivery-bench','aria-label':'Software-delivery comparison bench'},[text('div',{class:'delivery-presentation'},[guide,clockGroup,summary,vehicleOutcome,caseActions]),inspector,timeline]);
  element.appendChild(text('header',{class:'delivery-header'},[text('a',{href:'/#/overview',class:'delivery-brand','aria-label':'FleetLab home'},[text('span',{class:'delivery-monogram'},'F'),text('strong',{},'FleetLab')]),text('nav',{'aria-label':'Main navigation'},[['Home','/#/overview'],['Explore','/#/catalog'],['About & limits','/#/approach']].map(([label,href])=>text('a',{href},label)))]));
  element.appendChild(text('main',{},[text('nav',{class:'delivery-breadcrumb','aria-label':'Breadcrumb'},[text('a',{href:'/#/catalog'},'Explore'),text('span',{},' / Network Flows / Software delivery')]),
-  text('section',{class:'delivery-hero'},[para('04 / NETWORK FLOWS · SYNTHETIC RESOURCE MODEL','delivery-eyebrow'),h1,lead,
+  text('section',{class:'delivery-hero'},[para('LESSON 2 OF 5','delivery-eyebrow'),para('NETWORK FLOWS · SYNTHETIC RESOURCE MODEL','delivery-eyebrow'),h1,lead,
    para('An artifact is the update file. WAN is the internet link into the depot. A cold shared cache starts empty, fetches one copy and shares it locally. A delta update sends only changed parts; this lesson sends the whole file.','delivery-fixed'),para('Same file, arrivals, useful link rates, checks and activation. Only delivery policy changes.','delivery-fixed'),
    text('div',{class:'delivery-actions'},[watch,cancel,pendingPause]),status,
    para('Synthetic model. Readiness here does not establish driving safety or permission to deploy.','delivery-scope'),setup]),bench,

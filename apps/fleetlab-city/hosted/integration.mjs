@@ -119,7 +119,7 @@ export function mountCityEntry(doc = document) {
     networkQuestions.appendChild(node('article',{class:'network-question dispatch-entry-catalog'},[
       node('p',{class:'city-entry-eyebrow'},'FLEET OPERATIONS · CURRENT-REQUEST MATCHING'),
       node('h3',{},'Which car takes the next request?'),
-      node('p',{class:'network-description'},'Compare greedy assignment with joint matching. Follow one car, then see why the best assignment now can lose later.'),
+      node('p',{class:'network-description'},'Compare closest-first assignment with planned-together matching. Follow one car, then see why the best assignment now can lose later.'),
       node('a',{href:'/network-flows/dispatch/',class:'city-entry-action'},'Explore dispatch  →'),
     ]));
   }

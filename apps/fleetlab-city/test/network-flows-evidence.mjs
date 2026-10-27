@@ -19,7 +19,8 @@ export const PAGES={hub:'/network-flows/',capacity:'/network-flows/capacity/','s
 export const SIZES=[[320,700],[390,844],[768,1000],[1280,900]];
 export const NETWORK={pages:['capacity','dispatch'],sizes:[[390,844],[1280,900]]};
 // FL-A4 is the Capacity hero art. D-01 is the eager fallback diagram that, at the base, visitor.mjs puts in the Capacity
-// hero and enhancement-media.mjs removes in the same task (the decoy). D-05 is the Dispatch diagram visitor.mjs inserts twice.
+// hero and enhancement-media.mjs removes in the same task (the decoy). D-05 is the Dispatch diagram visitor.mjs inserts once,
+// beside the chapter-0 body copy.
 export const NAMED={'FL-A4':'/enhancement-media/FL-A4-capacity-hero.webp','D-01':'/diagrams/D-01-depot-scenario.webp','D-05':'/diagrams/D-05-opportunity-cost.webp'};
 // The DOM hooks below are product ids and classes; the test ties each to the product source that creates it.
 export const PAUSE={page:'rebalancing',size:[1280,900],video:'/site-media/r1-nf05.mp4',control:'.visitor-motion-control',flV2:'enhancement-deadhead-art',minVisible:0.25,waitMs:1000};

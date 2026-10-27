@@ -12,6 +12,9 @@
 .capacity-hero .capacity-status{font-size:14px;line-height:1.5;margin:8px 0;min-height:1.5em}
 .capacity-hero .eyebrow{font-size:14px;line-height:1.65}
 .capacity-hero .capacity-setup{margin:14px 0 0;padding:8px 12px;border-radius:10px}
+.capacity-hero .enhancement-visual{background:#f1ebe2}
+.capacity-hero::after{content:"";grid-area:1/2;aspect-ratio:16/9;border-radius:18px;background:#f1ebe2}
+.capacity-hero:has(>#enhancement-capacity)::after{content:none}
 .capacity-setup summary{font-size:15px}
 .capacity-setup .capacity-chips{margin-top:16px}
 .capacity-setup .capacity-picker{margin-bottom:8px}
@@ -118,6 +121,7 @@ to{left:100%}
 @media (max-width:767.98px){.capacity-page .depot-capacity{padding:22px 16px 48px;font-size:18px}
 .capacity-page .depot-capacity h1{font-size:34px}
 .capacity-hero{grid-template-columns:minmax(0,1fr);gap:26px}
+.capacity-hero::after{grid-area:2/1}
 .capacity-preview h2{max-width:none;margin-bottom:20px}
 .cap-preview-park{grid-template-columns:repeat(6,minmax(0,1fr));gap:12px 7px}
 .capacity-page .capacity-board{grid-template-columns:minmax(0,1fr)}
@@ -210,3 +214,6 @@ to{left:100%}
 .capacity-focal{scroll-margin-top:16px}
 .capacity-focal[data-loading=true]{min-height:650px}
 .capacity-guide-loading{font-size:15px}
+#capacity-root :is(button,select):is(:disabled,[aria-disabled=true]){opacity:1;background-color:#dce2d7;border-color:#dce2d7;color:#465d52;cursor:not-allowed;transform:none;transition:none}#capacity-root input[type=range]:disabled{opacity:.55;cursor:not-allowed}
+body>nav.fl-app{display:block;max-width:1100px;margin:0 auto;padding:0 24px;font-size:18px;line-height:1.6}body>nav.fl-app p{margin:0}body>nav.fl-app a{color:var(--ink)}
+a{color:inherit;text-underline-offset:4px}

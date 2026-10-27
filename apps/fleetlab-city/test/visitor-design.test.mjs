@@ -1,11 +1,14 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {installFakeDom} from '../../../playground/fleetlab/test/helpers/fake-dom.mjs';
 import {simulationCatalog,createSimulationCatalog} from '../../../playground/fleetlab/src/ui/simulation-catalog.js';
 import {QUESTION_FAMILIES} from '../hosted/visitor-families.mjs';
 import {decorateVisitors,animateOutcomeCounts} from '../hosted/visitor.mjs';
 import {createDepotFlowLab} from '../../../playground/fleetlab/src/ui/depot-flow-lab.js';
 import {requestOutcomes} from '../../../playground/fleetlab/src/ui/operations-lab.js';
+import {startDispatch} from '../../../playground/fleetlab/src/ui/dispatch-app.js';
+import {performDispatchJob} from '../../../playground/fleetlab/src/runtime/dispatch-job.js';
 
 test('concept diagrams follow the active lesson without duplicates or changing results',()=>{
  const restore=installFakeDom(),previous=globalThis.MutationObserver,callbacks=new Map();
@@ -75,12 +78,57 @@ test('Home has one purpose heading, a first lesson and the existing film retaine
 });
 test('dispatch opportunity-cost art has the supplied alt, concept caption and no duplicate insertion',()=>{
  const restore=installFakeDom();try{
-  const bench=document.createElement('div'),copy=document.createElement('p');copy.id='chapter-copy';bench.appendChild(copy);document.body.appendChild(bench);
+  const bench=document.createElement('div'),copy=document.createElement('p');bench.className='bench';copy.id='chapter-copy';bench.appendChild(copy);document.body.appendChild(bench);
   decorateVisitors(document);decorateVisitors(document);
-  const art=bench.querySelector('.dispatch-concept');assert.ok(art);assert.equal(bench.querySelectorAll('.dispatch-concept').length,1);
+  const art=bench.querySelector('.dispatch-concept');assert.ok(art);assert.equal(document.querySelectorAll('.dispatch-concept').length,1);assert.equal(copy.nextSibling,art);
   assert.equal(art.querySelector('img').getAttribute('alt'),'Dispatching the car now strands the next rider.');
   assert.equal(art.querySelector('figcaption').textContent,'Concept illustration · not simulation output');
  }finally{restore();}
+});
+test('Rebalancing chapter copy, inside #lesson but outside a .bench, never receives the Dispatch art',()=>{
+ const page=readFileSync(new URL('../../../playground/fleetlab/rebalancing/index.html',import.meta.url),'utf8');
+ assert.ok(page.includes('id="lesson"')&&page.includes('id="chapter-copy"'));assert.doesNotMatch(page,/class="(?:[^"]*\s)?bench(?:\s[^"]*)?"/);
+ const restore=installFakeDom();try{
+  const lesson=document.createElement('div'),column=document.createElement('div'),section=document.createElement('section'),copy=document.createElement('p'),map=document.createElement('section');
+  lesson.id='lesson';lesson.className='lesson-layout';copy.id='chapter-copy';map.className='map-bench';section.appendChild(copy);column.appendChild(section);column.appendChild(map);lesson.appendChild(column);document.body.appendChild(lesson);
+  // Both rejected lookups would match here: the unscoped id and '#lesson #chapter-copy'.
+  assert.equal(document.getElementById('chapter-copy'),copy);assert.equal(document.querySelector('#lesson #chapter-copy'),copy);
+  decorateVisitors(document);decorateVisitors(document);
+  assert.equal(document.querySelectorAll('.dispatch-concept').length,0);assert.equal(document.querySelectorAll('img[src="/diagrams/D-05-opportunity-cost.webp"]').length,0);
+ }finally{restore();}
+});
+// The real Dispatch page, nested as shipped; the fake DOM has no HTML parser.
+function mountDispatchPage(){
+ const html=readFileSync(new URL('../../../playground/fleetlab/dispatch/index.html',import.meta.url),'utf8'),stack=[document.body],empty=new Set(['br','img','input','link','meta']);
+ for(const [,text,close,tag,attrs] of html.slice(html.indexOf('<body>')+6,html.indexOf('</body>')).matchAll(/([^<]*)<(\/?)([a-z0-9]+)\b([^>]*)>/g)){
+  if(text.trim())stack.at(-1).appendChild(document.createTextNode(text.replaceAll('&amp;','&')));
+  if(close){stack.pop();continue;}
+  const n=document.createElement(tag);for(const [,key,value=''] of attrs.matchAll(/([\w:-]+)(?:="([^"]*)")?/g))n.setAttribute(key,value.replaceAll('&amp;','&'));
+  stack.at(-1).appendChild(n);if(!empty.has(tag))stack.push(n);
+ }
+}
+test('Dispatch keeps one D-05 beside chapter 1 copy through failure and navigation, and other chapters hide it',()=>{
+ const D05='img[src="/diagrams/D-05-opportunity-cost.webp"]',HIDE='#lesson:not([data-chapter="0"]) .dispatch-concept';
+ assert.equal(readFileSync(new URL('../hosted/visitor.css',import.meta.url),'utf8').split(HIDE+'{display:none}').length,2,'the chapter hide rule is unchanged');
+ for(const mode of ['worker error','startup throw']){
+  const restore=installFakeDom();try{
+   mountDispatchPage();const sent=[],worker={postMessage:m=>sent.push(m),terminate(){}};
+   const app=startDispatch({createWorker:()=>{if(mode==='startup throw')throw Error('worker unavailable');return worker;}});
+   if(mode==='worker error')worker.onmessage({data:{id:sent.at(-1).id,type:'error',error:'Unavailable test worker'}});
+   decorateVisitors(document);decorateVisitors(document);
+   const by=id=>document.getElementById(id),lesson=by('lesson'),art=document.querySelector('.dispatch-concept');
+   const one=()=>{assert.equal(document.querySelectorAll(D05).length,1,mode);assert.equal(by('chapter-copy').nextSibling,art,mode);assert.equal(document.querySelector('#main > .hero').querySelector('figure,img,.visitor-ambient-art'),null,mode);};
+   one();assert.ok(lesson.contains(art));assert.equal(by('watch').disabled,true);assert.equal(by('takeaway').textContent,'');assert.match(by('status').textContent,/unavailable/i);
+   if(mode==='worker error'){assert.equal(lesson.getAttribute('data-chapter'),'0');assert.equal(art.matches(HIDE),false);assert.equal(by('error').hidden,false);}
+   else{assert.equal(lesson.hasAttribute('data-chapter'),false);assert.equal(art.matches(HIDE),true,'accepted residual: a constructor throw never shows D-05');}
+   const live=()=>{assert.equal(by('next').disabled,false,mode);for(const b of document.querySelectorAll('button[data-chapter]'))assert.equal(b.disabled,false,mode);};
+   live();by('next').click();one();live();assert.equal(by('chapter-position').textContent,'2 / 6');assert.equal(art.matches(HIDE),true);
+   document.querySelector('button[data-chapter="3"]').click();one();live();assert.equal(art.matches(HIDE),true);
+   document.querySelector('button[data-chapter="0"]').click();one();live();assert.equal(art.matches(HIDE),mode==='startup throw');
+   if(mode==='worker error'){by('retry').click();worker.onmessage({data:performDispatchJob(sent.at(-1))});one();assert.equal(by('watch').disabled,false);by('watch').click();one();assert.equal(art.matches(HIDE),true);}
+   decorateVisitors(document);one();app.dispose();
+  }finally{restore();}
+ }
 });
 
 test('replay ribbon moves before the scrubber without cloning intervals or losing seek listeners',()=>{
@@ -165,6 +213,19 @@ test('pause, hidden tab or page and reduced motion consume pending or active acc
  }
 });
 
+test('the user-pause signal marks only the visitor\'s own pause and clears while reduced motion disables the control',()=>{
+ const x=visualMotionHarness();try{
+  const root=document.documentElement,control=document.querySelector('.visitor-motion-control'),held=()=>root.hasAttribute('data-visitor-user-paused');
+  assert.equal(held(),false);document.hidden=true;document.dispatchEvent(new Event('visibilitychange'));assert.equal(root.getAttribute('data-visitor-motion'),'paused');assert.equal(held(),false);
+  document.hidden=false;document.dispatchEvent(new Event('visibilitychange'));control.click();assert.equal(control.textContent,'Resume visual motion');assert.equal(root.getAttribute('data-visitor-motion'),'paused');assert.equal(held(),true);
+  x.restore.dom.media.set('(prefers-reduced-motion: reduce)',true);assert.equal(control.disabled,true);assert.equal(control.textContent,'Visual motion: reduced');assert.equal(held(),false);
+  x.restore.dom.media.set('(prefers-reduced-motion: reduce)',false);assert.equal(held(),true);
+  root.setAttribute('data-motion','reduce');x.attributes(root);assert.equal(control.disabled,true);assert.equal(held(),false);
+  root.removeAttribute('data-motion');x.attributes(root);assert.equal(held(),true);
+  control.click();assert.equal(control.textContent,'Pause visual motion');assert.equal(root.getAttribute('data-visitor-motion'),'running');assert.equal(held(),false);
+ }finally{x.close();}
+});
+
 test('replacing a summary finishes the old count-up and never revives it when reinserted',()=>{
  const x=visualMotionHarness();try{
   const first=requestOutcomes(outcomeMetrics,false,{accepted:true}),row=first.querySelector('[data-request-count]');x.replace(first);x.show(first);x.restore.dom.frames.flush(600);assert.equal(row.textContent,'Completed: 70');
@@ -182,12 +243,21 @@ test('detaching a pending summary consumes its reveal before the same page is re
 
 test('approved hero treatment adds concept artwork without numeric overlays or replay controls',()=>{
  const restore=installFakeDom();try{
-  const main=document.createElement('main');main.id='main';document.body.appendChild(main);
-  const hero=document.createElement('section');hero.className='hero';main.appendChild(hero);
+  const hero=document.createElement('section');hero.className='r1-hero';document.body.appendChild(hero);
+  const figure=document.createElement('figure'),caption=document.createElement('figcaption');caption.textContent='Concept illustration · not simulation output';figure.appendChild(caption);hero.appendChild(figure);
   const control=document.createElement('button');control.textContent='Run comparison';let runs=0;control.addEventListener('click',()=>runs++);hero.appendChild(control);
   decorateVisitors(document);decorateVisitors(document);
-  assert.equal(hero.querySelectorAll('.visitor-ambient-art').length,1);assert.match(hero.textContent,/Concept illustration · not simulation output/);
+  assert.equal(hero.querySelectorAll('.visitor-ambient-art').length,1);assert.equal(figure.getAttribute('data-ambient-kind'),'rebalancing');assert.match(hero.textContent,/Concept illustration · not simulation output/);
   assert.equal(hero.querySelectorAll('button').length,1);assert.equal(runs,0);assert.doesNotMatch(hero.textContent,/48.hours|V12|65 min|countdown/);
+ }finally{restore();}
+});
+test('the Dispatch hero stays text-only: no figure, artwork or ambient treatment is added',()=>{
+ const restore=installFakeDom();try{
+  const main=document.createElement('main');main.id='main';document.body.appendChild(main);
+  const hero=document.createElement('section');hero.className='hero';main.appendChild(hero);
+  decorateVisitors(document);decorateVisitors(document);
+  assert.equal(hero.querySelector('figure,img,.visitor-ambient-art'),null);assert.equal(hero.hasAttribute('data-ambient-ready'),false);
+  assert.equal(document.querySelectorAll('img[src="/diagrams/D-05-opportunity-cost.webp"]').length,0);
  }finally{restore();}
 });
 
