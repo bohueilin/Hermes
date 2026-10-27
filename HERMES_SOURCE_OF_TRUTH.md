@@ -1,5 +1,80 @@
 # Hermes — Source of Truth
 
+## October 26, 2026 — Network-flows redesign: Step A merged; Step B ready for its pull request
+
+**The live release is unchanged: the October 25 section below still holds the live identity (`a1b79cd`, production `72e45e9f`).**
+
+- **Reconcile merged:** PR #9 merged `codex/fleetlab-main-reconcile` into `main` as `b15055c`. `main` is the trunk again: start new work from `github/main` after `git fetch github`.
+- **Step A merged:** tests, tooling and baselines, with no visitor-visible change. PR #10, merge commit `f043995` (parents `b15055c` and `86ce57a`). Spec: [docs/FLEETLAB_NETWORK_FLOWS_STEP_A_SPEC_2026-10-25.md](docs/FLEETLAB_NETWORK_FLOWS_STEP_A_SPEC_2026-10-25.md).
+  - The base's measured values are the BEFORE baselines: non-City 16,187,445 B and compressed source offer 1,147,688 B. Each is 1 B above `a1b79cd`, because gzip compresses the embedded commit and tree hashes differently.
+  - CI run `40283638357` on `86ce57a` passed both jobs.
+- **Step B (not merged):** branch `codex/fleetlab-network-flows-step-b`, to reach `main` by pull request with a merge commit. Plan: [docs/FLEETLAB_NETWORK_FLOWS_STEP_B_PLAN_2026-10-26.md](docs/FLEETLAB_NETWORK_FLOWS_STEP_B_PLAN_2026-10-26.md), with owner decisions D1 to D6 and the residuals in §5. Once released, visitors get:
+  - a text-only Dispatch hero;
+  - Explore ordered 01 to 05, with card 05 reworded;
+  - a tinted Capacity hero with no D-01 decoy, with FL-A4 eager at high priority from 768 px;
+  - the global pause reaching the Rebalancing lesson video;
+  - one lesson sequence ("LESSON n OF 5", Next and Previous, the hub Compare lines);
+  - one disabled and loading language, with reasons;
+  - honest Delivery Order states.
+
+  Unchanged:
+  - no media was added;
+  - A2 and the held Fleet day film are untouched;
+  - the reserved eighth enhancement slot is unused;
+  - no ceiling was raised and no headroom moved between closures.
+- **Step B bytes:** stage check in `after` mode at `1ede8e4`, 20 of 20 checks passing, against the BEFORE stage at `b15055c`:
+
+  | Measure | BEFORE | AFTER | Change | Bound |
+  |---|---|---|---|---|
+  | Capacity (nf03) closure | 537,633 | 537,802 | +169 | 541,729 |
+  | Software Delivery (nf04) closure | 221,334 | 220,926 | −408 | 225,430 |
+  | Delivery Order closure | 225,063 | 226,062 | +999 | 229,159 |
+  | Rebalancing (R1) closure | 196,347 | 196,848 | +501 | 200,443 |
+  | Dispatch (R3) closure | 152,391 | 152,851 | +460 | 156,487 |
+  | Depot closure; route-local | 513,471; 418,159 | 512,868; 418,159 | −603; 0 | 515,519; pinned |
+  | Emitted text | 3,569,285 | 3,573,911 | +4,626 | 3,577,477 |
+  | Integration text; source | 129,056; 389,082 | 128,946; 388,890 | −110; −192 | 133,152; 397,274 |
+  | Source offer, extracted; compressed | 4,079,740; 1,147,688 | 4,083,602; 1,149,115 | +3,862; +1,427 | 4,104,316; 1,155,879 |
+  | Package metadata | 44,361 | 44,361 | 0 | 45,385 |
+  | Non-City | 16,187,445 | 16,193,498 | +6,053 | 16,203,828 |
+  | Offline edition | 2,565,111 B, `313fa3f1…` | identical | 0 | exact |
+
+  Unit-measured, by the Node suites:
+  - brand byte-sum 73,286 B, against a bound of 75,937;
+  - legacy text 2,605,859 B (+772), against 2,607,135;
+  - raw source and tools 3,557,298 B (+4,029), against 3,569,653.
+
+  The least headroom left is package metadata at 1,024 B and legacy text at 1,276 B. Among the closures it is the depot closure at 2,651 B.
+- **Step B local gates** at `1ede8e4`, run with official Node 22.23.4 and CPython 3.11.15:
+
+  | Gate | Result |
+  |---|---|
+  | `ruff check .` | clean |
+  | `pytest -q`, with fixtures, R6 against `bca4ccd` | 1,675 passed, 55 skipped (MetaDrive) |
+  | `hermes doctor` | 18 PASS, 1 NOT_AVAILABLE |
+  | City Python suite | 375 OK |
+  | Playground Node suite | 2,953 tests: 2,944 pass, 0 fail, 8 skipped (performance-gated), 1 todo |
+  | City Node suite | 307/307 |
+  | Traffic Node suite | 14/14 |
+
+  The pull request records its CI result.
+- **Step B browser evidence:** local headless Chrome 156 against the built stage at `1ede8e4`, without its `_headers`.
+  - **Capacity at 1280:** FL-A4 is eager, with fetchpriority high and initial priority High, and is the LCP element.
+  - **Capacity at 390:** FL-A4 is lazy at Low.
+  - **D-01 decoy:** no longer requested at either width.
+  - **Pause:** "Pause visual motion" now pauses r1-nf05 as well as FL-V2.
+  - **Overflow:** only the depot page overflows, at 320 px (scrollWidth 351), the recorded exception.
+  - **Console:** 0 console errors on every page.
+  - **Fleet day:** A2 is present, with no V1.
+- **Design verdict:** six independent agents judged the tree at `a11a797` fresh, in a real browser. Craft (desktop and phone lenses), comprehension and honesty in words are each PASS_WITH_RESIDUALS; re-inspection PASS; no blocker. The first verdict had rated craft FAIL on the Capacity end-of-lesson link; that and every later finding is fixed. W4 to W7 (the Delivery Order announcer and badge, static `disabled` on four selects, the tighter link sweep) came after the verdict: an independent verifier checked them, but they were not re-judged. The residuals are §5 of the plan.
+- **Not done:**
+  - the physical-phone check on the release candidate (an owner action);
+  - the re-run at the merged commit: stage, stage check, evidence and re-inspection;
+  - the deploy-ready proof package;
+  - deployment.
+
+  Publication waits for the owner's go-ahead naming the merged commit, and only the owner publishes, through the locked wrapper. The rollback target is Pages deployment `72e45e9f` (source `a1b79cd`).
+
 ## October 25, 2026 — FleetLab release `a1b79cd` live; `main` reconciled with the live line
 
 **Current release identity. The October 23 section below is superseded; the September entries are historical.**
@@ -58,7 +133,7 @@ create a new status, handoff, alignment or overview document; edit this one.
 | **Verification** | merged `main` @ `b447fc4` from the main checkout: **1,443 passed + 8 known artifact-staleness failures** (§14 — the checkout's untracked `artifacts/` predates Phase 3; code proven clean: `src`+`tests` diff vs the verified branch is fleet-only) · ruff clean · doctor 17 PASS / 1 WARN / 1 NOT_AVAILABLE |
 | **Published copy** | Historical copy: https://claude.ai/code/artifact/9f41cdb3-b9b1-4721-bc2c-1ab5dabe486b — not updated. The current user authorized the existing FleetLab Pages site, not this separate document artifact. |
 | **Design review and next phase** | [N2 design v2.1](docs/plans/2026-09-26-fleetlab-n2-design-v2.1.md) is the current N2 design; it supersedes the [v2 draft](docs/plans/2026-09-26-fleetlab-n2-design-v2.md), which superseded immutable v1. It holds 19 fixture groups; OD-1 to OD-6 and OD-19 are decided and the other N2 decisions are pending; **G2 OPEN pending S1**; no N2 implementation approval. The [design audit](docs/FLEETLAB_N2_V2_DESIGN_FEEDBACK.md) holds the next tasks. The [Scale lab design](docs/plans/2026-09-27-fleetlab-scale-lab-design.md) holds 25 owner decisions, taken at the lead's recommendation and ratified by the owner on 2026-09-28 with its package decisions D1 to D11. The FleetLab next plan, open owner decisions and build queue are the top section of [CODEX_HANDOFF.md](CODEX_HANDOFF.md). The earlier review packet and independent packet review remain historical rationale. No external dataset work; S1, X1, P2 remainder, P0 study and R0 lessons remain separate future work. |
-| **Last updated** | 2026-10-25: FleetLab release `a1b79cd`, live as `72e45e9f`, recorded here; `main` reconciled with the live line by merge commit; CI changed to run on Apple-silicon macOS, install the workbench extra, run the FleetLab Node suites on Node 22.23.4 and, on CI only, skip fixture-dependent tests when no fixture is present (its result is recorded on the reconcile pull request). Other tracks retain recorded dates. |
+| **Last updated** | 2026-10-26: network-flows Step A recorded as merged (`f043995`, PR #10), the reconcile pull request as merged (`b15055c`, PR #9), and Step B (the five priority fixes) recorded with its byte report, gates, browser evidence and design verdict; the live release is unchanged. 2026-10-25: FleetLab release `a1b79cd`, live as `72e45e9f`, recorded here; `main` reconciled with the live line by merge commit; CI changed to run on Apple-silicon macOS, install the workbench extra, run the FleetLab Node suites on Node 22.23.4 and, on CI only, skip fixture-dependent tests when no fixture is present (its result is recorded on the reconcile pull request). Other tracks retain recorded dates. |
 
 **Contents:** [0 How to use this file](#0-how-to-use-and-update-this-file) ·
 [1 What Hermes is](#1-what-hermes-is) · [2 State at a glance](#2-current-state-at-a-glance) ·
