@@ -20,3 +20,5 @@
 @media(max-width:350px){.delivery-chapters{grid-template-columns:repeat(3,1fr);gap:7px}}
 
 .delivery-presentation>*,.delivery-outcomes>*,.delivery-arms>*{min-width:0;overflow-wrap:anywhere}.delivery-presentation>.delivery-vehicle-outcome,.delivery-presentation>.delivery-controls{grid-column:1/-1}
+
+#delivery-root button:not(.delivery-primary):is(:disabled,[aria-disabled=true]){background-color:transparent;border:1px solid #465d52}

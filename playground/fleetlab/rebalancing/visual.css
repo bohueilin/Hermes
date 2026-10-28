@@ -15,3 +15,5 @@
 .explainer-connector{stroke:#80a697;stroke-width:3}.explainer-limit{stroke:#b5473e;stroke-width:3}.explainer-block{fill:#e7eee3;stroke:#91ac9d;stroke-width:3}.explainer-empty,.explainer-car{fill:#fffdf6;stroke:#25816e;stroke-width:3}[data-empty="false"] .explainer-car{fill:#25816e}.explainer-wheel{fill:#173d34}.explainer-stage .explainer-verdict{fill:#fffdf6;font-size:28px;font-weight:750}
 .explainer-wash{fill:#f5dfd4}
 /* End methodology explainers. */
+
+#main button:not(.primary):is(:disabled,[aria-disabled=true]){background-color:transparent;border:1px solid #465d52}
