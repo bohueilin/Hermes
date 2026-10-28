@@ -335,3 +335,68 @@ A result that fails any of the three is not ready to go live.
 - when the Dispatch Worker never starts (an error at start, later messages dropped), Retry, the fixture select and the neutral button stay enabled, and Retry leaves the lesson busy on "Checking the dispatch comparison…" indefinitely, since the session has no timeout (Delivery Order times out at 15 s) (pre-existing);
 - a rejected Dispatch manual batch, which any visitor can cause by adding the same pair twice, shows "Batch contains duplicate or infeasible assignment" under the green "Both policies checked independently. Synthetic results." band beside "Retry comparison", though the comparison did not fail; Retry reloads the scenario and resets the visitor's run, and the rejection joins the manual-result line with no full stop (pre-existing);
 - the tests leave two gaps: disabled-state-parity drives the Worker's error replies but not `worker.onerror` (a real browser handles it correctly), and the link sweep cannot see `:visited` colours, since `getComputedStyle` reports only unvisited styles (limits of the W2 and W1 tests).
+
+**Release-gate verdict, 2026-10-27.** Six fresh judges assessed the released site files: those of `1ede8e4`, which the `848b420` stage matches apart from embedded commit identity.
+- Craft (desktop and phone), comprehension, honesty in words and the W4 to W7 verifier: PASS_WITH_RESIDUALS. The verifier found no defect in W4 to W7 themselves.
+- Re-inspection: PASS.
+- There were 0 blockers.
+
+They named these residuals not listed above. None blocks release, and most are pre-existing. All are inputs for Scope 2, with one exception. The desktop craft judge recommended fixing the C6 disabled fill on secondary controls (every instance, including Software Delivery's "Previous chapter" and Delivery Order's "Restore my order", which §5 already names) soon after release, as a cheap CSS-only Scope 1 follow-up: keep the fill for primaries, and give disabled secondaries an outline treatment with the same label colour. Whether to do that before Scope 2 is the owner's decision.
+
+*Controls and states*
+- Dispatch's request-scenario select `#fixture` is the only visible lesson select still enabled in the markup before the module runs. The manual-batch selects (`#request` and `#car` on Dispatch, `#move-from` and `#move-to` on Rebalancing) also lack `disabled`, but their panels stay hidden until the module has run and the visitor reaches the manual chapter. A scenario picked before the module runs is silently reset to the default once the study is ready (pre-existing).
+- The disabled playback selects do not explain themselves. Their only reason line is the study status far above (at 390, about 1,100 px above on Rebalancing). Rebalancing's "Vehicle" select is an empty grey box showing only its chevron before ready and on failure (the emptiness is pre-existing; W2 disables it while the comparison loads and on failure, and W5 before the module runs).
+- The C6 disabled fill outweighs enabled neighbours in more places than listed above:
+  - Delivery Order's ↑ on the first vehicle and ↓ on the last;
+  - Rebalancing's deadhead-card "Pause" in its static state, a grey-filled pill beside the outline "Replay" (before C6 it was a faded outline);
+  - the chapter-boundary Previous control at every lesson start: "← Previous chapter" on Rebalancing and "← Previous" on Dispatch.
+- Rebalancing has no session timeout. A Worker that never replies leaves "Loading the recorded comparison…" with every playback control disabled (pre-existing).
+- "Watch worked example" stays enabled during a Delivery Order check, and pressing it replaces the check (pre-existing).
+- Busy wording changes within one load (the status strings are pre-existing; the button labels are from C6):
+  - Dispatch moves from the markup's "Reconstructing and independently checking both policies…" to "Calculating and checking this comparison.", beside "Checking the dispatch comparison…";
+  - Rebalancing moves from "Reconstructing the two recorded arms and checking every event, population and ledger row…" to "Loading the recorded comparison and checking its results…", beside "Loading the recorded comparison…".
+
+*Words*
+- After Back navigation from the browser's back-forward cache, Delivery Order says a check was interrupted when none ran (pre-existing; the honesty judge's most important finding).
+- During a visitor's manual batch, Dispatch's primary reads "Checking the dispatch comparison…" and its status "Calculating and checking this comparison.", though only the visitor's batch is being checked, not the recorded comparison. Rebalancing's status correctly says "Calculating and checking your moves.". The label is from C6; the status is pre-existing.
+- During a busy Dispatch scenario switch, the page never names the scenario being checked (pre-existing).
+- A Delivery Order scenario switch silently drops an edit that was never compared (pre-existing).
+- On Delivery Order, "Restore my order" after "Show best of 24" or "Watch worked example" shows the editor's never-compared order as "Your order", with "Checked … restored.". The figures are true, taken from the checked 24-order study, but "restored" implies a return to results the visitor saw before (pre-existing; W4 now also announces the line).
+- A Delivery Order failure on a new scenario, after an accepted one, leaves the cards showing the earlier scenario's figures. Only the small result-case eyebrow and "Previous accepted outcomes are retained." tie them to that scenario (pre-existing).
+- Software Delivery's "Records, refinement and what 'checked' means" disclosure renders "[object Object]" in its refinement lines. This is pre-existing, and it is the comprehension judge's most important finding, because it sits in the explanation of what "checked" means.
+- Software Delivery's failure status adds no full stop after a reason that lacks one, so an injected test failure reads "Comparison not accepted: Injected failure Published summary remains available." (pre-existing).
+
+*Screen readers*
+- The start of a Delivery Order check is never announced: the visible status is not a live region, and W4 clears the announcer at check start (pre-existing; before W4 the start of a check did not write the announcer either).
+- The worked-example success line is overwritten about 1 ms later by the first guide caption (pre-existing).
+- A second Restore writes identical text, so it may not be re-announced.
+
+*Craft, pre-existing*
+- Dispatch's result meters use Chrome's native green.
+- Software Delivery's "Watch comparison" draws a blue focus box on its heading after a mouse click.
+- Capacity's summary-disclosure chevron sits about 90 px above its heading.
+- Rebalancing's Reactive arm and Dispatch's request panel use warm colour outside "amber = human demand" (grandfathered).
+- Header-nav type differs by page.
+- At 768, Rebalancing's hero media ends inside the content edge.
+- In the Explore catalog grid, the Delivery Order card's button is not pinned to the card bottom.
+- At 1280, Capacity's footer and its "Next lesson" line start at x=114 while the lesson column starts at x=32, so the hand-off to lesson 2 lines up with neither the content above it nor the page edge (the footer container is unchanged from `b15055c`).
+- Before the brand layer applies, the hosted header on Rebalancing and Dispatch renders unbranded, then shifts about 52 px.
+
+*Phone, pre-existing*
+- At 390, the pause pill covers the right ends of hub card 01's lines.
+- At 390, Rebalancing's video "Pause" sits directly above the hosted pause pill.
+- At 320, Capacity's header nav wraps onto a second row.
+- Further controls fall under 44 px:
+  - the "Explore" breadcrumb (42×15 on Delivery Order);
+  - the hub footer's "Browse all lessons →" and "Contact the creator";
+  - Delivery Order's "Teaching source & build receipt" (204×17);
+  - Dispatch's footer "FleetLab";
+  - Rebalancing's glossary anchors COD (27×15) and VOR (25×15), and its observation-minute slider (322×40).
+- Large blank areas appear while loading or after a failure: the Dispatch vehicle-grid card, and about 280 px under Capacity's guide prompt.
+- At 390, Delivery Order focus can park the result heading under the fixed pill.
+- At 320 on Delivery Order, the result eyebrow orphans "study", and the footer breaks the author's name at its hyphen ("Bo-" / "Huei Lin").
+
+*Tests*
+- The claim that the start of a check clears the Delivery Order announcer is not pinned (a gap in the W4 tests).
+- Dispatch `#arm` and `#view` staying disabled during a busy reload after an earlier success is not pinned (a gap in the W2 and W5 tests).
+- The link sweep (W6, W7) reads computed `color` only, at 1280 and 390. A `-webkit-text-fill-color` override, or a pale colour applied only below 360 px, would pass it.
