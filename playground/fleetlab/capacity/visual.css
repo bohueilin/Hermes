@@ -218,4 +218,4 @@ to{left:100%}
 body>nav.fl-app{display:block;max-width:1100px;margin:0 auto;padding:0 24px;font-size:18px;line-height:1.6}body>nav.fl-app p{margin:0}body>nav.fl-app a{color:var(--ink)}
 a{color:inherit;text-underline-offset:4px}
 
-#capacity-root button:not(.studio-button-primary):is(:disabled,[aria-disabled=true]){background-color:transparent;border:1px solid #465d52}
+#capacity-root button:not(.studio-button-primary):is(:disabled,[aria-disabled=true]){background-color:transparent;border:1px solid #dce2d7}

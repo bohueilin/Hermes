@@ -16,4 +16,4 @@
 .explainer-wash{fill:#f5dfd4}
 /* End methodology explainers. */
 
-#main button:not(.primary):is(:disabled,[aria-disabled=true]){background-color:transparent;border:1px solid #465d52}
+#main button:not(.primary):is(:disabled,[aria-disabled=true]){background-color:transparent;border:1px solid #dce2d7}

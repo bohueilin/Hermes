@@ -4,4 +4,4 @@ svg .edge{stroke:#9a643c;stroke-width:1.5;stroke-dasharray:5 5;fill:none;opacity
 .results meter{width:100%;height:18px;accent-color:#248b7d}
 select{width:100%;min-width:0}
 
-#main button:not(.primary):is(:disabled,[aria-disabled=true]){background-color:transparent;border:1px solid #465d52}
+#main button:not(.primary):is(:disabled,[aria-disabled=true]){background-color:transparent;border:1px solid #dce2d7}

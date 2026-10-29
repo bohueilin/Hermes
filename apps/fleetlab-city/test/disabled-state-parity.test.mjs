@@ -29,7 +29,7 @@ const pg='playground/fleetlab/',hosted='apps/fleetlab-city/hosted/';
 // Primaries and fields retain C6; secondary buttons use R-M1. No transition, so the surface and the
 // label change together instead of the hosted 180 ms fill fade running under an instant label change.
 const SPEC={opacity:1,'background-color':'#dce2d7','border-color':'#dce2d7',color:'#465d52',cursor:'not-allowed',transform:'none',transition:'none'};
-const SECONDARY={...SPEC,'background-color':'transparent','border-color':'#465d52',border:'1px solid #465d52'};
+const SECONDARY={...SPEC,'background-color':'transparent','border-color':'#dce2d7',border:'1px solid #dce2d7'};
 const PRIMARY={capacity:'studio-button-primary','software-delivery':'delivery-primary','delivery-order':'primary',rebalancing:'primary',dispatch:'primary'};
 const secondary=(lesson,e)=>e.localName==='button'&&!e.classList.contains(PRIMARY[lesson]);
 const RANGE={opacity:.55,cursor:'not-allowed'};
