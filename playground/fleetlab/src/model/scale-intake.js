@@ -172,12 +172,12 @@ export const LAB=Object.freeze({id:'fleet-intake',version:VERSION,short:'Fleet i
     'Read the counts of one fleet in one week, then the gate where vehicles waited under each arm.',
     'An ops team would map every gate from delivery to rider service against its lead time and write the order week for the slowest one.','decision'],
   limits:'Invented delivery plan, gate times, lead times and removal rate; one fleet and one market as counts by week; no vehicle, site or grid is modelled.',
-  unknowns:['Whether any operating fleet has a gap between delivered vehicles and vehicles in rider service, or why. A model that can make a gap has not found its cause.',
-    'Any lead time, release date, stage time, pass share, removal rate or repair time of any fleet, depot, utility or regulator. Each one here is a teaching assumption, and the release week says nothing about any approval.',
-    'Which gate binds in any market, or when to order anywhere. Site power is the slowest depot resource here because the setup says so, and each lead time is drawn on its own, evenly across its range.',
-    'What validation tests. It is a duration and a pass share, and says nothing about driving behavior.',
-    'A bridge such as temporary power, a tranche that opens in part, or a repair shop with a limit. A tranche opens only when all four resources have arrived, and repairs never queue.',
-    'Money, kilowatts, staff rosters, a second market or a second vehicle platform. A place is a count, and idle capacity is counted in weeks. What a depot past its capacity does inside one day is the subject of the density ladder lab.'],
+  unknowns:['Real-world commissioning gaps and causes: serial intake gates can create a gap in this synthetic model without diagnosing any real fleet.',
+    'Actual operator or utility lead times, stage times, pass shares, removals or repair times: all are teaching assumptions. The release week says nothing about approval.',
+    'Market-specific binding gates or order weeks: site power is the slowest depot resource because the setup says so. Each lead time is drawn independently and uniformly across its range.',
+    'Technical validation content: validation is a duration and a pass share, and says nothing about driving behavior.',
+    'Temporary power, a partly opened tranche or a capacity-limited repair shop: a tranche opens only when all four resources arrive, and repairs never queue.',
+    'Money, kilowatts, staff rosters, a second market or vehicle platform. Places are counts and idle capacity is measured in weeks; within-day depot congestion is covered by the density ladder lab.'],
   controls:CONTROLS,defaults:()=>({arm:'middle',power:48,ports:24}),derive,steps});
 /** Exported for the lab's own tests only. */
 export const INTERNALS=Object.freeze({size,tapeOf,simulate,STANDING,PLAN});

@@ -88,7 +88,7 @@ export const OPS_CASES = deepFreeze([
     "theme": "sf",
     "slug": "ops02_late_recall",
     "title": "Late night recall: 00:30 or 02:00",
-    "situation": "At 00:30 on day 2 the end of service recall sends every free car to a depot and marks the cars then on a pickup or a trip to head for a depot when they finish, while a car sent out after that moment stays on the street. Riders leaving late night venues keep requesting after midnight at the off peak rate. Moving the recall to 02:00 keeps cars on the street longer and starts the depot wave later.",
+    "situation": "At 00:30 on day 2 the end of service recall sends every free car to a depot and marks the cars then on a pickup or a trip to head for a depot when they finish, while a car sent out after that moment is not recalled. Riders leaving late night venues keep requesting after midnight at the off peak rate. Moving the recall to 02:00 keeps cars on the street longer and starts the depot wave later.",
     "proxy": [
       {
         "standsFor": "Late night riders in San Francisco after midnight",
@@ -1613,7 +1613,7 @@ export const OPS_CASES = deepFreeze([
     "theme": "police",
     "slug": "ops18_sf_cars_held_at_scenes",
     "title": "Cars held at incident scenes in San Francisco",
-    "situation": "Police activity in San Francisco holds six cars at incident scenes, and they stay out of service for the whole run. Day 1 starts with every car idle in its own area, while day 2 starts from where the overnight recall and the depot queues left the fleet.",
+    "situation": "Hypothetical incident holds and review are represented by 34 SF cars instead of 40 for the two-day run. No incident or review process is simulated. Day 1 starts with each remaining car idle in its home area; day 2 reflects cross-area dispatch, overnight recall and depot queues.",
     "proxy": [
       {
         "standsFor": "Cars held at incident scenes and unavailable to riders.",
@@ -1681,18 +1681,18 @@ export const OPS_CASES = deepFreeze([
     "theme": "police",
     "slug": "ops19_service_check_every_second",
     "title": "A service check every second depot visit",
-    "situation": "After police activity in the service area, every car must pass a service check more often. The model has no inspection, so the case raises the service cadence from every third depot visit to every second, on the service bays the map already has (SF-1 2, SF-2 1, SJ-1 1, EB-1 1) and with the 45 minute service. The 00:30 recall then sends the whole wave through those bays before the morning.",
+    "situation": "A hypothetical fleet-wide inspection and calibration campaign is represented only by depot workload. Every second visit, rather than every third, adds the 45 min service after cleaning. Service bays remain SF-1 2, SF-2 1, SJ-1 1 and EB-1 1. Recall is at D2 00:30. The model does not simulate inspection or calibration outcomes.",
     "proxy": [
       {
-        "standsFor": "A post incident service check on every car, more often than the routine service.",
+        "standsFor": "Hypothetical fleet-wide inspection and calibration checks, represented only as frequent depot service workload.",
         "setAs": "parameter:DEP-8 3 (baseline) to 2 (candidate): every second depot visit takes the 45 minute service (DEP-6 2700 s) on a service bay after the 20 minute clean, at the service bays the map has (SF-1 2, SF-2 1, SJ-1 1, EB-1 1), for the whole run on both days.",
-        "misses": "An inspection shorter than a full service, checks limited to cars that were near an incident or to a few days, staff and parts to run them, cars that fail the check and leave the fleet, checks done on the street by a mobile crew, depot hours."
+        "misses": "Inspection or calibration outcomes; checks shorter than a full 45 min service; checks limited to specific batches or days; staff and parts; cars failing checks; mobile crews; depot hours."
       }
     ],
     "watch": "Depot board: SF-2 and EB-1, with one service bay each, from the 00:30 recall past 07:00 in each arm, the cars queued for service after their clean, and the cleaning bay wait beside the service bay wait. Fleet state stack: the at depot band at 06:00 on day 2 and the available band in San Francisco from 07:00, in each arm. Metric by hour: San Francisco wait p90 and unserved in hours 07 and 08 of day 2. Verdict strip: the morning wait p90 primary against its margin, and the San Francisco unserved, 06:00 readiness and SF-2 censored visits guardrails each against its max harm.",
     "outsideModel": [
       "An inspection shorter than a full 45 minute service",
-      "Checks limited to cars that were near an incident, or to a few days",
+      "Checks scoped only to specific vehicle batches, or to a few days",
       "Staff, parts and shift limits at the service bays",
       "Cars that fail the check and leave the fleet",
       "Checks done on the street by a mobile crew",
@@ -1757,18 +1757,18 @@ export const OPS_CASES = deepFreeze([
     "theme": "police",
     "slug": "ops20_sf1_lot_staging_area",
     "title": "A staging area on two thirds of the SF-1 lot",
-    "situation": "A police staging area takes two thirds of the SF-1 lot for the whole run, leaving 20 of its 60 stalls. Cars keep returning to their home depot, so the 00:30 recall wave, which peaks at about 21 cars on the SF-1 lot, now meets a lot that fills. The question is whether San Francisco riders feel it the next morning or only the depot gate does.",
+    "situation": "A hypothetical construction staging area occupies 40 of SF-1's 60 stalls for the run, leaving 20 stalls. Its 4 cleaning bays and 2 service bays stay open. Cars keep their home depot assignment, so the 00:30 recall wave meets the restricted lot. Does this reach SF riders next morning or only the depot gate?",
     "proxy": [
       {
-        "standsFor": "Two thirds of a depot lot closed off for a staging area, with cars still sent to their home depot.",
+        "standsFor": "Hypothetical construction or utility staging occupies two thirds of a depot lot; cars still return to their home depot.",
         "setAs": "parameter:DEP-2.SF-1 60 (baseline) to 20 (candidate) stalls for the whole run, with the map's default depot assignment rule home_depot: a car turned away at a full SF-1 gate drives on to the nearest depot with a free stall, SF-2. SF-1 keeps 4 cleaning bays and 2 service bays.",
-        "misses": "Staging that starts or ends partway through the run, cars already parked in the space, staging vehicles blocking the gate or bays, slower access to the depot, a dispatcher told the true stall count who rehomes cars on purpose."
+        "misses": "Construction staging that starts or ends during the run; cars already in that space; equipment blocking gates or bays; slower depot access; deliberate rehoming using the true stall count."
       }
     ],
     "watch": "Depot board: the SF-1 lot after the 00:30 recall against its 60 stalls and against 20, any car it turns away, and when SF-2 clears in each arm against the 05:45 release. Fleet state stack: the at depot band before 07:00 on day 2, in both arms. Metric by hour: San Francisco wait p90 in hours 07 and 08 of day 2, in each arm. Verdict strip: the morning wait p90 primary and its interval against the margin band, and the diversions and empty driving guardrails each against its max harm.",
     "outsideModel": [
       "Staging that only covers part of the night",
-      "Staging vehicles blocking gates, bays or access roads",
+      "Construction equipment blocking gates, bays or access roads",
       "Temporary parking elsewhere",
       "Staff moving cars inside a crowded lot",
       "A dispatcher who knows the true stall count and sends cars elsewhere before they reach the gate"

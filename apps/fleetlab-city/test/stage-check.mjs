@@ -9,7 +9,8 @@ export const INPUT_DIGESTS={legacy:'15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d
  city_source_offer:'1bf428531ba2d645054abae69b400e061d0bc742f912959a9e57f4d48e44e734',readback:'708659b40227369973cca941c69c098cb059c1dd2cc375d0d0203d56cd903d99'};
 // Sidecars record the Node version string and the offer is gzipped by Node's own zlib, so the build runtime is part of every figure.
 export const RUNTIME={node:'v22.23.4',python:'3.11.15'};
-export const OFFLINE={bytes:2565111,sha256:'313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1'};
+export const OFFLINE_BEFORE={bytes:2565111,sha256:'313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1'};
+export const OFFLINE_AFTER={bytes:2566962,sha256:'e49c0aba90eb35c342094ddbe9f0db07850eb8c080439e7c18c170637efb6bdd'};
 // Section 3 stage bounds; both modes apply them.
 export const BOUNDS={nf03_closure_bytes:541729,nf04_closure_bytes:225430,delivery_order_closure_bytes:229159,r1_closure_bytes:200443,r3_closure_bytes:156487,depot_closure_bytes:515519,
  emitted_text_bytes:3577477,integration_text_bytes:133152,integration_source_bytes:397274,source_offer_extracted_bytes:4104316,source_offer_compressed_bytes:1155879,
@@ -32,7 +33,8 @@ export function checkStage({inputs,manifest,receipt},mode){
  for(const [name,expected]of Object.entries(INPUT_DIGESTS))add(name+'_input_sha256',digests[name]===expected,digests[name],{expected});
  add('runtime',isDeepStrictEqual(inputs?.runtime,RUNTIME),inputs?.runtime,{expected:RUNTIME});
  const offline={bytes:manifest?.offline_download?.bytes,sha256:manifest?.offline_download?.sha256};
- add('offline_download',isDeepStrictEqual(offline,OFFLINE),offline,{expected:OFFLINE});
+ const offlinePin=mode==='before'?OFFLINE_BEFORE:OFFLINE_AFTER;
+ add('offline_download',isDeepStrictEqual(offline,offlinePin),offline,{expected:offlinePin});
  for(const [name,max]of Object.entries(BOUNDS))add(name,int(values[name])&&values[name]<=max,values[name],{max});
  const local=values.depot_route_local_bytes;
  add('depot_route_local_bytes',int(local)&&local>=ROUTE_LOCAL.min&&local<=ROUTE_LOCAL.max,local,ROUTE_LOCAL);

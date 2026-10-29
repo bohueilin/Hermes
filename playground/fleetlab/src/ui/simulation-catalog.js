@@ -25,7 +25,7 @@ const extensionLessons=[
 
 export const OPERATIONAL_LESSONS=Object.freeze([
   {id:'bay-area',title:'Real Bay Area routes in 3D',limits:'Sparse undirected major-road routes between anchors; no turn rules, local access or service-area verification.',patch:{}},
-  {id:'vehicle-mix',title:'I-PACE versus Ojai assumptions',limits:'Ojai numerical specifications are illustrative; no validated fleet performance or charge taper.',patch:{ojai_share_pct:50}},
+  {id:'vehicle-mix',title:'I-PACE versus Ojai assumptions',limits:'Both profiles are illustrative; Ojai values are invented. No OEM telemetry, validated fleet performance, charge taper curve or thermal derating is modeled.',patch:{ojai_share_pct:50}},
   {id:'fleet-day',title:'Fleet size versus trip demand',limits:'Synthetic trip distribution and dispatch; no actual market data.',patch:{}},
   {id:'weather-day',title:'Rain and hot-weather service',limits:'Declared multipliers; no tire grip, visibility or sensor model.',patch:{weather:'rain'}},
   {id:'rush-hour',title:'Morning and evening peaks',limits:'Synthetic clock profiles; no external traffic feed in this model.',patch:{start_hour:16,requests_per_hour:45}},
@@ -33,9 +33,9 @@ export const OPERATIONAL_LESSONS=Object.freeze([
   {id:'cleaning',title:'Cleaning capacity and queues',limits:'Fixed service times and unlimited staff.',patch:{cleaning_bays:1,trips_between_visits:2}},
   {id:'charging',title:'Battery and charging constraints',limits:'No charge taper, battery aging, temperature physics or V2G.',patch:{initial_soc_pct:40}},
   {id:'shared-power',title:'Charge ports versus site power',limits:'Equal power sharing; no tariff or optimized energy scheduler.',patch:{chargers:4,charger_kw:80,site_power_kw:40}},
-  {id:'software',title:'Software-update scheduling',limits:'Occupied-resource delay only; no actual update or failure/rollback model.',patch:{software_minutes:30,software_every_visits:1}},
-  {id:'upload',title:'Trip-data transfer bottlenecks',limits:'Fixed transfer duration; no bytes, bandwidth contention or retry model.',patch:{upload_minutes:30,upload_bays:1}},
-  {id:'full-cycle',title:'Follow a car through its day',limits:'One-minute model resolution; motion between snapshots is explanatory.',patch:{trips_between_visits:2}},
+  {id:'software',title:'Software-update scheduling',limits:'Fixed software time and concurrent stations before cleaning and charging; no actual update, download, staged rollout or failure/rollback model.',patch:{software_minutes:30,software_every_visits:1}},
+  {id:'upload',title:'Trip-data transfer bottlenecks',limits:'Fixed post-charge duration and station count; no bytes or retries. For shared bandwidth and charging that overlaps upload, see the Depot flow lab.',patch:{upload_minutes:30,upload_bays:1}},
+  {id:'full-cycle',title:'Follow a car through its day',limits:'One-minute model resolution; motion between snapshots is explanatory. Depot stages are software when scheduled, cleaning, charging, then upload: sequential work steps, not moves between separate lots.',patch:{trips_between_visits:2}},
   ...extensionLessons,
 ]);
 
@@ -46,8 +46,8 @@ const axisValue=value=>value&&typeof value==='object'?Object.entries(value).map(
 
 export function simulationCatalog(){
   return [
-    {id:'two-vehicles',title:'Two vehicles, one shared link',model:'Depot flow lab',target:'flows',limits:'Constructed visits and capacities; no packet loss, charge taper or operational authority. No random draws.'},
-    {id:'crossed-priorities',title:'Four visits, crossed priorities',model:'Depot flow lab',target:'flows',limits:'Constructed visits on one shared link; known upload sizes and constant capacity. No random draws.'},
+    {id:'two-vehicles',title:'Two vehicles, one shared link',model:'Depot flow lab',target:'flows',limits:'Synthetic visits and link capacities; linear charging and constant uplink throughput. No packet loss, charge taper or operational authority. No random draws.'},
+    {id:'crossed-priorities',title:'Four visits, crossed priorities',model:'Depot flow lab',target:'flows',limits:'Synthetic visits on one shared link; known upload sizes and constant bandwidth capacity. No random draws.'},
     ...OPERATIONAL_LESSONS.map(x=>({...x,model:'Fleet day',target:'operations'})),
     ...STREET_PRESETS.map(p=>({id:`street-${p.id}`,title:p.title,model:'Street lab',target:'streets',hotspot:p.id,limits:'Frozen OSM subset and supported turn rules; synthetic signals/capacity/demand; no lane changing, calibrated traffic, actual curb permission or depot energy model.'})),
     ...SCALE_LABS.map(l=>({id:l.id,title:l.title,model:'Scale lab',target:'scale',seeds:l.seeds.length,limits:l.limits})),

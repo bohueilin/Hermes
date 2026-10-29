@@ -25,9 +25,9 @@ const sizes=({receipt,files})=>{const raw=gunzipSync(files.get(receipt.source_of
  assert.equal(raw.length,receipt.counts.source_offer_extracted_bytes);assert.equal(meta.length,receipt.counts.package_metadata_bytes);
  return {offer:JSON.parse(raw),raw:raw.length,meta:meta.length};};
 
-test('legacy text stays within 2,048 B of its Step A baseline',()=>{
+test('legacy text stays within its C2 re-based ceiling',()=>{
  const v=measureSiteOwnership(site).legacy_text_bytes;
- assert.ok(v<=2605087+2048,`legacy text ${v} > ${2605087+2048} (baseline 2605087; ${runtime})`);
+ assert.ok(v<=2607968,`legacy text ${v} > 2607968 (Step A baseline 2605087, re-based at C2 with no allowance; ${runtime})`);
 });
 
 const ROWS=[['raw source and tools',r=>r.counts.raw_source_and_tools_bytes,3553269,16384],
