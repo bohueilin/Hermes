@@ -32,6 +32,10 @@ CLIENT_FIXES = frozenset((
     "src/ui/depot-scene.js",  # FL-SEC-27: cd40179f397625de23cfa7568bed017996c5c1cd
 ))
 FLOW_CHANGED = frozenset((
+    # C2 amendment 4: whole-file permission for four paths whose C2 change is 28 string literals
+    # (14 hunks against d56409e) and no code or constant.
+    "src/model/ops-cases.js", "src/model/scale-density.js",
+    "src/model/scale-intake.js", "src/model/scale-response.js",
     "src/ui/dom.js", "src/ui/iso.js", "src/ui/map.js", "src/ui/present.js",
     "styles.css", "src/ui/routes.js", "src/ui/teaching-frames.js", "src/ui/charts.js",
     "src/ui/simulation-catalog.js", "src/ui/operations-lab.js", "src/ui/street-lab.js",

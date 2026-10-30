@@ -64,13 +64,13 @@ These were measured at the base on 2026-10-25 with the official Node 22.23.4 bui
 | Integration text, unit | same, extended map | 127,256 | ≤ 131,352 (stage bound − 1,800) | ≤ | City (new) |
 | Integration source | receipt `integration_source.bytes`, development equals release | 389,082 | ≤ 397,274 (owner number) | ≤ | Playground (new) and stage |
 | Brand text sum, and the `BRAND_TEXT` list | `readFileSync` over the 8 files; list deep-equal, with Python `TEXT` parity | 73,889 | ≤ 75,937 | ≤ | City (new) |
-| Legacy text | `measureSiteOwnership(buildSite(...))` | 2,605,087 | ≤ 2,607,135 | ≤, −9 | Playground (new) |
+| Legacy text | `measureSiteOwnership(buildSite(...))` | 2,605,087 | ≤ 2,607,968 (re-based by the C2 apply commit, parent d56409e, owner approval 2026-10-29, no allowance; was ≤ 2,607,135) | ≤, −9 | Playground (new) |
 | Raw source and tools | `measurePackageProof`, development mode | 3,553,269 | ≤ 3,569,653 | ≤ | Playground (new) |
 | Source offer, extracted | same, development / release | 4,079,681 / 4,079,740 | ≤ 4,104,257 / ≤ 4,104,316 | ≤ | Playground (development) and stage (release) |
 | Source offer, compressed | same, development / release | 1,147,629 / 1,147,688 | ≤ 1,155,821 / ≤ 1,155,879 | ≤; zlib printed | Playground (development) and stage (release) |
 | Package metadata | receipt, development / release | 44,302 / 44,361 | ≤ 45,326 / ≤ 45,385 | ≤ | Playground (development) and stage (release) |
 | Non-City bytes | `integrate-site.py` `non_city_bytes` | 16,187,445 | ≤ 16,203,828 | ≤ | **stage only** |
-| Offline edition | `buildHtml`; existing `package-proof.test.mjs:131-132` | 2,565,111 B, `313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1` | exact | exact | existing, and stage |
+| Offline edition | `buildHtml`; existing `package-proof.test.mjs:131-132` | 2,565,111 B, `313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1` | exact: after mode 2,566,962 B, e49c0aba90eb35c342094ddbe9f0db07850eb8c080439e7c18c170637efb6bdd (re-pinned by the C2 apply commit, parent d56409e, 2026-10-29); before mode 2,565,111 B, 313fa3f1… | exact | existing, and stage |
 | Artwork | `ARTWORK_GROUPS`, `BRAND_MEDIA`, plus bytes and SHA-256 on disk | 41 records, 7,793,265 B | exact; all five groups deep-equal | exact | City (new) |
 | `.gitignore` | bytes, SHA-256, and `git check-ignore` on FL-V1 | 2,108 B, `582cda30b42d0e33024c3d6a41c5f2ce42a902c073540368b687961c498d6058` | exact | exact | pytest (new) |
 

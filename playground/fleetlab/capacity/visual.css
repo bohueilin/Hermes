@@ -217,3 +217,5 @@ to{left:100%}
 #capacity-root :is(button,select):is(:disabled,[aria-disabled=true]){opacity:1;background-color:#dce2d7;border-color:#dce2d7;color:#465d52;cursor:not-allowed;transform:none;transition:none}#capacity-root input[type=range]:disabled{opacity:.55;cursor:not-allowed}
 body>nav.fl-app{display:block;max-width:1100px;margin:0 auto;padding:0 24px;font-size:18px;line-height:1.6}body>nav.fl-app p{margin:0}body>nav.fl-app a{color:var(--ink)}
 a{color:inherit;text-underline-offset:4px}
+
+#capacity-root button:not(.studio-button-primary):is(:disabled,[aria-disabled=true]){background-color:transparent;border:1px solid #dce2d7}

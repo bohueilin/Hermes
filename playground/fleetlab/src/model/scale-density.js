@@ -145,9 +145,9 @@ export const LAB=Object.freeze({id:'density-ladder',version:VERSION,short:'Densi
     'Compare depot queue time with pickup driving at each rung, then depot load by hand with trips per car.',
     'An ops team would compare depot load at each planned fleet size before ordering cars.','decision'],
   limits:'One cell of nine places and at most 120 cars, not a city; every rate is invented; road distances are those of the Fleet day map; idle cars wait where they finish; one window of 8 hours from a fresh start, so another window length gives another size of effect; no fleet, depot or service in those places is described.',
-  unknowns:['A fleet past 120 cars. The engine stops there, so the ladder spans a factor of five inside one depot cell.',
-    'How riders respond. Requests per car are equal at every rung, so the ladder cannot say how many added requests the spare car time could carry.',
-    'Where idle cars or sites would be moved, or whether adding, enlarging or merging sites suits any network. Cars wait where a trip or a depot visit ends and use the nearest site, and the engine spaces the sites.',
-    'What depot capacity takes to buy, staff or permit, and when it would arrive. Lead times are the subject of the fleet intake lab.'],
+  unknowns:['Behavior beyond 120 cars: the ladder spans 24 to 120 cars inside one cell of nine places.',
+    'Induced rider demand: requests per car stay equal at every rung, so the ladder does not measure how many added requests spare car time could carry.',
+    'Active idle repositioning, custom site selection, or whether adding, enlarging or merging sites suits any network: cars wait where a trip or depot visit ends, use the nearest site, and the engine spaces the sites.',
+    'Depot acquisition, staffing, permitting and construction lead times.'],
   controls:[{key:'plan',label:'Comparison',options:Object.entries(PLANS).map(([k,p])=>[k,`${label(p[2])}, against ${p[3]}`])},...BANDS.map(([key,label,min,max,unit],i)=>({key,label,unit,min,max,step:i?.05:.02}))],
   defaults:()=>({plan:'capacity',street:.68,depot:.5}),derive,steps,map:true,credit:'Road distances in this lab come from the frozen Fleet day road table. Distances only; no service in those places is described.'});

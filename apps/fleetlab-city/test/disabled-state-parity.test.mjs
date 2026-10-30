@@ -1,4 +1,4 @@
-// Lesson control states v1 (Step B plan, section 3): one disabled and loading language across the five lessons.
+// Lesson control states (Step B section 3, Scope 2 R-M1): filled disabled primaries and outlined disabled secondaries.
 // It parses each lesson page's real stylesheets in page order (styles.css for Capacity, the lesson visual.css, then the
 // hosted brand.css, which imports visitor.css and enhancement-media.css), applies !important, specificity and order,
 // resolves var(), and composites colour and opacity over the real ancestor surfaces of each control, in the states
@@ -26,9 +26,12 @@ import {reconstructDeliveryPair} from '../../../playground/fleetlab/src/runtime/
 const repo=fileURLToPath(new URL('../../../',import.meta.url)),read=path=>readFileSync(repo+path,'utf8');
 const pg='playground/fleetlab/',hosted='apps/fleetlab-city/hosted/';
 
-// The component spec: every lesson resolves every disabled control to these values. No transition, so the fill and the
+// Primaries and fields retain C6; secondary buttons use R-M1. No transition, so the surface and the
 // label change together instead of the hosted 180 ms fill fade running under an instant label change.
 const SPEC={opacity:1,'background-color':'#dce2d7','border-color':'#dce2d7',color:'#465d52',cursor:'not-allowed',transform:'none',transition:'none'};
+const SECONDARY={...SPEC,'background-color':'transparent','border-color':'#dce2d7',border:'1px solid #dce2d7'};
+const PRIMARY={capacity:'studio-button-primary','software-delivery':'delivery-primary','delivery-order':'primary',rebalancing:'primary',dispatch:'primary'};
+const secondary=(lesson,e)=>e.localName==='button'&&!e.classList.contains(PRIMARY[lesson]);
 const RANGE={opacity:.55,cursor:'not-allowed'};
 const FLOOR=4.5;
 const LESSONS={capacity:'#capacity-root','software-delivery':'#delivery-root','delivery-order':'#order-root',rebalancing:'#main',dispatch:'#main'};
@@ -49,7 +52,7 @@ function cascade(lesson,{hostedLayer,edit=null}){
 const visible=e=>{for(let a=e;a;a=a.parentElement)if(a.hasAttribute('hidden'))return false;return true;};
 const isOff=e=>e.hasAttribute('disabled')||e.getAttribute('aria-disabled')==='true';
 // Violations of the spec for every visible disabled control under a lesson root. A range input has no text, so it takes
-// RANGE; every other input carries text and takes the full spec.
+// RANGE; primary buttons and text-bearing fields retain SPEC, and secondary buttons take SECONDARY.
 function audit(lesson,rootEl,rules){
  const problems=[],seen=[];
  for(const env of ENVS)for(const e of rootEl.querySelectorAll('button, select, input')){
@@ -60,8 +63,8 @@ function audit(lesson,rootEl,rules){
   if(e.localName==='input'&&e.getAttribute('type')==='range'){
    if(Math.abs(p.opacity-RANGE.opacity)>1e-9)problems.push(`${name}: opacity ${p.opacity}`);
    if(computed(rules,e,'cursor',env,st)!==RANGE.cursor)problems.push(`${name}: cursor`);continue;}
-  const got={opacity:p.opacity,...Object.fromEntries(['background-color','border-color','color','cursor','transform','transition'].map(k=>[k,computed(rules,e,k,env,st)]))};
-  for(const [k,v]of Object.entries(SPEC))if(String(got[k]).toLowerCase()!==String(v))problems.push(`${name}: ${k} ${got[k]} (spec ${v})`);
+  const got={opacity:p.opacity,...Object.fromEntries(['background-color','border-color','color','cursor','transform','transition','border'].map(k=>[k,computed(rules,e,k,env,st)]))};
+  for(const [k,v]of Object.entries(secondary(lesson,e)?SECONDARY:SPEC))if(String(got[k]).toLowerCase()!==String(v))problems.push(`${name}: ${k} ${got[k]} (spec ${v})`);
   for(const k of ['transform','background-color','color','border-color']){const h=computed(rules,e,k,env,hov);if(h!==got[k])problems.push(`${name}: hover/active ${k} ${h} (resting ${got[k]})`);}
   if(p.ratio<FLOOR)problems.push(`${name}: label contrast ${p.ratio.toFixed(2)} < ${FLOOR}`);
   seen.push(p.ratio);
@@ -109,7 +112,7 @@ test('the overrides win by strictly higher specificity, and an equal-specificity
  }finally{restore();}
 });
 
-test('every visible disabled control in the five lessons resolves to the one disabled language',async()=>{
+test('every visible disabled control keeps C6 primaries and fields filled and R-M1 secondaries outlined',async()=>{
  const all=[];
  const check=(lesson,rootEl,label)=>{for(const hostedLayer of [false,true]){const {problems,seen}=audit(lesson,rootEl,cascade(lesson,{hostedLayer}));assert.deepEqual(problems,[],`${label} (${hostedLayer?'hosted':'teaching'})`);all.push(...seen);}};
  let x=rebalancing('ok');try{check('rebalancing',x.by('main'),'rebalancing loading');x.reply();endRun(x,'apply-moves',12);check('rebalancing',x.by('main'),'rebalancing run ended');}finally{x.close();}
@@ -125,7 +128,7 @@ test('every visible disabled control in the five lessons resolves to the one dis
  {const restore=page('software-delivery');try{
   const p=createDeliveryPage({manifest:DELIVERY_STUDY,runPair:e=>Promise.resolve(reconstructDeliveryPair(e))});document.getElementById('delivery-root').replaceChildren(p.element);
   [...p.element.querySelectorAll('button')].find(b=>b.textContent==='Watch comparison').click();for(let k=0;k<20;k++)await Promise.resolve();
-  assert.ok([...p.element.querySelectorAll('button')].some(b=>b.disabled&&visible(b)),'software delivery shows a disabled chapter control after acceptance');
+  assert.ok([...p.element.querySelectorAll('button')].some(b=>b.disabled&&visible(b)&&secondary('software-delivery',b)),'software delivery shows a disabled secondary chapter control after acceptance');
   check('software-delivery',document.getElementById('delivery-root'),'software delivery boundary');p.destroy?.();}finally{restore();}}
  assert.ok(all.length>=20,`audited ${all.length} control states`);
  console.log('disabled-state contrast',JSON.stringify([...new Set(all.map(r=>r.toFixed(2)))]));

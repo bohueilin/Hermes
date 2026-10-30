@@ -125,11 +125,11 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.deepEqual(tool.measurePackageProof({ site, playground: source, offline }).files, result.files);
 });
 
-test("the offline edition still reproduces the preserved release bytes exactly", () => {
-  // Reconciliation 7.1 and 11.6: the hosted-only depot lab leaves the offline payload byte-identical.
+test("the offline edition reproduces the approved C2 bytes exactly", () => {
+  // C2 amendment 1: ops-cases.js is bundled twice, so its byte delta counts twice and the offline edition moves less than the source.
   const html = buildHtml(source);
-  assert.equal(Buffer.byteLength(html), 2565111);
-  assert.equal(hash(html), "313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1");
+  assert.equal(Buffer.byteLength(html), 2566962);
+  assert.equal(hash(html), "e49c0aba90eb35c342094ddbe9f0db07850eb8c080439e7c18c170637efb6bdd");
 });
 
 test("development measurement rejects altered site, offline bytes, extras and resealed root HTML", () => {
