@@ -236,7 +236,11 @@ additional release checks and separately authorized publication.
    shared charts, the film lifecycle, depot model/presentation modules, and the hosted capacity bench/guide/CSS/source sidecar. The October 10 follow-up adds only the named route-local guide module to that inventory. It rejects undeclared changes, compares copied payloads
    with validated digests, and rechecks the client inventory before finalization.
    All City payloads and source offers are preserved by that update.
-4. Commit reviewed source before final integration. Build the teaching site with pack.mjs `--source-commit` set to the exact commit;
+4. Before freezing a release, update the shared hosted footer's date in
+   `apps/fleetlab-city/hosted/integration.mjs` to the site update date. Keep its
+   `datetime` and displayed date consistent; verify it on Home and About & limits.
+   This is the site update date, not the visitor's current date.
+   Commit reviewed source before final integration. Build the teaching site with pack.mjs `--source-commit` set to the exact commit;
    use that same `--source-commit` for integration. The capacity sidecar must bind
    committed source/tool bytes and the deterministic page transform. Inspect `review/integration-manifest.json`; package only its `site/`.
    Never upload the repository, a working directory, or a legacy-only build.
