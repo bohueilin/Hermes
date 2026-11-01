@@ -169,7 +169,7 @@ const NOTES=Object.freeze([
 export const LAB=Object.freeze({id:'fleet-intake',version:VERSION,short:'Fleet intake',title:'From delivered to in service',geography:'Fictional market, weekly counts, no map',seeds:SEEDS,
   frame:['A delivered vehicle is not yet a vehicle in rider service. Which gate keeps vehicles waiting, and when is the slowest depot resource ordered?',
     'Weekly counts, not cars on a map. Vehicles pass integration, validation, a release gate and depot intake, where places open in tranches. The lesson arm orders the slowest depot resource ahead of the control.',
-    'Read the counts of one fleet in one week, then the gate where vehicles waited under each arm.',
+    'Read delivered and in-service counts week by week, then the gate where vehicles waited under each arm.',
     'An ops team would map every gate from delivery to rider service against its lead time and write the order week for the slowest one.','decision'],
   limits:'Invented delivery plan, gate times, lead times and removal rate; one fleet and one market as counts by week; no vehicle, site or grid is modelled.',
   unknowns:['Real-world commissioning gaps and causes: serial intake gates can create a gap in this synthetic model without diagnosing any real fleet.',

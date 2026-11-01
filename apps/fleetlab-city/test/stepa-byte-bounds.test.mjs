@@ -15,7 +15,8 @@ import {fingerprint,writeFiles} from './stage-fixture.mjs';
 // Step A bounds (docs/FLEETLAB_NETWORK_FLOWS_STEP_A_SPEC_2026-10-25.md section 3): BEFORE value at b15055c plus headroom.
 // Unit text sits 1,859 B under the stage: publication.json (1,800 B) is stage-only and the release receipt is 59 B longer.
 // Uncommitted bound files read 9 B low per sidecar; only depot-owned text, which must stay unchanged, has a floor. nf03 stays enhancement-packaging's gate.
-const BOUNDS={nf04_closure_bytes:221334+4096,delivery_order_closure_bytes:225063+4096,r1_closure_bytes:196347+4096,r3_closure_bytes:152391+4096,depot_closure_bytes:513471+2048,depot_route_local_bytes:[418159-9,418159],emitted_text_bytes:3577477-1859,integration_text_bytes:133152-1800,brand_text_bytes:73889+2048};
+// Catalog look_for wave (2026-10-31, owner D9): emitted_text_bytes re-based from 3577477-1859 to the measured unit 3575832, no allowance.
+const BOUNDS={nf04_closure_bytes:221334+4096,delivery_order_closure_bytes:225063+4096,r1_closure_bytes:196347+4096,r3_closure_bytes:152391+4096,depot_closure_bytes:513471+2048,depot_route_local_bytes:[418159-9,418159],emitted_text_bytes:3575832,integration_text_bytes:133152-1800,brand_text_bytes:73889+2048};
 const within=(key,value)=>{const bound=BOUNDS[key];return Array.isArray(bound)?value>=bound[0]&&value<=bound[1]:value<=bound;};
 const bound=key=>JSON.stringify(BOUNDS[key]??'enhancement-packaging.test.mjs');
 const report=(key,value,claim=`outside ${bound(key)}`)=>`${key} ${value} ${claim} (node ${process.version})`;

@@ -142,7 +142,7 @@ function report(rows,c,rules){
 export const LAB=Object.freeze({id:'density-ladder',version:VERSION,short:'Density ladder',title:'Density ladder: one depot cell, five fleet sizes',geography:'Nine neighbouring places of the Fleet day road map',seeds:SEEDS,
   frame:['One depot cell takes five times the cars and the requests. At which fleet size does the depot pass its capacity, and does siting matter at equal capacity?',
     'The Fleet day engine runs rungs of 24 to 120 cars in one cell of nine places at equal requests per car. Two load ratios set demand and depot size. Hours 5 to 8 are measured.',
-    'Compare depot queue time with pickup driving at each rung, then depot load by hand with trips per car.',
+    'Compare depot queue time with empty pickup driving at each rung, then check depot load by hand against trips per car.',
     'An ops team would compare depot load at each planned fleet size before ordering cars.','decision'],
   limits:'One cell of nine places and at most 120 cars, not a city; every rate is invented; road distances are those of the Fleet day map; idle cars wait where they finish; one window of 8 hours from a fresh start, so another window length gives another size of effect; no fleet, depot or service in those places is described.',
   unknowns:['Behavior beyond 120 cars: the ladder spans 24 to 120 cars inside one cell of nine places.',
