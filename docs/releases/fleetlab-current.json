@@ -4,7 +4,7 @@
   "sf_qualification": "HOLD",
   "authenticity": "NOT_AUTHENTICATED",
   "operational_deployment_permission": "NONE",
-  "source_commit": "848b42007e88d2d71debff7fbc31d415df88753c",
+  "source_commit": "8d2c7ac6c78768676d78cb07a566548f645f30e1",
   "current": {
     "compatibility": {
       "metrics": "fleetlab.city-metrics/1.0.0",
@@ -12,8 +12,8 @@
       "run": "fleetlab.city-run/1.0.0",
       "viewer": "1.1.0"
     },
-    "path": "city-explorer/releases/f6020231dc24d2e1",
-    "release_sha256": "f6020231dc24d2e122b98dd44ff762fcd8b8f2cb2493ca78fdeb5e28d910e760"
+    "path": "city-explorer/releases/f476f28a6dfd9f7c",
+    "release_sha256": "f476f28a6dfd9f7c1cef4ed8e3f8044e606ba5f09b16ca1b4f90bd04f3b3202a"
   },
   "rollback": {
     "compatibility": {
@@ -33,33 +33,33 @@
   "server_side": "none",
   "server_side_scope": "VERIFIED_LOCAL_STAGE_ONLY",
   "publication": "PUBLIC_BYTES_OBSERVED",
-  "integration_manifest_sha256": "1db765735de651f8d600feeb23a2d0635cfbbf58af17cfd3627c6b5d89773ea5",
+  "integration_manifest_sha256": "ed7c5417593d45f3d4097b98d8ec01eda1502f053a5b6270cba8adb513bb8b2c",
   "file_count": 10187,
-  "total_bytes": 1629569507,
-  "verified_at_utc": "2026-10-27T18:42:28.797Z",
+  "total_bytes": 1629577748,
+  "verified_at_utc": "2026-11-01T19:46:48.415Z",
   "verification": {
     "served_files": 10186,
     "matched_files": 10186,
     "header_checks": 100,
     "headers_pass": true,
-    "captured_at_utc": "2026-10-27T18:39:23.597659+00:00",
-    "headers_captured_at_utc": "2026-10-27T18:39:35.315344+00:00",
-    "full_readback_sha256": "7ff9e3d5758a0fa656193cd3eb9e8dcca6d8650fc23e688d6a93fc8fa48c328a",
-    "production_headers_sha256": "dd062f2eac5f0cf5ec2cdf54d0dd25bebc10d8cc7ea4a81eb6fc1be72a8c1d24",
-    "full_generated_receipt_sha256": "0759d621628fda18198a5cb00029932443ef3953d35ab915a1b832a871c9410a",
+    "captured_at_utc": "2026-11-01T19:39:38.436997+00:00",
+    "headers_captured_at_utc": "2026-11-01T19:42:03.728649+00:00",
+    "full_readback_sha256": "e8080896c9699188e1598cd7418b86ddc5f77db776a7b8374bce783b909b25ce",
+    "production_headers_sha256": "531b129870805be06cb02cf60d7ad1cdaed268c19f5c4b7c50dff44b7ae7ff25",
+    "full_generated_receipt_sha256": "b85827bba93c2fb4045eaec0e9ad8f33650a78054daeb6fc8e01590631dd81ca",
     "preview_matched_files": 10186,
     "preview_total_files": 10186,
-    "preview_captured_at_utc": "2026-10-27T18:24:17.705694+00:00",
-    "preview_full_readback_sha256": "47a2f09e4ca7be0c2b3b2c78be2f7ddab2c4086ade83b03419c1a99c9103ceb2",
-    "preview_headers_sha256": "a0ad3065e3741639cd8bc467900775e76f511d5a113ffae0e6a2834254ca7cbb",
+    "preview_captured_at_utc": "2026-11-01T15:28:30.910488+00:00",
+    "preview_full_readback_sha256": "0bc7a5ea5e9e111549c6e653c3df4e5d9d40b9d3c4477a1afcbb1dda8e2fdb4e",
+    "preview_headers_sha256": "c30f39ce2bf60f0b80b1317acb2e5b1e01296e854cc033d62f9c34816df94e3f",
     "preview_header_checks": 100,
     "immutable_matched_files": 10186,
     "immutable_total_files": 10186,
-    "immutable_captured_at_utc": "2026-10-27T18:41:57.559195+00:00",
-    "immutable_full_readback_sha256": "f2cabda842560cfa2973f8e87afd4810dd2f4ade114807036ceea2f31f59bbd3",
+    "immutable_captured_at_utc": "2026-11-01T19:41:51.688914+00:00",
+    "immutable_full_readback_sha256": "9db46fd753ec132923f71f7c08befed79f95f83ccc4c908c991abfb465bab86c",
     "immutable_header_checks": 100,
     "immutable_headers_matched": 100,
-    "immutable_headers_sha256": "3a8b9c36093cc76675a8d44c8034278fd46d11a53f8e22c1c2f0c1b2d1ab98d5",
+    "immutable_headers_sha256": "9b733b6feb48e1b047cf895ba757da17338a09204ef4c4ed5b5d487c6958b646",
     "immutable_scope": "FULL_BYTE_READBACK_AND_FULL_HEADER_CHECK of the immutable production host.",
     "production_browser_check": {
       "scope": "Headless Chrome 156 over CDP against https://fleetlab.pages.dev under its served headers: 11 pages at 390x844 and 1280x900, plus /publication.json at 1280x900 only (23 cells); every host other than the site failed to resolve, so analytics never loaded. Not physical-device or human qualification.",
@@ -109,35 +109,66 @@
       },
       "depot_requests_outside_origin": 0,
       "depot_console_errors": 0,
-      "observations_sha256": "6d75d55e6ad116cf87ba1fcbde9e2fa50699e6c0539b7a394d8f49dd3ef454c8"
+      "observations_sha256": "8a31ad6e41f7519a3027701e8345544007d39bfee7fd7778759e642845632da6"
     },
-    "preview_browser_check": "The same headless check at the preview: identical results on every page and width.",
-    "preview_browser_observations_sha256": "34019db3bd2250eec638be44cca8adb8e420b0f8b14503e84e0bb51e9044b1b4",
-    "prior_production_browser_check": "The same headless check against https://fleetlab.pages.dev, finished at 2026-10-27T18:24:16.867Z, before the production upload. Its results are those of the pre-Step B site (a1b79cd, deployment 72e45e9f per the previous record); the observation itself records no commit or deployment ID. Compared with production, the fields that differed were: compareLines, d01Requested, flA4Priority, lessonLabel, pause.",
-    "prior_production_browser_observations_sha256": "0b73ff777a10dc8e6cc61801cc34e6a349815476cb5118d953253e96c4344710",
-    "stable_smoke_sha256": "78614ed9f3e5baddffa357b020174f1e1bff3e6a383b95eacaa8576cacf739d1",
-    "phone_check": "The owner reported a physical-phone check on the preview as passed on 2026-10-27. No observation was recorded and none is bound here; this is not qualification."
+    "preview_browser_check": "The same headless check at the preview: identical results on every page and width. The only literal difference is the host name in the favicon 404 address.",
+    "preview_browser_observations_sha256": "ebae9e799c911d33114efff912e765003c4e7853ffff4f753c18b434c02ff8d7",
+    "prior_production_browser_check": "The same headless check against https://fleetlab.pages.dev, finished at 2026-11-01T15:33:51.186Z, before the production upload. Its results are those of the October 31 site (9dfc6bc, deployment c743621d per that release's production verification); the observation itself records no commit or deployment ID. Compared with production, no compared field differed: the catalog lines and the footer date that this release changes are outside this check's fields and are checked by production_catalog_check and production_footer_date_check.",
+    "prior_production_browser_observations_sha256": "df1a83ffd875ed56dfdebb34f29a63d45a81b3bac225fa1791c6785a61e3fe0c",
+    "stable_smoke_sha256": "bb374d47f18ce4f9ebbf144da0adf3d44b8407a77181ec0845a4961bccaa952d",
+    "production_footer_date_check": {
+      "scope": "Headless Chrome 156 over CDP against https://fleetlab.pages.dev: Home and About & limits at 320, 390, 768 and 1280 px (8 cells), with only www.googletagmanager.com blocked. Not physical-device or human qualification.",
+      "cells": 8,
+      "text": "Date: October 31st, 2026",
+      "datetime": "2026-10-31",
+      "minimum_contrast_ratio": 5.416,
+      "exceptions": 0,
+      "csp_violations": 0,
+      "site_failures": 0,
+      "observations_sha256": "73b81e801ecd6faa8e24c84c4299bb6a77c8b299c431c2786a397f45b777c5b5"
+    },
+    "production_catalog_check": {
+      "scope": "Headless Chrome 156 against https://fleetlab.pages.dev/#/catalog after Browse all lessons, at 320, 390, 768 and 1280 px: the count line, the cards, and this release's 25 changed look_for lines. Not physical-device or human qualification.",
+      "widths": [
+        320,
+        390,
+        768,
+        1280
+      ],
+      "count_line": "61 of 61",
+      "cards": 61,
+      "visible_lines": 61,
+      "changed_lines_present": 25,
+      "replaced_lines_left": 0,
+      "overflowing_cells": 0,
+      "observations_sha256": "7160d3aa9b805e6dd0d03b2d64c9750ac2ea4e93ca2bffad2afdc9e21ea3ba80"
+    },
+    "preview_footer_date_observations_sha256": "446fa0baf33440a1c21fdeed7362a91c25586e378cc54faf4860b4437f3006f2",
+    "preview_catalog_observations_sha256": "a9ad34080a9d135ad40cac9664af2e66aed4aa45e6f7691df4a12c0062ab4065",
+    "phone_check": "An agent drove one Chrome tab on the owner's USB-connected Android phone (installed Chrome, real network, 443 CSS px wide), at the owner's request, on the preview (2026-11-01T18:31:46.999Z) and on production (2026-11-01T19:45:46.972Z): the footer date on Home and About & limits, in view and not covered; the catalog at 61 of 61 with all 25 changed lines; no exceptions, security-policy violations or failed site requests. This is agent-operated, not the owner's visual judgment, and not qualification.",
+    "phone_preview_observations_sha256": "d5bc0145efe32dc214c83d0b4373a962b664d255cadc9cfeccf3dd084dbabc38",
+    "phone_production_observations_sha256": "badb5431dd62daddf82025e6a304ecaa006805d4cd437e00ec1d169a83a159c3"
   },
   "meaning": "Byte consistency and supplied hosting observations; not independent authenticity, provider configuration, operational authority or permission to deploy.",
   "stable_url": "https://fleetlab.pages.dev",
-  "source_tree": "752b5a1042ba8f3851f6c22dc12d65a3368b0000",
+  "source_tree": "e0f4cc7e631bd7064ae8708002cbc27e894c3d7d",
   "source_branch": "main",
-  "source_pull_request": "https://github.com/bohueilin/Hermes/pull/11",
-  "production_deployment_id_prefix": "ac431ba3",
-  "preview_deployment_id_prefix": "8b0b7954",
-  "prior_production_deployment_id_prefix": "72e45e9f",
+  "source_pull_request": "https://github.com/bohueilin/Hermes/pull/15",
+  "production_deployment_id_prefix": "9e85c9cc",
+  "preview_deployment_id_prefix": "f3918869",
+  "prior_production_deployment_id_prefix": "c743621d",
   "deployment_id_note": "Only immutable URL prefixes were observed for these releases; no full deployment UUID is asserted.",
-  "immutable_url": "https://ac431ba3.fleetlab.pages.dev",
-  "preview_url": "https://8b0b7954.fleetlab.pages.dev",
+  "immutable_url": "https://9e85c9cc.fleetlab.pages.dev",
+  "preview_url": "https://f3918869.fleetlab.pages.dev",
   "site_rollback": {
-    "deployment_id_prefix": "72e45e9f",
-    "immutable_url": "https://72e45e9f.fleetlab.pages.dev",
-    "source_commit": "a1b79cd137aa802c2bff1459843f550a5d70da83",
-    "method": "Owner-operated Cloudflare Pages rollback to the previous production deployment; restores the October 24 website, Depot Readiness lab included, without network-flows Step B.",
+    "deployment_id_prefix": "c743621d",
+    "immutable_url": "https://c743621d.fleetlab.pages.dev",
+    "source_commit": "9dfc6bcda523a4caf7064846b7a60847a9050f8f",
+    "method": "Owner-operated Cloudflare Pages rollback to the previous production deployment; restores the October 31 website (the corrected lesson copy and the October 30th footer date) without the November 1 catalog lines.",
     "rehearsal": "NOT_RUN"
   },
   "rollback_note": "rollback is the compatible staged City viewer generation inside this package. Whole-site rollback is site_rollback; neither rollback was rehearsed.",
-  "files_scope": "SMOKE_SUBSET: 128 selected observed paths: the October 24 subset with the City release and source-offer paths mapped to this release. The complete 10,186-path stable-site observation is bound by verification.full_readback_sha256. This subset is not an immutable-host smoke.",
+  "files_scope": "SMOKE_SUBSET: 128 selected observed paths: the October 27 subset with the City release and source-offer paths mapped to this release. The complete 10,186-path stable-site observation is bound by verification.full_readback_sha256. This subset is not an immutable-host smoke.",
   "files": {
     "404.html": {
       "bytes": 1609,
@@ -160,15 +191,15 @@
       "bytes": 34000,
       "sha256": "5e973076e662bb673b35207bb51432730d7c8cb14b1efea020da17ae5f86ed37"
     },
-    "city-explorer/releases/f6020231dc24d2e1/data/catalog.json": {
+    "city-explorer/releases/f476f28a6dfd9f7c/data/catalog.json": {
       "bytes": 341154,
       "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1"
     },
-    "city-explorer/releases/f6020231dc24d2e1/data/model-lessons.json": {
+    "city-explorer/releases/f476f28a6dfd9f7c/data/model-lessons.json": {
       "bytes": 31982,
       "sha256": "1552e6f4099a3f459f7d1671b280b98d8c1bff0ad997a87fad40134e5f77171b"
     },
-    "city-explorer/releases/f6020231dc24d2e1/index.html": {
+    "city-explorer/releases/f476f28a6dfd9f7c/index.html": {
       "bytes": 36082,
       "sha256": "f7bba516b67ec165a23f451b7f71f68c8c4f213c6704870f19d9ceac0462b749"
     },
@@ -186,7 +217,7 @@
     },
     "depot-readiness/release.json": {
       "bytes": 15830,
-      "sha256": "985b1cc8e3de7a39bef44e534ea2d808a1a43a8b49446185431874def01f8359"
+      "sha256": "fd437ae1e586d08690b13777e8afa3c6b34916cfdcf445236dc39d6d368295b8"
     },
     "depot-readiness/visual.css": {
       "bytes": 8172,
@@ -209,12 +240,12 @@
       "sha256": "353762295346a650a868f43580b379cdfd825676eec57c1b7fc4d4eec2444f8f"
     },
     "downloads/fleetlab-offline.html": {
-      "bytes": 2565111,
-      "sha256": "313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1"
+      "bytes": 2568066,
+      "sha256": "5f2228206b89cdc1416bb5ce9305a3c2f3922c21c686384f188c9731e7b90e40"
     },
     "downloads/teaching-package.json": {
       "bytes": 44361,
-      "sha256": "cfa22a5763ec86a8a75065525d09e1b73ffd9cfede5ba43676cf12c1a09c0245"
+      "sha256": "4845e105b14120201f0b1aa01b46c6cbef9d8450e299399468a875d27e091465"
     },
     "enhancement-media.css": {
       "bytes": 3057,
@@ -261,8 +292,8 @@
       "sha256": "111e9de42e9446f1c514e5953d0cf1c901ae9e3191a1bb05652ac27d41f9522f"
     },
     "integration.mjs": {
-      "bytes": 11855,
-      "sha256": "162878bd75808ddfe76f09d239bc5166db156ec3d6fd8ad7d3b8e55ecc99b90c"
+      "bytes": 11926,
+      "sha256": "5b36ef7b6f8fb910a91baf2039fee9b6151ff65097085d1eec7d1e6a61d0a5f3"
     },
     "network-flows/capacity/index.html": {
       "bytes": 2160,
@@ -270,11 +301,11 @@
     },
     "network-flows/capacity/release.json": {
       "bytes": 16589,
-      "sha256": "b79fd43040bdffa23d37e05a380a0e29d3c4c4c04304841ffc31047736af21be"
+      "sha256": "acfed10f8f1b263af13fd1cd2dbcb5b323eb25e540d4b2cf7a571dca9eed94e2"
     },
     "network-flows/capacity/visual.css": {
-      "bytes": 14751,
-      "sha256": "34c8f8f83ea9f52ab3bddf5770515a5ce015398d7ab5df4ecc93c357715a4655"
+      "bytes": 14892,
+      "sha256": "ac579ee1f9d45fe5f7d49d25c3ec297f5721c1fd8dcf1985276ad16d1dc3bd3f"
     },
     "network-flows/delivery-order/boot.js": {
       "bytes": 314,
@@ -286,11 +317,11 @@
     },
     "network-flows/delivery-order/release.json": {
       "bytes": 8099,
-      "sha256": "bf721891bcde0e7d1e71dd94174df5b2fc721c596fbb40c5925c54e5d1f238e3"
+      "sha256": "5db81fe953e4be83c2c51e3d9ccbbf643e6ffcd12d3dddcae47164b82bf272fa"
     },
     "network-flows/delivery-order/visual.css": {
-      "bytes": 12809,
-      "sha256": "eb878962bbb86256b6ca9db557b7241c28226fae95fda327c71410477f4f9a73"
+      "bytes": 12933,
+      "sha256": "499662b801a650cdd96705bdd2d356b07f4feb187e0e8d04fb0070dc77d5da47"
     },
     "network-flows/dispatch/boot.js": {
       "bytes": 199,
@@ -302,11 +333,11 @@
     },
     "network-flows/dispatch/release.json": {
       "bytes": 12657,
-      "sha256": "b584a11d761152face2aa208370588a8dd5d721f1f36d5c934fb5cf4587fbc09"
+      "sha256": "57da0f963044210660f4001a7d793144ff3fdf3d4fcf8eb4078eb14e7b7413e6"
     },
     "network-flows/dispatch/visual.css": {
-      "bytes": 5249,
-      "sha256": "9a2f996423631bc796966a8ea026b070cef5dcc3d0fcff722459f03da1e3814e"
+      "bytes": 5367,
+      "sha256": "7bd0d132e9c6a898e078c99a3b897073388b185dacf016090aabfc168e4f4b68"
     },
     "network-flows/fleet-day/index.html": {
       "bytes": 2722,
@@ -334,11 +365,11 @@
     },
     "network-flows/rebalancing/release.json": {
       "bytes": 17954,
-      "sha256": "f82ef116a0efd5e29dcda41ec1094ede8ae022fe4f67cd083f774dd7a8a3ebc4"
+      "sha256": "72f8bcddb94007e15f4546a4892f9e33f5f290e2f581840d9364acbef01bc082"
     },
     "network-flows/rebalancing/visual.css": {
-      "bytes": 16139,
-      "sha256": "cd059d0d59ed77587b0c60a4a492185e2465658c1ee922a6d64cfc332b064396"
+      "bytes": 16257,
+      "sha256": "dff03f7cedf515ffdf7e6244800abdc4394b50d98cbd65cb30b20c6c3dcda424"
     },
     "network-flows/software-delivery/boot.js": {
       "bytes": 335,
@@ -350,19 +381,19 @@
     },
     "network-flows/software-delivery/release.json": {
       "bytes": 6857,
-      "sha256": "82663726617cf40860f5ab9e23d98e20dfea611d12534ac6f058a6ddeff3989c"
+      "sha256": "afbf503f06d4bf43100e4da61cd65ce12826d96661e209c40e713e777c9f7f6f"
     },
     "network-flows/software-delivery/visual.css": {
-      "bytes": 18299,
-      "sha256": "81edd7f990fb88eaf6929fc95625666e3e3af11079a180f82010cdc4c1409441"
+      "bytes": 18435,
+      "sha256": "d72419d7b7b9660a778ca853905b69b76d63c38490101a3be16bb4075aad4d13"
     },
-    "network-flows/sources/6e1c6d1155ecccbb062ee216e805dcb93c0d6fcb1adf17acca93f33140fcd23d.json.gz": {
-      "bytes": 1149116,
-      "sha256": "6e1c6d1155ecccbb062ee216e805dcb93c0d6fcb1adf17acca93f33140fcd23d"
+    "network-flows/sources/9b92bfae6121da3ba1be7a5104d3b36624bd0eec6b62eb777e8c3e06703d312b.json.gz": {
+      "bytes": 1150622,
+      "sha256": "9b92bfae6121da3ba1be7a5104d3b36624bd0eec6b62eb777e8c3e06703d312b"
     },
     "publication.json": {
       "bytes": 1800,
-      "sha256": "ca1d8dc3e2bf0748c98cf0eb242e0a342f122bb60037542c30bd7c948135f85b"
+      "sha256": "2271b20967514bdc61540c572fe9ab8a2bedbeb0fa50d4f0fe1e77240ebe9fd2"
     },
     "site-media/apple-touch-icon.png": {
       "bytes": 21051,
@@ -553,8 +584,8 @@
       "sha256": "39b1a965e353f087ab96c93faccbe43d03c9b107679bbfdc1cf422af976a96c6"
     },
     "src/ui/simulation-catalog.js": {
-      "bytes": 13422,
-      "sha256": "049b264ffa9e0705348da8cf2fe053c15a105f31f1b7f716a87e07236b10adc4"
+      "bytes": 13817,
+      "sha256": "9edf3ae52faf8677d43f84f0d0f9f22bfb8cb1be21a5395904fc894b678d474d"
     },
     "src/ui/studio.js": {
       "bytes": 30818,
@@ -653,18 +684,18 @@
       "sha256": "70935f6f1f23018330cac98f4d9c7d1cd1a5b2755731d9df5b6512240bed73bf"
     }
   },
-  "capacity_release_sidecar_sha256": "b79fd43040bdffa23d37e05a380a0e29d3c4c4c04304841ffc31047736af21be",
-  "capacity_release_digest": "31768baf45ccbea6876c013ccc3a3365953a88aac09c7cb7145afd8980b34c10",
-  "software_delivery_release_sidecar_sha256": "82663726617cf40860f5ab9e23d98e20dfea611d12534ac6f058a6ddeff3989c",
-  "software_delivery_release_digest": "e413d8bbf16c1bcb853f5d801d9dd9ae2a5f733c48657e557f15f8a80280d0cc",
-  "delivery_order_release_sidecar_sha256": "bf721891bcde0e7d1e71dd94174df5b2fc721c596fbb40c5925c54e5d1f238e3",
-  "delivery_order_release_digest": "36a8d5dd45be2c2999ed1e7f4a0b68df941ea7e98fc532403dac032254e4782c",
-  "rebalancing_release_sidecar_sha256": "f82ef116a0efd5e29dcda41ec1094ede8ae022fe4f67cd083f774dd7a8a3ebc4",
-  "rebalancing_release_digest": "30043e1945e6c4112934d441c03205d787277943983ddc2a8b69f50638f09755",
-  "dispatch_release_sidecar_sha256": "b584a11d761152face2aa208370588a8dd5d721f1f36d5c934fb5cf4587fbc09",
-  "dispatch_release_digest": "8e2097478315f67ad4a4948f06604367dae0772d7df2763c2341839d75803cd9",
-  "depot_lab_release_sidecar_sha256": "985b1cc8e3de7a39bef44e534ea2d808a1a43a8b49446185431874def01f8359",
-  "depot_lab_release_digest": "68034a030cd03307b45d8f8600ae2286b0e8f4f9155fe7df13bae9922e97d407",
+  "capacity_release_sidecar_sha256": "acfed10f8f1b263af13fd1cd2dbcb5b323eb25e540d4b2cf7a571dca9eed94e2",
+  "capacity_release_digest": "ed76add01891cfa1e48ee8c00805a36c015bb762eb3ae8b7497066e1a62426e3",
+  "software_delivery_release_sidecar_sha256": "afbf503f06d4bf43100e4da61cd65ce12826d96661e209c40e713e777c9f7f6f",
+  "software_delivery_release_digest": "f84261f5ddfe96f6dc19b476f5786e0e48729c0a4b97c50229aa2d8370b21707",
+  "delivery_order_release_sidecar_sha256": "5db81fe953e4be83c2c51e3d9ccbbf643e6ffcd12d3dddcae47164b82bf272fa",
+  "delivery_order_release_digest": "998c08b1c909710dd707db3f4784ef6eac70f385d6a65ea80d29a0537f3ba75f",
+  "rebalancing_release_sidecar_sha256": "72f8bcddb94007e15f4546a4892f9e33f5f290e2f581840d9364acbef01bc082",
+  "rebalancing_release_digest": "e7ddfa9a2abd75bc145f5b40b42f6d12fe6c7d3a64b569b95556a0958c233e91",
+  "dispatch_release_sidecar_sha256": "57da0f963044210660f4001a7d793144ff3fdf3d4fcf8eb4078eb14e7b7413e6",
+  "dispatch_release_digest": "9faa6a9a4d272782c95d15be6475ece8090184f51a771b8bc11c4fb7476873d0",
+  "depot_lab_release_sidecar_sha256": "fd437ae1e586d08690b13777e8afa3c6b34916cfdcf445236dc39d6d368295b8",
+  "depot_lab_release_digest": "61e525a595b87f29eba3b1a1484c047a34ebca6a7e09f4ba23463cbac3494a99",
   "nf04_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
   "delivery_order_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
   "rebalancing_qualification": {
@@ -695,28 +726,28 @@
   "teaching_package": {
     "bytes": 44361,
     "path": "downloads/teaching-package.json",
-    "sha256": "cfa22a5763ec86a8a75065525d09e1b73ffd9cfede5ba43676cf12c1a09c0245"
+    "sha256": "4845e105b14120201f0b1aa01b46c6cbef9d8450e299399468a875d27e091465"
   },
   "teaching_source_offer": {
-    "bytes": 1149116,
-    "extracted_sha256": "f0ea33f9a2adcdfd4fcbe2747dee1e64d483b27f648236f9730e4548458be950",
-    "original_inventory_sha256": "2c01de40209493cd46680367be9447abbd5c9db4efe32caba8469d940a624f96",
+    "bytes": 1150622,
+    "extracted_sha256": "a771f060eb0b7f948cc0c731c58c712112eb98cd6b7de01995b00ade49cdd359",
+    "original_inventory_sha256": "2f60ea0735c87a4b8abdf3ddccb07f45bd4dafee0ceb486234dc6ab578ca67a4",
     "owner": "teaching-original-source-and-tools",
-    "path": "network-flows/sources/6e1c6d1155ecccbb062ee216e805dcb93c0d6fcb1adf17acca93f33140fcd23d.json.gz",
-    "sha256": "6e1c6d1155ecccbb062ee216e805dcb93c0d6fcb1adf17acca93f33140fcd23d"
+    "path": "network-flows/sources/9b92bfae6121da3ba1be7a5104d3b36624bd0eec6b62eb777e8c3e06703d312b.json.gz",
+    "sha256": "9b92bfae6121da3ba1be7a5104d3b36624bd0eec6b62eb777e8c3e06703d312b"
   },
-  "non_city_bytes": 16193499,
+  "non_city_bytes": 16201740,
   "integrated_text": {
-    "delivery_order_closure_bytes": 226062,
+    "delivery_order_closure_bytes": 226186,
     "depot_closure_bytes": 512868,
     "depot_route_local_bytes": 418159,
-    "emitted_text_bytes": 3573911,
+    "emitted_text_bytes": 3577691,
     "hosted_artwork_bytes": 7793265,
-    "integration_text_bytes": 128946,
-    "nf03_closure_bytes": 537802,
-    "nf04_closure_bytes": 220926,
-    "r1_closure_bytes": 196848,
-    "r3_closure_bytes": 152851
+    "integration_text_bytes": 129017,
+    "nf03_closure_bytes": 537943,
+    "nf04_closure_bytes": 221062,
+    "r1_closure_bytes": 196966,
+    "r3_closure_bytes": 152969
   },
   "hosted_presentation": {
     "schema": "fleetlab.hosted-presentation/1.0.0",
@@ -752,6 +783,7 @@
     "app_reported_vulnerabilities": 0,
     "meaning": "Dated registry audit and inspected bundled dependency residual; no current zero-vulnerability assertion for the uploader. See enhancement report for limitations and upstream references.",
     "reconfirmed_2026_10_24": "The wrapper npm ci output on 2026-10-24 reported 3 vulnerabilities (2 moderate, 1 high), the same counts as the October 23 audit. The individual advisories were not re-identified and no new registry audit log was recorded.",
-    "not_reconfirmed_2026_10_27": "The owner ran both uploads outside the agent session; the wrapper install output for this release was not captured, so the uploader audit is not reconfirmed for 2026-10-27."
+    "not_reconfirmed_2026_10_27": "The owner ran both uploads outside the agent session; the wrapper install output for this release was not captured, so the uploader audit is not reconfirmed for 2026-10-27.",
+    "not_reconfirmed_2026_11_01": "The owner ran both uploads outside the agent session; the wrapper install output for this release was not captured, so the uploader audit is not reconfirmed for 2026-11-01."
   }
 }
