@@ -111,14 +111,15 @@ test('the hosted brand text keeps its eight files, matches the Python integrator
  for(const key of Object.keys(counts)){const step=key==='depot_route_local_bytes'?0:1;assert.equal(grown[key]-counts[key],step,report(key,counts[key],`moved ${grown[key]-counts[key]} B, not ${step} B, for one brand.css byte (bound ${bound(key)})`));}
 });
 
-test('the hosted artwork inventory is exact: five groups, 41 records, 7,793,265 B, every file bound by bytes and SHA-256',()=>{
- assert.deepEqual(ARTWORK_GROUPS,[{root:'apps/fleetlab-city/diagram-media',maxBytes:524288,maxFiles:4},{root:'apps/fleetlab-city/rebalancing-media',maxBytes:2097152,maxFiles:4},{root:'apps/fleetlab-city/brand-media',maxBytes:2097152,maxFiles:7},{root:'apps/fleetlab-city/tile-media',maxBytes:2097152,maxFiles:19},{root:'apps/fleetlab-city/enhancement-media',maxBytes:4194304,maxFiles:8}]);
+// Tile swap wave (2026-11-01, owner): tile-media cap re-based from 2097152 to the measured 2130908, no allowance; T-07, T-09, T-13 and T-15 replaced byte for byte.
+test('the hosted artwork inventory is exact: five groups, 41 records, 7,933,679 B, every file bound by bytes and SHA-256',()=>{
+ assert.deepEqual(ARTWORK_GROUPS,[{root:'apps/fleetlab-city/diagram-media',maxBytes:524288,maxFiles:4},{root:'apps/fleetlab-city/rebalancing-media',maxBytes:2097152,maxFiles:4},{root:'apps/fleetlab-city/brand-media',maxBytes:2097152,maxFiles:7},{root:'apps/fleetlab-city/tile-media',maxBytes:2130908,maxFiles:19},{root:'apps/fleetlab-city/enhancement-media',maxBytes:4194304,maxFiles:8}]);
  const summary=media=>{
   const records=Object.values(media),groups=Object.fromEntries(ARTWORK_GROUPS.map(g=>{const own=records.filter(r=>r.source.startsWith(g.root+'/'));return [g.root.split('/').at(-1).replace('-media',''),[own.length,own.reduce((n,r)=>n+r.bytes,0)]];}));
   const inventory=createHash('sha256').update(JSON.stringify(Object.entries(media).sort(([a],[b])=>a<b?-1:1).map(([name,r])=>[name,r.source,r.bytes,r.sha256]))).digest('hex');
   return {records:records.length,bytes:records.reduce((n,r)=>n+r.bytes,0),groups,inventory};
  };
- const expected={records:41,bytes:7793265,groups:{diagram:[4,510436],rebalancing:[4,1983799],brand:[7,623114],tile:[19,1990494],enhancement:[7,2685422]},inventory:'bcd79b1535cf12f0b3e8c6f42d3563109a1c5e34bdd5245276da2abf9de0f7e9'};
+ const expected={records:41,bytes:7933679,groups:{diagram:[4,510436],rebalancing:[4,1983799],brand:[7,623114],tile:[19,2130908],enhancement:[7,2685422]},inventory:'93726002bd2160c045b063b859183d43646d4a762f3226f70184c504e2ccd0c1'};
  assert.deepEqual(summary(BRAND_MEDIA),expected);
  for(const [name,r]of Object.entries(BRAND_MEDIA)){const disk=fingerprint(readFileSync(new URL('../../../'+r.source,import.meta.url))),record={bytes:r.bytes,sha256:r.sha256};assert.deepEqual(disk,record,`${name}: ${r.source} is ${JSON.stringify(disk)} on disk, ${JSON.stringify(record)} in its record`);}
  // A same-size re-encode moves only the record digest.

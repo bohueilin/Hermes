@@ -69,7 +69,8 @@ export function renderPage(input,{analytics=false,tagFree=false}={}){
 }
 
 export const BRAND_MEDIA={...JSON.parse(readFileSync(new URL('./enhancement-assets.json',import.meta.url),'utf8')),...JSON.parse(readFileSync(new URL('./diagram-assets.json',import.meta.url),'utf8')),...JSON.parse(readFileSync(new URL('./rebalancing-assets.json',import.meta.url),'utf8')),...JSON.parse(readFileSync(new URL('./brand-assets.json',import.meta.url),'utf8')),...JSON.parse(readFileSync(new URL('./tile-assets.json',import.meta.url),'utf8'))};
-export const ARTWORK_GROUPS=[{root:'apps/fleetlab-city/diagram-media',maxBytes:512*1024,maxFiles:4},{root:'apps/fleetlab-city/rebalancing-media',maxBytes:2*1024*1024,maxFiles:4},{root:'apps/fleetlab-city/brand-media',maxBytes:2*1024*1024,maxFiles:7},{root:'apps/fleetlab-city/tile-media',maxBytes:2*1024*1024,maxFiles:19},{root:'apps/fleetlab-city/enhancement-media',maxBytes:4*1024*1024,maxFiles:8}];
+// Tile swap wave (2026-11-01, owner): tile-media cap re-based from 2*1024*1024 to the measured 2130908, no allowance.
+export const ARTWORK_GROUPS=[{root:'apps/fleetlab-city/diagram-media',maxBytes:512*1024,maxFiles:4},{root:'apps/fleetlab-city/rebalancing-media',maxBytes:2*1024*1024,maxFiles:4},{root:'apps/fleetlab-city/brand-media',maxBytes:2*1024*1024,maxFiles:7},{root:'apps/fleetlab-city/tile-media',maxBytes:2130908,maxFiles:19},{root:'apps/fleetlab-city/enhancement-media',maxBytes:4*1024*1024,maxFiles:8}];
 export const BRAND_TEXT=['brand.mjs','brand.css','visitor.mjs','visitor-families.mjs','visitor.css','enhancement-motion.mjs','enhancement-media.mjs','enhancement-media.css'];
 export const STATIC_INTEGRATION_FILES=Object.freeze({
  'network-flows/index.html':'network-hub.html',
