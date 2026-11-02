@@ -30,8 +30,8 @@
     "source": "apps/fleetlab-city/tile-media/T-06-model-limits.webp"
   },
   "tiles/T-07-depot-ops.webp": {
-    "bytes": 100668,
-    "sha256": "72e0e4183df62599d9b8faf3466293e49bb0036b168dd28d2ef457ee543a17c1",
+    "bytes": 152218,
+    "sha256": "bfaf0ba646edf12b2b8494ab154bd26e48c4a4ea6ba64d4ee11c89525a275592",
     "source": "apps/fleetlab-city/tile-media/T-07-depot-ops.webp"
   },
   "tiles/T-08-charging-energy.webp": {
@@ -40,8 +40,8 @@
     "source": "apps/fleetlab-city/tile-media/T-08-charging-energy.webp"
   },
   "tiles/T-09-data-movement.webp": {
-    "bytes": 108836,
-    "sha256": "f80ff9a5dafbde9a225b353e25fc3da41cebe45a68ec688fcb7e2bb2f6159fed",
+    "bytes": 134946,
+    "sha256": "e02f9ea41e9b1b3e4982dd221f096b78057e66a9897912926f5e321cac973dd5",
     "source": "apps/fleetlab-city/tile-media/T-09-data-movement.webp"
   },
   "tiles/T-10-streets-queues.webp": {
@@ -60,8 +60,8 @@
     "source": "apps/fleetlab-city/tile-media/T-12-fleet-scale.webp"
   },
   "tiles/T-13-paired-experiments.webp": {
-    "bytes": 108438,
-    "sha256": "8195c6e504abfee0d56743777516b8dfd7f77d92e1f0860f7e563e13bd4aa429",
+    "bytes": 158200,
+    "sha256": "86ab61d62bdfbdbb79d3c0be1f4f2bce82d8a12a7effcaf4ef78576b7b6a56b3",
     "source": "apps/fleetlab-city/tile-media/T-13-paired-experiments.webp"
   },
   "tiles/T-14-reading-result.webp": {
@@ -70,8 +70,8 @@
     "source": "apps/fleetlab-city/tile-media/T-14-reading-result.webp"
   },
   "tiles/T-15-launch-recall.webp": {
-    "bytes": 99578,
-    "sha256": "26c2c4cf3d36732ee9c4bea613826e1f6f4cb70728be12abaa86f1b9f655eba5",
+    "bytes": 112570,
+    "sha256": "5708a89531bf7b60980b9e456fe4483676a9fcbe4d4c95da6370250a1b049200",
     "source": "apps/fleetlab-city/tile-media/T-15-launch-recall.webp"
   },
   "tiles/T-16-city-atlas.webp": {

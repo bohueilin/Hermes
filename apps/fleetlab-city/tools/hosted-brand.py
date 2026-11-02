@@ -39,8 +39,9 @@ def transform(value, mode="--render"):
 
 
 def asset_inventory():
+    # 2026-11-01 (owner): tile-media cap re-based to the measured 2130908 B, no allowance.
     for folder, count, limit in (("brand-media", 7, 2 * 1024**2),
-                                 ("tile-media", 19, 2 * 1024**2),
+                                 ("tile-media", 19, 2130908),
                                  ("rebalancing-media", 4, 2 * 1024**2),
                                  ("enhancement-media", 8, 4 * 1024**2)):
         source = f"apps/fleetlab-city/{folder}"
