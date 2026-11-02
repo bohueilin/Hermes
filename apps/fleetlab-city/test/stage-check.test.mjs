@@ -9,9 +9,10 @@ import {checkStage,INPUT_DIGESTS,RUNTIME,OFFLINE_BEFORE,OFFLINE_AFTER,BOUNDS,ROU
 
 // Spec sections 3 and 4, restated so that a changed ceiling or baseline in the runner fails here.
 // Catalog look_for wave (2026-10-31, owner): emitted_text_bytes 3577477 and the offline AFTER pair re-pinned to the measured stage.
+// Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
 const SPEC_BOUNDS={nf03_closure_bytes:541729,nf04_closure_bytes:225430,delivery_order_closure_bytes:229159,r1_closure_bytes:200443,r3_closure_bytes:156487,depot_closure_bytes:515519,
  emitted_text_bytes:3577691,integration_text_bytes:133152,integration_source_bytes:397274,source_offer_extracted_bytes:4104316,source_offer_compressed_bytes:1155879,
- package_metadata_bytes:45385,non_city_bytes:16203828};
+ package_metadata_bytes:45385,non_city_bytes:16344242};
 const SPEC_BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,
  depot_route_local_bytes:418159,emitted_text_bytes:3569285,integration_text_bytes:129056,hosted_artwork_bytes:7793265,source_offer_extracted_bytes:4079740,non_city_minus_offer_bytes:15039757};
 const DIGEST_PREFIXES={legacy:'15b3d561',city_base:'4fa335d2',city_source_offer:'1bf42853',readback:'708659b4'};
