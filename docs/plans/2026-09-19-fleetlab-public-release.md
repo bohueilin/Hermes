@@ -14,7 +14,7 @@ The user requests a professional website inspired by Waymo's visual restraint, p
 
 ## Tasks
 1. Polish `studio.js`, `styles.css`, and the existing code-native depot illustration for a clear interview introduction, spacious layout, useful calls to action and creator attribution. Preserve simulations, accessibility, offline behavior and existing interface contracts. Validate relevant UI tests and inspect desktop/mobile.
-2. Improve repository discovery and sharing metadata. Write `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` with current project, exact build/deploy commands, optional domain and automation steps, and rollback. Write repository integration recommendation and release record. No shared files with task 1 except final review.
+2. Improve repository discovery and sharing metadata. Write `docs/fleetlab/publishing/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` with current project, exact build/deploy commands, optional domain and automation steps, and rollback. Write repository integration recommendation and release record. No shared files with task 1 except final review.
 3. Run JavaScript suite, packaging checks, focused Python parity/boundaries, lint, doctor and whitespace review. Review the publication payload. Commit and push the feature branch, deploy the matching static artifact, verify anonymous public rendering and source identity.
 
 ## Acceptance

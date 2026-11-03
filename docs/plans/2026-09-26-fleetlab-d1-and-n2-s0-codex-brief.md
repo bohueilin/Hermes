@@ -26,10 +26,10 @@ If Part A reaches a stop condition, record it and continue with Part B. A Part B
 
 ## 1. Read first
 
-1. `docs/FLEETLAB_PACKET_REVIEW_2026-09-26.md`: the independent review this brief implements. Its §2 (N2 contract texts, fixtures, G1–G6) is normative for Part A, except where §2 of this brief refines it. For Part B, **B.2 of this brief is the complete D1 change list**. Other review §1 and P1 items are out of scope; see B.0 "Deviations".
-2. `docs/FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md`: the packet the review answers.
+1. `docs/fleetlab/design/FLEETLAB_PACKET_REVIEW_2026-09-26.md`: the independent review this brief implements. Its §2 (N2 contract texts, fixtures, G1–G6) is normative for Part A, except where §2 of this brief refines it. For Part B, **B.2 of this brief is the complete D1 change list**. Other review §1 and P1 items are out of scope; see B.0 "Deviations".
+2. `docs/fleetlab/design/FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md`: the packet the review answers.
 3. `docs/plans/2026-09-25-fleetlab-n2-design.md`: N2 draft v1. **Never edit it.** Its SHA-256 is `c574b8df41d0378363e18f75452f09e15a2cf62581e8fb01f6f365229d7e25bf`.
-4. `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md`, `CODEX_HANDOFF.md` (top section) and `HERMES_SOURCE_OF_TRUTH.md` §7.5.
+4. `docs/fleetlab/publishing/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md`, `CODEX_HANDOFF.md` (top section) and `HERMES_SOURCE_OF_TRUTH.md` §7.5.
 5. `AGENTS.md`.
 
 **Precedence.** This brief is the owner's explicit current instruction. It overrides AGENTS.md in exactly two places:
@@ -153,7 +153,7 @@ These apply to N2 only; legacy behavior is unchanged.
 
 ### B.1 Inventories first
 
-Start the release record `docs/FLEETLAB_D1_RELEASE_2026-09-26.md` before coding. It holds:
+Start the release record `docs/fleetlab/publishing/FLEETLAB_D1_RELEASE_2026-09-26.md` before coding. It holds:
 - a route × state inventory: every route and panel × ready / running / completed / stale / canceled / invalid / unavailable / empty population, naming what each renders today and after D1;
 - a setup-link compatibility list for the five share models;
 - the byte tally;
@@ -299,7 +299,7 @@ git diff --check
 ## 6. Part C: deploy (only if every B.4 gate passed)
 
 1. Run the privacy scan on the staged diff. Commit the D1 source, the tests and the B.1 release-record sections: `feat(fleetlab): result-first Fleet day, model identity and readable Austin verdict`. The tree must be clean except for the owner's note.
-2. Re-run `pack.mjs --site dist/site` and `check-dist.mjs --site dist/site` on the committed HEAD. Then deploy, exactly as in `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md`:
+2. Re-run `pack.mjs --site dist/site` and `check-dist.mjs --site dist/site` on the committed HEAD. Then deploy, exactly as in `docs/fleetlab/publishing/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md`:
    ```bash
    npx --yes wrangler@4.135.0 whoami
    FLEETLAB_COMMIT=$(git rev-parse HEAD)
@@ -329,8 +329,8 @@ git diff --check
 1. Update in place; create no new status documents:
    - `HERMES_SOURCE_OF_TRUTH.md`: the Playground row, a dated §7.5 entry and Last updated. The records follow the deploy because the deployment ID only exists afterwards; say so, as an exception to the same-commit rule.
    - `CODEX_HANDOFF.md`: a new top section with the actual commands, counts, bytes, digests, deployment ID, negative results and limitations. Use no absolute local paths.
-   - `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md`: current production and source.
-   - `docs/FLEETLAB_D1_RELEASE_2026-09-26.md`: completed.
+   - `docs/fleetlab/publishing/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md`: current production and source.
+   - `docs/fleetlab/publishing/FLEETLAB_D1_RELEASE_2026-09-26.md`: completed.
 2. Run the privacy scan on the staged diff, then commit: `docs(fleetlab): record D1 release and verification`.
 3. Push.
    - **If D1 deployed and the readback passed:**

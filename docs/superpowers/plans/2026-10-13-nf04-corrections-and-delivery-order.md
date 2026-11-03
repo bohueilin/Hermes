@@ -4,7 +4,7 @@
 
 **Date:** October 13, 2026, America/Los_Angeles.
 
-**Implementation status:** Published from `f8b3b27` after independent review and final validation. See [the implementation and release handoff](../../FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md) for actual counts, target exceptions and remaining device/human observations. Original proposal language below is retained as design context; it is not a claim that this work is still pending.
+**Implementation status:** Published from `f8b3b27` after independent review and final validation. See [the implementation and release handoff](../../fleetlab/network-flows/FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md) for actual counts, target exceptions and remaining device/human observations. Original proposal language below is retained as design context; it is not a claim that this work is still pending.
 
 **Goal:** Make NF04's explanation dependable, then let a visitor choose a delivery order, compare individual consequences, and inspect an exact optimum within a small, explicitly bounded scheduling problem.
 
@@ -52,7 +52,7 @@ This is a real small optimization problem. The product value is making its objec
 | Live reference | [NF04 stable](https://fleetlab.pages.dev/network-flows/software-delivery/) and [immutable reviewed release](https://38a98b78.fleetlab.pages.dev/network-flows/software-delivery/) |
 | Consolidated feedback | `Downloads/FLEETLAB_NF04_REVIEW_AND_BOUNDED_OPTIMIZATION_DESIGN_2026-10-13.md` |
 | Original Fable feedback | `docs/FLEETLAB_NF04_REVIEW_AND_NEXT_PHASE_2026-10-13_Fable.md` |
-| Release and contract | `docs/FLEETLAB_NF04_B_IMPLEMENTATION_HANDOFF_2026-10-13.md`; `docs/FLEETLAB_NF04_B_CONTRACT_2026-10-13.md` |
+| Release and contract | `docs/fleetlab/network-flows/FLEETLAB_NF04_B_IMPLEMENTATION_HANDOFF_2026-10-13.md`; `docs/fleetlab/network-flows/FLEETLAB_NF04_B_CONTRACT_2026-10-13.md` |
 | Current source inspected | NF04 page, player, app, projection, worker, contract, relevant tests; package ownership, source capture, integration inventory and historical roadmap |
 | Read-only reproductions this turn | Existing NF04 reconstruction/projection and fake-DOM harness; independent Python enumeration of all 24 orders for four proposed fixtures; eight equal-share records reconstructed and checked with existing NF04 code at 1,000/250 ms |
 
@@ -453,7 +453,7 @@ receipt = received ? 'complete'
 
 ### Task 3 — Freeze the bounded contract and build independent interval checking
 
-**Create:** `playground/fleetlab/src/model/delivery-order-contract.js`, `delivery-order.js`, `delivery-order-verify.js`; `playground/fleetlab/test/delivery-order-{model,independence}.test.mjs`; `docs/FLEETLAB_DELIVERY_ORDER_CONTRACT.md`.
+**Create:** `playground/fleetlab/src/model/delivery-order-contract.js`, `delivery-order.js`, `delivery-order-verify.js`; `playground/fleetlab/test/delivery-order-{model,independence}.test.mjs`; `docs/fleetlab/network-flows/FLEETLAB_DELIVERY_ORDER_CONTRACT.md`.
 
 **Interfaces:**
 
@@ -574,7 +574,7 @@ createOrderPage({manifest,runStudy,cancelStudy,reducedMotion}) -> {
 
 ### Task 7 — Regression, source-bound release candidate and handoff
 
-**Update after implementation:** `docs/FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md`, this plan's checkboxes, corrected NF04 handoff, and `docs/releases/fleetlab-current.json` only after an actual authorized publication. Follow `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` for whole-generation staging, publication and rollback.
+**Update after implementation:** `docs/fleetlab/network-flows/FLEETLAB_DELIVERY_ORDER_IMPLEMENTATION_HANDOFF.md`, this plan's checkboxes, corrected NF04 handoff, and `docs/releases/fleetlab-current.json` only after an actual authorized publication. Follow `docs/fleetlab/publishing/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` for whole-generation staging, publication and rollback.
 
 - [x] Run the existing full gates from the implementation checkout:
 

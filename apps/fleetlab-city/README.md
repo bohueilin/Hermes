@@ -8,7 +8,7 @@ connectors have a separate model 4 and verified fixtures. A complete temporal ma
 bundle and candidate-specific inspection worksheet are now published as the
 third atlas choice, with complete corresponding source downloads. SF remains
 **HOLD** for district scope and independent observations. Use the current
-[`FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md`](../../docs/FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md)
+[`FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md`](../../docs/fleetlab/city-explorer/FLEETLAB_TEMPORAL_CANDIDATE_BUNDLE_V1.md)
 and SF completion status for exact versions, tests and remaining work. Historical
 setup/release notes below retain their original scope. The stopped power-study
 retry was consumed; no further evaluation is authorized by these packaging tools.
@@ -19,7 +19,7 @@ The October 2026 eMudhra trust-store update requires the patched Node runtime,
 `certifi` from the current wheel lock, and a patched Python/system CA store.
 Updating standalone `certifi` does not update pip's independently bundled store;
 use pip 26.2.2 or newer and verify the actual TLS clients used for downloads.
-See the [deployment runbook](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md#october-22-tls-toolchain-update)
+See the [deployment runbook](../../docs/fleetlab/publishing/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md#october-22-tls-toolchain-update)
 for the local runtime and verification procedure. The static website has no PHP runtime.
 
 ```bash
@@ -66,7 +66,7 @@ npm --prefix apps/fleetlab-city run test:browser
 
 `qualify-routing.py` compares 100 supported-graph OD queries and repeats an eight-hour run exactly. `rebuild-check.py` writes a new pack and compares five semantic products. It is a one-time immutable reproduction command; choose another output path to run again. Browser evidence checking validates the recorded local browser observations; it does not launch a browser or claim unavailable devices were tested.
 
-See `docs/FLEETLAB_CITY_PACK_V1.md`, `docs/FLEETLAB_CITY_RUN_V1.md`, and `docs/FLEETLAB_CITY_SF_VALIDATION.md` for contracts, results and remaining gates. The existing `playground/fleetlab/` app, root Python package, headers and legacy release path remain separate. No push or deployment command is part of this slice.
+See `docs/fleetlab/city-explorer/FLEETLAB_CITY_PACK_V1.md`, `docs/fleetlab/city-explorer/FLEETLAB_CITY_RUN_V1.md`, and `docs/fleetlab/city-explorer/FLEETLAB_CITY_SF_VALIDATION.md` for contracts, results and remaining gates. The existing `playground/fleetlab/` app, root Python package, headers and legacy release path remain separate. No push or deployment command is part of this slice.
 
 ## September 29 visitor-experience update
 
@@ -79,8 +79,8 @@ It uses the same frozen SF runs and does not change simulation or recommendation
 build/fleetlab-city/venv/bin/python apps/fleetlab-city/tools/city.py serve --site dist/city-explorer-v2-reviewed --port 4173
 ```
 
-Read `docs/FLEETLAB_CITY_PRESENTER_GUIDE.md` for the demonstration narrative and
-`docs/FLEETLAB_CITY_UX_V2_VALIDATION.md` for current checks and remaining device/map gates.
+Read `docs/fleetlab/city-explorer/FLEETLAB_CITY_PRESENTER_GUIDE.md` for the demonstration narrative and
+`docs/fleetlab/city-explorer/FLEETLAB_CITY_UX_V2_VALIDATION.md` for current checks and remaining device/map gates.
 The older `dist/city-explorer-reviewed/` and original validation logs remain historical evidence.
 `dist/city-explorer-v2/` is a mutable UI prototype and must not be deployed or used as the final release identity.
 
@@ -92,10 +92,10 @@ SF v2 qualification candidate. Recorded fleet results still use the unchanged SF
 The candidate is map-only: fleet execution is rejected until cross-leg restriction history
 is specified and validated. Its remaining class, district and human-review gates stay visible.
 
-Read `docs/FLEETLAB_CITY_V3_VALIDATION.md` for the current evidence,
-`docs/FLEETLAB_SF_MAP_RESEARCH_V3.md` for source research and simulator recommendations,
-and `docs/FLEETLAB_NEXT_PHASE_BRIEF_V3.md` for a portable brainstorming handoff.
-`docs/FLEETLAB_CITY_LAUNCH_PREPARATION.md` documents the separate local Pages stage,
+Read `docs/fleetlab/city-explorer/FLEETLAB_CITY_V3_VALIDATION.md` for the current evidence,
+`docs/fleetlab/city-explorer/FLEETLAB_SF_MAP_RESEARCH_V3.md` for source research and simulator recommendations,
+and `docs/fleetlab/city-explorer/FLEETLAB_NEXT_PHASE_BRIEF_V3.md` for a portable brainstorming handoff.
+`docs/fleetlab/city-explorer/FLEETLAB_CITY_LAUNCH_PREPARATION.md` documents the separate local Pages stage,
 proposed header/navigation diffs and rehearsed rollback. No public switch has occurred.
 
 ## Additive hosted integration
@@ -115,6 +115,6 @@ intermediate unchanged copy; `review/integration-manifest.json` is the final
 hosted inventory. City `release.json` records the build's review scope; the
 separate publication record records the owner's website-release decision.
 
-See `docs/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md` for actual checks,
+See `docs/fleetlab/city-explorer/FLEETLAB_CITY_INTEGRATION_RELEASE_2026-09-29.md` for actual checks,
 release paths, publication identity and rollback. The separate power-study
 execution amendment is still held; no uncomputed SF power results are shown.

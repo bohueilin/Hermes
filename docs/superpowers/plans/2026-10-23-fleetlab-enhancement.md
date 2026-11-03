@@ -56,7 +56,7 @@ Ruling: hold V1, not all media — the owner approved allocations and explicitly
 - Independent review found a second singular-grammar surface in replay. A failing regression reproduced it; the correction passed regression and browser checks.
 - Final capacity closure is 524,076 / 524,288 bytes (212 free). Leading-whitespace reduction was checked for token/line/comment equivalence; no ceiling increase.
 - Final gates: Hermes 1,661 pass / 56 skip; hosted Node 119 pass; teaching Node 2,433 pass / 8 skip / 1 existing TODO; City integration 34 pass; capacity-site 10 pass; Ruff and diff-check pass. Activated doctor: 17 PASS, dirty-tree WARN, optional display NOT_AVAILABLE.
-- Owner recommendation: HOLD FL-V1 for transition ghosting, doubled moon and dark endpoint. Full report: `docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md`.
+- Owner recommendation: HOLD FL-V1 for transition ghosting, doubled moon and dark endpoint. Full report: `docs/fleetlab/publishing/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md`.
 
 ## Approved continuation outcome
 

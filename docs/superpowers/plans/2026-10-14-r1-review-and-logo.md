@@ -41,4 +41,4 @@
 
 ## Completion record
 
-Review checkpoint complete on October 14: 92 City JS, 2,338 teaching JS, 342 City Python and 1,662 Hermes tests passed; skips/todo and Doctor warning recorded in the handoff. Independent review fixed stale-play rejection and interval ambiguity. Model and publication remain held by owner-requested contract review. Media reproduction and network-error retry qualification remain explicit limitations, not completed release checks. See `docs/FLEETLAB_R1_REVIEW_HANDOFF_2026-10-14.md`.
+Review checkpoint complete on October 14: 92 City JS, 2,338 teaching JS, 342 City Python and 1,662 Hermes tests passed; skips/todo and Doctor warning recorded in the handoff. Independent review fixed stale-play rejection and interval ambiguity. Model and publication remain held by owner-requested contract review. Media reproduction and network-error retry qualification remain explicit limitations, not completed release checks. See `docs/fleetlab/network-flows/FLEETLAB_R1_REVIEW_HANDOFF_2026-10-14.md`.

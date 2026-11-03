@@ -28,4 +28,4 @@ Owner direction, 2026-09-29: improve the San Francisco experience before adding 
 
 GeoLibre was evaluated from its primary repository as a possible GIS authoring/inspection tool. It already uses MapLibre and does not itself improve the source or simulation model, so it was not added to the focused viewer. No Google Maps content was scraped or copied. MetaDrive/MuJoCo and richer 3D worlds remain separate fidelity decisions for a later experiment.
 
-This pass does not relax map qualification thresholds, change the frozen scenario, claim operator calibration, deploy publicly, or establish physical-vehicle safety. Current outcome and evidence are recorded in `docs/FLEETLAB_CITY_UX_V2_VALIDATION.md`.
+This pass does not relax map qualification thresholds, change the frozen scenario, claim operator calibration, deploy publicly, or establish physical-vehicle safety. Current outcome and evidence are recorded in `docs/fleetlab/city-explorer/FLEETLAB_CITY_UX_V2_VALIDATION.md`.

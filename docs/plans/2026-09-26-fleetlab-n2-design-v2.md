@@ -2,7 +2,7 @@ DRAFT v2 for owner review; design only; no N2 implementation authorized
 
 # FleetLab N2: finite pickup resources and published-forecast preparation
 
-**S0 / WP0 contract addendum, 2026-09-26.** This complete corrected design supersedes [draft v1](2026-09-25-fleetlab-n2-design.md) for future implementation. It does not authorize implementation, experiment registration, an execution-seam refactor or publication. The [owner brief](2026-09-26-fleetlab-d1-and-n2-s0-codex-brief.md) §2 controls decisions; [independent review](../FLEETLAB_PACKET_REVIEW_2026-09-26.md) §2 supplies the contract corrections and §3 supplies S1 recommendations. The [packet](../FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md) §7 supplies the earlier findings and traces. This document describes proposed behavior, not measured N2 results.
+**S0 / WP0 contract addendum, 2026-09-26.** This complete corrected design supersedes [draft v1](2026-09-25-fleetlab-n2-design.md) for future implementation. It does not authorize implementation, experiment registration, an execution-seam refactor or publication. The [owner brief](2026-09-26-fleetlab-d1-and-n2-s0-codex-brief.md) §2 controls decisions; [independent review](../fleetlab/design/FLEETLAB_PACKET_REVIEW_2026-09-26.md) §2 supplies the contract corrections and §3 supplies S1 recommendations. The [packet](../fleetlab/design/FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md) §7 supplies the earlier findings and traces. This document describes proposed behavior, not measured N2 results.
 
 ## 1. Purpose, authority and change log
 

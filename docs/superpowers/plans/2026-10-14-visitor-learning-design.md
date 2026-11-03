@@ -48,4 +48,4 @@
 
 ## Completion ledger
 
-All three tasks completed. Implementation commit `86f8a13` is pushed and live. Production deployment `5924764c-7dc2-4336-a7d4-94fe3e39a991` and preview used the same source-bound stage. Both full readbacks matched all 10,097 served files; both header checks matched 49/49. Independent final review found no significant regressions. Full test counts, minor corrections, ownership decisions, live browser observations and retained limitations are recorded in `docs/FLEETLAB_VISITOR_DESIGN_HANDOFF_2026-10-14.md`.
+All three tasks completed. Implementation commit `86f8a13` is pushed and live. Production deployment `5924764c-7dc2-4336-a7d4-94fe3e39a991` and preview used the same source-bound stage. Both full readbacks matched all 10,097 served files; both header checks matched 49/49. Independent final review found no significant regressions. Full test counts, minor corrections, ownership decisions, live browser observations and retained limitations are recorded in `docs/fleetlab/design/FLEETLAB_VISITOR_DESIGN_HANDOFF_2026-10-14.md`.

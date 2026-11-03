@@ -8,11 +8,11 @@
 
 **Tech Stack:** Vanilla JavaScript, HTML video, existing Node packer and tests; Blender and FFmpeg for offline film authoring.
 
-**Spec:** `docs/FLEETLAB_HOMEPAGE_FILM.md`.
+**Spec:** `docs/fleetlab/playground/FLEETLAB_HOMEPAGE_FILM.md`.
 
 ## Global Constraints
 
-- Work only in `/Users/bohueilin/Documents/GitHub/Hermes-playground` on `feat/fleetlab-playground`.
+- Work only in `…/Hermes-playground` on `feat/fleetlab-playground`.
 - Do not alter Python core, GitHub workflows, evidence contracts or simulation semantics.
 - No frontend dependency, analytics, external media request or copied corporate asset.
 - Hosted film `media/fleet-film.mp4` ≤ 4 MiB; poster `media/fleet-film-poster.webp` ≤ 200 KiB; app/offline budget stays 2.5 MiB.

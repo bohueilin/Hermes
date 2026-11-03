@@ -8,7 +8,7 @@
 
 **Tech Stack:** Existing Python 3.11/SciPy, Node 22, vanilla modules and MapLibre. No new provider or backend.
 
-**Spec:** `docs/FLEETLAB_FINAL_PROPOSAL_2026-09-29.md` (owner approved building). Integration placement was presented before implementation: top-level City Explorer + homepage SF feature card, same-tab `/city-explorer/`, internal Start here/City atlas/Decision notebook/Replay studio and return to FleetLab. Placement and publication are now explicitly approved. Preserve all existing experiences.
+**Spec:** `docs/fleetlab/handoffs/FLEETLAB_FINAL_PROPOSAL_2026-09-29.md` (owner approved building). Integration placement was presented before implementation: top-level City Explorer + homepage SF feature card, same-tab `/city-explorer/`, internal Start here/City atlas/Decision notebook/Replay studio and return to FleetLab. Placement and publication are now explicitly approved. Preserve all existing experiences.
 
 ## Global Constraints
 
@@ -63,7 +63,7 @@
 
 ## Task 3: Map qualification design and prioritized evidence
 
-**Files:** New `docs/FLEETLAB_SF_MAP_CONTINUITY_DESIGN_V1.md` and `docs/FLEETLAB_MAP_REVIEW_RESULT_CONTRACT_V1.md`; optional bounded read-only tool/output under `tools/` and `build/fleetlab-city/validation/power-v1/`. No candidate execution guard removal.
+**Files:** New `docs/fleetlab/city-explorer/FLEETLAB_SF_MAP_CONTINUITY_DESIGN_V1.md` and `docs/fleetlab/city-explorer/FLEETLAB_MAP_REVIEW_RESULT_CONTRACT_V1.md`; optional bounded read-only tool/output under `tools/` and `build/fleetlab-city/validation/power-v1/`. No candidate execution guard removal.
 
 - [x] Specify per-vehicle incoming-edge/prefix state, zero-length-leg behavior, stop/depot boundary behavior, explicit reviewed connector resets, no-route outcomes and an independent sequence verifier under a future model version.
 - [x] Specify immutable review results with pack/source digest, reviewer/observation/rationale/disposition and stale/conflicting/insufficient review rejection. Existing NOT_RUN checklist stays immutable; no human review is fabricated.

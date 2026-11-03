@@ -5,7 +5,7 @@
 **Goal:** Publish one bounded, verified software-delivery comparison with three counterexamples while preserving existing FleetLab and SF content.
 **Architecture:** Canonical schema → independent engine and verifier → manifest-bound accepted pair → projection → route-local UI and terminated-worker cancellation. Owner-aware packaging binds the entire integrated generation.
 **Tech stack:** Existing dependency-free JavaScript ES modules, Node 22.22.0 tests, Python integration, pinned Cloudflare deployment.
-**Spec:** `docs/FLEETLAB_NF04_B_ACCEPTED_BRIEF_2026-10-13.md`, with the Oct12 contract A1 allocator mathematics retained.
+**Spec:** `docs/fleetlab/network-flows/FLEETLAB_NF04_B_ACCEPTED_BRIEF_2026-10-13.md`, with the Oct12 contract A1 allocator mathematics retained.
 
 ## Authority and amendments
 

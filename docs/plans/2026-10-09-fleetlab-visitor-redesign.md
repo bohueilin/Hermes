@@ -220,4 +220,4 @@ For each defect: write the exact reproduction as a test first; record CONFIRMED 
 
 ## Task 6: Built report
 
-Write `docs/FLEETLAB_WEBSITE_REDESIGN_BUILT_REPORT_2026-10-09.md` with: what changed (per page, with before/after structure), what was deliberately not changed (science, routes, City package), test and build evidence with exact numbers, defect reproduction results, browser measurements, design decisions and departures from the V2 proposal, remaining risks, rollback (`git revert` of the branch commits; the published release is untouched), and the exact commands to integrate and publish, which this work does not run.
+Write `docs/fleetlab/publishing/FLEETLAB_WEBSITE_REDESIGN_BUILT_REPORT_2026-10-09.md` with: what changed (per page, with before/after structure), what was deliberately not changed (science, routes, City package), test and build evidence with exact numbers, defect reproduction results, browser measurements, design decisions and departures from the V2 proposal, remaining risks, rollback (`git revert` of the branch commits; the published release is untouched), and the exact commands to integrate and publish, which this work does not run.

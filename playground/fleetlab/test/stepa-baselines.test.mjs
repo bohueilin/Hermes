@@ -1,4 +1,4 @@
-// Step A byte bounds, Playground rows (docs/FLEETLAB_NETWORK_FLOWS_STEP_A_SPEC_2026-10-25.md section 3). Baselines were
+// Step A byte bounds, Playground rows (docs/fleetlab/network-flows/FLEETLAB_NETWORK_FLOWS_STEP_A_SPEC_2026-10-25.md section 3). Baselines were
 // measured at b15055c under the official Node 22.23.4. Upper bounds only: uncommitted or git-less trees read low, and the
 // Node version string and its zlib shift some figures, so every message names the runtime.
 import {after,test} from 'node:test';import assert from 'node:assert/strict';import {execFileSync} from 'node:child_process';
