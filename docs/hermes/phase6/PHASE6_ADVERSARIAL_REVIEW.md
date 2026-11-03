@@ -101,9 +101,9 @@ produce pixel/manual visual, 200% reflow, visible CSS focus, screen-reader, cont
 or human-comprehension evidence; those statuses remain `NOT YET OBSERVED`.
 
 Automated AppTest structure does not establish those outcomes or WCAG conformance. The prospective
-protocols are `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md`,
-`docs/PHASE6_USABILITY_TEST_PLAN.md`, and
-`docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`. The accepted process-lifetime cache/session-growth P2
+protocols are `docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md`,
+`docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md`, and
+`docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`. The accepted process-lifetime cache/session-growth P2
 below remains unchanged; discovery/autocomplete still requires a deterministic synchronized bounded
 LRU predecessor.
 
@@ -128,11 +128,11 @@ simulator, browser, or server action was used during remediation.
 
 ## 2. Repository snapshot and observed architecture
 
-- Repository: `/Users/bohueilin/Documents/GitHub/Hermes`
+- Repository: `…/Hermes`
 - Branch: `feat/phase6-evidence-workbench`
 - Review base: `99c75124521bb98dbfad11cf1f6cc2b8528ce9cd`
   (`feat: add local read-only evidence workbench`)
-- Python: `3.11.15` from `/Users/bohueilin/miniconda3/envs/hermes-dev/bin/python`
+- Python: `3.11.15` from `…/miniconda3/envs/hermes-dev/bin/python`
 - Entry tree at review start: clean; `git diff --check` passed.
 - Review architecture observed:
   untrusted locator -> descriptor-relative immutable capture -> stored verification/compare core ->

@@ -8,7 +8,7 @@
 
 **Tech stack:** Python 3.11, Pydantic 2 strict/frozen models, Typer/Rich CLI, Streamlit 1.x in optional `workbench` extra, pytest, Ruff, stdlib descriptor APIs and `ipaddress`.
 
-**Frozen source of truth:** `PHASE6_DESIGN_FREEZE_HANDOFF.md`, `docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md`, `docs/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md`, `VALIDATION_MATRIX.md`, and `docs/PHASE6_REQUIREMENTS_TRACEABILITY.md` at commit `0ad1f5c`.
+**Frozen source of truth:** `PHASE6_DESIGN_FREEZE_HANDOFF.md`, `docs/hermes/phase6/PHASE6_REVIEW_ENVELOPE_CONTRACT.md`, `docs/hermes/phase6/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md`, `VALIDATION_MATRIX.md`, and `docs/hermes/phase6/PHASE6_REQUIREMENTS_TRACEABILITY.md` at commit `0ad1f5c`.
 
 **Non-negotiable invariants:** The existing stored verifier alone decides integrity. Existing `compare_artifacts` alone decides compatibility and dimension status. Invalid evidence cannot expose an accepted stored verdict, finding, metric, timeline, or provenance. Current authenticity is always `NOT_AUTHENTICATED`; authorization is `NOT_EVALUATED`; deployment permission is `NONE`; scope is `SIMULATION_ONLY`. Source artifact bytes never change. Review paths never import or launch adapters, policies, runtime, or MetaDrive. No remote action is allowed.
 
@@ -173,7 +173,7 @@ class ReviewModel(BaseModel):
 ```
 
 Implement the exact types and validation rules from
-`docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md`; do not simplify structured values into
+`docs/hermes/phase6/PHASE6_REVIEW_ENVELOPE_CONTRACT.md`; do not simplify structured values into
 `dict[str, Any]`. Export portable `ReviewEnvelope`, `ComparisonEnvelope`, `LocatorInfo`, the exact
 runtime `ReviewCacheKey`, canonical serializer, `ReviewUnavailableReason`, and
 `ReviewUnavailableError` from `hermes.review.__init__`. Do not invent another public locator or
@@ -526,7 +526,7 @@ git commit -m "feat: add local read-only evidence workbench"
 
 **Step 1: Review before rewriting.**
 
-Use `prompts/03_ADVERSARIAL_REVIEW.md` as the checklist. Inspect implementation and attempt to reproduce parallel authority, stale state, traversal/symlinks, directory replacement, artifact writes, invalid stored PASS, schema confusion, hidden unavailable evidence, threshold rounding, XSS/content injection, resource exhaustion, comparison cherry-picking, public bind, and simulator imports.
+Use `docs/archive/phase6-pack/prompts/03_ADVERSARIAL_REVIEW.md` as the checklist. Inspect implementation and attempt to reproduce parallel authority, stale state, traversal/symlinks, directory replacement, artifact writes, invalid stored PASS, schema confusion, hidden unavailable evidence, threshold rounding, XSS/content injection, resource exhaustion, comparison cherry-picking, public bind, and simulator imports.
 
 Record each candidate with severity, exact reproduction, observed evidence, expected fail-closed behavior, and initial status in `PHASE6_ADVERSARIAL_REVIEW.md` before editing production code.
 
@@ -583,13 +583,13 @@ forbidden.
 - Modify: `CURRENT_STATE_HANDOFF.md`
 - Modify: `VALIDATION_MATRIX.md`
 - Modify: `README_PHASE6_DRAFT.md` if retained
-- Modify: `docs/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md`
-- Modify: `docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md` only for implementation-conforming clarifications
-- Modify: `docs/PHASE6_UX_INFORMATION_ARCHITECTURE.md`
-- Modify: `docs/PHASE6_THREAT_MODEL.md`
-- Modify: `docs/PHASE6_REQUIREMENTS_TRACEABILITY.md`
-- Modify: `docs/PHASE6_DEMO_RUNBOOK.md`
-- Modify: `docs/decision-log.md`
+- Modify: `docs/hermes/phase6/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md`
+- Modify: `docs/hermes/phase6/PHASE6_REVIEW_ENVELOPE_CONTRACT.md` only for implementation-conforming clarifications
+- Modify: `docs/hermes/phase6/PHASE6_UX_INFORMATION_ARCHITECTURE.md`
+- Modify: `docs/hermes/phase6/PHASE6_THREAT_MODEL.md`
+- Modify: `docs/hermes/phase6/PHASE6_REQUIREMENTS_TRACEABILITY.md`
+- Modify: `docs/hermes/phase6/PHASE6_DEMO_RUNBOOK.md`
+- Modify: `docs/hermes/architecture/decision-log.md`
 - Modify: `CODEX_HANDOFF.md`
 - Modify: `PHASE6_DESIGN_FREEZE_HANDOFF.md` only if final status reconciliation requires it
 
@@ -642,11 +642,11 @@ git status --short
 git add README.md PROJECT_BRIEF.md BUILD_PLAN.md CURRENT_STATE_HANDOFF.md \
   VALIDATION_MATRIX.md README_PHASE6_DRAFT.md CODEX_HANDOFF.md \
   PHASE6_ADVERSARIAL_REVIEW.md PHASE6_DESIGN_FREEZE_HANDOFF.md \
-  docs/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md \
-  docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md \
-  docs/PHASE6_UX_INFORMATION_ARCHITECTURE.md \
-  docs/PHASE6_THREAT_MODEL.md docs/PHASE6_REQUIREMENTS_TRACEABILITY.md \
-  docs/PHASE6_DEMO_RUNBOOK.md docs/decision-log.md
+  docs/hermes/phase6/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md \
+  docs/hermes/phase6/PHASE6_REVIEW_ENVELOPE_CONTRACT.md \
+  docs/hermes/phase6/PHASE6_UX_INFORMATION_ARCHITECTURE.md \
+  docs/hermes/phase6/PHASE6_THREAT_MODEL.md docs/hermes/phase6/PHASE6_REQUIREMENTS_TRACEABILITY.md \
+  docs/hermes/phase6/PHASE6_DEMO_RUNBOOK.md docs/hermes/architecture/decision-log.md
 git diff --cached --check
 git diff --cached --stat
 ```

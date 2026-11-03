@@ -59,7 +59,7 @@ Compare `#compare`, and exception-text count 0.
 
 | Check | Command | Required result |
 |---|---|---|
-| Repository | `pwd` | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Repository | `pwd` | `…/Hermes` |
 | Environment | `python --version && which python` | Python 3.11 in `hermes-dev` |
 | Branch | `git branch --show-current` | `feat/phase6-reviewer-comprehension` for this iteration |
 | Status | `git status --short` | Only explicitly reviewed iteration changes and preserved user-owned prompt; clean before each commit |
@@ -368,7 +368,7 @@ No separate human-participant session is claimed at the `90fb7d8` checkpoint. De
 Streamlit AppTest coverage verifies the six screens and required trust content; a future usability
 study remains distinct from implementation acceptance.
 
-The current prospective protocol is `docs/PHASE6_USABILITY_TEST_PLAN.md`. It defines Tasks 1–10 for
+The current prospective protocol is `docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md`. It defines Tasks 1–10 for
 6–10 future participants across product, safety, simulation, and engineering:
 
 1. nominal PASS;
@@ -382,13 +382,13 @@ The current prospective protocol is `docs/PHASE6_USABILITY_TEST_PLAN.md`. It def
 9. incompatible comparison; and
 10. keyboard/screen-reader workflow.
 
-Use `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` for each actual participant. There is currently no
+Use `docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` for each actual participant. There is currently no
 retained valid fixture known to expose all Task 4 unavailable states; leave that task `NOT RUN`
 rather than mutating or fabricating evidence. Human comprehension remains `NOT YET OBSERVED`.
 
 ## 16A. Manual visual and accessibility evidence
 
-Use `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md`. Required rendered states include initial UNVERIFIED,
+Use `docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md`. Required rendered states include initial UNVERIFIED,
 PASS, HOLD, INVALID_EVIDENCE, typed required-unavailable evidence when a valid fixture exists,
 Timeline accountability, Provenance/limitations, compatible mixed comparisons, incompatible
 comparison, visible focus, and 200% Overview/Evidence/Timeline/Compare reflow.

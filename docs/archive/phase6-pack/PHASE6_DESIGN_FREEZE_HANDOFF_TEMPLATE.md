@@ -141,7 +141,7 @@ status:
 State either:
 
 ```text
-Run prompts/02_IMPLEMENT_PHASE6.md
+Run docs/archive/phase6-pack/prompts/02_IMPLEMENT_PHASE6.md
 ```
 
 or the exact remediation before implementation.

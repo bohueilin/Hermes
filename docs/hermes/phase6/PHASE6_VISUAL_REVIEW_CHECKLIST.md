@@ -27,7 +27,7 @@ state; it cannot establish screen-reader behavior, comprehension, or WCAG confor
 ## Launch and capture setup
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python -m pip install -e ".[dev,workbench]"
 hermes workbench \

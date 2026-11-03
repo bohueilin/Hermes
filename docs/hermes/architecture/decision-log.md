@@ -312,7 +312,7 @@ production Python, tests, dependencies, signing, artifact migration, or simulato
   genuine unresolved P0 blocker...,” and after GO/CONDITIONAL GO, “continue automatically to
   Stage 6B.” This explicit instruction overrides the generic AGENTS separate-approval gate.
 
-The full frozen register is docs/PHASE6_DECISION_LOG_SEED.md.
+The full frozen register is docs/hermes/phase6/PHASE6_DECISION_LOG_SEED.md.
 
 ## 2026-08-11 — Phase 0 environment doctor and package bootstrap
 
@@ -333,7 +333,7 @@ policies, safety shields, release gates, evidence bundles, and dashboards remain
   standalone proof. The user reported that it passed before Phase 0; the doctor independently
   imports its prerequisites and finds a graphics pipe, while explicitly not claiming rendering ran.
 - Resolve the actual current Git root instead of enforcing the recommended `~/Projects/Hermes`
-  path. This workspace is `/Users/bohueilin/Documents/GitHub/Hermes`.
+  path. This workspace is `…/Hermes`.
 - Exit successfully for `WARN` and `NOT_AVAILABLE`, but exit nonzero for any `FAIL`. Every failure
   includes an actionable remediation.
 
@@ -525,7 +525,7 @@ not a clean-commit release candidate. MetaDrive ground truth is not a perception
 scripted cut-in is not a behavior model, same-host repeatability is not cross-platform bitwise
 determinism, stored verification does not replay simulator dynamics, and local SHA-256 remains
 tamper-evident rather than independently authenticated. Full metrics and reproducibility conditions
-are recorded in `docs/phase3-safety-shield.md`.
+are recorded in `docs/hermes/architecture/phase3-safety-shield.md`.
 
 ## 2026-08-11 — Phase 4 deterministic fault injection and Phase 5 hardening
 

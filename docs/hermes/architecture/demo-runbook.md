@@ -11,7 +11,7 @@ Do not frame the demo as proof of real-world driving safety.
 ## Setup
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python -m pip install -e ".[dev]"
 python -m pytest -q

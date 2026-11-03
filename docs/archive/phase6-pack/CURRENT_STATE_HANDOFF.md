@@ -16,7 +16,7 @@ independent reviewers returned GO with no open P0/P1.
 | Surface | Current value |
 |---|---|
 | Product/repository | `Hermes` / intended `bohueilin/Hermes` |
-| Local repository | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Local repository | `…/Hermes` |
 | Distribution | `hermes-autonomy` |
 | Import package | `hermes` |
 | CLI | `hermes` |

@@ -7,7 +7,7 @@ Review the completed Phase 6 implementation. Begin with review and evidence coll
 ## Repository
 
 ```text
-/Users/bohueilin/Documents/GitHub/Hermes
+…/Hermes
 ```
 
 ## Primary question

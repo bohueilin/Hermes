@@ -26,7 +26,7 @@ The plan begins after Hermes Phase 0.
 
 | Item | Validated state |
 |---|---|
-| Repository root | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Repository root | `…/Hermes` |
 | Baseline branch | `main` |
 | Baseline commit | `c181509a691b132cb732a50c24612f6bd40bafca` |
 | Distribution | `hermes-autonomy` |
@@ -633,10 +633,10 @@ Creation timestamp, run ID, and host execution duration may differ.
 Create/update:
 
 - `README.md`;
-- `docs/phase1-architecture.md`;
-- `docs/phase1-requirements-traceability.md`;
-- `docs/decision-log.md`;
-- `docs/PM_SKILLS_MATRIX.md`;
+- `docs/hermes/architecture/phase1-architecture.md`;
+- `docs/hermes/architecture/phase1-requirements-traceability.md`;
+- `docs/hermes/architecture/decision-log.md`;
+- `docs/hermes/pm/PM_SKILLS_MATRIX.md`;
 - `CODEX_HANDOFF.md`.
 
 ### 10.16 Phase 1 acceptance commands
@@ -726,7 +726,7 @@ Before implementation, inspect the installed MetaDrive 0.4.3 source and examples
 - deterministic seeding controls;
 - clean shutdown behavior.
 
-Write `docs/phase2-metadrive-adapter.md` with observed APIs. Do not use keys copied from another release without verification.
+Write `docs/hermes/architecture/phase2-metadrive-adapter.md` with observed APIs. Do not use keys copied from another release without verification.
 
 ### 11.3 Adapter contract
 

@@ -53,7 +53,7 @@ Pre-existing untracked files at branch creation (not created by Phase 8, not sta
 Exact reproduction (see §2 for why `PYTHONPATH` is mandatory):
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes && PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$PWD/src" /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m pytest -p no:cacheprovider -q
+cd …/Hermes && PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$PWD/src" …/miniconda3/envs/hermes-dev/bin/python -m pytest -p no:cacheprovider -q
 ```
 
 ### 1.2 The `metadrive` pytest marker is declared but unused
@@ -94,7 +94,7 @@ verification returns `ARTIFACT_VERIFICATION_ERROR` ("artifact root and selected 
 real directories"). Even `tests/unit/test_architecture_boundaries.py` fails twice, because it asserts
 the boundary by invoking `review-artifact` / `review-compare` on a fixture bundle.
 
-**There is no committed way to regenerate the fixtures.** `docs/PHASE6_DEMO_RUNBOOK.md` *consumes*
+**There is no committed way to regenerate the fixtures.** `docs/hermes/phase6/PHASE6_DEMO_RUNBOOK.md` *consumes*
 `handoff-phase5-demo` but never says how it was produced; no Makefile target, script, or registry
 creates the `handoff-*` set. They exist only as 43 locally-generated directories on this machine.
 
@@ -137,14 +137,14 @@ Phase 7 worktree**, not at this checkout:
 
 ```
 $ cat .../envs/hermes-dev/lib/python3.11/site-packages/__editable__.hermes_autonomy-0.1.0.pth
-/Users/bohueilin/.codex/worktrees/Hermes/phase7-evaluation-adequacy-human-validation/src
+…/.codex/worktrees/Hermes/phase7-evaluation-adequacy-human-validation/src
 ```
 
 Running `python -m hermes` or `python -m pytest` in this checkout **without** an explicit
 `PYTHONPATH` imports Phase 7 code while reading Phase 8 tests and scenarios. Verified:
 
 - bare: `hermes.__file__` → `.../phase7-evaluation-adequacy-human-validation/src/hermes/__init__.py`
-- with `PYTHONPATH=$PWD/src`: `hermes.__file__` → `/Users/bohueilin/Documents/GitHub/Hermes/src/hermes/__init__.py` ✔
+- with `PYTHONPATH=$PWD/src`: `hermes.__file__` → `…/Hermes/src/hermes/__init__.py` ✔
 
 `metadrive` resolves correctly either way (its editable finder maps to this checkout's
 `third_party/metadrive`).
@@ -1098,7 +1098,7 @@ Phase 8 runs with `PYTHONPATH="$PWD/src"` against the `hermes-dev` interpreter. 
 
   No existing test assertion was edited or deleted. Final gates: **762 passed**, ruff clean on
   `src`/`tests`, doctor 16 PASS / 2 WARN.
-- The Phase 7 worktree at `~/.codex/worktrees/Hermes/phase7-evaluation-adequacy-human-validation` was
+- The Phase 7 worktree at `…/.codex/worktrees/Hermes/phase7-evaluation-adequacy-human-validation` was
   **not** read, checked out, merged or modified. Its adequacy machinery is not consumed. The only
   Phase 7 material read is the root-level `PHASE7_EVALUATION_ADEQUACY_AND_HUMAN_VALIDATION_DESIGN.md`,
   which is a tracked file of this checkout, consulted solely for the digest-bound registry pattern

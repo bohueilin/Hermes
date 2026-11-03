@@ -1,4 +1,4 @@
-![Hermes, winged messenger of the gods, watching a sensor-equipped autonomous vehicle trace a lit, waypointed path across a valley at sunrise](Hermes_Github.png)
+![Hermes, winged messenger of the gods, watching a sensor-equipped autonomous vehicle trace a lit, waypointed path across a valley at sunrise](docs/assets/Hermes_Github.png)
 
 # Hermes
 
@@ -8,9 +8,18 @@ Hermes is a simulation-only autonomous-driving scenario and safety-evidence lab.
 
 Hermes is designed to make an autonomy experiment reproducible and reviewable: it preserves the scenario, versions, candidate action, executed action, findings, metrics, release verdict, and evidence-integrity checks in one bundle.
 
+## Where things are
+
+- [`HERMES_SOURCE_OF_TRUTH.md`](HERMES_SOURCE_OF_TRUTH.md): the one status and plan file. Every agent starts there.
+- [`docs/hermes/`](docs/hermes/): the Hermes core, with architecture notes and the Phase 6 to 9 design documents.
+- [`docs/fleetlab/`](docs/fleetlab/): FleetLab publishing, handoffs, the Playground, City Explorer, Network Flows, the depot lab and design.
+- [`docs/releases/`](docs/releases/): the public record of the live FleetLab release.
+- [`docs/archive/`](docs/archive/): the Phase 5 and Phase 6 instruction sets, kept for history.
+- [`docs/README.md`](docs/README.md): the full folder guide.
+
 ## Try FleetLab in your browser
 
-**[Open the interactive FleetLab playground](https://fleetlab-playground.pages.dev/)** · [Source and quick start](playground/fleetlab/README.md) · [Project review and next-phase brief](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) · [Cloudflare publishing guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md)
+**[Open FleetLab](https://fleetlab.pages.dev/)** · [Source and quick start](playground/fleetlab/README.md) · [Project review and next-phase brief](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) · [Cloudflare publishing guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md)
 
 An independent product exploration by **Bo-Huei Lin**: follow a fleet through a simulated day, inspect its depot bottlenecks, and compare capacity decisions. The 3D Bay Area experience includes 18 city and airport locations, editable Jaguar I-PACE and Ojai vehicle profiles, and weather and demand scenarios. The new **Street lab** adds six downtown San Francisco bottlenecks, directed routes to SFO and the East Bay, block queues and same-demand routing comparisons. The catalog contains 59 cases and lessons across four teaching model families, including the newer depot readiness, charging, resource-observation, airport-preparation and launch-rehearsal extensions and the three Scale lab lessons on what changes as a fleet scales. Start with **Run a fleet day** or **Street lab**, then visit **Product approach** for the user needs, hypotheses and validation roadmap. See the [Street lab model and demonstration](docs/FLEETLAB_STREET_LAB.md).
 
@@ -93,7 +102,7 @@ screening input to a next test, never a launch decision, and `deployment_permiss
 
 | Document | What it is |
 |---|---|
-| [HERMES_PHASE9_FLEET_SIMULATION_PRD.md](HERMES_PHASE9_FLEET_SIMULATION_PRD.md) | The requirements document: personas, fidelity lanes, domain and event model, experiment semantics, scenario catalog, acceptance criteria |
+| [HERMES_PHASE9_FLEET_SIMULATION_PRD.md](docs/hermes/phase9/HERMES_PHASE9_FLEET_SIMULATION_PRD.md) | The requirements document: personas, fidelity lanes, domain and event model, experiment semantics, scenario catalog, acceptance criteria |
 | [docs/plans/2026-08-30-fleet-metric-contract-design.md](docs/plans/2026-08-30-fleet-metric-contract-design.md) | Design for a shared metric contract — and the defect in the code above that motivates it |
 
 **Built:** the FLEET-005 slice — preregistered specs, the hashed world tape, enforced invariants,
@@ -169,9 +178,9 @@ Reference documents (deep material, not status):
 
 | Document | What it is |
 |---|---|
-| [PHASE8_DESIGN_SPEC.md](PHASE8_DESIGN_SPEC.md) | The design, the agent authority model, acceptance criteria, and open questions for review |
-| [PHASE8_IMPLEMENTATION_NOTE.md](PHASE8_IMPLEMENTATION_NOTE.md) | What was built and measured, decisions forced by the code, deviations, and where the work is thinnest |
-| [PHASE8_BASELINE_AUDIT.md](PHASE8_BASELINE_AUDIT.md) | The Sprint 0 survey of the existing codebase and its compatibility risks |
+| [PHASE8_DESIGN_SPEC.md](docs/hermes/phase8/PHASE8_DESIGN_SPEC.md) | The design, the agent authority model, acceptance criteria, and open questions for review |
+| [PHASE8_IMPLEMENTATION_NOTE.md](docs/hermes/phase8/PHASE8_IMPLEMENTATION_NOTE.md) | What was built and measured, decisions forced by the code, deviations, and where the work is thinnest |
+| [PHASE8_BASELINE_AUDIT.md](docs/hermes/phase8/PHASE8_BASELINE_AUDIT.md) | The Sprint 0 survey of the existing codebase and its compatibility risks |
 
 ### The three things worth looking at
 
@@ -336,7 +345,7 @@ realism claim.
 ## Environment
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python --version
 which python
@@ -474,7 +483,7 @@ actual policy input.
 evidence and `40` for incompatible valid evidence or configuration/operational failure. Compatible
 comparisons report verdict, hard failures, collision, TTC, progress, comfort, latency, intervention,
 and evidence-availability trade-offs; intervention counts are descriptive rather than ordinal.
-See `docs/phase3-safety-shield.md` for exact rules, compatibility requirements, and limitations.
+See `docs/hermes/architecture/phase3-safety-shield.md` for exact rules, compatibility requirements, and limitations.
 
 ## Phase 4 deterministic fault command
 
@@ -499,7 +508,7 @@ Stored verification exactly replays the shield and fault transformations without
 Candidate policy proposals and simulator results remain trace inputs; the policy and simulator are
 not re-executed. MetaDrive IDM observation faults are rejected because that policy reads native
 simulator state; only action delay/saturation are truthful for that profile. See
-`docs/phase4-fault-and-ci-hardening.md` for the complete semantics and evidence boundary.
+`docs/hermes/architecture/phase4-fault-and-ci-hardening.md` for the complete semantics and evidence boundary.
 
 ## Phase 6 evidence review
 
@@ -569,9 +578,9 @@ regressions together with a no-overall-advancement interpretation.
 
 Human review artifacts are:
 
-- `docs/PHASE6_USABILITY_TEST_PLAN.md` — prospective Tasks 1–10 for 6–10 participants;
-- `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` — blank evidence record; and
-- `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md` — executable visual, keyboard, screen-reader, contrast,
+- `docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md` — prospective Tasks 1–10 for 6–10 participants;
+- `docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` — blank evidence record; and
+- `docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md` — executable visual, keyboard, screen-reader, contrast,
   table, focus, and 200% zoom/reflow checks.
 
 Automated correctness does not promote those manual gates. No WCAG or reviewer-readiness claim is

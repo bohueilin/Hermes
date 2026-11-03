@@ -38,7 +38,7 @@ primary comprehension measure; they may join a separate expert critique.
 Run from a clean local checkout in the `hermes-dev` Python 3.11 environment:
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python -m pip install -e ".[dev,workbench]"
 hermes workbench \
@@ -62,7 +62,7 @@ record the discrepancy rather than substituting or repairing evidence.
 1. Read the neutral introduction; do not teach the trust model before testing it.
 2. Ask the participant to think aloud, but do not correct an answer until it is recorded.
 3. Record the participant's exact words, navigation path, time, errors, assistance, and evidence
-   location in `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`.
+   location in `docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`.
 4. Distinguish unassisted success, success after a neutral prompt, and moderator-assisted success.
 5. Trigger the task-specific stop conditions immediately. Preserve the screen state and exact
    quote; do not continue a workflow that could normalize an authority misconception.

@@ -7,7 +7,7 @@ Demonstrate that Hermes makes simulation evidence understandable without strengt
 ## 2. Preflight
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python -m pip install -e ".[dev,workbench]"
 python -m pytest -q
@@ -294,10 +294,10 @@ infer it from AppTest output or fabricate a participant result.
 
 Use these separate records:
 
-- `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md` for rendered screenshots, keyboard, screen reader,
+- `docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md` for rendered screenshots, keyboard, screen reader,
   focus/announcement, non-color/contrast, tables, and 200% zoom/reflow;
-- `docs/PHASE6_USABILITY_TEST_PLAN.md` for Tasks 1–10 with 6–10 future participants; and
-- `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` for one actual participant session.
+- `docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md` for Tasks 1–10 with 6–10 future participants; and
+- `docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` for one actual participant session.
 
 Keep the closing statuses independent:
 

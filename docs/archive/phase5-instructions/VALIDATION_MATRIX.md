@@ -6,7 +6,7 @@ Use this matrix after the unattended Codex run. Do not accept a phase based only
 
 | Check | Command | Pass condition |
 |---|---|---|
-| Correct repository | `pwd` | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Correct repository | `pwd` | `…/Hermes` |
 | Correct environment | `which python` | path contains `/envs/hermes-dev/` |
 | Correct Python | `python --version` | Python 3.11.x |
 | Feature branch | `git branch --show-current` | not `main` during development |
@@ -19,7 +19,7 @@ Use this matrix after the unattended Codex run. Do not accept a phase based only
 Run:
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python -m pip install -e ".[dev]"
 python -m pytest -q
@@ -265,11 +265,11 @@ Only run when Codex reports Phase 3 complete.
 Required when relevant:
 
 - `CODEX_HANDOFF.md`
-- `docs/decision-log.md`
-- `docs/phase1-architecture.md`
-- `docs/phase1-requirements-traceability.md`
-- `docs/phase2-metadrive-adapter.md` when Phase 2 is attempted
-- `docs/demo-runbook.md` when demo hardening is attempted
+- `docs/hermes/architecture/decision-log.md`
+- `docs/hermes/architecture/phase1-architecture.md`
+- `docs/hermes/architecture/phase1-requirements-traceability.md`
+- `docs/hermes/architecture/phase2-metadrive-adapter.md` when Phase 2 is attempted
+- `docs/hermes/architecture/demo-runbook.md` when demo hardening is attempted
 - updated `README.md`
 
 Requirements traceability must connect hazard/requirement to scenario, component, verifier, test, evidence, and gate consequence.
