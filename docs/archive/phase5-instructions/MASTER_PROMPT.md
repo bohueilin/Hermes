@@ -54,7 +54,7 @@ Read, in this order:
 2. `PROJECT_BRIEF.md`
 3. `BUILD_PLAN.md`
 4. `README.md`
-5. `docs/decision-log.md`
+5. `docs/hermes/architecture/decision-log.md`
 6. `pyproject.toml`
 7. existing `src/hermes/` and `tests/`
 
@@ -105,7 +105,7 @@ If the branch already exists, switch to it and inspect current work. Never disca
 
 - Do not ask routine questions.
 - Do not wait for user confirmation when a safe, reversible default exists.
-- Make assumptions only when necessary and log material ones in `docs/decision-log.md`.
+- Make assumptions only when necessary and log material ones in `docs/hermes/architecture/decision-log.md`.
 - Implement, test, and demonstrate; do not stop after planning.
 - When one optional task is blocked, continue independent work.
 - Use subagents for independent architecture review, test design, or adversarial evidence review when available. If delegation is unavailable, perform the reviews sequentially.
@@ -616,10 +616,10 @@ Phase 1 tests must never launch MetaDrive.
 Update or create:
 
 - `README.md`
-- `docs/phase1-architecture.md`
-- `docs/phase1-requirements-traceability.md`
-- `docs/decision-log.md`
-- `docs/PM_SKILLS_MATRIX.md`
+- `docs/hermes/architecture/phase1-architecture.md`
+- `docs/hermes/architecture/phase1-requirements-traceability.md`
+- `docs/hermes/architecture/decision-log.md`
+- `docs/hermes/pm/PM_SKILLS_MATRIX.md`
 - `CODEX_HANDOFF.md`
 
 Requirements traceability must map:
@@ -773,7 +773,7 @@ Inspect MetaDrive 0.4.3:
 Record observed APIs and decisions in:
 
 ```text
-docs/phase2-metadrive-adapter.md
+docs/hermes/architecture/phase2-metadrive-adapter.md
 ```
 
 Do not modify `third_party/metadrive`.
@@ -954,7 +954,7 @@ Work in this order:
 3. actuator saturation;
 4. `make check`, `make demo-phase1`, and `make sim-smoke`;
 5. PR-safe CI files that exclude real MetaDrive integration by default;
-6. `docs/demo-runbook.md`;
+6. `docs/hermes/architecture/demo-runbook.md`;
 7. final adversarial review of evidence integrity and false-pass paths.
 
 Do not start a dashboard or RL.

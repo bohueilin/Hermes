@@ -6,10 +6,10 @@ from pathlib import Path
 import pytest
 
 PACKAGE_PATHS = (
-    "PHASE6_DESIGN_ITERATION_HANDOFF.md",
-    "docs/PHASE6_USABILITY_TEST_PLAN.md",
-    "docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md",
-    "docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md",
+    "docs/hermes/phase6/PHASE6_DESIGN_ITERATION_HANDOFF.md",
+    "docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md",
+    "docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md",
+    "docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md",
 )
 
 
@@ -39,7 +39,7 @@ def test_human_review_package_exists_and_preserves_unobserved_status(
 def test_usability_plan_defines_future_cohort_and_all_ten_tasks(
     repository_root: Path,
 ) -> None:
-    text = _read(repository_root, "docs/PHASE6_USABILITY_TEST_PLAN.md")
+    text = _read(repository_root, "docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md")
 
     assert "6–10" in text
     assert all(role in text for role in ("product", "safety", "simulation", "engineering"))
@@ -65,7 +65,7 @@ def test_usability_plan_defines_future_cohort_and_all_ten_tasks(
 def test_human_observation_template_is_unfilled_and_evidence_bearing(
     repository_root: Path,
 ) -> None:
-    text = _read(repository_root, "docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md")
+    text = _read(repository_root, "docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md")
 
     assert "Overall human-comprehension status: `NOT YET OBSERVED`" in text
     assert all(
@@ -90,7 +90,7 @@ def test_human_observation_template_is_unfilled_and_evidence_bearing(
 def test_visual_checklist_is_executable_and_keeps_manual_gates_open(
     repository_root: Path,
 ) -> None:
-    text = _read(repository_root, "docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md")
+    text = _read(repository_root, "docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md")
 
     assert "hermes workbench" in text
     assert "--host 127.0.0.1" in text
@@ -131,7 +131,7 @@ def test_visual_checklist_is_executable_and_keeps_manual_gates_open(
 def test_design_iteration_handoff_contains_all_twenty_nine_required_items(
     repository_root: Path,
 ) -> None:
-    text = _read(repository_root, "PHASE6_DESIGN_ITERATION_HANDOFF.md")
+    text = _read(repository_root, "docs/hermes/phase6/PHASE6_DESIGN_ITERATION_HANDOFF.md")
 
     numbered_sections = re.findall(r"^## (\d+)\. ", text, flags=re.MULTILINE)
     assert numbered_sections == [str(number) for number in range(1, 30)]

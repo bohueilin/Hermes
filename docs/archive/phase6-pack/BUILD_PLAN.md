@@ -402,7 +402,7 @@ The UI must not expose:
 
 ## 13. ReviewEnvelope v1 — required domains
 
-The normative schema is in `docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md`.
+The normative schema is in `docs/hermes/phase6/PHASE6_REVIEW_ENVELOPE_CONTRACT.md`.
 
 Required domains:
 
@@ -493,7 +493,7 @@ Do not auto-select “latest.”
 
 ## 18. Threat model
 
-The normative threat model is in `docs/PHASE6_THREAT_MODEL.md`.
+The normative threat model is in `docs/hermes/phase6/PHASE6_THREAT_MODEL.md`.
 
 Priority threats:
 
@@ -699,9 +699,9 @@ The package comprises:
 
 ```text
 PHASE6_DESIGN_ITERATION_HANDOFF.md
-docs/PHASE6_USABILITY_TEST_PLAN.md
-docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md
-docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md
+docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md
+docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md
+docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md
 ```
 
 The usability plan defines Tasks 1–10 for 6–10 future product, safety, simulation, and engineering

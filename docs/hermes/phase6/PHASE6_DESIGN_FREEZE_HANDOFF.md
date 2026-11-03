@@ -73,7 +73,7 @@ Phase 6 documents were reconciled to this inventory; validated Phase 1–5 histo
 ## 5. ReviewEnvelope 1.0 decision
 
 - Version: exactly 1.0.
-- Normative contract: docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md.
+- Normative contract: docs/hermes/phase6/PHASE6_REVIEW_ENVELOPE_CONTRACT.md.
 - Model target: immutable strict models in src/hermes/review/models.py.
 - Portable content: tool, artifact/inventory, observed/computed bundle/trace roots, verification,
   trust, gate, sufficiency, findings, metrics, timeline, provenance, assumptions, unavailable
@@ -226,15 +226,15 @@ PROJECT_BRIEF.md
 BUILD_PLAN.md
 VALIDATION_MATRIX.md
 README_PHASE6_DRAFT.md
-docs/PHASE6_PRODUCT_REQUIREMENTS.md
-docs/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md
-docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md
-docs/PHASE6_UX_INFORMATION_ARCHITECTURE.md
-docs/PHASE6_THREAT_MODEL.md
-docs/PHASE6_REQUIREMENTS_TRACEABILITY.md
-docs/PHASE6_AUTHENTICITY_DESIGN.md
-docs/PHASE6_DECISION_LOG_SEED.md
-docs/decision-log.md
+docs/hermes/phase6/PHASE6_PRODUCT_REQUIREMENTS.md
+docs/hermes/phase6/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md
+docs/hermes/phase6/PHASE6_REVIEW_ENVELOPE_CONTRACT.md
+docs/hermes/phase6/PHASE6_UX_INFORMATION_ARCHITECTURE.md
+docs/hermes/phase6/PHASE6_THREAT_MODEL.md
+docs/hermes/phase6/PHASE6_REQUIREMENTS_TRACEABILITY.md
+docs/hermes/phase6/PHASE6_AUTHENTICITY_DESIGN.md
+docs/hermes/phase6/PHASE6_DECISION_LOG_SEED.md
+docs/hermes/architecture/decision-log.md
 ~~~
 
 No production module, test, dependency, artifact, or third_party file belongs in the diff.
@@ -263,5 +263,5 @@ remote action: none
 Under the controlling request, continue automatically:
 
 ~~~
-Run prompts/02_IMPLEMENT_PHASE6.md
+Run docs/archive/phase6-pack/prompts/02_IMPLEMENT_PHASE6.md
 ~~~

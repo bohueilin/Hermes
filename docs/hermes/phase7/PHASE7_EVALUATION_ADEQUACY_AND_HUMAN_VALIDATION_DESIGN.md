@@ -138,9 +138,9 @@ These anchors are bound to the starting HEAD and are evidence for the proposed p
 | Challenge models | `src/hermes/domain/models.py:226-345` | Lead/cut-in mechanics and `behavior_realism_claim: false` are structurally typed; there is no adequacy field today |
 | Policy-input TTC and shield order | `src/hermes/shields/deterministic.py:31-115` | TTC uses input distance/relative speed; TTC reason precedes speed-cap reason; exact configured threshold is captured in execution context |
 | Closed verifier set | `src/hermes/verifiers/__init__.py:20-40` | No challenge-engagement or TTC finding exists; Phase 7 must not add one silently |
-| Current human plan | `docs/PHASE6_USABILITY_TEST_PLAN.md` | Task 4 is blocked, Task 5 names unsuitable schema-1 evidence, and no dedicated CONDITIONAL task exists |
-| Current observation record | `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` | Authoritative status is absent and no participant result has been recorded |
-| Current visual/accessibility protocol | `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md` | Automated/DOM evidence exists, but manual visual, accessibility, and human comprehension remain open |
+| Current human plan | `docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md` | Task 4 is blocked, Task 5 names unsuitable schema-1 evidence, and no dedicated CONDITIONAL task exists |
+| Current observation record | `docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md` | Authoritative status is absent and no participant result has been recorded |
+| Current visual/accessibility protocol | `docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md` | Automated/DOM evidence exists, but manual visual, accessibility, and human comprehension remain open |
 
 The independent review verified these seams; implementation must still bind tests to current symbols
 rather than treating line numbers in this design as permanent authority.
@@ -1764,9 +1764,9 @@ docs/PHASE7_MANUAL_VISUAL_RECORD.md
 docs/PHASE7_ACCESSIBILITY_RECORD.md
 docs/PHASE7_HUMAN_VALIDATION_HANDOFF.md
 docs/PHASE7_REQUIREMENTS_TRACEABILITY.md
-docs/PHASE6_USABILITY_TEST_PLAN.md       # mark superseded; link to Phase 7
-docs/PHASE6_DEMO_RUNBOOK.md              # non-causality wording/supersession only
-docs/decision-log.md
+docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md       # mark superseded; link to Phase 7
+docs/hermes/phase6/PHASE6_DEMO_RUNBOOK.md              # non-causality wording/supersession only
+docs/hermes/architecture/decision-log.md
 tests/unit/test_phase7_docs.py
 PHASE7_IMPLEMENTATION_HANDOFF.md
 CODEX_HANDOFF.md

@@ -51,13 +51,13 @@ Read in this order:
 3. `PROJECT_BRIEF.md`
 4. `BUILD_PLAN.md`
 5. `VALIDATION_MATRIX.md`
-6. `docs/PHASE6_PRODUCT_REQUIREMENTS.md`
-7. `docs/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md`
-8. `docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md`
-9. `docs/PHASE6_UX_INFORMATION_ARCHITECTURE.md`
-10. `docs/PHASE6_THREAT_MODEL.md`
-11. `docs/PHASE6_REQUIREMENTS_TRACEABILITY.md`
-12. `docs/PHASE6_AUTHENTICITY_DESIGN.md`
+6. `docs/hermes/phase6/PHASE6_PRODUCT_REQUIREMENTS.md`
+7. `docs/hermes/phase6/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md`
+8. `docs/hermes/phase6/PHASE6_REVIEW_ENVELOPE_CONTRACT.md`
+9. `docs/hermes/phase6/PHASE6_UX_INFORMATION_ARCHITECTURE.md`
+10. `docs/hermes/phase6/PHASE6_THREAT_MODEL.md`
+11. `docs/hermes/phase6/PHASE6_REQUIREMENTS_TRACEABILITY.md`
+12. `docs/hermes/phase6/PHASE6_AUTHENTICITY_DESIGN.md`
 13. Existing Phase 1–5 architecture, decision, traceability, README, handoff, and schema documents.
 14. Current implementation and tests for evidence capture, verification, comparison, CLI, gates, verifiers, and artifact publication.
 
@@ -156,7 +156,7 @@ Define exact wording for internally consistent versus authenticated evidence. Pr
 
 ## Required workstream D — freeze ReviewEnvelope v1
 
-Update `docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md` into a normative implementation contract.
+Update `docs/hermes/phase6/PHASE6_REVIEW_ENVELOPE_CONTRACT.md` into a normative implementation contract.
 
 It must define:
 
@@ -248,7 +248,7 @@ Use these criteria:
 - cache control;
 - accessibility and table/timeline support.
 
-Record one decision and rationale in `docs/PHASE6_DECISION_LOG_SEED.md` or the repository decision log.
+Record one decision and rationale in `docs/hermes/phase6/PHASE6_DECISION_LOG_SEED.md` or the repository decision log.
 
 Do not install the selected framework in this prompt.
 
@@ -276,7 +276,7 @@ For each screen, specify:
 
 ## Required workstream J — threat model and limits
 
-Update `docs/PHASE6_THREAT_MODEL.md` with:
+Update `docs/hermes/phase6/PHASE6_THREAT_MODEL.md` with:
 
 - assets;
 - actors;
@@ -314,7 +314,7 @@ Update `VALIDATION_MATRIX.md` with exact:
 
 ## Required workstream L — requirements traceability
 
-Update `docs/PHASE6_REQUIREMENTS_TRACEABILITY.md` to map every P0/P1 requirement to:
+Update `docs/hermes/phase6/PHASE6_REQUIREMENTS_TRACEABILITY.md` to map every P0/P1 requirement to:
 
 - owning component;
 - implementation milestone;
@@ -326,7 +326,7 @@ Update `docs/PHASE6_REQUIREMENTS_TRACEABILITY.md` to map every P0/P1 requirement
 
 ## Required workstream M — future authenticity design
 
-Keep authenticity implementation out of scope, but make `docs/PHASE6_AUTHENTICITY_DESIGN.md` implementation-ready for a later phase.
+Keep authenticity implementation out of scope, but make `docs/hermes/phase6/PHASE6_AUTHENTICITY_DESIGN.md` implementation-ready for a later phase.
 
 It must distinguish:
 

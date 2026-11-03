@@ -282,8 +282,8 @@ expansion, visible focus, announced validation/invalid-evidence errors, screen r
 the synchronized timeline table, and inert bounded artifact strings. Essential trust and decision
 content must not depend on horizontal scrolling. No ambiguous abbreviation or raw HTML is allowed.
 
-The tracked protocols are `docs/PHASE6_USABILITY_TEST_PLAN.md`,
-`docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`, and `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md`. Their
+The tracked protocols are `docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md`,
+`docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`, and `docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md`. Their
 creation does not constitute an observation. Human comprehension, manual visual review, and the
 accessibility audit remain `NOT YET OBSERVED` until a real reviewer or auditor records evidence.
 

@@ -226,8 +226,8 @@ visual or accessibility status.
 Reviewer-comprehension implementation commits changed:
 
 ```text
-docs/PHASE6_UX_INFORMATION_ARCHITECTURE.md
-docs/decision-log.md
+docs/hermes/phase6/PHASE6_UX_INFORMATION_ARCHITECTURE.md
+docs/hermes/architecture/decision-log.md
 src/hermes/workbench/app.py
 tests/unit/test_workbench_projection.py
 tests/integration/test_workbench_smoke.py
@@ -238,17 +238,17 @@ This documentation wave creates/updates only the Task 4 allowlist:
 
 ```text
 PHASE6_DESIGN_ITERATION_HANDOFF.md
-docs/PHASE6_USABILITY_TEST_PLAN.md
-docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md
-docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md
+docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md
+docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md
+docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md
 PROJECT_BRIEF.md
 README.md
 BUILD_PLAN.md
 CODEX_HANDOFF.md
 PHASE6_ADVERSARIAL_REVIEW.md
-docs/PHASE6_UX_INFORMATION_ARCHITECTURE.md
-docs/PHASE6_DEMO_RUNBOOK.md
-docs/decision-log.md
+docs/hermes/phase6/PHASE6_UX_INFORMATION_ARCHITECTURE.md
+docs/hermes/phase6/PHASE6_DEMO_RUNBOOK.md
+docs/hermes/architecture/decision-log.md
 VALIDATION_MATRIX.md
 tests/unit/test_reviewer_comprehension_docs.py
 ```

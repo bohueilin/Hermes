@@ -5,9 +5,9 @@ The Depot Readiness learning lab is live at
 The five-question Network flows hub links to it as a deeper experiment. The owner
 asked to publish without the separate release review, so that Muse can audit the
 live site. Built, reviewed and verified as recorded in
-[`docs/FLEETLAB_DEPOT_LAB_IMPLEMENTATION_HANDOFF_2026-10-24.md`](docs/FLEETLAB_DEPOT_LAB_IMPLEMENTATION_HANDOFF_2026-10-24.md);
+[`docs/FLEETLAB_DEPOT_LAB_IMPLEMENTATION_HANDOFF_2026-10-24.md`](../../FLEETLAB_DEPOT_LAB_IMPLEMENTATION_HANDOFF_2026-10-24.md);
 publication details are in its §10. Build decisions are in
-[`docs/FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md`](docs/FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md)
+[`docs/FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md`](../../FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md)
 (§§19 to 22 binding).
 
 ## Publication and verification
@@ -66,7 +66,7 @@ The owner published source `d0df87fff64889282e06fa3f4048b020b22bf8b5` through th
 existing credential and production-confirmation interface. **A2 is the Fleet day
 hero; V1 remains held for a separate rerender.** No upload step remains for this
 round. Shareable report:
-[`docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md`](docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md).
+[`docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md`](../../FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md).
 
 ## Publication and verification
 
@@ -276,7 +276,7 @@ fix does not cover other applications, custom CA overrides, other machines or
 historical downloadable source archives. Update their actual clients separately.
 
 Next 3 actions: review this local patch; use the runtime selection in the
-[deployment runbook](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md#october-22-tls-toolchain-update);
+[deployment runbook](../../FLEETLAB_CLOUDFLARE_DEPLOYMENT.md#october-22-tls-toolchain-update);
 update remaining system-wide TLS clients and review deployment-account activity
 before deciding whether credential rotation is warranted.
 
@@ -284,7 +284,7 @@ before deciding whether credential rotation is warranted.
 
 # Historical update — FleetLab design Round 5, October 15, 2026
 
-See [the itemized Round 5 handoff](docs/FLEETLAB_DESIGN_ROUND5_HANDOFF_2026-10-15.md) for audit decisions, source trimming, validation, initial negative readbacks and final release evidence. Runtime `8e4dbaf` is live in deployment `8dd48282-3c63-4347-bd31-a7159244ff2e`; fresh full preview and production checks each match 10,136 served files and 69 header checks. The exact receipt is `docs/releases/fleetlab-current.json`.
+See [the itemized Round 5 handoff](../../FLEETLAB_DESIGN_ROUND5_HANDOFF_2026-10-15.md) for audit decisions, source trimming, validation, initial negative readbacks and final release evidence. Runtime `8e4dbaf` is live in deployment `8dd48282-3c63-4347-bd31-a7159244ff2e`; fresh full preview and production checks each match 10,136 served files and 69 header checks. The exact receipt is `docs/releases/fleetlab-current.json`.
 
 P3 copy/layout/loading/accessibility improvements are complete within the documented audit interpretations. Gross source recovery is 3,806 bytes; net teaching-source reduction is 479 bytes, leaving 930 bytes under the unchanged ceiling. D-06 is deferred by the owner, existing diagrams retained, and all P2 visualizations remain deferred. Models/fixtures and SF qualification are unchanged; map, physical-device and human review remain open. Earlier status below is historical.
 
@@ -296,7 +296,7 @@ See `docs/FLEETLAB_DESIGN_ROUND4_HANDOFF_2026-10-14.md` for the five P1 changes,
 
 # FleetLab targeted design fixes, round 3 — October 14, 2026
 
-The round-three presentation fixes are published from source `c92dcd1f34f96342d9f0b8c424ad4f19a6c56a0a`. Production `94c48b5b-0500-4805-a984-e551d2fa0bcb`; preview `627db2a4-3cbf-4b7d-91d1-a12f2463ee61`. Preview and final stable production each match 10,133/10,133 served files and 68/68 header checks. Immutable production smoke passes 97/97; prior production passes 94/94. See [section-by-section handoff](docs/FLEETLAB_DESIGN_ROUND3_HANDOFF_2026-10-14.md) and [publication receipt](docs/releases/fleetlab-current.json).
+The round-three presentation fixes are published from source `c92dcd1f34f96342d9f0b8c424ad4f19a6c56a0a`. Production `94c48b5b-0500-4805-a984-e551d2fa0bcb`; preview `627db2a4-3cbf-4b7d-91d1-a12f2463ee61`. Preview and final stable production each match 10,133/10,133 served files and 68/68 header checks. Immutable production smoke passes 97/97; prior production passes 94/94. See [section-by-section handoff](../../FLEETLAB_DESIGN_ROUND3_HANDOFF_2026-10-14.md) and [publication receipt](../../releases/fleetlab-current.json).
 
 Three supplied concept diagrams, clearer lesson entry/copy, disabled-control explanations, readable accessible settings, canonical depot lesson URL, accepted-ledger zone bars and honest walkthrough mode announcements are implemented. Both reported broken videos played during verification; no unproven repair is claimed. No numerical model/runtime or protected capacity/software-delivery implementation changed. Deferred dispatch animation and per-vehicle delivery wait bars remain deferred.
 
@@ -306,7 +306,7 @@ Tests: teaching 2,408 pass / 8 skip / 1 todo; city Node 95 pass; city Python 345
 
 # FleetLab R3 dispatch implementation — October 14, 2026
 
-R3 is live: [Which car takes the next request?](https://fleetlab.pages.dev/network-flows/dispatch/). Source `7c80f9e0ead07a7183b178b3e69c3237c049af68`; production `769ad332-b726-496a-bb4e-201ec44c8518`; preview `62ef3431-4c36-4e5f-bd31-b2635987b5f9`. Both preview and production match 10,130/10,130 served files and 65/65 header checks. See [R3 implementation and audit handoff](docs/FLEETLAB_R3_IMPLEMENTATION_HANDOFF_2026-10-14.md) and [publication receipt](docs/releases/fleetlab-current.json).
+R3 is live: [Which car takes the next request?](https://fleetlab.pages.dev/network-flows/dispatch/). Source `7c80f9e0ead07a7183b178b3e69c3237c049af68`; production `769ad332-b726-496a-bb4e-201ec44c8518`; preview `62ef3431-4c36-4e5f-bd31-b2635987b5f9`. Both preview and production match 10,130/10,130 served files and 65/65 header checks. See [R3 implementation and audit handoff](../../FLEETLAB_R3_IMPLEMENTATION_HANDOFF_2026-10-14.md) and [publication receipt](../../releases/fleetlab-current.json).
 
 The default executes greedy 6/8 versus joint 8/8 pickups; the counterexample reverses that to 3/4 versus 2/4; the neutral example ties 4/4. Both policies use current requests only. Independent reconstruction, explicit PRE/POST/END states, manual accepted batches, counted graphics and disclosed traces protect the teaching claims. R1 copy now qualifies reserve rules and shows matched request r-04-B-05 wait 60→258 seconds. No R1 model or SF scientific evidence changed.
 
@@ -316,29 +316,29 @@ R2 charging and R7 sharing contracts were amended, not implemented. Original sou
 
 # FleetLab R1 implementation — October 14, 2026
 
-Owner approved the R1 model and publication, and subsequently requested R3/R2/R7 model contracts for review before their numerical implementation. R1 is implemented with an independent verifier, full ledger, manual controls, NF05/NF06 concept films and the chosen logo. See [R1 implementation handoff](docs/FLEETLAB_R1_IMPLEMENTATION_HANDOFF_2026-10-14.md) for the current release state and evidence. R1 is live at https://fleetlab.pages.dev/network-flows/rebalancing/. Source `5ffe7c1dc33ba7b055c907ef55fb378b2d247610`; production `186cb2a5-23b8-419f-8aaa-4cf95cf44567`. Preview and stable production each match 10,119/10,119 served files and 61/61 header checks. The final receipt is `docs/releases/fleetlab-current.json`. The prior immutable production `5924764c-7dc2-4336-a7d4-94fe3e39a991` remains reachable.
+Owner approved the R1 model and publication, and subsequently requested R3/R2/R7 model contracts for review before their numerical implementation. R1 is implemented with an independent verifier, full ledger, manual controls, NF05/NF06 concept films and the chosen logo. See [R1 implementation handoff](../../FLEETLAB_R1_IMPLEMENTATION_HANDOFF_2026-10-14.md) for the current release state and evidence. R1 is live at https://fleetlab.pages.dev/network-flows/rebalancing/. Source `5ffe7c1dc33ba7b055c907ef55fb378b2d247610`; production `186cb2a5-23b8-419f-8aaa-4cf95cf44567`. Preview and stable production each match 10,119/10,119 served files and 61/61 header checks. The final receipt is `docs/releases/fleetlab-current.json`. The prior immutable production `5924764c-7dc2-4336-a7d4-94fe3e39a991` remains reachable.
 
-Follow-on review order: [R3 dispatch](docs/FLEETLAB_R3_DISPATCH_MODEL_CONTRACT_2026-10-14.md) → [R2 charging](docs/FLEETLAB_R2_CHARGING_MODEL_CONTRACT_2026-10-14.md) → [R7 sharing](docs/FLEETLAB_R7_OTA_SHARING_MODEL_CONTRACT_2026-10-14.md). SF map, physical-device and human qualification remain open; no new city work. Earlier status below is historical.
+Follow-on review order: [R3 dispatch](../../FLEETLAB_R3_DISPATCH_MODEL_CONTRACT_2026-10-14.md) → [R2 charging](../../FLEETLAB_R2_CHARGING_MODEL_CONTRACT_2026-10-14.md) → [R7 sharing](../../FLEETLAB_R7_OTA_SHARING_MODEL_CONTRACT_2026-10-14.md). SF map, physical-device and human qualification remain open; no new city work. Earlier status below is historical.
 
 ---
 
 # FleetLab NF04-B — October 13, 2026
 
-NF04-B is live and pushed to GitHub: [software-delivery lesson](https://fleetlab.pages.dev/network-flows/software-delivery/). Source `f54496ed47f76b9378277f979318fc0f36a482f1`; production `38a98b78-2fae-4d16-87d5-3cfa37c11b24`; 10,053/10,053 served files and 16/16 headers match. See [October 13 implementation handoff](docs/FLEETLAB_NF04_B_IMPLEMENTATION_HANDOFF_2026-10-13.md), [contract amendment](docs/FLEETLAB_NF04_B_CONTRACT_2026-10-13.md) and [accepted brief](docs/FLEETLAB_NF04_B_ACCEPTED_BRIEF_2026-10-13.md). SF remains HOLD / BLOCKED_MAP_QUALIFICATION; physical-device and human-comprehension qualification remain open. All earlier status below is historical.
+NF04-B is live and pushed to GitHub: [software-delivery lesson](https://fleetlab.pages.dev/network-flows/software-delivery/). Source `f54496ed47f76b9378277f979318fc0f36a482f1`; production `38a98b78-2fae-4d16-87d5-3cfa37c11b24`; 10,053/10,053 served files and 16/16 headers match. See [October 13 implementation handoff](../../FLEETLAB_NF04_B_IMPLEMENTATION_HANDOFF_2026-10-13.md), [contract amendment](../../FLEETLAB_NF04_B_CONTRACT_2026-10-13.md) and [accepted brief](../../FLEETLAB_NF04_B_ACCEPTED_BRIEF_2026-10-13.md). SF remains HOLD / BLOCKED_MAP_QUALIFICATION; physical-device and human-comprehension qualification remain open. All earlier status below is historical.
 
 ---
 
 # FleetLab NF04-A — October 12, 2026
 
-The current educational-site release is live. See the [implementation handoff](docs/FLEETLAB_NF04_A_IMPLEMENTATION_HANDOFF_2026-10-12.md), [audit decisions](docs/FLEETLAB_REV3_AUDIT_DECISIONS_2026-10-12.md), [frozen numerical contract](docs/FLEETLAB_NF04_A_CONTRACT_AND_PACKAGING_PROPOSAL_2026-10-12.md) and [next experience specification](docs/FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-12.md). NF04-B is not built. SF qualification remains HOLD; new cities and the held power study remain paused. Earlier records below are historical.
+The current educational-site release is live. See the [implementation handoff](../../FLEETLAB_NF04_A_IMPLEMENTATION_HANDOFF_2026-10-12.md), [audit decisions](../../FLEETLAB_REV3_AUDIT_DECISIONS_2026-10-12.md), [frozen numerical contract](../../FLEETLAB_NF04_A_CONTRACT_AND_PACKAGING_PROPOSAL_2026-10-12.md) and [next experience specification](../../FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-12.md). NF04-B is not built. SF qualification remains HOLD; new cities and the held power study remain paused. Earlier records below are historical.
 
 ---
 
 # FleetLab visual experience — October 10, 2026
 
-Current implementation and release status: [October 10 handoff](docs/FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-10.md). Next proposed Network Flows lesson: [NF-04 design specification](docs/FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-10.md). These dated records supersede older website navigation and publication status below; they do not clear SF qualification, Q1/Q8/N2 or physical deployment boundaries.
+Current implementation and release status: [October 10 handoff](../../FLEETLAB_VISUAL_EXPERIENCE_HANDOFF_2026-10-10.md). Next proposed Network Flows lesson: [NF-04 design specification](../../FLEETLAB_NETWORK_FLOWS_NEXT_DESIGN_SPEC_2026-10-10.md). These dated records supersede older website navigation and publication status below; they do not clear SF qualification, Q1/Q8/N2 or physical deployment boundaries.
 
-Revision 3 adds the visible NF-03 fleet/vehicle trade-off, chapter context and depot-operations entry copy, and a concrete [NF04-A contract and packaging proposal](docs/FLEETLAB_NF04_A_CONTRACT_AND_PACKAGING_PROPOSAL_2026-10-10.md). Use its latest receipt in the handoff for validation/publication status. Earlier revisions remain historical. The owner selected NF-03 fixes plus the NF04-A proposal; NF-04 engine implementation is not part of this release.
+Revision 3 adds the visible NF-03 fleet/vehicle trade-off, chapter context and depot-operations entry copy, and a concrete [NF04-A contract and packaging proposal](../../FLEETLAB_NF04_A_CONTRACT_AND_PACKAGING_PROPOSAL_2026-10-10.md). Use its latest receipt in the handoff for validation/publication status. Earlier revisions remain historical. The owner selected NF-03 fixes plus the NF04-A proposal; NF-04 engine implementation is not part of this release.
 
 ---
 
@@ -1260,7 +1260,7 @@ Final Node: 1,876 tests, 1,875 pass, one existing TODO, zero failures; Python pa
 
 Browser: all four required lesson first-screen frames at four viewport sizes; eight routes at both mobile sizes; runtime results, exact disclosures, busy focus, edited context and 7.438:1 disabled Next contrast checked. Criterion 4 has an explicit OD-T7 scope exception: walkthrough 146 fresh/153 inherited words before Prepare; no beat/layout expansion. Precision exceptions preserve canonical fractions and threshold-side integrity. No full 56-route real-browser sweep or hosted readback. Model/data/pin changes, walkthrough structure, rider-draw robustness and Fleet day motion control remain T2.
 
-The self-contained [release/reviewer record](docs/FLEETLAB_T1_RELEASE_2026-09-26.md) contains exact commands, all 11 acceptance dispositions, honest byte checkpoints, failed intermediate checks/retries, review fixes, privacy and next actions. Generated evidence stays under ignored artifacts/fleetlab-t1; the owner's untracked note is untouched. For continuation: review the documented exceptions and remaining package headroom, keep N2 design-only, and obtain a separate explicit release instruction before any remote action.
+The self-contained [release/reviewer record](../../FLEETLAB_T1_RELEASE_2026-09-26.md) contains exact commands, all 11 acceptance dispositions, honest byte checkpoints, failed intermediate checks/retries, review fixes, privacy and next actions. Generated evidence stays under ignored artifacts/fleetlab-t1; the owner's untracked note is untouched. For continuation: review the documented exceptions and remaining package headroom, keep N2 design-only, and obtain a separate explicit release instruction before any remote action.
 
 ---
 
@@ -1277,14 +1277,14 @@ commit follows deployment by the brief's exception; final remote refs/task repor
 push completion. Other worktrees, main, regional-power branch, remotes and PRs are untouched.
 The only untracked entry remains the preserved owner's `FleetLab-ChatGPT-review-and-next-phase.md`.
 
-[Release record](docs/FLEETLAB_D1_RELEASE_2026-09-26.md) has inventories, per-item byte tally,
+[Release record](../../FLEETLAB_D1_RELEASE_2026-09-26.md) has inventories, per-item byte tally,
 rewrite reasons, browser evidence, privacy dispositions and publication receipts.
 D1 changes only UI/tests/package-copy inventory: result-first partition/focus; no autoplay;
 shared effective motion; version/geography/stale labels; five compatible setup controls;
 Four-area names/non-affiliation; field-driven Austin verdict/resource text with exact disclosure.
 No model, instrument, core or runtime source changed.
 
-[N2 v2](docs/plans/2026-09-26-fleetlab-n2-design-v2.md) is complete design-only S0:
+[N2 v2](../../plans/2026-09-26-fleetlab-n2-design-v2.md) is complete design-only S0:
 19 fixture groups, owner choices, dictionaries/ownership/versions/accounting. G2 remains
 **OPEN pending S1**. Independent review corrections are included. No N2 implementation,
 registration, external data, terms acceptance, package install or execution seam was run.
@@ -1349,7 +1349,7 @@ https://f08b6b6f.fleetlab.pages.dev/. The old project/address is preserved with 
 The owner explicitly requested this address change; it supersedes older local-only website
 restrictions. Cloudflare does not support changing a Pages hostname in place.
 
-The [self-contained Claude review packet](docs/FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md)
+The [self-contained Claude review packet](../../FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md)
 contains the shipped context, live design audit, editorial-studio proposal, bounded Waymo
 Motion research runbook, independent N2 audit and full unchanged N2 draft. There is no WOD
 importer/data use in current product code. No dataset was downloaded, agreement accepted,
@@ -1388,7 +1388,7 @@ Readback records: ignored `artifacts/fleetlab-design-review/published-readback.j
 `c574b8df41d0378363e18f75452f09e15a2cf62581e8fb01f6f365229d7e25bf`.
 The new Pages project has no earlier rollback release yet; historical old-project deployments
 cannot be selected as new-project rollback targets. Use the updated
-[publishing runbook](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) for future releases.
+[publishing runbook](../../FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) for future releases.
 
 # Previous-address FleetLab Austin release — September 25 Pacific / September 26 UTC, 2026
 
@@ -1397,8 +1397,8 @@ Published at **https://fleetlab-playground.pages.dev/** from source
 `6265159a-a13e-4ca7-9f9c-4acde9bcf6e7`. Source was pushed normally to
 `feat/fleetlab-playground` and `codex/fleetlab-regional-power`; main is unchanged.
 
-The [Austin runbook](docs/FLEETLAB_REGIONAL_POWER.md) describes the delivered N0/N1 slice.
-The [N2 design draft](docs/plans/2026-09-25-fleetlab-n2-design.md) proposes one finite
+The [Austin runbook](../../FLEETLAB_REGIONAL_POWER.md) describes the delivered N0/N1 slice.
+The [N2 design draft](../../plans/2026-09-25-fleetlab-n2-design.md) proposes one finite
 event-pickup hub and explicit boarding metrics; no N2 implementation is approved or claimed.
 
 Release validation: **1,791 Node passed** with performance enabled, zero fail/skip/cancel,
@@ -1413,7 +1413,7 @@ Published at **https://fleetlab-playground.pages.dev/** from source `96fde5b8621
 deployment `e72ae87d-6b96-47a0-950d-4d4a87b8bb95`. The normal GitHub push targets
 `feat/fleetlab-playground`; main is unchanged. The owner explicitly authorized publication.
 
-The [complete review and next-phase brief](docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) covers the entire FleetLab trajectory,
+The [complete review and next-phase brief](../../FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md) covers the entire FleetLab trajectory,
 accepted/rejected Muse feedback, shipped enhancements, exact release identity, validation,
 known limits, all 56 lesson links and a ready-to-use ChatGPT review prompt.
 
@@ -1426,13 +1426,13 @@ The full repository Python fixture gate remains non-green: 1,433 pass, 186 fail,
 technology, cross-browser/device and page-load lab coverage remain unverified. A small existing
 Street-panel literal-null rendering defect was observed and recorded for follow-up.
 
-The [pre-publication report](docs/FLEETLAB_DESIGN_ENHANCEMENTS_HANDOFF_2026-09-24.md)
+The [pre-publication report](../../FLEETLAB_DESIGN_ENHANCEMENTS_HANDOFF_2026-09-24.md)
 is preserved as a historical checkpoint. Publication records follow the deployed source in a
 documentation-only commit; that does not change the served package.
 
 # Previous M1–M4 release — September 24, 2026
 
-The [depot milestones release](docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md) is published at
+The [depot milestones release](../../FLEETLAB_DEPOT_RELEASE_2026-09-24.md) is published at
 **https://fleetlab-playground.pages.dev/** from source `7874c7ed1453b97123946b43b153f80a7228088c`,
 deployment `40858080-b229-44f1-8169-4f8b4faf5c86`. M1–M4 add staffing-aware readiness,
 two charging treatments, compatible paired evaluation, resource observations, synthetic airport
@@ -1453,22 +1453,22 @@ records publication and does not change deployed bytes. Main and other worktrees
 no PR or main merge. The current user authorized this publication. All simulation outputs
 remain `NOT_EVIDENCE`, simulation-only, deployment permission `NONE`; Python evidence contracts
 are unchanged. See the release record for commands, package digests, controls, limitations and
-rollback, and [M4 local instructions](docs/FLEETLAB_DEPOT_LAUNCH.md) for the reproducible demo.
+rollback, and [M4 local instructions](../../FLEETLAB_DEPOT_LAUNCH.md) for the reproducible demo.
 
 ## Previous homepage film release — historical
 
-The [original AV homepage film](docs/FLEETLAB_FILM_RELEASE_2026-09-19.md) is published at **https://fleetlab-playground.pages.dev/** from source `f85a28f69a8a8819fea620d06837ae530a390030`, deployment `ccb82b11-986c-4ad1-8658-e1bc30917992`. The 16-second Blender film connects a waterfront ride, charging-depot readiness and the wider fleet. It includes preference-aware motion, pause and an offline poster. All 68 served files match the checked package. Public movie playback and the default Fleet day run were verified. JavaScript: 1,626 pass, zero failures, two skips, one existing TODO. Python parity/boundaries: 89 pass. Ruff and both distribution checks pass. The release record contains exact commands, media/offline hashes, visual and negative results, limitations and publication provenance. The [design rationale](docs/FLEETLAB_HOMEPAGE_FILM.md) and [authoring workflow](tools/fleet-film/README.md) explain the product framing and original assets.
+The [original AV homepage film](../../FLEETLAB_FILM_RELEASE_2026-09-19.md) is published at **https://fleetlab-playground.pages.dev/** from source `f85a28f69a8a8819fea620d06837ae530a390030`, deployment `ccb82b11-986c-4ad1-8658-e1bc30917992`. The 16-second Blender film connects a waterfront ride, charging-depot readiness and the wider fleet. It includes preference-aware motion, pause and an offline poster. All 68 served files match the checked package. Public movie playback and the default Fleet day run were verified. JavaScript: 1,626 pass, zero failures, two skips, one existing TODO. Python parity/boundaries: 89 pass. Ruff and both distribution checks pass. The release record contains exact commands, media/offline hashes, visual and negative results, limitations and publication provenance. The [design rationale](../../FLEETLAB_HOMEPAGE_FILM.md) and [authoring workflow](../../../tools/fleet-film/README.md) explain the product framing and original assets.
 
-The earlier [Street lab model and design record](docs/FLEETLAB_STREET_LAB.md) and [directed street data record](docs/FLEETLAB_STREET_MAP_DATA.md) describe the downtown SF, SFO and East Bay enhancement. Its release validation and publication identity are recorded in [the Street lab release handoff](docs/FLEETLAB_STREET_RELEASE_2026-09-19.md). These changes extend only the isolated static playground; Hermes Python, evidence contracts and main-branch integration remain unchanged. The whole Python suite's historical missing-fixture failures are not represented as passing. No real-fleet performance or safety claim is made.
+The earlier [Street lab model and design record](../../FLEETLAB_STREET_LAB.md) and [directed street data record](../../FLEETLAB_STREET_MAP_DATA.md) describe the downtown SF, SFO and East Bay enhancement. Its release validation and publication identity are recorded in [the Street lab release handoff](../../FLEETLAB_STREET_RELEASE_2026-09-19.md). These changes extend only the isolated static playground; Hermes Python, evidence contracts and main-branch integration remain unchanged. The whole Python suite's historical missing-fixture failures are not represented as passing. No real-fleet performance or safety claim is made.
 
-See the [preceding public release record](docs/FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) for the earlier Bay Area publication state, the [Cloudflare guide](docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) for owner steps, and the [repository recommendation](docs/FLEETLAB_REPOSITORY_RECOMMENDATION.md) for main integration. The explicit user request authorizes static publication and a feature-branch push. The [Bay Area 3D handoff](docs/FLEETLAB_BAY_AREA_3D_HANDOFF_2026-09-19.md) and [earlier operations wave](docs/FLEETLAB_OPERATIONS_HANDOFF_2026-09-19.md) preserve the preceding local-only checkpoints. The historical Hermes handoff below is unchanged.
+See the [preceding public release record](../../FLEETLAB_PUBLIC_RELEASE_2026-09-19.md) for the earlier Bay Area publication state, the [Cloudflare guide](../../FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) for owner steps, and the [repository recommendation](../../FLEETLAB_REPOSITORY_RECOMMENDATION.md) for main integration. The explicit user request authorizes static publication and a feature-branch push. The [Bay Area 3D handoff](../../FLEETLAB_BAY_AREA_3D_HANDOFF_2026-09-19.md) and [earlier operations wave](../../FLEETLAB_OPERATIONS_HANDOFF_2026-09-19.md) preserve the preceding local-only checkpoints. The historical Hermes handoff below is unchanged.
 
 # Hermes Phase 6 Codex handoff
 
 ## FleetLab experience redesign addendum — 2026-09-18
 
 The current `feat/fleetlab-playground` worktree contains a local website redesign and a product/simulation audit.
-See [the redesign handoff](docs/FLEETLAB_REDESIGN_HANDOFF_2026-09-18.md) for actual validation, package digests,
+See [the redesign handoff](../../FLEETLAB_REDESIGN_HANDOFF_2026-09-18.md) for actual validation, package digests,
 browser observations, unresolved fixture failures and remaining model limitations. This is a separate playground
 presentation wave, not a new Phase 6 evidence contract. The historical handoff below is preserved.
 
@@ -1513,9 +1513,9 @@ about 251 MB peak RSS; restart recovers memory.
 The current human-review package and final-iteration ledger are in:
 
 - `PHASE6_DESIGN_ITERATION_HANDOFF.md`;
-- `docs/PHASE6_USABILITY_TEST_PLAN.md`;
-- `docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`; and
-- `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md`.
+- `docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md`;
+- `docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`; and
+- `docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md`.
 
 The documentation-wave results are recorded in `PHASE6_DESIGN_ITERATION_HANDOFF.md`: 756 full, 756
 non-MetaDrive, and 506 focused tests passed; both editable installs, repository Ruff, and
@@ -1587,11 +1587,11 @@ is not an authenticity, road-safety, certification, compliance, authorization, o
 
 | Decision | Final choice | Rationale | Document |
 |---|---|---|---|
-| Canonical bundle inventory | Exactly 10 files | One contract shared with stored verification; no workbench-specific bundle | `docs/PHASE6_REVIEW_ENVELOPE_CONTRACT.md` |
+| Canonical bundle inventory | Exactly 10 files | One contract shared with stored verification; no workbench-specific bundle | `docs/hermes/phase6/PHASE6_REVIEW_ENVELOPE_CONTRACT.md` |
 | `ReviewEnvelope` version | `1.0` | Strict, deterministic, portable, category-bearing review contract | same |
 | `ComparisonEnvelope` version | `1.0` | Exact compatible/incompatible union with no winner score | same |
 | Evidence-sufficiency model | Core-owned required/optional/not-applicable plus availability and consequence | Prevents UI inference or missing-as-success presentation | same |
-| UI framework | Streamlit | Locally testable with AppTest and cleanly optional | `docs/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md` |
+| UI framework | Streamlit | Locally testable with AppTest and cleanly optional | `docs/hermes/phase6/PHASE6_ARCHITECTURE_AND_TRUST_MODEL.md` |
 | Optional dependency model | `workbench` extra | Core/CLI remain importable without Streamlit | `pyproject.toml` |
 | Artifact-root policy | Explicit, canonical non-symlink directory; exact relative selection text | Fail-closed containment and no newest-run discovery | architecture document |
 | Cache policy | Digest/schema/tool/locator key plus private capture identity; consistent evidence only | Cache is non-authoritative and mutation invalidates the session | envelope contract |
@@ -2100,7 +2100,7 @@ Bay run remained **95/284**. No console errors were observed during these action
 
 ### Next design and release recommendation
 
-The requested [N2 design draft](docs/plans/2026-09-25-fleetlab-n2-design.md) proposes two
+The requested [N2 design draft](../../plans/2026-09-25-fleetlab-n2-design.md) proposes two
 synthetic event waves at one fictional Las Vegas pickup hub, finite approach/berth capacity,
 explicit arrival-versus-boarding events, and responsive execution prerequisites. It includes
 versioning, paired experiments, fresh seed discipline, staged acceptance, risks and decisions.

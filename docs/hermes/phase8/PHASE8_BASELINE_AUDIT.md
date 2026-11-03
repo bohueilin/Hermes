@@ -94,7 +94,7 @@ verification returns `ARTIFACT_VERIFICATION_ERROR` ("artifact root and selected 
 real directories"). Even `tests/unit/test_architecture_boundaries.py` fails twice, because it asserts
 the boundary by invoking `review-artifact` / `review-compare` on a fixture bundle.
 
-**There is no committed way to regenerate the fixtures.** `docs/PHASE6_DEMO_RUNBOOK.md` *consumes*
+**There is no committed way to regenerate the fixtures.** `docs/hermes/phase6/PHASE6_DEMO_RUNBOOK.md` *consumes*
 `handoff-phase5-demo` but never says how it was produced; no Makefile target, script, or registry
 creates the `handoff-*` set. They exist only as 43 locally-generated directories on this machine.
 

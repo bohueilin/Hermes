@@ -43,7 +43,7 @@ Use this precedence order:
 4. `BUILD_PLAN.md` and phase-specific design documents.
 5. Existing code, tests, and documented behavior.
 
-When two instructions conflict, follow the higher-precedence instruction, document the conflict in `docs/decision-log.md`, and continue all independent work.
+When two instructions conflict, follow the higher-precedence instruction, document the conflict in `docs/hermes/architecture/decision-log.md`, and continue all independent work.
 
 ## Product thesis
 
@@ -68,7 +68,7 @@ The user may be unavailable for an extended period. Work autonomously within the
 
 - Inspect before editing.
 - Make reasonable, conservative assumptions when ambiguity is non-material.
-- Record material assumptions and trade-offs in `docs/decision-log.md`.
+- Record material assumptions and trade-offs in `docs/hermes/architecture/decision-log.md`.
 - Execute code, tests, and demonstrations; do not stop after writing a plan.
 - Work in priority order and enforce phase acceptance gates.
 - Continue independent work when one optional item is blocked.

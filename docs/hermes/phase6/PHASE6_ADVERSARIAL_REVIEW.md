@@ -101,9 +101,9 @@ produce pixel/manual visual, 200% reflow, visible CSS focus, screen-reader, cont
 or human-comprehension evidence; those statuses remain `NOT YET OBSERVED`.
 
 Automated AppTest structure does not establish those outcomes or WCAG conformance. The prospective
-protocols are `docs/PHASE6_VISUAL_REVIEW_CHECKLIST.md`,
-`docs/PHASE6_USABILITY_TEST_PLAN.md`, and
-`docs/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`. The accepted process-lifetime cache/session-growth P2
+protocols are `docs/hermes/phase6/PHASE6_VISUAL_REVIEW_CHECKLIST.md`,
+`docs/hermes/phase6/PHASE6_USABILITY_TEST_PLAN.md`, and
+`docs/hermes/phase6/PHASE6_HUMAN_OBSERVATION_TEMPLATE.md`. The accepted process-lifetime cache/session-growth P2
 below remains unchanged; discovery/autocomplete still requires a deterministic synchronized bounded
 LRU predecessor.
 
