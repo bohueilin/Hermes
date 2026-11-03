@@ -2,7 +2,7 @@
 
 **Goal:** Implement approved Packages A–C: addressable navigation and lessons, versioned setup sharing, accessible page structure, precise provenance/copy, and verified hosted/offline behavior.
 
-**Approved specification:** `/Users/bohueilin/Downloads/ChatGPT6_fleetlab-design-review-feedback-audit.md`, approved by the user's “go” on September 24 Pacific time.
+**Approved specification:** `…/Downloads/ChatGPT6_fleetlab-design-review-feedback-audit.md`, approved by the user's “go” on September 24 Pacific time.
 
 **Architecture:** Retain all existing engines and the dependency-free static/offline application. A bounded hash-route table coordinates current studio destinations. A versioned setup codec validates complete producer configuration before a UI handoff; loading never computes results. Current inputs and submitted run inputs remain distinct.
 

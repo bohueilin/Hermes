@@ -4,11 +4,11 @@ Completed locally on 2026-09-19 UTC. This extends the preceding FleetLab redesig
 
 ## Repository snapshot
 
-- Worktree: `/Users/bohueilin/Documents/GitHub/Hermes-playground`.
+- Worktree: `…/Hermes-playground`.
 - Branch: `feat/fleetlab-playground`.
 - HEAD: `fb07b66ddaa786020f2176efdb82727bd55c5d4b`, unchanged.
 - Prior uncommitted redesign/operations work preserved. Current changes remain uncommitted and unstaged; no remote, PR, push or publication action.
-- The initial `/Users/bohueilin/Documents/GitHub/Hermes-fleetlab` worktree was not edited.
+- The initial `…/Hermes-fleetlab` worktree was not edited.
 - Current explicit user requests authorize new map/model/3D behavior; they supersede historical invented-place-only and presentation-only constraints for this isolated playground extension. No Phase 6 artifact contract or trust state changed.
 
 ## Delivered

@@ -350,9 +350,9 @@ Commands used for the software gates:
 ```sh
 build/fleetlab-city/venv/bin/python -m unittest discover -s apps/fleetlab-city/tests
 (cd apps/fleetlab-city && npm test)
-PYTHONPATH="$PWD/src" /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m pytest -q
-/Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m ruff check .
-PYTHONPATH="$PWD/src" /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m hermes doctor
+PYTHONPATH="$PWD/src" …/miniconda3/envs/hermes-dev/bin/python -m pytest -q
+…/miniconda3/envs/hermes-dev/bin/python -m ruff check .
+PYTHONPATH="$PWD/src" …/miniconda3/envs/hermes-dev/bin/python -m hermes doctor
 git diff --check
 ```
 

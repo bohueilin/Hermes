@@ -18,11 +18,11 @@ Implemented a new individual-vehicle fleet day, replay/step controls, time/weath
 
 ## Repository state
 
-- Worktree: `/Users/bohueilin/Documents/GitHub/Hermes-playground`.
+- Worktree: `…/Hermes-playground`.
 - Branch: `feat/fleetlab-playground`.
 - Unchanged HEAD: `fb07b66ddaa786020f2176efdb82727bd55c5d4b`.
 - The earlier redesign was already uncommitted and has been preserved.
-- The original task worktree `/Users/bohueilin/Documents/GitHub/Hermes-fleetlab` remains clean on its existing Phase 9 branch.
+- The original task worktree `…/Hermes-fleetlab` remains clean on its existing Phase 9 branch.
 - No commits, staging, pushes, PRs, deployments or remote writes. The previously supplied public URL remains unchanged.
 - No evidence artifacts were ingested or changed. No physical/production vehicle interface, simulator installation, cloud account, telemetry or persistence was added.
 

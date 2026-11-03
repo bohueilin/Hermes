@@ -27,7 +27,7 @@ Evidence directory: `build/fleetlab-city/validation/sf-acceptance-20261004/`.
 - Focused four-test regression: all four RED before implementation; all four GREEN after.
 - City Python: `build/fleetlab-city/venv/bin/python -m unittest discover -s apps/fleetlab-city/tests` — 312 passed.
 - City JavaScript: `npm --prefix apps/fleetlab-city test` — 59 passed (including the terminal-state regression).
-- Hermes: `PYTHONPATH="$PWD/src" /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m pytest -q` — 1,661 passed, 56 skipped.
+- Hermes: `PYTHONPATH="$PWD/src" …/miniconda3/envs/hermes-dev/bin/python -m pytest -q` — 1,661 passed, 56 skipped.
 - Actual in-app browser: original defect reproduced; corrected exact queue boundary,
   backward seeking, direct Play/Pause and terminal state inspected separately from tests.
 - Local QA initially served stale gzip mirrors after manual source overlay. This

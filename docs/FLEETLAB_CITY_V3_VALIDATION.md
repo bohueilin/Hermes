@@ -40,9 +40,9 @@ Core repeatable checks, from the repository root:
 ```bash
 PYTHONDONTWRITEBYTECODE=1 build/fleetlab-city/venv/bin/python -m unittest discover -s apps/fleetlab-city/tests -v
 node --test apps/fleetlab-city/test/*.test.mjs
-FLEET_PLAYGROUND_BASE=bca4ccd PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$PWD/src" /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m pytest -q tests/unit/test_fleet_playground_parity.py tests/unit/test_fleet_playground_boundaries.py
+FLEET_PLAYGROUND_BASE=bca4ccd PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$PWD/src" …/miniconda3/envs/hermes-dev/bin/python -m pytest -q tests/unit/test_fleet_playground_parity.py tests/unit/test_fleet_playground_boundaries.py
 FLEET_PLAYGROUND_PERF=1 node --test --test-concurrency=1 playground/fleetlab/test/*.test.mjs
-/Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m ruff check .
+…/miniconda3/envs/hermes-dev/bin/python -m ruff check .
 git diff --check
 ```
 

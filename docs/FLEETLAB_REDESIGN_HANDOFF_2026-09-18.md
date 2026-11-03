@@ -8,7 +8,7 @@ Date: 2026-09-18. This adapts `CODEX_HANDOFF_TEMPLATE.md` to the owner-requested
 
 - Completed: source-tree/product audit, public research synthesis, website redesign, responsive browser inspection, local distributions and role-specific demonstration narrative.
 - Recommendation: ready for local design review and a comprehension study. The repository-wide Python gate remains incomplete; no commit or publication was performed.
-- Worktree: `/Users/bohueilin/Documents/GitHub/Hermes-playground`.
+- Worktree: `…/Hermes-playground`.
 - Branch: `feat/fleetlab-playground`.
 - Starting and ending HEAD: `fb07b66ddaa786020f2176efdb82727bd55c5d4b`.
 - Starting worktree: clean. Ending worktree: intentional uncommitted source, test and documentation changes.

@@ -313,7 +313,7 @@ San Mateo municipality has a prepared California source probe; it is not San Mat
 
 ## 10. Engineering handoff and evidence index
 
-Repository root: `/Users/bohueilin/Documents/GitHub/Hermes-fleetlab`.
+Repository root: `…/Hermes-fleetlab`.
 The shared repository's product/package remains Hermes; FleetLab is its separate educational application. Do not rename canonical Hermes interfaces. Work is in the existing isolated feature worktree, not the historical Phase 6 baseline.
 
 Source layout:
@@ -325,13 +325,13 @@ Source layout:
 - `playground/fleetlab/`: retained established teaching product.
 - `build/fleetlab-city/` and `dist/`: generated local evidence, immutable bundles, release stages and dependency runtimes; not source changes to stage blindly.
 
-Validated runtimes recorded in the project: City Python at `build/fleetlab-city/venv/bin/python`; root Python/Ruff at `/Users/bohueilin/miniconda3/envs/hermes-dev/bin/python`; City Node target `>=22 <23`. Check the installed environment before a future implementation. Applicable commands for code changes include:
+Validated runtimes recorded in the project: City Python at `build/fleetlab-city/venv/bin/python`; root Python/Ruff at `…/miniconda3/envs/hermes-dev/bin/python`; City Node target `>=22 <23`. Check the installed environment before a future implementation. Applicable commands for code changes include:
 
 ```bash
 build/fleetlab-city/venv/bin/python -m unittest discover -s apps/fleetlab-city/tests
 npm --prefix apps/fleetlab-city test
-PYTHONPATH="$PWD/src" /Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m pytest -q
-/Users/bohueilin/miniconda3/envs/hermes-dev/bin/python -m ruff check .
+PYTHONPATH="$PWD/src" …/miniconda3/envs/hermes-dev/bin/python -m pytest -q
+…/miniconda3/envs/hermes-dev/bin/python -m ruff check .
 git diff --check
 ```
 

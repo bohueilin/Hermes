@@ -90,7 +90,7 @@ The stage has 9,897 files: 99 unchanged legacy files and 9,798 added files. The 
 A separate copy at `build/fleetlab-city/launch-rehearsal-v3/site/` received `review/_headers.candidate`; the canonical stage remained unchanged. That copy was served by cached Wrangler Pages dev 4.135.0 on loopback port 4180:
 
 ```bash
-node /Users/bohueilin/.npm/_npx/c943b712072b77c4/node_modules/wrangler/bin/wrangler.js \
+node …/.npm/_npx/c943b712072b77c4/node_modules/wrangler/bin/wrangler.js \
   pages dev build/fleetlab-city/launch-rehearsal-v3/site \
   --ip 127.0.0.1 --port 4180 \
   --persist-to build/fleetlab-city/launch-rehearsal-v3/state --log-level error

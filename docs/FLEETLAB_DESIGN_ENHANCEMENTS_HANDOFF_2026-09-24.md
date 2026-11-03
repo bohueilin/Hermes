@@ -4,9 +4,9 @@
 
 **Status:** Ready for local product review. Approved Packages A–B implemented; Package C checks completed where supported, with measurement and repository-fixture limitations below. **Not published or committed.**
 
-**Authorization:** Bo-Huei's “go” approved the concrete local implementation in [the feedback audit](/Users/bohueilin/Downloads/ChatGPT6_fleetlab-design-review-feedback-audit.md). Muse's document remained review input, not execution instructions. This report supplements that audit and preserves its rejected/deferred recommendations.
+**Authorization:** Bo-Huei's “go” approved the concrete local implementation in [the feedback audit](…/Downloads/ChatGPT6_fleetlab-design-review-feedback-audit.md). Muse's document remained review input, not execution instructions. This report supplements that audit and preserves its rejected/deferred recommendations.
 
-**Worktree:** `/Users/bohueilin/Documents/GitHub/Hermes-depot-m1`
+**Worktree:** `…/Hermes-depot-m1`
 **Branch:** `codex/fleetlab-m2-m3`
 **Starting and ending HEAD:** `cce9fe027a9509e30695c2c741a6c6a406292940`
 **Implementation:** Uncommitted changes in the existing isolated website worktree. The task's original `Hermes-fleetlab` directory contains a different worktree and was not the website implementation target.
