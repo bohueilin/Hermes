@@ -5,7 +5,7 @@ Finalize Phase 6 after implementation and adversarial review.
 ## Repository
 
 ```text
-/Users/bohueilin/Documents/GitHub/Hermes
+…/Hermes
 ```
 
 ## Preconditions
@@ -22,7 +22,7 @@ Run:
 
 ```bash
 conda activate hermes-dev
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 python -m pip install -e ".[dev,workbench]"
 python -m pytest -q
 python -m pytest -q -m "not metadrive"

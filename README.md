@@ -336,7 +336,7 @@ realism claim.
 ## Environment
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python --version
 which python

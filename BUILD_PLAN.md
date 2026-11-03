@@ -21,7 +21,7 @@ The historical design-review baseline was:
 
 | Item | Observed value |
 |---|---|
-| Repository | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Repository | `…/Hermes` |
 | Completed branch | `feat/unattended-evidence-core` |
 | Completed HEAD | `9e257a0cf0ddbdbf601b8a01deebe4de52de9763` |
 | Recommended Phase 6 branch | `feat/phase6-evidence-workbench` |

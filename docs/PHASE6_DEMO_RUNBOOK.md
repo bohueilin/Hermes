@@ -7,7 +7,7 @@ Demonstrate that Hermes makes simulation evidence understandable without strengt
 ## 2. Preflight
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python -m pip install -e ".[dev,workbench]"
 python -m pytest -q

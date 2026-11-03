@@ -7,7 +7,7 @@ Execute the Phase 6 **design freeze only**. Do not implement the workbench or ad
 ## Repository
 
 ```text
-/Users/bohueilin/Documents/GitHub/Hermes
+…/Hermes
 ```
 
 ## Environment

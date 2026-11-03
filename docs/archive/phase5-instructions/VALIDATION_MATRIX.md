@@ -6,7 +6,7 @@ Use this matrix after the unattended Codex run. Do not accept a phase based only
 
 | Check | Command | Pass condition |
 |---|---|---|
-| Correct repository | `pwd` | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Correct repository | `pwd` | `…/Hermes` |
 | Correct environment | `which python` | path contains `/envs/hermes-dev/` |
 | Correct Python | `python --version` | Python 3.11.x |
 | Feature branch | `git branch --show-current` | not `main` during development |
@@ -19,7 +19,7 @@ Use this matrix after the unattended Codex run. Do not accept a phase based only
 Run:
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python -m pip install -e ".[dev]"
 python -m pytest -q

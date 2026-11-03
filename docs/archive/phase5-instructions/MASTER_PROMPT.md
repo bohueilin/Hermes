@@ -19,7 +19,7 @@ The project should demonstrate how an autonomy organization connects product sco
 Repository root:
 
 ```text
-/Users/bohueilin/Documents/GitHub/Hermes
+…/Hermes
 ```
 
 Canonical identity:
@@ -80,7 +80,7 @@ python -m hermes doctor
 The Python executable must resolve inside:
 
 ```text
-/Users/bohueilin/miniconda3/envs/hermes-dev/
+…/miniconda3/envs/hermes-dev/
 ```
 
 If shell activation is unavailable, run commands through:

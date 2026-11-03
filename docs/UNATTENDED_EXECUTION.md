@@ -8,7 +8,7 @@ This protocol is designed for an extended Codex run while the user is unavailabl
 
 - Product mode: Codex.
 - Environment: Local.
-- Primary folder: `/Users/bohueilin/Documents/GitHub/Hermes`.
+- Primary folder: `…/Hermes`.
 - Branch: `feat/unattended-evidence-core`.
 - Permission boundary: repository-scoped workspace access.
 - Network: unnecessary after likely Phase 1 dependencies are preinstalled.

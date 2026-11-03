@@ -333,7 +333,7 @@ policies, safety shields, release gates, evidence bundles, and dashboards remain
   standalone proof. The user reported that it passed before Phase 0; the doctor independently
   imports its prerequisites and finds a graphics pipe, while explicitly not claiming rendering ran.
 - Resolve the actual current Git root instead of enforcing the recommended `~/Projects/Hermes`
-  path. This workspace is `/Users/bohueilin/Documents/GitHub/Hermes`.
+  path. This workspace is `…/Hermes`.
 - Exit successfully for `WARN` and `NOT_AVAILABLE`, but exit nonzero for any `FAIL`. Every failure
   includes an actionable remediation.
 

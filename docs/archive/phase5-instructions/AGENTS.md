@@ -6,7 +6,7 @@ These instructions apply to every Codex task in this repository. Read them befor
 
 - Product and repository display name: `Hermes`.
 - Intended GitHub repository: `bohueilin/Hermes`.
-- Local repository root: `/Users/bohueilin/Documents/GitHub/Hermes`.
+- Local repository root: `…/Hermes`.
 - Python distribution: `hermes-autonomy`.
 - Python import package: `hermes`.
 - Console command: `hermes`.

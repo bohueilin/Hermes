@@ -128,11 +128,11 @@ simulator, browser, or server action was used during remediation.
 
 ## 2. Repository snapshot and observed architecture
 
-- Repository: `/Users/bohueilin/Documents/GitHub/Hermes`
+- Repository: `…/Hermes`
 - Branch: `feat/phase6-evidence-workbench`
 - Review base: `99c75124521bb98dbfad11cf1f6cc2b8528ce9cd`
   (`feat: add local read-only evidence workbench`)
-- Python: `3.11.15` from `/Users/bohueilin/miniconda3/envs/hermes-dev/bin/python`
+- Python: `3.11.15` from `…/miniconda3/envs/hermes-dev/bin/python`
 - Entry tree at review start: clean; `git diff --check` passed.
 - Review architecture observed:
   untrusted locator -> descriptor-relative immutable capture -> stored verification/compare core ->

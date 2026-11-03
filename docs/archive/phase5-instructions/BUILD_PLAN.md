@@ -26,7 +26,7 @@ The plan begins after Hermes Phase 0.
 
 | Item | Validated state |
 |---|---|
-| Repository root | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Repository root | `…/Hermes` |
 | Baseline branch | `main` |
 | Baseline commit | `c181509a691b132cb732a50c24612f6bd40bafca` |
 | Distribution | `hermes-autonomy` |

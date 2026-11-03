@@ -970,7 +970,7 @@ contract closure") — the table above follows the commits.
 
 ### 5.8 Phase 7 — read-only, unmerged, unaccepted
 
-Lives only at `~/.codex/worktrees/Hermes/phase7-evaluation-adequacy-human-validation` on
+Lives only at `…/.codex/worktrees/Hermes/phase7-evaluation-adequacy-human-validation` on
 `codex/phase7-evaluation-adequacy-human-validation` (pushed, clean tree). Adds
 `adequacy/`, `evaluation_plans/`, `provenance/git.py`, `adapters/metadrive_config.py`, the
 `assess-adequacy` command, `EvaluationAdequacyEnvelope` 1.0, five protocol versions. Results:

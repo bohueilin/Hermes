@@ -17,7 +17,7 @@ If a P0 design blocker remains, stop implementation, update the handoff, and con
 ## Repository and environment
 
 ```text
-Repository: /Users/bohueilin/Documents/GitHub/Hermes
+Repository: …/Hermes
 Conda: hermes-dev
 Python: 3.11
 ```

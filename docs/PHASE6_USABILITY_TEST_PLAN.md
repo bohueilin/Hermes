@@ -38,7 +38,7 @@ primary comprehension measure; they may join a separate expert critique.
 Run from a clean local checkout in the `hermes-dev` Python 3.11 environment:
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python -m pip install -e ".[dev,workbench]"
 hermes workbench \

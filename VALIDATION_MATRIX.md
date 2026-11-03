@@ -59,7 +59,7 @@ Compare `#compare`, and exception-text count 0.
 
 | Check | Command | Required result |
 |---|---|---|
-| Repository | `pwd` | `/Users/bohueilin/Documents/GitHub/Hermes` |
+| Repository | `pwd` | `…/Hermes` |
 | Environment | `python --version && which python` | Python 3.11 in `hermes-dev` |
 | Branch | `git branch --show-current` | `feat/phase6-reviewer-comprehension` for this iteration |
 | Status | `git status --short` | Only explicitly reviewed iteration changes and preserved user-owned prompt; clean before each commit |

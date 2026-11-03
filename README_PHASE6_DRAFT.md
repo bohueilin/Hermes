@@ -32,7 +32,7 @@ A gate `PASS` means the installed Hermes gate recomputed PASS from an internally
 ## Environment
 
 ```bash
-cd /Users/bohueilin/Documents/GitHub/Hermes
+cd …/Hermes
 conda activate hermes-dev
 python -m pip install -e ".[dev,workbench]"
 ```
