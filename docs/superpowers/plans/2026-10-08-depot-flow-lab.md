@@ -62,4 +62,4 @@ Run relevant teaching/City/Hermes regression gates, offline and hosted packaging
 
 ### Task 5: Final review and handoff
 
-Obtain a fresh scoped code review after implementation as required by executing-plans, fix important findings, rerun affected tests. Record actual results, package paths, Git/publication state and residual human qualification limits in `docs/FLEETLAB_NETWORK_FLOWS_HANDOFF_2026-10-08.md`. Prepare the exact next NF-02/03 study questions without running it.
+Obtain a fresh scoped code review after implementation as required by executing-plans, fix important findings, rerun affected tests. Record actual results, package paths, Git/publication state and residual human qualification limits in `docs/fleetlab/network-flows/FLEETLAB_NETWORK_FLOWS_HANDOFF_2026-10-08.md`. Prepare the exact next NF-02/03 study questions without running it.

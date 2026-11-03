@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {installFakeDom} from './helpers/fake-dom.mjs';import {ORDER_STUDY} from '../src/data/delivery-order-study.js';
 import {reconstructOrderStudy,reconstructOrderEqualShare} from '../src/runtime/delivery-order-worker.js';import {createOrderPage} from '../src/ui/delivery-order-page.js';
-// Step B C7: the Delivery Order states (docs/FLEETLAB_NETWORK_FLOWS_STEP_B_PLAN_2026-10-26.md section 4, owner decision D5).
+// Step B C7: the Delivery Order states (docs/fleetlab/network-flows/FLEETLAB_NETWORK_FLOWS_STEP_B_PLAN_2026-10-26.md section 4, owner decision D5).
 // Badges are separate elements: [data-figures] labels the outcome cards, [data-pending] the editor, [data-unavailable] a failed check.
 const FIGS={default:'2/4 · 178 s · 138 s · 378 s',impossible:'1/4 · 192 s · 138 s · 378 s',close:'2/4 · 4 s · 2 s · 378 s',best:'4/4 · 0 s · 0 s · 378 s',closeBest:'3/4 · 50 s · 50 s · 378 s'};
 const NAMES={default:'Different targets',impossible:'One impossible target',close:'Close targets'};

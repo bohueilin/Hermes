@@ -28,7 +28,7 @@ Validation: **318 City Python tests**, **63 City JavaScript tests**, **1,662 Her
 
 All **4,886 non-catalogue recorded data files** and the source-offer identity remain unchanged. The catalogue changes only its measured export-memory value. No scientific result, threshold, map qualification or evaluation arm changed. The rollback selector was rehearsed on a separate local copy and rendered the sanitized prior viewer; no production rollback was performed. Browser checks covered desktop and 375 px reflow, malformed setup/hash handling, the real 404, current release selection and replay. Native saved-file launch and new physical-device/human qualification are not claimed.
 
-The first preview readback reached file comparison but failed to write its report under the Mac's older default Python. The complete unchanged package was then checked successfully with Python 3.11. Use the explicit project interpreter in the [publication runbook](FLEETLAB_CLOUDFLARE_DEPLOYMENT.md).
+The first preview readback reached file comparison but failed to write its report under the Mac's older default Python. The complete unchanged package was then checked successfully with Python 3.11. Use the explicit project interpreter in the [publication runbook](fleetlab/publishing/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md).
 
 Remaining owner actions: review account access/2FA and credential scope; choose historical-deployment/legacy-site retention; handle shared Hermes CI dependency policy separately. Old immutable deployments and cached removed URLs can remain reachable even though the current packages omit those files. Cloudflare documents [removed-asset retention of up to one week](https://developers.cloudflare.com/pages/configuration/serving-pages/#asset-retention); the existing browser cache duration is not a takedown guarantee. The supplied security audit and detailed finding decisions remain in private security storage, outside this public handoff and website.
 
@@ -47,7 +47,7 @@ SF source/map observations, human accessibility/device tasks, five independent v
 - The aggregate fleet introduction explains that 100 interacting vehicles are not 100 independent observations. The original statistical sample is twelve paired seeds.
 - Captions and explanatory text are larger and darker. Overview/film, Fleet day, Street lab, experiments, Scale lab, 59 lessons and the unchanged offline edition remain available.
 
-The [October 6 audit decisions](FLEETLAB_SF_AUDIT_CLOSURE_2026-10-06.md) give an accepted/adapted/rejected decision for each Claude finding and carry forward every October 5 Muse/Gemini decision. The AI auditor's workflow and agent count are not independent human qualification.
+The [October 6 audit decisions](fleetlab/city-explorer/FLEETLAB_SF_AUDIT_CLOSURE_2026-10-06.md) give an accepted/adapted/rejected decision for each Claude finding and carry forward every October 5 Muse/Gemini decision. The AI auditor's workflow and agent count are not independent human qualification.
 
 ## 2. Current product links and a short walkthrough
 
@@ -124,7 +124,7 @@ Everything below is the October 5 document verbatim. References to “latest”,
 
 **Latest outcome — SF non-human work: COMPLETE within the accepted October 4 scope.** The supported Muse/Gemini findings are implemented, tested, pushed and live. Formal SF acceptance remains **HOLD** for the human/source requirements below. Austin and other cities are **NOT_STARTED**. No further AI audit or handoff preparation is required for this release. Section 11 records the final publication; section 9 preserves the earlier v11 history.
 
-This handoff supersedes older next-action statements where they conflict with the accepted October 4 scope. Historical protocols, failed runs, adverse results and source snapshots remain unchanged. The [October 4 handoff](FLEETLAB_HANDOFF_2026-10-04.md) retains the detailed earlier history and resource analysis; the [canonical acceptance matrix](FLEETLAB_SF_ACCEPTANCE_2026-10-04.md) names every remaining gate.
+This handoff supersedes older next-action statements where they conflict with the accepted October 4 scope. Historical protocols, failed runs, adverse results and source snapshots remain unchanged. The [October 4 handoff](fleetlab/handoffs/FLEETLAB_HANDOFF_2026-10-04.md) retains the detailed earlier history and resource analysis; the [canonical acceptance matrix](fleetlab/city-explorer/FLEETLAB_SF_ACCEPTANCE_2026-10-04.md) names every remaining gate.
 
 ## 1. Open the product and launch-readiness examples
 
@@ -175,7 +175,7 @@ One depot A has eight charging ports, 200 kW site power and four turnaround slot
 
 The replication unit is the paired seed, not each of the 100 interacting cars. Favorable metrics do not by themselves establish practical benefit, map qualification, real-world safety or a depot recommendation for Waymo.
 
-For a ten-minute departmental demo, use [the executive walkthrough](FLEETLAB_SF_EXECUTIVE_WALKTHROUGH_2026-10-05.md). Keep that coached presentation separate from the uncoached visitor study.
+For a ten-minute departmental demo, use [the executive walkthrough](fleetlab/city-explorer/FLEETLAB_SF_EXECUTIVE_WALKTHROUGH_2026-10-05.md). Keep that coached presentation separate from the uncoached visitor study.
 
 | Department | Intended takeaway |
 |---|---|
@@ -192,7 +192,7 @@ The connected **Pixel 10 Pro XL / Android 17 / Chrome 154.0.8037.92** was exerci
 
 Actual Chrome **200% page zoom** exposed navigation overflow, overlapping map-layer/fit controls and a clipped depot select. We corrected wrapping, narrow grid minimums, the decorative capacity layout, map-control placement and select width. Short atlas labels **A · one** and **A + B · two** preserve depot identity at large zoom; loaded replay options retain their configuration/power labels. The final select and controls were visually rechecked on the phone. No scientific inputs, recorded outcomes or map geometry changed.
 
-All five views were checked at 240×844, 390×844, 844×390 and 1440×900: no document horizontal overflow and all navigation buttons within the viewport. Scrollable data tables remain intentional local regions. See [the connected-device record](FLEETLAB_SF_DEVICE_ACCEPTANCE_2026-10-05.md) for exact failures, partial checks, exclusions and remaining rows. After that packaged worksheet was captured, the deployed v11 preview was also tested on the Pixel: A+B selection displayed both red depot squares; direct Play advanced to 07:27:59, Pause held, the end seek reached 15:00:00, and Play restarted to 07:13:35. The desktop preview also passed slider End and restart. Evidence: `39-preview-play-ab.png`, `40-preview-end-ab.png`, `41-preview-restart-ab.png`, `preview-browser.json`. This closes the automated A+B sequence left open in the packaged worksheet; human pinch, focus traversal and assistive speech remain open. No TalkBack spoken-output session or independent visitor session is claimed. Phone font scale and portrait settings were restored to their initial values, both tested origin zoom levels reset, and Chrome’s temporary zoom-menu option switched off.
+All five views were checked at 240×844, 390×844, 844×390 and 1440×900: no document horizontal overflow and all navigation buttons within the viewport. Scrollable data tables remain intentional local regions. See [the connected-device record](fleetlab/city-explorer/FLEETLAB_SF_DEVICE_ACCEPTANCE_2026-10-05.md) for exact failures, partial checks, exclusions and remaining rows. After that packaged worksheet was captured, the deployed v11 preview was also tested on the Pixel: A+B selection displayed both red depot squares; direct Play advanced to 07:27:59, Pause held, the end seek reached 15:00:00, and Play restarted to 07:13:35. The desktop preview also passed slider End and restart. Evidence: `39-preview-play-ab.png`, `40-preview-end-ab.png`, `41-preview-restart-ab.png`, `preview-browser.json`. This closes the automated A+B sequence left open in the packaged worksheet; human pinch, focus traversal and assistive speech remain open. No TalkBack spoken-output session or independent visitor session is claimed. Phone font scale and portrait settings were restored to their initial values, both tested origin zoom levels reset, and Chrome’s temporary zoom-menu option switched off.
 
 ## 5. Where independent source/map observations come from
 
@@ -204,7 +204,7 @@ Practical starting point: [OpenStreetMap US Slack](https://openstreetmap.us/get-
 
 A **25-way / 10-OD pilot** is a sensible way to confirm reviewer competence and estimate effort. It does **not** reduce the frozen acceptance roster. Send only the relevant batch, captures and instructions first; do not ask a volunteer vaguely to “approve the entire SF map.”
 
-The separate [source-owner clarification draft](FLEETLAB_SF_SOURCE_CLARIFICATION_DRAFT_2026-09-30.md) is ready for the owner to send. It asks for exact redistribution/attribution terms, the authoritative adopted version corresponding to the captured full district service, and intended bridge/border scope. It remains **UNSENT**. Empty license fields establish neither permission nor prohibition. No unresolved full district GeoJSON was added to the public site.
+The separate [source-owner clarification draft](fleetlab/city-explorer/FLEETLAB_SF_SOURCE_CLARIFICATION_DRAFT_2026-09-30.md) is ready for the owner to send. It asks for exact redistribution/attribution terms, the authoritative adopted version corresponding to the captured full district service, and intended bridge/border scope. It remains **UNSENT**. Empty license fields establish neither permission nor prohibition. No unresolved full district GeoJSON was added to the public site.
 
 ### Current frozen workload and identities
 
@@ -285,7 +285,7 @@ This is a human-friendly intake form, not a replacement for the installed runtim
 
 > Please explore FleetLab's City Explorer for five minutes without reading the handoff or presenter guide. Then describe, in your own words, what it concludes about depots, what a seed is, what the 100 vehicles represent, what stays constant between layouts, and what the results establish about real SF service or safety. Try selecting a repeat and vehicle, playing a trace, finding limitations, and returning to FleetLab. Tell me where you got stuck. With your consent I will record anonymous answers and any assistance required; this is a formative product review.
 
-Use the [visitor protocol](FLEETLAB_SF_VALIDATION_SESSION.md). Ask its open question before later threshold prompts. Two scorers independently label answers correct/partial/incorrect/unclear, quote evidence and reconcile visibly. Do not send the answer rubric before the session. An AI role-play or this agent's inspection does not count as P1–P5.
+Use the [visitor protocol](fleetlab/city-explorer/FLEETLAB_SF_VALIDATION_SESSION.md). Ask its open question before later threshold prompts. Two scorers independently label answers correct/partial/incorrect/unclear, quote evidence and reconcile visibly. Do not send the answer rubric before the session. An AI role-play or this agent's inspection does not count as P1–P5.
 
 ## 7. What remains, with owner and completion evidence
 
@@ -363,7 +363,7 @@ Muse's suggested-vehicle explanation was already present. The purported “Same 
 
 Gemini's assertions about 100 chargers, 50/50 hubs, a 0.42–1.80 pp interval, interpolated positions, 10 Hz incident telemetry, road-congestion feedback, 98.4% lane qualification, AV-084 cross-model trace navigation and a synchronized v4.18.2 batch engine are unsupported or conflict with source and stored results. They were not implemented. The correct evidence remains eight ports / 4+4, 0.70–1.55 pp, held poses, generic resource queues and qualification HOLD. The nearby replay limits and offline scope address the useful comprehension goals without inventing telemetry. The existing practical-margin explanation remains; an extra interval graphic is optional, not an unresolved defect.
 
-A complete finding-by-finding rationale is in [the audit decision record](FLEETLAB_SF_AUDIT_CLOSURE_2026-10-05.md). This handoff is sufficient for the owner's next conversation; the longer record is optional supporting detail.
+A complete finding-by-finding rationale is in [the audit decision record](fleetlab/city-explorer/FLEETLAB_SF_AUDIT_CLOSURE_2026-10-05.md). This handoff is sufficient for the owner's next conversation; the longer record is optional supporting detail.
 
 **No further AI review or handoff round is required.** Section 6B is optional map/source claim triage. If used later, send this handoff plus the particular frozen batch and captures needed for its claims. Fable can be done later without holding up this release. AI outputs do not fill human observation rows.
 

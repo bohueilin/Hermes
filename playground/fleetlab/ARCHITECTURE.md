@@ -61,7 +61,7 @@ or result view. See the current top section of `CODEX_HANDOFF.md` for measured r
 ## Depot readiness M1 amendment, 2026-09-22
 
 The current user authorizes only a bounded staffing/work-order slice. Contract and decision
-record: `docs/FLEETLAB_DEPOT_READINESS.md`. The default Bay producer remains 1.0.0. An explicit
+record: `docs/fleetlab/depot/FLEETLAB_DEPOT_READINESS.md`. The default Bay producer remains 1.0.0. An explicit
 `readiness.version = depot-readiness-1.0.0` adds a suffix to its producer ID and a separate
 `depot-readiness-metrics-1.0.0` result namespace. No historical fixture is regenerated.
 
@@ -1354,7 +1354,7 @@ final sample summary in phase 5) and is absent, not skipped, before then.
     https://fleetlab.pages.dev/ as Production deployment `19e17ac6` of the Pages project `fleetlab`, from source
     `c08f60d`. Since 2026-09-28 that source is in the public repository, on the branch `feat/fleetlab-playground`. The
     deployment, its public readback and its rollback target are recorded in
-    `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`. Publishing stays an owner action (decision 40). One later
+    `docs/fleetlab/playground/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`. Publishing stays an owner action (decision 40). One later
     commit, `1aeaace`, changes `src/ui/studio.js` to fix a Fleet day heading defect older than this wave. It changes
     no rule of this item. On the owner's word it was deployed on 2026-09-28 as Production deployment `77922688`, which
     is the live site, and the rollback target became `19e17ac6`. Two sweeps of the lesson links after the deployment
@@ -1383,7 +1383,7 @@ JSON. The original instrument and Python vectors are unchanged.
 whole runs and within bootstrap steps; configuration changes/destroy discard pending
 results. One seed has no interval or recommendation. Required unavailable populations
 block analysis. Outputs remain NOT_EVIDENCE with deployment permission NONE. See
-[the full metric and lifecycle contract](../../docs/FLEETLAB_DEPOT_M2_M3.md).
+[the full metric and lifecycle contract](../../docs/fleetlab/depot/FLEETLAB_DEPOT_M2_M3.md).
 
 ## Configuration-driven launch rehearsal (M4, 2026-09-24)
 
@@ -1402,14 +1402,14 @@ matching paired treatment; no winner is computed by rendering.
 
 All launch versions start at 1.0.0. Existing unextended result hashes are preserved; the M2/M3
 paired adapter rejects launch configs. Region B uses explicit synthetic geometry through the
-same engine, not a second map simulator. [Contracts and exact metric populations](../../docs/FLEETLAB_DEPOT_LAUNCH.md).
+same engine, not a second map simulator. [Contracts and exact metric populations](../../docs/fleetlab/depot/FLEETLAB_DEPOT_LAUNCH.md).
 
 
 ## Isolated city explorer (September 29, 2026)
 
 `apps/fleetlab-city/` is a sibling subsystem because this playground's protected boundary excludes Python and node_modules. No city runtime import or dependency enters the legacy app. The new direction is source snapshots → directed graph → frozen scenarios → single-owner graph/resource runner → stored-event verification → paired comparison → same-origin recorded viewer. Its pack/scenario/run/metric/comparison/explanation contracts are separately versioned. Geometry, numerical decisions and optional prose have different ownership.
 
-The city package is prepared independently under `dist/city-explorer-reviewed/`, with route-scoped proposed headers and an inventory for whole-bundle rollback. It has not been deployed. The old offline payload and hosted package remain separate. Source accounting is complete for the pinned snapshot, while routing/district and human semantic qualification fail or remain open. See `docs/FLEETLAB_CITY_PACK_V1.md`, `docs/FLEETLAB_CITY_RUN_V1.md` and `docs/FLEETLAB_CITY_SF_VALIDATION.md`.
+The city package is prepared independently under `dist/city-explorer-reviewed/`, with route-scoped proposed headers and an inventory for whole-bundle rollback. It has not been deployed. The old offline payload and hosted package remain separate. Source accounting is complete for the pinned snapshot, while routing/district and human semantic qualification fail or remain open. See `docs/fleetlab/city-explorer/FLEETLAB_CITY_PACK_V1.md`, `docs/fleetlab/city-explorer/FLEETLAB_CITY_RUN_V1.md` and `docs/fleetlab/city-explorer/FLEETLAB_CITY_SF_VALIDATION.md`.
 
 ## 46. Depot flow lab, NF-01 (8 October 2026)
 

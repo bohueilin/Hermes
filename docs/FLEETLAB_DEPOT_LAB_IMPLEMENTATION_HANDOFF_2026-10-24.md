@@ -2,7 +2,7 @@
 
 **Date: 2026-10-24. Owner: Bo-Huei Lin. Built by Claude (Opus 5.5 lead, builders, reviewers and verifiers).**
 
-This implements the frozen depot readiness design, [`FLEETLAB_DEPOT_READINESS_FREEZE_CANDIDATE_2026-10-24.md`](FLEETLAB_DEPOT_READINESS_FREEZE_CANDIDATE_2026-10-24.md) (annex D1-01 to D1-13, D12-01 to D12-05, C1 to C4), under [`FLEETLAB_DEPOT_READINESS_RECONCILIATION_2026-10-24.md`](FLEETLAB_DEPOT_READINESS_RECONCILIATION_2026-10-24.md) (§7 budget, §8 decisions, §11 plan). The owner's build authorization (reconciliation §11.8) covered implementation, executable schemas, fixtures, tests, local previews, package accounting and local review artifacts. Build decisions are recorded in [`FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md`](FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md); §§19 to 22 are binding.
+This implements the frozen depot readiness design, [`FLEETLAB_DEPOT_READINESS_FREEZE_CANDIDATE_2026-10-24.md`](FLEETLAB_DEPOT_READINESS_FREEZE_CANDIDATE_2026-10-24.md) (annex D1-01 to D1-13, D12-01 to D12-05, C1 to C4), under [`FLEETLAB_DEPOT_READINESS_RECONCILIATION_2026-10-24.md`](FLEETLAB_DEPOT_READINESS_RECONCILIATION_2026-10-24.md) (§7 budget, §8 decisions, §11 plan). The owner's build authorization (reconciliation §11.8) covered implementation, executable schemas, fixtures, tests, local previews, package accounting and local review artifacts. Build decisions are recorded in [`FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md`](fleetlab/depot/FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md); §§19 to 22 are binding.
 
 **Status: published on 2026-10-24 at <https://fleetlab.pages.dev/depot-readiness/> (production `72e45e9f`, source `a1b79cd`).** It was built, independently reviewed, fixed and validated locally in three checkpoint commits on `codex/fleetlab-depot-lab`. The owner then asked to publish without the separate release review, so that Muse can audit the live site. The owner ran both uploads with their own credential injector, and both were read back in full (§10). Nothing was pushed to GitHub and no pull request was opened. (Added 2026-10-25: the branch was pushed on 2026-10-24 at `f1d130e`, and the reconcile pull request from `codex/fleetlab-main-reconcile` brings it to `main`.) Sections 1 to 8 describe the build as reviewed. The release-records bullet in §1, the readiness line and item 7 in §9, and §10 reflect the publication.
 
@@ -60,13 +60,13 @@ From `d0df87f` to `a1b79cd`, 88 files changed: 68 added and 20 modified.
 | Teaching tools: `depot-lab-package.mjs` (new), `pack`, `check-dist`, `software-delivery-package`, `package-proof` | 5 | +94 / -27 |
 | Hosted integration: `integrate-site.py`, `check-headers.py`, `integration-assets.mjs`, `site-transform.mjs`, `network-hub.{html,css}`, `sitemap.xml` | 7 | +101 / -16 |
 | Hosted and City tests | 7 | +125 / -9 |
-| `docs/FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md` | 1 | +885 / 0 |
+| `docs/fleetlab/depot/FLEETLAB_DEPOT_LAB_ENGINEERING_NOTE_2026-10-24.md` | 1 | +885 / 0 |
 
 Left untouched:
 
 - The older `src/model/depot-readiness.js`.
 - The historical Oct 23 spec, research and reviewer documents, the Muse proposal, the mockup and the three concept images. All are byte-identical (§8); the concept images were used as reference only and are not placed anywhere.
-- Four tracked files that held uncommitted edits before this task. They were left as they were and never staged: `CODEX_HANDOFF.md`, `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md`, `docs/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` and `docs/releases/fleetlab-current.json`.
+- Four tracked files that held uncommitted edits before this task. They were left as they were and never staged: `CODEX_HANDOFF.md`, `docs/fleetlab/publishing/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md`, `docs/fleetlab/publishing/FLEETLAB_ENHANCEMENT_REPORT_2026-10-23.md` and `docs/releases/fleetlab-current.json`.
 
 ## 3. Validation
 

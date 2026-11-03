@@ -65,7 +65,7 @@
 
 ## Task 4: Device and real-person validation
 
-**Files:** `docs/FLEETLAB_SF_VALIDATION_SESSION.md`, evidence in `build/fleetlab-city/validation/sf-completion-r3/`.
+**Files:** `docs/fleetlab/city-explorer/FLEETLAB_SF_VALIDATION_SESSION.md`, evidence in `build/fleetlab-city/validation/sf-completion-r3/`.
 
 - [ ] Recheck authorized Pixel and test observable unlocked device behavior; no lock bypass. Record keyboard, responsive viewport, touch, zoom, playback, enlarged text and screen-reader coverage separately.
 - [ ] Provide five-person comprehension worksheet with open question first and a second-scorer rubric. Record real answers only; pending responses remain NOT_RUN.
@@ -104,7 +104,7 @@ a new model/schema, with 29 new tests and 223 City Python passes. The fixed100OD
 plus retained-return diagnostic completed400 searches;380 ROUTE/20 unavailable,
 algorithm parity and directsourcechecks pass, peak1,535,672,320B. This does not
 complete the positiveconnector, temporalimport, fullfleetmemory or human gates.
-See `docs/FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md`. Austin supersedes the
+See `docs/fleetlab/city-explorer/FLEETLAB_SF_CONTINUITY_VALIDATION_2026-09-30.md`. Austin supersedes the
 prior SanMateo-first order after SF acceptance. The stopped power study is unchanged.
 
 Temporal integration is now installed in a separate v3 pack/model/run identity.
@@ -113,7 +113,7 @@ independent fleet verification are covered by regression tests. The local full-S
 compile retains all 69,027 candidate IDs and the original denominator. Unsupported
 eligible length is 0.987%; all class fractions are below 5%. This closes the
 bounded parser/profile implementation item, not the district/human/resource
-qualification gates. See `docs/FLEETLAB_TEMPORAL_INTEGRATION_V3.md` for adverse
+qualification gates. See `docs/fleetlab/city-explorer/FLEETLAB_TEMPORAL_INTEGRATION_V3.md` for adverse
 diagnostics, exact measurements and remaining bundle/connector work. No additional
 power-study execution or website deployment occurred in this continuation.
 

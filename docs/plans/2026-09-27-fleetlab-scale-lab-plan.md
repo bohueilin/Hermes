@@ -2,7 +2,7 @@
 
 Date: 2026-09-27. This file is the implementation plan of the Scale lab, kept as the record of how the build was
 done. Its companion is the design for owner review, `docs/plans/2026-09-27-fleetlab-scale-lab-design.md`. Read
-that first. The release record is `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`.
+that first. The release record is `docs/fleetlab/playground/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`.
 
 Status at the time of writing. Eight local commits hold the wave: the shell, three amendments, three labs and the
 fixes of an independent review, item R1. The last of them is `c08f60d`. On the owner's instruction of 2026-09-27
@@ -727,7 +727,7 @@ State of the items of this stage at the time of writing.
 | I3.8 Browser acceptance | Run in part at `319b4a9`, and again in part at `c08f60d`, locally and on the hosted site, and on the hosted heading fix release of 2026-09-28. No painted frame, no 1440 by 900 px, no throttle, no physical phone. Q1, the next build, completes it |
 | R1 Independent review and its fixes | Landed in `c08f60d`, the eighth commit |
 | I3.9 Commits | Seven commits made after the shell, which with the shell are the eight commits of this wave. One more, the documents commit on top of `1aeaace`, is made |
-| I3.10 Release record and handoff | Written: `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`, `docs/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md` and a new top section of `CODEX_HANDOFF.md`. Committed in the documents commit on top of `1aeaace` |
+| I3.10 Release record and handoff | Written: `docs/fleetlab/playground/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`, `docs/fleetlab/playground/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md` and a new top section of `CODEX_HANDOFF.md`. Committed in the documents commit on top of `1aeaace` |
 | I3.11 Push and deployment | Done. Deployment on the owner's instruction of 2026-09-27: deployment `19e17ac6`, source `c08f60d`, 98 of 98 public files read back. The heading fix release on the owner's word of 2026-09-28: Production `77922688`, source `1aeaace`, 98 of 98 public files read back. The push on the owner's word of 2026-09-28, made by the lead right after the records commit of 2026-09-28 |
 
 ### I3.1 Lab A replaces its stub. Landed in `27f6014`
@@ -791,10 +791,10 @@ documents commit leaves the deployed site byte for byte as it is.
 | `playground/fleetlab/ARCHITECTURE.md` | One new item, item 45 of section 12, "Scale lab": the route, the generic view, the lab contract of section 1, the shared paired contract with its two void rules, the rule that labs are page-only, how a long run yields, the run budget of Lab C, side-preserving numbers, and the reading of D8 for Lab A with the measured cost of both keyed alternatives |
 | `docs/plans/2026-09-27-fleetlab-scale-lab-design.md` | The design, with every source of its section 2 opened again first and the titles of rows 16a to 16c added |
 | This record | The plan, with every measurement given as a number or as the committed test that holds it |
-| `docs/FLEETLAB_SCALE_LAB.md` | Model notes for the three labs. The list below |
+| `docs/fleetlab/playground/FLEETLAB_SCALE_LAB.md` | Model notes for the three labs. The list below |
 | `HERMES_SOURCE_OF_TRUTH.md` | One dated entry in section 7.5, newest first, with every number measured and the command that produced it, and every decision marked as it then stood, assumed at the lead's recommendation; the owner ratified them on 2026-09-28. Correct the stale header rows in the same edit. No sibling status file |
-| `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`, `docs/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md`, the new top section of `CODEX_HANDOFF.md` | Item I3.10 |
-| `docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` | The status paragraph, as the documents commit corrected it: the Scale lab Production `19e17ac6` from `c08f60d` was current, D1 `dd4bfa44` was the rollback target, the project held three Production deployments, and `1aeaace` was committed and not deployed. Those facts changed on 2026-09-28, item I3.11. The rollback heading was made neutral in `0bc2f25` on 2026-09-28 |
+| `docs/fleetlab/playground/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md`, `docs/fleetlab/playground/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md`, the new top section of `CODEX_HANDOFF.md` | Item I3.10 |
+| `docs/fleetlab/publishing/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md` | The status paragraph, as the documents commit corrected it: the Scale lab Production `19e17ac6` from `c08f60d` was current, D1 `dd4bfa44` was the rollback target, the project held three Production deployments, and `1aeaace` was committed and not deployed. Those facts changed on 2026-09-28, item I3.11. The rollback heading was made neutral in `0bc2f25` on 2026-09-28 |
 | The lesson snapshot kept outside the tree | Declared again for 59 lesson records. It is not a file of the repository. Not done: it still counts 56 lessons |
 
 What the model notes hold.
@@ -1072,8 +1072,8 @@ update is part of the records commit of 2026-09-28, so it cannot state the hash 
 
 | File | Content |
 |---|---|
-| `docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md` | Modelled on the D1 record: release identity, what the deployment publishes, every gate with its command and result, the byte ledger as archived checkpoints, the review and its fixes, the browser evidence, publication and readback, what was not done, known open items |
-| `docs/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md` | The Scale lab handoff |
+| `docs/fleetlab/playground/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md` | Modelled on the D1 record: release identity, what the deployment publishes, every gate with its command and result, the byte ledger as archived checkpoints, the review and its fixes, the browser evidence, publication and readback, what was not done, known open items |
+| `docs/fleetlab/playground/FLEETLAB_SCALE_LAB_HANDOFF_2026-09-27.md` | The Scale lab handoff |
 | `CODEX_HANDOFF.md` | A new top section: branch and HEAD; what landed, commit by commit; the commands to reproduce the gates; every decision of section 12 of the design with its state, which was assumed at the lead's recommendation until the owner ratified every decision on 2026-09-28; the deployment; the next work |
 | `HERMES_SOURCE_OF_TRUTH.md` | Updated in I3.5: a new entry at the head of section 7.5 and updated header rows. The handoff points to it and does not repeat it |
 

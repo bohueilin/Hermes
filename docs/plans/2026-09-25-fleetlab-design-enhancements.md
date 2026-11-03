@@ -94,7 +94,7 @@ assert.throws(() => parseRoute('#/fleet-day?unexpected=yes'));
 - Baseline full Node run started; output in ignored `artifacts/fleetlab-design-enhancements/baseline-node.txt`.
 - Tasks 1–2 and embedded heading delegated with non-overlapping file ownership; routing and final integration remain with the primary agent.
 
-- Final outcome: approved local implementation complete, with verification limits recorded in `docs/FLEETLAB_DESIGN_ENHANCEMENTS_HANDOFF_2026-09-24.md`.
+- Final outcome: approved local implementation complete, with verification limits recorded in `docs/fleetlab/design/FLEETLAB_DESIGN_ENHANCEMENTS_HANDOFF_2026-09-24.md`.
 - Final serialized website suite: 1,778 pass, zero fail/skip/cancel, one existing TODO; 146.504 seconds. Final presentation follow-up: 111 pass, zero fail, same existing TODO.
 - Playground Python contract checks: 89 pass against starting commit. Full repository Python gate: 1,433 pass, 186 fail, 42 errors, 56 skip; retained artifact fixtures are absent. No backend/protected-path changes, no local commit or remote action.
 - Independent review: missing metric scope/direction and launch delay reset fixed; re-review found no remaining important findings. Additional fixes cover UI threshold serialization, 44-pixel disclosure targets, expanded result overflow and hero anchor interaction.
@@ -109,6 +109,6 @@ normally to `github/feat/fleetlab-playground` and deployed as Production `e72ae8
 existing Pages project. Fresh release gates: 1,778 Node pass, no fail/skip/cancel, one existing
 TODO; 89 Python playground pass; Ruff and both distribution checks pass. All 84 public files
 match; response security headers and hosted behavioral checks passed. The broad Python fixture
-failure remains disclosed. The [comprehensive review brief](../FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md)
+failure remains disclosed. The [comprehensive review brief](../fleetlab/handoffs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md)
 records the release, remaining limitations and candidate next phases. No new phase is approved
 by this publication.

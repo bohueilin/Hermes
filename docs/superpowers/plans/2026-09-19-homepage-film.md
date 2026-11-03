@@ -8,7 +8,7 @@
 
 **Tech Stack:** Vanilla JavaScript, HTML video, existing Node packer and tests; Blender and FFmpeg for offline film authoring.
 
-**Spec:** `docs/FLEETLAB_HOMEPAGE_FILM.md`.
+**Spec:** `docs/fleetlab/playground/FLEETLAB_HOMEPAGE_FILM.md`.
 
 ## Global Constraints
 

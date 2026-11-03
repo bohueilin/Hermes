@@ -2,7 +2,7 @@ DRAFT v2.1 for owner review; design only; no N2 implementation authorized
 
 # FleetLab N2: finite pickup resources and published-forecast preparation
 
-**S0 / WP0 contract addendum, 2026-09-26.** This complete corrected design restates v2 and supersedes it only where a correction is TEXT or an owner decision is DECIDED. Pending boxes are proposals, not operative contract. It does not authorize implementation, experiment registration, an execution-seam refactor or publication. The [owner brief](2026-09-26-fleetlab-d1-and-n2-s0-codex-brief.md) §2 controls decisions except for DECIDED overrides in §0.1; [independent review](../FLEETLAB_PACKET_REVIEW_2026-09-26.md) §2 supplies the contract corrections and §3 supplies S1 recommendations. The [packet](../FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md) §7 supplies the earlier findings and traces. This document describes proposed behavior, not measured N2 results.
+**S0 / WP0 contract addendum, 2026-09-26.** This complete corrected design restates v2 and supersedes it only where a correction is TEXT or an owner decision is DECIDED. Pending boxes are proposals, not operative contract. It does not authorize implementation, experiment registration, an execution-seam refactor or publication. The [owner brief](2026-09-26-fleetlab-d1-and-n2-s0-codex-brief.md) §2 controls decisions except for DECIDED overrides in §0.1; [independent review](../fleetlab/design/FLEETLAB_PACKET_REVIEW_2026-09-26.md) §2 supplies the contract corrections and §3 supplies S1 recommendations. The [packet](../fleetlab/design/FLEETLAB_DESIGN_DATA_AND_N2_REVIEW_2026-09-25.md) §7 supplies the earlier findings and traces. This document describes proposed behavior, not measured N2 results.
 
 ## 0. Implementer summary
 
@@ -797,7 +797,7 @@ S0 verification is documentary: source inspection, explicit owner-decision recon
 
 Executed on 2026-09-26: the new ignored `artifacts/fleetlab-n2-s0/fixture-values-v2.1.mjs` imports shipped keyed/statistical helpers and re-derives integer/type arithmetic, route/duration/energy fixtures and paired machine decisions. The original three S0 probe files remain untouched. Documentary gates check all 19 groups, 26 OD entries, 50 correction rows, pending-box classification, separators, privacy, immutable hashes and diff whitespace. These are documentary checks, not N2 model execution.
 
-Committed verification anchor: [D1 release record](../FLEETLAB_D1_RELEASE_2026-09-26.md), plus HERMES_SOURCE_OF_TRUTH.md §7.5’s dated v2.1 entry. D1 acceptance is separate: 1,827 Node tests, 1,826 pass, one existing TODO; no N2 campaign claim. Current read-only baseline confirms offline 2,551,878 bytes, site 90 files / 3,189,179 bytes and clean distribution checks.
+Committed verification anchor: [D1 release record](../fleetlab/publishing/FLEETLAB_D1_RELEASE_2026-09-26.md), plus HERMES_SOURCE_OF_TRUTH.md §7.5’s dated v2.1 entry. D1 acceptance is separate: 1,827 Node tests, 1,826 pass, one existing TODO; no N2 campaign claim. Current read-only baseline confirms offline 2,551,878 bytes, site 90 files / 3,189,179 bytes and clean distribution checks.
 
 Immutable v1 SHA-256: `c574b8df41d0378363e18f75452f09e15a2cf62581e8fb01f6f365229d7e25bf`; immutable v2 SHA-256: `da7b80690711116dc7a11874db4199468f2581ab6c5e87d4251698ead48d383d`. Source disagreements and explicit overrides are recorded in §0.2/§1.2. G2 remains OPEN; pending role/identity/state proposals cannot be inferred as approvals.
 

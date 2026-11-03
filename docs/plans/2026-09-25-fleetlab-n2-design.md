@@ -13,7 +13,7 @@ This draft uses the owner's `FleetLab_Regional_Simulation_Design_and_Codex_Brief
 
 Current N1 application release: `345b427cdddeb6e8946542c66786d3acbaacaa5c`, pushed to `codex/fleetlab-regional-power` and `feat/fleetlab-playground`. The publication task verified Production `6265159a-a13e-4ca7-9f9c-4acde9bcf6e7` at [FleetLab Playground](https://fleetlab-playground.pages.dev), with all 88 public payloads matching the release package. Source inspection began from base `4b7a2768d93891fab95383d4c20cf828f56b2557` plus the same N0/N1 working implementation, then publication completed separately. N2 remains this draft only. Repository package identity remains `hermes-autonomy` 0.1.0 / `hermes`.
 
-Recorded N1 results in [source of truth §7.5](../../HERMES_SOURCE_OF_TRUTH.md#75-fleetlab-playground-teaching-model-not-evidence), [regional mechanics](../FLEETLAB_REGIONAL_POWER.md), and the inspected local `artifacts/fleetlab-regional-power/demo/observed-results.json`:
+Recorded N1 results in [source of truth §7.5](../../HERMES_SOURCE_OF_TRUTH.md#75-fleetlab-playground-teaching-model-not-evidence), [regional mechanics](../fleetlab/playground/FLEETLAB_REGIONAL_POWER.md), and the inspected local `artifacts/fleetlab-regional-power/demo/observed-results.json`:
 
 | Austin condition | Completion result | Existing recommendation | Binding mean-harm guardrail |
 |---|---|---|---|

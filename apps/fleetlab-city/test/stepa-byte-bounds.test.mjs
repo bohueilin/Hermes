@@ -12,7 +12,7 @@ import {buildSite,buildHtml} from '../../../playground/fleetlab/tools/pack.mjs';
 import {integratedRootFiles,verifyIntegrationAssets} from '../deploy/integration-assets.mjs';
 import {fingerprint,writeFiles} from './stage-fixture.mjs';
 
-// Step A bounds (docs/FLEETLAB_NETWORK_FLOWS_STEP_A_SPEC_2026-10-25.md section 3): BEFORE value at b15055c plus headroom.
+// Step A bounds (docs/fleetlab/network-flows/FLEETLAB_NETWORK_FLOWS_STEP_A_SPEC_2026-10-25.md section 3): BEFORE value at b15055c plus headroom.
 // Unit text sits 1,859 B under the stage: publication.json (1,800 B) is stage-only and the release receipt is 59 B longer.
 // Uncommitted bound files read 9 B low per sidecar; only depot-owned text, which must stay unchanged, has a floor. nf03 stays enhancement-packaging's gate.
 // Catalog look_for wave (2026-10-31, owner D9): emitted_text_bytes re-based from 3577477-1859 to the measured unit 3575832, no allowance.

@@ -3,17 +3,17 @@
 **[Open the public playground](https://fleetlab.pages.dev/)** · Independent project by Bo-Huei Lin
 
 The live site serves source `1aeaace` (Production `77922688`, 2026-09-28), which adds one Fleet day heading fix to the Scale lab release of 2026-09-27; the
-[Scale lab release record](../../docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md) holds the gates and receipts of the Scale lab release.
-The [review and next-phase brief of 2026-09-25](../../docs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md)
+[Scale lab release record](../../docs/fleetlab/playground/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md) holds the gates and receipts of the Scale lab release.
+The [review and next-phase brief of 2026-09-25](../../docs/fleetlab/handoffs/FLEETLAB_REVIEW_AND_NEXT_PHASE_2026-09-25.md)
 holds the earlier project history, the release of that date, its tests, hosted acceptance, known limits and lessons.
 The catalog in this source tree holds 59 lessons: the three Scale lab lessons were added after that brief and are not in it.
-The [previous M1–M4 record](../../docs/FLEETLAB_DEPOT_RELEASE_2026-09-24.md) preserves that release's security scope.
+The [previous M1–M4 record](../../docs/fleetlab/depot/FLEETLAB_DEPOT_RELEASE_2026-09-24.md) preserves that release's security scope.
 
 Views and lessons have direct links. **Share a reproducible setup** captures complete current
 inputs or the selected completed-run/experiment inputs; opening a setup restores settings and
 waits for an explicit Run. Result exports remain separate from setup links.
 
-For a short guided path: **Overview → Fleet day → Run fleet day → Product approach**. For congestion: **Street lab → Bridge rush → Largest queue → Compare route policies**. Configure the experiment, inspect a car and a constraint, then explain the service trade-offs. The [Cloudflare guide](../../docs/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) records the exact publishing and optional custom-domain steps.
+For a short guided path: **Overview → Fleet day → Run fleet day → Product approach**. For congestion: **Street lab → Bridge rush → Largest queue → Compare route policies**. Configure the experiment, inspect a car and a constraint, then explain the service trade-offs. The [Cloudflare guide](../../docs/fleetlab/publishing/FLEETLAB_CLOUDFLARE_DEPLOYMENT.md) records the exact publishing and optional custom-domain steps.
 
 ## Depot readiness M1 (explicit opt-in)
 
@@ -23,13 +23,13 @@ work, recorded worker/bay blockers, completed-only means and unfinished visits/t
 one extra worker, then separately one extra bay, against the same demand. These are one-seed
 `NOT_EVIDENCE` descriptions, with named policy checks and no inferred recommendation.
 Historical defaults remain `fleetlab-bay-operations-1.0.0`; the explicit extension is
-`depot-readiness-1.0.0`. The source of truth records current publication state. See [local instructions, demo and metric contract](../../docs/FLEETLAB_DEPOT_READINESS.md).
+`depot-readiness-1.0.0`. The source of truth records current publication state. See [local instructions, demo and metric contract](../../docs/fleetlab/depot/FLEETLAB_DEPOT_READINESS.md).
 
 ## Downtown street bottlenecks in 3D
 
 The **Street lab** adds First Street, Harrison/Bryant, Stockton, Van Ness, the Embarcadero and Lombard to a directed OSM network with 2,343 road links. Follow individual AVs toward SFO or the East Bay, inspect finite road queues and upstream spillback, then compare free-flow and queue-aware routes using identical demand. Step five seconds, scrub the replay, follow an AV, or inspect a queued block and its front-car exit wait.
 
-Sourced geography and supported one-way/turn rules are separate from synthetic traffic, signal timing, capacity, incidents and off-road pickup service. SFO and Oakland are modeled gateway handoffs, not authorized pickup zones. There is no live traffic feed or physical driving model. Street lab does not share the Fleet day energy/depot engine. See the [model guide and demonstration](../../docs/FLEETLAB_STREET_LAB.md) and [directed OSM provenance](../../docs/FLEETLAB_STREET_MAP_DATA.md).
+Sourced geography and supported one-way/turn rules are separate from synthetic traffic, signal timing, capacity, incidents and off-road pickup service. SFO and Oakland are modeled gateway handoffs, not authorized pickup zones. There is no live traffic feed or physical driving model. Street lab does not share the Fleet day energy/depot engine. See the [model guide and demonstration](../../docs/fleetlab/playground/FLEETLAB_STREET_LAB.md) and [directed OSM provenance](../../docs/FLEETLAB_STREET_MAP_DATA.md).
 
 ## Bay Area fleet day in 3D
 
@@ -46,11 +46,11 @@ The Bay model is `fleetlab-bay-operations-1.0.0`. The original synthetic `operat
 
 Map attribution appears below the scene. **Download attributed map data** offers the complete compact derived database under ODbL in both packages. Source queries, hashes and reproduction script are in `tools/map-data/` at the repository root.
 
-See the [Bay Area handoff](../../docs/FLEETLAB_BAY_AREA_3D_HANDOFF_2026-09-19.md), [simulation guide](../../docs/FLEETLAB_SIMULATION_GUIDE.md), [map provenance](../../docs/FLEETLAB_BAY_AREA_MAP_DATA.md), [vehicle assumptions](../../docs/FLEETLAB_VEHICLE_PROFILES.md), and [Google traffic/CARLA research](../../docs/FLEETLAB_GOOGLE_TRAFFIC_CARLA_RESEARCH.md). The [original audit](../../docs/FLEETLAB_DESIGN_AUDIT_2026-09-18.md) records the broader product redesign.
+See the [Bay Area handoff](../../docs/fleetlab/playground/FLEETLAB_BAY_AREA_3D_HANDOFF_2026-09-19.md), [simulation guide](../../docs/fleetlab/playground/FLEETLAB_SIMULATION_GUIDE.md), [map provenance](../../docs/fleetlab/playground/FLEETLAB_BAY_AREA_MAP_DATA.md), [vehicle assumptions](../../docs/fleetlab/playground/FLEETLAB_VEHICLE_PROFILES.md), and [Google traffic/CARLA research](../../docs/fleetlab/playground/FLEETLAB_GOOGLE_TRAFFIC_CARLA_RESEARCH.md). The [original audit](../../docs/fleetlab/design/FLEETLAB_DESIGN_AUDIT_2026-09-18.md) records the broader product redesign.
 
 ## Scale lab
 
-The **Scale lab** at `#/scale-lab` asks which capacity meets its load first as a fleet scales. It shows three labs, one at a time, and each ends in a paired test with guardrails. **Density ladder** puts one depot cell of nine places through five fleet sizes from 24 to 120 cars at equal requests per car, and compares depot plans. **Fleet intake** follows one fleet of 624 vehicles as weekly counts from delivered to in rider service, through integration, validation, a release gate and depot places that open in tranches. **Response reserve** puts one pooled support queue through an ordinary day and one area-wide event at 2,000, 6,000 and 20,000 vehicles, and reads reserve staff or a directive against no lever. Two labs, fleet intake and response reserve, are count models with no map. One, the density ladder, reruns the Fleet day engine at five fleet sizes of at most 120 cars, the largest fleet that engine accepts. Its road distances come from the frozen Fleet day road table, so its page shows the map credit (OpenStreetMap contributors, ODbL) in every state, a refused setup among them. FleetLab is independent and is not affiliated with any operator, vehicle maker, regulator or utility. Every input is a teaching assumption unless its source row says otherwise, and every result is `NOT_EVIDENCE`, simulation only, with decision authority `NONE`. On the owner's word the Scale lab was deployed on 2026-09-27 to https://fleetlab.pages.dev/ as Production deployment `19e17ac6` from source `c08f60d`. A later commit, `1aeaace`, fixes a Fleet day heading defect older than the Scale lab; on the owner's word it was deployed on 2026-09-28 as Production deployment `77922688`, which is the live site. Both sources are in the public repository on the branch `feat/fleetlab-playground` since 2026-09-28. The deployment of 2026-09-27, its public readback and its rollback target are in [the Scale lab release record](../../docs/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md). Its design decisions, the lesson count of 59 among them, were taken at the lead's recommendation and ratified by the owner on 2026-09-28. The build contract is item 45 of `ARCHITECTURE.md`, and every decision in that item was likewise ratified by the owner on 2026-09-28. The model notes are in [the Scale lab guide](../../docs/FLEETLAB_SCALE_LAB.md).
+The **Scale lab** at `#/scale-lab` asks which capacity meets its load first as a fleet scales. It shows three labs, one at a time, and each ends in a paired test with guardrails. **Density ladder** puts one depot cell of nine places through five fleet sizes from 24 to 120 cars at equal requests per car, and compares depot plans. **Fleet intake** follows one fleet of 624 vehicles as weekly counts from delivered to in rider service, through integration, validation, a release gate and depot places that open in tranches. **Response reserve** puts one pooled support queue through an ordinary day and one area-wide event at 2,000, 6,000 and 20,000 vehicles, and reads reserve staff or a directive against no lever. Two labs, fleet intake and response reserve, are count models with no map. One, the density ladder, reruns the Fleet day engine at five fleet sizes of at most 120 cars, the largest fleet that engine accepts. Its road distances come from the frozen Fleet day road table, so its page shows the map credit (OpenStreetMap contributors, ODbL) in every state, a refused setup among them. FleetLab is independent and is not affiliated with any operator, vehicle maker, regulator or utility. Every input is a teaching assumption unless its source row says otherwise, and every result is `NOT_EVIDENCE`, simulation only, with decision authority `NONE`. On the owner's word the Scale lab was deployed on 2026-09-27 to https://fleetlab.pages.dev/ as Production deployment `19e17ac6` from source `c08f60d`. A later commit, `1aeaace`, fixes a Fleet day heading defect older than the Scale lab; on the owner's word it was deployed on 2026-09-28 as Production deployment `77922688`, which is the live site. Both sources are in the public repository on the branch `feat/fleetlab-playground` since 2026-09-28. The deployment of 2026-09-27, its public readback and its rollback target are in [the Scale lab release record](../../docs/fleetlab/playground/FLEETLAB_SCALE_LAB_RELEASE_2026-09-27.md). Its design decisions, the lesson count of 59 among them, were taken at the lead's recommendation and ratified by the owner on 2026-09-28. The build contract is item 45 of `ARCHITECTURE.md`, and every decision in that item was likewise ratified by the owner on 2026-09-28. The model notes are in [the Scale lab guide](../../docs/fleetlab/playground/FLEETLAB_SCALE_LAB.md).
 
 ## The underlying regional teaching model
 
@@ -185,7 +185,7 @@ The optional charging, resource-observation and synthetic airport situations ext
 existing Bay lifecycle. Each has a versioned opt-in; the historical default and M1 stay
 compatible. Paired experiments hold non-treatment inputs and exogenous demand fixed,
 separate tuning/evaluation seeds, and display service, unfinished work, energy and named
-guardrails. One seed is descriptive. See [the M2/M3 runbook](../../docs/FLEETLAB_DEPOT_M2_M3.md)
+guardrails. One seed is descriptive. See [the M2/M3 runbook](../../docs/fleetlab/depot/FLEETLAB_DEPOT_M2_M3.md)
 for exact local commands, treatments, metric populations and limits. M4 adds configuration-driven launch rehearsal through the same engine.
 
 ## Launch rehearsal and scenario learning (M4)
@@ -194,4 +194,4 @@ Choose **Fleet day → Launch rehearsal**, configure Peninsula or fictional Regi
 owners/dependencies/resources, and compare immediate versus delayed mock commissioning.
 Inspect all-request service, unfinished work, queue/active time, energy and recorded port states.
 The 59-entry catalog explains each model’s question and fleet-optimization decision.
-[Exact recipe, versions, controls and limits](../../docs/FLEETLAB_DEPOT_LAUNCH.md).
+[Exact recipe, versions, controls and limits](../../docs/fleetlab/depot/FLEETLAB_DEPOT_LAUNCH.md).
