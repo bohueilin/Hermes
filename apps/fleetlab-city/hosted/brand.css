@@ -32,3 +32,6 @@
 
 /* Display type. */
 h1:not(.fl-title),.visitor-film-title,.catalog-library-title,[data-role="present-beat"],#chapter-title,.methodology-explainer h3,:is(#visitor-founder,#visitor-contact,.start-points,.learning-path-heading,.network-flows-feature,.visitor-section-heading,.approach-section,.approach-case,.approach-close,.delivery-guide,.delivery-lessons,.learning-panel,.why) h2{font-family:var(--font-display)}
+
+.design-honesty{flex-basis:100%;max-width:78ch;margin:16px 0;font:14px/1.6 system-ui,sans-serif;color:#435b50}
+footer:has(.design-honesty){flex-wrap:wrap}

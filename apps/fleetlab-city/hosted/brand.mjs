@@ -10,6 +10,9 @@ for(const brand of doc.querySelectorAll('header .studio-monogram,header .deliver
  brand.replaceChildren(mark(),el('strong',{},'FleetLab'));
 }
 for(const footer of doc.querySelectorAll('footer'))if(!footer.querySelector('.design-footer-mark'))footer.insertBefore(el('a',{href:'/#/home',class:'design-footer-mark','aria-label':'FleetLab home'},[mark(),el('strong',{},'FleetLab')]),footer.firstChild);
+let footer=doc.querySelector('.studio-footer')??doc.querySelector('footer');
+if(!footer&&!doc.getElementById('fleetlab-root')){footer=el('footer');doc.body.appendChild(footer);}
+if(footer&&!footer.querySelector('.design-honesty'))footer.appendChild(el('p',{class:'design-honesty'},'Independent educational software by Bo-Huei Lin. Synthetic operations; map qualification remains open. Not affiliated with or endorsed by Waymo, Zoox, or their partners. No operational authority.'));
 for(const panel of doc.querySelectorAll('.offline-edition'))if(!panel.querySelector('.design-panel-mark'))panel.insertBefore(el('span',{class:'design-panel-mark'},[mark(),el('strong',{},'FleetLab')]),panel.firstChild);
 const home=doc.querySelector('.studio-overview');
 if(home&&!doc.getElementById('design-readiness')){
