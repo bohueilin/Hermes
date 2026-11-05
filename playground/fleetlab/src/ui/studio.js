@@ -129,7 +129,7 @@ export function mountStudio(app) {
   const container=el('div',{class:'fleet-studio','data-page':'overview'});
   root.parentNode.insertBefore(container,root);
   const navLink=([id,text])=>{const link=pageLink(text,id,navigate);link.setAttribute('data-nav',id);return link;};
-  const navItems=[['overview','Home'],['catalog','Explore'],['approach','About & limits']];
+  const navItems=[['overview','Home'],['simulation','Fleet day'],['streets','Street lab'],['catalog','Explore'],['approach','About & limits']];
   const navLinks=navItems.map(navLink);
   const labLinkNodes=[['simulation','Fleet day'],['streets','Street lab'],['depots','Four-area experiments'],['scale','Scale lab'],['flows','Depot flow lab'],['tour','Guided walkthrough']].map(navLink);
   const labLinks=el('nav',{class:'lab-links','aria-label':'Quick links'},labLinkNodes);

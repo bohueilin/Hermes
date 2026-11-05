@@ -9,6 +9,8 @@ for(const brand of doc.querySelectorAll('header .studio-monogram,header .deliver
  brand.setAttribute('data-art-logo','true');brand.classList.add('design-brand');brand.setAttribute('aria-label','FleetLab home');
  brand.replaceChildren(mark(),el('strong',{},'FleetLab'));
 }
+const masthead=doc.querySelector('header.masthead');
+if(masthead&&!masthead.querySelector('.design-global-nav'))masthead.insertBefore(el('nav',{class:'design-global-nav','aria-label':'FleetLab navigation'},[['Home','home'],['Fleet day','fleet-day'],['Street lab','street-lab'],['Explore','catalog'],['About & limits','approach']].map(([label,route])=>el('a',{href:'/#/'+route},label))),masthead.querySelector('.tabs'));
 for(const footer of doc.querySelectorAll('footer'))if(!footer.querySelector('.design-footer-mark'))footer.insertBefore(el('a',{href:'/#/home',class:'design-footer-mark','aria-label':'FleetLab home'},[mark(),el('strong',{},'FleetLab')]),footer.firstChild);
 let footer=doc.querySelector('.studio-footer')??doc.querySelector('footer');
 if(!footer&&!doc.getElementById('fleetlab-root')){footer=el('footer');doc.body.appendChild(footer);}
