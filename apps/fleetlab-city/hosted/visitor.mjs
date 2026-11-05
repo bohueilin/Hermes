@@ -1,15 +1,15 @@
 import {QUESTION_FAMILIES} from './visitor-families.mjs';
 import {decorateConceptMedia} from './enhancement-media.mjs';
 
-// Presentation and navigation only. Existing lessons own their controls, results and playback.
-// Same refusals as src/ui/dom.js setAttr.
+
+
 export function node(doc,tag,attrs={},children=[]){
  const n=doc.createElement(tag);
  for(const [key,value] of Object.entries(attrs)){if(/^on/i.test(key)||/^(href|src)$/i.test(key)&&/^(javascript|data):/i.test(String(value).replace(/[\0- ]/g,'')))throw Error(`unsafe attribute ${key}`);n.setAttribute(key,value);}
  for(const child of [children].flat())if(child!=null)n.appendChild(typeof child==='string'?doc.createTextNode(child):child);
  return n;
 }
-// Editorial context only; these records never enter model inputs, results or verifiers.
+
 const FIELD_NOTES={
 rebalancing:['An MIT study of Waymo’s California filings found that 43–45% of miles were driven without passengers from mid-2025 through December 2025. This includes travel to pickups as well as repositioning.','MIT researcher · Findings, May 2026','https://doi.org/10.32866/001c.161870'],
 dispatch:['In three weeks of April 2026 checks in Austin, Reuters found Tesla Robotaxi wait times above 15 minutes about half the time and no cars available in 27% of checks.','Reuters · May 2026 (syndicated)','https://www.investing.com/news/stock-market-news/teslas-robotaxi-rollout-features-texassized-wait-times-4679470'],
@@ -85,6 +85,20 @@ if(home&&!doc.getElementById('visitor-purpose')){
  });
  const credit=el('p',{class:'visitor-illustration-note'},'Illustrations introduce the questions. The lessons show the model’s results and limits.');
  home.querySelector('.start-points')?.appendChild(credit);
+ const insights=el('section',{id:'visitor-insights',class:'home-learning-path','aria-labelledby':'visitor-insights-title'},[
+  el('h2',{id:'visitor-insights-title'},'Five bounded lessons'),el('p',{},'Existing scenario checks, not new runs. Links open setups; run or compare in the lesson.'),
+  el('div',{class:'start-grid'},[
+   ['depot-flow-lab','two-vehicles','Order changes readiness','Default two-vehicle case: equal share and deadline first ready both on time; FIFO readies one. Vehicle A is one minute later.','Synthetic fixed tasks; size and deadline effects overlap.'],
+   ['fleet-day','staffing-readiness','An empty bay still needs a worker','The staffing fixture serves more trips with one extra worker; one extra bay leaves metrics unchanged.','One seed; serial work without shifts. Run fleet day, then compare staffing and bays.'],
+   ['experiments','UC-03','Less waiting can hide lost riders','UC-03 improves wait p90 but returns HOLD: more riders go unserved.','20 paired seeds on matched demand; check the counted population.'],
+   ['experiments','UC-08a','More bays may leave rider wait unchanged','UC-08a adds two SF-1 bays; rider wait stays within the declared margin.','20 paired seeds; a local capacity change is not a fleet-wide gain.'],
+   ['experiments','L2a','A guardrail can change the decision','L2a and L2b use the same arms. Adding the bay-wait guardrail changes RUN_MORE_EXPERIMENTS to HOLD.','Primary result remains INCONCLUSIVE; no deployment authority.','L2b'],
+  ].map(([route,id,title,finding,limit,also])=>el('article',{class:'start-card'},[
+   el('h3',{},title),el('p',{},finding),el('p',{},limit),...[id,also].filter(Boolean).map(lesson=>el('a',{class:'studio-button',href:`/#/${route}?lesson=${lesson}`},also?`Open ${lesson} →`:'Open setup →')),
+  ]))),
+ ]);
+ home.insertBefore(insights,home.querySelector('.home-learning-path'));
+
 }
 const catalog=doc.querySelector('.simulation-catalog');
 if(catalog&&!doc.getElementById('visitor-families')){
@@ -94,7 +108,7 @@ if(catalog&&!doc.getElementById('visitor-families')){
  const resultTitle=catalog.querySelector('.catalog-library-title');
  const results=el('details',{class:'visitor-library',id:'visitor-library'});
  results.appendChild(el('summary',{},'Browse the lesson library'));
- // Move the existing controls and result nodes together; their listeners and state stay owned by the catalogue.
+
  if(resultTitle){let part=resultTitle;while(part){const next=part.nextSibling;results.appendChild(part);if(part.classList.contains('catalog-grid'))break;part=next;}}
  const buttons=QUESTION_FAMILIES.map(f=>{
   const b=el('button',{type:'button',class:'visitor-family','data-family':f.id,'aria-pressed':'false','aria-controls':'visitor-library'},[
@@ -139,7 +153,7 @@ if(shift&&timeline&&!doc.querySelector('.visitor-shift-preview')){
  preview.appendChild(el('p',{class:'visitor-hold-key'},[el('span',{'aria-hidden':'true',class:'visitor-held-dot'},'● ━━━ ●'), 'Each dot is a recorded position. The map holds it until the next 15-second sample. No interpolation; gaps stop playback.']));
  timeline.parentNode.insertBefore(preview,timeline);
 }
-// User-approved correction: concept artwork motion only, with no fabricated results or replay.
+
 for(const [selector,kind] of [
  ['.r1-hero','rebalancing'],['.delivery-hero','delivery'],['#order-root .hero','order'],
 ]){
@@ -193,7 +207,7 @@ decorateFieldNotes(doc);
 decorateConceptMedia(doc,node);
 }
 
-// Only presentation is animated. No callback can run a model, accept an order or advance replay.
+
 const motionControllers=new WeakMap(),animatedOutcomes=new WeakSet();
 export function animateOutcomeCounts(root,{request,cancel,allowed,now=()=>performance.now()}={}){
 if(animatedOutcomes.has(root)||root.getAttribute('data-result-accepted')!=='true'||root.getAttribute('data-stale')==='true')return ()=>{};
