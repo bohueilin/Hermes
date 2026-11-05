@@ -15,8 +15,8 @@ function download(name,data){const link=el('a',{href:'data:application/json;char
 
 export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>requestAnimationFrame(fn),cancelFrame=id=>cancelAnimationFrame(id),reducedMotion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false}={}){
  let config=defaultStreetConfig(),result=null,comparison=null,time=0,playing=false,raf=null,lastTime=null,minuteCarry=0,stale=false,busy=false,destroyed=false,selected='AV-01',edgeId=null,lastDetails='',revision=0,runGeneration=0;
- let lesson=null,lessonEdited=false;const lessonFrame=el('div');
- function renderTeaching(){lessonFrame.replaceChildren(frameView(lesson?LESSON_FRAMES[lesson.id]:SURFACE_FRAMES.street,{title:lesson?.title??'Street lab',heading:'h1',edited:lessonEdited}));}
+ let lesson=null,lessonEdited=false;const lessonFrame=el('div'),lessonContext=el('details');
+ function renderTeaching(){const frame=frameView(lesson?LESSON_FRAMES[lesson.id]:SURFACE_FRAMES.street,{title:lesson?.title??'Street lab',heading:'h1',edited:lessonEdited});lessonContext.replaceChildren(el('summary',{},'Method, learning and limits'),...Array.from(frame.querySelector('.teaching-parts').children).slice(1),frame.querySelector('.teaching-limits'));lessonFrame.replaceChildren(frame);}
  const streetVersion='street-lab-v1',identity=modelHeader('Street lab','OpenStreetMap San Francisco street extracts',streetVersion);
  const inputs=new Map(),anchors=new Map(network.anchors.map(a=>[a.id,a])),edges=new Map(network.edges.map(e=>[e.id,e]));
  const label=id=>anchors.get(id)?.label??id??'not available: between places';
@@ -58,7 +58,7 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
  const resultHeading=el('h2',{tabindex:'-1'},'Result summary');
  const results=el('section',{class:'street-results'},[eyebrow('3 / READ THE TRADE-OFF'),resultHeading,el('p',{},'Run a scenario to see completed and unfinished journeys together.')]);
  const element=el('main',{class:'street-lab',id:'street-lab'},[
-  el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),lessonFrame,runButton,glossaryView(),el('details',{},[el('summary',{},'Exact values'),identity.element])]),
+  el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),lessonFrame,runButton,lessonContext,glossaryView(),el('details',{},[el('summary',{},'Exact values'),identity.element])]),
   conceptPrimer('street'),
   presetRow,el('div',{class:'street-layout'},[settings,el('div',{class:'street-main'},[replay,inspect])]),results,
   el('section',{class:'street-learning'},[eyebrow('WHAT THIS MODEL HELPS YOU ASK'),el('h2',{},'Connect the street problem to an operating decision.'),el('div',{class:'street-learning-grid'},[
