@@ -1711,7 +1711,7 @@ h1:not(.fl-title),.visitor-film-title,.catalog-library-title,[data-role="present
 .ops-intro>.ops-preset select{font:inherit;min-width:0;width:100%;min-height:44px;border:1px solid var(--rule-control);border-radius:8px;background:var(--panel);padding:8px}
 .ops-teaching .teaching-parts{display:block;padding:0;border:0;background:none;margin:10px 0}
 .ops-teaching .teaching-parts h3{display:none}
-.ops-context>summary,.ops-capacity>summary,.ops-setup>summary{padding:12px 0;min-height:44px;cursor:pointer;font-weight:600}
+.ops-context>summary,.ops-capacity>summary,.ops-setup>summary{padding:12px 0;cursor:pointer;font-weight:600}
 .ops-context{margin-top:18px}
 .ops-intro .ops-run-line{margin-top:14px}
 

@@ -9,13 +9,17 @@ import {pairLesson} from '../web/view-model.mjs';
 function node(tag,attrs={},text=''){
  const n=document.createElement(tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);n.textContent=text;return n;
 }
-test('founder opens Home below unchanged thesis, with the three-stop tour',()=>{
+test('Home keeps its thesis, first action, byline and three-stop tour in the approved order',()=>{
  const restore=installFakeDom();try{
   const home=node('main',{class:'studio-overview'});document.body.appendChild(home);
   decorateVisitors(document);decorateVisitors(document);
   const intro=home.querySelector('#visitor-purpose');
   assert.equal(intro.querySelector('h1').textContent,'Explore the work between the rides.');
-  assert.equal(intro.querySelector('h1').nextSibling.textContent,'I’m building this project to learn how autonomous fleets work—and to share what each experiment teaches us.');
+  const first=intro.querySelector('.visitor-first-action'),byline=intro.querySelector('.visitor-byline');
+  assert.equal(byline.textContent,'I’m building this project to learn how autonomous fleets work—and to share what each experiment teaches us.');
+  assert.equal(intro.querySelector('h1').nextSibling,intro.querySelector('.visitor-lede'));
+  assert.equal(intro.querySelector('.visitor-lede').nextSibling,first);assert.equal(first.nextSibling,byline);
+  assert.equal(first.getAttribute('href'),'/#/depot-flow-lab?lesson=two-vehicles');
   const tour=home.querySelector('.visitor-tour');assert.ok(tour);
   assert.equal(tour.querySelector('h2').textContent,'The 15-minute tour');
   assert.deepEqual(tour.querySelectorAll('a').map(a=>a.getAttribute('href')),['/#/walkthrough','/network-flows/dispatch/','/city-explorer/#compare']);

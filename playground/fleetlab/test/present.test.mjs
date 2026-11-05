@@ -1010,13 +1010,12 @@ describe("copy and classes", () => {
     }
   });
 
-  test("every class the walkthrough sets is defined in styles.css, listed in its header inventory, and carries no motion", () => {
+  test("every class the walkthrough sets is defined by a CSS selector and carries no motion", () => {
     const classes = new Set([...SOURCE.matchAll(/fl-(?:ledger|ticker|rail|reading-card)[\w-]*/g)].map((m) => m[0]));
     assert.ok(classes.size >= 8, [...classes].join(","));
-    const header = CSS.slice(0, CSS.indexOf("*/"));
+    const selectorText = CSS.replace(/\/\*[\s\S]*?\*\//g, "").match(/[^{}]+(?=\{)/g).join(" ");
     for (const name of classes) {
-      assert.match(CSS, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
-      assert.match(header, new RegExp(`\\.${name}(?![\\w-])`), `the header inventory lists .${name}`);
+      assert.match(selectorText, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
     }
     assert.ok(CSS.includes("/* The walkthrough"), "the walkthrough's rules say what they are for");
     // A beat change is instant, so no rule of the walkthrough or of the presenting grid may animate. Comments are

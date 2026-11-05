@@ -118,7 +118,7 @@ test('the command reads a stage directory, prints one JSON record and exits non-
    assert.equal(status,0,runner);assert.equal(record.ok,true);assert.equal(record.mode,mode);assert.equal(record.source_commit,'0'.repeat(40));
    assert.deepEqual(record.runner,{node:process.version,zlib:process.versions.zlib});
   }
-  write(stage({r3_closure_bytes:156488},OFFLINE_AFTER_PAIR));
+  write(stage({r3_closure_bytes:SPEC_BOUNDS.r3_closure_bytes+1},OFFLINE_AFTER_PAIR));
   for(const runner of [script,linked]){
    const {status,record}=run(runner,'--stage',root,'--mode','after');
    assert.equal(status,1,runner);assert.equal(record.ok,false);assert.deepEqual(record.checks.filter(c=>!c.ok).map(c=>c.name),['r3_closure_bytes']);

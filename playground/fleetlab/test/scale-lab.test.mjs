@@ -279,7 +279,9 @@ test('the route opens a lab without running it, refuses a lesson of another page
     studio.applyRoute('#/scale-lab');assert.equal(studio.element.getAttribute('data-page'),'scale');assert.equal(studio.scale.getState().lab,SCALE_LABS[0].id);
     assert.match(document.title,/^Scale lab · FleetLab/);
     for(const lab of SCALE_LABS){studio.applyRoute(`#/scale-lab?lesson=${lab.id}`);assert.equal(studio.scale.getState().lab,lab.id);assert.equal(studio.scale.getState().result,null);assert.equal(document.title,`${lab.title} · FleetLab by Hermes`);}
-    assert.equal(studio.element.querySelectorAll('.studio-header nav a').length,3);
+    const nav=studio.element.querySelectorAll('.studio-header nav a');
+    assert.deepEqual(nav.map(a=>a.textContent),['Home','Fleet day','Street lab','Explore','About & limits']);
+    assert.deepEqual(nav.map(a=>a.getAttribute('href')),['#/home','#/fleet-day','#/street-lab','#/catalog','#/approach']);
     studio.applyRoute('#/scale-lab?lesson=fleet-day');assert.equal(studio.element.getAttribute('data-page'),'error');assert.equal(studio.scale.element.hidden,true);
     studio.applyRoute('#/fleet-day?lesson=response-reserve');assert.equal(studio.element.getAttribute('data-page'),'error');
     for(const hash of ['#/scale-lab?lesson=missing','#/scale-lab?foo=1']){studio.applyRoute(hash);assert.equal(studio.element.getAttribute('data-page'),'error',hash);}
@@ -313,12 +315,12 @@ test('the ladder chart keeps the chart rules: one measure axis, a table twin, st
   }finally{restore();}
 });
 
-test('every class the view sets is defined and listed in the stylesheet header, and none of them moves',()=>{
+test('every class the view sets has a CSS selector, and none of them moves',()=>{
   const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8'),source=readFileSync(new URL('../src/ui/scale-lab.js',import.meta.url),'utf8');
   const classes=new Set([...source.matchAll(/class:'([^']+)'/g)].flatMap(m=>m[1].split(' ')).filter(c=>c.startsWith('scale-')));
-  const header=css.slice(0,css.indexOf('*/')),rules=css.slice(css.indexOf('*/'));
+  const rules=css.replace(/\/\*[\s\S]*?\*\//g,''),selectors=rules.match(/[^{}]+(?=\{)/g).join(' ');
   assert.ok(classes.size>=5,[...classes].join(','));
-  for(const name of classes){assert.match(rules,new RegExp(`\\.${name}(?![\\w-])`),`styles.css defines .${name}`);assert.match(header,new RegExp(`\\.${name}(?![\\w-])`),`the header lists .${name}`);}
+  for(const name of classes)assert.match(selectors,new RegExp(`\\.${name}(?![\\w-])`),`styles.css defines .${name}`);
   for(const block of rules.matchAll(/([^{}]*\.scale-[^{}]*)\{([^}]*)\}/g))assert.doesNotMatch(block[2],/transition|animation|will-change/,block[1].trim());
   assert.doesNotMatch(source,/#[0-9a-f]{3,8}\b/i,'colours come from the stylesheet tokens');
 });

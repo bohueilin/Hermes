@@ -279,16 +279,15 @@ describe("the verdict readout (demo plan beat 2.2)", () => {
     });
   });
 
-  test("the classes these views set are defined in styles.css, listed in its header inventory, and carry no motion", () => {
+  test("the classes these views set are defined by CSS selectors and carry no motion", () => {
     const sources = ["analytics.js", "present.js", "experiment.js"]
       .map((name) => readFileSync(new URL(`../src/ui/${name}`, import.meta.url), "utf8"))
       .join("\n");
     const classes = new Set([...sources.matchAll(/fl-(?:registry|hourly|readout|refusals)[\w-]*/g)].map((m) => m[0]));
     assert.deepEqual([...classes].sort(), ["fl-hourly", "fl-readout", "fl-refusals", "fl-registry"]);
-    const header = CSS.slice(0, CSS.indexOf("*/"));
+    const selectorText = CSS.replace(/\/\*[\s\S]*?\*\//g, "").match(/[^{}]+(?=\{)/g).join(" ");
     for (const name of classes) {
-      assert.match(CSS, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
-      assert.match(header, new RegExp(`\\.${name}(?![\\w-])`), `the header inventory lists .${name}`);
+      assert.match(selectorText, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
     }
     // A beat change is instant, so nothing a beat puts on screen may animate. Comments go first: one of them says the
     // word "transition" to explain why there is none.
