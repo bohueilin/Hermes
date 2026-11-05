@@ -161,8 +161,9 @@ test('workspace main, native navigation, page titles and skip focus follow the a
     }
     x.studio.element.querySelector('.studio-skip').click();assert.equal(document.activeElement,mains[0]);
   }
-  assert.equal(x.studio.element.querySelectorAll('.studio-header nav a').length,3);
-  assert.deepEqual(x.studio.element.querySelectorAll('.studio-header nav a').map(a=>a.textContent),['Home','Explore','About & limits']);
+  assert.equal(x.studio.element.querySelectorAll('.studio-header nav a').length,5);
+  assert.deepEqual(x.studio.element.querySelectorAll('.studio-header nav a').map(a=>a.textContent),['Home','Fleet day','Street lab','Explore','About & limits']);
+  assert.deepEqual(x.studio.element.querySelectorAll('.studio-header nav a').map(a=>a.getAttribute('href')),['#/home','#/fleet-day','#/street-lab','#/catalog','#/approach']);
  }finally{x.studio.destroy();x.restore();}
 });
 
