@@ -13,6 +13,7 @@ for(const footer of doc.querySelectorAll('footer'))if(!footer.querySelector('.de
 let footer=doc.querySelector('.studio-footer')??doc.querySelector('footer');
 if(!footer&&!doc.getElementById('fleetlab-root')){footer=el('footer');doc.body.appendChild(footer);}
 if(footer&&!footer.querySelector('.design-honesty'))footer.appendChild(el('p',{class:'design-honesty'},'Independent educational software by Bo-Huei Lin. Synthetic operations; map qualification remains open. Not affiliated with or endorsed by Waymo, Zoox, or their partners. No operational authority.'));
+if(footer&&!footer.querySelector('.map-gloss'))footer.appendChild(el('a',{class:'map-gloss',href:'/city-explorer/#limits'},'Map qualification: read the unresolved map checks →'));
 for(const panel of doc.querySelectorAll('.offline-edition'))if(!panel.querySelector('.design-panel-mark'))panel.insertBefore(el('span',{class:'design-panel-mark'},[mark(),el('strong',{},'FleetLab')]),panel.firstChild);
 const home=doc.querySelector('.studio-overview');
 if(home&&!doc.getElementById('design-readiness')){

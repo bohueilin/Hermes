@@ -161,7 +161,7 @@ export function mountStudio(app) {
   const errorText=el('p',{});
   const routeError=el('main',{class:'studio-route-error',hidden:true},[eyebrow('LINK COULD NOT BE LOADED'),el('h1',{},'This setup needs attention.'),errorText,el('p',{},'No simulation was run. Check the complete link and the FleetLab version that created it, or choose a view from the navigation.'),el('button',{type:'button',class:'studio-button','data-action':'recover-route',on:{click:()=>navigate('overview')}},'Go to Home')]);
   const footer=el('footer',{class:'studio-footer'},[
-    el('p',{},'An independent educational project by Bo-Huei Lin. Not affiliated with or endorsed by Waymo, Zoox, or their partners.'),
+    el('p',{class:'design-honesty'},NON_AFFILIATION),
     el('div',{},[el('strong',{},'FleetLab / Hermes'),el('p',{},'FleetLab is part of Hermes, an independent simulation and evidence-review project. Built with AI assistance. Synthetic models, inspectable assumptions.')]),
     el('nav',{'aria-label':'Footer navigation'},[pageLink('Explore','catalog',navigate),pageLink('About & limits','approach',navigate),pageLink('Guided walkthrough','tour',navigate)]),
     el('span',{},'Simulation for learning and exploration'),
