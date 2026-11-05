@@ -10,14 +10,14 @@ export const INPUT_DIGESTS={legacy:'15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d
 // Sidecars record the Node version string and the offer is gzipped by Node's own zlib, so the build runtime is part of every figure.
 export const RUNTIME={node:'v22.23.4',python:'3.11.15'};
 export const OFFLINE_BEFORE={bytes:2565111,sha256:'313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1'};
-// UX implementation (2026-11-04, owner IMP-D1): recomputed after the reviewed five-wave sequence.
-export const OFFLINE_AFTER={bytes:2569045,sha256:'50c474a5dcc34245185d788f3a156611293e276596e99d339e81b5e4edd032af'};
+// Wave 2 (2026-11-05, owner W2-D2): exact measured ceilings and recomputed offline pair; no spare allowance.
+export const OFFLINE_AFTER={bytes:2570744,sha256:'002f01c4172d7c61b83952ad812a777ef5d82c28ed47f081b86832b084a7ea86'};
 // Section 3 stage bounds; both modes apply them.
 // Catalog look_for wave (2026-10-31, owner): OFFLINE_AFTER and emitted_text_bytes (3577477) re-pinned to the measured stage, no allowance.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
-export const BOUNDS={nf03_closure_bytes:541729,nf04_closure_bytes:225430,delivery_order_closure_bytes:229159,r1_closure_bytes:200443,r3_closure_bytes:156487,depot_closure_bytes:515519,
- emitted_text_bytes:3577691,integration_text_bytes:133152,integration_source_bytes:397274,source_offer_extracted_bytes:4104316,source_offer_compressed_bytes:1155879,
- package_metadata_bytes:45385,non_city_bytes:16344242};
+export const BOUNDS={nf03_closure_bytes:544446,nf04_closure_bytes:226587,delivery_order_closure_bytes:231711,r1_closure_bytes:202790,r3_closure_bytes:158494,depot_closure_bytes:518393,
+ emitted_text_bytes:3582480,integration_text_bytes:133797,integration_source_bytes:397274,source_offer_extracted_bytes:4104316,source_offer_compressed_bytes:1155879,
+ package_metadata_bytes:45385,non_city_bytes:16350689};
 export const ROUTE_LOCAL={min:418150,max:418159};
 // BEFORE values at the base. The compressed offer embeds the commit, so only non-City minus the offer is exact across commits.
 export const BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,

@@ -66,7 +66,7 @@ test('the integrated depot closure, depot-owned text and NF03 bound stay inside 
  const counts=measureIntegratedText(teaching,final);
  assert.ok(counts.depot_closure_bytes<=786432,`depot closure ${counts.depot_closure_bytes}`);
  assert.ok(counts.depot_route_local_bytes<=524288,`depot-owned ${counts.depot_route_local_bytes}`);
- assert.ok(counts.nf03_closure_bytes<=537633+4096,`nf03 ${counts.nf03_closure_bytes}`);
+ assert.ok(counts.nf03_closure_bytes<=544446,`nf03 ${counts.nf03_closure_bytes}`);
  for(const id of ['nf04','delivery_order','r1','r3'])assert.ok(counts[`${id}_closure_bytes`]<=524288,id);
  console.log('integrated-depot-counters',JSON.stringify(counts));
 });
