@@ -168,6 +168,8 @@ if(welcome&&!doc.getElementById('visitor-city-path')){
  welcome.insertBefore(ribbon,comparison?.nextSibling??null);
 }
 if(doc.defaultView?.requestAnimationFrame&&typeof doc.defaultView.MutationObserver==='function')installVisualMotion(doc);
+const motionControl=doc.querySelector('.visitor-motion-control'),footer=doc.querySelector('.studio-footer')??doc.querySelector('footer');
+if(motionControl&&footer&&motionControl.parentNode!==footer)footer.appendChild(motionControl);
 text('.approach-intro .hero-lede','FleetLab is my independent learning project about autonomous fleet operations. I build small simulations to ask better questions about charging, depot work, data and rider service. Each lesson lets you change an assumption, see a trade-off and inspect the limits.');
 const about=doc.querySelector('.approach-intro .hero-lede');
 if(about&&!doc.getElementById('visitor-founder'))about.parentNode.insertBefore(el('section',{id:'visitor-founder','aria-labelledby':'visitor-founder-title'},[
