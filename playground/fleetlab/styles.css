@@ -1723,3 +1723,5 @@ h1:not(.fl-title),.visitor-film-title,.catalog-library-title,[data-role="present
 
 .visitor-hero-art .design-readiness-image{aspect-ratio:1672/941;object-fit:contain}.visitor-purpose>.visitor-hero-art{align-self:start}
 @media(max-width:767px){.operations-lab{padding-top:24px}}
+
+html:has(.studio-header){scroll-padding-top:150px}
