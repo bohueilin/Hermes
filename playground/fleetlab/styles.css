@@ -1725,3 +1725,7 @@ h1:not(.fl-title),.visitor-film-title,.catalog-library-title,[data-role="present
 @media(max-width:767px){.operations-lab{padding-top:24px}}
 
 html:has(.studio-header){scroll-padding-top:150px}
+
+@media(max-width:767px){.studio-header{padding-inline:12px;gap:8px;min-height:88px}.studio-header .design-brand strong{display:none}.studio-header .studio-brand{flex:0 0 48px}.studio-header .visitor-motion-control{flex:1 1 130px;order:2;font-size:11px;padding-inline:8px}.studio-header .studio-menu{order:3;margin:0;padding:8px}.studio-header nav[data-expanded=true]{order:4}}
+
+@media(min-width:768px) and (max-width:959px){.studio-header{padding-inline:12px;gap:8px}.studio-header nav{gap:0}.studio-header nav a{font-size:12px;padding-inline:6px}}
