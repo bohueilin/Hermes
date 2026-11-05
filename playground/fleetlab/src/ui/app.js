@@ -1,27 +1,27 @@
 import {teachingResult} from './teaching-projection.js';
-// Interface entry (contract section 8, design §7): builds the shell of design §7.2 and wires every region to one store
-// and to the engine host. The region modules render the knobs, map, transport, inspector, Learn and Experiment; this
-// file renders the top bar, the NOW panel, the panel across replications, the chart row, the fork section, the run
-// states of design §7.7 and the footer, and it runs the engine for Run window, the fork and a verdict seed.
-//
-// Decisions this module makes where the design is silent (reported with the build):
-// - Run window runs 5 replications of seed set 1 (the §7.2 wireframe reads "replay 1 of 5") and animates the first.
-// - Learn and Experiment render inside the chart row, the only region wide enough, ahead of the charts. The root
-//   carries `data-mode`, so the phone layout keeps that row on screen in those modes.
-// - The fork (D-10) runs on the watched replay's seed. In a Learn case lane A is the preset's axis baseline and lane B
-//   its candidate; in Sandbox lane A undoes the last knob change and lane B keeps it; from a verdict, lanes A and B are
-//   the frozen spec's arms on the spec's shared envelope.
-// - The demand and traffic strips sit under the scrubber for the selected area (San Francisco when nothing is
-//   selected); the traffic strip reads the highway toward that area.
-// - While the fork shows a verdict seed, the map, the NOW panel, the panel across replications and the strips (which
-//   replay the Sandbox world) are hidden and the top bar names the verdict seed, so only one THIS REPLAY seed is on
-//   screen (design §7.4, H-10). Closing the fork shows them again.
-// - The wait p90 values of the panel across replications and of the wait chart summary carry their completed rides.
-// - Before any run the NOW panel and the panel across replications each show one state line and no rows, so absence is
-//   said once and never reads as a value.
-// - Open the fork closes the inspector, scrolls the fork into view, focuses its heading and announces it politely.
-// - In an idle step after start (and after a traffic spread change), the host builds the lookup tables for the
-//   scenario's sigma, with a preparing line under the map, so the first run does not pay for them.
+// Interface shell and engine orchestration; region modules own their rendering.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { armScenarios, experimentEnvelope } from "../model/experiment.js";
 import { violationId } from "../model/invariants.js";
