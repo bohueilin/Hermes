@@ -43,4 +43,4 @@ footer:has(.design-honesty){flex-wrap:wrap}
 @media(max-width:360px){.masthead>.design-global-nav{font-size:13px;gap:0 12px}}
 
 .masthead:has(.design-global-nav)+.site-return{display:none}
-@media(max-width:767px){.masthead:has(.design-global-nav){padding:12px;gap:8px}.masthead .design-brand strong{display:none}.masthead>.visitor-motion-control{margin:0;margin-left:auto}.masthead>.design-global-nav{order:2;flex-basis:100%;font-size:12px;gap:0 8px}.masthead>.tabs{order:3}}
+@media(max-width:767px){.masthead:has(.design-global-nav){padding:12px;gap:8px}.masthead .design-brand strong{display:none}.masthead>.visitor-motion-control{margin:0;margin-left:auto}.masthead>.design-global-nav{order:2;flex-basis:100%;font-size:12px;gap:0 1px}.masthead>.tabs{order:3}}
