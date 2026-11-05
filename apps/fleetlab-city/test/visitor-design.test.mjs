@@ -213,14 +213,14 @@ test('pause, hidden tab or page and reduced motion consume pending or active acc
  }
 });
 
-test('the user-pause signal marks only the visitor\'s own pause and clears while reduced motion disables the control',()=>{
+test('the user-pause signal marks only the visitor\'s own pause and persists while reduced motion disables the control',()=>{
  const x=visualMotionHarness();try{
   const root=document.documentElement,control=document.querySelector('.visitor-motion-control'),held=()=>root.hasAttribute('data-visitor-user-paused');
   assert.equal(held(),false);document.hidden=true;document.dispatchEvent(new Event('visibilitychange'));assert.equal(root.getAttribute('data-visitor-motion'),'paused');assert.equal(held(),false);
   document.hidden=false;document.dispatchEvent(new Event('visibilitychange'));control.click();assert.equal(control.textContent,'Resume visual motion');assert.equal(root.getAttribute('data-visitor-motion'),'paused');assert.equal(held(),true);
-  x.restore.dom.media.set('(prefers-reduced-motion: reduce)',true);assert.equal(control.disabled,true);assert.equal(control.textContent,'Visual motion: reduced');assert.equal(held(),false);
+  x.restore.dom.media.set('(prefers-reduced-motion: reduce)',true);assert.equal(control.disabled,true);assert.equal(control.textContent,'Visual motion: reduced');assert.equal(held(),true);
   x.restore.dom.media.set('(prefers-reduced-motion: reduce)',false);assert.equal(held(),true);
-  root.setAttribute('data-motion','reduce');x.attributes(root);assert.equal(control.disabled,true);assert.equal(held(),false);
+  root.setAttribute('data-motion','reduce');x.attributes(root);assert.equal(control.disabled,true);assert.equal(held(),true);
   root.removeAttribute('data-motion');x.attributes(root);assert.equal(held(),true);
   control.click();assert.equal(control.textContent,'Pause visual motion');assert.equal(root.getAttribute('data-visitor-motion'),'running');assert.equal(held(),false);
  }finally{x.close();}

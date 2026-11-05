@@ -1,13 +1,13 @@
 import { el } from './dom.js';
 import { FILM_URL, POSTER_URL } from './hero-media.js';
 
-// Homepage-only rollback: false keeps the same asset behind explicit Play.
+
 export const FILM_AUTOPLAY = true;
 
-// A document survives BFCache and component remounts; a new navigation gets a new visit.
+
 const filmVisits = new WeakSet();
 
-/** Optional, silent, once-through motion. The poster and product actions never depend on playback. */
+
 export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL, autoplay = FILM_AUTOPLAY, reducedMotion } = {}) {
   if (filmUrl && !/^\.\/media\/[a-z0-9-]+\.mp4$/.test(filmUrl)) {
     throw new Error('Film must use a local media path');
@@ -45,7 +45,8 @@ export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL, aut
   let lastReduced = reduced(), lastSaving = saving();
   let active = false, visible = false, destroyed = false, away = false;
   let state = 'poster', intent = null, pending = null, generation = 0;
-  const eligible = () => !destroyed && active && visible && !doc.hidden && !away;
+  const blocked = () => doc.documentElement.hasAttribute('data-visitor-user-paused') || (doc.documentElement.getAttribute('data-visitor-motion') === 'paused' && !reduced());
+  const eligible = () => !destroyed && active && visible && !doc.hidden && !away && !blocked();
   const allowed = () => intent !== null && eligible();
 
   function label() {
@@ -81,14 +82,14 @@ export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL, aut
     lastSaving = currentSaving;
     if (veto) cancel(state === 'ended' ? 'ended' : 'preferencePaused');
     if (!eligible()) {
-      // Manual playback overrides a preference for this visible instance only.
+
       if (intent && (currentReduced || currentSaving)) cancel('preferencePaused');
       if (intent && state !== 'visibilityPaused') { state = 'visibilityPaused'; pause(); }
       else label();
       return;
     }
-    // No network API is a missing signal, not a bandwidth estimate. Only the one
-    // bounded film is eligible; explicit save-data/reduced-data signals veto it.
+
+
     if (!intent && state === 'poster' && autoplay && observer && !filmVisits.has(doc) && !currentReduced && !currentSaving) {
       intent = 'automatic';
       filmVisits.add(doc);
@@ -106,8 +107,8 @@ export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL, aut
       pending = null;
       if (attempt !== generation || !allowed()) {
         pause();
-        // Serialize requests: stale media cannot satisfy a newer intent. A still
-        // eligible intent gets its own play request only after the old one settles.
+
+
         if (allowed()) reconcile();
         return;
       }
@@ -146,11 +147,13 @@ export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL, aut
       intent = 'manual';
       state = 'starting';
       filmVisits.add(doc);
-      status.textContent = '';
+      status.textContent = blocked() ? 'Site motion is paused.' : '';
       reconcile();
     }
   }
   const visibility = () => reconcile();
+  const held = typeof view?.MutationObserver === 'function' ? new view.MutationObserver(visibility) : null;
+  held?.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-visitor-motion', 'data-visitor-user-paused'] });
   const departure = () => { away = true; reconcile(); };
   const restoration = () => { away = false; reconcile(); };
   video.addEventListener('play', playEvent);
@@ -190,8 +193,8 @@ export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL, aut
       boundingClientRect: rect, intersectionRect: { width, height } });
     reconcile();
   }
-  // Scroll/resize also cover oversized frames crossing the viewport-height boundary
-  // between IntersectionObserver's area thresholds. Unknown geometry stays static.
+
+
   view?.addEventListener('scroll', geometry, { passive: true });
   view?.addEventListener('resize', geometry);
   if (!observer) visible = true; // Manual playback remains available; automatic playback needs measured visibility.
@@ -210,6 +213,7 @@ export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL, aut
       intent = null;
       pause();
       observer?.disconnect();
+      held?.disconnect();
       doc.removeEventListener('visibilitychange', visibility);
       motion?.removeEventListener?.('change', visibility);
       dataMotion?.removeEventListener?.('change', visibility);
