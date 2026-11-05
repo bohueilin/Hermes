@@ -78,7 +78,7 @@ if(home&&!doc.getElementById('visitor-purpose')){
  text('.design-art-description','Why is a fully charged vehicle still waiting? Follow the work that must finish before its next ride.');
  text('.start-points h2','Where would you like to explore next?');
  const startTiles=[['T-01-fleet-day.webp','Concept vehicle with daily demand waves.'],['T-02-sf-study.webp','Two fictional depot locations on an illustrated city map.'],['T-03-street-lab.webp','Three white pods queued on a curved clay street.']];
- home.querySelectorAll('.start-card').forEach((card,i)=>{if(startTiles[i]){card.classList.add('visitor-start-card');card.insertBefore(art(...startTiles[i]),card.firstChild);}});
+ home.querySelectorAll('.start-card').forEach((card,i)=>{if(startTiles[i]){card.classList.add('visitor-start-card');card.insertBefore(art(...startTiles[i]),card.querySelector('a,.city-entry-actions'));}});
  const pathTiles=['T-04-shared-resources.webp','T-05-rider-service.webp','T-06-model-limits.webp'];
  home.querySelectorAll('.learning-path-grid article').forEach((card,i)=>{
   if(!pathTiles[i])return;card.classList.add('visitor-learning-card');card.querySelector('svg')?.remove();card.insertBefore(art(pathTiles[i]),card.firstChild);
@@ -112,7 +112,7 @@ if(catalog&&!doc.getElementById('visitor-families')){
  if(resultTitle){let part=resultTitle;while(part){const next=part.nextSibling;results.appendChild(part);if(part.classList.contains('catalog-grid'))break;part=next;}}
  const buttons=QUESTION_FAMILIES.map(f=>{
   const b=el('button',{type:'button',class:'visitor-family','data-family':f.id,'aria-pressed':'false','aria-controls':'visitor-library'},[
-   art(f.tile),el('span',{class:'visitor-family-title'},f.title),el('span',{class:'visitor-family-question'},f.question),el('span',{class:'visitor-family-count'},`${f.lessons.length} lessons`),
+   el('span',{class:'visitor-family-title'},f.title),el('span',{class:'visitor-family-question'},f.question),art(f.tile),el('span',{class:'visitor-family-count'},`${f.lessons.length} lessons`),
   ]);
   b.addEventListener('click',()=>{
    const wasSelected=b.getAttribute('aria-pressed')==='true';select(wasSelected?null:f);

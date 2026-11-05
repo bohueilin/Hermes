@@ -251,7 +251,9 @@ export function mountStudio(app) {
   function applyRoute(hash){
     applying=true;lastHandledHash=hash;
     try{
+      if(hash==='#/city-explorer'&&/^https?:$/.test(browserWindow?.location?.protocol)){browserWindow.location.replace('/city-explorer/');return;}
       const route=parseRoute(hash);
+      if(routeHref(route)!==hash)writeAddress(routeHref(route),true);
       if(route.page==='overview'&&!route.lesson&&!route.setup){const canonical=routeHref(route);globalThis.history?.replaceState(null,'',canonical);lastHandledHash=canonical;}
       if(route.page==='flows'&&!route.lesson&&!route.setup){route.lesson='two-vehicles';const canonical=routeHref(route);globalThis.history?.replaceState(null,'',canonical);lastHandledHash=canonical;}
       const record=route.lesson?records.find(r=>r.id===route.lesson):null;

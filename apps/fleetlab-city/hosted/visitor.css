@@ -10,7 +10,7 @@
 .visitor-steps li>span{font-size:12px;font-weight:650;letter-spacing:.05em;color:#677d60;padding-top:4px}
 .visitor-steps h2{font-size:18px!important;letter-spacing:-.015em;margin:0 0 6px!important;font-weight:650}.visitor-steps p{font-size:15px!important;line-height:1.55!important;color:#526456;margin:0!important}
 .studio-overview .design-readiness{box-shadow:none}.visitor-film-title{font-size:clamp(30px,4vw,48px);line-height:1.12;letter-spacing:-.04em;font-weight:600;margin:12px 0 24px;max-width:18ch}
-.visitor-tile-art{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:cover;object-position:center;border-radius:20px;transition:transform var(--motion-micro) var(--ease-out)}
+.visitor-tile-art{background:#e9f0e8;display:block;width:100%;height:auto;aspect-ratio:1;object-fit:cover;object-position:center;border-radius:20px;transition:transform var(--motion-micro) var(--ease-out)}
 .visitor-start-card{overflow:hidden;border-radius:20px!important;transition:transform var(--motion-micro) var(--ease-out);box-shadow:none!important}
 .visitor-start-card>.visitor-tile-art{aspect-ratio:4/3;max-height:250px;margin-bottom:18px;border-radius:14px;object-fit:cover}
 .visitor-learning-card>.visitor-tile-art{width:120px;height:120px;margin:0 0 22px;border-radius:20px}
@@ -22,7 +22,7 @@
 .visitor-scroll-hint{font-size:13px!important;color:#5a6c5c;margin:16px 0 8px!important}
 .visitor-family-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:10px 4px 18px}.visitor-family{min-width:0;width:100%}
 .visitor-family{flex:0 0 176px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:stretch;text-align:left;gap:0;background:#f4f3ea;color:#183f33;border:1px solid #dce1d4;border-radius:20px;padding:8px 8px 15px;font-family:inherit;cursor:pointer;transition:transform var(--motion-micro) var(--ease-out),background-color var(--motion-micro);box-shadow:none}
-.visitor-family>.visitor-tile-art{border-radius:14px;aspect-ratio:1}
+.visitor-family>.visitor-tile-art{border-radius:14px;aspect-ratio:1;margin-bottom:12px}
 .visitor-family-title{font-size:15px;line-height:1.3;font-weight:700;margin:13px 5px 7px}.visitor-family-question{font-size:13px;line-height:1.5;margin:0 5px 12px;color:#526553}.visitor-family-count{font-size:11px;letter-spacing:.04em;margin:auto 5px 0;color:#526553}
 .visitor-family[aria-pressed=true]{border:2px solid #255f48;background:#e3ecdc;padding:7px 7px 14px}.visitor-family[aria-pressed=true] .visitor-family-title::before{content:'✓ ';color:#255f48}
 .visitor-family-status{font-size:14px!important;line-height:1.5!important;margin:12px 0 0!important;color:#3e5c47}
@@ -103,3 +103,5 @@ html[data-visitor-motion=paused] summary::before{transition:none!important}
 .visitor-tour{margin:24px 0}.visitor-tour h2{font:600 24px/1.2 var(--font-display);margin:0 0 12px}.visitor-tour ol{display:flex;flex-wrap:wrap;gap:12px 28px;padding-left:20px}.visitor-tour a{color:#204f3f;text-underline-offset:4px}.visitor-purpose .visitor-byline{font-size:19px!important;margin-bottom:17px!important;color:#254c3e}
 
 @media(max-width:360px){.visitor-purpose h1{font-size:34px!important;margin-bottom:16px!important}.visitor-purpose .visitor-byline{font-size:16px!important;line-height:1.5!important;margin-bottom:12px!important}.visitor-lede{font-size:16px!important;line-height:1.5!important}.visitor-first-action{margin-top:8px}.visitor-tour{margin:18px 0}}
+
+#visitor-insights{padding-block:32px;border-block:1px solid #dce1d4}.visitor-family::after{top:auto;bottom:32px}
