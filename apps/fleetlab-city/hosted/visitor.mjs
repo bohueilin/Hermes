@@ -68,7 +68,9 @@ if(home&&!doc.getElementById('visitor-purpose')){
   ].map(([num,title,copy])=>el('li',{},[el('span',{'aria-hidden':'true'},num),el('div',{},[el('h2',{},title),el('p',{},copy)])]))),
  ]);
  home.insertBefore(intro,home.firstChild);
+ intro.firstChild.insertBefore(intro.querySelector('.visitor-byline'),intro.querySelector('.visitor-first-action').nextSibling);
  intro.firstChild.appendChild(tour());
+ const image=home.querySelector('.design-readiness-image'),steps=intro.querySelector('.visitor-steps');if(image){intro.appendChild(el('figure',{class:'visitor-hero-art'},[image,el('figcaption',{},'Concept illustration · not simulation output')]));home.insertBefore(steps,intro.nextSibling);}
  const filmTitle=home.querySelector('.film-copy h1');
  if(filmTitle){const h=el('h2',{class:'visitor-film-title'},'First, picture the work between rides.');filmTitle.parentNode.insertBefore(h,filmTitle);filmTitle.remove();}
  home.querySelector('.film-copy .eyebrow')?.remove();
@@ -181,8 +183,10 @@ if(welcome&&!doc.getElementById('visitor-city-path')){
  const comparison=welcome.querySelector('.learning-insight');
  welcome.insertBefore(ribbon,comparison?.nextSibling??null);
 }
+for(const hero of doc.querySelectorAll('.visitor-purpose,.ops-intro,.street-intro,.catalog-intro,.approach-intro'))hero.classList.add('lab-hero');
+for(const [selector,file] of [['.street-intro','T-03-street-lab.webp'],['.catalog-intro','T-04-shared-resources.webp'],['.approach-intro','T-06-model-limits.webp']]){const hero=doc.querySelector(selector);if(hero&&!hero.querySelector('.visitor-hero-art')){if(selector!=='.street-intro'){const link=el('a',{class:'design-primary',href:'/#/catalog'},'Explore the questions ↓');if(selector==='.catalog-intro')link.addEventListener('click',e=>{e.preventDefault();doc.getElementById('visitor-families')?.scrollIntoView({block:'start'});});hero.appendChild(link);}hero.appendChild(el('figure',{class:'visitor-hero-art'},[art(file),el('figcaption',{},'Concept illustration · not simulation output')]));}}
 if(doc.defaultView?.requestAnimationFrame&&typeof doc.defaultView.MutationObserver==='function')installVisualMotion(doc);
-const motionControl=doc.querySelector('.visitor-motion-control'),footer=doc.querySelector('.studio-footer')??doc.querySelector('footer');
+const motionControl=doc.querySelector('.visitor-motion-control'),footer=doc.querySelector('header')??doc.querySelector('footer');
 if(motionControl&&footer&&motionControl.parentNode!==footer)footer.appendChild(motionControl);
 text('.approach-intro .hero-lede','FleetLab is my independent learning project about autonomous fleet operations. I build small simulations to ask better questions about charging, depot work, data and rider service. Each lesson lets you change an assumption, see a trade-off and inspect the limits.');
 const about=doc.querySelector('.approach-intro .hero-lede');
