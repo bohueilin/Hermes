@@ -17,7 +17,8 @@ const SPEC_BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_
  depot_route_local_bytes:418159,emitted_text_bytes:3569285,integration_text_bytes:129056,hosted_artwork_bytes:7793265,source_offer_extracted_bytes:4079740,non_city_minus_offer_bytes:15039757};
 const DIGEST_PREFIXES={legacy:'15b3d561',city_base:'4fa335d2',city_source_offer:'1bf42853',readback:'708659b4'};
 const OFFLINE_SHA='313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1';
-const OFFLINE_AFTER_PAIR={bytes:2568066,sha256:'5f2228206b89cdc1416bb5ce9305a3c2f3922c21c686384f188c9731e7b90e40'};
+// UX implementation (2026-11-04, owner IMP-D1): recomputed after the reviewed five-wave sequence.
+const OFFLINE_AFTER_PAIR={bytes:2569045,sha256:'50c474a5dcc34245185d788f3a156611293e276596e99d339e81b5e4edd032af'};
 const LEGACY='15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d1ee9c9a7d3f7626b3529';
 
 // A synthetic stage holding the BEFORE values, shaped like the three records build-release.py writes.

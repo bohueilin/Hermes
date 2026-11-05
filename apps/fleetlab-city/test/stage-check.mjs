@@ -10,7 +10,8 @@ export const INPUT_DIGESTS={legacy:'15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d
 // Sidecars record the Node version string and the offer is gzipped by Node's own zlib, so the build runtime is part of every figure.
 export const RUNTIME={node:'v22.23.4',python:'3.11.15'};
 export const OFFLINE_BEFORE={bytes:2565111,sha256:'313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1'};
-export const OFFLINE_AFTER={bytes:2568066,sha256:'5f2228206b89cdc1416bb5ce9305a3c2f3922c21c686384f188c9731e7b90e40'};
+// UX implementation (2026-11-04, owner IMP-D1): recomputed after the reviewed five-wave sequence.
+export const OFFLINE_AFTER={bytes:2569045,sha256:'50c474a5dcc34245185d788f3a156611293e276596e99d339e81b5e4edd032af'};
 // Section 3 stage bounds; both modes apply them.
 // Catalog look_for wave (2026-10-31, owner): OFFLINE_AFTER and emitted_text_bytes (3577477) re-pinned to the measured stage, no allowance.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
