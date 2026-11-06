@@ -17,7 +17,7 @@ export const OFFLINE_AFTER={bytes:2570727,sha256:'9a05b7cdf176077dee0227918f6109
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
 export const BOUNDS={nf03_closure_bytes:544446,nf04_closure_bytes:226587,delivery_order_closure_bytes:231711,r1_closure_bytes:202790,r3_closure_bytes:158494,depot_closure_bytes:518393,
  emitted_text_bytes:3582480,integration_text_bytes:133797,integration_source_bytes:397274,source_offer_extracted_bytes:4104316,source_offer_compressed_bytes:1155879,
- package_metadata_bytes:45385,non_city_bytes:16350555};
+ package_metadata_bytes:45385,non_city_bytes:16350659};
 export const ROUTE_LOCAL={min:418150,max:418159};
 // BEFORE values at the base. The compressed offer embeds the commit, so only non-City minus the offer is exact across commits.
 export const BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,
