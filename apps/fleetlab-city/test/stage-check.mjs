@@ -10,14 +10,14 @@ export const INPUT_DIGESTS={legacy:'15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d
 // Sidecars record the Node version string and the offer is gzipped by Node's own zlib, so the build runtime is part of every figure.
 export const RUNTIME={node:'v22.23.4',python:'3.11.15'};
 export const OFFLINE_BEFORE={bytes:2565111,sha256:'313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1'};
-// Wave 2 companion (2026-11-05, owner GO): recomputed offline pair and exact non-City bound; other ceilings unchanged.
-export const OFFLINE_AFTER={bytes:2570728,sha256:'879dae5469d553e0a707c790157cf5da9e3f82c56f297e10370a1c362ffb82c9'};
+// Wave 2C (2026-11-05, owner D1-D9 GO): recomputed offline pair and exact non-City bound; other ceilings unchanged.
+export const OFFLINE_AFTER={bytes:2570727,sha256:'9a05b7cdf176077dee0227918f61093bd7c609d58f013bf59712ddb4909cae2f'};
 // Section 3 stage bounds; both modes apply them.
 // Catalog look_for wave (2026-10-31, owner): OFFLINE_AFTER and emitted_text_bytes (3577477) re-pinned to the measured stage, no allowance.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
 export const BOUNDS={nf03_closure_bytes:544446,nf04_closure_bytes:226587,delivery_order_closure_bytes:231711,r1_closure_bytes:202790,r3_closure_bytes:158494,depot_closure_bytes:518393,
  emitted_text_bytes:3582480,integration_text_bytes:133797,integration_source_bytes:397274,source_offer_extracted_bytes:4104316,source_offer_compressed_bytes:1155879,
- package_metadata_bytes:45385,non_city_bytes:16350665};
+ package_metadata_bytes:45385,non_city_bytes:16350555};
 export const ROUTE_LOCAL={min:418150,max:418159};
 // BEFORE values at the base. The compressed offer embeds the commit, so only non-City minus the offer is exact across commits.
 export const BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,

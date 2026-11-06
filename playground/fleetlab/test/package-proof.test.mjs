@@ -128,10 +128,10 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
 test("the offline edition reproduces the approved catalog look_for bytes exactly", () => {
   // C2 amendment 1: ops-cases.js is bundled twice, so its byte delta counts twice and the offline edition moves less than the source.
   // Catalog look_for wave (2026-10-31, owner D2): re-pinned from the C2 pair (2566962, e49c0aba...) to the measured bytes and SHA-256.
-  // Wave 2 companion (2026-11-05, owner GO): recomputed from the reviewed implementation tree.
+  // Wave 2C (2026-11-05, owner D1-D9 GO): recomputed from the reviewed implementation tree.
   const html = buildHtml(source);
-  assert.equal(Buffer.byteLength(html), 2570728);
-  assert.equal(hash(html), "879dae5469d553e0a707c790157cf5da9e3f82c56f297e10370a1c362ffb82c9");
+  assert.equal(Buffer.byteLength(html), 2570727);
+  assert.equal(hash(html), "9a05b7cdf176077dee0227918f61093bd7c609d58f013bf59712ddb4909cae2f");
 });
 
 test("development measurement rejects altered site, offline bytes, extras and resealed root HTML", () => {
