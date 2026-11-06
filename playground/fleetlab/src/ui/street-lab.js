@@ -58,7 +58,7 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
  const resultHeading=el('h2',{tabindex:'-1'},'Result summary');
  const results=el('section',{class:'street-results'},[eyebrow('3 / READ THE TRADE-OFF'),resultHeading,el('p',{},'Run a scenario to see completed and unfinished journeys together.')]);
  const element=el('main',{class:'street-lab',id:'street-lab'},[
-  el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),lessonFrame,runButton,lessonContext,glossaryView(),el('details',{},[el('summary',{},'Exact values'),identity.element])]),
+  el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),lessonFrame,runButton,el('p',{class:'street-model-class'},'A mesoscopic block-queue spillback model on frozen OSM SF extracts, not lane-level microsimulation.'),lessonContext,glossaryView(),el('details',{},[el('summary',{},'Exact values'),identity.element])]),
   conceptPrimer('street'),
   presetRow,el('div',{class:'street-layout'},[settings,el('div',{class:'street-main'},[replay,inspect])]),results,
   el('section',{class:'street-learning'},[eyebrow('WHAT THIS MODEL HELPS YOU ASK'),el('h2',{},'Connect the street problem to an operating decision.'),el('div',{class:'street-learning-grid'},[
@@ -117,16 +117,17 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   const edge=edges.get(car.edge_id??car.pending_edge_id),path=result.routes[car.route_id],names=path?path.edge_ids.map(id=>edges.get(id)?.name).filter((name,i,list)=>i===0||name!==list[i-1]):[];
   const events=result.vehicles.find(v=>v.id===selected).log.filter(e=>e.time<=time).slice(-4);
   vehicleDetail.replaceChildren(el('h3',{},`${car.id} · ${car.vehicle_type==='ojai'?'Ojai':'I-PACE'}`),el('p',{class:'street-car-state'},stateName(car.state)+(car.waiting?car.pending_edge_id?' · waiting to enter the road':' · road queue':'')),
-   el('p',{},car.request_id?`${car.request_id}: ${label(car.from)} → ${label(car.to)}`:`At ${label(car.anchor)} · ${car.completed} completed journeys`),
+   el('p',{},car.request_id?`Rider request ${car.request_id.replace(/^R/,'')}: ${label(car.from)} → ${label(car.to)}`:`At ${label(car.anchor)} · ${car.completed} completed journeys`),
    el('p',{},edge?`${edge.name} · ${fmt(edge.length_m,0)} m block · ${fmt(car.progress*100,0)}% along`:'At a modeled off-road anchor'),
    ...(car.edge_id&&car.waiting?[el('p',{},`${fmt(car.exit_wait_seconds/60)} min waiting after the uncongested exit time on this block. This is one part of the journey delay.`)]:[]),
+   el('details',{class:'street-raw-identifiers'},[el('summary',{},'Raw request and route identifiers'),el('p',{},`Request ${car.request_id??'none'} · Route ${car.route_id??'none'} · Edge ${car.edge_id??car.pending_edge_id??'none'}`)]),
    el('details',{},[el('summary',{},'Chosen road itinerary'),el('p',{},names.length?names.join(' → '):'No road leg in progress')]),
    el('ol',{class:'street-event-log'},events.map(e=>el('li',{},[el('time',{},clock(e.time,result.config.start_hour)),e.text]))));
   const top=[...f.roads].filter(e=>e.queued>0).sort((a,b)=>Number(b.spillback)-Number(a.spillback)||b.queued-a.queued).slice(0,5);
   queueList.replaceChildren(...top.map(s=>button(`${edges.get(s.id).name} · ${s.queued} queued${s.spillback?' · spillback':''}`,()=>scene.selectEdge(s.id))));
   if(!top.length)queueList.appendChild(el('p',{},'No vehicles queued on a road block at this step.'));
   const road=edges.get(edgeId),s=f.roads.find(e=>e.id===edgeId);
-  if(road)blockDetail.replaceChildren(el('h3',{},road.name),el('p',{},`${fmt(road.length_m,0)} m · ${road.lanes} modeled lane(s) · ${road.speed_kph} km/h free-flow input`),el('p',{},`${s?.occupancy??0} road vehicles occupying ${s?.storage??Math.max(1,Math.floor(road.length_m*Math.max(1,road.lanes)/7.5))} storage slots. ${s?.spillback?'The first car cannot enter the full downstream block.':'No downstream spillback at this step.'}`),el('p',{},`Directed edge ${road.from} → ${road.to}. ${road.signal?'Tagged signal; timing is synthetic.':'No signal represented at this exit.'}`));
+  if(road)blockDetail.replaceChildren(el('h3',{},road.name),el('p',{},`${fmt(road.length_m,0)} m · ${road.lanes} modeled lane(s) · ${road.speed_kph} km/h free-flow input`),el('p',{},`${s?.occupancy??0} road vehicles occupying ${s?.storage??Math.max(1,Math.floor(road.length_m*Math.max(1,road.lanes)/7.5))} storage slots. ${s?.spillback?'The first car cannot enter the full downstream block.':'No downstream spillback at this step.'}`),el('p',{},road.signal?'Tagged signal; timing is synthetic.':'No signal represented at this exit.'),el('details',{class:'street-raw-identifiers'},[el('summary',{},'Raw network identifiers'),el('p',{},`Edge ${road.id} · ${road.from} → ${road.to}`)]));
   else blockDetail.replaceChildren();
   if(road&&s)blockDetail.appendChild(el('p',{},`Front car exit wait: ${fmt(s.front_wait_seconds/60)} min beyond its uncongested exit time. This is a recorded model wait, not an estimated clearance time.`));
  }

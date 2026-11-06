@@ -143,7 +143,16 @@ const num=(v,d=1)=>Number.isFinite(v)?(v!==0&&Number(v.toFixed(d))===0?String(v)
 const sign=v=>Number.isFinite(v)?(v>0?'+':'')+num(v):absent;
 const upper=s=>s[0]?.toUpperCase()+s.slice(1);
 export function evidenceText(frame,n){return frame.evidence==='deterministic'?'No random draws':frame.evidence==='paired'?Number.isInteger(n)?`Paired test, ${n} seeds`:'Paired test, seed count not available':frame.evidence==='one-seed'?'One seed, same demand':'One replay';}
-export function glossaryView(entries=GLOSSARY){return el('details',{class:'teaching-glossary'},[el('summary',{},'Words used here'),...Object.values(entries).map(text=>el('p',{},text))]);}
+export const GLOSSARY_GROUPS=Object.freeze({
+ 'Time & queues':['Dwell','p90','Unserved','Waiting, in progress','Recall, release'],
+ 'Space & routing':['Empty distance','Governing ratio','Encoded units'],
+ 'Experiments & seeds':['Seed','Paired seeds','One replay','Same riders','Null control','Decision, condition test'],
+ 'Verdicts & limits':['Margin','Guardrail','Allowance','Beyond the margin','Within the margin','Crosses the margin','Held','Advance','No recommendation','NOT_EVIDENCE'],
+});
+export function glossaryView(entries=GLOSSARY){
+ const grouped=new Set(Object.values(GLOSSARY_GROUPS).flat());
+ return el('details',{class:'teaching-glossary'},[el('summary',{},'Words used here'),...Object.entries(GLOSSARY_GROUPS).filter(([,keys])=>keys.some(key=>entries[key])).map(([title,keys])=>el('section',{},[el('h3',{},title),...keys.filter(key=>entries[key]).map(key=>el('p',{},entries[key]))])),...Object.entries(entries).filter(([key])=>!grouped.has(key)).map(([,definition])=>el('p',{},definition))]);
+}
 export function exactView(value,children=[]){return el('details',{class:'teaching-exact'},[el('summary',{},'Exact values'),...children,el('p',{},'Harm is signed so that a negative value means the candidate did better.'),el('pre',{},JSON.stringify(value,null,2))]);}
 let exactSerial=0;
 export function exactDisclosure(children){const id='teaching-exact-'+(++exactSerial),body=el('div',{id,hidden:true},children),button=el('button',{type:'button','aria-expanded':'false','aria-controls':id,on:{click:()=>{body.hidden=!body.hidden;button.setAttribute('aria-expanded',String(!body.hidden));}}},'Exact values');return el('section',{class:'teaching-exact'},[button,body]);}

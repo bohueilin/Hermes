@@ -280,7 +280,7 @@ export function createOperationsLab({reducedMotion=()=>window.matchMedia?.('(pre
     }catch(e){error.hidden=false;error.textContent=`The day could not run: ${displayText(e.message)}`;}
     finally{busy=false;renderStatus();}
     if(error.hidden&&result&&!stale&&version===interactionVersion){
-      summaryHeading.focus({preventScroll:true});resultSummary.scrollIntoView({block:'end',behavior:'instant'});
+      summaryHeading.focus({preventScroll:true});runReading.scrollIntoView({block:'start',behavior:'instant'});
     }
     return result;
   }

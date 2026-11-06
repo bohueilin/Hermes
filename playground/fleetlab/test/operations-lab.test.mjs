@@ -10,12 +10,13 @@ test('a day runs only on request; reduced motion stays paused and edited results
     assert.equal(lab.getState().result,null);
     const resultSummary=lab.element.querySelector('.ops-result-summary'),summary=resultSummary.querySelector('h2');let scrollOptions;
     assert.ok(document.activeElement!==summary,'initial load does not focus the result');
-    resultSummary.scrollIntoView=options=>{scrollOptions=options;};
+    const runReading=resultSummary.children[3];runReading.scrollIntoView=options=>{scrollOptions=options;};
     lab.setConfig({fleet_size:8,requests_per_hour:8,duration_hours:2});
     await lab.run();
     assert.ok(lab.getState().result.frames.length>1);
     assert.ok(document.activeElement===summary);
-    assert.deepEqual(scrollOptions,{block:'end',behavior:'instant'},'manual Run reveals the takeaway without animated scrolling');
+    assert.deepEqual(scrollOptions,{block:'start',behavior:'instant'},'manual Run begins at the takeaway, independent of added diagnosis and share-panel height');
+    assert.ok(runReading.querySelector('.teaching-result'));
     assert.equal(lab.getState().playing,false);
     lab.seek(30); assert.equal(lab.getState().minute,30);
     lab.setConfig({fleet_size:10});

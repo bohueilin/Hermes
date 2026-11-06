@@ -17,17 +17,17 @@ function fixture(run){
  try{run(changes);}finally{globalThis.MutationObserver=prior;restore();}
 }
 // Step A golden (spec section 5): the shipped Fleet day figure, byte for byte.
-const A2='<figure id="enhancement-fleet-day" class="enhancement-media"><div class="enhancement-visual"><img src="/enhancement-media/FL-A2-one-fleet-day-panorama.webp" alt="Clay panorama of the same vehicle depot at dawn, midday and night, with white autonomous pods leaving, queueing and charging." width="2352" height="1008" loading="lazy" decoding="async"></div>'
+const A2='<figure id="enhancement-fleet-day" class="enhancement-media"><div class="enhancement-visual"><img src="/enhancement-media/FL-A2-one-fleet-day-panorama.webp" alt="Clay panorama of the same vehicle depot at dawn, midday and night, with white autonomous pods leaving, queueing and charging." width="2352" height="1008" loading="eager" fetchpriority="high" decoding="async"></div>'
  +'<figcaption><p class="enhancement-fence">Concept illustration · not simulation output</p><p class="enhancement-caption">One fleet day: out at dawn, queued by midday, charging by night. Your run will write its own version.</p></figcaption></figure>';
 
-test('A2 keeps its 602-byte golden after the Fleet day decision, outside the teaching frame, and decorates once',()=>fixture(()=>{
+test('A2 keeps its 624-byte golden after the Fleet day decision, outside the teaching frame, and decorates once',()=>fixture(()=>{
  const title=element('h1',{},'Fleet day'),frame=element('section',{class:'teaching-frame'},[title,element('p',{},'Not calibrated.')]);
  const teaching=element('div',{class:'ops-teaching'},frame),run=element('div',{class:'ops-run-line'},element('button',{},'Run fleet day'));
  const intro=element('section',{class:'ops-intro'},[teaching,run]),originalFrame=serialize(frame);
  document.body.appendChild(element('main',{class:'operations-lab'},intro));decorateVisitors(document);
  const hero=intro.querySelector('#enhancement-fleet-day');assert.ok(hero);
  const figure=serialize(hero);assert.equal(figure,A2);
- assert.equal(Buffer.byteLength(figure),602);assert.equal(sha(figure),'aa3a9cd27182bc1a5d68c63cb5061280864502febd6c74c1a7cc141e289029ea');
+ assert.equal(Buffer.byteLength(figure),624);assert.equal(sha(figure),'1b26537f3eba882f329109fb7943b1b2e0973b57da3f26c2ec24e92d06a847b7');
  assert.equal(hero.parentNode,intro);assert.equal(run.nextSibling,hero);assert.equal(serialize(frame),originalFrame);
  assert.equal(intro.querySelector('video'),null);assert.equal(frame.querySelector('#enhancement-fleet-day'),null);
  const once=serialize(intro),image=hero.querySelector('img');decorateVisitors(document);

@@ -53,6 +53,7 @@ if(hero&&!doc.getElementById('design-network-lesson')){
 }
 decorateVisitors(doc);
 decorateDepotPipes(doc);
+decorateAtlasCoverage(doc);
 }
 const installed=new WeakSet();
 export function installDesign(doc=document){
@@ -145,6 +146,64 @@ export function decorateDepotPipes(doc=document){
 }
 
 // Initialize only after all component state has been created.
+// Hosted alternate coverage view: the recorded renderer and scientific payload stay unchanged.
+export function atlasCoveragePaths(collection){
+ if(collection?.type!=='FeatureCollection'||!Array.isArray(collection.features))throw Error('Invalid coverage collection');
+ const counts={included:0,unsupported:0,excluded:0},lines=[];let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+ for(const f of collection.features){const status=f.properties?.status,c=f.geometry?.coordinates;
+  if(!Object.hasOwn(counts,status))throw Error('Unknown coverage status');
+  if(f.geometry?.type!=='LineString'||!Array.isArray(c)||c.length<2||c.some(p=>!Array.isArray(p)||p.length<2||!Number.isFinite(p[0])||!Number.isFinite(p[1])||Math.abs(p[0])>180||Math.abs(p[1])>=85))throw Error('Invalid coverage geometry');
+  counts[status]++;if(status==='excluded')continue;
+  const points=c.map(([lon,lat])=>[lon*Math.PI/180,Math.log(Math.tan(Math.PI/4+lat*Math.PI/360))]);
+  for(const [x,y]of points){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}lines.push({status,points});
+ }
+ if(!lines.length)throw Error('No eligible coverage roads');
+ const scale=Math.min(752/Math.max(1e-9,maxX-minX),552/Math.max(1e-9,maxY-minY)),cx=(minX+maxX)/2,cy=(minY+maxY)/2,paths={included:'',unsupported:''};
+ for(const {status,points}of lines)paths[status]+=points.map(([x,y],i)=>(i?'L':'M')+(400+(x-cx)*scale).toFixed(2)+' '+(300-(y-cy)*scale).toFixed(2)).join('');
+ return {counts,paths};
+}
+export async function verifyAtlasBytes(bytes,expected){
+ if(!expected||!Number.isSafeInteger(expected.bytes)||!/^[a-f0-9]{64}$/.test(expected.sha256))throw Error('File absent from snapshot catalogue');
+ if(bytes.byteLength!==expected.bytes||bytes.byteLength>26*1024*1024)throw Error('Recorded coverage size mismatch');
+ const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');
+ if(hash!==expected.sha256)throw Error('Recorded coverage digest mismatch');
+ return JSON.parse(new TextDecoder().decode(bytes));
+}
+const atlasDecorated=new WeakSet();
+export function decorateAtlasCoverage(doc=document){
+ const atlas=doc.getElementById('atlas-view'),bar=atlas?.querySelector('.atlas-version-bar'),stage=atlas?.querySelector('.atlas-map-stage');
+ if(!bar||!stage||atlasDecorated.has(atlas))return;atlasDecorated.add(atlas);
+ const el=(...args)=>node(doc,...args),svg=(tag,attrs)=>node(doc,tag,attrs,[],'http://www.w3.org/2000/svg');
+ bar.appendChild(el('p',{class:'atlas-scope-badge'},'Atlas view only — notebook and replay results always use frozen SF v1'));
+ const versionContext=el('p',{class:'atlas-version-context'},'SF v2 is an earlier static candidate; SF v3 adds time-aware rules. Source checks are loading.');bar.appendChild(versionContext);
+ const button=el('button',{type:'button',class:'secondary','aria-pressed':'false','aria-controls':'atlas-coverage-detail'},'Highlight unsupported gaps');
+ const status=el('p',{role:'status',class:'atlas-coverage-status'}),drawing=svg('svg',{viewBox:'0 0 800 600',role:'img','aria-label':'Recorded road support coverage, fixed full-network view'});
+ const detail=el('section',{id:'atlas-coverage-detail',class:'atlas-coverage-detail',hidden:''},[status,drawing,el('p',{},'Fixed full-network view of eligible source roads. Thick dashed ochre: unsupported; thin teal: supported. Excluded road classes are omitted. This is map coverage, not fleet simulation output or navigation.')]);
+ stage.parentNode.insertBefore(button,stage);stage.parentNode.insertBefore(detail,stage);
+ let wanted=false,ticket=0,catalogPromise=null;const cache=new Map(),base=new URL('./',doc.baseURI),fetcher=doc.defaultView?.fetch?.bind(doc.defaultView)??fetch;
+ const catalog=()=>catalogPromise??=(async()=>{const r=await fetcher(new URL('data/catalog.json',base),{cache:'no-cache'});if(!r.ok)throw Error('Snapshot catalogue unavailable');return r.json();})().catch(e=>{catalogPromise=null;throw e;});
+ const read=async path=>{const c=await catalog(),r=await fetcher(new URL(path,base),{cache:'no-cache'});if(!r.ok)throw Error('Recorded coverage unavailable');return verifyAtlasBytes(await r.arrayBuffer(),c.files?.[path]);};
+ const selected=()=>doc.getElementById('temporal-map')?.getAttribute('aria-pressed')==='true'?'temporal':doc.getElementById('candidate-map')?.getAttribute('aria-pressed')==='true'?'candidate':'recorded';
+ async function update(){
+  const id=++ticket;if(!wanted)return;const version=selected(),label={recorded:'SF v1',candidate:'SF v2',temporal:'SF v3'}[version];
+  drawing.replaceChildren();status.textContent=`Loading ${label} coverage from this recorded snapshot…`;
+  try{let result=cache.get(version);if(!result){result=atlasCoveragePaths(await read(`data/${version==='recorded'?'source':version}-roads.geo.json`));cache.set(version,result);}if(id!==ticket||!wanted)return;
+   const supported=svg('path',{d:result.paths.included,class:'atlas-coverage-supported',fill:'none'}),unsupported=svg('path',{d:result.paths.unsupported,class:'atlas-coverage-unsupported',fill:'none'});
+   const swatch=atlas.querySelector('.legend-line.amber'),warm=swatch&&doc.defaultView?.getComputedStyle?.(swatch).backgroundColor;
+   if(warm)unsupported.style.color=warm;
+   drawing.replaceChildren(supported,unsupported);status.textContent=`${label}: ${result.counts.unsupported.toLocaleString('en-US')} unsupported / ${(result.counts.included+result.counts.unsupported).toLocaleString('en-US')} eligible source records. ${result.counts.excluded.toLocaleString('en-US')} excluded records omitted.`;
+  }catch(e){if(id===ticket&&wanted)status.textContent=`Coverage view unavailable: ${e.message}. Use the original map; no substituted road data.`;}
+ }
+ button.addEventListener('click',()=>{wanted=!wanted;button.setAttribute('aria-pressed',String(wanted));button.textContent=wanted?'Return to interactive atlas':'Highlight unsupported gaps';detail.hidden=!wanted;stage.hidden=wanted;update();});
+ const Observer=doc.defaultView?.MutationObserver??globalThis.MutationObserver;
+ if(Observer)new Observer(rows=>{if(rows.some(r=>r.type==='attributes'))update();}).observe(bar,{subtree:true,attributes:true,attributeFilter:['aria-pressed']});
+ // Use the same checksum-bound temporal summary as the native viewer; never hardcode candidate outcomes.
+ read('data/temporal-summary.json').then(data=>{const r=data.report??data;
+  if(Number.isFinite(r.timed_turn_count)&&Number.isFinite(r.timed_access_count)&&Number.isFinite(r.before?.unsupported_fraction)&&Number.isFinite(r.after?.unsupported_fraction))versionContext.textContent=`SF v2 → SF v3: ${r.timed_turn_count} timed turn rules, ${r.timed_access_count} way-access schedules; unsupported eligible length ${(100*r.before.unsupported_fraction).toFixed(2)}% → ${(100*r.after.unsupported_fraction).toFixed(2)}%. These candidates have no notebook or replay results.`;
+  else versionContext.textContent='SF v2 is an earlier static candidate; SF v3 adds time-aware rules. Inspect source checks below; notebook and replay stay on SF v1.';
+ }).catch(()=>{versionContext.textContent='SF v2 is an earlier static candidate; SF v3 adds time-aware rules. Candidate summary unavailable; notebook and replay stay on SF v1.';});
+}
+
 if(typeof document!=='undefined'){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>installDesign(),{once:true});
 else installDesign();

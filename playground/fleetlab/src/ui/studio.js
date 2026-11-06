@@ -74,6 +74,7 @@ function approach(navigate) {
     ["Market lead","Locate a supply shortfall and understand the service impact.","Region availability, wait and unserved demand, with time and population in view."],
     ["Depot lead","Find the limiting resource before adding capacity.","Parking, cleaning and service queues; compare capacity and assignment rules."],
     ["Planning partner","Identify what must be true before expanding a depot.","Declared assumptions and a repeatable experiment; energy is simplified in Fleet day; a serial cleaning-worker extension is available; shifts and calibration remain future work."],
+    ["Rider","Get a ride before the wait becomes too long.","Read completed, unserved and still-open requests together. A shorter reported wait can leave more riders behind."],
   ];
   return el("main",{class:"studio-approach",id:"studio-approach"},[
     el("section",{class:"approach-intro"},[eyebrow("ABOUT & LIMITS"),el("h1",{},"What FleetLab models, and what it does not."),el("p",{class:"hero-lede"},"FleetLab is the browser learning playground inside Hermes, an independent simulation and evidence-review project. Every model here is synthetic, inspectable and bounded."),el("p",{},NON_AFFILIATION)]),

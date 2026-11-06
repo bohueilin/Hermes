@@ -107,3 +107,6 @@ html[data-visitor-motion=paused] summary::before{transition:none!important}
 #visitor-insights{padding-block:32px;border-block:1px solid #dce1d4}.visitor-family::after{top:auto;bottom:32px}
 
 .visitor-purpose>.visitor-hero-art{width:100%;max-width:560px}
+
+/* Wave 3: readable, bounded teaching context. */
+.teaching-glossary section{padding:.6rem 0;border-top:1px solid #cad6cd}.teaching-glossary p{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}.visitor-outside-model{margin:2rem 0;padding:1.2rem;border:1px solid #bacabd;border-radius:16px;background:#e9f0e8;color:#193b31}.visitor-outside-model h2{font-size:1.1rem}.visitor-tour li p{margin:.3rem 0 1rem}.street-model-class{max-width:65ch;color:#35554b}.street-lab .street-intro{display:block}.street-lab .street-intro .visitor-hero-art{max-width:28rem;float:right;margin:0 0 1rem 1.5rem}.street-lab .street-intro:after{content:"";display:block;clear:both}@media(max-width:700px){.street-lab .street-intro .visitor-hero-art{float:none;margin:1rem 0;max-width:100%}}

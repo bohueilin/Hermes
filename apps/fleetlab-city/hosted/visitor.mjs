@@ -3,9 +3,9 @@ import {decorateConceptMedia} from './enhancement-media.mjs';
 
 
 
-export function node(doc,tag,attrs={},children=[]){
- const n=doc.createElement(tag);
- for(const [key,value] of Object.entries(attrs)){if(/^on/i.test(key)||/^(href|src)$/i.test(key)&&/^(javascript|data):/i.test(String(value).replace(/[\0- ]/g,'')))throw Error(`unsafe attribute ${key}`);n.setAttribute(key,value);}
+export function node(doc,tag,attrs={},children=[],namespace=null){
+ const n=namespace?doc.createElementNS(namespace,tag):doc.createElement(tag);
+ for(const [key,value] of Object.entries(attrs)){if(/^on/i.test(key)||/^(href|src|xlink:href)$/i.test(key)&&/^(javascript|data):/i.test(String(value).replace(/[\0- ]/g,'')))throw Error(`unsafe attribute ${key}`);n.setAttribute(key,value);}
  for(const child of [children].flat())if(child!=null)n.appendChild(typeof child==='string'?doc.createTextNode(child):child);
  return n;
 }
@@ -48,7 +48,7 @@ const staffing=doc.querySelector('#staffing-help')?.parentNode;
 if(staffing&&!staffing.querySelector('.visitor-diagram')){staffing.classList.add('visitor-staffing');const figure=diagram('D-03-staffing-queue.webp','Pods queued at service bays; one bay works, one waits for a worker.');figure.querySelector('img').setAttribute('loading','lazy');staffing.insertBefore(figure,staffing.firstChild.nextSibling);}
 const art=(file,alt='',className='visitor-tile-art')=>el('img',{src:'/tiles/'+file,alt,class:className,width:'1600',height:'1600',loading:'lazy',decoding:'async'});
 const text=(selector,value)=>{const n=doc.querySelector(selector);if(n)n.textContent=value;};
-const tour=()=>el('section',{class:'visitor-tour'},[el('h2',{},'The 15-minute tour'),el('ol',{},[['Walkthrough','/#/walkthrough'],['Dispatch lesson','/network-flows/dispatch/'],['City Explorer notebook','/city-explorer/#compare']].map(([title,href])=>el('li',{},el('a',{href},title+' →'))))]);
+const tour=()=>el('section',{class:'visitor-tour'},[el('h2',{},'The 15-minute tour'),el('p',{},'After the 3-minute starter, take five minutes per stop.'),el('ol',{},[['Walkthrough','/#/walkthrough','You leave knowing how to change one assumption and read the result.'],['Dispatch lesson','/network-flows/dispatch/','You leave knowing why the nearest available car can carry an opportunity cost.'],['City Explorer notebook','/city-explorer/#compare','You leave knowing how a second depot changes this recorded synthetic study.']].map(([title,href,outcome])=>el('li',{},[el('a',{href},title+' · 5 min →'),el('p',{},outcome)]))),el('p',{class:'visitor-tour-finish'},'Finish: what would you test on Monday, which population would you count, and what evidence would change your mind?')]);
 text('#limits-view a[href="/city-explorer/sources/"]','Visit the map sources page for databases, captured sources, code and licenses →');
 const paired=doc.querySelector('#study-help');if(paired&&!doc.getElementById('visitor-paired'))paired.parentNode.appendChild(el('p',{id:'visitor-paired'},'A paired repeat compares configurations using the same seed, vehicle starting positions and rider requests.'));
 const home=doc.querySelector('.studio-overview');
@@ -58,7 +58,7 @@ if(home&&!doc.getElementById('visitor-purpose')){
    el('p',{class:'visitor-kicker'},'BO-HUEI LIN’S INDEPENDENT LEARNING PROJECT'),
    el('h1',{id:'visitor-purpose-title'},'Explore the work between the rides.'),
    el('p',{class:'visitor-byline'},'I’m building this project to learn how autonomous fleets work—and to share what each experiment teaches us.'),
-   el('p',{class:'visitor-lede'},'An autonomous car needs more than a charged battery. It needs time, data and a place to get ready. FleetLab makes those hidden decisions visible through small, interactive simulations — the same tradeoffs Waymo, Tesla and Zoox wrestle with at fleet scale.'),
+   el('p',{class:'visitor-lede'},'An autonomous car needs more than a charged battery. It needs time, data and a place to get ready. FleetLab makes those hidden decisions visible through small, interactive simulations — the same tradeoffs Waymo, Zoox and large autonomous fleet operators wrestle with.'),
    el('a',{class:'design-primary visitor-first-action',href:'/#/depot-flow-lab?lesson=two-vehicles'},'Start with a 3-minute lesson →'),
   ]),
   el('ol',{class:'visitor-steps','aria-label':'How to learn with FleetLab'},[
@@ -184,7 +184,7 @@ if(welcome&&!doc.getElementById('visitor-city-path')){
  welcome.insertBefore(ribbon,comparison?.nextSibling??null);
 }
 for(const hero of doc.querySelectorAll('.visitor-purpose,.ops-intro,.street-intro,.catalog-intro,.approach-intro'))hero.classList.add('lab-hero');
-for(const [selector,file] of [['.street-intro','T-03-street-lab.webp'],['.catalog-intro','T-04-shared-resources.webp'],['.approach-intro','T-06-model-limits.webp']]){const hero=doc.querySelector(selector);if(hero&&!hero.querySelector('.visitor-hero-art')){if(selector!=='.street-intro'){const link=el('a',{class:'design-primary',href:'/#/catalog'},'Explore the questions ↓');if(selector==='.catalog-intro')link.addEventListener('click',e=>{e.preventDefault();doc.getElementById('visitor-families')?.scrollIntoView({block:'start'});});hero.insertBefore(link,hero.querySelector('.hero-lede')?.nextSibling??null);}hero.appendChild(el('figure',{class:'visitor-hero-art'},[art(file),el('figcaption',{},'Concept illustration · not simulation output')]));}}
+for(const [selector,file] of [['.street-intro','T-03-street-lab.webp'],['.catalog-intro','T-04-shared-resources.webp'],['.approach-intro','T-06-model-limits.webp']]){const hero=doc.querySelector(selector);if(hero&&!hero.querySelector('.visitor-hero-art')){if(selector!=='.street-intro'){const link=el('a',{class:'design-primary',href:'/#/catalog'},'Explore the questions ↓');if(selector==='.catalog-intro')link.addEventListener('click',e=>{e.preventDefault();doc.getElementById('visitor-families')?.scrollIntoView({block:'start'});});hero.insertBefore(link,hero.querySelector('.hero-lede')?.nextSibling??null);}const image=art(file);image.setAttribute('loading','eager');image.setAttribute('fetchpriority','high');hero.appendChild(el('figure',{class:'visitor-hero-art'},[image,el('figcaption',{},'Concept illustration · not simulation output')]));}}
 if(doc.defaultView?.requestAnimationFrame&&typeof doc.defaultView.MutationObserver==='function')installVisualMotion(doc);
 const motionControl=doc.querySelector('.visitor-motion-control'),footer=doc.querySelector('.studio-header,header.masthead')??doc.querySelector('footer');
 if(motionControl&&footer&&motionControl.parentNode!==footer)footer.appendChild(motionControl);
@@ -207,6 +207,9 @@ for(const pairs of doc.querySelectorAll('#pair-rows,#pair-story'))if(!pairObserv
  const fix=()=>{for(const cell of pairs.id==='pair-story'?[pairs]:pairs.querySelectorAll('.pair-lesson')){const before=cell.textContent,after=before.replace(/Two depots completed 1 (more|fewer) trips,/, 'Two depots completed 1 $1 trip,');if(before!==after)cell.textContent=after;}};
  fix();new MutationObserver(fix).observe(pairs,{childList:true,subtree:true});pairObservers.add(pairs);
 }
+for(const target of doc.querySelectorAll('.studio-overview,.operations-lab,.studio-approach'))if(!target.querySelector('.visitor-outside-model'))target.appendChild(el('aside',{class:'visitor-outside-model','aria-label':'Outside these simulations'},[
+ el('h2',{},'Outside these simulations'),el('p',{},'Safety Case & ODD Qualification: these runs establish neither safety nor operating permission. Remote Assistance (Tele-Ops): remote staffing and escalation are not modeled. DC Fast-Charge Taper: simplified charging does not capture the full battery-dependent power curve. Unit Economics: time and capacity tradeoffs are not a profit model.'),
+]));
 decorateFieldNotes(doc);
 decorateConceptMedia(doc,node);
 }
