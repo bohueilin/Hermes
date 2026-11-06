@@ -1729,3 +1729,10 @@ html:has(.studio-header){scroll-padding-top:150px}
 @media(max-width:767px){.studio-header{padding-inline:12px;gap:8px;min-height:88px}.studio-header .design-brand strong{display:none}.studio-header .studio-brand{flex:0 0 48px}.studio-header .visitor-motion-control{flex:1 1 130px;order:2;font-size:11px;padding-inline:8px}.studio-header .studio-menu{order:3;margin:0;padding:8px}.studio-header nav[data-expanded=true]{order:4}}
 
 @media(min-width:768px) and (max-width:959px){.studio-header{padding-inline:12px;gap:8px}.studio-header nav{gap:0}.studio-header nav a{font-size:12px;padding-inline:6px}}
+
+/* Recorded Fleet day ledger and descriptive observation. */
+.ops-ledger{margin-block:24px;padding-block:20px;border-top:1px solid #aebdca;}
+.ops-ledger p{font-size:13px;line-height:1.7;white-space:normal;overflow:visible;overflow-wrap:anywhere;}
+.ops-ledger details{margin-top:12px;}
+.ops-ledger-bar{display:flex;width:100%;height:24px;border-radius:4px;overflow:hidden;margin-block:16px;}
+.ops-ledger-bar span{min-width:0;height:100%;border-right:1px solid #edf4ff;}

@@ -2,7 +2,7 @@ import {flowButton as button,svgElement as svg,el} from './dom.js';
 import {createCarGlyph} from './car-glyph.js';
 import {ACTIVITY_COLORS} from './operations-map.js';
 import {cameraMatrix,projectPoint,fitCameraToPoints,orbitCamera,pointOnPath,buildCarMesh,buildRoadMesh,box,quad,transformMesh,createWebGLRenderer} from './scene-3d.js';
-const color=state=>state.startsWith('queued_')?'#bd9277':ACTIVITY_COLORS[state]??'#568676';
+const color=state=>state.startsWith('queued_')?'#657589':ACTIVITY_COLORS[state]??'#555b65';
 const append=(target,source)=>{for(let i=0;i<source.length;i++)target.push(source[i]);};
 
 export function bayVehiclePosition(run,car,next,fraction){
@@ -29,35 +29,39 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
  const renderer=createRenderer(canvas);let mode=renderer?'3d':'flat';
  const status=el('span',{class:'bay-render-status'},renderer?'3D · WebGL':'Flat map · WebGL unavailable');
  const viewSelect=el('select',{'aria-label':'Map view',on:{change:()=>{mode=viewSelect.value;redraw();}}},[el('option',{value:'3d',disabled:!renderer},'3D perspective'),el('option',{value:'flat'},'Flat map')]);viewSelect.value=mode;
- const focusSelect=el('select',{'aria-label':'Focus map on a city',on:{change:()=>focus(focusSelect.value)}},[el('option',{value:'all'},'Entire Bay Area'),...places.map(p=>el('option',{value:p.id},p.label))]);
+ const corridor=places.filter(p=>['san-francisco','sfo','san-mateo','palo-alto'].includes(p.id));
+ const hasCorridor=corridor.length>=2;
+ const focusSelect=el('select',{'aria-label':'Focus map on a city',on:{change:()=>focus(focusSelect.value)}},[el('option',{value:'all'},'Entire Bay Area'),...(hasCorridor?[el('option',{value:'corridor'},'SF / SFO / Peninsula')]:[]),...places.map(p=>el('option',{value:p.id},p.label))]);
  const labelSelect=el('select',{'aria-label':'City label density',on:{change:()=>redraw()}},[el('option',{value:'key'},'Key place names'),el('option',{value:'all'},'All 18 names'),el('option',{value:'none'},'Roads & cars only')]);
  const controls=el('div',{class:'bay-map-controls'},[viewSelect,focusSelect,labelSelect,button('−',()=>changeCamera({zoom:1.25})),button('+',()=>changeCamera({zoom:.8})),button('Rotate ↶',()=>changeCamera({yaw:-.3})),button('Rotate ↷',()=>changeCamera({yaw:.3})),button('Tilt',()=>{camera.pitch=camera.pitch>1.1?.7:1.3;redraw();}),button('Follow selected car',()=>{following=true;overview=false;camera.distance=6;redraw();}),button('Reset view',()=>focus('all'))]);
  let legendPinned=null,legendHover=null,legendFocus=null;
  const legendColor=()=>legendHover??legendFocus??legendPinned;
  const legendButton=(name,value)=>{const b=button(name,()=>{legendPinned=legendPinned===value?null:value;for(const n of element.querySelectorAll('[data-legend-color]'))n.setAttribute('aria-pressed',String(n.getAttribute('data-legend-color')===legendPinned));redraw();});b.setAttribute('data-legend-state',name.replaceAll(' ','_'));b.setAttribute('data-legend-color',value);b.setAttribute('aria-pressed','false');b.insertBefore(el('span',{'aria-hidden':'true',style:`background:${value}`,class:'legend-swatch'}),b.firstChild);for(const [event,fn] of Object.entries({pointerenter:()=>legendHover=value,pointerleave:()=>legendHover=null,focus:()=>legendFocus=value,blur:()=>legendFocus=null}))b.addEventListener(event,()=>{fn();redraw();});return b;};
  const element=el('figure',{class:'bay-map'},[controls,el('div',{class:'bay-map-caption-top'},[status,el('span',{},'Drag to orbit · scroll to zoom · choose a city to inspect')]),viewport,
-  el('ul',{class:'bay-map-legend','aria-label':'Map legend'},[...Object.entries(ACTIVITY_COLORS).filter(([key])=>key!=='ready').map(([key,value])=>[key.replaceAll('_',' '),value]),['waiting for a resource','#bd9277'],['boarding, staging or other activity','#568676'],['Hypothetical depot','#4c7666']].map(([name,value])=>el('li',{},name==='Hypothetical depot'?[el('span',{'aria-hidden':'true',class:'legend-swatch legend-depot',style:`background:${value}`}),name]:legendButton(name,value)))),
+  el('ul',{class:'bay-map-legend','aria-label':'Map legend'},[...Object.entries(ACTIVITY_COLORS).filter(([key])=>key!=='ready').map(([key,value])=>[key.replaceAll('_',' '),value]),['waiting for a resource','#657589'],['unclassified activity','#555b65'],['Hypothetical depot','#4c7666']].map(([name,value])=>el('li',{},name==='Hypothetical depot'?[el('span',{'aria-hidden':'true',class:'legend-swatch legend-depot',style:`background:${value}`}),name]:legendButton(name,value)))),
   el('figcaption',{},[el('a',{href:'https://www.openstreetmap.org/copyright',target:'_blank',rel:'noopener noreferrer'},'© OpenStreetMap contributors'),el('span',{},' · ODbL. Frozen September 2026 extract. Sparse major-road routes; one-way and access rules excluded. Cars and hypothetical depots are enlarged; stationary cars are spread into display slots around their recorded anchor. Grid spacing: 5 km. Coastlines are sourced outlines; no terrain or water polygons. Traffic and demand are simulated. This is not a commercial service-area map.')])]);
  if(onDownloadMap)element.appendChild(button('Download attributed map data',onDownloadMap));
  const xs=places.map(p=>p.x),ys=places.map(p=>p.y);
  const bounds={minX:Math.min(...xs,0)-3,maxX:Math.max(...xs,10)+3,minY:Math.min(...ys,0)-3,maxY:Math.max(...ys,10)+3};
  const center=[(bounds.minX+bounds.maxX)/2,(bounds.minY+bounds.maxY)/2,0];
  let camera={target:[...center],distance:Math.max(bounds.maxX-bounds.minX,bounds.maxY-bounds.minY)*1.12,yaw:0,pitch:.9};
- let current=null,selected=null,drag=null,destroyed=false,lastFlatKey=null,hitPoints=[],following=false,overview=true,contextLost=false;
+ if(hasCorridor){const x=corridor.map(p=>p.x),y=corridor.map(p=>p.y);camera.target=[(Math.min(...x)+Math.max(...x))/2,(Math.min(...y)+Math.max(...y))/2,0];camera.distance=Math.max(Math.max(...x)-Math.min(...x),Math.max(...y)-Math.min(...y))*1.5;focusSelect.value='corridor';}
+ let current=null,selected=null,drag=null,destroyed=false,lastFlatKey=null,hitPoints=[],following=false,overview=!hasCorridor,contextLost=false;
  const labelNodes=new Map();for(const p of places){const label=button(p.label,()=>{focus(p.id);onFocus(p.id);});label.setAttribute('class',`bay-city-label${p.kind==='airport'?' is-airport':''}`);label.setAttribute('data-place-id',p.id);overlay.appendChild(label);labelNodes.set(p.id,label);}
  const meshes={ipace:buildCarMesh('ipace','#f3f5ec'),ojai:buildCarMesh('ojai','#d8e3f3')};
  const dimMeshes=Object.fromEntries(Object.entries(meshes).map(([key,m])=>[key,m.map((v,i)=>i%6<3?v:.84)]));
  const land=[];
- quad(land,[bounds.minX-30,bounds.minY-30,-.06],[bounds.maxX+30,bounds.minY-30,-.06],[bounds.maxX+30,bounds.maxY+30,-.06],[bounds.minX-30,bounds.maxY+30,-.06],'#e5eadc');
- const coast=buildRoadMesh((mapData.coastlines??[]).map(points=>({points})),.05,'#7cb1b0',.002);
+ quad(land,[bounds.minX-30,bounds.minY-30,-.06],[bounds.maxX+30,bounds.minY-30,-.06],[bounds.maxX+30,bounds.maxY+30,-.06],[bounds.minX-30,bounds.maxY+30,-.06],'#cbd5c8');
+ const coast=buildRoadMesh((mapData.coastlines??[]).map(points=>({points})),.05,'#426c79',.002);
  const roadEdges=buildRoadMesh(mapData.roads??[],.17,'#fafbf6',.018);
- const roads=buildRoadMesh(mapData.roads??[],.085,'#829788',.02);
+ const roads=buildRoadMesh(mapData.roads??[],.085,'#52655e',.02);
  const grid=[];for(let x=0;x<=bounds.maxX;x+=5)grid.push({points:[[x,0],[x,bounds.maxY]]});for(let y=0;y<=bounds.maxY;y+=5)grid.push({points:[[0,y],[bounds.maxX,y]]});
  const staticMesh=land.concat(buildRoadMesh(grid,.016,'#d6dfd0',-.02),coast,roadEdges,roads);
+ flat.style.background='#cbd5c8';
  const flatRoads=svg('g'),flatCars=svg('g');flat.appendChild(flatRoads);flat.appendChild(flatCars);
  const vehicleNodes=new Map();
  function changeCamera(change){overview=false;camera=orbitCamera(camera,change);redraw();}
- function focus(id){following=false;overview=id==='all';focusSelect.value=id;const p=places.find(p=>p.id===id);camera={...camera,target:p?[p.x,p.y,0]:[...center],distance:p?8:Math.max(bounds.maxX-bounds.minX,bounds.maxY-bounds.minY)*1.12};redraw();}
+ function focus(id){if(id==='corridor'&&hasCorridor){following=false;overview=false;const xs=corridor.map(p=>p.x),ys=corridor.map(p=>p.y);camera.target=[(Math.min(...xs)+Math.max(...xs))/2,(Math.min(...ys)+Math.max(...ys))/2,0];camera.distance=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys))*1.5;focusSelect.value=id;redraw();return;}following=false;overview=id==='all';focusSelect.value=id;const p=places.find(p=>p.id===id);camera={...camera,target:p?[p.x,p.y,0]:[...center],distance:p?8:Math.max(bounds.maxX-bounds.minX,bounds.maxY-bounds.minY)*1.12};redraw();}
  function placeLabels(project,width,height){
   leaders.setAttribute('viewBox',`0 0 ${width} ${height}`);leaders.replaceChildren();const occupied=[];
   const ordered=[...places].sort((a,b)=>(b.id===focusSelect.value)-(a.id===focusSelect.value));
@@ -80,17 +84,17 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
  function drawFlat(run,frame,nextFrame,fraction,width,height){
   flat.setAttribute('viewBox',`0 0 ${width} ${height}`);
   const key=JSON.stringify([camera.target,camera.distance,width,height]);
-  if(key!==lastFlatKey){lastFlatKey=key;flatRoads.replaceChildren();for(const road of mapData.roads??[]){const points=road.points.map(p=>flatProjection(p,width,height));flatRoads.appendChild(svg('polyline',{points:points.map(p=>`${p.x},${p.y}`).join(' '),fill:'none',stroke:'#a8b8a5','stroke-width':1.6}));}}
+  if(key!==lastFlatKey){lastFlatKey=key;flatRoads.replaceChildren();for(const line of mapData.coastlines??[]){const points=line.map(p=>flatProjection(p,width,height));flatRoads.appendChild(svg('polyline',{points:points.map(p=>`${p.x},${p.y}`).join(' '),fill:'none',stroke:'#426c79','stroke-width':2.5}));}for(const road of mapData.roads??[]){const points=road.points.map(p=>flatProjection(p,width,height));flatRoads.appendChild(svg('polyline',{points:points.map(p=>`${p.x},${p.y}`).join(' '),fill:'none',stroke:'#52655e','stroke-width':1.6}));}}
   placeLabels(p=>flatProjection([p.x,p.y],width,height),width,height);
   const positions=run?layoutBayVehicles(run,frame,nextFrame,fraction,Math.max(.035,camera.distance*.017)):new Map();
-  const seen=new Set();for(const car of frame?.vehicles??[]){seen.add(car.id);let n=vehicleNodes.get(car.id);if(!n){n=svg('g',{'data-car-id':car.id,role:'button',tabindex:'-1'});n.addEventListener('click',()=>onSelect(car.id));flatCars.appendChild(n);vehicleNodes.set(car.id,n);}n.setAttribute('opacity',legendColor()&&legendColor()!==color(car.state)?'0.22':'1');n.replaceChildren(createCarGlyph(color(car.state)));const pos=positions.get(car.id),p=flatProjection([pos.x,pos.y],width,height);n.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${-pos.heading*180/Math.PI}) scale(${selected===car.id?.8:.55})`);n.setAttribute('aria-label',`${car.id}: ${car.state.replaceAll('_',' ')}`);}
+  const seen=new Set();for(const car of frame?.vehicles??[]){seen.add(car.id);let n=vehicleNodes.get(car.id);if(!n){n=svg('g',{'data-car-id':car.id,role:'button',tabindex:'-1'});n.addEventListener('click',()=>onSelect(car.id));flatCars.appendChild(n);vehicleNodes.set(car.id,n);}n.setAttribute('opacity',legendColor()&&legendColor()!==color(car.state)?'0.22':'1');n.replaceChildren(createCarGlyph(color(car.state)));if(car.state.startsWith('queued_'))n.appendChild(svg('circle',{r:19,fill:'none',stroke:'#253343','stroke-width':3,'stroke-dasharray':'4 3'}));const pos=positions.get(car.id),p=flatProjection([pos.x,pos.y],width,height);n.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${-pos.heading*180/Math.PI}) scale(${selected===car.id?.8:.55})`);n.setAttribute('aria-label',`${car.id}: ${car.state.replaceAll('_',' ')}`);}
   for(const[id,n]of vehicleNodes)if(!seen.has(id)){n.remove();vehicleNodes.delete(id);}
  }
  function redraw(){
   if(destroyed)return;
   const width=Math.max(280,viewport.clientWidth||900),height=Math.max(320,viewport.clientHeight||580);
   if(overview){camera.distance=Math.max(bounds.maxY-bounds.minY,(bounds.maxX-bounds.minX)/(width/height))*1.16;camera=fitCameraToPoints(camera,places.map(p=>[p.x,p.y,0]),width,height);}
-  canvas.hidden=mode!=='3d';flat.setAttribute('style',mode==='flat'?'display:block':'display:none');
+  canvas.hidden=mode!=='3d';flat.style.display=mode==='flat'?'block':'none';
   status.textContent=mode==='3d'?'3D · WebGL':contextLost?'Flat map · 3D context unavailable':renderer?'Flat map':'Flat map · WebGL unavailable';
   const [run,frame,nextFrame,fraction]=current??[null,null,null,0];
   const scale=Math.max(.035,camera.distance*.017);const positions=run?layoutBayVehicles(run,frame,nextFrame,fraction,scale):new Map();
