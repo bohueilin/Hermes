@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { UI_CLASS_REGISTRY } from "./helpers/ui-class-registry.mjs";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 
@@ -441,6 +442,7 @@ describe("the isometric picture's faces and classes (design 7.3 and 8.2 as amend
     const selectorText = RULES.flatMap((rule) => rule.selectors ?? []).join(" ");
     for (const name of classes) {
       assert.match(selectorText, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
+      assert.ok(UI_CLASS_REGISTRY.includes(name), `curated UI registry includes .${name}`);
     }
     for (const rule of RULES.filter((r) => r.selectors?.some((sel) => sel.includes(".fl-iso")))) {
       for (const d of rule.declarations) assert.ok(!/^(transition|animation)/.test(d.name) && d.name !== "will-change", `${rule.prelude} ${d.name}`);

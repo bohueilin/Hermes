@@ -1,6 +1,7 @@
 // Shell tests of the Scale lab: the lab contract, the generic view, the route, the ladder chart and the copy rules.
 // Every lab in SCALE_LABS is held to the same checks, so a lab engineer adds no case here.
 import assert from 'node:assert/strict';
+import {UI_CLASS_REGISTRY} from './helpers/ui-class-registry.mjs';
 import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {installFakeDom} from './helpers/fake-dom.mjs';
@@ -320,7 +321,7 @@ test('every class the view sets has a CSS selector, and none of them moves',()=>
   const classes=new Set([...source.matchAll(/class:'([^']+)'/g)].flatMap(m=>m[1].split(' ')).filter(c=>c.startsWith('scale-')));
   const rules=css.replace(/\/\*[\s\S]*?\*\//g,''),selectors=rules.match(/[^{}]+(?=\{)/g).join(' ');
   assert.ok(classes.size>=5,[...classes].join(','));
-  for(const name of classes)assert.match(selectors,new RegExp(`\\.${name}(?![\\w-])`),`styles.css defines .${name}`);
+  for(const name of classes){assert.match(selectors,new RegExp(`\\.${name}(?![\\w-])`),`styles.css defines .${name}`);assert.ok(UI_CLASS_REGISTRY.includes(name),`curated UI registry includes .${name}`);}
   for(const block of rules.matchAll(/([^{}]*\.scale-[^{}]*)\{([^}]*)\}/g))assert.doesNotMatch(block[2],/transition|animation|will-change/,block[1].trim());
   assert.doesNotMatch(source,/#[0-9a-f]{3,8}\b/i,'colours come from the stylesheet tokens');
 });

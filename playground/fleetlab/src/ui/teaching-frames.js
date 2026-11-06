@@ -89,6 +89,8 @@ surfaceBase["preset:airport"]={...surfaceBase["airport"],id:"preset:airport"};
 surfaceBase["preset:staffing"]={...surfaceBase["staffing"],id:"preset:staffing"};
 export const SURFACE_FRAMES=Object.freeze(surfaceBase);
 export const GLOSSARY=Object.freeze({
+"Dwell":"Dwell: time stopped at a pickup or drop-off.",
+"Seed":"Seed: a number that fixes random draws for the same setup.",
 "p90":"p90: 9 in 10 results are at or under this value. A p90 wait of 20 min means at most 1 rider in 10 waited longer.",
 "Paired seeds":"Paired seeds: both runs share the same random draws, and the same riders where a model has riders, so a difference comes from the one changed setting.",
 "Margin":"Margin: the smallest change in the main result that the test treats as real. It is set before the run.",

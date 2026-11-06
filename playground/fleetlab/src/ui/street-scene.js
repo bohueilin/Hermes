@@ -79,7 +79,7 @@ export function createStreetScene({network,onSelect=()=>{},onEdgeSelect=()=>{},c
   else for(const edge of visibleEdges){const p=mids.get(edge.id),s=roadStates.get(edge.id);candidates.push({id:edge.id,name:edge.name+(s?.queued?` · ${s.queued} queued`:''),x:p.x,y:p.y,priority:(edge.id===selectedEdge?200:0)+(s?.queued??0)+(edge.hotspot===focusSelect.value?3:0),base:edge.name});}
   candidates.sort((a,b)=>b.priority-a.priority||Math.hypot(a.x-camera.target[0],a.y-camera.target[1])-Math.hypot(b.x-camera.target[0],b.y-camera.target[1]));
   const occupied=[],names=new Set();let index=0;
-  for(const p of candidates){if(index>=labelNodes.length)break;if(names.has(p.base??p.name))continue;const xy=project(p.x,p.y,.009);const w=Math.min(190,p.name.length*6+18),h=23;
+  for(const p of candidates){if(index>=labelNodes.length)break;if(names.has(p.base??p.name))continue;const xy=project(p.x,p.y,.009);const w=p.name.length*8+18,h=23;
    const rect={x:xy.x-w/2,y:xy.y-28,w,h};if(!xy.visible||rect.x<8||rect.y<8||rect.x+w>width-8||rect.y+h>height-8||occupied.some(a=>rect.x<a.x+a.w+12&&rect.x+w+12>a.x&&rect.y<a.y+a.h+8&&rect.y+h+8>a.y))continue;
    const n=labelNodes[index++];n.hidden=false;n.textContent=p.name;n.style.transform=`translate(${rect.x}px, ${rect.y}px)`;n.style.maxWidth=`${w}px`;occupied.push(rect);names.add(p.base??p.name);
   }

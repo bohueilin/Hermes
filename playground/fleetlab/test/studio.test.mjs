@@ -212,7 +212,8 @@ test('quick lab links carry data-nav ids and open their pages idle',()=>{
  const x=setup();try{
   const links=x.studio.element.querySelector('.simulation-catalog .lab-links');
   assert.ok(links);
-  for(const id of ['simulation','streets','depots','scale','flows','tour'])assert.ok(links.querySelector(`[data-nav="${id}"]`),id);
+  for(const id of ['simulation','streets']){assert.equal(links.querySelector(`[data-nav="${id}"]`),null);assert.ok(x.studio.element.querySelector(`.studio-header [data-nav="${id}"]`),id);}
+  for(const id of ['depots','scale','flows','tour'])assert.ok(links.querySelector(`[data-nav="${id}"]`),id);
   const depots=links.querySelector('[data-nav="depots"]');
   depots.click();
   assert.equal(x.studio.element.getAttribute('data-page'),'depots');

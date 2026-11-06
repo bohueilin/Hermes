@@ -1716,7 +1716,7 @@ h1:not(.fl-title),.visitor-film-title,.catalog-library-title,[data-role="present
 .ops-intro .ops-run-line{margin-top:14px}
 
 .lab-hero{max-width:1100px;margin-inline:auto;min-width:0}.lab-hero>p{max-width:68ch}.visitor-hero-art{margin:16px 0;max-width:360px}.visitor-hero-art img{aspect-ratio:4/3;object-fit:cover}.visitor-hero-art figcaption{font-size:12px;line-height:1.5;margin-top:8px;color:#435b50}
-.ops-intro>#enhancement-fleet-day{max-width:360px}.ops-intro .teaching-heading h1{margin:12px 0}.ops-intro .teaching-parts p{margin:8px 0}.ops-intro .teaching-chip-row{margin:6px 0}
+.ops-intro>#enhancement-fleet-day{max-width:360px}.ops-intro .teaching-heading h1{margin:12px 0}.ops-intro .teaching-parts p{margin:8px 0}
 @media(min-width:960px){.lab-hero:not(.visitor-purpose){display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.55fr);column-gap:36px}.lab-hero:not(.visitor-purpose)>*{grid-column:1}.lab-hero:not(.visitor-purpose)>.visitor-hero-art,.lab-hero>#enhancement-fleet-day{grid-column:2;grid-row:1/12;align-self:start}.lab-hero .teaching-heading{display:block}}
 .studio-header .visitor-motion-control{margin:0}.studio-header{position:sticky;top:0;z-index:30}.studio-header .visitor-motion-control{font-size:12px;padding:8px 12px}.studio-header nav{flex-wrap:wrap}
 @media(max-width:767px){.studio-header .visitor-motion-control{flex-basis:100%;margin:0}.visitor-purpose .visitor-byline{margin-top:16px!important}.visitor-purpose .visitor-first-action{margin-top:8px}.ops-intro .teaching-title{font-size:36px!important}.lab-hero .visitor-hero-art{max-width:280px}}

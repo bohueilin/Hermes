@@ -6,6 +6,7 @@
 // minutes written beside the seconds the card shows.
 
 import assert from "node:assert/strict";
+import { UI_CLASS_REGISTRY } from "./helpers/ui-class-registry.mjs";
 import { readFileSync } from "node:fs";
 import { before, describe, test } from "node:test";
 
@@ -288,6 +289,7 @@ describe("the verdict readout (demo plan beat 2.2)", () => {
     const selectorText = CSS.replace(/\/\*[\s\S]*?\*\//g, "").match(/[^{}]+(?=\{)/g).join(" ");
     for (const name of classes) {
       assert.match(selectorText, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
+      assert.ok(UI_CLASS_REGISTRY.includes(name), `curated UI registry includes .${name}`);
     }
     // A beat change is instant, so nothing a beat puts on screen may animate. Comments go first: one of them says the
     // word "transition" to explain why there is none.

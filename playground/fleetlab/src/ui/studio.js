@@ -131,7 +131,7 @@ export function mountStudio(app) {
   const navLink=([id,text])=>{const link=pageLink(text,id,navigate);link.setAttribute('data-nav',id);return link;};
   const navItems=[['overview','Home'],['simulation','Fleet day'],['streets','Street lab'],['catalog','Explore'],['approach','About & limits']];
   const navLinks=navItems.map(navLink);
-  const labLinkNodes=[['simulation','Fleet day'],['streets','Street lab'],['depots','Four-area experiments'],['scale','Scale lab'],['flows','Depot flow lab'],['tour','Guided walkthrough']].map(navLink);
+  const labLinkNodes=[['depots','Four-area experiments'],['scale','Scale lab'],['flows','Depot flow lab'],['tour','Guided walkthrough']].map(navLink);
   const labLinks=el('nav',{class:'lab-links','aria-label':'Quick links'},labLinkNodes);
   const brand=pageLink('F','overview',navigate);brand.setAttribute('class','studio-monogram');brand.setAttribute('aria-label','FleetLab home');
   const skip=el('a',{href:'#studio-content',class:'studio-skip',on:{click:event=>{event.preventDefault();activeMain?.focus();}}},'Skip to main content');

@@ -39,7 +39,7 @@ const diagram=(file,alt)=>el('figure',{class:'visitor-diagram'},[el('img',{src:'
 const flow=doc.querySelector('.flow-hero');
 if(flow&&!flow.hasAttribute('data-diagram-observed')){
  flow.setAttribute('data-diagram-observed','');
- const draw=()=>{const question=flow.querySelector('.flow-question');if(!question||question.querySelector('.visitor-diagram'))return;const crossed=flow.querySelector('.lab-chooser a[aria-current="page"]')?.getAttribute('href')?.includes('crossed-priorities');question.insertBefore(diagram(crossed?'D-02-crossed-priorities.webp':'D-01-depot-scenario.webp',crossed?'Four pods with mismatched upload sizes and deadlines sharing one link.':'Two autonomous pods sharing one network link, each with a deadline.'),question.querySelector(crossed?'.flow-definition':'.flow-lede'));};
+ const draw=()=>{const question=flow.querySelector('.flow-question');if(!question||flow.querySelector('.visitor-diagram'))return;const crossed=flow.querySelector('.lab-chooser a[aria-current="page"]')?.getAttribute('href')?.includes('crossed-priorities');flow.appendChild(diagram(crossed?'D-02-crossed-priorities.webp':'D-01-depot-scenario.webp',crossed?'Four pods with mismatched upload sizes and deadlines sharing one link.':'Two autonomous pods sharing one network link, each with a deadline.'));};
  draw();new MutationObserver(draw).observe(flow,{childList:true});
 }
 const dispatch=doc.querySelector('.bench>#chapter-copy');
