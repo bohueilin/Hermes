@@ -128,12 +128,34 @@ export function decorateDepotPipes(doc=document){
  pipeControllers.get(pipe)?.(readDepotPipeConfig(doc));
  if(!ready.querySelector('.depot-readiness-context')){
   const context=el('div',{class:'depot-readiness-context'},[
+   el('p',{},'Simulation only — no real-fleet claim or deployment permission.'),
    el('p',{},'This is an uncalibrated teaching simulation. It proves nothing about a real fleet and authorizes no operational change.'),
    el('p',{},'Power-slack B changes the physical yard: one added DC port also rezones one waiting stall. That bundled comparison cannot isolate the effect of the port alone.'),
    el('p',{},'The default release-by allowance is 21,600 seconds after each arrival: a six-hour overnight window per visit, distinct from the twelve-hour run horizon. WAN spend, prepositioning cache content and allowing later release are trade-offs to test; this lab models no prices.'),
-   el('a',{href:'/#/fleet-day?lesson=staffing-readiness'},'Isolate staffing versus bays in Fleet day →'),el('a',{href:'/#/depot-flow-lab?lesson=two-vehicles'},'Compare one scheduling factor in Depot Flow →')]);ready.insertBefore(context,ready.firstChild);
+   el('a',{href:'/#/fleet-day?lesson=staffing-readiness'},'Isolate staffing versus bays in Fleet day →'),el('a',{href:'/#/depot-flow-lab?lesson=two-vehicles'},'Compare one scheduling factor in Depot Flow →')]);ready.insertBefore(context,ready.querySelector('.lead')?.nextSibling??ready.firstChild);
  }
  const outcome=doc.getElementById('outcome');if(!outcome?.querySelector('[data-state="verified"]'))return;
+ const classification=outcome.querySelector('.classification');
+ if(classification&&!outcome.querySelector('.depot-result-overview')){
+  const overview=el('section',{class:'depot-result-overview','aria-label':'Result summary'},classification);
+  for(const title of ['What changed','What got worse','What remains uncertain']){
+   const heading=[...outcome.children].find(n=>n.tagName==='H3'&&n.textContent===title);
+   if(heading){const copy=heading.nextSibling;overview.appendChild(heading);if(copy)overview.appendChild(copy);}
+  }
+  outcome.insertBefore(overview,outcome.children[1]);
+  const vector=outcome.querySelector('tr[data-component]')?.closest('table');
+  if(vector){
+   const equal=[...vector.querySelectorAll('tbody > tr')].filter(row=>row.querySelector('.mark.equal'));
+   if(equal.length){
+    const heads=[...vector.querySelectorAll('thead th')].map(h=>el('th',{scope:'col'},h.textContent));
+    const details=el('details',{},[el('summary',{},`${equal.length} equal components — inspect exact values`),el('div',{class:'table-scroll',role:'region',tabindex:'0','aria-label':'Unchanged comparison components'},el('table',{},[el('caption',{},'Unchanged comparison components'),el('thead',{},el('tr',{},heads)),el('tbody',{},equal)]))]);
+    vector.parentNode.parentNode.insertBefore(details,vector.parentNode.nextSibling);
+   }
+   const remaining=[...vector.querySelectorAll('tbody > tr')],pair=classification.hasAttribute('data-classification');
+   const caption=!pair?'Baseline components, in presentation order':remaining.some(row=>!row.querySelector('.mark.better,.mark.worse'))?'Comparison components — unavailable values retained':'Changed comparison components, in presentation order';
+   vector.querySelector('caption').textContent=caption;vector.parentNode.setAttribute('aria-label',caption);vector.parentNode.hidden=!remaining.length;
+  }
+ }
  const countText=[...doc.querySelectorAll('.field .technical-only')].find(n=>/^visits \(count\):/.test(n.textContent))?.textContent;
  const count=Number(countText?.match(/:\s*(\d+)/)?.[1]);if(!count)return;
  const tile=outcome.querySelector('[data-term="visit.turnaround_observed_s"]');if(!tile)return;

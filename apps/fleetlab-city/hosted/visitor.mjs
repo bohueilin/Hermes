@@ -226,15 +226,15 @@ for(const row of rows){
  if(!Number.isSafeInteger(final)||final<0)continue;
  const exact=row.textContent;row.setAttribute('aria-label',exact);
  const display=row.ownerDocument.createElement('span');display.setAttribute('aria-hidden','true');
- const label=exact.slice(0,exact.lastIndexOf(':')+1);display.textContent=exact;
- const swatch=row.querySelector('.request-swatch');row.replaceChildren(...(swatch?[swatch]:[]),display);jobs.push({display,label,final});
+ display.textContent=exact;
+ const swatch=row.querySelector('.request-swatch');row.replaceChildren(...(swatch?[swatch]:[]),display);jobs.push({display,exact});
 }
 if(!jobs.length)return ()=>{};
 const token=root.ownerDocument.defaultView?.getComputedStyle?.(root).getPropertyValue('--motion-count').trim(),match=token?.match(/^(\d+(?:\.\d+)?)(ms|s)$/),duration=match&&Number(match[1])>0?Number(match[1])*(match[2]==='s'?1000:1):1200;
 let id=null,stopped=false;const start=now();
-const finish=()=>{stopped=true;if(id!==null)cancel(id);for(const j of jobs)j.display.textContent=`${j.label} ${j.final}`;root.classList.remove('visitor-count-reveal');root.style.removeProperty('--count-progress');};
-const step=t=>{if(stopped)return;if(!root.isConnected||root.closest('[hidden]')||root.getAttribute('data-stale')==='true'||!allowed()){finish();return;}const p=Math.min(1,Math.max(0,(t-start)/duration)),eased=1-(1-p)**3;root.style.setProperty('--count-progress',String(eased));for(const j of jobs)j.display.textContent=`${j.label} ${Math.floor(j.final*eased)}`;if(p<1)id=request(step);else finish();};
-root.classList.add('visitor-count-reveal');root.style.setProperty('--count-progress','0');for(const j of jobs)j.display.textContent=`${j.label} 0`;id=request(step);return finish;
+const finish=()=>{stopped=true;if(id!==null)cancel(id);for(const j of jobs)j.display.textContent=j.exact;root.classList.remove('visitor-count-reveal');root.style.removeProperty('--count-progress');};
+const step=t=>{if(stopped)return;if(!root.isConnected||root.closest('[hidden]')||root.getAttribute('data-stale')==='true'||!allowed()){finish();return;}const p=Math.min(1,Math.max(0,(t-start)/duration)),eased=1-(1-p)**3;root.style.setProperty('--count-progress',String(eased));if(p<1)id=request(step);else finish();};
+root.classList.add('visitor-count-reveal');root.style.setProperty('--count-progress','0');id=request(step);return finish;
 }
 function installVisualMotion(doc){
 if(motionControllers.has(doc))return;

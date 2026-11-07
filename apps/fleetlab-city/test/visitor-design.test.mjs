@@ -144,14 +144,14 @@ test('replay ribbon moves before the scrubber without cloning intervals or losin
  }finally{restore();}
 });
 
-test('accepted count-up eases for 1200 ms while accessible counts remain exact, and runs once per result',()=>{
+test('accepted reveal keeps visible and accessible integers exact at every frame, and runs once per result',()=>{
  const restore=installFakeDom();try{
   const root=document.createElement('section');document.body.appendChild(root);root.setAttribute('data-stale','false');root.setAttribute('data-result-accepted','true');
   const row=document.createElement('li');row.setAttribute('data-request-count','177');row.textContent='Completed: 177';root.appendChild(row);
   let frame,requested=0;
   const options={request:fn=>(frame=fn,++requested),cancel:()=>{},allowed:()=>true,now:()=>0};
   const stop=animateOutcomeCounts(root,options);
-  frame(600);assert.equal(row.textContent,'Completed: 154');assert.equal(row.getAttribute('aria-label'),'Completed: 177');assert.equal(row.querySelector('span').getAttribute('aria-hidden'),'true');
+  assert.equal(row.textContent,'Completed: 177');frame(0);assert.equal(row.textContent,'Completed: 177');frame(600);assert.equal(row.textContent,'Completed: 177');assert.equal(row.getAttribute('aria-label'),'Completed: 177');assert.equal(row.querySelector('span').getAttribute('aria-hidden'),'true');
   assert.equal(root.style.getPropertyValue('--count-progress'),'0.875');
   frame(1200);assert.equal(row.textContent,'Completed: 177');assert.equal(row.getAttribute('aria-label'),'Completed: 177');
   assert.equal(root.classList.contains('visitor-count-reveal'),false);stop();assert.equal(row.getAttribute('data-request-count'),'177');
@@ -160,7 +160,19 @@ test('accepted count-up eases for 1200 ms while accessible counts remain exact, 
 });
 
 const outcomeMetrics={completed_trips:80,unserved_requests:12,pending_requests:5,in_progress_trips:3,total_requests:100};
-test('unaccepted, stale, incomplete and initially restricted summaries remain exact without count-up',()=>{
+test('the accepted request partition never displays partial totals during reveal',()=>{
+ const restore=installFakeDom();try{
+  const root=requestOutcomes({completed_trips:95,unserved_requests:176,pending_requests:4,in_progress_trips:9,total_requests:284},false,{accepted:true});document.body.appendChild(root);
+  let frame;animateOutcomeCounts(root,{request:fn=>(frame=fn,1),cancel:()=>{},allowed:()=>true,now:()=>0});
+  for(const time of [0,1,300,600,1199,1200]){
+   frame(time);const rows=root.querySelectorAll('[data-request-count]');
+   assert.deepEqual(rows.map(row=>row.textContent),['Completed: 95','Unserved: 176','Waiting: 4','In progress: 9']);
+   assert.equal(rows.reduce((sum,row)=>sum+Number(row.textContent.split(': ')[1]),0),284);
+  }
+ }finally{restore();}
+});
+
+test('unaccepted, stale, incomplete and initially restricted summaries remain exact without reveal',()=>{
  const restore=installFakeDom();try{
   for(const [metrics,stale,accepted,allowed] of [[outcomeMetrics,false,false,true],[outcomeMetrics,true,true,true],[null,false,true,true],[outcomeMetrics,false,true,false]]){
    const root=requestOutcomes(metrics,stale,{accepted});document.body.appendChild(root);const exact=root.textContent;let requested=0;
@@ -170,11 +182,11 @@ test('unaccepted, stale, incomplete and initially restricted summaries remain ex
  }finally{restore();}
 });
 
-test('restriction, staleness, detachment and cancellation restore final counts and never restart',()=>{
+test('restriction, staleness, detachment and cancellation retain final counts and never restart',()=>{
  const restore=installFakeDom();try{
   for(const kind of ['restriction','stale','detach','cancel']){
    const root=requestOutcomes(outcomeMetrics,false,{accepted:true});document.body.appendChild(root);const row=root.querySelector('[data-request-count]');let frame,allowed=true,requested=0;
-   const options={request:fn=>(frame=fn,++requested),cancel:()=>{},allowed:()=>allowed,now:()=>0};const stop=animateOutcomeCounts(root,options);frame(600);assert.equal(row.textContent,'Completed: 70');assert.equal(row.getAttribute('aria-label'),'Completed: 80');
+   const options={request:fn=>(frame=fn,++requested),cancel:()=>{},allowed:()=>allowed,now:()=>0};const stop=animateOutcomeCounts(root,options);frame(600);assert.equal(row.textContent,'Completed: 80');assert.equal(row.getAttribute('aria-label'),'Completed: 80');
    if(kind==='restriction')allowed=false;else if(kind==='stale')root.setAttribute('data-stale','true');else if(kind==='detach')root.remove();else stop();frame(700);
    assert.equal(row.textContent,'Completed: 80');assert.equal(row.getAttribute('aria-label'),'Completed: 80');assert.equal(root.classList.contains('visitor-count-reveal'),false);
    allowed=true;root.setAttribute('data-stale','false');document.body.appendChild(root);const before=requested;animateOutcomeCounts(root,options);assert.equal(requested,before);
@@ -194,8 +206,8 @@ test('accepted summary waits until visible, uses the CSS count duration and igno
  const x=visualMotionHarness({duration:'2s'});try{
   const root=requestOutcomes(outcomeMetrics,false,{accepted:true}),row=root.querySelector('[data-request-count]');x.replace(root);
   assert.equal(x.restore.dom.frames.pending,0);assert.equal(row.textContent,'Completed: 80');x.show(root,false);assert.equal(x.restore.dom.frames.pending,0);
-  x.show(root);x.restore.dom.frames.flush(1000);assert.equal(row.textContent,'Completed: 70');assert.equal(row.getAttribute('aria-label'),'Completed: 80');
-  x.replace(root);x.restore.dom.frames.flush(1500);assert.equal(row.textContent,'Completed: 78','same accepted node keeps its original start time');x.restore.dom.frames.flush(2000);assert.equal(row.textContent,'Completed: 80');
+  x.show(root);x.restore.dom.frames.flush(1000);assert.equal(row.textContent,'Completed: 80');assert.equal(row.getAttribute('aria-label'),'Completed: 80');
+  assert.equal(root.style.getPropertyValue('--count-progress'),'0.875');x.replace(root);x.restore.dom.frames.flush(1500);assert.equal(root.style.getPropertyValue('--count-progress'),'0.984375');assert.equal(row.textContent,'Completed: 80','repeated rendering retains the exact accepted count');x.restore.dom.frames.flush(2000);assert.equal(row.textContent,'Completed: 80');
   x.replace(root);x.show(root);assert.equal(x.restore.dom.frames.pending,0);
   const restored=requestOutcomes(outcomeMetrics,false);x.replace(restored);x.show(restored);assert.equal(x.restore.dom.frames.pending,0);
  }finally{x.close();}
@@ -203,7 +215,7 @@ test('accepted summary waits until visible, uses the CSS count duration and igno
 test('pause, hidden tab or page and reduced motion consume pending or active acceptance without resuming it',()=>{
  for(const kind of ['pause','hidden','page','system','override'])for(const active of [false,true]){
   const x=visualMotionHarness();try{
-   const root=requestOutcomes(outcomeMetrics,false,{accepted:true}),row=root.querySelector('[data-request-count]');x.replace(root);if(active){x.show(root);x.restore.dom.frames.flush(600);assert.equal(row.textContent,'Completed: 70');}
+   const root=requestOutcomes(outcomeMetrics,false,{accepted:true}),row=root.querySelector('[data-request-count]');x.replace(root);if(active){x.show(root);x.restore.dom.frames.flush(600);assert.equal(row.textContent,'Completed: 80');}
    const control=document.querySelector('.visitor-motion-control');
    if(kind==='pause')control.click();else if(kind==='hidden'){document.hidden=true;document.dispatchEvent(new Event('visibilitychange'));}else if(kind==='page'){x.container.hidden=true;x.attributes(x.container);}else if(kind==='system')x.restore.dom.media.set('(prefers-reduced-motion: reduce)',true);else{document.documentElement.setAttribute('data-motion','reduce');x.attributes(document.documentElement);}
    assert.equal(row.textContent,'Completed: 80');assert.equal(x.restore.dom.frames.pending,0);
@@ -226,9 +238,9 @@ test('the user-pause signal marks only the visitor\'s own pause and persists whi
  }finally{x.close();}
 });
 
-test('replacing a summary finishes the old count-up and never revives it when reinserted',()=>{
+test('replacing a summary finishes its old reveal and never revives it when reinserted',()=>{
  const x=visualMotionHarness();try{
-  const first=requestOutcomes(outcomeMetrics,false,{accepted:true}),row=first.querySelector('[data-request-count]');x.replace(first);x.show(first);x.restore.dom.frames.flush(600);assert.equal(row.textContent,'Completed: 70');
+  const first=requestOutcomes(outcomeMetrics,false,{accepted:true}),row=first.querySelector('[data-request-count]');x.replace(first);x.show(first);x.restore.dom.frames.flush(600);assert.equal(row.textContent,'Completed: 80');
   const second=requestOutcomes(outcomeMetrics,false,{accepted:true});x.replace(second);assert.equal(row.textContent,'Completed: 80');assert.equal(x.restore.dom.frames.pending,0);
   x.replace(first);x.show(second);x.show(first);assert.equal(x.restore.dom.frames.pending,0);assert.equal(row.textContent,'Completed: 80');
  }finally{x.close();}
