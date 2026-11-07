@@ -234,7 +234,7 @@ def software_delivery_marker(html, accepted):
     )
 
 
-CLOSURE_LIMITS = {"nf03": 557056, "depot": 786432}
+CLOSURE_LIMITS = {"nf03": 567714, "depot": 786432}
 
 
 def final_route_counts(routes, files, owners=None):

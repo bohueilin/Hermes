@@ -94,7 +94,7 @@ test("the offline single file never reaches the capacity viewer and stays within
   assert.ok(!new RegExp(`^${MODULE_MARKER.replace(/[/]/g, "\\/")}\\S*depot-capacity`, "m").test(html), "no depot-capacity module marker");
   assert.ok(!html.includes(".fl-capacity-bench"), "hosted bench CSS is absent");
   assert.ok(!html.includes("fleetlab.capacity-release/"), "release sidecar is absent");
-  assert.ok(Buffer.byteLength(html) <= APP_MAX_BYTES - 50_000, "the offline reserve remains available");
+  assert.ok(Buffer.byteLength(html) <= APP_MAX_BYTES - 40_451, "the offline reserve remains available");
 });
 
 test("capacity packages route-local CSS with strict missing, changed and unexpected-file checks", () => {

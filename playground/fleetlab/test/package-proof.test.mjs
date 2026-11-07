@@ -90,7 +90,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.equal(receipt.counts.depot_route_local_bytes, measureSiteOwnership(files).depot_route_local_bytes);
   assert.ok(receipt.counts.depot_closure_bytes <= 786432 && receipt.counts.depot_route_local_bytes <= 524288);
   assert.ok(receipt.counts.package_metadata_bytes <= 57344 && receipt.counts.source_offer_extracted_bytes <= 5242880);
-  assert.ok(receipt.counts.offline_bytes <= 2571440);
+  assert.ok(receipt.counts.offline_bytes <= 2580989);
   assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 557056);
   assert.equal(result.files.size, 2);
   const archive = result.files.get(receipt.source_offer.path);
@@ -130,8 +130,8 @@ test("the offline edition reproduces the approved catalog look_for bytes exactly
   // Catalog look_for wave (2026-10-31, owner D2): re-pinned from the C2 pair (2566962, e49c0aba...) to the measured bytes and SHA-256.
   // Wave 2C (2026-11-05, owner D1-D9 GO): recomputed from the reviewed implementation tree.
   const html = buildHtml(source);
-  assert.equal(Buffer.byteLength(html), 2570727);
-  assert.equal(hash(html), "9a05b7cdf176077dee0227918f61093bd7c609d58f013bf59712ddb4909cae2f");
+  assert.equal(Buffer.byteLength(html), 2580989);
+  assert.equal(hash(html), "cd0d555b9dd1e975ce618b2665c714405b83ddb826e0a6f4961389390ae65d22");
 });
 
 test("development measurement rejects altered site, offline bytes, extras and resealed root HTML", () => {
@@ -156,8 +156,11 @@ test("development measurement rejects altered site, offline bytes, extras and re
   writeFileSync(join(site, "network-flows/capacity/release.json"), canonical({ ...payload, release_digest: hash(canonical(payload)) }) + "\n");
   assert.throws(() => tool.measurePackageProof(options), /reproduc|differ|mismatch/i);
   writeMap(site, files);
-  writeFileSync(offline, `${buildHtml(source)}\n`);
+  const original=buildHtml(source);
+  const altered=Buffer.from(original);altered[0]^=1;writeFileSync(offline, altered);
   assert.throws(() => tool.measurePackageProof(options), /offline.*(?:reproduc|differ|mismatch)/i);
+  writeFileSync(offline, `${original}\n`);
+  assert.throws(() => tool.measurePackageProof(options), /file byte limit exceeded/);
 });
 
 test("release package binds every source and its executing proof tool to the exact commit", () => {

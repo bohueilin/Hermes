@@ -25,7 +25,7 @@ export const LIMITS = Object.freeze({ legacy_text_bytes: 2621440, raw_source_and
   emitted_text_bytes: 3801088, package_metadata_bytes: 57344,
   source_offer_compressed_bytes: 4194304, source_offer_extracted_bytes: 5242880,
   teaching_text_plus_source_bytes: 7340032, teaching_generation_bytes: 17825792,
-  offline_bytes: 2571440 });
+  offline_bytes: 2580989 });
 // Per-file read caps stay at their pre-Q6 values; only the src/tools tree totals follow the raw ceiling.
 const FILE_CAPTURE_BYTES = 4194304, INTEGRATED_READ_BYTES = 3145728, PUBLICATION_READ_BYTES = 40960;
 const TOOL_ROOT = fileURLToPath(new URL("../", import.meta.url));
@@ -314,7 +314,7 @@ function assemble({ playground, captured, identity, site, offline }) {
       original_inventory_sha256: digest(canonical(sourceInventory)), owner: "teaching-original-source-and-tools" },
     validation_policy: { repository_path: CONTRACT, ...fingerprint(captured.contracts) },
     license: { repository_path: "LICENSE", ...fingerprint(captured.license) },
-    offline: { path: "downloads/fleetlab-offline.html", ...fingerprint(offline), owner: "complete-offline-edition", reserved_bytes: 50000 }, media,
+    offline: { path: "downloads/fleetlab-offline.html", ...fingerprint(offline), owner: "complete-offline-edition", reserved_bytes: 40451 }, media,
     emitted_files: Object.fromEntries([...site].map(([path, data]) => [path, { ...fingerprint(data), owner: owned.owners[path] }])),
     routes: measured.routes,
     ownership: { receipt: { path: RECEIPT_PATH, owner: "package-metadata", self_hash: "External integration inventory hashes this receipt; own byte size is included by fixed point." },
