@@ -2,7 +2,7 @@ import {flowButton as button,svgElement as svg,el} from './dom.js';
 import {createCarGlyph} from './car-glyph.js';
 import {ACTIVITY_COLORS} from './operations-map.js';
 import {cameraMatrix,projectPoint,fitCameraToPoints,orbitCamera,pointOnPath,buildCarMesh,buildRoadMesh,box,quad,transformMesh,createWebGLRenderer} from './scene-3d.js';
-const color=state=>state.startsWith('queued_')?'#657589':ACTIVITY_COLORS[state]??'#555b65';
+const color=state=>state.startsWith('queued_')?'#a87560':ACTIVITY_COLORS[state]??'#555b65';
 const append=(target,source)=>{for(let i=0;i<source.length;i++)target.push(source[i]);};
 
 export function bayVehiclePosition(run,car,next,fraction){
@@ -38,7 +38,7 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
  const legendColor=()=>legendHover??legendFocus??legendPinned;
  const legendButton=(name,value)=>{const b=button(name,()=>{legendPinned=legendPinned===value?null:value;for(const n of element.querySelectorAll('[data-legend-color]'))n.setAttribute('aria-pressed',String(n.getAttribute('data-legend-color')===legendPinned));redraw();});b.setAttribute('data-legend-state',name.replaceAll(' ','_'));b.setAttribute('data-legend-color',value);b.setAttribute('aria-pressed','false');b.insertBefore(el('span',{'aria-hidden':'true',style:`background:${value}`,class:'legend-swatch'}),b.firstChild);for(const [event,fn] of Object.entries({pointerenter:()=>legendHover=value,pointerleave:()=>legendHover=null,focus:()=>legendFocus=value,blur:()=>legendFocus=null}))b.addEventListener(event,()=>{fn();redraw();});return b;};
  const element=el('figure',{class:'bay-map'},[controls,el('div',{class:'bay-map-caption-top'},[status,el('span',{},'Drag to orbit · scroll to zoom · choose a city to inspect')]),viewport,
-  el('ul',{class:'bay-map-legend','aria-label':'Map legend'},[...Object.entries(ACTIVITY_COLORS).filter(([key])=>key!=='ready').map(([key,value])=>[key.replaceAll('_',' '),value]),['waiting for a resource','#657589'],['unclassified activity','#555b65'],['Hypothetical depot','#4c7666']].map(([name,value])=>el('li',{},name==='Hypothetical depot'?[el('span',{'aria-hidden':'true',class:'legend-swatch legend-depot',style:`background:${value}`}),name]:legendButton(name,value)))),
+  el('ul',{class:'bay-map-legend','aria-label':'Map legend'},[...Object.entries(ACTIVITY_COLORS).filter(([key])=>key!=='ready').map(([key,value])=>[key.replaceAll('_',' '),value]),['waiting for a resource','#a87560'],['unclassified activity','#555b65'],['Hypothetical depot','#4c7666']].map(([name,value])=>el('li',{},name==='Hypothetical depot'?[el('span',{'aria-hidden':'true',class:'legend-swatch legend-depot',style:`background:${value}`}),name]:legendButton(name,value)))),
   el('figcaption',{},[el('a',{href:'https://www.openstreetmap.org/copyright',target:'_blank',rel:'noopener noreferrer'},'© OpenStreetMap contributors'),el('span',{},' · ODbL. Frozen September 2026 extract. Sparse major-road routes; one-way and access rules excluded. Cars and hypothetical depots are enlarged; stationary cars are spread into display slots around their recorded anchor. Grid spacing: 5 km. Coastlines are sourced outlines; no terrain or water polygons. Traffic and demand are simulated. This is not a commercial service-area map.')])]);
  if(onDownloadMap)element.appendChild(button('Download attributed map data',onDownloadMap));
  const xs=places.map(p=>p.x),ys=places.map(p=>p.y);
