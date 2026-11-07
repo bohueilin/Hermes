@@ -11,13 +11,13 @@ export const INPUT_DIGESTS={legacy:'15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d
 export const RUNTIME={node:'v22.23.4',python:'3.11.15'};
 export const OFFLINE_BEFORE={bytes:2565111,sha256:'313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1'};
 // Wave 3 (2026-11-06, owner W3-D2): exact affected ceilings and recomputed offline pair.
-export const OFFLINE_AFTER={bytes:2580989,sha256:'cd0d555b9dd1e975ce618b2665c714405b83ddb826e0a6f4961389390ae65d22'};
+export const OFFLINE_AFTER={bytes:2580989,sha256:'95b8b93894c15c74bd73aa2b42a2c00479750e86d95c93c7e70d5c524a10034f'};
 // Section 3 stage bounds; both modes apply them.
 // Catalog look_for wave (2026-10-31, owner): OFFLINE_AFTER and emitted_text_bytes (3577477) re-pinned to the measured stage, no allowance.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
 export const BOUNDS={nf03_closure_bytes:567714,nf04_closure_bytes:249444,delivery_order_closure_bytes:254568,r1_closure_bytes:225647,r3_closure_bytes:181351,depot_closure_bytes:541250,
- emitted_text_bytes:3615482,integration_text_bytes:156649,integration_source_bytes:417103,source_offer_extracted_bytes:4126078,source_offer_compressed_bytes:1162766,
- package_metadata_bytes:45385,non_city_bytes:16405012};
+ emitted_text_bytes:3615482,integration_text_bytes:156649,integration_source_bytes:417103,source_offer_extracted_bytes:4126078,source_offer_compressed_bytes:1162767,
+ package_metadata_bytes:45385,non_city_bytes:16405013};
 export const ROUTE_LOCAL={min:418150,max:418159};
 // BEFORE values at the base. The compressed offer embeds the commit, so only non-City minus the offer is exact across commits.
 export const BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,

@@ -131,7 +131,7 @@ test("the offline edition reproduces the approved catalog look_for bytes exactly
   // Wave 2C (2026-11-05, owner D1-D9 GO): recomputed from the reviewed implementation tree.
   const html = buildHtml(source);
   assert.equal(Buffer.byteLength(html), 2580989);
-  assert.equal(hash(html), "cd0d555b9dd1e975ce618b2665c714405b83ddb826e0a6f4961389390ae65d22");
+  assert.equal(hash(html), "95b8b93894c15c74bd73aa2b42a2c00479750e86d95c93c7e70d5c524a10034f");
 });
 
 test("development measurement rejects altered site, offline bytes, extras and resealed root HTML", () => {

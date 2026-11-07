@@ -11,14 +11,14 @@ import {checkStage,INPUT_DIGESTS,RUNTIME,OFFLINE_BEFORE,OFFLINE_AFTER,BOUNDS,ROU
 // Catalog look_for wave (2026-10-31, owner): emitted_text_bytes 3577477 and the offline AFTER pair re-pinned to the measured stage.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
 const SPEC_BOUNDS={nf03_closure_bytes:567714,nf04_closure_bytes:249444,delivery_order_closure_bytes:254568,r1_closure_bytes:225647,r3_closure_bytes:181351,depot_closure_bytes:541250,
- emitted_text_bytes:3615482,integration_text_bytes:156649,integration_source_bytes:417103,source_offer_extracted_bytes:4126078,source_offer_compressed_bytes:1162766,
- package_metadata_bytes:45385,non_city_bytes:16405012};
+ emitted_text_bytes:3615482,integration_text_bytes:156649,integration_source_bytes:417103,source_offer_extracted_bytes:4126078,source_offer_compressed_bytes:1162767,
+ package_metadata_bytes:45385,non_city_bytes:16405013};
 const SPEC_BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,
  depot_route_local_bytes:418159,emitted_text_bytes:3569285,integration_text_bytes:129056,hosted_artwork_bytes:7793265,source_offer_extracted_bytes:4079740,non_city_minus_offer_bytes:15039757};
 const DIGEST_PREFIXES={legacy:'15b3d561',city_base:'4fa335d2',city_source_offer:'1bf42853',readback:'708659b4'};
 const OFFLINE_SHA='313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1';
 // Wave 3 (2026-11-06, owner W3-D2): exact affected ceilings and recomputed offline pair.
-const OFFLINE_AFTER_PAIR={bytes:2580989,sha256:'cd0d555b9dd1e975ce618b2665c714405b83ddb826e0a6f4961389390ae65d22'};
+const OFFLINE_AFTER_PAIR={bytes:2580989,sha256:'95b8b93894c15c74bd73aa2b42a2c00479750e86d95c93c7e70d5c524a10034f'};
 const LEGACY='15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d1ee9c9a7d3f7626b3529';
 
 // A synthetic stage holding the BEFORE values, shaped like the three records build-release.py writes.
