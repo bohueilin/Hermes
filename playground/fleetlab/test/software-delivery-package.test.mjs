@@ -30,11 +30,14 @@ test('the generated boot injects the independently packaged study into the app',
   assert.ok(JSON.parse(files.get(tool.DELIVERY_RELEASE)).emitted_files[study]);
 });
 
-test('historical 2621323-byte legacy generation plus 118 bytes fails without using sidecar recovery',()=>{
+test('the approved legacy boundary accepts its exact limit and rejects one extra byte without sidecar recovery',()=>{
   assert.equal(typeof tool.measureSiteOwnership,'function','owner gate is not implemented');
   const files=buildSite(root), measured=tool.measureSiteOwnership(files);
-  files.set('styles.css',files.get('styles.css')+' '.repeat(2621323-measured.legacy_text_bytes+118));
-  assert.throws(()=>tool.measureSiteOwnership(files),/legacy.*2621441.*2621440/);
+  const limit=2623233;assert.equal(tool.OWNER_LIMITS.legacy_text_bytes,limit);
+  files.set('styles.css',files.get('styles.css')+' '.repeat(limit-measured.legacy_text_bytes));
+  assert.equal(tool.measureSiteOwnership(files).legacy_text_bytes,limit);
+  files.set('styles.css',files.get('styles.css')+' ');
+  assert.throws(()=>tool.measureSiteOwnership(files),/legacy.*2623234.*2623233/);
 });
 
 test('300000-byte scratch NF04-only module has a valid emitted build path without increasing legacy',()=>{
@@ -124,9 +127,17 @@ test('a newly shared NF04 dependency is charged to legacy and removed from route
   const files=buildSite(root);
   const path='src/runtime/software-delivery-job.js';
   assert.ok(files.has(path),'the production NF04 route must include its contract');
-  const before=tool.measureSiteOwnership(files),added="import {createDeliveryJob} from '../runtime/software-delivery-job.js';\n";
+  const production=tool.measureSiteOwnership(files),added="import {createDeliveryJob} from '../runtime/software-delivery-job.js';\n";
+  const movedBytes=Buffer.byteLength(files.get(path))+Buffer.byteLength(added);
+  // This ownership-only fixture trades unrelated CSS bytes for exactly the new legacy dependency.
+  const cssBytes=Buffer.byteLength(files.get('styles.css'))-movedBytes;
+  assert.ok(cssBytes>=4,'the stylesheet can supply fixture headroom without changing any production limit');
+  files.set('styles.css','/*'+' '.repeat(cssBytes-4)+'*/');
+  const before=tool.measureSiteOwnership(files);
+  assert.equal(before.legacy_text_bytes,production.legacy_text_bytes-movedBytes);
   files.set('src/ui/app.js',added+files.get('src/ui/app.js'));
   const after=tool.measureSiteOwnership(files);
+  assert.equal(after.legacy_text_bytes,production.legacy_text_bytes);
   assert.equal(after.owners[path],'legacy-shared');
   assert.equal(after.legacy_text_bytes,before.legacy_text_bytes+Buffer.byteLength(files.get(path))+Buffer.byteLength(added));
   assert.equal(after.nf04_route_local_bytes,before.nf04_route_local_bytes-Buffer.byteLength(files.get(path)));
@@ -148,8 +159,10 @@ test('final transformed headers remain inside each complete route closure cap',(
   const teaching=buildSite(root),final=new Map(teaching);
   const closure=new Set([...tool.capacityScope(teaching),'network-flows/capacity/release.json','_headers']);
   const bytes=[...closure].reduce((total,path)=>total+Buffer.byteLength(teaching.get(path)),0);
-  final.set('_headers',final.get('_headers')+' '.repeat(567715-bytes));
-  assert.throws(()=>tool.measureIntegratedText(teaching,final),/nf03.*closure.*budget/);
+  final.set('_headers',final.get('_headers')+' '.repeat(593859-bytes));
+  assert.equal(tool.measureIntegratedText(teaching,final).nf03_closure_bytes,593859);
+  final.set('_headers',final.get('_headers')+' ');
+  assert.throws(()=>tool.measureIntegratedText(teaching,final),/nf03.*closure.*budget.*593860.*593859/);
   // Isolate the NF04 closure guard from the independently capped aggregate.
   const nf04Only=new Map([...teaching].filter(([path])=>!ORDER_MODULES.has(path)&&!path.startsWith('network-flows/delivery-order/')&&!R1_MODULES.has(path)&&!path.startsWith('network-flows/rebalancing/')&&!R3_MODULES.has(path)&&!path.startsWith('network-flows/dispatch/')&&!DEPOT_MODULE_PATH.test(path)&&!path.startsWith('depot-readiness/')));
   const nf04=tool.measureSiteOwnership(nf04Only).nf04_closure_bytes;

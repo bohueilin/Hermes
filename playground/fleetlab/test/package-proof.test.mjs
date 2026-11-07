@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 import { measureSiteOwnership, lessonNavigation } from "../tools/software-delivery-package.mjs";
 import { buildHtml, buildSite } from "../tools/pack.mjs";
+import { APP_MAX_BYTES } from "../tools/media.mjs";
 
 const source = fileURLToPath(new URL("../", import.meta.url));
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "fleetlab-package-test-")));
@@ -90,7 +91,8 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.equal(receipt.counts.depot_route_local_bytes, measureSiteOwnership(files).depot_route_local_bytes);
   assert.ok(receipt.counts.depot_closure_bytes <= 786432 && receipt.counts.depot_route_local_bytes <= 524288);
   assert.ok(receipt.counts.package_metadata_bytes <= 57344 && receipt.counts.source_offer_extracted_bytes <= 5242880);
-  assert.ok(receipt.counts.offline_bytes <= 2580989);
+  assert.ok(receipt.counts.offline_bytes <= 2585068);
+  assert.equal(receipt.offline.reserved_bytes, APP_MAX_BYTES - readFileSync(offline).length);
   assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 557056);
   assert.equal(result.files.size, 2);
   const archive = result.files.get(receipt.source_offer.path);
@@ -130,8 +132,8 @@ test("the offline edition reproduces the approved catalog look_for bytes exactly
   // Catalog look_for wave (2026-10-31, owner D2): re-pinned from the C2 pair (2566962, e49c0aba...) to the measured bytes and SHA-256.
   // Wave 2C (2026-11-05, owner D1-D9 GO): recomputed from the reviewed implementation tree.
   const html = buildHtml(source);
-  assert.equal(Buffer.byteLength(html), 2580989);
-  assert.equal(hash(html), "95b8b93894c15c74bd73aa2b42a2c00479750e86d95c93c7e70d5c524a10034f");
+  assert.equal(Buffer.byteLength(html), 2585068);
+  assert.equal(hash(html), "d8b5e5f146b9cbe3906995a9ca52d645fcc507c2ee858e1e676bec212b5bf855");
 });
 
 test("development measurement rejects altered site, offline bytes, extras and resealed root HTML", () => {

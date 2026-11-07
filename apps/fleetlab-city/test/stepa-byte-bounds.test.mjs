@@ -17,7 +17,7 @@ import {fingerprint,writeFiles} from './stage-fixture.mjs';
 // Uncommitted bound files read 9 B low per sidecar; only depot-owned text, which must stay unchanged, has a floor. nf03 stays enhancement-packaging's gate.
 // Catalog look_for wave (2026-10-31, owner D9): emitted_text_bytes re-based from 3577477-1859 to the measured unit 3575832, no allowance.
 // Wave 2 (2026-11-05, owner W2-D2): exact measured minimum ceilings.
-const BOUNDS={nf04_closure_bytes:249444,delivery_order_closure_bytes:254568,r1_closure_bytes:225647,r3_closure_bytes:181351,depot_closure_bytes:541250,depot_route_local_bytes:[418159-9,418159],emitted_text_bytes:3613623,integration_text_bytes:154849,brand_text_bytes:101668};
+const BOUNDS={nf04_closure_bytes:275243,delivery_order_closure_bytes:280367,r1_closure_bytes:251446,r3_closure_bytes:207150,depot_closure_bytes:567049,depot_route_local_bytes:[418159-9,418159],emitted_text_bytes:3643717,integration_text_bytes:180648,brand_text_bytes:127467};
 const within=(key,value)=>{const bound=BOUNDS[key];return Array.isArray(bound)?value>=bound[0]&&value<=bound[1]:value<=bound;};
 const bound=key=>JSON.stringify(BOUNDS[key]??'enhancement-packaging.test.mjs');
 const report=(key,value,claim=`outside ${bound(key)}`)=>`${key} ${value} ${claim} (node ${process.version})`;

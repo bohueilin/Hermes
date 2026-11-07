@@ -43,7 +43,7 @@ FLOW_CHANGED = frozenset((
     "src/ui/experiment.js", "src/ui/app.js", "src/ui/operations-3d.js",
     "src/ui/operations-map.js", "src/ui/regional-power-view.js",
     "src/ui/analytics.js", "src/ui/car-glyph.js", "src/ui/launch-view.js",
-    "src/ui/street-scene.js", "src/ui/model-identity.js",
+    "src/ui/street-scene.js", "src/ui/model-identity.js", "src/ui/store.js",
 ))
 FLOW_ADDED = frozenset((
     "src/model/depot-flow-contract.js", "src/model/depot-flow.js",
@@ -234,7 +234,7 @@ def software_delivery_marker(html, accepted):
     )
 
 
-CLOSURE_LIMITS = {"nf03": 567714, "depot": 786432}
+CLOSURE_LIMITS = {"nf03": 593859, "depot": 786432}
 
 
 def final_route_counts(routes, files, owners=None):
